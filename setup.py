@@ -12,9 +12,13 @@ except ImportError:
 
 compile_args = ['-ggdb', '-g', '-fopenmp', '-std=c++11']
 linker_args = ['-ggdb','-g', '-lgomp', '-std=c++11']
+
 if sys.platform == 'darwin':
     compile_args.append('-stdlib=libc++')
     linker_args = ['-L/usr/local/opt/llvm/lib'] + linker_args
+
+# os.environ['CC'] = 'g++-7'
+# os.environ['CXX'] = 'g++-7'
 
 include_librs = ['majiq/src/internals', numpy.get_include()] + pysam.get_include()
 pysam_library_path = [os.path.abspath(os.path.join(os.path.dirname(pysam.__file__)))]

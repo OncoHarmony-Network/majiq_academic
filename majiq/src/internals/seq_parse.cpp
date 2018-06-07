@@ -14,11 +14,9 @@
             "-ggdb",
             "-g",
             "-fopenmp",
-            "-std=c++11",
-            "-stdlib=libc++"
+            "-std=c++11"
         ],
         "extra_link_args": [
-            "-L/usr/local/opt/llvm/lib",
             "-ggdb",
             "-g",
             "-lgomp",
@@ -1197,7 +1195,7 @@ typedef npy_cdouble __pyx_t_5numpy_complex_t;
  */
 typedef std::vector<grimoire::Gene *>  __pyx_t_5majiq_3src_9internals_6io_bam_gene_vect_t;
 
-/* "majiq/src/internals/seq_parse.pyx":134
+/* "majiq/src/internals/seq_parse.pyx":133
  * 
  * 
  * cdef _find_junctions(list file_list, vector[Gene*] gene_vec,  object conf, object logger):             # <<<<<<<<<<<<<<
@@ -1210,7 +1208,7 @@ struct __pyx_obj_5majiq_3src_9internals_9seq_parse___pyx_scope_struct____pyx_f_5
 };
 
 
-/* "majiq/src/internals/seq_parse.pyx":230
+/* "majiq/src/internals/seq_parse.pyx":229
  *                 # print(file_list[j][0], j, last_it_grp, (j==last_it_grp), it.second, it.first)
  *                 tmp_str = it.first.decode('utf-8').split(':')[2]
  *                 start, end = (int(xx) for xx in tmp_str.split('-'))             # <<<<<<<<<<<<<<
@@ -2118,7 +2116,6 @@ static const char __pyx_k_chr[] = "chr";
 static const char __pyx_k_end[] = "end";
 static const char __pyx_k_exp[] = "exp";
 static const char __pyx_k_w_b[] = "w+b";
-static const char __pyx_k_KKK2[] = "KKK2";
 static const char __pyx_k_KKK3[] = "KKK3";
 static const char __pyx_k_args[] = "args";
 static const char __pyx_k_conf[] = "conf";
@@ -2243,7 +2240,6 @@ static PyObject *__pyx_kp_u_Format_string_allocated_too_shor;
 static PyObject *__pyx_kp_u_Format_string_allocated_too_shor_2;
 static PyObject *__pyx_kp_s_Generating_Splicegraph;
 static PyObject *__pyx_n_s_ImportError;
-static PyObject *__pyx_n_s_KKK2;
 static PyObject *__pyx_n_s_KKK3;
 static PyObject *__pyx_n_s_MIN_BP_OVERLAP;
 static PyObject *__pyx_kp_u_Non_native_byte_order_not_suppor;
@@ -3726,7 +3722,7 @@ static int __pyx_f_5majiq_3src_9internals_9seq_parse__output_lsv_file_single(std
  *                     # print('KKK2')
  *                     key = junc_ids[i][0].split(b':')[0]             # <<<<<<<<<<<<<<
  *                     irv = find_intron_retention(gene_map[key], junc_ids[i][1], junc_ids[i][2])
- *                     print ('KKK2', irv.size())
+ *                     for ir_ptr in irv:
  */
                       __pyx_t_6 = __Pyx_GetItemInt(((PyObject *)__pyx_v_junc_ids), __pyx_v_i, int, 1, __Pyx_PyInt_From_int, 0, 1, 1); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 86, __pyx_L17_error)
                       __Pyx_GOTREF(__pyx_t_6);
@@ -3750,8 +3746,8 @@ static int __pyx_f_5majiq_3src_9internals_9seq_parse__output_lsv_file_single(std
  *                     # print('KKK2')
  *                     key = junc_ids[i][0].split(b':')[0]
  *                     irv = find_intron_retention(gene_map[key], junc_ids[i][1], junc_ids[i][2])             # <<<<<<<<<<<<<<
- *                     print ('KKK2', irv.size())
  *                     for ir_ptr in irv:
+ *                         print('KKK3', ir_ptr.get_gene().get_id(), ir_ptr.get_start(), ir_ptr.get_end(), junc_ids[i][3], junc_ids[i][4])
  */
                       __pyx_t_6 = __Pyx_GetItemInt(((PyObject *)__pyx_v_junc_ids), __pyx_v_i, int, 1, __Pyx_PyInt_From_int, 0, 1, 1); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 87, __pyx_L17_error)
                       __Pyx_GOTREF(__pyx_t_6);
@@ -3772,26 +3768,6 @@ static int __pyx_f_5majiq_3src_9internals_9seq_parse__output_lsv_file_single(std
                       /* "majiq/src/internals/seq_parse.pyx":88
  *                     key = junc_ids[i][0].split(b':')[0]
  *                     irv = find_intron_retention(gene_map[key], junc_ids[i][1], junc_ids[i][2])
- *                     print ('KKK2', irv.size())             # <<<<<<<<<<<<<<
- *                     for ir_ptr in irv:
- *                         print('KKK3', ir_ptr.get_gene().get_id(), ir_ptr.get_start(), ir_ptr.get_end(), junc_ids[i][3], junc_ids[i][4])
- */
-                      __pyx_t_6 = __Pyx_PyInt_FromSize_t(__pyx_v_irv.size()); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 88, __pyx_L17_error)
-                      __Pyx_GOTREF(__pyx_t_6);
-                      __pyx_t_2 = PyTuple_New(2); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 88, __pyx_L17_error)
-                      __Pyx_GOTREF(__pyx_t_2);
-                      __Pyx_INCREF(__pyx_n_s_KKK2);
-                      __Pyx_GIVEREF(__pyx_n_s_KKK2);
-                      PyTuple_SET_ITEM(__pyx_t_2, 0, __pyx_n_s_KKK2);
-                      __Pyx_GIVEREF(__pyx_t_6);
-                      PyTuple_SET_ITEM(__pyx_t_2, 1, __pyx_t_6);
-                      __pyx_t_6 = 0;
-                      if (__Pyx_PrintOne(0, __pyx_t_2) < 0) __PYX_ERR(0, 88, __pyx_L17_error)
-                      __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-
-                      /* "majiq/src/internals/seq_parse.pyx":89
- *                     irv = find_intron_retention(gene_map[key], junc_ids[i][1], junc_ids[i][2])
- *                     print ('KKK2', irv.size())
  *                     for ir_ptr in irv:             # <<<<<<<<<<<<<<
  *                         print('KKK3', ir_ptr.get_gene().get_id(), ir_ptr.get_start(), ir_ptr.get_end(), junc_ids[i][3], junc_ids[i][4])
  *                         sg.intron_retention(ir_ptr.get_gene().get_id(), ir_ptr.get_start(),
@@ -3803,75 +3779,75 @@ static int __pyx_f_5majiq_3src_9internals_9seq_parse__output_lsv_file_single(std
                         ++__pyx_t_32;
                         __pyx_v_ir_ptr = __pyx_t_33;
 
-                        /* "majiq/src/internals/seq_parse.pyx":90
- *                     print ('KKK2', irv.size())
+                        /* "majiq/src/internals/seq_parse.pyx":89
+ *                     irv = find_intron_retention(gene_map[key], junc_ids[i][1], junc_ids[i][2])
  *                     for ir_ptr in irv:
  *                         print('KKK3', ir_ptr.get_gene().get_id(), ir_ptr.get_start(), ir_ptr.get_end(), junc_ids[i][3], junc_ids[i][4])             # <<<<<<<<<<<<<<
  *                         sg.intron_retention(ir_ptr.get_gene().get_id(), ir_ptr.get_start(),
  *                                             ir_ptr.get_end()).update_reads(experiment_name, junc_ids[i][3])
  */
-                        __pyx_t_2 = __pyx_convert_PyBytes_string_to_py_std__in_string(__pyx_v_ir_ptr->get_gene()->get_id()); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 90, __pyx_L17_error)
-                        __Pyx_GOTREF(__pyx_t_2);
-                        __pyx_t_6 = __Pyx_PyInt_From_int(__pyx_v_ir_ptr->get_start()); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 90, __pyx_L17_error)
+                        __pyx_t_6 = __pyx_convert_PyBytes_string_to_py_std__in_string(__pyx_v_ir_ptr->get_gene()->get_id()); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 89, __pyx_L17_error)
                         __Pyx_GOTREF(__pyx_t_6);
-                        __pyx_t_30 = __Pyx_PyInt_From_int(__pyx_v_ir_ptr->get_end()); if (unlikely(!__pyx_t_30)) __PYX_ERR(0, 90, __pyx_L17_error)
+                        __pyx_t_2 = __Pyx_PyInt_From_int(__pyx_v_ir_ptr->get_start()); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 89, __pyx_L17_error)
+                        __Pyx_GOTREF(__pyx_t_2);
+                        __pyx_t_30 = __Pyx_PyInt_From_int(__pyx_v_ir_ptr->get_end()); if (unlikely(!__pyx_t_30)) __PYX_ERR(0, 89, __pyx_L17_error)
                         __Pyx_GOTREF(__pyx_t_30);
-                        __pyx_t_29 = __Pyx_GetItemInt(((PyObject *)__pyx_v_junc_ids), __pyx_v_i, int, 1, __Pyx_PyInt_From_int, 0, 1, 1); if (unlikely(!__pyx_t_29)) __PYX_ERR(0, 90, __pyx_L17_error)
+                        __pyx_t_29 = __Pyx_GetItemInt(((PyObject *)__pyx_v_junc_ids), __pyx_v_i, int, 1, __Pyx_PyInt_From_int, 0, 1, 1); if (unlikely(!__pyx_t_29)) __PYX_ERR(0, 89, __pyx_L17_error)
                         __Pyx_GOTREF(__pyx_t_29);
-                        __pyx_t_5 = __Pyx_GetItemInt(__pyx_t_29, 3, long, 1, __Pyx_PyInt_From_long, 0, 0, 1); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 90, __pyx_L17_error)
+                        __pyx_t_5 = __Pyx_GetItemInt(__pyx_t_29, 3, long, 1, __Pyx_PyInt_From_long, 0, 0, 1); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 89, __pyx_L17_error)
                         __Pyx_GOTREF(__pyx_t_5);
                         __Pyx_DECREF(__pyx_t_29); __pyx_t_29 = 0;
-                        __pyx_t_29 = __Pyx_GetItemInt(((PyObject *)__pyx_v_junc_ids), __pyx_v_i, int, 1, __Pyx_PyInt_From_int, 0, 1, 1); if (unlikely(!__pyx_t_29)) __PYX_ERR(0, 90, __pyx_L17_error)
+                        __pyx_t_29 = __Pyx_GetItemInt(((PyObject *)__pyx_v_junc_ids), __pyx_v_i, int, 1, __Pyx_PyInt_From_int, 0, 1, 1); if (unlikely(!__pyx_t_29)) __PYX_ERR(0, 89, __pyx_L17_error)
                         __Pyx_GOTREF(__pyx_t_29);
-                        __pyx_t_4 = __Pyx_GetItemInt(__pyx_t_29, 4, long, 1, __Pyx_PyInt_From_long, 0, 0, 1); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 90, __pyx_L17_error)
+                        __pyx_t_4 = __Pyx_GetItemInt(__pyx_t_29, 4, long, 1, __Pyx_PyInt_From_long, 0, 0, 1); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 89, __pyx_L17_error)
                         __Pyx_GOTREF(__pyx_t_4);
                         __Pyx_DECREF(__pyx_t_29); __pyx_t_29 = 0;
-                        __pyx_t_29 = PyTuple_New(6); if (unlikely(!__pyx_t_29)) __PYX_ERR(0, 90, __pyx_L17_error)
+                        __pyx_t_29 = PyTuple_New(6); if (unlikely(!__pyx_t_29)) __PYX_ERR(0, 89, __pyx_L17_error)
                         __Pyx_GOTREF(__pyx_t_29);
                         __Pyx_INCREF(__pyx_n_s_KKK3);
                         __Pyx_GIVEREF(__pyx_n_s_KKK3);
                         PyTuple_SET_ITEM(__pyx_t_29, 0, __pyx_n_s_KKK3);
-                        __Pyx_GIVEREF(__pyx_t_2);
-                        PyTuple_SET_ITEM(__pyx_t_29, 1, __pyx_t_2);
                         __Pyx_GIVEREF(__pyx_t_6);
-                        PyTuple_SET_ITEM(__pyx_t_29, 2, __pyx_t_6);
+                        PyTuple_SET_ITEM(__pyx_t_29, 1, __pyx_t_6);
+                        __Pyx_GIVEREF(__pyx_t_2);
+                        PyTuple_SET_ITEM(__pyx_t_29, 2, __pyx_t_2);
                         __Pyx_GIVEREF(__pyx_t_30);
                         PyTuple_SET_ITEM(__pyx_t_29, 3, __pyx_t_30);
                         __Pyx_GIVEREF(__pyx_t_5);
                         PyTuple_SET_ITEM(__pyx_t_29, 4, __pyx_t_5);
                         __Pyx_GIVEREF(__pyx_t_4);
                         PyTuple_SET_ITEM(__pyx_t_29, 5, __pyx_t_4);
-                        __pyx_t_2 = 0;
                         __pyx_t_6 = 0;
+                        __pyx_t_2 = 0;
                         __pyx_t_30 = 0;
                         __pyx_t_5 = 0;
                         __pyx_t_4 = 0;
-                        if (__Pyx_PrintOne(0, __pyx_t_29) < 0) __PYX_ERR(0, 90, __pyx_L17_error)
+                        if (__Pyx_PrintOne(0, __pyx_t_29) < 0) __PYX_ERR(0, 89, __pyx_L17_error)
                         __Pyx_DECREF(__pyx_t_29); __pyx_t_29 = 0;
 
-                        /* "majiq/src/internals/seq_parse.pyx":91
+                        /* "majiq/src/internals/seq_parse.pyx":90
  *                     for ir_ptr in irv:
  *                         print('KKK3', ir_ptr.get_gene().get_id(), ir_ptr.get_start(), ir_ptr.get_end(), junc_ids[i][3], junc_ids[i][4])
  *                         sg.intron_retention(ir_ptr.get_gene().get_id(), ir_ptr.get_start(),             # <<<<<<<<<<<<<<
  *                                             ir_ptr.get_end()).update_reads(experiment_name, junc_ids[i][3])
  *                         tlb_ir[ir_ptr.get_key(ir_ptr.get_gene())] = Jinfo(i, junc_ids[i][1], junc_ids[i][2],
  */
-                        __pyx_t_5 = __Pyx_PyObject_GetAttrStr(__pyx_v_sg, __pyx_n_s_intron_retention); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 91, __pyx_L17_error)
+                        __pyx_t_5 = __Pyx_PyObject_GetAttrStr(__pyx_v_sg, __pyx_n_s_intron_retention); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 90, __pyx_L17_error)
                         __Pyx_GOTREF(__pyx_t_5);
-                        __pyx_t_30 = __pyx_convert_PyBytes_string_to_py_std__in_string(__pyx_v_ir_ptr->get_gene()->get_id()); if (unlikely(!__pyx_t_30)) __PYX_ERR(0, 91, __pyx_L17_error)
+                        __pyx_t_30 = __pyx_convert_PyBytes_string_to_py_std__in_string(__pyx_v_ir_ptr->get_gene()->get_id()); if (unlikely(!__pyx_t_30)) __PYX_ERR(0, 90, __pyx_L17_error)
                         __Pyx_GOTREF(__pyx_t_30);
-                        __pyx_t_6 = __Pyx_PyInt_From_int(__pyx_v_ir_ptr->get_start()); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 91, __pyx_L17_error)
-                        __Pyx_GOTREF(__pyx_t_6);
+                        __pyx_t_2 = __Pyx_PyInt_From_int(__pyx_v_ir_ptr->get_start()); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 90, __pyx_L17_error)
+                        __Pyx_GOTREF(__pyx_t_2);
 
-                        /* "majiq/src/internals/seq_parse.pyx":92
+                        /* "majiq/src/internals/seq_parse.pyx":91
  *                         print('KKK3', ir_ptr.get_gene().get_id(), ir_ptr.get_start(), ir_ptr.get_end(), junc_ids[i][3], junc_ids[i][4])
  *                         sg.intron_retention(ir_ptr.get_gene().get_id(), ir_ptr.get_start(),
  *                                             ir_ptr.get_end()).update_reads(experiment_name, junc_ids[i][3])             # <<<<<<<<<<<<<<
  *                         tlb_ir[ir_ptr.get_key(ir_ptr.get_gene())] = Jinfo(i, junc_ids[i][1], junc_ids[i][2],
  *                                                                   junc_ids[i][3], junc_ids[i][4])
  */
-                        __pyx_t_2 = __Pyx_PyInt_From_int(__pyx_v_ir_ptr->get_end()); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 92, __pyx_L17_error)
-                        __Pyx_GOTREF(__pyx_t_2);
+                        __pyx_t_6 = __Pyx_PyInt_From_int(__pyx_v_ir_ptr->get_end()); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 91, __pyx_L17_error)
+                        __Pyx_GOTREF(__pyx_t_6);
                         __pyx_t_3 = NULL;
                         __pyx_t_31 = 0;
                         if (CYTHON_UNPACK_METHODS && likely(PyMethod_Check(__pyx_t_5))) {
@@ -3886,52 +3862,52 @@ static int __pyx_f_5majiq_3src_9internals_9seq_parse__output_lsv_file_single(std
                         }
                         #if CYTHON_FAST_PYCALL
                         if (PyFunction_Check(__pyx_t_5)) {
-                          PyObject *__pyx_temp[4] = {__pyx_t_3, __pyx_t_30, __pyx_t_6, __pyx_t_2};
-                          __pyx_t_4 = __Pyx_PyFunction_FastCall(__pyx_t_5, __pyx_temp+1-__pyx_t_31, 3+__pyx_t_31); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 91, __pyx_L17_error)
+                          PyObject *__pyx_temp[4] = {__pyx_t_3, __pyx_t_30, __pyx_t_2, __pyx_t_6};
+                          __pyx_t_4 = __Pyx_PyFunction_FastCall(__pyx_t_5, __pyx_temp+1-__pyx_t_31, 3+__pyx_t_31); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 90, __pyx_L17_error)
                           __Pyx_XDECREF(__pyx_t_3); __pyx_t_3 = 0;
                           __Pyx_GOTREF(__pyx_t_4);
                           __Pyx_DECREF(__pyx_t_30); __pyx_t_30 = 0;
-                          __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
                           __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
+                          __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
                         } else
                         #endif
                         #if CYTHON_FAST_PYCCALL
                         if (__Pyx_PyFastCFunction_Check(__pyx_t_5)) {
-                          PyObject *__pyx_temp[4] = {__pyx_t_3, __pyx_t_30, __pyx_t_6, __pyx_t_2};
-                          __pyx_t_4 = __Pyx_PyCFunction_FastCall(__pyx_t_5, __pyx_temp+1-__pyx_t_31, 3+__pyx_t_31); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 91, __pyx_L17_error)
+                          PyObject *__pyx_temp[4] = {__pyx_t_3, __pyx_t_30, __pyx_t_2, __pyx_t_6};
+                          __pyx_t_4 = __Pyx_PyCFunction_FastCall(__pyx_t_5, __pyx_temp+1-__pyx_t_31, 3+__pyx_t_31); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 90, __pyx_L17_error)
                           __Pyx_XDECREF(__pyx_t_3); __pyx_t_3 = 0;
                           __Pyx_GOTREF(__pyx_t_4);
                           __Pyx_DECREF(__pyx_t_30); __pyx_t_30 = 0;
-                          __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
                           __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
+                          __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
                         } else
                         #endif
                         {
-                          __pyx_t_1 = PyTuple_New(3+__pyx_t_31); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 91, __pyx_L17_error)
+                          __pyx_t_1 = PyTuple_New(3+__pyx_t_31); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 90, __pyx_L17_error)
                           __Pyx_GOTREF(__pyx_t_1);
                           if (__pyx_t_3) {
                             __Pyx_GIVEREF(__pyx_t_3); PyTuple_SET_ITEM(__pyx_t_1, 0, __pyx_t_3); __pyx_t_3 = NULL;
                           }
                           __Pyx_GIVEREF(__pyx_t_30);
                           PyTuple_SET_ITEM(__pyx_t_1, 0+__pyx_t_31, __pyx_t_30);
-                          __Pyx_GIVEREF(__pyx_t_6);
-                          PyTuple_SET_ITEM(__pyx_t_1, 1+__pyx_t_31, __pyx_t_6);
                           __Pyx_GIVEREF(__pyx_t_2);
-                          PyTuple_SET_ITEM(__pyx_t_1, 2+__pyx_t_31, __pyx_t_2);
+                          PyTuple_SET_ITEM(__pyx_t_1, 1+__pyx_t_31, __pyx_t_2);
+                          __Pyx_GIVEREF(__pyx_t_6);
+                          PyTuple_SET_ITEM(__pyx_t_1, 2+__pyx_t_31, __pyx_t_6);
                           __pyx_t_30 = 0;
-                          __pyx_t_6 = 0;
                           __pyx_t_2 = 0;
-                          __pyx_t_4 = __Pyx_PyObject_Call(__pyx_t_5, __pyx_t_1, NULL); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 91, __pyx_L17_error)
+                          __pyx_t_6 = 0;
+                          __pyx_t_4 = __Pyx_PyObject_Call(__pyx_t_5, __pyx_t_1, NULL); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 90, __pyx_L17_error)
                           __Pyx_GOTREF(__pyx_t_4);
                           __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
                         }
                         __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
-                        __pyx_t_5 = __Pyx_PyObject_GetAttrStr(__pyx_t_4, __pyx_n_s_update_reads); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 92, __pyx_L17_error)
+                        __pyx_t_5 = __Pyx_PyObject_GetAttrStr(__pyx_t_4, __pyx_n_s_update_reads); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 91, __pyx_L17_error)
                         __Pyx_GOTREF(__pyx_t_5);
                         __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-                        __pyx_t_4 = __Pyx_GetItemInt(((PyObject *)__pyx_v_junc_ids), __pyx_v_i, int, 1, __Pyx_PyInt_From_int, 0, 1, 1); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 92, __pyx_L17_error)
+                        __pyx_t_4 = __Pyx_GetItemInt(((PyObject *)__pyx_v_junc_ids), __pyx_v_i, int, 1, __Pyx_PyInt_From_int, 0, 1, 1); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 91, __pyx_L17_error)
                         __Pyx_GOTREF(__pyx_t_4);
-                        __pyx_t_1 = __Pyx_GetItemInt(__pyx_t_4, 3, long, 1, __Pyx_PyInt_From_long, 0, 0, 1); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 92, __pyx_L17_error)
+                        __pyx_t_1 = __Pyx_GetItemInt(__pyx_t_4, 3, long, 1, __Pyx_PyInt_From_long, 0, 0, 1); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 91, __pyx_L17_error)
                         __Pyx_GOTREF(__pyx_t_1);
                         __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
                         __pyx_t_4 = NULL;
@@ -3949,7 +3925,7 @@ static int __pyx_f_5majiq_3src_9internals_9seq_parse__output_lsv_file_single(std
                         #if CYTHON_FAST_PYCALL
                         if (PyFunction_Check(__pyx_t_5)) {
                           PyObject *__pyx_temp[3] = {__pyx_t_4, __pyx_v_experiment_name, __pyx_t_1};
-                          __pyx_t_29 = __Pyx_PyFunction_FastCall(__pyx_t_5, __pyx_temp+1-__pyx_t_31, 2+__pyx_t_31); if (unlikely(!__pyx_t_29)) __PYX_ERR(0, 92, __pyx_L17_error)
+                          __pyx_t_29 = __Pyx_PyFunction_FastCall(__pyx_t_5, __pyx_temp+1-__pyx_t_31, 2+__pyx_t_31); if (unlikely(!__pyx_t_29)) __PYX_ERR(0, 91, __pyx_L17_error)
                           __Pyx_XDECREF(__pyx_t_4); __pyx_t_4 = 0;
                           __Pyx_GOTREF(__pyx_t_29);
                           __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
@@ -3958,32 +3934,32 @@ static int __pyx_f_5majiq_3src_9internals_9seq_parse__output_lsv_file_single(std
                         #if CYTHON_FAST_PYCCALL
                         if (__Pyx_PyFastCFunction_Check(__pyx_t_5)) {
                           PyObject *__pyx_temp[3] = {__pyx_t_4, __pyx_v_experiment_name, __pyx_t_1};
-                          __pyx_t_29 = __Pyx_PyCFunction_FastCall(__pyx_t_5, __pyx_temp+1-__pyx_t_31, 2+__pyx_t_31); if (unlikely(!__pyx_t_29)) __PYX_ERR(0, 92, __pyx_L17_error)
+                          __pyx_t_29 = __Pyx_PyCFunction_FastCall(__pyx_t_5, __pyx_temp+1-__pyx_t_31, 2+__pyx_t_31); if (unlikely(!__pyx_t_29)) __PYX_ERR(0, 91, __pyx_L17_error)
                           __Pyx_XDECREF(__pyx_t_4); __pyx_t_4 = 0;
                           __Pyx_GOTREF(__pyx_t_29);
                           __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
                         } else
                         #endif
                         {
-                          __pyx_t_2 = PyTuple_New(2+__pyx_t_31); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 92, __pyx_L17_error)
-                          __Pyx_GOTREF(__pyx_t_2);
+                          __pyx_t_6 = PyTuple_New(2+__pyx_t_31); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 91, __pyx_L17_error)
+                          __Pyx_GOTREF(__pyx_t_6);
                           if (__pyx_t_4) {
-                            __Pyx_GIVEREF(__pyx_t_4); PyTuple_SET_ITEM(__pyx_t_2, 0, __pyx_t_4); __pyx_t_4 = NULL;
+                            __Pyx_GIVEREF(__pyx_t_4); PyTuple_SET_ITEM(__pyx_t_6, 0, __pyx_t_4); __pyx_t_4 = NULL;
                           }
                           __Pyx_INCREF(__pyx_v_experiment_name);
                           __Pyx_GIVEREF(__pyx_v_experiment_name);
-                          PyTuple_SET_ITEM(__pyx_t_2, 0+__pyx_t_31, __pyx_v_experiment_name);
+                          PyTuple_SET_ITEM(__pyx_t_6, 0+__pyx_t_31, __pyx_v_experiment_name);
                           __Pyx_GIVEREF(__pyx_t_1);
-                          PyTuple_SET_ITEM(__pyx_t_2, 1+__pyx_t_31, __pyx_t_1);
+                          PyTuple_SET_ITEM(__pyx_t_6, 1+__pyx_t_31, __pyx_t_1);
                           __pyx_t_1 = 0;
-                          __pyx_t_29 = __Pyx_PyObject_Call(__pyx_t_5, __pyx_t_2, NULL); if (unlikely(!__pyx_t_29)) __PYX_ERR(0, 92, __pyx_L17_error)
+                          __pyx_t_29 = __Pyx_PyObject_Call(__pyx_t_5, __pyx_t_6, NULL); if (unlikely(!__pyx_t_29)) __PYX_ERR(0, 91, __pyx_L17_error)
                           __Pyx_GOTREF(__pyx_t_29);
-                          __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
+                          __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
                         }
                         __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
                         __Pyx_DECREF(__pyx_t_29); __pyx_t_29 = 0;
 
-                        /* "majiq/src/internals/seq_parse.pyx":93
+                        /* "majiq/src/internals/seq_parse.pyx":92
  *                         sg.intron_retention(ir_ptr.get_gene().get_id(), ir_ptr.get_start(),
  *                                             ir_ptr.get_end()).update_reads(experiment_name, junc_ids[i][3])
  *                         tlb_ir[ir_ptr.get_key(ir_ptr.get_gene())] = Jinfo(i, junc_ids[i][1], junc_ids[i][2],             # <<<<<<<<<<<<<<
@@ -3991,48 +3967,48 @@ static int __pyx_f_5majiq_3src_9internals_9seq_parse__output_lsv_file_single(std
  * 
  */
                         __pyx_t_23.index = __pyx_v_i;
-                        __pyx_t_29 = __Pyx_GetItemInt(((PyObject *)__pyx_v_junc_ids), __pyx_v_i, int, 1, __Pyx_PyInt_From_int, 0, 1, 1); if (unlikely(!__pyx_t_29)) __PYX_ERR(0, 93, __pyx_L17_error)
+                        __pyx_t_29 = __Pyx_GetItemInt(((PyObject *)__pyx_v_junc_ids), __pyx_v_i, int, 1, __Pyx_PyInt_From_int, 0, 1, 1); if (unlikely(!__pyx_t_29)) __PYX_ERR(0, 92, __pyx_L17_error)
                         __Pyx_GOTREF(__pyx_t_29);
-                        __pyx_t_5 = __Pyx_GetItemInt(__pyx_t_29, 1, long, 1, __Pyx_PyInt_From_long, 0, 0, 1); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 93, __pyx_L17_error)
+                        __pyx_t_5 = __Pyx_GetItemInt(__pyx_t_29, 1, long, 1, __Pyx_PyInt_From_long, 0, 0, 1); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 92, __pyx_L17_error)
                         __Pyx_GOTREF(__pyx_t_5);
                         __Pyx_DECREF(__pyx_t_29); __pyx_t_29 = 0;
-                        __pyx_t_24 = __Pyx_PyInt_As_unsigned_int(__pyx_t_5); if (unlikely((__pyx_t_24 == (unsigned int)-1) && PyErr_Occurred())) __PYX_ERR(0, 93, __pyx_L17_error)
+                        __pyx_t_24 = __Pyx_PyInt_As_unsigned_int(__pyx_t_5); if (unlikely((__pyx_t_24 == (unsigned int)-1) && PyErr_Occurred())) __PYX_ERR(0, 92, __pyx_L17_error)
                         __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
                         __pyx_t_23.start = __pyx_t_24;
-                        __pyx_t_5 = __Pyx_GetItemInt(((PyObject *)__pyx_v_junc_ids), __pyx_v_i, int, 1, __Pyx_PyInt_From_int, 0, 1, 1); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 93, __pyx_L17_error)
+                        __pyx_t_5 = __Pyx_GetItemInt(((PyObject *)__pyx_v_junc_ids), __pyx_v_i, int, 1, __Pyx_PyInt_From_int, 0, 1, 1); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 92, __pyx_L17_error)
                         __Pyx_GOTREF(__pyx_t_5);
-                        __pyx_t_29 = __Pyx_GetItemInt(__pyx_t_5, 2, long, 1, __Pyx_PyInt_From_long, 0, 0, 1); if (unlikely(!__pyx_t_29)) __PYX_ERR(0, 93, __pyx_L17_error)
+                        __pyx_t_29 = __Pyx_GetItemInt(__pyx_t_5, 2, long, 1, __Pyx_PyInt_From_long, 0, 0, 1); if (unlikely(!__pyx_t_29)) __PYX_ERR(0, 92, __pyx_L17_error)
                         __Pyx_GOTREF(__pyx_t_29);
                         __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
-                        __pyx_t_24 = __Pyx_PyInt_As_unsigned_int(__pyx_t_29); if (unlikely((__pyx_t_24 == (unsigned int)-1) && PyErr_Occurred())) __PYX_ERR(0, 93, __pyx_L17_error)
+                        __pyx_t_24 = __Pyx_PyInt_As_unsigned_int(__pyx_t_29); if (unlikely((__pyx_t_24 == (unsigned int)-1) && PyErr_Occurred())) __PYX_ERR(0, 92, __pyx_L17_error)
                         __Pyx_DECREF(__pyx_t_29); __pyx_t_29 = 0;
                         __pyx_t_23.end = __pyx_t_24;
 
-                        /* "majiq/src/internals/seq_parse.pyx":94
+                        /* "majiq/src/internals/seq_parse.pyx":93
  *                                             ir_ptr.get_end()).update_reads(experiment_name, junc_ids[i][3])
  *                         tlb_ir[ir_ptr.get_key(ir_ptr.get_gene())] = Jinfo(i, junc_ids[i][1], junc_ids[i][2],
  *                                                                   junc_ids[i][3], junc_ids[i][4])             # <<<<<<<<<<<<<<
  * 
  *             del junc_ids
  */
-                        __pyx_t_29 = __Pyx_GetItemInt(((PyObject *)__pyx_v_junc_ids), __pyx_v_i, int, 1, __Pyx_PyInt_From_int, 0, 1, 1); if (unlikely(!__pyx_t_29)) __PYX_ERR(0, 94, __pyx_L17_error)
+                        __pyx_t_29 = __Pyx_GetItemInt(((PyObject *)__pyx_v_junc_ids), __pyx_v_i, int, 1, __Pyx_PyInt_From_int, 0, 1, 1); if (unlikely(!__pyx_t_29)) __PYX_ERR(0, 93, __pyx_L17_error)
                         __Pyx_GOTREF(__pyx_t_29);
-                        __pyx_t_5 = __Pyx_GetItemInt(__pyx_t_29, 3, long, 1, __Pyx_PyInt_From_long, 0, 0, 1); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 94, __pyx_L17_error)
+                        __pyx_t_5 = __Pyx_GetItemInt(__pyx_t_29, 3, long, 1, __Pyx_PyInt_From_long, 0, 0, 1); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 93, __pyx_L17_error)
                         __Pyx_GOTREF(__pyx_t_5);
                         __Pyx_DECREF(__pyx_t_29); __pyx_t_29 = 0;
-                        __pyx_t_31 = __Pyx_PyInt_As_int(__pyx_t_5); if (unlikely((__pyx_t_31 == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 94, __pyx_L17_error)
+                        __pyx_t_31 = __Pyx_PyInt_As_int(__pyx_t_5); if (unlikely((__pyx_t_31 == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 93, __pyx_L17_error)
                         __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
                         __pyx_t_23.sreads = __pyx_t_31;
-                        __pyx_t_5 = __Pyx_GetItemInt(((PyObject *)__pyx_v_junc_ids), __pyx_v_i, int, 1, __Pyx_PyInt_From_int, 0, 1, 1); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 94, __pyx_L17_error)
+                        __pyx_t_5 = __Pyx_GetItemInt(((PyObject *)__pyx_v_junc_ids), __pyx_v_i, int, 1, __Pyx_PyInt_From_int, 0, 1, 1); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 93, __pyx_L17_error)
                         __Pyx_GOTREF(__pyx_t_5);
-                        __pyx_t_29 = __Pyx_GetItemInt(__pyx_t_5, 4, long, 1, __Pyx_PyInt_From_long, 0, 0, 1); if (unlikely(!__pyx_t_29)) __PYX_ERR(0, 94, __pyx_L17_error)
+                        __pyx_t_29 = __Pyx_GetItemInt(__pyx_t_5, 4, long, 1, __Pyx_PyInt_From_long, 0, 0, 1); if (unlikely(!__pyx_t_29)) __PYX_ERR(0, 93, __pyx_L17_error)
                         __Pyx_GOTREF(__pyx_t_29);
                         __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
-                        __pyx_t_31 = __Pyx_PyInt_As_int(__pyx_t_29); if (unlikely((__pyx_t_31 == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 94, __pyx_L17_error)
+                        __pyx_t_31 = __Pyx_PyInt_As_int(__pyx_t_29); if (unlikely((__pyx_t_31 == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 93, __pyx_L17_error)
                         __Pyx_DECREF(__pyx_t_29); __pyx_t_29 = 0;
                         __pyx_t_23.npos = __pyx_t_31;
 
-                        /* "majiq/src/internals/seq_parse.pyx":93
+                        /* "majiq/src/internals/seq_parse.pyx":92
  *                         sg.intron_retention(ir_ptr.get_gene().get_id(), ir_ptr.get_start(),
  *                                             ir_ptr.get_end()).update_reads(experiment_name, junc_ids[i][3])
  *                         tlb_ir[ir_ptr.get_key(ir_ptr.get_gene())] = Jinfo(i, junc_ids[i][1], junc_ids[i][2],             # <<<<<<<<<<<<<<
@@ -4041,9 +4017,9 @@ static int __pyx_f_5majiq_3src_9internals_9seq_parse__output_lsv_file_single(std
  */
                         (__pyx_v_tlb_ir[__pyx_v_ir_ptr->get_key(__pyx_v_ir_ptr->get_gene())]) = __pyx_t_23;
 
-                        /* "majiq/src/internals/seq_parse.pyx":89
+                        /* "majiq/src/internals/seq_parse.pyx":88
+ *                     key = junc_ids[i][0].split(b':')[0]
  *                     irv = find_intron_retention(gene_map[key], junc_ids[i][1], junc_ids[i][2])
- *                     print ('KKK2', irv.size())
  *                     for ir_ptr in irv:             # <<<<<<<<<<<<<<
  *                         print('KKK3', ir_ptr.get_gene().get_id(), ir_ptr.get_start(), ir_ptr.get_end(), junc_ids[i][3], junc_ids[i][4])
  *                         sg.intron_retention(ir_ptr.get_gene().get_id(), ir_ptr.get_start(),
@@ -4062,7 +4038,7 @@ static int __pyx_f_5majiq_3src_9internals_9seq_parse__output_lsv_file_single(std
                     __pyx_L23_continue:;
                   }
 
-                  /* "majiq/src/internals/seq_parse.pyx":96
+                  /* "majiq/src/internals/seq_parse.pyx":95
  *                                                                   junc_ids[i][3], junc_ids[i][4])
  * 
  *             del junc_ids             # <<<<<<<<<<<<<<
@@ -4072,7 +4048,7 @@ static int __pyx_f_5majiq_3src_9internals_9seq_parse__output_lsv_file_single(std
                   __Pyx_DECREF(((PyObject *)__pyx_v_junc_ids));
                   __pyx_v_junc_ids = NULL;
 
-                  /* "majiq/src/internals/seq_parse.pyx":98
+                  /* "majiq/src/internals/seq_parse.pyx":97
  *             del junc_ids
  * 
  *             for j in prange(nlsv, nogil=True, num_threads=nthreads):             # <<<<<<<<<<<<<<
@@ -4135,7 +4111,7 @@ static int __pyx_f_5majiq_3src_9internals_9seq_parse__output_lsv_file_single(std
                                             __pyx_v_lsv_ptr = ((grimoire::LSV *)1);
                                             __pyx_v_njunc = ((int)0xbad0bad0);
 
-                                            /* "majiq/src/internals/seq_parse.pyx":99
+                                            /* "majiq/src/internals/seq_parse.pyx":98
  * 
  *             for j in prange(nlsv, nogil=True, num_threads=nthreads):
  *                 lsv_ptr = out_lsvlist[j]             # <<<<<<<<<<<<<<
@@ -4144,7 +4120,7 @@ static int __pyx_f_5majiq_3src_9internals_9seq_parse__output_lsv_file_single(std
  */
                                             __pyx_v_lsv_ptr = (__pyx_v_out_lsvlist[__pyx_v_j]);
 
-                                            /* "majiq/src/internals/seq_parse.pyx":100
+                                            /* "majiq/src/internals/seq_parse.pyx":99
  *             for j in prange(nlsv, nogil=True, num_threads=nthreads):
  *                 lsv_ptr = out_lsvlist[j]
  *                 njunc = lsv_ptr.get_num_variations()             # <<<<<<<<<<<<<<
@@ -4153,7 +4129,7 @@ static int __pyx_f_5majiq_3src_9internals_9seq_parse__output_lsv_file_single(std
  */
                                             __pyx_v_njunc = __pyx_v_lsv_ptr->get_num_variations();
 
-                                            /* "majiq/src/internals/seq_parse.pyx":101
+                                            /* "majiq/src/internals/seq_parse.pyx":100
  *                 lsv_ptr = out_lsvlist[j]
  *                 njunc = lsv_ptr.get_num_variations()
  *                 lsvid = lsv_ptr.get_id()             # <<<<<<<<<<<<<<
@@ -4162,7 +4138,7 @@ static int __pyx_f_5majiq_3src_9internals_9seq_parse__output_lsv_file_single(std
  */
                                             __pyx_v_lsvid = __pyx_v_lsv_ptr->get_id();
 
-                                            /* "majiq/src/internals/seq_parse.pyx":102
+                                            /* "majiq/src/internals/seq_parse.pyx":101
  *                 njunc = lsv_ptr.get_num_variations()
  *                 lsvid = lsv_ptr.get_id()
  *                 with gil:             # <<<<<<<<<<<<<<
@@ -4175,63 +4151,63 @@ static int __pyx_f_5majiq_3src_9internals_9seq_parse__output_lsv_file_single(std
                                                 #endif
                                                 /*try:*/ {
 
-                                                  /* "majiq/src/internals/seq_parse.pyx":103
+                                                  /* "majiq/src/internals/seq_parse.pyx":102
  *                 lsvid = lsv_ptr.get_id()
  *                 with gil:
  *                     cov_dict[lsvid.decode('utf-8')] = np.zeros(shape=(njunc, msamples), dtype=np.float32)             # <<<<<<<<<<<<<<
  *                     type_list.append((lsvid.decode('utf-8'), lsv_ptr.get_type()))
  *                 junc_idx = 0
  */
-                                                  __pyx_t_29 = __Pyx_GetModuleGlobalName(__pyx_n_s_np); if (unlikely(!__pyx_t_29)) __PYX_ERR(0, 103, __pyx_L41_error)
+                                                  __pyx_t_29 = __Pyx_GetModuleGlobalName(__pyx_n_s_np); if (unlikely(!__pyx_t_29)) __PYX_ERR(0, 102, __pyx_L41_error)
                                                   __Pyx_GOTREF(__pyx_t_29);
-                                                  __pyx_t_5 = __Pyx_PyObject_GetAttrStr(__pyx_t_29, __pyx_n_s_zeros); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 103, __pyx_L41_error)
+                                                  __pyx_t_5 = __Pyx_PyObject_GetAttrStr(__pyx_t_29, __pyx_n_s_zeros); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 102, __pyx_L41_error)
                                                   __Pyx_GOTREF(__pyx_t_5);
                                                   __Pyx_DECREF(__pyx_t_29); __pyx_t_29 = 0;
-                                                  __pyx_t_29 = __Pyx_PyDict_NewPresized(2); if (unlikely(!__pyx_t_29)) __PYX_ERR(0, 103, __pyx_L41_error)
+                                                  __pyx_t_29 = __Pyx_PyDict_NewPresized(2); if (unlikely(!__pyx_t_29)) __PYX_ERR(0, 102, __pyx_L41_error)
                                                   __Pyx_GOTREF(__pyx_t_29);
-                                                  __pyx_t_2 = __Pyx_PyInt_From_int(__pyx_v_njunc); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 103, __pyx_L41_error)
-                                                  __Pyx_GOTREF(__pyx_t_2);
-                                                  __pyx_t_1 = __Pyx_PyInt_From_unsigned_int(__pyx_v_msamples); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 103, __pyx_L41_error)
+                                                  __pyx_t_6 = __Pyx_PyInt_From_int(__pyx_v_njunc); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 102, __pyx_L41_error)
+                                                  __Pyx_GOTREF(__pyx_t_6);
+                                                  __pyx_t_1 = __Pyx_PyInt_From_unsigned_int(__pyx_v_msamples); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 102, __pyx_L41_error)
                                                   __Pyx_GOTREF(__pyx_t_1);
-                                                  __pyx_t_4 = PyTuple_New(2); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 103, __pyx_L41_error)
+                                                  __pyx_t_4 = PyTuple_New(2); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 102, __pyx_L41_error)
                                                   __Pyx_GOTREF(__pyx_t_4);
-                                                  __Pyx_GIVEREF(__pyx_t_2);
-                                                  PyTuple_SET_ITEM(__pyx_t_4, 0, __pyx_t_2);
+                                                  __Pyx_GIVEREF(__pyx_t_6);
+                                                  PyTuple_SET_ITEM(__pyx_t_4, 0, __pyx_t_6);
                                                   __Pyx_GIVEREF(__pyx_t_1);
                                                   PyTuple_SET_ITEM(__pyx_t_4, 1, __pyx_t_1);
-                                                  __pyx_t_2 = 0;
+                                                  __pyx_t_6 = 0;
                                                   __pyx_t_1 = 0;
-                                                  if (PyDict_SetItem(__pyx_t_29, __pyx_n_s_shape, __pyx_t_4) < 0) __PYX_ERR(0, 103, __pyx_L41_error)
+                                                  if (PyDict_SetItem(__pyx_t_29, __pyx_n_s_shape, __pyx_t_4) < 0) __PYX_ERR(0, 102, __pyx_L41_error)
                                                   __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-                                                  __pyx_t_4 = __Pyx_GetModuleGlobalName(__pyx_n_s_np); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 103, __pyx_L41_error)
+                                                  __pyx_t_4 = __Pyx_GetModuleGlobalName(__pyx_n_s_np); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 102, __pyx_L41_error)
                                                   __Pyx_GOTREF(__pyx_t_4);
-                                                  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_t_4, __pyx_n_s_float32); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 103, __pyx_L41_error)
+                                                  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_t_4, __pyx_n_s_float32); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 102, __pyx_L41_error)
                                                   __Pyx_GOTREF(__pyx_t_1);
                                                   __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-                                                  if (PyDict_SetItem(__pyx_t_29, __pyx_n_s_dtype, __pyx_t_1) < 0) __PYX_ERR(0, 103, __pyx_L41_error)
+                                                  if (PyDict_SetItem(__pyx_t_29, __pyx_n_s_dtype, __pyx_t_1) < 0) __PYX_ERR(0, 102, __pyx_L41_error)
                                                   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-                                                  __pyx_t_1 = __Pyx_PyObject_Call(__pyx_t_5, __pyx_empty_tuple, __pyx_t_29); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 103, __pyx_L41_error)
+                                                  __pyx_t_1 = __Pyx_PyObject_Call(__pyx_t_5, __pyx_empty_tuple, __pyx_t_29); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 102, __pyx_L41_error)
                                                   __Pyx_GOTREF(__pyx_t_1);
                                                   __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
                                                   __Pyx_DECREF(__pyx_t_29); __pyx_t_29 = 0;
-                                                  __pyx_t_29 = __Pyx_decode_cpp_string(__pyx_v_lsvid, 0, PY_SSIZE_T_MAX, NULL, NULL, PyUnicode_DecodeUTF8); if (unlikely(!__pyx_t_29)) __PYX_ERR(0, 103, __pyx_L41_error)
+                                                  __pyx_t_29 = __Pyx_decode_cpp_string(__pyx_v_lsvid, 0, PY_SSIZE_T_MAX, NULL, NULL, PyUnicode_DecodeUTF8); if (unlikely(!__pyx_t_29)) __PYX_ERR(0, 102, __pyx_L41_error)
                                                   __Pyx_GOTREF(__pyx_t_29);
-                                                  if (unlikely(PyDict_SetItem(__pyx_v_cov_dict, __pyx_t_29, __pyx_t_1) < 0)) __PYX_ERR(0, 103, __pyx_L41_error)
+                                                  if (unlikely(PyDict_SetItem(__pyx_v_cov_dict, __pyx_t_29, __pyx_t_1) < 0)) __PYX_ERR(0, 102, __pyx_L41_error)
                                                   __Pyx_DECREF(__pyx_t_29); __pyx_t_29 = 0;
                                                   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
-                                                  /* "majiq/src/internals/seq_parse.pyx":104
+                                                  /* "majiq/src/internals/seq_parse.pyx":103
  *                 with gil:
  *                     cov_dict[lsvid.decode('utf-8')] = np.zeros(shape=(njunc, msamples), dtype=np.float32)
  *                     type_list.append((lsvid.decode('utf-8'), lsv_ptr.get_type()))             # <<<<<<<<<<<<<<
  *                 junc_idx = 0
  *                 for junc in lsv_ptr.get_junctions():
  */
-                                                  __pyx_t_1 = __Pyx_decode_cpp_string(__pyx_v_lsvid, 0, PY_SSIZE_T_MAX, NULL, NULL, PyUnicode_DecodeUTF8); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 104, __pyx_L41_error)
+                                                  __pyx_t_1 = __Pyx_decode_cpp_string(__pyx_v_lsvid, 0, PY_SSIZE_T_MAX, NULL, NULL, PyUnicode_DecodeUTF8); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 103, __pyx_L41_error)
                                                   __Pyx_GOTREF(__pyx_t_1);
-                                                  __pyx_t_29 = __pyx_convert_PyBytes_string_to_py_std__in_string(__pyx_v_lsv_ptr->get_type()); if (unlikely(!__pyx_t_29)) __PYX_ERR(0, 104, __pyx_L41_error)
+                                                  __pyx_t_29 = __pyx_convert_PyBytes_string_to_py_std__in_string(__pyx_v_lsv_ptr->get_type()); if (unlikely(!__pyx_t_29)) __PYX_ERR(0, 103, __pyx_L41_error)
                                                   __Pyx_GOTREF(__pyx_t_29);
-                                                  __pyx_t_5 = PyTuple_New(2); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 104, __pyx_L41_error)
+                                                  __pyx_t_5 = PyTuple_New(2); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 103, __pyx_L41_error)
                                                   __Pyx_GOTREF(__pyx_t_5);
                                                   __Pyx_GIVEREF(__pyx_t_1);
                                                   PyTuple_SET_ITEM(__pyx_t_5, 0, __pyx_t_1);
@@ -4239,11 +4215,11 @@ static int __pyx_f_5majiq_3src_9internals_9seq_parse__output_lsv_file_single(std
                                                   PyTuple_SET_ITEM(__pyx_t_5, 1, __pyx_t_29);
                                                   __pyx_t_1 = 0;
                                                   __pyx_t_29 = 0;
-                                                  __pyx_t_34 = __Pyx_PyList_Append(__pyx_v_type_list, __pyx_t_5); if (unlikely(__pyx_t_34 == ((int)-1))) __PYX_ERR(0, 104, __pyx_L41_error)
+                                                  __pyx_t_34 = __Pyx_PyList_Append(__pyx_v_type_list, __pyx_t_5); if (unlikely(__pyx_t_34 == ((int)-1))) __PYX_ERR(0, 103, __pyx_L41_error)
                                                   __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
                                                 }
 
-                                                /* "majiq/src/internals/seq_parse.pyx":102
+                                                /* "majiq/src/internals/seq_parse.pyx":101
  *                 njunc = lsv_ptr.get_num_variations()
  *                 lsvid = lsv_ptr.get_id()
  *                 with gil:             # <<<<<<<<<<<<<<
@@ -4267,7 +4243,7 @@ static int __pyx_f_5majiq_3src_9internals_9seq_parse__output_lsv_file_single(std
                                                 }
                                             }
 
-                                            /* "majiq/src/internals/seq_parse.pyx":105
+                                            /* "majiq/src/internals/seq_parse.pyx":104
  *                     cov_dict[lsvid.decode('utf-8')] = np.zeros(shape=(njunc, msamples), dtype=np.float32)
  *                     type_list.append((lsvid.decode('utf-8'), lsv_ptr.get_type()))
  *                 junc_idx = 0             # <<<<<<<<<<<<<<
@@ -4276,7 +4252,7 @@ static int __pyx_f_5majiq_3src_9internals_9seq_parse__output_lsv_file_single(std
  */
                                             __pyx_v_junc_idx = 0;
 
-                                            /* "majiq/src/internals/seq_parse.pyx":106
+                                            /* "majiq/src/internals/seq_parse.pyx":105
  *                     type_list.append((lsvid.decode('utf-8'), lsv_ptr.get_type()))
  *                 junc_idx = 0
  *                 for junc in lsv_ptr.get_junctions():             # <<<<<<<<<<<<<<
@@ -4291,7 +4267,7 @@ static int __pyx_f_5majiq_3src_9internals_9seq_parse__output_lsv_file_single(std
                                               ++__pyx_t_35;
                                               __pyx_v_junc = __pyx_t_37;
 
-                                              /* "majiq/src/internals/seq_parse.pyx":107
+                                              /* "majiq/src/internals/seq_parse.pyx":106
  *                 junc_idx = 0
  *                 for junc in lsv_ptr.get_junctions():
  *                     key = junc.get_key(lsv_ptr.get_gene())             # <<<<<<<<<<<<<<
@@ -4300,7 +4276,7 @@ static int __pyx_f_5majiq_3src_9internals_9seq_parse__output_lsv_file_single(std
  */
                                               __pyx_v_key = __pyx_v_junc->get_key(__pyx_v_lsv_ptr->get_gene());
 
-                                              /* "majiq/src/internals/seq_parse.pyx":108
+                                              /* "majiq/src/internals/seq_parse.pyx":107
  *                 for junc in lsv_ptr.get_junctions():
  *                     key = junc.get_key(lsv_ptr.get_gene())
  *                     if tlb_juncs.count(key) > 0 :             # <<<<<<<<<<<<<<
@@ -4310,7 +4286,7 @@ static int __pyx_f_5majiq_3src_9internals_9seq_parse__output_lsv_file_single(std
                                               __pyx_t_22 = ((__pyx_v_tlb_juncs.count(__pyx_v_key) > 0) != 0);
                                               if (__pyx_t_22) {
 
-                                                /* "majiq/src/internals/seq_parse.pyx":109
+                                                /* "majiq/src/internals/seq_parse.pyx":108
  *                     key = junc.get_key(lsv_ptr.get_gene())
  *                     if tlb_juncs.count(key) > 0 :
  *                         jobj_ptr = tlb_juncs[key]             # <<<<<<<<<<<<<<
@@ -4319,7 +4295,7 @@ static int __pyx_f_5majiq_3src_9internals_9seq_parse__output_lsv_file_single(std
  */
                                                 __pyx_v_jobj_ptr = (__pyx_v_tlb_juncs[__pyx_v_key]);
 
-                                                /* "majiq/src/internals/seq_parse.pyx":110
+                                                /* "majiq/src/internals/seq_parse.pyx":109
  *                     if tlb_juncs.count(key) > 0 :
  *                         jobj_ptr = tlb_juncs[key]
  *                         with gil:             # <<<<<<<<<<<<<<
@@ -4332,7 +4308,7 @@ static int __pyx_f_5majiq_3src_9internals_9seq_parse__output_lsv_file_single(std
                                                     #endif
                                                     /*try:*/ {
 
-                                                      /* "majiq/src/internals/seq_parse.pyx":111
+                                                      /* "majiq/src/internals/seq_parse.pyx":110
  *                         jobj_ptr = tlb_juncs[key]
  *                         with gil:
  *                             cov_dict[lsvid.decode('utf-8')][junc_idx] = boots[tlb_juncs[key].index]             # <<<<<<<<<<<<<<
@@ -4340,72 +4316,72 @@ static int __pyx_f_5majiq_3src_9internals_9seq_parse__output_lsv_file_single(std
  *                                               jobj_ptr.sreads, jobj_ptr.npos))
  */
                                                       __pyx_t_24 = (__pyx_v_tlb_juncs[__pyx_v_key]).index;
-                                                      __pyx_t_5 = __Pyx_GetItemInt(((PyObject *)__pyx_v_boots), __pyx_t_24, unsigned int, 0, __Pyx_PyInt_From_unsigned_int, 0, 0, 1); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 111, __pyx_L49_error)
+                                                      __pyx_t_5 = __Pyx_GetItemInt(((PyObject *)__pyx_v_boots), __pyx_t_24, unsigned int, 0, __Pyx_PyInt_From_unsigned_int, 0, 0, 1); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 110, __pyx_L49_error)
                                                       __Pyx_GOTREF(__pyx_t_5);
-                                                      __pyx_t_29 = __Pyx_decode_cpp_string(__pyx_v_lsvid, 0, PY_SSIZE_T_MAX, NULL, NULL, PyUnicode_DecodeUTF8); if (unlikely(!__pyx_t_29)) __PYX_ERR(0, 111, __pyx_L49_error)
+                                                      __pyx_t_29 = __Pyx_decode_cpp_string(__pyx_v_lsvid, 0, PY_SSIZE_T_MAX, NULL, NULL, PyUnicode_DecodeUTF8); if (unlikely(!__pyx_t_29)) __PYX_ERR(0, 110, __pyx_L49_error)
                                                       __Pyx_GOTREF(__pyx_t_29);
-                                                      __pyx_t_1 = __Pyx_PyDict_GetItem(__pyx_v_cov_dict, __pyx_t_29); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 111, __pyx_L49_error)
+                                                      __pyx_t_1 = __Pyx_PyDict_GetItem(__pyx_v_cov_dict, __pyx_t_29); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 110, __pyx_L49_error)
                                                       __Pyx_GOTREF(__pyx_t_1);
                                                       __Pyx_DECREF(__pyx_t_29); __pyx_t_29 = 0;
-                                                      if (unlikely(__Pyx_SetItemInt(__pyx_t_1, __pyx_v_junc_idx, __pyx_t_5, int, 1, __Pyx_PyInt_From_int, 0, 1, 1) < 0)) __PYX_ERR(0, 111, __pyx_L49_error)
+                                                      if (unlikely(__Pyx_SetItemInt(__pyx_t_1, __pyx_v_junc_idx, __pyx_t_5, int, 1, __Pyx_PyInt_From_int, 0, 1, 1) < 0)) __PYX_ERR(0, 110, __pyx_L49_error)
                                                       __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
                                                       __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
 
-                                                      /* "majiq/src/internals/seq_parse.pyx":112
+                                                      /* "majiq/src/internals/seq_parse.pyx":111
  *                         with gil:
  *                             cov_dict[lsvid.decode('utf-8')][junc_idx] = boots[tlb_juncs[key].index]
  *                             junc_info.append((lsvid.decode('utf-8'), junc.get_start(), junc.get_end(),             # <<<<<<<<<<<<<<
  *                                               jobj_ptr.sreads, jobj_ptr.npos))
  *                     junc_idx = junc_idx + 1
  */
-                                                      __pyx_t_5 = __Pyx_decode_cpp_string(__pyx_v_lsvid, 0, PY_SSIZE_T_MAX, NULL, NULL, PyUnicode_DecodeUTF8); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 112, __pyx_L49_error)
+                                                      __pyx_t_5 = __Pyx_decode_cpp_string(__pyx_v_lsvid, 0, PY_SSIZE_T_MAX, NULL, NULL, PyUnicode_DecodeUTF8); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 111, __pyx_L49_error)
                                                       __Pyx_GOTREF(__pyx_t_5);
-                                                      __pyx_t_1 = __Pyx_PyInt_From_int(__pyx_v_junc->get_start()); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 112, __pyx_L49_error)
+                                                      __pyx_t_1 = __Pyx_PyInt_From_int(__pyx_v_junc->get_start()); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 111, __pyx_L49_error)
                                                       __Pyx_GOTREF(__pyx_t_1);
-                                                      __pyx_t_29 = __Pyx_PyInt_From_int(__pyx_v_junc->get_end()); if (unlikely(!__pyx_t_29)) __PYX_ERR(0, 112, __pyx_L49_error)
+                                                      __pyx_t_29 = __Pyx_PyInt_From_int(__pyx_v_junc->get_end()); if (unlikely(!__pyx_t_29)) __PYX_ERR(0, 111, __pyx_L49_error)
                                                       __Pyx_GOTREF(__pyx_t_29);
 
-                                                      /* "majiq/src/internals/seq_parse.pyx":113
+                                                      /* "majiq/src/internals/seq_parse.pyx":112
  *                             cov_dict[lsvid.decode('utf-8')][junc_idx] = boots[tlb_juncs[key].index]
  *                             junc_info.append((lsvid.decode('utf-8'), junc.get_start(), junc.get_end(),
  *                                               jobj_ptr.sreads, jobj_ptr.npos))             # <<<<<<<<<<<<<<
  *                     junc_idx = junc_idx + 1
  * 
  */
-                                                      __pyx_t_4 = __Pyx_PyInt_From_int(__pyx_v_jobj_ptr.sreads); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 113, __pyx_L49_error)
+                                                      __pyx_t_4 = __Pyx_PyInt_From_int(__pyx_v_jobj_ptr.sreads); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 112, __pyx_L49_error)
                                                       __Pyx_GOTREF(__pyx_t_4);
-                                                      __pyx_t_2 = __Pyx_PyInt_From_int(__pyx_v_jobj_ptr.npos); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 113, __pyx_L49_error)
-                                                      __Pyx_GOTREF(__pyx_t_2);
+                                                      __pyx_t_6 = __Pyx_PyInt_From_int(__pyx_v_jobj_ptr.npos); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 112, __pyx_L49_error)
+                                                      __Pyx_GOTREF(__pyx_t_6);
 
-                                                      /* "majiq/src/internals/seq_parse.pyx":112
+                                                      /* "majiq/src/internals/seq_parse.pyx":111
  *                         with gil:
  *                             cov_dict[lsvid.decode('utf-8')][junc_idx] = boots[tlb_juncs[key].index]
  *                             junc_info.append((lsvid.decode('utf-8'), junc.get_start(), junc.get_end(),             # <<<<<<<<<<<<<<
  *                                               jobj_ptr.sreads, jobj_ptr.npos))
  *                     junc_idx = junc_idx + 1
  */
-                                                      __pyx_t_6 = PyTuple_New(5); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 112, __pyx_L49_error)
-                                                      __Pyx_GOTREF(__pyx_t_6);
+                                                      __pyx_t_2 = PyTuple_New(5); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 111, __pyx_L49_error)
+                                                      __Pyx_GOTREF(__pyx_t_2);
                                                       __Pyx_GIVEREF(__pyx_t_5);
-                                                      PyTuple_SET_ITEM(__pyx_t_6, 0, __pyx_t_5);
+                                                      PyTuple_SET_ITEM(__pyx_t_2, 0, __pyx_t_5);
                                                       __Pyx_GIVEREF(__pyx_t_1);
-                                                      PyTuple_SET_ITEM(__pyx_t_6, 1, __pyx_t_1);
+                                                      PyTuple_SET_ITEM(__pyx_t_2, 1, __pyx_t_1);
                                                       __Pyx_GIVEREF(__pyx_t_29);
-                                                      PyTuple_SET_ITEM(__pyx_t_6, 2, __pyx_t_29);
+                                                      PyTuple_SET_ITEM(__pyx_t_2, 2, __pyx_t_29);
                                                       __Pyx_GIVEREF(__pyx_t_4);
-                                                      PyTuple_SET_ITEM(__pyx_t_6, 3, __pyx_t_4);
-                                                      __Pyx_GIVEREF(__pyx_t_2);
-                                                      PyTuple_SET_ITEM(__pyx_t_6, 4, __pyx_t_2);
+                                                      PyTuple_SET_ITEM(__pyx_t_2, 3, __pyx_t_4);
+                                                      __Pyx_GIVEREF(__pyx_t_6);
+                                                      PyTuple_SET_ITEM(__pyx_t_2, 4, __pyx_t_6);
                                                       __pyx_t_5 = 0;
                                                       __pyx_t_1 = 0;
                                                       __pyx_t_29 = 0;
                                                       __pyx_t_4 = 0;
-                                                      __pyx_t_2 = 0;
-                                                      __pyx_t_34 = __Pyx_PyList_Append(__pyx_v_junc_info, __pyx_t_6); if (unlikely(__pyx_t_34 == ((int)-1))) __PYX_ERR(0, 112, __pyx_L49_error)
-                                                      __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
+                                                      __pyx_t_6 = 0;
+                                                      __pyx_t_34 = __Pyx_PyList_Append(__pyx_v_junc_info, __pyx_t_2); if (unlikely(__pyx_t_34 == ((int)-1))) __PYX_ERR(0, 111, __pyx_L49_error)
+                                                      __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
                                                     }
 
-                                                    /* "majiq/src/internals/seq_parse.pyx":110
+                                                    /* "majiq/src/internals/seq_parse.pyx":109
  *                     if tlb_juncs.count(key) > 0 :
  *                         jobj_ptr = tlb_juncs[key]
  *                         with gil:             # <<<<<<<<<<<<<<
@@ -4429,7 +4405,7 @@ static int __pyx_f_5majiq_3src_9internals_9seq_parse__output_lsv_file_single(std
                                                     }
                                                 }
 
-                                                /* "majiq/src/internals/seq_parse.pyx":108
+                                                /* "majiq/src/internals/seq_parse.pyx":107
  *                 for junc in lsv_ptr.get_junctions():
  *                     key = junc.get_key(lsv_ptr.get_gene())
  *                     if tlb_juncs.count(key) > 0 :             # <<<<<<<<<<<<<<
@@ -4438,7 +4414,7 @@ static int __pyx_f_5majiq_3src_9internals_9seq_parse__output_lsv_file_single(std
  */
                                               }
 
-                                              /* "majiq/src/internals/seq_parse.pyx":114
+                                              /* "majiq/src/internals/seq_parse.pyx":113
  *                             junc_info.append((lsvid.decode('utf-8'), junc.get_start(), junc.get_end(),
  *                                               jobj_ptr.sreads, jobj_ptr.npos))
  *                     junc_idx = junc_idx + 1             # <<<<<<<<<<<<<<
@@ -4447,7 +4423,7 @@ static int __pyx_f_5majiq_3src_9internals_9seq_parse__output_lsv_file_single(std
  */
                                               __pyx_v_junc_idx = (__pyx_v_junc_idx + 1);
 
-                                              /* "majiq/src/internals/seq_parse.pyx":106
+                                              /* "majiq/src/internals/seq_parse.pyx":105
  *                     type_list.append((lsvid.decode('utf-8'), lsv_ptr.get_type()))
  *                 junc_idx = 0
  *                 for junc in lsv_ptr.get_junctions():             # <<<<<<<<<<<<<<
@@ -4456,7 +4432,7 @@ static int __pyx_f_5majiq_3src_9internals_9seq_parse__output_lsv_file_single(std
  */
                                             }
 
-                                            /* "majiq/src/internals/seq_parse.pyx":116
+                                            /* "majiq/src/internals/seq_parse.pyx":115
  *                     junc_idx = junc_idx + 1
  * 
  *                 ir_ptr = lsv_ptr.get_intron()             # <<<<<<<<<<<<<<
@@ -4465,7 +4441,7 @@ static int __pyx_f_5majiq_3src_9internals_9seq_parse__output_lsv_file_single(std
  */
                                             __pyx_v_ir_ptr = __pyx_v_lsv_ptr->get_intron();
 
-                                            /* "majiq/src/internals/seq_parse.pyx":117
+                                            /* "majiq/src/internals/seq_parse.pyx":116
  * 
  *                 ir_ptr = lsv_ptr.get_intron()
  *                 if irb and ir_ptr != <Intron * > 0:             # <<<<<<<<<<<<<<
@@ -4483,7 +4459,7 @@ static int __pyx_f_5majiq_3src_9internals_9seq_parse__output_lsv_file_single(std
                                             __pyx_L52_bool_binop_done:;
                                             if (__pyx_t_22) {
 
-                                              /* "majiq/src/internals/seq_parse.pyx":118
+                                              /* "majiq/src/internals/seq_parse.pyx":117
  *                 ir_ptr = lsv_ptr.get_intron()
  *                 if irb and ir_ptr != <Intron * > 0:
  *                     key = ir_ptr.get_key(lsv_ptr.get_gene())             # <<<<<<<<<<<<<<
@@ -4492,7 +4468,7 @@ static int __pyx_f_5majiq_3src_9internals_9seq_parse__output_lsv_file_single(std
  */
                                               __pyx_v_key = __pyx_v_ir_ptr->get_key(__pyx_v_lsv_ptr->get_gene());
 
-                                              /* "majiq/src/internals/seq_parse.pyx":119
+                                              /* "majiq/src/internals/seq_parse.pyx":118
  *                 if irb and ir_ptr != <Intron * > 0:
  *                     key = ir_ptr.get_key(lsv_ptr.get_gene())
  *                     if tlb_ir.count(key) > 0 :             # <<<<<<<<<<<<<<
@@ -4502,7 +4478,7 @@ static int __pyx_f_5majiq_3src_9internals_9seq_parse__output_lsv_file_single(std
                                               __pyx_t_22 = ((__pyx_v_tlb_ir.count(__pyx_v_key) > 0) != 0);
                                               if (__pyx_t_22) {
 
-                                                /* "majiq/src/internals/seq_parse.pyx":120
+                                                /* "majiq/src/internals/seq_parse.pyx":119
  *                     key = ir_ptr.get_key(lsv_ptr.get_gene())
  *                     if tlb_ir.count(key) > 0 :
  *                         jobj_ptr = tlb_ir[key]             # <<<<<<<<<<<<<<
@@ -4511,7 +4487,7 @@ static int __pyx_f_5majiq_3src_9internals_9seq_parse__output_lsv_file_single(std
  */
                                                 __pyx_v_jobj_ptr = (__pyx_v_tlb_ir[__pyx_v_key]);
 
-                                                /* "majiq/src/internals/seq_parse.pyx":121
+                                                /* "majiq/src/internals/seq_parse.pyx":120
  *                     if tlb_ir.count(key) > 0 :
  *                         jobj_ptr = tlb_ir[key]
  *                         with gil:             # <<<<<<<<<<<<<<
@@ -4524,79 +4500,79 @@ static int __pyx_f_5majiq_3src_9internals_9seq_parse__output_lsv_file_single(std
                                                     #endif
                                                     /*try:*/ {
 
-                                                      /* "majiq/src/internals/seq_parse.pyx":122
+                                                      /* "majiq/src/internals/seq_parse.pyx":121
  *                         jobj_ptr = tlb_ir[key]
  *                         with gil:
  *                             cov_dict[lsvid.decode('utf-8')][junc_idx] = boots[jobj_ptr.index]             # <<<<<<<<<<<<<<
  *                             junc_info.append((lsvid.decode('utf-8'), ir_ptr.get_start(), ir_ptr.get_end(),
  *                                               jobj_ptr.sreads, jobj_ptr.npos))
  */
-                                                      __pyx_t_6 = __Pyx_GetItemInt(((PyObject *)__pyx_v_boots), __pyx_v_jobj_ptr.index, unsigned int, 0, __Pyx_PyInt_From_unsigned_int, 0, 0, 1); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 122, __pyx_L58_error)
-                                                      __Pyx_GOTREF(__pyx_t_6);
-                                                      __pyx_t_2 = __Pyx_decode_cpp_string(__pyx_v_lsvid, 0, PY_SSIZE_T_MAX, NULL, NULL, PyUnicode_DecodeUTF8); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 122, __pyx_L58_error)
+                                                      __pyx_t_2 = __Pyx_GetItemInt(((PyObject *)__pyx_v_boots), __pyx_v_jobj_ptr.index, unsigned int, 0, __Pyx_PyInt_From_unsigned_int, 0, 0, 1); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 121, __pyx_L58_error)
                                                       __Pyx_GOTREF(__pyx_t_2);
-                                                      __pyx_t_4 = __Pyx_PyDict_GetItem(__pyx_v_cov_dict, __pyx_t_2); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 122, __pyx_L58_error)
+                                                      __pyx_t_6 = __Pyx_decode_cpp_string(__pyx_v_lsvid, 0, PY_SSIZE_T_MAX, NULL, NULL, PyUnicode_DecodeUTF8); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 121, __pyx_L58_error)
+                                                      __Pyx_GOTREF(__pyx_t_6);
+                                                      __pyx_t_4 = __Pyx_PyDict_GetItem(__pyx_v_cov_dict, __pyx_t_6); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 121, __pyx_L58_error)
                                                       __Pyx_GOTREF(__pyx_t_4);
-                                                      __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-                                                      if (unlikely(__Pyx_SetItemInt(__pyx_t_4, __pyx_v_junc_idx, __pyx_t_6, int, 1, __Pyx_PyInt_From_int, 0, 1, 1) < 0)) __PYX_ERR(0, 122, __pyx_L58_error)
-                                                      __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
                                                       __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
+                                                      if (unlikely(__Pyx_SetItemInt(__pyx_t_4, __pyx_v_junc_idx, __pyx_t_2, int, 1, __Pyx_PyInt_From_int, 0, 1, 1) < 0)) __PYX_ERR(0, 121, __pyx_L58_error)
+                                                      __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
+                                                      __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
 
-                                                      /* "majiq/src/internals/seq_parse.pyx":123
+                                                      /* "majiq/src/internals/seq_parse.pyx":122
  *                         with gil:
  *                             cov_dict[lsvid.decode('utf-8')][junc_idx] = boots[jobj_ptr.index]
  *                             junc_info.append((lsvid.decode('utf-8'), ir_ptr.get_start(), ir_ptr.get_end(),             # <<<<<<<<<<<<<<
  *                                               jobj_ptr.sreads, jobj_ptr.npos))
  *                 #     do the same with ir_ptr
  */
-                                                      __pyx_t_6 = __Pyx_decode_cpp_string(__pyx_v_lsvid, 0, PY_SSIZE_T_MAX, NULL, NULL, PyUnicode_DecodeUTF8); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 123, __pyx_L58_error)
-                                                      __Pyx_GOTREF(__pyx_t_6);
-                                                      __pyx_t_4 = __Pyx_PyInt_From_int(__pyx_v_ir_ptr->get_start()); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 123, __pyx_L58_error)
-                                                      __Pyx_GOTREF(__pyx_t_4);
-                                                      __pyx_t_2 = __Pyx_PyInt_From_int(__pyx_v_ir_ptr->get_end()); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 123, __pyx_L58_error)
+                                                      __pyx_t_2 = __Pyx_decode_cpp_string(__pyx_v_lsvid, 0, PY_SSIZE_T_MAX, NULL, NULL, PyUnicode_DecodeUTF8); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 122, __pyx_L58_error)
                                                       __Pyx_GOTREF(__pyx_t_2);
+                                                      __pyx_t_4 = __Pyx_PyInt_From_int(__pyx_v_ir_ptr->get_start()); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 122, __pyx_L58_error)
+                                                      __Pyx_GOTREF(__pyx_t_4);
+                                                      __pyx_t_6 = __Pyx_PyInt_From_int(__pyx_v_ir_ptr->get_end()); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 122, __pyx_L58_error)
+                                                      __Pyx_GOTREF(__pyx_t_6);
 
-                                                      /* "majiq/src/internals/seq_parse.pyx":124
+                                                      /* "majiq/src/internals/seq_parse.pyx":123
  *                             cov_dict[lsvid.decode('utf-8')][junc_idx] = boots[jobj_ptr.index]
  *                             junc_info.append((lsvid.decode('utf-8'), ir_ptr.get_start(), ir_ptr.get_end(),
  *                                               jobj_ptr.sreads, jobj_ptr.npos))             # <<<<<<<<<<<<<<
  *                 #     do the same with ir_ptr
  * 
  */
-                                                      __pyx_t_29 = __Pyx_PyInt_From_int(__pyx_v_jobj_ptr.sreads); if (unlikely(!__pyx_t_29)) __PYX_ERR(0, 124, __pyx_L58_error)
+                                                      __pyx_t_29 = __Pyx_PyInt_From_int(__pyx_v_jobj_ptr.sreads); if (unlikely(!__pyx_t_29)) __PYX_ERR(0, 123, __pyx_L58_error)
                                                       __Pyx_GOTREF(__pyx_t_29);
-                                                      __pyx_t_1 = __Pyx_PyInt_From_int(__pyx_v_jobj_ptr.npos); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 124, __pyx_L58_error)
+                                                      __pyx_t_1 = __Pyx_PyInt_From_int(__pyx_v_jobj_ptr.npos); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 123, __pyx_L58_error)
                                                       __Pyx_GOTREF(__pyx_t_1);
 
-                                                      /* "majiq/src/internals/seq_parse.pyx":123
+                                                      /* "majiq/src/internals/seq_parse.pyx":122
  *                         with gil:
  *                             cov_dict[lsvid.decode('utf-8')][junc_idx] = boots[jobj_ptr.index]
  *                             junc_info.append((lsvid.decode('utf-8'), ir_ptr.get_start(), ir_ptr.get_end(),             # <<<<<<<<<<<<<<
  *                                               jobj_ptr.sreads, jobj_ptr.npos))
  *                 #     do the same with ir_ptr
  */
-                                                      __pyx_t_5 = PyTuple_New(5); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 123, __pyx_L58_error)
+                                                      __pyx_t_5 = PyTuple_New(5); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 122, __pyx_L58_error)
                                                       __Pyx_GOTREF(__pyx_t_5);
-                                                      __Pyx_GIVEREF(__pyx_t_6);
-                                                      PyTuple_SET_ITEM(__pyx_t_5, 0, __pyx_t_6);
+                                                      __Pyx_GIVEREF(__pyx_t_2);
+                                                      PyTuple_SET_ITEM(__pyx_t_5, 0, __pyx_t_2);
                                                       __Pyx_GIVEREF(__pyx_t_4);
                                                       PyTuple_SET_ITEM(__pyx_t_5, 1, __pyx_t_4);
-                                                      __Pyx_GIVEREF(__pyx_t_2);
-                                                      PyTuple_SET_ITEM(__pyx_t_5, 2, __pyx_t_2);
+                                                      __Pyx_GIVEREF(__pyx_t_6);
+                                                      PyTuple_SET_ITEM(__pyx_t_5, 2, __pyx_t_6);
                                                       __Pyx_GIVEREF(__pyx_t_29);
                                                       PyTuple_SET_ITEM(__pyx_t_5, 3, __pyx_t_29);
                                                       __Pyx_GIVEREF(__pyx_t_1);
                                                       PyTuple_SET_ITEM(__pyx_t_5, 4, __pyx_t_1);
-                                                      __pyx_t_6 = 0;
-                                                      __pyx_t_4 = 0;
                                                       __pyx_t_2 = 0;
+                                                      __pyx_t_4 = 0;
+                                                      __pyx_t_6 = 0;
                                                       __pyx_t_29 = 0;
                                                       __pyx_t_1 = 0;
-                                                      __pyx_t_34 = __Pyx_PyList_Append(__pyx_v_junc_info, __pyx_t_5); if (unlikely(__pyx_t_34 == ((int)-1))) __PYX_ERR(0, 123, __pyx_L58_error)
+                                                      __pyx_t_34 = __Pyx_PyList_Append(__pyx_v_junc_info, __pyx_t_5); if (unlikely(__pyx_t_34 == ((int)-1))) __PYX_ERR(0, 122, __pyx_L58_error)
                                                       __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
                                                     }
 
-                                                    /* "majiq/src/internals/seq_parse.pyx":121
+                                                    /* "majiq/src/internals/seq_parse.pyx":120
  *                     if tlb_ir.count(key) > 0 :
  *                         jobj_ptr = tlb_ir[key]
  *                         with gil:             # <<<<<<<<<<<<<<
@@ -4620,7 +4596,7 @@ static int __pyx_f_5majiq_3src_9internals_9seq_parse__output_lsv_file_single(std
                                                     }
                                                 }
 
-                                                /* "majiq/src/internals/seq_parse.pyx":119
+                                                /* "majiq/src/internals/seq_parse.pyx":118
  *                 if irb and ir_ptr != <Intron * > 0:
  *                     key = ir_ptr.get_key(lsv_ptr.get_gene())
  *                     if tlb_ir.count(key) > 0 :             # <<<<<<<<<<<<<<
@@ -4629,7 +4605,7 @@ static int __pyx_f_5majiq_3src_9internals_9seq_parse__output_lsv_file_single(std
  */
                                               }
 
-                                              /* "majiq/src/internals/seq_parse.pyx":117
+                                              /* "majiq/src/internals/seq_parse.pyx":116
  * 
  *                 ir_ptr = lsv_ptr.get_intron()
  *                 if irb and ir_ptr != <Intron * > 0:             # <<<<<<<<<<<<<<
@@ -4746,7 +4722,7 @@ static int __pyx_f_5majiq_3src_9internals_9seq_parse__output_lsv_file_single(std
                         #endif
                       }
 
-                      /* "majiq/src/internals/seq_parse.pyx":98
+                      /* "majiq/src/internals/seq_parse.pyx":97
  *             del junc_ids
  * 
  *             for j in prange(nlsv, nogil=True, num_threads=nthreads):             # <<<<<<<<<<<<<<
@@ -4772,7 +4748,7 @@ static int __pyx_f_5majiq_3src_9internals_9seq_parse__output_lsv_file_single(std
                       }
                   }
 
-                  /* "majiq/src/internals/seq_parse.pyx":127
+                  /* "majiq/src/internals/seq_parse.pyx":126
  *                 #     do the same with ir_ptr
  * 
  *             majiq_io.dump_lsv_coverage(out_file, cov_dict, type_list, junc_info, experiment_name)             # <<<<<<<<<<<<<<
@@ -4781,7 +4757,7 @@ static int __pyx_f_5majiq_3src_9internals_9seq_parse__output_lsv_file_single(std
  */
                   (void)(__pyx_f_5majiq_3src_2io_dump_lsv_coverage(__pyx_v_out_file, __pyx_v_cov_dict, __pyx_v_type_list, __pyx_v_junc_info, __pyx_v_experiment_name));
 
-                  /* "majiq/src/internals/seq_parse.pyx":128
+                  /* "majiq/src/internals/seq_parse.pyx":127
  * 
  *             majiq_io.dump_lsv_coverage(out_file, cov_dict, type_list, junc_info, experiment_name)
  *             tlb_juncs.clear()             # <<<<<<<<<<<<<<
@@ -4790,7 +4766,7 @@ static int __pyx_f_5majiq_3src_9internals_9seq_parse__output_lsv_file_single(std
  */
                   __pyx_v_tlb_juncs.clear();
 
-                  /* "majiq/src/internals/seq_parse.pyx":129
+                  /* "majiq/src/internals/seq_parse.pyx":128
  *             majiq_io.dump_lsv_coverage(out_file, cov_dict, type_list, junc_info, experiment_name)
  *             tlb_juncs.clear()
  *             tlb_ir.clear()             # <<<<<<<<<<<<<<
@@ -4814,9 +4790,9 @@ static int __pyx_f_5majiq_3src_9internals_9seq_parse__output_lsv_file_single(std
                 __pyx_L17_error:;
                 __Pyx_XDECREF(__pyx_t_3); __pyx_t_3 = 0;
                 __Pyx_XDECREF(__pyx_t_30); __pyx_t_30 = 0;
-                __Pyx_XDECREF(__pyx_t_6); __pyx_t_6 = 0;
-                __Pyx_XDECREF(__pyx_t_4); __pyx_t_4 = 0;
                 __Pyx_XDECREF(__pyx_t_2); __pyx_t_2 = 0;
+                __Pyx_XDECREF(__pyx_t_4); __pyx_t_4 = 0;
+                __Pyx_XDECREF(__pyx_t_6); __pyx_t_6 = 0;
                 __Pyx_XDECREF(__pyx_t_29); __pyx_t_29 = 0;
                 __Pyx_XDECREF(__pyx_t_1); __pyx_t_1 = 0;
                 __Pyx_XDECREF(__pyx_t_5); __pyx_t_5 = 0;
@@ -4826,11 +4802,11 @@ static int __pyx_f_5majiq_3src_9internals_9seq_parse__output_lsv_file_single(std
                   __Pyx_GOTREF(__pyx_t_5);
                   __Pyx_GOTREF(__pyx_t_1);
                   __Pyx_GOTREF(__pyx_t_29);
-                  __pyx_t_2 = PyTuple_Pack(3, __pyx_t_5, __pyx_t_1, __pyx_t_29); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 63, __pyx_L19_except_error)
-                  __Pyx_GOTREF(__pyx_t_2);
-                  __pyx_t_19 = __Pyx_PyObject_Call(__pyx_t_11, __pyx_t_2, NULL);
+                  __pyx_t_6 = PyTuple_Pack(3, __pyx_t_5, __pyx_t_1, __pyx_t_29); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 63, __pyx_L19_except_error)
+                  __Pyx_GOTREF(__pyx_t_6);
+                  __pyx_t_19 = __Pyx_PyObject_Call(__pyx_t_11, __pyx_t_6, NULL);
                   __Pyx_DECREF(__pyx_t_11); __pyx_t_11 = 0;
-                  __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
+                  __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
                   if (unlikely(!__pyx_t_19)) __PYX_ERR(0, 63, __pyx_L19_except_error)
                   __Pyx_GOTREF(__pyx_t_19);
                   __pyx_t_22 = __Pyx_PyObject_IsTrue(__pyx_t_19);
@@ -4899,9 +4875,9 @@ static int __pyx_f_5majiq_3src_9internals_9seq_parse__output_lsv_file_single(std
         __pyx_L7_error:;
         __Pyx_XDECREF(__pyx_t_3); __pyx_t_3 = 0;
         __Pyx_XDECREF(__pyx_t_30); __pyx_t_30 = 0;
-        __Pyx_XDECREF(__pyx_t_6); __pyx_t_6 = 0;
-        __Pyx_XDECREF(__pyx_t_4); __pyx_t_4 = 0;
         __Pyx_XDECREF(__pyx_t_2); __pyx_t_2 = 0;
+        __Pyx_XDECREF(__pyx_t_4); __pyx_t_4 = 0;
+        __Pyx_XDECREF(__pyx_t_6); __pyx_t_6 = 0;
         __Pyx_XDECREF(__pyx_t_5); __pyx_t_5 = 0;
         __Pyx_XDECREF(__pyx_t_1); __pyx_t_1 = 0;
         __Pyx_XDECREF(__pyx_t_29); __pyx_t_29 = 0;
@@ -4911,11 +4887,11 @@ static int __pyx_f_5majiq_3src_9internals_9seq_parse__output_lsv_file_single(std
           __Pyx_GOTREF(__pyx_t_29);
           __Pyx_GOTREF(__pyx_t_1);
           __Pyx_GOTREF(__pyx_t_5);
-          __pyx_t_2 = PyTuple_Pack(3, __pyx_t_29, __pyx_t_1, __pyx_t_5); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 62, __pyx_L9_except_error)
-          __Pyx_GOTREF(__pyx_t_2);
-          __pyx_t_11 = __Pyx_PyObject_Call(__pyx_t_7, __pyx_t_2, NULL);
+          __pyx_t_6 = PyTuple_Pack(3, __pyx_t_29, __pyx_t_1, __pyx_t_5); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 62, __pyx_L9_except_error)
+          __Pyx_GOTREF(__pyx_t_6);
+          __pyx_t_11 = __Pyx_PyObject_Call(__pyx_t_7, __pyx_t_6, NULL);
           __Pyx_DECREF(__pyx_t_7); __pyx_t_7 = 0;
-          __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
+          __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
           if (unlikely(!__pyx_t_11)) __PYX_ERR(0, 62, __pyx_L9_except_error)
           __Pyx_GOTREF(__pyx_t_11);
           __pyx_t_38 = __Pyx_PyObject_IsTrue(__pyx_t_11);
@@ -4969,14 +4945,14 @@ static int __pyx_f_5majiq_3src_9internals_9seq_parse__output_lsv_file_single(std
     __pyx_L69:;
   }
 
-  /* "majiq/src/internals/seq_parse.pyx":131
+  /* "majiq/src/internals/seq_parse.pyx":130
  *             tlb_ir.clear()
  * 
  *     return len(type_list)             # <<<<<<<<<<<<<<
  * 
  * 
  */
-  __pyx_t_39 = PyList_GET_SIZE(__pyx_v_type_list); if (unlikely(__pyx_t_39 == ((Py_ssize_t)-1))) __PYX_ERR(0, 131, __pyx_L1_error)
+  __pyx_t_39 = PyList_GET_SIZE(__pyx_v_type_list); if (unlikely(__pyx_t_39 == ((Py_ssize_t)-1))) __PYX_ERR(0, 130, __pyx_L1_error)
   __pyx_r = __pyx_t_39;
   goto __pyx_L0;
 
@@ -5025,7 +5001,7 @@ static int __pyx_f_5majiq_3src_9internals_9seq_parse__output_lsv_file_single(std
 }
 static PyObject *__pyx_gb_5majiq_3src_9internals_9seq_parse_15_find_junctions_2generator(__pyx_CoroutineObject *__pyx_generator, CYTHON_UNUSED PyThreadState *__pyx_tstate, PyObject *__pyx_sent_value); /* proto */
 
-/* "majiq/src/internals/seq_parse.pyx":230
+/* "majiq/src/internals/seq_parse.pyx":229
  *                 # print(file_list[j][0], j, last_it_grp, (j==last_it_grp), it.second, it.first)
  *                 tmp_str = it.first.decode('utf-8').split(':')[2]
  *                 start, end = (int(xx) for xx in tmp_str.split('-'))             # <<<<<<<<<<<<<<
@@ -5042,7 +5018,7 @@ static PyObject *__pyx_pf_5majiq_3src_9internals_9seq_parse_15_find_junctions_ge
   if (unlikely(!__pyx_cur_scope)) {
     __pyx_cur_scope = ((struct __pyx_obj_5majiq_3src_9internals_9seq_parse___pyx_scope_struct_1_genexpr *)Py_None);
     __Pyx_INCREF(Py_None);
-    __PYX_ERR(0, 230, __pyx_L1_error)
+    __PYX_ERR(0, 229, __pyx_L1_error)
   } else {
     __Pyx_GOTREF(__pyx_cur_scope);
   }
@@ -5050,7 +5026,7 @@ static PyObject *__pyx_pf_5majiq_3src_9internals_9seq_parse_15_find_junctions_ge
   __Pyx_INCREF(((PyObject *)__pyx_cur_scope->__pyx_outer_scope));
   __Pyx_GIVEREF(__pyx_cur_scope->__pyx_outer_scope);
   {
-    __pyx_CoroutineObject *gen = __Pyx_Generator_New((__pyx_coroutine_body_t) __pyx_gb_5majiq_3src_9internals_9seq_parse_15_find_junctions_2generator, NULL, (PyObject *) __pyx_cur_scope, __pyx_n_s_genexpr, __pyx_n_s_find_junctions_locals_genexpr, __pyx_n_s_majiq_src_internals_seq_parse); if (unlikely(!gen)) __PYX_ERR(0, 230, __pyx_L1_error)
+    __pyx_CoroutineObject *gen = __Pyx_Generator_New((__pyx_coroutine_body_t) __pyx_gb_5majiq_3src_9internals_9seq_parse_15_find_junctions_2generator, NULL, (PyObject *) __pyx_cur_scope, __pyx_n_s_genexpr, __pyx_n_s_find_junctions_locals_genexpr, __pyx_n_s_majiq_src_internals_seq_parse); if (unlikely(!gen)) __PYX_ERR(0, 229, __pyx_L1_error)
     __Pyx_DECREF(__pyx_cur_scope);
     __Pyx_RefNannyFinishContext();
     return (PyObject *) gen;
@@ -5084,17 +5060,17 @@ static PyObject *__pyx_gb_5majiq_3src_9internals_9seq_parse_15_find_junctions_2g
     return NULL;
   }
   __pyx_L3_first_run:;
-  if (unlikely(!__pyx_sent_value)) __PYX_ERR(0, 230, __pyx_L1_error)
-  if (unlikely(!__pyx_cur_scope->__pyx_outer_scope->__pyx_v_tmp_str)) { __Pyx_RaiseClosureNameError("tmp_str"); __PYX_ERR(0, 230, __pyx_L1_error) }
-  __pyx_t_1 = __Pyx_CallUnboundCMethod1(&__pyx_umethod_PyString_Type_split, __pyx_cur_scope->__pyx_outer_scope->__pyx_v_tmp_str, __pyx_kp_s__7); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 230, __pyx_L1_error)
+  if (unlikely(!__pyx_sent_value)) __PYX_ERR(0, 229, __pyx_L1_error)
+  if (unlikely(!__pyx_cur_scope->__pyx_outer_scope->__pyx_v_tmp_str)) { __Pyx_RaiseClosureNameError("tmp_str"); __PYX_ERR(0, 229, __pyx_L1_error) }
+  __pyx_t_1 = __Pyx_CallUnboundCMethod1(&__pyx_umethod_PyString_Type_split, __pyx_cur_scope->__pyx_outer_scope->__pyx_v_tmp_str, __pyx_kp_s__7); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 229, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   if (likely(PyList_CheckExact(__pyx_t_1)) || PyTuple_CheckExact(__pyx_t_1)) {
     __pyx_t_2 = __pyx_t_1; __Pyx_INCREF(__pyx_t_2); __pyx_t_3 = 0;
     __pyx_t_4 = NULL;
   } else {
-    __pyx_t_3 = -1; __pyx_t_2 = PyObject_GetIter(__pyx_t_1); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 230, __pyx_L1_error)
+    __pyx_t_3 = -1; __pyx_t_2 = PyObject_GetIter(__pyx_t_1); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 229, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_2);
-    __pyx_t_4 = Py_TYPE(__pyx_t_2)->tp_iternext; if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 230, __pyx_L1_error)
+    __pyx_t_4 = Py_TYPE(__pyx_t_2)->tp_iternext; if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 229, __pyx_L1_error)
   }
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   for (;;) {
@@ -5102,17 +5078,17 @@ static PyObject *__pyx_gb_5majiq_3src_9internals_9seq_parse_15_find_junctions_2g
       if (likely(PyList_CheckExact(__pyx_t_2))) {
         if (__pyx_t_3 >= PyList_GET_SIZE(__pyx_t_2)) break;
         #if CYTHON_ASSUME_SAFE_MACROS && !CYTHON_AVOID_BORROWED_REFS
-        __pyx_t_1 = PyList_GET_ITEM(__pyx_t_2, __pyx_t_3); __Pyx_INCREF(__pyx_t_1); __pyx_t_3++; if (unlikely(0 < 0)) __PYX_ERR(0, 230, __pyx_L1_error)
+        __pyx_t_1 = PyList_GET_ITEM(__pyx_t_2, __pyx_t_3); __Pyx_INCREF(__pyx_t_1); __pyx_t_3++; if (unlikely(0 < 0)) __PYX_ERR(0, 229, __pyx_L1_error)
         #else
-        __pyx_t_1 = PySequence_ITEM(__pyx_t_2, __pyx_t_3); __pyx_t_3++; if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 230, __pyx_L1_error)
+        __pyx_t_1 = PySequence_ITEM(__pyx_t_2, __pyx_t_3); __pyx_t_3++; if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 229, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_1);
         #endif
       } else {
         if (__pyx_t_3 >= PyTuple_GET_SIZE(__pyx_t_2)) break;
         #if CYTHON_ASSUME_SAFE_MACROS && !CYTHON_AVOID_BORROWED_REFS
-        __pyx_t_1 = PyTuple_GET_ITEM(__pyx_t_2, __pyx_t_3); __Pyx_INCREF(__pyx_t_1); __pyx_t_3++; if (unlikely(0 < 0)) __PYX_ERR(0, 230, __pyx_L1_error)
+        __pyx_t_1 = PyTuple_GET_ITEM(__pyx_t_2, __pyx_t_3); __Pyx_INCREF(__pyx_t_1); __pyx_t_3++; if (unlikely(0 < 0)) __PYX_ERR(0, 229, __pyx_L1_error)
         #else
-        __pyx_t_1 = PySequence_ITEM(__pyx_t_2, __pyx_t_3); __pyx_t_3++; if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 230, __pyx_L1_error)
+        __pyx_t_1 = PySequence_ITEM(__pyx_t_2, __pyx_t_3); __pyx_t_3++; if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 229, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_1);
         #endif
       }
@@ -5122,7 +5098,7 @@ static PyObject *__pyx_gb_5majiq_3src_9internals_9seq_parse_15_find_junctions_2g
         PyObject* exc_type = PyErr_Occurred();
         if (exc_type) {
           if (likely(__Pyx_PyErr_GivenExceptionMatches(exc_type, PyExc_StopIteration))) PyErr_Clear();
-          else __PYX_ERR(0, 230, __pyx_L1_error)
+          else __PYX_ERR(0, 229, __pyx_L1_error)
         }
         break;
       }
@@ -5132,7 +5108,7 @@ static PyObject *__pyx_gb_5majiq_3src_9internals_9seq_parse_15_find_junctions_2g
     __Pyx_XDECREF_SET(__pyx_cur_scope->__pyx_v_xx, __pyx_t_1);
     __Pyx_GIVEREF(__pyx_t_1);
     __pyx_t_1 = 0;
-    __pyx_t_1 = __Pyx_PyNumber_Int(__pyx_cur_scope->__pyx_v_xx); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 230, __pyx_L1_error)
+    __pyx_t_1 = __Pyx_PyNumber_Int(__pyx_cur_scope->__pyx_v_xx); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 229, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_1);
     __pyx_r = __pyx_t_1;
     __pyx_t_1 = 0;
@@ -5152,7 +5128,7 @@ static PyObject *__pyx_gb_5majiq_3src_9internals_9seq_parse_15_find_junctions_2g
     __Pyx_XGOTREF(__pyx_t_2);
     __pyx_t_3 = __pyx_cur_scope->__pyx_t_1;
     __pyx_t_4 = __pyx_cur_scope->__pyx_t_2;
-    if (unlikely(!__pyx_sent_value)) __PYX_ERR(0, 230, __pyx_L1_error)
+    if (unlikely(!__pyx_sent_value)) __PYX_ERR(0, 229, __pyx_L1_error)
   }
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
   CYTHON_MAYBE_UNUSED_VAR(__pyx_cur_scope);
@@ -5173,7 +5149,7 @@ static PyObject *__pyx_gb_5majiq_3src_9internals_9seq_parse_15_find_junctions_2g
   return __pyx_r;
 }
 
-/* "majiq/src/internals/seq_parse.pyx":134
+/* "majiq/src/internals/seq_parse.pyx":133
  * 
  * 
  * cdef _find_junctions(list file_list, vector[Gene*] gene_vec,  object conf, object logger):             # <<<<<<<<<<<<<<
@@ -5262,7 +5238,7 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse__find_junctions(PyObj
   if (unlikely(!__pyx_cur_scope)) {
     __pyx_cur_scope = ((struct __pyx_obj_5majiq_3src_9internals_9seq_parse___pyx_scope_struct____pyx_f_5majiq_3src_9internals_9seq_parse__find_junctions *)Py_None);
     __Pyx_INCREF(Py_None);
-    __PYX_ERR(0, 134, __pyx_L1_error)
+    __PYX_ERR(0, 133, __pyx_L1_error)
   } else {
     __Pyx_GOTREF(__pyx_cur_scope);
   }
@@ -5271,7 +5247,7 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse__find_junctions(PyObj
   __pyx_pybuffernd_boots.data = NULL;
   __pyx_pybuffernd_boots.rcbuffer = &__pyx_pybuffer_boots;
 
-  /* "majiq/src/internals/seq_parse.pyx":136
+  /* "majiq/src/internals/seq_parse.pyx":135
  * cdef _find_junctions(list file_list, vector[Gene*] gene_vec,  object conf, object logger):
  * 
  *     cdef int n = gene_vec.size()             # <<<<<<<<<<<<<<
@@ -5280,20 +5256,20 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse__find_junctions(PyObj
  */
   __pyx_v_n = __pyx_v_gene_vec.size();
 
-  /* "majiq/src/internals/seq_parse.pyx":137
+  /* "majiq/src/internals/seq_parse.pyx":136
  * 
  *     cdef int n = gene_vec.size()
  *     cdef int nthreads = conf.nthreads             # <<<<<<<<<<<<<<
  *     cdef int nsamples = len(file_list)
  *     cdef unsigned int minpos = conf.minpos
  */
-  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_conf, __pyx_n_s_nthreads); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 137, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_conf, __pyx_n_s_nthreads); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 136, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  __pyx_t_2 = __Pyx_PyInt_As_int(__pyx_t_1); if (unlikely((__pyx_t_2 == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 137, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_PyInt_As_int(__pyx_t_1); if (unlikely((__pyx_t_2 == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 136, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __pyx_v_nthreads = __pyx_t_2;
 
-  /* "majiq/src/internals/seq_parse.pyx":138
+  /* "majiq/src/internals/seq_parse.pyx":137
  *     cdef int n = gene_vec.size()
  *     cdef int nthreads = conf.nthreads
  *     cdef int nsamples = len(file_list)             # <<<<<<<<<<<<<<
@@ -5302,155 +5278,155 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse__find_junctions(PyObj
  */
   if (unlikely(__pyx_v_file_list == Py_None)) {
     PyErr_SetString(PyExc_TypeError, "object of type 'NoneType' has no len()");
-    __PYX_ERR(0, 138, __pyx_L1_error)
+    __PYX_ERR(0, 137, __pyx_L1_error)
   }
-  __pyx_t_3 = PyList_GET_SIZE(__pyx_v_file_list); if (unlikely(__pyx_t_3 == ((Py_ssize_t)-1))) __PYX_ERR(0, 138, __pyx_L1_error)
+  __pyx_t_3 = PyList_GET_SIZE(__pyx_v_file_list); if (unlikely(__pyx_t_3 == ((Py_ssize_t)-1))) __PYX_ERR(0, 137, __pyx_L1_error)
   __pyx_v_nsamples = __pyx_t_3;
 
-  /* "majiq/src/internals/seq_parse.pyx":139
+  /* "majiq/src/internals/seq_parse.pyx":138
  *     cdef int nthreads = conf.nthreads
  *     cdef int nsamples = len(file_list)
  *     cdef unsigned int minpos = conf.minpos             # <<<<<<<<<<<<<<
  *     cdef unsigned int minreads = conf.minreads
  *     cdef unsigned int denovo_thresh= conf.min_denovo
  */
-  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_conf, __pyx_n_s_minpos); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 139, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_conf, __pyx_n_s_minpos); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 138, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  __pyx_t_4 = __Pyx_PyInt_As_unsigned_int(__pyx_t_1); if (unlikely((__pyx_t_4 == (unsigned int)-1) && PyErr_Occurred())) __PYX_ERR(0, 139, __pyx_L1_error)
+  __pyx_t_4 = __Pyx_PyInt_As_unsigned_int(__pyx_t_1); if (unlikely((__pyx_t_4 == (unsigned int)-1) && PyErr_Occurred())) __PYX_ERR(0, 138, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __pyx_v_minpos = __pyx_t_4;
 
-  /* "majiq/src/internals/seq_parse.pyx":140
+  /* "majiq/src/internals/seq_parse.pyx":139
  *     cdef int nsamples = len(file_list)
  *     cdef unsigned int minpos = conf.minpos
  *     cdef unsigned int minreads = conf.minreads             # <<<<<<<<<<<<<<
  *     cdef unsigned int denovo_thresh= conf.min_denovo
  *     cdef float min_ir_cov = conf.min_intronic_cov
  */
-  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_conf, __pyx_n_s_minreads); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 140, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_conf, __pyx_n_s_minreads); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 139, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  __pyx_t_4 = __Pyx_PyInt_As_unsigned_int(__pyx_t_1); if (unlikely((__pyx_t_4 == (unsigned int)-1) && PyErr_Occurred())) __PYX_ERR(0, 140, __pyx_L1_error)
+  __pyx_t_4 = __Pyx_PyInt_As_unsigned_int(__pyx_t_1); if (unlikely((__pyx_t_4 == (unsigned int)-1) && PyErr_Occurred())) __PYX_ERR(0, 139, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __pyx_v_minreads = __pyx_t_4;
 
-  /* "majiq/src/internals/seq_parse.pyx":141
+  /* "majiq/src/internals/seq_parse.pyx":140
  *     cdef unsigned int minpos = conf.minpos
  *     cdef unsigned int minreads = conf.minreads
  *     cdef unsigned int denovo_thresh= conf.min_denovo             # <<<<<<<<<<<<<<
  *     cdef float min_ir_cov = conf.min_intronic_cov
  *     cdef bint ir = conf.ir
  */
-  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_conf, __pyx_n_s_min_denovo); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 141, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_conf, __pyx_n_s_min_denovo); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 140, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  __pyx_t_4 = __Pyx_PyInt_As_unsigned_int(__pyx_t_1); if (unlikely((__pyx_t_4 == (unsigned int)-1) && PyErr_Occurred())) __PYX_ERR(0, 141, __pyx_L1_error)
+  __pyx_t_4 = __Pyx_PyInt_As_unsigned_int(__pyx_t_1); if (unlikely((__pyx_t_4 == (unsigned int)-1) && PyErr_Occurred())) __PYX_ERR(0, 140, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __pyx_v_denovo_thresh = __pyx_t_4;
 
-  /* "majiq/src/internals/seq_parse.pyx":142
+  /* "majiq/src/internals/seq_parse.pyx":141
  *     cdef unsigned int minreads = conf.minreads
  *     cdef unsigned int denovo_thresh= conf.min_denovo
  *     cdef float min_ir_cov = conf.min_intronic_cov             # <<<<<<<<<<<<<<
  *     cdef bint ir = conf.ir
  *     cdef int i, j
  */
-  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_conf, __pyx_n_s_min_intronic_cov); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 142, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_conf, __pyx_n_s_min_intronic_cov); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 141, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  __pyx_t_5 = __pyx_PyFloat_AsFloat(__pyx_t_1); if (unlikely((__pyx_t_5 == (float)-1) && PyErr_Occurred())) __PYX_ERR(0, 142, __pyx_L1_error)
+  __pyx_t_5 = __pyx_PyFloat_AsFloat(__pyx_t_1); if (unlikely((__pyx_t_5 == (float)-1) && PyErr_Occurred())) __PYX_ERR(0, 141, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __pyx_v_min_ir_cov = __pyx_t_5;
 
-  /* "majiq/src/internals/seq_parse.pyx":143
+  /* "majiq/src/internals/seq_parse.pyx":142
  *     cdef unsigned int denovo_thresh= conf.min_denovo
  *     cdef float min_ir_cov = conf.min_intronic_cov
  *     cdef bint ir = conf.ir             # <<<<<<<<<<<<<<
  *     cdef int i, j
  *     cdef int k=conf.k, m=conf.m
  */
-  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_conf, __pyx_n_s_ir); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 143, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_conf, __pyx_n_s_ir); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 142, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  __pyx_t_6 = __Pyx_PyObject_IsTrue(__pyx_t_1); if (unlikely((__pyx_t_6 == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 143, __pyx_L1_error)
+  __pyx_t_6 = __Pyx_PyObject_IsTrue(__pyx_t_1); if (unlikely((__pyx_t_6 == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 142, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __pyx_v_ir = __pyx_t_6;
 
-  /* "majiq/src/internals/seq_parse.pyx":145
+  /* "majiq/src/internals/seq_parse.pyx":144
  *     cdef bint ir = conf.ir
  *     cdef int i, j
  *     cdef int k=conf.k, m=conf.m             # <<<<<<<<<<<<<<
  *     cdef float pvalue_limit=conf.pvalue_limit
  *     cdef unsigned int min_experiments = 1 if conf.min_exp == -1 else conf.min_exp
  */
-  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_conf, __pyx_n_s_k); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 145, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_conf, __pyx_n_s_k); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 144, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  __pyx_t_2 = __Pyx_PyInt_As_int(__pyx_t_1); if (unlikely((__pyx_t_2 == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 145, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_PyInt_As_int(__pyx_t_1); if (unlikely((__pyx_t_2 == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 144, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __pyx_v_k = __pyx_t_2;
-  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_conf, __pyx_n_s_m); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 145, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_conf, __pyx_n_s_m); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 144, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  __pyx_t_2 = __Pyx_PyInt_As_int(__pyx_t_1); if (unlikely((__pyx_t_2 == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 145, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_PyInt_As_int(__pyx_t_1); if (unlikely((__pyx_t_2 == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 144, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __pyx_v_m = __pyx_t_2;
 
-  /* "majiq/src/internals/seq_parse.pyx":146
+  /* "majiq/src/internals/seq_parse.pyx":145
  *     cdef int i, j
  *     cdef int k=conf.k, m=conf.m
  *     cdef float pvalue_limit=conf.pvalue_limit             # <<<<<<<<<<<<<<
  *     cdef unsigned int min_experiments = 1 if conf.min_exp == -1 else conf.min_exp
  *     cdef unsigned int eff_len = conf.readLen - 2*MIN_BP_OVERLAP
  */
-  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_conf, __pyx_n_s_pvalue_limit); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 146, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_conf, __pyx_n_s_pvalue_limit); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 145, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  __pyx_t_5 = __pyx_PyFloat_AsFloat(__pyx_t_1); if (unlikely((__pyx_t_5 == (float)-1) && PyErr_Occurred())) __PYX_ERR(0, 146, __pyx_L1_error)
+  __pyx_t_5 = __pyx_PyFloat_AsFloat(__pyx_t_1); if (unlikely((__pyx_t_5 == (float)-1) && PyErr_Occurred())) __PYX_ERR(0, 145, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __pyx_v_pvalue_limit = __pyx_t_5;
 
-  /* "majiq/src/internals/seq_parse.pyx":147
+  /* "majiq/src/internals/seq_parse.pyx":146
  *     cdef int k=conf.k, m=conf.m
  *     cdef float pvalue_limit=conf.pvalue_limit
  *     cdef unsigned int min_experiments = 1 if conf.min_exp == -1 else conf.min_exp             # <<<<<<<<<<<<<<
  *     cdef unsigned int eff_len = conf.readLen - 2*MIN_BP_OVERLAP
  *     cdef int strandness, njunc
  */
-  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_conf, __pyx_n_s_min_exp); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 147, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_conf, __pyx_n_s_min_exp); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 146, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  __pyx_t_7 = __Pyx_PyInt_EqObjC(__pyx_t_1, __pyx_int_neg_1, -1L, 0); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 147, __pyx_L1_error)
+  __pyx_t_7 = __Pyx_PyInt_EqObjC(__pyx_t_1, __pyx_int_neg_1, -1L, 0); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 146, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_7);
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-  __pyx_t_6 = __Pyx_PyObject_IsTrue(__pyx_t_7); if (unlikely(__pyx_t_6 < 0)) __PYX_ERR(0, 147, __pyx_L1_error)
+  __pyx_t_6 = __Pyx_PyObject_IsTrue(__pyx_t_7); if (unlikely(__pyx_t_6 < 0)) __PYX_ERR(0, 146, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_7); __pyx_t_7 = 0;
   if (__pyx_t_6) {
     __pyx_t_4 = 1;
   } else {
-    __pyx_t_7 = __Pyx_PyObject_GetAttrStr(__pyx_v_conf, __pyx_n_s_min_exp); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 147, __pyx_L1_error)
+    __pyx_t_7 = __Pyx_PyObject_GetAttrStr(__pyx_v_conf, __pyx_n_s_min_exp); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 146, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_7);
-    __pyx_t_8 = __Pyx_PyInt_As_unsigned_int(__pyx_t_7); if (unlikely((__pyx_t_8 == (unsigned int)-1) && PyErr_Occurred())) __PYX_ERR(0, 147, __pyx_L1_error)
+    __pyx_t_8 = __Pyx_PyInt_As_unsigned_int(__pyx_t_7); if (unlikely((__pyx_t_8 == (unsigned int)-1) && PyErr_Occurred())) __PYX_ERR(0, 146, __pyx_L1_error)
     __Pyx_DECREF(__pyx_t_7); __pyx_t_7 = 0;
     __pyx_t_4 = __pyx_t_8;
   }
   __pyx_v_min_experiments = __pyx_t_4;
 
-  /* "majiq/src/internals/seq_parse.pyx":148
+  /* "majiq/src/internals/seq_parse.pyx":147
  *     cdef float pvalue_limit=conf.pvalue_limit
  *     cdef unsigned int min_experiments = 1 if conf.min_exp == -1 else conf.min_exp
  *     cdef unsigned int eff_len = conf.readLen - 2*MIN_BP_OVERLAP             # <<<<<<<<<<<<<<
  *     cdef int strandness, njunc
  *     cdef list group_list
  */
-  __pyx_t_7 = __Pyx_PyObject_GetAttrStr(__pyx_v_conf, __pyx_n_s_readLen); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 148, __pyx_L1_error)
+  __pyx_t_7 = __Pyx_PyObject_GetAttrStr(__pyx_v_conf, __pyx_n_s_readLen); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 147, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_7);
-  __pyx_t_1 = __Pyx_GetModuleGlobalName(__pyx_n_s_MIN_BP_OVERLAP); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 148, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_GetModuleGlobalName(__pyx_n_s_MIN_BP_OVERLAP); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 147, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  __pyx_t_9 = PyNumber_Multiply(__pyx_int_2, __pyx_t_1); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 148, __pyx_L1_error)
+  __pyx_t_9 = PyNumber_Multiply(__pyx_int_2, __pyx_t_1); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 147, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_9);
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-  __pyx_t_1 = PyNumber_Subtract(__pyx_t_7, __pyx_t_9); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 148, __pyx_L1_error)
+  __pyx_t_1 = PyNumber_Subtract(__pyx_t_7, __pyx_t_9); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 147, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __Pyx_DECREF(__pyx_t_7); __pyx_t_7 = 0;
   __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
-  __pyx_t_4 = __Pyx_PyInt_As_unsigned_int(__pyx_t_1); if (unlikely((__pyx_t_4 == (unsigned int)-1) && PyErr_Occurred())) __PYX_ERR(0, 148, __pyx_L1_error)
+  __pyx_t_4 = __Pyx_PyInt_As_unsigned_int(__pyx_t_1); if (unlikely((__pyx_t_4 == (unsigned int)-1) && PyErr_Occurred())) __PYX_ERR(0, 147, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __pyx_v_eff_len = __pyx_t_4;
 
-  /* "majiq/src/internals/seq_parse.pyx":176
+  /* "majiq/src/internals/seq_parse.pyx":175
  * 
  *     # print("SIZE", gene_vec.size())
  *     sortGeneList(gene_vec)             # <<<<<<<<<<<<<<
@@ -5459,7 +5435,7 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse__find_junctions(PyObj
  */
   grimoire::sortGeneList(__pyx_v_gene_vec);
 
-  /* "majiq/src/internals/seq_parse.pyx":178
+  /* "majiq/src/internals/seq_parse.pyx":177
  *     sortGeneList(gene_vec)
  * 
  *     for gobj in gene_vec:             # <<<<<<<<<<<<<<
@@ -5473,7 +5449,7 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse__find_junctions(PyObj
     ++__pyx_t_10;
     __pyx_v_gobj = __pyx_t_11;
 
-    /* "majiq/src/internals/seq_parse.pyx":179
+    /* "majiq/src/internals/seq_parse.pyx":178
  * 
  *     for gobj in gene_vec:
  *         if gene_list.count(gobj.get_chromosome()) == 0:             # <<<<<<<<<<<<<<
@@ -5483,7 +5459,7 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse__find_junctions(PyObj
     __pyx_t_6 = ((__pyx_v_gene_list.count(__pyx_v_gobj->get_chromosome()) == 0) != 0);
     if (__pyx_t_6) {
 
-      /* "majiq/src/internals/seq_parse.pyx":180
+      /* "majiq/src/internals/seq_parse.pyx":179
  *     for gobj in gene_vec:
  *         if gene_list.count(gobj.get_chromosome()) == 0:
  *             gene_list[gobj.get_chromosome()] = gene_vect_t()             # <<<<<<<<<<<<<<
@@ -5494,11 +5470,11 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse__find_junctions(PyObj
         __pyx_t_12 = __pyx_t_5majiq_3src_9internals_6io_bam_gene_vect_t();
       } catch(...) {
         __Pyx_CppExn2PyErr();
-        __PYX_ERR(0, 180, __pyx_L1_error)
+        __PYX_ERR(0, 179, __pyx_L1_error)
       }
       (__pyx_v_gene_list[__pyx_v_gobj->get_chromosome()]) = __pyx_t_12;
 
-      /* "majiq/src/internals/seq_parse.pyx":179
+      /* "majiq/src/internals/seq_parse.pyx":178
  * 
  *     for gobj in gene_vec:
  *         if gene_list.count(gobj.get_chromosome()) == 0:             # <<<<<<<<<<<<<<
@@ -5507,7 +5483,7 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse__find_junctions(PyObj
  */
     }
 
-    /* "majiq/src/internals/seq_parse.pyx":183
+    /* "majiq/src/internals/seq_parse.pyx":182
  *             # if ir:
  *             #     intron_d[gobj.get_chromosome()] = intron_vect_t()
  *         gene_list[gobj.get_chromosome()].push_back(gobj)             # <<<<<<<<<<<<<<
@@ -5518,10 +5494,10 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse__find_junctions(PyObj
       (__pyx_v_gene_list[__pyx_v_gobj->get_chromosome()]).push_back(__pyx_v_gobj);
     } catch(...) {
       __Pyx_CppExn2PyErr();
-      __PYX_ERR(0, 183, __pyx_L1_error)
+      __PYX_ERR(0, 182, __pyx_L1_error)
     }
 
-    /* "majiq/src/internals/seq_parse.pyx":178
+    /* "majiq/src/internals/seq_parse.pyx":177
  *     sortGeneList(gene_vec)
  * 
  *     for gobj in gene_vec:             # <<<<<<<<<<<<<<
@@ -5530,7 +5506,7 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse__find_junctions(PyObj
  */
   }
 
-  /* "majiq/src/internals/seq_parse.pyx":185
+  /* "majiq/src/internals/seq_parse.pyx":184
  *         gene_list[gobj.get_chromosome()].push_back(gobj)
  * 
  *     for vector_gene in gene_list:             # <<<<<<<<<<<<<<
@@ -5544,7 +5520,7 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse__find_junctions(PyObj
     ++__pyx_t_13;
     __pyx_v_vector_gene = __pyx_t_14;
 
-    /* "majiq/src/internals/seq_parse.pyx":186
+    /* "majiq/src/internals/seq_parse.pyx":185
  * 
  *     for vector_gene in gene_list:
  *         sortGeneList(vector_gene.second)             # <<<<<<<<<<<<<<
@@ -5553,7 +5529,7 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse__find_junctions(PyObj
  */
     grimoire::sortGeneList(__pyx_v_vector_gene.second);
 
-    /* "majiq/src/internals/seq_parse.pyx":185
+    /* "majiq/src/internals/seq_parse.pyx":184
  *         gene_list[gobj.get_chromosome()].push_back(gobj)
  * 
  *     for vector_gene in gene_list:             # <<<<<<<<<<<<<<
@@ -5562,16 +5538,16 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse__find_junctions(PyObj
  */
   }
 
-  /* "majiq/src/internals/seq_parse.pyx":188
+  /* "majiq/src/internals/seq_parse.pyx":187
  *         sortGeneList(vector_gene.second)
  * 
  *     for tmp_str, group_list in conf.tissue_repl.items():             # <<<<<<<<<<<<<<
  *         name = tmp_str.encode('utf-8')
  *         last_it_grp = group_list[len(group_list) - 1]
  */
-  __pyx_t_9 = __Pyx_PyObject_GetAttrStr(__pyx_v_conf, __pyx_n_s_tissue_repl); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 188, __pyx_L1_error)
+  __pyx_t_9 = __Pyx_PyObject_GetAttrStr(__pyx_v_conf, __pyx_n_s_tissue_repl); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 187, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_9);
-  __pyx_t_7 = __Pyx_PyObject_GetAttrStr(__pyx_t_9, __pyx_n_s_items); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 188, __pyx_L1_error)
+  __pyx_t_7 = __Pyx_PyObject_GetAttrStr(__pyx_t_9, __pyx_n_s_items); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 187, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_7);
   __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
   __pyx_t_9 = NULL;
@@ -5585,10 +5561,10 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse__find_junctions(PyObj
     }
   }
   if (__pyx_t_9) {
-    __pyx_t_1 = __Pyx_PyObject_CallOneArg(__pyx_t_7, __pyx_t_9); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 188, __pyx_L1_error)
+    __pyx_t_1 = __Pyx_PyObject_CallOneArg(__pyx_t_7, __pyx_t_9); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 187, __pyx_L1_error)
     __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
   } else {
-    __pyx_t_1 = __Pyx_PyObject_CallNoArg(__pyx_t_7); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 188, __pyx_L1_error)
+    __pyx_t_1 = __Pyx_PyObject_CallNoArg(__pyx_t_7); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 187, __pyx_L1_error)
   }
   __Pyx_GOTREF(__pyx_t_1);
   __Pyx_DECREF(__pyx_t_7); __pyx_t_7 = 0;
@@ -5596,9 +5572,9 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse__find_junctions(PyObj
     __pyx_t_7 = __pyx_t_1; __Pyx_INCREF(__pyx_t_7); __pyx_t_3 = 0;
     __pyx_t_15 = NULL;
   } else {
-    __pyx_t_3 = -1; __pyx_t_7 = PyObject_GetIter(__pyx_t_1); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 188, __pyx_L1_error)
+    __pyx_t_3 = -1; __pyx_t_7 = PyObject_GetIter(__pyx_t_1); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 187, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_7);
-    __pyx_t_15 = Py_TYPE(__pyx_t_7)->tp_iternext; if (unlikely(!__pyx_t_15)) __PYX_ERR(0, 188, __pyx_L1_error)
+    __pyx_t_15 = Py_TYPE(__pyx_t_7)->tp_iternext; if (unlikely(!__pyx_t_15)) __PYX_ERR(0, 187, __pyx_L1_error)
   }
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   for (;;) {
@@ -5606,17 +5582,17 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse__find_junctions(PyObj
       if (likely(PyList_CheckExact(__pyx_t_7))) {
         if (__pyx_t_3 >= PyList_GET_SIZE(__pyx_t_7)) break;
         #if CYTHON_ASSUME_SAFE_MACROS && !CYTHON_AVOID_BORROWED_REFS
-        __pyx_t_1 = PyList_GET_ITEM(__pyx_t_7, __pyx_t_3); __Pyx_INCREF(__pyx_t_1); __pyx_t_3++; if (unlikely(0 < 0)) __PYX_ERR(0, 188, __pyx_L1_error)
+        __pyx_t_1 = PyList_GET_ITEM(__pyx_t_7, __pyx_t_3); __Pyx_INCREF(__pyx_t_1); __pyx_t_3++; if (unlikely(0 < 0)) __PYX_ERR(0, 187, __pyx_L1_error)
         #else
-        __pyx_t_1 = PySequence_ITEM(__pyx_t_7, __pyx_t_3); __pyx_t_3++; if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 188, __pyx_L1_error)
+        __pyx_t_1 = PySequence_ITEM(__pyx_t_7, __pyx_t_3); __pyx_t_3++; if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 187, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_1);
         #endif
       } else {
         if (__pyx_t_3 >= PyTuple_GET_SIZE(__pyx_t_7)) break;
         #if CYTHON_ASSUME_SAFE_MACROS && !CYTHON_AVOID_BORROWED_REFS
-        __pyx_t_1 = PyTuple_GET_ITEM(__pyx_t_7, __pyx_t_3); __Pyx_INCREF(__pyx_t_1); __pyx_t_3++; if (unlikely(0 < 0)) __PYX_ERR(0, 188, __pyx_L1_error)
+        __pyx_t_1 = PyTuple_GET_ITEM(__pyx_t_7, __pyx_t_3); __Pyx_INCREF(__pyx_t_1); __pyx_t_3++; if (unlikely(0 < 0)) __PYX_ERR(0, 187, __pyx_L1_error)
         #else
-        __pyx_t_1 = PySequence_ITEM(__pyx_t_7, __pyx_t_3); __pyx_t_3++; if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 188, __pyx_L1_error)
+        __pyx_t_1 = PySequence_ITEM(__pyx_t_7, __pyx_t_3); __pyx_t_3++; if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 187, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_1);
         #endif
       }
@@ -5626,7 +5602,7 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse__find_junctions(PyObj
         PyObject* exc_type = PyErr_Occurred();
         if (exc_type) {
           if (likely(__Pyx_PyErr_GivenExceptionMatches(exc_type, PyExc_StopIteration))) PyErr_Clear();
-          else __PYX_ERR(0, 188, __pyx_L1_error)
+          else __PYX_ERR(0, 187, __pyx_L1_error)
         }
         break;
       }
@@ -5638,7 +5614,7 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse__find_junctions(PyObj
       if (unlikely(size != 2)) {
         if (size > 2) __Pyx_RaiseTooManyValuesError(2);
         else if (size >= 0) __Pyx_RaiseNeedMoreValuesError(size);
-        __PYX_ERR(0, 188, __pyx_L1_error)
+        __PYX_ERR(0, 187, __pyx_L1_error)
       }
       #if CYTHON_ASSUME_SAFE_MACROS && !CYTHON_AVOID_BORROWED_REFS
       if (likely(PyTuple_CheckExact(sequence))) {
@@ -5651,15 +5627,15 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse__find_junctions(PyObj
       __Pyx_INCREF(__pyx_t_9);
       __Pyx_INCREF(__pyx_t_16);
       #else
-      __pyx_t_9 = PySequence_ITEM(sequence, 0); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 188, __pyx_L1_error)
+      __pyx_t_9 = PySequence_ITEM(sequence, 0); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 187, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_9);
-      __pyx_t_16 = PySequence_ITEM(sequence, 1); if (unlikely(!__pyx_t_16)) __PYX_ERR(0, 188, __pyx_L1_error)
+      __pyx_t_16 = PySequence_ITEM(sequence, 1); if (unlikely(!__pyx_t_16)) __PYX_ERR(0, 187, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_16);
       #endif
       __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
     } else {
       Py_ssize_t index = -1;
-      __pyx_t_17 = PyObject_GetIter(__pyx_t_1); if (unlikely(!__pyx_t_17)) __PYX_ERR(0, 188, __pyx_L1_error)
+      __pyx_t_17 = PyObject_GetIter(__pyx_t_1); if (unlikely(!__pyx_t_17)) __PYX_ERR(0, 187, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_17);
       __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
       __pyx_t_18 = Py_TYPE(__pyx_t_17)->tp_iternext;
@@ -5667,7 +5643,7 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse__find_junctions(PyObj
       __Pyx_GOTREF(__pyx_t_9);
       index = 1; __pyx_t_16 = __pyx_t_18(__pyx_t_17); if (unlikely(!__pyx_t_16)) goto __pyx_L10_unpacking_failed;
       __Pyx_GOTREF(__pyx_t_16);
-      if (__Pyx_IternextUnpackEndCheck(__pyx_t_18(__pyx_t_17), 2) < 0) __PYX_ERR(0, 188, __pyx_L1_error)
+      if (__Pyx_IternextUnpackEndCheck(__pyx_t_18(__pyx_t_17), 2) < 0) __PYX_ERR(0, 187, __pyx_L1_error)
       __pyx_t_18 = NULL;
       __Pyx_DECREF(__pyx_t_17); __pyx_t_17 = 0;
       goto __pyx_L11_unpacking_done;
@@ -5675,11 +5651,11 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse__find_junctions(PyObj
       __Pyx_DECREF(__pyx_t_17); __pyx_t_17 = 0;
       __pyx_t_18 = NULL;
       if (__Pyx_IterFinish() == 0) __Pyx_RaiseNeedMoreValuesError(index);
-      __PYX_ERR(0, 188, __pyx_L1_error)
+      __PYX_ERR(0, 187, __pyx_L1_error)
       __pyx_L11_unpacking_done:;
     }
-    if (!(likely(PyString_CheckExact(__pyx_t_9))||((__pyx_t_9) == Py_None)||(PyErr_Format(PyExc_TypeError, "Expected %.16s, got %.200s", "str", Py_TYPE(__pyx_t_9)->tp_name), 0))) __PYX_ERR(0, 188, __pyx_L1_error)
-    if (!(likely(PyList_CheckExact(__pyx_t_16))||((__pyx_t_16) == Py_None)||(PyErr_Format(PyExc_TypeError, "Expected %.16s, got %.200s", "list", Py_TYPE(__pyx_t_16)->tp_name), 0))) __PYX_ERR(0, 188, __pyx_L1_error)
+    if (!(likely(PyString_CheckExact(__pyx_t_9))||((__pyx_t_9) == Py_None)||(PyErr_Format(PyExc_TypeError, "Expected %.16s, got %.200s", "str", Py_TYPE(__pyx_t_9)->tp_name), 0))) __PYX_ERR(0, 187, __pyx_L1_error)
+    if (!(likely(PyList_CheckExact(__pyx_t_16))||((__pyx_t_16) == Py_None)||(PyErr_Format(PyExc_TypeError, "Expected %.16s, got %.200s", "list", Py_TYPE(__pyx_t_16)->tp_name), 0))) __PYX_ERR(0, 187, __pyx_L1_error)
     __Pyx_XGOTREF(__pyx_cur_scope->__pyx_v_tmp_str);
     __Pyx_XDECREF_SET(__pyx_cur_scope->__pyx_v_tmp_str, ((PyObject*)__pyx_t_9));
     __Pyx_GIVEREF(__pyx_t_9);
@@ -5687,20 +5663,20 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse__find_junctions(PyObj
     __Pyx_XDECREF_SET(__pyx_v_group_list, ((PyObject*)__pyx_t_16));
     __pyx_t_16 = 0;
 
-    /* "majiq/src/internals/seq_parse.pyx":189
+    /* "majiq/src/internals/seq_parse.pyx":188
  * 
  *     for tmp_str, group_list in conf.tissue_repl.items():
  *         name = tmp_str.encode('utf-8')             # <<<<<<<<<<<<<<
  *         last_it_grp = group_list[len(group_list) - 1]
  *         for j in group_list:
  */
-    __pyx_t_1 = __Pyx_CallUnboundCMethod1(&__pyx_umethod_PyString_Type_encode, __pyx_cur_scope->__pyx_v_tmp_str, __pyx_kp_s_utf_8); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 189, __pyx_L1_error)
+    __pyx_t_1 = __Pyx_CallUnboundCMethod1(&__pyx_umethod_PyString_Type_encode, __pyx_cur_scope->__pyx_v_tmp_str, __pyx_kp_s_utf_8); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 188, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_1);
-    __pyx_t_19 = __pyx_convert_string_from_py_std__in_string(__pyx_t_1); if (unlikely(PyErr_Occurred())) __PYX_ERR(0, 189, __pyx_L1_error)
+    __pyx_t_19 = __pyx_convert_string_from_py_std__in_string(__pyx_t_1); if (unlikely(PyErr_Occurred())) __PYX_ERR(0, 188, __pyx_L1_error)
     __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
     __pyx_v_name = __pyx_t_19;
 
-    /* "majiq/src/internals/seq_parse.pyx":190
+    /* "majiq/src/internals/seq_parse.pyx":189
  *     for tmp_str, group_list in conf.tissue_repl.items():
  *         name = tmp_str.encode('utf-8')
  *         last_it_grp = group_list[len(group_list) - 1]             # <<<<<<<<<<<<<<
@@ -5709,21 +5685,21 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse__find_junctions(PyObj
  */
     if (unlikely(__pyx_v_group_list == Py_None)) {
       PyErr_SetString(PyExc_TypeError, "'NoneType' object is not subscriptable");
-      __PYX_ERR(0, 190, __pyx_L1_error)
+      __PYX_ERR(0, 189, __pyx_L1_error)
     }
     if (unlikely(__pyx_v_group_list == Py_None)) {
       PyErr_SetString(PyExc_TypeError, "object of type 'NoneType' has no len()");
-      __PYX_ERR(0, 190, __pyx_L1_error)
+      __PYX_ERR(0, 189, __pyx_L1_error)
     }
-    __pyx_t_20 = PyList_GET_SIZE(__pyx_v_group_list); if (unlikely(__pyx_t_20 == ((Py_ssize_t)-1))) __PYX_ERR(0, 190, __pyx_L1_error)
+    __pyx_t_20 = PyList_GET_SIZE(__pyx_v_group_list); if (unlikely(__pyx_t_20 == ((Py_ssize_t)-1))) __PYX_ERR(0, 189, __pyx_L1_error)
     __pyx_t_21 = (__pyx_t_20 - 1);
-    __pyx_t_1 = __Pyx_GetItemInt_List(__pyx_v_group_list, __pyx_t_21, Py_ssize_t, 1, PyInt_FromSsize_t, 1, 1, 1); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 190, __pyx_L1_error)
+    __pyx_t_1 = __Pyx_GetItemInt_List(__pyx_v_group_list, __pyx_t_21, Py_ssize_t, 1, PyInt_FromSsize_t, 1, 1, 1); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 189, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_1);
-    __pyx_t_2 = __Pyx_PyInt_As_int(__pyx_t_1); if (unlikely((__pyx_t_2 == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 190, __pyx_L1_error)
+    __pyx_t_2 = __Pyx_PyInt_As_int(__pyx_t_1); if (unlikely((__pyx_t_2 == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 189, __pyx_L1_error)
     __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
     __pyx_v_last_it_grp = __pyx_t_2;
 
-    /* "majiq/src/internals/seq_parse.pyx":191
+    /* "majiq/src/internals/seq_parse.pyx":190
  *         name = tmp_str.encode('utf-8')
  *         last_it_grp = group_list[len(group_list) - 1]
  *         for j in group_list:             # <<<<<<<<<<<<<<
@@ -5732,40 +5708,40 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse__find_junctions(PyObj
  */
     if (unlikely(__pyx_v_group_list == Py_None)) {
       PyErr_SetString(PyExc_TypeError, "'NoneType' object is not iterable");
-      __PYX_ERR(0, 191, __pyx_L1_error)
+      __PYX_ERR(0, 190, __pyx_L1_error)
     }
     __pyx_t_1 = __pyx_v_group_list; __Pyx_INCREF(__pyx_t_1); __pyx_t_21 = 0;
     for (;;) {
       if (__pyx_t_21 >= PyList_GET_SIZE(__pyx_t_1)) break;
       #if CYTHON_ASSUME_SAFE_MACROS && !CYTHON_AVOID_BORROWED_REFS
-      __pyx_t_16 = PyList_GET_ITEM(__pyx_t_1, __pyx_t_21); __Pyx_INCREF(__pyx_t_16); __pyx_t_21++; if (unlikely(0 < 0)) __PYX_ERR(0, 191, __pyx_L1_error)
+      __pyx_t_16 = PyList_GET_ITEM(__pyx_t_1, __pyx_t_21); __Pyx_INCREF(__pyx_t_16); __pyx_t_21++; if (unlikely(0 < 0)) __PYX_ERR(0, 190, __pyx_L1_error)
       #else
-      __pyx_t_16 = PySequence_ITEM(__pyx_t_1, __pyx_t_21); __pyx_t_21++; if (unlikely(!__pyx_t_16)) __PYX_ERR(0, 191, __pyx_L1_error)
+      __pyx_t_16 = PySequence_ITEM(__pyx_t_1, __pyx_t_21); __pyx_t_21++; if (unlikely(!__pyx_t_16)) __PYX_ERR(0, 190, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_16);
       #endif
-      __pyx_t_2 = __Pyx_PyInt_As_int(__pyx_t_16); if (unlikely((__pyx_t_2 == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 191, __pyx_L1_error)
+      __pyx_t_2 = __Pyx_PyInt_As_int(__pyx_t_16); if (unlikely((__pyx_t_2 == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 190, __pyx_L1_error)
       __Pyx_DECREF(__pyx_t_16); __pyx_t_16 = 0;
       __pyx_v_j = __pyx_t_2;
 
-      /* "majiq/src/internals/seq_parse.pyx":192
+      /* "majiq/src/internals/seq_parse.pyx":191
  *         last_it_grp = group_list[len(group_list) - 1]
  *         for j in group_list:
  *             logger.info('Reading file %s' %(file_list[j][0]))             # <<<<<<<<<<<<<<
  *             bamfile = ('%s/%s.%s' % (conf.sam_dir, file_list[j][0], SEQ_FILE_FORMAT)).encode('utf-8')
  *             strandness = conf.strand_specific[file_list[j][0]]
  */
-      __pyx_t_9 = __Pyx_PyObject_GetAttrStr(__pyx_v_logger, __pyx_n_s_info); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 192, __pyx_L1_error)
+      __pyx_t_9 = __Pyx_PyObject_GetAttrStr(__pyx_v_logger, __pyx_n_s_info); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 191, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_9);
       if (unlikely(__pyx_v_file_list == Py_None)) {
         PyErr_SetString(PyExc_TypeError, "'NoneType' object is not subscriptable");
-        __PYX_ERR(0, 192, __pyx_L1_error)
+        __PYX_ERR(0, 191, __pyx_L1_error)
       }
-      __pyx_t_17 = __Pyx_GetItemInt_List(__pyx_v_file_list, __pyx_v_j, int, 1, __Pyx_PyInt_From_int, 1, 1, 1); if (unlikely(!__pyx_t_17)) __PYX_ERR(0, 192, __pyx_L1_error)
+      __pyx_t_17 = __Pyx_GetItemInt_List(__pyx_v_file_list, __pyx_v_j, int, 1, __Pyx_PyInt_From_int, 1, 1, 1); if (unlikely(!__pyx_t_17)) __PYX_ERR(0, 191, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_17);
-      __pyx_t_22 = __Pyx_GetItemInt(__pyx_t_17, 0, long, 1, __Pyx_PyInt_From_long, 0, 0, 1); if (unlikely(!__pyx_t_22)) __PYX_ERR(0, 192, __pyx_L1_error)
+      __pyx_t_22 = __Pyx_GetItemInt(__pyx_t_17, 0, long, 1, __Pyx_PyInt_From_long, 0, 0, 1); if (unlikely(!__pyx_t_22)) __PYX_ERR(0, 191, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_22);
       __Pyx_DECREF(__pyx_t_17); __pyx_t_17 = 0;
-      __pyx_t_17 = __Pyx_PyString_Format(__pyx_kp_s_Reading_file_s, __pyx_t_22); if (unlikely(!__pyx_t_17)) __PYX_ERR(0, 192, __pyx_L1_error)
+      __pyx_t_17 = __Pyx_PyString_Format(__pyx_kp_s_Reading_file_s, __pyx_t_22); if (unlikely(!__pyx_t_17)) __PYX_ERR(0, 191, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_17);
       __Pyx_DECREF(__pyx_t_22); __pyx_t_22 = 0;
       __pyx_t_22 = NULL;
@@ -5779,14 +5755,14 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse__find_junctions(PyObj
         }
       }
       if (!__pyx_t_22) {
-        __pyx_t_16 = __Pyx_PyObject_CallOneArg(__pyx_t_9, __pyx_t_17); if (unlikely(!__pyx_t_16)) __PYX_ERR(0, 192, __pyx_L1_error)
+        __pyx_t_16 = __Pyx_PyObject_CallOneArg(__pyx_t_9, __pyx_t_17); if (unlikely(!__pyx_t_16)) __PYX_ERR(0, 191, __pyx_L1_error)
         __Pyx_DECREF(__pyx_t_17); __pyx_t_17 = 0;
         __Pyx_GOTREF(__pyx_t_16);
       } else {
         #if CYTHON_FAST_PYCALL
         if (PyFunction_Check(__pyx_t_9)) {
           PyObject *__pyx_temp[2] = {__pyx_t_22, __pyx_t_17};
-          __pyx_t_16 = __Pyx_PyFunction_FastCall(__pyx_t_9, __pyx_temp+1-1, 1+1); if (unlikely(!__pyx_t_16)) __PYX_ERR(0, 192, __pyx_L1_error)
+          __pyx_t_16 = __Pyx_PyFunction_FastCall(__pyx_t_9, __pyx_temp+1-1, 1+1); if (unlikely(!__pyx_t_16)) __PYX_ERR(0, 191, __pyx_L1_error)
           __Pyx_XDECREF(__pyx_t_22); __pyx_t_22 = 0;
           __Pyx_GOTREF(__pyx_t_16);
           __Pyx_DECREF(__pyx_t_17); __pyx_t_17 = 0;
@@ -5795,20 +5771,20 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse__find_junctions(PyObj
         #if CYTHON_FAST_PYCCALL
         if (__Pyx_PyFastCFunction_Check(__pyx_t_9)) {
           PyObject *__pyx_temp[2] = {__pyx_t_22, __pyx_t_17};
-          __pyx_t_16 = __Pyx_PyCFunction_FastCall(__pyx_t_9, __pyx_temp+1-1, 1+1); if (unlikely(!__pyx_t_16)) __PYX_ERR(0, 192, __pyx_L1_error)
+          __pyx_t_16 = __Pyx_PyCFunction_FastCall(__pyx_t_9, __pyx_temp+1-1, 1+1); if (unlikely(!__pyx_t_16)) __PYX_ERR(0, 191, __pyx_L1_error)
           __Pyx_XDECREF(__pyx_t_22); __pyx_t_22 = 0;
           __Pyx_GOTREF(__pyx_t_16);
           __Pyx_DECREF(__pyx_t_17); __pyx_t_17 = 0;
         } else
         #endif
         {
-          __pyx_t_23 = PyTuple_New(1+1); if (unlikely(!__pyx_t_23)) __PYX_ERR(0, 192, __pyx_L1_error)
+          __pyx_t_23 = PyTuple_New(1+1); if (unlikely(!__pyx_t_23)) __PYX_ERR(0, 191, __pyx_L1_error)
           __Pyx_GOTREF(__pyx_t_23);
           __Pyx_GIVEREF(__pyx_t_22); PyTuple_SET_ITEM(__pyx_t_23, 0, __pyx_t_22); __pyx_t_22 = NULL;
           __Pyx_GIVEREF(__pyx_t_17);
           PyTuple_SET_ITEM(__pyx_t_23, 0+1, __pyx_t_17);
           __pyx_t_17 = 0;
-          __pyx_t_16 = __Pyx_PyObject_Call(__pyx_t_9, __pyx_t_23, NULL); if (unlikely(!__pyx_t_16)) __PYX_ERR(0, 192, __pyx_L1_error)
+          __pyx_t_16 = __Pyx_PyObject_Call(__pyx_t_9, __pyx_t_23, NULL); if (unlikely(!__pyx_t_16)) __PYX_ERR(0, 191, __pyx_L1_error)
           __Pyx_GOTREF(__pyx_t_16);
           __Pyx_DECREF(__pyx_t_23); __pyx_t_23 = 0;
         }
@@ -5816,27 +5792,27 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse__find_junctions(PyObj
       __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
       __Pyx_DECREF(__pyx_t_16); __pyx_t_16 = 0;
 
-      /* "majiq/src/internals/seq_parse.pyx":193
+      /* "majiq/src/internals/seq_parse.pyx":192
  *         for j in group_list:
  *             logger.info('Reading file %s' %(file_list[j][0]))
  *             bamfile = ('%s/%s.%s' % (conf.sam_dir, file_list[j][0], SEQ_FILE_FORMAT)).encode('utf-8')             # <<<<<<<<<<<<<<
  *             strandness = conf.strand_specific[file_list[j][0]]
  * 
  */
-      __pyx_t_16 = __Pyx_PyObject_GetAttrStr(__pyx_v_conf, __pyx_n_s_sam_dir); if (unlikely(!__pyx_t_16)) __PYX_ERR(0, 193, __pyx_L1_error)
+      __pyx_t_16 = __Pyx_PyObject_GetAttrStr(__pyx_v_conf, __pyx_n_s_sam_dir); if (unlikely(!__pyx_t_16)) __PYX_ERR(0, 192, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_16);
       if (unlikely(__pyx_v_file_list == Py_None)) {
         PyErr_SetString(PyExc_TypeError, "'NoneType' object is not subscriptable");
-        __PYX_ERR(0, 193, __pyx_L1_error)
+        __PYX_ERR(0, 192, __pyx_L1_error)
       }
-      __pyx_t_9 = __Pyx_GetItemInt_List(__pyx_v_file_list, __pyx_v_j, int, 1, __Pyx_PyInt_From_int, 1, 1, 1); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 193, __pyx_L1_error)
+      __pyx_t_9 = __Pyx_GetItemInt_List(__pyx_v_file_list, __pyx_v_j, int, 1, __Pyx_PyInt_From_int, 1, 1, 1); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 192, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_9);
-      __pyx_t_23 = __Pyx_GetItemInt(__pyx_t_9, 0, long, 1, __Pyx_PyInt_From_long, 0, 0, 1); if (unlikely(!__pyx_t_23)) __PYX_ERR(0, 193, __pyx_L1_error)
+      __pyx_t_23 = __Pyx_GetItemInt(__pyx_t_9, 0, long, 1, __Pyx_PyInt_From_long, 0, 0, 1); if (unlikely(!__pyx_t_23)) __PYX_ERR(0, 192, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_23);
       __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
-      __pyx_t_9 = __Pyx_GetModuleGlobalName(__pyx_n_s_SEQ_FILE_FORMAT); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 193, __pyx_L1_error)
+      __pyx_t_9 = __Pyx_GetModuleGlobalName(__pyx_n_s_SEQ_FILE_FORMAT); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 192, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_9);
-      __pyx_t_17 = PyTuple_New(3); if (unlikely(!__pyx_t_17)) __PYX_ERR(0, 193, __pyx_L1_error)
+      __pyx_t_17 = PyTuple_New(3); if (unlikely(!__pyx_t_17)) __PYX_ERR(0, 192, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_17);
       __Pyx_GIVEREF(__pyx_t_16);
       PyTuple_SET_ITEM(__pyx_t_17, 0, __pyx_t_16);
@@ -5847,46 +5823,46 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse__find_junctions(PyObj
       __pyx_t_16 = 0;
       __pyx_t_23 = 0;
       __pyx_t_9 = 0;
-      __pyx_t_9 = __Pyx_PyString_Format(__pyx_kp_s_s_s_s, __pyx_t_17); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 193, __pyx_L1_error)
+      __pyx_t_9 = __Pyx_PyString_Format(__pyx_kp_s_s_s_s, __pyx_t_17); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 192, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_9);
       __Pyx_DECREF(__pyx_t_17); __pyx_t_17 = 0;
-      __pyx_t_17 = __Pyx_PyObject_GetAttrStr(__pyx_t_9, __pyx_n_s_encode); if (unlikely(!__pyx_t_17)) __PYX_ERR(0, 193, __pyx_L1_error)
+      __pyx_t_17 = __Pyx_PyObject_GetAttrStr(__pyx_t_9, __pyx_n_s_encode); if (unlikely(!__pyx_t_17)) __PYX_ERR(0, 192, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_17);
       __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
-      __pyx_t_9 = __Pyx_PyObject_Call(__pyx_t_17, __pyx_tuple__8, NULL); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 193, __pyx_L1_error)
+      __pyx_t_9 = __Pyx_PyObject_Call(__pyx_t_17, __pyx_tuple__8, NULL); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 192, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_9);
       __Pyx_DECREF(__pyx_t_17); __pyx_t_17 = 0;
-      __pyx_t_19 = __pyx_convert_string_from_py_std__in_string(__pyx_t_9); if (unlikely(PyErr_Occurred())) __PYX_ERR(0, 193, __pyx_L1_error)
+      __pyx_t_19 = __pyx_convert_string_from_py_std__in_string(__pyx_t_9); if (unlikely(PyErr_Occurred())) __PYX_ERR(0, 192, __pyx_L1_error)
       __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
       __pyx_v_bamfile = __pyx_t_19;
 
-      /* "majiq/src/internals/seq_parse.pyx":194
+      /* "majiq/src/internals/seq_parse.pyx":193
  *             logger.info('Reading file %s' %(file_list[j][0]))
  *             bamfile = ('%s/%s.%s' % (conf.sam_dir, file_list[j][0], SEQ_FILE_FORMAT)).encode('utf-8')
  *             strandness = conf.strand_specific[file_list[j][0]]             # <<<<<<<<<<<<<<
  * 
  *             with nogil:
  */
-      __pyx_t_9 = __Pyx_PyObject_GetAttrStr(__pyx_v_conf, __pyx_n_s_strand_specific); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 194, __pyx_L1_error)
+      __pyx_t_9 = __Pyx_PyObject_GetAttrStr(__pyx_v_conf, __pyx_n_s_strand_specific); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 193, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_9);
       if (unlikely(__pyx_v_file_list == Py_None)) {
         PyErr_SetString(PyExc_TypeError, "'NoneType' object is not subscriptable");
-        __PYX_ERR(0, 194, __pyx_L1_error)
+        __PYX_ERR(0, 193, __pyx_L1_error)
       }
-      __pyx_t_17 = __Pyx_GetItemInt_List(__pyx_v_file_list, __pyx_v_j, int, 1, __Pyx_PyInt_From_int, 1, 1, 1); if (unlikely(!__pyx_t_17)) __PYX_ERR(0, 194, __pyx_L1_error)
+      __pyx_t_17 = __Pyx_GetItemInt_List(__pyx_v_file_list, __pyx_v_j, int, 1, __Pyx_PyInt_From_int, 1, 1, 1); if (unlikely(!__pyx_t_17)) __PYX_ERR(0, 193, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_17);
-      __pyx_t_23 = __Pyx_GetItemInt(__pyx_t_17, 0, long, 1, __Pyx_PyInt_From_long, 0, 0, 1); if (unlikely(!__pyx_t_23)) __PYX_ERR(0, 194, __pyx_L1_error)
+      __pyx_t_23 = __Pyx_GetItemInt(__pyx_t_17, 0, long, 1, __Pyx_PyInt_From_long, 0, 0, 1); if (unlikely(!__pyx_t_23)) __PYX_ERR(0, 193, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_23);
       __Pyx_DECREF(__pyx_t_17); __pyx_t_17 = 0;
-      __pyx_t_17 = __Pyx_PyObject_GetItem(__pyx_t_9, __pyx_t_23); if (unlikely(!__pyx_t_17)) __PYX_ERR(0, 194, __pyx_L1_error)
+      __pyx_t_17 = __Pyx_PyObject_GetItem(__pyx_t_9, __pyx_t_23); if (unlikely(!__pyx_t_17)) __PYX_ERR(0, 193, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_17);
       __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
       __Pyx_DECREF(__pyx_t_23); __pyx_t_23 = 0;
-      __pyx_t_2 = __Pyx_PyInt_As_int(__pyx_t_17); if (unlikely((__pyx_t_2 == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 194, __pyx_L1_error)
+      __pyx_t_2 = __Pyx_PyInt_As_int(__pyx_t_17); if (unlikely((__pyx_t_2 == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 193, __pyx_L1_error)
       __Pyx_DECREF(__pyx_t_17); __pyx_t_17 = 0;
       __pyx_v_strandness = __pyx_t_2;
 
-      /* "majiq/src/internals/seq_parse.pyx":196
+      /* "majiq/src/internals/seq_parse.pyx":195
  *             strandness = conf.strand_specific[file_list[j][0]]
  * 
  *             with nogil:             # <<<<<<<<<<<<<<
@@ -5901,7 +5877,7 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse__find_junctions(PyObj
           #endif
           /*try:*/ {
 
-            /* "majiq/src/internals/seq_parse.pyx":197
+            /* "majiq/src/internals/seq_parse.pyx":196
  * 
  *             with nogil:
  *                 c_iobam = IOBam(bamfile, strandness, eff_len, nthreads, gene_list)             # <<<<<<<<<<<<<<
@@ -5918,11 +5894,11 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse__find_junctions(PyObj
               #ifdef WITH_THREAD
               __Pyx_PyGILState_Release(__pyx_gilstate_save);
               #endif
-              __PYX_ERR(0, 197, __pyx_L17_error)
+              __PYX_ERR(0, 196, __pyx_L17_error)
             }
             __pyx_v_c_iobam = __pyx_t_24;
 
-            /* "majiq/src/internals/seq_parse.pyx":198
+            /* "majiq/src/internals/seq_parse.pyx":197
  *             with nogil:
  *                 c_iobam = IOBam(bamfile, strandness, eff_len, nthreads, gene_list)
  *                 c_iobam.ParseJunctionsFromFile(False)             # <<<<<<<<<<<<<<
@@ -5931,7 +5907,7 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse__find_junctions(PyObj
  */
             (void)(__pyx_v_c_iobam.ParseJunctionsFromFile(0));
 
-            /* "majiq/src/internals/seq_parse.pyx":200
+            /* "majiq/src/internals/seq_parse.pyx":199
  *                 c_iobam.ParseJunctionsFromFile(False)
  * 
  *                 njunc = c_iobam.get_njuncs()             # <<<<<<<<<<<<<<
@@ -5940,7 +5916,7 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse__find_junctions(PyObj
  */
             __pyx_v_njunc = __pyx_v_c_iobam.get_njuncs();
 
-            /* "majiq/src/internals/seq_parse.pyx":201
+            /* "majiq/src/internals/seq_parse.pyx":200
  * 
  *                 njunc = c_iobam.get_njuncs()
  *                 with gil:             # <<<<<<<<<<<<<<
@@ -5953,18 +5929,18 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse__find_junctions(PyObj
                 #endif
                 /*try:*/ {
 
-                  /* "majiq/src/internals/seq_parse.pyx":202
+                  /* "majiq/src/internals/seq_parse.pyx":201
  *                 njunc = c_iobam.get_njuncs()
  *                 with gil:
  *                         logger.info('PREV njunc %s' %(njunc))             # <<<<<<<<<<<<<<
  *                 if ir:
  *                     with gil:
  */
-                  __pyx_t_23 = __Pyx_PyObject_GetAttrStr(__pyx_v_logger, __pyx_n_s_info); if (unlikely(!__pyx_t_23)) __PYX_ERR(0, 202, __pyx_L22_error)
+                  __pyx_t_23 = __Pyx_PyObject_GetAttrStr(__pyx_v_logger, __pyx_n_s_info); if (unlikely(!__pyx_t_23)) __PYX_ERR(0, 201, __pyx_L22_error)
                   __Pyx_GOTREF(__pyx_t_23);
-                  __pyx_t_9 = __Pyx_PyInt_From_int(__pyx_v_njunc); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 202, __pyx_L22_error)
+                  __pyx_t_9 = __Pyx_PyInt_From_int(__pyx_v_njunc); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 201, __pyx_L22_error)
                   __Pyx_GOTREF(__pyx_t_9);
-                  __pyx_t_16 = __Pyx_PyString_Format(__pyx_kp_s_PREV_njunc_s, __pyx_t_9); if (unlikely(!__pyx_t_16)) __PYX_ERR(0, 202, __pyx_L22_error)
+                  __pyx_t_16 = __Pyx_PyString_Format(__pyx_kp_s_PREV_njunc_s, __pyx_t_9); if (unlikely(!__pyx_t_16)) __PYX_ERR(0, 201, __pyx_L22_error)
                   __Pyx_GOTREF(__pyx_t_16);
                   __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
                   __pyx_t_9 = NULL;
@@ -5978,14 +5954,14 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse__find_junctions(PyObj
                     }
                   }
                   if (!__pyx_t_9) {
-                    __pyx_t_17 = __Pyx_PyObject_CallOneArg(__pyx_t_23, __pyx_t_16); if (unlikely(!__pyx_t_17)) __PYX_ERR(0, 202, __pyx_L22_error)
+                    __pyx_t_17 = __Pyx_PyObject_CallOneArg(__pyx_t_23, __pyx_t_16); if (unlikely(!__pyx_t_17)) __PYX_ERR(0, 201, __pyx_L22_error)
                     __Pyx_DECREF(__pyx_t_16); __pyx_t_16 = 0;
                     __Pyx_GOTREF(__pyx_t_17);
                   } else {
                     #if CYTHON_FAST_PYCALL
                     if (PyFunction_Check(__pyx_t_23)) {
                       PyObject *__pyx_temp[2] = {__pyx_t_9, __pyx_t_16};
-                      __pyx_t_17 = __Pyx_PyFunction_FastCall(__pyx_t_23, __pyx_temp+1-1, 1+1); if (unlikely(!__pyx_t_17)) __PYX_ERR(0, 202, __pyx_L22_error)
+                      __pyx_t_17 = __Pyx_PyFunction_FastCall(__pyx_t_23, __pyx_temp+1-1, 1+1); if (unlikely(!__pyx_t_17)) __PYX_ERR(0, 201, __pyx_L22_error)
                       __Pyx_XDECREF(__pyx_t_9); __pyx_t_9 = 0;
                       __Pyx_GOTREF(__pyx_t_17);
                       __Pyx_DECREF(__pyx_t_16); __pyx_t_16 = 0;
@@ -5994,20 +5970,20 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse__find_junctions(PyObj
                     #if CYTHON_FAST_PYCCALL
                     if (__Pyx_PyFastCFunction_Check(__pyx_t_23)) {
                       PyObject *__pyx_temp[2] = {__pyx_t_9, __pyx_t_16};
-                      __pyx_t_17 = __Pyx_PyCFunction_FastCall(__pyx_t_23, __pyx_temp+1-1, 1+1); if (unlikely(!__pyx_t_17)) __PYX_ERR(0, 202, __pyx_L22_error)
+                      __pyx_t_17 = __Pyx_PyCFunction_FastCall(__pyx_t_23, __pyx_temp+1-1, 1+1); if (unlikely(!__pyx_t_17)) __PYX_ERR(0, 201, __pyx_L22_error)
                       __Pyx_XDECREF(__pyx_t_9); __pyx_t_9 = 0;
                       __Pyx_GOTREF(__pyx_t_17);
                       __Pyx_DECREF(__pyx_t_16); __pyx_t_16 = 0;
                     } else
                     #endif
                     {
-                      __pyx_t_22 = PyTuple_New(1+1); if (unlikely(!__pyx_t_22)) __PYX_ERR(0, 202, __pyx_L22_error)
+                      __pyx_t_22 = PyTuple_New(1+1); if (unlikely(!__pyx_t_22)) __PYX_ERR(0, 201, __pyx_L22_error)
                       __Pyx_GOTREF(__pyx_t_22);
                       __Pyx_GIVEREF(__pyx_t_9); PyTuple_SET_ITEM(__pyx_t_22, 0, __pyx_t_9); __pyx_t_9 = NULL;
                       __Pyx_GIVEREF(__pyx_t_16);
                       PyTuple_SET_ITEM(__pyx_t_22, 0+1, __pyx_t_16);
                       __pyx_t_16 = 0;
-                      __pyx_t_17 = __Pyx_PyObject_Call(__pyx_t_23, __pyx_t_22, NULL); if (unlikely(!__pyx_t_17)) __PYX_ERR(0, 202, __pyx_L22_error)
+                      __pyx_t_17 = __Pyx_PyObject_Call(__pyx_t_23, __pyx_t_22, NULL); if (unlikely(!__pyx_t_17)) __PYX_ERR(0, 201, __pyx_L22_error)
                       __Pyx_GOTREF(__pyx_t_17);
                       __Pyx_DECREF(__pyx_t_22); __pyx_t_22 = 0;
                     }
@@ -6016,7 +5992,7 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse__find_junctions(PyObj
                   __Pyx_DECREF(__pyx_t_17); __pyx_t_17 = 0;
                 }
 
-                /* "majiq/src/internals/seq_parse.pyx":201
+                /* "majiq/src/internals/seq_parse.pyx":200
  * 
  *                 njunc = c_iobam.get_njuncs()
  *                 with gil:             # <<<<<<<<<<<<<<
@@ -6040,7 +6016,7 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse__find_junctions(PyObj
                 }
             }
 
-            /* "majiq/src/internals/seq_parse.pyx":203
+            /* "majiq/src/internals/seq_parse.pyx":202
  *                 with gil:
  *                         logger.info('PREV njunc %s' %(njunc))
  *                 if ir:             # <<<<<<<<<<<<<<
@@ -6050,7 +6026,7 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse__find_junctions(PyObj
             __pyx_t_6 = (__pyx_v_ir != 0);
             if (__pyx_t_6) {
 
-              /* "majiq/src/internals/seq_parse.pyx":204
+              /* "majiq/src/internals/seq_parse.pyx":203
  *                         logger.info('PREV njunc %s' %(njunc))
  *                 if ir:
  *                     with gil:             # <<<<<<<<<<<<<<
@@ -6063,25 +6039,25 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse__find_junctions(PyObj
                   #endif
                   /*try:*/ {
 
-                    /* "majiq/src/internals/seq_parse.pyx":205
+                    /* "majiq/src/internals/seq_parse.pyx":204
  *                 if ir:
  *                     with gil:
  *                         logger.info('Detect Intron retention %s' %(file_list[j][0]))             # <<<<<<<<<<<<<<
  *                     c_iobam.detect_introns(min_ir_cov, min_experiments)
  *                 njunc = c_iobam.get_njuncs()
  */
-                    __pyx_t_23 = __Pyx_PyObject_GetAttrStr(__pyx_v_logger, __pyx_n_s_info); if (unlikely(!__pyx_t_23)) __PYX_ERR(0, 205, __pyx_L28_error)
+                    __pyx_t_23 = __Pyx_PyObject_GetAttrStr(__pyx_v_logger, __pyx_n_s_info); if (unlikely(!__pyx_t_23)) __PYX_ERR(0, 204, __pyx_L28_error)
                     __Pyx_GOTREF(__pyx_t_23);
                     if (unlikely(__pyx_v_file_list == Py_None)) {
                       PyErr_SetString(PyExc_TypeError, "'NoneType' object is not subscriptable");
-                      __PYX_ERR(0, 205, __pyx_L28_error)
+                      __PYX_ERR(0, 204, __pyx_L28_error)
                     }
-                    __pyx_t_22 = __Pyx_GetItemInt_List(__pyx_v_file_list, __pyx_v_j, int, 1, __Pyx_PyInt_From_int, 1, 1, 1); if (unlikely(!__pyx_t_22)) __PYX_ERR(0, 205, __pyx_L28_error)
+                    __pyx_t_22 = __Pyx_GetItemInt_List(__pyx_v_file_list, __pyx_v_j, int, 1, __Pyx_PyInt_From_int, 1, 1, 1); if (unlikely(!__pyx_t_22)) __PYX_ERR(0, 204, __pyx_L28_error)
                     __Pyx_GOTREF(__pyx_t_22);
-                    __pyx_t_16 = __Pyx_GetItemInt(__pyx_t_22, 0, long, 1, __Pyx_PyInt_From_long, 0, 0, 1); if (unlikely(!__pyx_t_16)) __PYX_ERR(0, 205, __pyx_L28_error)
+                    __pyx_t_16 = __Pyx_GetItemInt(__pyx_t_22, 0, long, 1, __Pyx_PyInt_From_long, 0, 0, 1); if (unlikely(!__pyx_t_16)) __PYX_ERR(0, 204, __pyx_L28_error)
                     __Pyx_GOTREF(__pyx_t_16);
                     __Pyx_DECREF(__pyx_t_22); __pyx_t_22 = 0;
-                    __pyx_t_22 = __Pyx_PyString_Format(__pyx_kp_s_Detect_Intron_retention_s, __pyx_t_16); if (unlikely(!__pyx_t_22)) __PYX_ERR(0, 205, __pyx_L28_error)
+                    __pyx_t_22 = __Pyx_PyString_Format(__pyx_kp_s_Detect_Intron_retention_s, __pyx_t_16); if (unlikely(!__pyx_t_22)) __PYX_ERR(0, 204, __pyx_L28_error)
                     __Pyx_GOTREF(__pyx_t_22);
                     __Pyx_DECREF(__pyx_t_16); __pyx_t_16 = 0;
                     __pyx_t_16 = NULL;
@@ -6095,14 +6071,14 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse__find_junctions(PyObj
                       }
                     }
                     if (!__pyx_t_16) {
-                      __pyx_t_17 = __Pyx_PyObject_CallOneArg(__pyx_t_23, __pyx_t_22); if (unlikely(!__pyx_t_17)) __PYX_ERR(0, 205, __pyx_L28_error)
+                      __pyx_t_17 = __Pyx_PyObject_CallOneArg(__pyx_t_23, __pyx_t_22); if (unlikely(!__pyx_t_17)) __PYX_ERR(0, 204, __pyx_L28_error)
                       __Pyx_DECREF(__pyx_t_22); __pyx_t_22 = 0;
                       __Pyx_GOTREF(__pyx_t_17);
                     } else {
                       #if CYTHON_FAST_PYCALL
                       if (PyFunction_Check(__pyx_t_23)) {
                         PyObject *__pyx_temp[2] = {__pyx_t_16, __pyx_t_22};
-                        __pyx_t_17 = __Pyx_PyFunction_FastCall(__pyx_t_23, __pyx_temp+1-1, 1+1); if (unlikely(!__pyx_t_17)) __PYX_ERR(0, 205, __pyx_L28_error)
+                        __pyx_t_17 = __Pyx_PyFunction_FastCall(__pyx_t_23, __pyx_temp+1-1, 1+1); if (unlikely(!__pyx_t_17)) __PYX_ERR(0, 204, __pyx_L28_error)
                         __Pyx_XDECREF(__pyx_t_16); __pyx_t_16 = 0;
                         __Pyx_GOTREF(__pyx_t_17);
                         __Pyx_DECREF(__pyx_t_22); __pyx_t_22 = 0;
@@ -6111,20 +6087,20 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse__find_junctions(PyObj
                       #if CYTHON_FAST_PYCCALL
                       if (__Pyx_PyFastCFunction_Check(__pyx_t_23)) {
                         PyObject *__pyx_temp[2] = {__pyx_t_16, __pyx_t_22};
-                        __pyx_t_17 = __Pyx_PyCFunction_FastCall(__pyx_t_23, __pyx_temp+1-1, 1+1); if (unlikely(!__pyx_t_17)) __PYX_ERR(0, 205, __pyx_L28_error)
+                        __pyx_t_17 = __Pyx_PyCFunction_FastCall(__pyx_t_23, __pyx_temp+1-1, 1+1); if (unlikely(!__pyx_t_17)) __PYX_ERR(0, 204, __pyx_L28_error)
                         __Pyx_XDECREF(__pyx_t_16); __pyx_t_16 = 0;
                         __Pyx_GOTREF(__pyx_t_17);
                         __Pyx_DECREF(__pyx_t_22); __pyx_t_22 = 0;
                       } else
                       #endif
                       {
-                        __pyx_t_9 = PyTuple_New(1+1); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 205, __pyx_L28_error)
+                        __pyx_t_9 = PyTuple_New(1+1); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 204, __pyx_L28_error)
                         __Pyx_GOTREF(__pyx_t_9);
                         __Pyx_GIVEREF(__pyx_t_16); PyTuple_SET_ITEM(__pyx_t_9, 0, __pyx_t_16); __pyx_t_16 = NULL;
                         __Pyx_GIVEREF(__pyx_t_22);
                         PyTuple_SET_ITEM(__pyx_t_9, 0+1, __pyx_t_22);
                         __pyx_t_22 = 0;
-                        __pyx_t_17 = __Pyx_PyObject_Call(__pyx_t_23, __pyx_t_9, NULL); if (unlikely(!__pyx_t_17)) __PYX_ERR(0, 205, __pyx_L28_error)
+                        __pyx_t_17 = __Pyx_PyObject_Call(__pyx_t_23, __pyx_t_9, NULL); if (unlikely(!__pyx_t_17)) __PYX_ERR(0, 204, __pyx_L28_error)
                         __Pyx_GOTREF(__pyx_t_17);
                         __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
                       }
@@ -6133,7 +6109,7 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse__find_junctions(PyObj
                     __Pyx_DECREF(__pyx_t_17); __pyx_t_17 = 0;
                   }
 
-                  /* "majiq/src/internals/seq_parse.pyx":204
+                  /* "majiq/src/internals/seq_parse.pyx":203
  *                         logger.info('PREV njunc %s' %(njunc))
  *                 if ir:
  *                     with gil:             # <<<<<<<<<<<<<<
@@ -6157,7 +6133,7 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse__find_junctions(PyObj
                   }
               }
 
-              /* "majiq/src/internals/seq_parse.pyx":206
+              /* "majiq/src/internals/seq_parse.pyx":205
  *                     with gil:
  *                         logger.info('Detect Intron retention %s' %(file_list[j][0]))
  *                     c_iobam.detect_introns(min_ir_cov, min_experiments)             # <<<<<<<<<<<<<<
@@ -6166,7 +6142,7 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse__find_junctions(PyObj
  */
               __pyx_v_c_iobam.detect_introns(__pyx_v_min_ir_cov, __pyx_v_min_experiments);
 
-              /* "majiq/src/internals/seq_parse.pyx":203
+              /* "majiq/src/internals/seq_parse.pyx":202
  *                 with gil:
  *                         logger.info('PREV njunc %s' %(njunc))
  *                 if ir:             # <<<<<<<<<<<<<<
@@ -6175,7 +6151,7 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse__find_junctions(PyObj
  */
             }
 
-            /* "majiq/src/internals/seq_parse.pyx":207
+            /* "majiq/src/internals/seq_parse.pyx":206
  *                         logger.info('Detect Intron retention %s' %(file_list[j][0]))
  *                     c_iobam.detect_introns(min_ir_cov, min_experiments)
  *                 njunc = c_iobam.get_njuncs()             # <<<<<<<<<<<<<<
@@ -6184,7 +6160,7 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse__find_junctions(PyObj
  */
             __pyx_v_njunc = __pyx_v_c_iobam.get_njuncs();
 
-            /* "majiq/src/internals/seq_parse.pyx":208
+            /* "majiq/src/internals/seq_parse.pyx":207
  *                     c_iobam.detect_introns(min_ir_cov, min_experiments)
  *                 njunc = c_iobam.get_njuncs()
  *                 with gil:             # <<<<<<<<<<<<<<
@@ -6197,18 +6173,18 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse__find_junctions(PyObj
                 #endif
                 /*try:*/ {
 
-                  /* "majiq/src/internals/seq_parse.pyx":209
+                  /* "majiq/src/internals/seq_parse.pyx":208
  *                 njunc = c_iobam.get_njuncs()
  *                 with gil:
  *                         logger.info('POST njunc %s' %(njunc))             # <<<<<<<<<<<<<<
  * 
  *             boots = np.zeros(shape=(njunc, m), dtype=np.float32)
  */
-                  __pyx_t_23 = __Pyx_PyObject_GetAttrStr(__pyx_v_logger, __pyx_n_s_info); if (unlikely(!__pyx_t_23)) __PYX_ERR(0, 209, __pyx_L33_error)
+                  __pyx_t_23 = __Pyx_PyObject_GetAttrStr(__pyx_v_logger, __pyx_n_s_info); if (unlikely(!__pyx_t_23)) __PYX_ERR(0, 208, __pyx_L33_error)
                   __Pyx_GOTREF(__pyx_t_23);
-                  __pyx_t_9 = __Pyx_PyInt_From_int(__pyx_v_njunc); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 209, __pyx_L33_error)
+                  __pyx_t_9 = __Pyx_PyInt_From_int(__pyx_v_njunc); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 208, __pyx_L33_error)
                   __Pyx_GOTREF(__pyx_t_9);
-                  __pyx_t_22 = __Pyx_PyString_Format(__pyx_kp_s_POST_njunc_s, __pyx_t_9); if (unlikely(!__pyx_t_22)) __PYX_ERR(0, 209, __pyx_L33_error)
+                  __pyx_t_22 = __Pyx_PyString_Format(__pyx_kp_s_POST_njunc_s, __pyx_t_9); if (unlikely(!__pyx_t_22)) __PYX_ERR(0, 208, __pyx_L33_error)
                   __Pyx_GOTREF(__pyx_t_22);
                   __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
                   __pyx_t_9 = NULL;
@@ -6222,14 +6198,14 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse__find_junctions(PyObj
                     }
                   }
                   if (!__pyx_t_9) {
-                    __pyx_t_17 = __Pyx_PyObject_CallOneArg(__pyx_t_23, __pyx_t_22); if (unlikely(!__pyx_t_17)) __PYX_ERR(0, 209, __pyx_L33_error)
+                    __pyx_t_17 = __Pyx_PyObject_CallOneArg(__pyx_t_23, __pyx_t_22); if (unlikely(!__pyx_t_17)) __PYX_ERR(0, 208, __pyx_L33_error)
                     __Pyx_DECREF(__pyx_t_22); __pyx_t_22 = 0;
                     __Pyx_GOTREF(__pyx_t_17);
                   } else {
                     #if CYTHON_FAST_PYCALL
                     if (PyFunction_Check(__pyx_t_23)) {
                       PyObject *__pyx_temp[2] = {__pyx_t_9, __pyx_t_22};
-                      __pyx_t_17 = __Pyx_PyFunction_FastCall(__pyx_t_23, __pyx_temp+1-1, 1+1); if (unlikely(!__pyx_t_17)) __PYX_ERR(0, 209, __pyx_L33_error)
+                      __pyx_t_17 = __Pyx_PyFunction_FastCall(__pyx_t_23, __pyx_temp+1-1, 1+1); if (unlikely(!__pyx_t_17)) __PYX_ERR(0, 208, __pyx_L33_error)
                       __Pyx_XDECREF(__pyx_t_9); __pyx_t_9 = 0;
                       __Pyx_GOTREF(__pyx_t_17);
                       __Pyx_DECREF(__pyx_t_22); __pyx_t_22 = 0;
@@ -6238,20 +6214,20 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse__find_junctions(PyObj
                     #if CYTHON_FAST_PYCCALL
                     if (__Pyx_PyFastCFunction_Check(__pyx_t_23)) {
                       PyObject *__pyx_temp[2] = {__pyx_t_9, __pyx_t_22};
-                      __pyx_t_17 = __Pyx_PyCFunction_FastCall(__pyx_t_23, __pyx_temp+1-1, 1+1); if (unlikely(!__pyx_t_17)) __PYX_ERR(0, 209, __pyx_L33_error)
+                      __pyx_t_17 = __Pyx_PyCFunction_FastCall(__pyx_t_23, __pyx_temp+1-1, 1+1); if (unlikely(!__pyx_t_17)) __PYX_ERR(0, 208, __pyx_L33_error)
                       __Pyx_XDECREF(__pyx_t_9); __pyx_t_9 = 0;
                       __Pyx_GOTREF(__pyx_t_17);
                       __Pyx_DECREF(__pyx_t_22); __pyx_t_22 = 0;
                     } else
                     #endif
                     {
-                      __pyx_t_16 = PyTuple_New(1+1); if (unlikely(!__pyx_t_16)) __PYX_ERR(0, 209, __pyx_L33_error)
+                      __pyx_t_16 = PyTuple_New(1+1); if (unlikely(!__pyx_t_16)) __PYX_ERR(0, 208, __pyx_L33_error)
                       __Pyx_GOTREF(__pyx_t_16);
                       __Pyx_GIVEREF(__pyx_t_9); PyTuple_SET_ITEM(__pyx_t_16, 0, __pyx_t_9); __pyx_t_9 = NULL;
                       __Pyx_GIVEREF(__pyx_t_22);
                       PyTuple_SET_ITEM(__pyx_t_16, 0+1, __pyx_t_22);
                       __pyx_t_22 = 0;
-                      __pyx_t_17 = __Pyx_PyObject_Call(__pyx_t_23, __pyx_t_16, NULL); if (unlikely(!__pyx_t_17)) __PYX_ERR(0, 209, __pyx_L33_error)
+                      __pyx_t_17 = __Pyx_PyObject_Call(__pyx_t_23, __pyx_t_16, NULL); if (unlikely(!__pyx_t_17)) __PYX_ERR(0, 208, __pyx_L33_error)
                       __Pyx_GOTREF(__pyx_t_17);
                       __Pyx_DECREF(__pyx_t_16); __pyx_t_16 = 0;
                     }
@@ -6260,7 +6236,7 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse__find_junctions(PyObj
                   __Pyx_DECREF(__pyx_t_17); __pyx_t_17 = 0;
                 }
 
-                /* "majiq/src/internals/seq_parse.pyx":208
+                /* "majiq/src/internals/seq_parse.pyx":207
  *                     c_iobam.detect_introns(min_ir_cov, min_experiments)
  *                 njunc = c_iobam.get_njuncs()
  *                 with gil:             # <<<<<<<<<<<<<<
@@ -6285,7 +6261,7 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse__find_junctions(PyObj
             }
           }
 
-          /* "majiq/src/internals/seq_parse.pyx":196
+          /* "majiq/src/internals/seq_parse.pyx":195
  *             strandness = conf.strand_specific[file_list[j][0]]
  * 
  *             with nogil:             # <<<<<<<<<<<<<<
@@ -6311,25 +6287,25 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse__find_junctions(PyObj
           }
       }
 
-      /* "majiq/src/internals/seq_parse.pyx":211
+      /* "majiq/src/internals/seq_parse.pyx":210
  *                         logger.info('POST njunc %s' %(njunc))
  * 
  *             boots = np.zeros(shape=(njunc, m), dtype=np.float32)             # <<<<<<<<<<<<<<
  *             with nogil:
  *                 with gil:
  */
-      __pyx_t_17 = __Pyx_GetModuleGlobalName(__pyx_n_s_np); if (unlikely(!__pyx_t_17)) __PYX_ERR(0, 211, __pyx_L1_error)
+      __pyx_t_17 = __Pyx_GetModuleGlobalName(__pyx_n_s_np); if (unlikely(!__pyx_t_17)) __PYX_ERR(0, 210, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_17);
-      __pyx_t_23 = __Pyx_PyObject_GetAttrStr(__pyx_t_17, __pyx_n_s_zeros); if (unlikely(!__pyx_t_23)) __PYX_ERR(0, 211, __pyx_L1_error)
+      __pyx_t_23 = __Pyx_PyObject_GetAttrStr(__pyx_t_17, __pyx_n_s_zeros); if (unlikely(!__pyx_t_23)) __PYX_ERR(0, 210, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_23);
       __Pyx_DECREF(__pyx_t_17); __pyx_t_17 = 0;
-      __pyx_t_17 = __Pyx_PyDict_NewPresized(2); if (unlikely(!__pyx_t_17)) __PYX_ERR(0, 211, __pyx_L1_error)
+      __pyx_t_17 = __Pyx_PyDict_NewPresized(2); if (unlikely(!__pyx_t_17)) __PYX_ERR(0, 210, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_17);
-      __pyx_t_16 = __Pyx_PyInt_From_int(__pyx_v_njunc); if (unlikely(!__pyx_t_16)) __PYX_ERR(0, 211, __pyx_L1_error)
+      __pyx_t_16 = __Pyx_PyInt_From_int(__pyx_v_njunc); if (unlikely(!__pyx_t_16)) __PYX_ERR(0, 210, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_16);
-      __pyx_t_22 = __Pyx_PyInt_From_int(__pyx_v_m); if (unlikely(!__pyx_t_22)) __PYX_ERR(0, 211, __pyx_L1_error)
+      __pyx_t_22 = __Pyx_PyInt_From_int(__pyx_v_m); if (unlikely(!__pyx_t_22)) __PYX_ERR(0, 210, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_22);
-      __pyx_t_9 = PyTuple_New(2); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 211, __pyx_L1_error)
+      __pyx_t_9 = PyTuple_New(2); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 210, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_9);
       __Pyx_GIVEREF(__pyx_t_16);
       PyTuple_SET_ITEM(__pyx_t_9, 0, __pyx_t_16);
@@ -6337,20 +6313,20 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse__find_junctions(PyObj
       PyTuple_SET_ITEM(__pyx_t_9, 1, __pyx_t_22);
       __pyx_t_16 = 0;
       __pyx_t_22 = 0;
-      if (PyDict_SetItem(__pyx_t_17, __pyx_n_s_shape, __pyx_t_9) < 0) __PYX_ERR(0, 211, __pyx_L1_error)
+      if (PyDict_SetItem(__pyx_t_17, __pyx_n_s_shape, __pyx_t_9) < 0) __PYX_ERR(0, 210, __pyx_L1_error)
       __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
-      __pyx_t_9 = __Pyx_GetModuleGlobalName(__pyx_n_s_np); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 211, __pyx_L1_error)
+      __pyx_t_9 = __Pyx_GetModuleGlobalName(__pyx_n_s_np); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 210, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_9);
-      __pyx_t_22 = __Pyx_PyObject_GetAttrStr(__pyx_t_9, __pyx_n_s_float32); if (unlikely(!__pyx_t_22)) __PYX_ERR(0, 211, __pyx_L1_error)
+      __pyx_t_22 = __Pyx_PyObject_GetAttrStr(__pyx_t_9, __pyx_n_s_float32); if (unlikely(!__pyx_t_22)) __PYX_ERR(0, 210, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_22);
       __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
-      if (PyDict_SetItem(__pyx_t_17, __pyx_n_s_dtype, __pyx_t_22) < 0) __PYX_ERR(0, 211, __pyx_L1_error)
+      if (PyDict_SetItem(__pyx_t_17, __pyx_n_s_dtype, __pyx_t_22) < 0) __PYX_ERR(0, 210, __pyx_L1_error)
       __Pyx_DECREF(__pyx_t_22); __pyx_t_22 = 0;
-      __pyx_t_22 = __Pyx_PyObject_Call(__pyx_t_23, __pyx_empty_tuple, __pyx_t_17); if (unlikely(!__pyx_t_22)) __PYX_ERR(0, 211, __pyx_L1_error)
+      __pyx_t_22 = __Pyx_PyObject_Call(__pyx_t_23, __pyx_empty_tuple, __pyx_t_17); if (unlikely(!__pyx_t_22)) __PYX_ERR(0, 210, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_22);
       __Pyx_DECREF(__pyx_t_23); __pyx_t_23 = 0;
       __Pyx_DECREF(__pyx_t_17); __pyx_t_17 = 0;
-      if (!(likely(((__pyx_t_22) == Py_None) || likely(__Pyx_TypeTest(__pyx_t_22, __pyx_ptype_5numpy_ndarray))))) __PYX_ERR(0, 211, __pyx_L1_error)
+      if (!(likely(((__pyx_t_22) == Py_None) || likely(__Pyx_TypeTest(__pyx_t_22, __pyx_ptype_5numpy_ndarray))))) __PYX_ERR(0, 210, __pyx_L1_error)
       __pyx_t_25 = ((PyArrayObject *)__pyx_t_22);
       {
         __Pyx_BufFmt_StackElem __pyx_stack[1];
@@ -6367,13 +6343,13 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse__find_junctions(PyObj
           __pyx_t_26 = __pyx_t_27 = __pyx_t_28 = 0;
         }
         __pyx_pybuffernd_boots.diminfo[0].strides = __pyx_pybuffernd_boots.rcbuffer->pybuffer.strides[0]; __pyx_pybuffernd_boots.diminfo[0].shape = __pyx_pybuffernd_boots.rcbuffer->pybuffer.shape[0]; __pyx_pybuffernd_boots.diminfo[1].strides = __pyx_pybuffernd_boots.rcbuffer->pybuffer.strides[1]; __pyx_pybuffernd_boots.diminfo[1].shape = __pyx_pybuffernd_boots.rcbuffer->pybuffer.shape[1];
-        if (unlikely(__pyx_t_2 < 0)) __PYX_ERR(0, 211, __pyx_L1_error)
+        if (unlikely(__pyx_t_2 < 0)) __PYX_ERR(0, 210, __pyx_L1_error)
       }
       __pyx_t_25 = 0;
       __Pyx_XDECREF_SET(__pyx_v_boots, ((PyArrayObject *)__pyx_t_22));
       __pyx_t_22 = 0;
 
-      /* "majiq/src/internals/seq_parse.pyx":212
+      /* "majiq/src/internals/seq_parse.pyx":211
  * 
  *             boots = np.zeros(shape=(njunc, m), dtype=np.float32)
  *             with nogil:             # <<<<<<<<<<<<<<
@@ -6388,7 +6364,7 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse__find_junctions(PyObj
           #endif
           /*try:*/ {
 
-            /* "majiq/src/internals/seq_parse.pyx":213
+            /* "majiq/src/internals/seq_parse.pyx":212
  *             boots = np.zeros(shape=(njunc, m), dtype=np.float32)
  *             with nogil:
  *                 with gil:             # <<<<<<<<<<<<<<
@@ -6401,22 +6377,22 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse__find_junctions(PyObj
                 #endif
                 /*try:*/ {
 
-                  /* "majiq/src/internals/seq_parse.pyx":214
+                  /* "majiq/src/internals/seq_parse.pyx":213
  *             with nogil:
  *                 with gil:
  *                         logger.info('Pre boost')             # <<<<<<<<<<<<<<
  *                 c_iobam.boostrap_samples(m, k, <np.float32_t *> boots.data)
  *                 j_ids = c_iobam.get_junc_map()
  */
-                  __pyx_t_22 = __Pyx_PyObject_GetAttrStr(__pyx_v_logger, __pyx_n_s_info); if (unlikely(!__pyx_t_22)) __PYX_ERR(0, 214, __pyx_L43_error)
+                  __pyx_t_22 = __Pyx_PyObject_GetAttrStr(__pyx_v_logger, __pyx_n_s_info); if (unlikely(!__pyx_t_22)) __PYX_ERR(0, 213, __pyx_L43_error)
                   __Pyx_GOTREF(__pyx_t_22);
-                  __pyx_t_17 = __Pyx_PyObject_Call(__pyx_t_22, __pyx_tuple__9, NULL); if (unlikely(!__pyx_t_17)) __PYX_ERR(0, 214, __pyx_L43_error)
+                  __pyx_t_17 = __Pyx_PyObject_Call(__pyx_t_22, __pyx_tuple__9, NULL); if (unlikely(!__pyx_t_17)) __PYX_ERR(0, 213, __pyx_L43_error)
                   __Pyx_GOTREF(__pyx_t_17);
                   __Pyx_DECREF(__pyx_t_22); __pyx_t_22 = 0;
                   __Pyx_DECREF(__pyx_t_17); __pyx_t_17 = 0;
                 }
 
-                /* "majiq/src/internals/seq_parse.pyx":213
+                /* "majiq/src/internals/seq_parse.pyx":212
  *             boots = np.zeros(shape=(njunc, m), dtype=np.float32)
  *             with nogil:
  *                 with gil:             # <<<<<<<<<<<<<<
@@ -6440,7 +6416,7 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse__find_junctions(PyObj
                 }
             }
 
-            /* "majiq/src/internals/seq_parse.pyx":215
+            /* "majiq/src/internals/seq_parse.pyx":214
  *                 with gil:
  *                         logger.info('Pre boost')
  *                 c_iobam.boostrap_samples(m, k, <np.float32_t *> boots.data)             # <<<<<<<<<<<<<<
@@ -6449,7 +6425,7 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse__find_junctions(PyObj
  */
             (void)(__pyx_v_c_iobam.boostrap_samples(__pyx_v_m, __pyx_v_k, ((__pyx_t_5numpy_float32_t *)__pyx_v_boots->data)));
 
-            /* "majiq/src/internals/seq_parse.pyx":216
+            /* "majiq/src/internals/seq_parse.pyx":215
  *                         logger.info('Pre boost')
  *                 c_iobam.boostrap_samples(m, k, <np.float32_t *> boots.data)
  *                 j_ids = c_iobam.get_junc_map()             # <<<<<<<<<<<<<<
@@ -6458,7 +6434,7 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse__find_junctions(PyObj
  */
             __pyx_v_j_ids = __pyx_v_c_iobam.get_junc_map();
 
-            /* "majiq/src/internals/seq_parse.pyx":217
+            /* "majiq/src/internals/seq_parse.pyx":216
  *                 c_iobam.boostrap_samples(m, k, <np.float32_t *> boots.data)
  *                 j_ids = c_iobam.get_junc_map()
  *                 jvec = c_iobam.get_junc_vec_summary()             # <<<<<<<<<<<<<<
@@ -6467,7 +6443,7 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse__find_junctions(PyObj
  */
             __pyx_v_jvec = __pyx_v_c_iobam.get_junc_vec_summary();
 
-            /* "majiq/src/internals/seq_parse.pyx":218
+            /* "majiq/src/internals/seq_parse.pyx":217
  *                 j_ids = c_iobam.get_junc_map()
  *                 jvec = c_iobam.get_junc_vec_summary()
  *                 jlimit = c_iobam.get_junc_limit_index()             # <<<<<<<<<<<<<<
@@ -6477,7 +6453,7 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse__find_junctions(PyObj
             __pyx_v_jlimit = __pyx_v_c_iobam.get_junc_limit_index();
           }
 
-          /* "majiq/src/internals/seq_parse.pyx":212
+          /* "majiq/src/internals/seq_parse.pyx":211
  * 
  *             boots = np.zeros(shape=(njunc, m), dtype=np.float32)
  *             with nogil:             # <<<<<<<<<<<<<<
@@ -6503,21 +6479,21 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse__find_junctions(PyObj
           }
       }
 
-      /* "majiq/src/internals/seq_parse.pyx":220
+      /* "majiq/src/internals/seq_parse.pyx":219
  *                 jlimit = c_iobam.get_junc_limit_index()
  * 
  *             logger.info("Update flags")             # <<<<<<<<<<<<<<
  *             for i in prange(n, nogil=True, num_threads=nthreads):
  *                 gg = gene_vec[i]
  */
-      __pyx_t_17 = __Pyx_PyObject_GetAttrStr(__pyx_v_logger, __pyx_n_s_info); if (unlikely(!__pyx_t_17)) __PYX_ERR(0, 220, __pyx_L1_error)
+      __pyx_t_17 = __Pyx_PyObject_GetAttrStr(__pyx_v_logger, __pyx_n_s_info); if (unlikely(!__pyx_t_17)) __PYX_ERR(0, 219, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_17);
-      __pyx_t_22 = __Pyx_PyObject_Call(__pyx_t_17, __pyx_tuple__10, NULL); if (unlikely(!__pyx_t_22)) __PYX_ERR(0, 220, __pyx_L1_error)
+      __pyx_t_22 = __Pyx_PyObject_Call(__pyx_t_17, __pyx_tuple__10, NULL); if (unlikely(!__pyx_t_22)) __PYX_ERR(0, 219, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_22);
       __Pyx_DECREF(__pyx_t_17); __pyx_t_17 = 0;
       __Pyx_DECREF(__pyx_t_22); __pyx_t_22 = 0;
 
-      /* "majiq/src/internals/seq_parse.pyx":221
+      /* "majiq/src/internals/seq_parse.pyx":220
  * 
  *             logger.info("Update flags")
  *             for i in prange(n, nogil=True, num_threads=nthreads):             # <<<<<<<<<<<<<<
@@ -6556,7 +6532,7 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse__find_junctions(PyObj
                                 /* Initialize private variables to invalid values */
                                 __pyx_v_gg = ((grimoire::Gene *)1);
 
-                                /* "majiq/src/internals/seq_parse.pyx":222
+                                /* "majiq/src/internals/seq_parse.pyx":221
  *             logger.info("Update flags")
  *             for i in prange(n, nogil=True, num_threads=nthreads):
  *                 gg = gene_vec[i]             # <<<<<<<<<<<<<<
@@ -6565,7 +6541,7 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse__find_junctions(PyObj
  */
                                 __pyx_v_gg = (__pyx_v_gene_vec[__pyx_v_i]);
 
-                                /* "majiq/src/internals/seq_parse.pyx":223
+                                /* "majiq/src/internals/seq_parse.pyx":222
  *             for i in prange(n, nogil=True, num_threads=nthreads):
  *                 gg = gene_vec[i]
  *                 gg.update_junc_flags(eff_len, (j==last_it_grp), minreads, minpos, denovo_thresh, min_experiments)             # <<<<<<<<<<<<<<
@@ -6586,7 +6562,7 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse__find_junctions(PyObj
             #endif
           }
 
-          /* "majiq/src/internals/seq_parse.pyx":221
+          /* "majiq/src/internals/seq_parse.pyx":220
  * 
  *             logger.info("Update flags")
  *             for i in prange(n, nogil=True, num_threads=nthreads):             # <<<<<<<<<<<<<<
@@ -6605,28 +6581,28 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse__find_junctions(PyObj
           }
       }
 
-      /* "majiq/src/internals/seq_parse.pyx":225
+      /* "majiq/src/internals/seq_parse.pyx":224
  *                 gg.update_junc_flags(eff_len, (j==last_it_grp), minreads, minpos, denovo_thresh, min_experiments)
  * 
  *             logger.info("Done Update flags")             # <<<<<<<<<<<<<<
  *             junc_ids = [0] * njunc
  *             for it in j_ids:
  */
-      __pyx_t_22 = __Pyx_PyObject_GetAttrStr(__pyx_v_logger, __pyx_n_s_info); if (unlikely(!__pyx_t_22)) __PYX_ERR(0, 225, __pyx_L1_error)
+      __pyx_t_22 = __Pyx_PyObject_GetAttrStr(__pyx_v_logger, __pyx_n_s_info); if (unlikely(!__pyx_t_22)) __PYX_ERR(0, 224, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_22);
-      __pyx_t_17 = __Pyx_PyObject_Call(__pyx_t_22, __pyx_tuple__11, NULL); if (unlikely(!__pyx_t_17)) __PYX_ERR(0, 225, __pyx_L1_error)
+      __pyx_t_17 = __Pyx_PyObject_Call(__pyx_t_22, __pyx_tuple__11, NULL); if (unlikely(!__pyx_t_17)) __PYX_ERR(0, 224, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_17);
       __Pyx_DECREF(__pyx_t_22); __pyx_t_22 = 0;
       __Pyx_DECREF(__pyx_t_17); __pyx_t_17 = 0;
 
-      /* "majiq/src/internals/seq_parse.pyx":226
+      /* "majiq/src/internals/seq_parse.pyx":225
  * 
  *             logger.info("Done Update flags")
  *             junc_ids = [0] * njunc             # <<<<<<<<<<<<<<
  *             for it in j_ids:
  *                 # print(file_list[j][0], j, last_it_grp, (j==last_it_grp), it.second, it.first)
  */
-      __pyx_t_17 = PyList_New(1 * ((__pyx_v_njunc<0) ? 0:__pyx_v_njunc)); if (unlikely(!__pyx_t_17)) __PYX_ERR(0, 226, __pyx_L1_error)
+      __pyx_t_17 = PyList_New(1 * ((__pyx_v_njunc<0) ? 0:__pyx_v_njunc)); if (unlikely(!__pyx_t_17)) __PYX_ERR(0, 225, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_17);
       { Py_ssize_t __pyx_temp;
         for (__pyx_temp=0; __pyx_temp < __pyx_v_njunc; __pyx_temp++) {
@@ -6638,7 +6614,7 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse__find_junctions(PyObj
       __Pyx_XDECREF_SET(__pyx_v_junc_ids, ((PyObject*)__pyx_t_17));
       __pyx_t_17 = 0;
 
-      /* "majiq/src/internals/seq_parse.pyx":227
+      /* "majiq/src/internals/seq_parse.pyx":226
  *             logger.info("Done Update flags")
  *             junc_ids = [0] * njunc
  *             for it in j_ids:             # <<<<<<<<<<<<<<
@@ -6652,35 +6628,35 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse__find_junctions(PyObj
         ++__pyx_t_31;
         __pyx_v_it = __pyx_t_32;
 
-        /* "majiq/src/internals/seq_parse.pyx":229
+        /* "majiq/src/internals/seq_parse.pyx":228
  *             for it in j_ids:
  *                 # print(file_list[j][0], j, last_it_grp, (j==last_it_grp), it.second, it.first)
  *                 tmp_str = it.first.decode('utf-8').split(':')[2]             # <<<<<<<<<<<<<<
  *                 start, end = (int(xx) for xx in tmp_str.split('-'))
  *                 junc_ids[it.second] = (it.first.decode('utf-8'), start, end, jvec[it.second], jvec[it.second + njunc], int(it.second>= jlimit))
  */
-        __pyx_t_17 = __Pyx_decode_cpp_string(__pyx_v_it.first, 0, PY_SSIZE_T_MAX, NULL, NULL, PyUnicode_DecodeUTF8); if (unlikely(!__pyx_t_17)) __PYX_ERR(0, 229, __pyx_L1_error)
+        __pyx_t_17 = __Pyx_decode_cpp_string(__pyx_v_it.first, 0, PY_SSIZE_T_MAX, NULL, NULL, PyUnicode_DecodeUTF8); if (unlikely(!__pyx_t_17)) __PYX_ERR(0, 228, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_17);
-        __pyx_t_22 = PyUnicode_Split(((PyObject*)__pyx_t_17), __pyx_kp_s__3, -1L); if (unlikely(!__pyx_t_22)) __PYX_ERR(0, 229, __pyx_L1_error)
+        __pyx_t_22 = PyUnicode_Split(((PyObject*)__pyx_t_17), __pyx_kp_s__3, -1L); if (unlikely(!__pyx_t_22)) __PYX_ERR(0, 228, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_22);
         __Pyx_DECREF(__pyx_t_17); __pyx_t_17 = 0;
-        __pyx_t_17 = __Pyx_GetItemInt_List(__pyx_t_22, 2, long, 1, __Pyx_PyInt_From_long, 1, 0, 1); if (unlikely(!__pyx_t_17)) __PYX_ERR(0, 229, __pyx_L1_error)
+        __pyx_t_17 = __Pyx_GetItemInt_List(__pyx_t_22, 2, long, 1, __Pyx_PyInt_From_long, 1, 0, 1); if (unlikely(!__pyx_t_17)) __PYX_ERR(0, 228, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_17);
         __Pyx_DECREF(__pyx_t_22); __pyx_t_22 = 0;
-        if (!(likely(PyString_CheckExact(__pyx_t_17))||((__pyx_t_17) == Py_None)||(PyErr_Format(PyExc_TypeError, "Expected %.16s, got %.200s", "str", Py_TYPE(__pyx_t_17)->tp_name), 0))) __PYX_ERR(0, 229, __pyx_L1_error)
+        if (!(likely(PyString_CheckExact(__pyx_t_17))||((__pyx_t_17) == Py_None)||(PyErr_Format(PyExc_TypeError, "Expected %.16s, got %.200s", "str", Py_TYPE(__pyx_t_17)->tp_name), 0))) __PYX_ERR(0, 228, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_cur_scope->__pyx_v_tmp_str);
         __Pyx_DECREF_SET(__pyx_cur_scope->__pyx_v_tmp_str, ((PyObject*)__pyx_t_17));
         __Pyx_GIVEREF(__pyx_t_17);
         __pyx_t_17 = 0;
 
-        /* "majiq/src/internals/seq_parse.pyx":230
+        /* "majiq/src/internals/seq_parse.pyx":229
  *                 # print(file_list[j][0], j, last_it_grp, (j==last_it_grp), it.second, it.first)
  *                 tmp_str = it.first.decode('utf-8').split(':')[2]
  *                 start, end = (int(xx) for xx in tmp_str.split('-'))             # <<<<<<<<<<<<<<
  *                 junc_ids[it.second] = (it.first.decode('utf-8'), start, end, jvec[it.second], jvec[it.second + njunc], int(it.second>= jlimit))
  * 
  */
-        __pyx_t_17 = __pyx_pf_5majiq_3src_9internals_9seq_parse_15_find_junctions_genexpr(((PyObject*)__pyx_cur_scope)); if (unlikely(!__pyx_t_17)) __PYX_ERR(0, 230, __pyx_L1_error)
+        __pyx_t_17 = __pyx_pf_5majiq_3src_9internals_9seq_parse_15_find_junctions_genexpr(((PyObject*)__pyx_cur_scope)); if (unlikely(!__pyx_t_17)) __PYX_ERR(0, 229, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_17);
         if ((likely(PyTuple_CheckExact(__pyx_t_17))) || (PyList_CheckExact(__pyx_t_17))) {
           PyObject* sequence = __pyx_t_17;
@@ -6688,7 +6664,7 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse__find_junctions(PyObj
           if (unlikely(size != 2)) {
             if (size > 2) __Pyx_RaiseTooManyValuesError(2);
             else if (size >= 0) __Pyx_RaiseNeedMoreValuesError(size);
-            __PYX_ERR(0, 230, __pyx_L1_error)
+            __PYX_ERR(0, 229, __pyx_L1_error)
           }
           #if CYTHON_ASSUME_SAFE_MACROS && !CYTHON_AVOID_BORROWED_REFS
           if (likely(PyTuple_CheckExact(sequence))) {
@@ -6701,15 +6677,15 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse__find_junctions(PyObj
           __Pyx_INCREF(__pyx_t_22);
           __Pyx_INCREF(__pyx_t_23);
           #else
-          __pyx_t_22 = PySequence_ITEM(sequence, 0); if (unlikely(!__pyx_t_22)) __PYX_ERR(0, 230, __pyx_L1_error)
+          __pyx_t_22 = PySequence_ITEM(sequence, 0); if (unlikely(!__pyx_t_22)) __PYX_ERR(0, 229, __pyx_L1_error)
           __Pyx_GOTREF(__pyx_t_22);
-          __pyx_t_23 = PySequence_ITEM(sequence, 1); if (unlikely(!__pyx_t_23)) __PYX_ERR(0, 230, __pyx_L1_error)
+          __pyx_t_23 = PySequence_ITEM(sequence, 1); if (unlikely(!__pyx_t_23)) __PYX_ERR(0, 229, __pyx_L1_error)
           __Pyx_GOTREF(__pyx_t_23);
           #endif
           __Pyx_DECREF(__pyx_t_17); __pyx_t_17 = 0;
         } else {
           Py_ssize_t index = -1;
-          __pyx_t_9 = PyObject_GetIter(__pyx_t_17); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 230, __pyx_L1_error)
+          __pyx_t_9 = PyObject_GetIter(__pyx_t_17); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 229, __pyx_L1_error)
           __Pyx_GOTREF(__pyx_t_9);
           __Pyx_DECREF(__pyx_t_17); __pyx_t_17 = 0;
           __pyx_t_18 = Py_TYPE(__pyx_t_9)->tp_iternext;
@@ -6717,7 +6693,7 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse__find_junctions(PyObj
           __Pyx_GOTREF(__pyx_t_22);
           index = 1; __pyx_t_23 = __pyx_t_18(__pyx_t_9); if (unlikely(!__pyx_t_23)) goto __pyx_L58_unpacking_failed;
           __Pyx_GOTREF(__pyx_t_23);
-          if (__Pyx_IternextUnpackEndCheck(__pyx_t_18(__pyx_t_9), 2) < 0) __PYX_ERR(0, 230, __pyx_L1_error)
+          if (__Pyx_IternextUnpackEndCheck(__pyx_t_18(__pyx_t_9), 2) < 0) __PYX_ERR(0, 229, __pyx_L1_error)
           __pyx_t_18 = NULL;
           __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
           goto __pyx_L59_unpacking_done;
@@ -6725,7 +6701,7 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse__find_junctions(PyObj
           __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
           __pyx_t_18 = NULL;
           if (__Pyx_IterFinish() == 0) __Pyx_RaiseNeedMoreValuesError(index);
-          __PYX_ERR(0, 230, __pyx_L1_error)
+          __PYX_ERR(0, 229, __pyx_L1_error)
           __pyx_L59_unpacking_done:;
         }
         __Pyx_XDECREF_SET(__pyx_v_start, __pyx_t_22);
@@ -6733,25 +6709,25 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse__find_junctions(PyObj
         __Pyx_XDECREF_SET(__pyx_v_end, __pyx_t_23);
         __pyx_t_23 = 0;
 
-        /* "majiq/src/internals/seq_parse.pyx":231
+        /* "majiq/src/internals/seq_parse.pyx":230
  *                 tmp_str = it.first.decode('utf-8').split(':')[2]
  *                 start, end = (int(xx) for xx in tmp_str.split('-'))
  *                 junc_ids[it.second] = (it.first.decode('utf-8'), start, end, jvec[it.second], jvec[it.second + njunc], int(it.second>= jlimit))             # <<<<<<<<<<<<<<
  * 
  *             logger.info('Done Reading file %s' %(file_list[j][0]))
  */
-        __pyx_t_17 = __Pyx_decode_cpp_string(__pyx_v_it.first, 0, PY_SSIZE_T_MAX, NULL, NULL, PyUnicode_DecodeUTF8); if (unlikely(!__pyx_t_17)) __PYX_ERR(0, 231, __pyx_L1_error)
+        __pyx_t_17 = __Pyx_decode_cpp_string(__pyx_v_it.first, 0, PY_SSIZE_T_MAX, NULL, NULL, PyUnicode_DecodeUTF8); if (unlikely(!__pyx_t_17)) __PYX_ERR(0, 230, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_17);
-        __pyx_t_23 = __Pyx_PyInt_From_int((__pyx_v_jvec[__pyx_v_it.second])); if (unlikely(!__pyx_t_23)) __PYX_ERR(0, 231, __pyx_L1_error)
+        __pyx_t_23 = __Pyx_PyInt_From_int((__pyx_v_jvec[__pyx_v_it.second])); if (unlikely(!__pyx_t_23)) __PYX_ERR(0, 230, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_23);
-        __pyx_t_22 = __Pyx_PyInt_From_int((__pyx_v_jvec[(__pyx_v_it.second + __pyx_v_njunc)])); if (unlikely(!__pyx_t_22)) __PYX_ERR(0, 231, __pyx_L1_error)
+        __pyx_t_22 = __Pyx_PyInt_From_int((__pyx_v_jvec[(__pyx_v_it.second + __pyx_v_njunc)])); if (unlikely(!__pyx_t_22)) __PYX_ERR(0, 230, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_22);
-        __pyx_t_9 = __Pyx_PyBool_FromLong((__pyx_v_it.second >= __pyx_v_jlimit)); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 231, __pyx_L1_error)
+        __pyx_t_9 = __Pyx_PyBool_FromLong((__pyx_v_it.second >= __pyx_v_jlimit)); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 230, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_9);
-        __pyx_t_16 = __Pyx_PyObject_CallOneArg(((PyObject *)(&PyInt_Type)), __pyx_t_9); if (unlikely(!__pyx_t_16)) __PYX_ERR(0, 231, __pyx_L1_error)
+        __pyx_t_16 = __Pyx_PyObject_CallOneArg(((PyObject *)(&PyInt_Type)), __pyx_t_9); if (unlikely(!__pyx_t_16)) __PYX_ERR(0, 230, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_16);
         __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
-        __pyx_t_9 = PyTuple_New(6); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 231, __pyx_L1_error)
+        __pyx_t_9 = PyTuple_New(6); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 230, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_9);
         __Pyx_GIVEREF(__pyx_t_17);
         PyTuple_SET_ITEM(__pyx_t_9, 0, __pyx_t_17);
@@ -6771,10 +6747,10 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse__find_junctions(PyObj
         __pyx_t_23 = 0;
         __pyx_t_22 = 0;
         __pyx_t_16 = 0;
-        if (unlikely(__Pyx_SetItemInt(__pyx_v_junc_ids, __pyx_v_it.second, __pyx_t_9, unsigned int, 0, __Pyx_PyInt_From_unsigned_int, 1, 0, 1) < 0)) __PYX_ERR(0, 231, __pyx_L1_error)
+        if (unlikely(__Pyx_SetItemInt(__pyx_v_junc_ids, __pyx_v_it.second, __pyx_t_9, unsigned int, 0, __Pyx_PyInt_From_unsigned_int, 1, 0, 1) < 0)) __PYX_ERR(0, 230, __pyx_L1_error)
         __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
 
-        /* "majiq/src/internals/seq_parse.pyx":227
+        /* "majiq/src/internals/seq_parse.pyx":226
  *             logger.info("Done Update flags")
  *             junc_ids = [0] * njunc
  *             for it in j_ids:             # <<<<<<<<<<<<<<
@@ -6783,25 +6759,25 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse__find_junctions(PyObj
  */
       }
 
-      /* "majiq/src/internals/seq_parse.pyx":233
+      /* "majiq/src/internals/seq_parse.pyx":232
  *                 junc_ids[it.second] = (it.first.decode('utf-8'), start, end, jvec[it.second], jvec[it.second + njunc], int(it.second>= jlimit))
  * 
  *             logger.info('Done Reading file %s' %(file_list[j][0]))             # <<<<<<<<<<<<<<
  *             _store_junc_file(boots, junc_ids, file_list[j][0], conf.outDir)
  * 
  */
-      __pyx_t_16 = __Pyx_PyObject_GetAttrStr(__pyx_v_logger, __pyx_n_s_info); if (unlikely(!__pyx_t_16)) __PYX_ERR(0, 233, __pyx_L1_error)
+      __pyx_t_16 = __Pyx_PyObject_GetAttrStr(__pyx_v_logger, __pyx_n_s_info); if (unlikely(!__pyx_t_16)) __PYX_ERR(0, 232, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_16);
       if (unlikely(__pyx_v_file_list == Py_None)) {
         PyErr_SetString(PyExc_TypeError, "'NoneType' object is not subscriptable");
-        __PYX_ERR(0, 233, __pyx_L1_error)
+        __PYX_ERR(0, 232, __pyx_L1_error)
       }
-      __pyx_t_22 = __Pyx_GetItemInt_List(__pyx_v_file_list, __pyx_v_j, int, 1, __Pyx_PyInt_From_int, 1, 1, 1); if (unlikely(!__pyx_t_22)) __PYX_ERR(0, 233, __pyx_L1_error)
+      __pyx_t_22 = __Pyx_GetItemInt_List(__pyx_v_file_list, __pyx_v_j, int, 1, __Pyx_PyInt_From_int, 1, 1, 1); if (unlikely(!__pyx_t_22)) __PYX_ERR(0, 232, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_22);
-      __pyx_t_23 = __Pyx_GetItemInt(__pyx_t_22, 0, long, 1, __Pyx_PyInt_From_long, 0, 0, 1); if (unlikely(!__pyx_t_23)) __PYX_ERR(0, 233, __pyx_L1_error)
+      __pyx_t_23 = __Pyx_GetItemInt(__pyx_t_22, 0, long, 1, __Pyx_PyInt_From_long, 0, 0, 1); if (unlikely(!__pyx_t_23)) __PYX_ERR(0, 232, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_23);
       __Pyx_DECREF(__pyx_t_22); __pyx_t_22 = 0;
-      __pyx_t_22 = __Pyx_PyString_Format(__pyx_kp_s_Done_Reading_file_s, __pyx_t_23); if (unlikely(!__pyx_t_22)) __PYX_ERR(0, 233, __pyx_L1_error)
+      __pyx_t_22 = __Pyx_PyString_Format(__pyx_kp_s_Done_Reading_file_s, __pyx_t_23); if (unlikely(!__pyx_t_22)) __PYX_ERR(0, 232, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_22);
       __Pyx_DECREF(__pyx_t_23); __pyx_t_23 = 0;
       __pyx_t_23 = NULL;
@@ -6815,14 +6791,14 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse__find_junctions(PyObj
         }
       }
       if (!__pyx_t_23) {
-        __pyx_t_9 = __Pyx_PyObject_CallOneArg(__pyx_t_16, __pyx_t_22); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 233, __pyx_L1_error)
+        __pyx_t_9 = __Pyx_PyObject_CallOneArg(__pyx_t_16, __pyx_t_22); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 232, __pyx_L1_error)
         __Pyx_DECREF(__pyx_t_22); __pyx_t_22 = 0;
         __Pyx_GOTREF(__pyx_t_9);
       } else {
         #if CYTHON_FAST_PYCALL
         if (PyFunction_Check(__pyx_t_16)) {
           PyObject *__pyx_temp[2] = {__pyx_t_23, __pyx_t_22};
-          __pyx_t_9 = __Pyx_PyFunction_FastCall(__pyx_t_16, __pyx_temp+1-1, 1+1); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 233, __pyx_L1_error)
+          __pyx_t_9 = __Pyx_PyFunction_FastCall(__pyx_t_16, __pyx_temp+1-1, 1+1); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 232, __pyx_L1_error)
           __Pyx_XDECREF(__pyx_t_23); __pyx_t_23 = 0;
           __Pyx_GOTREF(__pyx_t_9);
           __Pyx_DECREF(__pyx_t_22); __pyx_t_22 = 0;
@@ -6831,20 +6807,20 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse__find_junctions(PyObj
         #if CYTHON_FAST_PYCCALL
         if (__Pyx_PyFastCFunction_Check(__pyx_t_16)) {
           PyObject *__pyx_temp[2] = {__pyx_t_23, __pyx_t_22};
-          __pyx_t_9 = __Pyx_PyCFunction_FastCall(__pyx_t_16, __pyx_temp+1-1, 1+1); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 233, __pyx_L1_error)
+          __pyx_t_9 = __Pyx_PyCFunction_FastCall(__pyx_t_16, __pyx_temp+1-1, 1+1); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 232, __pyx_L1_error)
           __Pyx_XDECREF(__pyx_t_23); __pyx_t_23 = 0;
           __Pyx_GOTREF(__pyx_t_9);
           __Pyx_DECREF(__pyx_t_22); __pyx_t_22 = 0;
         } else
         #endif
         {
-          __pyx_t_17 = PyTuple_New(1+1); if (unlikely(!__pyx_t_17)) __PYX_ERR(0, 233, __pyx_L1_error)
+          __pyx_t_17 = PyTuple_New(1+1); if (unlikely(!__pyx_t_17)) __PYX_ERR(0, 232, __pyx_L1_error)
           __Pyx_GOTREF(__pyx_t_17);
           __Pyx_GIVEREF(__pyx_t_23); PyTuple_SET_ITEM(__pyx_t_17, 0, __pyx_t_23); __pyx_t_23 = NULL;
           __Pyx_GIVEREF(__pyx_t_22);
           PyTuple_SET_ITEM(__pyx_t_17, 0+1, __pyx_t_22);
           __pyx_t_22 = 0;
-          __pyx_t_9 = __Pyx_PyObject_Call(__pyx_t_16, __pyx_t_17, NULL); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 233, __pyx_L1_error)
+          __pyx_t_9 = __Pyx_PyObject_Call(__pyx_t_16, __pyx_t_17, NULL); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 232, __pyx_L1_error)
           __Pyx_GOTREF(__pyx_t_9);
           __Pyx_DECREF(__pyx_t_17); __pyx_t_17 = 0;
         }
@@ -6852,7 +6828,7 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse__find_junctions(PyObj
       __Pyx_DECREF(__pyx_t_16); __pyx_t_16 = 0;
       __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
 
-      /* "majiq/src/internals/seq_parse.pyx":234
+      /* "majiq/src/internals/seq_parse.pyx":233
  * 
  *             logger.info('Done Reading file %s' %(file_list[j][0]))
  *             _store_junc_file(boots, junc_ids, file_list[j][0], conf.outDir)             # <<<<<<<<<<<<<<
@@ -6861,24 +6837,24 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse__find_junctions(PyObj
  */
       if (unlikely(__pyx_v_file_list == Py_None)) {
         PyErr_SetString(PyExc_TypeError, "'NoneType' object is not subscriptable");
-        __PYX_ERR(0, 234, __pyx_L1_error)
+        __PYX_ERR(0, 233, __pyx_L1_error)
       }
-      __pyx_t_9 = __Pyx_GetItemInt_List(__pyx_v_file_list, __pyx_v_j, int, 1, __Pyx_PyInt_From_int, 1, 1, 1); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 234, __pyx_L1_error)
+      __pyx_t_9 = __Pyx_GetItemInt_List(__pyx_v_file_list, __pyx_v_j, int, 1, __Pyx_PyInt_From_int, 1, 1, 1); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 233, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_9);
-      __pyx_t_16 = __Pyx_GetItemInt(__pyx_t_9, 0, long, 1, __Pyx_PyInt_From_long, 0, 0, 1); if (unlikely(!__pyx_t_16)) __PYX_ERR(0, 234, __pyx_L1_error)
+      __pyx_t_16 = __Pyx_GetItemInt(__pyx_t_9, 0, long, 1, __Pyx_PyInt_From_long, 0, 0, 1); if (unlikely(!__pyx_t_16)) __PYX_ERR(0, 233, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_16);
       __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
-      if (!(likely(PyString_CheckExact(__pyx_t_16))||((__pyx_t_16) == Py_None)||(PyErr_Format(PyExc_TypeError, "Expected %.16s, got %.200s", "str", Py_TYPE(__pyx_t_16)->tp_name), 0))) __PYX_ERR(0, 234, __pyx_L1_error)
-      __pyx_t_9 = __Pyx_PyObject_GetAttrStr(__pyx_v_conf, __pyx_n_s_outDir); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 234, __pyx_L1_error)
+      if (!(likely(PyString_CheckExact(__pyx_t_16))||((__pyx_t_16) == Py_None)||(PyErr_Format(PyExc_TypeError, "Expected %.16s, got %.200s", "str", Py_TYPE(__pyx_t_16)->tp_name), 0))) __PYX_ERR(0, 233, __pyx_L1_error)
+      __pyx_t_9 = __Pyx_PyObject_GetAttrStr(__pyx_v_conf, __pyx_n_s_outDir); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 233, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_9);
-      if (!(likely(PyString_CheckExact(__pyx_t_9))||((__pyx_t_9) == Py_None)||(PyErr_Format(PyExc_TypeError, "Expected %.16s, got %.200s", "str", Py_TYPE(__pyx_t_9)->tp_name), 0))) __PYX_ERR(0, 234, __pyx_L1_error)
-      __pyx_t_17 = __pyx_f_5majiq_3src_9internals_9seq_parse__store_junc_file(((PyArrayObject *)__pyx_v_boots), __pyx_v_junc_ids, ((PyObject*)__pyx_t_16), ((PyObject*)__pyx_t_9)); if (unlikely(!__pyx_t_17)) __PYX_ERR(0, 234, __pyx_L1_error)
+      if (!(likely(PyString_CheckExact(__pyx_t_9))||((__pyx_t_9) == Py_None)||(PyErr_Format(PyExc_TypeError, "Expected %.16s, got %.200s", "str", Py_TYPE(__pyx_t_9)->tp_name), 0))) __PYX_ERR(0, 233, __pyx_L1_error)
+      __pyx_t_17 = __pyx_f_5majiq_3src_9internals_9seq_parse__store_junc_file(((PyArrayObject *)__pyx_v_boots), __pyx_v_junc_ids, ((PyObject*)__pyx_t_16), ((PyObject*)__pyx_t_9)); if (unlikely(!__pyx_t_17)) __PYX_ERR(0, 233, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_17);
       __Pyx_DECREF(__pyx_t_16); __pyx_t_16 = 0;
       __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
       __Pyx_DECREF(__pyx_t_17); __pyx_t_17 = 0;
 
-      /* "majiq/src/internals/seq_parse.pyx":191
+      /* "majiq/src/internals/seq_parse.pyx":190
  *         name = tmp_str.encode('utf-8')
  *         last_it_grp = group_list[len(group_list) - 1]
  *         for j in group_list:             # <<<<<<<<<<<<<<
@@ -6888,7 +6864,7 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse__find_junctions(PyObj
     }
     __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
-    /* "majiq/src/internals/seq_parse.pyx":188
+    /* "majiq/src/internals/seq_parse.pyx":187
  *         sortGeneList(vector_gene.second)
  * 
  *     for tmp_str, group_list in conf.tissue_repl.items():             # <<<<<<<<<<<<<<
@@ -6898,18 +6874,18 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse__find_junctions(PyObj
   }
   __Pyx_DECREF(__pyx_t_7); __pyx_t_7 = 0;
 
-  /* "majiq/src/internals/seq_parse.pyx":236
+  /* "majiq/src/internals/seq_parse.pyx":235
  *             _store_junc_file(boots, junc_ids, file_list[j][0], conf.outDir)
  * 
  *     logger.info("Detecting LSVs ngenes: %s " % n)             # <<<<<<<<<<<<<<
  * 
  *     for i in prange(n, nogil=True, num_threads=nthreads):
  */
-  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_logger, __pyx_n_s_info); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 236, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_logger, __pyx_n_s_info); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 235, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  __pyx_t_17 = __Pyx_PyInt_From_int(__pyx_v_n); if (unlikely(!__pyx_t_17)) __PYX_ERR(0, 236, __pyx_L1_error)
+  __pyx_t_17 = __Pyx_PyInt_From_int(__pyx_v_n); if (unlikely(!__pyx_t_17)) __PYX_ERR(0, 235, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_17);
-  __pyx_t_9 = __Pyx_PyString_Format(__pyx_kp_s_Detecting_LSVs_ngenes_s, __pyx_t_17); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 236, __pyx_L1_error)
+  __pyx_t_9 = __Pyx_PyString_Format(__pyx_kp_s_Detecting_LSVs_ngenes_s, __pyx_t_17); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 235, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_9);
   __Pyx_DECREF(__pyx_t_17); __pyx_t_17 = 0;
   __pyx_t_17 = NULL;
@@ -6923,14 +6899,14 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse__find_junctions(PyObj
     }
   }
   if (!__pyx_t_17) {
-    __pyx_t_7 = __Pyx_PyObject_CallOneArg(__pyx_t_1, __pyx_t_9); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 236, __pyx_L1_error)
+    __pyx_t_7 = __Pyx_PyObject_CallOneArg(__pyx_t_1, __pyx_t_9); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 235, __pyx_L1_error)
     __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
     __Pyx_GOTREF(__pyx_t_7);
   } else {
     #if CYTHON_FAST_PYCALL
     if (PyFunction_Check(__pyx_t_1)) {
       PyObject *__pyx_temp[2] = {__pyx_t_17, __pyx_t_9};
-      __pyx_t_7 = __Pyx_PyFunction_FastCall(__pyx_t_1, __pyx_temp+1-1, 1+1); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 236, __pyx_L1_error)
+      __pyx_t_7 = __Pyx_PyFunction_FastCall(__pyx_t_1, __pyx_temp+1-1, 1+1); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 235, __pyx_L1_error)
       __Pyx_XDECREF(__pyx_t_17); __pyx_t_17 = 0;
       __Pyx_GOTREF(__pyx_t_7);
       __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
@@ -6939,20 +6915,20 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse__find_junctions(PyObj
     #if CYTHON_FAST_PYCCALL
     if (__Pyx_PyFastCFunction_Check(__pyx_t_1)) {
       PyObject *__pyx_temp[2] = {__pyx_t_17, __pyx_t_9};
-      __pyx_t_7 = __Pyx_PyCFunction_FastCall(__pyx_t_1, __pyx_temp+1-1, 1+1); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 236, __pyx_L1_error)
+      __pyx_t_7 = __Pyx_PyCFunction_FastCall(__pyx_t_1, __pyx_temp+1-1, 1+1); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 235, __pyx_L1_error)
       __Pyx_XDECREF(__pyx_t_17); __pyx_t_17 = 0;
       __Pyx_GOTREF(__pyx_t_7);
       __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
     } else
     #endif
     {
-      __pyx_t_16 = PyTuple_New(1+1); if (unlikely(!__pyx_t_16)) __PYX_ERR(0, 236, __pyx_L1_error)
+      __pyx_t_16 = PyTuple_New(1+1); if (unlikely(!__pyx_t_16)) __PYX_ERR(0, 235, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_16);
       __Pyx_GIVEREF(__pyx_t_17); PyTuple_SET_ITEM(__pyx_t_16, 0, __pyx_t_17); __pyx_t_17 = NULL;
       __Pyx_GIVEREF(__pyx_t_9);
       PyTuple_SET_ITEM(__pyx_t_16, 0+1, __pyx_t_9);
       __pyx_t_9 = 0;
-      __pyx_t_7 = __Pyx_PyObject_Call(__pyx_t_1, __pyx_t_16, NULL); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 236, __pyx_L1_error)
+      __pyx_t_7 = __Pyx_PyObject_Call(__pyx_t_1, __pyx_t_16, NULL); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 235, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_7);
       __Pyx_DECREF(__pyx_t_16); __pyx_t_16 = 0;
     }
@@ -6960,7 +6936,7 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse__find_junctions(PyObj
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __Pyx_DECREF(__pyx_t_7); __pyx_t_7 = 0;
 
-  /* "majiq/src/internals/seq_parse.pyx":238
+  /* "majiq/src/internals/seq_parse.pyx":237
  *     logger.info("Detecting LSVs ngenes: %s " % n)
  * 
  *     for i in prange(n, nogil=True, num_threads=nthreads):             # <<<<<<<<<<<<<<
@@ -7000,7 +6976,7 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse__find_junctions(PyObj
                             __pyx_v_gg = ((grimoire::Gene *)1);
                             __pyx_v_nlsv = ((int)0xbad0bad0);
 
-                            /* "majiq/src/internals/seq_parse.pyx":239
+                            /* "majiq/src/internals/seq_parse.pyx":238
  * 
  *     for i in prange(n, nogil=True, num_threads=nthreads):
  *         gg = gene_vec[i]             # <<<<<<<<<<<<<<
@@ -7009,7 +6985,7 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse__find_junctions(PyObj
  */
                             __pyx_v_gg = (__pyx_v_gene_vec[__pyx_v_i]);
 
-                            /* "majiq/src/internals/seq_parse.pyx":240
+                            /* "majiq/src/internals/seq_parse.pyx":239
  *     for i in prange(n, nogil=True, num_threads=nthreads):
  *         gg = gene_vec[i]
  *         gg.detect_exons()             # <<<<<<<<<<<<<<
@@ -7018,7 +6994,7 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse__find_junctions(PyObj
  */
                             __pyx_v_gg->detect_exons();
 
-                            /* "majiq/src/internals/seq_parse.pyx":241
+                            /* "majiq/src/internals/seq_parse.pyx":240
  *         gg = gene_vec[i]
  *         gg.detect_exons()
  *         if ir:             # <<<<<<<<<<<<<<
@@ -7028,7 +7004,7 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse__find_junctions(PyObj
                             __pyx_t_6 = (__pyx_v_ir != 0);
                             if (__pyx_t_6) {
 
-                              /* "majiq/src/internals/seq_parse.pyx":244
+                              /* "majiq/src/internals/seq_parse.pyx":243
  *             # with gil:
  *             #     logger.info("KK0")
  *             gg.connect_introns()             # <<<<<<<<<<<<<<
@@ -7037,7 +7013,7 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse__find_junctions(PyObj
  */
                               __pyx_v_gg->connect_introns();
 
-                              /* "majiq/src/internals/seq_parse.pyx":241
+                              /* "majiq/src/internals/seq_parse.pyx":240
  *         gg = gene_vec[i]
  *         gg.detect_exons()
  *         if ir:             # <<<<<<<<<<<<<<
@@ -7046,7 +7022,7 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse__find_junctions(PyObj
  */
                             }
 
-                            /* "majiq/src/internals/seq_parse.pyx":246
+                            /* "majiq/src/internals/seq_parse.pyx":245
  *             gg.connect_introns()
  * 
  *         gg.fill_junc_tlb(gene_junc_tlb)             # <<<<<<<<<<<<<<
@@ -7055,7 +7031,7 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse__find_junctions(PyObj
  */
                             __pyx_v_gg->fill_junc_tlb(__pyx_v_gene_junc_tlb);
 
-                            /* "majiq/src/internals/seq_parse.pyx":252
+                            /* "majiq/src/internals/seq_parse.pyx":251
  *         # with gil:
  *         #     logger.info("KK")
  *         nlsv = detect_lsvs(out_lsvlist, gg)             # <<<<<<<<<<<<<<
@@ -7076,7 +7052,7 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse__find_junctions(PyObj
         #endif
       }
 
-      /* "majiq/src/internals/seq_parse.pyx":238
+      /* "majiq/src/internals/seq_parse.pyx":237
  *     logger.info("Detecting LSVs ngenes: %s " % n)
  * 
  *     for i in prange(n, nogil=True, num_threads=nthreads):             # <<<<<<<<<<<<<<
@@ -7095,21 +7071,21 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse__find_junctions(PyObj
       }
   }
 
-  /* "majiq/src/internals/seq_parse.pyx":267
+  /* "majiq/src/internals/seq_parse.pyx":266
  * 
  * 
  *     logger.info("Generating Splicegraph")             # <<<<<<<<<<<<<<
  * 
  *     for i in range(n):
  */
-  __pyx_t_7 = __Pyx_PyObject_GetAttrStr(__pyx_v_logger, __pyx_n_s_info); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 267, __pyx_L1_error)
+  __pyx_t_7 = __Pyx_PyObject_GetAttrStr(__pyx_v_logger, __pyx_n_s_info); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 266, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_7);
-  __pyx_t_1 = __Pyx_PyObject_Call(__pyx_t_7, __pyx_tuple__12, NULL); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 267, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyObject_Call(__pyx_t_7, __pyx_tuple__12, NULL); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 266, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __Pyx_DECREF(__pyx_t_7); __pyx_t_7 = 0;
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
-  /* "majiq/src/internals/seq_parse.pyx":269
+  /* "majiq/src/internals/seq_parse.pyx":268
  *     logger.info("Generating Splicegraph")
  * 
  *     for i in range(n):             # <<<<<<<<<<<<<<
@@ -7121,30 +7097,30 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse__find_junctions(PyObj
   for (__pyx_t_30 = 0; __pyx_t_30 < __pyx_t_29; __pyx_t_30+=1) {
     __pyx_v_i = __pyx_t_30;
 
-    /* "majiq/src/internals/seq_parse.pyx":270
+    /* "majiq/src/internals/seq_parse.pyx":269
  * 
  *     for i in range(n):
  *         gene_to_splicegraph(gene_vec[i], conf)             # <<<<<<<<<<<<<<
  * 
  *     logger.info("%s LSV found" % out_lsvlist.size())
  */
-    __pyx_t_1 = __pyx_f_5majiq_3src_9internals_9seq_parse_gene_to_splicegraph((__pyx_v_gene_vec[__pyx_v_i]), __pyx_v_conf); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 270, __pyx_L1_error)
+    __pyx_t_1 = __pyx_f_5majiq_3src_9internals_9seq_parse_gene_to_splicegraph((__pyx_v_gene_vec[__pyx_v_i]), __pyx_v_conf); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 269, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_1);
     __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   }
 
-  /* "majiq/src/internals/seq_parse.pyx":272
+  /* "majiq/src/internals/seq_parse.pyx":271
  *         gene_to_splicegraph(gene_vec[i], conf)
  * 
  *     logger.info("%s LSV found" % out_lsvlist.size())             # <<<<<<<<<<<<<<
  *     for j in range(nsamples):
  *         cnt = _output_lsv_file_single(out_lsvlist, file_list[j][0], gene_junc_tlb, gene_list, conf.outDir, nthreads, m, ir)
  */
-  __pyx_t_7 = __Pyx_PyObject_GetAttrStr(__pyx_v_logger, __pyx_n_s_info); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 272, __pyx_L1_error)
+  __pyx_t_7 = __Pyx_PyObject_GetAttrStr(__pyx_v_logger, __pyx_n_s_info); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 271, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_7);
-  __pyx_t_16 = __Pyx_PyInt_FromSize_t(__pyx_v_out_lsvlist.size()); if (unlikely(!__pyx_t_16)) __PYX_ERR(0, 272, __pyx_L1_error)
+  __pyx_t_16 = __Pyx_PyInt_FromSize_t(__pyx_v_out_lsvlist.size()); if (unlikely(!__pyx_t_16)) __PYX_ERR(0, 271, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_16);
-  __pyx_t_9 = __Pyx_PyString_Format(__pyx_kp_s_s_LSV_found, __pyx_t_16); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 272, __pyx_L1_error)
+  __pyx_t_9 = __Pyx_PyString_Format(__pyx_kp_s_s_LSV_found, __pyx_t_16); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 271, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_9);
   __Pyx_DECREF(__pyx_t_16); __pyx_t_16 = 0;
   __pyx_t_16 = NULL;
@@ -7158,14 +7134,14 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse__find_junctions(PyObj
     }
   }
   if (!__pyx_t_16) {
-    __pyx_t_1 = __Pyx_PyObject_CallOneArg(__pyx_t_7, __pyx_t_9); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 272, __pyx_L1_error)
+    __pyx_t_1 = __Pyx_PyObject_CallOneArg(__pyx_t_7, __pyx_t_9); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 271, __pyx_L1_error)
     __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
     __Pyx_GOTREF(__pyx_t_1);
   } else {
     #if CYTHON_FAST_PYCALL
     if (PyFunction_Check(__pyx_t_7)) {
       PyObject *__pyx_temp[2] = {__pyx_t_16, __pyx_t_9};
-      __pyx_t_1 = __Pyx_PyFunction_FastCall(__pyx_t_7, __pyx_temp+1-1, 1+1); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 272, __pyx_L1_error)
+      __pyx_t_1 = __Pyx_PyFunction_FastCall(__pyx_t_7, __pyx_temp+1-1, 1+1); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 271, __pyx_L1_error)
       __Pyx_XDECREF(__pyx_t_16); __pyx_t_16 = 0;
       __Pyx_GOTREF(__pyx_t_1);
       __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
@@ -7174,20 +7150,20 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse__find_junctions(PyObj
     #if CYTHON_FAST_PYCCALL
     if (__Pyx_PyFastCFunction_Check(__pyx_t_7)) {
       PyObject *__pyx_temp[2] = {__pyx_t_16, __pyx_t_9};
-      __pyx_t_1 = __Pyx_PyCFunction_FastCall(__pyx_t_7, __pyx_temp+1-1, 1+1); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 272, __pyx_L1_error)
+      __pyx_t_1 = __Pyx_PyCFunction_FastCall(__pyx_t_7, __pyx_temp+1-1, 1+1); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 271, __pyx_L1_error)
       __Pyx_XDECREF(__pyx_t_16); __pyx_t_16 = 0;
       __Pyx_GOTREF(__pyx_t_1);
       __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
     } else
     #endif
     {
-      __pyx_t_17 = PyTuple_New(1+1); if (unlikely(!__pyx_t_17)) __PYX_ERR(0, 272, __pyx_L1_error)
+      __pyx_t_17 = PyTuple_New(1+1); if (unlikely(!__pyx_t_17)) __PYX_ERR(0, 271, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_17);
       __Pyx_GIVEREF(__pyx_t_16); PyTuple_SET_ITEM(__pyx_t_17, 0, __pyx_t_16); __pyx_t_16 = NULL;
       __Pyx_GIVEREF(__pyx_t_9);
       PyTuple_SET_ITEM(__pyx_t_17, 0+1, __pyx_t_9);
       __pyx_t_9 = 0;
-      __pyx_t_1 = __Pyx_PyObject_Call(__pyx_t_7, __pyx_t_17, NULL); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 272, __pyx_L1_error)
+      __pyx_t_1 = __Pyx_PyObject_Call(__pyx_t_7, __pyx_t_17, NULL); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 271, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_1);
       __Pyx_DECREF(__pyx_t_17); __pyx_t_17 = 0;
     }
@@ -7195,7 +7171,7 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse__find_junctions(PyObj
   __Pyx_DECREF(__pyx_t_7); __pyx_t_7 = 0;
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
-  /* "majiq/src/internals/seq_parse.pyx":273
+  /* "majiq/src/internals/seq_parse.pyx":272
  * 
  *     logger.info("%s LSV found" % out_lsvlist.size())
  *     for j in range(nsamples):             # <<<<<<<<<<<<<<
@@ -7207,7 +7183,7 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse__find_junctions(PyObj
   for (__pyx_t_30 = 0; __pyx_t_30 < __pyx_t_29; __pyx_t_30+=1) {
     __pyx_v_j = __pyx_t_30;
 
-    /* "majiq/src/internals/seq_parse.pyx":274
+    /* "majiq/src/internals/seq_parse.pyx":273
  *     logger.info("%s LSV found" % out_lsvlist.size())
  *     for j in range(nsamples):
  *         cnt = _output_lsv_file_single(out_lsvlist, file_list[j][0], gene_junc_tlb, gene_list, conf.outDir, nthreads, m, ir)             # <<<<<<<<<<<<<<
@@ -7216,42 +7192,42 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse__find_junctions(PyObj
  */
     if (unlikely(__pyx_v_file_list == Py_None)) {
       PyErr_SetString(PyExc_TypeError, "'NoneType' object is not subscriptable");
-      __PYX_ERR(0, 274, __pyx_L1_error)
+      __PYX_ERR(0, 273, __pyx_L1_error)
     }
-    __pyx_t_1 = __Pyx_GetItemInt_List(__pyx_v_file_list, __pyx_v_j, int, 1, __Pyx_PyInt_From_int, 1, 1, 1); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 274, __pyx_L1_error)
+    __pyx_t_1 = __Pyx_GetItemInt_List(__pyx_v_file_list, __pyx_v_j, int, 1, __Pyx_PyInt_From_int, 1, 1, 1); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 273, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_1);
-    __pyx_t_7 = __Pyx_GetItemInt(__pyx_t_1, 0, long, 1, __Pyx_PyInt_From_long, 0, 0, 1); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 274, __pyx_L1_error)
+    __pyx_t_7 = __Pyx_GetItemInt(__pyx_t_1, 0, long, 1, __Pyx_PyInt_From_long, 0, 0, 1); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 273, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_7);
     __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-    if (!(likely(PyString_CheckExact(__pyx_t_7))||((__pyx_t_7) == Py_None)||(PyErr_Format(PyExc_TypeError, "Expected %.16s, got %.200s", "str", Py_TYPE(__pyx_t_7)->tp_name), 0))) __PYX_ERR(0, 274, __pyx_L1_error)
-    __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_conf, __pyx_n_s_outDir); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 274, __pyx_L1_error)
+    if (!(likely(PyString_CheckExact(__pyx_t_7))||((__pyx_t_7) == Py_None)||(PyErr_Format(PyExc_TypeError, "Expected %.16s, got %.200s", "str", Py_TYPE(__pyx_t_7)->tp_name), 0))) __PYX_ERR(0, 273, __pyx_L1_error)
+    __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_conf, __pyx_n_s_outDir); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 273, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_1);
-    if (!(likely(PyString_CheckExact(__pyx_t_1))||((__pyx_t_1) == Py_None)||(PyErr_Format(PyExc_TypeError, "Expected %.16s, got %.200s", "str", Py_TYPE(__pyx_t_1)->tp_name), 0))) __PYX_ERR(0, 274, __pyx_L1_error)
+    if (!(likely(PyString_CheckExact(__pyx_t_1))||((__pyx_t_1) == Py_None)||(PyErr_Format(PyExc_TypeError, "Expected %.16s, got %.200s", "str", Py_TYPE(__pyx_t_1)->tp_name), 0))) __PYX_ERR(0, 273, __pyx_L1_error)
     __pyx_v_cnt = __pyx_f_5majiq_3src_9internals_9seq_parse__output_lsv_file_single(__pyx_v_out_lsvlist, ((PyObject*)__pyx_t_7), __pyx_v_gene_junc_tlb, __pyx_v_gene_list, ((PyObject*)__pyx_t_1), __pyx_v_nthreads, __pyx_v_m, __pyx_v_ir);
     __Pyx_DECREF(__pyx_t_7); __pyx_t_7 = 0;
     __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
-    /* "majiq/src/internals/seq_parse.pyx":275
+    /* "majiq/src/internals/seq_parse.pyx":274
  *     for j in range(nsamples):
  *         cnt = _output_lsv_file_single(out_lsvlist, file_list[j][0], gene_junc_tlb, gene_list, conf.outDir, nthreads, m, ir)
  *         logger.info('%s: %d LSVs' %(file_list[j][0], cnt))             # <<<<<<<<<<<<<<
  * 
  * 
  */
-    __pyx_t_7 = __Pyx_PyObject_GetAttrStr(__pyx_v_logger, __pyx_n_s_info); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 275, __pyx_L1_error)
+    __pyx_t_7 = __Pyx_PyObject_GetAttrStr(__pyx_v_logger, __pyx_n_s_info); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 274, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_7);
     if (unlikely(__pyx_v_file_list == Py_None)) {
       PyErr_SetString(PyExc_TypeError, "'NoneType' object is not subscriptable");
-      __PYX_ERR(0, 275, __pyx_L1_error)
+      __PYX_ERR(0, 274, __pyx_L1_error)
     }
-    __pyx_t_17 = __Pyx_GetItemInt_List(__pyx_v_file_list, __pyx_v_j, int, 1, __Pyx_PyInt_From_int, 1, 1, 1); if (unlikely(!__pyx_t_17)) __PYX_ERR(0, 275, __pyx_L1_error)
+    __pyx_t_17 = __Pyx_GetItemInt_List(__pyx_v_file_list, __pyx_v_j, int, 1, __Pyx_PyInt_From_int, 1, 1, 1); if (unlikely(!__pyx_t_17)) __PYX_ERR(0, 274, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_17);
-    __pyx_t_9 = __Pyx_GetItemInt(__pyx_t_17, 0, long, 1, __Pyx_PyInt_From_long, 0, 0, 1); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 275, __pyx_L1_error)
+    __pyx_t_9 = __Pyx_GetItemInt(__pyx_t_17, 0, long, 1, __Pyx_PyInt_From_long, 0, 0, 1); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 274, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_9);
     __Pyx_DECREF(__pyx_t_17); __pyx_t_17 = 0;
-    __pyx_t_17 = __Pyx_PyInt_From_int(__pyx_v_cnt); if (unlikely(!__pyx_t_17)) __PYX_ERR(0, 275, __pyx_L1_error)
+    __pyx_t_17 = __Pyx_PyInt_From_int(__pyx_v_cnt); if (unlikely(!__pyx_t_17)) __PYX_ERR(0, 274, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_17);
-    __pyx_t_16 = PyTuple_New(2); if (unlikely(!__pyx_t_16)) __PYX_ERR(0, 275, __pyx_L1_error)
+    __pyx_t_16 = PyTuple_New(2); if (unlikely(!__pyx_t_16)) __PYX_ERR(0, 274, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_16);
     __Pyx_GIVEREF(__pyx_t_9);
     PyTuple_SET_ITEM(__pyx_t_16, 0, __pyx_t_9);
@@ -7259,7 +7235,7 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse__find_junctions(PyObj
     PyTuple_SET_ITEM(__pyx_t_16, 1, __pyx_t_17);
     __pyx_t_9 = 0;
     __pyx_t_17 = 0;
-    __pyx_t_17 = __Pyx_PyString_Format(__pyx_kp_s_s_d_LSVs, __pyx_t_16); if (unlikely(!__pyx_t_17)) __PYX_ERR(0, 275, __pyx_L1_error)
+    __pyx_t_17 = __Pyx_PyString_Format(__pyx_kp_s_s_d_LSVs, __pyx_t_16); if (unlikely(!__pyx_t_17)) __PYX_ERR(0, 274, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_17);
     __Pyx_DECREF(__pyx_t_16); __pyx_t_16 = 0;
     __pyx_t_16 = NULL;
@@ -7273,14 +7249,14 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse__find_junctions(PyObj
       }
     }
     if (!__pyx_t_16) {
-      __pyx_t_1 = __Pyx_PyObject_CallOneArg(__pyx_t_7, __pyx_t_17); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 275, __pyx_L1_error)
+      __pyx_t_1 = __Pyx_PyObject_CallOneArg(__pyx_t_7, __pyx_t_17); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 274, __pyx_L1_error)
       __Pyx_DECREF(__pyx_t_17); __pyx_t_17 = 0;
       __Pyx_GOTREF(__pyx_t_1);
     } else {
       #if CYTHON_FAST_PYCALL
       if (PyFunction_Check(__pyx_t_7)) {
         PyObject *__pyx_temp[2] = {__pyx_t_16, __pyx_t_17};
-        __pyx_t_1 = __Pyx_PyFunction_FastCall(__pyx_t_7, __pyx_temp+1-1, 1+1); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 275, __pyx_L1_error)
+        __pyx_t_1 = __Pyx_PyFunction_FastCall(__pyx_t_7, __pyx_temp+1-1, 1+1); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 274, __pyx_L1_error)
         __Pyx_XDECREF(__pyx_t_16); __pyx_t_16 = 0;
         __Pyx_GOTREF(__pyx_t_1);
         __Pyx_DECREF(__pyx_t_17); __pyx_t_17 = 0;
@@ -7289,20 +7265,20 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse__find_junctions(PyObj
       #if CYTHON_FAST_PYCCALL
       if (__Pyx_PyFastCFunction_Check(__pyx_t_7)) {
         PyObject *__pyx_temp[2] = {__pyx_t_16, __pyx_t_17};
-        __pyx_t_1 = __Pyx_PyCFunction_FastCall(__pyx_t_7, __pyx_temp+1-1, 1+1); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 275, __pyx_L1_error)
+        __pyx_t_1 = __Pyx_PyCFunction_FastCall(__pyx_t_7, __pyx_temp+1-1, 1+1); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 274, __pyx_L1_error)
         __Pyx_XDECREF(__pyx_t_16); __pyx_t_16 = 0;
         __Pyx_GOTREF(__pyx_t_1);
         __Pyx_DECREF(__pyx_t_17); __pyx_t_17 = 0;
       } else
       #endif
       {
-        __pyx_t_9 = PyTuple_New(1+1); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 275, __pyx_L1_error)
+        __pyx_t_9 = PyTuple_New(1+1); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 274, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_9);
         __Pyx_GIVEREF(__pyx_t_16); PyTuple_SET_ITEM(__pyx_t_9, 0, __pyx_t_16); __pyx_t_16 = NULL;
         __Pyx_GIVEREF(__pyx_t_17);
         PyTuple_SET_ITEM(__pyx_t_9, 0+1, __pyx_t_17);
         __pyx_t_17 = 0;
-        __pyx_t_1 = __Pyx_PyObject_Call(__pyx_t_7, __pyx_t_9, NULL); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 275, __pyx_L1_error)
+        __pyx_t_1 = __Pyx_PyObject_Call(__pyx_t_7, __pyx_t_9, NULL); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 274, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_1);
         __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
       }
@@ -7311,7 +7287,7 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse__find_junctions(PyObj
     __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   }
 
-  /* "majiq/src/internals/seq_parse.pyx":134
+  /* "majiq/src/internals/seq_parse.pyx":133
  * 
  * 
  * cdef _find_junctions(list file_list, vector[Gene*] gene_vec,  object conf, object logger):             # <<<<<<<<<<<<<<
@@ -7353,7 +7329,7 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse__find_junctions(PyObj
   return __pyx_r;
 }
 
-/* "majiq/src/internals/seq_parse.pyx":282
+/* "majiq/src/internals/seq_parse.pyx":281
  * from majiq.src.config import Config
  * 
  * cdef init_splicegraph(filename):             # <<<<<<<<<<<<<<
@@ -7382,14 +7358,14 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse_init_splicegraph(PyOb
   int __pyx_t_13;
   __Pyx_RefNannySetupContext("init_splicegraph", 0);
 
-  /* "majiq/src/internals/seq_parse.pyx":283
+  /* "majiq/src/internals/seq_parse.pyx":282
  * 
  * cdef init_splicegraph(filename):
  *     majiq_config = Config()             # <<<<<<<<<<<<<<
  * 
  *     # erase splice graph file
  */
-  __pyx_t_2 = __Pyx_GetModuleGlobalName(__pyx_n_s_Config); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 283, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_GetModuleGlobalName(__pyx_n_s_Config); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 282, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   __pyx_t_3 = NULL;
   if (CYTHON_UNPACK_METHODS && unlikely(PyMethod_Check(__pyx_t_2))) {
@@ -7402,17 +7378,17 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse_init_splicegraph(PyOb
     }
   }
   if (__pyx_t_3) {
-    __pyx_t_1 = __Pyx_PyObject_CallOneArg(__pyx_t_2, __pyx_t_3); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 283, __pyx_L1_error)
+    __pyx_t_1 = __Pyx_PyObject_CallOneArg(__pyx_t_2, __pyx_t_3); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 282, __pyx_L1_error)
     __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
   } else {
-    __pyx_t_1 = __Pyx_PyObject_CallNoArg(__pyx_t_2); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 283, __pyx_L1_error)
+    __pyx_t_1 = __Pyx_PyObject_CallNoArg(__pyx_t_2); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 282, __pyx_L1_error)
   }
   __Pyx_GOTREF(__pyx_t_1);
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
   __pyx_v_majiq_config = __pyx_t_1;
   __pyx_t_1 = 0;
 
-  /* "majiq/src/internals/seq_parse.pyx":286
+  /* "majiq/src/internals/seq_parse.pyx":285
  * 
  *     # erase splice graph file
  *     with SpliceGraph(filename, delete=True) as sg:             # <<<<<<<<<<<<<<
@@ -7420,24 +7396,24 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse_init_splicegraph(PyOb
  *         sg.experiment_names = majiq_config.exp_list
  */
   /*with:*/ {
-    __pyx_t_1 = __Pyx_GetModuleGlobalName(__pyx_n_s_SpliceGraph); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 286, __pyx_L1_error)
+    __pyx_t_1 = __Pyx_GetModuleGlobalName(__pyx_n_s_SpliceGraph); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 285, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_1);
-    __pyx_t_2 = PyTuple_New(1); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 286, __pyx_L1_error)
+    __pyx_t_2 = PyTuple_New(1); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 285, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_2);
     __Pyx_INCREF(__pyx_v_filename);
     __Pyx_GIVEREF(__pyx_v_filename);
     PyTuple_SET_ITEM(__pyx_t_2, 0, __pyx_v_filename);
-    __pyx_t_3 = __Pyx_PyDict_NewPresized(1); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 286, __pyx_L1_error)
+    __pyx_t_3 = __Pyx_PyDict_NewPresized(1); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 285, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_3);
-    if (PyDict_SetItem(__pyx_t_3, __pyx_n_s_delete, Py_True) < 0) __PYX_ERR(0, 286, __pyx_L1_error)
-    __pyx_t_4 = __Pyx_PyObject_Call(__pyx_t_1, __pyx_t_2, __pyx_t_3); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 286, __pyx_L1_error)
+    if (PyDict_SetItem(__pyx_t_3, __pyx_n_s_delete, Py_True) < 0) __PYX_ERR(0, 285, __pyx_L1_error)
+    __pyx_t_4 = __Pyx_PyObject_Call(__pyx_t_1, __pyx_t_2, __pyx_t_3); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 285, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_4);
     __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
     __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
     __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
-    __pyx_t_5 = __Pyx_PyObject_LookupSpecial(__pyx_t_4, __pyx_n_s_exit); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 286, __pyx_L1_error)
+    __pyx_t_5 = __Pyx_PyObject_LookupSpecial(__pyx_t_4, __pyx_n_s_exit); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 285, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_5);
-    __pyx_t_2 = __Pyx_PyObject_LookupSpecial(__pyx_t_4, __pyx_n_s_enter); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 286, __pyx_L3_error)
+    __pyx_t_2 = __Pyx_PyObject_LookupSpecial(__pyx_t_4, __pyx_n_s_enter); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 285, __pyx_L3_error)
     __Pyx_GOTREF(__pyx_t_2);
     __pyx_t_1 = NULL;
     if (CYTHON_UNPACK_METHODS && likely(PyMethod_Check(__pyx_t_2))) {
@@ -7450,10 +7426,10 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse_init_splicegraph(PyOb
       }
     }
     if (__pyx_t_1) {
-      __pyx_t_3 = __Pyx_PyObject_CallOneArg(__pyx_t_2, __pyx_t_1); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 286, __pyx_L3_error)
+      __pyx_t_3 = __Pyx_PyObject_CallOneArg(__pyx_t_2, __pyx_t_1); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 285, __pyx_L3_error)
       __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
     } else {
-      __pyx_t_3 = __Pyx_PyObject_CallNoArg(__pyx_t_2); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 286, __pyx_L3_error)
+      __pyx_t_3 = __Pyx_PyObject_CallNoArg(__pyx_t_2); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 285, __pyx_L3_error)
     }
     __Pyx_GOTREF(__pyx_t_3);
     __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
@@ -7472,24 +7448,24 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse_init_splicegraph(PyOb
           __pyx_v_sg = __pyx_t_2;
           __pyx_t_2 = 0;
 
-          /* "majiq/src/internals/seq_parse.pyx":287
+          /* "majiq/src/internals/seq_parse.pyx":286
  *     # erase splice graph file
  *     with SpliceGraph(filename, delete=True) as sg:
  *         print([(xx, type(xx)) for xx in majiq_config.exp_list])             # <<<<<<<<<<<<<<
  *         sg.experiment_names = majiq_config.exp_list
  *         sg.genome = majiq_config.genome
  */
-          __pyx_t_2 = PyList_New(0); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 287, __pyx_L7_error)
+          __pyx_t_2 = PyList_New(0); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 286, __pyx_L7_error)
           __Pyx_GOTREF(__pyx_t_2);
-          __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_v_majiq_config, __pyx_n_s_exp_list); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 287, __pyx_L7_error)
+          __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_v_majiq_config, __pyx_n_s_exp_list); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 286, __pyx_L7_error)
           __Pyx_GOTREF(__pyx_t_4);
           if (likely(PyList_CheckExact(__pyx_t_4)) || PyTuple_CheckExact(__pyx_t_4)) {
             __pyx_t_3 = __pyx_t_4; __Pyx_INCREF(__pyx_t_3); __pyx_t_9 = 0;
             __pyx_t_10 = NULL;
           } else {
-            __pyx_t_9 = -1; __pyx_t_3 = PyObject_GetIter(__pyx_t_4); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 287, __pyx_L7_error)
+            __pyx_t_9 = -1; __pyx_t_3 = PyObject_GetIter(__pyx_t_4); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 286, __pyx_L7_error)
             __Pyx_GOTREF(__pyx_t_3);
-            __pyx_t_10 = Py_TYPE(__pyx_t_3)->tp_iternext; if (unlikely(!__pyx_t_10)) __PYX_ERR(0, 287, __pyx_L7_error)
+            __pyx_t_10 = Py_TYPE(__pyx_t_3)->tp_iternext; if (unlikely(!__pyx_t_10)) __PYX_ERR(0, 286, __pyx_L7_error)
           }
           __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
           for (;;) {
@@ -7497,17 +7473,17 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse_init_splicegraph(PyOb
               if (likely(PyList_CheckExact(__pyx_t_3))) {
                 if (__pyx_t_9 >= PyList_GET_SIZE(__pyx_t_3)) break;
                 #if CYTHON_ASSUME_SAFE_MACROS && !CYTHON_AVOID_BORROWED_REFS
-                __pyx_t_4 = PyList_GET_ITEM(__pyx_t_3, __pyx_t_9); __Pyx_INCREF(__pyx_t_4); __pyx_t_9++; if (unlikely(0 < 0)) __PYX_ERR(0, 287, __pyx_L7_error)
+                __pyx_t_4 = PyList_GET_ITEM(__pyx_t_3, __pyx_t_9); __Pyx_INCREF(__pyx_t_4); __pyx_t_9++; if (unlikely(0 < 0)) __PYX_ERR(0, 286, __pyx_L7_error)
                 #else
-                __pyx_t_4 = PySequence_ITEM(__pyx_t_3, __pyx_t_9); __pyx_t_9++; if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 287, __pyx_L7_error)
+                __pyx_t_4 = PySequence_ITEM(__pyx_t_3, __pyx_t_9); __pyx_t_9++; if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 286, __pyx_L7_error)
                 __Pyx_GOTREF(__pyx_t_4);
                 #endif
               } else {
                 if (__pyx_t_9 >= PyTuple_GET_SIZE(__pyx_t_3)) break;
                 #if CYTHON_ASSUME_SAFE_MACROS && !CYTHON_AVOID_BORROWED_REFS
-                __pyx_t_4 = PyTuple_GET_ITEM(__pyx_t_3, __pyx_t_9); __Pyx_INCREF(__pyx_t_4); __pyx_t_9++; if (unlikely(0 < 0)) __PYX_ERR(0, 287, __pyx_L7_error)
+                __pyx_t_4 = PyTuple_GET_ITEM(__pyx_t_3, __pyx_t_9); __Pyx_INCREF(__pyx_t_4); __pyx_t_9++; if (unlikely(0 < 0)) __PYX_ERR(0, 286, __pyx_L7_error)
                 #else
-                __pyx_t_4 = PySequence_ITEM(__pyx_t_3, __pyx_t_9); __pyx_t_9++; if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 287, __pyx_L7_error)
+                __pyx_t_4 = PySequence_ITEM(__pyx_t_3, __pyx_t_9); __pyx_t_9++; if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 286, __pyx_L7_error)
                 __Pyx_GOTREF(__pyx_t_4);
                 #endif
               }
@@ -7517,7 +7493,7 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse_init_splicegraph(PyOb
                 PyObject* exc_type = PyErr_Occurred();
                 if (exc_type) {
                   if (likely(__Pyx_PyErr_GivenExceptionMatches(exc_type, PyExc_StopIteration))) PyErr_Clear();
-                  else __PYX_ERR(0, 287, __pyx_L7_error)
+                  else __PYX_ERR(0, 286, __pyx_L7_error)
                 }
                 break;
               }
@@ -7525,7 +7501,7 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse_init_splicegraph(PyOb
             }
             __Pyx_XDECREF_SET(__pyx_v_xx, __pyx_t_4);
             __pyx_t_4 = 0;
-            __pyx_t_4 = PyTuple_New(2); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 287, __pyx_L7_error)
+            __pyx_t_4 = PyTuple_New(2); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 286, __pyx_L7_error)
             __Pyx_GOTREF(__pyx_t_4);
             __Pyx_INCREF(__pyx_v_xx);
             __Pyx_GIVEREF(__pyx_v_xx);
@@ -7533,38 +7509,38 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse_init_splicegraph(PyOb
             __Pyx_INCREF(((PyObject *)Py_TYPE(__pyx_v_xx)));
             __Pyx_GIVEREF(((PyObject *)Py_TYPE(__pyx_v_xx)));
             PyTuple_SET_ITEM(__pyx_t_4, 1, ((PyObject *)Py_TYPE(__pyx_v_xx)));
-            if (unlikely(__Pyx_ListComp_Append(__pyx_t_2, (PyObject*)__pyx_t_4))) __PYX_ERR(0, 287, __pyx_L7_error)
+            if (unlikely(__Pyx_ListComp_Append(__pyx_t_2, (PyObject*)__pyx_t_4))) __PYX_ERR(0, 286, __pyx_L7_error)
             __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
           }
           __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
-          if (__Pyx_PrintOne(0, __pyx_t_2) < 0) __PYX_ERR(0, 287, __pyx_L7_error)
+          if (__Pyx_PrintOne(0, __pyx_t_2) < 0) __PYX_ERR(0, 286, __pyx_L7_error)
           __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
 
-          /* "majiq/src/internals/seq_parse.pyx":288
+          /* "majiq/src/internals/seq_parse.pyx":287
  *     with SpliceGraph(filename, delete=True) as sg:
  *         print([(xx, type(xx)) for xx in majiq_config.exp_list])
  *         sg.experiment_names = majiq_config.exp_list             # <<<<<<<<<<<<<<
  *         sg.genome = majiq_config.genome
  * 
  */
-          __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_majiq_config, __pyx_n_s_exp_list); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 288, __pyx_L7_error)
+          __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_majiq_config, __pyx_n_s_exp_list); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 287, __pyx_L7_error)
           __Pyx_GOTREF(__pyx_t_2);
-          if (__Pyx_PyObject_SetAttrStr(__pyx_v_sg, __pyx_n_s_experiment_names, __pyx_t_2) < 0) __PYX_ERR(0, 288, __pyx_L7_error)
+          if (__Pyx_PyObject_SetAttrStr(__pyx_v_sg, __pyx_n_s_experiment_names, __pyx_t_2) < 0) __PYX_ERR(0, 287, __pyx_L7_error)
           __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
 
-          /* "majiq/src/internals/seq_parse.pyx":289
+          /* "majiq/src/internals/seq_parse.pyx":288
  *         print([(xx, type(xx)) for xx in majiq_config.exp_list])
  *         sg.experiment_names = majiq_config.exp_list
  *         sg.genome = majiq_config.genome             # <<<<<<<<<<<<<<
  * 
  * cdef gene_to_splicegraph(Gene * gne, majiq_config):
  */
-          __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_majiq_config, __pyx_n_s_genome); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 289, __pyx_L7_error)
+          __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_majiq_config, __pyx_n_s_genome); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 288, __pyx_L7_error)
           __Pyx_GOTREF(__pyx_t_2);
-          if (__Pyx_PyObject_SetAttrStr(__pyx_v_sg, __pyx_n_s_genome, __pyx_t_2) < 0) __PYX_ERR(0, 289, __pyx_L7_error)
+          if (__Pyx_PyObject_SetAttrStr(__pyx_v_sg, __pyx_n_s_genome, __pyx_t_2) < 0) __PYX_ERR(0, 288, __pyx_L7_error)
           __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
 
-          /* "majiq/src/internals/seq_parse.pyx":286
+          /* "majiq/src/internals/seq_parse.pyx":285
  * 
  *     # erase splice graph file
  *     with SpliceGraph(filename, delete=True) as sg:             # <<<<<<<<<<<<<<
@@ -7583,20 +7559,20 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse_init_splicegraph(PyOb
         __Pyx_XDECREF(__pyx_t_2); __pyx_t_2 = 0;
         /*except:*/ {
           __Pyx_AddTraceback("majiq.src.internals.seq_parse.init_splicegraph", __pyx_clineno, __pyx_lineno, __pyx_filename);
-          if (__Pyx_GetException(&__pyx_t_2, &__pyx_t_3, &__pyx_t_4) < 0) __PYX_ERR(0, 286, __pyx_L9_except_error)
+          if (__Pyx_GetException(&__pyx_t_2, &__pyx_t_3, &__pyx_t_4) < 0) __PYX_ERR(0, 285, __pyx_L9_except_error)
           __Pyx_GOTREF(__pyx_t_2);
           __Pyx_GOTREF(__pyx_t_3);
           __Pyx_GOTREF(__pyx_t_4);
-          __pyx_t_1 = PyTuple_Pack(3, __pyx_t_2, __pyx_t_3, __pyx_t_4); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 286, __pyx_L9_except_error)
+          __pyx_t_1 = PyTuple_Pack(3, __pyx_t_2, __pyx_t_3, __pyx_t_4); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 285, __pyx_L9_except_error)
           __Pyx_GOTREF(__pyx_t_1);
           __pyx_t_11 = __Pyx_PyObject_Call(__pyx_t_5, __pyx_t_1, NULL);
           __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
           __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-          if (unlikely(!__pyx_t_11)) __PYX_ERR(0, 286, __pyx_L9_except_error)
+          if (unlikely(!__pyx_t_11)) __PYX_ERR(0, 285, __pyx_L9_except_error)
           __Pyx_GOTREF(__pyx_t_11);
           __pyx_t_12 = __Pyx_PyObject_IsTrue(__pyx_t_11);
           __Pyx_DECREF(__pyx_t_11); __pyx_t_11 = 0;
-          if (__pyx_t_12 < 0) __PYX_ERR(0, 286, __pyx_L9_except_error)
+          if (__pyx_t_12 < 0) __PYX_ERR(0, 285, __pyx_L9_except_error)
           __pyx_t_13 = ((!(__pyx_t_12 != 0)) != 0);
           if (__pyx_t_13) {
             __Pyx_GIVEREF(__pyx_t_2);
@@ -7604,7 +7580,7 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse_init_splicegraph(PyOb
             __Pyx_XGIVEREF(__pyx_t_4);
             __Pyx_ErrRestoreWithState(__pyx_t_2, __pyx_t_3, __pyx_t_4);
             __pyx_t_2 = 0; __pyx_t_3 = 0; __pyx_t_4 = 0; 
-            __PYX_ERR(0, 286, __pyx_L9_except_error)
+            __PYX_ERR(0, 285, __pyx_L9_except_error)
           }
           __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
           __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
@@ -7630,7 +7606,7 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse_init_splicegraph(PyOb
         if (__pyx_t_5) {
           __pyx_t_8 = __Pyx_PyObject_Call(__pyx_t_5, __pyx_tuple__13, NULL);
           __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
-          if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 286, __pyx_L1_error)
+          if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 285, __pyx_L1_error)
           __Pyx_GOTREF(__pyx_t_8);
           __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
         }
@@ -7645,7 +7621,7 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse_init_splicegraph(PyOb
     __pyx_L18:;
   }
 
-  /* "majiq/src/internals/seq_parse.pyx":282
+  /* "majiq/src/internals/seq_parse.pyx":281
  * from majiq.src.config import Config
  * 
  * cdef init_splicegraph(filename):             # <<<<<<<<<<<<<<
@@ -7672,7 +7648,7 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse_init_splicegraph(PyOb
   return __pyx_r;
 }
 
-/* "majiq/src/internals/seq_parse.pyx":291
+/* "majiq/src/internals/seq_parse.pyx":290
  *         sg.genome = majiq_config.genome
  * 
  * cdef gene_to_splicegraph(Gene * gne, majiq_config):             # <<<<<<<<<<<<<<
@@ -7722,44 +7698,44 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse_gene_to_splicegraph(g
   PyObject *__pyx_t_26 = NULL;
   __Pyx_RefNannySetupContext("gene_to_splicegraph", 0);
 
-  /* "majiq/src/internals/seq_parse.pyx":299
+  /* "majiq/src/internals/seq_parse.pyx":298
  *     cdef str gne_id
  * 
  *     alt_empty_starts = []             # <<<<<<<<<<<<<<
  *     alt_empty_ends = []
  *     gne_id = gne.get_id().decode('utf-8')
  */
-  __pyx_t_1 = PyList_New(0); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 299, __pyx_L1_error)
+  __pyx_t_1 = PyList_New(0); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 298, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_v_alt_empty_starts = ((PyObject*)__pyx_t_1);
   __pyx_t_1 = 0;
 
-  /* "majiq/src/internals/seq_parse.pyx":300
+  /* "majiq/src/internals/seq_parse.pyx":299
  * 
  *     alt_empty_starts = []
  *     alt_empty_ends = []             # <<<<<<<<<<<<<<
  *     gne_id = gne.get_id().decode('utf-8')
  *     # print('GENEID:', gne_id, gne.get_name(), chr(gne.get_strand()), gne.get_chromosome())
  */
-  __pyx_t_1 = PyList_New(0); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 300, __pyx_L1_error)
+  __pyx_t_1 = PyList_New(0); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 299, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_v_alt_empty_ends = ((PyObject*)__pyx_t_1);
   __pyx_t_1 = 0;
 
-  /* "majiq/src/internals/seq_parse.pyx":301
+  /* "majiq/src/internals/seq_parse.pyx":300
  *     alt_empty_starts = []
  *     alt_empty_ends = []
  *     gne_id = gne.get_id().decode('utf-8')             # <<<<<<<<<<<<<<
  *     # print('GENEID:', gne_id, gne.get_name(), chr(gne.get_strand()), gne.get_chromosome())
  *     with SpliceGraph(get_builder_splicegraph_filename(majiq_config.outDir)) as sg:
  */
-  __pyx_t_1 = __Pyx_decode_cpp_string(__pyx_v_gne->get_id(), 0, PY_SSIZE_T_MAX, NULL, NULL, PyUnicode_DecodeUTF8); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 301, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_decode_cpp_string(__pyx_v_gne->get_id(), 0, PY_SSIZE_T_MAX, NULL, NULL, PyUnicode_DecodeUTF8); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 300, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  if (!(likely(PyString_CheckExact(__pyx_t_1))||(PyErr_Format(PyExc_TypeError, "Expected %.16s, got %.200s", "str", Py_TYPE(__pyx_t_1)->tp_name), 0))) __PYX_ERR(0, 301, __pyx_L1_error)
+  if (!(likely(PyString_CheckExact(__pyx_t_1))||(PyErr_Format(PyExc_TypeError, "Expected %.16s, got %.200s", "str", Py_TYPE(__pyx_t_1)->tp_name), 0))) __PYX_ERR(0, 300, __pyx_L1_error)
   __pyx_v_gne_id = ((PyObject*)__pyx_t_1);
   __pyx_t_1 = 0;
 
-  /* "majiq/src/internals/seq_parse.pyx":303
+  /* "majiq/src/internals/seq_parse.pyx":302
  *     gne_id = gne.get_id().decode('utf-8')
  *     # print('GENEID:', gne_id, gne.get_name(), chr(gne.get_strand()), gne.get_chromosome())
  *     with SpliceGraph(get_builder_splicegraph_filename(majiq_config.outDir)) as sg:             # <<<<<<<<<<<<<<
@@ -7767,11 +7743,11 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse_gene_to_splicegraph(g
  * 
  */
   /*with:*/ {
-    __pyx_t_2 = __Pyx_GetModuleGlobalName(__pyx_n_s_SpliceGraph); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 303, __pyx_L1_error)
+    __pyx_t_2 = __Pyx_GetModuleGlobalName(__pyx_n_s_SpliceGraph); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 302, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_2);
-    __pyx_t_4 = __Pyx_GetModuleGlobalName(__pyx_n_s_get_builder_splicegraph_filename); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 303, __pyx_L1_error)
+    __pyx_t_4 = __Pyx_GetModuleGlobalName(__pyx_n_s_get_builder_splicegraph_filename); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 302, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_4);
-    __pyx_t_5 = __Pyx_PyObject_GetAttrStr(__pyx_v_majiq_config, __pyx_n_s_outDir); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 303, __pyx_L1_error)
+    __pyx_t_5 = __Pyx_PyObject_GetAttrStr(__pyx_v_majiq_config, __pyx_n_s_outDir); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 302, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_5);
     __pyx_t_6 = NULL;
     if (CYTHON_UNPACK_METHODS && unlikely(PyMethod_Check(__pyx_t_4))) {
@@ -7784,14 +7760,14 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse_gene_to_splicegraph(g
       }
     }
     if (!__pyx_t_6) {
-      __pyx_t_3 = __Pyx_PyObject_CallOneArg(__pyx_t_4, __pyx_t_5); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 303, __pyx_L1_error)
+      __pyx_t_3 = __Pyx_PyObject_CallOneArg(__pyx_t_4, __pyx_t_5); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 302, __pyx_L1_error)
       __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
       __Pyx_GOTREF(__pyx_t_3);
     } else {
       #if CYTHON_FAST_PYCALL
       if (PyFunction_Check(__pyx_t_4)) {
         PyObject *__pyx_temp[2] = {__pyx_t_6, __pyx_t_5};
-        __pyx_t_3 = __Pyx_PyFunction_FastCall(__pyx_t_4, __pyx_temp+1-1, 1+1); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 303, __pyx_L1_error)
+        __pyx_t_3 = __Pyx_PyFunction_FastCall(__pyx_t_4, __pyx_temp+1-1, 1+1); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 302, __pyx_L1_error)
         __Pyx_XDECREF(__pyx_t_6); __pyx_t_6 = 0;
         __Pyx_GOTREF(__pyx_t_3);
         __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
@@ -7800,20 +7776,20 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse_gene_to_splicegraph(g
       #if CYTHON_FAST_PYCCALL
       if (__Pyx_PyFastCFunction_Check(__pyx_t_4)) {
         PyObject *__pyx_temp[2] = {__pyx_t_6, __pyx_t_5};
-        __pyx_t_3 = __Pyx_PyCFunction_FastCall(__pyx_t_4, __pyx_temp+1-1, 1+1); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 303, __pyx_L1_error)
+        __pyx_t_3 = __Pyx_PyCFunction_FastCall(__pyx_t_4, __pyx_temp+1-1, 1+1); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 302, __pyx_L1_error)
         __Pyx_XDECREF(__pyx_t_6); __pyx_t_6 = 0;
         __Pyx_GOTREF(__pyx_t_3);
         __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
       } else
       #endif
       {
-        __pyx_t_7 = PyTuple_New(1+1); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 303, __pyx_L1_error)
+        __pyx_t_7 = PyTuple_New(1+1); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 302, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_7);
         __Pyx_GIVEREF(__pyx_t_6); PyTuple_SET_ITEM(__pyx_t_7, 0, __pyx_t_6); __pyx_t_6 = NULL;
         __Pyx_GIVEREF(__pyx_t_5);
         PyTuple_SET_ITEM(__pyx_t_7, 0+1, __pyx_t_5);
         __pyx_t_5 = 0;
-        __pyx_t_3 = __Pyx_PyObject_Call(__pyx_t_4, __pyx_t_7, NULL); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 303, __pyx_L1_error)
+        __pyx_t_3 = __Pyx_PyObject_Call(__pyx_t_4, __pyx_t_7, NULL); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 302, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_3);
         __Pyx_DECREF(__pyx_t_7); __pyx_t_7 = 0;
       }
@@ -7830,14 +7806,14 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse_gene_to_splicegraph(g
       }
     }
     if (!__pyx_t_4) {
-      __pyx_t_1 = __Pyx_PyObject_CallOneArg(__pyx_t_2, __pyx_t_3); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 303, __pyx_L1_error)
+      __pyx_t_1 = __Pyx_PyObject_CallOneArg(__pyx_t_2, __pyx_t_3); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 302, __pyx_L1_error)
       __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
       __Pyx_GOTREF(__pyx_t_1);
     } else {
       #if CYTHON_FAST_PYCALL
       if (PyFunction_Check(__pyx_t_2)) {
         PyObject *__pyx_temp[2] = {__pyx_t_4, __pyx_t_3};
-        __pyx_t_1 = __Pyx_PyFunction_FastCall(__pyx_t_2, __pyx_temp+1-1, 1+1); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 303, __pyx_L1_error)
+        __pyx_t_1 = __Pyx_PyFunction_FastCall(__pyx_t_2, __pyx_temp+1-1, 1+1); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 302, __pyx_L1_error)
         __Pyx_XDECREF(__pyx_t_4); __pyx_t_4 = 0;
         __Pyx_GOTREF(__pyx_t_1);
         __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
@@ -7846,28 +7822,28 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse_gene_to_splicegraph(g
       #if CYTHON_FAST_PYCCALL
       if (__Pyx_PyFastCFunction_Check(__pyx_t_2)) {
         PyObject *__pyx_temp[2] = {__pyx_t_4, __pyx_t_3};
-        __pyx_t_1 = __Pyx_PyCFunction_FastCall(__pyx_t_2, __pyx_temp+1-1, 1+1); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 303, __pyx_L1_error)
+        __pyx_t_1 = __Pyx_PyCFunction_FastCall(__pyx_t_2, __pyx_temp+1-1, 1+1); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 302, __pyx_L1_error)
         __Pyx_XDECREF(__pyx_t_4); __pyx_t_4 = 0;
         __Pyx_GOTREF(__pyx_t_1);
         __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
       } else
       #endif
       {
-        __pyx_t_7 = PyTuple_New(1+1); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 303, __pyx_L1_error)
+        __pyx_t_7 = PyTuple_New(1+1); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 302, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_7);
         __Pyx_GIVEREF(__pyx_t_4); PyTuple_SET_ITEM(__pyx_t_7, 0, __pyx_t_4); __pyx_t_4 = NULL;
         __Pyx_GIVEREF(__pyx_t_3);
         PyTuple_SET_ITEM(__pyx_t_7, 0+1, __pyx_t_3);
         __pyx_t_3 = 0;
-        __pyx_t_1 = __Pyx_PyObject_Call(__pyx_t_2, __pyx_t_7, NULL); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 303, __pyx_L1_error)
+        __pyx_t_1 = __Pyx_PyObject_Call(__pyx_t_2, __pyx_t_7, NULL); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 302, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_1);
         __Pyx_DECREF(__pyx_t_7); __pyx_t_7 = 0;
       }
     }
     __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-    __pyx_t_8 = __Pyx_PyObject_LookupSpecial(__pyx_t_1, __pyx_n_s_exit); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 303, __pyx_L1_error)
+    __pyx_t_8 = __Pyx_PyObject_LookupSpecial(__pyx_t_1, __pyx_n_s_exit); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 302, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_8);
-    __pyx_t_7 = __Pyx_PyObject_LookupSpecial(__pyx_t_1, __pyx_n_s_enter); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 303, __pyx_L3_error)
+    __pyx_t_7 = __Pyx_PyObject_LookupSpecial(__pyx_t_1, __pyx_n_s_enter); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 302, __pyx_L3_error)
     __Pyx_GOTREF(__pyx_t_7);
     __pyx_t_3 = NULL;
     if (CYTHON_UNPACK_METHODS && likely(PyMethod_Check(__pyx_t_7))) {
@@ -7880,10 +7856,10 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse_gene_to_splicegraph(g
       }
     }
     if (__pyx_t_3) {
-      __pyx_t_2 = __Pyx_PyObject_CallOneArg(__pyx_t_7, __pyx_t_3); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 303, __pyx_L3_error)
+      __pyx_t_2 = __Pyx_PyObject_CallOneArg(__pyx_t_7, __pyx_t_3); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 302, __pyx_L3_error)
       __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
     } else {
-      __pyx_t_2 = __Pyx_PyObject_CallNoArg(__pyx_t_7); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 303, __pyx_L3_error)
+      __pyx_t_2 = __Pyx_PyObject_CallNoArg(__pyx_t_7); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 302, __pyx_L3_error)
     }
     __Pyx_GOTREF(__pyx_t_2);
     __Pyx_DECREF(__pyx_t_7); __pyx_t_7 = 0;
@@ -7902,14 +7878,14 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse_gene_to_splicegraph(g
           __pyx_v_sg = __pyx_t_7;
           __pyx_t_7 = 0;
 
-          /* "majiq/src/internals/seq_parse.pyx":304
+          /* "majiq/src/internals/seq_parse.pyx":303
  *     # print('GENEID:', gne_id, gne.get_name(), chr(gne.get_strand()), gne.get_chromosome())
  *     with SpliceGraph(get_builder_splicegraph_filename(majiq_config.outDir)) as sg:
  *         sg.gene(gne_id).add(name=gne.get_name().decode('utf-8'), strand=chr(gne.get_strand()), chromosome=gne.get_chromosome().decode('utf-8'))             # <<<<<<<<<<<<<<
  * 
  *         for jj_pair in gne.junc_map_:
  */
-          __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_sg, __pyx_n_s_gene); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 304, __pyx_L7_error)
+          __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_sg, __pyx_n_s_gene); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 303, __pyx_L7_error)
           __Pyx_GOTREF(__pyx_t_1);
           __pyx_t_2 = NULL;
           if (CYTHON_UNPACK_METHODS && likely(PyMethod_Check(__pyx_t_1))) {
@@ -7922,13 +7898,13 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse_gene_to_splicegraph(g
             }
           }
           if (!__pyx_t_2) {
-            __pyx_t_7 = __Pyx_PyObject_CallOneArg(__pyx_t_1, __pyx_v_gne_id); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 304, __pyx_L7_error)
+            __pyx_t_7 = __Pyx_PyObject_CallOneArg(__pyx_t_1, __pyx_v_gne_id); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 303, __pyx_L7_error)
             __Pyx_GOTREF(__pyx_t_7);
           } else {
             #if CYTHON_FAST_PYCALL
             if (PyFunction_Check(__pyx_t_1)) {
               PyObject *__pyx_temp[2] = {__pyx_t_2, __pyx_v_gne_id};
-              __pyx_t_7 = __Pyx_PyFunction_FastCall(__pyx_t_1, __pyx_temp+1-1, 1+1); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 304, __pyx_L7_error)
+              __pyx_t_7 = __Pyx_PyFunction_FastCall(__pyx_t_1, __pyx_temp+1-1, 1+1); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 303, __pyx_L7_error)
               __Pyx_XDECREF(__pyx_t_2); __pyx_t_2 = 0;
               __Pyx_GOTREF(__pyx_t_7);
             } else
@@ -7936,51 +7912,51 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse_gene_to_splicegraph(g
             #if CYTHON_FAST_PYCCALL
             if (__Pyx_PyFastCFunction_Check(__pyx_t_1)) {
               PyObject *__pyx_temp[2] = {__pyx_t_2, __pyx_v_gne_id};
-              __pyx_t_7 = __Pyx_PyCFunction_FastCall(__pyx_t_1, __pyx_temp+1-1, 1+1); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 304, __pyx_L7_error)
+              __pyx_t_7 = __Pyx_PyCFunction_FastCall(__pyx_t_1, __pyx_temp+1-1, 1+1); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 303, __pyx_L7_error)
               __Pyx_XDECREF(__pyx_t_2); __pyx_t_2 = 0;
               __Pyx_GOTREF(__pyx_t_7);
             } else
             #endif
             {
-              __pyx_t_3 = PyTuple_New(1+1); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 304, __pyx_L7_error)
+              __pyx_t_3 = PyTuple_New(1+1); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 303, __pyx_L7_error)
               __Pyx_GOTREF(__pyx_t_3);
               __Pyx_GIVEREF(__pyx_t_2); PyTuple_SET_ITEM(__pyx_t_3, 0, __pyx_t_2); __pyx_t_2 = NULL;
               __Pyx_INCREF(__pyx_v_gne_id);
               __Pyx_GIVEREF(__pyx_v_gne_id);
               PyTuple_SET_ITEM(__pyx_t_3, 0+1, __pyx_v_gne_id);
-              __pyx_t_7 = __Pyx_PyObject_Call(__pyx_t_1, __pyx_t_3, NULL); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 304, __pyx_L7_error)
+              __pyx_t_7 = __Pyx_PyObject_Call(__pyx_t_1, __pyx_t_3, NULL); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 303, __pyx_L7_error)
               __Pyx_GOTREF(__pyx_t_7);
               __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
             }
           }
           __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-          __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_t_7, __pyx_n_s_add); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 304, __pyx_L7_error)
+          __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_t_7, __pyx_n_s_add); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 303, __pyx_L7_error)
           __Pyx_GOTREF(__pyx_t_1);
           __Pyx_DECREF(__pyx_t_7); __pyx_t_7 = 0;
-          __pyx_t_7 = __Pyx_PyDict_NewPresized(3); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 304, __pyx_L7_error)
+          __pyx_t_7 = __Pyx_PyDict_NewPresized(3); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 303, __pyx_L7_error)
           __Pyx_GOTREF(__pyx_t_7);
-          __pyx_t_3 = __Pyx_decode_cpp_string(__pyx_v_gne->get_name(), 0, PY_SSIZE_T_MAX, NULL, NULL, PyUnicode_DecodeUTF8); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 304, __pyx_L7_error)
+          __pyx_t_3 = __Pyx_decode_cpp_string(__pyx_v_gne->get_name(), 0, PY_SSIZE_T_MAX, NULL, NULL, PyUnicode_DecodeUTF8); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 303, __pyx_L7_error)
           __Pyx_GOTREF(__pyx_t_3);
-          if (PyDict_SetItem(__pyx_t_7, __pyx_n_s_name, __pyx_t_3) < 0) __PYX_ERR(0, 304, __pyx_L7_error)
+          if (PyDict_SetItem(__pyx_t_7, __pyx_n_s_name, __pyx_t_3) < 0) __PYX_ERR(0, 303, __pyx_L7_error)
           __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
-          __pyx_t_3 = __Pyx_PyInt_From_int(__pyx_v_gne->get_strand()); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 304, __pyx_L7_error)
+          __pyx_t_3 = __Pyx_PyInt_From_int(__pyx_v_gne->get_strand()); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 303, __pyx_L7_error)
           __Pyx_GOTREF(__pyx_t_3);
-          __pyx_t_2 = __Pyx_PyObject_CallOneArg(__pyx_builtin_chr, __pyx_t_3); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 304, __pyx_L7_error)
+          __pyx_t_2 = __Pyx_PyObject_CallOneArg(__pyx_builtin_chr, __pyx_t_3); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 303, __pyx_L7_error)
           __Pyx_GOTREF(__pyx_t_2);
           __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
-          if (PyDict_SetItem(__pyx_t_7, __pyx_n_s_strand, __pyx_t_2) < 0) __PYX_ERR(0, 304, __pyx_L7_error)
+          if (PyDict_SetItem(__pyx_t_7, __pyx_n_s_strand, __pyx_t_2) < 0) __PYX_ERR(0, 303, __pyx_L7_error)
           __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-          __pyx_t_2 = __Pyx_decode_cpp_string(__pyx_v_gne->get_chromosome(), 0, PY_SSIZE_T_MAX, NULL, NULL, PyUnicode_DecodeUTF8); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 304, __pyx_L7_error)
+          __pyx_t_2 = __Pyx_decode_cpp_string(__pyx_v_gne->get_chromosome(), 0, PY_SSIZE_T_MAX, NULL, NULL, PyUnicode_DecodeUTF8); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 303, __pyx_L7_error)
           __Pyx_GOTREF(__pyx_t_2);
-          if (PyDict_SetItem(__pyx_t_7, __pyx_n_s_chromosome, __pyx_t_2) < 0) __PYX_ERR(0, 304, __pyx_L7_error)
+          if (PyDict_SetItem(__pyx_t_7, __pyx_n_s_chromosome, __pyx_t_2) < 0) __PYX_ERR(0, 303, __pyx_L7_error)
           __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-          __pyx_t_2 = __Pyx_PyObject_Call(__pyx_t_1, __pyx_empty_tuple, __pyx_t_7); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 304, __pyx_L7_error)
+          __pyx_t_2 = __Pyx_PyObject_Call(__pyx_t_1, __pyx_empty_tuple, __pyx_t_7); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 303, __pyx_L7_error)
           __Pyx_GOTREF(__pyx_t_2);
           __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
           __Pyx_DECREF(__pyx_t_7); __pyx_t_7 = 0;
           __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
 
-          /* "majiq/src/internals/seq_parse.pyx":306
+          /* "majiq/src/internals/seq_parse.pyx":305
  *         sg.gene(gne_id).add(name=gne.get_name().decode('utf-8'), strand=chr(gne.get_strand()), chromosome=gne.get_chromosome().decode('utf-8'))
  * 
  *         for jj_pair in gne.junc_map_:             # <<<<<<<<<<<<<<
@@ -7995,7 +7971,7 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse_gene_to_splicegraph(g
             ++__pyx_t_12;
             __pyx_v_jj_pair = __pyx_t_14;
 
-            /* "majiq/src/internals/seq_parse.pyx":307
+            /* "majiq/src/internals/seq_parse.pyx":306
  * 
  *         for jj_pair in gne.junc_map_:
  *             jj = jj_pair.second             # <<<<<<<<<<<<<<
@@ -8005,7 +7981,7 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse_gene_to_splicegraph(g
             __pyx_t_15 = __pyx_v_jj_pair.second;
             __pyx_v_jj = __pyx_t_15;
 
-            /* "majiq/src/internals/seq_parse.pyx":311
+            /* "majiq/src/internals/seq_parse.pyx":310
  *             #     print(jj_pair.first, jj.get_denovo_bl(), jj.get_start(), jj.get_end(), jj.get_annot())
  * 
  *             if not jj.get_denovo_bl(): continue             # <<<<<<<<<<<<<<
@@ -8017,37 +7993,37 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse_gene_to_splicegraph(g
               goto __pyx_L13_continue;
             }
 
-            /* "majiq/src/internals/seq_parse.pyx":312
+            /* "majiq/src/internals/seq_parse.pyx":311
  * 
  *             if not jj.get_denovo_bl(): continue
  *             if jj.get_start() == FIRST_LAST_JUNC:             # <<<<<<<<<<<<<<
  *                 alt_empty_starts.append(jj.get_end())
  *                 continue
  */
-            __pyx_t_2 = __Pyx_PyInt_From_int(__pyx_v_jj->get_start()); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 312, __pyx_L7_error)
+            __pyx_t_2 = __Pyx_PyInt_From_int(__pyx_v_jj->get_start()); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 311, __pyx_L7_error)
             __Pyx_GOTREF(__pyx_t_2);
-            __pyx_t_7 = __Pyx_GetModuleGlobalName(__pyx_n_s_FIRST_LAST_JUNC); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 312, __pyx_L7_error)
+            __pyx_t_7 = __Pyx_GetModuleGlobalName(__pyx_n_s_FIRST_LAST_JUNC); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 311, __pyx_L7_error)
             __Pyx_GOTREF(__pyx_t_7);
-            __pyx_t_1 = PyObject_RichCompare(__pyx_t_2, __pyx_t_7, Py_EQ); __Pyx_XGOTREF(__pyx_t_1); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 312, __pyx_L7_error)
+            __pyx_t_1 = PyObject_RichCompare(__pyx_t_2, __pyx_t_7, Py_EQ); __Pyx_XGOTREF(__pyx_t_1); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 311, __pyx_L7_error)
             __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
             __Pyx_DECREF(__pyx_t_7); __pyx_t_7 = 0;
-            __pyx_t_16 = __Pyx_PyObject_IsTrue(__pyx_t_1); if (unlikely(__pyx_t_16 < 0)) __PYX_ERR(0, 312, __pyx_L7_error)
+            __pyx_t_16 = __Pyx_PyObject_IsTrue(__pyx_t_1); if (unlikely(__pyx_t_16 < 0)) __PYX_ERR(0, 311, __pyx_L7_error)
             __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
             if (__pyx_t_16) {
 
-              /* "majiq/src/internals/seq_parse.pyx":313
+              /* "majiq/src/internals/seq_parse.pyx":312
  *             if not jj.get_denovo_bl(): continue
  *             if jj.get_start() == FIRST_LAST_JUNC:
  *                 alt_empty_starts.append(jj.get_end())             # <<<<<<<<<<<<<<
  *                 continue
  * 
  */
-              __pyx_t_1 = __Pyx_PyInt_From_int(__pyx_v_jj->get_end()); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 313, __pyx_L7_error)
+              __pyx_t_1 = __Pyx_PyInt_From_int(__pyx_v_jj->get_end()); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 312, __pyx_L7_error)
               __Pyx_GOTREF(__pyx_t_1);
-              __pyx_t_17 = __Pyx_PyList_Append(__pyx_v_alt_empty_starts, __pyx_t_1); if (unlikely(__pyx_t_17 == ((int)-1))) __PYX_ERR(0, 313, __pyx_L7_error)
+              __pyx_t_17 = __Pyx_PyList_Append(__pyx_v_alt_empty_starts, __pyx_t_1); if (unlikely(__pyx_t_17 == ((int)-1))) __PYX_ERR(0, 312, __pyx_L7_error)
               __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
-              /* "majiq/src/internals/seq_parse.pyx":314
+              /* "majiq/src/internals/seq_parse.pyx":313
  *             if jj.get_start() == FIRST_LAST_JUNC:
  *                 alt_empty_starts.append(jj.get_end())
  *                 continue             # <<<<<<<<<<<<<<
@@ -8056,7 +8032,7 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse_gene_to_splicegraph(g
  */
               goto __pyx_L13_continue;
 
-              /* "majiq/src/internals/seq_parse.pyx":312
+              /* "majiq/src/internals/seq_parse.pyx":311
  * 
  *             if not jj.get_denovo_bl(): continue
  *             if jj.get_start() == FIRST_LAST_JUNC:             # <<<<<<<<<<<<<<
@@ -8065,37 +8041,37 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse_gene_to_splicegraph(g
  */
             }
 
-            /* "majiq/src/internals/seq_parse.pyx":316
+            /* "majiq/src/internals/seq_parse.pyx":315
  *                 continue
  * 
  *             if jj.get_end() == FIRST_LAST_JUNC:             # <<<<<<<<<<<<<<
  *                 alt_empty_ends.append(jj.get_start())
  *                 continue
  */
-            __pyx_t_1 = __Pyx_PyInt_From_int(__pyx_v_jj->get_end()); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 316, __pyx_L7_error)
+            __pyx_t_1 = __Pyx_PyInt_From_int(__pyx_v_jj->get_end()); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 315, __pyx_L7_error)
             __Pyx_GOTREF(__pyx_t_1);
-            __pyx_t_7 = __Pyx_GetModuleGlobalName(__pyx_n_s_FIRST_LAST_JUNC); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 316, __pyx_L7_error)
+            __pyx_t_7 = __Pyx_GetModuleGlobalName(__pyx_n_s_FIRST_LAST_JUNC); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 315, __pyx_L7_error)
             __Pyx_GOTREF(__pyx_t_7);
-            __pyx_t_2 = PyObject_RichCompare(__pyx_t_1, __pyx_t_7, Py_EQ); __Pyx_XGOTREF(__pyx_t_2); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 316, __pyx_L7_error)
+            __pyx_t_2 = PyObject_RichCompare(__pyx_t_1, __pyx_t_7, Py_EQ); __Pyx_XGOTREF(__pyx_t_2); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 315, __pyx_L7_error)
             __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
             __Pyx_DECREF(__pyx_t_7); __pyx_t_7 = 0;
-            __pyx_t_16 = __Pyx_PyObject_IsTrue(__pyx_t_2); if (unlikely(__pyx_t_16 < 0)) __PYX_ERR(0, 316, __pyx_L7_error)
+            __pyx_t_16 = __Pyx_PyObject_IsTrue(__pyx_t_2); if (unlikely(__pyx_t_16 < 0)) __PYX_ERR(0, 315, __pyx_L7_error)
             __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
             if (__pyx_t_16) {
 
-              /* "majiq/src/internals/seq_parse.pyx":317
+              /* "majiq/src/internals/seq_parse.pyx":316
  * 
  *             if jj.get_end() == FIRST_LAST_JUNC:
  *                 alt_empty_ends.append(jj.get_start())             # <<<<<<<<<<<<<<
  *                 continue
  * 
  */
-              __pyx_t_2 = __Pyx_PyInt_From_int(__pyx_v_jj->get_start()); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 317, __pyx_L7_error)
+              __pyx_t_2 = __Pyx_PyInt_From_int(__pyx_v_jj->get_start()); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 316, __pyx_L7_error)
               __Pyx_GOTREF(__pyx_t_2);
-              __pyx_t_17 = __Pyx_PyList_Append(__pyx_v_alt_empty_ends, __pyx_t_2); if (unlikely(__pyx_t_17 == ((int)-1))) __PYX_ERR(0, 317, __pyx_L7_error)
+              __pyx_t_17 = __Pyx_PyList_Append(__pyx_v_alt_empty_ends, __pyx_t_2); if (unlikely(__pyx_t_17 == ((int)-1))) __PYX_ERR(0, 316, __pyx_L7_error)
               __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
 
-              /* "majiq/src/internals/seq_parse.pyx":318
+              /* "majiq/src/internals/seq_parse.pyx":317
  *             if jj.get_end() == FIRST_LAST_JUNC:
  *                 alt_empty_ends.append(jj.get_start())
  *                 continue             # <<<<<<<<<<<<<<
@@ -8104,7 +8080,7 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse_gene_to_splicegraph(g
  */
               goto __pyx_L13_continue;
 
-              /* "majiq/src/internals/seq_parse.pyx":316
+              /* "majiq/src/internals/seq_parse.pyx":315
  *                 continue
  * 
  *             if jj.get_end() == FIRST_LAST_JUNC:             # <<<<<<<<<<<<<<
@@ -8113,18 +8089,18 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse_gene_to_splicegraph(g
  */
             }
 
-            /* "majiq/src/internals/seq_parse.pyx":323
+            /* "majiq/src/internals/seq_parse.pyx":322
  *             # if gne_id == 'ENSMUSG00000006498':
  *             #     print('JUNC', gne_id, jj.get_start(), jj.get_end())
  *             sg.junction(gne_id, jj.get_start(), jj.get_end()).add(annotated=jj.get_annot())             # <<<<<<<<<<<<<<
  * 
  *         for ex_pair in gne.exon_map_:
  */
-            __pyx_t_7 = __Pyx_PyObject_GetAttrStr(__pyx_v_sg, __pyx_n_s_junction); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 323, __pyx_L7_error)
+            __pyx_t_7 = __Pyx_PyObject_GetAttrStr(__pyx_v_sg, __pyx_n_s_junction); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 322, __pyx_L7_error)
             __Pyx_GOTREF(__pyx_t_7);
-            __pyx_t_1 = __Pyx_PyInt_From_int(__pyx_v_jj->get_start()); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 323, __pyx_L7_error)
+            __pyx_t_1 = __Pyx_PyInt_From_int(__pyx_v_jj->get_start()); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 322, __pyx_L7_error)
             __Pyx_GOTREF(__pyx_t_1);
-            __pyx_t_3 = __Pyx_PyInt_From_int(__pyx_v_jj->get_end()); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 323, __pyx_L7_error)
+            __pyx_t_3 = __Pyx_PyInt_From_int(__pyx_v_jj->get_end()); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 322, __pyx_L7_error)
             __Pyx_GOTREF(__pyx_t_3);
             __pyx_t_4 = NULL;
             __pyx_t_18 = 0;
@@ -8141,7 +8117,7 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse_gene_to_splicegraph(g
             #if CYTHON_FAST_PYCALL
             if (PyFunction_Check(__pyx_t_7)) {
               PyObject *__pyx_temp[4] = {__pyx_t_4, __pyx_v_gne_id, __pyx_t_1, __pyx_t_3};
-              __pyx_t_2 = __Pyx_PyFunction_FastCall(__pyx_t_7, __pyx_temp+1-__pyx_t_18, 3+__pyx_t_18); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 323, __pyx_L7_error)
+              __pyx_t_2 = __Pyx_PyFunction_FastCall(__pyx_t_7, __pyx_temp+1-__pyx_t_18, 3+__pyx_t_18); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 322, __pyx_L7_error)
               __Pyx_XDECREF(__pyx_t_4); __pyx_t_4 = 0;
               __Pyx_GOTREF(__pyx_t_2);
               __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
@@ -8151,7 +8127,7 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse_gene_to_splicegraph(g
             #if CYTHON_FAST_PYCCALL
             if (__Pyx_PyFastCFunction_Check(__pyx_t_7)) {
               PyObject *__pyx_temp[4] = {__pyx_t_4, __pyx_v_gne_id, __pyx_t_1, __pyx_t_3};
-              __pyx_t_2 = __Pyx_PyCFunction_FastCall(__pyx_t_7, __pyx_temp+1-__pyx_t_18, 3+__pyx_t_18); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 323, __pyx_L7_error)
+              __pyx_t_2 = __Pyx_PyCFunction_FastCall(__pyx_t_7, __pyx_temp+1-__pyx_t_18, 3+__pyx_t_18); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 322, __pyx_L7_error)
               __Pyx_XDECREF(__pyx_t_4); __pyx_t_4 = 0;
               __Pyx_GOTREF(__pyx_t_2);
               __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
@@ -8159,7 +8135,7 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse_gene_to_splicegraph(g
             } else
             #endif
             {
-              __pyx_t_5 = PyTuple_New(3+__pyx_t_18); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 323, __pyx_L7_error)
+              __pyx_t_5 = PyTuple_New(3+__pyx_t_18); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 322, __pyx_L7_error)
               __Pyx_GOTREF(__pyx_t_5);
               if (__pyx_t_4) {
                 __Pyx_GIVEREF(__pyx_t_4); PyTuple_SET_ITEM(__pyx_t_5, 0, __pyx_t_4); __pyx_t_4 = NULL;
@@ -8173,27 +8149,27 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse_gene_to_splicegraph(g
               PyTuple_SET_ITEM(__pyx_t_5, 2+__pyx_t_18, __pyx_t_3);
               __pyx_t_1 = 0;
               __pyx_t_3 = 0;
-              __pyx_t_2 = __Pyx_PyObject_Call(__pyx_t_7, __pyx_t_5, NULL); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 323, __pyx_L7_error)
+              __pyx_t_2 = __Pyx_PyObject_Call(__pyx_t_7, __pyx_t_5, NULL); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 322, __pyx_L7_error)
               __Pyx_GOTREF(__pyx_t_2);
               __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
             }
             __Pyx_DECREF(__pyx_t_7); __pyx_t_7 = 0;
-            __pyx_t_7 = __Pyx_PyObject_GetAttrStr(__pyx_t_2, __pyx_n_s_add); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 323, __pyx_L7_error)
+            __pyx_t_7 = __Pyx_PyObject_GetAttrStr(__pyx_t_2, __pyx_n_s_add); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 322, __pyx_L7_error)
             __Pyx_GOTREF(__pyx_t_7);
             __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-            __pyx_t_2 = __Pyx_PyDict_NewPresized(1); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 323, __pyx_L7_error)
+            __pyx_t_2 = __Pyx_PyDict_NewPresized(1); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 322, __pyx_L7_error)
             __Pyx_GOTREF(__pyx_t_2);
-            __pyx_t_5 = __Pyx_PyBool_FromLong(__pyx_v_jj->get_annot()); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 323, __pyx_L7_error)
+            __pyx_t_5 = __Pyx_PyBool_FromLong(__pyx_v_jj->get_annot()); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 322, __pyx_L7_error)
             __Pyx_GOTREF(__pyx_t_5);
-            if (PyDict_SetItem(__pyx_t_2, __pyx_n_s_annotated, __pyx_t_5) < 0) __PYX_ERR(0, 323, __pyx_L7_error)
+            if (PyDict_SetItem(__pyx_t_2, __pyx_n_s_annotated, __pyx_t_5) < 0) __PYX_ERR(0, 322, __pyx_L7_error)
             __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
-            __pyx_t_5 = __Pyx_PyObject_Call(__pyx_t_7, __pyx_empty_tuple, __pyx_t_2); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 323, __pyx_L7_error)
+            __pyx_t_5 = __Pyx_PyObject_Call(__pyx_t_7, __pyx_empty_tuple, __pyx_t_2); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 322, __pyx_L7_error)
             __Pyx_GOTREF(__pyx_t_5);
             __Pyx_DECREF(__pyx_t_7); __pyx_t_7 = 0;
             __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
             __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
 
-            /* "majiq/src/internals/seq_parse.pyx":306
+            /* "majiq/src/internals/seq_parse.pyx":305
  *         sg.gene(gne_id).add(name=gne.get_name().decode('utf-8'), strand=chr(gne.get_strand()), chromosome=gne.get_chromosome().decode('utf-8'))
  * 
  *         for jj_pair in gne.junc_map_:             # <<<<<<<<<<<<<<
@@ -8203,7 +8179,7 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse_gene_to_splicegraph(g
             __pyx_L13_continue:;
           }
 
-          /* "majiq/src/internals/seq_parse.pyx":325
+          /* "majiq/src/internals/seq_parse.pyx":324
  *             sg.junction(gne_id, jj.get_start(), jj.get_end()).add(annotated=jj.get_annot())
  * 
  *         for ex_pair in gne.exon_map_:             # <<<<<<<<<<<<<<
@@ -8218,7 +8194,7 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse_gene_to_splicegraph(g
             ++__pyx_t_19;
             __pyx_v_ex_pair = __pyx_t_21;
 
-            /* "majiq/src/internals/seq_parse.pyx":326
+            /* "majiq/src/internals/seq_parse.pyx":325
  * 
  *         for ex_pair in gne.exon_map_:
  *             ex = ex_pair.second             # <<<<<<<<<<<<<<
@@ -8228,19 +8204,19 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse_gene_to_splicegraph(g
             __pyx_t_22 = __pyx_v_ex_pair.second;
             __pyx_v_ex = __pyx_t_22;
 
-            /* "majiq/src/internals/seq_parse.pyx":332
+            /* "majiq/src/internals/seq_parse.pyx":331
  *             #     continue
  * 
  *             alt_start = []             # <<<<<<<<<<<<<<
  *             for jj in ex.ib:
  *                 if jj.get_end() in alt_empty_starts:
  */
-            __pyx_t_5 = PyList_New(0); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 332, __pyx_L7_error)
+            __pyx_t_5 = PyList_New(0); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 331, __pyx_L7_error)
             __Pyx_GOTREF(__pyx_t_5);
             __Pyx_XDECREF_SET(__pyx_v_alt_start, ((PyObject*)__pyx_t_5));
             __pyx_t_5 = 0;
 
-            /* "majiq/src/internals/seq_parse.pyx":333
+            /* "majiq/src/internals/seq_parse.pyx":332
  * 
  *             alt_start = []
  *             for jj in ex.ib:             # <<<<<<<<<<<<<<
@@ -8255,33 +8231,33 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse_gene_to_splicegraph(g
               ++__pyx_t_23;
               __pyx_v_jj = __pyx_t_15;
 
-              /* "majiq/src/internals/seq_parse.pyx":334
+              /* "majiq/src/internals/seq_parse.pyx":333
  *             alt_start = []
  *             for jj in ex.ib:
  *                 if jj.get_end() in alt_empty_starts:             # <<<<<<<<<<<<<<
  *                     alt_start.append(jj.get_end())
  * 
  */
-              __pyx_t_5 = __Pyx_PyInt_From_int(__pyx_v_jj->get_end()); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 334, __pyx_L7_error)
+              __pyx_t_5 = __Pyx_PyInt_From_int(__pyx_v_jj->get_end()); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 333, __pyx_L7_error)
               __Pyx_GOTREF(__pyx_t_5);
-              __pyx_t_16 = (__Pyx_PySequence_ContainsTF(__pyx_t_5, __pyx_v_alt_empty_starts, Py_EQ)); if (unlikely(__pyx_t_16 < 0)) __PYX_ERR(0, 334, __pyx_L7_error)
+              __pyx_t_16 = (__Pyx_PySequence_ContainsTF(__pyx_t_5, __pyx_v_alt_empty_starts, Py_EQ)); if (unlikely(__pyx_t_16 < 0)) __PYX_ERR(0, 333, __pyx_L7_error)
               __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
               __pyx_t_25 = (__pyx_t_16 != 0);
               if (__pyx_t_25) {
 
-                /* "majiq/src/internals/seq_parse.pyx":335
+                /* "majiq/src/internals/seq_parse.pyx":334
  *             for jj in ex.ib:
  *                 if jj.get_end() in alt_empty_starts:
  *                     alt_start.append(jj.get_end())             # <<<<<<<<<<<<<<
  * 
  *             alt_ends = []
  */
-                __pyx_t_5 = __Pyx_PyInt_From_int(__pyx_v_jj->get_end()); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 335, __pyx_L7_error)
+                __pyx_t_5 = __Pyx_PyInt_From_int(__pyx_v_jj->get_end()); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 334, __pyx_L7_error)
                 __Pyx_GOTREF(__pyx_t_5);
-                __pyx_t_17 = __Pyx_PyList_Append(__pyx_v_alt_start, __pyx_t_5); if (unlikely(__pyx_t_17 == ((int)-1))) __PYX_ERR(0, 335, __pyx_L7_error)
+                __pyx_t_17 = __Pyx_PyList_Append(__pyx_v_alt_start, __pyx_t_5); if (unlikely(__pyx_t_17 == ((int)-1))) __PYX_ERR(0, 334, __pyx_L7_error)
                 __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
 
-                /* "majiq/src/internals/seq_parse.pyx":334
+                /* "majiq/src/internals/seq_parse.pyx":333
  *             alt_start = []
  *             for jj in ex.ib:
  *                 if jj.get_end() in alt_empty_starts:             # <<<<<<<<<<<<<<
@@ -8290,7 +8266,7 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse_gene_to_splicegraph(g
  */
               }
 
-              /* "majiq/src/internals/seq_parse.pyx":333
+              /* "majiq/src/internals/seq_parse.pyx":332
  * 
  *             alt_start = []
  *             for jj in ex.ib:             # <<<<<<<<<<<<<<
@@ -8299,19 +8275,19 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse_gene_to_splicegraph(g
  */
             }
 
-            /* "majiq/src/internals/seq_parse.pyx":337
+            /* "majiq/src/internals/seq_parse.pyx":336
  *                     alt_start.append(jj.get_end())
  * 
  *             alt_ends = []             # <<<<<<<<<<<<<<
  *             for jj in ex.ob:
  *                 if jj.get_start() in alt_empty_ends:
  */
-            __pyx_t_5 = PyList_New(0); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 337, __pyx_L7_error)
+            __pyx_t_5 = PyList_New(0); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 336, __pyx_L7_error)
             __Pyx_GOTREF(__pyx_t_5);
             __Pyx_XDECREF_SET(__pyx_v_alt_ends, ((PyObject*)__pyx_t_5));
             __pyx_t_5 = 0;
 
-            /* "majiq/src/internals/seq_parse.pyx":338
+            /* "majiq/src/internals/seq_parse.pyx":337
  * 
  *             alt_ends = []
  *             for jj in ex.ob:             # <<<<<<<<<<<<<<
@@ -8326,33 +8302,33 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse_gene_to_splicegraph(g
               ++__pyx_t_23;
               __pyx_v_jj = __pyx_t_15;
 
-              /* "majiq/src/internals/seq_parse.pyx":339
+              /* "majiq/src/internals/seq_parse.pyx":338
  *             alt_ends = []
  *             for jj in ex.ob:
  *                 if jj.get_start() in alt_empty_ends:             # <<<<<<<<<<<<<<
  *                     alt_ends.append(jj.get_start())
  * 
  */
-              __pyx_t_5 = __Pyx_PyInt_From_int(__pyx_v_jj->get_start()); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 339, __pyx_L7_error)
+              __pyx_t_5 = __Pyx_PyInt_From_int(__pyx_v_jj->get_start()); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 338, __pyx_L7_error)
               __Pyx_GOTREF(__pyx_t_5);
-              __pyx_t_25 = (__Pyx_PySequence_ContainsTF(__pyx_t_5, __pyx_v_alt_empty_ends, Py_EQ)); if (unlikely(__pyx_t_25 < 0)) __PYX_ERR(0, 339, __pyx_L7_error)
+              __pyx_t_25 = (__Pyx_PySequence_ContainsTF(__pyx_t_5, __pyx_v_alt_empty_ends, Py_EQ)); if (unlikely(__pyx_t_25 < 0)) __PYX_ERR(0, 338, __pyx_L7_error)
               __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
               __pyx_t_16 = (__pyx_t_25 != 0);
               if (__pyx_t_16) {
 
-                /* "majiq/src/internals/seq_parse.pyx":340
+                /* "majiq/src/internals/seq_parse.pyx":339
  *             for jj in ex.ob:
  *                 if jj.get_start() in alt_empty_ends:
  *                     alt_ends.append(jj.get_start())             # <<<<<<<<<<<<<<
  * 
  *             extra_coords = []
  */
-                __pyx_t_5 = __Pyx_PyInt_From_int(__pyx_v_jj->get_start()); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 340, __pyx_L7_error)
+                __pyx_t_5 = __Pyx_PyInt_From_int(__pyx_v_jj->get_start()); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 339, __pyx_L7_error)
                 __Pyx_GOTREF(__pyx_t_5);
-                __pyx_t_17 = __Pyx_PyList_Append(__pyx_v_alt_ends, __pyx_t_5); if (unlikely(__pyx_t_17 == ((int)-1))) __PYX_ERR(0, 340, __pyx_L7_error)
+                __pyx_t_17 = __Pyx_PyList_Append(__pyx_v_alt_ends, __pyx_t_5); if (unlikely(__pyx_t_17 == ((int)-1))) __PYX_ERR(0, 339, __pyx_L7_error)
                 __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
 
-                /* "majiq/src/internals/seq_parse.pyx":339
+                /* "majiq/src/internals/seq_parse.pyx":338
  *             alt_ends = []
  *             for jj in ex.ob:
  *                 if jj.get_start() in alt_empty_ends:             # <<<<<<<<<<<<<<
@@ -8361,7 +8337,7 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse_gene_to_splicegraph(g
  */
               }
 
-              /* "majiq/src/internals/seq_parse.pyx":338
+              /* "majiq/src/internals/seq_parse.pyx":337
  * 
  *             alt_ends = []
  *             for jj in ex.ob:             # <<<<<<<<<<<<<<
@@ -8370,19 +8346,19 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse_gene_to_splicegraph(g
  */
             }
 
-            /* "majiq/src/internals/seq_parse.pyx":342
+            /* "majiq/src/internals/seq_parse.pyx":341
  *                     alt_ends.append(jj.get_start())
  * 
  *             extra_coords = []             # <<<<<<<<<<<<<<
  *             if ex.annot_:
  *                 if ex.get_start() < ex.db_start_:
  */
-            __pyx_t_5 = PyList_New(0); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 342, __pyx_L7_error)
+            __pyx_t_5 = PyList_New(0); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 341, __pyx_L7_error)
             __Pyx_GOTREF(__pyx_t_5);
             __Pyx_XDECREF_SET(__pyx_v_extra_coords, ((PyObject*)__pyx_t_5));
             __pyx_t_5 = 0;
 
-            /* "majiq/src/internals/seq_parse.pyx":343
+            /* "majiq/src/internals/seq_parse.pyx":342
  * 
  *             extra_coords = []
  *             if ex.annot_:             # <<<<<<<<<<<<<<
@@ -8392,7 +8368,7 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse_gene_to_splicegraph(g
             __pyx_t_16 = (__pyx_v_ex->annot_ != 0);
             if (__pyx_t_16) {
 
-              /* "majiq/src/internals/seq_parse.pyx":344
+              /* "majiq/src/internals/seq_parse.pyx":343
  *             extra_coords = []
  *             if ex.annot_:
  *                 if ex.get_start() < ex.db_start_:             # <<<<<<<<<<<<<<
@@ -8402,18 +8378,18 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse_gene_to_splicegraph(g
               __pyx_t_16 = ((__pyx_v_ex->get_start() < __pyx_v_ex->db_start_) != 0);
               if (__pyx_t_16) {
 
-                /* "majiq/src/internals/seq_parse.pyx":345
+                /* "majiq/src/internals/seq_parse.pyx":344
  *             if ex.annot_:
  *                 if ex.get_start() < ex.db_start_:
  *                     extra_coords.append([ex.get_start(), ex.db_start_ - 1])             # <<<<<<<<<<<<<<
  *                 if ex.get_end() > ex.db_end_:
  *                     extra_coords.append([ex.db_end_ + 1, ex.get_end()])
  */
-                __pyx_t_5 = __Pyx_PyInt_From_int(__pyx_v_ex->get_start()); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 345, __pyx_L7_error)
+                __pyx_t_5 = __Pyx_PyInt_From_int(__pyx_v_ex->get_start()); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 344, __pyx_L7_error)
                 __Pyx_GOTREF(__pyx_t_5);
-                __pyx_t_2 = __Pyx_PyInt_From_long((__pyx_v_ex->db_start_ - 1)); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 345, __pyx_L7_error)
+                __pyx_t_2 = __Pyx_PyInt_From_long((__pyx_v_ex->db_start_ - 1)); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 344, __pyx_L7_error)
                 __Pyx_GOTREF(__pyx_t_2);
-                __pyx_t_7 = PyList_New(2); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 345, __pyx_L7_error)
+                __pyx_t_7 = PyList_New(2); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 344, __pyx_L7_error)
                 __Pyx_GOTREF(__pyx_t_7);
                 __Pyx_GIVEREF(__pyx_t_5);
                 PyList_SET_ITEM(__pyx_t_7, 0, __pyx_t_5);
@@ -8421,10 +8397,10 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse_gene_to_splicegraph(g
                 PyList_SET_ITEM(__pyx_t_7, 1, __pyx_t_2);
                 __pyx_t_5 = 0;
                 __pyx_t_2 = 0;
-                __pyx_t_17 = __Pyx_PyList_Append(__pyx_v_extra_coords, __pyx_t_7); if (unlikely(__pyx_t_17 == ((int)-1))) __PYX_ERR(0, 345, __pyx_L7_error)
+                __pyx_t_17 = __Pyx_PyList_Append(__pyx_v_extra_coords, __pyx_t_7); if (unlikely(__pyx_t_17 == ((int)-1))) __PYX_ERR(0, 344, __pyx_L7_error)
                 __Pyx_DECREF(__pyx_t_7); __pyx_t_7 = 0;
 
-                /* "majiq/src/internals/seq_parse.pyx":344
+                /* "majiq/src/internals/seq_parse.pyx":343
  *             extra_coords = []
  *             if ex.annot_:
  *                 if ex.get_start() < ex.db_start_:             # <<<<<<<<<<<<<<
@@ -8433,7 +8409,7 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse_gene_to_splicegraph(g
  */
               }
 
-              /* "majiq/src/internals/seq_parse.pyx":346
+              /* "majiq/src/internals/seq_parse.pyx":345
  *                 if ex.get_start() < ex.db_start_:
  *                     extra_coords.append([ex.get_start(), ex.db_start_ - 1])
  *                 if ex.get_end() > ex.db_end_:             # <<<<<<<<<<<<<<
@@ -8443,18 +8419,18 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse_gene_to_splicegraph(g
               __pyx_t_16 = ((__pyx_v_ex->get_end() > __pyx_v_ex->db_end_) != 0);
               if (__pyx_t_16) {
 
-                /* "majiq/src/internals/seq_parse.pyx":347
+                /* "majiq/src/internals/seq_parse.pyx":346
  *                     extra_coords.append([ex.get_start(), ex.db_start_ - 1])
  *                 if ex.get_end() > ex.db_end_:
  *                     extra_coords.append([ex.db_end_ + 1, ex.get_end()])             # <<<<<<<<<<<<<<
  * 
  *             sg.exon(gne_id, ex.get_start(), ex.get_end()).add(coords_extra=extra_coords, annotated=ex.annot_,
  */
-                __pyx_t_7 = __Pyx_PyInt_From_long((__pyx_v_ex->db_end_ + 1)); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 347, __pyx_L7_error)
+                __pyx_t_7 = __Pyx_PyInt_From_long((__pyx_v_ex->db_end_ + 1)); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 346, __pyx_L7_error)
                 __Pyx_GOTREF(__pyx_t_7);
-                __pyx_t_2 = __Pyx_PyInt_From_int(__pyx_v_ex->get_end()); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 347, __pyx_L7_error)
+                __pyx_t_2 = __Pyx_PyInt_From_int(__pyx_v_ex->get_end()); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 346, __pyx_L7_error)
                 __Pyx_GOTREF(__pyx_t_2);
-                __pyx_t_5 = PyList_New(2); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 347, __pyx_L7_error)
+                __pyx_t_5 = PyList_New(2); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 346, __pyx_L7_error)
                 __Pyx_GOTREF(__pyx_t_5);
                 __Pyx_GIVEREF(__pyx_t_7);
                 PyList_SET_ITEM(__pyx_t_5, 0, __pyx_t_7);
@@ -8462,10 +8438,10 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse_gene_to_splicegraph(g
                 PyList_SET_ITEM(__pyx_t_5, 1, __pyx_t_2);
                 __pyx_t_7 = 0;
                 __pyx_t_2 = 0;
-                __pyx_t_17 = __Pyx_PyList_Append(__pyx_v_extra_coords, __pyx_t_5); if (unlikely(__pyx_t_17 == ((int)-1))) __PYX_ERR(0, 347, __pyx_L7_error)
+                __pyx_t_17 = __Pyx_PyList_Append(__pyx_v_extra_coords, __pyx_t_5); if (unlikely(__pyx_t_17 == ((int)-1))) __PYX_ERR(0, 346, __pyx_L7_error)
                 __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
 
-                /* "majiq/src/internals/seq_parse.pyx":346
+                /* "majiq/src/internals/seq_parse.pyx":345
  *                 if ex.get_start() < ex.db_start_:
  *                     extra_coords.append([ex.get_start(), ex.db_start_ - 1])
  *                 if ex.get_end() > ex.db_end_:             # <<<<<<<<<<<<<<
@@ -8474,7 +8450,7 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse_gene_to_splicegraph(g
  */
               }
 
-              /* "majiq/src/internals/seq_parse.pyx":343
+              /* "majiq/src/internals/seq_parse.pyx":342
  * 
  *             extra_coords = []
  *             if ex.annot_:             # <<<<<<<<<<<<<<
@@ -8483,18 +8459,18 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse_gene_to_splicegraph(g
  */
             }
 
-            /* "majiq/src/internals/seq_parse.pyx":349
+            /* "majiq/src/internals/seq_parse.pyx":348
  *                     extra_coords.append([ex.db_end_ + 1, ex.get_end()])
  * 
  *             sg.exon(gne_id, ex.get_start(), ex.get_end()).add(coords_extra=extra_coords, annotated=ex.annot_,             # <<<<<<<<<<<<<<
  *                                                     alt_starts=alt_start, alt_ends=alt_ends)
  * 
  */
-            __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_sg, __pyx_n_s_exon); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 349, __pyx_L7_error)
+            __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_sg, __pyx_n_s_exon); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 348, __pyx_L7_error)
             __Pyx_GOTREF(__pyx_t_2);
-            __pyx_t_7 = __Pyx_PyInt_From_int(__pyx_v_ex->get_start()); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 349, __pyx_L7_error)
+            __pyx_t_7 = __Pyx_PyInt_From_int(__pyx_v_ex->get_start()); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 348, __pyx_L7_error)
             __Pyx_GOTREF(__pyx_t_7);
-            __pyx_t_3 = __Pyx_PyInt_From_int(__pyx_v_ex->get_end()); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 349, __pyx_L7_error)
+            __pyx_t_3 = __Pyx_PyInt_From_int(__pyx_v_ex->get_end()); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 348, __pyx_L7_error)
             __Pyx_GOTREF(__pyx_t_3);
             __pyx_t_1 = NULL;
             __pyx_t_18 = 0;
@@ -8511,7 +8487,7 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse_gene_to_splicegraph(g
             #if CYTHON_FAST_PYCALL
             if (PyFunction_Check(__pyx_t_2)) {
               PyObject *__pyx_temp[4] = {__pyx_t_1, __pyx_v_gne_id, __pyx_t_7, __pyx_t_3};
-              __pyx_t_5 = __Pyx_PyFunction_FastCall(__pyx_t_2, __pyx_temp+1-__pyx_t_18, 3+__pyx_t_18); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 349, __pyx_L7_error)
+              __pyx_t_5 = __Pyx_PyFunction_FastCall(__pyx_t_2, __pyx_temp+1-__pyx_t_18, 3+__pyx_t_18); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 348, __pyx_L7_error)
               __Pyx_XDECREF(__pyx_t_1); __pyx_t_1 = 0;
               __Pyx_GOTREF(__pyx_t_5);
               __Pyx_DECREF(__pyx_t_7); __pyx_t_7 = 0;
@@ -8521,7 +8497,7 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse_gene_to_splicegraph(g
             #if CYTHON_FAST_PYCCALL
             if (__Pyx_PyFastCFunction_Check(__pyx_t_2)) {
               PyObject *__pyx_temp[4] = {__pyx_t_1, __pyx_v_gne_id, __pyx_t_7, __pyx_t_3};
-              __pyx_t_5 = __Pyx_PyCFunction_FastCall(__pyx_t_2, __pyx_temp+1-__pyx_t_18, 3+__pyx_t_18); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 349, __pyx_L7_error)
+              __pyx_t_5 = __Pyx_PyCFunction_FastCall(__pyx_t_2, __pyx_temp+1-__pyx_t_18, 3+__pyx_t_18); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 348, __pyx_L7_error)
               __Pyx_XDECREF(__pyx_t_1); __pyx_t_1 = 0;
               __Pyx_GOTREF(__pyx_t_5);
               __Pyx_DECREF(__pyx_t_7); __pyx_t_7 = 0;
@@ -8529,7 +8505,7 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse_gene_to_splicegraph(g
             } else
             #endif
             {
-              __pyx_t_4 = PyTuple_New(3+__pyx_t_18); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 349, __pyx_L7_error)
+              __pyx_t_4 = PyTuple_New(3+__pyx_t_18); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 348, __pyx_L7_error)
               __Pyx_GOTREF(__pyx_t_4);
               if (__pyx_t_1) {
                 __Pyx_GIVEREF(__pyx_t_1); PyTuple_SET_ITEM(__pyx_t_4, 0, __pyx_t_1); __pyx_t_1 = NULL;
@@ -8543,46 +8519,46 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse_gene_to_splicegraph(g
               PyTuple_SET_ITEM(__pyx_t_4, 2+__pyx_t_18, __pyx_t_3);
               __pyx_t_7 = 0;
               __pyx_t_3 = 0;
-              __pyx_t_5 = __Pyx_PyObject_Call(__pyx_t_2, __pyx_t_4, NULL); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 349, __pyx_L7_error)
+              __pyx_t_5 = __Pyx_PyObject_Call(__pyx_t_2, __pyx_t_4, NULL); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 348, __pyx_L7_error)
               __Pyx_GOTREF(__pyx_t_5);
               __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
             }
             __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-            __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_t_5, __pyx_n_s_add); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 349, __pyx_L7_error)
+            __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_t_5, __pyx_n_s_add); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 348, __pyx_L7_error)
             __Pyx_GOTREF(__pyx_t_2);
             __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
-            __pyx_t_5 = __Pyx_PyDict_NewPresized(4); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 349, __pyx_L7_error)
+            __pyx_t_5 = __Pyx_PyDict_NewPresized(4); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 348, __pyx_L7_error)
             __Pyx_GOTREF(__pyx_t_5);
-            if (PyDict_SetItem(__pyx_t_5, __pyx_n_s_coords_extra, __pyx_v_extra_coords) < 0) __PYX_ERR(0, 349, __pyx_L7_error)
-            __pyx_t_4 = __Pyx_PyBool_FromLong(__pyx_v_ex->annot_); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 349, __pyx_L7_error)
+            if (PyDict_SetItem(__pyx_t_5, __pyx_n_s_coords_extra, __pyx_v_extra_coords) < 0) __PYX_ERR(0, 348, __pyx_L7_error)
+            __pyx_t_4 = __Pyx_PyBool_FromLong(__pyx_v_ex->annot_); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 348, __pyx_L7_error)
             __Pyx_GOTREF(__pyx_t_4);
-            if (PyDict_SetItem(__pyx_t_5, __pyx_n_s_annotated, __pyx_t_4) < 0) __PYX_ERR(0, 349, __pyx_L7_error)
+            if (PyDict_SetItem(__pyx_t_5, __pyx_n_s_annotated, __pyx_t_4) < 0) __PYX_ERR(0, 348, __pyx_L7_error)
             __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
 
-            /* "majiq/src/internals/seq_parse.pyx":350
+            /* "majiq/src/internals/seq_parse.pyx":349
  * 
  *             sg.exon(gne_id, ex.get_start(), ex.get_end()).add(coords_extra=extra_coords, annotated=ex.annot_,
  *                                                     alt_starts=alt_start, alt_ends=alt_ends)             # <<<<<<<<<<<<<<
  * 
  *             #print ('SOKUC: ', ex.has_out_intron())
  */
-            if (PyDict_SetItem(__pyx_t_5, __pyx_n_s_alt_starts, __pyx_v_alt_start) < 0) __PYX_ERR(0, 349, __pyx_L7_error)
-            if (PyDict_SetItem(__pyx_t_5, __pyx_n_s_alt_ends, __pyx_v_alt_ends) < 0) __PYX_ERR(0, 349, __pyx_L7_error)
+            if (PyDict_SetItem(__pyx_t_5, __pyx_n_s_alt_starts, __pyx_v_alt_start) < 0) __PYX_ERR(0, 348, __pyx_L7_error)
+            if (PyDict_SetItem(__pyx_t_5, __pyx_n_s_alt_ends, __pyx_v_alt_ends) < 0) __PYX_ERR(0, 348, __pyx_L7_error)
 
-            /* "majiq/src/internals/seq_parse.pyx":349
+            /* "majiq/src/internals/seq_parse.pyx":348
  *                     extra_coords.append([ex.db_end_ + 1, ex.get_end()])
  * 
  *             sg.exon(gne_id, ex.get_start(), ex.get_end()).add(coords_extra=extra_coords, annotated=ex.annot_,             # <<<<<<<<<<<<<<
  *                                                     alt_starts=alt_start, alt_ends=alt_ends)
  * 
  */
-            __pyx_t_4 = __Pyx_PyObject_Call(__pyx_t_2, __pyx_empty_tuple, __pyx_t_5); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 349, __pyx_L7_error)
+            __pyx_t_4 = __Pyx_PyObject_Call(__pyx_t_2, __pyx_empty_tuple, __pyx_t_5); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 348, __pyx_L7_error)
             __Pyx_GOTREF(__pyx_t_4);
             __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
             __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
             __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
 
-            /* "majiq/src/internals/seq_parse.pyx":353
+            /* "majiq/src/internals/seq_parse.pyx":352
  * 
  *             #print ('SOKUC: ', ex.has_out_intron())
  *             if ex.has_out_intron():             # <<<<<<<<<<<<<<
@@ -8592,26 +8568,26 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse_gene_to_splicegraph(g
             __pyx_t_16 = (__pyx_v_ex->has_out_intron() != 0);
             if (__pyx_t_16) {
 
-              /* "majiq/src/internals/seq_parse.pyx":355
+              /* "majiq/src/internals/seq_parse.pyx":354
  *             if ex.has_out_intron():
  *                 # print ("in if splice")
  *                 sg.intron_retention(gne_id, ex.ob_irptr.get_start(),             # <<<<<<<<<<<<<<
  *                                     ex.ob_irptr.get_end()).add(annotated=ex.ob_irptr.get_annot())
  * 
  */
-              __pyx_t_5 = __Pyx_PyObject_GetAttrStr(__pyx_v_sg, __pyx_n_s_intron_retention); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 355, __pyx_L7_error)
+              __pyx_t_5 = __Pyx_PyObject_GetAttrStr(__pyx_v_sg, __pyx_n_s_intron_retention); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 354, __pyx_L7_error)
               __Pyx_GOTREF(__pyx_t_5);
-              __pyx_t_2 = __Pyx_PyInt_From_int(__pyx_v_ex->ob_irptr->get_start()); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 355, __pyx_L7_error)
+              __pyx_t_2 = __Pyx_PyInt_From_int(__pyx_v_ex->ob_irptr->get_start()); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 354, __pyx_L7_error)
               __Pyx_GOTREF(__pyx_t_2);
 
-              /* "majiq/src/internals/seq_parse.pyx":356
+              /* "majiq/src/internals/seq_parse.pyx":355
  *                 # print ("in if splice")
  *                 sg.intron_retention(gne_id, ex.ob_irptr.get_start(),
  *                                     ex.ob_irptr.get_end()).add(annotated=ex.ob_irptr.get_annot())             # <<<<<<<<<<<<<<
  * 
  * 
  */
-              __pyx_t_3 = __Pyx_PyInt_From_int(__pyx_v_ex->ob_irptr->get_end()); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 356, __pyx_L7_error)
+              __pyx_t_3 = __Pyx_PyInt_From_int(__pyx_v_ex->ob_irptr->get_end()); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 355, __pyx_L7_error)
               __Pyx_GOTREF(__pyx_t_3);
               __pyx_t_7 = NULL;
               __pyx_t_18 = 0;
@@ -8628,7 +8604,7 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse_gene_to_splicegraph(g
               #if CYTHON_FAST_PYCALL
               if (PyFunction_Check(__pyx_t_5)) {
                 PyObject *__pyx_temp[4] = {__pyx_t_7, __pyx_v_gne_id, __pyx_t_2, __pyx_t_3};
-                __pyx_t_4 = __Pyx_PyFunction_FastCall(__pyx_t_5, __pyx_temp+1-__pyx_t_18, 3+__pyx_t_18); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 355, __pyx_L7_error)
+                __pyx_t_4 = __Pyx_PyFunction_FastCall(__pyx_t_5, __pyx_temp+1-__pyx_t_18, 3+__pyx_t_18); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 354, __pyx_L7_error)
                 __Pyx_XDECREF(__pyx_t_7); __pyx_t_7 = 0;
                 __Pyx_GOTREF(__pyx_t_4);
                 __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
@@ -8638,7 +8614,7 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse_gene_to_splicegraph(g
               #if CYTHON_FAST_PYCCALL
               if (__Pyx_PyFastCFunction_Check(__pyx_t_5)) {
                 PyObject *__pyx_temp[4] = {__pyx_t_7, __pyx_v_gne_id, __pyx_t_2, __pyx_t_3};
-                __pyx_t_4 = __Pyx_PyCFunction_FastCall(__pyx_t_5, __pyx_temp+1-__pyx_t_18, 3+__pyx_t_18); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 355, __pyx_L7_error)
+                __pyx_t_4 = __Pyx_PyCFunction_FastCall(__pyx_t_5, __pyx_temp+1-__pyx_t_18, 3+__pyx_t_18); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 354, __pyx_L7_error)
                 __Pyx_XDECREF(__pyx_t_7); __pyx_t_7 = 0;
                 __Pyx_GOTREF(__pyx_t_4);
                 __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
@@ -8646,7 +8622,7 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse_gene_to_splicegraph(g
               } else
               #endif
               {
-                __pyx_t_1 = PyTuple_New(3+__pyx_t_18); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 355, __pyx_L7_error)
+                __pyx_t_1 = PyTuple_New(3+__pyx_t_18); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 354, __pyx_L7_error)
                 __Pyx_GOTREF(__pyx_t_1);
                 if (__pyx_t_7) {
                   __Pyx_GIVEREF(__pyx_t_7); PyTuple_SET_ITEM(__pyx_t_1, 0, __pyx_t_7); __pyx_t_7 = NULL;
@@ -8660,27 +8636,27 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse_gene_to_splicegraph(g
                 PyTuple_SET_ITEM(__pyx_t_1, 2+__pyx_t_18, __pyx_t_3);
                 __pyx_t_2 = 0;
                 __pyx_t_3 = 0;
-                __pyx_t_4 = __Pyx_PyObject_Call(__pyx_t_5, __pyx_t_1, NULL); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 355, __pyx_L7_error)
+                __pyx_t_4 = __Pyx_PyObject_Call(__pyx_t_5, __pyx_t_1, NULL); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 354, __pyx_L7_error)
                 __Pyx_GOTREF(__pyx_t_4);
                 __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
               }
               __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
-              __pyx_t_5 = __Pyx_PyObject_GetAttrStr(__pyx_t_4, __pyx_n_s_add); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 356, __pyx_L7_error)
+              __pyx_t_5 = __Pyx_PyObject_GetAttrStr(__pyx_t_4, __pyx_n_s_add); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 355, __pyx_L7_error)
               __Pyx_GOTREF(__pyx_t_5);
               __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-              __pyx_t_4 = __Pyx_PyDict_NewPresized(1); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 356, __pyx_L7_error)
+              __pyx_t_4 = __Pyx_PyDict_NewPresized(1); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 355, __pyx_L7_error)
               __Pyx_GOTREF(__pyx_t_4);
-              __pyx_t_1 = __Pyx_PyBool_FromLong(__pyx_v_ex->ob_irptr->get_annot()); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 356, __pyx_L7_error)
+              __pyx_t_1 = __Pyx_PyBool_FromLong(__pyx_v_ex->ob_irptr->get_annot()); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 355, __pyx_L7_error)
               __Pyx_GOTREF(__pyx_t_1);
-              if (PyDict_SetItem(__pyx_t_4, __pyx_n_s_annotated, __pyx_t_1) < 0) __PYX_ERR(0, 356, __pyx_L7_error)
+              if (PyDict_SetItem(__pyx_t_4, __pyx_n_s_annotated, __pyx_t_1) < 0) __PYX_ERR(0, 355, __pyx_L7_error)
               __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-              __pyx_t_1 = __Pyx_PyObject_Call(__pyx_t_5, __pyx_empty_tuple, __pyx_t_4); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 356, __pyx_L7_error)
+              __pyx_t_1 = __Pyx_PyObject_Call(__pyx_t_5, __pyx_empty_tuple, __pyx_t_4); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 355, __pyx_L7_error)
               __Pyx_GOTREF(__pyx_t_1);
               __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
               __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
               __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
-              /* "majiq/src/internals/seq_parse.pyx":353
+              /* "majiq/src/internals/seq_parse.pyx":352
  * 
  *             #print ('SOKUC: ', ex.has_out_intron())
  *             if ex.has_out_intron():             # <<<<<<<<<<<<<<
@@ -8689,7 +8665,7 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse_gene_to_splicegraph(g
  */
             }
 
-            /* "majiq/src/internals/seq_parse.pyx":325
+            /* "majiq/src/internals/seq_parse.pyx":324
  *             sg.junction(gne_id, jj.get_start(), jj.get_end()).add(annotated=jj.get_annot())
  * 
  *         for ex_pair in gne.exon_map_:             # <<<<<<<<<<<<<<
@@ -8698,7 +8674,7 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse_gene_to_splicegraph(g
  */
           }
 
-          /* "majiq/src/internals/seq_parse.pyx":303
+          /* "majiq/src/internals/seq_parse.pyx":302
  *     gne_id = gne.get_id().decode('utf-8')
  *     # print('GENEID:', gne_id, gne.get_name(), chr(gne.get_strand()), gne.get_chromosome())
  *     with SpliceGraph(get_builder_splicegraph_filename(majiq_config.outDir)) as sg:             # <<<<<<<<<<<<<<
@@ -8720,20 +8696,20 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse_gene_to_splicegraph(g
         __Pyx_XDECREF(__pyx_t_1); __pyx_t_1 = 0;
         /*except:*/ {
           __Pyx_AddTraceback("majiq.src.internals.seq_parse.gene_to_splicegraph", __pyx_clineno, __pyx_lineno, __pyx_filename);
-          if (__Pyx_GetException(&__pyx_t_1, &__pyx_t_4, &__pyx_t_5) < 0) __PYX_ERR(0, 303, __pyx_L9_except_error)
+          if (__Pyx_GetException(&__pyx_t_1, &__pyx_t_4, &__pyx_t_5) < 0) __PYX_ERR(0, 302, __pyx_L9_except_error)
           __Pyx_GOTREF(__pyx_t_1);
           __Pyx_GOTREF(__pyx_t_4);
           __Pyx_GOTREF(__pyx_t_5);
-          __pyx_t_3 = PyTuple_Pack(3, __pyx_t_1, __pyx_t_4, __pyx_t_5); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 303, __pyx_L9_except_error)
+          __pyx_t_3 = PyTuple_Pack(3, __pyx_t_1, __pyx_t_4, __pyx_t_5); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 302, __pyx_L9_except_error)
           __Pyx_GOTREF(__pyx_t_3);
           __pyx_t_26 = __Pyx_PyObject_Call(__pyx_t_8, __pyx_t_3, NULL);
           __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
           __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
-          if (unlikely(!__pyx_t_26)) __PYX_ERR(0, 303, __pyx_L9_except_error)
+          if (unlikely(!__pyx_t_26)) __PYX_ERR(0, 302, __pyx_L9_except_error)
           __Pyx_GOTREF(__pyx_t_26);
           __pyx_t_16 = __Pyx_PyObject_IsTrue(__pyx_t_26);
           __Pyx_DECREF(__pyx_t_26); __pyx_t_26 = 0;
-          if (__pyx_t_16 < 0) __PYX_ERR(0, 303, __pyx_L9_except_error)
+          if (__pyx_t_16 < 0) __PYX_ERR(0, 302, __pyx_L9_except_error)
           __pyx_t_25 = ((!(__pyx_t_16 != 0)) != 0);
           if (__pyx_t_25) {
             __Pyx_GIVEREF(__pyx_t_1);
@@ -8741,7 +8717,7 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse_gene_to_splicegraph(g
             __Pyx_XGIVEREF(__pyx_t_5);
             __Pyx_ErrRestoreWithState(__pyx_t_1, __pyx_t_4, __pyx_t_5);
             __pyx_t_1 = 0; __pyx_t_4 = 0; __pyx_t_5 = 0; 
-            __PYX_ERR(0, 303, __pyx_L9_except_error)
+            __PYX_ERR(0, 302, __pyx_L9_except_error)
           }
           __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
           __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
@@ -8767,7 +8743,7 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse_gene_to_splicegraph(g
         if (__pyx_t_8) {
           __pyx_t_11 = __Pyx_PyObject_Call(__pyx_t_8, __pyx_tuple__14, NULL);
           __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
-          if (unlikely(!__pyx_t_11)) __PYX_ERR(0, 303, __pyx_L1_error)
+          if (unlikely(!__pyx_t_11)) __PYX_ERR(0, 302, __pyx_L1_error)
           __Pyx_GOTREF(__pyx_t_11);
           __Pyx_DECREF(__pyx_t_11); __pyx_t_11 = 0;
         }
@@ -8782,7 +8758,7 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse_gene_to_splicegraph(g
     __pyx_L33:;
   }
 
-  /* "majiq/src/internals/seq_parse.pyx":291
+  /* "majiq/src/internals/seq_parse.pyx":290
  *         sg.genome = majiq_config.genome
  * 
  * cdef gene_to_splicegraph(Gene * gne, majiq_config):             # <<<<<<<<<<<<<<
@@ -8816,7 +8792,7 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse_gene_to_splicegraph(g
   return __pyx_r;
 }
 
-/* "majiq/src/internals/seq_parse.pyx":362
+/* "majiq/src/internals/seq_parse.pyx":361
  * 
  * ## OPEN API FOR PYTHON
  * cdef _core_build(str transcripts, list file_list, object conf, object logger):             # <<<<<<<<<<<<<<
@@ -8836,25 +8812,25 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse__core_build(PyObject 
   PyObject *__pyx_t_6 = NULL;
   __Pyx_RefNannySetupContext("_core_build", 0);
 
-  /* "majiq/src/internals/seq_parse.pyx":364
+  /* "majiq/src/internals/seq_parse.pyx":363
  * cdef _core_build(str transcripts, list file_list, object conf, object logger):
  *     cdef vector[Gene *] gene_vec
  *     majiq_io.read_gff(transcripts, gene_vec, logger)             # <<<<<<<<<<<<<<
  *     init_splicegraph(get_builder_splicegraph_filename(conf.outDir))
  *     _find_junctions(file_list, gene_vec, conf, logger)
  */
-  __pyx_t_1 = __pyx_f_5majiq_3src_2io_read_gff(__pyx_v_transcripts, __pyx_v_gene_vec, __pyx_v_logger); if (unlikely(__pyx_t_1 == ((int)-1))) __PYX_ERR(0, 364, __pyx_L1_error)
+  __pyx_t_1 = __pyx_f_5majiq_3src_2io_read_gff(__pyx_v_transcripts, __pyx_v_gene_vec, __pyx_v_logger); if (unlikely(__pyx_t_1 == ((int)-1))) __PYX_ERR(0, 363, __pyx_L1_error)
 
-  /* "majiq/src/internals/seq_parse.pyx":365
+  /* "majiq/src/internals/seq_parse.pyx":364
  *     cdef vector[Gene *] gene_vec
  *     majiq_io.read_gff(transcripts, gene_vec, logger)
  *     init_splicegraph(get_builder_splicegraph_filename(conf.outDir))             # <<<<<<<<<<<<<<
  *     _find_junctions(file_list, gene_vec, conf, logger)
  * 
  */
-  __pyx_t_3 = __Pyx_GetModuleGlobalName(__pyx_n_s_get_builder_splicegraph_filename); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 365, __pyx_L1_error)
+  __pyx_t_3 = __Pyx_GetModuleGlobalName(__pyx_n_s_get_builder_splicegraph_filename); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 364, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
-  __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_v_conf, __pyx_n_s_outDir); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 365, __pyx_L1_error)
+  __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_v_conf, __pyx_n_s_outDir); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 364, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_4);
   __pyx_t_5 = NULL;
   if (CYTHON_UNPACK_METHODS && unlikely(PyMethod_Check(__pyx_t_3))) {
@@ -8867,14 +8843,14 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse__core_build(PyObject 
     }
   }
   if (!__pyx_t_5) {
-    __pyx_t_2 = __Pyx_PyObject_CallOneArg(__pyx_t_3, __pyx_t_4); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 365, __pyx_L1_error)
+    __pyx_t_2 = __Pyx_PyObject_CallOneArg(__pyx_t_3, __pyx_t_4); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 364, __pyx_L1_error)
     __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
     __Pyx_GOTREF(__pyx_t_2);
   } else {
     #if CYTHON_FAST_PYCALL
     if (PyFunction_Check(__pyx_t_3)) {
       PyObject *__pyx_temp[2] = {__pyx_t_5, __pyx_t_4};
-      __pyx_t_2 = __Pyx_PyFunction_FastCall(__pyx_t_3, __pyx_temp+1-1, 1+1); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 365, __pyx_L1_error)
+      __pyx_t_2 = __Pyx_PyFunction_FastCall(__pyx_t_3, __pyx_temp+1-1, 1+1); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 364, __pyx_L1_error)
       __Pyx_XDECREF(__pyx_t_5); __pyx_t_5 = 0;
       __Pyx_GOTREF(__pyx_t_2);
       __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
@@ -8883,42 +8859,42 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse__core_build(PyObject 
     #if CYTHON_FAST_PYCCALL
     if (__Pyx_PyFastCFunction_Check(__pyx_t_3)) {
       PyObject *__pyx_temp[2] = {__pyx_t_5, __pyx_t_4};
-      __pyx_t_2 = __Pyx_PyCFunction_FastCall(__pyx_t_3, __pyx_temp+1-1, 1+1); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 365, __pyx_L1_error)
+      __pyx_t_2 = __Pyx_PyCFunction_FastCall(__pyx_t_3, __pyx_temp+1-1, 1+1); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 364, __pyx_L1_error)
       __Pyx_XDECREF(__pyx_t_5); __pyx_t_5 = 0;
       __Pyx_GOTREF(__pyx_t_2);
       __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
     } else
     #endif
     {
-      __pyx_t_6 = PyTuple_New(1+1); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 365, __pyx_L1_error)
+      __pyx_t_6 = PyTuple_New(1+1); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 364, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_6);
       __Pyx_GIVEREF(__pyx_t_5); PyTuple_SET_ITEM(__pyx_t_6, 0, __pyx_t_5); __pyx_t_5 = NULL;
       __Pyx_GIVEREF(__pyx_t_4);
       PyTuple_SET_ITEM(__pyx_t_6, 0+1, __pyx_t_4);
       __pyx_t_4 = 0;
-      __pyx_t_2 = __Pyx_PyObject_Call(__pyx_t_3, __pyx_t_6, NULL); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 365, __pyx_L1_error)
+      __pyx_t_2 = __Pyx_PyObject_Call(__pyx_t_3, __pyx_t_6, NULL); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 364, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_2);
       __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
     }
   }
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
-  __pyx_t_3 = __pyx_f_5majiq_3src_9internals_9seq_parse_init_splicegraph(__pyx_t_2); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 365, __pyx_L1_error)
+  __pyx_t_3 = __pyx_f_5majiq_3src_9internals_9seq_parse_init_splicegraph(__pyx_t_2); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 364, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
 
-  /* "majiq/src/internals/seq_parse.pyx":366
+  /* "majiq/src/internals/seq_parse.pyx":365
  *     majiq_io.read_gff(transcripts, gene_vec, logger)
  *     init_splicegraph(get_builder_splicegraph_filename(conf.outDir))
  *     _find_junctions(file_list, gene_vec, conf, logger)             # <<<<<<<<<<<<<<
  * 
  * 
  */
-  __pyx_t_3 = __pyx_f_5majiq_3src_9internals_9seq_parse__find_junctions(__pyx_v_file_list, __pyx_v_gene_vec, __pyx_v_conf, __pyx_v_logger); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 366, __pyx_L1_error)
+  __pyx_t_3 = __pyx_f_5majiq_3src_9internals_9seq_parse__find_junctions(__pyx_v_file_list, __pyx_v_gene_vec, __pyx_v_conf, __pyx_v_logger); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 365, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
 
-  /* "majiq/src/internals/seq_parse.pyx":362
+  /* "majiq/src/internals/seq_parse.pyx":361
  * 
  * ## OPEN API FOR PYTHON
  * cdef _core_build(str transcripts, list file_list, object conf, object logger):             # <<<<<<<<<<<<<<
@@ -8943,7 +8919,7 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse__core_build(PyObject 
   return __pyx_r;
 }
 
-/* "majiq/src/internals/seq_parse.pyx":369
+/* "majiq/src/internals/seq_parse.pyx":368
  * 
  * 
  * cpdef core_build(str transcripts, list file_list, object conf, object logger):             # <<<<<<<<<<<<<<
@@ -8958,18 +8934,18 @@ static PyObject *__pyx_f_5majiq_3src_9internals_9seq_parse_core_build(PyObject *
   PyObject *__pyx_t_1 = NULL;
   __Pyx_RefNannySetupContext("core_build", 0);
 
-  /* "majiq/src/internals/seq_parse.pyx":370
+  /* "majiq/src/internals/seq_parse.pyx":369
  * 
  * cpdef core_build(str transcripts, list file_list, object conf, object logger):
  *     _core_build(transcripts, file_list, conf, logger)             # <<<<<<<<<<<<<<
  * 
  * 
  */
-  __pyx_t_1 = __pyx_f_5majiq_3src_9internals_9seq_parse__core_build(__pyx_v_transcripts, __pyx_v_file_list, __pyx_v_conf, __pyx_v_logger); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 370, __pyx_L1_error)
+  __pyx_t_1 = __pyx_f_5majiq_3src_9internals_9seq_parse__core_build(__pyx_v_transcripts, __pyx_v_file_list, __pyx_v_conf, __pyx_v_logger); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 369, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
-  /* "majiq/src/internals/seq_parse.pyx":369
+  /* "majiq/src/internals/seq_parse.pyx":368
  * 
  * 
  * cpdef core_build(str transcripts, list file_list, object conf, object logger):             # <<<<<<<<<<<<<<
@@ -9027,23 +9003,23 @@ static PyObject *__pyx_pw_5majiq_3src_9internals_9seq_parse_3core_build(PyObject
         case  1:
         if (likely((values[1] = __Pyx_PyDict_GetItemStr(__pyx_kwds, __pyx_n_s_file_list)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("core_build", 1, 4, 4, 1); __PYX_ERR(0, 369, __pyx_L3_error)
+          __Pyx_RaiseArgtupleInvalid("core_build", 1, 4, 4, 1); __PYX_ERR(0, 368, __pyx_L3_error)
         }
         CYTHON_FALLTHROUGH;
         case  2:
         if (likely((values[2] = __Pyx_PyDict_GetItemStr(__pyx_kwds, __pyx_n_s_conf)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("core_build", 1, 4, 4, 2); __PYX_ERR(0, 369, __pyx_L3_error)
+          __Pyx_RaiseArgtupleInvalid("core_build", 1, 4, 4, 2); __PYX_ERR(0, 368, __pyx_L3_error)
         }
         CYTHON_FALLTHROUGH;
         case  3:
         if (likely((values[3] = __Pyx_PyDict_GetItemStr(__pyx_kwds, __pyx_n_s_logger)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("core_build", 1, 4, 4, 3); __PYX_ERR(0, 369, __pyx_L3_error)
+          __Pyx_RaiseArgtupleInvalid("core_build", 1, 4, 4, 3); __PYX_ERR(0, 368, __pyx_L3_error)
         }
       }
       if (unlikely(kw_args > 0)) {
-        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, 0, values, pos_args, "core_build") < 0)) __PYX_ERR(0, 369, __pyx_L3_error)
+        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, 0, values, pos_args, "core_build") < 0)) __PYX_ERR(0, 368, __pyx_L3_error)
       }
     } else if (PyTuple_GET_SIZE(__pyx_args) != 4) {
       goto __pyx_L5_argtuple_error;
@@ -9060,14 +9036,14 @@ static PyObject *__pyx_pw_5majiq_3src_9internals_9seq_parse_3core_build(PyObject
   }
   goto __pyx_L4_argument_unpacking_done;
   __pyx_L5_argtuple_error:;
-  __Pyx_RaiseArgtupleInvalid("core_build", 1, 4, 4, PyTuple_GET_SIZE(__pyx_args)); __PYX_ERR(0, 369, __pyx_L3_error)
+  __Pyx_RaiseArgtupleInvalid("core_build", 1, 4, 4, PyTuple_GET_SIZE(__pyx_args)); __PYX_ERR(0, 368, __pyx_L3_error)
   __pyx_L3_error:;
   __Pyx_AddTraceback("majiq.src.internals.seq_parse.core_build", __pyx_clineno, __pyx_lineno, __pyx_filename);
   __Pyx_RefNannyFinishContext();
   return NULL;
   __pyx_L4_argument_unpacking_done:;
-  if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_transcripts), (&PyString_Type), 1, "transcripts", 1))) __PYX_ERR(0, 369, __pyx_L1_error)
-  if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_file_list), (&PyList_Type), 1, "file_list", 1))) __PYX_ERR(0, 369, __pyx_L1_error)
+  if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_transcripts), (&PyString_Type), 1, "transcripts", 1))) __PYX_ERR(0, 368, __pyx_L1_error)
+  if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_file_list), (&PyList_Type), 1, "file_list", 1))) __PYX_ERR(0, 368, __pyx_L1_error)
   __pyx_r = __pyx_pf_5majiq_3src_9internals_9seq_parse_2core_build(__pyx_self, __pyx_v_transcripts, __pyx_v_file_list, __pyx_v_conf, __pyx_v_logger);
 
   /* function exit code */
@@ -9085,7 +9061,7 @@ static PyObject *__pyx_pf_5majiq_3src_9internals_9seq_parse_2core_build(CYTHON_U
   PyObject *__pyx_t_1 = NULL;
   __Pyx_RefNannySetupContext("core_build", 0);
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = __pyx_f_5majiq_3src_9internals_9seq_parse_core_build(__pyx_v_transcripts, __pyx_v_file_list, __pyx_v_conf, __pyx_v_logger, 0); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 369, __pyx_L1_error)
+  __pyx_t_1 = __pyx_f_5majiq_3src_9internals_9seq_parse_core_build(__pyx_v_transcripts, __pyx_v_file_list, __pyx_v_conf, __pyx_v_logger, 0); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 368, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
@@ -12239,7 +12215,6 @@ static __Pyx_StringTabEntry __pyx_string_tab[] = {
   {&__pyx_kp_u_Format_string_allocated_too_shor_2, __pyx_k_Format_string_allocated_too_shor_2, sizeof(__pyx_k_Format_string_allocated_too_shor_2), 0, 1, 0, 0},
   {&__pyx_kp_s_Generating_Splicegraph, __pyx_k_Generating_Splicegraph, sizeof(__pyx_k_Generating_Splicegraph), 0, 0, 1, 0},
   {&__pyx_n_s_ImportError, __pyx_k_ImportError, sizeof(__pyx_k_ImportError), 0, 0, 1, 1},
-  {&__pyx_n_s_KKK2, __pyx_k_KKK2, sizeof(__pyx_k_KKK2), 0, 0, 1, 1},
   {&__pyx_n_s_KKK3, __pyx_k_KKK3, sizeof(__pyx_k_KKK3), 0, 0, 1, 1},
   {&__pyx_n_s_MIN_BP_OVERLAP, __pyx_k_MIN_BP_OVERLAP, sizeof(__pyx_k_MIN_BP_OVERLAP), 0, 0, 1, 1},
   {&__pyx_kp_u_Non_native_byte_order_not_suppor, __pyx_k_Non_native_byte_order_not_suppor, sizeof(__pyx_k_Non_native_byte_order_not_suppor), 0, 1, 0, 0},
@@ -12364,7 +12339,7 @@ static __Pyx_StringTabEntry __pyx_string_tab[] = {
 static int __Pyx_InitCachedBuiltins(void) {
   __pyx_builtin_open = __Pyx_GetBuiltinName(__pyx_n_s_open); if (!__pyx_builtin_open) __PYX_ERR(0, 29, __pyx_L1_error)
   __pyx_builtin_range = __Pyx_GetBuiltinName(__pyx_n_s_range); if (!__pyx_builtin_range) __PYX_ERR(0, 70, __pyx_L1_error)
-  __pyx_builtin_chr = __Pyx_GetBuiltinName(__pyx_n_s_chr); if (!__pyx_builtin_chr) __PYX_ERR(0, 304, __pyx_L1_error)
+  __pyx_builtin_chr = __Pyx_GetBuiltinName(__pyx_n_s_chr); if (!__pyx_builtin_chr) __PYX_ERR(0, 303, __pyx_L1_error)
   __pyx_builtin_ValueError = __Pyx_GetBuiltinName(__pyx_n_s_ValueError); if (!__pyx_builtin_ValueError) __PYX_ERR(1, 229, __pyx_L1_error)
   __pyx_builtin_RuntimeError = __Pyx_GetBuiltinName(__pyx_n_s_RuntimeError); if (!__pyx_builtin_RuntimeError) __PYX_ERR(1, 810, __pyx_L1_error)
   __pyx_builtin_ImportError = __Pyx_GetBuiltinName(__pyx_n_s_ImportError); if (!__pyx_builtin_ImportError) __PYX_ERR(1, 1000, __pyx_L1_error)
@@ -12404,7 +12379,7 @@ static int __Pyx_InitCachedConstants(void) {
  *                     # print('KKK2')
  *                     key = junc_ids[i][0].split(b':')[0]             # <<<<<<<<<<<<<<
  *                     irv = find_intron_retention(gene_map[key], junc_ids[i][1], junc_ids[i][2])
- *                     print ('KKK2', irv.size())
+ *                     for ir_ptr in irv:
  */
   __pyx_tuple__4 = PyTuple_Pack(1, __pyx_kp_b__3); if (unlikely(!__pyx_tuple__4)) __PYX_ERR(0, 86, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_tuple__4);
@@ -12432,80 +12407,80 @@ static int __Pyx_InitCachedConstants(void) {
   __Pyx_GOTREF(__pyx_tuple__6);
   __Pyx_GIVEREF(__pyx_tuple__6);
 
-  /* "majiq/src/internals/seq_parse.pyx":193
+  /* "majiq/src/internals/seq_parse.pyx":192
  *         for j in group_list:
  *             logger.info('Reading file %s' %(file_list[j][0]))
  *             bamfile = ('%s/%s.%s' % (conf.sam_dir, file_list[j][0], SEQ_FILE_FORMAT)).encode('utf-8')             # <<<<<<<<<<<<<<
  *             strandness = conf.strand_specific[file_list[j][0]]
  * 
  */
-  __pyx_tuple__8 = PyTuple_Pack(1, __pyx_kp_s_utf_8); if (unlikely(!__pyx_tuple__8)) __PYX_ERR(0, 193, __pyx_L1_error)
+  __pyx_tuple__8 = PyTuple_Pack(1, __pyx_kp_s_utf_8); if (unlikely(!__pyx_tuple__8)) __PYX_ERR(0, 192, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_tuple__8);
   __Pyx_GIVEREF(__pyx_tuple__8);
 
-  /* "majiq/src/internals/seq_parse.pyx":214
+  /* "majiq/src/internals/seq_parse.pyx":213
  *             with nogil:
  *                 with gil:
  *                         logger.info('Pre boost')             # <<<<<<<<<<<<<<
  *                 c_iobam.boostrap_samples(m, k, <np.float32_t *> boots.data)
  *                 j_ids = c_iobam.get_junc_map()
  */
-  __pyx_tuple__9 = PyTuple_Pack(1, __pyx_kp_s_Pre_boost); if (unlikely(!__pyx_tuple__9)) __PYX_ERR(0, 214, __pyx_L1_error)
+  __pyx_tuple__9 = PyTuple_Pack(1, __pyx_kp_s_Pre_boost); if (unlikely(!__pyx_tuple__9)) __PYX_ERR(0, 213, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_tuple__9);
   __Pyx_GIVEREF(__pyx_tuple__9);
 
-  /* "majiq/src/internals/seq_parse.pyx":220
+  /* "majiq/src/internals/seq_parse.pyx":219
  *                 jlimit = c_iobam.get_junc_limit_index()
  * 
  *             logger.info("Update flags")             # <<<<<<<<<<<<<<
  *             for i in prange(n, nogil=True, num_threads=nthreads):
  *                 gg = gene_vec[i]
  */
-  __pyx_tuple__10 = PyTuple_Pack(1, __pyx_kp_s_Update_flags); if (unlikely(!__pyx_tuple__10)) __PYX_ERR(0, 220, __pyx_L1_error)
+  __pyx_tuple__10 = PyTuple_Pack(1, __pyx_kp_s_Update_flags); if (unlikely(!__pyx_tuple__10)) __PYX_ERR(0, 219, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_tuple__10);
   __Pyx_GIVEREF(__pyx_tuple__10);
 
-  /* "majiq/src/internals/seq_parse.pyx":225
+  /* "majiq/src/internals/seq_parse.pyx":224
  *                 gg.update_junc_flags(eff_len, (j==last_it_grp), minreads, minpos, denovo_thresh, min_experiments)
  * 
  *             logger.info("Done Update flags")             # <<<<<<<<<<<<<<
  *             junc_ids = [0] * njunc
  *             for it in j_ids:
  */
-  __pyx_tuple__11 = PyTuple_Pack(1, __pyx_kp_s_Done_Update_flags); if (unlikely(!__pyx_tuple__11)) __PYX_ERR(0, 225, __pyx_L1_error)
+  __pyx_tuple__11 = PyTuple_Pack(1, __pyx_kp_s_Done_Update_flags); if (unlikely(!__pyx_tuple__11)) __PYX_ERR(0, 224, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_tuple__11);
   __Pyx_GIVEREF(__pyx_tuple__11);
 
-  /* "majiq/src/internals/seq_parse.pyx":267
+  /* "majiq/src/internals/seq_parse.pyx":266
  * 
  * 
  *     logger.info("Generating Splicegraph")             # <<<<<<<<<<<<<<
  * 
  *     for i in range(n):
  */
-  __pyx_tuple__12 = PyTuple_Pack(1, __pyx_kp_s_Generating_Splicegraph); if (unlikely(!__pyx_tuple__12)) __PYX_ERR(0, 267, __pyx_L1_error)
+  __pyx_tuple__12 = PyTuple_Pack(1, __pyx_kp_s_Generating_Splicegraph); if (unlikely(!__pyx_tuple__12)) __PYX_ERR(0, 266, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_tuple__12);
   __Pyx_GIVEREF(__pyx_tuple__12);
 
-  /* "majiq/src/internals/seq_parse.pyx":286
+  /* "majiq/src/internals/seq_parse.pyx":285
  * 
  *     # erase splice graph file
  *     with SpliceGraph(filename, delete=True) as sg:             # <<<<<<<<<<<<<<
  *         print([(xx, type(xx)) for xx in majiq_config.exp_list])
  *         sg.experiment_names = majiq_config.exp_list
  */
-  __pyx_tuple__13 = PyTuple_Pack(3, Py_None, Py_None, Py_None); if (unlikely(!__pyx_tuple__13)) __PYX_ERR(0, 286, __pyx_L1_error)
+  __pyx_tuple__13 = PyTuple_Pack(3, Py_None, Py_None, Py_None); if (unlikely(!__pyx_tuple__13)) __PYX_ERR(0, 285, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_tuple__13);
   __Pyx_GIVEREF(__pyx_tuple__13);
 
-  /* "majiq/src/internals/seq_parse.pyx":303
+  /* "majiq/src/internals/seq_parse.pyx":302
  *     gne_id = gne.get_id().decode('utf-8')
  *     # print('GENEID:', gne_id, gne.get_name(), chr(gne.get_strand()), gne.get_chromosome())
  *     with SpliceGraph(get_builder_splicegraph_filename(majiq_config.outDir)) as sg:             # <<<<<<<<<<<<<<
  *         sg.gene(gne_id).add(name=gne.get_name().decode('utf-8'), strand=chr(gne.get_strand()), chromosome=gne.get_chromosome().decode('utf-8'))
  * 
  */
-  __pyx_tuple__14 = PyTuple_Pack(3, Py_None, Py_None, Py_None); if (unlikely(!__pyx_tuple__14)) __PYX_ERR(0, 303, __pyx_L1_error)
+  __pyx_tuple__14 = PyTuple_Pack(3, Py_None, Py_None, Py_None); if (unlikely(!__pyx_tuple__14)) __PYX_ERR(0, 302, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_tuple__14);
   __Pyx_GIVEREF(__pyx_tuple__14);
 
@@ -12679,13 +12654,13 @@ static int __Pyx_modinit_type_init_code(void) {
   __Pyx_RefNannyDeclarations
   __Pyx_RefNannySetupContext("__Pyx_modinit_type_init_code", 0);
   /*--- Type init code ---*/
-  if (PyType_Ready(&__pyx_type_5majiq_3src_9internals_9seq_parse___pyx_scope_struct____pyx_f_5majiq_3src_9internals_9seq_parse__find_junctions) < 0) __PYX_ERR(0, 134, __pyx_L1_error)
+  if (PyType_Ready(&__pyx_type_5majiq_3src_9internals_9seq_parse___pyx_scope_struct____pyx_f_5majiq_3src_9internals_9seq_parse__find_junctions) < 0) __PYX_ERR(0, 133, __pyx_L1_error)
   __pyx_type_5majiq_3src_9internals_9seq_parse___pyx_scope_struct____pyx_f_5majiq_3src_9internals_9seq_parse__find_junctions.tp_print = 0;
   if ((CYTHON_USE_TYPE_SLOTS && CYTHON_USE_PYTYPE_LOOKUP) && likely(!__pyx_type_5majiq_3src_9internals_9seq_parse___pyx_scope_struct____pyx_f_5majiq_3src_9internals_9seq_parse__find_junctions.tp_dictoffset && __pyx_type_5majiq_3src_9internals_9seq_parse___pyx_scope_struct____pyx_f_5majiq_3src_9internals_9seq_parse__find_junctions.tp_getattro == PyObject_GenericGetAttr)) {
     __pyx_type_5majiq_3src_9internals_9seq_parse___pyx_scope_struct____pyx_f_5majiq_3src_9internals_9seq_parse__find_junctions.tp_getattro = __Pyx_PyObject_GenericGetAttrNoDict;
   }
   __pyx_ptype_5majiq_3src_9internals_9seq_parse___pyx_scope_struct____pyx_f_5majiq_3src_9internals_9seq_parse__find_junctions = &__pyx_type_5majiq_3src_9internals_9seq_parse___pyx_scope_struct____pyx_f_5majiq_3src_9internals_9seq_parse__find_junctions;
-  if (PyType_Ready(&__pyx_type_5majiq_3src_9internals_9seq_parse___pyx_scope_struct_1_genexpr) < 0) __PYX_ERR(0, 230, __pyx_L1_error)
+  if (PyType_Ready(&__pyx_type_5majiq_3src_9internals_9seq_parse___pyx_scope_struct_1_genexpr) < 0) __PYX_ERR(0, 229, __pyx_L1_error)
   __pyx_type_5majiq_3src_9internals_9seq_parse___pyx_scope_struct_1_genexpr.tp_print = 0;
   if ((CYTHON_USE_TYPE_SLOTS && CYTHON_USE_PYTYPE_LOOKUP) && likely(!__pyx_type_5majiq_3src_9internals_9seq_parse___pyx_scope_struct_1_genexpr.tp_dictoffset && __pyx_type_5majiq_3src_9internals_9seq_parse___pyx_scope_struct_1_genexpr.tp_getattro == PyObject_GenericGetAttr)) {
     __pyx_type_5majiq_3src_9internals_9seq_parse___pyx_scope_struct_1_genexpr.tp_getattro = __Pyx_PyObject_GenericGetAttrNoDict;
@@ -13011,45 +12986,45 @@ if (!__Pyx_RefNanny) {
   if (PyDict_SetItem(__pyx_d, __pyx_n_s_update_splicegraph_junction, __pyx_t_2) < 0) __PYX_ERR(0, 32, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
 
-  /* "majiq/src/internals/seq_parse.pyx":279
+  /* "majiq/src/internals/seq_parse.pyx":278
  * 
  * 
  * from voila.api import SpliceGraph             # <<<<<<<<<<<<<<
  * from majiq.src.config import Config
  * 
  */
-  __pyx_t_2 = PyList_New(1); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 279, __pyx_L1_error)
+  __pyx_t_2 = PyList_New(1); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 278, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   __Pyx_INCREF(__pyx_n_s_SpliceGraph);
   __Pyx_GIVEREF(__pyx_n_s_SpliceGraph);
   PyList_SET_ITEM(__pyx_t_2, 0, __pyx_n_s_SpliceGraph);
-  __pyx_t_1 = __Pyx_Import(__pyx_n_s_voila_api, __pyx_t_2, -1); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 279, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_Import(__pyx_n_s_voila_api, __pyx_t_2, -1); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 278, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-  __pyx_t_2 = __Pyx_ImportFrom(__pyx_t_1, __pyx_n_s_SpliceGraph); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 279, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_ImportFrom(__pyx_t_1, __pyx_n_s_SpliceGraph); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 278, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
-  if (PyDict_SetItem(__pyx_d, __pyx_n_s_SpliceGraph, __pyx_t_2) < 0) __PYX_ERR(0, 279, __pyx_L1_error)
+  if (PyDict_SetItem(__pyx_d, __pyx_n_s_SpliceGraph, __pyx_t_2) < 0) __PYX_ERR(0, 278, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
-  /* "majiq/src/internals/seq_parse.pyx":280
+  /* "majiq/src/internals/seq_parse.pyx":279
  * 
  * from voila.api import SpliceGraph
  * from majiq.src.config import Config             # <<<<<<<<<<<<<<
  * 
  * cdef init_splicegraph(filename):
  */
-  __pyx_t_1 = PyList_New(1); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 280, __pyx_L1_error)
+  __pyx_t_1 = PyList_New(1); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 279, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __Pyx_INCREF(__pyx_n_s_Config);
   __Pyx_GIVEREF(__pyx_n_s_Config);
   PyList_SET_ITEM(__pyx_t_1, 0, __pyx_n_s_Config);
-  __pyx_t_2 = __Pyx_Import(__pyx_n_s_majiq_src_config, __pyx_t_1, -1); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 280, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_Import(__pyx_n_s_majiq_src_config, __pyx_t_1, -1); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 279, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-  __pyx_t_1 = __Pyx_ImportFrom(__pyx_t_2, __pyx_n_s_Config); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 280, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_ImportFrom(__pyx_t_2, __pyx_n_s_Config); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 279, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  if (PyDict_SetItem(__pyx_d, __pyx_n_s_Config, __pyx_t_1) < 0) __PYX_ERR(0, 280, __pyx_L1_error)
+  if (PyDict_SetItem(__pyx_d, __pyx_n_s_Config, __pyx_t_1) < 0) __PYX_ERR(0, 279, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
 

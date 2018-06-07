@@ -7,6 +7,7 @@
 #include <random>
 #include <string>
 #include <cmath>
+#include <algorithm>
 #include "io_bam.hpp"
 #include "htslib/sam.h"
 #include "htslib/hts.h"
