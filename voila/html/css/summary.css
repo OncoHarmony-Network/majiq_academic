@@ -1,0 +1,78 @@
+body {
+    background-color: #c0d8ee;
+    font-size: 12px;
+}
+
+table {
+    background-color: white;
+}
+
+.header {
+    position: fixed;
+    width: 100%;
+    background-color: white;
+}
+
+.menu {
+    background-color: #205bb0;
+    color: white;
+}
+
+.hidden {
+    visibility: hidden;
+}
+
+.submenu {
+    background-color: #c0d8ee
+}
+
+.splice-graph-header {
+    background: white;
+    padding-top: 10px;
+    padding-left: 10px;
+    padding-bottom: 10px;
+}
+
+.splice-graph-header > div {
+    display: inline-grid;
+    vertical-align: middle;
+}
+
+.splice-graph-header .gene-name {
+    font-size: 20px;
+    color: #205bb0;
+    font-weight: bold;
+}
+
+.splice-graph-header .gene-id {
+    font-size: 16px;
+    font-weight: bold;
+    color: #e75c29
+}
+
+.splice-graph-container {
+    background-color: white;
+    border-bottom: solid lightgrey 1px;
+    padding-bottom: 10px;
+    padding-top: 10px;
+    top: 34px;
+}
+
+.splice-graph-container svg {
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.lsv-container > div {
+    text-align: left;
+    display: inline-grid;
+    padding-left: 25px;
+    padding-right: 25px;
+    padding-top: 10px;
+}
+
+.lsv-container {
+    text-align: center;
+}
+

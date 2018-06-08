@@ -14,8 +14,20 @@ from voila.api.view_splice_graph import ViewSpliceGraph
 from voila.constants import EXEC_DIR
 from voila.utils import utils_voila
 from voila.utils.voila_log import voila_log
-from voila.utils.voila_pool import VoilaPool
-from voila.vlsv import Het, HetGroup
+from voila.processes import VoilaPool
+
+
+class NumpyEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, (numpy.int64, numpy.bool_, numpy.uint8, numpy.uint32)):
+            return obj.item()
+        elif isinstance(obj, numpy.ndarray):
+            return obj.tolist()
+        elif isinstance(obj, numpy.bytes_):
+            return obj.decode('utf-8')
+        elif isinstance(obj, types.GeneratorType):
+            return tuple(obj)
+        return obj
 
 
 class Html(ABC):
@@ -71,19 +83,6 @@ class Html(ABC):
 
     @classmethod
     def get_env(cls):
-        class NumpyEncoder(json.JSONEncoder):
-            def default(self, obj):
-                if isinstance(obj, (numpy.int64, numpy.bool_, numpy.uint8, numpy.uint32)):
-                    return obj.item()
-                elif isinstance(obj, numpy.ndarray):
-                    return obj.tolist()
-                elif isinstance(obj, numpy.bytes_):
-                    return obj.decode('utf-8')
-                elif isinstance(obj, (Het, HetGroup)):
-                    return dict(obj)
-                elif isinstance(obj, types.GeneratorType):
-                    return tuple(obj)
-                return json.JSONEncoder.default(self, obj)
 
         def to_json(value):
             return json.dumps(value, cls=NumpyEncoder)
@@ -115,9 +114,11 @@ class Html(ABC):
         log = voila_log()
         log.info("Copy static files from Voila sources")
         static_dir = os.path.join(self.get_template_dir(), 'static')
+        html_dir = os.path.join(self.get_template_dir(), '../html')
         if index:
             copy_tree(static_dir, os.path.join(args.output, 'static'))
         copy_tree(static_dir, os.path.join(args.output, constants.SUMMARIES_SUBFOLDER, 'static'))
+        copy_tree(html_dir, args.output)
 
     @staticmethod
     def get_output_html(args, file_name=None):
