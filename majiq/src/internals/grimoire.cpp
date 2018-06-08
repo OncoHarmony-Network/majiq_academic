@@ -336,7 +336,7 @@ cout << "CONNECT INTRONS: gene: " << id_ << " ir_coord: "<< ir_start << " :: " <
 
         for(const auto &exon_mapIt: exon_map_){
             Exon * ex = exon_mapIt.second ;
-            if (is_lsv(ex, true)) {
+            if (ex->is_lsv(true)) {
                 lsvObj = new LSV(this, ex, true) ;
                 set<string> t1 ;
                 lsvObj->get_variations(t1) ;
@@ -344,7 +344,7 @@ cout << "CONNECT INTRONS: gene: " << id_ << " ir_coord: "<< ir_start << " :: " <
                 source.insert(_p1) ;
                 lsvGenes.push_back(lsvObj) ;
             }
-            if (is_lsv(ex, false)) {
+            if (ex->is_lsv(false)) {
                 lsvObj = new LSV(this, ex, false) ;
                 set<string> t1 ;
                 lsvObj->get_variations(t1) ;
