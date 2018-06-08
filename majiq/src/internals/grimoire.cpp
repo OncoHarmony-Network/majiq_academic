@@ -312,7 +312,7 @@ namespace grimoire {
                     if (ir_ptr->get_start() >= ex_end ) break ;
 
                     if (ir_start <= ir_ptr->get_end() && ir_end >= ir_ptr->get_start() && ir_ptr->get_ir_flag()){
-cout << "CONNECT INTRONS: gene: " << id_ << " ir_coord: "<< ir_start << " :: " << ir_end << " nintrons: " << n_itrons<< "\n" ;
+//cout << "CONNECT INTRONS: gene: " << id_ << " ir_coord: "<< ir_start << " :: " << ir_end << " nintrons: " << n_itrons<< "\n" ;
                         prev_ex->ob_irptr = ir_ptr ;
                         (ex.second)->ib_irptr = ir_ptr ;
                     }

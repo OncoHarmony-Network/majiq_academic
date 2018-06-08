@@ -367,16 +367,12 @@ namespace io_bam {
                 const bool pass = intrn_it->is_reliable(min_bins) ;
 
                 if( pass ){
-cout << "KK1\n" ;
                     const string key = intrn_it->get_key(intrn_it->get_gene()) ;
                      #pragma omp critical
                      {
-cout << "KK2\n" ;
                         junc_map[key] = junc_vec.size() ;
                         junc_vec.push_back(intrn_it->read_rates_) ;
-cout << "KK3\n" ;
                         (intrn_it->get_gene())->add_intron(intrn_it, min_intron_cov, min_experiments) ;
-cout << "KK4\n" ;
                      }
                 }
 
