@@ -40,7 +40,6 @@ cdef extern from "grimoire.hpp" namespace "grimoire":
         Gene() nogil except +
         Gene(string id1, string name1, string chromosome1,
              char strand1, unsigned int start1, unsigned int end1) nogil except +
-        # ~Gene() except +
 
         string  get_chromosome() nogil ;
         int     get_start()      nogil ;
@@ -59,10 +58,12 @@ cdef extern from "grimoire.hpp" namespace "grimoire":
                                   unsigned int denovo_thresh, unsigned int min_experiments) nogil ;
         void    fill_junc_tlb(map[string, vector[string]]& tlb) nogil ;
         void    connect_introns() nogil ;
+        int     detect_lsvs(vector[LSV*] out_lsvlist) nogil ;
 
         map[string, Junction*] junc_map_ ;
         map[string, Exon*] exon_map_ ;
         vector[Intron*] intron_vec_ ;
+
 
     cdef cppclass Exon:
         Exon() nogil except +
@@ -70,6 +71,7 @@ cdef extern from "grimoire.hpp" namespace "grimoire":
         Exon(int start1, int end1, bint annot1) nogil except +
         int     get_start() nogil ;
         int     get_end()   nogil ;
+        bint    has_out_intron() nogil ;
         bint annot_ ;
         int db_start_ ;
         int db_end_ ;
@@ -77,23 +79,20 @@ cdef extern from "grimoire.hpp" namespace "grimoire":
         set[Junction *] ob ;
         Intron * ob_irptr ;
 
-        bint has_out_intron() nogil ;
-
-
 
     cdef cppclass LSV:
         set[Junction *] junctions ;
         LSV() nogil except +
         LSV(string gene_id1, char strand, Exon* ex, bint ss) nogil except +
-        bint    gather_lsv_info(float* source, float* target, clist[Jinfo*]& info, map[string, Jinfo]& tlb,
-                             unsigned int msample) nogil ;
-        string  get_id() nogil ;
-        Gene*   get_gene() nogil ;
-        string  get_type() nogil ;
-        # int    get_num_junctions() nogil ;
-        int     get_num_variations() nogil ;
-        vector[Junction *] get_junctions() nogil ;
-        Intron * get_intron() nogil ;
+        bint                gather_lsv_info(float* source, float* target, clist[Jinfo*]& info, map[string, Jinfo]& tlb,
+                                            unsigned int msample) nogil ;
+        string              get_id() nogil ;
+        Gene*               get_gene() nogil ;
+        string              get_type() nogil ;
+        int                 get_num_variations() nogil ;
+        vector[Junction *]  get_junctions() nogil ;
+        Intron *            get_intron() nogil ;
+
 
     cdef struct Jinfo:
         unsigned int index ;
@@ -102,8 +101,7 @@ cdef extern from "grimoire.hpp" namespace "grimoire":
         int sreads ;
         int npos ;
 
-    int detect_lsvs(vector[LSV*] out_lsvlist, Gene* gObj) nogil ;
-    float * boostrap_samples(LSV* lsvObj, int msamples, int ksamples, int exp_idx, int eff_len) nogil ;
+
     void sortGeneList(vector[Gene*] glist) nogil ;
     vector[Intron *]  find_intron_retention(vector[Gene*]& gene_list, int start, int end) nogil ;
 

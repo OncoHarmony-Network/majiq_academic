@@ -40,7 +40,7 @@ namespace io_bam{
             int strandness_;
             unsigned int eff_len_;
             map<string, unsigned int> junc_map ;
-            vector<int *> junc_vec ;
+            vector<float *> junc_vec ;
             unsigned int nthreads_;
             map<string, vector<Gene*>> glist_ ;
             map<string, vector<Intron*>> intronVec_ ;
@@ -78,12 +78,12 @@ namespace io_bam{
 
             char _get_strand(bam1_t * read) ;
             void set_junction_strand(bam1_t  *aln, Junction& j1) ;
-            void find_junction_genes(string chrom, char strand, int start, int end, int * nreads_ptr ) ;
+            void find_junction_genes(string chrom, char strand, int start, int end, float * nreads_ptr ) ;
             int ParseJunctionsFromFile(bool ir_func) ;
             inline void update_junction_read(string key, int read_start, int count) ;
-            inline int* new_junc_values(const string key) ;
+            inline float* new_junc_values(const string key) ;
             int boostrap_samples(int msamples, int ksamples, float* boots) ;
-            void detect_introns(float min_intron_cov, unsigned int min_experiments) ;
+            void detect_introns(float min_intron_cov, unsigned int min_experiments, float min_bins) ;
             int parse_read_for_ir(bam_hdr_t *header, bam1_t *read) ;
 
             int get_njuncs() ;

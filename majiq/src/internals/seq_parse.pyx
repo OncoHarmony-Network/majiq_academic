@@ -1,6 +1,6 @@
-from majiq.src.internals.io_bam cimport IOBam, gene_vect_t #, intron_vect_t
+from majiq.src.internals.io_bam cimport IOBam, gene_vect_t
 from majiq.src.internals.grimoire cimport Junction, Gene, Exon, LSV, Jinfo, Intron
-from majiq.src.internals.grimoire cimport detect_lsvs, boostrap_samples, sortGeneList, find_intron_retention
+from majiq.src.internals.grimoire cimport sortGeneList, find_intron_retention
 #
 import cython
 from majiq.src.constants import *
@@ -87,7 +87,7 @@ cdef int _output_lsv_file_single(vector[LSV*] out_lsvlist, str experiment_name, 
                     irv = find_intron_retention(gene_map[key], junc_ids[i][1], junc_ids[i][2])
 
                     for ir_ptr in irv:
-                        print('KKK3', ir_ptr.get_gene().get_id(), ir_ptr.get_start(), ir_ptr.get_end(), junc_ids[i][3], junc_ids[i][4])
+                        # print('KKK3', ir_ptr.get_gene().get_id(), ir_ptr.get_start(), ir_ptr.get_end(), junc_ids[i][3], junc_ids[i][4])
                         sg.intron_retention(ir_ptr.get_gene().get_id().decode('utf-8'), ir_ptr.get_start(),
                                             ir_ptr.get_end()).update_reads(experiment_name, junc_ids[i][3])
                         tlb_ir[ir_ptr.get_key(ir_ptr.get_gene())] = Jinfo(i, junc_ids[i][1], junc_ids[i][2],
@@ -168,7 +168,7 @@ cdef _find_junctions(list file_list, vector[Gene*] gene_vec,  object conf, objec
     cdef map[string, int*] junc_summary
     cdef pair[string, unsigned int] it
 
-    # cdef map[string, intron_vect_t] intron_d
+
 
     cdef map[string, vector[string]] gene_junc_tlb
 
@@ -197,16 +197,13 @@ cdef _find_junctions(list file_list, vector[Gene*] gene_vec,  object conf, objec
                 c_iobam = IOBam(bamfile, strandness, eff_len, nthreads, gene_list)
                 c_iobam.ParseJunctionsFromFile(False)
 
-                njunc = c_iobam.get_njuncs()
-                with gil:
-                        logger.info('PREV njunc %s' %(njunc))
                 if ir:
                     with gil:
                         logger.info('Detect Intron retention %s' %(file_list[j][0]))
-                    c_iobam.detect_introns(min_ir_cov, min_experiments)
+                    c_iobam.detect_introns(min_ir_cov, min_experiments, 0.8)
                 njunc = c_iobam.get_njuncs()
                 with gil:
-                        logger.info('POST njunc %s' %(njunc))
+                        logger.debug('Total Junctions and introns %s' %(njunc))
 
             boots = np.zeros(shape=(njunc, m), dtype=np.float32)
             with nogil:
@@ -217,12 +214,12 @@ cdef _find_junctions(list file_list, vector[Gene*] gene_vec,  object conf, objec
                 jvec = c_iobam.get_junc_vec_summary()
                 jlimit = c_iobam.get_junc_limit_index()
 
-            logger.info("Update flags")
+            logger.debug("Update flags")
             for i in prange(n, nogil=True, num_threads=nthreads):
                 gg = gene_vec[i]
                 gg.update_junc_flags(eff_len, (j==last_it_grp), minreads, minpos, denovo_thresh, min_experiments)
 
-            logger.info("Done Update flags")
+            logger.debug("Done Update flags")
             junc_ids = [0] * njunc
             for it in j_ids:
                 # print(file_list[j][0], j, last_it_grp, (j==last_it_grp), it.second, it.first)
@@ -233,39 +230,21 @@ cdef _find_junctions(list file_list, vector[Gene*] gene_vec,  object conf, objec
             logger.info('Done Reading file %s' %(file_list[j][0]))
             _store_junc_file(boots, junc_ids, file_list[j][0], conf.outDir)
 
-    logger.info("Detecting LSVs ngenes: %s " % n)
 
+    logger.info("Detecting LSVs ngenes: %s " % n)
     for i in prange(n, nogil=True, num_threads=nthreads):
         gg = gene_vec[i]
         gg.detect_exons()
         if ir:
-            # with gil:
-            #     logger.info("KK0")
             gg.connect_introns()
 
         gg.fill_junc_tlb(gene_junc_tlb)
         # with gil:
         #     gene_to_splicegraph(gg, conf)
-        # gg.print_exons()
-        # with gil:
-        #     logger.info("KK")
-        nlsv = detect_lsvs(out_lsvlist, gg)
-        # with gil:
-        #     logger.info("KK2")
-        # with gil:
-        #     logger.info("GENE: %s %s %s" % (gg.get_id(), gg.get_chromosome(), nlsv))
-
-    # import sys
-    # for tt in gene_junc_tlb:
-    #     sys.stdout.write("TLB check %s:" % tt.first)
-    #     for kk in tt.second:
-    #         sys.stdout.write(" %s" %kk)
-    #     sys.stdout.write("\n")
-    #     sys.stdout.flush()
+        nlsv = gg.detect_lsvs(out_lsvlist)
 
 
     logger.info("Generating Splicegraph")
-
     for i in range(n):
         gene_to_splicegraph(gene_vec[i], conf)
 
@@ -349,11 +328,9 @@ cdef gene_to_splicegraph(Gene * gne, majiq_config):
             sg.exon(gne_id, ex.get_start(), ex.get_end()).add(coords_extra=extra_coords, annotated=ex.annot_,
                                                     alt_starts=alt_start, alt_ends=alt_ends)
 
-            #print ('SOKUC: ', ex.has_out_intron())
-            if ex.has_out_intron():
-                # print ("in if splice")
-                sg.intron_retention(gne_id, ex.ob_irptr.get_start(),
-                                    ex.ob_irptr.get_end()).add(annotated=ex.ob_irptr.get_annot())
+        for ir in gne.intron_vec_:
+                sg.intron_retention(gne_id, ir.get_start(),
+                                    ir.get_end()).add(annotated=ir.get_annot())
 
 
 

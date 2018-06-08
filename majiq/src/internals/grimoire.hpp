@@ -16,9 +16,33 @@
 using namespace std ;
 
 namespace grimoire{
-    class Exon;
-    class Gene;
-    class Intron;
+    class Exon ;
+    class Junction ;
+    class Gene ;
+    class Intron ;
+    class LSV ;
+
+    struct Ssite {
+        int         coord ;
+        bool        donor_ss ;
+        Junction *  j ;
+    };
+
+    struct Jinfo {
+        unsigned int    index ;
+        unsigned int    start ;
+        unsigned int    end ;
+        int             sreads ;
+        int             npos ;
+    };
+
+    struct lsvtype {
+        int         coord ;
+        int         ref_coord ;
+        Exon *      ex_ptr ;
+        Junction *  jun_ptr ;
+    };
+
 
     class _Region{
         protected:
@@ -28,8 +52,11 @@ namespace grimoire{
             _Region(){}
             _Region(int start1, int end1): start_(start1), end_(end1) {}
         public:
-            int     get_start()     { return start_ ; }
-            int     get_end()       { return end_ ; }
+            int         get_start()             { return start_ ; }
+            int         get_end()               { return end_ ; }
+            void        set_start(int start1)   { start_ = start1 ; }
+            void        set_end(int end1)       { end_ = end1 ; }
+            inline int  length()                { return end_ - start_ ; }
 
             template <class myRegion>
             static int RegionSearch(vector<myRegion *>  &a, int n, int coord) {
@@ -72,7 +99,7 @@ namespace grimoire{
             Exon * donor_;
 
         public:
-            int* nreads_ ;
+            float* nreads_ ;
 
             Junction() {}
             Junction(int start1, int end1, bool annot1): _Region(start1, end1), annot_(annot1){
@@ -85,10 +112,8 @@ namespace grimoire{
             }
             ~Junction()             { clear_nreads(true) ; }
 
-            string  get_key(Gene * gObj) ;
             string  get_key()       { return(to_string(start_) + "-" + to_string(end_)) ; }
-            int     get_start()     { return start_ ; }
-            int     get_end()       { return end_ ; }
+            string  get_key(Gene * gObj) ;
             bool    get_annot()     { return annot_ ; }
             bool    get_intronic()  { return intronic_ ; }
             bool    get_bld_fltr()  { return bld_fltr_ ; }
@@ -96,7 +121,7 @@ namespace grimoire{
             Exon*   get_acceptor()  { return acceptor_ ; }
             Exon*   get_donor()     { return donor_ ; }
 
-            void  set_nreads_ptr(int * nreads1) { nreads_ = nreads1 ; }
+            void  set_nreads_ptr(float * nreads1) { nreads_ = nreads1 ; }
             void  set_acceptor(Exon * acc) { acceptor_ = acc ; }
             void  set_donor(Exon * don) { donor_ = don ; }
 
@@ -131,7 +156,7 @@ namespace grimoire{
             }
 
             void update_junction_read(int read_start, unsigned int n) ;
-            int length() ;
+
     };
     class Exon: public _Region{
 
@@ -157,12 +182,9 @@ namespace grimoire{
                 ob_irptr = nullptr ;
             }
             ~Exon(){}
-
-            int     get_start()             { return start_ ; }
-            int     get_end()               { return end_ ; }
-            void    set_start(int start1)   { start_ = start1 ; }
-            void    set_end(int end1)       { end_ = end1 ; }
+            bool    is_lsv(bool ss) ;
             bool    has_out_intron()        { return ob_irptr != nullptr ; }
+
     };
 
     class Intron: public _Region{
@@ -174,7 +196,7 @@ namespace grimoire{
             bool    ir_flag_ ;
 
         public:
-            int *   read_rates_ ;
+            float *   read_rates_ ;
             int     nbins_ ;
 
             Intron () {}
@@ -186,15 +208,13 @@ namespace grimoire{
                 nbins_      = 0 ;
             }
 
-            int     get_start()   { return start_ ; }
-            int     get_end()     { return end_ ; }
-            bool    get_annot()   { return annot_ ; }
-            Gene*   get_gene()    { return gObj_ ; }
-            bool    get_ir_flag() { return ir_flag_ ; }
+            bool    get_annot()             { return annot_ ; }
+            Gene*   get_gene()              { return gObj_ ; }
+            bool    get_ir_flag()           { return ir_flag_ ; }
+            string  get_key()               { return(to_string(start_) + "-" + to_string(end_)) ; }
             string  get_key(Gene * gObj) ;
-            string  get_key()       { return(to_string(start_) + "-" + to_string(end_)) ; }
-
-            void     add_read_rates_buff(int nbins1){
+            void    calculate_lambda() ;
+            void    add_read_rates_buff(int nbins1){
 
                 if ( end_ - start_ >= nbins1 * MIN_INTRON_BINSIZE ) {
                     nbins_ = nbins1 ;
@@ -204,12 +224,17 @@ namespace grimoire{
 
                 }
 //                read_rates_ = (int*) calloc(nbins_, sizeof(int)) ;
-                read_rates_ = (int*) calloc(nbins1, sizeof(int)) ;
+                read_rates_ = (float*) calloc(nbins1, sizeof(float)) ;
             }
-            bool  is_reliable(float min_intron_cov) ;
-            inline void  update_flags(int min_exps) {
-                flt_count_ += 1 ;
-                ir_flag_ = (flt_count_ >= min_exps) ;
+            bool  is_reliable(float min_bins) ;
+            inline void  update_flags(float min_coverage, int min_exps) {
+
+                int cnt = 0 ;
+                for(int i =0 ; i< nbins_; i++){
+                    cnt += (read_rates_[i]>= min_coverage) ? 1 : 0 ;
+                }
+                flt_count_ += (cnt == nbins_) ? 1 : 0 ;
+                ir_flag_ = ir_flag_ || (flt_count_ >= min_exps) ;
             }
 
             void overlaping_intron(Intron * inIR_ptr){
@@ -217,10 +242,8 @@ namespace grimoire{
                 end_ = min(end_, inIR_ptr->get_end()) ;
                 read_rates_ = inIR_ptr->read_rates_ ;
             }
-
-
-
     };
+
 
     class Gene: public _Region{
         private:
@@ -247,8 +270,6 @@ namespace grimoire{
                     delete p1.second ;
                 }
             }
-            int     get_start()     { return start_ ; }
-            int     get_end()       { return end_ ; }
             string  get_id()        { return id_ ; }
             string  get_chromosome(){ return chromosome_ ;}
             char    get_strand()    { return strand_ ;}
@@ -263,34 +284,14 @@ namespace grimoire{
             void    print_exons() ;
             void    detect_exons() ;
             void    detect_introns(vector<Intron*> &intronlist) ;
-            void    add_intron(Intron * inIR_ptr, unsigned int min_exps) ;
+            void    add_intron(Intron * inIR_ptr, float min_coverage, unsigned int min_exps) ;
             void    connect_introns() ;
             void    newExonDefinition(int start, int end, Junction *inbound_j, Junction *outbound_j, bool in_db) ;
             void    fill_junc_tlb(map<string, vector<string>> &tlb) ;
+            int     detect_lsvs(vector<LSV*> &out_lsvlist);
             void    update_junc_flags(int efflen, bool is_last_exp, unsigned int minreads, unsigned int minpos,
                                       unsigned int denovo_thresh, unsigned int min_experiments) ;
 
-    };
-
-    struct Ssite {
-        int         coord ;
-        bool        donor_ss ;
-        Junction *  j ;
-    };
-
-    struct Jinfo {
-        unsigned int    index ;
-        unsigned int    start ;
-        unsigned int    end ;
-        int             sreads ;
-        int             npos ;
-    };
-
-    struct lsvtype {
-        int         coord ;
-        int         ref_coord ;
-        Exon *      ex_ptr ;
-        Junction *  jun_ptr ;
     };
 
     class LSV{
@@ -306,12 +307,9 @@ namespace grimoire{
             LSV(Gene* gObj1, Exon* ex, bool ss): gObj_(gObj1){
                 const bool b = (gObj_->get_strand() == '+') ;
                 const string t = (ss != b) ? "t" : "s" ;
-
                 id_     = gObj_->get_id() + ":" + t + ":" + to_string(ex->get_start()) + "-" + to_string(ex->get_end()) ;
                 ir_ptr_ = ss? ex->ob_irptr : ex->ib_irptr ;
-//                cout<< "LSV_TYPE\n";
                 type_   = set_type(ex, ss) ;
-//                cout << "OUT TYPE\n" ;
             }
 
             ~LSV(){}
@@ -333,12 +331,8 @@ namespace grimoire{
                 const int c = (ir_ptr_ != nullptr) ? 1 : 0 ;
                 return (n+c) ;
             }
-
-
     };
 
-    bool is_lsv(Exon * ex, bool ss) ;
-    int detect_lsvs(vector<LSV*> &out_lsvlist, Gene * gObj);
     void sortGeneList(vector<Gene*> &glist) ;
     vector<Intron *> find_intron_retention(vector<Gene*> &gene_list, int start, int end) ;
 

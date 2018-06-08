@@ -16,16 +16,14 @@
 #include "htslib/thread_pool.h"
 
 using namespace std;
-//using namespace interval;
 namespace io_bam {
 
-    inline int* IOBam::new_junc_values(const string key){
+    inline float* IOBam::new_junc_values(const string key){
         junc_map[key] = junc_vec.size() ;
-        int* v = (int*) calloc(eff_len_, sizeof(int)) ;
+        float* v = (float*) calloc(eff_len_, sizeof(float)) ;
         junc_vec.push_back(v) ;
         return v;
     }
-
 
     char IOBam::_get_strand(bam1_t * read){
         char strn = '.';
@@ -46,7 +44,7 @@ namespace io_bam {
     }
 
     void IOBam::find_junction_genes(string chrom, char strand, int start, int end,
-                                    int* nreads_ptr ){
+                                    float* nreads_ptr ){
         const int n = glist_[chrom].size();
         bool found_stage1 = false ;
         bool found_stage2 = false ;
@@ -98,7 +96,7 @@ namespace io_bam {
     }
 
     inline void IOBam::update_junction_read(string key, int offset, int count) {
-        int* vec = junc_vec[junc_map[key]] ;
+        float* vec = junc_vec[junc_map[key]] ;
         vec[offset] += count ;
         return ;
     }
@@ -113,7 +111,7 @@ namespace io_bam {
         #pragma omp critical
         {
             if(junc_map.count(key) == 0) {
-                int* v = new_junc_values(key) ;
+                float* v = new_junc_values(key) ;
                 find_junction_genes(chrom, strand, start, end, v) ;
             }
             update_junction_read(key, offset, 1) ;
@@ -145,7 +143,7 @@ namespace io_bam {
                 try {
                     add_junction(chrom, _get_strand(read), j_start, j_end, read_pos);
                 } catch (const std::logic_error& e) {
-                    cout << "KKK" << e.what() << '\n';
+                    cout << "ERROR" << e.what() << '\n';
                 }
                 off += ol ;
             }
@@ -293,7 +291,7 @@ namespace io_bam {
         #pragma omp parallel for num_threads(nthreads_)
         for(int jidx=0; jidx < njunc; jidx++){
 
-            vector<int> vec ;
+            vector<float> vec ;
 //            int* vec = junc_vec[jidx] ;
             int npos = 0 ;
 
@@ -331,23 +329,22 @@ namespace io_bam {
 
         #pragma omp parallel for num_threads(nthreads_)
         for(int jidx=0; jidx < njunc; ++jidx){
-            int ss = 0 ;
+            float ss = 0 ;
             int np = 0 ;
             for(unsigned int i=0; i<eff_len_; ++i){
                 ss += junc_vec[jidx][i] ;
-                np += junc_vec[jidx][i]? 1 : 0 ;
+                np += (junc_vec[jidx][i]>0)? 1 : 0 ;
             }
-            res[jidx] = ss ;
+            res[jidx] = (int) ss ;
             res[jidx+njunc] = np ;
         }
         return res ;
     }
 
-    void IOBam::detect_introns(float min_intron_cov, unsigned int min_experiments){
+    void IOBam::detect_introns(float min_intron_cov, unsigned int min_experiments, float min_bins){
 
-            junc_limit_index_ = junc_vec.size() ;
+        junc_limit_index_ = junc_vec.size() ;
 
-cout << "INTRON RETENTION START\n" ;
         for (const auto & it: glist_){
             if (intronVec_.count(it.first)==0){
                 intronVec_[it.first] = vector<Intron*>() ;
@@ -367,19 +364,24 @@ cout << "INTRON RETENTION START\n" ;
             #pragma omp parallel for num_threads(nthreads_)
             for(int idx = 0; idx<n; idx++){
                 Intron * intrn_it = (it.second)[idx] ;
-                bool pass = intrn_it->is_reliable(min_intron_cov) ;
+                const bool pass = intrn_it->is_reliable(min_bins) ;
+
                 if( pass ){
-
+cout << "KK1\n" ;
                     const string key = intrn_it->get_key(intrn_it->get_gene()) ;
-                    junc_map[key] = junc_vec.size() ;
-                    junc_vec.push_back(intrn_it->read_rates_) ;
-
-                    (intrn_it->get_gene())->add_intron(intrn_it, min_experiments) ;
+                     #pragma omp critical
+                     {
+cout << "KK2\n" ;
+                        junc_map[key] = junc_vec.size() ;
+                        junc_vec.push_back(intrn_it->read_rates_) ;
+cout << "KK3\n" ;
+                        (intrn_it->get_gene())->add_intron(intrn_it, min_intron_cov, min_experiments) ;
+cout << "KK4\n" ;
+                     }
                 }
 
             }
         }
-cout << "END IR\n" ;
     }
 
 

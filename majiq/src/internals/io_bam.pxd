@@ -3,7 +3,6 @@ from libcpp.map cimport map
 from libcpp.pair cimport pair
 from libcpp.vector cimport vector
 cimport numpy as np
-from majiq.src.internals.interval cimport ITNode
 from majiq.src.internals.grimoire cimport Junction, Gene
 
 ctypedef np.float64_t DTYPE_t
@@ -19,7 +18,7 @@ cdef extern from "io_bam.hpp" namespace "io_bam":
         int ParseJunctionsFromFile(bint ir_func) nogil
         # int ParseJunctionsFromFile(map[string, ITNode*]) nogil
         int boostrap_samples(int msamples, int ksamples, np.float32_t * boots) nogil
-        void detect_introns(float min_intron_cov, unsigned int min_experiments) nogil
+        void detect_introns(float min_intron_cov, unsigned int min_experiments, float min_bins)  nogil
         int get_njuncs() nogil
         map[string, unsigned int] get_junc_map() nogil
         vector[Junction *] get_junc_vec() nogil
