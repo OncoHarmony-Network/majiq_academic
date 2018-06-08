@@ -110,7 +110,6 @@ class IntronRetention(SpliceGraphSQL):
 
             self.sql.session.flush()
             with self.sql.session.no_autoflush:
-                print(type(self.gene_id))
                 try:
                     self.get.has_reads = True
                 except AttributeError:
