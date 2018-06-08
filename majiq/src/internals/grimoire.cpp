@@ -406,6 +406,7 @@ namespace grimoire {
 
     bool Intron::is_reliable(float min_bins){
         int npos = 0 ;
+        if (length() <=0 || nbins_<=0) return false ;
         const int sz = length() / nbins_ ;
         for(int i =0 ; i< nbins_; i++){
 
@@ -414,7 +415,6 @@ namespace grimoire {
             }
             read_rates_[i] = (read_rates_[i]>0) ? (read_rates_[i] / sz ) : 0 ;
         }
-
         const float c = (npos>0) ? (npos/nbins_) : 0 ;
         bool b = (c >= min_bins) ;
 
