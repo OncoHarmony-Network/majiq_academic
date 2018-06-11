@@ -113,7 +113,7 @@ namespace grimoire{
             ~Junction()             { clear_nreads(true) ; }
 
             string  get_key()       { return(to_string(start_) + "-" + to_string(end_)) ; }
-            string  get_key(Gene * gObj) ;
+            string  get_key(Gene * gObj, int strandness) ;
             bool    get_annot()     { return annot_ ; }
             bool    get_intronic()  { return intronic_ ; }
             bool    get_bld_fltr()  { return bld_fltr_ ; }

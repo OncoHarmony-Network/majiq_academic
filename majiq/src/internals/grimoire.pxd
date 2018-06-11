@@ -15,7 +15,7 @@ cdef extern from "grimoire.hpp" namespace "grimoire":
         int          get_start() nogil ;
         int          get_end() nogil ;
         string       get_key() nogil ;
-        string       get_key(Gene * gObj) nogil ;
+        string       get_key(Gene * gObj, int strandness) nogil ;
         bint         get_intronic() nogil
         bint         get_annot() nogil
         bint         get_bld_fltr() nogil

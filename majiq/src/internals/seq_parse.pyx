@@ -34,7 +34,8 @@ def update_splicegraph_junction(sg, gene_id, start, end, nreads, exp):
         sg.junction(gene_id, start, end).update_reads(exp, nreads)
 
 cdef int _output_lsv_file_single(vector[LSV*] out_lsvlist, str experiment_name, map[string, vector[string]] tlb_j_g,
-                                 map[string, gene_vect_t] gene_map, str outDir, int nthreads, unsigned int msamples, bint irb):
+                                 map[string, gene_vect_t] gene_map, str outDir, int nthreads, unsigned int msamples,
+                                 bint irb, int strandness):
     cdef dict cov_dict = {}
     cdef int nlsv = out_lsvlist.size()
     cdef str out_file, junc_file
@@ -70,6 +71,7 @@ cdef int _output_lsv_file_single(vector[LSV*] out_lsvlist, str experiment_name, 
             for i in range(junc_ids.shape[0]):
 
                 if junc_ids[i][5] == 0:
+                    # print("###: %s" , junc_ids[i][0])
                     tlb_juncs[junc_ids[i][0]] = Jinfo(i, junc_ids[i][1], junc_ids[i][2], junc_ids[i][3], junc_ids[i][4])
                     if tlb_j_g.count(junc_ids[i][0]) == 0 :
                         continue
@@ -103,11 +105,15 @@ cdef int _output_lsv_file_single(vector[LSV*] out_lsvlist, str experiment_name, 
                     cov_dict[lsvid.decode('utf-8')] = np.zeros(shape=(njunc, msamples), dtype=np.float32)
                     type_list.append((lsvid.decode('utf-8'), lsv_ptr.get_type()))
                 junc_idx = 0
+
                 for junc in lsv_ptr.get_junctions():
-                    key = junc.get_key(lsv_ptr.get_gene())
+                    key = junc.get_key(lsv_ptr.get_gene(), strandness)
+                    # with gil:
+                        # print(key)
                     if tlb_juncs.count(key) > 0 :
                         jobj_ptr = tlb_juncs[key]
                         with gil:
+                            # print (boots[tlb_juncs[key].index])
                             cov_dict[lsvid.decode('utf-8')][junc_idx] = boots[tlb_juncs[key].index]
                             junc_info.append((lsvid.decode('utf-8'), junc.get_start(), junc.get_end(),
                                               jobj_ptr.sreads, jobj_ptr.npos))
@@ -166,9 +172,6 @@ cdef _find_junctions(list file_list, vector[Gene*] gene_vec,  object conf, objec
     cdef map[string, unsigned int] j_ids
     cdef map[string, int*] junc_summary
     cdef pair[string, unsigned int] it
-
-
-
     cdef map[string, vector[string]] gene_junc_tlb
 
     # print("SIZE", gene_vec.size())
@@ -177,8 +180,6 @@ cdef _find_junctions(list file_list, vector[Gene*] gene_vec,  object conf, objec
     for gobj in gene_vec:
         if gene_list.count(gobj.get_chromosome()) == 0:
             gene_list[gobj.get_chromosome()] = gene_vect_t()
-            # if ir:
-            #     intron_d[gobj.get_chromosome()] = intron_vect_t()
         gene_list[gobj.get_chromosome()].push_back(gobj)
 
     for vector_gene in gene_list:
@@ -206,8 +207,6 @@ cdef _find_junctions(list file_list, vector[Gene*] gene_vec,  object conf, objec
 
             boots = np.zeros(shape=(njunc, m), dtype=np.float32)
             with nogil:
-                with gil:
-                        logger.info('Pre boost')
                 c_iobam.boostrap_samples(m, k, <np.float32_t *> boots.data)
                 j_ids = c_iobam.get_junc_map()
                 jvec = c_iobam.get_junc_vec_summary()
@@ -252,7 +251,8 @@ cdef _find_junctions(list file_list, vector[Gene*] gene_vec,  object conf, objec
 
     logger.info("%s LSV found" % out_lsvlist.size())
     for j in range(nsamples):
-        cnt = _output_lsv_file_single(out_lsvlist, file_list[j][0], gene_junc_tlb, gene_list, conf.outDir, nthreads, m, ir)
+        strandness = conf.strand_specific[file_list[j][0]]
+        cnt = _output_lsv_file_single(out_lsvlist, file_list[j][0], gene_junc_tlb, gene_list, conf.outDir, nthreads, m, ir, strandness)
         logger.info('%s: %d LSVs' %(file_list[j][0], cnt))
 
 

@@ -9,6 +9,7 @@
 #include <algorithm>
 #include <string>
 #include "grimoire.hpp"
+#include "io_bam.hpp"
 
 #include <omp.h>
 
@@ -65,8 +66,10 @@ namespace grimoire {
     }
 
 
-    string  Junction::get_key(Gene * gObj) {
-         return(gObj->get_chromosome() + ":" + gObj->get_strand() + ":" + to_string(start_) + "-" + to_string(end_)) ;
+    string  Junction::get_key(Gene * gObj, int strandness) {
+
+        string strand = (UNSTRANDED == strandness) ? "." : to_string(gObj->get_strand()) ;
+        return(gObj->get_chromosome() + ":" + strand + ":" + to_string(start_) + "-" + to_string(end_)) ;
     }
 
 /*

@@ -292,15 +292,14 @@ namespace io_bam {
         for(int jidx=0; jidx < njunc; jidx++){
 
             vector<float> vec ;
-//            int* vec = junc_vec[jidx] ;
             int npos = 0 ;
-
             for(unsigned int i=0; i<eff_len_; ++i){
                 if (junc_vec[jidx][i]>0){
                     npos ++ ;
                     vec.push_back(junc_vec[jidx][i]) ;
                 }
             }
+
             if (npos == 0) continue ;
             default_random_engine generator;
             uniform_int_distribution<int> distribution(0, npos-1);
@@ -308,7 +307,7 @@ namespace io_bam {
                 float lambda = 0;
                 for (int k=0; k<ksamples; k++)lambda += vec[distribution(generator)] ;
                 lambda /= ksamples ;
-                *p = lambda * npos ;
+                *p = (lambda * npos) ;
                 p++ ;
             }
         }
