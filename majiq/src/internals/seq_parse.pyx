@@ -110,7 +110,7 @@ cdef int _output_lsv_file_single(vector[LSV*] out_lsvlist, str experiment_name, 
                         with gil:
                             cov_dict[lsvid.decode('utf-8')][junc_idx] = boots[tlb_juncs[key].index]
                             junc_info.append((lsvid.decode('utf-8'), junc.get_start(), junc.get_end(),
-                                              jobj_ptr.sreads, jobj_ptr.npos))
+                                              jobj_ptr.sreads, jobj_ptr.npos, 0))
                     junc_idx = junc_idx + 1
 
                 ir_ptr = lsv_ptr.get_intron()
@@ -121,8 +121,7 @@ cdef int _output_lsv_file_single(vector[LSV*] out_lsvlist, str experiment_name, 
                         with gil:
                             cov_dict[lsvid.decode('utf-8')][junc_idx] = boots[jobj_ptr.index]
                             junc_info.append((lsvid.decode('utf-8'), ir_ptr.get_start(), ir_ptr.get_end(),
-                                              jobj_ptr.sreads, jobj_ptr.npos))
-                #     do the same with ir_ptr
+                                              jobj_ptr.sreads, jobj_ptr.npos, 1))
 
             majiq_io.dump_lsv_coverage(out_file, cov_dict, type_list, junc_info, experiment_name)
             tlb_juncs.clear()
