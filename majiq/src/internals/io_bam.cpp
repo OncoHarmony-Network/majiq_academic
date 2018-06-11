@@ -320,6 +320,7 @@ namespace io_bam {
     }
 
     const map<string, unsigned int>& IOBam::get_junc_map(){
+
         return junc_map ;
     }
 
@@ -368,9 +369,11 @@ namespace io_bam {
                     const string key = intrn_it->get_key(intrn_it->get_gene()) ;
                      #pragma omp critical
                      {
-                        junc_map[key] = junc_vec.size() ;
-                        junc_vec.push_back(intrn_it->read_rates_) ;
-                        (intrn_it->get_gene())->add_intron(intrn_it, min_intron_cov, min_experiments) ;
+                        if (junc_map.count(key) == 0) {
+                            junc_map[key] = junc_vec.size() ;
+                            junc_vec.push_back(intrn_it->read_rates_) ;
+                            (intrn_it->get_gene())->add_intron(intrn_it, min_intron_cov, min_experiments) ;
+                        }
                      }
                 }
 

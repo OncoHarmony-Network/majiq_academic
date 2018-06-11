@@ -110,7 +110,7 @@ cdef int _output_lsv_file_single(vector[LSV*] out_lsvlist, str experiment_name, 
                         with gil:
                             cov_dict[lsvid.decode('utf-8')][junc_idx] = boots[tlb_juncs[key].index]
                             junc_info.append((lsvid.decode('utf-8'), junc.get_start(), junc.get_end(),
-                                              jobj_ptr.sreads, jobj_ptr.npos, 0))
+                                              jobj_ptr.sreads, jobj_ptr.npos))
                     junc_idx = junc_idx + 1
 
                 ir_ptr = lsv_ptr.get_intron()
@@ -121,7 +121,7 @@ cdef int _output_lsv_file_single(vector[LSV*] out_lsvlist, str experiment_name, 
                         with gil:
                             cov_dict[lsvid.decode('utf-8')][junc_idx] = boots[jobj_ptr.index]
                             junc_info.append((lsvid.decode('utf-8'), ir_ptr.get_start(), ir_ptr.get_end(),
-                                              jobj_ptr.sreads, jobj_ptr.npos, 1))
+                                              jobj_ptr.sreads, jobj_ptr.npos))
 
             majiq_io.dump_lsv_coverage(out_file, cov_dict, type_list, junc_info, experiment_name)
             tlb_juncs.clear()
@@ -220,7 +220,10 @@ cdef _find_junctions(list file_list, vector[Gene*] gene_vec,  object conf, objec
 
             logger.debug("Done Update flags")
             junc_ids = [0] * njunc
+
+            jv_idx = 0
             for it in j_ids:
+
                 # print(file_list[j][0], j, last_it_grp, (j==last_it_grp), it.second, it.first)
                 tmp_str = it.first.decode('utf-8').split(':')[2]
                 start, end = (int(xx) for xx in tmp_str.split('-'))
