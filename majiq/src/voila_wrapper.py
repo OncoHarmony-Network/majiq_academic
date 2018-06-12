@@ -3,6 +3,7 @@ from majiq.grimoire.exon import detect_exons, expand_introns
 
 from majiq.src.config import Config
 from majiq.src.constants import *
+from voila import constants
 from voila.api import SpliceGraph
 
 
@@ -32,6 +33,7 @@ def init_splicegraph(filename):
 
     # erase splice graph file
     with SpliceGraph(filename, delete=True) as sg:
+        sg.file_version = constants.SPLICE_GRAPH_FILE_VERSION
         sg.experiment_names = majiq_config.exp_list
         sg.genome = majiq_config.genome
 
@@ -41,7 +43,7 @@ def gene_to_splicegraph(gne_id, gne, dict_junctions, exon_dict, list_introns, ma
     alt_empty_ends = []
 
     with SpliceGraph(get_builder_splicegraph_filename(majiq_config.outDir)) as sg:
-        sg.gene(gne_id).add(name=gne.name, strand=gne.strand, chromosome=gne.chromosome)
+        sg.gene(gne_id).add(name=gne['name'], strand=gne['strand'], chromosome=gne['chromosome'])
 
         for jid in sorted(dict_junctions.keys()):
             jj = dict_junctions[jid]
@@ -55,7 +57,8 @@ def gene_to_splicegraph(gne_id, gne, dict_junctions, exon_dict, list_introns, ma
                 continue
 
             # TODO: add transcripts
-            sg.junction(gne_id, jj.start, jj.end).add(annotated=jj.annot, intron_retention=jj.intronic)
+            if not jj.intronic:
+                sg.junction(gne_id, jj.start, jj.end).add(annotated=jj.annot)
 
         for ex in sorted(exon_dict, key=lambda x: (x.start, x.end)):
             if ex.intron:
@@ -81,11 +84,12 @@ def gene_to_splicegraph(gne_id, gne, dict_junctions, exon_dict, list_introns, ma
                 if ex.end > ex.db_coords[1]:
                     extra_coords.append([ex.db_coords[1] + 1, ex.end])
 
-            sg.exon(gne_id, ex.start, ex.end).add(coords_extra=extra_coords, intron_retention=False, annotated=ex.annot,
-                                                  alt_starts=alt_start, alt_ends=alt_ends)
+            sg.exon(gne_id, ex.start, ex.end).add(coords_extra=extra_coords, annotated=ex.annot, alt_starts=alt_start,
+                                                  alt_ends=alt_ends)
 
         for info in list_introns:
             if info.skip:
                 continue
 
-            sg.exon(gne_id, info.start, info.end).add(annotated=info.annot, intron_retention=True)
+            sg.intron_retention(gne_id, info.start, info.end).add(annotated=info.annot)
+

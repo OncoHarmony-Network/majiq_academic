@@ -48,6 +48,7 @@ class BasicPipeline:
         # if not self.logger_path:
         #     self.logger_path = self.outDir
         self.nthreads = args.nproc
+        self.dpsi = False
         #self.psi_paths = []
         # try:
         #     self.replica_len = [len(self.files1), len(self.files2)]

@@ -10,6 +10,7 @@ import majiq.src.logger as majiq_logger
 from majiq.src.basic_pipeline import BasicPipeline, pipeline_run
 from majiq.src.constants import *
 from majiq.src.multiproc import QueueMessage, process_conf, queue_manager, process_wrapper, chunks
+from voila import constants
 from voila.api import Matrix
 from voila.constants import ANALYSIS_DELTAPSI
 
@@ -40,7 +41,8 @@ def deltapsi_quantification(list_of_lsv, chnk, conf, logger):
         if lidx % 50 == 0:
             print("Event %d ..." % lidx)
             sys.stdout.flush()
-        if f_list[0][lsv_id].coverage.shape[1] < 2:
+        if f_list[0][lsv_id].coverage.shape[1] < 2 or f_list[0][lsv_id].coverage.shape[1] != f_list[1][lsv_id].coverage.shape[1]:
+            logger.info("Skipping Incorrect LSV %s" % lsv_id)
             continue
 
         boots1 = f_list[0][lsv_id].coverage * weights1[lsv_id][:, None, None]
@@ -138,9 +140,10 @@ class DeltaPsi(BasicPipeline):
             pool.close()
 
             with Matrix(get_quantifier_voila_filename(self.outDir, self.names, deltapsi=True), 'w') as out_h5p:
+                out_h5p.file_version = constants.VOILA_FILE_VERSION
                 out_h5p.analysis_type = ANALYSIS_DELTAPSI
                 out_h5p.group_names = self.names
-                out_h5p.prior = []
+                out_h5p.prior = prior_matrix
                 out_h5p.experiment_names = [exps1, exps2]
                 queue_manager(out_h5p, self.lock, self.queue, num_chunks=nthreads, func=self.store_results,
                               logger=logger, junc_info=junc_info)
