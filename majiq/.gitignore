@@ -2,6 +2,7 @@
 *.c
 *.so
 seq_parse.cpp
+io.cpp
 .DS_Store
 .idea
 voila/templates/.idea
