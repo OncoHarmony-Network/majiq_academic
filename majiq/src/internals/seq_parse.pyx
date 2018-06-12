@@ -196,7 +196,6 @@ cdef _find_junctions(list file_list, vector[Gene*] gene_vec,  object conf, objec
             with nogil:
                 c_iobam = IOBam(bamfile, strandness, eff_len, nthreads, gene_list)
                 c_iobam.ParseJunctionsFromFile(False)
-
                 if ir:
                     with gil:
                         logger.info('Detect Intron retention %s' %(file_list[j][0]))
