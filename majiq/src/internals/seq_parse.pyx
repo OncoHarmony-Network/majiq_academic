@@ -235,13 +235,21 @@ cdef _find_junctions(list file_list, vector[Gene*] gene_vec,  object conf, objec
     logger.info("Detecting LSVs ngenes: %s " % n)
     for i in prange(n, nogil=True, num_threads=nthreads):
         gg = gene_vec[i]
+        with gil:
+            logger.debug("%s] Detect exons" % gg.get_id())
         gg.detect_exons()
         if ir:
+            with gil:
+                logger.debug("%s] Connect introns" % gg.get_id())
             gg.connect_introns()
 
+        with gil:
+            logger.debug("[%s] Generate TLB" % gg.get_id())
         gg.fill_junc_tlb(gene_junc_tlb)
         # with gil:
         #     gene_to_splicegraph(gg, conf)
+        with gil:
+            logger.debug("[%s] Detect LSVs" % gg.get_id())
         nlsv = gg.detect_lsvs(out_lsvlist)
 
 
