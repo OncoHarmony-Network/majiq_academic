@@ -238,6 +238,7 @@ namespace grimoire{
             }
 
             void overlaping_intron(Intron * inIR_ptr){
+
                 start_ = max(start_, inIR_ptr->get_start()) ;
                 end_ = min(end_, inIR_ptr->get_end()) ;
                 read_rates_ = inIR_ptr->read_rates_ ;
