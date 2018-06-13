@@ -308,6 +308,7 @@ class ViewHeterogens:
 
         def get_all(self):
             yield '_id', self.lsv_id
+            yield 'gene_id', self.gene_id
             yield 'mean_psi', tuple(self.mean_psi)
             yield 'reference_exon', self.reference_exon
             yield 'lsv_type', self.lsv_type
@@ -326,6 +327,10 @@ class ViewHeterogens:
                     pass
             assert len(s) == 1
             return s.pop()
+
+        @property
+        def gene_id(self):
+            return self.get_attr('gene_id')
 
         @property
         def prime5(self):
@@ -357,7 +362,7 @@ class ViewHeterogens:
                 except (LsvIdNotFoundInVoilaFile, GeneIdNotFoundInVoilaFile):
                     pass
 
-            return self.commpact_array(arr)
+            return self.compact_array(arr)
 
         def junction_stat(self, stat_name):
             group_names = self.matrix_hdf5.view_metadata['group_names']
@@ -366,17 +371,21 @@ class ViewHeterogens:
 
             for het in self.heterogens:
                 try:
-                    stat_idx = list(het.matrix_hdf5.view_metadata['stat_names']).index(stat_name)
-                    for junc_idx, stat in enumerate(het.junction_stats.T[stat_idx]):
+                    stat_names = het.matrix_hdf5.view_metadata['stat_names']
+                    stat_idx = list(stat_names).index(stat_name)
+                    trans_junc_stats = het.junction_stats.T
+                    for junc_idx, stat in enumerate(trans_junc_stats[stat_idx]):
                         z, y = sorted(group_names.index(g) for g in het.matrix_hdf5.view_metadata['group_names'])
+                        assert arr[junc_idx][y][z] == -1
                         arr[junc_idx][y][z] = stat
 
                 except (LsvIdNotFoundInVoilaFile, GeneIdNotFoundInVoilaFile):
                     pass
 
-            return self.commpact_array(arr)
+            return self.compact_array(arr)
 
-        def commpact_array(self, arr):
+        @staticmethod
+        def compact_array(arr):
             mask = np.ones(arr.shape[1:], dtype=bool)
             triangle_mask = np.tril(mask, k=-1)
             return arr[:, triangle_mask]
@@ -394,8 +403,14 @@ class ViewHeterogens:
                     for psi_d, sample in zip(getattr(het, data_type), het.matrix_hdf5.view_metadata['group_names']):
                         if sample in d:
                             test_shape = min(d[sample].shape, psi_d.shape)
-                            assert np.array_equal(d[sample][0:test_shape[0], 0:test_shape[1]],
-                                                  psi_d[0:test_shape[0], 0:test_shape[1]])
+                            arr1 = d[sample][0:test_shape[0], 0:test_shape[1]]
+                            arr2 = psi_d[0:test_shape[0], 0:test_shape[1]]
+                            arr_d = arr1 - arr2
+                            threshold = 0.001
+                            if (np.abs(arr_d) > threshold).any():
+                                voila_log().warning('PSI distribution from the files containing the group "{}" '
+                                                    'don\'t agree within a {} threshold.  Double check the '
+                                                    'files containing this group.'.format(sample, threshold))
                         else:
                             d[sample] = psi_d
                 except (LsvIdNotFoundInVoilaFile, GeneIdNotFoundInVoilaFile):
@@ -440,7 +455,6 @@ class ViewHeterogens:
 
             for h in self.heterogens:
                 try:
-
                     if juncs is None:
                         juncs = h.junctions
                         source_file = h.matrix_hdf5.h.filename

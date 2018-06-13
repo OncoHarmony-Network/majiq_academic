@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <title>Title</title>
+
+    <link rel="stylesheet" href="https://unpkg.com/purecss@1.0.0/build/pure-min.css"
+          integrity="sha384-nn4HPE8lTHyVtfCBi5yW9d20FjT8BJwUXyWZT9InLYax14RDjBj46LmSztkmNP9w" crossorigin="anonymous">
+    <link rel="stylesheet" href="css/index.css">
+
+    <script src="https://d3js.org/d3.v4.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/pouchdb@6.4.3/dist/pouchdb.min.js"></script>
+    <script src="https://unpkg.com/pouchdb@6.4.3/dist/pouchdb.find.min.js"></script>
+    <script>
+        var db_gene = new PouchDB('voila_gene');
+        var db_lsv = new PouchDB('voila_lsv');
+    </script>
+    <script src="db_gene.js"></script>
+    <script src="db_lsv.js"></script>
+    <script>
+
+        var mouseover_autocomplete = function (event) {
+            var select = document.querySelector('.autocomplete ul li.select');
+            try {
+                select.classList.remove('select');
+            } catch (TypeError) {
+                // pass
+            }
+            event.target.classList.add('select')
+        };
+
+        var action_autocomplete = function (input) {
+            var select = document.querySelector('.autocomplete ul li.select');
+            if (select) {
+                var ul = document.querySelector('.autocomplete ul');
+                input.value = select.innerHTML;
+                while (ul.firstChild) {
+                    ul.removeChild(ul.firstChild);
+                }
+            }
+            hide_autocomplete();
+        };
+
+        var mouseclick_autocomplete = function () {
+            var input = document.querySelector('.search');
+            var event = document.createEvent('HTMLEvents');
+            action_autocomplete(input);
+            event.initEvent('submit', true, false);
+            input.parentNode.dispatchEvent(event);
+        };
+
+        var enter_autocomplete = function (event) {
+            if (event.key === 'Enter') {
+                action_autocomplete(this);
+            }
+        };
+
+        var arrow_autocomplete = function (event) {
+            var i;
+            var li = document.querySelectorAll('.autocomplete ul li');
+
+            if (li.length === 0)
+                return;
+
+            if (event.key === 'ArrowDown') {
+                if (document.querySelectorAll('.autocomplete ul li.select').length === 0) {
+                    li[0].classList.add('select')
+                } else {
+                    for (i = 0; i < li.length - 1; i++) {
+                        if (li[i].classList.contains('select')) {
+                            li[i].classList.remove('select');
+                            li[i + 1].classList.add('select');
+                            break
+                        }
+                    }
+                }
+            }
+
+            if (event.key === 'ArrowUp') {
+                if (document.querySelectorAll('.autocomplete ul li.select').length !== 0) {
+                    for (i = li.length - 1; i > 0; i--) {
+                        if (li[i].classList.contains('select')) {
+                            li[i].classList.remove('select');
+                            li[i - 1].classList.add('select');
+                            break
+                        }
+                    }
+                }
+            }
+        };
+
+        var find_autocomplete = function () {
+
+            clear_results();
+
+            if (this.value.length === 0)
+                return hide_autocomplete();
+
+            var key_regex = new RegExp(this.value, 'i');
+
+            db_gene.find({
+                selector: {
+                    _id: {$gte: null},
+                    name: {$regex: key_regex}
+                },
+                fields: ['name']
+            }, function (err, results) {
+                autocomplete(results.docs, '.autocomplete ul.gene-name', function (d) {
+                    return d.name
+                })
+            });
+
+            db_gene.find({
+                selector: {
+                    _id: {$gte: null},
+                    id: {$regex: key_regex}
+                },
+                fields: ['id']
+            }, function (err, results) {
+                autocomplete(results.docs, '.autocomplete ul.gene-id', function (d) {
+                    return d.id
+                })
+            });
+
+        };
+
+        var autocomplete = function (rows, selector, d_fn) {
+            var t = d3.select(selector).selectAll('li')
+                .data(rows);
+
+            t.text(d_fn);
+
+            t.enter()
+                .append('li')
+                .text(d_fn);
+
+            t.exit().remove();
+
+            show_autocomplete();
+        };
+
+        var show_autocomplete = function () {
+            document.querySelector('.autocomplete').style.visibility = 'visible';
+        };
+
+        var hide_autocomplete = function () {
+            document.querySelector('.autocomplete').style.visibility = 'hidden';
+        };
+
+        var find_results = function (event) {
+            var key = this.querySelector('.search').value;
+
+            db_gene.createIndex({
+                index: {
+                    fields: ['name']
+                }
+            }).then(function () {
+                return db_gene.find({
+                    selector: {
+                        _id: {$gte: null},
+                        $or: [
+                            {name: key},
+                            {_id: key}
+                        ]
+                    },
+                    fields: ['_id']
+                })
+            }).then(function (results) {
+                var key = results.docs[0]._id;
+                return db_lsv.createIndex({
+                    index: {
+                        fields: ['gene_id']
+                    }
+                }).then(function () {
+                    return db_lsv.find({
+                        selector: {
+                            gene_id: key
+                        }
+                    })
+                });
+            }).then(function (results) {
+                show_results(results.docs)
+            });
+
+            event.preventDefault();
+        };
+
+        var show_results = function (lsvs) {
+            var t = d3.selectAll('.results tbody').selectAll('tr')
+                .data(lsvs);
+
+            t.selectAll('td')
+                .selectAll('a')
+                .attr('href', function (d) {
+                    console.log(d);
+                    return 'summary.html?gene_id=' + d.gene_id
+                })
+                .text(function (d) {
+                    return d._id
+                });
+
+            t.enter()
+                .append('tr')
+                .append('td')
+                .append('a')
+                .attr('href', function (d) {
+                    console.log(d);
+                    return 'summary.html?gene_id=' + d.gene_id
+                })
+                .text(function (d) {
+                    return d._id
+                });
+
+            t.exit().remove();
+        };
+
+        var clear_results = function () {
+            d3.selectAll('.results tbody').selectAll('*').remove()
+        };
+
+        window.onload = function () {
+            document.querySelector('.autocomplete ul').onmouseover = mouseover_autocomplete;
+            document.querySelector('.autocomplete ul').onmousedown = mouseclick_autocomplete;
+            document.querySelector('.search').oninput = find_autocomplete;
+            document.querySelector('.search').onkeydown = arrow_autocomplete;
+            document.querySelector('.search').onkeypress = enter_autocomplete;
+            document.querySelector('.search').onblur = hide_autocomplete;
+            document.querySelector('form').onsubmit = find_results;
+        }
+    </script>
+</head>
+<body>
+<div class="content search-bar">
+    <form class="pure-form">
+        <input class="search pure-input-1" type="text" placeholder="Gene Search..."><br>
+        <div class="autocomplete">
+            <ul class="gene-name"></ul>
+            <ul class="gene-id"></ul>
+        </div>
+    </form>
+</div>
+<div class="content">
+    <table class="results pure-table">
+        <thead>
+        <tr>
+            <th>LSV ID</th>
+        </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+</div>
+</body>
+</html>

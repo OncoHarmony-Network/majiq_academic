@@ -176,9 +176,9 @@ class Psi(Html, Tsv):
                             'Exons coords': self.semicolon_join(
                                 '{0}-{1}'.format(start, end) for start, end in self.filter_exons(lsv_exons)
                             ),
-                            'IR coords': self.semicolon_join(
-                                '{0}-{1}'.format(e.start, e.end) for e in lsv_exons if e.intron_retention
-                            ),
+                            # 'IR coords': self.semicolon_join(
+                            #     '{0}-{1}'.format(e.start, e.end) for e in lsv_exons if e.intron_retention
+                            # ),
                             'E(PSI) per LSV junction': self.semicolon_join(lsv.means),
                             'Var(E(PSI)) per LSV junction': self.semicolon_join(lsv.variances)
                         }

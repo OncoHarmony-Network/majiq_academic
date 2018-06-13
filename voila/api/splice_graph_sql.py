@@ -8,7 +8,6 @@ from sqlalchemy.orm.exc import NoResultFound
 
 from voila.api import splice_graph_model as model
 from voila.api.sql import SQL
-from voila.utils.exceptions import IntronRetentionNotFound, JunctionNotFound
 
 Session = sessionmaker()
 
@@ -98,24 +97,36 @@ class IntronRetention(SpliceGraphSQL):
                     and_(model.IntronRetention.gene_id == self.gene_id, model.IntronRetention.start == self.start,
                          model.IntronRetention.end == self.end))).scalar()
 
+        def reads_exists(self, experiment, reads):
+            experiment = str(experiment)
+            reads = int(reads)
+            return self.sql.session.query(
+                exists().where(and_(
+                    model.IntronRetentionReads.intron_retention_gene_id == self.gene_id,
+                    model.IntronRetentionReads.intron_retention_start == self.start,
+                    model.IntronRetentionReads.intron_retention_end == self.end,
+                    model.IntronRetentionReads.experiment_name == experiment,
+                    model.IntronRetentionReads.reads == reads,
+                ))).scalar()
+
         def update_reads(self, experiment: str, reads: int):
             experiment = str(experiment)
             reads = int(reads)
 
-            if not reads:
-                return
+            if reads:
 
-            r = model.IntronRetentionReads(intron_retention_gene_id=self.gene_id, intron_retention_start=self.start,
-                                           intron_retention_end=self.end, experiment_name=experiment, reads=reads)
+                r = model.IntronRetentionReads(intron_retention_gene_id=self.gene_id, intron_retention_start=self.start,
+                                               intron_retention_end=self.end, experiment_name=experiment, reads=reads)
 
-            self.sql.session.flush()
-            with self.sql.session.no_autoflush:
-                try:
-                    self.get.has_reads = True
-                except AttributeError:
-                    raise IntronRetentionNotFound(self)
-                self.sql.add(r)
-                self.sql.commit(default_commit_on_count)
+                if self.reads_exists(experiment, reads):
+                    return -1
+                else:
+                    with self.sql.session.no_autoflush:
+                        self.get.has_reads = True
+                        self.sql.add(r)
+                        self.sql.commit(default_commit_on_count)
+
+            return 0
 
     def intron_retention(self, gene_id: str, start: int, end: int):
         return self._IntronRetention(self, gene_id, start, end)
@@ -195,6 +206,7 @@ class Junctions(SpliceGraphSQL):
 
         def update_reads(self, experiment: str, reads: int):
             reads = int(reads)
+            experiment = str(experiment)
 
             if not reads:
                 return
@@ -203,10 +215,7 @@ class Junctions(SpliceGraphSQL):
                                     experiment_name=experiment, reads=reads)
 
             with self.sql.session.no_autoflush:
-                try:
-                    self.get.has_reads = True
-                except AttributeError:
-                    raise JunctionNotFound(self)
+                self.get.has_reads = True
                 self.sql.add(r)
                 self.sql.commit(default_commit_on_count)
 

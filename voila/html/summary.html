@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <title>Title</title>
+
+    <link rel="stylesheet" href="https://unpkg.com/purecss@1.0.0/build/pure-min.css"
+          integrity="sha384-nn4HPE8lTHyVtfCBi5yW9d20FjT8BJwUXyWZT9InLYax14RDjBj46LmSztkmNP9w" crossorigin="anonymous">
+    <link rel="stylesheet" href="css/summary.css">
+    <link rel="stylesheet" href="css/custom.css">
+
+    <script src="https://d3js.org/d3.v4.min.js"></script>
+    <script src="https://raw.githack.com/Kcnarf/d3-beeswarm/master/build/d3-beeswarm.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/pouchdb@6.4.3/dist/pouchdb.min.js"></script>
+    <script src="https://unpkg.com/pouchdb@6.4.3/dist/pouchdb.find.min.js"></script>
+
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/list.js/1.5.0/list.min.js"></script>
+
+    <script src="js/splicegraph.js"></script>
+    <script src="js/table.js"></script>
+    <script src="js/violin.js"></script>
+    <script src="js/heatmap.js"></script>
+    <script src="js/colors.js"></script>
+    <script>
+        const db_gene = new PouchDB('voila_gene');
+        const db_lsv = new PouchDB('voila_lsv');
+    </script>
+    <script src="db_gene.js"></script>
+    <script src="db_lsv.js"></script>
+    <script>
+        const urlParams = new URLSearchParams(document.location.search);
+
+        const show_lsvs = (lsvs) => new Promise((resolve, reject) => {
+            lsvs.sort((a, b) => {
+                return a.junctions.length - b.junctions.length
+            });
+
+            const table = d3.select('.lsv-container')
+                .selectAll('div')
+                .data(lsvs)
+                .enter()
+                .append('div')
+                .text(d => {
+                    return d._id
+                })
+                .append('table')
+                .classed('pure-table', true)
+                .attr('data-lsv-id', d => {
+                    return d._id
+                }).each((d, i, a) => new Table(a[i]));
+
+            table.append('thead')
+                .append('tr')
+                .selectAll('th')
+                .data(['Junctions', 'Violin', 'Heat Map'])
+                .enter()
+                .append('th')
+                .text(d => {
+                    return d
+                });
+
+            const row = table
+                .append('tbody')
+                .selectAll('tr')
+                .data(d => {
+                    return d.junctions
+                })
+                .enter()
+                .append('tr')
+                .attr('data-junction-index', (d, i) => {
+                    return i
+                });
+
+            row
+                .append('td')
+                .text(d => {
+                    return d
+                });
+
+            row
+                .append('td')
+                .append('svg')
+                .attr('class', 'het-violin-plot')
+                .attr('data-type', 'swarm')
+                .each((d, i, a) => new Violin(db_lsv, a[i]));
+
+            row
+                .append('td')
+                .append('svg')
+                .attr('class', 'heat-map')
+                .attr('data-stat-name', 'infoscore')
+                .each((d, i, a) => new HeatMap(db_lsv, a[i]).plot());
+
+            resolve()
+        });
+
+        window.onresize = () => document.querySelectorAll('.splice-graph')
+            .forEach(sg => new SpliceGraph(db_gene, sg));
+
+        window.onload = () => {
+            const sg_cont = document.querySelector('.splice-graph-container');
+            sg_cont.dataset.geneId = urlParams.get('gene_id');
+            sg_cont.dataset.zoom = '1';
+
+            document.querySelectorAll('.splice-graph').forEach(sg => new SpliceGraph(db_gene, sg, {init: true}));
+
+            // lsv tables
+            db_lsv.createIndex({
+                index: {fields: ['gene_id']}
+            }).then(() => {
+                return db_lsv.find({
+                    selector: {
+                        gene_id: urlParams.get('gene_id')
+                    },
+                    fields: ['_id', 'junctions']
+                })
+            }).then(results => show_lsvs(results.docs));
+
+            // menu drop downs
+            document.querySelector('.tools.pure-menu-link').onclick = (event) => {
+                event.preventDefault();
+                document.querySelector('.tools.submenu').classList.toggle('hidden');
+            };
+            document.querySelector('.splice-graph-header .gene-id').textContent = `Gene ID: ${urlParams.get('gene_id')};`;
+
+            db_gene.createIndex({
+                index: {fields: ['_id']}
+            }).then(() => {
+                return db_gene.find({
+                    selector: {
+                        _id: urlParams.get('gene_id')
+                    },
+                    fields: ['name', 'chromosome', 'strand', 'start', 'end']
+                })
+            }).then(results => {
+                const gene = results.docs[0];
+                document.querySelector('.splice-graph-header .gene-name').textContent = `Gene name: ${gene.name}; ${ gene.chromosome }:${ gene.strand }:${ gene.start }-${ gene.end };`;
+            });
+
+            db_gene.createIndex({
+                index: {fields: ['_id']}
+            }).then(() => {
+                return db_gene.find({
+                    selector: {
+                        _id: 'metadata'
+                    },
+                })
+            }).then(results => {
+                const meta = results.docs[0];
+                d3.select('.groups select')
+                    .selectAll('option')
+                    .data(meta.group_names)
+                    .enter()
+                    .append('option')
+                    .text(d => {
+                        return d
+                    });
+
+
+                const s = d3.select('.experiments select')
+                    .selectAll('option')
+                    .data(meta.experiment_names[0]);
+
+                s.text(d => {
+                    return d
+                });
+
+                s.enter()
+                    .append('option')
+                    .text(d => {
+                        return d
+                    });
+
+                s.exit().remove();
+            });
+
+            document.querySelector('#groups').onchange = (event) => {
+                db_gene.createIndex({
+                    index: {fields: ['_id']}
+                }).then(() => {
+                    return db_gene.find({
+                        selector: {
+                            _id: 'metadata'
+                        },
+                    })
+                }).then(results => {
+                    const s = d3.select('.experiments select')
+                        .selectAll('option')
+                        .data(results.docs[0].experiment_names[event.target.selectedIndex]);
+
+                    s.text(d => {
+                        return d
+                    });
+
+                    s.enter()
+                        .append('option')
+                        .text(d => {
+                            return d
+                        });
+
+                    s.exit().remove();
+
+                });
+            };
+
+            document.querySelector('.splice-graph-form').onsubmit = (event) => {
+                event.preventDefault();
+                const f = event.target;
+                const g = f.querySelector('#groups').value;
+                const e = f.querySelector('#experiments').value;
+                d3.select('.splice-graph-container')
+                    .append('div')
+                    .attr('class', 'splice-graph')
+                    .each((d, i, a) => {
+                        a[i].dataset.group = g;
+                        a[i].dataset.experiment = e;
+                        new SpliceGraph(db_gene, a[i], {init: true})
+                    })
+            }
+        }
+    </script>
+</head>
+<body>
+<div class="header">
+    <div class="menu pure-menu pure-menu-horizontal">
+        <a href class="pure-menu-heading"><img height="30" src="img/LogoOnly_white.svg"></a>
+        <ul class="pure-menu-list">
+            <li class="pure-menu-item">
+                <a href="index.html" class="pure-menu-link">Index</a>
+            </li>
+            <li class="pure-menu-item">
+                <a href class="tools pure-menu-link">Tools</a>
+            </li>
+        </ul>
+    </div>
+
+    <div class="submenu tools hidden">
+        <form class="splice-graph-form pure-form pure-form-aligned">
+            <fieldset>
+                <div class="groups pure-control-group">
+                    <label for="groups">Groups</label>
+                    <select id="groups"></select>
+                </div>
+
+                <div class="experiments pure-control-group">
+                    <label for="experiments">Experiments</label>
+                    <select id="experiments">
+                    </select>
+                </div>
+
+                <div class="pure-controls">
+                    <button type="submit" class="pure-button pure-button-primary">Add</button>
+                </div>
+            </fieldset>
+        </form>
+
+    </div>
+
+    <div class="splice-graph-header">
+        <div>
+            <div class="gene-name"></div>
+            <div class="gene-id"></div>
+        </div>
+        <div>
+            <img src="img/ucsc.png">
+        </div>
+        <div>
+            <img src="img/solve-icon16.png">
+            <img src="img/zoom_in.png">
+            <img src="img/zoom_out.png">
+            <img src="img/undo.png">
+        </div>
+
+    </div>
+
+    <div class="splice-graph-container default-view">
+        <div class="splice-graph" data-group="Adr" data-experiment="Adr Combined"></div>
+        <div class="splice-graph" data-group="Adr" data-experiment="Adr Combined"></div>
+    </div>
+</div>
+
+<div class="lsv-container"></div>
+
+</body>
+</html>

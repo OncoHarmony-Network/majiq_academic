@@ -8,9 +8,9 @@ import voila.constants as constants
 from voila.api import SpliceGraph, Matrix
 from voila.api.matrix_hdf5 import lsv_id_to_gene_id
 from voila.exceptions import VoilaException, CanNotFindVoilaFile
+from voila.processes import VoilaPool, VoilaQueue
 from voila.utils.utils_voila import create_if_not_exists
 from voila.utils.voila_log import voila_log
-from voila.utils.voila_pool import VoilaPool
 from voila.view.deltapsi import DeltaPsi
 from voila.view.heterogen import Heterogen
 from voila.view.psi import Psi
@@ -197,6 +197,7 @@ psi_parser.add_argument('--lsv-ids-file', type=check_list_file, dest='lsv_ids',
                              'per line.')
 psi_parser.add_argument('--lsv-ids', nargs='*', default=[],
                         help='LSV IDs, separated by spaces, which should remain in the results. e.g LSV_ID1 LSV_ID2 ...')
+psi_parser.add_argument('--disable-db', action='store_true', help='Disables the creation of the database files.')
 
 # deltapsi parser
 dpsi_parser = new_subparser()
@@ -256,6 +257,7 @@ def main():
     log.info('Voila v{}'.format(constants.VERSION))
 
     VoilaPool(args.nproc)
+    VoilaQueue(nprocs=args.nproc)
 
     try:
         file_versions()

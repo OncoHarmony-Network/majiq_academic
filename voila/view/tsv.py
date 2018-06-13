@@ -1,10 +1,10 @@
 import csv
 import os
-from abc import ABC, abstractmethod
+from abc import ABC
 
 from voila.api.view_matrix import ViewHeterogens
 from voila.utils.voila_log import voila_log
-from voila.utils.voila_pool import VoilaPool
+from voila.processes import VoilaPool, VoilaQueue
 from voila.view.html import Html
 
 
@@ -26,10 +26,6 @@ class Tsv(ABC):
             else:
                 yield exon.start, exon.end
 
-    @abstractmethod
-    def tsv_row(self, gene_ids, tsv_file, fieldnames):
-        pass
-
     def write_tsv(self, fieldnames):
         log = voila_log()
         log.info("Creating Tab-delimited output file")
@@ -45,11 +41,9 @@ class Tsv(ABC):
             writer = csv.DictWriter(tsv, fieldnames=fieldnames, delimiter='\t')
             writer.writeheader()
 
-        multiple_results = []
-        vp = VoilaPool()
-
-        for gene_ids in self.chunkify(view_gene_ids, vp.processes):
-            multiple_results.append(vp.apply_async(self.tsv_row, (gene_ids, tsv_file, fieldnames)))
+        with VoilaPool() as vp, VoilaQueue() as vq:
+            for gene_ids in self.chunkify(view_gene_ids, vp.processes):
+                multiple_results.append(vp.apply_async(self.tsv_row, (gene_ids, tsv_file, fieldnames)))
 
         [r.get() for r in multiple_results]
 
