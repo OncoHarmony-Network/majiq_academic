@@ -338,6 +338,7 @@ cdef gene_to_splicegraph(Gene * gne, majiq_config):
                                                     alt_starts=alt_start, alt_ends=alt_ends)
 
         for ir in gne.intron_vec_:
+            print("INTRON", gne_id,  ir.get_start(), ir.get_end())
             sg.intron_retention(gne_id, ir.get_start(), ir.get_end()).add(annotated=ir.get_annot())
 
 
