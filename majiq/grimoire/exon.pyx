@@ -33,14 +33,10 @@ cdef class Intron:
         self.parts = np.zeros(shape=self.nchunks, dtype=float)
         self.db_idx = db_idx
 
-
 # def exon_from_intron(gid, start, end, annot, junc1, junc2, list out_list):
 #     ex = Exon(start, end, annot=annot)
 #     ex.ib.add(Junction(start-1,  start, gid, -1, annot=annot))
 #     ex.ob.add(Junction(end,  end+1, gid, -1, annot=annot))
-
-
-
 
 
 cdef Exon exon_overlap(dict dd, int st, int end):

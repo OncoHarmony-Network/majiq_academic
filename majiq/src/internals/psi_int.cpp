@@ -12,9 +12,6 @@ float * _prob_data_sample_given_psi(float sample, float all_sample, float alpha_
 }
 
 
-
-
-
 void delta_posterior(float ** data1, float ** data2, float ** prior, int p_idx, int msamples, int nexp,
                      int nbins, float alpha_0, float beta_0) {
 //    deltapsi implementation

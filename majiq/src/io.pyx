@@ -1,10 +1,11 @@
 import datetime
 
 import os
-from majiq.grimoire.junction cimport Junction
-from majiq.grimoire.junction import Junction
-from majiq.grimoire.exon cimport Exon, Intron
-from majiq.grimoire.exon import Exon
+from libcpp.string cimport string
+from libcpp.map cimport map
+from libcpp.vector cimport vector
+
+from majiq.src.internals.grimoire cimport Gene, Exon, Junction
 from majiq.grimoire.lsv import quant_lsv
 
 from majiq.src.gff import parse_gff3
@@ -23,34 +24,36 @@ cdef list gene_name_keys = ['Name', 'gene_name']
 cdef list gene_id_keys = ['ID', 'gene_id']
 
 
-cdef int _read_gff(str filename, str outDir, object elem_dict,  object all_genes, object logging=None) except -1:
+cdef int  read_gff(str filename, vector[Gene *]& glist, object logging) except -1:
     """
     :param filename: GFF input filename
     :param list_of_genes: List of genes that will be updated with all the gene_id detected on the gff file
     :param logging: logger object
     :return: :raise RuntimeError:
     """
-    # cdef list all_genes = []
-    cdef dict gene_id_dict = {}
+
     cdef dict trcpt_id_dict = {}
     cdef dict exon_dict = {}
-    # cdef dict elem_dict = {}
 
-    cdef str chrom, name, strand
+    cdef string chrom
+    cdef char strand
     cdef int start, end
     cdef bint bb
     cdef list ind_list, tlist
+    cdef string gene_id, key, gene_name, parent_tx_id
+    cdef map[string, Gene*] all_genes
 
     for record in parse_gff3(filename):
-        chrom = record.seqid
-        strand = record.strand
+        chrom = record.seqid.encode('utf-8')
+
+        strand = <char> record.strand.encode('UTF-8')[0]
         start = record.start
         end = record.end
 
         if record.type in accepted_genes:
             for gname_k in gene_name_keys:
                 try:
-                    gene_name = record.attributes[gname_k]
+                    gene_name = record.attributes[gname_k].encode('utf-8')
                     break
                 except KeyError:
                     continue
@@ -60,7 +63,7 @@ cdef int _read_gff(str filename, str outDir, object elem_dict,  object all_genes
 
             for gid_k in gene_id_keys:
                 try:
-                    gene_id = record.attributes[gid_k]
+                    gene_id = record.attributes[gid_k].encode('utf-8')
                     break
                 except KeyError:
                     continue
@@ -68,39 +71,32 @@ cdef int _read_gff(str filename, str outDir, object elem_dict,  object all_genes
                 logging.info("Error, Gene doesn't contain one of the ID attribute information values: "
                              "%s" % gene_id_keys)
 
-            exon_dict[gene_id] = []
-            #all_genes.append((gene_id, gene_name, chrom, strand, start, end))
-            all_genes[gene_id] = {'id':gene_id, 'name':gene_name, 'chromosome': chrom,
-                                  'strand': strand, 'start': start, 'end':end, 'nreads': 0}
-
-            #all_genes[chrom].append((gene_id, gene_name, chrom, strand, start, end))
-            elem_dict[gene_id] = []
-
-            if gene_id in gene_id_dict:
+            if all_genes.count(gene_id)>0:
                 raise RuntimeError('Two Different Genes with the same name %s' % gene_name)
-            gene_id_dict[gene_id] = gene_id
 
+            exon_dict[gene_id] = []
+            all_genes[gene_id] = new Gene(gene_id, gene_name, chrom, strand, start, end)
+            glist.push_back(all_genes[gene_id])
         elif record.type in accepted_transcripts:
             if transcript_id_keys not in record.attributes or 'Parent' not in record.attributes:
                 logging.info("Error, Transcript doesn't contain one of the ID or parent attributes"
                              "information values: %s" % transcript_id_keys)
                 continue
-            transcript_name = record.attributes[transcript_id_keys]
-            parent = record.attributes['Parent']
-            try:
-                gn_id = gene_id_dict[parent]
-                trcpt_id_dict[record.attributes['ID']] = [gn_id, []]
 
-            except KeyError:
+            transcript_name = record.attributes[transcript_id_keys]
+            parent = record.attributes['Parent'].encode('utf-8')
+            if all_genes.count(gene_id)==0:
                 logging.error("Error, incorrect gff. mRNA %s doesn't have valid gene %s" % (transcript_name, parent))
-                #raise
+                continue
+
+            trcpt_id_dict[record.attributes['ID'].encode('utf-8')] = [parent, []]
 
         elif record.type == 'exon':
-            parent_tx_id = record.attributes['Parent']
+            parent_tx_id = record.attributes['Parent'].encode('utf-8')
             try:
-                gn_id = trcpt_id_dict[parent_tx_id][0]
-                exon_dict[gn_id].append((start, True))
-                exon_dict[gn_id].append((end, False))
+                gene_id = trcpt_id_dict[parent_tx_id][0]
+                exon_dict[gene_id].append((start, True))
+                exon_dict[gene_id].append((end, False))
                 trcpt_id_dict[parent_tx_id][1].append((start, end))
 
             except KeyError:
@@ -108,34 +104,32 @@ cdef int _read_gff(str filename, str outDir, object elem_dict,  object all_genes
                                 "doesn't have valid mRNA %s" % parent_tx_id)
 
 
-    for parent_tx_id, (gn_id, coord_list) in trcpt_id_dict.items():
-        tlist = elem_dict[gn_id]
+    for parent_tx_id, (gene_id, coord_list) in trcpt_id_dict.items():
         last_ss = FIRST_LAST_JUNC
         coord_list.sort(key=lambda x: (x[0], x[1]))
+        if gene_id == 'ENSMUSG00000006498': print (coord_list)
         for xx, yy in coord_list:
+            key = ('%s-%s' % (last_ss, xx)).encode('utf-8')
 
-            #elem_dict[gn_id].append([last_ss, xx, 1, J_TYPE])
-            tlist.append([last_ss, xx, 1, J_TYPE])
-
+            all_genes[gene_id].junc_map_[key] = new Junction(last_ss, xx, True)
             last_ss = yy
 
-        #tlist.append([last_ss, xx, 1, J_TYPE])
-        #elem_dict[gn_id].append([last_ss, FIRST_LAST_JUNC, 1, J_TYPE])
-        tlist.append([last_ss, FIRST_LAST_JUNC, 1, J_TYPE])
-        elem_dict[gn_id] = tlist
-    merge_exons(exon_dict, elem_dict)
+        key = ('%s-%s' % (last_ss, FIRST_LAST_JUNC)).encode('utf-8')
+        all_genes[gene_id].junc_map_[key] = new Junction(last_ss, FIRST_LAST_JUNC, True)
+
+    merge_exons(exon_dict, all_genes)
+    return 0
 
 
-cdef int merge_exons(dict exon_dict, object elem_dict) except -1:
-    cdef list ex_list, tlist
-    cdef str gne_id
+cdef int merge_exons(dict exon_dict, map[string, Gene*]& all_genes) except -1:
+    cdef list ex_list
+    cdef string gne_id, key
     cdef tuple x
     cdef int ex_start, ex_end, nopen, coord
     cdef bint is_start
 
 
     for gne_id, ex_list in exon_dict.items():
-        tlist = elem_dict[gne_id]
         ex_list.sort(key=lambda x:(x[0], x[1]))
         ex_start = -1
         ex_end = -1
@@ -143,9 +137,12 @@ cdef int merge_exons(dict exon_dict, object elem_dict) except -1:
         for coord, is_start in ex_list:
             if is_start:
                 if ex_end != -1:
-                    tlist.append([ex_start, ex_end, 1, EX_TYPE])
+                    key = ('%s-%s' % (ex_start, ex_end)).encode('utf-8')
+                    all_genes[gne_id].exon_map_[key] = new Exon(ex_start, ex_end, True)
                     if nopen > 0 and (ex_end+4) < (coord-1):
-                        tlist.append([ex_end+1, coord-1, 1, IR_TYPE])
+                       pass
+                        # all_genes[gne_id].create_annot_intron(ex_end+1, coord-1)
+                        #tlist.append([ex_end+1, coord-1, 1, IR_TYPE])
                     ex_end = -1
                     nopen = 0
                     ex_start = coord
@@ -158,11 +155,8 @@ cdef int merge_exons(dict exon_dict, object elem_dict) except -1:
                 ex_end = coord if coord > ex_end else ex_end
 
         if ex_end != -1:
-            tlist.append([ex_start, ex_end, 1, EX_TYPE])
-
-        elem_dict[gne_id] = tlist
-        # _dump_elems_list(db_f, gne_id, np.array(elem_mtrx))
-        #elem_dict[gne_id] = np.array(elem_dict[gne_id])
+            key = ('%s-%s' % (ex_start, ex_end)).encode('utf-8')
+            all_genes[gne_id].exon_map_[key] = new Exon(ex_start, ex_end, True)
 
 
 #######
@@ -179,7 +173,7 @@ cdef int _load_db(str filename, object elem_dict, object genes_dict) except -1:
         for xx in genes_dict.keys():
             elem_dict[xx] = all_files[xx]
 
-cdef int _dump_lsv_coverage(str filename, dict cov_dict, list type_list, list junc_info, str exp_name):
+cdef int dump_lsv_coverage(str filename, dict cov_dict, list type_list, list junc_info, str exp_name):
     dt=np.dtype('|S250, |S250')
 
     with open(filename, 'w+b') as ofp:
@@ -198,16 +192,16 @@ cdef int _dump_elems_list(object elem_dict, object gene_info, str outDir) except
     np.savez(get_build_temp_db_filename(outDir), **elem_dict)
 
 
-cdef int _read_junction(list row, str gne_id, dict jjs, list exs, list irs, int default_index) except -1:
-    jjs[(row[0], row[1])] = Junction(row[0], row[1], gne_id, default_index, annot=bool(row[2]))
-
-
-cdef int _read_exon(list row, str gne_id, dict jjs, list exs, list irs, int default_index) except -1:
-    exs.append(Exon(row[0], row[1], annot=bool(row[2])))
-
-
-cdef int _read_ir(list row, str gne_id, dict jjs, list exs, list irs, int default_index) except -1:
-    irs.append(Intron(row[0], row[1], annot=bool(row[2]), db_idx=-1))
+# cdef int _read_junction(list row, str gne_id, dict jjs, list exs, list irs, int default_index) except -1:
+#     jjs[(row[0], row[1])] = Junction(row[0], row[1], gne_id, default_index, annot=bool(row[2]))
+#
+#
+# cdef int _read_exon(list row, str gne_id, dict jjs, list exs, list irs, int default_index) except -1:
+#     exs.append(Exon(row[0], row[1], annot=bool(row[2])))
+#
+#
+# cdef int _read_ir(list row, str gne_id, dict jjs, list exs, list irs, int default_index) except -1:
+#     irs.append(Intron(row[0], row[1], annot=bool(row[2]), db_idx=-1))
 
 
 cdef int _pass_ir(list row, str gne_id, dict jjs, list exs, list irs, int default_index) except -1:
@@ -230,6 +224,7 @@ cdef dict _get_extract_lsv_list(list list_of_lsv_id, list file_list):
                 except KeyError:
                     continue
                 try:
+                    # print(lsv_id, result[lsv_id].coverage[fidx].shape)
                     result[lsv_id].coverage[fidx] = cov
                 except KeyError:
                     njunc = cov.shape[0]
@@ -329,31 +324,22 @@ cpdef tuple extract_lsv_summary(list files, int minnonzero, int min_reads, objec
 
     return r, exp_list
 
-cpdef int dump_lsv_coverage(str filename, dict cov_dict, list type_list, list junc_info, str exp_name):
-    _dump_lsv_coverage(filename, cov_dict, type_list, junc_info, exp_name)
+# cpdef int dump_lsv_coverage_wrap(str filename, dict cov_dict, list type_list, list junc_info, str exp_name):
+#     dump_lsv_coverage(filename, cov_dict, type_list, junc_info, exp_name)
 
-cpdef int parse_annot(str filename, str out_dir,  object elem_dict,  object all_genes, object logging=None):
-
-    try:
-        _read_gff(filename=filename, outDir=out_dir, elem_dict=elem_dict, all_genes=all_genes, logging=logging)
-    except Exception as e:
-        print e
-        raise
-
-
-cpdef int from_matrix_to_objects( str gne_id, object elem_dicts, dict dict_junctions,
-                                 list list_exons, list list_introns=None, int default_index=-1):
-    cdef dict func_list
-    cdef list elem
-
-    if list_introns is not None:
-        func_list = {EX_TYPE: _read_exon, IR_TYPE: _read_ir, J_TYPE: _read_junction}
-    else:
-        func_list = {EX_TYPE: _read_exon, IR_TYPE: _pass_ir, J_TYPE: _read_junction}
-
-    for elem in elem_dicts:
-        func_list[elem[3]](elem, gne_id, dict_junctions, list_exons,
-                             list_introns, default_index)
+# cpdef int from_matrix_to_objects( str gne_id, object elem_dicts, dict dict_junctions,
+#                                  list list_exons, list list_introns=None, int default_index=-1):
+#     cdef dict func_list
+#     cdef list elem
+#
+#     if list_introns is not None:
+#         func_list = {EX_TYPE: _read_exon, IR_TYPE: _read_ir, J_TYPE: _read_junction}
+#     else:
+#         func_list = {EX_TYPE: _read_exon, IR_TYPE: _pass_ir, J_TYPE: _read_junction}
+#
+#     for elem in elem_dicts:
+#         func_list[elem[3]](elem, gne_id, dict_junctions, list_exons,
+#                              list_introns, default_index)
 
 
 cpdef int add_elements_mtrx(dict new_elems, object shared_elem_dict):
