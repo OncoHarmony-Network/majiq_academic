@@ -76,9 +76,9 @@ class IntronRetention(SpliceGraphSQL):
     class _IntronRetention(SpliceGraphType):
         def __init__(self, sql, gene_id: str, start: int, end: int):
             self.sql = sql
-            self.gene_id = gene_id
-            self.start = start
-            self.end = end
+            self.gene_id = str(gene_id)
+            self.start = int(start)
+            self.end = int(end)
 
         def add(self, **kwargs):
             ir = model.IntronRetention(gene_id=self.gene_id, start=self.start, end=self.end, **kwargs)
@@ -97,17 +97,36 @@ class IntronRetention(SpliceGraphSQL):
                     and_(model.IntronRetention.gene_id == self.gene_id, model.IntronRetention.start == self.start,
                          model.IntronRetention.end == self.end))).scalar()
 
+        def reads_exists(self, experiment, reads):
+            experiment = str(experiment)
+            reads = int(reads)
+            return self.sql.session.query(
+                exists().where(and_(
+                    model.IntronRetentionReads.intron_retention_gene_id == self.gene_id,
+                    model.IntronRetentionReads.intron_retention_start == self.start,
+                    model.IntronRetentionReads.intron_retention_end == self.end,
+                    model.IntronRetentionReads.experiment_name == experiment,
+                    model.IntronRetentionReads.reads == reads,
+                ))).scalar()
+
         def update_reads(self, experiment: str, reads: int):
-            if not reads:
-                return
+            experiment = str(experiment)
+            reads = int(reads)
 
-            r = model.IntronRetentionReads(intron_retention_gene_id=self.gene_id, intron_retention_start=self.start,
-                                           intron_retention_end=self.end, experiment_name=experiment, reads=reads)
+            if reads:
 
-            with self.sql.session.no_autoflush:
-                self.get.has_reads = True
-                self.sql.add(r)
-                self.sql.commit(default_commit_on_count)
+                r = model.IntronRetentionReads(intron_retention_gene_id=self.gene_id, intron_retention_start=self.start,
+                                               intron_retention_end=self.end, experiment_name=experiment, reads=reads)
+
+                if self.reads_exists(experiment, reads):
+                    return -1
+                else:
+                    with self.sql.session.no_autoflush:
+                        self.get.has_reads = True
+                        self.sql.add(r)
+                        self.sql.commit(default_commit_on_count)
+
+            return 0
 
     def intron_retention(self, gene_id: str, start: int, end: int):
         return self._IntronRetention(self, gene_id, start, end)
@@ -121,9 +140,9 @@ class Exons(SpliceGraphSQL):
     class _Exon(SpliceGraphType):
         def __init__(self, sql, gene_id: str, start: int, end: int):
             self.sql = sql
-            self.gene_id = gene_id
-            self.start = start
-            self.end = end
+            self.gene_id = str(gene_id)
+            self.start = int(start)
+            self.end = int(end)
 
         def add(self, **kwargs):
             coords_extra = kwargs.pop('coords_extra', [])
@@ -161,9 +180,9 @@ class Junctions(SpliceGraphSQL):
     class _Junction(SpliceGraphType):
         def __init__(self, sql, gene_id: str, start: int, end: int):
             self.sql = sql
-            self.gene_id = gene_id
-            self.start = start
-            self.end = end
+            self.gene_id = str(gene_id)
+            self.start = int(start)
+            self.end = int(end)
 
         def add(self, **kwargs):
             reads = kwargs.pop('reads', [])
@@ -187,6 +206,7 @@ class Junctions(SpliceGraphSQL):
 
         def update_reads(self, experiment: str, reads: int):
             reads = int(reads)
+            experiment = str(experiment)
 
             if not reads:
                 return
@@ -194,10 +214,10 @@ class Junctions(SpliceGraphSQL):
             r = model.JunctionReads(junction_gene_id=self.gene_id, junction_start=self.start, junction_end=self.end,
                                     experiment_name=experiment, reads=reads)
 
-            self.sql.session.flush()
-            self.get.has_reads = True
-            self.sql.add(r)
-            self.sql.commit(default_commit_on_count)
+            with self.sql.session.no_autoflush:
+                self.get.has_reads = True
+                self.sql.add(r)
+                self.sql.commit(default_commit_on_count)
 
     def junction(self, gene_id: str, start: int, end: int):
         return self._Junction(self, gene_id, start, end)
@@ -211,7 +231,7 @@ class Genes(SpliceGraphSQL):
     class _Gene(SpliceGraphType):
         def __init__(self, sql, gene_id: str):
             self.sql = sql
-            self.gene_id = gene_id
+            self.gene_id = str(gene_id)
 
         def add(self, **kwargs):
             g = model.Gene(id=self.gene_id, **kwargs)
