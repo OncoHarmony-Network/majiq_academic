@@ -89,7 +89,7 @@ cdef int _output_lsv_file_single(vector[LSV*] out_lsvlist, str experiment_name, 
                     irv = find_intron_retention(gene_map[key], junc_ids[i][1], junc_ids[i][2])
 
                     for ir_ptr in irv :
-                        print(ir_ptr.get_gene(), ir_ptr.get_start(), ir_ptr.get_end())
+                        print(ir_ptr.get_gene().get_id().decode('utf-8'), ir_ptr.get_start(), ir_ptr.get_end())
 
                     print("######\n")
                     for ir_ptr in irv:
