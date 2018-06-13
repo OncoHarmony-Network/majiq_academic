@@ -35,7 +35,7 @@ def update_splicegraph_junction(sg, gene_id, start, end, nreads, exp):
 
 cdef int _output_lsv_file_single(vector[LSV*] out_lsvlist, str experiment_name, map[string, vector[string]] tlb_j_g,
                                  map[string, gene_vect_t] gene_map, str outDir, int nthreads, unsigned int msamples,
-                                 bint irb, int strandness):
+                                 bint irb, int strandness, object logger):
     cdef dict cov_dict = {}
     cdef int nlsv = out_lsvlist.size()
     cdef str out_file, junc_file
@@ -93,12 +93,13 @@ cdef int _output_lsv_file_single(vector[LSV*] out_lsvlist, str experiment_name, 
                     #
                     # print("######\n")
                     for ir_ptr in irv:
-
+                        logger.info("INTRON ::: %s:%s-%s" %(ir_ptr.get_gene().get_id().decode('utf-8'), ir_ptr.get_start(), ir_ptr.get_end())')
                         xx = sg.intron_retention(ir_ptr.get_gene().get_id().decode('utf-8'), ir_ptr.get_start(),
                                                  ir_ptr.get_end()).update_reads(experiment_name, junc_ids[i][3])
-                        if xx == -1:
-                            print ("ERRORRRRR", ir_ptr.get_gene().get_id().decode('utf-8'), ir_ptr.get_start(),
-                                                 ir_ptr.get_end())
+                        if xx < 0:
+                            logger.info("Duplicated intron retention %s:%s-%s" %(ir_ptr.get_gene().get_id().decode('utf-8'),
+                                                                                 ir_ptr.get_start(), ir_ptr.get_end()))
+
 
 
 
@@ -269,7 +270,8 @@ cdef _find_junctions(list file_list, vector[Gene*] gene_vec,  object conf, objec
     logger.info("%s LSV found" % out_lsvlist.size())
     for j in range(nsamples):
         strandness = conf.strand_specific[file_list[j][0]]
-        cnt = _output_lsv_file_single(out_lsvlist, file_list[j][0], gene_junc_tlb, gene_list, conf.outDir, nthreads, m, ir, strandness)
+        cnt = _output_lsv_file_single(out_lsvlist, file_list[j][0], gene_junc_tlb, gene_list, conf.outDir,
+                                      nthreads, m, ir, strandness, logger)
         logger.info('%s: %d LSVs' %(file_list[j][0], cnt))
 
 
