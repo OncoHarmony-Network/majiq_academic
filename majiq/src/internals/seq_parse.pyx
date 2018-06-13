@@ -88,8 +88,11 @@ cdef int _output_lsv_file_single(vector[LSV*] out_lsvlist, str experiment_name, 
                     key = junc_ids[i][0].split(b':')[0]
                     irv = find_intron_retention(gene_map[key], junc_ids[i][1], junc_ids[i][2])
 
+                    kk = [ print(ir_ptr.get_gene(), ir_ptr.get_start(), ir_ptr.get_end()) for ir_ptr in irv ]
+
+                    print("######\n")
                     for ir_ptr in irv:
-                        print('KKK3', ir_ptr.get_gene().get_id(), ir_ptr.get_start(), ir_ptr.get_end(), junc_ids[i][3], junc_ids[i][4])
+
                         sg.intron_retention(ir_ptr.get_gene().get_id().decode('utf-8'), ir_ptr.get_start(),
                                             ir_ptr.get_end()).update_reads(experiment_name, junc_ids[i][3])
                         tlb_ir[ir_ptr.get_key(ir_ptr.get_gene())] = Jinfo(i, junc_ids[i][1], junc_ids[i][2],
@@ -338,7 +341,7 @@ cdef gene_to_splicegraph(Gene * gne, majiq_config):
                                                     alt_starts=alt_start, alt_ends=alt_ends)
 
         for ir in gne.intron_vec_:
-            print("INTRON", gne_id,  ir.get_start(), ir.get_end())
+            # print("INTRON", gne_id,  ir.get_start(), ir.get_end())
             sg.intron_retention(gne_id, ir.get_start(), ir.get_end()).add(annotated=ir.get_annot())
 
 
