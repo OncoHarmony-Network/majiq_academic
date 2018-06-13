@@ -271,10 +271,10 @@ namespace grimoire {
                 }
             }
         }
-cout << "GENE INTRONS: " << id_ << "\n" ;
-for (const auto & ir: intronlist){
-    cout << "[" << id_ << "]: " << ir->get_start() << " - " << ir->get_end() << "\n" ;
-}
+//cout << "GENE INTRONS: " << id_ << "\n" ;
+//for (const auto & ir: intronlist){
+//    cout << "[" << id_ << "]: " << ir->get_start() << " - " << ir->get_end() << "\n" ;
+//}
     }
 
     void Gene::add_intron(Intron * inIR_ptr, float min_coverage, unsigned int min_exps){
