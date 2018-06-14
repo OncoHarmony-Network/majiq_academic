@@ -555,27 +555,31 @@ namespace grimoire {
     }
 
 
-    vector<Intron *> find_intron_retention(vector<Gene*> & gene_list, int start, int end){
+    vector<Intron *> find_intron_retention(vector<Gene*> & gene_list, char strand, int start, int end){
         vector<Intron*> ir_vec ;
         const int n = gene_list.size() ;
-        const int gIdx = Gene::RegionSearch(gene_list, n, end) ;
+        int gIdx = Gene::RegionSearch(gene_list, n, end) ;
 
         if (gIdx <0){ return ir_vec;}
-        if (gene_list[gIdx]->get_start()<= end && gene_list[gIdx]->get_end()>= start){
-            const int nir = (gene_list[gIdx]->intron_vec_).size() ;
-            int irIdx = Intron::RegionSearch(gene_list[gIdx]->intron_vec_, nir, start);
-            if (irIdx <0){ return ir_vec ;}
 
-            for(int i = irIdx; i<nir; ++i){
-                Intron * irp = gene_list[gIdx]->intron_vec_[i] ;
-                if(irp->get_start()> end){
-                    break ;
+        while(gIdx < n && gene_list[gIdx]->get_start()<= end){
+            if (gene_list[gIdx]->get_start()<= end && gene_list[gIdx]->get_end()>= start && gene_list[gIdx]->get_strand() == strand){
+                const int nir = (gene_list[gIdx]->intron_vec_).size() ;
+                int irIdx = Intron::RegionSearch(gene_list[gIdx]->intron_vec_, nir, start);
+                if (irIdx <0){ return ir_vec ;}
+
+                for(int i = irIdx; i<nir; ++i){
+                    Intron * irp = gene_list[gIdx]->intron_vec_[i] ;
+                    if(irp->get_start()> end){
+                        break ;
+                    }
+                    if(irp->get_end() < start){
+                        continue ;
+                    }
+                    ir_vec.push_back(irp) ;
                 }
-                if(irp->get_end() < start){
-                    continue ;
-                }
-                ir_vec.push_back(irp) ;
             }
+            gIdx++ ;
         }
         return ir_vec;
     }

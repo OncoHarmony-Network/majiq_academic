@@ -103,7 +103,7 @@ cdef extern from "grimoire.hpp" namespace "grimoire":
 
 
     void sortGeneList(vector[Gene*] glist) nogil ;
-    vector[Intron *]  find_intron_retention(vector[Gene*]& gene_list, int start, int end) nogil ;
+    vector[Intron *]  find_intron_retention(vector[Gene*]& gene_list, char strand, int start, int end) nogil ;
 
 
 

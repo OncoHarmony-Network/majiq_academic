@@ -55,6 +55,7 @@ cdef int _output_lsv_file_single(vector[LSV*] out_lsvlist, str experiment_name, 
     cdef string ir_key
     cdef vector[Intron *] irv
     cdef Intron * ir_ptr
+    cdef char strand
 
     junc_file = "%s/%s.juncs" % (outDir, experiment_name)
     #print("###", junc_file, get_builder_splicegraph_filename(outDir))
@@ -86,9 +87,11 @@ cdef int _output_lsv_file_single(vector[LSV*] out_lsvlist, str experiment_name, 
                     #intron retention case
                     # print('KKK2')
                     key = junc_ids[i][0].split(b':')[0]
-                    irv = find_intron_retention(gene_map[key], junc_ids[i][1], junc_ids[i][2])
+                    # print("STRAND: junc_ids[i][0].split(b':')[1]", junc_ids[i][0].split(b':')[1].decode('utf-8'))
+                    strand = <char>junc_ids[i][0].split(b':')[1][0]
+                    irv = find_intron_retention(gene_map[key], strand, junc_ids[i][1], junc_ids[i][2])
 
-                    print ("##: " , junc_ids[i], key)
+                    print ("##: " , junc_ids[i], key, strand)
                     for ir_ptr in irv :
                         print(ir_ptr.get_gene().get_id().decode('utf-8'), ir_ptr.get_start(), ir_ptr.get_end())
                     print("######")
