@@ -88,16 +88,14 @@ cdef int _output_lsv_file_single(vector[LSV*] out_lsvlist, str experiment_name, 
                     key = junc_ids[i][0].split(b':')[0]
                     irv = find_intron_retention(gene_map[key], junc_ids[i][1], junc_ids[i][2])
 
+                    print ("##: " , junc_ids[i], key)
                     for ir_ptr in irv :
                         print(ir_ptr.get_gene().get_id().decode('utf-8'), ir_ptr.get_start(), ir_ptr.get_end())
+                    print("######")
 
-                    print("######\n")
                     for ir_ptr in irv:
-
                         xx = sg.intron_retention(ir_ptr.get_gene().get_id().decode('utf-8'), ir_ptr.get_start(),
                                                  ir_ptr.get_end()).update_reads(experiment_name, junc_ids[i][3])
-
-
                         tlb_ir[ir_ptr.get_key(ir_ptr.get_gene())] = Jinfo(i, junc_ids[i][1], junc_ids[i][2],
                                                                   junc_ids[i][3], junc_ids[i][4])
 
