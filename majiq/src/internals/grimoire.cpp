@@ -408,7 +408,8 @@ namespace grimoire {
     }
 
     string Intron::get_key(Gene * gObj) {
-        return(gObj->get_chromosome() + ":" + gObj->get_strand() + ":" + to_string(start_) + "-" + to_string(end_)) ;
+        return(gObj->get_chromosome() + ":" + gObj->get_strand() + ":" + to_string(start_) + "-" + to_string(end_)
+               + ":" + gObj->get_id()) ;
     }
 
     bool Intron::is_reliable(float min_bins){
@@ -582,6 +583,33 @@ namespace grimoire {
             gIdx++ ;
         }
         return ir_vec;
+    }
+
+    vector<Intron *> find_intron_retention(vector<Gene*> & gene_list, string geneid, int start, int end){
+        vector<Intron*> ir_vec ;
+
+        const int n = gene_list.size() ;
+
+        for (int gIdx=0; gIdx<n; gIdx++){
+            if (gene_list[gIdx]->get_id() == geneid){
+                const int nir = (gene_list[gIdx]->intron_vec_).size() ;
+                int irIdx = Intron::RegionSearch(gene_list[gIdx]->intron_vec_, nir, start);
+                if (irIdx <0){ return ir_vec ;}
+
+                for(int i = irIdx; i<nir; ++i){
+                    Intron * irp = gene_list[gIdx]->intron_vec_[i] ;
+                    if(irp->get_start()> end){
+                        break ;
+                    }
+                    if(irp->get_end() < start){
+                        continue ;
+                    }
+                    ir_vec.push_back(irp) ;
+                }
+                break ;
+            }
+        }
+        return ir_vec ;
     }
 
 }

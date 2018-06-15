@@ -56,6 +56,7 @@ cdef int _output_lsv_file_single(vector[LSV*] out_lsvlist, str experiment_name, 
     cdef vector[Intron *] irv
     cdef Intron * ir_ptr
     cdef char strand
+    cdef string geneid
 
     junc_file = "%s/%s.juncs" % (outDir, experiment_name)
     #print("###", junc_file, get_builder_splicegraph_filename(outDir))
@@ -88,13 +89,13 @@ cdef int _output_lsv_file_single(vector[LSV*] out_lsvlist, str experiment_name, 
                     # print('KKK2')
                     key = junc_ids[i][0].split(b':')[0]
                     # print("STRAND: junc_ids[i][0].split(b':')[1]", junc_ids[i][0].split(b':')[1].decode('utf-8'))
-                    strand = <char>junc_ids[i][0].split(b':')[1][0]
-                    irv = find_intron_retention(gene_map[key], strand, junc_ids[i][1], junc_ids[i][2])
+                    geneid = junc_ids[i][0].split(b':')[3]
+                    irv = find_intron_retention(gene_map[key], geneid, junc_ids[i][1], junc_ids[i][2])
 
-                    print ("##: " , junc_ids[i], key, strand)
-                    for ir_ptr in irv :
-                        print(ir_ptr.get_gene().get_id().decode('utf-8'), ir_ptr.get_start(), ir_ptr.get_end())
-                    print("######")
+                    # print ("##: " , junc_ids[i], key)
+                    # for ir_ptr in irv :
+                    #     print(ir_ptr.get_gene().get_id().decode('utf-8'), ir_ptr.get_start(), ir_ptr.get_end())
+                    # print("######")
 
                     for ir_ptr in irv:
                         xx = sg.intron_retention(ir_ptr.get_gene().get_id().decode('utf-8'), ir_ptr.get_start(),
@@ -345,7 +346,7 @@ cdef gene_to_splicegraph(Gene * gne, majiq_config):
                                                     alt_starts=alt_start, alt_ends=alt_ends)
 
         for ir in gne.intron_vec_:
-            # print("INTRON", gne_id,  ir.get_start(), ir.get_end())
+            # print("**INTRON", gne_id,  ir.get_start(), ir.get_end())
             sg.intron_retention(gne_id, ir.get_start(), ir.get_end()).add(annotated=ir.get_annot())
 
 

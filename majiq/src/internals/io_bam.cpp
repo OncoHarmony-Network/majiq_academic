@@ -319,7 +319,6 @@ namespace io_bam {
     }
 
     const map<string, unsigned int>& IOBam::get_junc_map(){
-
         return junc_map ;
     }
 
