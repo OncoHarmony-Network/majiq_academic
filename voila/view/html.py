@@ -113,12 +113,10 @@ class Html(ABC):
         args = self.args
         log = voila_log()
         log.info("Copy static files from Voila sources")
-        static_dir = os.path.join(self.get_template_dir(), 'static')
         html_dir = os.path.join(self.get_template_dir(), '../html')
-        if index:
-            copy_tree(static_dir, os.path.join(args.output, 'static'))
-        copy_tree(static_dir, os.path.join(args.output, constants.SUMMARIES_SUBFOLDER, 'static'))
-        copy_tree(html_dir, args.output)
+        copy_tree(os.path.join(html_dir, 'js'), os.path.join(args.output, 'js'))
+        copy_tree(os.path.join(html_dir, 'css'), os.path.join(args.output, 'css'))
+        copy_tree(os.path.join(html_dir, 'img'), os.path.join(args.output, 'img'))
 
     @staticmethod
     def get_output_html(args, file_name=None):

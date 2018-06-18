@@ -167,7 +167,7 @@ class IntronRetention(Base):
     end = Column(Integer, primary_key=True)
     annotated = Column(Boolean)
 
-    # reads = relationship('IntronRetentionReads')
+    reads = relationship('IntronRetentionReads')
     gene = relationship('Gene')
 
 

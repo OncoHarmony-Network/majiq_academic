@@ -4,6 +4,8 @@
 
 .pure-menu-link {
     color: white;
+    cursor: pointer;
+    user-select: none;
 }
 
 .pure-menu-link:hover {
@@ -11,6 +13,11 @@
     color: #e75c29
 }
 
-.pure-form select:focus {
-    border-color: #205bb0
+.pure-menu-link:focus {
+    background-color: transparent;
 }
+
+.pure-form select:focus {
+    border-color: #205bb0;
+}
+

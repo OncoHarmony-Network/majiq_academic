@@ -1,0 +1,134 @@
+{% extends 'base_summary.html' %}
+
+{% block script %}
+    <script>
+        const db_gene = new PouchDB('voila_gene');
+        const db_lsv = new PouchDB('voila_lsv');
+    </script>
+    <script src="db_gene.js"></script>
+    <script src="db_lsv.js"></script>
+    <script>
+        const urlParams = new URLSearchParams(document.location.search);
+
+        const resize_bottom = () => {
+            const h = document.querySelector('.top').offsetHeight;
+            const c = document.querySelector('.content').offsetHeight;
+            document.querySelector('.bottom').style.height = (c - h) + 'px'
+        };
+
+        const show_lsvs = (lsvs) => {
+            lsvs.sort((a, b) => {
+                return a.junctions.length - b.junctions.length
+            });
+
+            const table = d3.select('.lsv-container')
+                .selectAll('div')
+                .data(lsvs)
+                .enter()
+                .append('div')
+                .text(d => {
+                    return d._id
+                })
+                .append('table')
+                .classed('pure-table', true)
+                .attr('data-lsv-id', d => {
+                    return d._id
+                }).each((d, i, a) => new Table(a[i]));
+
+            table.append('thead')
+                .append('tr')
+                .selectAll('th')
+                .data(['Junctions', 'Violin', 'Heat Map'])
+                .enter()
+                .append('th')
+                .text(d => {
+                    return d
+                });
+
+            const row = table
+                .append('tbody')
+                .selectAll('tr')
+                .data(d => {
+                    return d.junctions
+                })
+                .enter()
+                .append('tr')
+                .attr('data-junction-index', (d, i) => {
+                    return i
+                });
+
+            row
+                .append('td')
+                .text(d => {
+                    return d
+                });
+
+            row
+                .append('td')
+                .append('svg')
+                .attr('class', 'het-violin-plot')
+                .attr('data-type', 'swarm')
+                .each((d, i, a) => new Violin(db_lsv, a[i]));
+
+            row
+                .append('td')
+                .append('svg')
+                .attr('class', 'heat-map')
+                .attr('data-stat-name', 'infoscore')
+                .each((d, i, a) => new HeatMap(db_lsv, a[i]).plot());
+
+        };
+
+        window.addEventListener('load', () => {
+            // lsv tables
+            db_lsv.createIndex({
+                index: {fields: ['gene_id']}
+            }).then(() => {
+                return db_lsv.find({
+                    selector: {
+                        gene_id: urlParams.get('gene_id')
+                    },
+                    fields: ['_id', 'junctions']
+                })
+            }).then(results => show_lsvs(results.docs));
+        })
+    </script>
+{% endblock %}
+
+{% block toolbar %}
+    <div class="menu pure-menu pure-menu-horizontal">
+        <a href class="pure-menu-heading"><img height="30" src="img/LogoOnly_white.svg"></a>
+        <ul class="pure-menu-list">
+            <li class="pure-menu-item">
+                <a href="index.html" class="pure-menu-link">Index</a>
+            </li>
+            <li class="pure-menu-item">
+                <span class="tools pure-menu-link">Tools</span>
+            </li>
+        </ul>
+    </div>
+    <div class="submenu tools hide-submenu">
+        <form class="splice-graph-form pure-form pure-form-aligned">
+            <fieldset>
+                <div class="groups pure-control-group">
+                    <label for="groups">Groups</label>
+                    <select id="groups"></select>
+                </div>
+
+                <div class="experiments pure-control-group">
+                    <label for="experiments">Experiments</label>
+                    <select id="experiments">
+                    </select>
+                </div>
+
+                <div class="pure-controls">
+                    <button type="submit" class="pure-button pure-button-primary">Add</button>
+                </div>
+            </fieldset>
+        </form>
+    </div>
+{% endblock %}
+
+{% block bottom %}
+    <div class="lsv-container"></div>
+{% endblock %}

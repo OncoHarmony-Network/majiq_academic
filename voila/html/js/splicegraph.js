@@ -2,7 +2,8 @@ var SpliceGraph = function (db, div, opts) {
     var sg = this;
     opts = !opts ? {} : opts;
     var lsv_ids = !opts.lsv_ids ? [] : opts.lsv_ids;
-    this.controls = opts.controls === true;
+    this.remove_fn = opts.remove_fn;
+    this.callback = opts.callback;
     this.db = db;
     this.sg_div = div;
     this.width = div.parentNode.offsetWidth - 50;
@@ -32,12 +33,10 @@ var SpliceGraph = function (db, div, opts) {
     db.allDocs({
         keys: keys,
         include_docs: true
-    }, function (err, data) {
-        if (err)
-            console.error(err);
+    }).then((results) => {
 
-        var gene = data.rows[0].doc;
-        var lsvs = data.rows.slice(1).map(function (lsv) {
+        const gene = results.rows[0].doc;
+        const lsvs = results.rows.slice(1).map(function (lsv) {
             return lsv.doc
         });
 
@@ -50,12 +49,8 @@ var SpliceGraph = function (db, div, opts) {
             sg.update(gene, lsvs)
         }
 
-        const h = document.querySelector('.header').offsetHeight;
-        document
-            .querySelector('.lsv-container')
-            .style
-            .paddingTop = h + 'px'
-    });
+            this.callback()
+    })
 
 
 };
@@ -668,22 +663,17 @@ SpliceGraph.prototype.junction_reads = function () {
 SpliceGraph.prototype.init = function (gene) {
     var sg_div = this.sg_div;
 
+    var sg_header = d3.select(sg_div).append('div');
+    sg_header
+        .append('img')
+        .style('float', 'right')
+        .attr('src', 'img/remove.svg')
+        .attr('height', '16px')
+        .on('click', () => this.remove_fn(sg_div));
 
-    if (this.controls) {
-        var sg_header = d3.select(sg_div).append('div');
-        sg_header
-            .append('button')
-            .style('float', 'right')
-            .text('Remove')
-            .on('click', function () {
-                var x = this.closest('.splice-graph');
-                x.parentNode.removeChild(x);
-            });
-
-        sg_header
-            .append('div')
-            .text(this.group + ', ' + this.experiment);
-    }
+    sg_header
+        .append('div')
+        .text(`Group: ${this.group}; Experiment: ${this.experiment};`);
 
     var svg = d3.select(sg_div).append('svg')
         .attr('width', this.width)

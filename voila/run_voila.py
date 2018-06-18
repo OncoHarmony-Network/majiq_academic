@@ -177,6 +177,7 @@ splice_graph.add_argument('--gene-ids-file', dest='gene_ids', type=check_list_fi
 splice_graph.add_argument('--gene-ids', nargs='*', default=[],
                           help='Gene IDs, separated by spaces, which should remain in the results. e.g. GENE_ID1 '
                                'GENE_ID2 ...')
+splice_graph.add_argument('--disable-db', action='store_true', help='Disables the creation of the database files.')
 
 # psi parser
 psi_parser = new_subparser()
@@ -197,7 +198,6 @@ psi_parser.add_argument('--lsv-ids-file', type=check_list_file, dest='lsv_ids',
                              'per line.')
 psi_parser.add_argument('--lsv-ids', nargs='*', default=[],
                         help='LSV IDs, separated by spaces, which should remain in the results. e.g LSV_ID1 LSV_ID2 ...')
-psi_parser.add_argument('--disable-db', action='store_true', help='Disables the creation of the database files.')
 
 # deltapsi parser
 dpsi_parser = new_subparser()

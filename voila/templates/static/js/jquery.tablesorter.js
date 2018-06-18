@@ -731,15 +731,15 @@
                         var config = this.config;
                         // get position from the dom.
                         var pos = [(cell.parentNode.rowIndex - 1), cell.cellIndex];
-                        // update cache
+                        // splice_graph_update cache
                         cache.normalized[pos[0]][pos[1]] = config.parsers[pos[1]].format(
                             getElementText(config, cell), cell);
                     }).bind("sorton", function (e, list) {
                         $(this).trigger("sortStart");
                         config.sortList = list;
-                        // update and store the sortlist
+                        // splice_graph_update and store the sortlist
                         var sortList = config.sortList;
-                        // update header count index
+                        // splice_graph_update header count index
                         updateHeaderSortCount(this, sortList);
                         // set css for headers
                         setHeadersCss(this, $headers, sortList, sortCSS);

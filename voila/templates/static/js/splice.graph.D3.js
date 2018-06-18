@@ -955,7 +955,7 @@ function spliceGraphD3() {
                     // un-select all elements
                     d3.select(spliceDivContainer).selectAll('.junction, .exon, .intronret, .halfexon').classed(className, false);
 
-                    // trigger mouseover event while nothing's selected to update tool tip
+                    // trigger mouseover event while nothing's selected to splice_graph_update tool tip
                     event.initEvent('mouseover', true, true);
                     this.dispatchEvent(event);
 
