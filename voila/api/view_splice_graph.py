@@ -20,6 +20,14 @@ class ViewSpliceGraph(SQL):
     def experiment_names(self):
         return (e for e, in self.session.query(splice_graph_model.Experiment.name).all())
 
+    @property
+    def gene_ids(self):
+        return (e for e, in self.session.query(splice_graph_model.Gene.id).all())
+
+    @property
+    def metadata(self):
+        return {'experiment_names': [list(self.experiment_names)], 'group_names': ['Splice Graph'], '_id': 'metadata'}
+
     def genes(self, gene_ids):
         for gene_id in gene_ids:
             yield self.gene(gene_id)

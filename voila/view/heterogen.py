@@ -4,6 +4,9 @@ import os
 from multiprocessing import Lock
 from queue import Empty
 
+import jinja2
+
+import voila
 from voila import constants
 from voila.api.view_matrix import ViewHeterogens
 from voila.api.view_splice_graph import ViewSpliceGraph
@@ -32,6 +35,7 @@ class Heterogen(Html, Tsv):
 
         if not args.disable_html:
             self.copy_static()
+            self.render_html()
             if not args.disable_db:
                 self.render_dbs()
 
@@ -111,6 +115,21 @@ class Heterogen(Html, Tsv):
                 for lsv_id in h.view_gene_lsvs(gene_id):
                     queue.put(lsv_id)
         event.set()
+
+    def render_html(self):
+        exec_dir = os.path.dirname(os.path.abspath(voila.__file__))
+        template_dir = os.path.join(exec_dir, 'html')
+        env = jinja2.Environment(extensions=["jinja2.ext.do"], loader=jinja2.FileSystemLoader(template_dir),
+                                 undefined=jinja2.StrictUndefined)
+
+        index_template = env.get_template('het_index.html')
+        summary_template = env.get_template('het_summary.html')
+
+        with open(os.path.join(self.args.output, 'index.html'), 'w') as index:
+            index.write(index_template.render())
+
+        with open(os.path.join(self.args.output, 'summary.html'), 'w') as summary:
+            summary.write(summary_template.render())
 
     def render_dbs(self):
         args = self.args

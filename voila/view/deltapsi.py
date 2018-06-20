@@ -45,7 +45,7 @@ class DeltaPsi(Html, Tsv):
             lsv_count = m.view_lsv_count()
             too_many_lsvs = lsv_count > constants.MAX_LSVS_DELTAPSI_INDEX
 
-            with open(os.path.join(args.output, 'index.html'), 'w') as html:
+            with open(os.path.join(args.output, 'het_index.html'), 'w') as html:
                 index_template = self.get_env().get_template('index_delta_summary_template.html')
                 html.write(
                     index_template.render(

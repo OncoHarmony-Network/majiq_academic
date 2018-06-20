@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <title>Title</title>
+
+    <link rel="stylesheet" href="https://unpkg.com/purecss@1.0.0/build/pure-min.css"
+          integrity="sha384-nn4HPE8lTHyVtfCBi5yW9d20FjT8BJwUXyWZT9InLYax14RDjBj46LmSztkmNP9w" crossorigin="anonymous">
+    <link rel="stylesheet" href="css/summary.css">
+    <link rel="stylesheet" href="css/custom.css">
+    {% block style %}{% endblock %}
+
+    <script src="https://d3js.org/d3.v4.min.js"></script>
+    <script src="https://raw.githack.com/Kcnarf/d3-beeswarm/master/build/d3-beeswarm.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/pouchdb@6.4.3/dist/pouchdb.min.js"></script>
+    <script src="https://unpkg.com/pouchdb@6.4.3/dist/pouchdb.find.min.js"></script>
+
+    <script src="js/splicegraphs.js"></script>
+    <script src="js/splicegraphtools.js"></script>
+    <script src="js/table.js"></script>
+    <script src="js/violin.js"></script>
+    <script src="js/heatmap.js"></script>
+    <script src="js/colors.js"></script>
+    <script src="js/application.js"></script>
+    {% block script %}{% endblock %}
+</head>
+<body>
+
+{% block toolbar %}{% endblock %}
+<div class="content">
+    <div class="top">
+        <div class="gene-header">
+            <div>
+                <div class="gene-name"></div>
+                <div class="gene-id"></div>
+            </div>
+            <div>
+                <img src="img/ucsc.png">
+            </div>
+            <div class="splice-graph-icons">
+                <img src="img/solve-icon16.png">
+                <img src="img/zoom_in.png">
+                <img src="img/zoom_out.png">
+                <img src="img/undo.png">
+            </div>
+        </div>
+        <div class="splice-graph-container default-view"></div>
+    </div>
+    <div class="bottom">
+        {% block bottom %}{% endblock %}
+    </div>
+</div>
+</body>
+</html>

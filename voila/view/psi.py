@@ -50,7 +50,7 @@ class Psi(Html, Tsv):
             lsv_count = m.view_lsv_count()
             too_many_lsvs = lsv_count > constants.MAX_LSVS_PSI_INDEX
 
-            with open(os.path.join(args.output, 'index.html'), 'w') as html:
+            with open(os.path.join(args.output, 'het_index.html'), 'w') as html:
                 index_template = self.get_env().get_template('index_single_summary_template.html')
                 html.write(
                     index_template.render(
@@ -132,7 +132,7 @@ class Psi(Html, Tsv):
         #             vp.apply_async(self.create_summary, (metadata, args, database_name, paged)))
         #
         #     for res in multiple_results:
-        #         self.voila_links.update(res.get())
+        #         self.voila_links.splice_graph_update(res.get())
         #
         # log.debug('End summaries render')
         self.create_summaries(ViewPsi)

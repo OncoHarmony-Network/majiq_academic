@@ -1,6 +1,7 @@
 body {
     background-color: #c0d8ee;
     font-size: 12px;
+    overflow-y: hidden;
 }
 
 table {
@@ -16,35 +17,45 @@ table {
 .menu {
     background-color: #205bb0;
     color: white;
+    position: absolute;
+    z-index: 2;
 }
 
-.hidden {
-    visibility: hidden;
+.submenu.hide-submenu {
+    transform: translateY(-100%);
+    box-shadow: none;
+    transition: all 100ms ease;
 }
 
 .submenu {
-    background-color: #c0d8ee
+    transition: all 100ms ease;
+    background-color: #c0d8ee;
+    color: black;
+    z-index: 1;
+    position: absolute;
+    width: 100%;
+    top: 45px;
+    box-shadow: 0 0 25px 10px rgba(0, 0, 0, .3);
 }
 
-.splice-graph-header {
+.gene-header {
     background: white;
-    padding-top: 10px;
-    padding-left: 10px;
-    padding-bottom: 10px;
+    padding: 10px;
 }
 
-.splice-graph-header > div {
-    display: inline-grid;
+.gene-header > div {
+    display: inline-block;
     vertical-align: middle;
+    margin-right: 10px;
 }
 
-.splice-graph-header .gene-name {
+.gene-header .gene-name {
     font-size: 20px;
     color: #205bb0;
     font-weight: bold;
 }
 
-.splice-graph-header .gene-id {
+.gene-header .gene-id {
     font-size: 16px;
     font-weight: bold;
     color: #e75c29
@@ -52,9 +63,7 @@ table {
 
 .splice-graph-container {
     background-color: white;
-    border-bottom: solid lightgrey 1px;
-    padding-bottom: 10px;
-    padding-top: 10px;
+    padding-bottom:10px;
     top: 34px;
 }
 
@@ -76,3 +85,30 @@ table {
     text-align: center;
 }
 
+.content {
+    position: absolute;
+    height: calc(100% - 45px);
+    width: 100%;
+    top: 45px;
+}
+
+.top {
+    max-height: 50%;
+    overflow-y: auto;
+    border-bottom: solid lightgrey 1px;
+}
+
+.bottom {
+    overflow-y: auto
+}
+
+.menu-right {
+    float: right
+}
+
+.splice-graph-header {
+    margin-left: 10px;
+    margin-right: 10px;
+    padding-top: 10px;
+    color: #205bb0;
+}

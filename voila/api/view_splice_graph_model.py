@@ -102,7 +102,7 @@ class ViewIntronRetention(IntronRetention):
 class ViewGene(Gene):
     junctions = relationship('ViewJunction')
     exons = relationship('ViewExon')
-    intron_retention = relationship('ViewIntronRetention')
+    intron_retentions = relationship('ViewIntronRetention')
 
     def __iter__(self):
         yield 'name', self.name
@@ -164,10 +164,13 @@ class ViewGene(Gene):
                     except KeyError:
                         junc_reads[combined_name][junc.start] = {junc.end: summed_reads}
 
+            # for ir in self.intron_retentions:
+            #     print(ir.reads)
+
         gene = dict(self)
         gene['exons'] = [dict(e) for e in self.exons]
         gene['junctions'] = [dict(j) for j in self.junctions]
-        gene['intron_retention'] = [dict(ir) for ir in self.intron_retention]
+        gene['intron_retention'] = [dict(ir) for ir in self.intron_retentions]
         gene['junction_reads'] = junc_reads
         gene['intron_retention_reads'] = ir_reads
 

@@ -114,14 +114,14 @@ class IntronRetention(SpliceGraphSQL):
             reads = int(reads)
 
             if reads:
-
                 r = model.IntronRetentionReads(intron_retention_gene_id=self.gene_id, intron_retention_start=self.start,
                                                intron_retention_end=self.end, experiment_name=experiment, reads=reads)
 
-                if self.reads_exists(experiment, reads):
-                    return -1
-                else:
-                    with self.sql.session.no_autoflush:
+                self.sql.session.flush()
+                with self.sql.session.no_autoflush:
+                    if self.reads_exists(experiment, reads):
+                        return -1
+                    else:
                         self.get.has_reads = True
                         self.sql.add(r)
                         self.sql.commit(default_commit_on_count)

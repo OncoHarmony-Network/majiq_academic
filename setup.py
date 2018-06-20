@@ -14,11 +14,11 @@ compile_args = ['-fopenmp', '-std=c++11']
 linker_args = ['-lgomp', '-std=c++11']
 
 if sys.platform == 'darwin':
-    compile_args.append('-stdlib=libc++')
+    # compile_args.append('-stdlib=libc++')
     linker_args = ['-L/usr/local/opt/llvm/lib'] + linker_args
-# #
-# os.environ['CC'] = 'g++-8'
-# os.environ['CXX'] = 'g++-8'
+
+os.environ['CC'] = 'g++-8'
+os.environ['CXX'] = 'g++-8'
 
 include_librs = ['majiq/src/internals', numpy.get_include()] + pysam.get_include()
 pysam_library_path = [os.path.abspath(os.path.join(os.path.dirname(pysam.__file__)))]
