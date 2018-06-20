@@ -243,6 +243,22 @@ namespace grimoire{
                 end_ = min(end_, inIR_ptr->get_end()) ;
                 read_rates_ = inIR_ptr->read_rates_ ;
             }
+
+            void clear_nreads(bool reset_grp){
+//                read_rates_ = nullptr ;
+                flt_count_ = reset_grp ? 0: flt_count_ ;
+            }
+
+            void free_nreads(){
+//cout << "INTRON:: " << read_rates_ << "\n" ;
+                if(read_rates_ != nullptr){
+                    free(read_rates_);
+                    read_rates_ = nullptr ;
+                }
+//cout << "DEL INTRON DONE\n" ;
+            }
+
+
     };
 
 
@@ -285,7 +301,7 @@ namespace grimoire{
             void    print_exons() ;
             void    detect_exons() ;
             void    detect_introns(vector<Intron*> &intronlist) ;
-            void    add_intron(Intron * inIR_ptr, float min_coverage, unsigned int min_exps) ;
+            void    add_intron(Intron * inIR_ptr, float min_coverage, unsigned int min_exps, bool reset) ;
             void    connect_introns() ;
             void    newExonDefinition(int start, int end, Junction *inbound_j, Junction *outbound_j, bool in_db) ;
             void    fill_junc_tlb(map<string, vector<string>> &tlb) ;
@@ -336,7 +352,7 @@ namespace grimoire{
 
     void sortGeneList(vector<Gene*> &glist) ;
 //    vector<Intron *> find_intron_retention(vector<Gene*> &gene_list, char strand, int start, int end) ;
-    vector<Intron *> find_intron_retention(vector<Gene*> & gene_list, string geneid, int start, int end) ;
+    vector<Intron *> find_intron_retention(Gene * gObj, int start, int end);
 
 }
 

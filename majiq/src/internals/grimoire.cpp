@@ -222,6 +222,8 @@ namespace grimoire {
             (p.second)->update_flags(efflen, minreads, minpos, denovo_thresh, min_experiments) ;
             (p.second)->clear_nreads(is_last_exp) ;
         }
+
+
         return ;
     }
 
@@ -277,7 +279,7 @@ namespace grimoire {
 //}
     }
 
-    void Gene::add_intron(Intron * inIR_ptr, float min_coverage, unsigned int min_exps){
+    void Gene::add_intron(Intron * inIR_ptr, float min_coverage, unsigned int min_exps, bool reset){
         bool found = false ;
 
         for (const auto &ir: intron_vec_){
@@ -285,12 +287,14 @@ namespace grimoire {
             if (ir->get_end() >= inIR_ptr->get_start() && ir->get_start() <= inIR_ptr->get_end()){
                 ir->overlaping_intron(inIR_ptr) ;
                 ir->update_flags(min_coverage, min_exps) ;
+                ir->clear_nreads(reset) ;
                 found = true ;
             }
         }
 
         if(!found){
             inIR_ptr->update_flags(min_coverage, min_exps) ;
+            inIR_ptr->clear_nreads(reset) ;
             intron_vec_.push_back(inIR_ptr) ;
         }else{
             delete(inIR_ptr) ;
@@ -556,7 +560,7 @@ namespace grimoire {
     }
 
 
-    vector<Intron *> find_intron_retention(vector<Gene*> & gene_list, char strand, int start, int end){
+    vector<Intron *> find_intron_retention2(vector<Gene*> & gene_list, char strand, int start, int end){
         vector<Intron*> ir_vec ;
         const int n = gene_list.size() ;
         int gIdx = Gene::RegionSearch(gene_list, n, end) ;
@@ -585,7 +589,7 @@ namespace grimoire {
         return ir_vec;
     }
 
-    vector<Intron *> find_intron_retention(vector<Gene*> & gene_list, string geneid, int start, int end){
+    vector<Intron *> find_intron_retention3(vector<Gene*> & gene_list, string geneid, int start, int end){
         vector<Intron*> ir_vec ;
 
         const int n = gene_list.size() ;
@@ -608,6 +612,25 @@ namespace grimoire {
                 }
                 break ;
             }
+        }
+        return ir_vec ;
+    }
+
+    vector<Intron *> find_intron_retention(Gene * gObj, int start, int end){
+        vector<Intron*> ir_vec ;
+        const int nir = (gObj->intron_vec_).size() ;
+        int irIdx = Intron::RegionSearch(gObj->intron_vec_, nir, start);
+        if (irIdx <0){ return ir_vec ;}
+
+        for(int i = irIdx; i<nir; ++i){
+            Intron * irp = gObj->intron_vec_[i] ;
+            if(irp->get_start()> end){
+                break ;
+            }
+            if(irp->get_end() < start){
+                continue ;
+            }
+            ir_vec.push_back(irp) ;
         }
         return ir_vec ;
     }

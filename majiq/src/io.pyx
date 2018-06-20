@@ -24,7 +24,7 @@ cdef list gene_name_keys = ['Name', 'gene_name']
 cdef list gene_id_keys = ['ID', 'gene_id']
 
 
-cdef int  read_gff(str filename, vector[Gene *]& glist, object logging) except -1:
+cdef int  read_gff(str filename, map[string, Gene*]& all_genes, vector[string]& gid_vec, object logging) except -1:
     """
     :param filename: GFF input filename
     :param list_of_genes: List of genes that will be updated with all the gene_id detected on the gff file
@@ -41,7 +41,7 @@ cdef int  read_gff(str filename, vector[Gene *]& glist, object logging) except -
     cdef bint bb
     cdef list ind_list, tlist
     cdef string gene_id, key, gene_name, parent_tx_id
-    cdef map[string, Gene*] all_genes
+    # cdef map[string, Gene*] all_genes
 
     for record in parse_gff3(filename):
         chrom = record.seqid.encode('utf-8')
@@ -76,7 +76,7 @@ cdef int  read_gff(str filename, vector[Gene *]& glist, object logging) except -
 
             exon_dict[gene_id] = []
             all_genes[gene_id] = new Gene(gene_id, gene_name, chrom, strand, start, end)
-            glist.push_back(all_genes[gene_id])
+            gid_vec.push_back(gene_id)
         elif record.type in accepted_transcripts:
             if transcript_id_keys not in record.attributes or 'Parent' not in record.attributes:
                 logging.info("Error, Transcript doesn't contain one of the ID or parent attributes"
@@ -107,7 +107,7 @@ cdef int  read_gff(str filename, vector[Gene *]& glist, object logging) except -
     for parent_tx_id, (gene_id, coord_list) in trcpt_id_dict.items():
         last_ss = FIRST_LAST_JUNC
         coord_list.sort(key=lambda x: (x[0], x[1]))
-        if gene_id == 'ENSMUSG00000006498': print (coord_list)
+        # if gene_id == 'ENSMUSG00000006498': print (coord_list)
         for xx, yy in coord_list:
             key = ('%s-%s' % (last_ss, xx)).encode('utf-8')
 

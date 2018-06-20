@@ -1,22 +1,23 @@
 from majiq.src.internals.io_bam cimport IOBam, gene_vect_t
 from majiq.src.internals.grimoire cimport Junction, Gene, Exon, LSV, Jinfo, Intron
 from majiq.src.internals.grimoire cimport sortGeneList, find_intron_retention
-#
-import cython
+cimport majiq.src.io as majiq_io
 from majiq.src.constants import *
+from voila.c.splice_graph_sql cimport open_db, close_db
+from voila.c.splice_graph_sql cimport gene as sg_gene
+from voila.c.splice_graph_sql cimport junction as sg_junction
+from voila.c.splice_graph_sql cimport exon as sg_exon
+from voila.api import SpliceGraph
+
 from libcpp.string cimport string
-from libcpp.set cimport set
 from libcpp.map cimport map
 from libcpp.pair cimport pair
-from libcpp.list cimport list as clist
 from libcpp.vector cimport vector
-cimport openmp
-cimport majiq.src.io as majiq_io
 from cython.parallel import prange
 
-from libc.stdlib cimport calloc, free
-from numpy.random  import choice
-from scipy.stats import nbinom, poisson
+cdef extern from "sqlite3/sqlite3.h":
+    struct sqlite3
+
 import numpy as np
 cimport numpy as np
 
@@ -34,7 +35,7 @@ def update_splicegraph_junction(sg, gene_id, start, end, nreads, exp):
         sg.junction(gene_id, start, end).update_reads(exp, nreads)
 
 cdef int _output_lsv_file_single(vector[LSV*] out_lsvlist, str experiment_name, map[string, vector[string]] tlb_j_g,
-                                 map[string, gene_vect_t] gene_map, str outDir, int nthreads, unsigned int msamples,
+                                 map[string, Gene*] gene_map, str outDir, int nthreads, unsigned int msamples,
                                  bint irb, int strandness):
     cdef dict cov_dict = {}
     cdef int nlsv = out_lsvlist.size()
@@ -57,6 +58,7 @@ cdef int _output_lsv_file_single(vector[LSV*] out_lsvlist, str experiment_name, 
     cdef Intron * ir_ptr
     cdef char strand
     cdef string geneid
+    cdef Gene* gneObj
 
     junc_file = "%s/%s.juncs" % (outDir, experiment_name)
     #print("###", junc_file, get_builder_splicegraph_filename(outDir))
@@ -75,6 +77,7 @@ cdef int _output_lsv_file_single(vector[LSV*] out_lsvlist, str experiment_name, 
                 if junc_ids[i][5] == 0:
                     # print("###: %s" , junc_ids[i][0])
                     tlb_juncs[junc_ids[i][0]] = Jinfo(i, junc_ids[i][1], junc_ids[i][2], junc_ids[i][3], junc_ids[i][4])
+
                     if tlb_j_g.count(junc_ids[i][0]) == 0 :
                         continue
 
@@ -85,12 +88,18 @@ cdef int _output_lsv_file_single(vector[LSV*] out_lsvlist, str experiment_name, 
 
 
                 elif irb:
+                    geneid = junc_ids[i][0].split(b':')[3]
+                    if gene_map.count(geneid) == 0 :
+                        continue
+                    gneObj = gene_map[geneid]
+                    gid = gneObj.get_id()
+
                     #intron retention case
                     # print('KKK2')
-                    key = junc_ids[i][0].split(b':')[0]
-                    # print("STRAND: junc_ids[i][0].split(b':')[1]", junc_ids[i][0].split(b':')[1].decode('utf-8'))
-                    geneid = junc_ids[i][0].split(b':')[3]
-                    irv = find_intron_retention(gene_map[key], geneid, junc_ids[i][1], junc_ids[i][2])
+                    # key = junc_ids[i][0].split(b':')[0]
+                    # # print("STRAND: junc_ids[i][0].split(b':')[1]", junc_ids[i][0].split(b':')[1].decode('utf-8'))
+                    # geneid = junc_ids[i][0].split(b':')[3]
+                    irv = find_intron_retention(gneObj, junc_ids[i][1], junc_ids[i][2])
 
                     # print ("##: " , junc_ids[i], key)
                     # for ir_ptr in irv :
@@ -144,33 +153,33 @@ cdef int _output_lsv_file_single(vector[LSV*] out_lsvlist, str experiment_name, 
     return len(type_list)
 
 
-cdef _find_junctions(list file_list, vector[Gene*] gene_vec,  object conf, object logger):
+cdef _find_junctions(list file_list, map[string, Gene*]& gene_map, vector[string] gid_vec, object conf, object logger):
 
-    cdef int n = gene_vec.size()
+    cdef int n = gene_map.size()
     cdef int nthreads = conf.nthreads
-    cdef int nsamples = len(file_list)
+
     cdef unsigned int minpos = conf.minpos
     cdef unsigned int minreads = conf.minreads
     cdef unsigned int denovo_thresh= conf.min_denovo
     cdef float min_ir_cov = conf.min_intronic_cov
-    cdef bint ir = conf.ir
-    cdef int i, j
     cdef int k=conf.k, m=conf.m
     cdef float pvalue_limit=conf.pvalue_limit
     cdef unsigned int min_experiments = 1 if conf.min_exp == -1 else conf.min_exp
     cdef unsigned int eff_len = conf.readLen - 2*MIN_BP_OVERLAP
+    cdef bint ir = conf.ir
+
+    cdef int i, j
     cdef int strandness, njunc
     cdef list group_list
     cdef int last_it_grp
 
     cdef Gene * gg
-    cdef vector[LSV*] out_lsvlist
     cdef IOBam c_iobam
     cdef string name, bamfile
     cdef str tmp_str
     cdef np.ndarray[np.float32_t, ndim=2, mode="c"] boots
     cdef list junc_ids
-    cdef int nlsv
+
     cdef unsigned int jlimit
 
     cdef int* jvec
@@ -178,17 +187,15 @@ cdef _find_junctions(list file_list, vector[Gene*] gene_vec,  object conf, objec
     cdef pair[string, gene_vect_t] vector_gene
     cdef map[string, gene_vect_t] gene_list
     cdef map[string, unsigned int] j_ids
-    cdef map[string, int*] junc_summary
     cdef pair[string, unsigned int] it
-    cdef map[string, vector[string]] gene_junc_tlb
+    cdef pair[string, Gene *] git
+    # sortGeneList(gene_vec)
 
-    # print("SIZE", gene_vec.size())
-    sortGeneList(gene_vec)
-
-    for gobj in gene_vec:
-        if gene_list.count(gobj.get_chromosome()) == 0:
-            gene_list[gobj.get_chromosome()] = gene_vect_t()
-        gene_list[gobj.get_chromosome()].push_back(gobj)
+    for git in gene_map:
+        gg = git.second
+        if gene_list.count(gg.get_chromosome()) == 0:
+            gene_list[gg.get_chromosome()] = gene_vect_t()
+        gene_list[gg.get_chromosome()].push_back(gg)
 
     for vector_gene in gene_list:
         sortGeneList(vector_gene.second)
@@ -207,7 +214,7 @@ cdef _find_junctions(list file_list, vector[Gene*] gene_vec,  object conf, objec
                 if ir:
                     with gil:
                         logger.info('Detect Intron retention %s' %(file_list[j][0]))
-                    c_iobam.detect_introns(min_ir_cov, min_experiments, 0.8)
+                    c_iobam.detect_introns(min_ir_cov, min_experiments, 0.8, (j==last_it_grp))
                 njunc = c_iobam.get_njuncs()
                 with gil:
                         logger.debug('Total Junctions and introns %s' %(njunc))
@@ -221,68 +228,86 @@ cdef _find_junctions(list file_list, vector[Gene*] gene_vec,  object conf, objec
 
             logger.debug("Update flags")
             for i in prange(n, nogil=True, num_threads=nthreads):
-                gg = gene_vec[i]
+                gg = gene_map[gid_vec[i]]
                 gg.update_junc_flags(eff_len, (j==last_it_grp), minreads, minpos, denovo_thresh, min_experiments)
-
             logger.debug("Done Update flags")
             junc_ids = [0] * njunc
-
-            jv_idx = 0
             for it in j_ids:
-
                 # print(file_list[j][0], j, last_it_grp, (j==last_it_grp), it.second, it.first)
                 tmp_str = it.first.decode('utf-8').split(':')[2]
                 start, end = (int(xx) for xx in tmp_str.split('-'))
-                junc_ids[it.second] = (it.first.decode('utf-8'), start, end, jvec[it.second], jvec[it.second + njunc], int(it.second>= jlimit))
+                junc_ids[it.second] = (it.first.decode('utf-8'), start, end, jvec[it.second], jvec[it.second + njunc],
+                                       int(it.second>= jlimit))
 
             logger.info('Done Reading file %s' %(file_list[j][0]))
             _store_junc_file(boots, junc_ids, file_list[j][0], conf.outDir)
-
-
-    logger.info("Detecting LSVs ngenes: %s " % n)
-    for i in prange(n, nogil=True, num_threads=nthreads):
-        gg = gene_vec[i]
-        with gil:
-            logger.debug("%s] Detect exons" % gg.get_id())
-        gg.detect_exons()
-        if ir:
-            with gil:
-                logger.debug("%s] Connect introns" % gg.get_id())
-            gg.connect_introns()
-
-        with gil:
-            logger.debug("[%s] Generate TLB" % gg.get_id())
-        gg.fill_junc_tlb(gene_junc_tlb)
-        # with gil:
-        #     gene_to_splicegraph(gg, conf)
-        with gil:
-            logger.debug("[%s] Detect LSVs" % gg.get_id())
-        nlsv = gg.detect_lsvs(out_lsvlist)
-
-
-    logger.info("Generating Splicegraph")
-    for i in range(n):
-        gene_to_splicegraph(gene_vec[i], conf)
-
-    logger.info("%s LSV found" % out_lsvlist.size())
-    for j in range(nsamples):
-        strandness = conf.strand_specific[file_list[j][0]]
-        cnt = _output_lsv_file_single(out_lsvlist, file_list[j][0], gene_junc_tlb, gene_list, conf.outDir, nthreads, m, ir, strandness)
-        logger.info('%s: %d LSVs' %(file_list[j][0], cnt))
+            c_iobam.free_iobam()
 
 
 
-from voila.api import SpliceGraph
-from majiq.src.config import Config
 
-cdef init_splicegraph(filename):
-    majiq_config = Config()
+cdef init_splicegraph(string filename, object conf):
 
     # erase splice graph file
     with SpliceGraph(filename, delete=True) as sg:
-        print([(xx, type(xx)) for xx in majiq_config.exp_list])
-        sg.experiment_names = majiq_config.exp_list
-        sg.genome = majiq_config.genome
+        sg.experiment_names = conf.exp_list
+        sg.genome = conf.genome
+
+cdef gene_to_splicegraph2(Gene * gne, string sg_filename) nogil:
+
+    cdef pair[string, Junction *] jj_pair
+    cdef Junction * jj
+    cdef pair[string, Exon *] ex_pair
+    cdef Exon * ex
+    cdef string gne_id
+    cdef sqlite3* db
+
+    alt_empty_starts = []
+    alt_empty_ends = []
+    gne_id = gne.get_id()
+
+    db = open_db('/tmp/test.sqlite')
+    sg_gene(db, gne_id, gne.get_name(), gne.get_strand(), gne.get_chromosome())
+
+    for jj_pair in gne.junc_map_:
+        jj = jj_pair.second
+
+        if not jj.get_denovo_bl(): continue
+        if jj.get_start() == FIRST_LAST_JUNC:
+            alt_empty_starts.append(jj.get_end())
+            continue
+
+        if jj.get_end() == FIRST_LAST_JUNC:
+            alt_empty_ends.append(jj.get_start())
+            continue
+        sg_junction(gne_id, jj.get_start(), jj.get_end()).add(annotated=jj.get_annot())
+
+    for ex_pair in gne.exon_map_:
+        ex = ex_pair.second
+
+        alt_start = []
+        for jj in ex.ib:
+            if jj.get_end() in alt_empty_starts:
+                alt_start.append(jj.get_end())
+
+        alt_ends = []
+        for jj in ex.ob:
+            if jj.get_start() in alt_empty_ends:
+                alt_ends.append(jj.get_start())
+
+        extra_coords = []
+        if ex.annot_:
+            if ex.get_start() < ex.db_start_:
+                extra_coords.append([ex.get_start(), ex.db_start_ - 1])
+            if ex.get_end() > ex.db_end_:
+                extra_coords.append([ex.db_end_ + 1, ex.get_end()])
+
+        sg_exon(gne_id, ex.get_start(), ex.get_end(), ex.annot_ )#, alt_starts=alt_start, alt_ends=alt_ends)
+    # for ir in gne.intron_vec_:
+    #     sg_intron_retention(gne_id, ir.get_start(), ir.get_end()).add(annotated=ir.get_annot())
+
+    close_db(db)
+
 
 cdef gene_to_splicegraph(Gene * gne, majiq_config):
 
@@ -295,14 +320,11 @@ cdef gene_to_splicegraph(Gene * gne, majiq_config):
     alt_empty_starts = []
     alt_empty_ends = []
     gne_id = gne.get_id().decode('utf-8')
-    # print('GENEID:', gne_id, gne.get_name(), chr(gne.get_strand()), gne.get_chromosome())
     with SpliceGraph(get_builder_splicegraph_filename(majiq_config.outDir)) as sg:
         sg.gene(gne_id).add(name=gne.get_name().decode('utf-8'), strand=chr(gne.get_strand()), chromosome=gne.get_chromosome().decode('utf-8'))
 
         for jj_pair in gne.junc_map_:
             jj = jj_pair.second
-            # if gne_id == 'ENSMUSG00000006498':
-            #     print(jj_pair.first, jj.get_denovo_bl(), jj.get_start(), jj.get_end(), jj.get_annot())
 
             if not jj.get_denovo_bl(): continue
             if jj.get_start() == FIRST_LAST_JUNC:
@@ -312,18 +334,10 @@ cdef gene_to_splicegraph(Gene * gne, majiq_config):
             if jj.get_end() == FIRST_LAST_JUNC:
                 alt_empty_ends.append(jj.get_start())
                 continue
-
-            # TODO: add transcripts
-            # if gne_id == 'ENSMUSG00000006498':
-            #     print('JUNC', gne_id, jj.get_start(), jj.get_end())
             sg.junction(gne_id, jj.get_start(), jj.get_end()).add(annotated=jj.get_annot())
 
         for ex_pair in gne.exon_map_:
             ex = ex_pair.second
-        #for ex in sorted(exon_dict, key=lambda x: (x.start, x.end)):
-            # if ex.intron_:
-            #     sg.exon(gne_id, ex.start_, ex.end_).add(annotated=ex.annot_, intron_retention=True)
-            #     continue
 
             alt_start = []
             for jj in ex.ib:
@@ -344,9 +358,7 @@ cdef gene_to_splicegraph(Gene * gne, majiq_config):
 
             sg.exon(gne_id, ex.get_start(), ex.get_end()).add(coords_extra=extra_coords, annotated=ex.annot_,
                                                     alt_starts=alt_start, alt_ends=alt_ends)
-
         for ir in gne.intron_vec_:
-            # print("**INTRON", gne_id,  ir.get_start(), ir.get_end())
             sg.intron_retention(gne_id, ir.get_start(), ir.get_end()).add(annotated=ir.get_annot())
 
 
@@ -354,11 +366,57 @@ cdef gene_to_splicegraph(Gene * gne, majiq_config):
 
 ## OPEN API FOR PYTHON
 cdef _core_build(str transcripts, list file_list, object conf, object logger):
-    cdef vector[Gene *] gene_vec
-    majiq_io.read_gff(transcripts, gene_vec, logger)
-    init_splicegraph(get_builder_splicegraph_filename(conf.outDir))
-    _find_junctions(file_list, gene_vec, conf, logger)
+    # cdef vector[Gene *] gene_vec
+    cdef int n, i
+    cdef int nthreads = conf.nthreads
+    cdef map[string, vector[string]] gene_junc_tlb
+    cdef vector[LSV*] out_lsvlist
+    cdef int nsamples = len(file_list)
+    cdef int k=conf.k, m=conf.m
+    cdef bint ir = conf.ir
+    cdef int nlsv
+    cdef map[string, Gene*] gene_map
+    cdef vector[string] gid_vec
+    cdef string sg_filename = get_builder_splicegraph_filename(conf.outDir).encode('utf-8')
 
+    majiq_io.read_gff(transcripts, gene_map, gid_vec, logger)
+    n = gene_map.size()
+
+    init_splicegraph(sg_filename, conf)
+    _find_junctions(file_list, gene_map, gid_vec, conf, logger)
+
+    logger.info("Detecting LSVs ngenes: %s " % n)
+    for i in prange(n, nogil=True, num_threads=nthreads):
+        gg = gene_map[gid_vec[i]]
+        with gil:
+            logger.debug("%s] Detect exons" % gg.get_id())
+        gg.detect_exons()
+        if ir:
+            with gil:
+                logger.debug("%s] Connect introns" % gg.get_id())
+            gg.connect_introns()
+
+        with gil:
+            logger.debug("[%s] Generate TLB" % gg.get_id())
+        gg.fill_junc_tlb(gene_junc_tlb)
+        gene_to_splicegraph(gene_map[gid_vec[i]], sg_filename)
+        # with gil:
+        #     gene_to_splicegraph(gg, conf)
+        with gil:
+            logger.debug("[%s] Detect LSVs" % gg.get_id())
+        nlsv = gg.detect_lsvs(out_lsvlist)
+
+
+    logger.info("Generating Splicegraph")
+    for i in range(n):
+        gene_to_splicegraph(gene_map[gid_vec[i]], conf)
+
+    logger.info("%s LSV found" % out_lsvlist.size())
+    for j in range(nsamples):
+        strandness = conf.strand_specific[file_list[j][0]]
+        cnt = _output_lsv_file_single(out_lsvlist, file_list[j][0], gene_junc_tlb, gene_map, conf.outDir, nthreads,
+                                      m, ir, strandness)
+        logger.info('%s: %d LSVs' %(file_list[j][0], cnt))
 
 cpdef core_build(str transcripts, list file_list, object conf, object logger):
     _core_build(transcripts, file_list, conf, logger)

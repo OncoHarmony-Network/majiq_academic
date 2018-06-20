@@ -340,7 +340,7 @@ namespace io_bam {
         return res ;
     }
 
-    void IOBam::detect_introns(float min_intron_cov, unsigned int min_experiments, float min_bins){
+    void IOBam::detect_introns(float min_intron_cov, unsigned int min_experiments, float min_bins, bool reset){
 
         junc_limit_index_ = junc_vec.size() ;
 
@@ -357,6 +357,7 @@ namespace io_bam {
         }
 
         ParseJunctionsFromFile(true) ;
+cout << "Num junctions: " << junc_vec.size() << "\n" ;
         for (const auto & it: intronVec_){
             const int n = (it.second).size() ;
             #pragma omp parallel for num_threads(nthreads_)
@@ -365,16 +366,18 @@ namespace io_bam {
                 const bool pass = intrn_it->is_reliable(min_bins) ;
                 if( pass ){
                     const string key = intrn_it->get_key(intrn_it->get_gene()) ;
-                     #pragma omp critical
-                     {
+                    #pragma omp critical
+                    {
                         if (junc_map.count(key) == 0) {
                             junc_map[key] = junc_vec.size() ;
                             junc_vec.push_back(intrn_it->read_rates_) ;
-                            (intrn_it->get_gene())->add_intron(intrn_it, min_intron_cov, min_experiments) ;
+                            (intrn_it->get_gene())->add_intron(intrn_it, min_intron_cov, min_experiments, reset) ;
                         }
-                     }
+                    }
+                }else{
+                    intrn_it->free_nreads() ;
+                    delete intrn_it ;
                 }
-
             }
         }
     }
