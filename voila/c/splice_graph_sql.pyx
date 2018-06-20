@@ -23,16 +23,24 @@ cdef:
                         "('id','name','strand','chromosome') " \
                         "VALUES ('%s','%s','%s','%s');"
     char *exon_insert = "INSERT INTO exon " \
-                        "(gene_id, start, end, intron_retention, annotated) " \
-                        "VALUES ('%s','%s','%s','%s','%s');"
+                        "(gene_id, start, end, annotated) " \
+                        "VALUES ('%s',%d,%d,%d);"
     char *junc_insert = "INSERT INTO junction " \
-                        "(gene_id, start, end, has_reads, intron_retention, annotated) " \
-                        "VALUES ('%s','%s','%s','0','%s', '%s');"
-    char *reads_insert = "INSERT INTO reads " \
-                         "(reads, experiment_name, junction_gene_id, junction_start, junction_end) " \
-                         "VALUES ('%s','%s','%s','%s','%s');" \
-                         "UPDATE junction SET has_reads='1' " \
-                         "WHERE gene_id='%s' AND start='%s' AND end='%s';"
+                        "(gene_id, start, end, has_reads, annotated) " \
+                        "VALUES ('%s',%d,%d,0,%d);"
+    char *junc_reads_insert = "INSERT INTO junction_reads " \
+                              "(reads, experiment_name, junction_gene_id, junction_start, junction_end) " \
+                              "VALUES (%d,'%s','%s',%d,%d);" \
+                              "UPDATE junction SET has_reads=1 " \
+                              "WHERE gene_id='%s' AND start=%d AND 'end'=%d;"
+    char *ir_insert = "INSERT INTO intron_retention " \
+                      "(gene_id, start, end, has_reads, annotated) " \
+                      "VALUES ('%s',%d,%d,0,%d);"
+    char *ir_reads_insert = "INSERT INTO intron_retention_reads " \
+                            "(reads, experiment_name, intron_retention_gene_id, intron_retention_start, intron_retention_end) " \
+                            "VALUES (%d,'%s','%s',%d,%d); " \
+                            "UPDATE intron_retention SET has_reads=1 " \
+                            "WHERE gene_id='%s' AND start=%d AND 'end'=%d;"
 
 cdef int int_len(int value) nogil:
     cdef:
@@ -94,105 +102,65 @@ cdef void gene(sqlite3 *db, char *id, char *name, char *strand, char *chromosome
 
     free(sql)
 
-cdef void exon(sqlite3 *db, char *gene_id, int start, int end, int intron_retention, int annotated) nogil:
+cdef void exon(sqlite3 *db, char *gene_id, int start, int end, int annotated) nogil:
     cdef:
-        char *start_str
-        char *end_str
-        char *ir_str
-        char *annot_str
-
-        int start_len
-        int end_len
-        int ir_len
-        int annot_len
-
         int arg_len
         int rm_chars_len
         char *sql
 
-    start_len = int_len(start)
-    end_len = int_len(end)
-    ir_len = int_len(intron_retention)
-    annot_len = int_len(annotated)
-
-    start_str = <char *> malloc(sizeof(char) * (start_len + 1))
-    end_str = <char *> malloc(sizeof(char) * (end_len + 1))
-    ir_str = <char *> malloc(sizeof(char) * (ir_len + 1))
-    annot_str = <char *> malloc(sizeof(char) * (annot_len + 1))
-
-    sprintf(start_str, "%d", start)
-    sprintf(end_str, "%d", end)
-    sprintf(ir_str, "%d", intron_retention)
-    sprintf(annot_str, "%d", annotated)
-
-    arg_len = strlen(gene_id) + start_len + end_len + ir_len + annot_len
-    rm_chars_len = 5 * 2
+    arg_len = strlen(gene_id) + int_len(start) + int_len(end) + int_len(annotated)
+    rm_chars_len = 4 * 2
     sql = <char *> malloc(sizeof(char) * (strlen(exon_insert) + arg_len - rm_chars_len + 1))
-    sprintf(sql, exon_insert, gene_id, start_str, end_str, ir_str, annot_str)
+    sprintf(sql, exon_insert, gene_id, start, end, annotated)
     if exec_db(db, sql):
         fprintf(stderr, "Error inserting exon:\n")
         fprintf(stderr, "\tgene_id: %s\n", gene_id)
         fprintf(stderr, "\tstart: %d\n", start)
         fprintf(stderr, "\tend: %d\n", end)
-        fprintf(stderr, "\tintron retention: %d\n", intron_retention)
         fprintf(stderr, "\tannotated: %d\n", annotated)
         abort()
 
     free(sql)
-    free(start_str)
-    free(end_str)
-    free(ir_str)
-    free(annot_str)
 
-cdef void junction(sqlite3 *db, char *gene_id, int start, int end, int intron_retention, int annotated) nogil:
+cdef void junction(sqlite3 *db, char *gene_id, int start, int end, int annotated) nogil:
     cdef:
-        char *start_str
-        char *end_str
-        char *ir_str
-        char *annot_str
-
-        int start_len
-        int end_len
-        int ir_len
-        int annot_len
-
         int arg_len
         int rm_chars_len
         char *sql
 
-    start_len = int_len(start)
-    end_len = int_len(end)
-    ir_len = int_len(intron_retention)
-    annot_len = int_len(annotated)
-
-    start_str = <char *> malloc(sizeof(char) * (start_len + 1))
-    end_str = <char *> malloc(sizeof(char) * (end_len + 1))
-    ir_str = <char *> malloc(sizeof(char) * (ir_len + 1))
-    annot_str = <char *> malloc(sizeof(char) * (annot_len + 1))
-
-    sprintf(start_str, "%d", start)
-    sprintf(end_str, "%d", end)
-    sprintf(ir_str, "%d", intron_retention)
-    sprintf(annot_str, "%d", annotated)
-
-    arg_len = strlen(gene_id) + start_len + end_len + ir_len + annot_len
-    rm_chars_len = 5 * 2
+    arg_len = strlen(gene_id) + int_len(start) + int_len(end) + int_len(annotated)
+    rm_chars_len = 4 * 2
     sql = <char *> malloc(sizeof(char) * (strlen(junc_insert) + arg_len - rm_chars_len + 1))
-    sprintf(sql, junc_insert, gene_id, start_str, end_str, ir_str, annot_str)
+    sprintf(sql, junc_insert, gene_id, start, end, annotated)
     if exec_db(db, sql):
-        fprintf(stderr, "Error inserting junction:\n",)
+        fprintf(stderr, "Error inserting junction:\n", )
         fprintf(stderr, "\tgene_id: %s\n", gene_id)
         fprintf(stderr, "\tstart: %d\n", start)
         fprintf(stderr, "\tend: %d\n", end)
-        fprintf(stderr, "\tintron retention: %d\n", intron_retention)
         fprintf(stderr, "\tannotated: %d\n", annotated)
         abort()
 
     free(sql)
-    free(start_str)
-    free(end_str)
-    free(ir_str)
-    free(annot_str)
+
+cdef void intron_retention(sqlite3 *db, char *gene_id, int start, int end, int annotated) nogil:
+    cdef:
+        int arg_len
+        int rm_chars_len
+        char *sql
+
+    arg_len = strlen(gene_id) + int_len(start)  + int_len(end) + int_len(annotated)
+    rm_chars_len = 4 * 2
+    sql = <char *> malloc(sizeof(char) * (strlen(ir_insert) + arg_len - rm_chars_len + 1))
+    sprintf(sql, ir_insert, gene_id, start, end, annotated)
+    if exec_db(db, sql):
+        fprintf(stderr, "Error inserting intron retention:\n", )
+        fprintf(stderr, "\tgene_id: %s\n", gene_id)
+        fprintf(stderr, "\tstart: %d\n", start)
+        fprintf(stderr, "\tend: %d\n", end)
+        fprintf(stderr, "\tannotated: %d\n", annotated)
+        abort()
+
+    free(sql)
 
 cdef void experiment(sqlite3 *db, char *name) nogil:
     cdef:
@@ -211,38 +179,21 @@ cdef void experiment(sqlite3 *db, char *name) nogil:
 
     free(sql)
 
-cdef void reads(sqlite3 *db, int reads, char *exp_name, char *junc_gene_id, int junc_start, int junc_end) nogil:
+cdef void junction_reads(sqlite3 *db, int reads, char *exp_name, char *junc_gene_id, int junc_start,
+                         int junc_end) nogil:
     cdef:
-        char *reads_str
-        char *start_str
-        char *end_str
-
-        int reads_len
-        int start_len
-        int end_len
-
         int arg_len
         int rm_chars_len
         char *sql
 
-    reads_len = int_len(reads)
-    start_len = int_len(junc_start)
-    end_len = int_len(junc_end)
+    arg_len = int_len(reads) + strlen(exp_name) + strlen(junc_gene_id) + int_len(junc_start) + int_len(junc_end) + strlen(
+        junc_gene_id) + int_len(junc_start) + int_len(junc_end)
+    rm_chars_len = 8 * 2
+    sql = <char *> malloc(sizeof(char) * (strlen(junc_reads_insert) + arg_len - rm_chars_len + 1))
 
-    reads_str = <char *> malloc(sizeof(char) * (reads_len + 1))
-    start_str = <char *> malloc(sizeof(char) * (start_len + 1))
-    end_str = <char *> malloc(sizeof(char) * (end_len + 1))
-
-    sprintf(reads_str, "%d", reads)
-    sprintf(start_str, "%d", junc_start)
-    sprintf(end_str, "%d", junc_end)
-
-    arg_len = reads_len + strlen(exp_name) + strlen(junc_gene_id) + start_len + end_len
-    rm_chars_len = 5 * 2
-    sql = <char *> malloc(sizeof(char) * (strlen(reads_insert) + arg_len - rm_chars_len + 1))
-    sprintf(sql, reads_insert, reads_str, exp_name, junc_gene_id, start_str, end_str, junc_gene_id, start_str, end_str)
+    sprintf(sql, junc_reads_insert, reads, exp_name, junc_gene_id, junc_start, junc_end, junc_gene_id, junc_start, junc_end)
     if exec_db(db, sql):
-        fprintf(stderr, "Error inserting reads:\n")
+        fprintf(stderr, "Error inserting junc reads:\n")
         fprintf(stderr, "\treads: %d\n", reads)
         fprintf(stderr, "\texperiment name: %s\n", exp_name)
         fprintf(stderr, "\tjunction gene id: %s\n", junc_gene_id)
@@ -250,6 +201,29 @@ cdef void reads(sqlite3 *db, int reads, char *exp_name, char *junc_gene_id, int 
         fprintf(stderr, "\tjunction end: %d\n", junc_end)
         abort()
 
-    free(start_str)
-    free(end_str)
+    free(sql)
+
+cdef void intron_retention_reads(sqlite3 *db, int reads, char *exp_name, char *ir_gene_id, int ir_start,
+                                 int ir_end) nogil:
+    cdef:
+        int arg_len
+        int rm_chars_len
+        char *sql
+
+    arg_len = int_len(reads) + strlen(exp_name) + (strlen(ir_gene_id) * 2) + (int_len(ir_start) * 2) + (
+                int_len(ir_end) * 2)
+    rm_chars_len = 8 * 2
+
+    sql = <char *> malloc(sizeof(char) * (strlen(ir_reads_insert) + arg_len - rm_chars_len + 1))
+    sprintf(sql, ir_reads_insert, reads, exp_name, ir_gene_id, ir_start, ir_end, ir_gene_id, ir_start, ir_end)
+
+    if exec_db(db, sql):
+        fprintf(stderr, "Error inserting ir reads:\n")
+        fprintf(stderr, "\treads: %d\n", reads)
+        fprintf(stderr, "\texperiment name: %s\n", exp_name)
+        fprintf(stderr, "\tjunction gene id: %s\n", ir_gene_id)
+        fprintf(stderr, "\tjunction start: %d\n", ir_start)
+        fprintf(stderr, "\tjunction end: %d\n", ir_end)
+        abort()
+
     free(sql)

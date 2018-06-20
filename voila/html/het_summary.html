@@ -11,9 +11,13 @@
         const urlParams = new URLSearchParams(document.location.search);
 
         const resize_bottom = () => {
+            console.log('yuu');
             const h = document.querySelector('.top').offsetHeight;
             const c = document.querySelector('.content').offsetHeight;
-            document.querySelector('.bottom').style.height = (c - h) + 'px'
+            console.log('content: ' + c);
+            console.log('top: ' + h);
+            document.querySelector('.bottom').style.height = (c - h) + 'px';
+            document.querySelector('#groups').dispatchEvent(new Event('change'))
         };
 
         const show_lsvs = (lsvs) => {
@@ -78,6 +82,9 @@
                 .each((d, i, a) => new HeatMap(db_lsv, a[i]).plot());
 
         };
+
+        const sgs = new SpliceGraphs(db_gene, '.splice-graph-container', urlParams.get('gene_id'), resize_bottom);
+        sgs.create_localstorage();
 
         window.addEventListener('load', () => {
             // lsv tables

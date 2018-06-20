@@ -61,18 +61,16 @@ window.addEventListener('load', () => {
                 },
             })
         }).then(results => {
-            // const sg = JSON.parse(localStorage.getItem('splice_graphs'));
-            // if (sg)
-            //     console.log(sg.reduce((acc, curr) => {
-            //         acc.push(curr[1]);
-            //         return acc
-            //     }));
-
-            const exps = results.docs[0].experiment_names[event.target.selectedIndex].filter(el => true);
+            const sgs = JSON.parse(localStorage.getItem('splice_graphs'));
+            let exps = results.docs[0].experiment_names[event.target.selectedIndex];
+            if (sgs)
+                exps = exps.filter(exp => {
+                    return !sgs.some(sg => sg[1] === exp)
+                });
 
             const s = d3.select('.experiments select')
                 .selectAll('option')
-                .data(results.docs[0].experiment_names[event.target.selectedIndex]);
+                .data(exps);
 
             s.text(d => {
                 return d
@@ -98,7 +96,12 @@ window.addEventListener('load', () => {
         const f = event.target;
         const g = f.querySelector('#groups').value;
         const e = f.querySelector('#experiments').value;
-        sgs.create(g, e)
+        if (g && e)
+            sgs.create(g, e)
     };
 
+    document.querySelector('.toggle-scale').onclick = () => {
+        document.querySelector('.splice-graph-container').classList.toggle('default-view');
+        sgs.update();
+    }
 });

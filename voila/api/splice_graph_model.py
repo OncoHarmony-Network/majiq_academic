@@ -101,7 +101,6 @@ class IntronRetentionReads(Base):
     intron_retention_gene_id = Column(String, primary_key=True)
     intron_retention_start = Column(Integer, primary_key=True)
     intron_retention_end = Column(Integer, primary_key=True)
-    has_reads = Column(Boolean, default=False)
 
     __table_args__ = (
         ForeignKeyConstraint([intron_retention_gene_id, intron_retention_start, intron_retention_end],
@@ -165,6 +164,7 @@ class IntronRetention(Base):
     gene_id = Column(String, ForeignKey('gene.id'), primary_key=True)
     start = Column(Integer, primary_key=True)
     end = Column(Integer, primary_key=True)
+    has_reads = Column(Boolean, default=False)
     annotated = Column(Boolean)
 
     reads = relationship('IntronRetentionReads')

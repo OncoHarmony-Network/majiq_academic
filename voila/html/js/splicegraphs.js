@@ -1,5 +1,5 @@
 class SpliceGraphs {
-    constructor(db, container, gene_id) {
+    constructor(db, container, gene_id, callback) {
         this.db = db;
         this.container_selector = container;
         this.lsv_ids = [];
@@ -7,6 +7,7 @@ class SpliceGraphs {
         this.zoom = 1;
         this.max_bin = 1;
         this.duration = undefined;
+        this.callback = callback;
 
         //constants
         this.junction_height = 25;
@@ -26,7 +27,8 @@ class SpliceGraphs {
     }
 
     get width() {
-        return this.container.parentNode.offsetWidth
+        return this.container.parentNode.clientWidth
+        // return this.container.parentNode.offsetWidth
     }
 
     get svg_height() {
@@ -41,7 +43,6 @@ class SpliceGraphs {
         return d3.transition()
             .duration(function () {
                 if (this.duration === undefined)
-                // return 125;
                     return undefined;
                 return this.duration
             });
@@ -362,7 +363,6 @@ class SpliceGraphs {
         this.splice_site(sg, ss);
     };
 
-
     ss5p(sg) {
         const x = this.x;
         const gene = this.gene;
@@ -379,7 +379,6 @@ class SpliceGraphs {
         this.splice_site(sg, ss)
     };
 
-
     splice_site(sg_div, ss) {
         const y = this.y;
         const exon_height = this.exon_height;
@@ -390,7 +389,6 @@ class SpliceGraphs {
 
         this.style_junctions(sg_div, ss)
     };
-
 
     half_exons(sg) {
         const x = this.x;
@@ -663,7 +661,6 @@ class SpliceGraphs {
             keys: keys,
             include_docs: true
         }).then((results) => {
-
             const sg = document.createElement('div');
             this.container.appendChild(sg);
 
@@ -678,40 +675,50 @@ class SpliceGraphs {
             });
 
             this.splice_graph_init(sg);
-            this.add_localstorage(sg)
-        })
+            this.add_localstorage(sg);
+
+            // if there's a scroll bar, then run update one more time to remove it.
+            if (document.querySelector('.top').scrollWidth > document.querySelector('.top').clientWidth)
+                this.update();
+
+        }).then(() => this.callback())
     }
 
     create_localstorage() {
         const sg = JSON.parse(localStorage.getItem('splice_graphs'));
         if (sg)
-            sg.forEach(el => this.create(el[0], el[1]))
+            sg.forEach(el => this.create(el[0], el[1]));
     }
 
     remove(sg) {
-        this.remove_localstorage(sg);
-        sg.remove()
+        return new Promise(resolve => {
+            this.remove_localstorage(sg);
+            sg.remove();
+            resolve()
+        }).then(() => this.callback())
     }
 
-    splice_graph_init(sg_div) {
+    splice_graph_init(sg) {
         const gene = this.gene;
-        const sg_header = d3.select(sg_div).append('div').attr('class', 'splice-graph-header');
+        const sg_header = d3.select(sg).append('div').attr('class', 'splice-graph-header');
 
         sg_header
             .append('img')
             .style('float', 'right')
             .attr('src', 'img/remove.svg')
             .attr('height', '16px')
-            .on('click', () => this.remove(sg_div));
+            .on('click', () => this.remove(sg));
 
         sg_header
             .append('div')
+            .text(`Group: ${sg.dataset.group}; Experiment: ${sg.dataset.experiment};`);
 
-            .text(`Group: ${sg_div.dataset.group}; Experiment: ${sg_div.dataset.experiment};`);
+        this.x = this.x_scale();
+        this.junction_bins(sg.dataset.experiment);
+        this.y = this.y_scale();
 
-
-        const svg = d3.select(sg_div).append('svg')
-            .attr('width', this.width)
+        const svg = d3.select(sg).append('svg')
+            .attr('width', this.svg_width)
             .attr('height', this.svg_height);
 
         const exons = gene.exons.filter(function (d) {
@@ -725,7 +732,6 @@ class SpliceGraphs {
             .enter()
             .append('polyline')
             .attr('class', 'half-exon');
-
 
         svg.selectAll('.intron-retention')
             .data(gene.intron_retention)
@@ -750,7 +756,6 @@ class SpliceGraphs {
                     .append('text')
                     .attr('class', 'exon-number');
             });
-
 
         svg.selectAll('.junction-grp')
             .data(gene.junctions)
@@ -781,10 +786,11 @@ class SpliceGraphs {
                     .attr('class', 'splice-site p5')
             });
 
-        this.splice_graph_update(sg_div, gene, [], 0)
+        this.splice_graph_update(sg)
     }
 
     splice_graph_update(sg) {
+
         //update some values
         this.x = this.x_scale();
         this.junction_bins(sg.dataset.experiment);
@@ -809,6 +815,7 @@ class SpliceGraphs {
     };
 
     update() {
-        this.container.querySelectorAll('.splice-graph').forEach(sg => this.splice_graph_update(sg))
+        this.container.querySelectorAll('.splice-graph').forEach(sg => this.splice_graph_update(sg));
+        this.callback()
     }
 }

@@ -63,7 +63,7 @@ table {
 
 .splice-graph-container {
     background-color: white;
-    padding-bottom:10px;
+    padding-bottom: 10px;
     top: 34px;
 }
 
@@ -99,7 +99,8 @@ table {
 }
 
 .bottom {
-    overflow-y: auto
+    overflow-y: auto;
+    overflow-x: hidden;
 }
 
 .menu-right {
