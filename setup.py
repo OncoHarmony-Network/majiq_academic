@@ -47,7 +47,6 @@ extensions += [Extension('majiq.src.psi', ['majiq/src/psi.pyx'], include_dirs=in
 extensions += [Extension('majiq.src.sample', ['majiq/src/sample.pyx'], include_dirs=[numpy.get_include()])]
 extensions += [Extension('majiq.src.adjustdelta', ['majiq/src/adjustdelta.pyx'], include_dirs=[numpy.get_include()])]
 extensions += [Extension('voila.c.splice_graph_sql', ['voila/c/splice_graph_sql.pyx'])]
-extensions += [Extension('voila.sandbox.nogil_api', ['voila/sandbox/nogil_api.pyx'])]
 
 setup(
     name="majiq",
