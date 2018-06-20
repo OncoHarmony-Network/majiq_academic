@@ -83,9 +83,8 @@ cdef int _output_lsv_file_single(vector[LSV*] out_lsvlist, str experiment_name, 
 
                     for gid in tlb_j_g[junc_ids[i][0]]:
                         # print("ADD COUNT", i, gid.decode('utf-8'), junc_ids[i][1], junc_ids[i][2], junc_ids[i][3], junc_ids[i][0], experiment_name)
-                        update_splicegraph_junction(sg, gid.decode('utf-8'), junc_ids[i][1], junc_ids[i][2],
+                        update_splicegraph_junction(sg, gid, junc_ids[i][1], junc_ids[i][2],
                                                     junc_ids[i][3], experiment_name)
-
 
                 elif irb:
                     geneid = junc_ids[i][0].split(b':')[3]
@@ -93,21 +92,10 @@ cdef int _output_lsv_file_single(vector[LSV*] out_lsvlist, str experiment_name, 
                         continue
                     gneObj = gene_map[geneid]
                     gid = gneObj.get_id()
-
-                    #intron retention case
-                    # print('KKK2')
-                    # key = junc_ids[i][0].split(b':')[0]
-                    # # print("STRAND: junc_ids[i][0].split(b':')[1]", junc_ids[i][0].split(b':')[1].decode('utf-8'))
-                    # geneid = junc_ids[i][0].split(b':')[3]
                     irv = find_intron_retention(gneObj, junc_ids[i][1], junc_ids[i][2])
 
-                    # print ("##: " , junc_ids[i], key)
-                    # for ir_ptr in irv :
-                    #     print(ir_ptr.get_gene().get_id().decode('utf-8'), ir_ptr.get_start(), ir_ptr.get_end())
-                    # print("######")
-
                     for ir_ptr in irv:
-                        xx = sg.intron_retention(ir_ptr.get_gene().get_id().decode('utf-8'), ir_ptr.get_start(),
+                        xx = sg.intron_retention(geneid, ir_ptr.get_start(),
                                                  ir_ptr.get_end()).update_reads(experiment_name, junc_ids[i][3])
                         tlb_ir[ir_ptr.get_key(ir_ptr.get_gene())] = Jinfo(i, junc_ids[i][1], junc_ids[i][2],
                                                                   junc_ids[i][3], junc_ids[i][4])
@@ -261,9 +249,11 @@ cdef gene_to_splicegraph2(Gene * gne, string sg_filename) nogil:
     cdef Exon * ex
     cdef string gne_id
     cdef sqlite3* db
+    cdef vector[int] alt_empty_starts
+    cdef vector[int] alt_empty_ends
+    cdef vector[int] alt_start
+    cdef vector[int] alt_start
 
-    alt_empty_starts = []
-    alt_empty_ends = []
     gne_id = gne.get_id()
 
     db = open_db('/tmp/test.sqlite')
@@ -274,35 +264,36 @@ cdef gene_to_splicegraph2(Gene * gne, string sg_filename) nogil:
 
         if not jj.get_denovo_bl(): continue
         if jj.get_start() == FIRST_LAST_JUNC:
-            alt_empty_starts.append(jj.get_end())
+            # alt_empty_starts.push_back(jj.get_end())
             continue
 
         if jj.get_end() == FIRST_LAST_JUNC:
-            alt_empty_ends.append(jj.get_start())
+            # alt_empty_ends.push_back(jj.get_start())
             continue
-        sg_junction(gne_id, jj.get_start(), jj.get_end()).add(annotated=jj.get_annot())
+        sg_junction(gne_id, jj.get_start(), jj.get_end(), jj.get_annot())
 
     for ex_pair in gne.exon_map_:
         ex = ex_pair.second
 
-        alt_start = []
-        for jj in ex.ib:
-            if jj.get_end() in alt_empty_starts:
-                alt_start.append(jj.get_end())
 
-        alt_ends = []
-        for jj in ex.ob:
-            if jj.get_start() in alt_empty_ends:
-                alt_ends.append(jj.get_start())
-
-        extra_coords = []
-        if ex.annot_:
-            if ex.get_start() < ex.db_start_:
-                extra_coords.append([ex.get_start(), ex.db_start_ - 1])
-            if ex.get_end() > ex.db_end_:
-                extra_coords.append([ex.db_end_ + 1, ex.get_end()])
+        # for jj in ex.ib:
+        #     if jj.get_end() in alt_empty_starts:
+        #         alt_start.push_back(jj.get_end())
+        #
+        # for jj in ex.ob:
+        #     if jj.get_start() in alt_empty_ends:
+        #         alt_ends.push_back(jj.get_start())
+        #
+        # extra_coords = []
+        # if ex.annot_:
+        #     if ex.get_start() < ex.db_start_:
+        #         extra_coords.append([ex.get_start(), ex.db_start_ - 1])
+        #     if ex.get_end() > ex.db_end_:
+        #         extra_coords.append([ex.db_end_ + 1, ex.get_end()])
 
         sg_exon(gne_id, ex.get_start(), ex.get_end(), ex.annot_ )#, alt_starts=alt_start, alt_ends=alt_ends)
+        # alt_start.clear()
+        # alt_ends.clear()
     # for ir in gne.intron_vec_:
     #     sg_intron_retention(gne_id, ir.get_start(), ir.get_end()).add(annotated=ir.get_annot())
 
