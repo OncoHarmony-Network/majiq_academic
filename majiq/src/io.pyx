@@ -24,7 +24,7 @@ cdef list gene_name_keys = ['Name', 'gene_name']
 cdef list gene_id_keys = ['ID', 'gene_id']
 
 
-cdef int  read_gff(str filename, map[string, Gene*]& all_genes, vector[string]& gid_vec, object logging) except -1:
+cdef int  read_gff(str filename, map[string, Gene*] all_genes, vector[string] gid_vec, object logging) except -1:
     """
     :param filename: GFF input filename
     :param list_of_genes: List of genes that will be updated with all the gene_id detected on the gff file
