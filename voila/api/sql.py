@@ -35,7 +35,10 @@ class SQLType(ABC):
 
 class SQL:
     def __init__(self, filename: str, model, delete: bool = False, nprocs: int = 1):
-        filename = os.path.expanduser(filename)
+        try:
+            filename = filename.decode()
+        except AttributeError:
+            pass
 
         if delete is True:
             try:
