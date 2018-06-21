@@ -4,8 +4,12 @@ from libc.string cimport strlen
 from libcpp cimport bool
 from libcpp.string cimport string
 
+cdef extern from "<unistd.h>":
+    int usleep(int usec) nogil
 
 cdef extern from "sqlite3/sqlite3.h":
+    int SQLITE_LOCKED
+    int SQLITE_BUSY
     struct sqlite3
     int sqlite3_open(const char *filename, sqlite3 ** ppDb) nogil
     int sqlite3_exec(sqlite3*, const char *sql, int (*callback)(void*, int, char**, char**), void *,
@@ -14,6 +18,7 @@ cdef extern from "sqlite3/sqlite3.h":
     void sqlite3_free(void*) nogil
 
 cdef:
+    int rc
     char *zErrMsg = <char *> 0
 
     char *begin_trans = "PRAGMA foreign_keys = ON;BEGIN TRANSACTION;"
@@ -64,14 +69,21 @@ cdef int callback(void *NotUsed, int argc, char ** argv, char ** azColName) nogi
     return 0
 
 cdef int exec_db(sqlite3 *db, string sql) nogil:
-    cdef:
-        char rc = 5
+    cdef int exec_tries_count = 1000 * 1
 
-    while rc == 5:
+    while exec_tries_count:
         rc = sqlite3_exec(db, sql.c_str(), callback, <void *> 0, &zErrMsg)
+        if rc != SQLITE_BUSY and rc != SQLITE_LOCKED:
+            break
+        usleep(1000)
+        exec_tries_count -= 1
 
-    if rc != 0:
-        fprintf(stderr, "%s\n", zErrMsg)
+    if not exec_tries_count:
+        fprintf(stderr, 'exec_db timed out\n')
+        fprintf(stderr, '%s\n', sql.c_str())
+
+    if rc:
+        fprintf(stderr, "%s: %d\n", zErrMsg, rc)
         sqlite3_free(zErrMsg)
 
     return rc
@@ -94,7 +106,6 @@ cdef void gene(sqlite3 *db, string id, string name, string strand, string chromo
         int arg_len
         char *sql
         int rm_chars_len
-        int err = 5
 
     arg_len = id.length() + name.length() + strand.length() + chromosome.length()
     rm_chars_len = 4 * 2
@@ -103,7 +114,7 @@ cdef void gene(sqlite3 *db, string id, string name, string strand, string chromo
     sprintf(sql, gene_insert, id.c_str(), name.c_str(), strand.c_str(), chromosome.c_str())
 
     if exec_db(db, sql):
-        fprintf(stderr, "Error inserting gene: %d\n", err)
+        fprintf(stderr, "Error inserting gene\n")
         fprintf(stderr, "\tid: %s\n", id.c_str())
         fprintf(stderr, "\tname: %s\n", name.c_str())
         fprintf(stderr, "\tstrand: %s\n", strand.c_str())
@@ -231,7 +242,8 @@ cdef void junction_reads(sqlite3 *db, int reads, string exp_name, string junc_ge
     rm_chars_len = 8 * 2
     sql = <char *> malloc(sizeof(char) * (strlen(junc_reads_insert) + arg_len - rm_chars_len + 1))
 
-    sprintf(sql, junc_reads_insert, reads, exp_name.c_str(), junc_gene_id.c_str(), junc_start, junc_end, junc_gene_id.c_str(),
+    sprintf(sql, junc_reads_insert, reads, exp_name.c_str(), junc_gene_id.c_str(), junc_start, junc_end,
+            junc_gene_id.c_str(),
             junc_start,
             junc_end)
 
