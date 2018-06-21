@@ -1,7 +1,7 @@
 from libc.stdio cimport printf, sprintf, fprintf, stderr
 from libc.stdlib cimport malloc, free, abort, abs
 from libc.string cimport strlen
-
+from libcpp cimport bool
 from libcpp.string cimport string
 
 
@@ -13,12 +13,6 @@ cdef extern from "sqlite3/sqlite3.h":
     int sqlite3_close(sqlite3*) nogil
     void sqlite3_free(void*) nogil
 
-# cdef extern from "<string.h>" nogil:
-#     size_t strlen(const char *s)
-
-cdef extern from "<string>" nogil:
-    string to_string (int val);
-
 cdef:
     char rc
     char *zErrMsg = <char *> 0
@@ -29,6 +23,8 @@ cdef:
     char *gene_insert = "INSERT INTO gene " \
                         "('id','name','strand','chromosome') " \
                         "VALUES ('%s','%s','%s','%s');"
+    char *alt_start_insert = "INSERT INTO alt_start (gene_id, coordinate) VALUES ('%s', %d);"
+    char *alt_end_insert = "INSERT INTO alt_end (gene_id, coordinate) VALUES ('%s', %d);"
     char *exon_insert = "INSERT INTO exon " \
                         "(gene_id, start, end, annotated_start, annotated_end, annotated) " \
                         "VALUES ('%s',%d,%d,%d,%d,%d);"
@@ -59,7 +55,6 @@ cdef int int_len(int value) nogil:
         value /= 10
 
     return l
-
 
 cdef int callback(void *NotUsed, int argc, char ** argv, char ** azColName) nogil:
     cdef:
@@ -110,13 +105,40 @@ cdef void gene(sqlite3 *db, string id, string name, string strand, string chromo
 
     free(sql)
 
-cdef void exon(sqlite3 *db, string gene_id, int start, int end, int annotated_start, int annotated_end, int annotated) nogil:
+cdef void alt_gene(sqlite3 *db, string gene_id, int coordinate, char *sql_string) nogil:
+    cdef:
+        int arg_len
+        char *sql
+        int rm_chars_len
+
+    arg_len = gene_id.length() + int_len(coordinate)
+    rm_chars_len = 2 * 2
+
+    sql = <char *> malloc(sizeof(char) * (strlen(sql_string) + arg_len - rm_chars_len + 1))
+    sprintf(sql, sql_string, gene_id.c_str(), coordinate)
+    if exec_db(db, sql):
+        fprintf(stderr, "Error inserting gene:\n")
+        fprintf(stderr, "\tgene_id: %s\n", gene_id.c_str())
+        fprintf(stderr, "\tcoordinate: %d\n", coordinate)
+        abort()
+
+    free(sql)
+
+cdef void alt_start(sqlite3 *db, string gene_id, int coordinate) nogil:
+    alt_gene(db, gene_id, coordinate, alt_start_insert)
+
+cdef void alt_end(sqlite3 *db, string gene_id, int coordinate) nogil:
+    alt_gene(db, gene_id, coordinate, alt_end_insert)
+
+cdef void exon(sqlite3 *db, string gene_id, int start, int end, int annotated_start, int annotated_end,
+               bool annotated) nogil:
     cdef:
         int arg_len
         int rm_chars_len
         char *sql
 
-    arg_len = gene_id.length() + int_len(start) + int_len(end) + int_len(annotated_start) + int_len(annotated_end) + int_len(annotated)
+    arg_len = gene_id.length() + int_len(start) + int_len(end) + int_len(annotated_start) + int_len(
+        annotated_end) + int_len(annotated)
     rm_chars_len = 6 * 2
     sql = <char *> malloc(sizeof(char) * (strlen(exon_insert) + arg_len - rm_chars_len + 1))
     sprintf(sql, exon_insert, gene_id.c_str(), start, end, annotated_start, annotated_end, annotated)
@@ -132,9 +154,7 @@ cdef void exon(sqlite3 *db, string gene_id, int start, int end, int annotated_st
 
     free(sql)
 
-
-
-cdef void junction(sqlite3 *db, string gene_id, int start, int end, int annotated) nogil:
+cdef void junction(sqlite3 *db, string gene_id, int start, int end, bool annotated) nogil:
     cdef:
         int arg_len
         int rm_chars_len
@@ -154,7 +174,7 @@ cdef void junction(sqlite3 *db, string gene_id, int start, int end, int annotate
 
     free(sql)
 
-cdef void intron_retention(sqlite3 *db, string gene_id, int start, int end, int annotated) nogil:
+cdef void intron_retention(sqlite3 *db, string gene_id, int start, int end, bool annotated) nogil:
     cdef:
         int arg_len
         int rm_chars_len
