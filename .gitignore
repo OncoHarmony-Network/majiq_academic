@@ -1,5 +1,6 @@
 *.pyc
 *.c
+*.cpp
 .DS_Store
 .idea
 voila/templates/.idea
