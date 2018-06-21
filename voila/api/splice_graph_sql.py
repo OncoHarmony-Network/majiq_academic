@@ -144,15 +144,7 @@ class Exons(SpliceGraphSQL):
             self.end = int(end)
 
         def add(self, **kwargs):
-            coords_extra = kwargs.pop('coords_extra', [])
-            alt_ends = kwargs.pop('alt_ends', [])
-            alt_starts = kwargs.pop('alt_starts', [])
-
             exon = model.Exon(gene_id=self.gene_id, start=self.start, end=self.end, **kwargs)
-            exon.coords_extra = [model.CoordsExtra(start=int(s), end=int(e)) for s, e in coords_extra]
-            exon.alt_ends = [model.AltEnds(coordinate=int(alt_end)) for alt_end in alt_ends]
-            exon.alt_starts = [model.AltStarts(coordinate=int(alt_start)) for alt_start in alt_starts]
-
             self.sql.add(exon)
             self.sql.commit(default_commit_on_count)
             return exon
@@ -164,8 +156,11 @@ class Exons(SpliceGraphSQL):
         @property
         def exists(self):
             return self.sql.session.query(
-                exists().where(and_(model.Exon.gene_id == self.gene_id, model.Exon.start == self.start,
-                                    model.Exon.end == self.end))).scalar()
+                exists().where(and_(
+                    model.Exon.gene_id == self.gene_id,
+                    model.Exon.start == self.start,
+                    model.Exon.end == self.end
+                ))).scalar()
 
     def exon(self, gene_id: str, start: int, end: int):
         return self._Exon(self, gene_id, start, end)
@@ -196,8 +191,11 @@ class Junctions(SpliceGraphSQL):
         @property
         def exists(self):
             return self.sql.session.query(
-                exists().where(and_(model.Junction.gene_id == self.gene_id, model.Junction.start == self.start,
-                                    model.Junction.end == self.end))).scalar()
+                exists().where(and_(
+                    model.Junction.gene_id == self.gene_id,
+                    model.Junction.start == self.start,
+                    model.Junction.end == self.end
+                ))).scalar()
 
         @property
         def get(self):
@@ -233,9 +231,17 @@ class Genes(SpliceGraphSQL):
             self.gene_id = str(gene_id)
 
         def add(self, **kwargs):
+            alt_ends = kwargs.pop('alt_ends', [])
+            alt_starts = kwargs.pop('alt_starts', [])
+
             g = model.Gene(id=self.gene_id, **kwargs)
+
+            g.alt_starts = [model.AltStart(gene_id=self.gene_id, coordinate=int(s)) for s in alt_starts]
+            g.alt_ends = [model.AltEnd(gene_id=self.gene_id, coordinate=int(e)) for e in alt_ends]
+
             self.sql.add(g)
             self.sql.commit(default_commit_on_count)
+
             return g
 
         @property

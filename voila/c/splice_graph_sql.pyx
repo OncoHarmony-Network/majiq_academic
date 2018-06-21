@@ -1,6 +1,9 @@
 from libc.stdio cimport printf, sprintf, fprintf, stderr
-from libc.stdlib cimport malloc, free, abort
+from libc.stdlib cimport malloc, free, abort, abs
 from libc.string cimport strlen
+
+from libcpp.string cimport string
+
 
 cdef extern from "sqlite3/sqlite3.h":
     struct sqlite3
@@ -8,8 +11,13 @@ cdef extern from "sqlite3/sqlite3.h":
     int sqlite3_exec(sqlite3*, const char *sql, int (*callback)(void*, int, char**, char**), void *,
                      char ** errmsg) nogil
     int sqlite3_close(sqlite3*) nogil
-    void sqlite3_free(void*)nogil
+    void sqlite3_free(void*) nogil
 
+# cdef extern from "<string.h>" nogil:
+#     size_t strlen(const char *s)
+
+cdef extern from "<string>" nogil:
+    string to_string (int val);
 
 cdef:
     char rc
@@ -22,8 +30,8 @@ cdef:
                         "('id','name','strand','chromosome') " \
                         "VALUES ('%s','%s','%s','%s');"
     char *exon_insert = "INSERT INTO exon " \
-                        "(gene_id, start, end, annotated) " \
-                        "VALUES ('%s',%d,%d,%d);"
+                        "(gene_id, start, end, annotated_start, annotated_end, annotated) " \
+                        "VALUES ('%s',%d,%d,%d,%d,%d);"
     char *junc_insert = "INSERT INTO junction " \
                         "(gene_id, start, end, has_reads, annotated) " \
                         "VALUES ('%s',%d,%d,0,%d);"
@@ -42,14 +50,16 @@ cdef:
                             "WHERE gene_id='%s' AND start=%d AND 'end'=%d;"
 
 cdef int int_len(int value) nogil:
-    cdef:
-        int l = not value
+    cdef int l = (not value) + (value < 0)
+
+    value = abs(value)
 
     while value:
         l += 1
         value /= 10
 
     return l
+
 
 cdef int callback(void *NotUsed, int argc, char ** argv, char ** azColName) nogil:
     cdef:
@@ -100,25 +110,29 @@ cdef void gene(sqlite3 *db, string id, string name, string strand, string chromo
 
     free(sql)
 
-cdef void exon(sqlite3 *db, string gene_id, int start, int end, int annotated) nogil:
+cdef void exon(sqlite3 *db, string gene_id, int start, int end, int annotated_start, int annotated_end, int annotated) nogil:
     cdef:
         int arg_len
         int rm_chars_len
         char *sql
 
-    arg_len = gene_id.length() + int_len(start) + int_len(end) + int_len(annotated)
-    rm_chars_len = 4 * 2
+    arg_len = gene_id.length() + int_len(start) + int_len(end) + int_len(annotated_start) + int_len(annotated_end) + int_len(annotated)
+    rm_chars_len = 6 * 2
     sql = <char *> malloc(sizeof(char) * (strlen(exon_insert) + arg_len - rm_chars_len + 1))
-    sprintf(sql, exon_insert, gene_id.c_str(), start, end, annotated)
+    sprintf(sql, exon_insert, gene_id.c_str(), start, end, annotated_start, annotated_end, annotated)
     if exec_db(db, sql):
         fprintf(stderr, "Error inserting exon:\n")
         fprintf(stderr, "\tgene_id: %s\n", gene_id.c_str())
         fprintf(stderr, "\tstart: %d\n", start)
         fprintf(stderr, "\tend: %d\n", end)
+        fprintf(stderr, "\tannotated start: %d\n", annotated_start)
+        fprintf(stderr, "\tannotated end: %d\n", annotated_end)
         fprintf(stderr, "\tannotated: %d\n", annotated)
         abort()
 
     free(sql)
+
+
 
 cdef void junction(sqlite3 *db, string gene_id, int start, int end, int annotated) nogil:
     cdef:
@@ -190,7 +204,8 @@ cdef void junction_reads(sqlite3 *db, int reads, string exp_name, string junc_ge
     rm_chars_len = 8 * 2
     sql = <char *> malloc(sizeof(char) * (strlen(junc_reads_insert) + arg_len - rm_chars_len + 1))
 
-    sprintf(sql, junc_reads_insert, reads, exp_name.c_str(), junc_gene_id.c_str(), junc_start, junc_end, junc_gene_id, junc_start,
+    sprintf(sql, junc_reads_insert, reads, exp_name.c_str(), junc_gene_id.c_str(), junc_start, junc_end, junc_gene_id,
+            junc_start,
             junc_end)
     if exec_db(db, sql):
         fprintf(stderr, "Error inserting junc reads:\n")
@@ -215,7 +230,8 @@ cdef void intron_retention_reads(sqlite3 *db, int reads, string exp_name, string
     rm_chars_len = 8 * 2
 
     sql = <char *> malloc(sizeof(char) * (strlen(ir_reads_insert) + arg_len - rm_chars_len + 1))
-    sprintf(sql, ir_reads_insert, reads, exp_name.c_str(), ir_gene_id.c_str(), ir_start, ir_end, ir_gene_id.c_str(), ir_start, ir_end)
+    sprintf(sql, ir_reads_insert, reads, exp_name.c_str(), ir_gene_id.c_str(), ir_start, ir_end, ir_gene_id.c_str(),
+            ir_start, ir_end)
 
     if exec_db(db, sql):
         fprintf(stderr, "Error inserting ir reads:\n")

@@ -37,44 +37,22 @@ class Experiment(Base):
     name = Column(String, primary_key=True)
 
 
-class CoordsExtra(Base):
-    __tablename__ = 'coords_extra'
+class AltStart(Base):
+    __tablename__ = 'alt_start'
     __iter__ = base_iter
-    id = Column(Integer, primary_key=True)
-    start = Column(Integer)
-    end = Column(Integer)
-    exon_gene_id = Column(String)
-    exon_start = Column(Integer)
-    exon_end = Column(Integer)
+    gene_id = Column(String, primary_key=True)
+    coordinate = Column(Integer, primary_key=True)
 
-    __table_args__ = (
-        ForeignKeyConstraint([exon_gene_id, exon_start, exon_end], ['exon.gene_id', 'exon.start', 'exon.end']),)
+    __table_args__ = (ForeignKeyConstraint((gene_id,), ['gene.id']),)
 
 
-class AltStarts(Base):
-    __tablename__ = 'alt_starts'
+class AltEnd(Base):
+    __tablename__ = 'alt_end'
     __iter__ = base_iter
-    id = Column(Integer, primary_key=True)
-    coordinate = Column(Integer)
-    exon_gene_id = Column(String)
-    exon_start = Column(Integer)
-    exon_end = Column(Integer)
+    gene_id = Column(String, primary_key=True)
+    coordinate = Column(Integer, primary_key=True)
 
-    __table_args__ = (
-        ForeignKeyConstraint([exon_gene_id, exon_start, exon_end], ['exon.gene_id', 'exon.start', 'exon.end']),)
-
-
-class AltEnds(Base):
-    __tablename__ = 'alt_ends'
-    __iter__ = base_iter
-    id = Column(Integer, primary_key=True)
-    coordinate = Column(Integer)
-    exon_gene_id = Column(String)
-    exon_start = Column(Integer)
-    exon_end = Column(Integer)
-
-    __table_args__ = (
-        ForeignKeyConstraint([exon_gene_id, exon_start, exon_end], ['exon.gene_id', 'exon.start', 'exon.end']),)
+    __table_args__ = (ForeignKeyConstraint((gene_id,), ['gene.id']),)
 
 
 class JunctionReads(Base):
@@ -88,7 +66,7 @@ class JunctionReads(Base):
     junction_end = Column(Integer, primary_key=True)
 
     __table_args__ = (
-        ForeignKeyConstraint([junction_gene_id, junction_start, junction_end],
+        ForeignKeyConstraint((junction_gene_id, junction_start, junction_end),
                              ['junction.gene_id', 'junction.start', 'junction.end']),)
 
 
@@ -103,7 +81,7 @@ class IntronRetentionReads(Base):
     intron_retention_end = Column(Integer, primary_key=True)
 
     __table_args__ = (
-        ForeignKeyConstraint([intron_retention_gene_id, intron_retention_start, intron_retention_end],
+        ForeignKeyConstraint((intron_retention_gene_id, intron_retention_start, intron_retention_end),
                              ['intron_retention.gene_id', 'intron_retention.start', 'intron_retention.end']),)
 
 
@@ -127,7 +105,8 @@ class Exon(Base):
     gene_id = Column(String, ForeignKey('gene.id'), primary_key=True)
     start = Column(Integer, primary_key=True)
     end = Column(Integer, primary_key=True)
-
+    annotated_start = Column(Integer, default=-1)
+    annotated_end = Column(Integer, default=-1)
     annotated = Column(Boolean)
 
     gene = relationship('Gene')
@@ -181,6 +160,8 @@ class Gene(Base):
     chromosome = Column(String)
 
     junctions = relationship('Junction')
+    alt_starts = relationship('AltStart')
+    alt_ends = relationship('AltEnd')
 
     @property
     def start(self):
