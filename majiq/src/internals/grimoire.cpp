@@ -201,6 +201,7 @@ namespace grimoire {
     void Gene::fill_junc_tlb(map<string, vector<string>> &tlb){
 
         for(const auto &j: junc_map_){
+//cout << "C++ print:: "<< id_ << " :: "<< (j.second)->get_start() << " :: "<< (j.second)->get_end() << " :: "<< (j.second)->get_denovo_bl() << "\n" ;
             if (!(j.second)->get_denovo_bl()) continue ;
             const string key = chromosome_ + ":" + strand_ + ":" + j.first ;
             const string key2 = chromosome_ + ":.:" + j.first ;
