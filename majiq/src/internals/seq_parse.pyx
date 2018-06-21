@@ -43,7 +43,7 @@ cdef void update_splicegraph_junction(sqlite3 *db, string gene_id, int start, in
 
 cdef int _output_lsv_file_single(vector[LSV*] out_lsvlist, string experiment_name, map[string, vector[string]] tlb_j_g,
                                  map[string, Gene*] gene_map, str outDir, int nthreads, unsigned int msamples,
-                                 bint irb, int strandness):
+                                 bint irb, int strandness) except -1:
     cdef dict cov_dict = {}
     cdef int nlsv = out_lsvlist.size()
     cdef str out_file, junc_file
@@ -67,16 +67,12 @@ cdef int _output_lsv_file_single(vector[LSV*] out_lsvlist, string experiment_nam
     cdef string geneid
     cdef Gene* gneObj
     cdef sqlite3* db
-    cdef string sg_filename = get_builder_splicegraph_filename(outDir)
+    cdef string sg_filename = get_builder_splicegraph_filename(outDir).encode('utf-8')
 
-    junc_file = "%s/%s.juncs" % (outDir, experiment_name)
-    out_file = "%s/%s.majiq" % (outDir, experiment_name)
+    junc_file = "%s/%s.juncs" % (outDir, experiment_name.decode('utf-8'))
+    out_file = "%s/%s.majiq" % (outDir, experiment_name.decode('utf-8'))
     #print("###", junc_file, get_builder_splicegraph_filename(outDir))
 
-
-
-
-    # with SpliceGraph(get_builder_splicegraph_filename(outDir)) as sg:
     with open(junc_file, 'rb') as fp:
         all_juncs = np.load(fp)
         boots = all_juncs['bootstrap']
@@ -251,7 +247,7 @@ cdef init_splicegraph(string filename, object conf):
 
     # erase splice graph file
     print(filename)
-    with SpliceGraph(filename, delete=True) as sg:
+    with SpliceGraph(filename.decode('utf-8'), delete=True) as sg:
         sg.experiment_names = conf.exp_list
         sg.genome = conf.genome
 
