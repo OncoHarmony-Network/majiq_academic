@@ -93,7 +93,8 @@ cdef int _output_lsv_file_single(vector[LSV*] out_lsvlist, string experiment_nam
                     continue
 
                 for gid in tlb_j_g[junc_ids[i][0]]:
-                    # print("ADD COUNT", i, gid.decode('utf-8'), junc_ids[i][1], junc_ids[i][2], junc_ids[i][3], junc_ids[i][0], experiment_name)
+                    # print("ADD COUNT", i, gid.decode('utf-8'), junc_ids[i][1], junc_ids[i][2], junc_ids[i][3],
+                    # junc_ids[i][0], experiment_name)
                     update_splicegraph_junction(db, gid, junc_ids[i][1], junc_ids[i][2],
                                                 junc_ids[i][3], experiment_name)
 

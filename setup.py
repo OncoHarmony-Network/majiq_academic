@@ -17,8 +17,8 @@ if sys.platform == 'darwin':
     # compile_args.append('-stdlib=libc++')
     linker_args = ['-L/usr/local/opt/llvm/lib'] + linker_args
 
-os.environ['CC'] = 'g++-8'
-os.environ['CXX'] = 'g++-8'
+# os.environ['CC'] = 'g++-8'
+# os.environ['CXX'] = 'g++-8'
 
 include_librs = ['majiq/src/internals', numpy.get_include()] + pysam.get_include()
 pysam_library_path = [os.path.abspath(os.path.join(os.path.dirname(pysam.__file__)))]
@@ -28,7 +28,7 @@ extensions = [Extension('majiq.src.internals.seq_parse',
                         include_dirs=include_librs,
                         library_dirs=pysam_library_path,
                         libraries=['htslib'],
-                        runtime_library_dirs=pysam_library_path,
+                        runtime_library_dirs=pysam_library_path + ['majiq/src/internals'],
                         extra_compile_args=compile_args,  extra_link_args=linker_args,
                         language='c++', gdb_debug=True)]
 
