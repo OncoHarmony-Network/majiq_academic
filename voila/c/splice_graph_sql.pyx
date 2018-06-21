@@ -4,9 +4,6 @@ from libc.string cimport strlen
 from libcpp cimport bool
 from libcpp.string cimport string
 
-cdef extern from "<unistd.h>":
-    int usleep(int usec) nogil
-
 cdef extern from "sqlite3/sqlite3.h":
     int SQLITE_LOCKED
     int SQLITE_BUSY
@@ -69,17 +66,16 @@ cdef int callback(void *NotUsed, int argc, char ** argv, char ** azColName) nogi
     return 0
 
 cdef int exec_db(sqlite3 *db, string sql) nogil:
-    cdef int exec_tries_count = 1000 * 1
+    cdef int exec_tries_count = 1000 * 120
 
     while exec_tries_count:
         rc = sqlite3_exec(db, sql.c_str(), callback, <void *> 0, &zErrMsg)
         if rc != SQLITE_BUSY and rc != SQLITE_LOCKED:
             break
-        usleep(1000)
         exec_tries_count -= 1
 
     if not exec_tries_count:
-        fprintf(stderr, 'exec_db timed out\n')
+        fprintf(stderr, 'exec_db ran out of tries\n')
         fprintf(stderr, '%s\n', sql.c_str())
 
     if rc:
@@ -232,6 +228,9 @@ cdef void experiment(sqlite3 *db, string name) nogil:
 
 cdef void junction_reads(sqlite3 *db, int reads, string exp_name, string junc_gene_id, int junc_start,
                          int junc_end) nogil:
+    if not reads:
+        return
+
     cdef:
         int arg_len
         int rm_chars_len
@@ -261,6 +260,9 @@ cdef void junction_reads(sqlite3 *db, int reads, string exp_name, string junc_ge
 
 cdef void intron_retention_reads(sqlite3 *db, int reads, string exp_name, string ir_gene_id, int ir_start,
                                  int ir_end) nogil:
+    if not reads:
+        return
+
     cdef:
         int arg_len
         int rm_chars_len
