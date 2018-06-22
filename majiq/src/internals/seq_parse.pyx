@@ -45,7 +45,7 @@ cdef void update_splicegraph_junction(sqlite3 *db, string gene_id, int start, in
 
 cdef int _output_lsv_file_single(vector[LSV*] out_lsvlist, string experiment_name, map[string, vector[string]] tlb_j_g,
                                  map[string, Gene*] gene_map, str outDir, int nthreads, unsigned int msamples,
-                                 bint irb, int strandness) except -1:
+                                 bint irb, int strandness, object logger) except -1:
     cdef dict cov_dict = {}
     cdef int nlsv = out_lsvlist.size()
     cdef str out_file, junc_file
@@ -82,6 +82,7 @@ cdef int _output_lsv_file_single(vector[LSV*] out_lsvlist, string experiment_nam
         boots = all_juncs['bootstrap']
         junc_ids = all_juncs['junc_info']
         njunc = junc_ids.shape[0]
+        logger.info("update splicegraph")
         db = open_db(sg_filename)
         ''' If we move towards this solution we can remove elements in Jinfo and make it smaller'''
         #TODO: with tlb_j_g we can filter junctions are no present in this case like smaller annot db
@@ -117,6 +118,8 @@ cdef int _output_lsv_file_single(vector[LSV*] out_lsvlist, string experiment_nam
                                                               junc_ids[i][3], junc_ids[i][4])
         close_db(db)
         del junc_ids
+
+        logger.info("Create majiq file")
 
         for j in prange(nlsv, nogil=True, num_threads=nthreads):
             lsv_ptr = out_lsvlist[j]
@@ -403,7 +406,7 @@ cdef _core_build(str transcripts, list file_list, object conf, object logger):
     for j in range(nsamples):
         strandness = conf.strand_specific[file_list[j][0]]
         cnt = _output_lsv_file_single(out_lsvlist, file_list[j][0].encode('utf-8'), gene_junc_tlb, gene_map, conf.outDir, nthreads,
-                                      m, ir, strandness)
+                                      m, ir, strandness, logger)
         logger.info('%s: %d LSVs' %(file_list[j][0], cnt))
 
 cpdef core_build(str transcripts, list file_list, object conf, object logger):
