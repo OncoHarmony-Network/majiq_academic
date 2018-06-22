@@ -6,7 +6,7 @@ from libcpp.map cimport map
 from libcpp.vector cimport vector
 
 from majiq.src.internals.grimoire cimport Gene, Exon, Junction
-from majiq.grimoire.lsv import quant_lsv
+from majiq.src.internals import quant_lsv
 
 from majiq.src.gff import parse_gff3
 from majiq.src.constants import *

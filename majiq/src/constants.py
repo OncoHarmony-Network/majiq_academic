@@ -1,4 +1,4 @@
-VERSION = '1.2'
+VERSION = '2.0'
 
 JUNC_FILE_FORMAT = 'sjdb'
 SEQ_FILE_FORMAT = 'bam'

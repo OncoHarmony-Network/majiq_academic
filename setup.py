@@ -5,48 +5,49 @@ from majiq.src.constants import VERSION
 import numpy
 import sys
 import os
-try:
-    import pysam
-except ImportError:
-    raise Exception('pysam not found; please install pysam first')
+
+print("COMPILER ", os.environ.get("CXX", None))
+
+extensions = []
+HTSLIB_LIBRARY = ['hts', 'z']
+HTSLIB_LIB_DIRS = [os.environ.get("HTSLIB_LIBRARY_DIR", '/usr/local/lib')]
+HTSLIB_INC_DIRS = [os.environ.get("HTSLIB_INCLUDE_DIR", '/usr/local/include')]
+
 
 compile_args = ['-fopenmp', '-std=c++11']
 linker_args = ['-lgomp', '-std=c++11']
 
 if sys.platform == 'darwin':
-    # compile_args.append('-stdlib=libc++')
+    compile_args.append('-stdlib=libc++')
     linker_args = ['-L/usr/local/opt/llvm/lib'] + linker_args
 
-# os.environ['CC'] = 'g++-8'
-# os.environ['CXX'] = 'g++-8'
 
-include_librs = ['majiq/src/internals', numpy.get_include()] + pysam.get_include()
-pysam_library_path = [os.path.abspath(os.path.join(os.path.dirname(pysam.__file__)))]
-extensions = [Extension('majiq.src.internals.seq_parse',
-                        ['majiq/src/internals/seq_parse.pyx', 'majiq/src/internals/io_bam.cpp',
-                         'majiq/src/internals/grimoire.cpp'],
-                        include_dirs=include_librs,
-                        library_dirs=pysam_library_path,
-                        libraries=['htslib'],
-                        runtime_library_dirs=pysam_library_path + ['majiq/src/internals'],
-                        extra_compile_args=compile_args,  extra_link_args=linker_args,
-                        language='c++', gdb_debug=True)]
+MAJIQ_INC_DIRS = ['majiq/src/internals', 'voila/c']
+MAJIQ_LIB_DIRS = ['majiq/src/internals']
+NPY_INC_DIRS   = [numpy.get_include()]
 
-extensions += [Extension('majiq.src.io', ['majiq/src/io.pyx'], language='c++', include_dirs=include_librs,
+extensions += [Extension('majiq.src.internals.seq_parse', ['majiq/src/internals/seq_parse.pyx',
+                                                          'majiq/src/internals/io_bam.cpp',
+                                                          'majiq/src/internals/grimoire.cpp'],
+                        include_dirs=MAJIQ_INC_DIRS + NPY_INC_DIRS + HTSLIB_INC_DIRS,
+                        library_dirs=HTSLIB_LIB_DIRS + MAJIQ_LIB_DIRS,
+                        libraries=HTSLIB_LIBRARY,
+                        runtime_library_dirs=HTSLIB_LIB_DIRS + MAJIQ_LIB_DIRS,
+                        extra_compile_args=compile_args,  extra_link_args=linker_args, language='c++')]
+
+extensions += [Extension('majiq.src.io', ['majiq/src/io.pyx'], language='c++',
+                         include_dirs=NPY_INC_DIRS + MAJIQ_INC_DIRS,
                          extra_compile_args=compile_args,  extra_link_args=linker_args,)]
 
-extensions += [Extension('majiq.src.normalize', ['majiq/src/normalize.pyx'], include_dirs=[numpy.get_include()])]
-extensions += [Extension('majiq.grimoire.junction', ['majiq/grimoire/junction.pyx'])]
-extensions += [Extension('majiq.grimoire.lsv', ['majiq/grimoire/lsv.pyx'], include_dirs=[numpy.get_include()])]
-extensions += [Extension('majiq.grimoire.exon', ['majiq/grimoire/exon.pyx'], include_dirs=[numpy.get_include()])]
+extensions += [Extension('majiq.src.normalize', ['majiq/src/normalize.pyx'],     include_dirs=NPY_INC_DIRS)]
 extensions += [Extension('majiq.src.plotting', ['majiq/src/plotting.pyx'])]
-extensions += [Extension('majiq.src.polyfitnb', ['majiq/src/polyfitnb.pyx'], include_dirs=[numpy.get_include()])]
-inc_dirs = [numpy.get_include()]
-inc_dirs.extend(pysam.get_include())
-extensions += [Extension('majiq.src.psi', ['majiq/src/psi.pyx'], include_dirs=inc_dirs)]
-extensions += [Extension('majiq.src.sample', ['majiq/src/sample.pyx'], include_dirs=[numpy.get_include()])]
-extensions += [Extension('majiq.src.adjustdelta', ['majiq/src/adjustdelta.pyx'], include_dirs=[numpy.get_include()])]
-extensions += [Extension('voila.c.splice_graph_sql', ['voila/c/splice_graph_sql.pyx'])]
+extensions += [Extension('majiq.src.polyfitnb', ['majiq/src/polyfitnb.pyx'],     include_dirs=NPY_INC_DIRS)]
+extensions += [Extension('majiq.src.psi', ['majiq/src/psi.pyx'],                 include_dirs=NPY_INC_DIRS)]
+extensions += [Extension('majiq.src.sample', ['majiq/src/sample.pyx'],           include_dirs=NPY_INC_DIRS)]
+extensions += [Extension('majiq.src.adjustdelta', ['majiq/src/adjustdelta.pyx'], include_dirs=NPY_INC_DIRS)]
+extensions += [Extension('voila.c.splice_graph_sql', ['voila/c/splice_graph_sql.pyx'], language='c++',
+                         include_dirs=NPY_INC_DIRS, extra_compile_args=compile_args,
+                         extra_link_args=linker_args)]
 
 setup(
     name="majiq",
