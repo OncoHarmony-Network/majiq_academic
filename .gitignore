@@ -1,5 +1,6 @@
 *.pyc
 *.c
+!voila/c/sqlite3.c
 *.cpp
 .DS_Store
 .idea

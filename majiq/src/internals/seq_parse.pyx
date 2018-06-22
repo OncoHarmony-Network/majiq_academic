@@ -22,7 +22,7 @@ from cython.parallel import prange
 
 
 
-cdef extern from "sqlite3/sqlite3.h":
+cdef extern from "sqlite3.h":
     struct sqlite3
 
 import numpy as np

@@ -3,7 +3,7 @@ from libc.stdlib cimport malloc, free, abort, abs
 from libc.string cimport strlen
 from libcpp.string cimport string
 
-cdef extern from "sqlite3/sqlite3.h":
+cdef extern from "sqlite3.h":
     int SQLITE_LOCKED
     int SQLITE_BUSY
     struct sqlite3
