@@ -152,7 +152,7 @@ cdef int _output_lsv_file_single(vector[LSV*] out_lsvlist, string experiment_nam
                         cov_dict[lsvid.decode('utf-8')][junc_idx] = boots[jobj_ptr.index]
                         junc_info.append((lsvid.decode('utf-8'), ir_ptr.get_start(), ir_ptr.get_end(),
                                           jobj_ptr.sreads, jobj_ptr.npos))
-
+        logger.info("Dump majiq file")
         majiq_io.dump_lsv_coverage(out_file, cov_dict, type_list, junc_info, experiment_name.decode('utf-8'))
         tlb_juncs.clear()
         tlb_ir.clear()
