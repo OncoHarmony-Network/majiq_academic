@@ -18,11 +18,9 @@ compile_args = ['-fopenmp', '-std=c++11']
 linker_args = ['-lgomp', '-std=c++11']
 
 if sys.platform == 'darwin':
-    # compile_args.append('-stdlib=libc++')
+    compile_args.append('-stdlib=libc++')
     linker_args = ['-L/usr/local/opt/llvm/lib'] + linker_args
 
-os.environ['CC'] = 'gcc-8'
-os.environ['CXX'] = 'g++-8'
 
 MAJIQ_INC_DIRS = ['majiq/src/internals', 'voila/c']
 MAJIQ_LIB_DIRS = ['majiq/src/internals']
@@ -47,11 +45,7 @@ extensions += [Extension('majiq.src.polyfitnb', ['majiq/src/polyfitnb.pyx'],    
 extensions += [Extension('majiq.src.psi', ['majiq/src/psi.pyx'],                 include_dirs=NPY_INC_DIRS)]
 extensions += [Extension('majiq.src.sample', ['majiq/src/sample.pyx'],           include_dirs=NPY_INC_DIRS)]
 extensions += [Extension('majiq.src.adjustdelta', ['majiq/src/adjustdelta.pyx'], include_dirs=NPY_INC_DIRS)]
-
-# extensions += [Extension('voila.c.sqlite3', ['voila/c/sqlite3.c'])]
-
-
-extensions += [Extension('voila.c.splice_graph_sql', ['voila/c/splice_graph_sql.pyx', 'voila/c/sqlite3.c'], language='c++',
+extensions += [Extension('voila.c.splice_graph_sql', ['voila/c/splice_graph_sql.pyx'], language='c++',
                          include_dirs=NPY_INC_DIRS, extra_compile_args=compile_args,
                          extra_link_args=linker_args)]
 
