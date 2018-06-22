@@ -45,7 +45,7 @@ extensions += [Extension('majiq.src.polyfitnb', ['majiq/src/polyfitnb.pyx'],    
 extensions += [Extension('majiq.src.psi', ['majiq/src/psi.pyx'],                 include_dirs=NPY_INC_DIRS)]
 extensions += [Extension('majiq.src.sample', ['majiq/src/sample.pyx'],           include_dirs=NPY_INC_DIRS)]
 extensions += [Extension('majiq.src.adjustdelta', ['majiq/src/adjustdelta.pyx'], include_dirs=NPY_INC_DIRS)]
-extensions += [Extension('voila.c.splice_graph_sql', ['voila/c/splice_graph_sql.pyx'], language='c++',
+extensions += [Extension('voila.c.splice_graph_sql', ['voila/c/splice_graph_sql.pyx', 'voila/c/sqlite3.c'], language='c++',
                          include_dirs=NPY_INC_DIRS, extra_compile_args=compile_args,
                          extra_link_args=linker_args)]
 
