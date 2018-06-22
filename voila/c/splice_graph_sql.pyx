@@ -1,7 +1,6 @@
 from libc.stdio cimport printf, sprintf, fprintf, stderr
 from libc.stdlib cimport malloc, free, abort, abs
 from libc.string cimport strlen
-from libcpp cimport bool
 from libcpp.string cimport string
 
 cdef extern from "sqlite3/sqlite3.h":
@@ -145,7 +144,7 @@ cdef void alt_end(sqlite3 *db, string gene_id, int coordinate) nogil:
     alt_gene(db, gene_id, coordinate, alt_end_insert)
 
 cdef void exon(sqlite3 *db, string gene_id, int start, int end, int annotated_start, int annotated_end,
-               bool annotated) nogil:
+               bint annotated) nogil:
     cdef:
         int arg_len
         int rm_chars_len
@@ -168,7 +167,7 @@ cdef void exon(sqlite3 *db, string gene_id, int start, int end, int annotated_st
 
     free(sql)
 
-cdef void junction(sqlite3 *db, string gene_id, int start, int end, bool annotated) nogil:
+cdef void junction(sqlite3 *db, string gene_id, int start, int end, bint annotated) nogil:
     cdef:
         int arg_len
         int rm_chars_len
@@ -188,7 +187,7 @@ cdef void junction(sqlite3 *db, string gene_id, int start, int end, bool annotat
 
     free(sql)
 
-cdef void intron_retention(sqlite3 *db, string gene_id, int start, int end, bool annotated) nogil:
+cdef void intron_retention(sqlite3 *db, string gene_id, int start, int end, bint annotated) nogil:
     cdef:
         int arg_len
         int rm_chars_len
