@@ -20,7 +20,7 @@ cdef np.ndarray[DTYPE_t, ndim=1] _calc_mixture_pdf(np.ndarray[DTYPE_t, ndim=2] b
 
     for ii in np.arange(beta_param.shape[0]):
         bincdf = beta.cdf(x_pos, a=beta_param[ii, 0], b=beta_param[ii, 1])
-        mixture_pdf = mixture_pdf + (bincdf[1:] - bincdf[:-1] + 1e-300) * pmix[ii]
+        mixture_pdf = mixture_pdf + (bincdf[1:] - bincdf[:(nbins-1)] + 1e-300) * pmix[ii]
 
     return mixture_pdf
 

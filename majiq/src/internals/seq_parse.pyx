@@ -14,6 +14,8 @@ from voila.c.splice_graph_sql cimport junction_reads as sg_junction_reads
 from voila.c.splice_graph_sql cimport intron_retention_reads as sg_intron_retention_reads
 from voila.api import SpliceGraph
 
+# from majiq.src.polyfitnb import fit_nb
+
 from libcpp.string cimport string
 from libcpp.map cimport map
 from libcpp.pair cimport pair
@@ -45,7 +47,7 @@ cdef void update_splicegraph_junction(sqlite3 *db, string gene_id, int start, in
 
 cdef int _output_lsv_file_single(vector[LSV*] out_lsvlist, string experiment_name, map[string, vector[string]] tlb_j_g,
                                  map[string, Gene*] gene_map, str outDir, int nthreads, unsigned int msamples,
-                                 bint irb, int strandness, object logger) except -1:
+                                 bint irb, int strandness, object logger) :
     cdef dict cov_dict = {}
     cdef int nlsv = out_lsvlist.size()
     cdef str out_file, junc_file
@@ -186,7 +188,7 @@ cdef _find_junctions(list file_list, map[string, Gene*]& gene_map, vector[string
     cdef str tmp_str
     cdef np.ndarray[np.float32_t, ndim=2, mode="c"] boots
     cdef list junc_ids
-
+    cdef float fitfunc_r
     cdef unsigned int jlimit
 
     cdef int* jvec
@@ -226,9 +228,11 @@ cdef _find_junctions(list file_list, map[string, Gene*]& gene_map, vector[string
                 with gil:
                         logger.debug('Total Junctions and introns %s' %(njunc))
 
+            # fitfunc_r = fit_nb(c_iobam.junc_vec, logger=logger)
+            fitfunc_r = 0
             boots = np.zeros(shape=(njunc, m), dtype=np.float32)
             with nogil:
-                c_iobam.boostrap_samples(m, k, <np.float32_t *> boots.data)
+                c_iobam.boostrap_samples(m, k, <np.float32_t *> boots.data, fitfunc_r, pvalue_limit)
                 j_ids = c_iobam.get_junc_map()
                 jvec = c_iobam.get_junc_vec_summary()
                 jlimit = c_iobam.get_junc_limit_index()
@@ -293,62 +297,9 @@ cdef void gene_to_splicegraph(Gene * gne, string sg_filename) nogil:
         sg_exon(db, gne_id, ex.get_start(), ex.get_end(), ex.db_start_, ex.db_end_, ex.annot_ )
 
     for ir in gne.intron_vec_:
+        if not ir.get_ir_flag(): continue
         sg_intron_retention(db, gne_id, ir.get_start(), ir.get_end(), ir.get_annot())
     close_db(db)
-
-
-cdef gene_to_splicegraph2(Gene * gne, string sg_filename):
-
-    cdef pair[string, Junction *] jj_pair
-    cdef Junction * jj
-    cdef pair[string, Exon *] ex_pair
-    cdef Exon * ex
-    cdef str gne_id
-
-    alt_empty_starts = []
-    alt_empty_ends = []
-    gne_id = gne.get_id().decode('utf-8')
-    with SpliceGraph(sg_filename) as sg:
-        sg.gene(gne_id).add(name=gne.get_name().decode('utf-8'), strand=chr(gne.get_strand()), chromosome=gne.get_chromosome().decode('utf-8'))
-
-        for jj_pair in gne.junc_map_:
-            jj = jj_pair.second
-            # print("JUNC SG:", gne_id, jj.get_start(), jj.get_end(), jj.get_denovo_bl())
-            if not jj.get_denovo_bl(): continue
-            if jj.get_start() == FIRST_LAST_JUNC:
-                alt_empty_starts.append(jj.get_end())
-                continue
-
-            if jj.get_end() == FIRST_LAST_JUNC:
-                alt_empty_ends.append(jj.get_start())
-                continue
-            sg.junction(gne_id, jj.get_start(), jj.get_end()).add(annotated=jj.get_annot())
-
-        for ex_pair in gne.exon_map_:
-            ex = ex_pair.second
-
-            alt_start = []
-            for jj in ex.ib:
-                if jj.get_end() in alt_empty_starts:
-                    alt_start.append(jj.get_end())
-
-            alt_ends = []
-            for jj in ex.ob:
-                if jj.get_start() in alt_empty_ends:
-                    alt_ends.append(jj.get_start())
-
-            extra_coords = []
-            if ex.annot_:
-                if ex.get_start() < ex.db_start_:
-                    extra_coords.append([ex.get_start(), ex.db_start_ - 1])
-                if ex.get_end() > ex.db_end_:
-                    extra_coords.append([ex.db_end_ + 1, ex.get_end()])
-
-            sg.exon(gne_id, ex.get_start(), ex.get_end()).add(annotated=ex.annot_)
-        for ir in gne.intron_vec_:
-            sg.intron_retention(gne_id, ir.get_start(), ir.get_end()).add(annotated=ir.get_annot())
-
-
 
 
 ## OPEN API FOR PYTHON
@@ -396,11 +347,6 @@ cdef _core_build(str transcripts, list file_list, object conf, object logger):
             logger.debug("[%s] Detect LSVs" % gg.get_id())
 
         nlsv = gg.detect_lsvs(out_lsvlist)
-
-
-    logger.info("Generating Splicegraph")
-    # for i in range(n):
-    #     gene_to_splicegraph(gene_map[gid_vec[i]], conf)
 
     logger.info("%s LSV found" % out_lsvlist.size())
     for j in range(nsamples):

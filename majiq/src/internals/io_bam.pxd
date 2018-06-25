@@ -17,12 +17,14 @@ cdef extern from "io_bam.hpp" namespace "io_bam":
         # int find_junctions_from_region(vector[Gene*] gobj) nogil
         int ParseJunctionsFromFile(bint ir_func) nogil
         # int ParseJunctionsFromFile(map[string, ITNode*]) nogil
-        int boostrap_samples(int msamples, int ksamples, np.float32_t * boots) nogil
-        void detect_introns(float min_intron_cov, unsigned int min_experiments, float min_bins, bint reset)  nogil
+        int boostrap_samples(int msamples, int ksamples, np.float32_t* boots, float fitfunc_r, float pvalue_limit) nogil
+        void detect_introns(float min_intron_cov, unsigned int min_experiments, float min_bins, bint reset) nogil
         int get_njuncs() nogil
         map[string, unsigned int] get_junc_map() nogil
         vector[Junction *] get_junc_vec() nogil
         int * get_junc_vec_summary() nogil ;
         unsigned int get_junc_limit_index() nogil;
         void free_iobam() nogil ;
+
+        vector[np.float32_t *] junc_vec ;
 

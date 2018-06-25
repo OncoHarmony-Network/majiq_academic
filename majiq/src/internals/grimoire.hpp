@@ -137,7 +137,6 @@ namespace grimoire{
                     sum_reads += nreads_[i] ;
                     npos += nreads_[i]? 1 : 0 ;
                 }
-
                 if (( npos >= num_pos) && (sum_reads >= num_reads)){
                     ++ flter_cnt_ ;
                     bld_fltr_ = bld_fltr_ || (flter_cnt_ >= min_experiments) ;

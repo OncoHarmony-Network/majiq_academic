@@ -40,13 +40,14 @@ namespace io_bam{
             int strandness_;
             unsigned int eff_len_;
             map<string, unsigned int> junc_map ;
-            vector<float *> junc_vec ;
             unsigned int nthreads_;
             map<string, vector<Gene*>> glist_ ;
             map<string, vector<Intron*>> intronVec_ ;
             unsigned int junc_limit_index_ ;
 
         public:
+            vector<float *> junc_vec ;
+
             IOBam(){
                 bam_ = string(".");
                 strandness_ = 0 ;
@@ -65,19 +66,20 @@ namespace io_bam{
             }
 
             ~IOBam(){
-//cout << "DEL IOBAM:"<< bam_ << " :: " << junc_vec.size() << " :: " << junc_map.size() << "\n" ;
 
                 for(const auto &p1: junc_vec){
                     free(p1) ;
                 }
                 junc_vec.clear() ;
-//cout << "DONE DEL IOBAM" << bam_ << " :: " << junc_vec.size() << " :: " << junc_map.size() <<"\n" ;
             }
 
             int parse_read_into_junctions(bam_hdr_t *header, bam1_t *read) ;
             void add_junction(string chrom, char strand, int start, int end, int read_pos) ;
             int* get_junc_vec_summary() ;
             unsigned int get_junc_limit_index() { return junc_limit_index_ ; };
+            int normalize_stacks(vector<float> vec, float sreads, int npos, float fitfunc_r, float pvalue_limit) ;
+            int boostrap_samples(int msamples, int ksamples, float* boots, float fitfunc_r, float pvalue_limit) ;
+            void detect_introns(float min_intron_cov, unsigned int min_experiments, float min_bins, bool reset) ;
 
 
             char _get_strand(bam1_t * read) ;
@@ -86,8 +88,7 @@ namespace io_bam{
             int ParseJunctionsFromFile(bool ir_func) ;
             inline void update_junction_read(string key, int read_start, int count) ;
             inline float* new_junc_values(const string key) ;
-            int boostrap_samples(int msamples, int ksamples, float* boots) ;
-            void detect_introns(float min_intron_cov, unsigned int min_experiments, float min_bins, bool reset) ;
+
             int parse_read_for_ir(bam_hdr_t *header, bam1_t *read) ;
 
             int get_njuncs() ;
@@ -95,16 +96,12 @@ namespace io_bam{
             const vector<Junction *>& get_junc_vec() ;
             void free_iobam() {
                 int idx = 0 ;
-//cout << "DEL IOBAM:"<< bam_ << " :: " << junc_vec.size() << " :: " << junc_map.size() << "\n" ;
                 for(const auto &p1: junc_vec){
-//cout << "DEL IOBAM:"<< bam_ << " :"<< idx<< ": " << p1 << "\n" ;
                     free(p1) ;
                     idx ++ ;
-//                    delete(p1) ;
                 }
                 junc_vec.clear() ;
                 junc_map.clear() ;
-//cout << "DONE DEL IOBAM" << bam_ << " :: " << junc_vec.size() << " :: " << junc_map.size() <<"\n" ;
             }
 
     };

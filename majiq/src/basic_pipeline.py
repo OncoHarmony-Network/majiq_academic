@@ -1,5 +1,5 @@
 import majiq.src.io as majiq_io
-from majiq.src.polyfitnb import fit_nb
+# from majiq.src.polyfitnb import fit_nb
 import abc
 import majiq.src.logger as majiq_logger
 from majiq.src.psi import divs_from_bootsamples, calc_rho_from_divs, calc_local_weights
@@ -55,16 +55,16 @@ class BasicPipeline:
         # except AttributeError:
         #     pass
 
-    def fitfunc(self, const_junctions):
-        """Calculate the Negative Binomial function to sample from using the Constitutive events"""
-        if self.debug:
-            if self.logger is not None:
-                self.logger.debug("Skipping fitfunc because --debug!")
-            return np.poly1d([1, 0])
-        else:
-            if self.logger is not None:
-                self.logger.debug("Fitting NB function with constitutive events...")
-            return fit_nb(const_junctions, "%s/nbfit" % self.outDir, self.plotpath, logger=self.logger)
+    # def fitfunc(self, const_junctions):
+    #     """Calculate the Negative Binomial function to sample from using the Constitutive events"""
+    #     if self.debug:
+    #         if self.logger is not None:
+    #             self.logger.debug("Skipping fitfunc because --debug!")
+    #         return np.poly1d([1, 0])
+    #     else:
+    #         if self.logger is not None:
+    #             self.logger.debug("Fitting NB function with constitutive events...")
+    #         return fit_nb(const_junctions, "%s/nbfit" % self.outDir, self.plotpath, logger=self.logger)
 
     def calc_weights(self, weight_type, list_of_lsv, name, file_list, logger=None):
         self.file_list = file_list

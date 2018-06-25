@@ -445,6 +445,7 @@ namespace grimoire {
         for(const auto &juncIt:  juncSet){
             const int coord = ss? juncIt->get_end() : juncIt->get_start() ;
             c2 += (FIRST_LAST_JUNC != coord) ? 1:0 ;
+//cout << juncIt->get_bld_fltr() << "\n" ;
             if (FIRST_LAST_JUNC != coord && juncIt->get_bld_fltr()) {
                 ++c1 ;
             }
@@ -631,7 +632,8 @@ namespace grimoire {
             if(irp->get_end() < start){
                 continue ;
             }
-            ir_vec.push_back(irp) ;
+            if (irp->get_ir_flag())
+                ir_vec.push_back(irp) ;
         }
         return ir_vec ;
     }

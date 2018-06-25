@@ -6,7 +6,7 @@ cimport numpy as np
 # from scipy.stats.mstats_basic import mquantiles
 # from majiq.src.config import Config
 from majiq.src.constants import *
-from majiq.src.polyfitnb cimport get_negbinom_pval
+# from majiq.src.polyfitnb cimport get_negbinom_pval
 
 import numpy.ma as ma
 import cython
