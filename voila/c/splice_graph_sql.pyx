@@ -21,7 +21,7 @@ cdef:
     char *commit = "COMMIT;"
     char *exp_insert = "INSERT INTO experiment (name) VALUES ('%s');"
     char *gene_insert = "INSERT INTO gene " \
-                        "('id','name','strand','chromosome') " \
+                        "(id,name,strand,chromosome) " \
                         "VALUES ('%s','%s','%s','%s');"
     char *alt_start_insert = "INSERT INTO alt_start (gene_id, coordinate) VALUES ('%s', %d);"
     char *alt_end_insert = "INSERT INTO alt_end (gene_id, coordinate) VALUES ('%s', %d);"
@@ -35,7 +35,7 @@ cdef:
                               "(reads, experiment_name, junction_gene_id, junction_start, junction_end) " \
                               "VALUES (%d,'%s','%s',%d,%d);" \
                               "UPDATE junction SET has_reads=1 " \
-                              "WHERE gene_id='%s' AND start=%d AND 'end'=%d;"
+                              "WHERE gene_id='%s' AND start=%d AND end=%d;"
     char *ir_insert = "INSERT INTO intron_retention " \
                       "(gene_id, start, end, has_reads, annotated) " \
                       "VALUES ('%s',%d,%d,0,%d);"
@@ -43,7 +43,7 @@ cdef:
                             "(reads, experiment_name, intron_retention_gene_id, intron_retention_start, intron_retention_end) " \
                             "VALUES (%d,'%s','%s',%d,%d); " \
                             "UPDATE intron_retention SET has_reads=1 " \
-                            "WHERE gene_id='%s' AND start=%d AND 'end'=%d;"
+                            "WHERE gene_id='%s' AND start=%d AND end=%d;"
 
 cdef int int_len(int value) nogil:
     cdef int l = (not value) + (value < 0)
