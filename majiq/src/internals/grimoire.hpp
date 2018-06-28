@@ -28,12 +28,17 @@ namespace grimoire{
         Junction *  j ;
     };
 
-    struct Jinfo {
+    class Jinfo {
+        public:
         unsigned int    index ;
         unsigned int    start ;
         unsigned int    end ;
         int             sreads ;
         int             npos ;
+
+        Jinfo() {}
+        Jinfo(unsigned int index1, unsigned int start1, unsigned int end1, int sreads1, int npos1): index(index1),
+                                        start(start1), end(end1), sreads(sreads1), npos(npos1) {}
     };
 
     struct lsvtype {

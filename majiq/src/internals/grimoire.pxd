@@ -95,12 +95,14 @@ cdef extern from "grimoire.hpp" namespace "grimoire":
         Intron *            get_intron() nogil ;
 
 
-    cdef struct Jinfo:
+    cdef cppclass Jinfo:
         unsigned int index ;
         unsigned int start ;
         unsigned int end ;
         int sreads ;
         int npos ;
+        Jinfo() nogil ;
+        Jinfo(unsigned int index1, unsigned int start1, unsigned int end1, int sreads1, int npos1) nogil ;
 
 
     void sortGeneList(vector[Gene*] glist) nogil ;

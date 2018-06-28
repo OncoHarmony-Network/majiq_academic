@@ -27,6 +27,7 @@ def het_quantification(list_of_lsv, chnk, conf, logger):
             print("Event %d ..." % lidx)
             sys.stdout.flush()
 
+
         boots = [np.array(f_list[0][lsv_id].coverage), np.array(f_list[1][lsv_id].coverage)]
         msamples = boots[0].shape[2]
         # stat_het = []
@@ -35,10 +36,12 @@ def het_quantification(list_of_lsv, chnk, conf, logger):
                                                        "Please check that the conditions has been build together." \
                                                        % (lsv_id, conf.names[0], conf.names[1],
                                                           boots[0].shape[2], boots[1].shape[2])
+        logger.info('BEFORE HETEROGEN %s' % lsv_id)
         samps = heterogen_posterior(boots, grp_het, msamples, conf.nsamples, conf.vwindow, num_exp,
                                     conf.nbins, conf.lsv_type_dict[lsv_id])
-
+        logger.info('AFTER HETEROGEN %s' % lsv_id)
         out_stats = do_test_stats(samps, conf.stats, conf.minsamps)
+        logger.info('AFTER DO TEST %s' % lsv_id)
         # for stat_idx in range(out_stats.shape[1]):
         #     stat_het.append(out_stats[:, stat_idx])
 
