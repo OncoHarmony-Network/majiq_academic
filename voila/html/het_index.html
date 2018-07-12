@@ -240,6 +240,58 @@
             <ul class="gene-id"></ul>
         </div>
     </form>
+    <form class="pure-form pure-form-aligned">
+        <fieldset>
+            <div class=" pure-control-group">
+                <label for="prime5">5 Prime</label>
+                <input id="prime5" type="checkbox">
+            </div>
+
+            <div class=" pure-control-group">
+                <label for="prime3">3 Prime</label>
+                <input id="prime3" type="checkbox">
+            </div>
+
+            <div class="pure-control-group">
+                <label for="exon_skipping">Exon Skipping</label>
+                <input id="exon_skipping" type="checkbox">
+            </div>
+
+            <div class="pure-control-group">
+                <label for="source">Source</label>
+                <input id="source" type="checkbox">
+            </div>
+
+            <div class="pure-control-group">
+                <label for="target">Target</label>
+                <input id="target" type="checkbox">
+            </div>
+
+            <div class=" pure-control-group">
+                <label for="threshold">Threshold</label>
+                <input id="threshold" placeholder="20%">
+            </div>
+
+            <div class="pure-control-group">
+                <label for="confidence">Confidence</label>
+                <input id="confidence" placeholder="95%">
+            </div>
+
+            <label for="binary" class="pure-radio">
+                <input id="binary" type="radio" name="optionsRadios" value="binary" checked>
+                Binary
+            </label>
+
+            <label for="complex" class="pure-radio">
+                <input id="complex" type="radio" name="optionsRadios" value="complex">
+                Complex
+            </label>
+
+            <div class="pure-controls">
+                <button type="submit" class="pure-button pure-button-primary">Download Genes</button>
+            </div>
+        </fieldset>
+    </form>
 </div>
 <div class="content">
     <table class="results pure-table">

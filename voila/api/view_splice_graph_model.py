@@ -29,21 +29,10 @@ class ViewJunction(Junction):
         except AttributeError:
             return 0
 
-    # def view_intron_retention_type(self):
-    #     if self.intron_retention:
-    #         for exon in filter(lambda e: not e.intron_retention, self.gene.exons):
-    #             if self.start in exon:
-    #                 return constants.IR_TYPE_START
-    #             elif self.end in exon:
-    #                 return constants.IR_TYPE_END
-    #
-    #     return self.intron_retention
-
     def __iter__(self):
         yield 'start', self.start
         yield 'end', self.end
         yield 'has_reads', self.has_reads
-        # yield 'intron_retention', self.view_intron_retention_type()
         yield 'annotated', self.annotated
         yield 'color', self.color()
 
@@ -77,7 +66,6 @@ class ViewExon(Exon):
             yield 'half_exon', 'start'
         elif self.end == -1:
             yield 'half_exon', 'end'
-        # yield 'intron_retention', self.intron_retention
         yield 'annotated', self.annotated
         yield 'color', self.color()
 
@@ -87,17 +75,24 @@ class ViewIntronRetention(IntronRetention):
         yield 'start', self.start
         yield 'end', self.end
         yield 'annotated', self.annotated
-        # yield 'color', self.color()
+        yield 'color', self.color()
 
     def color(self):
         if self.annotated:
-            if any(j.has_reads for j in self.reads):
-                return 'grey'
+            if self.has_reads:
+                return 'red'
             else:
-                return ''
+                return 'grey'
         else:
             return 'green'
 
+    def reads(self, experiment_name):
+        session = inspect(self).session
+        r = session.query(JunctionReads).get((experiment_name, self.gene_id, self.start, self.end))
+        try:
+            return r.reads
+        except AttributeError:
+            return 0
 
 class ViewGene(Gene):
     junctions = relationship('ViewJunction')
@@ -164,8 +159,19 @@ class ViewGene(Gene):
                     except KeyError:
                         junc_reads[combined_name][junc.start] = {junc.end: summed_reads}
 
-            # for ir in self.intron_retentions:
-            #     print(ir.reads)
+            for ir in self.intron_retentions:
+                for experiment_name in experiment_names:
+                    try:
+                        ir_reads[experiment_name][ir.start][ir.end] = ir.reads(experiment_name)
+                    except KeyError:
+                        ir_reads[experiment_name][ir.start] = {ir.end: ir.reads(experiment_name)}
+
+                if combined_name:
+                    summed_reads = sum(ir_reads[n][ir.start][ir.end] for n in experiment_names)
+                    try:
+                        ir_reads[combined_name][ir.start][ir.end] = summed_reads
+                    except KeyError:
+                        ir_reads[combined_name][ir.start] = {ir.end: summed_reads}
 
         gene = dict(self)
         gene['exons'] = [dict(e) for e in self.exons]

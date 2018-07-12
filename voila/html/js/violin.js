@@ -143,7 +143,7 @@ Violin.prototype.swarm = function (color) {
             tool_tip = d3.select("body")
                 .append("div")
                 .attr('class', 'violin-tool-tip')
-                .style("visibility", "hidden");
+                .style("display", "none");
             tool_tip.append('div')
                 .attr('class', 'sample');
             tool_tip.append('div')
@@ -204,14 +204,14 @@ Violin.prototype.swarm = function (color) {
                     return acc
                 }, []);
                 tool_tip.selectAll('.sample').text(exp_names[i]);
-                tool_tip.style("visibility", "visible");
+                tool_tip.style("display", "block");
             })
             .on("mousemove", function () {
                 tool_tip.style("top", (event.pageY - 35) + "px").style("left", (event.pageX + 10) + "px");
             })
             .on("mouseout", function () {
                 d3.select(this).style('fill', '');
-                tool_tip.style("visibility", "hidden");
+                tool_tip.style("display", "none");
             });
     });
 };

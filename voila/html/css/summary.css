@@ -1,58 +1,59 @@
 body {
     background-color: #c0d8ee;
     font-size: 12px;
-    overflow-y: hidden;
+    position: absolute;
+    height: 100%;
+    width: 100%
 }
 
 table {
-    background-color: white;
-}
-
-.header {
-    position: fixed;
-    width: 100%;
-    background-color: white;
+    background-color: white
 }
 
 .menu {
     background-color: #205bb0;
     color: white;
     position: absolute;
-    z-index: 2;
+    z-index: 3
 }
 
 .submenu.hide-submenu {
     transform: translateY(-100%);
     box-shadow: none;
-    transition: all 100ms ease;
+    transition: all 100ms ease
 }
 
 .submenu {
     transition: all 100ms ease;
     background-color: #c0d8ee;
     color: black;
-    z-index: 1;
+    z-index: 2;
     position: absolute;
     width: 100%;
     top: 45px;
-    box-shadow: 0 0 25px 10px rgba(0, 0, 0, .3);
+    box-shadow: 0 0 25px 10px rgba(0, 0, 0, .3)
 }
 
 .gene-header {
     background: white;
-    padding: 10px;
+    position: absolute;
+    top: 45px;
+    z-index: 2;
+    width: 100%;
+    padding-top: 10px;
+    padding-bottom: 10px
 }
 
 .gene-header > div {
     display: inline-block;
     vertical-align: middle;
-    margin-right: 10px;
+    margin-left: 10px
 }
 
 .gene-header .gene-name {
     font-size: 20px;
     color: #205bb0;
-    font-weight: bold;
+    font-weight: bold
 }
 
 .gene-header .gene-id {
@@ -63,14 +64,13 @@ table {
 
 .splice-graph-container {
     background-color: white;
-    padding-bottom: 10px;
-    top: 34px;
+    padding-bottom: 10px
 }
 
 .splice-graph-container svg {
     display: block;
     margin-left: auto;
-    margin-right: auto;
+    margin-right: auto
 }
 
 .lsv-container > div {
@@ -78,29 +78,11 @@ table {
     display: inline-grid;
     padding-left: 25px;
     padding-right: 25px;
-    padding-top: 10px;
+    padding-top: 10px
 }
 
 .lsv-container {
-    text-align: center;
-}
-
-.content {
-    position: absolute;
-    height: calc(100% - 45px);
-    width: 100%;
-    top: 45px;
-}
-
-.top {
-    max-height: 50%;
-    overflow-y: auto;
-    border-bottom: solid lightgrey 1px;
-}
-
-.bottom {
-    overflow-y: auto;
-    overflow-x: hidden;
+    text-align: center
 }
 
 .menu-right {
@@ -111,5 +93,60 @@ table {
     margin-left: 10px;
     margin-right: 10px;
     padding-top: 10px;
-    color: #205bb0;
+    color: #205bb0
+
+}
+
+.splice-graph-header > * {
+    display: inline-grid;
+    margin-right: 10px;
+    vertical-align: middle
+}
+
+.content {
+    display: flex;
+    flex-direction: column;
+    height: calc(100% - 106px);
+    position: absolute;
+    top: 106px;
+    width: 100%
+}
+
+.top {
+    border-bottom: solid lightgrey 1px;
+    max-height: 50%;
+    flex-shrink: 0;
+    overflow-y: auto;
+    background-color: white
+}
+
+.bottom {
+    overflow-y: auto
+}
+
+.lsv-header {
+    background-color: white;
+    padding: 10px;
+    border-top: solid lightgray 1px;
+    border-right: solid lightgray 1px;
+    border-left: solid lightgray 1px
+}
+
+.lsv-header > * {
+    display: inline-grid;
+    vertical-align: middle;
+    margin-right: auto;
+}
+
+form.lsv-form label {
+    width: 7em !important;
+}
+
+.junction-grp:hover .junction {
+    stroke: orange;
+    stroke-width: 3px
+}
+
+.junction-grp:hover .junction-reads {
+    font-size: 14px
 }

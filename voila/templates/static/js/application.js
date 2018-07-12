@@ -375,7 +375,7 @@ function drawBarChart(context, bins, settingsCanvasSingle, zoomLevel) {
         settingsCanvasSingle.coords_origin[1],
         settingsCanvasSingle.coords_origin[0] + settingsCanvasSingle.area_pixels[0],
         settingsCanvasSingle.coords_origin[1]);
-//    drawLine(context, settingsCanvasSingle.coords_origin[0], canvasHeight-marginYaxis, canvasWidth, canvasHeight-marginYaxis);
+//    draw_line(context, settingsCanvasSingle.coords_origin[0], canvasHeight-marginYaxis, canvasWidth, canvasHeight-marginYaxis);
     context.lineWidth = "0.0";
 
     var chartHeight = settingsCanvasSingle.area_pixels[1];

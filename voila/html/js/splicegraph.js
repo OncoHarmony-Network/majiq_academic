@@ -66,9 +66,7 @@ var array_equal = function (a, b) {
     return true
 };
 
-var coord_in_exon = function (exon, coord) {
-    return coord >= exon.start && coord <= exon.end
-};
+
 
 var start_end_sort = function (a, b) {
     return a.start - b.start || a.end - b.end;

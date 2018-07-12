@@ -240,11 +240,20 @@ class MatrixType(ABC):
 
     @property
     def reference_exon(self):
-        for coord in self.lsv_id.split(':')[-1].split('-'):
-            if coord == 'nan':
-                yield -1
-            else:
-                yield int(coord)
+        coords = self.lsv_id.split(':')[-1].split('-')
+        if len(coords) == 2:
+            for coord in coords:
+                if coord == 'nan':
+                    yield -1
+                else:
+                    yield int(coord)
+        else:
+            for coord in coords:
+                if coord:
+                    if coord == '1':
+                        yield -1
+                    else:
+                        yield int(coord)
 
     @property
     def is_target(self):

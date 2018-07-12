@@ -95,6 +95,7 @@ class Junction(Base):
     annotated = Column(Boolean)
 
     gene = relationship('Gene')
+    reads = relationship('JunctionReads')
 
 
 class Exon(Base):
@@ -160,6 +161,7 @@ class Gene(Base):
     chromosome = Column(String)
 
     junctions = relationship('Junction')
+    intron_retentions = relationship('IntronRetention')
     alt_starts = relationship('AltStart')
     alt_ends = relationship('AltEnd')
 

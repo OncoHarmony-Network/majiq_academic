@@ -9,30 +9,92 @@
     <script src="db_lsv.js"></script>
     <script>
         const urlParams = new URLSearchParams(document.location.search);
-
-        const resize_bottom = () => {
-            console.log('yuu');
-            const h = document.querySelector('.top').offsetHeight;
-            const c = document.querySelector('.content').offsetHeight;
-            console.log('content: ' + c);
-            console.log('top: ' + h);
-            document.querySelector('.bottom').style.height = (c - h) + 'px';
-            document.querySelector('#groups').dispatchEvent(new Event('change'))
-        };
+        const lsv = new Lsv(db_lsv, db_gene);
 
         const show_lsvs = (lsvs) => {
             lsvs.sort((a, b) => {
-                return a.junctions.length - b.junctions.length
+                return a.junctions.length - b.junctions.length || a._id.localeCompare(a._id)
             });
 
-            const table = d3.select('.lsv-container')
+            d3.select('.lsv-container').selectAll('*').remove();
+
+            const container = d3.select('.lsv-container')
                 .selectAll('div')
                 .data(lsvs)
                 .enter()
                 .append('div')
+                .attr('class', 'lsv')
+                .attr('data-lsv-id', d => d._id);
+
+            const header = container
+                .append('div')
+                .attr('class', 'lsv-header');
+
+            const fieldset = header
+                .append('form')
+                .on('change', (d, i, a) => {
+                    const hl = Array.from(document.querySelectorAll('input#highlight:checked')).reduce((acc, curr) => {
+                        acc.push(curr.closest('.lsv').dataset.lsvId);
+                        return acc
+                    }, []);
+
+                    const w = Array.from(document.querySelectorAll('input#psi-weighted:checked')).reduce((acc, curr) => {
+                        acc.push(curr.closest('.lsv').dataset.lsvId);
+                        return acc
+                    }, []);
+                    sgs.highlight(hl, w);
+                })
+                .attr('class', 'lsv-form pure-form pure-form-aligned')
+                .append('fieldset');
+
+            const highlight = fieldset.append('div')
+                .attr('class', 'pure-control-group');
+
+            highlight.append('label')
+                .attr('for', 'highlight')
+                .text('Highlight');
+
+            highlight.append('input')
+                .attr('id', 'highlight')
+                .attr('type', 'checkbox');
+
+
+            const psi_weighted = fieldset.append('div')
+                .attr('class', 'pure-control-group');
+
+            psi_weighted.append('label')
+                .attr('for', 'psi-weighted')
+                .text('PSI Weighted');
+
+            psi_weighted.append('input')
+                .attr('id', 'psi-weighted')
+                .attr('type', 'checkbox')
+                .on('change', (d, i, a) => {
+                    if (a[i].checked)
+                        a[i].closest('fieldset').querySelector('input#highlight').checked = true;
+                });
+
+            const copy_lsv = fieldset.append('div')
+                .attr('class', 'pure-control-group');
+
+            copy_lsv.append('button')
+                .attr('id', 'copy_lsv')
+                .attr('class', 'pure-button')
+                .text('Copy LSV');
+
+            header
+                .append('div')
+                .each((d, i, a) => {
+                    lsv.cartoon(a[i], d._id);
+                });
+
+            header
+                .append('div')
                 .text(d => {
                     return d._id
-                })
+                });
+
+            const table = container
                 .append('table')
                 .classed('pure-table', true)
                 .attr('data-lsv-id', d => {
@@ -78,15 +140,14 @@
                 .append('td')
                 .append('svg')
                 .attr('class', 'heat-map')
-                .attr('data-stat-name', 'infoscore')
+                .attr('data-stat-name', 'wilcoxon')
                 .each((d, i, a) => new HeatMap(db_lsv, a[i]).plot());
-
         };
 
-        const sgs = new SpliceGraphs(db_gene, '.splice-graph-container', urlParams.get('gene_id'), resize_bottom);
-        sgs.create_localstorage();
+        const sgs = new SpliceGraphs(db_gene, db_lsv, '.splice-graph-container', urlParams.get('gene_id'));
 
-        window.addEventListener('load', () => {
+        const load_lsvs = () => {
+
             // lsv tables
             db_lsv.createIndex({
                 index: {fields: ['gene_id']}
@@ -95,45 +156,27 @@
                     selector: {
                         gene_id: urlParams.get('gene_id')
                     },
-                    fields: ['_id', 'junctions']
+                    fields: ['_id', 'junctions', '5_prime', '3_prime', 'exon_skipping']
                 })
-            }).then(results => show_lsvs(results.docs));
+            }).then(results => {
+                const prime5 = document.querySelector('#prime-5').checked;
+                const prime3 = document.querySelector('#prime-3').checked;
+                const exon_skipping = document.querySelector('#exon-skipping').checked;
+                const lsvs = results.docs
+                    .filter(e => !prime3 ? true : e['3_prime'] === prime3)
+                    .filter(e => !prime5 ? true : e['5_prime'] === prime5)
+                    .filter(e => !exon_skipping ? true : e['exon_skipping'] === exon_skipping);
+                console.log(lsvs);
+                show_lsvs(lsvs)
+            });
+        };
+
+        window.addEventListener('load', () => {
+            sgs.create_localstorage();
+            load_lsvs()
         })
+
     </script>
-{% endblock %}
-
-{% block toolbar %}
-    <div class="menu pure-menu pure-menu-horizontal">
-        <a href class="pure-menu-heading"><img height="30" src="img/LogoOnly_white.svg"></a>
-        <ul class="pure-menu-list">
-            <li class="pure-menu-item">
-                <a href="index.html" class="pure-menu-link">Index</a>
-            </li>
-            <li class="pure-menu-item">
-                <span class="tools pure-menu-link">Tools</span>
-            </li>
-        </ul>
-    </div>
-    <div class="submenu tools hide-submenu">
-        <form class="splice-graph-form pure-form pure-form-aligned">
-            <fieldset>
-                <div class="groups pure-control-group">
-                    <label for="groups">Groups</label>
-                    <select id="groups"></select>
-                </div>
-
-                <div class="experiments pure-control-group">
-                    <label for="experiments">Experiments</label>
-                    <select id="experiments">
-                    </select>
-                </div>
-
-                <div class="pure-controls">
-                    <button type="submit" class="pure-button pure-button-primary">Add</button>
-                </div>
-            </fieldset>
-        </form>
-    </div>
 {% endblock %}
 
 {% block bottom %}

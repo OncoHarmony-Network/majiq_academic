@@ -317,6 +317,10 @@ class ViewHeterogens:
                 yield stat_name, self.junction_stat(stat_name)
             yield 'mu_psi', self.mu_psi
             yield 'junctions', self.junctions
+            yield '5_prime', self.prime5
+            yield '3_prime', self.prime3
+            yield 'exon_skipping', self.exon_skipping
+            yield 'exon_count', self.exon_count
 
         def get_attr(self, attr):
             s = set()
@@ -351,13 +355,14 @@ class ViewHeterogens:
         @property
         def dpsi(self):
             group_names = self.matrix_hdf5.view_metadata['group_names']
-            arr = np.empty((len(self.junctions), len(group_names), len(group_names)), dtype=np.float)
+            ir = int(self.intron_retention)
+            arr = np.empty((len(self.junctions) + ir, len(group_names), len(group_names)), dtype=np.float)
             arr.fill(-1)
 
             for het in self.heterogens:
                 try:
                     for junc_idx, dpsi in enumerate(het.dpsi):
-                        z, y = sorted([group_names.index(g) for g in het.matrix_hdf5.view_metadata['group_names']])
+                        z, y = [group_names.index(g) for g in het.matrix_hdf5.view_metadata['group_names']]
                         arr[junc_idx][y][z] = dpsi
                 except (LsvIdNotFoundInVoilaFile, GeneIdNotFoundInVoilaFile):
                     pass
@@ -366,7 +371,8 @@ class ViewHeterogens:
 
         def junction_stat(self, stat_name):
             group_names = self.matrix_hdf5.view_metadata['group_names']
-            arr = np.empty((len(self.junctions), len(group_names), len(group_names)), dtype=np.float)
+            ir = int(self.lsv_type.endswith('i'))
+            arr = np.empty((len(self.junctions) + ir, len(group_names), len(group_names)), dtype=np.float)
             arr.fill(-1)
 
             for het in self.heterogens:
@@ -428,7 +434,7 @@ class ViewHeterogens:
             has_combined = meta['experiment_names'][0][0].endswith('Combined')
             exp_count = max(len(x) for x in meta['experiment_names']) - int(has_combined)
             grp_count = len(self.matrix_hdf5.view_metadata['group_names'])
-            junc_count = len(self.junctions)
+            junc_count = len(self.junctions) + int(self.lsv_type.endswith('i'))
             arr = np.empty((grp_count, exp_count, junc_count))
 
             arr.fill(-1)
@@ -447,6 +453,10 @@ class ViewHeterogens:
         @property
         def lsv_type(self):
             return self.get_attr('lsv_type')
+
+        @property
+        def intron_retention(self):
+            return self.get_attr('intron_retention')
 
         @property
         def junctions(self):

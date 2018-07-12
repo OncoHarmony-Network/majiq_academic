@@ -88,7 +88,7 @@ cdef int _output_lsv_file_single(vector[LSV*] out_lsvlist, string experiment_nam
 
     # with gil:
 
-    sg_filename = get_builder_splicegraph_filename(outDir).encode('utf-8')
+    sg_filename = get_builder_splicegraph_filename(outDir.decode('utf-8')).encode('utf-8')
     junc_file = "%s/%s.juncs" % (outDir.decode('utf-8'), experiment_name.decode('utf-8'))
     out_file = "%s/%s.majiq" % (outDir.decode('utf-8'), experiment_name.decode('utf-8'))
     with open(junc_file, 'rb') as fp:

@@ -60,12 +60,16 @@ class Heterogen(Html, Tsv):
 
                         if lsv_id:
                             log.debug('Write DB LSV ID: {}'.format(lsv_id))
-                            text = json.dumps(dict(h.heterogen(lsv_id).get_all()), cls=NumpyEncoder)
-                            lsv_lock.acquire()
-                            db_lsv.write(text)
-                            db_lsv.write(',')
-                            lsv_lock.release()
-
+                            try:
+                                text = json.dumps(dict(h.heterogen(lsv_id).get_all()), cls=NumpyEncoder)
+                                lsv_lock.acquire()
+                                db_lsv.write(text)
+                                db_lsv.write(',')
+                                lsv_lock.release()
+                            except IndexError:
+                                if h.heterogen(lsv_id).lsv_type == 's|1e1.4o4|2e1.3o4|3e1.2o4|4e1.1o4|5e2.3o3|i':
+                                    print(lsv_id)
+                                log.error('there was an error parsing {}'.format(lsv_id))
                             q.task_done()
 
         except Exception as e:

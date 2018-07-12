@@ -50,6 +50,7 @@ window.addEventListener('load', () => {
                 last_gene()
         })
     });
+
     document.querySelector('.next-gene').addEventListener('click', () => {
         db_gene.createIndex({
             index: {fields: ['_id']}

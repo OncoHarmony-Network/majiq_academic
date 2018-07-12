@@ -132,7 +132,7 @@ HeatMap.prototype.plot = function () {
             tool_tip = d3.select("body")
                 .append("div")
                 .attr('class', 'heat-map-tool-tip')
-                .style("visibility", "hidden");
+                .style("display", "none");
             tool_tip.append('div')
                 .attr('class', 'versus');
             tool_tip.append('div')
@@ -205,14 +205,14 @@ HeatMap.prototype.plot = function () {
                     tool_tip.selectAll('.stat-name').text(this.getAttribute('data-name'));
                     tool_tip.selectAll('.versus').text(this.closest('g').getAttribute('data-row') + '/' + this.getAttribute('data-column'));
                     tool_tip.selectAll('.value').text(this.getAttribute('data-value'));
-                    tool_tip.style("visibility", "visible");
+                    tool_tip.style("display", "block");
                 }
             })
             .on("mousemove", function () {
                 tool_tip.style("top", (event.pageY - 50) + "px").style("left", (event.pageX + 10) + "px");
             })
             .on("mouseout", function () {
-                tool_tip.style("visibility", "hidden");
+                tool_tip.style("display", "none");
             });
     });
 };
@@ -240,7 +240,7 @@ HeatMap.prototype.compact = function (el) {
                 .style('position', 'absolute')
                 .style('z-index', '10')
                 .style('cursor', 'default')
-                .style('visibility', "hidden")
+                .style('display', "none")
                 .style('background-color', 'rgba(255,255,255,.80)')
                 .style('padding-left', '3px')
                 .style('padding-top', '1px')
@@ -265,13 +265,13 @@ HeatMap.prototype.compact = function (el) {
                 return colors(d.value);
             })
             .on('mouseover', function (d) {
-                tt.text(d.name + ": " + d.value.toFixed(3)).style("visibility", "visible");
+                tt.text(d.name + ": " + d.value.toFixed(3)).style("display", "block");
             })
             .on('mousemove', function () {
                 tt.style('top', (event.pageY - 10) + 'px').style('left', (event.pageX + 10) + 'px')
             })
             .on("mouseout", function () {
-                tt.style("visibility", "hidden");
+                tt.style("display", "none");
             });
 
         svg
