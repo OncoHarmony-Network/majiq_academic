@@ -182,7 +182,7 @@ cdef int _output_lsv_file_single(vector[LSV*] out_lsvlist, string experiment_nam
                     sreads = jobj_ptr.sreads
                     npos = jobj_ptr.npos
                     with gil:
-                        cov_dict[lsvid][junc_idx] = boots[jobj_ptr.index]
+                        cov_dict[lsvid.decode('utf-8')][junc_idx] = boots[jobj_ptr.index]
                 else:
                     sreads = 0
                     npos = 0

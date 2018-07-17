@@ -223,8 +223,6 @@ namespace grimoire {
             (p.second)->update_flags(efflen, minreads, minpos, denovo_thresh, min_experiments) ;
             (p.second)->clear_nreads(is_last_exp) ;
         }
-
-
         return ;
     }
 
@@ -234,8 +232,6 @@ namespace grimoire {
         vector<Junction *> opened_exon ;
         int start_ir = 0 ;
         int end_ir = 0 ;
-
-
 
         for (const auto &jnc : junc_map_){
             if (!(jnc.second)->get_denovo_bl()) continue ;
@@ -255,15 +251,11 @@ namespace grimoire {
         for(const auto & ss : ss_vec){
             if (ss.donor_ss) {
                 start_ir = ss.coord ;
-
             } else {
                 if (start_ir <= 0) {
                     continue ;
                 } else {
                     end_ir = ss.coord ;
-                    // new intron
-                    // who creates the intron int_ptrs ?
-                    // check if the introns are created in the io_bam functions for bam
                     #pragma omp critical
                     {
                         Intron * irObj = new Intron(start_ir, end_ir, false, this) ;
@@ -292,7 +284,6 @@ namespace grimoire {
                 found = true ;
             }
         }
-
         if(!found){
             inIR_ptr->update_flags(min_coverage, min_exps) ;
             inIR_ptr->clear_nreads(reset) ;
@@ -445,7 +436,6 @@ namespace grimoire {
         for(const auto &juncIt:  juncSet){
             const int coord = ss? juncIt->get_end() : juncIt->get_start() ;
             c2 += (FIRST_LAST_JUNC != coord) ? 1:0 ;
-//cout << juncIt->get_bld_fltr() << "\n" ;
             if (FIRST_LAST_JUNC != coord && juncIt->get_bld_fltr()) {
                 ++c1 ;
             }
