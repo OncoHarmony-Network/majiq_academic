@@ -7,6 +7,7 @@ from libcpp.vector cimport vector
 
 from majiq.src.internals.grimoire cimport Gene, Exon, Junction
 from majiq.src.internals import quant_lsv
+from majiq.src.internals.psi cimport psi_distr_t
 
 from majiq.src.gff import parse_gff3
 from majiq.src.constants import *
@@ -15,6 +16,7 @@ import pickle
 import numpy as np
 cimport numpy as np
 
+# ctypedef vector[float] psi_distr_t ;
 
 cdef list accepted_transcripts = ['mRNA', 'transcript', 'lnc_RNA', 'miRNA', 'ncRNA',
                                   'rRNA', 'scRNA', 'snRNA', 'snoRNA', 'tRNA', 'pseudogenic_transcript']
@@ -235,6 +237,58 @@ cdef dict _get_extract_lsv_list(list list_of_lsv_id, list file_list):
 
     return result
 
+cpdef map[string, vector[psi_distr_t]] get_coverage_lsv(list list_of_lsv_id, list file_list, str weight_fname):
+    cdef map[string, vector[psi_distr_t]] result
+    cdef int n_exp = len(file_list)
+    cdef str lid, lsv_type, fname
+    cdef string lsv_id
+    cdef int fidx
+    cdef np.ndarray cov
+    cdef vector[psi_distr_t] lsv_cov
+    cdef psi_distr_t tv
+    cdef dict weights
+
+    if weight_fname != "":
+        weights = _load_weights(list_of_lsv_id, weight_fname)
+
+    for fidx, fname in enumerate(file_list):
+        with open(fname, 'rb') as fp:
+            data = np.load(fp)
+            for lid in list_of_lsv_id:
+                lsv_id = lid.encode('utf-8')
+                try:
+                    cov = data[lid]
+                except KeyError:
+                    continue
+                if result.count(lsv_id) > 0:
+                    if weight_fname != "":
+                        cov = cov * weights[lsv_id][fidx]
+                    # print(lsv_id, result[lsv_id].coverage[fidx].shape)
+                    for xx in range(njunc):
+                        for yy in range(msamples):
+                            result[lsv_id][xx][yy] = result[lsv_id][xx][yy] + cov[xx][yy]
+                else:
+                    njunc = cov.shape[0]
+                    msamples = cov.shape[1]
+                    # tv = psi_distr_t(msamples)
+                    lsv_cov = vector[psi_distr_t](njunc, psi_distr_t(msamples))
+                    for xx in range(njunc):
+                        for yy in range(msamples):
+                            lsv_cov[xx][yy] = cov[xx][yy]
+                    result[lsv_id] = lsv_cov
+    return result
+
+cdef map[string, psi_distr_t] _load_weights(list lsv_list, str file_name):
+    cdef dict out_dict = {}
+    # cdef str file_name
+    cdef str xx
+    # file_name = get_weights_filename(outdir, name)
+    with open(file_name, 'rb') as fp:
+        all_wgts = np.load(fp)
+        for xx in lsv_list:
+            out_dict[xx] = all_wgts[xx]
+
+    return out_dict
 
 
 
@@ -312,6 +366,81 @@ cdef list _extract_lsv_summary(list files, int minnonzero, int min_reads, object
 
     return lsv_id_list
 
+
+# cdef list _extract_lsv_summary_C(list files, int minnonzero, int min_reads,  map[string, string] types_dict,
+#                                  object junc_info, list exp_name_list, dict epsi=None, int percent=-1, object logger=None):
+#     cdef dict lsv_types, lsv_list = {}
+#     cdef list lsv_id_list = []
+#     cdef int nfiles = len(files)
+#     cdef int fidx
+#     cdef str ff
+#     cdef dict lsv_junc_info = {}
+#     cdef np.ndarray mtrx, vals
+#     cdef np.ndarray jinfo
+#
+#     if percent == -1:
+#         percent = nfiles / 2
+#         percent = percent + 1 if nfiles % 2 != 0 else percent
+#     percent = min(int(percent), nfiles)
+#
+#     for fidx, ff in enumerate(files):
+#         if not os.path.isfile(ff):
+#             logger.error('File %s does not exist. Exiting execution' % ff)
+#             exit(-1)
+#
+#         if logger:
+#             logger.info("Parsing file: %s" % ff)
+#         with open(ff, 'rb') as fp:
+#             all_files = np.load(fp)
+#             lsv_types = {yy[0].decode('UTF-8'):yy[1].decode('UTF-8') for yy in all_files['lsv_types']}
+#             jinfo = all_files['junc_info']
+#             xp = all_files['meta'][0]
+#
+#             exp_name_list.append(xp[0].decode('UTF-8'))
+#
+#             pre_lsv = jinfo[0][0].decode('UTF-8')
+#             lsv_t = False
+#             epsi_t = []
+#             lsv_junc_info = {zz: [] for zz in lsv_types.keys()}
+#
+#             for xx in jinfo:
+#                 lsv_id = xx[0].decode('UTF-8')
+#                 lsv_junc_info[lsv_id].append([xx[1], xx[2]])
+#
+#                 if xx[0] == pre_lsv:
+#                     lsv_t = lsv_t or (xx[3] >=min_reads and xx[4] >= minnonzero)
+#                     if epsi is not None:
+#                         epsi_t.append(xx[3])
+#                 else:
+#                     pre_lsv = lsv_id
+#                     lsv_t = (xx[3] >=min_reads and xx[4] >= minnonzero)
+#                     try:
+#                         lsv_list[pre_lsv] += int(lsv_t)
+#                         if epsi is not None:
+#                             epsi[lsv_id] += np.array(epsi_t)
+#                     except KeyError:
+#
+#                         lsv_list[pre_lsv] = int(lsv_t)
+#                         if epsi is not None:
+#                             epsi[lsv_id] = np.array(epsi_t)
+#                     epsi_t = []
+#
+#         junc_info.update(lsv_junc_info)
+#         types_dict.update(lsv_types)
+#
+#     if epsi is not None:
+#         for xx in epsi.keys():
+#             epsi[xx] = epsi[xx] / nfiles
+#             epsi[xx] = epsi[xx] / epsi[xx].sum()
+#             epsi[xx][np.isnan(epsi[xx])] = 1.0 / nfiles
+#
+#     for xx, yy in lsv_list.items():
+#         if yy >= percent:
+#             lsv_id_list.append(xx)
+#         junc_info[xx] = np.array(junc_info[xx])
+#
+#     return lsv_id_list
+
 ####
 # API
 ##
@@ -324,22 +453,14 @@ cpdef tuple extract_lsv_summary(list files, int minnonzero, int min_reads, objec
 
     return r, exp_list
 
-# cpdef int dump_lsv_coverage_wrap(str filename, dict cov_dict, list type_list, list junc_info, str exp_name):
-#     dump_lsv_coverage(filename, cov_dict, type_list, junc_info, exp_name)
 
-# cpdef int from_matrix_to_objects( str gne_id, object elem_dicts, dict dict_junctions,
-#                                  list list_exons, list list_introns=None, int default_index=-1):
-#     cdef dict func_list
-#     cdef list elem
+# cpdef  extract_lsv_summary_C(list files, int minnonzero, int min_reads, map[string, string] types_dict,
+#                              map[string, np.ndarray] junc_info, dict epsi=None, int percent=-1, object logger=None):
+#     cdef list r
+#     cdef list exp_list = []
+#     r = _extract_lsv_summary_C(files, minnonzero, min_reads, types_dict, junc_info, exp_list, epsi, percent, logger)
 #
-#     if list_introns is not None:
-#         func_list = {EX_TYPE: _read_exon, IR_TYPE: _read_ir, J_TYPE: _read_junction}
-#     else:
-#         func_list = {EX_TYPE: _read_exon, IR_TYPE: _pass_ir, J_TYPE: _read_junction}
-#
-#     for elem in elem_dicts:
-#         func_list[elem[3]](elem, gne_id, dict_junctions, list_exons,
-#                              list_introns, default_index)
+#     return r, exp_list
 
 
 cpdef int add_elements_mtrx(dict new_elems, object shared_elem_dict):
@@ -370,10 +491,10 @@ cpdef dump_bin_file(data, str filename):
         # fast_pickler.fast = 1
         fast_pickler.dump(data)
 
-cpdef dict get_extract_lsv_list(list list_of_lsv_id, list file_list, bint aggr=True):
+cpdef dict get_extract_lsv_list(list list_of_lsv_id, list file_list, bint aggr=True, str filename=None):
 
     if aggr:
-        return _get_extract_lsv_list(list_of_lsv_id, file_list)
+        return  _get_extract_lsv_list(list_of_lsv_id, file_list)
     else:
         return _get_extract_lsv_list(list_of_lsv_id, file_list)
 

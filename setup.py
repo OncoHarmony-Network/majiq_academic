@@ -14,13 +14,15 @@ HTSLIB_LIB_DIRS = [os.environ.get("HTSLIB_LIBRARY_DIR", '/usr/local/lib')]
 HTSLIB_INC_DIRS = [os.environ.get("HTSLIB_INCLUDE_DIR", '/usr/local/include')]
 
 
-compile_args = ['-fopenmp', '-std=c++11']
+compile_args = ['-fopenmp']
 scythe_compiler_args = ['-DSCYTHE_COMPILE_DIRECT', '-DSCYTHE_PTHREAD']
-linker_args = ['-lgomp', '-std=c++11']
+linker_args = ['-lgomp']
 
 if sys.platform == 'darwin':
-    # compile_args.append('-stdlib=libc++')
+    compile_args.append('-stdlib=libc++')
     linker_args = ['-L/usr/local/opt/llvm/lib'] + linker_args
+else:
+    compile_args.append('-std=c++11')
 
 
 MAJIQ_INC_DIRS = ['majiq/src/internals', 'voila/c']
@@ -29,13 +31,30 @@ NPY_INC_DIRS   = [numpy.get_include()]
 
 extensions += [Extension('majiq.src.polyfitnb', ['majiq/src/polyfitnb.pyx'], language='c++', include_dirs=NPY_INC_DIRS)]
 extensions += [Extension('majiq.src.internals.seq_parse', ['majiq/src/internals/seq_parse.pyx',
-                                                          'majiq/src/internals/io_bam.cpp',
-                                                          'majiq/src/internals/grimoire.cpp'],
+                                                           'majiq/src/internals/io_bam.cpp',
+                                                           'majiq/src/internals/grimoire.cpp'],
                          include_dirs=MAJIQ_INC_DIRS + NPY_INC_DIRS + HTSLIB_INC_DIRS,
                          library_dirs=HTSLIB_LIB_DIRS + MAJIQ_LIB_DIRS,
                          libraries=HTSLIB_LIBRARY,
                          runtime_library_dirs=HTSLIB_LIB_DIRS + MAJIQ_LIB_DIRS,
-                         extra_compile_args=compile_args+scythe_compiler_args,  extra_link_args=linker_args, language='c++')]
+                         extra_compile_args=compile_args+scythe_compiler_args,  extra_link_args=linker_args,
+                         language='c++')]
+
+extensions += [Extension('majiq.src.calc_psi', ['majiq/src/calc_psi.pyx',
+                                                'majiq/src/internals/psi.cpp'],
+                         include_dirs=MAJIQ_INC_DIRS + NPY_INC_DIRS,
+                         library_dirs=MAJIQ_LIB_DIRS,
+                         runtime_library_dirs=MAJIQ_LIB_DIRS,
+                         extra_compile_args=compile_args+scythe_compiler_args,  extra_link_args=linker_args,
+                         language='c++')]
+
+extensions += [Extension('majiq.src.deltapsi', ['majiq/src/deltapsi.pyx',
+                                                'majiq/src/internals/psi.cpp'],
+                         include_dirs=MAJIQ_INC_DIRS + NPY_INC_DIRS,
+                         library_dirs=MAJIQ_LIB_DIRS,
+                         runtime_library_dirs=MAJIQ_LIB_DIRS,
+                         extra_compile_args=compile_args+scythe_compiler_args,  extra_link_args=linker_args,
+                         language='c++')]
 
 extensions += [Extension('majiq.src.io', ['majiq/src/io.pyx'], language='c++',
                          include_dirs=NPY_INC_DIRS + MAJIQ_INC_DIRS,

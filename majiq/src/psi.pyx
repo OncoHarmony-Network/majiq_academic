@@ -407,7 +407,7 @@ def __load_default_prior():
     return data
 
 
-def gen_prior_matrix(object lsv_type, dict lsv_empirical_psi1, dict lsv_empirical_psi2, str output, list names,
+cpdef tuple gen_prior_matrix(object lsv_type, dict lsv_empirical_psi1, dict lsv_empirical_psi2, str output, list names,
                      str plotpath, int iter, float binsize, int numbins=20, bint defaultprior=False,
                      int minpercent=-1, object logger=None):
 
@@ -459,7 +459,7 @@ def gen_prior_matrix(object lsv_type, dict lsv_empirical_psi1, dict lsv_empirica
             for i in range(numbins):
                 pmat.extend(mixture_pdf[numbins - i:(numbins * 2) - i])
 
-            prior_matrix[prior_idx] = np.array(pmat).reshape(numbins, -1)
+            prior_matrix[prior_idx] = np.array(pmat, dtype=np.float32).reshape(numbins, -1)
             if np.isnan(prior_matrix[prior_idx]).any():
                 if prior_idx == 1:
                     logger.warning("Not enought statistic power to calculate the intron retention specific prior, "

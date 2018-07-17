@@ -23,7 +23,6 @@ from libcpp.vector cimport vector
 from cython.parallel import prange
 
 
-
 cdef extern from "sqlite3.h":
     struct sqlite3
 
@@ -47,7 +46,7 @@ cdef void update_splicegraph_junction(sqlite3 *db, string gene_id, int start, in
 
 cdef int _output_lsv_file_single(vector[LSV*] out_lsvlist, string experiment_name, map[string, vector[string]] tlb_j_g,
                                  map[string, Gene*] gene_map, string outDir, int nthreads, unsigned int msamples,
-                                 bint irb, int strandness, object logger) :
+                                 bint irb, int strandness, object logger) except -1:
 
     # cdef np.float32_t[:,:,:] boots
     # cdef np.float32_t* boots
@@ -140,6 +139,10 @@ cdef int _output_lsv_file_single(vector[LSV*] out_lsvlist, string experiment_nam
     # with gil:
     del junc_ids
 
+    for xx in tlb_juncs:
+        print(xx.first, xx.second.index)
+
+
     logger.info("Create majiq file")
 
     # for j in prange(nlsv, nogil=True, num_threads=nthreads):
@@ -149,26 +152,26 @@ cdef int _output_lsv_file_single(vector[LSV*] out_lsvlist, string experiment_nam
             njunc = lsv_ptr.get_num_variations()
             lsvid = lsv_ptr.get_id()
             with gil:
-                # cov_dict[lsvid] = np.zeros(shape=(njunc, msamples), dtype=np.float32)
+                cov_dict[lsvid.decode('utf-8')] = np.zeros(shape=(njunc, msamples), dtype=np.float32)
                 type_list.append((lsvid.decode('utf-8'), lsv_ptr.get_type()))
             junc_idx = 0
 
             for junc in lsv_ptr.get_junctions():
                 key = junc.get_key(lsv_ptr.get_gene(), strandness)
-                # with gil:
-                    # print(key)
+                with gil:
+                    print(key, tlb_juncs.count(key))
                 if tlb_juncs.count(key) > 0 :
                     jobj_ptr = tlb_juncs[key]
                     sreads = jobj_ptr.sreads
                     npos = jobj_ptr.npos
+                    with gil:
+                        cov_dict[lsvid.decode('utf-8')][junc_idx] = boots[tlb_juncs[key].index]
                 else:
                     sreads = 0
                     npos = 0
                 with gil:
-                        # print (boots[tlb_juncs[key].index])
-                    cov_dict[lsvid][junc_idx] = boots[tlb_juncs[key].index]
                     junc_info.append((lsvid.decode('utf-8'), junc.get_start(), junc.get_end(),
-                                          jobj_ptr.sreads, jobj_ptr.npos))
+                                          sreads, npos))
                 junc_idx = junc_idx + 1
 
             ir_ptr = lsv_ptr.get_intron()
@@ -178,14 +181,15 @@ cdef int _output_lsv_file_single(vector[LSV*] out_lsvlist, string experiment_nam
                     jobj_ptr = tlb_ir[key]
                     sreads = jobj_ptr.sreads
                     npos = jobj_ptr.npos
+                    with gil:
+                        cov_dict[lsvid][junc_idx] = boots[jobj_ptr.index]
                 else:
                     sreads = 0
                     npos = 0
 
                 with gil:
-                    cov_dict[lsvid][junc_idx] = boots[jobj_ptr.index]
                     junc_info.append((lsvid.decode('utf-8'), ir_ptr.get_start(), ir_ptr.get_end(),
-                                      jobj_ptr.sreads, jobj_ptr.npos))
+                                      sreads, npos))
     # with gil:
     logger.info("Dump majiq file")
     majiq_io.dump_lsv_coverage(out_file, cov_dict, type_list, junc_info, experiment_name.decode('utf-8'))
