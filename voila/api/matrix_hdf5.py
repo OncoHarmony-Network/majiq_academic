@@ -363,8 +363,9 @@ class DeltaPsi(MatrixHdf5):
             :return: None
             """
             bins_list = kwargs.get('bins')
-            bins = [collapse_matrix(bins) for bins in bins_list]
-            kwargs['bins'] = bins
+            # bins = [collapse_matrix(bins) for bins in bins_list]
+            # kwargs['bins'] = bins
+            kwargs['bins'] = bins_list
             super().add(**kwargs)
 
     def delta_psi(self, lsv_id):

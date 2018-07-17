@@ -391,7 +391,7 @@ cdef tuple _empirical_delta_psi(list list_of_lsv, dict lsv_empirical_psi1, dict 
             delta_psi_res = delta_psi
         delta_psi_res.append(lsv_empirical_psi1[lsv] - lsv_empirical_psi2[lsv])
 
-    return np.array(delta_psi), np.array(delta_psi_ir)
+    return np.array(delta_psi, dtype=np.float32), np.array(delta_psi_ir, dtype=np.float32)
 
 
 def __load_default_prior():
@@ -404,22 +404,24 @@ def __load_default_prior():
     data = fast_pickler.load()
     fop.close()
 
-    return data
+    return data.astype(np.float32)
 
 
 cpdef tuple gen_prior_matrix(object lsv_type, dict lsv_empirical_psi1, dict lsv_empirical_psi2, str output, list names,
                      str plotpath, int iter, float binsize, int numbins=20, bint defaultprior=False,
                      int minpercent=-1, object logger=None):
 
-    cdef np.ndarray psi_space, def_mat, lsv, mixture_pdf
+    cdef np.ndarray[np.float32_t] psi_space, def_mat, lsv, mixture_pdf
     cdef list prior_matrix, list_of_lsv, njun_prior, pmat
     cdef int prior_idx, nj
-    cdef np.ndarray best_delta_psi, best_dpsi, best_dpsi_ir
+    cdef np.ndarray[np.float32_t, ndim=2] best_deltap, best_dpsi, best_dpsi_ir
+
+    cdef np.ndarray[np.float32_t, ndim=1] best_delta_psi
 
 
     #Start prior matrix
     logger.info("Calculating prior matrix...")
-    psi_space = np.linspace(0, 1 - binsize, num=numbins) + binsize / 2
+    psi_space = np.linspace(0, 1 - binsize, num=numbins, dtype=np.float32) + binsize / 2
     if defaultprior:
         def_mat = __load_default_prior()
         prior_matrix = [def_mat, def_mat]
@@ -434,17 +436,17 @@ cpdef tuple gen_prior_matrix(object lsv_type, dict lsv_empirical_psi1, dict lsv_
     best_dpsi, best_dpsi_ir = _empirical_delta_psi(list_of_lsv, lsv_empirical_psi1, lsv_empirical_psi2, lsv_type)
 
     prior_matrix = [[], []]
-    for prior_idx, best_delta_psi in enumerate((best_dpsi, best_dpsi_ir)):
+    for prior_idx, best_deltap in enumerate((best_dpsi, best_dpsi_ir)):
         njun_prior = [[]]
 
-        for lsv in best_delta_psi:
+        for lsv in best_deltap:
             if lsv.shape[0] != 2:
                 continue
             njun_prior[0].append(lsv[0])
 
         for nj in range(len(njun_prior)):
 
-            best_delta_psi = np.array(njun_prior[nj])
+            best_delta_psi = np.array(njun_prior[nj], dtype=np.float32)
             if len(best_delta_psi) == 0:
                 if prior_idx == 0:
                     prior_matrix[prior_idx] = __load_default_prior()

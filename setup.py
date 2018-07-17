@@ -19,13 +19,15 @@ scythe_compiler_args = ['-DSCYTHE_COMPILE_DIRECT', '-DSCYTHE_PTHREAD']
 linker_args = ['-lgomp']
 
 if sys.platform == 'darwin':
+    # pass
     compile_args.append('-stdlib=libc++')
     linker_args = ['-L/usr/local/opt/llvm/lib'] + linker_args
 else:
     compile_args.append('-std=c++11')
 
 
-MAJIQ_INC_DIRS = ['majiq/src/internals', 'voila/c']
+MAJIQ_INC_DIRS = ['majiq/src/internals']
+VOILA_INC_DIRS = ['voila/c']
 MAJIQ_LIB_DIRS = ['majiq/src/internals']
 NPY_INC_DIRS   = [numpy.get_include()]
 
@@ -33,7 +35,7 @@ extensions += [Extension('majiq.src.polyfitnb', ['majiq/src/polyfitnb.pyx'], lan
 extensions += [Extension('majiq.src.internals.seq_parse', ['majiq/src/internals/seq_parse.pyx',
                                                            'majiq/src/internals/io_bam.cpp',
                                                            'majiq/src/internals/grimoire.cpp'],
-                         include_dirs=MAJIQ_INC_DIRS + NPY_INC_DIRS + HTSLIB_INC_DIRS,
+                         include_dirs=MAJIQ_INC_DIRS + VOILA_INC_DIRS + NPY_INC_DIRS + HTSLIB_INC_DIRS,
                          library_dirs=HTSLIB_LIB_DIRS + MAJIQ_LIB_DIRS,
                          libraries=HTSLIB_LIBRARY,
                          runtime_library_dirs=HTSLIB_LIB_DIRS + MAJIQ_LIB_DIRS,

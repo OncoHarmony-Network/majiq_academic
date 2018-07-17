@@ -83,6 +83,7 @@ inline void collapse_matrix(float* o_dpsi, float* matrix, int nbins){
     for (int i=0; i<nbins; i++){
        for (int j=0; j<nbins; j++){
             o_dpsi[j-i+(nbins-1)] += matrix[i*nbins + j] ;
+       }
     }
 }
 

@@ -17,7 +17,7 @@ from voila.api import Matrix
 from voila.constants import ANALYSIS_DELTAPSI, VOILA_FILE_VERSION
 cimport numpy as np
 import numpy as np
-
+# import collections
 
 def deltapsi(args):
     return pipeline_run(DeltaPsi(args))
@@ -50,7 +50,7 @@ cdef _core_deltapsi(object self):
     cdef np.ndarray[np.float32_t, ndim=2, mode="c"] o_postpsi_2
     cdef np.ndarray[np.float32_t, ndim=2, mode="c"] o_postdeltapsi
     cdef np.ndarray[np.float32_t, ndim=2, mode="c"] prior_m
-    cdef np.ndarray[np.float32_t, ndim=2, mode="c"] prior_matrix
+    cdef list prior_matrix
 
     cdef vector[string] lsv_vec
 
@@ -68,7 +68,7 @@ cdef _core_deltapsi(object self):
     lsv_empirical_psi1 = {}
     junc_info = {}
     list_of_lsv1, exps1 = majiq_io.extract_lsv_summary(self.files1, epsi=lsv_empirical_psi1,
-                                                       types_dict=self.lsv_type_dict,
+                                                       types_dict=lsv_type_dict,
                                                        minnonzero=self.minpos, min_reads=self.minreads,
                                                        junc_info=junc_info, percent=self.min_exp, logger=logger)
     # weights[0] = self.calc_weights(self.weights[0], list_of_lsv1, name=self.names[0], file_list=self.files1,
@@ -77,7 +77,7 @@ cdef _core_deltapsi(object self):
 
     lsv_empirical_psi2 = {}
     list_of_lsv2, exps2 = majiq_io.extract_lsv_summary(self.files2, epsi=lsv_empirical_psi2,
-                                                       types_dict=self.lsv_type_dict,
+                                                       types_dict=lsv_type_dict,
                                                        minnonzero=self.minpos, min_reads=self.minreads,
                                                        junc_info=junc_info, percent=self.min_exp, logger=logger)
     # weights[1] = self.calc_weights(self.weights[1], list_of_lsv2, name=self.names[1], file_list=self.files2,
@@ -88,10 +88,10 @@ cdef _core_deltapsi(object self):
     list_of_lsv = list(set(list_of_lsv1).intersection(set(list_of_lsv2)))
     logger.info("Number quantifiable LSVs: %s" % len(list_of_lsv))
 
-    psi_space, prior_matrix = gen_prior_matrix(self.lsv_type_dict, lsv_empirical_psi1, lsv_empirical_psi2,
+    psi_space, prior_matrix = gen_prior_matrix(lsv_type_dict, lsv_empirical_psi1, lsv_empirical_psi2,
                                                self.outDir, names=self.names, plotpath=self.plotpath,
                                                iter=self.iter, binsize=self.binsize,
-                                               numbins=self.nbins, defaultprior=self.default_prior,
+                                               numbins=nbins, defaultprior=self.default_prior,
                                                minpercent=self.min_exp, logger=logger)
 
     # logger.info("Saving prior matrix for %s..." % self.names)
@@ -108,8 +108,8 @@ cdef _core_deltapsi(object self):
 
     nthreads = min(self.nthreads, len(list_of_lsv))
 
-    cov_dict1 = majiq_io.get_coverage_lsv(list_of_lsv, self.files, "")
-    cov_dict2 = majiq_io.get_coverage_lsv(list_of_lsv, self.files, "")
+    cov_dict1 = majiq_io.get_coverage_lsv(list_of_lsv, self.files1, "")
+    cov_dict2 = majiq_io.get_coverage_lsv(list_of_lsv, self.files2, "")
 
     for i in prange(nlsv, nogil=True, num_threads=nthreads):
         lsv_id = lsv_vec[i]
@@ -203,7 +203,7 @@ cdef _core_deltapsi(object self):
 #         conf.queue.put(qm, block=True)
 #
 #
-prior_conf = collections.namedtuple('conf', 'iter plotpath breakiter names binsize')
+# prior_conf = collections.namedtuple('conf', 'iter plotpath breakiter names binsize')
 
 
 class DeltaPsi(BasicPipeline):
@@ -217,5 +217,5 @@ class DeltaPsi(BasicPipeline):
                                          junctions=extra['junc_info'][results[5]])
 
     def run(self):
-        self.deltapsi()
+        _core_deltapsi(self)
 
