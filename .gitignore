@@ -1,7 +1,8 @@
 *.pyc
 *.c
 !voila/c/sqlite3.c
-*.cpp
+src/internals/seq_parse.cpp
+src/*.cpp
 .DS_Store
 .idea
 voila/templates/.idea
@@ -12,4 +13,5 @@ voila/templates/spliceGraphD3.html
 voila/sandbox/*
 dist/
 majiq.egg-info
+
 
