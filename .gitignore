@@ -1,8 +1,8 @@
 *.pyc
 *.c
 !voila/c/sqlite3.c
-src/internals/seq_parse.cpp
-src/*.cpp
+majiq/src/internals/seq_parse.cpp
+majiq/src/*.cpp
 .DS_Store
 .idea
 voila/templates/.idea
