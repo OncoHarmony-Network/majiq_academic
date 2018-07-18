@@ -43,7 +43,7 @@ cdef _core_calcpsi(object self):
     cdef dict out_postpsi_d = {}
     cdef bint is_ir
     cdef string lsv_id
-    cdef int nways, msamples, i
+    cdef int nways, msamples, i, loop_step
     cdef np.ndarray[np.float32_t, ndim=1, mode="c"] o_mupsi
     cdef np.ndarray[np.float32_t, ndim=2, mode="c"] o_postpsi
     cdef list list_of_lsv
@@ -75,14 +75,19 @@ cdef _core_calcpsi(object self):
     if nlsv == 0:
         logger.info("There is no LSVs that passes the filters")
         return
-
+    loop_step = max(1, int(nlsv/10))
     nthreads = min(self.nthreads, nlsv)
     # cov_dict = majiq_io.get_coverage_lsv(list_of_lsv, self.files, "")
     for i in prange(nlsv, nogil=True, num_threads=nthreads):
+
         lsv_id = lsv_vec[i]
         with gil:
+
             print ('type', lsv_type_dict[lsv_id.decode('utf-8')])
             cov_dict = majiq_io.get_coverage_lsv([lsv_id.decode('utf-8')], self.files, "")
+
+            if i % loop_step == 0 :
+                print ("Event %s/%s" %(i, nlsv))
             nways = cov_dict[lsv_id].size()
             msamples = cov_dict[lsv_id][0].size()
             # o_mupsi = np.zeros(shape=nways, dtype=np.float32)
