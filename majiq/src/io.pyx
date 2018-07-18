@@ -255,11 +255,14 @@ cpdef map[string, vector[psi_distr_t]] get_coverage_lsv(list list_of_lsv_id, lis
         with open(fname, 'rb') as fp:
             data = np.load(fp)
             for lid in list_of_lsv_id:
+                # print ('LSV', lid)
                 lsv_id = lid.encode('utf-8')
                 try:
                     cov = data[lid]
                 except KeyError:
                     continue
+                njunc = cov.shape[0]
+                msamples = cov.shape[1]
                 if result.count(lsv_id) > 0:
                     if weight_fname != "":
                         cov = cov * weights[lsv_id][fidx]
@@ -268,8 +271,6 @@ cpdef map[string, vector[psi_distr_t]] get_coverage_lsv(list list_of_lsv_id, lis
                         for yy in range(msamples):
                             result[lsv_id][xx][yy] = result[lsv_id][xx][yy] + cov[xx][yy]
                 else:
-                    njunc = cov.shape[0]
-                    msamples = cov.shape[1]
                     # tv = psi_distr_t(msamples)
                     lsv_cov = vector[psi_distr_t](njunc, psi_distr_t(msamples))
                     for xx in range(njunc):
