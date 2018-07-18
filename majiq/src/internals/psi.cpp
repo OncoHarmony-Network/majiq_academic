@@ -25,7 +25,7 @@ void prob_data_sample_given_psi(float* out_array, float sample, float all_sample
 void psi_posterior(vector<psi_distr_t>& i_psi, float* o_mupsi, float* o_postpsi,
                    int msamples, int njunc, int nbins, bool is_ir){
 
-cout << "psi_posterior 01 msamples: "<< msamples << " njunc: "<< njunc << " ir?: "<< is_ir << "\n" ;
+//cout << "psi_posterior 01 msamples: "<< msamples << " njunc: "<< njunc << " ir?: "<< is_ir << "\n" ;
 
     vector<psi_distr_t> alpha_beta_prior(njunc, psi_distr_t(2)) ;
     get_prior_params(alpha_beta_prior, njunc, is_ir) ;
@@ -43,7 +43,7 @@ cout << "psi_posterior 01 msamples: "<< msamples << " njunc: "<< njunc << " ir?:
             all_m[m] += i_psi[j][m] ;
         }
     }
-cout << "IN THE LOOP\n" ;
+//cout << "IN THE LOOP\n" ;
     for (int j=0; j<njunc; j++){
         const float alpha = alpha_beta_prior[j][0] ;
         const float beta = alpha_beta_prior[j][1] ;
@@ -70,7 +70,7 @@ cout << "IN THE LOOP\n" ;
         }
     }
     free(all_m) ;
-cout << "OUT LOOP\n" ;
+//cout << "OUT LOOP\n" ;
 }
 
 //

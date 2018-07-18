@@ -63,6 +63,9 @@ cdef _core_calcpsi(object self):
                                                      percent=self.min_exp, junc_info=junc_info, logger=logger)
 
     for lsv in list_of_lsv:
+        nways = len(lsv_type_dict[lsv].split('|')) -1
+        out_mupsi_d[lsv.encode('utf-8')] = np.zeros(shape=nways, dtype=np.float32)
+        out_postpsi_d[lsv.encode('utf-8')] = np.zeros(shape=(nways, nbins), dtype=np.float32)
         lsv_vec.push_back(lsv.encode('utf-8'))
 
     # self.weights = self.calc_weights(self.weights, list_of_lsv, name=self.name, file_list=self.files, logger=logger)
@@ -74,17 +77,20 @@ cdef _core_calcpsi(object self):
         return
 
     nthreads = min(self.nthreads, nlsv)
-    cov_dict = majiq_io.get_coverage_lsv(list_of_lsv, self.files, "")
+    # cov_dict = majiq_io.get_coverage_lsv(list_of_lsv, self.files, "")
     for i in prange(nlsv, nogil=True, num_threads=nthreads):
         lsv_id = lsv_vec[i]
-        nways = cov_dict[lsv_id].size()
-        msamples = cov_dict[lsv_id][0].size()
         with gil:
-            o_mupsi = np.zeros(shape=nways, dtype=np.float32)
-            out_mupsi_d[lsv_id] = o_mupsi
-            o_postpsi = np.zeros(shape=(nways, nbins), dtype=np.float32)
-            out_postpsi_d[lsv_id] = o_postpsi
             print ('type', lsv_type_dict[lsv_id.decode('utf-8')])
+            cov_dict = majiq_io.get_coverage_lsv([lsv_id.decode('utf-8')], self.files, "")
+            nways = cov_dict[lsv_id].size()
+            msamples = cov_dict[lsv_id][0].size()
+            # o_mupsi = np.zeros(shape=nways, dtype=np.float32)
+            # out_mupsi_d[lsv_id] = o_mupsi
+            # o_postpsi = np.zeros(shape=(nways, nbins), dtype=np.float32)
+            # out_postpsi_d[lsv_id] = o_postpsi
+            o_mupsi = out_mupsi_d[lsv_id]
+            o_postpsi = out_postpsi_d[lsv_id]
             is_ir = 'i' in lsv_type_dict[lsv_id.decode('utf-8')]
         psi_posterior(cov_dict[lsv_id], <np.float32_t *> o_mupsi.data,
                       <np.float32_t *> o_postpsi.data, msamples, nways, nbins, is_ir)
