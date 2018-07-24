@@ -250,8 +250,8 @@ cpdef map[string, vector[psi_distr_t]] get_coverage_lsv(vector[string] list_of_l
     cdef np.ndarray[np.float32_t, ndim=2, mode="c"] cov
     cdef vector[psi_distr_t] lsv_cov
     cdef psi_distr_t tv
-    cdef dict weights, data
-    cdef object p
+    cdef dict weights
+    cdef object data
     cdef int nlsv = list_of_lsv_id.size()
 
     # if weight_fname != "":
