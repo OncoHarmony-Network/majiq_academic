@@ -240,6 +240,19 @@ cdef dict _get_extract_lsv_list(list list_of_lsv_id, list file_list):
 
     return result
 
+
+
+cdef test(map[string, vector[psi_distr_t]] result, np.ndarray[np.float32_t, ndim=2, mode="c"] cov, string lsv_id):
+
+    # cdef np.ndarray[np.float32_t, ndim=2, mode="c"] cov
+    cdef lid = lsv_id.decode('utf-8')
+
+    cdef int njunc = cov.shape[0]
+    cdef int msamples = cov.shape[1]
+    with nogil:
+        get_aggr_coverage(result, lsv_id, <np.float32_t *> cov.data, njunc, msamples)
+
+
 cpdef map[string, vector[psi_distr_t]] get_coverage_lsv(vector[string] list_of_lsv_id, list file_list,
                                                         str weight_fname, int nthreads):
     cdef map[string, vector[psi_distr_t]] result
@@ -247,9 +260,9 @@ cpdef map[string, vector[psi_distr_t]] get_coverage_lsv(vector[string] list_of_l
     cdef str lid, lsv_type, fname
     cdef string lsv_id
     cdef int fidx, njunc, msamples, i
-    cdef np.ndarray[np.float32_t, ndim=2, mode="c"] cov
-    cdef vector[psi_distr_t] lsv_cov
-    cdef psi_distr_t tv
+    # cdef np.ndarray[np.float32_t, ndim=2, mode="c"] cov
+    # cdef vector[psi_distr_t] lsv_cov
+    # cdef psi_distr_t tv
     cdef dict weights
     cdef object data
     cdef int nlsv = list_of_lsv_id.size()
@@ -269,15 +282,21 @@ cpdef map[string, vector[psi_distr_t]] get_coverage_lsv(vector[string] list_of_l
                 # print ('LSV', lid)
                 # lsv_id = lid.encode('utf-8')
                 with gil:
-                    lid = lsv_id.decode('utf-8')
-                    if lid not in data:
+                    try:
+                        lid = lsv_id.decode('utf-8')
+                        test(data[lid], result, lsv_id)
+                    except KeyError:
                         continue
-                    cov = data[lid]
 
-                    njunc = cov.shape[0]
-                    msamples = cov.shape[1]
-
-                get_aggr_coverage(result, lsv_id, <np.float32_t *> cov.data, njunc, msamples)
+                #     lid = lsv_id.decode('utf-8')
+                #     if lid not in data:
+                #         continue
+                #     cov = data[lid]
+                #
+                #     njunc = cov.shape[0]
+                #     msamples = cov.shape[1]
+                #
+                # get_aggr_coverage(result, lsv_id, <np.float32_t *> cov.data, njunc, msamples)
 
             # if result.count(lsv_id) > 0:
             #     if weight_fname != "":
