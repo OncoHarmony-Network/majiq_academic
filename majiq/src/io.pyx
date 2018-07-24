@@ -246,37 +246,40 @@ cpdef map[string, vector[psi_distr_t]] get_coverage_lsv(list list_of_lsv_id, lis
     cdef np.ndarray cov
     cdef vector[psi_distr_t] lsv_cov
     cdef psi_distr_t tv
-    cdef dict weights
+    cdef dict weights, data
+    cdef object p
 
     if weight_fname != "":
         weights = _load_weights(list_of_lsv_id, weight_fname)
 
     for fidx, fname in enumerate(file_list):
         with open(fname, 'rb') as fp:
-            data = np.load(fp)
-            for lid in list_of_lsv_id:
-                # print ('LSV', lid)
-                lsv_id = lid.encode('utf-8')
-                try:
-                    cov = data[lid]
-                except KeyError:
-                    continue
-                njunc = cov.shape[0]
-                msamples = cov.shape[1]
-                if result.count(lsv_id) > 0:
-                    if weight_fname != "":
-                        cov = cov * weights[lsv_id][fidx]
-                    # print(lsv_id, result[lsv_id].coverage[fidx].shape)
-                    for xx in range(njunc):
-                        for yy in range(msamples):
-                            result[lsv_id][xx][yy] = result[lsv_id][xx][yy] + cov[xx][yy]
-                else:
-                    # tv = psi_distr_t(msamples)
-                    lsv_cov = vector[psi_distr_t](njunc, psi_distr_t(msamples))
-                    for xx in range(njunc):
-                        for yy in range(msamples):
-                            lsv_cov[xx][yy] = cov[xx][yy]
-                    result[lsv_id] = lsv_cov
+            p = np.load(fp)
+            data = dict(p)
+
+        for lid in list_of_lsv_id:
+            # print ('LSV', lid)
+            lsv_id = lid.encode('utf-8')
+            try:
+                cov = data[lid]
+            except KeyError:
+                continue
+            njunc = cov.shape[0]
+            msamples = cov.shape[1]
+            if result.count(lsv_id) > 0:
+                if weight_fname != "":
+                    cov = cov * weights[lsv_id][fidx]
+                # print(lsv_id, result[lsv_id].coverage[fidx].shape)
+                for xx in range(njunc):
+                    for yy in range(msamples):
+                        result[lsv_id][xx][yy] = result[lsv_id][xx][yy] + cov[xx][yy]
+            else:
+                # tv = psi_distr_t(msamples)
+                lsv_cov = vector[psi_distr_t](njunc, psi_distr_t(msamples))
+                for xx in range(njunc):
+                    for yy in range(msamples):
+                        lsv_cov[xx][yy] = cov[xx][yy]
+                result[lsv_id] = lsv_cov
     return result
 
 cdef map[string, psi_distr_t] _load_weights(list lsv_list, str file_name):

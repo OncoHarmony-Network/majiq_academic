@@ -11,7 +11,7 @@ from libcpp.string cimport string
 from libcpp.map cimport map
 
 from libcpp.vector cimport vector
-from cython.parallel import prange
+from cython.parallel import prange, parallel, threadid
 
 from voila.api import Matrix
 from voila.constants import ANALYSIS_PSI, VOILA_FILE_VERSION
@@ -21,6 +21,7 @@ import numpy as np
 ################################
 # PSI calculation pipeline     #
 ################################
+
 
 def calcpsi(args):
     return pipeline_run(CalcPsi(args))
@@ -77,10 +78,23 @@ cdef _core_calcpsi(object self):
         return
     loop_step = max(1, int(nlsv/10))
     nthreads = min(self.nthreads, nlsv)
-    # cov_dict = majiq_io.get_coverage_lsv(list_of_lsv, self.files, "")
+    cov_dict = majiq_io.get_coverage_lsv(list_of_lsv, self.files, "")
 
-
-
+    # with nogil, parallel(num_threads=nthreads+1):
+    #     with gil:
+    #         print (" I AM ", threadid())
+    #     if threadid() == 0:
+    #         cov_dict = majiq_io.get_coverage_lsv(list_of_lsv, self.files, "")
+    #
+    #         with gil:
+    #             print (" IN IF AM ", threadid())
+    #         pass
+    #     else:
+    #         with gil:
+    #             print (" IN ELSE AM ", threadid())
+    #         #for i in prange(nlsv):
+    #         #    pass
+    #
 
     for i in prange(nlsv, nogil=True, num_threads=nthreads):
 
@@ -88,7 +102,7 @@ cdef _core_calcpsi(object self):
         with gil:
 
             print ('type', lsv_type_dict[lsv_id.decode('utf-8')])
-            cov_dict = majiq_io.get_coverage_lsv([lsv_id.decode('utf-8')], self.files, "")
+            # cov_dict = majiq_io.get_coverage_lsv([lsv_id.decode('utf-8')], self.files, "")
 
             if i % loop_step == 0 :
                 print ("Event %s/%s" %(i, nlsv))
