@@ -347,12 +347,12 @@ namespace grimoire {
                 source.insert(_p1) ;
                 lsvGenes.push_back(lsvObj) ;
             }
+
             if (ex->is_lsv(false)) {
                 lsvObj = new LSV(this, ex, false) ;
                 set<string> t1 ;
                 lsvObj->get_variations(t1) ;
                 lsvGenes.push_back(lsvObj) ;
-
 //                for (const auto &slvs: source){
 //cout << "DETECT LSVS PER GENE6\n" ;
 //                    set<string> d1 ;
@@ -375,7 +375,6 @@ namespace grimoire {
 //                }
             }
         }
-
         int nlsv = 0 ;
         #pragma omp critical
         for(const auto &l: lsvGenes){

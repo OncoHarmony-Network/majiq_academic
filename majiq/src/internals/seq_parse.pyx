@@ -139,8 +139,8 @@ cdef int _output_lsv_file_single(vector[LSV*] out_lsvlist, string experiment_nam
     # with gil:
     del junc_ids
 
-    for xx in tlb_juncs:
-        print(xx.first, xx.second.index)
+    # for xx in tlb_juncs:
+    #     print(xx.first, xx.second.index)
 
 
     logger.info("Create majiq file")
@@ -158,8 +158,8 @@ cdef int _output_lsv_file_single(vector[LSV*] out_lsvlist, string experiment_nam
 
             for junc in lsv_ptr.get_junctions():
                 key = junc.get_key(lsv_ptr.get_gene(), strandness)
-                with gil:
-                    print(key, tlb_juncs.count(key))
+                # with gil:
+                #     print(key, tlb_juncs.count(key))
                 if tlb_juncs.count(key) > 0 :
                     jobj_ptr = tlb_juncs[key]
                     sreads = jobj_ptr.sreads
@@ -310,15 +310,12 @@ cdef void gene_to_splicegraph(Gene * gne, string sg_filename) nogil:
     cdef Junction * jj
     cdef pair[string, Exon *] ex_pair
     cdef Exon * ex
-    cdef string gne_id
-    cdef sqlite3* db
+    cdef string gne_id = gne.get_id()
+    cdef sqlite3* db = open_db(sg_filename)
 
-    gne_id = gne.get_id()
-
-    db = open_db(sg_filename)
     sg_gene(db, gne_id, gne.get_name(), string(1, gne.get_strand()), gne.get_chromosome())
-
     for jj_pair in gne.junc_map_:
+
         jj = jj_pair.second
 
         if not jj.get_denovo_bl(): continue

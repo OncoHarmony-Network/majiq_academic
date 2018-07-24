@@ -329,7 +329,11 @@ namespace grimoire{
                 const bool b = (gObj_->get_strand() == '+') ;
                 const string t = (ss != b) ? "t" : "s" ;
                 id_     = gObj_->get_id() + ":" + t + ":" + to_string(ex->get_start()) + "-" + to_string(ex->get_end()) ;
-                ir_ptr_ = ss? ex->ob_irptr : ex->ib_irptr ;
+                ir_ptr_ = nullptr ;
+                Intron * temp_ir = ss? ex->ob_irptr : ex->ib_irptr ;
+                if (temp_ir != nullptr )
+                    ir_ptr_ = temp_ir->get_ir_flag() ? temp_ir : nullptr ;
+
                 type_   = set_type(ex, ss) ;
             }
 

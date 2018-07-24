@@ -78,6 +78,10 @@ cdef _core_calcpsi(object self):
     loop_step = max(1, int(nlsv/10))
     nthreads = min(self.nthreads, nlsv)
     # cov_dict = majiq_io.get_coverage_lsv(list_of_lsv, self.files, "")
+
+
+
+
     for i in prange(nlsv, nogil=True, num_threads=nthreads):
 
         lsv_id = lsv_vec[i]

@@ -164,6 +164,18 @@ void deltapsi_posterior(vector<psi_distr_t>& i_psi1, vector<psi_distr_t>& i_psi2
     free(all_m1) ;
     free(all_m2) ;
 }
+
+void thread_psi(vector<psi_distr_t>& i_psi, float* o_mupsi, float* o_postpsi,
+                   int msamples, int njunc, int nbins, bool is_ir){
+
+
+
+
+
+
+}
+
+
 //
 //
 //
