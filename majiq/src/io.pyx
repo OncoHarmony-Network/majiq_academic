@@ -242,15 +242,22 @@ cdef dict _get_extract_lsv_list(list list_of_lsv_id, list file_list):
 
 
 
-cdef test(map[string, vector[psi_distr_t]] result, np.ndarray[np.float32_t, ndim=2, mode="c"] cov, string lsv_id):
+cdef test(map[string, vector[psi_distr_t]] result, object data, string lsv_id):
 
-    # cdef np.ndarray[np.float32_t, ndim=2, mode="c"] cov
-    cdef lid = lsv_id.decode('utf-8')
+    cdef np.ndarray[np.float32_t, ndim=2, mode="c"] cov
+    cdef str lid = lsv_id.decode('utf-8')
+    cdef int njunc, msamples
 
-    cdef int njunc = cov.shape[0]
-    cdef int msamples = cov.shape[1]
-    with nogil:
-        get_aggr_coverage(result, lsv_id, <np.float32_t *> cov.data, njunc, msamples)
+
+
+    try:
+        cov = data[lid]
+        njunc = cov.shape[0]
+        msamples = cov.shape[1]
+        with nogil:
+            get_aggr_coverage(result, lsv_id, <np.float32_t *> cov.data, njunc, msamples)
+    except KeyError:
+        return ;
 
 
 cpdef map[string, vector[psi_distr_t]] get_coverage_lsv(vector[string] list_of_lsv_id, list file_list,
@@ -282,11 +289,11 @@ cpdef map[string, vector[psi_distr_t]] get_coverage_lsv(vector[string] list_of_l
                 # print ('LSV', lid)
                 # lsv_id = lid.encode('utf-8')
                 with gil:
-                    try:
-                        lid = lsv_id.decode('utf-8')
-                        test(data[lid], result, lsv_id)
-                    except KeyError:
-                        continue
+                    # try:
+                    #     lid = lsv_id.decode('utf-8')
+                        test(result, data, lsv_id)
+                    # except KeyError:
+                    #     continue
 
                 #     lid = lsv_id.decode('utf-8')
                 #     if lid not in data:
