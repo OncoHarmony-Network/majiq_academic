@@ -259,8 +259,9 @@ cpdef map[string, vector[psi_distr_t]] get_coverage_lsv(vector[string] list_of_l
 
     for fidx, fname in enumerate(file_list):
         with open(fname, 'rb') as fp:
-            p = np.load(fp)
-            data = dict(p)
+            # p = np.load(fp)
+            # data = dict(p)
+            data = np.load(fp)
         for i in prange(nlsv, nogil=True, num_threads=nthreads):
             lsv_id = list_of_lsv_id[i]
         #for lid in list_of_lsv_id:
