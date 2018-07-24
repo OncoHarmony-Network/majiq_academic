@@ -263,21 +263,21 @@ cpdef map[string, vector[psi_distr_t]] get_coverage_lsv(vector[string] list_of_l
             # p = np.load(fp)
             # data = dict(p)
             data = np.load(fp)
-        for i in prange(nlsv, nogil=True, num_threads=nthreads):
-            lsv_id = list_of_lsv_id[i]
-        #for lid in list_of_lsv_id:
-            # print ('LSV', lid)
-            # lsv_id = lid.encode('utf-8')
-            with gil:
-                lid = lsv_id.decode('utf-8')
-                if lid not in data:
-                    continue
-                cov = data[lid]
+            for i in prange(nlsv, nogil=True, num_threads=nthreads):
+                lsv_id = list_of_lsv_id[i]
+            #for lid in list_of_lsv_id:
+                # print ('LSV', lid)
+                # lsv_id = lid.encode('utf-8')
+                with gil:
+                    lid = lsv_id.decode('utf-8')
+                    if lid not in data:
+                        continue
+                    cov = data[lid]
 
-                njunc = cov.shape[0]
-                msamples = cov.shape[1]
+                    njunc = cov.shape[0]
+                    msamples = cov.shape[1]
 
-            get_aggr_coverage(result, lsv_id, <np.float32_t *> cov.data, njunc, msamples)
+                get_aggr_coverage(result, lsv_id, <np.float32_t *> cov.data, njunc, msamples)
 
             # if result.count(lsv_id) > 0:
             #     if weight_fname != "":
