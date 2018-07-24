@@ -78,7 +78,7 @@ cdef _core_calcpsi(object self):
         return
     loop_step = max(1, int(nlsv/10))
     nthreads = min(self.nthreads, nlsv)
-    cov_dict = majiq_io.get_coverage_lsv(list_of_lsv, self.files, "")
+    cov_dict = majiq_io.get_coverage_lsv(lsv_vec, self.files, "", nthreads)
 
     # with nogil, parallel(num_threads=nthreads+1):
     #     with gil:
@@ -101,7 +101,7 @@ cdef _core_calcpsi(object self):
         lsv_id = lsv_vec[i]
         with gil:
 
-            print ('type', lsv_type_dict[lsv_id.decode('utf-8')])
+            # print ('type', lsv_type_dict[lsv_id.decode('utf-8')])
             # cov_dict = majiq_io.get_coverage_lsv([lsv_id.decode('utf-8')], self.files, "")
 
             if i % loop_step == 0 :

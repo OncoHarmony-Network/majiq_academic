@@ -8,9 +8,12 @@ from libcpp.vector cimport vector
 from majiq.src.internals.grimoire cimport Gene, Exon, Junction
 from majiq.src.internals import quant_lsv
 from majiq.src.internals.psi cimport psi_distr_t
+from majiq.src.internals.io_utils cimport get_aggr_coverage
 
 from majiq.src.gff import parse_gff3
 from majiq.src.constants import *
+
+from cython.parallel import prange
 
 import pickle
 import numpy as np
@@ -237,49 +240,57 @@ cdef dict _get_extract_lsv_list(list list_of_lsv_id, list file_list):
 
     return result
 
-cpdef map[string, vector[psi_distr_t]] get_coverage_lsv(list list_of_lsv_id, list file_list, str weight_fname):
+cpdef map[string, vector[psi_distr_t]] get_coverage_lsv(vector[string] list_of_lsv_id, list file_list,
+                                                        str weight_fname, int nthreads):
     cdef map[string, vector[psi_distr_t]] result
     cdef int n_exp = len(file_list)
     cdef str lid, lsv_type, fname
     cdef string lsv_id
-    cdef int fidx
-    cdef np.ndarray cov
+    cdef int fidx, njunc, msamples, i
+    cdef np.ndarray[np.float32_t, ndim=2, mode="c"] cov
     cdef vector[psi_distr_t] lsv_cov
     cdef psi_distr_t tv
     cdef dict weights, data
     cdef object p
+    cdef int nlsv = list_of_lsv_id.size()
 
-    if weight_fname != "":
-        weights = _load_weights(list_of_lsv_id, weight_fname)
+    # if weight_fname != "":
+    #     weights = _load_weights(list_of_lsv_id, weight_fname)
 
     for fidx, fname in enumerate(file_list):
         with open(fname, 'rb') as fp:
             p = np.load(fp)
             data = dict(p)
-
-        for lid in list_of_lsv_id:
+        for i in prange(nlsv, nogil=True, num_threads=nthreads):
+            lsv_id = list_of_lsv_id[i]
+        #for lid in list_of_lsv_id:
             # print ('LSV', lid)
-            lsv_id = lid.encode('utf-8')
-            try:
+            # lsv_id = lid.encode('utf-8')
+            with gil:
+                lid = lsv_id.decode('utf-8')
+                if lid not in data:
+                    continue
                 cov = data[lid]
-            except KeyError:
-                continue
-            njunc = cov.shape[0]
-            msamples = cov.shape[1]
-            if result.count(lsv_id) > 0:
-                if weight_fname != "":
-                    cov = cov * weights[lsv_id][fidx]
-                # print(lsv_id, result[lsv_id].coverage[fidx].shape)
-                for xx in range(njunc):
-                    for yy in range(msamples):
-                        result[lsv_id][xx][yy] = result[lsv_id][xx][yy] + cov[xx][yy]
-            else:
-                # tv = psi_distr_t(msamples)
-                lsv_cov = vector[psi_distr_t](njunc, psi_distr_t(msamples))
-                for xx in range(njunc):
-                    for yy in range(msamples):
-                        lsv_cov[xx][yy] = cov[xx][yy]
-                result[lsv_id] = lsv_cov
+
+                njunc = cov.shape[0]
+                msamples = cov.shape[1]
+
+            get_aggr_coverage(result, lsv_id, <np.float32_t *> cov.data, njunc, msamples)
+
+            # if result.count(lsv_id) > 0:
+            #     if weight_fname != "":
+            #         cov = cov * weights[lsv_id][fidx]
+            #     # print(lsv_id, result[lsv_id].coverage[fidx].shape)
+            #     for xx in range(njunc):
+            #         for yy in range(msamples):
+            #             result[lsv_id][xx][yy] = result[lsv_id][xx][yy] + cov[xx][yy]
+            # else:
+            #     # tv = psi_distr_t(msamples)
+            #     lsv_cov = vector[psi_distr_t](njunc, psi_distr_t(msamples))
+            #     for xx in range(njunc):
+            #         for yy in range(msamples):
+            #             lsv_cov[xx][yy] = cov[xx][yy]
+            #     result[lsv_id] = lsv_cov
     return result
 
 cdef map[string, psi_distr_t] _load_weights(list lsv_list, str file_name):
