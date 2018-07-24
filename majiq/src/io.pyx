@@ -258,6 +258,7 @@ cpdef map[string, vector[psi_distr_t]] get_coverage_lsv(vector[string] list_of_l
     #     weights = _load_weights(list_of_lsv_id, weight_fname)
 
     for fidx, fname in enumerate(file_list):
+        print(fname)
         with open(fname, 'rb') as fp:
             # p = np.load(fp)
             # data = dict(p)
