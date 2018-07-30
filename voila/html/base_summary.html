@@ -13,10 +13,10 @@
     <link rel="stylesheet" href="css/lsv.css">
     {% block style %}{% endblock %}
 
-    <script src="https://d3js.org/d3.v4.min.js"></script>
+    <script src="https://d3js.org/d3.v5.min.js"></script>
     <script src="https://raw.githack.com/Kcnarf/d3-beeswarm/master/build/d3-beeswarm.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/pouchdb@6.4.3/dist/pouchdb.min.js"></script>
-    <script src="https://unpkg.com/pouchdb@6.4.3/dist/pouchdb.find.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/pouchdb@7.0.0/dist/pouchdb.min.js"></script>
+    <script src="https://unpkg.com/pouchdb@7.0.0/dist/pouchdb.find.min.js"></script>
 
     <script src="js/splicegraphs.js"></script>
     <script src="js/splicegraphtools.js"></script>
@@ -37,10 +37,10 @@
             <a href="index.html" class="pure-menu-link">Index</a>
         </li>
         <li class="pure-menu-item">
-            <span class="splice-graph-tools pure-menu-link">Splice Graph</span>
+            <span class="tools-menu-btn splice-graph-tools pure-menu-link">Splice Graph</span>
         </li>
         <li class="pure-menu-item">
-            <span class="lsv-tools pure-menu-link">LSV</span>
+            <span class="tools-menu-btn lsv-tools pure-menu-link">LSV</span>
         </li>
     </ul>
 
@@ -64,17 +64,20 @@
         <div class="gene-id"></div>
     </div>
     <div>
-        <img src="img/ucsc.png">
+        <a class="ucsc-gene">
+            <img src="img/ucsc.png">
+        </a>
     </div>
-    <div class="splice-graph-icons">
+    <div>
         <img class="toggle-scale" src="img/solve-icon16.png">
         <img class="zoom-in" src="img/zoom_in.png">
         <img class="zoom-out" src="img/zoom_out.png">
         <img class="zoom-reset" src="img/undo.png">
     </div>
+    <div class="coordinates"></div>
 </div>
 
-<div class="submenu splice-graph-tools hide-submenu pure-g">
+<div class="tools-menu splice-graph-tools hide-tools-menu pure-g">
     <div class="pure-u-1-2">
         <form class="splice-graph-form pure-form pure-form-aligned">
             <fieldset>
@@ -116,7 +119,7 @@
 </div>
 
 
-<div class="submenu lsv-tools hide-submenu pure-g">
+<div class="tools-menu lsv-tools hide-tools-menu pure-g">
     <div class="pure-u-1-2">
         <form class="lsv-filters pure-form pure-form-aligned">
             <fieldset>
@@ -131,6 +134,14 @@
                 <div class="pure-control-group">
                     <label for="exon-skipping">Exon Skipping</label>
                     <input type="checkbox" id="exon-skipping">
+                </div>
+                <div class="pure-control-group">
+                    <label for="target">Target</label>
+                    <input type="checkbox" id="target">
+                </div>
+                <div class="pure-control-group">
+                    <label for="source">Source</label>
+                    <input type="checkbox" id="source">
                 </div>
             </fieldset>
         </form>

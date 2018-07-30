@@ -1,184 +1,54 @@
 {% extends 'base_summary.html' %}
 
 {% block script %}
-    <script>
-        const db_gene = new PouchDB('voila_gene');
-        const db_lsv = new PouchDB('voila_lsv');
-    </script>
     <script src="db_gene.js"></script>
     <script src="db_lsv.js"></script>
     <script>
+        const db_gene = new PouchDB('voila_gene');
+        const db_lsv = new PouchDB('voila_lsv');
+        load_gene_db(db_gene);
+        load_lsv_db(db_lsv);
+    </script>
+    <script>
         const urlParams = new URLSearchParams(document.location.search);
-        const lsv = new Lsv(db_lsv, db_gene);
 
-        const show_lsvs = (lsvs) => {
-            lsvs.sort((a, b) => {
-                return a.junctions.length - b.junctions.length || a._id.localeCompare(a._id)
-            });
-
-            d3.select('.lsv-container').selectAll('*').remove();
-
-            const container = d3.select('.lsv-container')
-                .selectAll('div')
-                .data(lsvs)
-                .enter()
-                .append('div')
-                .attr('class', 'lsv')
-                .attr('data-lsv-id', d => d._id);
-
-            const header = container
-                .append('div')
-                .attr('class', 'lsv-header');
-
-            const fieldset = header
-                .append('form')
-                .on('change', (d, i, a) => {
-                    const hl = Array.from(document.querySelectorAll('input#highlight:checked')).reduce((acc, curr) => {
-                        acc.push(curr.closest('.lsv').dataset.lsvId);
-                        return acc
-                    }, []);
-
-                    const w = Array.from(document.querySelectorAll('input#psi-weighted:checked')).reduce((acc, curr) => {
-                        acc.push(curr.closest('.lsv').dataset.lsvId);
-                        return acc
-                    }, []);
-                    sgs.highlight(hl, w);
-                })
-                .attr('class', 'lsv-form pure-form pure-form-aligned')
-                .append('fieldset');
-
-            const highlight = fieldset.append('div')
-                .attr('class', 'pure-control-group');
-
-            highlight.append('label')
-                .attr('for', 'highlight')
-                .text('Highlight');
-
-            highlight.append('input')
-                .attr('id', 'highlight')
-                .attr('type', 'checkbox');
-
-
-            const psi_weighted = fieldset.append('div')
-                .attr('class', 'pure-control-group');
-
-            psi_weighted.append('label')
-                .attr('for', 'psi-weighted')
-                .text('PSI Weighted');
-
-            psi_weighted.append('input')
-                .attr('id', 'psi-weighted')
-                .attr('type', 'checkbox')
-                .on('change', (d, i, a) => {
-                    if (a[i].checked)
-                        a[i].closest('fieldset').querySelector('input#highlight').checked = true;
-                });
-
-            const copy_lsv = fieldset.append('div')
-                .attr('class', 'pure-control-group');
-
-            copy_lsv.append('button')
-                .attr('id', 'copy_lsv')
-                .attr('class', 'pure-button')
-                .text('Copy LSV');
-
-            header
-                .append('div')
-                .each((d, i, a) => {
-                    lsv.cartoon(a[i], d._id);
-                });
-
-            header
-                .append('div')
-                .text(d => {
-                    return d._id
-                });
-
-            const table = container
-                .append('table')
-                .classed('pure-table', true)
-                .attr('data-lsv-id', d => {
-                    return d._id
-                }).each((d, i, a) => new Table(a[i]));
-
-            table.append('thead')
-                .append('tr')
-                .selectAll('th')
-                .data(['Junctions', 'Violin', 'Heat Map'])
-                .enter()
-                .append('th')
-                .text(d => {
-                    return d
-                });
-
-            const row = table
-                .append('tbody')
-                .selectAll('tr')
-                .data(d => {
-                    return d.junctions
-                })
-                .enter()
-                .append('tr')
-                .attr('data-junction-index', (d, i) => {
-                    return i
-                });
-
-            row
-                .append('td')
-                .text(d => {
-                    return d
-                });
-
-            row
-                .append('td')
-                .append('svg')
-                .attr('class', 'het-violin-plot')
-                .attr('data-type', 'swarm')
-                .each((d, i, a) => new Violin(db_lsv, a[i]));
-
-            row
-                .append('td')
-                .append('svg')
-                .attr('class', 'heat-map')
-                .attr('data-stat-name', 'wilcoxon')
-                .each((d, i, a) => new HeatMap(db_lsv, a[i]).plot());
-        };
-
-        const sgs = new SpliceGraphs(db_gene, db_lsv, '.splice-graph-container', urlParams.get('gene_id'));
-
-        const load_lsvs = () => {
-
-            // lsv tables
-            db_lsv.createIndex({
-                index: {fields: ['gene_id']}
-            }).then(() => {
-                return db_lsv.find({
-                    selector: {
-                        gene_id: urlParams.get('gene_id')
-                    },
-                    fields: ['_id', 'junctions', '5_prime', '3_prime', 'exon_skipping']
-                })
-            }).then(results => {
-                const prime5 = document.querySelector('#prime-5').checked;
-                const prime3 = document.querySelector('#prime-3').checked;
-                const exon_skipping = document.querySelector('#exon-skipping').checked;
-                const lsvs = results.docs
-                    .filter(e => !prime3 ? true : e['3_prime'] === prime3)
-                    .filter(e => !prime5 ? true : e['5_prime'] === prime5)
-                    .filter(e => !exon_skipping ? true : e['exon_skipping'] === exon_skipping);
-                console.log(lsvs);
-                show_lsvs(lsvs)
+        const filter_lsvs = lsvs => {
+            document.querySelectorAll('.lsv').forEach(c => {
+                if (lsvs.some(lsv => c.dataset.lsvId === lsv._id))
+                    c.classList.remove('hidden');
+                else
+                    c.classList.add('hidden');
             });
         };
 
         window.addEventListener('load', () => {
+            const sgs = new SpliceGraphs('.splice-graph-container', {
+                db_gene: db_gene,
+                db_lsv: db_lsv,
+                gene_id: urlParams.get('gene_id')
+            });
+
             sgs.create_localstorage();
-            load_lsvs()
+
+            new SpliceGraphTools(sgs);
+
+            const lsv_tools = new LsvTools(sgs);
+
+            lsv_tools.load_lsvs().then(lsvs => lsv_tools.het_show_lsvs(lsvs));
+
+            document.querySelector('.lsv-filters').onchange = () => {
+                lsv_tools.load_lsvs().then(lsvs => filter_lsvs(lsvs));
+            }
         })
 
     </script>
 {% endblock %}
 
 {% block bottom %}
+    <svg height="0" width="0">
+        <pattern patternUnits="userSpaceOnUse" id="diagonalHatch" width="4" height="4">
+            <path d="M-1,1 l2,-2 M0,4 l4,-4 M3,5 l2,-2" stroke="grey" stroke-width="1"></path>
+        </pattern>
+    </svg>
     <div class="lsv-container"></div>
 {% endblock %}

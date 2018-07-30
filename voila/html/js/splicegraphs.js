@@ -1,10 +1,10 @@
 class SpliceGraphs {
-    constructor(db_gene, db_lsv, container, gene_id) {
-        this.db_gene = db_gene;
-        this.db_lsv = db_lsv;
+    constructor(container, opts) {
         this.container_selector = container;
+        this.db_gene = opts.db_gene;
+        this.db_lsv = opts.db_lsv;
+        this.gene_id = opts.gene_id;
         this.lsv_ids = [];
-        this.gene_id = gene_id;
         this.zoom = 1;
         this.max_bin = 1;
         this.d = undefined;
@@ -18,6 +18,11 @@ class SpliceGraphs {
 
         //resize event listener
         window.addEventListener('resize', () => this.update());
+
+        // splice_graph_update sg container dataset
+        this.container.dataset.geneId = this.gene_id;
+        this.container.dataset.zoom = '1';
+
     }
 
     get gene() {
@@ -39,7 +44,7 @@ class SpliceGraphs {
     }
 
     get width() {
-        return this.container.parentNode.clientWidth
+        return this.container.clientWidth - 40
         // return this.container.parentNode.offsetWidth
     }
 
@@ -63,7 +68,7 @@ class SpliceGraphs {
     static array_equal(a, b) {
         if (a.length !== b.length)
             return false;
-        for (var i = 0, l = a.length; i < l; i++) {
+        for (let i = 0, l = a.length; i < l; i++) {
             if (a[i] !== b[i])
                 return false
         }
@@ -203,6 +208,13 @@ class SpliceGraphs {
 
     }
 
+    find_reads(reads, junc) {
+        if (junc.start in reads)
+            if (junc.end in reads[junc.start])
+                return reads[junc.start][junc.end];
+        return 0;
+    }
+
     distance(x, j1, j2) {
         const y = this.y_scale();
         const x1 = x(j1.start) + (x(j1.end) - x(j1.start)) / 2;
@@ -213,8 +225,8 @@ class SpliceGraphs {
     }
 
     junction_bins(experiment, gene) {
-        const junctions = gene.junctions;
         const reads = gene.junction_reads[experiment];
+        const junctions = gene.junctions;
         const x = this.x;
         let i;
         let j;
@@ -223,6 +235,8 @@ class SpliceGraphs {
         let changed;
         const sg = this;
         let sentinel = 0;
+        let small_junc_r;
+        let junc_r;
 
         for (i = 0; i < junctions.length; i++)
             junctions[i].bin = 1;
@@ -256,15 +270,16 @@ class SpliceGraphs {
                 small_junc = junctions[i];
                 for (j = i + 1; j < junctions.length; j++) {
                     junc = junctions[j];
-                    const small_junc_r = reads[small_junc.start][small_junc.end];
-                    const junc_r = reads[junc.start][junc.end];
-                    if (small_junc_r && junc_r) {
-                        const reads_length = small_junc_r.toString().length + junc_r.toString().length;
-                        if (junc.bin === small_junc.bin && sg.distance(x, junc, small_junc) < reads_length * 4) {
-                            junc.bin += 1;
-                            changed = true;
-                            this.max_bin = Math.max(this.max_bin, junc.bin)
-                        }
+
+                    small_junc_r = this.find_reads(reads, small_junc);
+                    junc_r = this.find_reads(reads, junc);
+
+                    const reads_length = small_junc_r.toString().length + junc_r.toString().length;
+
+                    if (junc.bin === small_junc.bin && sg.distance(x, junc, small_junc) < reads_length * 4) {
+                        junc.bin += 1;
+                        changed = true;
+                        this.max_bin = Math.max(this.max_bin, junc.bin)
                     }
                 }
             }
@@ -301,7 +316,10 @@ class SpliceGraphs {
             d3.select(sg).selectAll('.intron-retention-reads')
                 .interrupt()
                 .transition(this.t())
-                .text(d => reads[d.start][d.end] ? reads[d.start][d.end] : null)
+                .text(d => {
+                    const x = this.find_reads(reads, d);
+                    return x ? x : null;
+                })
                 .attr('x', d => this.x(d.start + ((d.end - d.start) / 2)))
                 .attr('y', this.y((this.exon_height * (3 / 4)) + 3))
                 .attr('text-anchor', 'middle')
@@ -311,21 +329,50 @@ class SpliceGraphs {
         })
     }
 
-    style_intron_retention(sg, lsvs) {
-        d3.select(sg).selectAll('.intron-retention-reads')
-            .attr('opacity', lsvs.length ? 0.2 : null);
+    ir_in_lsv(d, gene, lsv) {
+        if (gene.strand === '+') {
+            if (lsv.target)
+                return lsv.reference_exon[0] === d.end;
+            else
+                return lsv.reference_exon[1] === d.start;
+        } else {
+            if (lsv.target)
+                return lsv.reference_exon[1] === d.start;
+            else
+                return lsv.reference_exon[0] === d.end;67
+        }
+    }
+
+    style_intron_retention(sg, gene, lsvs) {
+        const colors = new Colors();
+
+        d3.select(sg).selectAll('.intron-retention-grp')
+            .attr('opacity', d => lsvs.length && !lsvs.some(lsv => this.ir_in_lsv(d, gene, lsv)) ? .2 : null);
 
         d3.select(sg).selectAll('.intron-retention')
             .attr('fill-opacity', .3)
             .attr('stroke-linejoin', 'round')
-            .attr('fill', d => d.color)
-            .attr('stroke', d => d.color)
-            .attr('opacity', lsvs.length ? 0.2 : null)
+            .each((d, i, a) => {
+                const el = a[i];
+                const filter_lsvs = lsvs.filter(lsv => this.ir_in_lsv(d, gene, lsv));
+                if (filter_lsvs.length) {
+                    if (filter_lsvs.length === 1) {
+                        const lsv = filter_lsvs[0];
+                        el.setAttribute('fill', colors.brewer(lsv.junctions.length - 1));
+                        el.setAttribute('stroke', colors.brewer(lsv.junctions.length - 1));
+                    } else {
+                        el.setAttribute('fill', 'black');
+                        el.setAttribute('stroke', 'black');
+                    }
+                } else {
+                    el.setAttribute('fill', d.color);
+                    el.setAttribute('stroke', d.color);
+                }
+            });
     }
 
     style_exons(sg, gene, lsvs) {
         return new Promise(resolve => {
-
             // change opacity for 'hidden' elements
             d3.select(sg).selectAll('.exon, .half-exon, .exon-number')
                 .attr('opacity', d => {
@@ -357,42 +404,6 @@ class SpliceGraphs {
                             return
                         }
 
-                        const colors = new Colors();
-                        const hl = lsvs.reduce(function (acc, lsv) {
-                            if (gene.strand === '+') {
-                                if (lsv.is_target) {
-                                    if (lsv.reference_exon[0] - 1 === d.end)
-                                        acc.push(colors.brewer(lsv.junctions.length - 1));
-                                } else {
-                                    if (lsv.reference_exon[1] + 1 === d.start)
-                                        acc.push(colors.brewer(lsv.junctions.length - 1));
-                                }
-                            } else {
-                                if (lsv.is_target) {
-                                    if (lsv.reference_exon[1] + 1 === d.start)
-                                        acc.push(colors.brewer(lsv.junctions.length - 1));
-                                } else {
-                                    if (lsv.reference_exon[0] - 1 === d.end)
-                                        acc.push(colors.brewer(lsv.junctions.length - 1));
-                                }
-                            }
-                            return acc;
-                        }, []);
-
-                        if (hl.length > 1) {
-                            this.setAttribute('stroke', 'black');
-                            this.setAttribute('fill', 'grey');
-                            this.setAttribute('stroke-dasharray', '');
-                            return
-                        }
-
-                        if (hl.length === 1) {
-                            this.setAttribute('stroke', hl[0]);
-                            this.setAttribute('fill', hl[0]);
-                            this.setAttribute('stroke-dasharray', '');
-                            return
-                        }
-
                     }
 
                     switch (d.color) {
@@ -413,8 +424,6 @@ class SpliceGraphs {
                     resolve()
                 });
         })
-
-
     };
 
     ss3p(sg, gene) {
@@ -457,15 +466,6 @@ class SpliceGraphs {
                 .attr('stroke', 'black');
             resolve()
         });
-    };
-
-    splice_site(sg) {
-        const y = this.y;
-        const exon_height = this.exon_height;
-        d3.select(sg).selectAll('.splice-site.p5, .splice-site.p3')
-            .attr('y1', y(0))
-            .attr('y2', y(exon_height))
-            .attr('stroke', 'black');
     };
 
     half_exons(sg) {
@@ -551,97 +551,6 @@ class SpliceGraphs {
         })
     };
 
-
-    highlight_exons(sg, gene, lsvs) {
-        return new Promise(resolve => {
-
-            d3.select(sg).selectAll('.exon, .half-exon, .intron-retention')
-                .each((d, i, a) => {
-                    const el = a[i];
-                    if (lsvs.length) {
-                        if (lsvs.some(lsv => SpliceGraphs.array_equal(lsv.reference_exon, [d.start, d.end]))) {
-                            el.setAttribute('stroke', 'orange');
-                            el.setAttribute('fill', 'orange');
-                            el.setAttribute('stroke-dasharray', '');
-                            return
-                        }
-
-                        const colors = new Colors();
-
-                        const hl = lsvs.reduce(function (acc, lsv) {
-                            if (gene.strand === '+') {
-                                if (lsv.is_target) {
-                                    if (lsv.reference_exon[0] - 1 === d.end)
-                                        acc.push(colors.brewer(lsv.junctions.length - 1));
-                                } else {
-                                    if (lsv.reference_exon[1] + 1 === d.start)
-                                        acc.push(colors.brewer(lsv.junctions.length - 1));
-                                }
-                            } else {
-                                if (lsv.is_target) {
-                                    if (lsv.reference_exon[1] + 1 === d.start)
-                                        acc.push(colors.brewer(lsv.junctions.length - 1));
-                                } else {
-                                    if (lsv.reference_exon[0] - 1 === d.end)
-                                        acc.push(colors.brewer(lsv.junctions.length - 1));
-                                }
-                            }
-                            return acc;
-                        }, []);
-
-                        if (hl.length > 1) {
-                            this.setAttribute('stroke', 'black');
-                            this.setAttribute('fill', 'grey');
-                            this.setAttribute('stroke-dasharray', '');
-                            return
-                        }
-
-                        if (hl.length === 1) {
-                            this.setAttribute('stroke', hl[0]);
-                            this.setAttribute('fill', hl[0]);
-                            this.setAttribute('stroke-dasharray', '');
-                        }
-
-                    }
-                });
-
-
-            d3.select(sg).selectAll('.exon, .half-exon, .exon-number')
-                .attr('opacity', d => {
-                    if (lsvs.length) {
-                        if (lsvs.every(lsv => {
-                            return lsv.junctions.every(junc => {
-                                return !SpliceGraphs.coord_in_exon(d, junc[0]) && !SpliceGraphs.coord_in_exon(d, junc[1])
-                            })
-                        })) {
-                            return 0.2
-                        }
-                    }
-                    return 1
-                });
-
-
-            resolve()
-        });
-    };
-
-
-    highlight_junctions(sg, lsvs) {
-        return new Promise(resolve => {
-            d3.select(sg).selectAll('.junction, .junction-reads')
-                .attr('opacity', d => {
-                    console.log(lsvs);
-                    if (lsvs.length) {
-                        if (lsvs.every(lsv => lsv.junctions.every(junc => !SpliceGraphs.array_equal(junc, [d.start, d.end])))) {
-                            return 0.2
-                        }
-                    }
-                    return 1
-                });
-            resolve()
-        })
-    };
-
     junctions(sg, gene) {
         return new Promise(resolve => {
             const x = this.x;
@@ -695,8 +604,12 @@ class SpliceGraphs {
                     if (this.classList.contains('splice-site'))
                         return '2,2';
 
-                    if (gene.junction_reads[experiment][d.start][d.end] === 0)
+                    try {
+                        eval(gene.junction_reads[experiment][d.start][d.end])
+                    } catch (TypeError) {
                         return '5,2';
+                    }
+
                 })
                 .attr('stroke', function (d) {
                     if (lsvs.length) {
@@ -799,7 +712,6 @@ class SpliceGraphs {
         sg.dataset.experiment = experiment;
         sg.classList.add('splice-graph');
 
-
         this.splice_graph_init(sg);
         this.add_localstorage(sg);
 
@@ -826,16 +738,14 @@ class SpliceGraphs {
     }
 
     splice_graph_init(sg) {
-        this.gene.then(gene => {
-            // const gene = this.gene;
+        return this.gene.then(gene => {
             const sg_header = d3.select(sg).append('div').attr('class', 'splice-graph-header');
 
             sg_header
                 .append('img')
-                // .style('float', 'right')
                 .attr('src', 'img/remove.svg')
-                .attr('height', '16px')
-                .on('click', () => this.remove(sg));
+                .attr('class', 'splice-graph-remove')
+                .attr('height', '16px');
 
             sg_header
                 .append('div')
@@ -861,67 +771,58 @@ class SpliceGraphs {
                 .append('polyline')
                 .attr('class', 'half-exon');
 
-            svg.selectAll('.intron-retention')
+            const ir_grps = svg.selectAll('.intron-retention-grp')
                 .data(gene.intron_retention)
                 .enter()
+                .append('g')
+                .attr('class', 'intron-retention-grp');
+
+            ir_grps
                 .append('polygon')
                 .attr('class', 'intron-retention');
 
-            svg.selectAll('.intron-retention-reads')
-                .data(gene.intron_retention)
-                .enter()
+            ir_grps
                 .append('text')
                 .attr('class', 'intron-retention-reads');
 
-            svg.selectAll('.exon-grp')
+            const exon_grps = svg.selectAll('.exon-grp')
                 .data(exons)
                 .enter()
                 .append('g')
-                .attr('class', 'exon-grp')
-                .each(function (d) {
-                    const exon_grp = d3.select(this);
-                    exon_grp
-                        .datum(d)
-                        .append('polygon')
-                        .attr('class', 'exon');
+                .attr('class', 'exon-grp');
 
-                    exon_grp
-                        .datum(d)
-                        .append('text')
-                        .attr('class', 'exon-number');
-                });
+            exon_grps
+                .append('polygon')
+                .attr('class', 'exon');
 
-            svg.selectAll('.junction-grp')
+            exon_grps
+                .append('text')
+                .attr('class', 'exon-number');
+
+            const junc_grps = svg.selectAll('.junction-grp')
                 .data(gene.junctions)
                 .enter()
                 .append('g')
-                .attr('class', 'junction-grp')
-                .each(function (d) {
-                    const junction_grp = d3.select(this);
+                .attr('class', 'junction-grp');
 
-                    junction_grp
-                        .datum(d)
-                        .append('path')
-                        .attr('class', 'junction');
+            junc_grps
+                .append('path')
+                .attr('class', 'junction');
 
-                    junction_grp
-                        .datum(d)
-                        .append('text')
-                        .attr('class', 'junction-reads');
+            junc_grps
+                .append('text')
+                .attr('class', 'junction-reads');
 
-                    junction_grp
-                        .datum(d)
-                        .append('line')
-                        .attr('class', 'splice-site p3');
+            junc_grps
+                .append('line')
+                .attr('class', 'splice-site p3');
 
-                    junction_grp
-                        .datum(d)
-                        .append('line')
-                        .attr('class', 'splice-site p5')
-                });
+            junc_grps
+                .append('line')
+                .attr('class', 'splice-site p5');
 
-            this.splice_graph_update(sg, gene, [])
-        })
+            return sg;
+        }).then(sg => this.gene.then(gene => this.splice_graph_update(sg, gene, [])))
     }
 
     svg(sg) {
@@ -958,7 +859,7 @@ class SpliceGraphs {
         ]).then(() => {
             this.style_exons(sg, gene, lsvs);
             this.style_junctions(sg, gene, lsvs);
-            this.style_intron_retention(sg, lsvs);
+            this.style_intron_retention(sg, gene, lsvs);
         });
     }
 

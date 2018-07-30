@@ -97,7 +97,7 @@ HeatMap.prototype.plot = function () {
     this.db.allDocs({
         keys: ['metadata', lsv_id],
         include_docs: true
-    }, function (err, response) {
+    }).then(response => {
         var meta = response.rows[0].doc;
         var data = response.rows[1].doc;
 
@@ -147,15 +147,17 @@ HeatMap.prototype.plot = function () {
         svg.selectAll("*").remove();
 
         svg.attr('height', cell_size * group_names.length).attr('width', cell_size * group_names.length);
-        svg.append('pattern')
-            .attr('patternUnits', 'userSpaceOnUse')
-            .attr('id', 'diagonalHatch')
-            .attr('width', 4)
-            .attr('height', 4)
-            .append('path')
-            .attr('d', "M-1,1 l2,-2 M0,4 l4,-4 M3,5 l2,-2")
-            .attr('stroke', 'grey')
-            .attr('stroke-width', 1);
+        // svg
+        //     .append('defs')
+        //     .append('pattern')
+        //     .attr('patternUnits', 'userSpaceOnUse')
+        //     .attr('class', 'diagonalHatch')
+        //     .attr('width', 4)
+        //     .attr('height', 4)
+        //     .append('path')
+        //     .attr('d', "M-1,1 l2,-2 M0,4 l4,-4 M3,5 l2,-2")
+        //     .attr('stroke', 'grey')
+        //     .attr('stroke-width', 1);
 
         svg.selectAll('g')
             .data(matrix)
@@ -215,6 +217,7 @@ HeatMap.prototype.plot = function () {
                 tool_tip.style("display", "none");
             });
     });
+
 };
 
 HeatMap.prototype.compact = function (el) {

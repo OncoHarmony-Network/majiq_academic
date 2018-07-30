@@ -1,8 +1,9 @@
+numpy>=1.14.5
 Cython>=0.28.3
-numpy>=1.14.3
+h5py>=2.8.0
 cycler==0.10.0
-h5py==2.8.0
 Jinja2==2.10
+kiwisolver==1.0.1
 MarkupSafe==1.0
 matplotlib==2.2.2
 psutil==5.4.5

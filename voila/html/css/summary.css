@@ -17,13 +17,13 @@ table {
     z-index: 3
 }
 
-.submenu.hide-submenu {
+.tools-menu.hide-tools-menu {
     transform: translateY(-100%);
     box-shadow: none;
     transition: all 100ms ease
 }
 
-.submenu {
+.tools-menu {
     transition: all 100ms ease;
     background-color: #c0d8ee;
     color: black;
@@ -56,6 +56,11 @@ table {
     font-weight: bold
 }
 
+.coordinates {
+    font-size: 14px;
+    color: #205bb0;
+}
+
 .gene-header .gene-id {
     font-size: 16px;
     font-weight: bold;
@@ -64,7 +69,10 @@ table {
 
 .splice-graph-container {
     background-color: white;
-    padding-bottom: 10px
+    padding-bottom: 20px;
+    padding-left: 20px;
+    padding-right: 20px;
+
 }
 
 .splice-graph-container svg {
@@ -142,11 +150,31 @@ form.lsv-form label {
     width: 7em !important;
 }
 
-.junction-grp:hover .junction {
+.reads-filter, .mouseover-filter, .select-filter {
+    opacity: .2;
+}
+
+.mouseover .junction, .select .junction, .mouseover .intron-retention, .select .intron-retention {
     stroke: orange;
     stroke-width: 3px
 }
 
-.junction-grp:hover .junction-reads {
+.mouseover .intron-retention, .select .intron-retention {
+    fill: orange;
+}
+
+.mouseover .junction-reads,
+.select .junction-reads,
+.select .intron-retention-reads,
+.mouseover .intron-retention-reads {
     font-size: 14px
+}
+
+.mouseover, .select {
+    opacity: 1;
+}
+
+.junction-reads, .intron-retention-reads {
+    cursor: default;
+    user-select: none;
 }
