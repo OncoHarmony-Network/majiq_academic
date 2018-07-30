@@ -6,8 +6,8 @@ import numpy
 import sys
 import os
 
-os.environ['CC'] = 'gcc-8'
-os.environ['CXX'] = 'g++-8'
+# os.environ['CC'] = 'gcc-8'
+# os.environ['CXX'] = 'g++-8'
 
 print("COMPILER ", os.environ.get("CXX", None))
 
@@ -22,9 +22,9 @@ scythe_compiler_args = ['-DSCYTHE_COMPILE_DIRECT', '-DSCYTHE_PTHREAD']
 linker_args = ['-lgomp']
 
 if sys.platform == 'darwin':
-    pass
-    # compile_args.append('-stdlib=libc++')
-    # linker_args = ['-L/usr/local/opt/llvm/lib'] + linker_args
+    # pass
+    compile_args.append('-stdlib=libc++')
+    linker_args = ['-L/usr/local/opt/llvm/lib'] + linker_args
 else:
     compile_args.append('-std=c++11')
 
