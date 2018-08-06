@@ -3,6 +3,7 @@ from libcpp.map cimport map
 from libcpp.vector cimport vector
 from libcpp.set cimport set
 from libcpp.list cimport list as clist
+from majiq.src.internals.psi cimport psi_distr_t
 
 cdef extern from "grimoire.hpp" namespace "grimoire":
     cdef cppclass Junction:
@@ -103,6 +104,19 @@ cdef extern from "grimoire.hpp" namespace "grimoire":
         int npos ;
         Jinfo() nogil ;
         Jinfo(unsigned int index1, unsigned int start1, unsigned int end1, int sreads1, int npos1) nogil ;
+
+
+    cdef cppclass qLSV:
+        vector[vector[psi_distr_t]] coverages ;
+
+        qLSV() nogil ;
+        qLSV(vector[string] & lsv_list_) nogil ;
+            #~qLSV()                        { omp_destroy_lock(&semaphore_lock) ; }
+        vector[string] & get_lsvlist() nogil ;
+        void free_lock() nogil ;
+        void test_lock() nogil ;
+        void add_counter() nogil ;
+
 
 
     void sortGeneList(vector[Gene*] glist) nogil ;

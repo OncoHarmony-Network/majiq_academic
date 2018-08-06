@@ -259,8 +259,40 @@ cdef test(map[string, vector[psi_distr_t]] result, object data, string lsv_id):
     except KeyError:
         return ;
 
+cpdef void get_coverage_lsv(map[string, vector[psi_distr_t]] result, vector[string] list_of_lsv_id, list file_list,
+                            str weight_fname, int nthreads):
+    # cdef map[string, vector[psi_distr_t]] result
+    cdef int n_exp = len(file_list)
+    cdef str lid, lsv_type, fname
+    cdef string lsv_id
+    cdef int fidx, njunc, msamples, i
+    cdef np.ndarray[np.float32_t, ndim=2, mode="c"] cov
+    cdef dict weights
+    cdef object data
+    cdef int nlsv = list_of_lsv_id.size()
 
-cpdef map[string, vector[psi_distr_t]] get_coverage_lsv(vector[string] list_of_lsv_id, list file_list,
+    # if weight_fname != "":
+    #     weights = _load_weights(list_of_lsv_id, weight_fname)
+
+    for fidx, fname in enumerate(file_list):
+        print(fname)
+        with open(fname, 'rb') as fp:
+            data = np.load(fp)
+            for lsv_id in list_of_lsv_id:
+                lid = lsv_id.decode('utf-8')
+                try:
+                    cov = data[lid]
+                    njunc = cov.shape[0]
+                    msamples = cov.shape[1]
+                    with nogil:
+                        get_aggr_coverage(result, lsv_id, <np.float32_t *> cov.data, njunc, msamples)
+
+                except KeyError:
+                        continue
+
+
+
+cpdef map[string, vector[psi_distr_t]] get_coverage_lsv2(vector[string] list_of_lsv_id, list file_list,
                                                         str weight_fname, int nthreads):
     cdef map[string, vector[psi_distr_t]] result
     cdef int n_exp = len(file_list)

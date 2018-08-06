@@ -7,6 +7,10 @@
 
 using namespace std ;
 
+
+
+
+
 void prob_data_sample_given_psi(float* out_array, float sample, float all_sample, psi_distr_t & psi_border,
                                 int nbins, float alpha_prior, float beta_prior){
 

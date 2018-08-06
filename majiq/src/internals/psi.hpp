@@ -5,9 +5,12 @@
 #include <algorithm>
 #include <string>
 #include <math.h>
+#include <omp.h>
+
 
 using namespace std ;
 typedef vector<float> psi_distr_t ;
+
 
 inline float median(psi_distr_t a){
     const int n = a.size() ;
