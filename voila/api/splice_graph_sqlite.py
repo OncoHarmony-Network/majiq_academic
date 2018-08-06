@@ -1,15 +1,13 @@
 import sqlite3
 from collections import namedtuple
 
-from voila.api.splice_graph_abstract import SpliceGraphSQLAbstract, GenesAbstract, JunctionsAbstract, \
-    IntronRetentionAbstract, ExonsAbstract
+from voila.api.splice_graph_abstract import SpliceGraphSQLAbstract
 
 
 class SpliceGraphSQL(SpliceGraphSQLAbstract):
     def __init__(self, filename):
         self.conn = sqlite3.connect(filename)
-        self.c = self.conn.cursor()
-        self.c.arraysize = 10
+        self._genome = None
 
     def __enter__(self):
         return self
@@ -18,11 +16,17 @@ class SpliceGraphSQL(SpliceGraphSQLAbstract):
         self.close()
 
     def close(self):
-        pass
+        self.conn.close()
 
     @property
     def genome(self):
-        pass
+        if not self._genome:
+            query = self.conn.execute('''
+                                    SELECT name FROM genome
+                                    ''')
+            genome, = query.fetchone()
+            self._genome = genome
+        return self._genome
 
     @property
     def experiment_names(self):
@@ -31,6 +35,13 @@ class SpliceGraphSQL(SpliceGraphSQLAbstract):
     @property
     def file_version(self):
         pass
+
+    def _iter_results(self, query, sg_type):
+        while True:
+            fetch = query.fetchmany(10000)
+            if not fetch:
+                break
+            yield from (sg_type(*x) for x in fetch)
 
 
 Gene = namedtuple('Gene', ('id', 'name', 'strand', 'chromosome'))
@@ -41,123 +52,62 @@ JunctionReads = namedtuple('JunctionReads', ('reads', 'experiment_name'))
 IntronRetentionReads = namedtuple('IntronRetentionReads', ('reads', 'experiment_name'))
 
 
-class Genes(GenesAbstract, SpliceGraphSQL):
+class Genes(SpliceGraphSQL):
     def genes(self):
-        query = self.c.execute("SELECT id, name, strand, chromosome FROM gene")
-        fetch = query.fetchmany()
-        while fetch:
-            for gene in fetch:
-                yield Gene(*gene)
-            fetch = query.fetchmany()
+        query = self.conn.execute('SELECT id, name, strand, chromosome FROM gene')
+        return self._iter_results(query, Gene)
 
     def gene(self, gene_id):
-        query = self.c.execute("SELECT id, name, strand, chromosome FROM gene WHERE id=?", (gene_id,))
+        query = self.conn.execute('SELECT id, name, strand, chromosome FROM gene WHERE id=?', (gene_id,))
         fetch = query.fetchone()
         return Gene(*fetch)
 
 
-class Exons(ExonsAbstract, SpliceGraphSQL):
-    def exon(self, gene_id, start, end):
-        query = self.c.execute('''
+class Exons(SpliceGraphSQL):
+    def exons(self, gene):
+        query = self.conn.execute('''
                                 SELECT gene_id, start, end, annotated_start, annotated_end, annotated 
                                 FROM exon 
                                 WHERE gene_id=?
-                                AND start=?
-                                AND end=?
-                                ''', (gene_id, start, end))
-        fetch = query.fetchone()
-        return Exon(*fetch)
-
-    def exons(self, gene=None):
-        if gene:
-            query_args = ('''
-            SELECT gene_id, start, end, annotated_start, annotated_end, annotated 
-            FROM exon 
-            WHERE gene_id=?
-            ''', (gene.id,))
-        else:
-            query_args = ("SELECT gene_id, start, end, annotated_start, annotated_end, annotated FROM exon",)
-        query = self.c.execute(*query_args)
-        fetch = query.fetchmany()
-        while fetch:
-            for exon in fetch:
-                yield Exon(*exon)
-            fetch = query.fetchmany()
+                                ''', (gene.id,))
+        return self._iter_results(query, Exon)
 
 
-class Junctions(JunctionsAbstract, SpliceGraphSQL):
-    def junction(self, gene_id, start, end):
-        query = self.c.execute('''
-                                SELECT gene_id, start, end, has_reads, annotated
-                                FROM junction
-                                WHERE gene_id=?
-                                AND start=?
-                                AND end=?
-                                ''', (gene_id, start, end))
-        fetch = query.fetchone()
-        return Junction(*fetch)
-
+class Junctions(SpliceGraphSQL):
     def junctions(self, gene):
-        query = self.c.execute('''
+        query = self.conn.execute('''
                                 SELECT gene_id, start, end, has_reads, annotated
                                 FROM junction 
                                 WHERE gene_id=?
                                 ''', (gene.id,))
-        fetch = query.fetchmany()
-        while fetch:
-            for j in fetch:
-                yield Junction(*j)
-            fetch = query.fetchmany()
+        return self._iter_results(query, Junction)
 
     def junction_reads(self, junction):
-        query = self.c.execute('''
+        query = self.conn.execute('''
                                 SELECT reads, experiment_name 
                                 FROM junction_reads
                                 WHERE junction_gene_id=?
                                 AND junction_start=?
                                 AND junction_end=?
                                 ''', (junction.gene_id, junction.start, junction.end))
-        fetch = query.fetchmany()
-        while fetch:
-            for jr in fetch:
-                yield JunctionReads(*jr)
-            fetch = query.fetchmany()
+        return self._iter_results(query, JunctionReads)
 
 
-class IntronRetentions(IntronRetentionAbstract, SpliceGraphSQL):
-    def intron_retention(self, gene_id, start, end):
-        query = self.c.execute('''
-                                SELECT gene_id, start, end, has_reads, annotated
-                                FROM intron_retention
-                                WHERE gene_id=?
-                                AND start=?
-                                AND end=?
-                                ''', (gene_id, start, end))
-        fetch = query.fetchone()
-        return IntronRetention(*fetch)
-
+class IntronRetentions(SpliceGraphSQL):
     def intron_retentions(self, gene):
-        query = self.c.execute('''
+        query = self.conn.execute('''
                                 SELECT gene_id, start, end, has_reads, annotated
                                 FROM intron_retention
                                 WHERE gene_id=?
                                 ''', (gene.id,))
-        fetch = query.fetchmany()
-        while fetch:
-            for ir in fetch:
-                yield IntronRetention(*ir)
-            fetch = query.fetchmany()
+        return self._iter_results(query, IntronRetention)
 
     def intron_retention_reads(self, intron_retention):
-        query = self.c.execute('''
+        query = self.conn.execute('''
                                 SELECT reads, experiment_name 
                                 FROM intron_retention_reads
                                 WHERE intron_retention_gene_id=?
                                 AND intron_retention_start=?
                                 AND intron_retention_end=?
                                 ''', (intron_retention.gene_id, intron_retention.start, intron_retention.end))
-        fetch = query.fetchmany()
-        while fetch:
-            for iir in fetch:
-                yield IntronRetentionReads(*iir)
-            fetch = query.fetchmany()
+        return self._iter_results(query, IntronRetentionReads)

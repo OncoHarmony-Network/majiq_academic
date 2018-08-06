@@ -3,7 +3,8 @@ class LsvTools {
         this.sgs = sgs;
         this.db_lsv = sgs.db_lsv;
         this.db_gene = sgs.db_gene;
-        this.lsv = new Lsv(this.db_lsv, this.db_gene)
+        this.lsv = new Lsv(this.db_lsv, this.db_gene);
+        this.heatmap = new HeatMap(this.db_lsv)
     }
 
     load_lsvs() {
@@ -135,9 +136,7 @@ class LsvTools {
             })
             .enter()
             .append('tr')
-            .attr('data-junction-index', (d, i) => {
-                return i
-            });
+            .attr('data-junction-index', (d, i) => i);
 
         row
             .append('td')
@@ -157,7 +156,7 @@ class LsvTools {
             .append('svg')
             .attr('class', 'heat-map')
             .attr('data-stat-name', 'wilcoxon')
-            .each((d, i, a) => new HeatMap(db_lsv, a[i]).plot());
+            .each((d, i, a) => this.heatmap.plot(a[i]));
     };
 
     het_show_lsvs(lsvs) {

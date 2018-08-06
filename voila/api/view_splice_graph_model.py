@@ -89,8 +89,8 @@ class ViewGene(Gene):
         yield 'name', self.name
         yield 'strand', self.strand
         yield 'chromosome', self.chromosome
-        yield '_id', self.id
         yield 'id', self.id
+        yield '_id', self.id
         yield 'start', self.start
         yield 'end', self.end
 

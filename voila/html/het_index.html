@@ -21,6 +21,9 @@
     <script src="https://unpkg.com/pouchdb@7.0.0/dist/pouchdb.find.min.js"></script>
     <script src="js/newtable.js"></script>
     <script src="js/lsvtools.js"></script>
+    <script src="js/lsv.js"></script>
+    <script src="js/heatmap.js"></script>
+    <script src="js/colors.js"></script>
     <script src="db_gene.js"></script>
     <script src="db_lsv.js"></script>
     <script>
@@ -256,126 +259,201 @@
             document.querySelector('.search').onkeypress = enter_autocomplete;
             document.querySelector('.search').onblur = hide_autocomplete;
             document.querySelector('form').onsubmit = find_results;
+            const lsv = new Lsv(db_lsv, db_gene);
+            const heatmap = new HeatMap(db_lsv);
+            const lsv_filter = document.querySelector('.lsv-filters');
 
             const t = new NewTable('#results', db_gene, db_lsv, {
-                get_data: (db_gene, db_lsv) => {
-                    //const key = document.querySelector('.search').value;
-                    const key = "Lmf1";
+                get_data: table => {
+                    const filter = {};
 
-                    return db_gene
-                        .createIndex({
-                            index: {
-                                fields: ['name']
+                    lsv_filter.querySelector('#prime-5').checked ? filter.A5SS = true : null;
+                    lsv_filter.querySelector('#prime-3').checked ? filter.A3SS = true : null;
+                    lsv_filter.querySelector('#exon-skipping').checked ? filter.exon_skipping = true : null;
+                    lsv_filter.querySelector('#target').checked ? filter.target = true : null;
+                    lsv_filter.querySelector('#source').checked ? filter.target = false : null;
+                    lsv_filter.querySelector('#binary').checked ? filter.binary = true : null;
+                    lsv_filter.querySelector('#complex').checked ? filter.binary = false : null;
+
+                    return db_lsv.query((doc, emit) => {
+                        if (doc.gene_id) {
+                            const ks = Object.keys(filter);
+                            if (ks.length) {
+                                if (ks.every(k => doc[k] === filter[k]))
+                                    emit(doc._id)
+                            } else {
+                                emit(doc._id)
                             }
-                        })
-                        .then(() => {
-                            return db_gene.find({
-                                selector: {
-                                    _id: {$gte: null},
-                                    $or: [
-                                        {name: key},
-                                        {_id: key}
-                                    ]
-                                },
-                                fields: ['_id']
+                        }
+                    }, table.options)
+                },
+                curate_data: results => {
+                    console.log(results);
+                    const data = results.rows.map(r => r.doc);
+                    return data
+                },
+                show_data:
+                    (lsvs, table_body) => {
+
+                        const t = d3.select(table_body).selectAll('tr')
+                            .data(lsvs);
+
+                        /*
+                            Remove elements
+                        */
+
+                        t.exit().remove();
+
+                        /*
+                            Helper functions
+                        */
+
+                        const lsv_types = els => {
+                            els.each((d, i, a) => {
+                                d3.select(a[i]).selectAll('canvas').remove();
+                                lsv.cartoon(a[i], d._id)
                             })
-                        })
-                        .then(results => {
-                            return db_lsv.createIndex({
-                                index: {
-                                    fields: ['gene_id']
-                                }
-                            }).then(() => {
-                                return db_lsv.find({
-                                    selector: {
-                                        gene_id: results.docs[0]._id
-                                    },
-                                    fields: ['gene_id', '_id', 'lsv_type', 'A3SS', 'A5SS', 'exon_skipping', 'target', 'binary']
+                        };
+
+                        const lsv_ids = els => els.text(d => d._id);
+
+                        const gene_names = els => {
+                            els
+                                .attr('href', d => 'summary.html?gene_id=' + d.gene_id)
+                                .text(d => d.gene_id)
+                        };
+
+
+                        const links = els => {
+                            return els
+                                .attr('href', d => {
+                                    db_gene.get(d.gene_id).then(gene => {
+                                        // The order of the junctions array is super important, so we'll copy the array before sorting.
+                                        const juncs = Array.from(d.junctions);
+                                        juncs.sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+                                        const first_junc = juncs[0];
+                                        const last_junc = juncs[juncs.length - 1];
+                                        const first_exon = gene.exons.find(e => first_junc[0] >= e.start & first_junc[0] <= e.end);
+                                        const last_exon = gene.exons.find(e => last_junc[1] >= e.start & last_junc[1] <= e.end);
+                                        return `http://genome.ucsc.edu/cgi-bin/hgTracks?db=${gene.genome}&position=${gene.chromosome}:${first_exon.start}-${last_exon.end}`
+                                    })
+                                })
+                        };
+
+                        /*
+                            Update elements
+                         */
+
+                        t.each((d, i, a) => {
+                            if (a[i].dataset.lsvId !== d._id) {
+
+                                a[i].dataset.lsvId = d._id;
+
+                                const tr = d3.select(a[i]);
+
+                                gene_names(tr.selectAll('.gene-name a').datum(d));
+
+                                lsv_ids(tr.selectAll('.lsv-id').datum(d));
+
+                                lsv_types(tr.selectAll('.lsv-type').datum(d));
+
+                                links(tr.selectAll('.links a'));
+
+                                tr.selectAll('.summary')
+                                    .datum(d)
+                                    .each((d, i, a) => {
+                                        db_gene.get('metadata').then(metadata => {
+                                            d3.select(a[i]).selectAll('svg').remove();
+                                            heatmap.summary(a[i], d, metadata)
+                                        })
+                                    });
+                            }
+                        });
+
+
+                        /*
+                            Create elements
+                         */
+
+                        const trs = t.enter()
+                            .append('tr');
+
+                        trs
+                            .attr('data-lsv-id', d => d._id);
+
+                        // gene name
+                        gene_names(
+                            trs
+                                .append('td')
+                                .attr('class', 'gene-name')
+                                .append('a')
+                        );
+
+                        // lsv ID
+                        lsv_ids(
+                            trs
+                                .append('td')
+                                .attr('class', 'lsv-id')
+                        );
+
+                        // lsv type
+                        lsv_types(
+                            trs
+                                .append('td')
+                                .attr('class', 'lsv-type')
+                        );
+
+                        // summary
+                        trs
+                            .append('td')
+                            .attr('class', 'summary')
+                            .each((d, i, a) => {
+                                db_gene.get('metadata').then(metadata => {
+                                    heatmap.summary(a[i], d, metadata)
                                 })
                             });
-                        })
-                },
-                curate_data: results => LsvTools.lsv_filter(results.docs)
-                    .filter(e => !document.querySelector('#binary').checked ? true : e.binary)
-                    .filter(e => !document.querySelector('#complex').checked ? true : !e.binary),
-                show_data: (lsvs, table_body) => {
 
-                    const t = d3.select(table_body).selectAll('tr')
-                        .data(lsvs);
-
-                    /*
-                        Update elements
-                     */
-
-                    t.each((d, i, a) => {
-                        const tr = d3.select(a[i]);
-
-                        tr.selectAll('.gene-name a')
-                            .attr('href', 'summary.html?gene_id=' + d.gene_id)
-                            .text(d.gene_id);
-
-                        tr.selectAll('.lsv-id')
-                            .text(d._id);
-
-                        tr.selectAll('.lsv-type')
-                            .text(d.lsv_type)
-                    });
+                        // links
+                        links(
+                            trs
+                                .append('td')
+                                .attr('class', 'links')
+                                .append('a')
+                        )
+                            .append('img')
+                            .attr('src', 'img/ucsc.png');
 
 
-                    /*
-                        Create elements
-                     */
-
-                    const trs = t.enter()
-                        .append('tr');
-
-                    // gene name
-                    trs
-                        .append('td')
-                        .attr('class', 'gene-name')
-                        .append('a')
-                        .attr('href', function (d) {
-                            return 'summary.html?gene_id=' + d.gene_id
-                        })
-                        .text(function (d) {
-                            return d.gene_id
-                        });
-
-                    // lsv ID
-                    trs
-                        .append('td')
-                        .attr('class', 'lsv-id')
-                        .text(function (d) {
-                            return d._id
-                        });
-
-                    // lsv type
-                    trs
-                        .append('td')
-                        .attr('class', 'lsv-type')
-                        .text(function (d) {
-                            return d.lsv_type
-                        });
-
-                    // summary
-                    trs
-                        .append('td')
-                        .attr('class', 'summary');
-
-                    // links
-                    trs
-                        .append('td')
-                        .attr('class', 'links');
-
-                    /*
-                        Remove elements
-                     */
-
-                    t.exit().remove();
-                }
+                    },
+                next:
+                    table => {
+                        document.querySelector('.next').onclick = () => {
+                            const rows = table.rows;
+                            try {
+                                table.prev_key.push(rows[0].dataset.lsvId);
+                            } catch (TypeError) {
+                                table.prev_key = [rows[0].dataset.lsvId];
+                            }
+                            table.options.startkey = rows[rows.length - 1].dataset.lsvId;
+                            table.options.skip = 1;
+                            table.update();
+                        }
+                    },
+                previous:
+                    table => {
+                        const prev = document.querySelector('.previous');
+                        prev.onclick = () => {
+                            table.options.startkey = table.prev_key.pop();
+                            table.options.skip = 0;
+                            table.update();
+                        }
+                    }
             });
 
             document.querySelector('.lsv-filters').addEventListener('change', () => {
+                t.options.startkey = undefined;
+                t.options.skip = undefined;
+                t.prev_key = undefined;
                 t.update();
             })
         }
@@ -454,7 +532,9 @@
 
 
 </div>
-<div class="content">
+<div>
+    <button class="previous pure-button">Previous</button>
+    <button class="next pure-button">Next</button>
     <table id="results" class="pure-table">
         <thead>
         <tr>

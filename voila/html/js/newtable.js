@@ -4,7 +4,9 @@ class NewTable {
         this.get_data = opts.get_data;
         this.curate_data = opts.curate_data;
         this.show_data = opts.show_data;
-
+        this.options = {limit: 15, include_docs: true};
+        opts.next(this);
+        opts.previous(this);
         this.update();
 
         this.table.onclick = (event) => {
@@ -21,8 +23,12 @@ class NewTable {
         return document.querySelector(this.table_selector)
     }
 
-    get table_body() {
-        return document.querySelector(`${this.table_selector} tbody`)
+    get body() {
+        return this.table.querySelector('tbody');
+    }
+
+    get rows() {
+        return this.body.querySelectorAll('tr')
     }
 
     static col_value(tr, col_idx) {
@@ -31,7 +37,9 @@ class NewTable {
     }
 
     update() {
-        this.get_data(db_gene, db_lsv).then(this.curate_data).then(data => this.show_data(data, this.table_body));
+        this.get_data(this)
+            .then(data => this.curate_data(data, this.limit))
+            .then(data => this.show_data(data, this.body));
     }
 
     comparator(col_idx, asc) {

@@ -7,7 +7,7 @@ import jinja2
 import numpy
 
 import voila
-from voila.api.view_splice_graph import ViewSpliceGraph
+from voila.api.view_splice_graph_sqlite import ViewSpliceGraph
 from voila.exceptions import VoilaException
 from voila.processes import VoilaPool, VoilaQueue
 from voila.utils.voila_log import voila_log
@@ -29,9 +29,11 @@ class RenderSpliceGraphs(Html):
             self.render_dbs()
 
     def fill_queue_gene_ids(self, queue, event):
-        with ViewSpliceGraph(self.args) as h:
-            for gene_id in h.gene_ids:
-                queue.put(gene_id)
+        with ViewSpliceGraph(self.args) as sg:
+            for gene in sg.genes():
+                queue.put(gene.id)
+            # for gene_id in h.gene_ids:
+            #     queue.put(gene_id)
         event.set()
 
     def db_genes(self, q, e):
@@ -52,7 +54,7 @@ class RenderSpliceGraphs(Html):
 
                         if gene_id:
                             log.debug('Write DB Gene ID: {}'.format(gene_id))
-                            text = json.dumps(sg.gene(gene_id).get_experiment(metadata['experiment_names']))
+                            text = json.dumps(sg.gene_experiment(sg.gene(gene_id), metadata['experiment_names']))
                             gene_lock.acquire()
                             db_gene.write(text)
                             db_gene.write(',')
