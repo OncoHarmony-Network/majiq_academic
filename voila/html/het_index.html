@@ -9,16 +9,30 @@
     <link rel="stylesheet" href="https://unpkg.com/purecss@1.0.0/build/pure-min.css"
           integrity="sha384-nn4HPE8lTHyVtfCBi5yW9d20FjT8BJwUXyWZT9InLYax14RDjBj46LmSztkmNP9w" crossorigin="anonymous">
     <link rel="stylesheet" href="css/index.css">
-
+    <style>
+        hr {
+            background-color: #e5e5e5;
+            height: 1px;
+            border: 0;
+        }
+    </style>
     <script src="https://d3js.org/d3.v4.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/pouchdb@6.4.3/dist/pouchdb.min.js"></script>
-    <script src="https://unpkg.com/pouchdb@6.4.3/dist/pouchdb.find.min.js"></script>
-    <script>
-        var db_gene = new PouchDB('voila_gene');
-        var db_lsv = new PouchDB('voila_lsv');
-    </script>
+    <script src="https://cdn.jsdelivr.net/npm/pouchdb@7.0.0/dist/pouchdb.min.js"></script>
+    <script src="https://unpkg.com/pouchdb@7.0.0/dist/pouchdb.find.min.js"></script>
+    <script src="js/newtable.js"></script>
+    <script src="js/lsvtools.js"></script>
+    <script src="js/lsv.js"></script>
+    <script src="js/heatmap.js"></script>
+    <script src="js/colors.js"></script>
     <script src="db_gene.js"></script>
     <script src="db_lsv.js"></script>
+    <script>
+        const db_gene = new PouchDB('voila_gene');
+        const db_lsv = new PouchDB('voila_lsv');
+        load_gene_db(db_gene);
+        load_lsv_db(db_lsv);
+    </script>
+
     <script>
 
         var mouseover_autocomplete = function (event) {
@@ -191,6 +205,7 @@
             var t = d3.selectAll('.results tbody').selectAll('tr')
                 .data(lsvs);
 
+            /*
             t.selectAll('td')
                 .selectAll('a')
                 .attr('href', function (d) {
@@ -199,18 +214,34 @@
                 })
                 .text(function (d) {
                     return d._id
-                });
 
-            t.enter()
-                .append('tr')
+                });
+            */
+
+            const trs = t.enter()
+                .append('tr');
+
+
+            trs
                 .append('td')
                 .append('a')
                 .attr('href', function (d) {
-                    console.log(d);
                     return 'summary.html?gene_id=' + d.gene_id
                 })
                 .text(function (d) {
+                    return d.gene_id
+                });
+
+            trs
+                .append('td')
+                .text(function (d) {
                     return d._id
+                });
+
+            trs
+                .append('td')
+                .text(function (d) {
+                    return d.lsv_type
                 });
 
             t.exit().remove();
@@ -228,6 +259,203 @@
             document.querySelector('.search').onkeypress = enter_autocomplete;
             document.querySelector('.search').onblur = hide_autocomplete;
             document.querySelector('form').onsubmit = find_results;
+            const lsv = new Lsv(db_lsv, db_gene);
+            const heatmap = new HeatMap(db_lsv);
+            const lsv_filter = document.querySelector('.lsv-filters');
+
+            const t = new NewTable('#results', db_gene, db_lsv, {
+                get_data: table => {
+                    const filter = {};
+
+                    lsv_filter.querySelector('#prime-5').checked ? filter.A5SS = true : null;
+                    lsv_filter.querySelector('#prime-3').checked ? filter.A3SS = true : null;
+                    lsv_filter.querySelector('#exon-skipping').checked ? filter.exon_skipping = true : null;
+                    lsv_filter.querySelector('#target').checked ? filter.target = true : null;
+                    lsv_filter.querySelector('#source').checked ? filter.target = false : null;
+                    lsv_filter.querySelector('#binary').checked ? filter.binary = true : null;
+                    lsv_filter.querySelector('#complex').checked ? filter.binary = false : null;
+
+                    return db_lsv.query((doc, emit) => {
+                        if (doc.gene_id) {
+                            const ks = Object.keys(filter);
+                            if (ks.length) {
+                                if (ks.every(k => doc[k] === filter[k]))
+                                    emit(doc._id)
+                            } else {
+                                emit(doc._id)
+                            }
+                        }
+                    }, table.options)
+                },
+                curate_data: results => {
+                    console.log(results);
+                    const data = results.rows.map(r => r.doc);
+                    return data
+                },
+                show_data:
+                    (lsvs, table_body) => {
+
+                        const t = d3.select(table_body).selectAll('tr')
+                            .data(lsvs);
+
+                        /*
+                            Remove elements
+                        */
+
+                        t.exit().remove();
+
+                        /*
+                            Helper functions
+                        */
+
+                        const lsv_types = els => {
+                            els.each((d, i, a) => {
+                                d3.select(a[i]).selectAll('canvas').remove();
+                                lsv.cartoon(a[i], d._id)
+                            })
+                        };
+
+                        const lsv_ids = els => els.text(d => d._id);
+
+                        const gene_names = els => {
+                            els
+                                .attr('href', d => 'summary.html?gene_id=' + d.gene_id)
+                                .text(d => d.gene_id)
+                        };
+
+
+                        const links = els => {
+                            return els
+                                .attr('href', d => {
+                                    db_gene.get(d.gene_id).then(gene => {
+                                        // The order of the junctions array is super important, so we'll copy the array before sorting.
+                                        const juncs = Array.from(d.junctions);
+                                        juncs.sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+                                        const first_junc = juncs[0];
+                                        const last_junc = juncs[juncs.length - 1];
+                                        const first_exon = gene.exons.find(e => first_junc[0] >= e.start & first_junc[0] <= e.end);
+                                        const last_exon = gene.exons.find(e => last_junc[1] >= e.start & last_junc[1] <= e.end);
+                                        return `http://genome.ucsc.edu/cgi-bin/hgTracks?db=${gene.genome}&position=${gene.chromosome}:${first_exon.start}-${last_exon.end}`
+                                    })
+                                })
+                        };
+
+                        /*
+                            Update elements
+                         */
+
+                        t.each((d, i, a) => {
+                            if (a[i].dataset.lsvId !== d._id) {
+
+                                a[i].dataset.lsvId = d._id;
+
+                                const tr = d3.select(a[i]);
+
+                                gene_names(tr.selectAll('.gene-name a').datum(d));
+
+                                lsv_ids(tr.selectAll('.lsv-id').datum(d));
+
+                                lsv_types(tr.selectAll('.lsv-type').datum(d));
+
+                                links(tr.selectAll('.links a'));
+
+                                tr.selectAll('.summary')
+                                    .datum(d)
+                                    .each((d, i, a) => {
+                                        db_gene.get('metadata').then(metadata => {
+                                            d3.select(a[i]).selectAll('svg').remove();
+                                            heatmap.summary(a[i], d, metadata)
+                                        })
+                                    });
+                            }
+                        });
+
+
+                        /*
+                            Create elements
+                         */
+
+                        const trs = t.enter()
+                            .append('tr');
+
+                        trs
+                            .attr('data-lsv-id', d => d._id);
+
+                        // gene name
+                        gene_names(
+                            trs
+                                .append('td')
+                                .attr('class', 'gene-name')
+                                .append('a')
+                        );
+
+                        // lsv ID
+                        lsv_ids(
+                            trs
+                                .append('td')
+                                .attr('class', 'lsv-id')
+                        );
+
+                        // lsv type
+                        lsv_types(
+                            trs
+                                .append('td')
+                                .attr('class', 'lsv-type')
+                        );
+
+                        // summary
+                        trs
+                            .append('td')
+                            .attr('class', 'summary')
+                            .each((d, i, a) => {
+                                db_gene.get('metadata').then(metadata => {
+                                    heatmap.summary(a[i], d, metadata)
+                                })
+                            });
+
+                        // links
+                        links(
+                            trs
+                                .append('td')
+                                .attr('class', 'links')
+                                .append('a')
+                        )
+                            .append('img')
+                            .attr('src', 'img/ucsc.png');
+
+
+                    },
+                next:
+                    table => {
+                        document.querySelector('.next').onclick = () => {
+                            const rows = table.rows;
+                            try {
+                                table.prev_key.push(rows[0].dataset.lsvId);
+                            } catch (TypeError) {
+                                table.prev_key = [rows[0].dataset.lsvId];
+                            }
+                            table.options.startkey = rows[rows.length - 1].dataset.lsvId;
+                            table.options.skip = 1;
+                            table.update();
+                        }
+                    },
+                previous:
+                    table => {
+                        const prev = document.querySelector('.previous');
+                        prev.onclick = () => {
+                            table.options.startkey = table.prev_key.pop();
+                            table.options.skip = 0;
+                            table.update();
+                        }
+                    }
+            });
+
+            document.querySelector('.lsv-filters').addEventListener('change', () => {
+                t.options.startkey = undefined;
+                t.options.skip = undefined;
+                t.prev_key = undefined;
+                t.update();
+            })
         }
     </script>
 </head>
@@ -240,67 +468,85 @@
             <ul class="gene-id"></ul>
         </div>
     </form>
-    <form class="pure-form pure-form-aligned">
+</div>
+<div class="content">
+    <form class="lsv-filters pure-form pure-form-aligned">
         <fieldset>
-            <div class=" pure-control-group">
-                <label for="prime5">5 Prime</label>
-                <input id="prime5" type="checkbox">
+            <legend>LSV Filters</legend>
+            <div class="pure-g">
+                <div class="pure-u-1-3">
+                    <input id="prime-5" type="checkbox">
+                    <label for="prime-5">5 Prime</label>
+                </div>
+
+                <div class="pure-u-1-3">
+                    <input id="prime-3" type="checkbox">
+                    <label for="prime-3">3 Prime</label>
+                </div>
+
+                <div class="pure-u-1-3">
+                    <input id="exon-skipping" type="checkbox">
+                    <label for="exon-skipping">Exon Skipping</label>
+                </div>
+
+                <div class="pure-u-1-3">
+                    <input id="source" type="checkbox">
+                    <label for="source">Source</label>
+                </div>
+
+                <div class="pure-u-1-3">
+                    <input id="target" type="checkbox">
+                    <label for="target">Target</label>
+                </div>
+
+                <div class="pure-u-1-3">
+                    <input id="binary" type="checkbox">
+                    <label for="binary">Binary</label>
+                </div>
+
+                <div class="pure-u-1-3">
+                    <input id="complex" type="checkbox">
+                    <label for="complex">Complex</label>
+                </div>
             </div>
+            <hr>
+            <div class="pure-g">
+                <div class="pure-u-1-4">
+                    <label for="threshold">Threshold</label>
+                    <input id="threshold" class="pure-input-1-2" placeholder="20%">
+                </div>
 
-            <div class=" pure-control-group">
-                <label for="prime3">3 Prime</label>
-                <input id="prime3" type="checkbox">
-            </div>
-
-            <div class="pure-control-group">
-                <label for="exon_skipping">Exon Skipping</label>
-                <input id="exon_skipping" type="checkbox">
-            </div>
-
-            <div class="pure-control-group">
-                <label for="source">Source</label>
-                <input id="source" type="checkbox">
-            </div>
-
-            <div class="pure-control-group">
-                <label for="target">Target</label>
-                <input id="target" type="checkbox">
-            </div>
-
-            <div class=" pure-control-group">
-                <label for="threshold">Threshold</label>
-                <input id="threshold" placeholder="20%">
-            </div>
-
-            <div class="pure-control-group">
-                <label for="confidence">Confidence</label>
-                <input id="confidence" placeholder="95%">
-            </div>
-
-            <label for="binary" class="pure-radio">
-                <input id="binary" type="radio" name="optionsRadios" value="binary" checked>
-                Binary
-            </label>
-
-            <label for="complex" class="pure-radio">
-                <input id="complex" type="radio" name="optionsRadios" value="complex">
-                Complex
-            </label>
-
-            <div class="pure-controls">
-                <button type="submit" class="pure-button pure-button-primary">Download Genes</button>
+                <div class="pure-u-1-4">
+                    <label for="confidence">Confidence</label>
+                    <input id="confidence" class="pure-input-1-2" placeholder="95%">
+                </div>
+                <div class="pure-u-1-4">
+                    <button type="submit" class="pure-button pure-button-primary">Download LSVs</button>
+                </div>
+                <div class="pure-u-1-4">
+                    <button type="submit" class="pure-button pure-button-primary">Download Genes</button>
+                </div>
             </div>
         </fieldset>
     </form>
+
+
 </div>
-<div class="content">
-    <table class="results pure-table">
+<div>
+    <button class="previous pure-button">Previous</button>
+    <button class="next pure-button">Next</button>
+    <table id="results" class="pure-table">
         <thead>
         <tr>
+            <th>Gene Name</th>
             <th>LSV ID</th>
+            <th>LSV Type</th>
+            <th>Summary</th>
+            <th>Links</th>
         </tr>
         </thead>
-        <tbody></tbody>
+        <tbody>
+        </tbody>
     </table>
 </div>
 </body>

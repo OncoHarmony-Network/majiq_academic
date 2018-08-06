@@ -1,12 +1,13 @@
-from abc import ABC, abstractmethod
+from sqlalchemy import exists, and_
 from typing import List
 
-from sqlalchemy import exists, and_
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.orm.exc import NoResultFound
 
 from voila.api import splice_graph_model as model
+from voila.api.splice_graph_abstract import SpliceGraphType, SpliceGraphSQLAbstract, GenesAbstract, ExonsAbstract, \
+    JunctionsAbstract, IntronRetentionAbstract
 from voila.api.sql import SQL
 
 Session = sessionmaker()
@@ -14,7 +15,7 @@ Session = sessionmaker()
 default_commit_on_count = 1e4
 
 
-class SpliceGraphSQL(SQL):
+class SpliceGraphSQL(SpliceGraphSQLAbstract, SQL):
     def __init__(self, filename: str, delete: bool = False, nprocs: int = 1):
         super().__init__(filename, model, delete, nprocs)
 
@@ -50,29 +51,7 @@ class SpliceGraphSQL(SQL):
         self.session.add(model.FileVersion(value=version))
 
 
-class SpliceGraphType(ABC):
-    def __bool__(self):
-        return self.exists
-
-    def __iter__(self):
-        return self.get.__iter__()
-
-    @abstractmethod
-    def add(self, *args, **kwargs):
-        pass
-
-    @property
-    @abstractmethod
-    def get(self):
-        pass
-
-    @property
-    @abstractmethod
-    def exists(self):
-        pass
-
-
-class IntronRetention(SpliceGraphSQL):
+class IntronRetention(IntronRetentionAbstract, SpliceGraphSQL):
     class _IntronRetention(SpliceGraphType):
         def __init__(self, sql, gene_id: str, start: int, end: int):
             self.sql = sql
@@ -135,7 +114,7 @@ class IntronRetention(SpliceGraphSQL):
         return self.session.query(model.IntronRetention).all()
 
 
-class Exons(SpliceGraphSQL):
+class Exons(ExonsAbstract, SpliceGraphSQL):
     class _Exon(SpliceGraphType):
         def __init__(self, sql, gene_id: str, start: int, end: int):
             self.sql = sql
@@ -170,7 +149,7 @@ class Exons(SpliceGraphSQL):
         return self.session.query(model.Exon).all()
 
 
-class Junctions(SpliceGraphSQL):
+class Junctions(JunctionsAbstract, SpliceGraphSQL):
     class _Junction(SpliceGraphType):
         def __init__(self, sql, gene_id: str, start: int, end: int):
             self.sql = sql
@@ -224,7 +203,7 @@ class Junctions(SpliceGraphSQL):
         return self.session.query(model.Junction).all()
 
 
-class Genes(SpliceGraphSQL):
+class Genes(GenesAbstract, SpliceGraphSQL):
     class _Gene(SpliceGraphType):
         def __init__(self, sql, gene_id: str):
             self.sql = sql

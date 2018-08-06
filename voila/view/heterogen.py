@@ -9,7 +9,7 @@ import jinja2
 import voila
 from voila import constants
 from voila.api.view_matrix import ViewHeterogens
-from voila.api.view_splice_graph import ViewSpliceGraph
+from voila.api.view_splice_graph_sqlite import ViewSpliceGraph
 from voila.exceptions import NotHeterogenVoilaFile
 from voila.processes import VoilaPool, VoilaQueue
 from voila.utils.voila_log import voila_log
@@ -94,7 +94,7 @@ class Heterogen(Html, Tsv):
 
                         if gene_id:
                             log.debug('Write DB Gene ID: {}'.format(gene_id))
-                            text = json.dumps(sg.gene(gene_id).get_experiment(metadata['experiment_names']))
+                            text = json.dumps(sg.gene_experiment(sg.gene(gene_id), metadata['experiment_names']))
                             gene_lock.acquire()
                             db_gene.write(text)
                             db_gene.write(',')
@@ -142,12 +142,12 @@ class Heterogen(Html, Tsv):
             metadata = h.view_metadata
 
         with open(os.path.join(args.output, 'db_gene.js'), 'w') as db_gene:
-            db_gene.write('db_gene.bulkDocs([')
+            db_gene.write('const load_gene_db = db => {db.bulkDocs([')
             db_gene.write(json.dumps(metadata))
             db_gene.write(',')
 
         with open(os.path.join(args.output, 'db_lsv.js'), 'w') as db_lsv:
-            db_lsv.write('db_lsv.bulkDocs([')
+            db_lsv.write('const load_lsv_db = db => {db.bulkDocs([')
             db_lsv.write(json.dumps(metadata))
             db_lsv.write(',')
 
@@ -161,10 +161,10 @@ class Heterogen(Html, Tsv):
                     p.get()
 
         with open(os.path.join(args.output, 'db_gene.js'), 'a') as db_gene:
-            db_gene.write('])')
+            db_gene.write('])};')
 
         with open(os.path.join(args.output, 'db_lsv.js'), 'a') as db_lsv:
-            db_lsv.write('])')
+            db_lsv.write('])};')
 
     def tsv_row(self, q, e, tsv_file, fieldnames):
         args = self.args
@@ -195,8 +195,8 @@ class Heterogen(Html, Tsv):
                             'Gene ID': gene.id,
                             'LSV ID': lsv_id,
                             'LSV Type': lsv.lsv_type,
-                            'A5SS': lsv.prime5,
-                            'A3SS': lsv.prime3,
+                            'A5SS': lsv.a5ss,
+                            'A3SS': lsv.a3ss,
                             'ES': lsv.exon_skipping,
                             'Num. Junctions': len(lsv_junctions),
                             'Num. Exons': lsv.exon_count,

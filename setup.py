@@ -6,6 +6,9 @@ import numpy
 import sys
 import os
 
+# os.environ['CC'] = 'gcc-8'
+# os.environ['CXX'] = 'g++-8'
+
 print("COMPILER ", os.environ.get("CXX", None))
 
 extensions = []
@@ -71,6 +74,12 @@ extensions += [Extension('voila.c.splice_graph_sql', ['voila/c/splice_graph_sql.
                          language='c++', include_dirs=NPY_INC_DIRS, extra_compile_args=compile_args,
                          extra_link_args=linker_args)]
 
+
+def requirements():
+    with open('requirements.txt') as f:
+        return [l.strip() for l in f.readlines()]
+
+
 setup(
     name="majiq",
     packages=find_packages(),
@@ -82,6 +91,7 @@ setup(
     keywords=['rna', 'splicing', 'psi', 'splicegraph'],
     license='LICENSE.txt',
     include_package_data=True,
+    install_requires=requirements(),
     entry_points={'console_scripts': ['majiq = majiq.run_majiq:main', 'voila = voila.run_voila:main']},
     zip_safe=False,
     ext_modules=cythonize(extensions),

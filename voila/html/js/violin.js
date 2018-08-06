@@ -75,10 +75,10 @@ Violin.prototype.histograms = function (color) {
 
         var area = d3.area()
             .curve(d3.curveCatmullRom)
-            .defined(function (d) {
-                if (d > (x.domain()[0] + 1e-4))
-                    return d;
-            })
+            // .defined(function (d) {
+            //     if (d > (x.domain()[0]))
+            //         return d;
+            // })
             .x1(function (d) {
                 return x(d);
             })

@@ -256,7 +256,7 @@ class MatrixType(ABC):
                         yield int(coord)
 
     @property
-    def is_target(self):
+    def target(self):
         return self.lsv_id.split(':')[-2] == 't'
 
     @property
@@ -264,61 +264,48 @@ class MatrixType(ABC):
         return lsv_id_to_gene_id(self.lsv_id)
 
     @property
-    def _prime5(self):
-        try:
-            lsv_type = self.lsv_type[2:]
-            if lsv_type[-1] == 'i':
-                lsv_type = lsv_type[:-2]
+    def a5ss(self):
+        return 'A5SS' in [self.reference_exon_ss(), self.other_exons_ss()]
 
-            splice_sites = set(j[0] for j in lsv_type.split('|'))
-            return len(splice_sites) > 1
+    @property
+    def a3ss(self):
+        return 'A3SS' in [self.reference_exon_ss(), self.other_exons_ss()]
+
+    def reference_exon_ss(self):
+        try:
+            ss = filter(lambda x: x != 'i', self.lsv_type.split('|')[1:])
+            ss = map(lambda x: x.split('.')[0].split('e')[0], ss)
+            if len(set(ss)) > 1:
+                if self.lsv_type[0] == 's':
+                    return 'A5SS'
+                else:
+                    return 'A3SS'
         except IndexError:
             if self.lsv_type == constants.NA_LSV:
                 return constants.NA_LSV
             raise
 
-    @property
-    def _prime3(self):
+    def other_exons_ss(self):
         try:
-            lsv_type = self.lsv_type[2:]
-            if lsv_type[-1] == 'i':
-                lsv_type = lsv_type[:-2]
-
+            ss = filter(lambda x: x != 'i', self.lsv_type.split('|')[1:])
             exons = {}
-            for x in lsv_type.split('|'):
-                juncs = x[1:].split('.')
+            for x in ss:
+                exon = x.split('.')[0].split('e')[1]
+                ss = x.split('.')[1]
                 try:
-                    exons[juncs[0]].add(juncs[1])
+                    exons[exon].add(ss)
                 except KeyError:
-                    exons[juncs[0]] = set(juncs[1])
+                    exons[exon] = {ss}
 
-            for value in exons.values():
-                if len(value) > 1:
-                    return True
-
-            return False
+            if any(len(values) > 1 for values in exons.values()):
+                if self.lsv_type[0] == 's':
+                    return 'A3SS'
+                else:
+                    return 'A5SS'
         except IndexError:
             if self.lsv_type == constants.NA_LSV:
                 return constants.NA_LSV
             raise
-
-    @property
-    def prime5(self):
-        if self.target:
-            return self._prime5
-        else:
-            return self._prime3
-
-    @property
-    def prime3(self):
-        if self.target:
-            return self._prime3
-        else:
-            return self._prime5
-
-    @property
-    def target(self):
-        return self.lsv_type[0] == 't'
 
     @property
     def exon_skipping(self):
@@ -332,11 +319,9 @@ class MatrixType(ABC):
     @property
     def exon_count(self):
         try:
-            lsv_type = self.lsv_type[2:]
-            if lsv_type[-1] == 'i':
-                lsv_type = lsv_type[:-2]
-
-            return len(set(x[1:3] for x in lsv_type.split('|'))) + 1
+            exons = filter(lambda x: x != 'i', self.lsv_type.split('|')[1:])
+            exons = map(lambda x: x.split('.')[0].split('e')[1], exons)
+            return len(set(exons)) + 1
         except IndexError:
             if self.lsv_type == constants.NA_LSV:
                 return constants.NA_LSV

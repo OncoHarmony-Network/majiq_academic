@@ -121,7 +121,7 @@ class ViewPsi(Psi, ViewMatrix):
             yield '_id', self.lsv_id
             yield 'reference_exon', tuple(self.reference_exon)
             yield 'gene_id', self.gene_id
-            yield 'is_target', self.is_target
+            yield 'target', self.target
 
             fields = list(self.fields)
 
@@ -194,7 +194,7 @@ class ViewDeltaPsi(DeltaPsi, ViewMatrix):
             yield '_id', self.lsv_id
             yield 'reference_exon', self.reference_exon
             yield 'excl_incl', self.excl_incl
-            yield 'is_target', self.is_target
+            yield 'target', self.target
 
             fields = list(self.fields)
 
@@ -317,10 +317,12 @@ class ViewHeterogens:
                 yield stat_name, self.junction_stat(stat_name)
             yield 'mu_psi', self.mu_psi
             yield 'junctions', self.junctions
-            yield '5_prime', self.prime5
-            yield '3_prime', self.prime3
+            yield 'A5SS', self.a5ss
+            yield 'A3SS', self.a3ss
             yield 'exon_skipping', self.exon_skipping
             yield 'exon_count', self.exon_count
+            yield 'target', self.target
+            yield 'binary', self.binary
 
         def get_attr(self, attr):
             s = set()
@@ -337,12 +339,12 @@ class ViewHeterogens:
             return self.get_attr('gene_id')
 
         @property
-        def prime5(self):
-            return self.get_attr('prime5')
+        def a5ss(self):
+            return self.get_attr('a5ss')
 
         @property
-        def prime3(self):
-            return self.get_attr('prime3')
+        def a3ss(self):
+            return self.get_attr('a3ss')
 
         @property
         def exon_skipping(self):
@@ -351,6 +353,14 @@ class ViewHeterogens:
         @property
         def exon_count(self):
             return self.get_attr('exon_count')
+
+        @property
+        def target(self):
+            return self.get_attr('target')
+
+        @property
+        def binary(self):
+            return len(self.lsv_type.split('|')[1:]) == 2
 
         @property
         def dpsi(self):
@@ -411,12 +421,13 @@ class ViewHeterogens:
                             test_shape = min(d[sample].shape, psi_d.shape)
                             arr1 = d[sample][0:test_shape[0], 0:test_shape[1]]
                             arr2 = psi_d[0:test_shape[0], 0:test_shape[1]]
-                            arr_d = arr1 - arr2
+                            arr_d = arr2 - arr1
                             threshold = 0.001
                             if (np.abs(arr_d) > threshold).any():
-                                voila_log().warning('PSI distribution from the files containing the group "{}" '
+                                voila_log().warning('PSI distribution from {} containing the group "{}" '
                                                     'don\'t agree within a {} threshold.  Double check the '
-                                                    'files containing this group.'.format(sample, threshold))
+                                                    'files containing this group. {}.'.format(
+                                    het.matrix_hdf5.h.filename, sample, threshold, data_type))
                         else:
                             d[sample] = psi_d
                 except (LsvIdNotFoundInVoilaFile, GeneIdNotFoundInVoilaFile):
@@ -468,6 +479,7 @@ class ViewHeterogens:
                     if juncs is None:
                         juncs = h.junctions
                         source_file = h.matrix_hdf5.h.filename
+
                     if not np.array_equal(juncs, h.junctions):
                         filename = h.matrix_hdf5.h.filename
                         voila_log().warning('For junctions in LSV {}, {} and {} do not agree.'.format(self.lsv_id,

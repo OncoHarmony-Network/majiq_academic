@@ -3,6 +3,7 @@
 !voila/c/sqlite3.c
 majiq/src/internals/seq_parse.cpp
 majiq/src/*.cpp
+voila/c/*.cpp
 .DS_Store
 .idea
 voila/templates/.idea

@@ -223,7 +223,7 @@ class Lsv {
                     exons.push(exon);
                     let number_exon = (direction > 0 ? i : i + 1);
                     number_exon = (number_exon === 0 || number_exon === num_exons ? exon_lsv_number : '');
-                    lsv.render_exon(canvas, exon, pixel_factor, margins, percentage_exon, number_exon);
+                    this.render_exon(canvas, exon, pixel_factor, margins, percentage_exon, number_exon);
                     start += exon_width + percentage_intron * area[0];
                 }
 
@@ -235,7 +235,7 @@ class Lsv {
                             : [margins[0] + (num_exons - 1) * exon_width + (num_exons - 2) * percentage_intron * area[0],
                                 margins[0] + (num_exons - 1) * exon_width + (num_exons - 1) * percentage_intron * area[0]])
                     };
-                    lsv.render_intron_retained(canvas, intron, pixel_factor, margins, percentage_exon, intron_ret_i - 1);
+                    this.render_intron_retained(canvas, intron, pixel_factor, margins, percentage_exon, intron_ret_i - 1);
                 }
 
                 // Render junctions

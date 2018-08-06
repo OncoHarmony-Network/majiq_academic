@@ -1,8 +1,9 @@
 from sqlalchemy import inspect
+
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
 
-from voila.api.splice_graph_model import Gene, Exon, Junction, JunctionReads, IntronRetention
+from voila.api.splice_graph_model import Gene, Exon, Junction, JunctionReads, IntronRetention, Genome
 
 Base = declarative_base()
 
@@ -20,14 +21,6 @@ class ViewJunction(Junction):
                 return 'grey'
         else:
             return 'green'
-
-    def reads(self, experiment_name):
-        session = inspect(self).session
-        r = session.query(JunctionReads).get((experiment_name, self.gene_id, self.start, self.end))
-        try:
-            return r.reads
-        except AttributeError:
-            return 0
 
     def __iter__(self):
         yield 'start', self.start
@@ -86,13 +79,6 @@ class ViewIntronRetention(IntronRetention):
         else:
             return 'green'
 
-    def reads(self, experiment_name):
-        session = inspect(self).session
-        r = session.query(JunctionReads).get((experiment_name, self.gene_id, self.start, self.end))
-        try:
-            return r.reads
-        except AttributeError:
-            return 0
 
 class ViewGene(Gene):
     junctions = relationship('ViewJunction')
@@ -103,8 +89,8 @@ class ViewGene(Gene):
         yield 'name', self.name
         yield 'strand', self.strand
         yield 'chromosome', self.chromosome
-        yield '_id', self.id
         yield 'id', self.id
+        yield '_id', self.id
         yield 'start', self.start
         yield 'end', self.end
 
@@ -146,28 +132,46 @@ class ViewGene(Gene):
                     ir_reads[combined_name] = {}
 
             for junc in self.junctions:
-                for experiment_name in experiment_names:
+                reads = (r for r in junc.reads if r.experiment_name in experiment_names)
+                for r in reads:
                     try:
-                        junc_reads[experiment_name][junc.start][junc.end] = junc.reads(experiment_name)
+                        junc_reads[r.experiment_name][r.junction_start][r.junction_end] = r.reads
                     except KeyError:
-                        junc_reads[experiment_name][junc.start] = {junc.end: junc.reads(experiment_name)}
+                        junc_reads[r.experiment_name][r.junction_start] = {r.junction_end: r.reads}
 
-                if combined_name:
-                    summed_reads = sum(junc_reads[n][junc.start][junc.end] for n in experiment_names)
-                    try:
-                        junc_reads[combined_name][junc.start][junc.end] = summed_reads
-                    except KeyError:
-                        junc_reads[combined_name][junc.start] = {junc.end: summed_reads}
+                    if combined_name:
+                        def get_junc_reads():
+                            for n in experiment_names:
+                                try:
+                                    yield junc_reads[n][junc.start][junc.end]
+                                except KeyError:
+                                    pass
+
+                        summed_reads = sum(get_junc_reads())
+
+                        try:
+                            junc_reads[combined_name][junc.start][junc.end] = summed_reads
+                        except KeyError:
+                            junc_reads[combined_name][junc.start] = {junc.end: summed_reads}
 
             for ir in self.intron_retentions:
-                for experiment_name in experiment_names:
+                reads = (r for r in ir.reads if r.experiment_name in experiment_names)
+                for r in reads:
                     try:
-                        ir_reads[experiment_name][ir.start][ir.end] = ir.reads(experiment_name)
+                        ir_reads[r.experiment_name][ir.start][ir.end] = r.reads
                     except KeyError:
-                        ir_reads[experiment_name][ir.start] = {ir.end: ir.reads(experiment_name)}
+                        ir_reads[r.experiment_name][ir.start] = {ir.end: r.reads}
 
                 if combined_name:
-                    summed_reads = sum(ir_reads[n][ir.start][ir.end] for n in experiment_names)
+                    def get_ir_reads():
+                        for n in experiment_names:
+                            try:
+                                yield ir_reads[n][ir.start][ir.end]
+                            except KeyError:
+                                pass
+
+                    summed_reads = sum(get_ir_reads())
+
                     try:
                         ir_reads[combined_name][ir.start][ir.end] = summed_reads
                     except KeyError:
@@ -179,5 +183,6 @@ class ViewGene(Gene):
         gene['intron_retention'] = [dict(ir) for ir in self.intron_retentions]
         gene['junction_reads'] = junc_reads
         gene['intron_retention_reads'] = ir_reads
+        gene['genome'] = inspect(self).session.query(Genome).one().name
 
         return gene
