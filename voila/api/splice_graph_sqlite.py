@@ -9,19 +9,19 @@ from voila.api.splice_graph_abstract import SpliceGraphSQLAbstract
 
 
 class SpliceGraphSQL(SpliceGraphSQLAbstract):
-    def __init__(self, filename, delete=True):
+    def __init__(self, filename, delete=False):
         try:
             filename = filename.decode()
         except AttributeError:
             pass
 
-        if delete:
+        if delete is True:
             try:
                 os.remove(filename)
+                engine = create_engine('sqlite:///{0}'.format(filename), connect_args={'timeout': 120})
+                splice_graph_model.Base.metadata.create_all(engine)
             except FileNotFoundError:
                 pass
-        engine = create_engine('sqlite:///{0}'.format(filename), connect_args={'timeout': 120})
-        splice_graph_model.Base.metadata.create_all(engine)
 
         self.conn = sqlite3.connect(filename)
 
@@ -63,7 +63,7 @@ class SpliceGraphSQL(SpliceGraphSQLAbstract):
                             INSERT 
                             INTO main.genome (name) 
                             VALUES (?)
-                            ''', (g, ))
+                            ''', (g,))
 
     @property
     def experiment_names(self):
@@ -85,17 +85,20 @@ class SpliceGraphSQL(SpliceGraphSQLAbstract):
 
     @property
     def file_version(self):
-        if self._file_version is None:
-            query = self.conn.execute('''
-                                    SELECT value from main.file_version
-                                    ''')
-
-            file_version, = query.fetchone()
-            if not file_version:
-                self._file_version = ''
-            else:
-                self._file_version = file_version
-        return self._file_version
+        try:
+            if self._file_version is None:
+                query = self.conn.execute('''
+                                            SELECT value from file_version
+                                            ''')
+                file_version, = query.fetchone()
+                if not file_version:
+                    self._file_version = ''
+                else:
+                    self._file_version = file_version
+            return self._file_version
+        except TypeError:
+            # File version not found in database.
+            return -1
 
     @file_version.setter
     def file_version(self, version):
@@ -111,6 +114,7 @@ class SpliceGraphSQL(SpliceGraphSQLAbstract):
             if not fetch:
                 break
             for x in fetch:
+                print(x)
                 yield sg_type(*x)
 
 
