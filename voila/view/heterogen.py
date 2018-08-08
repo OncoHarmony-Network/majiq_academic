@@ -45,13 +45,20 @@ class Heterogen(Html, Tsv):
     def render_summaries(self):
         self.create_summaries(ViewHeterogens)
 
-    def db_lsvs(self, q, e):
+    def db_lsvs(self, q, e, i):
         log = voila_log()
 
         try:
             args = self.args
             with ViewHeterogens(args) as h:
-                with open(os.path.join(args.output, 'db_lsv.js'), 'a') as db_lsv:
+                with open(os.path.join(args.output, 'db_lsv_{}.js'.format(i)), 'w') as db_lsv:
+
+                    db_lsv.write('new PouchDB(\'voila_lsv\').bulkDocs([')
+
+                    if i == 0:
+                        db_lsv.write(json.dumps(h.view_metadata))
+                        db_lsv.write(',')
+
                     while not (e.is_set() and q.empty()):
                         try:
                             lsv_id = q.get_nowait()
@@ -60,47 +67,54 @@ class Heterogen(Html, Tsv):
 
                         if lsv_id:
                             log.debug('Write DB LSV ID: {}'.format(lsv_id))
-                            try:
-                                text = json.dumps(dict(h.heterogen(lsv_id).get_all()), cls=NumpyEncoder)
-                                lsv_lock.acquire()
-                                db_lsv.write(text)
-                                db_lsv.write(',')
-                                lsv_lock.release()
-                            except IndexError:
-                                if h.heterogen(lsv_id).lsv_type == 's|1e1.4o4|2e1.3o4|3e1.2o4|4e1.1o4|5e2.3o3|i':
-                                    print(lsv_id)
-                                log.error('there was an error parsing {}'.format(lsv_id))
+                            text = json.dumps(dict(h.heterogen(lsv_id).get_all()), cls=NumpyEncoder)
+                            lsv_lock.acquire()
+                            db_lsv.write(text)
+                            db_lsv.write(',')
+                            lsv_lock.release()
                             q.task_done()
+
+                    db_lsv.write(']);')
 
         except Exception as e:
             log.exception(e)
             exit()
 
-    def db_genes(self, q, e):
+    def db_genes(self, gene_ids, i):
         log = voila_log()
         try:
             args = self.args
 
-            with ViewSpliceGraph(args) as sg, ViewHeterogens(args) as h:
-
+            with ViewHeterogens(args) as h:
                 metadata = h.view_metadata
 
-                with open(os.path.join(args.output, 'db_gene.js'), 'a') as db_gene:
-                    while not (e.is_set() and q.empty()):
-                        try:
-                            gene_id = q.get_nowait()
-                        except Empty:
-                            gene_id = None
+            with ViewSpliceGraph(args) as sg, open(os.path.join(args.output, 'db_gene_{}.js'.format(i)),
+                                                   'w') as db_gene:
 
-                        if gene_id:
-                            log.debug('Write DB Gene ID: {}'.format(gene_id))
-                            text = json.dumps(sg.gene_experiment(sg.gene(gene_id), metadata['experiment_names']))
-                            gene_lock.acquire()
-                            db_gene.write(text)
-                            db_gene.write(',')
-                            gene_lock.release()
+                exp_name = metadata['experiment_names']
 
-                            q.task_done()
+                db_gene.write('new PouchDB(\'voila_gene\').bulkDocs([')
+
+                if i == 0:
+                    db_gene.write(json.dumps(metadata))
+                    db_gene.write(',')
+
+                for gene_id in gene_ids:
+                    log.debug('Write DB Gene ID: {}'.format(gene_id))
+
+                    gene = sg.gene(gene_id)
+                    gene_exp = sg.gene_experiment(gene, exp_name)
+                    text = json.dumps(gene_exp)
+
+                    db_gene.write(text)
+                    db_gene.write(',')
+
+                    del gene
+                    del gene_exp
+                    del text
+
+                db_gene.write(']);')
+
         except Exception as e:
             log.exception(e)
             exit()
@@ -138,30 +152,17 @@ class Heterogen(Html, Tsv):
     def render_dbs(self):
         args = self.args
 
-        with ViewHeterogens(args) as h:
-            metadata = h.view_metadata
-
-        with open(os.path.join(args.output, 'db_gene.js'), 'w') as db_gene:
-            db_gene.write('const load_gene_db = db => {db.bulkDocs([')
-            db_gene.write(json.dumps(metadata))
-            db_gene.write(',')
-
-        with open(os.path.join(args.output, 'db_lsv.js'), 'w') as db_lsv:
-            db_lsv.write('const load_lsv_db = db => {db.bulkDocs([')
-            db_lsv.write(json.dumps(metadata))
-            db_lsv.write(',')
-
         with VoilaPool() as pool:
-            with VoilaQueue(self.fill_queue_gene_ids) as (q, e):
-                for p in [pool.apply_async(self.db_genes, (q, e)) for _ in range(pool.processes)]:
-                    p.get()
+            with ViewSpliceGraph(self.args) as sg:
+                chunked_gene_ids = Html.chunkify([g.id for g in sg.genes()], pool.processes)
+
+            ps = [pool.apply_async(self.db_genes, (gene_ids, i)) for i, gene_ids in enumerate(chunked_gene_ids)]
+            for p in ps:
+                p.get()
 
             with VoilaQueue(self.fill_queue_lsv_ids) as (q, e):
-                for p in [pool.apply_async(self.db_lsvs, (q, e)) for _ in range(pool.processes)]:
+                for p in [pool.apply_async(self.db_lsvs, (q, e, i)) for i in range(pool.processes)]:
                     p.get()
-
-        with open(os.path.join(args.output, 'db_gene.js'), 'a') as db_gene:
-            db_gene.write('])};')
 
         with open(os.path.join(args.output, 'db_lsv.js'), 'a') as db_lsv:
             db_lsv.write('])};')

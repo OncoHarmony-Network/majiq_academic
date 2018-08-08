@@ -42,7 +42,7 @@ class VoilaQueue:
     class __VoilaQueue:
         def __init__(self, nprocs):
             self.Mgr = multiprocessing.Manager()
-            self.queue = self.Mgr.Queue(maxsize=nprocs)
+            self.queue = self.Mgr.Queue(maxsize=nprocs * 2)
 
             voila_log().debug('Manager PID {}'.format(self.Mgr._process.ident))
 

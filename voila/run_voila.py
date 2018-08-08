@@ -64,17 +64,31 @@ def gene_ids():
         log = voila_log()
         args.gene_ids = list(set(args.gene_ids))
         found_genes = set()
-        for f in args.voila_file:
-            with Matrix(f) as m:
+        if hasattr(args, 'voila_file'):
+            for f in args.voila_file:
+                with Matrix(f) as m:
+                    for gene_id in args.gene_ids:
+                        if any(m.lsv_ids([gene_id])):
+                            found_genes.add(gene_id)
+
+            for gene_id in set(args.gene_ids) - found_genes:
+                log.warning('Gene ID "{0}" could not be found in a Voila file'.format(gene_id))
+
+            if not found_genes:
+                raise VoilaException('None of the gene IDs could be found in a Voila file.')
+        else:
+            with SpliceGraph(args.splice_graph) as sg:
                 for gene_id in args.gene_ids:
-                    if any(m.lsv_ids([gene_id])):
+                    if sg.gene(gene_id):
                         found_genes.add(gene_id)
 
-        for gene_id in set(args.gene_ids) - found_genes:
-            log.warning('Gene ID "{0}" could not be found in a Voila file'.format(gene_id))
+                for gene_id in set(args.gene_ids) - found_genes:
+                    log.warning('Gene ID "{0}" could not be found in the Splice Graph file'.format(gene_id))
 
-        if not found_genes:
-            raise VoilaException('None of the gene IDs could be found in a Voila file.')
+                if not found_genes:
+                    raise VoilaException('None of the gene IDs could be found in the Splice Graph file.')
+
+        args.gene_ids = list(found_genes)
 
 
 def lsv_ids():

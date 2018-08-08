@@ -46,7 +46,7 @@ class SQL:
             except FileNotFoundError:
                 pass
 
-        engine = create_engine('sqlite:///{0}'.format(filename), connect_args={'timeout': 120})
+        engine = create_engine('sqlite:///{0}'.format(filename), connect_args={'timeout': 120}, echo=True)
         event.listen(engine, 'connect', self._fk_pragma_on_connect)
         model.Base.metadata.create_all(engine)
         Session.configure(bind=engine)
@@ -65,6 +65,10 @@ class SQL:
     @staticmethod
     def _fk_pragma_on_connect(dbapi_con, con_record):
         dbapi_con.execute('pragma foreign_keys=ON')
+        dbapi_con.execute('pragma temp_store=MEMORY')
+        dbapi_con.execute('pragma journal_mode=OFF')
+        dbapi_con.execute('pragma synchronous=OFF')
+        dbapi_con.execute('pragma locking_mode=EXCLUSIVE')
 
     def commit(self, cmds=0):
         if self.session_add_count > (cmds / self.nprocs):

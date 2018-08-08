@@ -1,13 +1,39 @@
+import os
 import sqlite3
 from collections import namedtuple
 
+from sqlalchemy import create_engine
+
+from voila.api import splice_graph_model
 from voila.api.splice_graph_abstract import SpliceGraphSQLAbstract
 
 
 class SpliceGraphSQL(SpliceGraphSQLAbstract):
-    def __init__(self, filename):
+    def __init__(self, filename, delete=True):
+        try:
+            filename = filename.decode()
+        except AttributeError:
+            pass
+
+        if delete:
+            try:
+                os.remove(filename)
+            except FileNotFoundError:
+                pass
+        engine = create_engine('sqlite:///{0}'.format(filename), connect_args={'timeout': 120})
+        splice_graph_model.Base.metadata.create_all(engine)
+
         self.conn = sqlite3.connect(filename)
+
+        self.conn.execute('pragma foreign_keys=OFF')
+        self.conn.execute('pragma temp_store=MEMORY')
+        self.conn.execute('pragma journal_mode=OFF')
+        self.conn.execute('pragma synchronous=OFF')
+        self.conn.execute('pragma locking_mode=EXCLUSIVE')
+
         self._genome = None
+        self._experiment_names = None
+        self._file_version = None
 
     def __enter__(self):
         return self
@@ -16,32 +42,76 @@ class SpliceGraphSQL(SpliceGraphSQLAbstract):
         self.close()
 
     def close(self):
+        self.conn.commit()
         self.conn.close()
 
     @property
     def genome(self):
-        if not self._genome:
-            query = self.conn.execute('''
-                                    SELECT name FROM genome
-                                    ''')
+        if self._genome is None:
+            query = self.conn.execute('SELECT name FROM genome')
             genome, = query.fetchone()
-            self._genome = genome
+            if not genome:
+                self._genome = ''
+            else:
+                self._genome = genome
+
         return self._genome
+
+    @genome.setter
+    def genome(self, g):
+        self.conn.execute('''
+                            INSERT 
+                            INTO main.genome (name) 
+                            VALUES (?)
+                            ''', (g, ))
 
     @property
     def experiment_names(self):
-        pass
+        if self._experiment_names is None:
+            query = self.conn.execute('''
+                                        SELECT name from main.experiment 
+                                        ''')
+            fetch = query.fetchall()
+            self._experiment_names = tuple(e for e, in fetch)
+        return self._experiment_names
+
+    @experiment_names.setter
+    def experiment_names(self, names):
+        self.conn.executemany('''
+                            INSERT 
+                            INTO experiment (name)
+                            VALUES (?)
+                            ''', tuple((n,) for n in names))
 
     @property
     def file_version(self):
-        pass
+        if self._file_version is None:
+            query = self.conn.execute('''
+                                    SELECT value from main.file_version
+                                    ''')
+
+            file_version, = query.fetchone()
+            if not file_version:
+                self._file_version = ''
+            else:
+                self._file_version = file_version
+        return self._file_version
+
+    @file_version.setter
+    def file_version(self, version):
+        self.conn.execute('''
+                            INSERT 
+                            INTO main.file_version (value)
+                            VALUES (?)
+                            ''', version)
 
     def _iter_results(self, query, sg_type):
         while True:
-            fetch = query.fetchmany(10000)
+            fetch = query.fetchmany(1)
             if not fetch:
                 break
-            yield from (sg_type(*x) for x in fetch)
+            for x in fetch:
+                yield sg_type(*x)
 
 
 Gene = namedtuple('Gene', ('id', 'name', 'strand', 'chromosome'))
@@ -60,7 +130,8 @@ class Genes(SpliceGraphSQL):
     def gene(self, gene_id):
         query = self.conn.execute('SELECT id, name, strand, chromosome FROM gene WHERE id=?', (gene_id,))
         fetch = query.fetchone()
-        return Gene(*fetch)
+        if fetch:
+            return Gene(*fetch)
 
 
 class Exons(SpliceGraphSQL):
@@ -86,10 +157,22 @@ class Junctions(SpliceGraphSQL):
         query = self.conn.execute('''
                                 SELECT reads, experiment_name 
                                 FROM junction_reads
-                                WHERE junction_gene_id=?
-                                AND junction_start=?
+                                WHERE junction_start=?
                                 AND junction_end=?
-                                ''', (junction.gene_id, junction.start, junction.end))
+                                AND junction_gene_id=?
+                                ''', (junction.start, junction.end, junction.gene_id))
+        return self._iter_results(query, JunctionReads)
+
+    def junction_reads_exp(self, junction, experiment_names):
+        query = self.conn.execute('''
+                                SELECT reads, experiment_name 
+                                FROM junction_reads
+                                WHERE junction_start=?
+                                AND junction_end=?
+                                AND junction_gene_id=?
+                                AND experiment_name IN ({})
+                                '''.format(','.join(["'{}'".format(x) for x in experiment_names])),
+                                  (junction.start, junction.end, junction.gene_id))
         return self._iter_results(query, JunctionReads)
 
 
@@ -106,8 +189,20 @@ class IntronRetentions(SpliceGraphSQL):
         query = self.conn.execute('''
                                 SELECT reads, experiment_name 
                                 FROM intron_retention_reads
-                                WHERE intron_retention_gene_id=?
-                                AND intron_retention_start=?
+                                WHERE intron_retention_start=?
                                 AND intron_retention_end=?
-                                ''', (intron_retention.gene_id, intron_retention.start, intron_retention.end))
+                                AND intron_retention_gene_id=?
+                                ''', (intron_retention.start, intron_retention.end, intron_retention.gene_id))
+        return self._iter_results(query, IntronRetentionReads)
+
+    def intron_retention_reads_exp(self, ir, experiment_names):
+        query = self.conn.execute('''
+                                SELECT reads, experiment_name 
+                                FROM intron_retention_reads
+                                WHERE intron_retention_start=?
+                                AND intron_retention_end=?
+                                AND intron_retention_gene_id=?
+                                AND experiment_name IN ({})
+                                '''.format(','.join(["'{}'".format(x) for x in experiment_names])),
+                                  (ir.start, ir.end, ir.gene_id))
         return self._iter_results(query, IntronRetentionReads)

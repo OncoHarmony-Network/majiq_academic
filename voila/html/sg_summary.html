@@ -1,23 +1,24 @@
 {% extends 'base_summary.html' %}
 
-{% block style %}
-    <style>
-        .top {
-            max-height: 100%;
-        }
-    </style>
-{% endblock %}
-
 {% block script %}
+    {% for i in range(4) %}
+        <script src="db_gene_{{ i }}.js"></script>
+    {% endfor %}
     <script>
         const db_gene = new PouchDB('voila_gene');
+        {#load_gene_db(db_gene);#}
     </script>
-    <script src="db_gene.js"></script>
     <script>
         const urlParams = new URLSearchParams(document.location.search);
-        const gene_id = urlParams.get('gene_id');
-        const sgs = new SpliceGraphs(db_gene, '.splice-graph-container', gene_id);
-        sgs.create_localstorage();
+
+        window.addEventListener('load', () => {
+            const sgs = new SpliceGraphs('.splice-graph-container', {
+                gene_id: urlParams.get('gene_id'),
+                db_gene: db_gene
+            });
+            sgs.create_localstorage();
+            new SpliceGraphTools(sgs);
+        })
     </script>
 {% endblock %}
 

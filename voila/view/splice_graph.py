@@ -1,7 +1,5 @@
 import json
-import multiprocessing
 import os
-import queue
 
 import jinja2
 import numpy
@@ -9,11 +7,9 @@ import numpy
 import voila
 from voila.api.view_splice_graph_sqlite import ViewSpliceGraph
 from voila.exceptions import VoilaException
-from voila.processes import VoilaPool, VoilaQueue
+from voila.processes import VoilaPool
 from voila.utils.voila_log import voila_log
 from voila.view.html import Html
-
-gene_lock = multiprocessing.Lock()
 
 
 class RenderSpliceGraphs(Html):
@@ -32,57 +28,52 @@ class RenderSpliceGraphs(Html):
         with ViewSpliceGraph(self.args) as sg:
             for gene in sg.genes():
                 queue.put(gene.id)
-            # for gene_id in h.gene_ids:
-            #     queue.put(gene_id)
         event.set()
 
-    def db_genes(self, q, e):
+    def db_genes(self, gene_ids, i):
         log = voila_log()
         try:
             args = self.args
 
-            with ViewSpliceGraph(args) as sg:
+            with ViewSpliceGraph(args) as sg, open(os.path.join(args.output, 'db_gene_{}.js'.format(i)),
+                                                   'w') as db_gene:
 
                 metadata = sg.metadata
+                exp_name = metadata['experiment_names']
 
-                with open(os.path.join(args.output, 'db_gene.js'), 'a') as db_gene:
-                    while not (e.is_set() and q.empty()):
-                        try:
-                            gene_id = q.get_nowait()
-                        except queue.Empty:
-                            gene_id = None
+                db_gene.write('new PouchDB(\'voila_gene\').bulkDocs([')
+                db_gene.write(json.dumps(metadata))
+                db_gene.write(',')
 
-                        if gene_id:
-                            log.debug('Write DB Gene ID: {}'.format(gene_id))
-                            text = json.dumps(sg.gene_experiment(sg.gene(gene_id), metadata['experiment_names']))
-                            gene_lock.acquire()
-                            db_gene.write(text)
-                            db_gene.write(',')
-                            gene_lock.release()
+                for gene_id in gene_ids:
+                    log.debug('Write DB Gene ID: {}'.format(gene_id))
 
-                            q.task_done()
+                    gene = sg.gene(gene_id)
+                    gene_exp = sg.gene_experiment(gene, exp_name)
+                    text = json.dumps(gene_exp)
+
+                    db_gene.write(text)
+                    db_gene.write(',')
+
+                    del gene
+                    del gene_exp
+                    del text
+
+                db_gene.write(']);')
+
         except Exception as e:
             log.exception(e)
             exit()
 
     def render_dbs(self):
-        args = self.args
-
-        with ViewSpliceGraph(args) as sg:
-            metadata = sg.metadata
-
-        with open(os.path.join(args.output, 'db_gene.js'), 'w') as db_gene:
-            db_gene.write('db_gene.bulkDocs([')
-            db_gene.write(json.dumps(metadata))
-            db_gene.write(',')
 
         with VoilaPool() as pool:
-            with VoilaQueue(self.fill_queue_gene_ids) as (q, e):
-                for p in [pool.apply_async(self.db_genes, (q, e)) for _ in range(pool.processes)]:
-                    p.get()
+            with ViewSpliceGraph(self.args) as sg:
+                chunked_gene_ids = Html.chunkify([g.id for g in sg.genes()], pool.processes)
 
-        with open(os.path.join(args.output, 'db_gene.js'), 'a') as db_gene:
-            db_gene.write('])')
+            ps = [pool.apply_async(self.db_genes, (gene_ids, i)) for i, gene_ids in enumerate(chunked_gene_ids)]
+            for p in ps:
+                p.get()
 
     def render_html(self):
         exec_dir = os.path.dirname(os.path.abspath(voila.__file__))

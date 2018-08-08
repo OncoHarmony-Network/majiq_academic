@@ -339,7 +339,8 @@ class SpliceGraphs {
             if (lsv.target)
                 return lsv.reference_exon[1] === d.start;
             else
-                return lsv.reference_exon[0] === d.end;67
+                return lsv.reference_exon[0] === d.end;
+            67
         }
     }
 
@@ -562,7 +563,7 @@ class SpliceGraphs {
                 .interrupt()
                 .data(gene.junctions)
                 .transition(this.t())
-                .attr('d', function (d) {
+                .attr('d', d => {
                     const sweep_flag = gene.strand === '+' ? 1 : 0;
                     const junc_length = x(d.end) - x(d.start);
                     return 'M' + [x(d.start), y(exon_height)].join(',') +
@@ -866,13 +867,18 @@ class SpliceGraphs {
     update(duration) {
         this.d = duration;
         this.gene.then(gene => {
-            return this.db_lsv.allDocs({
-                keys: this.highlight_lsvs,
-                include_docs: true
-            }).then(result => {
-                const lsvs = result.rows.map(r => r.doc);
-                return this.container.querySelectorAll('.splice-graph').forEach(sg => this.splice_graph_update(sg, gene, lsvs));
-            }).then(() => this.d = undefined);
+            if (this.db_lsv)
+                return this.db_lsv.allDocs({
+                    keys: this.highlight_lsvs,
+                    include_docs: true
+                }).then(result => {
+                    const lsvs = result.rows.map(r => r.doc);
+                    return this.container.querySelectorAll('.splice-graph').forEach(sg => this.splice_graph_update(sg, gene, lsvs));
+                }).then(() => this.d = undefined);
+            else {
+                this.container.querySelectorAll('.splice-graph').forEach(sg => this.splice_graph_update(sg, gene, []));
+                this.d = undefined
+            }
         })
     }
 }

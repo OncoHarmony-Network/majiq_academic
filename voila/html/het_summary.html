@@ -1,13 +1,13 @@
 {% extends 'base_summary.html' %}
 
 {% block script %}
-    <script src="db_gene.js"></script>
-    <script src="db_lsv.js"></script>
+    {% for i in range(4) %}
+        <script src="db_gene_{{ i }}.js"></script>
+        <script src="db_lsv_{{ i }}.js"></script>
+    {% endfor %}
     <script>
         const db_gene = new PouchDB('voila_gene');
         const db_lsv = new PouchDB('voila_lsv');
-        load_gene_db(db_gene);
-        load_lsv_db(db_lsv);
     </script>
     <script>
         const urlParams = new URLSearchParams(document.location.search);
