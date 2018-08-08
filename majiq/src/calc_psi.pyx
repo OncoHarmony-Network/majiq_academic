@@ -1,5 +1,6 @@
 import sys
 import majiq.src.io as majiq_io
+cimport majiq.src.io as majiq_io
 import psutil
 
 import majiq.src.logger as majiq_logger
@@ -67,7 +68,8 @@ cdef _core_calcpsi(object self):
     cdef int nlsv
     #cdef vector[string] lsv_vec
     cdef vector[string] tmp_vec
-    cdef vector[qLSV] lsv_vec
+    #cdef vector[qLSV] lsv_vec
+    cdef map[string, int] lsv_vec
     cdef str lsv
     cdef map[string, vector[psi_distr_t]] cov_dict
 
@@ -109,84 +111,80 @@ cdef _core_calcpsi(object self):
         nways = len(lsv_type_dict[lsv].split('|')) -1
         out_mupsi_d[lsv.encode('utf-8')] = np.zeros(shape=nways, dtype=np.float32)
         out_postpsi_d[lsv.encode('utf-8')] = np.zeros(shape=(nways, nbins), dtype=np.float32)
+        lsv_vec[lsv.encode('utf-8')] = nways
 
-        if lidx % nchunks == 0:
-            if lidx > 0:
-                qlsvObj = qLSV(tmp_vec)
-                lsv_vec.push_back(qlsvObj)
-            tmp_vec = vector[string]()
-        tmp_vec.push_back(lsv.encode('utf-8'))
-
-    qlsvObj = qLSV(tmp_vec)
-    lsv_vec.push_back(qlsvObj)
+    #     if lidx % nchunks == 0:
+    #         if lidx > 0:
+    #             qlsvObj = qLSV(tmp_vec)
+    #             lsv_vec.push_back(qlsvObj)
+    #         tmp_vec = vector[string]()
+    #     tmp_vec.push_back(lsv.encode('utf-8'))
+    #
+    # qlsvObj = qLSV(tmp_vec)
+    # lsv_vec.push_back(qlsvObj)
     # self.weights = self.calc_weights(self.weights, list_of_lsv, name=self.name, file_list=self.files, logger=logger)
 
     logger.info("Group %s: %s LSVs" % (self.name, nlsv))
     loop_step = max(1, int(nlsv/10))
-    nthreads = min(self.nthreads, nlsv) +1
+    nthreads = min(self.nthreads, nlsv) + 1
     # cov_dict = majiq_io.get_coverage_lsv(lsv_vec, self.files, "", nthreads)
-    with nogil, parallel(num_threads=nthreads):
-        if threadid() == 0:
-            for qlsvObj in lsv_vec:
-                with gil:
-                    logger.info('PPPP: ')
-                    majiq_io.get_coverage_lsv(cov_dict, qlsvObj.get_lsvlist(), self.files, "")
-                qlsvObj.free_lock()
-
-        else:
-            # cc = 0
-            with gil :
-                cc_py = 0
-            for qlsvObj in lsv_vec:
-                qlsvObj.test_lock()
-
-                tmp_vec = qlsvObj.get_lsvlist()
-                nlsv = tmp_vec.size()
-                with gil :
-
-                    print ("[thread:%s] Chunk %s" %(threadid(), cc_py))
-                    cc_py = 1
-                # cc += 1
-                for i in prange(nlsv):
-                    lsv_id = tmp_vec[i]
-                    with gil:
-                        logger.info('EVENT: %s' % i)
-                        nways = cov_dict[lsv_id].size()
-                        msamples = cov_dict[lsv_id][0].size()
-                        o_mupsi = out_mupsi_d[lsv_id]
-                        o_postpsi = out_postpsi_d[lsv_id]
-                        is_ir = 'i' in lsv_type_dict[lsv_id.decode('utf-8')]
-                    psi_posterior(cov_dict[lsv_id], <np.float32_t *> o_mupsi.data,
-                                  <np.float32_t *> o_postpsi.data, msamples, nways, nbins, is_ir)
-
-                qlsvObj.add_counter()
-
-
-            #for i in prange(nlsv):
-            #    pass
-
-
-    # for i in prange(nlsv, nogil=True, num_threads=nthreads):
+    # with nogil, parallel(num_threads=nthreads):
+    #     if threadid() == 0:
+    #         for qlsvObj in lsv_vec:
+    #             with gil:
+    #                 logger.info('PPPP: ')
+    #                 majiq_io.get_coverage_lsv(cov_dict, qlsvObj.get_lsvlist(), self.files, "")
+    #             qlsvObj.free_lock()
     #
-    #     lsv_id = lsv_vec[i]
-    #     with gil:
+    #     else:
+    #         # cc = 0
+    #         with gil :
+    #             cc_py = 0
+    #         for qlsvObj in lsv_vec:
+    #             qlsvObj.test_lock()
     #
-    #         # print ('type', lsv_type_dict[lsv_id.decode('utf-8')])
-    #         # cov_dict = majiq_io.get_coverage_lsv([lsv_id.decode('utf-8')], self.files, "")
+    #             tmp_vec = qlsvObj.get_lsvlist()
+    #             nlsv = tmp_vec.size()
+    #             with gil :
     #
-    #         if i % loop_step == 0 :
-    #             print ("Event %s/%s" %(i, nlsv))
-    #         nways = cov_dict[lsv_id].size()
-    #         msamples = cov_dict[lsv_id][0].size()
-    #         # o_mupsi = np.zeros(shape=nways, dtype=np.float32)
-    #         # out_mupsi_d[lsv_id] = o_mupsi
-    #         # o_postpsi = np.zeros(shape=(nways, nbins), dtype=np.float32)
-    #         # out_postpsi_d[lsv_id] = o_postpsi
-    #         o_mupsi = out_mupsi_d[lsv_id]
-    #         o_postpsi = out_postpsi_d[lsv_id]
-    #         is_ir = 'i' in lsv_type_dict[lsv_id.decode('utf-8')]
-    #     psi_posterior(cov_dict[lsv_id], <np.float32_t *> o_mupsi.data,
-    #                   <np.float32_t *> o_postpsi.data, msamples, nways, nbins, is_ir)
+    #                 print ("[thread:%s] Chunk %s" %(threadid(), cc_py))
+    #                 cc_py = 1
+    #             # cc += 1
+    #             for i in prange(nlsv):
+    #                 lsv_id = tmp_vec[i]
+    #                 with gil:
+    #                     logger.info('EVENT: %s' % i)
+    #                     nways = cov_dict[lsv_id].size()
+    #                     msamples = cov_dict[lsv_id][0].size()
+    #                     o_mupsi = out_mupsi_d[lsv_id]
+    #                     o_postpsi = out_postpsi_d[lsv_id]
+    #                     is_ir = 'i' in lsv_type_dict[lsv_id.decode('utf-8')]
+    #                 psi_posterior(cov_dict[lsv_id], <np.float32_t *> o_mupsi.data,
+    #                               <np.float32_t *> o_postpsi.data, msamples, nways, nbins, is_ir)
+    #
+    #             qlsvObj.add_counter()
+    #
+    #
+    #         #for i in prange(nlsv):
+    #         #    pass
+
+    majiq_io.get_coverage_mat(cov_dict, lsv_vec, self.files, "", nthreads)
+    logger.info("COV size: %s, %s" % (nlsv, cov_dict.size()))
+    for i in prange(nlsv, nogil=True, num_threads=nthreads):
+        with gil:
+            lsv = list_of_lsv[i]
+            lsv_id = lsv.encode('utf-8')
+            if i % loop_step == 0 :
+                print ("Event %s/%s" %(i, nlsv))
+            nways = cov_dict[lsv_id].size()
+            msamples = cov_dict[lsv_id][0].size()
+            o_mupsi = out_mupsi_d[lsv_id]
+            o_postpsi = out_postpsi_d[lsv_id]
+            is_ir = 'i' in lsv_type_dict[lsv]
+            # logger.info("2222 Event %s" %(lsv_id))
+
+        psi_posterior(cov_dict[lsv_id], <np.float32_t *> o_mupsi.data,
+                      <np.float32_t *> o_postpsi.data, msamples, nways, nbins, is_ir)
 
     logger.info('Computation done, saving results....')
     with Matrix(get_quantifier_voila_filename(self.outDir, self.name), 'w') as out_h5p:
@@ -196,6 +194,7 @@ cdef _core_calcpsi(object self):
         out_h5p.group_names = [self.name]
         for lsv in list_of_lsv:
             lsv_id = lsv.encode('utf-8')
+            # logger.info("2222 Event %s" %(lsv_id))
             out_h5p.psi(lsv).add(lsv_type=lsv_type_dict[lsv], bins=out_postpsi_d[lsv_id], means=out_mupsi_d[lsv_id],
                            junctions=junc_info[lsv])
 

@@ -76,6 +76,7 @@ cdef int _output_lsv_file_single(vector[LSV*] out_lsvlist, string experiment_nam
     cdef Junction * jObj
 
     cdef np.ndarray[np.float32_t, ndim=2, mode="c"] boots
+    cdef np.ndarray[np.float32_t, ndim=2, mode="c"] x
     cdef np.ndarray junc_ids
     cdef str out_file, junc_file
     cdef dict cov_dict = {}
@@ -97,6 +98,7 @@ cdef int _output_lsv_file_single(vector[LSV*] out_lsvlist, string experiment_nam
         njunc = junc_ids.shape[0]
 
     cov_dict = {}
+    cov_l = list()
     junc_info = []
     type_list = []
 
@@ -152,7 +154,8 @@ cdef int _output_lsv_file_single(vector[LSV*] out_lsvlist, string experiment_nam
             njunc = lsv_ptr.get_num_variations()
             lsvid = lsv_ptr.get_id()
             with gil:
-                cov_dict[lsvid.decode('utf-8')] = np.zeros(shape=(njunc, msamples), dtype=np.float32)
+                x = np.zeros(shape=(njunc, msamples), dtype=np.float32)
+                # cov_dict[lsvid.decode('utf-8')] = np.zeros(shape=(njunc, msamples), dtype=np.float32)
                 type_list.append((lsvid.decode('utf-8'), lsv_ptr.get_type()))
             junc_idx = 0
 
@@ -165,11 +168,15 @@ cdef int _output_lsv_file_single(vector[LSV*] out_lsvlist, string experiment_nam
                     sreads = jobj_ptr.sreads
                     npos = jobj_ptr.npos
                     with gil:
-                        cov_dict[lsvid.decode('utf-8')][junc_idx] = boots[tlb_juncs[key].index]
+                        x[junc_idx] = boots[tlb_juncs[key].index]
+                        #cov_dict[lsvid.decode('utf-8')][junc_idx] = boots[tlb_juncs[key].index]
                 else:
                     sreads = 0
                     npos = 0
+
+
                 with gil:
+                    cov_l.append(x[junc_idx])
                     junc_info.append((lsvid.decode('utf-8'), junc.get_start(), junc.get_end(),
                                           sreads, npos))
                 junc_idx = junc_idx + 1
@@ -182,17 +189,19 @@ cdef int _output_lsv_file_single(vector[LSV*] out_lsvlist, string experiment_nam
                     sreads = jobj_ptr.sreads
                     npos = jobj_ptr.npos
                     with gil:
-                        cov_dict[lsvid.decode('utf-8')][junc_idx] = boots[jobj_ptr.index]
+                        x[junc_idx] = boots[jobj_ptr.index]
+                        # cov_dict[lsvid.decode('utf-8')][junc_idx] = boots[jobj_ptr.index]
                 else:
                     sreads = 0
                     npos = 0
 
                 with gil:
+                    cov_l.append(x[junc_idx])
                     junc_info.append((lsvid.decode('utf-8'), ir_ptr.get_start(), ir_ptr.get_end(),
                                       sreads, npos))
     # with gil:
     logger.info("Dump majiq file")
-    majiq_io.dump_lsv_coverage(out_file, cov_dict, type_list, junc_info, experiment_name.decode('utf-8'))
+    majiq_io.dump_lsv_coverage(out_file, cov_l, type_list, junc_info, experiment_name.decode('utf-8'))
     nlsv = len(type_list)
 
     tlb_juncs.clear()

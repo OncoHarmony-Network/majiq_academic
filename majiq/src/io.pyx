@@ -178,7 +178,7 @@ cdef int _load_db(str filename, object elem_dict, object genes_dict) except -1:
         for xx in genes_dict.keys():
             elem_dict[xx] = all_files[xx]
 
-cdef int dump_lsv_coverage(str filename, dict cov_dict, list type_list, list junc_info, str exp_name):
+cdef int dump_lsv_coverage_old(str filename, dict cov_dict, list type_list, list junc_info, str exp_name):
     dt=np.dtype('|S250, |S250')
 
     with open(filename, 'w+b') as ofp:
@@ -188,6 +188,22 @@ cdef int dump_lsv_coverage(str filename, dict cov_dict, list type_list, list jun
         dt = np.dtype('|S250, |S25')
         cov_dict['meta'] = np.array([(exp_name, VERSION)], dtype=dt)
         np.savez(ofp, **cov_dict)
+
+
+cdef int dump_lsv_coverage(str filename, list cov_list, list type_list, list junc_info, str exp_name):
+    dt=np.dtype('|S250, |S250')
+
+    nlist = []
+    xx = {}
+    with open(filename, 'w+b') as ofp:
+
+        xx['lsv_types'] = np.array(type_list, dtype=dt)
+        dt=np.dtype('|S250, u4, u4, f4, f4')
+        xx['junc_info'] = np.array(junc_info, dtype=dt)
+        xx['coverage'] = np.array(cov_list, dtype=np.float32)
+        dt = np.dtype('|S250, |S25')
+        xx['meta'] = np.array([(exp_name, VERSION)], dtype=dt)
+        np.savez(ofp, **xx)
 
 cdef int _dump_elems_list(object elem_dict, object gene_info, str outDir) except -1:
 
@@ -259,7 +275,50 @@ cdef test(map[string, vector[psi_distr_t]] result, object data, string lsv_id):
     except KeyError:
         return ;
 
-cpdef void get_coverage_lsv(map[string, vector[psi_distr_t]] result, vector[string] list_of_lsv_id, list file_list,
+cdef void get_coverage_mat(map[string, vector[psi_distr_t]]& result, map[string, int] lsv_map, list file_list,
+                            str weight_fname, int nthreads):
+    cdef int n_exp = len(file_list)
+    cdef str lid, lsv_type, fname
+    cdef string lsv_id
+    cdef int fidx, njunc, msamples, i
+    cdef np.ndarray[np.float32_t, ndim=2, mode="c"] cov
+    cdef dict weights
+    cdef object data
+    cdef int nlsv = lsv_map.size()
+    cdef string empty_string = ''.encode('utf-8')
+    cdef string prev_lsvid = empty_string
+    cdef int prev_juncidx = 0
+
+    # if weight_fname != "":
+    #     weights = _load_weights(list_of_lsv_id, weight_fname)
+
+    for fidx, fname in enumerate(file_list):
+        print(fname)
+        with open(fname, 'rb') as fp:
+            fl = np.load(fp)
+            data = fl['coverage']
+            info = fl['junc_info']
+            msamples = data.shape[1]
+            idx = -1
+            for row in info:
+                idx += 1
+                lsv_id = row[0]
+                if lsv_map.count(lsv_id) > 0:
+                    if prev_lsvid != lsv_id:
+                        if prev_lsvid != empty_string:
+                            # print (prev_lsvid)
+                            get_aggr_coverage(result, prev_lsvid, <np.float32_t *> cov.data, njunc, msamples)
+
+                        prev_lsvid = lsv_id
+                        prev_juncidx = -1
+                        njunc = lsv_map[lsv_id]
+                        cov = np.zeros(shape=(njunc, msamples), dtype=np.float32)
+                    prev_juncidx += 1
+                    cov[prev_juncidx] = data[idx]
+        print (fname, result.size())
+
+
+cpdef void get_coverage_lsv(map[string, vector[psi_distr_t]]& result, vector[string] list_of_lsv_id, list file_list,
                             str weight_fname, int nthreads):
     # cdef map[string, vector[psi_distr_t]] result
     cdef int n_exp = len(file_list)
@@ -365,8 +424,6 @@ cdef map[string, psi_distr_t] _load_weights(list lsv_list, str file_name):
 
     return out_dict
 
-
-
 cdef list _extract_lsv_summary(list files, int minnonzero, int min_reads, object types_dict, object junc_info,
                                list exp_name_list, dict epsi=None, int percent=-1, object logger=None):
     cdef dict lsv_types, lsv_list = {}
@@ -440,6 +497,8 @@ cdef list _extract_lsv_summary(list files, int minnonzero, int min_reads, object
         junc_info[xx] = np.array(junc_info[xx])
 
     return lsv_id_list
+
+
 
 
 # cdef list _extract_lsv_summary_C(list files, int minnonzero, int min_reads,  map[string, string] types_dict,

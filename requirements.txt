@@ -11,6 +11,6 @@ pyparsing==2.2.0
 python-dateutil==2.7.3
 pytz==2018.4
 quicksect==0.1.0
-scipy==1.1.0
+scipy
 six==1.11.0
 SQLAlchemy==1.2.8
