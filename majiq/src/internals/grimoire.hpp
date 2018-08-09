@@ -237,10 +237,13 @@ namespace grimoire{
             inline void  update_flags(float min_coverage, int min_exps) {
 
                 int cnt = 0 ;
+cout << get_key() << ": [ " ;
                 for(int i =0 ; i< nbins_; i++){
+cout << read_rates_[i] << ", " ;
                     cnt += (read_rates_[i]>= min_coverage) ? 1 : 0 ;
                 }
                 flt_count_ += (cnt == nbins_) ? 1 : 0 ;
+                cout << " ] ir_flag_:" << ir_flag_ <<  " flt_count_:" << flt_count_ << " min_exps: " << min_exps << " cnt:"<< cnt << " nbins_:"<< nbins_ << " min_coverage:" << min_coverage << "\n" ;
                 ir_flag_ = ir_flag_ || (flt_count_ >= min_exps) ;
             }
 

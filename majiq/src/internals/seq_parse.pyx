@@ -342,8 +342,10 @@ cdef void gene_to_splicegraph(Gene * gne, string sg_filename) nogil:
         sg_exon(db, gne_id, ex.get_start(), ex.get_end(), ex.db_start_, ex.db_end_, ex.annot_ )
 
     for ir in gne.intron_vec_:
-        if not ir.get_ir_flag(): continue
-        sg_intron_retention(db, gne_id, ir.get_start(), ir.get_end(), ir.get_annot())
+        with gil:
+            print('KK:', ir.get_key(),ir.get_ir_flag())
+        if ir.get_ir_flag():
+            sg_intron_retention(db, gne_id, ir.get_start(), ir.get_end(), ir.get_annot())
     close_db(db)
 
 

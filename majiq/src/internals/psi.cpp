@@ -16,9 +16,9 @@ void prob_data_sample_given_psi(float* out_array, float sample, float all_sample
 
     const float a = sample + alpha_prior ;
     const float b = (all_sample - sample) + beta_prior ;
-
+cout << "a=" << sample << "+"<< alpha_prior <<" b=" << b << " nbins=" << nbins << " betap="<< beta_prior <<"\n" ;
     float prev = scythe::pbeta(psi_border[0], a, b) ;
-//cout << "a=" << sample << "+"<< alpha_prior <<" b=" << b << " nbins=" << nbins << " prev=" << prev << " betap="<< beta_prior <<"\n" ;
+
     for (int i=0; i<nbins; i++){
         float res = scythe::pbeta(psi_border[i+1], a, b) ;
         out_array[i] = log((res - prev) + 1e-300);

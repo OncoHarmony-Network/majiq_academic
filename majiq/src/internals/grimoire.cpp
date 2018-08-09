@@ -339,6 +339,7 @@ namespace grimoire {
 
         for(const auto &exon_mapIt: exon_map_){
             Exon * ex = exon_mapIt.second ;
+
             if (ex->is_lsv(true)) {
                 lsvObj = new LSV(this, ex, true) ;
                 set<string> t1 ;
@@ -352,37 +353,40 @@ namespace grimoire {
                 lsvObj = new LSV(this, ex, false) ;
                 set<string> t1 ;
                 lsvObj->get_variations(t1) ;
-                lsvGenes.push_back(lsvObj) ;
-//                for (const auto &slvs: source){
-//cout << "DETECT LSVS PER GENE6\n" ;
-//                    set<string> d1 ;
-//                    set<string> d2 ;
-//
-//                    set_difference((slvs.first).begin(), (slvs.first).end(), t1.begin(), t1.end(), inserter(d1, d1.begin())) ;
-//                    set_difference(t1.begin(), t1.end(), (slvs.first).begin(), (slvs.first).end(), inserter(d2, d2.begin())) ;
-//cout << "DETECT LSVS PER GEN75\n" ;
-//                    if (d1.size()>0 and d2.size()>0){
-//                        lsvGenes.push_back(lsvObj) ;
-//                    } else if (d1.size() >0 or (d1.size()==0 and d2.size() == 0)){
-//cout << "DELETE 1\n" ;
-//                        delete lsvObj ;
-//                        break ;
-//
-//                    } else if (d2.size() >0){
-//                        lsvGenes.push_back(lsvObj) ;
-//                        remLsv.insert(slvs.second->get_id()) ;
-//                    }
-//                }
+                bool rem_src = false ;
+
+                for (const auto &slvs: source){
+                    set<string> d1 ;
+                    set<string> d2 ;
+                    set_difference((slvs.first).begin(), (slvs.first).end(), t1.begin(), t1.end(), inserter(d1, d1.begin())) ;
+                    set_difference(t1.begin(), t1.end(), (slvs.first).begin(), (slvs.first).end(), inserter(d2, d2.begin())) ;
+
+                    if (d2.size() == 0){
+                        rem_src = true ;
+                        break ;
+                    }
+
+                    if (d1.size() == 0 && d2.size() > 0) {
+                        remLsv.insert(slvs.second->get_id()) ;
+                    }
+                }
+                if (rem_src){
+                    delete lsvObj ;
+                }else{
+                    lsvGenes.push_back(lsvObj) ;
+                }
             }
         }
         int nlsv = 0 ;
         #pragma omp critical
-        for(const auto &l: lsvGenes){
-            if (remLsv.count(l->get_id())==0){
-                ++nlsv ;
-                lsv_list.push_back(l) ;
-            }else{
-                delete l;
+        {
+            for(const auto &l: lsvGenes){
+                if (remLsv.count(l->get_id())==0){
+                    ++nlsv ;
+                    lsv_list.push_back(l) ;
+                }else{
+                    delete l;
+                }
             }
         }
         return  nlsv;
