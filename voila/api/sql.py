@@ -46,7 +46,7 @@ class SQL:
             except FileNotFoundError:
                 pass
 
-        engine = create_engine('sqlite:///{0}'.format(filename), connect_args={'timeout': 120}, echo=True)
+        engine = create_engine('sqlite:///{0}'.format(filename), connect_args={'timeout': 120})
         event.listen(engine, 'connect', self._fk_pragma_on_connect)
         model.Base.metadata.create_all(engine)
         Session.configure(bind=engine)
