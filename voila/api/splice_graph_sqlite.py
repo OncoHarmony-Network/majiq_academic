@@ -3,9 +3,12 @@ import sqlite3
 from collections import namedtuple
 
 from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
 
 from voila.api import splice_graph_model
 from voila.api.splice_graph_abstract import SpliceGraphSQLAbstract
+
+Session = sessionmaker()
 
 
 class SpliceGraphSQL(SpliceGraphSQLAbstract):
@@ -18,18 +21,18 @@ class SpliceGraphSQL(SpliceGraphSQLAbstract):
         if delete is True:
             try:
                 os.remove(filename)
-                engine = create_engine('sqlite:///{0}'.format(filename), connect_args={'timeout': 120})
-                splice_graph_model.Base.metadata.create_all(engine)
             except FileNotFoundError:
                 pass
 
+        engine = create_engine('sqlite:///{0}'.format(filename), connect_args={'timeout': 120})
+        splice_graph_model.Base.metadata.create_all(engine)
+        session = Session()
+        session.commit()
+        session.close_all()
+
         self.conn = sqlite3.connect(filename)
 
-        self.conn.execute('pragma foreign_keys=OFF')
-        self.conn.execute('pragma temp_store=MEMORY')
-        self.conn.execute('pragma journal_mode=OFF')
-        self.conn.execute('pragma synchronous=OFF')
-        self.conn.execute('pragma locking_mode=EXCLUSIVE')
+        self.conn.execute('pragma foreign_keys=ON')
 
         self._genome = None
         self._experiment_names = None
@@ -61,7 +64,7 @@ class SpliceGraphSQL(SpliceGraphSQLAbstract):
     def genome(self, g):
         self.conn.execute('''
                             INSERT 
-                            INTO main.genome (name) 
+                            INTO genome (name) 
                             VALUES (?)
                             ''', (g,))
 
@@ -69,7 +72,7 @@ class SpliceGraphSQL(SpliceGraphSQLAbstract):
     def experiment_names(self):
         if self._experiment_names is None:
             query = self.conn.execute('''
-                                        SELECT name from main.experiment 
+                                        SELECT name from experiment 
                                         ''')
             fetch = query.fetchall()
             self._experiment_names = tuple(e for e, in fetch)
@@ -114,7 +117,6 @@ class SpliceGraphSQL(SpliceGraphSQLAbstract):
             if not fetch:
                 break
             for x in fetch:
-                print(x)
                 yield sg_type(*x)
 
 
