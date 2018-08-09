@@ -953,6 +953,7 @@ namespace scythe {
   inline double
   pbeta(double x, double a, double b)
   {
+    sprintf("a:%d b:%d", a, b)
     SCYTHE_CHECK_10(a <= 0 || b <= 0,scythe_invalid_arg, "a or b <= 0");
     
     if (x <= 0)
