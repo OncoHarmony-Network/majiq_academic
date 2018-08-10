@@ -51,8 +51,8 @@ cdef _core_deltapsi(object self):
     cdef np.ndarray[np.float32_t, ndim=2, mode="c"] o_postdeltapsi
     cdef np.ndarray[np.float32_t, ndim=2, mode="c"] prior_m
     cdef list prior_matrix
+    cdef map[string, int] lsv_vec
 
-    cdef vector[string] lsv_vec
 
     majiq_logger.create_if_not_exists(self.outDir)
     logger = majiq_logger.get_logger("%s/deltapsi_majiq.log" % self.outDir, silent=self.silent,
@@ -94,10 +94,22 @@ cdef _core_deltapsi(object self):
                                                numbins=nbins, defaultprior=self.default_prior,
                                                minpercent=self.min_exp, logger=logger)
 
+    for lidx, lsv in enumerate(list_of_lsv):
+        nways = len(lsv_type_dict[lsv].split('|')) -1
+        out_mupsi_d_1[lsv.encode('utf-8')] = np.zeros(shape=nways, dtype=np.float32)
+        out_postpsi_d_1[lsv.encode('utf-8')] = np.zeros(shape=(nways, nbins), dtype=np.float32)
+        out_mupsi_d_2[lsv.encode('utf-8')] = np.zeros(shape=nways, dtype=np.float32)
+        out_postpsi_d_2[lsv.encode('utf-8')] = np.zeros(shape=(nways, nbins), dtype=np.float32)
+        out_postdpsi_d[lsv.encode('utf-8')] = np.zeros(shape=(nways, nbins), dtype=np.float32)
+        lsv_vec[lsv.encode('utf-8')] = nways
+
     # logger.info("Saving prior matrix for %s..." % self.names)
     # majiq_io.dump_bin_file(prior_matrix, get_prior_matrix_filename(self.outDir, self.names))
 
     # self.weights = weights
+
+
+
 
     for lsv in list_of_lsv:
         lsv_vec.push_back(lsv.encode('utf-8'))
@@ -108,6 +120,8 @@ cdef _core_deltapsi(object self):
 
     nthreads = min(self.nthreads, len(list_of_lsv))
 
+    majiq_io.get_coverage_mat(cov_dict1, lsv_vec, self.files1, "", nthreads)
+    majiq_io.get_coverage_mat(cov_dict2, lsv_vec, self.files2, "", nthreads)
     cov_dict1 = majiq_io.get_coverage_lsv(list_of_lsv, self.files1, "")
     cov_dict2 = majiq_io.get_coverage_lsv(list_of_lsv, self.files2, "")
 
@@ -116,21 +130,14 @@ cdef _core_deltapsi(object self):
         nways = cov_dict1[lsv_id].size()
         msamples = cov_dict1[lsv_id][0].size()
         with gil:
-            o_mupsi_1 = np.zeros(shape=nways, dtype=np.float32)
-            out_mupsi_d_1[lsv_id] = o_mupsi_1
-            o_postpsi_1 = np.zeros(shape=(nways, nbins), dtype=np.float32)
-            out_postpsi_d_1[lsv_id] = o_postpsi_1
-
-            o_mupsi_2 = np.zeros(shape=nways, dtype=np.float32)
-            out_mupsi_d_2[lsv_id] = o_mupsi_2
-            o_postpsi_2 = np.zeros(shape=(nways, nbins), dtype=np.float32)
-            out_postpsi_d_2[lsv_id] = o_postpsi_2
-
-            o_postdeltapsi = np.zeros(shape=(nways, (nbins*2)-1), dtype=np.float32)
-            out_postdpsi_d[lsv_id] = o_postdeltapsi
-
-            print ('type', lsv_type_dict[lsv_id.decode('utf-8')], prior_matrix[1].dtype, prior_matrix[0].dtype)
+            o_mupsi_1 = out_mupsi_d_1[lsv_id]
+            o_postpsi_1 = out_postpsi_d_1[lsv_id]
+            o_mupsi_2 = out_mupsi_d_2[lsv_id]
+            o_postpsi_2 = out_postpsi_d_2[lsv_id]
+            o_postdeltapsi = out_postdpsi_d[lsv_id]
             is_ir = 'i' in lsv_type_dict[lsv_id.decode('utf-8')]
+
+            # print ('type', lsv_type_dict[lsv_id.decode('utf-8')], prior_matrix[1].dtype, prior_matrix[0].dtype)
             if is_ir:
                 prior_m = prior_matrix[1]
             else:
@@ -141,6 +148,7 @@ cdef _core_deltapsi(object self):
                            <np.float32_t *> o_postpsi_1.data, <np.float32_t *> o_postpsi_2.data,
                            <np.float32_t *> o_postdeltapsi.data, msamples, nways, nbins, is_ir)
 
+    logger.info('Computation done, saving results....')
     with Matrix(get_quantifier_voila_filename(self.outDir, self.names, deltapsi=True), 'w') as out_h5p:
         out_h5p.file_version = VOILA_FILE_VERSION
         out_h5p.analysis_type = ANALYSIS_DELTAPSI
@@ -162,48 +170,6 @@ cdef _core_deltapsi(object self):
     logger.info("DeltaPSI calculation for %s_%s ended succesfully! Result can be found at %s" % (self.names[0],
                                                                                                  self.names[1],
                                                                                                  self.outDir))
-
-
-
-# def deltapsi_quantification(list_of_lsv, chnk, conf, logger):
-#     logger.info("Quantifying LSVs Delta PSI.. %s" % chnk)
-#     num_exp = [len(conf.files1), len(conf.files1)]
-#
-#     f_list = [None, None]
-#
-#     f_list[0] = majiq_io.get_extract_lsv_list(list_of_lsv, conf.files1)
-#     f_list[1] = majiq_io.get_extract_lsv_list(list_of_lsv, conf.files2)
-#
-#     if conf.weights[0] is None:
-#         weights1 = majiq_io.load_weights(list_of_lsv, conf.outDir, conf.names[0])
-#         weights2 = majiq_io.load_weights(list_of_lsv, conf.outDir, conf.names[1])
-#     else:
-#         weights1 = {xx: conf.weights[0] for xx in list_of_lsv}
-#         weights2 = {xx: conf.weights[1] for xx in list_of_lsv}
-#
-#     prior_matrix = np.array(majiq_io.load_bin_file(get_prior_matrix_filename(conf.outDir, conf.names)))
-#
-#     for lidx, lsv_id in enumerate(list_of_lsv):
-#         if lidx % 50 == 0:
-#             print("Event %d ..." % lidx)
-#             sys.stdout.flush()
-#         if f_list[0][lsv_id].coverage.shape[1] < 2 or f_list[0][lsv_id].coverage.shape[1] != f_list[1][lsv_id].coverage.shape[1]:
-#             logger.info("Skipping Incorrect LSV %s" % lsv_id)
-#             continue
-#
-#         boots1 = f_list[0][lsv_id].coverage * weights1[lsv_id][:, None, None]
-#         boots2 = f_list[1][lsv_id].coverage * weights2[lsv_id][:, None, None]
-#
-#         post_dpsi, post_psi1, post_psi2, mu_psi1, mu_psi2 = deltapsi_posterior(boots1, boots2, prior_matrix,
-#                                                                                boots1.shape[2],
-#                                                                                num_exp, conf.nbins,
-#                                                                                conf.lsv_type_dict[lsv_id])
-#         qm = QueueMessage(QUEUE_MESSAGE_DELTAPSI_RESULT, (post_dpsi, post_psi1, post_psi2,
-#                                                           mu_psi1, mu_psi2, lsv_id), chnk)
-#         conf.queue.put(qm, block=True)
-#
-#
-# prior_conf = collections.namedtuple('conf', 'iter plotpath breakiter names binsize')
 
 
 class DeltaPsi(BasicPipeline):

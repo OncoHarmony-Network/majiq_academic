@@ -178,7 +178,7 @@ cdef int _load_db(str filename, object elem_dict, object genes_dict) except -1:
         for xx in genes_dict.keys():
             elem_dict[xx] = all_files[xx]
 
-cdef int dump_lsv_coverage_old(str filename, dict cov_dict, list type_list, list junc_info, str exp_name):
+cdef int dump_lsv_coverage(str filename, dict cov_dict, list type_list, list junc_info, str exp_name):
     dt=np.dtype('|S250, |S250')
 
     with open(filename, 'w+b') as ofp:
@@ -190,7 +190,7 @@ cdef int dump_lsv_coverage_old(str filename, dict cov_dict, list type_list, list
         np.savez(ofp, **cov_dict)
 
 
-cdef int dump_lsv_coverage(str filename, list cov_list, list type_list, list junc_info, str exp_name):
+cdef int dump_lsv_coverage_mat(str filename, list cov_list, list type_list, list junc_info, str exp_name):
     dt=np.dtype('|S250, |S250')
 
     nlist = []
