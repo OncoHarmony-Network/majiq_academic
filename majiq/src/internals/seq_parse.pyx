@@ -152,6 +152,7 @@ cdef int _output_lsv_file_single(vector[LSV*] out_lsvlist, string experiment_nam
         for j in range(nlsv):
             lsv_ptr = out_lsvlist[j]
             njunc = lsv_ptr.get_num_variations()
+            if njunc<2: continue
             lsvid = lsv_ptr.get_id()
             with gil:
                 x = np.zeros(shape=(njunc, msamples), dtype=np.float32)
