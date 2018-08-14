@@ -22,11 +22,7 @@ import numpy as np
 def deltapsi(args):
     return pipeline_run(DeltaPsi(args))
 
-cdef _core_deltapsi(object self):
-    """
-    Given a file path with the junctions, return psi distributions.
-    write_pickle indicates if a .pickle should be saved in disk
-    """
+cdef void _core_deltapsi(object self):
 
     cdef dict junc_info = {}
     cdef dict lsv_type_dict = {}
@@ -108,17 +104,12 @@ cdef _core_deltapsi(object self):
 
     # self.weights = weights
 
-
-
-
-    for lsv in list_of_lsv:
-        lsv_vec.push_back(lsv.encode('utf-8'))
     nlsv = len(list_of_lsv)
     if nlsv == 0:
         logger.info("There is no LSVs that passes the filters")
         return
 
-    nthreads = min(self.nthreads, len(list_of_lsv))
+    nthreads = min(self.nthreads, nlsv)
 
     majiq_io.get_coverage_mat(cov_dict1, lsv_vec, self.files1, "", nthreads)
     majiq_io.get_coverage_mat(cov_dict2, lsv_vec, self.files2, "", nthreads)
@@ -126,10 +117,11 @@ cdef _core_deltapsi(object self):
     cov_dict2 = majiq_io.get_coverage_lsv(list_of_lsv, self.files2, "")
 
     for i in prange(nlsv, nogil=True, num_threads=nthreads):
-        lsv_id = lsv_vec[i]
-        nways = cov_dict1[lsv_id].size()
-        msamples = cov_dict1[lsv_id][0].size()
         with gil:
+            lsv = list_of_lsv[i]
+            lsv_id = lsv.encode('utf-8')
+            nways = cov_dict1[lsv_id].size()
+            msamples = cov_dict1[lsv_id][0].size()
             o_mupsi_1 = out_mupsi_d_1[lsv_id]
             o_postpsi_1 = out_postpsi_d_1[lsv_id]
             o_mupsi_2 = out_mupsi_d_2[lsv_id]
