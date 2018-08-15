@@ -5,11 +5,14 @@ class NewTable {
         this.table_selector = table_selector;
         this.show_data = opts.show_data;
         this.options = {limit: 5, include_docs: true};
-        this.page_number = 0;
+        this.page_number = 1;
+        this.total_pages = 1;
+        this.curr_page_rows = 10;
         this.urlParams = new URLSearchParams(document.location.search);
 
         this.next();
         this.previous();
+        this.page_rows();
         this.update();
 
         this.table.onclick = (event) => {
@@ -76,9 +79,16 @@ class NewTable {
                     else
                         return true
                 })
-                .sort((a, b) => a._id.localeCompare(b._id))
-                .slice(this.page_number * 5, (this.page_number + 1) * 5);
-            resolve(lsv_ids)
+                .sort((a, b) => a._id.localeCompare(b._id));
+
+            this.total_pages = Math.ceil(lsv_ids.length / this.curr_page_rows);
+
+            if (this.total_pages < this.page_number)
+                this.page_number = this.total_pages;
+
+            const lsv_ids_page = lsv_ids.slice((this.page_number - 1) * this.curr_page_rows, this.page_number * this.curr_page_rows);
+
+            resolve(lsv_ids_page)
         })
     }
 
@@ -105,6 +115,7 @@ class NewTable {
         this.retrieve_data()
             .then(data => this.curate_data(data))
             .then(data => this.show_data(data, this, this.body))
+            .then(() => this.update_toolbar())
             .then(() => console.timeEnd('update'));
     }
 
@@ -122,17 +133,37 @@ class NewTable {
             .forEach(tr => this.table.querySelector('tbody').appendChild(tr));
     }
 
+    update_toolbar() {
+        const prev_btn = document.querySelector('.previous');
+        const next_btn = document.querySelector('.next');
+        const page = document.querySelector('.current-page');
+        next_btn.disabled = this.page_number === this.total_pages;
+        prev_btn.disabled = this.page_number === 1;
+        page.innerHTML = `Page ${this.page_number} of ${this.total_pages}`
+    }
 
     next() {
-        document.querySelector('.next').onclick = () => {
+        const next_btn = document.querySelector('.next');
+        next_btn.onclick = (event) => {
+            event.preventDefault();
             this.page_number++;
             this.update();
         }
     }
 
-    previous(table) {
-        document.querySelector('.previous').onclick = () => {
+    previous() {
+        const prev_btn = document.querySelector('.previous');
+        prev_btn.onclick = (event) => {
+            event.preventDefault();
             this.page_number--;
+            this.update();
+        }
+    }
+
+    page_rows() {
+        document.querySelector('.rows').onchange = (event) => {
+            const s = event.target;
+            this.curr_page_rows = parseInt(s.options[s.selectedIndex].value);
             this.update();
         }
     }

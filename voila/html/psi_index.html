@@ -31,9 +31,7 @@
         const db_gene = new PouchDB('voila_gene_{{ db_id }}');
         const db_lsv = new PouchDB('voila_lsv_{{ db_id }}');
     </script>
-
     <script>
-
         var mouseover_autocomplete = function (event) {
             var select = document.querySelector('.autocomplete ul li.select');
             try {
@@ -500,8 +498,17 @@
     <div>
 
         <div>
-            <button class="previous pure-button">Previous</button>
-            <button class="next pure-button">Next</button>
+            <form class="pure-form">
+                <select class="rows">
+                    <option value="10">10</option>
+                    <option value="25">25</option>
+                    <option value="50">50</option>
+                    <option value="100">100</option>
+                </select>
+                <button class="previous pure-button">Previous</button>
+                <button class="next pure-button">Next</button>
+                <span class="current-page"></span>
+            </form>
         </div>
 
         <table id="results" class="pure-table">
