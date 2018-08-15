@@ -96,7 +96,7 @@ class Lsv {
         contextO.stroke();
     }
 
-    cartoon(container, lsv_id) {
+    cartoon(canvas, lsv_id) {
         this.db_lsv.createIndex({
             index: {fields: ['_id']}
         }).then(() => {
@@ -107,24 +107,24 @@ class Lsv {
                 fields: ['lsv_type', 'gene_id', 'reference_exon']
             })
         }).then(results => {
-            d3.select(container)
-                .append('canvas')
+            d3.select(canvas)
                 .datum(results.docs[0])
-                .attr('class', 'lsvLegend')
+                .attr('class', 'lsv-legend')
                 .attr('width', 200)
                 .attr('height', 80)
-                .attr('data-lsv-type', d => d.lsv_type)
-                .attr('data-gene-id', d => d.gene_id)
-                .attr('data-coord-exon', d => d.reference_exon.join(','))
                 .attr('title', d => d.lsv_type)
                 .each((d, i, a) => {
-                    this.render_lsv_splice_graph(a[i])
+                    const canvas = a[i];
+                    canvas.dataset.lsvType = d.lsv_type;
+                    canvas.dataset.geneId = d.gene_id;
+                    canvas.dataset.coordExon = d.reference_exon.join(',');
+                    this.render_lsv_splice_graph(canvas)
                 })
         })
     }
 
     render_lsv_splice_graph(canvas) {
-        this.db_gene.get(canvas.getAttribute('data-gene-id')).then((gene) => {
+        this.db_gene.get(canvas.dataset.geneId).then(gene => {
             if (canvas.getContext) {
                 // Render LSV representation from a string text representing the LSV i.e.: s|1e1.3o3|2e1.2o3|3e1.2o3|i|4e1.1o3  NEW: Intron Retention (i field)
                 let ctx = canvas.getContext("2d");
@@ -438,7 +438,8 @@ class Lsv {
     }
 
     draw_lsv_compact_stack_bars(canvas, fillMode) {
-        function createGradientLSVGroupsCompact(coords, group, count, fillMode, hue) {
+
+        const createGradientLSVGroupsCompact = (coords, group, count, fillMode, hue, ctx) => {
             //create a gradient object from the canvas context
 
             const gradient = ctx.createLinearGradient(coords.x1, coords.y1, coords.x2, coords.y2);
@@ -463,9 +464,9 @@ class Lsv {
                 }
             }
             return gradient;
-        }
+        };
 
-        const fillingPSIArea = function (ctx, fillMode, group, lsv_count, x1, y1, x2, y2) {
+        const fillingPSIArea = (ctx, fillMode, group, lsv_count, x1, y1, x2, y2) => {
             const area = [];
             if (fillMode === 0) {
                 // Fill from center to both left and right
@@ -473,7 +474,7 @@ class Lsv {
                 area[0] = Math.round((1 - (group.quartiles[lsv_count][4] - group.quartiles[lsv_count][0])) * (x2 - x1));
                 area[1] = y2 - y1;
                 ctx.strokeStyle = ctx.fillStyle;
-                drawRectangle(ctx, x1 + (x2 - x1 - area[0]) / 2, y1, area[0], area[1], true);
+                this.draw_rectangle(ctx, x1 + (x2 - x1 - area[0]) / 2, y1, area[0], area[1], true);
 //            ctx.strokeRect(x1+(x2-x1-area[0])/2, y1, area[0], area[1]);
             } else if (fillMode === 1) {
                 // Fill from center to both left and right
@@ -482,14 +483,14 @@ class Lsv {
                 area[0] = x2 - x1;
                 area[1] = y2 - y1;
                 ctx.strokeStyle = ctx.fillStyle;
-                drawRectangle(ctx, Math.round(x1 + (x2 - x1 - area[0]) / 2), Math.round(y1), Math.floor(area[0]), Math.floor(area[1]), true);
+                this.draw_rectangle(ctx, Math.round(x1 + (x2 - x1 - area[0]) / 2), Math.round(y1), Math.floor(area[0]), Math.floor(area[1]), true);
 //            ctx.strokeRect(x1+(x2-x1-area[0])/2, y1, area[0], area[1]);
             } else if (fillMode === 2 || fillMode === 3) {
                 // Fill all area, use the hue to represent constiance
                 area[0] = x2 - x1;
                 area[1] = y2 - y1;
                 ctx.strokeStyle = ctx.fillStyle;
-                drawRectangle(ctx, x1, y1, area[0], area[1], true);
+                this.draw_rectangle(ctx, x1, y1, area[0], area[1], true);
 //            ctx.strokeRect(x1, y1, area[0], area[1]);
             } else if (fillMode === 4) {
                 // Fill from left to right
@@ -497,20 +498,20 @@ class Lsv {
                 area[0] = Math.round((x2 - x1)); //(1 - (group.quartiles[lsv_count][4] - group.quartiles[lsv_count][0])) *
                 area[1] = y2 - y1;
                 ctx.strokeStyle = ctx.fillStyle;
-                drawRectangle(ctx, x1, y1, area[0], area[1], true);
+                this.draw_rectangle(ctx, x1, y1, area[0], area[1], true);
             }
         };
 
         if (canvas.getContext) {  // check for support
             const ctx = canvas.getContext("2d");
-            const lsv_id = canvas.getAttribute('data-lsv-id');
+            const lsv_id = canvas.closest('tr').getAttribute('data-lsv-id');
             const group_name = canvas.getAttribute('data-group');
 
             // Clear canvas
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
 
-            this.db.get(lsv_id).then(function (data) {
+            this.db_lsv.get(lsv_id).then(function (data) {
                 // const groups = JSON.parse(groups_str.replace(/'/g, '"'));
                 const groups = [data];
                 // Calculate origins_coords
@@ -551,9 +552,10 @@ class Lsv {
                     let acc_height = 0;
                     const group = groups[count];
 
+
                     for (let lsv_count = 0; lsv_count < group.group_bins[group_name].length; lsv_count++) {
                         // Calculate the group_height of the accumulated mean
-                        acc_height += group.group_means_rounded[group_name][lsv_count];
+                        acc_height += group.group_means[group_name][lsv_count];
 
                         const coords_gradient = {
                             'x1': origins_coords[count][0] + offset,
@@ -561,8 +563,8 @@ class Lsv {
                             'x2': origins_coords[count][0] + offset + sub_canvas_pixels[0],
                             'y2': origins_coords[count][1] - sub_canvas_pixels[1]
                         };
-                        ctx.fillStyle = createGradientLSVGroupsCompact(coords_gradient, group, lsv_count, fillMode, 1);
-                        ctx.strokeStyle = createGradientLSVGroupsCompact(coords_gradient, group, lsv_count, fillMode, 1);
+                        ctx.fillStyle = createGradientLSVGroupsCompact(coords_gradient, group, lsv_count, fillMode, 1, ctx);
+                        ctx.strokeStyle = createGradientLSVGroupsCompact(coords_gradient, group, lsv_count, fillMode, 1, ctx);
 
                         // Filling the PSI area
                         fillingPSIArea(ctx,
@@ -570,7 +572,7 @@ class Lsv {
                             group,
                             lsv_count,
                             origins_coords[count][0],
-                            origins_coords[count][1] - (acc_height - group.group_means_rounded[group_name][lsv_count]) * sub_canvas_pixels[1],
+                            origins_coords[count][1] - (acc_height - group.group_means[group_name][lsv_count]) * sub_canvas_pixels[1],
                             origins_coords[count][0] + sub_canvas_pixels[0],
                             origins_coords[count][1] - (acc_height) * sub_canvas_pixels[1]
                         );
@@ -579,6 +581,14 @@ class Lsv {
             });
         }
 
+    }
+
+    draw_rectangle(contextO, x, y, w, h, fill) {
+        contextO.beginPath();
+        contextO.rect(x, y, w, h);
+        contextO.closePath();
+        contextO.stroke();
+        if (fill) contextO.fill();
     }
 
     draw_delta_lsv_compact_svg(el, lsv) {

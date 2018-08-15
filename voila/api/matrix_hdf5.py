@@ -327,6 +327,10 @@ class MatrixType(ABC):
                 return constants.NA_LSV
             raise
 
+    @property
+    def binary(self):
+        return len(self.lsv_type.split('|')[1:]) == 2
+
 
 class DeltaPsi(MatrixHdf5):
     class _DeltaPsi(MatrixType):

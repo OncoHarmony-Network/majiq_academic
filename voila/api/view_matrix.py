@@ -112,7 +112,7 @@ class ViewMatrix(ABC):
 
 class ViewPsi(Psi, ViewMatrix):
     def __init__(self, args):
-        super().__init__(args.voila_file[0])
+        super().__init__(args.voila_files[0])
         self.args = args
 
     class _ViewPsi(Psi._Psi, ViewMatrix._ViewMatrix):
@@ -129,7 +129,7 @@ class ViewPsi(Psi, ViewMatrix):
             yield 'group_bins', dict(self.group_bins)
 
             fields.remove('means')
-            yield 'group_means_rounded', dict(self.group_means_rounded)
+            yield 'group_means', dict(self.group_means)
 
             yield from self.get_many(fields)
 
@@ -142,10 +142,10 @@ class ViewPsi(Psi, ViewMatrix):
             group_names = self.matrix_hdf5.group_names
             yield group_names[0], self.means
 
-        @property
-        def group_means_rounded(self):
-            for group_name, means in self.group_means:
-                yield group_name, np.around(tuple(means), decimals=3)
+        # @property
+        # def group_means(self):
+        #     for group_name, means in self.group_means:
+        #         yield group_name, tuple(means)
 
         @property
         def bins(self):
@@ -292,7 +292,7 @@ class ViewDeltaPsi(DeltaPsi, ViewMatrix):
 class ViewHeterogens:
     def __init__(self, args):
         self.args = args
-        self.view_heterogens = tuple(ViewHeterogen(args, f) for f in args.voila_file)
+        self.view_heterogens = tuple(ViewHeterogen(args, f) for f in args.voila_files)
 
     def __enter__(self):
         return self
@@ -357,10 +357,6 @@ class ViewHeterogens:
         @property
         def target(self):
             return self.get_attr('target')
-
-        @property
-        def binary(self):
-            return len(self.lsv_type.split('|')[1:]) == 2
 
         @property
         def dpsi(self):
@@ -575,6 +571,9 @@ class ViewHeterogens:
     @property
     def gene_ids(self):
         yield from {g for vh in self.view_heterogens for g in vh.gene_ids}
+
+    def view_lsv_ids(self):
+        yield from set(lsv_id for vh in self.view_heterogens for lsv_id in vh.view_lsv_ids())
 
 
 class ViewHeterogen(Heterogen, ViewMatrix):

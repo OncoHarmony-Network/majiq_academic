@@ -20,11 +20,11 @@
 
     <script src="js/splicegraphs.js"></script>
     <script src="js/splicegraphtools.js"></script>
-    <script src="js/table.js"></script>
-    <script src="js/violin.js"></script>
+    <script src="js/newtable.js"></script>
+    <script src="js/newviolin.js"></script>
     <script src="js/heatmap.js"></script>
     <script src="js/colors.js"></script>
-    <script src="js/application.js"></script>
+    <script src="js/summary.js"></script>
     <script src="js/lsv.js"></script>
     <script src="js/lsvtools.js"></script>
     {% block script %}{% endblock %}
@@ -143,6 +143,14 @@
                     <label for="source">Source</label>
                     <input type="checkbox" id="source">
                 </div>
+                <div class="pure-control-group">
+                    <label for="binary">Binary</label>
+                    <input type="checkbox" id="binary">
+                </div>
+                <div class="pure-control-group">
+                    <label for="complex">Complex</label>
+                    <input type="checkbox" id="complex">
+                </div>
             </fieldset>
         </form>
     </div>
@@ -151,7 +159,6 @@
 
 <div class="content">
     <div class="top">
-
         <div class="splice-graph-container default-view"></div>
     </div>
 

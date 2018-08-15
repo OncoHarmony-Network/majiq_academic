@@ -675,23 +675,26 @@ class SpliceGraphs {
         });
     };
 
-    add_localstorage(sg_div) {
-        const group = sg_div.dataset.group;
-        const experiment = sg_div.dataset.experiment;
+    psi_localstorage() {
+        return this.db_gene.get('metadata').then(results => {
+            this.add_localstorage(results.group_names[0], results.experiment_names[0][0])
+        })
+    }
+
+    add_localstorage(group, experiment) {
         const sg_key = 'splice_graphs';
         let sg = JSON.parse(localStorage.getItem(sg_key));
         if (!sg)
             sg = [];
 
-        const duplicate = !sg.some(el => {
+        const dup = sg.some(el => {
             return el[0] === group && el[1] === experiment;
         });
 
-        if (duplicate) {
+        if (!dup) {
             sg.push([group, experiment]);
             localStorage.setItem(sg_key, JSON.stringify(sg));
         }
-        return duplicate
     };
 
     remove_localstorage(sg_div) {
@@ -714,7 +717,7 @@ class SpliceGraphs {
         sg.classList.add('splice-graph');
 
         this.splice_graph_init(sg);
-        this.add_localstorage(sg);
+        this.add_localstorage(sg.dataset.group, sg.dataset.experiment);
 
         // if there's a scroll bar, then run update one more time to remove it.
         if (document.querySelector('.top').scrollWidth > document.querySelector('.top').clientWidth)

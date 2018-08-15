@@ -1,14 +1,21 @@
 import csv
+import glob
+import json
 import os
+import uuid
 from multiprocessing import Lock
 
+import jinja2
+
+import voila
 from voila import constants
 from voila.api.matrix_hdf5 import lsv_id_to_gene_id
 from voila.api.view_matrix import ViewPsi
-from voila.api.view_splice_graph import ViewSpliceGraph
+from voila.api.view_splice_graph_sqlite import ViewSpliceGraph
 from voila.exceptions import NotPsiVoilaFile
+from voila.processes import VoilaPool
 from voila.utils.voila_log import voila_log
-from voila.view.html import Html
+from voila.view.html import Html, NumpyEncoder
 from voila.view.tsv import Tsv
 
 lock = Lock()
@@ -16,26 +23,22 @@ lock = Lock()
 
 class Psi(Html, Tsv):
     def __init__(self, args):
-        """
-        Render psi output.
-        :param args: command line arguments
-        :return: None
-        """
-        super(Psi, self).__init__(args)
+        super().__init__(args)
+        self.db_id = uuid.uuid4().hex
 
         with ViewPsi(args) as m:
             if m.analysis_type != constants.ANALYSIS_PSI:
-                raise NotPsiVoilaFile(args.voila_file)
+                raise NotPsiVoilaFile(args)
             self.view_metadata = m.view_metadata
 
         if not args.disable_html:
             self.copy_static()
-            self.render_dbs()
-            self.render_summaries()
-            self.render_index()
+            if not args.disable_db:
+                self.render_dbs()
+            self.render_html()
 
         if not args.disable_tsv:
-            self.psi_tab_output()
+            self.render_tsv()
 
     def render_index(self):
         log = voila_log()
@@ -113,32 +116,113 @@ class Psi(Html, Tsv):
 
             return links
 
-    def render_summaries(self):
-        # log = voila_log()
-        # log.info('Render PSI HTML summaries')
-        # log.debug('Start summaries render')
-        #
-        # args = self.args
-        # metadata = self.view_metadata
-        # database_name = self.database_name()
-        #
-        # with ViewPsi(args) as m:
-        #     paged_genes = tuple(m.paginated_genes())
-        #
-        # multiple_results = []
-        # with VoilaPool() as vp:
-        #     for paged in self.chunkify(list(enumerate(paged_genes)), vp.processes):
-        #         multiple_results.append(
-        #             vp.apply_async(self.create_summary, (metadata, args, database_name, paged)))
-        #
-        #     for res in multiple_results:
-        #         self.voila_links.splice_graph_update(res.get())
-        #
-        # log.debug('End summaries render')
-        self.create_summaries(ViewPsi)
+    def render_html(self):
+        exec_dir = os.path.dirname(os.path.abspath(voila.__file__))
+        template_dir = os.path.join(exec_dir, 'html')
+        env = jinja2.Environment(extensions=["jinja2.ext.do"], loader=jinja2.FileSystemLoader(template_dir),
+                                 undefined=jinja2.StrictUndefined)
+
+        index_template = env.get_template('psi_index.html')
+        summary_template = env.get_template('psi_summary.html')
+
+        with open(os.path.join(self.args.output, 'index.html'), 'w') as index:
+            index.write(index_template.render({
+                'db_id': self.db_id
+            }))
+
+        with open(os.path.join(self.args.output, 'summary.html'), 'w') as summary:
+            summary.write(summary_template.render({
+                'db_id': self.db_id
+            }))
+
+    def dbs(self, gene_ids):
+        log = voila_log()
+        for gene_id in gene_ids:
+            with open(os.path.join(self.args.output, '{}.js'.format(gene_id)), 'w') as f:
+                with ViewPsi(self.args) as h, ViewSpliceGraph(self.args) as sg:
+                    metadata = h.view_metadata
+                    exp_name = metadata['experiment_names']
+                    lsv_ids = h.view_gene_lsvs(gene_id)
+
+                    f.write('new PouchDB(\'voila_gene_{}\').bulkDocs(['.format(self.db_id))
+
+                    log.debug('Write DB Gene ID: {}'.format(gene_id))
+
+                    gene = sg.gene(gene_id)
+                    gene_exp = sg.gene_experiment(gene, exp_name)
+                    text = json.dumps(gene_exp)
+
+                    f.write(text)
+                    f.write(',')
+
+                    del gene
+                    del gene_exp
+                    del text
+
+                    f.write(']);')
+                    f.write('\n')
+
+                    if lsv_ids:
+                        f.write('new PouchDB(\'voila_lsv_{}\').bulkDocs(['.format(self.db_id))
+
+                        for lsv_id in lsv_ids:
+                            log.debug('Write DB LSV ID: {}'.format(lsv_id))
+
+                            lsv = h.psi(lsv_id).get_all()
+                            lsv_dict = dict(lsv)
+                            text = json.dumps(lsv_dict, cls=NumpyEncoder)
+
+                            f.write(text)
+                            f.write(',')
+
+                            del lsv
+                            del lsv_dict
+                            del text
+
+                        f.write(']);')
 
     def render_dbs(self):
-        self.create_db_files(ViewPsi, 'psi')
+        log = voila_log()
+
+        log.debug('Create metadata file')
+        with open(os.path.join(self.args.output, 'metadata.js'), 'w') as f:
+            with ViewPsi(self.args) as h:
+                metadata = json.dumps(h.view_metadata, cls=NumpyEncoder)
+                f.write('new PouchDB(\'voila_gene_{}\').bulkDocs(['.format(self.db_id))
+                f.write(metadata)
+                f.write(',')
+                f.write(']);')
+
+                f.write('new PouchDB(\'voila_lsv_{}\').bulkDocs(['.format(self.db_id))
+                f.write(metadata)
+                f.write(',')
+                f.write(']);')
+
+                f.write('\n')
+
+                f.write('const lsvs_arr = [')
+
+                for lsv_id in h.view_lsv_ids():
+                    lsv = h.psi(lsv_id)
+                    f.write(json.dumps({
+                        '_id': lsv.lsv_id,
+                        'target': lsv.target,
+                        'binary': lsv.binary,
+                        'exon_skipping': lsv.exon_skipping,
+                        'A5SS': lsv.a5ss,
+                        'A3SS': lsv.a3ss,
+                        'gene_id': lsv.gene_id
+                    }))
+                    f.write(',')
+                f.write('];')
+
+        with VoilaPool() as pool:
+            with ViewPsi(self.args) as h:
+                gene_ids = list(h.view_gene_ids())
+                chunked_gene_ids = Html.chunkify(gene_ids, pool.processes)
+
+            for p in [pool.apply_async(self.dbs, (gene_ids,)) for gene_ids in chunked_gene_ids]:
+                p.get()
 
     def tsv_row(self, gene_ids, tsv_file, fieldnames):
         args = self.args
@@ -204,4 +288,4 @@ class Psi(Html, Tsv):
         if voila_links:
             fieldnames.append('Voila link')
 
-        self.write_tsv(fieldnames)
+        self.write_tsv(fieldnames, ViewPsi)

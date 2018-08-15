@@ -114,8 +114,8 @@ class CanNotFindVoilaFile(argparse.ArgumentTypeError):
 
 
 class NotPsiVoilaFile(VoilaException):
-    def __init__(self, filename):
-        self.filename = filename
+    def __init__(self, args):
+        self.filename = args.voila_files[0]
 
     def __str__(self):
         return 'Voila file has not been quantified using PSI: ' + self.filename
