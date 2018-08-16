@@ -197,18 +197,7 @@ class MatrixType(ABC):
         :param kwargs: keyword args containing key/values
         :return: None
         """
-        if all(k in kwargs for k in self.fields) and len(kwargs) == len(self.fields):
-            self.matrix_hdf5.add_multiple(self.lsv_id, **kwargs)
-        else:
-            wrong_fields = set(kwargs.keys()) - set(self.fields)
-            missing_fields = set(self.fields) - set(kwargs.keys()) - wrong_fields
-            msg = []
-            if wrong_fields:
-                msg.append('Wrong field(s): {0}'.format(', '.join(wrong_fields)))
-            if missing_fields:
-                msg.append('Missing field(s): {0}'.format(', '.join(missing_fields)))
-
-            raise Exception('; '.join(msg))
+        self.matrix_hdf5.add_multiple(self.lsv_id, **kwargs)
 
     def get(self, key: str):
         """
@@ -402,12 +391,22 @@ class Heterogen(MatrixHdf5):
             super().__init__(matrix_hdf5, lsv_id, fields)
 
         def add(self, **kwargs):
-            mu_psi = kwargs.get('mu_psi')
-            arr = np.empty((2, max(x.shape[0] for x in mu_psi), mu_psi[0].shape[1]))
-            arr.fill(-1)
-            for i, ms in enumerate(mu_psi):
-                arr[i][0:ms.shape[0], 0:ms.shape[1]] = ms
-            kwargs['mu_psi'] = arr
+            """
+            mu_psi: numpy array of two lists. one list for each condition.
+            junction_stats: 2d numpy matrix. Columns are stat test values and a row for each junction.
+            mean_psi: 2d matrix
+
+            :param kwargs:
+            :return:
+            """
+
+            mu_psi = kwargs.get('mu_psi', None)
+            if mu_psi:
+                arr = np.empty((2, max(x.shape[0] for x in mu_psi), mu_psi[0].shape[1]))
+                arr.fill(-1)
+                for i, ms in enumerate(mu_psi):
+                    arr[i][0:ms.shape[0], 0:ms.shape[1]] = ms
+                kwargs['mu_psi'] = arr
             super().add(**kwargs)
 
     def heterogen(self, lsv_id):
