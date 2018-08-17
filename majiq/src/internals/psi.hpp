@@ -10,6 +10,7 @@
 
 using namespace std ;
 typedef vector<float> psi_distr_t ;
+typedef pair<int, int> pair_int_t ;
 
 
 inline float median(psi_distr_t a){
@@ -85,6 +86,8 @@ inline void collapse_matrix(float* o_dpsi, float* matrix, int nbins){
 
     for (int i=0; i<nbins; i++){
        for (int j=0; j<nbins; j++){
+//        int temp = j-i+(nbins-1) ;
+//cout << " KKKKK: " << temp << "from i:" << i << " j: " << j << "\n" ;
             o_dpsi[j-i+(nbins-1)] += matrix[i*nbins + j] ;
        }
     }
@@ -100,5 +103,9 @@ void deltapsi_posterior(vector<psi_distr_t>& i_psi1, vector<psi_distr_t>& i_psi2
                         float* o_mu_psi1, float* o_mu_psi2, float* o_post_psi1, float* o_post_psi2,
                         float* o_posterior_dpsi, int msamples, int njunc, int nbins, bool is_ir) ;
 
+void get_samples_from_psi(vector<psi_distr_t>& i_psi, float* osamps, float* o_mu_psi, float* o_postpsi1,
+                          int psi_samples, int j_offset, psi_distr_t psi_border, int njunc, int msamples, int nbins) ;
+
+psi_distr_t get_psi_border(int nbins) ;
 
 #endif

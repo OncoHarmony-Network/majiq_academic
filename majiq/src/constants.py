@@ -73,3 +73,7 @@ def get_builder_splicegraph_filename(outdir):
 
 def get_weights_filename(outdir, name):
     return "%s/%s.wght" % (outdir, name)
+
+
+def get_tmp_psisample_file(outdir, name):
+    return "%s/%s.psisamples.tmp"  %(outdir, name)

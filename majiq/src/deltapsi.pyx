@@ -1,5 +1,6 @@
 import sys
 import majiq.src.io as majiq_io
+cimport majiq.src.io as majiq_io
 import psutil
 
 import majiq.src.logger as majiq_logger
@@ -27,7 +28,7 @@ cdef void _core_deltapsi(object self):
     cdef dict junc_info = {}
     cdef dict lsv_type_dict = {}
     cdef object logger
-    cdef int nbins = 40
+    cdef int nbins = 20
     cdef bint is_ir
     cdef string lsv_id
     cdef int nways, msamples, i
@@ -96,7 +97,7 @@ cdef void _core_deltapsi(object self):
         out_postpsi_d_1[lsv.encode('utf-8')] = np.zeros(shape=(nways, nbins), dtype=np.float32)
         out_mupsi_d_2[lsv.encode('utf-8')] = np.zeros(shape=nways, dtype=np.float32)
         out_postpsi_d_2[lsv.encode('utf-8')] = np.zeros(shape=(nways, nbins), dtype=np.float32)
-        out_postdpsi_d[lsv.encode('utf-8')] = np.zeros(shape=(nways, nbins), dtype=np.float32)
+        out_postdpsi_d[lsv.encode('utf-8')] = np.zeros(shape=(nways, (nbins*2)-1), dtype=np.float32)
         lsv_vec[lsv.encode('utf-8')] = nways
 
     # logger.info("Saving prior matrix for %s..." % self.names)
@@ -113,8 +114,6 @@ cdef void _core_deltapsi(object self):
 
     majiq_io.get_coverage_mat(cov_dict1, lsv_vec, self.files1, "", nthreads)
     majiq_io.get_coverage_mat(cov_dict2, lsv_vec, self.files2, "", nthreads)
-    cov_dict1 = majiq_io.get_coverage_lsv(list_of_lsv, self.files1, "")
-    cov_dict2 = majiq_io.get_coverage_lsv(list_of_lsv, self.files2, "")
 
     for i in prange(nlsv, nogil=True, num_threads=nthreads):
         with gil:

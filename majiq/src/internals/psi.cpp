@@ -8,7 +8,15 @@
 using namespace std ;
 
 
+psi_distr_t get_psi_border(int nbins){
+    psi_distr_t psi_border (nbins+1) ;
+    const float bsize = 1.0 / nbins ;
 
+    for(int i=0; i<=nbins; i++){
+        psi_border[i] = i*bsize ;
+    }
+    return psi_border ;
+}
 
 
 void prob_data_sample_given_psi(float* out_array, float sample, float all_sample, psi_distr_t & psi_border,
@@ -16,7 +24,7 @@ void prob_data_sample_given_psi(float* out_array, float sample, float all_sample
 
     const float a = sample + alpha_prior ;
     const float b = (all_sample - sample) + beta_prior ;
-cout << "a=" << sample << "+"<< alpha_prior <<" b=" << b << " nbins=" << nbins << " betap="<< beta_prior <<"\n" ;
+//cout << "a=" << sample << "+"<< alpha_prior <<" b=" << b << " nbins=" << nbins << " betap="<< beta_prior <<"\n" ;
     float prev = scythe::pbeta(psi_border[0], a, b) ;
 
     for (int i=0; i<nbins; i++){
@@ -102,6 +110,7 @@ void deltapsi_posterior(vector<psi_distr_t>& i_psi1, vector<psi_distr_t>& i_psi2
             all_m2[m] += i_psi2[j][m] ;
         }
     }
+
     const int nbins_dpsi = (nbins*2) - 1 ;
     for (int j=0; j<njunc; j++){
         const float alpha = alpha_beta_prior[j][0] ;
@@ -169,78 +178,82 @@ void deltapsi_posterior(vector<psi_distr_t>& i_psi1, vector<psi_distr_t>& i_psi2
     free(all_m2) ;
 }
 
-void thread_psi(vector<psi_distr_t>& i_psi, float* o_mupsi, float* o_postpsi,
-                   int msamples, int njunc, int nbins, bool is_ir){
 
-
-
-
-
-
-}
+/*void deltapsi_posterior(vector<psi_distr_t>& i_psi1, vector<psi_distr_t>& i_psi2, float* prior_matrix,
+                        float* o_mupsi1, float* o_mupsi2, float* o_postpsi1, float* o_postpsi2,
+                        float* o_posterior_dpsi, int msamples, int njunc, int nbins, bool is_ir){*/
 
 
 //
 //
 //
-//vector<vector<vector<float>>> heterogen_posterior(float psi[], float mu_psi[]){
-//
-//    vector<vector<vector<float>>> samps(num_ways,  vector<vector<float>>(psi_samples, vector<float>())) ;
-//   alpha_beta_prior = get_prior_params(num_ways, ir) ;
-//
+void get_samples_from_psi(vector<psi_distr_t>& i_psi, float* osamps, float* o_mupsi, float* o_postpsi,
+                            int psi_samples, int j_offset, psi_distr_t psi_border, int njunc, int msamples, int nbins){
+
+    vector<psi_distr_t> alpha_beta_prior(njunc, psi_distr_t(2)) ;
+
 //    const float bsize = 1.0 / nbins ;
 //    vector<float> psi_border vector(nbins) ;
 //    for(int i=0; i<=nbins; i++){
 //        psi_border[i] = i*bsize ;
 //    }
-//    vector<float> all_m vector(m_samples) ;
-//    for (int j=0; j<num_ways; j++){
-//        for (int i=0; i<m_samples; i++) {
-//            all_m[m] += psi[j, m] ;
-//        }
-//    }
-//    for (int j=0; j<njunc; j++){
-//        const float alpha = alpha_beta_prior[j][0] ;
-//        const float beta = alpha_beta_prior[j][1] ;
-//        for (int m=0; m<msamples; m++){
+
+
+    float * all_m = (float*) calloc(msamples, sizeof(float)) ;
+    for (int j=0; j<njunc; j++){
+        for (int m=0; m<msamples; m++) {
+            all_m[m] += i_psi[j][m] ;
+        }
+    }
+
+    for (int j=0; j<njunc; j++){
+        const float alpha = alpha_beta_prior[j][0] ;
+        const float beta = alpha_beta_prior[j][1] ;
+        psi_distr_t temp_mupsi(msamples) ;
+        for (int m=0; m<msamples; m++){
+
+            const float jnc_val = i_psi[j][m] ;
+            const float all_val = all_m[m] ;
+            float * psi_lkh =  (float*) calloc(nbins, sizeof(float)) ;
+            temp_mupsi[m] = calc_mupsi(jnc_val, all_val, alpha, beta) ;
+            prob_data_sample_given_psi(psi_lkh, jnc_val, all_val, psi_border, nbins, alpha, beta) ;
+            const float Z = logsumexp(psi_lkh, nbins) ;
+            for (int i=0; i< nbins; i++){
+                psi_lkh[i] -= Z ;
+                const int idx_2d = (j*nbins) + i ;
+                o_postpsi[idx_2d] += exp(psi_lkh[i]) ;
+            }
+            free(psi_lkh) ;
+        }
+        o_mupsi[j] = median(temp_mupsi) ;
+        psi_distr_t temp_postpsi(nbins) ;
+        for (int i=0; i<nbins; i++){
+            const int idx_2d = (j*nbins) + i ;
+            o_postpsi[idx_2d] /= msamples ;
+            temp_postpsi[i] = o_postpsi[idx_2d] ;
+        }
+
+
+        if (psi_samples == 1){
+            osamps[j+j_offset] = o_mupsi[j] ;
+        }else{
+            default_random_engine generator ;
+            discrete_distribution<float> psi_distribution (temp_postpsi.begin(), temp_postpsi.end());
+            for(int i=0; i<psi_samples; i++){
+                float p = psi_distribution(generator) ;
+                const int idx_2d = ((j+j_offset)*psi_samples) + i ;
+                osamps[idx_2d] = p ;
+            }
+        }
+    }
+
+    free(all_m) ;
+    return ;
+}
 //
-//            const float jnc_val = psi[p_id, m] ;
-//            const float all_val = all_m[m] ;
-//            vector<float> psi_lkh vector(nbins) ;
-//            mu_psi[j] += calc_mupsi(jnc_val, all_val, alpha, beta) ;
-//            prob_data_sample_given_psi(psi_lkh, jnc_val, all_val, psi_border, nbins, alpha, beta) ;
-//            psi_lkh = log(psi_lkh) ;
-//            const float Z = logsumexp(psi_lkh, nbins) ;
-//            for (i=0; i< nbins; i++){
-//                psi_lkh[i] -= Z ;
-//                post_psi[j][i] += exp(psi_lkh[i]) ;
-//            }
-//            free(psi_lkh) ;
-//        }
-//        for (i=0; i<nbins; i++){
-//            post_psi[j][i] /= msamples ;
-//        }
 //
-//        if (psi_samples == 1){
-//
-//        }else{
-//            default_random_engine generator ;
-//            discrete_distribution<float> psi_distribution (post_psi.begin(), post_psi.end());
-//            for(i=0; i<psi_samples; i++){
-//                float p = psi_distribution(generator) ;
-//                samps[j][i].push_back(p) ;
-//            }
-//        }
-////        _samples_from_psi(post_psi, mu_psi[exp, p_idx], vwindow, psi_samples, nbins)
-//
-//    }
-//    free(all_m) ;
-//    return samps ;
-//}
-//
-//
-//void test_calc(vector<vector<vector<float>>> samples1, vector<vector<vector<float>>> samples2, list<string> stats,
-//               int njunc, int psamples){
+//void test_calc(vector<vector<psi_distr_t>> samples1, vector<vector<psi_distr_t>> samples2, list<string> stats,
+//               int njunc){
 //
 //    const int nstats = stats.size() ;
 //
@@ -264,14 +277,14 @@ void thread_psi(vector<psi_distr_t>& i_psi, float* o_mupsi, float* o_postpsi,
 //            vectorB = apply_permutation(vectorB, p);
 //
 //            for(int i=0; i<nstats; i++){
-//                stats[i].operator(csamps, clabels) ;
+//                stats[i]->Cal_pval(csamps, clabels) ;
 //
 //            }
 //        }
 //
 //    }
-//
 //}
+
 //
 //
 //

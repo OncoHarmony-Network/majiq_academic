@@ -411,7 +411,8 @@ cpdef tuple gen_prior_matrix(object lsv_type, dict lsv_empirical_psi1, dict lsv_
                      str plotpath, int iter, float binsize, int numbins=20, bint defaultprior=False,
                      int minpercent=-1, object logger=None):
 
-    cdef np.ndarray[np.float32_t] psi_space, def_mat, lsv, mixture_pdf
+    cdef np.ndarray[np.float32_t] psi_space, lsv, mixture_pdf
+    cdef np.ndarray[np.float32_t, ndim=2] def_mat
     cdef list prior_matrix, list_of_lsv, njun_prior, pmat
     cdef int prior_idx, nj
     cdef np.ndarray[np.float32_t, ndim=2] best_deltap, best_dpsi, best_dpsi_ir

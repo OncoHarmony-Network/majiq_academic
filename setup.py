@@ -45,16 +45,21 @@ extensions += [Extension('majiq.src.internals.seq_parse', ['majiq/src/internals/
                          extra_compile_args=compile_args+scythe_compiler_args,  extra_link_args=linker_args,
                          language='c++')]
 
-extensions += [Extension('majiq.src.calc_psi', ['majiq/src/calc_psi.pyx',
-                                                'majiq/src/internals/psi.cpp'],
+extensions += [Extension('majiq.src.calc_psi', ['majiq/src/calc_psi.pyx', 'majiq/src/internals/psi.cpp'],
                          include_dirs=MAJIQ_INC_DIRS + NPY_INC_DIRS,
                          library_dirs=MAJIQ_LIB_DIRS,
                          runtime_library_dirs=MAJIQ_LIB_DIRS,
                          extra_compile_args=compile_args+scythe_compiler_args,  extra_link_args=linker_args,
                          language='c++')]
 
-extensions += [Extension('majiq.src.deltapsi', ['majiq/src/deltapsi.pyx',
-                                                'majiq/src/internals/psi.cpp'],
+extensions += [Extension('majiq.src.deltapsi', ['majiq/src/deltapsi.pyx', 'majiq/src/internals/psi.cpp'],
+                         include_dirs=MAJIQ_INC_DIRS + NPY_INC_DIRS,
+                         library_dirs=MAJIQ_LIB_DIRS,
+                         runtime_library_dirs=MAJIQ_LIB_DIRS,
+                         extra_compile_args=compile_args+scythe_compiler_args,  extra_link_args=linker_args,
+                         language='c++')]
+
+extensions += [Extension('majiq.src.indpnt', ['majiq/src/indpnt.pyx', 'majiq/src/internals/psi.cpp'],
                          include_dirs=MAJIQ_INC_DIRS + NPY_INC_DIRS,
                          library_dirs=MAJIQ_LIB_DIRS,
                          runtime_library_dirs=MAJIQ_LIB_DIRS,
