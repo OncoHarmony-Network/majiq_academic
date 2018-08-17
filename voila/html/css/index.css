@@ -36,3 +36,16 @@ table {
     margin-left: auto;
     margin-right: auto;
 }
+
+.lsv-container > div {
+    text-align: left;
+    display: inline-grid;
+}
+
+.lsv-container > div > div {
+    padding-bottom: 10px;
+}
+
+.lsv-container {
+    text-align: center
+}

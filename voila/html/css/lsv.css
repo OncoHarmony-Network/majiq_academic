@@ -1,12 +1,12 @@
 /*.excl-incl-rect svg, .lsvLegend, .lsv-single-compact-percentiles, .psi-violin-plot, .deltapsi-violin-plot {*/
-    /*padding: 0;*/
-    /*margin: auto;*/
-    /*display: block;*/
+/*padding: 0;*/
+/*margin: auto;*/
+/*display: block;*/
 /*}*/
 
 /*.lsv-single-compact-percentiles {*/
-    /*width: 20px;*/
-    /*height: 80px;*/
+/*width: 20px;*/
+/*height: 80px;*/
 /*}*/
 
 .violin-tool-tip, .heat-map-tool-tip {
@@ -19,3 +19,8 @@
     font-size: 12px;
 }
 
+.lsv-single-compact-percentiles {
+    width: 20px;
+    height: 80px;
+    border: 2pt solid darkgrey;
+}

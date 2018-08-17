@@ -1,12 +1,8 @@
 {% extends 'base_summary.html' %}
 
 {% block script %}
-    {% for i in range(4) %}
-        <script src="db_gene_{{ i }}.js"></script>
-    {% endfor %}
     <script>
-        const db_gene = new PouchDB('voila_gene');
-        {#load_gene_db(db_gene);#}
+        const db_gene = new PouchDB('voila_gene_{{ uuid }}');
     </script>
     <script>
         const urlParams = new URLSearchParams(document.location.search);

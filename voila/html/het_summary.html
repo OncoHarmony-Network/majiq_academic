@@ -1,9 +1,11 @@
 {% extends 'base_summary.html' %}
 
 {% block script %}
-    {% for i in range(4) %}
-        <script src="db_gene_{{ i }}.js"></script>
-        <script src="db_lsv_{{ i }}.js"></script>
+    {% for db_gene in db_genes %}
+        <script src="{{ db_gene }}"></script>
+    {% endfor %}
+    {% for db_lsv in db_lsvs %}
+        <script src="{{ db_lsv }}"></script>
     {% endfor %}
     <script>
         const db_gene = new PouchDB('voila_gene');

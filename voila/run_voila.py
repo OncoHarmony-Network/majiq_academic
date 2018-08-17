@@ -98,7 +98,7 @@ def lsv_ids():
         found_lsvs = set()
         for f in args.voila_file:
             with Matrix(f) as m:
-                for lsv_id in args.lsv_ids:
+                for lsv_id in set(args.lsv_ids) - found_lsvs:
                     if lsv_id in set(m.lsv_ids([lsv_id_to_gene_id(lsv_id)])):
                         found_lsvs.add(lsv_id)
 
@@ -109,6 +109,7 @@ def lsv_ids():
             raise VoilaException('None of the LSV IDs could be found in a Voila file.')
 
         args.lsv_ids = list(found_lsvs)
+        args.gene_ids = list(lsv_id_to_gene_id(lsv_id) for lsv_id in args.lsv_ids)
 
 
 def new_subparser():
@@ -195,7 +196,7 @@ splice_graph.add_argument('--disable-db', action='store_true', help='Disables th
 
 # psi parser
 psi_parser = new_subparser()
-psi_parser.add_argument('--voila-file', nargs='+', type=check_file,
+psi_parser.add_argument('voila_files', nargs='+', type=check_file,
                         help='Location of majiq\'s voila file.  File should end with ".voila".')
 psi_parser.add_argument('--gtf', action='store_true', help='Generate GTF (GFF2) files for LSVs.')
 psi_parser.add_argument('--gff', action='store_true', help='Generate GFF3 files for LSVs.')
@@ -228,8 +229,6 @@ dpsi_parser.add_argument('--show-all', action='store_true',
 
 # heterogen parser
 het_parser = new_subparser()
-het_parser.add_argument('--voila-dir', help='Directory of majiq\'s voila files.', dest='voila_file',
-                        type=check_voila_dir)
 
 # subparsers
 subparsers = parser.add_subparsers(help='')

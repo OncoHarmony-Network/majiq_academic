@@ -12,14 +12,14 @@ from jinja2 import Environment, FileSystemLoader, StrictUndefined
 from voila import constants
 from voila.api.view_splice_graph import ViewSpliceGraph
 from voila.constants import EXEC_DIR
+from voila.processes import VoilaPool
 from voila.utils import utils_voila
 from voila.utils.voila_log import voila_log
-from voila.processes import VoilaPool
 
 
 class NumpyEncoder(json.JSONEncoder):
     def default(self, obj):
-        if isinstance(obj, (numpy.int64, numpy.bool_, numpy.uint8, numpy.uint32)):
+        if isinstance(obj, (numpy.int64, numpy.bool_, numpy.uint8, numpy.uint32, numpy.float32)):
             return obj.item()
         elif isinstance(obj, numpy.ndarray):
             return obj.tolist()
@@ -27,7 +27,7 @@ class NumpyEncoder(json.JSONEncoder):
             return obj.decode('utf-8')
         elif isinstance(obj, types.GeneratorType):
             return tuple(obj)
-        return obj
+        return json.JSONEncoder.default(self, obj)
 
 
 class Html(ABC):
@@ -103,7 +103,13 @@ class Html(ABC):
     def get_template_dir():
         return os.path.join(EXEC_DIR, "templates/")
 
-    def copy_static(self, index=True):
+    def old_copy_static(self, index=True):
+        html_dir = self.get_template_dir()
+        if index:
+            copy_tree(os.path.join(html_dir, 'static'), os.path.join(self.args.output, 'static'))
+        copy_tree(os.path.join(html_dir, 'static'), os.path.join(self.args.output, 'summaries', 'static'))
+
+    def copy_static(self):
         """
         Copy static files to output directory.
         :param index:

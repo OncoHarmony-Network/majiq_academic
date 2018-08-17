@@ -1,0 +1,176 @@
+{% extends 'base_summary.html' %}
+
+{% block script %}
+    <script src="metadata.js"></script>
+    <script>
+        const db_gene = new PouchDB('voila_gene_{{ db_id }}');
+        const db_lsv = new PouchDB('voila_lsv_{{ db_id }}');
+    </script>
+    <script>
+        const urlParams = new URLSearchParams(document.location.search);
+        const filter_lsvs = lsvs => {
+            document.querySelectorAll('.lsv').forEach(c => {
+                if (lsvs.some(lsv => c.dataset.lsvId === lsv._id))
+                    c.classList.remove('hidden');
+                else
+                    c.classList.add('hidden');
+            });
+        };
+
+        window.addEventListener('load', () => {
+
+            const lsv = new Lsv(db_lsv, db_gene);
+            const violin = new Violin(db_lsv);
+
+            new NewTable('#results', db_gene, db_lsv, {
+                show_data: (lsvs, table, table_body) => {
+                    const t = d3.select(table_body).selectAll('tr')
+                        .data(lsvs);
+
+                    t.exit().remove();
+
+                    const trs = t.enter().append('tr');
+
+                    trs
+                        .attr('data-lsv-id', d => d._id);
+
+                    table.highlight_form(trs.append('td'), sgs);
+
+                    trs.append('td')
+                        .attr('class', 'lsv-id')
+                        .text(d => d._id);
+
+                    trs
+                        .append('td')
+                        .attr('class', 'lsv-type')
+                        .append('canvas')
+                        .each((d, i, a) => {
+                            lsv.cartoon(a[i], d._id)
+                        });
+
+                    const summary = trs
+                        .append('td')
+                        .attr('class', 'summary');
+
+                    summary
+                        .append('canvas')
+                        .attr('class', 'lsv-single-compact-percentiles')
+                        .each((d, i, a) => {
+                            db_lsv.get('metadata').then(metadata => {
+                                const canvas = a[i];
+                                canvas.dataset.group = metadata.group_names[0];
+                                lsv.draw_lsv_compact_stack_bars(canvas, 1);
+                                canvas.onclick = () => {
+                                    const violin = canvas.parentNode.querySelector('.psi-violin-plot');
+                                    violin.style.display = 'block';
+                                    canvas.style.display = 'none';
+                                }
+                            });
+                        });
+
+                    summary
+                        .append('svg')
+                        .attr('class', 'psi-violin-plot')
+                        .each((d, i, a) => {
+                            db_lsv.get('metadata').then(metadata => {
+                                const v = a[i];
+                                v.dataset.group = metadata.group_names[0];
+                                v.style.display = 'None';
+                                violin.psi(v);
+                                v.onclick = () => {
+                                    const comp = v.parentNode.querySelector('.lsv-single-compact-percentiles');
+                                    v.style.display = 'none';
+                                    comp.style.display = 'block';
+                                }
+                            });
+                        });
+
+                    table.ucsc_link(
+                        trs
+                            .append('td')
+                            .attr('class', 'links')
+                            .append('a')
+                    )
+                        .append('img')
+                        .attr('src', 'img/ucsc.png');
+
+                    t
+                        .each((d, i, a) => {
+                            a[i].dataset.lsvId = d._id;
+                            const tds = a[i].querySelectorAll('td');
+
+                            // lsv id
+                            tds[1].innerHTML = d._id;
+
+                            // lsv type
+                            let canvas = tds[2].querySelector('canvas');
+                            let context = canvas.getContext('2d');
+                            context.clearRect(0, 0, canvas.width, canvas.height);
+                            lsv.cartoon(canvas, d._id);
+
+                            // psi per junction
+                            canvas = tds[3].querySelector('canvas');
+                            console.log(canvas);
+                            context = canvas.getContext('2d');
+                            context.clearRect(0, 0, canvas.width, canvas.height);
+                            lsv.draw_lsv_compact_stack_bars(canvas, 1);
+                            canvas.style.display = 'block';
+
+                            const svg = tds[3].querySelector('svg');
+                            svg.style.display = 'None';
+                            violin.psi(svg);
+
+                            table.ucsc_link(d3.select(a[i]).selectAll('.links a').datum(d))
+                        })
+
+                }
+            });
+
+            const sgs = new SpliceGraphs('.splice-graph-container', {
+                db_gene: db_gene,
+                db_lsv: db_lsv,
+                gene_id: urlParams.get('gene_id')
+            });
+            sgs.psi_localstorage()
+                .then(() => {
+                    sgs.create_localstorage();
+                    new SpliceGraphTools(sgs);
+                });
+        })
+    </script>
+{% endblock %}
+
+{% block bottom %}
+    <div class="lsv-container">
+        <div>
+
+            <div>
+                <form class="pure-form">
+                    <select class="rows">
+                        <option value="10">10</option>
+                        <option value="25">25</option>
+                        <option value="50">50</option>
+                        <option value="100">100</option>
+                    </select>
+                    <button class="previous pure-button">Previous</button>
+                    <button class="next pure-button">Next</button>
+                    <span class="current-page"></span>
+                </form>
+            </div>
+
+            <table id="results" class="pure-table">
+                <thead>
+                <tr>
+                    <th>Highlight</th>
+                    <th>LSV ID</th>
+                    <th>LSV Type</th>
+                    <th>Ψ per Junction</th>
+                    <th>Links</th>
+                </tr>
+                </thead>
+                <tbody>
+                </tbody>
+            </table>
+        </div>
+    </div>
+{% endblock %}
