@@ -954,6 +954,7 @@ namespace scythe {
   pbeta(double x, double a, double b)
   {
     SCYTHE_CHECK_10(a <= 0 || b <= 0,scythe_invalid_arg, "a or b <= 0");
+
     if (x <= 0)
       return 0.;
     if (x >= 1)

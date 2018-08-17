@@ -22,9 +22,9 @@ scythe_compiler_args = ['-DSCYTHE_COMPILE_DIRECT', '-DSCYTHE_PTHREAD']
 linker_args = ['-lgomp']
 
 if sys.platform == 'darwin':
-    # pass
-    compile_args.append('-stdlib=libc++')
-    linker_args = ['-L/usr/local/opt/llvm/lib'] + linker_args
+    pass
+    # compile_args.append('-stdlib=libc++')
+    # linker_args = ['-L/usr/local/opt/llvm/lib'] + linker_args
 else:
     compile_args.append('-std=c++11')
 

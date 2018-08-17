@@ -197,6 +197,10 @@ void get_samples_from_psi(vector<psi_distr_t>& i_psi, float* osamps, float* o_mu
 //    for(int i=0; i<=nbins; i++){
 //        psi_border[i] = i*bsize ;
 //    }
+    vector<float> psi_space(nbins) ;
+    for(int i=0; i<nbins; i++){
+        psi_space[i] = (psi_border[i] + psi_border[i+1]) / 2 ;
+    }
 
 
     float * all_m = (float*) calloc(msamples, sizeof(float)) ;
@@ -226,7 +230,7 @@ void get_samples_from_psi(vector<psi_distr_t>& i_psi, float* osamps, float* o_mu
             free(psi_lkh) ;
         }
         o_mupsi[j] = median(temp_mupsi) ;
-        psi_distr_t temp_postpsi(nbins) ;
+        vector<float> temp_postpsi(nbins) ;
         for (int i=0; i<nbins; i++){
             const int idx_2d = (j*nbins) + i ;
             o_postpsi[idx_2d] /= msamples ;
@@ -238,11 +242,11 @@ void get_samples_from_psi(vector<psi_distr_t>& i_psi, float* osamps, float* o_mu
             osamps[j+j_offset] = o_mupsi[j] ;
         }else{
             default_random_engine generator ;
-            discrete_distribution<float> psi_distribution (temp_postpsi.begin(), temp_postpsi.end());
+            discrete_distribution<int> psi_distribution (temp_postpsi.begin(), temp_postpsi.end());
             for(int i=0; i<psi_samples; i++){
                 float p = psi_distribution(generator) ;
                 const int idx_2d = ((j+j_offset)*psi_samples) + i ;
-                osamps[idx_2d] = p ;
+                osamps[idx_2d] = psi_space[p] ;
             }
         }
     }
@@ -253,7 +257,7 @@ void get_samples_from_psi(vector<psi_distr_t>& i_psi, float* osamps, float* o_mu
 //
 //
 //void test_calc(vector<vector<psi_distr_t>> samples1, vector<vector<psi_distr_t>> samples2, list<string> stats,
-//               int njunc){
+//               int njunc, int psamples){
 //
 //    const int nstats = stats.size() ;
 //
