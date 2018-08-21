@@ -135,7 +135,7 @@ cdef void _core_deltapsi(object self):
                 prior_m = prior_matrix[0]
 
         deltapsi_posterior(cov_dict1[lsv_id], cov_dict2[lsv_id], <np.float32_t *> prior_m.data,
-                           <np.float32_t *> o_mupsi_1.data, <np.float32_t *> o_mupsi_1.data,
+                           <np.float32_t *> o_mupsi_1.data, <np.float32_t *> o_mupsi_2.data,
                            <np.float32_t *> o_postpsi_1.data, <np.float32_t *> o_postpsi_2.data,
                            <np.float32_t *> o_postdeltapsi.data, msamples, nways, nbins, is_ir)
 
