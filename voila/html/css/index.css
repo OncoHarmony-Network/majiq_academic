@@ -49,3 +49,8 @@ table {
 .lsv-container {
     text-align: center
 }
+
+.excl-incl-rect {
+    width: 200px;
+    margin:0;
+}

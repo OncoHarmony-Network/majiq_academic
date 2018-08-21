@@ -122,8 +122,8 @@ class NotPsiVoilaFile(VoilaException):
 
 
 class NotDeltaPsiVoilaFile(VoilaException):
-    def __init__(self, filename):
-        self.filename = filename
+    def __init__(self, args):
+        self.filename = args.voila_files[0]
 
     def __str__(self):
         return 'Voila file has not been quantified using DeltaPSI: ' + self.filename
