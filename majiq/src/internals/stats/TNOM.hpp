@@ -1,15 +1,33 @@
+#ifndef TNOM_H
+#define TNOM_H
 #include "MathFunctions.h"
+#include <random>
+#include <algorithm>
+#include <string>
+#include <map>
+#include "testStats.hpp"
 
 #define MAXCLASS 2
 
+using namespace std ;
 namespace stats{
-    class TNOM{
+
+    class TNOM: public TestStat{
         private:
+
             struct tTNOMRecord{
                 int neg ;
                 int pos ;
                 int score ;
+
+                bool operator<(const tTNOMRecord& rhs) const{
+                        return (neg < rhs.neg || (neg >= rhs.neg && pos >= rhs.pos) ||
+                                (neg >= rhs.neg && pos >= rhs.pos && score < rhs.score)) ;
+                }
+
             };
+
+
 
             map<tTNOMRecord, double> _pval_cache ;
 
@@ -50,9 +68,14 @@ namespace stats{
 
             double ComputePValue( int Neg, int Pos, int Score ){
 
-                tTNOMRecord R (Neg, Pos, Score) ;
-                if (_pval_cache.count(R) >0 )
+                tTNOMRecord R = {Neg, Pos, Score} ;
+                if (_pval_cache.count(R)){
                     return _pval_cache[R] ;
+                }
+//                map<tTNOMRecord, double> >::iterator i = _pval_cache.find(R) ;
+//
+//                if( i != _pval_cache.end() )
+//                    return (*i).second ;
 
 
                 #ifdef DEBUG
@@ -117,6 +140,8 @@ namespace stats{
                          << Score << " ) -> " << exp(PNum) << " " << exp(NNum) << " "
                          << PValue << "\n";
                 #endif
+//                map<tTNOMRecord, double, less<tTNOMRecord> >::value_type v(R, PValue) ;
+//                _pval_cache.insert( v ) ;
                 return PValue;
             }
 
@@ -150,7 +175,7 @@ namespace stats{
                 **/
                 double LastValue = -HUGE_VAL;
                 for( int i = 0; i <= n; i++ ){
-                    if( i == n || labels[i] <= 0 ) ){
+                    if( i == n || labels[i] <= 0 ){
                         double L = Loss(LeftClass) + Loss(RightClass);
                         double X = (i < n) ? data[i] : HUGE_VAL;
                         if( i == 0 || (L < BestLoss && X != LastValue) ){
@@ -165,6 +190,8 @@ namespace stats{
                         LastValue = X;
                     }
                 }
-                return PValue(LeftClass[0], LeftClass[1], (int)BestLoss) ;
+                return ComputePValue(LeftClass[0], LeftClass[1], (int)BestLoss) ;
+            }
     };
 }
+#endif

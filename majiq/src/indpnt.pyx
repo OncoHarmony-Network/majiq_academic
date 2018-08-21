@@ -5,10 +5,13 @@ from majiq.src.psi import heterogen_posterior
 import majiq.src.logger as majiq_logger
 from majiq.src.basic_pipeline import BasicPipeline, pipeline_run
 from majiq.src.constants import *
-from majiq.src.stats import operator, all_stats
+# from majiq.src.stats import operator, all_stats
+from majiq.src.internals.HetStats cimport HetStats
+
 from voila.api import Matrix
 from voila.constants import ANALYSIS_HETEROGEN, VOILA_FILE_VERSION
-from majiq.src.internals.psi cimport psi_distr_t, get_samples_from_psi, get_psi_border, pair_int_t
+from majiq.src.internals.psi cimport psi_distr_t, get_samples_from_psi, get_psi_border, pair_int_t, test_calc
+
 
 from libcpp.string cimport string
 from libcpp.map cimport map
@@ -21,33 +24,62 @@ import numpy as np
 def calc_independent(args):
     pipeline_run(independent(args))
 
-# cdef void _statistical_test_computation(str name1, int grp1_len, str name2, int grp2_len, list list_of_lsv,
-#                                         map[string, int] lsv_vec, str outDir, int nthreads ) :
-#     cdef int nlsv = len(list_of_lsv)
-#     cdef vector[psi_distr_t] cond1_smpl
-#     cdef vector[psi_distr_t] cond2_smpl
-#
-#
-#
-#
-#     for i in prange(nlsv, nogil=True, num_threads=nthreads):
-#         with gil:
-#             lsv = list_of_lsv[i]
-#             lsv_id = lsv.encode('utf-8')
-#             lsv_index = lsv_vec[lsv_id].second
-#             nways = sv_vec[lsv_id].first
-#
-#         for cc in file_list1:
-#             with gil:
-#                 k = cc[lsv_index:lsv_index+nways]
-#
-#             for j in range(nways):
-#             cond1_smpl[j][sampl][expidx] = k[k][sampl]
+cdef void _statistical_test_computation(object out_h5p, dict comparison, list list_of_lsv, vector[string] stats_list,
+                                        int psi_samples, map[string, pair_int_t] lsv_vec, str outDir, int nthreads ) :
+    cdef int nlsv = len(list_of_lsv)
+    cdef vector[float*] cond1_smpl
+    cdef vector[float*] cond2_smpl
+
+    cdef np.ndarray[np.float32_t, ndim=2, mode="c"]  k
+    cdef object cc
+    cdef int cond, xx, i
+    cdef str cond_name, lsv
+    cdef int index, nways, lsv_index
+    cdef list file_list = []
+    cdef np.ndarray[np.float32_t, ndim=2, mode="c"]  oPvals
+    cdef dict output = {}
+    cdef string lsv_id
+    cdef HetStats* StatsObj = new HetStats()
+    cdef int nstats = stats_list.size()
 
 
-cdef void _het_computation(object out_h5p, dict file_cond, list list_of_lsv, map[string, pair[int, int]] lsv_vec,
-                           list lsv_type_dict, dict junc_info,
-                           int psi_samples, int nthreads, int nbins, str outdir):
+    if StatsObj.initialize_statistics(stats_list):
+        print('ERROR stats')
+        return ;
+    index = 0
+    for cond_name, cond in comparison.items():
+        file_list.append([])
+        for xx in range(cond):
+            cc = np.load(open(get_tmp_psisample_file(outDir, "%s_%s" %(cond_name, xx)), 'rb'))
+            file_list[index] = cc
+        index +=1
+
+    for i in prange(nlsv, nogil=True, num_threads=nthreads):
+        with gil:
+            lsv = list_of_lsv[i]
+            lsv_id = lsv.encode('utf-8')
+            lsv_index = lsv_vec[lsv_id].second
+            nways = lsv_vec[lsv_id].first
+            oPvals = np.zeros(shape=(nways, nstats), dtype=np.float32)
+            output[lsv_id] = oPvals
+            for cc in file_list[0]:
+                k = cc[lsv_index:lsv_index+nways]
+                cond1_smpl.push_back(<np.float32_t *> k.data)
+
+            for cc in file_list[1]:
+                k = cc[lsv_index:lsv_index+nways]
+                cond1_smpl.push_back(<np.float32_t *> k.data)
+
+        test_calc(<np.float32_t *> oPvals.data, cond1_smpl, cond2_smpl, StatsObj, nways, psi_samples)
+
+    for lsv in list_of_lsv:
+        lsv_id = lsv.encode('utf-8')
+        out_h5p.heterogen(lsv_id).add(junction_stats=output[lsv_id])
+
+
+
+cdef void _het_computation(object out_h5p, dict file_cond, list list_of_lsv, map[string, pair_int_t] lsv_vec,
+                           list lsv_type_dict, dict junc_info, int psi_samples, int nthreads, int nbins, str outdir):
     cdef string fname, lsv_id
     cdef str f, cond_name ;
     cdef int cidx, fidx
@@ -114,6 +146,7 @@ cdef void _het_computation(object out_h5p, dict file_cond, list list_of_lsv, map
             # dump_tmp_file(fname, osamps)
 
     for lsv in list_of_lsv:
+        lsv_id = lsv.encode('utf-8')
         out_h5p.heterogen(lsv).add(lsv_type=lsv_type_dict[lsv], mu_psi=o_mupsi, mean_psi=o_postpsi,
                                       junctions=junc_info[lsv])
 
@@ -132,6 +165,8 @@ cdef void _core_independent(object self):
     cdef map[string, pair_int_t] lsv_vec
     cdef dict file_cond = {self.names[0]: self.files1, self.names[1]: self.files2}
     cdef pair_int_t tpair
+    cdef vector[string] stats_vec ;
+    cdef dict comparison = {self.names[0]: len(self.files1), self.names[1]: len(self.files2)}
 
     majiq_logger.create_if_not_exists(self.outDir)
     logger = majiq_logger.get_logger("%s/het_majiq.log" % self.outDir, silent=self.silent,
@@ -144,9 +179,10 @@ cdef void _core_independent(object self):
 
     try:
         for stats_name in self.stats:
-            module_ = __import__('majiq.src.stats.' + stats_name.lower(), fromlist=stats_name.title())
-            class_ = getattr(module_, stats_name.title())
-            operator[stats_name] = class_()
+            stats_vec.push_back(stats_name.upper().encode('utf-8'))
+            # module_ = __import__('majiq.src.stats.' + stats_name.lower(), fromlist=stats_name.title())
+            # class_ = getattr(module_, stats_name.title())
+            # operator[stats_name] = class_()
     except ImportError:
         logger.error("The %s statistic is not one of the available statistics, "
                      "in  [ %s ]" % (stats_name, ' | '.join(all_stats)))
@@ -174,6 +210,8 @@ cdef void _core_independent(object self):
     logger.info("Number quantifiable LSVs: %s" % nlsv)
     nthreads = min(self.nthreads, nlsv)
 
+    comparison
+
 
     logger.info('Computation done, saving results....')
     with Matrix(get_quantifier_voila_filename(self.outDir, self.names, het=True), 'w') as out_h5p:
@@ -193,7 +231,8 @@ cdef void _core_independent(object self):
         _het_computation(out_h5p, file_cond, list_of_lsv, lsv_vec, lsv_type_dict, junc_info, self.psi_samples,
                          nthreads, nbins, self.outDir)
 
-        # _statistical_test_computation(file_cond, list_of_lsv, self.outDir, nthreads, )
+        _statistical_test_computation(out_h5p, comparison, list_of_lsv, stats_vec, self.psi_samples, lsv_vec,
+                                      self.outDir, nthreads)
 
         #
         #

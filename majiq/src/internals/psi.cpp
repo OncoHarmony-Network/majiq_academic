@@ -4,6 +4,7 @@
 #include "scythestat/distributions.h"
 #include <math.h>
 #include "psi.hpp"
+#include "stats/stats.hpp"
 
 using namespace std ;
 
@@ -256,16 +257,30 @@ void get_samples_from_psi(vector<psi_distr_t>& i_psi, float* osamps, float* o_mu
 }
 //
 //
-//void test_calc(vector<vector<psi_distr_t>> samples1, vector<vector<psi_distr_t>> samples2, list<string> stats,
-//               int njunc, int psamples){
-//
-//    const int nstats = stats.size() ;
-//
-//    for (int j=0; j<njunc; j++){
-//        for(int s=0; s<psamples; s++){
-//            vector<float> csamps ;
-//            vector<int> labels ;
-//
+void test_calc(float* oPvals, vector<float*> samples1, vector<float*> samples2, HetStats* HetStatsObj,
+               int njunc, int psamples){
+
+    const int nstats = (HetStatsObj->statistics).size() ;
+
+    const int n1 = samples1.size() ;
+    const int n2 = samples1.size() ;
+    for (int j=0; j<njunc; j++){
+        for(int s=0; s<psamples; s++){
+            vector<float> csamps ;
+            vector<int> labels ;
+
+            for (int i=0; i<n1; i++){
+                const int in_2d = (j*psamples) + s ;
+                csamps.push_back(samples1[i][in_2d]) ;
+                labels.push_back(0) ;
+            }
+            for (int i=0; i<n2; i++){
+                const int in_2d = (j*psamples) + s ;
+                csamps.push_back(samples2[i][in_2d]) ;
+                labels.push_back(0) ;
+            }
+
+
 //            for( const auto& v: samples1[j][s]){
 //                csamps.push_back(v) ;
 //                labels.push_back(0) ;
@@ -274,20 +289,20 @@ void get_samples_from_psi(vector<psi_distr_t>& i_psi, float* osamps, float* o_mu
 //                csamps.push_back(v) ;
 //                labels.push_back(1) ;
 //            }
-//
-//            auto p = sort_permutation(csamps, [](T const& a, T const& b){ return(a<=b) });
-//
-//            vectorA = apply_permutation(vectorA, p);
-//            vectorB = apply_permutation(vectorB, p);
-//
-//            for(int i=0; i<nstats; i++){
-//                stats[i]->Cal_pval(csamps, clabels) ;
-//
-//            }
-//        }
-//
-//    }
-//}
+
+            auto p = sort_permutation <float>(csamps, less<float>() ) ;
+
+            csamps = apply_permutation(csamps, p);
+            labels = apply_permutation(labels, p);
+
+            for(int i=0; i<nstats; i++){
+                const int idx_2d = (j*nstats) + i ;
+                oPvals[idx_2d] = (float)(HetStatsObj->statistics)[i]->Calc_pval(csamps, labels) ;
+            }
+        }
+
+    }
+}
 
 //
 //

@@ -1,9 +1,19 @@
+#ifndef WILCOXON_H
+#define WILCOXON_H
 #include "MathFunctions.h"
+#include "testStats.hpp"
+#include <random>
+#include <algorithm>
+#include <string>
+#include <assert.h>
+#include <map>
 
 #define MAXCLASS 2
 
+using namespace std ;
 namespace stats{
-    class Wilcoxon{
+
+    class Wilcoxon: public TestStat{
 
         private:
 
@@ -11,9 +21,16 @@ namespace stats{
                 int n ;
                 int k ;
                 int s ;
+
+                bool operator<(const tWilcoxonCountRecord& rhs) const{
+                        return (n < rhs.n || (n >= rhs.n && k >= rhs.k) ||
+                                (n >= rhs.n && k >= rhs.k && s < rhs.s)) ;
+                }
+
+
             };
 
-            _pval_cache = map< tWilcoxonCountRecord, double, less<tWilcoxonCountRecord > ;
+             map< tWilcoxonCountRecord, double, less<tWilcoxonCountRecord >> _pval_cache ;
 
             double Count(int n, int k, int s ){
                 if( s < 0 )
@@ -32,7 +49,7 @@ namespace stats{
                         return -HUGE_VAL ;
                 }
 
-                tWilcoxonCountRecord R(n,k,s) ;
+                tWilcoxonCountRecord R = {n,k,s} ;
                 map<tWilcoxonCountRecord, double, less<tWilcoxonCountRecord> >::iterator i = _pval_cache.find(R) ;
 
                 if( i != _pval_cache.end() )
@@ -88,7 +105,7 @@ namespace stats{
                             }
                     }
                 }
-                _ZScore = (s - 0.5*n1*(n1+n2+1))/sqrt(n1*n2*(n1+n2+1)/12.0);
+                double _ZScore = (s - 0.5*n1*(n1+n2+1))/sqrt(n1*n2*(n1+n2+1)/12.0);
 
                 double PValue = -HUGE_VAL ;
                 int s1;
@@ -110,3 +127,4 @@ namespace stats{
             }
     } ;
 }
+#endif

@@ -6,9 +6,10 @@
 #include <string>
 #include <math.h>
 #include <omp.h>
-
+#include "stats/stats.hpp"
 
 using namespace std ;
+
 typedef vector<float> psi_distr_t ;
 typedef pair<int, int> pair_int_t ;
 
@@ -62,7 +63,7 @@ inline float logsumexp(float nums[], size_t ct){
 }
 
 template <typename T, typename Compare>
-vector<size_t> sort_permutation(const std::vector<T>& vec, Compare& compare)
+vector<size_t> sort_permutation(const std::vector<T>& vec, const Compare& compare)
 {
     vector<size_t> p(vec.size());
     iota(p.begin(), p.end(), 0);
@@ -105,6 +106,9 @@ void deltapsi_posterior(vector<psi_distr_t>& i_psi1, vector<psi_distr_t>& i_psi2
 
 void get_samples_from_psi(vector<psi_distr_t>& i_psi, float* osamps, float* o_mu_psi, float* o_postpsi1,
                           int psi_samples, int j_offset, psi_distr_t psi_border, int njunc, int msamples, int nbins) ;
+
+void test_calc(float* oPvals, vector<float*> samples1, vector<float*> samples2, HetStats* HetStatsObj,
+               int njunc, int psamples) ;
 
 psi_distr_t get_psi_border(int nbins) ;
 

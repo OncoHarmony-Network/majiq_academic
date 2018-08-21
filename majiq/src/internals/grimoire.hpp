@@ -17,6 +17,8 @@
 #define MIN_INTRON_BINSIZE 1000
 
 using namespace std ;
+//extern typedef vector<float> psi_distr_t ;
+typedef vector<float> psi_distr_t ;
 
 namespace grimoire{
     class Exon ;
