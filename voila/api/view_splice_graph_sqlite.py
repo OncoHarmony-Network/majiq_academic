@@ -65,7 +65,7 @@ class ViewSpliceGraph(SpliceGraph):
         query = self.conn.execute('''
                         SELECT has_reads FROM junction
                         WHERE 
-                        (has_reads=1)
+                        (gene_id=? AND has_reads=1)
                         AND 
                         (
                           ({0}=-1 AND start={1})
@@ -74,10 +74,10 @@ class ViewSpliceGraph(SpliceGraph):
                           OR
                           (-1 NOT IN ({0},{1}) AND start BETWEEN {0} AND {1})
                           OR 
-                          (-1 NOT IN ({0},{1}) AND END BETWEEN {0} AND {1})
+                          (-1 NOT IN ({0},{1}) AND end BETWEEN {0} AND {1})
                         )
                         LIMIT 1
-                      '''.format(exon.start, exon.end))
+                      '''.format(exon.start, exon.end), (exon.gene_id,))
         return query.fetchone()
 
     def exon_color(self, exon):
@@ -122,6 +122,42 @@ class ViewSpliceGraph(SpliceGraph):
                 return 'grey'
         else:
             return 'green'
+
+    def annotated_junctions(self, gene, lsv):
+        for junc in lsv.junctions:
+            junc = tuple(map(int, junc))
+            query = self.conn.execute('''
+                                SELECT annotated FROM junction
+                                WHERE gene_id=?
+                                AND start=? 
+                                AND end=?
+                                ''', (gene.id, junc[0], junc[1]))
+
+            fetch = query.fetchone()
+            if fetch:
+                yield fetch[0]
+
+    def lsv_exons(self, gene, lsv):
+        rtn_set = set()
+        for junc in lsv.junctions:
+            junc = tuple(map(int, junc))
+            query = self.conn.execute('''
+                                        SELECT start, end FROM exon
+                                        WHERE gene_id=? 
+                                        AND
+                                        (
+                                        (start=-1 AND end=?)
+                                        OR 
+                                        (end=-1 AND start=?)
+                                        OR
+                                        (start!=-1 AND end!=-1 AND ? BETWEEN start AND end)
+                                        OR 
+                                        (start!=-1 AND end!=-1 AND ? BETWEEN start and end)
+                                        )  
+                                        ''', (gene.id, junc[0], junc[1], junc[0], junc[1]))
+            for x in query.fetchall():
+                rtn_set.add(x)
+        return list(sorted(rtn_set))
 
     def gene_experiment(self, gene, experiment_names_list):
         junc_reads = {}

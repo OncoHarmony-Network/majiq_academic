@@ -307,7 +307,7 @@
                             .then(lsvs => {
                                 console.log(lsvs);
                                 if (lsvs.rows.some(r => r.error))
-                                    return table.curate_data(table, results);
+                                    return table.retrieve_data(table, results);
                                 else
                                     return lsvs.rows.map(r => r.doc)
                             })

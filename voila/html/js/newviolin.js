@@ -1,5 +1,3 @@
-
-
 class Violin {
     constructor(db) {
         this.db = db;
@@ -56,15 +54,49 @@ class Violin {
 
                 hist
                     .selectAll('.violin')
-                    .attr('stroke', (d, i) => color.brewer(i))
+                    // .attr('stroke', (d, i) => color.brewer(i))
+                    .attr('stroke', null)
                     .attr('stroke-width', 1)
                     .attr('fill', (d, i) => color.brewer(i))
-                    .attr('fill-opacity', .1);
+                    .attr('fill-opacity', 1);
 
                 this.draw_x_axis(g, results.group_means[group]);
-                this.draw_y_axis(g)
+                this.draw_psi_y_axis(g);
+                this.box_plots(g, results.group_bins[group])
             })
+    }
 
+    deltapsi(svg) {
+        this.db.get(svg.closest('tr').dataset.lsvId)
+            .then(results => {
+                d3.select(svg).selectAll('*').remove();
+                this.violin_count = results.junctions.length;
+                svg.setAttribute('height', this.svg_height);
+                svg.setAttribute('width', this.svg_width);
+
+                const color = new Colors();
+                const g = d3.select(svg)
+                    .append('g')
+                    .attr('transform', `translate(${this.y_axis_width}, ${this.top_padding})`);
+
+                const hist = g
+                    .append('g')
+                    .attr('class', 'histograms');
+
+                this.draw_histograms(hist, results.bins);
+
+                hist
+                    .selectAll('.violin')
+                    // .attr('stroke', (d, i) => color.brewer(i))
+                    .attr('stroke', null)
+                    .attr('stroke-width', 1)
+                    .attr('fill', (d, i) => color.brewer(i))
+                    .attr('fill-opacity', 1);
+
+                this.draw_x_axis(g, results.means);
+                this.draw_dpsi_y_axis(g);
+                this.box_plots(g, results.bins)
+            })
     }
 
     heterogen(el) {
@@ -110,7 +142,7 @@ class Violin {
 
     draw_histograms(g, violin_data) {
         const x = d3.scaleLinear()
-            .rangeRound([0, this.violin_width / 2]);
+            .range([0, this.violin_width / 2]);
 
         const y = d3.scaleLinear()
             .range([this.violin_height, 0]);
@@ -302,96 +334,73 @@ class Violin {
         });
     };
 
-    box_plots() {
-        var mean_psi_fn = this.mean_psi;
-        var junc_idx = this.junc_idx;
-        var height = this.dim.group.height;
-        var width = this.dim.group.width;
-        var plot = this.plot;
-        var r = 3;
-        var v = this;
+    translate_lsv_bins(lsv_bins) {
+        const numSamples = 40;
+        const binsSize = lsv_bins.length;
+        let numCopies;
+        let tmpBins = [];
 
-        var translateLsvBins = function (lsvBins) {
-            var numSamples = 40;
-            var tmpBins = [];
-            var binsSize = lsvBins.length;
-            var numCopies;
-            lsvBins.forEach(function (b, i) {
-                numCopies = Math.round(numSamples * b);
-                tmpBins = tmpBins.concat(new Array(numCopies).fill((1 / binsSize) / 2 + (i / binsSize)))
-            });
-            return tmpBins;
-        };
+        lsv_bins.forEach(function (b, i) {
+            numCopies = Math.round(numSamples * b);
+            tmpBins = tmpBins.concat(new Array(numCopies).fill((1 / binsSize) / 2 + (i / binsSize)))
+        });
+        return tmpBins;
+    };
 
-        this.db.get(this.lsv_id).then(function (data) {
-            mean_psi_fn(data, junc_idx).forEach(function (d, i) {
-                if (d.length) {
-                    var trans_d = translateLsvBins(d);
+    box_plots(svg, data) {
+        data.forEach((d, i) => {
+            const trans_d = this.translate_lsv_bins(d);
 
-                    var q = d3.scaleQuantile()
-                        .domain([0, 1])
-                        .range(trans_d);
+            const q = d3.scaleQuantile()
+                .domain([0, 1])
+                .range(trans_d);
 
-                    var y = d3.scaleLinear()
-                        .domain([0, 1])
-                        .range([height, 0]);
+            const y = d3.scaleLinear()
+                .domain([0, 1])
+                .range([this.violin_height, 0]);
 
-                    var x = d3.scaleLinear()
-                        .domain([0, 1])
-                        .range([0, width]);
+            const x = d3.scaleLinear()
+                .domain([0, 1])
+                .range([0, this.violin_width + this.violin_pad]);
 
-                    var g = plot.append('g')
-                        .attr('transform', v.transform_plot(i));
+            const g = svg.append('g')
+                .attr('transform', `translate(${x(i)})`);
 
-                    g
-                        .selectAll('.h-line')
-                        .data([.05, .5, .95].map(function (d) {
-                            return q(d)
-                        }))
-                        .enter()
-                        .append('line')
-                        .attr('stroke', 'black')
-                        .attr('class', 'h-line')
-                        .attr('x1', x(.4))
-                        .attr('x2', x(.6))
-                        .attr('y1', function (d) {
-                            return y(d)
-                        })
-                        .attr('y2', function (d) {
-                            return y(d)
-                        });
+            g
+                .selectAll('.h-line')
+                .data([.05, .5, .95].map(d => q(d)))
+                .enter()
+                .append('line')
+                .attr('stroke', 'black')
+                .attr('class', 'h-line')
+                .attr('x1', x(.4))
+                .attr('x2', x(.6))
+                .attr('y1', d => y(d))
+                .attr('y2', d => y(d));
 
+            g
+                .append('rect')
+                .attr('stroke-width', 0)
+                .attr('width', x(.55) - x(.45))
+                .attr('height', y(q(.25)) - y(q(.75)))
+                .attr('x', (d, i, a) => x(.5) - (a[i].getAttribute('width') / 2))
+                .attr('y', y(q(.75)));
 
-                    g
-                        .append('rect')
-                        .attr('stroke-width', 0)
-                        .attr('width', x(.55) - x(.45))
-                        .attr('height', y(q(.25)) - y(q(.75)))
-                        .attr('x', function () {
-                            return x(.5) - (this.getAttribute('width') / 2)
-                        })
-                        .attr('y', y(q(.75)));
+            g
+                .append('line')
+                .attr('stroke', 'black')
+                .attr('x1', x(.5))
+                .attr('x2', x(.5))
+                .attr('y1', y(q(.05)))
+                .attr('y2', y(q(.95)));
 
-                    g
-                        .append('line')
-                        .attr('stroke', 'black')
-                        .attr('x1', x(.5))
-                        .attr('x2', x(.5))
-                        .attr('y1', y(q(.05)))
-                        .attr('y2', y(q(.95)));
-
-
-                    g
-                        .append('circle')
-                        .attr('stroke', 'black')
-                        .attr('fill', 'white')
-                        .attr("cx", x(.5))
-                        .attr("cy", y(d3.mean(trans_d)))
-                        .attr("r", r);
-
-
-                }
-            })
+            g
+                .append('circle')
+                .attr('stroke', 'black')
+                .attr('fill', 'white')
+                .attr("cx", x(.5))
+                .attr("cy", y(d3.mean(trans_d)))
+                .attr("r", 3);
         })
     };
 
@@ -410,8 +419,32 @@ class Violin {
             .text(d => parseFloat(d.toPrecision(3)))
     }
 
-    draw_y_axis(svg) {
+    draw_psi_y_axis(svg) {
         var y = d3.scaleLinear().domain([0, 1]).range([this.violin_height, 0]);
+        var height = this.violin_height / 2;
+        var label_pad = -28;
+        var axis = d3.axisLeft(y).ticks(3);
+
+        const g = svg
+            .append('g')
+            .attr('class', 'y-axis');
+
+        g
+            .append('g')
+            .call(axis);
+
+        g
+            .append('text')
+            .text('E(PSI)')
+            .attr('font-size', 12)
+            .attr('text-anchor', 'middle')
+            .attr('transform', 'rotate(-90,' + label_pad + ',' + height + ')')
+            .attr('y', height)
+            .attr('x', label_pad)
+    }
+
+    draw_dpsi_y_axis(svg) {
+        var y = d3.scaleLinear().domain([-1, 1]).range([this.violin_height, 0]);
         var height = this.violin_height / 2;
         var label_pad = -28;
         var axis = d3.axisLeft(y).ticks(3);
@@ -453,7 +486,7 @@ class Violin {
                         return d
                     })
             })
-    };
+    }
 
     y_axis() {
         var y = d3.scaleLinear().domain([0, 1]).range([this.dim.group.height, 0]);
@@ -475,5 +508,5 @@ class Violin {
             .attr('transform', 'rotate(-90,' + label_pad + ',' + height + ')')
             .attr('y', height)
             .attr('x', label_pad)
-    };
+    }
 }

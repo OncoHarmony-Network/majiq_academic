@@ -179,3 +179,18 @@ form.lsv-form label {
     user-select: none;
 }
 
+.excl-incl-rect {
+    width: 200px;
+    margin: 0;
+}
+
+.highlight-form label {
+    text-align: right;
+    display: block;
+    margin-bottom: 10px;
+}
+
+.highlight-form input {
+    margin-left: 10px;
+
+}

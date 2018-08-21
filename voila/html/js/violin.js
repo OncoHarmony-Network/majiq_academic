@@ -238,8 +238,8 @@ Violin.prototype.box_plots = function () {
         return tmpBins;
     };
 
-    this.db.get(this.lsv_id).then(function (data) {
-        mean_psi_fn(data, junc_idx).forEach(function (d, i) {
+    this.db.get(this.lsv_id).then(data => {
+        this.mean_psi(data, junc_idx).forEach((d, i) => {
             if (d.length) {
                 var trans_d = translateLsvBins(d);
 

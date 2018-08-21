@@ -137,6 +137,10 @@ class ViewPsi(Psi, ViewMatrix):
         def means(self):
             yield from unpack_means(self.get('means'))
 
+        # @property
+        # def junctions(self):
+        #     return self.get('junctions')
+
         @property
         def group_means(self):
             group_names = self.matrix_hdf5.group_names
@@ -173,7 +177,7 @@ class ViewPsi(Psi, ViewMatrix):
         def junction_count(self):
             return len(tuple(self.means))
 
-    def psi(self, lsv_id):
+    def lsv(self, lsv_id):
         return self._ViewPsi(self, lsv_id)
 
     def valid_lsvs(self, lsv_ids):
@@ -182,7 +186,7 @@ class ViewPsi(Psi, ViewMatrix):
 
 class ViewDeltaPsi(DeltaPsi, ViewMatrix):
     def __init__(self, args):
-        super().__init__(args.voila_file[0])
+        super().__init__(args.voila_files[0])
         self.args = args
 
     class _ViewDeltaPsi(DeltaPsi._DeltaPsi, ViewMatrix._ViewMatrix):
@@ -190,6 +194,7 @@ class ViewDeltaPsi(DeltaPsi, ViewMatrix):
             super().__init__(matrix_hdf5, lsv_id)
 
         def get_all(self):
+            yield 'gene_id', self.gene_id
             yield 'lsv_id', self.lsv_id
             yield '_id', self.lsv_id
             yield 'reference_exon', self.reference_exon
@@ -202,23 +207,29 @@ class ViewDeltaPsi(DeltaPsi, ViewMatrix):
             yield 'group_bins', dict(self.group_bins)
 
             fields.remove('group_means')
-            yield 'group_means_rounded', dict(self.group_means_rounded)
+            yield 'group_means', dict(self.group_means)
 
             fields.remove('bins')
             yield 'bins', self.bins
-            yield 'means_rounded', self.means_rounded
+            yield 'means', self.means
 
             yield from self.get_many(fields)
 
         @property
         def bins(self):
+            # print('---------------------------------------------------------')
+            # print('---------------------------------------------------------')
+            # print(self.get('bins'))
+            # print('---------------------------------------------------------')
+            # print(unpack_bins(self.get('bins')))
+            # print('---------------------------------------------------------')
+            # print('---------------------------------------------------------')
             return unpack_bins(self.get('bins'))
 
         @property
         def group_bins(self):
             group_names = self.matrix_hdf5.group_names
-            group_bins = self.get('group_bins')
-            for group_name, value in zip(group_names, group_bins):
+            for group_name, value in zip(group_names, self.get('group_bins')):
                 yield group_name, unpack_bins(value)
 
         @property
@@ -227,19 +238,10 @@ class ViewDeltaPsi(DeltaPsi, ViewMatrix):
                 yield get_expected_dpsi(b)
 
         @property
-        def means_rounded(self):
-            return np.around(tuple(self.means), decimals=3)
-
-        @property
         def group_means(self):
-            for value in self.get('group_means'):
-                yield unpack_means(value)
-
-        @property
-        def group_means_rounded(self):
             group_names = self.matrix_hdf5.group_names
-            for group_name, means in zip(group_names, self.group_means):
-                yield group_name, np.around(means, decimals=3)
+            for group_name, means in zip(group_names, self.get('group_means')):
+                yield group_name, means
 
         @property
         def excl_incl(self):
@@ -270,7 +272,7 @@ class ViewDeltaPsi(DeltaPsi, ViewMatrix):
                 R = np.exp(A - scipy.special.logsumexp(A))
                 yield matrix_area(R, non_changing_threshold, non_changing=True)
 
-    def delta_psi(self, lsv_id):
+    def lsv(self, lsv_id):
         return self._ViewDeltaPsi(self, lsv_id)
 
     def valid_lsvs(self, lsv_ids):
@@ -283,7 +285,7 @@ class ViewDeltaPsi(DeltaPsi, ViewMatrix):
             probability_threshold = args.probability_threshold
 
         for lsv_id in super().valid_lsvs(lsv_ids):
-            delta_psi = self.delta_psi(lsv_id)
+            delta_psi = self.lsv(lsv_id)
             if not threshold or delta_psi.is_lsv_changing(threshold):
                 if not probability_threshold or delta_psi.probability_threshold():
                     yield lsv_id

@@ -18,12 +18,12 @@ class Tsv(ABC):
     @staticmethod
     def filter_exons(exons):
         for exon in exons:
-            if exon.start == -1:
-                yield 'nan', exon.end
-            elif exon.end == -1:
-                yield exon.start, 'nan'
+            if exon[0] == -1:
+                yield 'nan', exon[1]
+            elif exon[1] == -1:
+                yield exon[0], 'nan'
             else:
-                yield exon.start, exon.end
+                yield exon
 
     def write_tsv(self, fieldnames, view_matrix):
         log = voila_log()

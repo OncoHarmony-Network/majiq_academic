@@ -9,6 +9,8 @@ class NewTable {
         this.total_pages = 1;
         this.curr_page_rows = 10;
         this.urlParams = new URLSearchParams(document.location.search);
+        this.lsv = new Lsv(db_lsv, db_gene);
+        this.violin = new Violin(db_lsv);
 
         this.next();
         this.previous();
@@ -52,10 +54,13 @@ class NewTable {
         })
     };
 
-    retrieve_data() {
+    filter_data() {
         return new Promise(resolve => {
+
             const filter = {};
+            const gene_id = this.urlParams.get('gene_id');
             const lsv_filter = document.querySelector('.lsv-filters');
+
             lsv_filter.querySelector('#prime-5').checked ? filter.A5SS = true : null;
             lsv_filter.querySelector('#prime-3').checked ? filter.A3SS = true : null;
             lsv_filter.querySelector('#exon-skipping').checked ? filter.exon_skipping = true : null;
@@ -63,7 +68,7 @@ class NewTable {
             lsv_filter.querySelector('#source').checked ? filter.target = false : null;
             lsv_filter.querySelector('#binary').checked ? filter.binary = true : null;
             lsv_filter.querySelector('#complex').checked ? filter.binary = false : null;
-            const gene_id = this.urlParams.get('gene_id');
+
 
             const lsv_ids = lsvs_arr
                 .filter(l => {
@@ -83,17 +88,19 @@ class NewTable {
 
             this.total_pages = Math.ceil(lsv_ids.length / this.curr_page_rows);
 
-            if (this.total_pages < this.page_number)
+            if (this.total_pages < this.page_number || this.page_number === 0)
                 this.page_number = this.total_pages;
 
-            const lsv_ids_page = lsv_ids.slice((this.page_number - 1) * this.curr_page_rows, this.page_number * this.curr_page_rows);
+            const slice_start = (this.page_number - 1) * this.curr_page_rows;
+            const slice_end = this.page_number * this.curr_page_rows;
+            const lsv_ids_page = lsv_ids.slice(slice_start, slice_end);
 
             resolve(lsv_ids_page)
         })
     }
 
 
-    curate_data(results) {
+    retrieve_data(results) {
         const gene_ids = Array.from(new Set(results.map(l => l.gene_id)));
 
         return Promise.all(gene_ids.map(gene_id => this.load_db(gene_id))).then(() => {
@@ -103,7 +110,7 @@ class NewTable {
             })
                 .then(lsvs => {
                     if (lsvs.rows.some(r => r.error))
-                        return this.curate_data(results);
+                        return this.retrieve_data(results);
                     else
                         return lsvs.rows.map(r => r.doc)
                 })
@@ -112,8 +119,8 @@ class NewTable {
 
     update() {
         console.time('update');
-        this.retrieve_data()
-            .then(data => this.curate_data(data))
+        this.filter_data()
+            .then(data => this.retrieve_data(data))
             .then(data => this.show_data(data, this, this.body))
             .then(() => this.update_toolbar())
             .then(() => console.timeEnd('update'));
@@ -169,45 +176,39 @@ class NewTable {
     }
 
     highlight_form(cell, sgs) {
-        const fieldset = cell
-            .append('form')
+        const div = cell.append('div')
+            .attr('class', 'highlight-form');
+
+        div.append('div')
+            .append('label')
+            .text('Highlight')
+            .append('input')
+            .attr('class', 'highlight')
+            .attr('type', 'checkbox')
             .on('change', () => {
-                const hl = Array.from(document.querySelectorAll('input#highlight:checked'))
+                const hl = Array.from(document.querySelectorAll('input.highlight:checked'))
                     .map(el => el.closest('tr').dataset.lsvId);
-                const w = Array.from(document.querySelectorAll('input#psi-weighted:checked'))
+                const w = Array.from(document.querySelectorAll('input.psi-weighted:checked'))
                     .map(el => el.closest('tr').dataset.lsvId);
                 sgs.highlight(hl, w);
-            })
-            .attr('class', 'lsv-form pure-form pure-form-aligned')
-            .append('fieldset');
+            });
 
+        div.append('div')
+            .append('label')
 
-        const highlight = fieldset.append('div')
-            .attr('class', 'pure-control-group');
-
-        highlight.append('label')
-            .attr('for', 'highlight')
-            .text('Highlight');
-
-        highlight.append('input')
-            .attr('id', 'highlight')
-            .attr('type', 'checkbox');
-
-        const psi_weighted = fieldset.append('div')
-            .attr('class', 'pure-control-group');
-
-        psi_weighted.append('label')
-            .attr('for', 'psi-weighted')
-            .text('PSI Weighted');
-
-        psi_weighted.append('input')
-            .attr('id', 'psi-weighted')
+            .text('PSI Weighted')
+            .append('input')
+            .attr('class', 'psi-weighted')
             .attr('type', 'checkbox')
             .on('change', (d, i, a) => {
-                if (a[i].checked)
-                    a[i].closest('fieldset').querySelector('input#highlight').checked = true;
-            });
+                if (a[i].checked) {
+                    const hl = a[i].closest('.highlight-form').querySelector('.highlight');
+                    hl.checked = true;
+                    hl.dispatchEvent(new Event('change'))
+                }
+            })
     }
+
 
     ucsc_link(els) {
         return els
@@ -225,4 +226,55 @@ class NewTable {
             })
     };
 
+    psi_summary(canvases, svgs, group_name) {
+
+        canvases
+            .each((d, i, a) => {
+                const canvas = a[i];
+                canvas.dataset.group = group_name;
+                this.lsv.draw_lsv_compact_stack_bars(canvas, 1);
+                canvas.onclick = () => {
+                    const violin = canvas.parentNode.querySelector('.psi-violin-plot');
+                    violin.style.display = 'block';
+                    canvas.style.display = 'none';
+                }
+            });
+
+        svgs.each((d, i, a) => {
+            const v = a[i];
+            v.dataset.group = group_name;
+            v.style.display = 'None';
+            this.violin.psi(v);
+            v.onclick = () => {
+                const comp = v.parentNode.querySelector('.lsv-single-compact-percentiles');
+                v.style.display = 'none';
+                comp.style.display = 'block';
+            }
+        });
+    }
+
+    dpsi_summary(excl_incl, dpsi_violin) {
+        excl_incl
+            .each((d, i, a) => {
+                const e = a[i];
+                this.lsv.draw_delta_lsv_compact_svg(e, d);
+                e.onclick = () => {
+                    const v = e.parentNode.querySelector('.deltapsi-violin-plot');
+                    e.style.display = 'none';
+                    v.style.display = 'block'
+                }
+            });
+
+        dpsi_violin
+            .each((d, i, a) => {
+                const v = a[i];
+                this.violin.deltapsi(v);
+                v.style.display = 'none';
+                v.onclick = () => {
+                    const e = v.parentNode.querySelector('.excl-incl-rect');
+                    v.style.display = 'none';
+                    e.style.display = 'block'
+                }
+            });
+    }
 }

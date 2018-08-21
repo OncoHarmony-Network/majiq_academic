@@ -6,11 +6,13 @@ import uuid
 from abc import abstractmethod, ABC
 from distutils.dir_util import copy_tree
 
+import jinja2
 import numpy
 from jinja2 import Environment, FileSystemLoader, StrictUndefined
 
+import voila
 from voila import constants
-from voila.api.view_splice_graph import ViewSpliceGraph
+from voila.api.view_splice_graph_sqlite import ViewSpliceGraph
 from voila.constants import EXEC_DIR
 from voila.processes import VoilaPool
 from voila.utils import utils_voila
@@ -31,10 +33,12 @@ class NumpyEncoder(json.JSONEncoder):
 
 
 class Html(ABC):
-    def __init__(self, args):
+    def __init__(self, args, matrix):
         self.args = args
         self.voila_links = {}
         self._database_name = None
+        self.db_id = uuid.uuid4().hex
+        self.matrix = matrix
 
     def database_name(self):
         if self._database_name is None:
@@ -152,10 +156,6 @@ class Html(ABC):
                 return ideal_set[0:index]
         return ideal_set
 
-    @abstractmethod
-    def render_dbs(self):
-        pass
-
     def create_gene_db(self, gene_ids, view_matrix, data_type):
         template = self.get_env().get_template('gene_db_template.html')
         log = voila_log()
@@ -205,10 +205,6 @@ class Html(ABC):
 
         [res.get() for res in multiple_results]
 
-    @abstractmethod
-    def create_summary(self, paged):
-        pass
-
     def create_summaries(self, view_matrix):
         log = voila_log()
         log.info('Render Delta PSI HTML summaries')
@@ -229,3 +225,111 @@ class Html(ABC):
             log.debug('get pool results')
             for res in multiple_results:
                 self.voila_links.update(res.get())
+
+    def render_html(self, index_html, summary_html):
+        exec_dir = os.path.dirname(os.path.abspath(voila.__file__))
+        template_dir = os.path.join(exec_dir, 'html')
+        env = jinja2.Environment(extensions=["jinja2.ext.do"], loader=jinja2.FileSystemLoader(template_dir),
+                                 undefined=jinja2.StrictUndefined)
+
+        index_template = env.get_template(index_html)
+        summary_template = env.get_template(summary_html)
+
+        with open(os.path.join(self.args.output, 'index.html'), 'w') as index:
+            index.write(index_template.render({
+                'db_id': self.db_id
+            }))
+
+        with open(os.path.join(self.args.output, 'summary.html'), 'w') as summary:
+            summary.write(summary_template.render({
+                'db_id': self.db_id
+            }))
+
+    def render_dbs(self):
+        log = voila_log()
+
+        log.debug('Create metadata file')
+        with open(os.path.join(self.args.output, 'metadata.js'), 'w') as f:
+            with self.matrix(self.args) as h:
+                metadata = json.dumps(h.view_metadata, cls=NumpyEncoder)
+                f.write('new PouchDB(\'voila_gene_{}\').bulkDocs(['.format(self.db_id))
+                f.write(metadata)
+                f.write(',')
+                f.write(']);')
+
+                f.write('new PouchDB(\'voila_lsv_{}\').bulkDocs(['.format(self.db_id))
+                f.write(metadata)
+                f.write(',')
+                f.write(']);')
+
+                f.write('\n')
+
+                f.write('const lsvs_arr = [')
+
+                for lsv_id in h.view_lsv_ids():
+                    lsv = h.psi(lsv_id)
+                    f.write(json.dumps({
+                        '_id': lsv.lsv_id,
+                        'target': lsv.target,
+                        'binary': lsv.binary,
+                        'exon_skipping': lsv.exon_skipping,
+                        'A5SS': lsv.a5ss,
+                        'A3SS': lsv.a3ss,
+                        'gene_id': lsv.gene_id
+                    }))
+                    f.write(',')
+                f.write('];')
+
+        with VoilaPool() as pool:
+            with self.matrix(self.args) as h:
+                gene_ids = list(h.view_gene_ids())
+                chunked_gene_ids = Html.chunkify(gene_ids, pool.processes)
+
+            for p in [pool.apply_async(self.dbs, (gene_ids,)) for gene_ids in chunked_gene_ids]:
+                p.get()
+
+    def dbs(self, gene_ids):
+        log = voila_log()
+        for gene_id in gene_ids:
+            with open(os.path.join(self.args.output, '{}.js'.format(gene_id)), 'w') as f:
+                with self.matrix(self.args) as h, ViewSpliceGraph(self.args) as sg:
+                    metadata = h.view_metadata
+                    exp_name = metadata['experiment_names']
+                    lsv_ids = h.view_gene_lsvs(gene_id)
+
+                    f.write('new PouchDB(\'voila_gene_{}\').bulkDocs(['.format(self.db_id))
+
+                    log.debug('Write DB Gene ID: {}'.format(gene_id))
+
+                    gene = sg.gene(gene_id)
+                    gene_exp = sg.gene_experiment(gene, exp_name)
+                    text = json.dumps(gene_exp)
+
+                    f.write(text)
+                    f.write(',')
+
+                    del gene
+                    del gene_exp
+                    del text
+
+                    f.write(']);')
+                    f.write('\n')
+
+                    if lsv_ids:
+                        f.write('new PouchDB(\'voila_lsv_{}\').bulkDocs(['.format(self.db_id))
+
+                        for lsv_id in lsv_ids:
+                            log.debug('Write DB LSV ID: {}'.format(lsv_id))
+
+                            lsv = h.lsv(lsv_id).get_all()
+                            lsv_dict = dict(lsv)
+                            text = json.dumps(lsv_dict, cls=NumpyEncoder)
+
+                            f.write(text)
+                            f.write(',')
+
+                            del lsv
+                            del lsv_dict
+                            del text
+
+                        f.write(']);')

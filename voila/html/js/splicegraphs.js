@@ -681,6 +681,13 @@ class SpliceGraphs {
         })
     }
 
+    dpsi_localstorage() {
+        return this.db_gene.get('metadata').then(results => {
+            this.add_localstorage(results.group_names[0], results.experiment_names[0][0]);
+            this.add_localstorage(results.group_names[1], results.experiment_names[1][0])
+        })
+    }
+
     add_localstorage(group, experiment) {
         const sg_key = 'splice_graphs';
         let sg = JSON.parse(localStorage.getItem(sg_key));

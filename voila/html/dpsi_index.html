@@ -33,13 +33,14 @@
     </script>
     <script>
         window.onload = function () {
-            document.querySelector('.search').oninput = (event) => {
-                const x = lsvs_arr
-                    .filter(l => l.gene_id.includes(event.target.value))
-                    .map(l => l.gene_id);
-                console.log(x)
-            };
-
+            /*
+                        document.querySelector('.search').oninput = (event) => {
+                            const x = new Set(lsvs_arr
+                                .filter(l => l.gene_id.includes(event.target.value))
+                                .map(l => l.gene_id));
+                            console.log(x)
+                        };
+            */
             const lsv = new Lsv(db_lsv, db_gene);
             const violin = new Violin(db_lsv);
             const t = new NewTable('#results', db_gene, db_lsv, {
@@ -142,44 +143,18 @@
                             lsv.cartoon(a[i], d._id)
                         });
 
-                    // summary
-                    const summary = trs
-                        .append('td')
-                        .attr('class', 'summary');
+                    // changes
+                    const changes = trs.append('td');
 
-                    summary
-                        .append('canvas')
-                        .attr('class', 'lsv-single-compact-percentiles')
-                        .each((d, i, a) => {
-                            db_lsv.get('metadata').then(metadata => {
-                                const canvas = a[i];
-                                canvas.dataset.group = metadata.group_names[0];
-                                lsv.draw_lsv_compact_stack_bars(canvas, 1);
-                                canvas.onclick = () => {
-                                    const violin = canvas.parentNode.querySelector('.psi-violin-plot');
-                                    violin.style.display = 'block';
-                                    canvas.style.display = 'none';
-                                }
-                            });
-                        });
+                    const excl_incl = changes
+                        .append('div')
+                        .attr('class', 'excl-incl-rect');
 
-                    summary
+                    const dpsi_violin = changes
                         .append('svg')
-                        .attr('class', 'psi-violin-plot')
-                        .each((d, i, a) => {
-                            db_lsv.get('metadata').then(metadata => {
-                                const v = a[i];
-                                v.dataset.group = metadata.group_names[0];
-                                v.style.display = 'None';
-                                violin.psi(v);
-                                v.onclick = () => {
-                                    const comp = v.parentNode.querySelector('.lsv-single-compact-percentiles');
-                                    v.style.display = 'none';
-                                    comp.style.display = 'block';
+                        .attr('class', 'deltapsi-violin-plot');
 
-                                }
-                            });
-                        });
+                    table.dpsi_summary(excl_incl, dpsi_violin);
 
                     // links
                     table.ucsc_link(
@@ -296,7 +271,7 @@
                 <th>Gene Name</th>
                 <th>LSV ID</th>
                 <th>LSV Type</th>
-                <th>Ψ per Junction</th>
+                <th>More | More</th>
                 <th>Links</th>
             </tr>
             </thead>

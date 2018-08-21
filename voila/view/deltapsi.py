@@ -1,16 +1,17 @@
 import csv
+import json
 import os
 from multiprocessing import Lock
 
 import numpy as np
 
 from voila import constants
-from voila.api.matrix_hdf5 import lsv_id_to_gene_id
 from voila.api.view_matrix import ViewDeltaPsi
-from voila.api.view_splice_graph import ViewSpliceGraph
+from voila.api.view_splice_graph_sqlite import ViewSpliceGraph
 from voila.exceptions import NotDeltaPsiVoilaFile
+from voila.processes import VoilaPool
 from voila.utils.voila_log import voila_log
-from voila.view.html import Html
+from voila.view.html import Html, NumpyEncoder
 from voila.view.tsv import Tsv
 from voila.vlsv import matrix_area
 
@@ -19,108 +20,110 @@ lock = Lock()
 
 class DeltaPsi(Html, Tsv):
     def __init__(self, args):
-        super(DeltaPsi, self).__init__(args)
+        super().__init__(args, ViewDeltaPsi)
+
         with ViewDeltaPsi(args) as m:
             if m.analysis_type != constants.ANALYSIS_DELTAPSI:
-                raise NotDeltaPsiVoilaFile(args.voila_file)
+                raise NotDeltaPsiVoilaFile(args)
             self.view_metadata = m.view_metadata
 
         if not args.disable_html:
             self.copy_static()
-            self.render_dbs()
-            self.render_summaries()
-            self.render_index()
+            if not args.disable_db:
+                self.render_dbs()
+            self.render_html('dpsi_index.html', 'dpsi_summary.html')
 
         if not args.disable_tsv:
             self.delta_psi_tab_output()
 
-    def render_index(self):
+    def dbs(self, gene_ids):
         log = voila_log()
-        log.info('Render Delta PSI HTML index')
-        log.debug('Start index render')
-        args = self.args
-        metadata = self.view_metadata
+        for gene_id in gene_ids:
+            with open(os.path.join(self.args.output, '{}.js'.format(gene_id)), 'w') as f:
+                with ViewDeltaPsi(self.args) as h, ViewSpliceGraph(self.args) as sg:
+                    metadata = h.view_metadata
+                    exp_name = metadata['experiment_names']
+                    lsv_ids = h.view_gene_lsvs(gene_id)
 
-        with ViewSpliceGraph(args) as sg, ViewDeltaPsi(args) as m:
-            lsv_count = m.view_lsv_count()
-            too_many_lsvs = lsv_count > constants.MAX_LSVS_DELTAPSI_INDEX
+                    f.write('new PouchDB(\'voila_gene_{}\').bulkDocs(['.format(self.db_id))
 
-            with open(os.path.join(args.output, 'het_index.html'), 'w') as html:
-                index_template = self.get_env().get_template('index_delta_summary_template.html')
-                html.write(
-                    index_template.render(
-                        lexps=metadata,
-                        table_marks=self.table_marks_set(lsv_count),
-                        lsvs_count=lsv_count,
-                        prev_page=None,
-                        next_page=None,
-                        database_name='deltapsi_' + self.database_name(),
-                        lsvs=list(m.delta_psi(lsv_id) for lsv_id in m.view_lsv_ids()),
-                        genes=sg.gene,
-                        gene_ids=set(lsv_id_to_gene_id(lsv_id) for lsv_id in m.view_lsv_ids()),
-                        links=self.voila_links,
-                        too_many_lsvs=too_many_lsvs,
-                        metadata=metadata,
-                        genome=sg.genome,
-                        lsv_text_version=constants.LSV_TEXT_VERSION,
-                        threshold=args.threshold
-                    )
-                )
+                    log.debug('Write DB Gene ID: {}'.format(gene_id))
 
-                log.debug('End index render')
+                    gene = sg.gene(gene_id)
+                    gene_exp = sg.gene_experiment(gene, exp_name)
+                    text = json.dumps(gene_exp)
 
-    def create_summary(self, paged):
-        metadata = self.view_metadata
-        args = self.args
-        database_name = self.database_name()
-        summary_template = self.get_env().get_template("deltapsi_summary_template.html")
-        summaries_subfolder = self.get_summaries_subfolder(args)
-        group_names = metadata['group_names']
-        links = {}
+                    f.write(text)
+                    f.write(',')
 
-        with ViewSpliceGraph(args) as sg, ViewDeltaPsi(args) as m:
-            genome = sg.genome
-            page_count = m.page_count()
+                    del gene
+                    del gene_exp
+                    del text
 
-            for index, gene_ids in paged:
-                page_name = self.get_page_name(args, index)
-                next_page = self.get_next_page(args, index, page_count)
-                prev_page = self.get_prev_page(args, index)
+                    f.write(']);')
+                    f.write('\n')
 
-                lsv_dict = {gene_id: tuple(lsv_id for lsv_id in m.view_gene_lsvs(gene_id)) for
-                            gene_id in gene_ids}
-                table_marks = tuple(self.table_marks_set(len(gene_set)) for gene_set in lsv_dict)
+                    if lsv_ids:
+                        f.write('new PouchDB(\'voila_lsv_{}\').bulkDocs(['.format(self.db_id))
 
-                with open(os.path.join(summaries_subfolder, page_name), 'w') as html:
-                    html.write(
-                        summary_template.render(
-                            page_name=page_name,
-                            threshold=args.threshold,
-                            lsv_text_version=constants.LSV_TEXT_VERSION,
-                            table_marks=table_marks,
-                            prev_page=prev_page,
-                            next_page=next_page,
-                            gtf=args.gtf,
-                            group_names=group_names,
-                            genes=list(sg.genes(gene_ids)),
-                            lsv_ids=lsv_dict,
-                            delta_psi_lsv=m.delta_psi,
-                            metadata=metadata,
-                            database_name=database_name,
-                            genome=genome,
-                            splice_graph=sg
-                        )
-                    )
+                        for lsv_id in lsv_ids:
+                            log.debug('Write DB LSV ID: {}'.format(lsv_id))
 
-                links.update(self.get_voila_links(lsv_dict, page_name))
+                            lsv = h.lsv(lsv_id).get_all()
+                            lsv_dict = dict(lsv)
+                            text = json.dumps(lsv_dict, cls=NumpyEncoder)
 
-            return links
+                            f.write(text)
+                            f.write(',')
 
-    def render_summaries(self):
-        self.create_summaries(ViewDeltaPsi)
+                            del lsv
+                            del lsv_dict
+                            del text
+
+                        f.write(']);')
 
     def render_dbs(self):
-        self.create_db_files(ViewDeltaPsi, 'delta_psi')
+        log = voila_log()
+
+        log.debug('Create metadata file')
+        with open(os.path.join(self.args.output, 'metadata.js'), 'w') as f:
+            with ViewDeltaPsi(self.args) as h:
+                metadata = json.dumps(h.view_metadata, cls=NumpyEncoder)
+                f.write('new PouchDB(\'voila_gene_{}\').bulkDocs(['.format(self.db_id))
+                f.write(metadata)
+                f.write(',')
+                f.write(']);')
+
+                f.write('new PouchDB(\'voila_lsv_{}\').bulkDocs(['.format(self.db_id))
+                f.write(metadata)
+                f.write(',')
+                f.write(']);')
+
+                f.write('\n')
+
+                f.write('const lsvs_arr = [')
+
+                for lsv_id in h.view_lsv_ids():
+                    lsv = h.lsv(lsv_id)
+                    f.write(json.dumps({
+                        '_id': lsv.lsv_id,
+                        'target': lsv.target,
+                        'binary': lsv.binary,
+                        'exon_skipping': lsv.exon_skipping,
+                        'A5SS': lsv.a5ss,
+                        'A3SS': lsv.a3ss,
+                        'gene_id': lsv.gene_id
+                    }))
+                    f.write(',')
+                f.write('];')
+
+        with VoilaPool() as pool:
+            with ViewDeltaPsi(self.args) as h:
+                gene_ids = list(h.view_gene_ids())
+                chunked_gene_ids = Html.chunkify(gene_ids, pool.processes)
+
+            for p in [pool.apply_async(self.dbs, (gene_ids,)) for gene_ids in chunked_gene_ids]:
+                p.get()
 
     def tsv_row(self, gene_ids, tsv_file, fieldnames):
         voila_links = self.voila_links
@@ -135,15 +138,17 @@ class DeltaPsi(Html, Tsv):
             with open(tsv_file, 'a') as tsv:
                 writer = csv.DictWriter(tsv, fieldnames=fieldnames, delimiter='\t')
 
-                for gene in sg.genes(gene_ids):
+                for gene_id in gene_ids:
+                    gene = sg.gene(gene_id)
                     for lsv_id in m.view_gene_lsvs(gene.id):
                         log.debug('Write TSV row for {0}'.format(lsv_id))
-                        lsv = m.delta_psi(lsv_id)
 
-                        lsv_junctions = list(gene.lsv_junctions(lsv))
-                        lsv_exons = list(gene.lsv_exons(lsv))
-                        group_means = list(lsv.group_means)
+                        lsv = m.lsv(lsv_id)
+                        lsv_junctions = lsv.junctions
+                        annot_juncs = sg.annotated_junctions(gene, lsv)
+                        lsv_exons = sg.lsv_exons(gene, lsv)
                         excl_incl = list(lsv.excl_incl)
+                        group_means = dict(lsv.group_means)
 
                         row = {
                             '#Gene Name': gene.name,
@@ -157,11 +162,9 @@ class DeltaPsi(Html, Tsv):
                             'Num. Exons': lsv.exon_count,
                             'chr': gene.chromosome,
                             'strand': gene.strand,
-                            'De Novo Junctions': self.semicolon_join(
-                                int(not junc.annotated) for junc in lsv_junctions
-                            ),
+                            'De Novo Junctions': self.semicolon_join(annot_juncs),
                             'Junctions coords': self.semicolon_join(
-                                '{0}-{1}'.format(junc.start, junc.end) for junc in lsv_junctions
+                                '{0}-{1}'.format(start, end) for start, end in lsv_junctions
                             ),
                             'Exons coords': self.semicolon_join(
                                 '{0}-{1}'.format(start, end) for start, end in self.filter_exons(lsv_exons)
@@ -181,10 +184,10 @@ class DeltaPsi(Html, Tsv):
                                 lsv.high_probability_non_changing()
                             ),
                             '%s E(PSI)' % group1: self.semicolon_join(
-                                '%.3f' % i for i in group_means[0]
+                                '%.3f' % i for i in group_means[group1]
                             ),
                             '%s E(PSI)' % group2: self.semicolon_join(
-                                '%.3f' % i for i in group_means[1]
+                                '%.3f' % i for i in group_means[group2]
                             )
                         }
 
@@ -213,4 +216,4 @@ class DeltaPsi(Html, Tsv):
         if voila_links:
             fieldnames.append('Voila link')
 
-        self.write_tsv(fieldnames)
+        self.write_tsv(fieldnames, ViewDeltaPsi)
