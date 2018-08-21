@@ -138,6 +138,9 @@ cdef void _core_deltapsi(object self):
                            <np.float32_t *> o_mupsi_1.data, <np.float32_t *> o_mupsi_2.data,
                            <np.float32_t *> o_postpsi_1.data, <np.float32_t *> o_postpsi_2.data,
                            <np.float32_t *> o_postdeltapsi.data, msamples, nways, nbins, is_ir)
+        with gil:
+            for kk in range(nways):
+                print (o_postdeltapsi[kk], o_mupsi_1[kk], o_mupsi_2[kk])
 
     logger.info('Computation done, saving results....')
     with Matrix(get_quantifier_voila_filename(self.outDir, self.names, deltapsi=True), 'w') as out_h5p:

@@ -124,7 +124,7 @@ void deltapsi_posterior(vector<psi_distr_t>& i_psi1, vector<psi_distr_t>& i_psi2
             float jnc_val = i_psi1[j][m] ;
             float all_val = all_m1[m] ;
             float * psi_lkh1 =  (float*) calloc(nbins, sizeof(float)) ;
-            temp_mupsi2[m] = calc_mupsi(jnc_val, all_val, alpha, beta) ;
+            temp_mupsi1[m] = calc_mupsi(jnc_val, all_val, alpha, beta) ;
             prob_data_sample_given_psi(psi_lkh1, jnc_val, all_val, psi_border, nbins, alpha, beta) ;
 
             jnc_val = i_psi2[j][m] ;
@@ -192,17 +192,10 @@ void get_samples_from_psi(vector<psi_distr_t>& i_psi, float* osamps, float* o_mu
                             int psi_samples, int j_offset, psi_distr_t psi_border, int njunc, int msamples, int nbins){
 
     vector<psi_distr_t> alpha_beta_prior(njunc, psi_distr_t(2)) ;
-
-//    const float bsize = 1.0 / nbins ;
-//    vector<float> psi_border vector(nbins) ;
-//    for(int i=0; i<=nbins; i++){
-//        psi_border[i] = i*bsize ;
-//    }
     vector<float> psi_space(nbins) ;
     for(int i=0; i<nbins; i++){
         psi_space[i] = (psi_border[i] + psi_border[i+1]) / 2 ;
     }
-
 
     float * all_m = (float*) calloc(msamples, sizeof(float)) ;
     for (int j=0; j<njunc; j++){
@@ -280,16 +273,6 @@ void test_calc(float* oPvals, vector<float*> samples1, vector<float*> samples2, 
                 labels.push_back(0) ;
             }
 
-
-//            for( const auto& v: samples1[j][s]){
-//                csamps.push_back(v) ;
-//                labels.push_back(0) ;
-//            }
-//            for( const auto& v: samples2[j][s]){
-//                csamps.push_back(v) ;
-//                labels.push_back(1) ;
-//            }
-
             auto p = sort_permutation <float>(csamps, less<float>() ) ;
 
             csamps = apply_permutation(csamps, p);
@@ -303,40 +286,3 @@ void test_calc(float* oPvals, vector<float*> samples1, vector<float*> samples2, 
 
     }
 }
-
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//    cts = [insamps[0].shape[0], insamps[1].shape[0]]
-//    # lsv_id, lsv_type = lsv_attrs
-//    # samps = []
-//    # cts = []
-//    # for grp in samples.values():
-//    #     cts.append(len(grp))
-//    #     samps.append(grp)
-//    samps = np.concatenate(insamps, axis=0)
-//    labels = np.concatenate((np.zeros(cts[0]), np.ones(cts[1])), axis=0).astype(int)
-//    nfiles, njuncs, nsamples = samps.shape
-//    outstats = np.ones(shape=(njuncs, len(stats)))
-//    if all([nsamps >= minsamps for nsamps in cts]):
-//        for jn_idx in range(njuncs):
-//            cur_output = np.zeros(shape=(len(stats), nsamples))
-//            for samp_idx in range(nsamples):
-//                csamps = samps[:, jn_idx, samp_idx]
-//                clabels = labels[csamps != -1]
-//                npos = clabels.sum()
-//                nneg = clabels.size - npos
-//                if npos < minsamps or nneg < minsamps:
-//                    continue
-//                csamps = csamps[csamps != -1]
-//                asort = csamps.argsort()
-//                csamps = csamps[asort]
-//                clabels = clabels[asort]
-//                for stat_idx, stat_name in enumerate(stats):
-//                    cur_output[stat_idx, samp_idx] = operator[stat_name].operator(csamps, clabels)
