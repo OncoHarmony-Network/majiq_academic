@@ -107,6 +107,10 @@ class Lsv {
                 fields: ['lsv_type', 'gene_id', 'reference_exon']
             })
         }).then(results => {
+            //clear canvas
+            const context = canvas.getContext('2d');
+            context.clearRect(0, 0, canvas.width, canvas.height);
+
             d3.select(canvas)
                 .datum(results.docs[0])
                 .attr('class', 'lsv-legend')

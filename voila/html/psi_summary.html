@@ -44,16 +44,16 @@
                         .append('td')
                         .attr('class', 'summary');
 
-                    const canvases = summary
-                        .append('canvas')
-                        .attr('class', 'lsv-single-compact-percentiles');
-
-                    const svgs = summary
-                        .append('svg')
-                        .attr('class', 'psi-violin-plot');
-
                     db_lsv.get('metadata').then(metadata => {
-                        table.psi_summary(canvases, svgs, metadata.group_names[0]);
+                        summary
+                            .append('canvas')
+                            .attr('class', 'lsv-single-compact-percentiles')
+                            .each((d, i, a) => table.psi_summary_compact(a[i], metadata.group_names[0]));
+
+                        summary
+                            .append('svg')
+                            .attr('class', 'psi-violin-plot')
+                            .each((d, i, a) => table.psi_summary_violin(a[i], metadata.group_names[0]));
                     });
 
 
@@ -75,21 +75,11 @@
                             tds[1].innerHTML = d._id;
 
                             // lsv type
-                            let canvas = tds[2].querySelector('canvas');
-                            let context = canvas.getContext('2d');
-                            context.clearRect(0, 0, canvas.width, canvas.height);
-                            lsv.cartoon(canvas, d._id);
+                            lsv.cartoon(tds[2].querySelector('canvas'), d._id);
 
                             // psi per junction
-                            canvas = tds[3].querySelector('canvas');
-                            context = canvas.getContext('2d');
-                            context.clearRect(0, 0, canvas.width, canvas.height);
-                            lsv.draw_lsv_compact_stack_bars(canvas, 1);
-                            canvas.style.display = 'block';
-
-                            const svg = tds[3].querySelector('svg');
-                            svg.style.display = 'None';
-                            violin.psi(svg);
+                            table.psi_summary_compact(tds[3].querySelector('canvas'));
+                            table.psi_summary_violin(tds[3].querySelector('svg'));
 
                             table.ucsc_link(d3.select(a[i]).selectAll('.links a').datum(d))
                         })

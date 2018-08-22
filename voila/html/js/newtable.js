@@ -226,55 +226,47 @@ class NewTable {
             })
     };
 
-    psi_summary(canvases, svgs, group_name) {
-
-        canvases
-            .each((d, i, a) => {
-                const canvas = a[i];
-                canvas.dataset.group = group_name;
-                this.lsv.draw_lsv_compact_stack_bars(canvas, 1);
-                canvas.onclick = () => {
-                    const violin = canvas.parentNode.querySelector('.psi-violin-plot');
-                    violin.style.display = 'block';
-                    canvas.style.display = 'none';
-                }
-            });
-
-        svgs.each((d, i, a) => {
-            const v = a[i];
-            v.dataset.group = group_name;
-            v.style.display = 'None';
-            this.violin.psi(v);
-            v.onclick = () => {
-                const comp = v.parentNode.querySelector('.lsv-single-compact-percentiles');
-                v.style.display = 'none';
-                comp.style.display = 'block';
-            }
-        });
+    psi_summary_compact(canvas, group_name) {
+        if (group_name)
+            canvas.dataset.group = group_name;
+        canvas.style.display = 'block';
+        this.lsv.draw_lsv_compact_stack_bars(canvas, 1);
+        canvas.onclick = () => {
+            const violin = canvas.parentNode.querySelector('.psi-violin-plot');
+            violin.style.display = 'block';
+            canvas.style.display = 'none';
+        }
     }
 
-    dpsi_summary(excl_incl, dpsi_violin) {
-        excl_incl
-            .each((d, i, a) => {
-                const e = a[i];
-                this.lsv.draw_delta_lsv_compact_svg(e, d);
-                e.onclick = () => {
-                    const v = e.parentNode.querySelector('.deltapsi-violin-plot');
-                    e.style.display = 'none';
-                    v.style.display = 'block'
-                }
-            });
+    psi_summary_violin(svg, group_name) {
+        if (group_name)
+            svg.dataset.group = group_name;
+        svg.style.display = 'None';
+        this.violin.psi(svg);
+        svg.onclick = () => {
+            const comp = svg.parentNode.querySelector('.lsv-single-compact-percentiles');
+            svg.style.display = 'none';
+            comp.style.display = 'block';
+        }
+    }
 
-        dpsi_violin
-            .each((d, i, a) => {
-                const v = a[i];
-                this.violin.deltapsi(v);
-                v.style.display = 'none';
-                v.onclick = () => {
-                    const e = v.parentNode.querySelector('.excl-incl-rect');
-                    v.style.display = 'none';
-                    e.style.display = 'block'
-                }
-            });
+    dpsi_summary_excl_incl(div, datum) {
+        div.style.display = 'block';
+        this.lsv.draw_delta_lsv_compact_svg(div, datum);
+        div.onclick = () => {
+            const svg = div.parentNode.querySelector('.deltapsi-violin-plot');
+            div.style.display = 'none';
+            svg.style.display = 'block'
+        }
+    }
+
+    dpsi_summary_violin(svg) {
+        this.violin.deltapsi(svg);
+        svg.style.display = 'none';
+        svg.onclick = () => {
+            const div = svg.parentNode.querySelector('.excl-incl-rect');
+            svg.style.display = 'none';
+            div.style.display = 'block'
+        }
     }
 }
