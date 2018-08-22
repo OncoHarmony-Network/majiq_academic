@@ -64,7 +64,7 @@ cdef int _output_lsv_file_single(vector[LSV*] out_lsvlist, string experiment_nam
 
     cdef int nlsv = out_lsvlist.size()
 
-    cdef int njunc
+    cdef unsigned int njunc
     cdef Jinfo jobj_ptr
     cdef map[string, Jinfo] tlb_juncs
     cdef map[string, Jinfo] tlb_ir
@@ -400,6 +400,7 @@ cdef _core_build(str transcripts, list file_list, object conf, object logger):
         nlsv = gg.detect_lsvs(out_lsvlist)
 
     logger.info("%s LSV found" % out_lsvlist.size())
+
     for i in prange(nsamples, nogil=True, num_threads=nthreads):
         with gil:
             fname = file_list[i][0].encode('utf-8')

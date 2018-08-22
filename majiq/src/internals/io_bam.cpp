@@ -287,7 +287,7 @@ namespace io_bam {
 //cout << "iniT norm stacks " << sreads<< ": " << npos <<": " << pvalue_limit<< "\n" ;
         const float mean_reads = sreads/npos ;
         if (fitfunc_r == 0.0){
-            for (int i=0; i<vec.size(); i++){
+            for (int i=0; i<(int)vec.size(); i++){
                 const float pvalue = 1 - scythe::ppois(vec[i], mean_reads) ;
                 if (pvalue< pvalue_limit){
                     vec.erase(vec.begin() + i) ;
@@ -338,8 +338,10 @@ namespace io_bam {
                 float lambda = 0;
                 for (int k=0; k<ksamples; k++)lambda += vec[distribution(generator)] ;
                 lambda /= ksamples ;
-                *p = (lambda * npos) ;
-                p++ ;
+                const int idx2d = (jidx*msamples) + m ;
+                boots[idx2d] = (lambda * npos) ;
+//                *p = (lambda * npos) ;
+//                p++ ;
             }
         }
 //cout << "OUT BOOTSTRAP\n" ;

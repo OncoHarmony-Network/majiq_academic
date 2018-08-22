@@ -23,8 +23,8 @@ linker_args = ['-lgomp']
 
 if sys.platform == 'darwin':
     pass
-    compile_args.append('-stdlib=libc++')
-    linker_args = ['-L/usr/local/opt/llvm/lib'] + linker_args
+    # compile_args.append('-stdlib=libc++')
+    # linker_args = ['-L/usr/local/opt/llvm/lib'] + linker_args
 else:
     compile_args.append('-std=c++11')
 
