@@ -180,14 +180,6 @@ void deltapsi_posterior(vector<psi_distr_t>& i_psi1, vector<psi_distr_t>& i_psi2
 }
 
 
-/*void deltapsi_posterior(vector<psi_distr_t>& i_psi1, vector<psi_distr_t>& i_psi2, float* prior_matrix,
-                        float* o_mupsi1, float* o_mupsi2, float* o_postpsi1, float* o_postpsi2,
-                        float* o_posterior_dpsi, int msamples, int njunc, int nbins, bool is_ir){*/
-
-
-//
-//
-//
 void get_samples_from_psi(vector<psi_distr_t>& i_psi, float* osamps, float* o_mupsi, float* o_postpsi,
                             int psi_samples, int j_offset, psi_distr_t psi_border, int njunc, int msamples, int nbins){
 
@@ -248,8 +240,8 @@ void get_samples_from_psi(vector<psi_distr_t>& i_psi, float* osamps, float* o_mu
     free(all_m) ;
     return ;
 }
-//
-//
+
+
 void test_calc(float* oPvals, vector<float*> samples1, vector<float*> samples2, HetStats* HetStatsObj,
                int njunc, int psamples){
 
