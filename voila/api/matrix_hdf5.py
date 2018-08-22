@@ -107,6 +107,11 @@ class MatrixHdf5:
 
     @prior.setter
     def prior(self, ps):
+        """
+        Assumed that this is received in log space.
+        :param ps:
+        :return:
+        """
         self.h.create_dataset('metadata/prior', data=[collapse_matrix(p) for p in ps])
 
     @property

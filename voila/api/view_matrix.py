@@ -265,7 +265,7 @@ class ViewDeltaPsi(DeltaPsi, ViewMatrix):
             return any(matrix_area(b, threshold=threshold) >= probability_threshold for b in self.bins)
 
         def high_probability_non_changing(self):
-            prior = np.log(self.matrix_hdf5.prior[1 if self.intron_retention else 0])
+            prior = self.matrix_hdf5.prior[1 if self.intron_retention else 0]
             non_changing_threshold = self.matrix_hdf5.args.non_changing_threshold
             for bin in self.bins:
                 A = np.log(bin) - prior
