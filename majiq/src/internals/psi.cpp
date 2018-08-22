@@ -86,10 +86,7 @@ void psi_posterior(vector<psi_distr_t>& i_psi, float* o_mupsi, float* o_postpsi,
 //cout << "OUT LOOP\n" ;
 }
 
-//
-////TODO: 1 prior_matrix should be in log space
-////TODO: 2 fix mu_psi1 that should be a set of elements and median
-//// All arrays are precreated
+
 void deltapsi_posterior(vector<psi_distr_t>& i_psi1, vector<psi_distr_t>& i_psi2, float* prior_matrix,
                         float* o_mupsi1, float* o_mupsi2, float* o_postpsi1, float* o_postpsi2,
                         float* o_posterior_dpsi, int msamples, int njunc, int nbins, bool is_ir){

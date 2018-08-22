@@ -84,11 +84,8 @@ inline float calc_mupsi(const float sample, const float all_sample, float alpha,
 }
 
 inline void collapse_matrix(float* o_dpsi, float* matrix, int nbins){
-
     for (int i=0; i<nbins; i++){
        for (int j=0; j<nbins; j++){
-//        int temp = j-i+(nbins-1) ;
-//cout << " KKKKK: " << temp << "from i:" << i << " j: " << j << "\n" ;
             o_dpsi[j-i+(nbins-1)] += matrix[i*nbins + j] ;
        }
     }

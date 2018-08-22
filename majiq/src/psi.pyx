@@ -479,6 +479,9 @@ cpdef tuple gen_prior_matrix(object lsv_type, dict lsv_empirical_psi1, dict lsv_
             plot_matrix(prior_matrix[prior_idx], "Prior Matrix , version %s" % prior_idx,
                         "prior_matrix_jun_%s" % nj, plotpath)
 
+    prior_matrix[0] = np.log(prior_matrix[0])
+    prior_matrix[1] = np.log(prior_matrix[1])
+
     return psi_space, prior_matrix
 
 
