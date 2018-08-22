@@ -19,13 +19,13 @@ namespace grimoire {
 
 
     bool positive(lsvtype a, lsvtype b){
-        return ( a.coord<b.coord ||
-                (a.coord == b.coord && a.ref_coord<b.ref_coord)) ;
+        return ( a.ref_coord<b.ref_coord ||
+                (a.ref_coord == b.ref_coord && a.coord<b.coord)) ;
     }
 
     bool reverse(lsvtype a, lsvtype b){
-        return ( a.coord>b.coord ||
-                (a.coord == b.coord && a.ref_coord>b.ref_coord)) ;
+        return ( a.ref_coord>b.ref_coord ||
+                (a.ref_coord == b.ref_coord && a.coord>b.coord)) ;
     }
 
     bool sort_ss(const Ssite &a, const Ssite &b){
@@ -201,7 +201,6 @@ namespace grimoire {
     void Gene::fill_junc_tlb(map<string, vector<string>> &tlb){
 
         for(const auto &j: junc_map_){
-//cout << "C++ print:: "<< id_ << " :: "<< (j.second)->get_start() << " :: "<< (j.second)->get_end() << " :: "<< (j.second)->get_denovo_bl() << "\n" ;
             if (!(j.second)->get_denovo_bl()) continue ;
             const string key = chromosome_ + ":" + strand_ + ":" + j.first ;
             const string key2 = chromosome_ + ":.:" + j.first ;
@@ -247,7 +246,7 @@ namespace grimoire {
             }
         }
         sort(ss_vec.begin(), ss_vec.end(), sort_ss) ;
-//cout << tid<< " Analize ss_vec for gene:"<< id_ << " :: "<< ss_vec.size()<<  "\n" ;
+
         for(const auto & ss : ss_vec){
             if (ss.donor_ss) {
                 start_ir = ss.coord ;
@@ -266,10 +265,6 @@ namespace grimoire {
                 }
             }
         }
-//cout << "GENE INTRONS: " << id_ << "\n" ;
-//for (const auto & ir: intronlist){
-//    cout << "[" << id_ << "]: " << ir->get_start() << " - " << ir->get_end() << "\n" ;
-//}
     }
 
     void Gene::add_intron(Intron * inIR_ptr, float min_coverage, unsigned int min_exps, bool reset){
@@ -466,7 +461,7 @@ namespace grimoire {
         float * s1 ;
         float * t1 = target ;
         unsigned int count = 0 ;
-        cout<< id_ << " source @: " << source<< " target @: " << target<<" ##\n" ;
+//        cout<< id_ << " source @: " << source<< " target @: " << target<<" ##\n" ;
         for(const auto &j: junctions_){
             const string key = gObj_->get_chromosome() + ":" + to_string(j->get_start()) + "-" + to_string(j->get_end()) ;
             if(tlb.count(key)>0){
@@ -513,9 +508,11 @@ namespace grimoire {
         else for (const auto &j: ref_ex->ib) ref_ss_set.insert(j->get_end()) ;
 
         unsigned int jidx = 0 ;
+        int prev_coord = 0 ;
 
         for (const auto &ptr: sp_list){
-            jidx ++ ;
+            jidx = (prev_coord != ptr.ref_coord) ? jidx+1 : jidx ;
+            prev_coord = ptr.ref_coord ;
             const string exid = to_string((ptr.ex_ptr)->get_start()) + "-" + to_string((ptr.ex_ptr)->get_end()) ;
             if (exid == ref_exon_id) continue ;
             if ((ptr.jun_ptr)->get_intronic()){

@@ -237,15 +237,11 @@ namespace grimoire{
             }
             bool  is_reliable(float min_bins) ;
             inline void  update_flags(float min_coverage, int min_exps) {
-
                 int cnt = 0 ;
-cout << get_key() << ": [ " ;
                 for(int i =0 ; i< nbins_; i++){
-cout << read_rates_[i] << ", " ;
                     cnt += (read_rates_[i]>= min_coverage) ? 1 : 0 ;
                 }
                 flt_count_ += (cnt == nbins_) ? 1 : 0 ;
-                cout << " ] ir_flag_:" << ir_flag_ <<  " flt_count_:" << flt_count_ << " min_exps: " << min_exps << " cnt:"<< cnt << " nbins_:"<< nbins_ << " min_coverage:" << min_coverage << "\n" ;
                 ir_flag_ = ir_flag_ || (flt_count_ >= min_exps) ;
             }
 
@@ -257,17 +253,14 @@ cout << read_rates_[i] << ", " ;
             }
 
             void clear_nreads(bool reset_grp){
-//                read_rates_ = nullptr ;
                 flt_count_ = reset_grp ? 0: flt_count_ ;
             }
 
             void free_nreads(){
-//cout << "INTRON:: " << read_rates_ << "\n" ;
                 if(read_rates_ != nullptr){
                     free(read_rates_);
                     read_rates_ = nullptr ;
                 }
-//cout << "DEL INTRON DONE\n" ;
             }
 
 
@@ -401,7 +394,6 @@ cout << read_rates_[i] << ", " ;
 
 
     void sortGeneList(vector<Gene*> &glist) ;
-//    vector<Intron *> find_intron_retention(vector<Gene*> &gene_list, char strand, int start, int end) ;
     vector<Intron *> find_intron_retention(Gene * gObj, int start, int end);
 
 }

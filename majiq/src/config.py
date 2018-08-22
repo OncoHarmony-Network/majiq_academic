@@ -4,7 +4,6 @@ from scipy import interpolate
 import numpy as np
 from majiq.src.constants import *
 
-
 class SingletonMetaClass(type):
     def __init__(cls, name, bases, dict):
         super(SingletonMetaClass, cls).__init__(name,bases, dict)

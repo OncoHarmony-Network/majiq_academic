@@ -22,14 +22,15 @@ from libcpp.pair cimport pair
 from libcpp.vector cimport vector
 from cython.parallel import prange
 
-
 cdef extern from "sqlite3.h":
     struct sqlite3
 
 import numpy as np
 cimport numpy as np
 
+
 cdef int C_FIRST_LAST_JUNC = FIRST_LAST_JUNC
+
 
 cdef _store_junc_file(np.ndarray boots, list junc_ids, str experiment_name, str outDir):
 
@@ -40,16 +41,16 @@ cdef _store_junc_file(np.ndarray boots, list junc_ids, str experiment_name, str 
     with open(out_file, 'w+b') as ofp:
         np.savez(ofp, **vals)
 
+
 cdef void update_splicegraph_junction(sqlite3 *db, string gene_id, int start, int end, int nreads, string exp) nogil:
     if C_FIRST_LAST_JUNC != start and C_FIRST_LAST_JUNC != end:
         sg_junction_reads(db, nreads, exp, gene_id, start, end)
+
 
 cdef int _output_lsv_file_single(vector[LSV*] out_lsvlist, string experiment_name, map[string, vector[string]] tlb_j_g,
                                  map[string, Gene*] gene_map, string outDir, int nthreads, unsigned int msamples,
                                  bint irb, int strandness, object logger) except -1:
 
-    # cdef np.float32_t[:,:,:] boots
-    # cdef np.float32_t* boots
     cdef unsigned int irbool, coord1, coord2, sreads, npos
     cdef string jid
     cdef string geneid
@@ -62,9 +63,9 @@ cdef int _output_lsv_file_single(vector[LSV*] out_lsvlist, string experiment_nam
     cdef string lsvid, gid
     cdef unsigned int i, j, junc_idx
 
-    cdef int nlsv = out_lsvlist.size()
+    cdef unsigned int nlsv = out_lsvlist.size()
 
-    cdef unsigned int njunc
+    cdef unsigned int njunc = 0
     cdef Jinfo jobj_ptr
     cdef map[string, Jinfo] tlb_juncs
     cdef map[string, Jinfo] tlb_ir
@@ -83,10 +84,6 @@ cdef int _output_lsv_file_single(vector[LSV*] out_lsvlist, string experiment_nam
     cdef list type_list = []
     cdef list junc_info = []
     cdef object all_juncs
-
-    # cdef map[string, np.float32_t*] cov_dict
-
-    # with gil:
 
     sg_filename = get_builder_splicegraph_filename(outDir.decode('utf-8')).encode('utf-8')
     junc_file = "%s/%s.juncs" % (outDir.decode('utf-8'), experiment_name.decode('utf-8'))
@@ -119,12 +116,9 @@ cdef int _output_lsv_file_single(vector[LSV*] out_lsvlist, string experiment_nam
                 tlb_juncs[jid] = jobj_ptr
                 if tlb_j_g.count(jid) > 0:
                     for gid in tlb_j_g[jid]:
-                        # print("ADD COUNT", i, gid.decode('utf-8'), junc_ids[i][1], junc_ids[i][2], junc_ids[i][3],
-                        # junc_ids[i][0], experiment_name)
                         update_splicegraph_junction(db, gid, coord1, coord2, sreads, experiment_name)
 
             elif irb:
-                # print("###: %s" , junc_ids[i][0])
                 with gil:
                     geneid = jid.split(b':')[3]
                 if gene_map.count(geneid) > 0 :
@@ -138,16 +132,10 @@ cdef int _output_lsv_file_single(vector[LSV*] out_lsvlist, string experiment_nam
                         tlb_ir[ir_ptr.get_key(ir_ptr.get_gene())] = jobj_ptr
 
         close_db(db)
-    # with gil:
     del junc_ids
-
-    # for xx in tlb_juncs:
-    #     print(xx.first, xx.second.index)
-
 
     logger.info("Create majiq file")
 
-    # for j in prange(nlsv, nogil=True, num_threads=nthreads):
     with nogil:
         for j in range(nlsv):
             lsv_ptr = out_lsvlist[j]
@@ -247,7 +235,6 @@ cdef _find_junctions(list file_list, map[string, Gene*]& gene_map, vector[string
     cdef map[string, unsigned int] j_ids
     cdef pair[string, unsigned int] it
     cdef pair[string, Gene *] git
-    # sortGeneList(gene_vec)
 
     for git in gene_map:
         gg = git.second
@@ -293,7 +280,6 @@ cdef _find_junctions(list file_list, map[string, Gene*]& gene_map, vector[string
             logger.debug("Done Update flags")
             junc_ids = [0] * njunc
             for it in j_ids:
-                # print(file_list[j][0], j, last_it_grp, (j==last_it_grp), it.second, it.first)
                 tmp_str = it.first.decode('utf-8').split(':')[2]
                 start, end = (int(xx) for xx in tmp_str.split('-'))
                 junc_ids[it.second] = (it.first.decode('utf-8'), start, end, jvec[it.second], jvec[it.second + njunc],
@@ -302,9 +288,6 @@ cdef _find_junctions(list file_list, map[string, Gene*]& gene_map, vector[string
             logger.info('Done Reading file %s' %(file_list[j][0]))
             _store_junc_file(boots, junc_ids, file_list[j][0], conf.outDir)
             c_iobam.free_iobam()
-
-
-
 
 cdef init_splicegraph(string filename, object conf):
 
@@ -343,8 +326,6 @@ cdef void gene_to_splicegraph(Gene * gne, string sg_filename) nogil:
         sg_exon(db, gne_id, ex.get_start(), ex.get_end(), ex.db_start_, ex.db_end_, ex.annot_ )
 
     for ir in gne.intron_vec_:
-        with gil:
-            print('KK:', ir.get_key(),ir.get_ir_flag())
         if ir.get_ir_flag():
             sg_intron_retention(db, gne_id, ir.get_start(), ir.get_end(), ir.get_annot())
     close_db(db)
@@ -352,7 +333,6 @@ cdef void gene_to_splicegraph(Gene * gne, string sg_filename) nogil:
 
 ## OPEN API FOR PYTHON
 cdef _core_build(str transcripts, list file_list, object conf, object logger):
-    # cdef vector[Gene *] gene_vec
     cdef int n, i
     cdef int nthreads = conf.nthreads
     cdef map[string, vector[string]] gene_junc_tlb
@@ -369,11 +349,8 @@ cdef _core_build(str transcripts, list file_list, object conf, object logger):
     cdef int strandness, cnt
 
     majiq_io.read_gff(transcripts, gene_map, gid_vec, logger)
-    # logger.info("PRE INIT SG1")
     n = gene_map.size()
-    # logger.info("PRE INIT SG2 %s" % n)
     init_splicegraph(sg_filename, conf)
-    # logger.info("POST INIT SG")
     _find_junctions(file_list, gene_map, gid_vec, conf, logger)
 
     logger.info("Detecting LSVs ngenes: %s " % n)
@@ -392,8 +369,6 @@ cdef _core_build(str transcripts, list file_list, object conf, object logger):
 
         gg.fill_junc_tlb(gene_junc_tlb)
         gene_to_splicegraph(gg, sg_filename)
-        # with gil:
-        #     gene_to_splicegraph2(gene_map[gid_vec[i]], sg_filename)
         with gil:
             logger.debug("[%s] Detect LSVs" % gg.get_id())
 
