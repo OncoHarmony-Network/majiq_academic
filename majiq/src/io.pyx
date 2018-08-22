@@ -315,6 +315,7 @@ cdef void get_coverage_mat(map[string, vector[psi_distr_t]]& result, map[string,
                         cov = np.zeros(shape=(njunc, msamples), dtype=np.float32)
                     prev_juncidx += 1
                     cov[prev_juncidx] = data[idx]
+            get_aggr_coverage(result, prev_lsvid, <np.float32_t *> cov.data, njunc, msamples)
         print (fname, result.size())
 
 

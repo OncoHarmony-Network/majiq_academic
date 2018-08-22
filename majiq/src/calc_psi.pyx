@@ -119,17 +119,19 @@ cdef _core_calcpsi(object self):
     majiq_io.get_coverage_mat(cov_dict, lsv_vec, self.files, "", nthreads)
     logger.info("COV size: %s, %s" % (nlsv, cov_dict.size()))
     for i in prange(nlsv, nogil=True, num_threads=nthreads):
+
         with gil:
             lsv = list_of_lsv[i]
             lsv_id = lsv.encode('utf-8')
+            # logger.info("2222 Event %s - %s" %(lsv_id, lsv_type_dict[lsv]))
             if i % loop_step == 0 :
                 print ("Event %s/%s" %(i, nlsv))
+
             nways = cov_dict[lsv_id].size()
             msamples = cov_dict[lsv_id][0].size()
             o_mupsi = out_mupsi_d[lsv_id]
             o_postpsi = out_postpsi_d[lsv_id]
             is_ir = 'i' in lsv_type_dict[lsv]
-            # logger.info("2222 Event %s" %(lsv_id))
 
         psi_posterior(cov_dict[lsv_id], <np.float32_t *> o_mupsi.data,
                       <np.float32_t *> o_postpsi.data, msamples, nways, nbins, is_ir)
