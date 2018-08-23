@@ -84,25 +84,25 @@ namespace MajiqStats{
                 int i = 0 ;
                 while( i < nsampls ){
                     if( labels[i] >= 0 ) {
-                        double x = data[i] ;
                         int m1 = 0 ;
                         int m2 = 0 ;
                         // as long as expression level doesn't change, count how many samples labeled "1" (m1)
                         // and how many labeled "2" (m2).
-                        for( ; i < nsampls && data[i]; i++ )
+                        for( ; i < nsampls && data[i]; i++ ){
                             if( labels[i] >= 0 ){
                                 if( labels[i] == 0 )
                                     m1++ ;
                                 if( labels[i] == 1 )
                                     m2++ ;
                             }
-                            if( m1+m2 > 0 ){
-                                if( m1 > 0 )
-                                    s += m1*(j + 0.5*(m1+m2+1)) ;
-                                j += m1 + m2 ;
-                                n1 += m1 ;
-                                n2 += m2 ;
-                            }
+                        }
+                        if( m1+m2 > 0 ){
+                            if( m1 > 0 )
+                                s += m1*(j + 0.5*(m1+m2+1)) ;
+                            j += m1 + m2 ;
+                            n1 += m1 ;
+                            n2 += m2 ;
+                        }
                     }
                 }
                 double _ZScore = (s - 0.5*n1*(n1+n2+1))/sqrt(n1*n2*(n1+n2+1)/12.0);
