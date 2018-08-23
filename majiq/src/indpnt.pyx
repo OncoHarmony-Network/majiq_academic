@@ -56,14 +56,22 @@ cdef void _statistical_test_computation(object out_h5p, dict comparison, list li
             file_list[index].append(cc)
         index +=1
 
+    for lsv in list_of_lsv:
+        lsv_id = lsv.encode('utf-8')
+        nways = lsv_vec[lsv_id].first
+        output[lsv_id] = np.zeros(shape=(nways, nstats), dtype=np.float32)
+
+
+
     for i in prange(nlsv, nogil=True, num_threads=nthreads):
         with gil:
             lsv = list_of_lsv[i]
             lsv_id = lsv.encode('utf-8')
             lsv_index = lsv_vec[lsv_id].second
             nways = lsv_vec[lsv_id].first
-            oPvals = np.zeros(shape=(nways, nstats), dtype=np.float32)
-            output[lsv_id] = oPvals
+            oPvals = output[lsv_id]
+            # oPvals = np.zeros(shape=(nways, nstats), dtype=np.float32)
+            # output[lsv_id] = oPvals
             for cc in file_list[0]:
                 k = cc[lsv_index:lsv_index+nways]
                 cond1_smpl.push_back(<np.float32_t *> k.data)
@@ -120,7 +128,7 @@ cdef int _het_computation(object out_h5p, dict file_cond, list list_of_lsv, map[
 
         j_offset += nways
     total_njuncs = j_offset
-    print('LLLL', j_offset)
+
     for cidx, (cond_name, cond_list) in enumerate(file_cond.items()):
 
 
@@ -138,16 +146,15 @@ cdef int _het_computation(object out_h5p, dict file_cond, list list_of_lsv, map[
                     o_mupsi = out_mupsi_d[lsv_id][cidx]
                     o_postpsi = out_postpsi_d[lsv_id][cidx]
                     is_ir = 'i' in lsv_type_dict[lsv]
-                    j_offset = lsv_vec[lsv_id].second
 
                 get_samples_from_psi(cov_dict[lsv_id], <np.float32_t *> osamps.data, <np.float32_t *> o_mupsi.data,
-                                     <np.float32_t *> o_postpsi.data, psi_samples, j_offset, psi_border,
+                                     <np.float32_t *> o_postpsi.data, psi_samples, lsv_vec[lsv_id].second, psi_border,
                                      nways, msamples, nbins, is_ir)
 
             fname = get_tmp_psisample_file(outdir, "%s_%s" %(cond_name, fidx) )
             majiq_io.dump_hettmp_file(fname, osamps)
 
-    print("Dump psi_samples")
+    # print("Dump psi_samples")
     for lsv in list_of_lsv:
         lsv_id = lsv.encode('utf-8')
         out_h5p.heterogen(lsv).add(lsv_type=lsv_type_dict[lsv], mu_psi=out_mupsi_d[lsv_id], mean_psi=out_postpsi_d[lsv_id],
@@ -228,10 +235,11 @@ cdef void _core_independent(object self):
             lsv_vec[lsv.encode('utf-8')] = tpair
             j_offset += nways
 
-        print('PRE HET')
+        logger.info('Sampling from PSI')
         _het_computation(out_h5p, file_cond, list_of_lsv, lsv_vec, lsv_type_dict, junc_info, self.psi_samples,
                          nthreads, nbins, self.outDir)
 
+        logger.info('Calculating statistics pvalues')
         _statistical_test_computation(out_h5p, comparison, list_of_lsv, stats_vec, self.psi_samples, lsv_vec,
                                       self.outDir, nthreads)
 

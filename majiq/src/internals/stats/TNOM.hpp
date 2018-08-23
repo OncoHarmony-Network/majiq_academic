@@ -28,7 +28,6 @@ namespace MajiqStats{
             };
 
 
-
             map<tTNOMRecord, double> _pval_cache ;
 
             /**
@@ -50,8 +49,7 @@ namespace MajiqStats{
             }
 
             // Count number of paths from (0,0) to (Len,Offset)
-            double
-            LogPathNum(int Len, int Offset) {
+            double LogPathNum(int Len, int Offset) {
                 if( Offset < 0 )
                     Offset = -Offset;
                 if( Offset > Len )
