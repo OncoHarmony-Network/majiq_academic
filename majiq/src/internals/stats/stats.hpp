@@ -18,7 +18,7 @@ class HetStats{
                 if (st == "TNOM" ) statistics.push_back((MajiqStats::TestStat*) new MajiqStats::TNOM()) ;
                 if (st == "WILCOXON") statistics.push_back((MajiqStats::TestStat*) new MajiqStats::Wilcoxon()) ;
             }
-            return true ;
+            return statistics.size()>0 ;
        }
 } ;
 

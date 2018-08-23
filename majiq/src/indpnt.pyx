@@ -44,15 +44,16 @@ cdef void _statistical_test_computation(object out_h5p, dict comparison, list li
     cdef int nstats = stats_list.size()
 
 
-    if StatsObj.initialize_statistics(stats_list):
+    if not StatsObj.initialize_statistics(stats_list):
         print('ERROR stats')
-        return ;
+        return
+
     index = 0
     for cond_name, cond in comparison.items():
         file_list.append([])
         for xx in range(cond):
             cc = np.load(open(get_tmp_psisample_file(outDir, "%s_%s" %(cond_name, xx)), 'rb'))
-            file_list[index] = cc
+            file_list[index].append(cc)
         index +=1
 
     for i in prange(nlsv, nogil=True, num_threads=nthreads):
@@ -69,13 +70,13 @@ cdef void _statistical_test_computation(object out_h5p, dict comparison, list li
 
             for cc in file_list[1]:
                 k = cc[lsv_index:lsv_index+nways]
-                cond1_smpl.push_back(<np.float32_t *> k.data)
+                cond2_smpl.push_back(<np.float32_t *> k.data)
 
         test_calc(<np.float32_t *> oPvals.data, cond1_smpl, cond2_smpl, StatsObj, nways, psi_samples)
 
     for lsv in list_of_lsv:
         lsv_id = lsv.encode('utf-8')
-        out_h5p.heterogen(lsv_id).add(junction_stats=output[lsv_id])
+        out_h5p.heterogen(lsv).add(junction_stats=output[lsv_id])
 
 
 
@@ -133,7 +134,7 @@ cdef int _het_computation(object out_h5p, dict file_cond, list list_of_lsv, map[
 
                     nways = cov_dict[lsv_id].size()
                     msamples = cov_dict[lsv_id][0].size()
-                    print(i, lsv, lsv_type_dict[lsv], nways, cidx)
+                    # print(i, lsv, lsv_type_dict[lsv], nways, cidx)
                     o_mupsi = out_mupsi_d[lsv_id][cidx]
                     o_postpsi = out_postpsi_d[lsv_id][cidx]
                     is_ir = 'i' in lsv_type_dict[lsv]
@@ -149,7 +150,7 @@ cdef int _het_computation(object out_h5p, dict file_cond, list list_of_lsv, map[
     print("Dump psi_samples")
     for lsv in list_of_lsv:
         lsv_id = lsv.encode('utf-8')
-        out_h5p.heterogen(lsv).add(lsv_type=lsv_type_dict[lsv], mu_psi=o_mupsi, mean_psi=o_postpsi,
+        out_h5p.heterogen(lsv).add(lsv_type=lsv_type_dict[lsv], mu_psi=out_mupsi_d[lsv_id], mean_psi=out_postpsi_d[lsv_id],
                                       junctions=junc_info[lsv])
 
 

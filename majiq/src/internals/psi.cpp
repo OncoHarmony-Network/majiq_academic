@@ -240,35 +240,40 @@ void test_calc(float* oPvals, vector<float*> samples1, vector<float*> samples2, 
                int njunc, int psamples){
 
     const int nstats = (HetStatsObj->statistics).size() ;
-
+//cout << "KK1\n" ;
     const int n1 = samples1.size() ;
     const int n2 = samples1.size() ;
+//cout << "KK2\n" ;
     for (int j=0; j<njunc; j++){
         for(int s=0; s<psamples; s++){
+//cout << "KK30\n" ;
             vector<float> csamps ;
             vector<int> labels ;
-
+//cout << "KK31\n" ;
             for (int i=0; i<n1; i++){
                 const int in_2d = (j*psamples) + s ;
                 csamps.push_back(samples1[i][in_2d]) ;
                 labels.push_back(0) ;
             }
+//cout << "KK32\n" ;
             for (int i=0; i<n2; i++){
                 const int in_2d = (j*psamples) + s ;
                 csamps.push_back(samples2[i][in_2d]) ;
                 labels.push_back(0) ;
             }
-
+//cout << "KK33\n" ;
             auto p = sort_permutation <float>(csamps, less<float>() ) ;
-
+//cout << "KK34\n" ;
             csamps = apply_permutation(csamps, p);
             labels = apply_permutation(labels, p);
-
+//cout << "KK35\n" ;
             for(int i=0; i<nstats; i++){
                 const int idx_2d = (j*nstats) + i ;
                 oPvals[idx_2d] = (float)(HetStatsObj->statistics)[i]->Calc_pval(csamps, labels) ;
             }
+//cout << "KK3\n" ;
         }
 
     }
+//cout << "KK END\n" ;
 }
