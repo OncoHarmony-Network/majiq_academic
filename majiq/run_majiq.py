@@ -9,7 +9,7 @@ from majiq.src.indpnt import calc_independent
 from majiq.src.constants import *
 from majiq.src.wght_pipeline import calc_weights as py_calc_weights
 
-from majiq.src.stats import all_stats
+# from majiq.src.constants import all_stats
 import sys
 
 class FRange01(argparse.Action):
@@ -194,7 +194,7 @@ def main():
                              '[Default: %(default)0.02f.]')
     htrgen.add_argument('--bins', type=get_bins, default=get_bins(40),
                         help='Fixed-width binning resolution of PSI distributions. [Default: 40')
-    htrgen.add_argument('--stats', nargs='+', default=all_stats,
+    htrgen.add_argument('--stats', nargs='+', default=['ALL'],
                         help='Test statistics to run. [Default: %(default)s]')
     htrgen.add_argument('--minsamps', type=get_minsamps, default=2,
                         help='Minimum number of samples that need to be present for an LSV junction in order to '

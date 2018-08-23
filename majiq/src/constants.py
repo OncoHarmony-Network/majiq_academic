@@ -42,6 +42,10 @@ WEIGTHS_AUTO = 'auto'
 WEIGTHS_NONE = 'none'
 MINVAL = 1e-300
 
+
+all_stats = ["TNOM", "INFOSCORE", "WILCOXON"]
+
+
 import numpy as np
 EPSILON = np.finfo(np.float64).eps
 

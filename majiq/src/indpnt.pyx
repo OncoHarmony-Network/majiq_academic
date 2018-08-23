@@ -79,9 +79,13 @@ cdef void _statistical_test_computation(object out_h5p, dict comparison, list li
             for cc in file_list[1]:
                 k = cc[lsv_index:lsv_index+nways]
                 cond2_smpl.push_back(<np.float32_t *> k.data)
-
+            print('KOLA', i)
         test_calc(<np.float32_t *> oPvals.data, cond1_smpl, cond2_smpl, StatsObj, nways, psi_samples)
+        with gil:
+            print('END KOLA', i)
 
+
+    print('DUMP VOILA FILE')
     for lsv in list_of_lsv:
         lsv_id = lsv.encode('utf-8')
         out_h5p.heterogen(lsv).add(junction_stats=output[lsv_id])

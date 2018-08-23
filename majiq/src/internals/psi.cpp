@@ -269,7 +269,9 @@ void test_calc(float* oPvals, vector<float*> samples1, vector<float*> samples2, 
 //cout << "KK35\n" ;
             for(int i=0; i<nstats; i++){
                 const int idx_2d = (j*nstats) + i ;
-                oPvals[idx_2d] = (float)(HetStatsObj->statistics)[i]->Calc_pval(csamps, labels) ;
+                double ppp = (HetStatsObj->statistics)[i]->Calc_pval(csamps, labels) ;
+                oPvals[idx_2d] = (float)ppp ;
+cout << "STAT: " << i << ":: " << oPvals[idx_2d] << " :: " << ppp << "\n" ;
             }
 //cout << "KK3\n" ;
         }
