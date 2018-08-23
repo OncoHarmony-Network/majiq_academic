@@ -26,7 +26,6 @@ inline void get_prior_params( vector<psi_distr_t>& o_priors, int njunc, bool ir)
     int nways = ir ? njunc -1 : njunc ;
     float alpha = 1.0/ nways ;
     float fnjunc = (float)njunc ;
-//    vector<psi_distr_t> priors (njunc, vector<float>(2)) ;
 
     if (ir){
         alpha *= (fnjunc / (fnjunc+1)) ;
@@ -102,7 +101,8 @@ void deltapsi_posterior(vector<psi_distr_t>& i_psi1, vector<psi_distr_t>& i_psi2
                         float* o_posterior_dpsi, int msamples, int njunc, int nbins, bool is_ir) ;
 
 void get_samples_from_psi(vector<psi_distr_t>& i_psi, float* osamps, float* o_mu_psi, float* o_postpsi1,
-                          int psi_samples, int j_offset, psi_distr_t psi_border, int njunc, int msamples, int nbins) ;
+                          int psi_samples, int j_offset, psi_distr_t psi_border, int njunc, int msamples, int nbins,
+                          bool is_ir) ;
 
 void test_calc(float* oPvals, vector<float*> samples1, vector<float*> samples2, HetStats* HetStatsObj,
                int njunc, int psamples) ;

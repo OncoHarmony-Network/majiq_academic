@@ -3,14 +3,15 @@
 #include <algorithm>
 #include <string>
 
-using namespace std ;
-namespace stats{
+
+namespace MajiqStats{
+
     class TestStat{
         public:
-            TestStat() ;
-            ~TestStat() ;
-            virtual double Calc_pval(vector<float> data, vector<int> labels) { return 0 ;}
+            TestStat() {}
+            ~TestStat() {}
+            virtual double Calc_pval(std::vector<float> data, std::vector<int> labels) { return 0 ;}
     } ;
 }
+
 #endif
-//} ;

@@ -10,9 +10,9 @@
 #define MAXCLASS 2
 
 using namespace std ;
-namespace stats{
+namespace MajiqStats{
 
-    class TNOM: public TestStat{
+    class TNOM: public MajiqStats::TestStat{
         private:
 
             struct tTNOMRecord{

@@ -7,26 +7,17 @@
 
 class HetStats{
     public:
-        HetStats() {};
-        ~HetStats() {};
+        HetStats() {}
+        ~HetStats() {}
 
-//        std::map<string, std::function> statistics ;
-        std::vector<stats::TestStat *> statistics ;
+        std::vector<MajiqStats::TestStat *> statistics ;
 
-        bool initialize_statistics(vector<string> list_stats){
+        bool initialize_statistics(std::vector<string> list_stats){
 
             for (const auto & st: list_stats){
-                if (st == "TNOM" ) statistics.push_back((stats::TestStat*) new stats::TNOM()) ;
-                if (st == "WILCOXON") statistics.push_back((stats::TestStat*) new stats::Wilcoxon()) ;
-
-
-//                    case "TNOM": statistics["TNOM"] = new stats::TNOM() ;
-//                                 break ;
-//                    case "WILCOXON" : statistics["WILCOXON"] = new stats::Wilcoxon() ;
-//                                      break ;
-//                    default:
-//                        return false ;
-                }
+                if (st == "TNOM" ) statistics.push_back((MajiqStats::TestStat*) new MajiqStats::TNOM()) ;
+                if (st == "WILCOXON") statistics.push_back((MajiqStats::TestStat*) new MajiqStats::Wilcoxon()) ;
+            }
             return true ;
        }
 } ;

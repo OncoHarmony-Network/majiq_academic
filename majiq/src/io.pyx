@@ -275,6 +275,11 @@ cdef test(map[string, vector[psi_distr_t]] result, object data, string lsv_id):
     except KeyError:
         return ;
 
+cdef int dump_hettmp_file(str fname, np.ndarray[np.float32_t, ndim=2, mode="c"] osamps):
+    with open(fname, 'w+b') as fp:
+        np.save(fp, osamps)
+
+
 cdef void get_coverage_mat(map[string, vector[psi_distr_t]]& result, map[string, int] lsv_map, list file_list,
                             str weight_fname, int nthreads):
     cdef int n_exp = len(file_list)

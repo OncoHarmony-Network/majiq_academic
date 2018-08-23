@@ -1,5 +1,6 @@
 import sys
 import majiq.src.io as majiq_io
+cimport majiq.src.io as majiq_io
 import psutil
 from majiq.src.psi import heterogen_posterior
 import majiq.src.logger as majiq_logger
@@ -78,10 +79,10 @@ cdef void _statistical_test_computation(object out_h5p, dict comparison, list li
 
 
 
-cdef void _het_computation(object out_h5p, dict file_cond, list list_of_lsv, map[string, pair_int_t] lsv_vec,
-                           list lsv_type_dict, dict junc_info, int psi_samples, int nthreads, int nbins, str outdir):
-    cdef string fname, lsv_id
-    cdef str f, cond_name ;
+cdef int _het_computation(object out_h5p, dict file_cond, list list_of_lsv, map[string, pair_int_t] lsv_vec,
+                           dict lsv_type_dict, dict junc_info, int psi_samples, int nthreads, int nbins, str outdir) except -1:
+    cdef string lsv_id
+    cdef str f, cond_name, fname ;
     cdef int cidx, fidx
     cdef map[string, vector[psi_distr_t]] cov_dict
     cdef int nways
@@ -95,36 +96,36 @@ cdef void _het_computation(object out_h5p, dict file_cond, list list_of_lsv, map
 
     cdef int j_offset = 0
     cdef psi_distr_t psi_border
-    cdef max_nfiles = len(file_cond[0])
+    cdef max_nfiles = 0
     cdef list cond_list
     cdef int total_njuncs = 0
-    cdef np.ndarray[np.float32_t, ndim=2, mode="c"]  osamps
-    cdef np.ndarray[np.float32_t, ndim=1, mode="c"] o_mupsi
+    cdef np.ndarray[np.float32_t, ndim=2, mode="c"] osamps
+    cdef np.ndarray[np.float32_t, ndim=2, mode="c"] o_mupsi
     cdef np.ndarray[np.float32_t, ndim=2, mode="c"] o_postpsi
     cdef int i, msamples
+    cdef bint is_ir
 
-    for cond_list in file_cond:
+    for cond_name, cond_list in file_cond.items():
         max_nfiles = max(max_nfiles, len(cond_list))
 
     psi_border = get_psi_border(nbins)
-
     for lsv in list_of_lsv:
         lsv_id = lsv.encode('utf-8')
+        nways = len(lsv_type_dict[lsv].split('|')) -1
         out_mupsi_d[lsv_id]= np.ndarray(shape=(len(file_cond), max_nfiles, nways), dtype=np.float32)
         out_mupsi_d[lsv_id].fill(-1)
         out_postpsi_d[lsv_id] = np.zeros(shape=(len(file_cond), nways, nbins), dtype=np.float32)
-
-        nways = len(lsv_type_dict[lsv].split('|')) -1
         lsv_map[lsv.encode('utf-8')] = nways
+
         j_offset += nways
     total_njuncs = j_offset
-
+    print('LLLL', j_offset)
     for cidx, (cond_name, cond_list) in enumerate(file_cond.items()):
 
 
         for fidx, f in enumerate(cond_list):
             osamps = np.zeros(shape=(total_njuncs, psi_samples), dtype=np.float32)
-            majiq_io.get_coverage_mat(cov_dict, lsv_vec, [f], "", nthreads)
+            majiq_io.get_coverage_mat(cov_dict, lsv_map, [f], "", nthreads)
             for i in prange(nlsv, nogil=True, num_threads=nthreads):
                 with gil:
                     lsv = list_of_lsv[i]
@@ -132,19 +133,20 @@ cdef void _het_computation(object out_h5p, dict file_cond, list list_of_lsv, map
 
                     nways = cov_dict[lsv_id].size()
                     msamples = cov_dict[lsv_id][0].size()
-
+                    print(i, lsv, lsv_type_dict[lsv], nways, cidx)
                     o_mupsi = out_mupsi_d[lsv_id][cidx]
                     o_postpsi = out_postpsi_d[lsv_id][cidx]
                     is_ir = 'i' in lsv_type_dict[lsv]
                     j_offset = lsv_vec[lsv_id].second
 
-                # get_samples_from_psi(cov_dict[lsv_id], <np.float32_t *> osamps.data, o_mupsi, o_postpsi, psi_samples, j_offset, psi_border)
                 get_samples_from_psi(cov_dict[lsv_id], <np.float32_t *> osamps.data, <np.float32_t *> o_mupsi.data,
-                                     <np.float32_t *> o_postpsi.data, psi_samples, j_offset, psi_border, nways, msamples, nbins)
+                                     <np.float32_t *> o_postpsi.data, psi_samples, j_offset, psi_border,
+                                     nways, msamples, nbins, is_ir)
 
             fname = get_tmp_psisample_file(outdir, "%s_%s" %(cond_name, fidx) )
-            # dump_tmp_file(fname, osamps)
+            majiq_io.dump_hettmp_file(fname, osamps)
 
+    print("Dump psi_samples")
     for lsv in list_of_lsv:
         lsv_id = lsv.encode('utf-8')
         out_h5p.heterogen(lsv).add(lsv_type=lsv_type_dict[lsv], mu_psi=o_mupsi, mean_psi=o_postpsi,
@@ -184,8 +186,8 @@ cdef void _core_independent(object self):
             # class_ = getattr(module_, stats_name.title())
             # operator[stats_name] = class_()
     except ImportError:
-        logger.error("The %s statistic is not one of the available statistics, "
-                     "in  [ %s ]" % (stats_name, ' | '.join(all_stats)))
+        logger.error("The %s statistic is not one of the available statistics, ")
+                     #"in  [ %s ]" % (stats_name, ' | '.join(all_stats)))
         return
 
     list_of_lsv1, exps1 = majiq_io.extract_lsv_summary(self.files1, types_dict=lsv_type_dict,
@@ -194,7 +196,7 @@ cdef void _core_independent(object self):
 
     logger.info("Group %s: %s LSVs" % (self.names[0], len(list_of_lsv1)))
 
-    list_of_lsv2, exps2 = majiq_io.extract_lsv_summary(self.files2, types_dict=self.lsv_type_dict,
+    list_of_lsv2, exps2 = majiq_io.extract_lsv_summary(self.files2, types_dict=lsv_type_dict,
                                                        minnonzero=self.minpos, min_reads=self.minreads,
                                                        junc_info=junc_info, percent=self.min_exp, logger=logger)
     logger.info("Group %s: %s LSVs" % (self.names[1], len(list_of_lsv1)))
@@ -209,8 +211,6 @@ cdef void _core_independent(object self):
 
     logger.info("Number quantifiable LSVs: %s" % nlsv)
     nthreads = min(self.nthreads, nlsv)
-
-    comparison
 
 
     logger.info('Computation done, saving results....')
@@ -227,7 +227,7 @@ cdef void _core_independent(object self):
             lsv_vec[lsv.encode('utf-8')] = tpair
             j_offset += nways
 
-
+        print('PRE HET')
         _het_computation(out_h5p, file_cond, list_of_lsv, lsv_vec, lsv_type_dict, junc_info, self.psi_samples,
                          nthreads, nbins, self.outDir)
 

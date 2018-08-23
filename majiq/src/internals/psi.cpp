@@ -25,9 +25,9 @@ void prob_data_sample_given_psi(float* out_array, float sample, float all_sample
 
     const float a = sample + alpha_prior ;
     const float b = (all_sample - sample) + beta_prior ;
+
 //cout << "a=" << sample << "+"<< alpha_prior <<" b=" << b << " nbins=" << nbins << " betap="<< beta_prior <<"\n" ;
     float prev = scythe::pbeta(psi_border[0], a, b) ;
-
     for (int i=0; i<nbins; i++){
         float res = scythe::pbeta(psi_border[i+1], a, b) ;
         out_array[i] = log((res - prev) + 1e-300);
@@ -178,27 +178,26 @@ void deltapsi_posterior(vector<psi_distr_t>& i_psi1, vector<psi_distr_t>& i_psi2
 
 
 void get_samples_from_psi(vector<psi_distr_t>& i_psi, float* osamps, float* o_mupsi, float* o_postpsi,
-                            int psi_samples, int j_offset, psi_distr_t psi_border, int njunc, int msamples, int nbins){
-
+                            int psi_samples, int j_offset, psi_distr_t psi_border, int njunc, int msamples,
+                            int nbins, bool is_ir){
     vector<psi_distr_t> alpha_beta_prior(njunc, psi_distr_t(2)) ;
+    get_prior_params(alpha_beta_prior, njunc, is_ir) ;
+
     vector<float> psi_space(nbins) ;
     for(int i=0; i<nbins; i++){
         psi_space[i] = (psi_border[i] + psi_border[i+1]) / 2 ;
     }
-
     float * all_m = (float*) calloc(msamples, sizeof(float)) ;
     for (int j=0; j<njunc; j++){
         for (int m=0; m<msamples; m++) {
             all_m[m] += i_psi[j][m] ;
         }
     }
-
     for (int j=0; j<njunc; j++){
         const float alpha = alpha_beta_prior[j][0] ;
         const float beta = alpha_beta_prior[j][1] ;
         psi_distr_t temp_mupsi(msamples) ;
         for (int m=0; m<msamples; m++){
-
             const float jnc_val = i_psi[j][m] ;
             const float all_val = all_m[m] ;
             float * psi_lkh =  (float*) calloc(nbins, sizeof(float)) ;
@@ -220,7 +219,6 @@ void get_samples_from_psi(vector<psi_distr_t>& i_psi, float* osamps, float* o_mu
             temp_postpsi[i] = o_postpsi[idx_2d] ;
         }
 
-
         if (psi_samples == 1){
             osamps[j+j_offset] = o_mupsi[j] ;
         }else{
@@ -233,7 +231,6 @@ void get_samples_from_psi(vector<psi_distr_t>& i_psi, float* osamps, float* o_mu
             }
         }
     }
-
     free(all_m) ;
     return ;
 }

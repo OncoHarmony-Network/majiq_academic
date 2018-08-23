@@ -5,6 +5,7 @@ from majiq.src.py_deltapsi import deltapsi as py_deltapsi
 from majiq.src.py_indpnt import calc_independent as py_calc_independent
 from majiq.src.calc_psi import calcpsi
 from majiq.src.deltapsi import deltapsi
+from majiq.src.indpnt import calc_independent
 from majiq.src.constants import *
 from majiq.src.wght_pipeline import calc_weights as py_calc_weights
 
@@ -185,7 +186,7 @@ def main():
     htrgen.add_argument('-grp2', dest="files2", nargs='+', required=True)
     htrgen.add_argument('-n', '--names', nargs='+', required=True,
                         help="The names that identify each of the experiments.")
-    htrgen.add_argument('--nsamples', type=int, default=100,
+    htrgen.add_argument('--nsamples', type=int, default=100, dest="psi_samples",
                         help='Number of PSI samples to take per LSV junction. If equal to 1, use expected value only. '
                              '[Default: %(default)d]')
     htrgen.add_argument('--vwindow', type=get_vwindow, default=0.0,
@@ -241,7 +242,7 @@ def main():
                                              parents=[common, sampling, htrgen])
 
 
-    parser_heterogen.set_defaults(func=py_calc_independent)
+    parser_heterogen.set_defaults(func=calc_independent)
 
     if len(sys.argv) == 1:
         parser.print_help()

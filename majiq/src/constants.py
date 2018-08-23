@@ -76,4 +76,4 @@ def get_weights_filename(outdir, name):
 
 
 def get_tmp_psisample_file(outdir, name):
-    return "%s/%s.psisamples.tmp"  %(outdir, name)
+    return "%s/%s.psisamples.tmp" %(outdir, name)

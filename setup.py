@@ -30,8 +30,10 @@ else:
 
 
 MAJIQ_INC_DIRS = ['majiq/src/internals']
+MAJIQ_INC_STATS_DIR = ['majiq/src/internals/stats']
 VOILA_INC_DIRS = ['voila/c']
 MAJIQ_LIB_DIRS = ['majiq/src/internals']
+
 NPY_INC_DIRS   = [numpy.get_include()]
 
 extensions += [Extension('majiq.src.polyfitnb', ['majiq/src/polyfitnb.pyx'], language='c++', include_dirs=NPY_INC_DIRS)]
@@ -60,7 +62,7 @@ extensions += [Extension('majiq.src.deltapsi', ['majiq/src/deltapsi.pyx', 'majiq
                          language='c++')]
 
 extensions += [Extension('majiq.src.indpnt', ['majiq/src/indpnt.pyx', 'majiq/src/internals/psi.cpp'],
-                         include_dirs=MAJIQ_INC_DIRS + NPY_INC_DIRS,
+                         include_dirs=MAJIQ_INC_DIRS + NPY_INC_DIRS + MAJIQ_INC_STATS_DIR,
                          library_dirs=MAJIQ_LIB_DIRS,
                          runtime_library_dirs=MAJIQ_LIB_DIRS,
                          extra_compile_args=compile_args+scythe_compiler_args,  extra_link_args=linker_args,

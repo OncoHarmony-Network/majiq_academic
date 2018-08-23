@@ -20,7 +20,7 @@ cdef extern from "psi.hpp":
                                  int msamples, int njunc, int nbins, bint is_ir) nogil ;
     cdef void get_samples_from_psi(vector[psi_distr_t]& i_psi, float* osamps, float* o_mu_psi, float* o_postpsi1,
                                    int psi_samples, int j_offset, psi_distr_t psi_border, int njunc,
-                                   int msamples, int nbins) nogil ;
+                                   int msamples, int nbins, bint is_ir) nogil ;
 
     cdef void test_calc(float* oPvals, vector[float*] samples1, vector[float*] samples2, HetStats* HetStatsObj,
                int njunc, int psamples) nogil ;
