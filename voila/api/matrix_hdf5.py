@@ -406,7 +406,7 @@ class Heterogen(MatrixHdf5):
             """
 
             mu_psi = kwargs.get('mu_psi', None)
-            if mu_psi:
+            if mu_psi is not None:
                 arr = np.empty((2, max(x.shape[0] for x in mu_psi), mu_psi[0].shape[1]))
                 arr.fill(-1)
                 for i, ms in enumerate(mu_psi):
