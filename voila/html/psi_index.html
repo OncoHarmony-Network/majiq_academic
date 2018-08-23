@@ -73,6 +73,7 @@
 
                     t.each((d, i, a) => {
                         if (a[i].dataset.lsvId !== d._id) {
+                            const tds = a[i].querySelectorAll('td')
                             a[i].dataset.lsvId = d._id;
 
                             const tr = d3.select(a[i]);
@@ -81,29 +82,12 @@
 
                             table.ucsc_link(tr.selectAll('.links a').datum(d));
 
-                            tr.selectAll('.lsv-legend')
-                                .datum(d)
-                                .each((d, i, a) => {
-                                    const canvas = a[i];
-                                    const context = canvas.getContext('2d');
-                                    context.clearRect(0, 0, canvas.width, canvas.height);
-                                    lsv.cartoon(canvas, d._id)
-                                });
+                            // lsv cartoon
+                            lsv.cartoon(tds[2].querySelector('canvas'), d._id);
 
-                            tr.selectAll('.psi-violin-plot')
-                                .each((d, i, a) => {
-                                    a[i].style.display = 'None';
-                                    violin.psi(a[i]);
-                                });
-
-                            tr.selectAll('.lsv-single-compact-percentiles')
-                                .each((d, i, a) => {
-                                    const canvas = a[i];
-                                    const context = canvas.getContext('2d');
-                                    context.clearRect(0, 0, canvas.width, canvas.height);
-                                    lsv.draw_lsv_compact_stack_bars(canvas, 1);
-                                    canvas.style.display = 'block'
-                                });
+                            // psi per junction
+                            table.psi_summary_compact(tds[3].querySelector('canvas'));
+                            table.psi_summary_violin(tds[3].querySelector('svg'));
                         }
                     });
 
@@ -152,14 +136,7 @@
                         .attr('class', 'lsv-single-compact-percentiles')
                         .each((d, i, a) => {
                             db_lsv.get('metadata').then(metadata => {
-                                const canvas = a[i];
-                                canvas.dataset.group = metadata.group_names[0];
-                                lsv.draw_lsv_compact_stack_bars(canvas, 1);
-                                canvas.onclick = () => {
-                                    const violin = canvas.parentNode.querySelector('.psi-violin-plot');
-                                    violin.style.display = 'block';
-                                    canvas.style.display = 'none';
-                                }
+                                table.psi_summary_compact(a[i], metadata.group_names[0])
                             });
                         });
 
@@ -168,16 +145,7 @@
                         .attr('class', 'psi-violin-plot')
                         .each((d, i, a) => {
                             db_lsv.get('metadata').then(metadata => {
-                                const v = a[i];
-                                v.dataset.group = metadata.group_names[0];
-                                v.style.display = 'None';
-                                violin.psi(v);
-                                v.onclick = () => {
-                                    const comp = v.parentNode.querySelector('.lsv-single-compact-percentiles');
-                                    v.style.display = 'none';
-                                    comp.style.display = 'block';
-
-                                }
+                                table.psi_summary_violin(a[i], metadata.group_names[0]);
                             });
                         });
 
