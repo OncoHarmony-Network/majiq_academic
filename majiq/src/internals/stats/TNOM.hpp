@@ -6,8 +6,10 @@
 #include <string>
 #include <map>
 #include "testStats.hpp"
-
+#include <iostream>
 #define MAXCLASS 2
+
+#define DEBUG 1
 
 using namespace std ;
 namespace MajiqStats{
@@ -166,6 +168,7 @@ namespace MajiqStats{
                     if(labels[i] <= 0)
                         RightClass[labels[i]]++;
                 }
+
                 /** mainloop
                 * calculate number of "mistakes"
                 * L - num of mistakes in right + left classes
@@ -173,7 +176,7 @@ namespace MajiqStats{
                 **/
                 double LastValue = -HUGE_VAL;
                 for( int i = 0; i <= n; i++ ){
-                    if( i == n || labels[i] <= 0 ){
+                    if( i == n || labels[i] >= 0 ){
                         double L = Loss(LeftClass) + Loss(RightClass);
                         double X = (i < n) ? data[i] : HUGE_VAL;
                         if( i == 0 || (L < BestLoss && X != LastValue) ){
@@ -188,6 +191,7 @@ namespace MajiqStats{
                         LastValue = X;
                     }
                 }
+
                 return ComputePValue(LeftClass[0], LeftClass[1], (int)BestLoss) ;
             }
     };

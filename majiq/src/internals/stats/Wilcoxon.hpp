@@ -7,7 +7,7 @@
 #include <string>
 #include <assert.h>
 #include <map>
-
+#include <iostream>
 #define MAXCLASS 2
 
 using namespace std ;

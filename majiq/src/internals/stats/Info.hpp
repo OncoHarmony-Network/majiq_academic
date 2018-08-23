@@ -7,6 +7,7 @@
 #include <string>
 #include <assert.h>
 #include <map>
+#include <iostream>
 
 #define MAXCLASS 2
 
@@ -226,7 +227,7 @@ namespace MajiqStats{
                 double LastValue = -HUGE_VAL ;
                 for(int i = 0; i <= n; i++ ) {
 
-                    if( i == n || labels[i] <= 0 ){
+                    if( i == n || labels[i] >= 0 ){
 
                         double L = Entropy(LeftClass, MAXCLASS) + Entropy(RightClass, MAXCLASS) ;
                         double X = (i < n) ? data[i] : HUGE_VAL ;

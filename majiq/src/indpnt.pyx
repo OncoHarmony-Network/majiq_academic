@@ -49,6 +49,9 @@ cdef void _statistical_test_computation(object out_h5p, dict comparison, list li
         return
 
     index = 0
+
+    print(comparison)
+
     for cond_name, cond in comparison.items():
         file_list.append([])
         for xx in range(cond):
@@ -72,15 +75,20 @@ cdef void _statistical_test_computation(object out_h5p, dict comparison, list li
             oPvals = output[lsv_id]
             # oPvals = np.zeros(shape=(nways, nstats), dtype=np.float32)
             # output[lsv_id] = oPvals
+            print('223332KOLA', i, lsv_index, nways)
             for cc in file_list[0]:
                 k = cc[lsv_index:lsv_index+nways]
                 cond1_smpl.push_back(<np.float32_t *> k.data)
+                print ('1', k)
 
             for cc in file_list[1]:
                 k = cc[lsv_index:lsv_index+nways]
                 cond2_smpl.push_back(<np.float32_t *> k.data)
+                print ('2', k)
             print('KOLA', i)
         test_calc(<np.float32_t *> oPvals.data, cond1_smpl, cond2_smpl, StatsObj, nways, psi_samples)
+        cond1_smpl.clear()
+        cond2_smpl.clear()
         with gil:
             print('END KOLA', i)
 
