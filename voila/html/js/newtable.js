@@ -210,20 +210,29 @@ class NewTable {
     }
 
 
-    ucsc_link(els) {
-        return els
-            .each((d, i, a) => {
-                db_gene.get(d.gene_id).then(gene => {
-                    // The order of the junctions array is super important, so we'll copy the array before sorting.
-                    const juncs = Array.from(d.junctions);
-                    juncs.sort((a, b) => a[0] - b[0] || a[1] - b[1]);
-                    const first_junc = juncs[0];
-                    const last_junc = juncs[juncs.length - 1];
-                    const first_exon = gene.exons.find(e => first_junc[0] >= e.start & first_junc[0] <= e.end);
-                    const last_exon = gene.exons.find(e => last_junc[1] >= e.start & last_junc[1] <= e.end);
-                    a[i].setAttribute('href', `http://genome.ucsc.edu/cgi-bin/hgTracks?db=${gene.genome}&position=${gene.chromosome}:${first_exon.start}-${last_exon.end}`);
-                })
-            })
+    ucsc_link(a_tag, d) {
+        db_gene.get(d.gene_id).then(gene => {
+            // The order of the junctions array is super important, so we'll copy the array before sorting.
+            const juncs = Array.from(d.junctions);
+            juncs.sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+            const first_junc = juncs[0];
+            const last_junc = juncs[juncs.length - 1];
+            const first_exon = gene.exons.find(e => first_junc[0] >= e.start & first_junc[0] <= e.end);
+            const last_exon = gene.exons.find(e => last_junc[1] >= e.start & last_junc[1] <= e.end);
+            a_tag.setAttribute('href', `http://genome.ucsc.edu/cgi-bin/hgTracks?db=${gene.genome}&position=${gene.chromosome}:${first_exon.start}-${last_exon.end}`);
+        })
+    };
+
+    majiq_spel_button(btn, d) {
+        btn.onclick = () => {
+            const textArea = document.createElement("textarea");
+            textArea.value = `test value`;
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textArea);
+        }
     };
 
     psi_summary_compact(canvas, group_name) {

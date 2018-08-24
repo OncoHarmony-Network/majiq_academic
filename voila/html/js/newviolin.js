@@ -340,10 +340,11 @@ class Violin {
         let numCopies;
         let tmpBins = [];
 
-        lsv_bins.forEach(function (b, i) {
+        lsv_bins.forEach((b, i) => {
             numCopies = Math.round(numSamples * b);
             tmpBins = tmpBins.concat(new Array(numCopies).fill((1 / binsSize) / 2 + (i / binsSize)))
         });
+
         return tmpBins;
     };
 
@@ -435,7 +436,7 @@ class Violin {
 
         g
             .append('text')
-            .text('E(PSI)')
+            .text('E(Ψ)')
             .attr('font-size', 12)
             .attr('text-anchor', 'middle')
             .attr('transform', 'rotate(-90,' + label_pad + ',' + height + ')')
@@ -459,7 +460,7 @@ class Violin {
 
         g
             .append('text')
-            .text('E(PSI)')
+            .text('E(ΔΨ)')
             .attr('font-size', 12)
             .attr('text-anchor', 'middle')
             .attr('transform', 'rotate(-90,' + label_pad + ',' + height + ')')

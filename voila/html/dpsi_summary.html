@@ -90,15 +90,19 @@
                             .each((d, i, a) => table.psi_summary_violin(a[i], metadata.group_names[1]))
                     });
 
-                    table.ucsc_link(
-                        trs
-                            .append('td')
-                            .attr('class', 'links')
-                            .append('a')
-                    )
+                    const links = trs
+                        .append('td')
+                        .attr('class', 'links');
+                    links
+                        .append('a')
+                        .each((d, i, a) => {
+                            table.ucsc_link(a[i], d)
+                        })
                         .append('img')
                         .attr('src', 'img/ucsc.png');
-
+                    links.append('button')
+                        .text('Copy LSV')
+                        .each((d, i, a) => table.majiq_spel_button(a[i], d));
 
                     /*
                         Update values in existing rows
@@ -128,7 +132,8 @@
                             table.dpsi_summary_violin(tds[4].querySelector('.deltapsi-violin-plot'));
 
                             // ucsc link
-                            table.ucsc_link(d3.select(a[i]).selectAll('.links a').datum(d))
+                            table.ucsc_link(tds[6].querySelector('.links a'), d)
+
                         })
                 }
             });

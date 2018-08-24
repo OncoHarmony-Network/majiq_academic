@@ -361,6 +361,10 @@ class ViewHeterogens:
             return self.get_attr('target')
 
         @property
+        def binary(self):
+            return self.get_attr('binary')
+
+        @property
         def dpsi(self):
             group_names = self.matrix_hdf5.view_metadata['group_names']
             ir = int(self.intron_retention)
@@ -522,6 +526,7 @@ class ViewHeterogens:
 
     @property
     def analysis_type(self):
+        print([vh.analysis_type for vh in self.view_heterogens])
         analysis_types = {vh.analysis_type for vh in self.view_heterogens}
         if len(analysis_types) == 1:
             return analysis_types.pop()

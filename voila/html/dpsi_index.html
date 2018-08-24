@@ -75,12 +75,15 @@
                     t.each((d, i, a) => {
                         if (a[i].dataset.lsvId !== d._id) {
                             a[i].dataset.lsvId = d._id;
-
+                            const tds = a[i].querySelectorAll('td');
                             const tr = d3.select(a[i]);
+
                             gene_names(tr.selectAll('.gene-name a').datum(d));
                             lsv_ids(tr.selectAll('.lsv-id').datum(d));
 
-                            table.ucsc_link(tr.selectAll('.links a').datum(d));
+                            table.dpsi_summary_violin(tds[3].querySelector('.deltapsi-violin-plot'));
+                            table.dpsi_summary_excl_incl(tds[3].querySelector('.excl-incl-rect'), d);
+                            table.ucsc_link(tds[4].querySelector('.links a'), d);
 
                             tr.selectAll('.lsv-legend')
                                 .datum(d)
@@ -91,20 +94,7 @@
                                     lsv.cartoon(canvas, d._id)
                                 });
 
-                            tr.selectAll('.psi-violin-plot')
-                                .each((d, i, a) => {
-                                    a[i].style.display = 'None';
-                                    violin.psi(a[i]);
-                                });
 
-                            tr.selectAll('.lsv-single-compact-percentiles')
-                                .each((d, i, a) => {
-                                    const canvas = a[i];
-                                    const context = canvas.getContext('2d');
-                                    context.clearRect(0, 0, canvas.width, canvas.height);
-                                    lsv.draw_lsv_compact_stack_bars(canvas, 1);
-                                    canvas.style.display = 'block'
-                                });
                         }
                     });
 
@@ -146,23 +136,27 @@
                     // changes
                     const changes = trs.append('td');
 
-                    const excl_incl = changes
+                    changes
                         .append('div')
-                        .attr('class', 'excl-incl-rect');
+                        .attr('class', 'excl-incl-rect')
+                        .each((d, i, a) => {
+                            table.dpsi_summary_excl_incl(a[i], d)
+                        });
 
-                    const dpsi_violin = changes
+                    changes
                         .append('svg')
-                        .attr('class', 'deltapsi-violin-plot');
+                        .attr('class', 'deltapsi-violin-plot')
+                        .each((d, i, a) => {
+                            table.dpsi_summary_violin(a[i], d)
+                        });
 
-                    table.dpsi_summary(excl_incl, dpsi_violin);
-
-                    // links
-                    table.ucsc_link(
-                        trs
-                            .append('td')
-                            .attr('class', 'links')
-                            .append('a')
-                    )
+                    trs
+                        .append('td')
+                        .attr('class', 'links')
+                        .append('a')
+                        .each((d, i, a) => {
+                            table.ucsc_link(a[i], d)
+                        })
                         .append('img')
                         .attr('src', 'img/ucsc.png');
                 },

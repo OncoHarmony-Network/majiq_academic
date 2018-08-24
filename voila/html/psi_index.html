@@ -73,7 +73,7 @@
 
                     t.each((d, i, a) => {
                         if (a[i].dataset.lsvId !== d._id) {
-                            const tds = a[i].querySelectorAll('td')
+                            const tds = a[i].querySelectorAll('td');
                             a[i].dataset.lsvId = d._id;
 
                             const tr = d3.select(a[i]);
