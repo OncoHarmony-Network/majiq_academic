@@ -144,7 +144,7 @@ void deltapsi_posterior(vector<psi_distr_t>& i_psi1, vector<psi_distr_t>& i_psi2
             for (int x=0; x< nbins; x++){
                 for(int y=0; y<nbins; y++){
                     const int idx_2d = (x*nbins) + y ;
-                    A[idx_2d] = (psi_lkh1[x] * psi_lkh2[y]) + prior_matrix[idx_2d] ;
+                    A[idx_2d] = (psi_lkh1[x] + psi_lkh2[y]) + prior_matrix[idx_2d] ;
                 }
             }
 
@@ -243,7 +243,7 @@ void test_calc(float* oPvals, vector<float*> samples1, vector<float*> samples2, 
 //cout << "KK1\n" ;
     const int n1 = samples1.size() ;
     const int n2 = samples2.size() ;
-cout << "KK2 " << njunc << "\n" ;
+//cout << "KK2 " << njunc << "\n" ;
     for (int j=0; j<njunc; j++){
         for(int s=0; s<psamples; s++){
 //cout << "KK30\n" ;
@@ -263,20 +263,19 @@ cout << "KK2 " << njunc << "\n" ;
                 labels.push_back(1) ;
             }
 
-cout << "KK33\n" ;
-    for (int i=0; i<(n1+n2); i++)
-cout << csamps[i] << "|" << labels[i] << ", " ;
-cout << " ]"  << endl ;
+//cout << "KK33\n" ;
+//    for (int i=0; i<(n1+n2); i++)
+//cout << csamps[i] << "|" << labels[i] << ", " ;
+//cout << " ]"  << endl ;
 
             auto p = sort_permutation <float>(csamps, less<float>() ) ;
 //cout << "KK34\n" ;
             csamps = apply_permutation(csamps, p);
             labels = apply_permutation(labels, p);
-cout << "KK35\n" ;
-    for (int i=0; i<(n1+n2); i++)
-cout << csamps[i] << "|" << labels[i] << ", " ;
-cout << " ]"  << endl ;
-
+//cout << "KK35\n" ;
+//    for (int i=0; i<(n1+n2); i++)
+//cout << csamps[i] << "|" << labels[i] << ", " ;
+//cout << " ]"  << endl ;
 
             for(int i=0; i<nstats; i++){
                 const int idx_2d = (j*nstats) + i ;

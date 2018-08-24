@@ -9,8 +9,6 @@
 #include <iostream>
 #define MAXCLASS 2
 
-#define DEBUG 1
-
 using namespace std ;
 namespace MajiqStats{
 
@@ -28,7 +26,6 @@ namespace MajiqStats{
                 }
 
             };
-
 
             map<tTNOMRecord, double> _pval_cache ;
 

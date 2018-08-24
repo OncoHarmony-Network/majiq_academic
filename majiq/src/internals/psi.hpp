@@ -45,20 +45,19 @@ inline void get_prior_params( vector<psi_distr_t>& o_priors, int njunc, bool ir)
     return ;
 }
 
+
 inline float logsumexp(float nums[], size_t ct){
     float max_exp = nums[0], sum = 0.0;
     size_t i;
 
     for(i = 1; i < ct; i++){
-        if (nums[i] > max_exp){
-            max_exp = nums[i];
-        }
+        max_exp = (nums[i] > max_exp) ? nums[i] : max_exp ;
     }
 
     for(i = 0; i < ct; i++){
-        sum += exp(nums[i] - max_exp);
+        sum += exp(nums[i] - max_exp) ;
     }
-    return log(sum) + max_exp;
+    return log(sum) + max_exp ;
 }
 
 template <typename T, typename Compare>
