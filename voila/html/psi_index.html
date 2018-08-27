@@ -20,12 +20,12 @@
     <script src="https://d3js.org/d3.v4.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/pouchdb@7.0.0/dist/pouchdb.min.js"></script>
     <script src="https://unpkg.com/pouchdb@7.0.0/dist/pouchdb.find.min.js"></script>
-    <script src="js/newtable.js"></script>
+    <script src="js/table.js"></script>
     <script src="js/lsvtools.js"></script>
     <script src="js/lsv.js"></script>
     <script src="js/heatmap.js"></script>
     <script src="js/colors.js"></script>
-    <script src="js/newviolin.js"></script>
+    <script src="js/violin.js"></script>
     <script src="metadata.js"></script>
     <script>
         const db_gene = new PouchDB('voila_gene_{{ db_id }}');
@@ -41,8 +41,9 @@
             };
 
             const lsv = new Lsv(db_lsv, db_gene);
-            const violin = new Violin(db_lsv);
-            const t = new NewTable('#results', db_gene, db_lsv, {
+            const t = new Table('#results', {
+                db_gene: db_gene,
+                db_lsv: db_lsv,
                 show_data: (lsvs, table, table_body) => {
 
                     const t = d3.select(table_body).selectAll('tr')
@@ -73,14 +74,15 @@
 
                     t.each((d, i, a) => {
                         if (a[i].dataset.lsvId !== d._id) {
-                            const tds = a[i].querySelectorAll('td')
+                            const tds = a[i].querySelectorAll('td');
+
                             a[i].dataset.lsvId = d._id;
 
                             const tr = d3.select(a[i]);
                             gene_names(tr.selectAll('.gene-name a').datum(d));
                             lsv_ids(tr.selectAll('.lsv-id').datum(d));
 
-                            table.ucsc_link(tr.selectAll('.links a').datum(d));
+                            table.ucsc_link(tds[4].querySelector('.links a'), d);
 
                             // lsv cartoon
                             lsv.cartoon(tds[2].querySelector('canvas'), d._id);
@@ -150,12 +152,11 @@
                         });
 
                     // links
-                    table.ucsc_link(
-                        trs
-                            .append('td')
-                            .attr('class', 'links')
-                            .append('a')
-                    )
+                    trs
+                        .append('td')
+                        .attr('class', 'links')
+                        .append('a')
+                        .each((d, i, a) => table.ucsc_link(a[i], d))
                         .append('img')
                         .attr('src', 'img/ucsc.png');
                 },

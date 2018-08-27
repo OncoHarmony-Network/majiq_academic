@@ -12,9 +12,9 @@
         window.addEventListener('load', () => {
 
             const lsv = new Lsv(db_lsv, db_gene);
-            const violin = new Violin(db_lsv);
-
-            const t = new NewTable('#results', db_gene, db_lsv, {
+            const t = new Table('#results', {
+                db_gene: db_gene,
+                db_lsv: db_lsv,
                 show_data: (lsvs, table, table_body) => {
                     const t = d3.select(table_body).selectAll('tr')
                         .data(lsvs);
@@ -55,14 +55,13 @@
                             .attr('class', 'psi-violin-plot')
                             .each((d, i, a) => table.psi_summary_violin(a[i], metadata.group_names[0]));
                     });
-
-
-                    table.ucsc_link(
-                        trs
-                            .append('td')
-                            .attr('class', 'links')
-                            .append('a')
-                    )
+                    trs
+                        .append('td')
+                        .attr('class', 'links')
+                        .append('a')
+                        .each((d, i, a) => {
+                            table.ucsc_link(a[i], d)
+                        })
                         .append('img')
                         .attr('src', 'img/ucsc.png');
 
@@ -81,7 +80,7 @@
                             table.psi_summary_compact(tds[3].querySelector('canvas'));
                             table.psi_summary_violin(tds[3].querySelector('svg'));
 
-                            table.ucsc_link(d3.select(a[i]).selectAll('.links a').datum(d))
+                            table.ucsc_link(tds[4].querySelector('.links a'), d)
                         })
                 }
             });

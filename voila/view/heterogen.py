@@ -27,7 +27,7 @@ class Heterogen(Html, Tsv):
         pass
 
     def __init__(self, args):
-        super().__init__(args)
+        super().__init__(args, ViewHeterogens)
         with ViewHeterogens(args) as m:
             if m.analysis_type != constants.ANALYSIS_HETEROGEN:
                 raise NotHeterogenVoilaFile(args)

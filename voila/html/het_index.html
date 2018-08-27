@@ -19,11 +19,12 @@
     <script src="https://d3js.org/d3.v4.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/pouchdb@7.0.0/dist/pouchdb.min.js"></script>
     <script src="https://unpkg.com/pouchdb@7.0.0/dist/pouchdb.find.min.js"></script>
-    <script src="js/newtable.js"></script>
+    <script src="js/table.js"></script>
     <script src="js/lsvtools.js"></script>
     <script src="js/lsv.js"></script>
     <script src="js/heatmap.js"></script>
     <script src="js/colors.js"></script>
+    <script src="js/violin.js"></script>
     <script src="metadata.js"></script>
     <script>
         const db_gene = new PouchDB('voila_gene');
@@ -250,70 +251,12 @@
         };
 
         window.onload = function () {
-            document.querySelector('.autocomplete ul').onmouseover = mouseover_autocomplete;
-            document.querySelector('.autocomplete ul').onmousedown = mouseclick_autocomplete;
-            document.querySelector('.search').oninput = find_autocomplete;
-            document.querySelector('.search').onkeydown = arrow_autocomplete;
-            document.querySelector('.search').onkeypress = enter_autocomplete;
-            document.querySelector('.search').onblur = hide_autocomplete;
-            document.querySelector('form').onsubmit = find_results;
             const lsv = new Lsv(db_lsv, db_gene);
             const heatmap = new HeatMap(db_lsv);
-            const lsv_filter = document.querySelector('.lsv-filters');
-            const load_db = gene_id => {
-                return new Promise(resolve => {
-                    const scriptTag = document.createElement('script');
-                    scriptTag.src = `${gene_id}.js`;
-                    scriptTag.onload = () => resolve();
-                    scriptTag.onreadystatechange = () => resolve();
-                    document.body.appendChild(scriptTag);
-                    console.log(`loaded ${gene_id}.`)
-                })
-            };
-            const t = new NewTable('#results', db_gene, db_lsv, {
-                get_data: table => {
-                    return new Promise(resolve => {
-                        const filter = {};
-
-                        lsv_filter.querySelector('#prime-5').checked ? filter.A5SS = true : null;
-                        lsv_filter.querySelector('#prime-3').checked ? filter.A3SS = true : null;
-                        lsv_filter.querySelector('#exon-skipping').checked ? filter.exon_skipping = true : null;
-                        lsv_filter.querySelector('#target').checked ? filter.target = true : null;
-                        lsv_filter.querySelector('#source').checked ? filter.target = false : null;
-                        lsv_filter.querySelector('#binary').checked ? filter.binary = true : null;
-                        lsv_filter.querySelector('#complex').checked ? filter.binary = false : null;
-
-                        const lsv_ids = lsvs_arr
-                            .filter(l => {
-                                const ks = Object.keys(filter);
-                                if (ks.length)
-                                    return ks.every(k => l[k] === filter[k]);
-                                else
-                                    return true
-                            })
-                            .sort((a, b) => a._id.localeCompare(b._id))
-                            .slice(table.page_number * 25, (table.page_number + 1) * 25);
-                        resolve(lsv_ids)
-                    })
-                },
-                curate_data: (table, results) => {
-                    const gene_ids = Array.from(new Set(results.map(l => l.gene_id)));
-
-                    return Promise.all(gene_ids.map(gene_id => load_db(gene_id))).then(() => {
-                        return db_lsv.allDocs({
-                            keys: results.map(r => r._id),
-                            include_docs: true
-                        })
-                            .then(lsvs => {
-                                console.log(lsvs);
-                                if (lsvs.rows.some(r => r.error))
-                                    return table.retrieve_data(table, results);
-                                else
-                                    return lsvs.rows.map(r => r.doc)
-                            })
-                    })
-                },
-                show_data: (lsvs, table_body) => {
+            const t = new Table('#results', {
+                db_gene: db_gene,
+                db_lsv: db_lsv,
+                show_data: (lsvs, table, table_body) => {
 
                     const t = d3.select(table_body).selectAll('tr')
                         .data(lsvs);
@@ -328,13 +271,6 @@
                         Helper functions
                     */
 
-                    const lsv_types = els => {
-                        els.each((d, i, a) => {
-                            d3.select(a[i]).selectAll('canvas').remove();
-                            lsv.cartoon(a[i], d._id)
-                        })
-                    };
-
                     const lsv_ids = els => els.text(d => d._id);
 
                     const gene_names = els => {
@@ -344,28 +280,13 @@
                     };
 
 
-                    const links = els => {
-                        return els
-                            .attr('href', d => {
-                                db_gene.get(d.gene_id).then(gene => {
-                                    // The order of the junctions array is super important, so we'll copy the array before sorting.
-                                    const juncs = Array.from(d.junctions);
-                                    juncs.sort((a, b) => a[0] - b[0] || a[1] - b[1]);
-                                    const first_junc = juncs[0];
-                                    const last_junc = juncs[juncs.length - 1];
-                                    const first_exon = gene.exons.find(e => first_junc[0] >= e.start & first_junc[0] <= e.end);
-                                    const last_exon = gene.exons.find(e => last_junc[1] >= e.start & last_junc[1] <= e.end);
-                                    return `http://genome.ucsc.edu/cgi-bin/hgTracks?db=${gene.genome}&position=${gene.chromosome}:${first_exon.start}-${last_exon.end}`
-                                })
-                            })
-                    };
-
                     /*
                         Update elements
                      */
 
                     t.each((d, i, a) => {
                         if (a[i].dataset.lsvId !== d._id) {
+                            const tds = a[i].querySelectorAll('td');
 
                             a[i].dataset.lsvId = d._id;
 
@@ -375,9 +296,9 @@
 
                             lsv_ids(tr.selectAll('.lsv-id').datum(d));
 
-                            lsv_types(tr.selectAll('.lsv-type').datum(d));
+                            lsv.cartoon(tds[2].querySelector('canvas'), d._id);
 
-                            links(tr.selectAll('.links a'));
+                            table.ucsc_link(tds[4].querySelector('.links a'), d);
 
                             tr.selectAll('.summary')
                                 .datum(d)
@@ -417,11 +338,13 @@
                     );
 
                     // lsv type
-                    lsv_types(
-                        trs
-                            .append('td')
-                            .attr('class', 'lsv-type')
-                    );
+                    trs
+                        .append('td')
+                        .attr('class', 'lsv-type')
+                        .append('canvas')
+                        .each((d, i, a) => {
+                            lsv.cartoon(a[i], d._id)
+                        });
 
                     // summary
                     trs
@@ -434,31 +357,16 @@
                         });
 
                     // links
-                    links(
-                        trs
-                            .append('td')
-                            .attr('class', 'links')
-                            .append('a')
-                    )
+                    trs
+                        .append('td')
+                        .attr('class', 'links')
+                        .append('a')
+                        .each((d, i, a) => table.ucsc_link(a[i], d))
                         .append('img')
                         .attr('src', 'img/ucsc.png');
 
 
-                },
-                next:
-                    table => {
-                        document.querySelector('.next').onclick = () => {
-                            table.page_number++;
-                            table.update();
-                        }
-                    },
-                previous:
-                    table => {
-                        document.querySelector('.previous').onclick = () => {
-                            table.page_number--;
-                            table.update();
-                        }
-                    }
+                }
             });
 
             document.querySelector('.lsv-filters').addEventListener('change', () => {
@@ -543,22 +451,37 @@
 
 
 </div>
-<div>
-    <button class="previous pure-button">Previous</button>
-    <button class="next pure-button">Next</button>
-    <table id="results" class="pure-table">
-        <thead>
-        <tr>
-            <th>Gene Name</th>
-            <th>LSV ID</th>
-            <th>LSV Type</th>
-            <th>Summary</th>
-            <th>Links</th>
-        </tr>
-        </thead>
-        <tbody>
-        </tbody>
-    </table>
+<div class="lsv-container">
+    <div>
+        <div>
+            <form class="pure-form">
+                <button class="previous pure-button">Previous</button>
+                <button class="next pure-button">Next</button>
+                <select class="rows">
+                    <option value="10">10</option>
+                    <option value="25">25</option>
+                    <option value="50">50</option>
+                    <option value="100">100</option>
+                </select>
+                <span class="current-page"></span>
+            </form>
+        </div>
+
+        <table id="results" class="pure-table">
+            <thead>
+            <tr>
+                <th>Gene Name</th>
+                <th>LSV ID</th>
+                <th>LSV Type</th>
+                <th>Summary</th>
+                <th>Links</th>
+            </tr>
+            </thead>
+            <tbody>
+            </tbody>
+        </table>
+
+    </div>
 </div>
 </body>
 </html>

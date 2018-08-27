@@ -35,13 +35,17 @@ class MatrixHdf5:
         self.h.close()
 
     def add_dataset(self, *args, **kwargs):
-        grp = self.h
-        for k in args[:-1]:
-            try:
-                grp = grp[k]
-            except KeyError:
-                grp = grp.create_group(k)
-        grp.create_dataset(args[-1], **kwargs)
+        try:
+            grp = self.h
+            for k in args[:-1]:
+                try:
+                    grp = grp[k]
+                except KeyError:
+                    grp = grp.create_group(k)
+            grp.create_dataset(args[-1], **kwargs)
+        except Exception:
+            print('oh noes')
+            raise
 
     def add(self, lsv_id: str, key: str, data):
         """

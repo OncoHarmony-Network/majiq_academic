@@ -1,12 +1,7 @@
 {% extends 'base_summary.html' %}
 
 {% block script %}
-    {% for db_gene in db_genes %}
-        <script src="{{ db_gene }}"></script>
-    {% endfor %}
-    {% for db_lsv in db_lsvs %}
-        <script src="{{ db_lsv }}"></script>
-    {% endfor %}
+    <script src="metadata.js"></script>
     <script>
         const db_gene = new PouchDB('voila_gene');
         const db_lsv = new PouchDB('voila_lsv');

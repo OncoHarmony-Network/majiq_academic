@@ -217,13 +217,6 @@ class ViewDeltaPsi(DeltaPsi, ViewMatrix):
 
         @property
         def bins(self):
-            # print('---------------------------------------------------------')
-            # print('---------------------------------------------------------')
-            # print(self.get('bins'))
-            # print('---------------------------------------------------------')
-            # print(unpack_bins(self.get('bins')))
-            # print('---------------------------------------------------------')
-            # print('---------------------------------------------------------')
             return unpack_bins(self.get('bins'))
 
         @property
@@ -359,6 +352,10 @@ class ViewHeterogens:
         @property
         def target(self):
             return self.get_attr('target')
+
+        @property
+        def binary(self):
+            return self.get_attr('binary')
 
         @property
         def dpsi(self):
