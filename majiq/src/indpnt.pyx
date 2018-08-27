@@ -87,8 +87,8 @@ cdef void _statistical_test_computation(object out_h5p, dict comparison, list li
         test_calc(<np.float32_t *> oPvals.data, cond1_smpl, cond2_smpl, StatsObj, nways, psi_samples, 0.95)
         cond1_smpl.clear()
         cond2_smpl.clear()
-        with gil:
-            print('END KOLA', i)
+        # with gil:
+        #     print('END KOLA', i)
 
     print('DUMP VOILA FILE')
     for lsv in list_of_lsv:
@@ -221,7 +221,7 @@ cdef void _core_independent(object self):
     list_of_lsv = list(set(list_of_lsv1).intersection(set(list_of_lsv2)))
 
 
-    list_of_lsv = ['ENSMUSG00000032735:s:61823867-61823938']
+    # list_of_lsv = ['ENSMUSG00000032735:s:61823867-61823938']
     nlsv = len(list_of_lsv)
     if nlsv == 0:
         logger.info("There is no LSVs that passes the filters")

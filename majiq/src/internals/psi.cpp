@@ -248,36 +248,27 @@ void test_calc(float* oPvals, vector<float*> samples1, vector<float*> samples2, 
 
         vector<vector<float>> pval_vect (nstats, vector<float>(psamples)) ;
         for(int s=0; s<psamples; s++){
-//cout << "KK30\n" ;
+
             vector<float> csamps ;
             vector<int> labels ;
-//cout << "KK31\n" ;
+
             const int in_2d = (j*psamples) + s ;
 
             for (int i=0; i<n1; i++){
                 csamps.push_back(samples1[i][in_2d]) ;
                 labels.push_back(0) ;
             }
-//cout << "KK32\n" ;
+
             for (int i=0; i<n2; i++){
 
                 csamps.push_back(samples2[i][in_2d]) ;
                 labels.push_back(1) ;
             }
 
-//cout << "KK33\n" ;
-//    for (int i=0; i<(n1+n2); i++)
-//cout << csamps[i] << "|" << labels[i] << ", " ;
-//cout << " ]"  << endl ;
-
             auto p = sort_permutation <float>(csamps, less<float>() ) ;
 //cout << "KK34\n" ;
             csamps = apply_permutation(csamps, p);
             labels = apply_permutation(labels, p);
-//cout << "KK35\n" ;
-//    for (int i=0; i<(n1+n2); i++)
-//cout << csamps[i] << "|" << labels[i] << ", " ;
-//cout << " ]"  << endl ;
 
             for(int i=0; i<nstats; i++){
                 pval_vect[i][s] = (HetStatsObj->statistics)[i]->Calc_pval(csamps, labels) ;
@@ -287,7 +278,7 @@ void test_calc(float* oPvals, vector<float*> samples1, vector<float*> samples2, 
         for(int i=0; i<nstats; i++){
             const int idx_2d = (j*nstats) + i ;
             oPvals[idx_2d] = quantile(pval_vect[i], quant) ;
-            cout << "STAT: " << i << " :: " << oPvals[idx_2d] << "\n" ;
+//            cout << "STAT: " << i << " :: " << oPvals[idx_2d] << "\n" ;
         }
     }
 //cout << "KK END\n" ;
