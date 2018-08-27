@@ -8,6 +8,7 @@ from majiq.src.basic_pipeline import BasicPipeline, pipeline_run
 from majiq.src.constants import *
 # from majiq.src.stats import operator, all_stats
 from majiq.src.internals.HetStats cimport HetStats
+# from majiq.src.internals.npwrap import ArrayWrapper
 
 from voila.api import Matrix
 from voila.constants import ANALYSIS_HETEROGEN, VOILA_FILE_VERSION
@@ -74,8 +75,6 @@ cdef void _statistical_test_computation(object out_h5p, dict comparison, list li
             lsv_index = lsv_vec[lsv_id].second
             nways = lsv_vec[lsv_id].first
             oPvals = output[lsv_id]
-            # oPvals = np.zeros(shape=(nways, nstats), dtype=np.float32)
-            # output[lsv_id] = oPvals
             for cc in file_list[0]:
                 k = cc[lsv_index:lsv_index+nways]
                 cond1_smpl.push_back(<np.float32_t *> k.data)
@@ -87,8 +86,7 @@ cdef void _statistical_test_computation(object out_h5p, dict comparison, list li
         test_calc(<np.float32_t *> oPvals.data, cond1_smpl, cond2_smpl, StatsObj, nways, psi_samples, 0.95)
         cond1_smpl.clear()
         cond2_smpl.clear()
-        # with gil:
-        #     print('END KOLA', i)
+
 
     print('DUMP VOILA FILE')
     for lsv in list_of_lsv:
@@ -103,7 +101,6 @@ cdef int _het_computation(object out_h5p, dict file_cond, list list_of_lsv, map[
     cdef str f, cond_name, fname ;
     cdef int cidx, fidx
     cdef map[string, vector[psi_distr_t]] cov_dict
-    cdef int nways
     cdef int nlsv = len(list_of_lsv)
     cdef map[string, int] lsv_map
 
@@ -117,11 +114,14 @@ cdef int _het_computation(object out_h5p, dict file_cond, list list_of_lsv, map[
     cdef max_nfiles = 0
     cdef list cond_list
     cdef int total_njuncs = 0
+
     cdef np.ndarray[np.float32_t, ndim=2, mode="c"] osamps
-    cdef np.ndarray[np.float32_t, ndim=2, mode="c"] o_mupsi
+    cdef np.ndarray[np.float32_t, ndim=1, mode="c"] o_mupsi
     cdef np.ndarray[np.float32_t, ndim=2, mode="c"] o_postpsi
-    cdef int i, msamples
+    cdef list narray_mu, na_postpsi
+    cdef int i, msamples, nways
     cdef bint is_ir
+    # cdef ArrayWrapper mu_w0, mu_w1, ppsi_w0, ppsi_w1
 
     for cond_name, cond_list in file_cond.items():
         max_nfiles = max(max_nfiles, len(cond_list))
@@ -130,44 +130,54 @@ cdef int _het_computation(object out_h5p, dict file_cond, list list_of_lsv, map[
     for lsv in list_of_lsv:
         lsv_id = lsv.encode('utf-8')
         nways = len(lsv_type_dict[lsv].split('|')) -1
-        out_mupsi_d[lsv_id]= np.ndarray(shape=(len(file_cond), max_nfiles, nways), dtype=np.float32)
-        out_mupsi_d[lsv_id].fill(-1)
-        out_postpsi_d[lsv_id] = np.zeros(shape=(len(file_cond), nways, nbins), dtype=np.float32)
         lsv_map[lsv.encode('utf-8')] = nways
+
+        out_mupsi_d[lsv_id]= [np.ndarray(shape=(max_nfiles, nways), dtype=np.float32),
+                              np.ndarray(shape=(max_nfiles, nways), dtype=np.float32)]
+        out_mupsi_d[lsv_id][0].fill(-1)
+        out_mupsi_d[lsv_id][1].fill(-1)
+
+        out_postpsi_d[lsv_id] = [np.zeros(shape=(nways, nbins), dtype=np.float32),
+                                 np.zeros(shape=(nways, nbins), dtype=np.float32)]
+
 
         j_offset += nways
     total_njuncs = j_offset
 
     for cidx, (cond_name, cond_list) in enumerate(file_cond.items()):
-
-
         for fidx, f in enumerate(cond_list):
             osamps = np.zeros(shape=(total_njuncs, psi_samples), dtype=np.float32)
+            # osamps = vector(total_njuncs, vector(psi_samples))
+
             majiq_io.get_coverage_mat(cov_dict, lsv_map, [f], "", nthreads)
             for i in prange(nlsv, nogil=True, num_threads=nthreads):
                 with gil:
                     lsv = list_of_lsv[i]
                     lsv_id = lsv.encode('utf-8')
-
+                    is_ir = 'i' in lsv_type_dict[lsv]
                     nways = cov_dict[lsv_id].size()
                     msamples = cov_dict[lsv_id][0].size()
-                    # print(i, lsv, lsv_type_dict[lsv], nways, cidx)
-                    o_mupsi = out_mupsi_d[lsv_id][cidx]
+                    o_mupsi = out_mupsi_d[lsv_id][cidx][fidx]
+
                     o_postpsi = out_postpsi_d[lsv_id][cidx]
-                    is_ir = 'i' in lsv_type_dict[lsv]
 
                 get_samples_from_psi(cov_dict[lsv_id], <np.float32_t *> osamps.data, <np.float32_t *> o_mupsi.data,
                                      <np.float32_t *> o_postpsi.data, psi_samples, lsv_vec[lsv_id].second, psi_border,
                                      nways, msamples, nbins, is_ir)
 
+                # get_samples_from_psi(cov_dict[lsv_id], osamps, o_mupsi[lsv_id][cidx][fidx], o_postpsi[lsv_id][cidx],
+                #                      psi_samples, lsv_vec[lsv_id].second, psi_border, nways, msamples, nbins, is_ir)
+                # with gil:
+                #     print('INDP: 2', i , nlsv)
             fname = get_tmp_psisample_file(outdir, "%s_%s" %(cond_name, fidx) )
             majiq_io.dump_hettmp_file(fname, osamps)
 
-    # print("Dump psi_samples")
+    print("Dump psi_samples")
     for lsv in list_of_lsv:
+
         lsv_id = lsv.encode('utf-8')
-        out_h5p.heterogen(lsv).add(lsv_type=lsv_type_dict[lsv], mu_psi=out_mupsi_d[lsv_id], mean_psi=out_postpsi_d[lsv_id],
-                                      junctions=junc_info[lsv])
+        out_h5p.heterogen(lsv).add(lsv_type=lsv_type_dict[lsv], mu_psi=out_mupsi_d[lsv_id],
+                                   mean_psi=out_postpsi_d[lsv_id], junctions=junc_info[lsv])
 
 
 cdef void _core_independent(object self):

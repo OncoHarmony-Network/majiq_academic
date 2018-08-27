@@ -56,7 +56,7 @@ void psi_posterior(vector<psi_distr_t>& i_psi, float* o_mupsi, float* o_postpsi,
             all_m[m] += i_psi[j][m] ;
         }
     }
-//cout << "IN THE LOOP\n" ;
+
     for (int j=0; j<njunc; j++){
         const float alpha = alpha_beta_prior[j][0] ;
         const float beta = alpha_beta_prior[j][1] ;
@@ -177,12 +177,72 @@ void deltapsi_posterior(vector<psi_distr_t>& i_psi1, vector<psi_distr_t>& i_psi2
 }
 
 
+void get_samples_from_psi2(vector<psi_distr_t>& i_psi, vector<psi_distr_t>& osamps, psi_distr_t& o_mupsi,
+                          vector<psi_distr_t>& o_postpsi, int psi_samples, int j_offset, psi_distr_t psi_border,
+                          int njunc, int msamples, int nbins, bool is_ir){
+
+cout << "KAKA0\n" ;
+    vector<psi_distr_t> alpha_beta_prior(njunc, psi_distr_t(2)) ;
+    get_prior_params(alpha_beta_prior, njunc, is_ir) ;
+cout << "KAKA1\n" ;
+    vector<float> psi_space(nbins) ;
+    for(int i=0; i<nbins; i++){
+        psi_space[i] = (psi_border[i] + psi_border[i+1]) / 2 ;
+    }
+    float * all_m = (float*) calloc(msamples, sizeof(float)) ;
+    for (int j=0; j<njunc; j++){
+        for (int m=0; m<msamples; m++) {
+            all_m[m] += i_psi[j][m] ;
+        }
+    }
+cout << "KAKA2\n" ;
+    for (int j=0; j<njunc; j++){
+        const float alpha = alpha_beta_prior[j][0] ;
+        const float beta = alpha_beta_prior[j][1] ;
+        psi_distr_t temp_mupsi(msamples) ;
+        for (int m=0; m<msamples; m++){
+            const float jnc_val = i_psi[j][m] ;
+            const float all_val = all_m[m] ;
+            float * psi_lkh =  (float*) calloc(nbins, sizeof(float)) ;
+            temp_mupsi[m] = calc_mupsi(jnc_val, all_val, alpha, beta) ;
+            prob_data_sample_given_psi(psi_lkh, jnc_val, all_val, psi_border, nbins, alpha, beta) ;
+            const float Z = logsumexp(psi_lkh, nbins) ;
+            for (int i=0; i< nbins; i++){
+                psi_lkh[i] -= Z ;
+                o_postpsi[j][i] += exp(psi_lkh[i]) ;
+            }
+            free(psi_lkh) ;
+        }
+        o_mupsi[j] = median(temp_mupsi) ;
+//        delete temp_mupsi ;
+        for (int i=0; i<nbins; i++){
+            o_postpsi[j][i] /= msamples ;
+        }
+        if (psi_samples == 1){
+            osamps[j+j_offset][0] = o_mupsi[j] ;
+        }else{
+            default_random_engine generator ;
+            discrete_distribution<int> psi_distribution (o_postpsi[j].begin(), o_postpsi[j].end());
+            for(int i=0; i<psi_samples; i++){
+                float p = psi_distribution(generator) ;
+                osamps[j+j_offset][i] = psi_space[p] ;
+            }
+        }
+    }
+    free(all_m) ;
+cout << "KAKA4\n" ;
+    return ;
+}
+
+
+
+
 void get_samples_from_psi(vector<psi_distr_t>& i_psi, float* osamps, float* o_mupsi, float* o_postpsi,
                             int psi_samples, int j_offset, psi_distr_t psi_border, int njunc, int msamples,
                             int nbins, bool is_ir){
+
     vector<psi_distr_t> alpha_beta_prior(njunc, psi_distr_t(2)) ;
     get_prior_params(alpha_beta_prior, njunc, is_ir) ;
-
     vector<float> psi_space(nbins) ;
     for(int i=0; i<nbins; i++){
         psi_space[i] = (psi_border[i] + psi_border[i+1]) / 2 ;
@@ -212,6 +272,7 @@ void get_samples_from_psi(vector<psi_distr_t>& i_psi, float* osamps, float* o_mu
             free(psi_lkh) ;
         }
         o_mupsi[j] = median(temp_mupsi) ;
+
         vector<float> temp_postpsi(nbins) ;
         for (int i=0; i<nbins; i++){
             const int idx_2d = (j*nbins) + i ;

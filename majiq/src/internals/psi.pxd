@@ -21,5 +21,9 @@ cdef extern from "psi.hpp":
     cdef void get_samples_from_psi(vector[psi_distr_t]& i_psi, float* osamps, float* o_mu_psi, float* o_postpsi1,
                                    int psi_samples, int j_offset, psi_distr_t psi_border, int njunc,
                                    int msamples, int nbins, bint is_ir) nogil ;
+    # cdef void get_samples_from_psi(vector[psi_distr_t]& i_psi, vector[psi_distr_t]& osamps, psi_distr_t& o_mupsi,
+    #                                vector[psi_distr_t]& o_postpsi, int psi_samples, int j_offset,
+    #                                psi_distr_t psi_border, int njunc, int msamples, int nbins, bint is_ir) nogil ;
+
     cdef void test_calc(float* oPvals, vector[float*] samples1, vector[float*] samples2, HetStats* HetStatsObj,
                int njunc, int psamples, float quant) nogil ;

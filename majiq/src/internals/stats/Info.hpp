@@ -53,13 +53,13 @@ namespace MajiqStats{
             }
 
             double ComputePathScore(int Neg, int Pos, int k, int O) const {
-                int Left[3] ;
-                int Right[3] ;
+                int Left[2] ;
+                int Right[2] ;
 
-                Left[1] = (k - O)/2 ;
-                Left[2] = (k + O)/2 ;
-                Right[1] = Neg - Left[1] ;
-                Right[2] = Pos - Left[2] ;
+                Left[0] = (k - O)/2 ;
+                Left[1] = (k + O)/2 ;
+                Right[0] = Neg - Left[0] ;
+                Right[1] = Pos - Left[1] ;
 
                 return Entropy(Left, 2) + Entropy(Right, 2) ;
             }
@@ -253,6 +253,10 @@ namespace MajiqStats{
                         LastValue = X ;
                     }
                 }
+                 #ifdef DEBUG
+                    cerr << "INFOSCORE " << _Threshold << endl ;
+                 #endif
+
                 return ComputePValue( LeftClass[0], LeftClass[1], BestLoss) ;
             }
 

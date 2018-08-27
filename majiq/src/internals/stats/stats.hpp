@@ -23,7 +23,7 @@ class HetStats{
                     statistics.clear() ;
                     statistics.push_back((MajiqStats::TestStat*) new MajiqStats::TNOM()) ;
                     statistics.push_back((MajiqStats::TestStat*) new MajiqStats::Wilcoxon()) ;
-//                    statistics.push_back((MajiqStats::TestStat*) new MajiqStats::InfoScore()) ;
+                    statistics.push_back((MajiqStats::TestStat*) new MajiqStats::InfoScore()) ;
                     break ;
                 }
             }
