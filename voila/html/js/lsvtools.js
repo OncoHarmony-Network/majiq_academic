@@ -4,7 +4,8 @@ class LsvTools {
         this.db_lsv = sgs.db_lsv;
         this.db_gene = sgs.db_gene;
         this.lsv = new Lsv(this.db_lsv, this.db_gene);
-        this.heatmap = new HeatMap(this.db_lsv)
+        this.heatmap = new HeatMap(this.db_lsv);
+        this.violin = new Violin(this.db_lsv);
     }
 
     load_lsvs() {
@@ -99,6 +100,7 @@ class LsvTools {
         header
             .append('div')
             .attr('class', 'lsv-cartoon')
+            .append('canvas')
             .each((d, i, a) => {
                 this.lsv.cartoon(a[i], d._id);
             });
@@ -135,6 +137,7 @@ class LsvTools {
                 return d.junctions
             })
             .enter()
+
             .append('tr')
             .attr('data-junction-index', (d, i) => i);
 
@@ -149,13 +152,13 @@ class LsvTools {
             .append('svg')
             .attr('class', 'het-violin-plot')
             .attr('data-type', 'swarm')
-            .each((d, i, a) => new Violin(db_lsv, a[i]));
+            .each((d, i, a) => this.violin.heterogen(a[i]));
 
         row
             .append('td')
             .append('svg')
             .attr('class', 'heat-map')
-            .attr('data-stat-name', 'wilcoxon')
+            .attr('data-stat-name', 'tnom')
             .each((d, i, a) => this.heatmap.plot(a[i]));
     };
 

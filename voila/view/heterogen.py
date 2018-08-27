@@ -29,7 +29,6 @@ class Heterogen(Html, Tsv):
     def __init__(self, args):
         super().__init__(args, ViewHeterogens)
         with ViewHeterogens(args) as m:
-            print(m.analysis_type)
             if m.analysis_type != constants.ANALYSIS_HETEROGEN:
                 raise NotHeterogenVoilaFile(args)
             self.view_metadata = m.view_metadata

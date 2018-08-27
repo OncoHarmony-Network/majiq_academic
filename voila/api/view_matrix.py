@@ -217,13 +217,6 @@ class ViewDeltaPsi(DeltaPsi, ViewMatrix):
 
         @property
         def bins(self):
-            # print('---------------------------------------------------------')
-            # print('---------------------------------------------------------')
-            # print(self.get('bins'))
-            # print('---------------------------------------------------------')
-            # print(unpack_bins(self.get('bins')))
-            # print('---------------------------------------------------------')
-            # print('---------------------------------------------------------')
             return unpack_bins(self.get('bins'))
 
         @property
@@ -526,7 +519,6 @@ class ViewHeterogens:
 
     @property
     def analysis_type(self):
-        print([vh.analysis_type for vh in self.view_heterogens])
         analysis_types = {vh.analysis_type for vh in self.view_heterogens}
         if len(analysis_types) == 1:
             return analysis_types.pop()

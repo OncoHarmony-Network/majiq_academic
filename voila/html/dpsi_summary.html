@@ -12,9 +12,9 @@
         window.addEventListener('load', () => {
 
             const lsv = new Lsv(db_lsv, db_gene);
-            const violin = new Violin(db_lsv);
-
-            const t = new NewTable('#results', db_gene, db_lsv, {
+            const t = new Table('#results', {
+                db_gene: db_gene,
+                db_lsv: db_lsv,
                 show_data: (lsvs, table, table_body) => {
                     const t = d3.select(table_body).selectAll('tr')
                         .data(lsvs);

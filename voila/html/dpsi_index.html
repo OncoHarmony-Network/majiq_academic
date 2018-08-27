@@ -20,12 +20,12 @@
     <script src="https://d3js.org/d3.v4.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/pouchdb@7.0.0/dist/pouchdb.min.js"></script>
     <script src="https://unpkg.com/pouchdb@7.0.0/dist/pouchdb.find.min.js"></script>
-    <script src="js/newtable.js"></script>
+    <script src="js/table.js"></script>
     <script src="js/lsvtools.js"></script>
     <script src="js/lsv.js"></script>
     <script src="js/heatmap.js"></script>
     <script src="js/colors.js"></script>
-    <script src="js/newviolin.js"></script>
+    <script src="js/violin.js"></script>
     <script src="metadata.js"></script>
     <script>
         const db_gene = new PouchDB('voila_gene_{{ db_id }}');
@@ -42,8 +42,9 @@
                         };
             */
             const lsv = new Lsv(db_lsv, db_gene);
-            const violin = new Violin(db_lsv);
-            const t = new NewTable('#results', db_gene, db_lsv, {
+            const t = new Table('#results', {
+                db_gene: db_gene,
+                db_lsv: db_lsv,
                 show_data: (lsvs, table, table_body) => {
 
                     const t = d3.select(table_body).selectAll('tr')

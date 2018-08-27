@@ -265,6 +265,7 @@ class HeatMap {
             .attr('shape-rendering', 'crispEdges')
             .attr('stroke-dasharray', (d, i) => i !== 0 ? `0,${row_width},${(row_height * 2) + row_width}` : null);
 
+
         metadata.stat_names.forEach((s, si) => {
             jg
                 .append('rect')
@@ -272,7 +273,9 @@ class HeatMap {
                 .attr('height', row_height)
                 .attr('x', (row_width * (si + 2)))
                 .attr('y', (d, i) => row_height * i)
-                .attr('fill', (d, i) => stat_color(lsv[s][i].filter(a => a > 0).reduce((a, b) => Math.min(a, b))))
+                .attr('fill', (d, i) => {
+                    return stat_color(Math.min.apply(null, lsv[s][i].filter(a => a > 0)))
+                })
                 .attr('stroke', 'lightgrey')
                 .attr('stroke-width', stroke_width)
                 .attr('shape-rendering', 'crispEdges')
