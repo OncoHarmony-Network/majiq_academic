@@ -74,6 +74,13 @@ namespace MajiqStats{
 
         public:
             double Calc_pval(vector<float> data, vector<int> labels){
+
+
+                cerr << "DATA: " ;
+                for (auto const &p: data)
+                    cerr << p << " ," ;
+                cerr << endl ;
+
                 int n1 = 0 ;
                 int n2 = 0 ;
                 double s = 0 ;
@@ -84,11 +91,12 @@ namespace MajiqStats{
                 int i = 0 ;
                 while( i < nsampls ){
                     if( labels[i] >= 0 ) {
+                        double x = data[i] ;
                         int m1 = 0 ;
                         int m2 = 0 ;
                         // as long as expression level doesn't change, count how many samples labeled "1" (m1)
                         // and how many labeled "2" (m2).
-                        for( ; i < nsampls && data[i]; i++ ){
+                        for( ; i < nsampls && data[i] == x; i++ ){
                             if( labels[i] >= 0 ){
                                 if( labels[i] == 0 )
                                     m1++ ;
@@ -121,7 +129,7 @@ namespace MajiqStats{
                 }
                 PValue -= lgamma(n1+n2 + 1) ;
 
-                //  cerr << "Wilcoxon PValue (" << n1+n2 << ", " << n1 << "," << s <<") = " << exp(PValue)*2 << " compare to " << 2*GaussCDF(-fabs(_ZScore), 0, 1) << "\n";
+                  cerr << "Wilcoxon PValue (" << n1+n2 << ", " << n1 << ", " << s <<") = " << exp(PValue)*2 << " compare to " << 2*GaussCDF(-fabs(_ZScore), 0, 1) << "\n";
 
                 return exp(PValue)*2 ;
             }

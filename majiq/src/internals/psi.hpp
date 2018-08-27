@@ -17,8 +17,8 @@ typedef pair<int, int> pair_int_t ;
 inline float median(psi_distr_t a){
     const int n = a.size() ;
     sort(a.begin(), a.end()) ;
-    if (n % 2 != 0) return (float)a[n/2];
-    return (float)(a[(n-1)/2] + a[n/2])/2.0;
+    if (n % 2 != 0) return (float)a[n/2] ;
+    return (float)(a[(n-1)/2] + a[n/2])/2.0 ;
 }
 
 inline void get_prior_params( vector<psi_distr_t>& o_priors, int njunc, bool ir){
@@ -45,10 +45,22 @@ inline void get_prior_params( vector<psi_distr_t>& o_priors, int njunc, bool ir)
     return ;
 }
 
+inline float quantile(vector<float> set, float quant){
+    const int n = set.size() ;
+    float idx = n * quant ;
+    float c_idx = min(ceilf(idx), (float)n) ;
+    if (c_idx == idx){
+        int idxp = min(idx+1, (float)n) ;
+        return (set[idx] + set[idxp]) / 2 ;
+    }else{
+        return set[c_idx] ;
+    }
+}
+
 
 inline float logsumexp(float nums[], size_t ct){
-    float max_exp = nums[0], sum = 0.0;
-    size_t i;
+    float max_exp = nums[0], sum = 0.0 ;
+    size_t i ;
 
     for(i = 1; i < ct; i++){
         max_exp = (nums[i] > max_exp) ? nums[i] : max_exp ;
@@ -63,18 +75,18 @@ inline float logsumexp(float nums[], size_t ct){
 template <typename T, typename Compare>
 vector<size_t> sort_permutation(const std::vector<T>& vec, const Compare& compare)
 {
-    vector<size_t> p(vec.size());
-    iota(p.begin(), p.end(), 0);
-    sort(p.begin(), p.end(), [&](size_t i, size_t j){ return compare(vec[i], vec[j]); });
-    return p;
+    vector<size_t> p(vec.size()) ;
+    iota(p.begin(), p.end(), 0) ;
+    sort(p.begin(), p.end(), [&](size_t i, size_t j){ return compare(vec[i], vec[j]); }) ;
+    return p ;
 }
 
 template <typename T>
 vector<T> apply_permutation(const vector<T>& vec, const vector<size_t>& p)
 {
-    vector<T> sorted_vec(vec.size());
-    transform(p.begin(), p.end(), sorted_vec.begin(), [&](size_t i){ return vec[i]; });
-    return sorted_vec;
+    vector<T> sorted_vec(vec.size()) ;
+    transform(p.begin(), p.end(), sorted_vec.begin(), [&](size_t i){ return vec[i]; }) ;
+    return sorted_vec ;
 }
 
 inline float calc_mupsi(const float sample, const float all_sample, float alpha, float beta){
@@ -104,7 +116,7 @@ void get_samples_from_psi(vector<psi_distr_t>& i_psi, float* osamps, float* o_mu
                           bool is_ir) ;
 
 void test_calc(float* oPvals, vector<float*> samples1, vector<float*> samples2, HetStats* HetStatsObj,
-               int njunc, int psamples) ;
+               int njunc, int psamples, float quant) ;
 
 psi_distr_t get_psi_border(int nbins) ;
 

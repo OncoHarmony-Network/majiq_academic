@@ -69,6 +69,7 @@ cdef void _statistical_test_computation(object out_h5p, dict comparison, list li
     for i in prange(nlsv, nogil=True, num_threads=nthreads):
         with gil:
             lsv = list_of_lsv[i]
+            # print (i, lsv)
             lsv_id = lsv.encode('utf-8')
             lsv_index = lsv_vec[lsv_id].second
             nways = lsv_vec[lsv_id].first
@@ -83,12 +84,11 @@ cdef void _statistical_test_computation(object out_h5p, dict comparison, list li
                 k = cc[lsv_index:lsv_index+nways]
                 cond2_smpl.push_back(<np.float32_t *> k.data)
 
-        test_calc(<np.float32_t *> oPvals.data, cond1_smpl, cond2_smpl, StatsObj, nways, psi_samples)
+        test_calc(<np.float32_t *> oPvals.data, cond1_smpl, cond2_smpl, StatsObj, nways, psi_samples, 0.95)
         cond1_smpl.clear()
         cond2_smpl.clear()
         with gil:
             print('END KOLA', i)
-
 
     print('DUMP VOILA FILE')
     for lsv in list_of_lsv:
@@ -221,6 +221,7 @@ cdef void _core_independent(object self):
     list_of_lsv = list(set(list_of_lsv1).intersection(set(list_of_lsv2)))
 
 
+    list_of_lsv = ['ENSMUSG00000032735:s:61823867-61823938']
     nlsv = len(list_of_lsv)
     if nlsv == 0:
         logger.info("There is no LSVs that passes the filters")

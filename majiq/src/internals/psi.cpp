@@ -237,7 +237,7 @@ void get_samples_from_psi(vector<psi_distr_t>& i_psi, float* osamps, float* o_mu
 
 
 void test_calc(float* oPvals, vector<float*> samples1, vector<float*> samples2, HetStats* HetStatsObj,
-               int njunc, int psamples){
+               int njunc, int psamples, float quant){
 
     const int nstats = (HetStatsObj->statistics).size() ;
 //cout << "KK1\n" ;
@@ -245,6 +245,8 @@ void test_calc(float* oPvals, vector<float*> samples1, vector<float*> samples2, 
     const int n2 = samples2.size() ;
 //cout << "KK2 " << njunc << "\n" ;
     for (int j=0; j<njunc; j++){
+
+        vector<vector<float>> pval_vect (nstats, vector<float>(psamples)) ;
         for(int s=0; s<psamples; s++){
 //cout << "KK30\n" ;
             vector<float> csamps ;
@@ -278,14 +280,15 @@ void test_calc(float* oPvals, vector<float*> samples1, vector<float*> samples2, 
 //cout << " ]"  << endl ;
 
             for(int i=0; i<nstats; i++){
-                const int idx_2d = (j*nstats) + i ;
-                double ppp = (HetStatsObj->statistics)[i]->Calc_pval(csamps, labels) ;
-                oPvals[idx_2d] = (float)ppp ;
-cout << "STAT: " << i << " :: " << oPvals[idx_2d] << " :: " << ppp << "\n" ;
+                pval_vect[i][s] = (HetStatsObj->statistics)[i]->Calc_pval(csamps, labels) ;
             }
 //cout << "KK3\n" ;
         }
-
+        for(int i=0; i<nstats; i++){
+            const int idx_2d = (j*nstats) + i ;
+            oPvals[idx_2d] = quantile(pval_vect[i], quant) ;
+            cout << "STAT: " << i << " :: " << oPvals[idx_2d] << "\n" ;
+        }
     }
 //cout << "KK END\n" ;
 }

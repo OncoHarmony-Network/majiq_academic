@@ -22,4 +22,4 @@ cdef extern from "psi.hpp":
                                    int psi_samples, int j_offset, psi_distr_t psi_border, int njunc,
                                    int msamples, int nbins, bint is_ir) nogil ;
     cdef void test_calc(float* oPvals, vector[float*] samples1, vector[float*] samples2, HetStats* HetStatsObj,
-               int njunc, int psamples) nogil ;
+               int njunc, int psamples, float quant) nogil ;
