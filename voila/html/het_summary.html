@@ -3,8 +3,8 @@
 {% block script %}
     <script src="metadata.js"></script>
     <script>
-        const db_gene = new PouchDB('voila_gene');
-        const db_lsv = new PouchDB('voila_lsv');
+        const db_gene = new PouchDB('voila_gene_{{ db_id }}');
+        const db_lsv = new PouchDB('voila_lsv_{{ db_id }}');
     </script>
     <script>
         const urlParams = new URLSearchParams(document.location.search);
