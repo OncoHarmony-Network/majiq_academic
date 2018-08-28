@@ -341,7 +341,7 @@ class Heterogen(Html, Tsv):
         log.info("Creating Tab-delimited output file")
 
         args = self.args
-        output_html = Html.get_output_html(args, args.voila_file[0])
+        output_html = Html.get_output_html(args, args.voila_files[0])
         tsv_file = os.path.join(args.output, output_html.rsplit('.html', 1)[0] + '.tsv')
 
         with open(tsv_file, 'w') as tsv:

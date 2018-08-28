@@ -99,62 +99,39 @@ class Violin {
     }
 
     heterogen(svg) {
-        // this.junc_idx = el.closest('tr').dataset.junctionIndex;
-        // this.lsv_id = el.closest('table').dataset.lsvId;
-        // this.type = el.dataset.type;
-        //
-        //
-        // this.svg = d3.select(el);
-        // this.svg.selectAll('*').remove();
-        //
-        // this.size_svg();
-        //
-        // this.plot = this.svg
-        //     .append('g')
-        //     .attr('transform', 'translate(' + (this.dim.y_axis.width + this.dim.group.pad + this.dim.y_axis.label) + ',' + this.dim.pad.top + ')');
-        //
-        // var color = new Colors().brewer(this.junc_idx);
-        //
-        // this.het_histograms(color);
-        // this.x_axis();
-        // this.y_axis();
-        // if (this.type === 'box')
-        //     this.box_plots();
-        // if (this.type === 'swarm')
-        //     this.swarm(color)
         this.db.get(svg.closest('.lsv').dataset.lsvId)
             .then(results => {
-
-                d3.select(svg).selectAll('*').remove();
-                this.violin_count = results.junctions.length;
-                svg.setAttribute('height', this.svg_height);
-                svg.setAttribute('width', this.svg_width);
-
-                const junc_idx = svg.closest('tr').dataset.junctionIndex;
-                const color = new Colors().brewer(junc_idx);
-                const bins = this.mean_psi(results, junc_idx);
-
-                const g = d3.select(svg)
-                    .append('g')
-                    .attr('transform', `translate(${this.y_axis_width}, ${this.top_padding})`);
-
-                const hist = g
-                    .append('g')
-                    .attr('class', 'histograms');
-
-                this.draw_histograms(hist, bins);
-
-
-                hist
-                    .selectAll('.violin')
-                    .attr('stroke', color)
-                    .attr('stroke-width', 1)
-                    .attr('fill', color)
-                    .attr('fill-opacity', .1);
-
-                this.draw_psi_y_axis(g);
-
                 this.db.get('metadata').then(meta => {
+
+                    d3.select(svg).selectAll('*').remove();
+                    this.violin_count = meta.group_names.length;
+                    svg.setAttribute('height', this.svg_height);
+                    svg.setAttribute('width', this.svg_width);
+
+                    const junc_idx = svg.closest('tr').dataset.junctionIndex;
+                    const color = new Colors().brewer(junc_idx);
+                    const bins = this.mean_psi(results, junc_idx);
+
+                    const g = d3.select(svg)
+                        .append('g')
+                        .attr('transform', `translate(${this.y_axis_width}, ${this.top_padding})`);
+
+                    const hist = g
+                        .append('g')
+                        .attr('class', 'histograms');
+
+                    this.draw_histograms(hist, bins);
+
+
+                    hist
+                        .selectAll('.violin')
+                        .attr('stroke', color)
+                        .attr('stroke-width', 1)
+                        .attr('fill', color)
+                        .attr('fill-opacity', .1);
+
+                    this.draw_psi_y_axis(g);
+
                     this.swarm(g, results.mu_psi[junc_idx], meta, color);
                     this.draw_x_axis(g, meta.group_names);
                 });
@@ -417,7 +394,6 @@ class Violin {
             .attr('y', height)
             .attr('x', label_pad)
     }
-
 
 
     x_axis(svg) {
