@@ -37,7 +37,7 @@ class Heterogen(Html, Tsv):
             self.copy_static()
             if not args.disable_db:
                 self.render_dbs()
-            self.render_html()
+            self.render_html('het_index.html', 'het_summary.html')
 
         if not args.disable_tsv:
             self.render_tsv()
@@ -54,7 +54,7 @@ class Heterogen(Html, Tsv):
                     exp_name = metadata['experiment_names']
                     lsv_ids = h.view_gene_lsvs(gene_id)
 
-                    f.write('new PouchDB(\'voila_gene\').bulkDocs([')
+                    f.write('new PouchDB(\'voila_gene_{}\').bulkDocs(['.format(self.db_id))
 
                     log.debug('Write DB Gene ID: {}'.format(gene_id))
 
@@ -73,7 +73,7 @@ class Heterogen(Html, Tsv):
                     f.write('\n')
 
                     if lsv_ids:
-                        f.write('new PouchDB(\'voila_lsv\').bulkDocs([')
+                        f.write('new PouchDB(\'voila_lsv_{}\').bulkDocs(['.format(self.db_id))
 
                         for lsv_id in lsv_ids:
                             log.debug('Write DB LSV ID: {}'.format(lsv_id))
@@ -91,88 +91,6 @@ class Heterogen(Html, Tsv):
 
                         f.write(']);')
 
-    def db_lsvs(self, lsv_ids, i):
-        log = voila_log()
-
-        try:
-            lsv_ids_list = self.chunks(lsv_ids, 50)
-            args = self.args
-
-            for page_idx, lsv_ids in enumerate(lsv_ids_list):
-
-                with ViewHeterogens(args) as h:
-                    with open(os.path.join(args.output, 'db_lsv_{}_{}.js'.format(i, page_idx)), 'w') as db_lsv:
-
-                        db_lsv.write('new PouchDB(\'voila_lsv\').bulkDocs([')
-
-                        if i == 0 and page_idx == 0:
-                            db_lsv.write(json.dumps(h.view_metadata))
-                            db_lsv.write(',')
-
-                        for lsv_id in lsv_ids:
-                            log.debug('Write DB LSV ID: {}'.format(lsv_id))
-
-                            lsv = h.heterogen(lsv_id).get_all()
-                            lsv_dict = dict(lsv)
-                            text = json.dumps(lsv_dict, cls=NumpyEncoder)
-
-                            db_lsv.write(text)
-                            db_lsv.write(',')
-
-                        db_lsv.write(']);')
-
-        except Exception as e:
-            log.exception(e)
-            exit()
-
-    @staticmethod
-    def chunks(l, n):
-        """Yield successive n-sized chunks from l."""
-        for i in range(0, len(l), n):
-            yield l[i:i + n]
-
-    def db_genes(self, gene_ids, i):
-        log = voila_log()
-
-        try:
-            gene_ids_list = self.chunks(gene_ids, 50)
-            args = self.args
-
-            with ViewHeterogens(args) as h:
-                metadata = h.view_metadata
-                exp_name = metadata['experiment_names']
-
-            for page_idx, gene_ids in enumerate(gene_ids_list):
-
-                with ViewSpliceGraph(args) as sg:
-                    with open(os.path.join(args.output, 'db_gene_{}_{}.js'.format(i, page_idx)), 'w') as db_gene:
-
-                        db_gene.write('new PouchDB(\'voila_gene\').bulkDocs([')
-
-                        if i == 0 and page_idx == 0:
-                            db_gene.write(json.dumps(metadata))
-                            db_gene.write(',')
-
-                        for gene_id in gene_ids:
-                            log.debug('Write DB Gene ID: {}'.format(gene_id))
-
-                            gene = sg.gene(gene_id)
-                            gene_exp = sg.gene_experiment(gene, exp_name)
-                            text = json.dumps(gene_exp)
-
-                            db_gene.write(text)
-                            db_gene.write(',')
-
-                            del gene
-                            del gene_exp
-                            del text
-
-                        db_gene.write(']);')
-
-        except Exception as e:
-            log.exception(e)
-            exit()
-
     def fill_queue_gene_ids(self, queue, event):
         with ViewHeterogens(self.args) as h:
             for gene_id in h.gene_ids:
@@ -188,31 +106,31 @@ class Heterogen(Html, Tsv):
                     queue.put(lsv_id)
         event.set()
 
-    def render_html(self):
-        exec_dir = os.path.dirname(os.path.abspath(voila.__file__))
-        template_dir = os.path.join(exec_dir, 'html')
-        env = jinja2.Environment(extensions=["jinja2.ext.do"], loader=jinja2.FileSystemLoader(template_dir),
-                                 undefined=jinja2.StrictUndefined)
-
-        index_template = env.get_template('het_index.html')
-        summary_template = env.get_template('het_summary.html')
-
-        db_lsvs = [os.path.basename(f) for f in glob.glob(os.path.join(self.args.output, 'db_lsv*.js'))]
-        db_genes = [os.path.basename(f) for f in glob.glob(os.path.join(self.args.output, 'db_gene*.js'))]
-        dbs = [os.path.basename(f) for f in glob.glob(os.path.join(self.args.output, '*.js'))]
-
-        with open(os.path.join(self.args.output, 'index.html'), 'w') as index:
-            index.write(index_template.render({
-                'db_lsvs': db_lsvs,
-                'db_genes': db_genes,
-                'dbs': dbs
-            }))
-
-        with open(os.path.join(self.args.output, 'summary.html'), 'w') as summary:
-            summary.write(summary_template.render({
-                'db_lsvs': db_lsvs,
-                'db_genes': db_genes
-            }))
+    # def render_html(self):
+    #     exec_dir = os.path.dirname(os.path.abspath(voila.__file__))
+    #     template_dir = os.path.join(exec_dir, 'html')
+    #     env = jinja2.Environment(extensions=["jinja2.ext.do"], loader=jinja2.FileSystemLoader(template_dir),
+    #                              undefined=jinja2.StrictUndefined)
+    #
+    #     index_template = env.get_template('het_index.html')
+    #     summary_template = env.get_template('het_summary.html')
+    #
+    #     db_lsvs = [os.path.basename(f) for f in glob.glob(os.path.join(self.args.output, 'db_lsv*.js'))]
+    #     db_genes = [os.path.basename(f) for f in glob.glob(os.path.join(self.args.output, 'db_gene*.js'))]
+    #     dbs = [os.path.basename(f) for f in glob.glob(os.path.join(self.args.output, '*.js'))]
+    #
+    #     with open(os.path.join(self.args.output, 'index.html'), 'w') as index:
+    #         index.write(index_template.render({
+    #             'db_lsvs': db_lsvs,
+    #             'db_genes': db_genes,
+    #             'dbs': dbs
+    #         }))
+    #
+    #     with open(os.path.join(self.args.output, 'summary.html'), 'w') as summary:
+    #         summary.write(summary_template.render({
+    #             'db_lsvs': db_lsvs,
+    #             'db_genes': db_genes
+    #         }))
 
     def render_dbs(self):
         log = voila_log()
@@ -221,12 +139,12 @@ class Heterogen(Html, Tsv):
         with open(os.path.join(self.args.output, 'metadata.js'), 'w') as f:
             with ViewHeterogens(self.args) as h:
                 metadata = json.dumps(h.view_metadata)
-                f.write('new PouchDB(\'voila_gene\').bulkDocs([')
+                f.write('new PouchDB(\'voila_gene_{}\').bulkDocs(['.format(self.db_id))
                 f.write(metadata)
                 f.write(',')
                 f.write(']);')
 
-                f.write('new PouchDB(\'voila_lsv\').bulkDocs([')
+                f.write('new PouchDB(\'voila_lsv_{}\').bulkDocs(['.format(self.db_id))
                 f.write(metadata)
                 f.write(',')
                 f.write(']);')
@@ -341,7 +259,7 @@ class Heterogen(Html, Tsv):
         log.info("Creating Tab-delimited output file")
 
         args = self.args
-        output_html = Html.get_output_html(args, args.voila_file[0])
+        output_html = Html.get_output_html(args, args.voila_files[0])
         tsv_file = os.path.join(args.output, output_html.rsplit('.html', 1)[0] + '.tsv')
 
         with open(tsv_file, 'w') as tsv:
