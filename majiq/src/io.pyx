@@ -7,7 +7,8 @@ from libcpp.vector cimport vector
 
 from majiq.src.internals.grimoire cimport Gene, Exon, Junction
 from majiq.src.internals import quant_lsv
-from majiq.src.internals.psi cimport psi_distr_t
+from majiq.src.internals.psi cimport psi_distr_t, pair_int_t
+from majiq.src.internals.qLSV cimport qLSV
 from majiq.src.internals.io_utils cimport get_aggr_coverage
 
 from majiq.src.gff import parse_gff3
@@ -213,22 +214,6 @@ cdef int _dump_elems_list(object elem_dict, object gene_info, str outDir) except
     np.savez(get_build_temp_db_filename(outDir), **elem_dict)
 
 
-# cdef int _read_junction(list row, str gne_id, dict jjs, list exs, list irs, int default_index) except -1:
-#     jjs[(row[0], row[1])] = Junction(row[0], row[1], gne_id, default_index, annot=bool(row[2]))
-#
-#
-# cdef int _read_exon(list row, str gne_id, dict jjs, list exs, list irs, int default_index) except -1:
-#     exs.append(Exon(row[0], row[1], annot=bool(row[2])))
-#
-#
-# cdef int _read_ir(list row, str gne_id, dict jjs, list exs, list irs, int default_index) except -1:
-#     irs.append(Intron(row[0], row[1], annot=bool(row[2]), db_idx=-1))
-
-
-cdef int _pass_ir(list row, str gne_id, dict jjs, list exs, list irs, int default_index) except -1:
-    pass
-
-
 cdef dict _get_extract_lsv_list(list list_of_lsv_id, list file_list):
     cdef dict result = {}
     cdef int n_exp = len(file_list)
@@ -257,27 +242,51 @@ cdef dict _get_extract_lsv_list(list list_of_lsv_id, list file_list):
     return result
 
 
-
-cdef test(map[string, vector[psi_distr_t]] result, object data, string lsv_id):
-
-    cdef np.ndarray[np.float32_t, ndim=2, mode="c"] cov
-    cdef str lid = lsv_id.decode('utf-8')
-    cdef int njunc, msamples
-
-
-
-    try:
-        cov = data[lid]
-        njunc = cov.shape[0]
-        msamples = cov.shape[1]
-        with nogil:
-            get_aggr_coverage(result, lsv_id, <np.float32_t *> cov.data, njunc, msamples)
-    except KeyError:
-        return ;
-
 cdef int dump_hettmp_file(str fname, np.ndarray[np.float32_t, ndim=2, mode="c"] osamps):
     with open(fname, 'w+b') as fp:
         np.save(fp, osamps)
+
+
+cdef void get_coverage_mat_lsv(map[string, qLSV*]& result, list file_list, str weight_fname, int nthreads):
+    cdef int n_exp = len(file_list)
+    cdef str lid, lsv_type, fname
+    cdef string lsv_id
+    cdef int fidx, njunc, msamples, i
+    cdef np.ndarray[np.float32_t, ndim=2, mode="c"] cov
+    cdef dict weights
+    cdef object data
+    cdef int nlsv = result.size()
+    cdef string empty_string = ''.encode('utf-8')
+    cdef string prev_lsvid = empty_string
+    cdef int prev_juncidx = 0
+
+    # if weight_fname != "":
+    #     weights = _load_weights(list_of_lsv_id, weight_fname)
+
+    for fidx, fname in enumerate(file_list):
+        print(fname)
+        with open(fname, 'rb') as fp:
+            fl = np.load(fp)
+            data = fl['coverage']
+            info = fl['junc_info']
+            msamples = data.shape[1]
+            idx = -1
+            for row in info:
+                idx += 1
+                lsv_id = row[0]
+                if result.count(lsv_id) > 0:
+                    if prev_lsvid != lsv_id:
+                        if prev_lsvid != empty_string:
+                            result[prev_lsvid].add(<np.float32_t *> cov.data, msamples)
+                        prev_lsvid = lsv_id
+                        prev_juncidx = -1
+                        njunc = result[lsv_id].get_num_ways()
+                        cov = np.zeros(shape=(njunc, msamples), dtype=np.float32)
+                    prev_juncidx += 1
+                    cov[prev_juncidx] = data[idx]
+            result[prev_lsvid].add(<np.float32_t *> cov.data, msamples)
+    return
+
 
 
 cdef void get_coverage_mat(map[string, vector[psi_distr_t]]& result, map[string, int] lsv_map, list file_list,
@@ -355,68 +364,6 @@ cpdef void get_coverage_lsv(map[string, vector[psi_distr_t]]& result, vector[str
                 except KeyError:
                         continue
 
-
-
-cpdef map[string, vector[psi_distr_t]] get_coverage_lsv2(vector[string] list_of_lsv_id, list file_list,
-                                                        str weight_fname, int nthreads):
-    cdef map[string, vector[psi_distr_t]] result
-    cdef int n_exp = len(file_list)
-    cdef str lid, lsv_type, fname
-    cdef string lsv_id
-    cdef int fidx, njunc, msamples, i
-    # cdef np.ndarray[np.float32_t, ndim=2, mode="c"] cov
-    # cdef vector[psi_distr_t] lsv_cov
-    # cdef psi_distr_t tv
-    cdef dict weights
-    cdef object data
-    cdef int nlsv = list_of_lsv_id.size()
-
-    # if weight_fname != "":
-    #     weights = _load_weights(list_of_lsv_id, weight_fname)
-
-    for fidx, fname in enumerate(file_list):
-        print(fname)
-        with open(fname, 'rb') as fp:
-            # p = np.load(fp)
-            # data = dict(p)
-            data = np.load(fp, mmap_mode='r')
-            for i in prange(nlsv, nogil=True, num_threads=nthreads):
-                lsv_id = list_of_lsv_id[i]
-            #for lid in list_of_lsv_id:
-                # print ('LSV', lid)
-                # lsv_id = lid.encode('utf-8')
-                with gil:
-                    # try:
-                    #     lid = lsv_id.decode('utf-8')
-                        test(result, data, lsv_id)
-                    # except KeyError:
-                    #     continue
-
-                #     lid = lsv_id.decode('utf-8')
-                #     if lid not in data:
-                #         continue
-                #     cov = data[lid]
-                #
-                #     njunc = cov.shape[0]
-                #     msamples = cov.shape[1]
-                #
-                # get_aggr_coverage(result, lsv_id, <np.float32_t *> cov.data, njunc, msamples)
-
-            # if result.count(lsv_id) > 0:
-            #     if weight_fname != "":
-            #         cov = cov * weights[lsv_id][fidx]
-            #     # print(lsv_id, result[lsv_id].coverage[fidx].shape)
-            #     for xx in range(njunc):
-            #         for yy in range(msamples):
-            #             result[lsv_id][xx][yy] = result[lsv_id][xx][yy] + cov[xx][yy]
-            # else:
-            #     # tv = psi_distr_t(msamples)
-            #     lsv_cov = vector[psi_distr_t](njunc, psi_distr_t(msamples))
-            #     for xx in range(njunc):
-            #         for yy in range(msamples):
-            #             lsv_cov[xx][yy] = cov[xx][yy]
-            #     result[lsv_id] = lsv_cov
-    return result
 
 cdef map[string, psi_distr_t] _load_weights(list lsv_list, str file_name):
     cdef dict out_dict = {}

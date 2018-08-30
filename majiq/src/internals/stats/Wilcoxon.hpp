@@ -75,7 +75,7 @@ namespace MajiqStats{
         public:
             double Calc_pval(vector<float> data, vector<int> labels){
 
-
+//
                 cerr << "DATA: " ;
                 for (auto const &p: data)
                     cerr << p << " ," ;
@@ -129,7 +129,7 @@ namespace MajiqStats{
                 }
                 PValue -= lgamma(n1+n2 + 1) ;
 
-//                  cerr << "Wilcoxon PValue (" << n1+n2 << ", " << n1 << ", " << s <<") = " << exp(PValue)*2 << " compare to " << 2*GaussCDF(-fabs(_ZScore), 0, 1) << "\n";
+                cerr << "Wilcoxon PValue (" << n1+n2 << ", " << n1 << ", " << s <<") = " << exp(PValue)*2 << " compare to " << 2*GaussCDF(-fabs(_ZScore), 0, 1) << "\n";
 
                 return exp(PValue)*2 ;
             }

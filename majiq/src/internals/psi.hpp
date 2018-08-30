@@ -6,6 +6,7 @@
 #include <string>
 #include <math.h>
 #include <omp.h>
+#include "qLSV.hpp"
 #include "stats/stats.hpp"
 
 using namespace std ;
@@ -57,6 +58,19 @@ inline float quantile(vector<float> set, float quant){
     }
 }
 
+inline float logsumexp(psi_distr_t& nums, size_t ct){
+    float max_exp = nums[0], sum = 0.0 ;
+    size_t i ;
+
+    for(i = 1; i < ct; i++){
+        max_exp = (nums[i] > max_exp) ? nums[i] : max_exp ;
+    }
+
+    for(i = 0; i < ct; i++){
+        sum += exp(nums[i] - max_exp) ;
+    }
+    return log(sum) + max_exp ;
+}
 
 inline float logsumexp(float nums[], size_t ct){
     float max_exp = nums[0], sum = 0.0 ;
@@ -111,18 +125,16 @@ void deltapsi_posterior(vector<psi_distr_t>& i_psi1, vector<psi_distr_t>& i_psi2
                         float* o_mu_psi1, float* o_mu_psi2, float* o_post_psi1, float* o_post_psi2,
                         float* o_posterior_dpsi, int msamples, int njunc, int nbins, bool is_ir) ;
 
-void get_samples_from_psi(vector<psi_distr_t>& i_psi, float* osamps, float* o_mu_psi, float* o_postpsi1,
-                          int psi_samples, int j_offset, psi_distr_t psi_border, int njunc, int msamples, int nbins,
+void get_samples_from_psi(float* osamps, hetLSV* lsvObj, int psi_samples, psi_distr_t& psi_border,
+                          int nbins, int cidx, int fidx) ;
+void get_samples_from_psi2(vector<psi_distr_t>& i_psi, float* osamps, float* o_mu_psi, float* o_postpsi,
+                          int psi_samples, int j_offset, psi_distr_t& psi_border2, int njunc, int msamples, int nbins,
                           bool is_ir) ;
-
-void get_samples_from_psi2(vector<psi_distr_t>& i_psi, vector<psi_distr_t>& osamps, psi_distr_t& o_mupsi,
-                          vector<psi_distr_t>& o_postpsi, int psi_samples, int j_offset, psi_distr_t psi_border,
-                          int njunc, int msamples, int nbins, bool is_ir) ;
-
 
 void test_calc(float* oPvals, vector<float*> samples1, vector<float*> samples2, HetStats* HetStatsObj,
                int njunc, int psamples, float quant) ;
 
-psi_distr_t get_psi_border(int nbins) ;
+//psi_distr_t& get_psi_border(int nbins) ;
+void get_psi_border(psi_distr_t& psi_border, int nbins) ;
 
 #endif
