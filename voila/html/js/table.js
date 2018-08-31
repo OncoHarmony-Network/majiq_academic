@@ -49,14 +49,28 @@ class Table {
         return 'sortValue' in cell.dataset ? cell.dataset.sortValue : cell.textContent
     }
 
-    load_db(gene_id) {
-        return new Promise(resolve => {
+    static load_db(db_gene, gene_id) {
+        const load = new Promise(resolve => {
             const scriptTag = document.createElement('script');
             scriptTag.src = `${gene_id}.js`;
             scriptTag.onload = () => resolve();
             scriptTag.onreadystatechange = () => resolve();
             document.body.appendChild(scriptTag);
-        })
+        });
+
+        const check = new Promise(resolve => {
+            const re_check = () => {
+                db_gene.get(gene_id).then(() => {
+                    resolve()
+                }).catch(err => {
+                    if (err.reason === 'missing')
+                        re_check();
+                });
+            };
+            re_check();
+        });
+
+        return Promise.all([load, check])
     };
 
     filter_data() {
@@ -108,17 +122,11 @@ class Table {
     retrieve_data(results) {
         const gene_ids = Array.from(new Set(results.map(l => l.gene_id)));
 
-        return Promise.all(gene_ids.map(gene_id => this.load_db(gene_id))).then(() => {
+        return Promise.all(gene_ids.map(gene_id => Table.load_db(this.db_gene, gene_id))).then(() => {
             return this.db_lsv.allDocs({
                 keys: results.map(r => r._id),
                 include_docs: true
-            })
-                .then(lsvs => {
-                    if (lsvs.rows.some(r => r.error))
-                        return this.retrieve_data(results);
-                    else
-                        return lsvs.rows.map(r => r.doc)
-                })
+            }).then(lsvs => lsvs.rows.map(r => r.doc))
         })
     }
 

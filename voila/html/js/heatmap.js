@@ -1,15 +1,32 @@
-var stat_color = d3.scaleLog()
+// window.addEventListener('load', () => {
+//     d3.select(document.body)
+//         .append('svg')
+//         .attr('height', 0)
+//         .attr('width', 0)
+//         // .append('defs')
+//         .append('pattern')
+//         .attr('patternUnits', 'userSpaceOnUse')
+//         .attr('class', 'diagonalHatch')
+//         .attr('width', 4)
+//         .attr('height', 4)
+//         .append('path')
+//         .attr('d', "M-1,1 l2,-2 M0,4 l4,-4 M3,5 l2,-2")
+//         .attr('stroke', 'grey')
+//         .attr('stroke-width', 1);
+// });
+
+const stat_color = d3.scaleLog()
     .base(Math.LN10)
     .domain([-1, 1e-10, 1])
     .range(['grey', 'blue', 'white'])
     .interpolate(d3.interpolateCubehelix);
 
-var dpsi_color = d3.scaleLinear()
+const dpsi_color = d3.scaleLinear()
     .domain([-1, 0, 1])
     .range(['grey', 'white', 'brown'])
     .interpolate(d3.interpolateCubehelix);
 
-var HMData = function (value, stat_name) {
+const HMData = function (value, stat_name) {
     this.value = value;
     this.name = stat_name;
     if (stat_name.toLowerCase() === 'dpsi')
@@ -23,13 +40,13 @@ HMData.prototype.color = function () {
 };
 
 
-var flip = function (arr) {
+const flip = function (arr) {
     return arr.map(function (a) {
         return a.reverse()
     })
 };
 
-var rotate = function (arr) {
+const rotate = function (arr) {
     return flip(arr)[0].map(function (c, i) {
         return arr.map(function (r) {
             return r[i]
@@ -45,10 +62,10 @@ class HeatMap {
     }
 
     scale(scale) {
-        var scale_width = 124;
-        var height = 25;
+        const scale_width = 124;
+        const height = 25;
 
-        var svg = d3.select(this.el)
+        const svg = d3.select(this.el)
             .attr('width', scale_width + 2)
             .attr('height', height);
 
@@ -90,45 +107,68 @@ class HeatMap {
     };
 
     plot(el) {
-        var lsv_id = el.closest('table').dataset.lsvId;
-        var junc_idx = el.closest('tr').dataset.junctionIndex;
-        var stat_name = el.dataset.statName;
-        var cell_size = 20;
+        const lsv_id = el.closest('table').dataset.lsvId;
+        const junc_idx = el.closest('tr').dataset.junctionIndex;
+        const stat_name = el.dataset.statName;
+        const cell_size = 20;
 
         this.db.allDocs({
             keys: ['metadata', lsv_id],
             include_docs: true
         }).then(response => {
-            var meta = response.rows[0].doc;
-            var data = response.rows[1].doc;
+            const meta = response.rows[0].doc;
+            const data = response.rows[1].doc;
 
-            var group_names = meta.group_names;
+            const group_names = meta.group_names;
+            const m = Array(group_names.length).fill(null).map(() => Array(group_names.length).fill(null));
 
-            var ws = data.dpsi[junc_idx];
-            var matrix = Array(group_names.length).fill(Array(group_names.length).fill(new HMData(-1, 'dpsi')));
+            group_names
+                .forEach((gn1, gn_idx1) => group_names
+                    .forEach((gn2, gn_idx2) => {
+                        try {
+                            const stat_value = data[stat_name][gn1][gn2][junc_idx];
+                            m[gn_idx1][gn_idx2] = new HMData(stat_value, stat_name);
+                        } catch (TypeError) {
+                            m[gn_idx1][gn_idx2] = new HMData(-1, stat_name)
+                        }
 
-            matrix = matrix.map(function (a, i) {
-                var n = ws.slice(0, i);
-                ws = ws.slice(i);
-                return n.map(function (value) {
-                    return new HMData(value, 'dpsi')
-                }).concat(a.slice(i))
-            });
+                        try {
+                            const dpsi_value = data.dpsi[gn1][gn2][junc_idx];
+                            m[gn_idx2][gn_idx1] = new HMData(dpsi_value === undefined ? -1 : dpsi_value, 'dpsi')
+                        } catch (TypeError) {
+                            m[gn_idx2][gn_idx1] = new HMData(-1, 'dpsi')
+                        }
+                    }));
+
+
+            console.log(m);
+
+
+            // let ws = data.dpsi[junc_idx];
+            // let matrix = Array(group_names.length).fill(Array(group_names.length).fill(new HMData(-1, 'dpsi')));
+
+            // matrix = matrix.map(function (a, i) {
+            //     const n = ws.slice(0, i);
+            //     ws = ws.slice(i);
+            //     return n.map(function (value) {
+            //         return new HMData(value, 'dpsi')
+            //     }).concat(a.slice(i))
+            // });
 
             // transpose matrix
-            matrix = rotate(flip(matrix));
+            // matrix = rotate(flip(matrix));
 
-            ws = data[stat_name][junc_idx];
+            // ws = data[stat_name][junc_idx];
 
-            matrix = matrix.map(function (a, i) {
-                var n = ws.slice(0, i);
-                ws = ws.slice(i);
-                return n.map(function (value) {
-                    return new HMData(value, stat_name)
-                }).concat(a.slice(i));
-            });
+            // matrix = matrix.map(function (a, i) {
+            //     const n = ws.slice(0, i);
+            //     ws = ws.slice(i);
+            //     return n.map(function (value) {
+            //         return new HMData(value, stat_name)
+            //     }).concat(a.slice(i));
+            // });
 
-            var tool_tip = d3.select('.heat-map-tool-tip');
+            let tool_tip = d3.select('.heat-map-tool-tip');
             if (tool_tip.empty()) {
                 tool_tip = d3.select("body")
                     .append("div")
@@ -143,25 +183,16 @@ class HeatMap {
             }
 
 
-            var svg = d3.select(el);
+            const svg = d3.select(el);
 
             svg.selectAll("*").remove();
 
             svg.attr('height', cell_size * group_names.length).attr('width', cell_size * group_names.length);
-            // svg
-            //     .append('defs')
-            //     .append('pattern')
-            //     .attr('patternUnits', 'userSpaceOnUse')
-            //     .attr('class', 'diagonalHatch')
-            //     .attr('width', 4)
-            //     .attr('height', 4)
-            //     .append('path')
-            //     .attr('d', "M-1,1 l2,-2 M0,4 l4,-4 M3,5 l2,-2")
-            //     .attr('stroke', 'grey')
-            //     .attr('stroke-width', 1);
+
 
             svg.selectAll('g')
-                .data(matrix)
+            // .data(matrix)
+                .data(m)
                 .enter()
                 .append('g')
                 .attr('transform', function (d, i) {
