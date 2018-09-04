@@ -6,3 +6,4 @@ cdef extern from "stats/stats.hpp":
     cdef cppclass HetStats:
         set[string] names ;
         bint initialize_statistics(vector[string] list_stats) nogil ;
+        int get_number_stats() nogil ;

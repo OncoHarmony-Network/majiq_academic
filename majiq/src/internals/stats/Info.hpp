@@ -6,7 +6,7 @@
 #include <algorithm>
 #include <string>
 #include <assert.h>
-#include <map>
+#include <unordered_map>
 #include <iostream>
 
 #define MAXCLASS 2
@@ -18,19 +18,7 @@ namespace MajiqStats{
 
         private:
 
-            struct tInfoRecord{
-                int neg ;
-                int pos ;
-                double score ;
-
-                bool operator<(const tInfoRecord& rhs) const{
-                        return (neg < rhs.neg || (neg >= rhs.neg && pos >= rhs.pos) ||
-                                (neg >= rhs.neg && pos >= rhs.pos && score < rhs.score)) ;
-                }
-
-            };
-
-            map<tInfoRecord, double> _pval_cache ;
+            unordered_map<tTRecord, double, hash_fn> _pval_cache ;
 
             /**
              * for each part of the vector compute Entropy = sum{ numOfSamplesInClass * log(SumOfSamplesInVector/numOfSamplesInClass) }
@@ -74,8 +62,12 @@ namespace MajiqStats{
              **/
             double ComputePValue( int Neg, int Pos, double Score ){
 
-                tInfoRecord R = {Neg, Pos, Score} ;
-                if (_pval_cache.count(R)){
+
+                tTRecord R = {Neg, Pos, Score} ;
+                int tc ;
+                #pragma omp critical
+                    tc = _pval_cache.count(R) ;
+                if (tc > 0){
                     return _pval_cache[R] ;
                 }
 
@@ -188,13 +180,14 @@ namespace MajiqStats{
                 #endif
 
                 double PVal = exp( BadPaths - lchoose(Neg,Neg+Pos)) ;
-                _pval_cache[R] = PVal ;
+                #pragma omp critical
+                    _pval_cache[R] = PVal ;
                 return PVal ;
             }
 
 
         public:
-            double Calc_pval(vector<float> data, vector<int> labels){
+            double Calc_pval(vector<float>& data, vector<int>& labels){
 
                 int n = data.size() ;
                 double BestLoss = n ;

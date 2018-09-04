@@ -4,10 +4,11 @@
 #include <random>
 #include <algorithm>
 #include <string>
-#include <map>
+#include <unordered_map>
 #include "testStats.hpp"
 #include <iostream>
 #define MAXCLASS 2
+
 
 using namespace std ;
 namespace MajiqStats{
@@ -15,19 +16,7 @@ namespace MajiqStats{
     class TNOM: public MajiqStats::TestStat{
         private:
 
-            struct tTNOMRecord{
-                int neg ;
-                int pos ;
-                int score ;
-
-                bool operator<(const tTNOMRecord& rhs) const{
-                        return (neg < rhs.neg || (neg >= rhs.neg && pos >= rhs.pos) ||
-                                (neg >= rhs.neg && pos >= rhs.pos && score < rhs.score)) ;
-                }
-
-            };
-
-            map<tTNOMRecord, double> _pval_cache ;
+            unordered_map<tTRecord, double, hash_fn> _pval_cache ;
 
             /**
             * compute for the classes distribution: number of "mistakes" in this side of the vector:
@@ -65,14 +54,14 @@ namespace MajiqStats{
 
             double ComputePValue( int Neg, int Pos, int Score ){
 
-                tTNOMRecord R = {Neg, Pos, Score} ;
-                if (_pval_cache.count(R)){
+                tTRecord R = {Neg, Pos, Score} ;
+
+                int tc ;
+                #pragma omp critical
+                    tc = _pval_cache.count(R) ;
+//                    #map<tTNOMRecord, double> >::iterator i = _pval_cache.find(R) ;
+                if( tc > 0 )
                     return _pval_cache[R] ;
-                }
-//                map<tTNOMRecord, double> >::iterator i = _pval_cache.find(R) ;
-//
-//                if( i != _pval_cache.end() )
-//                    return (*i).second ;
 
 
                 #ifdef DEBUG
@@ -137,13 +126,13 @@ namespace MajiqStats{
                          << Score << " ) -> " << exp(PNum) << " " << exp(NNum) << " "
                          << PValue << "\n";
                 #endif
-//                map<tTNOMRecord, double, less<tTNOMRecord> >::value_type v(R, PValue) ;
-//                _pval_cache.insert( v ) ;
+                #pragma omp critical
+                    _pval_cache[R] = PValue ;
                 return PValue;
             }
 
         public:
-            double Calc_pval(vector<float> data, vector<int> labels){
+            double Calc_pval(vector<float>& data, vector<int>& labels){
                 // n = number of columms in the data set
                 // BestLoss - minimum num of mistakes
 

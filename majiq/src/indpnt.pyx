@@ -41,8 +41,9 @@ cdef void _statistical_test_computation(object out_h5p, dict comparison, list li
     cdef dict output = {}
     cdef string lsv_id, stname
     cdef HetStats* StatsObj = new HetStats()
-    cdef int nstats = stats_list.size()
+    cdef int nstats
     cdef str statlist = "";
+    cdef hetLSV* hetObj_ptr
 
     if not StatsObj.initialize_statistics(stats_list):
         print('ERROR stats')
@@ -51,6 +52,7 @@ cdef void _statistical_test_computation(object out_h5p, dict comparison, list li
     for stname in StatsObj.names:
         statlist += " " + stname.decode('utf-8') + " "
     logger.info("Using statistics: %s" % statlist)
+    nstats = StatsObj.get_number_stats()
 
     index = 0
 
@@ -76,27 +78,32 @@ cdef void _statistical_test_computation(object out_h5p, dict comparison, list li
             # print (i, lsv)
             lsv_id = lsv.encode('utf-8')
             hetObj_ptr = <hetLSV*> lsv_vec[lsv_id]
+            hetObj_ptr.create_condition_samples(len(file_list[0]), len(file_list[1]), psi_samples)
             lsv_index = hetObj_ptr.get_junction_index()
             nways = hetObj_ptr.get_num_ways()
             oPvals = output[lsv_id]
-            for cc in file_list[0]:
+
+            for fidx, cc in enumerate(file_list[0]):
                 k = cc[lsv_index:lsv_index+nways]
-                cond1_smpl.push_back(<np.float32_t *> k.data)
+                hetObj_ptr.add_condition1(<np.float32_t *> k.data, fidx, nways, psi_samples)
+                # cond1_smpl.push_back(<np.float32_t *> k.data)
 
             for cc in file_list[1]:
                 k = cc[lsv_index:lsv_index+nways]
-                cond2_smpl.push_back(<np.float32_t *> k.data)
+                hetObj_ptr.add_condition2(<np.float32_t *> k.data, fidx, nways, psi_samples)
+                # cond2_smpl.push_back(<np.float32_t *> k.data)
 
-        test_calc(<np.float32_t *> oPvals.data, cond1_smpl, cond2_smpl, StatsObj, nways, psi_samples, 0.95)
-        cond1_smpl.clear()
-        cond2_smpl.clear()
+        test_calc(<np.float32_t *> oPvals.data, StatsObj, hetObj_ptr, psi_samples, 0.95)
+        hetObj_ptr.clear()
+        # with gil:
+        #     del hetObj_ptr
 
 
     logger.info('Storing Voila file statistics')
     for lsv in list_of_lsv:
         lsv_id = lsv.encode('utf-8')
+        nways =lsv_vec[lsv_id].get_num_ways()
         out_h5p.heterogen(lsv).add(junction_stats=output[lsv_id])
-
 
 
 cdef int _het_computation(object out_h5p, dict file_cond, list list_of_lsv, map[string, qLSV*] lsv_vec,

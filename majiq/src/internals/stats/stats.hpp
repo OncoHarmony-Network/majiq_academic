@@ -44,7 +44,11 @@ class HetStats{
                     names.insert(st) ;
             }
             return statistics.size()>0 ;
-       }
+        }
+
+        int get_number_stats(){
+            return statistics.size() ;
+        }
 } ;
 
 #endif

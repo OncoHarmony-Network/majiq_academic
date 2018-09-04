@@ -31,5 +31,5 @@ cdef extern from "psi.hpp":
                                    vector[psi_distr_t]& o_postpsi, int psi_samples, int j_offset,
                                    psi_distr_t psi_border, int njunc, int msamples, int nbins, bint is_ir) nogil ;
 
-    cdef void test_calc(np.float32_t* oPvals, vector[np.float32_t*] samples1, vector[np.float32_t*] samples2, HetStats* HetStatsObj,
-               int njunc, int psamples, np.float32_t quant) nogil ;
+    cdef void test_calc(np.float32_t* oPvals, HetStats* HetStatsObj, hetLSV* lsvObj, int psamples,
+                        np.float32_t quant) nogil ;

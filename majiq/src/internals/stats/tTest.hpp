@@ -7,7 +7,7 @@
 #include <algorithm>
 #include <string>
 #include <assert.h>
-#include <map>
+#include <unordered_map>
 #include <iostream>
 
 #define MAXCLASS 2
@@ -31,23 +31,23 @@ namespace MajiqStats{
 //
 //            };
 //
-//            map<tTestRecord, double> _pval_cache ;
+            unordered_map<tTRecord, double, hash_fn> _pval_cache ;
 
 
         public:
-            double Calc_pval(vector<float> data, vector<int> labels){
+            double Calc_pval(vector<float>& data, vector<int>& labels){
 
                 // calculate mean and var for the expression values and num of samples in each class.
                 double Count[2] ;
                 double Mean[2] ;
                 double Var[2] ;
-
+//cout << "LL1\n" ;
                 for(int i = 0; i < MAXCLASS; i++ ) {
                     Count[i] = 0 ;
                     Mean[i] = 0 ;
                     Var[i] = 0 ;
                 }
-
+//cout << "LL2\n" ;
                 for(int i = 0; i < data.size(); i++ ){
                     if( labels[i] >= 0 ){
                         double x = data[i] ;
@@ -65,7 +65,7 @@ namespace MajiqStats{
                             Var[i] = 0.0000000001 ;
                     }
                 }
-
+//cout << "LL3\n" ;
                 double _Stat = sqrt(Count[0]+Count[1] - 2) * ( Mean[0] - Mean[1] ) ;
                 _Stat /= sqrt((1.0/Count[0] + 1.0/Count[1])*(Count[0]*Var[0] + Count[1]*Var[1])) ;
 
@@ -77,7 +77,9 @@ namespace MajiqStats{
 //                double P, Q ;
 //                cumt( &U, &_Deg, &P, &Q ) ;
                 double Q = scythe::pt(U, _Deg) ;
-                return 2*Q ;
+//cout << "LL4: " << U << " : " << 1-Q <<"\n" ;
+                return 2*(1-Q) ;
+//                return 2*Q ;
             }
 
     };

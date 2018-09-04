@@ -6,7 +6,7 @@
 #include <algorithm>
 #include <string>
 #include <assert.h>
-#include <map>
+#include <unordered_map>
 #include <iostream>
 #define MAXCLASS 2
 
@@ -17,20 +17,7 @@ namespace MajiqStats{
 
         private:
 
-            struct tWilcoxonCountRecord{
-                int n ;
-                int k ;
-                int s ;
-
-                bool operator<(const tWilcoxonCountRecord& rhs) const{
-                        return (n < rhs.n || (n >= rhs.n && k >= rhs.k) ||
-                                (n >= rhs.n && k >= rhs.k && s < rhs.s)) ;
-                }
-
-
-            };
-
-             map< tWilcoxonCountRecord, double, less<tWilcoxonCountRecord >> _pval_cache ;
+            unordered_map< tTRecord, double, hash_fn> _pval_cache ;
 
             double Count(int n, int k, int s ){
                 if( s < 0 )
@@ -49,11 +36,13 @@ namespace MajiqStats{
                         return -HUGE_VAL ;
                 }
 
-                tWilcoxonCountRecord R = {n,k,s} ;
-                map<tWilcoxonCountRecord, double, less<tWilcoxonCountRecord> >::iterator i = _pval_cache.find(R) ;
+                tTRecord R = {n,k,s} ;
+                int tc ;
+                #pragma omp critical
+                    tc = _pval_cache.count(R) ;
 
-                if( i != _pval_cache.end() )
-                    return (*i).second ;
+                if( _pval_cache.count(R))
+                    return _pval_cache[R] ;
 
                 assert( k > 0 ) ;
                 double c1 = Count( n -1 , k, s ) ;
@@ -66,20 +55,22 @@ namespace MajiqStats{
                 c2 += log( 1.0*k ) ;
                 double c = AddLog(c1, c2) ;
 
-                map<tWilcoxonCountRecord, double, less<tWilcoxonCountRecord> >::value_type v(R,c) ;
-                _pval_cache.insert( v ) ;
+                #pragma omp critical
+                    _pval_cache[R] = c ;
 
                 return c ;
             }
 
         public:
-            double Calc_pval(vector<float> data, vector<int> labels){
+            double Calc_pval(vector<float> & data, vector<int>& labels){
 
-//
-                cerr << "DATA: " ;
-                for (auto const &p: data)
-                    cerr << p << " ," ;
-                cerr << endl ;
+//                #pragma omp critical
+//                {
+//                    cerr << "DATA: " << endl;
+//                    for (auto const &p: data)
+//                        cerr << p << " ," ;
+//                    cerr << endl ;
+//                }
 
                 int n1 = 0 ;
                 int n2 = 0 ;
@@ -128,8 +119,8 @@ namespace MajiqStats{
                     }
                 }
                 PValue -= lgamma(n1+n2 + 1) ;
-
-                cerr << "Wilcoxon PValue (" << n1+n2 << ", " << n1 << ", " << s <<") = " << exp(PValue)*2 << " compare to " << 2*GaussCDF(-fabs(_ZScore), 0, 1) << "\n";
+//                #pragma omp critical
+//                cerr << "Wilcoxon PValue (" << n1+n2 << ", " << n1 << ", " << s <<") = " << exp(PValue)*2 << " compare to " << 2*GaussCDF(-fabs(_ZScore), 0, 1) << "\n";
 
                 return exp(PValue)*2 ;
             }

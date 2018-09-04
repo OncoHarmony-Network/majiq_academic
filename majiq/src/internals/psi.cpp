@@ -261,83 +261,15 @@ void get_samples_from_psi(float* osamps, hetLSV* lsvObj, int psi_samples, psi_di
 }
 
 
-void get_samples_from_psi2(vector<psi_distr_t>& i_psi, float* osamps, float* o_mupsi, float* o_postpsi,
-                            int psi_samples, int j_offset, psi_distr_t& psi_border2, int njunc, int msamples,
-                            int nbins, bool is_ir){
-
-    const float bsize = 1.0 / nbins ;
-    psi_distr_t psi_border (nbins+1) ;
-    for(int i=0; i<=nbins; i++){
-        psi_border[i] = i*bsize ;
-    }
-
-
-    vector<psi_distr_t> alpha_beta_prior(njunc, psi_distr_t(2)) ;
-    get_prior_params(alpha_beta_prior, njunc, is_ir) ;
-    psi_distr_t psi_space(nbins) ;
-    for(int i=0; i<nbins; i++){
-        psi_space[i] = (psi_border[i] + psi_border[i+1]) / 2 ;
-    }
-    float * all_m = (float*) calloc(msamples, sizeof(float)) ;
-    for (int j=0; j<njunc; j++){
-        for (int m=0; m<msamples; m++) {
-            all_m[m] += i_psi[j][m] ;
-        }
-    }
-    for (int j=0; j<njunc; j++){
-        const float alpha = alpha_beta_prior[j][0] ;
-        const float beta = alpha_beta_prior[j][1] ;
-        psi_distr_t temp_mupsi(msamples) ;
-        for (int m=0; m<msamples; m++){
-            const float jnc_val = i_psi[j][m] ;
-            const float all_val = all_m[m] ;
-            float * psi_lkh =  (float*) calloc(nbins, sizeof(float)) ;
-            temp_mupsi[m] = calc_mupsi(jnc_val, all_val, alpha, beta) ;
-            prob_data_sample_given_psi(psi_lkh, jnc_val, all_val, psi_border, nbins, alpha, beta) ;
-            const float Z = logsumexp(psi_lkh, nbins) ;
-            for (int i=0; i< nbins; i++){
-                psi_lkh[i] -= Z ;
-                const int idx_2d = (j*nbins) + i ;
-//cout << "INDEX: " << idx_2d << endl ;
-                o_postpsi[idx_2d] += exp(psi_lkh[i]) ;
-            }
-            free(psi_lkh) ;
-        }
-//        float p =  median(temp_mupsi) ;
-//cout << "PP:: " << p << endl ;
-        o_mupsi[j] = median(temp_mupsi) ;
-        psi_distr_t temp_postpsi(nbins) ;
-        for (int i=0; i<nbins; i++){
-            const int idx_2d = (j*nbins) + i ;
-            o_postpsi[idx_2d] /= msamples ;
-             temp_postpsi[i] = o_postpsi[idx_2d] ;
-        }
-
-        if (psi_samples == 1){
-            osamps[j+j_offset] = o_mupsi[j] ;
-        }else{
-            default_random_engine generator ;
-            discrete_distribution<int> psi_distribution (temp_postpsi.begin(), temp_postpsi.end());
-            for(int i=0; i<psi_samples; i++){
-                float p = psi_distribution(generator) ;
-                const int idx_2d = ((j+j_offset)*psi_samples) + i ;
-                osamps[idx_2d] = psi_space[p] ;
-            }
-        }
-    }
-    free(all_m) ;
-    return ;
-}
-
-
-void test_calc(float* oPvals, vector<float*> samples1, vector<float*> samples2, HetStats* HetStatsObj,
-               int njunc, int psamples, float quant){
+void test_calc(float* oPvals, HetStats* HetStatsObj, hetLSV* lsvObj, int psamples, float quant){
 
     const int nstats = (HetStatsObj->statistics).size() ;
 //cout << "KK1\n" ;
-    const int n1 = samples1.size() ;
-    const int n2 = samples2.size() ;
-//cout << "KK2 " << njunc << "\n" ;
+    const int n1 = lsvObj->cond_sample1.size() ;
+    const int n2 = lsvObj->cond_sample2.size() ;
+    const int njunc = lsvObj->get_num_ways() ;
+//cout << "KK2 " << n1 << " : "<< n2 <<"\n" ;
+
     for (int j=0; j<njunc; j++){
 
         vector<vector<float>> pval_vect (nstats, vector<float>(psamples)) ;
@@ -349,13 +281,13 @@ void test_calc(float* oPvals, vector<float*> samples1, vector<float*> samples2, 
             const int in_2d = (j*psamples) + s ;
 
             for (int i=0; i<n1; i++){
-                csamps.push_back(samples1[i][in_2d]) ;
+                csamps.push_back(lsvObj->cond_sample1[i][j][s]) ;
                 labels.push_back(0) ;
             }
 
             for (int i=0; i<n2; i++){
 
-                csamps.push_back(samples2[i][in_2d]) ;
+                csamps.push_back(lsvObj->cond_sample2[i][j][s]) ;
                 labels.push_back(1) ;
             }
 
@@ -365,7 +297,7 @@ void test_calc(float* oPvals, vector<float*> samples1, vector<float*> samples2, 
             labels = apply_permutation(labels, p);
 
             for(int i=0; i<nstats; i++){
-                pval_vect[i][s] = (HetStatsObj->statistics)[i]->Calc_pval(csamps, labels) ;
+                pval_vect[i][s] = (float)(HetStatsObj->statistics)[i]->Calc_pval(csamps, labels) ;
             }
 //cout << "KK3\n" ;
         }
