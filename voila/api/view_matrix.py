@@ -359,41 +359,58 @@ class ViewHeterogens:
 
         @property
         def dpsi(self):
-            group_names = self.matrix_hdf5.view_metadata['group_names']
-            ir = int(self.intron_retention)
-            arr = np.empty((len(self.junctions) + ir, len(group_names), len(group_names)), dtype=np.float)
-            arr.fill(-1)
+            d = {}
 
             for het in self.heterogens:
                 try:
-                    for junc_idx, dpsi in enumerate(het.dpsi):
-                        z, y = [group_names.index(g) for g in het.matrix_hdf5.view_metadata['group_names']]
-                        arr[junc_idx][y][z] = dpsi
+                    group_names = het.matrix_hdf5.view_metadata['group_names']
+                    dpsi_values = list(het.dpsi)
+                    try:
+                        d[group_names[0]][group_names[1]] = dpsi_values
+                    except KeyError:
+                        d[group_names[0]] = {group_names[1]: dpsi_values}
                 except (LsvIdNotFoundInVoilaFile, GeneIdNotFoundInVoilaFile):
                     pass
 
-            return self.compact_array(arr)
+            return d
 
         def junction_stat(self, stat_name):
-            group_names = self.matrix_hdf5.view_metadata['group_names']
-            ir = int(self.lsv_type.endswith('i'))
-            arr = np.empty((len(self.junctions) + ir, len(group_names), len(group_names)), dtype=np.float)
-            arr.fill(-1)
-
+            d = {}
             for het in self.heterogens:
                 try:
+                    group_names = het.matrix_hdf5.view_metadata['group_names']
                     stat_names = het.matrix_hdf5.view_metadata['stat_names']
                     stat_idx = list(stat_names).index(stat_name)
                     trans_junc_stats = het.junction_stats.T
-                    for junc_idx, stat in enumerate(trans_junc_stats[stat_idx]):
-                        z, y = sorted(group_names.index(g) for g in het.matrix_hdf5.view_metadata['group_names'])
-                        assert arr[junc_idx][y][z] == -1
-                        arr[junc_idx][y][z] = stat
-
+                    stats_values = trans_junc_stats[stat_idx].tolist()
+                    try:
+                        d[group_names[0]][group_names[1]] = stats_values
+                    except KeyError:
+                        d[group_names[0]] = {group_names[1]: stats_values}
                 except (LsvIdNotFoundInVoilaFile, GeneIdNotFoundInVoilaFile):
                     pass
+            return d
 
-            return self.compact_array(arr)
+            #
+            # group_names = self.matrix_hdf5.view_metadata['group_names']
+            # ir = int(self.lsv_type.endswith('i'))
+            # arr = np.empty((len(self.junctions) + ir, len(group_names), len(group_names)), dtype=np.float)
+            # arr.fill(-1)
+            #
+            # for het in self.heterogens:
+            #     try:
+            #         stat_names = het.matrix_hdf5.view_metadata['stat_names']
+            #         stat_idx = list(stat_names).index(stat_name)
+            #         trans_junc_stats = het.junction_stats.T
+            #         for junc_idx, stat in enumerate(trans_junc_stats[stat_idx]):
+            #             z, y = sorted(group_names.index(g) for g in het.matrix_hdf5.view_metadata['group_names'])
+            #             assert arr[junc_idx][y][z] == -1
+            #             arr[junc_idx][y][z] = stat
+            #
+            #     except (LsvIdNotFoundInVoilaFile, GeneIdNotFoundInVoilaFile):
+            #         pass
+            #
+            # return self.compact_array(arr)
 
         @staticmethod
         def compact_array(arr):
