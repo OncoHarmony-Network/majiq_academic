@@ -54,7 +54,7 @@ namespace MajiqStats{
 
             double ComputePValue( int Neg, int Pos, int Score ){
 
-                tTRecord R = {Neg, Pos, Score} ;
+                tTRecord R = {Neg, Pos, (double)Score} ;
 
                 int tc ;
                 #pragma omp critical

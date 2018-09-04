@@ -132,6 +132,7 @@ cdef int _het_computation(object out_h5p, dict file_cond, list list_of_lsv, map[
 
 
     for cidx, (cond_name, cond_list) in enumerate(file_cond.items()):
+        max_nfiles = max(max_nfiles, len(cond_list))
         for fidx, f in enumerate(cond_list):
             osamps = np.zeros(shape=(total_njuncs, psi_samples), dtype=np.float32)
             majiq_io.get_coverage_mat_lsv(lsv_vec, [f], "", nthreads)
@@ -154,11 +155,10 @@ cdef int _het_computation(object out_h5p, dict file_cond, list list_of_lsv, map[
         postpsi = np.ndarray(shape=(len(file_cond), nways, nbins), dtype=np.float32, order="c")
         mupsi.fill(-1)
         hetObj_ptr = <hetLSV*> lsv_vec[lsv_id]
-
         for x in range(len(file_cond)):
             for y in range(max_nfiles):
-               for z in range(nways):
-                   mupsi[x,y,z] = hetObj_ptr.mu_psi[x][y][z]
+                for z in range(nways):
+                    mupsi[x,y,z] = hetObj_ptr.mu_psi[x][y][z]
 
         for x in range(len(file_cond)):
             for y in range(nways):

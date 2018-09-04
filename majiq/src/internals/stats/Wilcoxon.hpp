@@ -36,12 +36,12 @@ namespace MajiqStats{
                         return -HUGE_VAL ;
                 }
 
-                tTRecord R = {n,k,s} ;
+                tTRecord R = {n,k, (double) s} ;
                 int tc ;
                 #pragma omp critical
                     tc = _pval_cache.count(R) ;
 
-                if( _pval_cache.count(R))
+                if( tc > 0 )
                     return _pval_cache[R] ;
 
                 assert( k > 0 ) ;

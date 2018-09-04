@@ -274,8 +274,6 @@ void test_calc(float* oPvals, HetStats* HetStatsObj, hetLSV* lsvObj, int psample
             vector<float> csamps ;
             vector<int> labels ;
 
-            const int in_2d = (j*psamples) + s ;
-
             for (int i=0; i<n1; i++){
                 csamps.push_back(lsvObj->cond_sample1[i][j][s]) ;
                 labels.push_back(0) ;
