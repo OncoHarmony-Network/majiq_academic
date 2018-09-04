@@ -10,14 +10,12 @@
 using namespace std ;
 
 void get_psi_border(psi_distr_t& psi_border, int nbins){
-//    psi_distr_t psi_border (nbins+1) ;
     const float bsize = 1.0 / nbins ;
 
     for(int i=0; i<=nbins; i++){
         psi_border[i] = i*bsize ;
     }
     return ;
-//    return psi_border ;
 }
 
 void prob_data_sample_given_psi2(psi_distr_t& out_array, float sample, float all_sample, psi_distr_t & psi_border,
@@ -264,11 +262,9 @@ void get_samples_from_psi(float* osamps, hetLSV* lsvObj, int psi_samples, psi_di
 void test_calc(float* oPvals, HetStats* HetStatsObj, hetLSV* lsvObj, int psamples, float quant){
 
     const int nstats = (HetStatsObj->statistics).size() ;
-//cout << "KK1\n" ;
     const int n1 = lsvObj->cond_sample1.size() ;
     const int n2 = lsvObj->cond_sample2.size() ;
     const int njunc = lsvObj->get_num_ways() ;
-//cout << "KK2 " << n1 << " : "<< n2 <<"\n" ;
 
     for (int j=0; j<njunc; j++){
 
@@ -292,20 +288,17 @@ void test_calc(float* oPvals, HetStats* HetStatsObj, hetLSV* lsvObj, int psample
             }
 
             auto p = sort_permutation <float>(csamps, less<float>() ) ;
-//cout << "KK34\n" ;
             csamps = apply_permutation(csamps, p);
             labels = apply_permutation(labels, p);
 
             for(int i=0; i<nstats; i++){
                 pval_vect[i][s] = (float)(HetStatsObj->statistics)[i]->Calc_pval(csamps, labels) ;
             }
-//cout << "KK3\n" ;
         }
         for(int i=0; i<nstats; i++){
             const int idx_2d = (j*nstats) + i ;
             oPvals[idx_2d] = quantile(pval_vect[i], quant) ;
-//            cout << "STAT: " << i << " :: " << oPvals[idx_2d] << "\n" ;
+
         }
     }
-//cout << "KK END\n" ;
 }

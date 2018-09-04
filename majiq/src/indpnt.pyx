@@ -70,12 +70,9 @@ cdef void _statistical_test_computation(object out_h5p, dict comparison, list li
         nways = lsv_vec[lsv_id].get_num_ways()
         output[lsv_id] = np.zeros(shape=(nways, nstats), dtype=np.float32)
 
-
-
     for i in prange(nlsv, nogil=True, num_threads=nthreads):
         with gil:
             lsv = list_of_lsv[i]
-            # print (i, lsv)
             lsv_id = lsv.encode('utf-8')
             hetObj_ptr = <hetLSV*> lsv_vec[lsv_id]
             hetObj_ptr.create_condition_samples(len(file_list[0]), len(file_list[1]), psi_samples)
@@ -86,17 +83,13 @@ cdef void _statistical_test_computation(object out_h5p, dict comparison, list li
             for fidx, cc in enumerate(file_list[0]):
                 k = cc[lsv_index:lsv_index+nways]
                 hetObj_ptr.add_condition1(<np.float32_t *> k.data, fidx, nways, psi_samples)
-                # cond1_smpl.push_back(<np.float32_t *> k.data)
 
             for cc in file_list[1]:
                 k = cc[lsv_index:lsv_index+nways]
                 hetObj_ptr.add_condition2(<np.float32_t *> k.data, fidx, nways, psi_samples)
-                # cond2_smpl.push_back(<np.float32_t *> k.data)
 
         test_calc(<np.float32_t *> oPvals.data, StatsObj, hetObj_ptr, psi_samples, 0.95)
         hetObj_ptr.clear()
-        # with gil:
-        #     del hetObj_ptr
 
 
     logger.info('Storing Voila file statistics')
@@ -131,25 +124,21 @@ cdef int _het_computation(object out_h5p, dict file_cond, list list_of_lsv, map[
     # cdef ArrayWrapper mu_w0, mu_w1, ppsi_w0, ppsi_w1
 
     get_psi_border(psi_border, nbins)
-    logger.info('PREPARE LSV')
+
     for lsv in list_of_lsv:
         lsv_id = lsv.encode('utf-8')
         nways = lsv_vec[lsv_id].get_num_ways()
         total_njuncs += nways
 
-    logger.info('PREPARE LSV2')
 
     for cidx, (cond_name, cond_list) in enumerate(file_cond.items()):
         for fidx, f in enumerate(cond_list):
             osamps = np.zeros(shape=(total_njuncs, psi_samples), dtype=np.float32)
-            # logger.info('READ COV')
             majiq_io.get_coverage_mat_lsv(lsv_vec, [f], "", nthreads)
-            # logger.info('MULTITH')
             for i in prange(nlsv, nogil=True, num_threads=nthreads):
                 with gil:
                     lsv = list_of_lsv[i]
                     lsv_id = lsv.encode('utf-8')
-                    # print ('CCCACACA')
                 get_samples_from_psi(<np.float32_t *> osamps.data, <hetLSV*> lsv_vec[lsv_id], psi_samples, psi_border,
                                      nbins, cidx, fidx)
             fname = get_tmp_psisample_file(outdir, "%s_%s" %(cond_name, fidx) )
