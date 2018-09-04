@@ -37,21 +37,26 @@ cdef void _statistical_test_computation(object out_h5p, dict comparison, list li
     cdef str cond_name, lsv
     cdef int index, nways, lsv_index
     cdef list file_list = []
+    cdef list statlist
     cdef np.ndarray[np.float32_t, ndim=2, mode="c"]  oPvals
     cdef dict output = {}
     cdef string lsv_id, stname
     cdef HetStats* StatsObj = new HetStats()
     cdef int nstats
-    cdef str statlist = "";
+
     cdef hetLSV* hetObj_ptr
 
     if not StatsObj.initialize_statistics(stats_list):
         print('ERROR stats')
         return
 
+
     for stname in StatsObj.names:
-        statlist += " " + stname.decode('utf-8') + " "
-    logger.info("Using statistics: %s" % statlist)
+        statlist.append(stname)
+
+    out_h5p.stat_names = statlist
+
+    logger.info("Using statistics: %s" % " ".join(statlist))
     nstats = StatsObj.get_number_stats()
 
     index = 0
@@ -238,7 +243,7 @@ cdef void _core_independent(object self):
         out_h5p.analysis_type = ANALYSIS_HETEROGEN
         out_h5p.group_names = self.names
         out_h5p.experiment_names = [exps1, exps2]
-        out_h5p.stat_names = self.stats
+
         j_offset = 0
         for lsv in list_of_lsv:
             nways = len(lsv_type_dict[lsv].split('|')) -1
