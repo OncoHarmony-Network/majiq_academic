@@ -106,7 +106,7 @@ cdef int _statistical_test_computation(object out_h5p, dict comparison, list lis
         oPvals = np.zeros(shape=(nways, nstats), dtype=np.float32)
         for ii in range(nways):
             for jj in range(nstats):
-                print(output[lsv_id][ii][jj])
+                # print(output[lsv_id][ii][jj])
                 oPvals[ii, jj] = output[lsv_id][ii][jj]
         out_h5p.heterogen(lsv).add(junction_stats=oPvals)
 
