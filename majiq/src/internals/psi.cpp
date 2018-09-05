@@ -258,8 +258,8 @@ void get_samples_from_psi(float* osamps, hetLSV* lsvObj, int psi_samples, psi_di
 
 }
 
-
-void test_calc(float* oPvals, HetStats* HetStatsObj, hetLSV* lsvObj, int psamples, float quant){
+void test_calc(vector<psi_distr_t>& oPvals, HetStats* HetStatsObj, hetLSV* lsvObj, int psamples, float quant){
+//void test_calc(float* oPvals, HetStats* HetStatsObj, hetLSV* lsvObj, int psamples, float quant){
 
     const int nstats = (HetStatsObj->statistics).size() ;
     const int n1 = lsvObj->cond_sample1.size() ;
@@ -294,8 +294,9 @@ void test_calc(float* oPvals, HetStats* HetStatsObj, hetLSV* lsvObj, int psample
             }
         }
         for(int i=0; i<nstats; i++){
-            const int idx_2d = (j*nstats) + i ;
-            oPvals[idx_2d] = quantile(pval_vect[i], quant) ;
+
+            float mmm = quantile(pval_vect[i], quant) ;
+            oPvals[j][i] = mmm ;
 
         }
     }

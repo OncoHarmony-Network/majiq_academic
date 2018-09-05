@@ -10,6 +10,7 @@
 #define MAXCLASS 2
 
 
+#define DEBUG
 using namespace std ;
 namespace MajiqStats{
 

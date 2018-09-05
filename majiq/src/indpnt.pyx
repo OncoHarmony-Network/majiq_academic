@@ -24,9 +24,9 @@ import numpy as np
 def calc_independent(args):
     pipeline_run(independent(args))
 
-cdef void _statistical_test_computation(object out_h5p, dict comparison, list list_of_lsv, vector[string] stats_list,
+cdef int _statistical_test_computation(object out_h5p, dict comparison, list list_of_lsv, vector[string] stats_list,
                                         int psi_samples, map[string, qLSV*] lsv_vec, str outDir, int nthreads,
-                                        object logger ) :
+                                        object logger )  except -1 :
     cdef int nlsv = len(list_of_lsv)
     cdef vector[np.float32_t*] cond1_smpl
     cdef vector[np.float32_t*] cond2_smpl
@@ -39,7 +39,8 @@ cdef void _statistical_test_computation(object out_h5p, dict comparison, list li
     cdef list file_list = []
     cdef list statlist
     cdef np.ndarray[np.float32_t, ndim=2, mode="c"]  oPvals
-    cdef dict output = {}
+    # cdef dict output = {}
+    cdef map[string, vector[psi_distr_t]] output
     cdef string lsv_id, stname
     cdef HetStats* StatsObj = new HetStats()
     cdef int nstats
@@ -48,7 +49,7 @@ cdef void _statistical_test_computation(object out_h5p, dict comparison, list li
 
     if not StatsObj.initialize_statistics(stats_list):
         print('ERROR stats')
-        return
+        return -1
 
     statlist = []
     for stname in StatsObj.names:
@@ -70,10 +71,10 @@ cdef void _statistical_test_computation(object out_h5p, dict comparison, list li
             file_list[index].append(cc)
         index +=1
 
-    for lsv in list_of_lsv:
-        lsv_id = lsv.encode('utf-8')
-        nways = lsv_vec[lsv_id].get_num_ways()
-        output[lsv_id] = np.zeros(shape=(nways, nstats), dtype=np.float32)
+    # for lsv in list_of_lsv:
+    #     lsv_id = lsv.encode('utf-8')
+    #     nways = lsv_vec[lsv_id].get_num_ways()
+    #     output[lsv_id] = np.zeros(shape=(nways, nstats), dtype=np.float32)
 
     for i in prange(nlsv, nogil=True, num_threads=nthreads):
         with gil:
@@ -83,17 +84,18 @@ cdef void _statistical_test_computation(object out_h5p, dict comparison, list li
             hetObj_ptr.create_condition_samples(len(file_list[0]), len(file_list[1]), psi_samples)
             lsv_index = hetObj_ptr.get_junction_index()
             nways = hetObj_ptr.get_num_ways()
-            oPvals = output[lsv_id]
 
             for fidx, cc in enumerate(file_list[0]):
                 k = cc[lsv_index:lsv_index+nways]
                 hetObj_ptr.add_condition1(<np.float32_t *> k.data, fidx, nways, psi_samples)
 
-            for cc in file_list[1]:
+            for fidx, cc in enumerate(file_list[1]):
                 k = cc[lsv_index:lsv_index+nways]
                 hetObj_ptr.add_condition2(<np.float32_t *> k.data, fidx, nways, psi_samples)
 
-        test_calc(<np.float32_t *> oPvals.data, StatsObj, hetObj_ptr, psi_samples, 0.95)
+        output[lsv_id] = vector[psi_distr_t](nways, psi_distr_t(nstats))
+        test_calc(output[lsv_id], StatsObj, hetObj_ptr, psi_samples, 0.95)
+        # test_calc(<np.float32_t *> oPvals.data, StatsObj, hetObj_ptr, psi_samples, 0.95)
         hetObj_ptr.clear()
 
 
@@ -101,7 +103,12 @@ cdef void _statistical_test_computation(object out_h5p, dict comparison, list li
     for lsv in list_of_lsv:
         lsv_id = lsv.encode('utf-8')
         nways =lsv_vec[lsv_id].get_num_ways()
-        out_h5p.heterogen(lsv).add(junction_stats=output[lsv_id])
+        oPvals = np.zeros(shape=(nways, nstats), dtype=np.float32)
+        for ii in range(nways):
+            for jj in range(nstats):
+                print(output[lsv_id][ii][jj])
+                oPvals[ii, jj] = output[lsv_id][ii][jj]
+        out_h5p.heterogen(lsv).add(junction_stats=oPvals)
 
 
 cdef int _het_computation(object out_h5p, dict file_cond, list list_of_lsv, map[string, qLSV*] lsv_vec,
