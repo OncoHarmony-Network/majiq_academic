@@ -61,8 +61,9 @@ namespace MajiqStats{
                 double U = fabs(_Stat) ;
 //                double P, Q ;
 //                cumt( &U, &_Deg, &P, &Q ) ;
-                double Q = scythe::pt(U, _Deg) ;
-                return 2*(1-Q) ;
+//                double Q = scythe::pt(U, _Deg) ;
+                double Q = 0 ;
+                return (1-Q) ;
             }
     };
 }

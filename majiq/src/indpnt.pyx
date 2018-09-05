@@ -34,7 +34,7 @@ cdef void _statistical_test_computation(object out_h5p, dict comparison, list li
     cdef np.ndarray[np.float32_t, ndim=2, mode="c"]  k
     cdef object cc
     cdef int cond, xx, i
-    cdef str cond_name, lsv
+    cdef str cond_name, lsv, statsnames
     cdef int index, nways, lsv_index
     cdef list file_list = []
     cdef list statlist
@@ -52,7 +52,7 @@ cdef void _statistical_test_computation(object out_h5p, dict comparison, list li
 
     statlist = []
     for stname in StatsObj.names:
-        statlist.append(stname)
+        statlist.append(stname.decode('utf-8'))
 
     out_h5p.stat_names = statlist
 
