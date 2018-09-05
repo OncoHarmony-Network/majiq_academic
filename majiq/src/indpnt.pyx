@@ -50,7 +50,7 @@ cdef void _statistical_test_computation(object out_h5p, dict comparison, list li
         print('ERROR stats')
         return
 
-
+    statlist = []
     for stname in StatsObj.names:
         statlist.append(stname)
 
