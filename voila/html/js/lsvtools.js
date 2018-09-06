@@ -137,7 +137,6 @@ class LsvTools {
                 return d.junctions
             })
             .enter()
-
             .append('tr')
             .attr('data-junction-index', (d, i) => i);
 
@@ -158,7 +157,7 @@ class LsvTools {
             .append('td')
             .append('svg')
             .attr('class', 'heat-map')
-            .attr('data-stat-name', 'tnom')
+            .attr('data-stat-name', 'TNOM')
             .each((d, i, a) => this.heatmap.plot(a[i]));
     };
 
