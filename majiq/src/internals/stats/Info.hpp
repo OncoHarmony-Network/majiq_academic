@@ -205,7 +205,7 @@ namespace MajiqStats{
                     RightClass[i] = LeftClass[i] = 0 ;
 
                 for( int i = 0; i < n; i++ ){
-                    if(labels[i] <= 0)
+                    if(labels[i] >= 0)
                         RightClass[labels[i]]++ ;
                 }
 

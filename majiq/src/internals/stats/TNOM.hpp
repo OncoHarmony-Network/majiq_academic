@@ -25,12 +25,12 @@ namespace MajiqStats{
             * @return 'Sum - Max'
             **/
             double Loss(int *N) const {
-                double Sum = 0;
-                double Max = 0.0;
-                for( int i = 0; i < 2; i++ ){
-                    Sum += N[i];
+                double Sum = 0 ;
+                double Max = 0.0 ;
+                for( int i = 0; i < MAXCLASS ; i++ ){
+                    Sum += abs(N[i]) ;
                     if( N[i] > Max )
-                        Max = N[i];
+                        Max = N[i] ;
                 }
                 return Sum - Max;
             }
@@ -55,6 +55,12 @@ namespace MajiqStats{
 
                 tTRecord R = {Neg, Pos, (double)Score} ;
 
+                #ifdef DEBUG
+                  cerr << "TNOM:ComputePValue(" << Neg << ", " << Pos << ", ";
+                  cerr << Score << ")" <<endl;
+                #endif
+
+
                 int tc ;
                 #pragma omp critical
                     tc = _pval_cache.count(R) ;
@@ -63,10 +69,7 @@ namespace MajiqStats{
                     return _pval_cache[R] ;
 
 
-                #ifdef DEBUG
-                  cerr << "TNOM:ComputePValue(" << Neg << ", " << Pos << ", ";
-                  cerr << Score << ")" <<endl;
-                #endif
+
 
                 // Need to reach A to get Score with positives on the left
                 int A = Pos - Score;
@@ -150,7 +153,7 @@ namespace MajiqStats{
                     RightClass[i] = LeftClass[i] = 0;
 
                 for( int i = 0; i < n; i++ ){
-                    if(labels[i] <= 0)
+                    if(labels[i] >= 0)
                         RightClass[labels[i]]++;
                 }
 
@@ -160,11 +163,15 @@ namespace MajiqStats{
                 * X - expression level in i's sample (ordered), or hug_val if it's end of the vector.
                 **/
                 double LastValue = -HUGE_VAL;
+                BestLoss = Loss(LeftClass) + Loss(RightClass) ;
+
                 for( int i = 0; i <= n; i++ ){
                     if( i == n || labels[i] >= 0 ){
+
+
                         double L = Loss(LeftClass) + Loss(RightClass);
                         double X = (i < n) ? data[i] : HUGE_VAL;
-                        if( i == 0 || (L < BestLoss && X != LastValue) ){
+                        if(L < BestLoss && X != LastValue) {
                             BestLoss = L;
                         }
                         // Move class
