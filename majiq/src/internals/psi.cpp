@@ -271,23 +271,30 @@ void test_calc(vector<psi_distr_t>& oPvals, HetStats* HetStatsObj, hetLSV* lsvOb
         vector<vector<float>> pval_vect (nstats, vector<float>(psamples)) ;
         for(int s=0; s<psamples; s++){
 
+            default_random_engine generator;
+            normal_distribution<double> dist(0.002, 0.001);
+
+
             vector<float> csamps ;
             vector<int> labels ;
 
             for (int i=0; i<n1; i++){
-                csamps.push_back(lsvObj->cond_sample1[i][j][s]) ;
+                csamps.push_back(lsvObj->cond_sample1[i][j][s] + dist(generator)) ;
                 labels.push_back(0) ;
             }
 
             for (int i=0; i<n2; i++){
 
-                csamps.push_back(lsvObj->cond_sample2[i][j][s]) ;
+                csamps.push_back(lsvObj->cond_sample2[i][j][s] + dist(generator)) ;
                 labels.push_back(1) ;
             }
 
             auto p = sort_permutation <float>(csamps, less<float>() ) ;
             csamps = apply_permutation(csamps, p);
             labels = apply_permutation(labels, p);
+
+
+
 
             for(int i=0; i<nstats; i++){
                 pval_vect[i][s] = (float)(HetStatsObj->statistics)[i]->Calc_pval(csamps, labels) ;
