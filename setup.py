@@ -6,8 +6,8 @@ import numpy
 import sys
 import os
 
-os.environ['CC'] = 'gcc-8'
-os.environ['CXX'] = 'g++-8'
+# os.environ['CC'] = 'gcc-8'
+# os.environ['CXX'] = 'g++-8'
 
 print("COMPILER ", os.environ.get("CXX", None))
 
