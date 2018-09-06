@@ -106,6 +106,31 @@ class HeatMap {
         this.scale(stat_color)
     };
 
+    get_stat_value(data, stat_name, gn1, gn2, junc_idx) {
+        try {
+            return data[stat_name][gn1][gn2][junc_idx];
+        } catch (TypeError) {
+            try {
+                return data[stat_name][gn2][gn1][junc_idx];
+            } catch (TypeError) {
+                return -1
+            }
+        }
+
+    }
+
+    get_dpsi(data, gn1, gn2, junc_idx) {
+        try {
+            return data.dpsi[gn1][gn2][junc_idx];
+        } catch (TypeError) {
+            try {
+                return data.dpsi[gn2][gn1][junc_idx];
+            } catch (TypeError) {
+                return -1
+            }
+        }
+    }
+
     plot(el) {
         const lsv_id = el.closest('table').dataset.lsvId;
         const junc_idx = el.closest('tr').dataset.junctionIndex;
@@ -125,48 +150,14 @@ class HeatMap {
             group_names
                 .forEach((gn1, gn_idx1) => group_names
                     .forEach((gn2, gn_idx2) => {
-                        try {
-                            const stat_value = data[stat_name][gn1][gn2][junc_idx];
-                            m[gn_idx1][gn_idx2] = new HMData(stat_value, stat_name);
-                        } catch (TypeError) {
-                            m[gn_idx1][gn_idx2] = new HMData(-1, stat_name)
-                        }
+                        const stat_value = this.get_stat_value(data, stat_name, gn1, gn2, junc_idx);
+                        m[gn_idx1][gn_idx2] = new HMData(stat_value, stat_name);
 
-                        try {
-                            const dpsi_value = data.dpsi[gn1][gn2][junc_idx];
-                            m[gn_idx2][gn_idx1] = new HMData(dpsi_value === undefined ? -1 : dpsi_value, 'dpsi')
-                        } catch (TypeError) {
-                            m[gn_idx2][gn_idx1] = new HMData(-1, 'dpsi')
-                        }
+                        const dpsi_value = this.get_dpsi(data, gn1, gn2, junc_idx);
+                        // m[gn_idx2][gn_idx1] = new HMData(dpsi_value === undefined ? -1 : dpsi_value, 'dpsi')
+                        m[gn_idx2][gn_idx1] = new HMData(dpsi_value, 'dpsi')
                     }));
 
-
-            console.log(m);
-
-
-            // let ws = data.dpsi[junc_idx];
-            // let matrix = Array(group_names.length).fill(Array(group_names.length).fill(new HMData(-1, 'dpsi')));
-
-            // matrix = matrix.map(function (a, i) {
-            //     const n = ws.slice(0, i);
-            //     ws = ws.slice(i);
-            //     return n.map(function (value) {
-            //         return new HMData(value, 'dpsi')
-            //     }).concat(a.slice(i))
-            // });
-
-            // transpose matrix
-            // matrix = rotate(flip(matrix));
-
-            // ws = data[stat_name][junc_idx];
-
-            // matrix = matrix.map(function (a, i) {
-            //     const n = ws.slice(0, i);
-            //     ws = ws.slice(i);
-            //     return n.map(function (value) {
-            //         return new HMData(value, stat_name)
-            //     }).concat(a.slice(i));
-            // });
 
             let tool_tip = d3.select('.heat-map-tool-tip');
             if (tool_tip.empty()) {
@@ -290,7 +281,10 @@ class HeatMap {
             .attr('height', row_height)
             .attr('x', row_width)
             .attr('y', (d, i) => row_height * i)
-            .attr('fill', (d, i) => dpsi_color(lsv.dpsi[i].reduce((a, b) => Math.max(a, b))))
+            .attr('fill', (d, i) => {
+                // dpsi_color(lsv.dpsi[i].reduce((a, b) => Math.max(a, b)))
+                // console.log(lsv.dpsi)
+            })
             .attr('stroke', 'lightgrey')
             .attr('stroke-width', stroke_width)
             .attr('shape-rendering', 'crispEdges')

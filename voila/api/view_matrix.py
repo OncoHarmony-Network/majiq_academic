@@ -162,11 +162,6 @@ class ViewPsi(Psi, ViewMatrix):
 
         @property
         def variances(self):
-            # def get_expected_psi(bins):
-            #     step = 1.0 / bins.size
-            #     projection_prod = bins * np.arange(step / 2, 1, step)
-            #     return np.sum(projection_prod)
-
             for b in self.bins:
                 epsi = get_expected_psi(b)
                 step_bins = 1.0 / b.size
@@ -308,6 +303,7 @@ class ViewHeterogens:
             yield 'reference_exon', self.reference_exon
             yield 'lsv_type', self.lsv_type
             yield 'dpsi', self.dpsi
+            print(self.matrix_hdf5.view_metadata['stat_names'])
             for stat_name in self.matrix_hdf5.view_metadata['stat_names']:
                 yield stat_name, self.junction_stat(stat_name)
             yield 'mu_psi', self.mu_psi
@@ -444,6 +440,10 @@ class ViewHeterogens:
                             d[sample] = psi_d
                 except (LsvIdNotFoundInVoilaFile, GeneIdNotFoundInVoilaFile):
                     pass
+                except IndexError:
+                    print(data_type)
+                    print(psi_d)
+                    exit()
 
             for sample in self.matrix_hdf5.view_metadata['group_names']:
                 try:

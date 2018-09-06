@@ -35,17 +35,13 @@ class MatrixHdf5:
         self.h.close()
 
     def add_dataset(self, *args, **kwargs):
-        try:
-            grp = self.h
-            for k in args[:-1]:
-                try:
-                    grp = grp[k]
-                except KeyError:
-                    grp = grp.create_group(k)
-            grp.create_dataset(args[-1], **kwargs)
-        except Exception:
-            print('oh noes')
-            raise
+        grp = self.h
+        for k in args[:-1]:
+            try:
+                grp = grp[k]
+            except KeyError:
+                grp = grp.create_group(k)
+        grp.create_dataset(args[-1], **kwargs)
 
     def add(self, lsv_id: str, key: str, data):
         """
@@ -68,7 +64,11 @@ class MatrixHdf5:
         :return: None
         """
         for key, value in kwargs.items():
-            self.add(lsv_id, key, value)
+            try:
+                self.add(lsv_id, key, value)
+            except TypeError:
+                print(key, value)
+                raise
 
     def get(self, lsv_id: str, key: str):
         """
@@ -90,7 +90,11 @@ class MatrixHdf5:
         except KeyError:
             raise LsvIdNotFoundInVoilaFile(self.h.filename, lsv_id)
 
-        return lsv_grp[key].value
+        try:
+            return lsv_grp[key].value
+        except KeyError:
+            print(dict(lsv_grp))
+            raise
 
     def get_many(self, lsv_id: str, keys: List[str]):
         """
