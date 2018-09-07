@@ -156,7 +156,7 @@ def main():
     delta.add_argument('-grp2', dest="files2", nargs='+', required=True)
     delta.add_argument('--default-prior', action='store_true', default=False,
                        help="Use a default prior instead of computing it using the empirical data")
-    delta.add_argument('-n', '--names', nargs='+', required=True,
+    delta.add_argument('-n', '--names', nargs='2', required=True,
                        help="The names that identify each of the experiments.")
     delta.add_argument('--binsize', default=0.025, type=int,
                        help='The bins for PSI values. With a --binsize of 0.025 (default), we have 40 bins')

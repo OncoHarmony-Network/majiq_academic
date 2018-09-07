@@ -52,41 +52,36 @@ namespace MajiqStats{
 
 
             double ComputePValue( int Neg, int Pos, int Score ){
-
                 tTRecord R = {Neg, Pos, (double)Score} ;
 
                 #ifdef DEBUG
-                  cerr << "TNOM:ComputePValue(" << Neg << ", " << Pos << ", ";
-                  cerr << Score << ")" <<endl;
+                  cerr << "TNOM:ComputePValue(" << Neg << ", " << Pos << ", " ;
+                  cerr << Score << ")" <<endl ;
                 #endif
-
 
                 int tc ;
                 #pragma omp critical
                     tc = _pval_cache.count(R) ;
-//                    #map<tTNOMRecord, double> >::iterator i = _pval_cache.find(R) ;
+
                 if( tc > 0 )
                     return _pval_cache[R] ;
 
-
-
-
                 // Need to reach A to get Score with positives on the left
-                int A = Pos - Score;
+                int A = Pos - Score ;
                 // Need to reach -B to get Score with positives on the right
-                int B = Neg - Score;
-                int L = Neg+Pos;
-                int O = Pos - Neg;
+                int B = Neg - Score ;
+                int L = Neg+Pos ;
+                int O = Pos - Neg ;
 
                 // if Neg or Pos = Score, every partition will give score Score or less
                 // (things can only get better).
                 if( A == 0 || B == 0 )
                     // Trivial partition does the job
-                    return 1;
+                    return 1 ;
 
                 // Use different accumulants to hold positive & negative counts
-                double PNum = -HUGE_VAL;
-                double NNum = -HUGE_VAL;
+                double PNum = -HUGE_VAL ;
+                double NNum = -HUGE_VAL ;
 
                 int Ni = 2*B;
                 int Pi = 2*A;
@@ -100,37 +95,37 @@ namespace MajiqStats{
                         NNum = AddLog(NNum, LogPathNum( L, Pi - O ));
                         NNum = AddLog(NNum, LogPathNum( L, -Ni - O ));
                     }
-                    sign *= -1;
-                    int OldPi = Pi;
-                    int OldNi = Ni;
+                    sign *= -1 ;
+                    int OldPi = Pi ;
+                    int OldNi = Ni ;
 
                     // Recursion rule based on reflection principle
-                    Pi = 2*A + OldNi;
-                    Ni = 2*B + OldPi;
+                    Pi = 2*A + OldNi ;
+                    Ni = 2*B + OldPi ;
 
                     #ifdef DEBUG
                         cerr << " -> " << OldNi << " " << OldPi << " "
-                         << exp(NNum) << " " << exp(PNum) << endl;
+                         << exp(NNum) << " " << exp(PNum) << endl ;
                     #endif
                 }
 
                 // Normalize by total number of paths
-                double NPath = LogPathNum(L, O);
-                PNum -= NPath;
-                NNum -= NPath;
+                double NPath = LogPathNum(L, O) ;
+                PNum -= NPath ;
+                NNum -= NPath ;
 
-                double PValue = exp(PNum);
+                double PValue = exp(PNum) ;
                 if( NNum > -HUGE_VAL )
-                    PValue -= exp(NNum );
+                    PValue -= exp(NNum ) ;
 
                 #ifdef DEBUG
                     cerr << "PValue( " << Neg << ", " << Pos << ", "
                          << Score << " ) -> " << exp(PNum) << " " << exp(NNum) << " "
-                         << PValue << "\n";
+                         << PValue << "\n" ;
                 #endif
                 #pragma omp critical
                     _pval_cache[R] = PValue ;
-                return PValue;
+                return PValue ;
             }
 
         public:
