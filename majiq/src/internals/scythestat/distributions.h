@@ -75,7 +75,7 @@
 #include "scythestat/error.h"
 #endif
 
-#ifndef
+#ifndef isfinite
 #define isfinite finitie
 #endif
 /* Fill in some defs from R that aren't in math.h */
