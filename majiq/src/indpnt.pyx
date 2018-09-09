@@ -232,7 +232,6 @@ cdef void _core_independent(object self):
 
     list_of_lsv = list(set(list_of_lsv1).intersection(set(list_of_lsv2)))
 
-    # list_of_lsv = ['ENSMUSG00000032735:s:61823867-61823938']
     nlsv = len(list_of_lsv)
     if nlsv == 0:
         logger.info("There is no LSVs that passes the filters")
@@ -267,9 +266,6 @@ cdef void _core_independent(object self):
         logger.info('Calculating statistics pvalues')
         _statistical_test_computation(out_h5p, comparison, list_of_lsv, stats_vec, self.psi_samples, lsv_map,
                                       self.outDir, nthreads, logger)
-
-
-
 
     if self.mem_profile:
         mem_allocated = int(psutil.Process().memory_info().rss) / (1024 ** 2)

@@ -75,6 +75,9 @@
 #include "scythestat/error.h"
 #endif
 
+#ifndef
+#define isfinite finitie
+#endif
 /* Fill in some defs from R that aren't in math.h */
 #ifndef M_PI
 #define M_PI 3.141592653589793238462643383280
