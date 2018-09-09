@@ -76,7 +76,7 @@
 #endif
 
 #ifndef isfinite
-#define isfinite finitie
+#define isfinite finite
 #endif
 /* Fill in some defs from R that aren't in math.h */
 #ifndef M_PI
