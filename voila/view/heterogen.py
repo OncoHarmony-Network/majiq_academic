@@ -195,8 +195,9 @@ class Heterogen(Html, Tsv):
                         gene = sg.gene(lsv.gene_id)
                         log.debug('Write TSV row for {0}'.format(lsv_id))
                         lsv = m.heterogen(lsv_id)
-                        lsv_junctions = list(gene.lsv_junctions(lsv))
-                        lsv_exons = list(gene.lsv_exons(lsv))
+                        lsv_junctions = lsv.junctions
+                        annot_juncs = sg.annotated_junctions(gene, lsv)
+                        lsv_exons = sg.lsv_exons(gene, lsv)
                         mean_psi = list(lsv.mean_psi)
 
                         row = {
@@ -211,11 +212,9 @@ class Heterogen(Html, Tsv):
                             'Num. Exons': lsv.exon_count,
                             'chr': gene.chromosome,
                             'strand': gene.strand,
-                            'De Novo Junctions': self.semicolon_join(
-                                int(not junc.annotated) for junc in lsv_junctions
-                            ),
+                            'De Novo Junctions': self.semicolon_join(annot_juncs),
                             'Junctions coords': self.semicolon_join(
-                                '{0}-{1}'.format(junc.start, junc.end) for junc in lsv_junctions
+                                '{0}-{1}'.format(start, end) for start, end in lsv_junctions
                             ),
                             'Exons coords': self.semicolon_join(
                                 '{0}-{1}'.format(start, end) for start, end in self.filter_exons(lsv_exons)

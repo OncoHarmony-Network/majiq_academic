@@ -152,13 +152,18 @@
                         });
 
                     // links
-                    trs
+                    const links = trs
                         .append('td')
                         .attr('class', 'links')
+
+                    links
                         .append('a')
                         .each((d, i, a) => table.ucsc_link(a[i], d))
                         .append('img')
                         .attr('src', 'img/ucsc.png');
+
+                    links.append('button')
+                        .text('Copy LSV')
                 },
 
             });

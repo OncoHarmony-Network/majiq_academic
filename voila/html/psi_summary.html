@@ -55,15 +55,22 @@
                             .attr('class', 'psi-violin-plot')
                             .each((d, i, a) => table.psi_summary_violin(a[i], metadata.group_names[0]));
                     });
-                    trs
+
+                    const links = trs
                         .append('td')
                         .attr('class', 'links')
+
+                    links
                         .append('a')
                         .each((d, i, a) => {
                             table.ucsc_link(a[i], d)
                         })
                         .append('img')
                         .attr('src', 'img/ucsc.png');
+
+                    links.append('button')
+                        .text('Copy LSV')
+                        .each((d, i, a) => table.copy_lsv(a[i]));
 
                     t
                         .each((d, i, a) => {
