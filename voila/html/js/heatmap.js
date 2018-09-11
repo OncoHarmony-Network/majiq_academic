@@ -244,6 +244,17 @@ class HeatMap {
     };
 
     summary(el, lsv, metadata) {
+
+        const create_matrix = (obj) => {
+            const m = [];
+            for (const gn1 in obj) {
+                for (const gn2 in obj[gn1]) {
+                    m.push(obj[gn1][gn2])
+                }
+            }
+            return m
+        };
+
         const row_height = 30;
         const row_width = 30;
         const row_color_height = 2;
@@ -253,6 +264,11 @@ class HeatMap {
         const juncs_count = lsv.junctions.length;
         const x_axis = 45;
         const tests_count = metadata.stat_names.length;
+        const dpsi = create_matrix(lsv.dpsi);
+        const stat = {};
+
+        metadata.stat_names.forEach(s => stat[s] = create_matrix(lsv[s]));
+
         const svg = d3.select(el)
             .append('svg')
             .attr('height', (juncs_count * (row_height + (stroke_width * 2))) + (padding * 2) + x_axis)
@@ -281,10 +297,7 @@ class HeatMap {
             .attr('height', row_height)
             .attr('x', row_width)
             .attr('y', (d, i) => row_height * i)
-            .attr('fill', (d, i) => {
-                // dpsi_color(lsv.dpsi[i].reduce((a, b) => Math.max(a, b)))
-                // console.log(lsv.dpsi)
-            })
+            .attr('fill', (d, i) => dpsi_color(Math.max.apply(null, dpsi.map(r => r[i]).filter(a => a > 0))))
             .attr('stroke', 'lightgrey')
             .attr('stroke-width', stroke_width)
             .attr('shape-rendering', 'crispEdges')
@@ -298,14 +311,11 @@ class HeatMap {
                 .attr('height', row_height)
                 .attr('x', (row_width * (si + 2)))
                 .attr('y', (d, i) => row_height * i)
-                .attr('fill', (d, i) => {
-                    return stat_color(Math.min.apply(null, lsv[s][i].filter(a => a > 0)))
-                })
+                .attr('fill', (d, i) => stat_color(Math.min.apply(null, stat[s].map(r => r[i]).filter(a => a > 0))))
                 .attr('stroke', 'lightgrey')
                 .attr('stroke-width', stroke_width)
                 .attr('shape-rendering', 'crispEdges')
                 .attr('stroke-dasharray', (d, i) => i === 0 ? `${row_height + (row_width * 2)},${row_height}` : `0,${row_width},${row_height + row_width},${row_height}`)
-                .on('mouseover', (d, i) => console.log(lsv[s][i]));
         });
 
         g.append('g')
