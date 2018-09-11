@@ -115,7 +115,7 @@ cdef int _het_computation(object out_h5p, dict file_cond, list list_of_lsv, map[
                           dict lsv_type_dict, dict junc_info, int psi_samples, int nthreads, int nbins, str outdir,
                           object logger ) except -1:
     cdef string lsv_id
-    cdef list cond_list
+    cdef list cond_list, conditions
     cdef str f, cond_name, fname ;
     cdef int cidx, fidx, i, msamples, nways
 
@@ -142,8 +142,9 @@ cdef int _het_computation(object out_h5p, dict file_cond, list list_of_lsv, map[
         nways = lsv_vec[lsv_id].get_num_ways()
         total_njuncs += nways
 
-
-    for cidx, (cond_name, cond_list) in enumerate(file_cond.items()):
+    conditions = file_cond.keys()
+    for cidx, cond_name in enumerate(conditions):
+        cond_list = file_cond[cond_name]
         max_nfiles = max(max_nfiles, len(cond_list))
         for fidx, f in enumerate(cond_list):
             osamps = np.zeros(shape=(total_njuncs, psi_samples), dtype=np.float32)
@@ -168,7 +169,7 @@ cdef int _het_computation(object out_h5p, dict file_cond, list list_of_lsv, map[
         mupsi.fill(-1)
         hetObj_ptr = <hetLSV*> lsv_vec[lsv_id]
         for x in range(len(file_cond)):
-            for y in range(len(file_cond[x])):
+            for y in range(len(file_cond[conditions[x]])):
                 for z in range(nways):
                     mupsi[x,y,z] = hetObj_ptr.mu_psi[x][y][z]
 
