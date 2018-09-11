@@ -168,7 +168,7 @@ cdef int _het_computation(object out_h5p, dict file_cond, list list_of_lsv, map[
         mupsi.fill(-1)
         hetObj_ptr = <hetLSV*> lsv_vec[lsv_id]
         for x in range(len(file_cond)):
-            for y in range(max_nfiles):
+            for y in range(len(file_cond[x])):
                 for z in range(nways):
                     mupsi[x,y,z] = hetObj_ptr.mu_psi[x][y][z]
 

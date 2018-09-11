@@ -371,7 +371,6 @@ cdef _core_build(str transcripts, list file_list, object conf, object logger):
         gene_to_splicegraph(gg, sg_filename)
         with gil:
             logger.debug("[%s] Detect LSVs" % gg.get_id())
-
         nlsv = gg.detect_lsvs(out_lsvlist)
 
     logger.info("%s LSV found" % out_lsvlist.size())

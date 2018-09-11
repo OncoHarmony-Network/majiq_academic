@@ -45,7 +45,7 @@ namespace io_bam {
     }
 
     void IOBam::find_junction_genes(string chrom, char strand, int start, int end,
-                                    float* nreads_ptr ){
+                                    float* nreads_ptr){
         const int n = glist_[chrom].size();
         bool found_stage1 = false ;
         bool found_stage2 = false ;
@@ -75,7 +75,6 @@ namespace io_bam {
                         }
                         else temp_vec2.push_back(gObj) ;
                     }
-
                 }
             }
         }
@@ -109,6 +108,7 @@ namespace io_bam {
         if (offset >= eff_len_) return ;
 
         string key = chrom + ":" + strand + ":" + to_string(start) + "-" + to_string(end) ;
+//        TODO: take find_junction_genes out of critical, we do not need critical just gene mutex
         #pragma omp critical
         {
             if(junc_map.count(key) == 0) {

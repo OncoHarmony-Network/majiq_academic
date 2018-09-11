@@ -380,7 +380,7 @@ namespace grimoire {
                     ++nlsv ;
                     lsv_list.push_back(l) ;
                 }else{
-                    delete l;
+                    delete l ;
                 }
             }
         }
