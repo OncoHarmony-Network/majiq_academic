@@ -142,7 +142,7 @@ cdef int _het_computation(object out_h5p, dict file_cond, list list_of_lsv, map[
         nways = lsv_vec[lsv_id].get_num_ways()
         total_njuncs += nways
 
-    conditions = file_cond.keys()
+    conditions = list(file_cond.keys())
     for cidx, cond_name in enumerate(conditions):
         cond_list = file_cond[cond_name]
         max_nfiles = max(max_nfiles, len(cond_list))
