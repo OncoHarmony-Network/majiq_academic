@@ -292,7 +292,8 @@ cdef _find_junctions(list file_list, map[string, Gene*]& gene_map, vector[string
 cdef init_splicegraph(string filename, object conf):
 
     # erase splice graph file
-    print(filename)
+
+
     with SpliceGraph(filename.decode('utf-8'), delete=True) as sg:
         sg.experiment_names = conf.exp_list
         sg.genome = conf.genome
@@ -348,12 +349,12 @@ cdef _core_build(str transcripts, list file_list, object conf, object logger):
     cdef string outDir = conf.outDir.encode('utf-8')
     cdef int strandness, cnt
 
-    logger.info("Parsing GFF3\n")
+    logger.info("Parsing GFF3")
     majiq_io.read_gff(transcripts, gene_map, gid_vec, logger)
 
     n = gene_map.size()
     init_splicegraph(sg_filename, conf)
-    logger.info("Analize bamfiles\n")
+    logger.info("Analize bamfiles")
     _find_junctions(file_list, gene_map, gid_vec, conf, logger)
 
     logger.info("Detecting LSVs ngenes: %s " % n)
