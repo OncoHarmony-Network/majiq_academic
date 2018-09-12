@@ -32,7 +32,7 @@ namespace MajiqStats{
                     Mean[i] = 0 ;
                     Var[i] = 0 ;
                 }
-                for(int i = 0; i < data.size(); i++ ){
+                for(int i = 0; i < (int)data.size(); i++ ){
                     if( labels[i] >= 0 ){
                         double x = data[i] ;
                         Count[labels[i]]++ ;

@@ -194,7 +194,9 @@ namespace MajiqStats{
 
                 int RightClass[MAXCLASS] ;
                 int LeftClass[MAXCLASS] ;
-                float _Threshold = 0 ;
+                #ifdef DEBUG
+                    float _Threshold = 0 ;
+                #endif
 
                 /**
                 * first step - Right class is all the samples in the vector, Left class is empty.
@@ -227,15 +229,17 @@ namespace MajiqStats{
 
                         if( i == 0 || (L < BestLoss && X != LastValue )  ) {
                             BestLoss = L ;
-                            if( i == 0 ) {
-                                _Threshold = data[i] - 1 ;
-                            } else {
-                                if( i < n ) {
-                                    _Threshold = (data[i] + LastValue )/2 ;
+                            #ifdef DEBUG
+                                if( i == 0 ) {
+                                    _Threshold = data[i] - 1 ;
                                 } else {
-                                    _Threshold = data[n-1] + 1 ;
+                                    if( i < n ) {
+                                        _Threshold = (data[i] + LastValue )/2 ;
+                                    } else {
+                                        _Threshold = data[n-1] + 1 ;
+                                    }
                                 }
-                            }
+                            #endif
                         }
 
                         // Move class

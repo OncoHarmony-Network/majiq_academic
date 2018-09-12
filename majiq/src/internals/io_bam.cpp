@@ -240,7 +240,7 @@ namespace io_bam {
         bam1_t *aln;
 
         int r = 0, exit_code = 0;
-        hts_opt *in_opts = NULL;
+//        hts_opt *in_opts = NULL;
         int extra_hdr_nuls = 0;
 
         in = sam_open(bam_.c_str(), "rb") ;
@@ -332,7 +332,7 @@ namespace io_bam {
 
     int IOBam::boostrap_samples(int msamples, int ksamples, float* boots, float fitfunc_r, float pvalue_limit){
 
-        float * p = boots ;
+//        float * p = boots ;
         const int njunc = junc_map.size();
 
         #pragma omp parallel for num_threads(nthreads_)
