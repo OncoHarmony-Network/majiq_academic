@@ -87,7 +87,8 @@ namespace io_bam{
             void find_junction_genes(string chrom, char strand, int start, int end, float * nreads_ptr ) ;
             int ParseJunctionsFromFile(bool ir_func) ;
             inline void update_junction_read(string key, int read_start, int count) ;
-            inline float* new_junc_values(const string key) ;
+//            inline float* new_junc_values(const string key) ;
+            inline bool new_junc_values(const string key) ;
 
             int parse_read_for_ir(bam_hdr_t *header, bam1_t *read) ;
 

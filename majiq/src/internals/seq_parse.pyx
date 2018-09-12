@@ -348,9 +348,12 @@ cdef _core_build(str transcripts, list file_list, object conf, object logger):
     cdef string outDir = conf.outDir.encode('utf-8')
     cdef int strandness, cnt
 
+    logger.info("Parsing GFF3\n")
     majiq_io.read_gff(transcripts, gene_map, gid_vec, logger)
+
     n = gene_map.size()
     init_splicegraph(sg_filename, conf)
+    logger.info("Analize bamfiles\n")
     _find_junctions(file_list, gene_map, gid_vec, conf, logger)
 
     logger.info("Detecting LSVs ngenes: %s " % n)

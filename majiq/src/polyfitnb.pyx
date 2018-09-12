@@ -166,4 +166,4 @@ cdef tuple _adjust_fit(float starting_a, np.ndarray[DTYPE_t, ndim=2] junctions, 
 #
 #         if logger:
 #             logger.debug("Calculating the nb_r and nb_p with the new fitted function")
-
+#

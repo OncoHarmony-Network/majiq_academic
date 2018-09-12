@@ -55,7 +55,6 @@ cdef int  read_gff(str filename, map[string, Gene*] all_genes, vector[string] gi
         strand = <char> record.strand.encode('UTF-8')[0]
         start = record.start
         end = record.end
-
         if record.type in accepted_genes:
             for gname_k in gene_name_keys:
                 try:
@@ -66,7 +65,6 @@ cdef int  read_gff(str filename, map[string, Gene*] all_genes, vector[string] gi
             else:
                 logging.info("Error, Gene doesn't contain one of the Name attribute  information values: "
                              "%s" % gene_name_keys)
-
             for gid_k in gene_id_keys:
                 try:
                     gene_id = record.attributes[gid_k].encode('utf-8')
@@ -76,7 +74,6 @@ cdef int  read_gff(str filename, map[string, Gene*] all_genes, vector[string] gi
             else:
                 logging.info("Error, Gene doesn't contain one of the ID attribute information values: "
                              "%s" % gene_id_keys)
-
             if all_genes.count(gene_id)>0:
                 raise RuntimeError('Two Different Genes with the same name %s' % gene_name)
 
@@ -88,7 +85,6 @@ cdef int  read_gff(str filename, map[string, Gene*] all_genes, vector[string] gi
                 logging.info("Error, Transcript doesn't contain one of the ID or parent attributes"
                              "information values: %s" % transcript_id_keys)
                 continue
-
             transcript_name = record.attributes[transcript_id_keys]
             parent = record.attributes['Parent'].encode('utf-8')
             if all_genes.count(gene_id)==0:
@@ -109,7 +105,6 @@ cdef int  read_gff(str filename, map[string, Gene*] all_genes, vector[string] gi
                 logging.warning("Error, incorrect gff. exon "
                                 "doesn't have valid mRNA %s" % parent_tx_id)
 
-
     for parent_tx_id, (gene_id, coord_list) in trcpt_id_dict.items():
         last_ss = FIRST_LAST_JUNC
         coord_list.sort(key=lambda x: (x[0], x[1]))
@@ -122,7 +117,6 @@ cdef int  read_gff(str filename, map[string, Gene*] all_genes, vector[string] gi
 
         key = ('%s-%s' % (last_ss, FIRST_LAST_JUNC)).encode('utf-8')
         all_genes[gene_id].junc_map_[key] = new Junction(last_ss, FIRST_LAST_JUNC, True)
-
     merge_exons(exon_dict, all_genes)
     return 0
 

@@ -19,12 +19,15 @@
 using namespace std;
 namespace io_bam {
 
-    inline float* IOBam::new_junc_values(const string key){
-        junc_map[key] = junc_vec.size() ;
-        float* v = (float*) calloc(eff_len_, sizeof(float)) ;
-        junc_vec.push_back(v) ;
-        return v;
-    }
+//    inline bool IOBam::new_junc_values(const string key){
+//        bool res = false ;
+//        if (junc_map.count(key) == 0 ) {
+//            junc_map[key] = junc_vec.size() ;
+//            float * v = (float*) calloc(eff_len_, sizeof(float)) ;
+//            junc_vec.push_back(v) ;
+//        }
+//        return res;
+//    }
 
     char IOBam::_get_strand(bam1_t * read){
         char strn = '.';
@@ -64,7 +67,8 @@ namespace io_bam {
             if (strand == '.' || strand == gObj->get_strand()) {
                 if(gObj->junc_map_.count(key) >0 ){
                     found_stage1 = true ;
-                    gObj->junc_map_[key]->set_nreads_ptr(nreads_ptr) ;
+                    gObj->initialize_junction(key, start, end, nreads_ptr) ;
+//                    gObj->junc_map_[key]->set_nreads_ptr(nreads_ptr) ;
                 } else if(found_stage1){
                     continue ;
                 } else {
@@ -82,41 +86,56 @@ namespace io_bam {
         if (!found_stage1){
             if (found_stage2){
                 for(const auto &g: temp_vec1){
-                    g->junc_map_[key] = new Junction(start, end, false) ;
-                    g->junc_map_[key]->set_nreads_ptr(nreads_ptr) ;
+                    g->initialize_junction(key, start, end, nreads_ptr) ;
+
+//                    g->junc_map_[key] = new Junction(start, end, false) ;
+//                    g->junc_map_[key]->set_nreads_ptr(nreads_ptr) ;
                 }
             }else{
                 for(const auto &g: temp_vec2){
-                    g->junc_map_[key] = new Junction(start, end, false) ;
-                    g->junc_map_[key]->set_nreads_ptr(nreads_ptr) ;
+                    g->initialize_junction(key, start, end, nreads_ptr) ;
+//                    g->junc_map_[key] = new Junction(start, end, false) ;
+//                    g->junc_map_[key]->set_nreads_ptr(nreads_ptr) ;
                 }
             }
         }
         return ;
     }
 
-    inline void IOBam::update_junction_read(string key, int offset, int count) {
-        float* vec = junc_vec[junc_map[key]] ;
-        vec[offset] += count ;
-        return ;
-    }
+//    inline void IOBam::update_junction_read(string key, int offset, int count) {
+//        float* vec = junc_vec[junc_map[key]] ;
+//        #pragma omp atomic
+//            vec[offset] += count ;
+//        return ;
+//    }
 
 
     void IOBam::add_junction(string chrom, char strand, int start, int end, int read_pos) {
 
         const unsigned int offset = start - (read_pos+ MIN_BP_OVERLAP) ;
         if (offset >= eff_len_) return ;
-
         string key = chrom + ":" + strand + ":" + to_string(start) + "-" + to_string(end) ;
-//        TODO: take find_junction_genes out of critical, we do not need critical just gene mutex
+
+        bool new_j = false ;
+        float * v ;
+//cout << "KK1\n" ;
         #pragma omp critical
         {
-            if(junc_map.count(key) == 0) {
-                float* v = new_junc_values(key) ;
-                find_junction_genes(chrom, strand, start, end, v) ;
+            if (junc_map.count(key) == 0 ) {
+                junc_map[key] = junc_vec.size() ;
+                v = (float*) calloc(eff_len_, sizeof(float)) ;
+                junc_vec.push_back(v) ;
+            } else {
+                v = junc_vec[junc_map[key]] ;
             }
-            update_junction_read(key, offset, 1) ;
         }
+//cout << "v: " << v << "\n";
+        if (new_j) {
+            find_junction_genes(chrom, strand, start, end, v) ;
+        }
+        #pragma omp atomic
+            v[offset] += 1 ;
+
         return ;
     }
 
@@ -141,6 +160,7 @@ namespace io_bam {
             else if( op == BAM_CREF_SKIP && off >= MIN_BP_OVERLAP){
                 const int j_end = read->core.pos + off + ol +1;
                 const int j_start =  read->core.pos + off;
+//cout << "add junction " << j_start << j_end << "\n" ;
                 try {
                     add_junction(chrom, _get_strand(read), j_start, j_end, read_pos);
                 } catch (const std::logic_error& e) {
@@ -296,7 +316,7 @@ namespace io_bam {
             }
 
         }else{
-            for (int i=0; i<vec.size(); i++){
+            for (int i=0; i<(int) vec.size(); i++){
                 const float r = 1 / fitfunc_r ;
                 const float p = r/(mean_reads + r) ;
                 const float pvalue = 1 - scythe::pnbinom(vec[i], r, p) ;

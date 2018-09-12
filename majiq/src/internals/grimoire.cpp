@@ -225,6 +225,17 @@ namespace grimoire {
         return ;
     }
 
+    void Gene::initialize_junction(string key, int start, int end, float* nreads_ptr){
+
+        omp_set_lock(&map_lck_) ;
+        if (junc_map_.count(key) == 0){
+            junc_map_[key] = new Junction(start, end, false) ;
+        }
+        junc_map_[key]->set_nreads_ptr(nreads_ptr) ;
+        omp_unset_lock(&map_lck_) ;
+        return ;
+    }
+
     void Gene::detect_introns(vector<Intron*> &intronlist){
 
         vector<Ssite> ss_vec ;

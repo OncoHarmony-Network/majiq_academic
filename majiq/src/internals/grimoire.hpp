@@ -243,6 +243,7 @@ namespace grimoire{
                 }
                 flt_count_ += (cnt == nbins_) ? 1 : 0 ;
                 ir_flag_ = ir_flag_ || (flt_count_ >= min_exps) ;
+                return ;
             }
 
             void overlaping_intron(Intron * inIR_ptr){
@@ -250,10 +251,12 @@ namespace grimoire{
                 start_ = max(start_, inIR_ptr->get_start()) ;
                 end_ = min(end_, inIR_ptr->get_end()) ;
                 read_rates_ = inIR_ptr->read_rates_ ;
+                return ;
             }
 
             void clear_nreads(bool reset_grp){
                 flt_count_ = reset_grp ? 0: flt_count_ ;
+                return ;
             }
 
             void free_nreads(){
@@ -261,6 +264,7 @@ namespace grimoire{
                     free(read_rates_);
                     read_rates_ = nullptr ;
                 }
+                return ;
             }
 
 
@@ -273,6 +277,7 @@ namespace grimoire{
             string  name_ ;
             string  chromosome_ ;
             char    strand_ ;
+            omp_lock_t map_lck_ ;
 
         public:
             map <string, Junction*> junc_map_ ;
@@ -283,7 +288,10 @@ namespace grimoire{
             Gene (){}
             Gene(string id1, string name1, string chromosome1,
                  char strand1, unsigned int start1, unsigned int end1): _Region(start1, end1), id_(id1), name_(name1),
-                                                                        chromosome_(chromosome1), strand_(strand1){}
+                                                                        chromosome_(chromosome1), strand_(strand1){
+                omp_init_lock( &map_lck_ ) ;
+            }
+
             ~Gene(){
                 for(const auto &p2: exon_map_){
                     delete p2.second ;
@@ -311,6 +319,7 @@ namespace grimoire{
             void    newExonDefinition(int start, int end, Junction *inbound_j, Junction *outbound_j, bool in_db) ;
             void    fill_junc_tlb(map<string, vector<string>> &tlb) ;
             int     detect_lsvs(vector<LSV*> &out_lsvlist);
+            void initialize_junction(string key, int start, int end, float* nreads_ptr) ;
             void    update_junc_flags(int efflen, bool is_last_exp, unsigned int minreads, unsigned int minpos,
                                       unsigned int denovo_thresh, unsigned int min_experiments) ;
 
