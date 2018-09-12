@@ -204,14 +204,17 @@ namespace grimoire {
             if (!(j.second)->get_denovo_bl()) continue ;
             const string key = chromosome_ + ":" + strand_ + ":" + j.first ;
             const string key2 = chromosome_ + ":.:" + j.first ;
-            if(tlb.count(key) == 0){
-                tlb[key] = vector<string>() ;
+            #pragma omp critical
+            {
+                if(tlb.count(key) == 0){
+                    tlb[key] = vector<string>() ;
+                }
+                if(tlb.count(key2) == 0){
+                    tlb[key2] = vector<string>() ;
+                }
+                tlb[key].push_back(id_) ;
+                tlb[key2].push_back(id_) ;
             }
-            if(tlb.count(key2) == 0){
-                tlb[key2] = vector<string>() ;
-            }
-            tlb[key].push_back(id_) ;
-            tlb[key2].push_back(id_) ;
         }
         return ;
     }
