@@ -90,7 +90,7 @@ void psi_posterior(vector<psi_distr_t>& i_psi, float* o_mupsi, float* o_postpsi,
             }
             free(psi_lkh) ;
         }
-        sort (temp_mupsi.begin(), temp_mupsi.end())
+        sort (temp_mupsi.begin(), temp_mupsi.end()) ;
         o_mupsi[j] = median(temp_mupsi) ;
         for (int i=0; i<nbins; i++){
             const int idx_2d = (j*nbins) + i ;
@@ -173,8 +173,8 @@ void deltapsi_posterior(vector<psi_distr_t>& i_psi1, vector<psi_distr_t>& i_psi2
             free(A) ;
 
         }
-        sort (temp_mupsi1.begin(), temp_mupsi1.end())
-        sort (temp_mupsi2.begin(), temp_mups2.end())
+        sort (temp_mupsi1.begin(), temp_mupsi1.end()) ;
+        sort (temp_mupsi2.begin(), temp_mupsi2.end()) ;
         o_mupsi1[j] = median(temp_mupsi1) ;
         o_mupsi2[j] = median(temp_mupsi2) ;
         for (int i=0; i<nbins; i++){
@@ -239,7 +239,7 @@ void get_samples_from_psi(float* osamps, hetLSV* lsvObj, int psi_samples, psi_di
             }
             psi_lkh.clear() ;
         }
-        sort (temp_mupsi.begin(), temp_mupsi.end())
+        sort (temp_mupsi.begin(), temp_mupsi.end()) ;
         lsvObj->mu_psi[cidx][fidx][j] = median(temp_mupsi) ;
         for (int i=0; i<nbins; i++){
             lsvObj->post_psi[cidx][j][i] /= msamples ;
