@@ -154,7 +154,6 @@ class HeatMap {
                         m[gn_idx1][gn_idx2] = new HMData(stat_value, stat_name);
 
                         const dpsi_value = this.get_dpsi(data, gn1, gn2, junc_idx);
-                        // m[gn_idx2][gn_idx1] = new HMData(dpsi_value === undefined ? -1 : dpsi_value, 'dpsi')
                         m[gn_idx2][gn_idx1] = new HMData(dpsi_value, 'dpsi')
                     }));
 

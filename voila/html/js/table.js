@@ -291,4 +291,52 @@ class Table {
             div.style.display = 'block'
         }
     }
+
+    copy_lsv(btn) {
+        btn.onclick = event => {
+            event.preventDefault();
+            const coord_in_exon = (exon, coord) => {
+                return coord >= exon.start && coord <= exon.end
+            };
+
+            const lsv_id = btn.closest('.lsv').dataset.lsvId;
+
+            db_lsv.get(lsv_id).then(lsv => {
+                db_gene.get(lsv.gene_id).then(gene => {
+                    const data = {};
+
+                    // get exons from data store and process them
+                    let exons = gene.exons.reduce(function (acc, exon) {
+                        lsv.junctions.forEach(function (junc) {
+                            if (coord_in_exon(exon, junc[0]) || coord_in_exon(exon, junc[1]))
+                                acc.push(exon)
+                        });
+                        return acc;
+                    }, []);
+                    exons = Array.from(new Set(exons));
+
+                    // get junctions from data store and process them
+                    var junctions = gene.junctions.reduce(function (acc, junc) {
+                        exons.forEach(function (exon) {
+                            if (coord_in_exon(exon, junc.start) || coord_in_exon(exon, junc.end))
+                                acc.push(junc)
+                        });
+                        return acc
+                    }, []);
+                    junctions = Array.from(new Set(junctions));
+                    console.log(junctions);
+
+                })
+            });
+
+
+            const textArea = document.createElement("textarea");
+            textArea.value = `blah blah blah...`;
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textArea);
+        }
+    }
 }
