@@ -37,7 +37,7 @@
 #define SCYTHE_RNG_H
 
 #include <iostream>
-#include <cmath>
+#include <cmath>te
 
 #ifdef HAVE_IEEEFP_H
 #include <ieeefp.h>
