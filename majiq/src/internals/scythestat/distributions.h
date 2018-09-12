@@ -59,7 +59,7 @@
 #include <climits>
 #include <algorithm>
 #include <limits>
-#include <math.h> // include isfinite instead of finite
+#include <math.h> // include std::isfinite instead of finite
 
 #ifdef HAVE_IEEEFP_H
 #include <ieeefp.h>
@@ -75,9 +75,6 @@
 #include "scythestat/error.h"
 #endif
 
-#ifndef isfinite
-    #define isfinite finite
-#endif
 /* Fill in some defs from R that aren't in math.h */
 #ifndef M_PI
 #define M_PI 3.141592653589793238462643383280
@@ -562,7 +559,7 @@ namespace scythe {
     double
     pnorm1 (double x, bool lower_tail, bool log_p)
     {
-      SCYTHE_CHECK_10(! isfinite(x), scythe_invalid_arg,
+      SCYTHE_CHECK_10(! std::isfinite(x), scythe_invalid_arg,
           "Quantile x is inifinte (+/-Inf) or NaN");
 
       double p, cp;
