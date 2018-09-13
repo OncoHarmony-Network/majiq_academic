@@ -10,6 +10,7 @@ cdef extern from "qLSV.hpp":
         qLSV(int nways1, bint is_ir, int msamples) nogil ;
         int get_num_ways() nogil ;
         void add(float* coverage, int msamples) nogil ;
+        void reset_samps() nogil ;
 
     cdef cppclass hetLSV(qLSV):
         hetLSV() nogil ;
@@ -19,5 +20,6 @@ cdef extern from "qLSV.hpp":
         void add_condition1(float * k, int x, int nways, int psi_samples) nogil ;
         void add_condition2(float * k, int x, int nways, int psi_samples) nogil ;
         void clear() nogil ;
+
         vector[vector[psi_distr_t]] mu_psi ;
         vector[vector[psi_distr_t]] post_psi ;

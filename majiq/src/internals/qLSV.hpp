@@ -32,6 +32,13 @@ class qLSV{
             samps.clear() ;
         }
 
+        void reset_samps(){
+
+            for(int xx=0; xx< nways_; xx++){
+                fill(samps[xx].begin(), samps[xx].end(), (float)0.0) ;
+            }
+        }
+
         void add(float* coverage, int msamples){
 
             if (samps.size() ==0)

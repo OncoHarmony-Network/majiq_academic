@@ -155,8 +155,11 @@ cdef int _het_computation(object out_h5p, dict file_cond, list list_of_lsv, map[
                     lsv_id = lsv.encode('utf-8')
                 get_samples_from_psi(<np.float32_t *> osamps.data, <hetLSV*> lsv_vec[lsv_id], psi_samples, psi_border,
                                      nbins, cidx, fidx)
+                lsv_vec[lsv_id].reset_samps()
             fname = get_tmp_psisample_file(outdir, "%s_%s" %(cond_name, fidx) )
             majiq_io.dump_hettmp_file(fname, osamps)
+
+
 
 
     logger.info("Store Voila LSV information")
@@ -232,7 +235,6 @@ cdef void _core_independent(object self):
     logger.info("Group %s: %s LSVs" % (self.names[1], len(list_of_lsv1)))
 
     list_of_lsv = list(set(list_of_lsv1).intersection(set(list_of_lsv2)))
-
     nlsv = len(list_of_lsv)
     if nlsv == 0:
         logger.info("There is no LSVs that passes the filters")

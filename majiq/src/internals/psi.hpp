@@ -19,6 +19,14 @@ inline float median(psi_distr_t a){
     const int n = a.size() ;
     sort(a.begin(), a.end()) ;
     if (n % 2 != 0) return (float)a[n/2] ;
+
+//    const float m = (float)(a[(n-1)/2] + a[n/2])/2.0 ;
+//cerr << "MEDIAN: " << m << " :: " ;
+//    for (auto const &c: a)
+//        cerr << c << ", " ;
+//    cerr << "\n" ;
+//    return m ;
+
     return (float)(a[(n-1)/2] + a[n/2])/2.0 ;
 }
 
@@ -104,6 +112,7 @@ vector<T> apply_permutation(const vector<T>& vec, const vector<size_t>& p)
 }
 
 inline float calc_mupsi(const float sample, const float all_sample, float alpha, float beta){
+//cerr << "sample: " << sample << " allsample: " << all_sample << " alpha: " << alpha << " beta: " << beta << "\n" ;
     return (sample + alpha) / (all_sample + alpha + beta) ;
 }
 
