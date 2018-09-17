@@ -1,13 +1,10 @@
 import argparse
 from majiq.src.build import build
-from majiq.src.py_calc_psi import calcpsi as py_calcpsi
-from majiq.src.py_deltapsi import deltapsi as py_deltapsi
-from majiq.src.py_indpnt import calc_independent as py_calc_independent
 from majiq.src.calc_psi import calcpsi
 from majiq.src.deltapsi import deltapsi
 from majiq.src.indpnt import calc_independent
 from majiq.src.constants import *
-from majiq.src.wght_pipeline import calc_weights as py_calc_weights
+# from majiq.src.wght_pipeline import calc_weights as py_calc_weights
 
 # from majiq.src.constants import all_stats
 import sys
@@ -205,27 +202,6 @@ def main():
     parser_preprocess = subparsers.add_parser('build', help='Preprocess SAM/BAM files as preparation for the rest of '
                                                             'the tools (psi, deltapsi)', parents=[common, buildparser])
     parser_preprocess.set_defaults(func=build)
-
-    parser_calcpsi = subparsers.add_parser('py_psi', help="Calculate PSI values for N experiments, given a folder of "
-                                                       "preprocessed events by 'majiq preprocess' or SAM/BAM files",
-                                           parents=[common, psi, sampling, weights])
-    parser_calcpsi.set_defaults(func=py_calcpsi)
-
-    parser_deltagroup = subparsers.add_parser('py_deltapsi', help='Calculate Delta PSI values given a pair of experiments '
-                                                               '(1 VS 1 conditions *with* replicas)',
-                                              parents=[common, delta, sampling, weights])
-    parser_deltagroup.set_defaults(func=py_deltapsi)
-
-    parser_weights = subparsers.add_parser('weights', help='Calculate weights values given a group of experiment '
-                                                           'replicas',
-                                           parents=[common, sampling, weights, wght])
-    parser_weights.set_defaults(func=py_calc_weights)
-
-    parser_heterogen = subparsers.add_parser('py_heterogen', help='Calculate Delta PSI values given a pair of experiments '
-                                                             'groups. This approach does not assume underlying PSI)',
-                                             parents=[common, sampling, htrgen])
-    parser_heterogen.set_defaults(func=py_calc_independent)
-
 
     parser_calcpsi = subparsers.add_parser('psi', help="Calculate PSI values for N experiments, given a folder of "
                                                        "preprocessed events by 'majiq preprocess' or SAM/BAM files",

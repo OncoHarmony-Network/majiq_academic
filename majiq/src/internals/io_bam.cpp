@@ -56,7 +56,7 @@ namespace io_bam {
         vector<Gene*> temp_vec2 ;
         Junction * junc = new Junction(start, end, false) ;
         const string key = junc->get_key() ;
-        int i = Gene::RegionSearch(glist_[chrom], n, junc->get_end()) ;
+        int i = Gene::RegionSearch(glist_[chrom], n, end) ;
 
         if(i<0) return ;
         while(i< n){
@@ -68,7 +68,6 @@ namespace io_bam {
                 if(gObj->junc_map_.count(key) >0 ){
                     found_stage1 = true ;
                     gObj->initialize_junction(key, start, end, nreads_ptr) ;
-//                    gObj->junc_map_[key]->set_nreads_ptr(nreads_ptr) ;
                 } else if(found_stage1){
                     continue ;
                 } else {
@@ -87,27 +86,15 @@ namespace io_bam {
             if (found_stage2){
                 for(const auto &g: temp_vec1){
                     g->initialize_junction(key, start, end, nreads_ptr) ;
-
-//                    g->junc_map_[key] = new Junction(start, end, false) ;
-//                    g->junc_map_[key]->set_nreads_ptr(nreads_ptr) ;
                 }
             }else{
                 for(const auto &g: temp_vec2){
                     g->initialize_junction(key, start, end, nreads_ptr) ;
-//                    g->junc_map_[key] = new Junction(start, end, false) ;
-//                    g->junc_map_[key]->set_nreads_ptr(nreads_ptr) ;
                 }
             }
         }
         return ;
     }
-
-//    inline void IOBam::update_junction_read(string key, int offset, int count) {
-//        float* vec = junc_vec[junc_map[key]] ;
-//        #pragma omp atomic
-//            vec[offset] += count ;
-//        return ;
-//    }
 
 
     void IOBam::add_junction(string chrom, char strand, int start, int end, int read_pos) {
@@ -118,23 +105,22 @@ namespace io_bam {
 
         bool new_j = false ;
         float * v ;
-//cout << "KK1\n" ;
         #pragma omp critical
         {
             if (junc_map.count(key) == 0 ) {
                 junc_map[key] = junc_vec.size() ;
                 v = (float*) calloc(eff_len_, sizeof(float)) ;
                 junc_vec.push_back(v) ;
+                new_j = true ;
             } else {
                 v = junc_vec[junc_map[key]] ;
             }
         }
-//cout << "v: " << v << "\n";
         if (new_j) {
             find_junction_genes(chrom, strand, start, end, v) ;
         }
         #pragma omp atomic
-            v[offset] += 1 ;
+            junc_vec[junc_map[key]][offset] += 1 ;
 
         return ;
     }

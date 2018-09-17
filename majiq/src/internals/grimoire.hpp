@@ -137,6 +137,8 @@ namespace grimoire{
 
             void update_flags(int efflen, unsigned int num_reads, unsigned int num_pos, unsigned int denovo_thresh,
                               unsigned int min_experiments){
+
+//cerr << "UPDATE FLAGS " << get_key() << " nreads_:" << nreads_ <<"\n" ;
                 if (nreads_ == nullptr ){
                     return ;
                 }
@@ -155,6 +157,8 @@ namespace grimoire{
                     ++ denovo_cnt_  ;
                     denovo_bl_ = denovo_bl_ || (denovo_cnt_ >= min_experiments) ;
                 }
+
+//cerr << "UPDATE FLAGS " << get_key() << " bool:" << denovo_bl_<< " denovothresh: " << denovo_thresh << " sum_reads: " << sum_reads << "\n" ;
                 return ;
             }
 
@@ -193,6 +197,7 @@ namespace grimoire{
             ~Exon(){}
             bool    is_lsv(bool ss) ;
             bool    has_out_intron()        { return ob_irptr != nullptr ; }
+            string  get_key()       { return(to_string(start_) + "-" + to_string(end_)) ; }
 
     };
 

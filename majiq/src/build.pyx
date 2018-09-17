@@ -1,6 +1,13 @@
+import os
+import sys
+import psutil
+
 from majiq.src.internals.io_bam cimport IOBam, gene_vect_t
 from majiq.src.internals.grimoire cimport Junction, Gene, Exon, LSV, Jinfo, Intron
 from majiq.src.internals.grimoire cimport sortGeneList, find_intron_retention
+from majiq.src.basic_pipeline import BasicPipeline, pipeline_run
+from majiq.src.config import Config
+import majiq.src.logger as majiq_logger
 cimport majiq.src.io as majiq_io
 from majiq.src.constants import *
 from voila.c.splice_graph_sql cimport open_db, close_db
@@ -22,12 +29,12 @@ from libcpp.pair cimport pair
 from libcpp.vector cimport vector
 from cython.parallel import prange
 
-cdef extern from "sqlite3.h":
-    struct sqlite3
-
 import numpy as np
 cimport numpy as np
 
+
+cdef extern from "sqlite3.h":
+    struct sqlite3
 
 cdef int C_FIRST_LAST_JUNC = FIRST_LAST_JUNC
 
@@ -273,10 +280,11 @@ cdef _find_junctions(list file_list, map[string, Gene*]& gene_map, vector[string
                 jvec = c_iobam.get_junc_vec_summary()
                 jlimit = c_iobam.get_junc_limit_index()
 
-            logger.debug("Update flags")
+            logger.debug("Update flags %s")
             for i in prange(n, nogil=True, num_threads=nthreads):
                 gg = gene_map[gid_vec[i]]
                 gg.update_junc_flags(eff_len, (j==last_it_grp), minreads, minpos, denovo_thresh, min_experiments)
+
             logger.debug("Done Update flags")
             junc_ids = [0] * njunc
             for it in j_ids:
@@ -387,8 +395,32 @@ cdef _core_build(str transcripts, list file_list, object conf, object logger):
                                           nthreads, m, ir, strandness, logger)
             logger.info('%s: %d LSVs' %(fname.decode('utf-8'), cnt))
 
-cpdef core_build(str transcripts, list file_list, object conf, object logger):
-    _core_build(transcripts, file_list, conf, logger)
+
+def build(args):
+    pipeline_run(Builder(args))
+
+class Builder(BasicPipeline):
+
+    def run(self):
+        # if self.simplify is not None and len(self.simplify) not in (0, 2):
+        #     raise RuntimeError('Simplify requires 2 values type of junctions afected and E(PSI) threshold.')
+        if not os.path.exists(self.conf):
+            raise RuntimeError("Config file %s does not exist" % self.conf)
+        majiq_config = Config(self.conf, self)
+        self.builder(majiq_config)
+
+    def builder(self, majiq_config):
+
+        logger = majiq_logger.get_logger("%s/majiq.log" % majiq_config.outDir, silent=False, debug=self.debug)
+        logger.info("Majiq Build v%s" % VERSION)
+        logger.info("Command: %s" % " ".join(sys.argv))
+
+        _core_build(self.transcripts, majiq_config.sam_list, majiq_config, logger)
+
+        if self.mem_profile:
+            mem_allocated = int(psutil.Process().memory_info().rss)/(1024**2)
+            logger.info("Max Memory used %.2f MB" % mem_allocated)
+        logger.info("MAJIQ Builder is ended succesfully!")
 
 
 

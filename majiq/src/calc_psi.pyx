@@ -24,37 +24,6 @@ import numpy as np
 # PSI calculation pipeline     #
 ################################
 
-# cdef kktest():
-#     cdef int cc
-#
-#     if threadid() == 0:
-#         for qlsvObj in lsv_vec:
-#             with gil:
-#                 majiq_io.get_coverage_lsv(cov_dict, qlsvObj.get_lsvlist(), self.files, "")
-#             qlsvObj.free_lock()
-#
-#     else:
-#         cc = 0
-#         for qlsvObj in lsv_vec:
-#             qlsvObj.test_lock()
-#             nlsv = qlsvObj.get_lsvlist()
-#
-#             with gil:
-#                 print ("[thread:%s] Chunk %s" %(threadid(), cc))
-#             cc += 1
-#             for i in prange(nlsv):
-#                 lsv_id = lsv_vec[i]
-#                 with gil:
-#                     nways = cov_dict[lsv_id].size()
-#                     msamples = cov_dict[lsv_id][0].size()
-#                     o_mupsi = out_mupsi_d[lsv_id]
-#                     o_postpsi = out_postpsi_d[lsv_id]
-#                     is_ir = 'i' in lsv_type_dict[lsv_id.decode('utf-8')]
-#                 psi_posterior(cov_dict[lsv_id], <np.float32_t *> o_mupsi.data,
-#                               <np.float32_t *> o_postpsi.data, msamples, nways, nbins, is_ir)
-#
-#             qlsvObj.add_counter()
-
 
 def calcpsi(args):
     return pipeline_run(CalcPsi(args))
@@ -104,7 +73,7 @@ cdef _core_calcpsi(object self):
         return
 
     for lidx, lsv in enumerate(list_of_lsv):
-        nways = len(lsv_type_dict[lsv].split('|')) -1
+        nways = len(lsv_type_dict[lsv].split('|')) - 1
         out_mupsi_d[lsv.encode('utf-8')] = np.zeros(shape=nways, dtype=np.float32)
         out_postpsi_d[lsv.encode('utf-8')] = np.zeros(shape=(nways, nbins), dtype=np.float32)
         lsv_vec[lsv.encode('utf-8')] = nways

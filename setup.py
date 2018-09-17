@@ -6,10 +6,10 @@ import numpy
 import sys
 import os
 
-# os.environ['CC'] = 'gcc-8'
-# os.environ['CXX'] = 'g++-8'
-
-print("COMPILER ", os.environ.get("CXX", None))
+# from distutils.command.build_ext import show_compilers
+#
+#
+# print (show_compilers())
 
 extensions = []
 HTSLIB_LIBRARY = ['hts', 'z']
@@ -22,9 +22,10 @@ scythe_compiler_args = ['-DSCYTHE_COMPILE_DIRECT', '-DSCYTHE_PTHREAD']
 linker_args = ['-lgomp']
 
 if sys.platform == 'darwin':
+    # os.environ['CLANG_DEFAULT_CXX_STDLIB'] = 'libc++'
     pass
     # compile_args.append('-stdlib=libc++')
-    linker_args = ['-L/usr/local/opt/llvm/lib'] + linker_args
+#     linker_args = ['-L/usr/local/opt/llvm/lib'] + linker_args
 else:
     compile_args.append('-std=c++11')
 
@@ -34,12 +35,12 @@ MAJIQ_INC_STATS_DIR = ['majiq/src/internals/stats']
 VOILA_INC_DIRS = ['voila/c']
 MAJIQ_LIB_DIRS = ['majiq/src/internals']
 
-NPY_INC_DIRS   = [numpy.get_include()]
+NPY_INC_DIRS = [numpy.get_include()]
 
 extensions += [Extension('majiq.src.polyfitnb', ['majiq/src/polyfitnb.pyx'], language='c++', include_dirs=NPY_INC_DIRS)]
-extensions += [Extension('majiq.src.internals.seq_parse', ['majiq/src/internals/seq_parse.pyx',
-                                                           'majiq/src/internals/io_bam.cpp',
-                                                           'majiq/src/internals/grimoire.cpp'],
+extensions += [Extension('majiq.src.build', ['majiq/src/build.pyx',
+                                             'majiq/src/internals/io_bam.cpp',
+                                             'majiq/src/internals/grimoire.cpp'],
                          include_dirs=MAJIQ_INC_DIRS + VOILA_INC_DIRS + NPY_INC_DIRS + HTSLIB_INC_DIRS,
                          library_dirs=HTSLIB_LIB_DIRS + MAJIQ_LIB_DIRS,
                          libraries=HTSLIB_LIBRARY,
@@ -68,20 +69,14 @@ extensions += [Extension('majiq.src.indpnt', ['majiq/src/indpnt.pyx', 'majiq/src
                          extra_compile_args=compile_args+scythe_compiler_args,  extra_link_args=linker_args,
                          language='c++')]
 
-# extensions += [Extension('majiq.src.internals.npwrap', ['majiq/src/internals/npwrap.pyx'], language='c++',
-#                          include_dirs=NPY_INC_DIRS + MAJIQ_INC_DIRS,
-#                          extra_compile_args=compile_args,  extra_link_args=linker_args,)]
-
-
 extensions += [Extension('majiq.src.io', ['majiq/src/io.pyx'], language='c++',
                          include_dirs=NPY_INC_DIRS + MAJIQ_INC_DIRS,
                          extra_compile_args=compile_args,  extra_link_args=linker_args,)]
 
-# extensions += [Extension('majiq.src.normalize', ['majiq/src/normalize.pyx'],     include_dirs=NPY_INC_DIRS)]
-extensions += [Extension('majiq.src.plotting', ['majiq/src/plotting.pyx'])]
 extensions += [Extension('majiq.src.psi', ['majiq/src/psi.pyx'],                 include_dirs=NPY_INC_DIRS)]
-extensions += [Extension('majiq.src.sample', ['majiq/src/sample.pyx'],           include_dirs=NPY_INC_DIRS)]
+
 extensions += [Extension('majiq.src.adjustdelta', ['majiq/src/adjustdelta.pyx'], include_dirs=NPY_INC_DIRS)]
+
 extensions += [Extension('voila.c.splice_graph_sql', ['voila/c/splice_graph_sql.pyx', 'voila/c/sqlite3.c'],
                          language='c++', include_dirs=NPY_INC_DIRS, extra_compile_args=compile_args,
                          extra_link_args=linker_args)]
