@@ -98,7 +98,6 @@ cdef _core_calcpsi(object self):
     list_of_lsv, exps = majiq_io.extract_lsv_summary(self.files, types_dict=lsv_type_dict,
                                                      minnonzero=self.minpos, min_reads=self.minreads,
                                                      percent=self.min_exp, junc_info=junc_info, logger=logger)
-
     nlsv = len(list_of_lsv)
     if nlsv == 0:
         logger.info("There is no LSVs that passes the filters")
