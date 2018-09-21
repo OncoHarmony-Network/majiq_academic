@@ -33,6 +33,5 @@ window.addEventListener('load', () => {
         else
             first_gene()
     });
-
 });
 

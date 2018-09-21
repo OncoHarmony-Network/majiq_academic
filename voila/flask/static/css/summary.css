@@ -1,0 +1,196 @@
+body {
+    background-color: #c0d8ee;
+    font-size: 12px;
+    position: absolute;
+    height: 100%;
+    width: 100%
+}
+
+table {
+    background-color: white
+}
+
+.menu {
+    background-color: #205bb0;
+    color: white;
+    position: absolute;
+    z-index: 3
+}
+
+.tools-menu.hide-tools-menu {
+    transform: translateY(-100%);
+    box-shadow: none;
+    transition: all 100ms ease
+}
+
+.tools-menu {
+    transition: all 100ms ease;
+    background-color: #c0d8ee;
+    color: black;
+    z-index: 2;
+    position: absolute;
+    width: 100%;
+    top: 45px;
+    box-shadow: 0 0 25px 10px rgba(0, 0, 0, .3)
+}
+
+.gene-header {
+    background: white;
+    position: absolute;
+    top: 45px;
+    z-index: 2;
+    width: 100%;
+    padding-top: 10px;
+    padding-bottom: 10px
+}
+
+.gene-header > div {
+    display: inline-block;
+    vertical-align: middle;
+    margin-left: 10px
+}
+
+.gene-header .gene-name {
+    font-size: 20px;
+    color: #205bb0;
+    font-weight: bold
+}
+
+.coordinates {
+    font-size: 14px;
+    color: #205bb0;
+}
+
+.gene-header .gene-id {
+    font-size: 16px;
+    font-weight: bold;
+    color: #e75c29
+}
+
+.splice-graph-container {
+    background-color: white;
+    padding-bottom: 20px;
+    padding-left: 20px;
+    padding-right: 20px;
+
+}
+
+.splice-graph-container svg {
+    display: block;
+    margin-left: auto;
+    margin-right: auto
+}
+
+.lsv-container > div {
+    text-align: left;
+    display: inline-grid;
+    padding-left: 25px;
+    padding-right: 25px;
+    padding-top: 10px
+}
+
+.lsv-container {
+    text-align: center
+}
+
+.menu-right {
+    float: right
+}
+
+.splice-graph-header {
+    margin-left: 10px;
+    margin-right: 10px;
+    padding-top: 10px;
+    color: #205bb0
+
+}
+
+.splice-graph-header > * {
+    display: inline-grid;
+    margin-right: 10px;
+    vertical-align: middle
+}
+
+.content {
+    display: flex;
+    flex-direction: column;
+    height: calc(100% - 106px);
+    position: absolute;
+    top: 106px;
+    width: 100%
+}
+
+.top {
+    border-bottom: solid lightgrey 1px;
+    max-height: 50%;
+    flex-shrink: 0;
+    overflow-y: auto;
+    background-color: white
+}
+
+.bottom {
+    overflow-y: auto
+}
+
+.lsv-header {
+    background-color: white;
+    padding: 10px;
+    border-top: solid lightgray 1px;
+    border-right: solid lightgray 1px;
+    border-left: solid lightgray 1px
+}
+
+.lsv-header > * {
+    display: inline-grid;
+    vertical-align: middle;
+    margin-right: auto;
+}
+
+form.lsv-form label {
+    width: 7em !important;
+}
+
+.reads-filter, .mouseover-filter, .select-filter {
+    opacity: .2;
+}
+
+.mouseover .junction, .select .junction, .mouseover .intron-retention, .select .intron-retention {
+    stroke: orange;
+    stroke-width: 3px
+}
+
+.mouseover .intron-retention, .select .intron-retention {
+    fill: orange;
+}
+
+.mouseover .junction-reads,
+.select .junction-reads,
+.select .intron-retention-reads,
+.mouseover .intron-retention-reads {
+    font-size: 14px
+}
+
+.mouseover, .select {
+    opacity: 1;
+}
+
+.junction-reads, .intron-retention-reads {
+    cursor: default;
+    user-select: none;
+}
+
+.excl-incl-rect {
+    width: 200px;
+    margin: 0;
+}
+
+.highlight-form label {
+    text-align: right;
+    display: block;
+    margin-bottom: 10px;
+}
+
+.highlight-form input {
+    margin-left: 10px;
+
+}

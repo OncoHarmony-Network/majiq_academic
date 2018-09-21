@@ -3,7 +3,7 @@ import json
 import os
 import types
 import uuid
-from abc import abstractmethod, ABC
+from abc import ABC
 from distutils.dir_util import copy_tree
 
 import jinja2
@@ -232,14 +232,14 @@ class Html(ABC):
         env = jinja2.Environment(extensions=["jinja2.ext.do"], loader=jinja2.FileSystemLoader(template_dir),
                                  undefined=jinja2.StrictUndefined)
 
-        index_template = env.get_template(index_html)
+        if index_html:
+            index_template = env.get_template(index_html)
+            with open(os.path.join(self.args.output, 'index.html'), 'w') as index:
+                index.write(index_template.render({
+                    'db_id': self.db_id
+                }))
+
         summary_template = env.get_template(summary_html)
-
-        with open(os.path.join(self.args.output, 'index.html'), 'w') as index:
-            index.write(index_template.render({
-                'db_id': self.db_id
-            }))
-
         with open(os.path.join(self.args.output, 'summary.html'), 'w') as summary:
             summary.write(summary_template.render({
                 'db_id': self.db_id
