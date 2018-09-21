@@ -151,8 +151,6 @@ class SpliceGraphTools {
         };
         document.querySelector('#reads-greater-than').oninput = junctions_filter;
         document.querySelector('#reads-less-than').oninput = junctions_filter;
-
-
     }
 
     /**
@@ -166,7 +164,7 @@ class SpliceGraphTools {
 
             // highlight junctions and intron retentions when you mouse over them
             added_nodes
-                .filter(el => el.classList && (el.classList.contains('junction-grp') || el.classList.contains('intron-retention-grp')))
+                .filter(el => el.classList && (el.classList.contains('junction-grp') || el.classList.contains('intron-retention-grp') || el.classList.contains('exon-grp')))
                 .forEach(el => {
                     const datum = d3.select(el).datum();
                     el.onmouseover = () => {
