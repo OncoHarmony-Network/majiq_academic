@@ -158,7 +158,7 @@ class LsvTools {
             .append('td')
             .append('svg')
             .attr('class', 'heat-map')
-            .attr('data-stat-name', 'TNOM')
+            .attr('data-stat-name', 'WILCOXON')
             .each((d, i, a) => this.heatmap.plot(a[i]));
     };
 
