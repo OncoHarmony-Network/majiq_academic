@@ -406,7 +406,7 @@ class Heterogen(MatrixHdf5):
         def add(self, **kwargs):
             """
             mu_psi: numpy array of two lists. one list for each condition.
-            junction_stats: 2d numpy matrix. Columns are stat test values and a row for each junction.
+            junction_stats: 2d numpy matrix. Columns are stat flask values and a row for each junction.
             mean_psi: 2d matrix
 
             :param kwargs:

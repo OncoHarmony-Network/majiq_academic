@@ -85,10 +85,10 @@ cdef sqlite3 *open_db(string file_name) nogil:
         fprintf(stderr, 'open_db: %s: %d\n', file_name.c_str(), rc)
         abort()
 
-    rc = sqlite3_busy_timeout(db, 120 * 1000)
-    if rc:
-        fprintf(stderr, 'busy_timeout: %s: %d\n', file_name.c_str(), rc)
-        abort()
+    # rc = sqlite3_busy_timeout(db, 120 * 1000)
+    # if rc:
+    #     fprintf(stderr, 'busy_timeout: %s: %d\n', file_name.c_str(), rc)
+    #     abort()
 
     exec_db(db, begin_trans)
 

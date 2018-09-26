@@ -1,0 +1,56 @@
+.content {
+    margin-left: auto;
+    margin-right: auto;
+    max-width: 800px;
+}
+
+.search-bar {
+    display: block;
+    position: relative;
+}
+
+.autocomplete {
+    position: absolute;
+    background-color: white;
+    width: 100%;
+    /*visibility: hidden;*/
+}
+
+.autocomplete ul {
+    list-style-type: none;
+    margin: 0;
+    padding: 0;
+    border: solid 1px lightgray;
+}
+
+.autocomplete ul li {
+    padding: 3px 3px 3px 10px;
+    font-size: 10px;
+}
+
+.autocomplete ul li.select {
+    background-color: lightskyblue;
+}
+
+table {
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.lsv-container > div {
+    text-align: left;
+    display: inline-grid;
+}
+
+.lsv-container > div > div {
+    padding-bottom: 10px;
+}
+
+.lsv-container {
+    text-align: center
+}
+
+.excl-incl-rect {
+    width: 200px;
+    margin:0;
+}

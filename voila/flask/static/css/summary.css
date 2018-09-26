@@ -154,12 +154,12 @@ form.lsv-form label {
     opacity: .2;
 }
 
-.mouseover .junction, .select .junction, .mouseover .intron-retention, .select .intron-retention, .mouseover .exon, .select .exon {
+.mouseover .junction, .select .junction, .mouseover .intron-retention, .select .intron-retention {
     stroke: orange;
     stroke-width: 3px
 }
 
-.mouseover .intron-retention, .select .intron-retention, .mouseover .exon, .select .exon {
+.mouseover .intron-retention, .select .intron-retention {
     fill: orange;
 }
 

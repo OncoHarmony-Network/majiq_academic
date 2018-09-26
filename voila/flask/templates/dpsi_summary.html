@@ -19,8 +19,14 @@
                     const t = d3.select(table_body).selectAll('tr')
                         .data(lsvs);
 
+                    /*
+                        Remove unused rows
+                     */
                     t.exit().remove();
 
+                    /*
+                        Create new rows
+                     */
                     const trs = t.enter().append('tr');
 
                     trs
@@ -40,26 +46,53 @@
                             lsv.cartoon(a[i], d._id)
                         });
 
-                    const summary = trs
-                        .append('td')
-                        .attr('class', 'summary');
+                    const first_summary = trs
+                        .append('td');
 
                     db_lsv.get('metadata').then(metadata => {
-                        summary
+                        first_summary
                             .append('canvas')
                             .attr('class', 'lsv-single-compact-percentiles')
                             .each((d, i, a) => table.psi_summary_compact(a[i], metadata.group_names[0]));
-
-                        summary
+                        first_summary
                             .append('svg')
                             .attr('class', 'psi-violin-plot')
-                            .each((d, i, a) => table.psi_summary_violin(a[i], metadata.group_names[0]));
+                            .each((d, i, a) => table.psi_summary_violin(a[i], metadata.group_names[0]))
+                    });
+
+                    const changes = trs
+                        .append('td');
+
+                    changes
+                        .append('div')
+                        .attr('class', 'excl-incl-rect')
+                        .each((d, i, a) => table.dpsi_summary_excl_incl(a[i], d));
+
+
+                    changes
+                        .append('svg')
+                        .attr('class', 'deltapsi-violin-plot')
+                        .each((d, i, a) => table.dpsi_summary_violin(a[i]));
+
+
+                    const second_summary = trs
+                        .append('td');
+
+                    db_lsv.get('metadata').then(metadata => {
+                        second_summary
+                            .append('canvas')
+                            .attr('class', 'lsv-single-compact-percentiles')
+                            .each((d, i, a) => table.psi_summary_compact(a[i], metadata.group_names[1]));
+
+                        second_summary
+                            .append('svg')
+                            .attr('class', 'psi-violin-plot')
+                            .each((d, i, a) => table.psi_summary_violin(a[i], metadata.group_names[1]))
                     });
 
                     const links = trs
                         .append('td')
                         .attr('class', 'links');
-
                     links
                         .append('a')
                         .each((d, i, a) => {
@@ -67,11 +100,13 @@
                         })
                         .append('img')
                         .attr('src', 'img/ucsc.png');
-
                     links.append('button')
                         .text('Copy LSV')
-                        .each((d, i, a) => table.copy_lsv(a[i]));
+                        .each((d, i, a) => table.majiq_spel_button(a[i], d));
 
+                    /*
+                        Update values in existing rows
+                     */
                     t
                         .each((d, i, a) => {
                             a[i].dataset.lsvId = d._id;
@@ -81,13 +116,24 @@
                             tds[1].innerHTML = d._id;
 
                             // lsv type
-                            lsv.cartoon(tds[2].querySelector('canvas'), d._id);
+                            let canvas = tds[2].querySelector('canvas');
+                            lsv.cartoon(canvas, d._id);
 
                             // psi per junction
-                            table.psi_summary_compact(tds[3].querySelector('canvas'));
-                            table.psi_summary_violin(tds[3].querySelector('svg'));
+                            db_lsv.get('metadata').then(metadata => {
+                                table.psi_summary_compact(tds[3].querySelector('canvas'), metadata.group_names[0]);
+                                table.psi_summary_violin(tds[3].querySelector('svg'), metadata.group_names[0]);
+                                table.psi_summary_compact(tds[5].querySelector('canvas'), metadata.group_names[1]);
+                                table.psi_summary_violin(tds[5].querySelector('svg'), metadata.group_names[1])
+                            });
 
-                            table.ucsc_link(tds[4].querySelector('.links a'), d)
+                            // deltapsi per junction
+                            table.dpsi_summary_excl_incl(tds[4].querySelector('.excl-incl-rect'), d);
+                            table.dpsi_summary_violin(tds[4].querySelector('.deltapsi-violin-plot'));
+
+                            // ucsc link
+                            table.ucsc_link(tds[6].querySelector('.links a'), d)
+
                         })
                 }
             });
@@ -102,7 +148,7 @@
                 gene_id: urlParams.get('gene_id')
             });
 
-            sgs.psi_localstorage()
+            sgs.dpsi_localstorage()
                 .then(() => {
                     sgs.create_localstorage();
                     new SpliceGraphTools(sgs);
@@ -135,6 +181,8 @@
                     <th>Highlight</th>
                     <th>LSV ID</th>
                     <th>LSV Type</th>
+                    <th>Ψ per Junction</th>
+                    <th>DeltaPSI per Junction</th>
                     <th>Ψ per Junction</th>
                     <th>Links</th>
                 </tr>
