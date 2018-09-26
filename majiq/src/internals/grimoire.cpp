@@ -562,6 +562,9 @@ namespace grimoire {
         }
 
         if (ir_ptr_ != nullptr) ext_type += "|i" ;
+        if (ext_type.length() > MAX_TYPE_LENGTH){
+            ext_type = "na"  ;
+        }
         return ext_type ;
     }
 

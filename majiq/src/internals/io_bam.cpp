@@ -34,17 +34,17 @@ namespace io_bam {
 
         if (strandness_ == FWD_STRANDED){
             strn = (((read->core.flag & 0x10) == (0x00 & is_read1(read)))
-                    || ((read->core.flag & 0x10) == (0x10 & is_read2(read)))) ? '+' : '-';
+                    || ((read->core.flag & 0x10) == (0x10 & is_read2(read)))) ? '+' : '-' ;
 
         } else if (strandness_ == REV_STRANDED){
             strn = (((read->core.flag & 0x10) ==(0x10 & is_read1(read)))
-                    || ((read->core.flag & 0x10) == (0x00 & is_read2(read)))) ? '+' : '-';
+                    || ((read->core.flag & 0x10) == (0x00 & is_read2(read)))) ? '+' : '-' ;
         }
         return (strn);
     }
 
     inline int _unique(bam1_t * read){
-        return ((read->core.flag & 0x100) != 0x100);
+        return ((read->core.flag & 0x100) != 0x100) ;
     }
 
     void IOBam::find_junction_genes(string chrom, char strand, int start, int end,
@@ -63,7 +63,8 @@ namespace io_bam {
             Gene * gObj  = glist_[chrom][i] ;
             ++i ;
             if (gObj->get_start() >= end) break ;
-            if (start< gObj->get_start() || end> gObj->get_end()) continue ;
+            if (gObj->get_end() < start) continue ;
+//            if (start< gObj->get_start() || end> gObj->get_end()) continue ;
             if (strand == '.' || strand == gObj->get_strand()) {
                 if(gObj->junc_map_.count(key) >0 ){
                     found_stage1 = true ;

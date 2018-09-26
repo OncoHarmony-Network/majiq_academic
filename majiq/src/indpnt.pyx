@@ -79,8 +79,7 @@ cdef int _statistical_test_computation(object out_h5p, dict comparison, list lis
     for i in prange(nlsv, nogil=True, num_threads=nthreads):
         with gil:
             lsv = list_of_lsv[i]
-            lsv_id = lsv.encode('utf-8')
-            hetObj_ptr = <hetLSV*> lsv_vec[lsv_id]
+            hetObj_ptr = <hetLSV*> lsv_vec[lsv]
             hetObj_ptr.create_condition_samples(len(file_list[0]), len(file_list[1]), psi_samples)
             lsv_index = hetObj_ptr.get_junction_index()
             nways = hetObj_ptr.get_num_ways()
@@ -101,20 +100,19 @@ cdef int _statistical_test_computation(object out_h5p, dict comparison, list lis
 
     logger.info('Storing Voila file statistics')
     for lsv in list_of_lsv:
-        lsv_id = lsv.encode('utf-8')
-        nways =lsv_vec[lsv_id].get_num_ways()
+        nways =lsv_vec[lsv].get_num_ways()
         oPvals = np.zeros(shape=(nways, nstats), dtype=np.float32)
         for ii in range(nways):
             for jj in range(nstats):
                 # print(output[lsv_id][ii][jj])
-                oPvals[ii, jj] = output[lsv_id][ii][jj]
-        out_h5p.heterogen(lsv).add(junction_stats=oPvals)
+                oPvals[ii, jj] = output[lsv][ii][jj]
+        out_h5p.heterogen(lsv.decode('utf-8')).add(junction_stats=oPvals)
 
 
 cdef int _het_computation(object out_h5p, dict file_cond, list list_of_lsv, map[string, qLSV*] lsv_vec,
                           dict lsv_type_dict, dict junc_info, int psi_samples, int nthreads, int nbins, str outdir,
                           object logger ) except -1:
-    cdef string lsv_id
+    cdef string lsv
     cdef list cond_list, conditions
     cdef str f, cond_name, fname ;
     cdef int cidx, fidx, i, msamples, nways
@@ -138,8 +136,7 @@ cdef int _het_computation(object out_h5p, dict file_cond, list list_of_lsv, map[
     get_psi_border(psi_border, nbins)
 
     for lsv in list_of_lsv:
-        lsv_id = lsv.encode('utf-8')
-        nways = lsv_vec[lsv_id].get_num_ways()
+        nways = lsv_vec[lsv].get_num_ways()
         total_njuncs += nways
 
     conditions = list(file_cond.keys())
@@ -152,10 +149,9 @@ cdef int _het_computation(object out_h5p, dict file_cond, list list_of_lsv, map[
             for i in prange(nlsv, nogil=True, num_threads=nthreads):
                 with gil:
                     lsv = list_of_lsv[i]
-                    lsv_id = lsv.encode('utf-8')
-                get_samples_from_psi(<np.float32_t *> osamps.data, <hetLSV*> lsv_vec[lsv_id], psi_samples, psi_border,
+                get_samples_from_psi(<np.float32_t *> osamps.data, <hetLSV*> lsv_vec[lsv], psi_samples, psi_border,
                                      nbins, cidx, fidx)
-                lsv_vec[lsv_id].reset_samps()
+                lsv_vec[lsv].reset_samps()
             fname = get_tmp_psisample_file(outdir, "%s_%s" %(cond_name, fidx) )
             majiq_io.dump_hettmp_file(fname, osamps)
 
@@ -165,12 +161,11 @@ cdef int _het_computation(object out_h5p, dict file_cond, list list_of_lsv, map[
     logger.info("Store Voila LSV information")
 
     for lsv in list_of_lsv:
-        lsv_id = lsv.encode('utf-8')
-        nways = lsv_vec[lsv_id].get_num_ways()
+        nways = lsv_vec[lsv].get_num_ways()
         mupsi = np.ndarray(shape=(len(file_cond), max_nfiles, nways), dtype=np.float32, order="c")
         postpsi = np.ndarray(shape=(len(file_cond), nways, nbins), dtype=np.float32, order="c")
         mupsi.fill(-1)
-        hetObj_ptr = <hetLSV*> lsv_vec[lsv_id]
+        hetObj_ptr = <hetLSV*> lsv_vec[lsv]
         for x in range(len(file_cond)):
             for y in range(len(file_cond[conditions[x]])):
                 for z in range(nways):
@@ -181,7 +176,8 @@ cdef int _het_computation(object out_h5p, dict file_cond, list list_of_lsv, map[
                for z in range(nbins):
                    postpsi[x,y,z] = hetObj_ptr.post_psi[x][y][z]
 
-        out_h5p.heterogen(lsv).add(lsv_type=lsv_type_dict[lsv], mu_psi=mupsi,mean_psi=postpsi, junctions=junc_info[lsv])
+        out_h5p.heterogen(lsv.decode('utf-8')).add(lsv_type=lsv_type_dict[lsv], mu_psi=mupsi,mean_psi=postpsi,
+                                                   junctions=junc_info[lsv])
 
 cdef void _core_independent(object self):
 
@@ -191,7 +187,7 @@ cdef void _core_independent(object self):
     cdef object logger
     cdef int nbins = 40
     cdef bint is_ir
-    cdef string lsv_id
+    cdef string lsv
     cdef int nways, msamples, i, j_offset
     cdef list list_of_lsv
     # cdef map[string, pair_int_t] lsv_vec
@@ -255,11 +251,11 @@ cdef void _core_independent(object self):
 
         j_offset = 0
         for lsv in list_of_lsv:
-            nways = len(lsv_type_dict[lsv].split('|')) -1
+            nways = lsv_type_dict[lsv][1]
             # tpair =  pair_int_t(nways, j_offset)
-            is_ir = 'i' in lsv_type_dict[lsv]
+            is_ir = b'i' in lsv_type_dict[lsv][0]
             m = new hetLSV(nways, j_offset, max_nfiles, nbins, is_ir, len(file_cond))
-            lsv_map[lsv.encode('utf-8')] = <qLSV*> m
+            lsv_map[lsv] = <qLSV*> m
             j_offset += nways
 
         logger.info('Sampling from PSI')

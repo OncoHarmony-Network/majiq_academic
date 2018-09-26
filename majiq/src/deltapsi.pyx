@@ -30,7 +30,7 @@ cdef void _core_deltapsi(object self):
     cdef object logger
     cdef int nbins = 20
     cdef bint is_ir
-    cdef string lsv_id
+    cdef string lsv
     cdef int nways, msamples, i
     cdef list list_of_lsv
 
@@ -92,13 +92,13 @@ cdef void _core_deltapsi(object self):
                                                minpercent=self.min_exp, logger=logger)
 
     for lidx, lsv in enumerate(list_of_lsv):
-        nways = len(lsv_type_dict[lsv].split('|')) -1
-        out_mupsi_d_1[lsv.encode('utf-8')] = np.zeros(shape=nways, dtype=np.float32)
-        out_postpsi_d_1[lsv.encode('utf-8')] = np.zeros(shape=(nways, nbins), dtype=np.float32)
-        out_mupsi_d_2[lsv.encode('utf-8')] = np.zeros(shape=nways, dtype=np.float32)
-        out_postpsi_d_2[lsv.encode('utf-8')] = np.zeros(shape=(nways, nbins), dtype=np.float32)
-        out_postdpsi_d[lsv.encode('utf-8')] = np.zeros(shape=(nways, (nbins*2)-1), dtype=np.float32)
-        lsv_vec[lsv.encode('utf-8')] = nways
+        nways = lsv_type_dict[lsv][1]
+        out_mupsi_d_1[lsv] = np.zeros(shape=nways, dtype=np.float32)
+        out_postpsi_d_1[lsv] = np.zeros(shape=(nways, nbins), dtype=np.float32)
+        out_mupsi_d_2[lsv] = np.zeros(shape=nways, dtype=np.float32)
+        out_postpsi_d_2[lsv] = np.zeros(shape=(nways, nbins), dtype=np.float32)
+        out_postdpsi_d[lsv] = np.zeros(shape=(nways, (nbins*2)-1), dtype=np.float32)
+        lsv_vec[lsv] = nways
 
     # logger.info("Saving prior matrix for %s..." % self.names)
     # majiq_io.dump_bin_file(prior_matrix, get_prior_matrix_filename(self.outDir, self.names))
@@ -118,15 +118,14 @@ cdef void _core_deltapsi(object self):
     for i in prange(nlsv, nogil=True, num_threads=nthreads):
         with gil:
             lsv = list_of_lsv[i]
-            lsv_id = lsv.encode('utf-8')
-            nways = cov_dict1[lsv_id].size()
-            msamples = cov_dict1[lsv_id][0].size()
-            o_mupsi_1 = out_mupsi_d_1[lsv_id]
-            o_postpsi_1 = out_postpsi_d_1[lsv_id]
-            o_mupsi_2 = out_mupsi_d_2[lsv_id]
-            o_postpsi_2 = out_postpsi_d_2[lsv_id]
-            o_postdeltapsi = out_postdpsi_d[lsv_id]
-            is_ir = 'i' in lsv_type_dict[lsv_id.decode('utf-8')]
+            nways = cov_dict1[lsv].size()
+            msamples = cov_dict1[lsv][0].size()
+            o_mupsi_1 = out_mupsi_d_1[lsv]
+            o_postpsi_1 = out_postpsi_d_1[lsv]
+            o_mupsi_2 = out_mupsi_d_2[lsv]
+            o_postpsi_2 = out_postpsi_d_2[lsv]
+            o_postdeltapsi = out_postdpsi_d[lsv]
+            is_ir = b'i' in lsv_type_dict[lsv][0]
 
             # print ('type', lsv_type_dict[lsv_id.decode('utf-8')], prior_matrix[1].dtype, prior_matrix[0].dtype)
             if is_ir:
@@ -134,7 +133,7 @@ cdef void _core_deltapsi(object self):
             else:
                 prior_m = prior_matrix[0]
 
-        deltapsi_posterior(cov_dict1[lsv_id], cov_dict2[lsv_id], <np.float32_t *> prior_m.data,
+        deltapsi_posterior(cov_dict1[lsv], cov_dict2[lsv], <np.float32_t *> prior_m.data,
                            <np.float32_t *> o_mupsi_1.data, <np.float32_t *> o_mupsi_2.data,
                            <np.float32_t *> o_postpsi_1.data, <np.float32_t *> o_postpsi_2.data,
                            <np.float32_t *> o_postdeltapsi.data, msamples, nways, nbins, is_ir)
@@ -147,10 +146,9 @@ cdef void _core_deltapsi(object self):
         out_h5p.prior = prior_matrix
         out_h5p.experiment_names = [exps1, exps2]
         for lsv in list_of_lsv:
-            lsv_id = lsv.encode('utf-8')
-            out_h5p.delta_psi(lsv).add(lsv_type=lsv_type_dict[lsv], bins=out_postdpsi_d[lsv_id],
-                                       group_bins=[out_postpsi_d_1[lsv_id], out_postpsi_d_2[lsv_id]],
-                                       group_means=[out_mupsi_d_1[lsv_id], out_mupsi_d_2[lsv_id]],
+            out_h5p.delta_psi(lsv.decode('utf-8')).add(lsv_type=lsv_type_dict[lsv], bins=out_postdpsi_d[lsv],
+                                       group_bins=[out_postpsi_d_1[lsv], out_postpsi_d_2[lsv]],
+                                       group_means=[out_mupsi_d_1[lsv], out_mupsi_d_2[lsv]],
                                        junctions=junc_info[lsv])
 
 

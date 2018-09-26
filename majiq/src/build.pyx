@@ -280,7 +280,7 @@ cdef _find_junctions(list file_list, map[string, Gene*]& gene_map, vector[string
                 jvec = c_iobam.get_junc_vec_summary()
                 jlimit = c_iobam.get_junc_limit_index()
 
-            logger.debug("Update flags %s")
+            logger.debug("Update flags")
             for i in prange(n, nogil=True, num_threads=nthreads):
                 gg = gene_map[gid_vec[i]]
                 gg.update_junc_flags(eff_len, (j==last_it_grp), minreads, minpos, denovo_thresh, min_experiments)

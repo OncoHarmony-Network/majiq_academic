@@ -371,7 +371,82 @@ cdef map[string, psi_distr_t] _load_weights(list lsv_list, str file_name):
 
     return out_dict
 
-cdef list _extract_lsv_summary(list files, int minnonzero, int min_reads, object types_dict, object junc_info,
+cdef list _extract_lsv_summary(list files, int minnonzero, int min_reads, dict types_dict, object junc_info,
+                               list exp_name_list, dict epsi=None, int percent=-1, object logger=None):
+    cdef dict lsv_types, lsv_list = {}
+    cdef list lsv_id_list = []
+    cdef int nfiles = len(files)
+    cdef int fidx
+    cdef str ff
+    cdef dict lsv_junc_info = {}
+    cdef np.ndarray mtrx, vals
+    cdef np.ndarray jinfo
+
+    if percent == -1:
+        percent = nfiles / 2
+        percent = percent + 1 if nfiles % 2 != 0 else percent
+    percent = min(int(percent), nfiles)
+
+    for fidx, ff in enumerate(files):
+        if not os.path.isfile(ff):
+            logger.error('File %s does not exist. Exiting execution' % ff)
+            exit(-1)
+
+        if logger:
+            logger.info("Parsing file: %s" % ff)
+        with open(ff, 'rb') as fp:
+            all_files = np.load(fp)
+            lsv_types = {yy[0]:[yy[1], 0] for yy in all_files['lsv_types']}
+            jinfo = all_files['junc_info']
+            xp = all_files['meta'][0]
+
+            exp_name_list.append(xp[0])
+
+            pre_lsv = jinfo[0][0]
+            lsv_t = False
+            epsi_t = []
+            lsv_junc_info = {zz: [] for zz in lsv_types.keys()}
+
+            for xx in jinfo:
+                lsv_id = xx[0]
+                lsv_junc_info[lsv_id].append([xx[1], xx[2]])
+                lsv_types[lsv_id][1] += 1
+                if xx[0] == pre_lsv:
+                    lsv_t = lsv_t or (xx[3] >=min_reads and xx[4] >= minnonzero)
+                    if epsi is not None:
+                        epsi_t.append(xx[3])
+                else:
+                    pre_lsv = lsv_id
+                    lsv_t = (xx[3] >=min_reads and xx[4] >= minnonzero)
+                    try:
+                        lsv_list[pre_lsv] += int(lsv_t)
+                        if epsi is not None:
+                            epsi[lsv_id] += np.array(epsi_t)
+                    except KeyError:
+
+                        lsv_list[pre_lsv] = int(lsv_t)
+                        if epsi is not None:
+                            epsi[lsv_id] = np.array(epsi_t)
+                    epsi_t = []
+
+        junc_info.update(lsv_junc_info)
+        types_dict.update(lsv_types)
+
+    if epsi is not None:
+        for xx in epsi.keys():
+            epsi[xx] = epsi[xx] / nfiles
+            epsi[xx] = epsi[xx] / epsi[xx].sum()
+            epsi[xx][np.isnan(epsi[xx])] = 1.0 / nfiles
+
+    for xx, yy in lsv_list.items():
+        if yy >= percent:
+            lsv_id_list.append(xx)
+        junc_info[xx] = np.array(junc_info[xx])
+
+    return lsv_id_list
+
+
+cdef list _extract_lsv_summary_old(list files, int minnonzero, int min_reads, object types_dict, object junc_info,
                                list exp_name_list, dict epsi=None, int percent=-1, object logger=None):
     cdef dict lsv_types, lsv_list = {}
     cdef list lsv_id_list = []
@@ -526,7 +601,7 @@ cdef list _extract_lsv_summary(list files, int minnonzero, int min_reads, object
 # API
 ##
 
-cpdef tuple extract_lsv_summary(list files, int minnonzero, int min_reads, object types_dict, object junc_info,
+cpdef tuple extract_lsv_summary(list files, int minnonzero, int min_reads, dict types_dict, dict junc_info,
                                 dict epsi=None, int percent=-1, object logger=None):
     cdef list r
     cdef list exp_list = []

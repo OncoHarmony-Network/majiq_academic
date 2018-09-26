@@ -36,7 +36,6 @@ cdef _core_calcpsi(object self):
     """
     cdef int nlsv
     cdef map[string, int] lsv_vec
-    cdef str lsv
     cdef map[string, vector[psi_distr_t]] cov_dict
 
     cdef object logger
@@ -46,15 +45,13 @@ cdef _core_calcpsi(object self):
     cdef dict out_mupsi_d = {}
     cdef dict out_postpsi_d = {}
     cdef bint is_ir
-    cdef string lsv_id
+    cdef string lsv
     cdef int nways, msamples, i, loop_step, cc, nthreads
     cdef np.ndarray[np.float32_t, ndim=1, mode="c"] o_mupsi
     cdef np.ndarray[np.float32_t, ndim=2, mode="c"] o_postpsi
     cdef list list_of_lsv
     cdef int nchunks = 500
     cdef qLSV qlsvObj
-    # cdef map[string, np.ndarray] out_mupsi
-    # cdef map[string, np.ndarray] out_post_psi
 
     majiq_logger.create_if_not_exists(self.outDir)
 
@@ -73,10 +70,10 @@ cdef _core_calcpsi(object self):
         return
 
     for lidx, lsv in enumerate(list_of_lsv):
-        nways = len(lsv_type_dict[lsv].split('|')) - 1
-        out_mupsi_d[lsv.encode('utf-8')] = np.zeros(shape=nways, dtype=np.float32)
-        out_postpsi_d[lsv.encode('utf-8')] = np.zeros(shape=(nways, nbins), dtype=np.float32)
-        lsv_vec[lsv.encode('utf-8')] = nways
+        nways = lsv_type_dict[lsv][1]
+        out_mupsi_d[lsv] = np.zeros(shape=nways, dtype=np.float32)
+        out_postpsi_d[lsv] = np.zeros(shape=(nways, nbins), dtype=np.float32)
+        lsv_vec[lsv] = nways
 
     # self.weights = self.calc_weights(self.weights, list_of_lsv, name=self.name, file_list=self.files, logger=logger)
 
@@ -90,18 +87,17 @@ cdef _core_calcpsi(object self):
 
         with gil:
             lsv = list_of_lsv[i]
-            lsv_id = lsv.encode('utf-8')
             # logger.info("2222 Event %s - %s" %(lsv_id, lsv_type_dict[lsv]))
             if i % loop_step == 0 :
                 print ("Event %s/%s" %(i, nlsv))
 
-            nways = cov_dict[lsv_id].size()
-            msamples = cov_dict[lsv_id][0].size()
-            o_mupsi = out_mupsi_d[lsv_id]
-            o_postpsi = out_postpsi_d[lsv_id]
-            is_ir = 'i' in lsv_type_dict[lsv]
+            nways = cov_dict[lsv].size()
+            msamples = cov_dict[lsv][0].size()
+            o_mupsi = out_mupsi_d[lsv]
+            o_postpsi = out_postpsi_d[lsv]
+            is_ir = b'i' in lsv_type_dict[lsv][0]
 
-        psi_posterior(cov_dict[lsv_id], <np.float32_t *> o_mupsi.data,
+        psi_posterior(cov_dict[lsv], <np.float32_t *> o_mupsi.data,
                       <np.float32_t *> o_postpsi.data, msamples, nways, nbins, is_ir)
 
     logger.info('Computation done, saving results....')
@@ -111,10 +107,9 @@ cdef _core_calcpsi(object self):
         out_h5p.experiment_names = [exps]
         out_h5p.group_names = [self.name]
         for lsv in list_of_lsv:
-            lsv_id = lsv.encode('utf-8')
             # logger.info("2222 Event %s" %(lsv_id))
-            out_h5p.psi(lsv).add(lsv_type=lsv_type_dict[lsv], bins=out_postpsi_d[lsv_id], means=out_mupsi_d[lsv_id],
-                           junctions=junc_info[lsv])
+            out_h5p.psi(lsv.decode('utf-8')).add(lsv_type=lsv_type_dict[lsv], bins=out_postpsi_d[lsv],
+                        means=out_mupsi_d[lsv], junctions=junc_info[lsv])
 
     if self.mem_profile:
         mem_allocated = int(psutil.Process().memory_info().rss) / (1024 ** 2)
