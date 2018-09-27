@@ -15,7 +15,7 @@
 #define FIRST_LAST_JUNC  -2
 #define MAX_DENOVO_DIFFERENCE 500
 #define MIN_INTRON_BINSIZE 1000
-#define MAX_TYPE_LENGTH 250
+#define MAX_TYPE_LENGTH 245
 
 using namespace std ;
 //extern typedef vector<float> psi_distr_t ;
