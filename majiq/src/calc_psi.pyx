@@ -108,7 +108,7 @@ cdef _core_calcpsi(object self):
         out_h5p.group_names = [self.name]
         for lsv in list_of_lsv:
             # logger.info("2222 Event %s" %(lsv_id))
-            out_h5p.psi(lsv.decode('utf-8')).add(lsv_type=lsv_type_dict[lsv].decode('utf-8'), bins=out_postpsi_d[lsv],
+            out_h5p.psi(lsv.decode('utf-8')).add(lsv_type=lsv_type_dict[lsv][0].decode('utf-8'), bins=out_postpsi_d[lsv],
                         means=out_mupsi_d[lsv], junctions=junc_info[lsv])
 
     if self.mem_profile:

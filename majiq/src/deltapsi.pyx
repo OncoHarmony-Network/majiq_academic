@@ -146,10 +146,11 @@ cdef void _core_deltapsi(object self):
         out_h5p.prior = prior_matrix
         out_h5p.experiment_names = [exps1, exps2]
         for lsv in list_of_lsv:
-            out_h5p.delta_psi(lsv.decode('utf-8')).add(lsv_type=lsv_type_dict[lsv], bins=out_postdpsi_d[lsv],
-                                       group_bins=[out_postpsi_d_1[lsv], out_postpsi_d_2[lsv]],
-                                       group_means=[out_mupsi_d_1[lsv], out_mupsi_d_2[lsv]],
-                                       junctions=junc_info[lsv])
+            out_h5p.delta_psi(lsv.decode('utf-8')).add(lsv_type=lsv_type_dict[lsv][0].decode('utf-8'),
+                                                       bins=out_postdpsi_d[lsv],
+                                                       group_bins=[out_postpsi_d_1[lsv], out_postpsi_d_2[lsv]],
+                                                       group_means=[out_mupsi_d_1[lsv], out_mupsi_d_2[lsv]],
+                                                       junctions=junc_info[lsv])
 
 
     if self.mem_profile:

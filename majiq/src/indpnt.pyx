@@ -176,8 +176,8 @@ cdef int _het_computation(object out_h5p, dict file_cond, list list_of_lsv, map[
                for z in range(nbins):
                    postpsi[x,y,z] = hetObj_ptr.post_psi[x][y][z]
 
-        out_h5p.heterogen(lsv.decode('utf-8')).add(lsv_type=lsv_type_dict[lsv], mu_psi=mupsi,mean_psi=postpsi,
-                                                   junctions=junc_info[lsv])
+        out_h5p.heterogen(lsv.decode('utf-8')).add(lsv_type=lsv_type_dict[lsv][0].decode('utf-8'), mu_psi=mupsi,
+                                                   mean_psi=postpsi, junctions=junc_info[lsv])
 
 cdef void _core_independent(object self):
 
