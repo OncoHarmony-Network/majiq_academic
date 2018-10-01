@@ -362,7 +362,7 @@ cdef _core_build(str transcripts, list file_list, object conf, object logger):
 
     n = gene_map.size()
     init_splicegraph(sg_filename, conf)
-    logger.info("Analize bamfiles")
+    logger.info("Reading bamfiles")
     _find_junctions(file_list, gene_map, gid_vec, conf, logger)
 
     logger.info("Detecting LSVs ngenes: %s " % n)
