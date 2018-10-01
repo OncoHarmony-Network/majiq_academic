@@ -103,7 +103,9 @@ namespace grimoire {
             if ((end - start) <= MAX_DENOVO_DIFFERENCE){
                 s1 << start ; s2 << end ;
                 key = s1.str() + "-" + s2.str() ;
-                ex1 = new Exon(start, end, in_db) ;
+                const int st1 = (inbound_j == nullptr) ? EMPTY_COORD : start ;
+                const int nd1 = (outbound_j == nullptr) ? EMPTY_COORD : end ;
+                ex1 = new Exon(st1, nd1, in_db) ;
                 ex2 = ex1 ;
                 exon_map_[key] = ex1 ;
 
