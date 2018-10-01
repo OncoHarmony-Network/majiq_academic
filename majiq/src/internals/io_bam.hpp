@@ -74,7 +74,7 @@ namespace io_bam{
             }
 
             int parse_read_into_junctions(bam_hdr_t *header, bam1_t *read) ;
-            void add_junction(string chrom, char strand, int start, int end, int read_pos) ;
+            void add_junction(string chrom, char strand, int start, int end, int read_pos, int first_offpos) ;
             int* get_junc_vec_summary() ;
             unsigned int get_junc_limit_index() { return junc_limit_index_ ; };
             int normalize_stacks(vector<float> vec, float sreads, int npos, float fitfunc_r, float pvalue_limit) ;

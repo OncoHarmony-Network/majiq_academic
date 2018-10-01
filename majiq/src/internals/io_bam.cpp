@@ -40,6 +40,8 @@ namespace io_bam {
             strn = (((read->core.flag & 0x10) ==(0x10 & is_read1(read)))
                     || ((read->core.flag & 0x10) == (0x00 & is_read2(read)))) ? '+' : '-' ;
         }
+//cout << strn << " " << read->core.flag << " " << read->id<<"\n" ;
+
         return (strn);
     }
 
@@ -98,9 +100,9 @@ namespace io_bam {
     }
 
 
-    void IOBam::add_junction(string chrom, char strand, int start, int end, int read_pos) {
+    void IOBam::add_junction(string chrom, char strand, int start, int end, int read_pos, int first_offpos) {
 
-        const unsigned int offset = start - (read_pos+ MIN_BP_OVERLAP) ;
+        const unsigned int offset = (first_offpos == -1) ? (start - (read_pos+ MIN_BP_OVERLAP)) : first_offpos ;
         if (offset >= eff_len_) return ;
         string key = chrom + ":" + strand + ":" + to_string(start) + "-" + to_string(end) ;
 
@@ -137,21 +139,27 @@ namespace io_bam {
 
         uint32_t *cigar = bam_get_cigar(read) ;
 
-        int off = 0;
+        int off = 0 ;
+        int first_offpos = -1 ;
+//cout << "read id: " << bam_get_qname(read) << "\n" ;
         for (int i = 0; i < n_cigar; ++i) {
             const char op = bam_cigar_op(cigar[i]);
             const int ol = bam_cigar_oplen(cigar[i]);
             if (op == BAM_CMATCH || op == BAM_CDEL ||  op == BAM_CEQUAL || op == BAM_CDIFF){
-                 off += ol;
+                 off += ol ;
             }
-            else if( op == BAM_CREF_SKIP && off >= MIN_BP_OVERLAP){
-                const int j_end = read->core.pos + off + ol +1;
-                const int j_start =  read->core.pos + off;
-//cout << "add junction " << j_start << j_end << "\n" ;
-                try {
-                    add_junction(chrom, _get_strand(read), j_start, j_end, read_pos);
-                } catch (const std::logic_error& e) {
-                    cout << "ERROR" << e.what() << '\n';
+            else if( op == BAM_CREF_SKIP ){
+                if (off >= MIN_BP_OVERLAP){
+                    const int j_end = read->core.pos + off + ol +1 ;
+                    const int j_start =  read->core.pos + off ;
+                    first_offpos  = (first_offpos == -1) ? (j_start - (read_pos+ MIN_BP_OVERLAP)) : first_offpos ;
+
+//cout << "add junction " << read_pos << ":: "<< j_start << "-" << j_end << "\n" ;
+                    try {
+                        add_junction(chrom, _get_strand(read), j_start, j_end, read_pos, first_offpos) ;
+                    } catch (const std::logic_error& e) {
+                        cout << "ERROR" << e.what() << '\n';
+                    }
                 }
                 off += ol ;
             }
