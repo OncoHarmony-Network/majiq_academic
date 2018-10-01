@@ -16,7 +16,7 @@
 #define MAX_DENOVO_DIFFERENCE 500
 #define MIN_INTRON_BINSIZE 1000
 #define MAX_TYPE_LENGTH 245
-
+#define NA_LSV = 'na'
 using namespace std ;
 //extern typedef vector<float> psi_distr_t ;
 typedef vector<float> psi_distr_t ;
@@ -343,8 +343,12 @@ namespace grimoire{
             LSV(){}
             LSV(Gene* gObj1, Exon* ex, bool ss): gObj_(gObj1){
                 const bool b = (gObj_->get_strand() == '+') ;
+
                 const string t = (ss != b) ? "t" : "s" ;
-                id_     = gObj_->get_id() + ":" + t + ":" + to_string(ex->get_start()) + "-" + to_string(ex->get_end()) ;
+                const string st = ex->get_start() == -1 ? NA_LSV : to_string(ex->get_start()) ;
+                const string end = ex->get_end() == -1 ? NA_LSV : to_string(ex->get_end()) ;
+                id_     = gObj_->get_id() + ":" + t + ":" + st + "-" + end ;
+
                 ir_ptr_ = nullptr ;
                 Intron * temp_ir = ss? ex->ob_irptr : ex->ib_irptr ;
                 if (temp_ir != nullptr )

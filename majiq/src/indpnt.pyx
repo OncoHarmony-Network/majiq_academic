@@ -211,9 +211,7 @@ cdef void _core_independent(object self):
     try:
         for stats_name in self.stats:
             stats_vec.push_back(stats_name.upper().encode('utf-8'))
-            # module_ = __import__('majiq.src.stats.' + stats_name.lower(), fromlist=stats_name.title())
-            # class_ = getattr(module_, stats_name.title())
-            # operator[stats_name] = class_()
+
     except ImportError:
         logger.error("The %s statistic is not one of the available statistics, ")
                      #"in  [ %s ]" % (stats_name, ' | '.join(all_stats)))
