@@ -144,6 +144,7 @@ class MatrixHdf5:
 
     @experiment_names.setter
     def experiment_names(self, ns):
+        ns = [[e.decode('utf-8') for e in es] for es in ns]
         arr = np.empty((2, max(len(n) for n in ns)), dtype=self.dt)
         arr.fill('')
         for i, n in enumerate(ns):
@@ -406,7 +407,7 @@ class Heterogen(MatrixHdf5):
         def add(self, **kwargs):
             """
             mu_psi: numpy array of two lists. one list for each condition.
-            junction_stats: 2d numpy matrix. Columns are stat flask values and a row for each junction.
+            junction_stats: 2d numpy matrix. Columns are stat flask_proj values and a row for each junction.
             mean_psi: 2d matrix
 
             :param kwargs:

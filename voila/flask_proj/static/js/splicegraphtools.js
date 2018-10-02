@@ -6,6 +6,8 @@ class SpliceGraphTools {
     }
 
     init() {
+        const gene = this.sgs.gene;
+
         // menu drop downs
         document.querySelector('.splice-graph-tools.tools-menu-btn').onclick = (event) => {
             event.preventDefault();
@@ -22,23 +24,14 @@ class SpliceGraphTools {
         };
 
         // header info
-        this.sgs.gene.then(gene => {
-            document.querySelector('.gene-header .gene-name').textContent = `Gene name: ${gene.name}; ${ gene.chromosome }:${ gene.strand }:${ gene.start }-${ gene.end };`;
-            document.querySelector('.gene-header .gene-id').textContent = `Gene ID: ${urlParams.get('gene_id')};`;
-            document.querySelector('.ucsc-gene').setAttribute('href', `http://genome.ucsc.edu/cgi-bin/hgTracks?db=${gene.genome}&position=${ gene.chromosome }:${ gene.start }-${ gene.end }`)
-        });
+        document.querySelector('.gene-header .gene-name').textContent = `Gene name: ${gene.name}; ${ gene.chromosome }:${ gene.strand }:${ gene.start }-${ gene.end };`;
+        document.querySelector('.gene-header .gene-id').textContent = `Gene ID: ${gene.id};`;
+        document.querySelector('.ucsc-gene').setAttribute('href', `http://genome.ucsc.edu/cgi-bin/hgTracks?db=${gene.genome}&position=${ gene.chromosome }:${ gene.start }-${ gene.end }`)
 
-        // populate splice graph selector groups
-        db_gene.createIndex({
-            index: {fields: ['_id']}
-        }).then(() => {
-            return db_gene.find({
-                selector: {
-                    _id: 'metadata'
-                },
-            })
-        }).then(results => {
-            const meta = results.docs[0];
+
+        json_ajax('/metadata', meta => {
+
+            // populate splice graph selector groups
             d3.select('.groups select')
                 .selectAll('option')
                 .data(meta.group_names)
@@ -47,21 +40,12 @@ class SpliceGraphTools {
                 .text(d => {
                     return d
                 });
-        });
 
-        // populate splice graph experiments when group is changed
-        document.querySelector('#groups').onchange = (event) => {
-            db_gene.createIndex({
-                index: {fields: ['_id']}
-            }).then(() => {
-                return db_gene.find({
-                    selector: {
-                        _id: 'metadata'
-                    },
-                })
-            }).then(results => {
+
+            // populate splice graph experiments when group is changed
+            document.querySelector('#groups').onchange = (event) => {
                 const sgs = JSON.parse(localStorage.getItem('splice_graphs'));
-                let exps = results.docs[0].experiment_names[event.target.selectedIndex];
+                let exps = meta.experiment_names[event.target.selectedIndex];
                 if (sgs)
                     exps = exps.filter(exp => {
                         return !sgs.some(sg => sg[1] === exp)
@@ -78,12 +62,12 @@ class SpliceGraphTools {
                     .text(d => d);
 
                 s.exit().remove();
+            };
 
-            });
-        };
+            // force change event to populate experiments on initial page load
+            SpliceGraphTools._populate_sg_form();
+        });
 
-        // force change event to populate experiments on initial page load
-        SpliceGraphTools._populate_sg_form();
 
         // submit event for splice graph selector
         document.querySelector('.splice-graph-form').onsubmit = (event) => {
@@ -166,13 +150,13 @@ class SpliceGraphTools {
 
             // highlight junctions and intron retentions when you mouse over them
             added_nodes
-                .filter(el => el.classList && (el.classList.contains('junction-grp') || el.classList.contains('intron-retention-grp')))
+                .filter(el => el.classList && (el.classList.contains('junction-grp') || el.classList.contains('intron-retention-grp') || el.classList.contains('exon-grp')))
                 .forEach(el => {
                     const datum = d3.select(el).datum();
                     el.onmouseover = () => {
                         const coords = document.querySelector('.coordinates');
                         if (!coords.classList.contains('select')) {
-                            coords.innerHTML = `Coordinates: ${datum.start}-${datum.end}; Length: ${datum.end - datum.start}`;
+                            coords.innerHTML = `Coordinates: ${datum.start}-${datum.end}; Length: ${datum.end - datum.start + 1}`;
 
                             el.classList.add('mouseover');
                             document.querySelectorAll('.junction-grp, .intron-retention-grp').forEach(el => {

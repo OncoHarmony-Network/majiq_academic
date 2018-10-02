@@ -318,7 +318,7 @@ class HeatMap {
         });
 
         g.append('g')
-            .attr('class', 'flask-names')
+            .attr('class', 'flask_proj-names')
             .selectAll('text')
             .data(['dpsi'].concat(metadata.stat_names))
             .enter()

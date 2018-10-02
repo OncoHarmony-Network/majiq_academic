@@ -1,0 +1,74 @@
+{% extends 'base_summary.html' %}
+
+{% block script %}
+    <script src="{{ url_for('static', filename='js/lsvtools.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/summary.js') }}"></script>
+    <script>
+        json_ajax('{{ url_for("nav", gene_id=gene_id) }}', json => {
+            document.querySelector('.prev-gene').addEventListener('click', () => {
+                window.location.href = json.prev;
+            });
+
+            document.querySelector('.next-gene').addEventListener('click', () => {
+                window.location.href = json.next;
+            });
+        });
+
+        json_ajax('{{ url_for("splice_graph", gene_id=gene_id) }}', json => {
+            const sgs = new SpliceGraphs('.splice-graph-container', {
+                remove_img: '{{ url_for('static', filename='img/remove.svg')}}',
+                gene: json
+            });
+            new SpliceGraphTools(sgs);
+            sgs.init_create()
+        });
+
+
+        new MutationObserver(mutation_list => {
+            json_ajax('{{ url_for("lsv_data") }}', lsv_data => {
+                const lsv = new Lsv(lsv_data);
+                mutation_list
+                    .map(mutation => mutation.addedNodes
+                        .forEach(node => {
+                            node.querySelectorAll('.lsv-cartoon')
+                                .forEach(c => lsv.cartoon(c));
+                            node.querySelectorAll('.lsv-single-compact-percentiles')
+                                .forEach(c => lsv.draw_lsv_compact_stack_bars(c))
+                        })
+                    );
+            })
+        })
+            .observe(document.querySelector('#results tbody'), {
+                childList: true,
+            });
+
+        $('#results').DataTable({
+            processing: true,
+            serverSide: true,
+            ajax: {
+                url: '{{ url_for('psi', gene_id=gene_id) }}',
+                type: 'POST'
+            }
+        });
+    </script>
+{% endblock %}
+
+{% block bottom %}
+    <div class="lsv-container">
+        <div>
+            <table id="results" class="pure-table">
+                <thead>
+                <tr>
+                    <th>Highlight</th>
+                    <th>LSV ID</th>
+                    <th>LSV Type</th>
+                    <th>Ψ per Junction</th>
+                    <th>Links</th>
+                </tr>
+                </thead>
+                <tbody>
+                </tbody>
+            </table>
+        </div>
+    </div>
+{% endblock %}

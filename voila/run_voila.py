@@ -7,13 +7,14 @@ import time
 import voila.constants as constants
 from voila.api import SpliceGraph, Matrix
 from voila.api.matrix_hdf5 import lsv_id_to_gene_id
+from voila.config import Config
 from voila.exceptions import VoilaException, CanNotFindVoilaFile
+from voila.flask_proj.views import run_service
 from voila.processes import VoilaPool, VoilaQueue
 from voila.utils.utils_voila import create_if_not_exists
 from voila.utils.voila_log import voila_log
 from voila.view.deltapsi import DeltaPsi
 from voila.view.heterogen import Heterogen
-from voila.view.psi import Psi
 from voila.view.splice_graph import RenderSpliceGraphs
 
 
@@ -233,7 +234,7 @@ het_parser = new_subparser()
 # subparsers
 subparsers = parser.add_subparsers(help='')
 subparsers.add_parser('splice-graph', parents=[splice_graph]).set_defaults(func=RenderSpliceGraphs)
-subparsers.add_parser('psi', parents=[splice_graph, psi_parser]).set_defaults(func=Psi)
+subparsers.add_parser('psi', parents=[splice_graph, psi_parser]).set_defaults(func=run_service)
 subparsers.add_parser('deltapsi', parents=[splice_graph, psi_parser, dpsi_parser]).set_defaults(func=DeltaPsi)
 subparsers.add_parser('heterogen',
                       parents=[splice_graph, psi_parser, dpsi_parser, het_parser]).set_defaults(
@@ -269,14 +270,16 @@ def main():
 
     log.info('Voila v{}'.format(constants.VERSION))
 
-    VoilaPool(args.nproc)
-    VoilaQueue(nprocs=args.nproc)
+    # VoilaPool(args.nproc)
+    # VoilaQueue(nprocs=args.nproc)
 
     try:
         file_versions()
         gene_names()
         gene_ids()
         lsv_ids()
+
+        Config.write(args)
 
         args.func(args)
 
@@ -300,7 +303,7 @@ def main():
         log.exception(e)
         exit(2)
 
-    VoilaPool().close()
+    # VoilaPool().close()
 
 
 if __name__ == '__main__':

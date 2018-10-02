@@ -61,3 +61,5 @@ VOILA_FILE_VERSION = 6
 NA_LSV = 'na'
 
 EXEC_DIR = os.path.dirname(os.path.abspath(voila.__file__))
+
+CONFIG_FILE = '/tmp/voila.ini'

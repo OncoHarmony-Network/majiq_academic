@@ -3,7 +3,7 @@ import multiprocessing
 import gunicorn.app.base
 from gunicorn.six import iteritems
 
-from voila.flask.index import app
+from voila.flask_proj.views import app
 
 
 def number_of_workers():

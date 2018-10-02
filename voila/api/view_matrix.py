@@ -17,13 +17,13 @@ from voila.vlsv import get_expected_dpsi, is_lsv_changing, matrix_area, get_expe
 def unpack_means(value):
     if np.size(value, 0) == 1:
         value = np.append(value, np.array(1 - value[0]))
-    return value
+    return value.tolist()
 
 
 def unpack_bins(value):
     if np.size(value, 0) == 1:
         value = np.append(value, [np.flip(value[-1], 0)], axis=0)
-    return value
+    return value.tolist()
 
 
 class ViewMatrix(ABC):
@@ -111,9 +111,8 @@ class ViewMatrix(ABC):
 
 
 class ViewPsi(Psi, ViewMatrix):
-    def __init__(self, args):
-        super().__init__(args.voila_files[0])
-        self.args = args
+    def __init__(self, voila_file):
+        super().__init__(voila_file)
 
     class _ViewPsi(Psi._Psi, ViewMatrix._ViewMatrix):
         def get_all(self):
@@ -144,7 +143,7 @@ class ViewPsi(Psi, ViewMatrix):
         @property
         def group_means(self):
             group_names = self.matrix_hdf5.group_names
-            yield group_names[0], self.means
+            yield group_names[0], list(self.means)
 
         # @property
         # def group_means(self):
@@ -229,7 +228,7 @@ class ViewDeltaPsi(DeltaPsi, ViewMatrix):
         def group_means(self):
             group_names = self.matrix_hdf5.group_names
             for group_name, means in zip(group_names, self.get('group_means')):
-                yield group_name, means
+                yield group_name, list(means)
 
         @property
         def excl_incl(self):

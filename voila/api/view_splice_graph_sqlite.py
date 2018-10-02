@@ -1,16 +1,19 @@
 from voila.api import SpliceGraph
+from voila.config import Config
+
+config = Config()
+splice_graph_file = config.splice_graph_file
 
 
 class ViewSpliceGraph(SpliceGraph):
-    def __init__(self, args):
-        self.args = args
-        super().__init__(args.splice_graph)
+    def __init__(self):
+        super().__init__(splice_graph_file)
 
     @property
     def metadata(self):
         query = self.conn.execute('SELECT name FROM experiment')
         experiment_names = [x for x, in query.fetchall()]
-        return {'experiment_names': [experiment_names], 'group_names': ['Splice Graph'], '_id': 'metadata'}
+        return {'experiment_names': [experiment_names], 'group_names': ['Splice Graph']}
 
     @staticmethod
     def exon_start(exon):
@@ -37,7 +40,7 @@ class ViewSpliceGraph(SpliceGraph):
 
     def view_gene(self, gene):
         yield from gene._asdict().items()
-        yield '_id', gene.id
+        yield 'id', gene.id
         yield 'start', self.gene_start(gene)
         yield 'end', self.gene_end(gene)
 
