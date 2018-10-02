@@ -203,7 +203,7 @@ cdef void _core_independent(object self):
     logger = majiq_logger.get_logger("%s/het_majiq.log" % self.outDir, silent=self.silent,
                                      debug=self.debug)
 
-    logger.info("Majiq deltapsi heterogeneous v%s" % VERSION)
+    logger.info("Majiq deltapsi heterogeneous v%s-%s" % (VERSION, get_git_version()))
     logger.info("Command: %s" % " ".join(sys.argv))
     logger.info("GROUP1: %s" % self.files1)
     logger.info("GROUP2: %s" % self.files2)

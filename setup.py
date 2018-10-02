@@ -1,10 +1,22 @@
 from setuptools import setup, find_packages
 from distutils.core import Extension
 from Cython.Build import cythonize
-from majiq.src.constants import VERSION
+from majiq.src.constants import VERSION, store_git_version
 import numpy
 import sys
 import os
+
+try:
+    from git import Repo
+
+    repo = Repo('./')
+    assert not repo.bare
+    sha = repo.head.object.hexsha
+    short_sha = repo.git.rev_parse(sha, short=7)
+    store_git_version(short_sha)
+
+except Exception as e:
+    print ("Problem was encounted during it hash extraction. Hash value disabled: %s" % e)
 
 # from distutils.command.build_ext import show_compilers
 #

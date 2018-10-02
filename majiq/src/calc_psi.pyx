@@ -56,7 +56,7 @@ cdef _core_calcpsi(object self):
     majiq_logger.create_if_not_exists(self.outDir)
 
     logger = majiq_logger.get_logger("%s/psi_majiq.log" % self.outDir, silent=self.silent, debug=self.debug)
-    logger.info("Majiq psi v%s" % VERSION)
+    logger.info("Majiq psi v%s-%s" % (VERSION, get_git_version()))
     logger.info("Command: %s" % " ".join(sys.argv))
     logger.info("Running Psi ...")
     logger.info("GROUP: %s" % self.files)

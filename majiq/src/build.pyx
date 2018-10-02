@@ -412,7 +412,7 @@ class Builder(BasicPipeline):
     def builder(self, majiq_config):
 
         logger = majiq_logger.get_logger("%s/majiq.log" % majiq_config.outDir, silent=False, debug=self.debug)
-        logger.info("Majiq Build v%s" % VERSION)
+        logger.info("Majiq Build v%s-%s" % (VERSION, get_git_version()))
         logger.info("Command: %s" % " ".join(sys.argv))
 
         _core_build(self.transcripts, majiq_config.sam_list, majiq_config, logger)

@@ -1,3 +1,4 @@
+import os
 VERSION = '2.0'
 
 JUNC_FILE_FORMAT = 'sjdb'
@@ -42,6 +43,8 @@ WEIGTHS_AUTO = 'auto'
 WEIGTHS_NONE = 'none'
 MINVAL = 1e-300
 
+GIT_VERSION_FILE = 'git_version'
+
 
 all_stats = ["TNOM", "INFOSCORE", "WILCOXON"]
 
@@ -81,3 +84,21 @@ def get_weights_filename(outdir, name):
 
 def get_tmp_psisample_file(outdir, name):
     return "%s/%s.psisamples.tmp" %(outdir, name)
+
+
+def store_git_version(short_sha):
+
+    direc = os.path.dirname(__file__)
+    with open('%s/../data/%s' % (direc, GIT_VERSION_FILE), 'w+') as ofp:
+        ofp.write('%s\n' % short_sha)
+
+
+def get_git_version():
+    direc = os.path.dirname(__file__)
+    try:
+        with open('%s/../data/%s' % (direc, GIT_VERSION_FILE), 'r') as ofp:
+            ver = ofp.readline().strip()
+    except FileNotFoundError:
+        ver = '<hash_not_found>'
+
+    return ver
