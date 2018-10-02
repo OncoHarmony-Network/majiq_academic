@@ -45,7 +45,7 @@ def main():
     parser = argparse.ArgumentParser(description="MAJIQ is a suite of tools for the Splicing Events "
                                                  "and Alternative Splicing Quantification.")
 
-    parser.add_argument('-v', action='version', version=VERSION)
+    parser.add_argument('-v', action='version', version="%s-%s" % (VERSION, get_git_version()))
 
 
     common = new_subparser()
