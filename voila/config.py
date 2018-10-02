@@ -18,6 +18,7 @@ class Config:
 
     @staticmethod
     def write(args):
+        print('hey')
         config = configparser.ConfigParser()
         files = 'FILES'
         config.add_section(files)

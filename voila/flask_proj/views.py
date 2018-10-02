@@ -13,19 +13,19 @@ from voila.flask_proj.html import Html
 
 app = Flask(__name__)
 app.secret_key = os.urandom(16)
-config = Config()
-voila_file = config.voila_file
-splice_graph_file = config.splice_graph_file
-
-with Matrix(voila_file) as h:
-    meta = {
-        'group_names': h.group_names.tolist(),
-        'experiment_names': h.experiment_names.tolist()
-    }
 
 
 def run_service(args):
     serve(app, listen='127.0.0.1:55555')
+
+
+def get_meta():
+    config = Config()
+    with Matrix(config.voila_file) as h:
+        return {
+            'group_names': h.group_names.tolist(),
+            'experiment_names': h.experiment_names.tolist()
+        }
 
 
 @app.route('/gene/<gene_id>/')
@@ -40,7 +40,9 @@ def index():
 
 @app.route('/index-table', methods=('POST',))
 def index_table():
-    with SpliceGraph(splice_graph_file) as sg, Matrix(voila_file) as p:
+    config = Config()
+    meta = get_meta()
+    with SpliceGraph(config.splice_graph_file) as sg, Matrix(config.voila_file) as p:
         records = []
 
         lsv_ids = list(p.lsv_ids())
@@ -80,7 +82,8 @@ def index_table():
 
 @app.route('/nav/<gene_id>', methods=('POST',))
 def nav(gene_id):
-    with Matrix(voila_file) as h:
+    config = Config()
+    with Matrix(config.voila_file) as h:
         gene_ids = list(sorted(h.gene_ids))
         idx = bisect(gene_ids, gene_id)
 
@@ -92,11 +95,12 @@ def nav(gene_id):
 
 @app.route('/metadata', methods=('POST',))
 def metadata():
-    return jsonify(meta)
+    return jsonify(get_meta())
 
 
 @app.route('/splice-graph/<gene_id>', methods=('POST', 'GET'))
 def splice_graph(gene_id):
+    meta = get_meta()
     if request.method == 'GET':
         return redirect(url_for('index'))
 
@@ -109,8 +113,9 @@ def splice_graph(gene_id):
 @app.route('/psi/<gene_id>', methods=('POST',))
 def psi(gene_id):
     records = []
-
-    with Matrix(voila_file) as m:
+    config = Config()
+    meta = get_meta()
+    with Matrix(config.voila_file) as m:
         lsv_ids = list(m.lsv_ids(gene_ids=[gene_id]))
         for lsv_id in lsv_ids:
             lsv = m.psi(lsv_id)
@@ -138,6 +143,7 @@ def psi(gene_id):
 
 @app.route('/psi-splice-graphs', methods=('POST',))
 def psi_splice_graphs():
+    meta = get_meta()
     try:
         sg_init = session['psi_init_splice_graphs']
     except KeyError:
@@ -156,7 +162,9 @@ def psi_splice_graphs():
 @app.route('/lsv-data', methods=('POST',))
 @app.route('/lsv-data/<gene_id>', methods=('POST',))
 def lsv_data(gene_id=None):
-    with SpliceGraph(splice_graph_file) as sg, ViewPsi(voila_file) as m:
+    config = Config()
+    meta = get_meta()
+    with SpliceGraph(config.splice_graph_file) as sg, ViewPsi(config.voila_file) as m:
         exon_numbers = {}
 
         if gene_id:

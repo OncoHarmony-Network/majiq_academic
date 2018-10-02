@@ -1,12 +1,11 @@
 from voila.api import SpliceGraph
 from voila.config import Config
 
-config = Config()
-splice_graph_file = config.splice_graph_file
-
 
 class ViewSpliceGraph(SpliceGraph):
     def __init__(self):
+        config = Config()
+        splice_graph_file = config.splice_graph_file
         super().__init__(splice_graph_file)
 
     @property
