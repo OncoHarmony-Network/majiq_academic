@@ -218,7 +218,7 @@ cdef _find_junctions(list file_list, map[string, Gene*]& gene_map, vector[string
     cdef int k=conf.k, m=conf.m
     cdef float pvalue_limit=conf.pvalue_limit
     cdef unsigned int min_experiments = 1 if conf.min_exp == -1 else conf.min_exp
-    cdef unsigned int eff_len = conf.readLen - 2*MIN_BP_OVERLAP
+    cdef unsigned int eff_len = conf.readLen - 2*MIN_BP_OVERLAP + 1
     cdef bint ir = conf.ir
 
     cdef int i, j
