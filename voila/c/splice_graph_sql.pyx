@@ -5,6 +5,7 @@ from libcpp.string cimport string
 
 cdef extern from "sqlite3.h":
     int SQLITE_BUSY
+    int SQLITE_LOCKED
     struct sqlite3
     int sqlite3_open(const char *, sqlite3 **) nogil
     int sqlite3_exec(sqlite3*, const char *, int (*)(void*, int, char**, char**), void *, char **) nogil
@@ -14,7 +15,6 @@ cdef extern from "sqlite3.h":
 
 cdef:
     int rc
-    char *zErrMsg = <char *> 0
 
     char *begin_trans = "PRAGMA foreign_keys = ON;BEGIN DEFERRED TRANSACTION;"
     char *commit = "COMMIT;"
@@ -64,10 +64,13 @@ cdef int callback(void *NotUsed, int argc, char ** argv, char ** azColName) nogi
     return 0
 
 cdef int exec_db(sqlite3 *db, char *sql) nogil:
-    while True:
+    cdef char *zErrMsg
+    rc = SQLITE_BUSY
+
+    while rc == SQLITE_BUSY or rc == SQLITE_LOCKED:
         rc = sqlite3_exec(db, sql, callback, <void *> 0, &zErrMsg)
-        if rc != SQLITE_BUSY:
-            break
+        if zErrMsg:
+            sqlite3_free(zErrMsg)
 
     if rc:
         fprintf(stderr, "exec_db: %s: %d\n", zErrMsg, rc)
@@ -100,17 +103,17 @@ cdef void close_db(sqlite3 *db) nogil:
     if rc:
         fprintf(stderr, 'close: %d\n', rc)
 
-cdef void experiment(sqlite3 *db, string name) nogil:
-    cdef:
-        int arg_len
-        int rm_chars_len
-        char *sql
-
-    arg_len = name.length()
-    rm_chars_len = 2
-    sql = <char *> malloc(sizeof(char) * (strlen(exp_insert) + arg_len - rm_chars_len + 1))
-    exec_db(db, sql)
-    free(sql)
+# cdef void experiment(sqlite3 *db, string name) nogil:
+#     cdef:
+#         int arg_len
+#         int rm_chars_len
+#         char *sql
+#
+#     arg_len = name.length()
+#     rm_chars_len = 2
+#     sql = <char *> malloc(sizeof(char) * (strlen(exp_insert) + arg_len - rm_chars_len + 1))
+#     exec_db(db, sql)
+#     free(sql)
 
 cdef void gene(sqlite3 *db, string id, string name, string strand, string chromosome) nogil:
     cdef:
@@ -135,8 +138,10 @@ cdef void alt_gene(sqlite3 *db, string gene_id, int coordinate, char *sql_string
 
     arg_len = gene_id.length() + int_len(coordinate)
     rm_chars_len = 2 * 2
+
     sql = <char *> malloc(sizeof(char) * (strlen(sql_string) + arg_len - rm_chars_len + 1))
     sprintf(sql, sql_string, gene_id.c_str(), coordinate)
+
     exec_db(db, sql)
     free(sql)
 
@@ -156,8 +161,10 @@ cdef void exon(sqlite3 *db, string gene_id, int start, int end, int annotated_st
     arg_len = gene_id.length() + int_len(start) + int_len(end) + int_len(annotated_start) + int_len(
         annotated_end) + int_len(annotated)
     rm_chars_len = 6 * 2
+
     sql = <char *> malloc(sizeof(char) * (strlen(exon_insert) + arg_len - rm_chars_len + 1))
     sprintf(sql, exon_insert, gene_id.c_str(), start, end, annotated_start, annotated_end, annotated)
+
     exec_db(db, sql)
     free(sql)
 
@@ -169,8 +176,10 @@ cdef void inter_exon(sqlite3 *db, string gene_id, int start, int end, bint annot
 
     arg_len = gene_id.length() + int_len(start) + int_len(end) + int_len(annotated)
     rm_chars_len = 4 * 2
+
     sql = <char *> malloc(sizeof(char) * (strlen(sql_string) + arg_len - rm_chars_len + 1))
     sprintf(sql, sql_string, gene_id.c_str(), start, end, annotated)
+
     exec_db(db, sql)
     free(sql)
 

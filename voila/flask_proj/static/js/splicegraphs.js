@@ -2,6 +2,7 @@ class SpliceGraphs {
     constructor(container, opts) {
         this.container_selector = container;
         this.remove_img = opts.remove_img;
+        this.remove_fn = opts.remove_fn;
         this.gene = opts.gene;
         this.lsv_ids = [];
         this.zoom = 1;
@@ -21,6 +22,8 @@ class SpliceGraphs {
         // splice_graph_update sg container dataset
         this.container.dataset.geneId = this.gene_id;
         this.container.dataset.zoom = '1';
+
+        this.mutation_observer();
     }
 
     get container() {
@@ -671,7 +674,7 @@ class SpliceGraphs {
         sg.classList.add('splice-graph');
 
         this.splice_graph_init(sg);
-        send_ajax('/psi-splice-graphs', [sg.dataset.group, sg.dataset.experiment]);
+        send_ajax('/psi-splice-graphs', {'add': [sg.dataset.group, sg.dataset.experiment]});
 
         // if there's a scroll bar, then run update one more time to remove it.
         if (document.querySelector('.top').scrollWidth > document.querySelector('.top').clientWidth)
@@ -679,9 +682,9 @@ class SpliceGraphs {
     }
 
     init_create() {
-        json_ajax('/psi-splice-graphs', json => {
-            json.forEach(x => this.create(x[0], x[1]))
-        })
+        return json_ajax('/psi-splice-graphs')
+            .then(json => json.forEach(x => this.create(x[0], x[1])))
+            .then(() => this)
     }
 
     highlight(highlight, weighted) {
@@ -819,6 +822,70 @@ class SpliceGraphs {
             this.style_junctions(sg, gene, lsvs);
             this.style_intron_retention(sg, gene, lsvs);
         });
+    }
+
+    mutation_observer() {
+        new MutationObserver(mutation_list => {
+
+            const added_nodes = Array.from(mutation_list)
+                .reduce((acc, curr) => acc.concat(Array.from(curr.addedNodes)), []);
+
+            // highlight junctions and intron retentions when you mouse over them
+            added_nodes
+                .filter(el => el.classList && (el.classList.contains('junction-grp') || el.classList.contains('intron-retention-grp') || el.classList.contains('exon-grp')))
+                .forEach(el => {
+                    const datum = d3.select(el).datum();
+                    el.onmouseover = () => {
+                        const coords = document.querySelector('.coordinates');
+                        if (!coords.classList.contains('select')) {
+                            coords.innerHTML = `Coordinates: ${datum.start}-${datum.end}; Length: ${datum.end - datum.start + 1}`;
+
+                            el.classList.add('mouseover');
+                            document.querySelectorAll('.junction-grp, .intron-retention-grp').forEach(el => {
+                                d3.select(el)
+                                    .classed('mouseover-filter', d => d.start !== datum.start || d.end !== datum.end)
+                            });
+                        }
+                    };
+
+                    el.onmouseout = () => {
+                        const coords = document.querySelector('.coordinates');
+                        if (!coords.classList.contains('select'))
+                            coords.innerHTML = null;
+
+                        el.classList.remove('mouseover');
+                        document.querySelectorAll('.junction-grp, .intron-retention-grp').forEach(el => el.classList.remove('mouseover-filter'));
+                    };
+
+                    el.onclick = () => {
+                        const click_new = !el.classList.contains('select');
+
+                        document.querySelectorAll('.select-filter, .select').forEach(x => {
+                            x.classList.remove('select-filter');
+                            x.classList.remove('select')
+                        });
+
+                        if (click_new) {
+                            el.dispatchEvent(new Event('mouseover'));
+                            document.querySelectorAll('.mouseover-filter').forEach(el => el.classList.add('select-filter'));
+                            el.classList.add('select');
+                            document.querySelector('.coordinates').classList.add('select');
+                            this.copy_select_ucsc(el)
+                        } else {
+                            el.dispatchEvent(new Event('mouseout'));
+                        }
+                    }
+                });
+
+            // add click event to remove icon
+            added_nodes
+                .filter(el => el.classList && el.classList.contains('splice-graph-remove'))
+                .forEach(el => el.onclick = this.remove_fn)
+        })
+            .observe(document.querySelector(this.container_selector), {
+                childList: true,
+                subtree: true
+            });
     }
 
     update(duration) {

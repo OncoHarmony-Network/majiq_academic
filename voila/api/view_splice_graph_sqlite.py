@@ -26,13 +26,6 @@ class ViewSpliceGraph(SpliceGraph):
             return exon.start + 10
         return exon.end
 
-    def genes(self):
-        if self.args.gene_ids:
-            for gene_id in self.args.gene_ids:
-                yield self.gene(gene_id)
-        else:
-            yield from super().genes()
-
     def gene_ids(self):
         query = self.conn.execute('SELECT id FROM gene')
         return [x for x, in query.fetchall()]

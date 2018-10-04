@@ -460,7 +460,6 @@ class Lsv {
 
 
             const groups = [this.lsvs[lsv_id]];
-            console.log(this.lsvs);
             // Calculate origins_coords
             const header_height = 0; // canvas.group_height*.1;
             const num_groups = groups.length;

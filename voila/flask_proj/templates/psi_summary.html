@@ -4,7 +4,7 @@
     <script src="{{ url_for('static', filename='js/lsvtools.js') }}"></script>
     <script src="{{ url_for('static', filename='js/summary.js') }}"></script>
     <script>
-        json_ajax('{{ url_for("nav", gene_id=gene_id) }}', json => {
+        json_ajax('{{ url_for("nav", gene_id=gene_id) }}').then(json => {
             document.querySelector('.prev-gene').addEventListener('click', () => {
                 window.location.href = json.prev;
             });
@@ -14,33 +14,48 @@
             });
         });
 
-        json_ajax('{{ url_for("splice_graph", gene_id=gene_id) }}', json => {
-            const sgs = new SpliceGraphs('.splice-graph-container', {
+        json_ajax('{{ url_for("splice_graph", gene_id=gene_id) }}').then(gene => {
+            new SpliceGraphs('.splice-graph-container', {
                 remove_img: '{{ url_for('static', filename='img/remove.svg')}}',
-                gene: json
-            });
-            new SpliceGraphTools(sgs);
-            sgs.init_create()
+                remove_fn: event => {
+                    const sg = event.target.closest('.splice-graph');
+                    send_ajax('{{ url_for('psi_splice_graphs') }}', {'remove': [sg.dataset.group, sg.dataset.experiment]})
+                        .then(() => {
+                            sg.remove();
+                            SpliceGraphTools._populate_sg_form();
+                        });
+                },
+                gene: gene
+            })
+                .init_create()
+                .then(s => new SpliceGraphTools(s))
         });
 
 
         new MutationObserver(mutation_list => {
-            json_ajax('{{ url_for("lsv_data") }}', lsv_data => {
+            json_ajax('{{ url_for("lsv_data") }}').then(lsv_data => {
                 const lsv = new Lsv(lsv_data);
+                const violin = new Violin(lsv_data.lsvs);
                 mutation_list
                     .map(mutation => mutation.addedNodes
                         .forEach(node => {
                             node.querySelectorAll('.lsv-cartoon')
                                 .forEach(c => lsv.cartoon(c));
                             node.querySelectorAll('.lsv-single-compact-percentiles')
-                                .forEach(c => lsv.draw_lsv_compact_stack_bars(c))
+                                .forEach(c => lsv.draw_lsv_compact_stack_bars(c));
+                            node.querySelectorAll('.psi-violin-plot')
+                                .forEach(s => {
+                                    violin.psi(s);
+                                    $(s).hide()
+                                })
                         })
                     );
-            })
+            });
         })
             .observe(document.querySelector('#results tbody'), {
                 childList: true,
             });
+
 
         $('#results').DataTable({
             processing: true,
@@ -50,6 +65,15 @@
                 type: 'POST'
             }
         });
+
+        $('#results tbody')
+            .on('click', '.psi-violin-plot, .lsv-single-compact-percentiles', event => {
+                const parent = event.target.closest('td');
+                const violin = parent.querySelector('.psi-violin-plot');
+                const compact = parent.querySelector('.lsv-single-compact-percentiles');
+                $(violin).toggle();
+                $(compact).toggle();
+            })
     </script>
 {% endblock %}
 

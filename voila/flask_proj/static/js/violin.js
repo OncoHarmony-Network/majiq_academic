@@ -1,6 +1,6 @@
 class Violin {
-    constructor(db) {
-        this.db = db;
+    constructor(violin_data) {
+        this.data = violin_data;
         this.violin_width = 50;
         this.violin_pad = 5;
         this.violin_height = 135;
@@ -31,38 +31,38 @@ class Violin {
     // }
 
     psi(svg) {
-        this.db.get(svg.closest('tr').dataset.lsvId)
-            .then(results => {
-                d3.select(svg).selectAll('*').remove();
-                this.violin_count = results.junctions.length;
-                svg.setAttribute('height', this.svg_height);
-                svg.setAttribute('width', this.svg_width);
+        d3.select(svg).selectAll('*').remove();
+        const lsv_id = svg.dataset.lsvId;
+        const data = this.data[lsv_id];
 
-                const group = svg.dataset.group;
-                const violin_data = results.group_bins[group];
-                const color = new Colors();
-                const g = d3.select(svg)
-                    .append('g')
-                    .attr('transform', `translate(${this.y_axis_width}, ${this.top_padding})`);
+        this.violin_count = data.junctions.length;
+        svg.setAttribute('height', this.svg_height);
+        svg.setAttribute('width', this.svg_width);
 
-                const hist = g
-                    .append('g')
-                    .attr('class', 'histograms');
+        const group = svg.dataset.group;
+        const violin_data = data.group_bins[group];
+        const color = new Colors();
+        const g = d3.select(svg)
+            .append('g')
+            .attr('transform', `translate(${this.y_axis_width}, ${this.top_padding})`);
 
-                this.draw_histograms(hist, violin_data);
+        const hist = g
+            .append('g')
+            .attr('class', 'histograms');
 
-                hist
-                    .selectAll('.violin')
-                    // .attr('stroke', (d, i) => color.brewer(i))
-                    .attr('stroke', null)
-                    .attr('stroke-width', 1)
-                    .attr('fill', (d, i) => color.brewer(i))
-                    .attr('fill-opacity', 1);
+        this.draw_histograms(hist, violin_data);
 
-                this.draw_x_axis(g, results.group_means[group]);
-                this.draw_psi_y_axis(g);
-                this.box_plots(g, results.group_bins[group])
-            })
+        hist
+            .selectAll('.violin')
+            // .attr('stroke', (d, i) => color.brewer(i))
+            .attr('stroke', null)
+            .attr('stroke-width', 1)
+            .attr('fill', (d, i) => color.brewer(i))
+            .attr('fill-opacity', 1);
+
+        this.draw_x_axis(g, data.group_means[group]);
+        this.draw_psi_y_axis(g);
+        this.box_plots(g, data.group_bins[group])
     }
 
     deltapsi(svg) {
