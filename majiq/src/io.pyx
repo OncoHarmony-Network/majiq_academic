@@ -413,20 +413,22 @@ cdef list _extract_lsv_summary(list files, int minnonzero, int min_reads, dict t
                 lsv_types[lsv_id][1] += 1
                 if xx[0] == pre_lsv:
                     lsv_t = lsv_t or (xx[3] >=min_reads and xx[4] >= minnonzero)
+                    # if lsv_id == b'ENSMUSG00000032735:t:61826501-61826559' : print (lsv_t)
                     if epsi is not None:
                         epsi_t.append(xx[3])
                 else:
                     pre_lsv = lsv_id
                     lsv_t = (xx[3] >=min_reads and xx[4] >= minnonzero)
-                    try:
-                        lsv_list[pre_lsv] += int(lsv_t)
-                        if epsi is not None:
-                            epsi[lsv_id] += np.array(epsi_t)
-                    except KeyError:
 
-                        lsv_list[pre_lsv] = int(lsv_t)
-                        if epsi is not None:
-                            epsi[lsv_id] = np.array(epsi_t)
+                try:
+                    lsv_list[pre_lsv] += int(lsv_t)
+                    if epsi is not None:
+                        epsi[lsv_id] += np.array(epsi_t)
+                except KeyError:
+
+                    lsv_list[pre_lsv] = int(lsv_t)
+                    if epsi is not None:
+                        epsi[lsv_id] = np.array(epsi_t)
                     epsi_t = []
 
         junc_info.update(lsv_junc_info)
@@ -439,6 +441,7 @@ cdef list _extract_lsv_summary(list files, int minnonzero, int min_reads, dict t
             epsi[xx][np.isnan(epsi[xx])] = 1.0 / nfiles
 
     for xx, yy in lsv_list.items():
+        if xx ==  b'ENSMUSG00000032735:t:61826501-61826559' : print ("MMM::", yy)
         if yy >= percent:
             lsv_id_list.append(xx)
         junc_info[xx] = np.array(junc_info[xx])
@@ -461,6 +464,8 @@ cdef list _extract_lsv_summary_old(list files, int minnonzero, int min_reads, ob
         percent = nfiles / 2
         percent = percent + 1 if nfiles % 2 != 0 else percent
     percent = min(int(percent), nfiles)
+
+
 
     for fidx, ff in enumerate(files):
         if not os.path.isfile(ff):

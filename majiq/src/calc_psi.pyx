@@ -87,7 +87,7 @@ cdef _core_calcpsi(object self):
 
         with gil:
             lsv = list_of_lsv[i]
-            # logger.info("2222 Event %s - %s" %(lsv_id, lsv_type_dict[lsv]))
+            # logger.info("2222 Event %s - %s" %(lsv, lsv_type_dict[lsv][0]))
             if i % loop_step == 0 :
                 print ("Event %s/%s" %(i, nlsv))
 
