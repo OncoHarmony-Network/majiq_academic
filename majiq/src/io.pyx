@@ -413,7 +413,6 @@ cdef list _extract_lsv_summary(list files, int minnonzero, int min_reads, dict t
                 lsv_types[lsv_id][1] += 1
                 if xx[0] == pre_lsv:
                     lsv_t = lsv_t or (xx[3] >=min_reads and xx[4] >= minnonzero)
-                    # if lsv_id == b'ENSMUSG00000032735:t:61826501-61826559' : print (lsv_t)
                     if epsi is not None:
                         epsi_t.append(xx[3])
                 else:
@@ -441,7 +440,6 @@ cdef list _extract_lsv_summary(list files, int minnonzero, int min_reads, dict t
             epsi[xx][np.isnan(epsi[xx])] = 1.0 / nfiles
 
     for xx, yy in lsv_list.items():
-        if xx ==  b'ENSMUSG00000032735:t:61826501-61826559' : print ("MMM::", yy)
         if yy >= percent:
             lsv_id_list.append(xx)
         junc_info[xx] = np.array(junc_info[xx])
