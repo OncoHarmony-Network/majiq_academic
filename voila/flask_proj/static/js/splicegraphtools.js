@@ -1,11 +1,11 @@
 class SpliceGraphTools {
     constructor(sgs) {
+        console.log('top');
         this.sgs = sgs;
-        this.init();
-        this.splice_graph_onload();
+        this._init();
     }
 
-    init() {
+    _init() {
         const gene = this.sgs.gene;
 
         // menu drop downs
@@ -29,7 +29,7 @@ class SpliceGraphTools {
         document.querySelector('.ucsc-gene').setAttribute('href', `http://genome.ucsc.edu/cgi-bin/hgTracks?db=${gene.genome}&position=${ gene.chromosome }:${ gene.start }-${ gene.end }`)
 
 
-        json_ajax('/metadata', meta => {
+        json_ajax('/metadata').then(meta => {
 
             // populate splice graph selector groups
             d3.select('.groups select')
@@ -44,12 +44,14 @@ class SpliceGraphTools {
 
             // populate splice graph experiments when group is changed
             document.querySelector('#groups').onchange = (event) => {
-                const sgs = JSON.parse(localStorage.getItem('splice_graphs'));
-                let exps = meta.experiment_names[event.target.selectedIndex];
-                if (sgs)
-                    exps = exps.filter(exp => {
-                        return !sgs.some(sg => sg[1] === exp)
-                    });
+                const group_name = meta.group_names[event.target.selectedIndex];
+
+                const shown_exps = Array.from(document.querySelectorAll('.splice-graph'))
+                    .filter(sg => sg.dataset.group === group_name)
+                    .map(sg => sg.dataset.experiment);
+
+                const exps = meta.experiment_names[event.target.selectedIndex]
+                    .filter(e => !shown_exps.includes(e));
 
                 const s = d3.select('.experiments select')
                     .selectAll('option')
@@ -76,8 +78,10 @@ class SpliceGraphTools {
             const g = f.querySelector('#groups').value;
             const e = f.querySelector('#experiments').value;
             if (g && e) {
+                f.querySelector('button').disabled = true;
                 this.sgs.create(g, e);
-                SpliceGraphTools._populate_sg_form()
+                SpliceGraphTools._populate_sg_form();
+                f.querySelector('button').disabled = false;
             }
         };
 
@@ -137,81 +141,6 @@ class SpliceGraphTools {
         document.querySelector('#reads-less-than').oninput = junctions_filter;
 
 
-    }
-
-    /**
-     * Add events to splice graph after they're added to page.
-     */
-    splice_graph_onload() {
-        new MutationObserver(mutation_list => {
-
-            const added_nodes = Array.from(mutation_list)
-                .reduce((acc, curr) => acc.concat(Array.from(curr.addedNodes)), []);
-
-            // highlight junctions and intron retentions when you mouse over them
-            added_nodes
-                .filter(el => el.classList && (el.classList.contains('junction-grp') || el.classList.contains('intron-retention-grp') || el.classList.contains('exon-grp')))
-                .forEach(el => {
-                    const datum = d3.select(el).datum();
-                    el.onmouseover = () => {
-                        const coords = document.querySelector('.coordinates');
-                        if (!coords.classList.contains('select')) {
-                            coords.innerHTML = `Coordinates: ${datum.start}-${datum.end}; Length: ${datum.end - datum.start + 1}`;
-
-                            el.classList.add('mouseover');
-                            document.querySelectorAll('.junction-grp, .intron-retention-grp').forEach(el => {
-                                d3.select(el)
-                                    .classed('mouseover-filter', d => d.start !== datum.start || d.end !== datum.end)
-                            });
-                        }
-                    };
-
-                    el.onmouseout = () => {
-                        const coords = document.querySelector('.coordinates');
-                        if (!coords.classList.contains('select'))
-                            coords.innerHTML = null;
-
-                        el.classList.remove('mouseover');
-                        document.querySelectorAll('.junction-grp, .intron-retention-grp').forEach(el => el.classList.remove('mouseover-filter'));
-                    };
-
-                    el.onclick = () => {
-                        const click_new = !el.classList.contains('select');
-
-                        document.querySelectorAll('.select-filter, .select').forEach(x => {
-                            x.classList.remove('select-filter');
-                            x.classList.remove('select')
-                        });
-
-                        if (click_new) {
-                            el.dispatchEvent(new Event('mouseover'));
-                            document.querySelectorAll('.mouseover-filter').forEach(el => el.classList.add('select-filter'));
-                            el.classList.add('select');
-                            document.querySelector('.coordinates').classList.add('select');
-                            this.copy_select_ucsc(el)
-                        } else {
-                            el.dispatchEvent(new Event('mouseout'));
-                        }
-                    }
-                });
-
-            // add click event to remove icon
-            added_nodes
-                .filter(el => el.classList && el.classList.contains('splice-graph-remove'))
-                .forEach(el => {
-                    el.onclick = (event) => {
-                        const s = event.target.closest('.splice-graph');
-                        this.sgs.remove_localstorage(s);
-                        s.remove();
-                        SpliceGraphTools._populate_sg_form()
-                    }
-                })
-
-        })
-            .observe(document.querySelector('.splice-graph-container'), {
-                childList: true,
-                subtree: true
-            });
     }
 
     copy_select_ucsc(el) {

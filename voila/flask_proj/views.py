@@ -4,7 +4,6 @@ from bisect import bisect
 from flask import Flask, render_template, jsonify, url_for, session, request, redirect
 from waitress import serve
 
-from voila.api import Matrix, SpliceGraph
 from voila.api.view_matrix import ViewPsi
 from voila.api.view_splice_graph_sqlite import ViewSpliceGraph
 from voila.config import Config
@@ -20,12 +19,8 @@ def run_service(args):
 
 
 def get_meta():
-    config = Config()
-    with Matrix(config.voila_file) as h:
-        return {
-            'group_names': h.group_names.tolist(),
-            'experiment_names': h.experiment_names.tolist()
-        }
+    with ViewPsi() as m:
+        return m.view_metadata
 
 
 @app.route('/gene/<gene_id>/')
@@ -42,7 +37,7 @@ def index():
 def index_table():
     config = Config()
     meta = get_meta()
-    with SpliceGraph(config.splice_graph_file) as sg, Matrix(config.voila_file) as p:
+    with ViewSpliceGraph() as sg, ViewPsi() as p:
         records = []
 
         lsv_ids = list(p.lsv_ids())
@@ -74,6 +69,9 @@ def index_table():
                          )
                 r[3] = str(html)
                 html.reset()
+                html.tag('svg', classes=['psi-violin-plot'], data_lsv_id=r[1], data_group=meta['group_names'][0])
+                r[3] += str(html)
+                html.reset()
 
     dt = DataTables(records, add_html)
 
@@ -82,8 +80,7 @@ def index_table():
 
 @app.route('/nav/<gene_id>', methods=('POST',))
 def nav(gene_id):
-    config = Config()
-    with Matrix(config.voila_file) as h:
+    with ViewPsi() as h:
         gene_ids = list(sorted(h.gene_ids))
         idx = bisect(gene_ids, gene_id)
 
@@ -113,9 +110,8 @@ def splice_graph(gene_id):
 @app.route('/psi/<gene_id>', methods=('POST',))
 def psi(gene_id):
     records = []
-    config = Config()
     meta = get_meta()
-    with Matrix(config.voila_file) as m:
+    with ViewPsi() as m:
         lsv_ids = list(m.lsv_ids(gene_ids=[gene_id]))
         for lsv_id in lsv_ids:
             lsv = m.psi(lsv_id)
@@ -135,6 +131,9 @@ def psi(gene_id):
                          )
                 r[3] = str(html)
                 html.reset()
+                html.tag('svg', classes=['psi-violin-plot'], data_lsv_id=r[1], data_group=meta['group_names'][0])
+                r[3] += str(html)
+                html.reset()
 
         dt = DataTables(records, add_html)
 
@@ -144,17 +143,24 @@ def psi(gene_id):
 @app.route('/psi-splice-graphs', methods=('POST',))
 def psi_splice_graphs():
     meta = get_meta()
+
     try:
         sg_init = session['psi_init_splice_graphs']
     except KeyError:
-        session['psi_init_splice_graphs'] = [[meta['group_names'][0], meta['experiment_names'][0][0]]]
-        sg_init = session['psi_init_splice_graphs']
+        sg_init = [[meta['group_names'][0], meta['experiment_names'][0][0]]]
 
     json_data = request.get_json()
+
     if json_data:
-        if all(s != json_data for s in sg_init):
-            sg_init.append(json_data)
-            session['psi_init_splice_graphs'] = sg_init
+        if 'add' in json_data:
+            if all(s != json_data['add'] for s in sg_init):
+                sg_init.append(json_data['add'])
+
+        if 'remove' in json_data:
+            sg_init = filter(lambda s: s != json_data['remove'], sg_init)
+            sg_init = list(sg_init)
+
+    session['psi_init_splice_graphs'] = sg_init
 
     return jsonify(sg_init)
 
@@ -162,9 +168,8 @@ def psi_splice_graphs():
 @app.route('/lsv-data', methods=('POST',))
 @app.route('/lsv-data/<gene_id>', methods=('POST',))
 def lsv_data(gene_id=None):
-    config = Config()
     meta = get_meta()
-    with SpliceGraph(config.splice_graph_file) as sg, ViewPsi(config.voila_file) as m:
+    with ViewSpliceGraph() as sg, ViewPsi() as m:
         exon_numbers = {}
 
         if gene_id:
@@ -193,6 +198,7 @@ def lsv_data(gene_id=None):
             lsv = m.lsv(lsv_id)
             lsvs[lsv_id] = {
                 'name': meta['group_names'][0],
+                'junctions': lsv.junctions.tolist(),
                 'group_means': dict(lsv.group_means),
                 'group_bins': dict(lsv.group_bins)
             }

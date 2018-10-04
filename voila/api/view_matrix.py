@@ -9,6 +9,7 @@ import scipy.special
 
 from voila import constants
 from voila.api.matrix_hdf5 import DeltaPsi, Psi, Heterogen, lsv_id_to_gene_id
+from voila.config import Config
 from voila.exceptions import NoLsvsFound, LsvIdNotFoundInVoilaFile, GeneIdNotFoundInVoilaFile
 from voila.utils.voila_log import voila_log
 from voila.vlsv import get_expected_dpsi, is_lsv_changing, matrix_area, get_expected_psi
@@ -39,17 +40,15 @@ class ViewMatrix(ABC):
 
     @property
     def view_metadata(self):
-        group_names = self.group_names
-        experiment_names = self.experiment_names
+        group_names = self.group_names.tolist()
+        experiment_names = self.experiment_names.tolist()
         metadata = {'group_names': group_names}
 
-        if experiment_names.size > 1:
-            metadata['experiment_names'] = [np.insert(exps, 0, '{0} Combined'.format(group)) for exps, group in
+        if len(experiment_names) > 1:
+            metadata['experiment_names'] = [[group + ' Combined'] + exps for exps, group in
                                             zip(experiment_names, group_names)]
         else:
             metadata['experiment_names'] = experiment_names
-
-        metadata['_id'] = 'metadata'
 
         return metadata
 
@@ -111,8 +110,9 @@ class ViewMatrix(ABC):
 
 
 class ViewPsi(Psi, ViewMatrix):
-    def __init__(self, voila_file):
-        super().__init__(voila_file)
+    def __init__(self):
+        config = Config()
+        super().__init__(config.voila_file)
 
     class _ViewPsi(Psi._Psi, ViewMatrix._ViewMatrix):
         def get_all(self):
