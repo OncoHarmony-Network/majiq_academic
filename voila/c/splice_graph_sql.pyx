@@ -1,5 +1,5 @@
 from libc.stdio cimport sprintf, fprintf, stderr
-from libc.stdlib cimport malloc, free, abort, abs
+from libc.stdlib cimport malloc, free, abs
 from libc.string cimport strlen
 from libcpp.string cimport string
 
@@ -71,9 +71,8 @@ cdef int exec_db(sqlite3 *db, char *sql) nogil:
         rc = sqlite3_exec(db, sql, callback, <void *> 0, &zErrMsg)
 
     if rc:
-        fprintf(stderr, "exec_db: %s: %d\n", zErrMsg, rc)
-        fprintf(stderr, '%s\n', sql)
-        abort()
+        with gil:
+            raise Exception('exec_db: ' + zErrMsg + '\n' + sql.decode('utf-8'))
 
     if zErrMsg:
         sqlite3_free(zErrMsg)
@@ -84,9 +83,10 @@ cdef sqlite3 *open_db(string file_name) nogil:
     cdef sqlite3 *db
 
     rc = sqlite3_open(file_name.c_str(), &db)
+
     if rc:
-        fprintf(stderr, 'open_db: %s: %d\n', file_name.c_str(), rc)
-        abort()
+        with gil:
+            raise Exception('open_db: ' + file_name)
 
     # rc = sqlite3_busy_timeout(db, 120 * 1000)
     # if rc:
