@@ -69,14 +69,14 @@ cdef int exec_db(sqlite3 *db, char *sql) nogil:
 
     while rc == SQLITE_BUSY or rc == SQLITE_LOCKED:
         rc = sqlite3_exec(db, sql, callback, <void *> 0, &zErrMsg)
-        if zErrMsg:
-            sqlite3_free(zErrMsg)
 
     if rc:
         fprintf(stderr, "exec_db: %s: %d\n", zErrMsg, rc)
         fprintf(stderr, '%s\n', sql)
-        sqlite3_free(zErrMsg)
         abort()
+
+    if zErrMsg:
+        sqlite3_free(zErrMsg)
 
     return rc
 
