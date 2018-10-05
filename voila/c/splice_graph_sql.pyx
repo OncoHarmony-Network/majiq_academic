@@ -72,7 +72,7 @@ cdef int exec_db(sqlite3 *db, char *sql) nogil:
 
     if rc:
         with gil:
-            raise Exception('exec_db: ' + zErrMsg + '\n' + sql.decode('utf-8'))
+            raise Exception('exec_db: ' + zErrMsg.decode('utf-8') + '\n' + sql.decode('utf-8'))
 
     if zErrMsg:
         sqlite3_free(zErrMsg)
@@ -86,7 +86,7 @@ cdef sqlite3 *open_db(string file_name) nogil:
 
     if rc:
         with gil:
-            raise Exception('open_db: ' + file_name)
+            raise Exception('open_db: ' + file_name.decode('utf-8'))
 
     # rc = sqlite3_busy_timeout(db, 120 * 1000)
     # if rc:
