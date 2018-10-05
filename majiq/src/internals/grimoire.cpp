@@ -42,7 +42,6 @@ namespace grimoire {
         unsigned int start1 = (start == EMPTY_COORD) ? end - 10 : start ;
         unsigned int end1 = (end == EMPTY_COORD) ? start + 10 : end ;
         const string key = to_string(start1) + "-" + to_string(end1) ;
-
         if (exon_map.count(key) > 0){
             ex = exon_map[key];
         } else {
@@ -88,7 +87,6 @@ namespace grimoire {
         stringstream s1 ;
         stringstream s2 ;
         if ((end - start) < 1) return ;
-
         ex1 = exonOverlap(exon_map_, start, end) ;
         if (nullptr != inbound_j && nullptr != outbound_j && inbound_j->get_intronic() && outbound_j->get_intronic()) {
             s1 << start ; s2 << end ;
@@ -101,20 +99,32 @@ namespace grimoire {
             }
         } else if (nullptr == ex1){
             if ((end - start) <= MAX_DENOVO_DIFFERENCE){
-                s1 << start ; s2 << end ;
-                key = s1.str() + "-" + s2.str() ;
+
+
+//                s1 << start ; s2 << end ;
+//                key = s1.str() + "-" + s2.str() ;
                 const int st1 = (inbound_j == nullptr) ? EMPTY_COORD : start ;
                 const int nd1 = (outbound_j == nullptr) ? EMPTY_COORD : end ;
-                ex1 = new Exon(st1, nd1, in_db) ;
+                ex1 = addExon(exon_map_, st1, nd1, in_db) ;
+
+//                if (exon_map_.count(key) > 0){
+//                    ex1 = exon_map_[key];
+//                } else {
+//                    const int st1 = (inbound_j == nullptr) ? EMPTY_COORD : start ;
+//                    const int nd1 = (outbound_j == nullptr) ? EMPTY_COORD : end ;
+//                    ex1 = new Exon(st1, nd1, in_db) ;
+//                    exon_map_[key] = ex1 ;
+//                }
                 ex2 = ex1 ;
-                exon_map_[key] = ex1 ;
 
             } else {
+
                 ex1 = addExon(exon_map_, start, EMPTY_COORD, in_db) ;
                 ex2 = addExon(exon_map_, EMPTY_COORD, end, in_db) ;
             }
 
         } else {
+
             ex2 = ex1;
             if (start < (ex1->get_start() - MAX_DENOVO_DIFFERENCE)){
                 ex1 = addExon(exon_map_, start, EMPTY_COORD, in_db) ;
@@ -407,12 +417,12 @@ namespace grimoire {
     void Gene::print_exons(){
 
         for(const auto & ex: exon_map_ ){
-            cout << "EXON:: "<< ex.first << "\n" ;
+            cerr << "EXON:: "<< ex.first << "\n" ;
             for (const auto & j1: (ex.second)->ib){
-                cout << "<<< " << j1->get_start() << "-" << j1->get_end() << "\n";
+                cerr << "<<< " << j1->get_start() << "-" << j1->get_end() << "\n";
             }
             for (const auto & j1: (ex.second)->ob){
-                cout << ">>>" << j1->get_start() << "-" << j1->get_end() << "\n";
+                cerr << ">>>" << j1->get_start() << "-" << j1->get_end() << "\n";
             }
         }
     }

@@ -137,7 +137,9 @@ cdef int merge_exons(dict exon_dict, map[string, Gene*]& all_genes) except -1:
         for coord, is_start in ex_list:
             if is_start:
                 if ex_end != -1:
-                    key = ('%s-%s' % (ex_start, ex_end)).encode('utf-8')
+                    start1 = ex_end -10  if ex_start == EMPTY_COORD else ex_start
+                    end1 = ex_start +10  if ex_end == EMPTY_COORD else ex_end
+                    key = ('%s-%s' % (start1, end1)).encode('utf-8')
                     all_genes[gne_id].exon_map_[key] = new Exon(ex_start, ex_end, True)
                     if nopen > 0 and (ex_end+4) < (coord-1):
                        pass

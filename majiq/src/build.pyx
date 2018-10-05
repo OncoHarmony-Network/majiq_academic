@@ -332,6 +332,9 @@ cdef void gene_to_splicegraph(Gene * gne, string sg_filename) nogil:
 
     for ex_pair in gne.exon_map_:
         ex = ex_pair.second
+        with gil:
+            print(ex_pair.first, ex.get_start(), ex.get_end())
+
         sg_exon(db, gne_id, ex.get_start(), ex.get_end(), ex.db_start_, ex.db_end_, ex.annot_ )
 
     for ir in gne.intron_vec_:
