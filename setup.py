@@ -85,7 +85,7 @@ extensions += [Extension('majiq.src.io', ['majiq/src/io.pyx'], language='c++',
                          include_dirs=NPY_INC_DIRS + MAJIQ_INC_DIRS,
                          extra_compile_args=compile_args,  extra_link_args=linker_args,)]
 
-extensions += [Extension('majiq.src.psi', ['majiq/src/psi.pyx'],                 include_dirs=NPY_INC_DIRS)]
+extensions += [Extension('majiq.src.psi', ['majiq/src/psi.pyx'], language='c++', include_dirs=NPY_INC_DIRS)]
 
 extensions += [Extension('majiq.src.adjustdelta', ['majiq/src/adjustdelta.pyx'], include_dirs=NPY_INC_DIRS)]
 

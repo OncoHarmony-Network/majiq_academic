@@ -5,10 +5,12 @@ import majiq.src.adjustdelta as majiq_delta
 # from majiq.src.plotting import plot_matrix
 from majiq.src.constants import *
 from majiq.src.beta_binomial import betabinom
+
 import scipy.misc
 import numpy as np
 cimport numpy as np
 import cython
+from libcpp.string cimport string
 import pickle
 
 """
@@ -128,20 +130,20 @@ cdef tuple _empirical_delta_psi(list list_of_lsv, dict lsv_empirical_psi1, dict 
     """
     Simple PSI calculation without involving a dirichlet prior, coming from reads from junctions
     """
-    cdef str lsv
+    cdef string lsv
     cdef list delta_psi = []
     cdef list delta_psi_ir = []
 
     for lsv in list_of_lsv:
+        if lsv_type[lsv][1] > 2 : continue
         # Assuming that the type is the same in all the replicas and groups
-        if lsv_type[lsv].endswith('i'):
+        if lsv_type[lsv][0].endswith(b'i'):
             delta_psi_res = delta_psi_ir
         else:
             delta_psi_res = delta_psi
-        delta_psi_res.append(lsv_empirical_psi1[lsv] - lsv_empirical_psi2[lsv])
-
+        delta_psi_res.append(lsv_empirical_psi1[lsv][0] - lsv_empirical_psi2[lsv][0])
     return np.array(delta_psi, dtype=np.float32), np.array(delta_psi_ir, dtype=np.float32)
-
+    # return delta_psi, delta_psi_ir
 
 def __load_default_prior():
 
@@ -164,8 +166,8 @@ cpdef tuple gen_prior_matrix(object lsv_type, dict lsv_empirical_psi1, dict lsv_
     cdef np.ndarray[np.float32_t, ndim=2] def_mat
     cdef list prior_matrix, list_of_lsv, njun_prior, pmat
     cdef int prior_idx, nj
-    cdef np.ndarray[np.float32_t, ndim=2] best_deltap, best_dpsi, best_dpsi_ir
-
+    cdef np.ndarray[np.float32_t, ndim=1] best_deltap, best_dpsi, best_dpsi_ir
+    # cdef list best_deltap, best_dpsi, best_dpsi_ir
     cdef np.ndarray[np.float32_t, ndim=1] best_delta_psi
 
 
@@ -186,47 +188,39 @@ cpdef tuple gen_prior_matrix(object lsv_type, dict lsv_empirical_psi1, dict lsv_
     best_dpsi, best_dpsi_ir = _empirical_delta_psi(list_of_lsv, lsv_empirical_psi1, lsv_empirical_psi2, lsv_type)
 
     prior_matrix = [[], []]
-    for prior_idx, best_deltap in enumerate((best_dpsi, best_dpsi_ir)):
-        njun_prior = [[]]
+    for prior_idx, best_delta_psi in enumerate((best_dpsi, best_dpsi_ir)):
 
-        for lsv in best_deltap:
-            if lsv.shape[0] != 2:
-                continue
-            njun_prior[0].append(lsv[0])
-
-        for nj in range(len(njun_prior)):
-
-            best_delta_psi = np.array(njun_prior[nj], dtype=np.float32)
-            if len(best_delta_psi) == 0:
-                if prior_idx == 0:
-                    prior_matrix[prior_idx] = __load_default_prior()
-                else:
-                    prior_matrix[prior_idx] = prior_matrix[0]
-                continue
-
-            logger.debug("Parametrizing 'best set'...%s", prior_idx)
-            mixture_pdf = majiq_delta.adjustdelta(best_delta_psi, iter, output, plotpath=plotpath,
-                                                      title=" ".join(names), njunc=nj, logger=logger)
-            pmat = []
-            for i in range(numbins):
-                pmat.extend(mixture_pdf[numbins - i:(numbins * 2) - i])
-
-            prior_matrix[prior_idx] = np.array(pmat, dtype=np.float32).reshape(numbins, -1)
-            if np.isnan(prior_matrix[prior_idx]).any():
-                if prior_idx == 1:
-                    logger.warning("Not enought statistic power to calculate the intron retention specific prior, "
-                                   "in that case we will use the global prior")
-                    prior_matrix[prior_idx] = prior_matrix[0]
-                else:
-                    raise ValueError(" The input data does not have enought statistic power in order to calculate "
-                                     "the prior. Check if the input is correct or use the --default-prior option in "
-                                     " order to use a precomputed prior")
+        # best_delta_psi = np.array(njun_prior[nj], dtype=np.float32)
+        if len(best_delta_psi) == 0:
+            if prior_idx == 0:
+                prior_matrix[prior_idx] = __load_default_prior()
             else:
-                prior_matrix[prior_idx] /= sum(prior_matrix[prior_idx])
-                # renormalize so it sums 1
+                prior_matrix[prior_idx] = prior_matrix[0]
+            continue
 
-            # plot_matrix(prior_matrix[prior_idx], "Prior Matrix , version %s" % prior_idx,
-            #             "prior_matrix_jun_%s" % nj, plotpath)
+        logger.debug("Parametrizing 'best set'...%s", prior_idx)
+        mixture_pdf = majiq_delta.adjustdelta(best_delta_psi, iter, output, plotpath=plotpath,
+                                                  title=" ".join(names), njunc=nj, logger=logger)
+        pmat = []
+        for i in range(numbins):
+            pmat.extend(mixture_pdf[numbins - i:(numbins * 2) - i])
+
+        prior_matrix[prior_idx] = np.array(pmat, dtype=np.float32).reshape(numbins, -1)
+        if np.isnan(prior_matrix[prior_idx]).any():
+            if prior_idx == 1:
+                logger.warning("Not enought statistic power to calculate the intron retention specific prior, "
+                               "in that case we will use the global prior")
+                prior_matrix[prior_idx] = prior_matrix[0]
+            else:
+                raise ValueError(" The input data does not have enought statistic power in order to calculate "
+                                 "the prior. Check if the input is correct or use the --default-prior option in "
+                                 " order to use a precomputed prior")
+        else:
+            prior_matrix[prior_idx] /= sum(prior_matrix[prior_idx])
+            # renormalize so it sums 1
+
+        # plot_matrix(prior_matrix[prior_idx], "Prior Matrix , version %s" % prior_idx,
+        #             "prior_matrix_jun_%s" % nj, plotpath)
 
     prior_matrix[0] = np.log(prior_matrix[0])
     prior_matrix[1] = np.log(prior_matrix[1])

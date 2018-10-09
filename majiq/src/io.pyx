@@ -415,22 +415,29 @@ cdef list _extract_lsv_summary(list files, int minnonzero, int min_reads, dict t
                 lsv_types[lsv_id][1] += 1
                 if xx[0] == pre_lsv:
                     lsv_t = lsv_t or (xx[3] >=min_reads and xx[4] >= minnonzero)
-                    if epsi is not None:
-                        epsi_t.append(xx[3])
+                    epsi_t.append(xx[3])
                 else:
+                    try:
+                        lsv_list[pre_lsv] += int(lsv_t)
+                        if epsi is not None:
+                            epsi[pre_lsv] += np.array(epsi_t)
+                    except KeyError:
+                        lsv_list[pre_lsv] = int(lsv_t)
+                        if epsi is not None:
+                            epsi[pre_lsv] = np.array(epsi_t)
+
+                    epsi_t = [xx[3]]
                     pre_lsv = lsv_id
                     lsv_t = (xx[3] >=min_reads and xx[4] >= minnonzero)
+            try:
+                lsv_list[pre_lsv] += int(lsv_t)
+                if epsi is not None:
+                    epsi[pre_lsv] += np.array(epsi_t)
+            except KeyError:
+                lsv_list[pre_lsv] = int(lsv_t)
+                if epsi is not None:
+                    epsi[pre_lsv] = np.array(epsi_t)
 
-                try:
-                    lsv_list[pre_lsv] += int(lsv_t)
-                    if epsi is not None:
-                        epsi[lsv_id] += np.array(epsi_t)
-                except KeyError:
-
-                    lsv_list[pre_lsv] = int(lsv_t)
-                    if epsi is not None:
-                        epsi[lsv_id] = np.array(epsi_t)
-                    epsi_t = []
 
         junc_info.update(lsv_junc_info)
         types_dict.update(lsv_types)

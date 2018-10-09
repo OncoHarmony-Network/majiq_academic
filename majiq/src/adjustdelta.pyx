@@ -4,31 +4,30 @@ from scipy.stats import beta
 from scipy.misc import logsumexp
 import cython
 
-cdef float PSEUDO = 1e-300
-ctypedef np.float64_t DTYPE_t
+cdef np.float32_t PSEUDO = 1e-300
+ctypedef np.float32_t DTYPE_t
 
 @cython.boundscheck(False) # turn off bounds-checking for entire function
 @cython.wraparound(False)  # turn off negative index wrapping for entire function
 cdef np.ndarray[DTYPE_t, ndim=1] _calc_mixture_pdf(np.ndarray[DTYPE_t, ndim=2] beta_param,
                                                    np.ndarray[DTYPE_t, ndim=1] pmix, int nbins=40):
-    cdef float bsize = 1.0 / float(nbins)
-    cdef np.ndarray[DTYPE_t, ndim=1] x_pos = np.arange(0, 1.01, bsize)
-    cdef np.ndarray[DTYPE_t, ndim=1] mixture_pdf = np.zeros(shape=nbins)
+    cdef np.float32_t bsize = 1.0 / nbins
+    cdef np.ndarray[DTYPE_t, ndim=1] x_pos = np.arange(0, 1.01, bsize, dtype=np.float32)
+    cdef np.ndarray[DTYPE_t, ndim=1] mixture_pdf = np.zeros(shape=nbins, dtype=np.float32)
     cdef np.ndarray[DTYPE_t, ndim=1] bincdf
+    cdef np.ndarray[np.float64_t, ndim=1] tt
     cdef int ii
 
-
     for ii in np.arange(beta_param.shape[0]):
-        bincdf = beta.cdf(x_pos, a=beta_param[ii, 0], b=beta_param[ii, 1])
-        mixture_pdf = mixture_pdf + (bincdf[1:] - bincdf[:(nbins-1)] + 1e-300) * pmix[ii]
-
+        tt = beta.cdf(x_pos, a=beta_param[ii, 0], b=beta_param[ii, 1])
+        bincdf = tt.astype(np.float32)
+        mixture_pdf = mixture_pdf + (bincdf[1:] - bincdf[:nbins] + 1e-300) * pmix[ii]
     return mixture_pdf
 
 
-cdef list _calculate_beta_params(float mean, float vari, sample_size):
+cdef list _calculate_beta_params(np.float32_t mean, np.float32_t vari, sample_size):
     b = (1 - mean) * sample_size
     a = mean * sample_size
-
     return [a, b]
 
 #from majiq.src.deleteme import _loglikelihood, _em_beta_mix
@@ -36,8 +35,8 @@ cdef list _calculate_beta_params(float mean, float vari, sample_size):
 cpdef np.ndarray[DTYPE_t, ndim=1] adjustdelta(np.ndarray[DTYPE_t, ndim=1] deltapsi, int num_iter, str output,
                                                   str plotpath=None, str title=None,int  njunc=1, object logger=False):
 
-    cdef np.ndarray[DTYPE_t, ndim=2] D = np.zeros(shape=(79, 2), dtype=np.float)
-    cdef np.ndarray[DTYPE_t, ndim=1] xpos = np.arange(-1 + (0.025 / 2), 1, 0.025)
+    cdef np.ndarray[DTYPE_t, ndim=2] D = np.zeros(shape=(79, 2), dtype=np.float32)
+    cdef np.ndarray[DTYPE_t, ndim=1] xpos = np.arange(-1 + (0.025 / 2), 1, 0.025, dtype=np.float32)
     # cdef np.ndarray[DTYPE_t, ndim=1] x_pos0 = np.arange(0, 1, 0.025)
     cdef np.ndarray[DTYPE_t, ndim=1] p_mixture
     cdef np.ndarray[DTYPE_t, ndim=2] beta_params
@@ -66,7 +65,7 @@ cpdef np.ndarray[DTYPE_t, ndim=1] adjustdelta(np.ndarray[DTYPE_t, ndim=1] deltap
     num_spike = D[zero_idx, 1]
     num_lowcenter = D[zero_idx - 3:zero_idx + 3, 1].sum() - num_spike
 
-    p_mixture = np.zeros(shape=3, dtype=np.float)
+    p_mixture = np.zeros(shape=3, dtype=np.float32)
 
     spike = _calculate_beta_params(0.5, 0, num_spike)
     p_mixture[2] = num_spike / total
@@ -74,11 +73,9 @@ cpdef np.ndarray[DTYPE_t, ndim=1] adjustdelta(np.ndarray[DTYPE_t, ndim=1] deltap
     center = _calculate_beta_params(0.5, 0, num_lowcenter)
     p_mixture[1] = num_lowcenter / total
     p_mixture[0] = 1 - ((num_lowcenter + num_spike) / total)
-    beta_params = np.array([uniform, center, spike])
-    print('KKK1')
+    beta_params = np.array([uniform, center, spike], dtype=np.float32)
     _em_beta_mix(D, p_mixture, beta_params, 0, min_ratio=1e-5, logger=logger, plotpath=plotpath, nj=njunc,
                  labels=labels)
-    print('KKK2')
     z_mixture_pdf = _calc_mixture_pdf(beta_params, p_mixture)
     return z_mixture_pdf
 
@@ -90,9 +87,9 @@ cdef tuple _loglikelihood(np.ndarray[DTYPE_t, ndim=2] D, np.ndarray[DTYPE_t, ndi
     cdef int N = D.shape[0]
     cdef int K = beta_mix.shape[0]
     cdef int k
-    cdef np.ndarray[DTYPE_t, ndim=2] logp_DgK = np.zeros(shape=(N, K), dtype=np.float)
+    cdef np.ndarray[DTYPE_t, ndim=2] logp_DgK = np.zeros(shape=(N, K), dtype=np.float32)
     cdef np.ndarray[DTYPE_t, ndim=2] logp_D
-    cdef np.ndarray[DTYPE_t, ndim=1] logp_Dsum = np.zeros(shape=N, dtype=np.float)
+    cdef np.ndarray[DTYPE_t, ndim=1] logp_Dsum = np.zeros(shape=N, dtype=np.float32)
     cdef np.ndarray[DTYPE_t, ndim=1] dm
     cdef np.ndarray zrow, no_zrow
     cdef float ll_sum
@@ -100,7 +97,7 @@ cdef tuple _loglikelihood(np.ndarray[DTYPE_t, ndim=2] D, np.ndarray[DTYPE_t, ndi
     for k in range(K):
         logp_DgK[:, k] = np.log(beta.pdf(D[:, 0], beta_mix[k, 0], beta_mix[k, 1]) + PSEUDO)
 
-    logp_D = logp_DgK + logp_mix * np.ones(shape=(N, 1), dtype=np.float)
+    logp_D = logp_DgK + logp_mix * np.ones(shape=(N, 1), dtype=np.float32)
 
     dm = np.sum(logp_DgK, axis=1)
     zrow = dm.astype(np.bool)
@@ -137,17 +134,16 @@ cdef _em_beta_mix(np.ndarray[DTYPE_t, ndim=2] D, np.ndarray[DTYPE_t, ndim=1] pmi
     if min(D[:, 0]) < 0.0:
         D[:, 0] = (D[:, 0] + 1) / (c - a)
 
-    print(D)
     logp_D, logp_Dsum, ll_sum, zrow = _loglikelihood(D, beta_mix, logp_mix)
 
 
     if logger:
         logger.debug("[NJ:%s] Initial Log_Likelihood %.3f \n" % (nj, ll_sum))
 
-    ones_1k = np.ones(shape=(1, K), dtype=np.float)
+    ones_1k = np.ones(shape=(1, K), dtype=np.float32)
 
     for mm in range(num_iter):
-        new_beta_mix = np.zeros(shape=(beta_mix.shape[0], beta_mix.shape[1]), dtype=np.float)
+        new_beta_mix = np.zeros(shape=(beta_mix.shape[0], beta_mix.shape[1]), dtype=np.float32)
 
         ''' E STEP: '''
         logger.info('KKK3')
