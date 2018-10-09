@@ -3,4 +3,3 @@ recursive-include voila/html *
 recursive-include voila/flask_proj/templates *
 recursive-include voila/flask_proj/static *
 recursive-include majiq/data *
-recursive-include docs *

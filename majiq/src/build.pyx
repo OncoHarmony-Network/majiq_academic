@@ -107,7 +107,7 @@ cdef int _output_lsv_file_single(vector[LSV*] out_lsvlist, string experiment_nam
     type_list = []
 
     with nogil:
-        db = open_db(sg_filename)
+        open_db(sg_filename, &db)
         for i in range(njunc):
             with gil:
                 jid     = junc_ids[i][0]
@@ -313,7 +313,8 @@ cdef void gene_to_splicegraph(Gene * gne, string sg_filename) nogil:
     cdef pair[string, Exon *] ex_pair
     cdef Exon * ex
     cdef string gne_id = gne.get_id()
-    cdef sqlite3* db = open_db(sg_filename)
+    cdef sqlite3* db
+    open_db(sg_filename, &db)
 
     sg_gene(db, gne_id, gne.get_name(), string(1, gne.get_strand()), gne.get_chromosome())
     for jj_pair in gne.junc_map_:
