@@ -202,9 +202,8 @@ class DeltaPsi(Html, Tsv):
                         lock.release()
 
     def delta_psi_tab_output(self):
-        args = self.args
-        voila_links = self.voila_links
-        metadata = self.view_metadata
+        with ViewDeltaPsi():
+            metadata = m.view_metadata
 
         fieldnames = ['#Gene Name', 'Gene ID', 'LSV ID', 'E(dPSI) per LSV junction',
                       'P(|dPSI|>=%.2f) per LSV junction' % args.threshold,

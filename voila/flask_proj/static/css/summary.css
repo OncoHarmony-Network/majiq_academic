@@ -184,6 +184,10 @@ form.lsv-form label {
     margin: 0;
 }
 
+.highlight-form {
+    width: 100px;
+}
+
 .highlight-form label {
     text-align: right;
     display: block;
@@ -191,6 +195,5 @@ form.lsv-form label {
 }
 
 .highlight-form input {
-    margin-left: 10px;
-
+    margin-left: 4px;
 }

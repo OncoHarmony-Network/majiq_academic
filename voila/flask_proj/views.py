@@ -4,6 +4,7 @@ from bisect import bisect
 from flask import Flask, render_template, jsonify, url_for, session, request, redirect
 from waitress import serve
 
+from voila import constants
 from voila.api.view_matrix import ViewPsi
 from voila.api.view_splice_graph_sqlite import ViewSpliceGraph
 from voila.config import Config
@@ -14,7 +15,7 @@ app = Flask(__name__)
 app.secret_key = os.urandom(16)
 
 
-def run_service(args):
+def run_service():
     serve(app, listen='127.0.0.1:55555')
 
 
@@ -23,19 +24,50 @@ def get_meta():
         return m.view_metadata
 
 
+def lsv_cartoon(lsv_type):
+    html = Html()
+    html.tag('canvas', classes=['lsv-cartoon'], width=200, height=80, data_lsv_type=lsv_type)
+    return str(html)
+
+
+def single_compact(group_name):
+    html = Html()
+    html.tag('canvas',
+             classes=['lsv-single-compact-percentiles'],
+             data_group=group_name)
+    return str(html)
+
+
+def psi_violin(group_name):
+    html = Html()
+    html.tag('svg', classes=['psi-violin-plot'], width=0, height=0, data_group=group_name)
+    return str(html)
+
+
 @app.route('/gene/<gene_id>/')
 def gene(gene_id):
-    return render_template('psi_summary.html', gene_id=gene_id)
+    config = Config()
+
+    if config.voila_files == constants.ANALYSIS_PSI:
+        return render_template('psi_summary.html', gene_id=gene_id)
+
+    if config.voila_files == constants.ANALYSIS_DELTAPSI:
+        return render_template('deltapsi_summary.html', gene_id=gene_id)
 
 
 @app.route('/')
 def index():
-    return render_template('psi_index.html')
+    config = Config()
+    print(config.analysis_type)
+    if config.voila_files == constants.ANALYSIS_PSI:
+        return render_template('psi_index.html')
+
+    if config.voila_files == constants.ANALYSIS_DELTAPSI:
+        return render_template('deltapsi_index.html')
 
 
 @app.route('/index-table', methods=('POST',))
 def index_table():
-    config = Config()
     meta = get_meta()
     with ViewSpliceGraph() as sg, ViewPsi() as p:
         records = []
@@ -49,7 +81,7 @@ def index_table():
 
         def add_html(rs):
             html = Html()
-
+            group_name = meta['group_names'][0]
             for r in rs:
                 gene_id = ':'.join(r[1].split(':')[0:-2])
 
@@ -58,20 +90,8 @@ def index_table():
                 r[0] = str(html)
                 html.reset()
 
-                html.tag('canvas', classes=['lsv-cartoon'], data_lsv_id=r[1], data_lsv_type=r[2])
-                r[2] = str(html)
-                html.reset()
-
-                html.tag('canvas',
-                         classes=['lsv-single-compact-percentiles'],
-                         data_group=meta['group_names'][0],
-                         data_lsv_id=r[1]
-                         )
-                r[3] = str(html)
-                html.reset()
-                html.tag('svg', classes=['psi-violin-plot'], data_lsv_id=r[1], data_group=meta['group_names'][0])
-                r[3] += str(html)
-                html.reset()
+                r[2] = lsv_cartoon(r[2])
+                r[3] = single_compact(group_name) + psi_violin(group_name)
 
     dt = DataTables(records, add_html)
 
@@ -118,22 +138,26 @@ def psi(gene_id):
             records.append(['', lsv_id, lsv.lsv_type, '', ''])
 
         def add_html(rs):
-            html = Html()
+            group_name = meta['group_names'][0]
             for r in rs:
-                html.tag('canvas', classes=['lsv-cartoon'], data_lsv_id=r[1], data_lsv_type=r[2])
-                r[2] = str(html)
-                html.reset()
+                """
+                <div class="highlight-form"><div><label>Highlight<input class="highlight" type="checkbox"></label></div><div><label>PSI Weighted<input class="psi-weighted" type="checkbox"></label></div></div>
+                """
 
-                html.tag('canvas',
-                         classes=['lsv-single-compact-percentiles'],
-                         data_group=meta['group_names'][0],
-                         data_lsv_id=r[1]
-                         )
-                r[3] = str(html)
-                html.reset()
-                html.tag('svg', classes=['psi-violin-plot'], data_lsv_id=r[1], data_group=meta['group_names'][0])
-                r[3] += str(html)
-                html.reset()
+                labels = []
+                for c in ['highlight', 'psi-weighted']:
+                    label = Html().tag('div')
+                    label = label.tag('label')
+                    label.children(
+                        Html().text(c.replace('-', ' ').title()),
+                        Html().tag('input', classes=[c], type='checkbox')
+                    )
+                    labels.append(label)
+                hl_form = Html().tag('div', classes=['highlight-form']).children(*labels)
+
+                r[0] = str(hl_form)
+                r[2] = lsv_cartoon(r[2])
+                r[3] = single_compact(group_name) + psi_violin(group_name)
 
         dt = DataTables(records, add_html)
 
@@ -166,41 +190,59 @@ def psi_splice_graphs():
 
 
 @app.route('/lsv-data', methods=('POST',))
-@app.route('/lsv-data/<gene_id>', methods=('POST',))
-def lsv_data(gene_id=None):
+@app.route('/lsv-data/<lsv_id>', methods=('POST',))
+def lsv_data(lsv_id):
     meta = get_meta()
-    with ViewSpliceGraph() as sg, ViewPsi() as m:
-        exon_numbers = {}
+    gene_id = ':'.join(lsv_id.split(':')[:-2])
+    ref_exon = list(map(int, lsv_id.split(':')[-1].split('-')))
 
-        if gene_id:
-            genes = [sg.gene(gene_id)]
-        else:
-            genes = sg.genes()
+    def find_exon_number(exons):
+        exons = filter(lambda e: -1 not in [e.start, e.end], exons)
+        exons = list(exons)
 
-        for gene in genes:
-            strand = gene.strand
-            exons = sg.exons(gene)
-            exons = filter(lambda e: -1 not in [e.start, e.end], exons)
-            exons = list(exons)
-
-            for idx, exon in enumerate(exons):
-                if strand == '+':
-                    value = idx + 1
+        for idx, exon in enumerate(exons):
+            if [exon.start, exon.end] == ref_exon:
+                if strand == '-':
+                    return len(exons) - idx
                 else:
-                    value = len(exons) - idx
+                    return idx + 1
 
-                key = str(exon.start) + '-' + str(exon.end)
-                assert key not in exon_numbers
-                exon_numbers[key] = value
+    with ViewSpliceGraph() as sg, ViewPsi() as m:
+        gene = sg.gene(gene_id)
+        strand = gene.strand
+        exons = sg.exons(gene)
+        exon_number = find_exon_number(exons)
 
-        lsvs = {}
-        for lsv_id in m.lsv_ids():
-            lsv = m.lsv(lsv_id)
-            lsvs[lsv_id] = {
+        lsv = m.lsv(lsv_id)
+
+        return jsonify({
+            'lsv': {
                 'name': meta['group_names'][0],
                 'junctions': lsv.junctions.tolist(),
                 'group_means': dict(lsv.group_means),
                 'group_bins': dict(lsv.group_bins)
-            }
+            },
+            'exon_number': exon_number
+        })
 
-    return jsonify({'lsvs': lsvs, 'exon_numbers': exon_numbers})
+
+@app.route('/lsv-highlight', methods=('POST',))
+def lsv_highlight():
+    json_data = request.get_json()
+
+    assert 'weighted' in json_data
+    assert 'highlight' in json_data
+
+    with ViewPsi() as m:
+        lsvs = []
+
+        for lsv_id in set(j for js in json_data.values() for j in js):
+            lsv = m.lsv(lsv_id)
+            lsvs.append({
+                'junctions': lsv.junctions.tolist(),
+                'reference_exon': list(lsv.reference_exon),
+                'target': lsv.target,
+                'weighted': lsv_id in json_data['weighted']
+            })
+
+        return jsonify(lsvs)

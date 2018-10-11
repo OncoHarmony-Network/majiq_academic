@@ -13,33 +13,32 @@
 
 {% block script %}
     <script>
-        new MutationObserver(mutation_list => {
-            json_ajax('{{ url_for("lsv_data") }}', lsv_data => {
-                const lsv = new Lsv(lsv_data);
-                const violin = new Violin(lsv_data.lsvs);
-                mutation_list
-                    .map(mutation => mutation.addedNodes
-                        .forEach(node => {
-                            node.querySelectorAll('.lsv-cartoon')
-                                .forEach(c => lsv.cartoon(c));
-                            node.querySelectorAll('.lsv-single-compact-percentiles')
-                                .forEach(c => lsv.draw_lsv_compact_stack_bars(c));
-                            node.querySelectorAll('.psi-violin-plot')
-                                .forEach(s => {
-                                    $(s).hide();
-                                    violin.psi(s)
-                                })
-                        })
-                    );
-            });
+        new MutationObserver(mutations => {
+            mutations.forEach(m => m.addedNodes
+                .forEach(n => {
+                    const lsv_id = n.querySelectorAll('td')[1].textContent;
+                    json_ajax('{{ url_for("lsv_data") }}/' + encodeURIComponent(lsv_id)).then(lsv_data => {
+                        const lsv = new Lsv(lsv_data);
+                        const violin = new Violin(lsv_data.lsv);
+                        const s = n.querySelector('.psi-violin-plot');
+
+                        lsv.cartoon(n.querySelector('.lsv-cartoon'));
+                        lsv.draw_lsv_compact_stack_bars(n.querySelector('.lsv-single-compact-percentiles'));
+                        violin.psi(s);
+                        $(s).hide();
+                    })
+                })
+            );
         })
             .observe(document.querySelector('#results tbody'), {
                 childList: true,
             });
 
+
         $('#results').DataTable({
             processing: true,
             serverSide: true,
+            autoWidth: false,
             ajax: {
                 url: '{{ url_for("index_table") }}',
                 type: 'POST'

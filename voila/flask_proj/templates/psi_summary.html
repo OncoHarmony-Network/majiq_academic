@@ -15,7 +15,9 @@
         });
 
         json_ajax('{{ url_for("splice_graph", gene_id=gene_id) }}').then(gene => {
-            new SpliceGraphs('.splice-graph-container', {
+
+            const sgs = new SpliceGraphs('.splice-graph-container', {
+                gene: gene,
                 remove_img: '{{ url_for('static', filename='img/remove.svg')}}',
                 remove_fn: event => {
                     const sg = event.target.closest('.splice-graph');
@@ -24,46 +26,55 @@
                             sg.remove();
                             SpliceGraphTools._populate_sg_form();
                         });
-                },
-                gene: gene
+                }
+            });
+
+            sgs.init_create().then(s => new SpliceGraphTools(s));
+
+            new MutationObserver(mutations => {
+                mutations.forEach(m => m.addedNodes
+                    .forEach(n => {
+                        const lsv_id = n.querySelectorAll('td')[1].textContent;
+                        json_ajax('{{ url_for("lsv_data") }}/' + encodeURIComponent(lsv_id))
+                            .then(lsv_data => {
+                                const lsv = new Lsv(lsv_data);
+                                const violin = new Violin(lsv_data.lsv);
+                                const s = n.querySelector('.psi-violin-plot');
+
+                                lsv.cartoon(n.querySelector('.lsv-cartoon'));
+                                lsv.draw_lsv_compact_stack_bars(n.querySelector('.lsv-single-compact-percentiles'));
+                                $(s).hide();
+                                violin.psi(s);
+
+                                n.querySelector('.highlight').onchange = () => {
+                                    const hl = Array.from(document.querySelectorAll('input.highlight:checked'))
+                                        .map(el => el.closest('tr').querySelectorAll('td')[1].textContent);
+                                    const w = Array.from(document.querySelectorAll('input.psi-weighted:checked'))
+                                        .map(el => el.closest('tr').querySelectorAll('td')[1].textContent);
+                                    const hl_data = {'highlight': hl, 'weighted': w};
+                                    send_ajax('{{ url_for("lsv_highlight") }}', hl_data).then(lsvs => {
+                                        sgs.highlight(hl, w, lsvs);
+                                    })
+                                }
+                            })
+                    })
+                );
             })
-                .init_create()
-                .then(s => new SpliceGraphTools(s))
-        });
+                .observe(document.querySelector('#results tbody'), {
+                    childList: true,
+                });
 
-
-        new MutationObserver(mutation_list => {
-            json_ajax('{{ url_for("lsv_data") }}').then(lsv_data => {
-                const lsv = new Lsv(lsv_data);
-                const violin = new Violin(lsv_data.lsvs);
-                mutation_list
-                    .map(mutation => mutation.addedNodes
-                        .forEach(node => {
-                            node.querySelectorAll('.lsv-cartoon')
-                                .forEach(c => lsv.cartoon(c));
-                            node.querySelectorAll('.lsv-single-compact-percentiles')
-                                .forEach(c => lsv.draw_lsv_compact_stack_bars(c));
-                            node.querySelectorAll('.psi-violin-plot')
-                                .forEach(s => {
-                                    violin.psi(s);
-                                    $(s).hide()
-                                })
-                        })
-                    );
-            });
-        })
-            .observe(document.querySelector('#results tbody'), {
-                childList: true,
+            $('#results').DataTable({
+                autoWidth: false,
+                processing: true,
+                serverSide: true,
+                ajax: {
+                    url: '{{ url_for('psi', gene_id=gene_id) }}',
+                    type: 'POST'
+                }
             });
 
 
-        $('#results').DataTable({
-            processing: true,
-            serverSide: true,
-            ajax: {
-                url: '{{ url_for('psi', gene_id=gene_id) }}',
-                type: 'POST'
-            }
         });
 
         $('#results tbody')
@@ -74,6 +85,7 @@
                 $(violin).toggle();
                 $(compact).toggle();
             })
+
     </script>
 {% endblock %}
 

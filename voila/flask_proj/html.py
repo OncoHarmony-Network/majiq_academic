@@ -26,10 +26,24 @@ class Html:
 
         attrs = [k.replace('_', '-') + '="' + str(v) + '"' for k, v in kwargs.items()]
         attrs = ' '.join(attrs)
-        self._tags.append(['<' + tag_v + ' ' + attrs + '>', '</' + tag_v + '>'])
+
+        if attrs:
+            open_tag = '<' + tag_v + ' ' + attrs + '>'
+        else:
+            open_tag = '<' + tag_v + '>'
+
+        close_tag = '</' + tag_v + '>'
+
+        self._tags.append([open_tag, close_tag])
+        return self
 
     def text(self, txt):
         self._tags.append([txt])
+        return self
+
+    def children(self, *args):
+        self._tags.append([''.join(str(a) for a in args)])
+        return self
 
     def reset(self):
         self._tags = []
