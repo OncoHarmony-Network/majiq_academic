@@ -111,8 +111,8 @@ cdef int _output_lsv_file_single(vector[LSV*] out_lsvlist, string experiment_nam
         for i in range(njunc):
             with gil:
                 jid     = junc_ids[i][0]
-                coord1  = junc_ids[i][1]
-                coord2  = junc_ids[i][2]
+                # coord1  = junc_ids[i][1]
+                # coord2  = junc_ids[i][2]
                 sreads  = junc_ids[i][3]
                 npos    = junc_ids[i][4]
                 irbool  = junc_ids[i][5]
@@ -121,8 +121,8 @@ cdef int _output_lsv_file_single(vector[LSV*] out_lsvlist, string experiment_nam
 
             if irbool == 0:
                 tlb_juncs[jid] = jobj_ptr
-                if tlb_j_g.count(jid) > 0:
-                    for gid in tlb_j_g[jid]:
+                if tlb_j_g.count(jid) > 0 :
+                    for gid in tlb_j_g[jid] :
                         update_splicegraph_junction(db, gid, coord1, coord2, sreads, experiment_name)
 
             elif irb:
@@ -299,22 +299,19 @@ cdef _find_junctions(list file_list, map[string, Gene*]& gene_map, vector[string
 
 cdef init_splicegraph(string filename, object conf):
 
-    # erase splice graph file
-
-
     with SpliceGraph(filename.decode('utf-8'), delete=True) as sg:
         sg.experiment_names = conf.exp_list
         sg.genome = conf.genome
 
-cdef void gene_to_splicegraph(Gene * gne, string sg_filename) nogil:
+cdef void gene_to_splicegraph(Gene * gne, sqlite3 db) nogil:
 
     cdef pair[string, Junction *] jj_pair
     cdef Junction * jj
     cdef pair[string, Exon *] ex_pair
     cdef Exon * ex
     cdef string gne_id = gne.get_id()
-    cdef sqlite3* db
-    open_db(sg_filename, &db)
+    # cdef sqlite3* db
+    # open_db(sg_filename, &db)
 
     sg_gene(db, gne_id, gne.get_name(), string(1, gne.get_strand()), gne.get_chromosome())
     for jj_pair in gne.junc_map_:
@@ -341,7 +338,7 @@ cdef void gene_to_splicegraph(Gene * gne, string sg_filename) nogil:
     for ir in gne.intron_vec_:
         if ir.get_ir_flag():
             sg_intron_retention(db, gne_id, ir.get_start(), ir.get_end(), ir.get_annot())
-    close_db(db)
+    # close_db(db)
 
 
 ## OPEN API FOR PYTHON
@@ -360,6 +357,7 @@ cdef _core_build(str transcripts, list file_list, object conf, object logger):
     cdef string fname
     cdef string outDir = conf.outDir.encode('utf-8')
     cdef int strandness, cnt
+    cdef sqlite3* db
 
     logger.info("Parsing GFF3")
     majiq_io.read_gff(transcripts, gene_map, gid_vec, logger)
@@ -370,6 +368,7 @@ cdef _core_build(str transcripts, list file_list, object conf, object logger):
     _find_junctions(file_list, gene_map, gid_vec, conf, logger)
 
     logger.info("Detecting LSVs ngenes: %s " % n)
+    open_db(sg_filename, &db)
     for i in prange(n, nogil=True, num_threads=nthreads):
         gg = gene_map[gid_vec[i]]
         with gil:
@@ -384,11 +383,12 @@ cdef _core_build(str transcripts, list file_list, object conf, object logger):
             logger.debug("[%s] Generate TLB" % gg.get_id())
 
         gg.fill_junc_tlb(gene_junc_tlb)
-        gene_to_splicegraph(gg, sg_filename)
+        gene_to_splicegraph(gg, db)
         with gil:
             logger.debug("[%s] Detect LSVs" % gg.get_id())
         nlsv = gg.detect_lsvs(out_lsvlist)
 
+    close_db(db)
     logger.info("%s LSV found" % out_lsvlist.size())
 
     for i in prange(nsamples, nogil=True, num_threads=nthreads):

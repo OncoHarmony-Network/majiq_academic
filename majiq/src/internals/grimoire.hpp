@@ -325,7 +325,7 @@ namespace grimoire{
             void    newExonDefinition(int start, int end, Junction *inbound_j, Junction *outbound_j, bool in_db) ;
             void    fill_junc_tlb(map<string, vector<string>> &tlb) ;
             int     detect_lsvs(vector<LSV*> &out_lsvlist);
-            void initialize_junction(string key, int start, int end, float* nreads_ptr) ;
+            void    initialize_junction(string key, int start, int end, float* nreads_ptr) ;
             void    update_junc_flags(int efflen, bool is_last_exp, unsigned int minreads, unsigned int minpos,
                                       unsigned int denovo_thresh, unsigned int min_experiments) ;
 
