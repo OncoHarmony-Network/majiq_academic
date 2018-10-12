@@ -142,21 +142,31 @@ class Genes(SpliceGraphSQL):
 
 class Exons(SpliceGraphSQL):
     def exons(self, gene):
+        if isinstance(gene, str):
+            gene_id = gene
+        else:
+            gene_id = gene.id
+
         query = self.conn.execute('''
                                 SELECT gene_id, start, end, annotated_start, annotated_end, annotated 
                                 FROM exon 
                                 WHERE gene_id=?
-                                ''', (gene.id,))
+                                ''', (gene_id,))
         return self._iter_results(query, Exon)
 
 
 class Junctions(SpliceGraphSQL):
     def junctions(self, gene):
+        if isinstance(gene, str):
+            gene_id = gene
+        else:
+            gene_id = gene.id
+
         query = self.conn.execute('''
                                 SELECT gene_id, start, end, has_reads, annotated
                                 FROM junction 
                                 WHERE gene_id=?
-                                ''', (gene.id,))
+                                ''', (gene_id,))
         return self._iter_results(query, Junction)
 
     def junction_reads(self, junction):

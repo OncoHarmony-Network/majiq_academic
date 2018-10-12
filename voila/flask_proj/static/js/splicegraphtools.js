@@ -1,6 +1,5 @@
 class SpliceGraphTools {
     constructor(sgs) {
-        console.log('top');
         this.sgs = sgs;
         this._init();
     }

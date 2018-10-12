@@ -8,7 +8,7 @@ import numpy as np
 import scipy.special
 
 from voila import constants
-from voila.api.matrix_hdf5 import DeltaPsi, Psi, Heterogen, lsv_id_to_gene_id
+from voila.api.matrix_hdf5 import DeltaPsi, Psi, Heterogen
 from voila.config import Config
 from voila.exceptions import NoLsvsFound, LsvIdNotFoundInVoilaFile, GeneIdNotFoundInVoilaFile
 from voila.utils.voila_log import voila_log
@@ -58,11 +58,9 @@ class ViewMatrix(ABC):
 
     @abstractmethod
     def valid_lsvs(self, lsv_ids):
-        args = self.args
+        # todo: There should be a way to filter lsv ids for tsvs
         for lsv_id in lsv_ids:
-            if not args.gene_ids or lsv_id_to_gene_id(lsv_id) in args.gene_ids:
-                if not args.lsv_ids or lsv_id in args.lsv_ids:
-                    yield lsv_id
+            yield lsv_id
 
     def view_lsv_ids(self):
         args = self.args
@@ -95,13 +93,7 @@ class ViewMatrix(ABC):
             yield tuple(p for p in page if p is not None)
 
     def view_gene_ids(self):
-        args = self.args
-        if args.gene_ids:
-            gene_ids = args.gene_ids
-        else:
-            gene_ids = self.gene_ids
-
-        for gene_id in gene_ids:
+        for gene_id in self.gene_ids:
             if any(self.valid_lsvs(self.view_gene_lsvs(gene_id))):
                 yield gene_id
 
@@ -163,7 +155,8 @@ class ViewPsi(Psi, ViewMatrix):
         def variances(self):
             for b in self.bins:
                 epsi = get_expected_psi(b)
-                step_bins = 1.0 / b.size
+                # b used to be a numpy array and now it's a list...
+                step_bins = 1.0 / len(b)
                 projection_prod = b * np.arange(step_bins / 2, 1, step_bins) ** 2
                 yield np.sum(projection_prod) - epsi ** 2
 
@@ -179,12 +172,13 @@ class ViewPsi(Psi, ViewMatrix):
 
 
 class ViewDeltaPsi(DeltaPsi, ViewMatrix):
-    def __init__(self, args):
-        super().__init__(args.voila_files[0])
-        self.args = args
+    def __init__(self):
+        self.config = Config()
+        super().__init__(self.config.voila_file)
 
     class _ViewDeltaPsi(DeltaPsi._DeltaPsi, ViewMatrix._ViewMatrix):
         def __init__(self, matrix_hdf5, lsv_id):
+            self.config = matrix_hdf5.config
             super().__init__(matrix_hdf5, lsv_id)
 
         def get_all(self):
@@ -253,7 +247,7 @@ class ViewDeltaPsi(DeltaPsi, ViewMatrix):
 
         def high_probability_non_changing(self):
             prior = self.matrix_hdf5.prior[1 if self.intron_retention else 0]
-            non_changing_threshold = self.matrix_hdf5.args.non_changing_threshold
+            non_changing_threshold = self.config.non_changing_threshold
             for bin in self.bins:
                 A = np.log(bin) - prior
                 R = np.exp(A - scipy.special.logsumexp(A))
@@ -265,11 +259,11 @@ class ViewDeltaPsi(DeltaPsi, ViewMatrix):
     def valid_lsvs(self, lsv_ids):
         threshold = None
         probability_threshold = None
-        args = self.args
+        config = self.config
 
-        if not args.show_all:
-            threshold = args.threshold
-            probability_threshold = args.probability_threshold
+        if not config.show_all:
+            threshold = config.threshold
+            probability_threshold = config.probability_threshold
 
         for lsv_id in super().valid_lsvs(lsv_ids):
             delta_psi = self.lsv(lsv_id)

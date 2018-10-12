@@ -70,8 +70,8 @@ const BREWER_PALETTE = [
 
 class Lsv {
     constructor(lsv_data) {
-        this.exon_numbers = lsv_data.exon_numbers;
-        this.lsvs = lsv_data.lsvs
+        this.exon_number = lsv_data.exon_number;
+        this.lsv = lsv_data.lsv
     }
 
     static draw_dashed_line(contextO, startx, starty, endx, endy, dashLen) {
@@ -110,10 +110,7 @@ class Lsv {
                 percentage_exon = .2;
             let percentage_intron = .15;
 
-            const lsv_id = canvas.dataset.lsvId;
-            const split_lsv_id = lsv_id.split(':');
-            const ref_exon = split_lsv_id[split_lsv_id.length - 1];
-            const exon_lsv_number = this.exon_numbers[ref_exon];
+            const exon_lsv_number = this.exon_number;
 
             const lsv_data = canvas.getAttribute('data-lsv-type');
             const lsvs = lsv_data.split('|');
@@ -455,11 +452,10 @@ class Lsv {
 
         if (canvas.getContext) {  // check for support
             const ctx = canvas.getContext("2d");
-            const lsv_id = canvas.dataset.lsvId;
             const group_name = canvas.dataset.group;
 
 
-            const groups = [this.lsvs[lsv_id]];
+            const groups = [this.lsv];
             // Calculate origins_coords
             const header_height = 0; // canvas.group_height*.1;
             const num_groups = groups.length;

@@ -10,12 +10,9 @@ from voila.api.matrix_hdf5 import lsv_id_to_gene_id
 from voila.config import Config
 from voila.exceptions import VoilaException, CanNotFindVoilaFile
 from voila.flask_proj.views import run_service
-from voila.processes import VoilaPool, VoilaQueue
 from voila.utils.utils_voila import create_if_not_exists
 from voila.utils.voila_log import voila_log
-from voila.view.deltapsi import DeltaPsi
-from voila.view.heterogen import Heterogen
-from voila.view.splice_graph import RenderSpliceGraphs
+from voila.view.tsv import NewTsv
 
 
 def secs2hms(secs):
@@ -231,14 +228,38 @@ dpsi_parser.add_argument('--show-all', action='store_true',
 # heterogen parser
 het_parser = new_subparser()
 
+# tsv parser
+tsv_parser = new_subparser()
+tsv_parser.add_argument('files', nargs='+',
+                        help='List of files or directories which contains the splice graph and voila files.')
+tsv_parser.add_argument('-l', '--logger', help='Path for log files.')
+tsv_parser.add_argument('--silent', action='store_true', help='Do not write logs to standard out.')
+tsv_parser.add_argument('-o', '--output', type=check_dir, required=True, help='Path for output directory.')
+tsv_parser.add_argument('--debug', action='store_true')
+tsv_parser.add_argument('-j', '--nproc', type=check_procs, default=max(int(os.cpu_count() / 2), 1),
+                        help='Number of processes used to produce output. Default is half of system processes. ')
+
+tsv_parser.add_argument('--threshold', type=float, default=0.2,
+                        help='Filter out LSVs with no junctions predicted to change over a certain value. Even when '
+                             'show-all is used this value is still used to calculate the probability in the TSV. The '
+                             'default is "0.2".')
+tsv_parser.add_argument('--non-changing-threshold', type=float, default=0.05,
+                        help='The default is "0.05".')
+tsv_parser.add_argument('--probability-threshold', type=float, default=None,
+                        help='This is off by default.')
+tsv_parser.add_argument('--show-all', action='store_true',
+                        help='Show all LSVs including those with no junction with significant change predicted.')
+
 # subparsers
 subparsers = parser.add_subparsers(help='')
-subparsers.add_parser('splice-graph', parents=[splice_graph]).set_defaults(func=RenderSpliceGraphs)
+subparsers.add_parser('tsv', parents=[tsv_parser]).set_defaults(func=NewTsv)
+
+# subparsers.add_parser('splice-graph', parents=[splice_graph]).set_defaults(func=RenderSpliceGraphs)
 subparsers.add_parser('psi', parents=[splice_graph, psi_parser]).set_defaults(func=run_service)
-subparsers.add_parser('deltapsi', parents=[splice_graph, psi_parser, dpsi_parser]).set_defaults(func=DeltaPsi)
-subparsers.add_parser('heterogen',
-                      parents=[splice_graph, psi_parser, dpsi_parser, het_parser]).set_defaults(
-    func=Heterogen)
+subparsers.add_parser('deltapsi', parents=[splice_graph, psi_parser, dpsi_parser]).set_defaults(func=run_service)
+# subparsers.add_parser('heterogen',
+#                       parents=[splice_graph, psi_parser, dpsi_parser, het_parser]).set_defaults(
+#     func=Heterogen)
 
 if len(sys.argv) == 1:
     parser.print_help()
@@ -274,14 +295,14 @@ def main():
     # VoilaQueue(nprocs=args.nproc)
 
     try:
-        file_versions()
-        gene_names()
-        gene_ids()
-        lsv_ids()
+        # file_versions()
+        # gene_names()
+        # gene_ids()
+        # lsv_ids()
 
         Config.write(args)
 
-        args.func(args)
+        args.func()
 
         log.info("Voila! Created in: {0}".format(args.output))
 

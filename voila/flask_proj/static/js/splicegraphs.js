@@ -10,6 +10,7 @@ class SpliceGraphs {
         this.d = undefined;
         this.highlight_lsvs = [];
         this.weighted_lsvs = [];
+        this.lsvs = undefined;
 
         //constants
         this.junction_height = 25;
@@ -687,9 +688,10 @@ class SpliceGraphs {
             .then(() => this)
     }
 
-    highlight(highlight, weighted) {
+    highlight(highlight, weighted, lsvs) {
         this.highlight_lsvs = highlight;
         this.weighted_lsvs = weighted;
+        this.lsvs = lsvs;
         this.update()
     }
 
@@ -891,15 +893,10 @@ class SpliceGraphs {
     update(duration) {
         const gene = this.gene;
         this.d = duration;
-        if (this.db_lsv)
-            return this.db_lsv.allDocs({
-                keys: this.highlight_lsvs,
-                include_docs: true
-            }).then(result => {
-                const lsvs = result.rows.map(r => r.doc);
-                return this.container.querySelectorAll('.splice-graph').forEach(sg => this.splice_graph_update(sg, gene, lsvs));
-            }).then(() => this.d = undefined);
-        else {
+        if (this.lsvs) {
+            this.container.querySelectorAll('.splice-graph').forEach(sg => this.splice_graph_update(sg, gene, this.lsvs));
+            this.d = undefined;
+        } else {
             this.container.querySelectorAll('.splice-graph').forEach(sg => this.splice_graph_update(sg, gene, []));
             this.d = undefined
         }

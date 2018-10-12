@@ -23,7 +23,7 @@ const send_ajax = async (url, data) => {
         xhr.onreadystatechange = () => {
             if (xhr.readyState === 4 && xhr.status === 200) {
                 try {
-                    resolve(xhr.responseText);
+                    resolve(JSON.parse(xhr.responseText));
                 } catch (TypeError) {
                     resolve()
                 }

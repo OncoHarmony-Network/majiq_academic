@@ -32,8 +32,7 @@ class Violin {
 
     psi(svg) {
         d3.select(svg).selectAll('*').remove();
-        const lsv_id = svg.dataset.lsvId;
-        const data = this.data[lsv_id];
+        const data = this.data;
 
         this.violin_count = data.junctions.length;
         svg.setAttribute('height', this.svg_height);
