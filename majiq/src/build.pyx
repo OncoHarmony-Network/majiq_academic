@@ -55,7 +55,7 @@ cdef void update_splicegraph_junction(sqlite3 *db, string gene_id, int start, in
 
 
 cdef int _output_lsv_file_single(vector[LSV*] out_lsvlist, string experiment_name, map[string, vector[string]] tlb_j_g,
-                                 map[string, Gene*] gene_map, string outDir, int nthreads, unsigned int msamples,
+                                 map[string, Gene*] gene_map, string outDir, sqlite3* db, int nthreads, unsigned int msamples,
                                  bint irb, int strandness, object logger) except -1:
 
     cdef unsigned int irbool, coord1, coord2, sreads, npos
@@ -64,7 +64,7 @@ cdef int _output_lsv_file_single(vector[LSV*] out_lsvlist, string experiment_nam
     cdef Gene* gneObj
     cdef vector[Intron *] irv
     cdef Intron * ir_ptr
-    cdef sqlite3* db
+    # cdef sqlite3* db
     cdef string sg_filename
     cdef LSV* lsv_ptr
     cdef string lsvid, gid
@@ -92,7 +92,7 @@ cdef int _output_lsv_file_single(vector[LSV*] out_lsvlist, string experiment_nam
     cdef list junc_info = []
     cdef object all_juncs
 
-    sg_filename = get_builder_splicegraph_filename(outDir.decode('utf-8')).encode('utf-8')
+    # sg_filename = get_builder_splicegraph_filename(outDir.decode('utf-8')).encode('utf-8')
     junc_file = "%s/%s.juncs" % (outDir.decode('utf-8'), experiment_name.decode('utf-8'))
     out_file = "%s/%s.majiq" % (outDir.decode('utf-8'), experiment_name.decode('utf-8'))
     with open(junc_file, 'rb') as fp:
@@ -107,7 +107,7 @@ cdef int _output_lsv_file_single(vector[LSV*] out_lsvlist, string experiment_nam
     type_list = []
 
     with nogil:
-        open_db(sg_filename, &db)
+        # open_db(sg_filename, &db)
         for i in range(njunc):
             with gil:
                 jid     = junc_ids[i][0]
@@ -138,7 +138,7 @@ cdef int _output_lsv_file_single(vector[LSV*] out_lsvlist, string experiment_nam
                                                   ir_ptr.get_end())
                         tlb_ir[ir_ptr.get_key(ir_ptr.get_gene())] = jobj_ptr
 
-        close_db(db)
+        # close_db(db)
     del junc_ids
 
     logger.info("Create majiq file")
@@ -388,16 +388,16 @@ cdef _core_build(str transcripts, list file_list, object conf, object logger):
             logger.debug("[%s] Detect LSVs" % gg.get_id())
         nlsv = gg.detect_lsvs(out_lsvlist)
 
-    close_db(db)
     logger.info("%s LSV found" % out_lsvlist.size())
 
     for i in prange(nsamples, nogil=True, num_threads=nthreads):
         with gil:
             fname = file_list[i][0].encode('utf-8')
             strandness = conf.strand_specific[file_list[i][0]]
-            cnt = _output_lsv_file_single(out_lsvlist, fname, gene_junc_tlb, gene_map, outDir,
+            cnt = _output_lsv_file_single(out_lsvlist, fname, gene_junc_tlb, gene_map, outDir, db,
                                           nthreads, m, ir, strandness, logger)
             logger.info('%s: %d LSVs' %(fname.decode('utf-8'), cnt))
+    close_db(db)
 
 
 def build(args):
