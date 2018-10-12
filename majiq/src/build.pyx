@@ -303,7 +303,7 @@ cdef init_splicegraph(string filename, object conf):
         sg.experiment_names = conf.exp_list
         sg.genome = conf.genome
 
-cdef void gene_to_splicegraph(Gene * gne, sqlite3 db) nogil:
+cdef void gene_to_splicegraph(Gene * gne, sqlite3 * db) nogil:
 
     cdef pair[string, Junction *] jj_pair
     cdef Junction * jj
