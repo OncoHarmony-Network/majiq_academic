@@ -111,8 +111,8 @@ cdef int _output_lsv_file_single(vector[LSV*] out_lsvlist, string experiment_nam
         for i in range(njunc):
             with gil:
                 jid     = junc_ids[i][0]
-                # coord1  = junc_ids[i][1]
-                # coord2  = junc_ids[i][2]
+                coord1  = junc_ids[i][1]
+                coord2  = junc_ids[i][2]
                 sreads  = junc_ids[i][3]
                 npos    = junc_ids[i][4]
                 irbool  = junc_ids[i][5]
