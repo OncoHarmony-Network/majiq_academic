@@ -243,7 +243,8 @@ cdef int dump_hettmp_file(str fname, np.ndarray[np.float32_t, ndim=2, mode="c"] 
         np.save(fp, osamps)
 
 
-cdef void get_coverage_mat_lsv(map[string, qLSV*]& result, list file_list, str weight_fname, int nthreads):
+cdef void get_coverage_mat_lsv(map[string, qLSV*]& result, list file_list, str weight_fname, int nthreads,
+                               bint fltr, int minreads, int minnonzero):
     cdef int n_exp = len(file_list)
     cdef str lid, lsv_type, fname
     cdef string lsv_id
@@ -255,6 +256,7 @@ cdef void get_coverage_mat_lsv(map[string, qLSV*]& result, list file_list, str w
     cdef string empty_string = ''.encode('utf-8')
     cdef string prev_lsvid = empty_string
     cdef int prev_juncidx = 0
+    cdef bint bflt = not fltr
 
     # if weight_fname != "":
     #     weights = _load_weights(list_of_lsv_id, weight_fname)
@@ -271,13 +273,18 @@ cdef void get_coverage_mat_lsv(map[string, qLSV*]& result, list file_list, str w
                 idx += 1
                 lsv_id = row[0]
                 if result.count(lsv_id) > 0:
+
                     if prev_lsvid != lsv_id:
                         if prev_lsvid != empty_string:
                             result[prev_lsvid].add(<np.float32_t *> cov.data, msamples)
+                            result[prev_lsvid].set_bool( bflt )
+                        bflt = fltr or (row[3] >=minreads and row[4] >= minnonzero)
                         prev_lsvid = lsv_id
                         prev_juncidx = -1
                         njunc = result[lsv_id].get_num_ways()
                         cov = np.zeros(shape=(njunc, msamples), dtype=np.float32)
+                    else:
+                        bflt = bflt or (row[3] >=minreads and row[4] >= minnonzero)
                     prev_juncidx += 1
                     cov[prev_juncidx] = data[idx]
             result[prev_lsvid].add(<np.float32_t *> cov.data, msamples)

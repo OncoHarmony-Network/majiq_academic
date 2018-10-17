@@ -198,10 +198,15 @@ void get_samples_from_psi(float* osamps, hetLSV* lsvObj, int psi_samples, psi_di
                           int nbins, int cidx, int fidx){
 
 //    cout<< "MM1\n" ;
-
     const int njunc = lsvObj->get_num_ways() ;
     const int j_offset = lsvObj->get_junction_index() ;
     const int msamples = lsvObj->samps[0].size() ;
+
+    if (!lsvObj->is_enabled()){
+        for (int j=0; j<njunc; j++){
+            lsvObj->mu_psi[cidx][fidx][j] = -1 ;
+        }
+    }
 
 //cout<< "MM2\n" ;
 //
@@ -224,7 +229,7 @@ void get_samples_from_psi(float* osamps, hetLSV* lsvObj, int psi_samples, psi_di
         const float alpha = alpha_beta_prior[j][0] ;
         const float beta = alpha_beta_prior[j][1] ;
         psi_distr_t temp_mupsi(msamples) ;
-
+        psi_distr_t temp_postpsi (nbins, 0.0) ;
         for (int m=0; m<msamples; m++){
             const float jnc_val = lsvObj->samps[j][m] ;
             const float all_val = all_m[m] ;
@@ -235,14 +240,17 @@ void get_samples_from_psi(float* osamps, hetLSV* lsvObj, int psi_samples, psi_di
             const float Z = logsumexp(psi_lkh, nbins) ;
             for (int i=0; i< nbins; i++){
                 psi_lkh[i] -= Z ;
-                lsvObj->post_psi[cidx][j][i] += exp(psi_lkh[i]) ;
+                temp_postpsi[i] += exp(psi_lkh[i]) ;
+//                lsvObj->post_psi[cidx][j][i] += exp(psi_lkh[i]) ;
             }
             psi_lkh.clear() ;
         }
         sort (temp_mupsi.begin(), temp_mupsi.end()) ;
         lsvObj->mu_psi[cidx][fidx][j] = median(temp_mupsi) ;
         for (int i=0; i<nbins; i++){
-            lsvObj->post_psi[cidx][j][i] /= msamples ;
+            temp_postpsi[i] /= msamples ;
+            lsvObj->post_psi[cidx][j][i] += temp_postpsi[i] ;
+//            lsvObj->post_psi[cidx][j][i] /= msamples ;
         }
         if (psi_samples == 1){
             osamps[j+j_offset] = lsvObj->mu_psi[cidx][fidx][j] ;

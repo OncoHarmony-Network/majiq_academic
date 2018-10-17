@@ -11,6 +11,8 @@ cdef extern from "qLSV.hpp":
         int get_num_ways() nogil ;
         void add(float* coverage, int msamples) nogil ;
         void reset_samps() nogil ;
+        void set_bool( bint flt ) nogil ;
+        bint is_enabled() nogil ;
 
     cdef cppclass hetLSV(qLSV):
         hetLSV() nogil ;

@@ -34,7 +34,7 @@ cdef int _statistical_test_computation(object out_h5p, dict comparison, list lis
     cdef np.ndarray[np.float32_t, ndim=2, mode="c"]  k
     cdef object cc
     cdef int cond, xx, i
-    cdef str cond_name, lsv, statsnames
+    cdef str cond_name, statsnames
     cdef int index, nways, lsv_index
     cdef list file_list = []
     cdef list statlist
@@ -78,8 +78,8 @@ cdef int _statistical_test_computation(object out_h5p, dict comparison, list lis
 
     for i in prange(nlsv, nogil=True, num_threads=nthreads):
         with gil:
-            lsv = list_of_lsv[i]
-            hetObj_ptr = <hetLSV*> lsv_vec[lsv]
+            lsv_id = list_of_lsv[i]
+            hetObj_ptr = <hetLSV*> lsv_vec[lsv_id]
             hetObj_ptr.create_condition_samples(len(file_list[0]), len(file_list[1]), psi_samples)
             lsv_index = hetObj_ptr.get_junction_index()
             nways = hetObj_ptr.get_num_ways()
@@ -111,7 +111,7 @@ cdef int _statistical_test_computation(object out_h5p, dict comparison, list lis
 
 cdef int _het_computation(object out_h5p, dict file_cond, list list_of_lsv, map[string, qLSV*] lsv_vec,
                           dict lsv_type_dict, dict junc_info, int psi_samples, int nthreads, int nbins, str outdir,
-                          object logger ) except -1:
+                          int minreads, int minnonzero, object logger ) except -1:
     cdef string lsv
     cdef list cond_list, conditions
     cdef str f, cond_name, fname ;
@@ -145,17 +145,16 @@ cdef int _het_computation(object out_h5p, dict file_cond, list list_of_lsv, map[
         max_nfiles = max(max_nfiles, len(cond_list))
         for fidx, f in enumerate(cond_list):
             osamps = np.zeros(shape=(total_njuncs, psi_samples), dtype=np.float32)
-            majiq_io.get_coverage_mat_lsv(lsv_vec, [f], "", nthreads)
+            majiq_io.get_coverage_mat_lsv(lsv_vec, [f], "", nthreads, True, minreads, minnonzero)
             for i in prange(nlsv, nogil=True, num_threads=nthreads):
                 with gil:
                     lsv = list_of_lsv[i]
+
                 get_samples_from_psi(<np.float32_t *> osamps.data, <hetLSV*> lsv_vec[lsv], psi_samples, psi_border,
                                      nbins, cidx, fidx)
                 lsv_vec[lsv].reset_samps()
             fname = get_tmp_psisample_file(outdir, "%s_%s" %(cond_name, fidx) )
             majiq_io.dump_hettmp_file(fname, osamps)
-
-
 
 
     logger.info("Store Voila LSV information")
@@ -173,8 +172,9 @@ cdef int _het_computation(object out_h5p, dict file_cond, list list_of_lsv, map[
 
         for x in range(len(file_cond)):
             for y in range(nways):
-               for z in range(nbins):
-                   postpsi[x,y,z] = hetObj_ptr.post_psi[x][y][z]
+                for z in range(nbins):
+                    postpsi[x,y,z] = hetObj_ptr.post_psi[x][y][z]
+                postpsi[x,y] /= postpsi[x,y].sum()
 
         out_h5p.heterogen(lsv.decode('utf-8')).add(lsv_type=lsv_type_dict[lsv][0].decode('utf-8'), mu_psi=mupsi,
                                                    mean_psi=postpsi, junctions=junc_info[lsv])
@@ -258,7 +258,7 @@ cdef void _core_independent(object self):
 
         logger.info('Sampling from PSI')
         _het_computation(out_h5p, file_cond, list_of_lsv, lsv_map, lsv_type_dict, junc_info, self.psi_samples,
-                         nthreads, nbins, self.outDir, logger)
+                         nthreads, nbins, self.outDir, self.minreads, self.minpos, logger)
 
         logger.info('Calculating statistics pvalues')
         _statistical_test_computation(out_h5p, comparison, list_of_lsv, stats_vec, self.psi_samples, lsv_map,

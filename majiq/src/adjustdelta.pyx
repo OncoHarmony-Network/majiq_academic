@@ -59,7 +59,7 @@ cpdef np.ndarray[DTYPE_t, ndim=1] adjustdelta(np.ndarray[DTYPE_t, ndim=1] deltap
                 D[idx, 1] += 1
                 break
 
-
+    print (deltapsi)
 
     total = D[:, 1].sum()
     num_spike = D[zero_idx, 1]

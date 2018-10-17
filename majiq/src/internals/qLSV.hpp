@@ -17,27 +17,30 @@ class qLSV{
     protected:
         int nways_ ;
         bool is_ir_ ;
+        bool present_ ;
 
     public:
         vector<psi_distr_t> samps ;
         qLSV(int nways1, bool is_ir1): nways_(nways1), is_ir_(is_ir1){
-
+            present_ = true ;
         }
-
         ~qLSV(){
             clear_samps() ;
         }
 
-        void clear_samps(){
-            samps.clear() ;
-        }
-
-        void reset_samps(){
+        int get_num_ways()        { return nways_ ; }
+        bool is_ir()              { return is_ir_ ; }
+        void set_bool( bool flt ) { present_ = flt ; }
+        bool is_enabled()         { return present_ ; }
+        void clear_samps()        { samps.clear() ; }
+        void reset_samps() {
 
             for(int xx=0; xx< nways_; xx++){
                 fill(samps[xx].begin(), samps[xx].end(), (float)0.0) ;
             }
         }
+
+
 
         void add(float* coverage, int msamples){
 
@@ -55,13 +58,7 @@ class qLSV{
             }
         }
 
-        int get_num_ways() {
-            return nways_ ;
-        }
 
-        bool is_ir(){
-            return is_ir_ ;
-        }
 
 };
 
