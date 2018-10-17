@@ -13,4 +13,4 @@ pytz==2018.4
 scipy
 six==1.11.0
 SQLAlchemy==1.2.8
-gitpython==2.0.5
+gitpython==2.1.11
