@@ -1,8 +1,8 @@
 import csv
 import multiprocessing
 import os
-from _queue import Empty
 from abc import ABC
+from queue import Empty
 
 import numpy as np
 
