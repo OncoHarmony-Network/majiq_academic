@@ -595,7 +595,8 @@ class Lsv {
         if (fill) contextO.fill();
     }
 
-    draw_delta_lsv_compact_svg(el, lsv) {
+    draw_delta_lsv_compact_svg(el) {
+        const lsv = this.lsv;
         const width = 200;
         const height = 20;
         const margin = {top: 1, bottom: 8, left: 2, right: 2};

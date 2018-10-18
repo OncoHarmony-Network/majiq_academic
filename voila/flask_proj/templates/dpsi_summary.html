@@ -1,180 +1,187 @@
 {% extends 'base_summary.html' %}
 
 {% block script %}
-    <script src="metadata.js"></script>
+    <script src="{{ url_for('static', filename='js/lsvtools.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/summary.js') }}"></script>
     <script>
-        const db_gene = new PouchDB('voila_gene_{{ db_id }}');
-        const db_lsv = new PouchDB('voila_lsv_{{ db_id }}');
-    </script>
-    <script>
-        const urlParams = new URLSearchParams(document.location.search);
+        json_ajax('{{ url_for("nav", gene_id=gene_id) }}').then(json => {
+            document.querySelector('.prev-gene').addEventListener('click', () => {
+                window.location.href = json.prev;
+            });
 
-        window.addEventListener('load', () => {
+            document.querySelector('.next-gene').addEventListener('click', () => {
+                window.location.href = json.next;
+            });
+        });
 
-            const lsv = new Lsv(db_lsv, db_gene);
-            const t = new Table('#results', {
-                db_gene: db_gene,
-                db_lsv: db_lsv,
-                show_data: (lsvs, table, table_body) => {
-                    const t = d3.select(table_body).selectAll('tr')
-                        .data(lsvs);
+        json_ajax('{{ url_for("splice_graph", gene_id=gene_id) }}').then(gene => {
 
-                    /*
-                        Remove unused rows
-                     */
-                    t.exit().remove();
-
-                    /*
-                        Create new rows
-                     */
-                    const trs = t.enter().append('tr');
-
-                    trs
-                        .attr('data-lsv-id', d => d._id);
-
-                    table.highlight_form(trs.append('td'), sgs);
-
-                    trs.append('td')
-                        .attr('class', 'lsv-id')
-                        .text(d => d._id);
-
-                    trs
-                        .append('td')
-                        .attr('class', 'lsv-type')
-                        .append('canvas')
-                        .each((d, i, a) => {
-                            lsv.cartoon(a[i], d._id)
+            const sgs = new SpliceGraphs('.splice-graph-container', {
+                gene: gene,
+                remove_img: '{{ url_for('static', filename='img/remove.svg')}}',
+                remove_fn: event => {
+                    const sg = event.target.closest('.splice-graph');
+                    send_ajax('{{ url_for('psi_splice_graphs') }}', {'remove': [sg.dataset.group, sg.dataset.experiment]})
+                        .then(() => {
+                            sg.remove();
+                            SpliceGraphTools._populate_sg_form();
                         });
-
-                    const first_summary = trs
-                        .append('td');
-
-                    db_lsv.get('metadata').then(metadata => {
-                        first_summary
-                            .append('canvas')
-                            .attr('class', 'lsv-single-compact-percentiles')
-                            .each((d, i, a) => table.psi_summary_compact(a[i], metadata.group_names[0]));
-                        first_summary
-                            .append('svg')
-                            .attr('class', 'psi-violin-plot')
-                            .each((d, i, a) => table.psi_summary_violin(a[i], metadata.group_names[0]))
-                    });
-
-                    const changes = trs
-                        .append('td');
-
-                    changes
-                        .append('div')
-                        .attr('class', 'excl-incl-rect')
-                        .each((d, i, a) => table.dpsi_summary_excl_incl(a[i], d));
-
-
-                    changes
-                        .append('svg')
-                        .attr('class', 'deltapsi-violin-plot')
-                        .each((d, i, a) => table.dpsi_summary_violin(a[i]));
-
-
-                    const second_summary = trs
-                        .append('td');
-
-                    db_lsv.get('metadata').then(metadata => {
-                        second_summary
-                            .append('canvas')
-                            .attr('class', 'lsv-single-compact-percentiles')
-                            .each((d, i, a) => table.psi_summary_compact(a[i], metadata.group_names[1]));
-
-                        second_summary
-                            .append('svg')
-                            .attr('class', 'psi-violin-plot')
-                            .each((d, i, a) => table.psi_summary_violin(a[i], metadata.group_names[1]))
-                    });
-
-                    const links = trs
-                        .append('td')
-                        .attr('class', 'links');
-                    links
-                        .append('a')
-                        .each((d, i, a) => {
-                            table.ucsc_link(a[i], d)
-                        })
-                        .append('img')
-                        .attr('src', 'img/ucsc.png');
-                    links.append('button')
-                        .text('Copy LSV')
-                        .each((d, i, a) => table.majiq_spel_button(a[i], d));
-
-                    /*
-                        Update values in existing rows
-                     */
-                    t
-                        .each((d, i, a) => {
-                            a[i].dataset.lsvId = d._id;
-                            const tds = a[i].querySelectorAll('td');
-
-                            // lsv id
-                            tds[1].innerHTML = d._id;
-
-                            // lsv type
-                            let canvas = tds[2].querySelector('canvas');
-                            lsv.cartoon(canvas, d._id);
-
-                            // psi per junction
-                            db_lsv.get('metadata').then(metadata => {
-                                table.psi_summary_compact(tds[3].querySelector('canvas'), metadata.group_names[0]);
-                                table.psi_summary_violin(tds[3].querySelector('svg'), metadata.group_names[0]);
-                                table.psi_summary_compact(tds[5].querySelector('canvas'), metadata.group_names[1]);
-                                table.psi_summary_violin(tds[5].querySelector('svg'), metadata.group_names[1])
-                            });
-
-                            // deltapsi per junction
-                            table.dpsi_summary_excl_incl(tds[4].querySelector('.excl-incl-rect'), d);
-                            table.dpsi_summary_violin(tds[4].querySelector('.deltapsi-violin-plot'));
-
-                            // ucsc link
-                            table.ucsc_link(tds[6].querySelector('.links a'), d)
-
-                        })
                 }
             });
 
-            document.querySelector('.lsv-filters').addEventListener('change', () => {
-                t.update();
-            });
+            sgs.init_create().then(s => new SpliceGraphTools(s));
 
-            const sgs = new SpliceGraphs('.splice-graph-container', {
-                db_gene: db_gene,
-                db_lsv: db_lsv,
-                gene_id: urlParams.get('gene_id')
-            });
+            new MutationObserver(mutations => {
+                mutations.forEach(m => m.addedNodes
+                    .forEach(n => {
+                        const lsv_id = n.querySelectorAll('td')[1].textContent;
+                        json_ajax('{{ url_for("lsv_data") }}/' + encodeURIComponent(lsv_id))
+                            .then(lsv_data => {
+                                    const lsv = new Lsv(lsv_data);
+                                    const violin = new Violin(lsv_data.lsv);
 
-            sgs.dpsi_localstorage()
-                .then(() => {
-                    sgs.create_localstorage();
-                    new SpliceGraphTools(sgs);
+                                    n.querySelectorAll('.psi-violin-plot')
+                                        .forEach(s => {
+                                            $(s).hide();
+                                            violin.psi(s);
+                                        });
+
+                                    n.querySelectorAll('.lsv-cartoon')
+                                        .forEach(s => lsv.cartoon(s));
+
+                                    n.querySelectorAll('.lsv-single-compact-percentiles')
+                                        .forEach(s => lsv.draw_lsv_compact_stack_bars(s));
+
+                                    n.querySelectorAll('.excl-incl-rect')
+                                        .forEach(s => {
+                                            lsv.draw_delta_lsv_compact_svg(s);
+
+                                        });
+                                    n.querySelectorAll('.dpsi-violin')
+                                        .forEach(s => {
+                                            $(s).hide();
+                                            violin.deltapsi(s);
+                                        });
+
+                                    n.querySelector('.highlight').onchange = () => {
+                                        const hl = Array.from(document.querySelectorAll('input.highlight:checked'))
+                                            .map(el => el.closest('tr').querySelectorAll('td')[1].textContent);
+                                        const w = Array.from(document.querySelectorAll('input.psi-weighted:checked'))
+                                            .map(el => el.closest('tr').querySelectorAll('td')[1].textContent);
+                                        const hl_data = {'highlight': hl, 'weighted': w};
+                                        send_ajax('{{ url_for("lsv_highlight") }}', hl_data).then(lsvs => {
+                                            sgs.highlight(hl, w, lsvs);
+                                        })
+                                    }
+                                }
+                            )
+                    })
+                );
+            })
+                .observe(document.querySelector('#results tbody'), {
+                    childList: true,
                 });
-        })
+
+            $('#results').DataTable({
+                autoWidth: false,
+                processing: true,
+                serverSide: true,
+                order: [[1, "asc"]],
+                ajax: {
+                    url: '{{ url_for('summary_table', gene_id=gene_id) }}',
+                    type: 'POST'
+                },
+                columnDefs: [
+                    {
+                        data: null,
+                        targets: 0,
+                        orderable: false,
+                        defaultContent: "<div class=\"highlight-form\">" +
+                            "<div>" +
+                            "<label>Highlight<input class=\"highlight\" type=\"checkbox\"></label>" +
+                            "</div>" +
+                            "<div>" +
+                            "<label>PSI Weighted<input class=\"psi-weighted\" type=\"checkbox\"></label>" +
+                            "</div>" +
+                            "</div>"
+                    },
+                    {
+                        targets: 2,
+                        orderable: false,
+                        render: data => {
+                            const element = document.createElement('canvas');
+                            element.setAttribute('width', '200');
+                            element.setAttribute('height', '80');
+                            element.classList.add('lsv-cartoon');
+                            element.dataset.lsvType = data;
+                            return element.outerHTML
+                        }
+                    },
+                    {
+                        targets: 4,
+                        render: () => {
+                            const excl_incl = document.createElement('svg');
+                            excl_incl.classList.add('excl-incl-rect');
+                            excl_incl.setAttribute('width', '0');
+                            excl_incl.setAttribute('height', '0');
+
+                            const dpsi_violin = document.createElement('svg');
+                            dpsi_violin.classList.add('dpsi-violin');
+                            dpsi_violin.setAttribute('width', '0');
+                            dpsi_violin.setAttribute('height', '0');
+
+                            return excl_incl.outerHTML + dpsi_violin.outerHTML;
+                        }
+                    },
+                    {
+                        targets: [3, 5],
+                        orderable: false,
+                        render: data => {
+                            const compact = document.createElement('canvas');
+                            compact.classList.add('lsv-single-compact-percentiles');
+                            compact.dataset.group = data;
+
+                            const violin = document.createElement('svg');
+                            violin.classList.add('psi-violin-plot');
+                            violin.setAttribute('width', '0');
+                            violin.setAttribute('height', '0');
+                            violin.dataset.group = data;
+
+                            return compact.outerHTML + violin.outerHTML
+                        }
+                    },
+                    {
+                        targets: 6,
+                        orderable: false,
+                    },
+                ]
+            });
+
+
+        });
+
+        $('#results tbody')
+            .on('click', '.excl-incl-rect, .dpsi-violin', event => {
+                const parent = event.target.closest('td');
+                const excl_incl = parent.querySelector('.excl-incl-rect');
+                const violin = parent.querySelector('.dpsi-violin');
+                $(violin).toggle();
+                $(excl_incl).toggle();
+            })
+            .on('click', '.psi-violin-plot, .lsv-single-compact-percentiles', event => {
+                const parent = event.target.closest('td');
+                const violin = parent.querySelector('.psi-violin-plot');
+                const compact = parent.querySelector('.lsv-single-compact-percentiles');
+                $(violin).toggle();
+                $(compact).toggle();
+            })
+
     </script>
 {% endblock %}
 
 {% block bottom %}
     <div class="lsv-container">
         <div>
-
-            <div>
-                <form class="pure-form">
-                    <button class="previous pure-button">Previous</button>
-                    <button class="next pure-button">Next</button>
-                    <select class="rows">
-                        <option value="10">10</option>
-                        <option value="25">25</option>
-                        <option value="50">50</option>
-                        <option value="100">100</option>
-                    </select>
-                    <span class="current-page"></span>
-                </form>
-            </div>
-
             <table id="results" class="pure-table">
                 <thead>
                 <tr>
@@ -182,7 +189,7 @@
                     <th>LSV ID</th>
                     <th>LSV Type</th>
                     <th>Ψ per Junction</th>
-                    <th>DeltaPSI per Junction</th>
+                    <th>∆Ψ per Junction</th>
                     <th>Ψ per Junction</th>
                     <th>Links</th>
                 </tr>

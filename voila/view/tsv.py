@@ -1,7 +1,8 @@
 import csv
+import multiprocessing
 import os
+from _queue import Empty
 from abc import ABC
-from multiprocessing import Lock
 
 import numpy as np
 
@@ -14,7 +15,7 @@ from voila.utils.voila_log import voila_log
 from voila.view.html import Html
 from voila.vlsv import matrix_area
 
-lock = Lock()
+lock = multiprocessing.Lock()
 
 
 class Tsv(ABC):
@@ -91,55 +92,78 @@ class NewTsv:
 
 
 class AnalysisTypeTsv:
-    def __init__(self):
+    def __init__(self, view_matrix):
         self.config = Config()
+        self.view_matrix = view_matrix
 
     @staticmethod
-    def tsv_row(gene_ids, tsv_file, fieldnames):
+    def tsv_row(self, q, e, tsv_file, fieldnames):
         raise NotImplementedError()
 
-    def write_tsv(self, fieldnames, view_matrix):
+    def fill_queue(self, queue, event):
+        with self.view_matrix() as m:
+            for gene_id in m.gene_ids:
+                # # if any(h.view_gene_lsvs(gene_id)):
+                # #     queue.put(gene_id)
+                queue.put(gene_id)
+            event.set()
+
+    def gene_ids(self, q, e):
+        while not (e.is_set() and q.empty()):
+            try:
+                yield q.get_nowait()
+            except Empty:
+                pass
+
+        assert q.empty()
+
+    def write_tsv(self, fieldnames):
         config = self.config
         log = voila_log()
         log.info("Creating Tab-delimited output file")
-
+        nproc = self.config.nproc
+        multiple_results = []
         output_html = Html.get_output_html(config.output, config.voila_file)
         tsv_file = os.path.join(config.output, output_html.rsplit('.html', 1)[0] + '.tsv')
+        mgr = multiprocessing.Manager()
+        queue = mgr.Queue(nproc * 2)
+        event = mgr.Event()
+        fill_queue_proc = multiprocessing.Process(target=self.fill_queue, args=(queue, event))
 
-        with view_matrix() as m:
-            view_gene_ids = list(m.gene_ids)
+        log.debug('Manager PID {}'.format(mgr._process.ident))
+
+        fill_queue_proc.start()
 
         with open(tsv_file, 'w') as tsv:
             writer = csv.DictWriter(tsv, fieldnames=fieldnames, delimiter='\t')
             writer.writeheader()
 
-        multiple_results = []
-
-        with VoilaPool(config.nproc) as vp, VoilaQueue(nprocs=config.nproc) as vq:
-            for gene_ids in chunkify(view_gene_ids, vp.processes):
-                multiple_results.append(vp.apply_async(self.tsv_row, (gene_ids, tsv_file, fieldnames)))
-
-        [r.get() for r in multiple_results]
+        with multiprocessing.Pool(processes=nproc) as pool:
+            for _ in range(nproc):
+                multiple_results.append(pool.apply_async(self.tsv_row, (queue, event, tsv_file, fieldnames)))
+            [r.get() for r in multiple_results]
 
         log.info("Delimited output file successfully created in: %s" % tsv_file)
+
+        fill_queue_proc.join()
 
 
 class PsiTsv(AnalysisTypeTsv):
     def __init__(self):
-        super().__init__()
+        super().__init__(ViewPsi)
         self.tab_output()
 
-    @staticmethod
-    def tsv_row(gene_ids, tsv_file, fieldnames):
+    def tsv_row(self, q, e, tsv_file, fieldnames):
         log = voila_log()
-
         with ViewPsi() as m, ViewSpliceGraph() as sg:
 
             with open(tsv_file, 'a') as tsv:
                 writer = csv.DictWriter(tsv, fieldnames=fieldnames, delimiter='\t')
 
-                for gene_id in gene_ids:
+                for gene_id in self.gene_ids(q, e):
+
                     gene = sg.gene(gene_id)
+
                     for lsv_id in m.view_gene_lsvs(gene.id):
                         lsv = m.lsv(lsv_id)
                         lsv_junctions = lsv.junctions
@@ -186,15 +210,15 @@ class PsiTsv(AnalysisTypeTsv):
                       'chr',
                       'strand', 'Junctions coords', 'Exons coords', 'IR coords']
 
-        self.write_tsv(fieldnames, ViewPsi)
+        self.write_tsv(fieldnames)
 
 
 class DeltaPsiTsv(AnalysisTypeTsv):
     def __init__(self):
-        super().__init__()
+        super().__init__(ViewDeltaPsi)
         self.tab_output()
 
-    def tsv_row(self, gene_ids, tsv_file, fieldnames):
+    def tsv_row(self, q, e, tsv_file, fieldnames):
         log = voila_log()
         config = self.config
 
@@ -206,8 +230,10 @@ class DeltaPsiTsv(AnalysisTypeTsv):
             with open(tsv_file, 'a') as tsv:
                 writer = csv.DictWriter(tsv, fieldnames=fieldnames, delimiter='\t')
 
-                for gene_id in gene_ids:
+                for gene_id in self.gene_ids(q, e):
+
                     gene = sg.gene(gene_id)
+
                     for lsv_id in m.view_gene_lsvs(gene.id):
                         log.debug('Write TSV row for {0}'.format(lsv_id))
 
@@ -276,4 +302,4 @@ class DeltaPsiTsv(AnalysisTypeTsv):
                       'A5SS', 'A3SS', 'ES', 'Num. Junctions', 'Num. Exons', 'De Novo Junctions', 'chr',
                       'strand', 'Junctions coords', 'Exons coords', 'IR coords']
 
-        self.write_tsv(fieldnames, ViewDeltaPsi)
+        self.write_tsv(fieldnames)

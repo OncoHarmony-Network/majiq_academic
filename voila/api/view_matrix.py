@@ -39,7 +39,7 @@ class ViewMatrix(ABC):
             return self.get('junctions')
 
     @property
-    def view_metadata(self):
+    def metadata(self):
         group_names = self.group_names.tolist()
         experiment_names = self.experiment_names.tolist()
         metadata = {'group_names': group_names}
@@ -222,15 +222,15 @@ class ViewDeltaPsi(DeltaPsi, ViewMatrix):
         def group_means(self):
             group_names = self.matrix_hdf5.group_names
             for group_name, means in zip(group_names, self.get('group_means')):
-                yield group_name, list(means)
+                yield group_name, means.tolist()
 
         @property
         def excl_incl(self):
             for mean in self.means:
                 if mean < 0:
-                    yield [-mean, 0]
+                    yield (-mean, 0)
                 else:
-                    yield [0, mean]
+                    yield (0, mean)
 
         @property
         def junction_count(self):
@@ -274,8 +274,9 @@ class ViewDeltaPsi(DeltaPsi, ViewMatrix):
 
 class ViewHeterogens:
     def __init__(self, args):
+        config = Config()
         self.args = args
-        self.view_heterogens = tuple(ViewHeterogen(args, f) for f in args.voila_files)
+        self.view_heterogens = tuple(ViewHeterogen(args, f) for f in config.voila_files)
 
     def __enter__(self):
         return self

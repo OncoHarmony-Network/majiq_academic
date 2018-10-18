@@ -10,8 +10,11 @@ from voila.api.matrix_hdf5 import lsv_id_to_gene_id
 from voila.config import Config
 from voila.exceptions import VoilaException, CanNotFindVoilaFile
 from voila.flask_proj.views import run_service
+from voila.processes import VoilaPool, VoilaQueue
 from voila.utils.utils_voila import create_if_not_exists
 from voila.utils.voila_log import voila_log
+from voila.view.heterogen import Heterogen
+from voila.view.splice_graph import RenderSpliceGraphs
 from voila.view.tsv import NewTsv
 
 
@@ -158,10 +161,6 @@ def check_file(value):
     return value
 
 
-def check_procs(value):
-    return min(os.cpu_count(), max(int(value), 1))
-
-
 parser = argparse.ArgumentParser(description='VOILA is a visualization package '
                                              'for Alternative Local Splicing Events.')
 parser.add_argument('-v', action='version', version=constants.VERSION)
@@ -169,14 +168,14 @@ parser.add_argument('-v', action='version', version=constants.VERSION)
 # splice graph parser
 splice_graph = new_subparser()
 
-splice_graph.add_argument('-s', '--splice-graph', type=check_file, required=True,
-                          help='Path to splice graph file.')
+# splice_graph.add_argument('-s', '--splice-graph', type=check_file, required=True,
+#                           help='Path to splice graph file.')
 splice_graph.add_argument('-o', '--output', type=check_dir, required=True,
                           help='Path for output directory.')
 splice_graph.add_argument('--logger', help='Path for log files.')
 splice_graph.add_argument('--silent', action='store_true', help='Do not write logs to standard out.')
 splice_graph.add_argument('--debug', action='store_true', help='Prints extra output for debugging.')
-splice_graph.add_argument('-j', '--nproc', type=check_procs, default=max(int(os.cpu_count() / 2), 1),
+splice_graph.add_argument('-j', '--nproc', type=int, default=min(os.cpu_count(), max(int(os.cpu_count() / 2), 1)),
                           help='Number of processes used to produce output. Default is half of system processes. ')
 splice_graph.add_argument('--gene-names-file', dest='gene_names', type=check_list_file, default=[],
                           help='Location of file that contains a list of common gene names which should remain in '
@@ -194,7 +193,7 @@ splice_graph.add_argument('--disable-db', action='store_true', help='Disables th
 
 # psi parser
 psi_parser = new_subparser()
-psi_parser.add_argument('voila_files', nargs='+', type=check_file,
+psi_parser.add_argument('files', nargs='+', type=check_file,
                         help='Location of majiq\'s voila file.  File should end with ".voila".')
 psi_parser.add_argument('--gtf', action='store_true', help='Generate GTF (GFF2) files for LSVs.')
 psi_parser.add_argument('--gff', action='store_true', help='Generate GFF3 files for LSVs.')
@@ -236,7 +235,7 @@ tsv_parser.add_argument('-l', '--logger', help='Path for log files.')
 tsv_parser.add_argument('--silent', action='store_true', help='Do not write logs to standard out.')
 tsv_parser.add_argument('-o', '--output', type=check_dir, required=True, help='Path for output directory.')
 tsv_parser.add_argument('--debug', action='store_true')
-tsv_parser.add_argument('-j', '--nproc', type=check_procs, default=max(int(os.cpu_count() / 2), 1),
+tsv_parser.add_argument('-j', '--nproc', type=int, default=min(os.cpu_count(), max(int(os.cpu_count() / 2), 1)),
                         help='Number of processes used to produce output. Default is half of system processes. ')
 
 tsv_parser.add_argument('--threshold', type=float, default=0.2,
@@ -254,12 +253,12 @@ tsv_parser.add_argument('--show-all', action='store_true',
 subparsers = parser.add_subparsers(help='')
 subparsers.add_parser('tsv', parents=[tsv_parser]).set_defaults(func=NewTsv)
 
-# subparsers.add_parser('splice-graph', parents=[splice_graph]).set_defaults(func=RenderSpliceGraphs)
+subparsers.add_parser('splice-graph', parents=[splice_graph]).set_defaults(func=RenderSpliceGraphs)
 subparsers.add_parser('psi', parents=[splice_graph, psi_parser]).set_defaults(func=run_service)
 subparsers.add_parser('deltapsi', parents=[splice_graph, psi_parser, dpsi_parser]).set_defaults(func=run_service)
-# subparsers.add_parser('heterogen',
-#                       parents=[splice_graph, psi_parser, dpsi_parser, het_parser]).set_defaults(
-#     func=Heterogen)
+subparsers.add_parser('heterogen',
+                      parents=[splice_graph, psi_parser, dpsi_parser, het_parser]).set_defaults(
+    func=Heterogen)
 
 if len(sys.argv) == 1:
     parser.print_help()
@@ -291,8 +290,7 @@ def main():
 
     log.info('Voila v{}'.format(constants.VERSION))
 
-    # VoilaPool(args.nproc)
-    # VoilaQueue(nprocs=args.nproc)
+
 
     try:
         # file_versions()
@@ -302,7 +300,12 @@ def main():
 
         Config.write(args)
 
-        args.func()
+        try:
+            args.func()
+        except TypeError:
+            VoilaPool(args.nproc)
+            VoilaQueue(nprocs=args.nproc)
+            args.func(args)
 
         log.info("Voila! Created in: {0}".format(args.output))
 

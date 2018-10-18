@@ -11,6 +11,7 @@ import voila
 from voila import constants
 from voila.api.view_matrix import ViewHeterogens
 from voila.api.view_splice_graph_sqlite import ViewSpliceGraph
+from voila.config import Config
 from voila.exceptions import NotHeterogenVoilaFile
 from voila.processes import VoilaPool, VoilaQueue
 from voila.utils.voila_log import voila_log
@@ -49,7 +50,7 @@ class Heterogen(Html, Tsv):
         log = voila_log()
         for gene_id in gene_ids:
             with open(os.path.join(self.args.output, '{}.js'.format(gene_id)), 'w') as f:
-                with ViewHeterogens(self.args) as h, ViewSpliceGraph(self.args) as sg:
+                with ViewHeterogens(self.args) as h, ViewSpliceGraph() as sg:
                     metadata = h.view_metadata
                     exp_name = metadata['experiment_names']
                     lsv_ids = h.view_gene_lsvs(gene_id)
@@ -180,7 +181,7 @@ class Heterogen(Html, Tsv):
         log = voila_log()
         metadata = self.view_metadata
         group_names = metadata['group_names']
-        with ViewHeterogens(args) as m, ViewSpliceGraph(args) as sg:
+        with ViewHeterogens(args) as m, ViewSpliceGraph() as sg:
             with open(tsv_file, 'a') as tsv:
                 writer = csv.DictWriter(tsv, fieldnames=fieldnames, delimiter='\t')
 
@@ -246,6 +247,7 @@ class Heterogen(Html, Tsv):
 
     def render_tsv(self):
         log = voila_log()
+        config = Config()
 
         with ViewHeterogens(self.args) as m:
             metadata = m.view_metadata
@@ -258,14 +260,14 @@ class Heterogen(Html, Tsv):
         log.info("Creating Tab-delimited output file")
 
         args = self.args
-        output_html = Html.get_output_html(args, args.voila_files[0])
+        output_html = Html.get_output_html(args, config.voila_file)
         tsv_file = os.path.join(args.output, output_html.rsplit('.html', 1)[0] + '.tsv')
 
         with open(tsv_file, 'w') as tsv:
             writer = csv.DictWriter(tsv, fieldnames=fieldnames, delimiter='\t')
             writer.writeheader()
 
-        with VoilaPool() as vp, VoilaQueue(self.fill_queue_lsv_ids) as (q, e):
+        with VoilaPool(processes=config.nproc) as vp, VoilaQueue(self.fill_queue_lsv_ids, nprocs=config.nproc) as (q, e):
             for x in [vp.apply_async(self.tsv_row, (q, e, tsv_file, fieldnames)) for _ in range(vp.processes)]:
                 x.get()
 

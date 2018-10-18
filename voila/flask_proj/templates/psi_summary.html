@@ -37,26 +37,32 @@
                         const lsv_id = n.querySelectorAll('td')[1].textContent;
                         json_ajax('{{ url_for("lsv_data") }}/' + encodeURIComponent(lsv_id))
                             .then(lsv_data => {
-                                const lsv = new Lsv(lsv_data);
-                                const violin = new Violin(lsv_data.lsv);
-                                const s = n.querySelector('.psi-violin-plot');
+                                    const lsv = new Lsv(lsv_data);
+                                    const violin = new Violin(lsv_data.lsv);
+                                    const s = n.querySelector('.psi-violin-plot');
 
-                                lsv.cartoon(n.querySelector('.lsv-cartoon'));
-                                lsv.draw_lsv_compact_stack_bars(n.querySelector('.lsv-single-compact-percentiles'));
-                                $(s).hide();
-                                violin.psi(s);
+                                    lsv.cartoon(n.querySelector('.lsv-cartoon'));
+                                    lsv.draw_lsv_compact_stack_bars(n.querySelector('.lsv-single-compact-percentiles'));
+                                    $(s).hide();
+                                    violin.psi(s);
 
-                                n.querySelector('.highlight').onchange = () => {
-                                    const hl = Array.from(document.querySelectorAll('input.highlight:checked'))
-                                        .map(el => el.closest('tr').querySelectorAll('td')[1].textContent);
-                                    const w = Array.from(document.querySelectorAll('input.psi-weighted:checked'))
-                                        .map(el => el.closest('tr').querySelectorAll('td')[1].textContent);
-                                    const hl_data = {'highlight': hl, 'weighted': w};
-                                    send_ajax('{{ url_for("lsv_highlight") }}', hl_data).then(lsvs => {
-                                        sgs.highlight(hl, w, lsvs);
-                                    })
+                                    n.querySelector('.highlight').onchange = () => {
+
+                                        const hl_data = Array.from(document.querySelectorAll('.highlight-form'))
+                                            .map(f => {
+                                                const lsv_id = f.closest('tr').querySelectorAll('td')[1].textContent;
+                                                const highlight = f.querySelector('.highlight').checked;
+                                                const weighted = f.querySelector('.psi-weighted').checked;
+                                                return [lsv_id, highlight, weighted];
+                                            });
+
+                                        send_ajax('{{ url_for("lsv_highlight") }}', hl_data).then(lsvs => {
+                                            sgs.highlight(lsvs);
+                                        })
+
+                                    }
                                 }
-                            })
+                            )
                     })
                 );
             })
@@ -68,10 +74,96 @@
                 autoWidth: false,
                 processing: true,
                 serverSide: true,
+                order: [[1, "asc"]],
                 ajax: {
-                    url: '{{ url_for('psi', gene_id=gene_id) }}',
+                    url: '{{ url_for('summary_table', gene_id=gene_id) }}',
                     type: 'POST'
-                }
+                },
+                columnDefs: [
+                    {
+                        targets: 0,
+                        render: data => {
+                            console.log(data);
+
+                            const form = document.createElement('div');
+                            form.classList.add('highlight-form');
+
+                            const h = document.createElement('div');
+
+                            const hl = document.createElement('label');
+                            hl.textContent = 'Highlight';
+
+                            const hl_cb = document.createElement('input');
+                            hl_cb.classList.add('highlight');
+                            hl_cb.setAttribute('type', 'checkbox');
+                            if (data[0])
+                                hl_cb.setAttribute('checked', '');
+
+                            hl.appendChild(hl_cb);
+                            h.appendChild(hl);
+
+                            const w = document.createElement('div');
+
+                            const wl = document.createElement('label');
+                            wl.textContent = 'Weighted';
+
+                            const wl_cb = document.createElement('input');
+                            wl_cb.classList.add('psi-weighted');
+                            wl_cb.type = 'checkbox';
+                            if (data[1])
+                                wl_cb.setAttribute('checked', '');
+
+                            wl.appendChild(wl_cb);
+                            w.appendChild(wl);
+
+                            form.appendChild(h);
+                            form.appendChild(w);
+
+                            return form.outerHTML
+                        },
+                        {#defaultContent: "<div class=\"highlight-form\">" +#}
+                        {#    "<div>" +#}
+                        {#    "<label>Highlight<input class=\"highlight\" type=\"checkbox\"></label>" +#}
+                        {#    "</div>" +#}
+                        {#    "<div>" +#}
+                        {#    "<label>PSI Weighted<input class=\"psi-weighted\" type=\"checkbox\"></label>" +#}
+                        {#    "</div>" +#}
+                        {#    "</div>"#}
+                    },
+                    {
+                        targets: 2,
+                        sortable: false,
+                        render: data => {
+                            const element = document.createElement('canvas');
+                            element.setAttribute('width', '200');
+                            element.setAttribute('height', '80');
+                            element.classList.add('lsv-cartoon');
+                            element.dataset.lsvType = data;
+                            return element.outerHTML
+                        }
+                    },
+                    {
+                        targets: 3,
+                        sortable: false,
+                        render: data => {
+                            const compact = document.createElement('canvas');
+                            compact.classList.add('lsv-single-compact-percentiles');
+                            compact.dataset.group = data;
+
+                            const violin = document.createElement('svg');
+                            violin.classList.add('psi-violin-plot');
+                            violin.setAttribute('width', '0');
+                            violin.setAttribute('height', '0');
+                            violin.dataset.group = data;
+
+                            return compact.outerHTML + violin.outerHTML
+                        }
+                    },
+                    {
+                        targets: 4,
+                        sortable: false,
+                    },
+                ]
             });
 
 

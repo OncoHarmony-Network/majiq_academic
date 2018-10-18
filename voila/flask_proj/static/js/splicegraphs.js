@@ -8,8 +8,6 @@ class SpliceGraphs {
         this.zoom = 1;
         this.max_bin = 1;
         this.d = undefined;
-        this.highlight_lsvs = [];
-        this.weighted_lsvs = [];
         this.lsvs = undefined;
 
         //constants
@@ -688,9 +686,7 @@ class SpliceGraphs {
             .then(() => this)
     }
 
-    highlight(highlight, weighted, lsvs) {
-        this.highlight_lsvs = highlight;
-        this.weighted_lsvs = weighted;
+    highlight(lsvs) {
         this.lsvs = lsvs;
         this.update()
     }

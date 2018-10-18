@@ -16,7 +16,13 @@
         new MutationObserver(mutations => {
             mutations.forEach(m => m.addedNodes
                 .forEach(n => {
-                    const lsv_id = n.querySelectorAll('td')[1].textContent;
+                    const tds = n.querySelectorAll('td:not(.dataTables_empty)');
+
+                    if (!tds.length)
+                        return;
+
+                    const lsv_id = tds[1].textContent;
+
                     json_ajax('{{ url_for("lsv_data") }}/' + encodeURIComponent(lsv_id)).then(lsv_data => {
                         const lsv = new Lsv(lsv_data);
                         const violin = new Violin(lsv_data.lsv);
@@ -42,7 +48,51 @@
             ajax: {
                 url: '{{ url_for("index_table") }}',
                 type: 'POST'
-            }
+            },
+            columnDefs: [
+                {
+                    targets: 0,
+                    render: data => {
+                        const element = document.createElement('a');
+                        element.setAttribute('href', data[0]);
+                        element.textContent = data[1];
+                        return element.outerHTML
+                    }
+                },
+                {
+                    targets: 2,
+                    sortable: false,
+                    render: data => {
+                        const element = document.createElement('canvas');
+                        element.setAttribute('width', '200');
+                        element.setAttribute('height', '80');
+                        element.classList.add('lsv-cartoon');
+                        element.dataset.lsvType = data;
+                        return element.outerHTML
+                    }
+                },
+                {
+                    targets: 3,
+                    sortable: false,
+                    render: data => {
+                        const compact = document.createElement('canvas');
+                        compact.classList.add('lsv-single-compact-percentiles');
+                        compact.dataset.group = data;
+
+                        const violin = document.createElement('svg');
+                        violin.classList.add('psi-violin-plot');
+                        violin.setAttribute('width', '0');
+                        violin.setAttribute('height', '0');
+                        violin.dataset.group = data;
+
+                        return compact.outerHTML + violin.outerHTML
+                    }
+                },
+                {
+                    targets: 4,
+                    sortable: false
+                }
+            ]
         });
 
         $('#results tbody')

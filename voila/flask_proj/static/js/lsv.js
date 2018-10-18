@@ -531,17 +531,15 @@ class Lsv {
         if (fill) contextO.fill();
     }
 
-    draw_delta_lsv_compact_svg(el, lsv) {
+    draw_delta_lsv_compact_svg(svg) {
+        const lsv = this.lsv;
         const width = 200;
         const height = 20;
         const margin = {top: 1, bottom: 8, left: 2, right: 2};
         const border_frame = 2;
         const MIN_DELTAPSI = .05;
 
-        d3.select(el).selectAll('*').remove();
-
-        const svgContainer = d3.select(el)
-            .append("svg")
+        const svgContainer = d3.select(svg)
             .attr("width", width)
             .attr("height", height);
 

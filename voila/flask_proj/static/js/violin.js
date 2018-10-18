@@ -31,7 +31,6 @@ class Violin {
     // }
 
     psi(svg) {
-        d3.select(svg).selectAll('*').remove();
         const data = this.data;
 
         this.violin_count = data.junctions.length;
@@ -65,36 +64,35 @@ class Violin {
     }
 
     deltapsi(svg) {
-        this.db.get(svg.closest('tr').dataset.lsvId)
-            .then(results => {
-                d3.select(svg).selectAll('*').remove();
-                this.violin_count = results.junctions.length;
-                svg.setAttribute('height', this.svg_height);
-                svg.setAttribute('width', this.svg_width);
+        const data = this.data;
 
-                const color = new Colors();
-                const g = d3.select(svg)
-                    .append('g')
-                    .attr('transform', `translate(${this.y_axis_width}, ${this.top_padding})`);
+        this.violin_count = data.junctions.length;
+        svg.setAttribute('height', this.svg_height);
+        svg.setAttribute('width', this.svg_width);
 
-                const hist = g
-                    .append('g')
-                    .attr('class', 'histograms');
+        const color = new Colors();
+        const g = d3.select(svg)
+            .append('g')
+            .attr('transform', `translate(${this.y_axis_width}, ${this.top_padding})`);
 
-                this.draw_histograms(hist, results.bins);
+        const hist = g
+            .append('g')
+            .attr('class', 'histograms');
 
-                hist
-                    .selectAll('.violin')
-                    // .attr('stroke', (d, i) => color.brewer(i))
-                    .attr('stroke', null)
-                    .attr('stroke-width', 1)
-                    .attr('fill', (d, i) => color.brewer(i))
-                    .attr('fill-opacity', 1);
+        this.draw_histograms(hist, data.bins);
 
-                this.draw_x_axis(g, results.means);
-                this.draw_dpsi_y_axis(g);
-                this.box_plots(g, results.bins)
-            })
+        hist
+            .selectAll('.violin')
+            // .attr('stroke', (d, i) => color.brewer(i))
+            .attr('stroke', null)
+            .attr('stroke-width', 1)
+            .attr('fill', (d, i) => color.brewer(i))
+            .attr('fill-opacity', 1);
+
+        this.draw_x_axis(g, data.means.map(n => n.toFixed(3)));
+        this.draw_dpsi_y_axis(g);
+        this.box_plots(g, data.bins)
+
     }
 
     heterogen(svg) {

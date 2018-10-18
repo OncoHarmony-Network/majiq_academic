@@ -2,10 +2,9 @@ from flask import request
 
 
 class DataTables:
-    def __init__(self, records, record_fn=None):
+    def __init__(self, records):
         self._form = request.form
         self._records = records
-        self._records_fn = record_fn
 
         # record values
         self.records_len = len(records)
@@ -17,11 +16,10 @@ class DataTables:
         self.search_value = self._form['search[value]'].lower()
 
         # Sort records
-        self._records.sort(key=lambda d: d[self.column_sort], reverse=self.sort_direction == 'desc')
+        self._records.sort(key=self._row_sort, reverse=self.sort_direction == 'desc')
 
         # Filter records
-        self.filtered_sorted_records = list(
-            filter(lambda x: any(self.search_value in y.lower() for y in x), self._records))
+        self.filtered_sorted_records = list(filter(self._filter, self._records))
 
         # Get length of all filtered records
         self.filtered_len = len(self.filtered_sorted_records)
@@ -29,12 +27,35 @@ class DataTables:
         # Slicing records to fit current table view
         self.filtered_sorted_records = self.filtered_sorted_records[self.start:self.start + self.length]
 
-        # Running records function if there is one
-        if self._records_fn is not None:
-            self._records_fn(self.filtered_sorted_records)
-
     def __iter__(self):
-        yield 'data', self.filtered_sorted_records
+        yield 'data', list(self._data())
         yield 'draw', self.draw
         yield 'recordsTotal', self.records_len
         yield 'recordsFiltered', self.filtered_len
+
+    def _row_sort(self, columns):
+        column = columns[self.column_sort]
+        if isinstance(column, dict):
+            return column.get('sort', '')
+        else:
+            return column
+
+    def _data(self):
+        def parse_data(d):
+            if isinstance(d, dict):
+                return d.get('display', '')
+            return d
+
+        for fs in self.filtered_sorted_records:
+            yield [parse_data(f) for f in fs]
+
+    def _filter(self, vs):
+        def parse(v):
+            try:
+                v = v.get('display', '')
+            except AttributeError:
+                pass
+
+            return self.search_value in str(v).lower()
+
+        return any(parse(v) for v in vs)

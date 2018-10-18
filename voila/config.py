@@ -24,23 +24,47 @@ class FoundMoreThanOneVoilaFile(Exception):
     pass
 
 
-class Config:
-    def __init__(self):
-        # todo: this should be a singleton class
-        self.default = None
-        self.analysis_type = None
+class Singleton(object):
+    def __new__(cls, *args, **kwds):
+        it = cls.__dict__.get("__it__")
+        if it is not None:
+            return it
+        cls.__it__ = it = object.__new__(cls)
+        it.init(*args, **kwds)
+        return it
 
-        self.files = None
-        self.voila_files = None
-        self.splice_graph_file = None
-        self.output = None
-        self.nproc = None
-        self.threshold = None
-        self.non_changing_threshold = None
-        self.probability_threshold = None
-        self.show_all = None
+    def init(self, *args, **kwds):
+        pass
 
-        self.read()
+
+class Config(Singleton):
+    def __new__(cls, *args, **kwargs):
+        config = configparser.ConfigParser()
+        config.read(constants.CONFIG_FILE)
+        analysis_type = config['DEFAULT']['analysis_type']
+
+        if analysis_type == constants.ANALYSIS_PSI:
+            c = super().__new__(PsiConfig)
+
+        elif analysis_type == constants.ANALYSIS_DELTAPSI:
+            c = super().__new__(DeltaPsiConfig)
+
+        elif analysis_type == constants.ANALYSIS_HETEROGEN:
+            c = super().__new__(HeterogenConfig)
+        else:
+            raise Exception()
+
+        files = config['FILES']
+        c.default = config['DEFAULT']
+
+        c.voila_files = files['voila'].split('\n')
+        c.splice_graph_file = files['splice_graph']
+
+        c.analysis_type = c.default['analysis_type']
+        c.output = c.default['output']
+        c.nproc = int(c.default['nproc'])
+
+        return c
 
     @property
     def voila_file(self):
@@ -80,25 +104,9 @@ class Config:
 
         return sg_file.resolve()
 
-    @staticmethod
-    def find_analysis_type(matrix_files):
-        analysis_type = None
-        for mf in matrix_files:
-            with Matrix(mf) as m:
-                if analysis_type is None:
-                    analysis_type = m.analysis_type
-                if analysis_type != m.analysis_type:
-                    raise MixedAnalysisTypeVoilaFiles()
-
-        if analysis_type in [constants.ANALYSIS_PSI, constants.ANALYSIS_DELTAPSI]:
-            if len(matrix_files) > 1:
-                raise FoundMoreThanOneVoilaFile()
-
-        return analysis_type
-
     @classmethod
-    def matrix_files(cls, vs):
-        matrix_files = set()
+    def find_voila_files(cls, vs):
+        voila_files = set()
 
         for v in vs:
 
@@ -108,52 +116,87 @@ class Config:
 
                 try:
                     with Matrix(v):
-                        matrix_files.add(v)
+                        voila_files.add(v)
                 except OSError:
                     pass
 
             elif v.is_dir():
-                x = cls.matrix_files(v.iterdir())
-                matrix_files.update(x)
+                x = cls.find_voila_files(v.iterdir())
+                voila_files.update(x)
 
-        return matrix_files
+        return voila_files
+
+    @staticmethod
+    def find_analysis_type(voila_files):
+        analysis_type = None
+
+        for mf in voila_files:
+
+            with Matrix(mf) as m:
+
+                if analysis_type is None:
+                    analysis_type = m.analysis_type
+
+                if analysis_type != m.analysis_type:
+                    raise MixedAnalysisTypeVoilaFiles()
+
+        if analysis_type in [constants.ANALYSIS_PSI, constants.ANALYSIS_DELTAPSI]:
+
+            if len(voila_files) > 1:
+                raise FoundMoreThanOneVoilaFile()
+
+        return analysis_type
+
+    @classmethod
+    def _analysis_type_config(cls, args, config):
+        raise NotImplementedError()
 
     @classmethod
     def write(cls, args):
+        voila_files = cls.find_voila_files(args.files)
+        analysis_type = cls.find_analysis_type(voila_files)
         splice_graph_file = cls.splice_graph_file(args.files)
-        matrix_files = cls.matrix_files(args.files)
-        analysis_type = cls.find_analysis_type(matrix_files)
+
         config = configparser.ConfigParser()
         files = 'FILES'
         default = 'DEFAULT'
 
         config.add_section(files)
-        config.set(files, 'voila', '\n'.join(str(m) for m in matrix_files))
+        config.set(files, 'voila', '\n'.join(str(m) for m in voila_files))
         config.set(files, 'splice_graph', str(splice_graph_file))
 
         config.set(default, 'analysis_type', analysis_type)
         config.set(default, 'output', args.output)
         config.set(default, 'nproc', str(args.nproc))
-        config.set(default, 'threshold', str(args.threshold))
-        config.set(default, 'non_changing_threshold', str(args.non_changing_threshold))
-        config.set(default, 'probability_threshold', str(args.probability_threshold))
-        config.set(default, 'show_all', str(args.show_all))
+
+        if analysis_type == constants.ANALYSIS_PSI:
+            analysis_type_config = PsiConfig._analysis_type_config
+
+        elif analysis_type == constants.ANALYSIS_DELTAPSI:
+            analysis_type_config = DeltaPsiConfig._analysis_type_config
+
+        elif analysis_type == constants.ANALYSIS_HETEROGEN:
+            analysis_type_config = HeterogenConfig._analysis_type_config
+
+        else:
+            raise Exception()
+
+        analysis_type_config(args, config)
 
         with open(constants.CONFIG_FILE, 'w') as configfile:
             config.write(configfile)
 
-    def read(self):
-        config = configparser.ConfigParser()
-        config.read(constants.CONFIG_FILE)
 
-        self.files = config['FILES']
-        self.voila_files = self.files['voila'].split('\n')
-        self.splice_graph_file = self.files['splice_graph']
+class PsiConfig(Config):
+    @classmethod
+    def _analysis_type_config(cls, args, config):
+        # with open(constants.CONFIG_FILE, 'w') as configfile:
+        #     config.write(configfile)
+        pass
 
-        self.default = config['DEFAULT']
-        self.analysis_type = self.default['analysis_type']
-        self.output = self.default['output']
-        self.nproc = self.default['nproc']
+
+class DeltaPsiConfig(Config):
+    def __init__(self):
         self.threshold = float(self.default['threshold'])
         self.non_changing_threshold = float(self.default['non_changing_threshold'])
 
@@ -166,3 +209,21 @@ class Config:
                 raise
 
         self.show_all = self.default['show_all'] == 'True'
+
+    @classmethod
+    def _analysis_type_config(cls, args, config):
+
+        default = 'DEFAULT'
+        config.set(default, 'threshold', str(args.threshold))
+        config.set(default, 'non_changing_threshold', str(args.non_changing_threshold))
+        config.set(default, 'probability_threshold', str(args.probability_threshold))
+        config.set(default, 'show_all', str(args.show_all))
+
+        # with open(constants.CONFIG_FILE, 'w') as configfile:
+        #     config.write(configfile)
+
+
+class HeterogenConfig(Config):
+    @classmethod
+    def _analysis_type_config(cls, args, config):
+        pass
