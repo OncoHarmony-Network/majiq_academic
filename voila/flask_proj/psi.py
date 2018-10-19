@@ -18,6 +18,13 @@ def index():
 
 @app.route('/gene/<gene_id>/')
 def gene(gene_id):
+    # For this gene, remove any already selected highlight/weighted lsvs from session.
+    highlight = session.get('highlight', {})
+    lsv_ids = [h for h in highlight if h.startswith(gene_id)]
+    for lsv_id in lsv_ids:
+        del highlight[lsv_id]
+    session['highlight'] = highlight
+
     return render_template('psi_summary.html', gene_id=gene_id)
 
 
@@ -74,6 +81,7 @@ def splice_graph(gene_id):
 @app.route('/summary-table/<gene_id>', methods=('POST',))
 def summary_table(gene_id):
     with ViewPsi() as v:
+
         def create_records(lsv_ids):
             for lsv_id in lsv_ids:
                 psi = v.lsv(lsv_id)
@@ -165,6 +173,7 @@ def lsv_highlight():
     json_data = request.get_json()
 
     with ViewPsi() as m:
+
         lsvs = []
         highlight_dict = session.get('highlight', {})
 

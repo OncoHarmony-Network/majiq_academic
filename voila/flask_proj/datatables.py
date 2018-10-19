@@ -25,7 +25,8 @@ class DataTables:
         self.filtered_len = len(self.filtered_sorted_records)
 
         # Slicing records to fit current table view
-        self.filtered_sorted_records = self.filtered_sorted_records[self.start:self.start + self.length]
+        if self.length != -1:
+            self.filtered_sorted_records = self.filtered_sorted_records[self.start:self.start + self.length]
 
     def __iter__(self):
         yield 'data', list(self._data())

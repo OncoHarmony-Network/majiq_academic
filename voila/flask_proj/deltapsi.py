@@ -18,6 +18,13 @@ def index():
 
 @app.route('/gene/<gene_id>/')
 def gene(gene_id):
+    # For this gene, remove any already selected highlight/weighted lsvs from session.
+    highlight = session.get('highlight', {})
+    lsv_ids = [h for h in highlight if h.startswith(gene_id)]
+    for lsv_id in lsv_ids:
+        del highlight[lsv_id]
+    session['highlight'] = highlight
+
     return render_template('dpsi_summary.html', gene_id=gene_id)
 
 
@@ -135,20 +142,25 @@ def psi_splice_graphs():
 def lsv_highlight():
     json_data = request.get_json()
 
-    assert 'weighted' in json_data
-    assert 'highlight' in json_data
-
     with ViewDeltaPsi() as m:
-        lsvs = []
 
-        for lsv_id in set(j for js in json_data.values() for j in js):
-            lsv = m.lsv(lsv_id)
-            lsvs.append({
-                'junctions': lsv.junctions.tolist(),
-                'reference_exon': list(lsv.reference_exon),
-                'target': lsv.target,
-                'weighted': lsv_id in json_data['weighted']
-            })
+        lsvs = []
+        highlight_dict = session.get('highlight', {})
+
+        for lsv_id, highlight, weighted in json_data:
+            highlight_dict[lsv_id] = [highlight, weighted]
+
+        session['highlight'] = highlight_dict
+
+        for lsv_id, (highlight, weighted) in highlight_dict.items():
+            if highlight:
+                lsv = m.lsv(lsv_id)
+                lsvs.append({
+                    'junctions': lsv.junctions.tolist(),
+                    'reference_exon': list(lsv.reference_exon),
+                    'target': lsv.target,
+                    'weighted': weighted
+                })
 
         return jsonify(lsvs)
 
@@ -156,7 +168,6 @@ def lsv_highlight():
 @app.route('/summary-table/<gene_id>', methods=('POST',))
 def summary_table(gene_id):
     with ViewDeltaPsi() as v:
-
         def create_records(lsv_ids):
             for lsv_id in lsv_ids:
                 dpsi = v.lsv(lsv_id)
@@ -166,7 +177,12 @@ def summary_table(gene_id):
                 lsv_id_col = {'sort': list(ref_exon), 'display': lsv_id}
                 lsv_type = dpsi.lsv_type
 
-                yield ['', lsv_id_col, lsv_type, grp_names[0], excl_incl, grp_names[1], 'links']
+                try:
+                    highlight = session['highlight'][lsv_id]
+                except KeyError:
+                    highlight = [False, False]
+
+                yield [highlight, lsv_id_col, lsv_type, grp_names[0], excl_incl, grp_names[1], 'links']
 
         grp_names = v.metadata['group_names']
         lsv_ids = v.lsv_ids(gene_ids=[gene_id])

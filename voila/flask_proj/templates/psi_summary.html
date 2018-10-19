@@ -34,7 +34,12 @@
             new MutationObserver(mutations => {
                 mutations.forEach(m => m.addedNodes
                     .forEach(n => {
-                        const lsv_id = n.querySelectorAll('td')[1].textContent;
+                        const tds = n.querySelectorAll('td:not(.dataTables_empty)');
+
+                        if (!tds.length)
+                            return;
+
+                        const lsv_id = tds[1].textContent;
                         json_ajax('{{ url_for("lsv_data") }}/' + encodeURIComponent(lsv_id))
                             .then(lsv_data => {
                                     const lsv = new Lsv(lsv_data);
@@ -74,6 +79,7 @@
                 autoWidth: false,
                 processing: true,
                 serverSide: true,
+                lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, "All"]],
                 order: [[1, "asc"]],
                 ajax: {
                     url: '{{ url_for('summary_table', gene_id=gene_id) }}',
@@ -83,8 +89,6 @@
                     {
                         targets: 0,
                         render: data => {
-                            console.log(data);
-
                             const form = document.createElement('div');
                             form.classList.add('highlight-form');
 
@@ -121,14 +125,6 @@
 
                             return form.outerHTML
                         },
-                        {#defaultContent: "<div class=\"highlight-form\">" +#}
-                        {#    "<div>" +#}
-                        {#    "<label>Highlight<input class=\"highlight\" type=\"checkbox\"></label>" +#}
-                        {#    "</div>" +#}
-                        {#    "<div>" +#}
-                        {#    "<label>PSI Weighted<input class=\"psi-weighted\" type=\"checkbox\"></label>" +#}
-                        {#    "</div>" +#}
-                        {#    "</div>"#}
                     },
                     {
                         targets: 2,
