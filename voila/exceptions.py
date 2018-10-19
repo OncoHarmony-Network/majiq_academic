@@ -108,9 +108,9 @@ class LsvIdNotFoundInVoilaFile(VoilaException):
 #
 #
 #
-class CanNotFindVoilaFile(argparse.ArgumentTypeError):
+class CanNotFindFile(argparse.ArgumentTypeError):
     def __init__(self, value):
-        super(CanNotFindVoilaFile, self).__init__('cannot find file "{0}"'.format(value))
+        super(CanNotFindFile, self).__init__('cannot find "{0}"'.format(value))
 
 
 class NotPsiVoilaFile(VoilaException):

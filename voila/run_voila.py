@@ -3,12 +3,13 @@ import errno
 import os
 import sys
 import time
+from pathlib import Path
 
 import voila.constants as constants
 from voila.api import SpliceGraph, Matrix
 from voila.api.matrix_hdf5 import lsv_id_to_gene_id
 from voila.config import Config
-from voila.exceptions import VoilaException, CanNotFindVoilaFile
+from voila.exceptions import VoilaException, CanNotFindFile
 from voila.flask_proj.views import run_service
 from voila.processes import VoilaPool, VoilaQueue
 from voila.utils.utils_voila import create_if_not_exists
@@ -129,7 +130,7 @@ def check_list_file(value):
             return [line.strip() for line in f]
     except IOError as e:
         if e.errno == errno.ENOENT:
-            raise CanNotFindVoilaFile(value)
+            raise CanNotFindFile(value)
         else:
             raise
 
@@ -155,10 +156,15 @@ def check_file(value):
     :param value: file path
     :return:
     """
-    value = os.path.expanduser(value)
-    if not os.path.isfile(value):
-        raise CanNotFindVoilaFile(value)
-    return value
+    value = Path(value)
+
+    value = value.expanduser()
+    value = value.absolute()
+
+    if value.exists():
+        return value
+    else:
+        raise CanNotFindFile(value)
 
 
 parser = argparse.ArgumentParser(description='VOILA is a visualization package '
@@ -289,8 +295,6 @@ def main():
     log.info('Command: {0}'.format(' '.join(sys.argv)))
 
     log.info('Voila v{}'.format(constants.VERSION))
-
-
 
     try:
         # file_versions()

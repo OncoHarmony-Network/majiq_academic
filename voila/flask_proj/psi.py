@@ -85,9 +85,6 @@ def summary_table(gene_id):
                 except KeyError:
                     highlight = [False, False]
 
-                if 'ENSMUSG00000020777:t:116198424-116199045':
-                    print(highlight)
-
                 yield [highlight, lsv_id_col, psi.lsv_type, grp_name, 'links']
 
         grp_name = v.metadata['group_names'][0]

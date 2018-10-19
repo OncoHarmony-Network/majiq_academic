@@ -14,9 +14,9 @@ Session = sessionmaker()
 class SpliceGraphSQL(SpliceGraphSQLAbstract):
     def __init__(self, filename, delete=False):
         try:
-            filename = filename.decode()
+            filename = filename.decode("utf-8")
         except AttributeError:
-            pass
+            filename = str(filename)
 
         if delete is True:
             try:
