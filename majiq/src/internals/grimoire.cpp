@@ -8,6 +8,7 @@
 #include <random>
 #include <algorithm>
 #include <string>
+#include <functional>
 #include "grimoire.hpp"
 #include "io_bam.hpp"
 
@@ -16,7 +17,6 @@
 using namespace std;
 
 namespace grimoire {
-
 
     bool positive(lsvtype a, lsvtype b){
         return ( a.ref_coord<b.ref_coord ||
@@ -27,6 +27,10 @@ namespace grimoire {
         return ( a.ref_coord>b.ref_coord ||
                 (a.ref_coord == b.ref_coord && a.coord>b.coord)) ;
     }
+
+    bool fless(unsigned int lhs, unsigned int rhs) {return lhs<rhs ;}
+    bool fgrt(unsigned int lhs, unsigned int rhs) {return lhs>rhs ;}
+
 
     bool sort_ss(const Ssite &a, const Ssite &b){
 
@@ -371,6 +375,7 @@ namespace grimoire {
             }
 
             if (ex->is_lsv(false)) {
+
                 lsvObj = new LSV(this, ex, false) ;
                 set<string> t1 ;
                 lsvObj->get_variations(t1) ;
@@ -526,6 +531,13 @@ namespace grimoire {
         bool b = (gObj_->get_strand() == '+') ;
         if (b) sort(sp_list.begin(), sp_list.end(), positive) ;
         else sort(sp_list.begin(), sp_list.end(), reverse) ;
+
+        bool(*bfunc)(unsigned int, unsigned int) = b ? fless: fgrt ;
+
+cout << id_ << " : " ;
+for (auto const &p: sp_list) cout << "[ " << p.coord << ", " << p.ref_coord << ", " << p.jun_ptr->get_key() << " ]";
+cout << "\n" ;
+
         string ext_type = (ss != b) ? "t" : "s" ;
 
         string prev_ex = to_string(sp_list[0].ex_ptr->get_start()) + "-" + to_string(sp_list[0].ex_ptr->get_end()) ;
@@ -548,15 +560,16 @@ namespace grimoire {
             }
             unsigned int total = 0 ;
             unsigned int pos = 0 ;
+
+            set<unsigned int, bool(*)(unsigned int,unsigned int)> ss_set (bfunc);
+
             if (ss) {
-                 set<unsigned int> ss_set ;
                  for (const auto &j: (ptr.ex_ptr)->ib){
                     ss_set.insert(j->get_end()) ;
                  }
                  total = ss_set.size() ;
                  pos = distance(ss_set.begin(), ss_set.find((ptr.jun_ptr)->get_end()))+1 ;
             }else{
-                 set<unsigned int> ss_set ;
                  for (const auto &j: (ptr.ex_ptr)->ob){
                     ss_set.insert(j->get_start()) ;
                  }

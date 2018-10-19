@@ -414,7 +414,6 @@ namespace grimoire{
 
     void sortGeneList(vector<Gene*> &glist) ;
     vector<Intron *> find_intron_retention(Gene * gObj, int start, int end);
-
 }
 
 #endif
