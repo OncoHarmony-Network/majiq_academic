@@ -1,6 +1,8 @@
 Click==7.0
 Cython==0.29
 Flask==1.0.2
+gitdb2==2.0.5
+GitPython==2.1.11
 h5py==2.8.0
 ItsDangerous==1.0.0
 Jinja2==2.10
@@ -10,6 +12,7 @@ numpy==1.15.2
 psutil==5.4.7
 scipy==1.1.0
 six==1.11.0
+smmap2==2.0.5
 SQLAlchemy==1.2.8
 waitress==1.1.0
 Werkzeug==0.14.1
