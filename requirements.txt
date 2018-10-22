@@ -6,7 +6,6 @@ GitPython==2.1.11
 h5py==2.8.0
 ItsDangerous==1.0.0
 Jinja2==2.10
-majiq==2.0
 MarkupSafe==1.0
 numpy==1.15.2
 psutil==5.4.7
