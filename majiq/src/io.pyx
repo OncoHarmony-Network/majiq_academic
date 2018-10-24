@@ -29,7 +29,6 @@ cdef list accepted_genes = ['gene', 'ncRNA_gene', 'pseudogene']
 cdef list gene_name_keys = ['Name', 'gene_name']
 cdef list gene_id_keys = ['ID', 'gene_id']
 
-
 cdef int  read_gff(str filename, map[string, Gene*] all_genes, vector[string] gid_vec, object logging) except -1:
     """
     :param filename: GFF input filename
@@ -50,6 +49,10 @@ cdef int  read_gff(str filename, map[string, Gene*] all_genes, vector[string] gi
     # cdef map[string, Gene*] all_genes
 
     for record in parse_gff3(filename):
+
+        if record.strand is None or record.seqid is None:
+            continue
+
         chrom = record.seqid.encode('utf-8')
 
         strand = <char> record.strand.encode('UTF-8')[0]

@@ -181,7 +181,6 @@ cdef int _het_computation(object out_h5p, dict file_cond, list list_of_lsv, map[
 
 cdef void _core_independent(object self):
 
-
     cdef dict junc_info = {}
     cdef dict lsv_type_dict = {}
     cdef object logger
@@ -250,7 +249,6 @@ cdef void _core_independent(object self):
         j_offset = 0
         for lsv in list_of_lsv:
             nways = lsv_type_dict[lsv][1]
-            # tpair =  pair_int_t(nways, j_offset)
             is_ir = b'i' in lsv_type_dict[lsv][0]
             m = new hetLSV(nways, j_offset, max_nfiles, nbins, is_ir, len(file_cond))
             lsv_map[lsv] = <qLSV*> m
