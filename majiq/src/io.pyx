@@ -112,6 +112,7 @@ cdef int  read_gff(str filename, map[string, Gene*] all_genes, vector[string] gi
         last_ss = FIRST_LAST_JUNC
         coord_list.sort(key=lambda x: (x[0], x[1]))
         # if gene_id == 'ENSMUSG00000006498': print (coord_list)
+        if len(coord_list) == 0 : continue
         for xx, yy in coord_list:
             key = ('%s-%s' % (last_ss, xx)).encode('utf-8')
 
