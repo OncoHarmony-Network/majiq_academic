@@ -14,7 +14,6 @@ from voila.flask_proj.views import run_service
 from voila.processes import VoilaPool, VoilaQueue
 from voila.utils.utils_voila import create_if_not_exists
 from voila.utils.voila_log import voila_log
-from voila.view.heterogen import Heterogen
 from voila.view.splice_graph import RenderSpliceGraphs
 from voila.view.tsv import NewTsv
 
@@ -264,7 +263,7 @@ subparsers.add_parser('psi', parents=[splice_graph, psi_parser]).set_defaults(fu
 subparsers.add_parser('deltapsi', parents=[splice_graph, psi_parser, dpsi_parser]).set_defaults(func=run_service)
 subparsers.add_parser('heterogen',
                       parents=[splice_graph, psi_parser, dpsi_parser, het_parser]).set_defaults(
-    func=Heterogen)
+    func=run_service)
 
 if len(sys.argv) == 1:
     parser.print_help()

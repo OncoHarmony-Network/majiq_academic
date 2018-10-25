@@ -94,7 +94,7 @@ class Lsv {
         contextO.stroke();
     }
 
-    cartoon(canvas) {
+    async cartoon(canvas) {
         canvas.setAttribute('height', 80);
         canvas.setAttribute('width', 200);
         this.render_lsv_splice_graph(canvas)

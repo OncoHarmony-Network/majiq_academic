@@ -1,16 +1,13 @@
-import math
 import operator
-from abc import ABC, abstractmethod
+from abc import ABC
 from functools import reduce
-from itertools import zip_longest
 
 import numpy as np
 import scipy.special
 
-from voila import constants
 from voila.api.matrix_hdf5 import DeltaPsi, Psi, Heterogen
 from voila.config import Config
-from voila.exceptions import NoLsvsFound, LsvIdNotFoundInVoilaFile, GeneIdNotFoundInVoilaFile
+from voila.exceptions import LsvIdNotFoundInVoilaFile, GeneIdNotFoundInVoilaFile
 from voila.utils.voila_log import voila_log
 from voila.vlsv import get_expected_dpsi, is_lsv_changing, matrix_area, get_expected_psi
 
@@ -28,7 +25,6 @@ def unpack_bins(value):
 
 
 class ViewMatrix(ABC):
-    args = None
     group_names = None
     experiment_names = None
     gene_ids = None
@@ -51,54 +47,6 @@ class ViewMatrix(ABC):
             metadata['experiment_names'] = experiment_names
 
         return metadata
-
-    @abstractmethod
-    def lsv_ids(self, gene_ids=None):
-        return ()
-
-    @abstractmethod
-    def valid_lsvs(self, lsv_ids):
-        # todo: There should be a way to filter lsv ids for tsvs
-        for lsv_id in lsv_ids:
-            yield lsv_id
-
-    def view_lsv_ids(self):
-        args = self.args
-        if args.lsv_ids:
-            lsv_ids = args.lsv_ids
-        elif args.gene_ids:
-            lsv_ids = self.lsv_ids(args.gene_ids)
-        else:
-            lsv_ids = self.lsv_ids()
-
-        yield from self.valid_lsvs(lsv_ids)
-
-    def view_lsv_count(self):
-        value = len(tuple(self.view_lsv_ids()))
-        voila_log().info('Found {} LSVs'.format(value))
-        if not value:
-            raise NoLsvsFound()
-        return value
-
-    def page_count(self):
-        gene_count = len(tuple(self.view_gene_ids()))
-        return math.ceil(gene_count / constants.MAX_GENES)
-
-    def paginated_genes(self):
-        def grouper(iterable, n, fillvalue=None):
-            args = [iter(iterable)] * n
-            return zip_longest(*args, fillvalue=fillvalue)
-
-        for page in grouper(self.view_gene_ids(), constants.MAX_GENES):
-            yield tuple(p for p in page if p is not None)
-
-    def view_gene_ids(self):
-        for gene_id in self.gene_ids:
-            if any(self.valid_lsvs(self.view_gene_lsvs(gene_id))):
-                yield gene_id
-
-    def view_gene_lsvs(self, gene_id):
-        yield from self.valid_lsvs(self.lsv_ids([gene_id]))
 
 
 class ViewPsi(Psi, ViewMatrix):
@@ -128,19 +76,10 @@ class ViewPsi(Psi, ViewMatrix):
         def means(self):
             yield from unpack_means(self.get('means'))
 
-        # @property
-        # def junctions(self):
-        #     return self.get('junctions')
-
         @property
         def group_means(self):
             group_names = self.matrix_hdf5.group_names
             yield group_names[0], list(self.means)
-
-        # @property
-        # def group_means(self):
-        #     for group_name, means in self.group_means:
-        #         yield group_name, tuple(means)
 
         @property
         def bins(self):
@@ -166,9 +105,6 @@ class ViewPsi(Psi, ViewMatrix):
 
     def lsv(self, lsv_id):
         return self._ViewPsi(self, lsv_id)
-
-    def valid_lsvs(self, lsv_ids):
-        yield from super().valid_lsvs(lsv_ids)
 
 
 class ViewDeltaPsi(DeltaPsi, ViewMatrix):
@@ -256,27 +192,11 @@ class ViewDeltaPsi(DeltaPsi, ViewMatrix):
     def lsv(self, lsv_id):
         return self._ViewDeltaPsi(self, lsv_id)
 
-    def valid_lsvs(self, lsv_ids):
-        threshold = None
-        probability_threshold = None
-        config = self.config
-
-        if not config.show_all:
-            threshold = config.threshold
-            probability_threshold = config.probability_threshold
-
-        for lsv_id in super().valid_lsvs(lsv_ids):
-            delta_psi = self.lsv(lsv_id)
-            if not threshold or delta_psi.is_lsv_changing(threshold):
-                if not probability_threshold or delta_psi.probability_threshold():
-                    yield lsv_id
-
 
 class ViewHeterogens:
-    def __init__(self, args):
+    def __init__(self):
         config = Config()
-        self.args = args
-        self.view_heterogens = tuple(ViewHeterogen(args, f) for f in config.voila_files)
+        self.view_heterogens = tuple(ViewHeterogen(f) for f in config.voila_files)
 
     def __enter__(self):
         return self
@@ -297,8 +217,8 @@ class ViewHeterogens:
             yield 'reference_exon', self.reference_exon
             yield 'lsv_type', self.lsv_type
             yield 'dpsi', self.dpsi
-            print(self.matrix_hdf5.view_metadata['stat_names'])
-            for stat_name in self.matrix_hdf5.view_metadata['stat_names']:
+            print(self.matrix_hdf5.metadata['stat_names'])
+            for stat_name in self.matrix_hdf5.metadata['stat_names']:
                 yield stat_name, self.junction_stat(stat_name)
             yield 'mu_psi', self.mu_psi
             yield 'junctions', self.junctions
@@ -348,12 +268,18 @@ class ViewHeterogens:
             return self.get_attr('binary')
 
         @property
+        def reference_exon(self):
+            ref_ex = {tuple(h.reference_exon) for h in self.heterogens}
+            assert len(ref_ex) == 1
+            return ref_ex.pop()
+
+        @property
         def dpsi(self):
             d = {}
 
             for het in self.heterogens:
                 try:
-                    group_names = het.matrix_hdf5.view_metadata['group_names']
+                    group_names = het.matrix_hdf5.metadata['group_names']
                     dpsi_values = list(het.dpsi)
                     try:
                         d[group_names[0]][group_names[1]] = dpsi_values
@@ -368,8 +294,8 @@ class ViewHeterogens:
             d = {}
             for het in self.heterogens:
                 try:
-                    group_names = het.matrix_hdf5.view_metadata['group_names']
-                    stat_names = het.matrix_hdf5.view_metadata['stat_names']
+                    group_names = het.matrix_hdf5.metadata['group_names']
+                    stat_names = het.matrix_hdf5.metadata['stat_names']
                     stat_idx = list(stat_names).index(stat_name)
                     trans_junc_stats = het.junction_stats.T
                     stats_values = trans_junc_stats[stat_idx].tolist()
@@ -381,65 +307,29 @@ class ViewHeterogens:
                     pass
             return d
 
-            #
-            # group_names = self.matrix_hdf5.view_metadata['group_names']
-            # ir = int(self.lsv_type.endswith('i'))
-            # arr = np.empty((len(self.junctions) + ir, len(group_names), len(group_names)), dtype=np.float)
-            # arr.fill(-1)
-            #
-            # for het in self.heterogens:
-            #     try:
-            #         stat_names = het.matrix_hdf5.view_metadata['stat_names']
-            #         stat_idx = list(stat_names).index(stat_name)
-            #         trans_junc_stats = het.junction_stats.T
-            #         for junc_idx, stat in enumerate(trans_junc_stats[stat_idx]):
-            #             z, y = sorted(group_names.index(g) for g in het.matrix_hdf5.view_metadata['group_names'])
-            #             assert arr[junc_idx][y][z] == -1
-            #             arr[junc_idx][y][z] = stat
-            #
-            #     except (LsvIdNotFoundInVoilaFile, GeneIdNotFoundInVoilaFile):
-            #         pass
-            #
-            # return self.compact_array(arr)
-
-        @staticmethod
-        def compact_array(arr):
-            mask = np.ones(arr.shape[1:], dtype=bool)
-            triangle_mask = np.tril(mask, k=-1)
-            return arr[:, triangle_mask]
-
-        @property
-        def reference_exon(self):
-            ref_ex = {tuple(h.reference_exon) for h in self.heterogens}
-            assert len(ref_ex) == 1
-            return ref_ex.pop()
-
         def psi_data(self, data_type):
             d = {}
             for het in self.heterogens:
                 try:
-                    for psi_d, sample in zip(getattr(het, data_type), het.matrix_hdf5.view_metadata['group_names']):
+                    for psi_d, sample in zip(getattr(het, data_type), het.matrix_hdf5.metadata['group_names']):
                         if sample in d:
-                            test_shape = min(d[sample].shape, psi_d.shape)
-                            arr1 = d[sample][0:test_shape[0], 0:test_shape[1]]
-                            arr2 = psi_d[0:test_shape[0], 0:test_shape[1]]
-                            arr_d = arr2 - arr1
-                            threshold = 0.001
-                            if (np.abs(arr_d) > threshold).any():
-                                voila_log().warning('PSI distribution from {} containing the group "{}" '
-                                                    'don\'t agree within a {} threshold.  Double check the '
-                                                    'files containing this group. {}.'.format(
-                                    het.matrix_hdf5.h.filename, sample, threshold, data_type))
+                            # test_shape = min(d[sample].shape, psi_d.shape)
+                            # arr1 = d[sample][0:test_shape[0], 0:test_shape[1]]
+                            # arr2 = psi_d[0:test_shape[0], 0:test_shape[1]]
+                            # arr_d = arr2 - arr1
+                            # threshold = 0.001
+                            # if (np.abs(arr_d) > threshold).any():
+                            #     voila_log().warning('PSI distribution from {} containing the group "{}" '
+                            #                         'don\'t agree within a {} threshold.  Double check the '
+                            #                         'files containing this group. {}.'.format(
+                            #         het.matrix_hdf5.h.filename, sample, threshold, data_type))
+                            pass
                         else:
                             d[sample] = psi_d
                 except (LsvIdNotFoundInVoilaFile, GeneIdNotFoundInVoilaFile):
                     pass
-                except IndexError:
-                    print(data_type)
-                    print(psi_d)
-                    exit()
 
-            for sample in self.matrix_hdf5.view_metadata['group_names']:
+            for sample in self.matrix_hdf5.metadata['group_names']:
                 try:
                     yield d[sample]
                 except KeyError:
@@ -447,21 +337,22 @@ class ViewHeterogens:
 
         @property
         def mu_psi(self):
-            meta = self.matrix_hdf5.view_metadata
-            has_combined = meta['experiment_names'][0][0].endswith('Combined')
-            exp_count = max(len(x) for x in meta['experiment_names']) - int(has_combined)
-            grp_count = len(self.matrix_hdf5.view_metadata['group_names'])
-            junc_count = len(self.junctions) + int(self.lsv_type.endswith('i'))
-            arr = np.empty((grp_count, exp_count, junc_count))
-
-            arr.fill(-1)
-
-            for idx, x in enumerate(self.psi_data('mu_psi')):
-                if x is not None:
-                    arr[idx][0:x.shape[0], 0:x.shape[1]] = x
-
-            for xs in arr.T:
-                yield [[] if np.all(x == -1) else x for x in xs.T]
+            # meta = self.matrix_hdf5.metadata
+            # has_combined = meta['experiment_names'][0][0].endswith('Combined')
+            # exp_count = max(len(x) for x in meta['experiment_names']) - int(has_combined)
+            # grp_count = len(self.matrix_hdf5.metadata['group_names'])
+            # junc_count = len(self.junctions) + int(self.lsv_type.endswith('i'))
+            # arr = np.empty((grp_count, exp_count, junc_count))
+            #
+            # arr.fill(-1)
+            #
+            # for idx, x in enumerate(self.psi_data('mu_psi')):
+            #     if x is not None:
+            #         arr[idx][0:x.shape[0], 0:x.shape[1]] = x
+            #
+            # for xs in arr.T:
+            #     yield [[] if np.all(x == -1) else x.tolist() for x in xs.T]
+            return self.psi_data('mu_psi')
 
         @property
         def mean_psi(self):
@@ -502,7 +393,7 @@ class ViewHeterogens:
             one_het = len(hets) == 1
             for het in hets:
                 try:
-                    meta = het.matrix_hdf5.view_metadata
+                    meta = het.matrix_hdf5.metadata
                     groups = '_'.join(meta['group_names'])
                     for name, stat in zip(meta['stat_names'], het.junction_stats.T):
                         if one_het:
@@ -520,7 +411,7 @@ class ViewHeterogens:
     def junction_stats_column_names(self):
         one_het = self.one_heterogen
         for vh in self.view_heterogens:
-            meta = vh.view_metadata
+            meta = vh.metadata
             groups = '_'.join(meta['group_names'])
             for name in meta['stat_names']:
                 if one_het:
@@ -535,13 +426,13 @@ class ViewHeterogens:
             return analysis_types.pop()
 
     @property
-    def view_metadata(self):
-        group_names = tuple(sorted({a for vh in self.view_heterogens for a in vh.view_metadata['group_names']}))
-        stat_names = tuple(sorted({a for vh in self.view_heterogens for a in vh.view_metadata['stat_names']}))
+    def metadata(self):
+        group_names = tuple(sorted({a for vh in self.view_heterogens for a in vh.metadata['group_names']}))
+        stat_names = tuple(sorted({a for vh in self.view_heterogens for a in vh.metadata['stat_names']}))
         experiment_names = {}
 
         for vh in self.view_heterogens:
-            for group, exp in zip(vh.view_metadata['group_names'], vh.view_metadata['experiment_names']):
+            for group, exp in zip(vh.metadata['group_names'], vh.metadata['experiment_names']):
                 exp = sorted(e for e in exp if e)
                 if group in experiment_names:
                     assert np.array_equal(experiment_names[group], exp), '{} {}'.format(experiment_names[group], exp)
@@ -554,45 +445,26 @@ class ViewHeterogens:
             'experiment_names': experiment_names,
             'group_names': group_names,
             'stat_names': stat_names,
-            '_id': 'metadata'
         }
 
-    def view_gene_ids(self):
-        yield from sorted({g for vh in self.view_heterogens for g in vh.view_gene_ids()})
-
-    def view_gene_lsvs(self, gene_id):
-        yield from {l for vh in self.view_heterogens for l in vh.view_gene_lsvs(gene_id)}
-
-    def heterogen(self, lsv_id):
+    def lsv(self, lsv_id):
         return self._ViewHeterogens(self, lsv_id)
-
-    def paginated_genes(self):
-        def grouper(iterable, n, fillvalue=None):
-            args = [iter(iterable)] * n
-            return zip_longest(*args, fillvalue=fillvalue)
-
-        for page in grouper(self.view_gene_ids(), constants.MAX_GENES):
-            yield tuple(p for p in page if p is not None)
-
-    def page_count(self):
-        gene_count = len(tuple(self.view_gene_ids()))
-        return math.ceil(gene_count / constants.MAX_GENES)
 
     @property
     def gene_ids(self):
         yield from {g for vh in self.view_heterogens for g in vh.gene_ids}
 
-    def view_lsv_ids(self):
-        yield from set(lsv_id for vh in self.view_heterogens for lsv_id in vh.view_lsv_ids())
+    def lsv_ids(self, gene_ids=None):
+        yield from {l for vh in self.view_heterogens for l in vh.lsv_ids(gene_ids)}
 
 
 class ViewHeterogen(Heterogen, ViewMatrix):
-    def __init__(self, args, voila_file):
-        super().__init__(voila_file)
-        self.args = args
-
-    def valid_lsvs(self, lsv_ids):
-        yield from super().valid_lsvs(lsv_ids)
+    def __init__(self, voila_file):
+        try:
+            super().__init__(voila_file)
+        except OSError:
+            print(voila_file)
+            raise
 
     class _ViewHeterogen(Heterogen._Heterogen, ViewMatrix._ViewMatrix):
         def __init__(self, matrix_hdf5, lsv_id):
@@ -629,5 +501,5 @@ class ViewHeterogen(Heterogen, ViewMatrix):
         return self._ViewHeterogen(self, lsv_id)
 
     @property
-    def view_metadata(self):
-        return {**super().view_metadata, **{'stat_names': self.stat_names}}
+    def metadata(self):
+        return {**super().metadata, **{'stat_names': self.stat_names}}

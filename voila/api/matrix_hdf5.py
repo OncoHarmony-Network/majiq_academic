@@ -347,18 +347,18 @@ class DeltaPsi(MatrixHdf5):
             fields = ('bins', 'group_bins', 'group_means', 'lsv_type', 'junctions')
             super().__init__(matrix_hdf5, lsv_id, fields)
 
-        def add(self, **kwargs):
-            """
-            Add keyword arguments specific for Delta PSI data.
-
-            :param kwargs: keyword arguments
-            :return: None
-            """
-            bins_list = kwargs.get('bins')
-            # bins = [collapse_matrix(bins) for bins in bins_list]
-            # kwargs['bins'] = bins
-            kwargs['bins'] = bins_list
-            super().add(**kwargs)
+        # def add(self, **kwargs):
+        #     """
+        #     Add keyword arguments specific for Delta PSI data.
+        #
+        #     :param kwargs: keyword arguments
+        #     :return: None
+        #     """
+        #     bins_list = kwargs.get('bins')
+        #     # bins = [collapse_matrix(bins) for bins in bins_list]
+        #     # kwargs['bins'] = bins
+        #     kwargs['bins'] = bins_list
+        #     super().add(**kwargs)
 
     def delta_psi(self, lsv_id):
         """
@@ -404,24 +404,24 @@ class Heterogen(MatrixHdf5):
             fields = ('lsv_type', 'junction_stats', 'mu_psi', 'mean_psi', 'junctions')
             super().__init__(matrix_hdf5, lsv_id, fields)
 
-        def add(self, **kwargs):
-            """
-            mu_psi: numpy array of two lists. one list for each condition.
-            junction_stats: 2d numpy matrix. Columns are stat flask_proj values and a row for each junction.
-            mean_psi: 2d matrix
-
-            :param kwargs:
-            :return:
-            """
-
-            mu_psi = kwargs.get('mu_psi', None)
-            if mu_psi is not None:
-                arr = np.empty((2, max(x.shape[0] for x in mu_psi), mu_psi[0].shape[1]))
-                arr.fill(-1)
-                for i, ms in enumerate(mu_psi):
-                    arr[i][0:ms.shape[0], 0:ms.shape[1]] = ms
-                kwargs['mu_psi'] = arr
-            super().add(**kwargs)
+        # def add(self, **kwargs):
+        #     """
+        #     mu_psi: numpy array of two lists. one list for each condition.
+        #     junction_stats: 2d numpy matrix. Columns are stat flask_proj values and a row for each junction.
+        #     mean_psi: 2d matrix
+        #
+        #     :param kwargs:
+        #     :return:
+        #     """
+        #
+        #     mu_psi = kwargs.get('mu_psi', None)
+        #     if mu_psi is not None:
+        #         arr = np.empty((2, max(x.shape[0] for x in mu_psi), mu_psi[0].shape[1]))
+        #         arr.fill(-1)
+        #         for i, ms in enumerate(mu_psi):
+        #             arr[i][0:ms.shape[0], 0:ms.shape[1]] = ms
+        #         kwargs['mu_psi'] = arr
+        #     super().add(**kwargs)
 
     def heterogen(self, lsv_id):
         """

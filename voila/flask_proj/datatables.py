@@ -4,10 +4,10 @@ from flask import request
 class DataTables:
     def __init__(self, records):
         self._form = request.form
-        self._records = records
+        self._records = list(records)
 
         # record values
-        self.records_len = len(records)
+        self.records_len = len(self._records)
         self.draw = self._form['draw']
         self.start = int(self._form['start'])
         self.length = int(self._form['length'])

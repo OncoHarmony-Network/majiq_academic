@@ -17,19 +17,6 @@ class Violin {
         return this.y_axis_width + this.violin_count * (this.violin_width + this.violin_pad)
     }
 
-    // get metadata() {
-    //     if (this._metadata === undefined) {
-    //         return this.db.get('metadata')
-    //             .then(metadata => {
-    //                 this._metadata = metadata;
-    //                 return this._metadata
-    //             })
-    //     } else {
-    //         console.log('cached');
-    //         return new Promise(this._metadata)
-    //     }
-    // }
-
     psi(svg) {
         const data = this.data;
 
@@ -95,53 +82,39 @@ class Violin {
 
     }
 
-    heterogen(svg) {
-        this.db.get(svg.closest('.lsv').dataset.lsvId)
-            .then(results => {
-                this.db.get('metadata').then(meta => {
+    async heterogen(svg) {
+        this.violin_count = this.data.group_names.length;
+        svg.setAttribute('height', this.svg_height);
+        svg.setAttribute('width', this.svg_width);
 
-                    d3.select(svg).selectAll('*').remove();
-                    this.violin_count = meta.group_names.length;
-                    svg.setAttribute('height', this.svg_height);
-                    svg.setAttribute('width', this.svg_width);
+        // const junc_idx = svg.closest('tr').dataset.junctionIndex;
+        const junc_idx = this.data.junction_idx;
+        const color = new Colors().brewer(junc_idx);
+        const bins = this.data.mean_psi;
 
-                    const junc_idx = svg.closest('tr').dataset.junctionIndex;
-                    const color = new Colors().brewer(junc_idx);
-                    const bins = this.mean_psi(results, junc_idx);
+        const g = d3.select(svg)
+            .append('g')
+            .attr('transform', `translate(${this.y_axis_width}, ${this.top_padding})`);
 
-                    const g = d3.select(svg)
-                        .append('g')
-                        .attr('transform', `translate(${this.y_axis_width}, ${this.top_padding})`);
+        const hist = g
+            .append('g')
+            .attr('class', 'histograms');
 
-                    const hist = g
-                        .append('g')
-                        .attr('class', 'histograms');
-
-                    this.draw_histograms(hist, bins);
+        this.draw_histograms(hist, bins);
 
 
-                    hist
-                        .selectAll('.violin')
-                        .attr('stroke', color)
-                        .attr('stroke-width', 1)
-                        .attr('fill', color)
-                        .attr('fill-opacity', .1);
+        hist
+            .selectAll('.violin')
+            .attr('stroke', color)
+            .attr('stroke-width', 1)
+            .attr('fill', color)
+            .attr('fill-opacity', .1);
 
-                    this.draw_psi_y_axis(g);
+        this.draw_psi_y_axis(g);
 
-                    this.swarm(g, results.mu_psi[junc_idx], meta, color);
-                    this.draw_x_axis(g, meta.group_names);
-                });
-            })
+        this.swarm(g, color);
+        this.draw_x_axis(g, this.data.group_names);
     }
-
-    // size_svg(svg, meta) {
-    //     const groups_num = meta.group_names.length;
-    //     const height = this.dim.group.height + this.dim.pad.top + this.dim.pad.bottom + this.dim.x_axis.height;
-    //     const width = (this.dim.group.width * groups_num) + (this.dim.group.pad * (groups_num + 1)) + this.dim.y_axis.width + this.dim.y_axis.label;
-    //     svg.setAttribute('height', height);
-    //     svg.setAttribute('width', width)
-    // };
 
     transform_plot(i) {
         return 'translate(' + i * (this.dim.group.width + this.dim.group.pad) + ')';
@@ -183,8 +156,8 @@ class Violin {
             });
     }
 
-    mean_psi(data, junc_idx) {
-        return data.mean_psi.map(function (arr) {
+    mean_psi(m_psi, junc_idx) {
+        return m_psi.map(function (arr) {
             try {
                 return arr[junc_idx]
             } catch (TypeError) {
@@ -193,8 +166,10 @@ class Violin {
         });
     };
 
-    swarm(svg, mu_psi, meta, color) {
+    swarm(svg, color) {
         const circle_radius = 3;
+        const mu_psi = this.data.mu_psi;
+        const experiment_names = this.data.experiment_names;
 
         var tool_tip = d3.select('.violin-tool-tip');
         if (tool_tip.empty()) {
@@ -240,7 +215,7 @@ class Violin {
                 d3.select(a[i]).style('fill', 'orange');
                 tool_tip.selectAll('.value').text(a[i].getAttribute('data-mu'));
                 const group_idx = parseInt(a[i].parentNode.getAttribute('data-group-index'));
-                const exp_names = meta.experiment_names[group_idx].filter(x => !x.includes('Combined'));
+                const exp_names = experiment_names[group_idx].filter(x => !x.includes('Combined'));
                 tool_tip.selectAll('.sample').text(exp_names[i]);
                 tool_tip.style("display", "block");
             })
