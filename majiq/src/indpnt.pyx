@@ -161,20 +161,20 @@ cdef int _het_computation(object out_h5p, dict file_cond, list list_of_lsv, map[
 
     for lsv in list_of_lsv:
         nways = lsv_vec[lsv].get_num_ways()
-        mupsi = np.ndarray(shape=(len(file_cond), max_nfiles, nways), dtype=np.float32, order="c")
-        postpsi = np.ndarray(shape=(len(file_cond), nways, nbins), dtype=np.float32, order="c")
+        mupsi = np.ndarray(shape=(nways, len(file_cond), max_nfiles), dtype=np.float32, order="c")
+        postpsi = np.ndarray(shape=(nways, len(file_cond), nbins), dtype=np.float32, order="c")
         mupsi.fill(-1)
         hetObj_ptr = <hetLSV*> lsv_vec[lsv]
-        for x in range(len(file_cond)):
-            for y in range(len(file_cond[conditions[x]])):
-                for z in range(nways):
-                    mupsi[x,y,z] = hetObj_ptr.mu_psi[x][y][z]
+        for z in range(nways):
+            for x in range(len(file_cond)):
+                for y in range(len(file_cond[conditions[x]])):
+                    mupsi[z, x, y] = hetObj_ptr.mu_psi[x][y][z]
 
-        for x in range(len(file_cond)):
-            for y in range(nways):
+        for y in range(nways):
+            for x in range(len(file_cond)):
                 for z in range(nbins):
-                    postpsi[x,y,z] = hetObj_ptr.post_psi[x][y][z]
-                postpsi[x,y] /= postpsi[x,y].sum()
+                    postpsi[y, x, z] = hetObj_ptr.post_psi[x][y][z]
+                postpsi[y, x] /= postpsi[y, x].sum()
 
         out_h5p.heterogen(lsv.decode('utf-8')).add(lsv_type=lsv_type_dict[lsv][0].decode('utf-8'), mu_psi=mupsi,
                                                    mean_psi=postpsi, junctions=junc_info[lsv])
