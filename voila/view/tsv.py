@@ -7,13 +7,13 @@ from queue import Empty
 import numpy as np
 
 from voila import constants
-from voila.api.view_matrix import ViewPsi, ViewDeltaPsi
+from voila.api.view_matrix import ViewPsi, ViewDeltaPsi, ViewHeterogens
 from voila.api.view_splice_graph_sqlite import ViewSpliceGraph
 from voila.config import Config
 from voila.processes import VoilaPool, VoilaQueue
 from voila.utils.voila_log import voila_log
 from voila.view.html import Html
-from voila.vlsv import matrix_area
+from voila.vlsv import matrix_area, get_expected_psi
 
 lock = multiprocessing.Lock()
 
@@ -85,19 +85,30 @@ class NewTsv:
     def __init__(self):
         self.config = Config()
         analysis_type = self.config.analysis_type
+
+        voila_log().info(analysis_type + ' TSV')
+
         if analysis_type == constants.ANALYSIS_PSI:
             PsiTsv()
         elif analysis_type == constants.ANALYSIS_DELTAPSI:
             DeltaPsiTsv()
+        elif analysis_type == constants.ANALYSIS_HETEROGEN:
+            HeterogenTsv()
+        else:
+            raise Exception('unknown analysis type')
 
 
 class AnalysisTypeTsv:
     def __init__(self, view_matrix):
         self.config = Config()
         self.view_matrix = view_matrix
+        self.tab_output()
 
     @staticmethod
     def tsv_row(self, q, e, tsv_file, fieldnames):
+        raise NotImplementedError()
+
+    def tab_output(self):
         raise NotImplementedError()
 
     def fill_queue(self, queue, event):
@@ -105,6 +116,7 @@ class AnalysisTypeTsv:
             for gene_id in m.gene_ids:
                 # # if any(h.view_gene_lsvs(gene_id)):
                 # #     queue.put(gene_id)
+                print(gene_id)
                 queue.put(gene_id)
             event.set()
 
@@ -118,6 +130,7 @@ class AnalysisTypeTsv:
         assert q.empty()
 
     def write_tsv(self, fieldnames):
+
         config = self.config
         log = voila_log()
         log.info("Creating Tab-delimited output file")
@@ -151,7 +164,6 @@ class AnalysisTypeTsv:
 class PsiTsv(AnalysisTypeTsv):
     def __init__(self):
         super().__init__(ViewPsi)
-        self.tab_output()
 
     def tsv_row(self, q, e, tsv_file, fieldnames):
         log = voila_log()
@@ -163,8 +175,9 @@ class PsiTsv(AnalysisTypeTsv):
                 for gene_id in self.gene_ids(q, e):
 
                     gene = sg.gene(gene_id)
-
-                    for lsv_id in m.view_gene_lsvs(gene.id):
+                    # todo: tsvs will need command line filters.
+                    # for lsv_id in m.view_gene_lsvs(gene.id):
+                    for lsv_id in m.lsv_ids(gene_ids=[gene_id]):
                         lsv = m.lsv(lsv_id)
                         lsv_junctions = lsv.junctions
                         annot_juncs = sg.annotated_junctions(gene, lsv)
@@ -201,9 +214,9 @@ class PsiTsv(AnalysisTypeTsv):
                         lock.acquire()
                         writer.writerow(row)
                         lock.release()
+                    q.task_done()
 
     def tab_output(self):
-
         fieldnames = ['#Gene Name', 'Gene ID', 'LSV ID', 'E(PSI) per LSV junction',
                       'Var(E(PSI)) per LSV junction',
                       'LSV Type', 'A5SS', 'A3SS', 'ES', 'Num. Junctions', 'Num. Exons', 'De Novo Junctions',
@@ -216,14 +229,13 @@ class PsiTsv(AnalysisTypeTsv):
 class DeltaPsiTsv(AnalysisTypeTsv):
     def __init__(self):
         super().__init__(ViewDeltaPsi)
-        self.tab_output()
 
     def tsv_row(self, q, e, tsv_file, fieldnames):
         log = voila_log()
         config = self.config
 
         with ViewDeltaPsi() as m, ViewSpliceGraph() as sg:
-            metadata = m.view_metadata
+            metadata = m.metadata
             group1 = metadata['group_names'][0]
             group2 = metadata['group_names'][1]
 
@@ -234,7 +246,9 @@ class DeltaPsiTsv(AnalysisTypeTsv):
 
                     gene = sg.gene(gene_id)
 
-                    for lsv_id in m.view_gene_lsvs(gene.id):
+                    # todo: need to implement command line filters
+                    # for lsv_id in m.view_gene_lsvs(gene.id):
+                    for lsv_id in m.lsv_ids(gene_ids=[gene_id]):
                         log.debug('Write TSV row for {0}'.format(lsv_id))
 
                         lsv = m.lsv(lsv_id)
@@ -288,12 +302,13 @@ class DeltaPsiTsv(AnalysisTypeTsv):
                         lock.acquire()
                         writer.writerow(row)
                         lock.release()
+                    q.task_done()
 
     def tab_output(self):
         config = Config()
 
         with ViewDeltaPsi() as v:
-            metadata = v.view_metadata
+            metadata = v.metadata
 
         fieldnames = ['#Gene Name', 'Gene ID', 'LSV ID', 'E(dPSI) per LSV junction',
                       'P(|dPSI|>=%.2f) per LSV junction' % config.threshold,
@@ -303,3 +318,80 @@ class DeltaPsiTsv(AnalysisTypeTsv):
                       'strand', 'Junctions coords', 'Exons coords', 'IR coords']
 
         self.write_tsv(fieldnames)
+
+
+class HeterogenTsv(AnalysisTypeTsv):
+    def __init__(self):
+        with ViewHeterogens() as m:
+            self.meta = m.metadata
+        print(self.meta)
+        super().__init__(ViewHeterogens)
+
+    def tab_output(self):
+        with ViewHeterogens() as m:
+            metadata = m.metadata
+
+            fieldnames = ['Gene Name', 'Gene ID', 'LSV ID', 'LSV Type', 'strand', 'chr'] + \
+                         ['%s E(PSI)' % group for group in metadata['group_names']] + \
+                         list(m.junction_stats_column_names) + \
+                         ['A5SS', 'A3SS', 'ES', 'Num. Junctions', 'Num. Exons', 'De Novo Junctions',
+                          'Junctions coords', 'Exons coords', 'IR coords']
+
+        self.write_tsv(fieldnames)
+
+    def tsv_row(self, q, e, tsv_file, fieldnames):
+        log = voila_log()
+
+        with ViewHeterogens() as m, ViewSpliceGraph() as sg, open(tsv_file, 'a') as tsv:
+            group_names = self.meta['group_names']
+
+            writer = csv.DictWriter(tsv, fieldnames=fieldnames, delimiter='\t')
+
+            for gene_id in self.gene_ids(q, e):
+                gene = sg.gene(gene_id)
+
+                for lsv_id in m.lsv_ids(gene_ids=[gene_id]):
+                    log.debug('Write TSV row for {0}'.format(lsv_id))
+                    het = m.lsv(lsv_id)
+                    lsv_junctions = het.junctions
+                    annot_juncs = sg.annotated_junctions(gene, het)
+                    lsv_exons = sg.lsv_exons(gene, het)
+                    mean_psi = list(het.mean_psi)
+
+                    row = {
+                        'Gene Name': gene.name,
+                        'Gene ID': gene.id,
+                        'LSV ID': lsv_id,
+                        'LSV Type': het.lsv_type,
+                        'A5SS': het.a5ss,
+                        'A3SS': het.a3ss,
+                        'ES': het.exon_skipping,
+                        'Num. Junctions': len(lsv_junctions),
+                        'Num. Exons': het.exon_count,
+                        'chr': gene.chromosome,
+                        'strand': gene.strand,
+                        'De Novo Junctions': semicolon_join(annot_juncs),
+                        'Junctions coords': semicolon_join(
+                            '{0}-{1}'.format(start, end) for start, end in lsv_junctions
+                        ),
+                        'Exons coords': semicolon_join(
+                            '{0}-{1}'.format(start, end) for start, end in filter_exons(lsv_exons)
+                        ),
+                        # todo: reimplement this column
+                        # 'IR coords': self.semicolon_join(
+                        #     '{0}-{1}'.format(e.start, e.end) for e in lsv_exons if e.intron_retention
+                        # ),
+                    }
+
+                    for idx, group in enumerate(group_names):
+                        if mean_psi[idx] is not None:
+                            row['%s E(PSI)' % group] = semicolon_join(
+                                get_expected_psi(x) for x in mean_psi[idx])
+
+                    for key, value in het.junction_stats:
+                        row[key] = semicolon_join(value)
+
+                    lock.acquire()
+                    writer.writerow(row)
+                    lock.release()
+                q.task_done()

@@ -1,4 +1,5 @@
 import os
+import tempfile
 
 import voila
 
@@ -62,4 +63,5 @@ NA_LSV = 'na'
 
 EXEC_DIR = os.path.dirname(os.path.abspath(voila.__file__))
 
-CONFIG_FILE = '/tmp/voila.ini'
+# CONFIG_FILE = '/tmp/voila.ini'
+CONFIG_FILE = tempfile.NamedTemporaryFile(delete=False).name

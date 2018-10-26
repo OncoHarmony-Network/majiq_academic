@@ -190,8 +190,6 @@ class Config(Singleton):
 class PsiConfig(Config):
     @classmethod
     def _analysis_type_config(cls, args, config):
-        # with open(constants.CONFIG_FILE, 'w') as configfile:
-        #     config.write(configfile)
         pass
 
 
@@ -218,9 +216,6 @@ class DeltaPsiConfig(Config):
         config.set(default, 'non_changing_threshold', str(args.non_changing_threshold))
         config.set(default, 'probability_threshold', str(args.probability_threshold))
         config.set(default, 'show_all', str(args.show_all))
-
-        # with open(constants.CONFIG_FILE, 'w') as configfile:
-        #     config.write(configfile)
 
 
 class HeterogenConfig(Config):
