@@ -114,9 +114,6 @@ class AnalysisTypeTsv:
     def fill_queue(self, queue, event):
         with self.view_matrix() as m:
             for gene_id in m.gene_ids:
-                # # if any(h.view_gene_lsvs(gene_id)):
-                # #     queue.put(gene_id)
-                print(gene_id)
                 queue.put(gene_id)
             event.set()
 
@@ -139,13 +136,19 @@ class AnalysisTypeTsv:
         output_html = Html.get_output_html(config.output, config.voila_file)
         tsv_file = os.path.join(config.output, output_html.rsplit('.html', 1)[0] + '.tsv')
         mgr = multiprocessing.Manager()
-        queue = mgr.Queue(nproc * 2)
+        # queue = mgr.Queue(nproc * 2)
+        queue = mgr.Queue()
         event = mgr.Event()
-        fill_queue_proc = multiprocessing.Process(target=self.fill_queue, args=(queue, event))
+
+        with ViewHeterogens() as m:
+            for gene_id in m.gene_ids:
+                queue.put(gene_id)
+        event.set()
+        # fill_queue_proc = multiprocessing.Process(target=self.fill_queue, args=(queue, event))
 
         log.debug('Manager PID {}'.format(mgr._process.ident))
 
-        fill_queue_proc.start()
+        # fill_queue_proc.start()
 
         with open(tsv_file, 'w') as tsv:
             writer = csv.DictWriter(tsv, fieldnames=fieldnames, delimiter='\t')
@@ -158,7 +161,7 @@ class AnalysisTypeTsv:
 
         log.info("Delimited output file successfully created in: %s" % tsv_file)
 
-        fill_queue_proc.join()
+        # fill_queue_proc.join()
 
 
 class PsiTsv(AnalysisTypeTsv):
@@ -322,17 +325,14 @@ class DeltaPsiTsv(AnalysisTypeTsv):
 
 class HeterogenTsv(AnalysisTypeTsv):
     def __init__(self):
-        with ViewHeterogens() as m:
-            self.meta = m.metadata
-        print(self.meta)
         super().__init__(ViewHeterogens)
 
     def tab_output(self):
         with ViewHeterogens() as m:
-            metadata = m.metadata
+            group_names = m.group_names
 
             fieldnames = ['Gene Name', 'Gene ID', 'LSV ID', 'LSV Type', 'strand', 'chr'] + \
-                         ['%s E(PSI)' % group for group in metadata['group_names']] + \
+                         ['%s E(PSI)' % group for group in group_names] + \
                          list(m.junction_stats_column_names) + \
                          ['A5SS', 'A3SS', 'ES', 'Num. Junctions', 'Num. Exons', 'De Novo Junctions',
                           'Junctions coords', 'Exons coords', 'IR coords']
@@ -343,7 +343,7 @@ class HeterogenTsv(AnalysisTypeTsv):
         log = voila_log()
 
         with ViewHeterogens() as m, ViewSpliceGraph() as sg, open(tsv_file, 'a') as tsv:
-            group_names = self.meta['group_names']
+            group_names = m.group_names
 
             writer = csv.DictWriter(tsv, fieldnames=fieldnames, delimiter='\t')
 
@@ -383,10 +383,12 @@ class HeterogenTsv(AnalysisTypeTsv):
                         # ),
                     }
 
-                    for idx, group in enumerate(group_names):
-                        if mean_psi[idx] is not None:
-                            row['%s E(PSI)' % group] = semicolon_join(
-                                get_expected_psi(x) for x in mean_psi[idx])
+                    # for idx, group in enumerate(group_names):
+                    #     if mean_psi[idx] is not None:
+                    #         row[group + ' E(PSI)'] = semicolon_join(get_expected_psi(x) for x in mean_psi[idx])
+
+                    for grp, mean in zip(group_names, np.array(mean_psi).transpose((1, 0, 2))):
+                        row[grp + ' E(PSI)'] = semicolon_join(get_expected_psi(x) for x in mean)
 
                     for key, value in het.junction_stats:
                         row[key] = semicolon_join(value)

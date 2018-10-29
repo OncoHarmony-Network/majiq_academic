@@ -24,6 +24,10 @@ class FoundMoreThanOneVoilaFile(Exception):
     pass
 
 
+class AnalysisTypeNotFound(Exception):
+    pass
+
+
 class Singleton(object):
     def __new__(cls, *args, **kwds):
         it = cls.__dict__.get("__it__")
@@ -139,6 +143,9 @@ class Config(Singleton):
 
                 if analysis_type != m.analysis_type:
                     raise MixedAnalysisTypeVoilaFiles()
+
+        if not analysis_type:
+            raise AnalysisTypeNotFound()
 
         if analysis_type in [constants.ANALYSIS_PSI, constants.ANALYSIS_DELTAPSI]:
 

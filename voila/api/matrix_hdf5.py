@@ -32,6 +32,9 @@ class MatrixHdf5:
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
+        self.close()
+
+    def close(self):
         self.h.close()
 
     def add_dataset(self, *args, **kwargs):

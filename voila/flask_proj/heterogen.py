@@ -1,7 +1,6 @@
 import os
 from bisect import bisect
 
-import numpy as np
 from flask import Flask, render_template, jsonify, url_for, request, redirect, session
 
 from voila.api.view_matrix import ViewDeltaPsi, ViewHeterogens
@@ -111,9 +110,8 @@ def splice_graph(gene_id):
         return redirect(url_for('index'))
 
     with ViewSpliceGraph() as sg, ViewDeltaPsi() as v:
-        meta = v.metadata
         g = sg.gene(gene_id)
-        gd = sg.gene_experiment(g, meta['experiment_names'])
+        gd = sg.gene_experiment(g, v.experiment_names)
         return jsonify(gd)
 
 
@@ -171,8 +169,8 @@ def lsv_highlight():
 @app.route('/summary-table/<lsv_id>', methods=('POST',))
 def summary_table(lsv_id):
     with ViewHeterogens() as v:
-        group_names = v.metadata['group_names']
-        experiment_names = [e[1:] for e in v.metadata['experiment_names']]
+        exp_names = v.experiment_names
+        grp_names = v.group_names
 
         def create_records():
             het = v.lsv(lsv_id)
@@ -184,21 +182,16 @@ def summary_table(lsv_id):
                 junc = map(str, junc)
                 junc = '-'.join(junc)
 
-                try:
-                    mean_psi = mean_psi.tolist()
-                except AttributeError:
-                    mean_psi = []
-
                 yield [
                     junc,
                     {
                         'display':
                             {
-                                'group_names': group_names,
-                                'experiment_names': experiment_names,
+                                'group_names': grp_names,
+                                'experiment_names': exp_names,
                                 'junction_idx': idx,
                                 'mean_psi': mean_psi,
-                                'mu_psi': mu_psi.tolist()
+                                'mu_psi': mu_psi
                             }
                     },
                     'heat maps']
@@ -208,9 +201,3 @@ def summary_table(lsv_id):
         dt = dict(dt)
 
         return jsonify(dt)
-
-
-@app.route('/metadata', methods=('POST',))
-def metadata():
-    with ViewDeltaPsi() as v:
-        return jsonify(v.metadata)
