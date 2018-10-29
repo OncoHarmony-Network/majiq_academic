@@ -450,7 +450,7 @@ class ViewHeterogens:
                 for exp, grp in zip(m.experiment_names, m.group_names):
                     exp_names[grp] = exp
 
-        return [exp_names[grp].tolist() for grp in self.group_names]
+        return [exp_names[grp] for grp in self.group_names]
 
     def lsv(self, lsv_id):
         return self._ViewHeterogens(self, lsv_id)

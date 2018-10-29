@@ -106,21 +106,22 @@ def splice_graph(gene_id):
         return redirect(url_for('index'))
 
     with ViewSpliceGraph() as sg, ViewDeltaPsi() as v:
-        meta = v.metadata
         g = sg.gene(gene_id)
-        gd = sg.gene_experiment(g, meta['experiment_names'])
+        gd = sg.gene_experiment(g, v.experiment_names)
         return jsonify(gd)
 
 
 @app.route('/psi-splice-graphs', methods=('POST',))
 def psi_splice_graphs():
     with ViewDeltaPsi() as v:
-        meta = v.metadata
+        grp_names = v.group_names
+        exp_names = v.experiment_names
+
         try:
             sg_init = session['psi_init_splice_graphs']
         except KeyError:
-            sg_init = [[meta['group_names'][0], meta['experiment_names'][0][0]],
-                       [meta['group_names'][1], meta['experiment_names'][1][0]]]
+            sg_init = [[grp_names[0], exp_names[0][0]],
+                       [grp_names[1], exp_names[1][0]]]
 
         json_data = request.get_json()
 
@@ -184,7 +185,7 @@ def summary_table(gene_id):
 
                 yield [highlight, lsv_id_col, lsv_type, grp_names[0], excl_incl, grp_names[1], 'links']
 
-        grp_names = v.metadata['group_names']
+        grp_names = v.group_names
         lsv_ids = v.lsv_ids(gene_ids=[gene_id])
         records = list(create_records(lsv_ids))
 
@@ -197,4 +198,7 @@ def summary_table(gene_id):
 @app.route('/metadata', methods=('POST',))
 def metadata():
     with ViewDeltaPsi() as v:
-        return jsonify(v.metadata)
+        return jsonify({
+            'group_names': v.group_names,
+            'experiment_names': v.experiment_names
+        })

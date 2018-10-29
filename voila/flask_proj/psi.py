@@ -40,7 +40,7 @@ def index_table():
 
                 yield [gene_name_col, lsv_id, psi.lsv_type, grp_name, 'links']
 
-        grp_name = v.metadata['group_names'][0]
+        grp_name = v.group_names[0]
         records = list(create_records(v.lsv_ids()))
 
         dt = DataTables(records)
@@ -63,7 +63,10 @@ def nav(gene_id):
 @app.route('/metadata', methods=('POST',))
 def metadata():
     with ViewPsi() as v:
-        return jsonify(v.metadata)
+        return jsonify({
+            'group_names': v.group_names,
+            'experiment_names': v.experiment_names
+        })
 
 
 @app.route('/splice-graph/<gene_id>', methods=('POST', 'GET'))
@@ -72,9 +75,8 @@ def splice_graph(gene_id):
         return redirect(url_for('index'))
 
     with ViewSpliceGraph() as sg, ViewPsi() as v:
-        meta = v.metadata
         g = sg.gene(gene_id)
-        gd = sg.gene_experiment(g, meta['experiment_names'])
+        gd = sg.gene_experiment(g, v.experiment_names)
         return jsonify(gd)
 
 
@@ -95,7 +97,7 @@ def summary_table(gene_id):
 
                 yield [highlight, lsv_id_col, psi.lsv_type, grp_name, 'links']
 
-        grp_name = v.metadata['group_names'][0]
+        grp_name = v.group_names[0]
         lsv_ids = v.lsv_ids(gene_ids=[gene_id])
         records = list(create_records(lsv_ids))
 
@@ -108,12 +110,10 @@ def summary_table(gene_id):
 @app.route('/psi-splice-graphs', methods=('POST',))
 def psi_splice_graphs():
     with ViewPsi() as v:
-        meta = v.metadata
-
         try:
             sg_init = session['psi_init_splice_graphs']
         except KeyError:
-            sg_init = [[meta['group_names'][0], meta['experiment_names'][0][0]]]
+            sg_init = [[v.group_names[0], v.experiment_names[0][0]]]
 
         json_data = request.get_json()
 
@@ -149,7 +149,6 @@ def lsv_data(lsv_id):
                     return idx + 1
 
     with ViewSpliceGraph() as sg, ViewPsi() as m:
-        meta = m.metadata
         gene = sg.gene(gene_id)
         strand = gene.strand
         exons = sg.exons(gene)
@@ -159,7 +158,7 @@ def lsv_data(lsv_id):
 
         return jsonify({
             'lsv': {
-                'name': meta['group_names'][0],
+                'name': m.group_names[0],
                 'junctions': lsv.junctions.tolist(),
                 'group_means': dict(lsv.group_means),
                 'group_bins': dict(lsv.group_bins)

@@ -135,7 +135,7 @@ class MatrixHdf5:
 
     @property
     def group_names(self):
-        return self.h['metadata']['group_names'].value
+        return self.h['metadata']['group_names'].value.tolist()
 
     @group_names.setter
     def group_names(self, n):
@@ -143,7 +143,7 @@ class MatrixHdf5:
 
     @property
     def experiment_names(self):
-        return self.h['metadata']['experiment_names'].value
+        return self.h['metadata']['experiment_names'].value.tolist()
 
     @experiment_names.setter
     def experiment_names(self, ns):
