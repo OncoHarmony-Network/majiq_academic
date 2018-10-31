@@ -1,5 +1,7 @@
 class SpliceGraphTools {
-    constructor(sgs) {
+    constructor(sgs, gene) {
+        this.grp_names = gene.group_names;
+        this.exp_names = gene.experiment_names;
         this.sgs = sgs;
         this._init();
     }
@@ -28,46 +30,43 @@ class SpliceGraphTools {
         document.querySelector('.ucsc-gene').setAttribute('href', `http://genome.ucsc.edu/cgi-bin/hgTracks?db=${gene.genome}&position=${ gene.chromosome }:${ gene.start }-${ gene.end }`)
 
 
-        json_ajax('/metadata').then(meta => {
+        // populate splice graph selector groups
+        d3.select('.groups select')
+            .selectAll('option')
+            .data(this.grp_names)
+            .enter()
+            .append('option')
+            .text(d => {
+                return d
+            });
 
-            // populate splice graph selector groups
-            d3.select('.groups select')
+
+        // populate splice graph experiments when group is changed
+        document.querySelector('#groups').onchange = (event) => {
+            const group_name = this.grp_names[event.target.selectedIndex];
+
+            const shown_exps = Array.from(document.querySelectorAll('.splice-graph'))
+                .filter(sg => sg.dataset.group === group_name)
+                .map(sg => sg.dataset.experiment);
+
+            const exps = this.exp_names[event.target.selectedIndex]
+                .filter(e => !shown_exps.includes(e));
+
+            const s = d3.select('.experiments select')
                 .selectAll('option')
-                .data(meta.group_names)
-                .enter()
+                .data(exps);
+
+            s.text(d => d);
+
+            s.enter()
                 .append('option')
-                .text(d => {
-                    return d
-                });
+                .text(d => d);
 
+            s.exit().remove();
+        };
 
-            // populate splice graph experiments when group is changed
-            document.querySelector('#groups').onchange = (event) => {
-                const group_name = meta.group_names[event.target.selectedIndex];
-
-                const shown_exps = Array.from(document.querySelectorAll('.splice-graph'))
-                    .filter(sg => sg.dataset.group === group_name)
-                    .map(sg => sg.dataset.experiment);
-
-                const exps = meta.experiment_names[event.target.selectedIndex]
-                    .filter(e => !shown_exps.includes(e));
-
-                const s = d3.select('.experiments select')
-                    .selectAll('option')
-                    .data(exps);
-
-                s.text(d => d);
-
-                s.enter()
-                    .append('option')
-                    .text(d => d);
-
-                s.exit().remove();
-            };
-
-            // force change event to populate experiments on initial page load
-            SpliceGraphTools._populate_sg_form();
-        });
+        // force change event to populate experiments on initial page load
+        SpliceGraphTools._populate_sg_form();
 
 
         // submit event for splice graph selector

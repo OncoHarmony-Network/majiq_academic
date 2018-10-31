@@ -29,7 +29,7 @@
                 }
             });
 
-            sgs.init_create().then(s => new SpliceGraphTools(s));
+            sgs.init_create().then(s => new SpliceGraphTools(s, gene));
 
             new MutationObserver(mutations => {
                 mutations.forEach(m => m.addedNodes
@@ -60,8 +60,8 @@
                                     n.querySelectorAll('.excl-incl-rect')
                                         .forEach(s => {
                                             lsv.draw_delta_lsv_compact_svg(s);
-
                                         });
+
                                     n.querySelectorAll('.dpsi-violin')
                                         .forEach(s => {
                                             $(s).hide();

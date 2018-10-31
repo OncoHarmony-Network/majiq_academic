@@ -1,7 +1,7 @@
 import os
 from bisect import bisect
 
-from flask import render_template, url_for, jsonify, request, redirect, session, Flask
+from flask import render_template, url_for, jsonify, request, session, Flask
 
 from voila.api.view_matrix import ViewPsi
 from voila.api.view_splice_graph_sqlite import ViewSpliceGraph
@@ -31,19 +31,27 @@ def gene(gene_id):
 @app.route('/index-table', methods=('POST',))
 def index_table():
     with ViewSpliceGraph() as sg, ViewPsi() as v:
+        grp_name = v.group_names[0]
+
         def create_records(lsv_ids):
             for lsv_id in lsv_ids:
                 psi = v.lsv(lsv_id)
-                gene_name = sg.gene(psi.gene_id).name
                 gene_id = psi.gene_id
-                gene_name_col = {'sort': gene_name, 'display': [url_for('gene', gene_id=gene_id), gene_name]}
+                gene_name = sg.gene(gene_id).name
+                yield [(gene_name, gene_id), lsv_id, '', '', '']
 
-                yield [gene_name_col, lsv_id, psi.lsv_type, grp_name, 'links']
+        def callback(rs):
+            for r in rs:
+                gene_name, gene_id = r[0]
+                lsv_id = r[1]
 
-        grp_name = v.group_names[0]
-        records = list(create_records(v.lsv_ids()))
+                r[0] = [url_for('gene', gene_id=gene_id), gene_name]
+                r[2] = v.lsv(lsv_id).lsv_type
+                r[3] = grp_name
 
-        dt = DataTables(records)
+        records = create_records(v.lsv_ids())
+
+        dt = DataTables(records, callback)
 
         return jsonify(dict(dt))
 
@@ -71,12 +79,12 @@ def metadata():
 
 @app.route('/splice-graph/<gene_id>', methods=('POST', 'GET'))
 def splice_graph(gene_id):
-    if request.method == 'GET':
-        return redirect(url_for('index'))
-
     with ViewSpliceGraph() as sg, ViewPsi() as v:
         g = sg.gene(gene_id)
-        gd = sg.gene_experiment(g, v.experiment_names)
+        exp_names = v.splice_graph_experiment_names
+        gd = sg.gene_experiment(g, exp_names)
+        gd['experiment_names'] = exp_names
+        gd['group_names'] = v.group_names
         return jsonify(gd)
 
 
@@ -88,20 +96,29 @@ def summary_table(gene_id):
             for lsv_id in lsv_ids:
                 psi = v.lsv(lsv_id)
                 ref_exon = list(psi.reference_exon)
-                lsv_id_col = {'sort': ref_exon, 'display': lsv_id}
+                lsv_id_col = [ref_exon, lsv_id]
 
                 try:
                     highlight = session['highlight'][lsv_id]
                 except KeyError:
                     highlight = [False, False]
 
-                yield [highlight, lsv_id_col, psi.lsv_type, grp_name, 'links']
+                yield [highlight, lsv_id_col, '', '', '']
+
+        def callback(rs):
+            for r in rs:
+                ref_exon, lsv_id = r[1]
+                psi = v.lsv(lsv_id)
+
+                r[1] = lsv_id
+                r[2] = psi.lsv_type
+                r[3] = grp_name
 
         grp_name = v.group_names[0]
         lsv_ids = v.lsv_ids(gene_ids=[gene_id])
-        records = list(create_records(lsv_ids))
+        records = create_records(lsv_ids)
 
-        dt = DataTables(records)
+        dt = DataTables(records, callback)
         dt = dict(dt)
 
         return jsonify(dt)
@@ -113,7 +130,7 @@ def psi_splice_graphs():
         try:
             sg_init = session['psi_init_splice_graphs']
         except KeyError:
-            sg_init = [[v.group_names[0], v.experiment_names[0][0]]]
+            sg_init = [[v.group_names[0], v.splice_graph_experiment_names[0][0]]]
 
         json_data = request.get_json()
 

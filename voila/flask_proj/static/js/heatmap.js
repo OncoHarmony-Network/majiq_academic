@@ -27,7 +27,7 @@ const dpsi_color = d3.scaleLinear()
     .interpolate(d3.interpolateCubehelix);
 
 const HMData = function (value, stat_name) {
-    this.value = value;
+    this.value = value === undefined ? -1 : value;
     this.name = stat_name;
     if (stat_name.toLowerCase() === 'dpsi')
         this.color_fn = dpsi_color;
@@ -56,8 +56,8 @@ const rotate = function (arr) {
 
 
 class HeatMap {
-    constructor(db) {
-        this.db = db;
+    constructor(data) {
+        this.data = data;
         this.color = new Colors();
     }
 
@@ -106,12 +106,12 @@ class HeatMap {
         this.scale(stat_color)
     };
 
-    get_stat_value(data, stat_name, gn1, gn2, junc_idx) {
+    get_stat_value(data, gn1, gn2) {
         try {
-            return data[stat_name][gn1][gn2][junc_idx];
+            return data[gn1][gn2];
         } catch (TypeError) {
             try {
-                return data[stat_name][gn2][gn1][junc_idx];
+                return data[gn2][gn1];
             } catch (TypeError) {
                 return -1
             }
@@ -119,12 +119,12 @@ class HeatMap {
 
     }
 
-    get_dpsi(data, gn1, gn2, junc_idx) {
+    get_dpsi(data, gn1, gn2) {
         try {
-            return data.dpsi[gn1][gn2][junc_idx];
+            return data.dpsi[gn1][gn2];
         } catch (TypeError) {
             try {
-                return data.dpsi[gn2][gn1][junc_idx];
+                return data.dpsi[gn2][gn1];
             } catch (TypeError) {
                 return -1
             }
@@ -132,113 +132,107 @@ class HeatMap {
     }
 
     plot(el) {
-        const lsv_id = el.closest('table').dataset.lsvId;
-        const junc_idx = el.closest('tr').dataset.junctionIndex;
-        const stat_name = el.dataset.statName;
+        const data = this.data;
+        const stat_name = data.stat_name;
+        const group_names = data.group_names;
         const cell_size = 20;
 
-        this.db.allDocs({
-            keys: ['metadata', lsv_id],
-            include_docs: true
-        }).then(response => {
-            const meta = response.rows[0].doc;
-            const data = response.rows[1].doc;
+        console.log(data);
+        const m = Array(group_names.length).fill(null).map(() => Array(group_names.length).fill(null));
 
-            const group_names = meta.group_names;
-            const m = Array(group_names.length).fill(null).map(() => Array(group_names.length).fill(null));
+        group_names
+            .forEach((gn1, gn_idx1) => group_names
+                .forEach((gn2, gn_idx2) => {
+                    const stat_value = this.get_stat_value(data, gn1, gn2);
+                    console.log(gn1 + ', ' + gn2);
+                    console.log(stat_value);
+                    m[gn_idx1][gn_idx2] = new HMData(stat_value, stat_name);
 
-            group_names
-                .forEach((gn1, gn_idx1) => group_names
-                    .forEach((gn2, gn_idx2) => {
-                        const stat_value = this.get_stat_value(data, stat_name, gn1, gn2, junc_idx);
-                        m[gn_idx1][gn_idx2] = new HMData(stat_value, stat_name);
-
-                        const dpsi_value = this.get_dpsi(data, gn1, gn2, junc_idx);
-                        m[gn_idx2][gn_idx1] = new HMData(dpsi_value, 'dpsi')
-                    }));
+                    // const dpsi_value = this.get_dpsi(data, gn1, gn2);
+                    // m[gn_idx2][gn_idx1] = new HMData(dpsi_value, 'dpsi')
+                }));
 
 
-            let tool_tip = d3.select('.heat-map-tool-tip');
-            if (tool_tip.empty()) {
-                tool_tip = d3.select("body")
-                    .append("div")
-                    .attr('class', 'heat-map-tool-tip')
-                    .style("display", "none");
-                tool_tip.append('div')
-                    .attr('class', 'versus');
-                tool_tip.append('div')
-                    .attr('class', 'stat-name');
-                tool_tip.append('div')
-                    .attr('class', 'value')
-            }
+        let tool_tip = d3.select('.heat-map-tool-tip');
+        if (tool_tip.empty()) {
+            tool_tip = d3.select("body")
+                .append("div")
+                .attr('class', 'heat-map-tool-tip')
+                .style("display", "none");
+            tool_tip.append('div')
+                .attr('class', 'versus');
+            tool_tip.append('div')
+                .attr('class', 'stat-name');
+            tool_tip.append('div')
+                .attr('class', 'value')
+        }
 
 
-            const svg = d3.select(el);
+        const svg = d3.select(el);
 
-            svg.selectAll("*").remove();
+        svg.selectAll("*").remove();
 
-            svg.attr('height', cell_size * group_names.length).attr('width', cell_size * group_names.length);
+        svg.attr('height', cell_size * group_names.length).attr('width', cell_size * group_names.length);
 
 
-            svg.selectAll('g')
-            // .data(matrix)
-                .data(m)
-                .enter()
-                .append('g')
-                .attr('transform', function (d, i) {
-                    return 'translate(0,' + (i * cell_size) + ')'
-                })
-                .attr('data-row', function (d, i) {
-                    return group_names[i];
-                })
-                .selectAll('rect')
-                .data(function (d) {
-                    return d
-                })
-                .enter()
-                .append('rect')
+        svg.selectAll('g')
+        // .data(matrix)
+            .data(m)
+            .enter()
+            .append('g')
+            .attr('transform', function (d, i) {
+                return 'translate(0,' + (i * cell_size) + ')'
+            })
+            .attr('data-row', function (d, i) {
+                return group_names[i];
+            })
+            .selectAll('rect')
+            .data(function (d) {
+                return d
+            })
+            .enter()
+            .append('rect')
 
-                .attr('class', 'cell')
-                .attr('x', function (d, i) {
-                    return cell_size * i
-                })
-                .attr('y', 0)
-                .attr('width', cell_size)
-                .attr('height', cell_size)
-                .attr('fill', function (d) {
-                    if (d.value !== -1)
-                        return d.color();
-                    else
-                        return 'url(#diagonalHatch)'
+            .attr('class', 'cell')
+            .attr('x', function (d, i) {
+                return cell_size * i
+            })
+            .attr('y', 0)
+            .attr('width', cell_size)
+            .attr('height', cell_size)
+            .attr('fill', function (d) {
+                if (d.value !== -1)
+                    return d.color();
+                else
+                    return 'url(#diagonalHatch)'
 
-                })
-                .attr('data-column', function (d, i) {
-                    if (d.value !== -1)
-                        return group_names[i]
-                })
-                .attr('data-name', function (d) {
-                    if (d.value !== -1)
-                        return d.name
-                })
-                .attr('data-value', function (d) {
-                    if (d.value !== -1)
-                        return d.value
-                })
-                .on("mouseover", function (d) {
-                    if (d.value !== -1) {
-                        tool_tip.selectAll('.stat-name').text(this.getAttribute('data-name'));
-                        tool_tip.selectAll('.versus').text(this.closest('g').getAttribute('data-row') + '/' + this.getAttribute('data-column'));
-                        tool_tip.selectAll('.value').text(this.getAttribute('data-value'));
-                        tool_tip.style("display", "block");
-                    }
-                })
-                .on("mousemove", function () {
-                    tool_tip.style("top", (event.pageY - 50) + "px").style("left", (event.pageX + 10) + "px");
-                })
-                .on("mouseout", function () {
-                    tool_tip.style("display", "none");
-                });
-        });
+            })
+            .attr('data-column', function (d, i) {
+                if (d.value !== -1)
+                    return group_names[i]
+            })
+            .attr('data-name', function (d) {
+                if (d.value !== -1)
+                    return d.name
+            })
+            .attr('data-value', function (d) {
+                if (d.value !== -1)
+                    return d.value
+            })
+            .on("mouseover", function (d) {
+                if (d.value !== -1) {
+                    tool_tip.selectAll('.stat-name').text(this.getAttribute('data-name'));
+                    tool_tip.selectAll('.versus').text(this.closest('g').getAttribute('data-row') + '/' + this.getAttribute('data-column'));
+                    tool_tip.selectAll('.value').text(this.getAttribute('data-value'));
+                    tool_tip.style("display", "block");
+                }
+            })
+            .on("mousemove", function () {
+                tool_tip.style("top", (event.pageY - 50) + "px").style("left", (event.pageX + 10) + "px");
+            })
+            .on("mouseout", function () {
+                tool_tip.style("display", "none");
+            });
 
     };
 

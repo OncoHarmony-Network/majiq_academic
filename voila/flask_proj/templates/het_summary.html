@@ -37,11 +37,9 @@
                 }
             });
 
-            sgs.init_create().then(s => new SpliceGraphTools(s));
+            sgs.init_create().then(s => new SpliceGraphTools(s, gene));
 
         });
-
-        console.log('asdf');
 
         document.querySelectorAll('.lsv-table')
             .forEach(lsv_table => {
@@ -68,7 +66,6 @@
                                 element.classList.add('psi-violin-plot');
                                 element.setAttribute('width', '0');
                                 element.setAttribute('height', '0');
-                                element.dataset.group = data;
 
                                 violin.heterogen(element);
 
@@ -77,7 +74,16 @@
                         },
                         {
                             targets: 2,
-                            sortable: false
+                            sortable: false,
+                            render: data => {
+                                const heatmap = new HeatMap(data);
+
+                                const element = document.createElement('svg');
+
+                                heatmap.plot(element);
+
+                                return element.outerHTML;
+                            }
                         }
                     ]
                 })
@@ -103,6 +109,11 @@
 {% endblock %}
 
 {% block bottom %}
+    <svg height="0" width="0">
+        <pattern patternUnits="userSpaceOnUse" id="diagonalHatch" width="4" height="4">
+            <path d="M-1,1 l2,-2 M0,4 l4,-4 M3,5 l2,-2" stroke="grey" stroke-width="1"></path>
+        </pattern>
+    </svg>
     <div class="lsv-container">
         {% for lsv_id, lsv_type in lsv_data %}
             <div class="lsv" data-lsv-id="{{ lsv_id }}">

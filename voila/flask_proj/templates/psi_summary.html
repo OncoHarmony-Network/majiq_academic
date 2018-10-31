@@ -29,7 +29,7 @@
                 }
             });
 
-            sgs.init_create().then(s => new SpliceGraphTools(s));
+            sgs.init_create().then(s => new SpliceGraphTools(s, gene));
 
             new MutationObserver(mutations => {
                 mutations.forEach(m => m.addedNodes

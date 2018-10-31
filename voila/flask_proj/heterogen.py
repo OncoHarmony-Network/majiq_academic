@@ -1,7 +1,7 @@
 import os
 from bisect import bisect
 
-from flask import Flask, render_template, jsonify, url_for, request, redirect, session
+from flask import Flask, render_template, jsonify, url_for, request, session
 
 from voila.api.view_matrix import ViewDeltaPsi, ViewHeterogens
 from voila.api.view_splice_graph_sqlite import ViewSpliceGraph
@@ -81,14 +81,17 @@ def index_table():
                 dpsi = p.lsv(lsv_id)
                 gene_id = dpsi.gene_id
                 gene_name = sg.gene(gene_id).name
-                gene_name_col = {'sort': gene_name, 'display': [url_for('gene', gene_id=gene_id), gene_name]}
+                yield [(gene_name, gene_id), lsv_id, '', '']
 
-                yield [gene_name_col, dpsi.lsv_id, dpsi.lsv_type, 'links']
+        def callback(rs):
+            for r in rs:
+                gene_name, gene_id = r[0]
+                lsv_id = r[1]
+                r[0] = [url_for('gene', gene_id=gene_id), gene_name]
+                r[2] = p.lsv(lsv_id).lsv_type
 
-        records = list(create_record(p.lsv_ids()))
-
-        dt = DataTables(records)
-
+        records = create_record(p.lsv_ids())
+        dt = DataTables(records, callback)
         return jsonify(dict(dt))
 
 
@@ -104,14 +107,14 @@ def nav(gene_id):
         })
 
 
-@app.route('/splice-graph/<gene_id>', methods=('POST', 'GET'))
+@app.route('/splice-graph/<gene_id>', methods=('POST',))
 def splice_graph(gene_id):
-    if request.method == 'GET':
-        return redirect(url_for('index'))
-
-    with ViewSpliceGraph() as sg, ViewDeltaPsi() as v:
+    with ViewSpliceGraph() as sg, ViewHeterogens() as v:
         g = sg.gene(gene_id)
-        gd = sg.gene_experiment(g, v.experiment_names)
+        exp_names = v.splice_graph_experiment_names
+        gd = sg.gene_experiment(g, exp_names)
+        gd['group_names'] = v.group_names
+        gd['experiment_names'] = exp_names
         return jsonify(gd)
 
 
@@ -171,6 +174,7 @@ def summary_table(lsv_id):
     with ViewHeterogens() as v:
         exp_names = v.experiment_names
         grp_names = v.group_names
+        stat_names = v.stat_names
 
         def create_records():
             het = v.lsv(lsv_id)
@@ -181,20 +185,19 @@ def summary_table(lsv_id):
             for idx, (junc, mean_psi, mu_psi) in enumerate(zip(juncs, mean_psis, mu_psis)):
                 junc = map(str, junc)
                 junc = '-'.join(junc)
+                junc_stat = het.junction_stat(stat_names[0], idx)
 
                 yield [
                     junc,
                     {
-                        'display':
-                            {
-                                'group_names': grp_names,
-                                'experiment_names': exp_names,
-                                'junction_idx': idx,
-                                'mean_psi': mean_psi,
-                                'mu_psi': mu_psi
-                            }
+                        'group_names': grp_names,
+                        'experiment_names': exp_names,
+                        'junction_idx': idx,
+                        'mean_psi': mean_psi,
+                        'mu_psi': mu_psi
                     },
-                    'heat maps']
+                    junc_stat
+                ]
 
         records = create_records()
         dt = DataTables(records)

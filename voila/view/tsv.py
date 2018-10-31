@@ -238,9 +238,8 @@ class DeltaPsiTsv(AnalysisTypeTsv):
         config = self.config
 
         with ViewDeltaPsi() as m, ViewSpliceGraph() as sg:
-            metadata = m.metadata
-            group1 = metadata['group_names'][0]
-            group2 = metadata['group_names'][1]
+
+            group1, group2 = m.group_names
 
             with open(tsv_file, 'a') as tsv:
                 writer = csv.DictWriter(tsv, fieldnames=fieldnames, delimiter='\t')
@@ -311,14 +310,14 @@ class DeltaPsiTsv(AnalysisTypeTsv):
         config = Config()
 
         with ViewDeltaPsi() as v:
-            metadata = v.metadata
+            grp_names = v.group_names
 
-        fieldnames = ['#Gene Name', 'Gene ID', 'LSV ID', 'E(dPSI) per LSV junction',
-                      'P(|dPSI|>=%.2f) per LSV junction' % config.threshold,
-                      'P(|dPSI|<=%.2f) per LSV junction' % config.non_changing_threshold,
-                      '%s E(PSI)' % metadata['group_names'][0], '%s E(PSI)' % metadata['group_names'][1], 'LSV Type',
-                      'A5SS', 'A3SS', 'ES', 'Num. Junctions', 'Num. Exons', 'De Novo Junctions', 'chr',
-                      'strand', 'Junctions coords', 'Exons coords', 'IR coords']
+            fieldnames = ['#Gene Name', 'Gene ID', 'LSV ID', 'E(dPSI) per LSV junction',
+                          'P(|dPSI|>=%.2f) per LSV junction' % config.threshold,
+                          'P(|dPSI|<=%.2f) per LSV junction' % config.non_changing_threshold,
+                          '%s E(PSI)' % grp_names[0], '%s E(PSI)' % grp_names[1], 'LSV Type',
+                          'A5SS', 'A3SS', 'ES', 'Num. Junctions', 'Num. Exons', 'De Novo Junctions', 'chr',
+                          'strand', 'Junctions coords', 'Exons coords', 'IR coords']
 
         self.write_tsv(fieldnames)
 

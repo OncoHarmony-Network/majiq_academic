@@ -2,7 +2,7 @@ from flask import request
 
 
 class DataTables:
-    def __init__(self, records):
+    def __init__(self, records, callback=None):
         self._form = request.form
         self._records = list(records)
 
@@ -13,13 +13,16 @@ class DataTables:
         self.length = int(self._form['length'])
         self.column_sort = int(self._form['order[0][column]'])
         self.sort_direction = self._form['order[0][dir]']
-        self.search_value = self._form['search[value]'].lower()
+        self.search_value = self._form['search[value]'].lower().strip()
 
         # Sort records
-        self._records.sort(key=self._row_sort, reverse=self.sort_direction == 'desc')
+        self._records.sort(key=lambda x: x[self.column_sort], reverse=self.sort_direction == 'desc')
 
         # Filter records
-        self.filtered_sorted_records = list(filter(self._filter, self._records))
+        if self.search_value:
+            self.filtered_sorted_records = list(filter(self._filter, self._records))
+        else:
+            self.filtered_sorted_records = self._records
 
         # Get length of all filtered records
         self.filtered_len = len(self.filtered_sorted_records)
@@ -28,27 +31,14 @@ class DataTables:
         if self.length != -1:
             self.filtered_sorted_records = self.filtered_sorted_records[self.start:self.start + self.length]
 
+        if callback:
+            callback(self.filtered_sorted_records)
+
     def __iter__(self):
-        yield 'data', list(self._data())
+        yield 'data', self.filtered_sorted_records
         yield 'draw', self.draw
         yield 'recordsTotal', self.records_len
         yield 'recordsFiltered', self.filtered_len
-
-    def _row_sort(self, columns):
-        column = columns[self.column_sort]
-        if isinstance(column, dict):
-            return column.get('sort', '')
-        else:
-            return column
-
-    def _data(self):
-        def parse_data(d):
-            if isinstance(d, dict):
-                return d.get('display', '')
-            return d
-
-        for fs in self.filtered_sorted_records:
-            yield [parse_data(f) for f in fs]
 
     def _filter(self, vs):
         def parse(v):
