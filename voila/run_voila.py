@@ -253,28 +253,33 @@ tsv_parser.add_argument('--show-all', action='store_true',
                         help='Show all LSVs including those with no junction with significant change predicted.')
 
 # html parser
-html_parser = new_subparser()
-html_parser.add_argument('files', nargs='+', type=check_file,
+view_parser = new_subparser()
+view_parser.add_argument('files', nargs='+', type=check_file,
                          help='List of files or directories which contains the splice graph and voila files.')
-html_parser.add_argument('-o', '--output', type=check_dir, required=True, help='Path for output directory.')
-html_parser.add_argument('--debug', action='store_true')
-html_parser.add_argument('-l', '--logger', help='Path for log files.')
-html_parser.add_argument('--silent', action='store_true', help='Do not write logs to standard out.')
-html_parser.add_argument('-j', '--nproc', type=int, default=min(os.cpu_count(), max(int(os.cpu_count() / 2), 1)),
+view_parser.add_argument('-o', '--output', type=check_dir, required=True, help='Path for output directory.')
+view_parser.add_argument('--debug', action='store_true')
+view_parser.add_argument('-l', '--logger', help='Path for log files.')
+view_parser.add_argument('--silent', action='store_true', help='Do not write logs to standard out.')
+view_parser.add_argument('-j', '--nproc', type=int, default=min(os.cpu_count(), max(int(os.cpu_count() / 2), 1)),
                          help='Number of processes used to produce output. Default is half of system processes. ')
-html_parser.add_argument('--threshold', type=float, default=0.2,
+view_parser.add_argument('--threshold', type=float, default=0.2,
                          help='Filter out LSVs with no junctions predicted to change over a certain value. Even when '
                               'show-all is used this value is still used to calculate the probability in the TSV. The '
                               'default is "0.2".')
-html_parser.add_argument('--non-changing-threshold', type=float, default=0.05, help='The default is "0.05".')
-html_parser.add_argument('--probability-threshold', type=float, default=None, help='This is off by default.')
-html_parser.add_argument('--show-all', action='store_true',
+view_parser.add_argument('--non-changing-threshold', type=float, default=0.05, help='The default is "0.05".')
+view_parser.add_argument('--probability-threshold', type=float, default=None, help='This is off by default.')
+view_parser.add_argument('--show-all', action='store_true',
                          help='Show all LSVs including those with no junction with significant change predicted.')
+view_parser.add_argument('-p', '--port', type=int, default=0,
+                         help='Set port to visualize MAJIQ output. Default is a random port.')
 
 # subparsers
 subparsers = parser.add_subparsers(help='')
-subparsers.add_parser('tsv', parents=[tsv_parser]).set_defaults(func=NewTsv)
-subparsers.add_parser('html', parents=[html_parser]).set_defaults(func=run_service)
+subparsers.add_parser('tsv', parents=[tsv_parser],
+                      help='Generate tsv output for the supplied files.').set_defaults(func=NewTsv)
+subparsers.add_parser('view', parents=[view_parser],
+                      help='Start service to view the visualization for the supplied files.').set_defaults(
+    func=run_service)
 
 # subparsers.add_parser('splice-graph', parents=[splice_graph]).set_defaults(func=RenderSpliceGraphs)
 # subparsers.add_parser('psi', parents=[splice_graph, psi_parser]).set_defaults(func=run_service)

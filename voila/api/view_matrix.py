@@ -211,7 +211,7 @@ class ViewHeterogens:
             yield 'lsv_type', self.lsv_type
             yield 'dpsi', self.dpsi
             for stat_name in self.matrix_hdf5.stat_names:
-                yield stat_name, self.junction_stat(stat_name)
+                yield stat_name, self.junction_heat_map(stat_name)
             yield 'mu_psi', self.mu_psi
             yield 'junctions', self.junctions
             yield 'A5SS', self.a5ss
@@ -262,76 +262,44 @@ class ViewHeterogens:
         def binary(self):
             return self.get_attr('binary')
 
-        @property
-        def reference_exon(self):
-            ref_ex = {tuple(h.reference_exon) for h in self.heterogens}
-            assert len(ref_ex) == 1
-            return ref_ex.pop()
-
-        @property
-        def dpsi(self):
-            d = {}
-
-            for het in self.heterogens:
-                try:
-                    group_names = het.matrix_hdf5.group_names
-                    dpsi_values = list(het.dpsi)
-                    try:
-                        d[group_names[0]][group_names[1]] = dpsi_values
-                    except KeyError:
-                        d[group_names[0]] = {group_names[1]: dpsi_values}
-                except (LsvIdNotFoundInVoilaFile, GeneIdNotFoundInVoilaFile):
-                    pass
-
-            return d
-
-        def junction_stat(self, stat_name, junc_idx):
+        def junction_heat_map(self, stat_name, junc_idx):
             voila_files = Config().voila_files
+            hets_grps = self.matrix_hdf5.group_names
+            hets_grps_len = len(hets_grps)
+            s = np.ndarray((hets_grps_len, hets_grps_len))
 
-            d = {
-                'group_names': self.matrix_hdf5.group_names,
-                'stat_name': stat_name
-            }
+            s.fill(-1)
 
             for f in voila_files:
                 with ViewHeterogen(f) as m:
+
                     het = m.lsv(self.lsv_id)
                     try:
 
-                        group_names = het.matrix_hdf5.group_names
-                        junc_stats = het.junction_stats
-                        stat_idx = list(het.matrix_hdf5.stat_names).index(stat_name)
+                        stat_idx = het.matrix_hdf5.stat_names
+                        stat_idx = list(stat_idx)
+                        stat_idx = stat_idx.index(stat_name)
 
-                        junc_stats = junc_stats.T
-                        junc_stats = junc_stats[stat_idx][junc_idx].item()
+                        stat_value = het.junction_stats
+                        stat_value = stat_value.T
+                        stat_value = stat_value[stat_idx][junc_idx]
 
-                        try:
-                            d[group_names[0]][group_names[1]] = junc_stats
-                        except KeyError:
-                            d[group_names[0]] = {group_names[1]: junc_stats}
+                        dpsi_value = het.dpsi
+                        dpsi_value = dpsi_value[junc_idx]
 
-                    except (LsvIdNotFoundInVoilaFile, GeneIdNotFoundInVoilaFile):
+                        grp_names = m.group_names
+                        grp_names.sort()
+
+                        x = hets_grps.index(grp_names[0])
+                        y = hets_grps.index(grp_names[1])
+
+                        s[x][y] = dpsi_value
+                        s[y][x] = stat_value
+
+                    except LsvIdNotFoundInVoilaFile:
                         pass
 
-            return d
-
-            # d = {}
-            # for het in self.heterogens:
-            #     try:
-            #         group_names = het.matrix_hdf5.group_names
-            #         stat_names = het.matrix_hdf5.stat_names
-            #         stat_idx = list(stat_names).index(stat_name)
-            #         trans_junc_stats = het.junction_stats.T
-            #         stats_values = trans_junc_stats[stat_idx].tolist()
-            #
-            #         try:
-            #             d[group_names[0]][group_names[1]] = stats_values
-            #         except KeyError:
-            #             d[group_names[0]] = {group_names[1]: stats_values}
-            #
-            #     except (LsvIdNotFoundInVoilaFile, GeneIdNotFoundInVoilaFile):
-            #         pass
-            # return d
+            return s.tolist()
 
         @property
         def mu_psi(self):
@@ -457,26 +425,6 @@ class ViewHeterogens:
                         yield groups + ' ' + name
 
     @property
-    def analysis_type(self):
-        analysis_types = {vh.analysis_type for vh in self.view_heterogens}
-        if len(analysis_types) == 1:
-            return analysis_types.pop()
-
-    @property
-    def group_names(self):
-        if self._group_names is None:
-            config = Config()
-            group_names = set()
-            for f in config.voila_files:
-                with ViewHeterogen(f) as m:
-                    for grp in m.group_names:
-                        group_names.add(grp)
-
-            self._group_names = list(sorted(group_names))
-
-        return self._group_names
-
-    @property
     def experiment_names(self):
         config = Config()
         exp_names = {}
@@ -496,7 +444,10 @@ class ViewHeterogens:
                 for grp in m.group_names:
                     grp_names.add(grp)
 
-        return list(grp_names)
+        grp_names = list(grp_names)
+        grp_names.sort()
+
+        return grp_names
 
     def lsv(self, lsv_id):
         return self._ViewHeterogens(self, lsv_id)
@@ -552,8 +503,7 @@ class ViewHeterogen(Heterogen, ViewMatrix):
 
         @property
         def dpsi(self):
-            for bins in zip(*self.mean_psi):
-                yield abs(reduce(operator.__sub__, (get_expected_psi(b) for b in bins)))
+            return [abs(reduce(operator.__sub__, (get_expected_psi(b) for b in bs))) for bs in self.mean_psi]
 
         @property
         def mean_psi(self):

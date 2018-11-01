@@ -133,25 +133,7 @@ class HeatMap {
 
     plot(el) {
         const data = this.data;
-        const stat_name = data.stat_name;
-        const group_names = data.group_names;
         const cell_size = 20;
-
-        console.log(data);
-        const m = Array(group_names.length).fill(null).map(() => Array(group_names.length).fill(null));
-
-        group_names
-            .forEach((gn1, gn_idx1) => group_names
-                .forEach((gn2, gn_idx2) => {
-                    const stat_value = this.get_stat_value(data, gn1, gn2);
-                    console.log(gn1 + ', ' + gn2);
-                    console.log(stat_value);
-                    m[gn_idx1][gn_idx2] = new HMData(stat_value, stat_name);
-
-                    // const dpsi_value = this.get_dpsi(data, gn1, gn2);
-                    // m[gn_idx2][gn_idx1] = new HMData(dpsi_value, 'dpsi')
-                }));
-
 
         let tool_tip = d3.select('.heat-map-tool-tip');
         if (tool_tip.empty()) {
@@ -167,24 +149,19 @@ class HeatMap {
                 .attr('class', 'value')
         }
 
-
         const svg = d3.select(el);
 
-        svg.selectAll("*").remove();
-
-        svg.attr('height', cell_size * group_names.length).attr('width', cell_size * group_names.length);
-
+        svg.attr('height', cell_size * data.length).attr('width', cell_size * data.length);
 
         svg.selectAll('g')
-        // .data(matrix)
-            .data(m)
+            .data(data)
             .enter()
             .append('g')
             .attr('transform', function (d, i) {
                 return 'translate(0,' + (i * cell_size) + ')'
             })
             .attr('data-row', function (d, i) {
-                return group_names[i];
+                return i;
             })
             .selectAll('rect')
             .data(function (d) {
@@ -201,16 +178,16 @@ class HeatMap {
             .attr('width', cell_size)
             .attr('height', cell_size)
             .attr('fill', function (d) {
-                if (d.value !== -1)
-                    return d.color();
+                if (d >= 0)
+                    return stat_color(d);
                 else
                     return 'url(#diagonalHatch)'
 
             })
-            .attr('data-column', function (d, i) {
-                if (d.value !== -1)
-                    return group_names[i]
-            })
+            // .attr('data-column', function (d, i) {
+            //     if (d.value !== -1)
+            //         return group_names[i]
+            // })
             .attr('data-name', function (d) {
                 if (d.value !== -1)
                     return d.name

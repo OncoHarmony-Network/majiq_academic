@@ -28,7 +28,7 @@ class AnalysisTypeNotFound(Exception):
     pass
 
 
-class Singleton(object):
+class Singleton:
     def __new__(cls, *args, **kwds):
         it = cls.__dict__.get("__it__")
         if it is not None:
@@ -175,6 +175,7 @@ class Config(Singleton):
         config.set(default, 'analysis_type', analysis_type)
         config.set(default, 'output', args.output)
         config.set(default, 'nproc', str(args.nproc))
+        config.set(default, 'port', str(args.port))
 
         if analysis_type == constants.ANALYSIS_PSI:
             analysis_type_config = PsiConfig._analysis_type_config
