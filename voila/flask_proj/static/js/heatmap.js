@@ -1,20 +1,3 @@
-// window.addEventListener('load', () => {
-//     d3.select(document.body)
-//         .append('svg')
-//         .attr('height', 0)
-//         .attr('width', 0)
-//         // .append('defs')
-//         .append('pattern')
-//         .attr('patternUnits', 'userSpaceOnUse')
-//         .attr('class', 'diagonalHatch')
-//         .attr('width', 4)
-//         .attr('height', 4)
-//         .append('path')
-//         .attr('d', "M-1,1 l2,-2 M0,4 l4,-4 M3,5 l2,-2")
-//         .attr('stroke', 'grey')
-//         .attr('stroke-width', 1);
-// });
-
 const stat_color = d3.scaleLog()
     .base(Math.LN10)
     .domain([-1, 1e-10, 1])
@@ -106,111 +89,51 @@ class HeatMap {
         this.scale(stat_color)
     };
 
-    get_stat_value(data, gn1, gn2) {
-        try {
-            return data[gn1][gn2];
-        } catch (TypeError) {
-            try {
-                return data[gn2][gn1];
-            } catch (TypeError) {
-                return -1
-            }
-        }
-
-    }
-
-    get_dpsi(data, gn1, gn2) {
-        try {
-            return data.dpsi[gn1][gn2];
-        } catch (TypeError) {
-            try {
-                return data.dpsi[gn2][gn1];
-            } catch (TypeError) {
-                return -1
-            }
-        }
-    }
-
     plot(el) {
-        const data = this.data;
+        const hm = this.data.heatmap;
+        const grp_names = this.data.group_names;
         const cell_size = 20;
 
-        let tool_tip = d3.select('.heat-map-tool-tip');
-        if (tool_tip.empty()) {
-            tool_tip = d3.select("body")
-                .append("div")
-                .attr('class', 'heat-map-tool-tip')
-                .style("display", "none");
-            tool_tip.append('div')
-                .attr('class', 'versus');
-            tool_tip.append('div')
-                .attr('class', 'stat-name');
-            tool_tip.append('div')
-                .attr('class', 'value')
-        }
-
-        const svg = d3.select(el);
-
-        svg.attr('height', cell_size * data.length).attr('width', cell_size * data.length);
-
-        svg.selectAll('g')
-            .data(data)
+        d3.select(el)
+            .attr('height', cell_size * hm.length).attr('width', cell_size * hm.length)
+            .attr('class', 'heat-map')
+            .attr('data-stat-name', this.data.stat_name)
+            .selectAll('g')
+            .data(hm)
             .enter()
             .append('g')
             .attr('transform', function (d, i) {
                 return 'translate(0,' + (i * cell_size) + ')'
             })
-            .attr('data-row', function (d, i) {
+            .attr('data-row-idx', function (d, i) {
                 return i;
             })
+            .attr('data-row', (d, i) => grp_names[i])
             .selectAll('rect')
             .data(function (d) {
                 return d
             })
             .enter()
             .append('rect')
-
             .attr('class', 'cell')
-            .attr('x', function (d, i) {
-                return cell_size * i
-            })
+            .attr('data-column', (d, i) => grp_names[i])
+            .attr('data-value', d => d)
+            .attr('x', (d, i) => cell_size * i)
             .attr('y', 0)
             .attr('width', cell_size)
             .attr('height', cell_size)
-            .attr('fill', function (d) {
-                if (d >= 0)
-                    return stat_color(d);
+            .attr('fill', function (d, i, a) {
+                const x = i;
+                const y = a[i].closest('g').dataset.rowIdx;
+                if (d >= 0) {
+                    if (x - y < 0)
+                        return stat_color(d);
+                    else
+                        return dpsi_color(d);
+                }
                 else
                     return 'url(#diagonalHatch)'
-
             })
-            // .attr('data-column', function (d, i) {
-            //     if (d.value !== -1)
-            //         return group_names[i]
-            // })
-            .attr('data-name', function (d) {
-                if (d.value !== -1)
-                    return d.name
-            })
-            .attr('data-value', function (d) {
-                if (d.value !== -1)
-                    return d.value
-            })
-            .on("mouseover", function (d) {
-                if (d.value !== -1) {
-                    tool_tip.selectAll('.stat-name').text(this.getAttribute('data-name'));
-                    tool_tip.selectAll('.versus').text(this.closest('g').getAttribute('data-row') + '/' + this.getAttribute('data-column'));
-                    tool_tip.selectAll('.value').text(this.getAttribute('data-value'));
-                    tool_tip.style("display", "block");
-                }
-            })
-            .on("mousemove", function () {
-                tool_tip.style("top", (event.pageY - 50) + "px").style("left", (event.pageX + 10) + "px");
-            })
-            .on("mouseout", function () {
-                tool_tip.style("display", "none");
-            });
-
     };
 
     summary(el, lsv, metadata) {

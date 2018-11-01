@@ -175,6 +175,7 @@ def summary_table(lsv_id):
         exp_names = v.experiment_names
         grp_names = v.group_names
         stat_names = v.stat_names
+        stat_name = stat_names[0]
 
         def create_records():
             het = v.lsv(lsv_id)
@@ -185,7 +186,7 @@ def summary_table(lsv_id):
             for idx, (junc, mean_psi, mu_psi) in enumerate(zip(juncs, mean_psis, mu_psis)):
                 junc = map(str, junc)
                 junc = '-'.join(junc)
-                junc_hm = het.junction_heat_map(stat_names[0], idx)
+                heatmap = junc_hm = het.junction_heat_map(stat_name, idx)
 
                 yield [
                     junc,
@@ -196,7 +197,11 @@ def summary_table(lsv_id):
                         'mean_psi': mean_psi,
                         'mu_psi': mu_psi,
                     },
-                    junc_hm
+                    {
+                        'heatmap': heatmap,
+                        'group_names': grp_names,
+                        'stat_name': stat_name
+                    }
                 ]
 
         records = create_records()

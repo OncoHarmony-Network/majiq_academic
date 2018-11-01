@@ -211,19 +211,11 @@ class Violin {
             .attr("cy", bee => bee.y)
             .attr("r", circle_radius)
             .attr('data-mu', d => d.datum)
-            .on("mouseover", (d, i, a) => {
-                d3.select(a[i]).style('fill', 'orange');
-                tool_tip.selectAll('.value').text(a[i].getAttribute('data-mu'));
-                const group_idx = parseInt(a[i].parentNode.getAttribute('data-group-index'));
-                const exp_names = experiment_names[group_idx].filter(x => !x.includes('Combined'));
-                tool_tip.selectAll('.sample').text(exp_names[i]);
-                tool_tip.style("display", "block");
+            .attr('data-exp-name', (d, i, a) => {
+                const grp_idx = a[i].closest('g').dataset.groupIndex;
+                return experiment_names[grp_idx][i]
             })
-            .on("mousemove", () => tool_tip.style("top", (event.pageY - 35) + "px").style("left", (event.pageX + 10) + "px"))
-            .on("mouseout", (d, i, a) => {
-                d3.select(a[i]).style('fill', '');
-                tool_tip.style("display", "none");
-            });
+
 
     };
 
