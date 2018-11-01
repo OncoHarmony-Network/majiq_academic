@@ -67,6 +67,7 @@ class Config(Singleton):
         c.analysis_type = c.default['analysis_type']
         c.output = c.default['output']
         c.nproc = int(c.default['nproc'])
+        c.port = int(c.default['port'])
 
         return c
 

@@ -10,7 +10,7 @@ def run_service():
     analysis_type = config.analysis_type
 
     kwargs = {
-        'listen': '127.0.0.1:0',
+        'listen': '127.0.0.1:' + str(config.port),
         'threads': config.nproc
     }
 
