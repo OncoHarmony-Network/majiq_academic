@@ -157,12 +157,22 @@ def lsv_highlight():
 
         for lsv_id, (highlight, weighted) in highlight_dict.items():
             if highlight:
-                lsv = m.lsv(lsv_id)
+                het = m.lsv(lsv_id)
+                junctions = het.junctions.tolist()
+
+                if het.lsv_type[-1] == 'i':
+                    intron_retention = junctions[-1]
+                    junctions = junctions[:-1]
+                else:
+                    intron_retention = []
+
                 lsvs.append({
-                    'junctions': lsv.junctions.tolist(),
-                    'reference_exon': list(lsv.reference_exon),
-                    'target': lsv.target,
+                    'junctions': junctions,
+                    'intron_retention': intron_retention,
+                    'reference_exon': list(het.reference_exon),
+                    'target': het.target,
                     'weighted': weighted
+
                 })
 
         return jsonify(lsvs)
