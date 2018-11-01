@@ -196,7 +196,7 @@ def summary_table(lsv_id):
             for idx, (junc, mean_psi, mu_psi) in enumerate(zip(juncs, mean_psis, mu_psis)):
                 junc = map(str, junc)
                 junc = '-'.join(junc)
-                heatmap = junc_hm = het.junction_heat_map(stat_name, idx)
+                heatmap = het.junction_heat_map(stat_name, idx)
 
                 yield [
                     junc,

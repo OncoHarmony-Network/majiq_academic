@@ -556,7 +556,7 @@ class SpliceGraphs {
     style_junctions(sg, gene, lsvs) {
         return new Promise(resolve => {
             const colors = new Colors();
-            const experiment = sg.dataset.experiment;
+            const exp = sg.dataset.experiment;
             // const weighted = this.weighted;
 
             d3.select(sg).selectAll('.junction-grp')
@@ -585,11 +585,9 @@ class SpliceGraphs {
                     if (this.classList.contains('splice-site'))
                         return '2,2';
 
-                    try {
-                        eval(gene.junction_reads[experiment][d.start][d.end])
-                    } catch (TypeError) {
+                    const junc_reads = gene.junction_reads;
+                    if (!(exp in junc_reads && d.start in junc_reads[exp] && d.end in junc_reads[exp][d.start]))
                         return '5,2';
-                    }
 
                 })
                 .attr('stroke', function (d) {
