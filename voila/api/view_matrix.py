@@ -296,7 +296,7 @@ class ViewHeterogens:
                         s[x][y] = dpsi_value
                         s[y][x] = stat_value
 
-                    except LsvIdNotFoundInVoilaFile:
+                    except (LsvIdNotFoundInVoilaFile, GeneIdNotFoundInVoilaFile):
                         pass
 
             return s.tolist()
