@@ -117,6 +117,7 @@ class HeatMap {
             .append('rect')
             .attr('class', 'cell')
             .attr('data-column', (d, i) => grp_names[i])
+            .attr('data-column-idx', (d, i) => i)
             .attr('data-value', d => d)
             .attr('x', (d, i) => cell_size * i)
             .attr('y', 0)

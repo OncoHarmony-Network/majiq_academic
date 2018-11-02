@@ -51,20 +51,39 @@
                                 try {
                                     const val = e.target.dataset.value;
                                     if (parseInt(val) !== -1) {
+
                                         const stat_name = h.dataset.statName;
                                         const col = e.target.dataset.column;
+                                        const col_idx = parseInt(e.target.dataset.columnIdx);
                                         const row = e.target.closest('g').dataset.row;
-                                        tool_tip.querySelector('.stat-name').textContent = stat_name;
+                                        const row_idx = parseInt(e.target.closest('g').dataset.rowIdx);
+
+                                        tool_tip.querySelector('.stat-name').textContent = col_idx - row_idx < 0 ? stat_name : 'Delta PSI';
                                         tool_tip.querySelector('.versus').textContent = `${row}/${col}`;
                                         tool_tip.querySelector('.value').textContent = val;
                                         tool_tip.style.display = 'block';
+
+                                        h.closest('tr')
+                                            .querySelectorAll('.x-axis text')
+                                            .forEach((l, idx) => {
+                                                if (![col_idx, row_idx].includes(idx))
+                                                    l.style.opacity = '.2'
+                                            });
+
                                     }
                                 } catch (TypeError) {
                                     // pass
                                 }
                             };
 
-                            h.onmouseout = () => tool_tip.style.display = 'none';
+                            h.onmouseout = () => {
+                                tool_tip.style.display = 'none';
+                                h.closest('tr')
+                                    .querySelectorAll('.x-axis text')
+                                    .forEach((l, idx) => {
+                                        l.style.opacity = null
+                                    });
+                            };
 
                             h.onmousemove = (event) => {
                                 tool_tip.style.top = (event.pageY - 90) + 'px';
