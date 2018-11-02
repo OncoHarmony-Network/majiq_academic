@@ -67,7 +67,11 @@ class Config(Singleton):
         c.analysis_type = c.default['analysis_type']
         c.output = c.default['output']
         c.nproc = int(c.default['nproc'])
-        c.port = int(c.default['port'])
+
+        try:
+            c.port = int(c.default['port'])
+        except KeyError:
+            pass
 
         return c
 
@@ -176,7 +180,11 @@ class Config(Singleton):
         config.set(default, 'analysis_type', analysis_type)
         config.set(default, 'output', args.output)
         config.set(default, 'nproc', str(args.nproc))
-        config.set(default, 'port', str(args.port))
+
+        try:
+            config.set(default, 'port', str(args.port))
+        except AttributeError:
+            pass
 
         if analysis_type == constants.ANALYSIS_PSI:
             analysis_type_config = PsiConfig._analysis_type_config
