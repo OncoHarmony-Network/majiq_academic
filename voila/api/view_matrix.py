@@ -6,9 +6,9 @@ from itertools import chain
 import numpy as np
 import scipy.special
 
-from majiq.src.constants import MINVAL
 from voila.api.matrix_hdf5 import DeltaPsi, Psi, Heterogen
 from voila.config import Config
+from voila.constants import MINVAL
 from voila.exceptions import LsvIdNotFoundInVoilaFile, GeneIdNotFoundInVoilaFile
 from voila.vlsv import get_expected_dpsi, is_lsv_changing, matrix_area, get_expected_psi
 
