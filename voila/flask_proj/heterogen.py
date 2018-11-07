@@ -1,10 +1,13 @@
 import os
 from bisect import bisect
+from pathlib import Path
 
+import h5py
 from flask import Flask, render_template, jsonify, url_for, request, session
 
 from voila.api.view_matrix import ViewDeltaPsi, ViewHeterogens
 from voila.api.view_splice_graph_sqlite import ViewSpliceGraph
+from voila.config import Config
 from voila.flask_proj.datatables import DataTables
 
 app = Flask(__name__)
@@ -75,12 +78,16 @@ def lsv_data(lsv_id):
 
 @app.route('/index-table', methods=('POST',))
 def index_table():
-    with ViewSpliceGraph() as sg, ViewHeterogens() as p:
-        def create_record(lsv_ids):
-            for lsv_id in lsv_ids:
-                dpsi = p.lsv(lsv_id)
-                gene_id = dpsi.gene_id
-                gene_name = sg.gene(gene_id).name
+    config = Config()
+    voila_directory = Path(config.voila_file).parents[0]
+    index_file = voila_directory / 'index.hdf5'
+    with ViewHeterogens() as p, h5py.File(index_file, 'r') as h:
+
+        def create_records():
+            for lsv_id, gene_id, gene_name in h['index'].value:
+                lsv_id = lsv_id.decode('utf-8')
+                gene_id = gene_id.decode('utf-8')
+                gene_name = gene_name.decode('utf-8')
                 yield [(gene_name, gene_id), lsv_id, '', '']
 
         def callback(rs):
@@ -90,7 +97,7 @@ def index_table():
                 r[0] = [url_for('gene', gene_id=gene_id), gene_name]
                 r[2] = p.lsv(lsv_id).lsv_type
 
-        records = create_record(p.lsv_ids())
+        records = create_records()
         dt = DataTables(records, callback)
         return jsonify(dict(dt))
 

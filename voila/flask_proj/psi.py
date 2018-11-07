@@ -1,10 +1,12 @@
 import os
 from bisect import bisect
 
+import h5py
 from flask import render_template, url_for, jsonify, request, session, Flask
 
 from voila.api.view_matrix import ViewPsi
 from voila.api.view_splice_graph_sqlite import ViewSpliceGraph
+from voila.config import Config
 from voila.flask_proj.datatables import DataTables
 
 app = Flask(__name__)
@@ -30,14 +32,13 @@ def gene(gene_id):
 
 @app.route('/index-table', methods=('POST',))
 def index_table():
-    with ViewSpliceGraph() as sg, ViewPsi() as v:
+    config = Config()
+    with ViewPsi() as v, h5py.File(config.voila_file, 'r') as h:
         grp_name = v.group_names[0]
 
-        def create_records(lsv_ids):
-            for lsv_id in lsv_ids:
-                psi = v.lsv(lsv_id)
-                gene_id = psi.gene_id
-                gene_name = sg.gene(gene_id).name
+        def create_records():
+            for vs in h['index'].value:
+                lsv_id, gene_id, gene_name = tuple(v.decode('utf-8') for v in vs)
                 yield [(gene_name, gene_id), lsv_id, '', '', '']
 
         def callback(rs):
@@ -49,7 +50,7 @@ def index_table():
                 r[2] = v.lsv(lsv_id).lsv_type
                 r[3] = grp_name
 
-        records = create_records(v.lsv_ids())
+        records = create_records()
 
         dt = DataTables(records, callback)
 

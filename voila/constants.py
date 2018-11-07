@@ -64,6 +64,10 @@ NA_LSV = 'na'
 EXEC_DIR = os.path.dirname(os.path.abspath(voila.__file__))
 
 # CONFIG_FILE = '/tmp/voila.ini'
-CONFIG_FILE = tempfile.NamedTemporaryFile(delete=False).name
+# CONFIG_FILE = tempfile.NamedTemporaryFile(delete=False).name
+if 'VOILA_CONFIG_FILE' not in os.environ or not os.environ['VOILA_CONFIG_FILE']:
+    CONFIG_FILE = tempfile.NamedTemporaryFile(delete=False).name
+else:
+    CONFIG_FILE = os.environ['VOILA_CONFIG_FILE']
 
 MINVAL = 1e-300

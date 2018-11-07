@@ -2,13 +2,14 @@ import multiprocessing
 
 import gunicorn.app.base
 from gunicorn.six import iteritems
-
-from voila.flask_proj.views import app
+from voila.flask_proj import heterogen
 
 
 def number_of_workers():
     return (multiprocessing.cpu_count() * 2) + 1
 
+def number_of_threads():
+    return (multiprocessing.cpu_count() * 2) + 1
 
 class StandaloneApplication(gunicorn.app.base.BaseApplication):
 
@@ -34,6 +35,7 @@ if __name__ == '__main__':
     options = {
         'bind': '%s:%s' % ('127.0.0.1', '8080'),
         'workers': number_of_workers(),
+        'threads'
         'worker_class': 'gthread'
     }
-    StandaloneApplication(app, options).run()
+    StandaloneApplication(heterogen.app, options).run()

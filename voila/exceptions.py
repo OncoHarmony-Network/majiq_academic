@@ -135,3 +135,7 @@ class NotHeterogenVoilaFile(VoilaException):
 
     def __str__(self):
         return 'Voila file has not been quantified using Heterogen: ' + self.filename
+
+
+class UnknownAnalysisType(Exception):
+    pass

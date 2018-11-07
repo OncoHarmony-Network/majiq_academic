@@ -2,7 +2,6 @@ import argparse
 import errno
 import os
 import sys
-import time
 from pathlib import Path
 
 import voila.constants as constants
@@ -11,6 +10,7 @@ from voila.api.matrix_hdf5 import lsv_id_to_gene_id
 from voila.config import Config
 from voila.exceptions import VoilaException, CanNotFindFile
 from voila.flask_proj.views import run_service
+from voila.index import Index
 from voila.utils.utils_voila import create_if_not_exists
 from voila.utils.voila_log import voila_log
 from voila.view.tsv import NewTsv
@@ -272,6 +272,8 @@ view_parser.add_argument('--show-all', action='store_true',
                          help='Show all LSVs including those with no junction with significant change predicted.')
 view_parser.add_argument('-p', '--port', type=int, default=0,
                          help='Set port to visualize MAJIQ output. Default is a random port.')
+view_parser.add_argument('--force-index', action='store_true',
+                         help='Create index even if already exists.')
 
 # subparsers
 subparsers = parser.add_subparsers(help='')
@@ -301,9 +303,6 @@ def main():
     :return: None
     """
 
-    # Time execution time
-    start_time = time.time()
-
     # set up logging
     log_filename = 'voila.log'
     if args.logger:
@@ -320,14 +319,14 @@ def main():
 
     try:
         log.info('config file: ' + constants.CONFIG_FILE)
+
         Config.write(args)
+
+        Index()
+
         args.func()
 
         log.info("Voila! Created in: {0}".format(args.output))
-
-        # Add elapsed time
-        elapsed_str = secs2hms(time.time() - start_time)
-        log.info("Execution time: {0}.".format(elapsed_str))
 
     except KeyboardInterrupt:
         log.warning('Voila exiting')

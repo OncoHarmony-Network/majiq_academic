@@ -313,7 +313,7 @@ class Violin {
             })
             .each((d, i, a) => {
                 const el = a[i];
-                if (d.length > 5) {
+                if (d.length > 7) {
                     el.setAttribute('x', (this.violin_width + this.violin_pad) * (i + .45));
                     el.setAttribute('y', this.svg_height - this.x_axis_height + 6);
                     el.setAttribute('transform', `rotate(90,${a[i].getAttribute('x')},${a[i].getAttribute('y')})`);

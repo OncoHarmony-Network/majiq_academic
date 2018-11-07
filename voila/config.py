@@ -67,11 +67,8 @@ class Config(Singleton):
         c.analysis_type = c.default['analysis_type']
         c.output = c.default['output']
         c.nproc = int(c.default['nproc'])
-
-        try:
-            c.port = int(c.default['port'])
-        except KeyError:
-            pass
+        c.force_index = c.default.get('force_index', '').lower() == 'true'
+        c.port = int(c.default.get('port', '0'))
 
         return c
 
@@ -121,7 +118,7 @@ class Config(Singleton):
 
             v = Path(v)
 
-            if v.is_file():
+            if v.is_file() and v.name.endswith('.voila'):
 
                 try:
                     with Matrix(v):
@@ -165,13 +162,17 @@ class Config(Singleton):
 
     @classmethod
     def write(cls, args):
-        voila_files = cls.find_voila_files(args.files)
+        voila_files = list(cls.find_voila_files(args.files))
         analysis_type = cls.find_analysis_type(voila_files)
         splice_graph_file = cls.splice_graph_file(args.files)
 
         config = configparser.ConfigParser()
         files = 'FILES'
         default = 'DEFAULT'
+
+        # We rely on the directory of voila files to store the index for het runs, therefore it would be best to
+        # have the same directory every time.
+        voila_files.sort()
 
         config.add_section(files)
         config.set(files, 'voila', '\n'.join(str(m) for m in voila_files))
@@ -185,6 +186,8 @@ class Config(Singleton):
             config.set(default, 'port', str(args.port))
         except AttributeError:
             pass
+
+        config.set(default, 'force_index', str(args.force_index))
 
         if analysis_type == constants.ANALYSIS_PSI:
             analysis_type_config = PsiConfig._analysis_type_config
@@ -227,7 +230,6 @@ class DeltaPsiConfig(Config):
 
     @classmethod
     def _analysis_type_config(cls, args, config):
-
         default = 'DEFAULT'
         config.set(default, 'threshold', str(args.threshold))
         config.set(default, 'non_changing_threshold', str(args.non_changing_threshold))
