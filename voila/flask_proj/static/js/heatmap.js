@@ -1,13 +1,12 @@
 const stat_color = d3.scaleLog()
-    .base(Math.LN10)
-    .domain([-1, 1e-10, 1])
-    .range(['grey', 'blue', 'white'])
-    .interpolate(d3.interpolateCubehelix);
+    .domain([1e-40, 0.05, 1])
+    .range(['blue', 'lightblue', 'white'])
+    .interpolate(d3.interpolateCubehelixLong);
 
 const dpsi_color = d3.scaleLinear()
-    .domain([-1, 0, 1])
-    .range(['grey', 'white', 'brown'])
-    .interpolate(d3.interpolateCubehelix);
+    .domain([0, 1])
+    .range(['white', 'brown'])
+    .interpolate(d3.interpolateCubehelixLong);
 
 const HMData = function (value, stat_name) {
     this.value = value === undefined ? -1 : value;
