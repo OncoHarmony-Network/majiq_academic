@@ -59,8 +59,6 @@ cpdef np.ndarray[DTYPE_t, ndim=1] adjustdelta(np.ndarray[DTYPE_t, ndim=1] deltap
                 D[idx, 1] += 1
                 break
 
-    print (deltapsi)
-
     total = D[:, 1].sum()
     num_spike = D[zero_idx, 1]
     num_lowcenter = D[zero_idx - 3:zero_idx + 3, 1].sum() - num_spike
@@ -185,4 +183,5 @@ cdef _em_beta_mix(np.ndarray[DTYPE_t, ndim=2] D, np.ndarray[DTYPE_t, ndim=1] pmi
                 logger.debug("Ratio = %.3f < 1+R(%.3f) - Aborting ... \n" % (ll_sum - ll_sum_old, min_ratio))
             break
         #logger.info('KKK10')
+
 

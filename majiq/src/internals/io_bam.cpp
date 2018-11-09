@@ -170,7 +170,7 @@ namespace io_bam {
 
     int IOBam::parse_read_for_ir(bam_hdr_t *header, bam1_t *read) {
         int n_cigar = read->core.n_cigar ;
-        if (!_unique(read)) // max one cigar operation exists(likely all matches)
+        if (n_cigar <= 1 || !_unique(read)) // max one cigar operation exists(likely all matches)
             return 0;
         const int read_pos = read->core.pos;
         const string chrom(header->target_name[read->core.tid]) ;
@@ -345,7 +345,7 @@ namespace io_bam {
             }
             if (npos == 0) continue ;
 
-//            if (pvalue_limit > 0) npos = normalize_stacks(vec, sreads, npos, fitfunc_r, pvalue_limit) ;
+            if (pvalue_limit > 0) npos = normalize_stacks(vec, sreads, npos, fitfunc_r, pvalue_limit) ;
             if (npos == 0) continue ;
             default_random_engine generator;
             uniform_int_distribution<int> distribution(0, npos-1);
@@ -431,6 +431,12 @@ namespace io_bam {
         }
     }
 
+//    void IOBam::fit_nb(vector<float*> jlist, ){
+//
+//        vector<float> pvalues ;
+//
+//
+//    }
 
 
 }

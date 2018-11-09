@@ -4,7 +4,7 @@ from scipy.stats import nbinom, poisson
 import cython
 from libcpp.vector cimport vector
 
-ctypedef np.float32_t DTYPE_t
+ctypedef np.float64_t DTYPE_t
 
 @cython.boundscheck(False) # turn off bounds-checking for entire function
 @cython.wraparound(False)  # turn off negative index wrapping for entire function
@@ -15,7 +15,7 @@ cdef np.ndarray[DTYPE_t, ndim=1] _get_ecdf(np.ndarray[DTYPE_t, ndim=1] pvalues):
     # print sorted(pvalues)
     nbins = max(min(10, len(pvalues)), len(pvalues) / 10)
     hist, bin_edges = np.histogram(pvalues, range=[0, 1], bins=nbins, density=True)
-    return np.cumsum(hist) / len(bin_edges)
+    return (np.cumsum(hist) / len(bin_edges))
 
 
 @cython.boundscheck(False) # turn off bounds-checking for entire function
@@ -36,21 +36,20 @@ cdef np.ndarray _calc_pvalues(np.ndarray[DTYPE_t, ndim=2] junctions, float one_o
     cdef np.ndarray[DTYPE_t, ndim=1] junc_idxs, mu, xx
     cdef np.ndarray[DTYPE_t, ndim=2] junc_fltr
     cdef np.ndarray[np.int_t, ndim=1] vals
+    # cdef np.float32_t r, p
 
     vals = np.count_nonzero(junctions, axis=1)
     junc_fltr = junctions[vals > 1]
     junc_idxs = np.array([xx[indices_list[idx]] for idx, xx in enumerate(junc_fltr)])
     vals = vals[vals > 1] - 1
     njuncs = vals.shape[0]
-
-    mu = (junc_fltr.sum(axis=1) - junc_idxs) / vals
+    mu = ((junc_fltr.sum(axis=1, dtype=np.float) - junc_idxs) / vals)
     if one_over_r > 0:
         r = 1 / one_over_r
         p = r/ (mu +r)
         pvalues = nbinom.cdf(junc_idxs, r, p)
     else:
         pvalues = poisson.cdf(junc_idxs, mu)
-
     return 1 - pvalues
 
 
@@ -62,8 +61,8 @@ cdef tuple _adjust_fit(float starting_a, np.ndarray[DTYPE_t, ndim=2] junctions, 
 
     cdef int previous_a = -1
     cdef int idx = 0
-    cdef np.ndarray pvalues, previous_pvalues, steps = np.arange(starting_a, 0, - precision)
-    cdef np.ndarray ecdf, previous_ecdf
+    cdef np.ndarray steps = np.arange(starting_a, 0, - precision)
+    cdef np.ndarray[DTYPE_t, ndim=1] pvalues, previous_pvalues, ecdf, previous_ecdf
     cdef float score
 
     if logger:
@@ -74,11 +73,9 @@ cdef tuple _adjust_fit(float starting_a, np.ndarray[DTYPE_t, ndim=2] junctions, 
 
         # since we are reducing the "a" from the fit and the problem is too much variability, we
         # expect optimization to be getting the "a" below
-
         pvalues = _calc_pvalues(junctions, corrected_a, index)
         ecdf = _get_ecdf(pvalues)
         score = _score_ecdf(ecdf)
-
         idx += 1
         if logger:
             logger.debug("New Score %.5f" % score)
@@ -103,67 +100,69 @@ cdef tuple _adjust_fit(float starting_a, np.ndarray[DTYPE_t, ndim=2] junctions, 
     return corrected_a, score, ecdf, pvalues
 
 
-# @cython.boundscheck(False) # turn off bounds-checking for entire function
-# @cython.wraparound(False)  # turn off negative index wrapping for entire function
+@cython.boundscheck(False) # turn off bounds-checking for entire function
+@cython.wraparound(False)  # turn off negative index wrapping for entire function
 # cpdef float fit_nb(vector[np.float32_t *] junctionl, int total_juncs, int eff_length, float nbdisp=0.1, object logger=None) except -1:
-#
-#     cdef np.ndarray[np.int_t, ndim=1] indices
-#     cdef np.ndarray[DTYPE_t, ndim=1] mean_junc, std_junc
-#     cdef np.ndarray[DTYPE_t, ndim=1] ecdf, pvalues
-#     cdef np.ndarray[DTYPE_t, ndim=2] junctions
-#
-#
-#     cdef np.ndarray[DTYPE_t, ndim=1] precision_values = np.array([0.1, 0.01, 0.001], dtype=np.float64)
-#     cdef float one_over_r0, b, one_over_r, score, precision
-#     cdef int i, j, ix
-#     cdef DTYPE_t c
-#     cdef int array_size
-#
-#     if total_juncs < 10:
-#         logger.warning("Your dataset is not deep enougth to define an apropiate NB factor. The default 0 is given")
-#         return 0.0
-#     array_size = total_juncs if total_juncs < 5000 else 5000
-#
-#     junctions = np.zeros(shape=(total_juncs, eff_length), dtype=np.float32)
-#     while ix < total_juncs and i < array_size:
-#         ix +=1
-#         c = 0
-#         for j in range(eff_length):
-#             junctions[i, j] = junctionl[i][j]
-#             c += junctionl[i][j]
-#         if c == 0: continue
-#         i += 1
-#
-#     junctions[junctions == 0] = np.nan
-#     mean_junc = np.nanmean(junctions, axis=1)
-#     std_junc = np.nanstd(junctions, axis=1)
-#     one_over_r0, b = np.polyfit(mean_junc, std_junc, 1)
-#     junctions[junctions == np.nan] = 0
-#
-#     indices = np.zeros(shape=len(junctions), dtype=np.int)
-#     for i, jj in enumerate(junctions):
-#         jji = np.argwhere(np.isnan(jj))
-#         indices[i] = np.random.choice(jji[0])
-#     # linear regression, retrieve the a and the b plus
-#
-#
-#     pvalues = _calc_pvalues(junctions, one_over_r0, indices)
-#     ecdf = _get_ecdf(pvalues)
-#     score = _score_ecdf(ecdf)
-#     one_over_r = one_over_r0
-#
-#     for i, precision in enumerate(precision_values):
-#         one_over_r, score, ecdf, pvalues = _adjust_fit(one_over_r, junctions, precision, score, index=indices,
-#                                                        logger=logger)
-#         if logger:
-#             logger.debug("Corrected to %.5f with precision %s. Current score is %.5f" % (one_over_r, precision, score))
-#         if i + 1 != len(precision_values):
-#             #go "up" in the scale so we dont miss better solution
-#             one_over_r += precision - precision_values[i + 1]
-#             pvalues = _calc_pvalues(junctions, one_over_r, indices)
-#             ecdf = _get_ecdf(pvalues)
-#             score = _score_ecdf(ecdf)
-#
-#         if logger:
-#             logger.debug("Calculating the nb_r and nb_p with the new fitted function")
-#
+cdef float fit_nb(vector[np.float32_t *] junctionl, int total_juncs, int eff_length, float nbdisp, object logger):
+    cdef np.ndarray[np.int64_t, ndim=1] indices
+    cdef np.ndarray[DTYPE_t, ndim=1] mean_junc, std_junc
+    cdef np.ndarray[DTYPE_t, ndim=1] ecdf, pvalues
+    cdef np.ndarray[DTYPE_t, ndim=2] junctions
+
+
+    cdef np.ndarray[DTYPE_t, ndim=1] precision_values = np.array([0.1, 0.01, 0.001], dtype=np.float)
+    cdef float one_over_r0, b, one_over_r, score, precision
+    cdef int i, j, ix
+    cdef DTYPE_t c
+    cdef int array_size
+    cdef vector[DTYPE_t *] jlist
+
+
+    if total_juncs < 10:
+        logger.warning("Your dataset is not deep enougth to define an apropiate NB factor. The default 0 is given")
+        return 0.0
+    array_size = total_juncs if total_juncs < 5000 else 5000
+
+    junctions = np.zeros(shape=(total_juncs, eff_length), dtype=np.float)
+    while ix < total_juncs and i < array_size:
+        ix +=1
+        c = 0
+        for j in range(eff_length):
+            junctions[i, j] = junctionl[i][j]
+            c += junctionl[i][j]
+        if c == 0: continue
+        i += 1
+    junctions[junctions == 0] = np.nan
+    mean_junc = np.nanmean(junctions, axis=1)
+    std_junc = np.nanstd(junctions, axis=1)
+    one_over_r0, b = np.polyfit(mean_junc, std_junc, 1)
+    junctions = np.nan_to_num(junctions)
+    #[junctions == np.nan] = 0
+    indices = np.zeros(shape=len(junctions), dtype=np.int)
+    for i, jj in enumerate(junctions):
+        jji =jj.nonzero()
+        indices[i] = np.random.choice(jji[0])
+    # linear regression, retrieve the a and the b plus
+    pvalues = _calc_pvalues(junctions, one_over_r0, indices)
+    ecdf = _get_ecdf(pvalues)
+    score = _score_ecdf(ecdf)
+    one_over_r = one_over_r0
+    for i, precision in enumerate(precision_values):
+        logger.debug(' [Step %s] 1/r: %s' %(i, one_over_r))
+        one_over_r, score, ecdf, pvalues = _adjust_fit(one_over_r, junctions, precision, score, index=indices,
+                                                       logger=logger)
+        if logger:
+            logger.debug(" [Step %s] Corrected to %.5f with precision %s. Current score is %.5f" % (i, one_over_r,
+                                                                                                    precision, score))
+        if i + 1 != len(precision_values):
+            #go "up" in the scale so we dont miss better solution
+            one_over_r += precision - precision_values[i + 1]
+            pvalues = _calc_pvalues(junctions, one_over_r, indices)
+            ecdf = _get_ecdf(pvalues)
+            score = _score_ecdf(ecdf)
+
+        if logger:
+            logger.debug(" [Step %s]  Calculating the nb_r and nb_p with the new fitted function" % i)
+
+    logger.debug('Chosen 1/r NB factor %s' % one_over_r)
+    return one_over_r

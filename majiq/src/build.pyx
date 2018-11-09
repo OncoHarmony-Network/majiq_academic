@@ -21,7 +21,7 @@ from voila.c.splice_graph_sql cimport junction_reads as sg_junction_reads
 from voila.c.splice_graph_sql cimport intron_retention_reads as sg_intron_retention_reads
 from voila.api import SpliceGraph
 
-# from majiq.src.polyfitnb import fit_nb
+from majiq.src.polyfitnb cimport fit_nb
 
 from libcpp.string cimport string
 from libcpp.map cimport map
@@ -137,7 +137,6 @@ cdef int _output_lsv_file_single(vector[LSV*] out_lsvlist, string experiment_nam
                         sg_intron_retention_reads(db, sreads, experiment_name, geneid, ir_ptr.get_start(),
                                                   ir_ptr.get_end())
                         tlb_ir[ir_ptr.get_key(ir_ptr.get_gene())] = jobj_ptr
-
         # close_db(db)
     del junc_ids
 
@@ -271,8 +270,8 @@ cdef _find_junctions(list file_list, map[string, Gene*]& gene_map, vector[string
                 with gil:
                         logger.debug('Total Junctions and introns %s' %(njunc))
 
-            # fitfunc_r = fit_nb(c_iobam.junc_vec, logger=logger)
-            fitfunc_r = 0
+            fitfunc_r = fit_nb(c_iobam.junc_vec, njunc, eff_len, nbdisp=0.1, logger=logger)
+            # fitfunc_r = 0
             boots = np.zeros(shape=(njunc, m), dtype=np.float32)
             with nogil:
                 c_iobam.boostrap_samples(m, k, <np.float32_t *> boots.data, fitfunc_r, pvalue_limit)
@@ -330,9 +329,8 @@ cdef void gene_to_splicegraph(Gene * gne, sqlite3 * db) nogil:
 
     for ex_pair in gne.exon_map_:
         ex = ex_pair.second
-        with gil:
-            print(ex_pair.first, ex.get_start(), ex.get_end())
-
+        # with gil:
+        #     print(ex_pair.first, ex.get_start(), ex.get_end())
         sg_exon(db, gne_id, ex.get_start(), ex.get_end(), ex.db_start_, ex.db_end_, ex.annot_ )
 
     for ir in gne.intron_vec_:
