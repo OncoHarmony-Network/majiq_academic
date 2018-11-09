@@ -174,6 +174,9 @@ namespace io_bam {
             return 0;
         const int read_pos = read->core.pos;
         const string chrom(header->target_name[read->core.tid]) ;
+        if (intronVec_.count(chrom) == 0)
+             return 0 ;
+
         const int  nintrons = intronVec_[chrom].size() ;
         uint32_t *cigar = bam_get_cigar(read) ;
 

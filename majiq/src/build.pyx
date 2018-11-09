@@ -269,9 +269,12 @@ cdef _find_junctions(list file_list, map[string, Gene*]& gene_map, vector[string
                 njunc = c_iobam.get_njuncs()
                 with gil:
                         logger.debug('Total Junctions and introns %s' %(njunc))
+            if njunc  == 0:
+                logger.warning('No junctions where found on sample %s' % bamfile)
+                fitfunc_r = 0
+            else:
+                fitfunc_r = fit_nb(c_iobam.junc_vec, njunc, eff_len, nbdisp=0.1, logger=logger)
 
-            fitfunc_r = fit_nb(c_iobam.junc_vec, njunc, eff_len, nbdisp=0.1, logger=logger)
-            # fitfunc_r = 0
             boots = np.zeros(shape=(njunc, m), dtype=np.float32)
             with nogil:
                 c_iobam.boostrap_samples(m, k, <np.float32_t *> boots.data, fitfunc_r, pvalue_limit)
