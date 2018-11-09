@@ -1,10 +1,13 @@
 import os
 from bisect import bisect
+from pathlib import Path
 
-from flask import Flask, render_template, jsonify, url_for, request, redirect, session
+import h5py
+from flask import Flask, render_template, jsonify, url_for, request, session
 
 from voila.api.view_matrix import ViewDeltaPsi, ViewHeterogens
 from voila.api.view_splice_graph_sqlite import ViewSpliceGraph
+from voila.config import Config
 from voila.flask_proj.datatables import DataTables
 
 app = Flask(__name__)
@@ -75,20 +78,27 @@ def lsv_data(lsv_id):
 
 @app.route('/index-table', methods=('POST',))
 def index_table():
-    with ViewSpliceGraph() as sg, ViewHeterogens() as p:
-        def create_record(lsv_ids):
-            for lsv_id in lsv_ids:
-                dpsi = p.lsv(lsv_id)
-                gene_id = dpsi.gene_id
-                gene_name = sg.gene(gene_id).name
-                gene_name_col = {'sort': gene_name, 'display': [url_for('gene', gene_id=gene_id), gene_name]}
+    config = Config()
+    voila_directory = Path(config.voila_file).parents[0]
+    index_file = voila_directory / 'index.hdf5'
+    with ViewHeterogens() as p, h5py.File(index_file, 'r') as h:
 
-                yield [gene_name_col, dpsi.lsv_id, dpsi.lsv_type, 'links']
+        def create_records():
+            for lsv_id, gene_id, gene_name in h['index'].value:
+                lsv_id = lsv_id.decode('utf-8')
+                gene_id = gene_id.decode('utf-8')
+                gene_name = gene_name.decode('utf-8')
+                yield [(gene_name, gene_id), lsv_id, '', '']
 
-        records = list(create_record(p.lsv_ids()))
+        def callback(rs):
+            for r in rs:
+                gene_name, gene_id = r[0]
+                lsv_id = r[1]
+                r[0] = [url_for('gene', gene_id=gene_id), gene_name]
+                r[2] = p.lsv(lsv_id).lsv_type
 
-        dt = DataTables(records)
-
+        records = create_records()
+        dt = DataTables(records, callback)
         return jsonify(dict(dt))
 
 
@@ -104,14 +114,14 @@ def nav(gene_id):
         })
 
 
-@app.route('/splice-graph/<gene_id>', methods=('POST', 'GET'))
+@app.route('/splice-graph/<gene_id>', methods=('POST',))
 def splice_graph(gene_id):
-    if request.method == 'GET':
-        return redirect(url_for('index'))
-
-    with ViewSpliceGraph() as sg, ViewDeltaPsi() as v:
+    with ViewSpliceGraph() as sg, ViewHeterogens() as v:
         g = sg.gene(gene_id)
-        gd = sg.gene_experiment(g, v.experiment_names)
+        exp_names = v.splice_graph_experiment_names
+        gd = sg.gene_experiment(g, exp_names)
+        gd['group_names'] = v.group_names
+        gd['experiment_names'] = exp_names
         return jsonify(gd)
 
 
@@ -154,12 +164,22 @@ def lsv_highlight():
 
         for lsv_id, (highlight, weighted) in highlight_dict.items():
             if highlight:
-                lsv = m.lsv(lsv_id)
+                het = m.lsv(lsv_id)
+                junctions = het.junctions.tolist()
+
+                if het.lsv_type[-1] == 'i':
+                    intron_retention = junctions[-1]
+                    junctions = junctions[:-1]
+                else:
+                    intron_retention = []
+
                 lsvs.append({
-                    'junctions': lsv.junctions.tolist(),
-                    'reference_exon': list(lsv.reference_exon),
-                    'target': lsv.target,
+                    'junctions': junctions,
+                    'intron_retention': intron_retention,
+                    'reference_exon': list(het.reference_exon),
+                    'target': het.target,
                     'weighted': weighted
+
                 })
 
         return jsonify(lsvs)
@@ -171,6 +191,8 @@ def summary_table(lsv_id):
     with ViewHeterogens() as v:
         exp_names = v.experiment_names
         grp_names = v.group_names
+        stat_names = v.stat_names
+        stat_name = stat_names[0]
 
         def create_records():
             het = v.lsv(lsv_id)
@@ -181,20 +203,23 @@ def summary_table(lsv_id):
             for idx, (junc, mean_psi, mu_psi) in enumerate(zip(juncs, mean_psis, mu_psis)):
                 junc = map(str, junc)
                 junc = '-'.join(junc)
+                heatmap = het.junction_heat_map(stat_name, idx)
 
                 yield [
                     junc,
                     {
-                        'display':
-                            {
-                                'group_names': grp_names,
-                                'experiment_names': exp_names,
-                                'junction_idx': idx,
-                                'mean_psi': mean_psi,
-                                'mu_psi': mu_psi
-                            }
+                        'group_names': grp_names,
+                        'experiment_names': exp_names,
+                        'junction_idx': idx,
+                        'mean_psi': mean_psi,
+                        'mu_psi': mu_psi,
                     },
-                    'heat maps']
+                    {
+                        'heatmap': heatmap,
+                        'group_names': grp_names,
+                        'stat_name': stat_name
+                    }
+                ]
 
         records = create_records()
         dt = DataTables(records)

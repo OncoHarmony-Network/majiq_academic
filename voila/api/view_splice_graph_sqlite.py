@@ -190,6 +190,7 @@ class ViewSpliceGraph(SpliceGraph):
                             junc_reads[combined_name][junc.start][junc.end] = summed_reads
                         except KeyError:
                             junc_reads[combined_name][junc.start] = {junc.end: summed_reads}
+
             for ir in self.intron_retentions(gene):
                 for r in self.intron_retention_reads_exp(ir, experiment_names):
                     try:

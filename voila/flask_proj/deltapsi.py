@@ -1,10 +1,12 @@
 import os
 from bisect import bisect
 
-from flask import Flask, render_template, jsonify, url_for, request, redirect, session
+import h5py
+from flask import Flask, render_template, jsonify, url_for, request, session
 
 from voila.api.view_matrix import ViewDeltaPsi
 from voila.api.view_splice_graph_sqlite import ViewSpliceGraph
+from voila.config import Config
 from voila.flask_proj.datatables import DataTables
 
 app = Flask(__name__)
@@ -68,23 +70,25 @@ def lsv_data(lsv_id):
 
 @app.route('/index-table', methods=('POST',))
 def index_table():
-    with ViewSpliceGraph() as sg, ViewDeltaPsi() as p:
-        def create_record(lsv_ids):
-            for lsv_id in lsv_ids:
-                dpsi = p.lsv(lsv_id)
-                gene_id = dpsi.gene_id
-                gene_name = sg.gene(gene_id).name
-                gene_name_col = {'sort': gene_name, 'display': [url_for('gene', gene_id=gene_id), gene_name]}
+    config = Config()
+    with ViewDeltaPsi() as p, h5py.File(config.voila_file, 'r') as h:
 
-                excl_incl = dpsi.excl_incl
-                excl_incl = max(abs(a - b) for a, b in excl_incl)
+        def create_record():
+            for vs in h['index'].value:
+                vs = list(vs)
+                lsv_id, gene_id, gene_name = tuple(v.decode('utf-8') for v in vs[:3])
+                excl_incl = float(vs[3])
+                yield [(gene_name, gene_id), lsv_id, '', excl_incl, '']
 
-                yield [gene_name_col, dpsi.lsv_id, dpsi.lsv_type, excl_incl, 'links']
+        def callback(rs):
+            for r in rs:
+                gene_name, gene_id = r[0]
+                lsv_id = r[1]
+                r[0] = [url_for('gene', gene_id=gene_id), gene_name]
+                r[2] = p.lsv(lsv_id).lsv_type
 
-        records = list(create_record(p.lsv_ids()))
-
-        dt = DataTables(records)
-
+        records = create_record()
+        dt = DataTables(records, callback)
         return jsonify(dict(dt))
 
 
@@ -102,25 +106,26 @@ def nav(gene_id):
 
 @app.route('/splice-graph/<gene_id>', methods=('POST', 'GET'))
 def splice_graph(gene_id):
-    if request.method == 'GET':
-        return redirect(url_for('index'))
-
     with ViewSpliceGraph() as sg, ViewDeltaPsi() as v:
-        meta = v.metadata
         g = sg.gene(gene_id)
-        gd = sg.gene_experiment(g, meta['experiment_names'])
+        exp_names = v.splice_graph_experiment_names
+        gd = sg.gene_experiment(g, exp_names)
+        gd['group_names'] = v.group_names
+        gd['experiment_names'] = exp_names
         return jsonify(gd)
 
 
 @app.route('/psi-splice-graphs', methods=('POST',))
 def psi_splice_graphs():
     with ViewDeltaPsi() as v:
-        meta = v.metadata
+        grp_names = v.group_names
+        exp_names = v.splice_graph_experiment_names
+
         try:
             sg_init = session['psi_init_splice_graphs']
         except KeyError:
-            sg_init = [[meta['group_names'][0], meta['experiment_names'][0][0]],
-                       [meta['group_names'][1], meta['experiment_names'][1][0]]]
+            sg_init = [[grp_names[0], exp_names[0][0]],
+                       [grp_names[1], exp_names[1][0]]]
 
         json_data = request.get_json()
 
@@ -154,12 +159,23 @@ def lsv_highlight():
 
         for lsv_id, (highlight, weighted) in highlight_dict.items():
             if highlight:
-                lsv = m.lsv(lsv_id)
+                dpsi = m.lsv(lsv_id)
+
+                junctions = dpsi.junctions.tolist()
+
+                if dpsi.lsv_type[-1] == 'i':
+                    intron_retention = junctions[-1]
+                    junctions = junctions[:-1]
+                else:
+                    intron_retention = []
+
                 lsvs.append({
-                    'junctions': lsv.junctions.tolist(),
-                    'reference_exon': list(lsv.reference_exon),
-                    'target': lsv.target,
+                    'junctions': junctions,
+                    'intron_retention': intron_retention,
+                    'reference_exon': list(dpsi.reference_exon),
+                    'target': dpsi.target,
                     'weighted': weighted
+
                 })
 
         return jsonify(lsvs)
@@ -168,33 +184,37 @@ def lsv_highlight():
 @app.route('/summary-table/<gene_id>', methods=('POST',))
 def summary_table(gene_id):
     with ViewDeltaPsi() as v:
+
         def create_records(lsv_ids):
             for lsv_id in lsv_ids:
                 dpsi = v.lsv(lsv_id)
                 excl_incl = dpsi.excl_incl
                 excl_incl = max(abs(a - b) for a, b in excl_incl)
                 ref_exon = dpsi.reference_exon
-                lsv_id_col = {'sort': list(ref_exon), 'display': lsv_id}
-                lsv_type = dpsi.lsv_type
+                lsv_id_col = [list(ref_exon), lsv_id]
 
                 try:
                     highlight = session['highlight'][lsv_id]
                 except KeyError:
                     highlight = [False, False]
 
-                yield [highlight, lsv_id_col, lsv_type, grp_names[0], excl_incl, grp_names[1], 'links']
+                yield [highlight, lsv_id_col, '', '', excl_incl, '', '']
 
-        grp_names = v.metadata['group_names']
+        def callback(rs):
+            for r in rs:
+                ref_exon, lsv_id = r[1]
+                het = v.lsv(lsv_id)
+
+                r[1] = lsv_id
+                r[2] = het.lsv_type
+                r[3] = grp_names[0]
+                r[5] = grp_names[1]
+
+        grp_names = v.group_names
         lsv_ids = v.lsv_ids(gene_ids=[gene_id])
         records = list(create_records(lsv_ids))
 
-        dt = DataTables(records)
+        dt = DataTables(records, callback)
         dt = dict(dt)
 
         return jsonify(dt)
-
-
-@app.route('/metadata', methods=('POST',))
-def metadata():
-    with ViewDeltaPsi() as v:
-        return jsonify(v.metadata)

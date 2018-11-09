@@ -319,37 +319,28 @@ class SpliceGraphs {
         })
     }
 
-    ir_in_lsv(d, gene, lsv) {
-        if (gene.strand === '+') {
-            if (lsv.target)
-                return lsv.reference_exon[0] === d.end;
-            else
-                return lsv.reference_exon[1] === d.start;
-        } else {
-            if (lsv.target)
-                return lsv.reference_exon[1] === d.start;
-            else
-                return lsv.reference_exon[0] === d.end;
-        }
+    ir_in_lsv(d, lsv) {
+        const ir = lsv.intron_retention;
+        return ir && d.start === ir[0] && d.end === ir[1]
     }
 
     style_intron_retention(sg, gene, lsvs) {
         const colors = new Colors();
 
         d3.select(sg).selectAll('.intron-retention-grp')
-            .attr('opacity', d => lsvs.length && !lsvs.some(lsv => this.ir_in_lsv(d, gene, lsv)) ? .2 : null);
+            .attr('opacity', d => lsvs.length && !lsvs.some(lsv => this.ir_in_lsv(d, lsv)) ? .2 : null);
 
         d3.select(sg).selectAll('.intron-retention')
             .attr('fill-opacity', .3)
             .attr('stroke-linejoin', 'round')
             .each((d, i, a) => {
                 const el = a[i];
-                const filter_lsvs = lsvs.filter(lsv => this.ir_in_lsv(d, gene, lsv));
+                const filter_lsvs = lsvs.filter(lsv => this.ir_in_lsv(d, lsv));
                 if (filter_lsvs.length) {
                     if (filter_lsvs.length === 1) {
                         const lsv = filter_lsvs[0];
-                        el.setAttribute('fill', colors.brewer(lsv.junctions.length - 1));
-                        el.setAttribute('stroke', colors.brewer(lsv.junctions.length - 1));
+                        el.setAttribute('fill', colors.brewer(lsv.junctions.length));
+                        el.setAttribute('stroke', colors.brewer(lsv.junctions.length));
                     } else {
                         el.setAttribute('fill', 'black');
                         el.setAttribute('stroke', 'black');
@@ -565,7 +556,7 @@ class SpliceGraphs {
     style_junctions(sg, gene, lsvs) {
         return new Promise(resolve => {
             const colors = new Colors();
-            const experiment = sg.dataset.experiment;
+            const exp = sg.dataset.experiment;
             // const weighted = this.weighted;
 
             d3.select(sg).selectAll('.junction-grp')
@@ -594,11 +585,9 @@ class SpliceGraphs {
                     if (this.classList.contains('splice-site'))
                         return '2,2';
 
-                    try {
-                        eval(gene.junction_reads[experiment][d.start][d.end])
-                    } catch (TypeError) {
+                    const junc_reads = gene.junction_reads;
+                    if (!(exp in junc_reads && d.start in junc_reads[exp] && d.end in junc_reads[exp][d.start]))
                         return '5,2';
-                    }
 
                 })
                 .attr('stroke', function (d) {

@@ -1,10 +1,10 @@
 class Violin {
     constructor(violin_data) {
         this.data = violin_data;
-        this.violin_width = 50;
+        this.violin_width = 75;
         this.violin_pad = 5;
         this.violin_height = 135;
-        this.x_axis_height = 20;
+        this.x_axis_height = 125;
         this.y_axis_width = 40;
         this.top_padding = 5;
     };
@@ -101,7 +101,6 @@ class Violin {
             .attr('class', 'histograms');
 
         this.draw_histograms(hist, bins);
-
 
         hist
             .selectAll('.violin')
@@ -200,31 +199,24 @@ class Violin {
             .append('g')
             .attr('class', 'swarm-group')
             .attr('data-group-index', (d, i) => i)
-            .attr('transform', (d, i) => 'translate(' + i * (this.violin_width + this.violin_pad) + ')')
+            .attr('transform', (d, i) => `translate(${i * (this.violin_width + this.violin_pad)})`)
             .selectAll('circle')
             .data(d => swarm_fn.data(d).arrange())
             .enter()
+            .filter(d => {
+                return d.datum !== -1
+            })
             .append("circle")
             .attr('fill', color)
             .attr('stroke', null)
-            .attr("cx", bee => bee.x + ((this.violin_width + this.violin_pad) / 2))
+            .attr("cx", bee => (bee.x % ((this.violin_width - circle_radius) / 2)) + ((this.violin_width + this.violin_pad) / 2))
             .attr("cy", bee => bee.y)
             .attr("r", circle_radius)
             .attr('data-mu', d => d.datum)
-            .on("mouseover", (d, i, a) => {
-                d3.select(a[i]).style('fill', 'orange');
-                tool_tip.selectAll('.value').text(a[i].getAttribute('data-mu'));
-                const group_idx = parseInt(a[i].parentNode.getAttribute('data-group-index'));
-                const exp_names = experiment_names[group_idx].filter(x => !x.includes('Combined'));
-                tool_tip.selectAll('.sample').text(exp_names[i]);
-                tool_tip.style("display", "block");
+            .attr('data-exp-name', (d, i, a) => {
+                const grp_idx = a[i].closest('g').dataset.groupIndex;
+                return experiment_names[grp_idx][i]
             })
-            .on("mousemove", () => tool_tip.style("top", (event.pageY - 35) + "px").style("left", (event.pageX + 10) + "px"))
-            .on("mouseout", (d, i, a) => {
-                d3.select(a[i]).style('fill', '');
-                tool_tip.style("display", "none");
-            });
-
     };
 
     translate_lsv_bins(lsv_bins) {
@@ -306,15 +298,31 @@ class Violin {
             .data(x_axis_data)
             .enter()
             .append('text')
-            .attr('text-anchor', 'middle')
-            .attr('y', this.svg_height - 6)
-            .attr('x', (d, i) => (this.violin_width + this.violin_pad) * (i + .5))
+            .attr('y', this.svg_height - this.x_axis_height + 6)
             .attr('font-size', 12)
             .text(d => {
                 try {
                     return parseFloat(d.toPrecision(3))
                 } catch (TypeError) {
+                    const max_length = 20;
+                    if (d.length > max_length) {
+                        d = d.slice(0, max_length - 3) + '...'
+                    }
                     return d
+                }
+            })
+            .each((d, i, a) => {
+                const el = a[i];
+                if (d.length > 7) {
+                    el.setAttribute('x', (this.violin_width + this.violin_pad) * (i + .45));
+                    el.setAttribute('y', this.svg_height - this.x_axis_height + 6);
+                    el.setAttribute('transform', `rotate(90,${a[i].getAttribute('x')},${a[i].getAttribute('y')})`);
+                    el.setAttribute('text-anchor', 'left');
+
+                } else {
+                    el.setAttribute('x', (this.violin_width + this.violin_pad) * (i + .5));
+                    el.setAttribute('y', this.svg_height - this.x_axis_height + 10);
+                    el.setAttribute('text-anchor', 'middle');
                 }
             })
     }
