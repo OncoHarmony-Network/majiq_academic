@@ -132,6 +132,11 @@ cdef float fit_nb(vector[np.float32_t *] junctionl, int total_juncs, int eff_len
             c += junctionl[i][j]
         if c == 0: continue
         i += 1
+    if junctions.sum() == 0.0 : 
+        return 0.0
+    #print(total_juncs, junctions.sum())
+    #print(junctions)
+
     junctions[junctions == 0] = np.nan
     mean_junc = np.nanmean(junctions, axis=1)
     std_junc = np.nanstd(junctions, axis=1)

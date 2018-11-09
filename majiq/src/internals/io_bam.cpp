@@ -170,19 +170,24 @@ namespace io_bam {
 
     int IOBam::parse_read_for_ir(bam_hdr_t *header, bam1_t *read) {
         int n_cigar = read->core.n_cigar ;
+//cerr << "R1: read id: " << bam_get_qname(read) << " : " << n_cigar<< "\n" ;
         if (n_cigar <= 1 || !_unique(read)) // max one cigar operation exists(likely all matches)
             return 0;
         const int read_pos = read->core.pos;
         const string chrom(header->target_name[read->core.tid]) ;
+//cerr << "R2 " << read_pos << " :: " << chrom << "\n" ;
+
         if (intronVec_.count(chrom) == 0)
              return 0 ;
-
+//cerr << "R3\n" ;
         const int  nintrons = intronVec_[chrom].size() ;
         uint32_t *cigar = bam_get_cigar(read) ;
+//cerr << "R4\n" ;
 
         int idx = _Region::RegionSearch(intronVec_[chrom], nintrons, read_pos) ;
+//cerr << "R5" << idx << "\n" ;
         if (idx<0) return 0 ;
-
+//cerr << "R6 \n" ;
         vector<pair<int, int>> junc_record ;
 
         int off = 0;
