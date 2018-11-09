@@ -307,7 +307,7 @@ namespace io_bam {
     }
 
     int IOBam::normalize_stacks(vector<float> vec, float sreads, int npos, float fitfunc_r, float pvalue_limit){
-//cout << "iniT norm stacks " << sreads<< ": " << npos <<": " << pvalue_limit<< "\n" ;
+cerr << "iniT norm stacks " << sreads<< ": " << npos <<": " << pvalue_limit<< "\n" ;
         const float mean_reads = sreads/npos ;
         if (fitfunc_r == 0.0){
             for (int i=0; i<(int)vec.size(); i++){
@@ -329,13 +329,12 @@ namespace io_bam {
                 }
             }
         }
-//cout << "OUT norm stacks " << npos << "\n" ;
+cerr << "OUT norm stacks " << npos << "\n" ;
         return npos ;
     }
 
     int IOBam::boostrap_samples(int msamples, int ksamples, float* boots, float fitfunc_r, float pvalue_limit){
-
-//        float * p = boots ;
+cerr << "OUT BOOTSTRAP\n" ;
         const int njunc = junc_map.size();
 
         #pragma omp parallel for num_threads(nthreads_)
@@ -363,11 +362,9 @@ namespace io_bam {
                 lambda /= ksamples ;
                 const int idx2d = (jidx*msamples) + m ;
                 boots[idx2d] = (lambda * npos) ;
-//                *p = (lambda * npos) ;
-//                p++ ;
             }
         }
-//cout << "OUT BOOTSTRAP\n" ;
+cerr << "OUT BOOTSTRAP\n" ;
         return 0 ;
     }
 
