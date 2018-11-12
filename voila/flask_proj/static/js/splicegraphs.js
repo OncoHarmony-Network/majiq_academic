@@ -557,29 +557,31 @@ class SpliceGraphs {
         return new Promise(resolve => {
             const colors = new Colors();
             const exp = sg.dataset.experiment;
-            // const weighted = this.weighted;
+            const grp = sg.dataset.group;
 
             d3.select(sg).selectAll('.junction-grp')
-                .attr('opacity', d => lsvs.length && lsvs.every(lsv => lsv.junctions.every(junc => !SpliceGraphs.array_equal(junc, [d.start, d.end]))) ? 0.2 : null);
+                .attr('opacity', d => lsvs.length && lsvs
+                    .every(lsv => lsv.junctions
+                        .every(junc => !SpliceGraphs.array_equal(junc, [d.start, d.end]))) ? 0.2 : null);
 
             d3.select(sg).selectAll('.junction, .splice-site.p5, .splice-site.p3')
-                .attr('stroke-width', function (d) {
-                    if (lsvs.length) {
-                        const hl = lsvs.reduce(function (acc, lsv, idx) {
-                            // if (weighted[idx])
-                            //     acc = acc.concat(lsv.doc.junctions.reduce(function (acc, junc, idx) {
-                            //         if (array_equal(junc, [d.start, d.end])) {
-                            //             acc.push(lsv.doc.group_means_rounded[sg.group][idx] * 3)
-                            //         }
-                            //         return acc
-                            //     }, []));
-                            return acc
-                        }, []);
+                .attr('stroke-width', d => {
+                    const x = lsvs
+                        .filter(l => l.weighted)
+                        .filter(l => l.junctions.some(j => SpliceGraphs.array_equal(j, [d.start, d.end])));
 
-                        if (hl.length === 1)
-                            return hl[0];
+                    let w = 1.5;
+
+                    if (x.length === 1) {
+                        x[0].junctions.forEach((j, i) => {
+                            if (SpliceGraphs.array_equal(j, [d.start, d.end])) {
+                                w = x[0].group_means[grp][i] * 3;
+                            }
+                        });
                     }
-                    return 1.5
+
+                    return w
+
                 })
                 .attr('stroke-dasharray', function (d) {
                     if (this.classList.contains('splice-site'))
@@ -785,6 +787,7 @@ class SpliceGraphs {
     }
 
     splice_graph_update(sg, gene, lsvs) {
+        console.log(sg);
 
         //update some values
         this.zoom = parseInt(sg.parentNode.dataset.zoom);

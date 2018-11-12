@@ -177,8 +177,8 @@ def lsv_highlight():
                     'junctions': junctions,
                     'intron_retention': intron_retention,
                     'reference_exon': list(het.reference_exon),
-                    'target': het.target,
-                    'weighted': weighted
+                    'weighted': weighted,
+                    'group_means': dict(het.group_means)
 
                 })
 

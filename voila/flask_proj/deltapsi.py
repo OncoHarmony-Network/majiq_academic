@@ -169,12 +169,13 @@ def lsv_highlight():
                 else:
                     intron_retention = []
 
+
                 lsvs.append({
                     'junctions': junctions,
                     'intron_retention': intron_retention,
                     'reference_exon': list(dpsi.reference_exon),
-                    'target': dpsi.target,
-                    'weighted': weighted
+                    'weighted': weighted,
+                    'group_means': dict(dpsi.group_means)
 
                 })
 
