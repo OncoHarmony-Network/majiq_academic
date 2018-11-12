@@ -308,9 +308,9 @@ namespace io_bam {
 
     int IOBam::normalize_stacks(vector<float> vec, float sreads, int npos, float fitfunc_r, float pvalue_limit){
 cerr << "iniT norm stacks " << sreads<< ": " << npos <<": " << pvalue_limit<< "\n" ;
-        const float mean_reads = sreads/npos ;
         if (fitfunc_r == 0.0){
             for (int i=0; i<(int)vec.size(); i++){
+                const float mean_reads = (sreads-vec[i])/npos ;
                 const float pvalue = 1 - scythe::ppois(vec[i], mean_reads) ;
                 if (pvalue< pvalue_limit){
                     vec.erase(vec.begin() + i) ;
@@ -320,6 +320,7 @@ cerr << "iniT norm stacks " << sreads<< ": " << npos <<": " << pvalue_limit<< "\
 
         }else{
             for (int i=0; i<(int) vec.size(); i++){
+                const float mean_reads = (sreads-vec[i])/npos ;
                 const float r = 1 / fitfunc_r ;
                 const float p = r/(mean_reads + r) ;
                 const float pvalue = 1 - scythe::pnbinom(vec[i], r, p) ;
@@ -334,7 +335,7 @@ cerr << "OUT norm stacks " << npos << "\n" ;
     }
 
     int IOBam::boostrap_samples(int msamples, int ksamples, float* boots, float fitfunc_r, float pvalue_limit){
-cerr << "OUT BOOTSTRAP\n" ;
+//cerr << "OUT BOOTSTRAP\n" ;
         const int njunc = junc_map.size();
 
         #pragma omp parallel for num_threads(nthreads_)
@@ -352,7 +353,7 @@ cerr << "OUT BOOTSTRAP\n" ;
             }
             if (npos == 0) continue ;
 
-            if (pvalue_limit > 0) npos = normalize_stacks(vec, sreads, npos, fitfunc_r, pvalue_limit) ;
+//            if (pvalue_limit > 0) npos = normalize_stacks(vec, sreads, npos, fitfunc_r, pvalue_limit) ;
             if (npos == 0) continue ;
             default_random_engine generator;
             uniform_int_distribution<int> distribution(0, npos-1);
@@ -364,7 +365,7 @@ cerr << "OUT BOOTSTRAP\n" ;
                 boots[idx2d] = (lambda * npos) ;
             }
         }
-cerr << "OUT BOOTSTRAP\n" ;
+//cerr << "OUT BOOTSTRAP\n" ;
         return 0 ;
     }
 
