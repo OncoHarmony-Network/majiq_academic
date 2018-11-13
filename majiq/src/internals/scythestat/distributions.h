@@ -1457,11 +1457,11 @@ namespace scythe {
 
     /* use a normal approximation if shape > alphlimit */
 
-    if (shape > alphlimit) {
-      pn1 = std::sqrt(shape) * 3. * (std::pow(x/shape, 1./3.) + 1.
-            / (9. * shape) - 1.);
-      return pnorm(pn1, 0., 1.);
-    }
+//    if (shape > alphlimit) {
+//      pn1 = std::sqrt(shape) * 3. * (std::pow(x/shape, 1./3.) + 1.
+//            / (9. * shape) - 1.);
+//      return pnorm(pn1, 0., 1.);
+//    }
 
     /* if x is extremely large __compared to shape__ then return 1 */
 
