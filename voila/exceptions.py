@@ -137,5 +137,13 @@ class NotHeterogenVoilaFile(VoilaException):
         return 'Voila file has not been quantified using Heterogen: ' + self.filename
 
 
-class UnknownAnalysisType(Exception):
+class UnknownAnalysisType(VoilaException):
+    pass
+
+
+class IndexNotFound(VoilaException):
+    pass
+
+
+class SortFunctionNotFound(VoilaException):
     pass

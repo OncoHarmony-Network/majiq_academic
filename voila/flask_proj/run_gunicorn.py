@@ -2,14 +2,17 @@ import multiprocessing
 
 import gunicorn.app.base
 from gunicorn.six import iteritems
-from voila.flask_proj import heterogen
+
+from voila.flask_proj import deltapsi
 
 
 def number_of_workers():
     return (multiprocessing.cpu_count() * 2) + 1
 
+
 def number_of_threads():
-    return (multiprocessing.cpu_count() * 2) + 1
+    return multiprocessing.cpu_count() * 2
+
 
 class StandaloneApplication(gunicorn.app.base.BaseApplication):
 
@@ -35,7 +38,7 @@ if __name__ == '__main__':
     options = {
         'bind': '%s:%s' % ('127.0.0.1', '8080'),
         'workers': number_of_workers(),
-        'threads'
+        'threads': number_of_threads(),
         'worker_class': 'gthread'
     }
-    StandaloneApplication(heterogen.app, options).run()
+    StandaloneApplication(deltapsi.app, options).run()

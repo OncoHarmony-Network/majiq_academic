@@ -48,15 +48,29 @@
                 childList: true,
             });
 
+        const form_to_json = (json_data) => {
+            $('.lsv-filters')
+                .serializeArray()
+                .map(d => {
+                    json_data[`lsv_filter[${d.name}]`] = d.value
+                });
+            $('.dpsi-filters')
+                .serializeArray()
+                .map(d => {
+                    json_data[`dpsi_filter[${d.name}]`] = d.value
+                });
+        };
 
-        $('#results').DataTable({
+
+        const $results = $('#results').DataTable({
             processing: true,
             serverSide: true,
             autoWidth: false,
             lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, "All"]],
             ajax: {
                 url: '{{ url_for("index_table") }}',
-                type: 'POST'
+                type: 'POST',
+                data: json_data => form_to_json(json_data)
             },
             columnDefs: [
                 {
@@ -103,6 +117,55 @@
             ]
         });
 
+        let to;
+        const reload_table = () => {
+            clearTimeout(to);
+            to = setTimeout(() => {
+                $results.ajax.reload()
+            }, 400);
+        };
+
+
+        document.querySelector('.lsv-filters').onchange = reload_table;
+        document.querySelector('.dpsi-filters').oninput = reload_table;
+
+        function download(filename, text) {
+            var element = document.createElement('a');
+            element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(text));
+            element.setAttribute('download', filename);
+
+            element.style.display = 'none';
+            document.body.appendChild(element);
+
+            element.click();
+
+            document.body.removeChild(element);
+        }
+
+        document.querySelector('.download-lsvs').onclick = (event) => {
+            event.preventDefault();
+
+            const search = document.querySelector('.lsv-container input[type=search]');
+            const form_data = {};
+            form_to_json(form_data);
+            form_data['search[value]'] = search.value;
+
+            send_form_ajax('{{ url_for("download_lsvs") }}', $.param(form_data))
+                .then(data => download('lsvs.txt', data));
+        };
+
+        document.querySelector('.download-genes').onclick = (event) => {
+            event.preventDefault();
+
+            const search = document.querySelector('.lsv-container input[type=search]');
+            const form_data = {};
+            form_to_json(form_data);
+            form_data['search[value]'] = search.value;
+
+            send_form_ajax('{{ url_for("download_genes") }}', $.param(form_data))
+                .then(data => download('genes.txt', data));
+        };
+
         $('#results tbody')
             .on('click', '.excl-incl-rect, .dpsi-violin', event => {
                 const parent = event.target.closest('td');
@@ -112,72 +175,53 @@
                 $(excl_incl).toggle();
             });
 
-
     </script>
 {% endblock %}
 
 {% block body %}
     <div class="content">
-        {#        <form class="lsv-filters pure-form pure-form-aligned">#}
-        {#            <fieldset>#}
-        {#                <legend>LSV Filters</legend>#}
-        {#                <div class="pure-g">#}
-        {#                    <div class="pure-u-1-3">#}
-        {#                        <input id="prime-5" type="checkbox">#}
-        {#                        <label for="prime-5">5 Prime</label>#}
-        {#                    </div>#}
-        {##}
-        {#                    <div class="pure-u-1-3">#}
-        {#                        <input id="prime-3" type="checkbox">#}
-        {#                        <label for="prime-3">3 Prime</label>#}
-        {#                    </div>#}
-        {##}
-        {#                    <div class="pure-u-1-3">#}
-        {#                        <input id="exon-skipping" type="checkbox">#}
-        {#                        <label for="exon-skipping">Exon Skipping</label>#}
-        {#                    </div>#}
-        {##}
-        {#                    <div class="pure-u-1-3">#}
-        {#                        <input id="source" type="checkbox">#}
-        {#                        <label for="source">Source</label>#}
-        {#                    </div>#}
-        {##}
-        {#                    <div class="pure-u-1-3">#}
-        {#                        <input id="target" type="checkbox">#}
-        {#                        <label for="target">Target</label>#}
-        {#                    </div>#}
-        {##}
-        {#                    <div class="pure-u-1-3">#}
-        {#                        <input id="binary" type="checkbox">#}
-        {#                        <label for="binary">Binary</label>#}
-        {#                    </div>#}
-        {##}
-        {#                    <div class="pure-u-1-3">#}
-        {#                        <input id="complex" type="checkbox">#}
-        {#                        <label for="complex">Complex</label>#}
-        {#                    </div>#}
-        {#                </div>#}
-        {#                <hr>#}
-        {#            <div class="pure-g">#}
-        {#                <div class="pure-u-1-4">#}
-        {#                    <label for="threshold">Threshold</label>#}
-        {#                    <input id="threshold" class="pure-input-1-2" placeholder="20%">#}
-        {#                </div>#}
-        {##}
-        {#                <div class="pure-u-1-4">#}
-        {#                    <label for="confidence">Confidence</label>#}
-        {#                    <input id="confidence" class="pure-input-1-2" placeholder="95%">#}
-        {#                </div>#}
-        {#                <div class="pure-u-1-4">#}
-        {#                    <button type="submit" class="pure-button pure-button-primary">Download LSVs</button>#}
-        {#                </div>#}
-        {#                <div class="pure-u-1-4">#}
-        {#                    <button type="submit" class="pure-button pure-button-primary">Download Genes</button>#}
-        {#                </div>#}
-        {#            </div>#}
-        {#            </fieldset>#}
-        {#        </form>#}
 
+        <form class="lsv-filters pure-form pure-form-aligned">
+            <fieldset>
+                <legend>LSV Filters</legend>
+                <div class="pure-g">
+                    {% for field in form %}
+                        {% if field.type != 'CSRFTokenField' %}
+                            <div class="pure-u-1-3">
+                                {{ field }}
+                                {{ field.label }}
+                            </div>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+            </fieldset>
+        </form>
+
+        <hr>
+
+        <form class="dpsi-filters pure-form pure-form-aligned">
+            <fieldset>
+                <div class="pure-g">
+                    <div class="pure-u-1-4">
+                        {{ dpsi_form.dpsi_threshold.label }}
+                        {{ dpsi_form.dpsi_threshold }}
+                    </div>
+
+                    <div class="pure-u-1-4">
+                        {{ dpsi_form.confidence_threshold.label }}
+                        {{ dpsi_form.confidence_threshold }}
+                    </div>
+                    <div class="pure-u-1-4">
+                        <button type="submit" class="download-lsvs pure-button pure-button-primary">Download LSVs
+                        </button>
+                    </div>
+                    <div class="pure-u-1-4">
+                        <button type="submit" class="download-genes pure-button pure-button-primary">Download Genes
+                        </button>
+                    </div>
+                </div>
+            </fieldset>
+        </form>
 
     </div>
     <div class="lsv-container">

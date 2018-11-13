@@ -1,13 +1,13 @@
 import os
 from bisect import bisect
 
-import h5py
-from flask import render_template, url_for, jsonify, request, session, Flask
+from flask import render_template, url_for, jsonify, request, session, Flask, Response
 
 from voila.api.view_matrix import ViewPsi
 from voila.api.view_splice_graph_sqlite import ViewSpliceGraph
-from voila.config import Config
 from voila.flask_proj.datatables import DataTables
+from voila.flask_proj.forms import LsvFiltersForm
+from voila.index import Index
 
 app = Flask(__name__)
 app.secret_key = os.urandom(16)
@@ -15,7 +15,8 @@ app.secret_key = os.urandom(16)
 
 @app.route('/')
 def index():
-    return render_template('psi_index.html')
+    form = LsvFiltersForm()
+    return render_template('psi_index.html', form=form)
 
 
 @app.route('/gene/<gene_id>/')
@@ -32,27 +33,23 @@ def gene(gene_id):
 
 @app.route('/index-table', methods=('POST',))
 def index_table():
-    config = Config()
-    with ViewPsi() as v, h5py.File(config.voila_file, 'r') as h:
+    with ViewPsi() as v:
         grp_name = v.group_names[0]
 
-        def create_records():
-            for vs in h['index'].value:
-                lsv_id, gene_id, gene_name = tuple(v.decode('utf-8') for v in vs)
-                yield [(gene_name, gene_id), lsv_id, '', '', '']
+        dt = DataTables(Index.psi(), ('gene_name', 'lsv_id'))
 
-        def callback(rs):
-            for r in rs:
-                gene_name, gene_id = r[0]
-                lsv_id = r[1]
+        for idx, index_row, records in dt.callback():
+            gene_name = index_row['gene_name'].decode('utf-8')
+            gene_id = index_row['gene_id'].decode('utf-8')
+            lsv_id = index_row['lsv_id'].decode('utf-8')
 
-                r[0] = [url_for('gene', gene_id=gene_id), gene_name]
-                r[2] = v.lsv(lsv_id).lsv_type
-                r[3] = grp_name
-
-        records = create_records()
-
-        dt = DataTables(records, callback)
+            records[idx] = [
+                [url_for('gene', gene_id=gene_id), gene_name],
+                lsv_id,
+                v.lsv(lsv_id).lsv_type,
+                grp_name,
+                ''
+            ]
 
         return jsonify(dict(dt))
 
@@ -92,37 +89,35 @@ def splice_graph(gene_id):
 @app.route('/summary-table/<gene_id>', methods=('POST',))
 def summary_table(gene_id):
     with ViewPsi() as v:
-
-        def create_records(lsv_ids):
-            for lsv_id in lsv_ids:
-                psi = v.lsv(lsv_id)
-                ref_exon = list(psi.reference_exon)
-                lsv_id_col = [ref_exon, lsv_id]
-
-                try:
-                    highlight = session['highlight'][lsv_id]
-                except KeyError:
-                    highlight = [False, False]
-
-                yield [highlight, lsv_id_col, '', '', '']
-
-        def callback(rs):
-            for r in rs:
-                ref_exon, lsv_id = r[1]
-                psi = v.lsv(lsv_id)
-
-                r[1] = lsv_id
-                r[2] = psi.lsv_type
-                r[3] = grp_name
-
         grp_name = v.group_names[0]
-        lsv_ids = v.lsv_ids(gene_ids=[gene_id])
-        records = create_records(lsv_ids)
+        index_data = Index.psi(gene_id)
 
-        dt = DataTables(records, callback)
-        dt = dict(dt)
+        dt = DataTables(index_data, ('highlight', 'lsv_id'), sort=False, slice=False)
 
-        return jsonify(dt)
+        dt.add_sort('highlight', DataTables.highlight)
+        dt.add_sort('lsv_id', DataTables.lsv_id)
+
+        dt.sort()
+        dt.slice()
+
+        for idx, record, records in dt.callback():
+            lsv_id = record['lsv_id'].decode('utf-8')
+            psi = v.lsv(lsv_id)
+            lsv_type = psi.lsv_type
+            try:
+                highlight = session['highlight'][lsv_id]
+            except KeyError:
+                highlight = [False, False]
+
+            records[idx] = [
+                highlight,
+                lsv_id,
+                lsv_type,
+                grp_name,
+                ''
+            ]
+
+        return jsonify(dict(dt))
 
 
 @app.route('/psi-splice-graphs', methods=('POST',))
@@ -220,3 +215,23 @@ def lsv_highlight():
                 })
 
         return jsonify(lsvs)
+
+
+@app.route('/download-lsvs', methods=('POST',))
+def download_lsvs():
+    dt = DataTables(Index.psi(), ('gene_name', 'lsv_id'), slice=False)
+
+    data = (d['lsv_id'].decode('utf-8') for d in dict(dt)['data'])
+    data = '\n'.join(data)
+
+    return Response(data, mimetype='text/plain')
+
+
+@app.route('/download-genes', methods=('POST',))
+def download_genes():
+    dt = DataTables(Index.psi(), ('gene_name', 'lsv_id'), slice=False)
+
+    data = set(d['gene_id'].decode('utf-8') for d in dict(dt)['data'])
+    data = '\n'.join(data)
+
+    return Response(data, mimetype='text/plain')

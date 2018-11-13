@@ -1,13 +1,13 @@
 import os
 from bisect import bisect
 
-import h5py
-from flask import Flask, render_template, jsonify, url_for, request, session
+from flask import Flask, render_template, jsonify, url_for, request, session, Response
 
 from voila.api.view_matrix import ViewDeltaPsi
 from voila.api.view_splice_graph_sqlite import ViewSpliceGraph
-from voila.config import Config
 from voila.flask_proj.datatables import DataTables
+from voila.flask_proj.forms import LsvFiltersForm, DeltaPsiFiltersForm
+from voila.index import Index
 
 app = Flask(__name__)
 app.secret_key = os.urandom(16)
@@ -15,7 +15,9 @@ app.secret_key = os.urandom(16)
 
 @app.route('/')
 def index():
-    return render_template('dpsi_index.html')
+    form = LsvFiltersForm()
+    dpsi_form = DeltaPsiFiltersForm()
+    return render_template('dpsi_index.html', form=form, dpsi_form=dpsi_form)
 
 
 @app.route('/gene/<gene_id>/')
@@ -33,21 +35,21 @@ def gene(gene_id):
 @app.route('/lsv-data', methods=('POST',))
 @app.route('/lsv-data/<lsv_id>', methods=('POST',))
 def lsv_data(lsv_id):
-    gene_id = ':'.join(lsv_id.split(':')[:-2])
-    ref_exon = list(map(int, lsv_id.split(':')[-1].split('-')))
-
-    def find_exon_number(exons):
-        exons = filter(lambda e: -1 not in [e.start, e.end], exons)
-        exons = list(exons)
-
-        for idx, exon in enumerate(exons):
-            if [exon.start, exon.end] == ref_exon:
-                if strand == '-':
-                    return len(exons) - idx
-                else:
-                    return idx + 1
-
     with ViewSpliceGraph() as sg, ViewDeltaPsi() as m:
+        def find_exon_number(exons):
+            exons = filter(lambda e: -1 not in [e.start, e.end], exons)
+            exons = list(exons)
+
+            for idx, exon in enumerate(exons):
+                if [exon.start, exon.end] == ref_exon:
+                    if strand == '-':
+                        return len(exons) - idx
+                    else:
+                        return idx + 1
+
+        dpsi = m.lsv(lsv_id)
+        ref_exon = dpsi.reference_exon
+        gene_id = dpsi.gene_id
         gene = sg.gene(gene_id)
         strand = gene.strand
         exons = sg.exons(gene)
@@ -70,25 +72,25 @@ def lsv_data(lsv_id):
 
 @app.route('/index-table', methods=('POST',))
 def index_table():
-    config = Config()
-    with ViewDeltaPsi() as p, h5py.File(config.voila_file, 'r') as h:
+    with ViewDeltaPsi() as p:
+        dt = DataTables(Index.delta_psi(), ('gene_name', 'lsv_id', '', 'excl_incl'), slice=False)
+        dt.delta_psi_filters()
+        dt.slice()
 
-        def create_record():
-            for vs in h['index'].value:
-                vs = list(vs)
-                lsv_id, gene_id, gene_name = tuple(v.decode('utf-8') for v in vs[:3])
-                excl_incl = float(vs[3])
-                yield [(gene_name, gene_id), lsv_id, '', excl_incl, '']
+        for idx, index_row, records in dt.callback():
+            lsv_id = index_row['lsv_id'].decode('utf-8')
+            excl_incl = index_row['excl_incl'].item()
+            gene_id = index_row['gene_id'].decode('utf-8')
+            gene_name = index_row['gene_name'].decode('utf-8')
 
-        def callback(rs):
-            for r in rs:
-                gene_name, gene_id = r[0]
-                lsv_id = r[1]
-                r[0] = [url_for('gene', gene_id=gene_id), gene_name]
-                r[2] = p.lsv(lsv_id).lsv_type
+            records[idx] = [
+                [url_for('gene', gene_id=gene_id), gene_name],
+                lsv_id,
+                p.lsv(lsv_id).lsv_type,
+                excl_incl,
+                ''
+            ]
 
-        records = create_record()
-        dt = DataTables(records, callback)
         return jsonify(dict(dt))
 
 
@@ -169,7 +171,6 @@ def lsv_highlight():
                 else:
                     intron_retention = []
 
-
                 lsvs.append({
                     'junctions': junctions,
                     'intron_retention': intron_retention,
@@ -186,36 +187,58 @@ def lsv_highlight():
 def summary_table(gene_id):
     with ViewDeltaPsi() as v:
 
-        def create_records(lsv_ids):
-            for lsv_id in lsv_ids:
-                dpsi = v.lsv(lsv_id)
-                excl_incl = dpsi.excl_incl
-                excl_incl = max(abs(a - b) for a, b in excl_incl)
-                ref_exon = dpsi.reference_exon
-                lsv_id_col = [list(ref_exon), lsv_id]
-
-                try:
-                    highlight = session['highlight'][lsv_id]
-                except KeyError:
-                    highlight = [False, False]
-
-                yield [highlight, lsv_id_col, '', '', excl_incl, '', '']
-
-        def callback(rs):
-            for r in rs:
-                ref_exon, lsv_id = r[1]
-                het = v.lsv(lsv_id)
-
-                r[1] = lsv_id
-                r[2] = het.lsv_type
-                r[3] = grp_names[0]
-                r[5] = grp_names[1]
-
         grp_names = v.group_names
-        lsv_ids = v.lsv_ids(gene_ids=[gene_id])
-        records = list(create_records(lsv_ids))
+        index_data = Index.delta_psi(gene_id)
 
-        dt = DataTables(records, callback)
-        dt = dict(dt)
+        dt = DataTables(index_data, ('highlight', 'lsv_id', '', '', 'excl_incl'), sort=False, slice=False)
 
-        return jsonify(dt)
+        dt.add_sort('highlight', DataTables.highlight)
+        dt.add_sort('lsv_id', DataTables.lsv_id)
+
+        dt.sort()
+        dt.slice()
+
+        for idx, record, records in dt.callback():
+            lsv_id = record['lsv_id'].decode('utf-8')
+            excl_incl = record['excl_incl'].item()
+            dpsi = v.lsv(lsv_id)
+            lsv_type = dpsi.lsv_type
+
+            try:
+                highlight = session['highlight'][lsv_id]
+            except KeyError:
+                highlight = [False, False]
+
+            records[idx] = [
+                highlight,
+                lsv_id,
+                lsv_type,
+                grp_names[0],
+                excl_incl,
+                grp_names[1],
+                ''
+            ]
+
+        return jsonify(dict(dt))
+
+
+@app.route('/download-lsvs', methods=('POST',))
+def download_lsvs():
+    dt = DataTables(Index.delta_psi(), ('gene_name', 'lsv_id', '', 'excl_incl'), slice=False)
+    dt.delta_psi_filters()
+
+    data = (d['lsv_id'].decode('utf-8') for d in dict(dt)['data'])
+    data = '\n'.join(data)
+
+    return Response(data, mimetype='text/plain')
+
+
+@app.route('/download-genes', methods=('POST',))
+def download_genes():
+    dt = DataTables(Index.delta_psi(), ('gene_name', 'lsv_id', '', 'excl_incl'), slice=False)
+    dt.delta_psi_filters()
+
+    data = set(d['gene_id'].decode('utf-8') for d in dict(dt)['data'])
+    data = '\n'.join(data)
+
+    return Response(data, mimetype='text/plain')

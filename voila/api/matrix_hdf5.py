@@ -257,23 +257,29 @@ class MatrixType(ABC):
     @property
     def reference_exon(self):
         coords = self.lsv_id.split(':')[-1].split('-')
+        ref_exon = []
         if len(coords) == 2:
             for coord in coords:
-                if coord == 'nan':
-                    yield -1
+                if coord == 'na':
+                    ref_exon.append(-1)
                 else:
-                    yield int(coord)
+                    ref_exon.append(int(coord))
         else:
             for coord in coords:
                 if coord:
                     if coord == '1':
-                        yield -1
+                        ref_exon.append(-1)
                     else:
-                        yield int(coord)
+                        ref_exon.append(int(coord))
+        return ref_exon
 
     @property
     def target(self):
         return self.lsv_id.split(':')[-2] == 't'
+
+    @property
+    def source(self):
+        return not self.target
 
     @property
     def gene_id(self):
@@ -346,6 +352,10 @@ class MatrixType(ABC):
     @property
     def binary(self):
         return len(self.lsv_type.split('|')[1:]) == 2
+
+    @property
+    def complex(self):
+        return not self.binary
 
 
 class DeltaPsi(MatrixHdf5):

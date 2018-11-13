@@ -787,8 +787,6 @@ class SpliceGraphs {
     }
 
     splice_graph_update(sg, gene, lsvs) {
-        console.log(sg);
-
         //update some values
         this.zoom = parseInt(sg.parentNode.dataset.zoom);
         this.x = this.x_scale(gene);
