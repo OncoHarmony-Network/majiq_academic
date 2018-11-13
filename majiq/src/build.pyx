@@ -249,7 +249,7 @@ cdef _find_junctions(list file_list, map[string, Gene*]& gene_map, vector[string
         gene_list[gg.get_chromosome()].push_back(gg)
 
     for vector_gene in gene_list:
-        sortGeneList(vector_gene.second)
+        sortGeneList(gene_list[vector_gene.first])
 
     for tmp_str, group_list in conf.tissue_repl.items():
         name = tmp_str.encode('utf-8')
@@ -269,13 +269,14 @@ cdef _find_junctions(list file_list, map[string, Gene*]& gene_map, vector[string
                     c_iobam.detect_introns(min_ir_cov, min_experiments, 0.8, (j==last_it_grp))
                 njunc = c_iobam.get_njuncs()
                 with gil:
-                        logger.debug('Total Junctions and introns %s' %(njunc))
-            # if n_junctions  == 0:
-            #     logger.warning('No junctions where found on sample %s' % bamfile)
-            #     fitfunc_r = 0
-            # else:
-            #     fitfunc_r = fit_nb(c_iobam.junc_vec, n_junctions, eff_len, nbdisp=0.1, logger=logger)
-            fitfunc_r = 0
+                    logger.debug('Total Junctions and introns %s' %(njunc))
+
+            if n_junctions == 0:
+                logger.warning('No junctions where found on sample %s' % bamfile)
+                fitfunc_r = 0
+            else:
+                fitfunc_r = fit_nb(c_iobam.junc_vec, n_junctions, eff_len, nbdisp=0.1, logger=logger)
+
             boots = np.zeros(shape=(njunc, m), dtype=np.float32)
             with nogil:
                 c_iobam.boostrap_samples(m, k, <np.float32_t *> boots.data, fitfunc_r, pvalue_limit)

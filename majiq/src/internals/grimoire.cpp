@@ -475,6 +475,7 @@ namespace grimoire {
             const int c = ir_ptr->get_ir_flag()? 1 : 0 ;
             c1 = c1 + c ;
         }
+cerr << get_key() << " : c1->" << c1 << " c2->" << c2 << "\n" ;
         return (c2>1 and c1>0);
     }
 

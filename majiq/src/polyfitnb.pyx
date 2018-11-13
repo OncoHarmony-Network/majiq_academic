@@ -133,7 +133,7 @@ cdef float fit_nb(vector[np.float32_t *] junctionl, int total_juncs, int eff_len
         if c == 0: continue
         i += 1
 
-    if junctions.sum() == 0.0 : 
+    if junctions.sum() == 0.0 :
         return 0.0
 
     junctions[junctions == 0] = np.nan
