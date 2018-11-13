@@ -51,7 +51,15 @@
                                     $(s).hide();
                                     violin.psi(s);
 
-                                    n.querySelector('.highlight').onchange = () => {
+                                    n.querySelector('.highlight-form').onchange = (event) => {
+
+                                        const input = event.target;
+                                        if (input.classList.contains('psi-weighted') && input.checked) {
+                                            input
+                                                .closest('.highlight-form')
+                                                .querySelectorAll('.highlight')
+                                                .forEach(hl => hl.checked = true)
+                                        }
 
                                         const hl_data = Array.from(document.querySelectorAll('.highlight-form'))
                                             .map(f => {

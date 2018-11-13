@@ -424,7 +424,8 @@ cdef list _extract_lsv_summary(list files, int minnonzero, int min_reads, dict t
                 lsv_id = xx[0]
                 lsv_junc_info[lsv_id].append([xx[1], xx[2]])
                 lsv_types[lsv_id][1] += 1
-                if xx[0] == pre_lsv:
+
+                if lsv_id == pre_lsv:
                     lsv_t = lsv_t or (xx[3] >=min_reads and xx[4] >= minnonzero)
                     epsi_t.append(xx[3])
                 else:

@@ -214,8 +214,8 @@ def lsv_highlight():
                     'junctions': junctions,
                     'intron_retention': intron_retention,
                     'reference_exon': list(psi.reference_exon),
-                    'target': psi.target,
-                    'weighted': weighted
+                    'weighted': weighted,
+                    'group_means': dict(psi.group_means)
 
                 })
 

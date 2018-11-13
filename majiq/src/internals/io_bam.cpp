@@ -317,7 +317,6 @@ namespace io_bam {
                     npos -- ;
                 }
             }
-
         }else{
             for (int i=0; i<(int) vec.size(); i++){
                 const float mean_reads = (sreads - vec[i]) == 0 ? 0.5: (sreads-vec[i]) ;
