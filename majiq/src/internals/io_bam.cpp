@@ -351,7 +351,7 @@ namespace io_bam {
                 }
             }
             if (npos == 0) continue ;
-            if (pvalue_limit > 0) npos = normalize_stacks(vec, sreads, npos, fitfunc_r, pvalue_limit) ;
+//            if (pvalue_limit > 0) npos = normalize_stacks(vec, sreads, npos, fitfunc_r, pvalue_limit) ;
             if (npos == 0) continue ;
             default_random_engine generator;
             uniform_int_distribution<int> distribution(0, npos-1);
