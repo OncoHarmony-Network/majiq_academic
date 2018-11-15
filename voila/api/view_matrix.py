@@ -187,6 +187,10 @@ class ViewDeltaPsi(DeltaPsi, ViewMatrix):
     def lsv(self, lsv_id):
         return self._ViewDeltaPsi(self, lsv_id)
 
+    def lsvs(self, gene_id):
+        for lsv_id in self.lsv_ids(gene_ids=[gene_id]):
+            yield self.lsv(lsv_id)
+
 
 class ViewHeterogens:
     def __init__(self):

@@ -1,5 +1,4 @@
-recursive-include voila/templates *
-recursive-include voila/html *
-recursive-include voila/flask_proj/templates *
-recursive-include voila/flask_proj/static *
+recursive-include voila/app/templates *
+recursive-include voila/app/static *
+recursive-include voila/api *
 recursive-include majiq/data *

@@ -4,16 +4,16 @@ import os
 import sys
 from pathlib import Path
 
-import voila.constants as constants
+from voila import constants
 from voila.api import SpliceGraph, Matrix
 from voila.api.matrix_hdf5 import lsv_id_to_gene_id
 from voila.config import Config
 from voila.exceptions import VoilaException, CanNotFindFile
-from voila.flask_proj.views import run_service
 from voila.index import Index
+from voila.tsv import Tsv
 from voila.utils.utils_voila import create_if_not_exists
 from voila.utils.voila_log import voila_log
-from voila.view.tsv import NewTsv
+from voila.view.views import run_service
 
 
 def secs2hms(secs):
@@ -234,9 +234,8 @@ het_parser = new_subparser()
 tsv_parser = new_subparser()
 tsv_parser.add_argument('files', nargs='+', type=check_file,
                         help='List of files or directories which contains the splice graph and voila files.')
-tsv_parser.add_argument('-l', '--logger', help='Path for log files.')
+tsv_parser.add_argument('-l', '--logger', help='Set log file and location.  There will be no log file if not set.')
 tsv_parser.add_argument('--silent', action='store_true', help='Do not write logs to standard out.')
-tsv_parser.add_argument('-o', '--output', type=check_dir, required=True, help='Path for output directory.')
 tsv_parser.add_argument('--debug', action='store_true')
 tsv_parser.add_argument('-j', '--nproc', type=int, default=min(os.cpu_count(), max(int(os.cpu_count() / 2), 1)),
                         help='Number of processes used to produce output. Default is half of system processes. ')
@@ -251,6 +250,7 @@ tsv_parser.add_argument('--probability-threshold', type=float, default=None,
                         help='This is off by default.')
 tsv_parser.add_argument('--show-all', action='store_true',
                         help='Show all LSVs including those with no junction with significant change predicted.')
+tsv_parser.add_argument('-f', '--file-name', required=True, help="Set the TSV file's name and location.")
 
 # html parser
 view_parser = new_subparser()
@@ -278,7 +278,7 @@ view_parser.add_argument('--force-index', action='store_true',
 # subparsers
 subparsers = parser.add_subparsers(help='')
 subparsers.add_parser('tsv', parents=[tsv_parser],
-                      help='Generate tsv output for the supplied files.').set_defaults(func=NewTsv)
+                      help='Generate tsv output for the supplied files.').set_defaults(func=Tsv)
 subparsers.add_parser('view', parents=[view_parser],
                       help='Start service to view the visualization for the supplied files.').set_defaults(
     func=run_service)
@@ -296,6 +296,8 @@ if len(sys.argv) == 1:
 
 args = parser.parse_args()
 
+log = voila_log(filename=args.logger, silent=args.silent, debug=args.debug)
+
 
 def main():
     """
@@ -303,16 +305,6 @@ def main():
     :return: None
     """
 
-    # set up logging
-    log_filename = 'voila.log'
-    if args.logger:
-        log_filename = os.path.join(args.logger, log_filename)
-    elif args.output:
-        log_filename = os.path.join(args.output, log_filename)
-    else:
-        log_filename = None
-
-    log = voila_log(filename=log_filename, silent=args.silent, debug=args.debug)
     log.info('Command: {0}'.format(' '.join(sys.argv)))
 
     log.info('Voila v{}'.format(constants.VERSION))
@@ -325,8 +317,6 @@ def main():
         Index()
 
         args.func()
-
-        log.info("Voila! Created in: {0}".format(args.output))
 
     except KeyboardInterrupt:
         log.warning('Voila exiting')

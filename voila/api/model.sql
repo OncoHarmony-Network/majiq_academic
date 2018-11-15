@@ -1,96 +1,97 @@
 CREATE TABLE genome (
-  row_id INTEGER PRIMARY KEY,
-  name   VARCHAR NOT NULL
+  id   INTEGER NOT NULL,
+  name VARCHAR,
+  PRIMARY KEY (id)
 );
-
 
 CREATE TABLE file_version (
-  row_id INTEGER PRIMARY KEY,
-  value  INTEGER NOT NULL
+  id    INTEGER NOT NULL,
+  value INTEGER,
+  PRIMARY KEY (id)
 );
-
 
 CREATE TABLE experiment (
-  row_id INTEGER PRIMARY KEY,
-  name   VARCHAR NOT NULL
+  name VARCHAR NOT NULL,
+  PRIMARY KEY (name)
 );
-
 
 CREATE TABLE alt_start (
-  row_id     INTEGER PRIMARY KEY,
   gene_id    VARCHAR NOT NULL,
   coordinate INTEGER NOT NULL,
-  FOREIGN KEY (gene_id) REFERENCES gene (row_id)
+  PRIMARY KEY (gene_id, coordinate),
+  FOREIGN KEY (gene_id) REFERENCES gene (id)
 );
-
 
 CREATE TABLE alt_end (
-  row_id     INTEGER PRIMARY KEY,
   gene_id    VARCHAR NOT NULL,
   coordinate INTEGER NOT NULL,
-  FOREIGN KEY (gene_id) REFERENCES gene (row_id)
+  PRIMARY KEY (gene_id, coordinate),
+  FOREIGN KEY (gene_id) REFERENCES gene (id)
 );
-
 
 CREATE TABLE junction_reads (
-  row_id        INTEGER PRIMARY KEY,
-  reads         INTEGER NOT NULL,
-  experiment_id INTEGER NOT NULL,
-  junction_id   INTEGER NOT NULL,
-  FOREIGN KEY (junction_id) REFERENCES junction (row_id),
-  FOREIGN KEY (experiment_id) REFERENCES experiment (row_id)
+  reads            INTEGER NOT NULL,
+  experiment_name  VARCHAR NOT NULL,
+  junction_gene_id VARCHAR NOT NULL,
+  junction_start   INTEGER NOT NULL,
+  junction_end     INTEGER NOT NULL,
+  PRIMARY KEY (experiment_name, junction_gene_id, junction_start, junction_end),
+  FOREIGN KEY (junction_gene_id, junction_start, junction_end) REFERENCES junction (gene_id, start, "end"),
+  FOREIGN KEY (experiment_name) REFERENCES experiment (name)
 );
-
 
 CREATE TABLE intron_retention_reads (
-  row_id              INTEGER PRIMARY KEY,
-  reads               INTEGER NOT NULL,
-  experiment_id       VARCHAR NOT NULL,
-  intron_retention_id INTEGER NOT NULL,
-  FOREIGN KEY (intron_retention_id) REFERENCES intron_retention (row_id),
-  FOREIGN KEY (experiment_id) REFERENCES experiment (row_id)
+  reads                    INTEGER NOT NULL,
+  experiment_name          VARCHAR NOT NULL,
+  intron_retention_gene_id VARCHAR NOT NULL,
+  intron_retention_start   INTEGER NOT NULL,
+  intron_retention_end     INTEGER NOT NULL,
+  PRIMARY KEY (experiment_name, intron_retention_gene_id, intron_retention_start, intron_retention_end),
+  FOREIGN KEY (intron_retention_gene_id, intron_retention_start, intron_retention_end) REFERENCES intron_retention (gene_id, start, "end"),
+  FOREIGN KEY (experiment_name) REFERENCES experiment (name)
 );
 
-
 CREATE TABLE junction (
-  row_id    INTEGER PRIMARY KEY,
   gene_id   VARCHAR NOT NULL,
   start     INTEGER NOT NULL,
   "end"     INTEGER NOT NULL,
   has_reads BOOLEAN,
   annotated BOOLEAN,
-  FOREIGN KEY (gene_id) REFERENCES gene (row_id)
+  PRIMARY KEY (gene_id, start, "end"),
+  FOREIGN KEY (gene_id) REFERENCES gene (id),
+  CHECK (has_reads IN (0, 1)),
+  CHECK (annotated IN (0, 1))
 );
 
-
 CREATE TABLE exon (
-  row_id          INTEGER PRIMARY KEY,
   gene_id         VARCHAR NOT NULL,
   start           INTEGER NOT NULL,
   "end"           INTEGER NOT NULL,
   annotated_start INTEGER,
   annotated_end   INTEGER,
   annotated       BOOLEAN,
-  FOREIGN KEY (gene_id) REFERENCES gene (row_id)
+  PRIMARY KEY (gene_id, start, "end"),
+  FOREIGN KEY (gene_id) REFERENCES gene (id),
+  CHECK (annotated IN (0, 1))
 );
 
-
 CREATE TABLE intron_retention (
-  row_id    INTEGER PRIMARY KEY,
   gene_id   VARCHAR NOT NULL,
   start     INTEGER NOT NULL,
   "end"     INTEGER NOT NULL,
   has_reads BOOLEAN,
   annotated BOOLEAN,
-  FOREIGN KEY (gene_id) REFERENCES gene (row_id)
+  PRIMARY KEY (gene_id, start, "end"),
+  FOREIGN KEY (gene_id) REFERENCES gene (id),
+  CHECK (has_reads IN (0, 1)),
+  CHECK (annotated IN (0, 1))
 );
 
-
 CREATE TABLE gene (
-  row_id     INTEGER PRIMARY KEY,
   id         VARCHAR NOT NULL,
   name       VARCHAR,
   strand     VARCHAR,
-  chromosome VARCHAR
-)
+  chromosome VARCHAR,
+  PRIMARY KEY (id)
+);
 

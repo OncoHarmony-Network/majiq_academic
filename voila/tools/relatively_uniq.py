@@ -315,7 +315,7 @@ def singly_unique(data,
 
     This algorithm is sensitive to the thresholds. Borderline cases will
         always be an issue. So, please check the results by eye to make sure
-        the results pass the ole' "Yeah that checks out" intuition flask_proj.
+        the results pass the ole' "Yeah that checks out" intuition view.
 
     Arguments:
         data : Quick Import

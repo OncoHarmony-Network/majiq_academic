@@ -1,218 +1,244 @@
-import csv
-import json
 import os
-from multiprocessing import Lock
+from bisect import bisect
 
-import numpy as np
+from flask import Flask, render_template, jsonify, url_for, request, session, Response
 
-from voila import constants
 from voila.api.view_matrix import ViewDeltaPsi
 from voila.api.view_splice_graph_sqlite import ViewSpliceGraph
-from voila.exceptions import NotDeltaPsiVoilaFile
-from voila.processes import VoilaPool
-from voila.utils.voila_log import voila_log
-from voila.view.html import Html, NumpyEncoder
-from voila.view.tsv import Tsv
-from voila.vlsv import matrix_area
+from voila.view.datatables import DataTables
+from voila.view.forms import LsvFiltersForm, DeltaPsiFiltersForm
+from voila.index import Index
 
-lock = Lock()
+app = Flask(__name__)
+app.secret_key = os.urandom(16)
 
 
-class DeltaPsi(Html, Tsv):
-    def __init__(self, args):
-        super().__init__(args, ViewDeltaPsi)
+@app.route('/')
+def index():
+    form = LsvFiltersForm()
+    dpsi_form = DeltaPsiFiltersForm()
+    return render_template('dpsi_index.html', form=form, dpsi_form=dpsi_form)
 
-        with ViewDeltaPsi(args) as m:
-            if m.analysis_type != constants.ANALYSIS_DELTAPSI:
-                raise NotDeltaPsiVoilaFile(args)
-            self.view_metadata = m.view_metadata
 
-        if not args.disable_html:
-            self.copy_static()
-            if not args.disable_db:
-                self.render_dbs()
-            self.render_html('dpsi_index.html', 'dpsi_summary.html')
+@app.route('/gene/<gene_id>/')
+def gene(gene_id):
+    # For this gene, remove any already selected highlight/weighted lsvs from session.
+    highlight = session.get('highlight', {})
+    lsv_ids = [h for h in highlight if h.startswith(gene_id)]
+    for lsv_id in lsv_ids:
+        del highlight[lsv_id]
+    session['highlight'] = highlight
 
-        if not args.disable_tsv:
-            self.delta_psi_tab_output()
+    return render_template('dpsi_summary.html', gene_id=gene_id)
 
-    def dbs(self, gene_ids):
-        log = voila_log()
-        for gene_id in gene_ids:
-            with open(os.path.join(self.args.output, '{}.js'.format(gene_id)), 'w') as f:
-                with ViewDeltaPsi(self.args) as h, ViewSpliceGraph(self.args) as sg:
-                    metadata = h.view_metadata
-                    exp_name = metadata['experiment_names']
-                    lsv_ids = h.view_gene_lsvs(gene_id)
 
-                    f.write('new PouchDB(\'voila_gene_{}\').bulkDocs(['.format(self.db_id))
+@app.route('/lsv-data', methods=('POST',))
+@app.route('/lsv-data/<lsv_id>', methods=('POST',))
+def lsv_data(lsv_id):
+    with ViewSpliceGraph() as sg, ViewDeltaPsi() as m:
+        def find_exon_number(exons):
+            exons = filter(lambda e: -1 not in [e.start, e.end], exons)
+            exons = list(exons)
 
-                    log.debug('Write DB Gene ID: {}'.format(gene_id))
+            for idx, exon in enumerate(exons):
+                if [exon.start, exon.end] == ref_exon:
+                    if strand == '-':
+                        return len(exons) - idx
+                    else:
+                        return idx + 1
 
-                    gene = sg.gene(gene_id)
-                    gene_exp = sg.gene_experiment(gene, exp_name)
-                    text = json.dumps(gene_exp)
+        dpsi = m.lsv(lsv_id)
+        ref_exon = dpsi.reference_exon
+        gene_id = dpsi.gene_id
+        gene = sg.gene(gene_id)
+        strand = gene.strand
+        exons = sg.exons(gene)
+        exon_number = find_exon_number(exons)
 
-                    f.write(text)
-                    f.write(',')
+        dpsi = m.lsv(lsv_id)
 
-                    del gene
-                    del gene_exp
-                    del text
+        return jsonify({
+            'lsv': {
+                'excl_incl': list(dpsi.excl_incl),
+                'junctions': dpsi.junctions.tolist(),
+                'means': list(dpsi.means),
+                'bins': dpsi.bins,
+                'group_bins': dict(dpsi.group_bins),
+                'group_means': dict(dpsi.group_means),
+            },
+            'exon_number': exon_number
+        })
 
-                    f.write(']);')
-                    f.write('\n')
 
-                    if lsv_ids:
-                        f.write('new PouchDB(\'voila_lsv_{}\').bulkDocs(['.format(self.db_id))
+@app.route('/index-table', methods=('POST',))
+def index_table():
+    with ViewDeltaPsi() as p:
+        dt = DataTables(Index.delta_psi(), ('gene_name', 'lsv_id', '', 'excl_incl'), slice=False)
+        dt.delta_psi_filters()
+        dt.slice()
 
-                        for lsv_id in lsv_ids:
-                            log.debug('Write DB LSV ID: {}'.format(lsv_id))
+        for idx, index_row, records in dt.callback():
+            lsv_id = index_row['lsv_id'].decode('utf-8')
+            excl_incl = index_row['excl_incl'].item()
+            gene_id = index_row['gene_id'].decode('utf-8')
+            gene_name = index_row['gene_name'].decode('utf-8')
 
-                            lsv = h.lsv(lsv_id).get_all()
-                            lsv_dict = dict(lsv)
-                            text = json.dumps(lsv_dict, cls=NumpyEncoder)
+            records[idx] = [
+                [url_for('gene', gene_id=gene_id), gene_name],
+                lsv_id,
+                p.lsv(lsv_id).lsv_type,
+                excl_incl,
+                ''
+            ]
 
-                            f.write(text)
-                            f.write(',')
+        return jsonify(dict(dt))
 
-                            del lsv
-                            del lsv_dict
-                            del text
 
-                        f.write(']);')
+@app.route('/nav/<gene_id>', methods=('POST',))
+def nav(gene_id):
+    with ViewDeltaPsi() as h:
+        gene_ids = list(sorted(h.gene_ids))
+        idx = bisect(gene_ids, gene_id)
 
-    def render_dbs(self):
-        log = voila_log()
+        return jsonify({
+            'next': url_for('gene', gene_id=gene_ids[idx % len(gene_ids)]),
+            'prev': url_for('gene', gene_id=gene_ids[(idx % len(gene_ids)) - 2])
+        })
 
-        log.debug('Create metadata file')
-        with open(os.path.join(self.args.output, 'metadata.js'), 'w') as f:
-            with ViewDeltaPsi(self.args) as h:
-                metadata = json.dumps(h.view_metadata, cls=NumpyEncoder)
-                f.write('new PouchDB(\'voila_gene_{}\').bulkDocs(['.format(self.db_id))
-                f.write(metadata)
-                f.write(',')
-                f.write(']);')
 
-                f.write('new PouchDB(\'voila_lsv_{}\').bulkDocs(['.format(self.db_id))
-                f.write(metadata)
-                f.write(',')
-                f.write(']);')
+@app.route('/splice-graph/<gene_id>', methods=('POST', 'GET'))
+def splice_graph(gene_id):
+    with ViewSpliceGraph() as sg, ViewDeltaPsi() as v:
+        g = sg.gene(gene_id)
+        exp_names = v.splice_graph_experiment_names
+        gd = sg.gene_experiment(g, exp_names)
+        gd['group_names'] = v.group_names
+        gd['experiment_names'] = exp_names
+        return jsonify(gd)
 
-                f.write('\n')
 
-                f.write('const lsvs_arr = [')
+@app.route('/psi-splice-graphs', methods=('POST',))
+def psi_splice_graphs():
+    with ViewDeltaPsi() as v:
+        grp_names = v.group_names
+        exp_names = v.splice_graph_experiment_names
 
-                for lsv_id in h.view_lsv_ids():
-                    lsv = h.lsv(lsv_id)
-                    f.write(json.dumps({
-                        '_id': lsv.lsv_id,
-                        'target': lsv.target,
-                        'binary': lsv.binary,
-                        'exon_skipping': lsv.exon_skipping,
-                        'A5SS': lsv.a5ss,
-                        'A3SS': lsv.a3ss,
-                        'gene_id': lsv.gene_id
-                    }))
-                    f.write(',')
-                f.write('];')
+        try:
+            sg_init = session['psi_init_splice_graphs']
+        except KeyError:
+            sg_init = [[grp_names[0], exp_names[0][0]],
+                       [grp_names[1], exp_names[1][0]]]
 
-        with VoilaPool() as pool:
-            with ViewDeltaPsi(self.args) as h:
-                gene_ids = list(h.view_gene_ids())
-                chunked_gene_ids = Html.chunkify(gene_ids, pool.processes)
+        json_data = request.get_json()
 
-            for p in [pool.apply_async(self.dbs, (gene_ids,)) for gene_ids in chunked_gene_ids]:
-                p.get()
+        if json_data:
+            if 'add' in json_data:
+                if all(s != json_data['add'] for s in sg_init):
+                    sg_init.append(json_data['add'])
 
-    def tsv_row(self, gene_ids, tsv_file, fieldnames):
-        voila_links = self.voila_links
-        args = self.args
-        log = voila_log()
+            if 'remove' in json_data:
+                sg_init = filter(lambda s: s != json_data['remove'], sg_init)
+                sg_init = list(sg_init)
 
-        with ViewDeltaPsi(args) as m, ViewSpliceGraph(args) as sg:
-            metadata = m.view_metadata
-            group1 = metadata['group_names'][0]
-            group2 = metadata['group_names'][1]
+        session['psi_init_splice_graphs'] = sg_init
 
-            with open(tsv_file, 'a') as tsv:
-                writer = csv.DictWriter(tsv, fieldnames=fieldnames, delimiter='\t')
+        return jsonify(sg_init)
 
-                for gene_id in gene_ids:
-                    gene = sg.gene(gene_id)
-                    for lsv_id in m.view_gene_lsvs(gene.id):
-                        log.debug('Write TSV row for {0}'.format(lsv_id))
 
-                        lsv = m.lsv(lsv_id)
-                        lsv_junctions = lsv.junctions
-                        annot_juncs = sg.annotated_junctions(gene, lsv)
-                        lsv_exons = sg.lsv_exons(gene, lsv)
-                        excl_incl = list(lsv.excl_incl)
-                        group_means = dict(lsv.group_means)
+@app.route('/lsv-highlight', methods=('POST',))
+def lsv_highlight():
+    json_data = request.get_json()
 
-                        row = {
-                            '#Gene Name': gene.name,
-                            'Gene ID': gene.id,
-                            'LSV ID': lsv_id,
-                            'LSV Type': lsv.lsv_type,
-                            'A5SS': lsv.a5ss,
-                            'A3SS': lsv.a3ss,
-                            'ES': lsv.exon_skipping,
-                            'Num. Junctions': lsv.junction_count,
-                            'Num. Exons': lsv.exon_count,
-                            'chr': gene.chromosome,
-                            'strand': gene.strand,
-                            'De Novo Junctions': self.semicolon_join(annot_juncs),
-                            'Junctions coords': self.semicolon_join(
-                                '{0}-{1}'.format(start, end) for start, end in lsv_junctions
-                            ),
-                            'Exons coords': self.semicolon_join(
-                                '{0}-{1}'.format(start, end) for start, end in self.filter_exons(lsv_exons)
-                            ),
-                            # TODO: this needs to be re-implemented
-                            # 'IR coords': self.semicolon_join(
-                            #     '{0}-{1}'.format(e.start, e.end) for e in lsv_exons if e.intron_retention
-                            # ),
-                            'E(dPSI) per LSV junction': self.semicolon_join(
-                                excl_incl[i][1] - excl_incl[i][0] for i in
-                                range(np.size(lsv.bins, 0))
-                            ),
-                            'P(|dPSI|>=%.2f) per LSV junction' % args.threshold: self.semicolon_join(
-                                matrix_area(b, args.threshold) for b in lsv.bins
-                            ),
-                            'P(|dPSI|<=%.2f) per LSV junction' % args.non_changing_threshold: self.semicolon_join(
-                                lsv.high_probability_non_changing()
-                            ),
-                            '%s E(PSI)' % group1: self.semicolon_join(
-                                '%.3f' % i for i in group_means[group1]
-                            ),
-                            '%s E(PSI)' % group2: self.semicolon_join(
-                                '%.3f' % i for i in group_means[group2]
-                            )
-                        }
+    with ViewDeltaPsi() as m:
 
-                        if voila_links:
-                            summary_path = voila_links[gene.id]
-                            if not os.path.isabs(summary_path):
-                                summary_path = os.path.join(os.getcwd(), args.output, summary_path)
-                            row['Voila link'] = "file://{0}".format(summary_path)
+        lsvs = []
+        highlight_dict = session.get('highlight', {})
 
-                        lock.acquire()
-                        writer.writerow(row)
-                        lock.release()
+        for lsv_id, highlight, weighted in json_data:
+            highlight_dict[lsv_id] = [highlight, weighted]
 
-    def delta_psi_tab_output(self):
-        with ViewDeltaPsi():
-            metadata = m.view_metadata
+        session['highlight'] = highlight_dict
 
-        fieldnames = ['#Gene Name', 'Gene ID', 'LSV ID', 'E(dPSI) per LSV junction',
-                      'P(|dPSI|>=%.2f) per LSV junction' % args.threshold,
-                      'P(|dPSI|<=%.2f) per LSV junction' % args.non_changing_threshold,
-                      '%s E(PSI)' % metadata['group_names'][0], '%s E(PSI)' % metadata['group_names'][1], 'LSV Type',
-                      'A5SS', 'A3SS', 'ES', 'Num. Junctions', 'Num. Exons', 'De Novo Junctions', 'chr',
-                      'strand', 'Junctions coords', 'Exons coords', 'IR coords']
+        for lsv_id, (highlight, weighted) in highlight_dict.items():
+            if highlight:
+                dpsi = m.lsv(lsv_id)
 
-        if voila_links:
-            fieldnames.append('Voila link')
+                junctions = dpsi.junctions.tolist()
 
-        self.write_tsv(fieldnames, ViewDeltaPsi)
+                if dpsi.lsv_type[-1] == 'i':
+                    intron_retention = junctions[-1]
+                    junctions = junctions[:-1]
+                else:
+                    intron_retention = []
+
+                lsvs.append({
+                    'junctions': junctions,
+                    'intron_retention': intron_retention,
+                    'reference_exon': list(dpsi.reference_exon),
+                    'weighted': weighted,
+                    'group_means': dict(dpsi.group_means)
+
+                })
+
+        return jsonify(lsvs)
+
+
+@app.route('/summary-table/<gene_id>', methods=('POST',))
+def summary_table(gene_id):
+    with ViewDeltaPsi() as v:
+
+        grp_names = v.group_names
+        index_data = Index.delta_psi(gene_id)
+
+        dt = DataTables(index_data, ('highlight', 'lsv_id', '', '', 'excl_incl'), sort=False, slice=False)
+
+        dt.add_sort('highlight', DataTables.highlight)
+        dt.add_sort('lsv_id', DataTables.lsv_id)
+
+        dt.sort()
+        dt.slice()
+
+        for idx, record, records in dt.callback():
+            lsv_id = record['lsv_id'].decode('utf-8')
+            excl_incl = record['excl_incl'].item()
+            dpsi = v.lsv(lsv_id)
+            lsv_type = dpsi.lsv_type
+
+            try:
+                highlight = session['highlight'][lsv_id]
+            except KeyError:
+                highlight = [False, False]
+
+            records[idx] = [
+                highlight,
+                lsv_id,
+                lsv_type,
+                grp_names[0],
+                excl_incl,
+                grp_names[1],
+                ''
+            ]
+
+        return jsonify(dict(dt))
+
+
+@app.route('/download-lsvs', methods=('POST',))
+def download_lsvs():
+    dt = DataTables(Index.delta_psi(), ('gene_name', 'lsv_id', '', 'excl_incl'), slice=False)
+    dt.delta_psi_filters()
+
+    data = (d['lsv_id'].decode('utf-8') for d in dict(dt)['data'])
+    data = '\n'.join(data)
+
+    return Response(data, mimetype='text/plain')
+
+
+@app.route('/download-genes', methods=('POST',))
+def download_genes():
+    dt = DataTables(Index.delta_psi(), ('gene_name', 'lsv_id', '', 'excl_incl'), slice=False)
+    dt.delta_psi_filters()
+
+    data = set(d['gene_id'].decode('utf-8') for d in dict(dt)['data'])
+    data = '\n'.join(data)
+
+    return Response(data, mimetype='text/plain')
