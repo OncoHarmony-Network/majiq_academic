@@ -296,6 +296,8 @@ namespace io_bam {
         bam_hdr_destroy(header);
 
         r = sam_close(in);
+        if(!ir_func)
+            junc_limit_index_ = junc_vec.size() ;
         if (r < 0) {
             fprintf(stderr, "Error closing input.\n");
             exit_code = 1;
@@ -394,8 +396,6 @@ namespace io_bam {
     }
 
     void IOBam::detect_introns(float min_intron_cov, unsigned int min_experiments, float min_bins, bool reset){
-
-        junc_limit_index_ = junc_vec.size() ;
 
         for (const auto & it: glist_){
             if (intronVec_.count(it.first)==0){
