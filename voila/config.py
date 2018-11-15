@@ -1,8 +1,6 @@
 import configparser
+import sqlite3
 from pathlib import Path
-
-import sqlalchemy
-from sqlalchemy.exc import DatabaseError
 
 from voila import constants
 from voila.api import Matrix, SpliceGraph
@@ -65,10 +63,10 @@ class Config(Singleton):
         c.splice_graph_file = files['splice_graph']
 
         c.analysis_type = c.default['analysis_type']
-        c.output = c.default['output']
         c.nproc = int(c.default['nproc'])
         c.force_index = c.default.get('force_index', '').lower() == 'true'
         c.port = int(c.default.get('port', '0'))
+        c.file_name = c.default.get('file_name', '')
 
         return c
 
@@ -89,7 +87,7 @@ class Config(Singleton):
                 try:
                     with SpliceGraph(v):
                         sg_files.add(v)
-                except sqlalchemy.exc.DatabaseError:
+                except sqlite3.DatabaseError:
                     pass
 
             elif v.is_dir():
@@ -179,15 +177,22 @@ class Config(Singleton):
         config.set(files, 'splice_graph', str(splice_graph_file))
 
         config.set(default, 'analysis_type', analysis_type)
-        config.set(default, 'output', args.output)
         config.set(default, 'nproc', str(args.nproc))
+
+        try:
+            config.set(default, 'file_name', str(Path(args.file_name).expanduser().absolute()))
+        except AttributeError:
+            pass
 
         try:
             config.set(default, 'port', str(args.port))
         except AttributeError:
             pass
 
-        config.set(default, 'force_index', str(args.force_index))
+        try:
+            config.set(default, 'force_index', str(args.force_index))
+        except AttributeError:
+            pass
 
         if analysis_type == constants.ANALYSIS_PSI:
             analysis_type_config = PsiConfig._analysis_type_config

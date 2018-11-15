@@ -1,274 +1,228 @@
-import csv
-import glob
-import json
 import os
-from multiprocessing import Lock
-from queue import Empty
+from bisect import bisect
+from pathlib import Path
 
-import jinja2
+import h5py
+from flask import Flask, render_template, jsonify, url_for, request, session
 
-import voila
-from voila import constants
-from voila.api.view_matrix import ViewHeterogens
+from voila.api.view_matrix import ViewDeltaPsi, ViewHeterogens
 from voila.api.view_splice_graph_sqlite import ViewSpliceGraph
 from voila.config import Config
-from voila.exceptions import NotHeterogenVoilaFile
-from voila.processes import VoilaPool, VoilaQueue
-from voila.utils.voila_log import voila_log
-from voila.view.html import Html, NumpyEncoder
-from voila.view.tsv import Tsv
-from voila.vlsv import get_expected_psi
+from voila.view.datatables import DataTables
 
-tsv_lock = Lock()
-meta_lock = Lock()
+app = Flask(__name__)
+app.secret_key = os.urandom(16)
 
 
-class Heterogen(Html, Tsv):
-    def create_summary(self, paged):
-        pass
+@app.route('/')
+def index():
+    return render_template('het_index.html')
 
-    def __init__(self, args):
-        super().__init__(args, ViewHeterogens)
-        with ViewHeterogens(args) as m:
-            if m.analysis_type != constants.ANALYSIS_HETEROGEN:
-                raise NotHeterogenVoilaFile(args)
-            self.view_metadata = m.view_metadata
 
-        if not args.disable_html:
-            self.copy_static()
-            if not args.disable_db:
-                self.render_dbs()
-            self.render_html('het_index.html', 'het_summary.html')
+@app.route('/gene/<gene_id>/')
+def gene(gene_id):
+    # For this gene, remove any already selected highlight/weighted lsvs from session.
+    highlight = session.get('highlight', {})
+    lsv_ids = [h for h in highlight if h.startswith(gene_id)]
+    for lsv_id in lsv_ids:
+        del highlight[lsv_id]
+    session['highlight'] = highlight
 
-        if not args.disable_tsv:
-            self.render_tsv()
+    with ViewHeterogens() as m:
+        lsv_data = list((lsv_id, m.lsv(lsv_id).lsv_type) for lsv_id in m.lsv_ids(gene_ids=[gene_id]))
+        lsv_data.sort(key=lambda x: len(x[1].split('|')))
+        return render_template('het_summary.html', gene_id=gene_id, lsv_data=lsv_data)
 
-    def render_summaries(self):
-        self.create_summaries(ViewHeterogens)
 
-    def dbs(self, gene_ids):
-        log = voila_log()
-        for gene_id in gene_ids:
-            with open(os.path.join(self.args.output, '{}.js'.format(gene_id)), 'w') as f:
-                with ViewHeterogens(self.args) as h, ViewSpliceGraph() as sg:
-                    metadata = h.view_metadata
-                    exp_name = metadata['experiment_names']
-                    lsv_ids = h.view_gene_lsvs(gene_id)
+@app.route('/lsv-data', methods=('POST',))
+@app.route('/lsv-data/<lsv_id>', methods=('POST',))
+def lsv_data(lsv_id):
+    def find_exon_number(exons):
+        ref_exon = list(map(int, lsv_id.split(':')[-1].split('-')))
+        exons = filter(lambda e: -1 not in [e.start, e.end], exons)
+        exons = list(exons)
 
-                    f.write('new PouchDB(\'voila_gene_{}\').bulkDocs(['.format(self.db_id))
+        for idx, exon in enumerate(exons):
+            if [exon.start, exon.end] == ref_exon:
+                if strand == '-':
+                    return len(exons) - idx
+                else:
+                    return idx + 1
 
-                    log.debug('Write DB Gene ID: {}'.format(gene_id))
+    with ViewSpliceGraph() as sg, ViewHeterogens() as m:
+        gene_id = ':'.join(lsv_id.split(':')[:-2])
+        gene = sg.gene(gene_id)
+        strand = gene.strand
+        exons = sg.exons(gene)
 
-                    gene = sg.gene(gene_id)
-                    gene_exp = sg.gene_experiment(gene, exp_name)
-                    text = json.dumps(gene_exp)
+        # return empty string when reference exon is a half exon
+        try:
+            exon_number = find_exon_number(exons)
+        except ValueError:
+            exon_number = ''
 
-                    f.write(text)
-                    f.write(',')
+        dpsi = m.lsv(lsv_id)
 
-                    del gene
-                    del gene_exp
-                    del text
+        return jsonify({
+            'lsv': {
+                # 'excl_incl': list(dpsi.excl_incl),
+                'junctions': dpsi.junctions.tolist(),
+                # 'means': list(dpsi.means),
+                # 'bins': dpsi.bins,
+                # 'group_bins': dict(dpsi.group_bins),
+                # 'group_means': dict(dpsi.group_means),
+            },
+            'exon_number': exon_number
+        })
 
-                    f.write(']);')
-                    f.write('\n')
 
-                    if lsv_ids:
-                        f.write('new PouchDB(\'voila_lsv_{}\').bulkDocs(['.format(self.db_id))
+@app.route('/index-table', methods=('POST',))
+def index_table():
+    config = Config()
+    voila_directory = Path(config.voila_file).parents[0]
+    index_file = voila_directory / 'index.hdf5'
+    with ViewHeterogens() as p, h5py.File(index_file, 'r') as h:
 
-                        for lsv_id in lsv_ids:
-                            log.debug('Write DB LSV ID: {}'.format(lsv_id))
+        def create_records():
+            for lsv_id, gene_id, gene_name in h['index'].value:
+                lsv_id = lsv_id.decode('utf-8')
+                gene_id = gene_id.decode('utf-8')
+                gene_name = gene_name.decode('utf-8')
+                yield [(gene_name, gene_id), lsv_id, '', '']
 
-                            lsv = h.heterogen(lsv_id).get_all()
-                            lsv_dict = dict(lsv)
-                            text = json.dumps(lsv_dict, cls=NumpyEncoder)
+        def callback(rs):
+            for r in rs:
+                gene_name, gene_id = r[0]
+                lsv_id = r[1]
+                r[0] = [url_for('gene', gene_id=gene_id), gene_name]
+                r[2] = p.lsv(lsv_id).lsv_type
 
-                            f.write(text)
-                            f.write(',')
+        records = create_records()
+        dt = DataTables(records, callback)
+        return jsonify(dict(dt))
 
-                            del lsv
-                            del lsv_dict
-                            del text
 
-                        f.write(']);')
+@app.route('/nav/<gene_id>', methods=('POST',))
+def nav(gene_id):
+    with ViewDeltaPsi() as h:
+        gene_ids = list(sorted(h.gene_ids))
+        idx = bisect(gene_ids, gene_id)
 
-    def fill_queue_gene_ids(self, queue, event):
-        with ViewHeterogens(self.args) as h:
-            for gene_id in h.gene_ids:
-                if any(h.view_gene_lsvs(gene_id)):
-                    queue.put(gene_id)
-        event.set()
+        return jsonify({
+            'next': url_for('gene', gene_id=gene_ids[idx % len(gene_ids)]),
+            'prev': url_for('gene', gene_id=gene_ids[(idx % len(gene_ids)) - 2])
+        })
 
-    def fill_queue_lsv_ids(self, queue, event):
-        event.clear()
-        with ViewHeterogens(self.args) as h:
-            for gene_id in h.gene_ids:
-                for lsv_id in h.view_gene_lsvs(gene_id):
-                    queue.put(lsv_id)
-        event.set()
 
-    # def render_html(self):
-    #     exec_dir = os.path.dirname(os.path.abspath(voila.__file__))
-    #     template_dir = os.path.join(exec_dir, 'html')
-    #     env = jinja2.Environment(extensions=["jinja2.ext.do"], loader=jinja2.FileSystemLoader(template_dir),
-    #                              undefined=jinja2.StrictUndefined)
-    #
-    #     index_template = env.get_template('het_index.html')
-    #     summary_template = env.get_template('het_summary.html')
-    #
-    #     db_lsvs = [os.path.basename(f) for f in glob.glob(os.path.join(self.args.output, 'db_lsv*.js'))]
-    #     db_genes = [os.path.basename(f) for f in glob.glob(os.path.join(self.args.output, 'db_gene*.js'))]
-    #     dbs = [os.path.basename(f) for f in glob.glob(os.path.join(self.args.output, '*.js'))]
-    #
-    #     with open(os.path.join(self.args.output, 'index.html'), 'w') as index:
-    #         index.write(index_template.render({
-    #             'db_lsvs': db_lsvs,
-    #             'db_genes': db_genes,
-    #             'dbs': dbs
-    #         }))
-    #
-    #     with open(os.path.join(self.args.output, 'summary.html'), 'w') as summary:
-    #         summary.write(summary_template.render({
-    #             'db_lsvs': db_lsvs,
-    #             'db_genes': db_genes
-    #         }))
+@app.route('/splice-graph/<gene_id>', methods=('POST',))
+def splice_graph(gene_id):
+    with ViewSpliceGraph() as sg, ViewHeterogens() as v:
+        g = sg.gene(gene_id)
+        exp_names = v.splice_graph_experiment_names
+        gd = sg.gene_experiment(g, exp_names)
+        gd['group_names'] = v.group_names
+        gd['experiment_names'] = exp_names
+        return jsonify(gd)
 
-    def render_dbs(self):
-        log = voila_log()
 
-        log.debug('Create metadata file')
-        with open(os.path.join(self.args.output, 'metadata.js'), 'w') as f:
-            with ViewHeterogens(self.args) as h:
-                metadata = json.dumps(h.view_metadata)
-                f.write('new PouchDB(\'voila_gene_{}\').bulkDocs(['.format(self.db_id))
-                f.write(metadata)
-                f.write(',')
-                f.write(']);')
+@app.route('/psi-splice-graphs', methods=('POST',))
+def psi_splice_graphs():
+    try:
+        sg_init = session['psi_init_splice_graphs']
+    except KeyError:
+        sg_init = []
 
-                f.write('new PouchDB(\'voila_lsv_{}\').bulkDocs(['.format(self.db_id))
-                f.write(metadata)
-                f.write(',')
-                f.write(']);')
+    json_data = request.get_json()
 
-                f.write('\n')
+    if json_data:
+        if 'add' in json_data:
+            if all(s != json_data['add'] for s in sg_init):
+                sg_init.append(json_data['add'])
 
-                f.write('const lsvs_arr = [')
+        if 'remove' in json_data:
+            sg_init = filter(lambda s: s != json_data['remove'], sg_init)
+            sg_init = list(sg_init)
 
-                for lsv_id in h.view_lsv_ids():
-                    lsv = h.heterogen(lsv_id)
-                    f.write(json.dumps({
-                        '_id': lsv.lsv_id,
-                        'target': lsv.target,
-                        'binary': lsv.binary,
-                        'exon_skipping': lsv.exon_skipping,
-                        'A5SS': lsv.a5ss,
-                        'A3SS': lsv.a3ss,
-                        'gene_id': lsv.gene_id
-                    }))
-                    f.write(',')
-                f.write('];')
+    session['psi_init_splice_graphs'] = sg_init
 
-        with VoilaPool() as pool:
-            with ViewHeterogens(self.args) as h:
-                gene_ids = list(h.view_gene_ids())
-                chunked_gene_ids = Html.chunkify(gene_ids, pool.processes)
+    return jsonify(sg_init)
 
-            for p in [pool.apply_async(self.dbs, (gene_ids,)) for gene_ids in chunked_gene_ids]:
-                p.get()
 
-    def tsv_row(self, q, e, tsv_file, fieldnames):
-        args = self.args
-        log = voila_log()
-        metadata = self.view_metadata
-        group_names = metadata['group_names']
-        with ViewHeterogens(args) as m, ViewSpliceGraph() as sg:
-            with open(tsv_file, 'a') as tsv:
-                writer = csv.DictWriter(tsv, fieldnames=fieldnames, delimiter='\t')
+@app.route('/lsv-highlight', methods=('POST',))
+def lsv_highlight():
+    json_data = request.get_json()
 
-                while not (e.is_set() and q.empty()):
-                    try:
-                        lsv_id = q.get_nowait()
-                    except Empty:
-                        lsv_id = None
+    with ViewDeltaPsi() as m:
 
-                    if lsv_id:
-                        lsv = m.heterogen(lsv_id)
-                        gene = sg.gene(lsv.gene_id)
-                        log.debug('Write TSV row for {0}'.format(lsv_id))
-                        lsv = m.heterogen(lsv_id)
-                        lsv_junctions = lsv.junctions
-                        annot_juncs = sg.annotated_junctions(gene, lsv)
-                        lsv_exons = sg.lsv_exons(gene, lsv)
-                        mean_psi = list(lsv.mean_psi)
+        lsvs = []
+        highlight_dict = session.get('highlight', {})
 
-                        row = {
-                            'Gene Name': gene.name,
-                            'Gene ID': gene.id,
-                            'LSV ID': lsv_id,
-                            'LSV Type': lsv.lsv_type,
-                            'A5SS': lsv.a5ss,
-                            'A3SS': lsv.a3ss,
-                            'ES': lsv.exon_skipping,
-                            'Num. Junctions': len(lsv_junctions),
-                            'Num. Exons': lsv.exon_count,
-                            'chr': gene.chromosome,
-                            'strand': gene.strand,
-                            'De Novo Junctions': self.semicolon_join(annot_juncs),
-                            'Junctions coords': self.semicolon_join(
-                                '{0}-{1}'.format(start, end) for start, end in lsv_junctions
-                            ),
-                            'Exons coords': self.semicolon_join(
-                                '{0}-{1}'.format(start, end) for start, end in self.filter_exons(lsv_exons)
-                            ),
-                            # todo: reimplement this column
-                            # 'IR coords': self.semicolon_join(
-                            #     '{0}-{1}'.format(e.start, e.end) for e in lsv_exons if e.intron_retention
-                            # ),
-                        }
+        for lsv_id, highlight, weighted in json_data:
+            highlight_dict[lsv_id] = [highlight, weighted]
 
-                        for idx, group in enumerate(group_names):
-                            if mean_psi[idx] is not None:
-                                row['%s E(PSI)' % group] = self.semicolon_join(
-                                    get_expected_psi(x) for x in mean_psi[idx])
+        session['highlight'] = highlight_dict
 
-                        for key, value in lsv.junction_stats:
-                            row[key] = self.semicolon_join(value)
+        for lsv_id, (highlight, weighted) in highlight_dict.items():
+            if highlight:
+                het = m.lsv(lsv_id)
+                junctions = het.junctions.tolist()
 
-                        # if voila_links:
-                        #     summary_path = voila_links[gene_id]
-                        #     if not os.path.isabs(summary_path):
-                        #         summary_path = join(os.getcwd(), args.output, summary_path)
-                        #     row['Voila link'] = "file://{0}".format(summary_path)
+                if het.lsv_type[-1] == 'i':
+                    intron_retention = junctions[-1]
+                    junctions = junctions[:-1]
+                else:
+                    intron_retention = []
 
-                        tsv_lock.acquire()
-                        writer.writerow(row)
-                        tsv_lock.release()
-                        q.task_done()
+                lsvs.append({
+                    'junctions': junctions,
+                    'intron_retention': intron_retention,
+                    'reference_exon': list(het.reference_exon),
+                    'weighted': weighted,
+                    'group_means': dict(het.group_means)
 
-    def render_tsv(self):
-        log = voila_log()
-        config = Config()
+                })
 
-        with ViewHeterogens(self.args) as m:
-            metadata = m.view_metadata
-            fieldnames = ['Gene Name', 'Gene ID', 'LSV ID', 'LSV Type', 'strand', 'chr'] + \
-                         ['%s E(PSI)' % group for group in metadata['group_names']] + \
-                         list(m.junction_stats_column_names) + \
-                         ['A5SS', 'A3SS', 'ES', 'Num. Junctions', 'Num. Exons', 'De Novo Junctions',
-                          'Junctions coords', 'Exons coords', 'IR coords']
+        return jsonify(lsvs)
 
-        log.info("Creating Tab-delimited output file")
 
-        args = self.args
-        output_html = Html.get_output_html(args, config.voila_file)
-        tsv_file = os.path.join(args.output, output_html.rsplit('.html', 1)[0] + '.tsv')
+@app.route('/summary-table', methods=('POST',))
+@app.route('/summary-table/<lsv_id>', methods=('POST',))
+def summary_table(lsv_id):
+    with ViewHeterogens() as v:
+        exp_names = v.experiment_names
+        grp_names = v.group_names
+        stat_names = v.stat_names
+        stat_name = stat_names[0]
 
-        with open(tsv_file, 'w') as tsv:
-            writer = csv.DictWriter(tsv, fieldnames=fieldnames, delimiter='\t')
-            writer.writeheader()
+        def create_records():
+            het = v.lsv(lsv_id)
+            juncs = het.junctions
+            mu_psis = het.mu_psi
+            mean_psis = het.mean_psi
 
-        with VoilaPool(processes=config.nproc) as vp, VoilaQueue(self.fill_queue_lsv_ids, nprocs=config.nproc) as (q, e):
-            for x in [vp.apply_async(self.tsv_row, (q, e, tsv_file, fieldnames)) for _ in range(vp.processes)]:
-                x.get()
+            for idx, (junc, mean_psi, mu_psi) in enumerate(zip(juncs, mean_psis, mu_psis)):
+                junc = map(str, junc)
+                junc = '-'.join(junc)
+                heatmap = het.junction_heat_map(stat_name, idx)
 
-        log.info("Delimited output file successfully created in: %s" % tsv_file)
+                yield [
+                    junc,
+                    {
+                        'group_names': grp_names,
+                        'experiment_names': exp_names,
+                        'junction_idx': idx,
+                        'mean_psi': mean_psi,
+                        'mu_psi': mu_psi,
+                    },
+                    {
+                        'heatmap': heatmap,
+                        'group_names': grp_names,
+                        'stat_name': stat_name
+                    }
+                ]
+
+        records = create_records()
+        dt = DataTables(records)
+        dt = dict(dt)
+
+        return jsonify(dt)

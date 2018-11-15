@@ -1,14 +1,10 @@
 import os
 import sqlite3
 from collections import namedtuple
+from pathlib import Path
 
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-
-from voila.api import splice_graph_model
 from voila.api.splice_graph_abstract import SpliceGraphSQLAbstract
-
-Session = sessionmaker()
+from voila.constants import EXEC_DIR
 
 
 class SpliceGraphSQL(SpliceGraphSQLAbstract):
@@ -24,15 +20,15 @@ class SpliceGraphSQL(SpliceGraphSQLAbstract):
             except FileNotFoundError:
                 pass
 
-        engine = create_engine('sqlite:///{0}'.format(filename), connect_args={'timeout': 120})
-        splice_graph_model.Base.metadata.create_all(engine)
-        session = Session()
-        session.commit()
-        session.close_all()
-
         self.conn = sqlite3.connect(filename)
-
         self.conn.execute('pragma foreign_keys=ON')
+
+        if delete is True:
+            with open(Path(EXEC_DIR) / 'api/model.sql', 'r') as sql:
+                self.conn.executescript(sql.read())
+                self.conn.commit()
+
+        self.conn.execute('select * from file_version')
 
         self._genome = None
         self._experiment_names = None

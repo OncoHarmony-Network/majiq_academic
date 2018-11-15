@@ -5,7 +5,7 @@ from voila.tools.example_tool import hello_world
 
 class TestExampleStringMethods(unittest.TestCase):
     """
-    This is the unit flask_proj for the example tool.  There should be a unit flask_proj for each method/function within your code.
+    This is the unit view for the example tool.  There should be a unit view for each method/function within your code.
     """
 
     def test_hello_world(self):

@@ -118,8 +118,8 @@ class ViewSpliceGraph(SpliceGraph):
         else:
             return 'green'
 
-    def annotated_junctions(self, gene, lsv):
-        for junc in lsv.junctions:
+    def annotated_junctions(self, gene, lsv_junctions):
+        for junc in lsv_junctions:
             junc = tuple(map(int, junc))
             query = self.conn.execute('''
                                 SELECT annotated FROM junction
@@ -132,9 +132,9 @@ class ViewSpliceGraph(SpliceGraph):
             if fetch:
                 yield fetch[0]
 
-    def lsv_exons(self, gene, lsv):
+    def lsv_exons(self, gene, lsv_junctions):
         rtn_set = set()
-        for junc in lsv.junctions:
+        for junc in lsv_junctions:
             junc = tuple(map(int, junc))
             query = self.conn.execute('''
                                         SELECT start, end FROM exon
