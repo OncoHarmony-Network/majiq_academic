@@ -85,7 +85,7 @@ class MatrixHdf5:
 
         try:
             gene_grp = self.h['lsvs'][gene_id]
-        except KeyError:
+        except (KeyError, ValueError):
             raise GeneIdNotFoundInVoilaFile(self.h.filename, gene_id)
 
         try:

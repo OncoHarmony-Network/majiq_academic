@@ -7,7 +7,7 @@ import numpy as np
 import scipy.special
 
 from voila.api.matrix_hdf5 import DeltaPsi, Psi, Heterogen
-from voila.config import Config
+from voila.config import ViewConfig
 from voila.constants import MINVAL
 from voila.exceptions import LsvIdNotFoundInVoilaFile, GeneIdNotFoundInVoilaFile
 from voila.vlsv import get_expected_dpsi, is_lsv_changing, matrix_area, get_expected_psi
@@ -35,10 +35,18 @@ class ViewMatrix(ABC):
         def junctions(self):
             return self.get('junctions')
 
+    def lsvs(self, gene_id=None):
+        if gene_id:
+            for lsv_id in self.lsv_ids(gene_ids=[gene_id]):
+                yield self.lsv(lsv_id)
+        else:
+            for lsv_id in self.lsv_ids():
+                yield self.lsv(lsv_id)
+
 
 class ViewPsi(Psi, ViewMatrix):
     def __init__(self):
-        config = Config()
+        config = ViewConfig()
         super().__init__(config.voila_file)
 
     class _ViewPsi(Psi._Psi, ViewMatrix._ViewMatrix):
@@ -61,7 +69,7 @@ class ViewPsi(Psi, ViewMatrix):
 
         @property
         def means(self):
-            yield from unpack_means(self.get('means'))
+            return list(unpack_means(self.get('means')))
 
         @property
         def group_means(self):
@@ -96,7 +104,7 @@ class ViewPsi(Psi, ViewMatrix):
 
 class ViewDeltaPsi(DeltaPsi, ViewMatrix):
     def __init__(self):
-        self.config = Config()
+        self.config = ViewConfig()
         super().__init__(self.config.voila_file)
 
     class _ViewDeltaPsi(DeltaPsi._DeltaPsi, ViewMatrix._ViewMatrix):
@@ -187,10 +195,6 @@ class ViewDeltaPsi(DeltaPsi, ViewMatrix):
     def lsv(self, lsv_id):
         return self._ViewDeltaPsi(self, lsv_id)
 
-    def lsvs(self, gene_id):
-        for lsv_id in self.lsv_ids(gene_ids=[gene_id]):
-            yield self.lsv(lsv_id)
-
 
 class ViewHeterogens:
     def __init__(self):
@@ -226,7 +230,7 @@ class ViewHeterogens:
             yield 'binary', self.binary
 
         def get_attr(self, attr):
-            voila_files = Config().voila_files
+            voila_files = ViewConfig().voila_files
             s = set()
             for f in voila_files:
                 with ViewHeterogen(f) as m:
@@ -267,7 +271,7 @@ class ViewHeterogens:
             return self.get_attr('binary')
 
         def junction_heat_map(self, stat_name, junc_idx):
-            voila_files = Config().voila_files
+            voila_files = ViewConfig().voila_files
             hets_grps = self.matrix_hdf5.group_names
             hets_grps_len = len(hets_grps)
             s = np.ndarray((hets_grps_len, hets_grps_len))
@@ -307,7 +311,7 @@ class ViewHeterogens:
 
         @property
         def mu_psi(self):
-            voila_files = Config().voila_files
+            voila_files = ViewConfig().voila_files
             group_names = self.matrix_hdf5.group_names
             experiment_names = self.matrix_hdf5.experiment_names
             exps_len = max(len(e) for e in experiment_names)
@@ -339,7 +343,7 @@ class ViewHeterogens:
 
         @property
         def mean_psi(self):
-            voila_files = Config().voila_files
+            voila_files = ViewConfig().voila_files
             group_names = self.matrix_hdf5.group_names
             juncs_len = len(self.junctions)
             grps_len = len(group_names)
@@ -374,7 +378,7 @@ class ViewHeterogens:
 
         @property
         def junctions(self):
-            config = Config()
+            config = ViewConfig()
             juncs = None
             for f in config.voila_files:
                 with ViewHeterogen(f) as m:
@@ -388,7 +392,7 @@ class ViewHeterogens:
 
         @property
         def junction_stats(self):
-            config = Config()
+            config = ViewConfig()
             voila_files = config.voila_files
             for f in voila_files:
                 with ViewHeterogen(f) as m:
@@ -407,7 +411,7 @@ class ViewHeterogens:
     @property
     def stat_names(self):
         names = set()
-        voila_files = Config().voila_files
+        voila_files = ViewConfig().voila_files
         for f in voila_files:
             with ViewHeterogen(f) as m:
                 for s in m.stat_names:
@@ -417,7 +421,7 @@ class ViewHeterogens:
 
     @property
     def junction_stats_column_names(self):
-        voila_files = Config().voila_files
+        voila_files = ViewConfig().voila_files
 
         for f in voila_files:
             with ViewHeterogen(f) as m:
@@ -430,7 +434,7 @@ class ViewHeterogens:
 
     @property
     def experiment_names(self):
-        config = Config()
+        config = ViewConfig()
         exp_names = {}
         for f in config.voila_files:
             with ViewHeterogen(f) as m:
@@ -441,7 +445,7 @@ class ViewHeterogens:
 
     @property
     def group_names(self):
-        config = Config()
+        config = ViewConfig()
         grp_names = set()
         for f in config.voila_files:
             with ViewHeterogen(f) as m:
@@ -458,7 +462,7 @@ class ViewHeterogens:
 
     @property
     def splice_graph_experiment_names(self):
-        config = Config()
+        config = ViewConfig()
         exp_names = {}
         for f in config.voila_files:
             with ViewHeterogen(f) as m:
@@ -469,14 +473,14 @@ class ViewHeterogens:
 
     @property
     def gene_ids(self):
-        voila_files = Config().voila_files
+        voila_files = ViewConfig().voila_files
         vhs = [ViewHeterogen(f) for f in voila_files]
         yield from set(chain(*(v.gene_ids for v in vhs)))
         for v in vhs:
             v.close()
 
     def lsv_ids(self, gene_ids=None):
-        voila_files = Config().voila_files
+        voila_files = ViewConfig().voila_files
         vhs = [ViewHeterogen(f) for f in voila_files]
         yield from set(chain(*(v.lsv_ids(gene_ids) for v in vhs)))
         for v in vhs:

@@ -7,7 +7,7 @@ from flask import Flask, render_template, jsonify, url_for, request, session
 
 from voila.api.view_matrix import ViewDeltaPsi, ViewHeterogens
 from voila.api.view_splice_graph_sqlite import ViewSpliceGraph
-from voila.config import Config
+from voila.config import ViewConfig
 from voila.view.datatables import DataTables
 
 app = Flask(__name__)
@@ -78,7 +78,7 @@ def lsv_data(lsv_id):
 
 @app.route('/index-table', methods=('POST',))
 def index_table():
-    config = Config()
+    config = ViewConfig()
     voila_directory = Path(config.voila_file).parents[0]
     index_file = voila_directory / 'index.hdf5'
     with ViewHeterogens() as p, h5py.File(index_file, 'r') as h:

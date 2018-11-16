@@ -4,12 +4,10 @@ import os
 import sys
 from pathlib import Path
 
-from voila import constants
+from voila import constants, config
 from voila.api import SpliceGraph, Matrix
 from voila.api.matrix_hdf5 import lsv_id_to_gene_id
-from voila.config import Config
 from voila.exceptions import VoilaException, CanNotFindFile
-from voila.index import Index
 from voila.tsv import Tsv
 from voila.utils.utils_voila import create_if_not_exists
 from voila.utils.voila_log import voila_log
@@ -168,68 +166,6 @@ parser = argparse.ArgumentParser(description='VOILA is a visualization package '
                                              'for Alternative Local Splicing Events.')
 parser.add_argument('-v', action='version', version=constants.VERSION)
 
-# splice graph parser
-splice_graph = new_subparser()
-
-# splice_graph.add_argument('-s', '--splice-graph', type=check_file, required=True,
-#                           help='Path to splice graph file.')
-splice_graph.add_argument('-o', '--output', type=check_dir, required=True,
-                          help='Path for output directory.')
-splice_graph.add_argument('--logger', help='Path for log files.')
-splice_graph.add_argument('--silent', action='store_true', help='Do not write logs to standard out.')
-splice_graph.add_argument('--debug', action='store_true', help='Prints extra output for debugging.')
-splice_graph.add_argument('-j', '--nproc', type=int, default=min(os.cpu_count(), max(int(os.cpu_count() / 2), 1)),
-                          help='Number of processes used to produce output. Default is half of system processes. ')
-splice_graph.add_argument('--gene-names-file', dest='gene_names', type=check_list_file, default=[],
-                          help='Location of file that contains a list of common gene names which should remain in '
-                               'the results. One name per line.')
-splice_graph.add_argument('--gene-names', nargs='*', default=[],
-                          help='Common gene names, separated by spaces, which should remain in the results. e.g. '
-                               'GENE1 GENE2 ...')
-splice_graph.add_argument('--gene-ids-file', dest='gene_ids', type=check_list_file, default=[],
-                          help='Location of file that contains a list of gene IDs which should remain in the '
-                               'results. One name per line.')
-splice_graph.add_argument('--gene-ids', nargs='*', default=[],
-                          help='Gene IDs, separated by spaces, which should remain in the results. e.g. GENE_ID1 '
-                               'GENE_ID2 ...')
-splice_graph.add_argument('--disable-db', action='store_true', help='Disables the creation of the database files.')
-
-# psi parser
-psi_parser = new_subparser()
-psi_parser.add_argument('files', nargs='+', type=check_file,
-                        help='Location of majiq\'s voila file.  File should end with ".voila".')
-psi_parser.add_argument('--gtf', action='store_true', help='Generate GTF (GFF2) files for LSVs.')
-psi_parser.add_argument('--gff', action='store_true', help='Generate GFF3 files for LSVs.')
-psi_parser.add_argument('--disable-html', action='store_true', help='Do not write html files.')
-psi_parser.add_argument('--disable-tsv', action='store_true',
-                        help='Do not generate tab-separated values output file.')
-psi_parser.add_argument('--lsv-types-file', type=check_list_file, dest='lsv_types',
-                        help='Location of file that contains a list of LSV types which should remain in the results. One '
-                             'type per line')
-psi_parser.add_argument('--lsv-types', nargs='*', default=[],
-                        help='LSV types which should remain in the results')
-psi_parser.add_argument('--lsv-ids-file', type=check_list_file, dest='lsv_ids',
-                        help='Location of file that contains a list of LSV IDs which should remain in the results. One ID '
-                             'per line.')
-psi_parser.add_argument('--lsv-ids', nargs='*', default=[],
-                        help='LSV IDs, separated by spaces, which should remain in the results. e.g LSV_ID1 LSV_ID2 ...')
-
-# deltapsi parser
-dpsi_parser = new_subparser()
-dpsi_parser.add_argument('--threshold', type=float, default=0.2,
-                         help='Filter out LSVs with no junctions predicted to change over a certain value. Even when '
-                              'show-all is used this value is still used to calculate the probability in the TSV. The '
-                              'default is "0.2".')
-dpsi_parser.add_argument('--non-changing-threshold', type=float, default=0.05,
-                         help='The default is "0.05".')
-dpsi_parser.add_argument('--probability-threshold', type=float, default=None,
-                         help='This is off by default.')
-dpsi_parser.add_argument('--show-all', action='store_true',
-                         help='Show all LSVs including those with no junction with significant change predicted.')
-
-# heterogen parser
-het_parser = new_subparser()
-
 # tsv parser
 tsv_parser = new_subparser()
 tsv_parser.add_argument('files', nargs='+', type=check_file,
@@ -246,30 +182,45 @@ tsv_parser.add_argument('--threshold', type=float, default=0.2,
                              'default is "0.2".')
 tsv_parser.add_argument('--non-changing-threshold', type=float, default=0.05,
                         help='The default is "0.05".')
+
 tsv_parser.add_argument('--probability-threshold', type=float, default=None,
                         help='This is off by default.')
+
 tsv_parser.add_argument('--show-all', action='store_true',
                         help='Show all LSVs including those with no junction with significant change predicted.')
 tsv_parser.add_argument('-f', '--file-name', required=True, help="Set the TSV file's name and location.")
+tsv_parser.add_argument('--lsv-types-file', type=check_list_file, dest='lsv_types',
+                        help='Location of file that contains a list of LSV types which should remain in the results. One '
+                             'type per line')
+tsv_parser.add_argument('--lsv-types', nargs='*', default=[],
+                        help='LSV types which should remain in the results')
+tsv_parser.add_argument('--lsv-ids-file', type=check_list_file, dest='lsv_ids',
+                        help='Location of file that contains a list of LSV IDs which should remain in the results. One ID '
+                             'per line.')
+tsv_parser.add_argument('--lsv-ids', nargs='*', default=[],
+                        help='LSV IDs, separated by spaces, which should remain in the results. e.g LSV_ID1 LSV_ID2 ...')
+tsv_parser.add_argument('--gene-names-file', dest='gene_names', type=check_list_file, default=[],
+                        help='Location of file that contains a list of common gene names which should remain in '
+                             'the results. One name per line.')
+tsv_parser.add_argument('--gene-names', nargs='*', default=[],
+                        help='Common gene names, separated by spaces, which should remain in the results. e.g. '
+                             'GENE1 GENE2 ...')
+tsv_parser.add_argument('--gene-ids-file', dest='gene_ids', type=check_list_file, default=[],
+                        help='Location of file that contains a list of gene IDs which should remain in the '
+                             'results. One name per line.')
+tsv_parser.add_argument('--gene-ids', nargs='*', default=[],
+                        help='Gene IDs, separated by spaces, which should remain in the results. e.g. GENE_ID1 '
+                             'GENE_ID2 ...')
 
-# html parser
+# view parser
 view_parser = new_subparser()
 view_parser.add_argument('files', nargs='+', type=check_file,
                          help='List of files or directories which contains the splice graph and voila files.')
-view_parser.add_argument('-o', '--output', type=check_dir, required=True, help='Path for output directory.')
 view_parser.add_argument('--debug', action='store_true')
-view_parser.add_argument('-l', '--logger', help='Path for log files.')
+view_parser.add_argument('-l', '--logger', default=None, help='Path for log files.')
 view_parser.add_argument('--silent', action='store_true', help='Do not write logs to standard out.')
 view_parser.add_argument('-j', '--nproc', type=int, default=min(os.cpu_count(), max(int(os.cpu_count() / 2), 1)),
                          help='Number of processes used to produce output. Default is half of system processes. ')
-view_parser.add_argument('--threshold', type=float, default=0.2,
-                         help='Filter out LSVs with no junctions predicted to change over a certain value. Even when '
-                              'show-all is used this value is still used to calculate the probability in the TSV. The '
-                              'default is "0.2".')
-view_parser.add_argument('--non-changing-threshold', type=float, default=0.05, help='The default is "0.05".')
-view_parser.add_argument('--probability-threshold', type=float, default=None, help='This is off by default.')
-view_parser.add_argument('--show-all', action='store_true',
-                         help='Show all LSVs including those with no junction with significant change predicted.')
 view_parser.add_argument('-p', '--port', type=int, default=0,
                          help='Set port to visualize MAJIQ output. Default is a random port.')
 view_parser.add_argument('--force-index', action='store_true',
@@ -282,13 +233,6 @@ subparsers.add_parser('tsv', parents=[tsv_parser],
 subparsers.add_parser('view', parents=[view_parser],
                       help='Start service to view the visualization for the supplied files.').set_defaults(
     func=run_service)
-
-# subparsers.add_parser('splice-graph', parents=[splice_graph]).set_defaults(func=RenderSpliceGraphs)
-# subparsers.add_parser('psi', parents=[splice_graph, psi_parser]).set_defaults(func=run_service)
-# subparsers.add_parser('deltapsi', parents=[splice_graph, psi_parser, dpsi_parser]).set_defaults(func=run_service)
-# subparsers.add_parser('heterogen',
-#                       parents=[splice_graph, psi_parser, dpsi_parser, het_parser]).set_defaults(
-#     func=run_service)
 
 if len(sys.argv) == 1:
     parser.print_help()
@@ -310,12 +254,8 @@ def main():
     log.info('Voila v{}'.format(constants.VERSION))
 
     try:
-        log.info('config file: ' + constants.CONFIG_FILE)
 
-        Config.write(args)
-
-        Index()
-
+        config.write(args)
         args.func()
 
     except KeyboardInterrupt:

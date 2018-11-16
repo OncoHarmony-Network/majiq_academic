@@ -7,7 +7,7 @@ import numpy as np
 from voila import constants
 from voila.api.view_matrix import ViewHeterogens, ViewDeltaPsi, ViewPsi
 from voila.api.view_splice_graph_sqlite import ViewSpliceGraph
-from voila.config import Config
+from voila.config import ViewConfig
 from voila.exceptions import UnknownAnalysisType, IndexNotFound
 from voila.utils.voila_log import voila_log
 from voila.vlsv import matrix_area
@@ -19,7 +19,7 @@ dpsi_keys = ['lsv_id', 'gene_id', 'gene_name', 'excl_incl', 'dpsi_threshold', 'c
 
 class Index:
     def __init__(self):
-        analysis_type = Config().analysis_type
+        analysis_type = ViewConfig().analysis_type
 
         if analysis_type == constants.ANALYSIS_PSI:
             index = self._psi
@@ -48,7 +48,7 @@ class Index:
             return index_in_h
 
     def _heterogen(self):
-        config = Config()
+        config = ViewConfig()
         log = voila_log()
 
         voila_dir = Path(config.voila_file).parents[0]
@@ -78,7 +78,7 @@ class Index:
             log.info('Index created')
 
     def _deltapsi(self):
-        config = Config()
+        config = ViewConfig()
         log = voila_log()
         force_index = remove_index = config.force_index
 
@@ -132,7 +132,7 @@ class Index:
                     h.create_dataset('index', voila_index.shape, data=voila_index)
 
     def _psi(self):
-        config = Config()
+        config = ViewConfig()
         log = voila_log()
         force_index = remove_index = config.force_index
 
@@ -185,7 +185,7 @@ class Index:
         except AttributeError:
             pass
 
-        config = Config()
+        config = ViewConfig()
 
         with h5py.File(config.voila_file, 'r') as h:
             try:

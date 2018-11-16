@@ -2,12 +2,15 @@ import gunicorn.app.base
 from gunicorn.six import iteritems
 
 from voila import constants
+from voila.config import ViewConfig
+from voila.index import Index
 from voila.view import deltapsi, heterogen, psi
-from voila.config import Config
 
 
 def run_service():
-    config = Config()
+
+    Index()
+    config = ViewConfig()
     analysis_type = config.analysis_type
 
     # kwargs = {
@@ -42,11 +45,11 @@ def run_service():
 
 
 def number_of_workers():
-    return (Config().nproc * 2) + 1
+    return (ViewConfig().nproc * 2) + 1
 
 
 def number_of_threads():
-    return Config().nproc * 2
+    return ViewConfig().nproc * 2
 
 
 class StandaloneApplication(gunicorn.app.base.BaseApplication):
