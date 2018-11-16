@@ -30,7 +30,7 @@ class AnalysisTypeNotFound(Exception):
 
 
 _ViewConfig = namedtuple('ViewConfig', ['voila_file', 'voila_files', 'splice_graph_file', 'analysis_type', 'nproc',
-                                        'port', 'force_index', 'debug', 'silent'])
+                                        'force_index', 'debug', 'silent', 'port'])
 _ViewConfig.__new__.__defaults__ = (None,) * len(_ViewConfig._fields)
 _TsvConfig = namedtuple('TsvConfig', ['file_name', 'voila_files', 'voila_file', 'splice_graph_file',
                                       'non_changing_threshold', 'nproc', 'threshold', 'analysis_type', 'show_all',
@@ -143,12 +143,6 @@ def write(args):
     settings = 'SETTINGS'
     filters = 'FILTERS'
 
-    config_parser.add_section(settings)
-    for key, value in attrs.items():
-        if value:
-            config_parser.set(settings, key, str(value))
-    config_parser.set(settings, 'analysis_type', analysis_type)
-
     for filter in ['lsv_types', 'lsv_ids', 'gene_ids', 'gene_names']:
         if filter in attrs and attrs[filter]:
             try:
@@ -156,6 +150,14 @@ def write(args):
             except configparser.NoSectionError:
                 config_parser.add_section(filters)
                 config_parser.set(filters, filter, '\n'.join(attrs[filter]))
+
+            del attrs[filter]
+
+    config_parser.add_section(settings)
+    for key, value in attrs.items():
+        if isinstance(value, int) or value:
+            config_parser.set(settings, key, str(value))
+    config_parser.set(settings, 'analysis_type', analysis_type)
 
     config_parser.add_section(files)
     config_parser.set(files, 'voila', '\n'.join(str(m) for m in voila_files))

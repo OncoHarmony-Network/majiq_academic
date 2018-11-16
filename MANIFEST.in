@@ -1,4 +1,3 @@
-recursive-include voila/app/templates *
-recursive-include voila/app/static *
-recursive-include voila/api *
+recursive-include voila/view/templates *
+recursive-include voila/view/static *
 recursive-include majiq/data *
