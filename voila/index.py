@@ -21,16 +21,19 @@ class Index:
     def __init__(self):
         analysis_type = ViewConfig().analysis_type
 
-        if analysis_type == constants.ANALYSIS_PSI:
-            index = self._psi
-        elif analysis_type == constants.ANALYSIS_DELTAPSI:
-            index = self._deltapsi
-        elif analysis_type == constants.ANALYSIS_HETEROGEN:
-            index = self._heterogen
-        else:
-            raise UnknownAnalysisType(analysis_type)
+        # The case where there's no analysis type, we're assuming this is splice graph only.
+        if analysis_type:
 
-        index()
+            if analysis_type == constants.ANALYSIS_PSI:
+                index = self._psi
+            elif analysis_type == constants.ANALYSIS_DELTAPSI:
+                index = self._deltapsi
+            elif analysis_type == constants.ANALYSIS_HETEROGEN:
+                index = self._heterogen
+            else:
+                raise UnknownAnalysisType(analysis_type)
+
+            index()
 
     @staticmethod
     def _check_strings(*strings):

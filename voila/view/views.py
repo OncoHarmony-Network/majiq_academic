@@ -3,8 +3,9 @@ from gunicorn.six import iteritems
 
 from voila import constants
 from voila.config import ViewConfig
+from voila.exceptions import UnknownAnalysisType
 from voila.index import Index
-from voila.view import deltapsi, heterogen, psi
+from voila.view import deltapsi, heterogen, psi, splicegraph
 
 
 def run_service():
@@ -19,7 +20,10 @@ def run_service():
         'worker_class': 'gthread'
     }
 
-    if analysis_type == constants.ANALYSIS_PSI:
+    if not analysis_type:
+        StandaloneApplication(splicegraph.app, options).run()
+
+    elif analysis_type == constants.ANALYSIS_PSI:
         StandaloneApplication(psi.app, options).run()
 
     elif analysis_type == constants.ANALYSIS_DELTAPSI:
@@ -27,6 +31,9 @@ def run_service():
 
     elif analysis_type == constants.ANALYSIS_HETEROGEN:
         StandaloneApplication(heterogen.app, options).run()
+
+    else:
+        raise UnknownAnalysisType(analysis_type)
 
 
 def number_of_workers():

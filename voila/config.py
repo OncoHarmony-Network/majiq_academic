@@ -6,28 +6,9 @@ from pathlib import Path
 
 from voila import constants
 from voila.api import Matrix, SpliceGraph
+from voila.exceptions import FoundNoSpliceGraphFile, FoundMoreThanOneSpliceGraph, \
+    MixedAnalysisTypeVoilaFiles, FoundMoreThanOneVoilaFile, AnalysisTypeNotFound
 from voila.utils.voila_log import voila_log
-
-
-class FoundNoSpliceGraphFile(Exception):
-    pass
-
-
-class FoundMoreThanOneSpliceGraph(Exception):
-    pass
-
-
-class MixedAnalysisTypeVoilaFiles(Exception):
-    pass
-
-
-class FoundMoreThanOneVoilaFile(Exception):
-    pass
-
-
-class AnalysisTypeNotFound(Exception):
-    pass
-
 
 _ViewConfig = namedtuple('ViewConfig', ['voila_file', 'voila_files', 'splice_graph_file', 'analysis_type', 'nproc',
                                         'force_index', 'debug', 'silent', 'port'])
@@ -131,11 +112,17 @@ def write(args):
     attrs = (a for a in attrs if not a[0].startswith('_'))
     attrs = dict(attrs)
 
-    voila_files = find_voila_files(args.files)
     sg_file = find_splice_graph_file(args.files)
-    analysis_type = find_analysis_type(voila_files)
 
-    for remove_key in ['files', 'func', 'logger']:
+    if args.splice_graph_only:
+        analysis_type = ''
+        voila_files = []
+
+    else:
+        voila_files = find_voila_files(args.files)
+        analysis_type = find_analysis_type(voila_files)
+
+    for remove_key in ['files', 'func', 'logger', 'splice_graph_only']:
         del attrs[remove_key]
 
     config_parser = configparser.ConfigParser()
