@@ -365,7 +365,7 @@ namespace grimoire {
         for(const auto &exon_mapIt: exon_map_){
             Exon * ex = exon_mapIt.second ;
 
-            ss = strand_ == '+' ;
+            const bool ss = strand_ == '+' ;
             if (ex->is_lsv(ss)) {
                 lsvObj = new LSV(this, ex, ss) ;
                 set<string> t1 ;
