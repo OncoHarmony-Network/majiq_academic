@@ -365,8 +365,9 @@ namespace grimoire {
         for(const auto &exon_mapIt: exon_map_){
             Exon * ex = exon_mapIt.second ;
 
-            if (ex->is_lsv(true)) {
-                lsvObj = new LSV(this, ex, true) ;
+            ss = strand_ == '+' ;
+            if (ex->is_lsv(ss)) {
+                lsvObj = new LSV(this, ex, ss) ;
                 set<string> t1 ;
                 lsvObj->get_variations(t1) ;
                 pair<set<string>, LSV*> _p1 (t1, lsvObj) ;
@@ -374,9 +375,9 @@ namespace grimoire {
                 lsvGenes.push_back(lsvObj) ;
             }
 
-            if (ex->is_lsv(false)) {
+            if (ex->is_lsv(!ss)) {
 
-                lsvObj = new LSV(this, ex, false) ;
+                lsvObj = new LSV(this, ex, !ss) ;
                 set<string> t1 ;
                 lsvObj->get_variations(t1) ;
                 bool rem_src = false ;
@@ -535,9 +536,9 @@ namespace grimoire {
 
         bool(*bfunc)(unsigned int, unsigned int) = b ? fless: fgrt ;
 
-//cout << id_ << " : " ;
-//for (auto const &p: sp_list) cout << "[ " << p.coord << ", " << p.ref_coord << ", " << p.jun_ptr->get_key() << " ]";
-//cout << "\n" ;
+cout << id_ << " : " ;
+for (auto const &p: sp_list) cout << "[ " << p.coord << ", " << p.ref_coord << ", " << p.jun_ptr->get_key() << " ]";
+cout << "\n" ;
 
         string ext_type = (ss != b) ? "t" : "s" ;
 
@@ -592,6 +593,7 @@ namespace grimoire {
         }
         if (ir_ptr_ != nullptr) ext_type += "|i" ;
 
+cout << id_ << " :: " << ext_type << "\n" ;
         return ext_type ;
     }
 

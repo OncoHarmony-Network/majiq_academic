@@ -300,12 +300,12 @@ namespace io_bam {
             junc_limit_index_ = junc_vec.size() ;
         if (r < 0) {
             fprintf(stderr, "Error closing input.\n");
-            exit_code = 1;
+            exit_code = 1 ;
         }
         if (p.pool)
             hts_tpool_destroy(p.pool);
 
-        return exit_code;
+        return exit_code ;
     }
 
     int IOBam::normalize_stacks(vector<float> vec, float sreads, int npos, float fitfunc_r, float pvalue_limit){
