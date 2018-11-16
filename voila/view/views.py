@@ -8,27 +8,12 @@ from voila.view import deltapsi, heterogen, psi
 
 
 def run_service():
-
     Index()
     config = ViewConfig()
     analysis_type = config.analysis_type
 
-    # kwargs = {
-    #     'listen': '127.0.0.1:' + str(config.port),
-    #     'threads': config.nproc
-    # }
-    #
-    # if analysis_type == constants.ANALYSIS_PSI:
-    #     serve(psi.view, **kwargs)
-    #
-    # elif analysis_type == constants.ANALYSIS_DELTAPSI:
-    #     serve(deltapsi.view, **kwargs)
-    #
-    # elif analysis_type == constants.ANALYSIS_HETEROGEN:
-    #     serve(heterogen.view, **kwargs)
-
     options = {
-        'bind': '%s:%s' % ('127.0.0.1', config.port),
+        'bind': '127.0.0.1:' + str(config.port),
         'workers': number_of_workers(),
         'threads': number_of_threads(),
         'worker_class': 'gthread'
