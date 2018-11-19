@@ -114,7 +114,7 @@ def write(args):
 
     sg_file = find_splice_graph_file(args.files)
 
-    if args.splice_graph_only:
+    if hasattr(args, 'splice_graph_only') and args.splice_graph_only:
         analysis_type = ''
         voila_files = []
 
@@ -123,7 +123,10 @@ def write(args):
         analysis_type = find_analysis_type(voila_files)
 
     for remove_key in ['files', 'func', 'logger', 'splice_graph_only']:
-        del attrs[remove_key]
+        try:
+            del attrs[remove_key]
+        except KeyError:
+            pass
 
     config_parser = configparser.ConfigParser()
     files = 'FILES'
