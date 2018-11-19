@@ -536,9 +536,9 @@ namespace grimoire {
 
         bool(*bfunc)(unsigned int, unsigned int) = b ? fless: fgrt ;
 
-cout << id_ << " : " ;
-for (auto const &p: sp_list) cout << "[ " << p.coord << ", " << p.ref_coord << ", " << p.jun_ptr->get_key() << " ]";
-cout << "\n" ;
+//cout << id_ << " : " ;
+//for (auto const &p: sp_list) cout << "[ " << p.coord << ", " << p.ref_coord << ", " << p.jun_ptr->get_key() << " ]";
+//cout << "\n" ;
 
         string ext_type = (ss != b) ? "t" : "s" ;
 
