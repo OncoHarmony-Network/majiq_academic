@@ -73,12 +73,12 @@ namespace grimoire{
             static int RegionSearch(vector<myRegion *>  &a, int n, int coord) {
                 int l = 0 ;
                 int h = n ; // Not n - 1
-                while (l < h) {
+                while (l < (h-1)) {
                     int mid = (l + h) / 2 ;
-                    if (a[mid]->get_start() >= coord) {
-                        h = mid ;
+                    if (a[mid]->get_start() > coord) {
+                        h = mid - 1 ;
                     } else {
-                        l = mid +1 ;
+                        l = mid ;
                     }
                 }
                 return l-1;
