@@ -168,24 +168,19 @@ namespace io_bam {
 
     int IOBam::parse_read_for_ir(bam_hdr_t *header, bam1_t *read) {
         int n_cigar = read->core.n_cigar ;
-//cerr << "R1: read id: " << bam_get_qname(read) << " : " << n_cigar<< "\n" ;
         if (n_cigar <= 1 || !_unique(read)) // max one cigar operation exists(likely all matches)
             return 0;
         const int read_pos = read->core.pos;
         const string chrom(header->target_name[read->core.tid]) ;
-//cerr << "R2 " << read_pos << " :: " << chrom << "\n" ;
-
         if (intronVec_.count(chrom) == 0)
              return 0 ;
-//cerr << "R3\n" ;
+
         const int  nintrons = intronVec_[chrom].size() ;
         uint32_t *cigar = bam_get_cigar(read) ;
-//cerr << "R4\n" ;
 
-        int idx = _Region::RegionSearch(intronVec_[chrom], nintrons, read_pos) ;
-//cerr << "R5" << idx << "\n" ;
-        if (idx<0) return 0 ;
-//cerr << "R6 \n" ;
+        vector<Intron *>::iterator low = lower_bound (intronVec_[chrom].begin(), intronVec_[chrom].end(),
+                                                      read_pos, _Region::func_comp ) ;
+        if (low ==  intronVec_[chrom].end()) return 0 ;
         vector<pair<int, int>> junc_record ;
 
         int off = 0;
@@ -206,9 +201,9 @@ namespace io_bam {
                 off += ol ;
             }
         }
-        for(int i=idx; i<nintrons; ++i){
+        for (; low < intronVec_[chrom].end() ; low++){
             bool junc_found = false ;
-            Intron * intron = intronVec_[chrom][i] ;
+            Intron * intron = *low;
             if(intron->get_start()> read_pos) break ;
             for (const auto & j:junc_record){
                 if ((j.first>=intron->get_start() && j.first<= intron->get_end() )

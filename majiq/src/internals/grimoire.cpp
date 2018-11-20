@@ -597,71 +597,76 @@ cout << id_ << " :: " << ext_type << "\n" ;
         return ext_type ;
     }
 
-
-    vector<Intron *> find_intron_retention2(vector<Gene*> & gene_list, char strand, int start, int end){
-        vector<Intron*> ir_vec ;
-        const int n = gene_list.size() ;
-        int gIdx = Gene::RegionSearch(gene_list, n, end) ;
-
-        if (gIdx <0){ return ir_vec;}
-
-        while(gIdx < n && gene_list[gIdx]->get_start()<= end){
-            if (gene_list[gIdx]->get_start()<= end && gene_list[gIdx]->get_end()>= start && gene_list[gIdx]->get_strand() == strand){
-                const int nir = (gene_list[gIdx]->intron_vec_).size() ;
-                int irIdx = Intron::RegionSearch(gene_list[gIdx]->intron_vec_, nir, start);
-                if (irIdx <0){ return ir_vec ;}
-
-                for(int i = irIdx; i<nir; ++i){
-                    Intron * irp = gene_list[gIdx]->intron_vec_[i] ;
-                    if(irp->get_start()> end){
-                        break ;
-                    }
-                    if(irp->get_end() < start){
-                        continue ;
-                    }
-                    ir_vec.push_back(irp) ;
-                }
-            }
-            gIdx++ ;
-        }
-        return ir_vec;
-    }
-
-    vector<Intron *> find_intron_retention3(vector<Gene*> & gene_list, string geneid, int start, int end){
-        vector<Intron*> ir_vec ;
-
-        const int n = gene_list.size() ;
-
-        for (int gIdx=0; gIdx<n; gIdx++){
-            if (gene_list[gIdx]->get_id() == geneid){
-                const int nir = (gene_list[gIdx]->intron_vec_).size() ;
-                int irIdx = Intron::RegionSearch(gene_list[gIdx]->intron_vec_, nir, start);
-                if (irIdx <0){ return ir_vec ;}
-
-                for(int i = irIdx; i<nir; ++i){
-                    Intron * irp = gene_list[gIdx]->intron_vec_[i] ;
-                    if(irp->get_start()> end){
-                        break ;
-                    }
-                    if(irp->get_end() < start){
-                        continue ;
-                    }
-                    ir_vec.push_back(irp) ;
-                }
-                break ;
-            }
-        }
-        return ir_vec ;
-    }
+//
+//    vector<Intron *> find_intron_retention2(vector<Gene*> & gene_list, char strand, int start, int end){
+//        vector<Intron*> ir_vec ;
+//        const int n = gene_list.size() ;
+//        int gIdx = Gene::RegionSearch(gene_list, n, end) ;
+//
+//        if (gIdx <0){ return ir_vec;}
+//
+//        while(gIdx < n && gene_list[gIdx]->get_start()<= end){
+//            if (gene_list[gIdx]->get_start()<= end && gene_list[gIdx]->get_end()>= start && gene_list[gIdx]->get_strand() == strand){
+//                const int nir = (gene_list[gIdx]->intron_vec_).size() ;
+//                int irIdx = Intron::RegionSearch(gene_list[gIdx]->intron_vec_, nir, start);
+//                if (irIdx <0){ return ir_vec ;}
+//
+//                for(int i = irIdx; i<nir; ++i){
+//                    Intron * irp = gene_list[gIdx]->intron_vec_[i] ;
+//                    if(irp->get_start()> end){
+//                        break ;
+//                    }
+//                    if(irp->get_end() < start){
+//                        continue ;
+//                    }
+//                    ir_vec.push_back(irp) ;
+//                }
+//            }
+//            gIdx++ ;
+//        }
+//        return ir_vec;
+//    }
+//
+//    vector<Intron *> find_intron_retention3(vector<Gene*> & gene_list, string geneid, int start, int end){
+//        vector<Intron*> ir_vec ;
+//
+//        const int n = gene_list.size() ;
+//
+//        for (int gIdx=0; gIdx<n; gIdx++){
+//            if (gene_list[gIdx]->get_id() == geneid){
+//                const int nir = (gene_list[gIdx]->intron_vec_).size() ;
+//                int irIdx = Intron::RegionSearch(gene_list[gIdx]->intron_vec_, nir, start);
+//                if (irIdx <0){ return ir_vec ;}
+//
+//                for(int i = irIdx; i<nir; ++i){
+//                    Intron * irp = gene_list[gIdx]->intron_vec_[i] ;
+//                    if(irp->get_start()> end){
+//                        break ;
+//                    }
+//                    if(irp->get_end() < start){
+//                        continue ;
+//                    }
+//                    ir_vec.push_back(irp) ;
+//                }
+//                break ;
+//            }
+//        }
+//        return ir_vec ;
+//    }
 
     vector<Intron *> find_intron_retention(Gene * gObj, int start, int end){
         vector<Intron*> ir_vec ;
         const int nir = (gObj->intron_vec_).size() ;
-        int irIdx = Intron::RegionSearch(gObj->intron_vec_, nir, start);
-        if (irIdx <0){ return ir_vec ;}
+        vector<Intron *>::iterator low = lower_bound (gObj->intron_vec_.begin(), gObj->intron_vec_.end(),
+                                                      start, _Region::func_comp ) ;
+        if (low ==  gObj->intron_vec_.end()) return ir_vec ;
+        for (; low < gObj->intron_vec_.end() ; low++){
+            Intron * irp = *low;
+//        int irIdx = Intron::RegionSearch(gObj->intron_vec_, nir, start);
+//        if (irIdx <0){ return ir_vec ;}
 
-        for(int i = irIdx; i<nir; ++i){
-            Intron * irp = gObj->intron_vec_[i] ;
+//        for(int i = irIdx; i<nir; ++i){
+//            Intron * irp = gObj->intron_vec_[i] ;
             if(irp->get_start()> end){
                 break ;
             }
