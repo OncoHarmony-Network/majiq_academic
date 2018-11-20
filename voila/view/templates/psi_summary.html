@@ -42,40 +42,49 @@
                         const lsv_id = tds[1].textContent;
                         json_ajax('{{ url_for("lsv_data") }}/' + encodeURIComponent(lsv_id))
                             .then(lsv_data => {
-                                    const lsv = new Lsv(lsv_data);
-                                    const violin = new Violin(lsv_data.lsv);
-                                    const s = n.querySelector('.psi-violin-plot');
+                                const lsv = new Lsv(lsv_data);
+                                const violin = new Violin(lsv_data.lsv);
+                                const s = n.querySelector('.psi-violin-plot');
 
-                                    lsv.cartoon(n.querySelector('.lsv-cartoon'));
-                                    lsv.draw_lsv_compact_stack_bars(n.querySelector('.lsv-single-compact-percentiles'));
-                                    $(s).hide();
-                                    violin.psi(s);
+                                lsv.cartoon(n.querySelector('.lsv-cartoon'));
+                                lsv.draw_lsv_compact_stack_bars(n.querySelector('.lsv-single-compact-percentiles'));
+                                $(s).hide();
+                                violin.psi(s);
 
-                                    n.querySelector('.highlight-form').onchange = (event) => {
+                                n.querySelector('.highlight-form').onchange = (event) => {
 
-                                        const input = event.target;
-                                        if (input.classList.contains('psi-weighted') && input.checked) {
-                                            input
-                                                .closest('.highlight-form')
-                                                .querySelectorAll('.highlight')
-                                                .forEach(hl => hl.checked = true)
-                                        }
-
-                                        const hl_data = Array.from(document.querySelectorAll('.highlight-form'))
-                                            .map(f => {
-                                                const lsv_id = f.closest('tr').querySelectorAll('td')[1].textContent;
-                                                const highlight = f.querySelector('.highlight').checked;
-                                                const weighted = f.querySelector('.psi-weighted').checked;
-                                                return [lsv_id, highlight, weighted];
-                                            });
-
-                                        send_ajax('{{ url_for("lsv_highlight") }}', hl_data).then(lsvs => {
-                                            sgs.highlight(lsvs);
-                                        })
-
+                                    const input = event.target;
+                                    if (input.classList.contains('psi-weighted') && input.checked) {
+                                        input
+                                            .closest('.highlight-form')
+                                            .querySelectorAll('.highlight')
+                                            .forEach(hl => hl.checked = true)
                                     }
+
+                                    const hl_data = Array.from(document.querySelectorAll('.highlight-form'))
+                                        .map(f => {
+                                            const lsv_id = f.closest('tr').querySelectorAll('td')[1].textContent;
+                                            const highlight = f.querySelector('.highlight').checked;
+                                            const weighted = f.querySelector('.psi-weighted').checked;
+                                            return [lsv_id, highlight, weighted];
+                                        });
+
+                                    send_ajax('{{ url_for("lsv_highlight") }}', hl_data).then(lsvs => {
+                                        sgs.highlight(lsvs);
+                                    })
+
                                 }
-                            )
+                            });
+
+                        n.querySelectorAll('.copy-lsv')
+                            .forEach(c => {
+                                json_ajax('{{ url_for("copy_lsv") }}/' + encodeURIComponent(lsv_id))
+                                    .then(lsv_data => {
+                                        new ClipboardJS(c, {
+                                            text: () => JSON.stringify(lsv_data).replace(/"/g, '\\"')
+                                        })
+                                    })
+                            })
                     })
                 );
             })
@@ -166,6 +175,12 @@
                     {
                         targets: 4,
                         sortable: false,
+                        render: () => {
+                            const btn = document.createElement('button');
+                            btn.textContent = 'Copy LSV';
+                            btn.classList.add('pure-button', 'copy-lsv');
+                            return btn.outerHTML
+                        }
                     },
                 ]
             });

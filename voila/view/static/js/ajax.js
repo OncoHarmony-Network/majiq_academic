@@ -11,7 +11,7 @@ const ajax = async url => {
     })
 };
 
-const json_ajax = url => {
+const json_ajax = async url => {
     return ajax(url)
         .then(response => JSON.parse(response))
 };

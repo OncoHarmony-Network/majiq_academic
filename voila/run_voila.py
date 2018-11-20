@@ -104,7 +104,7 @@ view_parser.add_argument('--silent', action='store_true', help='Do not write log
 view_parser.add_argument('-j', '--nproc', type=int, default=min(os.cpu_count(), max(int(os.cpu_count() / 2), 1)),
                          help='Number of processes used to produce output. Default is half of system processes. ')
 view_parser.add_argument('-p', '--port', type=int, default=0,
-                         help='Set port to visualize MAJIQ output. Default is a random port.')
+                         help='Set service port. Default is a random.')
 view_parser.add_argument('--force-index', action='store_true',
                          help='Create index even if already exists.')
 view_parser.add_argument('--splice-graph-only', action='store_true', help=argparse.SUPPRESS)
@@ -133,7 +133,6 @@ def main():
     """
 
     log.info('Command: {0}'.format(' '.join(sys.argv)))
-
     log.info('Voila v{}'.format(constants.VERSION))
 
     try:
@@ -154,8 +153,6 @@ def main():
     except Exception as e:
         log.exception(e)
         exit(2)
-
-    # VoilaPool().close()
 
 
 if __name__ == '__main__':
