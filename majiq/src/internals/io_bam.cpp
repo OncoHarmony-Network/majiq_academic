@@ -58,12 +58,10 @@ namespace io_bam {
         vector<Gene*> temp_vec2 ;
         Junction * junc = new Junction(start, end, false) ;
         const string key = junc->get_key() ;
-        int i = Gene::RegionSearch(glist_[chrom], n, end) ;
+        vector<int>::iterator low = lower_bound (glist_[chrom].begin(), glist_[chrom].end(), start, _Region::func_comp ) ;
 
-        if(i<0) return ;
-        while(i< n){
-            Gene * gObj  = glist_[chrom][i] ;
-            ++i ;
+        for (; low < glist_[chrom].end() ; low++){
+            Gene * gObj = *low ;
             if (gObj->get_start() >= end) break ;
             if (gObj->get_end() < start) continue ;
 //            if (start< gObj->get_start() || end> gObj->get_end()) continue ;

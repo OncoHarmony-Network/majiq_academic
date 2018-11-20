@@ -69,19 +69,9 @@ namespace grimoire{
             void        set_end(int end1)       { end_ = end1 ; }
             inline int  length()                { return end_ - start_ ; }
 
-            template <class myRegion>
-            static int RegionSearch(vector<myRegion *>  &a, int n, int coord) {
-                int l = 0 ;
-                int h = n ; // Not n - 1
-                while (l < (h-1)) {
-                    int mid = (l + h) / 2 ;
-                    if (a[mid]->get_start() > coord) {
-                        h = mid - 1 ;
-                    } else {
-                        l = mid ;
-                    }
-                }
-                return l-1;
+
+            static bool func_comp (_Region* a, int coord){
+                return a->get_end() < coord ;
             }
 
             template <class myRegion>
