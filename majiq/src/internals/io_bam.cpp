@@ -58,7 +58,7 @@ namespace io_bam {
         vector<Gene*> temp_vec2 ;
         Junction * junc = new Junction(start, end, false) ;
         const string key = junc->get_key() ;
-        vector<int>::iterator low = lower_bound (glist_[chrom].begin(), glist_[chrom].end(), start, _Region::func_comp ) ;
+        vector<Gene *>::iterator low = lower_bound (glist_[chrom].begin(), glist_[chrom].end(), start, _Region::func_comp ) ;
 
         for (; low < glist_[chrom].end() ; low++){
             Gene * gObj = *low ;
