@@ -1,3 +1,5 @@
+from urllib.parse import urlencode
+
 import gunicorn.app.base
 from flask import jsonify
 from gunicorn.six import iteritems
@@ -7,6 +9,7 @@ from voila.api.view_splice_graph_sqlite import ViewSpliceGraph
 from voila.config import ViewConfig
 from voila.exceptions import UnknownAnalysisType
 from voila.index import Index
+from voila.utils.voila_log import voila_log
 from voila.view import deltapsi, heterogen, psi, splicegraph
 
 
@@ -15,11 +18,17 @@ def run_service():
     config = ViewConfig()
     analysis_type = config.analysis_type
 
+    bind = '127.0.0.1:' + str(config.port)
+
+    voila_log().info('Server started at: http://' + bind)
+
     options = {
-        'bind': '127.0.0.1:' + str(config.port),
+        'bind': bind,
         'workers': number_of_workers(),
         'threads': number_of_threads(),
-        'worker_class': 'gthread'
+        'worker_class': 'gthread',
+        'loglevel': 'warning',
+        'disable_redirect_access_to_syslog': True
     }
 
     if not analysis_type:
@@ -120,3 +129,18 @@ def copy_lsv(lsv_id, view_matrix):
             'bins': bins
         }
     })
+
+
+def ucsc_link(lsv_exons, genome, chromosome, lsv_id):
+    # I know that some lsv ids contain half exons... now we just need to find an example to work from
+    assert 'na' not in lsv_id.split(':')[-1].split('-')
+
+    start = max(e for es in lsv_exons for e in es if e != -1)
+    end = min(e for es in lsv_exons for e in es if e != -1)
+
+    query_string = {
+        'db': genome,
+        'position': chromosome + ':' + str(start) + '-' + str(end)
+    }
+
+    return 'http://genome.ucsc.edu/cgi-bin/hgTracks?' + urlencode(query_string)

@@ -205,11 +205,19 @@
                     {
                         targets: 6,
                         orderable: false,
-                        render: () => {
-                            const btn = document.createElement('button');
-                            btn.textContent = 'Copy LSV';
-                            btn.classList.add('pure-button', 'copy-lsv');
-                            return btn.outerHTML
+                        render: data => {
+                            const copy_lsv = document.createElement('button');
+                            copy_lsv.textContent = 'Copy LSV';
+                            copy_lsv.classList.add('pure-button', 'copy-lsv');
+
+                            const ucsc_a = document.createElement('a');
+                            ucsc_a.href = data;
+                            ucsc_a.target = '_blank';
+                            const ucsc_img = document.createElement('img');
+                            ucsc_img.src = '{{ url_for('static', filename="img/ucsc.png") }}';
+                            ucsc_a.appendChild(ucsc_img);
+
+                            return copy_lsv.outerHTML + ucsc_a.outerHTML
                         }
                     },
                 ]

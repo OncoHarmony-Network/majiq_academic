@@ -38,7 +38,7 @@ def gene(gene_id):
 
 @app.route('/index-table', methods=('POST',))
 def index_table():
-    with ViewPsi() as v:
+    with ViewPsi() as v, ViewSpliceGraph() as sg:
         grp_name = v.group_names[0]
 
         dt = DataTables(Index.psi(), ('gene_name', 'lsv_id'))
@@ -48,12 +48,18 @@ def index_table():
             gene_id = index_row['gene_id'].decode('utf-8')
             lsv_id = index_row['lsv_id'].decode('utf-8')
 
+            psi = v.lsv(lsv_id)
+            gene = sg.gene(gene_id)
+            lsv_exons = sg.lsv_exons(gene, psi.lsv_junctions)
+
+            ucsc = views.ucsc_link(lsv_exons, sg.genome, gene.chromosome, lsv_id)
+
             records[idx] = [
-                [url_for('gene', gene_id=gene_id), gene_name],
+                {'href': url_for('gene', gene_id=gene_id), 'gene_name': gene_name},
                 lsv_id,
-                v.lsv(lsv_id).lsv_type,
+                psi.lsv_type,
                 grp_name,
-                ''
+                ucsc
             ]
 
         return jsonify(dict(dt))
@@ -84,7 +90,7 @@ def splice_graph(gene_id):
 
 @app.route('/summary-table/<gene_id>', methods=('POST',))
 def summary_table(gene_id):
-    with ViewPsi() as v:
+    with ViewPsi() as v, ViewSpliceGraph() as sg:
         grp_name = v.group_names[0]
         index_data = Index.psi(gene_id)
 
@@ -100,6 +106,12 @@ def summary_table(gene_id):
             lsv_id = record['lsv_id'].decode('utf-8')
             psi = v.lsv(lsv_id)
             lsv_type = psi.lsv_type
+
+            gene = sg.gene(gene_id)
+            lsv_exons = sg.lsv_exons(gene, psi.junctions)
+
+            ucsc = views.ucsc_link(lsv_exons, sg.genome, gene.chromosome, lsv_id)
+
             try:
                 highlight = session['highlight'][lsv_id]
             except KeyError:
@@ -110,7 +122,7 @@ def summary_table(gene_id):
                 lsv_id,
                 lsv_type,
                 grp_name,
-                ''
+                ucsc
             ]
 
         return jsonify(dict(dt))

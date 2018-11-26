@@ -82,7 +82,7 @@ def lsv_data(lsv_id):
 
 @app.route('/index-table', methods=('POST',))
 def index_table():
-    with ViewDeltaPsi() as p:
+    with ViewDeltaPsi() as p, ViewSpliceGraph() as sg:
         dt = DataTables(Index.delta_psi(), ('gene_name', 'lsv_id', '', 'excl_incl'), slice=False)
         dt.delta_psi_filters()
         dt.slice()
@@ -92,13 +92,20 @@ def index_table():
             excl_incl = index_row['excl_incl'].item()
             gene_id = index_row['gene_id'].decode('utf-8')
             gene_name = index_row['gene_name'].decode('utf-8')
+            dpsi = p.lsv(lsv_id)
+
+            gene = sg.gene(gene_id)
+            lsv_junctions = dpsi.junctions
+            lsv_exons = sg.lsv_exons(gene, lsv_junctions)
+
+            ucsc = views.ucsc_link(lsv_exons, sg.genome, gene.chromosome, lsv_id)
 
             records[idx] = [
                 [url_for('gene', gene_id=gene_id), gene_name],
                 lsv_id,
-                p.lsv(lsv_id).lsv_type,
+                dpsi.lsv_type,
                 excl_incl,
-                ''
+                ucsc
             ]
 
         return jsonify(dict(dt))
@@ -195,7 +202,7 @@ def lsv_highlight():
 
 @app.route('/summary-table/<gene_id>', methods=('POST',))
 def summary_table(gene_id):
-    with ViewDeltaPsi() as v:
+    with ViewDeltaPsi() as v, ViewSpliceGraph() as sg:
 
         grp_names = v.group_names
         index_data = Index.delta_psi(gene_id)
@@ -219,6 +226,12 @@ def summary_table(gene_id):
             except KeyError:
                 highlight = [False, False]
 
+            gene = sg.gene(gene_id)
+            lsv_junctions = dpsi.junctions
+            lsv_exons = sg.lsv_exons(gene, lsv_junctions)
+
+            ucsc = views.ucsc_link(lsv_exons, sg.genome, gene.chromosome, lsv_id)
+
             records[idx] = [
                 highlight,
                 lsv_id,
@@ -226,7 +239,7 @@ def summary_table(gene_id):
                 grp_names[0],
                 excl_incl,
                 grp_names[1],
-                ''
+                ucsc
             ]
 
         return jsonify(dict(dt))
