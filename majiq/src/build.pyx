@@ -241,17 +241,8 @@ cdef _find_junctions(list file_list, map[string, Gene*]& gene_map, vector[string
     cdef pair[string, unsigned int] it
     cdef pair[string, Gene *] git
 
-    # for git in gene_map:
-    #     gg = git.second
-    #     if gene_list.count(gg.get_chromosome()) == 0:
-    #         gene_list[gg.get_chromosome()] = gene_vect_t()
-    #     gene_list[gg.get_chromosome()].push_back(gg)
-    #
-    # for vector_gene in gene_list:
-    #     sortGeneList(gene_list[vector_gene.first])
 
     prepare_genelist(gene_map, gene_list)
-
 
     for tmp_str, group_list in conf.tissue_repl.items():
         name = tmp_str.encode('utf-8')
@@ -273,12 +264,12 @@ cdef _find_junctions(list file_list, map[string, Gene*]& gene_map, vector[string
                 with gil:
                     logger.debug('Total Junctions and introns %s' %(njunc))
 
-            # if n_junctions == 0:
-            #     logger.warning('No junctions where found on sample %s' % bamfile)
-            #     fitfunc_r = 0
-            # else:
-            #     fitfunc_r = fit_nb(c_iobam.junc_vec, n_junctions, eff_len, nbdisp=0.1, logger=logger)
-            fitfunc_r = 0
+            if n_junctions == 0:
+                logger.warning('No junctions where found on sample %s' % bamfile)
+                fitfunc_r = 0
+            else:
+                fitfunc_r = fit_nb(c_iobam.junc_vec, n_junctions, eff_len, nbdisp=0.1, logger=logger)
+            # fitfunc_r = 0
 
             boots = np.zeros(shape=(njunc, m), dtype=np.float32)
             with nogil:

@@ -19,16 +19,6 @@
 using namespace std;
 namespace io_bam {
 
-//    inline bool IOBam::new_junc_values(const string key){
-//        bool res = false ;
-//        if (junc_map.count(key) == 0 ) {
-//            junc_map[key] = junc_vec.size() ;
-//            float * v = (float*) calloc(eff_len_, sizeof(float)) ;
-//            junc_vec.push_back(v) ;
-//        }
-//        return res;
-//    }
-
     char IOBam::_get_strand(bam1_t * read){
         char strn = '.';
 
@@ -51,7 +41,7 @@ namespace io_bam {
 
     void IOBam::find_junction_genes(string chrom, char strand, int start, int end,
                                     float* nreads_ptr){
-        const int n = glist_[chrom].size() ;
+//        const int n = glist_[chrom].size() ;
         bool found_stage1 = false ;
         bool found_stage2 = false ;
         vector<Gene*> temp_vec1 ;
@@ -349,7 +339,7 @@ namespace io_bam {
                 }
             }
             if (npos == 0) continue ;
-//            if (pvalue_limit > 0) npos = normalize_stacks(vec, sreads, npos, fitfunc_r, pvalue_limit) ;
+            if (pvalue_limit > 0) npos = normalize_stacks(vec, sreads, npos, fitfunc_r, pvalue_limit) ;
             if (npos == 0) continue ;
             default_random_engine generator;
             uniform_int_distribution<int> distribution(0, npos-1);
