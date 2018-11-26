@@ -50,7 +50,7 @@ def index_table():
 
             psi = v.lsv(lsv_id)
             gene = sg.gene(gene_id)
-            lsv_exons = sg.lsv_exons(gene, psi.lsv_junctions)
+            lsv_exons = sg.lsv_exons(gene, psi.junctions)
 
             ucsc = views.ucsc_link(lsv_exons, sg.genome, gene.chromosome, lsv_id)
 

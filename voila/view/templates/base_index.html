@@ -1,0 +1,30 @@
+{% extends 'base.html' %}
+
+{% block style %}
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/index.css') }}">
+{% endblock %}
+
+{% block header %}
+    <div class="content index-header">
+        <img src="{{ url_for('static', filename='img/logoOnly.svg') }}">
+    </div>
+{% endblock %}
+
+{% block content %}
+    <div class="content">
+        {% block filters %}
+        {% endblock %}
+    </div>
+    <div class="lsv-container">
+        {% block index_table %}
+        {% endblock %}
+    </div>
+{% endblock %}
+
+{% block footer %}
+    <div class="footer">
+        © BIOCIPHERS · Department of Genetics Perelman School of Medicine Department of Computer and Information Science
+        School of Engineering University of Pennsylvania
+        <img src="{{ url_for('static', filename='img/penn.jpg') }}">
+    </div>
+{% endblock %}
