@@ -48,15 +48,25 @@ parser = argparse.ArgumentParser(description='VOILA is a visualization package '
                                              'for Alternative Local Splicing Events.')
 parser.add_argument('-v', action='version', version=constants.VERSION)
 
+# log parser
+log_parser = argparse.ArgumentParser(add_help=False)
+log_parser.add_argument('-l', '--logger', help='Set log file and location.  There will be no log file if not set.')
+log_parser.add_argument('--silent', action='store_true', help='Do not write logs to standard out.')
+
+# system parser
+sys_parser = argparse.ArgumentParser(add_help=False)
+sys_parser.add_argument('-j', '--nproc', type=int, default=min(os.cpu_count(), max(int(os.cpu_count() / 2), 1)),
+                        help='Number of processes used to produce output. Default is half of system processes. ')
+sys_parser.add_argument('--debug', action='store_true')
+
 # tsv parser
 tsv_parser = argparse.ArgumentParser(add_help=False)
+required_tsv_parser = tsv_parser.add_argument_group('required named arguments')
+
 tsv_parser.add_argument('files', nargs='+', type=check_file,
                         help='List of files or directories which contains the splice graph and voila files.')
-tsv_parser.add_argument('-l', '--logger', help='Set log file and location.  There will be no log file if not set.')
-tsv_parser.add_argument('--silent', action='store_true', help='Do not write logs to standard out.')
-tsv_parser.add_argument('--debug', action='store_true')
-tsv_parser.add_argument('-j', '--nproc', type=int, default=min(os.cpu_count(), max(int(os.cpu_count() / 2), 1)),
-                        help='Number of processes used to produce output. Default is half of system processes. ')
+
+required_tsv_parser.add_argument('-f', '--file-name', required=True, help="Set the TSV file's name and location.")
 
 tsv_parser.add_argument('--threshold', type=float, default=0.2,
                         help='Filter out LSVs with no junctions predicted to change over a certain value. Even when '
@@ -70,7 +80,7 @@ tsv_parser.add_argument('--probability-threshold', type=float, default=None,
 
 tsv_parser.add_argument('--show-all', action='store_true',
                         help='Show all LSVs including those with no junction with significant change predicted.')
-tsv_parser.add_argument('-f', '--file-name', required=True, help="Set the TSV file's name and location.")
+
 tsv_parser.add_argument('--lsv-types-file', type=check_list_file, dest='lsv_types',
                         help='Location of file that contains a list of LSV types which should remain in the results. One '
                              'type per line')
@@ -98,11 +108,6 @@ tsv_parser.add_argument('--gene-ids', nargs='*', default=[],
 view_parser = argparse.ArgumentParser(add_help=False)
 view_parser.add_argument('files', nargs='+', type=check_file,
                          help='List of files or directories which contains the splice graph and voila files.')
-view_parser.add_argument('--debug', action='store_true')
-view_parser.add_argument('-l', '--logger', default=None, help='Set the location and name of log file.')
-view_parser.add_argument('--silent', action='store_true', help='Do not write logs to standard out.')
-view_parser.add_argument('-j', '--nproc', type=int, default=min(os.cpu_count(), max(int(os.cpu_count() / 2), 1)),
-                         help='Number of processes used to produce output. Default is half of system processes. ')
 view_parser.add_argument('-p', '--port', type=int, default=0,
                          help='Set service port. Default is a random.')
 view_parser.add_argument('--force-index', action='store_true',
@@ -111,9 +116,9 @@ view_parser.add_argument('--splice-graph-only', action='store_true', help=argpar
 
 # subparsers
 subparsers = parser.add_subparsers(help='')
-subparsers.add_parser('tsv', parents=[tsv_parser],
+subparsers.add_parser('tsv', parents=[tsv_parser, sys_parser, log_parser],
                       help='Generate tsv output for the supplied files.').set_defaults(func=Tsv)
-subparsers.add_parser('view', parents=[view_parser],
+subparsers.add_parser('view', parents=[view_parser, sys_parser, log_parser],
                       help='Start service to view the visualization for the supplied files.').set_defaults(
     func=run_service)
 
