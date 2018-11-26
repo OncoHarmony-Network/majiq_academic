@@ -2,9 +2,9 @@ import os
 import sys
 import psutil
 
-from majiq.src.internals.io_bam cimport IOBam, gene_vect_t
 from majiq.src.internals.grimoire cimport Junction, Gene, Exon, LSV, Jinfo, Intron
-from majiq.src.internals.grimoire cimport sortGeneList, find_intron_retention
+from majiq.src.internals.io_bam cimport IOBam, prepare_genelist, overGene_vect_t
+from majiq.src.internals.grimoire cimport find_intron_retention
 from majiq.src.basic_pipeline import BasicPipeline, pipeline_run
 from majiq.src.config import Config
 import majiq.src.logger as majiq_logger
@@ -236,20 +236,22 @@ cdef _find_junctions(list file_list, map[string, Gene*]& gene_map, vector[string
 
     cdef int* jvec
 
-    cdef pair[string, gene_vect_t] vector_gene
-    cdef map[string, gene_vect_t] gene_list
+    cdef map[string, overGene_vect_t] gene_list
     cdef map[string, unsigned int] j_ids
     cdef pair[string, unsigned int] it
     cdef pair[string, Gene *] git
 
-    for git in gene_map:
-        gg = git.second
-        if gene_list.count(gg.get_chromosome()) == 0:
-            gene_list[gg.get_chromosome()] = gene_vect_t()
-        gene_list[gg.get_chromosome()].push_back(gg)
+    # for git in gene_map:
+    #     gg = git.second
+    #     if gene_list.count(gg.get_chromosome()) == 0:
+    #         gene_list[gg.get_chromosome()] = gene_vect_t()
+    #     gene_list[gg.get_chromosome()].push_back(gg)
+    #
+    # for vector_gene in gene_list:
+    #     sortGeneList(gene_list[vector_gene.first])
 
-    for vector_gene in gene_list:
-        sortGeneList(gene_list[vector_gene.first])
+    prepare_genelist(gene_map, gene_list)
+
 
     for tmp_str, group_list in conf.tissue_repl.items():
         name = tmp_str.encode('utf-8')

@@ -41,7 +41,7 @@ namespace io_bam{
             unsigned int eff_len_;
             map<string, unsigned int> junc_map ;
             unsigned int nthreads_;
-            map<string, vector<Gene*>> glist_ ;
+            map<string, vector<overGene*>> glist_ ;
             map<string, vector<Intron*>> intronVec_ ;
             unsigned int junc_limit_index_ ;
 
@@ -55,7 +55,7 @@ namespace io_bam{
             }
 
             IOBam(string bam1, int strandness1, unsigned int eff_len1, unsigned int nthreads1,
-                            map<string, vector<Gene*>> &glist1): strandness_(strandness1), eff_len_(eff_len1),
+                            map<string, vector<overGene*>> &glist1): strandness_(strandness1), eff_len_(eff_len1),
                                                                                 nthreads_(nthreads1), glist_(glist1){
                 bam_ = bam1;
             }
@@ -105,8 +105,11 @@ namespace io_bam{
                 junc_map.clear() ;
             }
 
+
+
     };
 
+    void prepare_genelist(map<string, Gene*>& gene_map, map<string, vector<overGene*>> & geneList);
     bool juncGeneSearch(Gene* t1, Junction* t2) ;
 }
 #endif

@@ -36,24 +36,23 @@ namespace grimoire{
 
     class Jinfo {
         public:
-        unsigned int    index ;
-        unsigned int    start ;
-        unsigned int    end ;
-        int             sreads ;
-        int             npos ;
+            unsigned int    index ;
+            unsigned int    start ;
+            unsigned int    end ;
+            int             sreads ;
+            int             npos ;
 
-        Jinfo() {}
-        Jinfo(unsigned int index1, unsigned int start1, unsigned int end1, int sreads1, int npos1): index(index1),
+            Jinfo() {}
+            Jinfo(unsigned int index1, unsigned int start1, unsigned int end1, int sreads1, int npos1): index(index1),
                                         start(start1), end(end1), sreads(sreads1), npos(npos1) {}
-    };
+    } ;
 
     struct lsvtype {
         int         coord ;
         int         ref_coord ;
         Exon *      ex_ptr ;
         Junction *  jun_ptr ;
-    };
-
+    } ;
 
     class _Region{
         protected:
@@ -74,11 +73,30 @@ namespace grimoire{
                 return a->get_end() < coord ;
             }
 
+//            template <class myRegion>
+//            vector<myRegion *>::iterator RegionSearch(vector<myRegion *> &v, coord){
+//
+//                vector<myRegion *>::iterator low_u = lower_bound (low_l, low_u, coord, func_comp ) ;
+//                vector<myRegion *>::iterator low_l = v.begin()
+//                bool brk = low_u != v.end() ;
+//                while(brk){
+//
+//                    low_l = lower_bound (v.begin(), low_u, coord, func_comp ) ;
+//                    if(low_l == low_u){
+//                        brk = false ;
+//                        low_u = low_l ;
+//                    }
+//                }
+//                return low_u ;
+//            }
+
+
             template <class myRegion>
             static bool islowerRegion(myRegion * a, myRegion * b){
                 return (a->get_start() < b->get_start()) ||
                         (a->get_start() == b->get_start() && a->get_end() < b->get_end());
             }
+
 
             template <class myRegion>
             static bool RegionsOverlap(myRegion* t1, myRegion* t2){
@@ -368,6 +386,12 @@ namespace grimoire{
             }
     };
 
+    class overGene: public _Region{
+        public:
+            vector<Gene *> glist ;
+        overGene(unsigned int start1, unsigned int end1):_Region(start1, end1) { }
+        overGene(){}
+    } ;
 
 
 //    class qLSV {

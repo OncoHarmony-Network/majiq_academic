@@ -1436,8 +1436,8 @@ namespace scythe {
   inline double
   pgamma (double x, double shape, double scale)
   {
-    const double xbig = 1.0e+8, xlarge = 1.0e+37, 
-      alphlimit = 1000.;/* normal approx. for shape > alphlimit */
+    const double xbig = 1.0e+8, xlarge = 1.0e+37 ;
+//  const double alphlimit = 1000.;/* normal approx. for shape > alphlimit */
 
     int lower_tail = 1;
 

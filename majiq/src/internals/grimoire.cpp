@@ -604,7 +604,7 @@ namespace grimoire {
         vector<Intron *>::iterator low = lower_bound (gObj->intron_vec_.begin(), gObj->intron_vec_.end(),
                                                       start, _Region::func_comp ) ;
         if (low ==  gObj->intron_vec_.end()) return ir_vec ;
-        for (; low < gObj->intron_vec_.end() ; low++){
+        for (; low != gObj->intron_vec_.end() ; low++){
             Intron * irp = *low;
             if(irp->get_start()> end){
                 break ;

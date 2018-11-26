@@ -3,15 +3,18 @@ from libcpp.map cimport map
 from libcpp.pair cimport pair
 from libcpp.vector cimport vector
 cimport numpy as np
-from majiq.src.internals.grimoire cimport Junction, Gene
+from majiq.src.internals.grimoire cimport Junction, Gene, overGene
 
 ctypedef np.float64_t DTYPE_t
-ctypedef vector[Gene *] gene_vect_t
+# ctypedef vector[pair[int, vector[Gene*]]] gene_vect_t
 # ctypedef vector[Intron] intron_vect_t
+ctypedef vector[overGene*] overGene_vect_t
+
 cdef extern from "io_bam.hpp" namespace "io_bam":
+
     cdef cppclass IOBam:
         IOBam() nogil except +
-        IOBam(string, int, unsigned int, unsigned int, map[string, gene_vect_t]) nogil except +
+        IOBam(string, int, unsigned int, unsigned int, map[string, overGene_vect_t]) nogil except +
         IOBam(string, int, unsigned int) nogil except +
         # int find_junctions(int min_experiments) nogil
         # int find_junctions_from_region(vector[Gene*] gobj) nogil
@@ -28,3 +31,4 @@ cdef extern from "io_bam.hpp" namespace "io_bam":
 
         vector[np.float32_t *] junc_vec ;
 
+    void prepare_genelist(map[string, Gene*]& gene_map, map[string, overGene_vect_t]& geneList) nogil ;

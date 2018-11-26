@@ -6,6 +6,9 @@ from libcpp.list cimport list as clist
 from majiq.src.internals.psi cimport psi_distr_t
 
 cdef extern from "grimoire.hpp" namespace "grimoire":
+    cdef cppclass overGene:
+        pass
+
     cdef cppclass Junction:
         Junction() nogil except +
         Junction(int start1, int end1) nogil except +

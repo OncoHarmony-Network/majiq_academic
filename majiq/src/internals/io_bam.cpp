@@ -51,18 +51,21 @@ namespace io_bam {
 
     void IOBam::find_junction_genes(string chrom, char strand, int start, int end,
                                     float* nreads_ptr){
-        const int n = glist_[chrom].size();
+        const int n = glist_[chrom].size() ;
         bool found_stage1 = false ;
         bool found_stage2 = false ;
         vector<Gene*> temp_vec1 ;
         vector<Gene*> temp_vec2 ;
         Junction * junc = new Junction(start, end, false) ;
         const string key = junc->get_key() ;
-        vector<Gene *>::iterator low = lower_bound (glist_[chrom].begin(), glist_[chrom].end(), start, _Region::func_comp ) ;
 
-        for (; low < glist_[chrom].end() ; low++){
-            Gene * gObj = *low ;
-            if (gObj->get_start() >= end) break ;
+        vector<overGene*>::iterator low = lower_bound (glist_[chrom].begin(), glist_[chrom].end(), start, _Region::func_comp ) ;
+        if (low == glist_[chrom].end())
+            return ;
+
+        for (const auto &gObj: (*low)->glist){
+//            if (gObj->get_start() >= end) break ;
+            if (gObj->get_start() >= end) continue ;
             if (gObj->get_end() < start) continue ;
 //            if (start< gObj->get_start() || end> gObj->get_end()) continue ;
             if (strand == '.' || strand == gObj->get_strand()) {
@@ -201,7 +204,7 @@ namespace io_bam {
                 off += ol ;
             }
         }
-        for (; low < intronVec_[chrom].end() ; low++){
+        for (; low != intronVec_[chrom].end() ; low++){
             bool junc_found = false ;
             Intron * intron = *low;
             if(intron->get_start()> read_pos) break ;
@@ -397,7 +400,9 @@ namespace io_bam {
             const int n = (it.second).size() ;
             #pragma omp parallel for num_threads(nthreads_)
             for(int g_it = 0; g_it<n; g_it++){
-                (it.second)[g_it]->detect_introns(intronVec_[it.first]) ;
+                for (const auto &g: ((it.second)[g_it])->glist){
+                    g->detect_introns(intronVec_[it.first]) ;
+                }
             }
             sort(intronVec_[it.first].begin(), intronVec_[it.first].end(), Intron::islowerRegion<Intron>) ;
         }
@@ -427,4 +432,55 @@ namespace io_bam {
             }
         }
     }
+
+
+    void prepare_genelist(map<string, Gene*>& gene_map, map<string, vector<overGene*>> & geneList){
+        map<string, vector<Gene*>> gmp ;
+
+        for(const auto & p: gene_map){
+            const string chrom = (p.second)->get_chromosome() ;
+            if (gmp.count(chrom) == 0 )
+                gmp[chrom] = vector<Gene*>() ;
+            gmp[chrom].push_back(p.second)  ;
+        }
+
+        for (auto &gl: gmp){
+            sort((gl.second).begin(), (gl.second).end(), Gene::islowerRegion<Gene>) ;
+            int gstart = 0, gend = 0 ;
+            overGene * ov = nullptr ;
+
+            for (const auto &g: (gl.second)){
+
+                int st = g->get_start() ;
+                int nd = g->get_end() ;
+                if (st <= gend && nd >= gstart){
+                    gstart = (gstart == 0) ? st : min(gstart, st) ;
+                    gend = (gend == 0) ? nd : max(gend, nd) ;
+                    ov->set_start(gstart) ;
+                    ov->set_end(gend) ;
+                }
+                else{
+                    if (ov != nullptr )
+                        geneList[gl.first].push_back(ov) ;
+                    ov = new overGene(st, nd) ;
+                    gstart = st ;
+                    gend = nd ;
+                }
+                (ov->glist).push_back(g) ;
+            }
+            if(ov != nullptr)
+                geneList[gl.first].push_back(ov) ;
+
+//for(const auto &ov : geneList[gl.first])
+//{
+//    cerr << gl.first << " : " << ov->get_start() << "-" << ov->get_end()<< " ";
+//    for (const auto &g: ov->glist){
+//        cerr << g->get_id() << ", " ;
+//    }
+//    cerr << "\n" ;
+//}
+
+        }
+    }
+
 }
