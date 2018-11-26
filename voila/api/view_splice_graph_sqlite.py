@@ -154,6 +154,12 @@ class ViewSpliceGraph(SpliceGraph):
                 rtn_set.add(x)
         return list(sorted(rtn_set))
 
+    def lsv_introns(self, gene, lsv_exons):
+        exons_ends = list(e for s, e in lsv_exons)
+        for ir in self.intron_retentions(gene):
+            if ir.start in exons_ends:
+                yield ir
+
     def gene_experiment(self, gene, experiment_names_list):
         junc_reads = {}
         ir_reads = {}

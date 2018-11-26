@@ -1,13 +1,14 @@
 import os
 from bisect import bisect
 
-from flask import Flask, render_template, jsonify, url_for, request, session, Response
+from flask import Flask, render_template, jsonify, url_for, request, session, Response, redirect
 
 from voila.api.view_matrix import ViewDeltaPsi
 from voila.api.view_splice_graph_sqlite import ViewSpliceGraph
+from voila.index import Index
+from voila.view import views
 from voila.view.datatables import DataTables
 from voila.view.forms import LsvFiltersForm, DeltaPsiFiltersForm
-from voila.index import Index
 
 app = Flask(__name__)
 app.secret_key = os.urandom(16)
@@ -22,6 +23,10 @@ def index():
 
 @app.route('/gene/<gene_id>/')
 def gene(gene_id):
+    with ViewDeltaPsi() as m:
+        if gene_id not in m.gene_ids:
+            return redirect(url_for('index'))
+
     # For this gene, remove any already selected highlight/weighted lsvs from session.
     highlight = session.get('highlight', {})
     lsv_ids = [h for h in highlight if h.startswith(gene_id)]
@@ -52,19 +57,24 @@ def lsv_data(lsv_id):
         gene_id = dpsi.gene_id
         gene = sg.gene(gene_id)
         strand = gene.strand
-        exons = sg.exons(gene)
+        exons = list(sg.exons(gene))
         exon_number = find_exon_number(exons)
 
-        dpsi = m.lsv(lsv_id)
+        excl_incl = list(dpsi.excl_incl)
+        lsv_junctions = dpsi.junctions.tolist()
+        means = list(dpsi.means)
+        bins = dpsi.bins
+        group_bins = dict(dpsi.group_bins)
+        group_means = dict(dpsi.group_means)
 
         return jsonify({
             'lsv': {
-                'excl_incl': list(dpsi.excl_incl),
-                'junctions': dpsi.junctions.tolist(),
-                'means': list(dpsi.means),
-                'bins': dpsi.bins,
-                'group_bins': dict(dpsi.group_bins),
-                'group_means': dict(dpsi.group_means),
+                'excl_incl': excl_incl,
+                'junctions': lsv_junctions,
+                'means': means,
+                'bins': bins,
+                'group_bins': group_bins,
+                'group_means': group_means,
             },
             'exon_number': exon_number
         })
@@ -242,3 +252,9 @@ def download_genes():
     data = '\n'.join(data)
 
     return Response(data, mimetype='text/plain')
+
+
+@app.route('/copy-lsv', methods=('POST',))
+@app.route('/copy-lsv/<lsv_id>', methods=('POST',))
+def copy_lsv(lsv_id):
+    return views.copy_lsv(lsv_id, ViewDeltaPsi)

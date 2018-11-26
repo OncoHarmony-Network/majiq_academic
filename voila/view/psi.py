@@ -1,13 +1,14 @@
 import os
 from bisect import bisect
 
-from flask import render_template, url_for, jsonify, request, session, Flask, Response
+from flask import render_template, url_for, jsonify, request, session, Flask, Response, redirect
 
 from voila.api.view_matrix import ViewPsi
 from voila.api.view_splice_graph_sqlite import ViewSpliceGraph
+from voila.index import Index
+from voila.view import views
 from voila.view.datatables import DataTables
 from voila.view.forms import LsvFiltersForm
-from voila.index import Index
 
 app = Flask(__name__)
 app.secret_key = os.urandom(16)
@@ -21,6 +22,10 @@ def index():
 
 @app.route('/gene/<gene_id>/')
 def gene(gene_id):
+    with ViewPsi() as m:
+        if gene_id not in m.gene_ids:
+            return redirect(url_for('index'))
+
     # For this gene, remove any already selected highlight/weighted lsvs from session.
     highlight = session.get('highlight', {})
     lsv_ids = [h for h in highlight if h.startswith(gene_id)]
@@ -63,15 +68,6 @@ def nav(gene_id):
         return jsonify({
             'next': url_for('gene', gene_id=gene_ids[idx % len(gene_ids)]),
             'prev': url_for('gene', gene_id=gene_ids[(idx % len(gene_ids)) - 2])
-        })
-
-
-@app.route('/metadata', methods=('POST',))
-def metadata():
-    with ViewPsi() as v:
-        return jsonify({
-            'group_names': v.group_names,
-            'experiment_names': v.experiment_names
         })
 
 
@@ -140,7 +136,6 @@ def psi_splice_graphs():
                 sg_init = list(sg_init)
 
         session['psi_init_splice_graphs'] = sg_init
-
         return jsonify(sg_init)
 
 
@@ -235,3 +230,9 @@ def download_genes():
     data = '\n'.join(data)
 
     return Response(data, mimetype='text/plain')
+
+
+@app.route('/copy-lsv', methods=('POST',))
+@app.route('/copy-lsv/<lsv_id>', methods=('POST',))
+def copy_lsv(lsv_id):
+    return views.copy_lsv(lsv_id, ViewPsi)
