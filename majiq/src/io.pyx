@@ -247,7 +247,9 @@ cdef int dump_hettmp_file(str fname, np.ndarray[np.float32_t, ndim=2, mode="c"] 
         np.save(fp, osamps)
 
 
-cdef void get_coverage_mat_lsv(map[string, qLSV*]& result, list file_list, str weight_fname, int nthreads,
+
+
+cdef void get_coverage_mat_lsv(map[string, qLSV*]& result, list file_list, int nthreads,
                                bint fltr, int minreads, int minnonzero):
     cdef int n_exp = len(file_list)
     cdef str lid, lsv_type, fname
@@ -262,11 +264,8 @@ cdef void get_coverage_mat_lsv(map[string, qLSV*]& result, list file_list, str w
     cdef int prev_juncidx = 0
     cdef bint bflt = not fltr
 
-    # if weight_fname != "":
-    #     weights = _load_weights(list_of_lsv_id, weight_fname)
-
     for fidx, fname in enumerate(file_list):
-        print(fname)
+        # print(fname)
         with open(fname, 'rb') as fp:
             fl = np.load(fp)
             data = fl['coverage']
@@ -285,6 +284,8 @@ cdef void get_coverage_mat_lsv(map[string, qLSV*]& result, list file_list, str w
                         bflt = fltr or (row[3] >=minreads and row[4] >= minnonzero)
                         prev_lsvid = lsv_id
                         prev_juncidx = -1
+
+
                         njunc = result[lsv_id].get_num_ways()
                         cov = np.zeros(shape=(njunc, msamples), dtype=np.float32)
                     else:
@@ -292,6 +293,7 @@ cdef void get_coverage_mat_lsv(map[string, qLSV*]& result, list file_list, str w
                     prev_juncidx += 1
                     cov[prev_juncidx] = data[idx]
             result[prev_lsvid].add(<np.float32_t *> cov.data, msamples)
+
     return
 
 
@@ -396,7 +398,7 @@ cdef list _extract_lsv_summary(list files, int minnonzero, int min_reads, dict t
     cdef np.ndarray jinfo
 
     if percent == -1:
-        percent = nfiles / 2
+        percent = <int> (nfiles / 2)
         percent = percent + 1 if nfiles % 2 != 0 else percent
     percent = min(int(percent), nfiles)
 
@@ -467,159 +469,6 @@ cdef list _extract_lsv_summary(list files, int minnonzero, int min_reads, dict t
 
     return lsv_id_list
 
-
-cdef list _extract_lsv_summary_old(list files, int minnonzero, int min_reads, object types_dict, object junc_info,
-                               list exp_name_list, dict epsi=None, int percent=-1, object logger=None):
-    cdef dict lsv_types, lsv_list = {}
-    cdef list lsv_id_list = []
-    cdef int nfiles = len(files)
-    cdef int fidx
-    cdef str ff
-    cdef dict lsv_junc_info = {}
-    cdef np.ndarray mtrx, vals
-    cdef np.ndarray jinfo
-
-    if percent == -1:
-        percent = nfiles / 2
-        percent = percent + 1 if nfiles % 2 != 0 else percent
-    percent = min(int(percent), nfiles)
-
-
-
-    for fidx, ff in enumerate(files):
-        if not os.path.isfile(ff):
-            logger.error('File %s does not exist. Exiting execution' % ff)
-            exit(-1)
-
-        if logger:
-            logger.info("Parsing file: %s" % ff)
-        with open(ff, 'rb') as fp:
-            all_files = np.load(fp)
-            lsv_types = {yy[0].decode('UTF-8'):yy[1].decode('UTF-8') for yy in all_files['lsv_types']}
-            jinfo = all_files['junc_info']
-            xp = all_files['meta'][0]
-
-            exp_name_list.append(xp[0].decode('UTF-8'))
-
-            pre_lsv = jinfo[0][0].decode('UTF-8')
-            lsv_t = False
-            epsi_t = []
-            lsv_junc_info = {zz: [] for zz in lsv_types.keys()}
-
-            for xx in jinfo:
-                lsv_id = xx[0].decode('UTF-8')
-                lsv_junc_info[lsv_id].append([xx[1], xx[2]])
-
-                if xx[0] == pre_lsv:
-                    lsv_t = lsv_t or (xx[3] >=min_reads and xx[4] >= minnonzero)
-                    if epsi is not None:
-                        epsi_t.append(xx[3])
-                else:
-                    pre_lsv = lsv_id
-                    lsv_t = (xx[3] >=min_reads and xx[4] >= minnonzero)
-                    try:
-                        lsv_list[pre_lsv] += int(lsv_t)
-                        if epsi is not None:
-                            epsi[lsv_id] += np.array(epsi_t)
-                    except KeyError:
-
-                        lsv_list[pre_lsv] = int(lsv_t)
-                        if epsi is not None:
-                            epsi[lsv_id] = np.array(epsi_t)
-                    epsi_t = []
-
-        junc_info.update(lsv_junc_info)
-        types_dict.update(lsv_types)
-
-    if epsi is not None:
-        for xx in epsi.keys():
-            epsi[xx] = epsi[xx] / nfiles
-            epsi[xx] = epsi[xx] / epsi[xx].sum()
-            epsi[xx][np.isnan(epsi[xx])] = 1.0 / nfiles
-
-    for xx, yy in lsv_list.items():
-        if yy >= percent:
-            lsv_id_list.append(xx)
-        junc_info[xx] = np.array(junc_info[xx])
-
-    return lsv_id_list
-
-
-
-
-# cdef list _extract_lsv_summary_C(list files, int minnonzero, int min_reads,  map[string, string] types_dict,
-#                                  object junc_info, list exp_name_list, dict epsi=None, int percent=-1, object logger=None):
-#     cdef dict lsv_types, lsv_list = {}
-#     cdef list lsv_id_list = []
-#     cdef int nfiles = len(files)
-#     cdef int fidx
-#     cdef str ff
-#     cdef dict lsv_junc_info = {}
-#     cdef np.ndarray mtrx, vals
-#     cdef np.ndarray jinfo
-#
-#     if percent == -1:
-#         percent = nfiles / 2
-#         percent = percent + 1 if nfiles % 2 != 0 else percent
-#     percent = min(int(percent), nfiles)
-#
-#     for fidx, ff in enumerate(files):
-#         if not os.path.isfile(ff):
-#             logger.error('File %s does not exist. Exiting execution' % ff)
-#             exit(-1)
-#
-#         if logger:
-#             logger.info("Parsing file: %s" % ff)
-#         with open(ff, 'rb') as fp:
-#             all_files = np.load(fp)
-#             lsv_types = {yy[0].decode('UTF-8'):yy[1].decode('UTF-8') for yy in all_files['lsv_types']}
-#             jinfo = all_files['junc_info']
-#             xp = all_files['meta'][0]
-#
-#             exp_name_list.append(xp[0].decode('UTF-8'))
-#
-#             pre_lsv = jinfo[0][0].decode('UTF-8')
-#             lsv_t = False
-#             epsi_t = []
-#             lsv_junc_info = {zz: [] for zz in lsv_types.keys()}
-#
-#             for xx in jinfo:
-#                 lsv_id = xx[0].decode('UTF-8')
-#                 lsv_junc_info[lsv_id].append([xx[1], xx[2]])
-#
-#                 if xx[0] == pre_lsv:
-#                     lsv_t = lsv_t or (xx[3] >=min_reads and xx[4] >= minnonzero)
-#                     if epsi is not None:
-#                         epsi_t.append(xx[3])
-#                 else:
-#                     pre_lsv = lsv_id
-#                     lsv_t = (xx[3] >=min_reads and xx[4] >= minnonzero)
-#                     try:
-#                         lsv_list[pre_lsv] += int(lsv_t)
-#                         if epsi is not None:
-#                             epsi[lsv_id] += np.array(epsi_t)
-#                     except KeyError:
-#
-#                         lsv_list[pre_lsv] = int(lsv_t)
-#                         if epsi is not None:
-#                             epsi[lsv_id] = np.array(epsi_t)
-#                     epsi_t = []
-#
-#         junc_info.update(lsv_junc_info)
-#         types_dict.update(lsv_types)
-#
-#     if epsi is not None:
-#         for xx in epsi.keys():
-#             epsi[xx] = epsi[xx] / nfiles
-#             epsi[xx] = epsi[xx] / epsi[xx].sum()
-#             epsi[xx][np.isnan(epsi[xx])] = 1.0 / nfiles
-#
-#     for xx, yy in lsv_list.items():
-#         if yy >= percent:
-#             lsv_id_list.append(xx)
-#         junc_info[xx] = np.array(junc_info[xx])
-#
-#     return lsv_id_list
 
 ####
 # API

@@ -4,10 +4,8 @@ from majiq.src.calc_psi import calcpsi
 from majiq.src.deltapsi import deltapsi
 from majiq.src.indpnt import calc_independent
 from majiq.src.constants import *
-# from majiq.src.wght_pipeline import calc_weights as py_calc_weights
-
-# from majiq.src.constants import all_stats
 import sys
+
 
 class FRange01(argparse.Action):
     def __call__(self, parser, namespace, values, option_string = None):
@@ -46,7 +44,6 @@ def main():
                                                  "and Alternative Splicing Quantification.")
 
     parser.add_argument('-v', action='version', version="%s-%s" % (VERSION, get_git_version()))
-
 
     common = new_subparser()
     common.add_argument('-j', '--nproc', default=4, type=int, help='Number of processes to use')
@@ -168,11 +165,11 @@ def main():
                             'Select the weights manually requires specifying one weight for each replica or an '
                             'error will be triggered.')
 
-    wght = new_subparser()
-    wght.add_argument('files', nargs='+', help='The experiment files to analyze. You can include more than one '
-                                               '(they will be analyzed independently though) Glob syntax supported.')
-    wght.add_argument('-n', '--name', required=True, help="The names that identify each of the experiments. "
-                                                          "[Default: %(default)s]")
+    # wght = new_subparser()
+    # wght.add_argument('files', nargs='+', help='The experiment files to analyze. You can include more than one '
+    #                                            '(they will be analyzed independently though) Glob syntax supported.')
+    # wght.add_argument('-n', '--name', required=True, help="The names that identify each of the experiments. "
+    #                                                       "[Default: %(default)s]")
 
     htrgen = new_subparser()
     htrgen.add_argument('-grp1', dest="files1", nargs='+', required=True)
@@ -212,8 +209,6 @@ def main():
     parser_heterogen = subparsers.add_parser('heterogen', help='Calculate Delta PSI values given a pair of experiments '
                                                              'groups. This approach does not assume underlying PSI)',
                                              parents=[common, sampling, htrgen])
-
-
     parser_heterogen.set_defaults(func=calc_independent)
 
     if len(sys.argv) == 1:

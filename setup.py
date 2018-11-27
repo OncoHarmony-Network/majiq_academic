@@ -113,7 +113,7 @@ setup(
     install_requires=requirements(),
     entry_points={'console_scripts': ['majiq = majiq.run_majiq:main', 'voila = voila.run_voila:main']},
     zip_safe=False,
-    ext_modules=cythonize(extensions),
+    ext_modules=cythonize(extensions, language_level=3),
     classifiers=[
         'Development Status :: 4 - Beta',
         'Environment :: Console',

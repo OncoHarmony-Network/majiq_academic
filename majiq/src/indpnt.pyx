@@ -39,7 +39,6 @@ cdef int _statistical_test_computation(object out_h5p, dict comparison, list lis
     cdef list file_list = []
     cdef list statlist
     cdef np.ndarray[np.float32_t, ndim=2, mode="c"]  oPvals
-    # cdef dict output = {}
     cdef map[string, vector[psi_distr_t]] output
     cdef string lsv_id, stname
     cdef HetStats* StatsObj = new HetStats()
@@ -71,10 +70,6 @@ cdef int _statistical_test_computation(object out_h5p, dict comparison, list lis
             file_list[index].append(cc)
         index +=1
 
-    # for lsv in list_of_lsv:
-    #     lsv_id = lsv.encode('utf-8')
-    #     nways = lsv_vec[lsv_id].get_num_ways()
-    #     output[lsv_id] = np.zeros(shape=(nways, nstats), dtype=np.float32)
 
     for i in prange(nlsv, nogil=True, num_threads=nthreads):
         with gil:
@@ -145,7 +140,7 @@ cdef int _het_computation(object out_h5p, dict file_cond, list list_of_lsv, map[
         max_nfiles = max(max_nfiles, len(cond_list))
         for fidx, f in enumerate(cond_list):
             osamps = np.zeros(shape=(total_njuncs, psi_samples), dtype=np.float32)
-            majiq_io.get_coverage_mat_lsv(lsv_vec, [f], "", nthreads, True, minreads, minnonzero)
+            majiq_io.get_coverage_mat_lsv(lsv_vec, [f], nthreads, True, minreads, minnonzero)
             for i in prange(nlsv, nogil=True, num_threads=nthreads):
                 with gil:
                     lsv = list_of_lsv[i]

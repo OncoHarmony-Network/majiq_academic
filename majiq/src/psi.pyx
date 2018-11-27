@@ -2,9 +2,12 @@ import os
 import sys
 from scipy.stats import beta
 import majiq.src.adjustdelta as majiq_delta
-# from majiq.src.plotting import plot_matrix
+from majiq.src.internals.psi cimport psi_distr_t
 from majiq.src.constants import *
 from majiq.src.beta_binomial import betabinom
+from libcpp.vector cimport vector
+from libcpp.pair cimport pair
+
 
 import scipy.misc
 import numpy as np
@@ -145,86 +148,104 @@ cdef tuple _empirical_delta_psi(list list_of_lsv, dict lsv_empirical_psi1, dict 
     return np.array(delta_psi, dtype=np.float32), np.array(delta_psi_ir, dtype=np.float32)
     # return delta_psi, delta_psi_ir
 
-def __load_default_prior():
+
+cpdef void __load_default_prior(vector[vector[psi_distr_t]]& prior_matrix):
+
+    cdef int numbins = prior_matrix[0].size()
+    cdef int xx, yy
 
     encoding = sys.getfilesystemencoding()
     direc = os.path.dirname(__file__)
 
     fop = open('%s/../data/defaultprior.pickle' % direc, 'rb')
     fast_pickler = pickle.Unpickler(fop)
-    data = fast_pickler.load()
+    data = fast_pickler.load().astype(np.float32)
     fop.close()
 
-    return data.astype(np.float32)
+    for xx in range(numbins):
+        for yy in range(numbins):
+            prior_matrix[0][xx][yy] = np.log(data[xx][yy])
+            prior_matrix[1][xx][yy] = np.log(data[xx][yy])
 
+    return
 
-cpdef tuple gen_prior_matrix(object lsv_type, dict lsv_empirical_psi1, dict lsv_empirical_psi2, str output, list names,
-                     str plotpath, int iter, float binsize, int numbins=20, bint defaultprior=False,
-                     int minpercent=-1, object logger=None):
+#
+# cdef print_prior(vector[vector[psi_distr_t]] matrix, int nbins):
+#
+#     sys.stderr('##MATRIX')
+#     for xx in range(nbins):
+#         for yy in range(nbins):
+#            sys.stderr.write("%s, " % matrix[0][xx][yy])
+#         sys.stderr.write("\n")
+#
+# import sys
+# def eprint(*args, **kwargs):
+#     print(*args, file=sys.stderr, **kwargs)
 
-    cdef np.ndarray[np.float32_t] psi_space, lsv, mixture_pdf
-    cdef np.ndarray[np.float32_t, ndim=2] def_mat
-    cdef list prior_matrix, list_of_lsv, njun_prior, pmat
-    cdef int prior_idx, nj
+cpdef vector[vector[psi_distr_t]] gen_prior_matrix(object lsv_type, dict lsv_empirical_psi1,
+                                                                      dict lsv_empirical_psi2, str output, list names,
+                                                                      str plotpath, int iter, float binsize,
+                                                                      int numbins=20, bint defaultprior=False,
+                                                                      int minpercent=-1, object logger=None):
+
+    cdef np.ndarray[np.float32_t] mixture_pdf
+    cdef list_of_lsv, njun_prior, pmat
+    cdef int prior_idx
     cdef np.ndarray[np.float32_t, ndim=1] best_deltap, best_dpsi, best_dpsi_ir
-    # cdef list best_deltap, best_dpsi, best_dpsi_ir
     cdef np.ndarray[np.float32_t, ndim=1] best_delta_psi
-
+    cdef np.ndarray[np.float32_t, ndim=3] np_pmatrix = np.zeros(shape=(3, numbins, numbins), dtype=np.float32)
+    cdef vector[vector[psi_distr_t]] prior_matrix = vector[vector[psi_distr_t]](2, vector[psi_distr_t](numbins, psi_distr_t(numbins, 0)))
 
     #Start prior matrix
     logger.info("Calculating prior matrix...")
-    psi_space = np.linspace(0, 1 - binsize, num=numbins, dtype=np.float32) + binsize / 2
     if defaultprior:
-        def_mat = __load_default_prior()
-        prior_matrix = [def_mat, def_mat]
-        return psi_space, prior_matrix
+        __load_default_prior(prior_matrix)
+        return prior_matrix
 
     logger.debug('Filtering to obtain "best set"...')
 
-    # temp_files = [files[0],files[]]
 
     list_of_lsv = list(set(lsv_empirical_psi1.keys()).intersection(set(lsv_empirical_psi2.keys())))
     logger.debug("'Best set' is %s events" % len(list_of_lsv))
     best_dpsi, best_dpsi_ir = _empirical_delta_psi(list_of_lsv, lsv_empirical_psi1, lsv_empirical_psi2, lsv_type)
 
-    prior_matrix = [[], []]
     for prior_idx, best_delta_psi in enumerate((best_dpsi, best_dpsi_ir)):
-
-        # best_delta_psi = np.array(njun_prior[nj], dtype=np.float32)
         if len(best_delta_psi) == 0:
             if prior_idx == 0:
-                prior_matrix[prior_idx] = __load_default_prior()
+                __load_default_prior(prior_matrix)
             else:
-                prior_matrix[prior_idx] = prior_matrix[0]
-            continue
+                prior_matrix[1] = prior_matrix[0]
+            return prior_matrix
 
         logger.debug("Parametrizing 'best set'...%s", prior_idx)
         mixture_pdf = majiq_delta.adjustdelta(best_delta_psi, iter, output, plotpath=plotpath,
-                                                  title=" ".join(names), njunc=nj, logger=logger)
+                                                  title=" ".join(names), njunc=2, logger=logger)
         pmat = []
         for i in range(numbins):
             pmat.extend(mixture_pdf[numbins - i:(numbins * 2) - i])
 
-        prior_matrix[prior_idx] = np.array(pmat, dtype=np.float32).reshape(numbins, -1)
-        if np.isnan(prior_matrix[prior_idx]).any():
+        np_pmatrix[prior_idx] = np.array(pmat, dtype=np.float32).reshape(numbins, -1)
+        if np.isnan(np_pmatrix[prior_idx]).any():
             if prior_idx == 1:
                 logger.warning("Not enought statistic power to calculate the intron retention specific prior, "
                                "in that case we will use the global prior")
-                prior_matrix[prior_idx] = prior_matrix[0]
+                np_pmatrix[prior_idx] = np_pmatrix[0]
             else:
                 raise ValueError(" The input data does not have enought statistic power in order to calculate "
                                  "the prior. Check if the input is correct or use the --default-prior option in "
                                  " order to use a precomputed prior")
         else:
-            prior_matrix[prior_idx] /= sum(prior_matrix[prior_idx])
+            np_pmatrix[prior_idx] /= sum(np_pmatrix[prior_idx])
+
             # renormalize so it sums 1
 
         # plot_matrix(prior_matrix[prior_idx], "Prior Matrix , version %s" % prior_idx,
         #             "prior_matrix_jun_%s" % nj, plotpath)
 
-    prior_matrix[0] = np.log(prior_matrix[0])
-    prior_matrix[1] = np.log(prior_matrix[1])
-
-    return psi_space, prior_matrix
+    for xx in range(numbins):
+        for yy in range(numbins):
+            prior_matrix[0][xx][yy] = np.log(np_pmatrix[0, xx, yy])
+            prior_matrix[1][xx][yy] = np.log(np_pmatrix[1, xx, yy])
+    return prior_matrix
 
 

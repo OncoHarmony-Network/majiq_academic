@@ -269,7 +269,6 @@ cdef _find_junctions(list file_list, map[string, Gene*]& gene_map, vector[string
                 fitfunc_r = 0
             else:
                 fitfunc_r = fit_nb(c_iobam.junc_vec, n_junctions, eff_len, nbdisp=0.1, logger=logger)
-            # fitfunc_r = 0
 
             boots = np.zeros(shape=(njunc, m), dtype=np.float32)
             with nogil:
@@ -308,8 +307,6 @@ cdef void gene_to_splicegraph(Gene * gne, sqlite3 * db) nogil:
     cdef pair[string, Exon *] ex_pair
     cdef Exon * ex
     cdef string gne_id = gne.get_id()
-    # cdef sqlite3* db
-    # open_db(sg_filename, &db)
 
     sg_gene(db, gne_id, gne.get_name(), string(1, gne.get_strand()), gne.get_chromosome())
     for jj_pair in gne.junc_map_:

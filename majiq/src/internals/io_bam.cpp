@@ -168,7 +168,7 @@ namespace io_bam {
         if (intronVec_.count(chrom) == 0)
              return 0 ;
 
-        const int  nintrons = intronVec_[chrom].size() ;
+//        const int  nintrons = intronVec_[chrom].size() ;
         uint32_t *cigar = bam_get_cigar(read) ;
 
         vector<Intron *>::iterator low = lower_bound (intronVec_[chrom].begin(), intronVec_[chrom].end(),

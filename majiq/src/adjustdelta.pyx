@@ -33,7 +33,7 @@ cdef list _calculate_beta_params(np.float32_t mean, np.float32_t vari, sample_si
 #from majiq.src.deleteme import _loglikelihood, _em_beta_mix
 
 cpdef np.ndarray[DTYPE_t, ndim=1] adjustdelta(np.ndarray[DTYPE_t, ndim=1] deltapsi, int num_iter, str output,
-                                                  str plotpath=None, str title=None,int  njunc=1, object logger=False):
+                                                  str plotpath=None, str title=None,int njunc=1, object logger=False):
 
     cdef np.ndarray[DTYPE_t, ndim=2] D = np.zeros(shape=(79, 2), dtype=np.float32)
     cdef np.ndarray[DTYPE_t, ndim=1] xpos = np.arange(-1 + (0.025 / 2), 1, 0.025, dtype=np.float32)

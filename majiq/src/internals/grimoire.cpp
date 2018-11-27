@@ -600,7 +600,7 @@ namespace grimoire {
 
     vector<Intron *> find_intron_retention(Gene * gObj, int start, int end){
         vector<Intron*> ir_vec ;
-        const int nir = (gObj->intron_vec_).size() ;
+//        const int nir = (gObj->intron_vec_).size() ;
         vector<Intron *>::iterator low = lower_bound (gObj->intron_vec_.begin(), gObj->intron_vec_.end(),
                                                       start, _Region::func_comp ) ;
         if (low ==  gObj->intron_vec_.end()) return ir_vec ;

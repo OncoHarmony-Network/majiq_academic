@@ -80,6 +80,24 @@ inline float logsumexp(psi_distr_t& nums, size_t ct){
     return log(sum) + max_exp ;
 }
 
+inline float logsumexp_2D(vector<psi_distr_t>& nums, size_t ct){
+    float max_exp = nums[0][0], sum = 0.0 ;
+    size_t i, j ;
+
+    for(i = 1; i < ct; i++){
+        for(j = 1; j < ct; j++){
+            max_exp = (nums[i][j] > max_exp) ? nums[i][j] : max_exp ;
+        }
+    }
+
+    for(i = 0; i < ct; i++){
+        for(j = 1; j < ct; j++){
+            sum += exp(nums[i][j] - max_exp) ;
+        }
+    }
+    return log(sum) + max_exp ;
+}
+
 inline float logsumexp(float nums[], size_t ct){
     float max_exp = nums[0], sum = 0.0 ;
     size_t i ;
@@ -116,23 +134,28 @@ inline float calc_mupsi(const float sample, const float all_sample, float alpha,
     return (sample + alpha) / (all_sample + alpha + beta) ;
 }
 
-inline void collapse_matrix(float* o_dpsi, float* matrix, int nbins){
+inline void collapse_matrix(psi_distr_t o_dpsi, float* matrix, int nbins){
     for (int i=0; i<nbins; i++){
-       for (int j=0; j<nbins; j++){
+        for (int j=0; j<nbins; j++){
             o_dpsi[j-i+(nbins-1)] += matrix[i*nbins + j] ;
-       }
+        }
     }
 }
 
+inline void collapse_matrix(psi_distr_t& o_dpsi, vector<psi_distr_t>& matrix, int nbins){
+    for (int i=0; i<nbins; i++){
+        for (int j=0; j<nbins; j++){
+            o_dpsi[j-i+(nbins-1)] += matrix[i][j] ;
+        }
+    }
+}
 
 void prob_data_sample_given_psi(float out_array[], float sample, float all_sample, psi_distr_t & psi_border,
                                 int nbins, float alpha_prior, float beta_prior) ;
 void psi_posterior(vector<psi_distr_t> & i_psi, float* o_mupsi, float* o_postpsi,
                    int msamples, int njunc, int nbins, bool is_ir) ;
 
-void deltapsi_posterior(vector<psi_distr_t>& i_psi1, vector<psi_distr_t>& i_psi2, float* prior_matrix,
-                        float* o_mu_psi1, float* o_mu_psi2, float* o_post_psi1, float* o_post_psi2,
-                        float* o_posterior_dpsi, int msamples, int njunc, int nbins, bool is_ir) ;
+void deltapsi_posterior(dpsiLSV*lsvObj, vector<psi_distr_t>& prior_matrix, psi_distr_t& psi_border, int nbins) ;
 
 void get_samples_from_psi(float* osamps, hetLSV* lsvObj, int psi_samples, psi_distr_t& psi_border,
                           int nbins, int cidx, int fidx) ;
@@ -140,10 +163,7 @@ void get_samples_from_psi2(vector<psi_distr_t>& i_psi, float* osamps, float* o_m
                           int psi_samples, int j_offset, psi_distr_t& psi_border2, int njunc, int msamples, int nbins,
                           bool is_ir) ;
 
-//void test_calc(float* oPvals, HetStats* HetStatsObj, hetLSV* lsvObj, int psamples, float quant) ;
 void test_calc(vector<psi_distr_t>& oPvals, HetStats* HetStatsObj, hetLSV* lsvObj, int psamples, float quant) ;
-
-//psi_distr_t& get_psi_border(int nbins) ;
 void get_psi_border(psi_distr_t& psi_border, int nbins) ;
 
 #endif

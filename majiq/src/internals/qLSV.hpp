@@ -32,6 +32,7 @@ class qLSV{
         bool is_ir()              { return is_ir_ ; }
         void set_bool( bool flt ) { present_ = flt ; }
         bool is_enabled()         { return present_ ; }
+
         void clear_samps()        { samps.clear() ; }
         void reset_samps() {
 
@@ -41,14 +42,11 @@ class qLSV{
         }
 
 
-
         void add(float* coverage, int msamples){
 
             if (samps.size() ==0)
                 samps = vector<psi_distr_t>(nways_, psi_distr_t(msamples)) ;
 
-//cout << "samps[" << samps.size() << ", " << samps[0].size() << "]\n" ;
-//cout << "loops[" << nways_ << ", " << msamples << "]\n" ;
             int cidx = 0 ;
             for(int xx=0; xx< nways_; xx++){
                 for(int yy=0; yy< msamples; yy++){
@@ -59,9 +57,80 @@ class qLSV{
         }
 
 
-
 };
 
+class dpsiLSV: public qLSV{
+    private:
+
+
+    public:
+        vector<psi_distr_t> cond_sample1 ;
+        vector<psi_distr_t> cond_sample2 ;
+        psi_distr_t mu_psi1 ;
+        psi_distr_t mu_psi2 ;
+        vector<psi_distr_t> post_psi1 ;
+        vector<psi_distr_t> post_psi2 ;
+        vector<psi_distr_t> post_dpsi ;
+
+
+        dpsiLSV(int nways1, int nbins1, bool is_ir): qLSV(nways1, is_ir){
+            mu_psi1 = psi_distr_t( nways1 ) ;
+            mu_psi2 = psi_distr_t( nways1 ) ;
+            post_psi1 = vector<psi_distr_t>(nways1, psi_distr_t(nbins1)) ;
+            post_psi2 = vector<psi_distr_t>(nways1, psi_distr_t(nbins1)) ;
+            post_dpsi = vector<psi_distr_t>(nways1, psi_distr_t((nbins1*2)-1)) ;
+        }
+
+        ~dpsiLSV() {}
+
+        void add_condition1(){
+            const int msamples = samps[0].size() ;
+            cond_sample1 = vector<psi_distr_t>(nways_, psi_distr_t(msamples)) ;
+            for (int i=0; i< nways_; i++){
+                for (int j=0; j< msamples; j++){
+                    cond_sample1[i][j] = samps[i][j] ;
+                }
+            }
+            clear_samps() ;
+        }
+
+        void add_condition2(){
+            const int msamples = samps[0].size() ;
+            cond_sample2 = vector<psi_distr_t>(nways_, psi_distr_t(msamples)) ;
+            for (int i=0; i< nways_; i++){
+                for (int j=0; j< msamples; j++){
+                    cond_sample2[i][j] = samps[i][j] ;
+                }
+            }
+            clear_samps() ;
+            samps.shrink_to_fit() ;
+        }
+
+        void clear(){
+            cond_sample1.clear() ;
+            cond_sample1.shrink_to_fit() ;
+            cond_sample2.clear() ;
+            cond_sample2.shrink_to_fit() ;
+        }
+
+
+        void clear_all(){
+            clear_samps() ;
+            mu_psi1.clear() ;
+            mu_psi1.shrink_to_fit() ;
+            mu_psi2.clear() ;
+            mu_psi2.shrink_to_fit() ;
+            post_psi1.clear() ;
+            post_psi1.shrink_to_fit() ;
+            post_psi2.clear() ;
+            post_psi2.shrink_to_fit() ;
+            post_dpsi.clear() ;
+            post_dpsi.shrink_to_fit() ;
+            clear() ;
+
+        }
+
+};
 
 class hetLSV: public qLSV{
     private:
@@ -113,7 +182,6 @@ class hetLSV: public qLSV{
             }
         }
 
-
         void clear(){
             clear_samps() ;
             mu_psi.clear() ;
@@ -127,6 +195,7 @@ class hetLSV: public qLSV{
         }
 
 };
+
 
 #endif
 

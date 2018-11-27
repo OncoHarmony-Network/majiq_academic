@@ -6,11 +6,13 @@ import psutil
 import majiq.src.logger as majiq_logger
 from majiq.src.basic_pipeline import BasicPipeline, pipeline_run
 from majiq.src.constants import *
-from majiq.src.internals.psi cimport deltapsi_posterior, psi_distr_t
+from majiq.src.internals.qLSV cimport dpsiLSV, qLSV
+from majiq.src.internals.psi cimport deltapsi_posterior, psi_distr_t, get_psi_border
 from majiq.src.psi import gen_prior_matrix
 
 from libcpp.string cimport string
 from libcpp.map cimport map
+from libcpp.pair cimport pair
 from libcpp.vector cimport vector
 from cython.parallel import prange
 
@@ -23,6 +25,23 @@ import numpy as np
 def deltapsi(args):
     return pipeline_run(DeltaPsi(args))
 
+
+cdef parse_dpsi_reads(map[string, qLSV*] lsv_map, list files1, list files2, int nthreads, int minreads, int minnonzero):
+
+    cdef pair[string, qLSV*] p_qlsv
+    cdef dpsiLSV* dpsiObj
+
+    majiq_io.get_coverage_mat_lsv(lsv_map, files1, nthreads, True, minreads, minnonzero)
+    for p_qlsv in lsv_map:
+        dpsiObj = <dpsiLSV*> p_qlsv.second
+        dpsiObj.add_condition1()
+
+    majiq_io.get_coverage_mat_lsv(lsv_map, files2, nthreads, True, minreads, minnonzero)
+    for p_qlsv in lsv_map:
+        dpsiObj = <dpsiLSV*> p_qlsv.second
+        dpsiObj.add_condition2()
+
+
 cdef void _core_deltapsi(object self):
 
     cdef dict junc_info = {}
@@ -31,24 +50,18 @@ cdef void _core_deltapsi(object self):
     cdef int nbins = 20
     cdef bint is_ir
     cdef string lsv
-    cdef int nways, msamples, i
+    cdef int nways, i
     cdef list list_of_lsv
 
-    cdef dict out_mupsi_d_1 = {}
-    cdef dict out_postpsi_d_1 = {}
-    cdef dict out_mupsi_d_2 = {}
-    cdef dict out_postpsi_d_2 = {}
-    cdef dict out_postdpsi_d = {}
-    cdef map[string, vector[psi_distr_t]] cov_dict1
-    cdef map[string, vector[psi_distr_t]] cov_dict2
-    cdef np.ndarray[np.float32_t, ndim=1, mode="c"] o_mupsi_1
-    cdef np.ndarray[np.float32_t, ndim=2, mode="c"] o_postpsi_1
-    cdef np.ndarray[np.float32_t, ndim=1, mode="c"] o_mupsi_2
-    cdef np.ndarray[np.float32_t, ndim=2, mode="c"] o_postpsi_2
-    cdef np.ndarray[np.float32_t, ndim=2, mode="c"] o_postdeltapsi
-    cdef np.ndarray[np.float32_t, ndim=2, mode="c"] prior_m
-    cdef list prior_matrix
-    cdef map[string, int] lsv_vec
+    cdef np.ndarray[np.float32_t, ndim=1, mode="c"] mupsi1
+    cdef np.ndarray[np.float32_t, ndim=1, mode="c"] mupsi2
+    cdef np.ndarray[np.float32_t, ndim=2, mode="c"] post_psi1
+    cdef np.ndarray[np.float32_t, ndim=2, mode="c"] post_psi2
+    cdef np.ndarray[np.float32_t, ndim=2, mode="c"] post_dpsi
+    cdef vector[vector[psi_distr_t]] prior_matrix
+    cdef vector[psi_distr_t] prior_m
+    cdef psi_distr_t psi_border = psi_distr_t(nbins+1)
+    cdef map[string, qLSV*] lsv_map
 
 
     majiq_logger.create_if_not_exists(self.outDir)
@@ -60,98 +73,98 @@ cdef void _core_deltapsi(object self):
     logger.info("GROUP1: %s" % self.files1)
     logger.info("GROUP2: %s" % self.files2)
 
-    # weights = [None, None]
-
     lsv_empirical_psi1 = {}
     junc_info = {}
     list_of_lsv1, exps1 = majiq_io.extract_lsv_summary(self.files1, epsi=lsv_empirical_psi1,
                                                        types_dict=lsv_type_dict,
                                                        minnonzero=self.minpos, min_reads=self.minreads,
                                                        junc_info=junc_info, percent=self.min_exp, logger=logger)
-    # weights[0] = self.calc_weights(self.weights[0], list_of_lsv1, name=self.names[0], file_list=self.files1,
-    #                                logger=logger)
-    logger.info("Group %s: %s LSVs" % (self.names[0], len(list_of_lsv1)))
 
+    logger.info("Group %s: %s LSVs" % (self.names[0], len(list_of_lsv1)))
     lsv_empirical_psi2 = {}
     list_of_lsv2, exps2 = majiq_io.extract_lsv_summary(self.files2, epsi=lsv_empirical_psi2,
                                                        types_dict=lsv_type_dict,
                                                        minnonzero=self.minpos, min_reads=self.minreads,
                                                        junc_info=junc_info, percent=self.min_exp, logger=logger)
-    # weights[1] = self.calc_weights(self.weights[1], list_of_lsv2, name=self.names[1], file_list=self.files2,
-    #                                logger=logger)
 
     logger.info("Group %s: %s LSVs" % (self.names[1], len(list_of_lsv1)))
 
     list_of_lsv = list(set(list_of_lsv1).intersection(set(list_of_lsv2)))
     logger.info("Number quantifiable LSVs: %s" % len(list_of_lsv))
-
-    psi_space, prior_matrix = gen_prior_matrix(lsv_type_dict, lsv_empirical_psi1, lsv_empirical_psi2,
+    prior_matrix = gen_prior_matrix(lsv_type_dict, lsv_empirical_psi1, lsv_empirical_psi2,
                                                self.outDir, names=self.names, plotpath=self.plotpath,
                                                iter=self.iter, binsize=self.binsize,
                                                numbins=nbins, defaultprior=self.default_prior,
                                                minpercent=self.min_exp, logger=logger)
-
-    for lidx, lsv in enumerate(list_of_lsv):
-        nways = lsv_type_dict[lsv][1]
-        out_mupsi_d_1[lsv] = np.zeros(shape=nways, dtype=np.float32)
-        out_postpsi_d_1[lsv] = np.zeros(shape=(nways, nbins), dtype=np.float32)
-        out_mupsi_d_2[lsv] = np.zeros(shape=nways, dtype=np.float32)
-        out_postpsi_d_2[lsv] = np.zeros(shape=(nways, nbins), dtype=np.float32)
-        out_postdpsi_d[lsv] = np.zeros(shape=(nways, (nbins*2)-1), dtype=np.float32)
-        lsv_vec[lsv] = nways
-
-    # logger.info("Saving prior matrix for %s..." % self.names)
-    # majiq_io.dump_bin_file(prior_matrix, get_prior_matrix_filename(self.outDir, self.names))
-
-    # self.weights = weights
 
     nlsv = len(list_of_lsv)
     if nlsv == 0:
         logger.info("There is no LSVs that passes the filters")
         return
 
+    for lsv in list_of_lsv:
+        nways = lsv_type_dict[lsv][1]
+        is_ir = b'i' in lsv_type_dict[lsv][0]
+        m = new dpsiLSV(nways, nbins, is_ir)
+        lsv_map[lsv] = <qLSV*> m
+
     nthreads = min(self.nthreads, nlsv)
+    parse_dpsi_reads(lsv_map, self.files1, self.files2, nthreads, self.minreads, self.minpos)
+    get_psi_border(psi_border, nbins)
 
-    majiq_io.get_coverage_mat(cov_dict1, lsv_vec, self.files1, "", nthreads)
-    majiq_io.get_coverage_mat(cov_dict2, lsv_vec, self.files2, "", nthreads)
-
+    print("Start Computing DeltaPSI")
     for i in prange(nlsv, nogil=True, num_threads=nthreads):
         with gil:
             lsv = list_of_lsv[i]
-            nways = cov_dict1[lsv].size()
-            msamples = cov_dict1[lsv][0].size()
-            o_mupsi_1 = out_mupsi_d_1[lsv]
-            o_postpsi_1 = out_postpsi_d_1[lsv]
-            o_mupsi_2 = out_mupsi_d_2[lsv]
-            o_postpsi_2 = out_postpsi_d_2[lsv]
-            o_postdeltapsi = out_postdpsi_d[lsv]
-            is_ir = b'i' in lsv_type_dict[lsv][0]
+            # print ('type', lsv, lsv_type_dict[lsv], lsv_map[lsv].get_num_ways())
+        if lsv_map[lsv].is_ir():
+            prior_m = prior_matrix[1]
+        else:
+            prior_m = prior_matrix[0]
 
-            # print ('type', lsv_type_dict[lsv_id.decode('utf-8')], prior_matrix[1].dtype, prior_matrix[0].dtype)
-            if is_ir:
-                prior_m = prior_matrix[1]
-            else:
-                prior_m = prior_matrix[0]
+        deltapsi_posterior(<dpsiLSV*> lsv_map[lsv], prior_m, psi_border, nbins)
 
-        deltapsi_posterior(cov_dict1[lsv], cov_dict2[lsv], <np.float32_t *> prior_m.data,
-                           <np.float32_t *> o_mupsi_1.data, <np.float32_t *> o_mupsi_2.data,
-                           <np.float32_t *> o_postpsi_1.data, <np.float32_t *> o_postpsi_2.data,
-                           <np.float32_t *> o_postdeltapsi.data, msamples, nways, nbins, is_ir)
 
     logger.info('Computation done, saving results....')
     with Matrix(get_quantifier_voila_filename(self.outDir, self.names, deltapsi=True), 'w') as out_h5p:
         out_h5p.file_version = VOILA_FILE_VERSION
         out_h5p.analysis_type = ANALYSIS_DELTAPSI
         out_h5p.group_names = self.names
-        out_h5p.prior = prior_matrix
-        out_h5p.experiment_names = [exps1, exps2]
-        for lsv in list_of_lsv:
-            out_h5p.delta_psi(lsv.decode('utf-8')).add(lsv_type=lsv_type_dict[lsv][0].decode('utf-8'),
-                                                       bins=out_postdpsi_d[lsv],
-                                                       group_bins=[out_postpsi_d_1[lsv], out_postpsi_d_2[lsv]],
-                                                       group_means=[out_mupsi_d_1[lsv], out_mupsi_d_2[lsv]],
-                                                       junctions=junc_info[lsv])
 
+        out_h5p.experiment_names = [exps1, exps2]
+
+        pmatrix = np.ndarray(shape=(nbins, nbins), dtype=np.float32, order="c")
+        pmatrix_ir = np.ndarray(shape=(nbins, nbins), dtype=np.float32, order="c")
+        for x in range(nbins):
+            for y in range(nbins):
+                pmatrix[x, y]    = prior_matrix[0][x][y]
+                pmatrix_ir[x, y] = prior_matrix[1][x][y]
+        out_h5p.prior = [pmatrix, pmatrix_ir]
+
+        for lsv in list_of_lsv:
+            dpsiObj_ptr = <dpsiLSV*> lsv_map[lsv]
+            nways = dpsiObj_ptr.get_num_ways()
+            mupsi1 = np.ndarray(shape=nways, dtype=np.float32, order="c")
+            mupsi2 = np.ndarray(shape=nways, dtype=np.float32, order="c")
+            postpsi1 = np.ndarray(shape=(nways, nbins), dtype=np.float32, order="c")
+            postpsi2 = np.ndarray(shape=(nways, nbins), dtype=np.float32, order="c")
+            postdpsi = np.ndarray(shape=(nways, (nbins*2)-1), dtype=np.float32, order="c")
+
+            for x in range(nways):
+                mupsi1[x] = dpsiObj_ptr.mu_psi1[x]
+                mupsi2[x] = dpsiObj_ptr.mu_psi2[x]
+                for y in range(nbins):
+                    postpsi1[x, y] = dpsiObj_ptr.post_psi1[x][y]
+                    postpsi2[x, y] = dpsiObj_ptr.post_psi2[x][y]
+
+                for y in range((nbins*2)-1):
+                    postdpsi[x, y] = dpsiObj_ptr.post_dpsi[x][y]
+            dpsiObj_ptr.clear_all()
+
+            # print(lsv, lsv_type_dict[lsv][0].decode('utf-8'), postdpsi, [postpsi1,postpsi2], [mupsi1, mupsi2], junc_info[lsv])
+            out_h5p.delta_psi(lsv.decode('utf-8')).add(lsv_type=lsv_type_dict[lsv][0].decode('utf-8'),
+                                                       bins=postdpsi, group_bins=[postpsi1,postpsi2],
+                                                       group_means=[mupsi1, mupsi2], junctions=junc_info[lsv])
 
     if self.mem_profile:
         mem_allocated = int(psutil.Process().memory_info().rss) / (1024 ** 2)
