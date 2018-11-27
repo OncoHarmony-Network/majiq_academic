@@ -4,6 +4,13 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/summary.css') }}">
 {% endblock %}
 
+{% block script %}
+    <script>
+        const legend = document.querySelector('.legend');
+        new Lsv().renderFloatingLegend(legend)
+    </script>
+    {% block analysis_type_script %}{% endblock %}
+{% endblock %}
 
 {% block content %}
     <div class="menu pure-menu pure-menu-horizontal">
@@ -26,9 +33,6 @@
                 <img height="30" class="prev-gene pure-menu-link"
                      src="{{ url_for('static', filename='img/left_arrow.svg') }}">
             </li>
-            {#        <li class="pure-menu-item">#}
-            {#            <input class="pure-menu-link search pure-input-1" type="text" placeholder="Gene Search...">#}
-            {#        </li>#}
             <li class="pure-menu-item">
                 <img height="30" class="next-gene pure-menu-link"
                      src="{{ url_for('static', filename='img/right_arrow.svg') }}">
@@ -39,11 +43,15 @@
 
     <div class="gene-header">
         <div>
-            <div class="gene-name"></div>
-            <div class="gene-id"></div>
+            <div class="gene-name">Gene
+                name: {{ gene.name }}; {{ gene.chromosome }}:{{ gene.strand }}:{{ gene.start }}-{{ gene.end }};
+            </div>
+            <div class="gene-id">
+                Gene ID: {{ gene.id }};
+            </div>
         </div>
         <div>
-            <a class="ucsc-gene" target="_blank">
+            <a class="ucsc-gene" target="_blank" href="{{ gene.href }}">
                 <img src="{{ url_for('static', filename='img/ucsc.png') }}">
             </a>
         </div>
@@ -53,7 +61,12 @@
             <img class="zoom-out" src="{{ url_for('static', filename='img/zoom_out.png') }}">
             <img class="zoom-reset" src="{{ url_for('static', filename='img/undo.png') }}">
         </div>
-        <div class="coordinates"></div>
+        <div>
+            <div>
+                <canvas width="500px" height="40px" class="legend"></canvas>
+            </div>
+            <div class="coordinates"></div>
+        </div>
     </div>
 
     <div class="tools-menu splice-graph-tools hide-tools-menu pure-g">
