@@ -9,7 +9,6 @@ from voila.api.view_splice_graph_sqlite import ViewSpliceGraph
 from voila.config import ViewConfig
 from voila.exceptions import UnknownAnalysisType
 from voila.index import Index
-from voila.utils.voila_log import voila_log
 from voila.view import deltapsi, heterogen, psi, splicegraph
 
 
@@ -20,31 +19,31 @@ def run_service():
 
     bind = '127.0.0.1:' + str(config.port)
 
-    voila_log().info('Server started at: http://' + bind)
-
     options = {
         'bind': bind,
         'workers': number_of_workers(),
         'threads': number_of_threads(),
         'worker_class': 'gthread',
-        'loglevel': 'warning',
+        'loglevel': 'info',
         'disable_redirect_access_to_syslog': True
     }
 
     if not analysis_type:
-        StandaloneApplication(splicegraph.app, options).run()
+        standalone_app = StandaloneApplication(splicegraph.app, options)
 
     elif analysis_type == constants.ANALYSIS_PSI:
-        StandaloneApplication(psi.app, options).run()
+        standalone_app = StandaloneApplication(psi.app, options)
 
     elif analysis_type == constants.ANALYSIS_DELTAPSI:
-        StandaloneApplication(deltapsi.app, options).run()
+        standalone_app = StandaloneApplication(deltapsi.app, options)
 
     elif analysis_type == constants.ANALYSIS_HETEROGEN:
-        StandaloneApplication(heterogen.app, options).run()
+        standalone_app = StandaloneApplication(heterogen.app, options)
 
     else:
         raise UnknownAnalysisType(analysis_type)
+
+    standalone_app.run()
 
 
 def number_of_workers():
