@@ -14,7 +14,7 @@ cdef extern from "grimoire.hpp" namespace "grimoire":
         Junction(int start1, int end1) nogil except +
         Junction(int start1, int end1, bint annot1) nogil except +
         void         update_flags(unsigned int num_reads, unsigned int num_pos, unsigned int denovo_thresh,
-                                  unsigned int min_experiments) nogil
+                                  unsigned int min_experiments, bint denovo) nogil
         void         clear_nreads(bint reset_grp) nogil
         int          get_start() nogil ;
         int          get_end() nogil ;
@@ -60,7 +60,7 @@ cdef extern from "grimoire.hpp" namespace "grimoire":
         void    create_annot_intron(int start_ir, int end_ir) nogil ;
         void    add_elements(map[string, Junction*] junc_map, map[string, Exon*] exon_map) nogil ;
         void    update_junc_flags(int efflen, bint is_last_exp, unsigned int minreads, unsigned int minpos,
-                                  unsigned int denovo_thresh, unsigned int min_experiments) nogil ;
+                                  unsigned int denovo_thresh, unsigned int min_experiments, bint denovo) nogil ;
         void    fill_junc_tlb(map[string, vector[string]]& tlb) nogil ;
         void    connect_introns() nogil ;
         int     detect_lsvs(vector[LSV*] out_lsvlist) nogil ;

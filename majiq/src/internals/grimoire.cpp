@@ -236,9 +236,9 @@ namespace grimoire {
     }
 
     void Gene::update_junc_flags(int efflen, bool is_last_exp, unsigned int minreads, unsigned int minpos,
-                                  unsigned int denovo_thresh, unsigned int min_experiments){
+                                  unsigned int denovo_thresh, unsigned int min_experiments, bool denovo){
         for(const auto &p: junc_map_){
-            (p.second)->update_flags(efflen, minreads, minpos, denovo_thresh, min_experiments) ;
+            (p.second)->update_flags(efflen, minreads, minpos, denovo_thresh, min_experiments, denovo) ;
             (p.second)->clear_nreads(is_last_exp) ;
         }
         return ;

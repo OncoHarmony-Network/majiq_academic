@@ -73,30 +73,11 @@ namespace grimoire{
                 return a->get_end() < coord ;
             }
 
-//            template <class myRegion>
-//            vector<myRegion *>::iterator RegionSearch(vector<myRegion *> &v, coord){
-//
-//                vector<myRegion *>::iterator low_u = lower_bound (low_l, low_u, coord, func_comp ) ;
-//                vector<myRegion *>::iterator low_l = v.begin()
-//                bool brk = low_u != v.end() ;
-//                while(brk){
-//
-//                    low_l = lower_bound (v.begin(), low_u, coord, func_comp ) ;
-//                    if(low_l == low_u){
-//                        brk = false ;
-//                        low_u = low_l ;
-//                    }
-//                }
-//                return low_u ;
-//            }
-
-
             template <class myRegion>
             static bool islowerRegion(myRegion * a, myRegion * b){
                 return (a->get_start() < b->get_start()) ||
                         (a->get_start() == b->get_start() && a->get_end() < b->get_end());
             }
-
 
             template <class myRegion>
             static bool RegionsOverlap(myRegion* t1, myRegion* t2){
@@ -145,7 +126,7 @@ namespace grimoire{
             void  set_donor(Exon * don) { donor_ = don ; }
 
             void update_flags(int efflen, unsigned int num_reads, unsigned int num_pos, unsigned int denovo_thresh,
-                              unsigned int min_experiments){
+                              unsigned int min_experiments, bool denovo){
 
 //cerr << "UPDATE FLAGS " << get_key() << " nreads_:" << nreads_ <<"\n" ;
                 if (nreads_ == nullptr ){
@@ -165,6 +146,8 @@ namespace grimoire{
                 if (sum_reads >= denovo_thresh){
                     ++ denovo_cnt_  ;
                     denovo_bl_ = denovo_bl_ || (denovo_cnt_ >= min_experiments) ;
+                    if (!(denovo || annot_))
+                        denovo_bl_ = false ;
                 }
 
 //cerr << "UPDATE FLAGS " << get_key() << " bool:" << denovo_bl_<< " denovothresh: " << denovo_thresh << " sum_reads: " << sum_reads << "\n" ;
@@ -335,7 +318,7 @@ namespace grimoire{
             int     detect_lsvs(vector<LSV*> &out_lsvlist);
             void    initialize_junction(string key, int start, int end, float* nreads_ptr) ;
             void    update_junc_flags(int efflen, bool is_last_exp, unsigned int minreads, unsigned int minpos,
-                                      unsigned int denovo_thresh, unsigned int min_experiments) ;
+                                      unsigned int denovo_thresh, unsigned int min_experiments, bool denovo) ;
 
     };
 

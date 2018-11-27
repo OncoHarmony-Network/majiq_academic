@@ -213,6 +213,7 @@ cdef _find_junctions(list file_list, map[string, Gene*]& gene_map, vector[string
     cdef unsigned int minpos = conf.minpos
     cdef unsigned int minreads = conf.minreads
     cdef unsigned int denovo_thresh= conf.min_denovo
+    cdef bint denovo = conf.denovo
     cdef float min_ir_cov = conf.min_intronic_cov
     cdef int k=conf.k, m=conf.m
     cdef float pvalue_limit=conf.pvalue_limit
@@ -280,7 +281,7 @@ cdef _find_junctions(list file_list, map[string, Gene*]& gene_map, vector[string
             logger.debug("Update flags")
             for i in prange(n, nogil=True, num_threads=nthreads):
                 gg = gene_map[gid_vec[i]]
-                gg.update_junc_flags(eff_len, (j==last_it_grp), minreads, minpos, denovo_thresh, min_experiments)
+                gg.update_junc_flags(eff_len, (j==last_it_grp), minreads, minpos, denovo_thresh, min_experiments, denovo)
 
             logger.debug("Done Update flags")
             junc_ids = [0] * njunc

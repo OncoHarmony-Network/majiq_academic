@@ -28,7 +28,7 @@ void prob_data_sample_given_psi(psi_distr_t& out_array, float sample, float all_
     float prev = scythe::pbeta(psi_border[0], a, b) ;
     for (int i=0; i<nbins; i++){
         float res = scythe::pbeta(psi_border[i+1], a, b) ;
-        out_array[i] = log((res - prev) + 1e-300) ;
+        out_array[i] = log((res - prev) + 1e-30) ;
         prev = res ;
     }
 }
@@ -44,7 +44,7 @@ void prob_data_sample_given_psi(float* out_array, float sample, float all_sample
     float prev = scythe::pbeta(psi_border[0], a, b) ;
     for (int i=0; i<nbins; i++){
         float res = scythe::pbeta(psi_border[i+1], a, b) ;
-        out_array[i] = log((res - prev) + 1e-300);
+        out_array[i] = log((res - prev) + 1e-30);
         prev = res ;
     }
 }
@@ -167,6 +167,7 @@ void deltapsi_posterior(dpsiLSV*lsvObj, vector<psi_distr_t>& prior_matrix, psi_d
         sort (temp_mupsi2.begin(), temp_mupsi2.end()) ;
         lsvObj->mu_psi1[j] = median(temp_mupsi1) ;
         lsvObj->mu_psi2[j] = median(temp_mupsi2) ;
+
         for (int i=0; i<nbins; i++){
             lsvObj->post_psi1[j][i] /= msamples ;
             lsvObj->post_psi2[j][i] /= msamples ;
@@ -174,6 +175,7 @@ void deltapsi_posterior(dpsiLSV*lsvObj, vector<psi_distr_t>& prior_matrix, psi_d
                 dpsi_matrix[i][i2] /= msamples ;
             }
         }
+
         collapse_matrix(lsvObj->post_dpsi[j], dpsi_matrix, nbins) ;
         dpsi_matrix.clear() ;
     }

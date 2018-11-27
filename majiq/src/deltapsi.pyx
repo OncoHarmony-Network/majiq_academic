@@ -161,7 +161,7 @@ cdef void _core_deltapsi(object self):
                     postdpsi[x, y] = dpsiObj_ptr.post_dpsi[x][y]
             dpsiObj_ptr.clear_all()
 
-            # print(lsv, lsv_type_dict[lsv][0].decode('utf-8'), postdpsi, [postpsi1,postpsi2], [mupsi1, mupsi2], junc_info[lsv])
+            print(lsv, lsv_type_dict[lsv][0].decode('utf-8'), postdpsi, [postpsi1,postpsi2], [mupsi1, mupsi2], junc_info[lsv])
             out_h5p.delta_psi(lsv.decode('utf-8')).add(lsv_type=lsv_type_dict[lsv][0].decode('utf-8'),
                                                        bins=postdpsi, group_bins=[postpsi1,postpsi2],
                                                        group_means=[mupsi1, mupsi2], junctions=junc_info[lsv])

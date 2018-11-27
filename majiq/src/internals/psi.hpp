@@ -84,14 +84,14 @@ inline float logsumexp_2D(vector<psi_distr_t>& nums, size_t ct){
     float max_exp = nums[0][0], sum = 0.0 ;
     size_t i, j ;
 
-    for(i = 1; i < ct; i++){
+    for(i = 0; i < ct; i++){
         for(j = 1; j < ct; j++){
             max_exp = (nums[i][j] > max_exp) ? nums[i][j] : max_exp ;
         }
     }
 
     for(i = 0; i < ct; i++){
-        for(j = 1; j < ct; j++){
+        for(j = 0; j < ct; j++){
             sum += exp(nums[i][j] - max_exp) ;
         }
     }
