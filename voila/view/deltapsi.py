@@ -23,7 +23,7 @@ def index():
 
 @app.route('/gene/<gene_id>/')
 def gene(gene_id):
-    return views.gene_view('dpsi_template.html', gene_id, ViewDeltaPsi)
+    return views.gene_view('dpsi_summary.html', gene_id, ViewDeltaPsi)
 
 
 @app.route('/lsv-data', methods=('POST',))
