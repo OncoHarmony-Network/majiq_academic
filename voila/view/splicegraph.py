@@ -26,7 +26,9 @@ def gene(gene_id=None):
         del highlight[lsv_id]
     session['highlight'] = highlight
 
-    return render_template('sg_summary.html', gene_id=gene_id)
+    with ViewSpliceGraph() as sg:
+        gene = sg.gene(gene_id)
+        return render_template('sg_summary.html', gene=gene)
 
 
 @app.route('/nav/<gene_id>', methods=('POST',))

@@ -4,7 +4,7 @@
     <script src="{{ url_for('static', filename='js/lsvtools.js') }}"></script>
     <script src="{{ url_for('static', filename='js/summary.js') }}"></script>
     <script>
-        json_ajax('{{ url_for("nav", gene_id=gene_id) }}').then(json => {
+        json_ajax('{{ url_for("nav", gene_id=gene.id) }}').then(json => {
             document.querySelector('.prev-gene').addEventListener('click', () => {
                 window.location.href = json.prev;
             });
@@ -14,7 +14,7 @@
             });
         });
 
-        json_ajax('{{ url_for("splice_graph", gene_id=gene_id) }}').then(gene => {
+        json_ajax('{{ url_for("splice_graph", gene_id=gene.id) }}').then(gene => {
 
             const sgs = new SpliceGraphs('.splice-graph-container', {
                 gene: gene,
