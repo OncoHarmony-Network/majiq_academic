@@ -1,28 +1,3 @@
-// $(document).on('click', '.lsv-single-compact-percentiles, .psi-violin-plot', function () {
-//     $(this.parentNode)
-//         .children('.lsv-single-compact-percentiles, .psi-violin-plot')
-//         .stop()
-//         .animate({height: 'toggle', width: 'toggle'});
-// });
-//
-// $(document).on('click', '.lsvDeltaCompact', function () {
-//     $(this)
-//         .children('.deltapsi-violin-plot, .excl-incl-rect')
-//         .stop()
-//         .animate({height: 'toggle', width: 'toggle'});
-// });
-//
-// $(document).on('change', '.highlight-lsv', function () {
-//     const table = this.parentElement.parentElement.parentElement.parentElement;
-//     const highlights = table.querySelectorAll('.highlight-btn:checked');
-//     const splice_graphs = table.parentElement.querySelectorAll('.splice-graph');
-//     const lsv_ids = get_lsv_ids(table);
-//     Array.from(splice_graphs).forEach(function (splice_graph) {
-//         console.log(lsv_ids);
-//         new SpliceGraph(splice_graph, {lsv_ids: lsv_ids})
-//     });
-// });
-
 // Adding dash lines to the Canvas Rendering
 CanvasRenderingContext2D.prototype.dashedLine = function (x1, y1, x2, y2, dashLen) {
 
@@ -70,8 +45,10 @@ const BREWER_PALETTE = [
 
 class Lsv {
     constructor(lsv_data) {
-        this.exon_number = lsv_data.exon_number;
-        this.lsv = lsv_data.lsv
+        if (lsv_data) {
+            this.exon_number = lsv_data.exon_number;
+            this.lsv = lsv_data.lsv
+        }
     }
 
     static draw_dashed_line(contextO, startx, starty, endx, endy, dashLen) {
@@ -301,8 +278,8 @@ class Lsv {
 
         const ctx = canvas.getContext("2d");
         if (exon.type === 1) {
-            ctx.strokeStyle = "rgba(255, 165, 0, 1)"; //this.get_color(2, BREWER_PALETTE, .8);
-            ctx.fillStyle = "rgba(255, 165, 0, 0.2)"; //this.get_color(2, BREWER_PALETTE, .2);
+            ctx.strokeStyle = "rgba(255, 165, 0, 1)"; //Lsv.get_color(2, BREWER_PALETTE, .8);
+            ctx.fillStyle = "rgba(255, 165, 0, 0.2)"; //Lsv.get_color(2, BREWER_PALETTE, .2);
         } else {
             ctx.strokeStyle = "rgba(0, 0, 0, 0.8)";
             ctx.fillStyle = "rgba(0, 0, 0, 0.2)";
@@ -656,6 +633,131 @@ class Lsv {
 
         return svgContainer;
 
+    }
+
+    renderFloatingLegend(canvas) {
+        var ctx = canvas.getContext("2d");
+
+        // Clear previous draw
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        var MARGINS = [10, 2, 2, 2];
+        var SEP_FIG_TEXT = canvas.height * .05;
+        var SEP_FIG = canvas.width * .02;
+        var num_fig = 8;
+        var area_figures = [
+            canvas.width - MARGINS[0] - MARGINS[1] - (num_fig - 1) * SEP_FIG,
+            canvas.height * .7 - MARGINS[2] - SEP_FIG_TEXT
+        ];
+        var area_texts = [canvas.width - MARGINS[0] - MARGINS[1], canvas.height * .3 - MARGINS[2] - SEP_FIG_TEXT];
+        var legend_line_length = 20;
+        var x = MARGINS[0];
+        var y = MARGINS[2];
+        ctx.font = "7pt Arial";
+        ctx.textAlign = "center";
+
+        /**
+         * Legend exons_obj
+         * */
+        // DB & RNASeq
+        ctx.strokeStyle = "rgba(0, 0, 0, 0.8)";
+        ctx.fillStyle = "rgba(0, 0, 0, 0.2)";
+        this.draw_rectangle(ctx, x, y, Math.round(area_figures[0] / num_fig - SEP_FIG), Math.round(area_figures[1]), true);
+        ctx.fillStyle = "rgba(0, 0, 0, 1)";
+        ctx.fillText("DB & RNASeq", Math.round(x + (area_figures[0] / num_fig - SEP_FIG) / 2), canvas.height - MARGINS[3]);
+        x = x + area_figures[0] / num_fig + SEP_FIG;
+
+        // RNASeq Only
+        ctx.strokeStyle = Lsv.get_color(2, BREWER_PALETTE, .8);
+        ctx.fillStyle = Lsv.get_color(2, BREWER_PALETTE, .2);
+        this.draw_rectangle(ctx, x, y, Math.round(area_figures[0] / num_fig - SEP_FIG), Math.round(area_figures[1]), true);
+        ctx.fillStyle = "rgba(0, 0, 0, 1)";
+        ctx.fillText("RNASeq Only", Math.round(x + (area_figures[0] / num_fig - SEP_FIG) / 2), canvas.height - MARGINS[3]);
+        x = x + area_figures[0] / num_fig + SEP_FIG;
+
+        // DB Only
+        ctx.strokeStyle = "rgba(0, 0, 0, 0.8)";
+        ctx.lineWidth = 2;
+        ctx.fillStyle = "rgba(255, 255, 255, .5)";
+        ctx.setLineDash([5, 5]);
+        this.draw_rectangle(ctx, Math.round(x), y, Math.round(area_figures[0] / num_fig - SEP_FIG), Math.round(area_figures[1]), true);
+        ctx.setLineDash([]);
+        ctx.fillStyle = "rgba(0, 0, 0, 1)";
+        ctx.fillText("DB Only", Math.round(x + (area_figures[0] / num_fig - SEP_FIG) / 2), canvas.height - MARGINS[3]);
+        x = x + area_figures[0] / num_fig + SEP_FIG;
+
+        /**
+         * Legend junctions
+         * */
+        // DB & RNASeq
+        ctx.strokeStyle = 'red';
+        ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        ctx.arc(Math.round(x + (area_figures[0] / num_fig - SEP_FIG) / 2), Math.round(y + area_figures[1]), (area_figures[0] / num_fig - SEP_FIG) / 2, -Math.PI, 0);
+        ctx.stroke();
+        ctx.fillStyle = "rgba(0, 0, 0, 1)";
+        ctx.fillText("DB & RNASeq", x + Math.round((area_figures[0] / num_fig - SEP_FIG) / 2), canvas.height - MARGINS[3]);
+        x = x + area_figures[0] / num_fig + SEP_FIG;
+
+        // RNASeq Only
+        ctx.strokeStyle = Lsv.get_color(2, BREWER_PALETTE, .8);
+        ctx.beginPath();
+        ctx.arc(Math.round(x + (area_figures[0] / num_fig - SEP_FIG) / 2), Math.round(y + area_figures[1]), (area_figures[0] / num_fig - SEP_FIG) / 2, -Math.PI, 0);
+        ctx.stroke();
+        ctx.fillStyle = "rgba(0, 0, 0, 1)";
+        ctx.fillText("RNASeq Only", Math.round(x + (area_figures[0] / num_fig - SEP_FIG) / 2), canvas.height - MARGINS[3]);
+        x = x + area_figures[0] / num_fig + SEP_FIG;
+
+        // DB Only
+        ctx.strokeStyle = "rgba(0, 0, 0, 0.8)";
+        ctx.setLineDash([5, 5]);
+        ctx.beginPath();
+        ctx.arc(Math.round(x + (area_figures[0] / num_fig - SEP_FIG) / 2), Math.round(y + area_figures[1]), (area_figures[0] / num_fig - SEP_FIG) / 2, -Math.PI, 0);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.fillStyle = "rgba(0, 0, 0, 1)";
+        ctx.fillText("DB Only", Math.round(x + (area_figures[0] / num_fig - SEP_FIG) / 2), canvas.height - MARGINS[3]);
+        x = x + area_figures[0] / num_fig + SEP_FIG;
+
+        /**
+         * Legend number of reads
+         * */
+        // DB & RNASeq example chosen
+        ctx.strokeStyle = 'red';
+        ctx.lineWidth = 1.2;
+        ctx.font = "8pt Arial";
+        var font_height = 9;
+        ctx.beginPath();
+        ctx.arc(Math.round(x + (area_figures[0] / num_fig - SEP_FIG) / 2), Math.round(y + area_figures[1]), (area_figures[0] / num_fig - 2 * SEP_FIG) / 2, -Math.PI, 0);
+        ctx.stroke();
+        Lsv.renderNumReads(ctx, Math.round(x + (area_figures[0] / num_fig - SEP_FIG) / 2), MARGINS[2] + font_height, 32);
+        ctx.fillStyle = "rgba(0, 0, 0, 1)";
+        ctx.font = "7pt Arial";
+        ctx.fillText("RNASeq reads", x + Math.round((area_figures[0] / num_fig - SEP_FIG) / 2), canvas.height - MARGINS[3]);
+        x = x + area_figures[0] / num_fig + SEP_FIG;
+
+        /**
+         * Legend Intron Retention
+         * */
+        ctx.strokeStyle = "rgba(0, 0, 0, 0.8)";
+        ctx.fillStyle = "rgba(0, 0, 0, 0.2)";
+        ctx.lineWidth = 1.2;
+        this.draw_rectangle(ctx, x, y, Math.round((area_figures[0] / num_fig) / 3 - SEP_FIG), Math.round(area_figures[1]), true);
+        this.draw_rectangle(ctx, Math.round(x + (area_figures[0] / num_fig) * 2 / 3), y, Math.round((area_figures[0] / num_fig) / 3 - SEP_FIG), Math.round(area_figures[1]), true);
+        this.draw_rectangle(ctx, Math.round(x + (area_figures[0] / num_fig) / 3 - SEP_FIG), y + area_figures[1] / 4, Math.round((area_figures[0] / num_fig - SEP_FIG) * 2 / 3), Math.round(area_figures[1] / 2), true);
+        ctx.fillStyle = "rgba(0, 0, 0, 1)";
+        ctx.fillText("Intron Ret.", x + Math.round((area_figures[0] / num_fig - SEP_FIG) / 2), canvas.height - MARGINS[3]);
+
+
+        ctx.lineWidth = 1;
+    }
+
+    static renderNumReads(ctx, x, y, num_reads) {
+        if (parseInt(num_reads) === 0) return;
+        ctx.fillStyle = "rgba(0, 0, 0, .8)";
+        ctx.font = "9pt Arial";
+        ctx.textAlign = "center";
+        ctx.fillText(num_reads, x, y - 2);
     }
 }
 

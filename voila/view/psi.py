@@ -1,7 +1,7 @@
 import os
 from bisect import bisect
 
-from flask import render_template, url_for, jsonify, request, session, Flask, Response, redirect
+from flask import render_template, url_for, jsonify, request, session, Flask, Response
 
 from voila.api.view_matrix import ViewPsi
 from voila.api.view_splice_graph_sqlite import ViewSpliceGraph
@@ -22,18 +22,7 @@ def index():
 
 @app.route('/gene/<gene_id>/')
 def gene(gene_id):
-    with ViewPsi() as m:
-        if gene_id not in m.gene_ids:
-            return redirect(url_for('index'))
-
-    # For this gene, remove any already selected highlight/weighted lsvs from session.
-    highlight = session.get('highlight', {})
-    lsv_ids = [h for h in highlight if h.startswith(gene_id)]
-    for lsv_id in lsv_ids:
-        del highlight[lsv_id]
-    session['highlight'] = highlight
-
-    return render_template('psi_summary.html', gene_id=gene_id)
+    return views.gene_view('psi_summary.html', gene_id, ViewPsi)
 
 
 @app.route('/index-table', methods=('POST',))
@@ -52,7 +41,13 @@ def index_table():
             gene = sg.gene(gene_id)
             lsv_exons = sg.lsv_exons(gene, psi.junctions)
 
-            ucsc = views.ucsc_link(lsv_exons, sg.genome, gene.chromosome, lsv_id)
+            # I know that some lsv ids contain half exons... now we just need to find an example to work from
+            assert 'na' not in lsv_id.split(':')[-1].split('-')
+
+            start = max(e for es in lsv_exons for e in es if e != -1)
+            end = min(e for es in lsv_exons for e in es if e != -1)
+
+            ucsc = views.ucsc_href(sg.genome, gene.chromosome, start, end)
 
             records[idx] = [
                 {'href': url_for('gene', gene_id=gene_id), 'gene_name': gene_name},
@@ -109,8 +104,8 @@ def summary_table(gene_id):
 
             gene = sg.gene(gene_id)
             lsv_exons = sg.lsv_exons(gene, psi.junctions)
-
-            ucsc = views.ucsc_link(lsv_exons, sg.genome, gene.chromosome, lsv_id)
+            start, end = views.lsv_boundries(lsv_exons)
+            ucsc = views.ucsc_href(sg.genome, gene.chromosome, start, end)
 
             try:
                 highlight = session['highlight'][lsv_id]

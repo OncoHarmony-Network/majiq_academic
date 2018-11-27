@@ -24,11 +24,6 @@ class SpliceGraphTools {
             document.querySelector('.lsv-tools.tools-menu').classList.toggle('hide-tools-menu');
         };
 
-        // header info
-        document.querySelector('.gene-header .gene-name').textContent = `Gene name: ${gene.name}; ${ gene.chromosome }:${ gene.strand }:${ gene.start }-${ gene.end };`;
-        document.querySelector('.gene-header .gene-id').textContent = `Gene ID: ${gene.id};`;
-        document.querySelector('.ucsc-gene').setAttribute('href', `http://genome.ucsc.edu/cgi-bin/hgTracks?db=${gene.genome}&position=${ gene.chromosome }:${ gene.start }-${ gene.end }`)
-
 
         // populate splice graph selector groups
         d3.select('.groups select')
@@ -67,7 +62,6 @@ class SpliceGraphTools {
 
         // force change event to populate experiments on initial page load
         SpliceGraphTools._populate_sg_form();
-
 
         // submit event for splice graph selector
         document.querySelector('.splice-graph-form').onsubmit = (event) => {
@@ -135,9 +129,9 @@ class SpliceGraphTools {
                     return (!isNaN(gt) && !isNaN(lt) && r <= gt || r >= lt) || (!isNaN(gt) && r <= gt) || (!isNaN(lt) && r >= lt);
                 })
         };
+
         document.querySelector('#reads-greater-than').oninput = junctions_filter;
         document.querySelector('#reads-less-than').oninput = junctions_filter;
-
 
     }
 

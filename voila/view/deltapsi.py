@@ -1,7 +1,7 @@
 import os
 from bisect import bisect
 
-from flask import Flask, render_template, jsonify, url_for, request, session, Response, redirect
+from flask import Flask, render_template, jsonify, url_for, request, session, Response
 
 from voila.api.view_matrix import ViewDeltaPsi
 from voila.api.view_splice_graph_sqlite import ViewSpliceGraph
@@ -23,18 +23,7 @@ def index():
 
 @app.route('/gene/<gene_id>/')
 def gene(gene_id):
-    with ViewDeltaPsi() as m:
-        if gene_id not in m.gene_ids:
-            return redirect(url_for('index'))
-
-    # For this gene, remove any already selected highlight/weighted lsvs from session.
-    highlight = session.get('highlight', {})
-    lsv_ids = [h for h in highlight if h.startswith(gene_id)]
-    for lsv_id in lsv_ids:
-        del highlight[lsv_id]
-    session['highlight'] = highlight
-
-    return render_template('dpsi_summary.html', gene_id=gene_id)
+    return views.gene_view('dpsi_summary.html', gene_id, ViewDeltaPsi)
 
 
 @app.route('/lsv-data', methods=('POST',))
@@ -98,7 +87,8 @@ def index_table():
             lsv_junctions = dpsi.junctions
             lsv_exons = sg.lsv_exons(gene, lsv_junctions)
 
-            ucsc = views.ucsc_link(lsv_exons, sg.genome, gene.chromosome, lsv_id)
+            start, end = views.lsv_boundries(lsv_exons)
+            ucsc = views.ucsc_href(sg.genome, gene.chromosome, start, end)
 
             records[idx] = [
                 [url_for('gene', gene_id=gene_id), gene_name],
@@ -229,8 +219,8 @@ def summary_table(gene_id):
             gene = sg.gene(gene_id)
             lsv_junctions = dpsi.junctions
             lsv_exons = sg.lsv_exons(gene, lsv_junctions)
-
-            ucsc = views.ucsc_link(lsv_exons, sg.genome, gene.chromosome, lsv_id)
+            start, end = views.lsv_boundries(lsv_exons)
+            ucsc = views.ucsc_href(sg.genome, gene.chromosome, start, end)
 
             records[idx] = [
                 highlight,

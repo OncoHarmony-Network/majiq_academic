@@ -1,3 +1,12 @@
+const copy_text = str => {
+    const el = document.createElement('textarea');
+    el.value = str;
+    document.body.appendChild(el);
+    el.select();
+    document.execCommand('copy');
+    document.body.removeChild(el);
+};
+
 class SpliceGraphs {
     constructor(container, opts) {
         this.container_selector = container;
@@ -845,6 +854,7 @@ class SpliceGraphs {
                         document.querySelectorAll('.junction-grp, .intron-retention-grp').forEach(el => el.classList.remove('mouseover-filter'));
                     };
 
+
                     el.onclick = () => {
                         const click_new = !el.classList.contains('select');
 
@@ -853,12 +863,14 @@ class SpliceGraphs {
                             x.classList.remove('select')
                         });
 
+
                         if (click_new) {
                             el.dispatchEvent(new Event('mouseover'));
                             document.querySelectorAll('.mouseover-filter').forEach(el => el.classList.add('select-filter'));
                             el.classList.add('select');
                             document.querySelector('.coordinates').classList.add('select');
-                            this.copy_select_ucsc(el)
+                            const d = d3.select(el).datum();
+                            copy_text(`${this.gene.chromosome}:${d.start}-${d.end}`)
                         } else {
                             el.dispatchEvent(new Event('mouseout'));
                         }

@@ -1,7 +1,7 @@
 from urllib.parse import urlencode
 
 import gunicorn.app.base
-from flask import jsonify
+from flask import jsonify, redirect, url_for, session, render_template
 from gunicorn.six import iteritems
 
 from voila import constants
@@ -131,16 +131,46 @@ def copy_lsv(lsv_id, view_matrix):
     })
 
 
-def ucsc_link(lsv_exons, genome, chromosome, lsv_id):
-    # I know that some lsv ids contain half exons... now we just need to find an example to work from
-    assert 'na' not in lsv_id.split(':')[-1].split('-')
-
-    start = max(e for es in lsv_exons for e in es if e != -1)
-    end = min(e for es in lsv_exons for e in es if e != -1)
-
+def ucsc_href(genome, chromosome, start, end):
     query_string = {
         'db': genome,
         'position': chromosome + ':' + str(start) + '-' + str(end)
     }
 
     return 'http://genome.ucsc.edu/cgi-bin/hgTracks?' + urlencode(query_string)
+
+
+def lsv_boundries(lsv_exons):
+    start = max(e for es in lsv_exons for e in es if e != -1)
+    end = min(e for es in lsv_exons for e in es if e != -1)
+    return start, end
+
+
+def gene_view(summary_template, gene_id, view_matrix):
+    with view_matrix() as m:
+        if gene_id not in m.gene_ids:
+            return redirect(url_for('index'))
+
+    with ViewSpliceGraph() as sg:
+        gene = sg.gene(gene_id)
+
+        # For this gene, remove any already selected highlight/weighted lsvs from session.
+        highlight = session.get('highlight', {})
+        lsv_ids = [h for h in highlight if h.startswith(gene_id)]
+        for lsv_id in lsv_ids:
+            del highlight[lsv_id]
+        session['highlight'] = highlight
+
+        exons = list(sg.exons(gene))
+        start = min(e.start for e in exons if e.start != -1)
+        end = max(e.end for e in exons if e.end != -1)
+        href = ucsc_href(sg.genome, gene.chromosome, start, end)
+
+        gene_dict = gene._asdict()
+        gene_dict.update({
+            'start': start,
+            'end': end,
+            'href': href
+        })
+
+        return render_template(summary_template, gene=gene_dict)

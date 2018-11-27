@@ -41,7 +41,7 @@ table {
     z-index: 2;
     width: 100%;
     padding-top: 10px;
-    padding-bottom: 10px
+    padding-bottom: 10px;
 }
 
 .gene-header > div {
@@ -59,6 +59,8 @@ table {
 .coordinates {
     font-size: 14px;
     color: #205bb0;
+    padding-top: 5px;
+    height: 20px;
 }
 
 .gene-header .gene-id {
@@ -114,9 +116,9 @@ table {
 .content {
     display: flex;
     flex-direction: column;
-    height: calc(100% - 106px);
+    height: calc(100% - 133px);
     position: absolute;
-    top: 106px;
+    top: 133px;
     width: 100%
 }
 
