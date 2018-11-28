@@ -109,15 +109,8 @@ namespace io_bam{
 
     };
 
-    void prepare_genelist(map<string, Gene*>& gene_map, map<string, vector<overGene*>> & geneList);
+    void prepare_genelist(map<string, Gene*>& gene_map, map<string, vector<overGene*>> & geneList) ;
     bool juncGeneSearch(Gene* t1, Junction* t2) ;
-    void free_genelist(map<string, vector<overGene*>> & geneList){
-        for (auto &ov_vec: geneList){
-            for(auto &ov: ov_vec.second){
-                delete (ov) ;
-            }
-            (ov_vec.second).clear() ;
-        }
-    }
+    void free_genelist(map<string, vector<overGene*>> & geneList) ;
 }
 #endif

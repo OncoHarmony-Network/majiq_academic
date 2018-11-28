@@ -475,4 +475,13 @@ namespace io_bam {
         }
     }
 
+    void free_genelist(map<string, vector<overGene*>> & geneList){
+        for (auto &ov_vec: geneList){
+            for(auto &ov: ov_vec.second){
+                delete (ov) ;
+            }
+            (ov_vec.second).clear() ;
+        }
+    }
+
 }
