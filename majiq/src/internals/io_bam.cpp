@@ -140,12 +140,14 @@ namespace io_bam {
                  off += ol ;
             }
             else if( op == BAM_CREF_SKIP ){
-                if (off >= MIN_BP_OVERLAP){
+                const int rlen = read->core.l_qseq ;
+                if (off >= MIN_BP_OVERLAP && off<= (rlen - MIN_BP_OVERLAP)){
                     const int j_end = read->core.pos + off + ol +1 ;
                     const int j_start =  read->core.pos + off ;
                     first_offpos  = (first_offpos == -1) ? (j_start - (read_pos+ MIN_BP_OVERLAP)) : first_offpos ;
 
-//cout << "add junction " << read_pos << ":: "<< j_start << "-" << j_end << "\n" ;
+//    cerr << read->id << "add junction " << read_pos << ":: "<< j_start << "-" << j_end ;
+//    cerr << " OFF" << off << " :: " << eff_len_ << ":" << rlen << "\n" ;
                     try {
                         add_junction(chrom, _get_strand(read), j_start, j_end, read_pos, first_offpos) ;
                     } catch (const std::logic_error& e) {
