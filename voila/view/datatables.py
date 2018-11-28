@@ -11,6 +11,7 @@ class DataTables:
         self._form = request.form
 
         self.sort_columns = sort_columns
+        self.filtered_len = 0
 
         # record values
         self.records_len = len(records)

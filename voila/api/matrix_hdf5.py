@@ -1,4 +1,4 @@
-import os
+import csv
 from abc import ABC, abstractmethod
 from typing import List
 
@@ -6,8 +6,10 @@ import h5py
 import numpy as np
 
 from voila import constants
+from voila.api.matrix_utils import generate_excl_incl, generate_means, generate_high_probability_non_changing, \
+    generate_variances
 from voila.exceptions import LsvIdNotFoundInVoilaFile, GeneIdNotFoundInVoilaFile
-from voila.vlsv import collapse_matrix
+from voila.vlsv import collapse_matrix, matrix_area
 
 
 def lsv_id_to_gene_id(lsv_id):
@@ -17,16 +19,24 @@ def lsv_id_to_gene_id(lsv_id):
 class MatrixHdf5:
     LSVS = 'lsvs'
 
-    def __init__(self, filename, mode='r'):
+    def __init__(self, filename, mode='r', voila_file=True, voila_tsv=False):
         """
         Access voila's HDF5 file.
 
         :param filename: name of voila file
         :param mode: generally r or w
         """
-        filename = os.path.expanduser(filename)
+        self.voila_tsv = voila_tsv
+        self.voila_file = voila_file
         self.dt = h5py.special_dtype(vlen=np.unicode)
-        self.h = h5py.File(filename, mode, libver='latest')
+        self._group_names = None
+        self._tsv_writer = None
+        self._tsv_file = None
+        self._filename = filename
+        self._prior = None
+
+        if voila_file:
+            self.h = h5py.File(filename, mode, libver='latest')
 
     def __enter__(self):
         return self
@@ -35,7 +45,11 @@ class MatrixHdf5:
         self.close()
 
     def close(self):
-        self.h.close()
+        if self.voila_file:
+            self.h.close()
+
+        if self.voila_tsv:
+            self._tsv_file.close()
 
     def add_dataset(self, *args, **kwargs):
         grp = self.h
@@ -72,6 +86,43 @@ class MatrixHdf5:
             except TypeError:
                 print(key, value)
                 raise
+
+    def add_tsv_row(self, matrix_type, **kwargs):
+
+        if self._tsv_writer is None:
+            tsv_filename = '.'.join(self._filename.split('.')[:-1]) + '.tsv'
+            self._tsv_file = open(tsv_filename, 'w', newline='')
+            fieldnames = matrix_type.tsv_fieldnames()
+            self._tsv_writer = csv.DictWriter(self._tsv_file, fieldnames=fieldnames, delimiter='\t')
+            self._tsv_writer.writeheader()
+
+        junctions = kwargs.get('junctions').tolist()
+        lsv_type = kwargs.get('lsv_type', '')
+        intron_ret = int(lsv_type[-1] == 'i')
+
+        if intron_ret:
+            junc_coords = junctions[:-1]
+            ir_coords = junctions[-2:-1]
+        else:
+            junc_coords = junctions
+            ir_coords = []
+
+        row = matrix_type.tsv_row(**kwargs)
+
+        row.update({
+            'gene_id': lsv_id_to_gene_id(matrix_type.lsv_id),
+            'lsv_id': matrix_type.lsv_id,
+            'lsv_type': lsv_type,
+            'a5ss': matrix_type.a5ss,
+            'a3ss': matrix_type.a3ss,
+            'es': matrix_type.exon_skipping,
+            'num_junctions': len(junctions) - intron_ret,
+            'num_exons': matrix_type.exon_count,
+            'junction_coords': ';'.join('{0}-{1}'.format(start, end) for start, end in junc_coords),
+            'ir_coords': ';'.join('{0}-{1}'.format(start, end) for start, end in ir_coords)
+        })
+
+        self._tsv_writer.writerow(row)
 
     def get(self, lsv_id: str, key: str):
         """
@@ -114,7 +165,9 @@ class MatrixHdf5:
 
     @property
     def prior(self):
-        return self.h['metadata']['prior'].value
+        if self._prior is None:
+            self._prior = self.h['metadata']['prior'].value
+        return self._prior
 
     @prior.setter
     def prior(self, ps):
@@ -123,7 +176,8 @@ class MatrixHdf5:
         :param ps:
         :return:
         """
-        self.h.create_dataset('metadata/prior', data=[collapse_matrix(p) for p in ps])
+        self._prior = [collapse_matrix(p) for p in ps]
+        self.create_dataset('metadata/prior', data=self._prior)
 
     @property
     def analysis_type(self):
@@ -131,15 +185,18 @@ class MatrixHdf5:
 
     @analysis_type.setter
     def analysis_type(self, a):
-        self.h.create_dataset('metadata/analysis_type', data=a)
+        self.create_dataset('metadata/analysis_type', data=a)
 
     @property
     def group_names(self):
-        return self.h['metadata']['group_names'].value.tolist()
+        if self._group_names is None:
+            self._group_names = self.h['metadata']['group_names'].value.tolist()
+        return self._group_names
 
     @group_names.setter
     def group_names(self, n):
-        self.h.create_dataset('metadata/group_names', data=np.array(n, dtype=self.dt))
+        self._group_names = n
+        self.create_dataset('metadata/group_names', data=np.array(n, dtype=self.dt))
 
     @property
     def splice_graph_experiment_names(self):
@@ -162,7 +219,7 @@ class MatrixHdf5:
         arr.fill('')
         for i, n in enumerate(ns):
             arr[i][0:len(n)] = n
-        self.h.create_dataset('metadata/experiment_names', data=arr)
+        self.create_dataset('metadata/experiment_names', data=arr)
 
     @property
     def stat_names(self):
@@ -199,7 +256,11 @@ class MatrixHdf5:
 
     @file_version.setter
     def file_version(self, version):
-        self.h.create_dataset('metadata/file_version', data=version)
+        self.create_dataset('metadata/file_version', data=version)
+
+    def create_dataset(self, *args, **kwargs):
+        if self.voila_file:
+            self.h.create_dataset(*args, **kwargs)
 
 
 class MatrixType(ABC):
@@ -212,6 +273,8 @@ class MatrixType(ABC):
         :param lsv_id: unique LSV identifier
         :param fields: fields allowed to be stored in this file
         """
+        self.voila_tsv = matrix_hdf5.voila_tsv
+        self.voila_file = matrix_hdf5.voila_file
         self.matrix_hdf5 = matrix_hdf5
         self.lsv_id = lsv_id
         self.fields = fields
@@ -224,7 +287,13 @@ class MatrixType(ABC):
         :param kwargs: keyword args containing key/values
         :return: None
         """
-        self.matrix_hdf5.add_multiple(self.lsv_id, **kwargs)
+        if self.voila_file:
+            self.matrix_hdf5.add_multiple(self.lsv_id, **kwargs)
+
+        if self.voila_tsv:
+            if self._lsv_type is None:
+                self._lsv_type = kwargs.get('lsv_type', None)
+            self.matrix_hdf5.add_tsv_row(self, **kwargs)
 
     def get(self, key: str):
         """
@@ -370,6 +439,34 @@ class DeltaPsi(MatrixHdf5):
             fields = ('bins', 'group_bins', 'group_means', 'lsv_type', 'junctions')
             super().__init__(matrix_hdf5, lsv_id, fields)
 
+        def tsv_fieldnames(self):
+            group_names = self.matrix_hdf5.group_names
+            return ['gene_id', 'lsv_id', 'lsv_type', 'E(dPSI)_per_junction', 'P(|dPSI|>=0.20)_per_junction',
+                    'P(|dPSI|<=0.05)_per_junction', '{}_E(PSI)'.format(group_names[0]),
+                    '{}_E(PSI)'.format(group_names[1]), 'a5ss', 'a3ss', 'es', 'num_junctions', 'num_exons',
+                    'junction_coords', 'ir_coords']
+
+        def tsv_row(self, **kwargs):
+            bins = kwargs['bins']
+            means = generate_means(bins)
+            excl_incl = generate_excl_incl(means)
+            threshold = 0.2
+            non_changing_threshold = 0.05
+
+            row = {
+                'E(dPSI)_per_junction': ';'.join(
+                    str(excl_incl[i][1] - excl_incl[i][0]) for i in range(np.size(bins, 0))),
+                'P(|dPSI|>=%.2f)_per_junction' % threshold: ';'.join(str(matrix_area(b, threshold)) for b in bins),
+                'P(|dPSI|<=%.2f)_per_junction' % non_changing_threshold: ';'.join(
+                    map(str, generate_high_probability_non_changing(self.intron_retention, self.matrix_hdf5.prior,
+                                                                    non_changing_threshold, bins))),
+            }
+
+            for group_name, means in zip(self.matrix_hdf5.group_names, kwargs['group_means']):
+                row[group_name + '_E(PSI)'] = ';'.join('%.3f' % i for i in means)
+
+            return row
+
     def delta_psi(self, lsv_id):
         """
         Accessor function for Delta PSI file.
@@ -391,6 +488,17 @@ class Psi(MatrixHdf5):
             """
             fields = ('bins', 'means', 'lsv_type', 'junctions')
             super().__init__(matrix_hdf5, lsv_id, fields)
+
+        def tsv_fieldnames(self):
+            return ['gene_id', 'lsv_id', 'lsv_type', 'E(PSI)', 'Var(E(PSI))', 'a5ss', 'a3ss', 'es', 'num_junctions',
+                    'num_exons', 'junction_coords', 'ir_coords']
+
+        def tsv_row(self, **kwargs):
+            bins = kwargs['bins']
+            return {
+                'E(PSI)': ';'.join(map(str, kwargs['means'])),
+                'Var(E(PSI))': ';'.join(map(str, generate_variances(bins)))
+            }
 
     def psi(self, lsv_id):
         """
