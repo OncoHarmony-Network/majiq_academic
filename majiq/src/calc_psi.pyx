@@ -52,6 +52,7 @@ cdef _core_calcpsi(object self):
     cdef list list_of_lsv
     cdef int nchunks = 500
     cdef qLSV qlsvObj
+    cdef bint voilafile, tsvfile
 
     majiq_logger.create_if_not_exists(self.outDir)
 
@@ -60,6 +61,9 @@ cdef _core_calcpsi(object self):
     logger.info("Command: %s" % " ".join(sys.argv))
     logger.info("Running Psi ...")
     logger.info("GROUP: %s" % self.files)
+
+    voilafile = self.output_type in ['all', 'voila']
+    tsvfile = self.output_type in ['all', 'tsv']
 
     list_of_lsv, exps = majiq_io.extract_lsv_summary(self.files, types_dict=lsv_type_dict,
                                                      minnonzero=self.minpos, min_reads=self.minreads,
@@ -101,7 +105,8 @@ cdef _core_calcpsi(object self):
                       <np.float32_t *> o_postpsi.data, msamples, nways, nbins, is_ir)
 
     logger.info('Computation done, saving results....')
-    with Matrix(get_quantifier_voila_filename(self.outDir, self.name), 'w') as out_h5p:
+    with Matrix(get_quantifier_voila_filename(self.outDir, self.name), 'w',
+                voila_file=voilafile, voila_tsv=tsvfile) as out_h5p:
         out_h5p.file_version = VOILA_FILE_VERSION
         out_h5p.analysis_type = ANALYSIS_PSI
         out_h5p.experiment_names = [exps]

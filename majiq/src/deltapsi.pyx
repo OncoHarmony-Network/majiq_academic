@@ -52,6 +52,7 @@ cdef void _core_deltapsi(object self):
     cdef string lsv
     cdef int nways, i
     cdef list list_of_lsv
+    cdef bint voilafile, tsvfile
 
     cdef np.ndarray[np.float32_t, ndim=1, mode="c"] mupsi1
     cdef np.ndarray[np.float32_t, ndim=1, mode="c"] mupsi2
@@ -67,11 +68,13 @@ cdef void _core_deltapsi(object self):
     majiq_logger.create_if_not_exists(self.outDir)
     logger = majiq_logger.get_logger("%s/deltapsi_majiq.log" % self.outDir, silent=self.silent,
                                      debug=self.debug)
-
     logger.info("Majiq deltapsi v%s-%s" % (VERSION, get_git_version()))
     logger.info("Command: %s" % " ".join(sys.argv))
     logger.info("GROUP1: %s" % self.files1)
     logger.info("GROUP2: %s" % self.files2)
+
+    voilafile = self.output_type in ['all', 'voila']
+    tsvfile = self.output_type in ['all', 'tsv']
 
     lsv_empirical_psi1 = {}
     junc_info = {}
@@ -126,7 +129,8 @@ cdef void _core_deltapsi(object self):
 
 
     logger.info('Computation done, saving results....')
-    with Matrix(get_quantifier_voila_filename(self.outDir, self.names, deltapsi=True), 'w') as out_h5p:
+    with Matrix(get_quantifier_voila_filename(self.outDir, self.names, deltapsi=True), 'w',
+                voila_file=voilafile, voila_tsv=tsvfile) as out_h5p:
         out_h5p.file_version = VOILA_FILE_VERSION
         out_h5p.analysis_type = ANALYSIS_DELTAPSI
         out_h5p.group_names = self.names
