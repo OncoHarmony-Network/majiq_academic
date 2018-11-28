@@ -13,7 +13,7 @@ using namespace std ;
 
 typedef vector<float> psi_distr_t ;
 typedef pair<int, int> pair_int_t ;
-
+#define PSEUDO 1e-20
 
 inline float median(psi_distr_t a){
     const int n = a.size() ;
@@ -134,18 +134,11 @@ inline float calc_mupsi(const float sample, const float all_sample, float alpha,
     return (sample + alpha) / (all_sample + alpha + beta) ;
 }
 
-inline void collapse_matrix(psi_distr_t o_dpsi, float* matrix, int nbins){
-    for (int i=0; i<nbins; i++){
-        for (int j=0; j<nbins; j++){
-            o_dpsi[j-i+(nbins-1)] += matrix[i*nbins + j] ;
-        }
-    }
-}
-
 inline void collapse_matrix(psi_distr_t& o_dpsi, vector<psi_distr_t>& matrix, int nbins){
+
     for (int i=0; i<nbins; i++){
         for (int j=0; j<nbins; j++){
-            o_dpsi[j-i+(nbins-1)] += matrix[i][j] ;
+            o_dpsi[j-i+(nbins-1)] += matrix[i][j];
         }
     }
 }

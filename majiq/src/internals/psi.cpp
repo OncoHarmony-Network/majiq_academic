@@ -28,7 +28,7 @@ void prob_data_sample_given_psi(psi_distr_t& out_array, float sample, float all_
     float prev = scythe::pbeta(psi_border[0], a, b) ;
     for (int i=0; i<nbins; i++){
         float res = scythe::pbeta(psi_border[i+1], a, b) ;
-        out_array[i] = log((res - prev) + 1e-30) ;
+        out_array[i] = log((res - prev) + PSEUDO) ;
         prev = res ;
     }
 }
@@ -44,7 +44,7 @@ void prob_data_sample_given_psi(float* out_array, float sample, float all_sample
     float prev = scythe::pbeta(psi_border[0], a, b) ;
     for (int i=0; i<nbins; i++){
         float res = scythe::pbeta(psi_border[i+1], a, b) ;
-        out_array[i] = log((res - prev) + 1e-30);
+        out_array[i] = log((res - prev) + PSEUDO);
         prev = res ;
     }
 }

@@ -131,10 +131,10 @@ cdef void _core_deltapsi(object self):
     logger.info('Computation done, saving results....')
     with Matrix(get_quantifier_voila_filename(self.outDir, self.names, deltapsi=True), 'w',
                 voila_file=voilafile, voila_tsv=tsvfile) as out_h5p:
+
         out_h5p.file_version = VOILA_FILE_VERSION
         out_h5p.analysis_type = ANALYSIS_DELTAPSI
         out_h5p.group_names = self.names
-
         out_h5p.experiment_names = [exps1, exps2]
 
         pmatrix = np.ndarray(shape=(nbins, nbins), dtype=np.float32, order="c")
@@ -144,6 +144,8 @@ cdef void _core_deltapsi(object self):
                 pmatrix[x, y]    = prior_matrix[0][x][y]
                 pmatrix_ir[x, y] = prior_matrix[1][x][y]
         out_h5p.prior = [pmatrix, pmatrix_ir]
+        # print ("PRIOR1", pmatrix)
+        # print ("PRIOR1", pmatrix_ir)
 
         for lsv in list_of_lsv:
             dpsiObj_ptr = <dpsiLSV*> lsv_map[lsv]
@@ -164,7 +166,6 @@ cdef void _core_deltapsi(object self):
                 for y in range((nbins*2)-1):
                     postdpsi[x, y] = dpsiObj_ptr.post_dpsi[x][y]
             dpsiObj_ptr.clear_all()
-
             # print(lsv, lsv_type_dict[lsv][0].decode('utf-8'), postdpsi, [postpsi1,postpsi2], [mupsi1, mupsi2], junc_info[lsv])
             out_h5p.delta_psi(lsv.decode('utf-8')).add(lsv_type=lsv_type_dict[lsv][0].decode('utf-8'),
                                                        bins=postdpsi, group_bins=[postpsi1,postpsi2],
