@@ -8,12 +8,12 @@ ctypedef np.float64_t DTYPE_t
 
 @cython.boundscheck(False) # turn off bounds-checking for entire function
 @cython.wraparound(False)  # turn off negative index wrapping for entire function
-cdef np.ndarray[DTYPE_t, ndim=1] _get_ecdf(np.ndarray[DTYPE_t, ndim=1] pvalues):
+cdef np.ndarray[np.float64_t, ndim=1] _get_ecdf(np.ndarray[np.float64_t, ndim=1] pvalues):
     cdef int nbins
     cdef np.ndarray hist, bin_edges
 
     # print sorted(pvalues)
-    nbins = max(min(10, len(pvalues)), len(pvalues) / 10)
+    nbins = max(min(10, len(pvalues)), int(len(pvalues) / 10))
     hist, bin_edges = np.histogram(pvalues, range=[0, 1], bins=nbins, density=True)
     return (np.cumsum(hist) / len(bin_edges))
 
@@ -29,12 +29,12 @@ cdef float _score_ecdf(np.ndarray[DTYPE_t, ndim=1] ecdf):
 
 @cython.boundscheck(False) # turn off bounds-checking for entire function
 @cython.wraparound(False)  # turn off negative index wrapping for entire function
-cdef np.ndarray _calc_pvalues(np.ndarray[DTYPE_t, ndim=2] junctions, float one_over_r,
+cdef np.ndarray _calc_pvalues(np.ndarray[np.float64_t, ndim=2] junctions, float one_over_r,
                               np.ndarray[np.int_t, ndim=1] indices_list):
-    cdef np.ndarray[DTYPE_t, ndim=1] pvalues,
+    cdef np.ndarray[np.float64_t, ndim=1] pvalues,
     cdef int njuncs, idx
-    cdef np.ndarray[DTYPE_t, ndim=1] junc_idxs, mu, xx
-    cdef np.ndarray[DTYPE_t, ndim=2] junc_fltr
+    cdef np.ndarray[np.float64_t, ndim=1] junc_idxs, mu
+    cdef np.ndarray[np.float64_t, ndim=2] junc_fltr
     cdef np.ndarray[np.int_t, ndim=1] vals
     # cdef np.float32_t r, p
 

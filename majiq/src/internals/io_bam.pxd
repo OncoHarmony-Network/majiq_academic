@@ -31,4 +31,5 @@ cdef extern from "io_bam.hpp" namespace "io_bam":
 
         vector[np.float32_t *] junc_vec ;
 
+    void free_genelist(map[string, overGene_vect_t]& geneList) nogil ;
     void prepare_genelist(map[string, Gene*]& gene_map, map[string, overGene_vect_t]& geneList) nogil ;

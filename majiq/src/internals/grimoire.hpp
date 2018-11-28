@@ -374,39 +374,12 @@ namespace grimoire{
             vector<Gene *> glist ;
         overGene(unsigned int start1, unsigned int end1):_Region(start1, end1) { }
         overGene(){}
+
+        ~overGene(){
+            glist.clear() ;
+            glist.shrink_to_fit() ;
+        }
     } ;
-
-
-//    class qLSV {
-//        private:
-//            omp_lock_t sem_lock_ ;
-//            vector<string> lsv_list_ ;
-//            int counter_ ;
-//
-//        public:
-//            vector<vector<psi_distr_t>> coverages ;
-//
-//            qLSV() {} ;
-//            qLSV(vector<string> & lsv_list1): lsv_list_(lsv_list1){
-//                omp_init_lock(&sem_lock_) ;
-//                omp_set_lock(&sem_lock_) ;
-//                counter_ = 0 ;
-//            }
-//
-//            ~qLSV()                        { omp_destroy_lock(&sem_lock_) ; }
-//            vector<string> & get_lsvlist() { return lsv_list_ ; }
-//            void free_lock()               { cout << "free test\n"  ;
-//                                             omp_unset_lock(&sem_lock_) ;
-//                                             cout << "free test off \n" ; }
-//            void test_lock()               { cout << "KKK test\n"  ;
-//                                             omp_set_lock(&sem_lock_) ;
-//                                             omp_unset_lock(&sem_lock_) ;
-//                                             cout << "MMM test off\n" ;}
-//
-//            void add_counter()             {
-//                #pragma omp atomic
-//                    counter_ ++ ;   }
-//    };
 
 
     void sortGeneList(vector<Gene*> &glist) ;

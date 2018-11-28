@@ -3,7 +3,7 @@ import sys
 import psutil
 
 from majiq.src.internals.grimoire cimport Junction, Gene, Exon, LSV, Jinfo, Intron
-from majiq.src.internals.io_bam cimport IOBam, prepare_genelist, overGene_vect_t
+from majiq.src.internals.io_bam cimport IOBam, prepare_genelist, overGene_vect_t, free_genelist
 from majiq.src.internals.grimoire cimport find_intron_retention
 from majiq.src.basic_pipeline import BasicPipeline, pipeline_run
 from majiq.src.config import Config
@@ -294,6 +294,8 @@ cdef _find_junctions(list file_list, map[string, Gene*]& gene_map, vector[string
             logger.info('Done Reading file %s' %(file_list[j][0]))
             _store_junc_file(boots, junc_ids, file_list[j][0], conf.outDir)
             c_iobam.free_iobam()
+
+    free_genelist(gene_list)
 
 cdef init_splicegraph(string filename, object conf):
 
