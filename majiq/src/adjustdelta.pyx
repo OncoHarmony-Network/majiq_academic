@@ -4,7 +4,7 @@ from scipy.stats import beta
 from scipy.misc import logsumexp
 import cython
 
-cdef np.float32_t PSEUDO = 1e-300
+cdef np.float32_t PSEUDO = 1e-30
 ctypedef np.float32_t DTYPE_t
 
 @cython.boundscheck(False) # turn off bounds-checking for entire function
@@ -21,7 +21,7 @@ cdef np.ndarray[DTYPE_t, ndim=1] _calc_mixture_pdf(np.ndarray[DTYPE_t, ndim=2] b
     for ii in np.arange(beta_param.shape[0]):
         tt = beta.cdf(x_pos, a=beta_param[ii, 0], b=beta_param[ii, 1])
         bincdf = tt.astype(np.float32)
-        mixture_pdf = mixture_pdf + (bincdf[1:] - bincdf[:nbins] + 1e-300) * pmix[ii]
+        mixture_pdf = mixture_pdf + (bincdf[1:] - bincdf[:nbins] + PSEUDO) * pmix[ii]
     return mixture_pdf
 
 
