@@ -4,25 +4,13 @@ from functools import reduce
 from itertools import chain
 
 import numpy as np
-import scipy.special
 
 from voila.api.matrix_hdf5 import DeltaPsi, Psi, Heterogen
+from voila.api.matrix_utils import unpack_means, unpack_bins, generate_excl_incl, generate_means, \
+    generate_high_probability_non_changing, generate_variances
 from voila.config import ViewConfig
-from voila.constants import MINVAL
 from voila.exceptions import LsvIdNotFoundInVoilaFile, GeneIdNotFoundInVoilaFile
-from voila.vlsv import get_expected_dpsi, is_lsv_changing, matrix_area, get_expected_psi
-
-
-def unpack_means(value):
-    if np.size(value, 0) == 1:
-        value = np.append(value, np.array(1 - value[0]))
-    return value.tolist()
-
-
-def unpack_bins(value):
-    if np.size(value, 0) == 1:
-        value = np.append(value, [np.flip(value[-1], 0)], axis=0)
-    return value.tolist()
+from voila.vlsv import is_lsv_changing, matrix_area, get_expected_psi
 
 
 class ViewMatrix(ABC):
@@ -87,12 +75,7 @@ class ViewPsi(Psi, ViewMatrix):
 
         @property
         def variances(self):
-            for b in self.bins:
-                epsi = get_expected_psi(b)
-                # b used to be a numpy array and now it's a list...
-                step_bins = 1.0 / len(b)
-                projection_prod = b * np.arange(step_bins / 2, 1, step_bins) ** 2
-                yield np.sum(projection_prod) - epsi ** 2
+            return generate_variances(self.bins)
 
         @property
         def junction_count(self):
@@ -146,10 +129,7 @@ class ViewDeltaPsi(DeltaPsi, ViewMatrix):
 
         @property
         def means(self):
-            m = []
-            for b in self.bins:
-                m.append(get_expected_dpsi(b))
-            return m
+            return generate_means(self.bins)
 
         @property
         def group_means(self):
@@ -159,13 +139,7 @@ class ViewDeltaPsi(DeltaPsi, ViewMatrix):
 
         @property
         def excl_incl(self):
-            l = []
-            for mean in self.means:
-                if mean < 0:
-                    l.append((-mean, 0))
-                else:
-                    l.append((0, mean))
-            return l
+            return generate_excl_incl(self.means)
 
         @property
         def junction_count(self):
@@ -181,16 +155,8 @@ class ViewDeltaPsi(DeltaPsi, ViewMatrix):
             return any(matrix_area(b, threshold=threshold) >= probability_threshold for b in self.bins)
 
         def high_probability_non_changing(self):
-            prior = self.matrix_hdf5.prior[1 if self.intron_retention else 0]
-            non_changing_threshold = self.config.non_changing_threshold
-
-            for bin in self.bins:
-                bin = np.array(bin)
-                bin += MINVAL
-                bin /= bin.sum()
-                A = np.log(bin) - prior
-                R = np.exp(A - scipy.special.logsumexp(A))
-                yield matrix_area(R, non_changing_threshold, non_changing=True)
+            return generate_high_probability_non_changing(self.intron_retention, self.matrix_hdf5.prior,
+                                                          self.config.non_changing_threshold, self.bins)
 
     def lsv(self, lsv_id):
         return self._ViewDeltaPsi(self, lsv_id)
