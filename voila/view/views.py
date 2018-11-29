@@ -3,6 +3,7 @@ from urllib.parse import urlencode
 import gunicorn.app.base
 from flask import jsonify, redirect, url_for, session, render_template
 from gunicorn.six import iteritems
+from waitress import serve
 
 from voila import constants
 from voila.api.view_splice_graph_sqlite import ViewSpliceGraph
@@ -28,22 +29,22 @@ def run_service():
         'disable_redirect_access_to_syslog': True
     }
 
+
+
     if not analysis_type:
-        standalone_app = StandaloneApplication(splicegraph.app, options)
+        serve(splicegraph.app, host='0.0.0.0', port=config.port)
 
     elif analysis_type == constants.ANALYSIS_PSI:
-        standalone_app = StandaloneApplication(psi.app, options)
+        serve(psi.app, host='0.0.0.0', port=config.port)
 
     elif analysis_type == constants.ANALYSIS_DELTAPSI:
-        standalone_app = StandaloneApplication(deltapsi.app, options)
+        serve(deltapsi.app, host='0.0.0.0', port=config.port)
 
     elif analysis_type == constants.ANALYSIS_HETEROGEN:
-        standalone_app = StandaloneApplication(heterogen.app, options)
+        serve(heterogen.app, host='0.0.0.0', port=config.port)
 
     else:
         raise UnknownAnalysisType(analysis_type)
-
-    standalone_app.run()
 
 
 def number_of_workers():
