@@ -1,8 +1,7 @@
 from urllib.parse import urlencode
 
-import gunicorn.app.base
 from flask import jsonify, redirect, url_for, session, render_template
-from gunicorn.six import iteritems
+from waitress import serve
 
 from voila import constants
 from voila.api.view_splice_graph_sqlite import ViewSpliceGraph
@@ -17,61 +16,22 @@ def run_service():
     config = ViewConfig()
     analysis_type = config.analysis_type
 
-    bind = '127.0.0.1:' + str(config.port)
-
-    options = {
-        'bind': bind,
-        'workers': number_of_workers(),
-        'threads': number_of_threads(),
-        'worker_class': 'gthread',
-        'loglevel': 'info',
-        'disable_redirect_access_to_syslog': True
-    }
-
     if not analysis_type:
-        standalone_app = StandaloneApplication(splicegraph.app, options)
+        run_app = splicegraph.app
 
     elif analysis_type == constants.ANALYSIS_PSI:
-        standalone_app = StandaloneApplication(psi.app, options)
+        run_app = psi.app
 
     elif analysis_type == constants.ANALYSIS_DELTAPSI:
-        standalone_app = StandaloneApplication(deltapsi.app, options)
+        run_app = deltapsi.app
 
     elif analysis_type == constants.ANALYSIS_HETEROGEN:
-        standalone_app = StandaloneApplication(heterogen.app, options)
+        run_app = heterogen.app
 
     else:
         raise UnknownAnalysisType(analysis_type)
 
-    standalone_app.run()
-
-
-def number_of_workers():
-    return (ViewConfig().nproc * 2) + 1
-
-
-def number_of_threads():
-    return ViewConfig().nproc * 2
-
-
-class StandaloneApplication(gunicorn.app.base.BaseApplication):
-
-    def init(self, parser, opts, args):
-        raise NotImplementedError()
-
-    def __init__(self, application, options=None):
-        self.options = options or {}
-        self.application = application
-        super(StandaloneApplication, self).__init__()
-
-    def load_config(self):
-        config = dict([(key, value) for key, value in iteritems(self.options)
-                       if key in self.cfg.settings and value is not None])
-        for key, value in iteritems(config):
-            self.cfg.set(key.lower(), value)
-
-    def load(self):
-        return self.application
+    serve(run_app, host='0.0.0.0', port=config.port)
 
 
 def copy_lsv(lsv_id, view_matrix):

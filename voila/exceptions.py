@@ -67,7 +67,8 @@ class MixedAnalysisTypeVoilaFiles(VoilaException):
 
 
 class FoundMoreThanOneVoilaFile(VoilaException):
-    pass
+    def __init__(self):
+        super().__init__('In the files or directories supplied, there was more than on Voila file found.')
 
 
 class AnalysisTypeNotFound(VoilaException):

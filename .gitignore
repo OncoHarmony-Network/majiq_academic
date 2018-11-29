@@ -12,7 +12,7 @@ build/
 voila/templates/spliceGraphD3.html
 *.log
 voila/sandbox/*
-dist/
+dist/*.egg
 majiq.egg-info
 */git_version
 
