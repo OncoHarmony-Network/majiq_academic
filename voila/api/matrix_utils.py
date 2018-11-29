@@ -1,5 +1,5 @@
 import numpy as np
-import scipy
+from scipy import special
 
 from voila.constants import MINVAL
 from voila.vlsv import get_expected_dpsi, matrix_area, get_expected_psi
@@ -43,7 +43,7 @@ def generate_high_probability_non_changing(ir, prior, non_changing_threshold, bi
         bin += MINVAL
         bin /= bin.sum()
         A = np.log(bin) - prior
-        R = np.exp(A - scipy.special.logsumexp(A))
+        R = np.exp(A - special.logsumexp(A))
         x.append(matrix_area(R, non_changing_threshold, non_changing=True))
 
     return x
