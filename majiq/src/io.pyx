@@ -23,11 +23,16 @@ cimport numpy as np
 # ctypedef vector[float] psi_distr_t ;
 
 cdef list accepted_transcripts = ['mRNA', 'transcript', 'lnc_RNA', 'miRNA', 'ncRNA',
-                                  'rRNA', 'scRNA', 'snRNA', 'snoRNA', 'tRNA', 'pseudogenic_transcript']
+                                  'rRNA', 'scRNA', 'snRNA', 'snoRNA', 'tRNA', 'pseudogenic_transcript',
+                                  'bidirectional_promoter_lncRNA', 'unconfirmed_transcript',
+                                  'three_prime_overlapping_ncrna']
 cdef str transcript_id_keys = 'ID'
-cdef list accepted_genes = ['gene', 'ncRNA_gene', 'pseudogene']
+cdef list accepted_genes = ['gene', 'ncRNA_gene', 'pseudogene', 'C_gene_segment', 'D_gene_segment', 'J_gene_segment',
+                            'V_gene_segment', 'ncRNA_gene']
 cdef list gene_name_keys = ['Name', 'gene_name']
 cdef list gene_id_keys = ['ID', 'gene_id']
+
+
 
 cdef int  read_gff(str filename, map[string, Gene*] all_genes, vector[string] gid_vec, object logging) except -1:
     """
