@@ -6,13 +6,11 @@ import psutil
 import majiq.src.logger as majiq_logger
 from majiq.src.basic_pipeline import BasicPipeline, pipeline_run
 from majiq.src.constants import *
-from majiq.src.internals.psi cimport psi_posterior, psi_distr_t
-from majiq.src.internals.grimoire cimport qLSV
+from majiq.src.internals.psi cimport psi_posterior, psi_distr_t, get_psi_border
+from majiq.src.internals.qLSV cimport psiLSV, qLSV
 
 from libcpp.string cimport string
 from libcpp.map cimport map
-
-from libcpp.vector cimport vector
 from cython.parallel import prange, parallel, threadid
 
 from voila.api import Matrix
@@ -35,24 +33,21 @@ cdef _core_calcpsi(object self):
     write_pickle indicates if a .pickle should be saved in disk
     """
     cdef int nlsv
-    cdef map[string, int] lsv_vec
-    cdef map[string, vector[psi_distr_t]] cov_dict
-
     cdef object logger
     cdef int nbins = 40
     cdef dict junc_info = {}
     cdef dict lsv_type_dict = {}
-    cdef dict out_mupsi_d = {}
-    cdef dict out_postpsi_d = {}
     cdef bint is_ir
     cdef string lsv
     cdef int nways, msamples, i, loop_step, cc, nthreads
-    cdef np.ndarray[np.float32_t, ndim=1, mode="c"] o_mupsi
-    cdef np.ndarray[np.float32_t, ndim=2, mode="c"] o_postpsi
+    cdef np.ndarray[np.float32_t, ndim=1, mode="c"] mupsi
+    cdef np.ndarray[np.float32_t, ndim=2, mode="c"] postpsi
     cdef list list_of_lsv
-    cdef int nchunks = 500
     cdef qLSV qlsvObj
     cdef bint voilafile, tsvfile
+    cdef psiLSV* psiObj_ptr
+    cdef map[string, qLSV*] lsv_map
+    cdef psi_distr_t psi_border = psi_distr_t(nbins+1)
 
     majiq_logger.create_if_not_exists(self.outDir)
 
@@ -68,41 +63,33 @@ cdef _core_calcpsi(object self):
     list_of_lsv, exps = majiq_io.extract_lsv_summary(self.files, types_dict=lsv_type_dict,
                                                      minnonzero=self.minpos, min_reads=self.minreads,
                                                      percent=self.min_exp, junc_info=junc_info, logger=logger)
+
     nlsv = len(list_of_lsv)
     if nlsv == 0:
         logger.info("There is no LSVs that passes the filters")
         return
 
-    for lidx, lsv in enumerate(list_of_lsv):
+    for lsv in list_of_lsv:
         nways = lsv_type_dict[lsv][1]
-        out_mupsi_d[lsv] = np.zeros(shape=nways, dtype=np.float32)
-        out_postpsi_d[lsv] = np.zeros(shape=(nways, nbins), dtype=np.float32)
-        lsv_vec[lsv] = nways
+        is_ir = b'i' in lsv_type_dict[lsv][0]
+        psiObj_ptr = new psiLSV(nways, nbins, is_ir)
+        lsv_map[lsv] = <qLSV*> psiObj_ptr
 
-    # self.weights = self.calc_weights(self.weights, list_of_lsv, name=self.name, file_list=self.files, logger=logger)
 
     logger.info("Group %s: %s LSVs" % (self.name, nlsv))
     loop_step = max(1, int(nlsv/10))
     nthreads = min(self.nthreads, nlsv) + 1
+    majiq_io.get_coverage_mat_lsv(lsv_map, self.files, nthreads, True, self.minreads, self.minpos)
+    get_psi_border(psi_border, nbins)
 
-    majiq_io.get_coverage_mat(cov_dict, lsv_vec, self.files, "", nthreads)
-    logger.info("COV size: %s, %s" % (nlsv, cov_dict.size()))
     for i in prange(nlsv, nogil=True, num_threads=nthreads):
 
         with gil:
             lsv = list_of_lsv[i]
-            # logger.info("2222 Event %s - %s" %(lsv, lsv_type_dict[lsv][0]))
             if i % loop_step == 0 :
                 print ("Event %s/%s" %(i, nlsv))
 
-            nways = cov_dict[lsv].size()
-            msamples = cov_dict[lsv][0].size()
-            o_mupsi = out_mupsi_d[lsv]
-            o_postpsi = out_postpsi_d[lsv]
-            is_ir = b'i' in lsv_type_dict[lsv][0]
-
-        psi_posterior(cov_dict[lsv], <np.float32_t *> o_mupsi.data,
-                      <np.float32_t *> o_postpsi.data, msamples, nways, nbins, is_ir)
+        psi_posterior(<psiLSV*> lsv_map[lsv], psi_border, nbins)
 
     logger.info('Computation done, saving results....')
     with Matrix(get_quantifier_voila_filename(self.outDir, self.name), 'w',
@@ -111,10 +98,21 @@ cdef _core_calcpsi(object self):
         out_h5p.analysis_type = ANALYSIS_PSI
         out_h5p.experiment_names = [exps]
         out_h5p.group_names = [self.name]
+
         for lsv in list_of_lsv:
-            # logger.info("2222 Event %s" %(lsv_id))
-            out_h5p.psi(lsv.decode('utf-8')).add(lsv_type=lsv_type_dict[lsv][0].decode('utf-8'), bins=out_postpsi_d[lsv],
-                        means=out_mupsi_d[lsv], junctions=junc_info[lsv])
+            psiObj_ptr = <psiLSV*> lsv_map[lsv]
+            nways = psiObj_ptr.get_num_ways()
+            mupsi = np.ndarray(shape=nways, dtype=np.float32, order="c")
+            postpsi = np.ndarray(shape=(nways, nbins), dtype=np.float32, order="c")
+            for x in range(nways):
+                mupsi[x] = psiObj_ptr.mu_psi[x]
+                for y in range(nbins):
+                    postpsi[x, y] = psiObj_ptr.post_psi[x][y]
+
+            psiObj_ptr.clear()
+            # logger.info("Event %s" %(lsv_id))
+            out_h5p.psi(lsv.decode('utf-8')).add(lsv_type=lsv_type_dict[lsv][0].decode('utf-8'), bins=postpsi,
+                        means=mupsi, junctions=junc_info[lsv])
 
     if self.mem_profile:
         mem_allocated = int(psutil.Process().memory_info().rss) / (1024 ** 2)

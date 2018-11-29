@@ -15,6 +15,14 @@ cdef extern from "qLSV.hpp":
         bint is_enabled() nogil ;
         bint is_ir() nogil ;
 
+    cdef cppclass psiLSV(qLSV):
+        psiLSV() nogil ;
+        psiLSV(int nways1, int nbins1, bint is_ir) nogil ;
+        void clear() nogil ;
+
+        psi_distr_t mu_psi ;
+        vector[psi_distr_t] post_psi ;
+
     cdef cppclass dpsiLSV(qLSV):
         dpsiLSV() nogil ;
         dpsiLSV(int nways1, int nbins1, bint is_ir) nogil ;

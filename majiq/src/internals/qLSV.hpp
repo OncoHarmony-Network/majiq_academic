@@ -55,9 +55,32 @@ class qLSV{
                 }
             }
         }
+};
 
+class psiLSV: public qLSV{
+    private:
+
+    public:
+        psi_distr_t mu_psi ;
+        vector<psi_distr_t> post_psi ;
+
+        psiLSV(int nways1, int nbins1, bool is_ir): qLSV(nways1, is_ir){
+            mu_psi = psi_distr_t( nways1 ) ;
+            post_psi = vector<psi_distr_t>(nways1, psi_distr_t(nbins1)) ;
+        }
+
+        ~psiLSV() {}
+
+        void clear(){
+            clear_samps() ;
+            mu_psi.clear() ;
+            mu_psi.shrink_to_fit() ;
+            post_psi.clear() ;
+            post_psi.shrink_to_fit() ;
+        }
 
 };
+
 
 class dpsiLSV: public qLSV{
     private:

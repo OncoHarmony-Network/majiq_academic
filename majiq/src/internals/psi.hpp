@@ -98,19 +98,19 @@ inline float logsumexp_2D(vector<psi_distr_t>& nums, size_t ct){
     return log(sum) + max_exp ;
 }
 
-inline float logsumexp(float nums[], size_t ct){
-    float max_exp = nums[0], sum = 0.0 ;
-    size_t i ;
-
-    for(i = 1; i < ct; i++){
-        max_exp = (nums[i] > max_exp) ? nums[i] : max_exp ;
-    }
-
-    for(i = 0; i < ct; i++){
-        sum += exp(nums[i] - max_exp) ;
-    }
-    return log(sum) + max_exp ;
-}
+//inline float logsumexp(float nums[], size_t ct){
+//    float max_exp = nums[0], sum = 0.0 ;
+//    size_t i ;
+//
+//    for(i = 1; i < ct; i++){
+//        max_exp = (nums[i] > max_exp) ? nums[i] : max_exp ;
+//    }
+//
+//    for(i = 0; i < ct; i++){
+//        sum += exp(nums[i] - max_exp) ;
+//    }
+//    return log(sum) + max_exp ;
+//}
 
 template <typename T, typename Compare>
 vector<size_t> sort_permutation(const std::vector<T>& vec, const Compare& compare)
@@ -145,10 +145,10 @@ inline void collapse_matrix(psi_distr_t& o_dpsi, vector<psi_distr_t>& matrix, in
 
 void prob_data_sample_given_psi(float out_array[], float sample, float all_sample, psi_distr_t & psi_border,
                                 int nbins, float alpha_prior, float beta_prior) ;
-void psi_posterior(vector<psi_distr_t> & i_psi, float* o_mupsi, float* o_postpsi,
-                   int msamples, int njunc, int nbins, bool is_ir) ;
 
-void deltapsi_posterior(dpsiLSV*lsvObj, vector<psi_distr_t>& prior_matrix, psi_distr_t& psi_border, int nbins) ;
+void psi_posterior(psiLSV* lsvObj, psi_distr_t& psi_border, int nbins) ;
+
+void deltapsi_posterior(dpsiLSV* lsvObj, vector<psi_distr_t>& prior_matrix, psi_distr_t& psi_border, int nbins) ;
 
 void get_samples_from_psi(float* osamps, hetLSV* lsvObj, int psi_samples, psi_distr_t& psi_border,
                           int nbins, int cidx, int fidx) ;

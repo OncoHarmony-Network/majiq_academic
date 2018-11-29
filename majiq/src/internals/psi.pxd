@@ -3,7 +3,7 @@ from libcpp.map cimport map
 from libcpp.pair cimport pair
 from libcpp.vector cimport vector
 from majiq.src.internals.HetStats cimport HetStats
-from majiq.src.internals.qLSV cimport dpsiLSV, hetLSV, qLSV
+from majiq.src.internals.qLSV cimport dpsiLSV, hetLSV, qLSV, psiLSV
 
 cimport numpy as np
 
@@ -14,8 +14,7 @@ cdef extern from "psi.hpp":
 
     cdef psi_distr_t& get_psi_border(psi_distr_t& psi_border, int nbins) nogil ;
     # cdef psi_distr_t& get_psi_border(int nbins) nogil ;
-    cdef void psi_posterior(vector[psi_distr_t] & i_psi, np.float32_t* o_mupsi, np.float32_t* o_postpsi,
-                            int msamples, int njunc, int nbins, bint is_ir) nogil ;
+    cdef void psi_posterior(psiLSV* lsvObj, psi_distr_t& psi_border, int nbins) nogil ;
 
     cdef void deltapsi_posterior(dpsiLSV* lsvObj, vector[psi_distr_t]& prior_matrix, psi_distr_t& psi_border,
                                  int nbins) nogil ;

@@ -34,40 +34,35 @@ void prob_data_sample_given_psi(psi_distr_t& out_array, float sample, float all_
 }
 
 
-void prob_data_sample_given_psi(float* out_array, float sample, float all_sample, psi_distr_t & psi_border,
-                                int nbins, float alpha_prior, float beta_prior){
+//void prob_data_sample_given_psi(float* out_array, float sample, float all_sample, psi_distr_t & psi_border,
+//                                int nbins, float alpha_prior, float beta_prior){
+//
+//    const float a = sample + alpha_prior ;
+//    const float b = (all_sample - sample) + beta_prior ;
+//
+////cout << "a=" << sample << "+"<< alpha_prior <<" b=" << b << " nbins=" << nbins << " betap="<< beta_prior <<"\n" ;
+//    float prev = scythe::pbeta(psi_border[0], a, b) ;
+//    for (int i=0; i<nbins; i++){
+//        float res = scythe::pbeta(psi_border[i+1], a, b) ;
+//        out_array[i] = log((res - prev) + PSEUDO);
+//        prev = res ;
+//    }
+//}
 
-    const float a = sample + alpha_prior ;
-    const float b = (all_sample - sample) + beta_prior ;
-
-//cout << "a=" << sample << "+"<< alpha_prior <<" b=" << b << " nbins=" << nbins << " betap="<< beta_prior <<"\n" ;
-    float prev = scythe::pbeta(psi_border[0], a, b) ;
-    for (int i=0; i<nbins; i++){
-        float res = scythe::pbeta(psi_border[i+1], a, b) ;
-        out_array[i] = log((res - prev) + PSEUDO);
-        prev = res ;
-    }
-}
-
-void psi_posterior(vector<psi_distr_t>& i_psi, float* o_mupsi, float* o_postpsi,
-                   int msamples, int njunc, int nbins, bool is_ir){
+void psi_posterior(psiLSV*lsvObj, psi_distr_t& psi_border, int nbins){
 
 //cout << "psi_posterior 01 msamples: "<< msamples << " njunc: "<< njunc << " ir?: "<< is_ir << "\n" ;
 
+    const int njunc = lsvObj->get_num_ways() ;
+    const int msamples = lsvObj->samps[0].size() ;
+
     vector<psi_distr_t> alpha_beta_prior(njunc, psi_distr_t(2)) ;
-    get_prior_params(alpha_beta_prior, njunc, is_ir) ;
+    get_prior_params(alpha_beta_prior, njunc, lsvObj->is_ir()) ;
 
-//    TODO: we can move this up to avoid recalculation
-        const float bsize = 1.0 / nbins ;
-        psi_distr_t psi_border (nbins+1) ;
-        for(int i=0; i<=nbins; i++){
-            psi_border[i] = i*bsize ;
-        }
-
-    float * all_m = (float*) calloc(msamples, sizeof(float)) ;
+    psi_distr_t all_m(msamples, 0.0) ;
     for (int j=0; j<njunc; j++){
         for (int m=0; m<msamples; m++) {
-            all_m[m] += i_psi[j][m] ;
+            all_m[m] += lsvObj->samps[j][m] ;
         }
     }
 
@@ -77,27 +72,25 @@ void psi_posterior(vector<psi_distr_t>& i_psi, float* o_mupsi, float* o_postpsi,
         psi_distr_t temp_mupsi(msamples) ;
         for (int m=0; m<msamples; m++){
 
-            const float jnc_val = i_psi[j][m] ;
+            const float jnc_val = lsvObj->samps[j][m]  ;
             const float all_val = all_m[m] ;
-            float * psi_lkh =  (float*) calloc(nbins, sizeof(float)) ;
+            psi_distr_t psi_lkh (nbins, 0.0) ;
             temp_mupsi[m] = calc_mupsi(jnc_val, all_val, alpha, beta) ;
             prob_data_sample_given_psi(psi_lkh, jnc_val, all_val, psi_border, nbins, alpha, beta) ;
             const float Z = logsumexp(psi_lkh, nbins) ;
             for (int i=0; i< nbins; i++){
                 psi_lkh[i] -= Z ;
-                const int idx_2d = (j*nbins) + i ;
-                o_postpsi[idx_2d] += exp(psi_lkh[i]) ;
+                lsvObj->post_psi[j][i] += exp(psi_lkh[i]) ;
             }
-            free(psi_lkh) ;
         }
         sort (temp_mupsi.begin(), temp_mupsi.end()) ;
-        o_mupsi[j] = median(temp_mupsi) ;
+        lsvObj->mu_psi[j] = median(temp_mupsi) ;
         for (int i=0; i<nbins; i++){
-            const int idx_2d = (j*nbins) + i ;
-            o_postpsi[idx_2d] /= msamples ;
+            lsvObj->post_psi[j][i] /= msamples ;
         }
     }
-    free(all_m) ;
+    all_m.clear() ;
+    lsvObj->clear_samps() ;
 //cout << "OUT LOOP\n" ;
 }
 
