@@ -184,16 +184,16 @@ cdef int _load_db(str filename, object elem_dict, object genes_dict) except -1:
         for xx in genes_dict.keys():
             elem_dict[xx] = all_files[xx]
 
-cdef int dump_lsv_coverage(str filename, dict cov_dict, list type_list, list junc_info, str exp_name):
-    dt=np.dtype('|S250, |S250')
-
-    with open(filename, 'w+b') as ofp:
-        cov_dict['lsv_types'] = np.array(type_list, dtype=dt)
-        dt=np.dtype('|S250, u4, u4, f4, f4')
-        cov_dict['junc_info'] = np.array(junc_info, dtype=dt)
-        dt = np.dtype('|S250, |S25')
-        cov_dict['meta'] = np.array([(exp_name, VERSION)], dtype=dt)
-        np.savez(ofp, **cov_dict)
+# cdef int dump_lsv_coverage(str filename, dict cov_dict, list type_list, list junc_info, str exp_name):
+#     dt=np.dtype('|S250, |S250')
+#
+#     with open(filename, 'w+b') as ofp:
+#         cov_dict['lsv_types'] = np.array(type_list, dtype=dt)
+#         dt=np.dtype('|S250, u4, u4, f4, f4')
+#         cov_dict['junc_info'] = np.array(junc_info, dtype=dt)
+#         dt = np.dtype('|S250, |S25')
+#         cov_dict['meta'] = np.array([(exp_name, VERSION)], dtype=dt)
+#         np.savez(ofp, **cov_dict)
 
 
 cdef int dump_lsv_coverage_mat(str filename, list cov_list, list type_list, list junc_info, str exp_name):
@@ -211,12 +211,12 @@ cdef int dump_lsv_coverage_mat(str filename, list cov_list, list type_list, list
         xx['meta'] = np.array([(exp_name, VERSION)], dtype=dt)
         np.savez(ofp, **xx)
 
-cdef int _dump_elems_list(object elem_dict, object gene_info, str outDir) except -1:
-
-    dt=np.dtype('|S250, |S250, |S32, S1, u4, u4')
-    kk = [(xx['id'], xx['name'], xx['chromosome'], xx['strand'], xx['start'], xx['end']) for xx in gene_info.values()]
-    elem_dict['gene_info'] = np.array(kk, dtype=dt)
-    np.savez(get_build_temp_db_filename(outDir), **elem_dict)
+# cdef int _dump_elems_list(object elem_dict, object gene_info, str outDir) except -1:
+#
+#     dt=np.dtype('|S250, |S250, |S32, S1, u4, u4')
+#     kk = [(xx['id'], xx['name'], xx['chromosome'], xx['strand'], xx['start'], xx['end']) for xx in gene_info.values()]
+#     elem_dict['gene_info'] = np.array(kk, dtype=dt)
+#     np.savez(get_build_temp_db_filename(outDir), **elem_dict)
 
 
 cdef dict _get_extract_lsv_list(list list_of_lsv_id, list file_list):
@@ -250,8 +250,6 @@ cdef dict _get_extract_lsv_list(list list_of_lsv_id, list file_list):
 cdef int dump_hettmp_file(str fname, np.ndarray[np.float32_t, ndim=2, mode="c"] osamps):
     with open(fname, 'w+b') as fp:
         np.save(fp, osamps)
-
-
 
 
 cdef void get_coverage_mat_lsv(map[string, qLSV*]& result, list file_list, int nthreads,
@@ -302,83 +300,6 @@ cdef void get_coverage_mat_lsv(map[string, qLSV*]& result, list file_list, int n
     return
 
 
-
-cdef void get_coverage_mat(map[string, vector[psi_distr_t]]& result, map[string, int] lsv_map, list file_list,
-                            str weight_fname, int nthreads):
-    cdef int n_exp = len(file_list)
-    cdef str lid, lsv_type, fname
-    cdef string lsv_id
-    cdef int fidx, njunc, msamples, i
-    cdef np.ndarray[np.float32_t, ndim=2, mode="c"] cov
-    cdef dict weights
-    cdef object data
-    cdef int nlsv = lsv_map.size()
-    cdef string empty_string = ''.encode('utf-8')
-    cdef string prev_lsvid = empty_string
-    cdef int prev_juncidx = 0
-
-    # if weight_fname != "":
-    #     weights = _load_weights(list_of_lsv_id, weight_fname)
-
-    for fidx, fname in enumerate(file_list):
-        print(fname)
-        with open(fname, 'rb') as fp:
-            fl = np.load(fp)
-            data = fl['coverage']
-            info = fl['junc_info']
-            msamples = data.shape[1]
-            idx = -1
-            for row in info:
-                idx += 1
-                lsv_id = row[0]
-                if lsv_map.count(lsv_id) > 0:
-                    if prev_lsvid != lsv_id:
-                        if prev_lsvid != empty_string:
-                            # print (prev_lsvid)
-                            get_aggr_coverage(result, prev_lsvid, <np.float32_t *> cov.data, njunc, msamples)
-
-                        prev_lsvid = lsv_id
-                        prev_juncidx = -1
-                        njunc = lsv_map[lsv_id]
-                        cov = np.zeros(shape=(njunc, msamples), dtype=np.float32)
-                    prev_juncidx += 1
-                    cov[prev_juncidx] = data[idx]
-            get_aggr_coverage(result, prev_lsvid, <np.float32_t *> cov.data, njunc, msamples)
-        print (fname, result.size())
-
-
-cpdef void get_coverage_lsv(map[string, vector[psi_distr_t]]& result, vector[string] list_of_lsv_id, list file_list,
-                            str weight_fname, int nthreads):
-    # cdef map[string, vector[psi_distr_t]] result
-    cdef int n_exp = len(file_list)
-    cdef str lid, lsv_type, fname
-    cdef string lsv_id
-    cdef int fidx, njunc, msamples, i
-    cdef np.ndarray[np.float32_t, ndim=2, mode="c"] cov
-    cdef dict weights
-    cdef object data
-    cdef int nlsv = list_of_lsv_id.size()
-
-    # if weight_fname != "":
-    #     weights = _load_weights(list_of_lsv_id, weight_fname)
-
-    for fidx, fname in enumerate(file_list):
-        print(fname)
-        with open(fname, 'rb') as fp:
-            data = np.load(fp)
-            for lsv_id in list_of_lsv_id:
-                lid = lsv_id.decode('utf-8')
-                try:
-                    cov = data[lid]
-                    njunc = cov.shape[0]
-                    msamples = cov.shape[1]
-                    with nogil:
-                        get_aggr_coverage(result, lsv_id, <np.float32_t *> cov.data, njunc, msamples)
-
-                except KeyError:
-                        continue
-
-
 cdef map[string, psi_distr_t] _load_weights(list lsv_list, str file_name):
     cdef dict out_dict = {}
     # cdef str file_name
@@ -390,6 +311,7 @@ cdef map[string, psi_distr_t] _load_weights(list lsv_list, str file_name):
             out_dict[xx] = all_wgts[xx]
 
     return out_dict
+
 
 cdef list _extract_lsv_summary(list files, int minnonzero, int min_reads, dict types_dict, object junc_info,
                                list exp_name_list, dict epsi=None, int percent=-1, object logger=None):
@@ -486,15 +408,6 @@ cpdef tuple extract_lsv_summary(list files, int minnonzero, int min_reads, dict 
     r = _extract_lsv_summary(files, minnonzero, min_reads, types_dict, junc_info, exp_list, epsi, percent, logger)
 
     return r, exp_list
-
-
-# cpdef  extract_lsv_summary_C(list files, int minnonzero, int min_reads, map[string, string] types_dict,
-#                              map[string, np.ndarray] junc_info, dict epsi=None, int percent=-1, object logger=None):
-#     cdef list r
-#     cdef list exp_list = []
-#     r = _extract_lsv_summary_C(files, minnonzero, min_reads, types_dict, junc_info, exp_list, epsi, percent, logger)
-#
-#     return r, exp_list
 
 
 cpdef int add_elements_mtrx(dict new_elems, object shared_elem_dict):
