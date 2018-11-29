@@ -121,20 +121,31 @@ cdef float fit_nb(vector[np.float32_t *] junctionl, int total_juncs, int eff_len
     if total_juncs < 10:
         logger.warning("Your dataset is not deep enougth to define an apropiate NB factor. The default 0 is given")
         return 0.0
-    array_size = total_juncs if total_juncs < 5000 else 5000
 
     junctions = np.zeros(shape=(total_juncs, eff_length), dtype=np.float)
-    while ix < total_juncs and i < array_size:
-        ix +=1
-        c = 0
-        for j in range(eff_length):
-            junctions[i, j] = junctionl[i][j]
-            c += junctionl[i][j]
-        if c == 0: continue
-        i += 1
 
-    if junctions.sum() == 0.0 :
+    for i in total_juncs:
+        for j in range(eff_length):
+            junctions[i,j] = junctionl[i][j]
+
+    junctions = junctions[junctions.sum(axis=1)>=10]
+    if junctions.shape[0] < 10:
+        logger.warning("Your dataset is not deep enougth to define an apropiate NB factor. The default 0 is given")
         return 0.0
+    array_size = junctions.shape[0] if junctions.shape[0] < 5000 else 5000
+    junctions = np.random.choice(junctions, array_size, replace=False)
+
+    # while ix < total_juncs and i < array_size:
+    #     ix +=1
+    #     c = 0
+    #     for j in range(eff_length):
+    #         junctions[i, j] = junctionl[i][j]
+    #         c += junctionl[i][j]
+    #     if c == 0: continue
+    #     i += 1
+    #
+    # if junctions.sum() == 0.0 :
+    #     return 0.0
 
     junctions[junctions == 0] = np.nan
     mean_junc = np.nanmean(junctions, axis=1)
