@@ -479,13 +479,14 @@ Logger arguments:
 <!-- - `--debug`: Activate this flag to activate debug messages. -->
 ___
 
-**VOILA**
-=========
-*HTML5 Summaries*
-----------------------
+# VOILA 
 
-*View*
---------------
+## HTML5 Summaries
+
+### View
+
+#### Usage 
+
 Here is the command line usage statment output from `voila view --help`.
 ```
 usage: voila view [-h] [-p PORT] [--force-index] [-j NPROC] [--debug]
@@ -509,14 +510,119 @@ optional arguments:
                         if not set.
   --silent              Do not write logs to standard out.
 ```
+
+#### Example
+
 Here is a sample usage of the voila view command.  The *files* positional argument just need the directories or files
 location for the splice graph and voila files.  Voila will detect if the voila file is for psi or delta psi.
 ```
 $ voila view splicegraph.sql deltapsi.voila
 ```
 
-*TSV*
---------------
+Once the server is running, you can have your browser to go the "Serving on" address to view the visualization.
+```
+2018-11-29 16:11:02,518 (PID:20941) - INFO - Voila v2.0.0
+2018-11-29 16:11:02,518 (PID:20941) - INFO - config file: /var/folders/lr/w6qznvqd5xd_xjs2x76nspyr0000gn/T/tmpmt9ye9fe
+Serving on http://0.0.0.0:59910
+```
+
+
+#### Splice Graphs
+
+![enter image description here](https://lh3.googleusercontent.com/AZ1V8WlwlYMWdl15sOSJNe6Cj-u7VAS2WvFZMm49E2g=s0 "splicegraphs in Voila")
+
+The splice graph gadget included in VOILA summarizes all the splice variants found in a gene by MAJIQ. Splice Graphs include the following features:
+
+ - Easy differentiation between exons and junctions annotated (red) and *de novo* detected (green) in RNA-Seq data,
+ - Contextual information about the coordinates for each exon and intron (hovering over exons/junctions).
+ - Raw reads counts for each junction. (*Note* MAJIQ applies several normalization factors to these raw values)
+ - Scaled view of the gene and the splice graph ![enter image description here](https://lh3.googleusercontent.com/-4cLZGCy9SJA/VWd9rTnwTRI/AAAAAAAAAOw/t2oZOgRkUVk/s0/solve-icon16.png "scaled view") . By default, introns are trimmed to obtain a more compact representation of the splice graph. Switching between scaled and default view is accomplished by clicking on the wand.
+ - Zoom in/out to explore complex splice graphs.
+ - Possibility to switch between replicates (condition members) when more than one splice graph is available via the dropdown box.
+
+
+All *Gene Summaries* include a descriptive legend of what you might find in the Splice Graphs:
+
+![splice graph legend](https://lh3.googleusercontent.com/-k1Y7ap-sc44/ViVylavJCPI/AAAAAAAAAVk/2RNGA4JVG-8/s0/Screen+Shot+2015-10-19+at+6.44.35+PM.png "splice graph legend")
+
+>*DB* refers to exons and junctions annotated in the GFF3 file and *RNASeq* to exons and junctions found in RNA-Seq data. *RNASeq reads* alludes to the raw reads found in RNA-Seq data. Please, note that retained introns (narrow rectangles connecting two exons) do not appear currently in the legend.
+
+Note that when MAJIQ creates the splice graphs that VOILA visualizes, it considers the bounds of each individual exon in all transcripts containing that exon and the longest version is represented in the splice graph. So in the above example, the annotation database had longer versions of exons 17 and 19 corresponding to alternative transcription start sites for this gene and thus the starting positions are extended to reflect this.
+
+
+#### PSI Summary
+
+![enter image description here](https://drive.google.com/uc?id=1OolGvKCnNlC0r2ofXOt2lK7MKHD1nyxC "PSI Index")
+
+VOILA PSI Index file offers an overview of all the LSVs detected in a table, providing links to detailed summaries of LSVs and genes. Clicking over a gene or LSV ID opens up a new tab with a summary containing interactive splice graphs, distributions of PSIs per junction and links to the UCSC. Below is an example of PSI summaries for *Tpd52l1*:
+
+![enter image description here](https://drive.google.com/uc?id=1HSchftu5eR8_-BLJ0NX6a6Pud6t2gV6- "PSI Splice Graph")
+
+>**Tip**: PSI Summaries can be navigated through the *Previous* and *Next* links, without having to go back to the *index* file.
+
+The information is broken into genes (10 per page), each of them with an interactive splice graph and an associated table with LSV quantification data. The table has the following information about the LSV:
+
+ - Hightlight:
+	 - **Hightlight**. To move the visualization of the LSV to the splice graph, select the “highlight” checkbox in the LSV table.  All junctions will be hidden except the ones included in the LSV.  The visible junctions will be colored to match the highlighted LSV.
+	 - **Weighted**.  To weight the junctions of the highlighted LSV, check the “weighted” checkbox.  The junctions for this LSV will now be weighted proportionally to the LSV’s expected PSI value for this experiment.
+ - LSV ID: a unique identifier for the LSV.
+ - LSV type:  a thumbnail representing the splicing event. Each junction has a different color.
+ - PSI per junction: the expected Percent Selected Index (PSI) per junction. It has two *views* that can be switched between by clicking on them:
+	 - ***Compact view***. Initially, the PSI per junction is represented by the height of a colored box. Each color refers to the expected inclusion of a particular junction. The taller the rectangle, the more included the junction is expected to be. Clicking on the rectangle (zoom in pointer) will open the *expanded view*.
+	 - ***Expanded view***. Distributions of probabilities of PSI per LSV junction (violin boxplots). The *white* dot represents the expected PSI, whereas the box plot indicates the 10, 25, 50, 75 and 90 percentile of the distribution. Consistently with the Compact view, each color refers to a particular junctions of the LSV.
+ - LSV links:
+	 - **GTF**. Link to the GTF file associated with the LSV.
+	 - **UCSC**. Coordinates link to explore the LSV on UCSC Genome Browser (when available).
+	 - **Copy LSV**. The new VOILA supports copy-paste functionality into a new web-tool, MAJIQ-SPEL. SPEL allows users to connect the LSV quantification to the various gene isoforms associated with those, automatically design RT-PCR primers for validating the LSV (with optional control over primer design parameters), and map the LSV to protein domains on the genome browser for functional integration and downstream analysis. See more details: http://biorxiv.org/content/early/2017/05/09/136077
+
+Lastly, the panel *LSV filters* allows the user to screen out LSVs with certain properties like having alternative 5-prime splice sites, involve Exon Skipping or contain a certain amount of exons and junctions.
+
+
+#### Delta PSI Summary
+
+![enter image description here](https://drive.google.com/uc?id=1sPQ8W9cw0iIeuO7PdjM5NJcQMUuyLXQL "Delta PSI Index")
+
+> **Tip1**: index tables can be sorted by *gene* name, *LSV Type* and/or *most changing junction* clicking on the column header respectively. It is possible to sort the table by multiple columns holding the *shift* key.
+> **Tip2**: You can display all LSVs that changed above the specified dPSI threshold (default 0.2) by clicking the dropdown box at the bottom left and select "All" (default: display 10 LSVs). This allows for quick searching (Ctrl+F) for genes of interest.
+
+Delta PSI index file is identical to PSI index except for the *PSI per junction* column that represents the estimated differential inclusion levels as bars leaning towards condition1 or condition2 (see *Compact view* below). Clicking over LSV IDs and genes opens up individual summaries.
+
+![enter image description here](https://drive.google.com/uc?id=1muUt3dNyQGLQxMuiM7PFeRcoeGkalhHi "deltapsi_splice_graph.png")
+
+The results are broken into 10-genes per page summaries, with LSV quantifications grouped by gene. Unlike in single PSI summaries, there are 2 splice graphs (one per condition) which facilitate quick visual inspection of possible differences. If multiple replicates were used in a condition, the splice graphs for each replicate can be switched between through the drop down box located next to the wand. The LSV information is displayed as follows:
+
+ - Hightlight:
+	 - **Hightlight**. To move the visualization of the LSV to the splice graph, select the “highlight” checkbox in the LSV table.  All junctions will be hidden except the ones included in the LSV.  The visible junctions will be colored to match the highlighted LSV.
+	 - **Weighted**.  To weight the junctions of the highlighted LSV, check the “weighted” checkbox.  The junctions for this LSV will now be weighted proportionally to the LSV’s expected PSI value for this experiment.
+ - LSV ID: a unique identifier for the LSV.
+ - LSV type:  a thumbnail representing the splicing event. Each junction has a different color.
+ - PSI *condition[1|2]*: individual $\Psi$ in *condition[1|2]*, similar to the *$\Psi$ per junction* column in PSI summary, with compact and expanded views.
+ - More in *condition 1* | More in *condition 2*: the expected delta PSI for all junctions. It has two *views* which can be switched between by clicking on them:
+	 - ***Compact view***. Initially, the observed delta PSI preference for a certain condition (more included) per junction. A bar going towards *condition 1* (left) with a value of *26* means that the junction is 26% more included in condition 1 than in condition 2. Each color refers to a particular junction of the LSV. In the above example, the red junction is 26% more included in cerebellum compared to adrenal gland.
+	 - ***Expanded view***. Distributions of probabilities of Delta PSI per LSV junction (violin boxplots). The *white* dot represents the expected PSI, whereas the box plot indicates the 10, 25, 50, 75 and 90 percentile of the distribution. Consistent with the Compact view, each color refers to a particular junction of the LSV.
+ - LSV links:
+	 - **UCSC**. Coordinates link to explore the LSV on UCSC Genome Browser (when available).
+	 - **Copy LSV**. The new VOILA supports copy-paste functionality into a new web-tool, MAJIQ-SPEL. SPEL allows users to connect the LSV quantification to the various gene isoforms associated with those, automatically design RT-PCR primers for validating the LSV (with optional control over primer design parameters), and map the LSV to protein domains on the genome browser for functional integration and downstream analysis. See more details: http://biorxiv.org/content/early/2017/05/09/136077
+
+#### Summary Drop Down Menus
+
+- **Index**. Returns you to the index page. 
+- **Splice Graph**. There are two parts to this menu.  The left side has a form to add specific Splice Graphs to the 
+view.  The right side has a juction reads filter.  Select the checkbox to activate this form and then fill in the 
+fields to hide unwanted junctions. 
+- **LSV**.  This provids a form to filter out LSVs from the LSV summary table. 
+
+### TSV 
+VOILA provides a tab-delimited text file to allow users to parse MAJIQ results and further analyze particular LSVs or 
+genes of interest. Most fields are shared between single PSI and delta PSI computations for the expected values and 
+the confidence measures (variance in the case of single PSI and the probability of |delta psi| > 0.2 (or your 
+specified alternative threshold) in delta PSI analysis). The common fields are: Gene name;	LSV ID;  LSV Type;  LSV 
+attributes (A5SS, A3SS, ES, Num. Junctions and Num. Exons); chromosome; strand; LSV coordinates (junctions and exons 
+coordinates); and finally, if additional evidence is required to determine what is the start/end of an LSV, a list 
+with all possible alternative starts and ends is provided.
+
+#### Usage
+
 The usage statement for `voila tsv --help` is the following:
 ```
 usage: voila tsv [-h] -f FILE_NAME [--threshold THRESHOLD]
@@ -586,102 +692,14 @@ required named arguments:
   -f FILE_NAME, --file-name FILE_NAME
                         Set the TSV file's name and location.
 ```
+
+#### Example
+
  For the voila command you will have to supply a filename for the tsv.  Again, psi or deltapsi will be detected from
   the voila file supplied. `A sample command for voila tsv would be something similar to:
  ```
 $ voila tsv splicegraph.sql psi.voila -f psi.tsv
 ```
-*Splice Graphs* {#Sgraph}
---------------
-
-![enter image description here](https://lh3.googleusercontent.com/AZ1V8WlwlYMWdl15sOSJNe6Cj-u7VAS2WvFZMm49E2g=s0 "splicegraphs in Voila")
-
-The splice graph gadget included in VOILA summarizes all the splice variants found in a gene by MAJIQ. Splice Graphs include the following features:
-
- - Easy differentiation between exons and junctions annotated (red) and *de novo* detected (green) in RNA-Seq data,
- - Contextual information about the coordinates for each exon and intron (hovering over exons/junctions).
- - Raw reads counts for each junction. (*Note* MAJIQ applies several normalization factors to these raw values)
- - Scaled view of the gene and the splice graph ![enter image description here](https://lh3.googleusercontent.com/-4cLZGCy9SJA/VWd9rTnwTRI/AAAAAAAAAOw/t2oZOgRkUVk/s0/solve-icon16.png "scaled view") . By default, introns are trimmed to obtain a more compact representation of the splice graph. Switching between scaled and default view is accomplished by clicking on the wand.
- - Zoom in/out to explore complex splice graphs.
- - Possibility to switch between replicates (condition members) when more than one splice graph is available via the dropdown box.
-
-
-All *Gene Summaries* include a descriptive legend of what you might find in the Splice Graphs:
-
-![splice graph legend](https://lh3.googleusercontent.com/-k1Y7ap-sc44/ViVylavJCPI/AAAAAAAAAVk/2RNGA4JVG-8/s0/Screen+Shot+2015-10-19+at+6.44.35+PM.png "splice graph legend")
-
->*DB* refers to exons and junctions annotated in the GFF3 file and *RNASeq* to exons and junctions found in RNA-Seq data. *RNASeq reads* alludes to the raw reads found in RNA-Seq data. Please, note that retained introns (narrow rectangles connecting two exons) do not appear currently in the legend.
-
-Note that when MAJIQ creates the splice graphs that VOILA visualizes, it considers the bounds of each individual exon in all transcripts containing that exon and the longest version is represented in the splice graph. So in the above example, the annotation database had longer versions of exons 17 and 19 corresponding to alternative transcription start sites for this gene and thus the starting positions are extended to reflect this.
-
-
-**PSI Summary**
-----
-![enter image description here](https://lh3.googleusercontent.com/-L3RkgCdIqkk/WQd6uGdh2FI/AAAAAAAAAN0/rr86CT51jhArBRpmSt1LJXkbwKNmwEukQCLcB/s0/Screen+Shot+2017-05-01+at+2.12.36+PM.png "PSI Index")
-
-VOILA PSI Index file offers an overview of all the LSVs detected in a table, providing links to detailed summaries of LSVs and genes. Clicking over a gene or LSV ID opens up a new tab with a summary containing interactive splice graphs, distributions of PSIs per junction and links to the UCSC. Below is an example of PSI summaries for *Tpd52l1*:
-
-![enter image description here](https://lh3.googleusercontent.com/vxcJoTIQgNkGQ-Mk7PaTsnEEipyTPcUT_oPQaKqi40X_uN-LKJ0aI-gifA1cnAlStLh2rgKM=s0 "PSI Splice Graph")
-
->**Tip**: PSI Summaries can be navigated through the *Previous* and *Next* links, without having to go back to the *index* file.
-
-The information is broken into genes (10 per page), each of them with an interactive splice graph and an associated table with LSV quantification data. The table has the following information about the LSV:
-
- - Hightlight:
-	 - **Hightlight**. To move the visualization of the LSV to the splice graph, select the “highlight” checkbox in the LSV table.  All junctions will be hidden except the ones included in the LSV.  The visible junctions will be colored to match the highlighted LSV.
-	 - **Weighted**.  To weight the junctions of the highlighted LSV, check the “weighted” checkbox.  The junctions for this LSV will now be weighted proportionally to the LSV’s expected PSI value for this experiment.
- - LSV ID: a unique identifier for the LSV.
- - LSV type:  a thumbnail representing the splicing event. Each junction has a different color.
- - PSI per junction: the expected Percent Selected Index (PSI) per junction. It has two *views* that can be switched between by clicking on them:
-	 - ***Compact view***. Initially, the PSI per junction is represented by the height of a colored box. Each color refers to the expected inclusion of a particular junction. The taller the rectangle, the more included the junction is expected to be. Clicking on the rectangle (zoom in pointer) will open the *expanded view*.
-	 - ***Expanded view***. Distributions of probabilities of PSI per LSV junction (violin boxplots). The *white* dot represents the expected PSI, whereas the box plot indicates the 10, 25, 50, 75 and 90 percentile of the distribution. Consistently with the Compact view, each color refers to a particular junctions of the LSV.
- - LSV links:
-	 - **GTF**. Link to the GTF file associated with the LSV.
-	 - **UCSC**. Coordinates link to explore the LSV on UCSC Genome Browser (when available).
-	 - **Copy LSV**. The new VOILA supports copy-paste functionality into a new web-tool, MAJIQ-SPEL. SPEL allows users to connect the LSV quantification to the various gene isoforms associated with those, automatically design RT-PCR primers for validating the LSV (with optional control over primer design parameters), and map the LSV to protein domains on the genome browser for functional integration and downstream analysis. See more details: http://biorxiv.org/content/early/2017/05/09/136077
-
-Lastly, the panel *LSV filters* allows the user to screen out LSVs with certain properties like having alternative 5-prime splice sites, involve Exon Skipping or contain a certain amount of exons and junctions.
-
-
-**Delta PSI Summary**
----
-
-![enter image description here](https://lh3.googleusercontent.com/-073q_Fp5dHI/WRxc-tHftAI/AAAAAAAAAP4/F7lz1qZrvXA8BmODYcCsu8hY8g8C0ERoACLcB/s0/Screen+Shot+2017-05-17+at+10.20.09+AM.png "Delta PSI Index")
-
-> **Tip1**: index tables can be sorted by *gene* name, *LSV Type* and/or *most changing junction* clicking on the column header respectively. It is possible to sort the table by multiple columns holding the *shift* key.
-> **Tip2**: You can display all LSVs that changed above the specified dPSI threshold (default 0.2) by clicking the dropdown box at the bottom left and select "All" (default: display 10 LSVs). This allows for quick searching (Ctrl+F) for genes of interest.
-
-Delta PSI index file is identical to PSI index except for the *PSI per junction* column that represents the estimated differential inclusion levels as bars leaning towards condition1 or condition2 (see *Compact view* below). Clicking over LSV IDs and genes opens up individual summaries.
-
-![enter image description here](https://lh3.googleusercontent.com/-Oed709oW3d0/WQd5qsf3v4I/AAAAAAAAANY/KYPkhR3evb8ZgyDoXkcq4Kp9wumpDLcgACLcB/s0/deltapsi_splice_graph.png "deltapsi_splice_graph.png")
-
-The results are broken into 10-genes per page summaries, with LSV quantifications grouped by gene. Unlike in single PSI summaries, there are 2 splice graphs (one per condition) which facilitate quick visual inspection of possible differences. If multiple replicates were used in a condition, the splice graphs for each replicate can be switched between through the drop down box located next to the wand. The LSV information is displayed as follows:
-
- - Hightlight:
-	 - **Hightlight**. To move the visualization of the LSV to the splice graph, select the “highlight” checkbox in the LSV table.  All junctions will be hidden except the ones included in the LSV.  The visible junctions will be colored to match the highlighted LSV.
-	 - **Weighted**.  To weight the junctions of the highlighted LSV, check the “weighted” checkbox.  The junctions for this LSV will now be weighted proportionally to the LSV’s expected PSI value for this experiment.
- - LSV ID: a unique identifier for the LSV.
- - LSV type:  a thumbnail representing the splicing event. Each junction has a different color.
- - PSI *condition[1|2]*: individual $\Psi$ in *condition[1|2]*, similar to the *$\Psi$ per junction* column in PSI summary, with compact and expanded views.
- - More in *condition 1* | More in *condition 2*: the expected delta PSI for all junctions. It has two *views* which can be switched between by clicking on them:
-	 - ***Compact view***. Initially, the observed delta PSI preference for a certain condition (more included) per junction. A bar going towards *condition 1* (left) with a value of *26* means that the junction is 26% more included in condition 1 than in condition 2. Each color refers to a particular junction of the LSV. In the above example, the red junction is 26% more included in cerebellum compared to adrenal gland.
-	 - ***Expanded view***. Distributions of probabilities of Delta PSI per LSV junction (violin boxplots). The *white* dot represents the expected PSI, whereas the box plot indicates the 10, 25, 50, 75 and 90 percentile of the distribution. Consistent with the Compact view, each color refers to a particular junction of the LSV.
- - LSV links:
-	 - **UCSC**. Coordinates link to explore the LSV on UCSC Genome Browser (when available).
-	 - **Copy LSV**. The new VOILA supports copy-paste functionality into a new web-tool, MAJIQ-SPEL. SPEL allows users to connect the LSV quantification to the various gene isoforms associated with those, automatically design RT-PCR primers for validating the LSV (with optional control over primer design parameters), and map the LSV to protein domains on the genome browser for functional integration and downstream analysis. See more details: http://biorxiv.org/content/early/2017/05/09/136077
- ___
-
-**Tab-delimited file**
----------------------
-VOILA provides a tab-delimited text file to allow users to parse MAJIQ results and further analyze particular LSVs or genes of interest. Most fields are shared between single PSI and delta PSI computations for the expected values and the confidence measures (variance in the case of single PSI and the probability of |delta psi| > 0.2 (or your specified alternative threshold) in delta PSI analysis). The common fields are: Gene name;	LSV ID;  LSV Type;  LSV attributes (A5SS, A3SS, ES, Num. Junctions and Num. Exons); chromosome; strand; LSV coordinates (junctions and exons coordinates); and finally, if additional evidence is required to determine what is the start/end of an LSV, a list with all possible alternative starts and ends is provided.
-
-**FAQ**
-===
-In VOILA gene summaries, what is that *number at the beginning* of the HTML file?
---
-To achieve a better performance, VOILA creates HTML files of up to 10 genes. Therefore, if MAJIQ detected and quantified LSVs from N genes, there will be N/10 pages (always rounded to the upper integer limit).
-For example, let say that we executed `voila psi data/Liver1.majiq_psi.pickle --genes-exp1 data/Liver1.splicegraph  -o psi_gene_out/` and 182 genes were detected. There will be 182/10=19 pages (starting with 0): 0_Liver1.majiq_psi_lsv_single_gene.html, 1_Liver1.majiq_psi_lsv_single_gene.html, ..., 18_Liver1.majiq_psi_lsv_single_gene.html.
-
 
 <!--References-->
 [Heber_2002]: http://bioinformatics.oxfordjournals.org/content/18/suppl_1/S181.abstract "Heber et. al 2002"
