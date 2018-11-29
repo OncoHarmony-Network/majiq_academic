@@ -124,7 +124,7 @@ cdef float fit_nb(vector[np.float32_t *] junctionl, int total_juncs, int eff_len
 
     junctions = np.zeros(shape=(total_juncs, eff_length), dtype=np.float)
 
-    for i in total_juncs:
+    for i in range(total_juncs):
         for j in range(eff_length):
             junctions[i,j] = junctionl[i][j]
 
