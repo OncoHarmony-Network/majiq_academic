@@ -441,10 +441,10 @@ class DeltaPsi(MatrixHdf5):
 
         def tsv_fieldnames(self):
             group_names = self.matrix_hdf5.group_names
-            return ['gene_id', 'lsv_id', 'lsv_type', 'E(dPSI)_per_junction', 'P(|dPSI|>=0.20)_per_junction',
-                    'P(|dPSI|<=0.05)_per_junction', '{}_E(PSI)'.format(group_names[0]),
-                    '{}_E(PSI)'.format(group_names[1]), 'a5ss', 'a3ss', 'es', 'num_junctions', 'num_exons',
-                    'junction_coords', 'ir_coords']
+            return ['Gene ID', 'LSV ID', 'LSV Type', 'E(dPSI) per LSV junction', 'P(|dPSI|>=0.20) per LSV junction',
+                    'P(|dPSI|<=0.05) per LSV junction', '{} E(PSI)'.format(group_names[0]),
+                    '{} E(PSI)'.format(group_names[1]), 'A5SS', 'A3SS', 'ES', 'Num. Junctions', 'Num. Exons',
+                    'Junctions coords', 'IR coords']
 
         def tsv_row(self, **kwargs):
             bins = kwargs['bins']
@@ -490,8 +490,8 @@ class Psi(MatrixHdf5):
             super().__init__(matrix_hdf5, lsv_id, fields)
 
         def tsv_fieldnames(self):
-            return ['gene_id', 'lsv_id', 'lsv_type', 'E(PSI)', 'Var(E(PSI))', 'a5ss', 'a3ss', 'es', 'num_junctions',
-                    'num_exons', 'junction_coords', 'ir_coords']
+            return ['Gene ID', 'LSV ID', 'LSV Type', 'E(PSI) per LSV junction', 'Var(E(PSI)) per LSV junction', 'A5SS',
+                    'A3SS', 'ES', 'Num. Junctions', 'Num. Exons', 'Junction coords', 'IR coords']
 
         def tsv_row(self, **kwargs):
             bins = kwargs['bins']
