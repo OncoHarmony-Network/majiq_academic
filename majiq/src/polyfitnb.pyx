@@ -133,7 +133,7 @@ cdef float fit_nb(vector[np.float32_t *] junctionl, int total_juncs, int eff_len
         logger.warning("Your dataset is not deep enougth to define an apropiate NB factor. The default 0 is given")
         return 0.0
     array_size = junctions.shape[0] if junctions.shape[0] < 5000 else 5000
-    junctions = np.random.choice(junctions, array_size, replace=False)
+    junctions = junctions[np.random.choice(junctions.shape[0], array_size, replace=False)]
 
     # while ix < total_juncs and i < array_size:
     #     ix +=1
