@@ -19,10 +19,17 @@ _TsvConfig = namedtuple('TsvConfig', ['file_name', 'voila_files', 'voila_file', 
                                       'lsv_types'])
 _TsvConfig.__new__.__defaults__ = (None,) * len(_TsvConfig._fields)
 
+# global config variable to act as the singleton instance of the config.
 this_config = None
 
 
 def find_splice_graph_file(vs):
+    """
+    Function that located all splice graphs from a list of files and directories.
+    :param vs: list of files and directories.
+    :return: location of splice graph file
+    """
+
     sg_files = set()
 
     for v in vs:
@@ -57,6 +64,12 @@ def find_splice_graph_file(vs):
 
 
 def find_voila_files(vs):
+    """
+    Find all voila files in files and directories.
+    :param vs: list of files and directories.
+    :return: list of voila files
+    """
+
     voila_files = []
 
     for v in vs:
@@ -83,6 +96,11 @@ def find_voila_files(vs):
 
 
 def find_analysis_type(voila_files):
+    """
+    Find the analysis type from the voila files.
+    :param voila_files: list of voila files.
+    :return: String
+    """
     analysis_type = None
 
     for mf in voila_files:
@@ -107,7 +125,14 @@ def find_analysis_type(voila_files):
 
 
 def write(args):
+    """
+    Write command line argmuments into a ini file.
+    :param args: argparse object
+    :return: None
+    """
+
     voila_log().info('config file: ' + constants.CONFIG_FILE)
+
     attrs = inspect.getmembers(args, lambda a: not inspect.isbuiltin(a))
     attrs = (a for a in attrs if not a[0].startswith('_'))
     attrs = dict(attrs)
@@ -115,13 +140,16 @@ def write(args):
     sg_file = find_splice_graph_file(args.files)
 
     if hasattr(args, 'splice_graph_only') and args.splice_graph_only:
+
         analysis_type = ''
         voila_files = []
 
     else:
+
         voila_files = find_voila_files(args.files)
         analysis_type = find_analysis_type(voila_files)
 
+    # attributes that don't need to be in the ini file
     for remove_key in ['files', 'func', 'logger', 'splice_graph_only']:
         try:
             del attrs[remove_key]
@@ -133,6 +161,7 @@ def write(args):
     settings = 'SETTINGS'
     filters = 'FILTERS'
 
+    # Get filters from arguments, add them to the appropriate section, and remove them from arguments.
     for filter in ['lsv_types', 'lsv_ids', 'gene_ids', 'gene_names']:
         if filter in attrs and attrs[filter]:
             try:
@@ -143,22 +172,34 @@ def write(args):
 
             del attrs[filter]
 
+    # Get settings from arguments.
     config_parser.add_section(settings)
     for key, value in attrs.items():
         if isinstance(value, int) or value:
             config_parser.set(settings, key, str(value))
     config_parser.set(settings, 'analysis_type', analysis_type)
 
+    # Get files from arguments
     config_parser.add_section(files)
     config_parser.set(files, 'voila', '\n'.join(str(m) for m in voila_files))
     config_parser.set(files, 'splice_graph', str(sg_file))
 
+    # Write ini file.
     with open(constants.CONFIG_FILE, 'w') as configfile:
         config_parser.write(configfile)
 
 
 class ViewConfig:
     def __new__(cls, *args, **kwargs):
+        """
+        Before the object is created, we'll parse the ini file, save the named tuple to a global variable, and use it
+        as the sington object. This class is specifically for the HTML view.
+
+        :param args: arguments
+        :param kwargs: keyword arguments
+        :return: named tuple config
+        """
+
         global this_config
 
         if this_config is None:
@@ -185,6 +226,15 @@ class ViewConfig:
 
 class TsvConfig:
     def __new__(cls, *args, **kwargs):
+        """
+        Before the object is created, we'll parse the ini file, save the named tuple to a global variable, and use it
+        as the sington object. This class is specifically for the TSV output.
+
+        :param args: arguments
+        :param kwargs: keyword arguments
+        :return: named tuple config
+        """
+
         global this_config
 
         if this_config is None:

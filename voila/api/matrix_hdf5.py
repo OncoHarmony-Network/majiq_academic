@@ -110,16 +110,16 @@ class MatrixHdf5:
         row = matrix_type.tsv_row(**kwargs)
 
         row.update({
-            'gene_id': lsv_id_to_gene_id(matrix_type.lsv_id),
-            'lsv_id': matrix_type.lsv_id,
-            'lsv_type': lsv_type,
-            'a5ss': matrix_type.a5ss,
-            'a3ss': matrix_type.a3ss,
-            'es': matrix_type.exon_skipping,
-            'num_junctions': len(junctions) - intron_ret,
-            'num_exons': matrix_type.exon_count,
-            'junction_coords': ';'.join('{0}-{1}'.format(start, end) for start, end in junc_coords),
-            'ir_coords': ';'.join('{0}-{1}'.format(start, end) for start, end in ir_coords)
+            'Gene ID': lsv_id_to_gene_id(matrix_type.lsv_id),
+            'LSV ID': matrix_type.lsv_id,
+            'LSV Type': lsv_type,
+            'A5SS': matrix_type.a5ss,
+            'A3SS': matrix_type.a3ss,
+            'ES': matrix_type.exon_skipping,
+            'Num. Junctions': len(junctions) - intron_ret,
+            'Num. Exons': matrix_type.exon_count,
+            'Junctions coords': ';'.join('{0}-{1}'.format(start, end) for start, end in junc_coords),
+            'IR coords': ';'.join('{0}-{1}'.format(start, end) for start, end in ir_coords)
         })
 
         self._tsv_writer.writerow(row)
@@ -461,16 +461,16 @@ class DeltaPsi(MatrixHdf5):
             non_changing_threshold = 0.05
 
             row = {
-                'E(dPSI)_per_junction': ';'.join(
+                'E(dPSI) per LSV junction': ';'.join(
                     str(excl_incl[i][1] - excl_incl[i][0]) for i in range(np.size(bins, 0))),
-                'P(|dPSI|>=%.2f)_per_junction' % threshold: ';'.join(str(matrix_area(b, threshold)) for b in bins),
-                'P(|dPSI|<=%.2f)_per_junction' % non_changing_threshold: ';'.join(
+                'P(|dPSI|>=%.2f) per LSV junction' % threshold: ';'.join(str(matrix_area(b, threshold)) for b in bins),
+                'P(|dPSI|<=%.2f) per LSV junction' % non_changing_threshold: ';'.join(
                     map(str, generate_high_probability_non_changing(self.intron_retention, self.matrix_hdf5.prior,
                                                                     non_changing_threshold, bins))),
             }
 
             for group_name, means in zip(self.matrix_hdf5.group_names, kwargs['group_means']):
-                row[group_name + '_E(PSI)'] = ';'.join('%.3f' % i for i in means)
+                row[group_name + ' E(PSI)'] = ';'.join('%.3f' % i for i in means)
 
             return row
 
@@ -498,13 +498,13 @@ class Psi(MatrixHdf5):
 
         def tsv_fieldnames(self):
             return ['Gene ID', 'LSV ID', 'LSV Type', 'E(PSI) per LSV junction', 'Var(E(PSI)) per LSV junction', 'A5SS',
-                    'A3SS', 'ES', 'Num. Junctions', 'Num. Exons', 'Junction coords', 'IR coords']
+                    'A3SS', 'ES', 'Num. Junctions', 'Num. Exons', 'Junctions coords', 'IR coords']
 
         def tsv_row(self, **kwargs):
             bins = kwargs['bins']
             return {
-                'E(PSI)': ';'.join(map(str, kwargs['means'])),
-                'Var(E(PSI))': ';'.join(map(str, generate_variances(bins)))
+                'E(PSI) per LSV junction': ';'.join(map(str, kwargs['means'])),
+                'Var(E(PSI)) per LSV junction': ';'.join(map(str, generate_variances(bins)))
             }
 
     def psi(self, lsv_id):
