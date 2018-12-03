@@ -199,12 +199,12 @@ cdef int _output_lsv_file_single(vector[LSV*] out_lsvlist, string experiment_nam
     majiq_io.dump_lsv_coverage_mat(out_file, cov_l, type_list, junc_info, experiment_name.decode('utf-8'))
     nlsv = len(type_list)
 
-    for jobj_ptr in tlb_juncs:
-        del jobj_ptr.second
+    for xx in tlb_juncs:
+        del xx.second
     tlb_juncs.clear()
 
-    for jobj_ptr in tlb_ir:
-        del jobj_ptr.second
+    for xx in tlb_ir:
+        del xx.second
     tlb_ir.clear()
 
     return nlsv
