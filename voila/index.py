@@ -1,4 +1,5 @@
 import json
+import os
 from pathlib import Path
 
 import h5py
@@ -97,6 +98,9 @@ class Index:
         log = voila_log()
         voila_dir = Path(config.voila_file).parents[0]
         index_file = voila_dir / 'index.hdf5'
+
+        if config.force_index:
+            os.remove(index_file)
 
         if config.force_index or not index_file.exists():
             log.info('Creating index: ' + str(index_file))

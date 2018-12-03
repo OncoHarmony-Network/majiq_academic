@@ -12,6 +12,7 @@ from voila.api.view_splice_graph_sqlite import ViewSpliceGraph
 from voila.config import ViewConfig, TsvConfig
 from voila.exceptions import VoilaException, UnknownAnalysisType
 from voila.utils.voila_log import voila_log
+from voila.view import views
 from voila.vlsv import get_expected_psi, matrix_area
 
 # lock used when writing files.
@@ -213,7 +214,8 @@ class AnalysisTypeTsv:
                     p = config.probability_threshold
                     lsvs = list(lsv for lsv in lsvs if any(matrix_area(b, t) >= p for b in lsv.bins))
 
-                lsvs = list(lsv for lsv in lsvs if any(m >= config.threshold for m in np.abs(lsv.means)))
+                if config.analysis_type != constants.ANALYSIS_HETEROGEN:
+                    lsvs = list(lsv for lsv in lsvs if any(m >= config.threshold for m in np.abs(lsv.means)))
 
                 yield from lsvs
 
@@ -305,6 +307,7 @@ class PsiTsv(AnalysisTypeTsv):
         log = voila_log()
 
         with ViewPsi() as m, ViewSpliceGraph() as sg:
+            genome = sg.genome
 
             with open(tsv_file, 'a') as tsv:
                 writer = csv.DictWriter(tsv, fieldnames=fieldnames, delimiter='\t')
@@ -312,6 +315,7 @@ class PsiTsv(AnalysisTypeTsv):
                 for gene_id in self.gene_ids(q, e):
 
                     gene = sg.gene(gene_id)
+                    chromosome = gene.chromosome
 
                     for psi in self.lsvs(gene_id):
                         lsv_id = psi.lsv_id
@@ -319,6 +323,7 @@ class PsiTsv(AnalysisTypeTsv):
                         annot_juncs = sg.annotated_junctions(gene, lsv_junctions)
                         lsv_exons = sg.lsv_exons(gene, lsv_junctions)
                         ir_coords = intron_retention_coords(psi, lsv_junctions)
+                        start, end = views.lsv_boundries(lsv_exons)
 
                         row = {
                             '#Gene Name': gene.name,
@@ -341,7 +346,8 @@ class PsiTsv(AnalysisTypeTsv):
                             ),
                             'IR coords': ir_coords,
                             'E(PSI) per LSV junction': semicolon(psi.means),
-                            'Var(E(PSI)) per LSV junction': semicolon(psi.variances)
+                            'Var(E(PSI)) per LSV junction': semicolon(psi.variances),
+                            'UCSC LSV Link': views.ucsc_href(genome, chromosome, start, end)
                         }
 
                         lock.acquire()
@@ -351,11 +357,9 @@ class PsiTsv(AnalysisTypeTsv):
                     q.task_done()
 
     def tab_output(self):
-        fieldnames = ['#Gene Name', 'Gene ID', 'LSV ID', 'E(PSI) per LSV junction',
-                      'Var(E(PSI)) per LSV junction',
-                      'LSV Type', 'A5SS', 'A3SS', 'ES', 'Num. Junctions', 'Num. Exons', 'De Novo Junctions',
-                      'chr',
-                      'strand', 'Junctions coords', 'Exons coords', 'IR coords']
+        fieldnames = ['#Gene Name', 'Gene ID', 'LSV ID', 'E(PSI) per LSV junction', 'Var(E(PSI)) per LSV junction',
+                      'LSV Type', 'A5SS', 'A3SS', 'ES', 'Num. Junctions', 'Num. Exons', 'De Novo Junctions', 'chr',
+                      'strand', 'Junctions coords', 'Exons coords', 'IR coords', 'UCSC LSV Link']
 
         self.write_tsv(fieldnames)
 
@@ -376,64 +380,71 @@ class HeterogenTsv(AnalysisTypeTsv):
                          ['%s E(PSI)' % group for group in group_names] + \
                          list(m.junction_stats_column_names) + \
                          ['A5SS', 'A3SS', 'ES', 'Num. Junctions', 'Num. Exons', 'De Novo Junctions',
-                          'Junctions coords', 'Exons coords', 'IR coords']
+                          'Junctions coords', 'Exons coords', 'IR coords', 'UCSC LSV Link']
 
         self.write_tsv(fieldnames)
 
     def tsv_row(self, q, e, tsv_file, fieldnames):
         log = voila_log()
+        # config = TsvConfig()
+        group_names = self.group_names
 
-        with ViewSpliceGraph() as sg, open(tsv_file, 'a') as tsv:
-            group_names = self.group_names
-            writer = csv.DictWriter(tsv, fieldnames=fieldnames, delimiter='\t')
+        with ViewSpliceGraph() as sg:
+            genome = sg.genome
 
-            for gene_id in self.gene_ids(q, e):
-                gene = sg.gene(gene_id)
+            with open(tsv_file, 'a') as tsv:
+                writer = csv.DictWriter(tsv, fieldnames=fieldnames, delimiter='\t')
 
-                for het in self.lsvs(gene_id):
-                    lsv_id = het.lsv_id
+                for gene_id in self.gene_ids(q, e):
 
-                    lsv_junctions = het.junctions
-                    annot_juncs = sg.annotated_junctions(gene, het)
-                    lsv_exons = sg.lsv_exons(gene, het)
-                    mean_psi = list(het.mean_psi)
+                    gene = sg.gene(gene_id)
+                    chromosome = gene.chromosome
 
-                    row = {
-                        'Gene Name': gene.name,
-                        'Gene ID': gene.id,
-                        'LSV ID': lsv_id,
-                        'LSV Type': het.lsv_type,
-                        'A5SS': het.a5ss,
-                        'A3SS': het.a3ss,
-                        'ES': het.exon_skipping,
-                        'Num. Junctions': len(lsv_junctions),
-                        'Num. Exons': het.exon_count,
-                        'chr': gene.chromosome,
-                        'strand': gene.strand,
-                        'De Novo Junctions': semicolon(annot_juncs),
-                        'Junctions coords': semicolon(
-                            '{0}-{1}'.format(start, end) for start, end in lsv_junctions
-                        ),
-                        'Exons coords': semicolon(
-                            '{0}-{1}'.format(start, end) for start, end in exon_str(lsv_exons)
-                        ),
-                        # todo: reimplement this column
-                        # 'IR coords': self.semicolon_join(
-                        #     '{0}-{1}'.format(e.start, e.end) for e in lsv_exons if e.intron_retention
-                        # ),
-                    }
+                    for het in self.lsvs(gene_id):
+                        lsv_id = het.lsv_id
 
-                    for grp, mean in zip(group_names, np.array(mean_psi).transpose((1, 0, 2))):
-                        row[grp + ' E(PSI)'] = semicolon(get_expected_psi(x) for x in mean)
+                        lsv_junctions = het.junctions
+                        annot_juncs = sg.annotated_junctions(gene, lsv_junctions)
+                        lsv_exons = sg.lsv_exons(gene, lsv_junctions)
+                        mean_psi = list(het.mean_psi)
+                        ir_coords = intron_retention_coords(het, lsv_junctions)
+                        start, end = views.lsv_boundries(lsv_exons)
 
-                    for key, value in het.junction_stats:
-                        row[key] = semicolon(value)
+                        row = {
+                            'Gene Name': gene.name,
+                            'Gene ID': gene.id,
+                            'LSV ID': lsv_id,
+                            'LSV Type': het.lsv_type,
+                            'A5SS': het.a5ss,
+                            'A3SS': het.a3ss,
+                            'ES': het.exon_skipping,
+                            'Num. Junctions': len(lsv_junctions),
+                            'Num. Exons': het.exon_count,
+                            'chr': gene.chromosome,
+                            'strand': gene.strand,
+                            'De Novo Junctions': semicolon(annot_juncs),
+                            'Junctions coords': semicolon(
+                                '{0}-{1}'.format(start, end) for start, end in lsv_junctions
+                            ),
+                            'Exons coords': semicolon(
+                                '{0}-{1}'.format(start, end) for start, end in exon_str(lsv_exons)
+                            ),
+                            'IR coords': ir_coords,
+                            'UCSC LSV Link': views.ucsc_href(genome, chromosome, start, end)
+                        }
 
-                    lock.acquire()
-                    log.debug('Write TSV row for {0}'.format(lsv_id))
-                    writer.writerow(row)
-                    lock.release()
-                q.task_done()
+                        for grp, mean in zip(group_names, np.array(mean_psi).transpose((1, 0, 2))):
+                            row[grp + ' E(PSI)'] = semicolon(get_expected_psi(x) for x in mean)
+
+                        for key, value in het.junction_stats:
+                            row[key] = semicolon(value)
+
+                        lock.acquire()
+                        log.debug('Write TSV row for {0}'.format(lsv_id))
+                        writer.writerow(row)
+                        lock.release()
+
+                    q.task_done()
 
 
 class DeltaPsiTsv(AnalysisTypeTsv):
@@ -449,6 +460,7 @@ class DeltaPsiTsv(AnalysisTypeTsv):
         group1, group2 = self.group_names
 
         with ViewSpliceGraph() as sg:
+            genome = sg.genome
 
             with open(tsv_file, 'a') as tsv:
                 writer = csv.DictWriter(tsv, fieldnames=fieldnames, delimiter='\t')
@@ -456,6 +468,7 @@ class DeltaPsiTsv(AnalysisTypeTsv):
                 for gene_id in self.gene_ids(q, e):
 
                     gene = sg.gene(gene_id)
+                    chromosome = gene.chromosome
 
                     for dpsi in self.lsvs(gene_id):
                         lsv_id = dpsi.lsv_id
@@ -467,6 +480,7 @@ class DeltaPsiTsv(AnalysisTypeTsv):
                         group_means = dict(dpsi.group_means)
                         bins = dpsi.bins
                         ir_coords = intron_retention_coords(dpsi, lsv_junctions)
+                        start, end = views.lsv_boundries(lsv_exons)
 
                         row = {
                             '#Gene Name': gene.name,
@@ -503,7 +517,8 @@ class DeltaPsiTsv(AnalysisTypeTsv):
                             ),
                             '%s E(PSI)' % group2: semicolon(
                                 '%.3f' % i for i in group_means[group2]
-                            )
+                            ),
+                            'UCSC LSV Link': views.ucsc_href(genome, chromosome, start, end)
                         }
 
                         lock.acquire()
@@ -522,8 +537,8 @@ class DeltaPsiTsv(AnalysisTypeTsv):
             fieldnames = ['#Gene Name', 'Gene ID', 'LSV ID', 'E(dPSI) per LSV junction',
                           'P(|dPSI|>=%.2f) per LSV junction' % config.threshold,
                           'P(|dPSI|<=%.2f) per LSV junction' % config.non_changing_threshold,
-                          '%s E(PSI)' % grp_names[0], '%s E(PSI)' % grp_names[1], 'LSV Type',
-                          'A5SS', 'A3SS', 'ES', 'Num. Junctions', 'Num. Exons', 'De Novo Junctions', 'chr',
-                          'strand', 'Junctions coords', 'Exons coords', 'IR coords']
+                          '%s E(PSI)' % grp_names[0], '%s E(PSI)' % grp_names[1], 'LSV Type', 'A5SS', 'A3SS', 'ES',
+                          'Num. Junctions', 'Num. Exons', 'De Novo Junctions', 'chr', 'strand', 'Junctions coords',
+                          'Exons coords', 'IR coords', 'UCSC LSV Link']
 
         self.write_tsv(fieldnames)

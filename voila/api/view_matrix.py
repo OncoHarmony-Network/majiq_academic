@@ -452,6 +452,15 @@ class ViewHeterogens:
         for v in vhs:
             v.close()
 
+    def lsvs(self, gene_id=None):
+        if gene_id:
+            for lsv_id in self.lsv_ids(gene_ids=[gene_id]):
+                yield self.lsv(lsv_id)
+        else:
+            for lsv_id in self.lsv_ids():
+                yield self.lsv(lsv_id)
+
+
 
 class ViewHeterogen(Heterogen, ViewMatrix):
     def __init__(self, voila_file):
