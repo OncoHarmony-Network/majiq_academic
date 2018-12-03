@@ -314,6 +314,13 @@ class MatrixType(ABC):
         return self.matrix_hdf5.get_many(self.lsv_id, keys)
 
     @property
+    def exists(self):
+        gene_id = self.gene_id
+        lsv_id = self.lsv_id
+        h = self.matrix_hdf5.h
+        return gene_id in h['lsvs'] and lsv_id in h[gene_id]
+
+    @property
     def lsv_type(self):
         if self._lsv_type is None:
             self._lsv_type = self.get('lsv_type')

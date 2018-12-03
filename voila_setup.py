@@ -1,5 +1,12 @@
 #!/usr/bin/env python
+"""
+This setup file can be used to install only voila.  This can be used with the following command:
+
+    python setup_voila.py install
+
+"""
 from setuptools import setup
+
 from voila.constants import VERSION
 
 setup(

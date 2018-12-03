@@ -19,6 +19,10 @@ dpsi_keys = ['lsv_id', 'gene_id', 'gene_name', 'excl_incl', 'dpsi_threshold', 'c
 
 class Index:
     def __init__(self):
+        """
+        Factory class to generate the index for the supplied analysis type.
+        """
+
         analysis_type = ViewConfig().analysis_type
 
         # The case where there's no analysis type, we're assuming this is splice graph only.
@@ -37,23 +41,60 @@ class Index:
 
     @staticmethod
     def _check_strings(*strings):
+        """
+        Validate the strings are no longer then 250 characters. This is being deprecated for a more general approach
+        to strings were we find the max length a string for a column.
+        :param strings: list of strings
+        :return: None
+        """
+
         assert any(len(str(s)) <= 250 for s in strings)
 
     @staticmethod
     def _index_in_voila(voila_file, remove_index=False):
+        """
+        Check if index has already been created in voila file. If remove_index has been set, then attempt to use the
+        h5py api to remove the index dataset from the file.
+
+        :param voila_file:
+        :param remove_index:
+        :return:
+        """
+
         with h5py.File(voila_file, 'a') as h:
             index_in_h = 'index' in h
 
             if remove_index and index_in_h:
-                del h['index']
                 voila_log().info('Removing index from HDF5')
+                del h['index']
 
             return index_in_h
 
+    @staticmethod
+    def _write_index(voila_file, voila_index, dtype):
+        """
+        Helper method to write voila index to voila file using specific numpy data type.
+
+        :param voila_file: location and name of voila file.
+        :param voila_index: Array of index data.
+        :param dtype: numpy data type string.
+        :return: None
+        """
+        voila_index = np.array(voila_index, dtype=np.dtype(dtype))
+        with h5py.File(voila_file, 'a') as h:
+            h.create_dataset('index', voila_index.shape, data=voila_index)
+
     def _heterogen(self):
+        """
+        Create index for heterogen analysis type.  This is an odd case as there can be more then one voila file.  The
+        current solution is to create a separate voila index hdf5 file in the directory of the first voila file.  Order
+        of voila files determined by sorting the filename/location of the each voila file in the config.
+
+        :return: None
+        """
+
         config = ViewConfig()
         log = voila_log()
-
         voila_dir = Path(config.voila_file).parents[0]
         index_file = voila_dir / 'index.hdf5'
 
@@ -74,13 +115,16 @@ class Index:
 
                     voila_index.append(row)
 
-            voila_index = np.array(voila_index, dtype=np.dtype('S250,S250,S250'))
-            with h5py.File(index_file, 'w') as h:
-                h.create_dataset('index', voila_index.shape, data=voila_index, compression='gzip', compression_opts=9)
-
-            log.info('Index created')
+            dtype = np.dtype('S250,S250,S250')
+            self._write_index(index_file, voila_index, dtype)
 
     def _deltapsi(self):
+        """
+        Generates index for delta psi analysis type.
+
+        :return: None
+        """
+
         config = ViewConfig()
         log = voila_log()
         force_index = remove_index = config.force_index
@@ -110,10 +154,14 @@ class Index:
                         dpsi_thresh = dpsi_thresh.tolist()
                         dpsi_thresh = json.dumps(dpsi_thresh)
 
+                        # Calculate a list of confidence for 10 (0 thru 1) values of threshold. This is done because we
+                        # don't want to store the bins data in the index.  Although, this might be a good idea once the
+                        # index gets large enough.
                         bins = dpsi.bins
                         confidence_thresh = list(max(matrix_area(b, x) for b in bins) for x in np.linspace(0, 1, 10))
                         confidence_thresh = json.dumps(confidence_thresh)
 
+                        # store the max length for each column
                         lsv_id_len = max(lsv_id_len, len(lsv_id))
                         gene_id_len = max(gene_id_len, len(gene_id))
                         gene_name_len = max(gene_name_len, len(gene_name))
@@ -125,16 +173,20 @@ class Index:
 
                         lsv_f = [getattr(dpsi, f) for f in lsv_filters]
 
+                        # For some reason, numpy needs these in tuples.
                         row = tuple([lsv_id, gene_id, gene_name, excl_incl, dpsi_thresh, confidence_thresh] + lsv_f)
                         voila_index.append(row)
 
                 dtype = 'S{},S{},S{},f4,S{},S{},?,?,?,?,?,?,?'.format(lsv_id_len, gene_id_len, gene_name_len,
                                                                       dpsi_thresh_len, confidence_thresh_len)
-                voila_index = np.array(voila_index, dtype=np.dtype(dtype))
-                with h5py.File(voila_file, 'a') as h:
-                    h.create_dataset('index', voila_index.shape, data=voila_index)
+                self._write_index(voila_file, voila_file, dtype)
 
     def _psi(self):
+        """
+        Create index to PSI analysis type.
+        :return: None
+        """
+
         config = ViewConfig()
         log = voila_log()
         force_index = remove_index = config.force_index
@@ -158,6 +210,7 @@ class Index:
                         gene_name = gene.name
                         lsv_f = [getattr(psi, f) for f in lsv_filters]
 
+                        # Store max string length for each column.
                         lsv_id_len = max(lsv_id_len, len(lsv_id))
                         gene_id_len = max(gene_id_len, len(gene_id))
                         gene_name_len = max(gene_name_len, len(gene_name))
@@ -168,21 +221,37 @@ class Index:
                         voila_index.append(row)
 
                 dtype = 'S{},S{},S{},?,?,?,?,?,?,?'.format(lsv_id_len, gene_id_len, gene_name_len)
-                voila_index = np.array(voila_index, dtype=np.dtype(dtype))
-
-                with h5py.File(voila_file, 'a') as h:
-                    h.create_dataset('index', voila_index.shape, data=voila_index)
+                self._write_index(voila_file, voila_index, dtype)
 
     @classmethod
     def psi(cls, gene_id=None):
+        """
+        Get PSI index data in as a dictionary for each row.
+        :param gene_id: Filter output by specific gene.
+        :return: Generator
+        """
+
         yield from cls.row_data(gene_id, psi_keys)
 
     @classmethod
     def delta_psi(cls, gene_id=None):
+        """
+        Get Delta PSI index data in as a dictionary for each row.
+        :param gene_id: Filter output by specific gene.
+        :return: Generator
+        """
+
         yield from cls.row_data(gene_id, dpsi_keys)
 
     @staticmethod
     def row_data(gene_id, keys):
+        """
+        For each row in index, zip list of keys with values in the row.
+        :param gene_id:
+        :param keys:
+        :return:
+        """
+
         try:
             gene_id = gene_id.encode('utf-8')
         except AttributeError:
@@ -191,9 +260,11 @@ class Index:
         config = ViewConfig()
 
         with h5py.File(config.voila_file, 'r') as h:
+
             try:
                 for row in h['index'].value:
                     if gene_id is None or gene_id == row[1]:
                         yield dict(zip(keys, row))
+
             except KeyError:
                 raise IndexNotFound()

@@ -10,19 +10,21 @@ from voila import constants
 from voila.api.view_matrix import ViewHeterogens, ViewPsi, ViewDeltaPsi
 from voila.api.view_splice_graph_sqlite import ViewSpliceGraph
 from voila.config import ViewConfig, TsvConfig
-from voila.exceptions import GeneIdNotFoundInVoilaFile, VoilaException, LsvIdNotFoundInVoilaFile
+from voila.exceptions import VoilaException, UnknownAnalysisType
 from voila.utils.voila_log import voila_log
 from voila.vlsv import get_expected_psi, matrix_area
 
+# lock used when writing files.
 lock = multiprocessing.Lock()
 
 
-def chunkify(lst, n):
-    for i in range(n):
-        yield lst[i::n]
-
-
 def exon_str(exons):
+    """
+    Take in a list of exons and is an exon coordinate is -1, return 'nan' instead.  This helps with parsing the tsv file
+    and something that is expected.
+    :param exons: list of exon coordinates
+    :return: exon coordinates or 'nan'
+    """
     for exon in exons:
         if exon[0] == -1:
             yield 'nan', exon[1]
@@ -32,11 +34,23 @@ def exon_str(exons):
             yield exon
 
 
-def semicolon_join(value_list):
+def semicolon(value_list):
+    """
+    Take a list of value and return a semicolon separated list as a string.
+    :param value_list: list of values
+    :return: s=String
+    """
     return ';'.join(str(x) for x in value_list)
 
 
 def intron_retention_coords(lsv, juncs):
+    """
+    If this LSV has intron retention, then return IR coordinates with a hyphen separating them or return an empty
+    string.  This is a helper function used in two classes.
+    :param lsv:  LSV object
+    :param juncs: list of LSV junctions which contain the coordinates of the IR at the end.
+    :return: String
+    """
     if lsv.intron_retention:
         return '-'.join(map(str, juncs[-1]))
     else:
@@ -45,6 +59,9 @@ def intron_retention_coords(lsv, juncs):
 
 class Tsv:
     def __init__(self):
+        """
+        Factory class used to create the TSV file for the specific analysis type.
+        """
         config = TsvConfig()
         analysis_type = config.analysis_type
 
@@ -57,11 +74,16 @@ class Tsv:
         elif analysis_type == constants.ANALYSIS_HETEROGEN:
             HeterogenTsv()
         else:
-            raise Exception('unknown analysis type')
+            raise UnknownAnalysisType(analysis_type)
 
 
 class AnalysisTypeTsv:
     def __init__(self, view_matrix):
+        """
+        Super class to each of the analysis types classes for creating a TSV file.
+        :param view_matrix: the view matrix class for the analysis type you're attempting to create a TSV file for.
+        """
+
         start_time = datetime.now()
         config = TsvConfig()
         log = voila_log()
@@ -83,11 +105,25 @@ class AnalysisTypeTsv:
         elapsed_time = datetime.now() - start_time
         voila_log().info('Duration: ' + str(elapsed_time))
 
-    @staticmethod
     def tsv_row(self, q, e, tsv_file, fieldnames):
+        """
+        Used in multi-processing to write each row of the tsv file.
+        :param q: Queue containing gene_ids
+        :param e: Event flag for when the queue is no long having elements pushed to it.
+        :param tsv_file: TSV filename.
+        :param fieldnames: column fieldnames for the the TSV file.
+        :return: None
+        """
+
         raise NotImplementedError()
 
     def validate_filters(self):
+        """
+        Validate command line filters.  If filters are listed but not found, then they will printed out to the log.  If
+        all filters are not found, then an error will be raised.
+        :return: None
+        """
+
         config = TsvConfig()
         log = voila_log()
 
@@ -96,12 +132,8 @@ class AnalysisTypeTsv:
 
             with self.view_matrix() as m:
                 for lsv_id in config.lsv_ids:
-                    try:
-                        # todo: is there a faster/natural way to check if lsv_id is in a file?
-                        m.lsv(lsv_id).lsv_type
+                    if m.lsv(lsv_id).exists:
                         self.filter_lsv_ids.add(lsv_id)
-                    except (GeneIdNotFoundInVoilaFile, LsvIdNotFoundInVoilaFile):
-                        pass
 
             not_found_lsvs = set(config.lsv_ids) - self.filter_lsv_ids
             if not_found_lsvs:
@@ -154,6 +186,11 @@ class AnalysisTypeTsv:
             raise VoilaException('Filters were specified, but values were found in Voila or Splice Graph files.')
 
     def lsvs(self, gene_id):
+        """
+        Returns a generator that handles the filtering of LSVs based on the command line arguments.
+        :param gene_id: Gene identifier for LSVs.
+        :return: Generator
+        """
         config = TsvConfig()
 
         with self.view_matrix() as m:
@@ -166,30 +203,49 @@ class AnalysisTypeTsv:
             else:
 
                 if self.filter_lsv_ids:
-                    lsvs = (lsv for lsv in lsvs if lsv.lsv_id in self.filter_lsv_ids)
+                    lsvs = list(lsv for lsv in lsvs if lsv.lsv_id in self.filter_lsv_ids)
 
                 if self.filter_gene_ids:
-                    lsvs = (lsv for lsv in lsvs if lsv.gene_id in self.filter_gene_ids)
+                    lsvs = list(lsv for lsv in lsvs if lsv.gene_id in self.filter_gene_ids)
 
                 if config.probability_threshold:
                     t = config.threshold
                     p = config.probability_threshold
-                    lsvs = (lsv for lsv in lsvs if any(matrix_area(b, t) >= p for b in lsv.bins))
+                    lsvs = list(lsv for lsv in lsvs if any(matrix_area(b, t) >= p for b in lsv.bins))
 
-                lsvs = (lsv for lsv in lsvs if any(m >= config.threshold for m in np.abs(lsv.means)))
+                lsvs = list(lsv for lsv in lsvs if any(m >= config.threshold for m in np.abs(lsv.means)))
 
                 yield from lsvs
 
     def tab_output(self):
+        """
+        Helper method to set up fieldnames and then call self.write_tsv().
+        :return: None
+        """
+
         raise NotImplementedError()
 
     def fill_queue(self, queue, event):
+        """
+        Fill queue with gene IDs.
+        :param queue: Queue to hold Gene IDs
+        :param event: Event to flag when all Genes have been added to queue.
+        :return: None
+        """
+
         with self.view_matrix() as m:
             for gene_id in m.gene_ids:
                 queue.put(gene_id)
             event.set()
 
     def gene_ids(self, q, e):
+        """
+        Get gene ids from queue.
+        :param q: Queue containing gene IDS.
+        :param e: Event flag to check if queue is still being added to.
+        :return: None
+        """
+
         while not (e.is_set() and q.empty()):
             try:
                 yield q.get_nowait()
@@ -199,23 +255,28 @@ class AnalysisTypeTsv:
         assert q.empty()
 
     def write_tsv(self, fieldnames):
-        config = ViewConfig()
+        """
+        Using the supplied fieldnames, start the pool writing the TSV file.
+        :param fieldnames: list of column field names.
+        :return: None
+        """
+
         log = voila_log()
         log.info("Creating Tab-delimited output file")
 
+        config = ViewConfig()
         nproc = config.nproc
         multiple_results = []
+
         tsv_file = Path(config.file_name).expanduser().resolve()
 
         mgr = multiprocessing.Manager()
+        log.info('Manager PID {}'.format(mgr._process.ident))
 
         queue = mgr.Queue(nproc * 2)
         event = mgr.Event()
 
         fill_queue_proc = multiprocessing.Process(target=self.fill_queue, args=(queue, event))
-
-        log.info('Manager PID {}'.format(mgr._process.ident))
-
         fill_queue_proc.start()
 
         with open(tsv_file, 'w') as tsv:
@@ -234,6 +295,10 @@ class AnalysisTypeTsv:
 
 class PsiTsv(AnalysisTypeTsv):
     def __init__(self):
+        """
+        Class to write TSV file for PSI analysis type.
+        """
+
         super().__init__(ViewPsi)
 
     def tsv_row(self, q, e, tsv_file, fieldnames):
@@ -267,16 +332,16 @@ class PsiTsv(AnalysisTypeTsv):
                             'Num. Exons': psi.exon_count,
                             'chr': gene.chromosome,
                             'strand': gene.strand,
-                            'De Novo Junctions': semicolon_join(annot_juncs),
-                            'Junctions coords': semicolon_join(
+                            'De Novo Junctions': semicolon(annot_juncs),
+                            'Junctions coords': semicolon(
                                 '{0}-{1}'.format(start, end) for start, end in lsv_junctions
                             ),
-                            'Exons coords': semicolon_join(
+                            'Exons coords': semicolon(
                                 '{0}-{1}'.format(start, end) for start, end in exon_str(lsv_exons)
                             ),
                             'IR coords': ir_coords,
-                            'E(PSI) per LSV junction': semicolon_join(psi.means),
-                            'Var(E(PSI)) per LSV junction': semicolon_join(psi.variances)
+                            'E(PSI) per LSV junction': semicolon(psi.means),
+                            'Var(E(PSI)) per LSV junction': semicolon(psi.variances)
                         }
 
                         lock.acquire()
@@ -297,6 +362,10 @@ class PsiTsv(AnalysisTypeTsv):
 
 class HeterogenTsv(AnalysisTypeTsv):
     def __init__(self):
+        """
+        Class to write TSV file for Heterogen analysis type.
+        """
+
         super().__init__(ViewHeterogens)
 
     def tab_output(self):
@@ -341,11 +410,11 @@ class HeterogenTsv(AnalysisTypeTsv):
                         'Num. Exons': het.exon_count,
                         'chr': gene.chromosome,
                         'strand': gene.strand,
-                        'De Novo Junctions': semicolon_join(annot_juncs),
-                        'Junctions coords': semicolon_join(
+                        'De Novo Junctions': semicolon(annot_juncs),
+                        'Junctions coords': semicolon(
                             '{0}-{1}'.format(start, end) for start, end in lsv_junctions
                         ),
-                        'Exons coords': semicolon_join(
+                        'Exons coords': semicolon(
                             '{0}-{1}'.format(start, end) for start, end in exon_str(lsv_exons)
                         ),
                         # todo: reimplement this column
@@ -355,10 +424,10 @@ class HeterogenTsv(AnalysisTypeTsv):
                     }
 
                     for grp, mean in zip(group_names, np.array(mean_psi).transpose((1, 0, 2))):
-                        row[grp + ' E(PSI)'] = semicolon_join(get_expected_psi(x) for x in mean)
+                        row[grp + ' E(PSI)'] = semicolon(get_expected_psi(x) for x in mean)
 
                     for key, value in het.junction_stats:
-                        row[key] = semicolon_join(value)
+                        row[key] = semicolon(value)
 
                     lock.acquire()
                     log.debug('Write TSV row for {0}'.format(lsv_id))
@@ -369,6 +438,9 @@ class HeterogenTsv(AnalysisTypeTsv):
 
 class DeltaPsiTsv(AnalysisTypeTsv):
     def __init__(self):
+        """
+        Class to write TSV file for Delta PSI analysis type.
+        """
         super().__init__(ViewDeltaPsi)
 
     def tsv_row(self, q, e, tsv_file, fieldnames):
@@ -408,28 +480,28 @@ class DeltaPsiTsv(AnalysisTypeTsv):
                             'Num. Exons': dpsi.exon_count,
                             'chr': gene.chromosome,
                             'strand': gene.strand,
-                            'De Novo Junctions': semicolon_join(annot_juncs),
-                            'Junctions coords': semicolon_join(
+                            'De Novo Junctions': semicolon(annot_juncs),
+                            'Junctions coords': semicolon(
                                 '{0}-{1}'.format(start, end) for start, end in lsv_junctions
                             ),
-                            'Exons coords': semicolon_join(
+                            'Exons coords': semicolon(
                                 '{0}-{1}'.format(start, end) for start, end in exon_str(lsv_exons)
                             ),
                             'IR coords': ir_coords,
-                            'E(dPSI) per LSV junction': semicolon_join(
+                            'E(dPSI) per LSV junction': semicolon(
                                 excl_incl[i][1] - excl_incl[i][0] for i in
                                 range(np.size(bins, 0))
                             ),
-                            'P(|dPSI|>=%.2f) per LSV junction' % config.threshold: semicolon_join(
+                            'P(|dPSI|>=%.2f) per LSV junction' % config.threshold: semicolon(
                                 matrix_area(b, config.threshold) for b in bins
                             ),
-                            'P(|dPSI|<=%.2f) per LSV junction' % config.non_changing_threshold: semicolon_join(
+                            'P(|dPSI|<=%.2f) per LSV junction' % config.non_changing_threshold: semicolon(
                                 dpsi.high_probability_non_changing()
                             ),
-                            '%s E(PSI)' % group1: semicolon_join(
+                            '%s E(PSI)' % group1: semicolon(
                                 '%.3f' % i for i in group_means[group1]
                             ),
-                            '%s E(PSI)' % group2: semicolon_join(
+                            '%s E(PSI)' % group2: semicolon(
                                 '%.3f' % i for i in group_means[group2]
                             )
                         }

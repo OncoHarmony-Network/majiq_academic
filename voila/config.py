@@ -175,7 +175,7 @@ class ViewConfig:
             settings = dict(config_parser['SETTINGS'])
             for int_key in ['nproc', 'port']:
                 settings[int_key] = config_parser['SETTINGS'].getint(int_key)
-            for bool_key in ['force_index']:
+            for bool_key in ['force_index', 'silent', 'debug']:
                 settings[bool_key] = config_parser['SETTINGS'].getboolean(bool_key)
 
             this_config = _ViewConfig(**{**files, **settings})
@@ -203,6 +203,8 @@ class TsvConfig:
                 settings[int_key] = config_parser['SETTINGS'].getint(int_key)
             for float_key in ['non_changing_threshold', 'threshold', 'probability_threshold']:
                 settings[float_key] = config_parser['SETTINGS'].getfloat(float_key)
+            for bool_key in ['show_all', 'silent', 'debug']:
+                settings[bool_key] = config_parser['SETTINGS'].getboolean(bool_key)
 
             filters = {}
             if config_parser.has_section('FILTERS'):
