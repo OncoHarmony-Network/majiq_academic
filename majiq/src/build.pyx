@@ -200,11 +200,13 @@ cdef int _output_lsv_file_single(vector[LSV*] out_lsvlist, string experiment_nam
     nlsv = len(type_list)
 
     for xx in tlb_juncs:
-        del xx.second
+        jobj_ptr = xx.second
+        del jobj_ptr
     tlb_juncs.clear()
 
     for xx in tlb_ir:
-        del xx.second
+        jobj_ptr = xx.second
+        del jobj_ptr
     tlb_ir.clear()
 
     return nlsv
