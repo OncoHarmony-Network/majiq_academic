@@ -241,12 +241,9 @@ cdef _find_junctions(list file_list, map[string, Gene*]& gene_map, vector[string
 
     cdef int* jvec
 
-
     cdef map[string, unsigned int] j_ids
     cdef pair[string, unsigned int] it
     cdef pair[string, Gene *] git
-
-
 
 
     for tmp_str, group_list in conf.tissue_repl.items():
@@ -345,7 +342,7 @@ cdef void gene_to_splicegraph(Gene * gne, sqlite3 * db) nogil:
 cdef _core_build(str transcripts, list file_list, object conf, object logger):
     cdef int n, i
     cdef int nthreads = conf.nthreads
-    cdef map[string, vector[string]] gene_junc_tlb
+    # cdef map[string, vector[string]] gene_junc_tlb
     cdef vector[LSV*] out_lsvlist
     cdef int nsamples = len(file_list)
     cdef int k=conf.k, m=conf.m
@@ -388,7 +385,7 @@ cdef _core_build(str transcripts, list file_list, object conf, object logger):
         with gil:
             logger.debug("[%s] Generate TLB" % gg.get_id())
 
-        gg.fill_junc_tlb(gene_junc_tlb)
+        # gg.fill_junc_tlb(gene_junc_tlb)
         gene_to_splicegraph(gg, db)
         with gil:
             logger.debug("[%s] Detect LSVs" % gg.get_id())
