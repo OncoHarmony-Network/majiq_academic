@@ -109,6 +109,7 @@ cdef extern from "grimoire.hpp" namespace "grimoire":
         Jinfo(unsigned int index1, unsigned int start1, unsigned int end1, int sreads1, int npos1) nogil ;
 
 
+
     cdef cppclass qLSV:
         vector[vector[psi_distr_t]] coverages ;
 

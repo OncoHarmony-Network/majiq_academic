@@ -54,7 +54,7 @@ cdef void update_splicegraph_junction(sqlite3 *db, string gene_id, int start, in
         sg_junction_reads(db, nreads, exp, gene_id, start, end)
 
 
-cdef int _output_lsv_file_single(vector[LSV*] out_lsvlist, string experiment_name, map[string, vector[string]] tlb_j_g,
+cdef int _output_lsv_file_single(vector[LSV*] out_lsvlist, string experiment_name, map[string, vector[string]] & tlb_j_g,
                                  map[string, Gene*] gene_map, string outDir, sqlite3* db, int nthreads, unsigned int msamples,
                                  bint irb, int strandness, object logger) except -1:
 
@@ -73,9 +73,9 @@ cdef int _output_lsv_file_single(vector[LSV*] out_lsvlist, string experiment_nam
     cdef unsigned int nlsv = out_lsvlist.size()
 
     cdef unsigned int njunc = 0
-    cdef Jinfo jobj_ptr
-    cdef map[string, Jinfo] tlb_juncs
-    cdef map[string, Jinfo] tlb_ir
+    cdef Jinfo * jobj_ptr
+    cdef map[string, Jinfo*] tlb_juncs
+    cdef map[string, Jinfo*] tlb_ir
 
 
     cdef string key
@@ -117,7 +117,7 @@ cdef int _output_lsv_file_single(vector[LSV*] out_lsvlist, string experiment_nam
                 npos    = junc_ids[i][4]
                 irbool  = junc_ids[i][5]
 
-            jobj_ptr = Jinfo(i, coord1, coord2, sreads, npos)
+            jobj_ptr = new Jinfo(i, coord1, coord2, sreads, npos)
 
             if irbool == 0:
                 tlb_juncs[jid] = jobj_ptr
@@ -199,7 +199,12 @@ cdef int _output_lsv_file_single(vector[LSV*] out_lsvlist, string experiment_nam
     majiq_io.dump_lsv_coverage_mat(out_file, cov_l, type_list, junc_info, experiment_name.decode('utf-8'))
     nlsv = len(type_list)
 
+    for jobj_ptr in tlb_juncs:
+        del jobj_ptr.second
     tlb_juncs.clear()
+
+    for jobj_ptr in tlb_ir:
+        del jobj_ptr.second
     tlb_ir.clear()
 
     return nlsv
@@ -367,6 +372,9 @@ cdef _core_build(str transcripts, list file_list, object conf, object logger):
 
     logger.info("Detecting LSVs ngenes: %s " % n)
     open_db(sg_filename, &db)
+
+    mem_allocated = int(psutil.Process().memory_info().rss)/(1024**2)
+    logger.info("PRE LOOP Memory used %.2f MB" % mem_allocated)
     for i in prange(n, nogil=True, num_threads=nthreads):
         gg = gene_map[gid_vec[i]]
         with gil:
@@ -388,13 +396,20 @@ cdef _core_build(str transcripts, list file_list, object conf, object logger):
 
     logger.info("%s LSV found" % out_lsvlist.size())
 
+    mem_allocated = int(psutil.Process().memory_info().rss)/(1024**2)
+    logger.info("POST LOOP Memory used %.2f MB" % mem_allocated)
+
     for i in prange(nsamples, nogil=True, num_threads=nthreads):
         with gil:
             fname = file_list[i][0].encode('utf-8')
             strandness = conf.strand_specific[file_list[i][0]]
+            mem_allocated = int(psutil.Process().memory_info().rss)/(1024**2)
+            logger.info("PRE OUT Memory used %.2f MB" % mem_allocated)
             cnt = _output_lsv_file_single(out_lsvlist, fname, gene_junc_tlb, gene_map, outDir, db,
                                           nthreads, m, ir, strandness, logger)
             logger.info('%s: %d LSVs' %(fname.decode('utf-8'), cnt))
+            mem_allocated = int(psutil.Process().memory_info().rss)/(1024**2)
+            logger.info("POST OUT  Memory used %.2f MB" % mem_allocated)
     close_db(db)
 
 

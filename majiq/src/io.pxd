@@ -1,12 +1,10 @@
-
 from libcpp.vector cimport vector
 from majiq.src.internals.grimoire cimport  Gene
 from libcpp.string cimport string
 from libcpp.map cimport map
-from majiq.src.internals.psi cimport psi_distr_t
 cimport numpy as np
 import numpy as np
-from majiq.src.internals.qLSV cimport hetLSV, qLSV
+from majiq.src.internals.qLSV cimport qLSV
 
 cdef int read_gff(str filename, map[string, Gene*]& all_genes, vector[string]& gid_vec, object logging) except -1
 cdef void get_coverage_mat_lsv(map[string, qLSV*]& result, list file_list, int nthreads, bint fltr,
