@@ -618,6 +618,37 @@ namespace grimoire {
         return ir_vec ;
     }
 
+    void find_gene_from_junc(map<string, vector<overGene*>> glist, string chrom, int start, int end,
+                             vector<Gene*> oGeneList, bool ir){
+
+        Junction * junc = new Junction(start, end, false) ;
+        Gene * gObj ;
+        const string key = junc->get_key() ;
+
+        vector<overGene*>::iterator low = lower_bound (glist[chrom].begin(), glist[chrom].end(),
+                                                       start, _Region::func_comp ) ;
+        if (low == glist_[chrom].end())
+            return ;
+
+        if (ir){
+            for (const auto &gObj: (*low)->glist){
+                for(const auto &irObj: gObj->intron_vec_){
+                    if(irObj->get_start() < end  && irObj->get_end() > start){
+                        oGeneList.push_back(gObj) ;
+                    }
+                }
+            }
+        } else {
+            for (const auto &gObj: (*low)->glist){
+                if(gObj->junc_map_.count(key) >0 ){
+                    oGeneList.push_back(gObj) ;
+                }
+            }
+        }
+        delete junc ;
+        return ;
+    }
+
 }
 
 

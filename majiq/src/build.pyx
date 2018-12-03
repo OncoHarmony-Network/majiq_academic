@@ -4,7 +4,7 @@ import psutil
 
 from majiq.src.internals.grimoire cimport Junction, Gene, Exon, LSV, Jinfo, Intron
 from majiq.src.internals.io_bam cimport IOBam, prepare_genelist, overGene_vect_t, free_genelist
-from majiq.src.internals.grimoire cimport find_intron_retention
+from majiq.src.internals.grimoire cimport find_intron_retention, find_gene_from_junc
 from majiq.src.basic_pipeline import BasicPipeline, pipeline_run
 from majiq.src.config import Config
 import majiq.src.logger as majiq_logger
@@ -54,12 +54,12 @@ cdef void update_splicegraph_junction(sqlite3 *db, string gene_id, int start, in
         sg_junction_reads(db, nreads, exp, gene_id, start, end)
 
 
-cdef int _output_lsv_file_single(vector[LSV*] out_lsvlist, string experiment_name, map[string, vector[string]] & tlb_j_g,
-                                 map[string, Gene*] gene_map, string outDir, sqlite3* db, int nthreads, unsigned int msamples,
+cdef int _output_lsv_file_single(vector[LSV*] out_lsvlist, string experiment_name, map[string, overGene_vect_t] gene_l,
+                                 string outDir, sqlite3* db, int nthreads, unsigned int msamples,
                                  bint irb, int strandness, object logger) except -1:
 
     cdef unsigned int irbool, coord1, coord2, sreads, npos
-    cdef string jid
+    cdef string jid, chrom
     cdef string geneid
     cdef Gene* gneObj
     cdef vector[Intron *] irv
@@ -91,6 +91,7 @@ cdef int _output_lsv_file_single(vector[LSV*] out_lsvlist, string experiment_nam
     cdef list type_list = []
     cdef list junc_info = []
     cdef object all_juncs
+    cdef vector[Gene*] gene_l
 
     # sg_filename = get_builder_splicegraph_filename(outDir.decode('utf-8')).encode('utf-8')
     junc_file = "%s/%s.juncs" % (outDir.decode('utf-8'), experiment_name.decode('utf-8'))
@@ -116,30 +117,26 @@ cdef int _output_lsv_file_single(vector[LSV*] out_lsvlist, string experiment_nam
                 sreads  = junc_ids[i][3]
                 npos    = junc_ids[i][4]
                 irbool  = junc_ids[i][5]
+                chrom   = jid.split(':')[0]
 
             jobj_ptr = new Jinfo(i, coord1, coord2, sreads, npos)
-
+            find_gene_from_junc(gene_l, chrom, coord1, coord2, gene_l, irbool)
             if irbool == 0:
                 tlb_juncs[jid] = jobj_ptr
-                if tlb_j_g.count(jid) > 0 :
-                    for gid in tlb_j_g[jid] :
-                        update_splicegraph_junction(db, gid, coord1, coord2, sreads, experiment_name)
+                for gneObj in gene_l:
+                    update_splicegraph_junction(db, gneObj.get_id(), coord1, coord2, sreads, experiment_name)
 
             elif irb:
-                with gil:
-                    geneid = jid.split(b':')[3]
-                if gene_map.count(geneid) > 0 :
-                    gneObj = gene_map[geneid]
-                    gid = gneObj.get_id()
+                for gneObj in gene_l:
                     irv = find_intron_retention(gneObj, coord1, coord2)
-
                     for ir_ptr in irv:
-                        sg_intron_retention_reads(db, sreads, experiment_name, geneid, ir_ptr.get_start(),
-                                                  ir_ptr.get_end())
+                        sg_intron_retention_reads(db, sreads, experiment_name,  gneObj.get_id(),
+                                                  ir_ptr.get_start(), ir_ptr.get_end())
                         tlb_ir[ir_ptr.get_key(ir_ptr.get_gene())] = jobj_ptr
-        # close_db(db)
-    del junc_ids
 
+            gene_l.clear()
+
+    del junc_ids
     logger.info("Create majiq file")
 
     with nogil:
@@ -211,8 +208,8 @@ cdef int _output_lsv_file_single(vector[LSV*] out_lsvlist, string experiment_nam
 
     return nlsv
 
-
-cdef _find_junctions(list file_list, map[string, Gene*]& gene_map, vector[string] gid_vec, object conf, object logger):
+cdef _find_junctions(list file_list, map[string, Gene*]& gene_map, vector[string] gid_vec,
+                     map[string, overGene_vect_t] gene_list, object conf, object logger):
 
     cdef int n = gene_map.size()
     cdef int nthreads = conf.nthreads
@@ -244,13 +241,13 @@ cdef _find_junctions(list file_list, map[string, Gene*]& gene_map, vector[string
 
     cdef int* jvec
 
-    cdef map[string, overGene_vect_t] gene_list
+
     cdef map[string, unsigned int] j_ids
     cdef pair[string, unsigned int] it
     cdef pair[string, Gene *] git
 
 
-    prepare_genelist(gene_map, gene_list)
+
 
     for tmp_str, group_list in conf.tissue_repl.items():
         name = tmp_str.encode('utf-8')
@@ -302,8 +299,6 @@ cdef _find_junctions(list file_list, map[string, Gene*]& gene_map, vector[string
             logger.info('Done Reading file %s' %(file_list[j][0]))
             _store_junc_file(boots, junc_ids, file_list[j][0], conf.outDir)
             c_iobam.free_iobam()
-
-    free_genelist(gene_list)
 
 cdef init_splicegraph(string filename, object conf):
 
@@ -357,6 +352,8 @@ cdef _core_build(str transcripts, list file_list, object conf, object logger):
     cdef bint ir = conf.ir
     cdef int nlsv
     cdef map[string, Gene*] gene_map
+    cdef map[string, overGene_vect_t] gene_list
+
     cdef vector[string] gid_vec
     cdef string sg_filename = get_builder_splicegraph_filename(conf.outDir).encode('utf-8')
     cdef string fname
@@ -367,10 +364,11 @@ cdef _core_build(str transcripts, list file_list, object conf, object logger):
     logger.info("Parsing GFF3")
     majiq_io.read_gff(transcripts, gene_map, gid_vec, logger)
 
+    prepare_genelist(gene_map, gene_list)
     n = gene_map.size()
     init_splicegraph(sg_filename, conf)
     logger.info("Reading bamfiles")
-    _find_junctions(file_list, gene_map, gid_vec, conf, logger)
+    _find_junctions(file_list, gene_map, gid_vec, gene_list, conf, logger)
 
     logger.info("Detecting LSVs ngenes: %s " % n)
     open_db(sg_filename, &db)
@@ -407,12 +405,13 @@ cdef _core_build(str transcripts, list file_list, object conf, object logger):
             strandness = conf.strand_specific[file_list[i][0]]
             mem_allocated = int(psutil.Process().memory_info().rss)/(1024**2)
             logger.info("PRE OUT Memory used %.2f MB" % mem_allocated)
-            cnt = _output_lsv_file_single(out_lsvlist, fname, gene_junc_tlb, gene_map, outDir, db,
+            cnt = _output_lsv_file_single(out_lsvlist, fname, gene_list, outDir, db,
                                           nthreads, m, ir, strandness, logger)
             logger.info('%s: %d LSVs' %(fname.decode('utf-8'), cnt))
             mem_allocated = int(psutil.Process().memory_info().rss)/(1024**2)
             logger.info("POST OUT  Memory used %.2f MB" % mem_allocated)
     close_db(db)
+    free_genelist(gene_list)
 
 
 def build(args):

@@ -384,6 +384,8 @@ namespace grimoire{
 
     void sortGeneList(vector<Gene*> &glist) ;
     vector<Intron *> find_intron_retention(Gene * gObj, int start, int end);
+    void find_gene_from_junc(map<string, vector<overGene*>> glist, string chrom, int start, int end,
+                             vector<Gene*> oGeneList, bool ir) ;
 }
 
 #endif
