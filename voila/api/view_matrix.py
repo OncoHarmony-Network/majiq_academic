@@ -19,9 +19,13 @@ class ViewMatrix(ABC):
     gene_ids = None
 
     class _ViewMatrix:
-        @property
-        def junctions(self):
-            return self.get('junctions')
+        pass
+
+    def lsv_ids(self, gene_ids=None):
+        raise NotImplementedError()
+
+    def lsv(self, lsv_id):
+        raise NotImplementedError()
 
     def lsvs(self, gene_id=None):
         if gene_id:
@@ -38,22 +42,6 @@ class ViewPsi(Psi, ViewMatrix):
         super().__init__(config.voila_file)
 
     class _ViewPsi(Psi._Psi, ViewMatrix._ViewMatrix):
-        def get_all(self):
-            yield 'lsv_id', self.lsv_id
-            yield '_id', self.lsv_id
-            yield 'reference_exon', tuple(self.reference_exon)
-            yield 'gene_id', self.gene_id
-            yield 'target', self.target
-
-            fields = list(self.fields)
-
-            fields.remove('bins')
-            yield 'group_bins', dict(self.group_bins)
-
-            fields.remove('means')
-            yield 'group_means', dict(self.group_means)
-
-            yield from self.get_many(fields)
 
         @property
         def means(self):
@@ -94,28 +82,6 @@ class ViewDeltaPsi(DeltaPsi, ViewMatrix):
         def __init__(self, matrix_hdf5, lsv_id):
             self.config = matrix_hdf5.config
             super().__init__(matrix_hdf5, lsv_id)
-
-        def get_all(self):
-            yield 'gene_id', self.gene_id
-            yield 'lsv_id', self.lsv_id
-            yield '_id', self.lsv_id
-            yield 'reference_exon', self.reference_exon
-            yield 'excl_incl', self.excl_incl
-            yield 'target', self.target
-
-            fields = list(self.fields)
-
-            fields.remove('group_bins')
-            yield 'group_bins', dict(self.group_bins)
-
-            fields.remove('group_means')
-            yield 'group_means', dict(self.group_means)
-
-            fields.remove('bins')
-            yield 'bins', self.bins
-            yield 'means', self.means
-
-            yield from self.get_many(fields)
 
         @property
         def bins(self):
@@ -176,24 +142,6 @@ class ViewHeterogens:
         def __init__(self, matrix_hdf5, lsv_id):
             self.matrix_hdf5 = matrix_hdf5
             self.lsv_id = lsv_id
-
-        def get_all(self):
-            yield '_id', self.lsv_id
-            yield 'gene_id', self.gene_id
-            yield 'mean_psi', tuple(self.mean_psi)
-            yield 'reference_exon', self.reference_exon
-            yield 'lsv_type', self.lsv_type
-            yield 'dpsi', self.dpsi
-            for stat_name in self.matrix_hdf5.stat_names:
-                yield stat_name, self.junction_heat_map(stat_name)
-            yield 'mu_psi', self.mu_psi
-            yield 'junctions', self.junctions
-            yield 'A5SS', self.a5ss
-            yield 'A3SS', self.a3ss
-            yield 'exon_skipping', self.exon_skipping
-            yield 'exon_count', self.exon_count
-            yield 'target', self.target
-            yield 'binary', self.binary
 
         def get_attr(self, attr):
             voila_files = ViewConfig().voila_files
@@ -451,6 +399,14 @@ class ViewHeterogens:
         yield from set(chain(*(v.lsv_ids(gene_ids) for v in vhs)))
         for v in vhs:
             v.close()
+
+    def lsvs(self, gene_id=None):
+        if gene_id:
+            for lsv_id in self.lsv_ids(gene_ids=[gene_id]):
+                yield self.lsv(lsv_id)
+        else:
+            for lsv_id in self.lsv_ids():
+                yield self.lsv(lsv_id)
 
 
 class ViewHeterogen(Heterogen, ViewMatrix):

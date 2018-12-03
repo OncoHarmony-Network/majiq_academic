@@ -1,9 +1,18 @@
 import os
 import tempfile
+from pathlib import Path
 
 import voila
 
-VERSION = '2.0.0'
+EXEC_DIR = Path(os.path.dirname(os.path.abspath(voila.__file__)))
+GIT_VERSION_FILE = EXEC_DIR / '../majiq/data/git_version'
+
+if GIT_VERSION_FILE.exists():
+    GIT_COMMIT_HASH = '-' + open(GIT_VERSION_FILE).read().rstrip()
+else:
+    GIT_COMMIT_HASH = ''
+
+VERSION = '2.0.0' + GIT_COMMIT_HASH
 FILE_VERSION = '0.1'
 ANALYSIS_PSI = 'psi'
 ANALYSIS_PSI_GENE = 'psi-gene'
@@ -60,8 +69,6 @@ SPLICE_GRAPH_FILE_VERSION = 6
 VOILA_FILE_VERSION = 6
 
 NA_LSV = 'na'
-
-EXEC_DIR = os.path.dirname(os.path.abspath(voila.__file__))
 
 # CONFIG_FILE = '/tmp/voila.ini'
 # CONFIG_FILE = tempfile.NamedTemporaryFile(delete=False).name

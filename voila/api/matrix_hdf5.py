@@ -433,6 +433,10 @@ class MatrixType(ABC):
     def complex(self):
         return not self.binary
 
+    @property
+    def junctions(self):
+        return self.get('junctions')
+
 
 class DeltaPsi(MatrixHdf5):
     class _DeltaPsi(MatrixType):
@@ -537,3 +541,4 @@ class Heterogen(MatrixHdf5):
         :return:
         """
         return self._Heterogen(self, lsv_id)
+

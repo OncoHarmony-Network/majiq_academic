@@ -1,3 +1,4 @@
+from operator import itemgetter
 from urllib.parse import urlencode
 
 from flask import jsonify, redirect, url_for, session, render_template
@@ -12,9 +13,15 @@ from voila.view import deltapsi, heterogen, psi, splicegraph
 
 
 def run_service():
+    port = ViewConfig().port
+    run_app = get_app()
+
+    serve(run_app, host='0.0.0.0', port=port)
+
+
+def get_app():
     Index()
-    config = ViewConfig()
-    analysis_type = config.analysis_type
+    analysis_type = ViewConfig().analysis_type
 
     if not analysis_type:
         run_app = splicegraph.app
@@ -31,7 +38,7 @@ def run_service():
     else:
         raise UnknownAnalysisType(analysis_type)
 
-    serve(run_app, host='0.0.0.0', port=config.port)
+    return run_app
 
 
 def copy_lsv(lsv_id, view_matrix):
@@ -41,13 +48,11 @@ def copy_lsv(lsv_id, view_matrix):
         lsv_junctions = dpsi.junctions.tolist()
         lsv_exons = sg.lsv_exons(gene, lsv_junctions)
 
-        juncs = list(j for j in sg.junctions(gene) if [j.start, j.end] in lsv_junctions)
-        exons = list(e._asdict() for e in sg.exons(gene) if (e.start, e.end) in lsv_exons)
+        juncs = list(j for j in sg.junctions(gene) if [j['start'], j['end']] in lsv_junctions)
+        exons = list(e for e in sg.exons(gene) if (e['start'], e['end']) in lsv_exons)
 
         lsv_type = dpsi.lsv_type
-        strand = gene.strand
-        chromosome = gene.chromosome
-        name = gene.name
+        strand, chromosome, name = itemgetter('strand', 'chromosome', 'name')(gene)
         genome = sg.genome
 
         group_bins = dict(dpsi.group_bins)
@@ -63,14 +68,12 @@ def copy_lsv(lsv_id, view_matrix):
             }
             for junc in juncs:
                 junction_reads = list(sg.junction_reads_exp(junc, exp_names))
-                reads = sum(r.reads for r in junction_reads)
-                junc = junc._asdict()
+                reads = sum(r['reads'] for r in junction_reads)
                 junc['reads'] = reads
                 junc_dict['junctions'].append(junc)
 
             splice_graphs.append(junc_dict)
 
-        juncs = [j._asdict() for j in juncs]
 
     return jsonify({
         'sample_names': sample_names,
@@ -121,15 +124,30 @@ def gene_view(summary_template, gene_id, view_matrix):
         session['highlight'] = highlight
 
         exons = list(sg.exons(gene))
-        start = min(e.start for e in exons if e.start != -1)
-        end = max(e.end for e in exons if e.end != -1)
-        href = ucsc_href(sg.genome, gene.chromosome, start, end)
+        start = min(e['start'] for e in exons if e['start'] != -1)
+        end = max(e['end'] for e in exons if e['end'] != -1)
+        href = ucsc_href(sg.genome, gene['chromosome'], start, end)
 
-        gene_dict = gene._asdict()
-        gene_dict.update({
+        gene.update({
             'start': start,
             'end': end,
             'href': href
         })
 
-        return render_template(summary_template, gene=gene_dict)
+        return render_template(summary_template, gene=gene)
+
+
+if __name__ == '__main__':
+    import git
+
+    repo = git.Repo(search_parent_directories=True)
+    sha = repo.head.object.hexsha
+    print(sha[:7])
+
+    app = get_app()
+    app.config.update(
+        DEBUG=True,
+        TEMPLATES_AUTO_RELOAD=True,
+        ENV='development'
+    )
+    app.run()

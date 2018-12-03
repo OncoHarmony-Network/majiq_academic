@@ -126,5 +126,13 @@ class DataTables:
         ref_exon = ref_exon.split(':')
         ref_exon = ref_exon[-1]
         ref_exon = ref_exon.split('-')
-        ref_exon = list(map(int, ref_exon))
+        try:
+            ref_exon = list(map(int, ref_exon))
+        except ValueError:
+            if ref_exon[0] == 'na':
+                ref_exon[1] = int(ref_exon[1])
+                ref_exon[0] = ref_exon[1] - 10
+            if ref_exon[1] == 'na':
+                ref_exon[0] = int(ref_exon[0])
+                ref_exon[1] = ref_exon[0] + 10
         return ref_exon

@@ -1,6 +1,6 @@
 import os
 import sqlite3
-from collections import namedtuple
+from operator import itemgetter
 from pathlib import Path
 
 from voila.api.splice_graph_abstract import SpliceGraphSQLAbstract
@@ -107,33 +107,32 @@ class SpliceGraphSQL(SpliceGraphSQLAbstract):
                             VALUES (?)
                             ''', version)
 
-    def _iter_results(self, query, sg_type):
+    def _iter_results(self, query, fieldnames):
         while True:
             fetch = query.fetchmany(1)
             if not fetch:
                 break
             for x in fetch:
-                yield sg_type(*x)
+                yield dict(zip(fieldnames, x))
 
 
-Gene = namedtuple('Gene', ('id', 'name', 'strand', 'chromosome'))
-Exon = namedtuple('Exon', ('gene_id', 'start', 'end', 'annotated_start', 'annotated_end', 'annotated'))
-Junction = namedtuple('Junction', ('gene_id', 'start', 'end', 'has_reads', 'annotated'))
-IntronRetention = namedtuple('IntronRetention', ('gene_id', 'start', 'end', 'has_reads', 'annotated'))
-JunctionReads = namedtuple('JunctionReads', ('reads', 'experiment_name'))
-IntronRetentionReads = namedtuple('IntronRetentionReads', ('reads', 'experiment_name'))
+gene_fieldnames = ('id', 'name', 'strand', 'chromosome')
+junc_fieldnames = ('gene_id', 'start', 'end', 'has_reads', 'annotated')
+junc_reads_fieldnames = ('reads', 'experiment_name')
+exon_fieldnames = ('gene_id', 'start', 'end', 'annotated_start', 'annotated_end', 'annotated')
+ir_fieldnames = ('gene_id', 'start', 'end', 'has_reads', 'annotated')
 
 
 class Genes(SpliceGraphSQL):
     def genes(self):
         query = self.conn.execute('SELECT id, name, strand, chromosome FROM gene')
-        return self._iter_results(query, Gene)
+        return self._iter_results(query, gene_fieldnames)
 
     def gene(self, gene_id):
         query = self.conn.execute('SELECT id, name, strand, chromosome FROM gene WHERE id=?', (gene_id,))
         fetch = query.fetchone()
         if fetch:
-            return Gene(*fetch)
+            return dict(zip(gene_fieldnames, fetch))
 
 
 class Exons(SpliceGraphSQL):
@@ -141,14 +140,14 @@ class Exons(SpliceGraphSQL):
         if isinstance(gene, str):
             gene_id = gene
         else:
-            gene_id = gene.id
+            gene_id = gene['id']
 
         query = self.conn.execute('''
                                 SELECT gene_id, start, end, annotated_start, annotated_end, annotated 
                                 FROM exon 
                                 WHERE gene_id=?
                                 ''', (gene_id,))
-        return self._iter_results(query, Exon)
+        return self._iter_results(query, exon_fieldnames)
 
 
 class Junctions(SpliceGraphSQL):
@@ -156,24 +155,14 @@ class Junctions(SpliceGraphSQL):
         if isinstance(gene, str):
             gene_id = gene
         else:
-            gene_id = gene.id
+            gene_id = gene['id']
 
         query = self.conn.execute('''
                                 SELECT gene_id, start, end, has_reads, annotated
                                 FROM junction 
                                 WHERE gene_id=?
                                 ''', (gene_id,))
-        return self._iter_results(query, Junction)
-
-    def junction_reads(self, junction):
-        query = self.conn.execute('''
-                                SELECT reads, experiment_name 
-                                FROM junction_reads
-                                WHERE junction_start=?
-                                AND junction_end=?
-                                AND junction_gene_id=?
-                                ''', (junction.start, junction.end, junction.gene_id))
-        return self._iter_results(query, JunctionReads)
+        return self._iter_results(query, junc_fieldnames)
 
     def junction_reads_exp(self, junction, experiment_names):
         query = self.conn.execute('''
@@ -184,8 +173,8 @@ class Junctions(SpliceGraphSQL):
                                 AND junction_gene_id=?
                                 AND experiment_name IN ({})
                                 '''.format(','.join(["'{}'".format(x) for x in experiment_names])),
-                                  (junction.start, junction.end, junction.gene_id))
-        return self._iter_results(query, JunctionReads)
+                                  itemgetter('start', 'end', 'gene_id')(junction))
+        return self._iter_results(query, junc_reads_fieldnames)
 
 
 class IntronRetentions(SpliceGraphSQL):
@@ -194,27 +183,5 @@ class IntronRetentions(SpliceGraphSQL):
                                 SELECT gene_id, start, end, has_reads, annotated
                                 FROM intron_retention
                                 WHERE gene_id=?
-                                ''', (gene.id,))
-        return self._iter_results(query, IntronRetention)
-
-    def intron_retention_reads(self, intron_retention):
-        query = self.conn.execute('''
-                                SELECT reads, experiment_name 
-                                FROM intron_retention_reads
-                                WHERE intron_retention_start=?
-                                AND intron_retention_end=?
-                                AND intron_retention_gene_id=?
-                                ''', (intron_retention.start, intron_retention.end, intron_retention.gene_id))
-        return self._iter_results(query, IntronRetentionReads)
-
-    def intron_retention_reads_exp(self, ir, experiment_names):
-        query = self.conn.execute('''
-                                SELECT reads, experiment_name 
-                                FROM intron_retention_reads
-                                WHERE intron_retention_start=?
-                                AND intron_retention_end=?
-                                AND intron_retention_gene_id=?
-                                AND experiment_name IN ({})
-                                '''.format(','.join(["'{}'".format(x) for x in experiment_names])),
-                                  (ir.start, ir.end, ir.gene_id))
-        return self._iter_results(query, IntronRetentionReads)
+                                ''', (gene['id'],))
+        return self._iter_results(query, ir_fieldnames)
