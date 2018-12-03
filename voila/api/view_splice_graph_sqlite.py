@@ -16,23 +16,23 @@ class ViewSpliceGraph(SpliceGraph):
 
     @staticmethod
     def exon_start(exon):
-        if exon.start == -1:
-            return exon.end - 10
-        return exon.start
+        if exon['start'] == -1:
+            return exon['end'] - 10
+        return exon['start']
 
     @staticmethod
     def exon_end(exon):
-        if exon.end == -1:
-            return exon.start + 10
-        return exon.end
+        if exon['end'] == -1:
+            return exon['start'] + 10
+        return exon['end']
 
     def gene_ids(self):
         query = self.conn.execute('SELECT id FROM gene')
         return [x for x, in query.fetchall()]
 
     def view_gene(self, gene):
-        yield from gene._asdict().items()
-        yield 'id', gene.id
+        yield from gene.items()
+        yield 'id', gene['id']
         yield 'start', self.gene_start(gene)
         yield 'end', self.gene_end(gene)
 
@@ -45,11 +45,11 @@ class ViewSpliceGraph(SpliceGraph):
     def view_exon(self, exon):
         yield 'start', self.exon_start(exon)
         yield 'end', self.exon_end(exon)
-        if exon.start == -1:
+        if exon['start'] == -1:
             yield 'half_exon', 'start'
-        elif exon.end == -1:
+        elif exon['end'] == -1:
             yield 'half_exon', 'end'
-        yield 'annotated', exon.annotated
+        yield 'annotated', exon['annotated']
         yield 'color', self.exon_color(exon)
 
     def view_exons(self, gene):
@@ -72,11 +72,11 @@ class ViewSpliceGraph(SpliceGraph):
                           (-1 NOT IN ({0},{1}) AND end BETWEEN {0} AND {1})
                         )
                         LIMIT 1
-                      '''.format(exon.start, exon.end), (exon.gene_id,))
+                      '''.format(exon['start'], exon['end']), (exon['gene_id'],))
         return query.fetchone()
 
     def exon_color(self, exon):
-        if exon.annotated:
+        if exon['annotated']:
             if self.exon_has_reads(exon):
                 return 'grey'
             else:
@@ -89,12 +89,12 @@ class ViewSpliceGraph(SpliceGraph):
             yield self.view_junction(junc)
 
     def view_junction(self, junction):
-        yield from junction._asdict().items()
+        yield from junction.items()
         yield 'color', self.junction_color(junction)
 
     def junction_color(self, junction):
-        if junction.annotated:
-            if junction.has_reads:
+        if junction['annotated']:
+            if junction['has_reads']:
                 return 'red'
             else:
                 return 'grey'
@@ -149,7 +149,7 @@ class ViewSpliceGraph(SpliceGraph):
                                         OR 
                                         (start!=-1 AND end!=-1 AND ? BETWEEN start and end)
                                         )  
-                                        ''', (gene.id, junc[0], junc[1], junc[0], junc[1]))
+                                        ''', (gene['id'], junc[0], junc[1], junc[0], junc[1]))
             for x in query.fetchall():
                 rtn_set.add(x)
         return list(sorted(rtn_set))
@@ -176,33 +176,40 @@ class ViewSpliceGraph(SpliceGraph):
                     ir_reads[combined_name] = {}
 
             for junc in self.junctions(gene):
+                junc_start = junc['start']
+                junc_end = junc['end']
                 for r in self.junction_reads_exp(junc, experiment_names):
+                    reads = r['reads']
+                    exp_name = r['experiment_name']
                     try:
-                        junc_reads[r.experiment_name][junc.start][junc.end] = r.reads
+                        junc_reads[exp_name][junc_start][junc_end] = reads
                     except KeyError:
-                        junc_reads[r.experiment_name][junc.start] = {junc.end: r.reads}
+                        junc_reads[exp_name][junc_start] = {junc_end: reads}
 
                     if combined_name:
                         def get_junc_reads():
                             for n in experiment_names:
                                 try:
-                                    yield junc_reads[n][junc.start][junc.end]
+                                    yield junc_reads[n][junc_start][junc_end]
                                 except KeyError:
                                     pass
 
                         summed_reads = sum(get_junc_reads())
 
                         try:
-                            junc_reads[combined_name][junc.start][junc.end] = summed_reads
+                            junc_reads[combined_name][junc_start][junc_end] = summed_reads
                         except KeyError:
-                            junc_reads[combined_name][junc.start] = {junc.end: summed_reads}
+                            junc_reads[combined_name][junc_start] = {junc_end: summed_reads}
 
             for ir in self.intron_retentions(gene):
                 for r in self.intron_retention_reads_exp(ir, experiment_names):
+                    reads = r['reads']
+                    exp_name = r['experiment_name']
+
                     try:
-                        ir_reads[r.experiment_name][ir.start][ir.end] = r.reads
+                        ir_reads[r.experiment_name][ir.start][ir.end] = reads
                     except KeyError:
-                        ir_reads[r.experiment_name][ir.start] = {ir.end: r.reads}
+                        ir_reads[r.experiment_name][ir.start] = {ir.end: reads}
 
                 if combined_name:
                     def get_ir_reads():

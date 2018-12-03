@@ -31,11 +31,11 @@ def gene(gene_id):
 def lsv_data(lsv_id):
     with ViewSpliceGraph() as sg, ViewDeltaPsi() as m:
         def find_exon_number(exons):
-            exons = filter(lambda e: -1 not in [e.start, e.end], exons)
+            exons = filter(lambda e: -1 not in [e['start'], e['end']], exons)
             exons = list(exons)
 
             for idx, exon in enumerate(exons):
-                if [exon.start, exon.end] == ref_exon:
+                if [exon['start'], exon['end']] == ref_exon:
                     if strand == '-':
                         return len(exons) - idx
                     else:
@@ -45,7 +45,7 @@ def lsv_data(lsv_id):
         ref_exon = dpsi.reference_exon
         gene_id = dpsi.gene_id
         gene = sg.gene(gene_id)
-        strand = gene.strand
+        strand = gene['strand']
         exons = list(sg.exons(gene))
         exon_number = find_exon_number(exons)
 
@@ -88,7 +88,7 @@ def index_table():
             lsv_exons = sg.lsv_exons(gene, lsv_junctions)
 
             start, end = views.lsv_boundries(lsv_exons)
-            ucsc = views.ucsc_href(sg.genome, gene.chromosome, start, end)
+            ucsc = views.ucsc_href(sg.genome, gene['chromosome'], start, end)
 
             records[idx] = [
                 [url_for('gene', gene_id=gene_id), gene_name],
@@ -220,7 +220,7 @@ def summary_table(gene_id):
             lsv_junctions = dpsi.junctions
             lsv_exons = sg.lsv_exons(gene, lsv_junctions)
             start, end = views.lsv_boundries(lsv_exons)
-            ucsc = views.ucsc_href(sg.genome, gene.chromosome, start, end)
+            ucsc = views.ucsc_href(sg.genome, gene['chromosome'], start, end)
 
             records[idx] = [
                 highlight,
