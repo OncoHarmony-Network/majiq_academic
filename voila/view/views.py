@@ -12,9 +12,15 @@ from voila.view import deltapsi, heterogen, psi, splicegraph
 
 
 def run_service():
+    port = ViewConfig().port
+    run_app = get_app()
+
+    serve(run_app, host='0.0.0.0', port=port)
+
+
+def get_app():
     Index()
-    config = ViewConfig()
-    analysis_type = config.analysis_type
+    analysis_type = ViewConfig().analysis_type
 
     if not analysis_type:
         run_app = splicegraph.app
@@ -31,7 +37,7 @@ def run_service():
     else:
         raise UnknownAnalysisType(analysis_type)
 
-    serve(run_app, host='0.0.0.0', port=config.port)
+    return run_app
 
 
 def copy_lsv(lsv_id, view_matrix):
@@ -133,3 +139,13 @@ def gene_view(summary_template, gene_id, view_matrix):
         })
 
         return render_template(summary_template, gene=gene_dict)
+
+
+if __name__ == '__main__':
+    app = get_app()
+    app.config.update(
+        DEBUG=True,
+        TEMPLATES_AUTO_RELOAD=True,
+        ENV='development'
+    )
+    app.run()
