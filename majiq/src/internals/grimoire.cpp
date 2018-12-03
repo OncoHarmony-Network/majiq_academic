@@ -627,7 +627,7 @@ namespace grimoire {
 
         vector<overGene*>::iterator low = lower_bound (glist[chrom].begin(), glist[chrom].end(),
                                                        start, _Region::func_comp ) ;
-        if (low == glist_[chrom].end())
+        if (low == glist[chrom].end())
             return ;
 
         if (ir){

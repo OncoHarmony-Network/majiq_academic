@@ -5,6 +5,8 @@ from libcpp.set cimport set
 from libcpp.list cimport list as clist
 from majiq.src.internals.psi cimport psi_distr_t
 
+ctypedef vector[overGene*] overGene_vect_t
+
 cdef extern from "grimoire.hpp" namespace "grimoire":
     cdef cppclass overGene:
         pass
@@ -127,6 +129,6 @@ cdef extern from "grimoire.hpp" namespace "grimoire":
     # vector[Intron *]  find_intron_retention(vector[Gene*]& gene_list, char strand, int start, int end) nogil ;
     # vector[Intron *]  find_intron_retention(vector[Gene*]& gene_list, string geneid, int start, int end) nogil ;
     vector[Intron *]  find_intron_retention(Gene * gObj, int start, int end) nogil ;
-    void find_gene_from_junc(map[string, vector[overGene*]] glist, string chrom, int start, int end,
-                             vector[Gene*] oGeneList, bool ir) nogil ;
+    void find_gene_from_junc(map[string, overGene_vect_t] glist, string chrom, int start, int end,
+                             vector[Gene*] oGeneList, bint ir) nogil ;
 

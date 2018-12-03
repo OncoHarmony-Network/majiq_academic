@@ -54,7 +54,7 @@ cdef void update_splicegraph_junction(sqlite3 *db, string gene_id, int start, in
         sg_junction_reads(db, nreads, exp, gene_id, start, end)
 
 
-cdef int _output_lsv_file_single(vector[LSV*] out_lsvlist, string experiment_name, map[string, overGene_vect_t] gene_l,
+cdef int _output_lsv_file_single(vector[LSV*] out_lsvlist, string experiment_name, map[string, overGene_vect_t] gList,
                                  string outDir, sqlite3* db, int nthreads, unsigned int msamples,
                                  bint irb, int strandness, object logger) except -1:
 
@@ -117,10 +117,10 @@ cdef int _output_lsv_file_single(vector[LSV*] out_lsvlist, string experiment_nam
                 sreads  = junc_ids[i][3]
                 npos    = junc_ids[i][4]
                 irbool  = junc_ids[i][5]
-                chrom   = jid.split(':')[0]
+                chrom   = jid.split(b':')[0]
 
             jobj_ptr = new Jinfo(i, coord1, coord2, sreads, npos)
-            find_gene_from_junc(gene_l, chrom, coord1, coord2, gene_l, irbool)
+            find_gene_from_junc(gList, chrom, coord1, coord2, gene_l, irbool)
             if irbool == 0:
                 tlb_juncs[jid] = jobj_ptr
                 for gneObj in gene_l:
@@ -147,7 +147,6 @@ cdef int _output_lsv_file_single(vector[LSV*] out_lsvlist, string experiment_nam
             lsvid = lsv_ptr.get_id()
             with gil:
                 x = np.zeros(shape=(njunc, msamples), dtype=np.float32)
-                # cov_dict[lsvid.decode('utf-8')] = np.zeros(shape=(njunc, msamples), dtype=np.float32)
                 type_list.append((lsvid.decode('utf-8'), lsv_ptr.get_type()))
             junc_idx = 0
 
@@ -161,7 +160,6 @@ cdef int _output_lsv_file_single(vector[LSV*] out_lsvlist, string experiment_nam
                     npos = jobj_ptr.npos
                     with gil:
                         x[junc_idx] = boots[tlb_juncs[key].index]
-                        #cov_dict[lsvid.decode('utf-8')][junc_idx] = boots[tlb_juncs[key].index]
                 else:
                     sreads = 0
                     npos = 0
@@ -182,7 +180,6 @@ cdef int _output_lsv_file_single(vector[LSV*] out_lsvlist, string experiment_nam
                     npos = jobj_ptr.npos
                     with gil:
                         x[junc_idx] = boots[jobj_ptr.index]
-                        # cov_dict[lsvid.decode('utf-8')][junc_idx] = boots[jobj_ptr.index]
                 else:
                     sreads = 0
                     npos = 0
@@ -392,21 +389,23 @@ cdef _core_build(str transcripts, list file_list, object conf, object logger):
         nlsv = gg.detect_lsvs(out_lsvlist)
 
     logger.info("%s LSV found" % out_lsvlist.size())
-
-    mem_allocated = int(psutil.Process().memory_info().rss)/(1024**2)
-    logger.info("POST LOOP Memory used %.2f MB" % mem_allocated)
+    if conf.mem_profile:
+        mem_allocated = int(psutil.Process().memory_info().rss)/(1024**2)
+        logger.info("POST LOOP Memory used %.2f MB" % mem_allocated)
 
     for i in prange(nsamples, nogil=True, num_threads=nthreads):
         with gil:
             fname = file_list[i][0].encode('utf-8')
             strandness = conf.strand_specific[file_list[i][0]]
-            mem_allocated = int(psutil.Process().memory_info().rss)/(1024**2)
-            logger.info("PRE OUT Memory used %.2f MB" % mem_allocated)
+            if conf.mem_profile:
+                mem_allocated = int(psutil.Process().memory_info().rss)/(1024**2)
+                logger.info("PRE OUT Memory used %.2f MB" % mem_allocated)
             cnt = _output_lsv_file_single(out_lsvlist, fname, gene_list, outDir, db,
                                           nthreads, m, ir, strandness, logger)
             logger.info('%s: %d LSVs' %(fname.decode('utf-8'), cnt))
-            mem_allocated = int(psutil.Process().memory_info().rss)/(1024**2)
-            logger.info("POST OUT  Memory used %.2f MB" % mem_allocated)
+            if conf.mem_profile:
+                mem_allocated = int(psutil.Process().memory_info().rss)/(1024**2)
+                logger.info("POST OUT  Memory used %.2f MB" % mem_allocated)
     close_db(db)
     free_genelist(gene_list)
 
