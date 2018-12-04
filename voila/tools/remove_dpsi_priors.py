@@ -1,5 +1,3 @@
-import pdb
-
 from voila.tools import Tool
 from voila.io_voila import Voila
 from voila.tools.utils import find_files
@@ -10,7 +8,7 @@ import os
 
 from voila.tools.utils.merge_dicts import merge_dicts
 from voila.tools.utils.percent_through_list import percent_through_list
-from voila.utils.voila_log import voila_log
+from voila.voila_log import voila_log
 
 # Caleb Matthew Radens
 # radlinsky@gmail.com

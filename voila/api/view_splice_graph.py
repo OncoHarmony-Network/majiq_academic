@@ -32,14 +32,15 @@ class ViewSpliceGraph(SpliceGraph):
         query = self.conn.execute('SELECT id FROM gene')
         return [x for x, in query.fetchall()]
 
-    def view_gene(self, gene):
+    def view_gene(self, gene_id):
+        gene = self.gene(gene_id)
         yield from gene.items()
-        yield 'id', gene['id']
-        yield 'start', self.gene_start(gene)
-        yield 'end', self.gene_end(gene)
+        yield 'id', gene_id
+        yield 'start', self.gene_start(gene_id)
+        yield 'end', self.gene_end(gene_id)
 
-    def gene_start(self, gene):
-        return sorted(self.exon_start(e) for e in self.exons(gene))[0]
+    def gene_start(self, gene_id):
+        return sorted(self.exon_start(e) for e in self.exons(gene_id))[0]
 
     def gene_end(self, gene):
         return sorted((self.exon_end(e) for e in self.exons(gene)), reverse=True)[0]
@@ -54,8 +55,8 @@ class ViewSpliceGraph(SpliceGraph):
         yield 'annotated', exon['annotated']
         yield 'color', self.exon_color(exon)
 
-    def view_exons(self, gene):
-        for exon in self.exons(gene):
+    def view_exons(self, gene_id):
+        for exon in self.exons(gene_id):
             yield self.view_exon(exon)
 
     def exon_has_reads(self, exon):
@@ -120,7 +121,7 @@ class ViewSpliceGraph(SpliceGraph):
         else:
             return 'green'
 
-    def annotated_junctions(self, gene, lsv_junctions):
+    def annotated_junctions(self, gene_id, lsv_junctions):
         for junc in lsv_junctions:
             junc = tuple(map(int, junc))
             query = self.conn.execute('''
@@ -128,13 +129,13 @@ class ViewSpliceGraph(SpliceGraph):
                                 WHERE gene_id=?
                                 AND start=? 
                                 AND end=?
-                                ''', (gene.id, junc[0], junc[1]))
+                                ''', (gene_id, junc[0], junc[1]))
 
             fetch = query.fetchone()
             if fetch:
                 yield fetch[0]
 
-    def lsv_exons(self, gene, lsv_junctions):
+    def lsv_exons(self, gene_id, lsv_junctions):
         rtn_set = set()
         for junc in lsv_junctions:
             junc = tuple(map(int, junc))
@@ -151,7 +152,7 @@ class ViewSpliceGraph(SpliceGraph):
                                         OR 
                                         (start!=-1 AND end!=-1 AND ? BETWEEN start and end)
                                         )  
-                                        ''', (gene['id'], junc[0], junc[1], junc[0], junc[1]))
+                                        ''', (gene_id, junc[0], junc[1], junc[0], junc[1]))
             for x in query.fetchall():
                 rtn_set.add(x)
         return list(sorted(rtn_set))
@@ -162,7 +163,7 @@ class ViewSpliceGraph(SpliceGraph):
             if ir.start in exons_ends:
                 yield ir
 
-    def gene_experiment(self, gene, experiment_names_list):
+    def gene_experiment(self, gene_id, experiment_names_list):
         junc_reads = {}
         ir_reads = {}
 
@@ -177,7 +178,7 @@ class ViewSpliceGraph(SpliceGraph):
                     junc_reads[combined_name] = {}
                     ir_reads[combined_name] = {}
 
-            for junc in self.junctions(gene):
+            for junc in self.junctions(gene_id):
                 junc_start, junc_end = itemgetter('start', 'end')(junc)
 
                 for r in self.junction_reads_exp(junc, experiment_names):
@@ -203,7 +204,7 @@ class ViewSpliceGraph(SpliceGraph):
                         except KeyError:
                             junc_reads[combined_name][junc_start] = {junc_end: summed_reads}
 
-            for ir in self.intron_retentions(gene):
+            for ir in self.intron_retentions(gene_id):
 
                 ir_start, ir_end = itemgetter('start', 'end')(ir)
 
@@ -231,10 +232,10 @@ class ViewSpliceGraph(SpliceGraph):
                     except KeyError:
                         ir_reads[combined_name][ir_start] = {ir_end: summed_reads}
 
-        gene_dict = dict(self.view_gene(gene))
-        gene_dict['exons'] = tuple(dict(e) for e in self.view_exons(gene))
-        gene_dict['junctions'] = tuple(dict(j) for j in self.view_junctions(gene))
-        gene_dict['intron_retention'] = tuple(dict(ir) for ir in self.view_intron_retentions(gene))
+        gene_dict = dict(self.view_gene(gene_id))
+        gene_dict['exons'] = tuple(dict(e) for e in self.view_exons(gene_id))
+        gene_dict['junctions'] = tuple(dict(j) for j in self.view_junctions(gene_id))
+        gene_dict['intron_retention'] = tuple(dict(ir) for ir in self.view_intron_retentions(gene_id))
         gene_dict['junction_reads'] = junc_reads
         gene_dict['intron_retention_reads'] = ir_reads
         gene_dict['genome'] = self.genome

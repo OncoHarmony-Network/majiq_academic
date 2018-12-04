@@ -3,7 +3,7 @@ import os
 from voila.tools import Tool
 from voila.tools.non_redundant_sets import get_junc_coords, get_exon_coords, coords_to_lsvs
 from voila.tools.utils import io_caleb
-from voila.utils.voila_log import voila_log
+from voila.voila_log import voila_log
 
 # Caleb Matthew Radens
 # radlinsky@gmail.com

@@ -5,7 +5,7 @@ from flask import jsonify, redirect, url_for, session, render_template
 from waitress import serve
 
 from voila import constants
-from voila.api.view_splice_graph_sqlite import ViewSpliceGraph
+from voila.api.view_splice_graph import ViewSpliceGraph
 from voila.config import ViewConfig
 from voila.exceptions import UnknownAnalysisType
 from voila.index import Index
@@ -43,12 +43,13 @@ def get_app():
 def copy_lsv(lsv_id, view_matrix):
     with ViewSpliceGraph() as sg, view_matrix() as m:
         dpsi = m.lsv(lsv_id)
-        gene = sg.gene(dpsi.gene_id)
+        gene_id = dpsi.gene_id
+        gene = sg.gene(gene_id)
         lsv_junctions = dpsi.junctions.tolist()
-        lsv_exons = sg.lsv_exons(gene, lsv_junctions)
+        lsv_exons = sg.lsv_exons(gene_id, lsv_junctions)
 
-        juncs = list(j for j in sg.junctions(gene) if [j['start'], j['end']] in lsv_junctions)
-        exons = list(e for e in sg.exons(gene) if (e['start'], e['end']) in lsv_exons)
+        juncs = list(j for j in sg.junctions(gene_id) if [j['start'], j['end']] in lsv_junctions)
+        exons = list(e for e in sg.exons(gene_id) if (e['start'], e['end']) in lsv_exons)
 
         lsv_type = dpsi.lsv_type
         strand, chromosome, name = itemgetter('strand', 'chromosome', 'name')(gene)
@@ -72,7 +73,6 @@ def copy_lsv(lsv_id, view_matrix):
                 junc_dict['junctions'].append(junc)
 
             splice_graphs.append(junc_dict)
-
 
     return jsonify({
         'sample_names': sample_names,
@@ -122,7 +122,7 @@ def gene_view(summary_template, gene_id, view_matrix):
             del highlight[lsv_id]
         session['highlight'] = highlight
 
-        exons = list(sg.exons(gene))
+        exons = list(sg.exons(gene_id))
         start = min(e['start'] for e in exons if e['start'] != -1)
         end = max(e['end'] for e in exons if e['end'] != -1)
         href = ucsc_href(sg.genome, gene['chromosome'], start, end)

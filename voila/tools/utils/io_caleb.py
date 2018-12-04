@@ -1,5 +1,4 @@
 import re
-import traceback
 
 import numpy as np
 import os
@@ -8,7 +7,7 @@ import pdb
 import copy
 from voila.tools.utils import find_files
 from voila.tools.utils.calebs_xrange import calebs_xrange
-from voila.utils.voila_log import voila_log
+from voila.voila_log import voila_log
 
 # Caleb Matthew Radens
 # radlinsky@gmail.com

@@ -1,14 +1,12 @@
 import pdb
 import numpy as np
-import os
 from voila.tools import Tool
 from voila.tools import remove_dpsi_priors
 from voila.tools.find_binary_lsvs import non_redundant_id_dict, counts_per_row
 from voila.tools.non_redundant_sets import non_redundant_set
 from voila.tools.utils import io_caleb
 from voila.tools.utils.percent_through_list import percent_through_list
-from voila.utils.voila_log import voila_log
-import pickle as pkl
+from voila.voila_log import voila_log
 
 # Caleb Matthew Radens
 # radlinsky@gmail.com

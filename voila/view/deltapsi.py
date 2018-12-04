@@ -4,7 +4,7 @@ from bisect import bisect
 from flask import Flask, render_template, jsonify, url_for, request, session, Response
 
 from voila.api.view_matrix import ViewDeltaPsi
-from voila.api.view_splice_graph_sqlite import ViewSpliceGraph
+from voila.api.view_splice_graph import ViewSpliceGraph
 from voila.index import Index
 from voila.view import views
 from voila.view.datatables import DataTables
@@ -46,7 +46,7 @@ def lsv_data(lsv_id):
         gene_id = dpsi.gene_id
         gene = sg.gene(gene_id)
         strand = gene['strand']
-        exons = list(sg.exons(gene))
+        exons = list(sg.exons(gene_id))
         exon_number = find_exon_number(exons)
 
         excl_incl = list(dpsi.excl_incl)
@@ -116,9 +116,8 @@ def nav(gene_id):
 @app.route('/splice-graph/<gene_id>', methods=('POST', 'GET'))
 def splice_graph(gene_id):
     with ViewSpliceGraph() as sg, ViewDeltaPsi() as v:
-        g = sg.gene(gene_id)
         exp_names = v.splice_graph_experiment_names
-        gd = sg.gene_experiment(g, exp_names)
+        gd = sg.gene_experiment(gene_id, exp_names)
         gd['group_names'] = v.group_names
         gd['experiment_names'] = exp_names
         return jsonify(gd)

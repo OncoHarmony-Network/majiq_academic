@@ -6,7 +6,7 @@ from pathlib import Path
 from voila import constants, config
 from voila.exceptions import VoilaException, CanNotFindFile
 from voila.tsv import Tsv
-from voila.utils.voila_log import voila_log
+from voila.voila_log import voila_log
 from voila.view.views import run_service
 
 
