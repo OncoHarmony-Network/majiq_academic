@@ -66,7 +66,7 @@ class DataTables:
                 self._records.sort(key=lambda x: x[col_name],
                                    reverse=self.sort_direction == 'desc')
         except KeyError:
-            raise SortFunctionNotFound()
+            raise SortFunctionNotFound(self.column_sort)
 
     def extra_filter(self, filter_fn):
         self._records = list(r for r in self._records if filter_fn(r))
@@ -112,27 +112,28 @@ class DataTables:
     def add_sort(self, sort_col, sort_fn):
         self.extra_sort[sort_col] = sort_fn
 
-    @staticmethod
-    def highlight(row):
-        lsv_id = row['lsv_id'].decode('utf-8')
-        try:
-            return session['highlight'][lsv_id]
-        except KeyError:
-            return [False, False]
+    class Sort:
+        @staticmethod
+        def highlight(row):
+            lsv_id = row['lsv_id'].decode('utf-8')
+            try:
+                return session['highlight'][lsv_id]
+            except KeyError:
+                return [False, False]
 
-    @staticmethod
-    def lsv_id(row):
-        ref_exon = row['lsv_id'].decode('utf-8')
-        ref_exon = ref_exon.split(':')
-        ref_exon = ref_exon[-1]
-        ref_exon = ref_exon.split('-')
-        try:
-            ref_exon = list(map(int, ref_exon))
-        except ValueError:
-            if ref_exon[0] == 'na':
-                ref_exon[1] = int(ref_exon[1])
-                ref_exon[0] = ref_exon[1] - 10
-            if ref_exon[1] == 'na':
-                ref_exon[0] = int(ref_exon[0])
-                ref_exon[1] = ref_exon[0] + 10
-        return ref_exon
+        @staticmethod
+        def lsv_id(row):
+            ref_exon = row['lsv_id'].decode('utf-8')
+            ref_exon = ref_exon.split(':')
+            ref_exon = ref_exon[-1]
+            ref_exon = ref_exon.split('-')
+            try:
+                ref_exon = list(map(int, ref_exon))
+            except ValueError:
+                if ref_exon[0] == 'na':
+                    ref_exon[1] = int(ref_exon[1])
+                    ref_exon[0] = ref_exon[1] - 10
+                if ref_exon[1] == 'na':
+                    ref_exon[0] = int(ref_exon[0])
+                    ref_exon[1] = ref_exon[0] + 10
+            return ref_exon

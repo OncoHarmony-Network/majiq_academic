@@ -1,13 +1,12 @@
 import os
 from bisect import bisect
-from pathlib import Path
+from operator import itemgetter
 
-import h5py
 from flask import Flask, render_template, jsonify, url_for, request, session
 
 from voila.api.view_matrix import ViewDeltaPsi, ViewHeterogens
 from voila.api.view_splice_graph_sqlite import ViewSpliceGraph
-from voila.config import ViewConfig
+from voila.index import Index
 from voila.view.datatables import DataTables
 
 app = Flask(__name__)
@@ -22,16 +21,18 @@ def index():
 @app.route('/gene/<gene_id>/')
 def gene(gene_id):
     # For this gene, remove any already selected highlight/weighted lsvs from session.
+
     highlight = session.get('highlight', {})
     lsv_ids = [h for h in highlight if h.startswith(gene_id)]
     for lsv_id in lsv_ids:
         del highlight[lsv_id]
     session['highlight'] = highlight
 
-    with ViewHeterogens() as m:
+    with ViewHeterogens() as m, ViewSpliceGraph() as sg:
+        gene = sg.gene(gene_id)
         lsv_data = list((lsv_id, m.lsv(lsv_id).lsv_type) for lsv_id in m.lsv_ids(gene_ids=[gene_id]))
         lsv_data.sort(key=lambda x: len(x[1].split('|')))
-        return render_template('het_summary.html', gene_id=gene_id, lsv_data=lsv_data)
+        return render_template('het_summary.html', gene=gene, lsv_data=lsv_data)
 
 
 @app.route('/lsv-data', methods=('POST',))
@@ -39,11 +40,11 @@ def gene(gene_id):
 def lsv_data(lsv_id):
     def find_exon_number(exons):
         ref_exon = list(map(int, lsv_id.split(':')[-1].split('-')))
-        exons = filter(lambda e: -1 not in [e.start, e.end], exons)
+        exons = filter(lambda e: -1 not in [e['start'], e['end']], exons)
         exons = list(exons)
 
         for idx, exon in enumerate(exons):
-            if [exon.start, exon.end] == ref_exon:
+            if [exon['start'], exon['end']] == ref_exon:
                 if strand == '-':
                     return len(exons) - idx
                 else:
@@ -52,7 +53,7 @@ def lsv_data(lsv_id):
     with ViewSpliceGraph() as sg, ViewHeterogens() as m:
         gene_id = ':'.join(lsv_id.split(':')[:-2])
         gene = sg.gene(gene_id)
-        strand = gene.strand
+        strand = gene['strand']
         exons = sg.exons(gene)
 
         # return empty string when reference exon is a half exon
@@ -78,27 +79,17 @@ def lsv_data(lsv_id):
 
 @app.route('/index-table', methods=('POST',))
 def index_table():
-    config = ViewConfig()
-    voila_directory = Path(config.voila_file).parents[0]
-    index_file = voila_directory / 'index.hdf5'
-    with ViewHeterogens() as p, h5py.File(index_file, 'r') as h:
+    with ViewHeterogens() as p:
+        dt = DataTables(Index.heterogen(), ('gene_name', 'lsv_id'))
 
-        def create_records():
-            for lsv_id, gene_id, gene_name in h['index'].value:
-                lsv_id = lsv_id.decode('utf-8')
-                gene_id = gene_id.decode('utf-8')
-                gene_name = gene_name.decode('utf-8')
-                yield [(gene_name, gene_id), lsv_id, '', '']
+        for idx, index_row, records in dt.callback():
+            values = itemgetter('lsv_id', 'gene_id', 'gene_name')(index_row)
+            values = [v.decode('utf-8') for v in values]
+            lsv_id, gene_id, gene_name = values
+            het = p.lsv(lsv_id)
 
-        def callback(rs):
-            for r in rs:
-                gene_name, gene_id = r[0]
-                lsv_id = r[1]
-                r[0] = [url_for('gene', gene_id=gene_id), gene_name]
-                r[2] = p.lsv(lsv_id).lsv_type
+            records[idx] = [(url_for('gene', gene_id=gene_id), gene_name), lsv_id, het.lsv_type, '']
 
-        records = create_records()
-        dt = DataTables(records, callback)
         return jsonify(dict(dt))
 
 
@@ -194,35 +185,44 @@ def summary_table(lsv_id):
         stat_names = v.stat_names
         stat_name = stat_names[0]
 
-        def create_records():
-            het = v.lsv(lsv_id)
-            juncs = het.junctions
-            mu_psis = het.mu_psi
-            mean_psis = het.mean_psi
+        het = v.lsv(lsv_id)
+        juncs = het.junctions
+        mu_psis = het.mu_psi
+        mean_psis = het.mean_psi
 
-            for idx, (junc, mean_psi, mu_psi) in enumerate(zip(juncs, mean_psis, mu_psis)):
-                junc = map(str, junc)
-                junc = '-'.join(junc)
-                heatmap = het.junction_heat_map(stat_name, idx)
+        table_data = []
 
-                yield [
-                    junc,
-                    {
-                        'group_names': grp_names,
-                        'experiment_names': exp_names,
-                        'junction_idx': idx,
-                        'mean_psi': mean_psi,
-                        'mu_psi': mu_psi,
-                    },
-                    {
-                        'heatmap': heatmap,
-                        'group_names': grp_names,
-                        'stat_name': stat_name
-                    }
-                ]
+        for idx, (junc, mean_psi, mu_psi) in enumerate(zip(juncs, mean_psis, mu_psis)):
+            junc = map(str, junc)
+            junc = '-'.join(junc)
+            heatmap = het.junction_heat_map(stat_name, idx)
 
-        records = create_records()
-        dt = DataTables(records)
-        dt = dict(dt)
+            table_data.append({
+                'junc': junc,
+                'mean_psi': mean_psi,
+                'mu_psi': mu_psi,
+                'heatmap': heatmap
+            })
 
-        return jsonify(dt)
+        dt = DataTables(table_data, ('junc', '', ''))
+
+        for idx, row_data, records in dt.callback():
+            junc, mean_psi, mu_psi, heatmap = itemgetter('junc', 'mean_psi', 'mu_psi', 'heatmap')(row_data)
+
+            records[idx] = [
+                junc,
+                {
+                    'group_names': grp_names,
+                    'experiment_names': exp_names,
+                    'junction_idx': idx,
+                    'mean_psi': mean_psi,
+                    'mu_psi': mu_psi,
+                },
+                {
+                    'heatmap': heatmap,
+                    'group_names': grp_names,
+                    'stat_name': stat_name
+                }
+            ]
+
+        return jsonify(dict(dt))
