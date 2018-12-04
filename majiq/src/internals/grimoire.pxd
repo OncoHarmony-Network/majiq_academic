@@ -21,6 +21,7 @@ cdef extern from "grimoire.hpp" namespace "grimoire":
         int          get_start() nogil ;
         int          get_end() nogil ;
         string       get_key() nogil ;
+        string       get_key(Gene * gObj) nogil ;
         string       get_key(Gene * gObj, int strandness) nogil ;
         bint         get_intronic() nogil
         bint         get_annot() nogil
@@ -103,25 +104,23 @@ cdef extern from "grimoire.hpp" namespace "grimoire":
 
     cdef cppclass Jinfo:
         unsigned int index ;
-        unsigned int start ;
-        unsigned int end ;
         int sreads ;
         int npos ;
         Jinfo() nogil ;
-        Jinfo(unsigned int index1, unsigned int start1, unsigned int end1, int sreads1, int npos1) nogil ;
+        Jinfo(unsigned int index1, int sreads1, int npos1) nogil ;
 
 
 
-    cdef cppclass qLSV:
-        vector[vector[psi_distr_t]] coverages ;
-
-        qLSV() nogil ;
-        qLSV(vector[string] & lsv_list_) nogil ;
-            #~qLSV()                        { omp_destroy_lock(&semaphore_lock) ; }
-        vector[string] & get_lsvlist() nogil ;
-        void free_lock() nogil ;
-        void test_lock() nogil ;
-        void add_counter() nogil ;
+    # cdef cppclass qLSV:
+    #     vector[vector[psi_distr_t]] coverages ;
+    #
+    #     qLSV() nogil ;
+    #     qLSV(vector[string] & lsv_list_) nogil ;
+    #         #~qLSV()                        { omp_destroy_lock(&semaphore_lock) ; }
+    #     vector[string] & get_lsvlist() nogil ;
+    #     void free_lock() nogil ;
+    #     void test_lock() nogil ;
+    #     void add_counter() nogil ;
 
 
 
@@ -130,5 +129,8 @@ cdef extern from "grimoire.hpp" namespace "grimoire":
     # vector[Intron *]  find_intron_retention(vector[Gene*]& gene_list, string geneid, int start, int end) nogil ;
     vector[Intron *]  find_intron_retention(Gene * gObj, int start, int end) nogil ;
     void find_gene_from_junc(map[string, overGene_vect_t] glist, string chrom, int start, int end,
-                             vector[Gene*] oGeneList, bint ir) nogil ;
+                             vector[Gene*]& oGeneList, bint ir) nogil ;
+    void fill_junc_tlb(vector[LSV*]& lsv_list, map[string, int]& tlb) nogil ;
+    bint isNullJinfo(Jinfo* x) nogil ;
+    string key_format(string gid, int coord1, int coord2, bint ir) nogil ;
 

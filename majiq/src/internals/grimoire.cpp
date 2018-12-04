@@ -75,6 +75,10 @@ namespace grimoire {
         return(gObj->get_chromosome() + ":" + strand + ":" + to_string(start_) + "-" + to_string(end_)) ;
     }
 
+    string  Junction::get_key(Gene * gObj) {
+        return(gObj->get_id() + ":" + to_string(start_) + "-" + to_string(end_)) ;
+    }
+
 /*
     Gene functions
 */
@@ -214,26 +218,26 @@ namespace grimoire {
         return ;
     }
 
-    void Gene::fill_junc_tlb(map<string, vector<string>> &tlb){
-
-        for(const auto &j: junc_map_){
-            if (!(j.second)->get_denovo_bl()) continue ;
-            const string key = chromosome_ + ":" + strand_ + ":" + j.first ;
-            const string key2 = chromosome_ + ":.:" + j.first ;
-            #pragma omp critical
-            {
-                if(tlb.count(key) == 0){
-                    tlb[key] = vector<string>() ;
-                }
-                if(tlb.count(key2) == 0){
-                    tlb[key2] = vector<string>() ;
-                }
-                tlb[key].push_back(id_) ;
-                tlb[key2].push_back(id_) ;
-            }
-        }
-        return ;
-    }
+//    void Gene::fill_junc_tlb(map<string, vector<string>> &tlb){
+//
+//        for(const auto &j: junc_map_){
+//            if (!(j.second)->get_denovo_bl()) continue ;
+//            const string key = chromosome_ + ":" + strand_ + ":" + j.first ;
+//            const string key2 = chromosome_ + ":.:" + j.first ;
+//            #pragma omp critical
+//            {
+//                if(tlb.count(key) == 0){
+//                    tlb[key] = vector<string>() ;
+//                }
+//                if(tlb.count(key2) == 0){
+//                    tlb[key2] = vector<string>() ;
+//                }
+//                tlb[key].push_back(id_) ;
+//                tlb[key2].push_back(id_) ;
+//            }
+//        }
+//        return ;
+//    }
 
     void Gene::update_junc_flags(int efflen, bool is_last_exp, unsigned int minreads, unsigned int minpos,
                                   unsigned int denovo_thresh, unsigned int min_experiments, bool denovo){
@@ -597,6 +601,27 @@ namespace grimoire {
         return ext_type ;
     }
 
+    void fill_junc_tlb(vector<LSV*>& lsv_list, map<string, int>& tlb){
+
+        for (const auto &l: lsv_list){
+            const string gid = (l->get_gene())->get_id() ;
+            for (const auto &j: l->get_junctions()){
+                const string k = j->get_key(l->get_gene()) ;
+                const int n  = tlb.size() ;
+                tlb[k] = n ;
+            }
+
+            Intron * ir_ptr = l->get_intron() ;
+            if (ir_ptr != 0){
+                const string k = "IR:" + gid + ":" + to_string(ir_ptr->get_start()) + "-" + to_string(ir_ptr->get_end()) ;
+                const int n  = tlb.size() ;
+                tlb[k] = n ;
+            }
+
+        }
+
+    }
+
 
     vector<Intron *> find_intron_retention(Gene * gObj, int start, int end){
         vector<Intron*> ir_vec ;
@@ -619,12 +644,11 @@ namespace grimoire {
     }
 
     void find_gene_from_junc(map<string, vector<overGene*>> glist, string chrom, int start, int end,
-                             vector<Gene*> oGeneList, bool ir){
+                             vector<Gene*>& oGeneList, bool ir){
 
         Junction * junc = new Junction(start, end, false) ;
         Gene * gObj ;
         const string key = junc->get_key() ;
-
         vector<overGene*>::iterator low = lower_bound (glist[chrom].begin(), glist[chrom].end(),
                                                        start, _Region::func_comp ) ;
         if (low == glist[chrom].end())
@@ -632,15 +656,13 @@ namespace grimoire {
 
         if (ir){
             for (const auto &gObj: (*low)->glist){
-                for(const auto &irObj: gObj->intron_vec_){
-                    if(irObj->get_start() < end  && irObj->get_end() > start){
-                        oGeneList.push_back(gObj) ;
-                    }
+                if(gObj->get_start() < start  && gObj->get_end() > end){
+                     oGeneList.push_back(gObj) ;
                 }
             }
         } else {
             for (const auto &gObj: (*low)->glist){
-                if(gObj->junc_map_.count(key) >0 ){
+                if(gObj->junc_map_.count(key) >0 && (gObj->junc_map_[key])->get_denovo_bl()){
                     oGeneList.push_back(gObj) ;
                 }
             }
@@ -649,6 +671,15 @@ namespace grimoire {
         return ;
     }
 
+    bool isNullJinfo(Jinfo* x){
+        return (x == nullptr) ;
+    }
+
+    string key_format(string gid, int coord1, int coord2, bool ir){
+        const string g_string = ir? "IR:"+ gid : gid ;
+        return(g_string + ":" + to_string(coord1) + "-" + to_string(coord2)) ;
+
+    }
 }
 
 

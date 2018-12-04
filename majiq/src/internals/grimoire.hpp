@@ -37,14 +37,11 @@ namespace grimoire{
     class Jinfo {
         public:
             unsigned int    index ;
-            unsigned int    start ;
-            unsigned int    end ;
             int             sreads ;
             int             npos ;
 
             Jinfo() {}
-            Jinfo(unsigned int index1, unsigned int start1, unsigned int end1, int sreads1, int npos1): index(index1),
-                                        start(start1), end(end1), sreads(sreads1), npos(npos1) {}
+            Jinfo(unsigned int index1, int sreads1, int npos1): index(index1), sreads(sreads1), npos(npos1) {}
     } ;
 
     struct lsvtype {
@@ -113,6 +110,7 @@ namespace grimoire{
             ~Junction()             { clear_nreads(true) ; }
 
             string  get_key()       { return(to_string(start_) + "-" + to_string(end_)) ; }
+            string  get_key(Gene * gObj) ;
             string  get_key(Gene * gObj, int strandness) ;
             bool    get_annot()     { return annot_ ; }
             bool    get_intronic()  { return intronic_ ; }
@@ -385,7 +383,10 @@ namespace grimoire{
     void sortGeneList(vector<Gene*> &glist) ;
     vector<Intron *> find_intron_retention(Gene * gObj, int start, int end);
     void find_gene_from_junc(map<string, vector<overGene*>> glist, string chrom, int start, int end,
-                             vector<Gene*> oGeneList, bool ir) ;
+                             vector<Gene*>& oGeneList, bool ir) ;
+    void fill_junc_tlb(vector<LSV*>& lsv_list, map<string, int>& tlb) ;
+    bool isNullJinfo(Jinfo* x) ;
+    string key_format(string gid, int coord1, int coord2, bool ir) ;
 }
 
 #endif
