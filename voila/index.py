@@ -16,6 +16,7 @@ from voila.vlsv import matrix_area
 lsv_filters = ['a5ss', 'a3ss', 'exon_skipping', 'target', 'source', 'binary', 'complex']
 psi_keys = ['lsv_id', 'gene_id', 'gene_name'] + lsv_filters
 dpsi_keys = ['lsv_id', 'gene_id', 'gene_name', 'excl_incl', 'dpsi_threshold', 'confidence_threshold'] + lsv_filters
+het_keys = ['lsv_id', 'gene_id', 'gene_name', 'excl_incl', 'dpsi_threshold', 'confidence_threshold'] + lsv_filters
 
 
 class Index:
@@ -99,7 +100,7 @@ class Index:
         voila_dir = Path(config.voila_file).parents[0]
         index_file = voila_dir / 'index.hdf5'
 
-        if config.force_index:
+        if index_file.exists() and config.force_index:
             os.remove(index_file)
 
         if config.force_index or not index_file.exists():
@@ -112,7 +113,7 @@ class Index:
 
                     gene_id = het.gene_id
                     gene = sg.gene(gene_id)
-                    gene_name = gene.name
+                    gene_name = gene['name']
 
                     row = (lsv_id, gene_id, gene_name)
                     self._check_strings(*row)
@@ -230,25 +231,40 @@ class Index:
     @classmethod
     def psi(cls, gene_id=None):
         """
-        Get PSI index data in as a dictionary for each row.
+        Get PSI index data in a dictionary for each row.
         :param gene_id: Filter output by specific gene.
         :return: Generator
         """
 
-        yield from cls.row_data(gene_id, psi_keys)
+        index_file = ViewConfig().voila_file
+        yield from cls.row_data(index_file, gene_id, psi_keys)
 
     @classmethod
     def delta_psi(cls, gene_id=None):
         """
-        Get Delta PSI index data in as a dictionary for each row.
+        Get Delta PSI index data in a dictionary for each row.
         :param gene_id: Filter output by specific gene.
         :return: Generator
         """
 
-        yield from cls.row_data(gene_id, dpsi_keys)
+        index_file = ViewConfig().voila_file
+        yield from cls.row_data(index_file, gene_id, dpsi_keys)
+
+    @classmethod
+    def heterogen(cls, gene_id=None):
+        """
+        Get Heterogen index data in a dictionary for each row.
+        :return:
+        """
+
+        voila_file = ViewConfig().voila_file
+        voila_file = Path(voila_file)
+        voila_dir = voila_file.parents[0]
+        index_file = voila_dir / 'index.hdf5'
+        yield from cls.row_data(index_file, gene_id, het_keys)
 
     @staticmethod
-    def row_data(gene_id, keys):
+    def row_data(index_file, gene_id, keys):
         """
         For each row in index, zip list of keys with values in the row.
         :param gene_id:
@@ -261,9 +277,7 @@ class Index:
         except AttributeError:
             pass
 
-        config = ViewConfig()
-
-        with h5py.File(config.voila_file, 'r') as h:
+        with h5py.File(index_file, 'r') as h:
 
             try:
                 for row in h['index'].value:

@@ -52,6 +52,12 @@ class MatrixHdf5:
             self._tsv_file.close()
 
     def add_dataset(self, *args, **kwargs):
+        """
+        Add dataset to hdf5 file using h5py api.
+        :param args: tree key values
+        :param kwargs: kwargs for the h5py create_dataset method.
+        :return: None
+        """
         grp = self.h
         for k in args[:-1]:
             try:
@@ -88,7 +94,13 @@ class MatrixHdf5:
                 raise
 
     def add_tsv_row(self, matrix_type, **kwargs):
+        """
+        Add row to tsv file.  This is used in the quantification step of the pipeline.
 
+        :param matrix_type: Matrix class for analysis type.
+        :param kwargs: data for voila file
+        :return: None
+        """
         if self._tsv_writer is None:
             tsv_filename = '.'.join(self._filename.split('.')[:-1]) + '.tsv'
             self._tsv_file = open(tsv_filename, 'w', newline='')
@@ -165,6 +177,11 @@ class MatrixHdf5:
 
     @property
     def prior(self):
+        """
+        Get Prior from hdf5 file if it hasn't already been cached.
+        :return: numpy matrix
+        """
+
         if self._prior is None:
             self._prior = self.h['metadata']['prior'].value
         return self._prior
@@ -181,25 +198,49 @@ class MatrixHdf5:
 
     @property
     def analysis_type(self):
+        """
+        Gets analysis type from h5py file.
+        :return:
+        """
         return self.h['metadata']['analysis_type'].value
 
     @analysis_type.setter
     def analysis_type(self, a):
+        """
+        Saved analysis type to h5py file.
+        :param a: analysis type string
+        :return: None
+        """
         self.create_dataset('metadata/analysis_type', data=a)
 
     @property
     def group_names(self):
+        """
+        If group names haven't already been cached, then cache them before returning list of group names.
+        :return: list of strings
+        """
         if self._group_names is None:
             self._group_names = self.h['metadata']['group_names'].value.tolist()
         return self._group_names
 
     @group_names.setter
     def group_names(self, n):
+        """
+        Cache group names and then save them to the h5py file.
+        :param n: list of group names
+        :return: None
+        """
         self._group_names = n
         self.create_dataset('metadata/group_names', data=np.array(n, dtype=self.dt))
 
     @property
     def splice_graph_experiment_names(self):
+        """
+        List of experiment names for creating splice graphs.  This will be same list of experiment names as is saved to
+        the voila file, but if there are more then one experiment name, there will be a 'Combined' prepended to the list
+        of experiment names.
+        :return: list of experiment names
+        """
         exp_names = []
         for grp, exp in zip(self.group_names, self.experiment_names):
             if len(exp) > 1:
@@ -210,10 +251,20 @@ class MatrixHdf5:
 
     @property
     def experiment_names(self):
+        """
+        Get list of experiment names using h5py api.
+        :return:
+        """
         return self.h['metadata']['experiment_names'].value.tolist()
 
     @experiment_names.setter
     def experiment_names(self, ns):
+        """
+        Set list of experiment names to the h5py file. Some care has be taken when the list of experiment names isn't
+        even across all columns.  For instance, if one group has more experiments then the rest of the groups.
+        :param ns: list of experiment names
+        :return: None
+        """
         ns = [[e.decode('utf-8') for e in es] for es in ns]
         arr = np.empty((2, max(len(n) for n in ns)), dtype=self.dt)
         arr.fill('')
@@ -223,18 +274,35 @@ class MatrixHdf5:
 
     @property
     def stat_names(self):
+        """
+        List of stats used in this quantification.
+        :return: list of strings
+        """
         return self.h['metadata']['stat_names'].value
 
     @stat_names.setter
     def stat_names(self, s):
+        """
+        Set list of stat names.
+        :param s: list of stat names
+        :return: list of strings
+        """
         self.h.create_dataset('metadata/stat_names', data=np.array(s, dtype=self.dt))
 
     @property
     def gene_ids(self):
+        """
+        A generator of all the gene ids in this file.
+        :return: generator
+        """
         yield from self.h['lsvs']
 
     def lsv_ids(self, gene_ids=None):
-
+        """
+        A generator of lsv ids. If gene ids is set, then only the lsvs for those gene ids will be provided.
+        :param gene_ids: list of gene ids
+        :return: generator
+        """
         if not gene_ids:
             gene_ids = self.gene_ids
 
@@ -451,6 +519,10 @@ class DeltaPsi(MatrixHdf5):
             super().__init__(matrix_hdf5, lsv_id, fields)
 
         def tsv_fieldnames(self):
+            """
+            Delta PSI TSV fieldnames.
+            :return: list of fieldnames
+            """
             group_names = self.matrix_hdf5.group_names
             return ['Gene ID', 'LSV ID', 'LSV Type', 'E(dPSI) per LSV junction', 'P(|dPSI|>=0.20) per LSV junction',
                     'P(|dPSI|<=0.05) per LSV junction', '{} E(PSI)'.format(group_names[0]),
@@ -458,6 +530,11 @@ class DeltaPsi(MatrixHdf5):
                     'Junctions coords', 'IR coords']
 
         def tsv_row(self, **kwargs):
+            """
+            Add columns that are not general to all analysis types.
+            :param kwargs: voila file data
+            :return: dictionary
+            """
             bins = kwargs['bins']
             means = generate_means(bins)
             excl_incl = generate_excl_incl(means)
@@ -501,10 +578,19 @@ class Psi(MatrixHdf5):
             super().__init__(matrix_hdf5, lsv_id, fields)
 
         def tsv_fieldnames(self):
+            """
+            PSI fieldnames.
+            :return: list of psi fieldnames
+            """
             return ['Gene ID', 'LSV ID', 'LSV Type', 'E(PSI) per LSV junction', 'Var(E(PSI)) per LSV junction', 'A5SS',
                     'A3SS', 'ES', 'Num. Junctions', 'Num. Exons', 'Junctions coords', 'IR coords']
 
         def tsv_row(self, **kwargs):
+            """
+            Add columns that are not general to all analysis types.
+            :param kwargs: voila file data
+            :return:  dictionary
+            """
             bins = kwargs['bins']
             return {
                 'E(PSI) per LSV junction': ';'.join(map(str, kwargs['means'])),
@@ -541,4 +627,3 @@ class Heterogen(MatrixHdf5):
         :return:
         """
         return self._Heterogen(self, lsv_id)
-

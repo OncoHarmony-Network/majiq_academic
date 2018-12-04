@@ -1,3 +1,5 @@
+from operator import itemgetter
+
 from voila.api import SpliceGraph
 from voila.config import ViewConfig
 
@@ -106,12 +108,12 @@ class ViewSpliceGraph(SpliceGraph):
             yield self.view_intron_retention(ir)
 
     def view_intron_retention(self, ir):
-        yield from ir._asdict().items()
+        yield from ir.items()
         yield 'color', self.ir_color(ir)
 
     def ir_color(self, ir):
-        if ir.annotated:
-            if ir.has_reads:
+        if ir['annotated']:
+            if ir['has_reads']:
                 return 'red'
             else:
                 return 'grey'
@@ -176,8 +178,8 @@ class ViewSpliceGraph(SpliceGraph):
                     ir_reads[combined_name] = {}
 
             for junc in self.junctions(gene):
-                junc_start = junc['start']
-                junc_end = junc['end']
+                junc_start, junc_end = itemgetter('start', 'end')(junc)
+
                 for r in self.junction_reads_exp(junc, experiment_names):
                     reads = r['reads']
                     exp_name = r['experiment_name']
@@ -202,29 +204,32 @@ class ViewSpliceGraph(SpliceGraph):
                             junc_reads[combined_name][junc_start] = {junc_end: summed_reads}
 
             for ir in self.intron_retentions(gene):
+
+                ir_start, ir_end = itemgetter('start', 'end')(ir)
+
                 for r in self.intron_retention_reads_exp(ir, experiment_names):
-                    reads = r['reads']
-                    exp_name = r['experiment_name']
+
+                    reads, exp_name = itemgetter('reads', 'experiment_name')(r)
 
                     try:
-                        ir_reads[r.experiment_name][ir.start][ir.end] = reads
+                        ir_reads[exp_name][ir_start][ir_end] = reads
                     except KeyError:
-                        ir_reads[r.experiment_name][ir.start] = {ir.end: reads}
+                        ir_reads[exp_name][ir_start] = {ir_end: reads}
 
                 if combined_name:
                     def get_ir_reads():
                         for n in experiment_names:
                             try:
-                                yield ir_reads[n][ir.start][ir.end]
+                                yield ir_reads[n][ir_start][ir_end]
                             except KeyError:
                                 pass
 
                     summed_reads = sum(get_ir_reads())
 
                     try:
-                        ir_reads[combined_name][ir.start][ir.end] = summed_reads
+                        ir_reads[combined_name][ir_start][ir_end] = summed_reads
                     except KeyError:
-                        ir_reads[combined_name][ir.start] = {ir.end: summed_reads}
+                        ir_reads[combined_name][ir_start] = {ir_end: summed_reads}
 
         gene_dict = dict(self.view_gene(gene))
         gene_dict['exons'] = tuple(dict(e) for e in self.view_exons(gene))

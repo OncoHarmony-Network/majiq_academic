@@ -199,8 +199,8 @@ def summary_table(gene_id):
 
         dt = DataTables(index_data, ('highlight', 'lsv_id', '', '', 'excl_incl'), sort=False, slice=False)
 
-        dt.add_sort('highlight', DataTables.highlight)
-        dt.add_sort('lsv_id', DataTables.lsv_id)
+        dt.add_sort('highlight', DataTables.Sort.highlight)
+        dt.add_sort('lsv_id', DataTables.Sort.lsv_id)
 
         dt.sort()
         dt.slice()

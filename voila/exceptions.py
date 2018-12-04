@@ -63,13 +63,14 @@ class IndexNotFound(VoilaException):
 
 
 class SortFunctionNotFound(VoilaException):
-    def __init__(self):
+    def __init__(self, column_idx):
         """
         While attempting to sort a column for a datatable, a sort function could not be found.  This could be that the
         column was no listed as a sortable column and it is (or visa versa).  Also this could be a column that should
         listed in the extra sort dictionary and isn't. 
         """
-        super().__init__('Value in datatables list requires specified sort function that was not found.')
+        super().__init__(
+            'Column {} in datatables list requires specified sort function that was not found.'.format(column_idx))
 
 
 class FoundNoSpliceGraphFile(VoilaException):

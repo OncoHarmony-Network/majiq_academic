@@ -5,6 +5,8 @@
 {% endblock %}
 
 {% block script %}
+    <script src="{{ url_for('static', filename='js/lsvtools.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/summary.js') }}"></script>
     <script>
         const legend = document.querySelector('.legend');
         new Lsv().renderFloatingLegend(legend)

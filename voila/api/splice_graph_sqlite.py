@@ -121,6 +121,7 @@ junc_fieldnames = ('gene_id', 'start', 'end', 'has_reads', 'annotated')
 junc_reads_fieldnames = ('reads', 'experiment_name')
 exon_fieldnames = ('gene_id', 'start', 'end', 'annotated_start', 'annotated_end', 'annotated')
 ir_fieldnames = ('gene_id', 'start', 'end', 'has_reads', 'annotated')
+ir_reads_fieldnames = ('reads', 'experiment_name')
 
 
 class Genes(SpliceGraphSQL):
@@ -185,3 +186,15 @@ class IntronRetentions(SpliceGraphSQL):
                                 WHERE gene_id=?
                                 ''', (gene['id'],))
         return self._iter_results(query, ir_fieldnames)
+
+    def intron_retention_reads_exp(self, ir, experiment_names):
+        query = self.conn.execute('''
+                                SELECT reads, experiment_name 
+                                FROM intron_retention_reads
+                                WHERE intron_retention_start=?
+                                AND intron_retention_end=?
+                                AND intron_retention_gene_id=?
+                                AND experiment_name IN ({})
+                                '''.format(','.join(["'{}'".format(x) for x in experiment_names])),
+                                  (ir['start'], ir['end'], ir['gene_id']))
+        return self._iter_results(query, ir_reads_fieldnames)

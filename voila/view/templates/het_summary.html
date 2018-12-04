@@ -1,8 +1,7 @@
 {% extends 'base_summary.html' %}
 
-{% block script %}
-    <script src="{{ url_for('static', filename='js/lsvtools.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/summary.js') }}"></script>
+{% block analysis_type_script %}
+
     <script>
         document.querySelectorAll('.lsv-cartoon').forEach(c => {
             const lsv_id = c.closest('.lsv').dataset.lsvId;
@@ -13,7 +12,7 @@
                 })
         });
 
-        json_ajax('{{ url_for("nav", gene_id=gene_id) }}').then(json => {
+        json_ajax('{{ url_for("nav", gene_id=gene.id) }}').then(json => {
             document.querySelector('.prev-gene').addEventListener('click', () => {
                 window.location.href = json.prev;
             });
@@ -23,7 +22,7 @@
             });
         });
 
-        json_ajax('{{ url_for("splice_graph", gene_id=gene_id) }}').then(gene => {
+        json_ajax('{{ url_for("splice_graph", gene_id=gene.id) }}').then(gene => {
             const sgs = new SpliceGraphs('.splice-graph-container', {
                 gene: gene,
                 remove_img: '{{ url_for('static', filename='img/remove.svg')}}',
@@ -223,7 +222,7 @@
                     <div>
                         {{ lsv_id }}
                     </div>
-                    </br>
+                    <br/>
                     <table class="pure-table lsv-table" data-lsv-id="{{ lsv_id }}">
                         <thead>
                         <tr>

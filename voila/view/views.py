@@ -15,8 +15,7 @@ from voila.view import deltapsi, heterogen, psi, splicegraph
 def run_service():
     port = ViewConfig().port
     run_app = get_app()
-
-    serve(run_app, host='0.0.0.0', port=port)
+    serve(run_app, port=port)
 
 
 def get_app():

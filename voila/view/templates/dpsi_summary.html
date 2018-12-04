@@ -1,8 +1,6 @@
 {% extends 'base_summary.html' %}
 
 {% block analysis_type_script %}
-    <script src="{{ url_for('static', filename='js/lsvtools.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/summary.js') }}"></script>
     <script>
         json_ajax('{{ url_for("nav", gene_id=gene.id) }}').then(json => {
             document.querySelector('.prev-gene').addEventListener('click', () => {
