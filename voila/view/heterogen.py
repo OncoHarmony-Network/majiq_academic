@@ -5,7 +5,7 @@ from operator import itemgetter
 from flask import Flask, render_template, jsonify, url_for, request, session
 
 from voila.api.view_matrix import ViewDeltaPsi, ViewHeterogens
-from voila.api.view_splice_graph_sqlite import ViewSpliceGraph
+from voila.api.view_splice_graph import ViewSpliceGraph
 from voila.index import Index
 from voila.view.datatables import DataTables
 
@@ -54,7 +54,7 @@ def lsv_data(lsv_id):
         gene_id = ':'.join(lsv_id.split(':')[:-2])
         gene = sg.gene(gene_id)
         strand = gene['strand']
-        exons = sg.exons(gene)
+        exons = sg.exons(gene_id)
 
         # return empty string when reference exon is a half exon
         try:
@@ -108,9 +108,8 @@ def nav(gene_id):
 @app.route('/splice-graph/<gene_id>', methods=('POST',))
 def splice_graph(gene_id):
     with ViewSpliceGraph() as sg, ViewHeterogens() as v:
-        g = sg.gene(gene_id)
         exp_names = v.splice_graph_experiment_names
-        gd = sg.gene_experiment(g, exp_names)
+        gd = sg.gene_experiment(gene_id, exp_names)
         gd['group_names'] = v.group_names
         gd['experiment_names'] = exp_names
         return jsonify(gd)

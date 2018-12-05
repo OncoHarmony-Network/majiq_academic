@@ -299,7 +299,7 @@ class MatrixHdf5:
 
     def lsv_ids(self, gene_ids=None):
         """
-        A generator of lsv ids. If gene ids is set, then only the lsvs for those gene ids will be provided.
+        A generator of lsv ids. If gene_ids is set, then only the lsvs for those gene ids will be provided.
         :param gene_ids: list of gene ids
         :return: generator
         """
@@ -316,6 +316,10 @@ class MatrixHdf5:
 
     @property
     def file_version(self):
+        """
+        File version as set using value from contants.
+        :return:
+        """
         metadata = self.h['metadata']
         try:
             return metadata['file_version'].value
@@ -324,9 +328,20 @@ class MatrixHdf5:
 
     @file_version.setter
     def file_version(self, version):
+        """
+        File version set from constants.
+        :param version:
+        :return:
+        """
         self.create_dataset('metadata/file_version', data=version)
 
     def create_dataset(self, *args, **kwargs):
+        """
+        Wrapper function for creating datasets with h5py api.
+        :param args: arguments
+        :param kwargs: keyword arguments
+        :return: None
+        """
         if self.voila_file:
             self.h.create_dataset(*args, **kwargs)
 
@@ -363,7 +378,7 @@ class MatrixType(ABC):
                 self._lsv_type = kwargs.get('lsv_type', None)
             self.matrix_hdf5.add_tsv_row(self, **kwargs)
 
-    def get(self, key: str):
+    def get(self, key):
         """
         Retrieve value from Matrix file.
 
@@ -372,7 +387,7 @@ class MatrixType(ABC):
         """
         return self.matrix_hdf5.get(self.lsv_id, key)
 
-    def get_many(self, keys: List[str]):
+    def get_many(self, keys):
         """
         Retrieve many values using list of keys
 
@@ -383,6 +398,10 @@ class MatrixType(ABC):
 
     @property
     def exists(self):
+        """
+        Does lsv id exist in h5py file.
+        :return: boolean
+        """
         gene_id = self.gene_id
         lsv_id = self.lsv_id
         h = self.matrix_hdf5.h
@@ -390,16 +409,28 @@ class MatrixType(ABC):
 
     @property
     def lsv_type(self):
+        """
+        Get lsv type from h5py file.
+        :return: string
+        """
         if self._lsv_type is None:
             self._lsv_type = self.get('lsv_type')
         return self._lsv_type
 
     @property
     def intron_retention(self):
+        """
+        Using the lsv type, does this lsv have intron retention.
+        :return: boolean
+        """
         return 'i' == self.lsv_type[-1]
 
     @property
     def reference_exon(self):
+        """
+        Get coordinates for the lsv reference exon.
+        :return:
+        """
         coords = self.lsv_id.split(':')[-1].split('-')
         ref_exon = []
         if len(coords) == 2:
@@ -419,41 +450,73 @@ class MatrixType(ABC):
 
     @property
     def target(self):
+        """
+        Use lsv_id to check if lsv is target.
+        :return: boolean
+        """
         return self.lsv_id.split(':')[-2] == 't'
 
     @property
     def source(self):
+        """
+        Inverse of target.
+        :return: boolean
+        """
         return not self.target
 
     @property
     def gene_id(self):
+        """
+        Convert lsv_id to gene id.
+        :return: string
+        """
         return lsv_id_to_gene_id(self.lsv_id)
 
     @property
     def a5ss(self):
+        """
+        Using lsv type, does this lsv have 5 prime splice sites.
+        :return: boolean
+        """
         return 'A5SS' in [self.reference_exon_ss(), self.other_exons_ss()]
 
     @property
     def a3ss(self):
+        """
+        Using lsv type, does this lsv have 3 prime splice sites.
+        :return: boolean
+        """
         return 'A3SS' in [self.reference_exon_ss(), self.other_exons_ss()]
 
     def reference_exon_ss(self):
+        """
+        Check for 3 prime or 5 prime splice sites in reference exon.
+        :return: list of strings
+        """
         try:
             ss = filter(lambda x: x != 'i', self.lsv_type.split('|')[1:])
             ss = map(lambda x: x.split('.')[0].split('e')[0], ss)
+
             if len(set(ss)) > 1:
                 if self.lsv_type[0] == 's':
                     return 'A5SS'
                 else:
                     return 'A3SS'
+
         except IndexError:
+
             if self.lsv_type == constants.NA_LSV:
                 return constants.NA_LSV
             raise
 
     def other_exons_ss(self):
+        """
+        Find 3 prime or 5 prime splice sites in exons that aren't the reference exon.
+        :return: List of strings
+        """
         try:
-            ss = filter(lambda x: x != 'i', self.lsv_type.split('|')[1:])
+
+            ss = filter(lambda lt: lt != 'i', self.lsv_type.split('|')[1:])
             exons = {}
             for x in ss:
                 exon = x.split('.')[0].split('e')[1]
@@ -468,6 +531,7 @@ class MatrixType(ABC):
                     return 'A3SS'
                 else:
                     return 'A5SS'
+
         except IndexError:
             if self.lsv_type == constants.NA_LSV:
                 return constants.NA_LSV
@@ -475,6 +539,10 @@ class MatrixType(ABC):
 
     @property
     def exon_skipping(self):
+        """
+        Using lsv type, does this lsv have exon skipping.
+        :return: boolean
+        """
         try:
             return self.exon_count > 2
         except TypeError:
@@ -484,6 +552,10 @@ class MatrixType(ABC):
 
     @property
     def exon_count(self):
+        """
+        Using lsv type, how many exons are in this lsv.
+        :return: integer
+        """
         try:
             exons = filter(lambda x: x != 'i', self.lsv_type.split('|')[1:])
             exons = map(lambda x: x.split('.')[0].split('e')[1], exons)
@@ -495,14 +567,26 @@ class MatrixType(ABC):
 
     @property
     def binary(self):
+        """
+        Using lsv type, is this lsv binary.
+        :return: boolean
+        """
         return len(self.lsv_type.split('|')[1:]) == 2
 
     @property
     def complex(self):
+        """
+        Inverse of binary.
+        :return: boolean
+        """
         return not self.binary
 
     @property
     def junctions(self):
+        """
+        Including intron retention, a 2d list of junction coordinates. Intron retention is the last set of coordinates.
+        :return: numpy matrix
+        """
         return self.get('junctions')
 
 
@@ -577,7 +661,8 @@ class Psi(MatrixHdf5):
             fields = ('bins', 'means', 'lsv_type', 'junctions')
             super().__init__(matrix_hdf5, lsv_id, fields)
 
-        def tsv_fieldnames(self):
+        @staticmethod
+        def tsv_fieldnames():
             """
             PSI fieldnames.
             :return: list of psi fieldnames
@@ -585,7 +670,8 @@ class Psi(MatrixHdf5):
             return ['Gene ID', 'LSV ID', 'LSV Type', 'E(PSI) per LSV junction', 'Var(E(PSI)) per LSV junction', 'A5SS',
                     'A3SS', 'ES', 'Num. Junctions', 'Num. Exons', 'Junctions coords', 'IR coords']
 
-        def tsv_row(self, **kwargs):
+        @staticmethod
+        def tsv_row(**kwargs):
             """
             Add columns that are not general to all analysis types.
             :param kwargs: voila file data

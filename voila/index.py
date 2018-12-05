@@ -7,10 +7,10 @@ import numpy as np
 
 from voila import constants
 from voila.api.view_matrix import ViewHeterogens, ViewDeltaPsi, ViewPsi
-from voila.api.view_splice_graph_sqlite import ViewSpliceGraph
+from voila.api.view_splice_graph import ViewSpliceGraph
 from voila.config import ViewConfig
 from voila.exceptions import UnknownAnalysisType, IndexNotFound
-from voila.utils.voila_log import voila_log
+from voila.voila_log import voila_log
 from voila.vlsv import matrix_area
 
 lsv_filters = ['a5ss', 'a3ss', 'exon_skipping', 'target', 'source', 'binary', 'complex']

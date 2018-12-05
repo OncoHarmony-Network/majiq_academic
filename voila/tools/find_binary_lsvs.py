@@ -2,7 +2,7 @@ from voila.tools import Tool
 from voila.tools.utils import io_caleb
 from voila.tools.utils.index_all import index_all
 from voila.tools.utils.percent_through_list import percent_through_list
-from voila.utils.voila_log import voila_log
+from voila.voila_log import voila_log
 import numpy as np
 import pandas as pa
 import copy

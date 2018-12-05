@@ -4,7 +4,7 @@ from bisect import bisect
 from flask import render_template, url_for, jsonify, request, session, Flask, Response
 
 from voila.api.view_matrix import ViewPsi
-from voila.api.view_splice_graph_sqlite import ViewSpliceGraph
+from voila.api.view_splice_graph import ViewSpliceGraph
 from voila.index import Index
 from voila.view import views
 from voila.view.datatables import DataTables
@@ -39,7 +39,7 @@ def index_table():
 
             psi = v.lsv(lsv_id)
             gene = sg.gene(gene_id)
-            lsv_exons = sg.lsv_exons(gene, psi.junctions)
+            lsv_exons = sg.lsv_exons(gene_id, psi.junctions)
 
             # I know that some lsv ids contain half exons... now we just need to find an example to work from
             assert 'na' not in lsv_id.split(':')[-1].split('-')
@@ -75,9 +75,8 @@ def nav(gene_id):
 @app.route('/splice-graph/<gene_id>', methods=('POST', 'GET'))
 def splice_graph(gene_id):
     with ViewSpliceGraph() as sg, ViewPsi() as v:
-        g = sg.gene(gene_id)
         exp_names = v.splice_graph_experiment_names
-        gd = sg.gene_experiment(g, exp_names)
+        gd = sg.gene_experiment(gene_id, exp_names)
         gd['experiment_names'] = exp_names
         gd['group_names'] = v.group_names
         return jsonify(gd)
@@ -103,7 +102,7 @@ def summary_table(gene_id):
             lsv_type = psi.lsv_type
 
             gene = sg.gene(gene_id)
-            lsv_exons = sg.lsv_exons(gene, psi.junctions)
+            lsv_exons = sg.lsv_exons(gene_id, psi.junctions)
             start, end = views.lsv_boundries(lsv_exons)
             ucsc = views.ucsc_href(sg.genome, gene['chromosome'], start, end)
 
@@ -166,7 +165,7 @@ def lsv_data(lsv_id):
     with ViewSpliceGraph() as sg, ViewPsi() as m:
         gene = sg.gene(gene_id)
         strand = gene['strand']
-        exons = sg.exons(gene)
+        exons = sg.exons(gene_id)
         exon_number = find_exon_number(exons)
 
         lsv = m.lsv(lsv_id)

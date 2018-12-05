@@ -8,7 +8,7 @@ from voila import constants
 from voila.api import Matrix, SpliceGraph
 from voila.exceptions import FoundNoSpliceGraphFile, FoundMoreThanOneSpliceGraph, \
     MixedAnalysisTypeVoilaFiles, FoundMoreThanOneVoilaFile, AnalysisTypeNotFound
-from voila.utils.voila_log import voila_log
+from voila.voila_log import voila_log
 
 _ViewConfig = namedtuple('ViewConfig', ['voila_file', 'voila_files', 'splice_graph_file', 'analysis_type', 'nproc',
                                         'force_index', 'debug', 'silent', 'port'])

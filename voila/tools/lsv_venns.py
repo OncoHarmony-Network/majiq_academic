@@ -1,8 +1,7 @@
 import os
-import pdb
 from voila.tools import Tool
 from voila.tools.utils import io_caleb
-from voila.utils.voila_log import voila_log
+from voila.voila_log import voila_log
 
 
 # Created by Matthew Gazzara, adapted by Caleb

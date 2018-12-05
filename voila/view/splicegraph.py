@@ -3,7 +3,7 @@ from bisect import bisect
 
 from flask import render_template, url_for, jsonify, request, session, Flask, redirect
 
-from voila.api.view_splice_graph_sqlite import ViewSpliceGraph
+from voila.api.view_splice_graph import ViewSpliceGraph
 
 app = Flask(__name__)
 app.secret_key = os.urandom(16)

@@ -5,7 +5,7 @@ from itertools import chain
 
 import numpy as np
 
-from voila.api.matrix_hdf5 import DeltaPsi, Psi, Heterogen
+from voila.api.matrix_hdf5 import DeltaPsi, Psi, Heterogen, MatrixType
 from voila.api.matrix_utils import unpack_means, unpack_bins, generate_excl_incl, generate_means, \
     generate_high_probability_non_changing, generate_variances
 from voila.config import ViewConfig
@@ -18,9 +18,6 @@ class ViewMatrix(ABC):
     experiment_names = None
     gene_ids = None
 
-    class _ViewMatrix:
-        pass
-
     def lsv_ids(self, gene_ids=None):
         raise NotImplementedError()
 
@@ -28,6 +25,11 @@ class ViewMatrix(ABC):
         raise NotImplementedError()
 
     def lsvs(self, gene_id=None):
+        """
+        Get a generator for all the lsvs.  If gene id is specified, then only return lsv for that gene.
+        :param gene_id: gene id
+        :return: generator of lsv objects
+        """
         if gene_id:
             for lsv_id in self.lsv_ids(gene_ids=[gene_id]):
                 yield self.lsv(lsv_id)
@@ -36,95 +38,165 @@ class ViewMatrix(ABC):
                 yield self.lsv(lsv_id)
 
 
+class ViewMatrixType(MatrixType):
+    def __init__(self, matrix_hdf5, lsv_id, fields):
+        super().__init__(matrix_hdf5, lsv_id, fields)
+
+    @property
+    def means(self):
+        raise NotImplementedError()
+
+    @property
+    def bins(self):
+        """
+        Get bins data from voila file.
+        :return: list
+        """
+        return unpack_bins(self.get('bins'))
+
+    @property
+    def junction_count(self):
+        """
+        Get count of all junctions in this lsv.
+        :return: integer
+        """
+        return len(tuple(self.means))
+
+
 class ViewPsi(Psi, ViewMatrix):
     def __init__(self):
+        """
+        View of the psi matrix. Used in creating tsv and html output.
+        """
         config = ViewConfig()
         super().__init__(config.voila_file)
 
-    class _ViewPsi(Psi._Psi, ViewMatrix._ViewMatrix):
-
+    class _ViewPsi(Psi._Psi, ViewMatrixType):
         @property
         def means(self):
+            """
+            Get means data from voila file.
+            :return: list
+            """
             return list(unpack_means(self.get('means')))
 
         @property
-        def group_means(self):
-            group_names = self.matrix_hdf5.group_names
-            yield group_names[0], list(self.means)
-
-        @property
-        def bins(self):
-            return unpack_bins(self.get('bins'))
-
-        @property
         def group_bins(self):
+            """
+            Get bins in a dictionary where the key in the name of the group it belongs to.
+            :return: generator of key, value
+            """
             group_names = self.matrix_hdf5.group_names
             yield group_names[0], self.bins
 
         @property
-        def variances(self):
-            return generate_variances(self.bins)
+        def group_means(self):
+            """
+            Get means data from voila file.
+            :return: generator
+            """
+            group_names = self.matrix_hdf5.group_names
+            yield group_names[0], list(self.means)
 
         @property
-        def junction_count(self):
-            return len(tuple(self.means))
+        def variances(self):
+            """
+            Create variance data of bins data.
+            :return: list
+            """
+            return generate_variances(self.bins)
 
     def lsv(self, lsv_id):
+        """
+        Get lsv object by lsv id.
+        :param lsv_id: lsv id
+        :return: lsv object
+        """
         return self._ViewPsi(self, lsv_id)
 
 
 class ViewDeltaPsi(DeltaPsi, ViewMatrix):
     def __init__(self):
+        """
+        View for delta psi matrix.  This is used in creation of tsv and html files.
+        """
         self.config = ViewConfig()
         super().__init__(self.config.voila_file)
 
-    class _ViewDeltaPsi(DeltaPsi._DeltaPsi, ViewMatrix._ViewMatrix):
+    class _ViewDeltaPsi(DeltaPsi._DeltaPsi, ViewMatrixType):
         def __init__(self, matrix_hdf5, lsv_id):
             self.config = matrix_hdf5.config
             super().__init__(matrix_hdf5, lsv_id)
 
         @property
-        def bins(self):
-            return unpack_bins(self.get('bins'))
-
-        @property
         def group_bins(self):
+            """
+            Get dictionary of bins by group name.
+            :return: generator of key, value
+            """
             group_names = self.matrix_hdf5.group_names
             for group_name, value in zip(group_names, self.get('group_bins')):
                 yield group_name, unpack_bins(value)
 
         @property
         def means(self):
+            """
+            Create mean data from bins data.
+            :return: list
+            """
             return generate_means(self.bins)
 
         @property
         def group_means(self):
+            """
+            Get dictionary of mean by group name.
+            :return: generator of key, value
+            """
             group_names = self.matrix_hdf5.group_names
             for group_name, means in zip(group_names, self.get('group_means')):
                 yield group_name, means.tolist()
 
         @property
         def excl_incl(self):
+            """
+            Using means data, create exclude/include list.
+            :return: list
+            """
             return generate_excl_incl(self.means)
 
-        @property
-        def junction_count(self):
-            return len(tuple(self.means))
-
         def is_lsv_changing(self, threshold):
+            """
+            Is lsv changing based on threshold supplied by user.
+            :param threshold: threshold value, usually 0.2
+            :return: boolean
+            """
             return is_lsv_changing(self.means, threshold)
 
         def probability_threshold(self):
+            """
+            Get probability that the junction in an LSV are changing.
+
+            :return: list of p values
+            """
             args = self.matrix_hdf5.args
             probability_threshold = args.probability_threshold
             threshold = args.probability_threshold
             return any(matrix_area(b, threshold=threshold) >= probability_threshold for b in self.bins)
 
         def high_probability_non_changing(self):
+            """
+            Get probability that junctions in an lsv aren't changing.
+            :return: list
+            """
             return generate_high_probability_non_changing(self.intron_retention, self.matrix_hdf5.prior,
                                                           self.config.non_changing_threshold, self.bins)
 
     def lsv(self, lsv_id):
+        """
+        Get delta psi object by lsv id.
+        :param lsv_id: lsv id
+        :return: delta psi object
+        """
         return self._ViewDeltaPsi(self, lsv_id)
 
 
@@ -157,10 +229,6 @@ class ViewHeterogens:
             return s.pop()
 
         @property
-        def gene_id(self):
-            return self.get_attr('gene_id')
-
-        @property
         def a5ss(self):
             return self.get_attr('a5ss')
 
@@ -175,14 +243,6 @@ class ViewHeterogens:
         @property
         def exon_count(self):
             return self.get_attr('exon_count')
-
-        @property
-        def target(self):
-            return self.get_attr('target')
-
-        @property
-        def binary(self):
-            return self.get_attr('binary')
 
         def junction_heat_map(self, stat_name, junc_idx):
             voila_files = ViewConfig().voila_files
@@ -417,7 +477,7 @@ class ViewHeterogen(Heterogen, ViewMatrix):
             print(voila_file)
             raise
 
-    class _ViewHeterogen(Heterogen._Heterogen, ViewMatrix._ViewMatrix):
+    class _ViewHeterogen(Heterogen._Heterogen, ViewMatrixType):
         def __init__(self, matrix_hdf5, lsv_id):
             super().__init__(matrix_hdf5, lsv_id)
 

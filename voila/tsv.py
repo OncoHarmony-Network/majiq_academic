@@ -8,12 +8,12 @@ import numpy as np
 
 from voila import constants
 from voila.api.view_matrix import ViewHeterogens, ViewPsi, ViewDeltaPsi
-from voila.api.view_splice_graph_sqlite import ViewSpliceGraph
+from voila.api.view_splice_graph import ViewSpliceGraph
 from voila.config import ViewConfig, TsvConfig
 from voila.exceptions import VoilaException, UnknownAnalysisType
-from voila.utils.voila_log import voila_log
 from voila.view import views
 from voila.vlsv import get_expected_psi, matrix_area
+from voila.voila_log import voila_log
 
 # lock used when writing files.
 lock = multiprocessing.Lock()
@@ -398,21 +398,21 @@ class HeterogenTsv(AnalysisTypeTsv):
                 for gene_id in self.gene_ids(q, e):
 
                     gene = sg.gene(gene_id)
-                    chromosome = gene.chromosome
+                    chromosome = gene['chromosome']
 
                     for het in self.lsvs(gene_id):
                         lsv_id = het.lsv_id
 
                         lsv_junctions = het.junctions
-                        annot_juncs = sg.annotated_junctions(gene, lsv_junctions)
-                        lsv_exons = sg.lsv_exons(gene, lsv_junctions)
+                        annot_juncs = sg.annotated_junctions(gene_id, lsv_junctions)
+                        lsv_exons = sg.lsv_exons(gene_id, lsv_junctions)
                         mean_psi = list(het.mean_psi)
                         ir_coords = intron_retention_coords(het, lsv_junctions)
                         start, end = views.lsv_boundries(lsv_exons)
 
                         row = {
-                            'Gene Name': gene.name,
-                            'Gene ID': gene.id,
+                            'Gene Name': gene['name'],
+                            'Gene ID': gene_id,
                             'LSV ID': lsv_id,
                             'LSV Type': het.lsv_type,
                             'A5SS': het.a5ss,
@@ -420,8 +420,8 @@ class HeterogenTsv(AnalysisTypeTsv):
                             'ES': het.exon_skipping,
                             'Num. Junctions': len(lsv_junctions),
                             'Num. Exons': het.exon_count,
-                            'chr': gene.chromosome,
-                            'strand': gene.strand,
+                            'chr': gene['chromosome'],
+                            'strand': gene['strand'],
                             'De Novo Junctions': semicolon(annot_juncs),
                             'Junctions coords': semicolon(
                                 '{0}-{1}'.format(start, end) for start, end in lsv_junctions

@@ -4,10 +4,9 @@ from voila.tools.utils import io_caleb
 from voila.tools import find_binary_lsvs
 from voila.tools.utils import random_merge_numpy
 from voila.tools.utils.percent_through_list import percent_through_list
-from voila.utils.voila_log import voila_log
+from voila.voila_log import voila_log
 import numpy as np
 import pandas as pa
-import pdb
 import copy
 import pickle as pkl
 

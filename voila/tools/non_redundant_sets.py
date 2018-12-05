@@ -2,15 +2,13 @@ import pdb
 from voila.tools import Tool
 from voila.tools import find_binary_lsvs
 from voila.tools.utils import io_caleb
-from random import shuffle
 from voila.tools.utils.most_common_elem import most_common
 from voila.tools.utils.percent_through_list import percent_through_list
-from voila.utils.voila_log import voila_log
+from voila.voila_log import voila_log
 import numpy as np
 import copy
 import pickle as pkl
 import os
-from operator import itemgetter
 
 # Caleb Matthew Radens
 # radlinsky@gmail.com

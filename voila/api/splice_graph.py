@@ -3,12 +3,17 @@ import sqlite3
 from operator import itemgetter
 from pathlib import Path
 
-from voila.api.splice_graph_abstract import SpliceGraphSQLAbstract
 from voila.constants import EXEC_DIR
 
 
-class SpliceGraphSQL(SpliceGraphSQLAbstract):
+class SpliceGraphSQL:
     def __init__(self, filename, delete=False):
+        """
+        Splice graph class to handle metadata and table information retrieval.
+        :param filename: database file name
+        :param delete: delete existing database file.
+        """
+
         try:
             filename = filename.decode("utf-8")
         except AttributeError:
@@ -23,11 +28,13 @@ class SpliceGraphSQL(SpliceGraphSQLAbstract):
         self.conn = sqlite3.connect(filename)
         self.conn.execute('pragma foreign_keys=ON')
 
+        # create tables in freshly delete file.
         if delete is True:
             with open(Path(EXEC_DIR) / 'api/model.sql', 'r') as sql:
                 self.conn.executescript(sql.read())
                 self.conn.commit()
 
+        # verify that file is a sqlite database.
         self.conn.execute('select * from file_version')
 
         self._genome = None
@@ -46,6 +53,10 @@ class SpliceGraphSQL(SpliceGraphSQLAbstract):
 
     @property
     def genome(self):
+        """
+        Get genome from data base.
+        :return: string
+        """
         if self._genome is None:
             query = self.conn.execute('SELECT name FROM genome')
             genome, = query.fetchone()
@@ -58,6 +69,11 @@ class SpliceGraphSQL(SpliceGraphSQLAbstract):
 
     @genome.setter
     def genome(self, g):
+        """
+        Write genome to databse.
+        :param g: genome value
+        :return: None
+        """
         self.conn.execute('''
                             INSERT 
                             INTO genome (name) 
@@ -66,6 +82,10 @@ class SpliceGraphSQL(SpliceGraphSQLAbstract):
 
     @property
     def experiment_names(self):
+        """
+        Get experiment names for database.
+        :return: list of strings
+        """
         if self._experiment_names is None:
             query = self.conn.execute('''
                                         SELECT name from experiment 
@@ -76,6 +96,11 @@ class SpliceGraphSQL(SpliceGraphSQLAbstract):
 
     @experiment_names.setter
     def experiment_names(self, names):
+        """
+        Write experiment names to database
+        :param names: list of experiment names
+        :return: None
+        """
         self.conn.executemany('''
                             INSERT 
                             INTO experiment (name)
@@ -84,6 +109,10 @@ class SpliceGraphSQL(SpliceGraphSQLAbstract):
 
     @property
     def file_version(self):
+        """
+        Get file version from database.
+        :return: string
+        """
         try:
             if self._file_version is None:
                 query = self.conn.execute('''
@@ -101,6 +130,11 @@ class SpliceGraphSQL(SpliceGraphSQLAbstract):
 
     @file_version.setter
     def file_version(self, version):
+        """
+        Write file version from constants to database.
+        :param version:
+        :return: None
+        """
         self.conn.execute('''
                             INSERT 
                             INTO main.file_version (value)
@@ -108,8 +142,15 @@ class SpliceGraphSQL(SpliceGraphSQLAbstract):
                             ''', version)
 
     def _iter_results(self, query, fieldnames):
+        """
+        Query blocks of 100 entries from database and then convert each line to a dictionary.
+
+        :param query: database query
+        :param fieldnames: table fieldnames
+        :return: generator of dictionaries
+        """
         while True:
-            fetch = query.fetchmany(1)
+            fetch = query.fetchmany(100)
             if not fetch:
                 break
             for x in fetch:
@@ -126,10 +167,19 @@ ir_reads_fieldnames = ('reads', 'experiment_name')
 
 class Genes(SpliceGraphSQL):
     def genes(self):
+        """
+        Get all the genes in the database.
+        :return: generator of dictionaries
+        """
         query = self.conn.execute('SELECT id, name, strand, chromosome FROM gene')
         return self._iter_results(query, gene_fieldnames)
 
     def gene(self, gene_id):
+        """
+        Get gene with gene id supplied.
+        :param gene_id: gene id
+        :return: dictionary
+        """
         query = self.conn.execute('SELECT id, name, strand, chromosome FROM gene WHERE id=?', (gene_id,))
         fetch = query.fetchone()
         if fetch:
@@ -137,11 +187,12 @@ class Genes(SpliceGraphSQL):
 
 
 class Exons(SpliceGraphSQL):
-    def exons(self, gene):
-        if isinstance(gene, str):
-            gene_id = gene
-        else:
-            gene_id = gene['id']
+    def exons(self, gene_id):
+        """
+        Get all exons for specified gene id
+        :param gene_id: gene id
+        :return: list of exons
+        """
 
         query = self.conn.execute('''
                                 SELECT gene_id, start, end, annotated_start, annotated_end, annotated 
@@ -152,11 +203,12 @@ class Exons(SpliceGraphSQL):
 
 
 class Junctions(SpliceGraphSQL):
-    def junctions(self, gene):
-        if isinstance(gene, str):
-            gene_id = gene
-        else:
-            gene_id = gene['id']
+    def junctions(self, gene_id):
+        """
+        Get list of junctions for specified gene id.
+        :param gene_id: gene id
+        :return: list of junction dictionaries
+        """
 
         query = self.conn.execute('''
                                 SELECT gene_id, start, end, has_reads, annotated
@@ -166,6 +218,13 @@ class Junctions(SpliceGraphSQL):
         return self._iter_results(query, junc_fieldnames)
 
     def junction_reads_exp(self, junction, experiment_names):
+        """
+        for a junction and a set of experiment names, get a list of reads.
+        :param junction: junction dictionary
+        :param experiment_names: list of experiment names
+        :return: list of reads dictionaries
+        """
+
         query = self.conn.execute('''
                                 SELECT reads, experiment_name 
                                 FROM junction_reads
@@ -175,19 +234,33 @@ class Junctions(SpliceGraphSQL):
                                 AND experiment_name IN ({})
                                 '''.format(','.join(["'{}'".format(x) for x in experiment_names])),
                                   itemgetter('start', 'end', 'gene_id')(junction))
+
         return self._iter_results(query, junc_reads_fieldnames)
 
 
 class IntronRetentions(SpliceGraphSQL):
-    def intron_retentions(self, gene):
+    def intron_retentions(self, gene_id):
+        """
+        Get all intron retentions for a gene id.
+        :param gene_id: gene id
+        :return: list of intron retention dictionaries
+        """
         query = self.conn.execute('''
                                 SELECT gene_id, start, end, has_reads, annotated
                                 FROM intron_retention
                                 WHERE gene_id=?
-                                ''', (gene['id'],))
+                                ''', (gene_id,))
+
         return self._iter_results(query, ir_fieldnames)
 
     def intron_retention_reads_exp(self, ir, experiment_names):
+        """
+        For an intron retention dictionary and a set of experiment names, get a list of intron retention reads.
+        :param ir: intron retention dictionary
+        :param experiment_names: list of experiment reads.
+        :return: list of intron retention reads
+        """
+        
         query = self.conn.execute('''
                                 SELECT reads, experiment_name 
                                 FROM intron_retention_reads

@@ -1,8 +1,6 @@
-import pdb
-
 import os
 from voila.tools import Tool
-from voila.utils.voila_log import voila_log
+from voila.voila_log import voila_log
 from voila.tools.utils import io_caleb
 from voila.tools import remove_dpsi_priors
 import pandas as pd
