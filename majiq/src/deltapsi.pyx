@@ -63,6 +63,7 @@ cdef void _core_deltapsi(object self):
     cdef vector[psi_distr_t] prior_m
     cdef psi_distr_t psi_border = psi_distr_t(nbins+1)
     cdef map[string, qLSV*] lsv_map
+    cdef dict prior_cond = {'mreads': self.prior_minreads, 'mpos': self.prior_minnonzero}
 
 
     majiq_logger.create_if_not_exists(self.outDir)
@@ -81,14 +82,16 @@ cdef void _core_deltapsi(object self):
     list_of_lsv1, exps1 = majiq_io.extract_lsv_summary(self.files1, epsi=lsv_empirical_psi1,
                                                        types_dict=lsv_type_dict,
                                                        minnonzero=self.minpos, min_reads=self.minreads,
-                                                       junc_info=junc_info, percent=self.min_exp, logger=logger)
+                                                       junc_info=junc_info, prior_conf=prior_cond,
+                                                       percent=self.min_exp, logger=logger)
 
     logger.info("Group %s: %s LSVs" % (self.names[0], len(list_of_lsv1)))
     lsv_empirical_psi2 = {}
     list_of_lsv2, exps2 = majiq_io.extract_lsv_summary(self.files2, epsi=lsv_empirical_psi2,
                                                        types_dict=lsv_type_dict,
                                                        minnonzero=self.minpos, min_reads=self.minreads,
-                                                       junc_info=junc_info, percent=self.min_exp, logger=logger)
+                                                       junc_info=junc_info, prior_conf=prior_cond,
+                                                       percent=self.min_exp, logger=logger)
 
     logger.info("Group %s: %s LSVs" % (self.names[1], len(list_of_lsv1)))
 

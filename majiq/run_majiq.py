@@ -117,25 +117,12 @@ def main():
     sampling.add_argument('--minpos', default=3, type=int,
                           help='Minimum number of start positions with at least 1 read for an event to be considered.'
                                '[Default: %(default)s]')
-    # weights = new_subparser()
-    # weights.add_argument('--weights-alpha', type=float, default=15.,
-    #                      help='Dispersion hyperparameter (Default: %(default)0.02f)')
-    # weights.add_argument('--weights-threshold', action=FRange01, default=0.75,
-    #                      help='Threshold hyperparameter (Default: %(default)0.02f)')
-    # weights.add_argument('--weights-local', dest='local', type=float, default=0.,
-    #                      help='Window for computation of local weights. If negative, uses a parametric approximation '
-    #                           'instead. [Default: %(default)0.02f]')
 
     psi = new_subparser()
     psi.add_argument('files', nargs='+', help='The experiment files to analyze. You can include more than one '
                                               '(they will all be analyzed independently though) Glob syntax supported.')
     psi.add_argument('-n', '--name', required=True, help="The names that identify each of the experiments.")
-    # psi.add_argument('--weights', dest="weights", default='None',
-    #                  help='Defines weights for each one of the replicas, for group1 and group2. The expected '
-    #                       'value is --weights [Auto|None|<w1[,w2,..]>]\n'
-    #                       '\t Auto will make majiq calculate the best weights, None will use uniform weights. '
-    #                       'Select the weights manually requires specifying one weight for each replica or an '
-    #                       'error will be triggered.')
+
 
     psi.add_argument('--output-type', choices=['voila', 'tsv', 'all'], default='all',
                      help='Defines the type of output file to be generated, voila file to be used in voila, '
@@ -160,19 +147,6 @@ def main():
     delta.add_argument('--output-type', choices=['voila', 'tsv', 'all'], default='all',
                        help='Defines the type of output file to be generated, voila file to be used in voila, '
                             'tsv with the lsv information or both. [Default: %(default)s]')
-
-    # delta.add_argument('--weights', dest="weights", nargs=2, default=['None', 'None'],
-    #                    help='Defines weights for each one of the replicas, for group1 and group2. The expected '
-    #                         'value is --weights [Auto|None|<w1[,w2,..]>] [Auto|None|<w\'1[,w\'2,..]>]\n'
-    #                         '\t Auto will make majiq calculate the best weights, None will use uniform weights. '
-    #                         'Select the weights manually requires specifying one weight for each replica or an '
-    #                         'error will be triggered.')
-
-    # wght = new_subparser()
-    # wght.add_argument('files', nargs='+', help='The experiment files to analyze. You can include more than one '
-    #                                            '(they will be analyzed independently though) Glob syntax supported.')
-    # wght.add_argument('-n', '--name', required=True, help="The names that identify each of the experiments. "
-    #                                                       "[Default: %(default)s]")
 
     htrgen = new_subparser()
     htrgen.add_argument('-grp1', dest="files1", nargs='+', required=True)

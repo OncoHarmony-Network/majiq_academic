@@ -142,7 +142,7 @@ cpdef vector[vector[psi_distr_t]] gen_prior_matrix(object lsv_type, dict lsv_emp
             prior_matrix[0][xx][yy] = np.log(np_pmatrix[0, xx, yy])
             prior_matrix[1][xx][yy] = np.log(np_pmatrix[1, xx, yy])
             # print('KLKKK2')
-    print_prior(prior_matrix, numbins)
+    # print_prior(prior_matrix, numbins)
     return prior_matrix
 
 
