@@ -137,12 +137,6 @@ def gene_view(summary_template, gene_id, view_matrix):
 
 
 if __name__ == '__main__':
-    import git
-
-    repo = git.Repo(search_parent_directories=True)
-    sha = repo.head.object.hexsha
-    print(sha[:7])
-
     app = get_app()
     app.config.update(
         DEBUG=True,

@@ -148,7 +148,7 @@ If you use MAJIQ in your published work, please cite this publication:
 _Vaquero-Garcia J, Barrera A, Gazzara MR, et al_. A new view of transcriptome complexity and regulation through the lens of local splicing variations.  eLife, 5, e11752. http://doi.org/10.7554/eLife.11
 
 ___
-**Quick start** {#QStart}
+**Quick start** 
 ============
 Pre MAJIQ
 ------------
@@ -479,13 +479,13 @@ Logger arguments:
 <!-- - `--debug`: Activate this flag to activate debug messages. -->
 ___
 
-# VOILA 
+# VOILA
 
 ## HTML5 Summaries
 
 ### View
 
-#### Usage 
+#### Usage
 
 Here is the command line usage statment output from `voila view --help`.
 ```
@@ -606,19 +606,19 @@ The results are broken into 10-genes per page summaries, with LSV quantification
 
 #### Summary Drop Down Menus
 
-- **Index**. Returns you to the index page. 
-- **Splice Graph**. There are two parts to this menu.  The left side has a form to add specific Splice Graphs to the 
-view.  The right side has a juction reads filter.  Select the checkbox to activate this form and then fill in the 
-fields to hide unwanted junctions. 
-- **LSV**.  This provids a form to filter out LSVs from the LSV summary table. 
+- **Index**. Returns you to the index page.
+- **Splice Graph**. There are two parts to this menu.  The left side has a form to add specific Splice Graphs to the
+view.  The right side has a juction reads filter.  Select the checkbox to activate this form and then fill in the
+fields to hide unwanted junctions.
+- **LSV**.  This provids a form to filter out LSVs from the LSV summary table.
 
-### TSV 
-VOILA provides a tab-delimited text file to allow users to parse MAJIQ results and further analyze particular LSVs or 
-genes of interest. Most fields are shared between single PSI and delta PSI computations for the expected values and 
-the confidence measures (variance in the case of single PSI and the probability of |delta psi| > 0.2 (or your 
-specified alternative threshold) in delta PSI analysis). The common fields are: Gene name;	LSV ID;  LSV Type;  LSV 
-attributes (A5SS, A3SS, ES, Num. Junctions and Num. Exons); chromosome; strand; LSV coordinates (junctions and exons 
-coordinates); and finally, if additional evidence is required to determine what is the start/end of an LSV, a list 
+### TSV
+VOILA provides a tab-delimited text file to allow users to parse MAJIQ results and further analyze particular LSVs or
+genes of interest. Most fields are shared between single PSI and delta PSI computations for the expected values and
+the confidence measures (variance in the case of single PSI and the probability of |delta psi| > 0.2 (or your
+specified alternative threshold) in delta PSI analysis). The common fields are: Gene name;	LSV ID;  LSV Type;  LSV
+attributes (A5SS, A3SS, ES, Num. Junctions and Num. Exons); chromosome; strand; LSV coordinates (junctions and exons
+coordinates); and finally, if additional evidence is required to determine what is the start/end of an LSV, a list
 with all possible alternative starts and ends is provided.
 
 #### Usage

@@ -103,7 +103,6 @@ cdef int _output_majiq_file(vector[LSV*] lsvlist, map[string, overGene_vect_t] g
                 irbool  = junc_ids[i][5]
                 chrom   = jid.split(b':')[0]
 
-            #jobj_ptr = new Jinfo(i, sreads, npos)
             find_gene_from_junc(gList, chrom, coord1, coord2, gene_l, irbool)
             if irbool == 0:
                 for gneObj in gene_l:
@@ -186,10 +185,7 @@ cdef int _output_majiq_file(vector[LSV*] lsvlist, map[string, overGene_vect_t] g
     # with gil:
     logger.info("Dump majiq file")
     majiq_io.dump_lsv_coverage_mat(out_file, cov_l, type_list, junc_info, experiment_name.decode('utf-8'))
-    logger.info("END DUMP")
-
     free_JinfoVec(jobj_vec) 
-    logger.info("KKKK3")
     nlsv = len(type_list)
 
     return nlsv

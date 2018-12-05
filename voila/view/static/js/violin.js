@@ -82,7 +82,7 @@ class Violin {
 
     }
 
-    async heterogen(svg) {
+    heterogen(svg) {
         this.violin_count = this.data.group_names.length;
         svg.setAttribute('height', this.svg_height);
         svg.setAttribute('width', this.svg_width);
@@ -103,7 +103,6 @@ class Violin {
         this.draw_histograms(hist, bins);
 
         hist
-            .selectAll('.violin')
             .attr('stroke', color)
             .attr('stroke-width', 1)
             .attr('fill', color)
@@ -152,7 +151,8 @@ class Violin {
                 x.domain(d3.extent(d));
                 y.domain([0, d.length - 1]);
                 return area(d)
-            });
+            })
+            .attr('data-group-idx', (d, i) => i);
     }
 
     mean_psi(m_psi, junc_idx) {
@@ -198,7 +198,7 @@ class Violin {
             .enter()
             .append('g')
             .attr('class', 'swarm-group')
-            .attr('data-group-index', (d, i) => i)
+            .attr('data-group-idx', (d, i) => i)
             .attr('transform', (d, i) => `translate(${i * (this.violin_width + this.violin_pad)})`)
             .selectAll('circle')
             .data(d => swarm_fn.data(d).arrange())
@@ -214,7 +214,7 @@ class Violin {
             .attr("r", circle_radius)
             .attr('data-mu', d => d.datum)
             .attr('data-exp-name', (d, i, a) => {
-                const grp_idx = a[i].closest('g').dataset.groupIndex;
+                const grp_idx = a[i].closest('g').dataset.groupIdx;
                 return experiment_names[grp_idx][i]
             })
     };

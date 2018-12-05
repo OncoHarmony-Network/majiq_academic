@@ -77,6 +77,12 @@ namespace grimoire{
             }
 
             template <class myRegion>
+            static bool isgreaterRegion(myRegion * a, myRegion * b){
+                return (a->get_start() > b->get_start()) ||
+                        (a->get_start() == b->get_start() && a->get_end() > b->get_end());
+            }
+
+            template <class myRegion>
             static bool RegionsOverlap(myRegion* t1, myRegion* t2){
                 return ( (t1->get_start() <= t2->get_end()) && (t1->get_end() >= t2->get_start()) ) ;
             }
