@@ -132,5 +132,6 @@ cdef extern from "grimoire.hpp" namespace "grimoire":
                              vector[Gene*]& oGeneList, bint ir) nogil ;
     void fill_junc_tlb(vector[LSV*]& lsv_list, map[string, int]& tlb) nogil ;
     bint isNullJinfo(Jinfo* x) nogil ;
+    void free_JinfoVec(vector[Jinfo*] jvec) nogil ;
     string key_format(string gid, int coord1, int coord2, bint ir) nogil ;
 
