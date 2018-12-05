@@ -102,9 +102,10 @@ cpdef vector[vector[psi_distr_t]] gen_prior_matrix(object lsv_type, dict lsv_emp
     logger.debug("'Best set' is %s events" % len(list_of_lsv))
     best_dpsi, best_dpsi_ir = _empirical_delta_psi(list_of_lsv, lsv_empirical_psi1, lsv_empirical_psi2, lsv_type)
     print(best_dpsi)
+    print(best_dpsi_ir)
 
     for prior_idx, best_delta_psi in enumerate((best_dpsi, best_dpsi_ir)):
-        if len(best_delta_psi) == 10:
+        if len(best_delta_psi) <= 100:
             if prior_idx == 0:
                 __load_default_prior(prior_matrix)
             else:
