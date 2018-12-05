@@ -90,23 +90,54 @@
 
                         });
 
-                    n.querySelectorAll('.psi-violin-plot circle')
-                        .forEach(c => {
-                            const tool_tip = document.querySelector('.violin-tool-tip');
-                            c.onmouseover = () => {
-                                c.style.fill = 'orange';
-                                tool_tip.querySelector('.value').textContent = c.dataset.mu;
-                                tool_tip.querySelector('.sample').textContent = c.dataset.expName;
-                                tool_tip.style.display = 'block';
-                            };
-                            c.onmouseout = () => {
-                                c.style.fill = null;
-                                tool_tip.style.display = 'none';
-                            };
-                            c.onmousemove = (e) => {
-                                tool_tip.style.top = (e.pageY - 90) + 'px';
-                                tool_tip.style.left = (e.pageX + 10) + 'px';
-                            };
+                    n.querySelectorAll('.psi-violin-plot')
+                        .forEach(v => {
+                            v.querySelectorAll('circle')
+                                .forEach(c => {
+                                    const tool_tip = document.querySelector('.violin-tool-tip');
+                                    c.onmouseover = () => {
+                                        c.style.fill = 'orange';
+                                        tool_tip.querySelector('.value').textContent = c.dataset.mu;
+                                        tool_tip.querySelector('.sample').textContent = c.dataset.expName;
+                                        tool_tip.style.display = 'block';
+                                    };
+                                    c.onmouseout = () => {
+                                        c.style.fill = null;
+                                        tool_tip.style.display = 'none';
+                                    };
+                                    c.onmousemove = (e) => {
+                                        tool_tip.style.top = (e.pageY - 90) + 'px';
+                                        tool_tip.style.left = (e.pageX + 10) + 'px';
+                                    };
+                                });
+
+                            v.querySelectorAll('.violin, .swarm-group')
+                                .forEach(h => {
+
+                                    h.onmouseover = () => {
+                                        const idx = h.dataset.groupIdx;
+                                        h
+                                            .closest('tr')
+                                            .querySelectorAll('.heat-map rect')
+                                            .forEach(r => r.dataset.columnIdx !== idx ? r.style.opacity = '0.2' : null);
+                                        h
+                                            .closest('tr')
+                                            .querySelectorAll('.heat-map g')
+                                            .forEach(g => {
+                                                if (g.dataset.rowIdx === idx) {
+                                                    g.querySelectorAll('rect')
+                                                        .forEach(r => r.style.opacity = null)
+                                                }
+                                            })
+                                    };
+
+                                    h.onmouseout = () => {
+                                        h
+                                            .closest('tr')
+                                            .querySelectorAll('.heat-map rect')
+                                            .forEach(r => r.style.opacity = r.style.stroke = null)
+                                    }
+                                })
                         })
                 }));
         })
