@@ -675,6 +675,17 @@ namespace grimoire {
         return (x == nullptr) ;
     }
 
+    void free_JinfoVec(vector<Jinfo*> jvec){     
+        int k = 0 ;
+        for (const auto &jobj_ptr: jvec){
+cerr << "KKK [" << k <<"]:" << jobj_ptr << "\n" ;
+          k ++ ;
+            if (jobj_ptr != nullptr) 
+                delete jobj_ptr ; 
+        } 
+        jvec.clear() ;
+    }
+
     string key_format(string gid, int coord1, int coord2, bool ir){
         const string g_string = ir? "IR:"+ gid : gid ;
         return(g_string + ":" + to_string(coord1) + "-" + to_string(coord2)) ;

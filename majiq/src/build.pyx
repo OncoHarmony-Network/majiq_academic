@@ -4,7 +4,7 @@ import psutil
 
 from majiq.src.internals.grimoire cimport Junction, Gene, Exon, LSV, Jinfo, Intron
 from majiq.src.internals.io_bam cimport IOBam, prepare_genelist, overGene_vect_t, free_genelist
-from majiq.src.internals.grimoire cimport find_intron_retention, find_gene_from_junc, isNullJinfo, fill_junc_tlb, key_format
+from majiq.src.internals.grimoire cimport find_intron_retention, find_gene_from_junc, isNullJinfo, fill_junc_tlb, key_format, free_JinfoVec
 from majiq.src.basic_pipeline import BasicPipeline, pipeline_run
 from majiq.src.config import Config
 import majiq.src.logger as majiq_logger
@@ -75,6 +75,7 @@ cdef int _output_majiq_file(vector[LSV*] lsvlist, map[string, overGene_vect_t] g
     cdef string key, chrom
     cdef Jinfo* jobj_ptr
 
+    logger.info('DUMP file %s' % experiment_name)
     jobj_vec = jinfoptr_vec_t(njlsv)
 
     # sg_filename = get_builder_splicegraph_filename(outDir.decode('utf-8')).encode('utf-8')
@@ -102,7 +103,7 @@ cdef int _output_majiq_file(vector[LSV*] lsvlist, map[string, overGene_vect_t] g
                 irbool  = junc_ids[i][5]
                 chrom   = jid.split(b':')[0]
 
-            jobj_ptr = new Jinfo(i, sreads, npos)
+            #jobj_ptr = new Jinfo(i, sreads, npos)
             find_gene_from_junc(gList, chrom, coord1, coord2, gene_l, irbool)
             if irbool == 0:
                 for gneObj in gene_l:
@@ -110,6 +111,7 @@ cdef int _output_majiq_file(vector[LSV*] lsvlist, map[string, overGene_vect_t] g
                     with gil:
                         key = key_format(gneObj.get_id(), coord1, coord2, False)
                         if j_tlb.count(key) > 0:
+                            jobj_ptr = new Jinfo(i, sreads, npos)
                             jobj_vec[j_tlb[key]] = jobj_ptr
 
             elif irb:
@@ -121,6 +123,7 @@ cdef int _output_majiq_file(vector[LSV*] lsvlist, map[string, overGene_vect_t] g
                         with gil:
                             key = key_format(gneObj.get_id(), ir_ptr.get_start(), ir_ptr.get_end(), True)
                         if j_tlb.count(key) > 0:
+                            jobj_ptr = new Jinfo(i, sreads, npos)
                             jobj_vec[j_tlb[key]] = jobj_ptr
                         # tlb_ir[ir_ptr.get_key(ir_ptr.get_gene())] = jobj_ptr
 
@@ -183,11 +186,11 @@ cdef int _output_majiq_file(vector[LSV*] lsvlist, map[string, overGene_vect_t] g
     # with gil:
     logger.info("Dump majiq file")
     majiq_io.dump_lsv_coverage_mat(out_file, cov_l, type_list, junc_info, experiment_name.decode('utf-8'))
-    nlsv = len(type_list)
+    logger.info("END DUMP")
 
-    for jobj_ptr in jobj_vec:
-        del jobj_ptr
-    jobj_vec.clear()
+    free_JinfoVec(jobj_vec) 
+    logger.info("KKKK3")
+    nlsv = len(type_list)
 
     return nlsv
 

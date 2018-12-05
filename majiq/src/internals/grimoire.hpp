@@ -386,6 +386,7 @@ namespace grimoire{
                              vector<Gene*>& oGeneList, bool ir) ;
     void fill_junc_tlb(vector<LSV*>& lsv_list, map<string, int>& tlb) ;
     bool isNullJinfo(Jinfo* x) ;
+    void free_JinfoVec(vector<Jinfo*> jvec);
     string key_format(string gid, int coord1, int coord2, bool ir) ;
 }
 
