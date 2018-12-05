@@ -316,7 +316,8 @@ cdef list _extract_lsv_summary(list files, int minnonzero, int min_reads, dict t
 
                 if lsv_id == pre_lsv:
                     lsv_t = lsv_t or (xx[3] >=min_reads and xx[4] >= minnonzero)
-                    lsv_t_prior = lsv_t or (xx[3] >=prior_conf['mreads'] and xx[4] >= prior_conf['mpos'])
+                    if prior_conf is not None:
+                        lsv_t_prior = lsv_t or (xx[3] >=prior_conf['mreads'] and xx[4] >= prior_conf['mpos'])
                     epsi_t.append(xx[3])
                 else:
                     try:
@@ -333,7 +334,8 @@ cdef list _extract_lsv_summary(list files, int minnonzero, int min_reads, dict t
                     epsi_t = [xx[3]]
                     pre_lsv = lsv_id
                     lsv_t = (xx[3] >=min_reads and xx[4] >= minnonzero)
-                    lsv_t_prior = lsv_t or (xx[3] >=prior_conf['mreads'] and xx[4] >= prior_conf['mpos'])
+                    if prior_conf is not None:
+                        lsv_t_prior = lsv_t or (xx[3] >=prior_conf['mreads'] and xx[4] >= prior_conf['mpos'])
             try:
                 lsv_list[pre_lsv] += int(lsv_t)
                 if epsi is not None:
