@@ -102,7 +102,7 @@ cdef int _output_majiq_file(vector[LSV*] lsvlist, map[string, overGene_vect_t] g
                 irbool  = junc_ids[i][5]
                 chrom   = jid.split(b':')[0]
 
-            jobj_ptr = new Jinfo(i, sreads, npos)
+
             find_gene_from_junc(gList, chrom, coord1, coord2, gene_l, irbool)
             if irbool == 0:
                 for gneObj in gene_l:
@@ -110,6 +110,7 @@ cdef int _output_majiq_file(vector[LSV*] lsvlist, map[string, overGene_vect_t] g
                     with gil:
                         key = key_format(gneObj.get_id(), coord1, coord2, False)
                         if j_tlb.count(key) > 0:
+                            jobj_ptr = new Jinfo(i, sreads, npos)
                             jobj_vec[j_tlb[key]] = jobj_ptr
 
             elif irb:
@@ -121,6 +122,7 @@ cdef int _output_majiq_file(vector[LSV*] lsvlist, map[string, overGene_vect_t] g
                         with gil:
                             key = key_format(gneObj.get_id(), ir_ptr.get_start(), ir_ptr.get_end(), True)
                         if j_tlb.count(key) > 0:
+                            jobj_ptr = new Jinfo(i, sreads, npos)
                             jobj_vec[j_tlb[key]] = jobj_ptr
                         # tlb_ir[ir_ptr.get_key(ir_ptr.get_gene())] = jobj_ptr
 

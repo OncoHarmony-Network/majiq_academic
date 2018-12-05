@@ -4,7 +4,7 @@ from scipy.stats import beta
 from scipy.misc import logsumexp
 import cython
 
-cdef np.float32_t PSEUDO = 1e-30
+cdef np.float32_t PSEUDO = 1e-20
 ctypedef np.float32_t DTYPE_t
 
 @cython.boundscheck(False) # turn off bounds-checking for entire function
@@ -93,6 +93,7 @@ cdef tuple _loglikelihood(np.ndarray[DTYPE_t, ndim=2] D, np.ndarray[DTYPE_t, ndi
     cdef float ll_sum
 
     for k in range(K):
+
         logp_DgK[:, k] = np.log(beta.pdf(D[:, 0], beta_mix[k, 0], beta_mix[k, 1]) + PSEUDO)
 
     logp_D = logp_DgK + logp_mix * np.ones(shape=(N, 1), dtype=np.float32)

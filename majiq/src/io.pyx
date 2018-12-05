@@ -24,11 +24,10 @@ cimport numpy as np
 
 cdef list accepted_transcripts = ['mRNA', 'transcript', 'lnc_RNA', 'miRNA', 'ncRNA',
                                   'rRNA', 'scRNA', 'snRNA', 'snoRNA', 'tRNA', 'pseudogenic_transcript',
-                                  'bidirectional_promoter_lncRNA', 'unconfirmed_transcript',
-                                  'three_prime_overlapping_ncrna']
+                                  'unconfirmed_transcript', 'three_prime_overlapping_ncrna']
 cdef str transcript_id_keys = 'ID'
 cdef list accepted_genes = ['gene', 'ncRNA_gene', 'pseudogene', 'C_gene_segment', 'D_gene_segment', 'J_gene_segment',
-                            'V_gene_segment', 'ncRNA_gene']
+                            'V_gene_segment', 'ncRNA_gene', 'bidirectional_promoter_lncRNA']
 cdef list gene_name_keys = ['Name', 'gene_name']
 cdef list gene_id_keys = ['ID', 'gene_id']
 
@@ -356,27 +355,33 @@ cdef list _extract_lsv_summary(list files, int minnonzero, int min_reads, dict t
 
                 if lsv_id == pre_lsv:
                     lsv_t = lsv_t or (xx[3] >=min_reads and xx[4] >= minnonzero)
+                    lsv_t_prior = lsv_t or (xx[3] >=min_reads and xx[4] >= minnonzero)
                     epsi_t.append(xx[3])
                 else:
                     try:
                         lsv_list[pre_lsv] += int(lsv_t)
                         if epsi is not None:
+                            lsv_list_prior[pre_lsv] += int(lsv_t_prior)
                             epsi[pre_lsv] += np.array(epsi_t)
                     except KeyError:
                         lsv_list[pre_lsv] = int(lsv_t)
                         if epsi is not None:
+                            lsv_list_prior[pre_lsv] = int(lsv_t_prior)
                             epsi[pre_lsv] = np.array(epsi_t)
 
                     epsi_t = [xx[3]]
                     pre_lsv = lsv_id
                     lsv_t = (xx[3] >=min_reads and xx[4] >= minnonzero)
+                    lsv_t_prior = lsv_t or (xx[3] >=min_reads and xx[4] >= minnonzero)
             try:
                 lsv_list[pre_lsv] += int(lsv_t)
                 if epsi is not None:
+                    lsv_list_prior[pre_lsv] += int(lsv_t_prior)
                     epsi[pre_lsv] += np.array(epsi_t)
             except KeyError:
                 lsv_list[pre_lsv] = int(lsv_t)
                 if epsi is not None:
+                    lsv_list_prior[pre_lsv] = int(lsv_t_prior)
                     epsi[pre_lsv] = np.array(epsi_t)
 
 

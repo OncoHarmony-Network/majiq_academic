@@ -358,18 +358,26 @@ namespace grimoire {
 
     }
 
-  int Gene::detect_lsvs(vector<LSV*> &lsv_list){
+    int Gene::detect_lsvs(vector<LSV*> &lsv_list){
 
         map<string, Exon*>::iterator exon_mapIt ;
         vector<LSV*> lsvGenes ;
         set<pair<set<string>, LSV*>> source ;
         LSV * lsvObj ;
         set<string> remLsv ;
+        const bool ss = strand_ == '+' ;
 
+        vector<Exon*> ex_vector ;
         for(const auto &exon_mapIt: exon_map_){
-            Exon * ex = exon_mapIt.second ;
+            ex_vector.push_back(exon_mapIt.second) ;
+        }
+        if (ss)
+            sort(ex_vector.begin(), ex_vector.end(), Exon::islowerRegion<Exon>) ;
+        else
+            sort(ex_vector.begin(), ex_vector.end(), Exon::isgreaterRegion<Exon>) ;
 
-            const bool ss = strand_ == '+' ;
+        for(const auto &ex: ex_vector){
+
             if (ex->is_lsv(ss)) {
                 lsvObj = new LSV(this, ex, ss) ;
                 set<string> t1 ;
@@ -380,6 +388,7 @@ namespace grimoire {
             }
 
             if (ex->is_lsv(!ss)) {
+//    cerr << " ####### " << id_ << " : " << strand_ << "\n" ;
 
                 lsvObj = new LSV(this, ex, !ss) ;
                 set<string> t1 ;
@@ -387,10 +396,18 @@ namespace grimoire {
                 bool rem_src = false ;
 
                 for (const auto &slvs: source){
+//                    for (const auto &xxx: slvs.first)
+//                        cerr << (slvs.second)->get_id() << " -> " << xxx <<"\n"
+//
                     set<string> d1 ;
                     set<string> d2 ;
                     set_difference((slvs.first).begin(), (slvs.first).end(), t1.begin(), t1.end(), inserter(d1, d1.begin())) ;
                     set_difference(t1.begin(), t1.end(), (slvs.first).begin(), (slvs.first).end(), inserter(d2, d2.begin())) ;
+
+//                    for (const auto &xxx: t1)
+//                        cerr << " @@ " << lsvObj->get_id() << " -> " << xxx <<"\n" ;
+//
+//                    cerr << " d2.size = " << d2.size() << " d1.size = "<< d1.size() << "\n";
 
                     if (d2.size() == 0){
                         rem_src = true ;
