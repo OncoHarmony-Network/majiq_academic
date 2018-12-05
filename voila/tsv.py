@@ -315,19 +315,19 @@ class PsiTsv(AnalysisTypeTsv):
                 for gene_id in self.gene_ids(q, e):
 
                     gene = sg.gene(gene_id)
-                    chromosome = gene.chromosome
+                    chromosome = gene['chromosome']
 
                     for psi in self.lsvs(gene_id):
                         lsv_id = psi.lsv_id
                         lsv_junctions = psi.junctions
-                        annot_juncs = sg.annotated_junctions(gene, lsv_junctions)
-                        lsv_exons = sg.lsv_exons(gene, lsv_junctions)
+                        annot_juncs = sg.annotated_junctions(gene_id, lsv_junctions)
+                        lsv_exons = sg.lsv_exons(gene_id, lsv_junctions)
                         ir_coords = intron_retention_coords(psi, lsv_junctions)
                         start, end = views.lsv_boundries(lsv_exons)
 
                         row = {
-                            '#Gene Name': gene.name,
-                            'Gene ID': gene.id,
+                            '#Gene Name': gene['name'],
+                            'Gene ID': gene_id,
                             'LSV ID': lsv_id,
                             'LSV Type': psi.lsv_type,
                             'A5SS': psi.a5ss,
@@ -335,8 +335,8 @@ class PsiTsv(AnalysisTypeTsv):
                             'ES': psi.exon_skipping,
                             'Num. Junctions': psi.junction_count,
                             'Num. Exons': psi.exon_count,
-                            'chr': gene.chromosome,
-                            'strand': gene.strand,
+                            'chr': gene['chromosome'],
+                            'strand': gene['strand'],
                             'De Novo Junctions': semicolon(annot_juncs),
                             'Junctions coords': semicolon(
                                 '{0}-{1}'.format(start, end) for start, end in lsv_junctions
@@ -468,14 +468,14 @@ class DeltaPsiTsv(AnalysisTypeTsv):
                 for gene_id in self.gene_ids(q, e):
 
                     gene = sg.gene(gene_id)
-                    chromosome = gene.chromosome
+                    chromosome = gene['chromosome']
 
                     for dpsi in self.lsvs(gene_id):
                         lsv_id = dpsi.lsv_id
 
                         lsv_junctions = dpsi.junctions
-                        annot_juncs = sg.annotated_junctions(gene, lsv_junctions)
-                        lsv_exons = sg.lsv_exons(gene, lsv_junctions)
+                        annot_juncs = sg.annotated_junctions(gene_id, lsv_junctions)
+                        lsv_exons = sg.lsv_exons(gene_id, lsv_junctions)
                         excl_incl = dpsi.excl_incl
                         group_means = dict(dpsi.group_means)
                         bins = dpsi.bins
@@ -483,8 +483,8 @@ class DeltaPsiTsv(AnalysisTypeTsv):
                         start, end = views.lsv_boundries(lsv_exons)
 
                         row = {
-                            '#Gene Name': gene.name,
-                            'Gene ID': gene.id,
+                            '#Gene Name': gene['name'],
+                            'Gene ID': gene_id,
                             'LSV ID': lsv_id,
                             'LSV Type': dpsi.lsv_type,
                             'A5SS': dpsi.a5ss,
@@ -492,8 +492,8 @@ class DeltaPsiTsv(AnalysisTypeTsv):
                             'ES': dpsi.exon_skipping,
                             'Num. Junctions': dpsi.junction_count,
                             'Num. Exons': dpsi.exon_count,
-                            'chr': gene.chromosome,
-                            'strand': gene.strand,
+                            'chr': gene['chromosome'],
+                            'strand': gene['strand'],
                             'De Novo Junctions': semicolon(annot_juncs),
                             'Junctions coords': semicolon(
                                 '{0}-{1}'.format(start, end) for start, end in lsv_junctions
