@@ -72,7 +72,7 @@ cdef int _output_majiq_file(vector[LSV*] lsvlist, map[string, overGene_vect_t] g
     cdef int junc_idx, njlsv = j_tlb.size()
     cdef jinfoptr_vec_t jobj_vec
     cdef vector[Gene*] gene_l
-    cdef string key, chrom
+    cdef string key, chrom, gid
     cdef Jinfo* jobj_ptr
 
     logger.info('DUMP file %s' % experiment_name)
@@ -109,18 +109,22 @@ cdef int _output_majiq_file(vector[LSV*] lsvlist, map[string, overGene_vect_t] g
                     update_splicegraph_junction(db, gneObj.get_id(), coord1, coord2, sreads, experiment_name)
                     with gil:
                         key = key_format(gneObj.get_id(), coord1, coord2, False)
-                        if j_tlb.count(key) > 0:
-                            jobj_ptr = new Jinfo(i, sreads, npos)
-                            jobj_vec[j_tlb[key]] = jobj_ptr
+                    if j_tlb.count(key) > 0:
+                        jobj_ptr = new Jinfo(i, sreads, npos)
+                        jobj_vec[j_tlb[key]] = jobj_ptr
 
             elif irb:
+                with gil:
+                    gid = jid.split(b':')[3]
                 for gneObj in gene_l:
+                    if gneObj.get_id() != gid:
+                        continue
                     irv = find_intron_retention(gneObj, coord1, coord2)
                     for ir_ptr in irv:
-                        sg_intron_retention_reads(db, sreads, experiment_name,  gneObj.get_id(),
+                        sg_intron_retention_reads(db, sreads, experiment_name,  gid,
                                                   ir_ptr.get_start(), ir_ptr.get_end())
                         with gil:
-                            key = key_format(gneObj.get_id(), ir_ptr.get_start(), ir_ptr.get_end(), True)
+                            key = key_format(gid, ir_ptr.get_start(), ir_ptr.get_end(), True)
                         if j_tlb.count(key) > 0:
                             jobj_ptr = new Jinfo(i, sreads, npos)
                             jobj_vec[j_tlb[key]] = jobj_ptr
