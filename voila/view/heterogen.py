@@ -2,13 +2,14 @@ import os
 from bisect import bisect
 from operator import itemgetter
 
-from flask import Flask, render_template, jsonify, url_for, request, session
+from flask import Flask, render_template, jsonify, url_for, request, session, Response
 
 from voila.api.view_matrix import ViewDeltaPsi, ViewHeterogens
 from voila.api.view_splice_graph import ViewSpliceGraph
 from voila.index import Index
 from voila.view import views
 from voila.view.datatables import DataTables
+from voila.view.forms import LsvFiltersForm
 
 app = Flask(__name__)
 app.secret_key = os.urandom(16)
@@ -16,7 +17,8 @@ app.secret_key = os.urandom(16)
 
 @app.route('/')
 def index():
-    return render_template('het_index.html')
+    form = LsvFiltersForm()
+    return render_template('het_index.html', form=form)
 
 
 @app.route('/gene/<gene_id>/')
@@ -230,6 +232,26 @@ def summary_table(lsv_id):
             ]
 
         return jsonify(dict(dt))
+
+
+@app.route('/download-lsvs', methods=('POST',))
+def download_lsvs():
+    dt = DataTables(Index.heterogen(), ('gene_name', 'lsv_id'), slice=False)
+
+    data = (d['lsv_id'].decode('utf-8') for d in dict(dt)['data'])
+    data = '\n'.join(data)
+
+    return Response(data, mimetype='text/plain')
+
+
+@app.route('/download-genes', methods=('POST',))
+def download_genes():
+    dt = DataTables(Index.heterogen(), ('gene_name', 'lsv_id'), slice=False)
+
+    data = set(d['gene_id'].decode('utf-8') for d in dict(dt)['data'])
+    data = '\n'.join(data)
+
+    return Response(data, mimetype='text/plain')
 
 
 @app.route('/copy-lsv', methods=('POST',))

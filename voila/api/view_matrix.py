@@ -237,6 +237,22 @@ class ViewHeterogens:
                 yield group_name, mean.tolist()
 
         @property
+        def target(self):
+            return self.get_attr('target')
+
+        @property
+        def source(self):
+            return self.get_attr('source')
+
+        @property
+        def binary(self):
+            return self.get_attr('binary')
+
+        @property
+        def complex(self):
+            return self.get_attr('complex')
+
+        @property
         def gene_id(self):
             return self.get_attr('gene_id')
 
