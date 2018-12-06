@@ -28,6 +28,9 @@ def gene(gene_id=None):
 
 @app.route('/gene-not-found/<gene_id>/')
 def gene_not_found(gene_id):
+    with ViewSpliceGraph() as sg:
+        if gene_id in sg.gene_ids:
+            return redirect(url_for('gene', gene_id=gene_id))
     return '<h1>' + gene_id + '</h1>' + '<h3>Gene ID was not found in splice graph.</h3>'
 
 
