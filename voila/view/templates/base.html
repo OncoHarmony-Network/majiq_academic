@@ -8,11 +8,19 @@
     <link rel="stylesheet" href="//cdn.datatables.net/1.10.19/css/jquery.dataTables.min.css">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/custom.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/lsv.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/copy_lsv.css') }}">
     {% block style %}{% endblock %}
 
 
 </head>
 <body>
+<div class="modal">
+    <div class="modal-content">
+        <span class="modal-close">&times;</span>
+        <p> Copy LSV text below:</p>
+        <input type="text" title="copy-lsv" placeholder="Getting LSV text...">
+    </div>
+</div>
 {% block header %}{% endblock %}
 {% block content %}{% endblock %}
 {% block footer %}{% endblock %}
@@ -31,6 +39,7 @@
 <script src="{{ url_for('static', filename='js/heatmap.js') }}"></script>
 <script src="{{ url_for('static', filename='js/colors.js') }}"></script>
 <script src="{{ url_for('static', filename='js/lsv.js') }}"></script>
+<script src="{{ url_for('static', filename='js/copy_lsv.js') }}"></script>
 
 {% block script %}{% endblock %}
 </html>

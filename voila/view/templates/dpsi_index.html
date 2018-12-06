@@ -33,15 +33,7 @@
                         });
 
 
-                    n.querySelectorAll('.copy-lsv')
-                        .forEach(c => {
-                            json_ajax('{{ url_for("copy_lsv") }}/' + encodeURIComponent(lsv_id))
-                                .then(lsv_data => {
-                                    new ClipboardJS(c, {
-                                        text: () => JSON.stringify(lsv_data).replace(/"/g, '\\"')
-                                    })
-                                })
-                        })
+                   copy_lsv_modal(n, '{{ url_for("copy_lsv") }}/' + encodeURIComponent(lsv_id))
                 })
             );
         })

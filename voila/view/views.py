@@ -1,7 +1,7 @@
 from operator import itemgetter
 from urllib.parse import urlencode
 
-from flask import jsonify, redirect, url_for, session, render_template
+from flask import jsonify, redirect, url_for, session, render_template, request
 from waitress import serve
 
 from voila import constants
@@ -42,21 +42,26 @@ def get_app():
 
 def copy_lsv(lsv_id, view_matrix):
     with ViewSpliceGraph() as sg, view_matrix() as m:
-        dpsi = m.lsv(lsv_id)
-        gene_id = dpsi.gene_id
+        lsv = m.lsv(lsv_id)
+        gene_id = lsv.gene_id
         gene = sg.gene(gene_id)
-        lsv_junctions = dpsi.junctions.tolist()
+        lsv_junctions = lsv.junctions.tolist()
         lsv_exons = sg.lsv_exons(gene_id, lsv_junctions)
 
         juncs = list(j for j in sg.junctions(gene_id) if [j['start'], j['end']] in lsv_junctions)
         exons = list(e for e in sg.exons(gene_id) if (e['start'], e['end']) in lsv_exons)
 
-        lsv_type = dpsi.lsv_type
+        lsv_type = lsv.lsv_type
         strand, chromosome, name = itemgetter('strand', 'chromosome', 'name')(gene)
         genome = sg.genome
 
-        group_bins = dict(dpsi.group_bins)
-        sample_names = m.group_names
+        if request.get_json():
+            sample_name = request.get_json().get('group_name', None)
+            sample_names = [sample_name]
+        else:
+            sample_names = m.group_names
+
+        group_bins = dict(lsv.group_bins)
         bins = [group_bins[sample_name] for sample_name in sample_names]
 
         splice_graphs = []
@@ -107,7 +112,7 @@ def lsv_boundries(lsv_exons):
     return start, end
 
 
-def gene_view(summary_template, gene_id, view_matrix):
+def gene_view(summary_template, gene_id, view_matrix, **kwargs):
     with view_matrix() as m:
         if gene_id not in m.gene_ids:
             return redirect(url_for('index'))
@@ -133,7 +138,9 @@ def gene_view(summary_template, gene_id, view_matrix):
             'href': href
         })
 
-        return render_template(summary_template, gene=gene)
+        kwargs['gene'] = gene
+
+        return render_template(summary_template, **kwargs)
 
 
 if __name__ == '__main__':

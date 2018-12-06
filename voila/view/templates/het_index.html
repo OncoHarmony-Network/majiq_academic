@@ -29,7 +29,10 @@
 
                             n.querySelectorAll('.lsv-cartoon')
                                 .forEach(s => lsv.cartoon(s));
-                        })
+                        });
+
+                    copy_lsv_modal_dropdown(n, '{{ url_for("copy_lsv") }}/' + encodeURIComponent(lsv_id))
+
                 })
             );
         })
@@ -71,7 +74,29 @@
                 },
                 {
                     targets: 3,
-                    sortable: false
+                    orderable: false,
+                    render: data => {
+                        const copy_lsv_dd = document.createElement('select');
+                        copy_lsv_dd.classList.add('copy-lsv');
+                        const opt = document.createElement('option');
+                        opt.textContent = 'Copy LSV';
+                        copy_lsv_dd.appendChild(opt);
+                        data.group_names.forEach(n => {
+                            const g_opt = document.createElement('option');
+                            g_opt.textContent = n;
+                            g_opt.value = n;
+                            copy_lsv_dd.appendChild(g_opt);
+                        });
+
+                        const ucsc_a = document.createElement('a');
+                        ucsc_a.href = data.ucsc;
+                        ucsc_a.target = '_blank';
+                        const ucsc_img = document.createElement('img');
+                        ucsc_img.src = '{{ url_for('static', filename="img/ucsc.png") }}';
+                        ucsc_a.appendChild(ucsc_img);
+
+                        return copy_lsv_dd.outerHTML + ucsc_a.outerHTML
+                    }
                 }
             ]
         });

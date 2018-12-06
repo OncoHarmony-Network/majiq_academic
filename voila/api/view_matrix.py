@@ -221,12 +221,24 @@ class ViewHeterogens:
             for f in voila_files:
                 with ViewHeterogen(f) as m:
                     try:
-                        het = m.heterogen(self.lsv_id)
+                        het = m.lsv(self.lsv_id)
                         s.add(getattr(het, attr))
                     except (GeneIdNotFoundInVoilaFile, LsvIdNotFoundInVoilaFile):
                         pass
-            assert len(s) == 1
+            assert len(s) == 1, s
             return s.pop()
+
+        @property
+        def group_bins(self):
+            mean_psi = self.mean_psi
+            mean_psi = np.array(mean_psi)
+            mean_psi = mean_psi.transpose((1, 0, 2))
+            for group_name, mean in zip(self.matrix_hdf5.group_names, mean_psi):
+                yield group_name, mean.tolist()
+
+        @property
+        def gene_id(self):
+            return self.get_attr('gene_id')
 
         @property
         def a5ss(self):
@@ -471,11 +483,7 @@ class ViewHeterogens:
 
 class ViewHeterogen(Heterogen, ViewMatrix):
     def __init__(self, voila_file):
-        try:
-            super().__init__(voila_file)
-        except OSError:
-            print(voila_file)
-            raise
+        super().__init__(voila_file)
 
     class _ViewHeterogen(Heterogen._Heterogen, ViewMatrixType):
         def __init__(self, matrix_hdf5, lsv_id):

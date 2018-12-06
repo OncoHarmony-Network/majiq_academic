@@ -153,8 +153,10 @@ class ViewSpliceGraph(SpliceGraph):
                                         (start!=-1 AND end!=-1 AND ? BETWEEN start and end)
                                         )  
                                         ''', (gene_id, junc[0], junc[1], junc[0], junc[1]))
+
             for x in query.fetchall():
                 rtn_set.add(x)
+
         return list(sorted(rtn_set))
 
     def lsv_introns(self, gene, lsv_exons):

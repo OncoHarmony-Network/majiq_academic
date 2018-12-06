@@ -7,6 +7,7 @@ from flask import Flask, render_template, jsonify, url_for, request, session
 from voila.api.view_matrix import ViewDeltaPsi, ViewHeterogens
 from voila.api.view_splice_graph import ViewSpliceGraph
 from voila.index import Index
+from voila.view import views
 from voila.view.datatables import DataTables
 
 app = Flask(__name__)
@@ -20,19 +21,10 @@ def index():
 
 @app.route('/gene/<gene_id>/')
 def gene(gene_id):
-    # For this gene, remove any already selected highlight/weighted lsvs from session.
-
-    highlight = session.get('highlight', {})
-    lsv_ids = [h for h in highlight if h.startswith(gene_id)]
-    for lsv_id in lsv_ids:
-        del highlight[lsv_id]
-    session['highlight'] = highlight
-
-    with ViewHeterogens() as m, ViewSpliceGraph() as sg:
-        gene = sg.gene(gene_id)
+    with ViewHeterogens() as m:
         lsv_data = list((lsv_id, m.lsv(lsv_id).lsv_type) for lsv_id in m.lsv_ids(gene_ids=[gene_id]))
         lsv_data.sort(key=lambda x: len(x[1].split('|')))
-        return render_template('het_summary.html', gene=gene, lsv_data=lsv_data)
+        return views.gene_view('het_summary.html', gene_id, ViewDeltaPsi, lsv_data=lsv_data, group_names=m.group_names)
 
 
 @app.route('/lsv-data', methods=('POST',))
@@ -79,7 +71,7 @@ def lsv_data(lsv_id):
 
 @app.route('/index-table', methods=('POST',))
 def index_table():
-    with ViewHeterogens() as p:
+    with ViewHeterogens() as p, ViewSpliceGraph() as sg:
         dt = DataTables(Index.heterogen(), ('gene_name', 'lsv_id'))
 
         for idx, index_row, records in dt.callback():
@@ -87,8 +79,21 @@ def index_table():
             values = [v.decode('utf-8') for v in values]
             lsv_id, gene_id, gene_name = values
             het = p.lsv(lsv_id)
-
-            records[idx] = [(url_for('gene', gene_id=gene_id), gene_name), lsv_id, het.lsv_type, '']
+            lsv_junctions = het.junctions
+            lsv_exons = sg.lsv_exons(gene_id, lsv_junctions)
+            start, end = views.lsv_boundries(lsv_exons)
+            gene = sg.gene(gene_id)
+            ucsc = views.ucsc_href(sg.genome, gene['chromosome'], start, end)
+            records[idx] = [
+                (url_for('gene', gene_id=gene_id),
+                 gene_name),
+                lsv_id,
+                het.lsv_type,
+                {
+                    'ucsc': ucsc,
+                    'group_names': p.group_names
+                }
+            ]
 
         return jsonify(dict(dt))
 
@@ -225,3 +230,9 @@ def summary_table(lsv_id):
             ]
 
         return jsonify(dict(dt))
+
+
+@app.route('/copy-lsv', methods=('POST',))
+@app.route('/copy-lsv/<lsv_id>', methods=('POST',))
+def copy_lsv(lsv_id):
+    return views.copy_lsv(lsv_id, ViewHeterogens)

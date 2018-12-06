@@ -1,7 +1,6 @@
 {% extends 'base_summary.html' %}
 
 {% block analysis_type_script %}
-
     <script>
         document.querySelectorAll('.lsv-cartoon').forEach(c => {
             const lsv_id = c.closest('.lsv').dataset.lsvId;
@@ -138,7 +137,7 @@
                                             .forEach(r => r.style.opacity = r.style.stroke = null)
                                     }
                                 })
-                        })
+                        });
                 }));
         })
             .observe(document.querySelector('.lsv-container'), {
@@ -209,6 +208,12 @@
                 const compact = parent.querySelector('.lsv-single-compact-percentiles');
                 $(violin).toggle();
                 $(compact).toggle();
+            });
+
+        document.querySelectorAll('.lsv')
+            .forEach(l => {
+                const lsv_id = l.dataset.lsvId;
+                copy_lsv_modal_dropdown(l, '{{ url_for("copy_lsv") }}/' + encodeURIComponent(lsv_id))
             })
 
     </script>
@@ -243,7 +248,12 @@
                             <div class="pure-control-group"><label for="psi-weighted">PSI Weighted</label><input
                                     id="psi-weighted" type="checkbox"></div>
                             <div class="pure-control-group">
-                                <button id="copy_lsv" class="pure-button">Copy LSV</button>
+                                <select class="copy-lsv">
+                                    <option>Copy LSV</option>
+                                    {% for grp in group_names %}
+                                        <option value="{{ grp }}">{{ grp }}</option>
+                                    {% endfor %}
+                                </select>
                             </div>
                         </fieldset>
                     </form>

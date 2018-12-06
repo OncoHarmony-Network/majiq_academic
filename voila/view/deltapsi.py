@@ -85,7 +85,7 @@ def index_table():
 
             gene = sg.gene(gene_id)
             lsv_junctions = dpsi.junctions
-            lsv_exons = sg.lsv_exons(gene, lsv_junctions)
+            lsv_exons = sg.lsv_exons(gene_id, lsv_junctions)
 
             start, end = views.lsv_boundries(lsv_exons)
             ucsc = views.ucsc_href(sg.genome, gene['chromosome'], start, end)
@@ -217,7 +217,7 @@ def summary_table(gene_id):
 
             gene = sg.gene(gene_id)
             lsv_junctions = dpsi.junctions
-            lsv_exons = sg.lsv_exons(gene, lsv_junctions)
+            lsv_exons = sg.lsv_exons(gene_id, lsv_junctions)
             start, end = views.lsv_boundries(lsv_exons)
             ucsc = views.ucsc_href(sg.genome, gene['chromosome'], start, end)
 
