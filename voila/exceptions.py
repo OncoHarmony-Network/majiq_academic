@@ -112,3 +112,8 @@ class AnalysisTypeNotFound(VoilaException):
         There was no analysis type found, which probably means there were no voila files found.
         """
         super().__init__('No Voila files were found in the files or directories provided.')
+
+
+class UnknownIndexFieldType(VoilaException):
+    def __init__(self, value):
+        super().__init__('Unkown field type found while generating index: {}, {}'.format(value, type(value)))

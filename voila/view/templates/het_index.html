@@ -40,15 +40,23 @@
                 childList: true,
             });
 
+        const form_to_json = (json_data) => {
+            $('.lsv-filters')
+                .serializeArray()
+                .map(d => {
+                    json_data[`lsv_filter[${d.name}]`] = d.value
+                });
+        };
 
-        $('#results').DataTable({
+        const $results = $('#results').DataTable({
             processing: true,
             serverSide: true,
             autoWidth: false,
             lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, "All"]],
             ajax: {
                 url: '{{ url_for("index_table") }}',
-                type: 'POST'
+                type: 'POST',
+                data: json_data => form_to_json(json_data)
             },
             columnDefs: [
                 {
@@ -101,6 +109,53 @@
             ]
         });
 
+        let to;
+        const reload_table = () => {
+            clearTimeout(to);
+            to = setTimeout(() => {
+                $results.ajax.reload()
+            }, 400);
+        };
+
+        function download(filename, text) {
+            var element = document.createElement('a');
+            element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(text));
+            element.setAttribute('download', filename);
+
+            element.style.display = 'none';
+            document.body.appendChild(element);
+
+            element.click();
+
+            document.body.removeChild(element);
+        }
+
+        document.querySelector('.lsv-filters').onchange = reload_table;
+
+        document.querySelector('.download-lsvs').onclick = (event) => {
+            event.preventDefault();
+
+            const search = document.querySelector('.lsv-container input[type=search]');
+            const form_data = {};
+            form_to_json(form_data);
+            form_data['search[value]'] = search.value;
+
+            send_form_ajax('{{ url_for("download_lsvs") }}', $.param(form_data))
+                .then(data => download('lsvs.txt', data));
+        };
+
+        document.querySelector('.download-genes').onclick = (event) => {
+            event.preventDefault();
+
+            const search = document.querySelector('.lsv-container input[type=search]');
+            const form_data = {};
+            form_to_json(form_data);
+            form_data['search[value]'] = search.value;
+
+            send_form_ajax('{{ url_for("download_genes") }}', $.param(form_data))
+                .then(data => download('genes.txt', data));
+        };
+
         $('#results tbody')
             .on('click', '.excl-incl-rect, .dpsi-violin', event => {
                 const parent = event.target.closest('td');
@@ -110,11 +165,47 @@
                 $(excl_incl).toggle();
             });
 
-
     </script>
 {% endblock %}
 
-{% block content %}
+{% block filters %}
+    <form class="lsv-filters pure-form pure-form-aligned">
+        <fieldset>
+            <legend>LSV Filters</legend>
+            <div class="pure-g">
+                {% for field in form %}
+                    {% if field.type != 'CSRFTokenField' %}
+                        <div class="pure-u-1-3">
+                            {{ field }}
+                            {{ field.label }}
+                        </div>
+                    {% endif %}
+                {% endfor %}
+            </div>
+        </fieldset>
+    </form>
+
+    <hr>
+
+    <form class="psi-filters pure-form pure-form-aligned">
+        <fieldset>
+            <div class="pure-g">
+                <div class="pure-u-1-4">
+                    <button type="submit" class="download-lsvs pure-button pure-button-primary">Download LSVs
+                    </button>
+                </div>
+
+                <div class="pure-u-1-4">
+                    <button type="submit" class="download-genes pure-button pure-button-primary">Download Genes
+                    </button>
+                </div>
+
+            </div>
+        </fieldset>
+    </form>
+{% endblock %}
+
+{% block index_table %}
     <div class="content">
     </div>
     <div class="lsv-container">

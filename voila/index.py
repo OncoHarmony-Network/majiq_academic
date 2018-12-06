@@ -1,5 +1,6 @@
 import json
 import os
+from itertools import chain
 from pathlib import Path
 
 import h5py
@@ -9,14 +10,14 @@ from voila import constants
 from voila.api.view_matrix import ViewHeterogens, ViewDeltaPsi, ViewPsi
 from voila.api.view_splice_graph import ViewSpliceGraph
 from voila.config import ViewConfig
-from voila.exceptions import UnknownAnalysisType, IndexNotFound
-from voila.voila_log import voila_log
+from voila.exceptions import UnknownAnalysisType, IndexNotFound, UnknownIndexFieldType
 from voila.vlsv import matrix_area
+from voila.voila_log import voila_log
 
 lsv_filters = ['a5ss', 'a3ss', 'exon_skipping', 'target', 'source', 'binary', 'complex']
 psi_keys = ['lsv_id', 'gene_id', 'gene_name'] + lsv_filters
 dpsi_keys = ['lsv_id', 'gene_id', 'gene_name', 'excl_incl', 'dpsi_threshold', 'confidence_threshold'] + lsv_filters
-het_keys = ['lsv_id', 'gene_id', 'gene_name', 'excl_incl', 'dpsi_threshold', 'confidence_threshold'] + lsv_filters
+het_keys = ['lsv_id', 'gene_id', 'gene_name'] + lsv_filters
 
 
 class Index:
@@ -40,17 +41,6 @@ class Index:
                 raise UnknownAnalysisType(analysis_type)
 
             index()
-
-    @staticmethod
-    def _check_strings(*strings):
-        """
-        Validate the strings are no longer then 250 characters. This is being deprecated for a more general approach
-        to strings were we find the max length a string for a column.
-        :param strings: list of strings
-        :return: None
-        """
-
-        assert any(len(str(s)) <= 250 for s in strings)
 
     @staticmethod
     def _index_in_voila(voila_file, remove_index=False):
@@ -86,6 +76,30 @@ class Index:
         with h5py.File(voila_file, 'a') as h:
             h.create_dataset('index', voila_index.shape, data=voila_index)
 
+    def _create_dtype(self, voila_index):
+        first_row = voila_index[0]
+        dtype = []
+
+        for field in first_row:
+            if isinstance(field, str):
+                dtype.append(len(field))
+            elif isinstance(field, bool):
+                dtype.append('?')
+            elif isinstance(field, np.float64):
+                dtype.append('f4')
+            else:
+                raise UnknownIndexFieldType(field)
+
+        for row in voila_index:
+            for idx, field in enumerate(row):
+                if dtype[idx] not in ('?', 'f4'):
+                    dtype[idx] = max(len(field), dtype[idx])
+
+        dtype = [d if d in ('?', 'f4') else 'S' + str(d) for d in dtype]
+        dtype = ','.join(dtype)
+
+        return dtype
+
     def _heterogen(self):
         """
         Create index for heterogen analysis type.  This is an odd case as there can be more then one voila file.  The
@@ -116,11 +130,15 @@ class Index:
                     gene_name = gene['name']
 
                     row = (lsv_id, gene_id, gene_name)
-                    self._check_strings(*row)
+
+                    lsv_f = [getattr(het, f) for f in lsv_filters]
+
+                    # For some reason, numpy needs these in tuples.
+                    row = tuple(chain(row, lsv_f))
 
                     voila_index.append(row)
 
-            dtype = np.dtype('S250,S250,S250')
+            dtype = self._create_dtype(voila_index)
             self._write_index(index_file, voila_index, dtype)
 
     def _deltapsi(self):
@@ -140,11 +158,6 @@ class Index:
 
                 log.info('Creating index: ' + voila_file)
                 voila_index = []
-                lsv_id_len = 0
-                gene_id_len = 0
-                gene_name_len = 0
-                dpsi_thresh_len = 0
-                confidence_thresh_len = 0
 
                 with ViewSpliceGraph() as sg, ViewDeltaPsi() as m:
                     for lsv_id in m.lsv_ids():
@@ -152,7 +165,7 @@ class Index:
 
                         gene_id = dpsi.gene_id
                         gene = sg.gene(gene_id)
-                        gene_name = gene.name
+                        gene_name = gene['name']
 
                         dpsi_thresh = dpsi.means
                         dpsi_thresh = np.abs(dpsi_thresh)
@@ -166,25 +179,18 @@ class Index:
                         confidence_thresh = list(max(matrix_area(b, x) for b in bins) for x in np.linspace(0, 1, 10))
                         confidence_thresh = json.dumps(confidence_thresh)
 
-                        # store the max length for each column
-                        lsv_id_len = max(lsv_id_len, len(lsv_id))
-                        gene_id_len = max(gene_id_len, len(gene_id))
-                        gene_name_len = max(gene_name_len, len(gene_name))
-                        dpsi_thresh_len = max(dpsi_thresh_len, len(dpsi_thresh))
-                        confidence_thresh_len = max(confidence_thresh_len, len(confidence_thresh))
-
                         excl_incl = dpsi.excl_incl
                         excl_incl = max(abs(a - b) for a, b in excl_incl)
 
                         lsv_f = [getattr(dpsi, f) for f in lsv_filters]
+                        row = (lsv_id, gene_id, gene_name, excl_incl, dpsi_thresh, confidence_thresh)
 
                         # For some reason, numpy needs these in tuples.
-                        row = tuple([lsv_id, gene_id, gene_name, excl_incl, dpsi_thresh, confidence_thresh] + lsv_f)
+                        row = tuple(chain(row, lsv_f))
                         voila_index.append(row)
 
-                dtype = 'S{},S{},S{},f4,S{},S{},?,?,?,?,?,?,?'.format(lsv_id_len, gene_id_len, gene_name_len,
-                                                                      dpsi_thresh_len, confidence_thresh_len)
-                self._write_index(voila_file, voila_file, dtype)
+                dtype = self._create_dtype(voila_index)
+                self._write_index(voila_file, voila_index, dtype)
 
     def _psi(self):
         """
@@ -202,9 +208,6 @@ class Index:
 
                 log.info('Creating index: ' + voila_file)
                 voila_index = []
-                lsv_id_len = 0
-                gene_id_len = 0
-                gene_name_len = 0
 
                 with ViewSpliceGraph() as sg, ViewPsi() as m:
                     for lsv_id in m.lsv_ids():
@@ -212,20 +215,16 @@ class Index:
 
                         gene_id = psi.gene_id
                         gene = sg.gene(gene_id)
-                        gene_name = gene.name
+                        gene_name = gene['name']
                         lsv_f = [getattr(psi, f) for f in lsv_filters]
-
-                        # Store max string length for each column.
-                        lsv_id_len = max(lsv_id_len, len(lsv_id))
-                        gene_id_len = max(gene_id_len, len(gene_id))
-                        gene_name_len = max(gene_name_len, len(gene_name))
+                        row = (lsv_id, gene_id, gene_name)
 
                         # for some reason, numpy needs these to tuples.
-                        row = tuple([lsv_id, gene_id, gene_name] + lsv_f)
+                        row = tuple(chain(row, lsv_f))
 
                         voila_index.append(row)
 
-                dtype = 'S{},S{},S{},?,?,?,?,?,?,?'.format(lsv_id_len, gene_id_len, gene_name_len)
+                dtype = self._create_dtype(voila_index)
                 self._write_index(voila_file, voila_index, dtype)
 
     @classmethod

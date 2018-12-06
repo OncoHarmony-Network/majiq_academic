@@ -1,5 +1,6 @@
 import os
 from bisect import bisect
+from operator import itemgetter
 
 from flask import render_template, url_for, jsonify, request, session, Flask, Response
 
@@ -33,9 +34,9 @@ def index_table():
         dt = DataTables(Index.psi(), ('gene_name', 'lsv_id'))
 
         for idx, index_row, records in dt.callback():
-            gene_name = index_row['gene_name'].decode('utf-8')
-            gene_id = index_row['gene_id'].decode('utf-8')
-            lsv_id = index_row['lsv_id'].decode('utf-8')
+            values = itemgetter('gene_name', 'gene_id', 'lsv_id')(index_row)
+            values = [x.decode('utf-8') for x in values]
+            gene_name, gene_id, lsv_id = values
 
             psi = v.lsv(lsv_id)
             gene = sg.gene(gene_id)
