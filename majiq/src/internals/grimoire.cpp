@@ -625,14 +625,16 @@ namespace grimoire {
             for (const auto &j: l->get_junctions()){
                 const string k = j->get_key(l->get_gene()) ;
                 const int n  = tlb.size() ;
-                tlb[k] = n ;
+                if (tlb.count(k) == 0)
+                    tlb[k] = n ;
             }
 
             Intron * ir_ptr = l->get_intron() ;
             if (ir_ptr != 0){
-                const string k = "IR:" + gid + ":" + to_string(ir_ptr->get_start()) + "-" + to_string(ir_ptr->get_end()) ;
+//                const string k = "IR:" + gid + ":" + to_string(ir_ptr->get_start()) + "-" + to_string(ir_ptr->get_end()) ;
                 const int n  = tlb.size() ;
-                tlb[k] = n ;
+                if (tlb.count(k) == 0)
+                    tlb[k] = n ;
             }
 
         }
@@ -648,6 +650,8 @@ namespace grimoire {
         if (low ==  gObj->intron_vec_.end()) return ir_vec ;
         for (; low != gObj->intron_vec_.end() ; low++){
             Intron * irp = *low;
+
+//      cerr << "in coords:" << start << "-" << end << " IRP->" << irp->get_start() << "-" << irp->get_end() << "\n" ;
             if(irp->get_start()> end){
                 break ;
             }
@@ -660,7 +664,7 @@ namespace grimoire {
         return ir_vec ;
     }
 
-    void find_gene_from_junc(map<string, vector<overGene*>> glist, string chrom, int start, int end,
+    void find_gene_from_junc(map<string, vector<overGene*>> & glist, string chrom, int start, int end,
                              vector<Gene*>& oGeneList, bool ir){
 
         Junction * junc = new Junction(start, end, false) ;
@@ -692,7 +696,7 @@ namespace grimoire {
         return (x == nullptr) ;
     }
 
-    void free_JinfoVec(vector<Jinfo*> jvec){     
+    void free_JinfoVec(vector<Jinfo*> & jvec){
         for (const auto &jobj_ptr: jvec){
             if (jobj_ptr != nullptr) 
                 delete jobj_ptr ; 

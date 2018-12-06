@@ -63,23 +63,22 @@ cpdef void __load_default_prior(vector[vector[psi_distr_t]]& prior_matrix):
     return
 
 #
-cdef print_prior(vector[vector[psi_distr_t]] matrix, int nbins):
-
-    sys.stderr('##MATRIX')
-    for xx in range(nbins):
-        for yy in range(nbins):
-           sys.stderr.write("%.2f, " % matrix[0][xx][yy])
-        sys.stderr.write("\n")
+# cdef print_prior(vector[vector[psi_distr_t]] matrix, int nbins):
+#
+#     sys.stderr('##MATRIX')
+#     for xx in range(nbins):
+#         for yy in range(nbins):
+#            sys.stderr.write("%.2f, " % matrix[0][xx][yy])
+#         sys.stderr.write("\n")
 #
 # import sys
 # def eprint(*args, **kwargs):
 #     print(*args, file=sys.stderr, **kwargs)
 
-cpdef vector[vector[psi_distr_t]] gen_prior_matrix(object lsv_type, dict lsv_empirical_psi1,
-                                                                      dict lsv_empirical_psi2, str output, list names,
-                                                                      str plotpath, int iter, float binsize,
-                                                                      int numbins=20, bint defaultprior=False,
-                                                                      int minpercent=-1, object logger=None):
+cpdef vector[vector[psi_distr_t]] gen_prior_matrix(object lsv_type, dict lsv_empirical_psi1, dict lsv_empirical_psi2,
+                                                   str output, list names, str plotpath, int iter, float binsize,
+                                                   int numbins=20, bint defaultprior=False, int minpercent=-1,
+                                                   object logger=None):
 
     cdef np.ndarray[np.float32_t] mixture_pdf
     cdef list_of_lsv, njun_prior, pmat

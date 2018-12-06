@@ -347,7 +347,6 @@ cdef list _extract_lsv_summary(list files, int minnonzero, int min_reads, dict t
                     lsv_list_prior[pre_lsv] = int(lsv_t_prior)
                     epsi[pre_lsv] = np.array(epsi_t)
 
-
         junc_info.update(lsv_junc_info)
         types_dict.update(lsv_types)
 
