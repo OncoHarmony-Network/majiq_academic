@@ -631,7 +631,7 @@ namespace grimoire {
 
             Intron * ir_ptr = l->get_intron() ;
             if (ir_ptr != 0){
-//                const string k = "IR:" + gid + ":" + to_string(ir_ptr->get_start()) + "-" + to_string(ir_ptr->get_end()) ;
+                const string k = "IR:" + gid + ":" + to_string(ir_ptr->get_start()) + "-" + to_string(ir_ptr->get_end()) ;
                 const int n  = tlb.size() ;
                 if (tlb.count(k) == 0)
                     tlb[k] = n ;
