@@ -13,7 +13,7 @@ app.secret_key = os.urandom(16)
 @app.route('/')
 def index():
     with ViewSpliceGraph() as sg:
-        first_gene_id = sorted(sg.gene_ids())[0]
+        first_gene_id = sorted(sg.gene_ids)[0]
         return redirect(url_for('gene', gene_id=first_gene_id))
 
 
@@ -31,6 +31,7 @@ def gene_not_found(gene_id):
     with ViewSpliceGraph() as sg:
         if gene_id in sg.gene_ids:
             return redirect(url_for('gene', gene_id=gene_id))
+
     return '<h1>' + gene_id + '</h1>' + '<h3>Gene ID was not found in splice graph.</h3>'
 
 
