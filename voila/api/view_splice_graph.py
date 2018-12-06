@@ -28,6 +28,7 @@ class ViewSpliceGraph(SpliceGraph):
             return exon['start'] + 10
         return exon['end']
 
+    @property
     def gene_ids(self):
         query = self.conn.execute('SELECT id FROM gene')
         return [x for x, in query.fetchall()]

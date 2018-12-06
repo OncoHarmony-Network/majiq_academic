@@ -1,9 +1,10 @@
 import os
 from bisect import bisect
 
-from flask import render_template, url_for, jsonify, request, session, Flask, redirect
+from flask import url_for, jsonify, request, session, Flask, redirect
 
 from voila.api.view_splice_graph import ViewSpliceGraph
+from voila.view import views
 
 app = Flask(__name__)
 app.secret_key = os.urandom(16)
@@ -19,22 +20,21 @@ def index():
 @app.route('/gene/<gene_id>/')
 @app.route('/gene')
 def gene(gene_id=None):
-    # For this gene, remove any already selected highlight/weighted lsvs from session.
-    highlight = session.get('highlight', {})
-    lsv_ids = [h for h in highlight if h.startswith(gene_id)]
-    for lsv_id in lsv_ids:
-        del highlight[lsv_id]
-    session['highlight'] = highlight
-
     with ViewSpliceGraph() as sg:
-        gene = sg.gene(gene_id)
-        return render_template('sg_summary.html', gene=gene)
+        if gene_id not in sg.gene_ids:
+            return redirect(url_for('gene_not_found', gene_id=gene_id))
+    return views.gene_view('sg_summary.html', gene_id, ViewSpliceGraph)
+
+
+@app.route('/gene-not-found/<gene_id>/')
+def gene_not_found(gene_id):
+    return '<h1>' + gene_id + '</h1>' + '<h3>Gene ID was not found in splice graph.</h3>'
 
 
 @app.route('/nav/<gene_id>', methods=('POST',))
 def nav(gene_id):
     with ViewSpliceGraph() as sg:
-        gene_ids = list(sorted(sg.gene_ids()))
+        gene_ids = sorted(sg.gene_ids)
         idx = bisect(gene_ids, gene_id)
 
         return jsonify({
@@ -46,9 +46,8 @@ def nav(gene_id):
 @app.route('/splice-graph/<gene_id>', methods=('POST', 'GET'))
 def splice_graph(gene_id):
     with ViewSpliceGraph() as sg:
-        g = sg.gene(gene_id)
         exp_names = [sg.experiment_names]
-        gd = sg.gene_experiment(g, exp_names)
+        gd = sg.gene_experiment(gene_id, exp_names)
         gd['experiment_names'] = exp_names
         gd['group_names'] = ['splice graph']
         return jsonify(gd)
