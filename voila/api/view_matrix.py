@@ -237,6 +237,10 @@ class ViewHeterogens:
                 yield group_name, mean.tolist()
 
         @property
+        def reference_exon(self):
+            return self.get_attr('reference_exon')
+        
+        @property
         def target(self):
             return self.get_attr('target')
 

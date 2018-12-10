@@ -446,7 +446,7 @@ class MatrixType(ABC):
                         ref_exon.append(-1)
                     else:
                         ref_exon.append(int(coord))
-        return ref_exon
+        return tuple(ref_exon)
 
     @property
     def target(self):

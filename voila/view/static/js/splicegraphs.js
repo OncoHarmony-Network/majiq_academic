@@ -584,7 +584,7 @@ class SpliceGraphs {
                     if (x.length === 1) {
                         x[0].junctions.forEach((j, i) => {
                             if (SpliceGraphs.array_equal(j, [d.start, d.end])) {
-                                w = x[0].group_means[grp][i] * 3;
+                                w = x[0].group_means[grp][exp][i] * 3;
                             }
                         });
                     }

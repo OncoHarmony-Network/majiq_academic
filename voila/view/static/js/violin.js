@@ -4,7 +4,8 @@ class Violin {
         this.violin_width = 75;
         this.violin_pad = 5;
         this.violin_height = 135;
-        this.x_axis_height = 125;
+        // this.x_axis_height = 125;
+        this.x_axis_height = 20;
         this.y_axis_width = 40;
         this.top_padding = 5;
     };

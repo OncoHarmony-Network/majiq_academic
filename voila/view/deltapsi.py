@@ -165,26 +165,38 @@ def lsv_highlight():
 
         session['highlight'] = highlight_dict
 
-        for lsv_id, (highlight, weighted) in highlight_dict.items():
-            if highlight:
-                dpsi = m.lsv(lsv_id)
+        splice_graphs = session.get('psi_init_splice_graphs', {})
 
-                junctions = dpsi.junctions.tolist()
+        if splice_graphs:
+            for lsv_id, (highlight, weighted) in highlight_dict.items():
+                if highlight:
+                    dpsi = m.lsv(lsv_id)
 
-                if dpsi.lsv_type[-1] == 'i':
-                    intron_retention = junctions[-1]
-                    junctions = junctions[:-1]
-                else:
-                    intron_retention = []
+                    junctions = dpsi.junctions.tolist()
 
-                lsvs.append({
-                    'junctions': junctions,
-                    'intron_retention': intron_retention,
-                    'reference_exon': list(dpsi.reference_exon),
-                    'weighted': weighted,
-                    'group_means': dict(dpsi.group_means)
+                    if dpsi.lsv_type[-1] == 'i':
+                        intron_retention = junctions[-1]
+                        junctions = junctions[:-1]
+                    else:
+                        intron_retention = []
 
-                })
+                    means = dict(dpsi.group_means)
+                    group_means = {}
+
+                    for sg in splice_graphs:
+                        grp_name, exp_name = sg
+                        if grp_name not in group_means:
+                            group_means[grp_name] = {}
+                        group_means[grp_name][exp_name] = means[grp_name]
+
+                    lsvs.append({
+                        'junctions': junctions,
+                        'intron_retention': intron_retention,
+                        'reference_exon': list(dpsi.reference_exon),
+                        'weighted': weighted,
+                        'group_means': group_means
+
+                    })
 
         return jsonify(lsvs)
 
