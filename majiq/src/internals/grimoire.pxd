@@ -6,7 +6,7 @@ from libcpp.list cimport list as clist
 from majiq.src.internals.psi cimport psi_distr_t
 
 ctypedef vector[overGene*] overGene_vect_t
-
+ctypedef vector[Gene*] Gene_vect_t
 cdef extern from "grimoire.hpp" namespace "grimoire":
     cdef cppclass overGene:
         pass
