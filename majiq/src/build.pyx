@@ -219,7 +219,7 @@ cdef int _output_majiq_file2(vector[LSV*] lsvlist, map[string, overGene_vect_t] 
     cdef int i, j, junc_idx, njlsv = j_tlb.size()
     cdef jinfoptr_vec_t jobj_vec
     cdef Gene_vect_t gene_l
-    cdef string key, chrom, lsvid, gid
+    cdef string key, chrom, lsvid, gid, jid
     cdef Jinfo* jobj_ptr
     cdef vector[np.float32_t] x
 
@@ -238,7 +238,7 @@ cdef int _output_majiq_file2(vector[LSV*] lsvlist, map[string, overGene_vect_t] 
     cov_l = list()
     junc_info = []
     type_list = []
-    print('PRE PRANGE')
+    # print('PRE PRANGE')
     for i in prange(njunc, nogil=True, num_threads=nthreads):
         gene_l = Gene_vect_t()
         with gil:
@@ -264,6 +264,7 @@ cdef int _output_majiq_file2(vector[LSV*] lsvlist, map[string, overGene_vect_t] 
 
         elif irb:
             with gil:
+                # print(i, jid, jid.split(b':'), junc_ids[i])
                 gid = jid.split(b':')[3]
             for gneObj in gene_l:
                 if gneObj.get_id() != gid:
