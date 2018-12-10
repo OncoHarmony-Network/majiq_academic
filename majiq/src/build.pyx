@@ -253,8 +253,8 @@ cdef int _output_majiq_file2(vector[LSV*] lsvlist, map[string, overGene_vect_t] 
         find_gene_from_junc(gList, chrom, coord1, coord2, gene_l, irbool)
         if irbool == 0:
             for gneObj in gene_l:
-                with gil:
-                    print('UPDATE SPLICEGRAPH', i)
+                # with gil:
+                    # print('UPDATE SPLICEGRAPH', i)
                 update_splicegraph_junction(db, gneObj.get_id(), coord1, coord2, sreads, experiment_name)
                 with gil:
                     key = key_format(gneObj.get_id(), coord1, coord2, False)
@@ -263,7 +263,11 @@ cdef int _output_majiq_file2(vector[LSV*] lsvlist, map[string, overGene_vect_t] 
                         jobj_vec[j_tlb[key]] = jobj_ptr
 
         elif irb:
+            with gil:
+                gid = jid.split(b':')[3]
             for gneObj in gene_l:
+                if gneObj.get_id() != gid:
+                    continue
                 irv = find_intron_retention(gneObj, coord1, coord2)
                 for ir_ptr in irv:
                     sg_intron_retention_reads(db, sreads, experiment_name,  gneObj.get_id(),
