@@ -356,6 +356,13 @@ class SpliceGraphs {
             });
     }
 
+    style_denovo_exts(sg) {
+        d3.select(sg)
+            .selectAll('.denovo-ext')
+            .attr('fill', 'green')
+            .attr('fill-opacity', 0.3)
+    }
+
     style_exons(sg, gene, lsvs) {
         // change opacity for 'hidden' elements
         d3.select(sg).selectAll('.exon, .half-exon, .exon-number')
@@ -490,6 +497,37 @@ class SpliceGraphs {
             });
     }
 
+    denovo_ext(sg) {
+        const x = this.x;
+        const y = this.y;
+        const exon_height = this.exon_height;
+
+        d3.select(sg)
+            .selectAll('.denovo-ext.end')
+            .interrupt()
+            .transition(this.t())
+            .attr('points', d => {
+                return [
+                    [x(d.annotated_end), y(0)].join(' '),
+                    [x(d.end), y(0)].join(' '),
+                    [x(d.end), y((exon_height))].join(' '),
+                    [x(d.annotated_end), y(exon_height)].join(' ')
+                ].join(', ');
+            });
+
+        d3.select(sg)
+            .selectAll('.denovo-ext.start')
+            .interrupt()
+            .transition(this.t())
+            .attr('points', d => {
+                return [
+                    [x(d.start), y(0)].join(' '),
+                    [x(d.annotated_start), y(0)].join(' '),
+                    [x(d.annotated_start), y((exon_height))].join(' '),
+                    [x(d.start), y(exon_height)].join(' ')
+                ].join(', ');
+            });
+    }
 
     exon_numbers(sg, gene) {
         const exons_nums = d3.select(sg).selectAll('.exon-number');
@@ -605,31 +643,22 @@ class SpliceGraphs {
             .transition(this.t())
             .attr('x', d => this.x(d))
             .attr('y', this.y(this.bottom_icons - 13))
-            .attr('text-anchor', () => {
-                if (strand === '+')
-                    return 'start';
-                else
-                    return 'end'
-            })
+            .attr('text-anchor', strand === '+' ? 'start' : 'middle')
             .attr('font-weight', 'bold')
-            .text(() => {
-                if (strand === '+')
-                    return '↳';
-                else
-                    return '↵'
-            })
+            .text(() => strand === '+' ? '↳' : '^')
     }
 
     alt_ends(sg) {
+        const strand = this.gene.strand;
         d3.select(sg)
             .selectAll('.alt_end')
             .interrupt()
             .transition(this.t())
             .attr('x', d => this.x(d))
             .attr('y', this.y(this.bottom_icons - 13))
-            .attr('text-anchor', 'middle')
+            .attr('text-anchor', strand === '+' ? 'middle' : 'start')
             .attr('font-weight', 'bold')
-            .text('^')
+            .text(() => strand === '+' ? '^' : '↳')
     }
 
 
@@ -765,6 +794,26 @@ class SpliceGraphs {
             .append('text')
             .attr('class', 'exon-number');
 
+        const denovo_ext_ends = this.gene.exons
+            .filter(e => e.annotated)
+            .filter(e => e.end > e.annotated_end);
+
+        const denovo_ext_starts = this.gene.exons
+            .filter(e => e.annotated)
+            .filter(e => e.start < e.annotated_start);
+
+        g.selectAll('.denovo-ext-end')
+            .data(denovo_ext_ends)
+            .enter()
+            .append('polygon')
+            .attr('class', 'denovo-ext end');
+
+        g.selectAll('.denovo-ext-start')
+            .data(denovo_ext_starts)
+            .enter()
+            .append('polygon')
+            .attr('class', 'denovo-ext start');
+
         const junc_grps = g.selectAll('.junction-grp')
             .data(gene.junctions)
             .enter()
@@ -830,11 +879,13 @@ class SpliceGraphs {
         this.ss5p(sg, gene);
         this.alt_starts(sg);
         this.alt_ends(sg);
+        this.denovo_ext(sg);
 
         // add style to Splice Graph elements
         this.style_exons(sg, gene, lsvs);
         this.style_junctions(sg, gene, lsvs);
         this.style_intron_retention(sg, gene, lsvs);
+        this.style_denovo_exts(sg);
     }
 
     mutation_observer() {

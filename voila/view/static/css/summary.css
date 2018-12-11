@@ -208,3 +208,6 @@ form.het-highlight-form label {
     width: 500px;
 }
 
+.denovo-ext, .exon-number {
+    pointer-events: none;
+}

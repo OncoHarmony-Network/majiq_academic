@@ -154,7 +154,7 @@ def find_exon_number(exons, ref_exon, strand):
                 return len(exons) - idx
             else:
                 return idx + 1
-    return ''
+    return 'unk'
 
 
 if __name__ == '__main__':
