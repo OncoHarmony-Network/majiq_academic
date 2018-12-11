@@ -286,8 +286,6 @@ cdef int _output_majiq_file2(vector[LSV*] lsvlist, map[string, overGene_vect_t] 
     junc_info = []
     type_list = []
 
-    logger.info('PRE PRANGE %s' % njunc)
-
     for j in prange(nlsv, nogil=True, num_threads=nthreads):
         thread_id = parallel.threadid()
         lsv_ptr = lsvlist[j]
@@ -297,62 +295,41 @@ cdef int _output_majiq_file2(vector[LSV*] lsvlist, map[string, overGene_vect_t] 
         with gil:
             type_list.append((lsvid.decode('utf-8'), lsv_ptr.get_type()))
 
-        with gil:
-            logger.info('[%s] PRE JUNC' % thread_id)
         for junc in lsv_ptr.get_junctions():
 
             key = junc.get_key(lsv_ptr.get_gene())
-            with gil:
-                logger.info('[%s] junc: %s - %s' % (thread_id, key.decode('utf-8'), lsv_ptr.get_type().decode('utf-8')))
             # with gil:
-            #     print (key, j_tlb[key], "{0:x}".format(<unsigned long> jobj_vec[j_tlb[key]]))
+            #     logger.info('[%s] junc: %s - %s' % (thread_id, key.decode('utf-8'), lsv_ptr.get_type().decode('utf-8')))
             if j_tlb.count(key) > 0 and not isNullJinfo(jobj_vec[j_tlb[key]]):
-                with gil:
-                    logger.info('[%s] in if' % thread_id)
                 jobj_ptr = jobj_vec[j_tlb[key]]
                 sreads = jobj_ptr.sreads
                 npos = jobj_ptr.npos
 
                 with gil:
-                    logger.info('[%s] KK1 %s ' %(thread_id, jobj_ptr.index))
                     cov_l.append(boots[jobj_ptr.index])
                     junc_info.append((lsvid.decode('utf-8'), junc.get_start(), junc.get_end(), sreads, npos))
             else:
                 with gil:
-                    logger.info('[%s] KK1 else' % thread_id )
                     x = np.zeros(shape=msamples, dtype=np.float32)
                     cov_l.append(x)
                     junc_info.append((lsvid.decode('utf-8'), junc.get_start(), junc.get_end(), 0, 0))
-        with gil:
-            logger.info('[%s] PRE IR ' %(thread_id))
         ir_ptr = lsv_ptr.get_intron()
-        with gil:
-            logger.info('[%s] PRE IR 2' %(thread_id))
         if irb and ir_ptr != <Intron * > 0:
-            with gil:
-                logger.info('[%s] PRE IR 3' %(thread_id))
             key = key_format(lsv_ptr.get_gene().get_id(), ir_ptr.get_start(), ir_ptr.get_end(), True)
-            with gil:
-                logger.info('[%s] PRE IR 4 %s' %(thread_id, key.decode('utf-8')))
             if j_tlb.count(key) > 0 and not isNullJinfo(jobj_vec[j_tlb[key]]):
                 jobj_ptr = jobj_vec[j_tlb[key]]
                 sreads = jobj_ptr.sreads
                 npos = jobj_ptr.npos
                 with gil:
-                    logger.info('[%s] IR KK1 %s' %(thread_id, jobj_ptr.index))
                     cov_l.append(boots[jobj_ptr.index])
                     junc_info.append((lsvid.decode('utf-8'), junc.get_start(), junc.get_end(), sreads, npos))
 
             else:
                 with gil:
-                    logger.info('[%s] IR KK1 else ' % thread_id)
                     x = np.zeros(shape=msamples, dtype=np.float32)
                     cov_l.append(x)
                     junc_info.append((lsvid.decode('utf-8'), junc.get_start(), junc.get_end(), 0, 0))
-            with gil:
-                logger.info("[%s] IR END" % thread_id)
-        with gil:
-            logger.info("[%s] END" % thread_id)
+
     logger.info("Dump majiq file")
     majiq_io.dump_lsv_coverage_mat(out_file, cov_l, type_list, junc_info, experiment_name.decode('utf-8'))
     free_JinfoVec(jobj_vec)
