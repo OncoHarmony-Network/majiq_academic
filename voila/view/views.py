@@ -143,6 +143,20 @@ def gene_view(summary_template, gene_id, view_matrix, **kwargs):
         return render_template(summary_template, **kwargs)
 
 
+def find_exon_number(exons, ref_exon, strand):
+    exons = filter(lambda e: -1 not in [e['start'], e['end']], exons)
+    exons = list(exons)
+
+    for idx, exon in enumerate(exons):
+
+        if (exon['start'], exon['end']) == ref_exon:
+            if strand == '-':
+                return len(exons) - idx
+            else:
+                return idx + 1
+    return ''
+
+
 if __name__ == '__main__':
     app = get_app()
     app.config.update(

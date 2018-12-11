@@ -242,5 +242,7 @@ class ViewSpliceGraph(SpliceGraph):
         gene_dict['junction_reads'] = junc_reads
         gene_dict['intron_retention_reads'] = ir_reads
         gene_dict['genome'] = self.genome
+        gene_dict['alt_starts'] = tuple(list(a.values())[0] for a in self.alt_starts(gene_id))
+        gene_dict['alt_ends'] = tuple(list(a.values())[0] for a in self.alt_ends(gene_id))
 
         return gene_dict

@@ -149,25 +149,14 @@ def psi_splice_graphs():
 @app.route('/lsv-data', methods=('POST',))
 @app.route('/lsv-data/<lsv_id>', methods=('POST',))
 def lsv_data(lsv_id):
-    gene_id = ':'.join(lsv_id.split(':')[:-2])
-    ref_exon = list(map(int, lsv_id.split(':')[-1].split('-')))
-
-    def find_exon_number(exons):
-        exons = filter(lambda e: -1 not in [e['start'], e['end']], exons)
-        exons = list(exons)
-
-        for idx, exon in enumerate(exons):
-            if [exon['start'], exon['end']] == ref_exon:
-                if strand == '-':
-                    return len(exons) - idx
-                else:
-                    return idx + 1
-
     with ViewSpliceGraph() as sg, ViewPsi() as m:
+        psi = m.lsv(lsv_id)
+        ref_exon = psi.reference_exon
+        gene_id = psi.gene_id
         gene = sg.gene(gene_id)
         strand = gene['strand']
         exons = sg.exons(gene_id)
-        exon_number = find_exon_number(exons)
+        exon_number = views.find_exon_number(exons, ref_exon, strand)
 
         lsv = m.lsv(lsv_id)
 

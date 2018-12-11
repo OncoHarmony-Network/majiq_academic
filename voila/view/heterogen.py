@@ -45,40 +45,18 @@ def gene(gene_id):
 @app.route('/lsv-data', methods=('POST',))
 @app.route('/lsv-data/<lsv_id>', methods=('POST',))
 def lsv_data(lsv_id):
-    def find_exon_number(exons):
-        ref_exon = list(map(int, lsv_id.split(':')[-1].split('-')))
-        exons = filter(lambda e: -1 not in [e['start'], e['end']], exons)
-        exons = list(exons)
-
-        for idx, exon in enumerate(exons):
-            if [exon['start'], exon['end']] == ref_exon:
-                if strand == '-':
-                    return len(exons) - idx
-                else:
-                    return idx + 1
-
     with ViewSpliceGraph() as sg, ViewHeterogens() as m:
-        gene_id = ':'.join(lsv_id.split(':')[:-2])
+        het = m.lsv(lsv_id)
+        gene_id = het.gene_id
         gene = sg.gene(gene_id)
         strand = gene['strand']
         exons = sg.exons(gene_id)
-
-        # return empty string when reference exon is a half exon
-        try:
-            exon_number = find_exon_number(exons)
-        except ValueError:
-            exon_number = ''
-
-        dpsi = m.lsv(lsv_id)
+        ref_exon = het.reference_exon
+        exon_number = views.find_exon_number(exons, ref_exon, strand)
 
         return jsonify({
             'lsv': {
-                # 'excl_incl': list(dpsi.excl_incl),
-                'junctions': dpsi.junctions.tolist(),
-                # 'means': list(dpsi.means),
-                # 'bins': dpsi.bins,
-                # 'group_bins': dict(dpsi.group_bins),
-                # 'group_means': dict(dpsi.group_means),
+                'junctions': het.junctions.tolist(),
             },
             'exon_number': exon_number
         })
@@ -216,8 +194,6 @@ def lsv_highlight():
                                     group_means[grp_name][comb_name] = []
 
                                 group_means[grp_name][comb_name].append(median(exp))
-
-                    print(group_means)
 
                     lsvs.append({
                         'junctions': junctions,
