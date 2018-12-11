@@ -643,31 +643,22 @@ class SpliceGraphs {
             .transition(this.t())
             .attr('x', d => this.x(d))
             .attr('y', this.y(this.bottom_icons - 13))
-            .attr('text-anchor', () => {
-                if (strand === '+')
-                    return 'start';
-                else
-                    return 'end'
-            })
+            .attr('text-anchor', strand === '+' ? 'start' : 'middle')
             .attr('font-weight', 'bold')
-            .text(() => {
-                if (strand === '+')
-                    return '↳';
-                else
-                    return '↵'
-            })
+            .text(() => strand === '+' ? '↳' : '^')
     }
 
     alt_ends(sg) {
+        const strand = this.gene.strand;
         d3.select(sg)
             .selectAll('.alt_end')
             .interrupt()
             .transition(this.t())
             .attr('x', d => this.x(d))
             .attr('y', this.y(this.bottom_icons - 13))
-            .attr('text-anchor', 'middle')
+            .attr('text-anchor', strand === '+' ? 'middle' : 'start')
             .attr('font-weight', 'bold')
-            .text('^')
+            .text(() => strand === '+' ? '^' : '↳')
     }
 
 
