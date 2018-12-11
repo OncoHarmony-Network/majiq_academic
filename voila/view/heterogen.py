@@ -1,7 +1,9 @@
 import os
 from bisect import bisect
 from operator import itemgetter
+from statistics import median
 
+import numpy as np
 from flask import Flask, render_template, jsonify, url_for, request, session, Response
 
 from voila.api.view_matrix import ViewDeltaPsi, ViewHeterogens
@@ -23,49 +25,38 @@ def index():
 
 @app.route('/gene/<gene_id>/')
 def gene(gene_id):
-    with ViewHeterogens() as m:
+    with ViewHeterogens() as m, ViewSpliceGraph() as sg:
         lsv_data = list((lsv_id, m.lsv(lsv_id).lsv_type) for lsv_id in m.lsv_ids(gene_ids=[gene_id]))
         lsv_data.sort(key=lambda x: len(x[1].split('|')))
-        return views.gene_view('het_summary.html', gene_id, ViewDeltaPsi, lsv_data=lsv_data, group_names=m.group_names)
+        ucsc = {}
+        for het in m.lsvs(gene_id):
+            lsv_junctions = het.junctions
+            lsv_exons = sg.lsv_exons(gene_id, lsv_junctions)
+            start, end = views.lsv_boundries(lsv_exons)
+            gene = sg.gene(gene_id)
+            ucsc[het.lsv_id] = views.ucsc_href(sg.genome, gene['chromosome'], start, end)
+
+        return views.gene_view('het_summary.html', gene_id, ViewDeltaPsi,
+                               lsv_data=lsv_data,
+                               group_names=m.group_names,
+                               ucsc=ucsc)
 
 
 @app.route('/lsv-data', methods=('POST',))
 @app.route('/lsv-data/<lsv_id>', methods=('POST',))
 def lsv_data(lsv_id):
-    def find_exon_number(exons):
-        ref_exon = list(map(int, lsv_id.split(':')[-1].split('-')))
-        exons = filter(lambda e: -1 not in [e['start'], e['end']], exons)
-        exons = list(exons)
-
-        for idx, exon in enumerate(exons):
-            if [exon['start'], exon['end']] == ref_exon:
-                if strand == '-':
-                    return len(exons) - idx
-                else:
-                    return idx + 1
-
     with ViewSpliceGraph() as sg, ViewHeterogens() as m:
-        gene_id = ':'.join(lsv_id.split(':')[:-2])
+        het = m.lsv(lsv_id)
+        gene_id = het.gene_id
         gene = sg.gene(gene_id)
         strand = gene['strand']
         exons = sg.exons(gene_id)
-
-        # return empty string when reference exon is a half exon
-        try:
-            exon_number = find_exon_number(exons)
-        except ValueError:
-            exon_number = ''
-
-        dpsi = m.lsv(lsv_id)
+        ref_exon = het.reference_exon
+        exon_number = views.find_exon_number(exons, ref_exon, strand)
 
         return jsonify({
             'lsv': {
-                # 'excl_incl': list(dpsi.excl_incl),
-                'junctions': dpsi.junctions.tolist(),
-                # 'means': list(dpsi.means),
-                # 'bins': dpsi.bins,
-                # 'group_bins': dict(dpsi.group_bins),
-                # 'group_means': dict(dpsi.group_means),
+                'junctions': het.junctions.tolist(),
             },
             'exon_number': exon_number
         })
@@ -149,7 +140,7 @@ def psi_splice_graphs():
 def lsv_highlight():
     json_data = request.get_json()
 
-    with ViewDeltaPsi() as m:
+    with ViewHeterogens() as m:
 
         lsvs = []
         highlight_dict = session.get('highlight', {})
@@ -158,26 +149,59 @@ def lsv_highlight():
             highlight_dict[lsv_id] = [highlight, weighted]
 
         session['highlight'] = highlight_dict
+        splice_graphs = session.get('psi_init_splice_graphs', {})
 
-        for lsv_id, (highlight, weighted) in highlight_dict.items():
-            if highlight:
-                het = m.lsv(lsv_id)
-                junctions = het.junctions.tolist()
+        if splice_graphs:
+            for lsv_id, (highlight, weighted) in highlight_dict.items():
+                if highlight:
+                    group_means = {}
 
-                if het.lsv_type[-1] == 'i':
-                    intron_retention = junctions[-1]
-                    junctions = junctions[:-1]
-                else:
-                    intron_retention = []
+                    het = m.lsv(lsv_id)
+                    junctions = het.junctions.tolist()
 
-                lsvs.append({
-                    'junctions': junctions,
-                    'intron_retention': intron_retention,
-                    'reference_exon': list(het.reference_exon),
-                    'weighted': weighted,
-                    'group_means': dict(het.group_means)
+                    if het.lsv_type[-1] == 'i':
+                        intron_retention = junctions[-1]
+                        junctions = junctions[:-1]
+                    else:
+                        intron_retention = []
 
-                })
+                    means = np.array(het.mu_psi).transpose((1, 2, 0))
+
+                    for gn, ens, xs in zip(m.group_names, m.experiment_names, means):
+
+                        if any(sg[0] == gn for sg in splice_graphs):
+
+                            for en, x in zip(ens, xs):
+
+                                if any(sg[1] == en for sg in splice_graphs):
+
+                                    x = x.tolist()
+
+                                    try:
+                                        group_means[gn][en] = x
+                                    except KeyError:
+                                        group_means[gn] = {en: x}
+
+                    for junc in het.mu_psi:
+                        for grp_name, exp in zip(m.group_names, junc):
+                            if any(sg[0] == grp_name and sg[1].endswith(' Combined') for sg in splice_graphs):
+                                comb_name = grp_name + ' Combined'
+
+                                if grp_name not in group_means:
+                                    group_means[grp_name] = {}
+
+                                if comb_name not in group_means[grp_name]:
+                                    group_means[grp_name][comb_name] = []
+
+                                group_means[grp_name][comb_name].append(median(exp))
+
+                    lsvs.append({
+                        'junctions': junctions,
+                        'intron_retention': intron_retention,
+                        'reference_exon': het.reference_exon,
+                        'weighted': weighted,
+                        'group_means': group_means
+                    })
 
         return jsonify(lsvs)
 
@@ -205,22 +229,24 @@ def summary_table(lsv_id):
 
             table_data.append({
                 'junc': junc,
+                'junc_idx': idx,
                 'mean_psi': mean_psi,
                 'mu_psi': mu_psi,
-                'heatmap': heatmap
+                'heatmap': heatmap,
             })
 
         dt = DataTables(table_data, ('junc', '', ''))
 
         for idx, row_data, records in dt.callback():
-            junc, mean_psi, mu_psi, heatmap = itemgetter('junc', 'mean_psi', 'mu_psi', 'heatmap')(row_data)
+            junc, junc_idx, mean_psi = itemgetter('junc', 'junc_idx', 'mean_psi')(row_data)
+            mu_psi, heatmap = itemgetter('mu_psi', 'heatmap')(row_data)
 
             records[idx] = [
                 junc,
                 {
                     'group_names': grp_names,
                     'experiment_names': exp_names,
-                    'junction_idx': idx,
+                    'junction_idx': junc_idx,
                     'mean_psi': mean_psi,
                     'mu_psi': mu_psi,
                 },

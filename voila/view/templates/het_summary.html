@@ -2,15 +2,6 @@
 
 {% block analysis_type_script %}
     <script>
-        document.querySelectorAll('.lsv-cartoon').forEach(c => {
-            const lsv_id = c.closest('.lsv').dataset.lsvId;
-            json_ajax('{{ url_for("lsv_data") }}/' + encodeURIComponent(lsv_id))
-                .then(lsv_data => {
-                    const lsv = new Lsv(lsv_data);
-                    lsv.cartoon(c)
-                })
-        });
-
         json_ajax('{{ url_for("nav", gene_id=gene.id) }}').then(json => {
             document.querySelector('.prev-gene').addEventListener('click', () => {
                 window.location.href = json.prev;
@@ -37,11 +28,45 @@
 
             sgs.init_create().then(s => new SpliceGraphTools(s, gene));
 
+            document.querySelectorAll('.highlight-form')
+                .forEach(h => h.addEventListener('change', (event) => {
+                    const input = event.target;
+                    if (input.classList.contains('psi-weighted') && input.checked) {
+                        input
+                            .closest('.highlight-form')
+                            .querySelectorAll('.highlight')
+                            .forEach(hl => hl.checked = true)
+                    }
+
+                    const hl_data = Array.from(document.querySelectorAll('.highlight-form'))
+                        .map(f => {
+                            const lsv_id = f.closest('.lsv').dataset.lsvId;
+                            const highlight = f.querySelector('.highlight').checked;
+                            const weighted = f.querySelector('.psi-weighted').checked;
+                            return [lsv_id, highlight, weighted];
+                        });
+
+                    send_ajax('{{ url_for("lsv_highlight") }}', hl_data).then(lsvs => {
+                        sgs.highlight(lsvs);
+                    })
+
+                }));
+        });
+
+        document.querySelectorAll('.lsv-cartoon').forEach(c => {
+            const lsv_id = c.closest('.lsv').dataset.lsvId;
+            json_ajax('{{ url_for("lsv_data") }}/' + encodeURIComponent(lsv_id))
+                .then(lsv_data => {
+                    const lsv = new Lsv(lsv_data);
+                    lsv.cartoon(c)
+                })
         });
 
         new MutationObserver(mutations => {
             mutations
                 .forEach(m => m.addedNodes.forEach(n => {
+
+
                     n.querySelectorAll('.heat-map')
                         .forEach(h => {
                             const tool_tip = document.querySelector('.heat-map-tool-tip');
@@ -182,11 +207,8 @@
                             sortable: false,
                             render: data => {
                                 const heatmap = new HeatMap(data);
-
                                 const element = document.createElement('svg');
-
                                 heatmap.plot(element);
-
                                 return element.outerHTML;
                             }
                         }
@@ -240,41 +262,54 @@
     <div class="lsv-container">
         {% for lsv_id, lsv_type in lsv_data %}
             <div class="lsv" data-lsv-id="{{ lsv_id }}">
-                <div class="lsv-header">
-                    <form class="lsv-form pure-form pure-form-aligned">
-                        <fieldset>
-                            <div class="pure-control-group"><label for="highlight">Highlight</label><input
-                                    id="highlight" type="checkbox"></div>
-                            <div class="pure-control-group"><label for="psi-weighted">PSI Weighted</label><input
-                                    id="psi-weighted" type="checkbox"></div>
-                            <div class="pure-control-group">
-                                <select class="copy-lsv">
-                                    <option>Copy LSV</option>
-                                    {% for grp in group_names %}
-                                        <option value="{{ grp }}">{{ grp }}</option>
-                                    {% endfor %}
-                                </select>
-                            </div>
-                        </fieldset>
-                    </form>
+                <div class="lsv-header ">
+                    <div class="highlight-form">
+                        <div>
+                            <label>
+                                Highlight
+                                <input class="highlight" type="checkbox">
+                            </label>
+                        </div>
+                        <div>
+                            <label>
+                                Weighted
+                                <input class="psi-weighted" type="checkbox">
+                            </label>
+                        </div>
+                    </div>
                     <div>
                         <canvas class="lsv-cartoon" width="200" height="80" data-lsv-type="{{ lsv_type }}"></canvas>
                     </div>
                     <div>
                         {{ lsv_id }}
                     </div>
-                    <br/>
-                    <table class="pure-table lsv-table" data-lsv-id="{{ lsv_id }}">
-                        <thead>
-                        <tr>
-                            <th>Junctions</th>
-                            <th>Violin</th>
-                            <th>Heat Map</th>
-                        </tr>
-                        </thead>
-                        <tbody></tbody>
-                    </table>
+                    <div>
+                        <form class="pure-form pure-form-aligned">
+                            <fieldset>
+                                <div class="pure-control-group">
+                                    <select class="copy-lsv">
+                                        <option>Copy LSV</option>
+                                        {% for grp in group_names %}
+                                            <option value="{{ grp }}">{{ grp }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </fieldset>
+                        </form>
+                        <a href="{{ ucsc[lsv_id] }}" target="_blank"><img
+                                src="{{ url_for('static', filename="img/ucsc.png") }}"></a>
+                    </div>
                 </div>
+                <table class="pure-table lsv-table" data-lsv-id="{{ lsv_id }}">
+                    <thead>
+                    <tr>
+                        <th>Junctions</th>
+                        <th>Violin</th>
+                        <th>Heat Map</th>
+                    </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
             </div>
         {% endfor %}
     </div>

@@ -11,6 +11,7 @@ const populate_modal = txt => {
 };
 
 const show_modal = () => {
+    input.value = null;
     modal.style.display = 'block';
 };
 

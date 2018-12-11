@@ -1,4 +1,4 @@
-const ajax = async url => {
+const ajax = url => {
     return new Promise(resolve => {
         const xhr = new XMLHttpRequest();
         xhr.onreadystatechange = () => {
@@ -11,12 +11,12 @@ const ajax = async url => {
     })
 };
 
-const json_ajax = async url => {
+const json_ajax = url => {
     return ajax(url)
         .then(response => JSON.parse(response))
 };
 
-const send_ajax = async (url, data) => {
+const send_ajax = (url, data) => {
     return new Promise(resolve => {
         const xhr = new XMLHttpRequest();
         xhr.open('POST', url);
@@ -34,7 +34,7 @@ const send_ajax = async (url, data) => {
     })
 };
 
-const send_form_ajax = async (url, data) => {
+const send_form_ajax = (url, data) => {
     return new Promise(resolve => {
         const xhr = new XMLHttpRequest();
         xhr.open('POST', url);

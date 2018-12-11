@@ -49,30 +49,32 @@
                                 $(s).hide();
                                 violin.psi(s);
 
-                                n.querySelector('.highlight-form').onchange = (event) => {
 
-                                    const input = event.target;
-                                    if (input.classList.contains('psi-weighted') && input.checked) {
-                                        input
-                                            .closest('.highlight-form')
-                                            .querySelectorAll('.highlight')
-                                            .forEach(hl => hl.checked = true)
-                                    }
-
-                                    const hl_data = Array.from(document.querySelectorAll('.highlight-form'))
-                                        .map(f => {
-                                            const lsv_id = f.closest('tr').querySelectorAll('td')[1].textContent;
-                                            const highlight = f.querySelector('.highlight').checked;
-                                            const weighted = f.querySelector('.psi-weighted').checked;
-                                            return [lsv_id, highlight, weighted];
-                                        });
-
-                                    send_ajax('{{ url_for("lsv_highlight") }}', hl_data).then(lsvs => {
-                                        sgs.highlight(lsvs);
-                                    })
-
-                                }
                             });
+
+                        n.querySelector('.highlight-form').onchange = (event) => {
+
+                            const input = event.target;
+                            if (input.classList.contains('psi-weighted') && input.checked) {
+                                input
+                                    .closest('.highlight-form')
+                                    .querySelectorAll('.highlight')
+                                    .forEach(hl => hl.checked = true)
+                            }
+
+                            const hl_data = Array.from(document.querySelectorAll('.highlight-form'))
+                                .map(f => {
+                                    const lsv_id = f.closest('tr').querySelectorAll('td')[1].textContent;
+                                    const highlight = f.querySelector('.highlight').checked;
+                                    const weighted = f.querySelector('.psi-weighted').checked;
+                                    return [lsv_id, highlight, weighted];
+                                });
+
+                            send_ajax('{{ url_for("lsv_highlight") }}', hl_data).then(lsvs => {
+                                sgs.highlight(lsvs);
+                            })
+
+                        };
 
                         copy_lsv_modal(n, '{{ url_for("copy_lsv") }}/' + encodeURIComponent(lsv_id))
                     })

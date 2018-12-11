@@ -163,6 +163,8 @@ junc_reads_fieldnames = ('reads', 'experiment_name')
 exon_fieldnames = ('gene_id', 'start', 'end', 'annotated_start', 'annotated_end', 'annotated')
 ir_fieldnames = ('gene_id', 'start', 'end', 'has_reads', 'annotated')
 ir_reads_fieldnames = ('reads', 'experiment_name')
+alt_starts_fieldnames = ('coordinate',)
+alt_ends_fieldnames = ('coordinate',)
 
 
 class Genes(SpliceGraphSQL):
@@ -260,7 +262,7 @@ class IntronRetentions(SpliceGraphSQL):
         :param experiment_names: list of experiment reads.
         :return: list of intron retention reads
         """
-        
+
         query = self.conn.execute('''
                                 SELECT reads, experiment_name 
                                 FROM intron_retention_reads
@@ -271,3 +273,22 @@ class IntronRetentions(SpliceGraphSQL):
                                 '''.format(','.join(["'{}'".format(x) for x in experiment_names])),
                                   (ir['start'], ir['end'], ir['gene_id']))
         return self._iter_results(query, ir_reads_fieldnames)
+
+
+class AltStarts(SpliceGraphSQL):
+    def alt_starts(self, gene_id):
+        query = self.conn.execute('''
+                                    SELECT coordinate 
+                                    FROM alt_start
+                                    WHERE gene_id=?
+                                    ''', (gene_id,))
+        return self._iter_results(query, alt_starts_fieldnames)
+
+class AltEnds(SpliceGraphSQL):
+    def alt_ends(self, gene_id):
+        query = self.conn.execute('''
+                                    SELECT coordinate 
+                                    FROM alt_end
+                                    WHERE gene_id=?
+                                    ''', (gene_id,))
+        return self._iter_results(query, alt_ends_fieldnames)

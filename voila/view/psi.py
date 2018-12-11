@@ -149,25 +149,14 @@ def psi_splice_graphs():
 @app.route('/lsv-data', methods=('POST',))
 @app.route('/lsv-data/<lsv_id>', methods=('POST',))
 def lsv_data(lsv_id):
-    gene_id = ':'.join(lsv_id.split(':')[:-2])
-    ref_exon = list(map(int, lsv_id.split(':')[-1].split('-')))
-
-    def find_exon_number(exons):
-        exons = filter(lambda e: -1 not in [e['start'], e['end']], exons)
-        exons = list(exons)
-
-        for idx, exon in enumerate(exons):
-            if [exon['start'], exon['end']] == ref_exon:
-                if strand == '-':
-                    return len(exons) - idx
-                else:
-                    return idx + 1
-
     with ViewSpliceGraph() as sg, ViewPsi() as m:
+        psi = m.lsv(lsv_id)
+        ref_exon = psi.reference_exon
+        gene_id = psi.gene_id
         gene = sg.gene(gene_id)
         strand = gene['strand']
         exons = sg.exons(gene_id)
-        exon_number = find_exon_number(exons)
+        exon_number = views.find_exon_number(exons, ref_exon, strand)
 
         lsv = m.lsv(lsv_id)
 
@@ -195,26 +184,37 @@ def lsv_highlight():
             highlight_dict[lsv_id] = [highlight, weighted]
 
         session['highlight'] = highlight_dict
+        splice_graphs = session.get('psi_init_splice_graphs', {})
 
-        for lsv_id, (highlight, weighted) in highlight_dict.items():
-            if highlight:
-                psi = m.lsv(lsv_id)
-                junctions = psi.junctions.tolist()
+        if splice_graphs:
+            for lsv_id, (highlight, weighted) in highlight_dict.items():
+                if highlight:
+                    psi = m.lsv(lsv_id)
+                    junctions = psi.junctions.tolist()
 
-                if psi.lsv_type[-1] == 'i':
-                    intron_retention = junctions[-1]
-                    junctions = junctions[:-1]
-                else:
-                    intron_retention = []
+                    if psi.lsv_type[-1] == 'i':
+                        intron_retention = junctions[-1]
+                        junctions = junctions[:-1]
+                    else:
+                        intron_retention = []
 
-                lsvs.append({
-                    'junctions': junctions,
-                    'intron_retention': intron_retention,
-                    'reference_exon': list(psi.reference_exon),
-                    'weighted': weighted,
-                    'group_means': dict(psi.group_means)
+                    means = dict(psi.group_means)
+                    group_means = {}
 
-                })
+                    for sg in splice_graphs:
+                        grp_name, exp_name = sg
+                        if grp_name not in group_means:
+                            group_means[grp_name] = {}
+                        group_means[grp_name][exp_name] = means[grp_name]
+
+                    lsvs.append({
+                        'junctions': junctions,
+                        'intron_retention': intron_retention,
+                        'reference_exon': list(psi.reference_exon),
+                        'weighted': weighted,
+                        'group_means': group_means
+
+                    })
 
         return jsonify(lsvs)
 

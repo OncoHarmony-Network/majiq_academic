@@ -84,7 +84,7 @@ table {
 }
 
 .lsv-container > div {
-    text-align: left;
+    text-align: center;
     display: inline-grid;
     padding-left: 25px;
     padding-right: 25px;
@@ -148,8 +148,8 @@ table {
     margin-right: auto;
 }
 
-form.lsv-form label {
-    width: 7em !important;
+form.het-highlight-form label {
+    width: 5em !important;
 }
 
 .reads-filter, .mouseover-filter, .select-filter {
@@ -207,3 +207,4 @@ form.lsv-form label {
     border-radius: 5px;
     width: 500px;
 }
+
