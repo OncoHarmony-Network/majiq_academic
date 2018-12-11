@@ -58,153 +58,9 @@ cdef void update_splicegraph_junction(sqlite3 *db, string gene_id, int start, in
 
 ctypedef vector[Jinfo *] jinfoptr_vec_t
 
-cdef int _output_majiq_file(vector[LSV*] lsvlist, map[string, overGene_vect_t] gList, map[string, int] j_tlb,
-                            string experiment_name, string outDir, sqlite3* db, unsigned int msamples,
-                            bint irb, object logger) except -1:
-
-    cdef unsigned int irbool, coord1, coord2, sreads, npos
-    cdef unsigned int nlsv = lsvlist.size()
-    cdef list cov_l, type_list = []
-    cdef list junc_info = []
-    cdef str out_file, junc_file
-    cdef unsigned int njunc = 0
-    cdef np.ndarray[np.float32_t, ndim=2, mode="c"] boots
-    cdef np.ndarray junc_ids
-    cdef object all_juncs
-    cdef int junc_idx, njlsv = j_tlb.size()
-    cdef jinfoptr_vec_t jobj_vec
-    cdef vector[Gene*] gene_l
-    cdef string key, chrom, gid
-    cdef Jinfo* jobj_ptr
-
-    logger.info('DUMP file %s' % experiment_name)
-    jobj_vec = jinfoptr_vec_t(njlsv)
-
-    # sg_filename = get_builder_splicegraph_filename(outDir.decode('utf-8')).encode('utf-8')
-    junc_file = "%s/%s.juncs" % (outDir.decode('utf-8'), experiment_name.decode('utf-8'))
-    out_file = "%s/%s.majiq" % (outDir.decode('utf-8'), experiment_name.decode('utf-8'))
-    with open(junc_file, 'rb') as fp:
-        all_juncs = np.load(fp)
-        # boots = all_juncs['bootstrap']
-        junc_ids = all_juncs['junc_info']
-        njunc = junc_ids.shape[0]
-
-    cov_dict = {}
-    cov_l = list()
-    junc_info = []
-    type_list = []
-
-    with nogil:
-        for i in range(njunc):
-            with gil:
-                jid     = junc_ids[i][0]
-                coord1  = junc_ids[i][1]
-                coord2  = junc_ids[i][2]
-                sreads  = junc_ids[i][3]
-                npos    = junc_ids[i][4]
-                irbool  = junc_ids[i][5]
-                chrom   = jid.split(b':')[0]
-
-            find_gene_from_junc(gList, chrom, coord1, coord2, gene_l, irbool)
-            if irbool == 0:
-                for gneObj in gene_l:
-                    update_splicegraph_junction(db, gneObj.get_id(), coord1, coord2, sreads, experiment_name)
-                    with gil:
-                        key = key_format(gneObj.get_id(), coord1, coord2, False)
-                    if j_tlb.count(key) > 0:
-                        jobj_ptr = new Jinfo(i, sreads, npos)
-                        jobj_vec[j_tlb[key]] = jobj_ptr
-
-            elif irb:
-                with gil:
-                    gid = jid.split(b':')[3]
-                for gneObj in gene_l:
-                    if gneObj.get_id() != gid:
-                        continue
-                    irv = find_intron_retention(gneObj, coord1, coord2)
-                    for ir_ptr in irv:
-                        sg_intron_retention_reads(db, sreads, experiment_name,  gid,
-                                                  ir_ptr.get_start(), ir_ptr.get_end())
-                        with gil:
-                            key = key_format(gid, ir_ptr.get_start(), ir_ptr.get_end(), True)
-                        if j_tlb.count(key) > 0:
-                            jobj_ptr = new Jinfo(i, sreads, npos)
-                            jobj_vec[j_tlb[key]] = jobj_ptr
-                        # tlb_ir[ir_ptr.get_key(ir_ptr.get_gene())] = jobj_ptr
-
-            gene_l.clear()
-
-
-    del junc_ids
-    logger.info("Create majiq file")
-
-    with open(junc_file, 'rb') as fp:
-        all_juncs = np.load(fp)
-        boots = all_juncs['bootstrap']
-        # junc_ids = all_juncs['junc_info']
-
-    with nogil:
-        for j in range(nlsv):
-            lsv_ptr = lsvlist[j]
-            njunc = lsv_ptr.get_num_variations()
-            if njunc<2: continue
-            lsvid = lsv_ptr.get_id()
-            with gil:
-                x = np.zeros(shape=(njunc, msamples), dtype=np.float32)
-                type_list.append((lsvid.decode('utf-8'), lsv_ptr.get_type()))
-            junc_idx = 0
-
-            for junc in lsv_ptr.get_junctions():
-                key = junc.get_key(lsv_ptr.get_gene())
-                # with gil:
-                #     print (key, j_tlb[key], "{0:x}".format(<unsigned long> jobj_vec[j_tlb[key]]))
-                if j_tlb.count(key) > 0 and not isNullJinfo(jobj_vec[j_tlb[key]]):
-                    jobj_ptr = jobj_vec[j_tlb[key]]
-                    sreads = jobj_ptr.sreads
-                    npos = jobj_ptr.npos
-                    with gil:
-                        x[junc_idx] = boots[jobj_ptr.index]
-                else:
-                    sreads = 0
-                    npos = 0
-
-                with gil:
-                    cov_l.append(x[junc_idx])
-                    junc_info.append((lsvid.decode('utf-8'), junc.get_start(), junc.get_end(),
-                                          sreads, npos))
-                junc_idx = junc_idx + 1
-
-            ir_ptr = lsv_ptr.get_intron()
-            if irb and ir_ptr != <Intron * > 0:
-                with gil:
-                    key = key_format(gneObj.get_id(), ir_ptr.get_start(), ir_ptr.get_end(), True)
-                if j_tlb.count(key) > 0 and not isNullJinfo(jobj_vec[j_tlb[key]]):
-                    jobj_ptr = jobj_vec[j_tlb[key]]
-                    sreads = jobj_ptr.sreads
-                    npos = jobj_ptr.npos
-                    with gil:
-                        x[junc_idx] = boots[jobj_ptr.index]
-                else:
-                    sreads = 0
-                    npos = 0
-
-                with gil:
-                    cov_l.append(x[junc_idx])
-                    junc_info.append((lsvid.decode('utf-8'), ir_ptr.get_start(), ir_ptr.get_end(),
-                                      sreads, npos))
-
-    # with gil:
-    logger.info("Dump majiq file")
-    majiq_io.dump_lsv_coverage_mat(out_file, cov_l, type_list, junc_info, experiment_name.decode('utf-8'))
-    free_JinfoVec(jobj_vec)
-    nlsv = len(type_list)
-
-    return nlsv
-
-
 @cython.boundscheck(False)  # Deactivate bounds checking
 @cython.wraparound(False)   # Deactivate negative indexing.
-cdef int _output_majiq_file2(vector[LSV*] lsvlist, map[string, overGene_vect_t] gList, map[string, int] j_tlb,
+cdef int _output_majiq_file(vector[LSV*] lsvlist, map[string, overGene_vect_t] gList, map[string, int] j_tlb,
                             string experiment_name, string outDir, sqlite3* db, unsigned int msamples,
                             bint irb, object logger, int nthreads) except -1:
 
@@ -239,6 +95,7 @@ cdef int _output_majiq_file2(vector[LSV*] lsvlist, map[string, overGene_vect_t] 
         junc_ids = np.load(fp)['junc_info']
     njunc = junc_ids.shape[0]
 
+#TODO: CHECK THE  with gil statement if it is necessary
     for i in prange(njunc, nogil=True, num_threads=nthreads):
         gene_l = Gene_vect_t()
         with gil:
@@ -469,7 +326,6 @@ cdef void gene_to_splicegraph(Gene * gne, sqlite3 * db) nogil:
     for ir in gne.intron_vec_:
         if ir.get_ir_flag():
             sg_intron_retention(db, gne_id, ir.get_start(), ir.get_end(), ir.get_annot())
-    # close_db(db)
 
 
 ## OPEN API FOR PYTHON
@@ -529,9 +385,6 @@ cdef _core_build(str transcripts, list file_list, object conf, object logger):
 
     fill_junc_tlb(out_lsvlist, lsv_juncs_tlb)
 
-    # for xx in lsv_juncs_tlb:
-    #     print(xx.first, xx.second)
-
     logger.info("%s LSV found" % out_lsvlist.size())
     if conf.mem_profile:
         mem_allocated = int(psutil.Process().memory_info().rss)/(1024**2)
@@ -543,28 +396,12 @@ cdef _core_build(str transcripts, list file_list, object conf, object logger):
         if conf.mem_profile:
             mem_allocated = int(psutil.Process().memory_info().rss)/(1024**2)
             logger.info("PRE OUT Memory used %.2f MB" % mem_allocated)
-        cnt  = _output_majiq_file2(out_lsvlist, gene_list, lsv_juncs_tlb, fname, outDir, db, m, ir, logger, nthreads)
+        cnt  = _output_majiq_file(out_lsvlist, gene_list, lsv_juncs_tlb, fname, outDir, db, m, ir, logger, nthreads)
 
         logger.info('%s: %d LSVs' %(fname.decode('utf-8'), cnt))
         if conf.mem_profile:
             mem_allocated = int(psutil.Process().memory_info().rss)/(1024**2)
             logger.info("POST OUT  Memory used %.2f MB" % mem_allocated)
-
-
-    # for i in prange(nsamples, nogil=True, num_threads=nthreads):
-    #     with gil:
-    #         fname = file_list[i][0].encode('utf-8')
-    #         strandness = conf.strand_specific[file_list[i][0]]
-    #         if conf.mem_profile:
-    #             mem_allocated = int(psutil.Process().memory_info().rss)/(1024**2)
-    #             logger.info("PRE OUT Memory used %.2f MB" % mem_allocated)
-    #         cnt  = _output_majiq_file(out_lsvlist, gene_list, lsv_juncs_tlb, fname, outDir, db, m, ir, logger)
-    #
-    #         logger.info('%s: %d LSVs' %(fname.decode('utf-8'), cnt))
-    #         if conf.mem_profile:
-    #             mem_allocated = int(psutil.Process().memory_info().rss)/(1024**2)
-    #             logger.info("POST OUT  Memory used %.2f MB" % mem_allocated)
-
 
     close_db(db)
     free_genelist(gene_list)
@@ -595,8 +432,3 @@ class Builder(BasicPipeline):
             mem_allocated = int(psutil.Process().memory_info().rss)/(1024**2)
             logger.info("Max Memory used %.2f MB" % mem_allocated)
         logger.info("MAJIQ Builder is ended succesfully!")
-
-
-
-
-
