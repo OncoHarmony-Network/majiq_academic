@@ -30,6 +30,8 @@ from libcpp.pair cimport pair
 from libcpp.vector cimport vector
 from cython.parallel import prange
 
+from cython import parallel
+
 import numpy as np
 cimport numpy as np
 
@@ -62,7 +64,6 @@ cdef int _output_majiq_file(vector[LSV*] lsvlist, map[string, overGene_vect_t] g
 
     cdef unsigned int irbool, coord1, coord2, sreads, npos
     cdef unsigned int nlsv = lsvlist.size()
-    cdef dict cov_dict = {}
     cdef list cov_l, type_list = []
     cdef list junc_info = []
     cdef str out_file, junc_file
@@ -208,20 +209,20 @@ cdef int _output_majiq_file2(vector[LSV*] lsvlist, map[string, overGene_vect_t] 
 
     cdef unsigned int irbool, coord1, coord2, sreads, npos
     cdef unsigned int nlsv = lsvlist.size()
-    cdef dict cov_dict = {}
     cdef list cov_l, type_list = []
     cdef list junc_info = []
     cdef str out_file, junc_file
     cdef unsigned int njunc = 0
     cdef np.ndarray[np.float32_t, ndim=2, mode="c"] boots
     cdef np.ndarray junc_ids
-    cdef object all_juncs
     cdef int i, j, junc_idx, njlsv = j_tlb.size()
     cdef jinfoptr_vec_t jobj_vec
     cdef Gene_vect_t gene_l
     cdef string key, chrom, lsvid, gid, jid
     cdef Jinfo* jobj_ptr
     cdef vector[np.float32_t] x
+
+    cdef int thread_id = -1
 
     logger.info('DUMP file %s' % experiment_name)
     jobj_vec = jinfoptr_vec_t(njlsv)
@@ -231,14 +232,8 @@ cdef int _output_majiq_file2(vector[LSV*] lsvlist, map[string, overGene_vect_t] 
     out_file = "%s/%s.majiq" % (outDir.decode('utf-8'), experiment_name.decode('utf-8'))
     with open(junc_file, 'rb') as fp:
         junc_ids = np.load(fp)['junc_info']
-        # junc_ids = all_juncs['junc_info']
     njunc = junc_ids.shape[0]
 
-    cov_dict = {}
-    cov_l = list()
-    junc_info = []
-    type_list = []
-    # print('PRE PRANGE')
     for i in prange(njunc, nogil=True, num_threads=nthreads):
         gene_l = Gene_vect_t()
         with gil:
@@ -282,67 +277,82 @@ cdef int _output_majiq_file2(vector[LSV*] lsvlist, map[string, overGene_vect_t] 
 
         gene_l.clear()
 
-
     del junc_ids
     logger.info("Create majiq file")
 
     with open(junc_file, 'rb') as fp:
         boots = np.load(fp)['bootstrap']
-        # boots = all_juncs['bootstrap']
+    cov_l = list()
+    junc_info = []
+    type_list = []
+
+    logger.info('PRE PRANGE %s' % njunc)
 
     for j in prange(nlsv, nogil=True, num_threads=nthreads):
+        thread_id = parallel.threadid()
         lsv_ptr = lsvlist[j]
         njunc = lsv_ptr.get_num_variations()
         if njunc<2: continue
         lsvid = lsv_ptr.get_id()
         with gil:
-            # print('####', lsvid, lsv_ptr.get_junctions().size(), njunc, len(boots))
-            # x = np.zeros(shape=(njunc, msamples), dtype=np.float32)
-            # x = vector[np.float32_t](msamples)
             type_list.append((lsvid.decode('utf-8'), lsv_ptr.get_type()))
-        junc_idx = 0
 
+        with gil:
+            logger.info('[%s] PRE JUNC' % thread_id)
         for junc in lsv_ptr.get_junctions():
 
             key = junc.get_key(lsv_ptr.get_gene())
+            with gil:
+                logger.info('[%s] junc: %s - %s' % (thread_id, key.decode('utf-8'), lsv_ptr.get_type().decode('utf-8')))
             # with gil:
             #     print (key, j_tlb[key], "{0:x}".format(<unsigned long> jobj_vec[j_tlb[key]]))
             if j_tlb.count(key) > 0 and not isNullJinfo(jobj_vec[j_tlb[key]]):
+                with gil:
+                    logger.info('[%s] in if' % thread_id)
                 jobj_ptr = jobj_vec[j_tlb[key]]
                 sreads = jobj_ptr.sreads
                 npos = jobj_ptr.npos
 
                 with gil:
-                    # print ('KK1', junc_idx, jobj_ptr.index)
+                    logger.info('[%s] KK1 %s ' %(thread_id, jobj_ptr.index))
                     cov_l.append(boots[jobj_ptr.index])
                     junc_info.append((lsvid.decode('utf-8'), junc.get_start(), junc.get_end(), sreads, npos))
             else:
                 with gil:
-                    # print ('KK1 else', )
+                    logger.info('[%s] KK1 else' % thread_id )
                     x = np.zeros(shape=msamples, dtype=np.float32)
                     cov_l.append(x)
                     junc_info.append((lsvid.decode('utf-8'), junc.get_start(), junc.get_end(), 0, 0))
-
+        with gil:
+            logger.info('[%s] PRE IR ' %(thread_id))
         ir_ptr = lsv_ptr.get_intron()
+        with gil:
+            logger.info('[%s] PRE IR 2' %(thread_id))
         if irb and ir_ptr != <Intron * > 0:
-            key = key_format(gneObj.get_id(), ir_ptr.get_start(), ir_ptr.get_end(), True)
+            with gil:
+                logger.info('[%s] PRE IR 3' %(thread_id))
+            key = key_format(lsv_ptr.get_gene(), ir_ptr.get_start(), ir_ptr.get_end(), True)
+            with gil:
+                logger.info('[%s] PRE IR 4 %s' %(thread_id, key.decode('utf-8')))
             if j_tlb.count(key) > 0 and not isNullJinfo(jobj_vec[j_tlb[key]]):
                 jobj_ptr = jobj_vec[j_tlb[key]]
                 sreads = jobj_ptr.sreads
                 npos = jobj_ptr.npos
                 with gil:
-                    # print (' IR KK1', junc_idx, jobj_ptr.index)
+                    logger.info('[%s] IR KK1 %s' %(thread_id, jobj_ptr.index))
                     cov_l.append(boots[jobj_ptr.index])
                     junc_info.append((lsvid.decode('utf-8'), junc.get_start(), junc.get_end(), sreads, npos))
 
             else:
                 with gil:
-                    # print (' IR KK1 else ')
+                    logger.info('[%s] IR KK1 else ' % thread_id)
                     x = np.zeros(shape=msamples, dtype=np.float32)
                     cov_l.append(x)
                     junc_info.append((lsvid.decode('utf-8'), junc.get_start(), junc.get_end(), 0, 0))
-
-    # with gil:
+            with gil:
+                logger.info("[%s] IR END" % thread_id)
+        with gil:
+            logger.info("[%s] END" % thread_id)
     logger.info("Dump majiq file")
     majiq_io.dump_lsv_coverage_mat(out_file, cov_l, type_list, junc_info, experiment_name.decode('utf-8'))
     free_JinfoVec(jobj_vec)

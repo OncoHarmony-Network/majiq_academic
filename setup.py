@@ -29,9 +29,9 @@ HTSLIB_LIB_DIRS = [os.environ.get("HTSLIB_LIBRARY_DIR", '/usr/local/lib')]
 HTSLIB_INC_DIRS = [os.environ.get("HTSLIB_INCLUDE_DIR", '/usr/local/include')]
 
 
-compile_args = ['-fopenmp']
+compile_args = ['-fopenmp', '-g']
 scythe_compiler_args = ['-DSCYTHE_COMPILE_DIRECT', '-DSCYTHE_PTHREAD']
-linker_args = ['-lgomp']
+linker_args = ['-lgomp', '-g']
 
 if sys.platform == 'darwin':
     # os.environ['CLANG_DEFAULT_CXX_STDLIB'] = 'libc++'
