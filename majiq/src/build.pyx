@@ -29,7 +29,7 @@ from libcpp.map cimport map
 from libcpp.pair cimport pair
 from libcpp.vector cimport vector
 from cython.parallel import prange
-
+import cython
 from cython import parallel
 
 import numpy as np
@@ -202,7 +202,8 @@ cdef int _output_majiq_file(vector[LSV*] lsvlist, map[string, overGene_vect_t] g
     return nlsv
 
 
-
+@cython.boundscheck(False)  # Deactivate bounds checking
+@cython.wraparound(False)   # Deactivate negative indexing.
 cdef int _output_majiq_file2(vector[LSV*] lsvlist, map[string, overGene_vect_t] gList, map[string, int] j_tlb,
                             string experiment_name, string outDir, sqlite3* db, unsigned int msamples,
                             bint irb, object logger, int nthreads) except -1:
@@ -248,12 +249,10 @@ cdef int _output_majiq_file2(vector[LSV*] lsvlist, map[string, overGene_vect_t] 
             npos    = junc_ids[i][4]
             irbool  = junc_ids[i][5]
             chrom   = jid.split(b':')[0]
-            # print('GET VALUES')
+
         find_gene_from_junc(gList, chrom, coord1, coord2, gene_l, irbool)
         if irbool == 0:
             for gneObj in gene_l:
-                # with gil:
-                    # print('UPDATE SPLICEGRAPH', i)
                 update_splicegraph_junction(db, gneObj.get_id(), coord1, coord2, sreads, experiment_name)
                 with gil:
                     key = key_format(gneObj.get_id(), coord1, coord2, False)
@@ -263,7 +262,6 @@ cdef int _output_majiq_file2(vector[LSV*] lsvlist, map[string, overGene_vect_t] 
 
         elif irb:
             with gil:
-                # print(i, jid, jid.split(b':'), junc_ids[i])
                 gid = jid.split(b':')[3]
             for gneObj in gene_l:
                 if gneObj.get_id() != gid:
@@ -277,7 +275,6 @@ cdef int _output_majiq_file2(vector[LSV*] lsvlist, map[string, overGene_vect_t] 
                         if j_tlb.count(key) > 0:
                             jobj_ptr = new Jinfo(i, sreads, npos)
                             jobj_vec[j_tlb[key]] = jobj_ptr
-                    # tlb_ir[ir_ptr.get_key(ir_ptr.get_gene())] = jobj_ptr
 
         gene_l.clear()
 
@@ -302,26 +299,20 @@ cdef int _output_majiq_file2(vector[LSV*] lsvlist, map[string, overGene_vect_t] 
         tmp_juncinfo = vector[vector[int]](njunc, vector[int](4))
         tmp_boots    = vector[vector[np.float32_t]](njunc, vector[np.float32_t](msamples))
         tmp_juncvec  = lsv_ptr.get_junctions()
-        # with gil:
-        #     logger.info('KK1')
+
         for junc_idx in range(tmp_juncvec.size()):
-        # for junc in lsv_ptr.get_junctions():
             junc = tmp_juncvec[junc_idx]
             key = junc.get_key(lsv_ptr.get_gene())
             tmp_juncinfo[junc_idx][0] = junc.get_start()
             tmp_juncinfo[junc_idx][1] = junc.get_end()
-            # with gil:
-            #     logger.info('KK2')
+
             if j_tlb.count(key) > 0 and not isNullJinfo(jobj_vec[j_tlb[key]]):
                 jobj_ptr = jobj_vec[j_tlb[key]]
-
                 tmp_juncinfo[junc_idx][2] = jobj_ptr.sreads
                 tmp_juncinfo[junc_idx][3] = jobj_ptr.npos
-
                 for m in range(msamples):
                     tmp_boots[junc_idx][m] = boots[jobj_ptr.index][m]
-        # with gil:
-            # logger.info('KK3')
+
         ir_ptr = lsv_ptr.get_intron()
         if irb and ir_ptr != <Intron * > 0:
             key = key_format(lsv_ptr.get_gene().get_id(), ir_ptr.get_start(), ir_ptr.get_end(), True)
@@ -335,18 +326,15 @@ cdef int _output_majiq_file2(vector[LSV*] lsvlist, map[string, overGene_vect_t] 
                 for m in range(msamples):
                     tmp_boots[njunc-1][m] = boots[jobj_ptr.index][m]
 
-
         with gil:
-            # logger.info('KK5')
             for i in range(njunc):
                 junc_info.append((lsvid.decode('utf-8'), tmp_juncinfo[i][0], tmp_juncinfo[i][1],
                                   tmp_juncinfo[i][2],tmp_juncinfo[i][3]))
-                tc = []#[lsvid.decode('utf-8')]
+                tc = []
                 for m in range(msamples):
                     tc.append(tmp_boots[i][m])
                 cov_l.append(tuple(tc))
 
-            # logger.info('KK6')
     logger.info("Dump majiq file")
     majiq_io.dump_lsv_coverage_mat(out_file, cov_l, type_list, junc_info, experiment_name.decode('utf-8'))
     free_JinfoVec(jobj_vec)
