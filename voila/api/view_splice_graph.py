@@ -28,6 +28,18 @@ class ViewSpliceGraph(SpliceGraph):
             return exon['start'] + 10
         return exon['end']
 
+    @staticmethod
+    def exon_annot_start(exon):
+        if exon['annotated_start'] == -1:
+            return exon['annotated_end'] - 10
+        return exon['annotated_start']
+
+    @staticmethod
+    def exon_annot_end(exon):
+        if exon['annotated_end'] == -1:
+            return exon['annotated_start'] + 10
+        return exon['annotated_end']
+
     @property
     def gene_ids(self):
         query = self.conn.execute('SELECT id FROM gene')
@@ -55,6 +67,8 @@ class ViewSpliceGraph(SpliceGraph):
             yield 'half_exon', 'end'
         yield 'annotated', exon['annotated']
         yield 'color', self.exon_color(exon)
+        yield 'annotated_start', self.exon_annot_start(exon)
+        yield 'annotated_end', self.exon_annot_end(exon)
 
     def view_exons(self, gene_id):
         for exon in self.exons(gene_id):
