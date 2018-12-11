@@ -213,14 +213,18 @@ cdef int _output_majiq_file2(vector[LSV*] lsvlist, map[string, overGene_vect_t] 
     cdef list junc_info = []
     cdef str out_file, junc_file
     cdef unsigned int njunc = 0
-    cdef np.ndarray[np.float32_t, ndim=2, mode="c"] boots
+    cdef np.float32_t[:, :] boots
+    # cdef np.ndarray[np.float32_t, ndim=2, mode="c"] boots
     cdef np.ndarray junc_ids
-    cdef int i, j, junc_idx, njlsv = j_tlb.size()
+    cdef int i, j, m, junc_idx, njlsv = j_tlb.size()
     cdef jinfoptr_vec_t jobj_vec
     cdef Gene_vect_t gene_l
     cdef string key, chrom, lsvid, gid, jid
     cdef Jinfo* jobj_ptr
     cdef vector[np.float32_t] x
+    cdef vector[vector[int]] tmp_juncinfo
+    cdef vector[vector[np.float32_t]] tmp_boots
+    cdef vector[Junction*] tmp_juncvec
 
     cdef int thread_id = -1
 
@@ -295,41 +299,54 @@ cdef int _output_majiq_file2(vector[LSV*] lsvlist, map[string, overGene_vect_t] 
         with gil:
             type_list.append((lsvid.decode('utf-8'), lsv_ptr.get_type()))
 
-        for junc in lsv_ptr.get_junctions():
-
+        tmp_juncinfo = vector[vector[int]](njunc, vector[int](4))
+        tmp_boots    = vector[vector[np.float32_t]](njunc, vector[np.float32_t](msamples))
+        tmp_juncvec  = lsv_ptr.get_junctions()
+        # with gil:
+        #     logger.info('KK1')
+        for junc_idx in range(tmp_juncvec.size()):
+        # for junc in lsv_ptr.get_junctions():
+            junc = tmp_juncvec[junc_idx]
             key = junc.get_key(lsv_ptr.get_gene())
+            tmp_juncinfo[junc_idx][0] = junc.get_start()
+            tmp_juncinfo[junc_idx][1] = junc.get_end()
             # with gil:
-            #     logger.info('[%s] junc: %s - %s' % (thread_id, key.decode('utf-8'), lsv_ptr.get_type().decode('utf-8')))
+            #     logger.info('KK2')
             if j_tlb.count(key) > 0 and not isNullJinfo(jobj_vec[j_tlb[key]]):
                 jobj_ptr = jobj_vec[j_tlb[key]]
-                sreads = jobj_ptr.sreads
-                npos = jobj_ptr.npos
 
-                with gil:
-                    cov_l.append(boots[jobj_ptr.index])
-                    junc_info.append((lsvid.decode('utf-8'), junc.get_start(), junc.get_end(), sreads, npos))
-            else:
-                with gil:
-                    x = np.zeros(shape=msamples, dtype=np.float32)
-                    cov_l.append(x)
-                    junc_info.append((lsvid.decode('utf-8'), junc.get_start(), junc.get_end(), 0, 0))
+                tmp_juncinfo[junc_idx][2] = jobj_ptr.sreads
+                tmp_juncinfo[junc_idx][3] = jobj_ptr.npos
+
+                for m in range(msamples):
+                    tmp_boots[junc_idx][m] = boots[jobj_ptr.index][m]
+        # with gil:
+            # logger.info('KK3')
         ir_ptr = lsv_ptr.get_intron()
         if irb and ir_ptr != <Intron * > 0:
             key = key_format(lsv_ptr.get_gene().get_id(), ir_ptr.get_start(), ir_ptr.get_end(), True)
+            tmp_juncinfo[njunc-1][0] = ir_ptr.get_start()
+            tmp_juncinfo[njunc-1][1] = ir_ptr.get_end()
+
             if j_tlb.count(key) > 0 and not isNullJinfo(jobj_vec[j_tlb[key]]):
                 jobj_ptr = jobj_vec[j_tlb[key]]
-                sreads = jobj_ptr.sreads
-                npos = jobj_ptr.npos
-                with gil:
-                    cov_l.append(boots[jobj_ptr.index])
-                    junc_info.append((lsvid.decode('utf-8'), junc.get_start(), junc.get_end(), sreads, npos))
+                tmp_juncinfo[njunc-1][2] = jobj_ptr.sreads
+                tmp_juncinfo[njunc-1][3] = jobj_ptr.npos
+                for m in range(msamples):
+                    tmp_boots[njunc-1][m] = boots[jobj_ptr.index][m]
 
-            else:
-                with gil:
-                    x = np.zeros(shape=msamples, dtype=np.float32)
-                    cov_l.append(x)
-                    junc_info.append((lsvid.decode('utf-8'), junc.get_start(), junc.get_end(), 0, 0))
 
+        with gil:
+            # logger.info('KK5')
+            for i in range(njunc):
+                junc_info.append((lsvid.decode('utf-8'), tmp_juncinfo[i][0], tmp_juncinfo[i][1],
+                                  tmp_juncinfo[i][2],tmp_juncinfo[i][3]))
+                tc = []#[lsvid.decode('utf-8')]
+                for m in range(msamples):
+                    tc.append(tmp_boots[i][m])
+                cov_l.append(tuple(tc))
+
+            # logger.info('KK6')
     logger.info("Dump majiq file")
     majiq_io.dump_lsv_coverage_mat(out_file, cov_l, type_list, junc_info, experiment_name.decode('utf-8'))
     free_JinfoVec(jobj_vec)
