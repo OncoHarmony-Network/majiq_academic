@@ -13,7 +13,7 @@ setup(
     name='voila',
     version=VERSION,
     packages=['voila', 'voila.api', 'voila.view', 'voila.utils', 'voila.view'],
-    install_requires=['h5py', 'flask', 'sqlalchemy', 'waitress', 'scipy'],
+    install_requires=['h5py', 'scipy', 'flask', 'flask_wtf', 'waitress'],
     entry_points={'console_scripts': ['voila = voila.run_voila:main']},
     package_data={
         'voila': [
