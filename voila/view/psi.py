@@ -41,13 +41,7 @@ def index_table():
             psi = v.lsv(lsv_id)
             gene = sg.gene(gene_id)
             lsv_exons = sg.lsv_exons(gene_id, psi.junctions)
-
-            # I know that some lsv ids contain half exons... now we just need to find an example to work from
-            assert 'na' not in lsv_id.split(':')[-1].split('-')
-
-            start = max(e for es in lsv_exons for e in es if e != -1)
-            end = min(e for es in lsv_exons for e in es if e != -1)
-
+            start, end = views.lsv_boundries(lsv_exons)
             ucsc = views.ucsc_href(sg.genome, gene['chromosome'], start, end)
 
             records[idx] = [
