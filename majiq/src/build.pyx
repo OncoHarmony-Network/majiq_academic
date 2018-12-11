@@ -331,7 +331,7 @@ cdef int _output_majiq_file2(vector[LSV*] lsvlist, map[string, overGene_vect_t] 
         if irb and ir_ptr != <Intron * > 0:
             with gil:
                 logger.info('[%s] PRE IR 3' %(thread_id))
-            key = key_format(lsv_ptr.get_gene(), ir_ptr.get_start(), ir_ptr.get_end(), True)
+            key = key_format(lsv_ptr.get_gene().get_id(), ir_ptr.get_start(), ir_ptr.get_end(), True)
             with gil:
                 logger.info('[%s] PRE IR 4 %s' %(thread_id, key.decode('utf-8')))
             if j_tlb.count(key) > 0 and not isNullJinfo(jobj_vec[j_tlb[key]]):
