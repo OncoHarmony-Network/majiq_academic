@@ -665,7 +665,7 @@ namespace grimoire {
         return ir_vec ;
     }
 
-    void find_gene_from_junc(map<string, vector<overGene*>> & glist, string chrom, int start, int end,
+    void find_gene_from_junc(map<string, vector<overGene*>> & glist, string chrom, char strand, int start, int end,
                              vector<Gene*>& oGeneList, bool ir){
 
         Junction * junc = new Junction(start, end, false) ;
@@ -684,7 +684,8 @@ namespace grimoire {
             }
         } else {
             for (const auto &gObj: (*low)->glist){
-                if(gObj->junc_map_.count(key) >0 && (gObj->junc_map_[key])->get_denovo_bl()){
+                const bool stbool = (strand == "." || strand == gObj->get_strand())
+                if(gObj->junc_map_.count(key) >0 && (gObj->junc_map_[key])->get_denovo_bl() && stbool){
                     oGeneList.push_back(gObj) ;
                 }
             }

@@ -82,6 +82,7 @@ cdef int _output_majiq_file(vector[LSV*] lsvlist, map[string, overGene_vect_t] g
     cdef vector[vector[int]] tmp_juncinfo
     cdef vector[vector[np.float32_t]] tmp_boots
     cdef vector[Junction*] tmp_juncvec
+    cdef char strand
 
     cdef int thread_id = -1
 
@@ -106,8 +107,9 @@ cdef int _output_majiq_file(vector[LSV*] lsvlist, map[string, overGene_vect_t] g
             npos    = junc_ids[i][4]
             irbool  = junc_ids[i][5]
             chrom   = jid.split(b':')[0]
+            strand  = <char> jid.split(b':')[1]
 
-        find_gene_from_junc(gList, chrom, coord1, coord2, gene_l, irbool)
+        find_gene_from_junc(gList, chrom, strand, coord1, coord2, gene_l, irbool)
         if irbool == 0:
             for gneObj in gene_l:
                 update_splicegraph_junction(db, gneObj.get_id(), coord1, coord2, sreads, experiment_name)
