@@ -15,6 +15,5 @@ class LsvFiltersForm(FlaskForm):
 
 
 class DeltaPsiFiltersForm(FlaskForm):
-    dpsi_threshold = StringField('|E(dPSI)| Threshold', default=0.2)
+    dpsi_threshold = StringField('abs(E(dPSI)) Threshold', default=0.2)
     confidence_threshold = StringField('Confidence Threshold', default=0.95)
-    # confidence_threshold = SelectField('Confidence Threshold', choices=list((x, x) for x in np.linspace(0, 1, 10)))
