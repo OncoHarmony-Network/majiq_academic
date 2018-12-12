@@ -889,10 +889,19 @@ class SpliceGraphs {
     }
 
     mutation_observer() {
+        window.addEventListener('click', e => {
+            const el = e.target.parentNode;
+            if (!el.classList.contains('junction-grp') && !el.classList.contains('exon-grp') && !el.classList.contains('intron-retention-grp'))
+                document.querySelectorAll('.select, .select-filter')
+                    .forEach(x => {
+                        x.classList.remove('select');
+                        x.classList.remove('select-filter')
+                    })
+        });
+
         new MutationObserver(mutation_list => {
 
-            const added_nodes = Array.from(mutation_list)
-                .reduce((acc, curr) => acc.concat(Array.from(curr.addedNodes)), []);
+            const added_nodes = mutation_list.map(m => m.addedNodes[0]);
 
             // highlight junctions and intron retentions when you mouse over them
             added_nodes
@@ -947,7 +956,9 @@ class SpliceGraphs {
             // add click event to remove icon
             added_nodes
                 .filter(el => el.classList && el.classList.contains('splice-graph-remove'))
-                .forEach(el => el.onclick = this.remove_fn)
+                .forEach(el => el.onclick = this.remove_fn);
+
+
         })
             .observe(document.querySelector(this.container_selector), {
                 childList: true,

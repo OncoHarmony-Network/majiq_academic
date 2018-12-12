@@ -3,7 +3,7 @@ const input = modal.querySelector('input');
 
 document.querySelector('.modal-close').onclick = () => modal.style.display = 'none';
 
-window.onclick = e => e.target === modal ? modal.style.display = 'none' : null;
+window.addEventListener('click', e => e.target === modal ? modal.style.display = 'none' : null);
 
 const populate_modal = txt => {
     input.value = txt;

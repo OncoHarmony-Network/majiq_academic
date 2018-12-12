@@ -135,18 +135,6 @@ class SpliceGraphTools {
 
     }
 
-    copy_select_ucsc(el) {
-        this.sgs.gene.then(gene => {
-            const d = d3.select(el).datum();
-            const textArea = document.createElement("textarea");
-            textArea.value = `${gene.chromosome}:${d.start}-${d.end}`;
-            document.body.appendChild(textArea);
-            textArea.focus();
-            textArea.select();
-            document.execCommand('copy');
-            document.body.removeChild(textArea);
-        })
-    }
 
     static _populate_sg_form() {
         document.querySelector('#groups').dispatchEvent(new Event('change'));
