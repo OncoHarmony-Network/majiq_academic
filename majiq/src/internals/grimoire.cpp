@@ -684,7 +684,7 @@ namespace grimoire {
             }
         } else {
             for (const auto &gObj: (*low)->glist){
-                const bool stbool = (strand == "." || strand == gObj->get_strand())
+                const bool stbool = (strand == '.' || strand == gObj->get_strand()) ;
                 if(gObj->junc_map_.count(key) >0 && (gObj->junc_map_[key])->get_denovo_bl() && stbool){
                     oGeneList.push_back(gObj) ;
                 }

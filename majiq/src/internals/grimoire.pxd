@@ -129,7 +129,7 @@ cdef extern from "grimoire.hpp" namespace "grimoire":
     # vector[Intron *]  find_intron_retention(vector[Gene*]& gene_list, string geneid, int start, int end) nogil ;
     vector[Intron *]  find_intron_retention(Gene * gObj, int start, int end) nogil ;
     # vector[Gene*] find_gene_from_junc(const map[string, overGene_vect_t]& glist, string chrom, int start, int end, bint ir) nogil ;
-    void find_gene_from_junc(map[string, overGene_vect_t] & glist, string chrom, int start, int end,
+    void find_gene_from_junc(map[string, overGene_vect_t] & glist, string chrom, char strand, int start, int end,
                              vector[Gene*]& oGeneList, bint ir) nogil ;
     void fill_junc_tlb(vector[LSV*]& lsv_list, map[string, int]& tlb) nogil ;
     bint isNullJinfo(Jinfo* x) nogil ;

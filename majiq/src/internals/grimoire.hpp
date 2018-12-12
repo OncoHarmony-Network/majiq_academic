@@ -390,7 +390,7 @@ namespace grimoire{
     vector<Intron *> find_intron_retention(Gene * gObj, int start, int end);
 //    vector<Gene*> find_gene_from_junc(const map<string, vector<overGene*>>& glist, string chrom, int start, int end, bool ir) ;
 
-    void find_gene_from_junc(map<string, vector<overGene*>> & glist, string chrom, int start, int end,
+    void find_gene_from_junc(map<string, vector<overGene*>> & glist, string chrom, char strand, int start, int end,
                              vector<Gene*>& oGeneList, bool ir) ;
     void fill_junc_tlb(vector<LSV*>& lsv_list, map<string, int>& tlb) ;
     bool isNullJinfo(Jinfo* x) ;
