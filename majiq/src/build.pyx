@@ -107,7 +107,7 @@ cdef int _output_majiq_file(vector[LSV*] lsvlist, map[string, overGene_vect_t] g
             npos    = junc_ids[i][4]
             irbool  = junc_ids[i][5]
             chrom   = jid.split(b':')[0]
-            strand  = <char> jid.split(b':')[1]
+            strand  = <char> jid.split(b':')[1][0]
 
         find_gene_from_junc(gList, chrom, strand, coord1, coord2, gene_l, irbool)
         if irbool == 0:
