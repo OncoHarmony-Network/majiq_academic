@@ -54,7 +54,9 @@
                     targets: 0,
                     render: data => {
                         const element = document.createElement('a');
-                        element.setAttribute('href', data.href);
+                        element.href = data.href;
+                        element.target = '_blank';
+                        element.rel = "noopener noreferrer";
                         element.textContent = data.gene_name;
                         return element.outerHTML
                     }
@@ -99,6 +101,7 @@
                         const ucsc_a = document.createElement('a');
                         ucsc_a.href = data;
                         ucsc_a.target = '_blank';
+                        ucsc.rel = "noopener noreferrer";
                         const ucsc_img = document.createElement('img');
                         ucsc_img.src = '{{ url_for('static', filename="img/ucsc.png") }}';
                         ucsc_a.appendChild(ucsc_img);

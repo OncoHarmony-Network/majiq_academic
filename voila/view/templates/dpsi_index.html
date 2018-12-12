@@ -33,7 +33,7 @@
                         });
 
 
-                   copy_lsv_modal(n, '{{ url_for("copy_lsv") }}/' + encodeURIComponent(lsv_id))
+                    copy_lsv_modal(n, '{{ url_for("copy_lsv") }}/' + encodeURIComponent(lsv_id))
                 })
             );
         })
@@ -70,7 +70,9 @@
                     targets: 0,
                     render: data => {
                         const element = document.createElement('a');
-                        element.setAttribute('href', data[0]);
+                        element.href = data[0];
+                        element.target = '_blank';
+                        element.rel = "noopener noreferrer";
                         element.textContent = data[1];
                         return element.outerHTML
                     }
@@ -114,6 +116,7 @@
                         const ucsc_a = document.createElement('a');
                         ucsc_a.href = data;
                         ucsc_a.target = '_blank';
+                        ucsc_a.rel = 'noopener noreferrer';
                         const ucsc_img = document.createElement('img');
                         ucsc_img.src = '{{ url_for('static', filename="img/ucsc.png") }}';
                         ucsc_a.appendChild(ucsc_img);
