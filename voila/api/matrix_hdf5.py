@@ -494,6 +494,7 @@ class MatrixType(ABC):
         :return: list of strings
         """
         try:
+
             ss = filter(lambda x: x != 'i', self.lsv_type.split('|')[1:])
             ss = map(lambda x: x.split('.')[0].split('e')[0], ss)
 
@@ -505,7 +506,7 @@ class MatrixType(ABC):
 
         except IndexError:
 
-            if self.lsv_type == constants.NA_LSV:
+            if constants.NA_LSV in self.lsv_type:
                 return constants.NA_LSV
             raise
 
@@ -533,7 +534,7 @@ class MatrixType(ABC):
                     return 'A5SS'
 
         except IndexError:
-            if self.lsv_type == constants.NA_LSV:
+            if constants.NA_LSV in self.lsv_type:
                 return constants.NA_LSV
             raise
 
@@ -561,7 +562,7 @@ class MatrixType(ABC):
             exons = map(lambda x: x.split('.')[0].split('e')[1], exons)
             return len(set(exons)) + 1
         except IndexError:
-            if self.lsv_type == constants.NA_LSV:
+            if constants.NA_LSV in self.lsv_type:
                 return constants.NA_LSV
             raise
 
