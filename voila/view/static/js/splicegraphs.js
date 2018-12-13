@@ -985,7 +985,7 @@ class SpliceGraphs {
                 const experiment = sg.dataset.experiment;
                 const reads = gene.junction_reads[experiment];
 
-                d3.selectAll(this.container.querySelectorAll('.junction-grp'))
+                d3.selectAll(sg.querySelectorAll('.junction-grp'))
                     .classed('reads-filter', d => {
                         let r;
                         try {
@@ -993,7 +993,7 @@ class SpliceGraphs {
                         } catch (TypeError) {
                             r = 0;
                         }
-                        return (!isNaN(gt) && !isNaN(lt) && r <= gt || r >= lt) || (!isNaN(gt) && r <= gt) || (!isNaN(lt) && r >= lt)
+                        return (!isNaN(gt) && !isNaN(lt) && r <= gt || r >= lt) || (!isNaN(gt) && r <= gt) || (!isNaN(lt) && r >= lt);
                     })
             })
 

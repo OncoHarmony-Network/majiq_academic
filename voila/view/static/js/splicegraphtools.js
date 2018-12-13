@@ -1,8 +1,9 @@
 class SpliceGraphTools {
-    constructor(sgs, gene) {
+    constructor(sgs, gene, highlight_lsvs) {
         this.grp_names = gene.group_names;
         this.exp_names = gene.experiment_names;
         this.sgs = sgs;
+        this.highlight_lsvs = highlight_lsvs;
         this._init();
     }
 
@@ -75,7 +76,8 @@ class SpliceGraphTools {
                 this.sgs.create(g, e);
                 SpliceGraphTools._populate_sg_form();
                 f.querySelector('button').disabled = false;
-                junctions_filter()
+                junctions_filter();
+                this.highlight_lsvs();
             }
         };
 
