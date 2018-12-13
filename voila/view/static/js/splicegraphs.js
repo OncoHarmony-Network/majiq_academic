@@ -905,7 +905,7 @@ class SpliceGraphs {
 
             // highlight junctions and intron retentions when you mouse over them
             added_nodes
-                .filter(el => el.classList && (el.classList.contains('junction-grp') || el.classList.contains('intron-retention-grp') || el.classList.contains('exon-grp')))
+                .filter(el => el && el.classList && (el.classList.contains('junction-grp') || el.classList.contains('intron-retention-grp') || el.classList.contains('exon-grp')))
                 .forEach(el => {
                     const datum = d3.select(el).datum();
                     el.onmouseover = () => {
@@ -955,7 +955,7 @@ class SpliceGraphs {
 
             // add click event to remove icon
             added_nodes
-                .filter(el => el.classList && el.classList.contains('splice-graph-remove'))
+                .filter(el => el && el.classList && el.classList.contains('splice-graph-remove'))
                 .forEach(el => el.onclick = this.remove_fn);
 
 
@@ -972,5 +972,30 @@ class SpliceGraphs {
             .querySelectorAll('.splice-graph')
             .forEach(sg => this.splice_graph_update(sg, this.gene, this.lsvs));
         this.d = undefined;
+    }
+
+    junctions_filter(gt, lt) {
+        const gene = this.gene;
+        gt = parseInt(gt);
+        lt = parseInt(lt);
+
+        this.container
+            .querySelectorAll('.splice-graph')
+            .forEach(sg => {
+                const experiment = sg.dataset.experiment;
+                const reads = gene.junction_reads[experiment];
+
+                d3.selectAll(this.container.querySelectorAll('.junction-grp'))
+                    .classed('reads-filter', d => {
+                        let r;
+                        try {
+                            r = parseInt(reads[d.start][d.end]) || 0;
+                        } catch (TypeError) {
+                            r = 0;
+                        }
+                        return (!isNaN(gt) && !isNaN(lt) && r <= gt || r >= lt) || (!isNaN(gt) && r <= gt) || (!isNaN(lt) && r >= lt)
+                    })
+            })
+
     }
 }

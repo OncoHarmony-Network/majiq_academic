@@ -17,12 +17,13 @@ class SpliceGraphTools {
             document.querySelector('.splice-graph-tools.tools-menu').classList.toggle('hide-tools-menu');
         };
 
-        document.querySelector('.lsv-tools.tools-menu-btn').onclick = (event) => {
-            event.preventDefault();
-            d3.selectAll('.splice-graph-tools.tools-menu')
-                .classed('hide-tools-menu', true);
-            document.querySelector('.lsv-tools.tools-menu').classList.toggle('hide-tools-menu');
-        };
+        document.querySelectorAll('.lsv-tools.tools-menu-btn')
+            .forEach(l => l.onclick = (event) => {
+                event.preventDefault();
+                d3.selectAll('.splice-graph-tools.tools-menu')
+                    .classed('hide-tools-menu', true);
+                document.querySelector('.lsv-tools.tools-menu').classList.toggle('hide-tools-menu');
+            });
 
 
         // populate splice graph selector groups
@@ -74,6 +75,7 @@ class SpliceGraphTools {
                 this.sgs.create(g, e);
                 SpliceGraphTools._populate_sg_form();
                 f.querySelector('button').disabled = false;
+                junctions_filter()
             }
         };
 
@@ -111,23 +113,19 @@ class SpliceGraphTools {
         document.querySelector('#junction-reads-filter').onchange = (event) => {
             document.querySelectorAll('#reads-greater-than, #reads-less-than').forEach(el => el.disabled = !el.disabled);
             if (event.target.checked) {
-                document.querySelectorAll('#reads-greater-than, #reads-less-than').forEach(e => e.dispatchEvent(new Event('input')));
+                junctions_filter()
             } else {
-                d3.selectAll('.junction-grp')
-                    .classed('reads-filter', false)
+                this.sgs.junctions_filter()
             }
         };
 
         // adjust greater than and less than fields in junction filter
         const junctions_filter = () => {
-            const gt = parseInt(document.querySelector('#reads-greater-than').value);
-            const lt = parseInt(document.querySelector('#reads-less-than').value);
-            d3.selectAll('.junction-grp')
-                .classed('reads-filter', (d, i, a) => {
-                    let r = parseInt(a[i].querySelector('.junction-reads').textContent);
-                    r = isNaN(r) ? 0 : r;
-                    return (!isNaN(gt) && !isNaN(lt) && r <= gt || r >= lt) || (!isNaN(gt) && r <= gt) || (!isNaN(lt) && r >= lt);
-                })
+            if (document.querySelector('#junction-reads-filter').checked) {
+                const gt = document.querySelector('#reads-greater-than').value;
+                const lt = document.querySelector('#reads-less-than').value;
+                this.sgs.junctions_filter(gt, lt)
+            }
         };
 
         document.querySelector('#reads-greater-than').oninput = junctions_filter;
