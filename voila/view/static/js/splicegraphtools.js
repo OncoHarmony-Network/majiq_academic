@@ -5,6 +5,7 @@ class SpliceGraphTools {
         this.sgs = sgs;
         this.highlight_lsvs = highlight_lsvs;
         this._init();
+        this.download_svg()
     }
 
     _init() {
@@ -133,11 +134,35 @@ class SpliceGraphTools {
         document.querySelector('#reads-greater-than').oninput = junctions_filter;
         document.querySelector('#reads-less-than').oninput = junctions_filter;
 
+
     }
 
 
     static _populate_sg_form() {
         document.querySelector('#groups').dispatchEvent(new Event('change'));
+    }
+
+
+    download_svg() {
+        window.addEventListener('click', e => {
+            if (e.target.classList.contains('splice-graph-download')) {
+                const sg = e.target.closest('.splice-graph');
+                const exp = sg.dataset.experiment;
+                const grp = sg.dataset.group;
+                const svg = sg.querySelector('svg').outerHTML;
+
+                const element = document.createElement('a');
+                element.setAttribute('href', 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg));
+                element.setAttribute('download', `${grp}_${exp}_sg.svg`);
+
+                element.style.display = 'none';
+                document.body.appendChild(element);
+
+                element.click();
+
+                document.body.removeChild(element);
+            }
+        })
     }
 
 }

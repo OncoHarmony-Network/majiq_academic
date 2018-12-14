@@ -24,7 +24,8 @@
                             sg.remove();
                             SpliceGraphTools._populate_sg_form();
                         });
-                }
+                },
+                download_img: '{{ url_for('static', filename='img/download.svg') }}'
             });
 
             const highlight_lsvs = () => {

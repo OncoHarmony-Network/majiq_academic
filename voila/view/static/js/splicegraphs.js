@@ -11,6 +11,7 @@ class SpliceGraphs {
     constructor(container, opts) {
         this.container_selector = container;
         this.remove_img = opts.remove_img;
+        this.download_img = opts.download_img;
         this.remove_fn = opts.remove_fn;
         this.gene = opts.gene;
         this.lsv_ids = [];
@@ -645,6 +646,7 @@ class SpliceGraphs {
             .attr('y', this.y(this.bottom_icons - 13))
             .attr('text-anchor', strand === '+' ? 'start' : 'middle')
             .attr('font-weight', 'bold')
+            .attr('font-size', 12)
             .text(() => strand === '+' ? '↳' : '^')
     }
 
@@ -658,6 +660,7 @@ class SpliceGraphs {
             .attr('y', this.y(this.bottom_icons - 13))
             .attr('text-anchor', strand === '+' ? 'middle' : 'start')
             .attr('font-weight', 'bold')
+            .attr('font-size', 12)
             .text(() => strand === '+' ? '^' : '↳')
     }
 
@@ -740,6 +743,12 @@ class SpliceGraphs {
             .attr('height', '16px');
 
         sg_header
+            .append('img')
+            .attr('class', 'splice-graph-download')
+            .attr('src', this.download_img)
+            .attr('height', '16px');
+
+        sg_header
             .append('div')
             .text(`Group: ${sg.dataset.group}; Experiment: ${sg.dataset.experiment};`);
 
@@ -749,7 +758,8 @@ class SpliceGraphs {
 
         const svg = d3.select(sg).append('svg')
             .attr('width', this.svg_width)
-            .attr('height', this.svg_height);
+            .attr('height', this.svg_height)
+            .attr("xmlns", "http://www.w3.org/2000/svg");
 
         const exons = gene.exons.filter(function (d) {
             return !d.intron_retention && !d.half_exon
