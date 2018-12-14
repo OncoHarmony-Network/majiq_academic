@@ -1,4 +1,7 @@
+from os.path import join
+
 from voila.utils import utils_voila
+from voila.voila_log import voila_log
 
 __author__ = 'abarrera'
 

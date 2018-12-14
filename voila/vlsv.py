@@ -76,6 +76,7 @@ def matrix_area(matrix, threshold, non_changing=False):
 def is_lsv_changing(means, threshold):
     """
     Return true if lsv is changing based on threshold.
+    :param means: means numpy array
     :param threshold: lsv threshold value
     :return: bool
     """

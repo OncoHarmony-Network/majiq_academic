@@ -82,15 +82,16 @@ tsv_parser.add_argument('--show-all', action='store_true',
                         help='Show all LSVs including those with no junction with significant change predicted.')
 
 tsv_parser.add_argument('--lsv-types-file', type=check_list_file, dest='lsv_types',
-                        help='Location of file that contains a list of LSV types which should remain in the results. One '
-                             'type per line')
+                        help='Location of file that contains a list of LSV types which should remain in the results. '
+                             'One type per line')
 tsv_parser.add_argument('--lsv-types', nargs='*', default=[],
                         help='LSV types which should remain in the results')
 tsv_parser.add_argument('--lsv-ids-file', type=check_list_file, dest='lsv_ids',
-                        help='Location of file that contains a list of LSV IDs which should remain in the results. One ID '
-                             'per line.')
+                        help='Location of file that contains a list of LSV IDs which should remain in the results. One '
+                             'ID per line.')
 tsv_parser.add_argument('--lsv-ids', nargs='*', default=[],
-                        help='LSV IDs, separated by spaces, which should remain in the results. e.g LSV_ID1 LSV_ID2 ...')
+                        help='LSV IDs, separated by spaces, which should remain in the results. e.g LSV_ID1 '
+                             'LSV_ID2 ...')
 tsv_parser.add_argument('--gene-names-file', dest='gene_names', type=check_list_file, default=[],
                         help='Location of file that contains a list of common gene names which should remain in '
                              'the results. One name per line.')

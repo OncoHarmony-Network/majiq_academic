@@ -162,15 +162,15 @@ def write(args):
     filters = 'FILTERS'
 
     # Get filters from arguments, add them to the appropriate section, and remove them from arguments.
-    for filter in ['lsv_types', 'lsv_ids', 'gene_ids', 'gene_names']:
-        if filter in attrs and attrs[filter]:
+    for lsv_filter in ['lsv_types', 'lsv_ids', 'gene_ids', 'gene_names']:
+        if lsv_filter in attrs and attrs[lsv_filter]:
             try:
-                config_parser.set(filters, filter, '\n'.join(attrs[filter]))
+                config_parser.set(filters, lsv_filter, '\n'.join(attrs[lsv_filter]))
             except configparser.NoSectionError:
                 config_parser.add_section(filters)
-                config_parser.set(filters, filter, '\n'.join(attrs[filter]))
+                config_parser.set(filters, lsv_filter, '\n'.join(attrs[lsv_filter]))
 
-            del attrs[filter]
+            del attrs[lsv_filter]
 
     # Get settings from arguments.
     config_parser.add_section(settings)
