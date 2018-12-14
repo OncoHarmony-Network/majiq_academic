@@ -257,6 +257,14 @@ cdef void _core_independent(object self):
         _statistical_test_computation(out_h5p, comparison, list_of_lsv, stats_vec, self.psi_samples, lsv_map,
                                       self.outDir, nthreads, logger)
 
+
+    if not self.keep_tmpfiles:
+        for cond_name in file_cond.keys():
+            for fidx in range(len(file_cond[cond_name])):
+                fname = get_tmp_psisample_file(self.outDir, "%s_%s" %(cond_name, fidx) )
+                if os.path.exists(fname):
+                    os.remove(fname)
+
     if self.mem_profile:
         mem_allocated = int(psutil.Process().memory_info().rss) / (1024 ** 2)
         logger.info("Max Memory used %.2f MB" % mem_allocated)

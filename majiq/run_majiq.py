@@ -77,9 +77,6 @@ def main():
                              help='Disables denovo detection of junction, splicesites and exons. This will speedup the '
                                   'execution but reduce the number of LSVs detected. [Default: denovo enabled]')
 
-    # buildparser.add_argument('--gff-output', dest='gff_output', default="lsvs.gff", action="store",
-    #                          help='Filename where a gff with the lsv events will be generated. [Default: %(default)s]')
-
     buildparser.add_argument('--min-intronic-cov', default=1, type=float,
                              help='Minimum number of reads on average in intronic sites, only for intron retention.'
                                   'Default: %(default)s]')
@@ -100,14 +97,11 @@ def main():
     buildparser.add_argument('--markstacks', default=0.0000001, type=float, dest="pvalue_limit",
                              help='Mark stack positions. Expects a p-value. Use a negative value in order to '
                                   'disable it. [Default: %(default)s]')
-    # buildparser.add_argument('--simplify', default=-1, type=int, help="Simplify splicegraph to only the cases that are "
-    #                                                                   "relevant for the current set of groups")
 
     buildparser.add_argument('--k', default=50, type=int,
                              help='Number of positions to sample per iteration. [Default: %(default)s]')
     buildparser.add_argument('--m', default=30, type=int,
                              help='Number of bootstrapping samples. [Default: %(default)s]')
-
 
     sampling = new_subparser()
 
@@ -122,7 +116,6 @@ def main():
     psi.add_argument('files', nargs='+', help='The experiment files to analyze. You can include more than one '
                                               '(they will all be analyzed independently though) Glob syntax supported.')
     psi.add_argument('-n', '--name', required=True, help="The names that identify each of the experiments.")
-
 
     psi.add_argument('--output-type', choices=['voila', 'tsv', 'all'], default='all',
                      help='Defines the type of output file to be generated, voila file to be used in voila, '
@@ -153,6 +146,9 @@ def main():
     htrgen.add_argument('-grp2', dest="files2", nargs='+', required=True)
     htrgen.add_argument('-n', '--names', nargs='+', required=True,
                         help="The names that identify each of the experiments.")
+    htrgen.add_argument('--keep-tmpfiles', action='store_true', default=False, dest='keep_tmpfiles',
+                        help='When this argument is specified, majiq heterogen will not remove the psi files that '
+                             'are temporary generated during the execution [Default: %(default)d]')
     htrgen.add_argument('--nsamples', type=int, default=100, dest="psi_samples",
                         help='Number of PSI samples to take per LSV junction. If equal to 1, use expected value only. '
                              '[Default: %(default)d]')
