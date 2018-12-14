@@ -207,7 +207,6 @@ class LsvTools {
                         return acc
                     }, []);
                     junctions = Array.from(new Set(junctions));
-                    console.log(junctions);
 
                 })
             });

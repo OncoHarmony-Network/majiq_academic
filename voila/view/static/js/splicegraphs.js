@@ -11,6 +11,7 @@ class SpliceGraphs {
     constructor(container, opts) {
         this.container_selector = container;
         this.remove_img = opts.remove_img;
+        this.download_img = opts.download_img;
         this.remove_fn = opts.remove_fn;
         this.gene = opts.gene;
         this.lsv_ids = [];
@@ -645,6 +646,7 @@ class SpliceGraphs {
             .attr('y', this.y(this.bottom_icons - 13))
             .attr('text-anchor', strand === '+' ? 'start' : 'middle')
             .attr('font-weight', 'bold')
+            .attr('font-size', 12)
             .text(() => strand === '+' ? '↳' : '^')
     }
 
@@ -658,6 +660,7 @@ class SpliceGraphs {
             .attr('y', this.y(this.bottom_icons - 13))
             .attr('text-anchor', strand === '+' ? 'middle' : 'start')
             .attr('font-weight', 'bold')
+            .attr('font-size', 12)
             .text(() => strand === '+' ? '^' : '↳')
     }
 
@@ -740,6 +743,12 @@ class SpliceGraphs {
             .attr('height', '16px');
 
         sg_header
+            .append('img')
+            .attr('class', 'splice-graph-download')
+            .attr('src', this.download_img)
+            .attr('height', '16px');
+
+        sg_header
             .append('div')
             .text(`Group: ${sg.dataset.group}; Experiment: ${sg.dataset.experiment};`);
 
@@ -749,7 +758,8 @@ class SpliceGraphs {
 
         const svg = d3.select(sg).append('svg')
             .attr('width', this.svg_width)
-            .attr('height', this.svg_height);
+            .attr('height', this.svg_height)
+            .attr("xmlns", "http://www.w3.org/2000/svg");
 
         const exons = gene.exons.filter(function (d) {
             return !d.intron_retention && !d.half_exon
@@ -905,7 +915,7 @@ class SpliceGraphs {
 
             // highlight junctions and intron retentions when you mouse over them
             added_nodes
-                .filter(el => el.classList && (el.classList.contains('junction-grp') || el.classList.contains('intron-retention-grp') || el.classList.contains('exon-grp')))
+                .filter(el => el && el.classList && (el.classList.contains('junction-grp') || el.classList.contains('intron-retention-grp') || el.classList.contains('exon-grp')))
                 .forEach(el => {
                     const datum = d3.select(el).datum();
                     el.onmouseover = () => {
@@ -955,7 +965,7 @@ class SpliceGraphs {
 
             // add click event to remove icon
             added_nodes
-                .filter(el => el.classList && el.classList.contains('splice-graph-remove'))
+                .filter(el => el && el.classList && el.classList.contains('splice-graph-remove'))
                 .forEach(el => el.onclick = this.remove_fn);
 
 
@@ -972,5 +982,30 @@ class SpliceGraphs {
             .querySelectorAll('.splice-graph')
             .forEach(sg => this.splice_graph_update(sg, this.gene, this.lsvs));
         this.d = undefined;
+    }
+
+    junctions_filter(gt, lt) {
+        const gene = this.gene;
+        gt = parseInt(gt);
+        lt = parseInt(lt);
+
+        this.container
+            .querySelectorAll('.splice-graph')
+            .forEach(sg => {
+                const experiment = sg.dataset.experiment;
+                const reads = gene.junction_reads[experiment];
+
+                d3.selectAll(sg.querySelectorAll('.junction-grp'))
+                    .classed('reads-filter', d => {
+                        let r;
+                        try {
+                            r = parseInt(reads[d.start][d.end]) || 0;
+                        } catch (TypeError) {
+                            r = 0;
+                        }
+                        return (!isNaN(gt) && !isNaN(lt) && r <= gt || r >= lt) || (!isNaN(gt) && r <= gt) || (!isNaN(lt) && r >= lt);
+                    })
+            })
+
     }
 }

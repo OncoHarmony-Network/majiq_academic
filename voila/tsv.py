@@ -271,6 +271,7 @@ class AnalysisTypeTsv:
         multiple_results = []
 
         tsv_file = Path(config.file_name).expanduser().resolve()
+        tsv_file.parents[0].mkdir(parents=True, exist_ok=True)
 
         mgr = multiprocessing.Manager()
         log.info('Manager PID {}'.format(mgr._process.ident))
@@ -281,7 +282,7 @@ class AnalysisTypeTsv:
         fill_queue_proc = multiprocessing.Process(target=self.fill_queue, args=(queue, event))
         fill_queue_proc.start()
 
-        with open(tsv_file, 'w') as tsv:
+        with tsv_file.open('w') as tsv:
             writer = csv.DictWriter(tsv, fieldnames=fieldnames, delimiter='\t')
             writer.writeheader()
 
@@ -309,7 +310,7 @@ class PsiTsv(AnalysisTypeTsv):
         with ViewPsi() as m, ViewSpliceGraph() as sg:
             genome = sg.genome
 
-            with open(tsv_file, 'a') as tsv:
+            with tsv_file.open('a') as tsv:
                 writer = csv.DictWriter(tsv, fieldnames=fieldnames, delimiter='\t')
 
                 for gene_id in self.gene_ids(q, e):
@@ -392,7 +393,7 @@ class HeterogenTsv(AnalysisTypeTsv):
         with ViewSpliceGraph() as sg:
             genome = sg.genome
 
-            with open(tsv_file, 'a') as tsv:
+            with tsv_file.open('a') as tsv:
                 writer = csv.DictWriter(tsv, fieldnames=fieldnames, delimiter='\t')
 
                 for gene_id in self.gene_ids(q, e):
@@ -462,7 +463,7 @@ class DeltaPsiTsv(AnalysisTypeTsv):
         with ViewSpliceGraph() as sg:
             genome = sg.genome
 
-            with open(tsv_file, 'a') as tsv:
+            with tsv_file.open('a') as tsv:
                 writer = csv.DictWriter(tsv, fieldnames=fieldnames, delimiter='\t')
 
                 for gene_id in self.gene_ids(q, e):

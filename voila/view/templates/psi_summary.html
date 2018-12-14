@@ -24,10 +24,25 @@
                             sg.remove();
                             SpliceGraphTools._populate_sg_form();
                         });
-                }
+                },
+                download_img: '{{ url_for('static', filename='img/download.svg') }}'
             });
 
-            sgs.init_create().then(s => new SpliceGraphTools(s, gene));
+            const highlight_lsvs = () => {
+                const hl_data = Array.from(document.querySelectorAll('.highlight-form'))
+                    .map(f => {
+                        const lsv_id = f.closest('tr').querySelectorAll('td')[1].textContent;
+                        const highlight = f.querySelector('.highlight').checked;
+                        const weighted = f.querySelector('.psi-weighted').checked;
+                        return [lsv_id, highlight, weighted];
+                    });
+
+                send_ajax('{{ url_for("lsv_highlight") }}', hl_data).then(lsvs => {
+                    sgs.highlight(lsvs);
+                })
+            };
+
+            sgs.init_create().then(s => new SpliceGraphTools(s, gene, highlight_lsvs));
 
             new MutationObserver(mutations => {
                 mutations.forEach(m => m.addedNodes
@@ -62,18 +77,7 @@
                                     .forEach(hl => hl.checked = true)
                             }
 
-                            const hl_data = Array.from(document.querySelectorAll('.highlight-form'))
-                                .map(f => {
-                                    const lsv_id = f.closest('tr').querySelectorAll('td')[1].textContent;
-                                    const highlight = f.querySelector('.highlight').checked;
-                                    const weighted = f.querySelector('.psi-weighted').checked;
-                                    return [lsv_id, highlight, weighted];
-                                });
-
-                            send_ajax('{{ url_for("lsv_highlight") }}', hl_data).then(lsvs => {
-                                sgs.highlight(lsvs);
-                            })
-
+                            highlight_lsvs();
                         };
 
                         copy_lsv_modal(n, '{{ url_for("copy_lsv") }}/' + encodeURIComponent(lsv_id))
