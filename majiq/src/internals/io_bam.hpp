@@ -22,6 +22,7 @@
 
 #define is_read1(b)   (((b)->core.flag & BAM_FREAD1) != 0)
 #define is_read2(b)   (((b)->core.flag & BAM_FREAD2) != 0)
+#define is_read_reverse(b) (((b)->core.flag & BAM_FREVERSE) == 0x10)
 ////Sort a vector of junctions
 //template <class CollectionType>
 //inline void sort_junctions(CollectionType &junctions) {

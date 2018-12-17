@@ -23,14 +23,18 @@ namespace io_bam {
         char strn = '.';
 
         if (strandness_ == FWD_STRANDED){
-            strn = (((read->core.flag & 0x10) == (0x00 & is_read1(read)))
-                    || ((read->core.flag & 0x10) == (0x10 & is_read2(read)))) ? '+' : '-' ;
+            strn = ((!is_read_reverse(read) && is_read1(read)) ||
+                    (is_read_reverse(read) && is_read2(read)) ||
+                    (!is_read_reverse(read) && (is_read1(read) == is_read2(read)))) ? '+' : '-' ;
 
         } else if (strandness_ == REV_STRANDED){
-            strn = (((read->core.flag & 0x10) ==(0x10 & is_read1(read)))
-                    || ((read->core.flag & 0x10) == (0x00 & is_read2(read)))) ? '+' : '-' ;
+
+            strn = ((is_read_reverse(read) && is_read1(read)) ||
+                    (!is_read_reverse(read) && is_read2(read)) ||
+                    (is_read_reverse(read) && (is_read1(read) == is_read2(read)))) ? '+' : '-' ;
         }
-//cout << strn << " " << read->core.flag << " " << read->id<<"\n" ;
+//cout << strn << " " << read->core.flag << " " << strandness_<< " , "  << is_read1(read) << " :: "<<  is_read2(read) << "\n" ;
+
 
         return (strn);
     }
