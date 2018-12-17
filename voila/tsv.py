@@ -1,5 +1,6 @@
 import csv
 import multiprocessing
+import os
 from datetime import datetime
 from pathlib import Path
 from queue import Empty
@@ -271,8 +272,9 @@ class AnalysisTypeTsv:
         nproc = config.nproc
         multiple_results = []
 
-        tsv_file = Path(config.file_name).expanduser().resolve()
-        tsv_file.parents[0].mkdir(parents=True, exist_ok=True)
+        tsv_file = config.file_name
+        os.makedirs(os.path.dirname(tsv_file), exist_ok=True)
+        tsv_file = Path(tsv_file)
 
         mgr = multiprocessing.Manager()
 
