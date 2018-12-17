@@ -277,6 +277,11 @@ class IntronRetentions(SpliceGraphSQL):
 
 class AltStarts(SpliceGraphSQL):
     def alt_starts(self, gene_id):
+        """
+        Get alternate starts for a specific gene.
+        :param gene_id: gene id
+        :return: list of alt starts dictionary
+        """
         query = self.conn.execute('''
                                     SELECT coordinate 
                                     FROM alt_start
@@ -284,8 +289,14 @@ class AltStarts(SpliceGraphSQL):
                                     ''', (gene_id,))
         return self._iter_results(query, alt_starts_fieldnames)
 
+
 class AltEnds(SpliceGraphSQL):
     def alt_ends(self, gene_id):
+        """
+        Get alternate ends for specific gene.
+        :param gene_id: gene id
+        :return: List of alt ends dictionary
+        """
         query = self.conn.execute('''
                                     SELECT coordinate 
                                     FROM alt_end

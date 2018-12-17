@@ -1,7 +1,24 @@
 {% extends 'base_summary.html' %}
 
+{% block heatmap_form %}
+    <div class="pure-u-1-3">
+        <form class="heatmap-form pure-form pure-form-aligned">
+            {% for stat_name in stat_names %}
+                <label for="{{ stat_name }}" class="pure-radio">
+                    <input id="{{ stat_name }}" type="radio" name="stat-name" value="{{ stat_name }}"
+                           {% if loop.first %}checked{% endif %}>
+                    {{ stat_name }}</label>
+            {% endfor %}
+        </form>
+    </div>
+{% endblock %}
+
 {% block analysis_type_script %}
     <script>
+        document.querySelector('.heatmap-form').addEventListener('change', () => {
+            $('.lsv-table').DataTable().ajax.reload();
+        });
+
         json_ajax('{{ url_for("nav", gene_id=gene.id) }}').then(json => {
             document.querySelector('.prev-gene').addEventListener('click', () => {
                 window.location.href = json.prev;
@@ -58,7 +75,7 @@
                 }));
         });
 
-        document.querySelectorAll('.lsv-cartoon').forEach(c => {
+        document.querySelectorAll('.lsv-cartoon').forEach(async function (c) {
             const lsv_id = c.closest('.lsv').dataset.lsvId;
             json_ajax('{{ url_for("lsv_data") }}/' + encodeURIComponent(lsv_id))
                 .then(lsv_data => {
@@ -177,7 +194,7 @@
 
 
         document.querySelectorAll('.lsv-table')
-            .forEach(lsv_table => {
+            .forEach(async function (lsv_table) {
                 $(lsv_table).DataTable({
                     autoWidth: false,
                     processing: true,
@@ -186,7 +203,11 @@
                     searching: false,
                     info: false,
                     ajax: {
-                        url: '{{ url_for('summary_table') }}/' + encodeURIComponent(lsv_table.dataset.lsvId),
+                        url: '{{ url_for('summary_table') }}',
+                        data: d => {
+                            d['lsv_id'] = lsv_table.dataset.lsvId;
+                            d['stat_name'] = document.querySelector('input[name=stat-name]:checked').value;
+                        },
                         type: 'POST'
                     },
                     columnDefs: [

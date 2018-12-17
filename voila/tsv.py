@@ -240,7 +240,8 @@ class AnalysisTypeTsv:
                 queue.put(gene_id)
             event.set()
 
-    def gene_ids(self, q, e):
+    @staticmethod
+    def gene_ids(q, e):
         """
         Get gene ids from queue.
         :param q: Queue containing gene IDS.
@@ -274,7 +275,6 @@ class AnalysisTypeTsv:
         tsv_file.parents[0].mkdir(parents=True, exist_ok=True)
 
         mgr = multiprocessing.Manager()
-        log.info('Manager PID {}'.format(mgr._process.ident))
 
         queue = mgr.Queue(nproc * 2)
         event = mgr.Event()
@@ -307,7 +307,7 @@ class PsiTsv(AnalysisTypeTsv):
     def tsv_row(self, q, e, tsv_file, fieldnames):
         log = voila_log()
 
-        with ViewPsi() as m, ViewSpliceGraph() as sg:
+        with ViewSpliceGraph() as sg:
             genome = sg.genome
 
             with tsv_file.open('a') as tsv:
@@ -376,10 +376,10 @@ class HeterogenTsv(AnalysisTypeTsv):
     def tab_output(self):
         with ViewHeterogens() as m:
             group_names = m.group_names
+            stats_column_names = list(m.junction_stats_column_names)
 
             fieldnames = ['Gene Name', 'Gene ID', 'LSV ID', 'LSV Type', 'strand', 'chr'] + \
-                         ['%s E(PSI)' % group for group in group_names] + \
-                         list(m.junction_stats_column_names) + \
+                         ['%s E(PSI)' % group for group in group_names] + stats_column_names + \
                          ['A5SS', 'A3SS', 'ES', 'Num. Junctions', 'Num. Exons', 'De Novo Junctions',
                           'Junctions coords', 'Exons coords', 'IR coords', 'UCSC LSV Link']
 

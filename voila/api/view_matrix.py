@@ -202,6 +202,9 @@ class ViewDeltaPsi(DeltaPsi, ViewMatrix):
 
 class ViewHeterogens:
     def __init__(self):
+        """
+        View for set of Heterogen Voila  files.  This is used in creation of tsv and html files.
+        """
         self._group_names = None
 
     def __enter__(self):
@@ -216,6 +219,12 @@ class ViewHeterogens:
             self.lsv_id = lsv_id
 
         def get_attr(self, attr):
+            """
+            For attributes that exist is each het file, this will get all values and confirm they're all equal.
+            :param attr: attribute found in het voila file.
+            :return: attribute value
+            """
+
             voila_files = ViewConfig().voila_files
             s = set()
             for f in voila_files:
@@ -229,17 +238,9 @@ class ViewHeterogens:
             return s.pop()
 
         @property
-        def group_bins(self):
-            mean_psi = self.mean_psi
-            mean_psi = np.array(mean_psi)
-            mean_psi = mean_psi.transpose((1, 0, 2))
-            for group_name, mean in zip(self.matrix_hdf5.group_names, mean_psi):
-                yield group_name, mean.tolist()
-
-        @property
         def reference_exon(self):
             return self.get_attr('reference_exon')
-        
+
         @property
         def target(self):
             return self.get_attr('target')
@@ -275,6 +276,27 @@ class ViewHeterogens:
         @property
         def exon_count(self):
             return self.get_attr('exon_count')
+
+        @property
+        def lsv_type(self):
+            return self.get_attr('lsv_type')
+
+        @property
+        def intron_retention(self):
+            return self.get_attr('intron_retention')
+
+        @property
+        def group_bins(self):
+            """
+            Associate means values with it's experiment group name.
+            :return: Generator key/value
+            """
+
+            mean_psi = self.mean_psi
+            mean_psi = np.array(mean_psi)
+            mean_psi = mean_psi.transpose((1, 0, 2))
+            for group_name, mean in zip(self.matrix_hdf5.group_names, mean_psi):
+                yield group_name, mean.tolist()
 
         def junction_heat_map(self, stat_name, junc_idx):
             voila_files = ViewConfig().voila_files
@@ -317,6 +339,12 @@ class ViewHeterogens:
 
         @property
         def mu_psi(self):
+            """
+            Find mu_psi in all het voila files and create a matrix that matches the new unified set of group/experiment
+            names.  In the case where the experiments are all the same number, this will fill the empty space in the
+            matrix with -1.
+            :return: List
+            """
             voila_files = ViewConfig().voila_files
             group_names = self.matrix_hdf5.group_names
             experiment_names = self.matrix_hdf5.experiment_names
@@ -324,7 +352,6 @@ class ViewHeterogens:
             juncs_len = len(self.junctions)
             grps_len = len(group_names)
             mu_psi = np.empty((grps_len, juncs_len, exps_len))
-
             mu_psi.fill(-1)
 
             for f in voila_files:
@@ -349,6 +376,12 @@ class ViewHeterogens:
 
         @property
         def mean_psi(self):
+            """
+             Find mean_psi in all het voila files and create a matrix that matches the new unified set of group/experiment
+            names.  In the case where the experiments are all the same number, this will fill the empty space in the
+            matrix with -1.
+            :return: List
+            """
             voila_files = ViewConfig().voila_files
             group_names = self.matrix_hdf5.group_names
             juncs_len = len(self.junctions)
@@ -375,15 +408,12 @@ class ViewHeterogens:
             return mean_psi.tolist()
 
         @property
-        def lsv_type(self):
-            return self.get_attr('lsv_type')
-
-        @property
-        def intron_retention(self):
-            return self.get_attr('intron_retention')
-
-        @property
         def junctions(self):
+            """
+            Finds first file with junctions list for this specific lsv id. This does NOT validate the junctions list
+            is the same across all files where lsv id exists.
+            :return: numpy array
+            """
             config = ViewConfig()
             juncs = None
             for f in config.voila_files:
@@ -398,6 +428,10 @@ class ViewHeterogens:
 
         @property
         def junction_stats(self):
+            """
+            This gets associates stat test names with their values.
+            :return: generator key/value
+            """
             config = ViewConfig()
             voila_files = config.voila_files
             for f in voila_files:
@@ -416,6 +450,10 @@ class ViewHeterogens:
 
     @property
     def stat_names(self):
+        """
+        Gets list of stat test names.
+        :return: List
+        """
         names = set()
         voila_files = ViewConfig().voila_files
         for f in voila_files:
@@ -427,6 +465,10 @@ class ViewHeterogens:
 
     @property
     def junction_stats_column_names(self):
+        """
+        Stat column names for tsv output.
+        :return: generator
+        """
         voila_files = ViewConfig().voila_files
 
         for f in voila_files:
@@ -440,6 +482,10 @@ class ViewHeterogens:
 
     @property
     def experiment_names(self):
+        """
+        Experiment names for this set of het voila files.
+        :return: List
+        """
         config = ViewConfig()
         exp_names = {}
         for f in config.voila_files:
@@ -451,6 +497,10 @@ class ViewHeterogens:
 
     @property
     def group_names(self):
+        """
+        Group names for this set of het voila files.
+        :return: list
+        """
         config = ViewConfig()
         grp_names = set()
         for f in config.voila_files:
@@ -463,11 +513,13 @@ class ViewHeterogens:
 
         return grp_names
 
-    def lsv(self, lsv_id):
-        return self._ViewHeterogens(self, lsv_id)
-
     @property
     def splice_graph_experiment_names(self):
+        """
+        experiment names for the splice graph drop down.
+        :return: List
+        """
+
         config = ViewConfig()
         exp_names = {}
         for f in config.voila_files:
@@ -479,6 +531,11 @@ class ViewHeterogens:
 
     @property
     def gene_ids(self):
+        """
+        Get a set of gene ids from all het voila files.
+        :return: generator
+        """
+
         voila_files = ViewConfig().voila_files
         vhs = [ViewHeterogen(f) for f in voila_files]
         yield from set(chain(*(v.gene_ids for v in vhs)))
@@ -486,41 +543,62 @@ class ViewHeterogens:
             v.close()
 
     def lsv_ids(self, gene_ids=None):
+        """
+        Get a set of lsv ids from all voila files for specified gene ids. If gene ids is None, then get all lsv ids.
+        :param gene_ids: list of gene ids
+        :return:
+        """
+
         voila_files = ViewConfig().voila_files
         vhs = [ViewHeterogen(f) for f in voila_files]
         yield from set(chain(*(v.lsv_ids(gene_ids) for v in vhs)))
         for v in vhs:
             v.close()
 
+    def lsv(self, lsv_id):
+        """
+        Get view heterogens object for this lsv id.
+        :param lsv_id: lsv id
+        :return: view heterogens object
+        """
+
+        return self._ViewHeterogens(self, lsv_id)
+
     def lsvs(self, gene_id=None):
+        """
+        Get all lsvs for set of het voila files.
+        :param gene_id: gene id
+        :return:
+        """
+
         if gene_id:
-            for lsv_id in self.lsv_ids(gene_ids=[gene_id]):
-                yield self.lsv(lsv_id)
+            gene_ids = [gene_id]
         else:
-            for lsv_id in self.lsv_ids():
-                yield self.lsv(lsv_id)
+            gene_ids = None
+
+        for lsv_id in self.lsv_ids(gene_ids):
+            yield self.lsv(lsv_id)
 
 
 class ViewHeterogen(Heterogen, ViewMatrix):
     def __init__(self, voila_file):
+        """
+        This represents a single het voila file.  ViewHeterogens uses this class to retrieve data from the individual
+        files.
+        :param voila_file: voila file name
+        """
         super().__init__(voila_file)
 
     class _ViewHeterogen(Heterogen._Heterogen, ViewMatrixType):
         def __init__(self, matrix_hdf5, lsv_id):
             super().__init__(matrix_hdf5, lsv_id)
 
-        def get_all(self):
-            yield '_id', self.lsv_id
-            yield 'mean_psi', self.mean_psi
-            yield 'dpsi', list(self.dpsi)
-            for idx, stat_name in enumerate(self.matrix_hdf5.stat_names):
-                yield stat_name, self.junction_stat(idx)
-
-        def junction_stat(self, idx):
-            return self.junction_stats.T[idx]
-
         @property
         def dpsi(self):
+            """
+            Calculated the difference in psi for heat map.
+            :return: list
+            """
             return [abs(reduce(operator.__sub__, (get_expected_psi(b) for b in bs))) for bs in self.mean_psi]
 
         @property

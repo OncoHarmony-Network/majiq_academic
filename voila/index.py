@@ -74,7 +74,8 @@ class Index:
         with h5py.File(voila_file, 'a') as h:
             h.create_dataset('index', voila_index.shape, data=voila_index)
 
-    def _create_dtype(self, voila_index):
+    @staticmethod
+    def _create_dtype(voila_index):
         first_row = voila_index[0]
         dtype = []
 

@@ -39,7 +39,8 @@ def gene(gene_id):
         return views.gene_view('het_summary.html', gene_id, ViewDeltaPsi,
                                lsv_data=lsv_data,
                                group_names=m.group_names,
-                               ucsc=ucsc)
+                               ucsc=ucsc,
+                               stat_names=m.stat_names)
 
 
 @app.route('/lsv-data', methods=('POST',))
@@ -207,13 +208,12 @@ def lsv_highlight():
 
 
 @app.route('/summary-table', methods=('POST',))
-@app.route('/summary-table/<lsv_id>', methods=('POST',))
-def summary_table(lsv_id):
+def summary_table():
+    lsv_id, stat_name = itemgetter('lsv_id', 'stat_name')(request.form)
+
     with ViewHeterogens() as v:
         exp_names = v.experiment_names
         grp_names = v.group_names
-        stat_names = v.stat_names
-        stat_name = stat_names[0]
 
         het = v.lsv(lsv_id)
         juncs = het.junctions
