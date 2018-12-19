@@ -42,7 +42,7 @@ namespace io_bam{
             unsigned int eff_len_;
             map<string, unsigned int> junc_map ;
             unsigned int nthreads_;
-            map<string, vector<overGene*>> glist_ ;
+            map<string, vector<overGene*>> & glist_ ;
             map<string, vector<Intron*>> intronVec_ ;
             unsigned int junc_limit_index_ ;
 
