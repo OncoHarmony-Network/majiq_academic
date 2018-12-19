@@ -278,6 +278,7 @@ namespace grimoire{
             string  name_ ;
             string  chromosome_ ;
             char    strand_ ;
+            omp_lock_t map_lck_ ;
 
         public:
             map <string, Junction*> junc_map_ ;
