@@ -289,6 +289,7 @@ cdef _find_junctions(list file_list, map[string, Gene*]& gene_map, vector[string
             logger.info('Done Reading file %s' %(file_list[j][0]))
             _store_junc_file(boots, junc_ids, file_list[j][0], conf.outDir)
             c_iobam.free_iobam()
+            del boots
 
 cdef init_splicegraph(string filename, object conf):
 
@@ -360,12 +361,12 @@ cdef _core_build(str transcripts, list file_list, object conf, object logger):
     logger.info("Reading bamfiles")
     _find_junctions(file_list, gene_map, gid_vec, gene_list, conf, logger)
 
-    logger.info("Detecting LSVs ngenes: %s " % n)
-    open_db(sg_filename, &db)
-
     if conf.mem_profile:
         mem_allocated = int(psutil.Process().memory_info().rss)/(1024**2)
         logger.info("PRE LOOP Memory used %.2f MB" % mem_allocated)
+
+    logger.info("Detecting LSVs ngenes: %s " % n)
+    open_db(sg_filename, &db)
 
     for i in prange(n, nogil=True, num_threads=nthreads):
         gg = gene_map[gid_vec[i]]

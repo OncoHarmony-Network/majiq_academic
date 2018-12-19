@@ -14,8 +14,8 @@ cdef extern from "io_bam.hpp" namespace "io_bam":
 
     cdef cppclass IOBam:
         IOBam() nogil except +
-        IOBam(string, int, unsigned int, unsigned int, map[string, overGene_vect_t]&) nogil except +
-        IOBam(string, int, unsigned int) nogil except +
+        IOBam(string, int, unsigned int, unsigned int, map[string, overGene_vect_t]) nogil except +
+        # IOBam(string, int, unsigned int) nogil except +
         # int find_junctions(int min_experiments) nogil
         # int find_junctions_from_region(vector[Gene*] gobj) nogil
         int ParseJunctionsFromFile(bint ir_func) nogil
