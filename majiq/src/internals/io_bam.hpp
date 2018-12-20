@@ -42,30 +42,28 @@ namespace io_bam{
             unsigned int eff_len_;
             map<string, unsigned int> junc_map ;
             unsigned int nthreads_;
-            const map<string, vector<overGene*>> glist_ ;
+            map<string, vector<overGene*>> glist_ ;
             map<string, vector<Intron*>> intronVec_ ;
             unsigned int junc_limit_index_ ;
 
         public:
             vector<float *> junc_vec ;
-            IOBam() ;
-//            IOBam(){
-//                bam_ = string(".");
-//                strandness_ = 0 ;
-//                nthreads_ = 1 ;
-//                glist = map<string, vector<overGene*>>( vector<overGene*>()) ;
-//            }
+            IOBam(){
+                bam_ = string(".");
+                strandness_ = 0 ;
+                nthreads_ = 1 ;
+            }
 
             IOBam(string bam1, int strandness1, unsigned int eff_len1, unsigned int nthreads1,
-                            const map<string, vector<overGene*>> glist1): strandness_(strandness1), eff_len_(eff_len1),
+                  map<string, vector<overGene*>> glist1): strandness_(strandness1), eff_len_(eff_len1),
                                                                                 nthreads_(nthreads1), glist_(glist1){
                 bam_ = bam1;
             }
 
-//            IOBam(string bam1, int strandness1, unsigned int eff_len1): strandness_(strandness1), eff_len_(eff_len1){
-//                bam_ = string(bam1);
-//                nthreads_ = 1 ;
-//            }
+            IOBam(string bam1, int strandness1, unsigned int eff_len1): strandness_(strandness1), eff_len_(eff_len1){
+                bam_ = string(bam1);
+                nthreads_ = 1 ;
+            }
 
             ~IOBam(){
 
