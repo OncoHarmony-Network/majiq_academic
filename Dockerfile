@@ -44,5 +44,5 @@ CMD []
 
 # To build image: docker build --squash -t majiq .
 # To save image: docker save majiq -o majiq.tar
-# To load image: docker load -i majiq
+# To load image: docker load -i majiq.tar
 # To run loaded image: docker run majiq -v
