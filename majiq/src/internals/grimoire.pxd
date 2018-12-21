@@ -110,29 +110,12 @@ cdef extern from "grimoire.hpp" namespace "grimoire":
         Jinfo(unsigned int index1, int sreads1, int npos1) nogil ;
 
 
-
-    # cdef cppclass qLSV:
-    #     vector[vector[psi_distr_t]] coverages ;
-    #
-    #     qLSV() nogil ;
-    #     qLSV(vector[string] & lsv_list_) nogil ;
-    #         #~qLSV()                        { omp_destroy_lock(&semaphore_lock) ; }
-    #     vector[string] & get_lsvlist() nogil ;
-    #     void free_lock() nogil ;
-    #     void test_lock() nogil ;
-    #     void add_counter() nogil ;
-
-
-
-    void sortGeneList(vector[Gene*] glist) nogil ;
-    # vector[Intron *]  find_intron_retention(vector[Gene*]& gene_list, char strand, int start, int end) nogil ;
-    # vector[Intron *]  find_intron_retention(vector[Gene*]& gene_list, string geneid, int start, int end) nogil ;
     vector[Intron *]  find_intron_retention(Gene * gObj, int start, int end) nogil ;
-    # vector[Gene*] find_gene_from_junc(const map[string, overGene_vect_t]& glist, string chrom, int start, int end, bint ir) nogil ;
     void find_gene_from_junc(map[string, overGene_vect_t] & glist, string chrom, char strand, int start, int end,
                              vector[Gene*]& oGeneList, bint ir) nogil ;
     void fill_junc_tlb(vector[LSV*]& lsv_list, map[string, int]& tlb) nogil ;
     bint isNullJinfo(Jinfo* x) nogil ;
     void free_JinfoVec( vector[Jinfo*]& jvec) nogil ;
     string key_format(string gid, int coord1, int coord2, bint ir) nogil ;
+    void free_lsvlist(vector[LSV*] & lsvList) nogil ;
 

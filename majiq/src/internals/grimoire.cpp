@@ -218,26 +218,6 @@ namespace grimoire {
         return ;
     }
 
-//    void Gene::fill_junc_tlb(map<string, vector<string>> &tlb){
-//
-//        for(const auto &j: junc_map_){
-//            if (!(j.second)->get_denovo_bl()) continue ;
-//            const string key = chromosome_ + ":" + strand_ + ":" + j.first ;
-//            const string key2 = chromosome_ + ":.:" + j.first ;
-//            #pragma omp critical
-//            {
-//                if(tlb.count(key) == 0){
-//                    tlb[key] = vector<string>() ;
-//                }
-//                if(tlb.count(key2) == 0){
-//                    tlb[key2] = vector<string>() ;
-//                }
-//                tlb[key].push_back(id_) ;
-//                tlb[key2].push_back(id_) ;
-//            }
-//        }
-//        return ;
-//    }
 
     void Gene::update_junc_flags(int efflen, bool is_last_exp, unsigned int minreads, unsigned int minpos,
                                   unsigned int denovo_thresh, unsigned int min_experiments, bool denovo){
@@ -268,7 +248,6 @@ namespace grimoire {
 
         for (const auto &jnc : junc_map_){
             if (!(jnc.second)->get_denovo_bl()) continue ;
-
 
             if ((jnc.second)->get_start() > 0) {
                 Ssite s = {(jnc.second)->get_start(), true, jnc.second} ;
@@ -704,6 +683,12 @@ namespace grimoire {
                 delete jobj_ptr ; 
         } 
         jvec.clear() ;
+    }
+
+    void free_lsvlist(vector<LSV*> & lsvList){
+        for (auto &lsv: lsvList){
+            delete lsv ;
+        }
     }
 
     string key_format(string gid, int coord1, int coord2, bool ir){

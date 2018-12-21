@@ -294,11 +294,14 @@ namespace grimoire{
             }
 
             ~Gene(){
-                for(const auto &p2: exon_map_){
-                    delete p2.second ;
+                for(const auto &p: exon_map_){
+                    delete p.second ;
                 }
-                for(const auto &p1: junc_map_){
-                    delete p1.second ;
+                for(const auto &p: junc_map_){
+                    delete p.second ;
+                }
+                for(const auto &p: intron_vec_){
+                    delete p ;
                 }
             }
             string  get_id()        { return id_ ; }
@@ -380,6 +383,9 @@ namespace grimoire{
         overGene(){}
 
         ~overGene(){
+            for (auto &g: glist){
+                delete g ;
+            }
             glist.clear() ;
             glist.shrink_to_fit() ;
         }
@@ -396,6 +402,7 @@ namespace grimoire{
     bool isNullJinfo(Jinfo* x) ;
     void free_JinfoVec(vector<Jinfo*>& jvec);
     string key_format(string gid, int coord1, int coord2, bool ir) ;
+    void free_lsvlist(vector<LSV*> & lsvList) ;
 }
 
 #endif

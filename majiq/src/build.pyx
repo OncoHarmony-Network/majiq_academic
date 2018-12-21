@@ -5,7 +5,7 @@ import psutil
 from majiq.src.internals.grimoire cimport Junction, Gene, Exon, LSV, Jinfo, Intron
 from majiq.src.internals.io_bam cimport IOBam, prepare_genelist, overGene_vect_t, free_genelist
 from majiq.src.internals.grimoire cimport find_intron_retention, find_gene_from_junc, isNullJinfo, fill_junc_tlb
-from majiq.src.internals.grimoire cimport key_format, free_JinfoVec, Gene_vect_t
+from majiq.src.internals.grimoire cimport key_format, free_JinfoVec, Gene_vect_t, free_lsvlist
 from majiq.src.basic_pipeline import BasicPipeline, pipeline_run
 from majiq.src.config import Config
 import majiq.src.logger as majiq_logger
@@ -231,12 +231,9 @@ cdef _find_junctions(list file_list, map[string, Gene*]& gene_map, vector[string
     cdef list junc_ids
     cdef float fitfunc_r
     cdef unsigned int jlimit
-
     cdef int* jvec
-
     cdef map[string, unsigned int] j_ids
     cdef pair[string, unsigned int] it
-    cdef pair[string, Gene *] git
 
 
     for tmp_str, group_list in conf.tissue_repl.items():
@@ -269,8 +266,8 @@ cdef _find_junctions(list file_list, map[string, Gene*]& gene_map, vector[string
             boots = np.zeros(shape=(njunc, m), dtype=np.float32)
             with nogil:
                 c_iobam.boostrap_samples(m, k, <np.float32_t *> boots.data, fitfunc_r, pvalue_limit)
-                j_ids = c_iobam.get_junc_map()
-                jvec = c_iobam.get_junc_vec_summary()
+                j_ids  = c_iobam.get_junc_map()
+                jvec   = c_iobam.get_junc_vec_summary()
                 jlimit = c_iobam.get_junc_limit_index()
 
             logger.debug("Update flags")
@@ -408,6 +405,7 @@ cdef _core_build(str transcripts, list file_list, object conf, object logger):
 
     close_db(db)
     free_genelist(gene_list)
+    free_lsvlist(out_lsvlist)
 
 
 def build(args):

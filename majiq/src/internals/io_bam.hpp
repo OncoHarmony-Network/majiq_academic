@@ -57,11 +57,11 @@ namespace io_bam{
             IOBam(string bam1, int strandness1, unsigned int eff_len1, unsigned int nthreads1,
                   map<string, vector<overGene*>> glist1): strandness_(strandness1), eff_len_(eff_len1),
                                                                                 nthreads_(nthreads1), glist_(glist1){
-                bam_ = bam1;
+                bam_ = bam1 ;
             }
 
             IOBam(string bam1, int strandness1, unsigned int eff_len1): strandness_(strandness1), eff_len_(eff_len1){
-                bam_ = string(bam1);
+                bam_ = string(bam1) ;
                 nthreads_ = 1 ;
             }
 
