@@ -6,46 +6,78 @@ from voila.config import ViewConfig
 
 class ViewSpliceGraph(SpliceGraph):
     def __init__(self):
+        """
+        Wrapper class to splice graph api used to generate voila output.
+        """
         config = ViewConfig()
         splice_graph_file = config.splice_graph_file
         super().__init__(splice_graph_file)
 
-    @property
-    def metadata(self):
-        query = self.conn.execute('SELECT name FROM experiment')
-        experiment_names = [x for x, in query.fetchall()]
-        return {'experiment_names': [experiment_names], 'group_names': ['Splice Graph']}
-
     @staticmethod
     def exon_start(exon):
+        """
+        Get start of exon. If no start, then use end to calculate start.
+        :param exon: exon dictionary from splice graph
+        :return: integer
+        """
+
         if exon['start'] == -1:
             return exon['end'] - 10
         return exon['start']
 
     @staticmethod
     def exon_end(exon):
+        """
+        Get end of exon. If no end, then use start to calculate end.
+        :param exon: exon dictionary from splice graph
+        :return: integer
+        """
+
         if exon['end'] == -1:
             return exon['start'] + 10
         return exon['end']
 
     @staticmethod
     def exon_annot_start(exon):
+        """
+        Get annotated start. When exon is denovo/missing start, then this value might be -1.
+        :param exon: exon dictionary from splice graph
+        :return: integer
+        """
+
         if exon['annotated_start'] == -1:
             return exon['annotated_end'] - 10
         return exon['annotated_start']
 
     @staticmethod
     def exon_annot_end(exon):
+        """
+        Get annotated end. When exon is denovo/missing end, then this value might be -1.
+        :param exon: exon dictionary from splice graph
+        :return: integer
+        """
+
         if exon['annotated_end'] == -1:
             return exon['annotated_start'] + 10
         return exon['annotated_end']
 
     @property
     def gene_ids(self):
+        """
+        List of all gene ids in splice graph.
+        :return: list
+        """
+
         query = self.conn.execute('SELECT id FROM gene')
         return [x for x, in query.fetchall()]
 
     def view_gene(self, gene_id):
+        """
+        Add information to gene dictionary that is used by javascript splice graph.
+        :param gene_id: gene id
+        :return: generator key/value
+        """
+
         gene = self.gene(gene_id)
         yield from gene.items()
         yield 'id', gene_id
@@ -53,12 +85,30 @@ class ViewSpliceGraph(SpliceGraph):
         yield 'end', self.gene_end(gene_id)
 
     def gene_start(self, gene_id):
+        """
+        Find gene start from exon coords.
+        :param gene_id: gene id
+        :return: integer
+        """
+
         return sorted(self.exon_start(e) for e in self.exons(gene_id))[0]
 
     def gene_end(self, gene):
+        """
+        Find gene end from exon coords.
+        :param gene_id: gene id
+        :return: integer
+        """
+
         return sorted((self.exon_end(e) for e in self.exons(gene)), reverse=True)[0]
 
     def view_exon(self, exon):
+        """
+        Add information to exon dictionary that is used by javascript splice graph.
+        :param exon: exon dictionary from splice graph file.
+        :return: generator key/value
+        """
+
         yield 'start', self.exon_start(exon)
         yield 'end', self.exon_end(exon)
         if exon['start'] == -1:
@@ -71,10 +121,22 @@ class ViewSpliceGraph(SpliceGraph):
         yield 'annotated_end', self.exon_annot_end(exon)
 
     def view_exons(self, gene_id):
+        """
+        Get all view exons.
+        :param gene_id: gene id
+        :return: generator of view exons
+        """
+
         for exon in self.exons(gene_id):
             yield self.view_exon(exon)
 
     def exon_has_reads(self, exon):
+        """
+        Does this exon have at least one junction that has reads.
+        :param exon: exon dictionary from splice graph
+        :return: boolean
+        """
+
         query = self.conn.execute('''
                         SELECT has_reads FROM junction
                         WHERE 
@@ -94,6 +156,12 @@ class ViewSpliceGraph(SpliceGraph):
         return query.fetchone()
 
     def exon_color(self, exon):
+        """
+        Get color of exon for javascript splice graph.
+        :param exon: exon dictionary from splice graph
+        :return: string
+        """
+
         if exon['annotated']:
             if self.exon_has_reads(exon):
                 return 'grey'
@@ -103,14 +171,32 @@ class ViewSpliceGraph(SpliceGraph):
             return 'green'
 
     def view_junctions(self, gene):
+        """
+        Get all view junctions.
+        :param gene: gene dictionary
+        :return: generator of all junctions
+        """
+
         for junc in self.junctions(gene):
             yield self.view_junction(junc)
 
     def view_junction(self, junction):
+        """
+        Add information to juction dictionary for javascript splice graph.
+        :param junction: junction dictionary from splice graph file.
+        :return: generator key/value
+        """
+
         yield from junction.items()
         yield 'color', self.junction_color(junction)
 
     def junction_color(self, junction):
+        """
+        Find color for junction to use with javascript splice graph.
+        :param junction: junction dictionary from splice graph file.
+        :return: string
+        """
+
         if junction['annotated']:
             if junction['has_reads']:
                 return 'red'
@@ -120,14 +206,32 @@ class ViewSpliceGraph(SpliceGraph):
             return 'green'
 
     def view_intron_retentions(self, gene):
+        """
+        Get all view irs.
+        :param gene: gene dictionary from splice graph.
+        :return: generator
+        """
+
         for ir in self.intron_retentions(gene):
             yield self.view_intron_retention(ir)
 
     def view_intron_retention(self, ir):
+        """
+        Add information to the ir dictionary from splice graph file.
+        :param ir: ir dictionary from splice graph file.
+        :return: generator key/value
+        """
+
         yield from ir.items()
         yield 'color', self.ir_color(ir)
 
     def ir_color(self, ir):
+        """
+        Find color for intron retention.
+        :param ir: ir dictionary from splice graph file.
+        :return: string
+        """
+
         if ir['annotated']:
             if ir['has_reads']:
                 return 'red'
@@ -137,6 +241,13 @@ class ViewSpliceGraph(SpliceGraph):
             return 'green'
 
     def annotated_junctions(self, gene_id, lsv_junctions):
+        """
+        List of junction which are annotated in the db.
+        :param gene_id: gene id
+        :param lsv_junctions: list of juctions for an LSV.
+        :return: generator
+        """
+
         for junc in lsv_junctions:
             junc = tuple(map(int, junc))
             query = self.conn.execute('''
@@ -151,6 +262,13 @@ class ViewSpliceGraph(SpliceGraph):
                 yield fetch[0]
 
     def lsv_exons(self, gene_id, lsv_junctions):
+        """
+        Get exons for an LSV.
+        :param gene_id: gene id
+        :param lsv_junctions: list of lsv junctions
+        :return: list
+        """
+
         rtn_set = set()
         for junc in lsv_junctions:
             junc = tuple(map(int, junc))
@@ -175,12 +293,25 @@ class ViewSpliceGraph(SpliceGraph):
         return list(sorted(rtn_set))
 
     def lsv_introns(self, gene, lsv_exons):
+        """
+        Get ir for an LSV.
+        :param gene: gene dictionary from splice graph file.
+        :param lsv_exons: list of lsv exons
+        :return: generator
+        """
         exons_ends = list(e for s, e in lsv_exons)
         for ir in self.intron_retentions(gene):
             if ir.start in exons_ends:
                 yield ir
 
     def gene_experiment(self, gene_id, experiment_names_list):
+        """
+        Get data to populate javascript splice graph.
+        :param gene_id: gene id
+        :param experiment_names_list: experiment names
+        :return: dictionary
+        """
+
         junc_reads = {}
         ir_reads = {}
 

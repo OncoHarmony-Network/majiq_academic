@@ -1,5 +1,5 @@
 from bisect import bisect_left, bisect_right
-from itertools import combinations, permutations
+from itertools import combinations
 from pathlib import Path
 
 from voila import constants
@@ -405,7 +405,7 @@ class Graph:
             s = self.Filters.source_psi
             t = self.Filters.target_psi
 
-            for n1, n2, n3 in permutations(self.nodes, 3):
+            for n1, n2, n3 in combinations(self.nodes, 3):
                 if n1.connects(n2, s) and n1.connects(n3, b) and n2.connects(n3, t):
                     return True
 
@@ -417,10 +417,18 @@ class Graph:
 
             f = self.Filters.target_source_psi
 
-            for n1, n2, n3, n4 in permutations(self.nodes, 4):
-                if n1.connects(n2, f) and n1.connects(n3, f) and n2.connects(n4, f) and n3.connects(n4, f):
-                    if not n2.connects(n3):
-                        return True
+            # for n1, n2, n3, n4 in combinations(self.nodes, 4):
+            #     if n1.connects(n2, f) and n1.connects(n3, f) and n2.connects(n4, f) and n3.connects(n4, f):
+            #         if not n2.connects(n3):
+            #             return True
+
+            for n1 in self.nodes[:-1]:
+                for e1, e2, in combinations(f(n1.edges), 2):
+                    if e1.node != e2.node and not (e1.node.connects(e2.node, f) or e2.node.connects(e1.node, f)):
+                        for i1 in f(e1.node.edges):
+                            for i2 in f(e2.node.edges):
+                                if i1.node == i2.node:
+                                    return True
 
         def as_types(self):
             """
@@ -490,13 +498,17 @@ if __name__ == "__main__":
     # with SpliceGraph(sg_file) as sg:
     #    gene_ids = list(g['id'] for g in sg.genes())
 
-    # Fine all gene ids in voila file
-    # with Matrix(dpsi_file) as m:
-    #     gene_id = list(m.gene_ids)
+    # Find all gene ids in voila file
+    with Matrix(Path(psi_file).expanduser()) as m:
+        gene_ids = list(m.gene_ids)
 
     # for gene_id in gene_ids:
-    gene_id = 'ENSMUSG00000001419'
-    graph = Graph(gene_id, sg_file, psi_file)
+    # gene_id = 'ENSMUSG00000001419'
+    for gene_id in gene_ids:
+        print(gene_id)
+        graph = Graph(gene_id, sg_file, psi_file)
 
-    for module in graph.modules():
-        print(module.as_types())
+        for module in graph.modules():
+            # t = timeit.Timer(module.as_types)
+            # print(t.timeit(100), module.as_types())
+            print(module.as_types())
