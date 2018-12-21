@@ -486,6 +486,14 @@ if __name__ == "__main__":
     psi_file = '~/Development/small_test/majiq_psi_all/Adr.psi.voila'
     dpsi_file = '~/Development/small_test/majiq_deltapsi_all_v_all/Adr_Cer.deltapsi.voila'
 
+    # Find all gene ids in splice graph
+    # with SpliceGraph(sg_file) as sg:
+    #    gene_ids = list(g['id'] for g in sg.genes())
+
+    # Fine all gene ids in voila file
+    # with Matrix(dpsi_file) as m:
+    #     gene_id = list(m.gene_ids)
+
     # for gene_id in gene_ids:
     gene_id = 'ENSMUSG00000001419'
     graph = Graph(gene_id, sg_file, psi_file)
