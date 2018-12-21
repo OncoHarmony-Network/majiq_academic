@@ -36,6 +36,7 @@ class Graph:
         # get psi/dpsi data from voila file and associate with edges
         with Matrix(self.voila_file) as m:
             analysis_type = m.analysis_type
+
         if analysis_type == constants.ANALYSIS_PSI:
             self._psi()
         elif analysis_type == constants.ANALYSIS_DELTAPSI:
@@ -91,6 +92,7 @@ class Graph:
             Start of exon.
             :return: integer
             """
+
             return self.exon['start']
 
         @property
@@ -99,6 +101,7 @@ class Graph:
             End of exon.
             :return: integer
             """
+
             return self.exon['end']
 
         @property
@@ -107,6 +110,7 @@ class Graph:
             Alter start of exon if exon has no start. Visual start of exon.
             :return: integer
             """
+
             start = self.exon['start']
             if start == -1:
                 start = self.end - 10
@@ -118,6 +122,7 @@ class Graph:
             Alter end of exon if exon has no edn. Visual end of exon.
             :return: integer
             """
+
             end = self.exon['end']
             if end == -1:
                 end = self.start + 10
@@ -134,6 +139,7 @@ class Graph:
             edges = self.edges
             if filter:
                 edges = filter(edges)
+
             return any(e.node == node for e in edges)
 
     class Edge:
@@ -145,11 +151,7 @@ class Graph:
 
             self.junc = junc  # junction dictionary
             self.node = None  # node this junction connects to
-
-            self.source_psi = []  # list of source psi values
-            self.target_psi = []  # list of target psi values
-            self.delta_psi = []  # list of dpsi values
-            self.lsv_ids = []  # list of lsv ids
+            self.lsvs = {}
 
         def __lt__(self, other):
             """
@@ -167,6 +169,7 @@ class Graph:
             :param other:
             :return:
             """
+
             return self.start == other.start and self.end == other.end
 
         def __repr__(self):
@@ -174,6 +177,7 @@ class Graph:
             String representation of junction with start and end.
             :return: string
             """
+
             return '<{} {},{}>'.format(self.__class__.__name__, self.start, self.end)
 
         @property
@@ -182,6 +186,7 @@ class Graph:
             Junction start.
             :return: integer
             """
+
             return self.junc['start']
 
         @property
@@ -190,6 +195,7 @@ class Graph:
             Junction end.
             :return: interger
             """
+
             return self.junc['end']
 
         @property
@@ -198,6 +204,7 @@ class Graph:
             For compatibility with using bisect to find which exon this junction starts/stops in.
             :return: integer
             """
+
             return self.start
 
         @property
@@ -206,6 +213,7 @@ class Graph:
             For compatibility with using bisect to find which exon this junction starts/stops in.
             :return: integer
             """
+
             return self.end
 
     def start_node(self, edge):
@@ -214,6 +222,7 @@ class Graph:
         :param edge: supplied junction
         :return: node object
         """
+
         i = bisect_left(self.nodes, edge)
         return self.nodes[i]
 
@@ -223,6 +232,7 @@ class Graph:
         :param edge: supplied junction
         :return: node object
         """
+
         i = bisect_right(self.nodes, edge)
         return self.nodes[i - 1]
 
@@ -248,6 +258,7 @@ class Graph:
         :param exon: exon dictionary from splice graph
         :return: None
         """
+
         self.nodes.append(self.Node(exon))
 
     def _find_connections(self):
@@ -255,6 +266,7 @@ class Graph:
         When this has completed, each exon should have a list of exons that start there.
         :return: None
         """
+
         for edge in self.edges:
             node = self.start_node(edge)
             node.edges.append(edge)
@@ -264,6 +276,7 @@ class Graph:
         Add all juctions and exons to graph and sort those lists.
         :return: None
         """
+
         with SpliceGraph(self.sg_file) as sg:
             for exon in sg.exons(self.gene_id):
                 self._add_exon(exon)
@@ -279,6 +292,7 @@ class Graph:
         next module starts. There will be an over lapping exon.
         :return: Generator of modules
         """
+
         start_idx = 0
         for edge in self.edges:
             if not any(e.start < edge.end < e.end or (e.start > edge.start and e.end == edge.end) for e in self.edges):
@@ -291,101 +305,102 @@ class Graph:
         When a psi voila file is supplied, this is where the psi data is added to the junctions.
         :return: None
         """
-        target = {}
-        source = {}
+
+        lsv_store = {}
 
         with Matrix(self.voila_file) as m:
             for lsv_id in m.lsv_ids(gene_ids=[self.gene_id]):
                 lsv = m.psi(lsv_id)
+
                 for (start, end), means in zip(lsv.junctions, lsv.get('means')):
+
                     key = str(start) + '-' + str(end)
-                    if lsv_id.split(':')[-2] == 's':
-                        source[key] = means
-                    else:
-                        target[key] = means
+
+                    if key not in lsv_store:
+                        lsv_store[key] = {}
+
+                    if lsv_id not in lsv_store[key]:
+                        lsv_store[key][lsv_id] = {'psi': [], 'delta_psi': []}
+
+                    lsv_store[key][lsv_id]['psi'].append(means)
 
         for edge in self.edges:
             key = str(edge.start) + '-' + str(edge.end)
-            if key in source:
-                edge.source_psi.append(source[key])
-            if key in target:
-                edge.target_psi.append(target[key])
+            if key in lsv_store:
+                edge.lsvs = lsv_store[key]
 
     def _delta_psi(self):
         """
         When a delta psi voila file is supplied, this is where the psi/delta psi data is added to the junctions.
         :return: None
         """
-        target_psi = {}
-        source_psi = {}
-        junc_lsv_ids = {}
-        dpsi = {}
+
+        lsv_store = {}
 
         with Matrix(self.voila_file) as m:
-            group_names = m.group_names
+
             for lsv_id in m.lsv_ids(gene_ids=[self.gene_id]):
 
                 lsv = m.delta_psi(lsv_id)
                 juncs = lsv.junctions
 
-                for group, group_means in zip(group_names, lsv.get('group_means')):
-
+                for group_means in lsv.get('group_means'):
                     for (start, end), means in zip(juncs, group_means):
                         key = str(start) + '-' + str(end)
 
-                        if lsv_id.split(':')[-2] == 's':
-                            psi_store = source_psi
-                        else:
-                            psi_store = target_psi
+                        if key not in lsv_store:
+                            lsv_store[key] = {}
 
-                        if key in psi_store:
-                            psi_store[key].append(means)
-                        else:
-                            psi_store[key] = [means]
+                        if lsv_id not in lsv_store[key]:
+                            lsv_store[key][lsv_id] = {'psi': [], 'delta_psi': []}
 
-                        if key in junc_lsv_ids:
-                            junc_lsv_ids[key].add(lsv_id)
-                        else:
-                            junc_lsv_ids[key] = {lsv_id}
+                        lsv_store[key][lsv_id]['psi'].append(means)
 
                 for (start, end), means in zip(juncs, generate_means(lsv.get('bins'))):
                     key = str(start) + '-' + str(end)
-                    dpsi[key] = means
+                    lsv_store[key][lsv_id]['delta_psi'].append(means)
 
         for edge in self.edges:
             key = str(edge.start) + '-' + str(edge.end)
-            if key in source_psi:
-                edge.source_psi += source_psi[key]
-            if key in target_psi:
-                edge.target_psi += target_psi[key]
-            if key in dpsi:
-                edge._delta_psi = dpsi[key]
-            if key in junc_lsv_ids:
-                edge.lsv_ids += list(junc_lsv_ids[key])
+            edge.lsvs = lsv_store[key]
 
     class Module:
         def __init__(self, nodes):
+            """
+            Module is subset of a gene.  The divide between modules is where junctions don't cross.
+            :param nodes: list of nodes that belong to module
+            """
+
             self.nodes = nodes  # subset of nodes for this module
 
-        def starts_equal(self, e1, e2):
-            return e1.start == e2.start
-
-        def ends_equal(self, e1, e2):
-            return e1.end == e2.end
-
         def alternate_downstream(self):
+            """
+            Check if alternate downstream occurs in this module.
+            :return: boolean
+            """
+
             for node in self.nodes[:-1]:
                 for e1, e2 in combinations(node.edges, 2):
-                    if self.starts_equal(e1, e2) and not self.ends_equal(e1, e2):
+                    if e1.start == e2.start and e1.end != e2.end:
                         return True
 
         def alternate_upstream(self):
+            """
+            Check if alternate upstream occurs in this module.
+            :return: boolean
+            """
+
             for node in self.nodes[:-1]:
                 for e1, e2 in combinations(node.edges, 2):
-                    if self.ends_equal(e1, e2) and not self.starts_equal(e1, e2):
+                    if e1.end == e2.end and e1.start != e2.start:
                         return True
 
         def exon_skipping(self):
+            """
+            Check if exon skipping occurs in this module.
+            :return: boolean
+            """
+
             b = self.Filters.target_source_psi
             s = self.Filters.source_psi
             t = self.Filters.target_psi
@@ -395,6 +410,11 @@ class Graph:
                     return True
 
         def mutually_exclusive(self):
+            """
+            Check if mutually exclusive occurs in this module.
+            :return: boolean
+            """
+
             f = self.Filters.target_source_psi
 
             for n1, n2, n3, n4 in permutations(self.nodes, 4):
@@ -403,6 +423,11 @@ class Graph:
                         return True
 
         def as_types(self):
+            """
+            Helper function that returns a list of types found in this module.
+            :return: list of AS types
+            """
+
             as_type_dict = {
                 'alt_downstream': self.alternate_downstream,
                 'alt_upstream': self.alternate_upstream,
@@ -412,9 +437,18 @@ class Graph:
             return [k for k, v in as_type_dict.items() if v()]
 
         class Filters:
+            """
+            Class to act as Namespace to hold filter methods.
+            """
 
             @classmethod
             def target_source_psi(cls, edges):
+                """
+                Returns edge if it contains junctions that have target and source psi values that pass threshold.
+                :param edges: list of edges
+                :return: filtered list of edges
+                """
+
                 if PSI_THRESHOLD:
                     return cls.target_psi(cls.source_psi(edges))
                 else:
@@ -422,17 +456,29 @@ class Graph:
 
             @staticmethod
             def target_psi(edges):
-                if PSI_THRESHOLD:
-                    return list(e for e in edges if any(p >= PSI_THRESHOLD for p in e.target_psi))
-                else:
-                    return edges
+                """
+                Returns edge if it contains junctions that have target psi values that pass threshold.
+                :param edges: list of edges
+                :return: filtered list of edges
+                """
+
+                for edge in edges:
+                    target_ids = (l for l in edge.lsvs if ':t:' in l)
+                    if any(p >= PSI_THRESHOLD for l in target_ids for p in edge.lsvs[l]['psi']):
+                        yield edge
 
             @staticmethod
             def source_psi(edges):
-                if PSI_THRESHOLD:
-                    return list(e for e in edges if any(p >= PSI_THRESHOLD for p in e.source_psi))
-                else:
-                    return edges
+                """
+                Returns edge if it contains junctions that have source psi values that pass threshold.
+                :param edges: list of edges
+                :return: filtered list of edges
+                """
+
+                for edge in edges:
+                    source_ids = (l for l in edge.lsvs if ':s:' in l)
+                    if any(p >= PSI_THRESHOLD for l in source_ids for p in edge.lsvs[l]['psi']):
+                        yield edge
 
 
 if __name__ == "__main__":
@@ -445,5 +491,4 @@ if __name__ == "__main__":
     graph = Graph(gene_id, sg_file, psi_file)
 
     for module in graph.modules():
-        for as_type in module.as_types():
-            print(as_type)
+        print(module.as_types())
