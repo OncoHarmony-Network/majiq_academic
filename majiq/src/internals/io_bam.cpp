@@ -43,6 +43,10 @@ namespace io_bam {
         return ((read->core.flag & 0x100) != 0x100) ;
     }
 
+    inline int _unmapped(bam1_t * read){
+        return ((read->core.flag & 0x4) != 0x4) ;
+    }
+
     void IOBam::find_junction_genes(string chrom, char strand, int start, int end,
                                     float* nreads_ptr){
 //        const int n = glist_[chrom].size() ;
@@ -126,7 +130,7 @@ namespace io_bam {
 
     int IOBam::parse_read_into_junctions(bam_hdr_t *header, bam1_t *read) {
         int n_cigar = read->core.n_cigar;
-        if (n_cigar <= 1 || !_unique(read)) // max one cigar operation exists(likely all matches)
+        if (n_cigar <= 1 || !_unique(read) || _unmapped(read)) // max one cigar operation exists(likely all matches)
             return 0;
 
         int read_pos = read->core.pos;
@@ -167,7 +171,7 @@ namespace io_bam {
 
     int IOBam::parse_read_for_ir(bam_hdr_t *header, bam1_t *read) {
         int n_cigar = read->core.n_cigar ;
-        if (n_cigar <= 1 || !_unique(read)) // max one cigar operation exists(likely all matches)
+        if (n_cigar <= 1 || !_unique(read) || _unmapped(read)) // max one cigar operation exists(likely all matches)
             return 0;
         const int read_pos = read->core.pos;
         const string chrom(header->target_name[read->core.tid]) ;
