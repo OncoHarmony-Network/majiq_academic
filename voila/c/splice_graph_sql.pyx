@@ -92,18 +92,6 @@ cdef int close_db(sqlite3 *db) nogil:
         return rc
     return sqlite3_close(db)
 
-# cdef void experiment(sqlite3 *db, string name) nogil:
-#     cdef:
-#         int arg_len
-#         int rm_chars_len
-#         char *sql
-#
-#     arg_len = name.length()
-#     rm_chars_len = 2
-#     sql = <char *> malloc(sizeof(char) * (strlen(exp_insert) + arg_len - rm_chars_len + 1))
-#     exec_db(db, sql)
-#     free(sql)
-
 cdef int gene(sqlite3 *db, string id, string name, string strand, string chromosome) nogil:
     cdef:
         int rc
