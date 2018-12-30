@@ -44,7 +44,7 @@ namespace io_bam {
     }
 
     inline int _unmapped(bam1_t * read){
-        return ((read->core.flag & 0x4) != 0x4) ;
+        return ((read->core.flag & 0x4) == 0x4) ;
     }
 
     void IOBam::find_junction_genes(string chrom, char strand, int start, int end,
