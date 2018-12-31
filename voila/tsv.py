@@ -175,9 +175,9 @@ class AnalysisTypeTsv:
 
             with ViewSpliceGraph() as sg:
                 for gene in sg.genes():
-                    if gene.name in config.gene_names and gene.id in matrix_gene_ids:
-                        self.filter_gene_ids.add(gene.id)
-                        found_gene_names.add(gene.name)
+                    if gene['name'] in config.gene_names and gene['id'] in matrix_gene_ids:
+                        self.filter_gene_ids.add(gene['id'])
+                        found_gene_names.add(gene['name'])
 
             not_found_genes = set(config.gene_names) - found_gene_names
             if not_found_genes:
@@ -273,7 +273,7 @@ class AnalysisTypeTsv:
         multiple_results = []
 
         tsv_file = config.file_name
-        os.makedirs(os.path.dirname(tsv_file), exist_ok=True)
+        os.makedirs(os.path.dirname(tsv_file) or '.', exist_ok=True)
         tsv_file = Path(tsv_file)
 
         mgr = multiprocessing.Manager()
