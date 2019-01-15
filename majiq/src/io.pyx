@@ -142,15 +142,20 @@ cdef int merge_exons(dict exon_dict, map[string, Gene*]& all_genes) except -1:
         ex_start = -1
         ex_end = -1
         nopen = 0
+
+        print(gne_id, ex_list)
         for coord, is_start in ex_list:
+            print (coord, is_start, nopen, ex_end)
             if is_start:
                 if ex_end != -1:
                     start1 = ex_end -10  if ex_start == EMPTY_COORD else ex_start
                     end1 = ex_start +10  if ex_end == EMPTY_COORD else ex_end
                     key = ('%s-%s' % (start1, end1)).encode('utf-8')
                     all_genes[gne_id].exon_map_[key] = new Exon(ex_start, ex_end, True)
+
                     if nopen > 0 and (ex_end+4) < (coord-1):
                        pass
+#                    else:
                         # all_genes[gne_id].create_annot_intron(ex_end+1, coord-1)
                         #tlist.append([ex_end+1, coord-1, 1, IR_TYPE])
                     ex_end = -1

@@ -439,16 +439,22 @@ namespace grimoire {
     }
 
     bool Intron::is_reliable(float min_bins){
+
         int npos = 0 ;
         if (length() <=0 || nbins_<=0) return false ;
         const int sz = length() / nbins_ ;
+cerr << "IR:" << (get_gene())->get_id() << ":" << get_start() << "-" << get_end()<<" "<< sz << "\n" ;
+cerr << "READ RATES: " ;
         for(int i =0 ; i< nbins_; i++){
 
             if (read_rates_[i]>0){
                 npos ++;
             }
-            read_rates_[i] = (read_rates_[i]>0) ? (read_rates_[i] / sz ) : 0 ;
+            read_rates_[i] = (read_rates_[i]>0) ? (read_rates_[i] / npos ) : 0 ;
+            cerr << read_rates_[i] << ", " ;
+
         }
+cerr << " npos:" << npos << "\n" ;
         const float c = (npos>0) ? (npos/nbins_) : 0 ;
         bool b = (c >= min_bins) ;
 

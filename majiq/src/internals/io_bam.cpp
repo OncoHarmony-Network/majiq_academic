@@ -130,7 +130,7 @@ namespace io_bam {
 
     int IOBam::parse_read_into_junctions(bam_hdr_t *header, bam1_t *read) {
         int n_cigar = read->core.n_cigar;
-        if (n_cigar <= 1 || !_unique(read) || _unmapped(read)) // max one cigar operation exists(likely all matches)
+        if (!_unique(read) || _unmapped(read)) // max one cigar operation exists(likely all matches)
             return 0;
 
         int read_pos = read->core.pos;
@@ -171,22 +171,28 @@ namespace io_bam {
 
     int IOBam::parse_read_for_ir(bam_hdr_t *header, bam1_t *read) {
         int n_cigar = read->core.n_cigar ;
-        if (n_cigar <= 1 || !_unique(read) || _unmapped(read)) // max one cigar operation exists(likely all matches)
+cerr << "KK0 " << bam_get_qname(read) << "\n" ;
+        if (!_unique(read) || _unmapped(read)) // max one cigar operation exists(likely all matches)
             return 0;
         const int read_pos = read->core.pos;
+
         const string chrom(header->target_name[read->core.tid]) ;
+cerr << "KK1 " << bam_get_qname(read) << " :: " << chrom<<" :: "<< read_pos<< "\n" ;
         if (intronVec_.count(chrom) == 0)
              return 0 ;
+        const int rlen = read->core.l_qseq ;
+
+//if (((read_pos+rlen) >= 74731743) && (read_pos <= 74731854))
+
 
 //        const int  nintrons = intronVec_[chrom].size() ;
-        uint32_t *cigar = bam_get_cigar(read) ;
 
         vector<Intron *>::iterator low = lower_bound (intronVec_[chrom].begin(), intronVec_[chrom].end(),
                                                       read_pos, _Region::func_comp ) ;
         if (low ==  intronVec_[chrom].end()) return 0 ;
         vector<pair<int, int>> junc_record ;
-
         int off = 0;
+        uint32_t *cigar = bam_get_cigar(read) ;
         for (int i = 0; i < n_cigar; ++i) {
             const char op = bam_cigar_op(cigar[i]);
             const int ol = bam_cigar_oplen(cigar[i]);
@@ -204,11 +210,17 @@ namespace io_bam {
                 off += ol ;
             }
         }
+
+if (((read_pos+rlen) >= 74731743) && (read_pos <= 74731854))
+   cerr << "KK1.2: " << bam_get_qname(read) << " :: "<< (*low)->get_start() << "-" << (*low)->get_end() << " :: coord: "<< read_pos<< "\n" ;
+
         for (; low != intronVec_[chrom].end() ; low++){
             bool junc_found = false ;
             Intron * intron = *low;
-            if(intron->get_start()> read_pos) break ;
+            if(intron->get_start()> read_pos+rlen) break ;
             for (const auto & j:junc_record){
+            if (((read_pos+rlen) >= 74731743) && (read_pos <= 74731854))
+            cerr << "JUNC: " << j.first << "-" << j.second << "\n" ;
                 if ((j.first>=intron->get_start() && j.first<= intron->get_end() )
                     || (j.second>=intron->get_start() && j.second<= intron->get_end())){
                     junc_found = true ;
@@ -216,12 +228,15 @@ namespace io_bam {
                 }
             }
             if (!junc_found){
+if (((read_pos+rlen) >= 74731743) && (read_pos <= 74731854))
+   cerr << "KK2 " << bam_get_qname(read) << " :: "<< intron->get_start() << "-" << intron->get_end() << " :: coord: "<< read_pos<< "\n" ;
                 #pragma omp critical
                 {
                     if (intron->read_rates_ == nullptr){
                         intron->add_read_rates_buff(eff_len_) ;
                     }
-                    const int offset = (int)(read_pos - intron->get_start()) % intron->nbins_ ;
+                    int offset = (int)(read_pos - intron->get_start()) % intron->nbins_ ;
+                    offset = (offset >=0) ? offset: 0 ;
                     intron->read_rates_[offset] += 1 ;
                 }
             }
@@ -405,6 +420,13 @@ namespace io_bam {
                 }
             }
             sort(intronVec_[it.first].begin(), intronVec_[it.first].end(), Intron::islowerRegion<Intron>) ;
+
+            cerr << "INTRON: " << it.first << " :: " ;
+            for (const auto &kk: intronVec_[it.first] ){
+                cerr << kk->get_start() << "-" << kk->get_end() << "\n" ;
+            }
+            cerr << "\n" ;
+
         }
 
         ParseJunctionsFromFile(true) ;
