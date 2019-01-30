@@ -33,9 +33,6 @@ namespace io_bam {
                     (!is_read_reverse(read) && is_read2(read)) ||
                     (is_read_reverse(read) && (is_read1(read) == is_read2(read)))) ? '+' : '-' ;
         }
-//cout << strn << " " << read->core.flag << " " << strandness_<< " , "  << is_read1(read) << " :: "<<  is_read2(read) << "\n" ;
-
-
         return (strn);
     }
 
@@ -140,7 +137,6 @@ namespace io_bam {
 
         int off = 0 ;
         int first_offpos = -1 ;
-//cout << "read id: " << bam_get_qname(read) << "\n" ;
         for (int i = 0; i < n_cigar; ++i) {
             const char op = bam_cigar_op(cigar[i]);
             const int ol = bam_cigar_oplen(cigar[i]);
@@ -154,8 +150,6 @@ namespace io_bam {
                     const int j_start =  read->core.pos + off ;
                     first_offpos  = (first_offpos == -1) ? (j_start - (read_pos+ MIN_BP_OVERLAP)) : first_offpos ;
 
-//    cerr << read->id << "add junction " << read_pos << ":: "<< j_start << "-" << j_end ;
-//    cerr << " OFF" << off << " :: " << eff_len_ << ":" << rlen << "\n" ;
                     try {
                         add_junction(chrom, _get_strand(read), j_start, j_end, read_pos, first_offpos) ;
                     } catch (const std::logic_error& e) {
@@ -171,26 +165,21 @@ namespace io_bam {
 
     int IOBam::parse_read_for_ir(bam_hdr_t *header, bam1_t *read) {
         int n_cigar = read->core.n_cigar ;
-cerr << "KK0 " << bam_get_qname(read) << "\n" ;
         if (!_unique(read) || _unmapped(read)) // max one cigar operation exists(likely all matches)
             return 0;
         const int read_pos = read->core.pos;
 
         const string chrom(header->target_name[read->core.tid]) ;
-cerr << "KK1 " << bam_get_qname(read) << " :: " << chrom<<" :: "<< read_pos<< "\n" ;
         if (intronVec_.count(chrom) == 0)
              return 0 ;
         const int rlen = read->core.l_qseq ;
-
-//if (((read_pos+rlen) >= 74731743) && (read_pos <= 74731854))
-
-
-//        const int  nintrons = intronVec_[chrom].size() ;
-
         vector<Intron *>::iterator low = lower_bound (intronVec_[chrom].begin(), intronVec_[chrom].end(),
                                                       read_pos, _Region::func_comp ) ;
         if (low ==  intronVec_[chrom].end()) return 0 ;
         vector<pair<int, int>> junc_record ;
+
+
+
         int off = 0;
         uint32_t *cigar = bam_get_cigar(read) ;
         for (int i = 0; i < n_cigar; ++i) {
@@ -211,16 +200,11 @@ cerr << "KK1 " << bam_get_qname(read) << " :: " << chrom<<" :: "<< read_pos<< "\
             }
         }
 
-if (((read_pos+rlen) >= 74731743) && (read_pos <= 74731854))
-   cerr << "KK1.2: " << bam_get_qname(read) << " :: "<< (*low)->get_start() << "-" << (*low)->get_end() << " :: coord: "<< read_pos<< "\n" ;
-
         for (; low != intronVec_[chrom].end() ; low++){
             bool junc_found = false ;
             Intron * intron = *low;
             if(intron->get_start()> read_pos+rlen) break ;
             for (const auto & j:junc_record){
-            if (((read_pos+rlen) >= 74731743) && (read_pos <= 74731854))
-            cerr << "JUNC: " << j.first << "-" << j.second << "\n" ;
                 if ((j.first>=intron->get_start() && j.first<= intron->get_end() )
                     || (j.second>=intron->get_start() && j.second<= intron->get_end())){
                     junc_found = true ;
@@ -228,17 +212,9 @@ if (((read_pos+rlen) >= 74731743) && (read_pos <= 74731854))
                 }
             }
             if (!junc_found){
-if (((read_pos+rlen) >= 74731743) && (read_pos <= 74731854))
-   cerr << "KK2 " << bam_get_qname(read) << " :: "<< intron->get_start() << "-" << intron->get_end() << " :: coord: "<< read_pos<< "\n" ;
                 #pragma omp critical
-                {
-                    if (intron->read_rates_ == nullptr){
-                        intron->add_read_rates_buff(eff_len_) ;
-                    }
-                    int offset = (int)(read_pos - intron->get_start()) % intron->nbins_ ;
-                    offset = (offset >=0) ? offset: 0 ;
-                    intron->read_rates_[offset] += 1 ;
-                }
+                    intron->add_read(read_pos, eff_len_) ;
+
             }
         }
         return 0 ;
@@ -320,7 +296,6 @@ if (((read_pos+rlen) >= 74731743) && (read_pos <= 74731854))
     }
 
     int IOBam::normalize_stacks(vector<float> vec, float sreads, int npos, float fitfunc_r, float pvalue_limit){
-//cerr << "iniT norm stacks " << sreads<< ": " << npos <<": " << pvalue_limit<< "\n" ;
         if (fitfunc_r == 0.0){
             for (int i=0; i<(int)vec.size(); i++){
                 const float mean_reads = (sreads - vec[i]) == 0 ? 0.5: (sreads-vec[i]) ;
@@ -342,12 +317,10 @@ if (((read_pos+rlen) >= 74731743) && (read_pos <= 74731854))
                 }
             }
         }
-//cerr << "OUT norm stacks " << npos << "\n" ;
         return npos ;
     }
 
     int IOBam::boostrap_samples(int msamples, int ksamples, float* boots, float fitfunc_r, float pvalue_limit){
-//cerr << "OUT BOOTSTRAP\n" ;
         const int njunc = junc_map.size();
 
         #pragma omp parallel for num_threads(nthreads_)
@@ -376,7 +349,6 @@ if (((read_pos+rlen) >= 74731743) && (read_pos <= 74731854))
                 boots[idx2d] = (lambda * npos) ;
             }
         }
-//cerr << "OUT BOOTSTRAP\n" ;
         return 0 ;
     }
 
@@ -421,16 +393,15 @@ if (((read_pos+rlen) >= 74731743) && (read_pos <= 74731854))
             }
             sort(intronVec_[it.first].begin(), intronVec_[it.first].end(), Intron::islowerRegion<Intron>) ;
 
-            cerr << "INTRON: " << it.first << " :: " ;
-            for (const auto &kk: intronVec_[it.first] ){
-                cerr << kk->get_start() << "-" << kk->get_end() << "\n" ;
-            }
-            cerr << "\n" ;
-
+//cerr << "INTRON: " << it.first << " :: " ;
+//for (const auto &kk: intronVec_[it.first] ){
+//    cerr << kk->get_start() << "-" << kk->get_end() << "\n" ;
+//}
+//cerr << "\n" ;
         }
 
         ParseJunctionsFromFile(true) ;
-//cout << "Num junctions: " << junc_vec.size() << "\n" ;
+
         for (const auto & it: intronVec_){
             const int n = (it.second).size() ;
             #pragma omp parallel for num_threads(nthreads_)
@@ -444,7 +415,7 @@ if (((read_pos+rlen) >= 74731743) && (read_pos <= 74731854))
                         if (junc_map.count(key) == 0) {
                             junc_map[key] = junc_vec.size() ;
                             junc_vec.push_back(intrn_it->read_rates_) ;
-                            (intrn_it->get_gene())->add_intron(intrn_it, min_intron_cov, min_experiments, reset) ;
+                            (intrn_it->get_gene())->add_intron(intrn_it, min_intron_cov, min_experiments, min_bins, reset) ;
                         }
                     }
                 }else{
@@ -492,16 +463,6 @@ if (((read_pos+rlen) >= 74731743) && (read_pos <= 74731854))
             }
             if(ov != nullptr)
                 geneList[gl.first].push_back(ov) ;
-
-//for(const auto &ov : geneList[gl.first])
-//{
-//    cerr << gl.first << " : " << ov->get_start() << "-" << ov->get_end()<< " ";
-//    for (const auto &g: ov->glist){
-//        cerr << g->get_id() << ", " ;
-//    }
-//    cerr << "\n" ;
-//}
-
         }
     }
 

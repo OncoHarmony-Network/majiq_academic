@@ -108,21 +108,9 @@ namespace grimoire {
         } else if (nullptr == ex1){
             if ((end - start) <= MAX_DENOVO_DIFFERENCE){
 
-
-//                s1 << start ; s2 << end ;
-//                key = s1.str() + "-" + s2.str() ;
                 const int st1 = (inbound_j == nullptr) ? EMPTY_COORD : start ;
                 const int nd1 = (outbound_j == nullptr) ? EMPTY_COORD : end ;
                 ex1 = addExon(exon_map_, st1, nd1, in_db) ;
-
-//                if (exon_map_.count(key) > 0){
-//                    ex1 = exon_map_[key];
-//                } else {
-//                    const int st1 = (inbound_j == nullptr) ? EMPTY_COORD : start ;
-//                    const int nd1 = (outbound_j == nullptr) ? EMPTY_COORD : end ;
-//                    ex1 = new Exon(st1, nd1, in_db) ;
-//                    exon_map_[key] = ex1 ;
-//                }
                 ex2 = ex1 ;
 
             } else {
@@ -266,8 +254,9 @@ namespace grimoire {
             } else {
                 if (start_ir <= 0) {
                     continue ;
-                } else {
+                } else if ((ss.coord - start_ir) > 2) {
                     end_ir = ss.coord ;
+
                     #pragma omp critical
                     {
                         Intron * irObj = new Intron(start_ir, end_ir, false, this) ;
@@ -280,20 +269,20 @@ namespace grimoire {
         }
     }
 
-    void Gene::add_intron(Intron * inIR_ptr, float min_coverage, unsigned int min_exps, bool reset){
+    void Gene::add_intron(Intron * inIR_ptr, float min_coverage, unsigned int min_exps, float min_bins, bool reset){
         bool found = false ;
 
         for (const auto &ir: intron_vec_){
             if (ir->get_end() < inIR_ptr->get_start() || ir->get_start() > inIR_ptr->get_end()) continue ;
             if (ir->get_end() >= inIR_ptr->get_start() && ir->get_start() <= inIR_ptr->get_end()){
                 ir->overlaping_intron(inIR_ptr) ;
-                ir->update_flags(min_coverage, min_exps) ;
+                ir->update_flags(min_coverage, min_exps, min_bins) ;
                 ir->clear_nreads(reset) ;
                 found = true ;
             }
         }
         if(!found){
-            inIR_ptr->update_flags(min_coverage, min_exps) ;
+            inIR_ptr->update_flags(min_coverage, min_exps, min_bins) ;
             inIR_ptr->clear_nreads(reset) ;
             intron_vec_.push_back(inIR_ptr) ;
         }else{
@@ -311,28 +300,35 @@ namespace grimoire {
         int ir_start = 0 ;
 
         for(const auto & ex: exon_map_ ){
+
             const int ex_start = ((ex.second)->get_start() < 0) ? (ex.second)->get_end()-10 : (ex.second)->get_start() ;
             const int ex_end = ((ex.second)->get_end() < 0) ? (ex.second)->get_start()+10 : (ex.second)->get_end() ;
 
-            if (ir_start != 0 && prev_ex->get_end()> 0 && (ex.second)->get_start()>0) {
+            if (ir_start == 0 ) {
+                ir_start = ex_end + 1;
+                prev_ex = (ex.second) ;
+                continue ;
+            }
+
+            if( prev_ex->get_end()> 0 && (ex.second)->get_start()>0) {
                 const int ir_end = ex_start - 1 ;
 
                 while(intron_index< n_itrons){
                     Intron * ir_ptr = intron_vec_[intron_index];
-
-                    if (ir_ptr->get_start() >= ex_end ) break ;
-
+                    if (ir_ptr->get_end() >= ex_end ) break ;
                     if (ir_start <= ir_ptr->get_end() && ir_end >= ir_ptr->get_start() && ir_ptr->get_ir_flag()){
-//cout << "CONNECT INTRONS: gene: " << id_ << " ir_coord: "<< ir_start << " :: " << ir_end << " nintrons: " << n_itrons<< "\n" ;
                         prev_ex->ob_irptr = ir_ptr ;
                         (ex.second)->ib_irptr = ir_ptr ;
+                        ir_ptr->update_boundaries(prev_ex->get_end(), (ex.second)->get_start()) ;
+                        ir_ptr->set_markd();
                     }
 
                     ++intron_index ;
                 }
+                ir_start = ex_end + 1;
+                prev_ex = (ex.second) ;
             }
-            ir_start = ex_end + 1;
-            prev_ex = (ex.second) ;
+
         }
 
     }
@@ -367,26 +363,16 @@ namespace grimoire {
             }
 
             if (ex->is_lsv(!ss)) {
-//    cerr << " ####### " << id_ << " : " << strand_ << "\n" ;
-
                 lsvObj = new LSV(this, ex, !ss) ;
                 set<string> t1 ;
                 lsvObj->get_variations(t1) ;
                 bool rem_src = false ;
 
                 for (const auto &slvs: source){
-//                    for (const auto &xxx: slvs.first)
-//                        cerr << (slvs.second)->get_id() << " -> " << xxx <<"\n"
-//
                     set<string> d1 ;
                     set<string> d2 ;
                     set_difference((slvs.first).begin(), (slvs.first).end(), t1.begin(), t1.end(), inserter(d1, d1.begin())) ;
                     set_difference(t1.begin(), t1.end(), (slvs.first).begin(), (slvs.first).end(), inserter(d2, d2.begin())) ;
-
-//                    for (const auto &xxx: t1)
-//                        cerr << " @@ " << lsvObj->get_id() << " -> " << xxx <<"\n" ;
-//
-//                    cerr << " d2.size = " << d2.size() << " d1.size = "<< d1.size() << "\n";
 
                     if (d2.size() == 0){
                         rem_src = true ;
@@ -440,22 +426,19 @@ namespace grimoire {
 
     bool Intron::is_reliable(float min_bins){
 
-        int npos = 0 ;
-        if (length() <=0 || nbins_<=0) return false ;
-        const int sz = length() / nbins_ ;
-cerr << "IR:" << (get_gene())->get_id() << ":" << get_start() << "-" << get_end()<<" "<< sz << "\n" ;
-cerr << "READ RATES: " ;
-        for(int i =0 ; i< nbins_; i++){
-
+        float npos = 0 ;
+        const int nbins = n_nb_.size() ;
+        if (length() <=0 || nbins <= 0) return false ;
+//cerr << "IR:" << (get_gene())->get_id() << ":" << get_start() << "-" << get_end()<<" " << "\n" ;
+        for(int i =0 ; i< nbins; i++){
             if (read_rates_[i]>0){
                 npos ++;
             }
-            read_rates_[i] = (read_rates_[i]>0) ? (read_rates_[i] / npos ) : 0 ;
-            cerr << read_rates_[i] << ", " ;
-
+            read_rates_[i] = (read_rates_[i]>0) ? (read_rates_[i] / n_nb_[i].size() ) : 0 ;
         }
-cerr << " npos:" << npos << "\n" ;
-        const float c = (npos>0) ? (npos/nbins_) : 0 ;
+
+        const float c = (npos>0) ? (npos/nbins) : 0 ;
+//cerr << " npos:" << npos << " c:" << c << " min_bins:" << min_bins<<  "\n" ;
         bool b = (c >= min_bins) ;
 
         return b ;
@@ -542,10 +525,6 @@ cerr << " npos:" << npos << "\n" ;
 
         bool(*bfunc)(unsigned int, unsigned int) = b ? fless: fgrt ;
 
-//cout << id_ << " : " ;
-//for (auto const &p: sp_list) cout << "[ " << p.coord << ", " << p.ref_coord << ", " << p.jun_ptr->get_key() << " ]";
-//cout << "\n" ;
-
         string ext_type = (ss != b) ? "t" : "s" ;
 
         string prev_ex = to_string(sp_list[0].ex_ptr->get_start()) + "-" + to_string(sp_list[0].ex_ptr->get_end()) ;
@@ -599,8 +578,6 @@ cerr << " npos:" << npos << "\n" ;
             ext_type += "|na"  ;
         }
         if (ir_ptr_ != nullptr) ext_type += "|i" ;
-
-//cout << id_ << " :: " << ext_type << "\n" ;
         return ext_type ;
     }
 
@@ -622,29 +599,25 @@ cerr << " npos:" << npos << "\n" ;
                 if (tlb.count(k) == 0)
                     tlb[k] = n ;
             }
-
         }
-
     }
-
 
     vector<Intron *> find_intron_retention(Gene * gObj, int start, int end){
         vector<Intron*> ir_vec ;
-//        const int nir = (gObj->intron_vec_).size() ;
         vector<Intron *>::iterator low = lower_bound (gObj->intron_vec_.begin(), gObj->intron_vec_.end(),
                                                       start, _Region::func_comp ) ;
         if (low ==  gObj->intron_vec_.end()) return ir_vec ;
         for (; low != gObj->intron_vec_.end() ; low++){
             Intron * irp = *low;
 
-//      cerr << "in coords:" << start << "-" << end << " IRP->" << irp->get_start() << "-" << irp->get_end() << "\n" ;
             if(irp->get_start()> end){
                 break ;
             }
             if(irp->get_end() < start){
                 continue ;
             }
-            if (irp->get_ir_flag())
+//cerr << irp->get_start() << "-" << irp->get_end() << " == " << irp->get_ir_flag() << " || " << irp->is_connected() << "\n" ;
+            if (irp->get_ir_flag() && irp->is_connected())
                 ir_vec.push_back(irp) ;
         }
         return ir_vec ;

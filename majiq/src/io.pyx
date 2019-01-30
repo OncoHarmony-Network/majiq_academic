@@ -143,9 +143,7 @@ cdef int merge_exons(dict exon_dict, map[string, Gene*]& all_genes) except -1:
         ex_end = -1
         nopen = 0
 
-        print(gne_id, ex_list)
         for coord, is_start in ex_list:
-            print (coord, is_start, nopen, ex_end)
             if is_start:
                 if ex_end != -1:
                     start1 = ex_end -10  if ex_start == EMPTY_COORD else ex_start

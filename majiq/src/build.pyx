@@ -251,7 +251,7 @@ cdef _find_junctions(list file_list, map[string, Gene*]& gene_map, vector[string
                 if ir:
                     with gil:
                         logger.info('Detect Intron retention %s' %(file_list[j][0]))
-                    c_iobam.detect_introns(min_ir_cov, min_experiments, 0.8, (j==last_it_grp))
+                    c_iobam.detect_introns(min_ir_cov, min_experiments, 0.5, (j==last_it_grp))
                 njunc = c_iobam.get_njuncs()
                 with gil:
                     logger.debug('Total Junctions and introns %s' %(njunc))
@@ -322,10 +322,15 @@ cdef void gene_to_splicegraph(Gene * gne, sqlite3 * db) nogil:
         # with gil:
         #     print(ex_pair.first, ex.get_start(), ex.get_end())
         sg_exon(db, gne_id, ex.get_start(), ex.get_end(), ex.db_start_, ex.db_end_, ex.annot_ )
+        if ex.has_out_intron():
+            ir = ex.ob_irptr
+            if ir.get_ir_flag():
+                sg_intron_retention(db, gne_id, ir.get_start(), ir.get_end(), ir.get_annot())
 
-    for ir in gne.intron_vec_:
-        if ir.get_ir_flag():
-            sg_intron_retention(db, gne_id, ir.get_start(), ir.get_end(), ir.get_annot())
+    #
+    # for ir in gne.intron_vec_:
+    #     if ir.get_ir_flag():
+    #         sg_intron_retention(db, gne_id, ir.get_start(), ir.get_end(), ir.get_annot())
 
 
 ## OPEN API FOR PYTHON

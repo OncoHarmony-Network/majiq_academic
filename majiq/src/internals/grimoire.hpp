@@ -199,15 +199,16 @@ namespace grimoire{
 
     class Intron: public _Region{
         private:
-//            string  id_ ;
-            bool    annot_ ;
-            Gene *  gObj_ ;
-            int     flt_count_ ;
-            bool    ir_flag_ ;
+            bool        annot_ ;
+            Gene *      gObj_ ;
+            int         flt_count_ ;
+            bool        ir_flag_ ;
+            bool        markd_ ;
+            vector<set<int>> n_nb_ ;
+            int         nxbin ;
 
         public:
-            float *   read_rates_ ;
-            int     nbins_ ;
+            float*  read_rates_ ;
 
             Intron () {}
             Intron (int start1, int end1, bool annot1, Gene* gObj1): _Region(start1, end1),
@@ -215,36 +216,62 @@ namespace grimoire{
                 flt_count_  = 0 ;
                 ir_flag_    = false ;
                 read_rates_ = nullptr ;
-                nbins_      = 0 ;
+                nxbin       = 0 ;
+                markd_      = false ;
             }
 
             bool    get_annot()             { return annot_ ; }
             Gene*   get_gene()              { return gObj_ ; }
             bool    get_ir_flag()           { return ir_flag_ ; }
             string  get_key()               { return(to_string(start_) + "-" + to_string(end_)) ; }
+            void    set_markd()             { markd_ = true ; }
+            bool    is_connected()          { return markd_ ; }
             string  get_key(Gene * gObj) ;
             void    calculate_lambda() ;
-            void    add_read_rates_buff(int nbins1){
+            bool    is_reliable(float min_bins) ;
 
-                if ( end_ - start_ >= nbins1 * MIN_INTRON_BINSIZE ) {
-                    nbins_ = nbins1 ;
-                } else {
-                    nbins_ = (end_ - start_) / MIN_INTRON_BINSIZE ;
-                    nbins_ = (nbins_ == 0) ? 1 : nbins_ ;
+            void    add_read_rates_buff(int eff_len){
 
-                }
-//                read_rates_ = (int*) calloc(nbins_, sizeof(int)) ;
-                read_rates_ = (float*) calloc(nbins1, sizeof(float)) ;
+                nxbin = (int) ((length()+ eff_len) / eff_len) ;
+                nxbin = (length() % eff_len) == 0 ? nxbin : nxbin +1 ;
+                read_rates_ = (float*) calloc(eff_len, sizeof(float)) ;
+                n_nb_ = vector<set<int>>(eff_len, set<int>()) ;
             }
-            bool  is_reliable(float min_bins) ;
-            inline void  update_flags(float min_coverage, int min_exps) {
+
+            void  add_read(int read_pos, int eff_len){
+                int st = get_start() - eff_len ;
+                if (read_rates_ == nullptr){
+                    add_read_rates_buff(eff_len) ;
+                }
+                int offset = (int)((read_pos - st)/nxbin) ;
+                offset = (offset >=0) ? offset: 0 ;
+                n_nb_[offset].insert(read_pos - st) ;
+                read_rates_[offset] += 1 ;
+            }
+
+            inline void  update_flags(float min_coverage, int min_exps, float min_bins) {
                 int cnt = 0 ;
-                for(int i =0 ; i< nbins_; i++){
+                const int nbins = n_nb_.size() ;
+                const float pc_bins = nbins * min_bins ;
+                for(int i =0 ; i< nbins; i++){
                     cnt += (read_rates_[i]>= min_coverage) ? 1 : 0 ;
                 }
-                flt_count_ += (cnt == nbins_) ? 1 : 0 ;
+
+                flt_count_ += (cnt >= pc_bins) ? 1 : 0 ;
                 ir_flag_ = ir_flag_ || (flt_count_ >= min_exps) ;
                 return ;
+            }
+
+            inline void update_boundaries(int start, int end){
+                int st = get_start() ;
+                int nd = get_end() ;
+
+                st = (st > start)? st: start ;
+                nd = (nd < end)? nd: end ;
+
+                set_end(nd) ;
+                set_start(st) ;
+
             }
 
             void overlaping_intron(Intron * inIR_ptr){
@@ -264,11 +291,11 @@ namespace grimoire{
                 if(read_rates_ != nullptr){
                     free(read_rates_);
                     read_rates_ = nullptr ;
+                    n_nb_.clear() ;
+                    n_nb_.shrink_to_fit() ;
                 }
                 return ;
             }
-
-
     };
 
 
@@ -318,7 +345,7 @@ namespace grimoire{
             void    print_exons() ;
             void    detect_exons() ;
             void    detect_introns(vector<Intron*> &intronlist) ;
-            void    add_intron(Intron * inIR_ptr, float min_coverage, unsigned int min_exps, bool reset) ;
+            void    add_intron(Intron * inIR_ptr, float min_coverage, unsigned int min_exps, float min_bins, bool reset) ;
             void    connect_introns() ;
             void    newExonDefinition(int start, int end, Junction *inbound_j, Junction *outbound_j, bool in_db) ;
             void    fill_junc_tlb(map<string, vector<string>> &tlb) ;
