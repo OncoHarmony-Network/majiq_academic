@@ -301,6 +301,8 @@ namespace grimoire {
 
         for(const auto & ex: exon_map_ ){
 
+            if (((ex.second)->get_start() < 0) || (ex.second)->get_end()<0)
+                continue ;
             const int ex_start = ((ex.second)->get_start() < 0) ? (ex.second)->get_end()-10 : (ex.second)->get_start() ;
             const int ex_end = ((ex.second)->get_end() < 0) ? (ex.second)->get_start()+10 : (ex.second)->get_end() ;
 

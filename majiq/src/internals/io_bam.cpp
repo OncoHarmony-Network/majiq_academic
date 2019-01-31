@@ -178,8 +178,6 @@ namespace io_bam {
         if (low ==  intronVec_[chrom].end()) return 0 ;
         vector<pair<int, int>> junc_record ;
 
-
-
         int off = 0;
         uint32_t *cigar = bam_get_cigar(read) ;
         for (int i = 0; i < n_cigar; ++i) {
@@ -204,6 +202,7 @@ namespace io_bam {
             bool junc_found = false ;
             Intron * intron = *low;
             if(intron->get_start()> read_pos+rlen) break ;
+            if (intron->get_end() <= read_pos) continue ;
             for (const auto & j:junc_record){
                 if ((j.first>=intron->get_start() && j.first<= intron->get_end() )
                     || (j.second>=intron->get_start() && j.second<= intron->get_end())){
@@ -212,11 +211,13 @@ namespace io_bam {
                 }
             }
             if (!junc_found){
+
+
                 #pragma omp critical
                     intron->add_read(read_pos, eff_len_) ;
-
             }
         }
+
         return 0 ;
     }
 
@@ -399,9 +400,7 @@ namespace io_bam {
 //}
 //cerr << "\n" ;
         }
-
         ParseJunctionsFromFile(true) ;
-
         for (const auto & it: intronVec_){
             const int n = (it.second).size() ;
             #pragma omp parallel for num_threads(nthreads_)
