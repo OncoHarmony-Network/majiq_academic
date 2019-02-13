@@ -121,7 +121,7 @@ cdef int _output_majiq_file(vector[LSV*] lsvlist, map[string, overGene_vect_t] g
 
         elif irb:
             with gil:
-                gid = jid.split(b':')[3]
+                gid = b':'.join(jid.split(b':')[3:])
             for gneObj in gene_l:
                 if gneObj.get_id() != gid:
                     continue
@@ -173,6 +173,7 @@ cdef int _output_majiq_file(vector[LSV*] lsvlist, map[string, overGene_vect_t] g
                     tmp_boots[junc_idx][m] = boots[jobj_ptr.index][m]
 
         ir_ptr = lsv_ptr.get_intron()
+
         if irb and ir_ptr != <Intron * > 0:
             key = key_format(lsv_ptr.get_gene().get_id(), ir_ptr.get_start(), ir_ptr.get_end(), True)
             tmp_juncinfo[njunc-1][0] = ir_ptr.get_start()

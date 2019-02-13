@@ -635,7 +635,6 @@ namespace grimoire {
                                                        start, _Region::func_comp ) ;
         if (low == glist[chrom].end())
             return ;
-
         if (ir){
             for (const auto &gObj: (*low)->glist){
                 if(gObj->get_start() < start  && gObj->get_end() > end){
