@@ -102,6 +102,9 @@ def main():
                              help='Number of positions to sample per iteration. [Default: %(default)s]')
     buildparser.add_argument('--m', default=30, type=int,
                              help='Number of bootstrapping samples. [Default: %(default)s]')
+    buildparser.add_argument('--irnbins', default=0.2, type=float, help='This values defines the number of bins with '
+                                                                        'some coverage that an intron needs to pass '
+                                                                        'to be accepted as real [Default: %(default)s]')
 
     sampling = new_subparser()
 

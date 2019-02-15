@@ -218,6 +218,7 @@ cdef _find_junctions(list file_list, map[string, Gene*]& gene_map, vector[string
     cdef unsigned int min_experiments = 1 if conf.min_exp == -1 else conf.min_exp
     cdef unsigned int eff_len = conf.readLen - 2*MIN_BP_OVERLAP + 1
     cdef bint ir = conf.ir
+    cdef float ir_numbins=conf.irnbins
 
     cdef int i, j
     cdef int strandness, njunc
@@ -252,7 +253,7 @@ cdef _find_junctions(list file_list, map[string, Gene*]& gene_map, vector[string
                 if ir:
                     with gil:
                         logger.info('Detect Intron retention %s' %(file_list[j][0]))
-                    c_iobam.detect_introns(min_ir_cov, min_experiments, 0.5, (j==last_it_grp))
+                    c_iobam.detect_introns(min_ir_cov, min_experiments, ir_numbins, (j==last_it_grp))
                 njunc = c_iobam.get_njuncs()
                 with gil:
                     logger.debug('Total Junctions and introns %s' %(njunc))
