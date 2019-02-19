@@ -315,9 +315,6 @@ cdef list _extract_lsv_summary(list files, int minnonzero, int min_reads, dict t
             for xx in jinfo:
                 lsv_id = xx[0]
 
-                if b'ENSG00000255284' not in lsv_id:
-                    continue
-
                 lsv_junc_info[lsv_id].append([xx[1], xx[2]])
                 lsv_types[lsv_id][1] += 1
 
