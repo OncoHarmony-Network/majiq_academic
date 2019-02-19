@@ -54,7 +54,7 @@ cpdef void __load_default_prior(vector[vector[psi_distr_t]]& prior_matrix):
     fast_pickler = pickle.Unpickler(fop)
     data = fast_pickler.load().astype(np.float32)
     fop.close()
-    print_prior(data, numbins)
+    # print_prior(data, numbins)
     data /= np.sum(data)
     for xx in range(numbins):
         for yy in range(numbins):
