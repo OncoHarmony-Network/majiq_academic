@@ -13,7 +13,7 @@ using namespace std ;
 
 typedef vector<float> psi_distr_t ;
 typedef pair<int, int> pair_int_t ;
-#define PSEUDO 1e-20
+#define PSEUDO 1e-16
 
 inline float median(psi_distr_t a){
     const int n = a.size() ;

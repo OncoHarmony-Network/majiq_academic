@@ -54,7 +54,8 @@ cpdef void __load_default_prior(vector[vector[psi_distr_t]]& prior_matrix):
     fast_pickler = pickle.Unpickler(fop)
     data = fast_pickler.load().astype(np.float32)
     fop.close()
-
+    print_prior(data, numbins)
+    data /= np.sum(data)
     for xx in range(numbins):
         for yy in range(numbins):
             prior_matrix[0][xx][yy] = np.log(data[xx][yy])
@@ -63,13 +64,13 @@ cpdef void __load_default_prior(vector[vector[psi_distr_t]]& prior_matrix):
     return
 
 #
-# cdef print_prior(vector[vector[psi_distr_t]] matrix, int nbins):
-#
-#     sys.stderr('##MATRIX')
-#     for xx in range(nbins):
-#         for yy in range(nbins):
-#            sys.stderr.write("%.2f, " % matrix[0][xx][yy])
-#         sys.stderr.write("\n")
+cdef print_prior(vector[vector[psi_distr_t]] matrix, int nbins):
+
+    sys.stderr.write('##MATRIX')
+    for xx in range(nbins):
+        for yy in range(nbins):
+           sys.stderr.write("%.2f, " % np.exp(matrix[1][xx][yy]))
+        sys.stderr.write("\n")
 #
 # import sys
 # def eprint(*args, **kwargs):
@@ -92,6 +93,7 @@ cpdef vector[vector[psi_distr_t]] gen_prior_matrix(object lsv_type, dict lsv_emp
     logger.info("Calculating prior matrix...")
     if defaultprior:
         __load_default_prior(prior_matrix)
+        # print_prior(prior_matrix, numbins)
         return prior_matrix
 
     logger.debug('Filtering to obtain "best set"...')
@@ -129,7 +131,7 @@ cpdef vector[vector[psi_distr_t]] gen_prior_matrix(object lsv_type, dict lsv_emp
                                  "the prior. Check if the input is correct or use the --default-prior option in "
                                  " order to use a precomputed prior")
         else:
-            np_pmatrix[prior_idx] /= sum(np_pmatrix[prior_idx])
+            np_pmatrix[prior_idx] /= np.sum(np_pmatrix[prior_idx])
 
             # renormalize so it sums 1
 
