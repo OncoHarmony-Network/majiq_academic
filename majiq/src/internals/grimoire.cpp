@@ -432,12 +432,29 @@ namespace grimoire {
         const int nbins = n_nb_.size() ;
         if (length() <=0 || nbins <= 0) return false ;
 //cerr << "IR:" << (get_gene())->get_id() << ":" << get_start() << "-" << get_end()<<" " << "\n" ;
+//cerr << get_start() << "-" << get_end() << ": " << "\n" ;
+//cerr << "\t :: " ;
+// for(int i =0 ; i< nbins; i++){
+//cerr << read_rates_[i] << ", " ;
+//}
+//cerr << "\n" ;
+
+
+
         for(int i =0 ; i< nbins; i++){
             if (read_rates_[i]>0){
                 npos ++;
             }
-            read_rates_[i] = (read_rates_[i]>0) ? (read_rates_[i] / n_nb_[i].size() ) : 0 ;
+//            read_rates_[i] = (read_rates_[i]>0) ? (read_rates_[i] / n_nb_[i].size() ) : 0 ;
+             read_rates_[i] = (read_rates_[i]>0) ? (read_rates_[i] /  nxbin) : 0 ;
+
         }
+//cerr << get_start() << "-" << get_end() << ": " << "\n" ;
+//cerr << "\t :: " ;
+// for(int i =0 ; i< nbins; i++){
+//cerr << read_rates_[i] << ", " ;
+//}
+//cerr << "\n" ;
 
         const float c = (npos>0) ? (npos/nbins) : 0 ;
 //cerr << " npos:" << npos << " c:" << c << " min_bins:" << min_bins<<  "\n" ;

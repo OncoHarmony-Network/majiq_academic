@@ -256,7 +256,12 @@ namespace grimoire{
                 for(int i =0 ; i< nbins; i++){
                     cnt += (read_rates_[i]>= min_coverage) ? 1 : 0 ;
                 }
-
+//cerr << get_start() << "-" << get_end() << ": " << cnt << "\n" ;
+//cerr << "\t :: " ;
+// for(int i =0 ; i< nbins; i++){
+//cerr << read_rates_[i] << ", " ;
+//}
+//cerr << "\n" ;
                 flt_count_ += (cnt >= pc_bins) ? 1 : 0 ;
                 ir_flag_ = ir_flag_ || (flt_count_ >= min_exps) ;
                 return ;

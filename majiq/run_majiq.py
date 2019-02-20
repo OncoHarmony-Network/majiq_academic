@@ -77,7 +77,7 @@ def main():
                              help='Disables denovo detection of junction, splicesites and exons. This will speedup the '
                                   'execution but reduce the number of LSVs detected. [Default: denovo enabled]')
 
-    buildparser.add_argument('--min-intronic-cov', default=1, type=float,
+    buildparser.add_argument('--min-intronic-cov', default=0.01, type=float,
                              help='Minimum number of reads on average in intronic sites, only for intron retention.'
                                   'Default: %(default)s]')
 
