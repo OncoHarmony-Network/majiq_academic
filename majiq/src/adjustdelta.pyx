@@ -4,7 +4,7 @@ from scipy.stats import beta
 from scipy.misc import logsumexp
 import cython
 
-cdef np.float32_t PSEUDO = 1e-20
+cdef np.float32_t PSEUDO = 1e-16
 ctypedef np.float32_t DTYPE_t
 
 @cython.boundscheck(False) # turn off bounds-checking for entire function
@@ -137,7 +137,8 @@ cdef _em_beta_mix(np.ndarray[DTYPE_t, ndim=2] D, np.ndarray[DTYPE_t, ndim=1] pmi
 
 
     if logger:
-        logger.debug("[NJ:%s] Initial Log_Likelihood %.3f \n" % (nj, ll_sum))
+        logger.debug("[NJ:%s] Initial Log_Likelihood %.3f , iter: %s\n" % (nj, ll_sum, num_iter))
+
 
     ones_1k = np.ones(shape=(1, K), dtype=np.float32)
 
