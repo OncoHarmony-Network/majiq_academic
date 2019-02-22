@@ -68,7 +68,7 @@ cpdef np.ndarray[DTYPE_t, ndim=1] adjustdelta(np.ndarray[DTYPE_t, ndim=1] deltap
                 D[idx, 1] += 1
                 break
         if D[zero_idx+1]<= abs(ppv)< D[zero_idx+4, 0] :
-            center.append(ppv)
+            centervals.append(ppv)
         if abs(ppv) < D[zero_idx+1]:
             gamma.append(ppv)
 
