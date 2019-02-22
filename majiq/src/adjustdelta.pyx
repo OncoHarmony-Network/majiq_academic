@@ -38,9 +38,9 @@ cdef list _calculate_beta_params(np.float32_t mean, np.float32_t vari, sample_si
     cor_vari = vari / 4
 
 
-    p = ((mean*(1 - mean)) / vari) - 1
-    a = mean * p
-    b = (1 - mean) * p
+    p = ((cor_mean*(1 - cor_mean)) / cor_vari) - 1
+    a = cor_mean * p
+    b = (1 - cor_mean) * p
 
     print(a, b, p)
 
