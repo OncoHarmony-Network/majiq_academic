@@ -64,7 +64,6 @@ cpdef np.ndarray[DTYPE_t, ndim=1] adjustdelta(np.ndarray[DTYPE_t, ndim=1] deltap
     cdef list labels = ['Uniform', 'center', 'spike']
     cdef list centervals, gamma
 
-
     for idx, ii in enumerate(xpos[:-1]):
         D[idx, 0] = round((ii + xpos[idx + 1]) / 2, 5)
         if D[idx, 0] == 0:
@@ -107,6 +106,7 @@ cpdef np.ndarray[DTYPE_t, ndim=1] adjustdelta(np.ndarray[DTYPE_t, ndim=1] deltap
     print('beta2: ', p_mixture, beta_params)
     z_mixture_pdf = _calc_mixture_pdf(beta_params, p_mixture)
 
+    print("ZMIXT, ", z_mixture_pdf)
     return z_mixture_pdf
 
 
