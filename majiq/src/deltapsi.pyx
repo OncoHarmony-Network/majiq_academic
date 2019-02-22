@@ -122,7 +122,7 @@ cdef void _core_deltapsi(object self):
     for i in prange(nlsv, nogil=True, num_threads=nthreads):
         with gil:
             lsv = list_of_lsv[i]
-            logger.info(lsv)
+            logger.debug(lsv)
 
         if lsv_map[lsv].is_ir():
             prior_m = prior_matrix[1]
