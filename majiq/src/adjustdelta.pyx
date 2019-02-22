@@ -51,8 +51,8 @@ cdef list _calculate_beta_params(np.float32_t mean, np.float32_t vari, sample_si
 cpdef np.ndarray[DTYPE_t, ndim=1] adjustdelta(np.ndarray[DTYPE_t, ndim=1] deltapsi, int num_iter, str output,
                                                   str plotpath=None, str title=None,int njunc=1, object logger=False):
 
-    cdef np.ndarray[DTYPE_t, ndim=2] D = np.zeros(shape=(79, 2), dtype=np.float32)
-    cdef np.ndarray[DTYPE_t, ndim=1] xpos = np.arange(-1 + (0.025 / 2), 1, 0.025, dtype=np.float32)
+    cdef np.ndarray[DTYPE_t, ndim=2] D = np.zeros(shape=(40, 2), dtype=np.float32)
+    cdef np.ndarray[DTYPE_t, ndim=1] xpos = np.arange(-1 + (0.05 / 2), 1, 0.5, dtype=np.float32)
     # cdef np.ndarray[DTYPE_t, ndim=1] x_pos0 = np.arange(0, 1, 0.025)
     cdef np.ndarray[DTYPE_t, ndim=1] p_mixture
     cdef np.ndarray[DTYPE_t, ndim=2] beta_params
@@ -106,7 +106,7 @@ cpdef np.ndarray[DTYPE_t, ndim=1] adjustdelta(np.ndarray[DTYPE_t, ndim=1] deltap
     print('beta2: ', p_mixture, beta_params)
     z_mixture_pdf = _calc_mixture_pdf(beta_params, p_mixture)
 
-    print("ZMIXT, ", z_mixture_pdf)
+    print("ZMIXT, ", z_mixture_pdf, xpos)
     return z_mixture_pdf
 
 
