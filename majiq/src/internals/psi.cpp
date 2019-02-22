@@ -196,6 +196,12 @@ void get_samples_from_psi(float* osamps, hetLSV* lsvObj, int psi_samples, psi_di
 //
     vector<psi_distr_t> alpha_beta_prior(njunc, psi_distr_t(2)) ;
     get_prior_params(alpha_beta_prior, njunc, lsvObj->is_ir()) ;
+cerr << "GET PRIOR ";
+
+    for (const auto &c: alpha_beta_prior){
+cerr << "alpha: " << c[0] << " beta: " << c[1] << "\n" ;
+
+    }
 
     psi_distr_t psi_space(nbins) ;
     for(int i=0; i<nbins; i++){
