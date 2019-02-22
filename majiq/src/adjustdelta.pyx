@@ -26,8 +26,13 @@ cdef np.ndarray[DTYPE_t, ndim=1] _calc_mixture_pdf(np.ndarray[DTYPE_t, ndim=2] b
 
 
 cdef list _calculate_beta_params(np.float32_t mean, np.float32_t vari, sample_size):
-    b = (1 - mean) * sample_size
-    a = mean * sample_size
+
+    cdef np.float32_t p , a , b
+
+    p = ((mean*(1 - mean)) / vari) - 1
+    a = mean * p
+    b = (1 - mean) * p
+
     return [a, b]
 
 #from majiq.src.deleteme import _loglikelihood, _em_beta_mix
@@ -46,6 +51,7 @@ cpdef np.ndarray[DTYPE_t, ndim=1] adjustdelta(np.ndarray[DTYPE_t, ndim=1] deltap
     cdef float ii, total, num_spike, num_lowcenter
     cdef list spike, center, uniform = [1, 1]
     cdef list labels = ['Uniform', 'center', 'spike']
+    cdef list centervals, gamma
 
 
     for idx, ii in enumerate(xpos[:-1]):
@@ -53,32 +59,43 @@ cpdef np.ndarray[DTYPE_t, ndim=1] adjustdelta(np.ndarray[DTYPE_t, ndim=1] deltap
         if D[idx, 0] == 0:
             zero_idx = idx
 
+    centervals = []
+    gamma = []
+
     for ppv in deltapsi:
         for idx, ii in enumerate(xpos[:-1]):
             if ii <= ppv < xpos[idx + 1]:
                 D[idx, 1] += 1
                 break
+        if D[zero_idx+1]<= abs(ppv)< D[zero_idx+4, 0] :
+            center.append(ppv)
+        if abs(ppv) < D[zero_idx+1]:
+            gamma.append(ppv)
+
+
 
     total = D[:, 1].sum()
+
     num_spike = D[zero_idx, 1]
-    num_lowcenter = D[zero_idx - 3:zero_idx + 3, 1].sum() - num_spike
+    num_lowcenter = D[zero_idx - 3:zero_idx + 4, 1].sum() - num_spike
+    # num_lowcenter = (D[zero_idx - 3:zero_idx + 4, 1]*abs(D[zero_idx - 3:zero_idx + 4, 0])).sum()
+
 
     p_mixture = np.zeros(shape=3, dtype=np.float32)
-
-    spike = _calculate_beta_params(0.5, 0, num_spike)
+    p_mixture[0] = 1 - ((num_lowcenter + num_spike) / total)
+    p_mixture[1] = num_lowcenter / total
     p_mixture[2] = num_spike / total
 
-    center = _calculate_beta_params(0.5, 0, num_lowcenter)
-    p_mixture[1] = num_lowcenter / total
-    p_mixture[0] = 1 - ((num_lowcenter + num_spike) / total)
+    spike =  _calculate_beta_params(np.mean(gamma),      np.var(gamma),      num_spike)
+    center = _calculate_beta_params(np.mean(centervals), np.var(centervals), num_lowcenter)
     beta_params = np.array([uniform, center, spike], dtype=np.float32)
 
-    print('beta: ', p_mixture[0], p_mixture[1], p_mixture[2], beta_params)
+    print('beta: ', p_mixture, beta_params)
     _em_beta_mix(D, p_mixture, beta_params, num_iter, min_ratio=1e-5, logger=logger, plotpath=plotpath, nj=njunc,
                  labels=labels)
-    print('beta2: ', p_mixture[0], p_mixture[1], p_mixture[2], beta_params)
-
+    print('beta2: ', p_mixture, beta_params)
     z_mixture_pdf = _calc_mixture_pdf(beta_params, p_mixture)
+
     return z_mixture_pdf
 
 
