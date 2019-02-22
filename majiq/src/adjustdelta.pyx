@@ -72,8 +72,12 @@ cpdef np.ndarray[DTYPE_t, ndim=1] adjustdelta(np.ndarray[DTYPE_t, ndim=1] deltap
     p_mixture[1] = num_lowcenter / total
     p_mixture[0] = 1 - ((num_lowcenter + num_spike) / total)
     beta_params = np.array([uniform, center, spike], dtype=np.float32)
-    _em_beta_mix(D, p_mixture, beta_params, 0, min_ratio=1e-5, logger=logger, plotpath=plotpath, nj=njunc,
+
+    print('beta: ', p_mixture[0], p_mixture[1], p_mixture[2], beta_params)
+    _em_beta_mix(D, p_mixture, beta_params, num_iter, min_ratio=1e-5, logger=logger, plotpath=plotpath, nj=njunc,
                  labels=labels)
+    print('beta2: ', p_mixture[0], p_mixture[1], p_mixture[2], beta_params)
+
     z_mixture_pdf = _calc_mixture_pdf(beta_params, p_mixture)
     return z_mixture_pdf
 
@@ -174,7 +178,7 @@ cdef _em_beta_mix(np.ndarray[DTYPE_t, ndim=2] D, np.ndarray[DTYPE_t, ndim=1] pmi
 
         if ll_sum < ll_sum_old:
             if logger:
-                logger.debug("Log_Likelihood DECREASE new %d old %d - Aborting ....\n" % (ll_sum, ll_sum_old))
+                logger.debug("Log_Likelihood DECREASE new %.3f old %.3f - Aborting ....\n" % (ll_sum, ll_sum_old))
             break
         #logger.info('KKK9')
         pmix = new_pmix.copy()

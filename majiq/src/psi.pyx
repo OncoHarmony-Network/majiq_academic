@@ -66,7 +66,13 @@ cpdef void __load_default_prior(vector[vector[psi_distr_t]]& prior_matrix):
 #
 cdef print_prior(vector[vector[psi_distr_t]] matrix, int nbins):
 
-    sys.stderr.write('##MATRIX')
+    sys.stderr.write('##MATRIX 0 ')
+    for xx in range(nbins):
+        for yy in range(nbins):
+           sys.stderr.write("%.2f, " % np.exp(matrix[0][xx][yy]))
+        sys.stderr.write("\n")
+
+    sys.stderr.write('##MATRIX 1 ')
     for xx in range(nbins):
         for yy in range(nbins):
            sys.stderr.write("%.2f, " % np.exp(matrix[1][xx][yy]))
@@ -92,7 +98,15 @@ cpdef vector[vector[psi_distr_t]] gen_prior_matrix(object lsv_type, dict lsv_emp
     #Start prior matrix
     logger.info("Calculating prior matrix...")
     if defaultprior:
-        __load_default_prior(prior_matrix)
+         for xx in range(numbins):
+        for yy in range(numbins):
+            # print('KLKKK1', xx, yy)
+            prior_matrix[0][xx][yy] = np.log(1)
+            prior_matrix[1][xx][yy] = np.log(1)
+            # print('KLKKK2')
+
+
+        # __load_default_prior(prior_matrix)
         # print_prior(prior_matrix, numbins)
         return prior_matrix
 
