@@ -28,10 +28,21 @@ cdef np.ndarray[DTYPE_t, ndim=1] _calc_mixture_pdf(np.ndarray[DTYPE_t, ndim=2] b
 cdef list _calculate_beta_params(np.float32_t mean, np.float32_t vari, sample_size):
 
     cdef np.float32_t p , a , b
+    cdef np.float32_t cor_mean, cor_vari
+
+    # For a interval of [a, c]
+    # comes from corrected m = (m-a)/(c-a)
+    # Comes from  corrected V = V/ (c-a)^2
+
+    cor_mean = (mean +1)/2
+    cor_vari = vari / 4
+
 
     p = ((mean*(1 - mean)) / vari) - 1
     a = mean * p
     b = (1 - mean) * p
+
+    print(a, b, p)
 
     return [a, b]
 
