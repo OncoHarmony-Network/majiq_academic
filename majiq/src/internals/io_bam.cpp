@@ -178,7 +178,7 @@ namespace io_bam {
         if (low ==  intronVec_[chrom].end()) return 0 ;
         vector<pair<int, int>> junc_record ;
 
-        const read_strand = _get_strand(read) ;
+        const char read_strand = _get_strand(read) ;
         int off = 0 ;
         uint32_t *cigar = bam_get_cigar(read) ;
         for (int i = 0; i < n_cigar; ++i) {
