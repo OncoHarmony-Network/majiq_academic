@@ -178,7 +178,8 @@ namespace io_bam {
         if (low ==  intronVec_[chrom].end()) return 0 ;
         vector<pair<int, int>> junc_record ;
 
-        int off = 0;
+        const read_strand = _get_strand(read) ;
+        int off = 0 ;
         uint32_t *cigar = bam_get_cigar(read) ;
         for (int i = 0; i < n_cigar; ++i) {
             const char op = bam_cigar_op(cigar[i]);
@@ -199,22 +200,26 @@ namespace io_bam {
         }
 
         for (; low != intronVec_[chrom].end() ; low++){
+
             bool junc_found = false ;
             Intron * intron = *low;
-            if(intron->get_start()> read_pos+rlen) break ;
-            if (intron->get_end() <= read_pos) continue ;
-            for (const auto & j:junc_record){
-                if ((j.first>=intron->get_start() && j.first<= intron->get_end() )
-                    || (j.second>=intron->get_start() && j.second<= intron->get_end())){
-                    junc_found = true ;
-                    break ;
+            const char gstrand = intron->get_gene()->get_strand() ;
+            if (gstrand == '.' || gstrand == read_strand){
+                if(intron->get_start()> read_pos+rlen) break ;
+                if (intron->get_end() <= read_pos) continue ;
+                for (const auto & j:junc_record){
+                    if ((j.first>=intron->get_start() && j.first<= intron->get_end() )
+                        || (j.second>=intron->get_start() && j.second<= intron->get_end())){
+                        junc_found = true ;
+                        break ;
+                    }
                 }
-            }
-            if (!junc_found){
+                if (!junc_found){
 
 
-                #pragma omp critical
-                    intron->add_read(read_pos, eff_len_) ;
+                    #pragma omp critical
+                        intron->add_read(read_pos, eff_len_) ;
+                }
             }
         }
 

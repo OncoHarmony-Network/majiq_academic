@@ -7,6 +7,9 @@
 #include "qLSV.hpp"
 #include "stats/stats.hpp"
 
+#include <iostream>
+#include <fstream>
+
 using namespace std ;
 
 void get_psi_border(psi_distr_t& psi_border, int nbins){
@@ -23,31 +26,21 @@ void prob_data_sample_given_psi(psi_distr_t& out_array, float sample, float all_
 
     const float a = sample + alpha_prior ;
     const float b = (all_sample - sample) + beta_prior ;
-
-//cout << "a=" << sample << "+"<< alpha_prior <<" b=" << b << " nbins=" << nbins << " betap="<< beta_prior <<"\n" ;
+//cerr << "a=" << sample << "+"<< alpha_prior <<" b=" << b << " nbins=" << nbins << " betap="<< beta_prior <<"\n" ;
     float prev = scythe::pbeta(psi_border[0], a, b) ;
     for (int i=0; i<nbins; i++){
         float res = scythe::pbeta(psi_border[i+1], a, b) ;
         out_array[i] = log((res - prev) + PSEUDO) ;
         prev = res ;
     }
+
+//    cerr<< "PSI: " ;
+//    for (int i=0; i<nbins; i++)
+//        cerr << "[" << psi_border[i] <<"] " << out_array[i] ;
+//    cerr << "[" << psi_border[nbins]  << "]\n" ;
+
 }
 
-
-//void prob_data_sample_given_psi(float* out_array, float sample, float all_sample, psi_distr_t & psi_border,
-//                                int nbins, float alpha_prior, float beta_prior){
-//
-//    const float a = sample + alpha_prior ;
-//    const float b = (all_sample - sample) + beta_prior ;
-//
-////cout << "a=" << sample << "+"<< alpha_prior <<" b=" << b << " nbins=" << nbins << " betap="<< beta_prior <<"\n" ;
-//    float prev = scythe::pbeta(psi_border[0], a, b) ;
-//    for (int i=0; i<nbins; i++){
-//        float res = scythe::pbeta(psi_border[i+1], a, b) ;
-//        out_array[i] = log((res - prev) + PSEUDO);
-//        prev = res ;
-//    }
-//}
 
 void psi_posterior(psiLSV*lsvObj, psi_distr_t& psi_border, int nbins){
 
@@ -196,12 +189,12 @@ void get_samples_from_psi(float* osamps, hetLSV* lsvObj, int psi_samples, psi_di
 //
     vector<psi_distr_t> alpha_beta_prior(njunc, psi_distr_t(2)) ;
     get_prior_params(alpha_beta_prior, njunc, lsvObj->is_ir()) ;
-cerr << "GET PRIOR ";
 
-    for (const auto &c: alpha_beta_prior){
-cerr << "alpha: " << c[0] << " beta: " << c[1] << "\n" ;
-
-    }
+//cerr << "GET PRIOR ";
+//    for (const auto &c: alpha_beta_prior){
+//cerr << "alpha: " << c[0] << " beta: " << c[1] << "\n" ;
+//
+//    }
 
     psi_distr_t psi_space(nbins) ;
     for(int i=0; i<nbins; i++){
@@ -310,3 +303,161 @@ void test_calc(vector<psi_distr_t>& oPvals, HetStats* HetStatsObj, hetLSV* lsvOb
         }
     }
 }
+
+
+void calc_mixture_pdf(psi_distr_t& o_mixpdf, vector<pair<float, float>>& beta_param, psi_distr_t& pmix,
+                      psi_distr_t& psi_border, int nbins){
+
+    int bpara_idx = 0 ;
+    float sum = 0.0 ;
+    for (const auto &bparam: beta_param){
+        psi_distr_t bincdf(nbins, 0.0) ;
+        prob_data_sample_given_psi(bincdf, 0.0, 0.0, psi_border, nbins, bparam.first, bparam.second) ;
+cerr << "PARAM [" << bpara_idx << ", " << bparam.first << ", " << bparam.second <<", " << pmix[bpara_idx] << "]: ";
+        for (int i=0; i<nbins; i++){
+            const float k = exp(bincdf[i]) * pmix[bpara_idx] ;
+            o_mixpdf[i] += k ;
+            sum += k ;
+cerr << o_mixpdf[i] << "[" << exp(bincdf[i])<< "] ";
+        }
+cerr << "\n" ;
+        bpara_idx ++ ;
+    }
+cerr << ": sum: " << sum << "\n" ;
+
+    for (int i=0; i<nbins; i++){
+        o_mixpdf[i] /= sum ;
+    }
+}
+
+
+pair<float, float> calculate_beta_params(float mean, float vari){
+    float p, a , b, cor_mean, cor_vari ;
+
+//    For a interval of [a, c]
+//    comes from corrected m = (m-a)/(c-a)
+//    Comes from  corrected V = V/ (c-a)^2
+//    cor_mean = (mean +1)/2 ;
+//    cor_vari = vari / 4 ;
+
+//    p = ((cor_mean*(1 - cor_mean)) / cor_vari) - 1 ;
+//    a = cor_mean * p ;
+//    b = (1 - cor_mean) * p ;
+
+    p = ((mean*(1 - mean)) / vari) - 1 ;
+    a = mean * p ;
+    b = (1 - mean) * p ;
+
+
+    float t = (mean*(1 - mean)) ;
+
+
+cerr << "BETA PARAMS: " << "a: " << a << " b: " << b << " p: " << p  << " temp: " << t <<
+        " vari: " << vari  << " mean: " << mean << "\n" ;
+    return pair<float, float>(a, b) ;
+}
+
+void print_mixture( psi_distr_t& dpsi_mean, psi_distr_t& hst, psi_distr_t& mixt){
+
+
+    for (int i=0; i < hst.size(); i++){
+        const float  dpsi = (dpsi_mean[i] + dpsi_mean[i+1] ) /2 ;
+        cerr << dpsi << ", " << hst[i] << ", " << mixt[i]<< "\n" ;
+    }
+}
+
+void print_vals( psi_distr_t& hst, string fname ){
+
+    ofstream myfile ;
+    myfile.open (fname) ;
+
+    for (int i=0; i < hst.size(); i++){
+        myfile << hst[i]<< "\n" ;
+    }
+    myfile.close() ;
+}
+
+
+void adjustdelta(psi_distr_t& o_mixtpdf, psi_distr_t& emp_dpsi, int num_iter, int nbins){
+
+    psi_distr_t psi_border(nbins+1) ;
+    psi_distr_t dpsi_border(nbins+1) ;
+    psi_distr_t hist(nbins, 0.0) ;
+    psi_distr_t center_dst, spike_dst ;
+    psi_distr_t p_mixture (3) ;
+
+    vector<pair<float, float>> beta_params (3) ;
+
+    const float bsize = 2.0 / nbins ;
+    const float tmp = (1-bsize/2) ;
+
+
+    for(int i=0; i<=nbins; i++){
+        dpsi_border[i] = i*bsize - 0.975;
+//        psi_border[i] = i*(bsize/2) ;
+        psi_border[i] = (dpsi_border[i] +1) /2 ;
+    }
+
+    psi_border[0] = 0 ;
+    psi_border[nbins] = 1 ;
+    dpsi_border[0] = -1 ;
+    dpsi_border[nbins] = 1 ;
+
+    sort(emp_dpsi.begin(), emp_dpsi.end()) ;
+    int i = 0 ;
+    int ub = 26, lb = 21 ;
+
+    cerr<< "PSI\n" ;
+    for (int i=0; i<=nbins; i++)
+   cerr << i << ": " << dpsi_border[i] << "\n" ;
+
+
+    for(const auto &v: emp_dpsi){
+        if (v>= dpsi_border[i] && v< dpsi_border[i+1]){
+            hist[i] ++ ;
+        }
+        else if (v< dpsi_border[i]){
+            cerr<< "THIS SHOULD NOT HAPPEN\n" ;
+        }
+        else{
+            while(i < nbins && v>= dpsi_border[i+1]){
+                i++ ;
+            }
+        }
+        if(abs(v)<= dpsi_border[ub] && abs(v)> dpsi_border[lb]){
+            center_dst.push_back((v+1)/2) ;
+        }
+        else if(abs(v)<= dpsi_border[lb]){
+            spike_dst.push_back((v+1)/2) ;
+        }
+    }
+    print_vals(center_dst, "./center_dst.csv") ;
+    print_vals(spike_dst, "./spike_dst.csv") ;
+
+    float total_cnt =  emp_dpsi.size() ;
+    float spike_cnt =  spike_dst.size() ;
+    float center_cnt = center_dst.size() ;
+
+    p_mixture[0] = (total_cnt - (spike_cnt + center_cnt)) / total_cnt;
+    p_mixture[1] = center_cnt / total_cnt ;
+    p_mixture[2] = spike_cnt / total_cnt ;
+
+    beta_params[0] =  std::make_pair(1, 1) ;
+
+    float cnt_mean = my_mean(center_dst) ;
+    float spk_mean = my_mean(spike_dst) ;
+    beta_params[1] = calculate_beta_params(cnt_mean, my_variance(cnt_mean, center_dst)) ;
+    beta_params[2] = calculate_beta_params(spk_mean, my_variance(spk_mean, spike_dst)) ;
+
+
+//     _em_beta_mix(D, p_mixture, beta_params, num_iter, min_ratio=1e-5, logger=logger, plotpath=plotpath, nj=njunc,
+//                 labels=labels)
+
+    calc_mixture_pdf(o_mixtpdf, beta_params, p_mixture, psi_border, nbins) ;
+
+    print_mixture(dpsi_border,  hist, o_mixtpdf) ;
+
+
+}
+
+

@@ -103,6 +103,7 @@ cdef void _core_deltapsi(object self):
                                                numbins=nbins, defaultprior=self.default_prior,
                                                minpercent=self.min_exp, logger=logger)
 
+
     nlsv = len(list_of_lsv)
     if nlsv == 0:
         logger.info("There is no LSVs that passes the filters")

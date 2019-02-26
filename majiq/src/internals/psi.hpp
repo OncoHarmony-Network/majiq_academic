@@ -13,7 +13,7 @@ using namespace std ;
 
 typedef vector<float> psi_distr_t ;
 typedef pair<int, int> pair_int_t ;
-#define PSEUDO 1e-16
+#define PSEUDO 1e-20
 
 inline float median(psi_distr_t a){
     const int n = a.size() ;
@@ -36,7 +36,8 @@ inline void get_prior_params( vector<psi_distr_t>& o_priors, int njunc, bool ir)
     float alpha = 1.0/ nways ;
     float fnjunc = (float)njunc ;
 
-    if (ir){
+//    if (ir){
+    if( 0){
         alpha *= (fnjunc / (fnjunc+1)) ;
         for (int i=0; i<fnjunc-1; i++){
             o_priors[i][0] = alpha ;
@@ -80,7 +81,7 @@ inline float logsumexp(psi_distr_t& nums, size_t ct){
     return log(sum) + max_exp ;
 }
 
-inline float logsumexp_2D(vector<psi_distr_t>& nums, size_t ct){
+inline float logsumexp_2D(vector<psi_distr_t>& nums, size_t ct) {
     float max_exp = nums[0][0], sum = 0.0 ;
     size_t i, j ;
 
@@ -98,23 +99,32 @@ inline float logsumexp_2D(vector<psi_distr_t>& nums, size_t ct){
     return log(sum) + max_exp ;
 }
 
-//inline float logsumexp(float nums[], size_t ct){
-//    float max_exp = nums[0], sum = 0.0 ;
-//    size_t i ;
-//
-//    for(i = 1; i < ct; i++){
-//        max_exp = (nums[i] > max_exp) ? nums[i] : max_exp ;
-//    }
-//
-//    for(i = 0; i < ct; i++){
-//        sum += exp(nums[i] - max_exp) ;
-//    }
-//    return log(sum) + max_exp ;
-//}
+
+inline float my_mean(const std::vector<float>& numbers) {
+    if (numbers.empty())
+        return std::numeric_limits<float>::quiet_NaN() ;
+
+    return std::accumulate(numbers.begin(), numbers.end(), 0.0) / numbers.size() ;
+}
+
+inline float my_variance(const float mean, const std::vector<float>& numbers) {
+    if (numbers.size() <= 1u)
+        return std::numeric_limits<float>::quiet_NaN() ;
+
+    auto const add_square = [mean](float sum, float i) {
+        auto d = i - mean ;
+
+//cerr << "sum: " << sum << " i: " << i << " mean: " << mean << "\n" ;
+        return sum + d*d ;
+    };
+    double total = std::accumulate(numbers.begin(), numbers.end(), 0.0, add_square) ;
+    return total / (numbers.size() - 1) ;
+}
+
+
 
 template <typename T, typename Compare>
-vector<size_t> sort_permutation(const std::vector<T>& vec, const Compare& compare)
-{
+vector<size_t> sort_permutation(const std::vector<T>& vec, const Compare& compare) {
     vector<size_t> p(vec.size()) ;
     iota(p.begin(), p.end(), 0) ;
     sort(p.begin(), p.end(), [&](size_t i, size_t j){ return compare(vec[i], vec[j]); }) ;
@@ -122,8 +132,7 @@ vector<size_t> sort_permutation(const std::vector<T>& vec, const Compare& compar
 }
 
 template <typename T>
-vector<T> apply_permutation(const vector<T>& vec, const vector<size_t>& p)
-{
+vector<T> apply_permutation(const vector<T>& vec, const vector<size_t>& p) {
     vector<T> sorted_vec(vec.size()) ;
     transform(p.begin(), p.end(), sorted_vec.begin(), [&](size_t i){ return vec[i]; }) ;
     return sorted_vec ;
@@ -158,5 +167,10 @@ void get_samples_from_psi2(vector<psi_distr_t>& i_psi, float* osamps, float* o_m
 
 void test_calc(vector<psi_distr_t>& oPvals, HetStats* HetStatsObj, hetLSV* lsvObj, int psamples, float quant) ;
 void get_psi_border(psi_distr_t& psi_border, int nbins) ;
+
+void adjustdelta(psi_distr_t& o_mixtpdf, psi_distr_t& emp_dpsi, int num_iter, int nbins) ;
+pair<float, float> calculate_beta_params(float mean, float vari) ;
+void calc_mixture_pdf(psi_distr_t& o_mixpdf, vector<pair<float, float>>& beta_param, psi_distr_t& pmix,
+                      psi_distr_t& psi_border, int nbins) ;
 
 #endif

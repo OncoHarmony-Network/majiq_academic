@@ -33,5 +33,7 @@ cdef extern from "psi.hpp":
     cdef void test_calc(vector[psi_distr_t]& oPvals, HetStats* HetStatsObj, hetLSV* lsvObj, int psamples,
                         np.float32_t quant) nogil ;
 
+    cdef void adjustdelta(psi_distr_t& o_mixtpdf, psi_distr_t& emp_dpsi, int num_iter, int nbins) nogil ;
+
     # cdef void test_calc(np.float32_t* oPvals, HetStats* HetStatsObj, hetLSV* lsvObj, int psamples,
     #                     np.float32_t quant) nogil ;
