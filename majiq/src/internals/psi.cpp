@@ -315,7 +315,7 @@ void calc_mixture_pdf(psi_distr_t& o_mixpdf, vector<pair<float, float>>& beta_pa
         prob_data_sample_given_psi(bincdf, 0.0, 0.0, psi_border, nbins, bparam.first, bparam.second) ;
 //cerr << "PARAM [" << bpara_idx << ", " << bparam.first << ", " << bparam.second <<", " << pmix[bpara_idx] << "]: ";
         for (int i=0; i<nbins; i++){
-            const float k = exp(bincdf[i]) * pmix[bpara_idx] ;
+            const float k = exp(bincdf[i]) ; //* pmix[bpara_idx] ;
             o_mixpdf[i] += k ;
             sum += k ;
 //cerr << o_mixpdf[i] << "[" << exp(bincdf[i])<< "] ";
