@@ -84,7 +84,7 @@ extensions += [Extension('majiq.src.indpnt', ['majiq/src/indpnt.pyx', 'majiq/src
 extensions += [Extension('majiq.src.io', ['majiq/src/io.pyx'], include_dirs=NPY_INC_DIRS + MAJIQ_INC_DIRS,
                          extra_compile_args=compile_args,  extra_link_args=linker_args, language='c++')]
 
-extensions += [Extension('majiq.src.py_psi', ['majiq/src/py_psi.pyx'], language='c++',
+extensions += [Extension('majiq.src.py_psi', ['majiq/src/py_psi.pyx', 'majiq/src/internals/psi.cpp'], language='c++',
                          extra_compile_args=compile_args, include_dirs=NPY_INC_DIRS)]
 
 extensions += [Extension('voila.c.splice_graph_sql', ['voila/c/splice_graph_sql.pyx', 'voila/c/sqlite3.c'],
