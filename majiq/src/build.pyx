@@ -21,9 +21,7 @@ from voila.c.splice_graph_sql cimport alt_end as sg_alt_end
 from voila.c.splice_graph_sql cimport junction_reads as sg_junction_reads
 from voila.c.splice_graph_sql cimport intron_retention_reads as sg_intron_retention_reads
 from voila.api import SpliceGraph
-
 from majiq.src.polyfitnb cimport fit_nb
-
 from libcpp.string cimport string
 from libcpp.map cimport map
 from libcpp.pair cimport pair
@@ -31,7 +29,6 @@ from libcpp.vector cimport vector
 from cython.parallel import prange
 import cython
 from cython import parallel
-
 import numpy as np
 cimport numpy as np
 

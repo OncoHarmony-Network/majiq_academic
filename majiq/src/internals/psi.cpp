@@ -89,7 +89,7 @@ void psi_posterior(psiLSV*lsvObj, psi_distr_t& psi_border, int nbins){
 
 void deltapsi_posterior(dpsiLSV*lsvObj, vector<psi_distr_t>& prior_matrix, psi_distr_t& psi_border, int nbins){
 
-    const int njunc = lsvObj->get_num_ways() ;
+    const int njunc    = lsvObj->get_num_ways() ;
     const int msamples = lsvObj->cond_sample1[0].size() ;
 
     vector<psi_distr_t> alpha_beta_prior(njunc, psi_distr_t(2)) ;
@@ -107,7 +107,7 @@ void deltapsi_posterior(dpsiLSV*lsvObj, vector<psi_distr_t>& prior_matrix, psi_d
 
     for (int j=0; j<njunc; j++){
         const float alpha = alpha_beta_prior[j][0] ;
-        const float beta = alpha_beta_prior[j][1] ;
+        const float beta  = alpha_beta_prior[j][1] ;
 
         vector<psi_distr_t> dpsi_matrix(nbins, psi_distr_t(nbins, 0)) ;
         psi_distr_t temp_mupsi1(msamples) ;
@@ -313,17 +313,17 @@ void calc_mixture_pdf(psi_distr_t& o_mixpdf, vector<pair<float, float>>& beta_pa
     for (const auto &bparam: beta_param){
         psi_distr_t bincdf(nbins, 0.0) ;
         prob_data_sample_given_psi(bincdf, 0.0, 0.0, psi_border, nbins, bparam.first, bparam.second) ;
-cerr << "PARAM [" << bpara_idx << ", " << bparam.first << ", " << bparam.second <<", " << pmix[bpara_idx] << "]: ";
+//cerr << "PARAM [" << bpara_idx << ", " << bparam.first << ", " << bparam.second <<", " << pmix[bpara_idx] << "]: ";
         for (int i=0; i<nbins; i++){
             const float k = exp(bincdf[i]) * pmix[bpara_idx] ;
             o_mixpdf[i] += k ;
             sum += k ;
-cerr << o_mixpdf[i] << "[" << exp(bincdf[i])<< "] ";
+//cerr << o_mixpdf[i] << "[" << exp(bincdf[i])<< "] ";
         }
-cerr << "\n" ;
+//cerr << "\n" ;
         bpara_idx ++ ;
     }
-cerr << ": sum: " << sum << "\n" ;
+//cerr << ": sum: " << sum << "\n" ;
 
     for (int i=0; i<nbins; i++){
         o_mixpdf[i] /= sum ;
@@ -352,8 +352,8 @@ pair<float, float> calculate_beta_params(float mean, float vari){
     float t = (mean*(1 - mean)) ;
 
 
-cerr << "BETA PARAMS: " << "a: " << a << " b: " << b << " p: " << p  << " temp: " << t <<
-        " vari: " << vari  << " mean: " << mean << "\n" ;
+//cerr << "BETA PARAMS: " << "a: " << a << " b: " << b << " p: " << p  << " temp: " << t <<
+//        " vari: " << vari  << " mean: " << mean << "\n" ;
     return pair<float, float>(a, b) ;
 }
 
@@ -407,9 +407,9 @@ void adjustdelta(psi_distr_t& o_mixtpdf, psi_distr_t& emp_dpsi, int num_iter, in
     int i = 0 ;
     int ub = 26, lb = 21 ;
 
-    cerr<< "PSI\n" ;
-    for (int i=0; i<=nbins; i++)
-   cerr << i << ": " << dpsi_border[i] << "\n" ;
+//    cerr<< "PSI\n" ;
+//    for (int i=0; i<=nbins; i++)
+//   cerr << i << ": " << dpsi_border[i] << "\n" ;
 
 
     for(const auto &v: emp_dpsi){
@@ -446,8 +446,8 @@ void adjustdelta(psi_distr_t& o_mixtpdf, psi_distr_t& emp_dpsi, int num_iter, in
 
     float cnt_mean = my_mean(center_dst) ;
     float spk_mean = my_mean(spike_dst) ;
-    beta_params[1] = calculate_beta_params(cnt_mean, my_variance(cnt_mean, center_dst)) ;
-    beta_params[2] = calculate_beta_params(spk_mean, my_variance(spk_mean, spike_dst)) ;
+    beta_params[1] = calculate_beta_params(0.5, my_variance(cnt_mean, center_dst)) ;
+    beta_params[2] = calculate_beta_params(0.5, my_variance(spk_mean, spike_dst)) ;
 
 
 //     _em_beta_mix(D, p_mixture, beta_params, num_iter, min_ratio=1e-5, logger=logger, plotpath=plotpath, nj=njunc,

@@ -32,7 +32,8 @@ inline float median(psi_distr_t a){
 
 inline void get_prior_params( vector<psi_distr_t>& o_priors, int njunc, bool ir){
 
-    int nways = ir ? njunc -1 : njunc ;
+//    int nways = ir ? njunc -1 : njunc ;
+    int nways = njunc ;
     float alpha = 1.0/ nways ;
     float fnjunc = (float)njunc ;
 

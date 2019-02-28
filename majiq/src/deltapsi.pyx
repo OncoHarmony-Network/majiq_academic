@@ -7,8 +7,8 @@ import majiq.src.logger as majiq_logger
 from majiq.src.basic_pipeline import BasicPipeline, pipeline_run
 from majiq.src.constants import *
 from majiq.src.internals.qLSV cimport dpsiLSV, qLSV
-from majiq.src.internals.psi cimport deltapsi_posterior, psi_distr_t, get_psi_border
-from majiq.src.psi import gen_prior_matrix
+from majiq.src.internals.psi cimport deltapsi_posterior, psi_distr_t, get_psi_border, gen_prior_matrix
+# from majiq.src.psi import gen_prior_matrix
 
 from libcpp.string cimport string
 from libcpp.map cimport map
@@ -109,11 +109,13 @@ cdef void _core_deltapsi(object self):
         logger.info("There is no LSVs that passes the filters")
         return
 
+
     for lsv in list_of_lsv:
         nways = lsv_type_dict[lsv][1]
         is_ir = b'i' in lsv_type_dict[lsv][0]
         m = new dpsiLSV(nways, nbins, is_ir)
         lsv_map[lsv] = <qLSV*> m
+
 
     nthreads = min(self.nthreads, nlsv)
     parse_dpsi_reads(lsv_map, self.files1, self.files2, nthreads, self.minreads, self.minpos)
