@@ -3,7 +3,7 @@ from libcpp.map cimport map
 from libcpp.vector cimport vector
 from libcpp.set cimport set
 from libcpp.list cimport list as clist
-from majiq.src.internals.psi cimport psi_distr_t
+from majiq.src.internals.mtypes cimport *
 
 ctypedef vector[overGene*] overGene_vect_t
 ctypedef vector[Gene*] Gene_vect_t

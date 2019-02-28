@@ -1,7 +1,7 @@
 from libcpp.string cimport string
 from libcpp.map cimport map
 from libcpp.vector cimport vector
-from majiq.src.internals.psi cimport psi_distr_t
+from majiq.src.internals.mtypes cimport *
 cimport numpy as np
 
 

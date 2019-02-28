@@ -5,12 +5,13 @@ import psutil
 import majiq.src.logger as majiq_logger
 from majiq.src.basic_pipeline import BasicPipeline, pipeline_run
 from majiq.src.constants import *
+from majiq.src.internals.mtypes cimport *
 from majiq.src.internals.HetStats cimport HetStats
 from majiq.src.internals.qLSV cimport hetLSV, qLSV
+from majiq.src.internals.psi cimport get_samples_from_psi, get_psi_border, test_calc
 
 from voila.api import Matrix
 from voila.constants import ANALYSIS_HETEROGEN, VOILA_FILE_VERSION
-from majiq.src.internals.psi cimport psi_distr_t, get_samples_from_psi, get_psi_border, pair_int_t, test_calc
 
 from libcpp.string cimport string
 from libcpp.map cimport map

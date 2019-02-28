@@ -332,7 +332,8 @@ void calc_mixture_pdf(psi_distr_t& o_mixpdf, vector<pair<float, float>>& beta_pa
 
 
 pair<float, float> calculate_beta_params(float mean, float vari){
-    float p, a , b, cor_mean, cor_vari ;
+    float p, a , b ;
+//    float cor_mean, cor_vari ;
 
 //    For a interval of [a, c]
 //    comes from corrected m = (m-a)/(c-a)
@@ -347,11 +348,6 @@ pair<float, float> calculate_beta_params(float mean, float vari){
     p = ((mean*(1 - mean)) / vari) - 1 ;
     a = mean * p ;
     b = (1 - mean) * p ;
-
-
-    float t = (mean*(1 - mean)) ;
-
-
 //cerr << "BETA PARAMS: " << "a: " << a << " b: " << b << " p: " << p  << " temp: " << t <<
 //        " vari: " << vari  << " mean: " << mean << "\n" ;
     return pair<float, float>(a, b) ;
@@ -359,8 +355,7 @@ pair<float, float> calculate_beta_params(float mean, float vari){
 
 void print_mixture( psi_distr_t& dpsi_mean, psi_distr_t& hst, psi_distr_t& mixt){
 
-
-    for (int i=0; i < hst.size(); i++){
+    for (long unsigned int i=0; i < hst.size(); i++){
         const float  dpsi = (dpsi_mean[i] + dpsi_mean[i+1] ) /2 ;
         cerr << dpsi << ", " << hst[i] << ", " << mixt[i]<< "\n" ;
     }
@@ -371,7 +366,7 @@ void print_vals( psi_distr_t& hst, string fname ){
     ofstream myfile ;
     myfile.open (fname) ;
 
-    for (int i=0; i < hst.size(); i++){
+    for (long unsigned int i=0; i < hst.size(); i++){
         myfile << hst[i]<< "\n" ;
     }
     myfile.close() ;
@@ -389,7 +384,7 @@ void adjustdelta(psi_distr_t& o_mixtpdf, psi_distr_t& emp_dpsi, int num_iter, in
     vector<pair<float, float>> beta_params (3) ;
 
     const float bsize = 2.0 / nbins ;
-    const float tmp = (1-bsize/2) ;
+//    const float tmp = (1-bsize/2) ;
 
 
     for(int i=0; i<=nbins; i++){
@@ -455,7 +450,7 @@ void adjustdelta(psi_distr_t& o_mixtpdf, psi_distr_t& emp_dpsi, int num_iter, in
 
     calc_mixture_pdf(o_mixtpdf, beta_params, p_mixture, psi_border, nbins) ;
 
-    print_mixture(dpsi_border,  hist, o_mixtpdf) ;
+//    print_mixture(dpsi_border,  hist, o_mixtpdf) ;
 
 
 }

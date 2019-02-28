@@ -7,8 +7,9 @@ import majiq.src.logger as majiq_logger
 from majiq.src.basic_pipeline import BasicPipeline, pipeline_run
 from majiq.src.constants import *
 from majiq.src.internals.qLSV cimport dpsiLSV, qLSV
-from majiq.src.internals.psi cimport deltapsi_posterior, psi_distr_t, get_psi_border, gen_prior_matrix
-# from majiq.src.psi import gen_prior_matrix
+from majiq.src.internals.mtypes cimport *
+from majiq.src.internals.psi cimport deltapsi_posterior, get_psi_border
+from majiq.src.py_psi import gen_prior_matrix
 
 from libcpp.string cimport string
 from libcpp.map cimport map

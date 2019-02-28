@@ -1,13 +1,10 @@
-import datetime
-
-import os
 from libcpp.string cimport string
 from libcpp.map cimport map
 from libcpp.vector cimport vector
 
 from majiq.src.internals.grimoire cimport Gene, Exon, Junction
 from majiq.src.internals import quant_lsv
-from majiq.src.internals.psi cimport psi_distr_t, pair_int_t
+from majiq.src.internals.mtypes cimport *
 from majiq.src.internals.qLSV cimport qLSV
 from majiq.src.internals.io_utils cimport get_aggr_coverage
 
@@ -19,8 +16,6 @@ from cython.parallel import prange
 import pickle
 import numpy as np
 cimport numpy as np
-
-# ctypedef vector[float] psi_distr_t ;
 
 cdef list accepted_transcripts = ['mRNA', 'transcript', 'lnc_RNA', 'miRNA', 'ncRNA',
                                   'rRNA', 'scRNA', 'snRNA', 'snoRNA', 'tRNA', 'pseudogenic_transcript',

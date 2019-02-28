@@ -7,6 +7,7 @@ from majiq.src.internals.io_bam cimport IOBam, prepare_genelist, overGene_vect_t
 from majiq.src.internals.grimoire cimport find_intron_retention, find_gene_from_junc, isNullJinfo, fill_junc_tlb
 from majiq.src.internals.grimoire cimport key_format, free_JinfoVec, Gene_vect_t, free_lsvlist
 from majiq.src.basic_pipeline import BasicPipeline, pipeline_run
+from majiq.src.polyfitnb cimport fit_nb
 from majiq.src.config import Config
 import majiq.src.logger as majiq_logger
 cimport majiq.src.io as majiq_io
@@ -21,7 +22,6 @@ from voila.c.splice_graph_sql cimport alt_end as sg_alt_end
 from voila.c.splice_graph_sql cimport junction_reads as sg_junction_reads
 from voila.c.splice_graph_sql cimport intron_retention_reads as sg_intron_retention_reads
 from voila.api import SpliceGraph
-from majiq.src.polyfitnb cimport fit_nb
 from libcpp.string cimport string
 from libcpp.map cimport map
 from libcpp.pair cimport pair
@@ -70,7 +70,8 @@ cdef int _output_majiq_file(vector[LSV*] lsvlist, map[string, overGene_vect_t] g
     cdef np.float32_t[:, :] boots
     # cdef np.ndarray[np.float32_t, ndim=2, mode="c"] boots
     cdef np.ndarray junc_ids
-    cdef int i, j, m, junc_idx, njlsv = j_tlb.size()
+    cdef int i, j, njlsv = j_tlb.size()
+    cdef unsigned int junc_idx, m
     cdef jinfoptr_vec_t jobj_vec
     cdef Gene_vect_t gene_l
     cdef string key, chrom, lsvid, gid, jid

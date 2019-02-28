@@ -6,7 +6,8 @@ import psutil
 import majiq.src.logger as majiq_logger
 from majiq.src.basic_pipeline import BasicPipeline, pipeline_run
 from majiq.src.constants import *
-from majiq.src.internals.psi cimport psi_posterior, psi_distr_t, get_psi_border
+from majiq.src.internals.mtypes cimport *
+from majiq.src.internals.psi cimport psi_posterior, get_psi_border
 from majiq.src.internals.qLSV cimport psiLSV, qLSV
 
 from libcpp.string cimport string

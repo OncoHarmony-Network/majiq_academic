@@ -646,7 +646,7 @@ namespace grimoire {
                              vector<Gene*>& oGeneList, bool ir){
 
         Junction * junc = new Junction(start, end, false) ;
-        Gene * gObj ;
+//        Gene * gObj ;
         const string key = junc->get_key() ;
         vector<overGene*>::iterator low = lower_bound (glist[chrom].begin(), glist[chrom].end(),
                                                        start, _Region::func_comp ) ;

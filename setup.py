@@ -29,9 +29,9 @@ HTSLIB_LIB_DIRS = [os.environ.get("HTSLIB_LIBRARY_DIR", '/usr/local/lib')]
 HTSLIB_INC_DIRS = [os.environ.get("HTSLIB_INCLUDE_DIR", '/usr/local/include')]
 
 
-compile_args = ['-fopenmp', '-g']
+compile_args = ['-fopenmp']
 scythe_compiler_args = ['-DSCYTHE_COMPILE_DIRECT', '-DSCYTHE_PTHREAD']
-linker_args = ['-lgomp', '-g']
+linker_args = ['-lgomp']
 
 if sys.platform == 'darwin':
     # os.environ['CLANG_DEFAULT_CXX_STDLIB'] = 'libc++'
@@ -81,12 +81,11 @@ extensions += [Extension('majiq.src.indpnt', ['majiq/src/indpnt.pyx', 'majiq/src
                          extra_compile_args=compile_args+scythe_compiler_args,  extra_link_args=linker_args,
                          language='c++')]
 
-extensions += [Extension('majiq.src.io', ['majiq/src/io.pyx'], language='c++',
-                         include_dirs=NPY_INC_DIRS + MAJIQ_INC_DIRS,
-                         extra_compile_args=compile_args,  extra_link_args=linker_args,)]
+extensions += [Extension('majiq.src.io', ['majiq/src/io.pyx'], include_dirs=NPY_INC_DIRS + MAJIQ_INC_DIRS,
+                         extra_compile_args=compile_args,  extra_link_args=linker_args, language='c++')]
 
-# extensions += [Extension('majiq.src.psi', ['majiq/src/psi.pyx'], language='c++',
-#                          extra_compile_args=compile_args, include_dirs=NPY_INC_DIRS)]
+extensions += [Extension('majiq.src.py_psi', ['majiq/src/py_psi.pyx'], language='c++',
+                         extra_compile_args=compile_args, include_dirs=NPY_INC_DIRS)]
 
 extensions += [Extension('voila.c.splice_graph_sql', ['voila/c/splice_graph_sql.pyx', 'voila/c/sqlite3.c'],
                          language='c++', include_dirs=NPY_INC_DIRS, extra_compile_args=compile_args,

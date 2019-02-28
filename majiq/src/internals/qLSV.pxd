@@ -1,9 +1,8 @@
 from libcpp.vector cimport vector
+from majiq.src.internals.mtypes cimport *
 cimport numpy as np
 
 cdef extern from "qLSV.hpp":
-
-    ctypedef vector[np.float32_t] psi_distr_t ;
 
     cdef cppclass qLSV:
         qLSV() nogil ;
