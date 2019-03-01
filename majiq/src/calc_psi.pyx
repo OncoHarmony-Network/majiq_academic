@@ -118,7 +118,7 @@ cdef _core_calcpsi(object self):
     if self.mem_profile:
         mem_allocated = int(psutil.Process().memory_info().rss) / (1024 ** 2)
         logger.info("Max Memory used %.2f MB" % mem_allocated)
-    logger.info("PSI calculation for %s ended succesfully! "
+    logger.info("PSI calculation for %s ended successfully! "
                 "Result can be found at %s" % (self.name, self.outDir))
 
 class CalcPsi(BasicPipeline):

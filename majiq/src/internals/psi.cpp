@@ -333,17 +333,6 @@ void calc_mixture_pdf(psi_distr_t& o_mixpdf, vector<pair<float, float>>& beta_pa
 
 pair<float, float> calculate_beta_params(float mean, float vari){
     float p, a , b ;
-//    float cor_mean, cor_vari ;
-
-//    For a interval of [a, c]
-//    comes from corrected m = (m-a)/(c-a)
-//    Comes from  corrected V = V/ (c-a)^2
-//    cor_mean = (mean +1)/2 ;
-//    cor_vari = vari / 4 ;
-
-//    p = ((cor_mean*(1 - cor_mean)) / cor_vari) - 1 ;
-//    a = cor_mean * p ;
-//    b = (1 - cor_mean) * p ;
 
     p = ((mean*(1 - mean)) / vari) - 1 ;
     a = mean * p ;
@@ -384,12 +373,9 @@ void adjustdelta(psi_distr_t& o_mixtpdf, psi_distr_t& emp_dpsi, int num_iter, in
     vector<pair<float, float>> beta_params (3) ;
 
     const float bsize = 2.0 / nbins ;
-//    const float tmp = (1-bsize/2) ;
-
 
     for(int i=0; i<=nbins; i++){
         dpsi_border[i] = i*bsize - 0.975;
-//        psi_border[i] = i*(bsize/2) ;
         psi_border[i] = (dpsi_border[i] +1) /2 ;
     }
 

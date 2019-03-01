@@ -204,9 +204,10 @@ namespace io_bam {
             bool junc_found = false ;
             Intron * intron = *low;
             const char gstrand = intron->get_gene()->get_strand() ;
+
+            if(intron->get_start()> read_pos+rlen) break ;
+            if (intron->get_end() <= read_pos) continue ;
             if (gstrand == '.' || gstrand == read_strand){
-                if(intron->get_start()> read_pos+rlen) break ;
-                if (intron->get_end() <= read_pos) continue ;
                 for (const auto & j:junc_record){
                     if ((j.first>=intron->get_start() && j.first<= intron->get_end() )
                         || (j.second>=intron->get_start() && j.second<= intron->get_end())){

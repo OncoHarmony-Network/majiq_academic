@@ -165,6 +165,14 @@ def main():
     htrgen.add_argument('--minsamps', type=get_minsamps, default=2,
                         help='Minimum number of samples that need to be present for an LSV junction in order to '
                              'perform each test statistic. [Default: %(default)d]')
+    htrgen.add_argument('--test_percentile', type=float, default=0.95,
+                        help='For each one of the statistical tests, we combine all pvalue per psi sample by '
+                             'percentile calculation. This argument allows the user define with percentile they '
+                             'want to use [Default: %(default)d]')
+
+
+
+
 
     #calcpsi flags
     subparsers = parser.add_subparsers(help='')

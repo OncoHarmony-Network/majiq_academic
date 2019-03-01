@@ -437,4 +437,4 @@ class Builder(BasicPipeline):
         if self.mem_profile:
             mem_allocated = int(psutil.Process().memory_info().rss)/(1024**2)
             logger.info("Max Memory used %.2f MB" % mem_allocated)
-        logger.info("MAJIQ Builder is ended succesfully!")
+        logger.info("MAJIQ Builder is ended successfully!")

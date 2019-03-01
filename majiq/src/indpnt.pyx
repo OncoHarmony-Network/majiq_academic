@@ -26,8 +26,8 @@ def calc_independent(args):
     pipeline_run(independent(args))
 
 cdef int _statistical_test_computation(object out_h5p, dict comparison, list list_of_lsv, vector[string] stats_list,
-                                        int psi_samples, map[string, qLSV*] lsv_vec, str outDir, int nthreads,
-                                        object logger )  except -1 :
+                                       int psi_samples, map[string, qLSV*] lsv_vec, str outDir, int nthreads,
+                                       float test_percentile, object logger )  except -1 :
     cdef int nlsv = len(list_of_lsv)
     cdef vector[np.float32_t*] cond1_smpl
     cdef vector[np.float32_t*] cond2_smpl
@@ -89,8 +89,7 @@ cdef int _statistical_test_computation(object out_h5p, dict comparison, list lis
                 hetObj_ptr.add_condition2(<np.float32_t *> k.data, fidx, nways, psi_samples)
 
         output[lsv_id] = vector[psi_distr_t](nways, psi_distr_t(nstats))
-        test_calc(output[lsv_id], StatsObj, hetObj_ptr, psi_samples, 0.95)
-        # test_calc(<np.float32_t *> oPvals.data, StatsObj, hetObj_ptr, psi_samples, 0.95)
+        test_calc(output[lsv_id], StatsObj, hetObj_ptr, psi_samples, test_percentile)
         hetObj_ptr.clear()
 
 
@@ -256,7 +255,7 @@ cdef void _core_independent(object self):
 
         logger.info('Calculating statistics pvalues')
         _statistical_test_computation(out_h5p, comparison, list_of_lsv, stats_vec, self.psi_samples, lsv_map,
-                                      self.outDir, nthreads, logger)
+                                      self.outDir, nthreads, self.test_percentile, logger)
 
 
     if not self.keep_tmpfiles:
@@ -269,7 +268,7 @@ cdef void _core_independent(object self):
     if self.mem_profile:
         mem_allocated = int(psutil.Process().memory_info().rss) / (1024 ** 2)
         logger.info("Max Memory used %.2f MB" % mem_allocated)
-    logger.info("Majiq Heterogeneous calculation for %s_%s ended succesfully! "
+    logger.info("Majiq Heterogeneous calculation for %s_%s ended successfully! "
                 "Result can be found at %s" % (self.names[0], self.names[1], self.outDir))
 
 

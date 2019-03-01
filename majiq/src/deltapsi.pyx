@@ -183,7 +183,7 @@ cdef void _core_deltapsi(object self):
         mem_allocated = int(psutil.Process().memory_info().rss) / (1024 ** 2)
         logger.info("Max Memory used %.2f MB" % mem_allocated)
 
-    logger.info("DeltaPSI calculation for %s_%s ended succesfully! Result can be found at %s" % (self.names[0],
+    logger.info("DeltaPSI calculation for %s_%s ended successfully! Result can be found at %s" % (self.names[0],
                                                                                                  self.names[1],
                                                                                                  self.outDir))
 
