@@ -46,24 +46,27 @@ def main():
     parser.add_argument('-v', action='version', version="%s-%s" % (VERSION, get_git_version()))
 
     common = new_subparser()
-    common.add_argument('-j', '--nproc', default=4, type=int, help='Number of processes to use')
-
+    common.add_argument('-j', '--nproc', default=4, type=int, help='Number of processes to use. [Default: %(default)s]')
     common.add_argument('-o', '--output', dest="outDir", required=True, help='Path to save the pickle output to.')
-    common.add_argument('--logger', default=None, help='Path for the logger. Default is output directory')
+
+    common.add_argument('--logger', default=None, help='Path for the logger. [Default is output directory]')
     common.add_argument('--silent', action='store_true', default=False, help='Silence the logger.')
 
     common.add_argument('--debug', default=False, action='store_true',
                         help="Activate this flag for debugging purposes, activates logger and jumps some "
                              "processing steps. [Default: %(default)s]")
+
     common.add_argument('--mem-profile', default=False, action='store_true',
                         help="Print memory usage summary at the end of the execution. [Default: %(default)s]")
 
     common.add_argument('--min-experiments', default=-1, type=float, dest='min_exp',
                         help='Lower threshold for group filters. min_experiments is the minimum number of experiments '
-                             'where the different filters check in order to pass an lsv or junction.')
+                             'where the different filters check in order to pass an lsv or junction. [Default: 50% of '
+                             'the total number of experiments in the group]')
 
     common.add_argument('--plotpath', default=None,
-                        help='Path to save the plot to, if not provided will show on a matplotlib popup window')
+                        help='Path to save the plot to, if not provided will show on a matplotlib popup window. '
+                             '[Default: %(default)s]')
 
     buildparser = new_subparser()
     buildparser.add_argument('transcripts', action="store", help='Annotation db ')
@@ -128,18 +131,20 @@ def main():
     delta.add_argument('-grp1', dest="files1", nargs='+', required=True)
     delta.add_argument('-grp2', dest="files2", nargs='+', required=True)
     delta.add_argument('--default-prior', action='store_true', default=False,
-                       help="Use a default prior instead of computing it using the empirical data")
+                       help="Use a default prior instead of computing it using the empirical data. "
+                            " [Default: default prior disabled]")
     delta.add_argument('-n', '--names', nargs=2, required=True,
                        help="The names that identify each of the experiments.")
     delta.add_argument('--binsize', default=0.025, type=int,
-                       help='The bins for PSI values. With a --binsize of 0.025 (default), we have 40 bins')
+                       help='The bins for PSI values. With a --binsize of 0.025 (default), we have 40 bins. '
+                            '[Default: %(default)s]')
     delta.add_argument('--prior-minreads', default=20, type=int,
                        help="Minimum number of reads combining all positions in a junction to be considered "
                             "(for the 'best set' calculation). [Default: %(default)s]")
     delta.add_argument('--prior-minnonzero', default=10, type=int,
-                       help='Minimum number of positions for the best set.')
-    delta.add_argument('--prior-iter', default=10, type=int, dest="iter",
-                       help='Max number of iterations of the EM')
+                       help='Minimum number of positions for the best set. [Default: %(default)s]')
+    delta.add_argument('--prior-iter', default=1, type=int, dest="iter",
+                       help='Max number of iterations of the EM. [Default: %(default)s]')
     delta.add_argument('--output-type', choices=['voila', 'tsv', 'all'], default='all',
                        help='Defines the type of output file to be generated, voila file to be used in voila, '
                             'tsv with the lsv information or both. [Default: %(default)s]')

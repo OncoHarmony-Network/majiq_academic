@@ -66,7 +66,7 @@ required_tsv_parser = tsv_parser.add_argument_group('required named arguments')
 tsv_parser.add_argument('files', nargs='+', type=check_file,
                         help='List of files or directories which contains the splice graph and voila files.')
 
-required_tsv_parser.add_argument('-f', '--file-name', required=True, help="Set the TSV file's name and location.")
+required_tsv_parser.add_argument('-f', '--file-name', required=True, help="Output TSV file's name and location.")
 
 tsv_parser.add_argument('--threshold', type=float, default=0.2,
                         help='Filter out LSVs with no junctions predicted to change over a certain value. Even when '
