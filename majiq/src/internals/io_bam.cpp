@@ -207,7 +207,7 @@ namespace io_bam {
 
             if(intron->get_start()> read_pos+rlen) break ;
             if (intron->get_end() <= read_pos) continue ;
-            if (gstrand == '.' || gstrand == read_strand){
+            if (read_strand == '.' || gstrand == read_strand){
                 for (const auto & j:junc_record){
                     if ((j.first>=intron->get_start() && j.first<= intron->get_end() )
                         || (j.second>=intron->get_start() && j.second<= intron->get_end())){
