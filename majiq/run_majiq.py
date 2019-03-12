@@ -59,10 +59,13 @@ def main():
     common.add_argument('--mem-profile', default=False, action='store_true',
                         help="Print memory usage summary at the end of the execution. [Default: %(default)s]")
 
-    common.add_argument('--min-experiments', default=-1, type=float, dest='min_exp',
-                        help='Lower threshold for group filters. min_experiments is the minimum number of experiments '
-                             'where the different filters check in order to pass an lsv or junction. [Default: 50% of '
-                             'the total number of experiments in the group]')
+    common.add_argument('--min-experiments', default=0.5, type=float, dest='min_exp',
+                        help='Lower threshold for group filters. min_experiments set the minimum number of experiments '
+                             'where the different filters check in order to pass an lsv or junction.\n'
+                             '\t + <  1 the value is the fraction of the experiments in the group\n'
+                             '\t + >= 1 the value is the actual number of experiments. If the number is set to a '
+                             'greater number than the size of the group, we use the size instead.\n'
+                             '[Default: %(default)s]]')
 
     common.add_argument('--plotpath', default=None,
                         help='Path to save the plot to, if not provided will show on a matplotlib popup window. '

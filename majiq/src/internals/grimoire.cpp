@@ -105,6 +105,7 @@ namespace grimoire {
             } else {
                 return ;
             }
+
         } else if (nullptr == ex1){
             if ((end - start) <= MAX_DENOVO_DIFFERENCE){
 
@@ -120,7 +121,6 @@ namespace grimoire {
             }
 
         } else {
-
             ex2 = ex1;
             if (start < (ex1->get_start() - MAX_DENOVO_DIFFERENCE)){
                 ex1 = addExon(exon_map_, start, EMPTY_COORD, in_db) ;
@@ -134,15 +134,16 @@ namespace grimoire {
                 ex2->set_end(end) ;
             }
         }
+
         if (nullptr != inbound_j){
             (ex1->ib).insert(inbound_j) ;
             inbound_j->set_acceptor(ex1) ;
         }
+
         if (outbound_j != nullptr){
             (ex2->ob).insert(outbound_j) ;
             outbound_j->set_donor(ex2) ;
         }
-
         return ;
     }
 
@@ -152,7 +153,6 @@ namespace grimoire {
         vector<Junction *> opened_exon ;
         Junction * last_5prime = nullptr ;
         Junction * first_3prime = nullptr ;
-
         for (const auto &jnc : junc_map_){
             if (!(jnc.second)->get_denovo_bl()) continue ;
             if ((jnc.second)->get_start() > 0) {
@@ -196,11 +196,9 @@ namespace grimoire {
                 opened_exon.push_back(ss.j) ;
             }
         }
-
         for (const auto &jj2: opened_exon){
             newExonDefinition(jj2->get_end(), jj2->get_end()+10, jj2, nullptr, false) ;
         }
-
         ss_vec.clear() ;
         ss_vec.shrink_to_fit();
         return ;
@@ -237,11 +235,12 @@ namespace grimoire {
         for (const auto &jnc : junc_map_){
             if (!(jnc.second)->get_denovo_bl()) continue ;
 
-            if ((jnc.second)->get_start() > 0) {
+
+            if ((jnc.second)->get_start() > 0 && (jnc.second)->get_donor()->get_start()>0) {
                 Ssite s = {(jnc.second)->get_start(), true, jnc.second} ;
                 ss_vec.push_back(s) ;
             }
-            if ((jnc.second)->get_end() > 0) {
+            if ((jnc.second)->get_end() > 0 && (jnc.second)->get_acceptor()->get_end()>0) {
                 Ssite s = {(jnc.second)->get_end(), false, jnc.second} ;
                 ss_vec.push_back(s) ;
             }
@@ -271,8 +270,7 @@ namespace grimoire {
 
     void Gene::add_intron(Intron * inIR_ptr, float min_coverage, unsigned int min_exps, float min_bins, bool reset){
         bool found = false ;
-
-        for (const auto &ir: intron_vec_){
+         for (const auto &ir: intron_vec_){
             if (ir->get_end() < inIR_ptr->get_start() || ir->get_start() > inIR_ptr->get_end()) continue ;
             if (ir->get_end() >= inIR_ptr->get_start() && ir->get_start() <= inIR_ptr->get_end()){
                 ir->overlaping_intron(inIR_ptr) ;
@@ -319,6 +317,11 @@ namespace grimoire {
                     Intron * ir_ptr = intron_vec_[intron_index];
                     if (ir_ptr->get_end() >= ex_end ) break ;
                     if (ir_start <= ir_ptr->get_end() && ir_end >= ir_ptr->get_start() && ir_ptr->get_ir_flag()){
+
+//if (prev_ex->ob_irptr != nullptr){
+//    cerr << "#1 " << ir_start << "-" << ir_end<< " :: " << prev_ex->ob_irptr->get_gene() << ":" << prev_ex->ob_irptr->get_start() << "-" << prev_ex->ob_irptr->get_end()<< "\n" ;
+//    cerr << "#2 " << ir_start << "-" << ir_end<< " :: " << ir_ptr->get_gene() << ":" << ir_ptr->get_start() << "-" << ir_ptr->get_end()<< "\n" ;
+//    }
                         prev_ex->ob_irptr = ir_ptr ;
                         (ex.second)->ib_irptr = ir_ptr ;
                         ir_ptr->update_boundaries(prev_ex->get_end(), (ex.second)->get_start()) ;

@@ -42,6 +42,7 @@ cdef extern from "grimoire.hpp" namespace "grimoire":
             string  get_key(Gene * gObj) nogil ;
             Gene *  get_gene() nogil ;
             bint    get_ir_flag() nogil ;
+            bint    is_connected() nogil ;
 
 
     cdef cppclass Gene:

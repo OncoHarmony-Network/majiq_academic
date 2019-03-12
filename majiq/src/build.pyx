@@ -325,6 +325,8 @@ cdef void gene_to_splicegraph(Gene * gne, sqlite3 * db) nogil:
         if ex.has_out_intron():
             ir = ex.ob_irptr
             if ir.get_ir_flag():
+                # with gil:
+                #     print(gne_id, ir.get_start(), ir.get_end(), ir.get_annot(), ir.is_connected())
                 sg_intron_retention(db, gne_id, ir.get_start(), ir.get_end(), ir.get_annot())
 
     #
