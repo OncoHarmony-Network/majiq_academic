@@ -213,7 +213,7 @@ cdef _find_junctions(list file_list, map[string, Gene*]& gene_map, vector[string
     cdef float min_ir_cov = conf.min_intronic_cov
     cdef int k=conf.k, m=conf.m
     cdef float pvalue_limit=conf.pvalue_limit
-    cdef unsigned int min_experiments = 1 if conf.min_exp == -1 else conf.min_exp
+    cdef unsigned int min_experiments
     cdef unsigned int eff_len = conf.readLen - 2*MIN_BP_OVERLAP + 1
     cdef bint ir = conf.ir
     cdef float ir_numbins=conf.irnbins
@@ -236,9 +236,14 @@ cdef _find_junctions(list file_list, map[string, Gene*]& gene_map, vector[string
     cdef pair[string, unsigned int] it
 
 
+
+
     for tmp_str, group_list in conf.tissue_repl.items():
         name = tmp_str.encode('utf-8')
         last_it_grp = group_list[len(group_list) - 1]
+        min_experiments = conf.min_experiments[tmp_str]
+        logger.info('Group %s, number of experiments: %s, minexperiments: %s' % (tmp_str,
+                                                                                  len(group_list), min_experiments))
         for j in group_list:
             logger.info('Reading file %s' %(file_list[j][0]))
             bamfile = ('%s/%s.%s' % (conf.sam_dir, file_list[j][0], SEQ_FILE_FORMAT)).encode('utf-8')
