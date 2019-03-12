@@ -288,9 +288,6 @@ void test_calc(vector<psi_distr_t>& oPvals, HetStats* HetStatsObj, hetLSV* lsvOb
             csamps = apply_permutation(csamps, p);
             labels = apply_permutation(labels, p);
 
-
-
-
             for(int i=0; i<nstats; i++){
                 pval_vect[i][s] = (float)(HetStatsObj->statistics)[i]->Calc_pval(csamps, labels) ;
             }

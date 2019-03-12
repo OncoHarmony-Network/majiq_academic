@@ -10,7 +10,7 @@ from majiq.src.internals.io_utils cimport get_aggr_coverage
 
 from majiq.src.gff import parse_gff3
 from majiq.src.constants import *
-
+from math import ceil
 from cython.parallel import prange
 
 import pickle
@@ -270,7 +270,7 @@ cdef void get_coverage_mat_lsv(map[string, qLSV*]& result, list file_list, int n
 
 
 cdef list _extract_lsv_summary(list files, int minnonzero, int min_reads, dict types_dict, object junc_info,
-                               list exp_name_list, dict o_epsi=None, dict prior_conf=None, int percent=-1,
+                               list exp_name_list, dict o_epsi=None, dict prior_conf=None, int nexp=-1,
                                object logger=None):
     cdef dict lsv_types, lsv_list = {}, lsv_list_prior = {}
     cdef list lsv_id_list = []
@@ -281,10 +281,12 @@ cdef list _extract_lsv_summary(list files, int minnonzero, int min_reads, dict t
     cdef np.ndarray mtrx, vals
     cdef np.ndarray jinfo
     cdef dict epsi = {}
+    cdef int percent
 
-    if percent == -1:
-        percent = <int> (nfiles / 2)
-        percent = percent + 1 if nfiles % 2 != 0 else percent
+    if nexp < 1:
+        percent = ceil(nfiles * nexp)
+    else:
+        percent = nexp
     percent = min(int(percent), nfiles)
 
     for fidx, ff in enumerate(files):

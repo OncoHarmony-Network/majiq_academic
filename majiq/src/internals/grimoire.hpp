@@ -13,7 +13,7 @@
 
 #define EMPTY_COORD  -1
 #define FIRST_LAST_JUNC  -2
-#define MAX_DENOVO_DIFFERENCE 500
+#define MAX_DENOVO_DIFFERENCE 1
 #define MIN_INTRON_BINSIZE 1000
 #define MAX_TYPE_LENGTH 245
 #define NA_LSV  "na"
@@ -128,6 +128,10 @@ namespace grimoire{
             void  set_nreads_ptr(float * nreads1) { nreads_ = nreads1 ; }
             void  set_acceptor(Exon * acc) { acceptor_ = acc ; }
             void  set_donor(Exon * don) { donor_ = don ; }
+            void  exonReset(){
+                acceptor_ = nullptr ;
+                donor_ = nullptr ;
+            }
 
             void update_flags(int efflen, unsigned int num_reads, unsigned int num_pos, unsigned int denovo_thresh,
                               unsigned int min_experiments, bool denovo){
@@ -195,6 +199,22 @@ namespace grimoire{
             bool    has_out_intron()        { return ob_irptr != nullptr ; }
             string  get_key()       { return(to_string(start_) + "-" + to_string(end_)) ; }
 
+            void    revert_to_db(){
+                set_start(db_start_) ;
+                set_end(db_end_) ;
+                for (auto const &j: ib){
+                    j->exonReset() ;
+                }
+                ib.clear() ;
+//                ib.shrink_to_fit() ;
+
+                for (auto const &j: ob){
+                    j->exonReset() ;
+                }
+                ob.clear() ;
+//                ob.shrink_to_fit() ;
+            }
+
     };
 
     class Intron: public _Region{
@@ -256,12 +276,6 @@ namespace grimoire{
                 for(int i =0 ; i< nbins; i++){
                     cnt += (read_rates_[i]>= min_coverage) ? 1 : 0 ;
                 }
-//cerr << get_start() << "-" << get_end() << ": " << cnt << "\n" ;
-//cerr << "\t :: " ;
-// for(int i =0 ; i< nbins; i++){
-//cerr << read_rates_[i] << ", " ;
-//}
-//cerr << "\n" ;
                 flt_count_ += (cnt >= pc_bins) ? 1 : 0 ;
                 ir_flag_ = ir_flag_ || (flt_count_ >= min_exps) ;
                 return ;
@@ -344,6 +358,20 @@ namespace grimoire{
             void    create_annot_intron(int start_ir, int end_ir){
                 Intron * ir = new Intron(start_ir, end_ir, true, this) ;
                 intron_vec_.push_back(ir) ;
+            }
+
+            void reset_exons(){
+                for (auto p  = exon_map_.begin(); p!= exon_map_.end();){
+                    map <string, Exon*>::iterator pit = p ;
+                    Exon * e = p->second ;
+                    e->revert_to_db() ;
+                    ++p ;
+                    if (!e->annot_){
+                        exon_map_.erase(pit) ;
+                        delete e ;
+                    }
+                }
+
             }
 
             string  get_region() ;
