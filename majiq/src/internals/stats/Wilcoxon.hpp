@@ -46,10 +46,10 @@ namespace MajiqStats{
 
                 assert( k > 0 ) ;
                 double c1 = Count( n -1 , k, s ) ;
-                //  cout << "Count(" <<  n-1 << "," << k << "," << s << ") = " << c1 << " " << exp(c1)  << "\n";
+                cout << "Count(" <<  n-1 << "," << k << "," << s << ") = " << c1 << " " << exp(c1)  << "\n";
 
                 double c2 = Count( n -1 , k-1, s - n ) ;
-                //  cout << "Count(" <<  n-1 << "," << k-1 << "," << s-n << ") = " << c2 << " " << exp(c2)  << "\n";
+                cout << "Count(" <<  n-1 << "," << k-1 << "," << s-n << ") = " << c2 << " " << exp(c2)  << "\n";
 
                 c1 += log( 1.0*(n - k) ) ;
                 c2 += log( 1.0*k ) ;
@@ -120,7 +120,7 @@ namespace MajiqStats{
                 }
                 PValue -= lgamma(n1+n2 + 1) ;
 //                #pragma omp critical
-//                cerr << "Wilcoxon PValue (" << n1+n2 << ", " << n1 << ", " << s <<") = " << exp(PValue)*2 << " compare to " << 2*GaussCDF(-fabs(_ZScore), 0, 1) << "\n";
+                cerr << "Wilcoxon PValue (" << n1+n2 << ", " << n1 << ", " << s <<") = " << exp(PValue)*2 << " compare to " << 2*GaussCDF(-fabs(_ZScore), 0, 1) << "\n";
 
                 return exp(PValue)*2 ;
             }
