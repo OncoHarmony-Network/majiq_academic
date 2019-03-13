@@ -17,7 +17,6 @@ class SpliceGraphTools {
                 .classed('hide-tools-menu', true);
             document.querySelector('.splice-graph-tools.tools-menu').classList.toggle('hide-tools-menu');
             $('#splice-graph-menu-btn').toggleClass('pure-menu-active')
-            console.log('t')
         }
 
         // menu drop downs
