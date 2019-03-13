@@ -77,6 +77,26 @@ class Violin {
             .attr('fill', (d, i) => color.brewer(i))
             .attr('fill-opacity', 1);
 
+        // trying to read the user-selected threshold value, first from the selection box if it exists
+        var absEdPSI_Threshold_elem = $('#dpsi_threshold');
+        var absEdPSI_Threshold_value = null;
+        if(absEdPSI_Threshold_elem.length){
+            absEdPSI_Threshold_value = parseFloat(absEdPSI_Threshold_elem.val());
+        }else{
+            // else in the get arguments
+            let searchParams = new URLSearchParams(window.location.search);
+            if(searchParams.has('absEdPSI_Threshold')){
+                absEdPSI_Threshold_value = parseFloat(searchParams.get('absEdPSI_Threshold'));
+            }
+        }
+
+        // if we found a threshold value specified, draw the horizontal lines
+        if(absEdPSI_Threshold_value !== null && absEdPSI_Threshold_value > 0.0){
+            this.draw_horizontal_line(g, (this.violin_height / 2) + ((this.violin_height / 2)
+                * absEdPSI_Threshold_value), '#9a9a9a');
+            this.draw_horizontal_line(g, (this.violin_height / 2) - ((this.violin_height / 2)
+                * absEdPSI_Threshold_value), '#9a9a9a');
+        }
         this.draw_x_axis(g, data.means.map(n => n.toFixed(3)));
         this.draw_dpsi_y_axis(g);
         this.box_plots(g, data.bins)
@@ -290,6 +310,17 @@ class Violin {
                 .attr("r", 3);
         })
     };
+
+    draw_horizontal_line(svg, y, color) {
+        svg
+            .append("line")
+            .attr("x1", 0)
+            .attr("x2", this.svg_width)
+            .attr("y1", y)
+            .attr("y2", y)
+            .style("stroke-dasharray","5,5")
+            .style("stroke", color);
+    }
 
     draw_x_axis(svg, x_axis_data) {
         svg
