@@ -8,13 +8,17 @@
     user-select: none;
 }
 
-.pure-menu-link:hover {
-    background-color: transparent;
-    color: #e75c29
+.pure-menu-link:hover{
+    color: #e75c29;
+}
+
+.pure-menu-link:hover ,.pure-menu-active{
+    background-color: #24478e;
+    border-radius: 7px;
 }
 
 .pure-menu-link:focus {
-    background-color: transparent;
+    background-color: #24478e;
 }
 
 .pure-form select:focus {
