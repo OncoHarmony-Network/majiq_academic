@@ -125,7 +125,7 @@ view_parser.add_argument('--splice-graph-only', action='store_true', help=argpar
 
 # subparsers
 subparsers = parser.add_subparsers(help='')
-subparsers.add_parser('tsv', parents=[tsv_parser, sys_parser, log_parser, webserver_parser],
+subparsers.add_parser('tsv', parents=[tsv_parser, sys_parser, log_parser],
                       help='Generate tsv output for the supplied files.').set_defaults(func=Tsv)
 subparsers.add_parser('view', parents=[view_parser, sys_parser, log_parser, webserver_parser],
                       help='Start service to view the visualization for the supplied files.').set_defaults(
