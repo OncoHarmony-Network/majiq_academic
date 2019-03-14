@@ -270,7 +270,7 @@ cdef void get_coverage_mat_lsv(map[string, qLSV*]& result, list file_list, int n
 
 
 cdef list _extract_lsv_summary(list files, int minnonzero, int min_reads, dict types_dict, object junc_info,
-                               list exp_name_list, dict o_epsi=None, dict prior_conf=None, int nexp=-1,
+                               list exp_name_list, dict o_epsi=None, dict prior_conf=None, float nexp=-1,
                                object logger=None):
     cdef dict lsv_types, lsv_list = {}, lsv_list_prior = {}
     cdef list lsv_id_list = []
@@ -286,7 +286,7 @@ cdef list _extract_lsv_summary(list files, int minnonzero, int min_reads, dict t
     if nexp < 1:
         percent = ceil(nfiles * nexp)
     else:
-        percent = nexp
+        percent =int(nexp)
     percent = min(int(percent), nfiles)
 
     for fidx, ff in enumerate(files):
@@ -361,7 +361,6 @@ cdef list _extract_lsv_summary(list files, int minnonzero, int min_reads, dict t
                 o_epsi[xx] = o_epsi[xx] / o_epsi[xx].sum()
                 o_epsi[xx][np.isnan(o_epsi[xx])] = 1.0 / nfiles
 
-
     for xx, yy in lsv_list.items():
         if yy >= percent:
             lsv_id_list.append(xx)
@@ -375,7 +374,7 @@ cdef list _extract_lsv_summary(list files, int minnonzero, int min_reads, dict t
 ##
 
 cpdef tuple extract_lsv_summary(list files, int minnonzero, int min_reads, dict types_dict, dict junc_info,
-                                dict epsi=None, dict prior_conf=None, int percent=-1, object logger=None):
+                                dict epsi=None, dict prior_conf=None, float percent=-1, object logger=None):
     cdef list r
     cdef list exp_list = []
     r = _extract_lsv_summary(files, minnonzero, min_reads, types_dict, junc_info, exp_list, epsi, prior_conf,
