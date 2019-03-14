@@ -293,7 +293,6 @@ void test_calc(vector<psi_distr_t>& oPvals, HetStats* HetStatsObj, hetLSV* lsvOb
             }
         }
         for(int i=0; i<nstats; i++){
-
             float mmm = quantile(pval_vect[i], quant) ;
             oPvals[j][i] = mmm ;
 

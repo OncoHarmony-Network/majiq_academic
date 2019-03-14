@@ -15,33 +15,39 @@ class HetStats{
     public:
         HetStats() {}
         ~HetStats() {}
-        std::set<string> names ;
+        std::vector<string> names ;
         std::vector<MajiqStats::TestStat *> statistics ;
 
         bool initialize_statistics(std::vector<string> list_stats){
 
-            for (const auto & st: list_stats){
-                if (st == "TNOM" && names.count("TNOM") == 0)
+            std::vector<string>::iterator it;
+            it = std::unique (list_stats.begin(), list_stats.end());
+            list_stats.resize( std::distance(list_stats.begin(),it) );
+
+            for (it=list_stats.begin(); it!=list_stats.end(); ++it){
+                string st = *it ;
+cerr << " KKLL " << st << "\n" ;
+                if (st == "TNOM")
                     statistics.push_back((MajiqStats::TestStat*) new MajiqStats::TNOM()) ;
-                if (st == "WILCOXON" && names.count("WILCOXON") == 0)
+                if (st == "WILCOXON")
                     statistics.push_back((MajiqStats::TestStat*) new MajiqStats::Wilcoxon()) ;
-                if (st == "INFOSCORE" && names.count("INFOSCORE") == 0)
+                if (st == "INFOSCORE")
                     statistics.push_back((MajiqStats::TestStat*) new MajiqStats::InfoScore()) ;
-                if (st == "TTEST" && names.count("TTEST") == 0)
+                if (st == "TTEST")
                     statistics.push_back((MajiqStats::TestStat*) new MajiqStats::tTest()) ;
                 if (st == "ALL"){
                     statistics.clear() ;
                     statistics.push_back((MajiqStats::TestStat*) new MajiqStats::TNOM()) ;
-                    names.insert("TNOM") ;
+                    names.push_back("TNOM") ;
                     statistics.push_back((MajiqStats::TestStat*) new MajiqStats::Wilcoxon()) ;
-                    names.insert("WILCOXON") ;
+                    names.push_back("WILCOXON") ;
                     statistics.push_back((MajiqStats::TestStat*) new MajiqStats::InfoScore()) ;
-                    names.insert("INFOSCORE") ;
+                    names.push_back("INFOSCORE") ;
                     statistics.push_back((MajiqStats::TestStat*) new MajiqStats::tTest()) ;
-                    names.insert("TTEST") ;
+                    names.push_back("TTEST") ;
                     break ;
                 } else
-                    names.insert(st) ;
+                    names.push_back(st) ;
             }
             return statistics.size()>0 ;
         }
