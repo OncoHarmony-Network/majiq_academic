@@ -19,7 +19,7 @@ class HetStats{
         std::vector<MajiqStats::TestStat *> statistics ;
 
         bool initialize_statistics(std::vector<string> list_stats){
-
+            sort(list_stats.begin(), list_stats.end())
             std::vector<string>::iterator it;
             it = std::unique (list_stats.begin(), list_stats.end());
             list_stats.resize( std::distance(list_stats.begin(),it) );
