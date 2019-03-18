@@ -84,8 +84,8 @@ def get_app():
     return run_app
 
 
-def copy_lsv(lsv_id, view_matrix):
-    with ViewSpliceGraph() as sg, view_matrix() as m:
+def copy_lsv(lsv_id, view_matrix, voila_file=None):
+    with ViewSpliceGraph() as sg, view_matrix(voila_file=voila_file) as m:
         lsv = m.lsv(lsv_id)
         gene_id = lsv.gene_id
         gene = sg.gene(gene_id)
@@ -159,9 +159,16 @@ def lsv_boundries(lsv_exons):
 
 
 def gene_view(summary_template, gene_id, view_matrix, **kwargs):
-    with view_matrix() as m:
-        if gene_id not in m.gene_ids:
-            return redirect(url_for('index'))
+
+
+    if kwargs.get('voila_file'):
+        with view_matrix(voila_file=kwargs.get('voila_file')) as m:
+            if gene_id not in m.gene_ids:
+                return redirect(url_for('index'))
+    else:
+        with view_matrix() as m:
+            if gene_id not in m.gene_ids:
+                return redirect(url_for('index'))
 
     with ViewSpliceGraph() as sg:
         gene = sg.gene(gene_id)

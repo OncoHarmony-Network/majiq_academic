@@ -5,7 +5,7 @@ import h5py
 import numpy as np
 
 from voila import constants
-from voila.api.view_matrix import ViewHeterogens, ViewDeltaPsi, ViewPsi
+from voila.api.view_matrix import ViewHeterogens, ViewDeltaPsi, ViewPsi, ViewPsis
 from voila.api.view_splice_graph import ViewSpliceGraph
 from voila.config import ViewConfig
 from voila.exceptions import UnknownAnalysisType, IndexNotFound, UnknownIndexFieldType
@@ -203,7 +203,7 @@ class Index:
             log.info('Creating index: ' + voila_file)
             voila_index = []
 
-            with ViewSpliceGraph() as sg, ViewPsi() as m:
+            with ViewSpliceGraph() as sg, ViewPsis() as m:
                 for lsv_id in m.lsv_ids():
                     psi = m.lsv(lsv_id)
 
@@ -244,6 +244,7 @@ class Index:
                 for row in h['index'].value:
                     if gene_id is None or gene_id == row[1]:
                         yield dict(zip(keys, row))
+
 
             except KeyError:
                 raise IndexNotFound()

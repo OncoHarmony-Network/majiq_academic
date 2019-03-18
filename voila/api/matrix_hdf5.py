@@ -38,6 +38,7 @@ class MatrixHdf5:
         if voila_file:
             self.h = h5py.File(filename, mode, libver='latest')
 
+
     def __enter__(self):
         return self
 
@@ -149,12 +150,18 @@ class MatrixHdf5:
         try:
             gene_grp = self.h['lsvs'][gene_id]
         except (KeyError, ValueError):
-            raise GeneIdNotFoundInVoilaFile(self.h.filename, gene_id)
+            try:
+                raise GeneIdNotFoundInVoilaFile(self.h.filename, gene_id)
+            except:
+                raise GeneIdNotFoundInVoilaFile(None, gene_id)
 
         try:
             lsv_grp = gene_grp[lsv_id]
         except KeyError:
-            raise LsvIdNotFoundInVoilaFile(self.h.filename, lsv_id)
+            try:
+                raise LsvIdNotFoundInVoilaFile(self.h.filename, lsv_id)
+            except:
+                raise LsvIdNotFoundInVoilaFile(None, lsv_id)
 
         try:
             return lsv_grp[key].value

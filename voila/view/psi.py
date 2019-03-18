@@ -4,31 +4,51 @@ from operator import itemgetter
 
 from flask import render_template, url_for, jsonify, request, session, Flask, Response
 
-from voila.api.view_matrix import ViewPsi
+from voila.api.view_matrix import ViewPsi, ViewPsis, ViewDeltaPsi
 from voila.api.view_splice_graph import ViewSpliceGraph
 from voila.index import Index
 from voila.view import views
 from voila.view.datatables import DataTables
 from voila.view.forms import LsvFiltersForm
+from voila.config import ViewConfig
+from voila.exceptions import LsvIdNotFoundInVoilaFile, LsvIdNotFoundInAnyVoilaFile
 
 app = Flask(__name__)
 app.secret_key = os.urandom(16)
 
-
 @app.route('/')
 def index():
     form = LsvFiltersForm()
-    return render_template('psi_index.html', form=form)
+    return render_template('psi_index.html', form=form,
+                           multi_view=len(ViewConfig().voila_files) > 1)
 
 
 @app.route('/gene/<gene_id>/')
 def gene(gene_id):
-    return views.gene_view('psi_summary.html', gene_id, ViewPsi)
+
+    with ViewPsis() as m, ViewSpliceGraph() as sg:
+        lsv_data = list((lsv_id, m.lsv(lsv_id).lsv_type) for lsv_id in m.lsv_ids(gene_ids=[gene_id]))
+        lsv_data.sort(key=lambda x: len(x[1].split('|')))
+        ucsc = {}
+        for het in m.lsvs(gene_id):
+            lsv_junctions = het.junctions
+            lsv_exons = sg.lsv_exons(gene_id, lsv_junctions)
+            start, end = views.lsv_boundries(lsv_exons)
+            gene = sg.gene(gene_id)
+            ucsc[het.lsv_id] = views.ucsc_href(sg.genome, gene['chromosome'], start, end)
+
+        return views.gene_view('psi_summary.html', gene_id, ViewDeltaPsi,
+                               lsv_data=lsv_data,
+                               group_names=m.group_names,
+                               ucsc=ucsc,
+                               multi_view=len(ViewConfig().voila_files) > 1
+                               )
 
 
 @app.route('/index-table', methods=('POST',))
 def index_table():
-    with ViewPsi() as v, ViewSpliceGraph() as sg:
+
+    with ViewPsis() as v, ViewSpliceGraph() as sg:
         grp_name = v.group_names[0]
 
         dt = DataTables(Index.psi(), ('gene_name', 'lsv_id'))
@@ -47,17 +67,18 @@ def index_table():
             records[idx] = [
                 {'href': url_for('gene', gene_id=gene_id), 'gene_name': gene_name},
                 lsv_id,
-                psi.lsv_type,
-                grp_name,
-                ucsc
+                psi.lsv_type
             ]
+            if len(ViewConfig().voila_files) == 1:
+                records[idx].append(grp_name)
+            records[idx].append(ucsc)
 
         return jsonify(dict(dt))
 
 
 @app.route('/nav/<gene_id>', methods=('POST',))
 def nav(gene_id):
-    with ViewPsi() as h:
+    with ViewPsis() as h:
         gene_ids = list(sorted(h.gene_ids))
         idx = bisect(gene_ids, gene_id)
 
@@ -69,7 +90,7 @@ def nav(gene_id):
 
 @app.route('/splice-graph/<gene_id>', methods=('POST', 'GET'))
 def splice_graph(gene_id):
-    with ViewSpliceGraph() as sg, ViewPsi() as v:
+    with ViewSpliceGraph() as sg, ViewPsis() as v:
         exp_names = v.splice_graph_experiment_names
         gd = sg.gene_experiment(gene_id, exp_names)
         gd['experiment_names'] = exp_names
@@ -79,7 +100,7 @@ def splice_graph(gene_id):
 
 @app.route('/summary-table/<gene_id>', methods=('POST',))
 def summary_table(gene_id):
-    with ViewPsi() as v, ViewSpliceGraph() as sg:
+    with ViewPsis() as v, ViewSpliceGraph() as sg:
         grp_name = v.group_names[0]
         index_data = Index.psi(gene_id)
 
@@ -119,7 +140,7 @@ def summary_table(gene_id):
 
 @app.route('/psi-splice-graphs', methods=('POST',))
 def psi_splice_graphs():
-    with ViewPsi() as v:
+    with ViewPsis() as v:
         try:
             sg_init = session['psi_init_splice_graphs']
         except KeyError:
@@ -143,7 +164,8 @@ def psi_splice_graphs():
 @app.route('/lsv-data', methods=('POST',))
 @app.route('/lsv-data/<lsv_id>', methods=('POST',))
 def lsv_data(lsv_id):
-    with ViewSpliceGraph() as sg, ViewPsi() as m:
+
+    with ViewSpliceGraph() as sg, ViewPsis() as m:
         psi = m.lsv(lsv_id)
         ref_exon = psi.reference_exon
         gene_id = psi.gene_id
@@ -152,24 +174,98 @@ def lsv_data(lsv_id):
         exons = sg.exons(gene_id)
         exon_number = views.find_exon_number(exons, ref_exon, strand)
 
-        lsv = m.lsv(lsv_id)
-
         return jsonify({
             'lsv': {
                 'name': m.group_names[0],
-                'junctions': lsv.junctions.tolist(),
-                'group_means': dict(lsv.group_means),
-                'group_bins': dict(lsv.group_bins)
+                'junctions': psi.junctions.tolist(),
+                'group_means': dict(psi.group_means),
+                'group_bins': dict(psi.group_bins)
             },
             'exon_number': exon_number
         })
+
+@app.route('/violin-data', methods=('POST',))
+@app.route('/violin-data/<lsv_id>', methods=('POST',))
+def violin_data(lsv_id):
+    config = ViewConfig()
+
+
+    """
+    Expected workflow:
+    For each lsv, we first get the union of all possible junctions from all voila files
+    For each found junction, we represent a table row
+    Then, For each voila file, we look for that LSV and check if the junction is available in it.
+    If so, we  add group bins / means to that table row
+    """
+
+    with ViewPsis() as v:
+        exp_names = v.experiment_names
+        grp_names = v.group_names
+
+        all = v.lsv(lsv_id)
+
+        table_data = []
+
+        for i, _junc in enumerate(all.junctions.tolist()):
+
+            """
+            In one table row, "group_bins" is a 2d array. Outer array index refers to the test group index
+            (voila file index). 
+            
+            For each DataTable box (one cell in the table), violin plots are made for all horizontal elements 
+            at once. So we need to provide the array of group_bins in terms of junction rather than groups
+            For example, the first element of group_bins should represent all data from the first junction, 
+            and the value of this first element should be an array of data for each group (from the first junction)
+            
+            'group_means': [ <junc1> , <junc2> ]
+            'group_means': [ [ <group1>, <group2> ] , <junc2> ]
+            """
+            table_data.append([
+                _junc,
+                {
+                    'junction_idx': i,
+                    'junction_name': _junc,
+                    "group_names": grp_names,
+                    "experiment_names": exp_names,
+                    'group_means': [[] for _ in range(len(all.junctions.tolist()))],
+                    'group_bins': [[] for _ in range(len(all.junctions.tolist()))],
+                }
+            ])
+
+            for j, grp in enumerate(grp_names):
+                with ViewPsi(config.voila_files[j]) as m:
+
+                    try:
+                        psi = m.lsv(lsv_id)
+                        means = dict(psi.group_means)[grp][i]
+                        bins = dict(psi.group_bins)[grp][i]
+                        juncs = psi.junctions.tolist()
+                    except LsvIdNotFoundInVoilaFile:
+                        means = []
+                        bins = []
+                        juncs = []
+
+
+                    if _junc in juncs:
+
+                        table_data[-1][1]['group_means'][i].append(means)
+                        table_data[-1][1]['group_bins'][i].append(bins)
+
+                    else:
+                        table_data[-1][1]['group_means'][i].append([])
+                        table_data[-1][1]['group_bins'][i].append([])
+
+        dt = DataTables(table_data, (), sort=False)
+
+
+        return jsonify(dict(dt))
 
 
 @app.route('/lsv-highlight', methods=('POST',))
 def lsv_highlight():
     json_data = request.get_json()
 
-    with ViewPsi() as m:
+    with ViewPsis() as m:
 
         lsvs = []
         highlight_dict = session.get('highlight', {})
@@ -192,14 +288,15 @@ def lsv_highlight():
                     else:
                         intron_retention = []
 
-                    means = dict(psi.group_means)
+                    means = dict(psi.all_group_means)
                     group_means = {}
 
                     for sg in splice_graphs:
                         grp_name, exp_name = sg
                         if grp_name not in group_means:
                             group_means[grp_name] = {}
-                        group_means[grp_name][exp_name] = means[grp_name]
+                        if grp_name in means:
+                            group_means[grp_name][exp_name] = means[grp_name]
 
                     lsvs.append({
                         'junctions': junctions,
@@ -236,4 +333,4 @@ def download_genes():
 @app.route('/copy-lsv', methods=('POST',))
 @app.route('/copy-lsv/<lsv_id>', methods=('POST',))
 def copy_lsv(lsv_id):
-    return views.copy_lsv(lsv_id, ViewPsi)
+    return views.copy_lsv(lsv_id, ViewPsi, voila_file=ViewConfig().voila_files[0])

@@ -5,6 +5,7 @@ from collections import namedtuple
 from pathlib import Path
 
 from voila import constants
+
 from voila.api import Matrix, SpliceGraph
 from voila.exceptions import FoundNoSpliceGraphFile, FoundMoreThanOneSpliceGraph, \
     MixedAnalysisTypeVoilaFiles, FoundMoreThanOneVoilaFile, AnalysisTypeNotFound
@@ -116,10 +117,8 @@ def find_analysis_type(voila_files):
     if not analysis_type:
         raise AnalysisTypeNotFound()
 
-    if analysis_type in [constants.ANALYSIS_PSI, constants.ANALYSIS_DELTAPSI]:
-
-        if len(voila_files) > 1:
-            raise FoundMoreThanOneVoilaFile()
+    if analysis_type in (constants.ANALYSIS_DELTAPSI,) and len(voila_files) > 1:
+        raise FoundMoreThanOneVoilaFile()
 
     return analysis_type
 
@@ -148,6 +147,11 @@ def write(args):
 
         voila_files = find_voila_files(args.files)
         analysis_type = find_analysis_type(voila_files)
+
+    # raise multi-file error if trying to run voila in TSV mode with multiple input files
+    # (currently, multiple input is only supported in View mode)
+    if analysis_type in (constants.ANALYSIS_PSI, ) and args.func.__name__ != 'run_service' and len(voila_files) > 1:
+        raise FoundMoreThanOneVoilaFile()
 
     # attributes that don't need to be in the ini file
     for remove_key in ['files', 'func', 'logger', 'splice_graph_only']:
