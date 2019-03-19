@@ -429,40 +429,26 @@ namespace grimoire {
                + ":" + gObj->get_id()) ;
     }
 
-    bool Intron::is_reliable(float min_bins){
+    bool Intron::is_reliable(float min_bins, int eff_len){
 
         float npos = 0 ;
-        const int nbins = n_nb_.size() ;
-        if (length() <=0 || nbins <= 0) return false ;
-//cerr << "IR:" << (get_gene())->get_id() << ":" << get_start() << "-" << get_end()<<" " << "\n" ;
-//cerr << get_start() << "-" << get_end() << ": " << "\n" ;
-//cerr << "\t :: " ;
-// for(int i =0 ; i< nbins; i++){
-//cerr << read_rates_[i] << ", " ;
-//}
-//cerr << "\n" ;
+        if (length() <=0 || numbins_ <= 0 || read_rates_ == nullptr) return false ;
+        const int ext = (int) (eff_len / (nxbin_+1)) ;
+        vector<float> cov (numbins_) ;
 
-
-
-        for(int i =0 ; i< nbins; i++){
-            if (read_rates_[i]>0){
-                npos ++;
+        for(int i =0 ; i< numbins_; i++){
+            if (read_rates_[i] < 0) continue ;
+            const int binsz = i< nxbin_mod_ ? nxbin_ +1 : nxbin_ ;
+            read_rates_[i] = (read_rates_[i]>0) ? (read_rates_[i] /  binsz) : 0 ;
+            for (int j=0; j<ext && (i+j)<numbins_; j++){
+                cov[i+j] += read_rates_[i] ;
             }
-//            read_rates_[i] = (read_rates_[i]>0) ? (read_rates_[i] / n_nb_[i].size() ) : 0 ;
-             read_rates_[i] = (read_rates_[i]>0) ? (read_rates_[i] /  nxbin) : 0 ;
-
         }
-//cerr << get_start() << "-" << get_end() << ": " << "\n" ;
-//cerr << "\t :: " ;
-// for(int i =0 ; i< nbins; i++){
-//cerr << read_rates_[i] << ", " ;
-//}
-//cerr << "\n" ;
-
-        const float c = (npos>0) ? (npos/nbins) : 0 ;
-//cerr << " npos:" << npos << " c:" << c << " min_bins:" << min_bins<<  "\n" ;
+        for (const auto &p: cov){
+            npos += (p>0)? 1: 0 ;
+        }
+        const float c = (npos>0) ? (npos/numbins_) : 0 ;
         bool b = (c >= min_bins) ;
-
         return b ;
     }
 

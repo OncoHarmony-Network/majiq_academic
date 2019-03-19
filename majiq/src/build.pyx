@@ -70,7 +70,7 @@ cdef int _output_majiq_file(vector[LSV*] lsvlist, map[string, overGene_vect_t] g
     cdef np.float32_t[:, :] boots
     # cdef np.ndarray[np.float32_t, ndim=2, mode="c"] boots
     cdef np.ndarray junc_ids
-    cdef int i, j, njlsv = j_tlb.size()
+    cdef unsigned int i, j, njlsv = j_tlb.size()
     cdef unsigned int junc_idx, m
     cdef jinfoptr_vec_t jobj_vec
     cdef Gene_vect_t gene_l

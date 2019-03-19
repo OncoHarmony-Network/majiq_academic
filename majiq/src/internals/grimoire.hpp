@@ -219,13 +219,16 @@ namespace grimoire{
 
     class Intron: public _Region{
         private:
-            bool        annot_ ;
-            Gene *      gObj_ ;
-            int         flt_count_ ;
-            bool        ir_flag_ ;
-            bool        markd_ ;
-            vector<set<int>> n_nb_ ;
-            int         nxbin ;
+            bool    annot_ ;
+            Gene *  gObj_ ;
+            int     flt_count_ ;
+            bool    ir_flag_ ;
+            bool    markd_ ;
+
+            int     nxbin_off_ ;
+            int     nxbin_mod_ ;
+            int     nxbin_ ;
+            int     numbins_ ;
 
         public:
             float*  read_rates_ ;
@@ -236,7 +239,8 @@ namespace grimoire{
                 flt_count_  = 0 ;
                 ir_flag_    = false ;
                 read_rates_ = nullptr ;
-                nxbin       = 0 ;
+                nxbin_      = 0 ;
+                nxbin_off_   = 0 ;
                 markd_      = false ;
             }
 
@@ -248,14 +252,16 @@ namespace grimoire{
             bool    is_connected()          { return markd_ ; }
             string  get_key(Gene * gObj) ;
             void    calculate_lambda() ;
-            bool    is_reliable(float min_bins) ;
+            bool    is_reliable(float min_bins, int eff_len) ;
 
             void    add_read_rates_buff(int eff_len){
 
-                nxbin = (int) ((length()+ eff_len) / eff_len) ;
-                nxbin = (length() % eff_len) == 0 ? nxbin : nxbin +1 ;
+                nxbin_ = (int) ((length()+ eff_len) / eff_len) ;
+                nxbin_mod_ = (length() % eff_len) ;
+                nxbin_off_ = nxbin_mod_ * ( nxbin_+1 ) ;
                 read_rates_ = (float*) calloc(eff_len, sizeof(float)) ;
-                n_nb_ = vector<set<int>>(eff_len, set<int>()) ;
+                numbins_ = eff_len ;
+
             }
 
             void  add_read(int read_pos, int eff_len){
@@ -263,17 +269,25 @@ namespace grimoire{
                 if (read_rates_ == nullptr){
                     add_read_rates_buff(eff_len) ;
                 }
-                int offset = (int)((read_pos - st)/nxbin) ;
+                int offset = (read_pos - st) ;
                 offset = (offset >=0) ? offset: 0 ;
-                n_nb_[offset].insert(read_pos - st) ;
+
+                const int off1 = (int) ((offset - nxbin_off_) / nxbin_) + nxbin_mod_ ;
+                const int off2 = (int) offset / (nxbin_+1) ;
+                offset = (int)(offset < nxbin_off_) ? off2: off1 ;
+
+//cerr << get_start() << "-" << get_end() << " offset =" << offset << " read_pos = " << read_pos << " (intronstart - eff_len) = " << st <<
+//" eff_len = "<< eff_len << " nxbin_off_ = "<< nxbin_off_<< " nxbin_ = "<< nxbin_<< "\n" ;
+
+
                 read_rates_[offset] += 1 ;
+
             }
 
             inline void  update_flags(float min_coverage, int min_exps, float min_bins) {
                 int cnt = 0 ;
-                const int nbins = n_nb_.size() ;
-                const float pc_bins = nbins * min_bins ;
-                for(int i =0 ; i< nbins; i++){
+                const float pc_bins = numbins_ * min_bins ;
+                for(int i =0 ; i< numbins_; i++){
                     cnt += (read_rates_[i]>= min_coverage) ? 1 : 0 ;
                 }
                 flt_count_ += (cnt >= pc_bins) ? 1 : 0 ;
@@ -310,8 +324,6 @@ namespace grimoire{
                 if(read_rates_ != nullptr){
                     free(read_rates_);
                     read_rates_ = nullptr ;
-                    n_nb_.clear() ;
-                    n_nb_.shrink_to_fit() ;
                 }
                 return ;
             }
