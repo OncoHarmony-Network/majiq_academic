@@ -154,6 +154,23 @@ class ViewMulti:
         for v in vhs:
             v.close()
 
+    def lsv(self, lsv_id):
+        raise NotImplementedError()
+
+    def lsvs(self, gene_id=None):
+        """
+        Get all lsvs for set of het voila files.
+        :param gene_id: gene id
+        :return:
+        """
+
+        if gene_id:
+            gene_ids = [gene_id]
+        else:
+            gene_ids = None
+
+        for lsv_id in self.lsv_ids(gene_ids):
+            yield self.lsv(lsv_id)
 
 
 
@@ -329,21 +346,6 @@ class ViewPsis(ViewMulti):
             input files upon finding the first one with the lsv id
             """
             return self._get_prop('group_bins', dict)
-
-    def lsvs(self, gene_id=None):
-        """
-        Get all lsvs for set of het voila files.
-        :param gene_id: gene id
-        :return:
-        """
-
-        if gene_id:
-            gene_ids = [gene_id]
-        else:
-            gene_ids = None
-
-        for lsv_id in self.lsv_ids(gene_ids):
-            yield self.lsv(lsv_id)
 
     def lsv(self, lsv_id):
         """
@@ -694,6 +696,7 @@ class ViewHeterogens(ViewMulti):
         """
 
         return self._ViewHeterogens(self, lsv_id)
+
 
 
 
