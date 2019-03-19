@@ -410,10 +410,11 @@ namespace io_bam {
         ParseJunctionsFromFile(true) ;
         for (const auto & it: intronVec_){
             const int n = (it.second).size() ;
+
             #pragma omp parallel for num_threads(nthreads_)
             for(int idx = 0; idx<n; idx++){
                 Intron * intrn_it = (it.second)[idx] ;
-                const bool pass = intrn_it->is_reliable(min_bins) ;
+                const bool pass = intrn_it->is_reliable(min_bins, eff_len_) ;
                 if( pass ){
                     const string key = intrn_it->get_key(intrn_it->get_gene()) ;
                     #pragma omp critical
