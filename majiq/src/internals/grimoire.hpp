@@ -240,8 +240,10 @@ namespace grimoire{
                 ir_flag_    = false ;
                 read_rates_ = nullptr ;
                 nxbin_      = 0 ;
-                nxbin_off_   = 0 ;
+                nxbin_off_  = 0 ;
+                nxbin_mod_  = 0 ;
                 markd_      = false ;
+                numbins_    = 0 ;
             }
 
             bool    get_annot()             { return annot_ ; }
@@ -259,8 +261,9 @@ namespace grimoire{
                 nxbin_ = (int) ((length()+ eff_len) / eff_len) ;
                 nxbin_mod_ = (length() % eff_len) ;
                 nxbin_off_ = nxbin_mod_ * ( nxbin_+1 ) ;
-                read_rates_ = (float*) calloc(eff_len, sizeof(float)) ;
                 numbins_ = eff_len ;
+                read_rates_ = (float*) calloc(numbins_, sizeof(float)) ;
+
 
             }
 
