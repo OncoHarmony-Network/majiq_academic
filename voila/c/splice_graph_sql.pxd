@@ -1,10 +1,12 @@
 from libcpp.string cimport string
+from libcpp.vector cimport vector
 cdef extern from "sqlite3.h":
     struct sqlite3
 
 cdef int open_db(string file_name, sqlite3 ** db) nogil
 cdef int close_db(sqlite3 *db) nogil
 cdef int gene(sqlite3 *db, string id, string name, string strand, string chromosome) nogil
+cdef int gene_overlap(sqlite3 *db, string id, vector[string] overlapping) nogil
 # cdef int experiment(sqlite3 *db, string name) nogil
 cdef int exon(sqlite3 *db, string gene_id, int start, int end, int annotated_start, int annotated_end,
                bint annotated) nogil

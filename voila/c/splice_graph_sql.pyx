@@ -1,7 +1,8 @@
-from libc.stdio cimport sprintf, fprintf, stderr
+from libc.stdio cimport sprintf, fprintf, stderr, stdout
 from libc.stdlib cimport malloc, free, abs
 from libc.string cimport strlen
 from libcpp.string cimport string
+from libcpp.vector cimport vector
 
 cdef extern from "sqlite3.h":
     int SQLITE_BUSY
@@ -20,6 +21,9 @@ cdef:
     char *gene_insert = "INSERT INTO gene " \
                         "(id,name,strand,chromosome) " \
                         "VALUES ('%s','%s','%s','%s');"
+    char *gene_overlap_insert = "INSERT INTO gene_overlap " \
+                                "(gene_id_1,gene_id_2) " \
+                                "VALUES ('%s','%s');"
     char *alt_start_insert = "INSERT INTO alt_start (gene_id,coordinate) VALUES ('%s',%d);"
     char *alt_end_insert = "INSERT INTO alt_end (gene_id,coordinate) VALUES ('%s',%d);"
     char *exon_insert = "INSERT INTO exon " \
@@ -104,6 +108,26 @@ cdef int gene(sqlite3 *db, string id, string name, string strand, string chromos
 
     sql = <char *> malloc(sizeof(char) * (strlen(gene_insert) + arg_len - rm_chars_len + 1))
     sprintf(sql, gene_insert, id.c_str(), name.c_str(), strand.c_str(), chromosome.c_str())
+
+    rc = exec_db(db, sql)
+    free(sql)
+    return rc
+
+cdef int gene_overlap(sqlite3 *db, string id, vector[string] overlapping) nogil:
+    cdef:
+        int rc
+        int arg_len
+        char *sql
+        int rm_chars_len
+
+    arg_len = id.length() + overlapping[0].length()
+    rm_chars_len = 2 * 2
+
+    sql = <char *> malloc(sizeof(char) * (strlen(gene_overlap_insert) + arg_len - rm_chars_len + 1) * overlapping.size())
+    cdef char *pos = sql
+
+    for i in range(overlapping.size()):
+        pos += sprintf(pos, gene_overlap_insert, id.c_str(), overlapping[i].c_str())
 
     rc = exec_db(db, sql)
     free(sql)

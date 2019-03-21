@@ -87,6 +87,20 @@ CREATE TABLE intron_retention (
   CHECK (annotated IN (0, 1))
 );
 
+CREATE TABLE  gene_overlap (
+  gene_id_1 VARCHAR NOT NULL,
+  gene_id_2 VARCHAR NOT NULL,
+  PRIMARY KEY (gene_id_1, gene_id_2)
+);
+
+CREATE TRIGGER remove_dup BEFORE INSERT
+ON gene_overlap
+BEGIN
+   DELETE FROM gene_overlap WHERE gene_id_1 = new.gene_id_1 and gene_id_2 = new.gene_id_2;
+   DELETE FROM gene_overlap WHERE gene_id_1 = new.gene_id_2 and gene_id_2 = new.gene_id_1;
+END;
+
+
 CREATE TABLE gene (
   id         VARCHAR NOT NULL,
   name       VARCHAR,
