@@ -51,6 +51,15 @@
             <div class="gene-id">
                 Gene ID: {{ gene.id }};
             </div>
+            {% if gene.overlap %}
+                <div class="gene-overlap">
+                    <strong>Note:</strong> overlaps with the following Genes:
+                    {% set sep = joiner(" ; ") %}
+                    {% for _gene in gene.overlap %}
+                        {{ sep() }}<a href="{{ url_for('gene', gene_id=_gene[0])}}">{{ _gene[1] }}</a>
+                    {% endfor %}
+                </div>
+            {% endif %}
         </div>
         <div>
             <a class="ucsc-gene" target="_blank" rel="noopener noreferrer" href="{{ gene.href }}">

@@ -187,6 +187,17 @@ class Genes(SpliceGraphSQL):
         if fetch:
             return dict(zip(gene_fieldnames, fetch))
 
+    def gene_overlap(self, gene_id):
+        query = self.conn.execute("""
+                    SELECT gene_overlap.gene_id_1, g1.name, gene_overlap.gene_id_2, g2.name FROM gene_overlap 
+                    INNER JOIN gene g1 on g1.id = gene_overlap.gene_id_1
+					INNER JOIN gene g2 on g2.id = gene_overlap.gene_id_2                     
+                    WHERE gene_id_1 = ?
+                    OR gene_id_2 = ?
+                """, (gene_id, gene_id))
+        return [(g[0], g[1],) if g[0] != gene_id else (g[2], g[3],) for g in query.fetchall()]
+
+
 
 class Exons(SpliceGraphSQL):
     def exons(self, gene_id):

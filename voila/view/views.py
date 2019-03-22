@@ -183,7 +183,8 @@ def gene_view(summary_template, gene_id, view_matrix, **kwargs):
         gene.update({
             'start': start,
             'end': end,
-            'href': href
+            'href': href,
+            'overlap': sg.gene_overlap(gene_id)
         })
 
         kwargs['gene'] = gene
