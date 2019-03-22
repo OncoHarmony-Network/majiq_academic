@@ -30,8 +30,8 @@ cdef:
                         "(gene_id,start,end,annotated_start,annotated_end,annotated) " \
                         "VALUES ('%s',%d,%d,%d,%d,%d);"
     char *junc_insert = "INSERT INTO junction " \
-                        "(gene_id,start,end,has_reads,annotated) " \
-                        "VALUES ('%s',%d,%d,0,%d);"
+                        "(gene_id,start,end,has_reads,annotated, is_simplified) " \
+                        "VALUES ('%s',%d,%d,0,%d,%d);"
     char *junc_reads_insert = "INSERT INTO junction_reads " \
                               "(reads,experiment_name,junction_gene_id,junction_start,junction_end) " \
                               "VALUES (%d,'%s','%s',%d,%d);" \
@@ -175,7 +175,24 @@ cdef int exon(sqlite3 *db, string gene_id, int start, int end, int annotated_sta
     free(sql)
     return rc
 
-cdef int inter_exon(sqlite3 *db, string gene_id, int start, int end, bint annotated, char *sql_string) nogil:
+cdef int junction(sqlite3 *db, string gene_id, int start, int end, bint annotated, bint is_simplified) nogil:
+    cdef:
+        int rc
+        int arg_len
+        int rm_chars_len
+        char *sql
+
+    arg_len = gene_id.length() + int_len(start) + int_len(end) + int_len(annotated) + int_len(is_simplified)
+    rm_chars_len = 5 * 2
+
+    sql = <char *> malloc(sizeof(char) * (strlen(junc_insert) + arg_len - rm_chars_len + 1))
+    sprintf(sql, junc_insert, gene_id.c_str(), start, end, annotated, is_simplified)
+
+    rc = exec_db(db, sql)
+    free(sql)
+    return rc
+
+cdef int intron_retention(sqlite3 *db, string gene_id, int start, int end, bint annotated) nogil:
     cdef:
         int rc
         int arg_len
@@ -185,18 +202,12 @@ cdef int inter_exon(sqlite3 *db, string gene_id, int start, int end, bint annota
     arg_len = gene_id.length() + int_len(start) + int_len(end) + int_len(annotated)
     rm_chars_len = 4 * 2
 
-    sql = <char *> malloc(sizeof(char) * (strlen(sql_string) + arg_len - rm_chars_len + 1))
-    sprintf(sql, sql_string, gene_id.c_str(), start, end, annotated)
+    sql = <char *> malloc(sizeof(char) * (strlen(ir_insert) + arg_len - rm_chars_len + 1))
+    sprintf(sql, ir_insert, gene_id.c_str(), start, end, annotated)
 
     rc = exec_db(db, sql)
     free(sql)
     return rc
-
-cdef int junction(sqlite3 *db, string gene_id, int start, int end, bint annotated) nogil:
-    return inter_exon(db, gene_id, start, end, annotated, junc_insert)
-
-cdef int intron_retention(sqlite3 *db, string gene_id, int start, int end, bint annotated) nogil:
-    return inter_exon(db, gene_id, start, end, annotated, ir_insert)
 
 cdef int reads_update(sqlite3 *db, int reads, string exp_name, string gene_id, int start, int end,
                       const char *sql_string) nogil:

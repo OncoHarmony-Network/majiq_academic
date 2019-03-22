@@ -57,6 +57,7 @@ CREATE TABLE junction (
   "end"     INTEGER NOT NULL,
   has_reads BOOLEAN,
   annotated BOOLEAN,
+  is_simplified BOOLEAN,
   PRIMARY KEY (gene_id, start, "end"),
   FOREIGN KEY (gene_id) REFERENCES gene (id),
   CHECK (has_reads IN (0, 1)),
