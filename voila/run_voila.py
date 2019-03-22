@@ -61,11 +61,11 @@ sys_parser.add_argument('--debug', action='store_true')
 
 # webserver parser
 webserver_parser = argparse.ArgumentParser(add_help=False)
-webserver_parser.add_argument('--web-server', type=str, default='waitress', choices=('waitress', 'gunicorn',),
+webserver_parser.add_argument('--web-server', type=str, default='waitress', choices=('waitress', 'gunicorn', 'flask',),
                         help='Web server backend to use. Default is waitress')
 webserver_parser.add_argument('--num-web-workers', type=int, default=min(os.cpu_count(), max(int(os.cpu_count() / 2), 1)),
                         help='Number of processes used to handle web I/O (gunicorn workers). '
-                             'Only used if the web server is gunicorn. Default is half of system processes. ')
+                             'Only used if the web server is gunicorn. Default is half of system processor count. ')
 
 # tsv parser
 tsv_parser = argparse.ArgumentParser(add_help=False)
