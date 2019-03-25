@@ -96,8 +96,10 @@ namespace grimoire{
             bool intronic_ ;
             bool bld_fltr_ ;
             bool denovo_bl_ ;
+            bool simpl_fltr_ ;
             unsigned int denovo_cnt_ ;
             unsigned int flter_cnt_ ;
+            unsigned int bool simpl_cnt_ ;
             Exon * acceptor_;
             Exon * donor_;
 
@@ -121,6 +123,7 @@ namespace grimoire{
             bool    get_annot()     { return annot_ ; }
             bool    get_intronic()  { return intronic_ ; }
             bool    get_bld_fltr()  { return bld_fltr_ ; }
+            bool    get_simpl_fltr(){ return simpl_fltr_ ; }
             bool    get_denovo_bl() { return denovo_bl_ ; }
             Exon*   get_acceptor()  { return acceptor_ ; }
             Exon*   get_donor()     { return donor_ ; }
@@ -131,6 +134,10 @@ namespace grimoire{
             void  exonReset(){
                 acceptor_ = nullptr ;
                 donor_ = nullptr ;
+            }
+
+            void set_simpl_fltr(bool val){
+
             }
 
             void update_flags(int efflen, unsigned int num_reads, unsigned int num_pos, unsigned int denovo_thresh,
@@ -398,6 +405,7 @@ namespace grimoire{
             void    newExonDefinition(int start, int end, Junction *inbound_j, Junction *outbound_j, bool in_db) ;
             void    fill_junc_tlb(map<string, vector<string>> &tlb) ;
             int     detect_lsvs(vector<LSV*> &out_lsvlist);
+            void    simplify(float simpl_percent) ;
             void    initialize_junction(string key, int start, int end, float* nreads_ptr) ;
             void    update_junc_flags(int efflen, bool is_last_exp, unsigned int minreads, unsigned int minpos,
                                       unsigned int denovo_thresh, unsigned int min_experiments, bool denovo) ;

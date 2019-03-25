@@ -27,6 +27,7 @@ cdef extern from "io_bam.hpp" namespace "io_bam":
         vector[Junction *] get_junc_vec() nogil
         int * get_junc_vec_summary() nogil ;
         unsigned int get_junc_limit_index() nogil;
+        void simplify() nogil ;
         void free_iobam() nogil ;
 
         vector[np.float32_t *] junc_vec ;

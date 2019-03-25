@@ -396,7 +396,7 @@ namespace io_bam {
                 for (const auto &g: ((it.second)[g_it])->glist){
                     g->detect_exons() ;
                     g->detect_introns(intronVec_[it.first]) ;
-                    g->reset_exons() ;
+//                    g->reset_exons() ;
                 }
             }
             sort(intronVec_[it.first].begin(), intronVec_[it.first].end(), Intron::islowerRegion<Intron>) ;
@@ -471,6 +471,19 @@ namespace io_bam {
             if(ov != nullptr)
                 geneList[gl.first].push_back(ov) ;
         }
+    }
+
+    void IOBam::simplify(float simpl_percent){
+        for (const auto & it: glist_){
+            const int n = (it.second).size() ;
+            #pragma omp parallel for num_threads(nthreads_)
+            for(int g_it = 0; g_it<n; g_it++){
+                for (const auto &g: ((it.second)[g_it])->glist){
+                    g->simplify(simpl_percent) ;
+                }
+            }
+        }
+
     }
 
     void free_genelist(map<string, vector<overGene*>> & geneList){

@@ -257,6 +257,11 @@ cdef _find_junctions(list file_list, map[string, Gene*]& gene_map, vector[string
                     with gil:
                         logger.info('Detect Intron retention %s' %(file_list[j][0]))
                     c_iobam.detect_introns(min_ir_cov, min_experiments, ir_numbins, (j==last_it_grp))
+
+                # if simplify:
+                #     with gil:
+                #         logger.debug('Define irrelevant junctions %s' %(file_list[j][0]))
+                #     c_iobam.simplify()
                 njunc = c_iobam.get_njuncs()
                 with gil:
                     logger.debug('Total Junctions and introns %s' %(njunc))
@@ -279,6 +284,7 @@ cdef _find_junctions(list file_list, map[string, Gene*]& gene_map, vector[string
             for i in prange(n, nogil=True, num_threads=nthreads):
                 gg = gene_map[gid_vec[i]]
                 gg.update_junc_flags(eff_len, (j==last_it_grp), minreads, minpos, denovo_thresh, min_experiments, denovo)
+                gg.simplify()
 
             logger.debug("Done Update flags")
             junc_ids = [0] * njunc
