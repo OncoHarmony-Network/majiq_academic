@@ -411,6 +411,69 @@ namespace grimoire {
 
     }
 
+
+    void Exon::simplify(float simpl_percent){
+        float sumall = 0 ;
+        unsigned int njunc = 0 ;
+        {
+            vector<float> sumj ;
+            vector<Junction *> jnc_vec ;
+            unsigned int i = 0 ;
+            for(const auto &juncIt: ib){
+                if (juncIt->)
+                    continue ;
+                jnc_vec.push_back(juncIt) ;
+                sumj.push_back(0) ;
+                for(int j=0; j<efflen; ++j){
+                    sumj[i] += juncIt->nreads_[j] ;
+                }
+                sumall += sum[i] ;
+                i++ ;
+            }
+
+            for(i=0; i<njunc; i++){
+                float x = sumj[i]/sumall ;
+                jnc_vec[i]->set_simpl_fltr(x<simpl_percent) ;
+            }
+        }
+
+
+        sumall = 0 ;
+        njunc = 0 ;
+        {
+            vector<float> sumj ;
+            vector<Junction *> jnc_vec ;
+            unsigned int i = 0 ;
+            for(const auto &juncIt: ob){
+                if (juncIt->)
+                    continue ;
+                jnc_vec.push_back(juncIt) ;
+                sumj.push_back(0) ;
+                for(int j=0; j<efflen; ++j){
+                    sumj[i] += juncIt->nreads_[j] ;
+                }
+                sumall += sum[i] ;
+                i++ ;
+            }
+
+            for(i=0; i<njunc; i++){
+                float x = sumj[i]/sumall ;
+                jnc_vec[i]->set_simpl_fltr(x<simpl_percent) ;
+            }
+        }
+
+
+    }
+
+
+    void Gene::simplify(float simpl_percent){
+        for(const auto &ex: ex_vector){
+            ex->simplify(simpl_percent) ;
+        }
+
+    }
+
+
     void Gene::print_exons(){
 
         for(const auto & ex: exon_map_ ){
