@@ -19,6 +19,18 @@ class SpliceGraphTools {
             document.querySelector('.splice-graph-tools.tools-menu').classList.toggle('hide-tools-menu');
         };
 
+        // handling click outside of splice graph options hides the options
+        $("body").click(function(event){
+           if($('#splice-graph-menu-btn').hasClass('pure-menu-active')){
+                toggle_splicegraph_opts();
+           }
+        });
+
+        // (and click inside the options does not hide it)
+        $(".splice-graph-tools").click(function () {
+           event.stopPropagation();
+        });
+
         document.querySelectorAll('.lsv-tools.tools-menu-btn')
             .forEach(l => l.onclick = (event) => {
                 event.preventDefault();
