@@ -216,18 +216,17 @@ class Exons(SpliceGraphSQL):
 
 
 class Junctions(SpliceGraphSQL):
-    def junctions(self, gene_id):
+    def junctions(self, gene_id, omit_simplified=False):
         """
         Get list of junctions for specified gene id.
         :param gene_id: gene id
         :return: list of junction dictionaries
         """
-
         query = self.conn.execute('''
-                                SELECT gene_id, start, end, has_reads, annotated
+                                SELECT gene_id, start, end, has_reads, annotated, is_simplified
                                 FROM junction 
                                 WHERE gene_id=?
-                                ''', (gene_id,))
+                                ''' + (" AND is_simplified = 0" if omit_simplified else ''), (gene_id,))
         return self._iter_results(query, junc_fieldnames)
 
     def junction_reads_exp(self, junction, experiment_names):
