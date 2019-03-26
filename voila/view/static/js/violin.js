@@ -167,6 +167,7 @@ class Violin {
 
         this.swarm(g2, color);
         this.draw_x_axis(g, this.data.group_names);
+        this.draw_view_icons(g, this.data.group_names);
     }
 
     transform_plot(i) {
@@ -215,6 +216,7 @@ class Violin {
                 .on("start", function () {
                     var current = d3.select(this);
                     deltaX = current.attr("data-x") - d3.event.x;
+                    current.style('cursor', 'grabbing');
                 })
                 .on("drag", function () {
 
@@ -263,7 +265,7 @@ class Violin {
                         var el2 = $(el1).parent().children()[finalIndex];
                         perform_swap(el1, el2, true)
                     })
-                    $.each($(`.lsv-table[data-lsv-id="${lsv_id}"] text[data-group-idx="${current.attr("data-group-idx")}"]`), function(i, el1){
+                    $.each($(`.lsv-table[data-lsv-id="${lsv_id}"] svg[data-group-idx="${current.attr("data-group-idx")}"]`), function(i, el1){
                         var el2 = $(el1).parent().children()[finalIndex];
                         perform_swap(el1, el2)
                     })
@@ -271,14 +273,17 @@ class Violin {
                         var el2 = $(el1).parent().children()[finalIndex];
                         perform_swap(el1, el2, true)
                     })
+                    current.style('cursor', 'ew-resize');
 
                 });
+
 
         g.selectAll('.violin')
 
             .data(bins)
             .enter()
             .append('path')
+            .style('cursor', 'ew-resize')
             .attr('class', 'violin')
             .attr('transform', (d, i) => `translate(${(this.violin_width + this.violin_pad) * (i + .5)})`)
             .attr("x", (d, i) => `${(this.violin_width + this.violin_pad) * (i + .5)}`)
@@ -442,16 +447,32 @@ class Violin {
             .style("stroke-dasharray","5,5")
             .style("stroke", color);
     }
+    
+    draw_view_icons(svg, x_axis_data) {
+
+  }
 
     draw_x_axis(svg, x_axis_data) {
+        var self = this;
+
         svg
             .append('g')
             .attr('class', 'x-axis')
             .selectAll('text')
             .data(x_axis_data)
             .enter()
-            .append('text')
+            .append('svg')
+            .style('overflow', 'visible')
+            .attr('class', 'x-axis-grp')
+            .append("svg:image")
+            .attr('class', 'hide-btn')
+            .attr("xlink:href", "/static/img/hide.png")
+            .attr('y', -11)
+            .attr('x', 17)
+            .style("cursor", "pointer")
+            .select(function() { return this.parentNode; })
             .attr('y', this.svg_height - this.x_axis_height + 6)
+            .append('text')
             .attr('font-size', 12)
             .text(d => {
                 try {
@@ -464,6 +485,7 @@ class Violin {
                     return d
                 }
             })
+            .select(function() { return this.parentNode; })
             .each((d, i, a) => {
                 const el = a[i];
                 if (d.length > 7) {
@@ -481,6 +503,48 @@ class Violin {
                 }
                 el.setAttribute('data-group-idx', i)
             })
+
+        d3.selectAll("image.hide-btn").on('click', function(){
+
+            var current = d3.select(this);
+            var group = $(this).parent();
+            var lsv_id = self._get_parent(current, "lsv-table").attr('data-lsv-id');
+            // var prev_index = $(d3.selectAll(`.lsv-table[data-lsv-id="${lsv_id}"] path[data-group-idx="${current.attr("data-group-idx")}"]`).node()).index();
+            // var finalIndex = (Math.floor(((d3.event.x + deltaX) + (colWidth/2)) / colWidth)) + prev_index;
+            //
+            // if(finalIndex > self.violin_count - 1){
+            //     finalIndex = self.violin_count - 1;
+            // }else if(finalIndex < 0){
+            //     finalIndex = 0;
+            // }
+
+            var last_shown = 100;
+            $.each($(`.lsv-table[data-lsv-id="${lsv_id}"] path[data-group-idx="${group.attr("data-group-idx")}"]`), function(i, el1){
+                $.each($(el1).parent().children(), function(i, el){
+                    if($(el).is(':visible')){
+                        last_shown = i;
+                    }
+                })
+            })
+            console.log(last_shown)
+            $.each($(`.lsv-table[data-lsv-id="${lsv_id}"] path[data-group-idx="${group.attr("data-group-idx")}"]`), function(i, el1){
+                var el2 = $(el1).parent().children()[last_shown];
+                perform_swap(el1, el2, true);
+                $(el1).hide()
+            })
+            $.each($(`.lsv-table[data-lsv-id="${lsv_id}"] svg[data-group-idx="${group.attr("data-group-idx")}"]`), function(i, el1){
+                var el2 = $(el1).parent().children()[last_shown];
+                perform_swap(el1, el2);
+                $(el1).hide()
+            })
+            $.each($(`.lsv-table[data-lsv-id="${lsv_id}"] g[data-group-idx="${group.attr("data-group-idx")}"]`), function(i, el1){
+                var el2 = $(el1).parent().children()[last_shown];
+                perform_swap(el1, el2, true);
+                $(el1).hide()
+            })
+        })
+
+
     }
 
     draw_psi_y_axis(svg) {
