@@ -284,7 +284,6 @@ cdef _find_junctions(list file_list, map[string, Gene*]& gene_map, vector[string
             for i in prange(n, nogil=True, num_threads=nthreads):
                 gg = gene_map[gid_vec[i]]
                 gg.update_junc_flags(eff_len, (j==last_it_grp), minreads, minpos, denovo_thresh, min_experiments, denovo)
-                gg.simplify()
 
             logger.debug("Done Update flags")
             junc_ids = [0] * njunc
@@ -326,7 +325,8 @@ cdef void gene_to_splicegraph(Gene * gne, sqlite3 * db) nogil:
         if jj.get_end() == C_FIRST_LAST_JUNC:
             sg_alt_end(db, gne_id, jj.get_start())
             continue
-        sg_junction(db, gne_id, jj.get_start(), jj.get_end(), jj.get_annot(), 0)
+
+        sg_junction(db, gne_id, jj.get_start(), jj.get_end(), jj.get_annot(), jj.get_simpl_fltr())
 
     for ex_pair in gne.exon_map_:
         ex = ex_pair.second
@@ -344,6 +344,38 @@ cdef void gene_to_splicegraph(Gene * gne, sqlite3 * db) nogil:
     # for ir in gne.intron_vec_:
     #     if ir.get_ir_flag():
     #         sg_intron_retention(db, gne_id, ir.get_start(), ir.get_end(), ir.get_annot())
+
+
+cdef void simplify(list file_list, map[string, Gene*] gene_map, vector[string] gid_vec, object conf, object logger) :
+    cdef int nsamples = len(file_list)
+    cdef int nthreads = conf.nthreads
+    cdef map[string, int] junc_tlb
+    cdef int n = gene_map.size()
+    cdef Gene * gg
+    cdef unsigned int i
+    cdef np.float32_t simpl_fltr = 0.001
+    cdef int strandness
+
+    # for tmp_str, group_list in conf.tissue_repl.items():
+    #     name = tmp_str.encode('utf-8')
+        # last_it_grp = group_list[len(group_list) - 1]
+        # min_experiments = conf.min_experiments[tmp_str]
+
+    for i in range(nsamples):
+        strandness = conf.strand_specific[file_list[i][0]]
+        junc_file = "%s/%s.juncs" % (conf.outDir.decode('utf-8'), file_list[i][0])
+
+        with open(junc_file, 'rb') as fp:
+            junc_ids = np.load(fp)['junc_info']
+            njunc = junc_ids.shape[0]
+            for j in range(njunc):
+                junc_tlb[junc_ids[i][0]] = junc_ids[i][3]
+            del junc_ids
+
+        for i in prange(n, nogil=True, num_threads=nthreads):
+            gg = gene_map[gid_vec[i]]
+            gg.simplify(junc_tlb, simpl_fltr, strandness)
+
 
 
 ## OPEN API FOR PYTHON
@@ -393,9 +425,9 @@ cdef _core_build(str transcripts, list file_list, object conf, object logger):
                 logger.debug("%s] Connect introns" % gg.get_id())
             gg.connect_introns()
 
-        with gil:
-            logger.debug("[%s] Generate TLB" % gg.get_id())
 
+
+    for i in prange(n, nogil=True, num_threads=nthreads):
         gene_to_splicegraph(gg, db)
         with gil:
             logger.debug("[%s] Detect LSVs" % gg.get_id())

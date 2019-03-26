@@ -137,7 +137,7 @@ namespace grimoire{
             }
 
             void set_simpl_fltr(bool val){
-
+                simpl_fltr_ = simpl_fltr_ && val ;
             }
 
             void update_flags(int efflen, unsigned int num_reads, unsigned int num_pos, unsigned int denovo_thresh,

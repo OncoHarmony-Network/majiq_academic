@@ -412,7 +412,7 @@ namespace grimoire {
     }
 
 
-    void Exon::simplify(float simpl_percent){
+    void Exon::simplify(map<string, int>& junc_tlb, float simpl_percent, Gene* gObj, int strandness){
         float sumall = 0 ;
         unsigned int njunc = 0 ;
         {
@@ -420,14 +420,13 @@ namespace grimoire {
             vector<Junction *> jnc_vec ;
             unsigned int i = 0 ;
             for(const auto &juncIt: ib){
-                if (juncIt->)
+                if (juncIt->get_denovo_bl())
                     continue ;
+                string key = juncIt->get_key(gObj, strandness) ;
                 jnc_vec.push_back(juncIt) ;
-                sumj.push_back(0) ;
-                for(int j=0; j<efflen; ++j){
-                    sumj[i] += juncIt->nreads_[j] ;
-                }
-                sumall += sum[i] ;
+                float s = junc_tlb.count(key)>0 ? junc_tlb[key] : 0 ;
+                sumj.push_back(s) ;
+                sumall += s ;
                 i++ ;
             }
 
@@ -445,14 +444,13 @@ namespace grimoire {
             vector<Junction *> jnc_vec ;
             unsigned int i = 0 ;
             for(const auto &juncIt: ob){
-                if (juncIt->)
+                if (juncIt->get_denovo_bl())
                     continue ;
+                string key = juncIt->get_key(gObj, strandness) ;
                 jnc_vec.push_back(juncIt) ;
+                float s = junc_tlb.count(key)>0 ? junc_tlb[key] : 0 ;
                 sumj.push_back(0) ;
-                for(int j=0; j<efflen; ++j){
-                    sumj[i] += juncIt->nreads_[j] ;
-                }
-                sumall += sum[i] ;
+                sumall += s ;
                 i++ ;
             }
 
@@ -466,9 +464,9 @@ namespace grimoire {
     }
 
 
-    void Gene::simplify(float simpl_percent){
+    void Gene::simplify(map<string, int>& junc_tlb, float simpl_percent, int strandness){
         for(const auto &ex: ex_vector){
-            ex->simplify(simpl_percent) ;
+            ex->simplify(junc_tlb, simpl_percent, self, strandness) ;
         }
 
     }
