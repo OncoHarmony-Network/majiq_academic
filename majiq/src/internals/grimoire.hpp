@@ -114,6 +114,7 @@ namespace grimoire{
                 flter_cnt_ = 0 ;
                 intronic_ = false ;
                 nreads_ = nullptr ;
+                simpl_fltr_ = false ;
             }
             ~Junction()             { clear_nreads(true) ; }
 
@@ -137,7 +138,7 @@ namespace grimoire{
             }
 
             void set_simpl_fltr(bool val){
-                simpl_fltr_ = simpl_fltr_ && val ;
+                simpl_fltr_ = simpl_fltr_ || val ;
             }
 
             void update_flags(int efflen, unsigned int num_reads, unsigned int num_pos, unsigned int denovo_thresh,

@@ -321,7 +321,8 @@ cdef void gene_to_splicegraph(Gene * gne, sqlite3 * db) nogil:
         if jj.get_end() == C_FIRST_LAST_JUNC:
             sg_alt_end(db, gne_id, jj.get_start())
             continue
-        
+        with gil:
+            print(jj_pair.first, jj.get_start(), jj.get_end(), jj.get_annot(), jj.get_simpl_fltr())
         sg_junction(db, gne_id, jj.get_start(), jj.get_end(), jj.get_annot(), jj.get_simpl_fltr())
 
     for ex_pair in gne.exon_map_:
@@ -359,7 +360,7 @@ cdef void simplify(list file_list, map[string, Gene*] gene_map, vector[string] g
 
     for i in range(nsamples):
         strandness = conf.strand_specific[file_list[i][0]]
-        junc_file = "%s/%s.juncs" % (conf.outDir.decode('utf-8'), file_list[i][0])
+        junc_file = "%s/%s.juncs" % (conf.outDir, file_list[i][0])
 
         with open(junc_file, 'rb') as fp:
             junc_ids = np.load(fp)['junc_info']
@@ -421,7 +422,7 @@ cdef _core_build(str transcripts, list file_list, object conf, object logger):
                 logger.debug("%s] Connect introns" % gg.get_id())
             gg.connect_introns()
 
-
+    simplify(file_list, gene_map, gid_vec, conf, logger)
     for i in prange(n, nogil=True, num_threads=nthreads):
         gg = gene_map[gid_vec[i]]
         gene_to_splicegraph(gg, db)
