@@ -9,6 +9,14 @@
     <script>
         const legend = document.querySelector('.legend');
         new Lsv().renderFloatingLegend(legend)
+        var url = new URL(location.href);
+        const sg_simplified_view = url.searchParams.get('omit_simplified')
+        if (sg_simplified_view === 'true') $('#sg-simplified-view').prop('checked', true)
+        $('#sg-simplified-view').change(function(){
+            url.searchParams.set('omit_simplified', $('#sg-simplified-view').prop('checked'));
+            window.location.replace(url.href)
+        });
+
     </script>
     {% block analysis_type_script %}{% endblock %}
 {% endblock %}
@@ -115,6 +123,16 @@
                     <div class="junction-filter pure-control-group">
                         <label for="reads-less-than">Reads Less Than</label>
                         <input id="reads-less-than" disabled>
+                    </div>
+                </fieldset>
+            </form>
+        </div>
+        <div class="pure-u-1-3">
+            <form class="splice-graph-form pure-form pure-form-aligned">
+                <fieldset>
+                    <div class="pure-control-group">
+                        <label for="sg-simplified-view">Simplified View</label>
+                        <input id="sg-simplified-view" type="checkbox">
                     </div>
                 </fieldset>
             </form>
