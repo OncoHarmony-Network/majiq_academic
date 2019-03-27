@@ -414,13 +414,12 @@ namespace grimoire {
 
     void Exon::simplify(map<string, int>& junc_tlb, float simpl_percent, Gene* gObj, int strandness){
         float sumall = 0 ;
-        unsigned int njunc = 0 ;
         {
             vector<float> sumj ;
             vector<Junction *> jnc_vec ;
             unsigned int i = 0 ;
             for(const auto &juncIt: ib){
-                if (juncIt->get_denovo_bl())
+                if (!juncIt->get_denovo_bl())
                     continue ;
                 string key = juncIt->get_key(gObj, strandness) ;
                 jnc_vec.push_back(juncIt) ;
@@ -429,22 +428,23 @@ namespace grimoire {
                 sumall += s ;
                 i++ ;
             }
+cerr <<  get_key() << " = " << jnc_vec.size() << "\n" ;
 
-            for(i=0; i<njunc; i++){
+            for(i=0; i<jnc_vec.size(); i++){
                 float x = sumj[i]/sumall ;
-                jnc_vec[i]->set_simpl_fltr(x<simpl_percent) ;
+cerr << jnc_vec[i]->get_key() << " :: " << simpl_percent << "<=" << x << "\n" ;
+                jnc_vec[i]->set_simpl_fltr(x>=simpl_percent) ;
             }
         }
 
 
         sumall = 0 ;
-        njunc = 0 ;
         {
             vector<float> sumj ;
             vector<Junction *> jnc_vec ;
             unsigned int i = 0 ;
             for(const auto &juncIt: ob){
-                if (juncIt->get_denovo_bl())
+                if (!juncIt->get_denovo_bl())
                     continue ;
                 string key = juncIt->get_key(gObj, strandness) ;
                 jnc_vec.push_back(juncIt) ;
@@ -453,10 +453,12 @@ namespace grimoire {
                 sumall += s ;
                 i++ ;
             }
-
-            for(i=0; i<njunc; i++){
+cerr <<  get_key() << " = " << jnc_vec.size() << "\n" ;
+            for(i=0; i<jnc_vec.size(); i++){
                 float x = sumj[i]/sumall ;
-                jnc_vec[i]->set_simpl_fltr(x<simpl_percent) ;
+cerr << jnc_vec[i]->get_key() << " :: " << simpl_percent << "<=" << x << "\n" ;
+
+                jnc_vec[i]->set_simpl_fltr(x>=simpl_percent) ;
             }
         }
 
