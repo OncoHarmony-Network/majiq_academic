@@ -1,9 +1,12 @@
 body {
-    background-color: #c0d8ee;
     font-size: 12px;
     position: absolute;
     height: 100%;
     width: 100%
+}
+
+.bottom {
+    background-color: #c0d8ee;
 }
 
 table {

@@ -1,5 +1,28 @@
 {% extends 'base_summary.html' %}
 
+{% block style %}
+    {{ super() }}
+<style>
+    @media print
+    {
+            html, body{
+                height: 100%;
+            }
+            body{
+                -webkit-print-color-adjust: exact;
+                background-color:white;
+            }
+            body * {
+                visibility: hidden;
+                background-color:white;}
+            .content {background-color:white;}
+            .bottom {background-color:white;}
+            .tools-menu {background-color:white;}
+    }
+</style>
+<style id="printStyle"></style>
+{% endblock %}
+
 {% block heatmap_form %}
     <div class="pure-u-1-3">
         <form class="heatmap-form pure-form pure-form-aligned">
@@ -14,6 +37,7 @@
 {% endblock %}
 
 {% block analysis_type_script %}
+    <script src="https://unpkg.com/jspdf@latest/dist/jspdf.min.js"></script>
     <script>
         document.querySelector('.heatmap-form').addEventListener('change', () => {
             $('.lsv-table').DataTable().ajax.reload();
@@ -234,6 +258,7 @@
                             render: data => {
                                 const heatmap = new HeatMap(data);
                                 const element = document.createElement('svg');
+                                heatmap.lsv_id = lsv_table.dataset.lsvId;
                                 heatmap.plot(element);
                                 return element.outerHTML;
                             }
@@ -264,15 +289,34 @@
                 copy_lsv_modal_dropdown(l, '{{ url_for("copy_lsv") }}/' + encodeURIComponent(lsv_id))
             })
 
+        $('.save-lsv').click(function(){
+            var lsv_id = $(this).closest('.lsv').find('.lsv-table').attr('data-lsv-id');
+            // 670 px is supposed to be the 'safe' value to use for a sheet of letter paper
+            // (as this is using the print preview mode)
+            var zoom = 670.0 / $(this).closest('.lsv').find('.lsv-table').width();
+
+            var printStyle = "@media print {" +
+                `    table[data-lsv-id="${lsv_id}"] *` +
+                "    { visibility: visible !important;}" +
+                `    table[data-lsv-id="${lsv_id}"] {` +
+                "        visibility: visible !important;" +
+                "        position:fixed;" +
+                "        top:0;" +
+                "        left:0;" +
+                "        z-index: 999;" +
+                `        zoom: ${zoom};` +
+                "         }" +
+                "    }";
+            $('#printStyle').text(printStyle)
+
+            window.print()
+
+        })
+
     </script>
 {% endblock %}
 
 {% block bottom %}
-    <svg height="0" width="0">
-        <pattern patternUnits="userSpaceOnUse" id="diagonalHatch" width="4" height="4">
-            <path d="M-1,1 l2,-2 M0,4 l4,-4 M3,5 l2,-2" stroke="grey" stroke-width="1"></path>
-        </pattern>
-    </svg>
 
     <div class="heat-map-tool-tip" style="display: none;">
         <div class="versus"></div>
@@ -308,7 +352,11 @@
                     </div>
                     <div>
                         {{ lsv_id }}
+                        <div class="pure-control-group">
+                            <button type="button" class="pure-button save-lsv">Print / Save LSV</button>
+                        </div>
                     </div>
+
                     <div>
                         <form class="pure-form pure-form-aligned">
                             <fieldset>
