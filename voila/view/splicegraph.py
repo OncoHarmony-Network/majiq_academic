@@ -49,7 +49,7 @@ def nav(gene_id):
 
 @app.route('/splice-graph/<gene_id>', methods=('POST', 'GET'))
 def splice_graph(gene_id):
-    omit_simplified = True if request.args.get('omit_simplified', 'true') else False
+    omit_simplified = True if request.args.get('omit_simplified', 'false') == 'true' else False
     with ViewSpliceGraph(omit_simplified=omit_simplified) as sg:
         exp_names = [sg.experiment_names]
         gd = sg.gene_experiment(gene_id, exp_names)
