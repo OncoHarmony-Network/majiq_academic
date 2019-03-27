@@ -321,7 +321,7 @@ cdef void gene_to_splicegraph(Gene * gne, sqlite3 * db) nogil:
         if jj.get_end() == C_FIRST_LAST_JUNC:
             sg_alt_end(db, gne_id, jj.get_start())
             continue
-        
+
         sg_junction(db, gne_id, jj.get_start(), jj.get_end(), jj.get_annot(), jj.get_simpl_fltr())
 
     for ex_pair in gne.exon_map_:
