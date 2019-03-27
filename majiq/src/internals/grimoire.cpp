@@ -465,8 +465,8 @@ namespace grimoire {
 
 
     void Gene::simplify(map<string, int>& junc_tlb, float simpl_percent, int strandness){
-        for(const auto &ex: ex_vector){
-            ex->simplify(junc_tlb, simpl_percent, self, strandness) ;
+        for(const auto &ex: exon_map_){
+            (ex.second)->simplify(junc_tlb, simpl_percent, this, strandness) ;
         }
 
     }

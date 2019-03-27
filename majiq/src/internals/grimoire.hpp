@@ -99,7 +99,7 @@ namespace grimoire{
             bool simpl_fltr_ ;
             unsigned int denovo_cnt_ ;
             unsigned int flter_cnt_ ;
-            unsigned int bool simpl_cnt_ ;
+            unsigned int simpl_cnt_ ;
             Exon * acceptor_;
             Exon * donor_;
 
@@ -203,6 +203,7 @@ namespace grimoire{
             }
             ~Exon(){}
             bool    is_lsv(bool ss) ;
+            void    simplify(map<string, int>& junc_tlb, float simpl_percent, Gene* gObj, int strandness) ;
             bool    has_out_intron()        { return ob_irptr != nullptr ; }
             string  get_key()       { return(to_string(start_) + "-" + to_string(end_)) ; }
 
@@ -405,7 +406,7 @@ namespace grimoire{
             void    newExonDefinition(int start, int end, Junction *inbound_j, Junction *outbound_j, bool in_db) ;
             void    fill_junc_tlb(map<string, vector<string>> &tlb) ;
             int     detect_lsvs(vector<LSV*> &out_lsvlist);
-            void    simplify(float simpl_percent) ;
+            void    simplify(map<string, int>& junc_tlb, float simpl_percent, int strandness) ;
             void    initialize_junction(string key, int start, int end, float* nreads_ptr) ;
             void    update_junc_flags(int efflen, bool is_last_exp, unsigned int minreads, unsigned int minpos,
                                       unsigned int denovo_thresh, unsigned int min_experiments, bool denovo) ;
