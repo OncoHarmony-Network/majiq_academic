@@ -126,6 +126,8 @@
                                         const row = e.target.closest('g').dataset.row;
                                         const row_idx = parseInt(e.target.closest('g').dataset.rowIdx);
 
+
+
                                         tool_tip.querySelector('.stat-name').textContent = col_idx - row_idx < 0 ? stat_name : 'Delta PSI';
                                         tool_tip.querySelector('.versus').textContent = `${row}/${col}`;
                                         tool_tip.querySelector('.value').textContent = val;
@@ -133,7 +135,8 @@
 
                                         h.closest('tr')
                                             .querySelectorAll('.x-axis text')
-                                            .forEach((l, idx) => {
+                                            .forEach((l) => {
+                                                const idx = parseInt(l.parentNode.getAttribute("data-group-idx"));
                                                 if (![col_idx, row_idx].includes(idx))
                                                     l.style.opacity = '.2';
                                                 else
@@ -226,8 +229,6 @@
                                                             // row ; horizontal boxes
                                                             // first case: intersection point
                                                             if(r.dataset.columnIdx === idx) {
-                                                                console.log(r.dataset.columnIdx)
-                                                                console.log(g.dataset.rowIdx)
                                                                 // literal corner cases
                                                                 if(r.dataset.columnIdx === '0' && g.dataset.rowIdx === '0'){
                                                                     r.style.stroke = outline_color;
