@@ -13,3 +13,7 @@
     height: 80px;
     border: 2pt solid darkgrey;
 }
+
+.lsv-table .heat-map{
+    overflow: visible;
+}
