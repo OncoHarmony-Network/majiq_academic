@@ -283,6 +283,9 @@ class Violin {
                     d3.selectAll(`.lsv-table[data-lsv-id="${lsv_id}"] g[data-group-idx="${current.attr("data-group-idx")}"]`)
                         .attr("data-x", d3.event.x + deltaX)
                         .attr("transform", (d, i, el) => `translate(${d3.event.x + deltaX + parseInt(el[0].getAttribute("x"))})`);
+                    d3.selectAll(`.lsv-table[data-lsv-id="${lsv_id}"] svg[data-group-idx="${current.attr("data-group-idx")}"]`)
+                        .attr("data-x", d3.event.x + deltaX)
+                        .attr("x", (d, i, el) => d3.event.x + deltaX + parseInt(el[0].getAttribute("data-orig-x")));
 
 
                 })
@@ -322,6 +325,10 @@ class Violin {
                         var el2 = $(el1).parent().children()[finalIndex];
                         perform_swap(el1, el2, true)
                     })
+                    $.each($(`.lsv-table[data-lsv-id="${lsv_id}"] text[data-group-idx="${current.attr("data-group-idx")}"]`), function(i, el1){
+                        var el2 = $(el1).parent().children()[finalIndex];
+                        perform_swap(el1, el2)
+                    })
                     current.style('cursor', 'ew-resize');
 
                 });
@@ -346,7 +353,11 @@ class Violin {
 
         // console.log(g.selectAll('.violin'))
         // dragHandler(g.selectAll('.violin'))
-        d3.selectAll(".violin").call(dragHandler);
+        if($.inArray(view_type, ['multipsi', 'het']) !== -1){
+            d3.selectAll(".violin").call(dragHandler);
+        }
+
+
     }
 
     mean_psi(m_psi, junc_idx) {
@@ -429,7 +440,12 @@ class Violin {
         return tmpBins;
     };
 
-    box_plots(svg, data) {
+    box_plots(svg_outer, data) {
+
+        const svg = svg_outer
+                    .append('g')
+                    .attr('class', 'box-plots');
+
         data.forEach((d, i) => {
             if(d.length > 0) {
                 const trans_d = this.translate_lsv_bins(d);
@@ -447,7 +463,11 @@ class Violin {
                     .range([0, this.violin_width + this.violin_pad]);
 
                 const g = svg.append('g')
-                    .attr('transform', `translate(${x(i)})`);
+                    .attr('transform', `translate(${x(i)})`)
+                    .attr("data-orig-x", x(i))
+                    .attr("x", x(i))
+                    .attr("data-x", x(i))
+                    .attr("data-group-idx", i);
 
                 g
                     .selectAll('.h-line')
@@ -529,15 +549,20 @@ class Violin {
                 const el = a[i];
                 if (d.length > 7) {
                     el.setAttribute('x', (this.violin_width + this.violin_pad) * (i + .45));
+                    el.setAttribute("data-x", (this.violin_width + this.violin_pad) * (i + .45));
+                    el.setAttribute("data-orig-x", (this.violin_width + this.violin_pad) * (i + .45));
                     el.setAttribute('y', 0);
                     el.setAttribute('transform', `rotate(90,${a[i].getAttribute('x')},${a[i].getAttribute('y')})`);
                     el.setAttribute('text-anchor', 'left');
 
                 } else {
                     el.setAttribute('x', (this.violin_width + this.violin_pad) * (i + .5));
+                    el.setAttribute("data-x", (this.violin_width + this.violin_pad) * (i + .5));
+                    el.setAttribute("data-orig-x", (this.violin_width + this.violin_pad) * (i + .45));
                     el.setAttribute('y', 0);
                     el.setAttribute('text-anchor', 'middle');
                 }
+                el.setAttribute('data-group-idx', i)
             })
     }
 
@@ -579,6 +604,7 @@ class Violin {
                 const el = a[i];
                 if (d.length > 7) {
                     el.setAttribute('x', (this.violin_width + this.violin_pad) * (i + .45));
+                    el.setAttribute("data-x", (this.violin_width + this.violin_pad) * (i + .45));
                     el.setAttribute("data-orig-x", (this.violin_width + this.violin_pad) * (i + .45));
                     el.setAttribute('y', this.svg_height - this.x_axis_height + 6);
                     el.setAttribute('transform', `rotate(90,${a[i].getAttribute('x')},${a[i].getAttribute('y')})`);
@@ -586,6 +612,7 @@ class Violin {
 
                 } else {
                     el.setAttribute('x', (this.violin_width + this.violin_pad) * (i + .5));
+                    el.setAttribute("data-x", (this.violin_width + this.violin_pad) * (i + .5));
                     el.setAttribute("data-orig-x", (this.violin_width + this.violin_pad) * (i + .5));
                     el.setAttribute('y', this.svg_height - this.x_axis_height + 10);
                     el.setAttribute('text-anchor', 'middle');
@@ -593,45 +620,45 @@ class Violin {
                 el.setAttribute('data-group-idx', i)
             })
 
-        d3.selectAll("image.hide-btn").on('click', function(){
+        if($.inArray(view_type, ['multipsi', 'het']) !== -1) {
+            d3.selectAll("image.hide-btn").on('click', function () {
 
-            var current = d3.select(this);
-            var group = $(this).parent();
-            var lsv_id = self._get_parent(current, "lsv-table").attr('data-lsv-id');
-            // var prev_index = $(d3.selectAll(`.lsv-table[data-lsv-id="${lsv_id}"] path[data-group-idx="${current.attr("data-group-idx")}"]`).node()).index();
-            // var finalIndex = (Math.floor(((d3.event.x + deltaX) + (colWidth/2)) / colWidth)) + prev_index;
-            //
-            // if(finalIndex > self.violin_count - 1){
-            //     finalIndex = self.violin_count - 1;
-            // }else if(finalIndex < 0){
-            //     finalIndex = 0;
-            // }
+                var current = d3.select(this);
+                var group = $(this).parent();
+                var lsv_id = self._get_parent(current, "lsv-table").attr('data-lsv-id');
 
-            var last_shown = 100;
-            $.each($(`.lsv-table[data-lsv-id="${lsv_id}"] path[data-group-idx="${group.attr("data-group-idx")}"]`), function(i, el1){
-                $.each($(el1).parent().children(), function(i, el){
-                    if($(el).is(':visible')){
-                        last_shown = i;
-                    }
+                var last_shown = 100;
+                $.each($(`.lsv-table[data-lsv-id="${lsv_id}"] path[data-group-idx="${group.attr("data-group-idx")}"]`), function (i, el1) {
+                    $.each($(el1).parent().children(), function (i, el) {
+                        if ($(el).is(':visible')) {
+                            last_shown = i;
+                        }
+                    })
+                })
+                $.each($(`.lsv-table[data-lsv-id="${lsv_id}"] path[data-group-idx="${group.attr("data-group-idx")}"]`), function (i, el1) {
+                    var el2 = $(el1).parent().children()[last_shown];
+                    perform_swap(el1, el2, true);
+                    $(el1).hide()
+                })
+                $.each($(`.lsv-table[data-lsv-id="${lsv_id}"] svg[data-group-idx="${group.attr("data-group-idx")}"]`), function (i, el1) {
+                    var el2 = $(el1).parent().children()[last_shown];
+                    perform_swap(el1, el2);
+                    $(el1).hide()
+                })
+                $.each($(`.lsv-table[data-lsv-id="${lsv_id}"] g[data-group-idx="${group.attr("data-group-idx")}"]`), function (i, el1) {
+                    var el2 = $(el1).parent().children()[last_shown];
+                    perform_swap(el1, el2, true);
+                    $(el1).hide()
+                })
+                $.each($(`.lsv-table[data-lsv-id="${lsv_id}"] text[data-group-idx="${group.attr("data-group-idx")}"]`), function (i, el1) {
+                    var el2 = $(el1).parent().children()[last_shown];
+                    perform_swap(el1, el2);
+                    $(el1).hide()
                 })
             })
-            console.log(last_shown)
-            $.each($(`.lsv-table[data-lsv-id="${lsv_id}"] path[data-group-idx="${group.attr("data-group-idx")}"]`), function(i, el1){
-                var el2 = $(el1).parent().children()[last_shown];
-                perform_swap(el1, el2, true);
-                $(el1).hide()
-            })
-            $.each($(`.lsv-table[data-lsv-id="${lsv_id}"] svg[data-group-idx="${group.attr("data-group-idx")}"]`), function(i, el1){
-                var el2 = $(el1).parent().children()[last_shown];
-                perform_swap(el1, el2);
-                $(el1).hide()
-            })
-            $.each($(`.lsv-table[data-lsv-id="${lsv_id}"] g[data-group-idx="${group.attr("data-group-idx")}"]`), function(i, el1){
-                var el2 = $(el1).parent().children()[last_shown];
-                perform_swap(el1, el2, true);
-                $(el1).hide()
-            })
-        })
+        }else{
+            d3.selectAll("image.hide-btn").style('display', 'none');
+        }
 
 
     }

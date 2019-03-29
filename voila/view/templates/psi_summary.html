@@ -3,6 +3,12 @@
 {% block analysis_type_script %}
 
     <script>
+        {% if multi_view %}
+            const view_type = 'multipsi';
+        {% else %}
+            const view_type = 'psi';
+        {% endif %}
+
         json_ajax('{{ url_for("nav", gene_id=gene.id) }}').then(json => {
             document.querySelector('.prev-gene').addEventListener('click', () => {
                 window.location.href = json.prev;
