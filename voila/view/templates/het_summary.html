@@ -1,5 +1,28 @@
 {% extends 'base_summary.html' %}
 
+{% block style %}
+    {{ super() }}
+<style>
+    @media print
+    {
+            html, body{
+                height: 100%;
+            }
+            body{
+                -webkit-print-color-adjust: exact;
+                background-color:white;
+            }
+            body * {
+                visibility: hidden;
+                background-color:white;}
+            .content {background-color:white;}
+            .bottom {background-color:white;}
+            .tools-menu {background-color:white;}
+    }
+</style>
+<style id="printStyle"></style>
+{% endblock %}
+
 {% block heatmap_form %}
     <div class="pure-u-1-3">
         <form class="heatmap-form pure-form pure-form-aligned">
@@ -14,6 +37,7 @@
 {% endblock %}
 
 {% block analysis_type_script %}
+    <script src="https://unpkg.com/jspdf@latest/dist/jspdf.min.js"></script>
     <script>
         document.querySelector('.heatmap-form').addEventListener('change', () => {
             $('.lsv-table').DataTable().ajax.reload();
@@ -88,7 +112,6 @@
             mutations
                 .forEach(m => m.addedNodes.forEach(n => {
 
-
                     n.querySelectorAll('.heat-map')
                         .forEach(h => {
                             const tool_tip = document.querySelector('.heat-map-tool-tip');
@@ -103,6 +126,8 @@
                                         const row = e.target.closest('g').dataset.row;
                                         const row_idx = parseInt(e.target.closest('g').dataset.rowIdx);
 
+
+
                                         tool_tip.querySelector('.stat-name').textContent = col_idx - row_idx < 0 ? stat_name : 'Delta PSI';
                                         tool_tip.querySelector('.versus').textContent = `${row}/${col}`;
                                         tool_tip.querySelector('.value').textContent = val;
@@ -110,9 +135,12 @@
 
                                         h.closest('tr')
                                             .querySelectorAll('.x-axis text')
-                                            .forEach((l, idx) => {
+                                            .forEach((l) => {
+                                                const idx = parseInt(l.parentNode.getAttribute("data-group-idx"));
                                                 if (![col_idx, row_idx].includes(idx))
-                                                    l.style.opacity = '.2'
+                                                    l.style.opacity = '.2';
+                                                else
+                                                    l.style.fontWeight = 900;
                                             });
                                     }
                                 } catch (TypeError) {
@@ -125,7 +153,8 @@
                                 h.closest('tr')
                                     .querySelectorAll('.x-axis text')
                                     .forEach((l, idx) => {
-                                        l.style.opacity = null
+                                        l.style.opacity = null;
+                                        l.style.fontWeight = null;
                                     });
                             };
 
@@ -159,20 +188,81 @@
 
                             v.querySelectorAll('.violin, .swarm-group')
                                 .forEach(h => {
-
+                                    const outline_color = '#61D836';
                                     h.onmouseover = () => {
                                         const idx = h.dataset.groupIdx;
+                                        var cur_row = 0;
                                         h
                                             .closest('tr')
                                             .querySelectorAll('.heat-map rect')
-                                            .forEach(r => r.dataset.columnIdx !== idx ? r.style.opacity = '0.2' : null);
+                                            .forEach((r, i , arr) => {
+                                                const num_cols = Math.sqrt(arr.length);
+
+                                                if(r.dataset.columnIdx === idx){
+                                                    // vertical boxes
+                                                    r.style.stroke = outline_color;
+                                                    r.style.strokeWidth = '2px';
+
+                                                    if(cur_row === (num_cols - 1)){
+                                                        r.style.strokeDasharray = "0, 20, 60";
+                                                    }else if(cur_row === 0) {
+                                                        r.style.strokeDasharray = "40, 20";
+                                                    }else{
+                                                        r.style.strokeDashoffset = "20";
+                                                        r.style.strokeDasharray = "20, 20";
+                                                    }
+                                                    cur_row++;
+
+                                                }else{
+                                                    r.style.opacity = '0.2'
+                                                }
+                                            });
                                         h
                                             .closest('tr')
                                             .querySelectorAll('.heat-map g')
                                             .forEach(g => {
                                                 if (g.dataset.rowIdx === idx) {
                                                     g.querySelectorAll('rect')
-                                                        .forEach(r => r.style.opacity = null)
+                                                        .forEach((r, i, arr) => {
+                                                            const mx_i = String(arr.length - 1);
+                                                            r.style.opacity = null;
+                                                            // row ; horizontal boxes
+                                                            // first case: intersection point
+                                                            if(r.dataset.columnIdx === idx) {
+                                                                // literal corner cases
+                                                                if(r.dataset.columnIdx === '0' && g.dataset.rowIdx === '0'){
+                                                                    r.style.stroke = outline_color;
+                                                                    r.style.strokeWidth = '2px';
+                                                                    r.style.strokeDasharray = "20, 40";
+                                                                }else if(r.dataset.columnIdx === mx_i && g.dataset.rowIdx === mx_i){
+                                                                    r.style.stroke = outline_color;
+                                                                    r.style.strokeWidth = '2px';
+                                                                    r.style.strokeDasharray = "40";
+                                                                    r.style.strokeDashoffset = '60';
+                                                                }else{
+                                                                    r.style.stroke = null;
+                                                                }
+
+                                                            }else{
+                                                                r.style.stroke = outline_color;
+                                                                r.style.strokeWidth = '2px';
+                                                                // left end cap
+                                                                if(r.dataset.columnIdx === '0') {
+                                                                    r.style.strokeDashoffset = null;
+                                                                    r.style.strokeDasharray = "20, 20, 40";
+                                                                // right end cap
+                                                                }else if(String(i) === mx_i) {
+                                                                    r.style.strokeDashoffset = null;
+                                                                    r.style.strokeDasharray = "60, 20";
+                                                                // everything else
+                                                                }else {
+                                                                    r.style.strokeDashoffset = null;
+                                                                    r.style.strokeDasharray = "20, 20";
+                                                                }
+                                                            }
+
+
+                                                        })
                                                 }
                                             })
                                     };
@@ -191,6 +281,7 @@
                 childList: true,
                 subtree: true
             });
+
 
 
         document.querySelectorAll('.lsv-table')
@@ -217,13 +308,13 @@
                             render: data => {
 
                                 const violin = new Violin(data);
-
                                 const element = document.createElement('svg');
                                 element.classList.add('psi-violin-plot');
                                 element.setAttribute('width', '0');
                                 element.setAttribute('height', '0');
 
                                 violin.heterogen(element);
+
 
                                 return element.outerHTML
                             }
@@ -234,6 +325,7 @@
                             render: data => {
                                 const heatmap = new HeatMap(data);
                                 const element = document.createElement('svg');
+                                heatmap.lsv_id = lsv_table.dataset.lsvId;
                                 heatmap.plot(element);
                                 return element.outerHTML;
                             }
@@ -264,15 +356,34 @@
                 copy_lsv_modal_dropdown(l, '{{ url_for("copy_lsv") }}/' + encodeURIComponent(lsv_id))
             })
 
+        $('.save-lsv').click(function(){
+            var lsv_id = $(this).closest('.lsv').find('.lsv-table').attr('data-lsv-id');
+            // 670 px is supposed to be the 'safe' value to use for a sheet of letter paper
+            // (as this is using the print preview mode)
+            var zoom = 670.0 / $(this).closest('.lsv').find('.lsv-table').width();
+
+            var printStyle = "@media print {" +
+                `    table[data-lsv-id="${lsv_id}"] *` +
+                "    { visibility: visible !important;}" +
+                `    table[data-lsv-id="${lsv_id}"] {` +
+                "        visibility: visible !important;" +
+                "        position:fixed;" +
+                "        top:0;" +
+                "        left:0;" +
+                "        z-index: 999;" +
+                `        zoom: ${zoom};` +
+                "         }" +
+                "    }";
+            $('#printStyle').text(printStyle)
+
+            window.print()
+
+        })
+
     </script>
 {% endblock %}
 
 {% block bottom %}
-    <svg height="0" width="0">
-        <pattern patternUnits="userSpaceOnUse" id="diagonalHatch" width="4" height="4">
-            <path d="M-1,1 l2,-2 M0,4 l4,-4 M3,5 l2,-2" stroke="grey" stroke-width="1"></path>
-        </pattern>
-    </svg>
 
     <div class="heat-map-tool-tip" style="display: none;">
         <div class="versus"></div>
@@ -308,7 +419,11 @@
                     </div>
                     <div>
                         {{ lsv_id }}
+                        <div class="pure-control-group">
+                            <button type="button" class="pure-button save-lsv">Print / Save LSV</button>
+                        </div>
                     </div>
+
                     <div>
                         <form class="pure-form pure-form-aligned">
                             <fieldset>

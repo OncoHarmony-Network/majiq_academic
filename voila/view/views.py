@@ -57,6 +57,8 @@ def run_service():
             'workers': ViewConfig().num_web_workers,
         }
         GunicornStandaloneApplication(run_app, options).run()
+    elif web_server == 'flask':
+        run_app.run(host='127.0.0.1', port=port, debug=True)
     else:
         raise Exception("Unsupported web server %s specified" % web_server)
 
@@ -188,7 +190,8 @@ def gene_view(summary_template, gene_id, view_matrix, **kwargs):
         gene.update({
             'start': start,
             'end': end,
-            'href': href
+            'href': href,
+            'overlap': sg.gene_overlap(gene_id)
         })
 
         kwargs['gene'] = gene

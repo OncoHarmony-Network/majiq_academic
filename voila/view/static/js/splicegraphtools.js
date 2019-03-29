@@ -31,7 +31,6 @@ class SpliceGraphTools {
            if($('#splice-graph-menu-btn').hasClass('pure-menu-active')){
                 toggle_splicegraph_opts();
            }
-           event.stopPropagation();
         });
 
         // (and click inside the options does not hide it)

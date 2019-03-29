@@ -93,10 +93,49 @@ class HeatMap {
         const grp_names = this.data.group_names;
         const cell_size = 20;
 
+        // we can not use one pattern in the page outside of the SVG to render the hatch pattern, because the
+        // chrome PDF renderer is not able to pick it up correctly for export.
+        // Therefore, we need to define the pattern in each heatmap SVG. SVG patterns can only be referenced by the ID
+        // attribute, so to comply with HTML standards we need a unique id for each of these pattern elements.
+        // So we are expecting the LSV ID (which should be unique) to be set on each of these instances to use
+        const uniq = this.lsv_id;
+
         d3.select(el)
             .attr('height', cell_size * hm.length).attr('width', cell_size * hm.length)
             .attr('class', 'heat-map')
             .attr('data-stat-name', this.data.stat_name)
+
+            // this section generates the (repetitive) pattern element for the hatch style
+            .append("defs")
+
+            // first block here generates the background pattern on the heatmap from a small raster image
+            // (commented out) , second block uses a path. Both solutions look good in the browser but
+            // look strange in different ways when previewing pdf. Unsure of a good solution so far.
+
+            // .append('pattern')
+            // .attr('patternUnits', "userSpaceOnUse")
+            // .attr('id', 'diagonalHatch-' + uniq)
+            // .attr('width', '20')
+            // .attr('height', '20')
+            // .append('image')
+            // .attr('xlink:href', "/static/img/hatched.png")
+            // .attr('width', '20')
+            // .attr('height', '20')
+
+            .append('pattern')
+            .attr('patternUnits', "userSpaceOnUse")
+            .attr('id', 'diagonalHatch-' + uniq)
+            .attr('width', '4')
+            .attr('height', '4')
+            .append('path')
+            .attr('d', "M-1,1 l2,-2 M0,4 l4,-4 M3,5 l2,-2")
+            .attr('stroke', 'grey')
+            .attr('stroke-width', '1')
+
+            .select(function() { return this.parentNode; })
+            .select(function() { return this.parentNode; })
+            .select(function() { return this.parentNode; })
+
             .selectAll('g')
             .data(hm)
             .enter()
@@ -132,7 +171,8 @@ class HeatMap {
                         return dpsi_color(d);
                 }
                 else
-                    return 'url(#diagonalHatch)'
+                    return `url(#diagonalHatch-${uniq})`
+                    //return '';
             })
     };
 

@@ -1,9 +1,12 @@
 body {
-    background-color: #c0d8ee;
     font-size: 12px;
     position: absolute;
     height: 100%;
     width: 100%
+}
+
+.bottom {
+    background-color: #c0d8ee;
 }
 
 table {
@@ -72,6 +75,11 @@ table {
     font-size: 16px;
     font-weight: bold;
     color: #e75c29
+}
+
+.gene-header .gene-overlap {
+    max-width: 600px;
+    color: #e75263
 }
 
 .splice-graph-container {
