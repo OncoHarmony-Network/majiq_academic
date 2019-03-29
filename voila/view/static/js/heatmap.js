@@ -136,6 +136,14 @@ class HeatMap {
             .select(function() { return this.parentNode; })
             .select(function() { return this.parentNode; })
 
+            // this to draw the diagonal line
+            .append('path')
+            .attr('d', `M 0 0 L ${cell_size * hm.length} ${cell_size * hm.length}`)
+            .attr('stroke', "black")
+            .attr('stroke-width', "1")
+            .select(function() { return this.parentNode; })
+
+
             .selectAll('g')
             .data(hm)
             .enter()
