@@ -251,6 +251,7 @@ namespace grimoire{
             bool    get_ir_flag()           { return ir_flag_ ; }
             string  get_key()               { return(to_string(start_) + "-" + to_string(end_)) ; }
             void    set_markd()             { markd_ = true ; }
+            void    unset_markd()           { markd_ = false ; }
             bool    is_connected()          { return markd_ ; }
             string  get_key(Gene * gObj) ;
             void    calculate_lambda() ;
@@ -258,10 +259,10 @@ namespace grimoire{
 
             void    add_read_rates_buff(int eff_len){
 
-                nxbin_ = (int) ((length()+ eff_len) / eff_len) ;
-                nxbin_mod_ = (length() % eff_len) ;
-                nxbin_off_ = nxbin_mod_ * ( nxbin_+1 ) ;
-                numbins_ = eff_len ;
+                nxbin_      = (int) ((length()+ eff_len) / eff_len) ;
+                nxbin_mod_  = (length() % eff_len) ;
+                nxbin_off_  = nxbin_mod_ * ( nxbin_+1 ) ;
+                numbins_    = eff_len ;
                 read_rates_ = (float*) calloc(numbins_, sizeof(float)) ;
 
 

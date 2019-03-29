@@ -70,7 +70,7 @@ cdef int _output_majiq_file(vector[LSV*] lsvlist, map[string, overGene_vect_t] g
     cdef np.float32_t[:, :] boots
     # cdef np.ndarray[np.float32_t, ndim=2, mode="c"] boots
     cdef np.ndarray junc_ids
-    cdef unsigned int i, j, njlsv = j_tlb.size()
+    cdef int i, j, njlsv = j_tlb.size()
     cdef unsigned int junc_idx, m
     cdef jinfoptr_vec_t jobj_vec
     cdef Gene_vect_t gene_l
@@ -386,15 +386,13 @@ cdef _core_build(str transcripts, list file_list, object conf, object logger):
             with gil:
                 logger.debug("%s] Connect introns" % gg.get_id())
             gg.connect_introns()
-
-        with gil:
-            logger.debug("[%s] Generate TLB" % gg.get_id())
-
         gene_to_splicegraph(gg, db)
         with gil:
             logger.debug("[%s] Detect LSVs" % gg.get_id())
         nlsv = gg.detect_lsvs(out_lsvlist)
 
+
+    logger.debug("Generate TLB")
     fill_junc_tlb(out_lsvlist, lsv_juncs_tlb)
 
     logger.info("%s LSV found" % out_lsvlist.size())

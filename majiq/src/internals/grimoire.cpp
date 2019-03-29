@@ -318,7 +318,9 @@ namespace grimoire {
                     if (ir_ptr->get_end() >= ex_end ) break ;
                     if (ir_start <= ir_ptr->get_end() && ir_end >= ir_ptr->get_start() && ir_ptr->get_ir_flag()){
 
-//if (prev_ex->ob_irptr != nullptr){
+                        if (prev_ex->ob_irptr != nullptr){
+                            (prev_ex->ob_irptr)->unset_markd() ;
+                        }
 //    cerr << "#1 " << ir_start << "-" << ir_end<< " :: " << prev_ex->ob_irptr->get_gene() << ":" << prev_ex->ob_irptr->get_start() << "-" << prev_ex->ob_irptr->get_end()<< "\n" ;
 //    cerr << "#2 " << ir_start << "-" << ir_end<< " :: " << ir_ptr->get_gene() << ":" << ir_ptr->get_start() << "-" << ir_ptr->get_end()<< "\n" ;
 //    }
