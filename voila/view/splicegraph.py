@@ -12,15 +12,22 @@ app.secret_key = os.urandom(16)
 
 @app.route('/')
 def index():
-    with ViewSpliceGraph() as sg:
+    with ViewSpliceGraph(omit_simplified=session.get('omit_simplified', False)) as sg:
         first_gene_id = sorted(sg.gene_ids)[0]
         return redirect(url_for('gene', gene_id=first_gene_id))
 
+@app.route('/toggle-simplified', methods=('POST',))
+def toggle_simplified():
+    if not 'omit_simplified' in session:
+        session['omit_simplified'] = True
+    else:
+        session['omit_simplified'] = not session['omit_simplified']
+    return jsonify({'ok':1})
 
 @app.route('/gene/<gene_id>/')
 @app.route('/gene')
 def gene(gene_id=None):
-    with ViewSpliceGraph() as sg:
+    with ViewSpliceGraph(omit_simplified=session.get('omit_simplified', False)) as sg:
         if gene_id not in sg.gene_ids:
             return redirect(url_for('gene_not_found', gene_id=gene_id))
     return views.gene_view('sg_summary.html', gene_id, ViewSpliceGraph)
@@ -28,7 +35,7 @@ def gene(gene_id=None):
 
 @app.route('/gene-not-found/<gene_id>/')
 def gene_not_found(gene_id):
-    with ViewSpliceGraph() as sg:
+    with ViewSpliceGraph(omit_simplified=session.get('omit_simplified', False)) as sg:
         if gene_id in sg.gene_ids:
             return redirect(url_for('gene', gene_id=gene_id))
 
@@ -37,7 +44,7 @@ def gene_not_found(gene_id):
 
 @app.route('/nav/<gene_id>', methods=('POST',))
 def nav(gene_id):
-    with ViewSpliceGraph() as sg:
+    with ViewSpliceGraph(omit_simplified=session.get('omit_simplified', False)) as sg:
         gene_ids = sorted(sg.gene_ids)
         idx = bisect(gene_ids, gene_id)
 
@@ -49,8 +56,7 @@ def nav(gene_id):
 
 @app.route('/splice-graph/<gene_id>', methods=('POST', 'GET'))
 def splice_graph(gene_id):
-    omit_simplified = True if request.args.get('omit_simplified', 'false') == 'true' else False
-    with ViewSpliceGraph(omit_simplified=omit_simplified) as sg:
+    with ViewSpliceGraph(omit_simplified=session.get('omit_simplified', False)) as sg:
         exp_names = [sg.experiment_names]
         gd = sg.gene_experiment(gene_id, exp_names)
         gd['experiment_names'] = exp_names
@@ -60,7 +66,7 @@ def splice_graph(gene_id):
 
 @app.route('/psi-splice-graphs', methods=('POST',))
 def psi_splice_graphs():
-    with ViewSpliceGraph() as sg:
+    with ViewSpliceGraph(omit_simplified=session.get('omit_simplified', False)) as sg:
         try:
             sg_init = session['psi_init_splice_graphs']
         except KeyError:

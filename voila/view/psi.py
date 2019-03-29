@@ -21,6 +21,14 @@ def index():
     return render_template('psi_index.html', form=form)
 
 
+@app.route('/toggle-simplified', methods=('POST',))
+def toggle_simplified():
+    if not 'omit_simplified' in session:
+        session['omit_simplified'] = True
+    else:
+        session['omit_simplified'] = not session['omit_simplified']
+    return jsonify({'ok':1})
+
 @app.route('/gene/<gene_id>/')
 def gene(gene_id):
     return views.gene_view('psi_summary.html', gene_id, ViewPsi)
@@ -28,7 +36,7 @@ def gene(gene_id):
 
 @app.route('/index-table', methods=('POST',))
 def index_table():
-    with ViewPsi() as v, ViewSpliceGraph() as sg:
+    with ViewPsi() as v, ViewSpliceGraph(omit_simplified=session.get('omit_simplified', False)) as sg:
         grp_name = v.group_names[0]
 
         dt = DataTables(Index.psi(), ('gene_name', 'lsv_id'))
@@ -69,8 +77,7 @@ def nav(gene_id):
 
 @app.route('/splice-graph/<gene_id>', methods=('POST', 'GET'))
 def splice_graph(gene_id):
-    omit_simplified = True if request.args.get('omit_simplified', 'false') == 'true' else False
-    with ViewSpliceGraph(omit_simplified=omit_simplified) as sg, ViewPsi() as v:
+    with ViewSpliceGraph(omit_simplified=session.get('omit_simplified', False)) as sg, ViewPsi() as v:
         exp_names = v.splice_graph_experiment_names
         gd = sg.gene_experiment(gene_id, exp_names)
         gd['experiment_names'] = exp_names
@@ -80,7 +87,7 @@ def splice_graph(gene_id):
 
 @app.route('/summary-table/<gene_id>', methods=('POST',))
 def summary_table(gene_id):
-    with ViewPsi() as v, ViewSpliceGraph() as sg:
+    with ViewPsi() as v, ViewSpliceGraph(omit_simplified=session.get('omit_simplified', False)) as sg:
         grp_name = v.group_names[0]
         index_data = Index.psi(gene_id)
 
@@ -144,7 +151,7 @@ def psi_splice_graphs():
 @app.route('/lsv-data', methods=('POST',))
 @app.route('/lsv-data/<lsv_id>', methods=('POST',))
 def lsv_data(lsv_id):
-    with ViewSpliceGraph() as sg, ViewPsi() as m:
+    with ViewSpliceGraph(omit_simplified=session.get('omit_simplified', False)) as sg, ViewPsi() as m:
         psi = m.lsv(lsv_id)
         ref_exon = psi.reference_exon
         gene_id = psi.gene_id

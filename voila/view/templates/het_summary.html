@@ -27,7 +27,7 @@
             });
         });
 
-        json_ajax('{{ url_for("splice_graph", gene_id=gene.id) }}' + ((sg_simplified_view === 'true') ? "?omit_simplified=true" : '')).then(gene => {
+        json_ajax('{{ url_for("splice_graph", gene_id=gene.id) }}').then(gene => {
             const sgs = new SpliceGraphs('.splice-graph-container', {
                 gene: gene,
                 remove_img: '{{ url_for('static', filename='img/remove.svg')}}',

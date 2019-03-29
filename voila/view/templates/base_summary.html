@@ -9,12 +9,12 @@
     <script>
         const legend = document.querySelector('.legend');
         new Lsv().renderFloatingLegend(legend)
-        var url = new URL(location.href);
-        const sg_simplified_view = url.searchParams.get('omit_simplified')
-        if (sg_simplified_view === 'true') $('#sg-simplified-view').prop('checked', true)
+
+        const sg_simplified_view = "{{ session.get('omit_simplified', False) }}";
+        if (sg_simplified_view === 'True') $('#sg-simplified-view').prop('checked', true);
         $('#sg-simplified-view').change(function(){
-            url.searchParams.set('omit_simplified', $('#sg-simplified-view').prop('checked'));
-            window.location.replace(url.href)
+            json_ajax('/toggle-simplified')
+            .then(() => location.reload());
         });
 
     </script>
