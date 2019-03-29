@@ -412,11 +412,13 @@ namespace grimoire {
     }
 
 
-    void Exon::simplify(map<string, int>& junc_tlb, float simpl_percent, Gene* gObj, int strandness){
+    void Exon::simplify(map<string, int>& junc_tlb, float simpl_percent, Gene* gObj, int strandness,
+                        int denovo_simpl, int db_simple, int ir_simpl){
         float sumall = 0 ;
         {
             vector<float> sumj ;
-            vector<Junction *> jnc_vec ;
+            vector<_Region *> jnc_vec ;
+            vector<int> thrshld_vect;
             unsigned int i = 0 ;
             for(const auto &juncIt: ib){
                 if (!juncIt->get_denovo_bl())
@@ -425,15 +427,25 @@ namespace grimoire {
                 jnc_vec.push_back(juncIt) ;
                 float s = junc_tlb.count(key)>0 ? junc_tlb[key] : 0 ;
                 sumj.push_back(s) ;
+                int min_reads = juncIt->get_annot() ?  db_simple: denovo_simpl ;
+                thrshld_vect.push_back(min_reads) ;
                 sumall += s ;
                 i++ ;
             }
-cerr <<  get_key() << " = " << jnc_vec.size() << "\n" ;
+            if (ib_irptr != nullptr && ib_irptr->get_ir_flag()){
+                const int ir_strt =  ib_irptr->get_start() ;
+                const int ir_end  =  ib_irptr->get_end() ;
+                jnc_vec.push_back(ib_irptr) ;
+                string key = key_format(gObj->get_id(), ir_strt, ir_end, true) ;
+                float s = junc_tlb.count(key)>0 ? junc_tlb[key] : 0 ;
+                thrshld_vect.push_back(ir_simpl) ;
+                sumj.push_back(s) ;
+                sumall += s ;
+            }
 
             for(i=0; i<jnc_vec.size(); i++){
-                float x = sumj[i]/sumall ;
-cerr << jnc_vec[i]->get_key() << " :: " << simpl_percent << "<=" << x << "\n" ;
-                jnc_vec[i]->set_simpl_fltr(x>=simpl_percent) ;
+                float x = (sumall >0) ? sumj[i]/sumall : 0 ;
+                jnc_vec[i]->set_simpl_fltr(x<simpl_percent || sumj[i]< thrshld_vect[i]) ;
             }
         }
 
@@ -441,7 +453,8 @@ cerr << jnc_vec[i]->get_key() << " :: " << simpl_percent << "<=" << x << "\n" ;
         sumall = 0 ;
         {
             vector<float> sumj ;
-            vector<Junction *> jnc_vec ;
+            vector<_Region *> jnc_vec ;
+            vector<int> thrshld_vect;
             unsigned int i = 0 ;
             for(const auto &juncIt: ob){
                 if (!juncIt->get_denovo_bl())
@@ -449,16 +462,26 @@ cerr << jnc_vec[i]->get_key() << " :: " << simpl_percent << "<=" << x << "\n" ;
                 string key = juncIt->get_key(gObj, strandness) ;
                 jnc_vec.push_back(juncIt) ;
                 float s = junc_tlb.count(key)>0 ? junc_tlb[key] : 0 ;
-                sumj.push_back(0) ;
+                sumj.push_back(s) ;
+                int min_reads = juncIt->get_annot() ?  db_simple: denovo_simpl ;
+                thrshld_vect.push_back(min_reads) ;
                 sumall += s ;
                 i++ ;
             }
-cerr <<  get_key() << " = " << jnc_vec.size() << "\n" ;
-            for(i=0; i<jnc_vec.size(); i++){
-                float x = sumj[i]/sumall ;
-cerr << jnc_vec[i]->get_key() << " :: " << simpl_percent << "<=" << x << "\n" ;
+            if (ob_irptr != nullptr && ob_irptr->get_ir_flag()){
+                const int ir_strt =  ob_irptr->get_start() ;
+                const int ir_end  =  ob_irptr->get_end() ;
+                jnc_vec.push_back(ob_irptr) ;
+                string key = key_format(gObj->get_id(), ir_strt, ir_end, true) ;
+                float s = junc_tlb.count(key)>0 ? junc_tlb[key] : 0 ;
+                thrshld_vect.push_back(ir_simpl) ;
+                sumj.push_back(s) ;
+                sumall += s ;
+            }
 
-                jnc_vec[i]->set_simpl_fltr(x>=simpl_percent) ;
+            for(i=0; i<jnc_vec.size(); i++){
+                float x = (sumall >0) ? sumj[i]/sumall : 0 ;
+                jnc_vec[i]->set_simpl_fltr(x<simpl_percent || sumj[i]< thrshld_vect[i]) ;
             }
         }
 
@@ -466,9 +489,10 @@ cerr << jnc_vec[i]->get_key() << " :: " << simpl_percent << "<=" << x << "\n" ;
     }
 
 
-    void Gene::simplify(map<string, int>& junc_tlb, float simpl_percent, int strandness){
+    void Gene::simplify(map<string, int>& junc_tlb, float simpl_percent, int strandness, int denovo_simpl,
+                        int db_simple, int ir_simpl){
         for(const auto &ex: exon_map_){
-            (ex.second)->simplify(junc_tlb, simpl_percent, this, strandness) ;
+            (ex.second)->simplify(junc_tlb, simpl_percent, this, strandness, denovo_simpl, db_simple, ir_simpl) ;
         }
 
     }
@@ -687,7 +711,6 @@ cerr << jnc_vec[i]->get_key() << " :: " << simpl_percent << "<=" << x << "\n" ;
             if(irp->get_end() < start){
                 continue ;
             }
-//cerr << irp->get_start() << "-" << irp->get_end() << " == " << irp->get_ir_flag() << " || " << irp->is_connected() << "\n" ;
             if (irp->get_ir_flag() && irp->is_connected())
                 ir_vec.push_back(irp) ;
         }
@@ -698,7 +721,6 @@ cerr << jnc_vec[i]->get_key() << " :: " << simpl_percent << "<=" << x << "\n" ;
                              vector<Gene*>& oGeneList, bool ir){
 
         Junction * junc = new Junction(start, end, false) ;
-//        Gene * gObj ;
         const string key = junc->get_key() ;
         vector<overGene*>::iterator low = lower_bound (glist[chrom].begin(), glist[chrom].end(),
                                                        start, _Region::func_comp ) ;
