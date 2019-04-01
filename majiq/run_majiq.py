@@ -167,7 +167,7 @@ def main():
     htrgen.add_argument('--keep-tmpfiles', action='store_true', default=False, dest='keep_tmpfiles',
                         help='When this argument is specified, majiq heterogen will not remove the psi files that '
                              'are temporary generated during the execution [Default: %(default)d]')
-    htrgen.add_argument('--nsamples', type=int, default=100, dest="psi_samples",
+    htrgen.add_argument('--psi-samples', type=int, default=100, dest="psi_samples",
                         help='Number of PSI samples to take per LSV junction. If equal to 1, use expected value only. '
                              '[Default: %(default)d]')
     htrgen.add_argument('--vwindow', type=get_vwindow, default=0.0,
