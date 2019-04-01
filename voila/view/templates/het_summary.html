@@ -37,10 +37,8 @@
 {% endblock %}
 
 {% block analysis_type_script %}
-    <script src="https://unpkg.com/jspdf@latest/dist/jspdf.min.js"></script>
     <script>
         const view_type = 'het';
-
         document.querySelector('.heatmap-form').addEventListener('change', () => {
             $('.lsv-table').DataTable().ajax.reload();
         });

@@ -2,6 +2,12 @@
 
 {% block script %}
     <script>
+        {% if multi_view %}
+            const view_type = 'multipsi';
+        {% else %}
+            const view_type = 'psi';
+        {% endif %}
+
         new MutationObserver(mutations => {
             mutations.forEach(m => m.addedNodes
                 .forEach(n => {
