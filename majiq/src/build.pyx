@@ -200,6 +200,51 @@ cdef int _output_majiq_file(vector[LSV*] lsvlist, map[string, overGene_vect_t] g
 
     return nlsv
 
+cdef _parse_junction_file(tuple file, map[string, Gene*]& gene_map, vector[string] gid_vec,
+                          map[string, overGene_vect_t] gene_list, int min_experiments, bint last_in_group,
+                          object conf, object logger):
+    cdef int nthreads = conf.nthreads
+    cdef int strandness = conf.strand_specific[file_list[j][0]]
+    cdef unsigned int minreads = conf.minreads
+    cdef unsigned int denovo_thresh= conf.min_denovo
+    cdef bint denovo = conf.denovo
+    cdef IOBam c_iobam
+    cdef int njunc
+    cdef np.ndarray junc_ids
+    cdef object fp
+    cdef Gene_vect_t gene_l
+    cdef string key, chrom, lsvid, gid, jid
+    cdef int coord1, coord2, sreads, npos
+
+    c_iobam = IOBam(file[1], strandness, 1, nthreads, gene_list)
+
+    with open(file[1], 'rb') as fp:
+        junc_ids = np.load(fp)['junc_info']
+    njunc = junc_ids.shape[0]
+
+    for i in prange(njunc, nogil=True, num_threads=nthreads):
+        gene_l = Gene_vect_t()
+        with gil:
+            jid     = junc_ids[i][0]
+            coord1  = junc_ids[i][1]
+            coord2  = junc_ids[i][2]
+            sreads  = junc_ids[i][3]
+            npos    = junc_ids[i][4]
+            irbool  = junc_ids[i][5]
+            chrom   = jid.split(b':')[0]
+            strand  = <char> jid.split(b':')[1][0]
+
+        c_iobam.parseJuncEntry(gene_list, chrom, strand, coord1, coord2, gene_l, irbool)
+
+        logger.debug("Update flags")
+        for i in prange(n, nogil=True, num_threads=nthreads):
+            gg = gene_map[gid_vec[i]]
+            gg.update_junc_flags(1, last_in_group, minreads, 0, denovo_thresh, min_experiments, denovo)
+
+        logger.info('Done Reading file %s' %(file_list[j][0]))
+        c_iobam.free_iobam()
+
+
 cdef _find_junctions(list file_list, map[string, Gene*]& gene_map, vector[string] gid_vec,
                      map[string, overGene_vect_t] gene_list, object conf, object logger):
 
@@ -236,8 +281,6 @@ cdef _find_junctions(list file_list, map[string, Gene*]& gene_map, vector[string
     cdef pair[string, unsigned int] it
 
 
-
-
     for tmp_str, group_list in conf.tissue_repl.items():
         name = tmp_str.encode('utf-8')
         last_it_grp = group_list[len(group_list) - 1]
@@ -245,53 +288,58 @@ cdef _find_junctions(list file_list, map[string, Gene*]& gene_map, vector[string
         logger.info('Group %s, number of experiments: %s, minexperiments: %s' % (tmp_str,
                                                                                   len(group_list), min_experiments))
         for j in group_list:
-            logger.info('Reading file %s' %(file_list[j][0]))
-            bamfile = ('%s/%s.%s' % (conf.sam_dir, file_list[j][0], SEQ_FILE_FORMAT)).encode('utf-8')
-            strandness = conf.strand_specific[file_list[j][0]]
 
-            with nogil:
-                c_iobam = IOBam(bamfile, strandness, eff_len, nthreads, gene_list)
-                c_iobam.ParseJunctionsFromFile(False)
-                n_junctions = c_iobam.get_njuncs()
-                if ir:
-                    with gil:
-                        logger.info('Detect Intron retention %s' %(file_list[j][0]))
-                    c_iobam.detect_introns(min_ir_cov, min_experiments, ir_numbins, (j==last_it_grp))
-                njunc = c_iobam.get_njuncs()
-                with gil:
-                    logger.debug('Total Junctions and introns %s' %(njunc))
-
-            if n_junctions == 0 or pvalue_limit <= 0:
-                if n_junctions == 0:
-                    logger.warning('No junctions where found on sample %s' % bamfile)
-                fitfunc_r = 0
+            if file_list[j][2]:
+                logger.info('Reading %s file %s' %(JUNC_FILE_FORMAT, file_list[j][0]))
+                pass
             else:
-                fitfunc_r = fit_nb(c_iobam.junc_vec, n_junctions, eff_len, nbdisp=0.1, logger=logger)
+                logger.info('Reading %s file %s' %(SEQ_FILE_FORMAT, file_list[j][0]))
+                bamfile = ('%s' % (file_list[j][1])).encode('utf-8')
+                strandness = conf.strand_specific[file_list[j][0]]
 
-            boots = np.zeros(shape=(njunc, m), dtype=np.float32)
-            with nogil:
-                c_iobam.boostrap_samples(m, k, <np.float32_t *> boots.data, fitfunc_r, pvalue_limit)
-                j_ids  = c_iobam.get_junc_map()
-                jvec   = c_iobam.get_junc_vec_summary()
-                jlimit = c_iobam.get_junc_limit_index()
+                with nogil:
+                    c_iobam = IOBam(bamfile, strandness, eff_len, nthreads, gene_list)
+                    c_iobam.ParseJunctionsFromFile(False)
+                    n_junctions = c_iobam.get_njuncs()
+                    if ir:
+                        with gil:
+                            logger.info('Detect Intron retention %s' %(file_list[j][0]))
+                        c_iobam.detect_introns(min_ir_cov, min_experiments, ir_numbins, (j==last_it_grp))
+                    njunc = c_iobam.get_njuncs()
+                    with gil:
+                        logger.debug('Total Junctions and introns %s' %(njunc))
 
-            logger.debug("Update flags")
-            for i in prange(n, nogil=True, num_threads=nthreads):
-                gg = gene_map[gid_vec[i]]
-                gg.update_junc_flags(eff_len, (j==last_it_grp), minreads, minpos, denovo_thresh, min_experiments, denovo)
+                if n_junctions == 0 or pvalue_limit <= 0:
+                    if n_junctions == 0:
+                        logger.warning('No junctions where found on sample %s' % bamfile)
+                    fitfunc_r = 0
+                else:
+                    fitfunc_r = fit_nb(c_iobam.junc_vec, n_junctions, eff_len, nbdisp=0.1, logger=logger)
 
-            logger.debug("Done Update flags")
-            junc_ids = [0] * njunc
-            for it in j_ids:
-                tmp_str = it.first.decode('utf-8').split(':')[2]
-                start, end = (int(xx) for xx in tmp_str.split('-'))
-                junc_ids[it.second] = (it.first.decode('utf-8'), start, end, jvec[it.second], jvec[it.second + njunc],
-                                       int(it.second>= jlimit))
+                boots = np.zeros(shape=(njunc, m), dtype=np.float32)
+                with nogil:
+                    c_iobam.boostrap_samples(m, k, <np.float32_t *> boots.data, fitfunc_r, pvalue_limit)
+                    j_ids  = c_iobam.get_junc_map()
+                    jvec   = c_iobam.get_junc_vec_summary()
+                    jlimit = c_iobam.get_junc_limit_index()
 
-            logger.info('Done Reading file %s' %(file_list[j][0]))
-            _store_junc_file(boots, junc_ids, file_list[j][0], conf.outDir)
-            c_iobam.free_iobam()
-            del boots
+                logger.debug("Update flags")
+                for i in prange(n, nogil=True, num_threads=nthreads):
+                    gg = gene_map[gid_vec[i]]
+                    gg.update_junc_flags(eff_len, (j==last_it_grp), minreads, minpos, denovo_thresh, min_experiments, denovo)
+
+                logger.debug("Done Update flags")
+                junc_ids = [0] * njunc
+                for it in j_ids:
+                    tmp_str = it.first.decode('utf-8').split(':')[2]
+                    start, end = (int(xx) for xx in tmp_str.split('-'))
+                    junc_ids[it.second] = (it.first.decode('utf-8'), start, end, jvec[it.second], jvec[it.second + njunc],
+                                           int(it.second>= jlimit))
+
+                logger.info('Done Reading file %s' %(file_list[j][0]))
+                _store_junc_file(boots, junc_ids, file_list[j][0], conf.outDir)
+                c_iobam.free_iobam()
+                del boots
 
 cdef init_splicegraph(string filename, object conf):
 
@@ -374,6 +422,8 @@ cdef _core_build(str transcripts, list file_list, object conf, object logger):
         mem_allocated = int(psutil.Process().memory_info().rss)/(1024**2)
         logger.info("PRE LOOP Memory used %.2f MB" % mem_allocated)
 
+    if conf.juncfiles_only:
+        return
     logger.info("Detecting LSVs ngenes: %s " % n)
     open_db(sg_filename, &db)
 

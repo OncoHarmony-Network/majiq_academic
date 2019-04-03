@@ -96,7 +96,7 @@ namespace io_bam {
     }
 
 
-    void IOBam::add_junction(string chrom, char strand, int start, int end, int read_pos, int first_offpos) {
+    void IOBam::add_junction(string chrom, char strand, int start, int end, int read_pos, int first_offpos, int sreads) {
 
         const unsigned int offset = (first_offpos == -1) ? (start - (read_pos+ MIN_BP_OVERLAP)) : first_offpos ;
         if (offset >= eff_len_) return ;
@@ -119,7 +119,7 @@ namespace io_bam {
             find_junction_genes(chrom, strand, start, end, v) ;
         }
         #pragma omp atomic
-            junc_vec[junc_map[key]][offset] += 1 ;
+            junc_vec[junc_map[key]][offset] += sreads ;
 
         return ;
     }
@@ -151,7 +151,7 @@ namespace io_bam {
                     first_offpos  = (first_offpos == -1) ? (j_start - (read_pos+ MIN_BP_OVERLAP)) : first_offpos ;
 
                     try {
-                        add_junction(chrom, _get_strand(read), j_start, j_end, read_pos, first_offpos) ;
+                        add_junction(chrom, _get_strand(read), j_start, j_end, read_pos, first_offpos, 1) ;
                     } catch (const std::logic_error& e) {
                         cout << "ERROR" << e.what() << '\n';
                     }
@@ -219,7 +219,7 @@ namespace io_bam {
 
 
                     #pragma omp critical
-                        intron->add_read(read_pos, eff_len_) ;
+                        intron->add_read(read_pos, eff_len_, 1) ;
                 }
             }
         }
@@ -385,6 +385,41 @@ namespace io_bam {
         return res ;
     }
 
+
+    void IOBam::parseJuncEntry(map<string, vector<overGene*>> & glist, string chrom, char strand, int start, int end,
+                               bint annot, int sreads, vector<Gene*>& oGeneList, bool ir, int minexp){
+
+        vector<overGene*>::iterator low = lower_bound (glist[chrom].begin(), glist[chrom].end(),
+                                                       start, _Region::func_comp ) ;
+        if (low == glist[chrom].end())
+            return ;
+        if (ir){
+            for (const auto &gObj: (*low)->glist){
+                Intron * irptr = new Intron(start, end, annot, gObj) ;
+                irptr->add_read_rates_buff(1) ;
+                irptr->add_read(0, 1, sreads) ;
+                const string key = irptr->get_key(gObj) ;
+                #pragma omp critical
+                {
+                    if (junc_map.count(key) == 0) {
+                        junc_map[key] = junc_vec.size() ;
+                        junc_vec.push_back(intrn_it->read_rates_) ;
+                        (intrn_it->get_gene())->add_intron(irptr, 0, minexp, 1, reset) ;
+                    }
+                }
+
+            }
+        } else {
+            for (const auto &gObj: (*low)->glist){
+                const bool stbool = (strand == '.' || strand == gObj->get_strand()) ;
+                add_junction(chrom, strand, start, end, 0, 0, sreads) ;
+            }
+        }
+        return ;
+
+    }
+
+
     void IOBam::detect_introns(float min_intron_cov, unsigned int min_experiments, float min_bins, bool reset){
         for (const auto & it: glist_){
             if (intronVec_.count(it.first)==0){
@@ -401,11 +436,6 @@ namespace io_bam {
             }
             sort(intronVec_[it.first].begin(), intronVec_[it.first].end(), Intron::islowerRegion<Intron>) ;
 
-//cerr << "INTRON: " << it.first << " :: " ;
-//for (const auto &kk: intronVec_[it.first] ){
-//    cerr << kk->get_start() << "-" << kk->get_end() << "\n" ;
-//}
-//cerr << "\n" ;
         }
         ParseJunctionsFromFile(true) ;
         for (const auto & it: intronVec_){

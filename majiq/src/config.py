@@ -3,6 +3,7 @@ import configparser
 from scipy import interpolate
 import numpy as np
 from majiq.src.constants import *
+import warnings
 
 
 class SingletonMetaClass(type):
@@ -40,7 +41,7 @@ class Config(object):
         def _set_strandness(self, experiment_name, val):
             self.strand_specific[experiment_name] = val
 
-        def __init__(self, filename, params, only_db=False):
+        def __init__(self, filename, params):
 
             self.__dict__.update(params.__dict__)
 
@@ -56,7 +57,21 @@ class Config(object):
             count = 0
             if not os.path.exists(self.outDir):
                 os.makedirs(self.outDir)
-            self.sam_dir = general['samdir']
+
+
+            try:
+                sam_dirlist = general['samdir'].split(',')
+            except KeyError:
+                sam_dirlist  = ['.']
+                warnings.warn('samdir parameter not found in config file, using "./" instead')
+
+            try:
+                junc_dirlist = general['juncdir'].split(',')
+            except KeyError:
+                junc_dirlist = ['.']
+                warnings.warn('juncdir parameter not found in config file, using "./" instead')
+
+
             self.genome = general['genome']
             self.readLen = int(general['readlen'])
 
@@ -96,16 +111,31 @@ class Config(object):
                     mexp = self.min_exp
                 self.min_experiments[name] = int(min(len(ind_list), mexp))
                 for exp_idx in ind_list:
-                    exp = self.exp_list[exp_idx]
-                # for exp_idx, exp in enumerate(self.exp_list):
-                    samfile = "%s/%s.%s" % (self.sam_dir, exp, SEQ_FILE_FORMAT)
-                    if not os.path.exists(samfile):
-                        raise RuntimeError("Skipping %s.... not found" % samfile)
-                    baifile = "%s/%s.%s" % (self.sam_dir, exp, SEQ_INDEX_FILE_FORMAT)
-                    if not os.path.exists(baifile):
-                        raise RuntimeError("Skipping %s.... not found ( index file for bam file is required)" % baifile)
-                    juncfile = "%s/%s.%s" % (self.sam_dir, exp, JUNC_FILE_FORMAT)
-                    self.sam_list.append((exp, os.path.exists(juncfile), name))
+                    found = False
+
+                    if self.aggregate:
+                        for j_dir in junc_dirlist:
+                            juncfile = "%s/%s.%s" % (j_dir, self.exp_list[exp_idx], JUNC_FILE_FORMAT)
+                            if os.path.isfile(juncfile):
+                                found = True
+                                self.sam_list.append((self.exp_list[exp_idx], juncfile, True))
+                                break
+                    if found:
+                        break
+                    for s_dir in sam_dirlist:
+                        bamfile = "%s/%s.%s" % (s_dir, self.exp_list[exp_idx], SEQ_FILE_FORMAT)
+                        baifile = "%s/%s.%s" % (s_dir, self.exp_list[exp_idx], SEQ_INDEX_FILE_FORMAT)
+
+                        if os.path.isfile(bamfile) and os.path.isfile(baifile):
+                            found = True
+                            self.sam_list.append((self.exp_list[exp_idx], bamfile, False))
+                            break
+
+                    if not found:
+                        raise RuntimeError("Error %s (and %s) or %s not "
+                                           "found for file %s in any of "
+                                           "the paths" % (SEQ_FILE_FORMAT, SEQ_INDEX_FILE_FORMAT, JUNC_FILE_FORMAT,
+                                                          self.exp_list[exp_idx]))
 
             opt_dict = {'strandness': self._set_strandness}
             strandness = {'forward': FWD_STRANDED, 'reverse': REV_STRANDED, 'none': UNSTRANDED}

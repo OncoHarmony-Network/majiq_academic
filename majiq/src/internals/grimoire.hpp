@@ -258,17 +258,25 @@ namespace grimoire{
             bool    is_reliable(float min_bins, int eff_len) ;
 
             void    add_read_rates_buff(int eff_len){
-
                 nxbin_      = (int) ((length()+ eff_len) / eff_len) ;
                 nxbin_mod_  = (length() % eff_len) ;
                 nxbin_off_  = nxbin_mod_ * ( nxbin_+1 ) ;
                 numbins_    = eff_len ;
                 read_rates_ = (float*) calloc(numbins_, sizeof(float)) ;
-
-
             }
 
-            void  add_read(int read_pos, int eff_len){
+//            void    add_read_sum_as_rates(int s){
+//                read_rates_   = (float*) calloc(1, sizeof(float)) ;
+//                read_rates[0] = s ;
+//                nxbin_      = (int) ((length()+ eff_len)  ;
+//                nxbin_mod_  = (length() % eff_len) ;
+//                nxbin_off_  = nxbin_mod_ * ( nxbin_+1 ) ;
+//                numbins_    = 1 ;
+//
+//
+//            }
+
+            void  add_read(int read_pos, int eff_len, int s){
                 int st = get_start() - eff_len ;
                 if (read_rates_ == nullptr){
                     add_read_rates_buff(eff_len) ;
@@ -284,7 +292,7 @@ namespace grimoire{
 //" eff_len = "<< eff_len << " nxbin_off_ = "<< nxbin_off_<< " nxbin_ = "<< nxbin_<< "\n" ;
 
 
-                read_rates_[offset] += 1 ;
+                read_rates_[offset] += s ;
 
             }
 

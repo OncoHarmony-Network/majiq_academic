@@ -89,6 +89,12 @@ def main():
     buildparser.add_argument('--disable-denovo', dest="denovo", action='store_false', default=True,
                              help='Disables denovo detection of junction, splicesites and exons. This will speedup the '
                                   'execution but reduce the number of LSVs detected. [Default: denovo enabled]')
+    buildparser.add_argument('--junc-files-only', dest="juncfiles_only", action='store_true', default=False,
+                             help='Only extract junction information from BAMs and exports .junc file'
+                                  ' [Default: ir enabled]')
+    buildparser.add_argument('--aggregate', dest="aggregate", action='store_true', default=False,
+                             help='Uses previously generated junc files to generate a ground truth '
+                                  'and unified splicegraph. Default: %(default)s]')
 
     buildparser.add_argument('--min-intronic-cov', default=0.01, type=float,
                              help='Minimum number of reads on average in intronic sites, only for intron retention.'
@@ -184,10 +190,6 @@ def main():
                         help='For each one of the statistical tests, we combine all pvalue per psi sample by '
                              'percentile calculation. This argument allows the user define with percentile they '
                              'want to use [Default: %(default)d]')
-
-
-
-
 
     #calcpsi flags
     subparsers = parser.add_subparsers(help='')

@@ -270,7 +270,7 @@ namespace grimoire {
 
     void Gene::add_intron(Intron * inIR_ptr, float min_coverage, unsigned int min_exps, float min_bins, bool reset){
         bool found = false ;
-         for (const auto &ir: intron_vec_){
+        for (const auto &ir: intron_vec_){
             if (ir->get_end() < inIR_ptr->get_start() || ir->get_start() > inIR_ptr->get_end()) continue ;
             if (ir->get_end() >= inIR_ptr->get_start() && ir->get_start() <= inIR_ptr->get_end()){
                 ir->overlaping_intron(inIR_ptr) ;

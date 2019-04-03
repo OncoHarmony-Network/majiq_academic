@@ -74,7 +74,7 @@ namespace io_bam{
             }
 
             int parse_read_into_junctions(bam_hdr_t *header, bam1_t *read) ;
-            void add_junction(string chrom, char strand, int start, int end, int read_pos, int first_offpos) ;
+            void add_junction(string chrom, char strand, int start, int end, int read_pos, int first_offpos, int sreads) ;
             int* get_junc_vec_summary() ;
             unsigned int get_junc_limit_index() { return junc_limit_index_ ; };
             int normalize_stacks(vector<float> vec, float sreads, int npos, float fitfunc_r, float pvalue_limit) ;
@@ -85,13 +85,12 @@ namespace io_bam{
             char _get_strand(bam1_t * read) ;
             void set_junction_strand(bam1_t  *aln, Junction& j1) ;
             void find_junction_genes(string chrom, char strand, int start, int end, float * nreads_ptr ) ;
-            int ParseJunctionsFromFile(bool ir_func) ;
+            int  ParseJunctionsFromFile(bool ir_func) ;
+            void parseJuncEntry(map<string, vector<overGene*>> & glist, string chrom, char strand, int start, int end,
+                                int sreads, vector<Gene*>& oGeneList, bool ir) ;
             inline void update_junction_read(string key, int read_start, int count) ;
-//            inline float* new_junc_values(const string key) ;
             inline bool new_junc_values(const string key) ;
-
             int parse_read_for_ir(bam_hdr_t *header, bam1_t *read) ;
-
             int get_njuncs() ;
             const map<string, unsigned int> &get_junc_map() ;
             const vector<Junction *>& get_junc_vec() ;
