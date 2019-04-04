@@ -645,10 +645,10 @@ class Violin {
         // when applicable
 
         const cur_index = $(main_svg.node()).find('[data-checked="true"]').parent().index();
+        main_svg.select('.overbars').remove();
         if(cur_index === -1){
             return;
         }
-        main_svg.select('.overbars').remove();
 
         // get violin plots center lines
         var x_vals = [];
