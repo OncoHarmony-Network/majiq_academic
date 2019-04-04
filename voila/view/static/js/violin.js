@@ -615,11 +615,11 @@ class Violin {
                 return null;
             }
             //comp_val = Math.log(comp_val);
-            comp_val = comp_val ** 10;
+            comp_val = 10 ** comp_val;
             //console.log(comp_val)
 
             if(comp_val > 0.05){
-                return "nc"
+                return null
             }else{
                 if(comp_val > 0.001){
                     return "*"
