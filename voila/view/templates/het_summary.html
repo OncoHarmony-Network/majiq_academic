@@ -111,7 +111,9 @@
         new MutationObserver(mutations => {
             mutations
                 .forEach(m => m.addedNodes.forEach(n => {
-
+                    if(n.nodeType === 3){
+                        return;
+                    }
                     n.querySelectorAll('.heat-map')
                         .forEach(h => {
                             const tool_tip = document.querySelector('.heat-map-tool-tip');
@@ -306,7 +308,6 @@
                             targets: 1,
                             sortable: false,
                             render: data => {
-
                                 const violin = new Violin(data);
                                 const element = document.createElement('svg');
                                 element.classList.add('psi-violin-plot');
@@ -314,6 +315,7 @@
                                 element.setAttribute('height', '0');
 
                                 violin.heterogen(element);
+
 
 
                                 return element.outerHTML

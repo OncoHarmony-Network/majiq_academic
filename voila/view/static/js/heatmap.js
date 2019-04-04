@@ -196,11 +196,11 @@ class HeatMap {
             .select(d3_parent)
             .append('text').style('font-size', '10px').text(this.data.stat_name).attr('text-anchor', 'middle').attr('fill', 'black').attr('x', 30).attr('y', "-2")
             .select(d3_parent)
-            .append('text').style('font-size', '8px').text("1E-40").attr('text-anchor', 'middle').attr('fill', 'black').attr('x', 0).attr('y', 25)
+            .append('text').style('font-size', '8px').text("1.0").attr('text-anchor', 'middle').attr('fill', 'black').attr('x', 0).attr('y', 25)
             .select(d3_parent)
             .append('text').style('font-size', '8px').text("0.05").attr('text-anchor', 'middle').attr('fill', 'black').attr('x', 60 / 2).attr('y', 25)
             .select(d3_parent)
-            .append('text').style('font-size', '8px').text("1.0").attr('text-anchor', 'middle').attr('fill', 'black').attr('x', 60).attr('y', 25)
+            .append('text').style('font-size', '8px').text("1E-40").attr('text-anchor', 'middle').attr('fill', 'black').attr('x', 60).attr('y', 25)
             .select(d3_parent)
             .select(d3_parent)
 

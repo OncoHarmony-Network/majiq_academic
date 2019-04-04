@@ -249,6 +249,7 @@ def summary_table():
                     'junction_idx': junc_idx,
                     'mean_psi': mean_psi,
                     'mu_psi': mu_psi,
+                    'heatmap': heatmap,
                 },
                 {
                     'heatmap': heatmap,
