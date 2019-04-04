@@ -380,7 +380,7 @@ namespace grimoire{
             string  get_name()      { return name_ ;}
 
             void    create_annot_intron(int start_ir, int end_ir){
-                Intron * ir = new Intron(start_ir, end_ir, true, this) ;
+                Intron * ir = new Intron(start_ir+1, end_ir-1, true, this) ;
                 intron_vec_.push_back(ir) ;
             }
 

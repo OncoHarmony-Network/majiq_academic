@@ -237,11 +237,11 @@ namespace grimoire {
 
 
             if ((jnc.second)->get_start() > 0 && (jnc.second)->get_donor()->get_start()>0) {
-                Ssite s = {(jnc.second)->get_start(), true, jnc.second} ;
+                Ssite s = {(jnc.second)->get_start()+1, true, jnc.second} ;
                 ss_vec.push_back(s) ;
             }
             if ((jnc.second)->get_end() > 0 && (jnc.second)->get_acceptor()->get_end()>0) {
-                Ssite s = {(jnc.second)->get_end(), false, jnc.second} ;
+                Ssite s = {(jnc.second)->get_end()-1, false, jnc.second} ;
                 ss_vec.push_back(s) ;
             }
         }

@@ -387,7 +387,7 @@ namespace io_bam {
 
 
     void IOBam::parseJuncEntry(map<string, vector<overGene*>> & glist, string chrom, char strand, int start, int end,
-                               bint annot, int sreads, vector<Gene*>& oGeneList, bool ir, int minexp){
+                               int sreads, vector<Gene*>& oGeneList, bool ir, int minexp, bool reset){
 
         vector<overGene*>::iterator low = lower_bound (glist[chrom].begin(), glist[chrom].end(),
                                                        start, _Region::func_comp ) ;
@@ -395,7 +395,7 @@ namespace io_bam {
             return ;
         if (ir){
             for (const auto &gObj: (*low)->glist){
-                Intron * irptr = new Intron(start, end, annot, gObj) ;
+                Intron * irptr = new Intron(start, end, false, gObj) ;
                 irptr->add_read_rates_buff(1) ;
                 irptr->add_read(0, 1, sreads) ;
                 const string key = irptr->get_key(gObj) ;
@@ -403,8 +403,8 @@ namespace io_bam {
                 {
                     if (junc_map.count(key) == 0) {
                         junc_map[key] = junc_vec.size() ;
-                        junc_vec.push_back(intrn_it->read_rates_) ;
-                        (intrn_it->get_gene())->add_intron(irptr, 0, minexp, 1, reset) ;
+                        junc_vec.push_back(irptr->read_rates_) ;
+                        (irptr->get_gene())->add_intron(irptr, 0, minexp, 1, reset) ;
                     }
                 }
 

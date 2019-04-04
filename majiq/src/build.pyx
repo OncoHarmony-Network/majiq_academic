@@ -200,49 +200,54 @@ cdef int _output_majiq_file(vector[LSV*] lsvlist, map[string, overGene_vect_t] g
 
     return nlsv
 
-cdef _parse_junction_file(tuple file, map[string, Gene*]& gene_map, vector[string] gid_vec,
-                          map[string, overGene_vect_t] gene_list, int min_experiments, bint last_in_group,
+cdef _parse_junction_file(tuple filetp, map[string, Gene*]& gene_map, vector[string] gid_vec,
+                          map[string, overGene_vect_t] gene_list, int min_experiments, bint last_in_group, bint reset,
                           object conf, object logger):
+
     cdef int nthreads = conf.nthreads
-    cdef int strandness = conf.strand_specific[file_list[j][0]]
+    cdef int strandness = conf.strand_specific[filetp[0]]
     cdef unsigned int minreads = conf.minreads
     cdef unsigned int denovo_thresh= conf.min_denovo
     cdef bint denovo = conf.denovo
     cdef IOBam c_iobam
-    cdef int njunc
+    cdef int njunc, i, j
     cdef np.ndarray junc_ids
     cdef object fp
     cdef Gene_vect_t gene_l
     cdef string key, chrom, lsvid, gid, jid
-    cdef int coord1, coord2, sreads, npos
+    # cdef int coord1, coord2, sreads, npos, strand
+    cdef unsigned int irbool, coord1, coord2, sreads, npos
+    cdef int n = gene_map.size()
+    cdef char strand
 
-    c_iobam = IOBam(file[1], strandness, 1, nthreads, gene_list)
+    c_iobam = IOBam(filetp[1], strandness, 1, nthreads, gene_list)
 
-    with open(file[1], 'rb') as fp:
+    with open(filetp[1], 'rb') as fp:
         junc_ids = np.load(fp)['junc_info']
     njunc = junc_ids.shape[0]
 
-    for i in prange(njunc, nogil=True, num_threads=nthreads):
+    for j in prange(njunc, nogil=True, num_threads=nthreads):
         gene_l = Gene_vect_t()
         with gil:
-            jid     = junc_ids[i][0]
-            coord1  = junc_ids[i][1]
-            coord2  = junc_ids[i][2]
-            sreads  = junc_ids[i][3]
-            npos    = junc_ids[i][4]
-            irbool  = junc_ids[i][5]
+            jid     = junc_ids[j][0]
+            coord1  = junc_ids[j][1]
+            coord2  = junc_ids[j][2]
+            sreads  = junc_ids[j][3]
+            npos    = junc_ids[j][4]
+            irbool  = junc_ids[j][5]
             chrom   = jid.split(b':')[0]
             strand  = <char> jid.split(b':')[1][0]
 
-        c_iobam.parseJuncEntry(gene_list, chrom, strand, coord1, coord2, gene_l, irbool)
+        c_iobam.parseJuncEntry(gene_list, chrom, strand, coord1, coord2, sreads, gene_l, irbool, min_experiments, reset)
 
-        logger.debug("Update flags")
-        for i in prange(n, nogil=True, num_threads=nthreads):
-            gg = gene_map[gid_vec[i]]
-            gg.update_junc_flags(1, last_in_group, minreads, 0, denovo_thresh, min_experiments, denovo)
 
-        logger.info('Done Reading file %s' %(file_list[j][0]))
-        c_iobam.free_iobam()
+    for i in prange(n, nogil=True, num_threads=nthreads):
+        gg = gene_map[gid_vec[i]]
+        gg.update_junc_flags(1, last_in_group, minreads, 0, denovo_thresh, min_experiments, denovo)
+
+    c_iobam.free_iobam()
+    logger.info('Done Reading file %s' %(filetp[0]))
+
 
 
 cdef _find_junctions(list file_list, map[string, Gene*]& gene_map, vector[string] gid_vec,
