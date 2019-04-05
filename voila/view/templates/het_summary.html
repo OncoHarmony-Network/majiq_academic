@@ -24,22 +24,44 @@
 {% endblock %}
 
 {% block heatmap_form %}
-        <form class="heatmap-form pure-form pure-form-aligned" style="float: right; margin-right: 10px;">
-            {% for stat_name in stat_names %}
-                <label for="{{ stat_name }}" class="pure-radio">
-                    <input id="{{ stat_name }}" type="radio" name="stat-name" value="{{ stat_name }}"
-                           {% if loop.first %}checked{% endif %}>
-                    {{ stat_name }}</label>
-            {% endfor %}
-        </form>
+
+
+    <form class="heatmap-form pure-form pure-form-aligned" style="float: right; margin-right: 10px;">
+    <div id="heatmap-stat-choices">
+        {% for stat_name in stat_names %}
+            <label for="{{ stat_name }}" class="pure-radio">
+                <input id="{{ stat_name }}" type="radio" name="stat-name" value="{{ stat_name }}"
+                       {% if loop.first %}checked{% endif %}>
+                {{ stat_name }}</label>
+        {% endfor %}
+    </div>
+    </form>
+
+    <form class="heatmap-scale-form pure-form pure-form-stacked" style="float: right; margin-right: 10px;">
+
+        <label for="dPSI-cutoff">dPSI Scale Cutoff</label>
+        <input id="dPSI-cutoff" type="number" min="0" class="pure-input" style="width:110px;" value="0.5">
+
+    </form>
+
+
+
+
+
 {% endblock %}
 
 {% block analysis_type_script %}
+    <script src="{{ url_for('static', filename='js/lib/jquery.ba-throttle-debounce.min.js') }}"></script>
     <script>
         const view_type = 'het';
-        document.querySelector('.heatmap-form').addEventListener('change', () => {
+        document.querySelector('#heatmap-stat-choices').addEventListener('change', () => {
             $('.lsv-table').DataTable().ajax.reload();
         });
+
+        $(".heatmap-scale-form input").on('input', ($.debounce(750, function(e) {
+            const dPSI_max = parseFloat($('#dPSI-cutoff').val());
+            HeatMap.change_axis_scale({'max':dPSI_max, 'min':-1*dPSI_max}, {'max':0, 'min':0});
+        })));
 
         json_ajax('{{ url_for("nav", gene_id=gene.id) }}').then(json => {
             document.querySelector('.prev-gene').addEventListener('click', () => {
@@ -333,6 +355,9 @@
                     ]
                 })
             });
+
+
+
 
         $('#results tbody')
             .on('click', '.excl-incl-rect, .dpsi-violin', event => {

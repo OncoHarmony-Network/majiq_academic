@@ -1,12 +1,46 @@
-const stat_color = d3.scaleLog()
-    .domain([1e-40, 0.05, 1])
-    .range(['blue', 'lightblue', 'white'])
-    .interpolate(d3.interpolateCubehelixLong);
 
-const dpsi_color = d3.scaleLinear()
-    .domain([0, 1])
-    .range(['white', 'brown'])
-    .interpolate(d3.interpolateCubehelixLong);
+
+const stat_color = function(val){
+    const stopMin = 'blue';
+    const stopMax = 'white';
+    const rangeMin = 1E-40;
+    const rangeMax = 1;
+    if(val < rangeMin){
+        return stopMin;
+    }else if(val > rangeMax){
+        return stopMax;
+    }else{
+        return d3.scaleLog()
+        .domain([rangeMin, 0.05, rangeMax])
+        .range([stopMin, 'lightblue', stopMax])
+        .interpolate(d3.interpolateCubehelixLong)(val);
+    }
+};
+
+const calc_dpsi_color = function(val, rangeMin, rangeMax){
+    const stopMin = 'white';
+    const stopMax = 'brown';
+    if(val < rangeMin){
+        return stopMin;
+    }else if(val > rangeMax){
+        return stopMax;
+    }else{
+        return d3.scaleLinear()
+        .domain([rangeMin, rangeMax])
+        .range([stopMin, stopMax])
+        .interpolate(d3.interpolateCubehelixLong)(val);
+    }
+};
+
+const dpsi_color = function(val, rangeMin, rangeMax){
+    if(rangeMin === undefined){
+        rangeMin = -0.5;
+    }
+    if(rangeMax === undefined){
+        rangeMax = 0.5;
+    }
+    return calc_dpsi_color(val, rangeMin, rangeMax);
+};
 
 const HMData = function (value, stat_name) {
     this.value = value === undefined ? -1 : value;
@@ -41,6 +75,32 @@ class HeatMap {
     constructor(data) {
         this.data = data;
         this.color = new Colors();
+    }
+
+    static change_axis_scale(dPSI, stat) {
+        // static method
+        // modifies all existing heat maps to use a new scale for their coloring
+        // also changes the scale in the legends to reflect what is shown
+
+        $('.heat-map-outer').each(function(){
+            const dPSI_legend = $(this).find('.hm-upper-legend');
+            dPSI_legend.find('text').eq(1).text(dPSI['min']);
+            dPSI_legend.find('text').eq(3).text(dPSI['max']);
+
+            $(this).find('.heat-map g').each(function(i, g){
+                $(g).find('rect').each(function(j, _rect){
+                    const rect = $(_rect);
+                    if (rect.attr('data-value') !== '-1'){
+                        const val = parseFloat(rect.attr('data-value'));
+                        if (i - j < 0){
+                                rect.attr('fill', dpsi_color(val, dPSI['min'], dPSI['max']));
+                        }
+                    }
+
+                })
+            })
+
+        });
     }
 
     scale(scale) {
@@ -175,11 +235,11 @@ class HeatMap {
             .select(d3_parent)
             .append('text').style('font-size', '10px').text("dPSI").attr('text-anchor', 'middle').attr('fill', 'black').attr('x', 30).attr('y', "-2")
             .select(d3_parent)
-            .append('text').style('font-size', '8px').text("0.0").attr('text-anchor', 'middle').attr('fill', 'black').attr('x', 0).attr('y', 25)
+            .append('text').style('font-size', '8px').text("-0.5").attr('text-anchor', 'middle').attr('fill', 'black').attr('x', 0).attr('y', 25)
             .select(d3_parent)
-            .append('text').style('font-size', '8px').text("0.5").attr('text-anchor', 'middle').attr('fill', 'black').attr('x', 60 / 2).attr('y', 25)
+            .append('text').style('font-size', '8px').text("0.0").attr('text-anchor', 'middle').attr('fill', 'black').attr('x', 60 / 2).attr('y', 25)
             .select(d3_parent)
-            .append('text').style('font-size', '8px').text("1.0").attr('text-anchor', 'middle').attr('fill', 'black').attr('x', 60).attr('y', 25)
+            .append('text').style('font-size', '8px').text("0.5").attr('text-anchor', 'middle').attr('fill', 'black').attr('x', 60).attr('y', 25)
             .select(d3_parent)
             .select(d3_parent)
 
