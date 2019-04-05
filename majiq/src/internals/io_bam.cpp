@@ -62,7 +62,7 @@ namespace io_bam {
 //            if (gObj->get_start() >= end) break ;
             if (gObj->get_start() >= end) continue ;
             if (gObj->get_end() < start) continue ;
-//            if (start< gObj->get_start() || end> gObj->get_end()) continue ;
+            if (start< gObj->get_start() || end> gObj->get_end()) continue ;
             if (strand == '.' || strand == gObj->get_strand()) {
                 if(gObj->junc_map_.count(key) >0 ){
                     found_stage1 = true ;

@@ -113,13 +113,13 @@ class Config(object):
                 for exp_idx in ind_list:
                     found = False
 
-                    if self.aggregate:
-                        for j_dir in junc_dirlist:
-                            juncfile = "%s/%s.%s" % (j_dir, self.exp_list[exp_idx], JUNC_FILE_FORMAT)
-                            if os.path.isfile(juncfile):
-                                found = True
-                                self.sam_list.append((self.exp_list[exp_idx], juncfile, True))
-                                break
+                    # if self.aggregate:
+                    #     for j_dir in junc_dirlist:
+                    #         juncfile = "%s/%s.%s" % (j_dir, self.exp_list[exp_idx], JUNC_FILE_FORMAT)
+                    #         if os.path.isfile(juncfile):
+                    #             found = True
+                    #             self.sam_list.append((self.exp_list[exp_idx], juncfile, True))
+                    #             break
                     if found:
                         break
                     for s_dir in sam_dirlist:
