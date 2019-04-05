@@ -251,7 +251,7 @@ class Junctions(SpliceGraphSQL):
 
 
 class IntronRetentions(SpliceGraphSQL):
-    def intron_retentions(self, gene_id):
+    def intron_retentions(self, gene_id, omit_simplified=False):
         """
         Get all intron retentions for a gene id.
         :param gene_id: gene id
@@ -261,7 +261,7 @@ class IntronRetentions(SpliceGraphSQL):
                                 SELECT gene_id, start, end, has_reads, annotated
                                 FROM intron_retention
                                 WHERE gene_id=?
-                                ''', (gene_id,))
+                                ''' + (" AND is_simplified = 0" if omit_simplified else ''), (gene_id,))
 
         return self._iter_results(query, ir_fieldnames)
 

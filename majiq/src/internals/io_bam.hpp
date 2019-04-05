@@ -89,7 +89,7 @@ namespace io_bam{
             inline void update_junction_read(string key, int read_start, int count) ;
 //            inline float* new_junc_values(const string key) ;
             inline bool new_junc_values(const string key) ;
-
+            void simplify(float simpl_percent) ;
             int parse_read_for_ir(bam_hdr_t *header, bam1_t *read) ;
 
             int get_njuncs() ;

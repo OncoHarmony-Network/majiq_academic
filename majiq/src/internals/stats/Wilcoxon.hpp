@@ -46,10 +46,10 @@ namespace MajiqStats{
 
                 assert( k > 0 ) ;
                 double c1 = Count( n -1 , k, s ) ;
-                //  cout << "Count(" <<  n-1 << "," << k << "," << s << ") = " << c1 << " " << exp(c1)  << "\n";
+//                cout << "Count(" <<  n-1 << "," << k << "," << s << ") = " << c1 << " " << exp(c1)  << "\n";
 
                 double c2 = Count( n -1 , k-1, s - n ) ;
-                //  cout << "Count(" <<  n-1 << "," << k-1 << "," << s-n << ") = " << c2 << " " << exp(c2)  << "\n";
+//                cout << "Count(" <<  n-1 << "," << k-1 << "," << s-n << ") = " << c2 << " " << exp(c2)  << "\n";
 
                 c1 += log( 1.0*(n - k) ) ;
                 c2 += log( 1.0*k ) ;

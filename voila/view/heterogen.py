@@ -22,10 +22,17 @@ def index():
     form = LsvFiltersForm()
     return render_template('het_index.html', form=form)
 
+@app.route('/toggle-simplified', methods=('POST',))
+def toggle_simplified():
+    if not 'omit_simplified' in session:
+        session['omit_simplified'] = True
+    else:
+        session['omit_simplified'] = not session['omit_simplified']
+    return jsonify({'ok':1})
 
 @app.route('/gene/<gene_id>/')
 def gene(gene_id):
-    with ViewHeterogens() as m, ViewSpliceGraph() as sg:
+    with ViewHeterogens() as m, ViewSpliceGraph(omit_simplified=session.get('omit_simplified', False)) as sg:
         lsv_data = list((lsv_id, m.lsv(lsv_id).lsv_type) for lsv_id in m.lsv_ids(gene_ids=[gene_id]))
         lsv_data.sort(key=lambda x: len(x[1].split('|')))
         ucsc = {}
@@ -46,7 +53,7 @@ def gene(gene_id):
 @app.route('/lsv-data', methods=('POST',))
 @app.route('/lsv-data/<lsv_id>', methods=('POST',))
 def lsv_data(lsv_id):
-    with ViewSpliceGraph() as sg, ViewHeterogens() as m:
+    with ViewSpliceGraph(omit_simplified=session.get('omit_simplified', False)) as sg, ViewHeterogens() as m:
         het = m.lsv(lsv_id)
         gene_id = het.gene_id
         gene = sg.gene(gene_id)
@@ -65,7 +72,7 @@ def lsv_data(lsv_id):
 
 @app.route('/index-table', methods=('POST',))
 def index_table():
-    with ViewHeterogens() as p, ViewSpliceGraph() as sg:
+    with ViewHeterogens() as p, ViewSpliceGraph(omit_simplified=session.get('omit_simplified', False)) as sg:
         dt = DataTables(Index.heterogen(), ('gene_name', 'lsv_id'))
 
         for idx, index_row, records in dt.callback():
@@ -106,7 +113,7 @@ def nav(gene_id):
 
 @app.route('/splice-graph/<gene_id>', methods=('POST',))
 def splice_graph(gene_id):
-    with ViewSpliceGraph() as sg, ViewHeterogens() as v:
+    with ViewSpliceGraph(omit_simplified=session.get('omit_simplified', False)) as sg, ViewHeterogens() as v:
         exp_names = v.splice_graph_experiment_names
         gd = sg.gene_experiment(gene_id, exp_names)
         gd['group_names'] = v.group_names

@@ -5,10 +5,11 @@ from voila.config import ViewConfig
 
 
 class ViewSpliceGraph(SpliceGraph):
-    def __init__(self):
+    def __init__(self, omit_simplified=False):
         """
         Wrapper class to splice graph api used to generate voila output.
         """
+        self.omit_simplified = omit_simplified
         config = ViewConfig()
         splice_graph_file = config.splice_graph_file
         super().__init__(splice_graph_file)
@@ -151,8 +152,11 @@ class ViewSpliceGraph(SpliceGraph):
                           OR 
                           (-1 NOT IN ({0},{1}) AND end BETWEEN {0} AND {1})
                         )
+                        {2}
                         LIMIT 1
-                      '''.format(exon['start'], exon['end']), (exon['gene_id'],))
+                      '''.format(exon['start'], exon['end'],
+                                (" AND is_simplified = 0" if self.omit_simplified else '')),
+                                (exon['gene_id'],))
         return query.fetchone()
 
     def exon_color(self, exon):
@@ -177,7 +181,7 @@ class ViewSpliceGraph(SpliceGraph):
         :return: generator of all junctions
         """
 
-        for junc in self.junctions(gene):
+        for junc in self.junctions(gene, omit_simplified=self.omit_simplified):
             yield self.view_junction(junc)
 
     def view_junction(self, junction):
@@ -212,7 +216,7 @@ class ViewSpliceGraph(SpliceGraph):
         :return: generator
         """
 
-        for ir in self.intron_retentions(gene):
+        for ir in self.intron_retentions(gene, omit_simplified=self.omit_simplified):
             yield self.view_intron_retention(ir)
 
     def view_intron_retention(self, ir):
@@ -300,7 +304,7 @@ class ViewSpliceGraph(SpliceGraph):
         :return: generator
         """
         exons_ends = list(e for s, e in lsv_exons)
-        for ir in self.intron_retentions(gene):
+        for ir in self.intron_retentions(gene, omit_simplified=self.omit_simplified):
             if ir.start in exons_ends:
                 yield ir
 
@@ -326,7 +330,7 @@ class ViewSpliceGraph(SpliceGraph):
                     junc_reads[combined_name] = {}
                     ir_reads[combined_name] = {}
 
-            for junc in self.junctions(gene_id):
+            for junc in self.junctions(gene_id, omit_simplified=self.omit_simplified):
                 junc_start, junc_end = itemgetter('start', 'end')(junc)
 
                 for r in self.junction_reads_exp(junc, experiment_names):
@@ -352,8 +356,7 @@ class ViewSpliceGraph(SpliceGraph):
                         except KeyError:
                             junc_reads[combined_name][junc_start] = {junc_end: summed_reads}
 
-            for ir in self.intron_retentions(gene_id):
-
+            for ir in self.intron_retentions(gene_id, omit_simplified=self.omit_simplified):
                 ir_start, ir_end = itemgetter('start', 'end')(ir)
 
                 for r in self.intron_retention_reads_exp(ir, experiment_names):

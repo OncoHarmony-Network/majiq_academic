@@ -23,25 +23,28 @@ cdef extern from "grimoire.hpp" namespace "grimoire":
         string       get_key() nogil ;
         string       get_key(Gene * gObj) nogil ;
         string       get_key(Gene * gObj, int strandness) nogil ;
-        bint         get_intronic() nogil
-        bint         get_annot() nogil
-        bint         get_bld_fltr() nogil
-        bint         get_denovo_bl() nogil
+        bint         get_intronic() nogil ;
+        bint         get_annot() nogil ;
+        bint         get_bld_fltr() nogil ;
+        bint         get_denovo_bl() nogil ;
+        bint         get_simpl_fltr() nogil ;
 
         unsigned int nreads;
 
 
     cdef cppclass Intron:
 
-            Intron () nogil except +
-            Intron (int start1, int end1, bint annot1, Gene* gObj1) nogil except +
-            int     get_start()  nogil ;
-            int     get_end()    nogil ;
-            bint    get_annot()  nogil ;
-            string  get_key() nogil ;
-            string  get_key(Gene * gObj) nogil ;
-            Gene *  get_gene() nogil ;
-            bint    get_ir_flag() nogil ;
+        Intron () nogil except +
+        Intron (int start1, int end1, bint annot1, Gene* gObj1) nogil except +
+        int     get_start()  nogil ;
+        int     get_end()    nogil ;
+        bint    get_annot()  nogil ;
+        string  get_key() nogil ;
+        string  get_key(Gene * gObj) nogil ;
+        Gene *  get_gene() nogil ;
+        bint    get_ir_flag() nogil ;
+        bint    is_connected() nogil ;
+        bint    get_simpl_fltr() nogil ;
 
 
     cdef cppclass Gene:
@@ -67,6 +70,8 @@ cdef extern from "grimoire.hpp" namespace "grimoire":
         void    fill_junc_tlb(map[string, vector[string]]& tlb) nogil ;
         void    connect_introns() nogil ;
         int     detect_lsvs(vector[LSV*] out_lsvlist) nogil ;
+        void    simplify(map[string, int]& junc_tlb, np.float32_t simpl_percent, int strandness, int denovo_simpl,
+                         int db_simple, int ir_simpl) nogil ;
 
         map[string, Junction*] junc_map_ ;
         map[string, Exon*] exon_map_ ;

@@ -386,7 +386,6 @@ namespace io_bam {
     }
 
     void IOBam::detect_introns(float min_intron_cov, unsigned int min_experiments, float min_bins, bool reset){
-
         for (const auto & it: glist_){
             if (intronVec_.count(it.first)==0){
                 intronVec_[it.first] = vector<Intron*>() ;
@@ -395,7 +394,9 @@ namespace io_bam {
             #pragma omp parallel for num_threads(nthreads_)
             for(int g_it = 0; g_it<n; g_it++){
                 for (const auto &g: ((it.second)[g_it])->glist){
+                    g->detect_exons() ;
                     g->detect_introns(intronVec_[it.first]) ;
+                    g->reset_exons() ;
                 }
             }
             sort(intronVec_[it.first].begin(), intronVec_[it.first].end(), Intron::islowerRegion<Intron>) ;
@@ -409,10 +410,11 @@ namespace io_bam {
         ParseJunctionsFromFile(true) ;
         for (const auto & it: intronVec_){
             const int n = (it.second).size() ;
+
             #pragma omp parallel for num_threads(nthreads_)
             for(int idx = 0; idx<n; idx++){
                 Intron * intrn_it = (it.second)[idx] ;
-                const bool pass = intrn_it->is_reliable(min_bins) ;
+                const bool pass = intrn_it->is_reliable(min_bins, eff_len_) ;
                 if( pass ){
                     const string key = intrn_it->get_key(intrn_it->get_gene()) ;
                     #pragma omp critical
@@ -470,6 +472,7 @@ namespace io_bam {
                 geneList[gl.first].push_back(ov) ;
         }
     }
+
 
     void free_genelist(map<string, vector<overGene*>> & geneList){
         for (auto &ov_vec: geneList){
