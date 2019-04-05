@@ -40,6 +40,7 @@ class InstallCommand(install):
         if(self.voila_only):
             # self.name = 'voila',
             # self.version = VERSION,
+            self.distribution.install_requires = ['Flask-WTF', 'Flask', 'h5py', 'scipy', 'waitress']
             self.distribution.packages = ['voila', 'voila.api', 'voila.view', 'voila.utils', 'voila.view']
             self.distribution.package_data = {'voila': ['view/templates/*', 'view/static/css/*',
                                            'view/static/js/*', 'view/static/img/*']}
@@ -113,6 +114,7 @@ class InstallCommand(install):
                                      extra_link_args=linker_args)]
 
             self.distribution.packages = find_packages()
+            self.distribution.install_requires = requirements(),
             self.distribution.include_package_data = True
             self.distribution.entry_points['console_scripts'].append('majiq = majiq.run_majiq:main')
             self.distribution.zip_safe = False
@@ -131,7 +133,6 @@ setup(
     keywords=['rna', 'splicing', 'psi', 'splicegraph'],
     license='LICENSE.txt',
     entry_points = {'console_scripts': ['voila = voila.run_voila:main']},
-    install_requires = requirements(),
     cmdclass={'install': InstallCommand,},
     classifiers=[
         'Development Status :: 4 - Beta',
