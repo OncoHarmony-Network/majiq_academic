@@ -403,10 +403,11 @@ cdef int simplify(list file_list, map[string, Gene*] gene_map, vector[string] gi
                 gene_l.clear()
 
             del junc_ids
-        logger.info('Simplifying file %s' % file_list[i][0])
+        logger.debug('Simplifying file %s' % file_list[i][0])
         for j in prange(n, nogil=True, num_threads=nthreads):
             gg = gene_map[gid_vec[j]]
             gg.simplify(junc_tlb, simpl_fltr, strandness, denovo_simpl, db_simple, ir_simpl)
+    logger.info('Finished simplification')
 
 
 

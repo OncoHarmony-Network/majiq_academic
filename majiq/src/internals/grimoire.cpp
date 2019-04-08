@@ -448,8 +448,6 @@ namespace grimoire {
                 jnc_vec[i]->set_simpl_fltr(x<simpl_percent || sumj[i]< thrshld_vect[i]) ;
             }
         }
-
-
         sumall = 0 ;
         {
             vector<float> sumj ;
@@ -484,8 +482,6 @@ namespace grimoire {
                 jnc_vec[i]->set_simpl_fltr(x<simpl_percent || sumj[i]< thrshld_vect[i]) ;
             }
         }
-
-
     }
 
 
@@ -494,7 +490,6 @@ namespace grimoire {
         for(const auto &ex: exon_map_){
             (ex.second)->simplify(junc_tlb, simpl_percent, this, strandness, denovo_simpl, db_simple, ir_simpl) ;
         }
-
     }
 
 
@@ -549,8 +544,8 @@ namespace grimoire {
         set<Junction*> &juncSet = ss? ob : ib ;
         for(const auto &juncIt:  juncSet){
             const int coord = ss? juncIt->get_end() : juncIt->get_start() ;
-            c2 += (FIRST_LAST_JUNC != coord) ? 1:0 ;
-            if (FIRST_LAST_JUNC != coord && juncIt->get_bld_fltr()) {
+            c2 += (FIRST_LAST_JUNC != coord && !juncIt->get_simpl_fltr()) ? 1:0 ;
+            if (FIRST_LAST_JUNC != coord && juncIt->get_bld_fltr() && !juncIt->get_simpl_fltr()) {
                 ++c1 ;
             }
         }
@@ -560,7 +555,7 @@ namespace grimoire {
             const int c = ir_ptr->get_ir_flag()? 1 : 0 ;
             c1 = c1 + c ;
         }
-//cerr << get_key() << " : c1->" << c1 << " c2->" << c2 << "\n" ;
+        //cerr << get_key() << " : c1->" << c1 << " c2->" << c2 << "\n" ;
         return (c2>1 and c1>0);
     }
 
@@ -593,7 +588,6 @@ namespace grimoire {
                 info.push_back(&tlb[key]) ;
             } else {
                 t1 += msample ;
-
             }
         }
         return count>0 ;
@@ -609,7 +603,7 @@ namespace grimoire {
             Exon * ex = ss? j->get_acceptor() :  j->get_donor() ;
             const int coord = ss? j->get_end() : j->get_start() ;
             const int ref_coord = ss ? j->get_start() : j->get_end() ;
-            if (ex==nullptr || coord < 0 || ref_coord < 0) continue ;
+            if (ex==nullptr || coord < 0 || ref_coord < 0 || j->get_simpl_fltr()) continue ;
             lsvtype lsvtypeobj = {coord, ref_coord, ex, j} ;
             sp_list.push_back(lsvtypeobj) ;
         }
@@ -619,14 +613,13 @@ namespace grimoire {
         else sort(sp_list.begin(), sp_list.end(), reverse) ;
 
         bool(*bfunc)(unsigned int, unsigned int) = b ? fless: fgrt ;
-
         string ext_type = (ss != b) ? "t" : "s" ;
-
         string prev_ex = to_string(sp_list[0].ex_ptr->get_start()) + "-" + to_string(sp_list[0].ex_ptr->get_end()) ;
-        unsigned int excount = 1 ;
+
+        unsigned int excount = 1;
+
         if (ss) for (const auto &j: ref_ex->ob) ref_ss_set.insert(j->get_start()) ;
         else for (const auto &j: ref_ex->ib) ref_ss_set.insert(j->get_end()) ;
-
         unsigned int jidx = 0 ;
         int prev_coord = 0 ;
 
