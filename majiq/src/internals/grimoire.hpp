@@ -300,8 +300,6 @@ namespace grimoire{
 
 //cerr << get_start() << "-" << get_end() << " offset =" << offset << " read_pos = " << read_pos << " (intronstart - eff_len) = " << st <<
 //" eff_len = "<< eff_len << " nxbin_off_ = "<< nxbin_off_<< " nxbin_ = "<< nxbin_<< "\n" ;
-
-
                 read_rates_[offset] += 1 ;
 
             }
@@ -446,7 +444,7 @@ namespace grimoire{
                 ir_ptr_ = nullptr ;
                 Intron * temp_ir = ss? ex->ob_irptr : ex->ib_irptr ;
                 if (temp_ir != nullptr )
-                    ir_ptr_ = temp_ir->get_ir_flag() ? temp_ir : nullptr ;
+                    ir_ptr_ = (temp_ir->get_ir_flag() && !temp_ir->get_simpl_fltr()) ? temp_ir : nullptr ;
 
                 type_   = set_type(ex, ss) ;
             }

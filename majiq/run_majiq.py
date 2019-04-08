@@ -119,22 +119,22 @@ def main():
                                                                         'some coverage that an intron needs to pass '
                                                                         'to be accepted as real [Default: %(default)s]')
 
-    buildparser.add_argument('--simplify_denovo', dest="simpl_denovo", default=10, type=int,
+    buildparser.add_argument('--simplify-denovo', dest="simpl_denovo", default=10, type=int,
                              help='Minimum number of reads threshold combining all positions of an denovo junction to '
                                   'consider if it will be simplified, even knowing it is real. Simplified junctions are'
                                   ' discarded from any lsv. [Default: %(default)s]')
 
-    buildparser.add_argument('--simplify_annotated', dest="simpl_db", default=10, type=int,
+    buildparser.add_argument('--simplify-annotated', dest="simpl_db", default=10, type=int,
                              help='Minimum number of reads threshold combining all positions of an annotated junction to '
                                   'consider if it will be simplified, even knowing it is real. Simplified junctions are'
                                   ' discarded from any lsv. [Default: %(default)s]')
 
-    buildparser.add_argument('--simplify_ir', dest="simpl_ir", default=10, type=int,
+    buildparser.add_argument('--simplify-ir', dest="simpl_ir", default=10, type=int,
                              help='Minimum number of reads threshold combining all positions of an ir to '
                                   'consider if it will be simplified, even knowing it is real. Simplified junctions are'
                                   ' discarded from any lsv. [Default: %(default)s]')
 
-    buildparser.add_argument('--simplify_psi', dest="simpl_psi", default=0.01, type=float,
+    buildparser.add_argument('--simplify-psi', dest="simpl_psi", default=0.01, type=float,
                              help='Minimum fraction of the usage of any junction in a LSV to consider that junction is'
                                   ' real. [Default: %(default)s]')
 
