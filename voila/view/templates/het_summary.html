@@ -54,7 +54,14 @@
     <script src="{{ url_for('static', filename='js/lib/jquery.ba-throttle-debounce.min.js') }}"></script>
     <script>
         const view_type = 'het';
+        var hidden_idx = [];
         document.querySelector('#heatmap-stat-choices').addEventListener('change', () => {
+            $('.lsv-table').DataTable().ajax.reload();
+        });
+
+        $('.lsv-table').on('click', "image.hide-btn", function () {
+            const group = $(this).parent();
+            hidden_idx.push(group.attr('data-group-idx'));
             $('.lsv-table').DataTable().ajax.reload();
         });
 
@@ -320,6 +327,7 @@
                         data: d => {
                             d['lsv_id'] = lsv_table.dataset.lsvId;
                             d['stat_name'] = document.querySelector('input[name=stat-name]:checked').value;
+                            d['hidden_idx'] = hidden_idx.length > 0 ? hidden_idx.join(',') : undefined;
                         },
                         type: 'POST'
                     },

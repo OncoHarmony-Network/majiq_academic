@@ -217,10 +217,17 @@ def lsv_highlight():
 @app.route('/summary-table', methods=('POST',))
 def summary_table():
     lsv_id, stat_name = itemgetter('lsv_id', 'stat_name')(request.form)
+    if 'hidden_idx' in request.form:
+        hidden_idx = [int(x) for x in request.form['hidden_idx'].split(',')]
+    else:
+        hidden_idx = []
 
     with ViewHeterogens() as v:
         exp_names = v.experiment_names
         grp_names = v.group_names
+        for idx in hidden_idx:
+            grp_names.pop(idx)
+            exp_names.pop(idx)
 
         het = v.lsv(lsv_id)
         juncs = het.junctions
@@ -229,24 +236,36 @@ def summary_table():
 
         table_data = []
 
+        skipped_idx = 0
         for idx, (junc, mean_psi, mu_psi) in enumerate(zip(juncs, mean_psis, mu_psis)):
+            if idx in hidden_idx:
+                skipped_idx += 1
+                continue
             junc = map(str, junc)
             junc = '-'.join(junc)
             heatmap = het.junction_heat_map(stat_name, idx)
 
             table_data.append({
                 'junc': junc,
-                'junc_idx': idx,
+                'junc_idx': idx - skipped_idx,
                 'mean_psi': mean_psi,
                 'mu_psi': mu_psi,
                 'heatmap': heatmap,
             })
 
+
         dt = DataTables(table_data, ('junc', '', ''))
 
         for idx, row_data, records in dt.callback():
+            if idx in hidden_idx:
+                skipped_idx += 1
             junc, junc_idx, mean_psi = itemgetter('junc', 'junc_idx', 'mean_psi')(row_data)
             mu_psi, heatmap = itemgetter('mu_psi', 'heatmap')(row_data)
+            for _idx in hidden_idx:
+                heatmap = np.delete(heatmap, _idx, axis=0)
+                heatmap = np.delete(heatmap, _idx, axis=1).tolist()
+                mu_psi.pop(_idx)
+                mean_psi.pop(_idx)
 
             records[idx] = [
                 junc,
@@ -255,8 +274,7 @@ def summary_table():
                     'experiment_names': exp_names,
                     'junction_idx': junc_idx,
                     'mean_psi': mean_psi,
-                    'mu_psi': mu_psi,
-                    'heatmap': heatmap,
+                    'mu_psi': mu_psi
                 },
                 {
                     'heatmap': heatmap,

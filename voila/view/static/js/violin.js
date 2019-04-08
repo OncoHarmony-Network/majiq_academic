@@ -547,51 +547,7 @@ class Violin {
             })
 
         // upon clicking the hide button
-        if($.inArray(view_type, ['multipsi', 'het']) !== -1) {
-            d3.selectAll("image.hide-btn").on('click', function () {
-
-                var current = d3.select(this);
-                var group = $(this).parent();
-                var lsv_id = self._get_parent(current, "lsv-table").attr('data-lsv-id');
-
-                var last_shown = 100;
-                $.each($(`.lsv-table[data-lsv-id="${lsv_id}"] path[data-group-idx="${group.attr("data-group-idx")}"]`), function (i, el1) {
-                    $.each($(el1).parent().children(), function (i, el) {
-                        if ($(el).is(':visible')) {
-                            last_shown = i;
-                        }
-                    })
-                })
-                $.each($(`.lsv-table[data-lsv-id="${lsv_id}"] path[data-group-idx="${group.attr("data-group-idx")}"]`), function (i, el1) {
-                    var el2 = $(el1).parent().children()[last_shown];
-                    perform_swap(el1, el2, true);
-                    //$(el1).hide()
-                    $(el1).remove();
-                })
-                $.each($(`.lsv-table[data-lsv-id="${lsv_id}"] svg[data-group-idx="${group.attr("data-group-idx")}"]`), function (i, el1) {
-                    var el2 = $(el1).parent().children()[last_shown];
-                    perform_swap(el1, el2);
-                    //$(el1).hide()
-                    $(el1).remove();
-                })
-                $.each($(`.lsv-table[data-lsv-id="${lsv_id}"] g[data-group-idx="${group.attr("data-group-idx")}"]`), function (i, el1) {
-                    var el2 = $(el1).parent().children()[last_shown];
-                    perform_swap(el1, el2, true);
-                    //$(el1).hide()
-                    $(el1).remove();
-                })
-                $.each($(`.lsv-table[data-lsv-id="${lsv_id}"] text[data-group-idx="${group.attr("data-group-idx")}"]`), function (i, el1) {
-                    var el2 = $(el1).parent().children()[last_shown];
-                    perform_swap(el1, el2);
-                    //$(el1).hide()
-                    $(el1).remove();
-                })
-
-                attrDeltaInt($(`.lsv-table[data-lsv-id="${lsv_id}"] .psi-violin-plot`), 'width', -80);
-                const main_svg =  d3.select(`.lsv-table[data-lsv-id="${lsv_id}"] .psi-violin-plot`);
-                self.draw_pairwise_plot(main_svg);
-            })
-        }else{
+        if(!isInArr(view_type, ['multipsi', 'het'])) {
             d3.selectAll("image.hide-btn").style('display', 'none');
         }
 
