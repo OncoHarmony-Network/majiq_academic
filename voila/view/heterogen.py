@@ -257,8 +257,6 @@ def summary_table():
         dt = DataTables(table_data, ('junc', '', ''))
 
         for idx, row_data, records in dt.callback():
-            if idx in hidden_idx:
-                skipped_idx += 1
             junc, junc_idx, mean_psi = itemgetter('junc', 'junc_idx', 'mean_psi')(row_data)
             mu_psi, heatmap = itemgetter('mu_psi', 'heatmap')(row_data)
             for _idx in hidden_idx:
