@@ -13,7 +13,7 @@
 
 #define EMPTY_COORD  -1
 #define FIRST_LAST_JUNC  -2
-#define MAX_DENOVO_DIFFERENCE 500
+#define MAX_DENOVO_DIFFERENCE 1
 #define MIN_INTRON_BINSIZE 1000
 #define MAX_TYPE_LENGTH 245
 #define NA_LSV  "na"
@@ -58,12 +58,14 @@ namespace grimoire{
 
             _Region(){}
             _Region(int start1, int end1): start_(start1), end_(end1) {}
+            virtual ~_Region(){}
         public:
             int         get_start()             { return start_ ; }
             int         get_end()               { return end_ ; }
             void        set_start(int start1)   { start_ = start1 ; }
             void        set_end(int end1)       { end_ = end1 ; }
             inline int  length()                { return end_ - start_ ; }
+            virtual void  set_simpl_fltr(bool val) { cerr << "NOT SHOW\n" ;}
 
 
             static bool func_comp (_Region* a, int coord){
@@ -87,6 +89,8 @@ namespace grimoire{
                 return ( (t1->get_start() <= t2->get_end()) && (t1->get_end() >= t2->get_start()) ) ;
             }
 
+
+
     };
 
 
@@ -96,8 +100,10 @@ namespace grimoire{
             bool intronic_ ;
             bool bld_fltr_ ;
             bool denovo_bl_ ;
+            bool simpl_fltr_ ;
             unsigned int denovo_cnt_ ;
             unsigned int flter_cnt_ ;
+            unsigned int simpl_cnt_ ;
             Exon * acceptor_;
             Exon * donor_;
 
@@ -107,11 +113,13 @@ namespace grimoire{
             Junction() {}
             Junction(int start1, int end1, bool annot1): _Region(start1, end1), annot_(annot1){
                 denovo_bl_ = annot1 ;
+//                denovo_bl_ = false ;
                 denovo_cnt_ = 0 ;
                 bld_fltr_ = false ;
                 flter_cnt_ = 0 ;
                 intronic_ = false ;
                 nreads_ = nullptr ;
+                simpl_fltr_ = true ;
             }
             ~Junction()             { clear_nreads(true) ; }
 
@@ -121,6 +129,7 @@ namespace grimoire{
             bool    get_annot()     { return annot_ ; }
             bool    get_intronic()  { return intronic_ ; }
             bool    get_bld_fltr()  { return bld_fltr_ ; }
+            bool    get_simpl_fltr(){ return simpl_fltr_ ; }
             bool    get_denovo_bl() { return denovo_bl_ ; }
             Exon*   get_acceptor()  { return acceptor_ ; }
             Exon*   get_donor()     { return donor_ ; }
@@ -128,11 +137,17 @@ namespace grimoire{
             void  set_nreads_ptr(float * nreads1) { nreads_ = nreads1 ; }
             void  set_acceptor(Exon * acc) { acceptor_ = acc ; }
             void  set_donor(Exon * don) { donor_ = don ; }
+            void  exonReset(){
+                acceptor_ = nullptr ;
+                donor_ = nullptr ;
+            }
+
+            void set_simpl_fltr(bool val){
+                simpl_fltr_ = simpl_fltr_ && val ;
+            }
 
             void update_flags(int efflen, unsigned int num_reads, unsigned int num_pos, unsigned int denovo_thresh,
                               unsigned int min_experiments, bool denovo){
-
-//cerr << "UPDATE FLAGS " << get_key() << " nreads_:" << nreads_ <<"\n" ;
                 if (nreads_ == nullptr ){
                     return ;
                 }
@@ -192,20 +207,42 @@ namespace grimoire{
             }
             ~Exon(){}
             bool    is_lsv(bool ss) ;
+            void    simplify(map<string, int>& junc_tlb, float simpl_percent, Gene* gObj, int strandness,
+                        int denovo_simpl, int db_simple, int ir_simpl) ;
             bool    has_out_intron()        { return ob_irptr != nullptr ; }
             string  get_key()       { return(to_string(start_) + "-" + to_string(end_)) ; }
+            void set_simpl_fltr(bool val) {};
+            void    revert_to_db(){
+                set_start(db_start_) ;
+                set_end(db_end_) ;
+                for (auto const &j: ib){
+                    j->exonReset() ;
+                }
+                ib.clear() ;
+//                ib.shrink_to_fit() ;
+
+                for (auto const &j: ob){
+                    j->exonReset() ;
+                }
+                ob.clear() ;
+//                ob.shrink_to_fit() ;
+            }
 
     };
 
     class Intron: public _Region{
         private:
-            bool        annot_ ;
-            Gene *      gObj_ ;
-            int         flt_count_ ;
-            bool        ir_flag_ ;
-            bool        markd_ ;
-            vector<set<int>> n_nb_ ;
-            int         nxbin ;
+            bool    annot_ ;
+            Gene *  gObj_ ;
+            int     flt_count_ ;
+            bool    ir_flag_ ;
+            bool    markd_ ;
+
+            int     nxbin_off_ ;
+            int     nxbin_mod_ ;
+            int     nxbin_ ;
+            int     numbins_ ;
+            bool    simpl_fltr_ ;
 
         public:
             float*  read_rates_ ;
@@ -216,26 +253,37 @@ namespace grimoire{
                 flt_count_  = 0 ;
                 ir_flag_    = false ;
                 read_rates_ = nullptr ;
-                nxbin       = 0 ;
+                nxbin_      = 0 ;
+                nxbin_off_  = 0 ;
+                nxbin_mod_  = 0 ;
                 markd_      = false ;
+                numbins_    = 0 ;
+                simpl_fltr_ = true ;
             }
 
             bool    get_annot()             { return annot_ ; }
             Gene*   get_gene()              { return gObj_ ; }
             bool    get_ir_flag()           { return ir_flag_ ; }
             string  get_key()               { return(to_string(start_) + "-" + to_string(end_)) ; }
+            bool    get_simpl_fltr()        { return simpl_fltr_ ; }
             void    set_markd()             { markd_ = true ; }
             bool    is_connected()          { return markd_ ; }
             string  get_key(Gene * gObj) ;
             void    calculate_lambda() ;
-            bool    is_reliable(float min_bins) ;
+            bool    is_reliable(float min_bins, int eff_len) ;
 
+            void set_simpl_fltr(bool val){
+                simpl_fltr_ = simpl_fltr_ && val ;
+            }
             void    add_read_rates_buff(int eff_len){
 
-                nxbin = (int) ((length()+ eff_len) / eff_len) ;
-                nxbin = (length() % eff_len) == 0 ? nxbin : nxbin +1 ;
-                read_rates_ = (float*) calloc(eff_len, sizeof(float)) ;
-                n_nb_ = vector<set<int>>(eff_len, set<int>()) ;
+                nxbin_ = (int) ((length()+ eff_len) / eff_len) ;
+                nxbin_mod_ = (length() % eff_len) ;
+                nxbin_off_ = nxbin_mod_ * ( nxbin_+1 ) ;
+                numbins_ = eff_len ;
+                read_rates_ = (float*) calloc(numbins_, sizeof(float)) ;
+
+
             }
 
             void  add_read(int read_pos, int eff_len){
@@ -243,25 +291,27 @@ namespace grimoire{
                 if (read_rates_ == nullptr){
                     add_read_rates_buff(eff_len) ;
                 }
-                int offset = (int)((read_pos - st)/nxbin) ;
+                int offset = (read_pos - st) ;
                 offset = (offset >=0) ? offset: 0 ;
-                n_nb_[offset].insert(read_pos - st) ;
+
+                const int off1 = (int) ((offset - nxbin_off_) / nxbin_) + nxbin_mod_ ;
+                const int off2 = (int) offset / (nxbin_+1) ;
+                offset = (int)(offset < nxbin_off_) ? off2: off1 ;
+
+//cerr << get_start() << "-" << get_end() << " offset =" << offset << " read_pos = " << read_pos << " (intronstart - eff_len) = " << st <<
+//" eff_len = "<< eff_len << " nxbin_off_ = "<< nxbin_off_<< " nxbin_ = "<< nxbin_<< "\n" ;
+
+
                 read_rates_[offset] += 1 ;
+
             }
 
             inline void  update_flags(float min_coverage, int min_exps, float min_bins) {
                 int cnt = 0 ;
-                const int nbins = n_nb_.size() ;
-                const float pc_bins = nbins * min_bins ;
-                for(int i =0 ; i< nbins; i++){
+                const float pc_bins = numbins_ * min_bins ;
+                for(int i =0 ; i< numbins_; i++){
                     cnt += (read_rates_[i]>= min_coverage) ? 1 : 0 ;
                 }
-//cerr << get_start() << "-" << get_end() << ": " << cnt << "\n" ;
-//cerr << "\t :: " ;
-// for(int i =0 ; i< nbins; i++){
-//cerr << read_rates_[i] << ", " ;
-//}
-//cerr << "\n" ;
                 flt_count_ += (cnt >= pc_bins) ? 1 : 0 ;
                 ir_flag_ = ir_flag_ || (flt_count_ >= min_exps) ;
                 return ;
@@ -296,8 +346,6 @@ namespace grimoire{
                 if(read_rates_ != nullptr){
                     free(read_rates_);
                     read_rates_ = nullptr ;
-                    n_nb_.clear() ;
-                    n_nb_.shrink_to_fit() ;
                 }
                 return ;
             }
@@ -340,10 +388,24 @@ namespace grimoire{
             string  get_chromosome(){ return chromosome_ ;}
             char    get_strand()    { return strand_ ;}
             string  get_name()      { return name_ ;}
-
+            void set_simpl_fltr(bool val) {};
             void    create_annot_intron(int start_ir, int end_ir){
                 Intron * ir = new Intron(start_ir, end_ir, true, this) ;
                 intron_vec_.push_back(ir) ;
+            }
+
+            void reset_exons(){
+                for (auto p  = exon_map_.begin(); p!= exon_map_.end();){
+                    map <string, Exon*>::iterator pit = p ;
+                    Exon * e = p->second ;
+                    e->revert_to_db() ;
+                    ++p ;
+                    if (!e->annot_){
+                        exon_map_.erase(pit) ;
+                        delete e ;
+                    }
+                }
+
             }
 
             string  get_region() ;
@@ -355,6 +417,8 @@ namespace grimoire{
             void    newExonDefinition(int start, int end, Junction *inbound_j, Junction *outbound_j, bool in_db) ;
             void    fill_junc_tlb(map<string, vector<string>> &tlb) ;
             int     detect_lsvs(vector<LSV*> &out_lsvlist);
+            void    simplify(map<string, int>& junc_tlb, float simpl_percent, int strandness, int denovo_simpl,
+                             int db_simple, int ir_simpl) ;
             void    initialize_junction(string key, int start, int end, float* nreads_ptr) ;
             void    update_junc_flags(int efflen, bool is_last_exp, unsigned int minreads, unsigned int minpos,
                                       unsigned int denovo_thresh, unsigned int min_experiments, bool denovo) ;

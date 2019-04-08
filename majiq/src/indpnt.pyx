@@ -71,7 +71,6 @@ cdef int _statistical_test_computation(object out_h5p, dict comparison, list lis
             file_list[index].append(cc)
         index +=1
 
-
     for i in prange(nlsv, nogil=True, num_threads=nthreads):
         with gil:
             lsv_id = list_of_lsv[i]

@@ -1,12 +1,46 @@
-const stat_color = d3.scaleLog()
-    .domain([1e-40, 0.05, 1])
-    .range(['blue', 'lightblue', 'white'])
-    .interpolate(d3.interpolateCubehelixLong);
 
-const dpsi_color = d3.scaleLinear()
-    .domain([0, 1])
-    .range(['white', 'brown'])
-    .interpolate(d3.interpolateCubehelixLong);
+
+const stat_color = function(val){
+    const stopMin = 'blue';
+    const stopMax = 'white';
+    const rangeMin = 1E-40;
+    const rangeMax = 1;
+    if(val < rangeMin){
+        return stopMin;
+    }else if(val > rangeMax){
+        return stopMax;
+    }else{
+        return d3.scaleLog()
+        .domain([rangeMin, 0.05, rangeMax])
+        .range([stopMin, 'lightblue', stopMax])
+        .interpolate(d3.interpolateCubehelixLong)(val);
+    }
+};
+
+const calc_dpsi_color = function(val, rangeMin, rangeMax){
+    const stopMin = 'white';
+    const stopMax = 'brown';
+    if(val < rangeMin){
+        return stopMin;
+    }else if(val > rangeMax){
+        return stopMax;
+    }else{
+        return d3.scaleLinear()
+        .domain([rangeMin, rangeMax])
+        .range([stopMin, stopMax])
+        .interpolate(d3.interpolateCubehelixLong)(val);
+    }
+};
+
+const dpsi_color = function(val, rangeMin, rangeMax){
+    if(rangeMin === undefined){
+        rangeMin = -0.5;
+    }
+    if(rangeMax === undefined){
+        rangeMax = 0.5;
+    }
+    return calc_dpsi_color(val, rangeMin, rangeMax);
+};
 
 const HMData = function (value, stat_name) {
     this.value = value === undefined ? -1 : value;
@@ -41,6 +75,32 @@ class HeatMap {
     constructor(data) {
         this.data = data;
         this.color = new Colors();
+    }
+
+    static change_axis_scale(dPSI, stat) {
+        // static method
+        // modifies all existing heat maps to use a new scale for their coloring
+        // also changes the scale in the legends to reflect what is shown
+
+        $('.heat-map-outer').each(function(){
+            const dPSI_legend = $(this).find('.hm-upper-legend');
+            dPSI_legend.find('text').eq(1).text(dPSI['min']);
+            dPSI_legend.find('text').eq(3).text(dPSI['max']);
+
+            $(this).find('.heat-map g').each(function(i, g){
+                $(g).find('rect').each(function(j, _rect){
+                    const rect = $(_rect);
+                    if (rect.attr('data-value') !== '-1'){
+                        const val = parseFloat(rect.attr('data-value'));
+                        if (i - j < 0){
+                                rect.attr('fill', dpsi_color(val, dPSI['min'], dPSI['max']));
+                        }
+                    }
+
+                })
+            })
+
+        });
     }
 
     scale(scale) {
@@ -101,12 +161,38 @@ class HeatMap {
         const uniq = this.lsv_id;
 
         d3.select(el)
-            .attr('height', cell_size * hm.length).attr('width', cell_size * hm.length)
-            .attr('class', 'heat-map')
-            .attr('data-stat-name', this.data.stat_name)
+
+            .attr('class', 'heat-map-outer')
+            .attr('height', (cell_size * hm.length) + 100).attr('width', (cell_size * hm.length) + 125)
 
             // this section generates the (repetitive) pattern element for the hatch style
             .append("defs")
+            .append('linearGradient')
+            .attr('id', 'upperGradient')
+            .append('stop')
+            .attr('offset', '0%')
+            .attr('style', 'stop-color:white;stop-opacity:1')
+            .select(d3_parent)
+            .append('stop')
+            .attr('offset', '100%')
+            .attr('style', 'stop-color:brown;stop-opacity:1')
+            .select(d3_parent)
+            .select(d3_parent)
+            .append('linearGradient')
+            .attr('id', 'lowerGradient')
+            .append('stop')
+            .attr('offset', '0%')
+            .attr('style', 'stop-color:white;stop-opacity:1')
+            .select(d3_parent)
+            .append('stop')
+            .attr('offset', '50%')
+            .attr('style', 'stop-color:lightblue;stop-opacity:1')
+            .select(d3_parent)
+            .append('stop')
+            .attr('offset', '100%')
+            .attr('style', 'stop-color:blue;stop-opacity:1')
+            .select(d3_parent)
+            .select(d3_parent)
 
             // first block here generates the background pattern on the heatmap from a small raster image
             // (commented out) , second block uses a path. Both solutions look good in the browser but
@@ -132,9 +218,104 @@ class HeatMap {
             .attr('stroke', 'grey')
             .attr('stroke-width', '1')
 
-            .select(function() { return this.parentNode; })
-            .select(function() { return this.parentNode; })
-            .select(function() { return this.parentNode; })
+            .select(d3_parent)
+            .select(d3_parent)
+            .select(d3_parent)
+
+            // upper legend bar
+
+            .append("svg")
+            .attr('class', "hm-upper-legend")
+            .style('overflow', 'visible')
+            .attr('x',  (cell_size * hm.length) + 50 + 10).attr('y', (((cell_size * hm.length) + 100) / 2) - 5)
+            .append('rect')
+            .attr('x', 0).attr('y', 0).attr('width', 60).attr('height', 15)
+            .attr('fill', 'url(#upperGradient)')
+            .attr('stroke', 'black').attr('strokeWidth', '1px')
+            .select(d3_parent)
+            .append('text').style('font-size', '10px').text("dPSI").attr('text-anchor', 'middle').attr('fill', 'black').attr('x', 30).attr('y', "-2")
+            .select(d3_parent)
+            .append('text').style('font-size', '8px').text("-0.5").attr('text-anchor', 'middle').attr('fill', 'black').attr('x', 0).attr('y', 25)
+            .select(d3_parent)
+            .append('text').style('font-size', '8px').text("0.0").attr('text-anchor', 'middle').attr('fill', 'black').attr('x', 60 / 2).attr('y', 25)
+            .select(d3_parent)
+            .append('text').style('font-size', '8px').text("0.5").attr('text-anchor', 'middle').attr('fill', 'black').attr('x', 60).attr('y', 25)
+            .select(d3_parent)
+            .select(d3_parent)
+
+            // lower legend bar
+
+            .append("svg")
+            .attr('class', "hm-lower-legend")
+            .style('overflow', 'visible')
+            .attr('x', (((cell_size * hm.length) + 100) / 2) - 30).attr('y', ((cell_size * hm.length) + 70))
+            .append('rect')
+            .attr('x', 0).attr('y', 0).attr('width', 60).attr('height', 15)
+            .attr('fill', 'url(#lowerGradient)')
+            .attr('stroke', 'black').attr('strokeWidth', '1px')
+            .select(d3_parent)
+            .append('text').style('font-size', '10px').text(this.data.stat_name).attr('text-anchor', 'middle').attr('fill', 'black').attr('x', 30).attr('y', "-2")
+            .select(d3_parent)
+            .append('text').style('font-size', '8px').text("1.0").attr('text-anchor', 'middle').attr('fill', 'black').attr('x', 0).attr('y', 25)
+            .select(d3_parent)
+            .append('text').style('font-size', '8px').text("0.05").attr('text-anchor', 'middle').attr('fill', 'black').attr('x', 60 / 2).attr('y', 25)
+            .select(d3_parent)
+            .append('text').style('font-size', '8px').text("1E-40").attr('text-anchor', 'middle').attr('fill', 'black').attr('x', 60).attr('y', 25)
+            .select(d3_parent)
+            .select(d3_parent)
+
+            // left side titles
+            .append("svg")
+            .attr('class', "hm-left-titles")
+            .style('overflow', 'visible')
+            .attr('x', 40).attr('y', 68)
+            .selectAll('text')
+            .data(grp_names)
+            .enter()
+            .append('text').style('font-size', '10px').text(function(d){return d}).attr('text-anchor', 'middle').attr('fill', 'black').attr('x', 0).attr('y', 0)
+            .attr('transform', function(d, i){
+                return `translate(0, ${i*cell_size})rotate(-45)`;
+            })
+            .select(d3_parent)
+            .select(d3_parent)
+
+        d3.select(el)
+            // top side titles
+            .append("svg")
+            .attr('class', "hm-top-titles")
+            .style('overflow', 'visible')
+            .attr('x', 68).attr('y', 40)
+            .selectAll('text')
+            .data(grp_names)
+            .enter()
+            .append('text').style('font-size', '10px').text(function(d){return d}).attr('text-anchor', 'middle').attr('fill', 'black').attr('x', 0).attr('y', 0)
+            .attr('transform', function(d, i){
+                return `translate(${i*cell_size}, 0)rotate(-45)`;
+            })
+            .select(d3_parent)
+            .select(d3_parent)
+
+        d3.select(el)
+            // main heatmap svg
+            .append("svg")
+            .attr('class', 'heat-map')
+            .attr('x', 50).attr('y', 50)
+            .attr('height', cell_size * hm.length).attr('width', cell_size * hm.length)
+            .attr('data-stat-name', this.data.stat_name)
+
+
+
+
+
+
+            // this to draw the diagonal line
+            .append('path')
+            .attr('d', `M 0 0 L ${cell_size * hm.length} ${cell_size * hm.length}`)
+            .attr('stroke', "black")
+            .attr('stroke-width', "1")
+            .select(d3_parent)
+
+
 
             .selectAll('g')
             .data(hm)

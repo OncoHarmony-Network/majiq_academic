@@ -288,15 +288,11 @@ void test_calc(vector<psi_distr_t>& oPvals, HetStats* HetStatsObj, hetLSV* lsvOb
             csamps = apply_permutation(csamps, p);
             labels = apply_permutation(labels, p);
 
-
-
-
             for(int i=0; i<nstats; i++){
                 pval_vect[i][s] = (float)(HetStatsObj->statistics)[i]->Calc_pval(csamps, labels) ;
             }
         }
         for(int i=0; i<nstats; i++){
-
             float mmm = quantile(pval_vect[i], quant) ;
             oPvals[j][i] = mmm ;
 
@@ -313,17 +309,13 @@ void calc_mixture_pdf(psi_distr_t& o_mixpdf, vector<pair<float, float>>& beta_pa
     for (const auto &bparam: beta_param){
         psi_distr_t bincdf(nbins, 0.0) ;
         prob_data_sample_given_psi(bincdf, 0.0, 0.0, psi_border, nbins, bparam.first, bparam.second) ;
-//cerr << "PARAM [" << bpara_idx << ", " << bparam.first << ", " << bparam.second <<", " << pmix[bpara_idx] << "]: ";
         for (int i=0; i<nbins; i++){
             const float k = exp(bincdf[i]) ; //* pmix[bpara_idx] ;
             o_mixpdf[i] += k ;
             sum += k ;
-//cerr << o_mixpdf[i] << "[" << exp(bincdf[i])<< "] ";
         }
-//cerr << "\n" ;
         bpara_idx ++ ;
     }
-//cerr << ": sum: " << sum << "\n" ;
 
     for (int i=0; i<nbins; i++){
         o_mixpdf[i] /= sum ;

@@ -5,6 +5,14 @@
     <script>
         {% if multi_view %}
             const view_type = 'multipsi';
+
+            var hidden_idx = [];
+
+            $('.lsv-table').on('click', "image.hide-btn", function () {
+                const group = $(this).parent();
+                hidden_idx.push(group.attr('data-group-idx'));
+                $('.lsv-table').DataTable().ajax.reload();
+            });
         {% else %}
             const view_type = 'psi';
         {% endif %}
@@ -93,6 +101,7 @@
                         const lsv_id = tds[1].textContent;
                         json_ajax('{{ url_for("lsv_data") }}/' + encodeURIComponent(lsv_id))
                             .then(lsv_data => {
+                                console.log(lsv_data)
                                 const lsv = new Lsv(lsv_data);
                                 const violin = new Violin(lsv_data.lsv);
                                 const s = n.querySelector('.psi-violin-plot');
@@ -138,6 +147,10 @@
                     info: false,
                     ajax: {
                         url: '{{ url_for('violin_data') }}' + '/' + encodeURIComponent(lsv_table.dataset.lsvId),
+                        data: d => {
+                            d['lsv_id'] = lsv_table.dataset.lsvId;
+                            d['hidden_idx'] = hidden_idx.length > 0 ? hidden_idx.join(',') : undefined;
+                        },
                         type: 'POST'
                     },
                     columnDefs: [

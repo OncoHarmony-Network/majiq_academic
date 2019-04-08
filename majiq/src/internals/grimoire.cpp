@@ -105,6 +105,7 @@ namespace grimoire {
             } else {
                 return ;
             }
+
         } else if (nullptr == ex1){
             if ((end - start) <= MAX_DENOVO_DIFFERENCE){
 
@@ -120,7 +121,6 @@ namespace grimoire {
             }
 
         } else {
-
             ex2 = ex1;
             if (start < (ex1->get_start() - MAX_DENOVO_DIFFERENCE)){
                 ex1 = addExon(exon_map_, start, EMPTY_COORD, in_db) ;
@@ -134,15 +134,16 @@ namespace grimoire {
                 ex2->set_end(end) ;
             }
         }
+
         if (nullptr != inbound_j){
             (ex1->ib).insert(inbound_j) ;
             inbound_j->set_acceptor(ex1) ;
         }
+
         if (outbound_j != nullptr){
             (ex2->ob).insert(outbound_j) ;
             outbound_j->set_donor(ex2) ;
         }
-
         return ;
     }
 
@@ -152,7 +153,6 @@ namespace grimoire {
         vector<Junction *> opened_exon ;
         Junction * last_5prime = nullptr ;
         Junction * first_3prime = nullptr ;
-
         for (const auto &jnc : junc_map_){
             if (!(jnc.second)->get_denovo_bl()) continue ;
             if ((jnc.second)->get_start() > 0) {
@@ -196,11 +196,9 @@ namespace grimoire {
                 opened_exon.push_back(ss.j) ;
             }
         }
-
         for (const auto &jj2: opened_exon){
             newExonDefinition(jj2->get_end(), jj2->get_end()+10, jj2, nullptr, false) ;
         }
-
         ss_vec.clear() ;
         ss_vec.shrink_to_fit();
         return ;
@@ -237,12 +235,13 @@ namespace grimoire {
         for (const auto &jnc : junc_map_){
             if (!(jnc.second)->get_denovo_bl()) continue ;
 
-            if ((jnc.second)->get_start() > 0) {
-                Ssite s = {(jnc.second)->get_start(), true, jnc.second} ;
+
+            if ((jnc.second)->get_start() > 0 && (jnc.second)->get_donor()->get_start()>0) {
+                Ssite s = {(jnc.second)->get_start()+1, true, jnc.second} ;
                 ss_vec.push_back(s) ;
             }
-            if ((jnc.second)->get_end() > 0) {
-                Ssite s = {(jnc.second)->get_end(), false, jnc.second} ;
+            if ((jnc.second)->get_end() > 0 && (jnc.second)->get_acceptor()->get_end()>0) {
+                Ssite s = {(jnc.second)->get_end()-1, false, jnc.second} ;
                 ss_vec.push_back(s) ;
             }
         }
@@ -271,8 +270,7 @@ namespace grimoire {
 
     void Gene::add_intron(Intron * inIR_ptr, float min_coverage, unsigned int min_exps, float min_bins, bool reset){
         bool found = false ;
-
-        for (const auto &ir: intron_vec_){
+         for (const auto &ir: intron_vec_){
             if (ir->get_end() < inIR_ptr->get_start() || ir->get_start() > inIR_ptr->get_end()) continue ;
             if (ir->get_end() >= inIR_ptr->get_start() && ir->get_start() <= inIR_ptr->get_end()){
                 ir->overlaping_intron(inIR_ptr) ;
@@ -319,6 +317,11 @@ namespace grimoire {
                     Intron * ir_ptr = intron_vec_[intron_index];
                     if (ir_ptr->get_end() >= ex_end ) break ;
                     if (ir_start <= ir_ptr->get_end() && ir_end >= ir_ptr->get_start() && ir_ptr->get_ir_flag()){
+
+//if (prev_ex->ob_irptr != nullptr){
+//    cerr << "#1 " << ir_start << "-" << ir_end<< " :: " << prev_ex->ob_irptr->get_gene() << ":" << prev_ex->ob_irptr->get_start() << "-" << prev_ex->ob_irptr->get_end()<< "\n" ;
+//    cerr << "#2 " << ir_start << "-" << ir_end<< " :: " << ir_ptr->get_gene() << ":" << ir_ptr->get_start() << "-" << ir_ptr->get_end()<< "\n" ;
+//    }
                         prev_ex->ob_irptr = ir_ptr ;
                         (ex.second)->ib_irptr = ir_ptr ;
                         ir_ptr->update_boundaries(prev_ex->get_end(), (ex.second)->get_start()) ;
@@ -408,6 +411,93 @@ namespace grimoire {
 
     }
 
+
+    void Exon::simplify(map<string, int>& junc_tlb, float simpl_percent, Gene* gObj, int strandness,
+                        int denovo_simpl, int db_simple, int ir_simpl){
+        float sumall = 0 ;
+        {
+            vector<float> sumj ;
+            vector<_Region *> jnc_vec ;
+            vector<int> thrshld_vect;
+            unsigned int i = 0 ;
+            for(const auto &juncIt: ib){
+                if (!juncIt->get_denovo_bl())
+                    continue ;
+                string key = juncIt->get_key(gObj, strandness) ;
+                jnc_vec.push_back(juncIt) ;
+                float s = junc_tlb.count(key)>0 ? junc_tlb[key] : 0 ;
+                sumj.push_back(s) ;
+                int min_reads = juncIt->get_annot() ?  db_simple: denovo_simpl ;
+                thrshld_vect.push_back(min_reads) ;
+                sumall += s ;
+                i++ ;
+            }
+            if (ib_irptr != nullptr && ib_irptr->get_ir_flag()){
+                const int ir_strt =  ib_irptr->get_start() ;
+                const int ir_end  =  ib_irptr->get_end() ;
+                jnc_vec.push_back(ib_irptr) ;
+                string key = key_format(gObj->get_id(), ir_strt, ir_end, true) ;
+                float s = junc_tlb.count(key)>0 ? junc_tlb[key] : 0 ;
+                thrshld_vect.push_back(ir_simpl) ;
+                sumj.push_back(s) ;
+                sumall += s ;
+            }
+
+            for(i=0; i<jnc_vec.size(); i++){
+                float x = (sumall >0) ? sumj[i]/sumall : 0 ;
+                jnc_vec[i]->set_simpl_fltr(x<simpl_percent || sumj[i]< thrshld_vect[i]) ;
+            }
+        }
+
+
+        sumall = 0 ;
+        {
+            vector<float> sumj ;
+            vector<_Region *> jnc_vec ;
+            vector<int> thrshld_vect;
+            unsigned int i = 0 ;
+            for(const auto &juncIt: ob){
+                if (!juncIt->get_denovo_bl())
+                    continue ;
+                string key = juncIt->get_key(gObj, strandness) ;
+                jnc_vec.push_back(juncIt) ;
+                float s = junc_tlb.count(key)>0 ? junc_tlb[key] : 0 ;
+                sumj.push_back(s) ;
+                int min_reads = juncIt->get_annot() ?  db_simple: denovo_simpl ;
+                thrshld_vect.push_back(min_reads) ;
+                sumall += s ;
+                i++ ;
+            }
+            if (ob_irptr != nullptr && ob_irptr->get_ir_flag()){
+                const int ir_strt =  ob_irptr->get_start() ;
+                const int ir_end  =  ob_irptr->get_end() ;
+                jnc_vec.push_back(ob_irptr) ;
+                string key = key_format(gObj->get_id(), ir_strt, ir_end, true) ;
+                float s = junc_tlb.count(key)>0 ? junc_tlb[key] : 0 ;
+                thrshld_vect.push_back(ir_simpl) ;
+                sumj.push_back(s) ;
+                sumall += s ;
+            }
+
+            for(i=0; i<jnc_vec.size(); i++){
+                float x = (sumall >0) ? sumj[i]/sumall : 0 ;
+                jnc_vec[i]->set_simpl_fltr(x<simpl_percent || sumj[i]< thrshld_vect[i]) ;
+            }
+        }
+
+
+    }
+
+
+    void Gene::simplify(map<string, int>& junc_tlb, float simpl_percent, int strandness, int denovo_simpl,
+                        int db_simple, int ir_simpl){
+        for(const auto &ex: exon_map_){
+            (ex.second)->simplify(junc_tlb, simpl_percent, this, strandness, denovo_simpl, db_simple, ir_simpl) ;
+        }
+
+    }
+
+
     void Gene::print_exons(){
 
         for(const auto & ex: exon_map_ ){
@@ -426,40 +516,26 @@ namespace grimoire {
                + ":" + gObj->get_id()) ;
     }
 
-    bool Intron::is_reliable(float min_bins){
+    bool Intron::is_reliable(float min_bins, int eff_len){
 
         float npos = 0 ;
-        const int nbins = n_nb_.size() ;
-        if (length() <=0 || nbins <= 0) return false ;
-//cerr << "IR:" << (get_gene())->get_id() << ":" << get_start() << "-" << get_end()<<" " << "\n" ;
-//cerr << get_start() << "-" << get_end() << ": " << "\n" ;
-//cerr << "\t :: " ;
-// for(int i =0 ; i< nbins; i++){
-//cerr << read_rates_[i] << ", " ;
-//}
-//cerr << "\n" ;
+        if (length() <=0 || numbins_ <= 0 || read_rates_ == nullptr) return false ;
+        const int ext = (int) (eff_len / (nxbin_+1)) ;
+        vector<float> cov (numbins_) ;
 
-
-
-        for(int i =0 ; i< nbins; i++){
-            if (read_rates_[i]>0){
-                npos ++;
+        for(int i =0 ; i< numbins_; i++){
+            if (read_rates_[i] < 0) continue ;
+            const int binsz = i< nxbin_mod_ ? nxbin_ +1 : nxbin_ ;
+            read_rates_[i] = (read_rates_[i]>0) ? (read_rates_[i] /  binsz) : 0 ;
+            for (int j=0; j<ext && (i+j)<numbins_; j++){
+                cov[i+j] += read_rates_[i] ;
             }
-//            read_rates_[i] = (read_rates_[i]>0) ? (read_rates_[i] / n_nb_[i].size() ) : 0 ;
-             read_rates_[i] = (read_rates_[i]>0) ? (read_rates_[i] /  nxbin) : 0 ;
-
         }
-//cerr << get_start() << "-" << get_end() << ": " << "\n" ;
-//cerr << "\t :: " ;
-// for(int i =0 ; i< nbins; i++){
-//cerr << read_rates_[i] << ", " ;
-//}
-//cerr << "\n" ;
-
-        const float c = (npos>0) ? (npos/nbins) : 0 ;
-//cerr << " npos:" << npos << " c:" << c << " min_bins:" << min_bins<<  "\n" ;
+        for (const auto &p: cov){
+            npos += (p>0)? 1: 0 ;
+        }
+        const float c = (npos>0) ? (npos/numbins_) : 0 ;
         bool b = (c >= min_bins) ;
-
         return b ;
     }
 
@@ -635,7 +711,6 @@ namespace grimoire {
             if(irp->get_end() < start){
                 continue ;
             }
-//cerr << irp->get_start() << "-" << irp->get_end() << " == " << irp->get_ir_flag() << " || " << irp->is_connected() << "\n" ;
             if (irp->get_ir_flag() && irp->is_connected())
                 ir_vec.push_back(irp) ;
         }
@@ -646,7 +721,6 @@ namespace grimoire {
                              vector<Gene*>& oGeneList, bool ir){
 
         Junction * junc = new Junction(start, end, false) ;
-//        Gene * gObj ;
         const string key = junc->get_key() ;
         vector<overGene*>::iterator low = lower_bound (glist[chrom].begin(), glist[chrom].end(),
                                                        start, _Region::func_comp ) ;

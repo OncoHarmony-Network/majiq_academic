@@ -164,7 +164,7 @@ class MatrixHdf5:
                 raise LsvIdNotFoundInVoilaFile(None, lsv_id)
 
         try:
-            return lsv_grp[key].value
+            return lsv_grp[key][()]
         except KeyError:
             print(dict(lsv_grp))
             raise
@@ -180,7 +180,7 @@ class MatrixHdf5:
         gene_id = lsv_id_to_gene_id(lsv_id)
         lsv_grp = self.h['lsvs'][gene_id][lsv_id]
         for key in keys:
-            yield key, lsv_grp[key].value
+            yield key, lsv_grp[key][()]
 
     @property
     def prior(self):
@@ -190,7 +190,7 @@ class MatrixHdf5:
         """
 
         if self._prior is None:
-            self._prior = self.h['metadata']['prior'].value
+            self._prior = self.h['metadata']['prior'][()]
         return self._prior
 
     @prior.setter
@@ -209,7 +209,7 @@ class MatrixHdf5:
         Gets analysis type from h5py file.
         :return:
         """
-        return self.h['metadata']['analysis_type'].value
+        return self.h['metadata']['analysis_type'][()]
 
     @analysis_type.setter
     def analysis_type(self, a):
@@ -227,7 +227,7 @@ class MatrixHdf5:
         :return: list of strings
         """
         if self._group_names is None:
-            self._group_names = self.h['metadata']['group_names'].value.tolist()
+            self._group_names = self.h['metadata']['group_names'][()].tolist()
         return self._group_names
 
     @group_names.setter
@@ -262,7 +262,7 @@ class MatrixHdf5:
         Get list of experiment names using h5py api.
         :return:
         """
-        return self.h['metadata']['experiment_names'].value.tolist()
+        return self.h['metadata']['experiment_names'][()].tolist()
 
     @experiment_names.setter
     def experiment_names(self, ns):
@@ -285,7 +285,7 @@ class MatrixHdf5:
         List of stats used in this quantification.
         :return: list of strings
         """
-        return self.h['metadata']['stat_names'].value
+        return self.h['metadata']['stat_names'][()]
 
     @stat_names.setter
     def stat_names(self, s):
@@ -329,7 +329,7 @@ class MatrixHdf5:
         """
         metadata = self.h['metadata']
         try:
-            return metadata['file_version'].value
+            return metadata['file_version'][()]
         except KeyError:
             return -1
 

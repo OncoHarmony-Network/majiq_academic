@@ -30,6 +30,13 @@ def get_minsamps(param):
     assert param >= 2
     return param
 
+def check_positive(value):
+    ivalue = float(value)
+    if ivalue <= 0:
+        raise argparse.ArgumentTypeError("%s is an invalid positive float value" % value)
+    return ivalue
+
+
 
 def new_subparser():
     return argparse.ArgumentParser(add_help=False)
@@ -59,10 +66,13 @@ def main():
     common.add_argument('--mem-profile', default=False, action='store_true',
                         help="Print memory usage summary at the end of the execution. [Default: %(default)s]")
 
-    common.add_argument('--min-experiments', default=-1, type=float, dest='min_exp',
-                        help='Lower threshold for group filters. min_experiments is the minimum number of experiments '
-                             'where the different filters check in order to pass an lsv or junction. [Default: 50% of '
-                             'the total number of experiments in the group]')
+    common.add_argument('--min-experiments', default=0.5, type=check_positive, dest='min_exp',
+                        help='Lower threshold for group filters. min_experiments set the minimum number of experiments '
+                             'where the different filters check in order to pass an lsv or junction.\n'
+                             '\t + <  1 the value is the fraction of the experiments in the group\n'
+                             '\t + >= 1 the value is the actual number of experiments. If the number is set to a '
+                             'greater number than the size of the group, we use the size instead.\n'
+                             '[Default: %(default)s]]')
 
     common.add_argument('--plotpath', default=None,
                         help='Path to save the plot to, if not provided will show on a matplotlib popup window. '
@@ -84,7 +94,7 @@ def main():
                              help='Minimum number of reads on average in intronic sites, only for intron retention.'
                                   'Default: %(default)s]')
 
-    buildparser.add_argument('--min-denovo', default=2, type=int,
+    buildparser.add_argument('--min-denovo', default=10, type=int,
                              help='Minimum number of reads threshold combining all positions in a LSV to consider that'
                                   'denovo junction is real". [Default: %(default)s]')
 
@@ -105,9 +115,30 @@ def main():
                              help='Number of positions to sample per iteration. [Default: %(default)s]')
     buildparser.add_argument('--m', default=30, type=int,
                              help='Number of bootstrapping samples. [Default: %(default)s]')
-    buildparser.add_argument('--irnbins', default=0.2, type=float, help='This values defines the number of bins with '
+    buildparser.add_argument('--irnbins', default=0.5, type=float, help='This values defines the number of bins with '
                                                                         'some coverage that an intron needs to pass '
                                                                         'to be accepted as real [Default: %(default)s]')
+
+    buildparser.add_argument('--simplify_denovo', dest="simpl_denovo", default=10, type=int,
+                             help='Minimum number of reads threshold combining all positions of an denovo junction to '
+                                  'consider if it will be simplified, even knowing it is real. Simplified junctions are'
+                                  ' discarded from any lsv. [Default: %(default)s]')
+
+    buildparser.add_argument('--simplify_annotated', dest="simpl_db", default=10, type=int,
+                             help='Minimum number of reads threshold combining all positions of an annotated junction to '
+                                  'consider if it will be simplified, even knowing it is real. Simplified junctions are'
+                                  ' discarded from any lsv. [Default: %(default)s]')
+
+    buildparser.add_argument('--simplify_ir', dest="simpl_ir", default=10, type=int,
+                             help='Minimum number of reads threshold combining all positions of an ir to '
+                                  'consider if it will be simplified, even knowing it is real. Simplified junctions are'
+                                  ' discarded from any lsv. [Default: %(default)s]')
+
+    buildparser.add_argument('--simplify_psi', dest="simpl_psi", default=0.01, type=float,
+                             help='Minimum fraction of the usage of any junction in a LSV to consider that junction is'
+                                  ' real. [Default: %(default)s]')
+
+
 
     sampling = new_subparser()
 

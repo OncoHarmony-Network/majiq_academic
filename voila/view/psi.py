@@ -23,6 +23,14 @@ def index():
                            multi_view=len(ViewConfig().voila_files) > 1)
 
 
+@app.route('/toggle-simplified', methods=('POST',))
+def toggle_simplified():
+    if not 'omit_simplified' in session:
+        session['omit_simplified'] = True
+    else:
+        session['omit_simplified'] = not session['omit_simplified']
+    return jsonify({'ok':1})
+
 @app.route('/gene/<gene_id>/')
 def gene(gene_id):
 
@@ -48,7 +56,7 @@ def gene(gene_id):
 @app.route('/index-table', methods=('POST',))
 def index_table():
 
-    with ViewPsis() as v, ViewSpliceGraph() as sg:
+    with ViewPsis() as v, ViewSpliceGraph(omit_simplified=session.get('omit_simplified', False)) as sg:
         grp_name = v.group_names[0]
 
         dt = DataTables(Index.psi(), ('gene_name', 'lsv_id'))
@@ -90,7 +98,7 @@ def nav(gene_id):
 
 @app.route('/splice-graph/<gene_id>', methods=('POST', 'GET'))
 def splice_graph(gene_id):
-    with ViewSpliceGraph() as sg, ViewPsis() as v:
+    with ViewSpliceGraph(omit_simplified=session.get('omit_simplified', False)) as sg, ViewPsis() as v:
         exp_names = v.splice_graph_experiment_names
         gd = sg.gene_experiment(gene_id, exp_names)
         gd['experiment_names'] = exp_names
@@ -100,7 +108,8 @@ def splice_graph(gene_id):
 
 @app.route('/summary-table/<gene_id>', methods=('POST',))
 def summary_table(gene_id):
-    with ViewPsis() as v, ViewSpliceGraph() as sg:
+
+    with ViewPsis() as v, ViewSpliceGraph(omit_simplified=session.get('omit_simplified', False)) as sg:
         grp_name = v.group_names[0]
         index_data = Index.psi(gene_id)
 
@@ -165,7 +174,7 @@ def psi_splice_graphs():
 @app.route('/lsv-data/<lsv_id>', methods=('POST',))
 def lsv_data(lsv_id):
 
-    with ViewSpliceGraph() as sg, ViewPsis() as m:
+    with ViewSpliceGraph(omit_simplified=session.get('omit_simplified', False)) as sg, ViewPsis() as m:
         psi = m.lsv(lsv_id)
         ref_exon = psi.reference_exon
         gene_id = psi.gene_id
@@ -188,7 +197,10 @@ def lsv_data(lsv_id):
 @app.route('/violin-data/<lsv_id>', methods=('POST',))
 def violin_data(lsv_id):
     config = ViewConfig()
-
+    if 'hidden_idx' in request.form:
+        hidden_idx = [int(x) for x in request.form['hidden_idx'].split(',')]
+    else:
+        hidden_idx = []
 
     """
     Expected workflow:
@@ -197,16 +209,21 @@ def violin_data(lsv_id):
     Then, For each voila file, we look for that LSV and check if the junction is available in it.
     If so, we  add group bins / means to that table row
     """
-
     with ViewPsis() as v:
         exp_names = v.experiment_names
         grp_names = v.group_names
+        files = config.voila_files[:]
+        for idx in hidden_idx:
+            grp_names.pop(idx)
+            exp_names.pop(idx)
+            files.pop(idx)
 
         all = v.lsv(lsv_id)
 
         table_data = []
 
         for i, _junc in enumerate(all.junctions.tolist()):
+
 
             """
             In one table row, "group_bins" is a 2d array. Outer array index refers to the test group index
@@ -233,7 +250,8 @@ def violin_data(lsv_id):
             ])
 
             for j, grp in enumerate(grp_names):
-                with ViewPsi(config.voila_files[j]) as m:
+
+                with ViewPsi(files[j]) as m:
 
                     try:
                         psi = m.lsv(lsv_id)
@@ -244,7 +262,6 @@ def violin_data(lsv_id):
                         means = []
                         bins = []
                         juncs = []
-
 
                     if _junc in juncs:
 

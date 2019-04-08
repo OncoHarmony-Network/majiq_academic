@@ -90,8 +90,11 @@ class Config(object):
 
             self.min_experiments = {}
             for name, ind_list in self.tissue_repl.items():
-                n = min(len(ind_list), np.ceil(len(ind_list)/2))
-                self.min_experiments[name] = int(n) if self.min_exp == -1 else self.min_exp
+                if self.min_exp < 1:
+                    mexp = np.ceil(len(ind_list) * self.min_exp)
+                else:
+                    mexp = self.min_exp
+                self.min_experiments[name] = int(min(len(ind_list), mexp))
                 for exp_idx in ind_list:
                     exp = self.exp_list[exp_idx]
                 # for exp_idx, exp in enumerate(self.exp_list):

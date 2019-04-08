@@ -24,26 +24,51 @@
 {% endblock %}
 
 {% block heatmap_form %}
-    <div class="pure-u-1-3">
-        <form class="heatmap-form pure-form pure-form-aligned">
-            {% for stat_name in stat_names %}
-                <label for="{{ stat_name }}" class="pure-radio">
-                    <input id="{{ stat_name }}" type="radio" name="stat-name" value="{{ stat_name }}"
-                           {% if loop.first %}checked{% endif %}>
-                    {{ stat_name }}</label>
-            {% endfor %}
-        </form>
+
+
+    <form class="heatmap-form pure-form pure-form-aligned" style="float: right; margin-right: 10px;">
+    <div id="heatmap-stat-choices">
+        {% for stat_name in stat_names %}
+            <label for="{{ stat_name }}" class="pure-radio">
+                <input id="{{ stat_name }}" type="radio" name="stat-name" value="{{ stat_name }}"
+                       {% if loop.first %}checked{% endif %}>
+                {{ stat_name }}</label>
+        {% endfor %}
     </div>
+    </form>
+
+    <form class="heatmap-scale-form pure-form pure-form-stacked" style="float: right; margin-right: 10px;">
+
+        <label for="dPSI-cutoff">dPSI Scale Cutoff</label>
+        <input id="dPSI-cutoff" type="number" min="0" class="pure-input" style="width:110px;" value="0.5">
+
+    </form>
+
+
+
+
+
 {% endblock %}
 
 {% block analysis_type_script %}
-    <script src="https://unpkg.com/jspdf@latest/dist/jspdf.min.js"></script>
+    <script src="{{ url_for('static', filename='js/lib/jquery.ba-throttle-debounce.min.js') }}"></script>
     <script>
         const view_type = 'het';
-
-        document.querySelector('.heatmap-form').addEventListener('change', () => {
+        var hidden_idx = [];
+        document.querySelector('#heatmap-stat-choices').addEventListener('change', () => {
             $('.lsv-table').DataTable().ajax.reload();
         });
+
+        $('.lsv-table').on('click', "image.hide-btn", function () {
+            const group = $(this).parent();
+            hidden_idx.push(group.attr('data-group-idx'));
+            $('.lsv-table').DataTable().ajax.reload();
+        });
+
+        $(".heatmap-scale-form input").on('input', ($.debounce(750, function(e) {
+            const dPSI_max = parseFloat($('#dPSI-cutoff').val());
+            HeatMap.change_axis_scale({'max':dPSI_max, 'min':-1*dPSI_max}, {'max':0, 'min':0});
+        })));
 
         json_ajax('{{ url_for("nav", gene_id=gene.id) }}').then(json => {
             document.querySelector('.prev-gene').addEventListener('click', () => {
@@ -113,7 +138,9 @@
         new MutationObserver(mutations => {
             mutations
                 .forEach(m => m.addedNodes.forEach(n => {
-
+                    if(n.nodeType === 3){
+                        return;
+                    }
                     n.querySelectorAll('.heat-map')
                         .forEach(h => {
                             const tool_tip = document.querySelector('.heat-map-tool-tip');
@@ -300,6 +327,7 @@
                         data: d => {
                             d['lsv_id'] = lsv_table.dataset.lsvId;
                             d['stat_name'] = document.querySelector('input[name=stat-name]:checked').value;
+                            d['hidden_idx'] = hidden_idx.length > 0 ? hidden_idx.join(',') : undefined;
                         },
                         type: 'POST'
                     },
@@ -308,7 +336,6 @@
                             targets: 1,
                             sortable: false,
                             render: data => {
-
                                 const violin = new Violin(data);
                                 const element = document.createElement('svg');
                                 element.classList.add('psi-violin-plot');

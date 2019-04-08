@@ -22,10 +22,17 @@ def index():
     form = LsvFiltersForm()
     return render_template('het_index.html', form=form)
 
+@app.route('/toggle-simplified', methods=('POST',))
+def toggle_simplified():
+    if not 'omit_simplified' in session:
+        session['omit_simplified'] = True
+    else:
+        session['omit_simplified'] = not session['omit_simplified']
+    return jsonify({'ok':1})
 
 @app.route('/gene/<gene_id>/')
 def gene(gene_id):
-    with ViewHeterogens() as m, ViewSpliceGraph() as sg:
+    with ViewHeterogens() as m, ViewSpliceGraph(omit_simplified=session.get('omit_simplified', False)) as sg:
         lsv_data = list((lsv_id, m.lsv(lsv_id).lsv_type) for lsv_id in m.lsv_ids(gene_ids=[gene_id]))
         lsv_data.sort(key=lambda x: len(x[1].split('|')))
         ucsc = {}
@@ -46,7 +53,7 @@ def gene(gene_id):
 @app.route('/lsv-data', methods=('POST',))
 @app.route('/lsv-data/<lsv_id>', methods=('POST',))
 def lsv_data(lsv_id):
-    with ViewSpliceGraph() as sg, ViewHeterogens() as m:
+    with ViewSpliceGraph(omit_simplified=session.get('omit_simplified', False)) as sg, ViewHeterogens() as m:
         het = m.lsv(lsv_id)
         gene_id = het.gene_id
         gene = sg.gene(gene_id)
@@ -65,7 +72,7 @@ def lsv_data(lsv_id):
 
 @app.route('/index-table', methods=('POST',))
 def index_table():
-    with ViewHeterogens() as p, ViewSpliceGraph() as sg:
+    with ViewHeterogens() as p, ViewSpliceGraph(omit_simplified=session.get('omit_simplified', False)) as sg:
         dt = DataTables(Index.heterogen(), ('gene_name', 'lsv_id'))
 
         for idx, index_row, records in dt.callback():
@@ -106,7 +113,7 @@ def nav(gene_id):
 
 @app.route('/splice-graph/<gene_id>', methods=('POST',))
 def splice_graph(gene_id):
-    with ViewSpliceGraph() as sg, ViewHeterogens() as v:
+    with ViewSpliceGraph(omit_simplified=session.get('omit_simplified', False)) as sg, ViewHeterogens() as v:
         exp_names = v.splice_graph_experiment_names
         gd = sg.gene_experiment(gene_id, exp_names)
         gd['group_names'] = v.group_names
@@ -210,10 +217,17 @@ def lsv_highlight():
 @app.route('/summary-table', methods=('POST',))
 def summary_table():
     lsv_id, stat_name = itemgetter('lsv_id', 'stat_name')(request.form)
+    if 'hidden_idx' in request.form:
+        hidden_idx = [int(x) for x in request.form['hidden_idx'].split(',')]
+    else:
+        hidden_idx = []
 
     with ViewHeterogens() as v:
         exp_names = v.experiment_names
         grp_names = v.group_names
+        for idx in hidden_idx:
+            grp_names.pop(idx)
+            exp_names.pop(idx)
 
         het = v.lsv(lsv_id)
         juncs = het.junctions
@@ -222,24 +236,34 @@ def summary_table():
 
         table_data = []
 
+        skipped_idx = 0
         for idx, (junc, mean_psi, mu_psi) in enumerate(zip(juncs, mean_psis, mu_psis)):
+            if idx in hidden_idx:
+                skipped_idx += 1
+                continue
             junc = map(str, junc)
             junc = '-'.join(junc)
             heatmap = het.junction_heat_map(stat_name, idx)
 
             table_data.append({
                 'junc': junc,
-                'junc_idx': idx,
+                'junc_idx': idx - skipped_idx,
                 'mean_psi': mean_psi,
                 'mu_psi': mu_psi,
                 'heatmap': heatmap,
             })
+
 
         dt = DataTables(table_data, ('junc', '', ''))
 
         for idx, row_data, records in dt.callback():
             junc, junc_idx, mean_psi = itemgetter('junc', 'junc_idx', 'mean_psi')(row_data)
             mu_psi, heatmap = itemgetter('mu_psi', 'heatmap')(row_data)
+            for _idx in hidden_idx:
+                heatmap = np.delete(heatmap, _idx, axis=0)
+                heatmap = np.delete(heatmap, _idx, axis=1).tolist()
+                mu_psi.pop(_idx)
+                mean_psi.pop(_idx)
 
             records[idx] = [
                 junc,
@@ -248,7 +272,7 @@ def summary_table():
                     'experiment_names': exp_names,
                     'junction_idx': junc_idx,
                     'mean_psi': mean_psi,
-                    'mu_psi': mu_psi,
+                    'mu_psi': mu_psi
                 },
                 {
                     'heatmap': heatmap,

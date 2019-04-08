@@ -66,7 +66,7 @@ cdef int _output_majiq_file(vector[LSV*] lsvlist, map[string, overGene_vect_t] g
     cdef list cov_l, type_list = []
     cdef list junc_info = []
     cdef str out_file, junc_file
-    cdef unsigned int njunc = 0
+    cdef int njunc = 0
     cdef np.float32_t[:, :] boots
     # cdef np.ndarray[np.float32_t, ndim=2, mode="c"] boots
     cdef np.ndarray junc_ids
@@ -213,7 +213,7 @@ cdef _find_junctions(list file_list, map[string, Gene*]& gene_map, vector[string
     cdef float min_ir_cov = conf.min_intronic_cov
     cdef int k=conf.k, m=conf.m
     cdef float pvalue_limit=conf.pvalue_limit
-    cdef unsigned int min_experiments = 1 if conf.min_exp == -1 else conf.min_exp
+    cdef unsigned int min_experiments
     cdef unsigned int eff_len = conf.readLen - 2*MIN_BP_OVERLAP + 1
     cdef bint ir = conf.ir
     cdef float ir_numbins=conf.irnbins
@@ -236,9 +236,14 @@ cdef _find_junctions(list file_list, map[string, Gene*]& gene_map, vector[string
     cdef pair[string, unsigned int] it
 
 
+
+
     for tmp_str, group_list in conf.tissue_repl.items():
         name = tmp_str.encode('utf-8')
         last_it_grp = group_list[len(group_list) - 1]
+        min_experiments = conf.min_experiments[tmp_str]
+        logger.info('Group %s, number of experiments: %s, minexperiments: %s' % (tmp_str,
+                                                                                  len(group_list), min_experiments))
         for j in group_list:
             logger.info('Reading file %s' %(file_list[j][0]))
             bamfile = ('%s/%s.%s' % (conf.sam_dir, file_list[j][0], SEQ_FILE_FORMAT)).encode('utf-8')
@@ -252,6 +257,7 @@ cdef _find_junctions(list file_list, map[string, Gene*]& gene_map, vector[string
                     with gil:
                         logger.info('Detect Intron retention %s' %(file_list[j][0]))
                     c_iobam.detect_introns(min_ir_cov, min_experiments, ir_numbins, (j==last_it_grp))
+
                 njunc = c_iobam.get_njuncs()
                 with gil:
                     logger.debug('Total Junctions and introns %s' %(njunc))
@@ -315,7 +321,9 @@ cdef void gene_to_splicegraph(Gene * gne, sqlite3 * db) nogil:
         if jj.get_end() == C_FIRST_LAST_JUNC:
             sg_alt_end(db, gne_id, jj.get_start())
             continue
-        sg_junction(db, gne_id, jj.get_start(), jj.get_end(), jj.get_annot(), 0)
+        # with gil:
+            # print(jj_pair.first, jj.get_start(), jj.get_end(), jj.get_annot(), jj.get_simpl_fltr())
+        sg_junction(db, gne_id, jj.get_start(), jj.get_end(), jj.get_annot(), jj.get_simpl_fltr())
 
     for ex_pair in gne.exon_map_:
         ex = ex_pair.second
@@ -325,12 +333,81 @@ cdef void gene_to_splicegraph(Gene * gne, sqlite3 * db) nogil:
         if ex.has_out_intron():
             ir = ex.ob_irptr
             if ir.get_ir_flag():
-                sg_intron_retention(db, gne_id, ir.get_start(), ir.get_end(), ir.get_annot())
+                # with gil:
+                #     print(gne_id, ir.get_start(), ir.get_end(), ir.get_annot(), ir.is_connected())
+                sg_intron_retention(db, gne_id, ir.get_start(), ir.get_end(), ir.get_annot(), ir.get_simpl_fltr())
 
-    #
-    # for ir in gne.intron_vec_:
-    #     if ir.get_ir_flag():
-    #         sg_intron_retention(db, gne_id, ir.get_start(), ir.get_end(), ir.get_annot())
+
+cdef int simplify(list file_list, map[string, Gene*] gene_map, vector[string] gid_vec,
+                   map[string, overGene_vect_t] gene_list, object conf, object logger) except -1 :
+
+    cdef int nsamples = len(file_list)
+    cdef int nthreads = conf.nthreads
+    cdef map[string, int] junc_tlb
+    cdef int n = gene_map.size()
+    cdef int njunc
+    cdef Gene * gg
+    cdef Gene_vect_t gene_l
+    cdef int i, j
+    cdef np.float32_t simpl_fltr = conf.simpl_psi
+    cdef int strandness
+    cdef bint irb =  conf.ir
+    cdef Intron * ir_ptr;
+    cdef bint val = True ;
+    cdef unsigned int irbool, coord1, coord2, sreads, npos
+    cdef string chrom, gid, key, jid
+    cdef char strand
+    cdef int denovo_simpl = conf.simpl_denovo
+    cdef int db_simple = conf.simpl_db
+    cdef int ir_simpl = conf.simpl_ir
+
+    # for tmp_str, group_list in conf.tissue_repl.items():
+    #     name = tmp_str.encode('utf-8')
+        # last_it_grp = group_list[len(group_list) - 1]
+        # min_experiments = conf.min_experiments[tmp_str]
+
+    for i in range(nsamples):
+        strandness = conf.strand_specific[file_list[i][0]]
+        junc_file = "%s/%s.juncs" % (conf.outDir, file_list[i][0])
+
+        with open(junc_file, 'rb') as fp:
+            junc_ids = np.load(fp)['junc_info']
+            njunc = junc_ids.shape[0]
+
+            for j in prange(njunc, nogil=True, num_threads=nthreads):
+                gene_l = Gene_vect_t()
+                with gil:
+                    jid     = junc_ids[j][0]
+                    coord1  = junc_ids[j][1]
+                    coord2  = junc_ids[j][2]
+                    sreads  = junc_ids[j][3]
+                    irbool  = junc_ids[j][5]
+                    chrom   = jid.split(b':')[0]
+                    strand  = <char> jid.split(b':')[1][0]
+
+                if irbool == 0:
+                    junc_tlb[jid] = sreads
+
+                elif irb:
+                    find_gene_from_junc(gene_list, chrom, strand, coord1, coord2, gene_l, irbool)
+                    with gil:
+                        gid = b':'.join(jid.split(b':')[3:])
+                    for gg in gene_l:
+                        if gg.get_id() != gid:
+                            continue
+                        irv = find_intron_retention(gg, coord1, coord2)
+                        for ir_ptr in irv:
+                            key = key_format(gg.get_id(), ir_ptr.get_start(), ir_ptr.get_end(), val)
+                            with gil:
+                                junc_tlb[key] = sreads
+                gene_l.clear()
+
+            del junc_ids
+        logger.info('Simplifying file %s' % file_list[i][0])
+        for j in prange(n, nogil=True, num_threads=nthreads):
+            gg = gene_map[gid_vec[j]]
+            gg.simplify(junc_tlb, simpl_fltr, strandness, denovo_simpl, db_simple, ir_simpl)
+
 
 
 ## OPEN API FOR PYTHON
@@ -380,9 +457,9 @@ cdef _core_build(str transcripts, list file_list, object conf, object logger):
                 logger.debug("%s] Connect introns" % gg.get_id())
             gg.connect_introns()
 
-        with gil:
-            logger.debug("[%s] Generate TLB" % gg.get_id())
-
+    simplify(file_list, gene_map, gid_vec, gene_list, conf, logger)
+    for i in prange(n, nogil=True, num_threads=nthreads):
+        gg = gene_map[gid_vec[i]]
         gene_to_splicegraph(gg, db)
         with gil:
             logger.debug("[%s] Detect LSVs" % gg.get_id())
