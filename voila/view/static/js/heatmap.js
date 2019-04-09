@@ -18,26 +18,28 @@ const stat_color = function(val){
 };
 
 const calc_dpsi_color = function(val, rangeMin, rangeMax){
-    const stopMin = 'white';
-    const stopMax = 'brown';
+    const stopMin = '#dce317';
+    const stopMax = '#450d54';
     if(val < rangeMin){
         return stopMin;
     }else if(val > rangeMax){
         return stopMax;
     }else{
         return d3.scaleLinear()
-        .domain([rangeMin, rangeMax])
-        .range([stopMin, stopMax])
+        .domain([rangeMin, 0, rangeMax])
+        .range([stopMin, 'white', stopMax])
         .interpolate(d3.interpolateCubehelixLong)(val);
     }
 };
 
+const DEFAULT_DPSI_MAXVAL = 0.5;
+
 const dpsi_color = function(val, rangeMin, rangeMax){
     if(rangeMin === undefined){
-        rangeMin = -0.5;
+        rangeMin = -DEFAULT_DPSI_MAXVAL;
     }
     if(rangeMax === undefined){
-        rangeMax = 0.5;
+        rangeMax = DEFAULT_DPSI_MAXVAL;
     }
     return calc_dpsi_color(val, rangeMin, rangeMax);
 };
@@ -171,11 +173,15 @@ class HeatMap {
             .attr('id', 'upperGradient')
             .append('stop')
             .attr('offset', '0%')
+            .attr('style', 'stop-color:#dce317;stop-opacity:1')
+            .select(d3_parent)
+            .append('stop')
+            .attr('offset', '50%')
             .attr('style', 'stop-color:white;stop-opacity:1')
             .select(d3_parent)
             .append('stop')
             .attr('offset', '100%')
-            .attr('style', 'stop-color:brown;stop-opacity:1')
+            .attr('style', 'stop-color:#450d54;stop-opacity:1')
             .select(d3_parent)
             .select(d3_parent)
             .append('linearGradient')
@@ -345,7 +351,7 @@ class HeatMap {
             .attr('fill', function (d, i, a) {
                 const x = i;
                 const y = a[i].closest('g').dataset.rowIdx;
-                if (d >= 0) {
+                if (d !== -1) {
                     if (x - y < 0)
                         return stat_color(d);
                     else

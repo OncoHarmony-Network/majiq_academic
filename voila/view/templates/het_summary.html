@@ -97,11 +97,17 @@
             $('.lsv-table').DataTable().ajax.reload();
         }));
 
-        $(".heatmap-scale-form input").on('input', ($.debounce(750, function(e) {
+        function update_heatmap_scale(){
             // we limit minimum to 0.1 smallest possible as discussed
             const dPSI_max = Math.max(parseFloat($('#dPSI-cutoff').val()), 0.1);
             $('#dPSI-cutoff').val(dPSI_max);
             HeatMap.change_axis_scale({'max':dPSI_max, 'min':-1*dPSI_max}, {'max':0, 'min':0});
+        }
+
+        $(".heatmap-scale-form input").on('input', ($.debounce(750, function(e) {
+            if($('#dPSI-cutoff').val() !== ''){
+                update_heatmap_scale();
+            }
         })));
 
         json_ajax('{{ url_for("nav", gene_id=gene.id) }}').then(json => {
@@ -412,7 +418,11 @@
                                 const element = document.createElement('svg');
                                 heatmap.lsv_id = lsv_table.dataset.lsvId;
                                 heatmap.plot(element);
+                                if($('#dPSI-cutoff').val() !== DEFAULT_DPSI_MAXVAL){
+                                    update_heatmap_scale();
+                                }
                                 return element.outerHTML;
+
                             }
                         }
                     ]
