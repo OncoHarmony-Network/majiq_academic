@@ -198,7 +198,7 @@ def lsv_data(lsv_id):
 def violin_data(lsv_id):
     config = ViewConfig()
     if 'hidden_idx' in request.form:
-        hidden_idx = [int(x) for x in request.form['hidden_idx'].split(',')]
+        hidden_idx = sorted([int(x) for x in request.form['hidden_idx'].split(',')], reverse=True)
     else:
         hidden_idx = []
 

@@ -1,18 +1,61 @@
 {% extends 'base_summary.html' %}
 
-{% block analysis_type_script %}
+{% block style %}
+    {{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/lib/sumoselect.min.css') }}">
+<style>
+     .SumoUnder{
+        z-index: -1000;
+        pointer-events: none;
+    }
+    .SumoSelect>.CaptionCont {
+        min-height: 16px;
+        border: 1px solid #ccc;
+        box-shadow: inset 0 1px 3px #ddd;
+        border-radius: 4px;
+    }
+    #groups-display-all, #groups-display-none{
+        margin-top:2px;
+    }
 
+</style>
+{% endblock %}
+
+{% block heatmap_form %}
+
+    <form class="heatmap-scale-form pure-form pure-form-stacked" style="float: right; margin-right: 10px; width:214px;">
+
+        <label for="groups-display">Show / Hide Groups</label>
+        <select id="groups-display" multiple style="width:100%;">
+
+        </select>
+        <button type="button" id="groups-display-all">All</button>
+        <button type="button" id="groups-display-none">None</button>
+
+    </form>
+
+{% endblock %}
+
+{% block analysis_type_script %}
+    <script src="{{ url_for('static', filename='js/lib/jquery.sumoselect.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/lib/jquery.ba-throttle-debounce.min.js') }}"></script>
     <script>
         {% if multi_view %}
             const view_type = 'multipsi';
 
             var hidden_idx = [];
 
-            $('.lsv-table').on('click', "image.hide-btn", function () {
-                const group = $(this).parent();
-                hidden_idx.push(group.attr('data-group-idx'));
-                $('.lsv-table').DataTable().ajax.reload();
+            $('#groups-display').change(function(){
+                hidden_idx = [];
+                $('#groups-display option:not(:selected)').each(function(i, elem){
+                    hidden_idx.push($(elem).index())
+                });
             });
+
+            $('#groups-display').change($.debounce(1250, function(){
+                $('.lsv-table').DataTable().ajax.reload();
+            }));
+
         {% else %}
             const view_type = 'psi';
         {% endif %}
@@ -167,6 +210,26 @@
                                 element.setAttribute('height', '0');
 
                                 violin.multipsi(element);
+                                if($('#groups-display option').length === 0){
+                                    $.each(data.group_names, function(i, v){
+                                        $('#groups-display').append(`<option value="${v}" selected>${v}</option>`);
+                                    });
+
+                                    $('#groups-display').SumoSelect({
+                                        'captionFormatAllSelected': 'All Groups are Visible',
+                                        'captionFormat': '{0} Groups are Visible',
+                                        'placeholder': 'No Groups are Visible',
+                                        'isClickAwayOk': true
+                                    });
+
+                                    $('#groups-display-all').click(function(){
+                                        $('#groups-display')[0].sumo.selectAll();
+                                    });
+
+                                    $('#groups-display-none').click(function(){
+                                        $('#groups-display')[0].sumo.unSelectAll();
+                                    });
+                                }
 
                                 return element.outerHTML
                             }
