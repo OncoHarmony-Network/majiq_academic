@@ -42,7 +42,7 @@
 {% block heatmap_form %}
 
 
-    <form class="heatmap-form pure-form pure-form-aligned" style="float: right; margin-right: 10px;">
+    <div class="heatmap-form pure-form pure-form-aligned" style="float: right; margin-right: 10px;">
     <div id="heatmap-stat-choices">
         {% for stat_name in stat_names %}
             <label for="{{ stat_name }}" class="pure-radio">
@@ -51,16 +51,16 @@
                 {{ stat_name }}</label>
         {% endfor %}
     </div>
-    </form>
+    </div>
 
-    <form class="heatmap-scale-form pure-form pure-form-stacked" style="float: right; margin-right: 10px;">
+    <div class="heatmap-scale-form pure-form pure-form-stacked" style="float: right; margin-right: 10px;">
 
         <label for="dPSI-cutoff">dPSI Scale Cutoff</label>
-        <input id="dPSI-cutoff" type="number" min="0" class="pure-input" style="width:110px;" value="0.5">
+        <input id="dPSI-cutoff" type="number" min="0.1" step="any"  class="pure-input" style="width:110px;" value="0.5">
 
-    </form>
+    </div>
 
-    <form class="heatmap-scale-form pure-form pure-form-stacked" style="float: right; margin-right: 10px; width:214px;">
+    <div class="heatmap-scale-form pure-form pure-form-stacked" style="float: right; margin-right: 10px; width:214px;">
 
         <label for="groups-display">Show / Hide Groups</label>
         <select id="groups-display" multiple style="width:100%;">
@@ -69,7 +69,7 @@
         <button type="button" id="groups-display-all">All</button>
         <button type="button" id="groups-display-none">None</button>
 
-    </form>
+    </div>
 
 
 
@@ -98,7 +98,9 @@
         }));
 
         $(".heatmap-scale-form input").on('input', ($.debounce(750, function(e) {
-            const dPSI_max = parseFloat($('#dPSI-cutoff').val());
+            // we limit minimum to 0.1 smallest possible as discussed
+            const dPSI_max = Math.max(parseFloat($('#dPSI-cutoff').val()), 0.1);
+            $('#dPSI-cutoff').val(dPSI_max);
             HeatMap.change_axis_scale({'max':dPSI_max, 'min':-1*dPSI_max}, {'max':0, 'min':0});
         })));
 
