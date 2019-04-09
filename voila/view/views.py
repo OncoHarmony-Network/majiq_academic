@@ -46,19 +46,20 @@ class GunicornStandaloneApplication(gunicorn.app.base.BaseApplication):
 
 def run_service():
     port = ViewConfig().port
+    host = ViewConfig().host
     run_app = get_app()
     web_server = ViewConfig().web_server
 
     if web_server == 'waitress':
-        serve(run_app, port=port)
+        serve(run_app, port=port, host=host)
     elif web_server == 'gunicorn':
         options = {
-            'bind': '%s:%s' % ('127.0.0.1', port),
+            'bind': '%s:%s' % (host, port),
             'workers': ViewConfig().num_web_workers,
         }
         GunicornStandaloneApplication(run_app, options).run()
     elif web_server == 'flask':
-        run_app.run(host='127.0.0.1', port=port, debug=True)
+        run_app.run(host=host, port=port, debug=True)
     else:
         raise Exception("Unsupported web server %s specified" % web_server)
 

@@ -119,6 +119,8 @@ view_parser.add_argument('files', nargs='+', type=check_file,
                          help='List of files or directories which contains the splice graph and voila files.')
 view_parser.add_argument('-p', '--port', type=int, default=0,
                          help='Set service port. Default is a random.')
+view_parser.add_argument('--host', type=str, default='127.0.0.1',
+                         help='Set bind address. ex 0.0.0.0 for all interfaces. Default is a 127.0.0.1 (localhost).')
 view_parser.add_argument('--force-index', action='store_true',
                          help='Create index even if already exists.')
 view_parser.add_argument('--splice-graph-only', action='store_true', help=argparse.SUPPRESS)
