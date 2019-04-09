@@ -100,7 +100,7 @@ def main():
                              help='Minimum number of reads on average in intronic sites, only for intron retention.'
                                   'Default: %(default)s]')
 
-    buildparser.add_argument('--min-denovo', default=2, type=int,
+    buildparser.add_argument('--min-denovo', default=5, type=int,
                              help='Minimum number of reads threshold combining all positions in a LSV to consider that'
                                   'denovo junction is real". [Default: %(default)s]')
 
