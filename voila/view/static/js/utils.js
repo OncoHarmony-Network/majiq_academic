@@ -11,3 +11,7 @@ function attrDeltaInt(elem, attr, delta){
 function attrDelta(elem, attr, delta){
     elem.attr(attr, elem.attr(attr) + delta);
 }
+
+function removeFromArray(item, array){
+    array.splice(array.indexOf(item), 1);
+}

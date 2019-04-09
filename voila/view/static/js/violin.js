@@ -182,7 +182,7 @@ class Violin {
 
     heterogen(svg) {
         this.violin_count = this.data.group_names.length;
-        svg.setAttribute('height', this.svg_height + 20);
+        svg.setAttribute('height', this.svg_height);
         svg.setAttribute('width', this.svg_width);
 
 
@@ -579,21 +579,11 @@ class Violin {
             .style('overflow', 'visible')
             .attr('class', 'x-axis-grp')
 
-            if(isInArr(view_type, ['multipsi', 'het'])) {
-                chain = chain
-                    .append("svg:image")
-                    .attr('class', 'hide-btn')
-                    .attr("xlink:href", "/static/img/hide.png")
-                    .attr('y', -11)
-                    .attr('x', 17)
-                    .style("cursor", "pointer")
-                    .select(d3_parent)
-            }
             if(isInArr(view_type, ['het'])) {
                 chain = chain
                     .append("rect")
                     .attr('class', 'pairwise-check')
-                    .attr('y', 11)
+                    .attr('y', -8)
                     .attr('x', 20)
                     .attr('width', 8)
                     .attr('height', 8)

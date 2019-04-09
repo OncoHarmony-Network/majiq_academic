@@ -218,16 +218,18 @@ def lsv_highlight():
 def summary_table():
     lsv_id, stat_name = itemgetter('lsv_id', 'stat_name')(request.form)
     if 'hidden_idx' in request.form:
-        hidden_idx = [int(x) for x in request.form['hidden_idx'].split(',')]
+        # this is reversed because we are removing these indexes from lists later, and that only works
+        # consistently if we do it backwards
+        hidden_idx = sorted([int(x) for x in request.form['hidden_idx'].split(',')], reverse=True)
     else:
         hidden_idx = []
 
     with ViewHeterogens() as v:
         exp_names = v.experiment_names
         grp_names = v.group_names
-        for idx in hidden_idx:
-            grp_names.pop(idx)
-            exp_names.pop(idx)
+        for _idx in hidden_idx:
+            del grp_names[_idx]
+            del exp_names[_idx]
 
         het = v.lsv(lsv_id)
         juncs = het.junctions
@@ -253,7 +255,6 @@ def summary_table():
                 'heatmap': heatmap,
             })
 
-
         dt = DataTables(table_data, ('junc', '', ''))
 
         for idx, row_data, records in dt.callback():
@@ -262,8 +263,8 @@ def summary_table():
             for _idx in hidden_idx:
                 heatmap = np.delete(heatmap, _idx, axis=0)
                 heatmap = np.delete(heatmap, _idx, axis=1).tolist()
-                mu_psi.pop(_idx)
-                mean_psi.pop(_idx)
+                del mu_psi[_idx]
+                del mean_psi[_idx]
 
             records[idx] = [
                 junc,
@@ -272,7 +273,8 @@ def summary_table():
                     'experiment_names': exp_names,
                     'junction_idx': junc_idx,
                     'mean_psi': mean_psi,
-                    'mu_psi': mu_psi
+                    'mu_psi': mu_psi,
+                    'heatmap': heatmap,
                 },
                 {
                     'heatmap': heatmap,
