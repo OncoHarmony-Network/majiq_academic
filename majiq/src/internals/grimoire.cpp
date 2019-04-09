@@ -136,11 +136,13 @@ namespace grimoire {
         }
 
         if (nullptr != inbound_j){
+cerr << "IN " << ex1->get_key() << " . " << inbound_j->get_start() <<"-" <<  inbound_j->get_end()<< "\n" ;
             (ex1->ib).insert(inbound_j) ;
             inbound_j->set_acceptor(ex1) ;
         }
 
         if (outbound_j != nullptr){
+cerr << "OUT " << ex2->get_key() << " . " << outbound_j->get_start() <<"-" <<  outbound_j->get_end()<< "\n" ;
             (ex2->ob).insert(outbound_j) ;
             outbound_j->set_donor(ex2) ;
         }
@@ -154,7 +156,9 @@ namespace grimoire {
         Junction * last_5prime = nullptr ;
         Junction * first_3prime = nullptr ;
         for (const auto &jnc : junc_map_){
+cerr << (jnc.second)->get_start() <<"-" <<  (jnc.second)->get_end()<< " ::: " << (jnc.second)->get_denovo_bl() << "\n" ;
             if (!(jnc.second)->get_denovo_bl()) continue ;
+cerr << "#1\n" ;
             if ((jnc.second)->get_start() > 0) {
                 Ssite s = {(jnc.second)->get_start(), 1, jnc.second} ;
                 ss_vec.push_back(s) ;
@@ -166,6 +170,7 @@ namespace grimoire {
         }
         sort(ss_vec.begin(), ss_vec.end(), sort_ss) ;
         for(const auto & ss : ss_vec){
+cerr << "## " << ss.coord << " :: " << ss.donor_ss <<"\n" ;
             if (ss.donor_ss) {
                 if (opened_exon.size() > 0){
                     newExonDefinition(opened_exon.back()->get_end(), ss.coord, opened_exon.back(), ss.j, false) ;
@@ -270,7 +275,7 @@ namespace grimoire {
 
     void Gene::add_intron(Intron * inIR_ptr, float min_coverage, unsigned int min_exps, float min_bins, bool reset){
         bool found = false ;
-         for (const auto &ir: intron_vec_){
+        for (const auto &ir: intron_vec_){
             if (ir->get_end() < inIR_ptr->get_start() || ir->get_start() > inIR_ptr->get_end()) continue ;
             if (ir->get_end() >= inIR_ptr->get_start() && ir->get_start() <= inIR_ptr->get_end()){
                 ir->overlaping_intron(inIR_ptr) ;
@@ -318,7 +323,9 @@ namespace grimoire {
                     if (ir_ptr->get_end() >= ex_end ) break ;
                     if (ir_start <= ir_ptr->get_end() && ir_end >= ir_ptr->get_start() && ir_ptr->get_ir_flag()){
 
-//if (prev_ex->ob_irptr != nullptr){
+                        if (prev_ex->ob_irptr != nullptr){
+                            (prev_ex->ob_irptr)->unset_markd() ;
+                        }
 //    cerr << "#1 " << ir_start << "-" << ir_end<< " :: " << prev_ex->ob_irptr->get_gene() << ":" << prev_ex->ob_irptr->get_start() << "-" << prev_ex->ob_irptr->get_end()<< "\n" ;
 //    cerr << "#2 " << ir_start << "-" << ir_end<< " :: " << ir_ptr->get_gene() << ":" << ir_ptr->get_start() << "-" << ir_ptr->get_end()<< "\n" ;
 //    }
@@ -414,6 +421,7 @@ namespace grimoire {
 
     void Exon::simplify(map<string, int>& junc_tlb, float simpl_percent, Gene* gObj, int strandness,
                         int denovo_simpl, int db_simple, int ir_simpl){
+cerr << "GENE : " << gObj->get_id() << "\n";
         float sumall = 0 ;
         {
             vector<float> sumj ;
@@ -421,6 +429,7 @@ namespace grimoire {
             vector<int> thrshld_vect;
             unsigned int i = 0 ;
             for(const auto &juncIt: ib){
+cerr << "# IB: "<<juncIt->get_start() <<"-" <<  juncIt->get_end()<< " ::: " << juncIt->get_denovo_bl() << "\n" ;
                 if (!juncIt->get_denovo_bl())
                     continue ;
                 string key = juncIt->get_key(gObj, strandness) ;
@@ -445,6 +454,7 @@ namespace grimoire {
 
             for(i=0; i<jnc_vec.size(); i++){
                 float x = (sumall >0) ? sumj[i]/sumall : 0 ;
+cerr << "IB: "<<jnc_vec[i]->get_start() <<"-" <<  jnc_vec[i]->get_end()<< " :: " << x << " , " << sumj[i] << "\n " ;
                 jnc_vec[i]->set_simpl_fltr(x<simpl_percent || sumj[i]< thrshld_vect[i]) ;
             }
         }
@@ -455,6 +465,7 @@ namespace grimoire {
             vector<int> thrshld_vect;
             unsigned int i = 0 ;
             for(const auto &juncIt: ob){
+cerr << "# OB: "<<juncIt->get_start() <<"-" <<  juncIt->get_end()<< " ::: " << juncIt->get_denovo_bl() << "\n" ;
                 if (!juncIt->get_denovo_bl())
                     continue ;
                 string key = juncIt->get_key(gObj, strandness) ;
@@ -479,6 +490,7 @@ namespace grimoire {
 
             for(i=0; i<jnc_vec.size(); i++){
                 float x = (sumall >0) ? sumj[i]/sumall : 0 ;
+cerr << "OB: "<< jnc_vec[i]->get_start() <<"-" <<  jnc_vec[i]->get_end() << " :: " << x << " , " << sumj[i] << "\n " ;
                 jnc_vec[i]->set_simpl_fltr(x<simpl_percent || sumj[i]< thrshld_vect[i]) ;
             }
         }
@@ -542,7 +554,9 @@ namespace grimoire {
         unsigned int c1 = 0 ;
         unsigned int c2 = 0 ;
         set<Junction*> &juncSet = ss? ob : ib ;
+cerr << "# IB: "<<get_key() << "\n" ;
         for(const auto &juncIt:  juncSet){
+cerr << "# LSV: "<<juncIt->get_start() <<"-" <<  juncIt->get_end()<< " ::: " << juncIt->get_denovo_bl() << "\n" ;
             const int coord = ss? juncIt->get_end() : juncIt->get_start() ;
             c2 += (FIRST_LAST_JUNC != coord && !juncIt->get_simpl_fltr()) ? 1:0 ;
             if (FIRST_LAST_JUNC != coord && juncIt->get_bld_fltr() && !juncIt->get_simpl_fltr()) {
@@ -555,7 +569,7 @@ namespace grimoire {
             const int c = ir_ptr->get_ir_flag()? 1 : 0 ;
             c1 = c1 + c ;
         }
-        //cerr << get_key() << " : c1->" << c1 << " c2->" << c2 << "\n" ;
+//cerr << get_key() << " : c1->" << c1 << " c2->" << c2 << "\n" ;
         return (c2>1 and c1>0);
     }
 
@@ -613,13 +627,14 @@ namespace grimoire {
         else sort(sp_list.begin(), sp_list.end(), reverse) ;
 
         bool(*bfunc)(unsigned int, unsigned int) = b ? fless: fgrt ;
+
         string ext_type = (ss != b) ? "t" : "s" ;
+
         string prev_ex = to_string(sp_list[0].ex_ptr->get_start()) + "-" + to_string(sp_list[0].ex_ptr->get_end()) ;
-
-        unsigned int excount = 1;
-
+        unsigned int excount = 1 ;
         if (ss) for (const auto &j: ref_ex->ob) ref_ss_set.insert(j->get_start()) ;
         else for (const auto &j: ref_ex->ib) ref_ss_set.insert(j->get_end()) ;
+
         unsigned int jidx = 0 ;
         int prev_coord = 0 ;
 

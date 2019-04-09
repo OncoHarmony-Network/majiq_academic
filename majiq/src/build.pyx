@@ -246,7 +246,7 @@ cdef _find_junctions(list file_list, map[string, Gene*]& gene_map, vector[string
                                                                                   len(group_list), min_experiments))
         for j in group_list:
             logger.info('Reading file %s' %(file_list[j][0]))
-            bamfile = ('%s/%s.%s' % (conf.sam_dir, file_list[j][0], SEQ_FILE_FORMAT)).encode('utf-8')
+            bamfile = ('%s' % (file_list[j][1])).encode('utf-8')
             strandness = conf.strand_specific[file_list[j][0]]
 
             with nogil:
@@ -312,7 +312,8 @@ cdef void gene_to_splicegraph(Gene * gne, sqlite3 * db) nogil:
     for jj_pair in gne.junc_map_:
 
         jj = jj_pair.second
-
+        with gil:
+            print("KKKKKK" , jj_pair.first, jj.get_start(), jj.get_end(), jj.get_annot(), jj.get_denovo_bl())
         if not jj.get_denovo_bl(): continue
         if jj.get_start() == C_FIRST_LAST_JUNC:
             sg_alt_start(db, gne_id, jj.get_end())
@@ -321,8 +322,9 @@ cdef void gene_to_splicegraph(Gene * gne, sqlite3 * db) nogil:
         if jj.get_end() == C_FIRST_LAST_JUNC:
             sg_alt_end(db, gne_id, jj.get_start())
             continue
-        # with gil:
-            # print(jj_pair.first, jj.get_start(), jj.get_end(), jj.get_annot(), jj.get_simpl_fltr())
+
+        with gil:
+            print("MMMMM", jj_pair.first, jj.get_start(), jj.get_end(), jj.get_annot())
         sg_junction(db, gne_id, jj.get_start(), jj.get_end(), jj.get_annot(), jj.get_simpl_fltr())
 
     for ex_pair in gne.exon_map_:

@@ -267,6 +267,7 @@ namespace grimoire{
             string  get_key()               { return(to_string(start_) + "-" + to_string(end_)) ; }
             bool    get_simpl_fltr()        { return simpl_fltr_ ; }
             void    set_markd()             { markd_ = true ; }
+            void    unset_markd()           { markd_ = false ; }
             bool    is_connected()          { return markd_ ; }
             string  get_key(Gene * gObj) ;
             void    calculate_lambda() ;
