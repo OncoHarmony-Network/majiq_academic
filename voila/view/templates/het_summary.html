@@ -34,6 +34,16 @@
     #groups-display-all, #groups-display-none{
         margin-top:2px;
     }
+    .SumoSelect{
+        width: 100%;
+    }
+    .groups-display-form{
+        width: 9%;
+    }
+    .groups-display-form select[multiple]{
+        height:28px;
+        margin-bottom:0;
+    }
 
 </style>
 <style id="printStyle"></style>
@@ -60,18 +70,29 @@
 
     </div>
 
-    <div class="heatmap-scale-form pure-form pure-form-stacked" style="float: right; margin-right: 10px; width:214px;">
+    <div class="groups-display-form pure-form pure-form-stacked" style="float: right; margin-right: 10px; width:10%;">
 
-        <label for="groups-display">Show / Hide Groups</label>
-        <select id="groups-display" multiple style="width:100%;">
+        <div>
+            <label for="groups-display">Show / Hide Groups</label>
+            <select id="groups-display" multiple style="width:100%;">
 
-        </select>
-        <button type="button" id="groups-display-all">All</button>
-        <button type="button" id="groups-display-none">None</button>
+            </select>
+            <button type="button" id="groups-display-all">All</button>
+            <button type="button" id="groups-display-none">None</button>
+        </div>
+        <div id="lsv-ordering-options">
+            <label>LSV Ordering</label>
+            <label for="lsv-order-exon-num" class="pure-radio">
+                <input id="lsv-order-exon-num" type="radio" name="lsv-order" value="exon-number-idx" checked>
+                Exon Number
+            </label>
+            <label for="lsv-order-type-len" class="pure-radio">
+                <input id="lsv-order-type-len" type="radio" name="lsv-order" value="type-length-idx">
+                Type Length
+            </label>
+        </div>
 
     </div>
-
-
 
 
 {% endblock %}
@@ -81,6 +102,15 @@
     <script src="{{ url_for('static', filename='js/lib/jquery.ba-throttle-debounce.min.js') }}"></script>
     <script>
         const view_type = 'het';
+
+        // incase the screen is very small and content in the header takes more vertical space
+        // push down the content more so it does not overlap
+        $('.content').css('top',$('.gene-header').height() + 60);
+
+        $('#lsv-ordering-options input').click(function(){
+            $('.lsv-container').eq(0).sortClass('lsv', $(this).val());
+        });
+
         var hidden_idx = [];
         document.querySelector('#heatmap-stat-choices').addEventListener('change', () => {
             $('.lsv-table').DataTable().ajax.reload();
@@ -495,8 +525,9 @@
     </div>
 
     <div class="lsv-container">
-        {% for lsv_id, lsv_type in lsv_data %}
-            <div class="lsv" data-lsv-id="{{ lsv_id }}">
+        {% for lsv_id, lsv_type, exon_number_idx, type_length_idx in lsv_data %}
+            <div class="lsv" data-lsv-id="{{ lsv_id }}" data-exon-number-idx="{{ exon_number_idx }}"
+                 data-type-length-idx="{{ type_length_idx }}">
                 <div class="lsv-header ">
                     <div class="highlight-form">
                         <div>

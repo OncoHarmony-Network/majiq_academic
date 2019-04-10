@@ -33,15 +33,39 @@ def toggle_simplified():
 @app.route('/gene/<gene_id>/')
 def gene(gene_id):
     with ViewHeterogens() as m, ViewSpliceGraph(omit_simplified=session.get('omit_simplified', False)) as sg:
-        lsv_data = list((lsv_id, m.lsv(lsv_id).lsv_type) for lsv_id in m.lsv_ids(gene_ids=[gene_id]))
-        lsv_data.sort(key=lambda x: len(x[1].split('|')))
+
+
         ucsc = {}
+        exon_numbers = {}
+
         for het in m.lsvs(gene_id):
             lsv_junctions = het.junctions
             lsv_exons = sg.lsv_exons(gene_id, lsv_junctions)
             start, end = views.lsv_boundries(lsv_exons)
             gene = sg.gene(gene_id)
             ucsc[het.lsv_id] = views.ucsc_href(sg.genome, gene['chromosome'], start, end)
+            exon_numbers[het.lsv_id] = views.find_exon_number(sg.exons(gene_id), het.reference_exon, gene['strand'])
+
+
+        lsv_data = []
+        lsv_is_source = {}
+        for lsv_id in m.lsv_ids(gene_ids=[gene_id]):
+            lsv = m.lsv(lsv_id)
+
+            lsv_data.append( [lsv_id, lsv.lsv_type] )
+            lsv_is_source[lsv_id] = 1 if lsv.source else 0
+
+
+        # this is the default sort, so modify the list, and add the indexes
+        lsv_data.sort(key=lambda x: (exon_numbers[x[0]], lsv_is_source[x[0]]))
+
+        type_length_idx = [i[0] for i in sorted(enumerate(lsv_data), key=lambda x: len(x[1][1].split('|')))]
+
+        for i, lsv in enumerate(lsv_data):
+            # appending default sort index
+            lsv.append(i)
+            # appending other sort indexes
+            lsv.append(type_length_idx[i])
 
         return views.gene_view('het_summary.html', gene_id, ViewDeltaPsi,
                                lsv_data=lsv_data,

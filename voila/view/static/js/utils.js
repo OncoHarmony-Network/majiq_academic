@@ -15,3 +15,8 @@ function attrDelta(elem, attr, delta){
 function removeFromArray(item, array){
     array.splice(array.indexOf(item), 1);
 }
+
+$.fn.sortClass = function sortDivs(_class, _attr) {
+    $("> ." + _class, this[0]).sort(dec_sort).appendTo(this[0]);
+    function dec_sort(a, b){ return ($(b).data(_attr)) < ($(a).data(_attr)) ? 1 : -1; }
+}
