@@ -461,7 +461,6 @@ cdef _core_build(str transcripts, list file_list, object conf, object logger):
                 logger.debug("%s] Connect introns" % gg.get_id())
             gg.connect_introns()
 
-    # print("SIMPLIFY", conf.simpl_psi)
     if bsimpl:
         simplify(file_list, gene_map, gid_vec, gene_list, conf, logger)
     for i in prange(n, nogil=True, num_threads=nthreads):

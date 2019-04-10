@@ -505,10 +505,10 @@ namespace grimoire {
         for(const auto & ex: exon_map_ ){
             cerr << "EXON:: "<< ex.first << "\n" ;
             for (const auto & j1: (ex.second)->ib){
-                cerr << "<<< " << j1->get_start() << "-" << j1->get_end() << "\n";
+                cerr << "<<< " << j1->get_start() << "-" << j1->get_end() << "\n" ;
             }
             for (const auto & j1: (ex.second)->ob){
-                cerr << ">>>" << j1->get_start() << "-" << j1->get_end() << "\n";
+                cerr << ">>>" << j1->get_start() << "-" << j1->get_end() << "\n" ;
             }
         }
     }
