@@ -136,13 +136,11 @@ namespace grimoire {
         }
 
         if (nullptr != inbound_j){
-cerr << "IN " << ex1->get_key() << " . " << inbound_j->get_start() <<"-" <<  inbound_j->get_end()<< "\n" ;
             (ex1->ib).insert(inbound_j) ;
             inbound_j->set_acceptor(ex1) ;
         }
 
         if (outbound_j != nullptr){
-cerr << "OUT " << ex2->get_key() << " . " << outbound_j->get_start() <<"-" <<  outbound_j->get_end()<< "\n" ;
             (ex2->ob).insert(outbound_j) ;
             outbound_j->set_donor(ex2) ;
         }
@@ -156,9 +154,7 @@ cerr << "OUT " << ex2->get_key() << " . " << outbound_j->get_start() <<"-" <<  o
         Junction * last_5prime = nullptr ;
         Junction * first_3prime = nullptr ;
         for (const auto &jnc : junc_map_){
-cerr << (jnc.second)->get_start() <<"-" <<  (jnc.second)->get_end()<< " ::: " << (jnc.second)->get_denovo_bl() << "\n" ;
             if (!(jnc.second)->get_denovo_bl()) continue ;
-cerr << "#1\n" ;
             if ((jnc.second)->get_start() > 0) {
                 Ssite s = {(jnc.second)->get_start(), 1, jnc.second} ;
                 ss_vec.push_back(s) ;
@@ -170,7 +166,6 @@ cerr << "#1\n" ;
         }
         sort(ss_vec.begin(), ss_vec.end(), sort_ss) ;
         for(const auto & ss : ss_vec){
-cerr << "## " << ss.coord << " :: " << ss.donor_ss <<"\n" ;
             if (ss.donor_ss) {
                 if (opened_exon.size() > 0){
                     newExonDefinition(opened_exon.back()->get_end(), ss.coord, opened_exon.back(), ss.j, false) ;
@@ -219,18 +214,18 @@ cerr << "## " << ss.coord << " :: " << ss.donor_ss <<"\n" ;
         return ;
     }
 
-    void Gene::initialize_junction(string key, int start, int end, float* nreads_ptr){
+    void Gene::initialize_junction(string key, int start, int end, float* nreads_ptr, bool simpl){
 
         omp_set_lock(&map_lck_) ;
         if (junc_map_.count(key) == 0){
-            junc_map_[key] = new Junction(start, end, false) ;
+            junc_map_[key] = new Junction(start, end, false, simpl) ;
         }
         junc_map_[key]->set_nreads_ptr(nreads_ptr) ;
         omp_unset_lock(&map_lck_) ;
         return ;
     }
 
-    void Gene::detect_introns(vector<Intron*> &intronlist){
+    void Gene::detect_introns(vector<Intron*> &intronlist, bool simpl){
 
         vector<Ssite> ss_vec ;
         vector<Junction *> opened_exon ;
@@ -263,7 +258,7 @@ cerr << "## " << ss.coord << " :: " << ss.donor_ss <<"\n" ;
 
                     #pragma omp critical
                     {
-                        Intron * irObj = new Intron(start_ir, end_ir, false, this) ;
+                        Intron * irObj = new Intron(start_ir, end_ir, false, this, simpl) ;
                         intronlist.push_back(irObj) ;
                     }
 
@@ -420,8 +415,7 @@ cerr << "## " << ss.coord << " :: " << ss.donor_ss <<"\n" ;
 
 
     void Exon::simplify(map<string, int>& junc_tlb, float simpl_percent, Gene* gObj, int strandness,
-                        int denovo_simpl, int db_simple, int ir_simpl){
-cerr << "GENE : " << gObj->get_id() << "\n";
+                        int denovo_simpl, int db_simple, int ir_simpl, bool last, unsigned int min_experiments){
         float sumall = 0 ;
         {
             vector<float> sumj ;
@@ -429,7 +423,6 @@ cerr << "GENE : " << gObj->get_id() << "\n";
             vector<int> thrshld_vect;
             unsigned int i = 0 ;
             for(const auto &juncIt: ib){
-cerr << "# IB: "<<juncIt->get_start() <<"-" <<  juncIt->get_end()<< " ::: " << juncIt->get_denovo_bl() << "\n" ;
                 if (!juncIt->get_denovo_bl())
                     continue ;
                 string key = juncIt->get_key(gObj, strandness) ;
@@ -454,7 +447,6 @@ cerr << "# IB: "<<juncIt->get_start() <<"-" <<  juncIt->get_end()<< " ::: " << j
 
             for(i=0; i<jnc_vec.size(); i++){
                 float x = (sumall >0) ? sumj[i]/sumall : 0 ;
-cerr << "IB: "<<jnc_vec[i]->get_start() <<"-" <<  jnc_vec[i]->get_end()<< " :: " << x << " , " << sumj[i] << "\n " ;
                 jnc_vec[i]->set_simpl_fltr(x<simpl_percent || sumj[i]< thrshld_vect[i]) ;
             }
         }
@@ -465,7 +457,6 @@ cerr << "IB: "<<jnc_vec[i]->get_start() <<"-" <<  jnc_vec[i]->get_end()<< " :: "
             vector<int> thrshld_vect;
             unsigned int i = 0 ;
             for(const auto &juncIt: ob){
-cerr << "# OB: "<<juncIt->get_start() <<"-" <<  juncIt->get_end()<< " ::: " << juncIt->get_denovo_bl() << "\n" ;
                 if (!juncIt->get_denovo_bl())
                     continue ;
                 string key = juncIt->get_key(gObj, strandness) ;
@@ -490,7 +481,6 @@ cerr << "# OB: "<<juncIt->get_start() <<"-" <<  juncIt->get_end()<< " ::: " << j
 
             for(i=0; i<jnc_vec.size(); i++){
                 float x = (sumall >0) ? sumj[i]/sumall : 0 ;
-cerr << "OB: "<< jnc_vec[i]->get_start() <<"-" <<  jnc_vec[i]->get_end() << " :: " << x << " , " << sumj[i] << "\n " ;
                 jnc_vec[i]->set_simpl_fltr(x<simpl_percent || sumj[i]< thrshld_vect[i]) ;
             }
         }
@@ -498,10 +488,15 @@ cerr << "OB: "<< jnc_vec[i]->get_start() <<"-" <<  jnc_vec[i]->get_end() << " ::
 
 
     void Gene::simplify(map<string, int>& junc_tlb, float simpl_percent, int strandness, int denovo_simpl,
-                        int db_simple, int ir_simpl){
+                        int db_simple, int ir_simpl, bool last, unsigned int min_experiments){
         for(const auto &ex: exon_map_){
-            (ex.second)->simplify(junc_tlb, simpl_percent, this, strandness, denovo_simpl, db_simple, ir_simpl) ;
+            (ex.second)->simplify(junc_tlb, simpl_percent, this, strandness, denovo_simpl, db_simple,
+                                  ir_simpl, last, min_experiments) ;
         }
+        if (last)
+            for (const auto &j: junc_map_){
+                (j.second)->update_simpl_flags(min_experiments) ;
+            }
     }
 
 
@@ -554,9 +549,7 @@ cerr << "OB: "<< jnc_vec[i]->get_start() <<"-" <<  jnc_vec[i]->get_end() << " ::
         unsigned int c1 = 0 ;
         unsigned int c2 = 0 ;
         set<Junction*> &juncSet = ss? ob : ib ;
-cerr << "# IB: "<<get_key() << "\n" ;
         for(const auto &juncIt:  juncSet){
-cerr << "# LSV: "<<juncIt->get_start() <<"-" <<  juncIt->get_end()<< " ::: " << juncIt->get_denovo_bl() << "\n" ;
             const int coord = ss? juncIt->get_end() : juncIt->get_start() ;
             c2 += (FIRST_LAST_JUNC != coord && !juncIt->get_simpl_fltr()) ? 1:0 ;
             if (FIRST_LAST_JUNC != coord && juncIt->get_bld_fltr() && !juncIt->get_simpl_fltr()) {
@@ -726,9 +719,9 @@ cerr << "# LSV: "<<juncIt->get_start() <<"-" <<  juncIt->get_end()<< " ::: " << 
     }
 
     void find_gene_from_junc(map<string, vector<overGene*>> & glist, string chrom, char strand, int start, int end,
-                             vector<Gene*>& oGeneList, bool ir){
+                             vector<Gene*>& oGeneList, bool ir, bool simpl){
 
-        Junction * junc = new Junction(start, end, false) ;
+        Junction * junc = new Junction(start, end, false, simpl) ;
         const string key = junc->get_key() ;
         vector<overGene*>::iterator low = lower_bound (glist[chrom].begin(), glist[chrom].end(),
                                                        start, _Region::func_comp ) ;

@@ -134,7 +134,7 @@ def main():
                                   'consider if it will be simplified, even knowing it is real. Simplified junctions are'
                                   ' discarded from any lsv. [Default: %(default)s]')
 
-    buildparser.add_argument('--simplify-psi', dest="simpl_psi", default=0.01, type=float,
+    buildparser.add_argument('--simplify', dest="simpl_psi", default=-1, type=float, nargs='?', const=0.01,
                              help='Minimum fraction of the usage of any junction in a LSV to consider that junction is'
                                   ' real. [Default: %(default)s]')
 
