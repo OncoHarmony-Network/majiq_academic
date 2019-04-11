@@ -219,3 +219,11 @@ form.het-highlight-form label {
 .denovo-ext, .exon-number {
     pointer-events: none;
 }
+
+.toggle-scale, .zoom-in, .zoom-out, .zoom-reset{
+    cursor: pointer;
+}
+
+.toggle-scale:hover, .zoom-in:hover, .zoom-out:hover, .zoom-reset:hover{
+    box-shadow: 0 0 12px #ffd400;
+}
