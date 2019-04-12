@@ -342,7 +342,8 @@ class PsiTsv(AnalysisTypeTsv):
                             'strand': gene['strand'],
                             'De Novo Junctions': semicolon(annot_juncs),
                             'Junctions coords': semicolon(
-                                ['{0}-{1}'.format(start, end) for start, end in lsv_junctions] + [ir_coords]
+                                ['{0}-{1}'.format(start, end) for start, end in lsv_junctions] +
+                                ([ir_coords] if ir_coords else [])
                             ),
                             'Exons coords': semicolon(
                                 '{0}-{1}'.format(start, end) for start, end in exon_str(lsv_exons)
@@ -427,7 +428,8 @@ class HeterogenTsv(AnalysisTypeTsv):
                             'strand': gene['strand'],
                             'De Novo Junctions': semicolon(annot_juncs),
                             'Junctions coords': semicolon(
-                                '{0}-{1}'.format(start, end) for start, end in lsv_junctions
+                                ['{0}-{1}'.format(start, end) for start, end in lsv_junctions] +
+                                ([ir_coords] if ir_coords else [])
                             ),
                             'Exons coords': semicolon(
                                 '{0}-{1}'.format(start, end) for start, end in exon_str(lsv_exons)
@@ -499,7 +501,8 @@ class DeltaPsiTsv(AnalysisTypeTsv):
                             'strand': gene['strand'],
                             'De Novo Junctions': semicolon(annot_juncs),
                             'Junctions coords': semicolon(
-                                ['{0}-{1}'.format(start, end) for start, end in lsv_junctions] + [ir_coords]
+                                ['{0}-{1}'.format(start, end) for start, end in lsv_junctions] +
+                                ([ir_coords] if ir_coords else [])
                             ),
                             'Exons coords': semicolon(
                                 '{0}-{1}'.format(start, end) for start, end in exon_str(lsv_exons)
