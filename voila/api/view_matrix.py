@@ -11,6 +11,7 @@ from voila.api.matrix_utils import unpack_means, unpack_bins, generate_excl_incl
 from voila.config import ViewConfig
 from voila.exceptions import LsvIdNotFoundInVoilaFile, GeneIdNotFoundInVoilaFile
 from voila.vlsv import is_lsv_changing, matrix_area, get_expected_psi
+from multiprocessing import Pool
 
 
 class ViewMatrix(ABC):
@@ -540,18 +541,51 @@ class ViewHeterogens:
         for v in vhs:
             v.close()
 
+    @staticmethod
+    def pair_merge(pairs):
+        if len(pairs) == 1:
+            if type(pairs[0]) is set:
+                return pairs[0]
+            else:
+                with ViewHeterogen(pairs[0]) as v:
+                    return v.lsv_ids()
+        else:
+            if type(pairs[0]) is set:
+                s1 = pairs[0]
+            else:
+                with ViewHeterogen(pairs[0]) as v:
+                    s1 = set(v.lsv_ids())
+            if type(pairs[1]) is set:
+                s2 = pairs[1]
+            else:
+                with ViewHeterogen(pairs[1]) as v:
+                    s2 = set(v.lsv_ids())
+            return s1 | s2
+
+
     def lsv_ids(self, gene_ids=None):
         """
         Get a set of lsv ids from all voila files for specified gene ids. If gene ids is None, then get all lsv ids.
         :param gene_ids: list of gene ids
         :return:
         """
+        if gene_ids:
+            voila_files = ViewConfig().voila_files
+            vhs = [ViewHeterogen(f) for f in voila_files]
+            yield from set(chain(*(v.lsv_ids(gene_ids) for v in vhs)))
+            for v in vhs:
+                v.close()
+        else:
+            vhs = ViewConfig().voila_files
+            p = Pool(ViewConfig().nproc)
 
-        voila_files = ViewConfig().voila_files
-        vhs = [ViewHeterogen(f) for f in voila_files]
-        yield from set(chain(*(v.lsv_ids(gene_ids) for v in vhs)))
-        for v in vhs:
-            v.close()
+            while len(vhs) > 1:
+                vhs = [vhs[i:i + 2] for i in range(0, len(vhs), 2)]
+                vhs = p.map(self.pair_merge, vhs)
+
+            yield from vhs[0]
+
+
 
     def lsv(self, lsv_id):
         """

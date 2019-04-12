@@ -11,6 +11,8 @@ from voila.config import ViewConfig
 from voila.exceptions import UnknownAnalysisType, IndexNotFound, UnknownIndexFieldType
 from voila.vlsv import matrix_area
 from voila.voila_log import voila_log
+from multiprocessing import Pool, Manager
+import time
 
 lsv_filters = ['a5ss', 'a3ss', 'exon_skipping', 'target', 'source', 'binary', 'complex']
 psi_keys = ['lsv_id', 'gene_id', 'gene_name'] + lsv_filters
@@ -99,6 +101,25 @@ class Index:
 
         return dtype
 
+    @staticmethod
+    def _heterogen_pool_add_index(args):
+        with ViewSpliceGraph() as sg, ViewHeterogens() as m:
+            lsv_id, q = args
+            het = m.lsv(lsv_id)
+
+            gene_id = het.gene_id
+            gene = sg.gene(gene_id)
+            gene_name = gene['name']
+
+            row = (lsv_id, gene_id, gene_name)
+
+            lsv_f = [getattr(het, f) for f in lsv_filters]
+
+            # For some reason, numpy needs these in tuples.
+            row = tuple(chain(row, lsv_f))
+            q.put(row)
+            return row
+
     def _heterogen(self):
         """
         Create index for heterogen analysis type.  This is an odd case as there can be more then one voila file.  We
@@ -115,24 +136,28 @@ class Index:
         if not self._index_in_voila(voila_file, remove_index) or force_index:
 
             log.info('Creating index: ' + voila_file)
-            voila_index = []
 
-            with ViewSpliceGraph() as sg, ViewHeterogens() as m:
-                for lsv_id in m.lsv_ids():
-                    het = m.lsv(lsv_id)
+            m = Manager()
+            q = m.Queue()
 
-                    gene_id = het.gene_id
-                    gene = sg.gene(gene_id)
-                    gene_name = gene['name']
+            with ViewHeterogens() as m:
+                lsv_ids = [(x, q) for x in m.lsv_ids()]
+            p = Pool(config.nproc)
+            work_size = len(lsv_ids)
+            # voila_index = p.map(self._heterogen_pool_add_index, zip(lsv_ids, range(work_size), repeat(work_size)))
 
-                    row = (lsv_id, gene_id, gene_name)
+            voila_index = p.map_async(self._heterogen_pool_add_index, lsv_ids)
 
-                    lsv_f = [getattr(het, f) for f in lsv_filters]
+            # monitor loop
+            while True:
+                if voila_index.ready():
+                    break
+                else:
+                    size = q.qsize()
+                    print("Indexing LSV IDs: %d / %d" % (size, work_size))
+                    time.sleep(1)
 
-                    # For some reason, numpy needs these in tuples.
-                    row = tuple(chain(row, lsv_f))
-
-                    voila_index.append(row)
+            voila_index = voila_index.get()
 
             dtype = self._create_dtype(voila_index)
             self._write_index(voila_file, voila_index, dtype)
