@@ -13,8 +13,8 @@ cdef extern from "grimoire.hpp" namespace "grimoire":
 
     cdef cppclass Junction:
         Junction() nogil except +
-        Junction(int start1, int end1) nogil except +
-        Junction(int start1, int end1, bint annot1) nogil except +
+        # Junction(int start1, int end1) nogil except +
+        Junction(int start1, int end1, bint annot1, bint simpl1) nogil except +
         void         update_flags(unsigned int num_reads, unsigned int num_pos, unsigned int denovo_thresh,
                                   unsigned int min_experiments, bint denovo) nogil
         void         clear_nreads(bint reset_grp) nogil
@@ -35,7 +35,7 @@ cdef extern from "grimoire.hpp" namespace "grimoire":
     cdef cppclass Intron:
 
         Intron () nogil except +
-        Intron (int start1, int end1, bint annot1, Gene* gObj1) nogil except +
+        Intron (int start1, int end1, bint annot1, Gene* gObj1, bint simpl1) nogil except +
         int     get_start()  nogil ;
         int     get_end()    nogil ;
         bint    get_annot()  nogil ;
@@ -61,17 +61,17 @@ cdef extern from "grimoire.hpp" namespace "grimoire":
         void    print_gene()     nogil ;
         void    print_exons()    nogil ;
         void    detect_exons()   nogil ;
-        void    detect_introns() nogil ;
+        # void    detect_introns() nogil ;
+        void    connect_introns() nogil ;
 
-        void    create_annot_intron(int start_ir, int end_ir) nogil ;
+        void    create_annot_intron(int start_ir, int end_ir, bint simpl) nogil ;
         void    add_elements(map[string, Junction*] junc_map, map[string, Exon*] exon_map) nogil ;
         void    update_junc_flags(int efflen, bint is_last_exp, unsigned int minreads, unsigned int minpos,
                                   unsigned int denovo_thresh, unsigned int min_experiments, bint denovo) nogil ;
         void    fill_junc_tlb(map[string, vector[string]]& tlb) nogil ;
-        void    connect_introns() nogil ;
         int     detect_lsvs(vector[LSV*] out_lsvlist) nogil ;
         void    simplify(map[string, int]& junc_tlb, np.float32_t simpl_percent, int strandness, int denovo_simpl,
-                         int db_simple, int ir_simpl) nogil ;
+                         int db_simple, int ir_simpl, bint last, unsigned int min_experiments) nogil ;
 
         map[string, Junction*] junc_map_ ;
         map[string, Exon*] exon_map_ ;
@@ -117,7 +117,7 @@ cdef extern from "grimoire.hpp" namespace "grimoire":
 
     vector[Intron *]  find_intron_retention(Gene * gObj, int start, int end) nogil ;
     void find_gene_from_junc(map[string, overGene_vect_t] & glist, string chrom, char strand, int start, int end,
-                             vector[Gene*]& oGeneList, bint ir) nogil ;
+                             vector[Gene*]& oGeneList, bint ir, bint simpl) nogil ;
     void fill_junc_tlb(vector[LSV*]& lsv_list, map[string, int]& tlb) nogil ;
     bint isNullJinfo(Jinfo* x) nogil ;
     void free_JinfoVec( vector[Jinfo*]& jvec) nogil ;
