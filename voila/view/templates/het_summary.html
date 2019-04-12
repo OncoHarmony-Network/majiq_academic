@@ -525,8 +525,8 @@
     </div>
 
     <div class="lsv-container">
-        {% for lsv_id, lsv_type, exon_number_idx, type_length_idx in lsv_data %}
-            <div class="lsv" data-lsv-id="{{ lsv_id }}" data-exon-number-idx="{{ exon_number_idx }}"
+        {% for lsv_id, lsv_type, exon_number, exon_number_idx, type_length_idx in lsv_data %}
+            <div class="lsv" data-exon-number="{{ exon_number }}" data-lsv-id="{{ lsv_id }}" data-exon-number-idx="{{ exon_number_idx }}"
                  data-type-length-idx="{{ type_length_idx }}">
                 <div class="lsv-header ">
                     <div class="highlight-form">

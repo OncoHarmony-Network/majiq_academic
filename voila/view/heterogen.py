@@ -62,6 +62,8 @@ def gene(gene_id):
         type_length_idx = [i[0] for i in sorted(enumerate(lsv_data), key=lambda x: len(x[1][1].split('|')))]
 
         for i, lsv in enumerate(lsv_data):
+            # appending exon number
+            lsv.append(exon_numbers[lsv[0]])
             # appending default sort index
             lsv.append(i)
             # appending other sort indexes
