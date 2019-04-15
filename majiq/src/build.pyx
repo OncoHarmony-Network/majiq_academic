@@ -59,7 +59,7 @@ ctypedef vector[Jinfo *] jinfoptr_vec_t
 @cython.wraparound(False)   # Deactivate negative indexing.
 cdef int _output_majiq_file(vector[LSV*] lsvlist, map[string, overGene_vect_t] gList, map[string, int] j_tlb,
                             string experiment_name, string outDir, sqlite3* db, unsigned int msamples,
-                            bint irb, object logger, int nthreads) except -1:
+                            bint irb, bint simpl, object logger, int nthreads) except -1:
 
     cdef unsigned int irbool, coord1, coord2, sreads, npos
     cdef unsigned int nlsv = lsvlist.size()
@@ -107,7 +107,7 @@ cdef int _output_majiq_file(vector[LSV*] lsvlist, map[string, overGene_vect_t] g
             chrom   = jid.split(b':')[0]
             strand  = <char> jid.split(b':')[1][0]
 
-        find_gene_from_junc(gList, chrom, strand, coord1, coord2, gene_l, irbool)
+        find_gene_from_junc(gList, chrom, strand, coord1, coord2, gene_l, irbool, simpl)
         if irbool == 0:
             for gneObj in gene_l:
                 update_splicegraph_junction(db, gneObj.get_id(), coord1, coord2, sreads, experiment_name)
@@ -216,6 +216,7 @@ cdef _find_junctions(list file_list, map[string, Gene*]& gene_map, vector[string
     cdef unsigned int min_experiments
     cdef unsigned int eff_len = conf.readLen - 2*MIN_BP_OVERLAP + 1
     cdef bint ir = conf.ir
+    cdef bint bsimpl = (conf.simpl_psi >= 0)
     cdef float ir_numbins=conf.irnbins
 
     cdef int i, j
@@ -235,9 +236,6 @@ cdef _find_junctions(list file_list, map[string, Gene*]& gene_map, vector[string
     cdef map[string, unsigned int] j_ids
     cdef pair[string, unsigned int] it
 
-
-
-
     for tmp_str, group_list in conf.tissue_repl.items():
         name = tmp_str.encode('utf-8')
         last_it_grp = group_list[len(group_list) - 1]
@@ -246,11 +244,11 @@ cdef _find_junctions(list file_list, map[string, Gene*]& gene_map, vector[string
                                                                                   len(group_list), min_experiments))
         for j in group_list:
             logger.info('Reading file %s' %(file_list[j][0]))
-            bamfile = ('%s/%s.%s' % (conf.sam_dir, file_list[j][0], SEQ_FILE_FORMAT)).encode('utf-8')
+            bamfile = ('%s' % (file_list[j][1])).encode('utf-8')
             strandness = conf.strand_specific[file_list[j][0]]
 
             with nogil:
-                c_iobam = IOBam(bamfile, strandness, eff_len, nthreads, gene_list)
+                c_iobam = IOBam(bamfile, strandness, eff_len, nthreads, gene_list, bsimpl)
                 c_iobam.ParseJunctionsFromFile(False)
                 n_junctions = c_iobam.get_njuncs()
                 if ir:
@@ -312,7 +310,6 @@ cdef void gene_to_splicegraph(Gene * gne, sqlite3 * db) nogil:
     for jj_pair in gne.junc_map_:
 
         jj = jj_pair.second
-
         if not jj.get_denovo_bl(): continue
         if jj.get_start() == C_FIRST_LAST_JUNC:
             sg_alt_start(db, gne_id, jj.get_end())
@@ -322,7 +319,7 @@ cdef void gene_to_splicegraph(Gene * gne, sqlite3 * db) nogil:
             sg_alt_end(db, gne_id, jj.get_start())
             continue
         # with gil:
-            # print(jj_pair.first, jj.get_start(), jj.get_end(), jj.get_annot(), jj.get_simpl_fltr())
+        #     print("## ", gne_id, jj.get_start(), jj.get_end(), jj.get_annot(), jj.get_simpl_fltr())
         sg_junction(db, gne_id, jj.get_start(), jj.get_end(), jj.get_annot(), jj.get_simpl_fltr())
 
     for ex_pair in gne.exon_map_:
@@ -343,70 +340,76 @@ cdef int simplify(list file_list, map[string, Gene*] gene_map, vector[string] gi
 
     cdef int nsamples = len(file_list)
     cdef int nthreads = conf.nthreads
-    cdef map[string, int] junc_tlb
-    cdef int n = gene_map.size()
-    cdef int njunc
-    cdef Gene * gg
-    cdef Gene_vect_t gene_l
-    cdef int i, j
-    cdef np.float32_t simpl_fltr = conf.simpl_psi
-    cdef int strandness
-    cdef bint irb =  conf.ir
-    cdef Intron * ir_ptr;
-    cdef bint val = True ;
-    cdef unsigned int irbool, coord1, coord2, sreads, npos
-    cdef string chrom, gid, key, jid
-    cdef char strand
     cdef int denovo_simpl = conf.simpl_denovo
     cdef int db_simple = conf.simpl_db
     cdef int ir_simpl = conf.simpl_ir
+    cdef int i, j
+    cdef int n = gene_map.size()
+    cdef int njunc
+    cdef int strandness
+    cdef unsigned int irbool, coord1, coord2, sreads, npos
+    cdef unsigned int min_experiments
+    cdef map[string, int] junc_tlb
+    cdef Gene * gg
+    cdef Gene_vect_t gene_l
+    cdef np.float32_t simpl_fltr = conf.simpl_psi
+    cdef bint irb =  conf.ir
+    cdef bint val = True ;
+    cdef bint bsimpl = (conf.simpl_psi >= 0)
+    cdef int last_it_grp;
+    cdef Intron * ir_ptr;
+    cdef string chrom, gid, key, jid
+    cdef char strand
 
-    # for tmp_str, group_list in conf.tissue_repl.items():
-    #     name = tmp_str.encode('utf-8')
-        # last_it_grp = group_list[len(group_list) - 1]
-        # min_experiments = conf.min_experiments[tmp_str]
+    logger.info('Starting simplification %s' % bsimpl)
+    for tmp_str, group_list in conf.tissue_repl.items():
+        name = tmp_str.encode('utf-8')
+        last_it_grp = group_list[len(group_list) - 1]
+        min_experiments = conf.min_experiments[tmp_str]
 
-    for i in range(nsamples):
-        strandness = conf.strand_specific[file_list[i][0]]
-        junc_file = "%s/%s.juncs" % (conf.outDir, file_list[i][0])
+        for i in group_list:
 
-        with open(junc_file, 'rb') as fp:
-            junc_ids = np.load(fp)['junc_info']
-            njunc = junc_ids.shape[0]
+            strandness = conf.strand_specific[file_list[i][0]]
+            junc_file = "%s/%s.juncs" % (conf.outDir, file_list[i][0])
 
-            for j in prange(njunc, nogil=True, num_threads=nthreads):
-                gene_l = Gene_vect_t()
-                with gil:
-                    jid     = junc_ids[j][0]
-                    coord1  = junc_ids[j][1]
-                    coord2  = junc_ids[j][2]
-                    sreads  = junc_ids[j][3]
-                    irbool  = junc_ids[j][5]
-                    chrom   = jid.split(b':')[0]
-                    strand  = <char> jid.split(b':')[1][0]
+            with open(junc_file, 'rb') as fp:
+                junc_ids = np.load(fp)['junc_info']
+                njunc = junc_ids.shape[0]
 
-                if irbool == 0:
-                    junc_tlb[jid] = sreads
-
-                elif irb:
-                    find_gene_from_junc(gene_list, chrom, strand, coord1, coord2, gene_l, irbool)
+                for j in prange(njunc, nogil=True, num_threads=nthreads):
+                    gene_l = Gene_vect_t()
                     with gil:
-                        gid = b':'.join(jid.split(b':')[3:])
-                    for gg in gene_l:
-                        if gg.get_id() != gid:
-                            continue
-                        irv = find_intron_retention(gg, coord1, coord2)
-                        for ir_ptr in irv:
-                            key = key_format(gg.get_id(), ir_ptr.get_start(), ir_ptr.get_end(), val)
-                            with gil:
-                                junc_tlb[key] = sreads
-                gene_l.clear()
+                        jid     = junc_ids[j][0]
+                        coord1  = junc_ids[j][1]
+                        coord2  = junc_ids[j][2]
+                        sreads  = junc_ids[j][3]
+                        irbool  = junc_ids[j][5]
+                        chrom   = jid.split(b':')[0]
+                        strand  = <char> jid.split(b':')[1][0]
 
-            del junc_ids
-        logger.info('Simplifying file %s' % file_list[i][0])
-        for j in prange(n, nogil=True, num_threads=nthreads):
-            gg = gene_map[gid_vec[j]]
-            gg.simplify(junc_tlb, simpl_fltr, strandness, denovo_simpl, db_simple, ir_simpl)
+                    if irbool == 0:
+                        junc_tlb[jid] = sreads
+
+                    elif irb:
+                        find_gene_from_junc(gene_list, chrom, strand, coord1, coord2, gene_l, irbool, bsimpl)
+                        with gil:
+                            gid = b':'.join(jid.split(b':')[3:])
+                        for gg in gene_l:
+                            if gg.get_id() != gid:
+                                continue
+                            irv = find_intron_retention(gg, coord1, coord2)
+                            for ir_ptr in irv:
+                                key = key_format(gg.get_id(), ir_ptr.get_start(), ir_ptr.get_end(), val)
+                                with gil:
+                                    junc_tlb[key] = sreads
+                    gene_l.clear()
+                del junc_ids
+            logger.debug('Simplifying file %s %s %s %s' %(file_list[i][0], (i==last_it_grp), last_it_grp, i))
+            for j in prange(n, nogil=True, num_threads=nthreads):
+                gg = gene_map[gid_vec[j]]
+                gg.simplify(junc_tlb, simpl_fltr, strandness, denovo_simpl, db_simple, ir_simpl,
+                            (i==last_it_grp), min_experiments)
+    logger.info('Finished simplification')
 
 
 
@@ -430,9 +433,10 @@ cdef _core_build(str transcripts, list file_list, object conf, object logger):
     cdef string outDir = conf.outDir.encode('utf-8')
     cdef int strandness, cnt
     cdef sqlite3* db
+    cdef bint bsimpl = (conf.simpl_psi >= 0)
 
     logger.info("Parsing GFF3")
-    majiq_io.read_gff(transcripts, gene_map, gid_vec, logger)
+    majiq_io.read_gff(transcripts, gene_map, gid_vec, bsimpl, logger)
 
     prepare_genelist(gene_map, gene_list)
     n = gene_map.size()
@@ -457,7 +461,8 @@ cdef _core_build(str transcripts, list file_list, object conf, object logger):
                 logger.debug("%s] Connect introns" % gg.get_id())
             gg.connect_introns()
 
-    simplify(file_list, gene_map, gid_vec, gene_list, conf, logger)
+    if bsimpl:
+        simplify(file_list, gene_map, gid_vec, gene_list, conf, logger)
     for i in prange(n, nogil=True, num_threads=nthreads):
         gg = gene_map[gid_vec[i]]
         gene_to_splicegraph(gg, db)
@@ -478,7 +483,8 @@ cdef _core_build(str transcripts, list file_list, object conf, object logger):
         if conf.mem_profile:
             mem_allocated = int(psutil.Process().memory_info().rss)/(1024**2)
             logger.info("PRE OUT Memory used %.2f MB" % mem_allocated)
-        cnt  = _output_majiq_file(out_lsvlist, gene_list, lsv_juncs_tlb, fname, outDir, db, m, ir, logger, nthreads)
+        cnt  = _output_majiq_file(out_lsvlist, gene_list, lsv_juncs_tlb, fname, outDir, db, m, ir, bsimpl,
+                                  logger, nthreads)
 
         logger.info('%s: %d LSVs' %(fname.decode('utf-8'), cnt))
         if conf.mem_profile:

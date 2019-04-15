@@ -111,7 +111,8 @@ namespace grimoire{
             float* nreads_ ;
 
             Junction() {}
-            Junction(int start1, int end1, bool annot1): _Region(start1, end1), annot_(annot1){
+            Junction(int start1, int end1, bool annot1, bool simpl1): _Region(start1, end1),
+                                                                      annot_(annot1), simpl_fltr_(simpl1){
                 denovo_bl_ = annot1 ;
 //                denovo_bl_ = false ;
                 denovo_cnt_ = 0 ;
@@ -119,7 +120,7 @@ namespace grimoire{
                 flter_cnt_ = 0 ;
                 intronic_ = false ;
                 nreads_ = nullptr ;
-                simpl_fltr_ = true ;
+                simpl_cnt_  = 0;
             }
             ~Junction()             { clear_nreads(true) ; }
 
@@ -133,7 +134,6 @@ namespace grimoire{
             bool    get_denovo_bl() { return denovo_bl_ ; }
             Exon*   get_acceptor()  { return acceptor_ ; }
             Exon*   get_donor()     { return donor_ ; }
-
             void  set_nreads_ptr(float * nreads1) { nreads_ = nreads1 ; }
             void  set_acceptor(Exon * acc) { acceptor_ = acc ; }
             void  set_donor(Exon * don) { donor_ = don ; }
@@ -143,7 +143,12 @@ namespace grimoire{
             }
 
             void set_simpl_fltr(bool val){
-                simpl_fltr_ = simpl_fltr_ && val ;
+                simpl_cnt_ += val? 1 : 0 ;
+            }
+
+            void update_simpl_flags(unsigned int min_experiments){
+                simpl_fltr_ &= (simpl_cnt_ >= min_experiments) ;
+                simpl_cnt_ = 0 ;
             }
 
             void update_flags(int efflen, unsigned int num_reads, unsigned int num_pos, unsigned int denovo_thresh,
@@ -208,7 +213,7 @@ namespace grimoire{
             ~Exon(){}
             bool    is_lsv(bool ss) ;
             void    simplify(map<string, int>& junc_tlb, float simpl_percent, Gene* gObj, int strandness,
-                        int denovo_simpl, int db_simple, int ir_simpl) ;
+                        int denovo_simpl, int db_simple, int ir_simpl, bool last, unsigned int min_experiments) ;
             bool    has_out_intron()        { return ob_irptr != nullptr ; }
             string  get_key()       { return(to_string(start_) + "-" + to_string(end_)) ; }
             void set_simpl_fltr(bool val) {};
@@ -243,13 +248,14 @@ namespace grimoire{
             int     nxbin_ ;
             int     numbins_ ;
             bool    simpl_fltr_ ;
+            unsigned int simpl_cnt_ ;
 
         public:
             float*  read_rates_ ;
 
             Intron () {}
-            Intron (int start1, int end1, bool annot1, Gene* gObj1): _Region(start1, end1),
-                                                                     annot_(annot1), gObj_(gObj1) {
+            Intron (int start1, int end1, bool annot1, Gene* gObj1, bool simpl1): _Region(start1, end1),
+                                                                     annot_(annot1), gObj_(gObj1), simpl_fltr_(simpl1){
                 flt_count_  = 0 ;
                 ir_flag_    = false ;
                 read_rates_ = nullptr ;
@@ -258,7 +264,7 @@ namespace grimoire{
                 nxbin_mod_  = 0 ;
                 markd_      = false ;
                 numbins_    = 0 ;
-                simpl_fltr_ = true ;
+                simpl_cnt_  = 0 ;
             }
 
             bool    get_annot()             { return annot_ ; }
@@ -267,14 +273,21 @@ namespace grimoire{
             string  get_key()               { return(to_string(start_) + "-" + to_string(end_)) ; }
             bool    get_simpl_fltr()        { return simpl_fltr_ ; }
             void    set_markd()             { markd_ = true ; }
+            void    unset_markd()           { markd_ = false ; }
             bool    is_connected()          { return markd_ ; }
             string  get_key(Gene * gObj) ;
             void    calculate_lambda() ;
             bool    is_reliable(float min_bins, int eff_len) ;
 
             void set_simpl_fltr(bool val){
-                simpl_fltr_ = simpl_fltr_ && val ;
+                simpl_cnt_ += val? 1 : 0 ;
             }
+
+            void update_simpl_flags(unsigned int min_experiments){
+                simpl_fltr_ &= (simpl_cnt_ >= min_experiments) ;
+                simpl_cnt_ = 0 ;
+            }
+
             void    add_read_rates_buff(int eff_len){
 
                 nxbin_ = (int) ((length()+ eff_len) / eff_len) ;
@@ -300,8 +313,6 @@ namespace grimoire{
 
 //cerr << get_start() << "-" << get_end() << " offset =" << offset << " read_pos = " << read_pos << " (intronstart - eff_len) = " << st <<
 //" eff_len = "<< eff_len << " nxbin_off_ = "<< nxbin_off_<< " nxbin_ = "<< nxbin_<< "\n" ;
-
-
                 read_rates_[offset] += 1 ;
 
             }
@@ -388,9 +399,9 @@ namespace grimoire{
             string  get_chromosome(){ return chromosome_ ;}
             char    get_strand()    { return strand_ ;}
             string  get_name()      { return name_ ;}
-            void set_simpl_fltr(bool val) {};
-            void    create_annot_intron(int start_ir, int end_ir){
-                Intron * ir = new Intron(start_ir, end_ir, true, this) ;
+            void    set_simpl_fltr(bool val) {};
+            void    create_annot_intron(int start_ir, int end_ir, bool simpl){
+                Intron * ir = new Intron(start_ir, end_ir, true, this, simpl) ;
                 intron_vec_.push_back(ir) ;
             }
 
@@ -411,15 +422,15 @@ namespace grimoire{
             string  get_region() ;
             void    print_exons() ;
             void    detect_exons() ;
-            void    detect_introns(vector<Intron*> &intronlist) ;
-            void    add_intron(Intron * inIR_ptr, float min_coverage, unsigned int min_exps, float min_bins, bool reset) ;
             void    connect_introns() ;
+            void    detect_introns(vector<Intron*> &intronlist, bool simpl) ;
+            void    add_intron(Intron * inIR_ptr, float min_coverage, unsigned int min_exps, float min_bins, bool reset) ;
             void    newExonDefinition(int start, int end, Junction *inbound_j, Junction *outbound_j, bool in_db) ;
             void    fill_junc_tlb(map<string, vector<string>> &tlb) ;
-            int     detect_lsvs(vector<LSV*> &out_lsvlist);
+            int     detect_lsvs(vector<LSV*> &out_lsvlist) ;
             void    simplify(map<string, int>& junc_tlb, float simpl_percent, int strandness, int denovo_simpl,
-                             int db_simple, int ir_simpl) ;
-            void    initialize_junction(string key, int start, int end, float* nreads_ptr) ;
+                             int db_simple, int ir_simpl, bool last, unsigned int min_experiments) ;
+            void    initialize_junction(string key, int start, int end, float* nreads_ptr, bool simpl) ;
             void    update_junc_flags(int efflen, bool is_last_exp, unsigned int minreads, unsigned int minpos,
                                       unsigned int denovo_thresh, unsigned int min_experiments, bool denovo) ;
 
@@ -446,13 +457,14 @@ namespace grimoire{
                 ir_ptr_ = nullptr ;
                 Intron * temp_ir = ss? ex->ob_irptr : ex->ib_irptr ;
                 if (temp_ir != nullptr )
-                    ir_ptr_ = temp_ir->get_ir_flag() ? temp_ir : nullptr ;
+                    ir_ptr_ = (temp_ir->get_ir_flag() && !temp_ir->get_simpl_fltr()) ? temp_ir : nullptr ;
 
                 type_   = set_type(ex, ss) ;
             }
 
             ~LSV(){}
-            bool gather_lsv_info (float* source, float* target, list<Jinfo*> &info, map<string, Jinfo> &tlb, unsigned int msample) ;
+            bool gather_lsv_info (float* source, float* target, list<Jinfo*> &info, map<string, Jinfo> &tlb,
+                                  unsigned int msample) ;
             string      set_type (Exon* ex, bool ss) ;
             inline void get_variations(set<string> &t1) ;
             string      get_type ()                  { return type_ ; }
@@ -493,7 +505,7 @@ namespace grimoire{
 //    vector<Gene*> find_gene_from_junc(const map<string, vector<overGene*>>& glist, string chrom, int start, int end, bool ir) ;
 
     void find_gene_from_junc(map<string, vector<overGene*>> & glist, string chrom, char strand, int start, int end,
-                             vector<Gene*>& oGeneList, bool ir) ;
+                             vector<Gene*>& oGeneList, bool ir, bool simpl) ;
     void fill_junc_tlb(vector<LSV*>& lsv_list, map<string, int>& tlb) ;
     bool isNullJinfo(Jinfo* x) ;
     void free_JinfoVec(vector<Jinfo*>& jvec);
