@@ -35,6 +35,12 @@ class LsvIdNotFoundInVoilaFile(VoilaException):
     def __str__(self):
         return '{}: LSV ID "{}" was not found in Voila file'.format(self.filename, self.lsv_id)
 
+class LsvIdNotFoundInAnyVoilaFile(VoilaException):
+    """
+    Error thrown when LSV ID cannot be found in group of Voila files.
+    """
+
+
 
 class CanNotFindFile(argparse.ArgumentTypeError):
     def __init__(self, value):

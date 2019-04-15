@@ -1,13 +1,21 @@
 body {
-    background-color: #c0d8ee;
     font-size: 12px;
     position: absolute;
     height: 100%;
     width: 100%
 }
 
+.bottom {
+    background-color: #c0d8ee;
+}
+
 table {
     background-color: white
+}
+
+.dataTables_wrapper{
+    max-width: 100%;
+    overflow: auto;
 }
 
 .menu {
@@ -215,4 +223,12 @@ form.het-highlight-form label {
 
 .denovo-ext, .exon-number {
     pointer-events: none;
+}
+
+.toggle-scale, .zoom-in, .zoom-out, .zoom-reset{
+    cursor: pointer;
+}
+
+.toggle-scale:hover, .zoom-in:hover, .zoom-out:hover, .zoom-reset:hover{
+    box-shadow: 0 0 12px #ffd400;
 }

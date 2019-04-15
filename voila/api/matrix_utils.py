@@ -3,6 +3,7 @@ from scipy import special
 
 from voila.constants import MINVAL
 from voila.vlsv import get_expected_dpsi, matrix_area, get_expected_psi
+from voila.voila_log import voila_log
 
 
 def unpack_means(value):
@@ -89,5 +90,19 @@ def generate_variances(bins):
         # b used to be a numpy array and now it's a list...
         step_bins = 1.0 / len(b)
         projection_prod = b * np.arange(step_bins / 2, 1, step_bins) ** 2
-        v.append(np.sum(projection_prod) - epsi ** 2)
+        var = np.sum(projection_prod) - (epsi ** 2)
+        if var < 0:
+            v.append(0.0)
+            if abs(var) < step_bins:
+                # if var is < 0 but also of less magnitude then the bin size, we assume a rounding error and
+                # pass along a zero variance
+                pass
+            else:
+                # otherwise, this should not happen, so we send a warning
+                log = voila_log()
+                log.warning("Negative variance found when calculating over %s" % str(b))
+        else:
+            v.append(var)
+
+
     return v

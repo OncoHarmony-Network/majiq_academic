@@ -1,21 +1,121 @@
 {% extends 'base_summary.html' %}
 
+{% block style %}
+    {{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/lib/sumoselect.min.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/multi_input.css') }}">
+<style>
+    @media print
+    {
+            html, body{
+                height: 100%;
+            }
+            body{
+                -webkit-print-color-adjust: exact;
+                background-color:white;
+            }
+            body * {
+                visibility: hidden;
+                background-color:white;}
+            .content {background-color:white;}
+            .bottom {background-color:white;}
+            .tools-menu {background-color:white;}
+    }
+
+</style>
+<style id="printStyle"></style>
+{% endblock %}
+
 {% block heatmap_form %}
-        <form class="heatmap-form pure-form pure-form-aligned" style="float: right; margin-right: 10px;">
-            {% for stat_name in stat_names %}
-                <label for="{{ stat_name }}" class="pure-radio">
-                    <input id="{{ stat_name }}" type="radio" name="stat-name" value="{{ stat_name }}"
-                           {% if loop.first %}checked{% endif %}>
-                    {{ stat_name }}</label>
-            {% endfor %}
-        </form>
+
+
+    <div class="heatmap-form pure-form pure-form-aligned" style="float: right; margin-right: 10px;">
+    <div id="heatmap-stat-choices">
+        {% for stat_name in stat_names %}
+            <label for="{{ stat_name }}" class="pure-radio">
+                <input id="{{ stat_name }}" type="radio" name="stat-name" value="{{ stat_name }}"
+                       {% if loop.first %}checked{% endif %}>
+                {{ stat_name }}</label>
+        {% endfor %}
+    </div>
+    </div>
+
+    <div class="heatmap-scale-form pure-form pure-form-stacked" style="float: right; margin-right: 10px;">
+
+        <label for="dPSI-cutoff">dPSI Scale Cutoff</label>
+        <input id="dPSI-cutoff" type="number" min="0.1" step="any"  class="pure-input" style="width:110px;" value="0.5">
+
+    </div>
+
+    <div class="groups-display-form pure-form pure-form-stacked" style="float: right; margin-right: 10px; width:10%;">
+
+        <div>
+            <label for="groups-display">Show / Hide Groups</label>
+            <select id="groups-display" multiple style="width:100%;">
+
+            </select>
+            <button type="button" id="groups-display-all">All</button>
+            <button type="button" id="groups-display-none">None</button>
+        </div>
+        <div id="lsv-ordering-options">
+            <label>LSV Ordering</label>
+            <label for="lsv-order-exon-num" class="pure-radio">
+                <input id="lsv-order-exon-num" type="radio" name="lsv-order" value="exon-number-idx" checked>
+                Exon Number
+            </label>
+            <label for="lsv-order-type-len" class="pure-radio">
+                <input id="lsv-order-type-len" type="radio" name="lsv-order" value="type-length-idx">
+                Type Length
+            </label>
+        </div>
+
+    </div>
+
+
 {% endblock %}
 
 {% block analysis_type_script %}
+    <script src="{{ url_for('static', filename='js/lib/jquery.sumoselect.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/lib/jquery.ba-throttle-debounce.min.js') }}"></script>
     <script>
-        document.querySelector('.heatmap-form').addEventListener('change', () => {
+        const view_type = 'het';
+
+        // incase the screen is very small and content in the header takes more vertical space
+        // push down the content more so it does not overlap
+        $('.content').css('top',$('.gene-header').height() + 60);
+
+        $('#lsv-ordering-options input').click(function(){
+            $('.lsv-container').eq(0).sortClass('lsv', $(this).val());
+        });
+
+        var hidden_idx = [];
+        document.querySelector('#heatmap-stat-choices').addEventListener('change', () => {
             $('.lsv-table').DataTable().ajax.reload();
         });
+
+        $('#groups-display').change(function(){
+            hidden_idx = [];
+            $('#groups-display option:not(:selected)').each(function(i, elem){
+                hidden_idx.push($(elem).index())
+            });
+        });
+
+        $('#groups-display').change($.debounce(1250, function(){
+            $('.lsv-table').DataTable().ajax.reload();
+        }));
+
+        function update_heatmap_scale(){
+            // we limit minimum to 0.1 smallest possible as discussed
+            const dPSI_max = Math.max(parseFloat($('#dPSI-cutoff').val()), 0.1);
+            $('#dPSI-cutoff').val(dPSI_max);
+            HeatMap.change_axis_scale({'max':dPSI_max, 'min':-1*dPSI_max}, {'max':0, 'min':0});
+        }
+
+        $(".heatmap-scale-form input").on('input', ($.debounce(750, function(e) {
+            if($('#dPSI-cutoff').val() !== ''){
+                update_heatmap_scale();
+            }
+        })));
 
         json_ajax('{{ url_for("nav", gene_id=gene.id) }}').then(json => {
             document.querySelector('.prev-gene').addEventListener('click', () => {
@@ -85,8 +185,9 @@
         new MutationObserver(mutations => {
             mutations
                 .forEach(m => m.addedNodes.forEach(n => {
-
-
+                    if(n.nodeType === 3){
+                        return;
+                    }
                     n.querySelectorAll('.heat-map')
                         .forEach(h => {
                             const tool_tip = document.querySelector('.heat-map-tool-tip');
@@ -101,6 +202,8 @@
                                         const row = e.target.closest('g').dataset.row;
                                         const row_idx = parseInt(e.target.closest('g').dataset.rowIdx);
 
+
+
                                         tool_tip.querySelector('.stat-name').textContent = col_idx - row_idx < 0 ? stat_name : 'Delta PSI';
                                         tool_tip.querySelector('.versus').textContent = `${row}/${col}`;
                                         tool_tip.querySelector('.value').textContent = val;
@@ -108,9 +211,12 @@
 
                                         h.closest('tr')
                                             .querySelectorAll('.x-axis text')
-                                            .forEach((l, idx) => {
+                                            .forEach((l) => {
+                                                const idx = parseInt(l.parentNode.getAttribute("data-group-idx"));
                                                 if (![col_idx, row_idx].includes(idx))
-                                                    l.style.opacity = '.2'
+                                                    l.style.opacity = '.2';
+                                                else
+                                                    l.style.fontWeight = 900;
                                             });
                                     }
                                 } catch (TypeError) {
@@ -123,7 +229,8 @@
                                 h.closest('tr')
                                     .querySelectorAll('.x-axis text')
                                     .forEach((l, idx) => {
-                                        l.style.opacity = null
+                                        l.style.opacity = null;
+                                        l.style.fontWeight = null;
                                     });
                             };
 
@@ -157,20 +264,81 @@
 
                             v.querySelectorAll('.violin, .swarm-group')
                                 .forEach(h => {
-
+                                    const outline_color = '#61D836';
                                     h.onmouseover = () => {
                                         const idx = h.dataset.groupIdx;
+                                        var cur_row = 0;
                                         h
                                             .closest('tr')
                                             .querySelectorAll('.heat-map rect')
-                                            .forEach(r => r.dataset.columnIdx !== idx ? r.style.opacity = '0.2' : null);
+                                            .forEach((r, i , arr) => {
+                                                const num_cols = Math.sqrt(arr.length);
+
+                                                if(r.dataset.columnIdx === idx){
+                                                    // vertical boxes
+                                                    r.style.stroke = outline_color;
+                                                    r.style.strokeWidth = '2px';
+
+                                                    if(cur_row === (num_cols - 1)){
+                                                        r.style.strokeDasharray = "0, 20, 60";
+                                                    }else if(cur_row === 0) {
+                                                        r.style.strokeDasharray = "40, 20";
+                                                    }else{
+                                                        r.style.strokeDashoffset = "20";
+                                                        r.style.strokeDasharray = "20, 20";
+                                                    }
+                                                    cur_row++;
+
+                                                }else{
+                                                    r.style.opacity = '0.2'
+                                                }
+                                            });
                                         h
                                             .closest('tr')
                                             .querySelectorAll('.heat-map g')
                                             .forEach(g => {
                                                 if (g.dataset.rowIdx === idx) {
                                                     g.querySelectorAll('rect')
-                                                        .forEach(r => r.style.opacity = null)
+                                                        .forEach((r, i, arr) => {
+                                                            const mx_i = String(arr.length - 1);
+                                                            r.style.opacity = null;
+                                                            // row ; horizontal boxes
+                                                            // first case: intersection point
+                                                            if(r.dataset.columnIdx === idx) {
+                                                                // literal corner cases
+                                                                if(r.dataset.columnIdx === '0' && g.dataset.rowIdx === '0'){
+                                                                    r.style.stroke = outline_color;
+                                                                    r.style.strokeWidth = '2px';
+                                                                    r.style.strokeDasharray = "20, 40";
+                                                                }else if(r.dataset.columnIdx === mx_i && g.dataset.rowIdx === mx_i){
+                                                                    r.style.stroke = outline_color;
+                                                                    r.style.strokeWidth = '2px';
+                                                                    r.style.strokeDasharray = "40";
+                                                                    r.style.strokeDashoffset = '60';
+                                                                }else{
+                                                                    r.style.stroke = null;
+                                                                }
+
+                                                            }else{
+                                                                r.style.stroke = outline_color;
+                                                                r.style.strokeWidth = '2px';
+                                                                // left end cap
+                                                                if(r.dataset.columnIdx === '0') {
+                                                                    r.style.strokeDashoffset = null;
+                                                                    r.style.strokeDasharray = "20, 20, 40";
+                                                                // right end cap
+                                                                }else if(String(i) === mx_i) {
+                                                                    r.style.strokeDashoffset = null;
+                                                                    r.style.strokeDasharray = "60, 20";
+                                                                // everything else
+                                                                }else {
+                                                                    r.style.strokeDashoffset = null;
+                                                                    r.style.strokeDasharray = "20, 20";
+                                                                }
+                                                            }
+
+
+                                                        })
                                                 }
                                             })
                                     };
@@ -191,6 +359,7 @@
             });
 
 
+
         document.querySelectorAll('.lsv-table')
             .forEach(async function (lsv_table) {
                 $(lsv_table).DataTable({
@@ -205,6 +374,7 @@
                         data: d => {
                             d['lsv_id'] = lsv_table.dataset.lsvId;
                             d['stat_name'] = document.querySelector('input[name=stat-name]:checked').value;
+                            d['hidden_idx'] = hidden_idx.length > 0 ? hidden_idx.join(',') : undefined;
                         },
                         type: 'POST'
                     },
@@ -213,15 +383,33 @@
                             targets: 1,
                             sortable: false,
                             render: data => {
-
                                 const violin = new Violin(data);
-
                                 const element = document.createElement('svg');
                                 element.classList.add('psi-violin-plot');
                                 element.setAttribute('width', '0');
                                 element.setAttribute('height', '0');
 
                                 violin.heterogen(element);
+                                if($('#groups-display option').length === 0){
+                                    $.each(data.group_names, function(i, v){
+                                        $('#groups-display').append(`<option value="${v}" selected>${v}</option>`);
+                                    });
+
+                                    $('#groups-display').SumoSelect({
+                                        'captionFormatAllSelected': 'All Groups are Visible',
+                                        'captionFormat': '{0} Groups are Visible',
+                                        'placeholder': 'No Groups are Visible',
+                                        'isClickAwayOk': true
+                                    });
+
+                                    $('#groups-display-all').click(function(){
+                                        $('#groups-display')[0].sumo.selectAll();
+                                    });
+
+                                    $('#groups-display-none').click(function(){
+                                        $('#groups-display')[0].sumo.unSelectAll();
+                                    });
+                                }
 
                                 return element.outerHTML
                             }
@@ -232,8 +420,13 @@
                             render: data => {
                                 const heatmap = new HeatMap(data);
                                 const element = document.createElement('svg');
+                                heatmap.lsv_id = lsv_table.dataset.lsvId;
                                 heatmap.plot(element);
+                                if($('#dPSI-cutoff').val() !== DEFAULT_DPSI_MAXVAL){
+                                    update_heatmap_scale();
+                                }
                                 return element.outerHTML;
+
                             }
                         }
                     ]
@@ -262,15 +455,34 @@
                 copy_lsv_modal_dropdown(l, '{{ url_for("copy_lsv") }}/' + encodeURIComponent(lsv_id))
             })
 
+        $('.save-lsv').click(function(){
+            var lsv_id = $(this).closest('.lsv').find('.lsv-table').attr('data-lsv-id');
+            // 670 px is supposed to be the 'safe' value to use for a sheet of letter paper
+            // (as this is using the print preview mode)
+            var zoom = 670.0 / $(this).closest('.lsv').find('.lsv-table').width();
+
+            var printStyle = "@media print {" +
+                `    table[data-lsv-id="${lsv_id}"] *` +
+                "    { visibility: visible !important;}" +
+                `    table[data-lsv-id="${lsv_id}"] {` +
+                "        visibility: visible !important;" +
+                "        position:fixed;" +
+                "        top:0;" +
+                "        left:0;" +
+                "        z-index: 999;" +
+                `        zoom: ${zoom};` +
+                "         }" +
+                "    }";
+            $('#printStyle').text(printStyle)
+
+            window.print()
+
+        })
+
     </script>
 {% endblock %}
 
 {% block bottom %}
-    <svg height="0" width="0">
-        <pattern patternUnits="userSpaceOnUse" id="diagonalHatch" width="4" height="4">
-            <path d="M-1,1 l2,-2 M0,4 l4,-4 M3,5 l2,-2" stroke="grey" stroke-width="1"></path>
-        </pattern>
-    </svg>
 
     <div class="heat-map-tool-tip" style="display: none;">
         <div class="versus"></div>
@@ -284,8 +496,9 @@
     </div>
 
     <div class="lsv-container">
-        {% for lsv_id, lsv_type in lsv_data %}
-            <div class="lsv" data-lsv-id="{{ lsv_id }}">
+        {% for lsv_id, lsv_type, exon_number, exon_number_idx, type_length_idx in lsv_data %}
+            <div class="lsv" data-exon-number="{{ exon_number }}" data-lsv-id="{{ lsv_id }}" data-exon-number-idx="{{ exon_number_idx }}"
+                 data-type-length-idx="{{ type_length_idx }}">
                 <div class="lsv-header ">
                     <div class="highlight-form">
                         <div>
@@ -306,7 +519,11 @@
                     </div>
                     <div>
                         {{ lsv_id }}
+                        <div class="pure-control-group">
+                            <button type="button" class="pure-button save-lsv">Print / Save LSV</button>
+                        </div>
                     </div>
+
                     <div>
                         <form class="pure-form pure-form-aligned">
                             <fieldset>

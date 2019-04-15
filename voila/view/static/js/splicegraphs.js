@@ -576,6 +576,8 @@ class SpliceGraphs {
     }
 
     style_junctions(sg, gene, lsvs) {
+
+
         const colors = new Colors();
         const exp = sg.dataset.experiment;
         const grp = sg.dataset.group;
@@ -596,7 +598,8 @@ class SpliceGraphs {
                 if (x.length === 1) {
                     x[0].junctions.forEach((j, i) => {
                         if (SpliceGraphs.array_equal(j, [d.start, d.end])) {
-                            w = x[0].group_means[grp][exp][i] * 3;
+                            if(!$.isEmptyObject(x[0].group_means[grp]))
+                                w = x[0].group_means[grp][exp][i] * 3;
                         }
                     });
                 }

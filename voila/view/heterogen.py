@@ -33,15 +33,41 @@ def toggle_simplified():
 @app.route('/gene/<gene_id>/')
 def gene(gene_id):
     with ViewHeterogens() as m, ViewSpliceGraph(omit_simplified=session.get('omit_simplified', False)) as sg:
-        lsv_data = list((lsv_id, m.lsv(lsv_id).lsv_type) for lsv_id in m.lsv_ids(gene_ids=[gene_id]))
-        lsv_data.sort(key=lambda x: len(x[1].split('|')))
+
+
         ucsc = {}
+        exon_numbers = {}
+
         for het in m.lsvs(gene_id):
             lsv_junctions = het.junctions
             lsv_exons = sg.lsv_exons(gene_id, lsv_junctions)
             start, end = views.lsv_boundries(lsv_exons)
             gene = sg.gene(gene_id)
             ucsc[het.lsv_id] = views.ucsc_href(sg.genome, gene['chromosome'], start, end)
+            exon_numbers[het.lsv_id] = views.find_exon_number(sg.exons(gene_id), het.reference_exon, gene['strand'])
+
+
+        lsv_data = []
+        lsv_is_source = {}
+        for lsv_id in m.lsv_ids(gene_ids=[gene_id]):
+            lsv = m.lsv(lsv_id)
+
+            lsv_data.append( [lsv_id, lsv.lsv_type] )
+            lsv_is_source[lsv_id] = 1 if lsv.source else 0
+
+
+        # this is the default sort, so modify the list, and add the indexes
+        lsv_data.sort(key=lambda x: (exon_numbers[x[0]], lsv_is_source[x[0]]))
+
+        type_length_idx = [i[0] for i in sorted(enumerate(lsv_data), key=lambda x: len(x[1][1].split('|')))]
+
+        for i, lsv in enumerate(lsv_data):
+            # appending exon number
+            lsv.append(exon_numbers[lsv[0]])
+            # appending default sort index
+            lsv.append(i)
+            # appending other sort indexes
+            lsv.append(type_length_idx[i])
 
         return views.gene_view('het_summary.html', gene_id, ViewDeltaPsi,
                                lsv_data=lsv_data,
@@ -217,10 +243,19 @@ def lsv_highlight():
 @app.route('/summary-table', methods=('POST',))
 def summary_table():
     lsv_id, stat_name = itemgetter('lsv_id', 'stat_name')(request.form)
+    if 'hidden_idx' in request.form:
+        # this is reversed because we are removing these indexes from lists later, and that only works
+        # consistently if we do it backwards
+        hidden_idx = sorted([int(x) for x in request.form['hidden_idx'].split(',')], reverse=True)
+    else:
+        hidden_idx = []
 
     with ViewHeterogens() as v:
         exp_names = v.experiment_names
         grp_names = v.group_names
+        for _idx in hidden_idx:
+            del grp_names[_idx]
+            del exp_names[_idx]
 
         het = v.lsv(lsv_id)
         juncs = het.junctions
@@ -229,14 +264,18 @@ def summary_table():
 
         table_data = []
 
+        skipped_idx = 0
         for idx, (junc, mean_psi, mu_psi) in enumerate(zip(juncs, mean_psis, mu_psis)):
+            if idx in hidden_idx:
+                skipped_idx += 1
+                continue
             junc = map(str, junc)
             junc = '-'.join(junc)
             heatmap = het.junction_heat_map(stat_name, idx)
 
             table_data.append({
                 'junc': junc,
-                'junc_idx': idx,
+                'junc_idx': idx - skipped_idx,
                 'mean_psi': mean_psi,
                 'mu_psi': mu_psi,
                 'heatmap': heatmap,
@@ -247,6 +286,11 @@ def summary_table():
         for idx, row_data, records in dt.callback():
             junc, junc_idx, mean_psi = itemgetter('junc', 'junc_idx', 'mean_psi')(row_data)
             mu_psi, heatmap = itemgetter('mu_psi', 'heatmap')(row_data)
+            for _idx in hidden_idx:
+                heatmap = np.delete(heatmap, _idx, axis=0)
+                heatmap = np.delete(heatmap, _idx, axis=1).tolist()
+                del mu_psi[_idx]
+                del mean_psi[_idx]
 
             records[idx] = [
                 junc,
@@ -256,6 +300,7 @@ def summary_table():
                     'junction_idx': junc_idx,
                     'mean_psi': mean_psi,
                     'mu_psi': mu_psi,
+                    'heatmap': heatmap,
                 },
                 {
                     'heatmap': heatmap,
@@ -263,6 +308,7 @@ def summary_table():
                     'stat_name': stat_name
                 }
             ]
+
 
         return jsonify(dict(dt))
 
