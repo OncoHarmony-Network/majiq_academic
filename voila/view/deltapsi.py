@@ -30,7 +30,19 @@ def toggle_simplified():
 
 @app.route('/gene/<gene_id>/')
 def gene(gene_id):
-    return views.gene_view('dpsi_summary.html', gene_id, ViewDeltaPsi)
+    with ViewDeltaPsi() as m, ViewSpliceGraph() as sg:
+        filter_exon_numbers = {}
+        for lsv in m.lsvs(gene_id):
+            gene = sg.gene(gene_id)
+            exon_num = views.find_exon_number(sg.exons(gene_id), lsv.reference_exon, gene['strand'])
+            if type(exon_num) is int:
+                # accounting for 'unk' exon numbers
+                if not exon_num in filter_exon_numbers:
+                    filter_exon_numbers[exon_num] = [lsv.lsv_id]
+                else:
+                    filter_exon_numbers[exon_num].append(lsv.lsv_id)
+
+    return views.gene_view('dpsi_summary.html', gene_id, ViewDeltaPsi, filter_exon_numbers=filter_exon_numbers)
 
 
 @app.route('/lsv-data', methods=('POST',))

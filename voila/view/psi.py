@@ -37,6 +37,7 @@ def gene(gene_id):
     with ViewPsis() as m, ViewSpliceGraph() as sg:
         ucsc = {}
         exon_numbers = {}
+        filter_exon_numbers = {}
         for lsv in m.lsvs(gene_id):
             lsv_junctions = lsv.junctions
             lsv_exons = sg.lsv_exons(gene_id, lsv_junctions)
@@ -47,6 +48,10 @@ def gene(gene_id):
             if type(exon_num) is int:
                 # accounting for 'unk' exon numbers
                 exon_numbers[lsv.lsv_id] = exon_num
+                if not exon_num in filter_exon_numbers:
+                    filter_exon_numbers[exon_num] = [lsv.lsv_id]
+                else:
+                    filter_exon_numbers[exon_num].append(lsv.lsv_id)
             else:
                 exon_numbers[lsv.lsv_id] = 0
 
@@ -70,11 +75,14 @@ def gene(gene_id):
             # appending other sort indexes
             lsv.append(type_length_idx[i])
 
+
+
         return views.gene_view('psi_summary.html', gene_id, ViewDeltaPsi,
                                lsv_data=lsv_data,
                                group_names=m.group_names,
                                ucsc=ucsc,
-                               multi_view=len(ViewConfig().voila_files) > 1
+                               multi_view=len(ViewConfig().voila_files) > 1,
+                               filter_exon_numbers=filter_exon_numbers
                                )
 
 
