@@ -113,6 +113,12 @@ def index_table():
 def nav(gene_id):
     with ViewPsis() as h:
         gene_ids = list(sorted(h.gene_ids))
+
+        if len(gene_ids) == 1:
+            return jsonify({
+                'next': url_for('gene', gene_id=gene_ids[0]),
+                'prev': url_for('gene', gene_id=gene_ids[0])
+            })
         idx = bisect(gene_ids, gene_id)
 
         return jsonify({
