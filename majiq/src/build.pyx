@@ -219,8 +219,9 @@ cdef _parse_junction_file(tuple filetp, map[string, Gene*]& gene_map, vector[str
     cdef unsigned int irbool, coord1, coord2, sreads, npos
     cdef int n = gene_map.size()
     cdef char strand
+    cdef bint bsimpl = (conf.simpl_psi >= 0)
 
-    c_iobam = IOBam(filetp[1], strandness, 1, nthreads, gene_list)
+    c_iobam = IOBam(filetp[1], strandness, 1, nthreads, gene_list, bsimpl)
 
     with open(filetp[1], 'rb') as fp:
         junc_ids = np.load(fp)['junc_info']
@@ -286,7 +287,6 @@ cdef _find_junctions(list file_list, map[string, Gene*]& gene_map, vector[string
     cdef map[string, unsigned int] j_ids
     cdef pair[string, unsigned int] it
 
-
     for tmp_str, group_list in conf.tissue_repl.items():
         name = tmp_str.encode('utf-8')
         last_it_grp = group_list[len(group_list) - 1]
@@ -294,22 +294,6 @@ cdef _find_junctions(list file_list, map[string, Gene*]& gene_map, vector[string
         logger.info('Group %s, number of experiments: %s, minexperiments: %s' % (tmp_str,
                                                                                   len(group_list), min_experiments))
         for j in group_list:
-            logger.info('Reading file %s' %(file_list[j][0]))
-            bamfile = ('%s' % (file_list[j][1])).encode('utf-8')
-            strandness = conf.strand_specific[file_list[j][0]]
-
-            with nogil:
-                c_iobam = IOBam(bamfile, strandness, eff_len, nthreads, gene_list, bsimpl)
-                c_iobam.ParseJunctionsFromFile(False)
-                n_junctions = c_iobam.get_njuncs()
-                if ir:
-                    with gil:
-                        logger.info('Detect Intron retention %s' %(file_list[j][0]))
-                    c_iobam.detect_introns(min_ir_cov, min_experiments, ir_numbins, (j==last_it_grp))
-
-                njunc = c_iobam.get_njuncs()
-                with gil:
-                    logger.debug('Total Junctions and introns %s' %(njunc))
 
             if file_list[j][2]:
                 logger.info('Reading %s file %s' %(JUNC_FILE_FORMAT, file_list[j][0]))
@@ -320,7 +304,7 @@ cdef _find_junctions(list file_list, map[string, Gene*]& gene_map, vector[string
                 strandness = conf.strand_specific[file_list[j][0]]
 
                 with nogil:
-                    c_iobam = IOBam(bamfile, strandness, eff_len, nthreads, gene_list)
+                    c_iobam = IOBam(bamfile, strandness, eff_len, nthreads, gene_list, bsimpl)
                     c_iobam.ParseJunctionsFromFile(False)
                     n_junctions = c_iobam.get_njuncs()
                     if ir:

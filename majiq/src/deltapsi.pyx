@@ -124,6 +124,7 @@ cdef void _core_deltapsi(object self):
 
     print("Start Computing DeltaPSI")
     for i in prange(nlsv, nogil=True, num_threads=nthreads):
+
         with gil:
             lsv = list_of_lsv[i]
             logger.debug(lsv)
