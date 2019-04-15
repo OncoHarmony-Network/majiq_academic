@@ -5,12 +5,13 @@ import h5py
 import numpy as np
 
 from voila import constants
-from voila.api.view_matrix import ViewHeterogens, ViewDeltaPsi, ViewPsi
+from voila.api.view_matrix import ViewHeterogens, ViewDeltaPsi, ViewPsi, ViewPsis
 from voila.api.view_splice_graph import ViewSpliceGraph
 from voila.config import ViewConfig
 from voila.exceptions import UnknownAnalysisType, IndexNotFound, UnknownIndexFieldType
 from voila.vlsv import matrix_area
 from voila.voila_log import voila_log
+import hashlib
 
 lsv_filters = ['a5ss', 'a3ss', 'exon_skipping', 'target', 'source', 'binary', 'complex']
 psi_keys = ['lsv_id', 'gene_id', 'gene_name'] + lsv_filters
@@ -46,19 +47,36 @@ class Index:
         Check if index has already been created in voila file. If remove_index has been set, then attempt to use the
         h5py api to remove the index dataset from the file.
 
+        If the case of multiple voila files, we hash all of them and check that the hash of that group of hashes
+        matches what is stored in the voila file. Here we are assuming that the 'order' of the files is not important
+        (for example, if we check for a match in the first file but the previous index was stored in a different
+        file, the index will be rebuilt again for the same data)
         :param voila_file:
         :param remove_index:
         :return:
         """
-
         with h5py.File(voila_file, 'a') as h:
+
             index_in_h = 'index' in h
 
             if remove_index and index_in_h:
                 voila_log().info('Removing index from HDF5')
                 del h['index']
 
+            voila_files = ViewConfig().voila_files
+
+            if 'input_hash' in h:
+                prior = h.get('input_hash')[0].decode('utf-8')
+                new = Index._get_files_hash(voila_files)
+                index_in_h = (prior == new)
+
             return index_in_h
+
+    @staticmethod
+    def _get_files_hash(voila_files):
+        # for now we get a hash based on the combined name of all files
+        # (this is because we can not easily do it based on the content because we change the content for this process)
+        return hashlib.sha1(''.join(voila_files).encode('utf-8')).hexdigest()
 
     @staticmethod
     def _write_index(voila_file, voila_index, dtype):
@@ -71,8 +89,18 @@ class Index:
         :return: None
         """
         voila_index = np.array(voila_index, dtype=np.dtype(dtype))
+
+        voila_files = ViewConfig().voila_files
+
         with h5py.File(voila_file, 'a') as h:
+            if 'index' in h:
+                del h['index']
+            if 'input_hash' in h:
+                del h['input_hash']
             h.create_dataset('index', voila_index.shape, data=voila_index)
+            hashval = Index._get_files_hash(voila_files)
+            h.create_dataset("input_hash", (1,), dtype="S40", data=(hashval.encode('utf-8'),))
+
 
     @staticmethod
     def _create_dtype(voila_index):
@@ -203,7 +231,7 @@ class Index:
             log.info('Creating index: ' + voila_file)
             voila_index = []
 
-            with ViewSpliceGraph() as sg, ViewPsi() as m:
+            with ViewSpliceGraph() as sg, ViewPsis() as m:
                 for lsv_id in m.lsv_ids():
                     psi = m.lsv(lsv_id)
 
@@ -244,6 +272,7 @@ class Index:
                 for row in h['index'].value:
                     if gene_id is None or gene_id == row[1]:
                         yield dict(zip(keys, row))
+
 
             except KeyError:
                 raise IndexNotFound()

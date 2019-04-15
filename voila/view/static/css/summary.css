@@ -13,6 +13,11 @@ table {
     background-color: white
 }
 
+.dataTables_wrapper{
+    max-width: 100%;
+    overflow: auto;
+}
+
 .menu {
     background-color: #205bb0;
     color: white;

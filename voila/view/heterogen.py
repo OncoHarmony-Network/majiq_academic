@@ -309,6 +309,7 @@ def summary_table():
                 }
             ]
 
+
         return jsonify(dict(dt))
 
 
