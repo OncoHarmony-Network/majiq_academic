@@ -3,38 +3,41 @@
 {% block style %}
     {{ super() }}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/lib/sumoselect.min.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/multi_input.css') }}">
 <style>
-     .SumoUnder{
-        z-index: -1000;
-        pointer-events: none;
-    }
-    .SumoSelect>.CaptionCont {
-        min-height: 16px;
-        border: 1px solid #ccc;
-        box-shadow: inset 0 1px 3px #ddd;
-        border-radius: 4px;
-    }
-    #groups-display-all, #groups-display-none{
-        margin-top:2px;
-    }
 
 </style>
 {% endblock %}
 
+
 {% block heatmap_form %}
+    {% if multi_view %}
+    <div class="groups-display-form pure-form pure-form-stacked" style="float: right; margin-right: 10px; width:10%;">
+        <div>
+            <label for="groups-display">Show / Hide Groups</label>
+            <select id="groups-display" multiple style="width:100%;">
 
-    <form class="heatmap-scale-form pure-form pure-form-stacked" style="float: right; margin-right: 10px; width:214px;">
+            </select>
+            <button type="button" id="groups-display-all">All</button>
+            <button type="button" id="groups-display-none">None</button>
+        </div>
+        <div id="lsv-ordering-options">
+            <label>LSV Ordering</label>
+            <label for="lsv-order-exon-num" class="pure-radio">
+                <input id="lsv-order-exon-num" type="radio" name="lsv-order" value="exon-number-idx" checked>
+                Exon Number
+            </label>
+            <label for="lsv-order-type-len" class="pure-radio">
+                <input id="lsv-order-type-len" type="radio" name="lsv-order" value="type-length-idx">
+                Type Length
+            </label>
+        </div>
 
-        <label for="groups-display">Show / Hide Groups</label>
-        <select id="groups-display" multiple style="width:100%;">
-
-        </select>
-        <button type="button" id="groups-display-all">All</button>
-        <button type="button" id="groups-display-none">None</button>
-
-    </form>
+    </div>
+    {% endif %}
 
 {% endblock %}
+
 
 {% block analysis_type_script %}
     <script src="{{ url_for('static', filename='js/lib/jquery.sumoselect.min.js') }}"></script>
@@ -42,6 +45,14 @@
     <script>
         {% if multi_view %}
             const view_type = 'multipsi';
+
+            // incase the screen is very small and content in the header takes more vertical space
+            // push down the content more so it does not overlap
+            $('.content').css('top',$('.gene-header').height() + 60);
+
+            $('#lsv-ordering-options input').click(function(){
+                $('.lsv-container').eq(0).sortClass('lsv', $(this).val());
+            });
 
             var hidden_idx = [];
 
@@ -144,7 +155,6 @@
                         const lsv_id = tds[1].textContent;
                         json_ajax('{{ url_for("lsv_data") }}/' + encodeURIComponent(lsv_id))
                             .then(lsv_data => {
-                                console.log(lsv_data)
                                 const lsv = new Lsv(lsv_data);
                                 const violin = new Violin(lsv_data.lsv);
                                 const s = n.querySelector('.psi-violin-plot');
@@ -358,8 +368,9 @@
 {% block bottom %}
     {% if multi_view %}
     <div class="lsv-container">
-        {% for lsv_id, lsv_type in lsv_data %}
-            <div class="lsv" data-lsv-id="{{ lsv_id }}">
+        {% for lsv_id, lsv_type, exon_number, exon_number_idx, type_length_idx in lsv_data %}
+            <div class="lsv" data-exon-number="{{ exon_number }}" data-lsv-id="{{ lsv_id }}" data-exon-number-idx="{{ exon_number_idx }}"
+                 data-type-length-idx="{{ type_length_idx }}">
                 <div class="lsv-header ">
                     <div class="highlight-form">
                         <div>
