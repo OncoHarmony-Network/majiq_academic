@@ -11,7 +11,7 @@ from voila.exceptions import FoundNoSpliceGraphFile, FoundMoreThanOneSpliceGraph
 from voila.voila_log import voila_log
 
 _ViewConfig = namedtuple('ViewConfig', ['voila_file', 'voila_files', 'splice_graph_file', 'analysis_type', 'nproc',
-                                        'force_index', 'debug', 'silent', 'port', 'host', 'web_server',
+                                        'force_index', 'debug', 'silent', 'port', 'host', 'web_server', 'index_file',
                                         'num_web_workers'])
 _ViewConfig.__new__.__defaults__ = (None,) * len(_ViewConfig._fields)
 _TsvConfig = namedtuple('TsvConfig', ['file_name', 'voila_files', 'voila_file', 'splice_graph_file',

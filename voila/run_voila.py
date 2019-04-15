@@ -123,6 +123,9 @@ view_parser.add_argument('--host', type=str, default='127.0.0.1',
                          help='Set bind address. ex 0.0.0.0 for all interfaces. Default is a 127.0.0.1 (localhost).')
 view_parser.add_argument('--force-index', action='store_true',
                          help='Create index even if already exists.')
+view_parser.add_argument('--index-file', type=str, default='',
+                         help='Location of index file. If specified, will use a separate HDF5 based file for storing '
+                              'index data, rather than using input Voila file')
 view_parser.add_argument('--splice-graph-only', action='store_true', help=argparse.SUPPRESS)
 
 # subparsers
