@@ -9,7 +9,7 @@ from voila.api.matrix_hdf5 import DeltaPsi, Psi, Heterogen, MatrixType
 from voila.api.matrix_utils import unpack_means, unpack_bins, generate_excl_incl, generate_means, \
     generate_high_probability_non_changing, generate_variances
 from voila.config import ViewConfig
-from voila.exceptions import LsvIdNotFoundInVoilaFile, GeneIdNotFoundInVoilaFile
+from voila.exceptions import LsvIdNotFoundInVoilaFile, GeneIdNotFoundInVoilaFile, LsvIdNotFoundInAnyVoilaFile
 from voila.vlsv import is_lsv_changing, matrix_area, get_expected_psi
 
 
@@ -63,13 +63,312 @@ class ViewMatrixType(MatrixType):
         return len(tuple(self.means))
 
 
-class ViewPsi(Psi, ViewMatrix):
-    def __init__(self):
+class ViewMulti:
+    """
+    View for set of Voila  files.  This is used in creation of tsv and html files.
+    Base class
+    """
+    def __init__(self, view_class):
         """
-        View of the psi matrix. Used in creating tsv and html output.
+        :param view_class: class for view of single item (ex, ViewPsi, ViewHeterogen)
+        """
+        self._group_names = None
+        self.view_class = view_class
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        pass
+
+    @property
+    def experiment_names(self):
+        """
+        Experiment names for this set of het voila files.
+        :return: List
         """
         config = ViewConfig()
-        super().__init__(config.voila_file)
+        exp_names = {}
+        for f in config.voila_files:
+            with self.view_class(f) as m:
+                for exp, grp in zip(m.experiment_names, m.group_names):
+                    exp_names[grp] = exp
+
+        return [exp_names[grp] for grp in self.group_names]
+
+    @property
+    def group_names(self):
+        """
+        Group names for this set of het voila files.
+        :return: list
+        """
+        config = ViewConfig()
+        grp_names = []
+        for f in config.voila_files:
+            with self.view_class(f) as m:
+                for grp in m.group_names:
+                    if not grp in grp_names:
+                        grp_names.append(grp)
+
+        return grp_names
+
+    @property
+    def splice_graph_experiment_names(self):
+        """
+        experiment names for the splice graph drop down.
+        :return: List
+        """
+
+        config = ViewConfig()
+        exp_names = {}
+        for f in config.voila_files:
+            with self.view_class(f) as m:
+                for exp, grp in zip(m.splice_graph_experiment_names, m.group_names):
+                    exp_names[grp] = exp
+
+        return [exp_names[grp] for grp in self.group_names]
+
+    @property
+    def gene_ids(self):
+        """
+        Get a set of gene ids from all het voila files.
+        :return: generator
+        """
+
+        voila_files = ViewConfig().voila_files
+        vhs = [self.view_class(f) for f in voila_files]
+        yield from set(chain(*(v.gene_ids for v in vhs)))
+        for v in vhs:
+            v.close()
+
+    def lsv_ids(self, gene_ids=None):
+        """
+        Get a set of lsv ids from all voila files for specified gene ids. If gene ids is None, then get all lsv ids.
+        :param gene_ids: list of gene ids
+        :return:
+        """
+
+        voila_files = ViewConfig().voila_files
+        vhs = [self.view_class(f) for f in voila_files]
+        yield from set(chain(*(v.lsv_ids(gene_ids) for v in vhs)))
+        for v in vhs:
+            v.close()
+
+    def lsv(self, lsv_id):
+        raise NotImplementedError()
+
+    def lsvs(self, gene_id=None):
+        """
+        Get all lsvs for set of het voila files.
+        :param gene_id: gene id
+        :return:
+        """
+
+        if gene_id:
+            gene_ids = [gene_id]
+        else:
+            gene_ids = None
+
+        for lsv_id in self.lsv_ids(gene_ids):
+            yield self.lsv(lsv_id)
+
+
+
+class _ViewMulti:
+    """
+    Base class for .lsv() call return of other multi objects
+    """
+    def __init__(self, matrix_hdf5, lsv_id, view_class):
+        """
+        :param view_class: class for view of single item (ex, ViewPsi, ViewHeterogen)
+        """
+        self.matrix_hdf5 = matrix_hdf5
+        self.lsv_id = lsv_id
+        self.view_class = view_class
+
+    def _get_prop(self, prop, cast=None):
+        """
+        Look for the first input voila file with the property which exists. This does NOT validate the property
+        is the same across all files where lsv id exists.
+
+        cast should be specified when trying to retrieve generator style properties, because the generator
+        will be processed inside this function, and attempting to iterate the generator outside of
+        will cause an unrelated error because you have exited the "with" block.
+        :return: property value
+        """
+        config = ViewConfig()
+        propval = None
+        for f in config.voila_files:
+            with ViewPsi(f) as m:
+                if propval is None:
+                    try:
+
+                        propval = getattr(m.lsv(self.lsv_id), prop)
+                        if cast:
+                            propval = cast(propval)
+
+                    except (GeneIdNotFoundInVoilaFile, LsvIdNotFoundInVoilaFile):
+                        pass
+                if propval is not None:
+                    return propval
+
+    def _get_prop_multi(self, prop):
+        """
+        Look for some attribute in all input files, and return a group:property dict
+        it is assummed that the property itself will be read as a group:property dict
+        from each individual file.
+        :return: property value
+        """
+        config = ViewConfig()
+        propval = None
+        groups_to_props = {}
+        for f in config.voila_files:
+            with ViewPsi(f) as m:
+                try:
+                    propval = dict(getattr(m.lsv(self.lsv_id), prop))
+
+                except (GeneIdNotFoundInVoilaFile, LsvIdNotFoundInVoilaFile):
+                    pass
+                if propval is not None:
+                    for key in propval:
+                        groups_to_props[key] = propval[key]
+
+        return groups_to_props
+
+
+    def get_attr(self, attr):
+        """
+        For attributes that exist is each het file, this will get all values and confirm they're all equal.
+        :param attr: attribute found in het voila file.
+        :return: attribute value
+        """
+
+        voila_files = ViewConfig().voila_files
+        s = set()
+        for f in voila_files:
+            with self.view_class(f) as m:
+                try:
+                    inner = m.lsv(self.lsv_id)
+                    s.add(getattr(inner, attr))
+                except (GeneIdNotFoundInVoilaFile, LsvIdNotFoundInVoilaFile):
+                    pass
+        if len(s) == 0:
+            raise LsvIdNotFoundInAnyVoilaFile
+        assert len(s) == 1, s
+        return s.pop()
+
+    @property
+    def reference_exon(self):
+        return self.get_attr('reference_exon')
+
+    @property
+    def target(self):
+        return self.get_attr('target')
+
+    @property
+    def source(self):
+        return self.get_attr('source')
+
+    @property
+    def binary(self):
+        return self.get_attr('binary')
+
+    @property
+    def complex(self):
+        return self.get_attr('complex')
+
+    @property
+    def gene_id(self):
+        return self.get_attr('gene_id')
+
+    @property
+    def a5ss(self):
+        return self.get_attr('a5ss')
+
+    @property
+    def a3ss(self):
+        return self.get_attr('a3ss')
+
+    @property
+    def exon_skipping(self):
+        return self.get_attr('exon_skipping')
+
+    @property
+    def exon_count(self):
+        return self.get_attr('exon_count')
+
+    @property
+    def lsv_type(self):
+        return self.get_attr('lsv_type')
+
+    @property
+    def intron_retention(self):
+        return self.get_attr('intron_retention')
+
+
+    @property
+    def junctions(self):
+        """
+        Finds first file with junctions list for this specific lsv id. This does NOT validate the junctions list
+        is the same across all files where lsv id exists.
+        :return: numpy array
+        """
+        return self._get_prop('junctions')
+
+class ViewPsis(ViewMulti):
+
+    def __init__(self):
+        super().__init__(ViewPsi)
+
+    class _ViewPsis(_ViewMulti):
+        def __init__(self, matrix_hdf5, lsv_id):
+            super().__init__(matrix_hdf5, lsv_id, ViewPsi)
+
+        @property
+        def all_group_means(self):
+            """
+            Get group means from all files as a dict of group_name:means
+            """
+            return self._get_prop_multi('group_means')
+
+        @property
+        def group_means(self):
+            """
+            Finds first file with this specific lsv id and gets group means. This does NOT consider any other
+            input files upon finding the first one with the lsv id
+            """
+            return self._get_prop('group_means', dict)
+
+        @property
+        def group_bins(self):
+            """
+            Finds first file with this specific lsv id and gets group means. This does NOT consider any other
+            input files upon finding the first one with the lsv id
+            """
+            return self._get_prop('group_bins', dict)
+
+    def lsv(self, lsv_id):
+        """
+        Get view heterogens object for this lsv id.
+        :param lsv_id: lsv id
+        :return: view heterogens object
+        """
+        return self._ViewPsis(self, lsv_id)
+
+
+
+
+
+class ViewPsi(Psi, ViewMatrix):
+    def __init__(self, voila_file=None):
+        """
+        This represents a single Psi voila file.  ViewPsis uses this class to retrieve data from the individual
+        files.
+        :param voila_file: voila file name
+        """
+        if not voila_file:
+            voila_file = ViewConfig().voila_file
+        super().__init__(voila_file)
 
     class _ViewPsi(Psi._Psi, ViewMatrixType):
         @property
@@ -200,90 +499,18 @@ class ViewDeltaPsi(DeltaPsi, ViewMatrix):
         return self._ViewDeltaPsi(self, lsv_id)
 
 
-class ViewHeterogens:
+
+
+
+
+class ViewHeterogens(ViewMulti):
+
     def __init__(self):
-        """
-        View for set of Heterogen Voila  files.  This is used in creation of tsv and html files.
-        """
-        self._group_names = None
+        super().__init__(ViewHeterogen)
 
-    def __enter__(self):
-        return self
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        pass
-
-    class _ViewHeterogens:
+    class _ViewHeterogens(_ViewMulti):
         def __init__(self, matrix_hdf5, lsv_id):
-            self.matrix_hdf5 = matrix_hdf5
-            self.lsv_id = lsv_id
-
-        def get_attr(self, attr):
-            """
-            For attributes that exist is each het file, this will get all values and confirm they're all equal.
-            :param attr: attribute found in het voila file.
-            :return: attribute value
-            """
-
-            voila_files = ViewConfig().voila_files
-            s = set()
-            for f in voila_files:
-                with ViewHeterogen(f) as m:
-                    try:
-                        het = m.lsv(self.lsv_id)
-                        s.add(getattr(het, attr))
-                    except (GeneIdNotFoundInVoilaFile, LsvIdNotFoundInVoilaFile):
-                        pass
-            assert len(s) == 1, s
-            return s.pop()
-
-        @property
-        def reference_exon(self):
-            return self.get_attr('reference_exon')
-
-        @property
-        def target(self):
-            return self.get_attr('target')
-
-        @property
-        def source(self):
-            return self.get_attr('source')
-
-        @property
-        def binary(self):
-            return self.get_attr('binary')
-
-        @property
-        def complex(self):
-            return self.get_attr('complex')
-
-        @property
-        def gene_id(self):
-            return self.get_attr('gene_id')
-
-        @property
-        def a5ss(self):
-            return self.get_attr('a5ss')
-
-        @property
-        def a3ss(self):
-            return self.get_attr('a3ss')
-
-        @property
-        def exon_skipping(self):
-            return self.get_attr('exon_skipping')
-
-        @property
-        def exon_count(self):
-            return self.get_attr('exon_count')
-
-        @property
-        def lsv_type(self):
-            return self.get_attr('lsv_type')
-
-        @property
-        def intron_retention(self):
-            return self.get_attr('intron_retention')
+            super().__init__(matrix_hdf5, lsv_id, ViewHeterogen)
 
         @property
         def group_bins(self):
@@ -320,7 +547,7 @@ class ViewHeterogens:
                         stat_value = stat_value.T
                         stat_value = stat_value[stat_idx][junc_idx]
 
-                        dpsi_value = het.dpsi
+                        dpsi_value = het.dpsi_signed
                         dpsi_value = dpsi_value[junc_idx]
 
                         grp_names = m.group_names
@@ -408,25 +635,6 @@ class ViewHeterogens:
             return mean_psi.tolist()
 
         @property
-        def junctions(self):
-            """
-            Finds first file with junctions list for this specific lsv id. This does NOT validate the junctions list
-            is the same across all files where lsv id exists.
-            :return: numpy array
-            """
-            config = ViewConfig()
-            juncs = None
-            for f in config.voila_files:
-                with ViewHeterogen(f) as m:
-                    if juncs is None:
-                        try:
-                            juncs = m.lsv(self.lsv_id).junctions
-                        except (GeneIdNotFoundInVoilaFile, LsvIdNotFoundInVoilaFile):
-                            pass
-                    if juncs is not None:
-                        return juncs
-
-        @property
         def junction_stats(self):
             """
             This gets associates stat test names with their values.
@@ -480,79 +688,6 @@ class ViewHeterogens:
                     else:
                         yield groups + ' ' + name
 
-    @property
-    def experiment_names(self):
-        """
-        Experiment names for this set of het voila files.
-        :return: List
-        """
-        config = ViewConfig()
-        exp_names = {}
-        for f in config.voila_files:
-            with ViewHeterogen(f) as m:
-                for exp, grp in zip(m.experiment_names, m.group_names):
-                    exp_names[grp] = exp
-
-        return [exp_names[grp] for grp in self.group_names]
-
-    @property
-    def group_names(self):
-        """
-        Group names for this set of het voila files.
-        :return: list
-        """
-        config = ViewConfig()
-        grp_names = []
-        for f in config.voila_files:
-            with ViewHeterogen(f) as m:
-                for grp in m.group_names:
-                    if not grp in grp_names:
-                        grp_names.append(grp)
-
-        return grp_names
-
-    @property
-    def splice_graph_experiment_names(self):
-        """
-        experiment names for the splice graph drop down.
-        :return: List
-        """
-
-        config = ViewConfig()
-        exp_names = {}
-        for f in config.voila_files:
-            with ViewHeterogen(f) as m:
-                for exp, grp in zip(m.splice_graph_experiment_names, m.group_names):
-                    exp_names[grp] = exp
-
-        return [exp_names[grp] for grp in self.group_names]
-
-    @property
-    def gene_ids(self):
-        """
-        Get a set of gene ids from all het voila files.
-        :return: generator
-        """
-
-        voila_files = ViewConfig().voila_files
-        vhs = [ViewHeterogen(f) for f in voila_files]
-        yield from set(chain(*(v.gene_ids for v in vhs)))
-        for v in vhs:
-            v.close()
-
-    def lsv_ids(self, gene_ids=None):
-        """
-        Get a set of lsv ids from all voila files for specified gene ids. If gene ids is None, then get all lsv ids.
-        :param gene_ids: list of gene ids
-        :return:
-        """
-
-        voila_files = ViewConfig().voila_files
-        vhs = [ViewHeterogen(f) for f in voila_files]
-        yield from set(chain(*(v.lsv_ids(gene_ids) for v in vhs)))
-        for v in vhs:
-            v.close()
-
     def lsv(self, lsv_id):
         """
         Get view heterogens object for this lsv id.
@@ -562,20 +697,8 @@ class ViewHeterogens:
 
         return self._ViewHeterogens(self, lsv_id)
 
-    def lsvs(self, gene_id=None):
-        """
-        Get all lsvs for set of het voila files.
-        :param gene_id: gene id
-        :return:
-        """
 
-        if gene_id:
-            gene_ids = [gene_id]
-        else:
-            gene_ids = None
 
-        for lsv_id in self.lsv_ids(gene_ids):
-            yield self.lsv(lsv_id)
 
 
 class ViewHeterogen(Heterogen, ViewMatrix):
@@ -594,10 +717,18 @@ class ViewHeterogen(Heterogen, ViewMatrix):
         @property
         def dpsi(self):
             """
-            Calculated the difference in psi for heat map.
+            Calculated the absolute difference in psi for heat map.
             :return: list
             """
             return [abs(reduce(operator.__sub__, (get_expected_psi(b) for b in bs))) for bs in self.mean_psi]
+
+        @property
+        def dpsi_signed(self):
+            """
+            Calculated the difference in psi for heat map. (with negative values possible)
+            :return: list
+            """
+            return [reduce(operator.__sub__, (get_expected_psi(b) for b in bs)) for bs in self.mean_psi]
 
         @property
         def mean_psi(self):

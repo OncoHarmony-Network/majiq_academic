@@ -2,6 +2,8 @@
 
 {% block analysis_type_script %}
     <script>
+        const view_type = 'dpsi';
+
         json_ajax('{{ url_for("nav", gene_id=gene.id) }}').then(json => {
             document.querySelector('.prev-gene').addEventListener('click', () => {
                 window.location.href = json.prev;

@@ -17,6 +17,38 @@
             .then(() => location.reload());
         });
 
+        // capture double clicking on exon numbers in splicegraph
+        $('.top').on('dblclick', '.exon-grp', function(){
+            // look for the matching exon number table without the prev attr (there might be two)
+            const exon_number = $(this).children('text').eq(0).text();
+            var setOne = false; // flag used to that we don't double set on the first double click event
+            const lsv_tables = $(`.lsv[data-exon-number="${exon_number}"]`)
+            lsv_tables.each(function(i, el){
+                const $self = $(this);
+                if(!$self.is('[data-select]') || lsv_tables.length === 1){
+                    if(!setOne){
+                        // scroll to it
+
+                        $self.css('background-color', '#ff7878');
+                        $self.css('transition', 'background 1.5s');
+
+                        $('.bottom').animate({
+                            scrollTop: $self[0].offsetTop - ($('.gene-header').height() + 80)
+                        }, 500, 'linear', function(){
+                            $self.css('background-color', 'transparent');
+                        });
+
+                        // set the attr, so it will not be chosen next time
+                        $self.attr('data-select', 't');
+                        setOne = true;
+                    }
+                }else{
+                    // unset for the other one
+                    $self.attr('data-select', null);
+                }
+            })
+        });
+
     </script>
     {% block analysis_type_script %}{% endblock %}
 {% endblock %}
