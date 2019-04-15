@@ -74,9 +74,17 @@ class Index:
 
     @staticmethod
     def _get_files_hash(voila_files):
-        # for now we get a hash based on the combined name of all files
-        # (this is because we can not easily do it based on the content because we change the content for this process)
-        return hashlib.sha1(''.join(voila_files).encode('utf-8')).hexdigest()
+        if ViewConfig().index_file:
+            # if we use a separate file for indexing, we can verify the hash of all inputs in the verification
+            h = hashlib.sha1()
+            for filename in sorted(voila_files):
+                with open(filename, 'rb') as f:
+                    h.update(f.read())
+            return h.hexdigest()
+        else:
+            # for now we get a hash based on the combined name of all files
+            # (this is because we can not easily do it based on the content because we change the content for this process)
+            return hashlib.sha1(''.join(voila_files).encode('utf-8')).hexdigest()
 
     @staticmethod
     def _write_index(voila_file, voila_index, dtype):
@@ -101,6 +109,13 @@ class Index:
             hashval = Index._get_files_hash(voila_files)
             h.create_dataset("input_hash", (1,), dtype="S40", data=(hashval.encode('utf-8'),))
 
+    @staticmethod
+    def _get_voila_index_file():
+        c = ViewConfig()
+        if c.index_file:
+            return c.index_file
+        else:
+            return c.voila_file
 
     @staticmethod
     def _create_dtype(voila_index):
@@ -138,7 +153,7 @@ class Index:
         config = ViewConfig()
         log = voila_log()
         force_index = remove_index = config.force_index
-        voila_file = config.voila_file
+        voila_file = self._get_voila_index_file()
 
         if not self._index_in_voila(voila_file, remove_index) or force_index:
 
@@ -164,6 +179,8 @@ class Index:
 
             dtype = self._create_dtype(voila_index)
             self._write_index(voila_file, voila_index, dtype)
+        else:
+            log.info('Using index: ' + voila_file)
 
     def _deltapsi(self):
         """
@@ -175,7 +192,7 @@ class Index:
         config = ViewConfig()
         log = voila_log()
         force_index = remove_index = config.force_index
-        voila_file = config.voila_file
+        voila_file = self._get_voila_index_file()
 
         if not self._index_in_voila(voila_file, remove_index) or force_index:
 
@@ -214,6 +231,8 @@ class Index:
 
             dtype = self._create_dtype(voila_index)
             self._write_index(voila_file, voila_index, dtype)
+        else:
+            log.info('Using index: ' + voila_file)
 
     def _psi(self):
         """
@@ -224,7 +243,7 @@ class Index:
         config = ViewConfig()
         log = voila_log()
         force_index = remove_index = config.force_index
-        voila_file = config.voila_file
+        voila_file = self._get_voila_index_file()
 
         if not self._index_in_voila(voila_file, remove_index) or force_index:
 
@@ -248,6 +267,8 @@ class Index:
 
             dtype = self._create_dtype(voila_index)
             self._write_index(voila_file, voila_index, dtype)
+        else:
+            log.info('Using index: ' + voila_file)
 
     @staticmethod
     def _row_data(gene_id, keys):
@@ -258,7 +279,7 @@ class Index:
         :return:
         """
 
-        index_file = ViewConfig().voila_file
+        index_file = Index._get_voila_index_file()
 
         try:
             gene_id = gene_id.encode('utf-8')
@@ -272,7 +293,6 @@ class Index:
                 for row in h['index'].value:
                     if gene_id is None or gene_id == row[1]:
                         yield dict(zip(keys, row))
-
 
             except KeyError:
                 raise IndexNotFound()
