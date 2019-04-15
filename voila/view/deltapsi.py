@@ -20,6 +20,13 @@ def index():
     dpsi_form = DeltaPsiFiltersForm()
     return render_template('dpsi_index.html', form=form, dpsi_form=dpsi_form)
 
+@app.route('/toggle-simplified', methods=('POST',))
+def toggle_simplified():
+    if not 'omit_simplified' in session:
+        session['omit_simplified'] = True
+    else:
+        session['omit_simplified'] = not session['omit_simplified']
+    return jsonify({'ok':1})
 
 @app.route('/gene/<gene_id>/')
 def gene(gene_id):
@@ -29,7 +36,7 @@ def gene(gene_id):
 @app.route('/lsv-data', methods=('POST',))
 @app.route('/lsv-data/<lsv_id>', methods=('POST',))
 def lsv_data(lsv_id):
-    with ViewSpliceGraph() as sg, ViewDeltaPsi() as m:
+    with ViewSpliceGraph(omit_simplified=session.get('omit_simplified', False)) as sg, ViewDeltaPsi() as m:
         dpsi = m.lsv(lsv_id)
         ref_exon = dpsi.reference_exon
         gene_id = dpsi.gene_id
@@ -60,7 +67,7 @@ def lsv_data(lsv_id):
 
 @app.route('/index-table', methods=('POST',))
 def index_table():
-    with ViewDeltaPsi() as p, ViewSpliceGraph() as sg:
+    with ViewDeltaPsi() as p, ViewSpliceGraph(omit_simplified=session.get('omit_simplified', False)) as sg:
         dt = DataTables(Index.delta_psi(), ('gene_name', 'lsv_id', '', 'excl_incl'), slice=False)
         dt.delta_psi_filters()
         dt.slice()
@@ -104,7 +111,7 @@ def nav(gene_id):
 
 @app.route('/splice-graph/<gene_id>', methods=('POST', 'GET'))
 def splice_graph(gene_id):
-    with ViewSpliceGraph() as sg, ViewDeltaPsi() as v:
+    with ViewSpliceGraph(omit_simplified=session.get('omit_simplified', False)) as sg, ViewDeltaPsi() as v:
         exp_names = v.splice_graph_experiment_names
         gd = sg.gene_experiment(gene_id, exp_names)
         gd['group_names'] = v.group_names
@@ -192,7 +199,7 @@ def lsv_highlight():
 
 @app.route('/summary-table/<gene_id>', methods=('POST',))
 def summary_table(gene_id):
-    with ViewDeltaPsi() as v, ViewSpliceGraph() as sg:
+    with ViewDeltaPsi() as v, ViewSpliceGraph(omit_simplified=session.get('omit_simplified', False)) as sg:
 
         grp_names = v.group_names
         index_data = Index.delta_psi(gene_id)

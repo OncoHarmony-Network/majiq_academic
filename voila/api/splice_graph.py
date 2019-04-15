@@ -187,6 +187,17 @@ class Genes(SpliceGraphSQL):
         if fetch:
             return dict(zip(gene_fieldnames, fetch))
 
+    def gene_overlap(self, gene_id):
+        query = self.conn.execute("""
+                    SELECT gene_overlap.gene_id_1, g1.name, gene_overlap.gene_id_2, g2.name FROM gene_overlap 
+                    INNER JOIN gene g1 on g1.id = gene_overlap.gene_id_1
+					INNER JOIN gene g2 on g2.id = gene_overlap.gene_id_2                     
+                    WHERE gene_id_1 = ?
+                    OR gene_id_2 = ?
+                """, (gene_id, gene_id))
+        return [(g[0], g[1],) if g[0] != gene_id else (g[2], g[3],) for g in query.fetchall()]
+
+
 
 class Exons(SpliceGraphSQL):
     def exons(self, gene_id):
@@ -205,18 +216,17 @@ class Exons(SpliceGraphSQL):
 
 
 class Junctions(SpliceGraphSQL):
-    def junctions(self, gene_id):
+    def junctions(self, gene_id, omit_simplified=False):
         """
         Get list of junctions for specified gene id.
         :param gene_id: gene id
         :return: list of junction dictionaries
         """
-
         query = self.conn.execute('''
-                                SELECT gene_id, start, end, has_reads, annotated
+                                SELECT gene_id, start, end, has_reads, annotated, is_simplified
                                 FROM junction 
                                 WHERE gene_id=?
-                                ''', (gene_id,))
+                                ''' + (" AND is_simplified = 0" if omit_simplified else ''), (gene_id,))
         return self._iter_results(query, junc_fieldnames)
 
     def junction_reads_exp(self, junction, experiment_names):
@@ -241,7 +251,7 @@ class Junctions(SpliceGraphSQL):
 
 
 class IntronRetentions(SpliceGraphSQL):
-    def intron_retentions(self, gene_id):
+    def intron_retentions(self, gene_id, omit_simplified=False):
         """
         Get all intron retentions for a gene id.
         :param gene_id: gene id
@@ -251,7 +261,7 @@ class IntronRetentions(SpliceGraphSQL):
                                 SELECT gene_id, start, end, has_reads, annotated
                                 FROM intron_retention
                                 WHERE gene_id=?
-                                ''', (gene_id,))
+                                ''' + (" AND is_simplified = 0" if omit_simplified else ''), (gene_id,))
 
         return self._iter_results(query, ir_fieldnames)
 

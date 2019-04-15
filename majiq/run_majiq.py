@@ -125,6 +125,27 @@ def main():
                                                                         'some coverage that an intron needs to pass '
                                                                         'to be accepted as real [Default: %(default)s]')
 
+    buildparser.add_argument('--simplify-denovo', dest="simpl_denovo", default=10, type=int,
+                             help='Minimum number of reads threshold combining all positions of an denovo junction to '
+                                  'consider if it will be simplified, even knowing it is real. Simplified junctions are'
+                                  ' discarded from any lsv. [Default: %(default)s]')
+
+    buildparser.add_argument('--simplify-annotated', dest="simpl_db", default=10, type=int,
+                             help='Minimum number of reads threshold combining all positions of an annotated junction to '
+                                  'consider if it will be simplified, even knowing it is real. Simplified junctions are'
+                                  ' discarded from any lsv. [Default: %(default)s]')
+
+    buildparser.add_argument('--simplify-ir', dest="simpl_ir", default=10, type=int,
+                             help='Minimum number of reads threshold combining all positions of an ir to '
+                                  'consider if it will be simplified, even knowing it is real. Simplified junctions are'
+                                  ' discarded from any lsv. [Default: %(default)s]')
+
+    buildparser.add_argument('--simplify', dest="simpl_psi", default=-1, type=float, nargs='?', const=0.01,
+                             help='Minimum fraction of the usage of any junction in a LSV to consider that junction is'
+                                  ' real. [Default: %(default)s]')
+
+
+
     sampling = new_subparser()
 
     sampling.add_argument('--minreads', default=10, type=int,

@@ -55,6 +55,7 @@
                         const lsv_id = tds[1].textContent;
                         json_ajax('{{ url_for("lsv_data") }}/' + encodeURIComponent(lsv_id))
                             .then(lsv_data => {
+                                console.log(lsv_data)
                                 const lsv = new Lsv(lsv_data);
                                 const violin = new Violin(lsv_data.lsv);
                                 const s = n.querySelector('.psi-violin-plot');

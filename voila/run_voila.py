@@ -59,6 +59,14 @@ sys_parser.add_argument('-j', '--nproc', type=int, default=min(os.cpu_count(), m
                         help='Number of processes used to produce output. Default is half of system processes. ')
 sys_parser.add_argument('--debug', action='store_true')
 
+# webserver parser
+webserver_parser = argparse.ArgumentParser(add_help=False)
+webserver_parser.add_argument('--web-server', type=str, default='waitress', choices=('waitress', 'gunicorn', 'flask',),
+                        help='Web server backend to use. Default is waitress')
+webserver_parser.add_argument('--num-web-workers', type=int, default=min(os.cpu_count(), max(int(os.cpu_count() / 2), 1)),
+                        help='Number of processes used to handle web I/O (gunicorn workers). '
+                             'Only used if the web server is gunicorn. Default is half of system processor count. ')
+
 # tsv parser
 tsv_parser = argparse.ArgumentParser(add_help=False)
 required_tsv_parser = tsv_parser.add_argument_group('required named arguments')
@@ -119,9 +127,11 @@ view_parser.add_argument('--splice-graph-only', action='store_true', help=argpar
 subparsers = parser.add_subparsers(help='')
 subparsers.add_parser('tsv', parents=[tsv_parser, sys_parser, log_parser],
                       help='Generate tsv output for the supplied files.').set_defaults(func=Tsv)
-subparsers.add_parser('view', parents=[view_parser, sys_parser, log_parser],
+subparsers.add_parser('view', parents=[view_parser, sys_parser, log_parser, webserver_parser],
                       help='Start service to view the visualization for the supplied files.').set_defaults(
     func=run_service)
+
+
 
 if len(sys.argv) == 1:
     parser.print_help()

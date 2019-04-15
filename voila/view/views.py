@@ -12,10 +12,56 @@ from voila.index import Index
 from voila.view import deltapsi, heterogen, psi, splicegraph
 
 
+
+
+
+import gunicorn.app.base
+
+from gunicorn.six import iteritems
+
+class GunicornStandaloneApplication(gunicorn.app.base.BaseApplication):
+
+    def __init__(self, app, options=None):
+        self.options = options or {}
+        self.application = app
+        super(GunicornStandaloneApplication, self).__init__()
+
+    def load_config(self):
+        config = dict([(key, value) for key, value in iteritems(self.options)
+                       if key in self.cfg.settings and value is not None])
+        for key, value in iteritems(config):
+            self.cfg.set(key.lower(), value)
+
+    def load(self):
+        return self.application
+
+
+
+
+
+
+
+
+
+
 def run_service():
     port = ViewConfig().port
     run_app = get_app()
-    serve(run_app, port=port)
+    web_server = ViewConfig().web_server
+
+    if web_server == 'waitress':
+        serve(run_app, port=port)
+    elif web_server == 'gunicorn':
+        options = {
+            'bind': '%s:%s' % ('127.0.0.1', port),
+            'workers': ViewConfig().num_web_workers,
+        }
+        GunicornStandaloneApplication(run_app, options).run()
+    elif web_server == 'flask':
+        run_app.run(host='127.0.0.1', port=port, debug=True)
+    else:
+        raise Exception("Unsupported web server %s specified" % web_server)
+
 
 
 def get_app():
@@ -137,7 +183,8 @@ def gene_view(summary_template, gene_id, view_matrix, **kwargs):
         gene.update({
             'start': start,
             'end': end,
-            'href': href
+            'href': href,
+            'overlap': sg.gene_overlap(gene_id)
         })
 
         kwargs['gene'] = gene

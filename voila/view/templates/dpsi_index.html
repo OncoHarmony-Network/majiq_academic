@@ -70,7 +70,8 @@
                     targets: 0,
                     render: data => {
                         const element = document.createElement('a');
-                        element.href = data[0];
+                        // we can move onto a more complicated query string writer / parser when the need arises
+                        element.href = data[0] + '?absEdPSI_Threshold=' + $('#dpsi_threshold').val();
                         element.target = '_blank';
                         element.rel = "noopener noreferrer";
                         element.textContent = data[1];

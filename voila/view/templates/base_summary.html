@@ -9,6 +9,14 @@
     <script>
         const legend = document.querySelector('.legend');
         new Lsv().renderFloatingLegend(legend)
+
+        const sg_simplified_view = "{{ session.get('omit_simplified', False) }}";
+        if (sg_simplified_view === 'True') $('#sg-simplified-view').prop('checked', true);
+        $('#sg-simplified-view').change(function(){
+            json_ajax('/toggle-simplified')
+            .then(() => location.reload());
+        });
+
     </script>
     {% block analysis_type_script %}{% endblock %}
 {% endblock %}
@@ -23,7 +31,7 @@
                 <a href="{{ url_for('index') }}" class="pure-menu-link">Index</a>
             </li>
             <li class="pure-menu-item">
-                <span class="tools-menu-btn splice-graph-tools pure-menu-link">Splice Graph</span>
+                <span class="tools-menu-btn splice-graph-tools pure-menu-link" id="splice-graph-menu-btn">Splice Graph</span>
             </li>
             {#            <li class="pure-menu-item">#}
             {#                <span class="tools-menu-btn lsv-tools pure-menu-link">LSV</span>#}
@@ -51,6 +59,15 @@
             <div class="gene-id">
                 Gene ID: {{ gene.id }};
             </div>
+            {% if gene.overlap %}
+                <div class="gene-overlap">
+                    <strong>Note:</strong> overlaps with the following Genes:
+                    {% set sep = joiner(" ; ") %}
+                    {% for _gene in gene.overlap %}
+                        {{ sep() }}<a href="{{ url_for('gene', gene_id=_gene[0])}}">{{ _gene[1] }}</a>
+                    {% endfor %}
+                </div>
+            {% endif %}
         </div>
         <div>
             <a class="ucsc-gene" target="_blank" rel="noopener noreferrer" href="{{ gene.href }}">
@@ -69,6 +86,7 @@
             </div>
             <div class="coordinates"></div>
         </div>
+        {% block heatmap_form %}{% endblock %}
     </div>
 
     <div class="tools-menu splice-graph-tools hide-tools-menu pure-g">
@@ -110,7 +128,17 @@
                 </fieldset>
             </form>
         </div>
-        {% block heatmap_form %}{% endblock %}
+        <div class="pure-u-1-3">
+            <form class="splice-graph-form pure-form pure-form-aligned">
+                <fieldset>
+                    <div class="pure-control-group">
+                        <label for="sg-simplified-view">Simplified View</label>
+                        <input id="sg-simplified-view" type="checkbox">
+                    </div>
+                </fieldset>
+            </form>
+        </div>
+
     </div>
 
 

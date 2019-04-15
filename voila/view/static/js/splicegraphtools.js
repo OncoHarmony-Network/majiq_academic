@@ -11,13 +11,32 @@ class SpliceGraphTools {
     _init() {
         const gene = this.sgs.gene;
 
-        // menu drop downs
-        document.querySelector('.splice-graph-tools.tools-menu-btn').onclick = (event) => {
-            event.preventDefault();
+
+        function toggle_splicegraph_opts(){
             d3.selectAll('.lsv-tools.tools-menu')
                 .classed('hide-tools-menu', true);
             document.querySelector('.splice-graph-tools.tools-menu').classList.toggle('hide-tools-menu');
+            $('#splice-graph-menu-btn').toggleClass('pure-menu-active')
+        }
+
+        // menu drop downs
+        document.querySelector('.splice-graph-tools.tools-menu-btn').onclick = (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            toggle_splicegraph_opts();
         };
+
+        // handling click outside of splice graph options hides the options
+        $("body").click(function(event){
+           if($('#splice-graph-menu-btn').hasClass('pure-menu-active')){
+                toggle_splicegraph_opts();
+           }
+        });
+
+        // (and click inside the options does not hide it)
+        $(".splice-graph-tools").click(function () {
+           event.stopPropagation();
+        });
 
         document.querySelectorAll('.lsv-tools.tools-menu-btn')
             .forEach(l => l.onclick = (event) => {

@@ -502,14 +502,12 @@ class ViewHeterogens:
         :return: list
         """
         config = ViewConfig()
-        grp_names = set()
+        grp_names = []
         for f in config.voila_files:
             with ViewHeterogen(f) as m:
                 for grp in m.group_names:
-                    grp_names.add(grp)
-
-        grp_names = list(grp_names)
-        grp_names.sort()
+                    if not grp in grp_names:
+                        grp_names.append(grp)
 
         return grp_names
 

@@ -45,25 +45,27 @@ namespace io_bam{
             map<string, vector<overGene*>> glist_ ;
             map<string, vector<Intron*>> intronVec_ ;
             unsigned int junc_limit_index_ ;
+            bool simpl_ ;
 
         public:
             vector<float *> junc_vec ;
             IOBam(){
-                bam_ = string(".");
-                strandness_ = 0 ;
-                nthreads_ = 1 ;
+//                bam_ = string(".");
+//                strandness_ = 0 ;
+//                nthreads_ = 1 ;
+//                simpl_ = false ;
             }
 
             IOBam(string bam1, int strandness1, unsigned int eff_len1, unsigned int nthreads1,
-                  map<string, vector<overGene*>> glist1): strandness_(strandness1), eff_len_(eff_len1),
-                                                                                nthreads_(nthreads1), glist_(glist1){
+                  map<string, vector<overGene*>> glist1, bool simpl1): strandness_(strandness1), eff_len_(eff_len1),
+                                                                  nthreads_(nthreads1), glist_(glist1), simpl_(simpl1){
                 bam_ = bam1 ;
             }
 
-            IOBam(string bam1, int strandness1, unsigned int eff_len1): strandness_(strandness1), eff_len_(eff_len1){
-                bam_ = string(bam1) ;
-                nthreads_ = 1 ;
-            }
+//            IOBam(string bam1, int strandness1, unsigned int eff_len1): strandness_(strandness1), eff_len_(eff_len1){
+//                bam_ = string(bam1) ;
+//                nthreads_ = 1 ;
+//            }
 
             ~IOBam(){
 
@@ -90,6 +92,8 @@ namespace io_bam{
                                 int sreads, vector<Gene*>& oGeneList, bool ir, int minexp, bool reset) ;
             inline void update_junction_read(string key, int read_start, int count) ;
             inline bool new_junc_values(const string key) ;
+
+            void simplify(float simpl_percent) ;
             int parse_read_for_ir(bam_hdr_t *header, bam1_t *read) ;
             int get_njuncs() ;
             const map<string, unsigned int> &get_junc_map() ;
