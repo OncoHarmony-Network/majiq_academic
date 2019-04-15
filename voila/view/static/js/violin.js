@@ -489,8 +489,8 @@ class Violin {
                 chain = chain
                     .append("rect")
                     .attr('class', 'pairwise-check')
-                    .attr('y', -8)
-                    .attr('x', 20)
+                    .attr('y', 7)
+                    .attr('x', -4)
                     .attr('width', 8)
                     .attr('height', 8)
                     .attr('fill', 'white')
