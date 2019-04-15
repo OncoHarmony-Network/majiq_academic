@@ -20,3 +20,10 @@ $.fn.sortClass = function sortDivs(_class, _attr) {
     $("> ." + _class, this[0]).sort(dec_sort).appendTo(this[0]);
     function dec_sort(a, b){ return ($(b).data(_attr)) < ($(a).data(_attr)) ? 1 : -1; }
 }
+
+function dispFadeAlert(text){
+    $('body').append(`<div class="tmp-alert">${text}</div>`);
+    $('.tmp-alert').fadeOut(2000, function(){
+        $(this).remove();
+    });
+}

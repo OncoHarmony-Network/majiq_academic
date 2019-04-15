@@ -232,3 +232,17 @@ form.het-highlight-form label {
 .toggle-scale:hover, .zoom-in:hover, .zoom-out:hover, .zoom-reset:hover{
     box-shadow: 0 0 12px #ffd400;
 }
+
+.tmp-alert{
+    position: fixed;
+    top: 9%;
+    z-index:1000;
+    font-size:16px;
+    left: 50%;
+    background-color: #ffb2b0;
+    border: #ff6864 solid 2px;
+    padding:20px;
+    border-radius: 10px;
+    transform: translate(-50%, 0);
+
+}
