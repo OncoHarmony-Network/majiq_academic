@@ -43,7 +43,12 @@ def gene(gene_id):
             start, end = views.lsv_boundries(lsv_exons)
             gene = sg.gene(gene_id)
             ucsc[lsv.lsv_id] = views.ucsc_href(sg.genome, gene['chromosome'], start, end)
-            exon_numbers[lsv.lsv_id] = views.find_exon_number(sg.exons(gene_id), lsv.reference_exon, gene['strand'])
+            exon_num = views.find_exon_number(sg.exons(gene_id), lsv.reference_exon, gene['strand'])
+            if type(exon_num) is int:
+                # accounting for 'unk' exon numbers
+                exon_numbers[lsv.lsv_id] = exon_num
+            else:
+                exon_numbers[lsv.lsv_id] = 0
 
         lsv_data = []
         lsv_is_source = {}
