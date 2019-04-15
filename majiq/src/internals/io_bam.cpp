@@ -395,7 +395,7 @@ namespace io_bam {
             return ;
         if (ir){
             for (const auto &gObj: (*low)->glist){
-                Intron * irptr = new Intron(start, end, false, gObj) ;
+                Intron * irptr = new Intron(start, end, false, gObj, simpl_) ;
                 irptr->add_read_rates_buff(1) ;
                 irptr->add_read(0, 1, sreads) ;
                 const string key = irptr->get_key(gObj) ;
