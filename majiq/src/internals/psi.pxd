@@ -105,7 +105,7 @@ cdef inline print_prior(vector[vector[psi_distr_t]] matrix, int nbins):
     sys.stderr.write('##MATRIX [1] sum: %.4f\n' % sum)
 
 
-cpdef void gen_prior_matrix(vector[vector[psi_distr_t]]& prior_matrix, dict lsv_type, dict lsv_empirical_psi1,
+cdef void gen_prior_matrix(vector[vector[psi_distr_t]]& prior_matrix, dict lsv_type, dict lsv_empirical_psi1,
                             dict lsv_empirical_psi2, str output, list names, str plotpath, int iter, float binsize,
                             int numbins, bint defaultprior, int minpercent, object logger):
 
