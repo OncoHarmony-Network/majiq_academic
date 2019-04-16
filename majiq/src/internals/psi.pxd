@@ -105,7 +105,7 @@ cdef inline print_prior(vector[vector[psi_distr_t]] matrix, int nbins):
     sys.stderr.write('##MATRIX [1] sum: %.4f\n' % sum)
 
 
-cdef void gen_prior_matrix(vector[vector[psi_distr_t]]& prior_matrix, dict lsv_type, dict lsv_empirical_psi1,
+cdef inline void gen_prior_matrix(vector[vector[psi_distr_t]]& prior_matrix, dict lsv_type, dict lsv_empirical_psi1,
                             dict lsv_empirical_psi2, str output, list names, str plotpath, int iter, float binsize,
                             int numbins, bint defaultprior, int minpercent, object logger):
 
@@ -116,7 +116,6 @@ cdef void gen_prior_matrix(vector[vector[psi_distr_t]]& prior_matrix, dict lsv_t
     cdef np.ndarray[np.float32_t, ndim=1] best_delta_psi
     cdef np.ndarray[np.float32_t, ndim=3] np_pmatrix = np.zeros(shape=(2, numbins, numbins), dtype=np.float32)
 
-    prior_matrix = vector[vector[psi_distr_t]](2, vector[psi_distr_t](numbins, psi_distr_t(numbins, 0)))
 
     #Start prior matrix
     logger.info("Calculating prior matrix...")
