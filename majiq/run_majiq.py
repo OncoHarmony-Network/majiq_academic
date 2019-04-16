@@ -92,9 +92,9 @@ def main():
     buildparser.add_argument('--junc-files-only', dest="juncfiles_only", action='store_true', default=False,
                              help='Only extract junction information from BAMs and exports .junc file'
                                   ' [Default: ir enabled]')
-    # buildparser.add_argument('--aggregate', dest="aggregate", action='store_true', default=False,
-    #                          help='Uses previously generated junc files to generate a ground truth '
-    #                               'and unified splicegraph. Default: %(default)s]')
+    buildparser.add_argument('--incremental', dest="aggregate", action='store_true', default=False,
+                             help='Uses previously generated junc files to generate a ground truth '
+                                  'and unified splicegraph. Default: %(default)s]')
 
     buildparser.add_argument('--min-intronic-cov', default=0.01, type=float,
                              help='Minimum number of reads on average in intronic sites, only for intron retention.'
@@ -125,17 +125,17 @@ def main():
                                                                         'some coverage that an intron needs to pass '
                                                                         'to be accepted as real [Default: %(default)s]')
 
-    buildparser.add_argument('--simplify-denovo', dest="simpl_denovo", default=10, type=int,
+    buildparser.add_argument('--simplify-denovo', dest="simpl_denovo", default=0, type=int,
                              help='Minimum number of reads threshold combining all positions of an denovo junction to '
                                   'consider if it will be simplified, even knowing it is real. Simplified junctions are'
                                   ' discarded from any lsv. [Default: %(default)s]')
 
-    buildparser.add_argument('--simplify-annotated', dest="simpl_db", default=10, type=int,
+    buildparser.add_argument('--simplify-annotated', dest="simpl_db", default=0, type=int,
                              help='Minimum number of reads threshold combining all positions of an annotated junction to '
                                   'consider if it will be simplified, even knowing it is real. Simplified junctions are'
                                   ' discarded from any lsv. [Default: %(default)s]')
 
-    buildparser.add_argument('--simplify-ir', dest="simpl_ir", default=10, type=int,
+    buildparser.add_argument('--simplify-ir', dest="simpl_ir", default=0, type=int,
                              help='Minimum number of reads threshold combining all positions of an ir to '
                                   'consider if it will be simplified, even knowing it is real. Simplified junctions are'
                                   ' discarded from any lsv. [Default: %(default)s]')
