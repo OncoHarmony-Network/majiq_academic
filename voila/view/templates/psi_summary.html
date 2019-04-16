@@ -43,6 +43,9 @@
     <script src="{{ url_for('static', filename='js/lib/jquery.sumoselect.min.js') }}"></script>
     <script src="{{ url_for('static', filename='js/lib/jquery.ba-throttle-debounce.min.js') }}"></script>
     <script>
+        // this stores a map of exon numbers so that we can map from the splicegraph numbers to
+        // the LSV ID to search for
+
         {% if multi_view %}
             const view_type = 'multipsi';
 
@@ -69,6 +72,7 @@
 
         {% else %}
             const view_type = 'psi';
+            const filter_exon_numbers = {{ filter_exon_numbers|tojson }};
         {% endif %}
 
         json_ajax('{{ url_for("nav", gene_id=gene.id) }}').then(json => {
