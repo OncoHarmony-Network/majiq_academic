@@ -105,9 +105,9 @@ cdef inline print_prior(vector[vector[psi_distr_t]] matrix, int nbins):
     sys.stderr.write('##MATRIX [1] sum: %.4f\n' % sum)
 
 
-cpdef inline vector[vector[psi_distr_t]] gen_prior_matrix(dict lsv_type, dict lsv_empirical_psi1, dict lsv_empirical_psi2,
-                                                   str output, list names, str plotpath, int iter, float binsize,
-                                                   int numbins, bint defaultprior, int minpercent, object logger):
+cpdef void gen_prior_matrix(vector[vector[psi_distr_t]]& prior_matrix, dict lsv_type, dict lsv_empirical_psi1,
+                            dict lsv_empirical_psi2, str output, list names, str plotpath, int iter, float binsize,
+                            int numbins, bint defaultprior, int minpercent, object logger):
 
     cdef psi_distr_t mixture_pdf = psi_distr_t(numbins*2)
     cdef list list_of_lsv, njun_prior
@@ -115,7 +115,8 @@ cpdef inline vector[vector[psi_distr_t]] gen_prior_matrix(dict lsv_type, dict ls
     cdef np.ndarray[np.float32_t, ndim=1] best_deltap, best_dpsi, best_dpsi_ir
     cdef np.ndarray[np.float32_t, ndim=1] best_delta_psi
     cdef np.ndarray[np.float32_t, ndim=3] np_pmatrix = np.zeros(shape=(2, numbins, numbins), dtype=np.float32)
-    cdef vector[vector[psi_distr_t]] prior_matrix = vector[vector[psi_distr_t]](2, vector[psi_distr_t](numbins, psi_distr_t(numbins, 0)))
+
+    prior_matrix = vector[vector[psi_distr_t]](2, vector[psi_distr_t](numbins, psi_distr_t(numbins, 0)))
 
     #Start prior matrix
     logger.info("Calculating prior matrix...")
