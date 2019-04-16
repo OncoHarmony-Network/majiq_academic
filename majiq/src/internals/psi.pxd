@@ -78,10 +78,10 @@ cdef inline void __load_default_prior(vector[vector[psi_distr_t]]& prior_matrix)
     fop.close()
     # print_prior(data, numbins)
     data /= np.sum(data)
-    for xx in range(numbins):
-        for yy in range(numbins):
-            prior_matrix[0][xx][yy] = np.log(data[xx][yy])
-            prior_matrix[1][xx][yy] = np.log(data[xx][yy])
+    # for xx in range(numbins):
+    #     for yy in range(numbins):
+    #         prior_matrix[0][xx][yy] = np.log(data[xx][yy])
+    #         prior_matrix[1][xx][yy] = np.log(data[xx][yy])
 
     return
 
@@ -121,50 +121,43 @@ cdef inline void gen_prior_matrix(vector[vector[psi_distr_t]]& prior_matrix, dic
     logger.info("Calculating prior matrix...")
     if defaultprior:
         __load_default_prior(prior_matrix)
-        # print_prior(prior_matrix, numbins)
-        return prior_matrix
+    else:
 
-    logger.debug('Filtering to obtain "best set"...')
+        logger.debug('Filtering to obtain "best set"...')
 
+        list_of_lsv = list(set(lsv_empirical_psi1.keys()).intersection(set(lsv_empirical_psi2.keys())))
+        logger.debug("'Best set' is %s events" % len(list_of_lsv))
+        best_dpsi, best_dpsi_ir = _empirical_delta_psi(list_of_lsv, lsv_empirical_psi1, lsv_empirical_psi2, lsv_type)
 
-    list_of_lsv = list(set(lsv_empirical_psi1.keys()).intersection(set(lsv_empirical_psi2.keys())))
-    logger.debug("'Best set' is %s events" % len(list_of_lsv))
-    best_dpsi, best_dpsi_ir = _empirical_delta_psi(list_of_lsv, lsv_empirical_psi1, lsv_empirical_psi2, lsv_type)
-    # print(best_dpsi)
+        for prior_idx, best_delta_psi in enumerate((best_dpsi, best_dpsi_ir)):
+            # initialize mixture_pdf
+            for i in range(numbins*2):
+                mixture_pdf[i] = 0
 
+            if len(best_delta_psi) <= 100:
+                if prior_idx == 0:
+                    __load_default_prior(prior_matrix)
+                else:
+                    prior_matrix[1] = prior_matrix[0]
+                break
 
-    for prior_idx, best_delta_psi in enumerate((best_dpsi, best_dpsi_ir)):
-        # initialize mixture_pdf
-        for i in range(numbins*2):
-            mixture_pdf[i] = 0
+            logger.debug("Parametrizing 'best set'...%s", prior_idx)
+            adjustdelta(mixture_pdf, best_delta_psi, iter, numbins*2)
+            for i in range(numbins):
+                for j in range(numbins):
+                    np_pmatrix[prior_idx][i][j] = mixture_pdf[j-i+(numbins-1)]
 
-        if len(best_delta_psi) <= 100:
-            if prior_idx == 0:
-                __load_default_prior(prior_matrix)
+            if np.isnan(np_pmatrix[prior_idx]).any():
+                if prior_idx == 1:
+                    logger.warning("Not enought statistic power to calculate the intron retention specific prior, "
+                                   "in that case we will use the global prior")
+                    np_pmatrix[prior_idx] = np_pmatrix[0]
+                else:
+                    raise ValueError(" The input data does not have enought statistic power in order to calculate "
+                                     "the prior. Check if the input is correct or use the --default-prior option in "
+                                     " order to use a precomputed prior")
             else:
-                prior_matrix[1] = prior_matrix[0]
-            return prior_matrix
-
-        logger.debug("Parametrizing 'best set'...%s", prior_idx)
-
-        adjustdelta(mixture_pdf, best_delta_psi, iter, numbins*2)
-
-        for i in range(numbins):
-            for j in range(numbins):
-                np_pmatrix[prior_idx][i][j] = mixture_pdf[j-i+(numbins-1)]
-
-
-        if np.isnan(np_pmatrix[prior_idx]).any():
-            if prior_idx == 1:
-                logger.warning("Not enought statistic power to calculate the intron retention specific prior, "
-                               "in that case we will use the global prior")
-                np_pmatrix[prior_idx] = np_pmatrix[0]
-            else:
-                raise ValueError(" The input data does not have enought statistic power in order to calculate "
-                                 "the prior. Check if the input is correct or use the --default-prior option in "
-                                 " order to use a precomputed prior")
-        else:
-            np_pmatrix[prior_idx] /= np.sum(np_pmatrix[prior_idx])
+                np_pmatrix[prior_idx] /= np.sum(np_pmatrix[prior_idx])
 
             # renormalize so it sums 1
 
