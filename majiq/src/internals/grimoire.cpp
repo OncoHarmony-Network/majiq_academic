@@ -28,8 +28,8 @@ namespace grimoire {
                 (a.ref_coord == b.ref_coord && a.coord>b.coord)) ;
     }
 
-    bool fless(unsigned int lhs, unsigned int rhs) {return lhs<rhs ;}
-    bool fgrt(unsigned int lhs, unsigned int rhs) {return lhs>rhs ;}
+    bool fless(unsigned int lhs, unsigned int rhs) { return lhs<rhs ; }
+    bool fgrt(unsigned int lhs, unsigned int rhs) { return lhs>rhs ; }
 
 
     bool sort_ss(const Ssite &a, const Ssite &b){
@@ -447,7 +447,7 @@ namespace grimoire {
 
             for(i=0; i<jnc_vec.size(); i++){
                 float x = (sumall >0) ? sumj[i]/sumall : 0 ;
-                jnc_vec[i]->set_simpl_fltr(x<simpl_percent || sumj[i]< thrshld_vect[i]) ;
+                jnc_vec[i]->set_simpl_fltr(x<simpl_percent || sumj[i]< thrshld_vect[i], true) ;
             }
         }
         sumall = 0 ;
@@ -481,7 +481,7 @@ namespace grimoire {
 
             for(i=0; i<jnc_vec.size(); i++){
                 float x = (sumall >0) ? sumj[i]/sumall : 0 ;
-                jnc_vec[i]->set_simpl_fltr(x<simpl_percent || sumj[i]< thrshld_vect[i]) ;
+                jnc_vec[i]->set_simpl_fltr(x<simpl_percent || sumj[i]< thrshld_vect[i], false) ;
             }
         }
     }
@@ -496,6 +496,12 @@ namespace grimoire {
         if (last)
             for (const auto &j: junc_map_){
                 (j.second)->update_simpl_flags(min_experiments) ;
+            }
+            for(const auto &ex: exon_map_){
+                if ((ex.second)->ib_irptr != nullptr)
+                    ((ex.second)->ib_irptr)->update_simpl_flags(min_experiments) ;
+                if ((ex.second)->ob_irptr != nullptr)
+                    ((ex.second)->ob_irptr)->update_simpl_flags(min_experiments) ;
             }
     }
 

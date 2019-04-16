@@ -65,7 +65,7 @@ namespace grimoire{
             void        set_start(int start1)   { start_ = start1 ; }
             void        set_end(int end1)       { end_ = end1 ; }
             inline int  length()                { return end_ - start_ ; }
-            virtual void  set_simpl_fltr(bool val) { cerr << "NOT SHOW\n" ;}
+            virtual void  set_simpl_fltr(bool val, bool in) { cerr << "NOT SHOW\n" ;}
 
 
             static bool func_comp (_Region* a, int coord){
@@ -103,7 +103,8 @@ namespace grimoire{
             bool simpl_fltr_ ;
             unsigned int denovo_cnt_ ;
             unsigned int flter_cnt_ ;
-            unsigned int simpl_cnt_ ;
+            unsigned int simpl_cnt_in_ ;
+            unsigned int simpl_cnt_out_ ;
             Exon * acceptor_;
             Exon * donor_;
 
@@ -120,7 +121,8 @@ namespace grimoire{
                 flter_cnt_ = 0 ;
                 intronic_ = false ;
                 nreads_ = nullptr ;
-                simpl_cnt_  = 0;
+                simpl_cnt_in_ = 0 ;
+                simpl_cnt_out_ = 0 ;
             }
             ~Junction()             { clear_nreads(true) ; }
 
@@ -142,13 +144,17 @@ namespace grimoire{
                 donor_ = nullptr ;
             }
 
-            void set_simpl_fltr(bool val){
-                simpl_cnt_ += val? 1 : 0 ;
+            void set_simpl_fltr(bool val, bool in){
+                if (in)
+                    simpl_cnt_in_ += val? 1 : 0 ;
+                else
+                    simpl_cnt_out_ += val? 1 : 0 ;
             }
 
             void update_simpl_flags(unsigned int min_experiments){
-                simpl_fltr_ &= (simpl_cnt_ >= min_experiments) ;
-                simpl_cnt_ = 0 ;
+                simpl_fltr_ &= (simpl_cnt_in_ >= min_experiments || simpl_cnt_out_ >= min_experiments) ;
+                simpl_cnt_in_ = 0 ;
+                simpl_cnt_out_ = 0 ;
             }
 
             void update_flags(int efflen, unsigned int num_reads, unsigned int num_pos, unsigned int denovo_thresh,
@@ -248,7 +254,8 @@ namespace grimoire{
             int     nxbin_ ;
             int     numbins_ ;
             bool    simpl_fltr_ ;
-            unsigned int simpl_cnt_ ;
+            unsigned int simpl_cnt_in_ ;
+            unsigned int simpl_cnt_out_ ;
 
         public:
             float*  read_rates_ ;
@@ -264,7 +271,8 @@ namespace grimoire{
                 nxbin_mod_  = 0 ;
                 markd_      = false ;
                 numbins_    = 0 ;
-                simpl_cnt_  = 0 ;
+                simpl_cnt_in_  = 0 ;
+                simpl_cnt_out_  = 0 ;
             }
 
             bool    get_annot()             { return annot_ ; }
@@ -279,13 +287,17 @@ namespace grimoire{
             void    calculate_lambda() ;
             bool    is_reliable(float min_bins, int eff_len) ;
 
-            void set_simpl_fltr(bool val){
-                simpl_cnt_ += val? 1 : 0 ;
+            void set_simpl_fltr(bool val, bool in){
+                if (in)
+                    simpl_cnt_in_ += val? 1 : 0 ;
+                else
+                    simpl_cnt_out_ += val? 1 : 0 ;
             }
 
             void update_simpl_flags(unsigned int min_experiments){
-                simpl_fltr_ &= (simpl_cnt_ >= min_experiments) ;
-                simpl_cnt_ = 0 ;
+                simpl_fltr_ &= (simpl_cnt_in_ >= min_experiments || simpl_cnt_out_ >= min_experiments) ;
+                simpl_cnt_in_  = 0 ;
+                simpl_cnt_out_  = 0 ;
             }
 
             void    add_read_rates_buff(int eff_len){

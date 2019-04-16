@@ -125,17 +125,17 @@ def main():
                                                                         'some coverage that an intron needs to pass '
                                                                         'to be accepted as real [Default: %(default)s]')
 
-    buildparser.add_argument('--simplify-denovo', dest="simpl_denovo", default=10, type=int,
+    buildparser.add_argument('--simplify-denovo', dest="simpl_denovo", default=0, type=int,
                              help='Minimum number of reads threshold combining all positions of an denovo junction to '
                                   'consider if it will be simplified, even knowing it is real. Simplified junctions are'
                                   ' discarded from any lsv. [Default: %(default)s]')
 
-    buildparser.add_argument('--simplify-annotated', dest="simpl_db", default=10, type=int,
+    buildparser.add_argument('--simplify-annotated', dest="simpl_db", default=0, type=int,
                              help='Minimum number of reads threshold combining all positions of an annotated junction to '
                                   'consider if it will be simplified, even knowing it is real. Simplified junctions are'
                                   ' discarded from any lsv. [Default: %(default)s]')
 
-    buildparser.add_argument('--simplify-ir', dest="simpl_ir", default=10, type=int,
+    buildparser.add_argument('--simplify-ir', dest="simpl_ir", default=0, type=int,
                              help='Minimum number of reads threshold combining all positions of an ir to '
                                   'consider if it will be simplified, even knowing it is real. Simplified junctions are'
                                   ' discarded from any lsv. [Default: %(default)s]')
