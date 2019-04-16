@@ -92,9 +92,9 @@ def main():
     buildparser.add_argument('--junc-files-only', dest="juncfiles_only", action='store_true', default=False,
                              help='Only extract junction information from BAMs and exports .junc file'
                                   ' [Default: ir enabled]')
-    # buildparser.add_argument('--aggregate', dest="aggregate", action='store_true', default=False,
-    #                          help='Uses previously generated junc files to generate a ground truth '
-    #                               'and unified splicegraph. Default: %(default)s]')
+    buildparser.add_argument('--incremental', dest="aggregate", action='store_true', default=False,
+                             help='Uses previously generated junc files to generate a ground truth '
+                                  'and unified splicegraph. Default: %(default)s]')
 
     buildparser.add_argument('--min-intronic-cov', default=0.01, type=float,
                              help='Minimum number of reads on average in intronic sites, only for intron retention.'

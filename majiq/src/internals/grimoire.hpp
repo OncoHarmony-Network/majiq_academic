@@ -152,7 +152,7 @@ namespace grimoire{
             }
 
             void update_simpl_flags(unsigned int min_experiments){
-                simpl_fltr_ &= (simpl_cnt_in_ >= min_experiments || simpl_cnt_out_ >= min_experiments) ;
+                simpl_fltr_ = simpl_fltr_ && simpl_cnt_in_ >= min_experiments && simpl_cnt_out_ >= min_experiments ;
                 simpl_cnt_in_ = 0 ;
                 simpl_cnt_out_ = 0 ;
             }
@@ -230,13 +230,11 @@ namespace grimoire{
                     j->exonReset() ;
                 }
                 ib.clear() ;
-//                ib.shrink_to_fit() ;
 
                 for (auto const &j: ob){
                     j->exonReset() ;
                 }
                 ob.clear() ;
-//                ob.shrink_to_fit() ;
             }
 
     };
@@ -295,7 +293,7 @@ namespace grimoire{
             }
 
             void update_simpl_flags(unsigned int min_experiments){
-                simpl_fltr_ &= (simpl_cnt_in_ >= min_experiments || simpl_cnt_out_ >= min_experiments) ;
+                simpl_fltr_ = simpl_fltr_ && simpl_cnt_in_ >= min_experiments && simpl_cnt_out_ >= min_experiments ;
                 simpl_cnt_in_  = 0 ;
                 simpl_cnt_out_  = 0 ;
             }
@@ -307,17 +305,6 @@ namespace grimoire{
                 numbins_    = eff_len ;
                 read_rates_ = (float*) calloc(numbins_, sizeof(float)) ;
             }
-
-//            void    add_read_sum_as_rates(int s){
-//                read_rates_   = (float*) calloc(1, sizeof(float)) ;
-//                read_rates[0] = s ;
-//                nxbin_      = (int) ((length()+ eff_len)  ;
-//                nxbin_mod_  = (length() % eff_len) ;
-//                nxbin_off_  = nxbin_mod_ * ( nxbin_+1 ) ;
-//                numbins_    = 1 ;
-//
-//
-//            }
 
             void  add_read(int read_pos, int eff_len, int s){
                 int st = get_start() - eff_len ;
@@ -360,7 +347,6 @@ namespace grimoire{
             }
 
             void overlaping_intron(Intron * inIR_ptr){
-
                 start_ = max(start_, inIR_ptr->get_start()) ;
                 end_ = min(end_, inIR_ptr->get_end()) ;
                 read_rates_ = inIR_ptr->read_rates_ ;

@@ -41,7 +41,7 @@ cdef int C_FIRST_LAST_JUNC = FIRST_LAST_JUNC
 
 cdef _store_junc_file(np.ndarray boots, list junc_ids, str experiment_name, str outDir):
 
-    cdef str out_file = "%s/%s.juncs" % (outDir, experiment_name)
+    cdef str out_file = "%s/%s.%s" % (outDir, experiment_name, JUNC_FILE_FORMAT)
     cdef dict vals = {'bootstrap': boots}
     dt = np.dtype('S250, u4, u4, f4, f4, u4')
     vals['junc_info'] = np.array(junc_ids, dtype=dt)
@@ -88,8 +88,8 @@ cdef int _output_majiq_file(vector[LSV*] lsvlist, map[string, overGene_vect_t] g
     jobj_vec = jinfoptr_vec_t(njlsv)
 
     # sg_filename = get_builder_splicegraph_filename(outDir.decode('utf-8')).encode('utf-8')
-    junc_file = "%s/%s.juncs" % (outDir.decode('utf-8'), experiment_name.decode('utf-8'))
-    out_file = "%s/%s.majiq" % (outDir.decode('utf-8'), experiment_name.decode('utf-8'))
+    junc_file = "%s/%s.%s" % (outDir.decode('utf-8'), experiment_name.decode('utf-8'), JUNC_FILE_FORMAT)
+    out_file = "%s/%s.%s" % (outDir.decode('utf-8'), experiment_name.decode('utf-8'), MAJIQ_FILE_FORMAT)
     with open(junc_file, 'rb') as fp:
         junc_ids = np.load(fp)['junc_info']
     njunc = junc_ids.shape[0]
@@ -201,8 +201,8 @@ cdef int _output_majiq_file(vector[LSV*] lsvlist, map[string, overGene_vect_t] g
     return nlsv
 
 cdef _parse_junction_file(tuple filetp, map[string, Gene*]& gene_map, vector[string] gid_vec,
-                          map[string, overGene_vect_t] gene_list, int min_experiments, bint last_in_group, bint reset,
-                          object conf, object logger):
+                          map[string, overGene_vect_t] gene_list, int min_experiments, bint reset, object conf,
+                          object logger):
 
     cdef int nthreads = conf.nthreads
     cdef int strandness = conf.strand_specific[filetp[0]]
@@ -221,7 +221,7 @@ cdef _parse_junction_file(tuple filetp, map[string, Gene*]& gene_map, vector[str
     cdef char strand
     cdef bint bsimpl = (conf.simpl_psi >= 0)
 
-    c_iobam = IOBam(filetp[1], strandness, 1, nthreads, gene_list, bsimpl)
+    c_iobam = IOBam(filetp[1].encode('utf-8'), strandness, 1, nthreads, gene_list, bsimpl)
 
     with open(filetp[1], 'rb') as fp:
         junc_ids = np.load(fp)['junc_info']
@@ -244,7 +244,7 @@ cdef _parse_junction_file(tuple filetp, map[string, Gene*]& gene_map, vector[str
 
     for i in prange(n, nogil=True, num_threads=nthreads):
         gg = gene_map[gid_vec[i]]
-        gg.update_junc_flags(1, last_in_group, minreads, 0, denovo_thresh, min_experiments, denovo)
+        gg.update_junc_flags(1, reset, minreads, 0, denovo_thresh, min_experiments, denovo)
 
     c_iobam.free_iobam()
     logger.info('Done Reading file %s' %(filetp[0]))
@@ -294,10 +294,11 @@ cdef _find_junctions(list file_list, map[string, Gene*]& gene_map, vector[string
         logger.info('Group %s, number of experiments: %s, minexperiments: %s' % (tmp_str,
                                                                                   len(group_list), min_experiments))
         for j in group_list:
-
+            print(file_list[j])
             if file_list[j][2]:
                 logger.info('Reading %s file %s' %(JUNC_FILE_FORMAT, file_list[j][0]))
-                pass
+                _parse_junction_file(file_list[j], gene_map, gid_vec,gene_list, min_experiments, (j==last_it_grp),
+                                     conf, logger)
             else:
                 logger.info('Reading %s file %s' %(SEQ_FILE_FORMAT, file_list[j][0]))
                 bamfile = ('%s' % (file_list[j][1])).encode('utf-8')
