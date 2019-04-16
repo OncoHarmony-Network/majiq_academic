@@ -116,7 +116,6 @@ cdef inline void gen_prior_matrix(vector[vector[psi_distr_t]]& prior_matrix, dic
     cdef np.ndarray[np.float32_t, ndim=1] best_delta_psi
     cdef np.ndarray[np.float32_t, ndim=3] np_pmatrix = np.zeros(shape=(2, numbins, numbins), dtype=np.float32)
 
-
     #Start prior matrix
     logger.info("Calculating prior matrix...")
     if defaultprior:
