@@ -3,7 +3,9 @@
 {% block style %}
     {{ super() }}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/lib/sumoselect.min.css') }}">
-<link rel="stylesheet" href="{{ url_for('static', filename='css/multi_input.css') }}">
+    {% if multi_view %}
+        <link rel="stylesheet" href="{{ url_for('static', filename='css/multi_input.css') }}">
+    {% endif %}
 <style>
 
 </style>
