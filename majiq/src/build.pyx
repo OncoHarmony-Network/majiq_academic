@@ -465,6 +465,7 @@ cdef int simplify(list file_list, map[string, Gene*] gene_map, vector[string] gi
                 gg = gene_map[gid_vec[j]]
                 gg.simplify(junc_tlb, simpl_fltr, strandness, denovo_simpl, db_simple, ir_simpl,
                             (i==last_it_grp), min_experiments)
+            junc_tlb.clear()
     logger.info('Finished simplification')
 
 

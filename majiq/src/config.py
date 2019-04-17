@@ -62,14 +62,16 @@ class Config(object):
             try:
                 sam_dirlist = general['bamdirs'].split(',')
             except KeyError:
+                if 'samdir' in general:
+                    raise UserWarning("samdir is a deprecated value, please use bamdirs instead")
                 sam_dirlist  = ['.']
-                warnings.warn('samdir parameter not found in config file, using "./" instead')
+                warnings.warn('bamdirs parameter not found in config file, using "./" instead')
 
             try:
-                junc_dirlist = general['juncdirs'].split(',')
+                junc_dirlist = general['sjdirs'].split(',')
             except KeyError:
                 junc_dirlist = ['.']
-                warnings.warn('juncdir parameter not found in config file, using "./" instead')
+                warnings.warn('sjdirs parameter not found in config file, using "./" instead')
 
 
             self.genome = general['genome']
