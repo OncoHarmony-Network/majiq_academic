@@ -493,16 +493,17 @@ namespace grimoire {
             (ex.second)->simplify(junc_tlb, simpl_percent, this, strandness, denovo_simpl, db_simple,
                                   ir_simpl, last, min_experiments) ;
         }
-        if (last)
+        if (last){
             for (const auto &j: junc_map_){
                 (j.second)->update_simpl_flags(min_experiments) ;
             }
             for(const auto &ex: exon_map_){
                 if ((ex.second)->ib_irptr != nullptr)
                     ((ex.second)->ib_irptr)->update_simpl_flags(min_experiments) ;
-                if ((ex.second)->ob_irptr != nullptr)
-                    ((ex.second)->ob_irptr)->update_simpl_flags(min_experiments) ;
+//                if ((ex.second)->ob_irptr != nullptr)
+//                    ((ex.second)->ob_irptr)->update_simpl_flags(min_experiments, false) ;
             }
+        }
     }
 
 

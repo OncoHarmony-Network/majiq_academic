@@ -58,7 +58,7 @@ ctypedef vector[Jinfo *] jinfoptr_vec_t
 @cython.boundscheck(False)  # Deactivate bounds checking
 @cython.wraparound(False)   # Deactivate negative indexing.
 cdef int _output_majiq_file(vector[LSV*] lsvlist, map[string, overGene_vect_t] gList, map[string, int] j_tlb,
-                            string experiment_name, string outDir, sqlite3* db, unsigned int msamples,
+                            tuple fname, string outDir, sqlite3* db, unsigned int msamples,
                             bint irb, bint simpl, object logger, int nthreads) except -1:
 
     cdef unsigned int irbool, coord1, coord2, sreads, npos
@@ -81,6 +81,7 @@ cdef int _output_majiq_file(vector[LSV*] lsvlist, map[string, overGene_vect_t] g
     cdef vector[vector[np.float32_t]] tmp_boots
     cdef vector[Junction*] tmp_juncvec
     cdef char strand
+    cdef string experiment_name = fname[0].encode('utf-8')
 
     cdef int thread_id = -1
 
@@ -88,7 +89,10 @@ cdef int _output_majiq_file(vector[LSV*] lsvlist, map[string, overGene_vect_t] g
     jobj_vec = jinfoptr_vec_t(njlsv)
 
     # sg_filename = get_builder_splicegraph_filename(outDir.decode('utf-8')).encode('utf-8')
-    junc_file = "%s/%s.%s" % (outDir.decode('utf-8'), experiment_name.decode('utf-8'), JUNC_FILE_FORMAT)
+    if fname[2]:
+        junc_file = fname[1]
+    else:
+        junc_file = "%s/%s.%s" % (outDir.decode('utf-8'), experiment_name.decode('utf-8'), JUNC_FILE_FORMAT)
     out_file = "%s/%s.%s" % (outDir.decode('utf-8'), experiment_name.decode('utf-8'), MAJIQ_FILE_FORMAT)
     with open(junc_file, 'rb') as fp:
         junc_ids = np.load(fp)['junc_info']
@@ -426,7 +430,7 @@ cdef int simplify(list file_list, map[string, Gene*] gene_map, vector[string] gi
         for i in group_list:
 
             strandness = conf.strand_specific[file_list[i][0]]
-            junc_file = "%s/%s.juncs" % (conf.outDir, file_list[i][0])
+            junc_file = "%s/%s.%s" % (conf.outDir, file_list[i][0], JUNC_FILE_FORMAT)
 
             with open(junc_file, 'rb') as fp:
                 junc_ids = np.load(fp)['junc_info']
@@ -465,6 +469,7 @@ cdef int simplify(list file_list, map[string, Gene*] gene_map, vector[string] gi
                 gg = gene_map[gid_vec[j]]
                 gg.simplify(junc_tlb, simpl_fltr, strandness, denovo_simpl, db_simple, ir_simpl,
                             (i==last_it_grp), min_experiments)
+            junc_tlb.clear()
     logger.info('Finished simplification')
 
 
@@ -538,15 +543,14 @@ cdef _core_build(str transcripts, list file_list, object conf, object logger):
         logger.info("POST LOOP Memory used %.2f MB" % mem_allocated)
 
     for i in range(nsamples):
-        fname = file_list[i][0].encode('utf-8')
         strandness = conf.strand_specific[file_list[i][0]]
         if conf.mem_profile:
             mem_allocated = int(psutil.Process().memory_info().rss)/(1024**2)
             logger.info("PRE OUT Memory used %.2f MB" % mem_allocated)
-        cnt  = _output_majiq_file(out_lsvlist, gene_list, lsv_juncs_tlb, fname, outDir, db, m, ir, bsimpl,
+        cnt  = _output_majiq_file(out_lsvlist, gene_list, lsv_juncs_tlb, file_list[i], outDir, db, m, ir, bsimpl,
                                   logger, nthreads)
 
-        logger.info('%s: %d LSVs' %(fname.decode('utf-8'), cnt))
+        logger.info('%s: %d LSVs' %(file_list[i][0], cnt))
         if conf.mem_profile:
             mem_allocated = int(psutil.Process().memory_info().rss)/(1024**2)
             logger.info("POST OUT  Memory used %.2f MB" % mem_allocated)
