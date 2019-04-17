@@ -358,8 +358,6 @@
                 subtree: true
             });
 
-
-
         document.querySelectorAll('.lsv-table')
             .forEach(async function (lsv_table) {
                 $(lsv_table).DataTable({
@@ -420,8 +418,10 @@
                             render: data => {
                                 const heatmap = new HeatMap(data);
                                 const element = document.createElement('svg');
+
                                 heatmap.lsv_id = lsv_table.dataset.lsvId;
                                 heatmap.plot(element);
+
                                 if($('#dPSI-cutoff').val() !== DEFAULT_DPSI_MAXVAL){
                                     update_heatmap_scale();
                                 }
