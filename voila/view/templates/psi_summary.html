@@ -100,7 +100,7 @@
                 download_img: '{{ url_for('static', filename='img/download.svg') }}'
             });
 
-            const highlight_lsvs = () => {
+            highlight_lsvs = () => {
                 const hl_data = Array.from(document.querySelectorAll('.highlight-form'))
                     .map(f => {
                         {% if multi_view %}
@@ -150,11 +150,13 @@
             {% else %}
             new MutationObserver(mutations => {
                 mutations.forEach(m => m.addedNodes
-                    .forEach(n => {
+                    .forEach((n, i) => {
                         const tds = n.querySelectorAll('td:not(.dataTables_empty)');
 
                         if (!tds.length)
                             return;
+
+
 
                         const lsv_id = tds[1].textContent;
                         json_ajax('{{ url_for("lsv_data") }}/' + encodeURIComponent(lsv_id))
@@ -171,6 +173,7 @@
 
                             });
 
+
                         n.querySelector('.highlight-form').onchange = (event) => {
 
                             const input = event.target;
@@ -182,6 +185,13 @@
                             }
                             highlight_lsvs();
                         };
+
+                        if(highlightFirst && i === 0){
+                            $(n).find('.highlight').prop('checked', true).trigger('change');
+                            highlightFirst = false;
+                        }else if(n.querySelector('.highlight').checked === true){
+                            $(n).find('.highlight').prop('checked', false).trigger('change');
+                        }
 
                         copy_lsv_modal(n, '{{ url_for("copy_lsv") }}/' + encodeURIComponent(lsv_id))
                     })

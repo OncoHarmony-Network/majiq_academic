@@ -9,6 +9,7 @@
     <script>
         const legend = document.querySelector('.legend');
         new Lsv().renderFloatingLegend(legend)
+        var highlightFirst = false;
 
         const sg_simplified_view = "{{ session.get('omit_simplified', False) }}";
         if (sg_simplified_view === 'True') $('#sg-simplified-view').prop('checked', true);
@@ -26,31 +27,27 @@
             //whether filter_exon_numbers (which should be provided for paginated views) is defined
 
             if (typeof filter_exon_numbers !== 'undefined') {
-                // paginated method, just search for the correct LSV ID(s) and scroll to the table
+                const input_box = $('#results_filter input');
+                // paginated method, just search for the correct LSV ID(s) filter the table by it
                 if(exon_number in filter_exon_numbers){
-                    const current_val = $('#results_filter input').val();
-                    if(filter_exon_numbers[exon_number].length === 1 && current_val !== filter_exon_numbers[exon_number][0]){
-                        // only one relevant LSV, not shown yet
-                        $('#results_filter input').val(filter_exon_numbers[exon_number][0]);
-                    }else if(filter_exon_numbers[exon_number].length === 1){
-                        // only one relevant LSV, already shown, so clear selection
-                        $('#results_filter input').val('');
-                    }else if(current_val !== filter_exon_numbers[exon_number][0] && current_val !== filter_exon_numbers[exon_number][1]){
-                        // two relevent LSVs, not shown yet
-                        $('#results_filter input').val(filter_exon_numbers[exon_number][0]);
-                    }else if(current_val === filter_exon_numbers[exon_number][0]){
-                        // two relevant LSVs, the first one show, show the second
-                        $('#results_filter input').val(filter_exon_numbers[exon_number][1]);
+                    const current_val = input_box.val();
+                    const coord_range = filter_exon_numbers[exon_number][0].split(':').pop();
+                    if(current_val === coord_range){
+                        // we already selected this one before, so clear selection
+                        input_box.val('');
+                        input_box.trigger('input');
                     }else{
-                        // two relevant LSVs, already shown, so clear selection
-                        $('#results_filter input').val('');
+                        // filter by range
+                        input_box.val(coord_range);
+                        input_box.trigger('input');
+                        // check the first highlight box
+                        highlightFirst = true;
                     }
-
                 }else{
-                    $('#results_filter input').val('');
+                    input_box.val('');
                     dispFadeAlert("No LSV found for this Exon Number");
-                }
-                $('#results_filter input').trigger('input');
+                    input_box.trigger('input');
+                }                
 
             }else{
                 // non-paginated method, find exactly the LSV table and scroll to it, possible alternating between
