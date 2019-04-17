@@ -361,6 +361,7 @@ class HeatMap {
                     return `url(#diagonalHatch-${uniq})`
                     //return '';
             })
+
     };
 
     summary(el, lsv, metadata) {
