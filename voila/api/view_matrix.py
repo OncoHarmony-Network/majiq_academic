@@ -556,8 +556,12 @@ class ViewHeterogens(ViewMulti):
                         x = hets_grps.index(grp_names[0])
                         y = hets_grps.index(grp_names[1])
 
-                        s[x][y] = dpsi_value
-                        s[y][x] = stat_value
+                        if x - y > 0:
+                            s[x][y] = stat_value
+                            s[y][x] = dpsi_value
+                        else:
+                            s[x][y] = dpsi_value
+                            s[y][x] = stat_value
 
                     except (LsvIdNotFoundInVoilaFile, GeneIdNotFoundInVoilaFile):
                         pass
