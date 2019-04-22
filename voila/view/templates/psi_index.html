@@ -18,15 +18,19 @@
 
                     const lsv_id = tds[1].textContent;
 
-                    json_ajax('{{ url_for("lsv_data") }}/' + encodeURIComponent(lsv_id)).then(lsv_data => {
-                        const lsv = new Lsv(lsv_data);
-                        const violin = new Violin(lsv_data.lsv);
-                        const s = n.querySelector('.psi-violin-plot');
 
+                    json_ajax('{{ url_for("lsv_data") }}/' + encodeURIComponent(lsv_id)).then(lsv_data => {
+
+                        const lsv = new Lsv(lsv_data);
                         lsv.cartoon(n.querySelector('.lsv-cartoon'));
-                        lsv.draw_lsv_compact_stack_bars(n.querySelector('.lsv-single-compact-percentiles'));
-                        violin.psi(s);
-                        $(s).hide();
+
+                        {% if not multi_view %}
+                            const violin = new Violin(lsv_data.lsv);
+                            const s = n.querySelector('.psi-violin-plot');
+                            lsv.draw_lsv_compact_stack_bars(n.querySelector('.lsv-single-compact-percentiles'));
+                            violin.psi(s);
+                            $(s).hide();
+                        {% endif %}
                     });
 
                     copy_lsv_modal(n, '{{ url_for("copy_lsv") }}/' + encodeURIComponent(lsv_id))
@@ -79,25 +83,28 @@
                         return element.outerHTML
                     }
                 },
-                {
-                    targets: 3,
-                    sortable: false,
-                    render: data => {
-                        const compact = document.createElement('canvas');
-                        compact.classList.add('lsv-single-compact-percentiles');
-                        compact.dataset.group = data;
 
-                        const violin = document.createElement('svg');
-                        violin.classList.add('psi-violin-plot');
-                        violin.setAttribute('width', '0');
-                        violin.setAttribute('height', '0');
-                        violin.dataset.group = data;
+                {% if not multi_view %}
+                    {
+                        targets: 3,
+                        sortable: false,
+                        render: data => {
+                            const compact = document.createElement('canvas');
+                            compact.classList.add('lsv-single-compact-percentiles');
+                            compact.dataset.group = data;
 
-                        return compact.outerHTML + violin.outerHTML
-                    }
-                },
+                            const violin = document.createElement('svg');
+                            violin.classList.add('psi-violin-plot');
+                            violin.setAttribute('width', '0');
+                            violin.setAttribute('height', '0');
+                            violin.dataset.group = data;
+
+                            return compact.outerHTML + violin.outerHTML
+                        }
+                    },
+                {% endif %}
                 {
-                    targets: 4,
+                    targets: {% if multi_view %}3{% else %}4{% endif %},
                     sortable: false,
                     render: data => {
                         const copy_lsv = document.createElement('button');
@@ -225,7 +232,9 @@
                     <th>Gene Name</th>
                     <th>LSV ID</th>
                     <th>LSV Type</th>
-                    <th>Ψ per Junction</th>
+                    {% if not multi_view %}
+                        <th>Ψ per Junction</th>
+                    {% endif %}
                     <th>Links</th>
                 </tr>
                 </thead>

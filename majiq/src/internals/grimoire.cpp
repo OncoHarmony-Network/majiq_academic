@@ -214,18 +214,18 @@ namespace grimoire {
         return ;
     }
 
-    void Gene::initialize_junction(string key, int start, int end, float* nreads_ptr){
+    void Gene::initialize_junction(string key, int start, int end, float* nreads_ptr, bool simpl){
 
         omp_set_lock(&map_lck_) ;
         if (junc_map_.count(key) == 0){
-            junc_map_[key] = new Junction(start, end, false) ;
+            junc_map_[key] = new Junction(start, end, false, simpl) ;
         }
         junc_map_[key]->set_nreads_ptr(nreads_ptr) ;
         omp_unset_lock(&map_lck_) ;
         return ;
     }
 
-    void Gene::detect_introns(vector<Intron*> &intronlist){
+    void Gene::detect_introns(vector<Intron*> &intronlist, bool simpl){
 
         vector<Ssite> ss_vec ;
         vector<Junction *> opened_exon ;
@@ -258,7 +258,7 @@ namespace grimoire {
 
                     #pragma omp critical
                     {
-                        Intron * irObj = new Intron(start_ir, end_ir, false, this) ;
+                        Intron * irObj = new Intron(start_ir, end_ir, false, this, simpl) ;
                         intronlist.push_back(irObj) ;
                     }
 
@@ -270,7 +270,7 @@ namespace grimoire {
 
     void Gene::add_intron(Intron * inIR_ptr, float min_coverage, unsigned int min_exps, float min_bins, bool reset){
         bool found = false ;
-         for (const auto &ir: intron_vec_){
+        for (const auto &ir: intron_vec_){
             if (ir->get_end() < inIR_ptr->get_start() || ir->get_start() > inIR_ptr->get_end()) continue ;
             if (ir->get_end() >= inIR_ptr->get_start() && ir->get_start() <= inIR_ptr->get_end()){
                 ir->overlaping_intron(inIR_ptr) ;
@@ -318,7 +318,9 @@ namespace grimoire {
                     if (ir_ptr->get_end() >= ex_end ) break ;
                     if (ir_start <= ir_ptr->get_end() && ir_end >= ir_ptr->get_start() && ir_ptr->get_ir_flag()){
 
-//if (prev_ex->ob_irptr != nullptr){
+                        if (prev_ex->ob_irptr != nullptr){
+                            (prev_ex->ob_irptr)->unset_markd() ;
+                        }
 //    cerr << "#1 " << ir_start << "-" << ir_end<< " :: " << prev_ex->ob_irptr->get_gene() << ":" << prev_ex->ob_irptr->get_start() << "-" << prev_ex->ob_irptr->get_end()<< "\n" ;
 //    cerr << "#2 " << ir_start << "-" << ir_end<< " :: " << ir_ptr->get_gene() << ":" << ir_ptr->get_start() << "-" << ir_ptr->get_end()<< "\n" ;
 //    }
@@ -413,7 +415,7 @@ namespace grimoire {
 
 
     void Exon::simplify(map<string, int>& junc_tlb, float simpl_percent, Gene* gObj, int strandness,
-                        int denovo_simpl, int db_simple, int ir_simpl){
+                        int denovo_simpl, int db_simple, int ir_simpl, bool last, unsigned int min_experiments){
         float sumall = 0 ;
         {
             vector<float> sumj ;
@@ -448,8 +450,6 @@ namespace grimoire {
                 jnc_vec[i]->set_simpl_fltr(x<simpl_percent || sumj[i]< thrshld_vect[i]) ;
             }
         }
-
-
         sumall = 0 ;
         {
             vector<float> sumj ;
@@ -484,17 +484,19 @@ namespace grimoire {
                 jnc_vec[i]->set_simpl_fltr(x<simpl_percent || sumj[i]< thrshld_vect[i]) ;
             }
         }
-
-
     }
 
 
     void Gene::simplify(map<string, int>& junc_tlb, float simpl_percent, int strandness, int denovo_simpl,
-                        int db_simple, int ir_simpl){
+                        int db_simple, int ir_simpl, bool last, unsigned int min_experiments){
         for(const auto &ex: exon_map_){
-            (ex.second)->simplify(junc_tlb, simpl_percent, this, strandness, denovo_simpl, db_simple, ir_simpl) ;
+            (ex.second)->simplify(junc_tlb, simpl_percent, this, strandness, denovo_simpl, db_simple,
+                                  ir_simpl, last, min_experiments) ;
         }
-
+        if (last)
+            for (const auto &j: junc_map_){
+                (j.second)->update_simpl_flags(min_experiments) ;
+            }
     }
 
 
@@ -503,10 +505,10 @@ namespace grimoire {
         for(const auto & ex: exon_map_ ){
             cerr << "EXON:: "<< ex.first << "\n" ;
             for (const auto & j1: (ex.second)->ib){
-                cerr << "<<< " << j1->get_start() << "-" << j1->get_end() << "\n";
+                cerr << "<<< " << j1->get_start() << "-" << j1->get_end() << "\n" ;
             }
             for (const auto & j1: (ex.second)->ob){
-                cerr << ">>>" << j1->get_start() << "-" << j1->get_end() << "\n";
+                cerr << ">>>" << j1->get_start() << "-" << j1->get_end() << "\n" ;
             }
         }
     }
@@ -549,8 +551,8 @@ namespace grimoire {
         set<Junction*> &juncSet = ss? ob : ib ;
         for(const auto &juncIt:  juncSet){
             const int coord = ss? juncIt->get_end() : juncIt->get_start() ;
-            c2 += (FIRST_LAST_JUNC != coord) ? 1:0 ;
-            if (FIRST_LAST_JUNC != coord && juncIt->get_bld_fltr()) {
+            c2 += (FIRST_LAST_JUNC != coord && !juncIt->get_simpl_fltr()) ? 1:0 ;
+            if (FIRST_LAST_JUNC != coord && juncIt->get_bld_fltr() && !juncIt->get_simpl_fltr()) {
                 ++c1 ;
             }
         }
@@ -593,7 +595,6 @@ namespace grimoire {
                 info.push_back(&tlb[key]) ;
             } else {
                 t1 += msample ;
-
             }
         }
         return count>0 ;
@@ -609,7 +610,7 @@ namespace grimoire {
             Exon * ex = ss? j->get_acceptor() :  j->get_donor() ;
             const int coord = ss? j->get_end() : j->get_start() ;
             const int ref_coord = ss ? j->get_start() : j->get_end() ;
-            if (ex==nullptr || coord < 0 || ref_coord < 0) continue ;
+            if (ex==nullptr || coord < 0 || ref_coord < 0 || j->get_simpl_fltr()) continue ;
             lsvtype lsvtypeobj = {coord, ref_coord, ex, j} ;
             sp_list.push_back(lsvtypeobj) ;
         }
@@ -718,9 +719,9 @@ namespace grimoire {
     }
 
     void find_gene_from_junc(map<string, vector<overGene*>> & glist, string chrom, char strand, int start, int end,
-                             vector<Gene*>& oGeneList, bool ir){
+                             vector<Gene*>& oGeneList, bool ir, bool simpl){
 
-        Junction * junc = new Junction(start, end, false) ;
+        Junction * junc = new Junction(start, end, false, simpl) ;
         const string key = junc->get_key() ;
         vector<overGene*>::iterator low = lower_bound (glist[chrom].begin(), glist[chrom].end(),
                                                        start, _Region::func_comp ) ;

@@ -13,6 +13,11 @@ table {
     background-color: white
 }
 
+.dataTables_wrapper{
+    max-width: 100%;
+    overflow: auto;
+}
+
 .menu {
     background-color: #205bb0;
     color: white;
@@ -220,10 +225,32 @@ form.het-highlight-form label {
     pointer-events: none;
 }
 
-.toggle-scale, .zoom-in, .zoom-out, .zoom-reset{
+.toggle-scale, .zoom-in, .zoom-out, .zoom-reset, .splice-graph-header img{
     cursor: pointer;
 }
 
-.toggle-scale:hover, .zoom-in:hover, .zoom-out:hover, .zoom-reset:hover{
+.toggle-scale:hover, .zoom-in:hover, .zoom-out:hover, .zoom-reset:hover, .splice-graph-header img:hover{
     box-shadow: 0 0 12px #ffd400;
+}
+
+.lsv-single-compact-percentiles, .psi-violin-plot, .dpsi-violin, .excl-incl-rect{
+    cursor: pointer;
+}
+
+.lsv-single-compact-percentiles:hover, .psi-violin-plot:hover, .dpsi-violin:hover, .excl-incl-rect:hover{
+    box-shadow: 0 0 12px #ffd400;
+}
+
+.tmp-alert{
+    position: fixed;
+    top: 9%;
+    z-index:1000;
+    font-size:16px;
+    left: 50%;
+    background-color: #ffb2b0;
+    border: #ff6864 solid 2px;
+    padding:20px;
+    border-radius: 10px;
+    transform: translate(-50%, 0);
+
 }

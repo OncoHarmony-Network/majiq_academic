@@ -51,7 +51,7 @@ namespace io_bam {
         bool found_stage2 = false ;
         vector<Gene*> temp_vec1 ;
         vector<Gene*> temp_vec2 ;
-        Junction * junc = new Junction(start, end, false) ;
+        Junction * junc = new Junction(start, end, false, simpl_) ;
         const string key = junc->get_key() ;
 
         vector<overGene*>::iterator low = lower_bound (glist_[chrom].begin(), glist_[chrom].end(), start, _Region::func_comp ) ;
@@ -66,7 +66,7 @@ namespace io_bam {
             if (strand == '.' || strand == gObj->get_strand()) {
                 if(gObj->junc_map_.count(key) >0 ){
                     found_stage1 = true ;
-                    gObj->initialize_junction(key, start, end, nreads_ptr) ;
+                    gObj->initialize_junction(key, start, end, nreads_ptr, simpl_) ;
                 } else if(found_stage1){
                     continue ;
                 } else {
@@ -84,11 +84,11 @@ namespace io_bam {
         if (!found_stage1){
             if (found_stage2){
                 for(const auto &g: temp_vec1){
-                    g->initialize_junction(key, start, end, nreads_ptr) ;
+                    g->initialize_junction(key, start, end, nreads_ptr, simpl_) ;
                 }
             }else{
                 for(const auto &g: temp_vec2){
-                    g->initialize_junction(key, start, end, nreads_ptr) ;
+                    g->initialize_junction(key, start, end, nreads_ptr, simpl_) ;
                 }
             }
         }
@@ -395,7 +395,7 @@ namespace io_bam {
             for(int g_it = 0; g_it<n; g_it++){
                 for (const auto &g: ((it.second)[g_it])->glist){
                     g->detect_exons() ;
-                    g->detect_introns(intronVec_[it.first]) ;
+                    g->detect_introns(intronVec_[it.first], simpl_) ;
                     g->reset_exons() ;
                 }
             }

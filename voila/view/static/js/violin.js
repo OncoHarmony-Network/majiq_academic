@@ -79,6 +79,55 @@ class Violin {
         this.box_plots(g, data.group_bins[group])
     }
 
+    multipsi(svg) {
+
+        this.violin_count = this.data.group_names.length;
+        svg.setAttribute('height', this.svg_height);
+        svg.setAttribute('width', this.svg_width);
+
+        // const junc_idx = svg.closest('tr').dataset.junctionIndex;
+        const junc_idx = this.data.junction_idx;
+        const color = new Colors().brewer(junc_idx);
+
+        const bins = this.data.group_bins[junc_idx];
+
+
+        if(junc_idx === 0)
+            svg.setAttribute('height', this.svg_height + 10);
+
+        const g = d3.select(svg)
+                .append('g');
+
+        if(junc_idx === 0)
+            g.attr('transform', `translate(${this.y_axis_width}, ${this.top_padding+10})`);
+        else
+            g.attr('transform', `translate(${this.y_axis_width}, ${this.top_padding})`);
+
+        const hist = g
+            .append('g')
+            .attr('class', 'histograms');
+
+        this.draw_histograms(hist, bins);
+
+        hist
+            .attr('stroke', color)
+            .attr('stroke-width', 1)
+            .attr('fill', color)
+            .attr('fill-opacity', .1);
+
+
+
+        //this.swarm(g, color);
+
+        if(junc_idx === 0)
+            this.draw_names_above(g, this.data.group_names);
+        this.draw_x_axis(g, this.data.group_means[junc_idx]);
+        this.draw_psi_y_axis(g);
+        this.box_plots(g, this.data.group_bins[junc_idx])
+
+
+    }
+
     deltapsi(svg) {
         const data = this.data;
 
@@ -132,15 +181,17 @@ class Violin {
     }
 
     heterogen(svg) {
-        this.violin_count = this.data.group_names.length;
+        const data = this.data;
+        
+        this.violin_count = data.group_names.length;
         svg.setAttribute('height', this.svg_height);
         svg.setAttribute('width', this.svg_width);
 
 
         // const junc_idx = svg.closest('tr').dataset.junctionIndex;
-        const junc_idx = this.data.junction_idx;
+        const junc_idx = data.junction_idx;
         const color = new Colors().brewer(junc_idx);
-        const bins = this.data.mean_psi;
+        const bins = data.mean_psi;
 
         const g = d3.select(svg)
             .append('g')
@@ -166,8 +217,8 @@ class Violin {
             .attr('transform', `translate(${this.y_axis_width}, ${this.top_padding})`);
 
         this.swarm(g2, color);
-        this.draw_x_axis(g, this.data.group_names);
-        this.draw_view_icons(g, this.data.group_names);
+        this.draw_x_axis(g, data.group_names);
+        this.draw_view_icons(g, data.group_names);
         this.pairwise_plot_triggers(g);
     }
 
@@ -399,19 +450,20 @@ class Violin {
                     .attr('class', 'box-plots');
 
         data.forEach((d, i) => {
-            const trans_d = this.translate_lsv_bins(d);
+            if(d.length > 0) {
+                const trans_d = this.translate_lsv_bins(d);
 
-            const q = d3.scaleQuantile()
-                .domain([0, 1])
-                .range(trans_d);
+                const q = d3.scaleQuantile()
+                    .domain([0, 1])
+                    .range(trans_d);
 
-            const y = d3.scaleLinear()
-                .domain([0, 1])
-                .range([this.violin_height, 0]);
+                const y = d3.scaleLinear()
+                    .domain([0, 1])
+                    .range([this.violin_height, 0]);
 
-            const x = d3.scaleLinear()
-                .domain([0, 1])
-                .range([0, this.violin_width + this.violin_pad]);
+                const x = d3.scaleLinear()
+                    .domain([0, 1])
+                    .range([0, this.violin_width + this.violin_pad]);
 
                 const g = svg.append('g')
                     .attr('transform', `translate(${x(i)})`)
@@ -420,41 +472,42 @@ class Violin {
                     .attr("data-x", x(i))
                     .attr("data-group-idx", i);
 
-            g
-                .selectAll('.h-line')
-                .data([.05, .5, .95].map(d => q(d)))
-                .enter()
-                .append('line')
-                .attr('stroke', 'black')
-                .attr('class', 'h-line')
-                .attr('x1', x(.4))
-                .attr('x2', x(.6))
-                .attr('y1', d => y(d))
-                .attr('y2', d => y(d));
+                g
+                    .selectAll('.h-line')
+                    .data([.05, .5, .95].map(d => q(d)))
+                    .enter()
+                    .append('line')
+                    .attr('stroke', 'black')
+                    .attr('class', 'h-line')
+                    .attr('x1', x(.4))
+                    .attr('x2', x(.6))
+                    .attr('y1', d => y(d))
+                    .attr('y2', d => y(d));
 
-            g
-                .append('rect')
-                .attr('stroke-width', 0)
-                .attr('width', x(.55) - x(.45))
-                .attr('height', y(q(.25)) - y(q(.75)))
-                .attr('x', (d, i, a) => x(.5) - (a[i].getAttribute('width') / 2))
-                .attr('y', y(q(.75)));
+                g
+                    .append('rect')
+                    .attr('stroke-width', 0)
+                    .attr('width', x(.55) - x(.45))
+                    .attr('height', y(q(.25)) - y(q(.75)))
+                    .attr('x', (d, i, a) => x(.5) - (a[i].getAttribute('width') / 2))
+                    .attr('y', y(q(.75)));
 
-            g
-                .append('line')
-                .attr('stroke', 'black')
-                .attr('x1', x(.5))
-                .attr('x2', x(.5))
-                .attr('y1', y(q(.05)))
-                .attr('y2', y(q(.95)));
+                g
+                    .append('line')
+                    .attr('stroke', 'black')
+                    .attr('x1', x(.5))
+                    .attr('x2', x(.5))
+                    .attr('y1', y(q(.05)))
+                    .attr('y2', y(q(.95)));
 
-            g
-                .append('circle')
-                .attr('stroke', 'black')
-                .attr('fill', 'white')
-                .attr("cx", x(.5))
-                .attr("cy", y(d3.mean(trans_d)))
-                .attr("r", 3);
+                g
+                    .append('circle')
+                    .attr('stroke', 'black')
+                    .attr('fill', 'white')
+                    .attr("cx", x(.5))
+                    .attr("cy", y(d3.mean(trans_d)))
+                    .attr("r", 3);
+            }
         })
     };
 
@@ -473,6 +526,49 @@ class Violin {
 
   }
 
+    draw_names_above(svg, x_axis_data) {
+        svg
+            .append('g')
+            .attr('class', 'x-axis')
+            .attr('transform', 'translate(0, -5)')
+            .selectAll('text')
+            .data(x_axis_data)
+            .enter()
+            .append('text')
+            .attr('y', this.svg_height - this.x_axis_height + 6)
+            .attr('font-size', 12)
+            .text(d => {
+                try {
+                    return parseFloat(d.toPrecision(3))
+                } catch (TypeError) {
+                    const max_length = 20;
+                    if (d.length > max_length) {
+                        d = d.slice(0, max_length - 3) + '...'
+                    }
+                    return d
+                }
+            })
+            .each((d, i, a) => {
+                const el = a[i];
+                if (d.length > 7) {
+                    el.setAttribute('x', (this.violin_width + this.violin_pad) * (i + .45));
+                    el.setAttribute("data-x", (this.violin_width + this.violin_pad) * (i + .45));
+                    el.setAttribute("data-orig-x", (this.violin_width + this.violin_pad) * (i + .45));
+                    el.setAttribute('y', 0);
+                    el.setAttribute('transform', `rotate(90,${a[i].getAttribute('x')},${a[i].getAttribute('y')})`);
+                    el.setAttribute('text-anchor', 'left');
+
+                } else {
+                    el.setAttribute('x', (this.violin_width + this.violin_pad) * (i + .5));
+                    el.setAttribute("data-x", (this.violin_width + this.violin_pad) * (i + .5));
+                    el.setAttribute("data-orig-x", (this.violin_width + this.violin_pad) * (i + .45));
+                    el.setAttribute('y', 0);
+                    el.setAttribute('text-anchor', 'middle');
+                }
+                el.setAttribute('data-group-idx', i)
+            })
+    }
+
     draw_x_axis(svg, x_axis_data) {
         var self = this;
         var chain = svg
@@ -489,8 +585,8 @@ class Violin {
                 chain = chain
                     .append("rect")
                     .attr('class', 'pairwise-check')
-                    .attr('y', -8)
-                    .attr('x', 20)
+                    .attr('y', 7)
+                    .attr('x', -4)
                     .attr('width', 8)
                     .attr('height', 8)
                     .attr('fill', 'white')
@@ -543,26 +639,26 @@ class Violin {
 
     }
     draw_pairwise_plot(main_svg){
-        const self = this;
 
         function pairwise_significance(v1_idx, v2_idx){
-
             const i1 = parseInt($(main_svg.node()).find(`.violin`).eq(v1_idx).attr('data-group-idx'));
             const i2 = parseInt($(main_svg.node()).find(`.violin`).eq(v2_idx).attr('data-group-idx'));
             let comp_val;
+
             // we want the row index to always be larger than the col index to get the low half of the heatmap
             if(i1 > i2){
-                comp_val = self.data.heatmap[i1][i2];
+                comp_val = parseFloat($(main_svg.node()).closest('tr').find('.heat-map g').eq(i1).find('rect').eq(i2).attr('data-value'));
             }else{
-                comp_val = self.data.heatmap[i2][i1];
+                comp_val = parseFloat($(main_svg.node()).closest('tr').find('.heat-map g').eq(i2).find('rect').eq(i1).attr('data-value'));
             }
 
             if(comp_val < 0){
                 return null;
             }
             //comp_val = Math.log(comp_val);
-            comp_val = 10 ** comp_val;
+            //comp_val = 10 ** comp_val;
             //console.log(comp_val)
+
 
             if(comp_val > 0.05){
                 return null

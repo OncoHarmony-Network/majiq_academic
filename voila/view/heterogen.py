@@ -44,8 +44,12 @@ def gene(gene_id):
             start, end = views.lsv_boundries(lsv_exons)
             gene = sg.gene(gene_id)
             ucsc[het.lsv_id] = views.ucsc_href(sg.genome, gene['chromosome'], start, end)
-            exon_numbers[het.lsv_id] = views.find_exon_number(sg.exons(gene_id), het.reference_exon, gene['strand'])
-
+            exon_num = views.find_exon_number(sg.exons(gene_id), het.reference_exon, gene['strand'])
+            if type(exon_num) is int:
+                # accounting for 'unk' exon numbers
+                exon_numbers[het.lsv_id] = exon_num
+            else:
+                exon_numbers[het.lsv_id] = 0
 
         lsv_data = []
         lsv_is_source = {}
@@ -62,6 +66,8 @@ def gene(gene_id):
         type_length_idx = [i[0] for i in sorted(enumerate(lsv_data), key=lambda x: len(x[1][1].split('|')))]
 
         for i, lsv in enumerate(lsv_data):
+            # appending exon number
+            lsv.append(exon_numbers[lsv[0]])
             # appending default sort index
             lsv.append(i)
             # appending other sort indexes
@@ -127,6 +133,11 @@ def index_table():
 def nav(gene_id):
     with ViewDeltaPsi() as h:
         gene_ids = list(sorted(h.gene_ids))
+        if len(gene_ids) == 1:
+            return jsonify({
+                'next': url_for('gene', gene_id=gene_ids[0]),
+                'prev': url_for('gene', gene_id=gene_ids[0])
+            })
         idx = bisect(gene_ids, gene_id)
 
         return jsonify({
@@ -298,7 +309,6 @@ def summary_table():
                     'junction_idx': junc_idx,
                     'mean_psi': mean_psi,
                     'mu_psi': mu_psi,
-                    'heatmap': heatmap,
                 },
                 {
                     'heatmap': heatmap,
@@ -306,6 +316,7 @@ def summary_table():
                     'stat_name': stat_name
                 }
             ]
+
 
         return jsonify(dict(dt))
 

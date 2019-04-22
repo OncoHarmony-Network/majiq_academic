@@ -3,6 +3,7 @@
 {% block analysis_type_script %}
     <script>
         const view_type = 'dpsi';
+        const filter_exon_numbers = {{ filter_exon_numbers|tojson }};
 
         json_ajax('{{ url_for("nav", gene_id=gene.id) }}').then(json => {
             document.querySelector('.prev-gene').addEventListener('click', () => {
@@ -50,7 +51,7 @@
 
             new MutationObserver(mutations => {
                 mutations.forEach(m => m.addedNodes
-                    .forEach(n => {
+                    .forEach((n, i) => {
                         const tds = n.querySelectorAll('td:not(.dataTables_empty)');
 
                         if (!tds.length)
@@ -96,7 +97,16 @@
 
                                     highlight_lsvs();
                                 }
+
+                                if(highlightFirst && i === 0){
+                                    $(n).find('.highlight').prop('checked', true).trigger('change');
+                                    highlightFirst = false;
+                                }else if(n.querySelector('.highlight').checked === true){
+                                    $(n).find('.highlight').prop('checked', false).trigger('change');
+                                }
                             });
+
+
                         copy_lsv_modal(n, '{{ url_for("copy_lsv") }}/' + encodeURIComponent(lsv_id))
 
                     })

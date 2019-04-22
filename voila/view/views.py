@@ -10,30 +10,29 @@ from voila.config import ViewConfig
 from voila.exceptions import UnknownAnalysisType
 from voila.index import Index
 from voila.view import deltapsi, heterogen, psi, splicegraph
+import os
 
 
 
+if os.name != 'nt':
+    import gunicorn.app.base
+    from gunicorn.six import iteritems
 
+    class GunicornStandaloneApplication(gunicorn.app.base.BaseApplication):
 
-import gunicorn.app.base
+        def __init__(self, app, options=None):
+            self.options = options or {}
+            self.application = app
+            super(GunicornStandaloneApplication, self).__init__()
 
-from gunicorn.six import iteritems
+        def load_config(self):
+            config = dict([(key, value) for key, value in iteritems(self.options)
+                           if key in self.cfg.settings and value is not None])
+            for key, value in iteritems(config):
+                self.cfg.set(key.lower(), value)
 
-class GunicornStandaloneApplication(gunicorn.app.base.BaseApplication):
-
-    def __init__(self, app, options=None):
-        self.options = options or {}
-        self.application = app
-        super(GunicornStandaloneApplication, self).__init__()
-
-    def load_config(self):
-        config = dict([(key, value) for key, value in iteritems(self.options)
-                       if key in self.cfg.settings and value is not None])
-        for key, value in iteritems(config):
-            self.cfg.set(key.lower(), value)
-
-    def load(self):
-        return self.application
+        def load(self):
+            return self.application
 
 
 
@@ -53,6 +52,8 @@ def run_service():
     if web_server == 'waitress':
         serve(run_app, port=port, host=host)
     elif web_server == 'gunicorn':
+        if os.name == 'nt':
+            raise Exception("Gunicorn is unsupported on windows")
         options = {
             'bind': '%s:%s' % (host, port),
             'workers': ViewConfig().num_web_workers,
@@ -87,8 +88,8 @@ def get_app():
     return run_app
 
 
-def copy_lsv(lsv_id, view_matrix):
-    with ViewSpliceGraph() as sg, view_matrix() as m:
+def copy_lsv(lsv_id, view_matrix, voila_file=None):
+    with ViewSpliceGraph() as sg, view_matrix(voila_file=voila_file) as m:
         lsv = m.lsv(lsv_id)
         gene_id = lsv.gene_id
         gene = sg.gene(gene_id)
@@ -162,9 +163,16 @@ def lsv_boundries(lsv_exons):
 
 
 def gene_view(summary_template, gene_id, view_matrix, **kwargs):
-    with view_matrix() as m:
-        if gene_id not in m.gene_ids:
-            return redirect(url_for('index'))
+
+
+    if kwargs.get('voila_file'):
+        with view_matrix(voila_file=kwargs.get('voila_file')) as m:
+            if gene_id not in m.gene_ids:
+                return redirect(url_for('index'))
+    else:
+        with view_matrix() as m:
+            if gene_id not in m.gene_ids:
+                return redirect(url_for('index'))
 
     with ViewSpliceGraph() as sg:
         gene = sg.gene(gene_id)

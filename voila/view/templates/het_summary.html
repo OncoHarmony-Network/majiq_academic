@@ -3,6 +3,7 @@
 {% block style %}
     {{ super() }}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/lib/sumoselect.min.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/multi_input.css') }}">
 <style>
     @media print
     {
@@ -19,30 +20,6 @@
             .content {background-color:white;}
             .bottom {background-color:white;}
             .tools-menu {background-color:white;}
-    }
-
-    .SumoUnder{
-        z-index: -1000;
-        pointer-events: none;
-    }
-    .SumoSelect>.CaptionCont {
-        min-height: 16px;
-        border: 1px solid #ccc;
-        box-shadow: inset 0 1px 3px #ddd;
-        border-radius: 4px;
-    }
-    #groups-display-all, #groups-display-none{
-        margin-top:2px;
-    }
-    .SumoSelect{
-        width: 100%;
-    }
-    .groups-display-form{
-        width: 9%;
-    }
-    .groups-display-form select[multiple]{
-        height:28px;
-        margin-bottom:0;
     }
 
 </style>
@@ -381,8 +358,6 @@
                 subtree: true
             });
 
-
-
         document.querySelectorAll('.lsv-table')
             .forEach(async function (lsv_table) {
                 $(lsv_table).DataTable({
@@ -432,10 +407,7 @@
                                     $('#groups-display-none').click(function(){
                                         $('#groups-display')[0].sumo.unSelectAll();
                                     });
-
-
                                 }
-
 
                                 return element.outerHTML
                             }
@@ -446,8 +418,10 @@
                             render: data => {
                                 const heatmap = new HeatMap(data);
                                 const element = document.createElement('svg');
+
                                 heatmap.lsv_id = lsv_table.dataset.lsvId;
                                 heatmap.plot(element);
+
                                 if($('#dPSI-cutoff').val() !== DEFAULT_DPSI_MAXVAL){
                                     update_heatmap_scale();
                                 }
@@ -458,9 +432,6 @@
                     ]
                 })
             });
-
-
-
 
         $('#results tbody')
             .on('click', '.excl-incl-rect, .dpsi-violin', event => {
@@ -525,8 +496,8 @@
     </div>
 
     <div class="lsv-container">
-        {% for lsv_id, lsv_type, exon_number_idx, type_length_idx in lsv_data %}
-            <div class="lsv" data-lsv-id="{{ lsv_id }}" data-exon-number-idx="{{ exon_number_idx }}"
+        {% for lsv_id, lsv_type, exon_number, exon_number_idx, type_length_idx in lsv_data %}
+            <div class="lsv" data-exon-number="{{ exon_number }}" data-lsv-id="{{ lsv_id }}" data-exon-number-idx="{{ exon_number_idx }}"
                  data-type-length-idx="{{ type_length_idx }}">
                 <div class="lsv-header ">
                     <div class="highlight-form">
