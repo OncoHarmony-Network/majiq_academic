@@ -83,17 +83,19 @@ namespace io_bam{
             int boostrap_samples(int msamples, int ksamples, float* boots, float fitfunc_r, float pvalue_limit) ;
             void detect_introns(float min_intron_cov, unsigned int min_experiments, float min_bins, bool reset) ;
 
+            void get_intron_raw_cov(float* out_cov) ;
 
             char _get_strand(bam1_t * read) ;
             void set_junction_strand(bam1_t  *aln, Junction& j1) ;
             void find_junction_genes(string chrom, char strand, int start, int end, float * nreads_ptr ) ;
             int  ParseJunctionsFromFile(bool ir_func) ;
             void parseJuncEntry(map<string, vector<overGene*>> & glist, string chrom, char strand, int start, int end,
-                                int sreads, vector<Gene*>& oGeneList, bool ir, int minexp, bool reset) ;
+                                int sreads, vector<Gene*>& oGeneList, bool ir, vector<float>& ircov,
+                                float min_intron_cov, float min_bins, int minexp, bool reset) ;
             inline void update_junction_read(string key, int read_start, int count) ;
             inline bool new_junc_values(const string key) ;
 
-            void simplify(float simpl_percent) ;
+
             int parse_read_for_ir(bam_hdr_t *header, bam1_t *read) ;
             int get_njuncs() ;
             const map<string, unsigned int> &get_junc_map() ;
@@ -110,6 +112,7 @@ namespace io_bam{
 
 
             }
+
 
 
 

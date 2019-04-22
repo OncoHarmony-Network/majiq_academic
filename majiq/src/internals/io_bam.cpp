@@ -387,7 +387,8 @@ namespace io_bam {
 
 
     void IOBam::parseJuncEntry(map<string, vector<overGene*>> & glist, string chrom, char strand, int start, int end,
-                               int sreads, vector<Gene*>& oGeneList, bool ir, int minexp, bool reset){
+                               int sreads, vector<Gene*>& oGeneList, bool ir, vector<float>& ircov,
+                               float min_intron_cov, float min_bins, int minexp, bool reset){
 
         vector<overGene*>::iterator low = lower_bound (glist[chrom].begin(), glist[chrom].end(),
                                                        start, _Region::func_comp ) ;
@@ -396,15 +397,16 @@ namespace io_bam {
         if (ir){
             for (const auto &gObj: (*low)->glist){
                 Intron * irptr = new Intron(start, end, false, gObj, simpl_) ;
-                irptr->add_read_rates_buff(1) ;
-                irptr->add_read(0, 1, sreads) ;
+                irptr->add_read_rates_buff(ircov.size()) ;
+                irptr->initReadCovFromVector(ircov) ;
+
                 const string key = irptr->get_key(gObj) ;
                 #pragma omp critical
                 {
                     if (junc_map.count(key) == 0) {
                         junc_map[key] = junc_vec.size() ;
                         junc_vec.push_back(irptr->read_rates_) ;
-                        (irptr->get_gene())->add_intron(irptr, 0, minexp, 1, reset) ;
+                        (irptr->get_gene())->add_intron(irptr, min_intron_cov, minexp, min_bins, reset) ;
                     }
                 }
 
@@ -463,6 +465,18 @@ namespace io_bam {
         }
     }
 
+
+    void IOBam::get_intron_raw_cov(float* out_cov){
+        const unsigned int all_junc = junc_vec.size() ;
+        #pragma omp parallel for num_threads(nthreads_)
+        for(unsigned int idx = junc_limit_index_; idx<all_junc; idx++){
+            const unsigned int i = idx - junc_limit_index_ ;
+            for (unsigned int j=0; j<eff_len_; j++){
+                const unsigned int indx_2d = i*eff_len_ + j ;
+                out_cov[indx_2d] = junc_vec[idx][j] ;
+            }
+        }
+    }
 
     void prepare_genelist(map<string, Gene*>& gene_map, map<string, vector<overGene*>> & geneList){
         map<string, vector<Gene*>> gmp ;

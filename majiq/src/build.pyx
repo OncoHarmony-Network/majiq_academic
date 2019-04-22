@@ -39,12 +39,13 @@ cdef extern from "sqlite3.h":
 cdef int C_FIRST_LAST_JUNC = FIRST_LAST_JUNC
 
 
-cdef _store_junc_file(np.ndarray boots, list junc_ids, str experiment_name, str outDir):
+cdef _store_junc_file(np.ndarray boots, np.ndarray ir_cov, list junc_ids, str experiment_name, np.ndarray meta, str outDir):
 
     cdef str out_file = "%s/%s.%s" % (outDir, experiment_name, JUNC_FILE_FORMAT)
-    cdef dict vals = {'bootstrap': boots}
+    cdef dict vals = {'bootstrap': boots, 'ir_cov': ir_cov}
     dt = np.dtype('S250, u4, u4, f4, f4, u4')
     vals['junc_info'] = np.array(junc_ids, dtype=dt)
+    vals['meta'] = meta
     with open(out_file, 'w+b') as ofp:
         np.savez(ofp, **vals)
 
@@ -224,11 +225,21 @@ cdef _parse_junction_file(tuple filetp, map[string, Gene*]& gene_map, vector[str
     cdef int n = gene_map.size()
     cdef char strand
     cdef bint bsimpl = (conf.simpl_psi >= 0)
+    cdef bint ir = conf.ir
+    cdef np.ndarray[np.float32_t, ndim=2, mode="c"] ir_cov
+    cdef vector[np.float32_t] ir_vec
+    cdef unsigned int eff_len = conf.readLen - 2*MIN_BP_OVERLAP + 1
+    cdef np.float32_t min_ir_cov = conf.min_intronic_cov
+    cdef np.float32_t ir_numbins = conf.irnbins
+    cdef int jlimit
 
-    c_iobam = IOBam(filetp[1].encode('utf-8'), strandness, 1, nthreads, gene_list, bsimpl)
+    c_iobam = IOBam(filetp[1].encode('utf-8'), strandness, eff_len, nthreads, gene_list, bsimpl)
 
-    with open(filetp[1], 'rb') as fp:
-        junc_ids = np.load(fp)['junc_info']
+    with np.load(filetp[1]) as fp:
+        junc_ids = fp['junc_info']
+        if ir:
+            ir_cov = fp['ir_cov']
+        jlimit = fp['meta'][0][2]
     njunc = junc_ids.shape[0]
 
     for j in prange(njunc, nogil=True, num_threads=nthreads):
@@ -243,7 +254,15 @@ cdef _parse_junction_file(tuple filetp, map[string, Gene*]& gene_map, vector[str
             chrom   = jid.split(b':')[0]
             strand  = <char> jid.split(b':')[1][0]
 
-        c_iobam.parseJuncEntry(gene_list, chrom, strand, coord1, coord2, sreads, gene_l, irbool, min_experiments, reset)
+            if irbool and not ir :
+                continue
+            elif ir and irbool:
+                ir_vec = vector[np.float32_t](eff_len)
+                for i in range(eff_len):
+                    ir_vec[i] = ir_cov[j - jlimit][i]
+
+        c_iobam.parseJuncEntry(gene_list, chrom, strand, coord1, coord2, sreads, gene_l, irbool, ir_vec, min_ir_cov,
+                               ir_numbins, min_experiments, reset)
 
 
     for i in prange(n, nogil=True, num_threads=nthreads):
@@ -252,7 +271,6 @@ cdef _parse_junction_file(tuple filetp, map[string, Gene*]& gene_map, vector[str
 
     c_iobam.free_iobam()
     logger.info('Done Reading file %s' %(filetp[0]))
-
 
 
 cdef _find_junctions(list file_list, map[string, Gene*]& gene_map, vector[string] gid_vec,
@@ -265,14 +283,14 @@ cdef _find_junctions(list file_list, map[string, Gene*]& gene_map, vector[string
     cdef unsigned int minreads = conf.minreads
     cdef unsigned int denovo_thresh= conf.min_denovo
     cdef bint denovo = conf.denovo
-    cdef float min_ir_cov = conf.min_intronic_cov
+    cdef np.float32_t min_ir_cov = conf.min_intronic_cov
     cdef int k=conf.k, m=conf.m
-    cdef float pvalue_limit=conf.pvalue_limit
+    cdef np.float32_t pvalue_limit=conf.pvalue_limit
     cdef unsigned int min_experiments
     cdef unsigned int eff_len = conf.readLen - 2*MIN_BP_OVERLAP + 1
     cdef bint ir = conf.ir
     cdef bint bsimpl = (conf.simpl_psi >= 0)
-    cdef float ir_numbins=conf.irnbins
+    cdef np.float32_t ir_numbins=conf.irnbins
 
     cdef int i, j
     cdef int strandness, njunc
@@ -284,8 +302,9 @@ cdef _find_junctions(list file_list, map[string, Gene*]& gene_map, vector[string
     cdef string name, bamfile
     cdef str tmp_str
     cdef np.ndarray[np.float32_t, ndim=2, mode="c"] boots
+    cdef np.ndarray[np.float32_t, ndim=2, mode="c"] ir_raw_cov
     cdef list junc_ids
-    cdef float fitfunc_r
+    cdef np.float32_t fitfunc_r
     cdef unsigned int jlimit
     cdef int* jvec
     cdef map[string, unsigned int] j_ids
@@ -334,6 +353,12 @@ cdef _find_junctions(list file_list, map[string, Gene*]& gene_map, vector[string
                     jvec   = c_iobam.get_junc_vec_summary()
                     jlimit = c_iobam.get_junc_limit_index()
 
+                ir_raw_cov = np.zeros(shape=(njunc - jlimit, eff_len), dtype=np.float32)
+                logger.info(" KKK %s %s" % (jlimit, njunc))
+                if ir:
+                    with nogil:
+                        c_iobam.get_intron_raw_cov(<np.float32_t *> ir_raw_cov.data)
+
                 logger.debug("Update flags")
                 for i in prange(n, nogil=True, num_threads=nthreads):
                     gg = gene_map[gid_vec[i]]
@@ -341,6 +366,7 @@ cdef _find_junctions(list file_list, map[string, Gene*]& gene_map, vector[string
 
                 logger.debug("Done Update flags")
                 junc_ids = [0] * njunc
+                # ir_raw_cov = [0] * (njunc - jlimit)
                 for it in j_ids:
                     tmp_str = it.first.decode('utf-8').split(':')[2]
                     start, end = (int(xx) for xx in tmp_str.split('-'))
@@ -348,9 +374,17 @@ cdef _find_junctions(list file_list, map[string, Gene*]& gene_map, vector[string
                                            int(it.second>= jlimit))
 
                 logger.info('Done Reading file %s' %(file_list[j][0]))
-                _store_junc_file(boots, junc_ids, file_list[j][0], conf.outDir)
+
+                logger.info('Done Reading file %s %s %s' %(file_list[j][0], ir_raw_cov.shape[0], ir_raw_cov.shape[1]))
+
+                dt = np.dtype('|S250, |S25, u4')
+                meta = np.array([(file_list[j][0], VERSION, jlimit)], dtype=dt)
+                _store_junc_file(boots, ir_raw_cov, junc_ids, file_list[j][0], meta, conf.outDir)
                 c_iobam.free_iobam()
                 del boots
+                del ir_raw_cov
+                logger.info(' 22 Done Reading file %s' %(file_list[j][0]))
+
 
 cdef init_splicegraph(string filename, object conf):
 

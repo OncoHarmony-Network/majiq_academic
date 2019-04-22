@@ -299,12 +299,19 @@ namespace grimoire{
                 simpl_cnt_out_  = 0 ;
             }
 
-            void    add_read_rates_buff(int eff_len){
+            void add_read_rates_buff(int eff_len){
                 nxbin_      = (int) ((length()+ eff_len) / eff_len) ;
                 nxbin_mod_  = (length() % eff_len) ;
                 nxbin_off_  = nxbin_mod_ * ( nxbin_+1 ) ;
                 numbins_    = eff_len ;
                 read_rates_ = (float*) calloc(numbins_, sizeof(float)) ;
+            }
+
+            void initReadCovFromVector(vector<float> cov){
+                for (int i=0; i<cov.size(); ++i) {
+                    read_rates_[i] = cov[i] ;
+                }
+
             }
 
             void  add_read(int read_pos, int eff_len, int s){
@@ -318,9 +325,6 @@ namespace grimoire{
                 const int off1 = (int) ((offset - nxbin_off_) / nxbin_) + nxbin_mod_ ;
                 const int off2 = (int) offset / (nxbin_+1) ;
                 offset = (int)(offset < nxbin_off_) ? off2: off1 ;
-
-//cerr << get_start() << "-" << get_end() << " offset =" << offset << " read_pos = " << read_pos << " (intronstart - eff_len) = " << st <<
-//" eff_len = "<< eff_len << " nxbin_off_ = "<< nxbin_off_<< " nxbin_ = "<< nxbin_<< "\n" ;
                 read_rates_[offset] += s ;
             }
 
