@@ -262,7 +262,6 @@ class Index:
         if not self._index_in_voila(voila_file, remove_index) or force_index:
 
             log.info('Creating index: ' + voila_file)
-            voila_index = []
 
             m = Manager()
             q = m.Queue()
