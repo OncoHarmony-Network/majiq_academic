@@ -225,18 +225,26 @@ class ViewHeterogens:
             :param attr: attribute found in het voila file.
             :return: attribute value
             """
-
-            voila_files = ViewConfig().voila_files
-            s = set()
-            for f in voila_files:
-                with ViewHeterogen(f) as m:
-                    try:
-                        het = m.lsv(self.lsv_id)
-                        s.add(getattr(het, attr))
-                    except (GeneIdNotFoundInVoilaFile, LsvIdNotFoundInVoilaFile):
-                        pass
-            assert len(s) == 1, s
-            return s.pop()
+            config = ViewConfig()
+            if config.strict_indexing:
+                s = set()
+                for f in config.voila_files:
+                    with ViewHeterogen(f) as m:
+                        try:
+                            het = m.lsv(self.lsv_id)
+                            s.add(getattr(het, attr))
+                        except (GeneIdNotFoundInVoilaFile, LsvIdNotFoundInVoilaFile):
+                            pass
+                assert len(s) == 1, s
+                return s.pop()
+            else:
+                for f in config.voila_files:
+                    with ViewHeterogen(f) as m:
+                        try:
+                            het = m.lsv(self.lsv_id)
+                            return getattr(het, attr)
+                        except (GeneIdNotFoundInVoilaFile, LsvIdNotFoundInVoilaFile):
+                            pass
 
         @property
         def reference_exon(self):
@@ -578,7 +586,6 @@ class ViewHeterogens:
         else:
             vhs = ViewConfig().voila_files
             p = Pool(ViewConfig().nproc)
-
             while len(vhs) > 1:
                 vhs = [vhs[i:i + 2] for i in range(0, len(vhs), 2)]
                 vhs = p.map(self.pair_merge, vhs)

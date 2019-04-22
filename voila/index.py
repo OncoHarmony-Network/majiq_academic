@@ -135,6 +135,9 @@ class Index:
 
     @staticmethod
     def _heterogen_pool_add_index(args):
+        """
+        Multithread inner function for each iteration of _heterogen loop below
+        """
         with ViewSpliceGraph() as sg, ViewHeterogens() as m:
             lsv_id, q = args
             het = m.lsv(lsv_id)
@@ -187,8 +190,9 @@ class Index:
                 else:
                     size = q.qsize()
                     print("Indexing LSV IDs: %d / %d" % (size, work_size))
-                    time.sleep(1)
+                    time.sleep(2)
 
+            log.info('Writing index: ' + voila_file)
             voila_index = voila_index.get()
 
             dtype = self._create_dtype(voila_index)
