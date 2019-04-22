@@ -21,3 +21,11 @@
     height:28px;
     margin-bottom:0;
 }
+
+.lsv-single-compact-percentiles, .psi-violin-plot, .dpsi-violin, .excl-incl-rect{
+    cursor: default;
+}
+
+.lsv-single-compact-percentiles:hover, .psi-violin-plot:hover, .dpsi-violin:hover, .excl-incl-rect:hover{
+    box-shadow: none;
+}

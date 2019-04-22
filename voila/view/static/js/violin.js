@@ -181,15 +181,17 @@ class Violin {
     }
 
     heterogen(svg) {
-        this.violin_count = this.data.group_names.length;
+        const data = this.data;
+        
+        this.violin_count = data.group_names.length;
         svg.setAttribute('height', this.svg_height);
         svg.setAttribute('width', this.svg_width);
 
 
         // const junc_idx = svg.closest('tr').dataset.junctionIndex;
-        const junc_idx = this.data.junction_idx;
+        const junc_idx = data.junction_idx;
         const color = new Colors().brewer(junc_idx);
-        const bins = this.data.mean_psi;
+        const bins = data.mean_psi;
 
         const g = d3.select(svg)
             .append('g')
@@ -215,8 +217,8 @@ class Violin {
             .attr('transform', `translate(${this.y_axis_width}, ${this.top_padding})`);
 
         this.swarm(g2, color);
-        this.draw_x_axis(g, this.data.group_names);
-        this.draw_view_icons(g, this.data.group_names);
+        this.draw_x_axis(g, data.group_names);
+        this.draw_view_icons(g, data.group_names);
         this.pairwise_plot_triggers(g);
     }
 
@@ -637,25 +639,26 @@ class Violin {
 
     }
     draw_pairwise_plot(main_svg){
-        const self = this;
 
         function pairwise_significance(v1_idx, v2_idx){
             const i1 = parseInt($(main_svg.node()).find(`.violin`).eq(v1_idx).attr('data-group-idx'));
             const i2 = parseInt($(main_svg.node()).find(`.violin`).eq(v2_idx).attr('data-group-idx'));
             let comp_val;
+
             // we want the row index to always be larger than the col index to get the low half of the heatmap
             if(i1 > i2){
-                comp_val = self.data.heatmap[i1][i2];
+                comp_val = parseFloat($(main_svg.node()).closest('tr').find('.heat-map g').eq(i1).find('rect').eq(i2).attr('data-value'));
             }else{
-                comp_val = self.data.heatmap[i2][i1];
+                comp_val = parseFloat($(main_svg.node()).closest('tr').find('.heat-map g').eq(i2).find('rect').eq(i1).attr('data-value'));
             }
 
             if(comp_val < 0){
                 return null;
             }
             //comp_val = Math.log(comp_val);
-            comp_val = 10 ** comp_val;
+            //comp_val = 10 ** comp_val;
             //console.log(comp_val)
+
 
             if(comp_val > 0.05){
                 return null
