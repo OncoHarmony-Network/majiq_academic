@@ -858,7 +858,7 @@ class ViewHeterogens(ViewMulti):
         :param gene_ids: list of gene ids
         :return:
         """
-        if gene_ids:
+        if gene_ids or len(ViewConfig().voila_files) == 1:
             voila_files = ViewConfig().voila_files
             vhs = [ViewHeterogen(f) for f in voila_files]
             yield from set(chain(*(v.lsv_ids(gene_ids) for v in vhs)))

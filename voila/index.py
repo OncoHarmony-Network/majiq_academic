@@ -163,6 +163,7 @@ class Index:
 
             # For some reason, numpy needs these in tuples.
             row = tuple(chain(row, lsv_f))
+
             q.put(row)
             return row
 
@@ -183,15 +184,16 @@ class Index:
 
             log.info('Creating index: ' + voila_file)
 
-            m = Manager()
-            q = m.Queue()
+            manager = Manager()
+            q = manager.Queue()
 
             with ViewHeterogens() as m:
                 lsv_ids = [(x, q) for x in m.lsv_ids()]
+
             p = Pool(config.nproc)
             work_size = len(lsv_ids)
-            # voila_index = p.map(self._heterogen_pool_add_index, zip(lsv_ids, range(work_size), repeat(work_size)))
 
+            # voila_index = p.map(self._heterogen_pool_add_index, zip(lsv_ids, range(work_size), repeat(work_size)))
             voila_index = p.map_async(self._heterogen_pool_add_index, lsv_ids)
 
             # monitor loop
@@ -263,8 +265,8 @@ class Index:
 
             log.info('Creating index: ' + voila_file)
 
-            m = Manager()
-            q = m.Queue()
+            manager = Manager()
+            q = manager.Queue()
 
             with ViewDeltaPsi() as m:
                 lsv_ids = [(x, q) for x in m.lsv_ids()]
@@ -328,8 +330,8 @@ class Index:
 
             log.info('Creating index: ' + voila_file)
 
-            m = Manager()
-            q = m.Queue()
+            manager = Manager()
+            q = manager.Queue()
 
             with ViewPsis() as m:
                 lsv_ids = [(x, q) for x in m.lsv_ids()]
