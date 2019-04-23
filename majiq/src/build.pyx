@@ -464,7 +464,10 @@ cdef int simplify(list file_list, map[string, Gene*] gene_map, vector[string] gi
         for i in group_list:
 
             strandness = conf.strand_specific[file_list[i][0]]
-            junc_file = "%s/%s.%s" % (conf.outDir, file_list[i][0], JUNC_FILE_FORMAT)
+            if file_list[i][2]:
+                junc_file =  file_list[i][1]
+            else:
+                junc_file = "%s/%s.%s" % (conf.outDir, file_list[i][0], JUNC_FILE_FORMAT)
 
             with open(junc_file, 'rb') as fp:
                 junc_ids = np.load(fp)['junc_info']
