@@ -126,6 +126,11 @@ view_parser.add_argument('--force-index', action='store_true',
 view_parser.add_argument('--index-file', type=str, default='',
                          help='Location of index file. If specified, will use a separate HDF5 based file for storing '
                               'index data, rather than using input Voila file')
+view_parser.add_argument('--strict-indexing', action='store_true',
+                         help='When building an index for a study that uses multiple input voila files (such as '
+                              'heterogen), verifies that values for each LSV are the same across all input files. '
+                              'This protects against accidentally mixing or using inputs from different runs, but '
+                              'slows down the indexing process.')
 view_parser.add_argument('--splice-graph-only', action='store_true', help=argparse.SUPPRESS)
 
 # subparsers

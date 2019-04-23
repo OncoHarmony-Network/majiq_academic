@@ -10,30 +10,29 @@ from voila.config import ViewConfig
 from voila.exceptions import UnknownAnalysisType
 from voila.index import Index
 from voila.view import deltapsi, heterogen, psi, splicegraph
+import os
 
 
 
+if os.name != 'nt':
+    import gunicorn.app.base
+    from gunicorn.six import iteritems
 
+    class GunicornStandaloneApplication(gunicorn.app.base.BaseApplication):
 
-import gunicorn.app.base
+        def __init__(self, app, options=None):
+            self.options = options or {}
+            self.application = app
+            super(GunicornStandaloneApplication, self).__init__()
 
-from gunicorn.six import iteritems
+        def load_config(self):
+            config = dict([(key, value) for key, value in iteritems(self.options)
+                           if key in self.cfg.settings and value is not None])
+            for key, value in iteritems(config):
+                self.cfg.set(key.lower(), value)
 
-class GunicornStandaloneApplication(gunicorn.app.base.BaseApplication):
-
-    def __init__(self, app, options=None):
-        self.options = options or {}
-        self.application = app
-        super(GunicornStandaloneApplication, self).__init__()
-
-    def load_config(self):
-        config = dict([(key, value) for key, value in iteritems(self.options)
-                       if key in self.cfg.settings and value is not None])
-        for key, value in iteritems(config):
-            self.cfg.set(key.lower(), value)
-
-    def load(self):
-        return self.application
+        def load(self):
+            return self.application
 
 
 
@@ -53,6 +52,8 @@ def run_service():
     if web_server == 'waitress':
         serve(run_app, port=port, host=host)
     elif web_server == 'gunicorn':
+        if os.name == 'nt':
+            raise Exception("Gunicorn is unsupported on windows")
         options = {
             'bind': '%s:%s' % (host, port),
             'workers': ViewConfig().num_web_workers,

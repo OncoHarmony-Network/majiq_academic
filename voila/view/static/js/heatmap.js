@@ -278,9 +278,10 @@ class HeatMap {
             .selectAll('text')
             .data(grp_names)
             .enter()
-            .append('text').style('font-size', '10px').text(function(d){return d}).attr('text-anchor', 'middle').attr('fill', 'black').attr('x', 0).attr('y', 0)
+            .append('text').style('font-size', '10px').style('font-family', 'helvetica').text(function(d){return d}).attr('text-anchor', 'middle').attr('fill', 'black').attr('x', 0).attr('y', 0)
             .attr('transform', function(d, i){
-                return `translate(0, ${i*cell_size})rotate(-45)`;
+                const offset = measureText(d, 7.5) / 4;
+                return `translate(${-offset}, ${(i*cell_size) + offset})rotate(-45)`;
             })
             .select(d3_parent)
             .select(d3_parent)
@@ -294,9 +295,10 @@ class HeatMap {
             .selectAll('text')
             .data(grp_names)
             .enter()
-            .append('text').style('font-size', '10px').text(function(d){return d}).attr('text-anchor', 'middle').attr('fill', 'black').attr('x', 0).attr('y', 0)
+            .append('text').style('font-size', '10px').style('font-family', 'helvetica').text(function(d){return d}).attr('text-anchor', 'middle').attr('fill', 'black').attr('x', 0).attr('y', 0)
             .attr('transform', function(d, i){
-                return `translate(${i*cell_size}, 0)rotate(-45)`;
+                const offset = measureText(d, 7.5) / 4;
+                return `translate(${i*cell_size + offset}, ${-offset})rotate(-45)`;
             })
             .select(d3_parent)
             .select(d3_parent)
