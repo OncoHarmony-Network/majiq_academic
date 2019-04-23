@@ -11,6 +11,8 @@ from voila.config import ViewConfig
 from voila.exceptions import UnknownAnalysisType, IndexNotFound, UnknownIndexFieldType
 from voila.vlsv import matrix_area
 from voila.voila_log import voila_log
+from multiprocessing import Pool, Manager
+import time
 import hashlib
 
 lsv_filters = ['a5ss', 'a3ss', 'exon_skipping', 'target', 'source', 'binary', 'complex']
@@ -55,8 +57,8 @@ class Index:
         :param remove_index:
         :return:
         """
-        with h5py.File(voila_file, 'a') as h:
 
+        with h5py.File(voila_file, 'a') as h:
             index_in_h = 'index' in h
 
             if remove_index and index_in_h:
@@ -142,6 +144,29 @@ class Index:
 
         return dtype
 
+    @staticmethod
+    def _heterogen_pool_add_index(args):
+        """
+        Multithread inner function for each iteration of _heterogen loop below
+        """
+        with ViewSpliceGraph() as sg, ViewHeterogens() as m:
+            lsv_id, q = args
+            het = m.lsv(lsv_id)
+
+            gene_id = het.gene_id
+            gene = sg.gene(gene_id)
+            gene_name = gene['name']
+
+            row = (lsv_id, gene_id, gene_name)
+
+            lsv_f = [getattr(het, f) for f in lsv_filters]
+
+            # For some reason, numpy needs these in tuples.
+            row = tuple(chain(row, lsv_f))
+
+            q.put(row)
+            return row
+
     def _heterogen(self):
         """
         Create index for heterogen analysis type.  This is an odd case as there can be more then one voila file.  We
@@ -158,29 +183,71 @@ class Index:
         if not self._index_in_voila(voila_file, remove_index) or force_index:
 
             log.info('Creating index: ' + voila_file)
-            voila_index = []
 
-            with ViewSpliceGraph() as sg, ViewHeterogens() as m:
-                for lsv_id in m.lsv_ids():
-                    het = m.lsv(lsv_id)
+            manager = Manager()
+            q = manager.Queue()
 
-                    gene_id = het.gene_id
-                    gene = sg.gene(gene_id)
-                    gene_name = gene['name']
+            with ViewHeterogens() as m:
+                lsv_ids = [(x, q) for x in m.lsv_ids()]
 
-                    row = (lsv_id, gene_id, gene_name)
+            p = Pool(config.nproc)
+            work_size = len(lsv_ids)
 
-                    lsv_f = [getattr(het, f) for f in lsv_filters]
+            # voila_index = p.map(self._heterogen_pool_add_index, zip(lsv_ids, range(work_size), repeat(work_size)))
+            voila_index = p.map_async(self._heterogen_pool_add_index, lsv_ids)
 
-                    # For some reason, numpy needs these in tuples.
-                    row = tuple(chain(row, lsv_f))
+            # monitor loop
+            while True:
+                if voila_index.ready():
+                    break
+                else:
+                    size = q.qsize()
+                    print("Indexing LSV IDs: %d / %d" % (size, work_size))
+                    time.sleep(2)
 
-                    voila_index.append(row)
+            log.info('Writing index: ' + voila_file)
+            voila_index = voila_index.get()
 
             dtype = self._create_dtype(voila_index)
             self._write_index(voila_file, voila_index, dtype)
         else:
             log.info('Using index: ' + voila_file)
+
+    @staticmethod
+    def _deltapsi_pool_add_index(args):
+        """
+        Multithread inner function for each iteration of _deltapsi loop below
+        """
+        with ViewSpliceGraph() as sg, ViewDeltaPsi() as m:
+            lsv_id, q = args
+            dpsi = m.lsv(lsv_id)
+
+            gene_id = dpsi.gene_id
+            gene = sg.gene(gene_id)
+            gene_name = gene['name']
+
+            dpsi_thresh = dpsi.means
+            dpsi_thresh = np.abs(dpsi_thresh)
+            dpsi_thresh = dpsi_thresh.tolist()
+            dpsi_thresh = json.dumps(dpsi_thresh)
+
+            # Calculate a list of confidence for 10 (0 thru 1) values of threshold. This is done because we
+            # don't want to store the bins data in the index.  Although, this might be a good idea once the
+            # index gets large enough.
+            bins = dpsi.bins
+            confidence_thresh = list(max(matrix_area(b, x) for b in bins) for x in np.linspace(0, 1, 10))
+            confidence_thresh = json.dumps(confidence_thresh)
+
+            excl_incl = dpsi.excl_incl
+            excl_incl = max(abs(a - b) for a, b in excl_incl)
+
+            lsv_f = [getattr(dpsi, f) for f in lsv_filters]
+            row = (lsv_id, gene_id, gene_name, excl_incl, dpsi_thresh, confidence_thresh)
+
+            # For some reason, numpy needs these in tuples.
+            row = tuple(chain(row, lsv_f))
+            q.put(row)
+            return row
 
     def _deltapsi(self):
         """
@@ -197,42 +264,56 @@ class Index:
         if not self._index_in_voila(voila_file, remove_index) or force_index:
 
             log.info('Creating index: ' + voila_file)
-            voila_index = []
 
-            with ViewSpliceGraph() as sg, ViewDeltaPsi() as m:
-                for lsv_id in m.lsv_ids():
-                    dpsi = m.lsv(lsv_id)
+            manager = Manager()
+            q = manager.Queue()
 
-                    gene_id = dpsi.gene_id
-                    gene = sg.gene(gene_id)
-                    gene_name = gene['name']
+            with ViewDeltaPsi() as m:
+                lsv_ids = [(x, q) for x in m.lsv_ids()]
+            p = Pool(config.nproc)
+            work_size = len(lsv_ids)
 
-                    dpsi_thresh = dpsi.means
-                    dpsi_thresh = np.abs(dpsi_thresh)
-                    dpsi_thresh = dpsi_thresh.tolist()
-                    dpsi_thresh = json.dumps(dpsi_thresh)
+            voila_index = p.map_async(self._deltapsi_pool_add_index, lsv_ids)
 
-                    # Calculate a list of confidence for 10 (0 thru 1) values of threshold. This is done because we
-                    # don't want to store the bins data in the index.  Although, this might be a good idea once the
-                    # index gets large enough.
-                    bins = dpsi.bins
-                    confidence_thresh = list(max(matrix_area(b, x) for b in bins) for x in np.linspace(0, 1, 10))
-                    confidence_thresh = json.dumps(confidence_thresh)
+            # monitor loop
+            while True:
+                if voila_index.ready():
+                    break
+                else:
+                    size = q.qsize()
+                    print("Indexing LSV IDs: %d / %d" % (size, work_size))
+                    time.sleep(2)
 
-                    excl_incl = dpsi.excl_incl
-                    excl_incl = max(abs(a - b) for a, b in excl_incl)
+            log.info('Writing index: ' + voila_file)
+            voila_index = voila_index.get()
 
-                    lsv_f = [getattr(dpsi, f) for f in lsv_filters]
-                    row = (lsv_id, gene_id, gene_name, excl_incl, dpsi_thresh, confidence_thresh)
-
-                    # For some reason, numpy needs these in tuples.
-                    row = tuple(chain(row, lsv_f))
-                    voila_index.append(row)
-
+            print(voila_index[0:2])
             dtype = self._create_dtype(voila_index)
             self._write_index(voila_file, voila_index, dtype)
         else:
             log.info('Using index: ' + voila_file)
+
+    @staticmethod
+    def _psi_pool_add_index(args):
+        """
+        Multithread inner function for each iteration of _psi loop below
+        """
+        with ViewSpliceGraph() as sg, ViewPsis() as m:
+            lsv_id, q = args
+            lsv = m.lsv(lsv_id)
+
+            gene_id = lsv.gene_id
+            gene = sg.gene(gene_id)
+            gene_name = gene['name']
+
+            row = (lsv_id, gene_id, gene_name)
+
+            lsv_f = [getattr(lsv, f) for f in lsv_filters]
+
+            # For some reason, numpy needs these in tuples.
+            row = tuple(chain(row, lsv_f))
+            q.put(row)
+            return row
 
     def _psi(self):
         """
@@ -248,22 +329,29 @@ class Index:
         if not self._index_in_voila(voila_file, remove_index) or force_index:
 
             log.info('Creating index: ' + voila_file)
-            voila_index = []
 
-            with ViewSpliceGraph() as sg, ViewPsis() as m:
-                for lsv_id in m.lsv_ids():
-                    psi = m.lsv(lsv_id)
+            manager = Manager()
+            q = manager.Queue()
 
-                    gene_id = psi.gene_id
-                    gene = sg.gene(gene_id)
-                    gene_name = gene['name']
-                    lsv_f = [getattr(psi, f) for f in lsv_filters]
-                    row = (lsv_id, gene_id, gene_name)
+            with ViewPsis() as m:
+                lsv_ids = [(x, q) for x in m.lsv_ids()]
+            p = Pool(config.nproc)
+            work_size = len(lsv_ids)
 
-                    # for some reason, numpy needs these to tuples.
-                    row = tuple(chain(row, lsv_f))
+            voila_index = p.map_async(self._psi_pool_add_index, lsv_ids)
 
-                    voila_index.append(row)
+            # monitor loop
+            while True:
+                if voila_index.ready():
+                    break
+                else:
+                    size = q.qsize()
+                    print("Indexing LSV IDs: %d / %d" % (size, work_size))
+                    time.sleep(2)
+
+            log.info('Writing index: ' + voila_file)
+            voila_index = voila_index.get()
+
 
             dtype = self._create_dtype(voila_index)
             self._write_index(voila_file, voila_index, dtype)
@@ -290,7 +378,7 @@ class Index:
 
             try:
 
-                for row in h['index'][()]:
+                for row in h['index'].value:
                     if gene_id is None or gene_id == row[1]:
                         yield dict(zip(keys, row))
 

@@ -11,6 +11,7 @@ from voila.api.matrix_utils import unpack_means, unpack_bins, generate_excl_incl
 from voila.config import ViewConfig
 from voila.exceptions import LsvIdNotFoundInVoilaFile, GeneIdNotFoundInVoilaFile, LsvIdNotFoundInAnyVoilaFile
 from voila.vlsv import is_lsv_changing, matrix_area, get_expected_psi
+from multiprocessing import Pool
 
 
 class ViewMatrix(ABC):
@@ -511,6 +512,83 @@ class ViewHeterogens(ViewMulti):
     class _ViewHeterogens(_ViewMulti):
         def __init__(self, matrix_hdf5, lsv_id):
             super().__init__(matrix_hdf5, lsv_id, ViewHeterogen)
+            self.matrix_hdf5 = matrix_hdf5
+            self.lsv_id = lsv_id
+
+        def get_attr(self, attr):
+            """
+            For attributes that exist is each het file, this will get all values and confirm they're all equal.
+            :param attr: attribute found in het voila file.
+            :return: attribute value
+            """
+            config = ViewConfig()
+            if config.strict_indexing:
+                s = set()
+                for f in config.voila_files:
+                    with ViewHeterogen(f) as m:
+                        try:
+                            het = m.lsv(self.lsv_id)
+                            s.add(getattr(het, attr))
+                        except (GeneIdNotFoundInVoilaFile, LsvIdNotFoundInVoilaFile):
+                            pass
+                assert len(s) == 1, s
+                return s.pop()
+            else:
+                for f in config.voila_files:
+                    with ViewHeterogen(f) as m:
+                        try:
+                            het = m.lsv(self.lsv_id)
+                            return getattr(het, attr)
+                        except (GeneIdNotFoundInVoilaFile, LsvIdNotFoundInVoilaFile):
+                            pass
+
+        @property
+        def reference_exon(self):
+            return self.get_attr('reference_exon')
+
+        @property
+        def target(self):
+            return self.get_attr('target')
+
+        @property
+        def source(self):
+            return self.get_attr('source')
+
+        @property
+        def binary(self):
+            return self.get_attr('binary')
+
+        @property
+        def complex(self):
+            return self.get_attr('complex')
+
+        @property
+        def gene_id(self):
+            return self.get_attr('gene_id')
+
+        @property
+        def a5ss(self):
+            return self.get_attr('a5ss')
+
+        @property
+        def a3ss(self):
+            return self.get_attr('a3ss')
+
+        @property
+        def exon_skipping(self):
+            return self.get_attr('exon_skipping')
+
+        @property
+        def exon_count(self):
+            return self.get_attr('exon_count')
+
+        @property
+        def lsv_type(self):
+            return self.get_attr('lsv_type')
+
+        @property
+        def intron_retention(self):
+            return self.get_attr('intron_retention')
 
         @property
         def group_bins(self):
@@ -691,6 +769,111 @@ class ViewHeterogens(ViewMulti):
                         yield name
                     else:
                         yield groups + ' ' + name
+
+    @property
+    def experiment_names(self):
+        """
+        Experiment names for this set of het voila files.
+        :return: List
+        """
+        config = ViewConfig()
+        exp_names = {}
+        for f in config.voila_files:
+            with ViewHeterogen(f) as m:
+                for exp, grp in zip(m.experiment_names, m.group_names):
+                    exp_names[grp] = exp
+
+        return [exp_names[grp] for grp in self.group_names]
+
+    @property
+    def group_names(self):
+        """
+        Group names for this set of het voila files.
+        :return: list
+        """
+        config = ViewConfig()
+        grp_names = []
+        for f in config.voila_files:
+            with ViewHeterogen(f) as m:
+                for grp in m.group_names:
+                    if not grp in grp_names:
+                        grp_names.append(grp)
+
+        return grp_names
+
+    @property
+    def splice_graph_experiment_names(self):
+        """
+        experiment names for the splice graph drop down.
+        :return: List
+        """
+
+        config = ViewConfig()
+        exp_names = {}
+        for f in config.voila_files:
+            with ViewHeterogen(f) as m:
+                for exp, grp in zip(m.splice_graph_experiment_names, m.group_names):
+                    exp_names[grp] = exp
+
+        return [exp_names[grp] for grp in self.group_names]
+
+    @property
+    def gene_ids(self):
+        """
+        Get a set of gene ids from all het voila files.
+        :return: generator
+        """
+
+        voila_files = ViewConfig().voila_files
+        vhs = [ViewHeterogen(f) for f in voila_files]
+        yield from set(chain(*(v.gene_ids for v in vhs)))
+        for v in vhs:
+            v.close()
+
+    @staticmethod
+    def pair_merge(pairs):
+        if len(pairs) == 1:
+            if type(pairs[0]) is set:
+                return pairs[0]
+            else:
+                with ViewHeterogen(pairs[0]) as v:
+                    return v.lsv_ids()
+        else:
+            if type(pairs[0]) is set:
+                s1 = pairs[0]
+            else:
+                with ViewHeterogen(pairs[0]) as v:
+                    s1 = set(v.lsv_ids())
+            if type(pairs[1]) is set:
+                s2 = pairs[1]
+            else:
+                with ViewHeterogen(pairs[1]) as v:
+                    s2 = set(v.lsv_ids())
+            return s1 | s2
+
+
+    def lsv_ids(self, gene_ids=None):
+        """
+        Get a set of lsv ids from all voila files for specified gene ids. If gene ids is None, then get all lsv ids.
+        :param gene_ids: list of gene ids
+        :return:
+        """
+        if gene_ids or len(ViewConfig().voila_files) == 1:
+            voila_files = ViewConfig().voila_files
+            vhs = [ViewHeterogen(f) for f in voila_files]
+            yield from set(chain(*(v.lsv_ids(gene_ids) for v in vhs)))
+            for v in vhs:
+                v.close()
+        else:
+            vhs = ViewConfig().voila_files
+            p = Pool(ViewConfig().nproc)
+            while len(vhs) > 1:
+                vhs = [vhs[i:i + 2] for i in range(0, len(vhs), 2)]
+                vhs = p.map(self.pair_merge, vhs)
+
+            yield from vhs[0]
+
+
 
     def lsv(self, lsv_id):
         """
