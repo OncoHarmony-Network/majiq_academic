@@ -271,7 +271,7 @@ class Index:
             p = Pool(config.nproc)
             work_size = len(lsv_ids)
 
-            voila_index = p.map_async(self._psi_pool_add_index, lsv_ids)
+            voila_index = p.map_async(self._deltapsi_pool_add_index, lsv_ids)
 
             # monitor loop
             while True:
@@ -285,6 +285,7 @@ class Index:
             log.info('Writing index: ' + voila_file)
             voila_index = voila_index.get()
 
+            print(voila_index[0:2])
             dtype = self._create_dtype(voila_index)
             self._write_index(voila_file, voila_index, dtype)
         else:
