@@ -138,7 +138,7 @@ class ViewSpliceGraph(SpliceGraph):
         :return: boolean
         """
 
-        query = self.conn.execute('''
+        found = self.conn.execute('''
                         SELECT has_reads FROM junction
                         WHERE 
                         (gene_id=? AND has_reads=1)
@@ -156,8 +156,30 @@ class ViewSpliceGraph(SpliceGraph):
                         LIMIT 1
                       '''.format(exon['start'], exon['end'],
                                 (" AND is_simplified = 0" if self.omit_simplified else '')),
-                                (exon['gene_id'],))
-        return query.fetchone()
+                                (exon['gene_id'],)).fetchone()
+        if not found:
+            # if no reads in the junction table, also check the intron retention table
+            found = self.conn.execute('''
+                SELECT has_reads FROM intron_retention
+                WHERE 
+                (gene_id=? AND has_reads=1)
+                AND 
+                (
+                  ({0}=-1 AND start={1})
+                  OR 
+                  ({1}=-1 AND end={0})
+                  OR
+                  (-1 NOT IN ({0},{1}) AND start BETWEEN {0} AND {1})
+                  OR 
+                  (-1 NOT IN ({0},{1}) AND end BETWEEN {0} AND {1})
+                )
+                {2}
+                LIMIT 1
+              '''.format(exon['start'] - 2, exon['end'] + 2,
+                         (" AND is_simplified = 0" if self.omit_simplified else '')),
+                  (exon['gene_id'],)).fetchone()
+
+        return found
 
     def exon_color(self, exon):
         """
