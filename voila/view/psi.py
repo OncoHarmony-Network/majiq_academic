@@ -11,7 +11,7 @@ from voila.view import views
 from voila.view.datatables import DataTables
 from voila.view.forms import LsvFiltersForm
 from voila.config import ViewConfig
-from voila.exceptions import LsvIdNotFoundInVoilaFile, LsvIdNotFoundInAnyVoilaFile
+from voila.exceptions import LsvIdNotFoundInVoilaFile, LsvIdNotFoundInAnyVoilaFile, GeneIdNotFoundInVoilaFile
 
 app = Flask(__name__)
 app.secret_key = os.urandom(16)
@@ -297,7 +297,7 @@ def violin_data(lsv_id):
                         means = dict(psi.group_means)[grp][i]
                         bins = dict(psi.group_bins)[grp][i]
                         juncs = psi.junctions.tolist()
-                    except LsvIdNotFoundInVoilaFile:
+                    except (LsvIdNotFoundInVoilaFile, GeneIdNotFoundInVoilaFile):
                         means = []
                         bins = []
                         juncs = []

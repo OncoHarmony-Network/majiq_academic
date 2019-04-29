@@ -550,7 +550,7 @@ class Violin {
             })
             .each((d, i, a) => {
                 const el = a[i];
-                if (d.length > 7) {
+                if (d.length > 20) {
                     el.setAttribute('x', (this.violin_width + this.violin_pad) * (i + .45));
                     el.setAttribute("data-x", (this.violin_width + this.violin_pad) * (i + .45));
                     el.setAttribute("data-orig-x", (this.violin_width + this.violin_pad) * (i + .45));
