@@ -317,7 +317,6 @@ cdef _find_junctions(list file_list, map[string, Gene*]& gene_map, vector[string
         logger.info('Group %s, number of experiments: %s, minexperiments: %s' % (tmp_str,
                                                                                   len(group_list), min_experiments))
         for j in group_list:
-            print(file_list[j])
             if file_list[j][2]:
                 logger.info('Reading %s file %s' %(JUNC_FILE_FORMAT, file_list[j][0]))
                 _parse_junction_file(file_list[j], gene_map, gid_vec,gene_list, min_experiments, (j==last_it_grp),
@@ -612,7 +611,7 @@ class Builder(BasicPipeline):
 
     def builder(self, majiq_config):
 
-        logger = majiq_logger.get_logger("%s/majiq.log" % majiq_config.outDir, silent=False, debug=self.debug)
+        logger = majiq_logger.get_logger("%s/majiq.log" % majiq_config.outDir, silent=self.silent, debug=self.debug)
         logger.info("Majiq Build v%s-%s" % (VERSION, get_git_version()))
         logger.info("Command: %s" % " ".join(sys.argv))
 

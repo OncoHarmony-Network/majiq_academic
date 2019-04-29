@@ -5,6 +5,8 @@ from pathlib import Path
 from voila import constants
 from voila.api import SpliceGraph, Matrix
 from voila.api.matrix_utils import generate_means
+import argparse
+
 
 PSI_THRESHOLD = 0.01
 DPSI_THRESHOLD = None
@@ -282,7 +284,6 @@ class Graph:
                 self._add_exon(exon)
             for junc in sg.junctions(self.gene_id):
                 self._add_junc(junc)
-
         self.edges.sort()
         self.nodes.sort()
 
@@ -490,25 +491,25 @@ class Graph:
 
 
 if __name__ == "__main__":
-    sg_file = '~/Development/small_test/majiq_build/splicegraph.sql'
-    psi_file = '~/Development/small_test/majiq_psi_all/Adr.psi.voila'
-    dpsi_file = '~/Development/small_test/majiq_deltapsi_all_v_all/Adr_Cer.deltapsi.voila'
+    parser = argparse.ArgumentParser()
 
-    # Find all gene ids in splice graph
-    # with SpliceGraph(sg_file) as sg:
-    #    gene_ids = list(g['id'] for g in sg.genes())
+    parser.add_argument('sg_file', help='Splicegraph file that comes from the build execution')
+    parser.add_argument('voila_file', help='voila file')
+
+
+    args = parser.parse_args()
 
     # Find all gene ids in voila file
-    with Matrix(Path(psi_file).expanduser()) as m:
+    with Matrix(Path(args.voila_file).expanduser()) as m:
         gene_ids = list(m.gene_ids)
 
     # for gene_id in gene_ids:
     # gene_id = 'ENSMUSG00000001419'
     for gene_id in gene_ids:
         print(gene_id)
-        graph = Graph(gene_id, sg_file, psi_file)
-
+        graph = Graph(gene_id, args.sg_file, args.voila_file)
         for module in graph.modules():
+
             # t = timeit.Timer(module.as_types)
             # print(t.timeit(100), module.as_types())
-            print(module.as_types())
+            print(module)
