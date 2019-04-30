@@ -175,7 +175,7 @@ class ViewSpliceGraph(SpliceGraph):
                 )
                 {2}
                 LIMIT 1
-              '''.format(exon['start'] - 2, exon['end'] + 2,
+              '''.format(exon['start'] - 1, exon['end'] + 1,
                          (" AND is_simplified = 0" if self.omit_simplified else '')),
                   (exon['gene_id'],)).fetchone()
 
