@@ -6,8 +6,44 @@ from voila import constants
 from voila.api import SpliceGraph, Matrix
 from voila.api.matrix_utils import generate_means
 
-PSI_THRESHOLD = 0.0
+import csv
+
+import argparse
+
+def check_file(value):
+    """
+    Check if file exists.
+    :param value: file path
+    :return:
+    """
+    value = Path(value)
+
+    value = value.expanduser()
+    value = value.absolute()
+
+    if value.exists():
+        return value
+    else:
+        raise Exception("Can't find file %s" % value)
+
+parser = argparse.ArgumentParser(description='LSV Classification Script')
+parser.add_argument('psi_file', type=check_file,
+                        help='File path of input voila psi file')
+parser.add_argument('splicegraph_file', type=check_file,
+                        help='File path of input splicegraph file')
+parser.add_argument('-f', '--file-name', required=True, help="Output TSV file path")
+parser.add_argument('--hide-sub-complex', action='store_true',
+                    help='If a module is detected as complex, do not show any other events detected in that module')
+parser.add_argument('--psi-threshold', type=float, default=0.0,
+                    help='Only detect junctions where target and source psi values pass threshold. '
+                         '(0.0, the default, accepts everything)')
+
+args = parser.parse_args()
+
+
+PSI_THRESHOLD = args.psi_threshold
 DPSI_THRESHOLD = None
+HIDE_SUB_COMPLEX = args.hide_sub_complex
 
 
 class UnsupportedVoilaFile(Exception):
@@ -566,8 +602,8 @@ class Graph:
             """
 
             as_type_dict = {
-                'alt_downstream': self.alternate_downstream,
-                'alt_upstream': self.alternate_upstream,
+                # 'alt_downstream': self.alternate_downstream,
+                # 'alt_upstream': self.alternate_upstream,
                 'cassette_exon': self.exon_skipping,
                 'mutually_exclusive': self.mutually_exclusive,
                 'intron_retention': self.intron_retention,
@@ -584,8 +620,10 @@ class Graph:
                     ret.append('complex')
                 if res:
                     ret.append(k)
-            if not 'complex' in ret and len(ret) > 2:
+            if not 'complex' in ret and len(ret) > 1:
                 ret.append('complex')
+            if HIDE_SUB_COMPLEX and 'complex' in ret and len(ret) > 1:
+                ret = ['complex']
             return ret
 
         class Filters:
@@ -649,10 +687,47 @@ class Graph:
                         yield edge
 
 
+def output_tsv(genes_modules):
+    """
+    Write the output file
+    :param genes_modules: a list of (gene_id (str), gene_modules (obj)) tuples
+    :return: NOTHING
+    """
+    with open(args.file_name, 'w', newline='') as csvfile:
+        writer = csv.writer(csvfile, dialect='excel-tab', delimiter='\t')
+
+        writer.writerow(['gene_id', 'module_idx', 'complex', 'cassette_exon', 'mutually_exclusive',
+                    'intron_retention', 'alt3ss', 'alt5ss', 'altTranscStart', 'altTranscEnd',
+                    'multi_exon_skipping'])
+
+        for gene_id, modules in genes_modules:
+            for i, module in enumerate(modules, 1):
+                types = module.as_types()
+                writer.writerow((gene_id, i,
+                                 1 if 'complex' in types else 0,
+                                 1 if 'cassette_exon' in types else 0,
+                                 1 if 'mutually_exclusive' in types else 0,
+                                 1 if 'intron_retention' in types else 0,
+                                 1 if 'alt3ss' in types else 0,
+                                 1 if 'alt5ss' in types else 0,
+                                 1 if 'altTranscStart' in types else 0,
+                                 1 if 'altTranscEnd' in types else 0,
+                                 1 if 'multi_exon_skipping' in types else 0,)
+                                )
+
+
 if __name__ == "__main__":
+
+
+
+
     sg_file = '/home/paul/PycharmProjects/majiq/test_cases/VOILA_DEV/ORIGINAL_BUILD/splicegraph.sql'
     psi_file = '/home/paul/PycharmProjects/majiq/test_cases/VOILA_DEV/ORIGINAL_PSI/test.psi.voila'
     #dpsi_file = '~/Development/small_test/majiq_deltapsi_all_v_all/Adr_Cer.deltapsi.voila'
+
+    psi_file = args.psi_file
+    sg_file = args.splicegraph_file
+
 
     # Find all gene ids in splice graph
     # with SpliceGraph(sg_file) as sg:
@@ -664,11 +739,14 @@ if __name__ == "__main__":
 
     # for gene_id in gene_ids:
     # gene_id = 'ENSMUSG00000001419'
+    genes_modules = []
     for gene_id in gene_ids:
         #if gene_id == "ENSMUSG00000021820":
         #if gene_id == "ENSMUSG00000026843":
         #if gene_id == "ENSMUSG00000024097":
-        if gene_id == "ENSMUSG00000006498":
+        #if gene_id == "ENSMUSG00000006498":
+        #if gene_id == "ENSMUSG00000027287":
+        #if gene_id == "ENSMUSG00000001419":
         #     print(gene_id)
         #     graph = Graph(gene_id, sg_file, psi_file)
         #
@@ -676,14 +754,16 @@ if __name__ == "__main__":
         #     print(mod.nodes)
         #     print(mod.as_types())
 
-            graph = Graph(gene_id, sg_file, psi_file)
+        graph = Graph(gene_id, sg_file, psi_file)
+        genes_modules.append((gene_id, graph.modules()))
+        #for module in graph.modules():
+            # t = timeit.Timer(module.as_types)
+            # print(t.timeit(100), module.as_types())
 
-            for module in graph.modules():
-                # t = timeit.Timer(module.as_types)
-                # print(t.timeit(100), module.as_types())
+            #print(module.as_types())
 
-                print(module.as_types())
 
+    output_tsv(genes_modules)
 
     # what to do with exon 19-20 event in http://localhost:5005/gene/ENSMUSG00000021820/
 
