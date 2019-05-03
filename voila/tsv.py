@@ -414,7 +414,7 @@ class HeterogenTsv(AnalysisTypeTsv):
                         start, end = views.lsv_boundries(lsv_exons)
 
                         row = {
-                            'Gene Name': gene['name'],
+                            '#Gene Name': gene['name'],
                             'Gene ID': gene_id,
                             'LSV ID': lsv_id,
                             'LSV Type': het.lsv_type,
