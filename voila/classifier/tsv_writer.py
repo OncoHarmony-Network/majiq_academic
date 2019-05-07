@@ -36,7 +36,7 @@ class TsvWriter:
         # becomes an issue.
         self.modules = [x for x in self.graph.modules()]
 
-
+        #self.as_types = {x.idx: x.as_types() for x in self.modules}
         self.as_types = {x.idx: x.as_types() for x in self.modules}
 
     @property
