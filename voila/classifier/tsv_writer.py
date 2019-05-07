@@ -97,7 +97,7 @@ class TsvWriter:
                 if 'var' in self.quantifications_enabled:
                     quantification_fields.append('')
 
-        return [module.idx, semicolon(lsvs), self.gene_id, self.graph.gene_name,
+        return ["%s_%d" % (self.gene_id, module.idx), semicolon(lsvs), self.gene_id, self.graph.gene_name,
                 self.graph.chromosome, self.graph.strand], quantification_fields
 
     def start_headers(self, headers, filename):
@@ -392,7 +392,7 @@ class TsvWriter:
 
 
 
-                writer.writerow([module.idx,
+                writer.writerow(["%s_%d" % (self.gene_id, module.idx),
                                  semicolon(module.target_lsv_ids.union(module.source_lsv_ids))] +
                                 [v if v else '' for v in counts.values()] + [str(_complex)]
                                 )
