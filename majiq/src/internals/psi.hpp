@@ -58,6 +58,7 @@ inline void get_prior_params( vector<psi_distr_t>& o_priors, int njunc, bool ir)
 
 inline float quantile(vector<float> set, float quant){
     const int n = set.size() ;
+    if (n==1) return set[0] ;
     float idx = n * quant ;
     float c_idx = min(ceilf(idx), (float)n) ;
     if (c_idx == idx){

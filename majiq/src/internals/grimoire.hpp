@@ -13,7 +13,7 @@
 
 #define EMPTY_COORD  -1
 #define FIRST_LAST_JUNC  -2
-#define MAX_DENOVO_DIFFERENCE 1
+#define MAX_DENOVO_DIFFERENCE 400
 #define MIN_INTRON_BINSIZE 1000
 #define MAX_TYPE_LENGTH 245
 #define NA_LSV  "na"
@@ -65,7 +65,7 @@ namespace grimoire{
             void        set_start(int start1)   { start_ = start1 ; }
             void        set_end(int end1)       { end_ = end1 ; }
             inline int  length()                { return end_ - start_ ; }
-            virtual void  set_simpl_fltr(bool val) { cerr << "NOT SHOW\n" ;}
+            virtual void  set_simpl_fltr(bool val, bool in) { cerr << "NOT SHOW\n" ;}
 
 
             static bool func_comp (_Region* a, int coord){
@@ -103,7 +103,8 @@ namespace grimoire{
             bool simpl_fltr_ ;
             unsigned int denovo_cnt_ ;
             unsigned int flter_cnt_ ;
-            unsigned int simpl_cnt_ ;
+            unsigned int simpl_cnt_in_ ;
+            unsigned int simpl_cnt_out_ ;
             Exon * acceptor_;
             Exon * donor_;
 
@@ -120,7 +121,8 @@ namespace grimoire{
                 flter_cnt_ = 0 ;
                 intronic_ = false ;
                 nreads_ = nullptr ;
-                simpl_cnt_  = 0;
+                simpl_cnt_in_ = 0 ;
+                simpl_cnt_out_ = 0 ;
             }
             ~Junction()             { clear_nreads(true) ; }
 
@@ -142,13 +144,17 @@ namespace grimoire{
                 donor_ = nullptr ;
             }
 
-            void set_simpl_fltr(bool val){
-                simpl_cnt_ += val? 1 : 0 ;
+            void set_simpl_fltr(bool val, bool in){
+                if (in)
+                    simpl_cnt_in_ += val? 1 : 0 ;
+                else
+                    simpl_cnt_out_ += val? 1 : 0 ;
             }
 
             void update_simpl_flags(unsigned int min_experiments){
-                simpl_fltr_ &= (simpl_cnt_ >= min_experiments) ;
-                simpl_cnt_ = 0 ;
+                simpl_fltr_ = simpl_fltr_ && simpl_cnt_in_ >= min_experiments && simpl_cnt_out_ >= min_experiments ;
+                simpl_cnt_in_ = 0 ;
+                simpl_cnt_out_ = 0 ;
             }
 
             void update_flags(int efflen, unsigned int num_reads, unsigned int num_pos, unsigned int denovo_thresh,
@@ -224,13 +230,11 @@ namespace grimoire{
                     j->exonReset() ;
                 }
                 ib.clear() ;
-//                ib.shrink_to_fit() ;
 
                 for (auto const &j: ob){
                     j->exonReset() ;
                 }
                 ob.clear() ;
-//                ob.shrink_to_fit() ;
             }
 
     };
@@ -248,7 +252,8 @@ namespace grimoire{
             int     nxbin_ ;
             int     numbins_ ;
             bool    simpl_fltr_ ;
-            unsigned int simpl_cnt_ ;
+            unsigned int simpl_cnt_in_ ;
+            unsigned int simpl_cnt_out_ ;
 
         public:
             float*  read_rates_ ;
@@ -264,7 +269,8 @@ namespace grimoire{
                 nxbin_mod_  = 0 ;
                 markd_      = false ;
                 numbins_    = 0 ;
-                simpl_cnt_  = 0 ;
+                simpl_cnt_in_  = 0 ;
+                simpl_cnt_out_  = 0 ;
             }
 
             bool    get_annot()             { return annot_ ; }
@@ -279,27 +285,36 @@ namespace grimoire{
             void    calculate_lambda() ;
             bool    is_reliable(float min_bins, int eff_len) ;
 
-            void set_simpl_fltr(bool val){
-                simpl_cnt_ += val? 1 : 0 ;
+            void set_simpl_fltr(bool val, bool in){
+                if (in)
+                    simpl_cnt_in_ += val? 1 : 0 ;
+                else
+                    simpl_cnt_out_ += val? 1 : 0 ;
             }
 
             void update_simpl_flags(unsigned int min_experiments){
-                simpl_fltr_ &= (simpl_cnt_ >= min_experiments) ;
-                simpl_cnt_ = 0 ;
+                simpl_fltr_ = simpl_fltr_ && simpl_cnt_in_ >= min_experiments && simpl_cnt_out_ >= min_experiments ;
+
+                simpl_cnt_in_  = 0 ;
+                simpl_cnt_out_  = 0 ;
             }
 
-            void    add_read_rates_buff(int eff_len){
-
-                nxbin_ = (int) ((length()+ eff_len) / eff_len) ;
-                nxbin_mod_ = (length() % eff_len) ;
-                nxbin_off_ = nxbin_mod_ * ( nxbin_+1 ) ;
-                numbins_ = eff_len ;
+            void add_read_rates_buff(int eff_len){
+                nxbin_      = (int) ((length()+ eff_len) / eff_len) ;
+                nxbin_mod_  = (length() % eff_len) ;
+                nxbin_off_  = nxbin_mod_ * ( nxbin_+1 ) ;
+                numbins_    = eff_len ;
                 read_rates_ = (float*) calloc(numbins_, sizeof(float)) ;
+            }
 
+            void initReadCovFromVector(vector<float> cov){
+                for (int i=0; i<cov.size(); ++i) {
+                    read_rates_[i] = cov[i] ;
+                }
 
             }
 
-            void  add_read(int read_pos, int eff_len){
+            void  add_read(int read_pos, int eff_len, int s){
                 int st = get_start() - eff_len ;
                 if (read_rates_ == nullptr){
                     add_read_rates_buff(eff_len) ;
@@ -310,11 +325,7 @@ namespace grimoire{
                 const int off1 = (int) ((offset - nxbin_off_) / nxbin_) + nxbin_mod_ ;
                 const int off2 = (int) offset / (nxbin_+1) ;
                 offset = (int)(offset < nxbin_off_) ? off2: off1 ;
-
-//cerr << get_start() << "-" << get_end() << " offset =" << offset << " read_pos = " << read_pos << " (intronstart - eff_len) = " << st <<
-//" eff_len = "<< eff_len << " nxbin_off_ = "<< nxbin_off_<< " nxbin_ = "<< nxbin_<< "\n" ;
-                read_rates_[offset] += 1 ;
-
+                read_rates_[offset] += s ;
             }
 
             inline void  update_flags(float min_coverage, int min_exps, float min_bins) {
@@ -341,7 +352,6 @@ namespace grimoire{
             }
 
             void overlaping_intron(Intron * inIR_ptr){
-
                 start_ = max(start_, inIR_ptr->get_start()) ;
                 end_ = min(end_, inIR_ptr->get_end()) ;
                 read_rates_ = inIR_ptr->read_rates_ ;
@@ -401,7 +411,7 @@ namespace grimoire{
             string  get_name()      { return name_ ;}
             void    set_simpl_fltr(bool val) {};
             void    create_annot_intron(int start_ir, int end_ir, bool simpl){
-                Intron * ir = new Intron(start_ir, end_ir, true, this, simpl) ;
+                Intron * ir = new Intron(start_ir+1, end_ir-1, true, this, simpl) ;
                 intron_vec_.push_back(ir) ;
             }
 

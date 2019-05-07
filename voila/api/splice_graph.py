@@ -30,7 +30,7 @@ class SpliceGraphSQL:
 
         # create tables in freshly delete file.
         if delete is True:
-            with open(Path(EXEC_DIR) / 'api/model.sql', 'r') as sql:
+            with (Path(EXEC_DIR) / 'api/model.sql').open('r') as sql:
                 self.conn.executescript(sql.read())
                 self.conn.commit()
 

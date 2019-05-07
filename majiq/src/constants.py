@@ -1,9 +1,10 @@
 import os
 VERSION = '2.0'
 
-JUNC_FILE_FORMAT = 'sjdb'
+JUNC_FILE_FORMAT = 'sj'
 SEQ_FILE_FORMAT = 'bam'
 SEQ_INDEX_FILE_FORMAT = 'bam.bai'
+MAJIQ_FILE_FORMAT = 'majiq'
 
 UNSTRANDED = 0
 FWD_STRANDED = 1

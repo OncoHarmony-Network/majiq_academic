@@ -29,6 +29,10 @@ cdef extern from "io_bam.hpp" namespace "io_bam":
         unsigned int get_junc_limit_index() nogil;
         void simplify() nogil ;
         void free_iobam() nogil ;
+        void get_intron_raw_cov(np.float32_t* out_cov) nogil ;
+        void parseJuncEntry(map[string, overGene_vect_t]& glist, string chrom, char strand, int start, int end,
+                            int sreads, vector[Gene*]& oGeneList, bint ir, vector[float]& ircov,
+                            float min_intron_cov, float min_bins, int minexp, bint reset) nogil ;
 
         vector[np.float32_t *] junc_vec ;
 

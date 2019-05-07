@@ -28,8 +28,8 @@ namespace grimoire {
                 (a.ref_coord == b.ref_coord && a.coord>b.coord)) ;
     }
 
-    bool fless(unsigned int lhs, unsigned int rhs) {return lhs<rhs ;}
-    bool fgrt(unsigned int lhs, unsigned int rhs) {return lhs>rhs ;}
+    bool fless(unsigned int lhs, unsigned int rhs) { return lhs<rhs ; }
+    bool fgrt(unsigned int lhs, unsigned int rhs) { return lhs>rhs ; }
 
 
     bool sort_ss(const Ssite &a, const Ssite &b){
@@ -323,7 +323,6 @@ namespace grimoire {
                         }
 //    cerr << "#1 " << ir_start << "-" << ir_end<< " :: " << prev_ex->ob_irptr->get_gene() << ":" << prev_ex->ob_irptr->get_start() << "-" << prev_ex->ob_irptr->get_end()<< "\n" ;
 //    cerr << "#2 " << ir_start << "-" << ir_end<< " :: " << ir_ptr->get_gene() << ":" << ir_ptr->get_start() << "-" << ir_ptr->get_end()<< "\n" ;
-//    }
                         prev_ex->ob_irptr = ir_ptr ;
                         (ex.second)->ib_irptr = ir_ptr ;
                         ir_ptr->update_boundaries(prev_ex->get_end(), (ex.second)->get_start()) ;
@@ -447,7 +446,7 @@ namespace grimoire {
 
             for(i=0; i<jnc_vec.size(); i++){
                 float x = (sumall >0) ? sumj[i]/sumall : 0 ;
-                jnc_vec[i]->set_simpl_fltr(x<simpl_percent || sumj[i]< thrshld_vect[i]) ;
+                jnc_vec[i]->set_simpl_fltr(x<simpl_percent || sumj[i]< thrshld_vect[i], true) ;
             }
         }
         sumall = 0 ;
@@ -481,7 +480,7 @@ namespace grimoire {
 
             for(i=0; i<jnc_vec.size(); i++){
                 float x = (sumall >0) ? sumj[i]/sumall : 0 ;
-                jnc_vec[i]->set_simpl_fltr(x<simpl_percent || sumj[i]< thrshld_vect[i]) ;
+                jnc_vec[i]->set_simpl_fltr(x<simpl_percent || sumj[i]< thrshld_vect[i], false) ;
             }
         }
     }
@@ -493,10 +492,17 @@ namespace grimoire {
             (ex.second)->simplify(junc_tlb, simpl_percent, this, strandness, denovo_simpl, db_simple,
                                   ir_simpl, last, min_experiments) ;
         }
-        if (last)
+        if (last){
             for (const auto &j: junc_map_){
                 (j.second)->update_simpl_flags(min_experiments) ;
             }
+            for(const auto &ex: exon_map_){
+                if ((ex.second)->ib_irptr != nullptr)
+                    ((ex.second)->ib_irptr)->update_simpl_flags(min_experiments) ;
+//                if ((ex.second)->ob_irptr != nullptr)
+//                    ((ex.second)->ob_irptr)->update_simpl_flags(min_experiments, false) ;
+            }
+        }
     }
 
 

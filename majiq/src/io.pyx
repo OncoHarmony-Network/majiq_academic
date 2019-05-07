@@ -148,7 +148,7 @@ cdef int merge_exons(dict exon_dict, map[string, Gene*]& all_genes, bint simpl) 
                     all_genes[gne_id].exon_map_[key] = new Exon(ex_start, ex_end, True)
 
                     if nopen > 0 and (ex_end+4) < (coord-1):
-                        all_genes[gne_id].create_annot_intron(ex_end+1, coord-1, simpl)
+                        all_genes[gne_id].create_annot_intron(ex_end, coord, simpl)
                        # pass
 #                    else:
                         # all_genes[gne_id].create_annot_intron(ex_end+1, coord-1)
