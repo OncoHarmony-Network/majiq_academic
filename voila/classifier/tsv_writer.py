@@ -257,7 +257,7 @@ class TsvWriter:
                 events, _complex = self.as_types[module.idx]
                 if not _complex or SHOW_COMPLEX_IN_ALL:
                     for event in events:
-                        if event['event'] == 'alt_last_exon':
+                        if event['event'] == 'ale':
                             src_common = self.common_data(module, 's')
                             trg_common = self.common_data(module, 't')
                             row = [event['C1'].range_str(), 'A1', event['A1'].range_str(), 'C1_A1',
@@ -265,6 +265,11 @@ class TsvWriter:
                             writer.writerow(src_common[0] + row + src_common[1])
                             row = [event['C1'].range_str(), 'A2', event['A2'].range_str(), 'C1_A2',
                                    semicolon((x.range_str() for x in event['SkipA1']))]
+                            writer.writerow(trg_common[0] + row + trg_common[1])
+                        if event['event'] == 'p_ale':
+                            trg_common = self.common_data(module, 't')
+                            row = ['N/A', 'A1', event['A1'].range_str(), 'C1_A1',
+                                   'N/A']
                             writer.writerow(trg_common[0] + row + trg_common[1])
 
     def alternate_first_exon(self):
@@ -278,7 +283,7 @@ class TsvWriter:
                 events, _complex = self.as_types[module.idx]
                 if not _complex or SHOW_COMPLEX_IN_ALL:
                     for event in events:
-                        if event['event'] == 'alt_first_exon':
+                        if event['event'] == 'afe':
                             src_common = self.common_data(module, 's')
                             trg_common = self.common_data(module, 't')
                             row = [event['C1'].range_str(), 'A1', event['A1'].range_str(), 'C1_A1',
@@ -287,6 +292,12 @@ class TsvWriter:
                             row = [event['C1'].range_str(), 'A2', event['A2'].range_str(), 'C1_A2',
                                    semicolon((x.range_str() for x in event['SkipA1']))]
                             writer.writerow(trg_common[0] + row + trg_common[1])
+                        if event['event'] == 'p_afe':
+                            src_common = self.common_data(module, 's')
+                            row = ['N/A', 'A1', event['A1'].range_str(), 'C1_A1',
+                                   'N/A']
+                            writer.writerow(src_common[0] + row + src_common[1])
+
 
     def intron_retention(self):
         headers = self.common_headers + ['Reference Exon Coordinate', 'Exon Spliced With',
@@ -354,7 +365,7 @@ class TsvWriter:
         """
         headers = ['Module', 'LSV ID(s)', 'Cassette', 'Alt 3',
                              'Alt 5', 'Alt 3 and Alt 5', 'MXE', 'ALE',
-                             'AFE', 'Tandem Cassette', 'Intron Retention', 'Complex']
+                             'AFE', 'P_ALE', 'P_AFE', 'Tandem Cassette', 'Intron Retention', 'Complex']
         self.start_headers(headers, 'summary.tsv')
 
         with open(os.path.join(self.config.directory, 'summary.tsv'), 'a', newline='') as csvfile:
@@ -371,6 +382,8 @@ class TsvWriter:
                 counts['mutually_exclusive'] = 0
                 counts['ale'] = 0
                 counts['afe'] = 0
+                counts['p_ale'] = 0
+                counts['p_afe'] = 0
                 counts['multi_exon_skipping'] = 0
                 counts['intron_retention'] = 0
                 for event in events:

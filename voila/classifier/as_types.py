@@ -691,14 +691,16 @@ class Graph:
             found = []
             for node in self.nodes:
                 if node.start == -1:
-                    found.append({'event': 'p_alt_last_exon'})
+                    found.append({'event': 'p_ale', 'A1': node, 'A2': None, 'C1': None,
+                                      'SkipA2': None, 'SkipA1': None})
             return found
 
         def p_alt_first_exon(self):
             found = []
             for node in self.nodes:
                 if node.end == -1:
-                    found.append({'event': 'p_alt_first_exon'})
+                    found.append({'event': 'p_afe', 'A1': node, 'A2': None, 'C1': None,
+                                      'SkipA2': None, 'SkipA1': None})
             return found
 
         def alt_last_exon(self):
@@ -714,7 +716,7 @@ class Graph:
                     connections2 = n1.connects(n3, s)
                     connectionsTest = n2.connects(n3)
                     if len(connections1) == 1 and len(connections2) == 1 and not connectionsTest:
-                        found.append({'event': 'alt_last_exon', 'A1': n2, 'A2': n3, 'C1': n1,
+                        found.append({'event': 'ale', 'A1': n2, 'A2': n3, 'C1': n1,
                                       'SkipA2': connections1, 'SkipA1': connections2})
             return found
 
@@ -757,12 +759,12 @@ class Graph:
                         # end the submodule
 
                         found.append(
-                            {'event': 'alt_last_exon', 'A1': current_submodule[0], 'A2': None, 'C1': nodes[-1],
+                            {'event': 'ale', 'A1': current_submodule[0], 'A2': None, 'C1': nodes[-1],
                              'SkipA2': current_submodule[0].edges, 'SkipA1': None})
                         current_submodule = []
 
             if found:
-                found.append({'event': 'afe', 'alt_last_exon': current_submodule[0], 'A2': None, 'C1': nodes[-1],
+                found.append({'event': 'ale', 'A1': current_submodule[0], 'A2': None, 'C1': nodes[-1],
                               'SkipA2': current_submodule[0].edges, 'SkipA1': None})
 
             return found
@@ -823,12 +825,12 @@ class Graph:
                     if node.connects(self.nodes[-1]) and not node.connects(self.nodes[i+1]):
                         # end the submodule
 
-                        found.append({'event': 'alt_first_exon', 'A1': current_submodule[0], 'A2': None, 'C1': self.nodes[-1],
+                        found.append({'event': 'afe', 'A1': current_submodule[0], 'A2': None, 'C1': self.nodes[-1],
                                       'SkipA2': current_submodule[0].edges, 'SkipA1': None})
                         current_submodule = []
 
             if found:
-                found.append({'event': 'afe', 'alt_first_exon': current_submodule[0], 'A2': None, 'C1': self.nodes[-1],
+                found.append({'event': 'afe', 'A1': current_submodule[0], 'A2': None, 'C1': self.nodes[-1],
                               'SkipA2': current_submodule[0].edges, 'SkipA1': None})
 
 
