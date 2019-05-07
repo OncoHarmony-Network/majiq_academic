@@ -487,6 +487,15 @@ class Graph:
                                 targets.add(lsv)
             return sources, targets
 
+        def strand_case(self, case_plus, case_minus):
+            """
+
+            """
+            if self.Filters.strand == '+':
+                return case_plus
+            else:
+                return case_minus
+
         def alternate_downstream(self):
             """
             Check if alternate downstream occurs in this module.
@@ -639,15 +648,15 @@ class Graph:
 
             for n1, n2 in combinations(self.nodes, 2):
                 connections = n1.connects(n2)
-                if connections and len(connections) > 1 and len(set((x.end for x in connections))) == 1:
+                if connections and len(connections) > 1 and \
+                        len(set((self.strand_case(x.end, x.start) for x in connections))) == 1:
+                    closest_edge = connections[0]
+                    pop_i = 0
                     for i, edge in enumerate(connections):
-                        if edge.end == n2.start:
-                            # this should be the 'Proximal' connection
-                            proximal = connections.pop(i)
-                            break
-                    else:
-                        print("Warning: did not find proximal connection for alt5ss %s %s" % (n1, n2))
-                        continue
+                        if edge.start > closest_edge.start:
+                            closest_edge = edge
+                            pop_i = i
+                    proximal = connections.pop(pop_i)
                     for distal in connections:
                         found.append({'event': 'alt5ss', 'E1': n1, 'E2': n2, 'Proximal': proximal, 'Distal': distal})
             return found
@@ -658,15 +667,15 @@ class Graph:
 
             for n1, n2 in combinations(self.nodes, 2):
                 connections = n1.connects(n2)
-                if connections and len(connections) > 1 and len(set((x.start for x in connections))) == 1:
+                if connections and len(connections) > 1 and \
+                        len(set((self.strand_case(x.start, x.end) for x in connections))) == 1:
+                    closest_edge = connections[0]
+                    pop_i = 0
                     for i, edge in enumerate(connections):
-                        if edge.end == n2.start:
-                            # this should be the 'Proximal' connection
-                            proximal = connections.pop(i)
-                            break
-                    else:
-                        print("Warning: did not find proximal connection for alt3ss %s %s" % (n1, n2))
-                        continue
+                        if edge.start > closest_edge.start:
+                            closest_edge = edge
+                            pop_i = i
+                    proximal = connections.pop(pop_i)
                     for distal in connections:
                         found.append({'event': 'alt3ss', 'E1': n1, 'E2': n2, 'Proximal': proximal, 'Distal': distal})
             return found
