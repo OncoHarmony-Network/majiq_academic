@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import argparse
 import os
 import sys
@@ -6,6 +8,7 @@ from pathlib import Path
 from voila import constants, config
 from voila.exceptions import VoilaException, CanNotFindFile
 from voila.tsv import Tsv
+from voila.classify import Classify
 from voila.voila_log import voila_log
 from voila.view.views import run_service
 
@@ -133,6 +136,18 @@ view_parser.add_argument('--strict-indexing', action='store_true',
                               'slows down the indexing process.')
 view_parser.add_argument('--splice-graph-only', action='store_true', help=argparse.SUPPRESS)
 
+# classifier parser
+classify_parser = argparse.ArgumentParser(add_help=False)
+classify_parser.add_argument('files', nargs='+', type=check_file,
+                         help='List of files or directories which contains the splice graph and voila files.')
+classify_parser.add_argument('--gene-ids', nargs='*', default=[],
+                        help='Gene IDs, separated by spaces, which should remain in the results. e.g. GENE_ID1 '
+                             'GENE_ID2 ...')
+required_classify_parser = classify_parser.add_argument_group('required named arguments')
+required_classify_parser.add_argument('-d', '--directory', required=True, help="All generated TSV files will be dumped in"
+                                                                          " this directory")
+
+
 # subparsers
 subparsers = parser.add_subparsers(help='')
 subparsers.add_parser('tsv', parents=[tsv_parser, sys_parser, log_parser],
@@ -140,6 +155,9 @@ subparsers.add_parser('tsv', parents=[tsv_parser, sys_parser, log_parser],
 subparsers.add_parser('view', parents=[view_parser, sys_parser, log_parser, webserver_parser],
                       help='Start service to view the visualization for the supplied files.').set_defaults(
     func=run_service)
+subparsers.add_parser('classify', parents=[classify_parser, sys_parser, log_parser],
+                      help='Classify Splicing events and generate a breakdown of the classification in '
+                           'multiple TSV files.').set_defaults(func=Classify)
 
 
 

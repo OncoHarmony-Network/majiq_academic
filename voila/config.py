@@ -20,6 +20,10 @@ _TsvConfig = namedtuple('TsvConfig', ['file_name', 'voila_files', 'voila_file', 
                                       'debug', 'probability_threshold', 'silent', 'gene_ids', 'gene_names', 'lsv_ids',
                                       'lsv_types', 'strict_indexing'])
 _TsvConfig.__new__.__defaults__ = (None,) * len(_TsvConfig._fields)
+_ClassifyConfig = namedtuple('ClassifyConfig', ['directory', 'voila_files', 'voila_file', 'splice_graph_file',
+                                      'nproc', 'threshold', 'analysis_type', 'gene_ids',
+                                      'debug', 'silent'])
+_ClassifyConfig.__new__.__defaults__ = (None,) * len(_ClassifyConfig._fields)
 
 # global config variable to act as the singleton instance of the config.
 this_config = None
@@ -151,7 +155,8 @@ def write(args):
 
     # raise multi-file error if trying to run voila in TSV mode with multiple input files
     # (currently, multiple input is only supported in View mode)
-    if analysis_type in (constants.ANALYSIS_PSI, ) and args.func.__name__ != 'run_service' and len(voila_files) > 1:
+    if analysis_type in (constants.ANALYSIS_PSI, ) and args.func.__name__ not in ['run_service',
+                                                                                  'Classify'] and len(voila_files) > 1:
         raise FoundMoreThanOneVoilaFile()
 
     # attributes that don't need to be in the ini file
@@ -267,5 +272,41 @@ class TsvConfig:
                     filters[key] = config_parser['FILTERS'][key].split('\n')
 
             this_config = _TsvConfig(**{**files, **settings, **filters})
+
+        return this_config
+
+class ClassifyConfig:
+    def __new__(cls, *args, **kwargs):
+        """
+
+        """
+
+        global this_config
+
+        if this_config is None:
+            voila_log().debug('Generating config object')
+            config_parser = configparser.ConfigParser()
+            config_parser.read(constants.CONFIG_FILE)
+
+            files = {
+                'voila_files': config_parser['FILES']['voila'].split('\n'),
+                'voila_file': config_parser['FILES']['voila'].split('\n')[0],
+                'splice_graph_file': config_parser['FILES']['splice_graph']
+            }
+
+            settings = dict(config_parser['SETTINGS'])
+            for int_key in ['nproc']:
+                settings[int_key] = config_parser['SETTINGS'].getint(int_key)
+            for float_key in ['threshold']:
+                settings[float_key] = config_parser['SETTINGS'].getfloat(float_key)
+            for bool_key in ['debug']:
+                settings[bool_key] = config_parser['SETTINGS'].getboolean(bool_key)
+
+            filters = {}
+            if config_parser.has_section('FILTERS'):
+                for key, value in config_parser['FILTERS'].items():
+                    filters[key] = config_parser['FILTERS'][key].split('\n')
+
+            this_config = _ClassifyConfig(**{**files, **settings, **filters})
 
         return this_config
