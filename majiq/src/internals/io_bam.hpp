@@ -46,6 +46,7 @@ namespace io_bam{
             map<string, vector<Intron*>> intronVec_ ;
             unsigned int junc_limit_index_ ;
             bool simpl_ ;
+            omp_lock_t map_lck_ ;
 
         public:
             vector<float *> junc_vec ;
@@ -54,6 +55,7 @@ namespace io_bam{
             IOBam(string bam1, int strandness1, unsigned int eff_len1, unsigned int nthreads1,
                   map<string, vector<overGene*>> glist1, bool simpl1): strandness_(strandness1), eff_len_(eff_len1),
                                                                   nthreads_(nthreads1), glist_(glist1), simpl_(simpl1){
+                omp_init_lock( &map_lck_ ) ;
                 bam_ = bam1 ;
             }
 

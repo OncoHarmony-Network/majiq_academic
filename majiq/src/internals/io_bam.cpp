@@ -104,7 +104,7 @@ namespace io_bam {
 
         bool new_j = false ;
         float * v ;
-        #pragma omp critical
+        omp_set_lock(&map_lck_) ;
         {
             if (junc_map.count(key) == 0 ) {
                 junc_map[key] = junc_vec.size() ;
@@ -115,6 +115,8 @@ namespace io_bam {
                 v = junc_vec[junc_map[key]] ;
             }
         }
+        omp_unset_lock(&map_lck_) ;
+
         if (new_j) {
             find_junction_genes(chrom, strand, start, end, v) ;
         }
@@ -400,7 +402,7 @@ namespace io_bam {
                 irptr->initReadCovFromVector(ircov) ;
 
                 const string key = irptr->get_key(gObj) ;
-                #pragma omp critical
+                omp_set_lock(&map_lck_) ;
                 {
                     if (junc_map.count(key) == 0) {
                         junc_map[key] = junc_vec.size() ;
@@ -408,6 +410,7 @@ namespace io_bam {
                         gObj->add_intron(irptr, min_intron_cov, minexp, min_bins, reset) ;
                     }
                 }
+                omp_unset_lock(&map_lck_) ;
             }
         } else {
             string key = to_string(start) + "-" + to_string(end) ;
