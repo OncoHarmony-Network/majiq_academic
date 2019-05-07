@@ -877,9 +877,9 @@ class Graph:
             complex = False
             for k, v in as_type_dict.items():
                 res = v()
-                if len(res) > 1:
-                    complex = True
                 ret += res
+            if len(ret) > 1:
+                complex = True
             if HIDE_SUB_COMPLEX and complex:
                 ret = []
             return ret, complex
