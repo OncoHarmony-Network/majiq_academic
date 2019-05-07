@@ -208,10 +208,21 @@ namespace grimoire {
     void Gene::update_junc_flags(int efflen, bool is_last_exp, unsigned int minreads, unsigned int minpos,
                                   unsigned int denovo_thresh, unsigned int min_experiments, bool denovo){
         for(const auto &p: junc_map_){
-            (p.second)->update_flags(efflen, minreads, minpos, denovo_thresh, min_experiments, denovo) ;
+            (p.second)->gen_and_update_flags(efflen, minreads, minpos, denovo_thresh, min_experiments, denovo) ;
             (p.second)->clear_nreads(is_last_exp) ;
         }
         return ;
+    }
+
+    void Gene::updateFlagsFromJunc(string key, unsigned int sreads, unsigned int minreads_t, unsigned int npos,
+                               unsigned int minpos_t, unsigned int denovo_t, bool denovo, int minexp, bool reset){
+        if (junc_map_.count(key) > 0){
+            omp_set_lock(&map_lck_) ;
+            Junction * jnc = junc_map_[key] ;
+            jnc->update_flags(sreads, minreads_t, npos, minpos_t, denovo_t, minexp, denovo) ;
+            jnc->clear_nreads(reset) ;
+            omp_unset_lock(&map_lck_) ;
+        }
     }
 
     void Gene::initialize_junction(string key, int start, int end, float* nreads_ptr, bool simpl){
@@ -224,6 +235,7 @@ namespace grimoire {
         omp_unset_lock(&map_lck_) ;
         return ;
     }
+
 
     void Gene::detect_introns(vector<Intron*> &intronlist, bool simpl){
 
@@ -274,12 +286,15 @@ namespace grimoire {
             if (ir->get_end() < inIR_ptr->get_start() || ir->get_start() > inIR_ptr->get_end()) continue ;
             if (ir->get_end() >= inIR_ptr->get_start() && ir->get_start() <= inIR_ptr->get_end()){
                 ir->overlaping_intron(inIR_ptr) ;
+//cerr << "found " << ir->get_key() << endl ;
                 ir->update_flags(min_coverage, min_exps, min_bins) ;
                 ir->clear_nreads(reset) ;
                 found = true ;
             }
         }
         if(!found){
+//cerr << "NOT found " << inIR_ptr->get_key() << endl ;
+
             inIR_ptr->update_flags(min_coverage, min_exps, min_bins) ;
             inIR_ptr->clear_nreads(reset) ;
             intron_vec_.push_back(inIR_ptr) ;

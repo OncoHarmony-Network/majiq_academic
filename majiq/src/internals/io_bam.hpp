@@ -49,23 +49,13 @@ namespace io_bam{
 
         public:
             vector<float *> junc_vec ;
-            IOBam(){
-//                bam_ = string(".");
-//                strandness_ = 0 ;
-//                nthreads_ = 1 ;
-//                simpl_ = false ;
-            }
+            IOBam(){ }
 
             IOBam(string bam1, int strandness1, unsigned int eff_len1, unsigned int nthreads1,
                   map<string, vector<overGene*>> glist1, bool simpl1): strandness_(strandness1), eff_len_(eff_len1),
                                                                   nthreads_(nthreads1), glist_(glist1), simpl_(simpl1){
                 bam_ = bam1 ;
             }
-
-//            IOBam(string bam1, int strandness1, unsigned int eff_len1): strandness_(strandness1), eff_len_(eff_len1){
-//                bam_ = string(bam1) ;
-//                nthreads_ = 1 ;
-//            }
 
             ~IOBam(){
 
@@ -89,9 +79,11 @@ namespace io_bam{
             void set_junction_strand(bam1_t  *aln, Junction& j1) ;
             void find_junction_genes(string chrom, char strand, int start, int end, float * nreads_ptr ) ;
             int  ParseJunctionsFromFile(bool ir_func) ;
-            void parseJuncEntry(map<string, vector<overGene*>> & glist, string chrom, char strand, int start, int end,
-                                int sreads, vector<Gene*>& oGeneList, bool ir, vector<float>& ircov,
-                                float min_intron_cov, float min_bins, int minexp, bool reset) ;
+            void parseJuncEntry(map<string, vector<overGene*>> & glist, string gid, string chrom, char strand,
+                               int start, int end, unsigned int sreads, unsigned int minreads_t, unsigned int npos,
+                               unsigned int minpos_t, unsigned int denovo_t, bool denovo, vector<Gene*>& oGeneList,
+                               bool ir, vector<float>& ircov, float min_intron_cov, float min_bins, int minexp,
+                               bool reset) ;
             inline void update_junction_read(string key, int read_start, int count) ;
             inline bool new_junc_values(const string key) ;
 
@@ -112,9 +104,6 @@ namespace io_bam{
 
 
             }
-
-
-
 
     };
 
