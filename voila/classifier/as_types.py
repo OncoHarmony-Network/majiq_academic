@@ -1,5 +1,5 @@
 from bisect import bisect_left, bisect_right
-from itertools import combinations
+from itertools import combinations, permutations
 from pathlib import Path
 
 from voila import constants
@@ -417,11 +417,6 @@ class Graph:
 
 
 
-
-
-
-
-
         for edge in self.edges:
             key = str(edge.start) + '-' + str(edge.end)
             if key in lsv_store:
@@ -484,14 +479,17 @@ class Graph:
             """
             sources = set()
             targets = set()
-            for node in self.nodes:
-                for edge in node.edges:
-                    for lsv in edge.lsvs:
-                        if lsv != 'matrix_events':
-                            if ":s:" in lsv:
-                                sources.add(lsv)
-                            elif ":t:" in lsv:
-                                targets.add(lsv)
+
+            for node, n2 in permutations(self.nodes, 2):
+                connections = node.connects(n2)
+                if connections:
+                    for edge in connections:
+                        for lsv in edge.lsvs:
+                            if lsv != 'matrix_events':
+                                if ":s:" in lsv:
+                                    sources.add(lsv)
+                                elif ":t:" in lsv:
+                                    targets.add(lsv)
             return sources, targets
 
         def strand_case(self, case_plus, case_minus):
@@ -837,7 +835,7 @@ class Graph:
             Helper function that returns a list of types found in this module.
             :return: list of AS types, flag is module is complex true or false
             """
-            print('---------------------------', self.idx, '--------------------------------')
+            #print('---------------------------', self.idx, '--------------------------------')
             as_type_dict = {
                 # 'alt_downstream': self.alternate_downstream,
                 # 'alt_upstream': self.alternate_upstream,
