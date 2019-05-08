@@ -35,7 +35,7 @@ cdef extern from "psi.hpp":
     cdef void test_calc(vector[psi_distr_t]& oPvals, HetStats* HetStatsObj, hetLSV* lsvObj, int psamples,
                         np.float32_t quant) nogil ;
 
-    cdef void adjustdelta(psi_distr_t& o_mixtpdf, psi_distr_t& emp_dpsi, int num_iter, int nbins) nogil ;
+    cdef int adjustdelta(psi_distr_t& o_mixtpdf, psi_distr_t& emp_dpsi, int num_iter, int nbins) nogil ;
 
 
 
@@ -105,9 +105,9 @@ cdef inline print_prior(vector[vector[psi_distr_t]] matrix, int nbins):
     sys.stderr.write('##MATRIX [1] sum: %.4f\n' % sum)
 
 
-cdef inline void gen_prior_matrix(vector[vector[psi_distr_t]]& prior_matrix, dict lsv_type, dict lsv_empirical_psi1,
+cdef inline int gen_prior_matrix(vector[vector[psi_distr_t]]& prior_matrix, dict lsv_type, dict lsv_empirical_psi1,
                             dict lsv_empirical_psi2, str output, list names, str plotpath, int iter, float binsize,
-                            int numbins, bint defaultprior, int minpercent, object logger):
+                            int numbins, bint defaultprior, int minpercent, object logger) except -1:
 
     cdef psi_distr_t mixture_pdf = psi_distr_t(numbins*2)
     cdef list list_of_lsv, njun_prior
@@ -141,7 +141,11 @@ cdef inline void gen_prior_matrix(vector[vector[psi_distr_t]]& prior_matrix, dic
                 break
 
             logger.debug("Parametrizing 'best set'...%s", prior_idx)
-            adjustdelta(mixture_pdf, best_delta_psi, iter, numbins*2)
+            r = adjustdelta(mixture_pdf, best_delta_psi, iter, numbins*2)
+            if r == -1 :
+                raise ValueError(" The input data does not have enought statistic power in order to calculate "
+                                 "the prior. Check if the input is correct or use the --default-prior option in "
+                                  " order to use a precomputed prior")
             for i in range(numbins):
                 for j in range(numbins):
                     np_pmatrix[prior_idx][i][j] = mixture_pdf[j-i+(numbins-1)]
