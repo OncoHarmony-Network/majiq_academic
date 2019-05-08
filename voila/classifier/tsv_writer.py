@@ -365,7 +365,7 @@ class TsvWriter:
         """
         headers = ['Module', 'LSV ID(s)', 'Cassette', 'Alt 3',
                              'Alt 5', 'Alt 3 and Alt 5', 'MXE', 'ALE',
-                             'AFE', 'P_ALE', 'P_AFE', 'Tandem Cassette', 'Intron Retention', 'Complex']
+                             'AFE', 'P_ALE', 'P_AFE', 'Multi Exon Skipping', 'Intron Retention', 'Complex']
         self.start_headers(headers, 'summary.tsv')
 
         with open(os.path.join(self.config.directory, 'summary.tsv'), 'a', newline='') as csvfile:
