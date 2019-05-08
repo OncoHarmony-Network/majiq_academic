@@ -29,6 +29,7 @@ class Classify:
 
 
 
+
 def run_classifier():
 
     config = ClassifyConfig()
@@ -46,9 +47,12 @@ def run_classifier():
     voila_log().info("Classifying %d gene(s)" % len(gene_ids))
     voila_log().info("Writing TSVs to %s" % os.path.abspath(config.directory))
 
-
+    total_genes = len(gene_ids)
     TsvWriter.delete_tsvs()
-    for gene_id in gene_ids:
+    for i, gene_id in enumerate(gene_ids):
+        if i % int(total_genes / 100) == 0:
+            print('Processing Genes and Modules [%d/%d]\r' % (i, total_genes), end="")
+
         graph = Graph(gene_id)
 
         writer = TsvWriter(graph, gene_id)
@@ -65,3 +69,40 @@ def run_classifier():
 
         writer.alternate_first_exon()
         writer.alternate_last_exon()
+    print('                                                  \r', end="")
+    print("Done!")
+
+
+# import multiprocessing
+#
+#
+# def Writer(dest_filename, some_queue, some_stop_token):
+#     with open(dest_filename, 'w') as dest_file:
+#         while True:
+#             line = some_queue.get()
+#             if line == some_stop_token:
+#                 return
+#             dest_file.write(line)
+#
+#
+# def the_job(some_queue):
+#     for item in something:
+#         result = process(item)
+#         some_queue.put(result)
+#
+#
+# if __name__ == "__main__":
+#     queue = multiprocessing.Queue()
+#
+#     STOP_TOKEN = "STOP!!!"
+#
+#     writer_process = multiprocessing.Process(target=Writer, args=("output.txt", queue, STOP_TOKEN))
+#     writer_process.start()
+#
+#     # Dispatch all the jobs
+#
+#     # Make sure the jobs are finished
+#
+#     queue.put(STOP_TOKEN)
+#     writer_process.join()
+#     # There, your file was written.
