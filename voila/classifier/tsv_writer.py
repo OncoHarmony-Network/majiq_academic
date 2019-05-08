@@ -34,7 +34,7 @@ class TsvWriter:
         # we could do some crazy thing to yield to all of the different output types at once (across each method)
         # (in order to save memory) But for now we just save modules in a list. Will ammend later if memory use
         # becomes an issue.
-        self.modules = [x for x in self.graph.modules()]
+        self.modules = self.graph.modules()
 
         #self.as_types = {x.idx: x.as_types() for x in self.modules}
         self.as_types = {x.idx: x.as_types() for x in self.modules}
