@@ -60,17 +60,30 @@ class TsvWriter:
             if os.path.exists(path):
                 os.remove(path)
 
-    def common_data(self, module, parity=None):
-        """
-        Extract the certain cols from the CSV which are generally similar across all outputs,
-
-        """
+    @staticmethod
+    def parity2lsv(module, parity):
         if parity == 's':
             lsvs = module.source_lsv_ids
         elif parity == 't':
             lsvs = module.target_lsv_ids
         else:
             lsvs = module.target_lsv_ids.union(module.source_lsv_ids)
+        return lsvs
+
+    def common_data(self, module, parity=None, edge=None):
+        """
+        Extract the certain cols from the CSV which are generally similar across all outputs,
+
+        """
+        lsvs = self.parity2lsv(module, parity)
+
+
+        return ["%s_%d" % (self.gene_id, module.idx), semicolon(lsvs), self.gene_id, self.graph.gene_name,
+                self.graph.chromosome, self.graph.strand]
+
+    def quantifications(self, module, parity=None, edge=None):
+
+        lsvs = self.parity2lsv(module, parity)
 
         with Matrix(self.config.voila_file) as m:
             analysis_type = m.analysis_type
@@ -85,8 +98,20 @@ class TsvWriter:
                             lsv = m.psi(lsv_id)
                         else:
                             lsv = m.delta_psi(lsv_id)
-                        means += list(lsv.get('means'))
-                        vars += list(generate_variances(lsv.get('bins')))
+
+                        if edge:
+                            # loop through junctions to find one matching range of edge
+                            for j, junc in enumerate(lsv.get('junctions')):
+                                if junc[0] == edge.start and junc[1] == edge.end:
+                                    means.append(lsv.get('means')[j])
+                                    vars.append(generate_variances([lsv.get('bins')[i]])[0])
+                                    break
+                            else:
+                                # junction not quantified by majiq
+                                pass
+                        else:
+                            means += list(lsv.get('means'))
+                            vars += list(generate_variances(lsv.get('bins')))
                 if 'psi' in self.quantifications_enabled:
                     quantification_fields.append(semicolon(means))
                 if 'var' in self.quantifications_enabled:
@@ -97,8 +122,8 @@ class TsvWriter:
                 if 'var' in self.quantifications_enabled:
                     quantification_fields.append('')
 
-        return ["%s_%d" % (self.gene_id, module.idx), semicolon(lsvs), self.gene_id, self.graph.gene_name,
-                self.graph.chromosome, self.graph.strand], quantification_fields
+        return quantification_fields
+
 
     def start_headers(self, headers, filename):
         """
@@ -125,18 +150,22 @@ class TsvWriter:
                         if event['event'] == 'cassette_exon':
                             src_common = self.common_data(module, 's')
                             trg_common = self.common_data(module, 't')
-                            row = [event['C1'].range_str(), 'C2', event['C2'].range_str(), 'C1_C2',
-                                   semicolon((x.range_str() for x in event['Skip']))]
-                            writer.writerow(src_common[0] + row + src_common[1])
-                            row = [event['C1'].range_str(), 'A', event['A'].range_str(), 'C1_A',
-                                   semicolon((x.range_str() for x in event['Include1']))]
-                            writer.writerow(src_common[0] + row + src_common[1])
-                            row = [event['C2'].range_str(), 'C1', event['C1'].range_str(), 'C2_C1',
-                                   semicolon((x.range_str() for x in event['Skip']))]
-                            writer.writerow(trg_common[0] + row + trg_common[1])
-                            row = [event['C2'].range_str(), 'A', event['A'].range_str(), 'C2_A',
-                                   semicolon((x.range_str() for x in event['Include2']))]
-                            writer.writerow(trg_common[0] + row + trg_common[1])
+                            for junc in event['Skip']:
+                                row = [event['C1'].range_str(), 'C2', event['C2'].range_str(), 'C1_C2',
+                                       junc.range_str()]
+                                writer.writerow(src_common + row + self.quantifications(module, 's', junc))
+                            for junc in event['Include1']:
+                                row = [event['C1'].range_str(), 'A', event['A'].range_str(), 'C1_A',
+                                       junc.range_str()]
+                                writer.writerow(src_common + row + self.quantifications(module, 's', junc))
+                            for junc in event['Skip']:
+                                row = [event['C2'].range_str(), 'C1', event['C1'].range_str(), 'C2_C1',
+                                       junc.range_str()]
+                                writer.writerow(trg_common + row + self.quantifications(module, 't', junc))
+                            for junc in event['Include2']:
+                                row = [event['C2'].range_str(), 'A', event['A'].range_str(), 'C2_A',
+                                       junc.range_str()]
+                                writer.writerow(trg_common + row + self.quantifications(module, 't', junc))
 
     def alt3prime(self):
         headers = self.common_headers + ['Reference Exon Coordinate', 'Exon Spliced With',
@@ -154,16 +183,16 @@ class TsvWriter:
                             trg_common = self.common_data(module, 't')
                             row = [event['E1'].range_str(), 'E2', event['E2'].range_str(), 'E1_E2_Proximal',
                                    event['Proximal'].range_str()]
-                            writer.writerow(src_common[0] + row + src_common[1])
+                            writer.writerow(src_common + row + self.quantifications(module, 's', event['Proximal']))
                             row = [event['E1'].range_str(), 'E2', event['E2'].range_str(), 'E1_E2_Distal',
                                    event['Distal'].range_str()]
-                            writer.writerow(src_common[0] + row + src_common[1])
+                            writer.writerow(src_common + row + self.quantifications(module, 's', event['Distal']))
                             row = [event['E2'].range_str(), 'E1', event['E1'].range_str(), 'E2_E1_Proximal',
                                    event['Proximal'].range_str()]
-                            writer.writerow(trg_common[0] + row + trg_common[1])
+                            writer.writerow(trg_common + row + self.quantifications(module, 't', event['Proximal']))
                             row = [event['E2'].range_str(), 'E1', event['E1'].range_str(), 'E2_E1_Distal',
                                    event['Distal'].range_str()]
-                            writer.writerow(trg_common[0] + row + trg_common[1])
+                            writer.writerow(trg_common + row + self.quantifications(module, 't', event['Distal']))
                             
     def alt5prime(self):
         headers = self.common_headers + ['Reference Exon Coordinate', 'Exon Spliced With',
@@ -181,16 +210,16 @@ class TsvWriter:
                             trg_common = self.common_data(module, 't')
                             row = [event['E1'].range_str(), 'E2', event['E2'].range_str(), 'E1_E2_Proximal',
                                    event['Proximal'].range_str()]
-                            writer.writerow(src_common[0] + row + src_common[1])
+                            writer.writerow(src_common + row + self.quantifications(module, 's', event['Proximal']))
                             row = [event['E1'].range_str(), 'E2', event['E2'].range_str(), 'E1_E2_Distal',
                                    event['Distal'].range_str()]
-                            writer.writerow(src_common[0] + row + src_common[1])
+                            writer.writerow(src_common + row + self.quantifications(module, 's', event['Distal']))
                             row = [event['E2'].range_str(), 'E1', event['E1'].range_str(), 'E2_E1_Proximal',
                                    event['Proximal'].range_str()]
-                            writer.writerow(trg_common[0] + row + trg_common[1])
+                            writer.writerow(trg_common + row + self.quantifications(module, 't', event['Proximal']))
                             row = [event['E2'].range_str(), 'E1', event['E1'].range_str(), 'E2_E1_Distal',
                                    event['Distal'].range_str()]
-                            writer.writerow(trg_common[0] + row + trg_common[1])
+                            writer.writerow(trg_common + row + self.quantifications(module, 't', event['Distal']))
 
     def alt3and5prime(self):
         headers = self.common_headers + ['Reference Exon Coordinate', 'Exon Spliced With',
@@ -235,16 +264,16 @@ class TsvWriter:
                             trg_common = self.common_data(module, 't')
                             row = [event['C1'].range_str(), 'A1', event['A1'].range_str(), 'C1_A1',
                                    event['Include1'].range_str()]
-                            writer.writerow(src_common[0] + row + src_common[1])
+                            writer.writerow(src_common + row + self.quantifications(module, 's', event['Include1']))
                             row = [event['C1'].range_str(), 'A2', event['A2'].range_str(), 'C1_A2',
                                    event['SkipA1'].range_str()]
-                            writer.writerow(src_common[0] + row + src_common[1])
+                            writer.writerow(src_common + row + self.quantifications(module, 's', event['SkipA1']))
                             row = [event['C2'].range_str(), 'A2', event['A2'].range_str(), 'C2_A2',
                                    event['Include2'].range_str()]
-                            writer.writerow(trg_common[0] + row + trg_common[1])
+                            writer.writerow(trg_common + row + self.quantifications(module, 't', event['Include2']))
                             row = [event['C2'].range_str(), 'A1', event['A1'].range_str(), 'C2_A1',
                                    event['SkipA2'].range_str()]
-                            writer.writerow(trg_common[0] + row + trg_common[1])
+                            writer.writerow(trg_common + row + self.quantifications(module, 't', event['SkipA2']))
 
     def alternate_last_exon(self):
         headers = self.common_headers + ['Reference Exon Coordinate', 'Exon Spliced With',
@@ -260,17 +289,19 @@ class TsvWriter:
                         if event['event'] == 'ale':
                             src_common = self.common_data(module, 's')
                             trg_common = self.common_data(module, 't')
-                            row = [event['C1'].range_str(), 'A1', event['A1'].range_str(), 'C1_A1',
-                                   semicolon((x.range_str() for x in event['SkipA2']))]
-                            writer.writerow(src_common[0] + row + src_common[1])
-                            row = [event['C1'].range_str(), 'A2', event['A2'].range_str(), 'C1_A2',
-                                   semicolon((x.range_str() for x in event['SkipA1']))]
-                            writer.writerow(trg_common[0] + row + trg_common[1])
-                        if event['event'] == 'p_ale':
+                            for junc in event['SkipA2']:
+                                row = [event['C1'].range_str(), 'A1', event['A1'].range_str(), 'C1_A1',
+                                       junc.range_str()]
+                                writer.writerow(src_common + row + self.quantifications(module, 's', junc))
+                            for junc in event['SkipA1']:
+                                row = [event['C1'].range_str(), 'A2', event['A2'].range_str(), 'C1_A2',
+                                       junc.range_str()]
+                                writer.writerow(trg_common + row + self.quantifications(module, 't', junc))
+                        elif event['event'] == 'p_ale':
                             trg_common = self.common_data(module, 't')
                             row = ['N/A', 'A1', event['A1'].range_str(), 'C1_A1',
                                    'N/A']
-                            writer.writerow(trg_common[0] + row + trg_common[1])
+                            writer.writerow(trg_common + row + self.quantifications(module, 't', event['A1']))
 
     def alternate_first_exon(self):
         headers = self.common_headers + ['Reference Exon Coordinate', 'Exon Spliced With',
@@ -286,17 +317,19 @@ class TsvWriter:
                         if event['event'] == 'afe':
                             src_common = self.common_data(module, 's')
                             trg_common = self.common_data(module, 't')
-                            row = [event['C1'].range_str(), 'A1', event['A1'].range_str(), 'C1_A1',
-                                   semicolon((x.range_str() for x in event['SkipA2']))]
-                            writer.writerow(src_common[0] + row + src_common[1])
-                            row = [event['C1'].range_str(), 'A2', event['A2'].range_str(), 'C1_A2',
-                                   semicolon((x.range_str() for x in event['SkipA1']))]
-                            writer.writerow(trg_common[0] + row + trg_common[1])
-                        if event['event'] == 'p_afe':
-                            src_common = self.common_data(module, 's')
+                            for junc in event['SkipA2']:
+                                row = [event['C1'].range_str(), 'A1', event['A1'].range_str(), 'C1_A1',
+                                       junc.range_str()]
+                                writer.writerow(src_common + row + self.quantifications(module, 's', junc))
+                            for junc in event['SkipA1']:
+                                row = [event['C1'].range_str(), 'A2', event['A2'].range_str(), 'C1_A2',
+                                       junc.range_str()]
+                                writer.writerow(trg_common + row + self.quantifications(module, 't', junc))
+                        elif event['event'] == 'p_ale':
+                            trg_common = self.common_data(module, 't')
                             row = ['N/A', 'A1', event['A1'].range_str(), 'C1_A1',
                                    'N/A']
-                            writer.writerow(src_common[0] + row + src_common[1])
+                            writer.writerow(trg_common + row + self.quantifications(module, 't', event['A1']))
 
 
     def intron_retention(self):
@@ -313,18 +346,19 @@ class TsvWriter:
                         if event['event'] == 'intron_retention':
                             src_common = self.common_data(module, 's')
                             trg_common = self.common_data(module, 't')
+
                             row = [event['C1'].range_str(), 'C2', event['C2'].range_str(), 'C1_C2_intron',
                                    event['Intron'].range_str()]
-                            writer.writerow(src_common[0] + row + src_common[1])
+                            writer.writerow(src_common + row + self.quantifications(module, 's', event['Intron']))
                             row = [event['C1'].range_str(), 'C2', event['C2'].range_str(), 'C1_C2_spliced',
                                    event['Intron'].range_str()]
-                            writer.writerow(src_common[0] + row + src_common[1])
+                            writer.writerow(src_common + row + self.quantifications(module, 's', event['Intron']))
                             row = [event['C2'].range_str(), 'C1', event['C1'].range_str(), 'C2_C1_intron',
                                    event['Intron'].range_str()]
-                            writer.writerow(trg_common[0] + row + trg_common[1])
+                            writer.writerow(trg_common + row + self.quantifications(module, 't', event['Intron']))
                             row = [event['C2'].range_str(), 'C1', event['C1'].range_str(), 'C2_C1_spliced',
                                    event['Intron'].range_str()]
-                            writer.writerow(trg_common[0] + row + trg_common[1])
+                            writer.writerow(trg_common + row + self.quantifications(module, 't', event['Intron']))
 
     def multi_exon_skipping(self):
         headers = self.common_headers + ['Reference Exon Coordinate', 'Exon Spliced With',
@@ -343,19 +377,19 @@ class TsvWriter:
                             row = [event['C1'].range_str(), 'C2', event['C2'].range_str(),
                                    semicolon((x.range_str() for x in event['As'])), 'C1_C2',
                                    semicolon((x.range_str() for x in event['Skip']))]
-                            writer.writerow(src_common[0] + row + src_common[1])
+                            writer.writerow(src_common + row + self.quantifications(module, 's'))
                             row = [event['C1'].range_str(), 'A1', event['As'][0].range_str(),
                                    semicolon((x.range_str() for x in event['As'])), 'C1_A',
                                    semicolon((x.range_str() for x in event['Include1']))]
-                            writer.writerow(src_common[0] + row + src_common[1])
+                            writer.writerow(src_common + row + self.quantifications(module, 's'))
                             row = [event['C2'].range_str(), 'C1', event['C1'].range_str(),
                                    semicolon((x.range_str() for x in event['As'])), 'C2_C1',
                                    semicolon((x.range_str() for x in event['Skip']))]
-                            writer.writerow(trg_common[0] + row + trg_common[1])
+                            writer.writerow(trg_common + row + self.quantifications(module, 't'))
                             row = [event['C2'].range_str(), 'A<N>',
                                    semicolon((x.range_str() for x in event['As'])), 'A<N>_C2',
                                    semicolon((x.range_str() for x in event['Includes']))]
-                            writer.writerow(trg_common[0] + row + trg_common[1])
+                            writer.writerow(trg_common + row + self.quantifications(module, 't'))
 
     def summary(self):
         """
