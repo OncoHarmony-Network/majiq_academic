@@ -620,21 +620,18 @@ class Graph:
 
             #b = self.Filters.target_source_psi
             #s = self.Filters.source_psi
-            t = self.Filters.target_psi
+            #t = self.Filters.target_psi
 
             for n1, n2 in combinations(self.nodes, 2):
                 for edge in n1.edges:
-
-                    if 'IR' in edge.lsvs.get('matrix_events', {}) and n1.connects(n2, t):
-                        # print("Found intron")
-                        # print(n1, n2)
+                    if 'IR' in edge.lsvs.get('matrix_events', {}) and (n1.connects(n2) or n2.connects(n1)):
                         found.append({'event': 'intron_retention', 'C1': n1, 'C2': n2,
                                       'Intron': Graph.Edge(edge.lsvs['matrix_events']['IR'])})
 
-                # for edge in n2.edges:
-                #     if 'IR' in edge.lsvs.get('matrix_events', {}) and n2.connects(n1, b):
-                #         found.append({'event': 'intron_retention', 'C1': n1, 'C2': n2,
-                #                       'Intron': Graph.Edge(edge.lsvs['matrix_events']['IR'])})
+                for edge in n2.edges:
+                    if 'IR' in edge.lsvs.get('matrix_events', {}) and (n1.connects(n2) or n2.connects(n1)):
+                        found.append({'event': 'intron_retention', 'C1': n1, 'C2': n2,
+                                      'Intron': Graph.Edge(edge.lsvs['matrix_events']['IR'])})
 
 
             return found
@@ -736,40 +733,19 @@ class Graph:
         def alt_last_exon(self):
 
             found = []
-            t = self.Filters.target_psi
-            s = self.Filters.source_psi
 
             nodes = [x for x in reversed(self.nodes)]
             current_submodule = []
             for i, node in enumerate(nodes[:-1]):
-                #print(node)
 
                 current_submodule.append(node)
-
-                # assume these are ordered?
-                # we care that there is some exon which is connected by skipping one or more exons
-                # but NOT connected to the skipped exons
-                # here, when looking for this second condition, we need to do iteration
-                # we check if the first exon is connected to the next, etc, until finding a break
-                # to find the break we check that the current group is only connected to the last node
-                # not other nodes ahead of it.
-
-                #print(self.nodes[:len(current_submodule)-1])
 
                 for fwd_node in nodes[:len(current_submodule) - 1]:
                     #print(node.connects(fwd_node))
                     if node.connects(fwd_node):
                         break
                 else:
-                    # did not find any connections backward
 
-                    #print("~~")
-                    # print(node.connects(nodes[-1]))
-                    # print(nodes[-1])
-                    # print(node)
-                    # print(nodes[i+1])
-                    # print(node.connects(nodes[i+1]))
-                    #print("~~")
                     if nodes[-1].connects(node) and not nodes[i + 1].connects(node):
                         # end the submodule
 
@@ -777,10 +753,6 @@ class Graph:
                             {'event': 'ale', 'A1': current_submodule[0], 'A2': node, 'C1': nodes[-1],
                              'SkipA2': current_submodule[0].edges, 'SkipA1': node.edges})
                         current_submodule = []
-
-            # if found:
-            #     found.append({'event': 'ale', 'A1': current_submodule[0], 'A2': None, 'C1': nodes[-1],
-            #                   'SkipA2': current_submodule[0].edges, 'SkipA1': None})
 
             return found
 
@@ -804,10 +776,11 @@ class Graph:
         #
         #     return found
 
+
+
         def alt_first_exon(self):
 
             found = []
-            t = self.Filters.target_psi
 
             current_submodule = []
             for i, node in enumerate(self.nodes[:-1]):
@@ -823,34 +796,18 @@ class Graph:
                 # to find the break we check that the current group is only connected to the last node
                 # not other nodes ahead of it.
 
-                #print(self.nodes[:len(current_submodule)-1])
-
                 for back_node in self.nodes[:len(current_submodule)-1]:
                     if back_node.connects(node):
                         break
                 else:
                     # did not find any connections backward
 
-                    #print("~~")
-                    #print(node.connects(self.nodes[-1]))
-                    #print(node)
-                    #print(self.nodes[i+1])
-                    #print(node.connects(self.nodes[i+1]))
-                    #print("~~")
                     if node.connects(self.nodes[-1]) and not node.connects(self.nodes[i+1]):
                         # end the submodule
 
                         found.append({'event': 'afe', 'A1': current_submodule[0], 'A2': node, 'C1': self.nodes[-1],
                                       'SkipA2': current_submodule[0].edges, 'SkipA1': node.edges})
                         current_submodule = []
-
-            # if found:
-            #     found.append({'event': 'afe', 'A1': current_submodule[0], 'A2': None, 'C1': self.nodes[-1],
-            #                   'SkipA2': current_submodule[0].edges, 'SkipA1': None})
-
-
-
-
 
             #
             # for n1, n2, n3 in combinations(self.nodes, 3):
@@ -868,14 +825,18 @@ class Graph:
 
             return found
 
-
+        # def alt_first_exon(self):
+        #     return self.strand_case(self._alt_first_exon, self._alt_last_exon)()
+        #
+        # def alt_last_exon(self):
+        #     return self.strand_case(self._alt_last_exon, self._alt_first_exon)()
 
         def as_types(self):
             """
             Helper function that returns a list of types found in this module.
             :return: list of AS types, flag is module is complex true or false
             """
-            #print('---------------------------', self.idx, '--------------------------------')
+            print('---------------------------', self.idx, '--------------------------------')
             as_type_dict = {
                 # 'alt_downstream': self.alternate_downstream,
                 # 'alt_upstream': self.alternate_upstream,
