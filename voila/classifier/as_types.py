@@ -98,6 +98,7 @@ class Graph:
             self.edges = []  # all edge starting in this exon
             self.exon = exon  # exon dictionary
 
+
         def __eq__(self, other):
             """
             Exons are uniquely defined by gene id, start, and end.  Since Graphs work on one gene at a time, equality
@@ -115,7 +116,6 @@ class Graph:
             :param other: other exon
             :return: boolean
             """
-
             return self.view_start < other.view_start and self.view_end < other.view_start
 
         def __repr__(self):
@@ -342,13 +342,13 @@ class Graph:
         """
         Search through edges to find where they don't cross.  At this point is where the previous module ends and the
         next module starts. There will be an over lapping exon.
-        :return: Generator of modules
+        :return: List of modules
         """
 
-        start_idx = 0
+        modules = []
         j = 0
         nextEndShift = 0
-        module_idx = 0
+        start_idx = 0
         for edge in self.edges:
 
 
@@ -357,20 +357,25 @@ class Graph:
                 i = bisect_left(self.nodes, edge.node)
                 if j == 2 or True:
                     #print(edge.lsvs)
-                    module_idx += 1
                     if((self.nodes[i].end == -1 or self.nodes[i].start == -1) and True):
                         # handling case like exon 19-20 in ENSMUSG00000021820
                         # we aim to make sure that the half exons are in the middle of the module
                         # so that we don't mark the next module as having that half exon
-                        yield self.Module(self.nodes[start_idx: i + 1 + 1], self.strand, module_idx)
+                        modules.append(self.Module(self.nodes[start_idx: i + 1 + 1], self.strand))
                         nextEndShift = 1
                     else:
-
-                        yield self.Module(self.nodes[start_idx + nextEndShift: i + 1], self.strand, module_idx)
+                        modules.append(self.Module(self.nodes[start_idx + nextEndShift: i + 1], self.strand))
                         nextEndShift = 0
 
-
                 start_idx = i
+
+        if self.strand == '-':
+            modules.reverse()
+        for i, mod in enumerate(modules, 1):
+            mod.set_idx(i)
+
+
+        return modules
 
     def _psi(self):
         """
@@ -458,7 +463,7 @@ class Graph:
             edge.lsvs = lsv_store[key]
 
     class Module:
-        def __init__(self, nodes, strand, idx):
+        def __init__(self, nodes, strand):
             """
             Module is subset of a gene.  The divide between modules is where junctions don't cross.
             :param nodes: list of nodes that belong to module
@@ -467,6 +472,8 @@ class Graph:
             self.nodes = nodes  # subset of nodes for this module
             self.Filters.strand = strand
             self.source_lsv_ids, self.target_lsv_ids = self.get_lsv_ids()
+
+        def set_idx(self, idx):
             self.idx = idx
 
 
@@ -750,7 +757,7 @@ class Graph:
                         # end the submodule
 
                         found.append(
-                            {'event': 'ale', 'A1': current_submodule[0], 'A2': node, 'C1': nodes[-1],
+                            {'event': self.strand_case('ale', 'afe'), 'A1': current_submodule[0], 'A2': node, 'C1': nodes[-1],
                              'SkipA2': current_submodule[0].edges, 'SkipA1': node.edges})
                         current_submodule = []
 
@@ -805,8 +812,8 @@ class Graph:
                     if node.connects(self.nodes[-1]) and not node.connects(self.nodes[i+1]):
                         # end the submodule
 
-                        found.append({'event': 'afe', 'A1': current_submodule[0], 'A2': node, 'C1': self.nodes[-1],
-                                      'SkipA2': current_submodule[0].edges, 'SkipA1': node.edges})
+                        found.append({'event': self.strand_case('afe', 'ale'), 'A1': current_submodule[0], 'A2': node,
+                                      'C1': self.nodes[-1], 'SkipA2': current_submodule[0].edges, 'SkipA1': node.edges})
                         current_submodule = []
 
             #
@@ -824,12 +831,6 @@ class Graph:
             #                           'SkipA2': connections1, 'SkipA1': connections2})
 
             return found
-
-        # def alt_first_exon(self):
-        #     return self.strand_case(self._alt_first_exon, self._alt_last_exon)()
-        #
-        # def alt_last_exon(self):
-        #     return self.strand_case(self._alt_last_exon, self._alt_first_exon)()
 
         def as_types(self):
             """
