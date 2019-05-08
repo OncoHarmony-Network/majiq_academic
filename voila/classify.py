@@ -71,7 +71,7 @@ def run_classifier():
         writer.alternate_first_exon()
         writer.alternate_last_exon()
     print('                                                  \r', end="")
-    print("Done!")
+    voila_log().info("Classification Complete")
 
 
 # import multiprocessing
