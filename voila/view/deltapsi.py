@@ -13,6 +13,10 @@ from voila.view.forms import LsvFiltersForm, DeltaPsiFiltersForm
 app = Flask(__name__)
 app.secret_key = os.urandom(16)
 
+@app.before_request
+def init_session():
+    if not 'omit_simplified' in session:
+        session['omit_simplified'] = True
 
 @app.route('/')
 def index():
@@ -22,10 +26,7 @@ def index():
 
 @app.route('/toggle-simplified', methods=('POST',))
 def toggle_simplified():
-    if not 'omit_simplified' in session:
-        session['omit_simplified'] = True
-    else:
-        session['omit_simplified'] = not session['omit_simplified']
+    session['omit_simplified'] = not session['omit_simplified']
     return jsonify({'ok':1})
 
 @app.route('/gene/<gene_id>/')
