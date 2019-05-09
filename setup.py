@@ -22,7 +22,9 @@ except Exception as e:
 
 def requirements():
     with open('requirements.txt') as f:
-        return [l.strip() for l in f.readlines()]
+        reql = [l.strip() for l in f.readlines()]
+        # print(reql)
+        return reql
 
 class InstallCommand(install):
 
@@ -36,14 +38,9 @@ class InstallCommand(install):
         install.finalize_options(self)
 
     def run(self):
-        print(self.voila_only)
+        # print(self.__dict__)
         if(self.voila_only):
-            # self.name = 'voila',
-            # self.version = VERSION,
-            self.distribution.install_requires = ['Flask-WTF', 'Flask', 'h5py', 'scipy', 'waitress']
             self.distribution.packages = ['voila', 'voila.api', 'voila.view', 'voila.utils', 'voila.view']
-            self.distribution.package_data = {'voila': ['view/templates/*', 'view/static/css/*',
-                                           'view/static/js/*', 'view/static/img/*']}
         else:
             extensions = []
             HTSLIB_LIBRARY = ['hts', 'z']
@@ -113,11 +110,7 @@ class InstallCommand(install):
                                      language='c++', include_dirs=NPY_INC_DIRS, extra_compile_args=compile_args,
                                      extra_link_args=linker_args)]
 
-            self.distribution.packages = find_packages()
-            self.distribution.install_requires = requirements(),
-            self.distribution.include_package_data = True
             self.distribution.entry_points['console_scripts'].append('majiq = majiq.run_majiq:main')
-            self.distribution.zip_safe = False
             self.distribution.ext_modules = cythonize(extensions, language_level=3)
 
 
@@ -132,6 +125,10 @@ setup(
     url='https://biociphers.org',
     keywords=['rna', 'splicing', 'psi', 'splicegraph'],
     license='LICENSE.txt',
+    packages=find_packages(),
+    install_requires = requirements(),
+    include_package_data = True,
+    zip_safe = False,
     entry_points = {'console_scripts': ['voila = voila.run_voila:main']},
     cmdclass={'install': InstallCommand,},
     classifiers=[
