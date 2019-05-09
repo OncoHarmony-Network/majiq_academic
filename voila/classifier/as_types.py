@@ -371,6 +371,12 @@ class Graph:
 
         if self.strand == '-':
             modules.reverse()
+
+        # removing modules with no lsv ids
+        if not self.config.keep_constitutive:
+            modules[:] = [x for x in modules if x.source_lsv_ids or x.target_lsv_ids]
+
+
         for i, mod in enumerate(modules, 1):
             mod.set_idx(i)
 

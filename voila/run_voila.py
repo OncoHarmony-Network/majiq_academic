@@ -143,6 +143,8 @@ classify_parser.add_argument('files', nargs='+', type=check_file,
 classify_parser.add_argument('--gene-ids', nargs='*', default=[],
                         help='Gene IDs, separated by spaces, which should remain in the results. e.g. GENE_ID1 '
                              'GENE_ID2 ...')
+classify_parser.add_argument('--keep-constitutive', action='store_true',
+                         help='Do not discard modules that are unquantified my Majiq (no LSVs found)')
 required_classify_parser = classify_parser.add_argument_group('required named arguments')
 required_classify_parser.add_argument('-d', '--directory', required=True, help="All generated TSV files will be dumped in"
                                                                           " this directory")

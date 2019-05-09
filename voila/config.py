@@ -22,7 +22,7 @@ _TsvConfig = namedtuple('TsvConfig', ['file_name', 'voila_files', 'voila_file', 
 _TsvConfig.__new__.__defaults__ = (None,) * len(_TsvConfig._fields)
 _ClassifyConfig = namedtuple('ClassifyConfig', ['directory', 'voila_files', 'voila_file', 'splice_graph_file',
                                       'nproc', 'threshold', 'analysis_type', 'gene_ids',
-                                      'debug', 'silent'])
+                                      'debug', 'silent', 'keep_constitutive'])
 _ClassifyConfig.__new__.__defaults__ = (None,) * len(_ClassifyConfig._fields)
 
 # global config variable to act as the singleton instance of the config.
@@ -299,7 +299,7 @@ class ClassifyConfig:
                 settings[int_key] = config_parser['SETTINGS'].getint(int_key)
             for float_key in ['threshold']:
                 settings[float_key] = config_parser['SETTINGS'].getfloat(float_key)
-            for bool_key in ['debug']:
+            for bool_key in ['debug', 'keep_constitutive']:
                 settings[bool_key] = config_parser['SETTINGS'].getboolean(bool_key)
 
             filters = {}
