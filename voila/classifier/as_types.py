@@ -332,7 +332,7 @@ class Graph:
         with SpliceGraph(self.config.splice_graph_file) as sg:
             for exon in sg.exons(self.gene_id):
                 self._add_exon(exon)
-            for junc in sg.junctions(self.gene_id):
+            for junc in sg.junctions(self.gene_id, omit_simplified=True):
                 self._add_junc(junc)
 
         self.edges.sort()
