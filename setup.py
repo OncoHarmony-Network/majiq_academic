@@ -1,7 +1,6 @@
 from setuptools import setup, find_packages
 from setuptools.command.install import install
 from distutils.core import Extension
-from Cython.Build import cythonize
 from majiq.src.constants import VERSION, store_git_version
 import numpy
 import sys
@@ -38,8 +37,10 @@ class InstallCommand(install):
         install.finalize_options(self)
 
     def run(self):
-        # print(self.__dict__)
+        print(self.__dict__)
+        # print(user_options)
         if(self.voila_only):
+
             self.distribution.packages = ['voila', 'voila.api', 'voila.view', 'voila.utils', 'voila.view']
         else:
             extensions = []
@@ -109,6 +110,8 @@ class InstallCommand(install):
             extensions += [Extension('voila.c.splice_graph_sql', ['voila/c/splice_graph_sql.pyx', 'voila/c/sqlite3.c'],
                                      language='c++', include_dirs=NPY_INC_DIRS, extra_compile_args=compile_args,
                                      extra_link_args=linker_args)]
+
+            from Cython.Build import cythonize
 
             self.distribution.entry_points['console_scripts'].append('majiq = majiq.run_majiq:main')
             self.distribution.ext_modules = cythonize(extensions, language_level=3)
