@@ -380,7 +380,7 @@ class HeterogenTsv(AnalysisTypeTsv):
             group_names = m.group_names
             stats_column_names = list(m.junction_stats_column_names)
 
-            fieldnames = ['Gene Name', 'Gene ID', 'LSV ID', 'LSV Type', 'strand', 'chr'] + \
+            fieldnames = ['#Gene Name', 'Gene ID', 'LSV ID', 'LSV Type', 'strand', 'chr'] + \
                          ['%s E(PSI)' % group for group in group_names] + stats_column_names + \
                          ['A5SS', 'A3SS', 'ES', 'Num. Junctions', 'Num. Exons', 'De Novo Junctions',
                           'Junctions coords', 'Exons coords', 'IR coords', 'UCSC LSV Link']
