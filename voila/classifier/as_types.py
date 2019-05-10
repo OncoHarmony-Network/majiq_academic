@@ -189,6 +189,8 @@ class Graph:
             edges = self.edges
             if filter:
                 edges = filter(edges)
+            if not ir:
+                edges = [edge for edge in edges if not edge.ir]
 
             # print(node)
             # print([x.node for x in edges])
