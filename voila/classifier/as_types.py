@@ -749,16 +749,16 @@ class Graph:
         def p_alt_last_exon(self):
             found = []
             for node in self.nodes:
-                if node.start == -1:
-                    found.append({'event': 'p_ale', 'A1': node, 'A2': None, 'C1': None,
+                if node.end == -1:
+                    found.append({'event': self.strand_case('p_ale', 'p_afe'), 'A1': node, 'A2': None, 'C1': None,
                                       'SkipA2': None, 'SkipA1': None})
             return found
 
         def p_alt_first_exon(self):
             found = []
             for node in self.nodes:
-                if node.end == -1:
-                    found.append({'event': 'p_afe', 'A1': node, 'A2': None, 'C1': None,
+                if node.start == -1:
+                    found.append({'event': self.strand_case('p_afe', 'p_ale'), 'A1': node, 'A2': None, 'C1': None,
                                       'SkipA2': None, 'SkipA1': None})
             return found
 
