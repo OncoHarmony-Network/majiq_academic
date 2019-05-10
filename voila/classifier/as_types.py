@@ -62,6 +62,10 @@ class Graph:
         self.edges = []  # all edges in the graph
         self.gene_id = gene_id
         self.config = ClassifyConfig()
+        self.experiment_names = []
+        for voila_file in self.config.voila_files:
+            with Matrix(voila_file) as m:
+                self.experiment_names.append(m.experiment_names[0][0])
 
         # populate the graph with data from the splice graph
         self._populate()
@@ -173,11 +177,12 @@ class Graph:
         def is_half_exon(self):
             return self.exon['end'] == -1 or self.exon['start'] == -1
 
-        def connects(self, node, filter=None):
+        def connects(self, node, filter=None, ir=False):
             """
             Search through junctions for this exon to see if this exon has a junction that connects to supplied exon.
             :param node: the exon that this exon might connect to.
             :param filter: function to filter junctions
+            :param ir: include IR edges
             :return: boolean
             """
 
@@ -195,15 +200,17 @@ class Graph:
             return connected
 
     class Edge(Printable_Event):
-        def __init__(self, junc):
+        def __init__(self, junc, ir=False):
             """
             Graph wrapper for junctions.
             :param junc: junction dictionary from the splice graph file.
             """
 
+            self.ir = ir
             self.junc = junc  # junction dictionary
             self.node = None  # node this junction connects to
             self.lsvs = {}
+
 
         def __lt__(self, other):
             """
@@ -222,7 +229,7 @@ class Graph:
             :return:
             """
 
-            return self.start == other.start and self.end == other.end
+            return self.start == other.start and self.end == other.end and self.ir == other.ir
 
         def __repr__(self):
             """
@@ -288,19 +295,26 @@ class Graph:
         i = bisect_right(self.nodes, edge)
         return self.nodes[i - 1]
 
-    def _add_junc(self, junc):
+    def _add_junc(self, junc, ir=False):
         """
         Add junction to graph as edge object. If junction starts and ends in the same exon, it is not added to graph.
         :param junc: junction dictionary from splice graph.
+        :param ir: junction is intron retention
         :return: None
         """
 
-        edge = self.Edge(junc)
+        if ir:
+            junc['start'] -= 1
+            junc['end'] += 1
+
+        edge = self.Edge(junc, ir)
+
         start_node = self.start_node(edge)
         end_node = self.end_node(edge)
 
         # Since majiq doesn't quantify junctions that start/stop in same exon, filter them.
         if start_node != end_node:
+
             self.edges.append(edge)
             edge.node = end_node
 
@@ -333,7 +347,12 @@ class Graph:
             for exon in sg.exons(self.gene_id):
                 self._add_exon(exon)
             for junc in sg.junctions(self.gene_id, omit_simplified=True):
+
                 self._add_junc(junc)
+            for ir in sg.intron_retentions(self.gene_id, omit_simplified=True):
+                if [x for x in sg.intron_retention_reads_exp(ir, self.experiment_names)]:
+                    self._add_junc(ir, ir=True)
+
 
         self.edges.sort()
         self.nodes.sort()
@@ -349,25 +368,26 @@ class Graph:
         j = 0
         nextEndShift = 0
         start_idx = 0
-        for edge in self.edges:
+        edges = [x for x in self.edges if not x.ir]  # we exclude IR from module creation for now
+        for edge in edges:
 
 
-            if not any(e.start < edge.end < e.end or (e.start > edge.start and e.end == edge.end) for e in self.edges):
-                j += 1
-                i = bisect_left(self.nodes, edge.node)
-                if j == 2 or True:
-                    #print(edge.lsvs)
-                    if((self.nodes[i].end == -1 or self.nodes[i].start == -1) and True):
-                        # handling case like exon 19-20 in ENSMUSG00000021820
-                        # we aim to make sure that the half exons are in the middle of the module
-                        # so that we don't mark the next module as having that half exon
-                        modules.append(self.Module(self.nodes[start_idx: i + 1 + 1], self.strand))
-                        nextEndShift = 1
-                    else:
-                        modules.append(self.Module(self.nodes[start_idx + nextEndShift: i + 1], self.strand))
-                        nextEndShift = 0
+                if not any(e.start < edge.end < e.end or (e.start > edge.start and e.end == edge.end) for e in edges):
+                    j += 1
+                    i = bisect_left(self.nodes, edge.node)
+                    if j == 2 or True:
+                        #print(edge.lsvs)
+                        if((self.nodes[i].end == -1 or self.nodes[i].start == -1) and True):
+                            # handling case like exon 19-20 in ENSMUSG00000021820
+                            # we aim to make sure that the half exons are in the middle of the module
+                            # so that we don't mark the next module as having that half exon
+                            modules.append(self.Module(self.nodes[start_idx: i + 1 + 1], self.strand))
+                            nextEndShift = 1
+                        else:
+                            modules.append(self.Module(self.nodes[start_idx + nextEndShift: i + 1], self.strand))
+                            nextEndShift = 0
 
-                start_idx = i
+                    start_idx = i
 
         if self.strand == '-':
             modules.reverse()
@@ -391,42 +411,62 @@ class Graph:
 
         lsv_store = {}
 
+
         with Matrix(self.config.voila_file) as m:
             for lsv_id in m.lsv_ids(gene_ids=[self.gene_id]):
                 lsv = m.psi(lsv_id)
-                experiment_names = [m.experiment_names[0][0]]
+
 
                 for (start, end), means in zip(lsv.junctions, lsv.get('means')):
 
                     key = str(start) + '-' + str(end)
 
+
+
                     if key not in lsv_store:
-                        lsv_store[key] = {'matrix_events': {}}
+                        lsv_store[key] = {}
 
                     if lsv_id not in lsv_store[key]:
                         lsv_store[key][lsv_id] = {'psi': [], 'delta_psi': []}
 
                     lsv_store[key][lsv_id]['psi'].append(means)
+                    #
+                    # with SpliceGraph(self.config.splice_graph_file) as sg:
+                    #     if [x for x in sg.intron_retention_reads_exp({'gene_id': self.gene_id,
+                    #                                               'start': int(start),
+                    #                                               'end': int(end)}, experiment_names)]:
+                    #
+                    #         # if not key in ir_store:
+                    #         #     ir_store[key] = []
+                    #         ir_store[key] = True
 
-                    if lsv.intron_retention:
-                        with SpliceGraph(self.config.splice_graph_file) as sg:
-                            # print(start)
-                            # print(end)
-                            # print("true 1")
-
-                            if [x for x in sg.intron_retention_reads_exp({'gene_id': self.gene_id,
-                                                              'start': int(start)+1,
-                                                              'end': int(end)-1}, experiment_names)]:
-                                # print("true 2")
-                                lsv_store[key]['matrix_events']['IR'] = {'start': int(start)+1,
-                                                                         'end': int(end)-1}
+                # for start, end in lsv.get('junctions'):
+                #     print(start, end)
+                #     print('nnnnnn')
+                #     with SpliceGraph(self.config.splice_graph_file) as sg:
+                #         # print(experiment_names)
+                #         # print(int(start)+1)
+                #         # print(int(end)-1)
+                #         # print("true 1")
+                #
+                #         if [x for x in sg.intron_retention_reads_exp({'gene_id': self.gene_id,
+                #                                           'start': int(start),
+                #                                           'end': int(end)}, experiment_names)]:
+                #             #print("true 2")
+                #             #print(lsv_store[key])
+                #             if not key in ir_store:
+                #                 ir_store[key] = []
+                #             ir_store[key].append({'start': start, 'end': end})
 
 
 
         for edge in self.edges:
+
             key = str(edge.start) + '-' + str(edge.end)
+
             if key in lsv_store:
                 edge.lsvs = lsv_store[key]
+
 
     def _delta_psi(self):
         """
@@ -491,7 +531,6 @@ class Graph:
                 if connections:
                     for edge in connections:
                         for lsv in edge.lsvs:
-                            if lsv != 'matrix_events':
                                 if ":s:" in lsv:
                                     sources.add(lsv)
                                 elif ":t:" in lsv:
@@ -634,19 +673,18 @@ class Graph:
             #t = self.Filters.target_psi
 
             for n1, n2 in combinations(self.nodes, 2):
-                for edge in n1.edges:
-                    if 'IR' in edge.lsvs.get('matrix_events', {}) and (n1.connects(n2) or n2.connects(n1)):
+                fwd_connects = n1.connects(n2, ir=True)
+                for edge in fwd_connects:
+                    if edge.ir:
                         found.append({'event': 'intron_retention', 'C1': n1, 'C2': n2,
-                                      'Intron': Graph.Edge(edge.lsvs['matrix_events']['IR'])})
-
-                for edge in n2.edges:
-                    if 'IR' in edge.lsvs.get('matrix_events', {}) and (n1.connects(n2) or n2.connects(n1)):
-                        found.append({'event': 'intron_retention', 'C1': n1, 'C2': n2,
-                                      'Intron': Graph.Edge(edge.lsvs['matrix_events']['IR'])})
-
+                                      'Intron': edge})
+                # bkd_connects = n2.connects(n1)
+                # for edge in bkd_connects:
+                #     if edge.ir:
+                #         found.append({'event': 'intron_retention', 'C1': n1, 'C2': n2,
+                #                       'Intron': edge})
 
             return found
-
 
 
 
