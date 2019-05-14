@@ -339,6 +339,17 @@ class Graph:
             node = self.start_node(edge)
             node.edges.append(edge)
 
+    def in_exon(self, exon, coordinate):
+        """
+        Check if the coordinate falls inside the exon (inclusive)
+        :param exon:
+        :param coordinate:
+        :return:
+        """
+        if exon.start <= coordinate <= exon.end:
+            return True
+        return False
+
     def _populate(self):
         """
         Add all juctions and exons to graph and sort those lists.
@@ -354,6 +365,12 @@ class Graph:
             for ir in sg.intron_retentions(self.gene_id, omit_simplified=True):
                 if [x for x in sg.intron_retention_reads_exp(ir, self.experiment_names)]:
                     self._add_junc(ir, ir=True)
+
+
+        # remove exons that don't have any junctions
+        # this is done by looking at the start and end of each junction and seeing if any of those ends
+        # fall inside of each node
+        self.nodes[:] = [x for x in self.nodes if any(self.in_exon(x, edge.end) or self.in_exon(x, edge.start) for edge in self.edges)]
 
 
         self.edges.sort()
@@ -931,7 +948,7 @@ class Graph:
             Helper function that returns a list of types found in this module.
             :return: list of AS types, flag is module is complex true or false
             """
-            #print('---------------------------', self.idx, '--------------------------------')
+            print('---------------------------', self.idx, '--------------------------------')
             as_type_dict = {
                 # 'alt_downstream': self.alternate_downstream,
                 # 'alt_upstream': self.alternate_upstream,
