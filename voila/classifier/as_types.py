@@ -1,5 +1,5 @@
 from bisect import bisect_left, bisect_right
-from itertools import combinations, permutations
+from itertools import combinations, permutations, product
 from pathlib import Path
 
 from voila import constants
@@ -311,14 +311,14 @@ class Graph:
 
         edge = self.Edge(junc, ir)
 
-        start_node = self.start_node(edge)
+        #start_node = self.start_node(edge)
         end_node = self.end_node(edge)
 
         # Since majiq doesn't quantify junctions that start/stop in same exon, filter them.
-        if start_node != end_node:
+        #if start_node != end_node:
 
-            self.edges.append(edge)
-            edge.node = end_node
+        self.edges.append(edge)
+        edge.node = end_node
 
     def _add_exon(self, exon):
         """
@@ -346,6 +346,10 @@ class Graph:
         :param coordinate:
         :return:
         """
+        if exon.start == -1:
+            return coordinate == exon.end
+        elif exon.end == -1:
+            return coordinate == exon.start
         if exon.start <= coordinate <= exon.end:
             return True
         return False
@@ -370,8 +374,9 @@ class Graph:
         # remove exons that don't have any junctions
         # this is done by looking at the start and end of each junction and seeing if any of those ends
         # fall inside of each node
-        self.nodes[:] = [x for x in self.nodes if any(self.in_exon(x, edge.end) or self.in_exon(x, edge.start) for edge in self.edges)]
 
+
+        self.nodes[:] = [x for x in self.nodes if any(self.in_exon(x, edge.end) or self.in_exon(x, edge.start) for edge in self.edges)]
 
         self.edges.sort()
         self.nodes.sort()
@@ -387,7 +392,8 @@ class Graph:
         j = 0
         nextEndShift = 0
         start_idx = 0
-        edges = [x for x in self.edges if not x.ir]  # we exclude IR from module creation for now
+        #edges = [x for x in self.edges if not x.ir]  # we exclude IR from module creation for now
+        edges = self.edges
         for edge in edges:
 
 
@@ -418,6 +424,7 @@ class Graph:
 
         for i, mod in enumerate(modules, 1):
             mod.set_idx(i)
+
 
 
         return modules
@@ -606,16 +613,19 @@ class Graph:
                 # print(n1.connects(n3, b))
                 # print('--------------------')
                 # print(n2.connects(n3, s))
-                include1 = n1.connects(n2, s)
-                include2 = n2.connects(n3, t)
-                skip = n1.connects(n3, b)
-                if include1 and include2 and skip:
+                include1s = n1.connects(n2, s)
+                include2s = n2.connects(n3, t)
+                skips = n1.connects(n3, b)
+                if include1s and include2s and skips:
                     # assert len(include1) > 1
                     # assert len(include2) > 1
                     # assert len(skip) > 1
-                    found.append({'event': 'cassette_exon', 'C1': n1, 'C2': n3,
-                                  'A': n2, 'Include1': include1,
-                                  'Include2': include2, 'Skip': skip})
+                    for include1, include2, skip in product(include1s, include2s, skips):
+
+                        found.append({'event': 'cassette_exon', 'C1': n1, 'C2': n3,
+                                      'A': n2, 'Include1': include1,
+                                      'Include2': include2, 'Skip': skip})
+
                     #return True
 
             return found
@@ -802,13 +812,13 @@ class Graph:
 
             found = []
             for node in self.nodes:
-                has_connections = False
+
+                if node.is_half_exon:
+                    continue
 
                 for other_node in self.nodes:
-                    connections = node.connects(other_node) + other_node.connects(node)
-
+                    connections = node.connects(other_node, ir=True) + other_node.connects(node, ir=True)
                     if connections:
-                        has_connections = True
                         if self.Filters.strand == '+':
                             if node == self.nodes[0]:
 
@@ -822,18 +832,17 @@ class Graph:
                             if other_node.start > node.start:
                                 break
                 else:
-                    if has_connections:
-                        if self.Filters.strand == '+':
-                            a1 = self.nodes[0]
-                            c1 = self.nodes[-1]
-                        else:
-                            a1 = self.nodes[-1]
-                            c1 = self.nodes[0]
+                    if self.Filters.strand == '+':
+                        a1 = self.nodes[0]
+                        c1 = self.nodes[-1]
+                    else:
+                        a1 = self.nodes[-1]
+                        c1 = self.nodes[0]
 
-                        skipA1 = node.connects(c1) + c1.connects(node)
-                        skipA2 = a1.connects(c1) + c1.connects(a1)
-                        found.append({'event': 'afe', 'A1': a1, 'A2': node, 'C1': c1,
-                                                'SkipA2': skipA2, 'SkipA1': skipA1})
+                    skipA1 = node.connects(c1, ir=True) + c1.connects(node, ir=True)
+                    skipA2 = a1.connects(c1, ir=True) + c1.connects(a1, ir=True)
+                    found.append({'event': 'afe', 'A1': a1, 'A2': node, 'C1': c1,
+                                            'SkipA2': skipA2, 'SkipA1': skipA1})
 
             return found
 
@@ -841,13 +850,14 @@ class Graph:
 
             found = []
             for node in self.nodes:
-                has_connections = False
+
+                if node.is_half_exon:
+                    continue
 
                 for other_node in self.nodes:
-                    connections = node.connects(other_node) + other_node.connects(node)
+                    connections = node.connects(other_node, ir=True) + other_node.connects(node, ir=True)
 
                     if connections:
-                        has_connections = True
                         if self.Filters.strand == '+':
                             if node == self.nodes[-1]:
                                 break
@@ -859,18 +869,17 @@ class Graph:
                             if other_node.start < node.start:
                                 break
                 else:
-                    if has_connections:
-                        if self.Filters.strand == '+':
-                            a2 = self.nodes[-1]
-                            c1 = self.nodes[0]
-                        else:
-                            a2 = self.nodes[0]
-                            c1 = self.nodes[-1]
+                    if self.Filters.strand == '+':
+                        a2 = self.nodes[-1]
+                        c1 = self.nodes[0]
+                    else:
+                        a2 = self.nodes[0]
+                        c1 = self.nodes[-1]
 
-                        skipA1 = a2.connects(c1) + c1.connects(a2)
-                        skipA2 = c1.connects(node) + node.connects(c1)
-                        found.append({'event': 'ale', 'A1': node, 'A2': a2, 'C1': c1,
-                                      'SkipA2': skipA2, 'SkipA1': skipA1})
+                    skipA1 = a2.connects(c1, ir=True) + c1.connects(a2, ir=True)
+                    skipA2 = c1.connects(node, ir=True) + node.connects(c1, ir=True)
+                    found.append({'event': 'ale', 'A1': node, 'A2': a2, 'C1': c1,
+                                  'SkipA2': skipA2, 'SkipA1': skipA1})
 
             return found
 
@@ -948,7 +957,8 @@ class Graph:
             Helper function that returns a list of types found in this module.
             :return: list of AS types, flag is module is complex true or false
             """
-            print('---------------------------', self.idx, '--------------------------------')
+            #print('---------------------------', self.idx, '--------------------------------')
+            #print(self.nodes)
             as_type_dict = {
                 # 'alt_downstream': self.alternate_downstream,
                 # 'alt_upstream': self.alternate_upstream,
