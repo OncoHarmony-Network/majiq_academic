@@ -177,19 +177,23 @@ class Graph:
         def is_half_exon(self):
             return self.exon['end'] == -1 or self.exon['start'] == -1
 
-        def connects(self, node, filter=None, ir=False):
+        def connects(self, node, filter=None, ir=False, only_ir=False):
             """
             Search through junctions for this exon to see if this exon has a junction that connects to supplied exon.
             :param node: the exon that this exon might connect to.
             :param filter: function to filter junctions
-            :param ir: include IR edges
+            :param ir: include IR edges and standard junctions if true
+            :param only_ir: include ONLY IR edges and NOT standard junctions if true
             :return: boolean
             """
 
             edges = self.edges
             if filter:
                 edges = filter(edges)
-            if not ir:
+
+            if only_ir is True:
+                edges = [edge for edge in edges if edge.ir]
+            elif ir is False:
                 edges = [edge for edge in edges if not edge.ir]
 
             # print(node)
@@ -736,6 +740,7 @@ class Graph:
                         found.append({'event': 'alt5ss', 'E1': n1, 'E2': n2, 'Proximal': proximal, 'Distal': distal})
             return found
 
+
         def alt3ss(self):
 
             found = []
@@ -753,6 +758,63 @@ class Graph:
                     proximal = connections.pop(pop_i)
                     for distal in connections:
                         found.append({'event': 'alt3ss', 'E1': n1, 'E2': n2, 'Proximal': proximal, 'Distal': distal})
+            return found
+
+
+        def p_alt5ss(self):
+
+            found = []
+
+            b = self.Filters.target_source_psi
+
+            for n1, n2, n3 in combinations(self.nodes, 3):
+
+                skips = n1.connects(n3, b)
+
+                if self.Filters.strand == '+':
+                    include1s = n1.connects(n2, only_ir=True)
+                    include2s = n2.connects(n3)
+                else:
+                    include2s = n1.connects(n2)
+                    include1s = n2.connects(n3, only_ir=True)
+
+                if include1s and include2s and skips:
+
+                    for include1, include2, skip in product(include1s, include2s, skips):
+                        found.append({'event': 'p_alt5ss', 'C1': n1, 'C2': n3,
+                                      'A': n2, 'Include1': include1,
+                                      'Include2': include2, 'Skip': skip})
+                        # found.append({'event': 'alt5ss', 'E1': n1, 'E2': n2, 'Proximal': proximal, 'Distal': distal})
+
+            return found
+
+        def p_alt3ss(self):
+
+            found = []
+
+            b = self.Filters.target_source_psi
+
+            for n1, n2, n3 in combinations(self.nodes, 3):
+
+                skips = n1.connects(n3, b)
+
+                if self.Filters.strand == '+':
+                    include1s = n1.connects(n2)
+                    include2s = n2.connects(n3, only_ir=True)
+
+                else:
+                    include2s = n1.connects(n2, only_ir=True)
+                    include1s = n2.connects(n3)
+
+
+                if include1s and include2s and skips:
+
+                    for include1, include2, skip in product(include1s, include2s, skips):
+                        found.append({'event': 'p_alt3ss', 'C1': n1, 'C2': n3,
+                                      'A': n2, 'Include1': include1,
+                                      'Include2': include2, 'Skip': skip})
+                        # found.append({'event': 'alt5ss', 'E1': n1, 'E2': n2, 'Proximal': proximal, 'Distal': distal})
+
             return found
 
         # def alt3and5ss(self):
@@ -967,6 +1029,8 @@ class Graph:
                 'intron_retention': self.intron_retention,
                 'alt3ss': self.alt3ss,
                 'alt5ss': self.alt5ss,
+                'p_alt3ss': self.p_alt3ss,
+                'p_alt5ss': self.p_alt5ss,
                 'p_alt_last_exon': self.p_alt_last_exon,
                 'p_alt_first_exon': self.p_alt_first_exon,
                 'alt_last_exon': self.alt_last_exon,

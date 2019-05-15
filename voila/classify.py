@@ -63,6 +63,9 @@ def run_classifier():
         writer.alt5prime()
         # writer.alt3and5prime()
 
+        writer.p_alt3prime()
+        writer.p_alt5prime()
+
         writer.mutually_exclusive()
         writer.intron_retention()
         writer.multi_exon_skipping()

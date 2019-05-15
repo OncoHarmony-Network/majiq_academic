@@ -221,6 +221,66 @@ class TsvWriter:
                                    event['Distal'].range_str()]
                             writer.writerow(trg_common + row + self.quantifications(module, 't', event['Distal']))
 
+    def p_alt5prime(self):
+        headers = self.common_headers + ['Reference Exon Coordinate', 'Exon Spliced With',
+                                         'Exon Spliced With Coordinate', 'Junction Name',
+                                         'Junction Coordinate'] + self.quantification_headers
+        self.start_headers(headers, 'p_alt5prime.tsv')
+        with open(os.path.join(self.config.directory, 'p_alt5prime.tsv'), 'a', newline='') as csvfile:
+            writer = csv.writer(csvfile, dialect='excel-tab', delimiter='\t')
+            for module in self.modules:
+                events, _complex = self.as_types[module.idx]
+                if not _complex or SHOW_COMPLEX_IN_ALL:
+                    for event in events:
+                        if event['event'] == 'p_alt5ss':
+                            src_common = self.common_data(module, 's')
+                            trg_common = self.common_data(module, 't')
+                            row = [event['C1'].range_str(), 'C2', event['C2'].range_str(), 'C1_C2',
+                                   event['Skip'].range_str()]
+                            writer.writerow(src_common + row + self.quantifications(module, 's', event['Skip']))
+
+                            row = [event['C1'].range_str(), 'A', event['A'].range_str(), 'C1_A',
+                                   event['Include1'].range_str()]
+                            writer.writerow(src_common + row + self.quantifications(module, 's', event['Include1']))
+
+                            row = [event['C2'].range_str(), 'C1', event['C1'].range_str(), 'C2_C1',
+                                   event['Skip'].range_str()]
+                            writer.writerow(trg_common + row + self.quantifications(module, 't', event['Skip']))
+
+                            row = [event['C2'].range_str(), 'A', event['A'].range_str(), 'C2_A',
+                                   event['Include2'].range_str()]
+                            writer.writerow(trg_common + row + self.quantifications(module, 't', event['Include2']))
+
+    def p_alt3prime(self):
+        headers = self.common_headers + ['Reference Exon Coordinate', 'Exon Spliced With',
+                                         'Exon Spliced With Coordinate', 'Junction Name',
+                                         'Junction Coordinate'] + self.quantification_headers
+        self.start_headers(headers, 'p_alt3prime.tsv')
+        with open(os.path.join(self.config.directory, 'p_alt3prime.tsv'), 'a', newline='') as csvfile:
+            writer = csv.writer(csvfile, dialect='excel-tab', delimiter='\t')
+            for module in self.modules:
+                events, _complex = self.as_types[module.idx]
+                if not _complex or SHOW_COMPLEX_IN_ALL:
+                    for event in events:
+                        if event['event'] == 'p_alt3ss':
+                            src_common = self.common_data(module, 's')
+                            trg_common = self.common_data(module, 't')
+                            row = [event['C1'].range_str(), 'C2', event['C2'].range_str(), 'C1_C2',
+                                   event['Skip'].range_str()]
+                            writer.writerow(src_common + row + self.quantifications(module, 's', event['Skip']))
+
+                            row = [event['C1'].range_str(), 'A', event['A'].range_str(), 'C1_A',
+                                   event['Include1'].range_str()]
+                            writer.writerow(src_common + row + self.quantifications(module, 's', event['Include1']))
+
+                            row = [event['C2'].range_str(), 'C1', event['C1'].range_str(), 'C2_C1',
+                                   event['Skip'].range_str()]
+                            writer.writerow(trg_common + row + self.quantifications(module, 't', event['Skip']))
+
+                            row = [event['C2'].range_str(), 'A', event['A'].range_str(), 'C2_A',
+                                   event['Include2'].range_str()]
+                            writer.writerow(trg_common + row + self.quantifications(module, 't', event['Include2']))
+
     def alt3and5prime(self):
         headers = self.common_headers + ['Reference Exon Coordinate', 'Exon Spliced With',
                                          'Exon Spliced With Coordinate', 'Junction Name',
@@ -274,6 +334,62 @@ class TsvWriter:
                             row = [event['C2'].range_str(), 'A1', event['A1'].range_str(), 'C2_A1',
                                    event['SkipA2'].range_str()]
                             writer.writerow(trg_common + row + self.quantifications(module, 't', event['SkipA2']))
+
+    # def p_alternate_first_exon(self):
+    #     headers = self.common_headers + ['Reference Exon Coordinate', 'Exon Spliced With',
+    #                                      'Exon Spliced With Coordinate', 'Junction Name',
+    #                                      'Junction Coordinate'] + self.quantification_headers
+    #     self.start_headers(headers, 'p_alternate_first_exon.tsv')
+    #     with open(os.path.join(self.config.directory, 'p_alternate_first_exon.tsv'), 'a', newline='') as csvfile:
+    #         writer = csv.writer(csvfile, dialect='excel-tab', delimiter='\t')
+    #         for module in self.modules:
+    #             events, _complex = self.as_types[module.idx]
+    #             if not _complex or SHOW_COMPLEX_IN_ALL:
+    #                 for event in events:
+    #                     if event['event'] == 'p_afe':
+    #                         src_common = self.common_data(module, 's')
+    #                         trg_common = self.common_data(module, 't')
+    #                         for junc in event['SkipA2']:
+    #                             row = [event['C1'].range_str(), 'A1', event['A1'].range_str(), 'C1_A1',
+    #                                    junc.range_str()]
+    #                             writer.writerow(src_common + row + self.quantifications(module, 's', junc))
+    #                         for junc in event['SkipA1']:
+    #                             row = [event['C1'].range_str(), 'A2', event['A2'].range_str(), 'C1_A2',
+    #                                    junc.range_str()]
+    #                             writer.writerow(trg_common + row + self.quantifications(module, 't', junc))
+    #                     elif event['event'] == 'p_ale':
+    #                         trg_common = self.common_data(module, 't')
+    #                         row = ['N/A', 'A1', event['A1'].range_str(), 'C1_A1',
+    #                                'N/A']
+    #                         writer.writerow(trg_common + row + self.quantifications(module, 't', event['A1']))
+    #
+    # def p_alternate_last_exon(self):
+    #     headers = self.common_headers + ['Reference Exon Coordinate', 'Exon Spliced With',
+    #                                      'Exon Spliced With Coordinate', 'Junction Name',
+    #                                      'Junction Coordinate'] + self.quantification_headers
+    #     self.start_headers(headers, 'p_alternate_last_exon.tsv')
+    #     with open(os.path.join(self.config.directory, 'p_alternate_last_exon.tsv'), 'a', newline='') as csvfile:
+    #         writer = csv.writer(csvfile, dialect='excel-tab', delimiter='\t')
+    #         for module in self.modules:
+    #             events, _complex = self.as_types[module.idx]
+    #             if not _complex or SHOW_COMPLEX_IN_ALL:
+    #                 for event in events:
+    #                     if event['event'] == 'p_ale':
+    #                         src_common = self.common_data(module, 's')
+    #                         trg_common = self.common_data(module, 't')
+    #                         for junc in event['SkipA2']:
+    #                             row = [event['C1'].range_str(), 'A1', event['A1'].range_str(), 'C1_A1',
+    #                                    junc.range_str()]
+    #                             writer.writerow(src_common + row + self.quantifications(module, 's', junc))
+    #                         for junc in event['SkipA1']:
+    #                             row = [event['C1'].range_str(), 'A2', event['A2'].range_str(), 'C1_A2',
+    #                                    junc.range_str()]
+    #                             writer.writerow(trg_common + row + self.quantifications(module, 't', junc))
+    #                     elif event['event'] == 'p_ale':
+    #                         trg_common = self.common_data(module, 't')
+    #                         row = ['N/A', 'A1', event['A1'].range_str(), 'C1_A1',
+    #                                'N/A']
+    #                         writer.writerow(trg_common + row + self.quantifications(module, 't', event['A1']))
 
     def alternate_last_exon(self):
         headers = self.common_headers + ['Reference Exon Coordinate', 'Exon Spliced With',
@@ -398,7 +514,7 @@ class TsvWriter:
         :return: NOTHING
         """
         headers = ['Module', 'LSV ID(s)', 'Cassette', 'Alt 3',
-                             'Alt 5', 'Alt 3 and Alt 5', 'MXE', 'ALE',
+                             'Alt 5', 'P_Alt 3', 'P_Alt 5', 'Alt 3 and Alt 5', 'MXE', 'ALE',
                              'AFE', 'P_ALE', 'P_AFE', 'Multi Exon Skipping', 'Intron Retention', 'Complex']
         self.start_headers(headers, 'summary.tsv')
 
@@ -412,6 +528,8 @@ class TsvWriter:
                 counts['cassette_exon'] = 0
                 counts['alt3ss'] = 0
                 counts['alt5ss'] = 0
+                counts['p_alt3ss'] = 0
+                counts['p_alt5ss'] = 0
                 counts['alt3ss+alt5ss'] = 0
                 counts['mutually_exclusive'] = 0
                 counts['ale'] = 0
