@@ -21,7 +21,7 @@ _TsvConfig = namedtuple('TsvConfig', ['file_name', 'voila_files', 'voila_file', 
                                       'lsv_types', 'strict_indexing'])
 _TsvConfig.__new__.__defaults__ = (None,) * len(_TsvConfig._fields)
 _ClassifyConfig = namedtuple('ClassifyConfig', ['directory', 'voila_files', 'voila_file', 'splice_graph_file',
-                                      'nproc', 'threshold', 'analysis_type', 'gene_ids',
+                                      'nproc', 'decomplexify_threshold', 'analysis_type', 'gene_ids',
                                       'debug', 'silent', 'keep_constitutive'])
 _ClassifyConfig.__new__.__defaults__ = (None,) * len(_ClassifyConfig._fields)
 
@@ -297,7 +297,7 @@ class ClassifyConfig:
             settings = dict(config_parser['SETTINGS'])
             for int_key in ['nproc']:
                 settings[int_key] = config_parser['SETTINGS'].getint(int_key)
-            for float_key in ['threshold']:
+            for float_key in ['decomplexify_threshold']:
                 settings[float_key] = config_parser['SETTINGS'].getfloat(float_key)
             for bool_key in ['debug', 'keep_constitutive']:
                 settings[bool_key] = config_parser['SETTINGS'].getboolean(bool_key)

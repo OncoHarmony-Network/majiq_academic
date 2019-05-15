@@ -1,7 +1,7 @@
 from bisect import bisect_left, bisect_right
 from itertools import combinations, permutations, product
 from pathlib import Path
-
+from voila.voila_log import voila_log
 from voila import constants
 from voila.api import SpliceGraph, Matrix
 from voila.api.matrix_utils import generate_means
@@ -72,7 +72,7 @@ class Graph:
 
         # get psi/dpsi data from voila file and associate with edges
         with Matrix(self.config.voila_file) as m:
-            analysis_type = m.analysis_type
+            self.analysis_type = m.analysis_type
 
         with SpliceGraph(self.config.splice_graph_file) as sg:
             gene_meta = sg.gene(self.gene_id)
@@ -81,12 +81,14 @@ class Graph:
             self.strand, self.gene_name, self.chromosome = itemgetter('strand', 'name', 'chromosome')(gene_meta)
 
 
-        if analysis_type == constants.ANALYSIS_PSI:
+        if self.analysis_type == constants.ANALYSIS_PSI:
             self._psi()
-        elif analysis_type == constants.ANALYSIS_DELTAPSI:
+        elif self.analysis_type == constants.ANALYSIS_DELTAPSI:
             self._delta_psi()
         else:
             raise UnsupportedVoilaFile()
+
+        self._decomplexify()
 
         # find connections between nodes
         self._find_connections()
@@ -343,6 +345,25 @@ class Graph:
             node = self.start_node(edge)
             node.edges.append(edge)
 
+    def _decomplexify(self):
+        """
+        Remove any edges which are under a certain PSI value from the Graph
+        :return:
+        """
+        if not self.config.decomplexify_threshold:
+            return
+        num_filtered = 0
+        for i in range(len(self.edges) - 1, -1, -1):
+            if self.edges[i].lsvs:
+                if self.analysis_type == constants.ANALYSIS_PSI:
+                    psi = max(map(max, (v['psi'] for v in self.edges[i].lsvs.values())))
+                    if psi < self.config.decomplexify_threshold:
+                        num_filtered += 1
+                        del self.edges[i]
+        voila_log().debug("Decomplexifier removed %d junction(s)" % num_filtered)
+
+
+
     def in_exon(self, exon, coordinate):
         """
         Check if the coordinate falls inside the exon (inclusive)
@@ -368,7 +389,6 @@ class Graph:
             for exon in sg.exons(self.gene_id):
                 self._add_exon(exon)
             for junc in sg.junctions(self.gene_id, omit_simplified=True):
-
                 self._add_junc(junc)
             for ir in sg.intron_retentions(self.gene_id, omit_simplified=True):
                 if [x for x in sg.intron_retention_reads_exp(ir, self.experiment_names)]:
