@@ -873,8 +873,6 @@ class ViewHeterogens(ViewMulti):
 
             yield from vhs[0]
 
-
-
     def lsv(self, lsv_id):
         """
         Get view heterogens object for this lsv id.
@@ -883,10 +881,6 @@ class ViewHeterogens(ViewMulti):
         """
 
         return self._ViewHeterogens(self, lsv_id)
-
-
-
-
 
 class ViewHeterogen(Heterogen, ViewMatrix):
     def __init__(self, voila_file):

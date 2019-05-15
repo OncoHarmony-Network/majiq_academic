@@ -389,7 +389,8 @@ class Graph:
             for exon in sg.exons(self.gene_id):
                 self._add_exon(exon)
             for junc in sg.junctions(self.gene_id, omit_simplified=True):
-                self._add_junc(junc)
+                if [x for x in sg.junction_reads_exp(junc, self.experiment_names)]:
+                    self._add_junc(junc)
             for ir in sg.intron_retentions(self.gene_id, omit_simplified=True):
                 if [x for x in sg.intron_retention_reads_exp(ir, self.experiment_names)]:
                     self._add_junc(ir, ir=True)
