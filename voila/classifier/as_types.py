@@ -626,21 +626,21 @@ class Graph:
             """
 
             found = []
-            b = self.Filters.target_source_psi
-            s = self.Filters.source_psi
-            t = self.Filters.target_psi
-
+            # b = self.Filters.target_source_psi
+            # s = self.Filters.source_psi
+            # t = self.Filters.target_psi
+            # print(self.nodes)
             for n1, n2, n3 in combinations(self.nodes, 3):
                 # print(n1, n2, n3)
                 # print('--------------------')
-                # print(n1.connects(n2, t))
+                # print(n1.connects(n2))
                 # print('--------------------')
-                # print(n1.connects(n3, b))
+                # print(n1.connects(n3))
                 # print('--------------------')
-                # print(n2.connects(n3, s))
-                include1s = n1.connects(n2, s)
-                include2s = n2.connects(n3, t)
-                skips = n1.connects(n3, b)
+                # print(n2.connects(n3))
+                include1s = n1.connects(n2)
+                include2s = n2.connects(n3)
+                skips = n1.connects(n3)
                 if include1s and include2s and skips:
                     # assert len(include1) > 1
                     # assert len(include2) > 1
@@ -665,7 +665,7 @@ class Graph:
             if len(self.nodes) < 4:
                 return []
 
-            b = self.Filters.target_source_psi
+            #b = self.Filters.target_source_psi
 
             # exclude half exons
             full_exons = list(filter(lambda ex: ex.start != -1 and ex.end != -1, self.nodes))
@@ -679,10 +679,10 @@ class Graph:
             for i, n1 in enumerate(full_exons):
                 for j, n2 in enumerate(full_exons):
                     if j - i > 2:
-                        skip = n1.connects(n2, b)
+                        skip = n1.connects(n2)
                         if skip:
-                            include1 = n1.connects(self.nodes[i+1], b)
-                            include2 = self.nodes[j].connects(n2, b)
+                            include1 = n1.connects(self.nodes[i+1])
+                            include2 = self.nodes[j].connects(n2)
                             includes = []
                             found.append({'event': 'multi_exon_skipping', 'C1': n1, 'C2': n2, 'As': self.nodes[i+1:j],
                                           'Skip': skip, 'Include1': include1, 'Include2': include2,
@@ -695,7 +695,7 @@ class Graph:
             :return: boolean
             """
             found = []
-            f = self.Filters.target_source_psi
+            #f = self.Filters.target_source_psi
 
             # for n1, n2, n3, n4 in combinations(self.nodes, 4):
             #     if n1.connects(n2, f) and n1.connects(n3, f) and n2.connects(n4, f) and n3.connects(n4, f):
@@ -703,10 +703,10 @@ class Graph:
             #             return True
 
             for n1 in self.nodes[:-1]:
-                for e1, e2, in combinations(f(n1.edges), 2):
-                    if e1.node != e2.node and not (e1.node.connects(e2.node, f) or e2.node.connects(e1.node, f)):
-                        for i1 in f(e1.node.edges):
-                            for i2 in f(e2.node.edges):
+                for e1, e2, in combinations(n1.edges, 2):
+                    if e1.node != e2.node and not (e1.node.connects(e2.node) or e2.node.connects(e1.node)):
+                        for i1 in e1.node.edges:
+                            for i2 in e2.node.edges:
                                 if i1.node == i2.node:
                                     found.append({'event': 'mutually_exclusive',
                                                   'C1': n1, 'C2': i1.node,
@@ -813,11 +813,11 @@ class Graph:
 
             found = []
 
-            b = self.Filters.target_source_psi
+            #b = self.Filters.target_source_psi
 
             for n1, n2, n3 in combinations(self.nodes, 3):
 
-                skips = n1.connects(n3, b)
+                skips = n1.connects(n3)
 
                 if self.Filters.strand == '+':
                     include1s = n1.connects(n2)
