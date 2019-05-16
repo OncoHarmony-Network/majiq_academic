@@ -152,6 +152,7 @@ class SpliceGraphTools {
 
         document.querySelector('#reads-greater-than').oninput = junctions_filter;
         document.querySelector('#reads-less-than').oninput = junctions_filter;
+        junctions_filter();
 
 
     }
