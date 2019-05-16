@@ -249,11 +249,11 @@ namespace grimoire {
 
 
             if ((jnc.second)->get_start() > 0 && (jnc.second)->get_donor()->get_start()>0) {
-                Ssite s = {(jnc.second)->get_start()+1, true, jnc.second} ;
+                Ssite s = {(jnc.second)->get_start(), true, jnc.second} ;
                 ss_vec.push_back(s) ;
             }
             if ((jnc.second)->get_end() > 0 && (jnc.second)->get_acceptor()->get_end()>0) {
-                Ssite s = {(jnc.second)->get_end()-1, false, jnc.second} ;
+                Ssite s = {(jnc.second)->get_end(), false, jnc.second} ;
                 ss_vec.push_back(s) ;
             }
         }
@@ -270,7 +270,7 @@ namespace grimoire {
 
                     #pragma omp critical
                     {
-                        Intron * irObj = new Intron(start_ir, end_ir, false, this, simpl) ;
+                        Intron * irObj = new Intron(start_ir +1, end_ir -1, false, this, simpl) ;
                         intronlist.push_back(irObj) ;
                     }
 
@@ -657,11 +657,7 @@ namespace grimoire {
             prev_coord = ptr.ref_coord ;
             const string exid = to_string((ptr.ex_ptr)->get_start()) + "-" + to_string((ptr.ex_ptr)->get_end()) ;
             if (exid == ref_exon_id) continue ;
-            if ((ptr.jun_ptr)->get_intronic()){
-                ext_type = ext_type + "|i" ;
-                junctions_.push_back(ptr.jun_ptr) ;
-                continue ;
-            }
+
             unsigned int total = 0 ;
             unsigned int pos = 0 ;
 
