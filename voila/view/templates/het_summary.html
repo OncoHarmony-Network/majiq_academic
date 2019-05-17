@@ -89,6 +89,34 @@
         });
 
         var hidden_idx = [];
+        var group_names = {{ group_names | tojson }};
+
+        $.each(group_names, function(i, v){
+            console.log(v)
+            if(isInArr(i, hidden_idx)){
+                $('#groups-display').append(`<option value="${v}">${v}</option>`);
+            }else{
+                $('#groups-display').append(`<option value="${v}" selected>${v}</option>`);
+            }
+        });
+
+        $('#groups-display').SumoSelect({
+            'captionFormatAllSelected': 'All Groups are Visible',
+            'captionFormat': '{0} Groups are Visible',
+            'placeholder': 'No Groups are Visible',
+            'isClickAwayOk': true
+        });
+
+        $('#groups-display-all').click(function(){
+            $('#groups-display')[0].sumo.selectAll();
+        });
+
+        $('#groups-display-none').click(function(){
+            $('#groups-display')[0].sumo.unSelectAll();
+        });
+
+
+
         document.querySelector('#heatmap-stat-choices').addEventListener('change', () => {
             $('.lsv-table').DataTable().ajax.reload();
         });
@@ -388,26 +416,7 @@
                                 element.setAttribute('height', '0');
 
                                 violin.heterogen(element);
-                                if($('#groups-display option').length === 0){
-                                    $.each(data.group_names, function(i, v){
-                                        $('#groups-display').append(`<option value="${v}" selected>${v}</option>`);
-                                    });
 
-                                    $('#groups-display').SumoSelect({
-                                        'captionFormatAllSelected': 'All Groups are Visible',
-                                        'captionFormat': '{0} Groups are Visible',
-                                        'placeholder': 'No Groups are Visible',
-                                        'isClickAwayOk': true
-                                    });
-
-                                    $('#groups-display-all').click(function(){
-                                        $('#groups-display')[0].sumo.selectAll();
-                                    });
-
-                                    $('#groups-display-none').click(function(){
-                                        $('#groups-display')[0].sumo.unSelectAll();
-                                    });
-                                }
 
                                 return element.outerHTML
                             }
@@ -432,6 +441,7 @@
                     ]
                 })
             });
+
 
         $('#results tbody')
             .on('click', '.excl-incl-rect, .dpsi-violin', event => {
