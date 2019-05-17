@@ -443,9 +443,11 @@ class Graph:
             modules.reverse()
 
         # removing modules with no lsv ids
-        if not self.config.keep_constitutive:
-            modules[:] = [x for x in modules if x.source_lsv_ids or x.target_lsv_ids]
+        modules[:] = [x for x in modules if x.source_lsv_ids or x.target_lsv_ids]
 
+        # removing modules with only one junction
+        if not self.config.keep_constitutive:
+            modules[:] = [x for x in modules if x.get_num_edges(ir=True) > 1]
 
         for i, mod in enumerate(modules, 1):
             mod.set_idx(i)
@@ -568,6 +570,19 @@ class Graph:
         def set_idx(self, idx):
             self.idx = idx
 
+        def get_all_edges(self, ir=False):
+            edges = []
+            for node, n2 in permutations(self.nodes, 2):
+                connections = node.connects(n2, ir=ir)
+                if connections:
+                    edges += connections
+            return edges
+
+        def get_num_edges(self, ir=False):
+            num_edges = 0
+            for node, n2 in permutations(self.nodes, 2):
+                num_edges += len(node.connects(n2, ir=ir))
+            return num_edges
 
         def get_lsv_ids(self):
             """
