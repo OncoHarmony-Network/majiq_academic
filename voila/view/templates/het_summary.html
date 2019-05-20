@@ -92,7 +92,6 @@
         var group_names = {{ group_names | tojson }};
 
         $.each(group_names, function(i, v){
-            console.log(v)
             if(isInArr(i, hidden_idx)){
                 $('#groups-display').append(`<option value="${v}">${v}</option>`);
             }else{
@@ -114,7 +113,6 @@
         $('#groups-display-none').click(function(){
             $('#groups-display')[0].sumo.unSelectAll();
         });
-
 
 
         document.querySelector('#heatmap-stat-choices').addEventListener('change', () => {

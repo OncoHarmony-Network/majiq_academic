@@ -600,6 +600,12 @@ class Violin {
             .attr('y', this.svg_height - this.x_axis_height + 6)
             .append('text')
             .attr('font-size', 12)
+            .attr('textLength', d =>{
+                if(d.length > 10){
+                    return "77px";
+                }
+            })
+            .attr('lengthAdjust', "spacingAndGlyphs")
             .text(d => {
                 try {
                     return parseFloat(d.toPrecision(3))
@@ -614,21 +620,22 @@ class Violin {
             .select(function() { return this.parentNode; })
             .each((d, i, a) => {
                 const el = a[i];
-                if (d.length > 7) {
-                    el.setAttribute('x', (this.violin_width + this.violin_pad) * (i + .45));
-                    el.setAttribute("data-x", (this.violin_width + this.violin_pad) * (i + .45));
-                    el.setAttribute("data-orig-x", (this.violin_width + this.violin_pad) * (i + .45));
-                    el.setAttribute('y', this.svg_height - this.x_axis_height + 6);
-                    el.setAttribute('transform', `rotate(90,${a[i].getAttribute('x')},${a[i].getAttribute('y')})`);
-                    el.setAttribute('text-anchor', 'left');
-
-                } else {
+                // if (d.length > 7) {
+                //     el.setAttribute('x', (this.violin_width + this.violin_pad) * (i + .45));
+                //     el.setAttribute("data-x", (this.violin_width + this.violin_pad) * (i + .45));
+                //     el.setAttribute("data-orig-x", (this.violin_width + this.violin_pad) * (i + .45));
+                //     el.setAttribute('y', this.svg_height - this.x_axis_height + 6);
+                //     el.setAttribute('transform', `rotate(90,${a[i].getAttribute('x')},${a[i].getAttribute('y')})`);
+                //     el.setAttribute('text-anchor', 'left');
+                //
+                // } else {
                     el.setAttribute('x', (this.violin_width + this.violin_pad) * (i + .5));
                     el.setAttribute("data-x", (this.violin_width + this.violin_pad) * (i + .5));
                     el.setAttribute("data-orig-x", (this.violin_width + this.violin_pad) * (i + .5));
                     el.setAttribute('y', this.svg_height - this.x_axis_height + 10);
                     el.setAttribute('text-anchor', 'middle');
-                }
+                //                }
+                el.setAttribute('textLength', '40px')
                 el.setAttribute('data-group-idx', i)
             })
 
