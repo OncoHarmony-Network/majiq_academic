@@ -656,9 +656,6 @@ class Graph:
                 include1s = n1.connects(n2)
                 include2s = n2.connects(n3)
                 skips = n1.connects(n3)
-                print(include1s)
-                print(include2s)
-                print(skips)
                 if include1s and include2s and skips:
                     # assert len(include1) > 1
                     # assert len(include2) > 1
@@ -1059,7 +1056,7 @@ class Graph:
             Helper function that returns a list of types found in this module.
             :return: list of AS types, flag is module is complex true or false
             """
-            print('---------------------------', self.idx, '--------------------------------')
+            #print('---------------------------', self.idx, '--------------------------------')
             #print(self.nodes)
             as_type_dict = {
                 # 'alt_downstream': self.alternate_downstream,
