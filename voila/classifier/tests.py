@@ -8,7 +8,7 @@ from voila.api.matrix_utils import generate_means
 
 from voila.classifier.as_types import Graph
 from voila.classifier.tsv_writer import TsvWriter
-from voila.classifier.tests_expected import expected_modules
+from voila.classifier.tests_expected import expected_modules, expected_cassette_exons
 
 from subprocess import Popen, PIPE, STDOUT
 import os, shutil
@@ -42,8 +42,30 @@ def run_voila_classify(gene_id):
     os.environ['PYTHONPATH'] = ''
 
 
+expected_headers = ['module_id', 'lsv_ids', 'cassette_exon', 'alt3ss', 'alt5ss', 'p_alt3ss', 'p_alt5ss', 'alt3ss+alt5ss',
+ 'mutually_exclusive', 'ale', 'afe', 'p_ale', 'p_afe', 'multi_exon_skipping', 'intron_retention', 'complex']
 
 def verify_tsvs(gene_id):
+
+    with open(os.path.join(out_dir, 'cassette.tsv'), 'r', newline='') as csvfile:
+        reader = csv.reader(csvfile, dialect='excel-tab', delimiter='\t')
+        headers = next(reader, None)
+        events = []
+        for line in reader:
+            events.append(line)
+
+        if gene_id in expected_cassette_exons:
+            for i, mod in enumerate(expected_cassette_exons[gene_id]):
+                print(mod)
+
+                for k, v in mod.items():
+                    try:
+                        assert v == events[i][headers.index(k)]
+                    except:
+                        print("expt: %s found: %s (%d, %s, %s)" % (v, events[i][headers.index(k)], i+1,
+                                                                   events[i][headers.index(k)], gene_id))
+                        raise
+
 
     with open(os.path.join(out_dir, 'summary.tsv'), 'r', newline='') as csvfile:
         reader = csv.reader(csvfile, dialect='excel-tab', delimiter='\t')
@@ -51,30 +73,30 @@ def verify_tsvs(gene_id):
         headers = next(reader, None)
         modules = []
         for line in reader:
-            sum_of_events = sum(int(x) if x else 0 for x in line[2:14])
-            if sum_of_events > 1:
-                assert line[15] == "True"
             modules.append(line)
 
         print(modules)
-        try:
-            assert len(modules) == len(expected_modules[gene_id])
-        except:
-            print("expt: %d found: %d (%s)" % (len(expected_modules[gene_id]), len(modules), gene_id))
-            raise
+        if gene_id in expected_modules:
+            try:
+                assert len(modules) == len(expected_modules[gene_id])
+            except:
+                print("expt: %d found: %d (%s)" % (len(expected_modules[gene_id]), len(modules), gene_id))
+                raise
 
-        for i, mod in enumerate(expected_modules[gene_id]):
-            print(mod)
 
-            for j, col in enumerate(mod):
-                try:
-                    if j == 1:
-                        assert all(x in col.split(';') for x in modules[i][j].split(';'))
-                    else:
-                        assert col == modules[i][j]
-                except:
-                    print("expt: %s found: %s (%d, %s, %s)" % (col, modules[i][j], i+1, headers[j], gene_id))
-                    raise
+            for i, mod in enumerate(expected_modules[gene_id]):
+                print(mod)
+
+                for k, v in mod.items():
+                    try:
+                        if k == 'lsv_ids':
+                            assert all(x in v.split(';') for x in modules[i][expected_headers.index(k)].split(';'))
+                        else:
+                            assert v == modules[i][expected_headers.index(k)]
+                    except:
+                        print("expt: %s found: %s (%d, %s, %s)" % (v, modules[i][expected_headers.index(k)], i+1,
+                                                                   headers[expected_headers.index(k)], gene_id))
+                        raise
 
 
 import sys

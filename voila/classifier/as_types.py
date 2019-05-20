@@ -656,15 +656,19 @@ class Graph:
                 include1s = n1.connects(n2)
                 include2s = n2.connects(n3)
                 skips = n1.connects(n3)
+                print(include1s)
+                print(include2s)
+                print(skips)
                 if include1s and include2s and skips:
                     # assert len(include1) > 1
                     # assert len(include2) > 1
                     # assert len(skip) > 1
                     for include1, include2, skip in product(include1s, include2s, skips):
 
-                        found.append({'event': 'cassette_exon', 'C1': n1, 'C2': n3,
-                                      'A': n2, 'Include1': include1,
-                                      'Include2': include2, 'Skip': skip})
+                        found.append({'event': 'cassette_exon', 'C1': self.strand_case(n1, n3),
+                                      'C2': self.strand_case(n3, n1),
+                                      'A': n2, 'Include1': self.strand_case(include1, include2),
+                                      'Include2': self.strand_case(include2, include1), 'Skip': skip})
 
                     #return True
 
@@ -1055,7 +1059,7 @@ class Graph:
             Helper function that returns a list of types found in this module.
             :return: list of AS types, flag is module is complex true or false
             """
-            #print('---------------------------', self.idx, '--------------------------------')
+            print('---------------------------', self.idx, '--------------------------------')
             #print(self.nodes)
             as_type_dict = {
                 # 'alt_downstream': self.alternate_downstream,
