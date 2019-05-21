@@ -6,6 +6,7 @@ from voila.exceptions import GeneIdNotFoundInVoilaFile, LsvIdNotFoundInVoilaFile
 from voila.api.matrix_utils import generate_variances
 from collections import OrderedDict
 from voila.config import ClassifyConfig
+import multiprocessing
 
 def semicolon(value_list):
     return ';'.join(str(x) for x in value_list)
@@ -30,14 +31,16 @@ class TsvWriter:
         self.gene_id = gene_id
         self.quantifications_enabled = quantifications
         self.config = ClassifyConfig()
+        self.pid = multiprocessing.current_process().pid
 
         # we could do some crazy thing to yield to all of the different output types at once (across each method)
         # (in order to save memory) But for now we just save modules in a list. Will ammend later if memory use
         # becomes an issue.
-        self.modules = self.graph.modules()
+        if self.graph:
+            self.modules = self.graph.modules()
 
-        #self.as_types = {x.idx: x.as_types() for x in self.modules}
-        self.as_types = {x.idx: x.as_types() for x in self.modules}
+            #self.as_types = {x.idx: x.as_types() for x in self.modules}
+            self.as_types = {x.idx: x.as_types() for x in self.modules}
 
     @property
     def quantification_headers(self):
@@ -51,10 +54,14 @@ class TsvWriter:
         return headers
 
     @staticmethod
+    def tsv_names():
+        return ('summary.tsv', 'cassette.tsv', 'alt3prime.tsv', 'alt5prime.tsv', 'alt3and5prime.tsv',
+                'mutually_exclusive.tsv', 'alternate_last_exon.tsv', 'alternate_first_exon.tsv',
+                'intron_retention.tsv', 'p_alt5prime.tsv', 'p_alt3prime.tsv', 'multi_exon_skipping.tsv')
+
+    @staticmethod
     def delete_tsvs():
-        for tsv_file in ('summary.tsv', 'cassette.tsv', 'alt3prime.tsv', 'alt5prime.tsv', 'alt3and5prime.tsv',
-                         'mutually_exclusive.tsv', 'alternate_last_exon.tsv', 'alternate_fist_exon.tsv',
-                         'intron_retention.tsv'):
+        for tsv_file in TsvWriter.tsv_names():
             config = ClassifyConfig()
             path = os.path.join(config.directory, tsv_file)
             if os.path.exists(path):
@@ -135,15 +142,34 @@ class TsvWriter:
                 writer = csv.writer(csvfile, dialect='excel-tab', delimiter='\t')
                 writer.writerow(headers)
 
-    def cassette(self):
+    def start_all_headers(self):
         headers = self.common_headers + ['Reference Exon Coordinate', 'Exon Spliced With',
-                                                       'Exon Spliced With Coordinate', 'Junction Name',
-                                                       'Junction Coordinate'] + self.quantification_headers
+                                         'Exon Spliced With Coordinate', 'Junction Name',
+                                         'Junction Coordinate'] + self.quantification_headers
         self.start_headers(headers, 'cassette.tsv')
-        with open(os.path.join(self.config.directory, 'cassette.tsv'), 'a', newline='') as csvfile:
+        self.start_headers(headers, 'alt3prime.tsv')
+        self.start_headers(headers, 'alt5prime.tsv')
+        self.start_headers(headers, 'p_alt5prime.tsv')
+        self.start_headers(headers, 'p_alt3prime.tsv')
+        self.start_headers(headers, 'alt3and5prime.tsv')
+        self.start_headers(headers, 'mutually_exclusive.tsv')
+        self.start_headers(headers, 'alternate_last_exon.tsv')
+        self.start_headers(headers, 'alternate_first_exon.tsv')
+        self.start_headers(headers, 'intron_retention.tsv')
+        headers = self.common_headers + ['Reference Exon Coordinate', 'Exon Spliced With',
+                                         'Exon Spliced With Coordinate', 'Tandem Exon Coordinates',
+                                         'Junction Name', 'Junction Coordinate'] + self.quantification_headers
+        self.start_headers(headers, 'multi_exon_skipping.tsv')
+        headers = ['Module', 'LSV ID(s)', 'Cassette', 'Alt 3',
+                   'Alt 5', 'P_Alt 3', 'P_Alt 5', 'Alt 3 and Alt 5', 'MXE', 'ALE',
+                   'AFE', 'P_ALE', 'P_AFE', 'Multi Exon Skipping', 'Intron Retention', 'Complex']
+        self.start_headers(headers, 'summary.tsv')
+
+
+    def cassette(self):
+        with open(os.path.join(self.config.directory, 'cassette.tsv.%s' % self.pid), 'a', newline='') as csvfile:
             writer = csv.writer(csvfile, dialect='excel-tab', delimiter='\t')
             for module in self.modules:
-
                 events, _complex = self.as_types[module.idx]
                 if not _complex or SHOW_COMPLEX_IN_ALL:
                     for event in events:
@@ -168,11 +194,7 @@ class TsvWriter:
                             writer.writerow(trg_common + row + self.quantifications(module, 't', event['Include2']))
 
     def alt3prime(self):
-        headers = self.common_headers + ['Reference Exon Coordinate', 'Exon Spliced With',
-                                         'Exon Spliced With Coordinate', 'Junction Name',
-                                         'Junction Coordinate'] + self.quantification_headers
-        self.start_headers(headers, 'alt3prime.tsv')
-        with open(os.path.join(self.config.directory, 'alt3prime.tsv'), 'a', newline='') as csvfile:
+        with open(os.path.join(self.config.directory, 'alt3prime.tsv.%s' % self.pid), 'a', newline='') as csvfile:
             writer = csv.writer(csvfile, dialect='excel-tab', delimiter='\t')
             for module in self.modules:
                 events, _complex = self.as_types[module.idx]
@@ -195,11 +217,7 @@ class TsvWriter:
                             writer.writerow(trg_common + row + self.quantifications(module, 't', event['Distal']))
                             
     def alt5prime(self):
-        headers = self.common_headers + ['Reference Exon Coordinate', 'Exon Spliced With',
-                                         'Exon Spliced With Coordinate', 'Junction Name',
-                                         'Junction Coordinate'] + self.quantification_headers
-        self.start_headers(headers, 'alt5prime.tsv')
-        with open(os.path.join(self.config.directory, 'alt5prime.tsv'), 'a', newline='') as csvfile:
+        with open(os.path.join(self.config.directory, 'alt5prime.tsv.%s' % self.pid), 'a', newline='') as csvfile:
             writer = csv.writer(csvfile, dialect='excel-tab', delimiter='\t')
             for module in self.modules:
                 events, _complex = self.as_types[module.idx]
@@ -222,11 +240,7 @@ class TsvWriter:
                             writer.writerow(trg_common + row + self.quantifications(module, 't', event['Distal']))
 
     def p_alt5prime(self):
-        headers = self.common_headers + ['Reference Exon Coordinate', 'Exon Spliced With',
-                                         'Exon Spliced With Coordinate', 'Junction Name',
-                                         'Junction Coordinate'] + self.quantification_headers
-        self.start_headers(headers, 'p_alt5prime.tsv')
-        with open(os.path.join(self.config.directory, 'p_alt5prime.tsv'), 'a', newline='') as csvfile:
+        with open(os.path.join(self.config.directory, 'p_alt5prime.tsv.%s' % self.pid), 'a', newline='') as csvfile:
             writer = csv.writer(csvfile, dialect='excel-tab', delimiter='\t')
             for module in self.modules:
                 events, _complex = self.as_types[module.idx]
@@ -252,11 +266,7 @@ class TsvWriter:
                             writer.writerow(trg_common + row + self.quantifications(module, 't', event['Include2']))
 
     def p_alt3prime(self):
-        headers = self.common_headers + ['Reference Exon Coordinate', 'Exon Spliced With',
-                                         'Exon Spliced With Coordinate', 'Junction Name',
-                                         'Junction Coordinate'] + self.quantification_headers
-        self.start_headers(headers, 'p_alt3prime.tsv')
-        with open(os.path.join(self.config.directory, 'p_alt3prime.tsv'), 'a', newline='') as csvfile:
+        with open(os.path.join(self.config.directory, 'p_alt3prime.tsv.%s' % self.pid), 'a', newline='') as csvfile:
             writer = csv.writer(csvfile, dialect='excel-tab', delimiter='\t')
             for module in self.modules:
                 events, _complex = self.as_types[module.idx]
@@ -282,11 +292,7 @@ class TsvWriter:
                             writer.writerow(trg_common + row + self.quantifications(module, 't', event['Include2']))
 
     def alt3and5prime(self):
-        headers = self.common_headers + ['Reference Exon Coordinate', 'Exon Spliced With',
-                                         'Exon Spliced With Coordinate', 'Junction Name',
-                                         'Junction Coordinate'] + self.quantification_headers
-        self.start_headers(headers, 'alt3and5prime.tsv')
-        with open(os.path.join(self.config.directory, 'alt3and5prime.tsv'), 'a', newline='') as csvfile:
+        with open(os.path.join(self.config.directory, 'alt3and5prime.tsv.%s' % self.pid), 'a', newline='') as csvfile:
             writer = csv.writer(csvfile, dialect='excel-tab', delimiter='\t')
             # for module in self.modules:
             #     events, _complex = self.as_types[module.idx]
@@ -309,11 +315,7 @@ class TsvWriter:
             #                 writer.writerow(trg_common[0] + row + trg_common[1])
 
     def mutually_exclusive(self):
-        headers = self.common_headers + ['Reference Exon Coordinate', 'Exon Spliced With',
-                                         'Exon Spliced With Coordinate', 'Junction Name',
-                                         'Junction Coordinate'] + self.quantification_headers
-        self.start_headers(headers, 'mutually_exclusive.tsv')
-        with open(os.path.join(self.config.directory, 'mutually_exclusive.tsv'), 'a', newline='') as csvfile:
+        with open(os.path.join(self.config.directory, 'mutually_exclusive.tsv.%s' % self.pid), 'a', newline='') as csvfile:
             writer = csv.writer(csvfile, dialect='excel-tab', delimiter='\t')
             for module in self.modules:
                 events, _complex = self.as_types[module.idx]
@@ -339,8 +341,8 @@ class TsvWriter:
     #     headers = self.common_headers + ['Reference Exon Coordinate', 'Exon Spliced With',
     #                                      'Exon Spliced With Coordinate', 'Junction Name',
     #                                      'Junction Coordinate'] + self.quantification_headers
-    #     self.start_headers(headers, 'p_alternate_first_exon.tsv')
-    #     with open(os.path.join(self.config.directory, 'p_alternate_first_exon.tsv'), 'a', newline='') as csvfile:
+    #     self.start_headers(headers, 'p_alternate_first_exon.tsv.%s' % self.pid)
+    #     with open(os.path.join(self.config.directory, 'p_alternate_first_exon.tsv.%s' % self.pid), 'a', newline='') as csvfile:
     #         writer = csv.writer(csvfile, dialect='excel-tab', delimiter='\t')
     #         for module in self.modules:
     #             events, _complex = self.as_types[module.idx]
@@ -367,8 +369,8 @@ class TsvWriter:
     #     headers = self.common_headers + ['Reference Exon Coordinate', 'Exon Spliced With',
     #                                      'Exon Spliced With Coordinate', 'Junction Name',
     #                                      'Junction Coordinate'] + self.quantification_headers
-    #     self.start_headers(headers, 'p_alternate_last_exon.tsv')
-    #     with open(os.path.join(self.config.directory, 'p_alternate_last_exon.tsv'), 'a', newline='') as csvfile:
+    #     self.start_headers(headers, 'p_alternate_last_exon.tsv.%s' % self.pid)
+    #     with open(os.path.join(self.config.directory, 'p_alternate_last_exon.tsv.%s' % self.pid), 'a', newline='') as csvfile:
     #         writer = csv.writer(csvfile, dialect='excel-tab', delimiter='\t')
     #         for module in self.modules:
     #             events, _complex = self.as_types[module.idx]
@@ -392,11 +394,7 @@ class TsvWriter:
     #                         writer.writerow(trg_common + row + self.quantifications(module, 't', event['A1']))
 
     def alternate_last_exon(self):
-        headers = self.common_headers + ['Reference Exon Coordinate', 'Exon Spliced With',
-                                         'Exon Spliced With Coordinate', 'Junction Name',
-                                         'Junction Coordinate'] + self.quantification_headers
-        self.start_headers(headers, 'alternate_last_exon.tsv')
-        with open(os.path.join(self.config.directory, 'alternate_last_exon.tsv'), 'a', newline='') as csvfile:
+        with open(os.path.join(self.config.directory, 'alternate_last_exon.tsv.%s' % self.pid), 'a', newline='') as csvfile:
             writer = csv.writer(csvfile, dialect='excel-tab', delimiter='\t')
             for module in self.modules:
                 events, _complex = self.as_types[module.idx]
@@ -420,11 +418,7 @@ class TsvWriter:
                             writer.writerow(trg_common + row + self.quantifications(module, 't', event['A1']))
 
     def alternate_first_exon(self):
-        headers = self.common_headers + ['Reference Exon Coordinate', 'Exon Spliced With',
-                                         'Exon Spliced With Coordinate', 'Junction Name',
-                                         'Junction Coordinate'] + self.quantification_headers
-        self.start_headers(headers, 'alternate_first_exon.tsv')
-        with open(os.path.join(self.config.directory, 'alternate_first_exon.tsv'), 'a', newline='') as csvfile:
+        with open(os.path.join(self.config.directory, 'alternate_first_exon.tsv.%s' % self.pid), 'a', newline='') as csvfile:
             writer = csv.writer(csvfile, dialect='excel-tab', delimiter='\t')
             for module in self.modules:
                 events, _complex = self.as_types[module.idx]
@@ -449,11 +443,7 @@ class TsvWriter:
 
 
     def intron_retention(self):
-        headers = self.common_headers + ['Reference Exon Coordinate', 'Exon Spliced With',
-                                         'Exon Spliced With Coordinate', 'Junction Name',
-                                         'Junction Coordinate'] + self.quantification_headers
-        self.start_headers(headers, 'intron_retention.tsv')
-        with open(os.path.join(self.config.directory, 'intron_retention.tsv'), 'a', newline='') as csvfile:
+        with open(os.path.join(self.config.directory, 'intron_retention.tsv.%s' % self.pid), 'a', newline='') as csvfile:
             writer = csv.writer(csvfile, dialect='excel-tab', delimiter='\t')
             for module in self.modules:
                 events, _complex = self.as_types[module.idx]
@@ -477,11 +467,7 @@ class TsvWriter:
                             writer.writerow(trg_common + row + self.quantifications(module, 't', event['Intron']))
 
     def multi_exon_skipping(self):
-        headers = self.common_headers + ['Reference Exon Coordinate', 'Exon Spliced With',
-                                         'Exon Spliced With Coordinate', 'Tandem Exon Coordinates',
-                                         'Junction Name', 'Junction Coordinate'] + self.quantification_headers
-        self.start_headers(headers, 'multi_exon_skipping.tsv')
-        with open(os.path.join(self.config.directory, 'multi_exon_skipping.tsv'), 'a', newline='') as csvfile:
+        with open(os.path.join(self.config.directory, 'multi_exon_skipping.tsv.%s' % self.pid), 'a', newline='') as csvfile:
             writer = csv.writer(csvfile, dialect='excel-tab', delimiter='\t')
             for module in self.modules:
                 events, _complex = self.as_types[module.idx]
@@ -513,12 +499,9 @@ class TsvWriter:
         :param genes_modules: a list of (gene_id (str), gene_modules (obj)) tuples
         :return: NOTHING
         """
-        headers = ['Module', 'LSV ID(s)', 'Cassette', 'Alt 3',
-                             'Alt 5', 'P_Alt 3', 'P_Alt 5', 'Alt 3 and Alt 5', 'MXE', 'ALE',
-                             'AFE', 'P_ALE', 'P_AFE', 'Multi Exon Skipping', 'Intron Retention', 'Complex']
-        self.start_headers(headers, 'summary.tsv')
+        
 
-        with open(os.path.join(self.config.directory, 'summary.tsv'), 'a', newline='') as csvfile:
+        with open(os.path.join(self.config.directory, 'summary.tsv.%s' % self.pid), 'a', newline='') as csvfile:
             writer = csv.writer(csvfile, dialect='excel-tab', delimiter='\t')
 
 
