@@ -49,11 +49,13 @@ def classify_gene(args):
 
     writer.mutually_exclusive()
     writer.intron_retention()
-    writer.multi_exon_skipping()
+    writer.multi_exon_spanning()
     writer.summary()
 
     writer.alternate_first_exon()
     writer.alternate_last_exon()
+
+    writer.tandem_cassette()
 
     q.put(None)
 

@@ -671,7 +671,46 @@ class Graph:
 
             return found
 
-        def multi_exon_skipping(self):
+        def tandem_cassette(self):
+            """
+            Strat: find all multi-exon skipping events, then, check if all of the middle
+            exons only have two connections, and are connected to the exon before and after them
+            """
+
+            found = []
+
+            if len(self.nodes) < 4:
+                return []
+
+            # exclude half exons
+            full_exons = list(filter(lambda ex: ex.start != -1 and ex.end != -1, self.nodes))
+
+            if len(full_exons) < 4:
+                return []
+
+            # find combinations of nodes with at least two nodes in between
+            # we assume nodes are ordered by default
+            # we don't care to find different ordering either
+            for i, n1 in enumerate(full_exons):
+                for j, n2 in enumerate(full_exons):
+                    if j - i > 2:
+                        skip = n1.connects(n2)
+                        if skip:
+                            conns = []
+                            for k in range(j - i):
+                                conns.append(self.nodes[i+k].connects(self.nodes[i+k+1], ir=True))
+                            if not all(len(x) == 1 and x[0].ir is False for x in conns):
+                                continue
+
+                            include1 = n1.connects(self.nodes[i + 1])
+                            include2 = self.nodes[j].connects(n2)
+                            includes = []
+                            found.append({'event': 'tandem_cassette', 'C1': n1, 'C2': n2, 'As': self.nodes[i + 1:j],
+                                          'Skip': skip, 'Include1': include1, 'Include2': include2,
+                                          'Tandem_Exons': self.nodes[2:-2], 'Includes': includes})
+            return found
+
+        def multi_exon_spanning(self):
             """
             Check if multi exon skipping occurs in this module.
             :return: boolean
@@ -700,7 +739,7 @@ class Graph:
                             include1 = n1.connects(self.nodes[i+1])
                             include2 = self.nodes[j].connects(n2)
                             includes = []
-                            found.append({'event': 'multi_exon_skipping', 'C1': n1, 'C2': n2, 'As': self.nodes[i+1:j],
+                            found.append({'event': 'multi_exon_spanning', 'C1': n1, 'C2': n2, 'As': self.nodes[i+1:j],
                                           'Skip': skip, 'Include1': include1, 'Include2': include2,
                                           'Includes': includes})
             return found
@@ -1072,15 +1111,23 @@ class Graph:
                 'p_alt_first_exon': self.p_alt_first_exon,
                 'alt_last_exon': self.alt_last_exon,
                 'alt_first_exon': self.alt_first_exon,
-                'multi_exon_skipping': self.multi_exon_skipping
+                'multi_exon_spanning': self.multi_exon_spanning,
+                'tandem_cassette': self.tandem_cassette
             }
             ret = []
             complex = False
+
             for k, v in as_type_dict.items():
                 res = v()
                 ret += res
-            if len(ret) > 1:
+
+            num_tandem = sum(1 for item in ret if item.get('event') == 'tandem_cassette')
+            num_spanning = sum(1 for item in ret if item.get('event') == 'multi_exon_spanning')
+            if num_tandem == 1 and num_spanning == 1:
+                complex = False
+            elif len(ret) > 1:
                 complex = True
+
             if HIDE_SUB_COMPLEX and complex:
                 ret = []
             return ret, complex
@@ -1196,7 +1243,7 @@ if __name__ == "__main__":
     genes_modules = []
     # genes_events = {'complex', 'cassette_exon', 'mutually_exclusive',
     #                 'intron_retention', 'alt3ss', 'alt5ss', 'altTranscStart', 'altTranscEnd',
-    #                 'multi_exon_skipping'}
+    #                 'multi_exon_spanning'}
     out_rows = []
     TsvWriter.delete_tsvs(args.directory)
     for gene_id in gene_ids:

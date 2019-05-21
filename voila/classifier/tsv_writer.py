@@ -57,7 +57,8 @@ class TsvWriter:
     def tsv_names():
         return ('summary.tsv', 'cassette.tsv', 'alt3prime.tsv', 'alt5prime.tsv', 'alt3and5prime.tsv',
                 'mutually_exclusive.tsv', 'alternate_last_exon.tsv', 'alternate_first_exon.tsv',
-                'intron_retention.tsv', 'p_alt5prime.tsv', 'p_alt3prime.tsv', 'multi_exon_skipping.tsv')
+                'intron_retention.tsv', 'p_alt5prime.tsv', 'p_alt3prime.tsv', 'multi_exon_spanning.tsv',
+                'tandem_cassette.tsv')
 
     @staticmethod
     def delete_tsvs():
@@ -159,10 +160,12 @@ class TsvWriter:
         headers = self.common_headers + ['Reference Exon Coordinate', 'Exon Spliced With',
                                          'Exon Spliced With Coordinate', 'Tandem Exon Coordinates',
                                          'Junction Name', 'Junction Coordinate'] + self.quantification_headers
-        self.start_headers(headers, 'multi_exon_skipping.tsv')
+        self.start_headers(headers, 'multi_exon_spanning.tsv')
+        self.start_headers(headers, 'tandem_cassette.tsv')
         headers = ['Module', 'LSV ID(s)', 'Cassette', 'Alt 3',
                    'Alt 5', 'P_Alt 3', 'P_Alt 5', 'Alt 3 and Alt 5', 'MXE', 'ALE',
-                   'AFE', 'P_ALE', 'P_AFE', 'Multi Exon Skipping', 'Intron Retention', 'Complex']
+                   'AFE', 'P_ALE', 'P_AFE', 'Multi Exon Spanning',
+                   'Tandem Cassette', 'Intron Retention', 'Complex']
         self.start_headers(headers, 'summary.tsv')
 
 
@@ -466,14 +469,14 @@ class TsvWriter:
                                    event['Intron'].range_str()]
                             writer.writerow(trg_common + row + self.quantifications(module, 't', event['Intron']))
 
-    def multi_exon_skipping(self):
-        with open(os.path.join(self.config.directory, 'multi_exon_skipping.tsv.%s' % self.pid), 'a', newline='') as csvfile:
+    def multi_exon_spanning(self):
+        with open(os.path.join(self.config.directory, 'multi_exon_spanning.tsv.%s' % self.pid), 'a', newline='') as csvfile:
             writer = csv.writer(csvfile, dialect='excel-tab', delimiter='\t')
             for module in self.modules:
                 events, _complex = self.as_types[module.idx]
                 if not _complex or SHOW_COMPLEX_IN_ALL:
                     for event in events:
-                        if event['event'] == 'multi_exon_skipping':
+                        if event['event'] == 'multi_exon_spanning':
                             src_common = self.common_data(module, 's')
                             trg_common = self.common_data(module, 't')
                             row = [event['C1'].range_str(), 'C2', event['C2'].range_str(),
@@ -491,6 +494,34 @@ class TsvWriter:
                             row = [event['C2'].range_str(), 'A<N>',
                                    semicolon((x.range_str() for x in event['As'])), 'A<N>_C2',
                                    semicolon((x.range_str() for x in event['Includes']))]
+                            writer.writerow(trg_common + row + self.quantifications(module, 't'))
+
+    def tandem_cassette(self):
+        with open(os.path.join(self.config.directory, 'tandem_cassette.tsv.%s' % self.pid), 'a', newline='') as csvfile:
+            writer = csv.writer(csvfile, dialect='excel-tab', delimiter='\t')
+            for module in self.modules:
+                events, _complex = self.as_types[module.idx]
+                if not _complex or SHOW_COMPLEX_IN_ALL:
+                    for event in events:
+                        if event['event'] == 'tandem_cassette':
+
+                            src_common = self.common_data(module, 's')
+                            trg_common = self.common_data(module, 't')
+                            row = [event['C1'].range_str(), 'C2', event['C2'].range_str(),
+                                   semicolon((x.range_str() for x in event['As'])), 'C1_C2',
+                                   semicolon((x.range_str() for x in event['Skip']))]
+                            writer.writerow(src_common + row + self.quantifications(module, 's'))
+                            row = [event['C1'].range_str(), 'A1', event['As'][0].range_str(),
+                                   semicolon((x.range_str() for x in event['As'])), 'C1_A',
+                                   semicolon((x.range_str() for x in event['Include1']))]
+                            writer.writerow(src_common + row + self.quantifications(module, 's'))
+                            row = [event['C2'].range_str(), 'C1', event['C1'].range_str(),
+                                   semicolon((x.range_str() for x in event['As'])), 'C2_C1',
+                                   semicolon((x.range_str() for x in event['Skip']))]
+                            writer.writerow(trg_common + row + self.quantifications(module, 't'))
+                            row = [event['C2'].range_str(), 'A<N>', '',
+                                   semicolon((x.range_str() for x in event['As'])), 'A<N>_C2',
+                                   semicolon((x.range_str() for x in event['Tandem_Exons']))]
                             writer.writerow(trg_common + row + self.quantifications(module, 't'))
 
     def summary(self):
@@ -519,7 +550,8 @@ class TsvWriter:
                 counts['afe'] = 0
                 counts['p_ale'] = 0
                 counts['p_afe'] = 0
-                counts['multi_exon_skipping'] = 0
+                counts['multi_exon_spanning'] = 0
+                counts['tandem_cassette'] = 0
                 counts['intron_retention'] = 0
                 for event in events:
                     if event['event'] in counts:
