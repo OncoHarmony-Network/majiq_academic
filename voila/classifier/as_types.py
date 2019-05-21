@@ -1114,6 +1114,21 @@ class Graph:
                 'multi_exon_spanning': self.multi_exon_spanning,
                 'tandem_cassette': self.tandem_cassette
             }
+            event_counts = {
+                'cassette_exon': 0,
+                'mutually_exclusive': 0,
+                'intron_retention': 0,
+                'alt3ss': 0,
+                'alt5ss': 0,
+                'p_alt3ss': 0,
+                'p_alt5ss': 0,
+                'p_ale': 0,
+                'p_afe': 0,
+                'afe': 0,
+                'ale': 0,
+                'multi_exon_spanning': 0,
+                'tandem_cassette': 0
+            }
             ret = []
             complex = False
 
@@ -1121,9 +1136,11 @@ class Graph:
                 res = v()
                 ret += res
 
-            num_tandem = sum(1 for item in ret if item.get('event') == 'tandem_cassette')
-            num_spanning = sum(1 for item in ret if item.get('event') == 'multi_exon_spanning')
-            if num_tandem == 1 and num_spanning == 1:
+            for e in ret:
+                event_counts[e['event']] += 1
+
+            if sum(event_counts.values()) == 2 and event_counts['multi_exon_spanning'] == 1 and\
+                    event_counts['tandem_cassette'] == 1:
                 complex = False
             elif len(ret) > 1:
                 complex = True
