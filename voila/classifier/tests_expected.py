@@ -79,7 +79,7 @@ expected_modules = {
         {
             "module_id": "gene:ENSG00000082074_2",
             "lsv_ids": "gene:ENSG00000082074:s:39127741-39127807;gene:ENSG00000082074:t:39124253-39124317",
-            "cassette_exon": "2",
+            "cassette_exon": "1",
             "alt3ss": "",
             "alt5ss": "1",
             "p_alt3ss": "1",
@@ -267,7 +267,7 @@ expected_modules = {
         {
             "module_id": "gene:ENSG00000083168_1",
             "lsv_ids": "gene:ENSG00000083168:t:42045878-42049302;gene:ENSG00000083168:s:42051901-42052026",
-            "cassette_exon": "2",
+            "cassette_exon": "1",
             "alt3ss": "",
             "alt5ss": "1",
             "p_alt3ss": "",
