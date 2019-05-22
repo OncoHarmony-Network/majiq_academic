@@ -801,16 +801,16 @@ class Graph:
 
             for n1, n2 in combinations(self.nodes, 2):
                 connections = n1.connects(n2)
-                if connections and len(connections) > 1 and \
-                        len(set((self.strand_case(x.end, x.start) for x in connections))) == 1:
-                    closest_edge = connections[0]
-                    pop_i = 0
-                    for i, edge in enumerate(connections):
-                        if edge.start > closest_edge.start:
-                            closest_edge = edge
-                            pop_i = i
-                    proximal = connections.pop(pop_i)
-                    for distal in connections:
+                for e1, e2 in combinations(connections, 2):
+                    if len(set((self.strand_case(x.end, x.start) for x in (e1, e2,)))) == 1:
+
+                        if self.strand_case(e1.end, e1.start) < self.strand_case(e1.end, e1.start):
+                            proximal = e2
+                            distal = e1
+                        else:
+                            proximal = e1
+                            distal = e2
+
                         found.append({'event': 'alt5ss', 'E1': n1, 'E2': n2, 'Proximal': proximal, 'Distal': distal})
             return found
 
@@ -821,17 +821,18 @@ class Graph:
 
             for n1, n2 in combinations(self.nodes, 2):
                 connections = n1.connects(n2)
-                if connections and len(connections) > 1 and \
-                        len(set((self.strand_case(x.start, x.end) for x in connections))) == 1:
-                    closest_edge = connections[0]
-                    pop_i = 0
-                    for i, edge in enumerate(connections):
-                        if edge.start > closest_edge.start:
-                            closest_edge = edge
-                            pop_i = i
-                    proximal = connections.pop(pop_i)
-                    for distal in connections:
+                for e1, e2 in combinations(connections, 2):
+                    if len(set((self.strand_case(x.start, x.end) for x in (e1, e2,)))) == 1:
+
+                        if self.strand_case(e1.end, e1.start) > self.strand_case(e1.end, e1.start):
+                            proximal = e2
+                            distal = e1
+                        else:
+                            proximal = e1
+                            distal = e2
+
                         found.append({'event': 'alt3ss', 'E1': n1, 'E2': n2, 'Proximal': proximal, 'Distal': distal})
+
             return found
 
 
@@ -891,24 +892,32 @@ class Graph:
 
             return found
 
-        # def alt3and5ss(self):
-        #
-        #     found = []
-        #
-        #     for n1, n2 in combinations(self.nodes, 2):
-        #         connections = n1.connects(n2)
-        #         if connections and len(connections) > 1 and len(set((x.start for x in connections))) == 1:
-        #             for i, edge in enumerate(connections):
-        #                 if edge.end == n2.start:
-        #                     # this should be the 'Proximal' connection
-        #                     proximal = connections.pop(i)
-        #                     break
-        #             else:
-        #                 print("Warning: did not find proximal connection for alt3ss %s %s" % (n1, n2))
-        #                 continue
-        #             for distal in connections:
-        #                 found.append({'event': 'alt3ss', 'E1': n1, 'E2': n2, 'Proximal': proximal, 'Distal': distal})
-        #     return found
+        def alt3and5ss(self):
+
+            found = []
+
+            for n1, n2 in combinations(self.nodes, 2):
+                connections = n1.connects(n2)
+                if connections and len(connections) > 1:
+                    for e1, e2 in combinations(connections, 2):
+                        if e1.start != e2.start and e1.end != e2.end:
+
+                            found.append(
+                                {'event': 'alt3and5ss', 'E1': self.strand_case(n1, n2),
+                                 'E2': self.strand_case(n2, n1),
+                                 'J1': self.strand_case(e1, e2), 'J2': self.strand_case(e2, e1)})
+                    #
+                    #
+                    # closest_edge = connections[0]
+                    # pop_i = 0
+                    # for i, edge in enumerate(connections):
+                    #     if edge.start > closest_edge.start:
+                    #         closest_edge = edge
+                    #         pop_i = i
+                    # proximal = connections.pop(pop_i)
+                    # for distal in connections:
+                    #     found.append({'event': 'alt3ss', 'E1': n1, 'E2': n2, 'Proximal': proximal, 'Distal': distal})
+            return found
 
 
         def p_alt_last_exon(self):
@@ -1093,8 +1102,8 @@ class Graph:
             Helper function that returns a list of types found in this module.
             :return: list of AS types, flag is module is complex true or false
             """
-            #print('---------------------------', self.idx, '--------------------------------')
-            #print(self.nodes)
+            # print('---------------------------', self.idx, '--------------------------------')
+            # print(self.nodes)
             as_type_dict = {
                 # 'alt_downstream': self.alternate_downstream,
                 # 'alt_upstream': self.alternate_upstream,
@@ -1103,6 +1112,7 @@ class Graph:
                 'intron_retention': self.intron_retention,
                 'alt3ss': self.alt3ss,
                 'alt5ss': self.alt5ss,
+                'alt3and5ss': self.alt3and5ss,
                 'p_alt3ss': self.p_alt3ss,
                 'p_alt5ss': self.p_alt5ss,
                 'p_alt_last_exon': self.p_alt_last_exon,
@@ -1118,6 +1128,7 @@ class Graph:
                 'intron_retention': 0,
                 'alt3ss': 0,
                 'alt5ss': 0,
+                'alt3and5ss': 0,
                 'p_alt3ss': 0,
                 'p_alt5ss': 0,
                 'p_ale': 0,

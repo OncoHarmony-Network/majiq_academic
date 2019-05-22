@@ -42,7 +42,7 @@ def classify_gene(args):
 
     writer.alt3prime()
     writer.alt5prime()
-    # writer.alt3and5prime()
+    writer.alt3and5prime()
 
     writer.p_alt3prime()
     writer.p_alt5prime()

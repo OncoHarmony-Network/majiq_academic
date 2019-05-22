@@ -297,25 +297,25 @@ class TsvWriter:
     def alt3and5prime(self):
         with open(os.path.join(self.config.directory, 'alt3and5prime.tsv.%s' % self.pid), 'a', newline='') as csvfile:
             writer = csv.writer(csvfile, dialect='excel-tab', delimiter='\t')
-            # for module in self.modules:
-            #     events, _complex, _multi_event = self.as_types[module.idx]
-            #     if not _complex or SHOW_COMPLEX_IN_ALL:
-            #         for event in events:
-            #             if event['event'] == 'alt5ss':
-            #                 src_common = self.common_data(module, 's')
-            #                 trg_common = self.common_data(module, 't')
-            #                 row = [event['E1'].range_str(), 'E2', event['E2'].range_str(), 'E1_E2_Proximal',
-            #                        event['Proximal'].range_str()]
-            #                 writer.writerow(src_common[0] + row + src_common[1])
-            #                 row = [event['E1'].range_str(), 'E2', event['E2'].range_str(), 'E1_E2_Distal',
-            #                        event['Distal'].range_str()]
-            #                 writer.writerow(src_common[0] + row + src_common[1])
-            #                 row = [event['E2'].range_str(), 'E1', event['E1'].range_str(), 'E2_E1_Proximal',
-            #                        event['Proximal'].range_str()]
-            #                 writer.writerow(trg_common[0] + row + trg_common[1])
-            #                 row = [event['E2'].range_str(), 'E1', event['E1'].range_str(), 'E2_E1_Distal',
-            #                        event['Distal'].range_str()]
-            #                 writer.writerow(trg_common[0] + row + trg_common[1])
+            for module in self.modules:
+                events, _complex, _multi_event = self.as_types[module.idx]
+                if not _complex or SHOW_COMPLEX_IN_ALL:
+                    for event in events:
+                        if event['event'] == 'alt3and5ss':
+                            src_common = self.common_data(module, 's')
+                            trg_common = self.common_data(module, 't')
+                            row = [event['E1'].range_str(), 'E2', event['E2'].range_str(), 'E1_E2_J1',
+                                   event['J1'].range_str()]
+                            writer.writerow(src_common + row + self.quantifications(module, 's', event['J1']))
+                            row = [event['E1'].range_str(), 'E2', event['E2'].range_str(), 'E1_E2_J2',
+                                   event['J2'].range_str()]
+                            writer.writerow(src_common + row + self.quantifications(module, 's', event['J2']))
+                            row = [event['E2'].range_str(), 'E1', event['E1'].range_str(), 'E2_E1_J1',
+                                   event['J1'].range_str()]
+                            writer.writerow(trg_common + row + self.quantifications(module, 't', event['J1']))
+                            row = [event['E2'].range_str(), 'E1', event['E1'].range_str(), 'E2_E1_J2',
+                                   event['J2'].range_str()]
+                            writer.writerow(trg_common + row + self.quantifications(module, 't', event['J2']))
 
     def mutually_exclusive(self):
         with open(os.path.join(self.config.directory, 'mutually_exclusive.tsv.%s' % self.pid), 'a', newline='') as csvfile:
@@ -544,7 +544,7 @@ class TsvWriter:
                 counts['alt5ss'] = 0
                 counts['p_alt3ss'] = 0
                 counts['p_alt5ss'] = 0
-                counts['alt3ss+alt5ss'] = 0
+                counts['alt3and5ss'] = 0
                 counts['mutually_exclusive'] = 0
                 counts['ale'] = 0
                 counts['afe'] = 0
