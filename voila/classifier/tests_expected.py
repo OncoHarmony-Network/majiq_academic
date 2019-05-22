@@ -289,7 +289,7 @@ expected_modules = {
             "alt3ss": "",
             "alt5ss": "",
             "p_alt3ss": "",
-            "p_alt5ss": "",
+            "p_alt5ss": "1",
             
             "mutually_exclusive": "",
             "ale": "",
@@ -1149,6 +1149,20 @@ expected_modules = {
             "complex": "True"
         },
         {}
+    ],
+    'gene:ENSG00000236449': [
+        {
+            "module_id": "gene:ENSG00000236449_1",
+            "orphan_junction": "1",
+            "p_ale": "",
+            "p_afe": "",
+        },
+        {
+            "module_id": "gene:ENSG00000236449_2",
+            "orphan_junction": "1",
+            "p_ale": "2",
+            "p_afe": "",
+        }
     ]
 }
 

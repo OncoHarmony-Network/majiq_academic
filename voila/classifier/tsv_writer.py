@@ -164,7 +164,7 @@ class TsvWriter:
         self.start_headers(headers, 'tandem_cassette.tsv')
         headers = ['Module', 'LSV ID(s)', 'Cassette', 'Alt 3',
                    'Alt 5', 'P_Alt 3', 'P_Alt 5', 'Alt 3 and Alt 5', 'MXE', 'ALE',
-                   'AFE', 'P_ALE', 'P_AFE', 'Multi Exon Spanning',
+                   'AFE', 'P_ALE', 'P_AFE', 'Orphan Junction', 'Multi Exon Spanning',
                    'Tandem Cassette', 'Intron Retention', 'Complex', 'Multi-Event']
         self.start_headers(headers, 'summary.tsv')
 
@@ -550,6 +550,7 @@ class TsvWriter:
                 counts['afe'] = 0
                 counts['p_ale'] = 0
                 counts['p_afe'] = 0
+                counts['orphan_junction'] = 0
                 counts['multi_exon_spanning'] = 0
                 counts['tandem_cassette'] = 0
                 counts['intron_retention'] = 0

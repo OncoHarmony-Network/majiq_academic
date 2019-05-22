@@ -964,34 +964,37 @@ class Graph:
             found = []
             for node in self.nodes:
                 if node.end == -1:
-                    found.append({'event': self.strand_case('p_ale', 'p_afe'), 'A1': node, 'A2': None, 'C1': None,
+                    for other_node in self.nodes:
+                        if node.connects(other_node) or other_node.connects(node):
+                            if not other_node.is_half_exon:
+                                found.append({'event': self.strand_case('p_ale', 'p_afe'), 'A1': node, 'A2': None, 'C1': None,
                                       'SkipA2': None, 'SkipA1': None})
+                                break
             return found
 
         def p_alt_first_exon(self):
             found = []
             for node in self.nodes:
                 if node.start == -1:
-                    found.append({'event': self.strand_case('p_afe', 'p_ale'), 'A1': node, 'A2': None, 'C1': None,
+                    for other_node in self.nodes:
+                        if node.connects(other_node) or other_node.connects(node):
+                            if not other_node.is_half_exon:
+                                found.append({'event': self.strand_case('p_afe', 'p_ale'), 'A1': node, 'A2': None, 'C1': None,
                                       'SkipA2': None, 'SkipA1': None})
+                                break
             return found
 
-        # def alt_last_exon(self):
-        #
-        #     found = []
-        #     t = self.Filters.target_psi
-        #     s = self.Filters.source_psi
-        #
-        #     for n1, n2, n3 in combinations(self.nodes, 3):
-        #         if len(n2.edges) == 1 and len(n3.edges) == 1 and n2.end < n3.start:
-        #
-        #             connections1 = n1.connects(n2, s)
-        #             connections2 = n1.connects(n3, s)
-        #             connectionsTest = n2.connects(n3)
-        #             if len(connections1) == 1 and len(connections2) == 1 and not connectionsTest:
-        #                 found.append({'event': 'ale', 'A1': n2, 'A2': n3, 'C1': n1,
-        #                               'SkipA2': connections1, 'SkipA1': connections2})
-        #     return found
+        def orphan_junction(self):
+            found = []
+            for n1, n2 in combinations(self.nodes, 2):
+
+                if n1.is_half_exon and n2.is_half_exon:
+                    conn = n1.connects(n2)
+                    if conn:
+                        found.append({'event': 'orphan_junction', 'A1': n1, 'A2': n2, 'Junc': conn})
+            return found
+
+
 
         def alt_first_exon(self):
 
@@ -1068,82 +1071,14 @@ class Graph:
 
             return found
 
-        # def alt_first_exon(self):
-        #
-        #     found = []
-        #     t = self.Filters.target_psi
-        #
-        #     for n1, n2, n3 in combinations(self.nodes, 3):
-        #         # we care that there is some exon which is connected by skipping one or more exons
-        #         # but NOT connected to the skipped exons
-        #         # here, when looking for this second condition
-        #         if n1.end < n2.start:
-        #
-        #             connections1 = n1.connects(n3, t)
-        #             connections2 = n2.connects(n3, t)
-        #             connectionsTest = n1.connects(n2)
-        #             if len(connections1) == 1 and len(connections2) == 1 and not connectionsTest:
-        #                 found.append({'event': 'afe', 'A1': n1, 'A2': n2, 'C1': n3,
-        #                               'SkipA2': connections1, 'SkipA1': connections2})
-        #
-        #     return found
-
-
-
-        # def alt_first_exon(self):
-        #
-        #     found = []
-        #
-        #     current_submodule = []
-        #     for i, node in enumerate(self.nodes[:-1]):
-        #         #print(node)
-        #
-        #         current_submodule.append(node)
-        #
-        #         # assume these are ordered?
-        #         # we care that there is some exon which is connected by skipping one or more exons
-        #         # but NOT connected to the skipped exons
-        #         # here, when looking for this second condition, we need to do iteration
-        #         # we check if the first exon is connected to the next, etc, until finding a break
-        #         # to find the break we check that the current group is only connected to the last node
-        #         # not other nodes ahead of it.
-        #
-        #         for back_node in self.nodes[:len(current_submodule)-1]:
-        #             if back_node.connects(node):
-        #                 break
-        #         else:
-        #             # did not find any connections backward
-        #
-        #             if node.connects(self.nodes[-1]) and not node.connects(self.nodes[i+1]):
-        #                 # end the submodule
-        #
-        #                 found.append({'event': self.strand_case('afe', 'ale'), 'A1': current_submodule[0], 'A2': node,
-        #                               'C1': self.nodes[-1], 'SkipA2': current_submodule[0].edges, 'SkipA1': node.edges})
-        #                 current_submodule = []
-        #
-        #     #
-        #     # for n1, n2, n3 in combinations(self.nodes, 3):
-        #     #     # we care that there is some exon which is connected by skipping one or more exons
-        #     #     # but NOT connected to the skipped exons
-        #     #     # here, when looking for this second condition
-        #     #     if n1.end < n2.start:
-        #     #
-        #     #         connections1 = n1.connects(n3, t)
-        #     #         connections2 = n2.connects(n3, t)
-        #     #         connectionsTest = n1.connects(n2)
-        #     #         if len(connections1) == 1 and len(connections2) == 1 and not connectionsTest:
-        #     #             found.append({'event': 'afe', 'A1': n1, 'A2': n2, 'C1': n3,
-        #     #                           'SkipA2': connections1, 'SkipA1': connections2})
-        #
-        #     return found
 
         def as_types(self):
             """
             Helper function that returns a list of types found in this module.
             :return: list of AS types, flag is module is complex true or false
             """
-            # print('---------------------------', self.idx, '--------------------------------')
-            # print(self.nodes)
+            print('---------------------------', self.idx, '--------------------------------')
+            print(self.nodes)
             as_type_dict = {
                 # 'alt_downstream': self.alternate_downstream,
                 # 'alt_upstream': self.alternate_upstream,
@@ -1160,7 +1095,8 @@ class Graph:
                 'alt_last_exon': self.alt_last_exon,
                 'alt_first_exon': self.alt_first_exon,
                 'multi_exon_spanning': self.multi_exon_spanning,
-                'tandem_cassette': self.tandem_cassette
+                'tandem_cassette': self.tandem_cassette,
+                'orphan_junction': self.orphan_junction
             }
             event_counts = {
                 'cassette_exon': 0,
@@ -1176,7 +1112,8 @@ class Graph:
                 'afe': 0,
                 'ale': 0,
                 'multi_exon_spanning': 0,
-                'tandem_cassette': 0
+                'tandem_cassette': 0,
+                'orphan_junction': 0
             }
             ret = []
             complex = False
