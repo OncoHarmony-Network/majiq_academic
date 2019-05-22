@@ -801,17 +801,19 @@ class Graph:
 
             for n1, n2 in combinations(self.nodes, 2):
                 connections = n1.connects(n2)
-                for e1, e2 in combinations(connections, 2):
-                    if len(set((self.strand_case(x.end, x.start) for x in (e1, e2,)))) == 1:
+                if len(connections) > 1:
+                    for e2 in connections[1:]:
+                        e1 = connections[0]
+                        if len(set((self.strand_case(x.end, x.start) for x in (e1, e2,)))) == 1:
 
-                        if self.strand_case(e1.end, e1.start) < self.strand_case(e1.end, e1.start):
-                            proximal = e2
-                            distal = e1
-                        else:
-                            proximal = e1
-                            distal = e2
+                            if self.strand_case(e1.end, e1.start) < self.strand_case(e1.end, e1.start):
+                                proximal = e2
+                                distal = e1
+                            else:
+                                proximal = e1
+                                distal = e2
 
-                        found.append({'event': 'alt5ss', 'E1': n1, 'E2': n2, 'Proximal': proximal, 'Distal': distal})
+                            found.append({'event': 'alt5ss', 'E1': n1, 'E2': n2, 'Proximal': proximal, 'Distal': distal})
             return found
 
 
@@ -821,17 +823,19 @@ class Graph:
 
             for n1, n2 in combinations(self.nodes, 2):
                 connections = n1.connects(n2)
-                for e1, e2 in combinations(connections, 2):
-                    if len(set((self.strand_case(x.start, x.end) for x in (e1, e2,)))) == 1:
+                if len(connections) > 1:
+                    for e2 in connections[1:]:
+                        e1 = connections[0]
+                        if len(set((self.strand_case(x.start, x.end) for x in (e1, e2,)))) == 1:
 
-                        if self.strand_case(e1.end, e1.start) > self.strand_case(e1.end, e1.start):
-                            proximal = e2
-                            distal = e1
-                        else:
-                            proximal = e1
-                            distal = e2
+                            if self.strand_case(e1.end, e1.start) > self.strand_case(e1.end, e1.start):
+                                proximal = e2
+                                distal = e1
+                            else:
+                                proximal = e1
+                                distal = e2
 
-                        found.append({'event': 'alt3ss', 'E1': n1, 'E2': n2, 'Proximal': proximal, 'Distal': distal})
+                            found.append({'event': 'alt3ss', 'E1': n1, 'E2': n2, 'Proximal': proximal, 'Distal': distal})
 
             return found
 
