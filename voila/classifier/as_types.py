@@ -878,7 +878,8 @@ class Graph:
                 if include1s and include2s and skips:
 
                     for include1, include2, skip in product(include1s, include2s, skips):
-                        found.append({'event': 'p_alt5ss', 'C1': n1, 'C2': n3,
+                        if len(set((self.strand_case(x.end, x.start) for x in (skip, include2,)))) == 1:
+                            found.append({'event': 'p_alt5ss', 'C1': n1, 'C2': n3,
                                       'A': n2, 'Include1': include1,
                                       'Include2': include2, 'Skip': skip})
                         # found.append({'event': 'alt5ss', 'E1': n1, 'E2': n2, 'Proximal': proximal, 'Distal': distal})
@@ -925,9 +926,10 @@ class Graph:
                 if include1s and include2s and skips:
 
                     for include1, include2, skip in product(include1s, include2s, skips):
-                        found.append({'event': 'p_alt3ss', 'C1': n1, 'C2': n3,
-                                      'A': n2, 'Include1': include1,
-                                      'Include2': include2, 'Skip': skip})
+                        if len(set((self.strand_case(x.start, x.end) for x in (include1, skip,)))) == 1:
+                            found.append({'event': 'p_alt3ss', 'C1': n1, 'C2': n3,
+                                          'A': n2, 'Include1': include1,
+                                          'Include2': include2, 'Skip': skip})
                         # found.append({'event': 'alt5ss', 'E1': n1, 'E2': n2, 'Proximal': proximal, 'Distal': distal})
 
             return found
@@ -1077,8 +1079,8 @@ class Graph:
             Helper function that returns a list of types found in this module.
             :return: list of AS types, flag is module is complex true or false
             """
-            print('---------------------------', self.idx, '--------------------------------')
-            print(self.nodes)
+            #print('---------------------------', self.idx, '--------------------------------')
+            #print(self.nodes)
             as_type_dict = {
                 # 'alt_downstream': self.alternate_downstream,
                 # 'alt_upstream': self.alternate_upstream,
