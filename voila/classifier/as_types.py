@@ -844,18 +844,36 @@ class Graph:
 
             found = []
 
-            b = self.Filters.target_source_psi
-
             for n1, n2, n3 in combinations(self.nodes, 3):
 
-                skips = n1.connects(n3, b)
+                skips = n1.connects(n3)
 
                 if self.Filters.strand == '+':
-                    include1s = n1.connects(n2, only_ir=True)
+                    # iterate all nodes in between to check if they all connect with introns
+
                     include2s = n2.connects(n3)
+                    include1s = n1.connects(n2, only_ir=True)
+
+                    if not include1s:
+                        start_idx = self.nodes.index(n1)
+                        end_idx = self.nodes.index(n2)
+                        for ni in range(start_idx, end_idx):
+                            if not self.nodes[ni].connects(self.nodes[ni+1], only_ir=True):
+                                break
+                        else:
+                            include1s = self.nodes[start_idx].connects(self.nodes[start_idx+1], only_ir=True)
+
                 else:
                     include2s = n1.connects(n2)
                     include1s = n2.connects(n3, only_ir=True)
+                    if not include1s:
+                        start_idx = self.nodes.index(n2)
+                        end_idx = self.nodes.index(n3)
+                        for ni in range(start_idx, end_idx):
+                            if not self.nodes[ni].connects(self.nodes[ni+1], only_ir=True):
+                                break
+                        else:
+                            include1s = self.nodes[start_idx].connects(self.nodes[start_idx+1], only_ir=True)
 
                 if include1s and include2s and skips:
 
@@ -881,9 +899,27 @@ class Graph:
                     include1s = n1.connects(n2)
                     include2s = n2.connects(n3, only_ir=True)
 
+                    if not include2s:
+                        start_idx = self.nodes.index(n2)
+                        end_idx = self.nodes.index(n3)
+                        for ni in range(start_idx, end_idx):
+                            if not self.nodes[ni].connects(self.nodes[ni + 1], only_ir=True):
+                                break
+                        else:
+                            include2s = self.nodes[start_idx].connects(self.nodes[start_idx + 1], only_ir=True)
+
                 else:
-                    include2s = n1.connects(n2, only_ir=True)
                     include1s = n2.connects(n3)
+                    include2s = n1.connects(n2, only_ir=True)
+
+                    if not include2s:
+                        start_idx = self.nodes.index(n1)
+                        end_idx = self.nodes.index(n2)
+                        for ni in range(start_idx, end_idx):
+                            if not self.nodes[ni].connects(self.nodes[ni+1], only_ir=True):
+                                break
+                        else:
+                            include2s = self.nodes[start_idx].connects(self.nodes[start_idx+1], only_ir=True)
 
 
                 if include1s and include2s and skips:
