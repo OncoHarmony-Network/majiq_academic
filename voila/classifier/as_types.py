@@ -130,7 +130,8 @@ class Graph:
             :return: string
             """
 
-            return '<{} {},{}>'.format(self.__class__.__name__, self.start, self.end)
+            return '<{} {} ({}),{} ({})>'.format(self.__class__.__name__, self.start, self.untrimmed_start,
+                                                 self.end, self.untrimmed_end)
 
 
         @property
@@ -345,6 +346,7 @@ class Graph:
             node = self.start_node(edge)
             node.edges.append(edge)
 
+
     def _decomplexify(self):
         """
         Remove any edges which are under a certain PSI value from the Graph
@@ -401,7 +403,48 @@ class Graph:
         # fall inside of each node
 
 
-        self.nodes[:] = [x for x in self.nodes if any(self.in_exon(x, edge.end) or self.in_exon(x, edge.start) for edge in self.edges)]
+        #self.nodes[:] = [x for x in self.nodes if any(self.in_exon(x, edge.end) or self.in_exon(x, edge.start) for edge in self.edges)]
+        nodes = []
+        for i, node in enumerate(self.nodes):
+
+            global_min = float('inf')
+            global_max = float('-inf')
+            edges_starting = []
+            edges_ending = []
+            for _e in self.edges:
+                if self.in_exon(node, _e.start) and not _e.start == node.start:
+                    global_max = max(_e.start, global_max)
+                    global_min = min(_e.start, global_min)
+                    edges_starting.append(_e)
+            for _e in self.edges:
+                if self.in_exon(node, _e.end) and not _e.end == node.end:
+                    global_max = max(_e.end, global_max)
+                    global_min = min(_e.end, global_min)
+                    edges_ending.append(_e)
+
+            if not edges_starting and not edges_ending:
+                continue
+
+
+            node.untrimmed_start = node.start
+            node.untrimmed_end = node.end
+
+            if not node.is_half_exon:
+                # if not the last node
+                if not i == len(self.nodes)-1:
+                    # and not node connecting ahead
+                    if not node.connects(self.nodes[i+1], only_ir=True):
+                        node.exon['end'] = global_max
+
+                # if not the first node
+                if not i == 0:
+                    # and not IR connecting behind
+                    if not self.nodes[i - 1].connects(node, only_ir=True):
+                        node.exon['start'] = global_min
+
+            nodes.append(node)
+
+        self.nodes[:] = nodes
 
         self.edges.sort()
         self.nodes.sort()

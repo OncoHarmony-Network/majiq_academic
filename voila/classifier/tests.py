@@ -76,7 +76,6 @@ def verify_tsvs(gene_id):
         for line in reader:
             modules.append(line)
 
-        print(modules)
         if gene_id in expected_modules:
             try:
                 assert len(modules) == len(expected_modules[gene_id])
@@ -86,6 +85,7 @@ def verify_tsvs(gene_id):
 
 
             for i, mod in enumerate(expected_modules[gene_id]):
+                print(modules[i])
                 print(mod)
 
                 for k, v in mod.items():
@@ -93,6 +93,7 @@ def verify_tsvs(gene_id):
                         if k == 'lsv_ids':
                             assert all(x in v.split(';') for x in modules[i][expected_headers.index(k)].split(';'))
                         else:
+
                             assert v == modules[i][expected_headers.index(k)]
                     except:
                         print("expt: %s found: %s (%d, %s, %s)" % (v, modules[i][expected_headers.index(k)], i+1,

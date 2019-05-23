@@ -1,11 +1,18 @@
 expected_modules = {
+    "gene:ENSG00000003756":[
+        {}, {}, {}, {}, {}, {},
+        {
+            'tandem_cassette': '1'
+        },
+        {}, {}
+    ],
     "gene:ENSG00000164674":[
         {},
         {
             "module_id": "gene:ENSG00000164674_2",
             "mutually_exclusive": "",
             "exitron": "1",
-            "p_alt3ss": "1",
+            "p_alt3ss": "",
             "p_alt5ss": "1",
             "intron_retention": "2"
 
