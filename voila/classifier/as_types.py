@@ -757,15 +757,18 @@ class Graph:
 
             for n1 in self.nodes[:-1]:
                 for e1, e2, in combinations(n1.edges, 2):
-                    if e1.node != e2.node and not (e1.node.connects(e2.node) or e2.node.connects(e1.node)):
-                        for i1 in e1.node.edges:
-                            for i2 in e2.node.edges:
-                                if i1.node == i2.node:
-                                    found.append({'event': 'mutually_exclusive',
-                                                  'C1': n1, 'C2': i1.node,
-                                                  'A1': e1.node, 'A2': e2.node,
-                                                  'Include1': e1, 'Include2': i2,
-                                                  'SkipA1': e2, 'SkipA2': i1})
+                    # this check removes exitrons from consideration
+                    if not (e1.start > e1.node.start and e1.end < e1.node.end) and \
+                       not (e2.start > e2.node.start and e2.end < e2.node.end):
+                        if e1.node != e2.node and not (e1.node.connects(e2.node) or e2.node.connects(e1.node)):
+                            for i1 in e1.node.edges:
+                                for i2 in e2.node.edges:
+                                    if i1.node == i2.node:
+                                        found.append({'event': 'mutually_exclusive',
+                                                      'C1': n1, 'C2': i1.node,
+                                                      'A1': e1.node, 'A2': e2.node,
+                                                      'Include1': e1, 'Include2': i2,
+                                                      'SkipA1': e2, 'SkipA2': i1})
             return found
 
         def intron_retention(self):
