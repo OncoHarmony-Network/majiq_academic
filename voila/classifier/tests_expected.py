@@ -1163,6 +1163,13 @@ expected_modules = {
             "p_ale": "2",
             "p_afe": "",
         }
+    ],
+    'gene:ENSG00000233175': [
+        {
+            "module_id": "gene:ENSG00000233175_1",
+            "exitron": "2"
+        },
+
     ]
 }
 

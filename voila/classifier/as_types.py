@@ -986,17 +986,6 @@ class Graph:
                                 break
             return found
 
-        def orphan_junction(self):
-            found = []
-            for n1, n2 in combinations(self.nodes, 2):
-
-                if n1.is_half_exon and n2.is_half_exon:
-                    conn = n1.connects(n2)
-                    if conn:
-                        found.append({'event': 'orphan_junction', 'A1': n1, 'A2': n2, 'Junc': conn})
-            return found
-
-
 
         def alt_first_exon(self):
 
@@ -1073,6 +1062,29 @@ class Graph:
 
             return found
 
+        def orphan_junction(self):
+            found = []
+            for n1, n2 in combinations(self.nodes, 2):
+
+                if n1.is_half_exon and n2.is_half_exon:
+                    conn = n1.connects(n2)
+                    if conn:
+                        found.append({'event': 'orphan_junction', 'A1': n1, 'A2': n2, 'Junc': conn})
+            return found
+
+
+        def exitron(self):
+            found = []
+            # look for junctions which are in the same exon
+            for node in self.nodes:
+                for edge in node.edges:
+                    if edge.start > node.start and edge.end < node.end:
+                        found.append({'event': 'exitron', 'Exon': node, 'Junc': edge})
+
+            return found
+
+
+
 
         def as_types(self):
             """
@@ -1098,7 +1110,8 @@ class Graph:
                 'alt_first_exon': self.alt_first_exon,
                 'multi_exon_spanning': self.multi_exon_spanning,
                 'tandem_cassette': self.tandem_cassette,
-                'orphan_junction': self.orphan_junction
+                'orphan_junction': self.orphan_junction,
+                'exitron': self.exitron
             }
             event_counts = {
                 'cassette_exon': 0,
@@ -1115,7 +1128,8 @@ class Graph:
                 'ale': 0,
                 'multi_exon_spanning': 0,
                 'tandem_cassette': 0,
-                'orphan_junction': 0
+                'orphan_junction': 0,
+                'exitron': 0
             }
             ret = []
             complex = False

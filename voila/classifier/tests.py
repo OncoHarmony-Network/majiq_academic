@@ -44,7 +44,7 @@ def run_voila_classify(gene_id):
 
 expected_headers = ['module_id', 'lsv_ids', 'cassette_exon', 'alt3ss', 'alt5ss', 'p_alt3ss', 'p_alt5ss', 'alt3and5ss',
  'mutually_exclusive', 'ale', 'afe', 'p_ale', 'p_afe', 'orphan_junction', 'multi_exon_spanning', 'tandem_cassette',
-                    'intron_retention', 'complex', 'multi-event']
+                    'intron_retention', 'exitron', 'complex', 'multi-event']
 
 def verify_tsvs(gene_id):
 

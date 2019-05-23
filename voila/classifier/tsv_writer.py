@@ -58,7 +58,7 @@ class TsvWriter:
         return ('summary.tsv', 'cassette.tsv', 'alt3prime.tsv', 'alt5prime.tsv', 'alt3and5prime.tsv',
                 'mutually_exclusive.tsv', 'alternate_last_exon.tsv', 'alternate_first_exon.tsv',
                 'intron_retention.tsv', 'p_alt5prime.tsv', 'p_alt3prime.tsv', 'multi_exon_spanning.tsv',
-                'tandem_cassette.tsv')
+                'tandem_cassette.tsv', 'exitron.tsv')
 
     @staticmethod
     def delete_tsvs():
@@ -162,10 +162,12 @@ class TsvWriter:
                                          'Junction Name', 'Junction Coordinate'] + self.quantification_headers
         self.start_headers(headers, 'multi_exon_spanning.tsv')
         self.start_headers(headers, 'tandem_cassette.tsv')
+        headers = self.common_headers + ['Exon coordinate', 'Junction Coordinate'] + self.quantification_headers
+        self.start_headers(headers, 'exitron.tsv')
         headers = ['Module', 'LSV ID(s)', 'Cassette', 'Alt 3',
                    'Alt 5', 'P_Alt 3', 'P_Alt 5', 'Alt 3 and Alt 5', 'MXE', 'ALE',
                    'AFE', 'P_ALE', 'P_AFE', 'Orphan Junction', 'Multi Exon Spanning',
-                   'Tandem Cassette', 'Intron Retention', 'Complex', 'Multi-Event']
+                   'Tandem Cassette', 'Intron Retention', 'Exitron', 'Complex', 'Multi-Event']
         self.start_headers(headers, 'summary.tsv')
 
 
@@ -524,6 +526,21 @@ class TsvWriter:
                                    semicolon((x.range_str() for x in event['Tandem_Exons']))]
                             writer.writerow(trg_common + row + self.quantifications(module, 't'))
 
+    def exitron(self):
+        with open(os.path.join(self.config.directory, 'exitron.tsv.%s' % self.pid), 'a', newline='') as csvfile:
+            writer = csv.writer(csvfile, dialect='excel-tab', delimiter='\t')
+            for module in self.modules:
+                events, _complex, _multi_event = self.as_types[module.idx]
+                if not _complex or SHOW_COMPLEX_IN_ALL:
+                    for event in events:
+                        if event['event'] == 'exitron':
+                            src_common = self.common_data(module, 's')
+                            trg_common = self.common_data(module, 't')
+                            row = [event['Exon'].range_str(), event['Junc'].range_str()]
+                            writer.writerow(src_common + row + self.quantifications(module, 's'))
+                            row = [event['Exon'].range_str(), event['Junc'].range_str()]
+                            writer.writerow(trg_common + row + self.quantifications(module, 't'))
+
     def summary(self):
         """
         Write the summary style output file
@@ -554,6 +571,7 @@ class TsvWriter:
                 counts['multi_exon_spanning'] = 0
                 counts['tandem_cassette'] = 0
                 counts['intron_retention'] = 0
+                counts['exitron'] = 0
                 for event in events:
                     if event['event'] in counts:
                         counts[event['event']] += 1

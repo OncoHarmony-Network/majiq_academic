@@ -56,6 +56,7 @@ def classify_gene(args):
     writer.alternate_last_exon()
 
     writer.tandem_cassette()
+    writer.exitron()
 
     q.put(None)
 
