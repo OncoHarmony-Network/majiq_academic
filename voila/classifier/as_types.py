@@ -798,7 +798,8 @@ class Graph:
                 for e1, e2, in combinations(n1.edges, 2):
                     # this check removes exitrons from consideration
                     if not (e1.start > e1.node.start and e1.end < e1.node.end) and \
-                       not (e2.start > e2.node.start and e2.end < e2.node.end):
+                       not (e2.start > e2.node.start and e2.end < e2.node.end) and \
+                       not (e1.ir or e2.ir):
                         if e1.node != e2.node and not (e1.node.connects(e2.node) or e2.node.connects(e1.node)):
                             for i1 in e1.node.edges:
                                 for i2 in e2.node.edges:

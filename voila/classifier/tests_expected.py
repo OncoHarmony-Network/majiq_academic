@@ -1,4 +1,12 @@
 expected_modules = {
+    "gene:ENSG00000205744":[
+        {}, {}, {},
+        {
+            "mutually_exclusive": "1",
+            "intron_retention": "1"
+        },
+        {}
+    ],
     "gene:ENSG00000003756":[
         {}, {}, {}, {}, {}, {},
         {
