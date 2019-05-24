@@ -1010,8 +1010,8 @@ expected_modules = {
             "p_alt5ss": "",
             
             "mutually_exclusive": "",
-            "ale": "3",
-            "afe": "2",
+            "ale": "1",
+            "afe": "1",
             "p_ale": "",
             "p_afe": "",
             "multi_exon_spanning": "3",

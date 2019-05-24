@@ -501,28 +501,33 @@ class Graph:
         """
 
         modules = []
-        j = 0
         nextEndShift = 0
         start_idx = 0
         #edges = [x for x in self.edges if not x.ir]  # we exclude IR from module creation for now
         edges = self.edges
         for edge in edges:
 
+                # there is a chance that there are simply no junctions at all, so this algorithm will misplace
+                # slightly. It always overlaps by one exon as stated, so we will end up getting two exons
+                # smack against each other with no junctions between in a module, which gives superflous
+                # definitions.
+                # to work around this, we need to check the first exon in a module actually connects to
+                # ANY other node alead, and if not remove this node from the module.
+                # I just need to think of some efficient way to do this...
 
                 if not any(e.start < edge.end < e.end or (e.start > edge.start and e.end == edge.end) for e in edges):
-                    j += 1
                     i = bisect_left(self.nodes, edge.node)
-                    if j == 2 or True:
-                        #print(edge.lsvs)
-                        if((self.nodes[i].end == -1 or self.nodes[i].start == -1) and True):
-                            # handling case like exon 19-20 in ENSMUSG00000021820
-                            # we aim to make sure that the half exons are in the middle of the module
-                            # so that we don't mark the next module as having that half exon
-                            modules.append(self.Module(self.nodes[start_idx: i + 1 + 1], self.strand))
-                            nextEndShift = 1
-                        else:
-                            modules.append(self.Module(self.nodes[start_idx + nextEndShift: i + 1], self.strand))
-                            nextEndShift = 0
+
+                    #print(edge.lsvs)
+                    if((self.nodes[i].end == -1 or self.nodes[i].start == -1) and True):
+                        # handling case like exon 19-20 in ENSMUSG00000021820
+                        # we aim to make sure that the half exons are in the middle of the module
+                        # so that we don't mark the next module as having that half exon
+                        modules.append(self.Module(self.nodes[start_idx: i + 1 + 1], self.strand))
+                        nextEndShift = 1
+                    else:
+                        modules.append(self.Module(self.nodes[start_idx + nextEndShift: i + 1], self.strand))
+                        nextEndShift = 0
 
                     start_idx = i
 
@@ -532,11 +537,15 @@ class Graph:
         # removing modules with no lsv ids
         modules[:] = [x for x in modules if x.source_lsv_ids or x.target_lsv_ids]
 
+
+
         # removing modules with only one junction
         if not self.config.keep_constitutive:
             modules[:] = [x for x in modules if x.get_num_edges(ir=True) > 1]
 
         for i, mod in enumerate(modules, 1):
+            if not mod.nodes[0].edges:
+                del mod.nodes[0]
             mod.set_idx(i)
 
 
