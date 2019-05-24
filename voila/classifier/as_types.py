@@ -45,8 +45,8 @@ class UnsupportedVoilaFile(Exception):
 class Printable_Event:
 
     def range_str(self):
-        return '{}-{}'.format(self.start, self.end)
-
+        return '{}-{}'.format(getattr(self, 'untrimmed_start', self.start),
+                              getattr(self, 'untrimmed_end', self.end))
 
 class Graph:
     def __init__(self, gene_id):
@@ -484,6 +484,10 @@ class Graph:
 
             if trim_end:
                 node.exon['end'] = global_max
+
+            if not self.config.untrimmed_exons:
+                node.untrimmed_start = node.start
+                node.untrimmed_end = node.end
 
 
     def modules(self):

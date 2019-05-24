@@ -8,7 +8,7 @@ from voila.api.matrix_utils import generate_means
 
 from voila.classifier.as_types import Graph
 from voila.classifier.tsv_writer import TsvWriter
-from voila.classifier.tests_expected import expected_modules, expected_cassette_exons
+from voila.classifier.tests_expected import expected_modules, expected_cassette_exons, expected_intron_retention
 
 from subprocess import Popen, PIPE, STDOUT
 import os, shutil
@@ -67,6 +67,24 @@ def verify_tsvs(gene_id):
                                                                    events[i][headers.index(k)], gene_id))
                         raise
 
+    with open(os.path.join(out_dir, 'intron_retention.tsv'), 'r', newline='') as csvfile:
+        reader = csv.reader(csvfile, dialect='excel-tab', delimiter='\t')
+        headers = next(reader, None)
+        events = []
+        for line in reader:
+            events.append(line)
+
+        if gene_id in expected_intron_retention:
+            for i, mod in enumerate(expected_intron_retention[gene_id]):
+                print(mod)
+
+                for k, v in mod.items():
+                    try:
+                        assert v == events[i][headers.index(k)]
+                    except:
+                        print("expt: %s found: %s (%d, %s, %s)" % (v, events[i][headers.index(k)], i+1,
+                                                                   events[i][headers.index(k)], gene_id))
+                        raise
 
     with open(os.path.join(out_dir, 'summary.tsv'), 'r', newline='') as csvfile:
         reader = csv.reader(csvfile, dialect='excel-tab', delimiter='\t')

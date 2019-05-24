@@ -1214,3 +1214,10 @@ expected_cassette_exons = {
     ]
 }
 
+expected_intron_retention = {
+    'gene:ENSG00000123146': [
+        {'Reference Exon Coordinate': '14381156-14381545'},
+        {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}
+    ]
+}
+
