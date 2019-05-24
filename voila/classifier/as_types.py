@@ -401,10 +401,9 @@ class Graph:
         # remove exons that don't have any junctions
         # this is done by looking at the start and end of each junction and seeing if any of those ends
         # fall inside of each node
-
-
-        #self.nodes[:] = [x for x in self.nodes if any(self.in_exon(x, edge.end) or self.in_exon(x, edge.start) for edge in self.edges)]
+        self.nodes[:] = [x for x in self.nodes if any(self.in_exon(x, edge.end) or self.in_exon(x, edge.start) for edge in self.edges)]
         nodes = []
+
         for i, node in enumerate(self.nodes):
 
             global_min = float('inf')
@@ -422,10 +421,6 @@ class Graph:
                     global_min = min(_e.end, global_min)
                     edges_ending.append(_e)
 
-            if not edges_starting and not edges_ending:
-                continue
-
-
             node.untrimmed_start = node.start
             node.untrimmed_end = node.end
 
@@ -437,6 +432,7 @@ class Graph:
                         node.exon['end'] = global_max
 
                 # if not the first node
+
                 if not i == 0:
                     # and not IR connecting behind
                     if not self.nodes[i - 1].connects(node, only_ir=True):
