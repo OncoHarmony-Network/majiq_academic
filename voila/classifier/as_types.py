@@ -130,8 +130,9 @@ class Graph:
             :return: string
             """
 
-            return '<{} {} ({}),{} ({})>'.format(self.__class__.__name__, self.start, self.untrimmed_start,
-                                                 self.end, self.untrimmed_end)
+            return '<{} {} ({}),{} ({})>'.format(self.__class__.__name__, self.start,
+                                                 getattr(self, 'untrimmed_start', self.start),
+                                                 self.end, getattr(self, 'untrimmed_end', self.end))
 
 
         @property
@@ -424,7 +425,9 @@ class Graph:
             # first find exitrons, we will need them later
             exitrons = []
             for edge in self.edges:
-                if self.in_exon(node, edge.start) and self.in_exon(node, edge.end):
+                # this is different then using in_exon() because it is exclusive instead of inclusive
+                # this is how we differentiate exitrons from junctions in overlapping exons
+                if node.start < edge.start < node.end and node.start < edge.end < node.end:
                     exitrons.append(edge)
 
             trim_end = False
@@ -439,7 +442,7 @@ class Graph:
                     # check that the edge allowing trimming fwd is completely ahead of exitrons, otherwise
                     # if does not count
                     for exitron in exitrons:
-                        if edge.start > exitron.start and edge.start > exitron.end:
+                        if edge.start <= exitron.end:
                             break
                     else:
                         trim_end = True
@@ -452,7 +455,7 @@ class Graph:
                         trim_start = False
                         break
                     for exitron in exitrons:
-                        if edge.end < exitron.start and edge.end < exitron.end:
+                        if edge.end >= exitron.start:
                             break
                     else:
                         trim_start = True
