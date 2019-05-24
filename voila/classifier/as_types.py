@@ -402,48 +402,89 @@ class Graph:
         # this is done by looking at the start and end of each junction and seeing if any of those ends
         # fall inside of each node
         self.nodes[:] = [x for x in self.nodes if any(self.in_exon(x, edge.end) or self.in_exon(x, edge.start) for edge in self.edges)]
-        nodes = []
+        self._trim_exons()
+
+        self.edges.sort()
+        self.nodes.sort()
+
+
+    def _trim_exons(self):
+        """
+        modify self.nodes to remove parts of exons which exist outside of any junction connection
+        """
 
         for i, node in enumerate(self.nodes):
 
-            global_min = float('inf')
-            global_max = float('-inf')
-            edges_starting = []
-            edges_ending = []
-            for _e in self.edges:
-                if self.in_exon(node, _e.start) and not _e.start == node.start:
-                    global_max = max(_e.start, global_max)
-                    global_min = min(_e.start, global_min)
-                    edges_starting.append(_e)
-            for _e in self.edges:
-                if self.in_exon(node, _e.end) and not _e.end == node.end:
-                    global_max = max(_e.end, global_max)
-                    global_min = min(_e.end, global_min)
-                    edges_ending.append(_e)
+            # find conditions where we should not trim! ---
+
+            # not half exon
+            if node.is_half_exon:
+                continue
+
+            # first find exitrons, we will need them later
+            exitrons = []
+            for edge in self.edges:
+                if self.in_exon(node, edge.start) and self.in_exon(node, edge.end):
+                    exitrons.append(edge)
+
+            trim_end = False
+            for edge in self.edges:
+                # look through all edges
+                # if we can't find any going ahead (other end greater value than exon) (excluding IR), don't trim end
+                if self.in_exon(node, edge.start) and edge.end > node.end:
+                    # intron retention ahead immediately disqualified trimming ahead
+                    if edge.ir:
+                        trim_end = False
+                        break
+                    # check that the edge allowing trimming fwd is completely ahead of exitrons, otherwise
+                    # if does not count
+                    for exitron in exitrons:
+                        if edge.start > exitron.start and edge.start > exitron.end:
+                            break
+                    else:
+                        trim_end = True
+
+            trim_start = False
+            for edge in self.edges:
+                # similar for backwards
+                if self.in_exon(node, edge.end) and edge.start < node.start:
+                    if edge.ir:
+                        trim_start = False
+                        break
+                    for exitron in exitrons:
+                        if edge.end < exitron.start and edge.end < exitron.end:
+                            break
+                    else:
+                        trim_start = True
+
+            # end find conditions part ---
 
             node.untrimmed_start = node.start
             node.untrimmed_end = node.end
 
-            if not node.is_half_exon:
-                # if not the last node
-                if not i == len(self.nodes)-1:
-                    # and not node connecting ahead
-                    if not node.connects(self.nodes[i+1], only_ir=True):
-                        node.exon['end'] = global_max
+            global_min = float('inf')
+            global_max = float('-inf')
+            if trim_end or trim_start:
 
-                # if not the first node
+                edges_starting = []
+                edges_ending = []
+                for _e in self.edges:
+                    if self.in_exon(node, _e.start) and not _e.start == node.start:
+                        global_max = max(_e.start, global_max)
+                        global_min = min(_e.start, global_min)
+                        edges_starting.append(_e)
+                for _e in self.edges:
+                    if self.in_exon(node, _e.end) and not _e.end == node.end:
+                        global_max = max(_e.end, global_max)
+                        global_min = min(_e.end, global_min)
+                        edges_ending.append(_e)
 
-                if not i == 0:
-                    # and not IR connecting behind
-                    if not self.nodes[i - 1].connects(node, only_ir=True):
-                        node.exon['start'] = global_min
+            if trim_start:
+                node.exon['start'] = global_min
 
-            nodes.append(node)
+            if trim_end:
+                node.exon['end'] = global_max
 
-        self.nodes[:] = nodes
-
-        self.edges.sort()
-        self.nodes.sort()
 
     def modules(self):
         """
