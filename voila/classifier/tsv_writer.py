@@ -11,8 +11,6 @@ import multiprocessing
 def semicolon(value_list):
     return ';'.join(str(x) for x in value_list)
 
-SHOW_COMPLEX_IN_ALL = False
-
 
 class TsvWriter:
     """
@@ -176,7 +174,7 @@ class TsvWriter:
             writer = csv.writer(csvfile, dialect='excel-tab', delimiter='\t')
             for module in self.modules:
                 events, _complex, _multi_event = self.as_types[module.idx]
-                if not _complex or SHOW_COMPLEX_IN_ALL:
+                if not _complex or self.config.output_complex:
                     for event in events:
                         if event['event'] == 'cassette_exon':
                             src_common = self.common_data(module, 's')
@@ -203,7 +201,7 @@ class TsvWriter:
             writer = csv.writer(csvfile, dialect='excel-tab', delimiter='\t')
             for module in self.modules:
                 events, _complex, _multi_event = self.as_types[module.idx]
-                if not _complex or SHOW_COMPLEX_IN_ALL:
+                if not _complex or self.config.output_complex:
                     for event in events:
                         if event['event'] == 'alt3ss':
                             src_common = self.common_data(module, 's')
@@ -226,7 +224,7 @@ class TsvWriter:
             writer = csv.writer(csvfile, dialect='excel-tab', delimiter='\t')
             for module in self.modules:
                 events, _complex, _multi_event = self.as_types[module.idx]
-                if not _complex or SHOW_COMPLEX_IN_ALL:
+                if not _complex or self.config.output_complex:
                     for event in events:
                         if event['event'] == 'alt5ss':
                             src_common = self.common_data(module, 's')
@@ -249,7 +247,7 @@ class TsvWriter:
             writer = csv.writer(csvfile, dialect='excel-tab', delimiter='\t')
             for module in self.modules:
                 events, _complex, _multi_event = self.as_types[module.idx]
-                if not _complex or SHOW_COMPLEX_IN_ALL:
+                if not _complex or self.config.output_complex:
                     for event in events:
                         if event['event'] == 'p_alt5ss':
                             src_common = self.common_data(module, 's')
@@ -275,7 +273,7 @@ class TsvWriter:
             writer = csv.writer(csvfile, dialect='excel-tab', delimiter='\t')
             for module in self.modules:
                 events, _complex, _multi_event = self.as_types[module.idx]
-                if not _complex or SHOW_COMPLEX_IN_ALL:
+                if not _complex or self.config.output_complex:
                     for event in events:
                         if event['event'] == 'p_alt3ss':
                             src_common = self.common_data(module, 's')
@@ -301,7 +299,7 @@ class TsvWriter:
             writer = csv.writer(csvfile, dialect='excel-tab', delimiter='\t')
             for module in self.modules:
                 events, _complex, _multi_event = self.as_types[module.idx]
-                if not _complex or SHOW_COMPLEX_IN_ALL:
+                if not _complex or self.config.output_complex:
                     for event in events:
                         if event['event'] == 'alt3and5ss':
                             src_common = self.common_data(module, 's')
@@ -324,7 +322,7 @@ class TsvWriter:
             writer = csv.writer(csvfile, dialect='excel-tab', delimiter='\t')
             for module in self.modules:
                 events, _complex, _multi_event = self.as_types[module.idx]
-                if not _complex or SHOW_COMPLEX_IN_ALL:
+                if not _complex or self.config.output_complex:
                     for event in events:
                         if event['event'] == 'mutually_exclusive':
                             src_common = self.common_data(module, 's')
@@ -351,7 +349,7 @@ class TsvWriter:
     #         writer = csv.writer(csvfile, dialect='excel-tab', delimiter='\t')
     #         for module in self.modules:
     #             events, _complex, _multi_event = self.as_types[module.idx]
-    #             if not _complex or SHOW_COMPLEX_IN_ALL:
+    #             if not _complex or self.config.output_complex:
     #                 for event in events:
     #                     if event['event'] == 'p_afe':
     #                         src_common = self.common_data(module, 's')
@@ -379,7 +377,7 @@ class TsvWriter:
     #         writer = csv.writer(csvfile, dialect='excel-tab', delimiter='\t')
     #         for module in self.modules:
     #             events, _complex, _multi_event = self.as_types[module.idx]
-    #             if not _complex or SHOW_COMPLEX_IN_ALL:
+    #             if not _complex or self.config.output_complex:
     #                 for event in events:
     #                     if event['event'] == 'p_ale':
     #                         src_common = self.common_data(module, 's')
@@ -403,7 +401,7 @@ class TsvWriter:
             writer = csv.writer(csvfile, dialect='excel-tab', delimiter='\t')
             for module in self.modules:
                 events, _complex, _multi_event = self.as_types[module.idx]
-                if not _complex or SHOW_COMPLEX_IN_ALL:
+                if not _complex or self.config.output_complex:
                     for event in events:
                         if event['event'] == 'ale':
                             src_common = self.common_data(module, 's')
@@ -427,7 +425,7 @@ class TsvWriter:
             writer = csv.writer(csvfile, dialect='excel-tab', delimiter='\t')
             for module in self.modules:
                 events, _complex, _multi_event = self.as_types[module.idx]
-                if not _complex or SHOW_COMPLEX_IN_ALL:
+                if not _complex or self.config.output_complex:
                     for event in events:
                         if event['event'] == 'afe':
                             src_common = self.common_data(module, 's')
@@ -452,7 +450,7 @@ class TsvWriter:
             writer = csv.writer(csvfile, dialect='excel-tab', delimiter='\t')
             for module in self.modules:
                 events, _complex, _multi_event = self.as_types[module.idx]
-                if not _complex or SHOW_COMPLEX_IN_ALL:
+                if not _complex or self.config.output_complex:
                     for event in events:
                         if event['event'] == 'intron_retention':
                             src_common = self.common_data(module, 's')
@@ -476,7 +474,7 @@ class TsvWriter:
             writer = csv.writer(csvfile, dialect='excel-tab', delimiter='\t')
             for module in self.modules:
                 events, _complex, _multi_event = self.as_types[module.idx]
-                if not _complex or SHOW_COMPLEX_IN_ALL:
+                if not _complex or self.config.output_complex:
                     for event in events:
                         if event['event'] == 'multi_exon_spanning':
                             src_common = self.common_data(module, 's')
@@ -503,7 +501,7 @@ class TsvWriter:
             writer = csv.writer(csvfile, dialect='excel-tab', delimiter='\t')
             for module in self.modules:
                 events, _complex, _multi_event = self.as_types[module.idx]
-                if not _complex or SHOW_COMPLEX_IN_ALL:
+                if not _complex or self.config.output_complex:
                     for event in events:
                         if event['event'] == 'tandem_cassette':
 
@@ -531,7 +529,7 @@ class TsvWriter:
             writer = csv.writer(csvfile, dialect='excel-tab', delimiter='\t')
             for module in self.modules:
                 events, _complex, _multi_event = self.as_types[module.idx]
-                if not _complex or SHOW_COMPLEX_IN_ALL:
+                if not _complex or self.config.output_complex:
                     for event in events:
                         if event['event'] == 'exitron':
                             src_common = self.common_data(module, 's')

@@ -145,8 +145,10 @@ classify_parser.add_argument('--gene-ids', nargs='*', default=[],
                              'GENE_ID2 ...')
 classify_parser.add_argument('--keep-constitutive', action='store_true',
                          help='Do not discard modules that are unquantified my Majiq (no LSVs found)')
+classify_parser.add_argument('--output-complex', action='store_true',
+                         help='Complex module data is dumped to all output TSVs, not only summary')
 classify_parser.add_argument('--decomplexify-threshold', type=float, default=0.01,
-                        help='Filter out junctions there PSI is below a certain value (between 0.0 and 1.0). If multiple'
+                         help='Filter out junctions there PSI is below a certain value (between 0.0 and 1.0). If multiple'
                              'input files are used, only the highest PSI value is used. If 0 (or 0.0) is specified, '
                              'no filtering fill be done. The default is "0.01". (1%%)')
 required_classify_parser = classify_parser.add_argument_group('required named arguments')
