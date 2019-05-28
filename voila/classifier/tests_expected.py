@@ -1226,3 +1226,6 @@ expected_intron_retention = {
     ]
 }
 
+# expected_alt5ss = {
+#     'gene:ENSG00000138085'
+# }

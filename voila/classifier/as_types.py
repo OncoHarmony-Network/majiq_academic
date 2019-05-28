@@ -909,11 +909,16 @@ class Graph:
                             if self.strand_case(e1.end, e1.start) < self.strand_case(e1.end, e1.start):
                                 proximal = e2
                                 distal = e1
+                                n_e1 = n1
+                                n_e2 = n2
                             else:
                                 proximal = e1
                                 distal = e2
+                                n_e1 = n2
+                                n_e2 = n1
 
-                            found.append({'event': 'alt5ss', 'E1': n1, 'E2': n2, 'Proximal': proximal, 'Distal': distal})
+                            found.append({'event': 'alt5ss', 'E1': n_e1, 'E2': n_e2,
+                                          'Proximal': proximal, 'Distal': distal})
             return found
 
 
@@ -931,12 +936,16 @@ class Graph:
                             if self.strand_case(e1.end, e1.start) > self.strand_case(e1.end, e1.start):
                                 proximal = e2
                                 distal = e1
+                                n_e1 = n1
+                                n_e2 = n2
                             else:
                                 proximal = e1
                                 distal = e2
+                                n_e1 = n2
+                                n_e2 = n1
 
-                            found.append({'event': 'alt3ss', 'E1': n1, 'E2': n2, 'Proximal': proximal, 'Distal': distal})
-
+                            found.append({'event': 'alt3ss', 'E1': n_e1, 'E2': n_e2,
+                                          'Proximal': proximal, 'Distal': distal})
             return found
 
 

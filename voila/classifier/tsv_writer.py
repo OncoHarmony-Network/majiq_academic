@@ -206,18 +206,20 @@ class TsvWriter:
                         if event['event'] == 'alt3ss':
                             src_common = self.common_data(module, 's')
                             trg_common = self.common_data(module, 't')
-                            row = [event['E1'].range_str(), 'E2', event['E2'].range_str(), 'E1_E2_Proximal',
-                                   event['Proximal'].range_str()]
-                            writer.writerow(src_common + row + self.quantifications(module, 's', event['Proximal']))
-                            row = [event['E1'].range_str(), 'E2', event['E2'].range_str(), 'E1_E2_Distal',
-                                   event['Distal'].range_str()]
-                            writer.writerow(src_common + row + self.quantifications(module, 's', event['Distal']))
-                            row = [event['E2'].range_str(), 'E1', event['E1'].range_str(), 'E2_E1_Proximal',
-                                   event['Proximal'].range_str()]
-                            writer.writerow(trg_common + row + self.quantifications(module, 't', event['Proximal']))
-                            row = [event['E2'].range_str(), 'E1', event['E1'].range_str(), 'E2_E1_Distal',
-                                   event['Distal'].range_str()]
-                            writer.writerow(trg_common + row + self.quantifications(module, 't', event['Distal']))
+                            if src_common[1]:
+                                row = [event['E1'].range_str(), 'E2', event['E2'].range_str(), 'E1_E2_Proximal',
+                                       event['Proximal'].range_str()]
+                                writer.writerow(src_common + row + self.quantifications(module, 's', event['Proximal']))
+                                row = [event['E1'].range_str(), 'E2', event['E2'].range_str(), 'E1_E2_Distal',
+                                       event['Distal'].range_str()]
+                                writer.writerow(src_common + row + self.quantifications(module, 's', event['Distal']))
+                            if trg_common[1]:
+                                row = [event['E2'].range_str(), 'E1', event['E1'].range_str(), 'E2_E1_Proximal',
+                                       event['Proximal'].range_str()]
+                                writer.writerow(trg_common + row + self.quantifications(module, 't', event['Proximal']))
+                                row = [event['E2'].range_str(), 'E1', event['E1'].range_str(), 'E2_E1_Distal',
+                                       event['Distal'].range_str()]
+                                writer.writerow(trg_common + row + self.quantifications(module, 't', event['Distal']))
                             
     def alt5prime(self):
         with open(os.path.join(self.config.directory, 'alt5prime.tsv.%s' % self.pid), 'a', newline='') as csvfile:
@@ -229,18 +231,20 @@ class TsvWriter:
                         if event['event'] == 'alt5ss':
                             src_common = self.common_data(module, 's')
                             trg_common = self.common_data(module, 't')
-                            row = [event['E1'].range_str(), 'E2', event['E2'].range_str(), 'E1_E2_Proximal',
-                                   event['Proximal'].range_str()]
-                            writer.writerow(src_common + row + self.quantifications(module, 's', event['Proximal']))
-                            row = [event['E1'].range_str(), 'E2', event['E2'].range_str(), 'E1_E2_Distal',
-                                   event['Distal'].range_str()]
-                            writer.writerow(src_common + row + self.quantifications(module, 's', event['Distal']))
-                            row = [event['E2'].range_str(), 'E1', event['E1'].range_str(), 'E2_E1_Proximal',
-                                   event['Proximal'].range_str()]
-                            writer.writerow(trg_common + row + self.quantifications(module, 't', event['Proximal']))
-                            row = [event['E2'].range_str(), 'E1', event['E1'].range_str(), 'E2_E1_Distal',
-                                   event['Distal'].range_str()]
-                            writer.writerow(trg_common + row + self.quantifications(module, 't', event['Distal']))
+                            if src_common[1]:
+                                row = [event['E1'].range_str(), 'E2', event['E2'].range_str(), 'E1_E2_Proximal',
+                                       event['Proximal'].range_str()]
+                                writer.writerow(src_common + row + self.quantifications(module, 's', event['Proximal']))
+                                row = [event['E1'].range_str(), 'E2', event['E2'].range_str(), 'E1_E2_Distal',
+                                       event['Distal'].range_str()]
+                                writer.writerow(src_common + row + self.quantifications(module, 's', event['Distal']))
+                            if trg_common[1]:
+                                row = [event['E2'].range_str(), 'E1', event['E1'].range_str(), 'E2_E1_Proximal',
+                                       event['Proximal'].range_str()]
+                                writer.writerow(trg_common + row + self.quantifications(module, 't', event['Proximal']))
+                                row = [event['E2'].range_str(), 'E1', event['E1'].range_str(), 'E2_E1_Distal',
+                                       event['Distal'].range_str()]
+                                writer.writerow(trg_common + row + self.quantifications(module, 't', event['Distal']))
 
     def p_alt5prime(self):
         with open(os.path.join(self.config.directory, 'p_alt5prime.tsv.%s' % self.pid), 'a', newline='') as csvfile:
