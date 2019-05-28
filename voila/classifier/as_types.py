@@ -1129,7 +1129,7 @@ class Graph:
 
                     skipA1 = node.connects(c1, ir=True) + c1.connects(node, ir=True)
                     skipA2 = a1.connects(c1, ir=True) + c1.connects(a1, ir=True)
-                    found.append({'event': 'afe', 'A1': a1, 'A2': node, 'C1': c1,
+                    found.append({'event': 'afe', 'Proximal': node, 'Distal': a1, 'Reference': c1,
                                             'SkipA2': skipA2, 'SkipA1': skipA1})
 
             return found
@@ -1166,7 +1166,7 @@ class Graph:
 
                     skipA1 = a2.connects(c1, ir=True) + c1.connects(a2, ir=True)
                     skipA2 = c1.connects(node, ir=True) + node.connects(c1, ir=True)
-                    found.append({'event': 'ale', 'A1': node, 'A2': a2, 'C1': c1,
+                    found.append({'event': 'ale', 'Proximal': node, 'Distal': a2, 'Reference': c1,
                                   'SkipA2': skipA2, 'SkipA1': skipA1})
 
             return found
