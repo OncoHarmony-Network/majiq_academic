@@ -510,19 +510,19 @@ class TsvWriter:
                             row = [event['C1'].range_str(), 'C2', event['C2'].range_str(),
                                    semicolon((x.range_str() for x in event['As'])), len(event['As']), 'C1_C2',
                                    semicolon((x.range_str() for x in event['Skip']))]
-                            writer.writerow(src_common + row + self.quantifications(module, 's'))
+                            writer.writerow(src_common + row + self.quantifications(module, 's', event['Skip'][0]))
                             row = [event['C1'].range_str(), 'A1', event['As'][0].range_str(),
                                    semicolon((x.range_str() for x in event['As'])), len(event['As']), 'C1_A',
                                    semicolon((x.range_str() for x in event['Include1']))]
-                            writer.writerow(src_common + row + self.quantifications(module, 's'))
+                            writer.writerow(src_common + row + self.quantifications(module, 's', event['Include1'][0]))
                             row = [event['C2'].range_str(), 'C1', event['C1'].range_str(),
                                    semicolon((x.range_str() for x in event['As'])), len(event['As']), 'C2_C1',
                                    semicolon((x.range_str() for x in event['Skip']))]
-                            writer.writerow(trg_common + row + self.quantifications(module, 't'))
+                            writer.writerow(trg_common + row + self.quantifications(module, 't', event['Skip'][0]))
                             row = [event['C2'].range_str(), 'A_Last', '',
                                    semicolon((x.range_str() for x in event['As'])), len(event['As']), 'A_Last_C2',
                                    semicolon((x.range_str() for x in event['Include2']))]
-                            writer.writerow(trg_common + row + self.quantifications(module, 't'))
+                            writer.writerow(trg_common + row + self.quantifications(module, 't', event['Include2'][0]))
 
     def tandem_cassette(self):
         with open(os.path.join(self.config.directory, 'tandem_cassette.tsv.%s' % self.pid), 'a', newline='') as csvfile:
@@ -538,19 +538,19 @@ class TsvWriter:
                             row = [event['C1'].range_str(), 'C2', event['C2'].range_str(),
                                    semicolon((x.range_str() for x in event['As'])), len(event['As']), 'C1_C2',
                                    semicolon((x.range_str() for x in event['Skip']))]
-                            writer.writerow(src_common + row + self.quantifications(module, 's'))
+                            writer.writerow(src_common + row + self.quantifications(module, 's', event['Skip'][0]))
                             row = [event['C1'].range_str(), 'A1', event['As'][0].range_str(),
                                    semicolon((x.range_str() for x in event['As'])), len(event['As']), 'C1_A',
                                    semicolon((x.range_str() for x in event['Include1']))]
-                            writer.writerow(src_common + row + self.quantifications(module, 's'))
+                            writer.writerow(src_common + row + self.quantifications(module, 's', event['Include1'][0]))
                             row = [event['C2'].range_str(), 'C1', event['C1'].range_str(),
                                    semicolon((x.range_str() for x in event['As'])), len(event['As']), 'C2_C1',
                                    semicolon((x.range_str() for x in event['Skip']))]
-                            writer.writerow(trg_common + row + self.quantifications(module, 't'))
+                            writer.writerow(trg_common + row + self.quantifications(module, 't', event['Skip'][0]))
                             row = [event['C2'].range_str(), 'A_Last', '',
                                    semicolon((x.range_str() for x in event['As'])), len(event['As']), 'A_Last_C2',
                                    semicolon((x.range_str() for x in event['Include2']))]
-                            writer.writerow(trg_common + row + self.quantifications(module, 't'))
+                            writer.writerow(trg_common + row + self.quantifications(module, 't', event['Include2'][0]))
 
     def exitron(self):
         with open(os.path.join(self.config.directory, 'exitron.tsv.%s' % self.pid), 'a', newline='') as csvfile:
