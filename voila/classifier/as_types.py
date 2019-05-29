@@ -543,12 +543,20 @@ class Graph:
         if not self.config.keep_constitutive:
             modules[:] = [x for x in modules if x.get_num_edges(ir=True) > 1]
 
+        # removing beginning mode of module if it does not have any forward junctions
+        # this can happen when there are complete breaks in the gene
         for i, mod in enumerate(modules, 1):
             if not mod.nodes[0].edges:
+                # node that so far this only shows exon coords correctly if there is one break in a gene
+                # we have not yet seen multiple breaks to test with and will handle that when it comes around
+                # it should still show multiple entries if there are multiple breaks, but the coordinates
+                # will likely be incorrect
+                mod.p_multi_gene_regions.append({'Region1ExonStart': modules[0].nodes[0],
+                                                 'Region1ExonEnd': mod.nodes[0],
+                                                 'Region2ExonStart': mod.nodes[1],
+                                                 'Region2ExonEnd': modules[-1].nodes[-1]})
                 del mod.nodes[0]
             mod.set_idx(i)
-
-
 
         return modules
 
@@ -662,6 +670,8 @@ class Graph:
             self.nodes = nodes  # subset of nodes for this module
             self.Filters.strand = strand
             self.source_lsv_ids, self.target_lsv_ids = self.get_lsv_ids()
+            self.p_multi_gene_regions = []  # meta event
+
 
         def set_idx(self, idx):
             self.idx = idx
@@ -1273,6 +1283,11 @@ class Graph:
 
             if HIDE_SUB_COMPLEX and complex:
                 ret = []
+
+            for region in self.p_multi_gene_regions:
+                region['event'] = 'p_multi_gene_region'
+                ret.append(region)
+
             return ret, complex, multi_event
 
 

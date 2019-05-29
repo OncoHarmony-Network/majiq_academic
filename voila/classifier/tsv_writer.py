@@ -56,7 +56,7 @@ class TsvWriter:
         return ('summary.tsv', 'cassette.tsv', 'alt3prime.tsv', 'alt5prime.tsv', 'alt3and5prime.tsv',
                 'mutually_exclusive.tsv', 'alternate_last_exon.tsv', 'alternate_first_exon.tsv',
                 'intron_retention.tsv', 'p_alt5prime.tsv', 'p_alt3prime.tsv', 'multi_exon_spanning.tsv',
-                'tandem_cassette.tsv', 'exitron.tsv')
+                'tandem_cassette.tsv', 'exitron.tsv', 'p_multi_gene_region.tsv')
 
     @staticmethod
     def delete_tsvs():
@@ -167,6 +167,9 @@ class TsvWriter:
                    'AFE', 'P_ALE', 'P_AFE', 'Orphan Junction', 'Multi Exon Spanning',
                    'Tandem Cassette', 'Intron Retention', 'Exitron', 'Complex', 'Multi-Event']
         self.start_headers(headers, 'summary.tsv')
+        headers = ['Gene ID_Region', 'Gene ID', 'Gene Name', 'Chr', 'Strand', 'First Exon Start coord',
+                   'First Exon End coord', 'Last Exon Start coord', "Last Exon End coord"]
+        self.start_headers(headers, 'p_multi_gene_region.tsv')
 
 
     def cassette(self):
@@ -566,6 +569,24 @@ class TsvWriter:
                             writer.writerow(src_common + row + self.quantifications(module, 's'))
                             row = [event['Exon'].range_str(), event['Junc'].range_str()]
                             writer.writerow(trg_common + row + self.quantifications(module, 't'))
+
+    def p_multi_gene_region(self):
+        with open(os.path.join(self.config.directory, 'p_multi_gene_region.tsv.%s' % self.pid), 'a', newline='') as csvfile:
+            writer = csv.writer(csvfile, dialect='excel-tab', delimiter='\t')
+            for module in self.modules:
+                events, _complex, _multi_event = self.as_types[module.idx]
+                for event in events:
+                    if event['event'] == 'p_multi_gene_region':
+                        row = ["%s_Region1" % self.gene_id, self.gene_id, self.graph.gene_name,
+                               self.graph.chromosome, self.graph.strand, event['Region1ExonStart'].start,
+                               event['Region1ExonStart'].end, event['Region1ExonEnd'].start,
+                               event['Region1ExonEnd'].end]
+                        writer.writerow(row)
+                        row = ["%s_Region2" % self.gene_id, self.gene_id, self.graph.gene_name,
+                               self.graph.chromosome, self.graph.strand, event['Region2ExonStart'].start,
+                               event['Region2ExonStart'].end, event['Region2ExonEnd'].start,
+                               event['Region2ExonEnd'].end]
+                        writer.writerow(row)
 
     def summary(self):
         """

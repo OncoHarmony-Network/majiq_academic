@@ -50,14 +50,16 @@ def classify_gene(args):
     writer.mutually_exclusive()
     writer.intron_retention()
 
-    writer.summary()
-
     writer.alternate_first_exon()
     writer.alternate_last_exon()
 
     writer.multi_exon_spanning()
     writer.tandem_cassette()
     writer.exitron()
+
+    writer.p_multi_gene_region()
+
+    writer.summary()
 
     q.put(None)
 
