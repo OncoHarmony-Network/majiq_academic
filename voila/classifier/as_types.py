@@ -797,11 +797,13 @@ class Graph:
                                 continue
 
                             include1 = n1.connects(self.nodes[i + 1])
-                            include2 = self.nodes[j].connects(n2)
+                            include2 = self.nodes[j-1].connects(n2)
                             includes = []
-                            found.append({'event': 'tandem_cassette', 'C1': n1, 'C2': n2, 'As': self.nodes[i + 1:j],
-                                          'Skip': skip, 'Include1': include1, 'Include2': include2,
-                                          'Tandem_Exons': self.nodes[2:-2], 'Includes': includes})
+                            found.append({'event': 'tandem_cassette', 'C1': self.strand_case(n1, n2),
+                                          'C2': self.strand_case(n2, n1), 'As': self.nodes[i + 1:j],
+                                          'Skip': skip, 'Include1': self.strand_case(include1, include2),
+                                          'Include2': self.strand_case(include2, include1),
+                                          'Tandem_Exons': self.nodes[i + 1:j], 'Includes': includes})
             return found
 
         def multi_exon_spanning(self):
@@ -831,10 +833,12 @@ class Graph:
                         skip = n1.connects(n2)
                         if skip:
                             include1 = n1.connects(self.nodes[i+1])
-                            include2 = self.nodes[j].connects(n2)
+                            include2 = self.nodes[j-1].connects(n2)
                             includes = []
-                            found.append({'event': 'multi_exon_spanning', 'C1': n1, 'C2': n2, 'As': self.nodes[i+1:j],
-                                          'Skip': skip, 'Include1': include1, 'Include2': include2,
+                            found.append({'event': 'multi_exon_spanning', 'C1': self.strand_case(n1, n2),
+                                          'C2': self.strand_case(n2, n1), 'As': self.nodes[i+1:j],
+                                          'Skip': skip, 'Include1': self.strand_case(include1, include2),
+                                          'Include2': self.strand_case(include2, include1),
                                           'Includes': includes})
             return found
 

@@ -521,7 +521,7 @@ class TsvWriter:
                             writer.writerow(trg_common + row + self.quantifications(module, 't'))
                             row = [event['C2'].range_str(), 'A_Last', '',
                                    semicolon((x.range_str() for x in event['As'])), len(event['As']), 'A_Last_C2',
-                                   semicolon((x.range_str() for x in event['Includes']))]
+                                   semicolon((x.range_str() for x in event['Include2']))]
                             writer.writerow(trg_common + row + self.quantifications(module, 't'))
 
     def tandem_cassette(self):
@@ -549,7 +549,7 @@ class TsvWriter:
                             writer.writerow(trg_common + row + self.quantifications(module, 't'))
                             row = [event['C2'].range_str(), 'A_Last', '',
                                    semicolon((x.range_str() for x in event['As'])), len(event['As']), 'A_Last_C2',
-                                   semicolon((x.range_str() for x in event['Tandem_Exons']))]
+                                   semicolon((x.range_str() for x in event['Include2']))]
                             writer.writerow(trg_common + row + self.quantifications(module, 't'))
 
     def exitron(self):
