@@ -156,7 +156,7 @@ class TsvWriter:
         self.start_headers(headers, 'alternate_first_exon.tsv')
         self.start_headers(headers, 'intron_retention.tsv')
         headers = self.common_headers + ['Reference Exon Coordinate', 'Exon Spliced With',
-                                         'Exon Spliced With Coordinate', 'Tandem Exon Coordinates',
+                                         'Exon Spliced With Coordinate', 'Tandem Exon Coordinates', 'Num_Tandem_Exons',
                                          'Junction Name', 'Junction Coordinate'] + self.quantification_headers
         self.start_headers(headers, 'multi_exon_spanning.tsv')
         self.start_headers(headers, 'tandem_cassette.tsv')
@@ -508,19 +508,19 @@ class TsvWriter:
                             src_common = self.common_data(module, 's')
                             trg_common = self.common_data(module, 't')
                             row = [event['C1'].range_str(), 'C2', event['C2'].range_str(),
-                                   semicolon((x.range_str() for x in event['As'])), 'C1_C2',
+                                   semicolon((x.range_str() for x in event['As'])), len(event['As']), 'C1_C2',
                                    semicolon((x.range_str() for x in event['Skip']))]
                             writer.writerow(src_common + row + self.quantifications(module, 's'))
                             row = [event['C1'].range_str(), 'A1', event['As'][0].range_str(),
-                                   semicolon((x.range_str() for x in event['As'])), 'C1_A',
+                                   semicolon((x.range_str() for x in event['As'])), len(event['As']), 'C1_A',
                                    semicolon((x.range_str() for x in event['Include1']))]
                             writer.writerow(src_common + row + self.quantifications(module, 's'))
                             row = [event['C2'].range_str(), 'C1', event['C1'].range_str(),
-                                   semicolon((x.range_str() for x in event['As'])), 'C2_C1',
+                                   semicolon((x.range_str() for x in event['As'])), len(event['As']), 'C2_C1',
                                    semicolon((x.range_str() for x in event['Skip']))]
                             writer.writerow(trg_common + row + self.quantifications(module, 't'))
-                            row = [event['C2'].range_str(), 'A<N>',
-                                   semicolon((x.range_str() for x in event['As'])), 'A<N>_C2',
+                            row = [event['C2'].range_str(), 'A_Last', '',
+                                   semicolon((x.range_str() for x in event['As'])), len(event['As']), 'A_Last_C2',
                                    semicolon((x.range_str() for x in event['Includes']))]
                             writer.writerow(trg_common + row + self.quantifications(module, 't'))
 
@@ -536,19 +536,19 @@ class TsvWriter:
                             src_common = self.common_data(module, 's')
                             trg_common = self.common_data(module, 't')
                             row = [event['C1'].range_str(), 'C2', event['C2'].range_str(),
-                                   semicolon((x.range_str() for x in event['As'])), 'C1_C2',
+                                   semicolon((x.range_str() for x in event['As'])), len(event['As']), 'C1_C2',
                                    semicolon((x.range_str() for x in event['Skip']))]
                             writer.writerow(src_common + row + self.quantifications(module, 's'))
                             row = [event['C1'].range_str(), 'A1', event['As'][0].range_str(),
-                                   semicolon((x.range_str() for x in event['As'])), 'C1_A',
+                                   semicolon((x.range_str() for x in event['As'])), len(event['As']), 'C1_A',
                                    semicolon((x.range_str() for x in event['Include1']))]
                             writer.writerow(src_common + row + self.quantifications(module, 's'))
                             row = [event['C2'].range_str(), 'C1', event['C1'].range_str(),
-                                   semicolon((x.range_str() for x in event['As'])), 'C2_C1',
+                                   semicolon((x.range_str() for x in event['As'])), len(event['As']), 'C2_C1',
                                    semicolon((x.range_str() for x in event['Skip']))]
                             writer.writerow(trg_common + row + self.quantifications(module, 't'))
-                            row = [event['C2'].range_str(), 'A<N>', '',
-                                   semicolon((x.range_str() for x in event['As'])), 'A<N>_C2',
+                            row = [event['C2'].range_str(), 'A_Last', '',
+                                   semicolon((x.range_str() for x in event['As'])), len(event['As']), 'A_Last_C2',
                                    semicolon((x.range_str() for x in event['Tandem_Exons']))]
                             writer.writerow(trg_common + row + self.quantifications(module, 't'))
 
