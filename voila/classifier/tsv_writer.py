@@ -577,16 +577,12 @@ class TsvWriter:
                 events, _complex, _multi_event = self.as_types[module.idx]
                 for event in events:
                     if event['event'] == 'p_multi_gene_region':
-                        row = ["%s_Region1" % self.gene_id, self.gene_id, self.graph.gene_name,
-                               self.graph.chromosome, self.graph.strand, event['Region1ExonStart'].start,
-                               event['Region1ExonStart'].end, event['Region1ExonEnd'].start,
-                               event['Region1ExonEnd'].end]
+                        row = ["%s_Region%d" % (self.gene_id, event['idx']), self.gene_id, self.graph.gene_name,
+                               self.graph.chromosome, self.graph.strand, event['ExonStart'].start,
+                               event['ExonStart'].end, event['ExonEnd'].start,
+                               event['ExonEnd'].end]
                         writer.writerow(row)
-                        row = ["%s_Region2" % self.gene_id, self.gene_id, self.graph.gene_name,
-                               self.graph.chromosome, self.graph.strand, event['Region2ExonStart'].start,
-                               event['Region2ExonStart'].end, event['Region2ExonEnd'].start,
-                               event['Region2ExonEnd'].end]
-                        writer.writerow(row)
+
 
     def summary(self):
         """

@@ -547,6 +547,8 @@ class Graph:
         # this can happen when there are complete breaks in the gene
         last_break_idx = 0
         p_multi_gene_regions = []
+        num_regions_found = 0
+        last_region = None
         for i, mod in enumerate(modules, 1):
             if not mod.nodes[0].edges:
                 # node that so far this only shows exon coords correctly if there is one break in a gene
@@ -555,23 +557,32 @@ class Graph:
                 # will likely be incorrect
                 if self.strand == '+':
                     if p_multi_gene_regions:
-                        p_multi_gene_regions[-1]['Region2ExonEnd'] = mod.nodes[0]
-                    p_multi_gene_regions.append({'Region1ExonStart': modules[last_break_idx].nodes[0],
-                                                     'Region1ExonEnd': mod.nodes[0],
-                                                     'Region2ExonStart': mod.nodes[1],
-                                                     'Region2ExonEnd': modules[-1].nodes[-1]})
+                        p_multi_gene_regions[-1]['ExonEnd'] = mod.nodes[0]
+                    p_multi_gene_regions.append({'ExonStart': modules[last_break_idx].nodes[0],
+                                                 'ExonEnd': mod.nodes[0],
+                                                 'idx': num_regions_found + 1})
+                    last_region = {'ExonStart': mod.nodes[1],
+                                   'ExonEnd': modules[-1].nodes[-1]}
 
                 else:
                     if p_multi_gene_regions:
-                        p_multi_gene_regions[-1]['Region2ExonEnd'] = mod.nodes[1]
-                    p_multi_gene_regions.append({'Region1ExonStart': modules[last_break_idx].nodes[-1],
-                                                     'Region1ExonEnd': mod.nodes[1],
-                                                     'Region2ExonStart': mod.nodes[0],
-                                                     'Region2ExonEnd': modules[-1].nodes[0]})
+                        p_multi_gene_regions[-1]['ExonEnd'] = mod.nodes[1]
+                    p_multi_gene_regions.append({'ExonStart': modules[last_break_idx].nodes[-1],
+                                                 'ExonEnd': mod.nodes[1],
+                                                 'idx': num_regions_found + 1})
+                    last_region = {'ExonStart': mod.nodes[0],
+                                   'ExonEnd': modules[-1].nodes[0]}
 
                 last_break_idx = i
-                del mod.nodes[0]
+                num_regions_found += 1
+
+
+                del mod.nodes[0]  # this line actually removes the problem exon for the module
             mod.set_idx(i)
+        if num_regions_found > 0:
+            last_region['idx'] = num_regions_found + 1
+            p_multi_gene_regions.append(last_region)
+
         if modules:
             modules[0].p_multi_gene_regions = p_multi_gene_regions
 
