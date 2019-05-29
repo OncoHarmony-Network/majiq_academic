@@ -24,7 +24,7 @@ class TsvWriter:
         :param graph: the Graph object of the gene
         """
         
-        self.common_headers = ['Module ID', 'LSV ID(s)', 'Gene Name', 'Gene ID', 'Chr', 'Strand']
+        self.common_headers = ['Module ID', 'LSV ID(s)', 'Gene ID', 'Gene Name', 'Chr', 'Strand']
         self.graph = graph
         self.gene_id = gene_id
         self.quantifications_enabled = quantifications
