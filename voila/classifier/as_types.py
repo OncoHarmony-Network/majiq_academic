@@ -1255,11 +1255,15 @@ class Graph:
             for e in ret:
                 event_counts[e['event']] += 1
 
-            if sum(event_counts.values()) == 2 and event_counts['multi_exon_spanning'] == 1 and\
+            total_events = sum(event_counts.values())
+
+            if total_events == 2 and event_counts['multi_exon_spanning'] == 1 and\
                     event_counts['tandem_cassette'] == 1:
                 complex = False
-            elif sum(event_counts.values()) == 2 and event_counts['intron_retention'] == 1 and\
+            elif total_events == 2 and event_counts['intron_retention'] == 1 and\
                     (event_counts['p_alt3ss'] == 1 or event_counts['p_alt5ss'] == 1):
+                complex = False
+            elif event_counts['multi_exon_spanning'] == 1 and total_events == (event_counts['intron_retention'] + 1):
                 complex = False
             elif len(ret) > 1:
                 complex = True
