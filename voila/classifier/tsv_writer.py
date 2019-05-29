@@ -162,7 +162,7 @@ class TsvWriter:
         self.start_headers(headers, 'tandem_cassette.tsv')
         headers = self.common_headers + ['Exon coordinate', 'Junction Coordinate'] + self.quantification_headers
         self.start_headers(headers, 'exitron.tsv')
-        headers = ['Module', 'LSV ID(s)', 'Cassette', 'Alt 3',
+        headers = ['Module', 'Gene ID', 'Gene Name', 'LSV ID(s)', 'Cassette', 'Alt 3',
                    'Alt 5', 'P_Alt 3', 'P_Alt 5', 'Alt 3 and Alt 5', 'MXE', 'ALE',
                    'AFE', 'P_ALE', 'P_AFE', 'Orphan Junction', 'Multi Exon Spanning',
                    'Tandem Cassette', 'Intron Retention', 'Exitron', 'Complex', 'Multi-Event']
@@ -605,6 +605,7 @@ class TsvWriter:
 
 
                 writer.writerow(["%s_%d" % (self.gene_id, module.idx),
+                                 self.gene_id, self.graph.gene_name,
                                  semicolon(module.target_lsv_ids.union(module.source_lsv_ids))] +
                                 [v if v else '' for v in counts.values()] + [str(_complex), str(_multi_event)]
                                 )
