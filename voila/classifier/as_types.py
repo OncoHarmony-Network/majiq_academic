@@ -353,14 +353,14 @@ class Graph:
         Remove any edges which are under a certain PSI value from the Graph
         :return:
         """
-        if not self.config.decomplexify_threshold:
+        if not self.config.decomplexify_psi_threshold:
             return
         num_filtered = 0
         for i in range(len(self.edges) - 1, -1, -1):
             if self.edges[i].lsvs:
                 if self.analysis_type == constants.ANALYSIS_PSI:
                     psi = max(map(max, (v['psi'] for v in self.edges[i].lsvs.values())))
-                    if psi < self.config.decomplexify_threshold:
+                    if psi < self.config.decomplexify_psi_threshold:
                         num_filtered += 1
                         del self.edges[i]
         voila_log().debug("Decomplexifier removed %d junction(s)" % num_filtered)

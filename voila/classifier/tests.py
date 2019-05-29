@@ -24,7 +24,7 @@ def run_voila_classify(gene_id):
            '/home/paul/PycharmProjects/majiq/voila/run_voila.py',
            'classify', psi_file, sg_file, '-d', out_dir,
            '--gene-id', gene_id,
-           '--decomplexify-threshold', '0.0'
+           '--decomplexify-psi-threshold', '0.0'
            )
 
     p = Popen(cmd, stdout=PIPE, stderr=STDOUT)
