@@ -1303,8 +1303,6 @@ class Graph:
             elif total_events == 2 and event_counts['intron_retention'] == 1 and\
                     (event_counts['p_alt3ss'] == 1 or event_counts['p_alt5ss'] == 1):
                 complex = False
-            elif event_counts['multi_exon_spanning'] == 1 and total_events == (event_counts['intron_retention'] + 1):
-                complex = False
             elif len(ret) > 1:
                 complex = True
 
