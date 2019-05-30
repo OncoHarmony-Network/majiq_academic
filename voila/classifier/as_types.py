@@ -543,22 +543,25 @@ class Graph:
         if not self.config.keep_constitutive:
             modules[:] = [x for x in modules if x.get_num_edges(ir=True) > 1]
 
+
         # removing beginning mode of module if it does not have any forward junctions
         # this can happen when there are complete breaks in the gene
+        # this section also serves to calculate the broken gene region "events" for later
         last_break_idx = 0
         p_multi_gene_regions = []
         num_regions_found = 0
         last_region = None
         for i, mod in enumerate(modules, 1):
-            if not mod.nodes[0].edges:
-                # node that so far this only shows exon coords correctly if there is one break in a gene
-                # we have not yet seen multiple breaks to test with and will handle that when it comes around
-                # it should still show multiple entries if there are multiple breaks, but the coordinates
-                # will likely be incorrect
+            if mod.get_num_edges(ir=True) > 0 and not mod.nodes[0].edges:
+
                 if self.strand == '+':
+                    # if there are prior entries, we need to update the last one instead of ending
+                    # on the exon at the end of the gene, to end on the exon at the end of
+                    # the last found region
+
                     if p_multi_gene_regions:
-                        p_multi_gene_regions[-1]['ExonEnd'] = mod.nodes[0]
-                    p_multi_gene_regions.append({'ExonStart': modules[last_break_idx].nodes[0],
+                        p_multi_gene_regions[-1]['ExonEnd'] = modules[last_break_idx-2].nodes[-1]
+                    p_multi_gene_regions.append({'ExonStart': modules[last_break_idx-1].nodes[0] if p_multi_gene_regions else modules[0].nodes[0],
                                                  'ExonEnd': mod.nodes[0],
                                                  'idx': num_regions_found + 1})
                     last_region = {'ExonStart': mod.nodes[1],
@@ -566,8 +569,8 @@ class Graph:
 
                 else:
                     if p_multi_gene_regions:
-                        p_multi_gene_regions[-1]['ExonEnd'] = mod.nodes[1]
-                    p_multi_gene_regions.append({'ExonStart': modules[last_break_idx].nodes[-1],
+                        p_multi_gene_regions[-1]['ExonEnd'] = modules[last_break_idx-1].nodes[0]
+                    p_multi_gene_regions.append({'ExonStart': modules[last_break_idx].nodes[-1] if p_multi_gene_regions else modules[0].nodes[-1],
                                                  'ExonEnd': mod.nodes[1],
                                                  'idx': num_regions_found + 1})
                     last_region = {'ExonStart': mod.nodes[0],
@@ -575,7 +578,6 @@ class Graph:
 
                 last_break_idx = i
                 num_regions_found += 1
-
 
                 del mod.nodes[0]  # this line actually removes the problem exon for the module
             mod.set_idx(i)
