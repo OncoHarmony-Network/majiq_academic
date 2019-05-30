@@ -8,6 +8,7 @@ from collections import OrderedDict
 from voila.config import ClassifyConfig
 import multiprocessing
 
+
 def semicolon(value_list):
     return ';'.join(str(x) for x in value_list)
 
@@ -23,8 +24,8 @@ class TsvWriter:
         :param output_path: The folder where all output TSV files will be written under
         :param graph: the Graph object of the gene
         """
-        
-        self.common_headers = ['Module ID', 'LSV ID(s)', 'Gene ID', 'Gene Name', 'Chr', 'Strand']
+
+        self.common_headers = ['Module ID', 'Gene ID', 'Gene Name', 'Chr', 'Strand', 'LSV ID(s)']
         self.graph = graph
         self.gene_id = gene_id
         self.quantifications_enabled = quantifications
@@ -37,7 +38,7 @@ class TsvWriter:
         if self.graph:
             self.modules = self.graph.modules()
 
-            #self.as_types = {x.idx: x.as_types() for x in self.modules}
+            # self.as_types = {x.idx: x.as_types() for x in self.modules}
             self.as_types = {x.idx: x.as_types() for x in self.modules}
 
     @property
@@ -83,9 +84,8 @@ class TsvWriter:
         """
         lsvs = self.parity2lsv(module, parity)
 
-
-        return ["%s_%d" % (self.gene_id, module.idx), semicolon(lsvs), self.gene_id, self.graph.gene_name,
-                self.graph.chromosome, self.graph.strand]
+        return ["%s_%d" % (self.gene_id, module.idx), self.gene_id, self.graph.gene_name,
+                self.graph.chromosome, self.graph.strand, semicolon(lsvs)]
 
     def quantifications(self, module, parity=None, edge=None):
 
@@ -130,7 +130,6 @@ class TsvWriter:
 
         return quantification_fields
 
-
     def start_headers(self, headers, filename):
         """
         Start a tsv file with the required headers, only if it does not yet exist
@@ -162,15 +161,16 @@ class TsvWriter:
         self.start_headers(headers, 'tandem_cassette.tsv')
         headers = self.common_headers + ['Exon coordinate', 'Junction Coordinate'] + self.quantification_headers
         self.start_headers(headers, 'exitron.tsv')
-        headers = ['Module', 'Gene ID', 'Gene Name', 'LSV ID(s)', 'Cassette', 'Alt 3',
-                   'Alt 5', 'P_Alt 3', 'P_Alt 5', 'Alt 3 and Alt 5', 'MXE', 'ALE',
-                   'AFE', 'P_ALE', 'P_AFE', 'Orphan Junction', 'Multi Exon Spanning',
-                   'Tandem Cassette', 'Intron Retention', 'Exitron', 'Complex', 'Number of Events']
+        headers = self.common_headers + ["Cassette", "Tandem Cassette",
+                   "Alt 3", "Alt 5", "P_Alt 3", "P_Alt 5", "Alt 3 and Alt 5", "MXE", "Intron Retention", "ALE", "AFE",
+                   "P_ALE", "P_AFE", "Orphan Junction"]
+        if False:
+            headers.append("Constitutive Junction")
+        headers += ["Multi Exon Spanning", "Exitron", "Complex", "Number of Events"]
         self.start_headers(headers, 'summary.tsv')
         headers = ['Gene ID_Region', 'Gene ID', 'Gene Name', 'Chr', 'Strand', 'First Exon Start coord',
                    'First Exon End coord', 'Last Exon Start coord', "Last Exon End coord"]
         self.start_headers(headers, 'p_multi_gene_region.tsv')
-
 
     def cassette(self):
         with open(os.path.join(self.config.directory, 'cassette.tsv.%s' % self.pid), 'a', newline='') as csvfile:
@@ -223,7 +223,7 @@ class TsvWriter:
                                 row = [event['E2'].range_str(), 'E1', event['E1'].range_str(), 'E2_E1_Distal',
                                        event['Distal'].range_str()]
                                 writer.writerow(trg_common + row + self.quantifications(module, 't', event['Distal']))
-                            
+
     def alt5prime(self):
         with open(os.path.join(self.config.directory, 'alt5prime.tsv.%s' % self.pid), 'a', newline='') as csvfile:
             writer = csv.writer(csvfile, dialect='excel-tab', delimiter='\t')
@@ -325,7 +325,8 @@ class TsvWriter:
                             writer.writerow(trg_common + row + self.quantifications(module, 't', event['J2']))
 
     def mutually_exclusive(self):
-        with open(os.path.join(self.config.directory, 'mutually_exclusive.tsv.%s' % self.pid), 'a', newline='') as csvfile:
+        with open(os.path.join(self.config.directory, 'mutually_exclusive.tsv.%s' % self.pid), 'a',
+                  newline='') as csvfile:
             writer = csv.writer(csvfile, dialect='excel-tab', delimiter='\t')
             for module in self.modules:
                 events, _complex, _total_events = self.as_types[module.idx]
@@ -404,7 +405,8 @@ class TsvWriter:
     #                         writer.writerow(trg_common + row + self.quantifications(module, 't', event['A1']))
 
     def alternate_last_exon(self):
-        with open(os.path.join(self.config.directory, 'alternate_last_exon.tsv.%s' % self.pid), 'a', newline='') as csvfile:
+        with open(os.path.join(self.config.directory, 'alternate_last_exon.tsv.%s' % self.pid), 'a',
+                  newline='') as csvfile:
             writer = csv.writer(csvfile, dialect='excel-tab', delimiter='\t')
             for module in self.modules:
                 events, _complex, _total_events = self.as_types[module.idx]
@@ -442,7 +444,8 @@ class TsvWriter:
                             writer.writerow(trg_common + row + self.quantifications(module, 't', event['A1']))
 
     def alternate_first_exon(self):
-        with open(os.path.join(self.config.directory, 'alternate_first_exon.tsv.%s' % self.pid), 'a', newline='') as csvfile:
+        with open(os.path.join(self.config.directory, 'alternate_first_exon.tsv.%s' % self.pid), 'a',
+                  newline='') as csvfile:
             writer = csv.writer(csvfile, dialect='excel-tab', delimiter='\t')
             for module in self.modules:
                 events, _complex, _total_events = self.as_types[module.idx]
@@ -453,20 +456,24 @@ class TsvWriter:
                             trg_common = self.common_data(module, 't')
                             if src_common[1]:
                                 for junc in event['SkipA2']:
-                                    row = [event['Reference'].range_str(), 'A', event['Proximal'].range_str(), 'C_A_Proximal',
+                                    row = [event['Reference'].range_str(), 'A', event['Proximal'].range_str(),
+                                           'C_A_Proximal',
                                            junc.range_str()]
                                     writer.writerow(src_common + row + self.quantifications(module, 's', junc))
                                 for junc in event['SkipA1']:
-                                    row = [event['Reference'].range_str(), 'A', event['Distal'].range_str(), 'C_A_Distal',
+                                    row = [event['Reference'].range_str(), 'A', event['Distal'].range_str(),
+                                           'C_A_Distal',
                                            junc.range_str()]
                                     writer.writerow(src_common + row + self.quantifications(module, 's', junc))
                             if trg_common[1]:
                                 for junc in event['SkipA2']:
-                                    row = [event['Reference'].range_str(), 'A', event['Proximal'].range_str(), 'C_A_Proximal',
+                                    row = [event['Reference'].range_str(), 'A', event['Proximal'].range_str(),
+                                           'C_A_Proximal',
                                            junc.range_str()]
                                     writer.writerow(trg_common + row + self.quantifications(module, 't', junc))
                                 for junc in event['SkipA1']:
-                                    row = [event['Reference'].range_str(), 'A', event['Distal'].range_str(), 'C_A_Distal',
+                                    row = [event['Reference'].range_str(), 'A', event['Distal'].range_str(),
+                                           'C_A_Distal',
                                            junc.range_str()]
                                     writer.writerow(trg_common + row + self.quantifications(module, 't', junc))
                         elif event['event'] == 'p_afe':
@@ -475,9 +482,9 @@ class TsvWriter:
                                    'N/A']
                             writer.writerow(trg_common + row + self.quantifications(module, 't', event['A1']))
 
-
     def intron_retention(self):
-        with open(os.path.join(self.config.directory, 'intron_retention.tsv.%s' % self.pid), 'a', newline='') as csvfile:
+        with open(os.path.join(self.config.directory, 'intron_retention.tsv.%s' % self.pid), 'a',
+                  newline='') as csvfile:
             writer = csv.writer(csvfile, dialect='excel-tab', delimiter='\t')
             for module in self.modules:
                 events, _complex, _total_events = self.as_types[module.idx]
@@ -501,7 +508,8 @@ class TsvWriter:
                             writer.writerow(trg_common + row + self.quantifications(module, 't', event['Intron']))
 
     def multi_exon_spanning(self):
-        with open(os.path.join(self.config.directory, 'multi_exon_spanning.tsv.%s' % self.pid), 'a', newline='') as csvfile:
+        with open(os.path.join(self.config.directory, 'multi_exon_spanning.tsv.%s' % self.pid), 'a',
+                  newline='') as csvfile:
             writer = csv.writer(csvfile, dialect='excel-tab', delimiter='\t')
             for module in self.modules:
                 events, _complex, _total_events = self.as_types[module.idx]
@@ -535,7 +543,6 @@ class TsvWriter:
                 if not _complex or self.config.output_complex:
                     for event in events:
                         if event['event'] == 'tandem_cassette':
-
                             src_common = self.common_data(module, 's')
                             trg_common = self.common_data(module, 't')
                             row = [event['C1'].range_str(), 'C2', event['C2'].range_str(),
@@ -571,7 +578,8 @@ class TsvWriter:
                             writer.writerow(trg_common + row + self.quantifications(module, 't'))
 
     def p_multi_gene_region(self):
-        with open(os.path.join(self.config.directory, 'p_multi_gene_region.tsv.%s' % self.pid), 'a', newline='') as csvfile:
+        with open(os.path.join(self.config.directory, 'p_multi_gene_region.tsv.%s' % self.pid), 'a',
+                  newline='') as csvfile:
             writer = csv.writer(csvfile, dialect='excel-tab', delimiter='\t')
             for module in self.modules:
                 events, _complex, _total_events = self.as_types[module.idx]
@@ -583,46 +591,42 @@ class TsvWriter:
                                event['ExonEnd'].end]
                         writer.writerow(row)
 
-
     def summary(self):
         """
         Write the summary style output file
         :param genes_modules: a list of (gene_id (str), gene_modules (obj)) tuples
         :return: NOTHING
         """
-        
 
         with open(os.path.join(self.config.directory, 'summary.tsv.%s' % self.pid), 'a', newline='') as csvfile:
             writer = csv.writer(csvfile, dialect='excel-tab', delimiter='\t')
-
 
             for module in self.modules:
                 events, _complex, _total_events = self.as_types[module.idx]
                 counts = OrderedDict()
                 counts['cassette_exon'] = 0
+                counts['tandem_cassette'] = 0
                 counts['alt3ss'] = 0
                 counts['alt5ss'] = 0
                 counts['p_alt3ss'] = 0
                 counts['p_alt5ss'] = 0
                 counts['alt3and5ss'] = 0
                 counts['mutually_exclusive'] = 0
+                counts['intron_retention'] = 0
                 counts['ale'] = 0
                 counts['afe'] = 0
                 counts['p_ale'] = 0
                 counts['p_afe'] = 0
                 counts['orphan_junction'] = 0
+                # constitutive
                 counts['multi_exon_spanning'] = 0
-                counts['tandem_cassette'] = 0
-                counts['intron_retention'] = 0
                 counts['exitron'] = 0
                 for event in events:
                     if event['event'] in counts:
                         counts[event['event']] += 1
 
-
-
                 writer.writerow(["%s_%d" % (self.gene_id, module.idx),
-                                 self.gene_id, self.graph.gene_name,
+                                 self.gene_id, self.graph.gene_name, self.graph.chromosome, self.graph.strand,
                                  semicolon(module.target_lsv_ids.union(module.source_lsv_ids))] +
                                 [v if v else '' for v in counts.values()] + [str(_complex), str(_total_events)]
                                 )
