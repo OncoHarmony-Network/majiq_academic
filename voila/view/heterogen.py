@@ -6,7 +6,7 @@ from statistics import median
 import numpy as np
 from flask import Flask, render_template, jsonify, url_for, request, session, Response
 
-from voila.api.view_matrix import ViewDeltaPsi, ViewHeterogens
+from voila.api.view_matrix import ViewHeterogens
 from voila.api.view_splice_graph import ViewSpliceGraph
 from voila.index import Index
 from voila.view import views
@@ -74,7 +74,7 @@ def gene(gene_id):
             # appending other sort indexes
             lsv.append(type_length_idx[i])
 
-        return views.gene_view('het_summary.html', gene_id, ViewDeltaPsi,
+        return views.gene_view('het_summary.html', gene_id, ViewHeterogens,
                                lsv_data=lsv_data,
                                group_names=m.group_names,
                                ucsc=ucsc,
@@ -132,7 +132,7 @@ def index_table():
 
 @app.route('/nav/<gene_id>', methods=('POST',))
 def nav(gene_id):
-    with ViewDeltaPsi() as h:
+    with ViewHeterogens() as h:
         gene_ids = list(sorted(h.gene_ids))
         if len(gene_ids) == 1:
             return jsonify({
