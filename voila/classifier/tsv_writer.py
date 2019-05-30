@@ -559,7 +559,7 @@ class TsvWriter:
                                    semicolon((x.range_str() for x in event['As'])), len(event['As']), 'C2_C1',
                                    semicolon((x.range_str() for x in event['Skip']))]
                             writer.writerow(trg_common + row + self.quantifications(module, 't', event['Skip'][0]))
-                            row = [event['C2'].range_str(), 'A_Last', '',
+                            row = [event['C2'].range_str(), 'A_Last', event['As'][-1].range_str(),
                                    semicolon((x.range_str() for x in event['As'])), len(event['As']), 'A_Last_C2',
                                    semicolon((x.range_str() for x in event['Include2']))]
                             writer.writerow(trg_common + row + self.quantifications(module, 't', event['Include2'][0]))
