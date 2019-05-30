@@ -354,6 +354,43 @@ namespace grimoire {
 
     }
 
+    int
+    Gene::get_constitutive_junctions(vector<string>& v){
+        vector<Exon*> ex_vector ;
+        for(const auto &exon_mapIt: exon_map_){
+            ex_vector.push_back(exon_mapIt.second) ;
+        }
+        sort(ex_vector.begin(), ex_vector.end(), Exon::islowerRegion<Exon>) ;
+
+        for(const auto &ex: ex_vector){
+            if ((ex->ob).size()>1 || ((ex->ob).size()==1 && ex->ob_irptr != nullptr))
+                continue ;
+            else{
+                if ((ex->ob).size()==1 && ex->ob_irptr == nullptr){
+                    Junction * jnc = *(ex->ob.begin()) ;
+                    if (FIRST_LAST_JUNC == jnc->get_end() || !jnc->get_bld_fltr() || jnc->get_simpl_fltr()){
+                        continue ;
+                    }
+                    // check acceptor
+                    Exon * accex = jnc->get_acceptor() ;
+                    if((accex->ib).size()>1 || accex->ib_irptr != nullptr){
+                        continue ;
+                    }
+                    string str_ln = id_ + "\t" + chromosome_ + "\t" +
+                                    to_string(jnc->get_start()) + "\t" + to_string(jnc->get_end()) + "\t" +
+                                    to_string(ex->get_start()) + "\t" + to_string(ex->get_end()) + "\t" +
+                                    to_string(accex->get_start()) + "\t" + to_string(accex->get_end()) ;
+                    #pragma omp critical
+                        v.push_back(str_ln) ;
+                }
+                else{
+                    continue ;
+                }
+            }
+        }
+        return 0 ;
+    }
+
     int Gene::detect_lsvs(vector<LSV*> &lsv_list){
 
         map<string, Exon*>::iterator exon_mapIt ;
@@ -583,7 +620,6 @@ namespace grimoire {
             const int c = ir_ptr->get_ir_flag()? 1 : 0 ;
             c1 = c1 + c ;
         }
-//cerr << get_key() << " : c1->" << c1 << " c2->" << c2 << "\n" ;
         return (c2>1 and c1>0);
     }
 

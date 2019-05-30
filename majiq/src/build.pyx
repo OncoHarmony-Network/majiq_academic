@@ -530,6 +530,8 @@ cdef _core_build(str transcripts, list file_list, object conf, object logger):
     cdef int strandness, cnt
     cdef sqlite3* db
     cdef bint bsimpl = (conf.simpl_psi >= 0)
+    cdef bint dumpCJunctions = conf.dump_const_j
+    cdef vector[string] cjuncs
 
     logger.info("Parsing GFF3")
     majiq_io.read_gff(transcripts, gene_map, gid_vec, bsimpl, logger)
@@ -567,6 +569,16 @@ cdef _core_build(str transcripts, list file_list, object conf, object logger):
         with gil:
             logger.debug("[%s] Detect LSVs" % gg.get_id())
         nlsv = gg.detect_lsvs(out_lsvlist)
+
+        if dumpCJunctions:
+            gg.get_constitutive_junctions(cjuncs)
+
+
+    if cjuncs.size()>0:
+        with open("%s/constitutive_junctions.tsv" % conf.outDir, 'w+') as fp:
+            fp.write('#GENEID\tCHROMOSOME\tJUNC_START\tJUNC_END\tDONOR_START\tDONOR_END\tACCEPTOR_START\tACCEPTOR_END\n')
+            for jstr in cjuncs:
+                fp.write("%s\n" % jstr.decode('utf8'))
 
 
     logger.debug("Generate TLB")

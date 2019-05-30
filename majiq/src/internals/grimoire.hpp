@@ -457,6 +457,7 @@ namespace grimoire{
             void    newExonDefinition(int start, int end, Junction *inbound_j, Junction *outbound_j, bool in_db) ;
             void    fill_junc_tlb(map<string, vector<string>> &tlb) ;
             int     detect_lsvs(vector<LSV*> &out_lsvlist) ;
+            int     get_constitutive_junctions(vector<string>& v) ;
             void    simplify(map<string, int>& junc_tlb, float simpl_percent, int strandness, int denovo_simpl,
                              int db_simple, int ir_simpl, bool last, unsigned int min_experiments) ;
             void    initialize_junction(string key, int start, int end, float* nreads_ptr, bool simpl) ;
@@ -534,8 +535,6 @@ namespace grimoire{
 
     void sortGeneList(vector<Gene*> &glist) ;
     vector<Intron *> find_intron_retention(Gene * gObj, int start, int end);
-//    vector<Gene*> find_gene_from_junc(const map<string, vector<overGene*>>& glist, string chrom, int start, int end, bool ir) ;
-
     void find_gene_from_junc(map<string, vector<overGene*>> & glist, string chrom, char strand, int start, int end,
                              vector<Gene*>& oGeneList, bool ir, bool simpl) ;
     void fill_junc_tlb(vector<LSV*>& lsv_list, map<string, int>& tlb) ;
