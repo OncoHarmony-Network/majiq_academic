@@ -143,8 +143,10 @@ classify_parser.add_argument('files', nargs='+', type=check_file,
 classify_parser.add_argument('--gene-ids', nargs='*', default=[],
                         help='Gene IDs, separated by spaces, which should remain in the results. e.g. GENE_ID1 '
                              'GENE_ID2 ...')
-classify_parser.add_argument('--keep-constitutive', action='store_true',
+classify_parser.add_argument('--show-all-modules', action='store_true',
                          help='Do not discard modules that are unquantified my Majiq (no LSVs found)')
+classify_parser.add_argument('--keep-constitutive', action='store_true',
+                         help='Do not discard modules with only one junction')
 classify_parser.add_argument('--output-complex', action='store_true',
                          help='Complex module data is dumped to all output TSVs, not only summary')
 classify_parser.add_argument('--untrimmed-exons', action='store_true',

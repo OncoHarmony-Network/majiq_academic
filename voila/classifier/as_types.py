@@ -535,8 +535,8 @@ class Graph:
             modules.reverse()
 
         # removing modules with no lsv ids
-        modules[:] = [x for x in modules if x.source_lsv_ids or x.target_lsv_ids]
-
+        if not self.config.show_all_modules:
+            modules[:] = [x for x in modules if x.source_lsv_ids or x.target_lsv_ids]
 
 
         # removing modules with only one junction
