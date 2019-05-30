@@ -209,14 +209,14 @@ class TsvWriter:
                         if event['event'] == 'alt3ss':
                             src_common = self.common_data(module, 's')
                             trg_common = self.common_data(module, 't')
-                            if src_common[1]:
+                            if src_common[5]:
                                 row = [event['E1'].range_str(), 'E2', event['E2'].range_str(), 'E1_E2_Proximal',
                                        event['Proximal'].range_str()]
                                 writer.writerow(src_common + row + self.quantifications(module, 's', event['Proximal']))
                                 row = [event['E1'].range_str(), 'E2', event['E2'].range_str(), 'E1_E2_Distal',
                                        event['Distal'].range_str()]
                                 writer.writerow(src_common + row + self.quantifications(module, 's', event['Distal']))
-                            if trg_common[1]:
+                            if trg_common[5]:
                                 row = [event['E2'].range_str(), 'E1', event['E1'].range_str(), 'E2_E1_Proximal',
                                        event['Proximal'].range_str()]
                                 writer.writerow(trg_common + row + self.quantifications(module, 't', event['Proximal']))
@@ -234,14 +234,14 @@ class TsvWriter:
                         if event['event'] == 'alt5ss':
                             src_common = self.common_data(module, 's')
                             trg_common = self.common_data(module, 't')
-                            if src_common[1]:
+                            if src_common[5]:
                                 row = [event['E1'].range_str(), 'E2', event['E2'].range_str(), 'E1_E2_Proximal',
                                        event['Proximal'].range_str()]
                                 writer.writerow(src_common + row + self.quantifications(module, 's', event['Proximal']))
                                 row = [event['E1'].range_str(), 'E2', event['E2'].range_str(), 'E1_E2_Distal',
                                        event['Distal'].range_str()]
                                 writer.writerow(src_common + row + self.quantifications(module, 's', event['Distal']))
-                            if trg_common[1]:
+                            if trg_common[5]:
                                 row = [event['E2'].range_str(), 'E1', event['E1'].range_str(), 'E2_E1_Proximal',
                                        event['Proximal'].range_str()]
                                 writer.writerow(trg_common + row + self.quantifications(module, 't', event['Proximal']))
@@ -415,7 +415,7 @@ class TsvWriter:
                         if event['event'] == 'ale':
                             src_common = self.common_data(module, 's')
                             trg_common = self.common_data(module, 't')
-                            if src_common[1]:
+                            if src_common[5]:
                                 for junc in event['SkipA2']:
                                     row = [event['Reference'].range_str(), 'A', event['Proximal'].range_str(),
                                            'C_A_Proximal',
@@ -426,7 +426,7 @@ class TsvWriter:
                                            'C_A_Distal',
                                            junc.range_str()]
                                     writer.writerow(src_common + row + self.quantifications(module, 's', junc))
-                            if trg_common[1]:
+                            if trg_common[5]:
                                 for junc in event['SkipA2']:
                                     row = [event['Reference'].range_str(), 'A', event['Proximal'].range_str(),
                                            'C_A_Proximal',
@@ -454,7 +454,7 @@ class TsvWriter:
                         if event['event'] == 'afe':
                             src_common = self.common_data(module, 's')
                             trg_common = self.common_data(module, 't')
-                            if src_common[1]:
+                            if src_common[5]:
                                 for junc in event['SkipA2']:
                                     row = [event['Reference'].range_str(), 'A', event['Proximal'].range_str(),
                                            'C_A_Proximal',
@@ -465,7 +465,7 @@ class TsvWriter:
                                            'C_A_Distal',
                                            junc.range_str()]
                                     writer.writerow(src_common + row + self.quantifications(module, 's', junc))
-                            if trg_common[1]:
+                            if trg_common[5]:
                                 for junc in event['SkipA2']:
                                     row = [event['Reference'].range_str(), 'A', event['Proximal'].range_str(),
                                            'C_A_Proximal',
@@ -493,19 +493,21 @@ class TsvWriter:
                         if event['event'] == 'intron_retention':
                             src_common = self.common_data(module, 's')
                             trg_common = self.common_data(module, 't')
+                            if trg_common[5]:
+                                row = [event['C2'].range_str(), 'C1', event['C1'].range_str(), 'C2_C1_intron',
+                                       event['Intron'].range_str()]
+                                writer.writerow(trg_common + row + self.quantifications(module, 't', event['Intron']))
+                                row = [event['C2'].range_str(), 'C1', event['C1'].range_str(), 'C2_C1_spliced',
+                                       event['Intron'].range_str()]
+                                writer.writerow(trg_common + row + self.quantifications(module, 't', event['Intron']))
+                            else:
+                                row = [event['C1'].range_str(), 'C2', event['C2'].range_str(), 'C1_C2_intron',
+                                       event['Intron'].range_str()]
+                                writer.writerow(src_common + row + self.quantifications(module, 's', event['Intron']))
+                                row = [event['C1'].range_str(), 'C2', event['C2'].range_str(), 'C1_C2_spliced',
+                                       event['Intron'].range_str()]
+                                writer.writerow(src_common + row + self.quantifications(module, 's', event['Intron']))
 
-                            row = [event['C1'].range_str(), 'C2', event['C2'].range_str(), 'C1_C2_intron',
-                                   event['Intron'].range_str()]
-                            writer.writerow(src_common + row + self.quantifications(module, 's', event['Intron']))
-                            row = [event['C1'].range_str(), 'C2', event['C2'].range_str(), 'C1_C2_spliced',
-                                   event['Intron'].range_str()]
-                            writer.writerow(src_common + row + self.quantifications(module, 's', event['Intron']))
-                            row = [event['C2'].range_str(), 'C1', event['C1'].range_str(), 'C2_C1_intron',
-                                   event['Intron'].range_str()]
-                            writer.writerow(trg_common + row + self.quantifications(module, 't', event['Intron']))
-                            row = [event['C2'].range_str(), 'C1', event['C1'].range_str(), 'C2_C1_spliced',
-                                   event['Intron'].range_str()]
-                            writer.writerow(trg_common + row + self.quantifications(module, 't', event['Intron']))
 
     def multi_exon_spanning(self):
         with open(os.path.join(self.config.directory, 'multi_exon_spanning.tsv.%s' % self.pid), 'a',
