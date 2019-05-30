@@ -1286,7 +1286,6 @@ class Graph:
             }
             ret = []
             complex = False
-            multi_event = False
 
             for k, v in as_type_dict.items():
                 res = v()
@@ -1306,9 +1305,6 @@ class Graph:
             elif len(ret) > 1:
                 complex = True
 
-            if len(ret) > 1:
-                multi_event = True
-
             if HIDE_SUB_COMPLEX and complex:
                 ret = []
 
@@ -1316,7 +1312,7 @@ class Graph:
                 region['event'] = 'p_multi_gene_region'
                 ret.append(region)
 
-            return ret, complex, multi_event
+            return ret, complex, total_events
 
 
 
