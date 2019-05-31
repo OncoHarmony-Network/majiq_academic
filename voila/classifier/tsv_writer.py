@@ -60,6 +60,7 @@ class TsvWriter:
             # self.as_types = {x.idx: x.as_types() for x in self.modules}
             self.as_types = {x.idx: x.as_types() for x in self.modules}
 
+
     @property
     def quantification_headers(self):
         headers = []
@@ -636,7 +637,6 @@ class TsvWriter:
         :param genes_modules: a list of (gene_id (str), gene_modules (obj)) tuples
         :return: NOTHING
         """
-
         with open(os.path.join(self.config.directory, 'summary.tsv.%s' % self.pid), 'a', newline='') as csvfile:
             writer = csv.writer(csvfile, dialect='excel-tab', delimiter='\t')
 
@@ -664,6 +664,7 @@ class TsvWriter:
                 for event in events:
                     if event['event'] in counts:
                         counts[event['event']] += 1
+
 
                 writer.writerow(["%s_%d" % (self.gene_id, module.idx),
                                  self.gene_id, self.graph.gene_name, self.graph.chromosome, self.graph.strand,

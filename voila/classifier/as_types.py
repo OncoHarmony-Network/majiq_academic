@@ -1271,9 +1271,12 @@ class Graph:
                     config = ClassifyConfig()
 
                     with SpliceGraph(config.splice_graph_file) as sg:
-                            junc_reads = next(sg.junction_reads_exp({'start': junc.start, 'end': junc.end,
-                                                                'gene_id':self.graph.gene_id},
-                                                                 self.graph.experiment_names))['reads']
+                            try:
+                                junc_reads = next(sg.junction_reads_exp({'start': junc.start, 'end': junc.end,
+                                                                    'gene_id':self.graph.gene_id},
+                                                                     self.graph.experiment_names))['reads']
+                            except StopIteration:
+                                continue
 
                             if junc_reads >= config.keep_constitutive:
                                 found.append({'event': 'constitutive', 'Junc': junc})
@@ -1326,10 +1329,10 @@ class Graph:
                 'multi_exon_spanning': 0,
                 'tandem_cassette': 0,
                 'orphan_junction': 0,
-                'exitron': 0
+                'exitron': 0,
+                'constitutive': 0
             }
-            if ClassifyConfig().keep_constitutive:
-                event_counts['constitutive'] = 0
+
             ret = []
             complex = False
 
@@ -1342,7 +1345,7 @@ class Graph:
 
             total_events = sum(event_counts.values())
 
-            if total_events == 2 and event_counts['multi_exon_spanning'] == 1 and\
+            if total_events - event_counts['constitutive'] == 2 and event_counts['multi_exon_spanning'] == 1 and \
                     event_counts['tandem_cassette'] == 1:
                 complex = False
             elif total_events == 2 and event_counts['intron_retention'] == 1 and\

@@ -38,6 +38,7 @@ def classify_gene(args):
     graph = Graph(gene_id)
 
     writer = TsvWriter(graph, gene_id)
+
     writer.cassette()
 
     writer.alt3prime()
@@ -93,6 +94,8 @@ def run_classifier():
 
     p = Pool(config.nproc)
     work_size = len(gene_ids)
+
+
 
     # voila_index = p.map(self._heterogen_pool_add_index, zip(lsv_ids, range(work_size), repeat(work_size)))
     classifier_pool = p.map_async(classify_gene, ((x, q) for x in gene_ids),)
