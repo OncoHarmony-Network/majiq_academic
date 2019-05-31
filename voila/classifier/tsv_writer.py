@@ -289,21 +289,22 @@ class TsvWriter:
                         if event['event'] == 'p_alt5ss':
                             src_common = self.common_data(module, 's')
                             trg_common = self.common_data(module, 't')
-                            row = [event['C1'].range_str(), 'C2', event['C2'].range_str(), 'C1_C2',
+
+                            row = [event['C1'].range_str(), 'E2', event['A'].range_str(), 'E3_E2_Proximal',
+                                   event['Include2'].range_str()]
+                            writer.writerow(src_common + row + self.quantifications(module, 's', event['Include2']))
+
+                            row = [event['C1'].range_str(), 'E1', event['C2'].range_str(), 'E3_E1_Distal',
                                    event['Skip'].range_str()]
                             writer.writerow(src_common + row + self.quantifications(module, 's', event['Skip']))
 
-                            row = [event['C1'].range_str(), 'A', event['A'].range_str(), 'C1_A',
+                            event['Include1'].junc['start'] += 1
+                            event['Include1'].junc['end'] -= 1
+
+                            row = [event['C2'].range_str(), 'E2', event['A'].range_str(), 'E1_E2_Intron',
                                    event['Include1'].range_str()]
-                            writer.writerow(src_common + row + self.quantifications(module, 's', event['Include1']))
+                            writer.writerow(trg_common + row + self.quantifications(module, 't', event['Include1']))
 
-                            row = [event['C2'].range_str(), 'C1', event['C1'].range_str(), 'C2_C1',
-                                   event['Skip'].range_str()]
-                            writer.writerow(trg_common + row + self.quantifications(module, 't', event['Skip']))
-
-                            row = [event['C2'].range_str(), 'A', event['A'].range_str(), 'C2_A',
-                                   event['Include2'].range_str()]
-                            writer.writerow(trg_common + row + self.quantifications(module, 't', event['Include2']))
 
     def p_alt3prime(self):
         with open(os.path.join(self.config.directory, 'p_alt3prime.tsv.%s' % self.pid), 'a', newline='') as csvfile:
@@ -315,21 +316,23 @@ class TsvWriter:
                         if event['event'] == 'p_alt3ss':
                             src_common = self.common_data(module, 's')
                             trg_common = self.common_data(module, 't')
-                            row = [event['C1'].range_str(), 'C2', event['C2'].range_str(), 'C1_C2',
-                                   event['Skip'].range_str()]
-                            writer.writerow(src_common + row + self.quantifications(module, 's', event['Skip']))
 
-                            row = [event['C1'].range_str(), 'A', event['A'].range_str(), 'C1_A',
+                            row = [event['C2'].range_str(), 'E2', event['A'].range_str(), 'E1_E2_Proximal',
                                    event['Include1'].range_str()]
-                            writer.writerow(src_common + row + self.quantifications(module, 's', event['Include1']))
+                            writer.writerow(src_common + row + self.quantifications(module, None, event['Include1']))
 
-                            row = [event['C2'].range_str(), 'C1', event['C1'].range_str(), 'C2_C1',
+                            row = [event['C2'].range_str(), 'E1', event['C1'].range_str(), 'E1_E3_Distal',
                                    event['Skip'].range_str()]
-                            writer.writerow(trg_common + row + self.quantifications(module, 't', event['Skip']))
+                            writer.writerow(src_common + row + self.quantifications(module, None, event['Skip']))
 
-                            row = [event['C2'].range_str(), 'A', event['A'].range_str(), 'C2_A',
+                            event['Include2'].junc['start'] += 1
+                            event['Include2'].junc['end'] -= 1
+
+                            row = [event['C1'].range_str(), 'E2', event['A'].range_str(), 'E3_E2_Intron',
                                    event['Include2'].range_str()]
-                            writer.writerow(trg_common + row + self.quantifications(module, 't', event['Include2']))
+                            writer.writerow(trg_common + row + self.quantifications(module, None, event['Include2']))
+
+
 
     def alt3and5prime(self):
         with open(os.path.join(self.config.directory, 'alt3and5prime.tsv.%s' % self.pid), 'a', newline='') as csvfile:
