@@ -12,6 +12,25 @@ import multiprocessing
 def semicolon(value_list):
     return ';'.join(str(x) for x in value_list)
 
+summaryVars2Headers = {
+    'cassette_exon': 'Cassette',
+    'tandem_cassette': 'Tandem Cassette',
+    'alt3ss': 'Alt 3',
+    'alt5ss': 'Alt 5',
+    'p_alt3ss': 'P_Alt 3',
+    'p_alt5ss': 'P_Alt 5',
+    'alt3and5ss': 'Alt 3 and Alt 5',
+    'mutually_exclusive': 'MXE',
+    'intron_retention': 'Intron Retention',
+    'ale': 'ALE',
+    'afe': 'AFE',
+    'p_ale': 'P_ALE',
+    'p_afe': 'P_AFE',
+    'orphan_junction': 'Orphan Junction',
+    'constitutive': 'Constitutive',
+    'multi_exon_spanning': 'Multi Exon Spanning',
+    'exitron': 'Exitron',
+}
 
 class TsvWriter:
     """
@@ -55,9 +74,9 @@ class TsvWriter:
     @staticmethod
     def tsv_names():
         names = ['summary.tsv', 'cassette.tsv', 'alt3prime.tsv', 'alt5prime.tsv', 'alt3and5prime.tsv',
-                'mutually_exclusive.tsv', 'alternate_last_exon.tsv', 'alternate_first_exon.tsv',
-                'intron_retention.tsv', 'p_alt5prime.tsv', 'p_alt3prime.tsv', 'multi_exon_spanning.tsv',
-                'tandem_cassette.tsv', 'exitron.tsv', 'p_multi_gene_region.tsv']
+                 'mutually_exclusive.tsv', 'alternate_last_exon.tsv', 'alternate_first_exon.tsv',
+                 'intron_retention.tsv', 'p_alt5prime.tsv', 'p_alt3prime.tsv', 'multi_exon_spanning.tsv',
+                 'tandem_cassette.tsv', 'exitron.tsv', 'p_multi_gene_region.tsv']
         if ClassifyConfig().keep_constitutive:
             names.append('constitutive.tsv')
         return names
@@ -165,11 +184,12 @@ class TsvWriter:
         headers = self.common_headers + ['Exon coordinate', 'Junction Coordinate'] + self.quantification_headers
         self.start_headers(headers, 'exitron.tsv')
         headers = self.common_headers + ["Cassette", "Tandem Cassette",
-                   "Alt 3", "Alt 5", "P_Alt 3", "P_Alt 5", "Alt 3 and Alt 5", "MXE", "Intron Retention", "ALE", "AFE",
-                   "P_ALE", "P_AFE", "Orphan Junction"]
+                                         "Alt 3", "Alt 5", "P_Alt 3", "P_Alt 5", "Alt 3 and Alt 5", "MXE",
+                                         "Intron Retention", "ALE", "AFE",
+                                         "P_ALE", "P_AFE", "Orphan Junction"]
         if self.config.keep_constitutive:
             headers.append("Constitutive Junction")
-        headers += ["Multi Exon Spanning", "Exitron", "Complex", "Number of Events"]
+        headers += ["Multi Exon Spanning", "Exitron", "Complex", "Number of Events", "Collapsed Event Name"]
         self.start_headers(headers, 'summary.tsv')
         headers = ['Gene ID_Region', 'Gene ID', 'Gene Name', 'Chr', 'Strand', 'First Exon Start coord',
                    'First Exon End coord', 'Last Exon Start coord', "Last Exon End coord"]
@@ -514,7 +534,6 @@ class TsvWriter:
                                        event['Intron'].range_str()]
                                 writer.writerow(src_common + row + self.quantifications(module, 's', event['Intron']))
 
-
     def multi_exon_spanning(self):
         with open(os.path.join(self.config.directory, 'multi_exon_spanning.tsv.%s' % self.pid), 'a',
                   newline='') as csvfile:
@@ -597,7 +616,6 @@ class TsvWriter:
                             row = [event['Junc'].range_str(), str(event['Junc'].ir), '']
                             writer.writerow(common + row)
 
-
     def p_multi_gene_region(self):
         with open(os.path.join(self.config.directory, 'p_multi_gene_region.tsv.%s' % self.pid), 'a',
                   newline='') as csvfile:
@@ -650,5 +668,17 @@ class TsvWriter:
                 writer.writerow(["%s_%d" % (self.gene_id, module.idx),
                                  self.gene_id, self.graph.gene_name, self.graph.chromosome, self.graph.strand,
                                  semicolon(module.target_lsv_ids.union(module.source_lsv_ids))] +
-                                [v if v else '' for v in counts.values()] + [str(_complex), str(_total_events)]
+                                [v if v else '' for v in counts.values()] + [str(_complex), str(_total_events),
+                                                                             self._collapsed_event_name(counts)]
                                 )
+
+    def _collapsed_event_name(self, counts):
+        """
+        function to generate the collapsed event name from event counts
+        """
+        out = []
+        for count in counts:
+            if counts[count]:
+                out.append("%sx%d" % (summaryVars2Headers[count], counts[count]))
+        return '_'.join(out)
+
