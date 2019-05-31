@@ -144,6 +144,11 @@ def main():
                              help='Minimum fraction of the usage of any junction in a LSV to consider that junction is'
                                   ' real. [Default: %(default)s]')
 
+    buildparser.add_argument('--dump-constitutive', dest="dump_const_j", action='store_true', default=False,
+                             help='With this option enabled, MAJIQ will create a constitutive_junctions.tsv file '
+                                  'containing all the junctions that are structurally constitutive, the junctions pass'
+                                  ' minreads and minpos filters. [Default: %(default)s]')
+
 
 
     sampling = new_subparser()
