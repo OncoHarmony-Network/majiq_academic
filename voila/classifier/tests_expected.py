@@ -1,4 +1,9 @@
 expected_modules = {
+    "gene:ENSG00000170581": [
+        {}, {}, {}, {}, {
+            'tandem_cassette': ''
+        }, {}
+    ],
     "gene:ENSG00000177239":[
         {}, {}, {}, {}, {
             'exitron': "3"

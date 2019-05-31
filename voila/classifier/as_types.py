@@ -833,17 +833,27 @@ class Graph:
                             conns = []
                             for k in range(j - i):
                                 conns.append(self.nodes[i+k].connects(self.nodes[i+k+1], ir=True))
+
+                            # checking all A exons connect together
                             if not all(len(x) > 0 and all(y.ir is False for y in x) for x in conns):
                                 continue
 
-                            include1 = n1.connects(self.nodes[i + 1])
-                            include2 = self.nodes[j-1].connects(n2)
-                            includes = []
-                            found.append({'event': 'tandem_cassette', 'C1': self.strand_case(n1, n2),
-                                          'C2': self.strand_case(n2, n1), 'As': self.nodes[i + 1:j],
-                                          'Skip': skip, 'Include1': self.strand_case(include1, include2),
-                                          'Include2': self.strand_case(include2, include1),
-                                          'Tandem_Exons': self.nodes[i + 1:j], 'Includes': includes})
+                            include1 = self.strand_case(n1.connects(self.nodes[i + 1]), self.nodes[j-1].connects(n2))
+                            include2 = self.strand_case(self.nodes[j-1].connects(n2), n1.connects(self.nodes[i + 1]))
+
+                            # checking that first and last connections match skip coordinates
+                            if self.strand_case(include1[0].start == skip[0].start and include2[0].end == skip[0].end,
+                                                include1[0].end == skip[0].end and include2[0].start == skip[0].start):
+
+                                c1 = self.strand_case(n1, n2)
+                                c2 = self.strand_case(n2, n1)
+
+                                includes = []
+                                found.append({'event': 'tandem_cassette', 'C1': c1,
+                                              'C2': c2, 'As': self.nodes[i + 1:j],
+                                              'Skip': skip, 'Include1': include1,
+                                              'Include2': include2,
+                                              'Tandem_Exons': self.nodes[i + 1:j], 'Includes': includes})
             return found
 
         def multi_exon_spanning(self):
