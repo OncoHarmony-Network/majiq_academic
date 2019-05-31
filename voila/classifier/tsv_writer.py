@@ -129,15 +129,18 @@ class TsvWriter:
                             lsv = m.delta_psi(lsv_id)
 
                         if edge:
-                            # loop through junctions to find one matching range of edge
-                            for j, junc in enumerate(lsv.get('junctions')):
-                                if junc[0] == edge.start and junc[1] == edge.end:
-                                    means.append(lsv.get('means')[j])
-                                    vars.append(generate_variances([lsv.get('bins')[i]])[0])
-                                    break
-                            else:
-                                # junction not quantified by majiq
-                                pass
+                            if type(edge) != list:
+                                edge = [edge]
+                            for _edge in edge:
+                                # loop through junctions to find one matching range of edge
+                                for j, junc in enumerate(lsv.get('junctions')):
+                                    if junc[0] == _edge.start and junc[1] == _edge.end:
+                                        means.append(lsv.get('means')[j])
+                                        vars.append(generate_variances([lsv.get('bins')[i]])[0])
+                                        break
+                                else:
+                                    # junction not quantified by majiq
+                                    pass
                         else:
                             means += list(lsv.get('means'))
                             vars += list(generate_variances(lsv.get('bins')))
@@ -520,20 +523,25 @@ class TsvWriter:
                         if event['event'] == 'intron_retention':
                             src_common = self.common_data(module, 's')
                             trg_common = self.common_data(module, 't')
-                            if trg_common[5] and not src_common[5]:
+
+                            # put coordinates back to Jordi's offset numbers
+                            event['Intron'].junc['start'] += 1
+                            event['Intron'].junc['end'] -= 1
+                            if any(':t:' in _l for _l in event['Intron'].lsvs) and not \
+                               any(':s:' in _l for _l in event['Intron'].lsvs):
                                 row = [event['C2'].range_str(), 'C1', event['C1'].range_str(), 'C2_C1_intron',
                                        event['Intron'].range_str()]
                                 writer.writerow(trg_common + row + self.quantifications(module, 't', event['Intron']))
                                 row = [event['C2'].range_str(), 'C1', event['C1'].range_str(), 'C2_C1_spliced',
-                                       event['Intron'].range_str()]
-                                writer.writerow(trg_common + row + self.quantifications(module, 't', event['Intron']))
+                                       semicolon((x.range_str() for x in event['Spliced']))]
+                                writer.writerow(trg_common + row + self.quantifications(module, 't', event['Spliced']))
                             else:
                                 row = [event['C1'].range_str(), 'C2', event['C2'].range_str(), 'C1_C2_intron',
                                        event['Intron'].range_str()]
                                 writer.writerow(src_common + row + self.quantifications(module, 's', event['Intron']))
                                 row = [event['C1'].range_str(), 'C2', event['C2'].range_str(), 'C1_C2_spliced',
-                                       event['Intron'].range_str()]
-                                writer.writerow(src_common + row + self.quantifications(module, 's', event['Intron']))
+                                       semicolon((x.range_str() for x in event['Spliced']))]
+                                writer.writerow(src_common + row + self.quantifications(module, 's', event['Spliced']))
 
     def multi_exon_spanning(self):
         with open(os.path.join(self.config.directory, 'multi_exon_spanning.tsv.%s' % self.pid), 'a',

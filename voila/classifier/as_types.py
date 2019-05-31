@@ -939,11 +939,12 @@ class Graph:
             #t = self.Filters.target_psi
 
             for n1, n2 in combinations(self.nodes, 2):
-                fwd_connects = n1.connects(n2, ir=True)
+                fwd_connects = n1.connects(n2, only_ir=True)
                 for edge in fwd_connects:
                     if edge.ir:
+                        spliced = n1.connects(n2)
                         found.append({'event': 'intron_retention', 'C1': n1, 'C2': n2,
-                                      'Intron': edge})
+                                      'Intron': edge, 'Spliced': spliced})
                 # bkd_connects = n2.connects(n1)
                 # for edge in bkd_connects:
                 #     if edge.ir:
