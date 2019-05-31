@@ -145,8 +145,9 @@ classify_parser.add_argument('--gene-ids', nargs='*', default=[],
                              'GENE_ID2 ...')
 classify_parser.add_argument('--show-all-modules', action='store_true',
                          help='Do not discard modules that are unquantified my Majiq (no LSVs found)')
-classify_parser.add_argument('--keep-constitutive', action='store_true',
-                         help='Do not discard modules with only one junction')
+classify_parser.add_argument('--keep-constitutive', type=int, default=0,
+                         help='Do not discard modules with only one junction, implies "--show-all-modules". Turns on '
+                              'output of constitutive.tsv and constitutive column in summary output')
 classify_parser.add_argument('--output-complex', action='store_true',
                          help='Complex module data is dumped to all output TSVs, not only summary')
 classify_parser.add_argument('--untrimmed-exons', action='store_true',

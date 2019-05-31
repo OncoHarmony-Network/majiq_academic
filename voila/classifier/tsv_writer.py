@@ -54,10 +54,13 @@ class TsvWriter:
 
     @staticmethod
     def tsv_names():
-        return ('summary.tsv', 'cassette.tsv', 'alt3prime.tsv', 'alt5prime.tsv', 'alt3and5prime.tsv',
+        names = ['summary.tsv', 'cassette.tsv', 'alt3prime.tsv', 'alt5prime.tsv', 'alt3and5prime.tsv',
                 'mutually_exclusive.tsv', 'alternate_last_exon.tsv', 'alternate_first_exon.tsv',
                 'intron_retention.tsv', 'p_alt5prime.tsv', 'p_alt3prime.tsv', 'multi_exon_spanning.tsv',
-                'tandem_cassette.tsv', 'exitron.tsv', 'p_multi_gene_region.tsv')
+                'tandem_cassette.tsv', 'exitron.tsv', 'p_multi_gene_region.tsv']
+        if ClassifyConfig().keep_constitutive:
+            names.append('constitutive.tsv')
+        return names
 
     @staticmethod
     def delete_tsvs():
@@ -164,13 +167,16 @@ class TsvWriter:
         headers = self.common_headers + ["Cassette", "Tandem Cassette",
                    "Alt 3", "Alt 5", "P_Alt 3", "P_Alt 5", "Alt 3 and Alt 5", "MXE", "Intron Retention", "ALE", "AFE",
                    "P_ALE", "P_AFE", "Orphan Junction"]
-        if False:
+        if self.config.keep_constitutive:
             headers.append("Constitutive Junction")
         headers += ["Multi Exon Spanning", "Exitron", "Complex", "Number of Events"]
         self.start_headers(headers, 'summary.tsv')
         headers = ['Gene ID_Region', 'Gene ID', 'Gene Name', 'Chr', 'Strand', 'First Exon Start coord',
                    'First Exon End coord', 'Last Exon Start coord', "Last Exon End coord"]
         self.start_headers(headers, 'p_multi_gene_region.tsv')
+        if self.config.keep_constitutive:
+            headers = self.common_headers + ['Junction Coordinate', 'Intron Retention', 'Collapsed Event Name']
+            self.start_headers(headers, 'constitutive.tsv')
 
     def cassette(self):
         with open(os.path.join(self.config.directory, 'cassette.tsv.%s' % self.pid), 'a', newline='') as csvfile:
@@ -579,6 +585,19 @@ class TsvWriter:
                             row = [event['Exon'].range_str(), event['Junc'].range_str()]
                             writer.writerow(trg_common + row + self.quantifications(module, 't'))
 
+    def constitutive(self):
+        with open(os.path.join(self.config.directory, 'constitutive.tsv.%s' % self.pid), 'a', newline='') as csvfile:
+            writer = csv.writer(csvfile, dialect='excel-tab', delimiter='\t')
+            for module in self.modules:
+                events, _complex, _total_events = self.as_types[module.idx]
+                if not _complex or self.config.output_complex:
+                    for event in events:
+                        if event['event'] == 'constitutive':
+                            common = self.common_data(module)
+                            row = [event['Junc'].range_str(), str(event['Junc'].ir), '']
+                            writer.writerow(common + row)
+
+
     def p_multi_gene_region(self):
         with open(os.path.join(self.config.directory, 'p_multi_gene_region.tsv.%s' % self.pid), 'a',
                   newline='') as csvfile:
@@ -620,7 +639,8 @@ class TsvWriter:
                 counts['p_ale'] = 0
                 counts['p_afe'] = 0
                 counts['orphan_junction'] = 0
-                # constitutive
+                if self.config.keep_constitutive:
+                    counts['constitutive'] = 0
                 counts['multi_exon_spanning'] = 0
                 counts['exitron'] = 0
                 for event in events:

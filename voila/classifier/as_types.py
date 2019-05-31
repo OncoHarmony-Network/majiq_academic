@@ -102,7 +102,9 @@ class Graph:
             """
 
             self.edges = []  # all edge starting in this exon
+            self.back_edges = []
             self.exon = exon  # exon dictionary
+            self.graph = None
 
 
         def __eq__(self, other):
@@ -346,6 +348,8 @@ class Graph:
         for edge in self.edges:
             node = self.start_node(edge)
             node.edges.append(edge)
+            node = self.end_node(edge)
+            node.back_edges.append(edge)
 
 
     def _decomplexify(self):
@@ -523,10 +527,10 @@ class Graph:
                         # handling case like exon 19-20 in ENSMUSG00000021820
                         # we aim to make sure that the half exons are in the middle of the module
                         # so that we don't mark the next module as having that half exon
-                        modules.append(self.Module(self.nodes[start_idx: i + 1 + 1], self.strand))
+                        modules.append(self.Module(self.nodes[start_idx: i + 1 + 1], self))
                         nextEndShift = 1
                     else:
-                        modules.append(self.Module(self.nodes[start_idx + nextEndShift: i + 1], self.strand))
+                        modules.append(self.Module(self.nodes[start_idx + nextEndShift: i + 1], self))
                         nextEndShift = 0
 
                     start_idx = i
@@ -691,14 +695,15 @@ class Graph:
             edge.lsvs = lsv_store[key]
 
     class Module:
-        def __init__(self, nodes, strand):
+        def __init__(self, nodes, graph):
             """
             Module is subset of a gene.  The divide between modules is where junctions don't cross.
             :param nodes: list of nodes that belong to module
             """
 
             self.nodes = nodes  # subset of nodes for this module
-            self.Filters.strand = strand
+            self.graph = graph
+            self.Filters.strand = graph.strand
             self.source_lsv_ids, self.target_lsv_ids = self.get_lsv_ids()
             self.p_multi_gene_regions = []  # meta event
 
@@ -1246,7 +1251,34 @@ class Graph:
 
             return found
 
+        def constitutive(self):
+            found = []
 
+            nodes_to_check = []
+            if len(self.nodes[0].edges) == 1:
+                nodes_to_check.append(self.nodes[0])
+            if len(self.nodes[-1].back_edges) == 1:
+                nodes_to_check.append(self.nodes[-1])
+            for node in self.nodes[1:-1]:
+                if len(node.edges) == 1 and len(node.back_edges) == 1:
+                    nodes_to_check.append(node)
+
+            for n1, n2 in combinations(nodes_to_check, 2):
+                junc = n1.connects(n2, ir=True)
+                if junc and len(junc) == 1:
+
+                    junc = junc[0]
+                    config = ClassifyConfig()
+
+                    with SpliceGraph(config.splice_graph_file) as sg:
+                            junc_reads = next(sg.junction_reads_exp({'start': junc.start, 'end': junc.end,
+                                                                'gene_id':self.graph.gene_id},
+                                                                 self.graph.experiment_names))['reads']
+
+                            if junc_reads >= config.keep_constitutive:
+                                found.append({'event': 'constitutive', 'Junc': junc})
+
+            return found
 
 
         def as_types(self):
@@ -1276,6 +1308,8 @@ class Graph:
                 'orphan_junction': self.orphan_junction,
                 'exitron': self.exitron
             }
+            if ClassifyConfig().keep_constitutive:
+                as_type_dict['constitutive'] = self.constitutive
             event_counts = {
                 'cassette_exon': 0,
                 'mutually_exclusive': 0,
@@ -1294,6 +1328,8 @@ class Graph:
                 'orphan_junction': 0,
                 'exitron': 0
             }
+            if ClassifyConfig().keep_constitutive:
+                event_counts['constitutive'] = 0
             ret = []
             complex = False
 

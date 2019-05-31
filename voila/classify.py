@@ -61,6 +61,9 @@ def classify_gene(args):
 
     writer.summary()
 
+    if ClassifyConfig().keep_constitutive:
+        writer.constitutive()
+
     q.put(None)
 
 def run_classifier():

@@ -296,12 +296,16 @@ class ClassifyConfig:
             }
 
             settings = dict(config_parser['SETTINGS'])
-            for int_key in ['nproc']:
+            for int_key in ['nproc', 'keep_constitutive']:
                 settings[int_key] = config_parser['SETTINGS'].getint(int_key)
             for float_key in ['decomplexify_psi_threshold']:
                 settings[float_key] = config_parser['SETTINGS'].getfloat(float_key)
-            for bool_key in ['debug', 'keep_constitutive', 'show_all_modules', 'output_complex', 'untrimmed_exons']:
+            for bool_key in ['debug', 'show_all_modules', 'output_complex', 'untrimmed_exons']:
                 settings[bool_key] = config_parser['SETTINGS'].getboolean(bool_key)
+
+            # implications
+            if settings['keep_constitutive']:
+                settings['show_all_modules'] = True
 
             filters = {}
             if config_parser.has_section('FILTERS'):
