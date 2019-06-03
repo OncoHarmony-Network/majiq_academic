@@ -321,7 +321,7 @@ class TsvWriter:
                                    event['Include1'].range_str()]
                             writer.writerow(src_common + row + self.quantifications(module, None, event['Include1']))
 
-                            row = [event['C2'].range_str(), 'E1', event['C1'].range_str(), 'E1_E3_Distal',
+                            row = [event['C2'].range_str(), 'E3', event['C1'].range_str(), 'E1_E3_Distal',
                                    event['Skip'].range_str()]
                             writer.writerow(src_common + row + self.quantifications(module, None, event['Skip']))
 
