@@ -1345,14 +1345,15 @@ class Graph:
                 event_counts[e['event']] += 1
 
             total_events = sum(event_counts.values())
+            check_events = total_events - event_counts['constitutive']
 
-            if total_events - event_counts['constitutive'] == 2 and event_counts['multi_exon_spanning'] == 1 and \
+            if check_events == 2 and event_counts['multi_exon_spanning'] == 1 and \
                     event_counts['tandem_cassette'] == 1:
                 complex = False
-            elif total_events == 2 and event_counts['intron_retention'] == 1 and\
+            elif check_events == 2 and event_counts['intron_retention'] == 1 and\
                     (event_counts['p_alt3ss'] == 1 or event_counts['p_alt5ss'] == 1):
                 complex = False
-            elif len(ret) > 1:
+            elif check_events > 1:
                 complex = True
 
             if HIDE_SUB_COMPLEX and complex:
