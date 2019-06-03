@@ -1290,6 +1290,14 @@ class Graph:
             Helper function that returns a list of types found in this module.
             :return: list of AS types, flag is module is complex true or false
             """
+            ret = []
+
+            if ClassifyConfig().multi_gene_regions:
+                for region in self.p_multi_gene_regions:
+                    region['event'] = 'p_multi_gene_region'
+                    ret.append(region)
+                return ret, False, len(ret)
+
             #print('---------------------------', self.idx, '--------------------------------')
             #print(self.nodes)
             as_type_dict = {
@@ -1334,7 +1342,6 @@ class Graph:
                 'constitutive': 0
             }
 
-            ret = []
             complex = False
 
             for k, v in as_type_dict.items():
@@ -1358,10 +1365,6 @@ class Graph:
 
             if HIDE_SUB_COMPLEX and complex:
                 ret = []
-
-            for region in self.p_multi_gene_regions:
-                region['event'] = 'p_multi_gene_region'
-                ret.append(region)
 
             return ret, complex, total_events
 

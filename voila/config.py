@@ -23,7 +23,7 @@ _TsvConfig.__new__.__defaults__ = (None,) * len(_TsvConfig._fields)
 _ClassifyConfig = namedtuple('ClassifyConfig', ['directory', 'voila_files', 'voila_file', 'splice_graph_file',
                                       'nproc', 'decomplexify_psi_threshold', 'analysis_type', 'gene_ids',
                                       'debug', 'silent', 'keep_constitutive', 'show_all_modules', 'output_complex',
-                                      'untrimmed_exons'])
+                                      'untrimmed_exons', 'multi_gene_regions'])
 _ClassifyConfig.__new__.__defaults__ = (None,) * len(_ClassifyConfig._fields)
 
 # global config variable to act as the singleton instance of the config.
@@ -300,10 +300,12 @@ class ClassifyConfig:
                 settings[int_key] = config_parser['SETTINGS'].getint(int_key)
             for float_key in ['decomplexify_psi_threshold']:
                 settings[float_key] = config_parser['SETTINGS'].getfloat(float_key)
-            for bool_key in ['debug', 'show_all_modules', 'output_complex', 'untrimmed_exons']:
+            for bool_key in ['debug', 'show_all_modules', 'output_complex', 'untrimmed_exons', 'multi_gene_regions']:
                 settings[bool_key] = config_parser['SETTINGS'].getboolean(bool_key)
 
             # implications
+            if settings['multi_gene_regions']:
+                settings['keep_constitutive'] = True
             if settings['keep_constitutive']:
                 settings['show_all_modules'] = True
 

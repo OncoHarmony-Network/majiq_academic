@@ -74,10 +74,12 @@ class TsvWriter:
 
     @staticmethod
     def tsv_names():
+        if ClassifyConfig().multi_gene_regions:
+            return ['p_multi_gene_region.tsv']
         names = ['summary.tsv', 'cassette.tsv', 'alt3prime.tsv', 'alt5prime.tsv', 'alt3and5prime.tsv',
                  'mutually_exclusive.tsv', 'alternate_last_exon.tsv', 'alternate_first_exon.tsv',
                  'intron_retention.tsv', 'p_alt5prime.tsv', 'p_alt3prime.tsv', 'multi_exon_spanning.tsv',
-                 'tandem_cassette.tsv', 'exitron.tsv', 'p_multi_gene_region.tsv']
+                 'tandem_cassette.tsv', 'exitron.tsv']
         if ClassifyConfig().keep_constitutive:
             names.append('constitutive.tsv')
         return names
@@ -167,6 +169,13 @@ class TsvWriter:
                 writer.writerow(headers)
 
     def start_all_headers(self):
+
+        if self.config.multi_gene_regions:
+            headers = ['Gene ID_Region', 'Gene ID', 'Gene Name', 'Chr', 'Strand', 'First Exon Start coord',
+                       'First Exon End coord', 'Last Exon Start coord', "Last Exon End coord"]
+            self.start_headers(headers, 'p_multi_gene_region.tsv')
+            return
+
         headers = self.common_headers + ['Reference Exon Coordinate', 'Exon Spliced With',
                                          'Exon Spliced With Coordinate', 'Junction Name',
                                          'Junction Coordinate'] + self.quantification_headers
@@ -195,9 +204,7 @@ class TsvWriter:
             headers.append("Constitutive Junction")
         headers += ["Multi Exon Spanning", "Exitron", "Complex", "Number of Events", "Collapsed Event Name"]
         self.start_headers(headers, 'summary.tsv')
-        headers = ['Gene ID_Region', 'Gene ID', 'Gene Name', 'Chr', 'Strand', 'First Exon Start coord',
-                   'First Exon End coord', 'Last Exon Start coord', "Last Exon End coord"]
-        self.start_headers(headers, 'p_multi_gene_region.tsv')
+
         if self.config.keep_constitutive:
             headers = self.common_headers + ['Junction Coordinate', 'Intron Retention', 'Collapsed Event Name']
             self.start_headers(headers, 'constitutive.tsv')

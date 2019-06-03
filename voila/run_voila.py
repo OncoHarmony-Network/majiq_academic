@@ -148,6 +148,9 @@ classify_parser.add_argument('--show-all-modules', action='store_true',
 classify_parser.add_argument('--keep-constitutive', type=int, default=0,
                          help='Do not discard modules with only one junction, implies "--show-all-modules". Turns on '
                               'output of constitutive.tsv and constitutive column in summary output')
+classify_parser.add_argument('--multi-gene-regions', action='store_true',
+                         help='Only output a single TSV file describing regions found in inputs with complete breaks '
+                              'in the gene (no junctions connecting at all). Implies "--keep-constitutive"')
 classify_parser.add_argument('--output-complex', action='store_true',
                          help='Complex module data is dumped to all output TSVs, not only summary')
 classify_parser.add_argument('--untrimmed-exons', action='store_true',

@@ -39,31 +39,34 @@ def classify_gene(args):
 
     writer = TsvWriter(graph, gene_id)
 
-    writer.cassette()
+    config = ClassifyConfig()
+    if config.multi_gene_regions:
+        writer.p_multi_gene_region()
 
-    writer.alt3prime()
-    writer.alt5prime()
-    writer.alt3and5prime()
+    else:
+        writer.cassette()
 
-    writer.p_alt3prime()
-    writer.p_alt5prime()
+        writer.alt3prime()
+        writer.alt5prime()
+        writer.alt3and5prime()
 
-    writer.mutually_exclusive()
-    writer.intron_retention()
+        writer.p_alt3prime()
+        writer.p_alt5prime()
 
-    writer.alternate_first_exon()
-    writer.alternate_last_exon()
+        writer.mutually_exclusive()
+        writer.intron_retention()
 
-    writer.multi_exon_spanning()
-    writer.tandem_cassette()
-    writer.exitron()
+        writer.alternate_first_exon()
+        writer.alternate_last_exon()
 
-    writer.p_multi_gene_region()
+        writer.multi_exon_spanning()
+        writer.tandem_cassette()
+        writer.exitron()
 
-    writer.summary()
+        writer.summary()
 
-    if ClassifyConfig().keep_constitutive:
-        writer.constitutive()
+        if ClassifyConfig().keep_constitutive:
+            writer.constitutive()
 
     q.put(None)
 
