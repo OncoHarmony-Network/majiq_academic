@@ -632,7 +632,7 @@ class TsvWriter:
                     for event in events:
                         if event['event'] == 'constitutive':
                             common = self.common_data(module)
-                            row = [event['Junc'].range_str(), str(event['Junc'].ir), '']
+                            row = [event['Junc'].range_str(), str(event['Junc'].ir), module.collapsed_event_name]
                             writer.writerow(common + row)
 
     def p_multi_gene_region(self):
@@ -683,12 +683,14 @@ class TsvWriter:
                     if event['event'] in counts:
                         counts[event['event']] += 1
 
+                # we store collapsed event name on module, because we need it for constitutive
+                module.collapsed_event_name = self._collapsed_event_name(counts)
 
                 writer.writerow(["%s_%d" % (self.gene_id, module.idx),
                                  self.gene_id, self.graph.gene_name, self.graph.chromosome, self.graph.strand,
                                  semicolon(module.target_lsv_ids.union(module.source_lsv_ids))] +
                                 [v if v else '' for v in counts.values()] + [str(_complex), str(_total_events),
-                                                                             self._collapsed_event_name(counts)]
+                                                                             module.collapsed_event_name]
                                 )
 
     def _collapsed_event_name(self, counts):
