@@ -1327,8 +1327,8 @@ class Graph:
                     ret.append(region)
                 return ret, False, len(ret)
 
-            #print('---------------------------', self.idx, '--------------------------------')
-            #print(self.nodes)
+            print('---------------------------', self.idx, '--------------------------------')
+            print(self.nodes)
             as_type_dict = {
                 # 'alt_downstream': self.alternate_downstream,
                 # 'alt_upstream': self.alternate_upstream,
