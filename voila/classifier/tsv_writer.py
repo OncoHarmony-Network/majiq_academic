@@ -4,9 +4,12 @@ from voila.api import Matrix
 from voila import constants
 from voila.exceptions import GeneIdNotFoundInVoilaFile, LsvIdNotFoundInVoilaFile
 from voila.api.matrix_utils import generate_variances
+from voila.api import view_matrix
 from collections import OrderedDict
 from voila.config import ClassifyConfig
 import multiprocessing
+import numpy as np
+from voila.vlsv import get_expected_psi, matrix_area
 
 
 def semicolon(value_list):
@@ -37,7 +40,7 @@ class TsvWriter:
     Output AS data from one gene
     """
 
-    def __init__(self, graph, gene_id, quantifications=('psi', 'var',)):
+    def __init__(self, graph, gene_id):
         """
 
         :param output_path: The folder where all output TSV files will be written under
@@ -47,8 +50,8 @@ class TsvWriter:
         self.common_headers = ['Module ID', 'Gene ID', 'Gene Name', 'Chr', 'Strand', 'LSV ID(s)']
         self.graph = graph
         self.gene_id = gene_id
-        self.quantifications_enabled = quantifications
         self.config = ClassifyConfig()
+        self.quantifications_int = self.quantification_intersection()
         self.pid = multiprocessing.current_process().pid
 
         # we could do some crazy thing to yield to all of the different output types at once (across each method)
@@ -60,17 +63,163 @@ class TsvWriter:
             # self.as_types = {x.idx: x.as_types() for x in self.modules}
             self.as_types = {x.idx: x.as_types() for x in self.modules}
 
+    def quantification_intersection(self):
+        """
+        Look at all psi and dpsi quant headers and find the appropriate intersection
+        we need to then define which function should be called for each resulting column
+        :return:
+        """
+        def _filter_edges(edge, lsv):
+            if type(edge) != list:
+                edge = [edge]
+            for _edge in edge:
+                # loop through junctions to find one matching range of edge
+                for j, junc in enumerate(lsv.get('junctions')):
+                    if junc[0] == _edge.start and junc[1] == _edge.end:
+                        return j
+                else:
+                    # junction not quantified by majiq
+                    pass
+
+
+        def _psi_psi(voila_file):
+            def f(lsv_id, edge=None):
+                with Matrix(voila_file) as m:
+                    lsv = m.psi(lsv_id)
+                    if edge:
+                        edge_idx = _filter_edges(edge, lsv)
+                        if edge_idx is None:
+                            return ''
+                        else:
+                            return lsv.get('means')[edge_idx]
+                    else:
+                        return lsv.get('means')
+            return f
+
+        def _psi_var(voila_file):
+            def f(lsv_id, edge=None):
+                with Matrix(voila_file) as m:
+                    lsv = m.psi(lsv_id)
+                    if edge:
+                        edge_idx = _filter_edges(edge, lsv)
+                        if edge_idx is None:
+                            return ''
+                        else:
+                            return generate_variances([lsv.get('bins')][0])[edge_idx]
+                    else:
+                        return generate_variances([lsv.get('bins')[0]])[0]
+            return f
+
+        def _dpsi_psi(voila_file, group_idx):
+            def f(lsv_id, edge=None):
+                with Matrix(voila_file) as m:
+                    lsv = m.delta_psi(lsv_id)
+                    if edge:
+                        edge_idx = _filter_edges(edge, lsv)
+                        if edge_idx is None:
+                            return ''
+                        else:
+                            return lsv.get('group_means')[group_idx][edge_idx]
+                    else:
+                        return lsv.get('group_means')
+            return f
+
+        def _dpsi_dpsi(voila_file):
+            def f(lsv_id, edge=None):
+                with view_matrix.ViewDeltaPsi(voila_file) as m:
+                    lsv = m.lsv(lsv_id)
+                    bins = lsv.get('group_bins')
+
+                    return semicolon(
+                                    lsv.excl_incl[i][1] - lsv.excl_incl[i][0] for i in
+                                    range(np.size(bins, 0))
+                                )
+            return f
+
+        def _dpsi_p_thresh(voila_file):
+            def f(lsv_id, edge=None):
+                with view_matrix.ViewDeltaPsi(voila_file) as m:
+                    lsv = m.lsv(lsv_id)
+
+                    bins = lsv.bins
+
+                    return semicolon(matrix_area(b, 0.20) for b in bins)
+
+            return f
+
+        def _dpsi_p_nonchange(voila_file):
+            def f(lsv_id, edge=None):
+                #lsv = m.delta_psi(lsv_id)
+                with view_matrix.ViewDeltaPsi(voila_file) as m:
+                    lsv = m.lsv(lsv_id)
+
+                    return semicolon(lsv.high_probability_non_changing())
+
+            return f
+
+        tmp = OrderedDict()
+        for voila_file in self.config.voila_files:
+
+            with Matrix(voila_file) as m:
+                analysis_type = m.analysis_type
+                group_names = m.group_names
+
+
+            if analysis_type == constants.ANALYSIS_PSI:
+                for group in group_names:
+                    for key in ("E(PSI)", "Var(E(PSI))",):
+                        header = "%s_%s" % (group, key)
+                        if not header in tmp:
+                            if key == "E(PSI)":
+                                tmp[header] = _psi_psi(voila_file)
+                            elif key == "Var(E(PSI))":
+                                tmp[header] = _psi_var(voila_file)
+                        else:
+                            pass
+                            #print("found duplicate key %s" % header)
+            else:
+                for i, group in enumerate(group_names):
+                    for key in ("E(PSI)",):
+                        header = "%s_%s" % (group, key)
+                        if not header in tmp:
+                            if key == "E(PSI)":
+                                tmp[header] = _dpsi_psi(voila_file, i)
+                        else:
+                            pass
+                            #print("found duplicate key %s" % header)
+
+                for key in ("E(dPSI)", "P(|dPSI|>=0.20)", "P(|dPSI|<=0.05)"):
+                    header = "%s_%s" % ('-'.join(group_names), key)
+                    if not header in tmp:
+                        if key == "E(dPSI)":
+                            tmp[header] = _dpsi_dpsi(voila_file)
+                        elif key == "P(|dPSI|>=0.20)":
+                            tmp[header] = _dpsi_p_thresh(voila_file)
+                        elif key == "P(|dPSI|<=0.05)":
+                            tmp[header] = _dpsi_p_nonchange(voila_file)
+                    else:
+                        pass
+                        #print("found duplicate key %s" % header)
+
+                # tmp.append('%s_E(dPSI) per LSV junction' % trunc_name)
+                # tmp.append('%s_E(dPSI) per LSV junction' % trunc_name)
+                # tmp.append('%s_E(dPSI) per LSV junction' % trunc_name)
+                # tmp.append('%s_E(dPSI) per LSV junction' % trunc_name)
+                # tmp.append('%s_E(dPSI) per LSV junction' % trunc_name)
+
+        return tmp
+
+    def quantification_functions(self):
+        """
+
+        :return:
+        """
+
 
     @property
     def quantification_headers(self):
-        headers = []
-        for input_file in self.config.voila_files:
-            trunc_name = str(input_file).split('/')[-1].split('.')[0]
-            if 'psi' in self.quantifications_enabled:
-                headers.append('%s_E(PSI)' % trunc_name)
-            if 'var' in self.quantifications_enabled:
-                headers.append('%s_Var(E(PSI))' % trunc_name)
-        return headers
+        return list(self.quantifications_int.keys())
+
 
     @staticmethod
     def tsv_names():
@@ -116,47 +265,76 @@ class TsvWriter:
 
         lsvs = self.parity2lsv(module, parity)
 
-        with Matrix(self.config.voila_file) as m:
-            analysis_type = m.analysis_type
-        quantification_fields = []
-        for i, voila_file in enumerate(self.config.voila_files):
-            try:
-                with Matrix(voila_file) as m:
-                    means = []
-                    vars = []
-                    for lsv_id in lsvs:
-                        if analysis_type == constants.ANALYSIS_PSI:
-                            lsv = m.psi(lsv_id)
-                        else:
-                            lsv = m.delta_psi(lsv_id)
 
-                        if edge:
-                            if type(edge) != list:
-                                edge = [edge]
-                            for _edge in edge:
-                                # loop through junctions to find one matching range of edge
-                                for j, junc in enumerate(lsv.get('junctions')):
-                                    if junc[0] == _edge.start and junc[1] == _edge.end:
-                                        means.append(lsv.get('means')[j])
-                                        vars.append(generate_variances([lsv.get('bins')[i]])[0])
-                                        break
-                                else:
-                                    # junction not quantified by majiq
-                                    pass
-                        else:
-                            means += list(lsv.get('means'))
-                            vars += list(generate_variances(lsv.get('bins')))
-                if 'psi' in self.quantifications_enabled:
-                    quantification_fields.append(semicolon(means))
-                if 'var' in self.quantifications_enabled:
-                    quantification_fields.append(semicolon(vars))
-            except (GeneIdNotFoundInVoilaFile, LsvIdNotFoundInVoilaFile):
-                if 'psi' in self.quantifications_enabled:
-                    quantification_fields.append('')
-                if 'var' in self.quantifications_enabled:
-                    quantification_fields.append('')
 
-        return quantification_fields
+        quantification_vals = []
+
+        for field in self.quantifications_int:
+
+            for lsv_id in lsvs:
+
+                try:
+
+                    #print(self.quantifications_int[field](lsv_id, edge))
+                    quantification_vals.append(self.quantifications_int[field](lsv_id, edge))
+                except (GeneIdNotFoundInVoilaFile, LsvIdNotFoundInVoilaFile) as e:
+                    quantification_vals.append('')
+                    #print(e)
+
+        #print(quantification_vals)
+
+        return quantification_vals
+
+        # for i, voila_file in enumerate(self.config.voila_files):
+        #     try:
+        #         with Matrix(voila_file) as m:
+        #             analysis_type = m.analysis_type
+        #             means = []
+        #             vars = []
+        #             for lsv_id in lsvs:
+        #                 if analysis_type == constants.ANALYSIS_PSI:
+        #                     lsv = m.psi(lsv_id)
+        #                 else:
+        #                     lsv = m.delta_psi(lsv_id)
+        #
+        #                 if edge:
+        #                     if type(edge) != list:
+        #                         edge = [edge]
+        #                     for _edge in edge:
+        #                         # loop through junctions to find one matching range of edge
+        #                         for j, junc in enumerate(lsv.get('junctions')):
+        #                             if junc[0] == _edge.start and junc[1] == _edge.end:
+        #                                 if analysis_type == constants.ANALYSIS_PSI:
+        #                                     means.append(lsv.get('means')[j])
+        #                                     #vars.append(generate_variances([lsv.get('bins')[i]])[0])
+        #                                     vars.append('')
+        #                                 else:
+        #                                     for mean in lsv.get('group_means'):
+        #                                         means.append(mean)
+        #                                     vars.append(lsv.get('bins'))
+        #                                 break
+        #                         else:
+        #                             # junction not quantified by majiq
+        #                             pass
+        #                 else:
+        #                     if analysis_type == constants.ANALYSIS_PSI:
+        #                         means += list(lsv.get('means'))
+        #                         vars += list(generate_variances(lsv.get('bins')))
+        #                     else:
+        #                         for mean in lsv.get('group_means'):
+        #                             means.append(mean)
+        #                         vars += list(lsv.get('bins'))
+        #
+        #         quantification_fields.append(semicolon(means))
+        #
+        #         quantification_fields.append(semicolon(vars))
+        #     except (GeneIdNotFoundInVoilaFile, LsvIdNotFoundInVoilaFile):
+        #
+        #         quantification_fields.append('')
+        #
+        #         quantification_fields.append('')
+        #
+        # return quantification_fields
 
     def start_headers(self, headers, filename):
         """

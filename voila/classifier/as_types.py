@@ -70,9 +70,7 @@ class Graph:
         # populate the graph with data from the splice graph
         self._populate()
 
-        # get psi/dpsi data from voila file and associate with edges
-        with Matrix(self.config.voila_file) as m:
-            self.analysis_type = m.analysis_type
+
 
         with SpliceGraph(self.config.splice_graph_file) as sg:
             gene_meta = sg.gene(self.gene_id)
@@ -80,13 +78,10 @@ class Graph:
                 raise VoilaException("Gene ID not found in SpliceGraph File: %s" % self.gene_id)
             self.strand, self.gene_name, self.chromosome = itemgetter('strand', 'name', 'chromosome')(gene_meta)
 
-
-        if self.analysis_type == constants.ANALYSIS_PSI:
-            self._psi()
-        elif self.analysis_type == constants.ANALYSIS_DELTAPSI:
-            self._delta_psi()
-        else:
-            raise UnsupportedVoilaFile()
+        # supporting both PSI and dPSI ; the goal is to filter out junctions derived from each input file
+        #
+        for voila_file in self.config.voila_files:
+            self._add_matrix_values(voila_file)
 
         self._decomplexify()
 
@@ -357,16 +352,41 @@ class Graph:
         Remove any edges which are under a certain PSI value from the Graph
         :return:
         """
+        from functools import partial
+
         if not self.config.decomplexify_psi_threshold:
             return
         num_filtered = 0
         for i in range(len(self.edges) - 1, -1, -1):
             if self.edges[i].lsvs:
-                if self.analysis_type == constants.ANALYSIS_PSI:
-                    psi = max(map(max, (v['psi'] for v in self.edges[i].lsvs.values())))
-                    if psi < self.config.decomplexify_psi_threshold:
+
+                # check both psi and delta_psi here
+                # print(self.edges[i].lsvs)
+                # print(self.edges[i].lsvs.values())
+                # print([x for x in (abs(y) for v in self.edges[i].lsvs.values() for y in v['delta_psi'])])
+
+
+                psi = max(map(max, (v['psi'] for v in self.edges[i].lsvs.values())), default=None)
+                delta_psi = max((abs(y) for v in self.edges[i].lsvs.values() for y in v['delta_psi']), default=None)
+
+                # print(delta_psi)
+                #
+                # print(self.config.decomplexify_deltapsi_threshold and delta_psi is not None)
+
+                if self.config.decomplexify_psi_threshold and psi is not None and self.config.decomplexify_deltapsi_threshold and delta_psi is not None:
+                    # if both filters applied, we only filter if both values are below the threshold
+                    if psi < self.config.decomplexify_psi_threshold and delta_psi < self.config.decomplexify_deltapsi_threshold:
+
                         num_filtered += 1
                         del self.edges[i]
+                elif self.config.decomplexify_psi_threshold and psi is not None and psi < self.config.decomplexify_psi_threshold:
+                    num_filtered += 1
+                    del self.edges[i]
+                elif self.config.decomplexify_deltapsi_threshold and delta_psi is not None and delta_psi < self.config.decomplexify_deltapsi_threshold:
+                    num_filtered += 1
+                    del self.edges[i]
+
+
         voila_log().debug("Decomplexifier removed %d junction(s)" % num_filtered)
 
 
@@ -594,7 +614,17 @@ class Graph:
 
         return modules
 
-    def _psi(self):
+    def _add_matrix_values(self, voila_file):
+        with Matrix(voila_file) as m:
+            analysis_type = m.analysis_type
+        if analysis_type == constants.ANALYSIS_PSI:
+            self._psi(voila_file)
+        elif analysis_type == constants.ANALYSIS_DELTAPSI:
+            self._delta_psi(voila_file)
+        else:
+            raise UnsupportedVoilaFile()
+
+    def _psi(self, voila_file):
         """
         When a psi voila file is supplied, this is where the psi data is added to the junctions.
         :return: None
@@ -603,7 +633,7 @@ class Graph:
         lsv_store = {}
 
 
-        with Matrix(self.config.voila_file) as m:
+        with Matrix(voila_file) as m:
             for lsv_id in m.lsv_ids(gene_ids=[self.gene_id]):
                 lsv = m.psi(lsv_id)
 
@@ -618,48 +648,30 @@ class Graph:
                         lsv_store[key] = {}
 
                     if lsv_id not in lsv_store[key]:
-                        lsv_store[key][lsv_id] = {'psi': [], 'delta_psi': []}
+                        lsv_store[key][lsv_id] = {'psi': set(), 'delta_psi': set()}
 
-                    lsv_store[key][lsv_id]['psi'].append(means)
-                    #
-                    # with SpliceGraph(self.config.splice_graph_file) as sg:
-                    #     if [x for x in sg.intron_retention_reads_exp({'gene_id': self.gene_id,
-                    #                                               'start': int(start),
-                    #                                               'end': int(end)}, experiment_names)]:
-                    #
-                    #         # if not key in ir_store:
-                    #         #     ir_store[key] = []
-                    #         ir_store[key] = True
-
-                # for start, end in lsv.get('junctions'):
-                #     print(start, end)
-                #     print('nnnnnn')
-                #     with SpliceGraph(self.config.splice_graph_file) as sg:
-                #         # print(experiment_names)
-                #         # print(int(start)+1)
-                #         # print(int(end)-1)
-                #         # print("true 1")
-                #
-                #         if [x for x in sg.intron_retention_reads_exp({'gene_id': self.gene_id,
-                #                                           'start': int(start),
-                #                                           'end': int(end)}, experiment_names)]:
-                #             #print("true 2")
-                #             #print(lsv_store[key])
-                #             if not key in ir_store:
-                #                 ir_store[key] = []
-                #             ir_store[key].append({'start': start, 'end': end})
-
-
+                    lsv_store[key][lsv_id]['psi'].add(means)
 
         for edge in self.edges:
-
             key = str(edge.start) + '-' + str(edge.end)
-
+            # if we found values for this edge in the voila file
             if key in lsv_store:
-                edge.lsvs = lsv_store[key]
+                # if the edge already has values found from another voila file
+                if edge.lsvs:
+                    # for each lsv in the voila file just read
+                    for lsv_id in lsv_store[key]:
+                        if lsv_id in edge.lsvs:
+                            for means in lsv_store[key][lsv_id]['psi']:
 
+                                edge.lsvs[lsv_id]['psi'].add(means)
+                            for means in lsv_store[key][lsv_id]['delta_psi']:
+                                edge.lsvs[lsv_id]['delta_psi'].add(means)
+                        else:
+                            edge.lsvs[lsv_id] = lsv_store[key][lsv_id]
+                else:
+                    edge.lsvs = lsv_store[key]
 
-    def _delta_psi(self):
+    def _delta_psi(self, voila_file):
         """
         When a delta psi voila file is supplied, this is where the psi/delta psi data is added to the junctions.
         :return: None
@@ -667,7 +679,7 @@ class Graph:
 
         lsv_store = {}
 
-        with Matrix(self.config.voila_file) as m:
+        with Matrix(voila_file) as m:
 
             for lsv_id in m.lsv_ids(gene_ids=[self.gene_id]):
 
@@ -682,17 +694,31 @@ class Graph:
                             lsv_store[key] = {}
 
                         if lsv_id not in lsv_store[key]:
-                            lsv_store[key][lsv_id] = {'psi': [], 'delta_psi': []}
+                            lsv_store[key][lsv_id] = {'psi': set(), 'delta_psi': set()}
 
-                        lsv_store[key][lsv_id]['psi'].append(means)
+                        lsv_store[key][lsv_id]['psi'].add(means)
 
                 for (start, end), means in zip(juncs, generate_means(lsv.get('bins'))):
                     key = str(start) + '-' + str(end)
-                    lsv_store[key][lsv_id]['delta_psi'].append(means)
+                    lsv_store[key][lsv_id]['delta_psi'].add(means)
 
         for edge in self.edges:
             key = str(edge.start) + '-' + str(edge.end)
-            edge.lsvs = lsv_store[key]
+            # if we found values for this edge in the voila file
+            if key in lsv_store:
+                # if the edge already has values found from another voila file
+                if edge.lsvs:
+                    # for each lsv in the voila file just read
+                    for lsv_id in lsv_store[key]:
+                        if lsv_id in edge.lsvs:
+                            for means in lsv_store[key][lsv_id]['psi']:
+                                edge.lsvs[lsv_id]['psi'].add(means)
+                            for means in lsv_store[key][lsv_id]['delta_psi']:
+                                edge.lsvs[lsv_id]['delta_psi'].add(means)
+                        else:
+                            edge.lsvs[lsv_id] = lsv_store[key][lsv_id]
+                else:
+                    edge.lsvs = lsv_store[key]
 
     class Module:
         def __init__(self, nodes, graph):

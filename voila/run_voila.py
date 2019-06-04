@@ -156,9 +156,15 @@ classify_parser.add_argument('--output-complex', action='store_true',
 classify_parser.add_argument('--untrimmed-exons', action='store_true',
                          help='Display original Exon coordinates instead of Trimmed coordinates in output TSVs')
 classify_parser.add_argument('--decomplexify-psi-threshold', type=float, default=0.01,
-                         help='Filter out junctions there PSI is below a certain value (between 0.0 and 1.0). If multiple'
-                             'input files are used, only the highest PSI value is used. If 0 (or 0.0) is specified, '
-                             'no filtering fill be done. The default is "0.01". (1%%)')
+                         help='Filter out junctions where PSI is below a certain value (between 0.0 and 1.0). If multiple '
+                              'input files are used, only the highest PSI value is used. If 0 (or 0.0) is specified, '
+                              'no filtering fill be done. The default is "0.01". (1%%)')
+classify_parser.add_argument('--decomplexify-deltapsi-threshold', type=float, default=0.0,
+                         help='Filter out junctions where abs(E(dPSI)) is below a certain value (between 0.0 and 1.0). If multiple '
+                              'input files are used, only the biggest difference (dPSI) value is used. If 0 (or 0.0) is specified, '
+                              'no filtering fill be done. The default is "0.0". ')
+classify_parser.add_argument('--non-changing-threshold', type=float, default=0.05,
+                        help='The default is "0.05".')
 required_classify_parser = classify_parser.add_argument_group('required named arguments')
 required_classify_parser.add_argument('-d', '--directory', required=True, help="All generated TSV files will be dumped in"
                                                                           " this directory")

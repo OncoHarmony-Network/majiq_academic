@@ -21,14 +21,7 @@ class Classify:
 
         voila_log().info(analysis_type + ' CLASSIFY')
 
-        if analysis_type == constants.ANALYSIS_PSI:
-            run_classifier()
-        elif analysis_type == constants.ANALYSIS_DELTAPSI:
-            raise UnsupportedAnalysisType(analysis_type)
-        elif analysis_type == constants.ANALYSIS_HETEROGEN:
-            raise UnsupportedAnalysisType(analysis_type)
-        else:
-            raise UnknownAnalysisType(analysis_type)
+        run_classifier()
 
 
 def classify_gene(args):
@@ -86,6 +79,7 @@ def run_classifier():
         os.makedirs(config.directory)
 
     voila_log().info("Classifying %d gene(s)" % len(gene_ids))
+    voila_log().info("Quantifications based on %d input file(s)" % len(config.voila_files))
     voila_log().info("Writing TSVs to %s" % os.path.abspath(config.directory))
 
     #total_genes = len(gene_ids)

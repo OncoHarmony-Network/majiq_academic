@@ -21,9 +21,10 @@ _TsvConfig = namedtuple('TsvConfig', ['file_name', 'voila_files', 'voila_file', 
                                       'lsv_types', 'strict_indexing'])
 _TsvConfig.__new__.__defaults__ = (None,) * len(_TsvConfig._fields)
 _ClassifyConfig = namedtuple('ClassifyConfig', ['directory', 'voila_files', 'voila_file', 'splice_graph_file',
-                                      'nproc', 'decomplexify_psi_threshold', 'analysis_type', 'gene_ids',
+                                      'nproc', 'decomplexify_psi_threshold', 'decomplexify_deltapsi_threshold',
+                                      'analysis_type', 'gene_ids',
                                       'debug', 'silent', 'keep_constitutive', 'show_all_modules', 'output_complex',
-                                      'untrimmed_exons', 'multi_gene_regions'])
+                                      'untrimmed_exons', 'multi_gene_regions', 'non_changing_threshold'])
 _ClassifyConfig.__new__.__defaults__ = (None,) * len(_ClassifyConfig._fields)
 
 # global config variable to act as the singleton instance of the config.
@@ -101,6 +102,24 @@ def find_voila_files(vs):
 
     return voila_files
 
+def get_mixed_analysis_type_str(voila_files):
+    types = {'psi': 0, 'delta_psi': 0}
+    for mf in voila_files:
+
+        with Matrix(mf) as m:
+
+            if m.analysis_type == constants.ANALYSIS_PSI:
+                types['psi'] += 1
+
+            if m.analysis_type == constants.ANALYSIS_DELTAPSI:
+                types['delta_psi'] += 1
+
+    if not types['psi']:
+        return "dPSIx%d" % types['delta_psi']
+    elif not types['delta_psi']:
+        return "PSIx%d" % types['psi']
+    else:
+        return "PSIx%d dPSIx%d" % (types['psi'], types['delta_psi'])
 
 def find_analysis_type(voila_files):
     """
@@ -152,7 +171,10 @@ def write(args):
     else:
 
         voila_files = find_voila_files(args.files)
-        analysis_type = find_analysis_type(voila_files)
+        if args.func.__name__ == "Classify":
+            analysis_type = get_mixed_analysis_type_str(voila_files)
+        else:
+            analysis_type = find_analysis_type(voila_files)
 
     # raise multi-file error if trying to run voila in TSV mode with multiple input files
     # (currently, multiple input is only supported in View mode)
@@ -298,7 +320,7 @@ class ClassifyConfig:
             settings = dict(config_parser['SETTINGS'])
             for int_key in ['nproc', 'keep_constitutive']:
                 settings[int_key] = config_parser['SETTINGS'].getint(int_key)
-            for float_key in ['decomplexify_psi_threshold']:
+            for float_key in ['decomplexify_psi_threshold', 'decomplexify_deltapsi_threshold', 'non_changing_threshold']:
                 settings[float_key] = config_parser['SETTINGS'].getfloat(float_key)
             for bool_key in ['debug', 'show_all_modules', 'output_complex', 'untrimmed_exons', 'multi_gene_regions']:
                 settings[bool_key] = config_parser['SETTINGS'].getboolean(bool_key)

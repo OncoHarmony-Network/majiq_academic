@@ -416,12 +416,15 @@ class ViewPsi(Psi, ViewMatrix):
 
 
 class ViewDeltaPsi(DeltaPsi, ViewMatrix):
-    def __init__(self):
+    def __init__(self, voila_file=None):
         """
         View for delta psi matrix.  This is used in creation of tsv and html files.
         """
         self.config = ViewConfig()
-        super().__init__(self.config.voila_file)
+        if voila_file is None:
+            super().__init__(self.config.voila_file)
+        else:
+            super().__init__(voila_file)
 
     class _ViewDeltaPsi(DeltaPsi._DeltaPsi, ViewMatrixType):
         def __init__(self, matrix_hdf5, lsv_id):
