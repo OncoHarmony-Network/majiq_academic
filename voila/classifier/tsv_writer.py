@@ -143,7 +143,7 @@ class TsvWriter:
 
                     bins = lsv.bins
 
-                    return semicolon(matrix_area(b, 0.20) for b in bins)
+                    return semicolon(matrix_area(b, self.config.threshold) for b in bins)
 
             return f
 

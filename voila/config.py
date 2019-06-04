@@ -24,7 +24,7 @@ _ClassifyConfig = namedtuple('ClassifyConfig', ['directory', 'voila_files', 'voi
                                       'nproc', 'decomplexify_psi_threshold', 'decomplexify_deltapsi_threshold',
                                       'analysis_type', 'gene_ids',
                                       'debug', 'silent', 'keep_constitutive', 'show_all_modules', 'output_complex',
-                                      'untrimmed_exons', 'multi_gene_regions', 'non_changing_threshold'])
+                                      'untrimmed_exons', 'multi_gene_regions', 'threshold', 'non_changing_threshold'])
 _ClassifyConfig.__new__.__defaults__ = (None,) * len(_ClassifyConfig._fields)
 
 # global config variable to act as the singleton instance of the config.
@@ -320,7 +320,8 @@ class ClassifyConfig:
             settings = dict(config_parser['SETTINGS'])
             for int_key in ['nproc', 'keep_constitutive']:
                 settings[int_key] = config_parser['SETTINGS'].getint(int_key)
-            for float_key in ['decomplexify_psi_threshold', 'decomplexify_deltapsi_threshold', 'non_changing_threshold']:
+            for float_key in ['decomplexify_psi_threshold', 'decomplexify_deltapsi_threshold',
+                              'non_changing_threshold', 'threshold']:
                 settings[float_key] = config_parser['SETTINGS'].getfloat(float_key)
             for bool_key in ['debug', 'show_all_modules', 'output_complex', 'untrimmed_exons', 'multi_gene_regions']:
                 settings[bool_key] = config_parser['SETTINGS'].getboolean(bool_key)
