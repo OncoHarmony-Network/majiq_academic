@@ -145,7 +145,7 @@ classify_parser.add_argument('--gene-ids', nargs='*', default=[],
                              'GENE_ID2 ...')
 classify_parser.add_argument('--show-all-modules', action='store_true',
                          help='Do not discard modules that are unquantified my Majiq (no LSVs found)')
-classify_parser.add_argument('--keep-constitutive', type=int, default=0,
+classify_parser.add_argument('--keep-constitutive', type=int, nargs='?', const=1,
                          help='Do not discard modules with only one junction, implies "--show-all-modules". Turns on '
                               'output of constitutive.tsv and constitutive column in summary output')
 classify_parser.add_argument('--multi-gene-regions', action='store_true',
