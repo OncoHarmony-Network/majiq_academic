@@ -542,18 +542,21 @@ class Graph:
                 if not any(e.start < edge.end < e.end or (e.start > edge.start and e.end == edge.end) for e in edges):
                     i = bisect_left(self.nodes, edge.node)
 
-                    #print(edge.lsvs)
-                    if((self.nodes[i].end == -1 or self.nodes[i].start == -1) and True):
-                        # handling case like exon 19-20 in ENSMUSG00000021820
-                        # we aim to make sure that the half exons are in the middle of the module
-                        # so that we don't mark the next module as having that half exon
-                        modules.append(self.Module(self.nodes[start_idx: i + 1 + 1], self))
-                        nextEndShift = 1
-                    else:
-                        modules.append(self.Module(self.nodes[start_idx + nextEndShift: i + 1], self))
-                        nextEndShift = 0
+                    if (i - start_idx) > 0:
 
-                    start_idx = i
+                        #print(edge.lsvs)
+                        if((self.nodes[i].end == -1 or self.nodes[i].start == -1) and True):
+                            # handling case like exon 19-20 in ENSMUSG00000021820
+                            # we aim to make sure that the half exons are in the middle of the module
+                            # so that we don't mark the next module as having that half exon
+
+                            modules.append(self.Module(self.nodes[start_idx: i + 1 + 1], self))
+                            nextEndShift = 1
+                        else:
+                            modules.append(self.Module(self.nodes[start_idx + nextEndShift: i + 1], self))
+                            nextEndShift = 0
+
+                        start_idx = i
 
         if self.strand == '-':
             modules.reverse()
