@@ -866,10 +866,10 @@ class Graph:
                         if skip:
                             conns = []
                             for k in range(j - i):
-                                conns.append(self.nodes[i+k].connects(self.nodes[i+k+1], ir=True))
+                                conns.append(self.nodes[i+k].connects(self.nodes[i+k+1]))
 
                             # checking all A exons connect together
-                            if not all(len(x) > 0 and all(y.ir is False for y in x) for x in conns):
+                            if not all(len(x) > 0 for x in conns):
                                 continue
 
                             include1 = self.strand_case(n1.connects(self.nodes[i + 1]), self.nodes[j-1].connects(n2))
