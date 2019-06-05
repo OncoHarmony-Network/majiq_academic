@@ -579,10 +579,10 @@ class TsvWriter:
                             row = [event['C1'].range_str(), 'A2', event['A2'].range_str(), 'C1_A2',
                                    event['SkipA1'].range_str()]
                             writer.writerow(src_common + row + self.quantifications(module, 's', event['SkipA1']))
-                            row = [event['C2'].range_str(), 'A2', event['A2'].range_str(), 'C2_A2',
+                            row = [event['C2'].range_str(), 'A1', event['A1'].range_str(), 'C2_A1',
                                    event['Include2'].range_str()]
                             writer.writerow(trg_common + row + self.quantifications(module, 't', event['Include2']))
-                            row = [event['C2'].range_str(), 'A1', event['A1'].range_str(), 'C2_A1',
+                            row = [event['C2'].range_str(), 'A2', event['A2'].range_str(), 'C2_A2',
                                    event['SkipA2'].range_str()]
                             writer.writerow(trg_common + row + self.quantifications(module, 't', event['SkipA2']))
 

@@ -951,10 +951,14 @@ class Graph:
                                 for i2 in e2.node.edges:
                                     if i1.node == i2.node:
                                         found.append({'event': 'mutually_exclusive',
-                                                      'C1': n1, 'C2': i1.node,
-                                                      'A1': e1.node, 'A2': e2.node,
-                                                      'Include1': e1, 'Include2': i2,
-                                                      'SkipA1': e2, 'SkipA2': i1})
+                                                      'C1': self.strand_case(n1, i1.node),
+                                                      'C2': self.strand_case(i1.node, n1),
+                                                      'A1': self.strand_case(e1.node, e2.node),
+                                                      'A2': self.strand_case(e2.node, e1.node),
+                                                      'Include1': self.strand_case(e1, i2),
+                                                      'SkipA1': self.strand_case(e2, i1),
+                                                      'Include2': self.strand_case(i1, e2),
+                                                      'SkipA2': self.strand_case(i2, e1)})
             return found
 
         def intron_retention(self):
