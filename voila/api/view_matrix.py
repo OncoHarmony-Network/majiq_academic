@@ -840,7 +840,7 @@ class ViewHeterogens(ViewMulti):
                 return pairs[0]
             else:
                 with ViewHeterogen(pairs[0]) as v:
-                    return v.lsv_ids()
+                    return set(v.lsv_ids())
         else:
             if type(pairs[0]) is set:
                 s1 = pairs[0]
