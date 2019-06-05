@@ -454,7 +454,7 @@ class Graph:
             for edge in self.edges:
                 # look through all edges
                 # if we can't find any going ahead (other end greater value than exon) (excluding IR), don't trim end
-                if self.in_exon(node, edge.start) and edge.end > node.end:
+                if self.in_exon(node, edge.start) and edge.end >= node.end:
                     # intron retention ahead immediately disqualified trimming ahead
                     if edge.ir:
                         trim_end = False
@@ -470,7 +470,7 @@ class Graph:
             trim_start = False
             for edge in self.edges:
                 # similar for backwards
-                if self.in_exon(node, edge.end) and edge.start < node.start:
+                if self.in_exon(node, edge.end) and edge.start <= node.start:
                     if edge.ir:
                         trim_start = False
                         break
@@ -1328,8 +1328,9 @@ class Graph:
                     ret.append(region)
                 return ret, False, len(ret)
 
-            # print('---------------------------', self.idx, '--------------------------------')
-            # print(self.nodes)
+            #print('---------------------------', self.idx, '--------------------------------')
+            #print(self.nodes)
+
             as_type_dict = {
                 # 'alt_downstream': self.alternate_downstream,
                 # 'alt_upstream': self.alternate_upstream,
