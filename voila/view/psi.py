@@ -4,7 +4,7 @@ from operator import itemgetter
 
 from flask import render_template, url_for, jsonify, request, session, Flask, Response
 
-from voila.api.view_matrix import ViewPsi, ViewPsis, ViewDeltaPsi
+from voila.api.view_matrix import ViewPsi, ViewPsis
 from voila.api.view_splice_graph import ViewSpliceGraph
 from voila.index import Index
 from voila.view import views
@@ -79,7 +79,7 @@ def gene(gene_id):
 
 
 
-        return views.gene_view('psi_summary.html', gene_id, ViewDeltaPsi,
+        return views.gene_view('psi_summary.html', gene_id, ViewPsis,
                                lsv_data=lsv_data,
                                group_names=m.group_names,
                                ucsc=ucsc,
