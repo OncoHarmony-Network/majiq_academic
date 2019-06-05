@@ -69,6 +69,8 @@ class TsvWriter:
         we need to then define which function should be called for each resulting column
         :return:
         """
+        SIG_FIGS = 3
+
         def _filter_edges(edge, lsv):
             if type(edge) != list:
                 edge = [edge]
@@ -81,7 +83,6 @@ class TsvWriter:
                     # junction not quantified by majiq
                     pass
 
-
         def _psi_psi(voila_file):
             def f(lsv_id, edge=None):
                 with Matrix(voila_file) as m:
@@ -91,9 +92,9 @@ class TsvWriter:
                         if edge_idx is None:
                             return ''
                         else:
-                            return lsv.get('means')[edge_idx]
+                            return round(lsv.get('means')[edge_idx], SIG_FIGS)
                     else:
-                        return lsv.get('means')
+                        return (round(x, SIG_FIGS) for x in lsv.get('means'))
             return f
 
         def _psi_var(voila_file):
@@ -105,9 +106,9 @@ class TsvWriter:
                         if edge_idx is None:
                             return ''
                         else:
-                            return generate_variances([lsv.get('bins')][0])[edge_idx]
+                            return round(generate_variances([lsv.get('bins')][0])[edge_idx], SIG_FIGS)
                     else:
-                        return generate_variances([lsv.get('bins')[0]])[0]
+                        return (round(x, SIG_FIGS) for x in generate_variances([lsv.get('bins')[0]]))
             return f
 
         def _dpsi_psi(voila_file, group_idx):
@@ -119,9 +120,9 @@ class TsvWriter:
                         if edge_idx is None:
                             return ''
                         else:
-                            return lsv.get('group_means')[group_idx][edge_idx]
+                            return round(lsv.get('group_means')[group_idx][edge_idx], SIG_FIGS)
                     else:
-                        return lsv.get('group_means')
+                        return (round(x, SIG_FIGS) for x in lsv.get('group_means')[group_idx])
             return f
 
         def _dpsi_dpsi(voila_file):
@@ -129,10 +130,16 @@ class TsvWriter:
                 with view_matrix.ViewDeltaPsi(voila_file) as m:
                     lsv = m.lsv(lsv_id)
                     bins = lsv.get('group_bins')
-
-                    return semicolon(
-                                    lsv.excl_incl[i][1] - lsv.excl_incl[i][0] for i in
-                                    range(np.size(bins, 0))
+                    if edge:
+                        edge_idx = _filter_edges(edge, lsv)
+                        if edge_idx is None:
+                            return ''
+                        else:
+                            return round(lsv.excl_incl[edge_idx][1] - lsv.excl_incl[edge_idx][0], SIG_FIGS)
+                    else:
+                        return (
+                                    round(x, SIG_FIGS) for x in ((lsv.excl_incl[i][1] - lsv.excl_incl[i][0] for i in
+                                    range(np.size(bins, 0))))
                                 )
             return f
 
@@ -142,9 +149,16 @@ class TsvWriter:
                     lsv = m.lsv(lsv_id)
 
                     bins = lsv.bins
-
-                    return semicolon(matrix_area(b, self.config.threshold) for b in bins)
-
+                    if edge:
+                        edge_idx = _filter_edges(edge, lsv)
+                        if edge_idx is None:
+                            return ''
+                        else:
+                            return round(matrix_area(bins[edge_idx], self.config.threshold), SIG_FIGS)
+                    else:
+                        return (
+                                    round(matrix_area(b, self.config.threshold), SIG_FIGS) for b in bins
+                                )
             return f
 
         def _dpsi_p_nonchange(voila_file):
@@ -152,8 +166,14 @@ class TsvWriter:
                 #lsv = m.delta_psi(lsv_id)
                 with view_matrix.ViewDeltaPsi(voila_file) as m:
                     lsv = m.lsv(lsv_id)
-
-                    return semicolon(lsv.high_probability_non_changing())
+                    if edge:
+                        edge_idx = _filter_edges(edge, lsv)
+                        if edge_idx is None:
+                            return ''
+                        else:
+                            return round(lsv.high_probability_non_changing()[edge_idx], SIG_FIGS)
+                    else:
+                        return (round(x, SIG_FIGS) for x in lsv.high_probability_non_changing())
 
             return f
 
