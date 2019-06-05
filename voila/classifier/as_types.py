@@ -352,10 +352,6 @@ class Graph:
         Remove any edges which are under a certain PSI value from the Graph
         :return:
         """
-        from functools import partial
-
-        if not self.config.decomplexify_psi_threshold:
-            return
         num_filtered = 0
         for i in range(len(self.edges) - 1, -1, -1):
             if self.edges[i].lsvs:
