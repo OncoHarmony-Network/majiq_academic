@@ -371,14 +371,14 @@ class Graph:
 
                 if self.config.decomplexify_psi_threshold and psi is not None and self.config.decomplexify_deltapsi_threshold and delta_psi is not None:
                     # if both filters applied, we only filter if both values are below the threshold
-                    if psi < self.config.decomplexify_psi_threshold and delta_psi < self.config.decomplexify_deltapsi_threshold:
+                    if psi < self.config.decomplexify_psi_threshold and delta_psi > self.config.decomplexify_deltapsi_threshold:
 
                         num_filtered += 1
                         del self.edges[i]
-                elif self.config.decomplexify_psi_threshold and psi is not None and psi < self.config.decomplexify_psi_threshold:
+                elif self.config.decomplexify_psi_threshold and psi is not None and psi > self.config.decomplexify_psi_threshold:
                     num_filtered += 1
                     del self.edges[i]
-                elif self.config.decomplexify_deltapsi_threshold and delta_psi is not None and delta_psi < self.config.decomplexify_deltapsi_threshold:
+                elif self.config.decomplexify_deltapsi_threshold and delta_psi is not None and delta_psi > self.config.decomplexify_deltapsi_threshold:
                     num_filtered += 1
                     del self.edges[i]
 
@@ -1328,8 +1328,8 @@ class Graph:
                     ret.append(region)
                 return ret, False, len(ret)
 
-            #print('---------------------------', self.idx, '--------------------------------')
-            #print(self.nodes)
+            # print('---------------------------', self.idx, '--------------------------------')
+            # print(self.nodes)
             as_type_dict = {
                 # 'alt_downstream': self.alternate_downstream,
                 # 'alt_upstream': self.alternate_upstream,
