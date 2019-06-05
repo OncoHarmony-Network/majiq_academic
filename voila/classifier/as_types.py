@@ -48,6 +48,10 @@ class Printable_Event:
         return '{}-{}'.format(getattr(self, 'untrimmed_start', self.start),
                               getattr(self, 'untrimmed_end', self.end))
 
+    # def untrimmed_range_str(self):
+    #     return '{}-{}'.format(getattr(self, 'untrimmed_start', self.start),
+    #                           getattr(self, 'untrimmed_end', self.end))
+
 class Graph:
     def __init__(self, gene_id):
         """
@@ -130,6 +134,8 @@ class Graph:
             return '<{} {} ({}),{} ({})>'.format(self.__class__.__name__, self.start,
                                                  getattr(self, 'untrimmed_start', self.start),
                                                  self.end, getattr(self, 'untrimmed_end', self.end))
+
+
 
 
         @property
@@ -372,7 +378,6 @@ class Graph:
                 if self.config.decomplexify_psi_threshold and psi is not None and self.config.decomplexify_deltapsi_threshold and delta_psi is not None:
                     # if both filters applied, we only filter if both values are below the threshold
                     if psi < self.config.decomplexify_psi_threshold and delta_psi > self.config.decomplexify_deltapsi_threshold:
-
                         num_filtered += 1
                         del self.edges[i]
                 elif self.config.decomplexify_psi_threshold and psi is not None and psi > self.config.decomplexify_psi_threshold:

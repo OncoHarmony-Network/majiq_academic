@@ -229,13 +229,6 @@ class TsvWriter:
 
         return tmp
 
-    def quantification_functions(self):
-        """
-
-        :return:
-        """
-
-
     @property
     def quantification_headers(self):
         return list(self.quantifications_int.keys())
@@ -261,38 +254,48 @@ class TsvWriter:
             if os.path.exists(path):
                 os.remove(path)
 
-    @staticmethod
-    def parity2lsv(module, parity):
+    def parity2lsv(self, module, parity, edge=None, node=None):
+
         if parity == 's':
             lsvs = module.source_lsv_ids
+            if edge or node:
+                if not node:
+                    node = self.graph.start_node(edge)
+                lsvs = set(filter(lambda lsv: lsv.endswith(node.range_str()), lsvs))
+
         elif parity == 't':
             lsvs = module.target_lsv_ids
+            if edge or node:
+                if not node:
+                    node = self.graph.end_node(edge)
+                lsvs = set(filter(lambda lsv: lsv.endswith(node.range_str()), lsvs))
         else:
             lsvs = module.target_lsv_ids.union(module.source_lsv_ids)
         return lsvs
 
-    def common_data(self, module, parity=None, edge=None):
+    def common_data(self, module, parity=None, edge=None, node=None):
         """
         Extract the certain cols from the CSV which are generally similar across all outputs,
 
         """
-        lsvs = self.parity2lsv(module, parity)
+        lsvs = self.parity2lsv(module, parity, edge, node)
 
         return ["%s_%d" % (self.gene_id, module.idx), self.gene_id, self.graph.gene_name,
                 self.graph.chromosome, self.graph.strand, semicolon(lsvs)]
 
-    def quantifications(self, module, parity=None, edge=None):
+    def quantifications(self, module, parity=None, edge=None, lsv_edge=None):
 
-        lsvs = self.parity2lsv(module, parity)
+        if lsv_edge:
+            lsvs = self.parity2lsv(module, parity, edge)
+        else:
+            lsvs = self.parity2lsv(module, parity)
 
 
-
-        quantification_vals = []
+        out = []
 
         for field in self.quantifications_int:
-
+            quantification_vals = []
             for lsv_id in lsvs:
-
                 try:
 
                     #print(self.quantifications_int[field](lsv_id, edge))
@@ -300,10 +303,11 @@ class TsvWriter:
                 except (GeneIdNotFoundInVoilaFile, LsvIdNotFoundInVoilaFile) as e:
                     quantification_vals.append('')
                     #print(e)
+            out.append(semicolon(quantification_vals))
 
         #print(quantification_vals)
 
-        return quantification_vals
+        return out
 
         # for i, voila_file in enumerate(self.config.voila_files):
         #     try:
@@ -415,24 +419,24 @@ class TsvWriter:
                 if not _complex or self.config.output_complex:
                     for event in events:
                         if event['event'] == 'cassette_exon':
-                            src_common = self.common_data(module, 's')
-                            trg_common = self.common_data(module, 't')
+                            src_common = self.common_data(module, 's', event['C1'])
+                            trg_common = self.common_data(module, 't', event['C2'])
 
                             row = [event['C1'].range_str(), 'C2', event['C2'].range_str(), 'C1_C2',
                                    event['Skip'].range_str()]
-                            writer.writerow(src_common + row + self.quantifications(module, 's', event['Skip']))
+                            writer.writerow(src_common + row + self.quantifications(module, 's', event['Skip'], event['Skip']))
 
                             row = [event['C1'].range_str(), 'A', event['A'].range_str(), 'C1_A',
                                    event['Include1'].range_str()]
-                            writer.writerow(src_common + row + self.quantifications(module, 's', event['Include1']))
+                            writer.writerow(src_common + row + self.quantifications(module, 's', event['Include1'], event['Include1']))
 
                             row = [event['C2'].range_str(), 'C1', event['C1'].range_str(), 'C2_C1',
                                    event['Skip'].range_str()]
-                            writer.writerow(trg_common + row + self.quantifications(module, 't', event['Skip']))
+                            writer.writerow(trg_common + row + self.quantifications(module, 't', event['Skip'], event['Skip']))
 
                             row = [event['C2'].range_str(), 'A', event['A'].range_str(), 'C2_A',
                                    event['Include2'].range_str()]
-                            writer.writerow(trg_common + row + self.quantifications(module, 't', event['Include2']))
+                            writer.writerow(trg_common + row + self.quantifications(module, 't', event['Include2'], event['Include2']))
 
     def alt3prime(self):
         with open(os.path.join(self.config.directory, 'alt3prime.tsv.%s' % self.pid), 'a', newline='') as csvfile:
@@ -442,8 +446,8 @@ class TsvWriter:
                 if not _complex or self.config.output_complex:
                     for event in events:
                         if event['event'] == 'alt3ss':
-                            src_common = self.common_data(module, 's')
-                            trg_common = self.common_data(module, 't')
+                            src_common = self.common_data(module, 's', node=event['E1'])
+                            trg_common = self.common_data(module, 't', node=event['E2'])
                             if src_common[5]:
                                 row = [event['E1'].range_str(), 'E2', event['E2'].range_str(), 'E1_E2_Proximal',
                                        event['Proximal'].range_str()]
@@ -467,8 +471,8 @@ class TsvWriter:
                 if not _complex or self.config.output_complex:
                     for event in events:
                         if event['event'] == 'alt5ss':
-                            src_common = self.common_data(module, 's')
-                            trg_common = self.common_data(module, 't')
+                            src_common = self.common_data(module, 's', node=event['E1'])
+                            trg_common = self.common_data(module, 't', node=event['E2'])
                             if src_common[5]:
                                 row = [event['E1'].range_str(), 'E2', event['E2'].range_str(), 'E1_E2_Proximal',
                                        event['Proximal'].range_str()]
@@ -524,20 +528,18 @@ class TsvWriter:
 
                             row = [event['C2'].range_str(), 'E2', event['A'].range_str(), 'E1_E2_Proximal',
                                    event['Include1'].range_str()]
-                            writer.writerow(src_common + row + self.quantifications(module, None, event['Include1']))
+                            writer.writerow(src_common + row + self.quantifications(module, 's', event['Include1']))
 
                             row = [event['C2'].range_str(), 'E3', event['C1'].range_str(), 'E1_E3_Distal',
                                    event['Skip'].range_str()]
-                            writer.writerow(src_common + row + self.quantifications(module, None, event['Skip']))
+                            writer.writerow(src_common + row + self.quantifications(module, 's', event['Skip']))
 
                             event['Include2'].junc['start'] += 1
                             event['Include2'].junc['end'] -= 1
 
                             row = [event['C1'].range_str(), 'E2', event['A'].range_str(), 'E3_E2_Intron',
                                    event['Include2'].range_str()]
-                            writer.writerow(trg_common + row + self.quantifications(module, None, event['Include2']))
-
-
+                            writer.writerow(trg_common + row + self.quantifications(module, 't', event['Include2']))
 
     def alt3and5prime(self):
         with open(os.path.join(self.config.directory, 'alt3and5prime.tsv.%s' % self.pid), 'a', newline='') as csvfile:
@@ -651,7 +653,7 @@ class TsvWriter:
                 if not _complex or self.config.output_complex:
                     for event in events:
                         if event['event'] == 'ale':
-                            src_common = self.common_data(module, 's')
+                            src_common = self.common_data(module, 's', node=event['Reference'])
                             trg_common = self.common_data(module, 't')
                             if src_common[5]:
                                 for junc in event['SkipA2']:
@@ -691,7 +693,7 @@ class TsvWriter:
                     for event in events:
                         if event['event'] == 'afe':
                             src_common = self.common_data(module, 's')
-                            trg_common = self.common_data(module, 't')
+                            trg_common = self.common_data(module, 't', node=event['Reference'])
                             if src_common[5]:
                                 for junc in event['SkipA2']:
                                     row = [event['Reference'].range_str(), 'A', event['Proximal'].range_str(),
@@ -787,8 +789,8 @@ class TsvWriter:
                 if not _complex or self.config.output_complex:
                     for event in events:
                         if event['event'] == 'tandem_cassette':
-                            src_common = self.common_data(module, 's')
-                            trg_common = self.common_data(module, 't')
+                            src_common = self.common_data(module, 's', node=event['C1'])
+                            trg_common = self.common_data(module, 't', node=event['C2'])
                             row = [event['C1'].range_str(), 'C2', event['C2'].range_str(),
                                    semicolon((x.range_str() for x in event['As'])), len(event['As']), 'C1_C2',
                                    semicolon((x.range_str() for x in event['Skip']))]
