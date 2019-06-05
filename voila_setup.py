@@ -11,7 +11,7 @@ from voila.constants import VERSION
 setup(
     name='voila',
     version=VERSION,
-    packages=['voila', 'voila.api', 'voila.view', 'voila.utils', 'voila.view'],
+    packages=['voila', 'voila.api', 'voila.view', 'voila.utils', 'voila.classifier'],
     install_requires=['Flask-WTF', 'Flask', 'h5py', 'scipy', 'waitress'],
     entry_points={'console_scripts': ['voila = voila.run_voila:main']},
     package_data={
