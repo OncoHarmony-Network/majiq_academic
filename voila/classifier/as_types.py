@@ -1307,6 +1307,14 @@ class Graph:
                     config = ClassifyConfig()
 
                     with SpliceGraph(config.splice_graph_file) as sg:
+                        if junc.ir:
+                            try:
+                                junc_reads = next(sg.intron_retention_reads_exp({'start': junc.start + 1, 'end': junc.end - 1,
+                                                                    'gene_id':self.graph.gene_id},
+                                                                     self.graph.experiment_names))['reads']
+                            except StopIteration:
+                                continue
+                        else:
                             try:
                                 junc_reads = next(sg.junction_reads_exp({'start': junc.start, 'end': junc.end,
                                                                     'gene_id':self.graph.gene_id},
@@ -1314,8 +1322,8 @@ class Graph:
                             except StopIteration:
                                 continue
 
-                            if junc_reads >= config.keep_constitutive:
-                                found.append({'event': 'constitutive', 'Junc': junc})
+                        if junc_reads >= config.keep_constitutive:
+                            found.append({'event': 'constitutive', 'Junc': junc})
 
             return found
 
