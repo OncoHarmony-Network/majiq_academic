@@ -283,13 +283,14 @@ class TsvWriter:
         return ["%s_%d" % (self.gene_id, module.idx), self.gene_id, self.graph.gene_name,
                 self.graph.chromosome, self.graph.strand, semicolon(lsvs)]
 
-    def quantifications(self, module, parity=None, edge=None, lsv_edge=None):
+    def quantifications(self, module, parity=None, edge=None, node=None):
+        """
+        Edge / Parity is used to find LSVs
+        Node is used to filter lsvs to specific node (the node that has THAT lsv)
+        :return:
+        """
 
-        if lsv_edge:
-            lsvs = self.parity2lsv(module, parity, edge)
-        else:
-            lsvs = self.parity2lsv(module, parity)
-
+        lsvs = self.parity2lsv(module, parity, node=node)
 
         out = []
 
@@ -305,60 +306,9 @@ class TsvWriter:
                     #print(e)
             out.append(semicolon(quantification_vals))
 
-        #print(quantification_vals)
 
         return out
 
-        # for i, voila_file in enumerate(self.config.voila_files):
-        #     try:
-        #         with Matrix(voila_file) as m:
-        #             analysis_type = m.analysis_type
-        #             means = []
-        #             vars = []
-        #             for lsv_id in lsvs:
-        #                 if analysis_type == constants.ANALYSIS_PSI:
-        #                     lsv = m.psi(lsv_id)
-        #                 else:
-        #                     lsv = m.delta_psi(lsv_id)
-        #
-        #                 if edge:
-        #                     if type(edge) != list:
-        #                         edge = [edge]
-        #                     for _edge in edge:
-        #                         # loop through junctions to find one matching range of edge
-        #                         for j, junc in enumerate(lsv.get('junctions')):
-        #                             if junc[0] == _edge.start and junc[1] == _edge.end:
-        #                                 if analysis_type == constants.ANALYSIS_PSI:
-        #                                     means.append(lsv.get('means')[j])
-        #                                     #vars.append(generate_variances([lsv.get('bins')[i]])[0])
-        #                                     vars.append('')
-        #                                 else:
-        #                                     for mean in lsv.get('group_means'):
-        #                                         means.append(mean)
-        #                                     vars.append(lsv.get('bins'))
-        #                                 break
-        #                         else:
-        #                             # junction not quantified by majiq
-        #                             pass
-        #                 else:
-        #                     if analysis_type == constants.ANALYSIS_PSI:
-        #                         means += list(lsv.get('means'))
-        #                         vars += list(generate_variances(lsv.get('bins')))
-        #                     else:
-        #                         for mean in lsv.get('group_means'):
-        #                             means.append(mean)
-        #                         vars += list(lsv.get('bins'))
-        #
-        #         quantification_fields.append(semicolon(means))
-        #
-        #         quantification_fields.append(semicolon(vars))
-        #     except (GeneIdNotFoundInVoilaFile, LsvIdNotFoundInVoilaFile):
-        #
-        #         quantification_fields.append('')
-        #
-        #         quantification_fields.append('')
-        #
-        # return quantification_fields
 
     def start_headers(self, headers, filename):
         """
@@ -424,19 +374,19 @@ class TsvWriter:
 
                             row = [event['C1'].range_str(), 'C2', event['C2'].range_str(), 'C1_C2',
                                    event['Skip'].range_str()]
-                            writer.writerow(src_common + row + self.quantifications(module, 's', event['Skip'], event['Skip']))
+                            writer.writerow(src_common + row + self.quantifications(module, 's', event['Skip'], event['C1']))
 
                             row = [event['C1'].range_str(), 'A', event['A'].range_str(), 'C1_A',
                                    event['Include1'].range_str()]
-                            writer.writerow(src_common + row + self.quantifications(module, 's', event['Include1'], event['Include1']))
+                            writer.writerow(src_common + row + self.quantifications(module, 's', event['Include1'], event['C1']))
 
                             row = [event['C2'].range_str(), 'C1', event['C1'].range_str(), 'C2_C1',
                                    event['Skip'].range_str()]
-                            writer.writerow(trg_common + row + self.quantifications(module, 't', event['Skip'], event['Skip']))
+                            writer.writerow(trg_common + row + self.quantifications(module, 't', event['Skip'], event['C2']))
 
                             row = [event['C2'].range_str(), 'A', event['A'].range_str(), 'C2_A',
                                    event['Include2'].range_str()]
-                            writer.writerow(trg_common + row + self.quantifications(module, 't', event['Include2'], event['Include2']))
+                            writer.writerow(trg_common + row + self.quantifications(module, 't', event['Include2'], event['C2']))
 
     def alt3prime(self):
         with open(os.path.join(self.config.directory, 'alt3prime.tsv.%s' % self.pid), 'a', newline='') as csvfile:
@@ -771,7 +721,7 @@ class TsvWriter:
                             row = [event['C1'].range_str(), 'A1', event['As'][0].range_str(),
                                    semicolon((x.range_str() for x in event['As'])), len(event['As']), 'C1_A',
                                    semicolon((x.range_str() for x in event['Include1']))]
-                            writer.writerow(src_common + row + self.quantifications(module, 's'))
+                            writer.writerow(src_common + row + self.quantifications(module, 's')), event['C1']
                             row = [event['C2'].range_str(), 'C1', event['C1'].range_str(),
                                    semicolon((x.range_str() for x in event['As'])), len(event['As']), 'C2_C1',
                                    semicolon((x.range_str() for x in event['Skip']))]
@@ -794,19 +744,19 @@ class TsvWriter:
                             row = [event['C1'].range_str(), 'C2', event['C2'].range_str(),
                                    semicolon((x.range_str() for x in event['As'])), len(event['As']), 'C1_C2',
                                    semicolon((x.range_str() for x in event['Skip']))]
-                            writer.writerow(src_common + row + self.quantifications(module, 's', event['Skip'][0]))
+                            writer.writerow(src_common + row + self.quantifications(module, 's', event['Skip'][0], event['C1']))
                             row = [event['C1'].range_str(), 'A1', event['As'][0].range_str(),
                                    semicolon((x.range_str() for x in event['As'])), len(event['As']), 'C1_A',
                                    semicolon((x.range_str() for x in event['Include1']))]
-                            writer.writerow(src_common + row + self.quantifications(module, 's', event['Include1'][0]))
+                            writer.writerow(src_common + row + self.quantifications(module, 's', event['Include1'][0], event['C1']))
                             row = [event['C2'].range_str(), 'C1', event['C1'].range_str(),
                                    semicolon((x.range_str() for x in event['As'])), len(event['As']), 'C2_C1',
                                    semicolon((x.range_str() for x in event['Skip']))]
-                            writer.writerow(trg_common + row + self.quantifications(module, 't', event['Skip'][0]))
+                            writer.writerow(trg_common + row + self.quantifications(module, 't', event['Skip'][0], event['C2']))
                             row = [event['C2'].range_str(), 'A_Last', event['As'][-1].range_str(),
                                    semicolon((x.range_str() for x in event['As'])), len(event['As']), 'A_Last_C2',
                                    semicolon((x.range_str() for x in event['Include2']))]
-                            writer.writerow(trg_common + row + self.quantifications(module, 't', event['Include2'][0]))
+                            writer.writerow(trg_common + row + self.quantifications(module, 't', event['Include2'][0], event['C2']))
 
     def exitron(self):
         with open(os.path.join(self.config.directory, 'exitron.tsv.%s' % self.pid), 'a', newline='') as csvfile:

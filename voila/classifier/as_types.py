@@ -513,7 +513,7 @@ class Graph:
             if trim_end:
                 node.exon['end'] = global_max
 
-            if not self.config.untrimmed_exons:
+            if self.config.untrimmed_exons:
                 node.untrimmed_start = node.start
                 node.untrimmed_end = node.end
 
