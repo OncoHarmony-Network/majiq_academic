@@ -746,7 +746,6 @@ class Graph:
 
             self.nodes = nodes  # subset of nodes for this module
             self.graph = graph
-            self.Filters.strand = graph.strand
             self.source_lsv_ids, self.target_lsv_ids = self.get_lsv_ids()
             self.p_multi_gene_regions = []  # meta event
 
@@ -791,32 +790,10 @@ class Graph:
             """
 
             """
-            if self.Filters.strand == '+':
+            if self.graph.strand == '+':
                 return case_plus
             else:
                 return case_minus
-
-        def alternate_downstream(self):
-            """
-            Check if alternate downstream occurs in this module.
-            :return: boolean
-            """
-
-            # for node in self.nodes[:-1]:
-            #     for e1, e2 in combinations(node.edges, 2):
-            #         if e1.start == e2.start and e1.end != e2.end:
-            #             return True
-
-        def alternate_upstream(self):
-            """
-            Check if alternate upstream occurs in this module.
-            :return: boolean
-            """
-
-            # for node in self.nodes[:-1]:
-            #     for e1, e2 in combinations(node.edges, 2):
-            #         if e1.end == e2.end and e1.start != e2.start:
-            #             return True
 
         def cassette_exon(self):
             """
@@ -982,10 +959,6 @@ class Graph:
             """
             found = []
 
-            #b = self.Filters.target_source_psi
-            #s = self.Filters.source_psi
-            #t = self.Filters.target_psi
-
             for n1, n2 in combinations(self.nodes, 2):
                 fwd_connects = n1.connects(n2, only_ir=True)
                 for edge in fwd_connects:
@@ -993,11 +966,6 @@ class Graph:
                         spliced = n1.connects(n2)
                         found.append({'event': 'intron_retention', 'C1': n1, 'C2': n2,
                                       'Intron': edge, 'Spliced': spliced})
-                # bkd_connects = n2.connects(n1)
-                # for edge in bkd_connects:
-                #     if edge.ir:
-                #         found.append({'event': 'intron_retention', 'C1': n1, 'C2': n2,
-                #                       'Intron': edge})
 
             return found
 
@@ -1065,7 +1033,7 @@ class Graph:
 
                 skips = n1.connects(n3)
 
-                if self.Filters.strand == '+':
+                if self.graph.strand == '+':
                     # iterate all nodes in between to check if they all connect with introns
 
                     include2s = n2.connects(n3)
@@ -1113,7 +1081,7 @@ class Graph:
 
                 skips = n1.connects(n3)
 
-                if self.Filters.strand == '+':
+                if self.graph.strand == '+':
                     include1s = n1.connects(n2)
                     include2s = n2.connects(n3, only_ir=True)
 
@@ -1215,7 +1183,7 @@ class Graph:
                 for other_node in self.nodes:
                     connections = node.connects(other_node, ir=True) + other_node.connects(node, ir=True)
                     if connections:
-                        if self.Filters.strand == '+':
+                        if self.graph.strand == '+':
                             if node == self.nodes[0]:
 
                                 break
@@ -1228,7 +1196,7 @@ class Graph:
                             if other_node.start > node.start:
                                 break
                 else:
-                    if self.Filters.strand == '+':
+                    if self.graph.strand == '+':
                         a1 = self.nodes[0]
                         c1 = self.nodes[-1]
                     else:
@@ -1256,7 +1224,7 @@ class Graph:
                     connections = node.connects(other_node, ir=True) + other_node.connects(node, ir=True)
 
                     if connections:
-                        if self.Filters.strand == '+':
+                        if self.graph.strand == '+':
                             if node == self.nodes[-1]:
                                 break
                             if other_node.start > node.start:
@@ -1267,7 +1235,7 @@ class Graph:
                             if other_node.start < node.start:
                                 break
                 else:
-                    if self.Filters.strand == '+':
+                    if self.graph.strand == '+':
                         a2 = self.nodes[-1]
                         c1 = self.nodes[0]
                     else:
@@ -1428,68 +1396,6 @@ class Graph:
                 ret = []
 
             return ret, complex, total_events
-
-
-
-        class Filters:
-            """
-            Class to act as Namespace to hold filter methods.
-            """
-            rev_map = {':t:': ':s:', ':s:': ':t:'}
-
-            @classmethod
-            def strand_select(cls, lsv_str):
-                """
-                For some reason, the way it is designed, the sources and targets are reversed for - strands compared
-                to + strands. I am guessing this may eventually be more complicated, where I would not be able to
-                do a simple reversal like here, but currently it works correctly.
-                :param lsv_str:
-                :return:
-                """
-                if cls.strand == '+':
-                    return lsv_str
-                else:
-                    return cls.rev_map[lsv_str]
-
-            @classmethod
-            def target_source_psi(cls, edges):
-                """
-                Returns edge if it contains junctions that have target and source psi values that pass threshold.
-                :param edges: list of edges
-                :return: filtered list of edges
-                """
-
-                if PSI_THRESHOLD:
-                    return cls.target_psi(cls.source_psi(edges))
-                else:
-                    return edges
-
-            @classmethod
-            def target_psi(cls, edges):
-                """
-                Returns edge if it contains junctions that have target psi values that pass threshold.
-                :param edges: list of edges
-                :return: filtered list of edges
-                """
-
-                for edge in edges:
-                    target_ids = (l for l in edge.lsvs if cls.strand_select(':t:') in l)
-                    #print([x for x in target_ids])
-                    if any(p >= PSI_THRESHOLD for l in target_ids for p in edge.lsvs[l]['psi']):
-                        yield edge
-
-            @classmethod
-            def source_psi(cls, edges):
-                """
-                Returns edge if it contains junctions that have source psi values that pass threshold.
-                :param edges: list of edges
-                :return: filtered list of edges
-                """
-
-                for edge in edges:
-                    source_ids = (l for l in edge.lsvs if cls.strand_select(':s:') in l)
-                    if any(p >= PSI_THRESHOLD for l in source_ids for p in edge.lsvs[l]['psi']):
-                        yield edge
 
 
 
