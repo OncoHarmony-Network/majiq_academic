@@ -43,7 +43,7 @@ cdef parse_dpsi_reads(map[string, qLSV*] lsv_map, list files1, list files2, int 
         dpsiObj.add_condition2()
 
 
-cdef void _core_deltapsi(object self):
+cdef int _core_deltapsi(object self) except -1:
 
     cdef dict junc_info = {}
     cdef dict lsv_type_dict = {}
@@ -107,7 +107,7 @@ cdef void _core_deltapsi(object self):
     nlsv = len(list_of_lsv)
     if nlsv == 0:
         logger.info("There is no LSVs that passes the filters")
-        return
+        return 0
 
 
     for lsv in list_of_lsv:

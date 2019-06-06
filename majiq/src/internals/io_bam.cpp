@@ -104,7 +104,7 @@ namespace io_bam {
 
         bool new_j = false ;
         float * v ;
-        #pragma omp critical
+        omp_set_lock(&map_lck_) ;
         {
             if (junc_map.count(key) == 0 ) {
                 junc_map[key] = junc_vec.size() ;
@@ -115,6 +115,8 @@ namespace io_bam {
                 v = junc_vec[junc_map[key]] ;
             }
         }
+        omp_unset_lock(&map_lck_) ;
+
         if (new_j) {
             find_junction_genes(chrom, strand, start, end, v) ;
         }
@@ -216,17 +218,13 @@ namespace io_bam {
                     }
                 }
                 if (!junc_found){
-
-
-                    #pragma omp critical
+                  #pragma omp critical
                         intron->add_read(read_pos, eff_len_, 1) ;
                 }
             }
         }
-
         return 0 ;
     }
-
 
 
     int IOBam::ParseJunctionsFromFile(bool ir_func){
@@ -386,9 +384,11 @@ namespace io_bam {
     }
 
 
-    void IOBam::parseJuncEntry(map<string, vector<overGene*>> & glist, string chrom, char strand, int start, int end,
-                               int sreads, vector<Gene*>& oGeneList, bool ir, vector<float>& ircov,
-                               float min_intron_cov, float min_bins, int minexp, bool reset){
+    void IOBam::parseJuncEntry(map<string, vector<overGene*>> & glist, string gid, string chrom, char strand,
+                               int start, int end, unsigned int sreads, unsigned int minreads_t, unsigned int npos,
+                               unsigned int minpos_t, unsigned int denovo_t, bool denovo, vector<Gene*>& oGeneList,
+                               bool ir, vector<float>& ircov, float min_intron_cov, float min_bins, int minexp,
+                               bool reset){
 
         vector<overGene*>::iterator low = lower_bound (glist[chrom].begin(), glist[chrom].end(),
                                                        start, _Region::func_comp ) ;
@@ -396,26 +396,35 @@ namespace io_bam {
             return ;
         if (ir){
             for (const auto &gObj: (*low)->glist){
+                if (gObj->get_id() != gid) continue ;
                 Intron * irptr = new Intron(start, end, false, gObj, simpl_) ;
                 irptr->add_read_rates_buff(ircov.size()) ;
                 irptr->initReadCovFromVector(ircov) ;
 
                 const string key = irptr->get_key(gObj) ;
-                #pragma omp critical
+                omp_set_lock(&map_lck_) ;
                 {
                     if (junc_map.count(key) == 0) {
                         junc_map[key] = junc_vec.size() ;
                         junc_vec.push_back(irptr->read_rates_) ;
-                        (irptr->get_gene())->add_intron(irptr, min_intron_cov, minexp, min_bins, reset) ;
+                        gObj->add_intron(irptr, min_intron_cov, minexp, min_bins, reset) ;
                     }
                 }
-
+                omp_unset_lock(&map_lck_) ;
             }
         } else {
+            string key = to_string(start) + "-" + to_string(end) ;
+            add_junction(chrom, strand, start, end, 0, 0, sreads) ;
             for (const auto &gObj: (*low)->glist){
-                const bool stbool = (strand == '.' || strand == gObj->get_strand()) ;
-                add_junction(chrom, strand, start, end, 0, 0, sreads) ;
+                gObj->updateFlagsFromJunc(key, sreads, minreads_t, npos, minpos_t, denovo_t, denovo, minexp, reset) ;
+
+//                if (gObj->junc_map_.count(key) > 0){
+//                    Junction * jnc = gObj->junc_map_[key] ;
+//                    jnc->update_flags(sreads, minreads_t, npos, minpos_t, denovo_t, minexp, denovo) ;
+//                    jnc->clear_nreads(reset) ;
+//                }
             }
+
         }
         return ;
 

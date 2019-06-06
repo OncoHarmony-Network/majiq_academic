@@ -1,5 +1,5 @@
 import os
-VERSION = '2.0'
+VERSION = '2.1'
 
 JUNC_FILE_FORMAT = 'sj'
 SEQ_FILE_FORMAT = 'bam'

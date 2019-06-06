@@ -205,6 +205,7 @@ cdef int _output_majiq_file(vector[LSV*] lsvlist, map[string, overGene_vect_t] g
 
     return nlsv
 
+
 cdef _parse_junction_file(tuple filetp, map[string, Gene*]& gene_map, vector[string] gid_vec,
                           map[string, overGene_vect_t] gene_list, int min_experiments, bint reset, object conf,
                           object logger):
@@ -212,6 +213,7 @@ cdef _parse_junction_file(tuple filetp, map[string, Gene*]& gene_map, vector[str
     cdef int nthreads = conf.nthreads
     cdef int strandness = conf.strand_specific[filetp[0]]
     cdef unsigned int minreads = conf.minreads
+    cdef unsigned int minpos   = conf.minpos
     cdef unsigned int denovo_thresh= conf.min_denovo
     cdef bint denovo = conf.denovo
     cdef IOBam c_iobam
@@ -253,21 +255,24 @@ cdef _parse_junction_file(tuple filetp, map[string, Gene*]& gene_map, vector[str
             irbool  = junc_ids[j][5]
             chrom   = jid.split(b':')[0]
             strand  = <char> jid.split(b':')[1][0]
-
-            if irbool and not ir :
+            gid     = b'.'
+            if irbool == 1 and not ir :
                 continue
-            elif ir and irbool:
+            elif ir and irbool == 1:
+                gid = b':'.join(jid.split(b':')[3:])
                 ir_vec = vector[np.float32_t](eff_len)
                 for i in range(eff_len):
                     ir_vec[i] = ir_cov[j - jlimit][i]
 
-        c_iobam.parseJuncEntry(gene_list, chrom, strand, coord1, coord2, sreads, gene_l, irbool, ir_vec, min_ir_cov,
-                               ir_numbins, min_experiments, reset)
+                # logger.info("IR VEC: %s %s" %(eff_len, ir_vec.size()))
+        c_iobam.parseJuncEntry(gene_list, gid, chrom, strand, coord1, coord2, sreads, minreads, npos, minpos,
+                               denovo_thresh, denovo, gene_l, irbool==1, ir_vec, min_ir_cov, ir_numbins,
+                               min_experiments, reset)
 
 
-    for i in prange(n, nogil=True, num_threads=nthreads):
-        gg = gene_map[gid_vec[i]]
-        gg.update_junc_flags(1, reset, minreads, 0, denovo_thresh, min_experiments, denovo)
+    # for i in prange(n, nogil=True, num_threads=nthreads):
+    #     gg = gene_map[gid_vec[i]]
+    #     gg.update_junc_flags(1, reset, minreads, 0, denovo_thresh, min_experiments, denovo)
 
     c_iobam.free_iobam()
     logger.info('Done Reading file %s' %(filetp[0]))
@@ -317,7 +322,6 @@ cdef _find_junctions(list file_list, map[string, Gene*]& gene_map, vector[string
         logger.info('Group %s, number of experiments: %s, minexperiments: %s' % (tmp_str,
                                                                                   len(group_list), min_experiments))
         for j in group_list:
-            print(file_list[j])
             if file_list[j][2]:
                 logger.info('Reading %s file %s' %(JUNC_FILE_FORMAT, file_list[j][0]))
                 _parse_junction_file(file_list[j], gene_map, gid_vec,gene_list, min_experiments, (j==last_it_grp),
@@ -354,7 +358,6 @@ cdef _find_junctions(list file_list, map[string, Gene*]& gene_map, vector[string
                     jlimit = c_iobam.get_junc_limit_index()
 
                 ir_raw_cov = np.zeros(shape=(njunc - jlimit, eff_len), dtype=np.float32)
-                logger.info(" KKK %s %s" % (jlimit, njunc))
                 if ir:
                     with nogil:
                         c_iobam.get_intron_raw_cov(<np.float32_t *> ir_raw_cov.data)
@@ -366,7 +369,6 @@ cdef _find_junctions(list file_list, map[string, Gene*]& gene_map, vector[string
 
                 logger.debug("Done Update flags")
                 junc_ids = [0] * njunc
-                # ir_raw_cov = [0] * (njunc - jlimit)
                 for it in j_ids:
                     tmp_str = it.first.decode('utf-8').split(':')[2]
                     start, end = (int(xx) for xx in tmp_str.split('-'))
@@ -374,16 +376,12 @@ cdef _find_junctions(list file_list, map[string, Gene*]& gene_map, vector[string
                                            int(it.second>= jlimit))
 
                 logger.info('Done Reading file %s' %(file_list[j][0]))
-
-                logger.info('Done Reading file %s %s %s' %(file_list[j][0], ir_raw_cov.shape[0], ir_raw_cov.shape[1]))
-
                 dt = np.dtype('|S250, |S25, u4')
                 meta = np.array([(file_list[j][0], VERSION, jlimit)], dtype=dt)
                 _store_junc_file(boots, ir_raw_cov, junc_ids, file_list[j][0], meta, conf.outDir)
                 c_iobam.free_iobam()
                 del boots
                 del ir_raw_cov
-                logger.info(' 22 Done Reading file %s' %(file_list[j][0]))
 
 
 cdef init_splicegraph(string filename, object conf):
@@ -612,7 +610,7 @@ class Builder(BasicPipeline):
 
     def builder(self, majiq_config):
 
-        logger = majiq_logger.get_logger("%s/majiq.log" % majiq_config.outDir, silent=False, debug=self.debug)
+        logger = majiq_logger.get_logger("%s/majiq.log" % majiq_config.outDir, silent=self.silent, debug=self.debug)
         logger.info("Majiq Build v%s-%s" % (VERSION, get_git_version()))
         logger.info("Command: %s" % " ".join(sys.argv))
 

@@ -170,7 +170,7 @@ void get_samples_from_psi2(vector<psi_distr_t>& i_psi, float* osamps, float* o_m
 void test_calc(vector<psi_distr_t>& oPvals, HetStats* HetStatsObj, hetLSV* lsvObj, int psamples, float quant) ;
 void get_psi_border(psi_distr_t& psi_border, int nbins) ;
 
-void adjustdelta(psi_distr_t& o_mixtpdf, psi_distr_t& emp_dpsi, int num_iter, int nbins) ;
+int adjustdelta(psi_distr_t& o_mixtpdf, psi_distr_t& emp_dpsi, int num_iter, int nbins) ;
 pair<float, float> calculate_beta_params(float mean, float vari) ;
 void calc_mixture_pdf(psi_distr_t& o_mixpdf, vector<pair<float, float>>& beta_param, psi_distr_t& pmix,
                       psi_distr_t& psi_border, int nbins) ;
