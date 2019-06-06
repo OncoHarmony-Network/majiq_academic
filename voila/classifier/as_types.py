@@ -82,12 +82,10 @@ class Graph:
                 raise VoilaException("Gene ID not found in SpliceGraph File: %s" % self.gene_id)
             self.strand, self.gene_name, self.chromosome = itemgetter('strand', 'name', 'chromosome')(gene_meta)
 
-        # supporting both PSI and dPSI ; the goal is to filter out junctions derived from each input file
-        #
-        for voila_file in self.config.voila_files:
-            self._add_matrix_values(voila_file)
 
-        self._decomplexify()
+
+
+
 
         # find connections between nodes
         self._find_connections()
@@ -358,6 +356,10 @@ class Graph:
         Remove any edges which are under a certain PSI value from the Graph
         :return:
         """
+        for voila_file in self.config.voila_files:
+            self._add_matrix_values(voila_file)
+
+
         num_filtered = 0
         for i in range(len(self.edges) - 1, -1, -1):
             if self.edges[i].lsvs:
@@ -389,6 +391,13 @@ class Graph:
 
 
         voila_log().debug("Decomplexifier removed %d junction(s)" % num_filtered)
+
+    def _remove_empty_exons(self):
+        """
+        Remove exons / nodes wiht no junctions
+        """
+        self.nodes[:] = [x for x in self.nodes if
+                         any(self.in_exon(x, edge.end) or self.in_exon(x, edge.start) for edge in self.edges)]
 
 
 
@@ -427,8 +436,12 @@ class Graph:
         # remove exons that don't have any junctions
         # this is done by looking at the start and end of each junction and seeing if any of those ends
         # fall inside of each node
-        self.nodes[:] = [x for x in self.nodes if any(self.in_exon(x, edge.end) or self.in_exon(x, edge.start) for edge in self.edges)]
+
+
+        self._decomplexify()
+        self._remove_empty_exons()
         self._trim_exons()
+
 
         self.edges.sort()
         self.nodes.sort()
