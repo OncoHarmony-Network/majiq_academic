@@ -57,7 +57,7 @@ expected_modules = {
             "p_ale": "",
             "p_afe": "",
             "multi_exon_spanning": "2",
-            "alternative_intron": "2",
+            "alternative_intron": "1",
             "complex": "True"
         }
     ],
@@ -339,7 +339,7 @@ expected_modules = {
             "p_ale": "",
             "p_afe": "",
             "multi_exon_spanning": "1",
-            "alternative_intron": "2",
+            "alternative_intron": "1",
             "complex": "True"
         },
         {

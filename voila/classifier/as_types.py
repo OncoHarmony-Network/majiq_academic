@@ -955,7 +955,6 @@ class Graph:
         def alternative_intron(self):
             """
             Check if intron retention occurs in this module.
-            :return: boolean
             """
             found = []
 
@@ -963,8 +962,26 @@ class Graph:
                 fwd_connects = n1.connects(n2, only_ir=True)
                 for edge in fwd_connects:
                     if edge.ir:
-                        spliced = n1.connects(n2)
-                        found.append({'event': 'alternative_intron', 'C1': n1, 'C2': n2,
+                        if len(n1.edges) > 1 or len(n2.back_edges) > 1:
+                            spliced = n1.connects(n2)
+                            found.append({'event': 'alternative_intron', 'C1': n1, 'C2': n2,
+                                          'Intron': edge, 'Spliced': spliced})
+
+            return found
+
+        def constitutive_intron(self):
+            """
+            Check if intron retention occurs in this module.
+            """
+            found = []
+
+            for n1, n2 in combinations(self.nodes, 2):
+                fwd_connects = n1.connects(n2, only_ir=True)
+                for edge in fwd_connects:
+                    if edge.ir:
+                        if len(n1.edges) == 1 and len(n2.back_edges) == 1:
+                            spliced = n1.connects(n2)
+                            found.append({'event': 'constitutive_intron', 'C1': n1, 'C2': n2,
                                       'Intron': edge, 'Spliced': spliced})
 
             return found
@@ -1351,6 +1368,7 @@ class Graph:
             }
             if ClassifyConfig().keep_constitutive:
                 as_type_dict['constitutive'] = self.constitutive
+                as_type_dict['constitutive_intron'] = self.constitutive_intron
             event_counts = {
                 'cassette_exon': 0,
                 'mutually_exclusive': 0,
@@ -1368,7 +1386,8 @@ class Graph:
                 'tandem_cassette': 0,
                 'orphan_junction': 0,
                 'exitron': 0,
-                'constitutive': 0
+                'constitutive': 0,
+                'constitutive_intron': 0
             }
 
             complex = False
@@ -1381,7 +1400,7 @@ class Graph:
                 event_counts[e['event']] += 1
 
             total_events = sum(event_counts.values())
-            check_events = total_events - event_counts['constitutive']
+            check_events = total_events - event_counts['constitutive'] - event_counts['constitutive_intron']
 
             if check_events == 2 and event_counts['multi_exon_spanning'] == 1 and \
                     event_counts['tandem_cassette'] == 1:
