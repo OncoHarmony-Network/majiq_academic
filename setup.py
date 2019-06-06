@@ -41,7 +41,7 @@ class InstallCommand(install):
         # print(user_options)
         if(self.voila_only):
 
-            self.distribution.packages = ['voila', 'voila.api', 'voila.view', 'voila.utils', 'voila.view']
+            self.distribution.packages = ['voila', 'voila.api', 'voila.view', 'voila.utils', 'voila.classifier']
         else:
             extensions = []
             HTSLIB_LIBRARY = ['hts', 'z']
