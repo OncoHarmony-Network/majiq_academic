@@ -24,7 +24,7 @@ summaryVars2Headers = {
     'p_alt5ss': 'P_Alt 5',
     'alt3and5ss': 'Alt 3 and Alt 5',
     'mutually_exclusive': 'MXE',
-    'intron_retention': 'Intron Retention',
+    'alternative_intron': 'Intron Retention',
     'ale': 'ALE',
     'afe': 'AFE',
     'p_ale': 'P_ALE',
@@ -240,7 +240,7 @@ class TsvWriter:
             return ['p_multi_gene_region.tsv']
         names = ['summary.tsv', 'cassette.tsv', 'alt3prime.tsv', 'alt5prime.tsv', 'alt3and5prime.tsv',
                  'mutually_exclusive.tsv', 'alternate_last_exon.tsv', 'alternate_first_exon.tsv',
-                 'intron_retention.tsv', 'p_alt5prime.tsv', 'p_alt3prime.tsv', 'multi_exon_spanning.tsv',
+                 'alternative_intron.tsv', 'p_alt5prime.tsv', 'p_alt3prime.tsv', 'multi_exon_spanning.tsv',
                  'tandem_cassette.tsv', 'exitron.tsv']
         if ClassifyConfig().keep_constitutive:
             names.append('constitutive.tsv')
@@ -340,7 +340,7 @@ class TsvWriter:
         self.start_headers(headers, 'mutually_exclusive.tsv')
         self.start_headers(headers, 'alternate_last_exon.tsv')
         self.start_headers(headers, 'alternate_first_exon.tsv')
-        self.start_headers(headers, 'intron_retention.tsv')
+        self.start_headers(headers, 'alternative_intron.tsv')
         headers = self.common_headers + ['Reference Exon Coordinate', 'Exon Spliced With',
                                          'Exon Spliced With Coordinate', 'Tandem Exon Coordinates', 'Num_Tandem_Exons',
                                          'Junction Name', 'Junction Coordinate'] + self.quantification_headers
@@ -648,15 +648,15 @@ class TsvWriter:
                                    'N/A']
                             writer.writerow(trg_common + row + self.quantifications(module, 't', event['A1']))
 
-    def intron_retention(self):
-        with open(os.path.join(self.config.directory, 'intron_retention.tsv.%s' % self.pid), 'a',
+    def alternative_intron(self):
+        with open(os.path.join(self.config.directory, 'alternative_intron.tsv.%s' % self.pid), 'a',
                   newline='') as csvfile:
             writer = csv.writer(csvfile, dialect='excel-tab', delimiter='\t')
             for module in self.modules:
                 events, _complex, _total_events = self.as_types[module.idx]
                 if not _complex or self.config.output_complex:
                     for event in events:
-                        if event['event'] == 'intron_retention':
+                        if event['event'] == 'alternative_intron':
                             src_common = self.common_data(module, 's')
                             trg_common = self.common_data(module, 't')
 
@@ -795,7 +795,7 @@ class TsvWriter:
                 counts['p_alt5ss'] = 0
                 counts['alt3and5ss'] = 0
                 counts['mutually_exclusive'] = 0
-                counts['intron_retention'] = 0
+                counts['alternative_intron'] = 0
                 counts['ale'] = 0
                 counts['afe'] = 0
                 counts['p_ale'] = 0

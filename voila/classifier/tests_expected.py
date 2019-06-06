@@ -18,7 +18,7 @@ expected_modules = {
         {}, {}, {},
         {
             "mutually_exclusive": "1",
-            "intron_retention": "1"
+            "alternative_intron": "1"
         },
         {}
     ],
@@ -37,7 +37,7 @@ expected_modules = {
             "exitron": "1",
             "p_alt3ss": "",
             "p_alt5ss": "1",
-            "intron_retention": "2"
+            "alternative_intron": "2"
 
         }, {}, {}, {}, {}
     ],
@@ -57,7 +57,7 @@ expected_modules = {
             "p_ale": "",
             "p_afe": "",
             "multi_exon_spanning": "2",
-            "intron_retention": "2",
+            "alternative_intron": "2",
             "complex": "True"
         }
     ],
@@ -77,7 +77,7 @@ expected_modules = {
             "p_ale": "",
             "p_afe": "",
             "multi_exon_spanning": "",
-            "intron_retention": "",
+            "alternative_intron": "",
             "complex": "False"
         },
         {
@@ -95,7 +95,7 @@ expected_modules = {
             "p_ale": "",
             "p_afe": "",
             "multi_exon_spanning": "",
-            "intron_retention": "1",
+            "alternative_intron": "1",
             "complex": "False"
         }
     ],
@@ -115,7 +115,7 @@ expected_modules = {
             "p_ale": "",
             "p_afe": "",
             "multi_exon_spanning": "",
-            "intron_retention": "1",
+            "alternative_intron": "1",
             "complex": "True"
         },
         {
@@ -133,7 +133,7 @@ expected_modules = {
             "p_ale": "",
             "p_afe": "",
             "multi_exon_spanning": "",
-            "intron_retention": "2",
+            "alternative_intron": "2",
             "complex": "True"
         },
         {
@@ -151,7 +151,7 @@ expected_modules = {
             "p_ale": "",
             "p_afe": "",
             "multi_exon_spanning": "",
-            "intron_retention": "1",
+            "alternative_intron": "1",
             "complex": "False"
         }
     ],
@@ -171,7 +171,7 @@ expected_modules = {
             "p_ale": "",
             "p_afe": "",
             "multi_exon_spanning": "",
-            "intron_retention": "",
+            "alternative_intron": "",
             "complex": "False"
         },
         {
@@ -189,7 +189,7 @@ expected_modules = {
             "p_ale": "",
             "p_afe": "",
             "multi_exon_spanning": "",
-            "intron_retention": "",
+            "alternative_intron": "",
             "complex": "False"
         }
     ],
@@ -209,7 +209,7 @@ expected_modules = {
             "p_ale": "",
             "p_afe": "",
             "multi_exon_spanning": "",
-            "intron_retention": "",
+            "alternative_intron": "",
             "complex": "False"
         },
         {
@@ -227,7 +227,7 @@ expected_modules = {
             "p_ale": "",
             "p_afe": "",
             "multi_exon_spanning": "1",
-            "intron_retention": "",
+            "alternative_intron": "",
             "complex": "False"
         }
     ],
@@ -247,7 +247,7 @@ expected_modules = {
             "p_ale": "",
             "p_afe": "",
             "multi_exon_spanning": "1",
-            "intron_retention": "1",
+            "alternative_intron": "1",
             "complex": "True"
         },
         {
@@ -265,7 +265,7 @@ expected_modules = {
             "p_ale": "",
             "p_afe": "",
             "multi_exon_spanning": "",
-            "intron_retention": "1",
+            "alternative_intron": "1",
             "complex": "False"
         },
         {
@@ -283,7 +283,7 @@ expected_modules = {
             "p_ale": "",
             "p_afe": "",
             "multi_exon_spanning": "",
-            "intron_retention": "1",
+            "alternative_intron": "1",
             "complex": "False"
         },
         {
@@ -301,7 +301,7 @@ expected_modules = {
             "p_ale": "",
             "p_afe": "",
             "multi_exon_spanning": "",
-            "intron_retention": "1",
+            "alternative_intron": "1",
             "complex": "False"
         }
     ],
@@ -321,7 +321,7 @@ expected_modules = {
             "p_ale": "",
             "p_afe": "",
             "multi_exon_spanning": "",
-            "intron_retention": "",
+            "alternative_intron": "",
             "complex": "True"
         },
         {
@@ -339,7 +339,7 @@ expected_modules = {
             "p_ale": "",
             "p_afe": "",
             "multi_exon_spanning": "1",
-            "intron_retention": "2",
+            "alternative_intron": "2",
             "complex": "True"
         },
         {
@@ -357,7 +357,7 @@ expected_modules = {
             "p_ale": "",
             "p_afe": "",
             "multi_exon_spanning": "",
-            "intron_retention": "1",
+            "alternative_intron": "1",
             "complex": "False"
         }
     ],
@@ -377,7 +377,7 @@ expected_modules = {
             "p_ale": "",
             "p_afe": "",
             "multi_exon_spanning": "",
-            "intron_retention": "",
+            "alternative_intron": "",
             "complex": "False"
         }
     ],
@@ -397,7 +397,7 @@ expected_modules = {
             "p_ale": "",
             "p_afe": "",
             "multi_exon_spanning": "",
-            "intron_retention": "",
+            "alternative_intron": "",
             "complex": "False"
         },
         {
@@ -415,7 +415,7 @@ expected_modules = {
             "p_ale": "",
             "p_afe": "",
             "multi_exon_spanning": "",
-            "intron_retention": "",
+            "alternative_intron": "",
             "complex": "False"
         },
         {
@@ -433,7 +433,7 @@ expected_modules = {
             "p_ale": "",
             "p_afe": "",
             "multi_exon_spanning": "",
-            "intron_retention": "",
+            "alternative_intron": "",
             "complex": "False"
         }
     ],
@@ -453,7 +453,7 @@ expected_modules = {
             "p_ale": "",
             "p_afe": "",
             "multi_exon_spanning": "2",
-            "intron_retention": "",
+            "alternative_intron": "",
             "complex": "True"
         },
         {
@@ -471,7 +471,7 @@ expected_modules = {
             "p_ale": "",
             "p_afe": "",
             "multi_exon_spanning": "",
-            "intron_retention": "",
+            "alternative_intron": "",
             "complex": "False"
         },
         {
@@ -489,7 +489,7 @@ expected_modules = {
             "p_ale": "",
             "p_afe": "",
             "multi_exon_spanning": "",
-            "intron_retention": "",
+            "alternative_intron": "",
             "complex": "False"
         }
     ],
@@ -509,7 +509,7 @@ expected_modules = {
             "p_ale": "",
             "p_afe": "",
             "multi_exon_spanning": "",
-            "intron_retention": "1",
+            "alternative_intron": "1",
             "complex": "False"
         },
         {
@@ -527,7 +527,7 @@ expected_modules = {
             "p_ale": "",
             "p_afe": "",
             "multi_exon_spanning": "",
-            "intron_retention": "1",
+            "alternative_intron": "1",
             "complex": "False"
         },
         {
@@ -545,7 +545,7 @@ expected_modules = {
             "p_ale": "",
             "p_afe": "",
             "multi_exon_spanning": "",
-            "intron_retention": "",
+            "alternative_intron": "",
             "complex": "False"
         },
         {
@@ -563,7 +563,7 @@ expected_modules = {
             "p_ale": "1",
             "p_afe": "",
             "multi_exon_spanning": "",
-            "intron_retention": "",
+            "alternative_intron": "",
             "complex": "False"
         },
         {
@@ -581,7 +581,7 @@ expected_modules = {
             "p_ale": "",
             "p_afe": "",
             "multi_exon_spanning": "",
-            "intron_retention": "",
+            "alternative_intron": "",
             "complex": "False"
         },
         {
@@ -599,7 +599,7 @@ expected_modules = {
             "p_ale": "",
             "p_afe": "",
             "multi_exon_spanning": "",
-            "intron_retention": "1",
+            "alternative_intron": "1",
             "complex": "False"
         },
         {
@@ -617,7 +617,7 @@ expected_modules = {
             "p_ale": "",
             "p_afe": "",
             "multi_exon_spanning": "",
-            "intron_retention": "1",
+            "alternative_intron": "1",
             "complex": "False"
         },
         {
@@ -635,7 +635,7 @@ expected_modules = {
             "p_ale": "",
             "p_afe": "",
             "multi_exon_spanning": "",
-            "intron_retention": "1",
+            "alternative_intron": "1",
             "complex": "False"
         }
     ],
@@ -655,7 +655,7 @@ expected_modules = {
             "p_ale": "",
             "p_afe": "",
             "multi_exon_spanning": "2",
-            "intron_retention": "2",
+            "alternative_intron": "2",
             "complex": "True"
         },
         {
@@ -673,7 +673,7 @@ expected_modules = {
             "p_ale": "1",
             "p_afe": "",
             "multi_exon_spanning": "",
-            "intron_retention": "",
+            "alternative_intron": "",
             "complex": "False"
         }
     ],
@@ -693,7 +693,7 @@ expected_modules = {
             "p_ale": "",
             "p_afe": "",
             "multi_exon_spanning": "1",
-            "intron_retention": "",
+            "alternative_intron": "",
             "complex": "True"
         },
         {
@@ -711,7 +711,7 @@ expected_modules = {
             "p_ale": "",
             "p_afe": "",
             "multi_exon_spanning": "",
-            "intron_retention": "1",
+            "alternative_intron": "1",
             "complex": "False"
         },
         {
@@ -729,7 +729,7 @@ expected_modules = {
             "p_ale": "",
             "p_afe": "",
             "multi_exon_spanning": "",
-            "intron_retention": "1",
+            "alternative_intron": "1",
             "complex": "False"
         },
         {
@@ -747,7 +747,7 @@ expected_modules = {
             "p_ale": "1",
             "p_afe": "",
             "multi_exon_spanning": "",
-            "intron_retention": "1",
+            "alternative_intron": "1",
             "complex": "True"
         },
         {
@@ -765,7 +765,7 @@ expected_modules = {
             "p_ale": "",
             "p_afe": "",
             "multi_exon_spanning": "",
-            "intron_retention": "1",
+            "alternative_intron": "1",
             "complex": "False"
         },
         {
@@ -783,7 +783,7 @@ expected_modules = {
             "p_ale": "",
             "p_afe": "",
             "multi_exon_spanning": "",
-            "intron_retention": "1",
+            "alternative_intron": "1",
             "complex": "False"
         }
     ],
@@ -803,7 +803,7 @@ expected_modules = {
             "p_ale": "",
             "p_afe": "",
             "multi_exon_spanning": "",
-            "intron_retention": "",
+            "alternative_intron": "",
             "complex": "False"
         },
         {
@@ -821,7 +821,7 @@ expected_modules = {
             "p_ale": "1",
             "p_afe": "",
             "multi_exon_spanning": "",
-            "intron_retention": "1",
+            "alternative_intron": "1",
             "complex": "True"
         },
         {
@@ -839,7 +839,7 @@ expected_modules = {
             "p_ale": "",
             "p_afe": "",
             "multi_exon_spanning": "",
-            "intron_retention": "1",
+            "alternative_intron": "1",
             "complex": "False"
         },
         {
@@ -857,7 +857,7 @@ expected_modules = {
             "p_ale": "",
             "p_afe": "",
             "multi_exon_spanning": "",
-            "intron_retention": "1",
+            "alternative_intron": "1",
             "complex": "True"
         },
         {
@@ -875,7 +875,7 @@ expected_modules = {
             "p_ale": "",
             "p_afe": "",
             "multi_exon_spanning": "",
-            "intron_retention": "1",
+            "alternative_intron": "1",
             "complex": "False"
         }
     ],
@@ -895,7 +895,7 @@ expected_modules = {
             "p_ale": "",
             "p_afe": "1",
             "multi_exon_spanning": "",
-            "intron_retention": "",
+            "alternative_intron": "",
             "complex": "True"
         },
         {
@@ -913,7 +913,7 @@ expected_modules = {
             "p_ale": "",
             "p_afe": "",
             "multi_exon_spanning": "",
-            "intron_retention": "",
+            "alternative_intron": "",
             "complex": "False"
         },
         {
@@ -931,7 +931,7 @@ expected_modules = {
             "p_ale": "",
             "p_afe": "",
             "multi_exon_spanning": "",
-            "intron_retention": "1",
+            "alternative_intron": "1",
             "complex": "False"
         },
         {
@@ -949,7 +949,7 @@ expected_modules = {
             "p_ale": "",
             "p_afe": "",
             "multi_exon_spanning": "",
-            "intron_retention": "2",
+            "alternative_intron": "2",
             "complex": "True"
         }
     ],
@@ -969,7 +969,7 @@ expected_modules = {
             "p_ale": "",
             "p_afe": "",
             "multi_exon_spanning": "1",
-            "intron_retention": "2",
+            "alternative_intron": "2",
             "complex": "True"
         },
         {
@@ -987,7 +987,7 @@ expected_modules = {
             "p_ale": "",
             "p_afe": "",
             "multi_exon_spanning": "",
-            "intron_retention": "1",
+            "alternative_intron": "1",
             "complex": "True"
         }
     ],
@@ -1007,7 +1007,7 @@ expected_modules = {
             "p_ale": "",
             "p_afe": "",
             "multi_exon_spanning": "",
-            "intron_retention": "",
+            "alternative_intron": "",
             "complex": "False"
         },
         {
@@ -1025,7 +1025,7 @@ expected_modules = {
             "p_ale": "",
             "p_afe": "",
             "multi_exon_spanning": "3",
-            "intron_retention": "3",
+            "alternative_intron": "3",
             "complex": "True"
         },
         {
@@ -1043,7 +1043,7 @@ expected_modules = {
             "p_ale": "",
             "p_afe": "",
             "multi_exon_spanning": "",
-            "intron_retention": "2",
+            "alternative_intron": "2",
             "complex": "True"
         }
     ],
@@ -1063,7 +1063,7 @@ expected_modules = {
             "p_ale": "",
             "p_afe": "",
             "multi_exon_spanning": "2",
-            "intron_retention": "",
+            "alternative_intron": "",
             "complex": "True"
         }
     ],
@@ -1083,7 +1083,7 @@ expected_modules = {
             "p_ale": "",
             "p_afe": "",
             "multi_exon_spanning": "",
-            "intron_retention": "",
+            "alternative_intron": "",
             "complex": "False"
         },
         {
@@ -1101,7 +1101,7 @@ expected_modules = {
             "p_ale": "",
             "p_afe": "",
             "multi_exon_spanning": "",
-            "intron_retention": "",
+            "alternative_intron": "",
             "complex": "False"
         }
     ],
@@ -1121,7 +1121,7 @@ expected_modules = {
             "p_ale": "",
             "p_afe": "",
             "multi_exon_spanning": "",
-            "intron_retention": "1",
+            "alternative_intron": "1",
             "complex": "False"
         },
         {
@@ -1139,7 +1139,7 @@ expected_modules = {
             "p_ale": "",
             "p_afe": "",
             "multi_exon_spanning": "",
-            "intron_retention": "1",
+            "alternative_intron": "1",
             "complex": "False"
         },
         {
@@ -1157,7 +1157,7 @@ expected_modules = {
             "p_ale": "",
             "p_afe": "",
             "multi_exon_spanning": "",
-            "intron_retention": "1",
+            "alternative_intron": "1",
             "complex": "False"
         }
     ],
@@ -1187,7 +1187,7 @@ expected_modules = {
             "p_ale": "",
             "p_afe": "",
             "multi_exon_spanning": "",
-            "intron_retention": "",
+            "alternative_intron": "",
             "complex": "True"
         },
         {}
@@ -1229,7 +1229,7 @@ expected_cassette_exons = {
     ]
 }
 
-expected_intron_retention = {
+expected_alternative_intron = {
     'gene:ENSG00000123146': [
         {'Reference Exon Coordinate': '14381156-14381545'},
         {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}

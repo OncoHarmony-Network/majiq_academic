@@ -47,7 +47,7 @@ def classify_gene(args):
         writer.p_alt5prime()
 
         writer.mutually_exclusive()
-        writer.intron_retention()
+        writer.alternative_intron()
 
         writer.alternate_first_exon()
         writer.alternate_last_exon()

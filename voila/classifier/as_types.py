@@ -952,7 +952,7 @@ class Graph:
                                                       'SkipA2': self.strand_case(i2, e1)})
             return found
 
-        def intron_retention(self):
+        def alternative_intron(self):
             """
             Check if intron retention occurs in this module.
             :return: boolean
@@ -964,7 +964,7 @@ class Graph:
                 for edge in fwd_connects:
                     if edge.ir:
                         spliced = n1.connects(n2)
-                        found.append({'event': 'intron_retention', 'C1': n1, 'C2': n2,
+                        found.append({'event': 'alternative_intron', 'C1': n1, 'C2': n2,
                                       'Intron': edge, 'Spliced': spliced})
 
             return found
@@ -1334,7 +1334,7 @@ class Graph:
                 # 'alt_upstream': self.alternate_upstream,
                 'cassette_exon': self.cassette_exon,
                 'mutually_exclusive': self.mutually_exclusive,
-                'intron_retention': self.intron_retention,
+                'alternative_intron': self.alternative_intron,
                 'alt3ss': self.alt3ss,
                 'alt5ss': self.alt5ss,
                 'alt3and5ss': self.alt3and5ss,
@@ -1354,7 +1354,7 @@ class Graph:
             event_counts = {
                 'cassette_exon': 0,
                 'mutually_exclusive': 0,
-                'intron_retention': 0,
+                'alternative_intron': 0,
                 'alt3ss': 0,
                 'alt5ss': 0,
                 'alt3and5ss': 0,
@@ -1386,7 +1386,7 @@ class Graph:
             if check_events == 2 and event_counts['multi_exon_spanning'] == 1 and \
                     event_counts['tandem_cassette'] == 1:
                 complex = False
-            elif check_events == 2 and event_counts['intron_retention'] == 1 and\
+            elif check_events == 2 and event_counts['alternative_intron'] == 1 and\
                     (event_counts['p_alt3ss'] == 1 or event_counts['p_alt5ss'] == 1):
                 complex = False
             elif check_events > 1:
@@ -1445,7 +1445,7 @@ if __name__ == "__main__":
     # gene_id = 'ENSMUSG00000001419'
     genes_modules = []
     # genes_events = {'complex', 'cassette_exon', 'mutually_exclusive',
-    #                 'intron_retention', 'alt3ss', 'alt5ss', 'altTranscStart', 'altTranscEnd',
+    #                 'alternative_intron', 'alt3ss', 'alt5ss', 'altTranscStart', 'altTranscEnd',
     #                 'multi_exon_spanning'}
     out_rows = []
     TsvWriter.delete_tsvs(args.directory)
@@ -1473,7 +1473,7 @@ if __name__ == "__main__":
             writer.alt5prime()
             writer.alt3and5prime()
             writer.mutually_exclusive()
-            writer.intron_retention()
+            writer.alternative_intron()
             writer.summary()
 
 

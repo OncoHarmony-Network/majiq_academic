@@ -8,7 +8,7 @@ from voila.api.matrix_utils import generate_means
 
 from voila.classifier.as_types import Graph
 from voila.classifier.tsv_writer import TsvWriter
-from voila.classifier.tests_expected import expected_modules, expected_cassette_exons, expected_intron_retention
+from voila.classifier.tests_expected import expected_modules, expected_cassette_exons, expected_alternative_intron
 
 from subprocess import Popen, PIPE, STDOUT
 import os, shutil
@@ -43,7 +43,7 @@ def run_voila_classify(gene_id):
 
 
 expected_headers = ['module_id', 'gene_id', 'gene_name', "Chr","Strand", 'lsv_ids', 'cassette_exon', 'tandem_cassette', 'alt3ss', 'alt5ss', 'p_alt3ss',
-                    'p_alt5ss', 'alt3and5ss', 'mutually_exclusive', 'intron_retention', 'ale', 'afe', 'p_ale', 'p_afe', 'orphan_junction',
+                    'p_alt5ss', 'alt3and5ss', 'mutually_exclusive', 'alternative_intron', 'ale', 'afe', 'p_ale', 'p_afe', 'orphan_junction',
                     'multi_exon_spanning',   'exitron', 'complex', 'number-of-events']
 
 def verify_tsvs(gene_id):
@@ -67,15 +67,15 @@ def verify_tsvs(gene_id):
                                                                    events[i][headers.index(k)], gene_id))
                         raise
 
-    with open(os.path.join(out_dir, 'intron_retention.tsv'), 'r', newline='') as csvfile:
+    with open(os.path.join(out_dir, 'alternative_intron.tsv'), 'r', newline='') as csvfile:
         reader = csv.reader(csvfile, dialect='excel-tab', delimiter='\t')
         headers = next(reader, None)
         events = []
         for line in reader:
             events.append(line)
 
-        if gene_id in expected_intron_retention:
-            for i, mod in enumerate(expected_intron_retention[gene_id]):
+        if gene_id in expected_alternative_intron:
+            for i, mod in enumerate(expected_alternative_intron[gene_id]):
                 print(mod)
 
                 for k, v in mod.items():
