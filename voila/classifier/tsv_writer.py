@@ -263,14 +263,14 @@ class TsvWriter:
             if edge or node:
                 if not node:
                     node = self.graph.start_node(edge)
-                lsvs = set(filter(lambda lsv: lsv.endswith(node.range_str()), lsvs))
+                lsvs = set(filter(lambda lsv: lsv.endswith(node.untrimmed_range_str()), lsvs))
 
         elif parity == 't':
             lsvs = module.target_lsv_ids
             if edge or node:
                 if not node:
                     node = self.graph.end_node(edge)
-                lsvs = set(filter(lambda lsv: lsv.endswith(node.range_str()), lsvs))
+                lsvs = set(filter(lambda lsv: lsv.endswith(node.untrimmed_range_str()), lsvs))
         else:
             lsvs = module.target_lsv_ids.union(module.source_lsv_ids)
         return lsvs

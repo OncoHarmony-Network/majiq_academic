@@ -44,13 +44,15 @@ class UnsupportedVoilaFile(Exception):
 
 class Printable_Event:
 
-    def range_str(self):
-        return '{}-{}'.format(getattr(self, 'untrimmed_start', self.start),
-                              getattr(self, 'untrimmed_end', self.end))
+    def untrimmed_range_str(self):
+            return '{}-{}'.format(getattr(self, 'untrimmed_start', self.start),
+                                  getattr(self, 'untrimmed_end', self.end))
 
-    # def untrimmed_range_str(self):
-    #     return '{}-{}'.format(getattr(self, 'untrimmed_start', self.start),
-    #                           getattr(self, 'untrimmed_end', self.end))
+    def range_str(self):
+        if ClassifyConfig().untrimmed_exons:
+            return self.untrimmed_range_str()
+        else:
+            return '{}-{}'.format(self.start, self.end)
 
 class Graph:
     def __init__(self, gene_id):
@@ -526,9 +528,6 @@ class Graph:
             if trim_end:
                 node.exon['end'] = global_max
 
-            if self.config.untrimmed_exons:
-                node.untrimmed_start = node.start
-                node.untrimmed_end = node.end
 
 
     def modules(self):
@@ -1343,8 +1342,8 @@ class Graph:
                     ret.append(region)
                 return ret, False, len(ret)
 
-            #print('---------------------------', self.idx, '--------------------------------')
-            #print(self.nodes)
+            # print('---------------------------', self.idx, '--------------------------------')
+            # print(self.nodes)
 
             as_type_dict = {
                 # 'alt_downstream': self.alternate_downstream,
