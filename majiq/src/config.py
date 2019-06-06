@@ -60,32 +60,22 @@ class Config(object):
 
 
             try:
-                sam_dirlist = general['samdir'].split(',')
+                sam_dirlist = general['bamdirs'].split(',')
             except KeyError:
+                if 'samdir' in general:
+                    raise UserWarning("samdir is a deprecated value, please use bamdirs instead")
                 sam_dirlist  = ['.']
-                warnings.warn('samdir parameter not found in config file, using "./" instead')
+                warnings.warn('bamdirs parameter not found in config file, using "./" instead')
 
             try:
-                junc_dirlist = general['juncdir'].split(',')
+                junc_dirlist = general['sjdirs'].split(',')
             except KeyError:
                 junc_dirlist = ['.']
-                warnings.warn('juncdir parameter not found in config file, using "./" instead')
+                warnings.warn('sjdirs parameter not found in config file, using "./" instead')
 
 
             self.genome = general['genome']
             self.readLen = int(general['readlen'])
-
-            # self.simplify_threshold = 0.0
-            # self.simplify_type = SIMPLIFY_ALL
-            # if self.simplify:
-            #
-            #     self.simplify_threshold = float(params.simplify[1])
-            #     self.simplify_type = self.simplify[0]
-            #     if self.simplify_type not in (
-            #     SIMPLIFY_ALL, SIMPLIFY_DB, SIMPLIFY_DENOVO) or not 0 <= self.simplify_threshold <= 1:
-            #         raise RuntimeError(
-            #             'Error in simplify option, first argument should be "all|denovo|annotated" and second'
-            #             ' a float between 0..1')
 
             exps = Config.config_section_map(config, "experiments")
             self.juncfile_list = []
@@ -112,16 +102,15 @@ class Config(object):
                 self.min_experiments[name] = int(min(len(ind_list), mexp))
                 for exp_idx in ind_list:
                     found = False
-
-                    # if self.aggregate:
-                    #     for j_dir in junc_dirlist:
-                    #         juncfile = "%s/%s.%s" % (j_dir, self.exp_list[exp_idx], JUNC_FILE_FORMAT)
-                    #         if os.path.isfile(juncfile):
-                    #             found = True
-                    #             self.sam_list.append((self.exp_list[exp_idx], juncfile, True))
-                    #             break
+                    if self.aggregate:
+                        for j_dir in junc_dirlist:
+                            juncfile = "%s/%s.%s" % (j_dir, self.exp_list[exp_idx], JUNC_FILE_FORMAT)
+                            if os.path.isfile(juncfile):
+                                found = True
+                                self.sam_list.append((self.exp_list[exp_idx], juncfile, True))
+                                break
                     if found:
-                        break
+                        continue
                     for s_dir in sam_dirlist:
                         bamfile = "%s/%s.%s" % (s_dir, self.exp_list[exp_idx], SEQ_FILE_FORMAT)
                         baifile = "%s/%s.%s" % (s_dir, self.exp_list[exp_idx], SEQ_INDEX_FILE_FORMAT)

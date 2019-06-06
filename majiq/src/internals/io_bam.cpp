@@ -62,7 +62,7 @@ namespace io_bam {
 //            if (gObj->get_start() >= end) break ;
             if (gObj->get_start() >= end) continue ;
             if (gObj->get_end() < start) continue ;
-//            if (start< gObj->get_start() || end> gObj->get_end()) continue ;
+            if (start< gObj->get_start() || end> gObj->get_end()) continue ;
             if (strand == '.' || strand == gObj->get_strand()) {
                 if(gObj->junc_map_.count(key) >0 ){
                     found_stage1 = true ;
@@ -96,7 +96,7 @@ namespace io_bam {
     }
 
 
-    void IOBam::add_junction(string chrom, char strand, int start, int end, int read_pos, int first_offpos) {
+    void IOBam::add_junction(string chrom, char strand, int start, int end, int read_pos, int first_offpos, int sreads) {
 
         const unsigned int offset = (first_offpos == -1) ? (start - (read_pos+ MIN_BP_OVERLAP)) : first_offpos ;
         if (offset >= eff_len_) return ;
@@ -104,7 +104,7 @@ namespace io_bam {
 
         bool new_j = false ;
         float * v ;
-        #pragma omp critical
+        omp_set_lock(&map_lck_) ;
         {
             if (junc_map.count(key) == 0 ) {
                 junc_map[key] = junc_vec.size() ;
@@ -115,11 +115,13 @@ namespace io_bam {
                 v = junc_vec[junc_map[key]] ;
             }
         }
+        omp_unset_lock(&map_lck_) ;
+
         if (new_j) {
             find_junction_genes(chrom, strand, start, end, v) ;
         }
         #pragma omp atomic
-            junc_vec[junc_map[key]][offset] += 1 ;
+            junc_vec[junc_map[key]][offset] += sreads ;
 
         return ;
     }
@@ -151,7 +153,7 @@ namespace io_bam {
                     first_offpos  = (first_offpos == -1) ? (j_start - (read_pos+ MIN_BP_OVERLAP)) : first_offpos ;
 
                     try {
-                        add_junction(chrom, _get_strand(read), j_start, j_end, read_pos, first_offpos) ;
+                        add_junction(chrom, _get_strand(read), j_start, j_end, read_pos, first_offpos, 1) ;
                     } catch (const std::logic_error& e) {
                         cout << "ERROR" << e.what() << '\n';
                     }
@@ -216,17 +218,13 @@ namespace io_bam {
                     }
                 }
                 if (!junc_found){
-
-
-                    #pragma omp critical
-                        intron->add_read(read_pos, eff_len_) ;
+                  #pragma omp critical
+                        intron->add_read(read_pos, eff_len_, 1) ;
                 }
             }
         }
-
         return 0 ;
     }
-
 
 
     int IOBam::ParseJunctionsFromFile(bool ir_func){
@@ -385,6 +383,54 @@ namespace io_bam {
         return res ;
     }
 
+
+    void IOBam::parseJuncEntry(map<string, vector<overGene*>> & glist, string gid, string chrom, char strand,
+                               int start, int end, unsigned int sreads, unsigned int minreads_t, unsigned int npos,
+                               unsigned int minpos_t, unsigned int denovo_t, bool denovo, vector<Gene*>& oGeneList,
+                               bool ir, vector<float>& ircov, float min_intron_cov, float min_bins, int minexp,
+                               bool reset){
+
+        vector<overGene*>::iterator low = lower_bound (glist[chrom].begin(), glist[chrom].end(),
+                                                       start, _Region::func_comp ) ;
+        if (low == glist[chrom].end())
+            return ;
+        if (ir){
+            for (const auto &gObj: (*low)->glist){
+                if (gObj->get_id() != gid) continue ;
+                Intron * irptr = new Intron(start, end, false, gObj, simpl_) ;
+                irptr->add_read_rates_buff(ircov.size()) ;
+                irptr->initReadCovFromVector(ircov) ;
+
+                const string key = irptr->get_key(gObj) ;
+                omp_set_lock(&map_lck_) ;
+                {
+                    if (junc_map.count(key) == 0) {
+                        junc_map[key] = junc_vec.size() ;
+                        junc_vec.push_back(irptr->read_rates_) ;
+                        gObj->add_intron(irptr, min_intron_cov, minexp, min_bins, reset) ;
+                    }
+                }
+                omp_unset_lock(&map_lck_) ;
+            }
+        } else {
+            string key = to_string(start) + "-" + to_string(end) ;
+            add_junction(chrom, strand, start, end, 0, 0, sreads) ;
+            for (const auto &gObj: (*low)->glist){
+                gObj->updateFlagsFromJunc(key, sreads, minreads_t, npos, minpos_t, denovo_t, denovo, minexp, reset) ;
+
+//                if (gObj->junc_map_.count(key) > 0){
+//                    Junction * jnc = gObj->junc_map_[key] ;
+//                    jnc->update_flags(sreads, minreads_t, npos, minpos_t, denovo_t, minexp, denovo) ;
+//                    jnc->clear_nreads(reset) ;
+//                }
+            }
+
+        }
+        return ;
+
+    }
+
+
     void IOBam::detect_introns(float min_intron_cov, unsigned int min_experiments, float min_bins, bool reset){
         for (const auto & it: glist_){
             if (intronVec_.count(it.first)==0){
@@ -401,11 +447,6 @@ namespace io_bam {
             }
             sort(intronVec_[it.first].begin(), intronVec_[it.first].end(), Intron::islowerRegion<Intron>) ;
 
-//cerr << "INTRON: " << it.first << " :: " ;
-//for (const auto &kk: intronVec_[it.first] ){
-//    cerr << kk->get_start() << "-" << kk->get_end() << "\n" ;
-//}
-//cerr << "\n" ;
         }
         ParseJunctionsFromFile(true) ;
         for (const auto & it: intronVec_){
@@ -433,6 +474,18 @@ namespace io_bam {
         }
     }
 
+
+    void IOBam::get_intron_raw_cov(float* out_cov){
+        const unsigned int all_junc = junc_vec.size() ;
+        #pragma omp parallel for num_threads(nthreads_)
+        for(unsigned int idx = junc_limit_index_; idx<all_junc; idx++){
+            const unsigned int i = idx - junc_limit_index_ ;
+            for (unsigned int j=0; j<eff_len_; j++){
+                const unsigned int indx_2d = i*eff_len_ + j ;
+                out_cov[indx_2d] = junc_vec[idx][j] ;
+            }
+        }
+    }
 
     void prepare_genelist(map<string, Gene*>& gene_map, map<string, vector<overGene*>> & geneList){
         map<string, vector<Gene*>> gmp ;

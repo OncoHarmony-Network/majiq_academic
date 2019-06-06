@@ -28,8 +28,8 @@ namespace grimoire {
                 (a.ref_coord == b.ref_coord && a.coord>b.coord)) ;
     }
 
-    bool fless(unsigned int lhs, unsigned int rhs) {return lhs<rhs ;}
-    bool fgrt(unsigned int lhs, unsigned int rhs) {return lhs>rhs ;}
+    bool fless(unsigned int lhs, unsigned int rhs) { return lhs<rhs ; }
+    bool fgrt(unsigned int lhs, unsigned int rhs) { return lhs>rhs ; }
 
 
     bool sort_ss(const Ssite &a, const Ssite &b){
@@ -208,10 +208,21 @@ namespace grimoire {
     void Gene::update_junc_flags(int efflen, bool is_last_exp, unsigned int minreads, unsigned int minpos,
                                   unsigned int denovo_thresh, unsigned int min_experiments, bool denovo){
         for(const auto &p: junc_map_){
-            (p.second)->update_flags(efflen, minreads, minpos, denovo_thresh, min_experiments, denovo) ;
+            (p.second)->gen_and_update_flags(efflen, minreads, minpos, denovo_thresh, min_experiments, denovo) ;
             (p.second)->clear_nreads(is_last_exp) ;
         }
         return ;
+    }
+
+    void Gene::updateFlagsFromJunc(string key, unsigned int sreads, unsigned int minreads_t, unsigned int npos,
+                               unsigned int minpos_t, unsigned int denovo_t, bool denovo, int minexp, bool reset){
+        if (junc_map_.count(key) > 0){
+            omp_set_lock(&map_lck_) ;
+            Junction * jnc = junc_map_[key] ;
+            jnc->update_flags(sreads, minreads_t, npos, minpos_t, denovo_t, minexp, denovo) ;
+            jnc->clear_nreads(reset) ;
+            omp_unset_lock(&map_lck_) ;
+        }
     }
 
     void Gene::initialize_junction(string key, int start, int end, float* nreads_ptr, bool simpl){
@@ -225,6 +236,7 @@ namespace grimoire {
         return ;
     }
 
+
     void Gene::detect_introns(vector<Intron*> &intronlist, bool simpl){
 
         vector<Ssite> ss_vec ;
@@ -237,11 +249,11 @@ namespace grimoire {
 
 
             if ((jnc.second)->get_start() > 0 && (jnc.second)->get_donor()->get_start()>0) {
-                Ssite s = {(jnc.second)->get_start()+1, true, jnc.second} ;
+                Ssite s = {(jnc.second)->get_start(), true, jnc.second} ;
                 ss_vec.push_back(s) ;
             }
             if ((jnc.second)->get_end() > 0 && (jnc.second)->get_acceptor()->get_end()>0) {
-                Ssite s = {(jnc.second)->get_end()-1, false, jnc.second} ;
+                Ssite s = {(jnc.second)->get_end(), false, jnc.second} ;
                 ss_vec.push_back(s) ;
             }
         }
@@ -258,7 +270,7 @@ namespace grimoire {
 
                     #pragma omp critical
                     {
-                        Intron * irObj = new Intron(start_ir, end_ir, false, this, simpl) ;
+                        Intron * irObj = new Intron(start_ir +1, end_ir -1, false, this, simpl) ;
                         intronlist.push_back(irObj) ;
                     }
 
@@ -274,12 +286,15 @@ namespace grimoire {
             if (ir->get_end() < inIR_ptr->get_start() || ir->get_start() > inIR_ptr->get_end()) continue ;
             if (ir->get_end() >= inIR_ptr->get_start() && ir->get_start() <= inIR_ptr->get_end()){
                 ir->overlaping_intron(inIR_ptr) ;
+//cerr << "found " << ir->get_key() << endl ;
                 ir->update_flags(min_coverage, min_exps, min_bins) ;
                 ir->clear_nreads(reset) ;
                 found = true ;
             }
         }
         if(!found){
+//cerr << "NOT found " << inIR_ptr->get_key() << endl ;
+
             inIR_ptr->update_flags(min_coverage, min_exps, min_bins) ;
             inIR_ptr->clear_nreads(reset) ;
             intron_vec_.push_back(inIR_ptr) ;
@@ -323,7 +338,6 @@ namespace grimoire {
                         }
 //    cerr << "#1 " << ir_start << "-" << ir_end<< " :: " << prev_ex->ob_irptr->get_gene() << ":" << prev_ex->ob_irptr->get_start() << "-" << prev_ex->ob_irptr->get_end()<< "\n" ;
 //    cerr << "#2 " << ir_start << "-" << ir_end<< " :: " << ir_ptr->get_gene() << ":" << ir_ptr->get_start() << "-" << ir_ptr->get_end()<< "\n" ;
-//    }
                         prev_ex->ob_irptr = ir_ptr ;
                         (ex.second)->ib_irptr = ir_ptr ;
                         ir_ptr->update_boundaries(prev_ex->get_end(), (ex.second)->get_start()) ;
@@ -447,7 +461,7 @@ namespace grimoire {
 
             for(i=0; i<jnc_vec.size(); i++){
                 float x = (sumall >0) ? sumj[i]/sumall : 0 ;
-                jnc_vec[i]->set_simpl_fltr(x<simpl_percent || sumj[i]< thrshld_vect[i]) ;
+                jnc_vec[i]->set_simpl_fltr(x<simpl_percent || sumj[i]< thrshld_vect[i], true) ;
             }
         }
         sumall = 0 ;
@@ -481,7 +495,7 @@ namespace grimoire {
 
             for(i=0; i<jnc_vec.size(); i++){
                 float x = (sumall >0) ? sumj[i]/sumall : 0 ;
-                jnc_vec[i]->set_simpl_fltr(x<simpl_percent || sumj[i]< thrshld_vect[i]) ;
+                jnc_vec[i]->set_simpl_fltr(x<simpl_percent || sumj[i]< thrshld_vect[i], false) ;
             }
         }
     }
@@ -493,10 +507,17 @@ namespace grimoire {
             (ex.second)->simplify(junc_tlb, simpl_percent, this, strandness, denovo_simpl, db_simple,
                                   ir_simpl, last, min_experiments) ;
         }
-        if (last)
+        if (last){
             for (const auto &j: junc_map_){
                 (j.second)->update_simpl_flags(min_experiments) ;
             }
+            for(const auto &ex: exon_map_){
+                if ((ex.second)->ib_irptr != nullptr)
+                    ((ex.second)->ib_irptr)->update_simpl_flags(min_experiments) ;
+//                if ((ex.second)->ob_irptr != nullptr)
+//                    ((ex.second)->ob_irptr)->update_simpl_flags(min_experiments, false) ;
+            }
+        }
     }
 
 
@@ -636,11 +657,7 @@ namespace grimoire {
             prev_coord = ptr.ref_coord ;
             const string exid = to_string((ptr.ex_ptr)->get_start()) + "-" + to_string((ptr.ex_ptr)->get_end()) ;
             if (exid == ref_exon_id) continue ;
-            if ((ptr.jun_ptr)->get_intronic()){
-                ext_type = ext_type + "|i" ;
-                junctions_.push_back(ptr.jun_ptr) ;
-                continue ;
-            }
+
             unsigned int total = 0 ;
             unsigned int pos = 0 ;
 

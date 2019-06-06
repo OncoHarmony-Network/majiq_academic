@@ -9,7 +9,7 @@ from majiq.src.constants import *
 from majiq.src.internals.qLSV cimport dpsiLSV, qLSV
 from majiq.src.internals.mtypes cimport *
 from majiq.src.internals.psi cimport deltapsi_posterior, get_psi_border
-from majiq.src.py_psi import gen_prior_matrix
+from majiq.src.internals.psi cimport gen_prior_matrix
 
 from libcpp.string cimport string
 from libcpp.map cimport map
@@ -43,7 +43,7 @@ cdef parse_dpsi_reads(map[string, qLSV*] lsv_map, list files1, list files2, int 
         dpsiObj.add_condition2()
 
 
-cdef void _core_deltapsi(object self):
+cdef int _core_deltapsi(object self) except -1:
 
     cdef dict junc_info = {}
     cdef dict lsv_type_dict = {}
@@ -98,17 +98,16 @@ cdef void _core_deltapsi(object self):
 
     list_of_lsv = list(set(list_of_lsv1).intersection(set(list_of_lsv2)))
     logger.info("Number quantifiable LSVs: %s" % len(list_of_lsv))
-    prior_matrix = gen_prior_matrix(lsv_type_dict, lsv_empirical_psi1, lsv_empirical_psi2,
-                                               self.outDir, names=self.names, plotpath=self.plotpath,
-                                               iter=self.iter, binsize=self.binsize,
-                                               numbins=nbins, defaultprior=self.default_prior,
-                                               minpercent=self.min_exp, logger=logger)
+    prior_matrix = vector[vector[psi_distr_t]](2, vector[psi_distr_t](nbins, psi_distr_t(nbins, 0)))
+    gen_prior_matrix(prior_matrix, lsv_type_dict, lsv_empirical_psi1, lsv_empirical_psi2, self.outDir,
+                     names=self.names, plotpath=self.plotpath, iter=self.iter, binsize=self.binsize, numbins=nbins,
+                     defaultprior=self.default_prior, minpercent=self.min_exp, logger=logger)
 
 
     nlsv = len(list_of_lsv)
     if nlsv == 0:
         logger.info("There is no LSVs that passes the filters")
-        return
+        return 0
 
 
     for lsv in list_of_lsv:
@@ -124,6 +123,7 @@ cdef void _core_deltapsi(object self):
 
     print("Start Computing DeltaPSI")
     for i in prange(nlsv, nogil=True, num_threads=nthreads):
+
         with gil:
             lsv = list_of_lsv[i]
             logger.debug(lsv)

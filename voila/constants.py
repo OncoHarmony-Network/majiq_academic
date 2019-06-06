@@ -8,7 +8,7 @@ EXEC_DIR = Path(os.path.dirname(os.path.abspath(voila.__file__)))
 GIT_VERSION_FILE = EXEC_DIR / '../majiq/data/git_version'
 
 if GIT_VERSION_FILE.exists():
-    GIT_COMMIT_HASH = '-' + open(GIT_VERSION_FILE).read().rstrip()
+    GIT_COMMIT_HASH = '-' + GIT_VERSION_FILE.open().read().rstrip()
 else:
     GIT_COMMIT_HASH = ''
 
