@@ -968,23 +968,6 @@ class Graph:
 
             return found
 
-        def constitutive_intron(self):
-            """
-            Check if intron retention occurs in this module.
-            """
-            found = []
-
-            for n1, n2 in combinations(self.nodes, 2):
-                fwd_connects = n1.connects(n2, only_ir=True)
-                for edge in fwd_connects:
-                    if edge.ir:
-                        if len(n1.edges) == 1 and len(n2.back_edges) == 1:
-                            spliced = n1.connects(n2)
-                            found.append({'event': 'constitutive_intron', 'C1': n1, 'C2': n2,
-                                      'Intron': edge, 'Spliced': spliced})
-
-            return found
-
 
 
         def alt5ss(self):
@@ -1307,15 +1290,8 @@ class Graph:
                     junc = junc[0]
                     config = ClassifyConfig()
 
-                    with SpliceGraph(config.splice_graph_file) as sg:
-                        if junc.ir:
-                            try:
-                                junc_reads = next(sg.intron_retention_reads_exp({'start': junc.start + 1, 'end': junc.end - 1,
-                                                                    'gene_id':self.graph.gene_id},
-                                                                     self.graph.experiment_names))['reads']
-                            except StopIteration:
-                                continue
-                        else:
+                    if not junc.ir:
+                        with SpliceGraph(config.splice_graph_file) as sg:
                             try:
                                 junc_reads = next(sg.junction_reads_exp({'start': junc.start, 'end': junc.end,
                                                                     'gene_id':self.graph.gene_id},
@@ -1323,8 +1299,35 @@ class Graph:
                             except StopIteration:
                                 continue
 
-                        if junc_reads >= config.keep_constitutive:
-                            found.append({'event': 'constitutive', 'Junc': junc})
+                            if junc_reads >= config.keep_constitutive:
+                                found.append({'event': 'constitutive', 'Junc': junc})
+
+            return found
+
+        def constitutive_intron(self):
+            """
+            Check if intron retention occurs in this module.
+            """
+            found = []
+
+            for n1, n2 in combinations(self.nodes, 2):
+                fwd_connects = n1.connects(n2, only_ir=True)
+                for edge in fwd_connects:
+                    if edge.ir:
+                        if len(n1.edges) == 1 and len(n2.back_edges) == 1:
+                            config = ClassifyConfig()
+                            with SpliceGraph(config.splice_graph_file) as sg:
+                                try:
+                                    junc_reads = \
+                                    next(sg.intron_retention_reads_exp({'start': edge.start + 1, 'end': edge.end - 1,
+                                                                        'gene_id': self.graph.gene_id},
+                                                                       self.graph.experiment_names))['reads']
+                                except StopIteration:
+                                    continue
+
+                                if junc_reads >= config.keep_constitutive:
+                                    found.append({'event': 'constitutive_intron', 'C1': n1, 'C2': n2,
+                                              'Intron': edge, 'Spliced': edge})
 
             return found
 
