@@ -51,6 +51,8 @@ def classify_gene(args):
 
         writer.alternate_first_exon()
         writer.alternate_last_exon()
+        writer.p_alternate_first_exon()
+        writer.p_alternate_last_exon()
 
         writer.multi_exon_spanning()
         writer.tandem_cassette()

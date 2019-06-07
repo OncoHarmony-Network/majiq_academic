@@ -15,6 +15,7 @@ from voila.vlsv import get_expected_psi, matrix_area
 def semicolon(value_list):
     return ';'.join(str(x) for x in value_list)
 
+
 summaryVars2Headers = {
     'cassette_exon': 'Cassette',
     'tandem_cassette': 'Tandem Cassette',
@@ -242,7 +243,7 @@ class TsvWriter:
         names = ['summary.tsv', 'cassette.tsv', 'alt3prime.tsv', 'alt5prime.tsv', 'alt3and5prime.tsv',
                  'mutually_exclusive.tsv', 'alternate_last_exon.tsv', 'alternate_first_exon.tsv',
                  'alternative_intron.tsv', 'p_alt5prime.tsv', 'p_alt3prime.tsv', 'multi_exon_spanning.tsv',
-                 'tandem_cassette.tsv', 'exitron.tsv']
+                 'tandem_cassette.tsv', 'exitron.tsv', 'p_alternate_last_exon.tsv', 'p_alternate_first_exon.tsv']
         if ClassifyConfig().keep_constitutive:
             names.append('constitutive.tsv')
             names.append('constitutive_intron.tsv')
@@ -342,6 +343,8 @@ class TsvWriter:
         self.start_headers(headers, 'mutually_exclusive.tsv')
         self.start_headers(headers, 'alternate_last_exon.tsv')
         self.start_headers(headers, 'alternate_first_exon.tsv')
+        self.start_headers(headers, 'p_alternate_last_exon.tsv')
+        self.start_headers(headers, 'p_alternate_first_exon.tsv')
         self.start_headers(headers, 'alternative_intron.tsv')
         headers = self.common_headers + ['Reference Exon Coordinate', 'Exon Spliced With',
                                          'Exon Spliced With Coordinate', 'Tandem Exon Coordinates', 'Num_Tandem_Exons',
@@ -567,11 +570,6 @@ class TsvWriter:
                                            'C_A_Distal',
                                            junc.range_str()]
                                     writer.writerow(src_common + row + self.quantifications(module, 's', junc))
-                        elif event['event'] == 'p_ale':
-                            trg_common = self.common_data(module, 't')
-                            row = ['N/A', 'A1', event['A1'].range_str(), 'C1_A1',
-                                   'N/A']
-                            writer.writerow(trg_common + row + self.quantifications(module, 't', event['A1']))
 
     def alternate_first_exon(self):
         with open(os.path.join(self.config.directory, 'alternate_first_exon.tsv.%s' % self.pid), 'a',
@@ -594,11 +592,58 @@ class TsvWriter:
                                            'C_A_Distal',
                                            junc.range_str()]
                                     writer.writerow(trg_common + row + self.quantifications(module, 't', junc))
-                        elif event['event'] == 'p_afe':
-                            trg_common = self.common_data(module, 't')
-                            row = ['N/A', 'A1', event['A1'].range_str(), 'C1_A1',
-                                   'N/A']
-                            writer.writerow(trg_common + row + self.quantifications(module, 't', event['A1']))
+
+    def p_alternate_last_exon(self):
+        with open(os.path.join(self.config.directory, 'p_alternate_last_exon.tsv.%s' % self.pid), 'a',
+                  newline='') as csvfile:
+            writer = csv.writer(csvfile, dialect='excel-tab', delimiter='\t')
+            for module in self.modules:
+                events, _complex, _total_events = self.as_types[module.idx]
+                if not _complex or self.config.output_complex:
+                    for event in events:
+                        if event['event'] == 'p_ale':
+                            src_common = self.common_data(module, 's', node=event['Reference'])
+                            if event['Proximal'].start == -1:
+                                proxStr = "nan-{}".format(event['Proximal'].end)
+                            else:
+                                proxStr = "{}-nan".format(event['Proximal'].start)
+                            if src_common[5]:
+                                for junc in event['SkipA2']:
+                                    row = [event['Reference'].range_str(), 'A', proxStr,
+                                           'C_A_Proximal',
+                                           junc.range_str()]
+                                    writer.writerow(src_common + row + self.quantifications(module, 's', junc))
+                                for junc in event['SkipA1']:
+                                    row = [event['Reference'].range_str(), 'A', event['Distal'].range_str(),
+                                           'C_A_Distal',
+                                           junc.range_str()]
+                                    writer.writerow(src_common + row + self.quantifications(module, 's', junc))
+
+    def p_alternate_first_exon(self):
+        with open(os.path.join(self.config.directory, 'p_alternate_first_exon.tsv.%s' % self.pid), 'a',
+                  newline='') as csvfile:
+            writer = csv.writer(csvfile, dialect='excel-tab', delimiter='\t')
+            for module in self.modules:
+                events, _complex, _total_events = self.as_types[module.idx]
+                if not _complex or self.config.output_complex:
+                    for event in events:
+                        if event['event'] == 'p_afe':
+                            if event['Proximal'].start == -1:
+                                proxStr = "nan-{}".format(event['Proximal'].end)
+                            else:
+                                proxStr = "{}-nan".format(event['Proximal'].start)
+                            trg_common = self.common_data(module, 't', node=event['Reference'])
+                            if trg_common[5]:
+                                for junc in event['SkipA1']:
+                                    row = [event['Reference'].range_str(), 'A', proxStr,
+                                           'C_A_Proximal',
+                                           junc.range_str()]
+                                    writer.writerow(trg_common + row + self.quantifications(module, 't', junc))
+                                for junc in event['SkipA2']:
+                                    row = [event['Reference'].range_str(), 'A', event['Distal'].range_str(),
+                                           'C_A_Distal',
+                                           junc.range_str()]
+                                    writer.writerow(trg_common + row + self.quantifications(module, 't', junc))
 
     def alternative_intron(self):
         with open(os.path.join(self.config.directory, 'alternative_intron.tsv.%s' % self.pid), 'a',

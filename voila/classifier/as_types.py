@@ -1149,25 +1149,83 @@ class Graph:
         def p_alt_last_exon(self):
             found = []
             for node in self.nodes:
-                if node.end == -1:
-                    for other_node in self.nodes:
-                        if node.connects(other_node) or other_node.connects(node):
-                            if not other_node.is_half_exon:
-                                found.append({'event': self.strand_case('p_ale', 'p_afe'), 'A1': node, 'A2': None, 'C1': None,
-                                      'SkipA2': None, 'SkipA1': None})
+
+                if not node.is_half_exon:
+                    continue
+
+                all_half_exons = True
+                for other_node in self.nodes:
+                    connections = node.connects(other_node, ir=True) + other_node.connects(node, ir=True)
+
+                    if connections:
+                        if not other_node.is_half_exon:
+                            all_half_exons = False
+                        if self.graph.strand == '+':
+                            if other_node.start > node.start:
                                 break
+                        else:
+                            if other_node.start < node.start:
+                                break
+                else:
+                    if all_half_exons:
+                        continue
+
+                    if self.graph.strand == '+':
+                        a2 = self.nodes[-1]
+                        c1 = self.nodes[0]
+                    else:
+                        a2 = self.nodes[0]
+                        c1 = self.nodes[-1]
+
+                    skipA1 = a2.connects(c1, ir=True) + c1.connects(a2, ir=True)
+                    skipA2 = c1.connects(node, ir=True) + node.connects(c1, ir=True)
+                    found.append({'event': 'p_ale', 'Proximal': node,
+                                  'Distal': a2, 'Reference': c1,
+                                  'SkipA2': skipA2,
+                                  'SkipA1': skipA1})
+
             return found
 
         def p_alt_first_exon(self):
             found = []
             for node in self.nodes:
-                if node.start == -1:
-                    for other_node in self.nodes:
-                        if node.connects(other_node) or other_node.connects(node):
-                            if not other_node.is_half_exon:
-                                found.append({'event': self.strand_case('p_afe', 'p_ale'), 'A1': node, 'A2': None, 'C1': None,
-                                      'SkipA2': None, 'SkipA1': None})
+
+                if not node.is_half_exon:
+                    continue
+
+                all_half_exons = True
+                for other_node in self.nodes:
+
+                    connections = node.connects(other_node, ir=True) + other_node.connects(node, ir=True)
+                    if connections:
+                        if not other_node.is_half_exon:
+                            all_half_exons = False
+                        if self.graph.strand == '+':
+                            if other_node.start < node.start:
                                 break
+                        else:
+                            if other_node.start > node.start:
+                                break
+
+                else:
+                    if all_half_exons:
+                        continue
+
+                    if self.graph.strand == '+':
+                        a1 = self.nodes[0]
+                        c1 = self.nodes[-1]
+                    else:
+                        a1 = self.nodes[-1]
+                        c1 = self.nodes[0]
+
+
+
+                    skipA1 = node.connects(c1, ir=True) + c1.connects(node, ir=True)
+                    skipA2 = a1.connects(c1, ir=True) + c1.connects(a1, ir=True)
+                    found.append({'event': 'p_afe', 'Proximal': node,
+                                  'Distal': a1, 'Reference': c1,
+                                  'SkipA2': skipA2,
+                                  'SkipA1': skipA1})
             return found
 
 
