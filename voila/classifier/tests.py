@@ -8,7 +8,7 @@ from voila.api.matrix_utils import generate_means
 
 from voila.classifier.as_types import Graph
 from voila.classifier.tsv_writer import TsvWriter
-from voila.classifier.tests_expected import expected_modules, expected_cassette_exons, expected_alternative_intron
+from voila.classifier.tests_expected import expected_modules, expected_cassette_exons, expected_alternative_intron, expected_modules_constitutive
 
 from subprocess import Popen, PIPE, STDOUT
 import os, shutil
@@ -18,14 +18,16 @@ sg_file = '/home/paul/PycharmProjects/majiq/test_cases/classifier/caleb1/spliceg
 psi_file = '/home/paul/PycharmProjects/majiq/test_cases/classifier/caleb1/ran_treg.psi.voila'
 out_dir = '/home/paul/PycharmProjects/majiq/test_cases/classifier/caleb1/testout'
 
-def run_voila_classify(gene_id):
+def run_voila_classify(gene_id, additional_args=[]):
     os.environ['PYTHONPATH'] = '/home/paul/PycharmProjects/majiq'
-    cmd = ('python3',
+    cmd = ['python3',
            '/home/paul/PycharmProjects/majiq/voila/run_voila.py',
            'classify', psi_file, sg_file, '-d', out_dir,
            '--gene-id', gene_id,
            '--decomplexify-psi-threshold', '0.0'
-           )
+           ]
+    for arg in additional_args:
+        cmd.append(arg)
 
     p = Popen(cmd, stdout=PIPE, stderr=STDOUT)
     output = ''
@@ -44,6 +46,10 @@ def run_voila_classify(gene_id):
 
 expected_headers = ['module_id', 'gene_id', 'gene_name', "Chr","Strand", 'lsv_ids', 'cassette_exon', 'tandem_cassette', 'alt3ss', 'alt5ss', 'p_alt3ss',
                     'p_alt5ss', 'alt3and5ss', 'mutually_exclusive', 'alternative_intron', 'ale', 'afe', 'p_ale', 'p_afe', 'orphan_junction',
+                    'multi_exon_spanning',   'exitron', 'complex', 'number-of-events']
+expected_headers_constitutive = ['module_id', 'gene_id', 'gene_name', "Chr","Strand", 'lsv_ids', 'cassette_exon', 'tandem_cassette', 'alt3ss', 'alt5ss', 'p_alt3ss',
+                    'p_alt5ss', 'alt3and5ss', 'mutually_exclusive', 'alternative_intron', 'ale', 'afe', 'p_ale', 'p_afe', 'orphan_junction',
+                                 'constitutive_junction', 'constitutive_intron',
                     'multi_exon_spanning',   'exitron', 'complex', 'number-of-events']
 
 def verify_tsvs(gene_id):
@@ -119,20 +125,59 @@ def verify_tsvs(gene_id):
                         raise
 
 
+def verify_constitutive(gene_id):
+    with open(os.path.join(out_dir, 'summary.tsv'), 'r', newline='') as csvfile:
+        reader = csv.reader(csvfile, dialect='excel-tab', delimiter='\t')
+
+        headers = next(reader, None)
+        modules = []
+        for line in reader:
+            modules.append(line)
+
+        if gene_id in expected_modules_constitutive:
+            try:
+                assert len(modules) == len(expected_modules_constitutive[gene_id])
+            except:
+                print("expt: %d found: %d (%s)" % (len(expected_modules_constitutive[gene_id]), len(modules), gene_id))
+                raise
+
+
+            for i, mod in enumerate(expected_modules_constitutive[gene_id]):
+                print(modules[i])
+                print(mod)
+
+                for k, v in mod.items():
+                    try:
+                        if k == 'lsv_ids':
+                            assert all(x in v.split(';') for x in modules[i][expected_headers_constitutive.index(k)].split(';'))
+                        else:
+
+                            assert v == modules[i][expected_headers_constitutive.index(k)]
+                    except:
+                        print("expt: %s found: %s (%d, %s, %s)" % (v, modules[i][expected_headers_constitutive.index(k)], i+1,
+                                                                   headers[expected_headers_constitutive.index(k)], gene_id))
+                        raise
+
 import sys
 
 def run_tests():
 
     if len(sys.argv) > 1:
-        run_voila_classify(sys.argv[-1])
-        verify_tsvs(sys.argv[-1])
+        if sys.argv[-1] in expected_modules:
+            run_voila_classify(sys.argv[-1])
+            verify_tsvs(sys.argv[-1])
+        elif sys.argv[-1] in expected_modules_constitutive:
+            run_voila_classify(sys.argv[-1], ['--keep-constitutive'])
+            verify_constitutive(sys.argv[-1])
 
     else:
         for gene_id in expected_modules:
             run_voila_classify(gene_id)
             verify_tsvs(gene_id)
 
-
+        for gene_id in expected_modules_constitutive:
+            run_voila_classify(gene_id, ['--keep-constitutive'])
+            verify_constitutive(gene_id)
 
 
     print("Success!")

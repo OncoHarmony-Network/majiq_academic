@@ -1212,6 +1212,19 @@ expected_modules = {
             "exitron": "2"
         },
 
+    ],
+    'gene:ENSG00000218739': [
+        {},
+
+    ]
+}
+
+expected_modules_constitutive = {
+    'gene:ENSG00000218739': [
+        {}, {}, {}, {}, {
+            'constitutive_intron': '1'
+        }
+
     ]
 }
 
