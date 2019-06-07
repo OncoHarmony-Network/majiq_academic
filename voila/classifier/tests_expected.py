@@ -1238,6 +1238,19 @@ expected_modules_constitutive = {
             'constitutive_intron': '1'
         }
 
+    ],
+    'gene:ENSG00000273189': [
+        {}, {
+            'constitutive_junction': '1'
+        }, {
+            'constitutive_junction': '1'
+        }, {}, {
+            'constitutive_junction': '1'
+        }, {
+            'constitutive_junction': '1'
+        }, {
+            'constitutive_junction': '1'
+        }
     ]
 }
 

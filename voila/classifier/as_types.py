@@ -233,7 +233,7 @@ class Graph:
             :return: boolean
             """
 
-            return self.start < other.start and self.end < other.start
+            return self.view_start < other.view_start and self.view_end < other.view_start
 
         def __eq__(self, other):
             """
