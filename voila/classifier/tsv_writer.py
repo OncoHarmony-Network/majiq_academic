@@ -405,6 +405,12 @@ class TsvWriter:
                         if event['event'] == 'alt3ss':
                             src_common = self.common_data(module, 's', node=event['E1'])
                             trg_common = self.common_data(module, 't', node=event['E2'])
+
+                            print(event['E1'])
+                            print(event['E2'])
+                            print(src_common[5])
+
+
                             if src_common[5]:
                                 row = [event['E1'].range_str(), 'E2', event['E2'].range_str(), 'E1_E2_Proximal',
                                        event['Proximal'].range_str()]
