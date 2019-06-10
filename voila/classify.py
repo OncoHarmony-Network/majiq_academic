@@ -10,6 +10,7 @@ import time
 import os
 from multiprocessing import Manager, Pool
 import glob
+import traceback
 
 class Classify:
     def __init__(self):
@@ -27,41 +28,47 @@ class Classify:
 def classify_gene(args):
 
     gene_id, q = args
-
-    graph = Graph(gene_id)
-
-    writer = TsvWriter(graph, gene_id)
-
     config = ClassifyConfig()
-    if config.multi_gene_regions:
-        writer.p_multi_gene_region()
 
-    else:
-        writer.cassette()
+    try:
+        graph = Graph(gene_id)
 
-        writer.alt3prime()
-        writer.alt5prime()
-        writer.alt3and5prime()
+        writer = TsvWriter(graph, gene_id)
 
-        writer.p_alt3prime()
-        writer.p_alt5prime()
 
-        writer.mutually_exclusive()
-        writer.alternative_intron()
+        if config.multi_gene_regions:
+            writer.p_multi_gene_region()
 
-        writer.alternate_first_exon()
-        writer.alternate_last_exon()
-        writer.p_alternate_first_exon()
-        writer.p_alternate_last_exon()
+        else:
+            writer.cassette()
 
-        writer.multi_exon_spanning()
-        writer.tandem_cassette()
-        writer.exitron()
+            writer.alt3prime()
+            writer.alt5prime()
+            writer.alt3and5prime()
 
-        writer.summary()
+            writer.p_alt3prime()
+            writer.p_alt5prime()
 
-        if ClassifyConfig().keep_constitutive:
-            writer.constitutive()
+            writer.mutually_exclusive()
+            writer.alternative_intron()
+
+            writer.alternate_first_exon()
+            writer.alternate_last_exon()
+            writer.p_alternate_first_exon()
+            writer.p_alternate_last_exon()
+
+            writer.multi_exon_spanning()
+            writer.tandem_cassette()
+            writer.exitron()
+
+            writer.summary()
+
+            if ClassifyConfig().keep_constitutive:
+                writer.constitutive()
+    except:
+        if config.debug:
+            print(traceback.format_exc())
+        voila_log().warning("Some error processing gene %s , turn on --debug for more info" % gene_id)
 
     q.put(None)
 
