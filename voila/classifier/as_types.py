@@ -232,7 +232,7 @@ class Graph:
             :param other: other junction
             :return: boolean
             """
-
+            #return self.start < other.start and self.end < other.start
             return self.view_start < other.view_start and self.view_end < other.view_start
 
         def __eq__(self, other):
@@ -558,7 +558,7 @@ class Graph:
                     if (i - start_idx) > 0:
 
                         #print(edge.lsvs)
-                        if((self.nodes[i].end == -1 or self.nodes[i].start == -1) and True):
+                        if(i < len(self.nodes) and (self.nodes[i].end == -1 or self.nodes[i].start == -1) and True):
                             # handling case like exon 19-20 in ENSMUSG00000021820
                             # we aim to make sure that the half exons are in the middle of the module
                             # so that we don't mark the next module as having that half exon
