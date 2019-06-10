@@ -149,14 +149,12 @@ class Index:
         """
         Multithread inner function for each iteration of _heterogen loop below
         """
-        lsv_id, m, q = args
+        lsv_id, g, m, q = args
 
         het = m.lsv(lsv_id)
         gene_id = het.gene_id
 
-        with ViewSpliceGraph() as sg:
-            gene = sg.gene(gene_id)
-            gene_name = gene['name']
+        gene_name = g[gene_id]
 
         row = (lsv_id, gene_id, gene_name)
 
@@ -183,8 +181,11 @@ class Index:
             manager = Manager()
             q = manager.Queue()
 
+            with ViewSpliceGraph() as sg:
+                g = sg.gene_ids2gene_names
+
             with ViewHeterogens() as m:
-                lsv_ids = [(x, m, q) for x in m.lsv_ids()]
+                lsv_ids = [(x, g, m, q) for x in m.lsv_ids()]
 
             p = Pool(config.nproc)
             work_size = len(lsv_ids)
@@ -214,7 +215,7 @@ class Index:
         """
         Multithread inner function for each iteration of _deltapsi loop below
         """
-        lsv_id, q = args
+        lsv_id, g, q = args
 
         with ViewDeltaPsi() as m:
             dpsi = m.lsv(lsv_id)
@@ -233,10 +234,7 @@ class Index:
             confidence_thresh = list(max(matrix_area(b, x) for b in bins) for x in np.linspace(0, 1, 10))
             confidence_thresh = json.dumps(confidence_thresh)
 
-        with ViewSpliceGraph() as sg:
-
-            gene = sg.gene(gene_id)
-            gene_name = gene['name']
+        gene_name = g[gene_id]
 
         row = (lsv_id, gene_id, gene_name, excl_incl, dpsi_thresh, confidence_thresh)
 
@@ -262,8 +260,11 @@ class Index:
             manager = Manager()
             q = manager.Queue()
 
+            with ViewSpliceGraph() as sg:
+                g = sg.gene_ids2gene_names
+
             with ViewDeltaPsi() as m:
-                lsv_ids = [(x, q) for x in m.lsv_ids()]
+                lsv_ids = [(x, g, q) for x in m.lsv_ids()]
             p = Pool(config.nproc)
             work_size = len(lsv_ids)
 
@@ -292,13 +293,11 @@ class Index:
         """
         Multithread inner function for each iteration of _psi loop below
         """
-        lsv_id, m, q = args
+        lsv_id, g, m, q = args
         lsv = m.lsv(lsv_id)
         gene_id = lsv.gene_id
 
-        with ViewSpliceGraph() as sg:
-            gene = sg.gene(gene_id)
-            gene_name = gene['name']
+        gene_name = g[gene_id]
 
         row = (lsv_id, gene_id, gene_name)
 
@@ -323,8 +322,11 @@ class Index:
             manager = Manager()
             q = manager.Queue()
 
+            with ViewSpliceGraph() as sg:
+                g = sg.gene_ids2gene_names
+
             with ViewPsis() as m:
-                lsv_ids = [(x, m, q) for x in m.lsv_ids()]
+                lsv_ids = [(x, g, m, q) for x in m.lsv_ids()]
             p = Pool(config.nproc)
             work_size = len(lsv_ids)
 
