@@ -149,23 +149,19 @@ class Index:
         """
         Multithread inner function for each iteration of _heterogen loop below
         """
-        with ViewSpliceGraph() as sg, ViewHeterogens() as m:
-            lsv_id, q = args
-            het = m.lsv(lsv_id)
+        lsv_id, m, q = args
 
-            gene_id = het.gene_id
+        het = m.lsv(lsv_id)
+        gene_id = het.gene_id
+
+        with ViewSpliceGraph() as sg:
             gene = sg.gene(gene_id)
             gene_name = gene['name']
 
-            row = (lsv_id, gene_id, gene_name)
+        row = (lsv_id, gene_id, gene_name)
 
-            lsv_f = [getattr(het, f) for f in lsv_filters]
-
-            # For some reason, numpy needs these in tuples.
-            row = tuple(chain(row, lsv_f))
-
-            q.put(row)
-            return row
+        q.put(row)
+        return row
 
     def _heterogen(self):
         """
@@ -188,7 +184,7 @@ class Index:
             q = manager.Queue()
 
             with ViewHeterogens() as m:
-                lsv_ids = [(x, q) for x in m.lsv_ids()]
+                lsv_ids = [(x, m, q) for x in m.lsv_ids()]
 
             p = Pool(config.nproc)
             work_size = len(lsv_ids)
@@ -218,13 +214,12 @@ class Index:
         """
         Multithread inner function for each iteration of _deltapsi loop below
         """
-        with ViewSpliceGraph() as sg, ViewDeltaPsi() as m:
-            lsv_id, q = args
-            dpsi = m.lsv(lsv_id)
+        lsv_id, q = args
 
+        with ViewDeltaPsi() as m:
+            dpsi = m.lsv(lsv_id)
+            excl_incl = max(abs(a - b) for a, b in dpsi.excl_incl)
             gene_id = dpsi.gene_id
-            gene = sg.gene(gene_id)
-            gene_name = gene['name']
 
             dpsi_thresh = dpsi.means
             dpsi_thresh = np.abs(dpsi_thresh)
@@ -238,16 +233,15 @@ class Index:
             confidence_thresh = list(max(matrix_area(b, x) for b in bins) for x in np.linspace(0, 1, 10))
             confidence_thresh = json.dumps(confidence_thresh)
 
-            excl_incl = dpsi.excl_incl
-            excl_incl = max(abs(a - b) for a, b in excl_incl)
+        with ViewSpliceGraph() as sg:
 
-            lsv_f = [getattr(dpsi, f) for f in lsv_filters]
-            row = (lsv_id, gene_id, gene_name, excl_incl, dpsi_thresh, confidence_thresh)
+            gene = sg.gene(gene_id)
+            gene_name = gene['name']
 
-            # For some reason, numpy needs these in tuples.
-            row = tuple(chain(row, lsv_f))
-            q.put(row)
-            return row
+        row = (lsv_id, gene_id, gene_name, excl_incl, dpsi_thresh, confidence_thresh)
+
+        q.put(row)
+        return row
 
     def _deltapsi(self):
         """
@@ -287,7 +281,7 @@ class Index:
             log.info('Writing index: ' + voila_file)
             voila_index = voila_index.get()
 
-            print(voila_index[0:2])
+
             dtype = self._create_dtype(voila_index)
             self._write_index(voila_file, voila_index, dtype)
         else:
@@ -298,22 +292,18 @@ class Index:
         """
         Multithread inner function for each iteration of _psi loop below
         """
-        with ViewSpliceGraph() as sg, ViewPsis() as m:
-            lsv_id, q = args
-            lsv = m.lsv(lsv_id)
+        lsv_id, m, q = args
+        lsv = m.lsv(lsv_id)
+        gene_id = lsv.gene_id
 
-            gene_id = lsv.gene_id
+        with ViewSpliceGraph() as sg:
             gene = sg.gene(gene_id)
             gene_name = gene['name']
 
-            row = (lsv_id, gene_id, gene_name)
+        row = (lsv_id, gene_id, gene_name)
 
-            lsv_f = [getattr(lsv, f) for f in lsv_filters]
-
-            # For some reason, numpy needs these in tuples.
-            row = tuple(chain(row, lsv_f))
-            q.put(row)
-            return row
+        q.put(row)
+        return row
 
     def _psi(self):
         """
@@ -334,7 +324,7 @@ class Index:
             q = manager.Queue()
 
             with ViewPsis() as m:
-                lsv_ids = [(x, q) for x in m.lsv_ids()]
+                lsv_ids = [(x, m, q) for x in m.lsv_ids()]
             p = Pool(config.nproc)
             work_size = len(lsv_ids)
 
