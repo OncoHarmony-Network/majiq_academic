@@ -210,14 +210,16 @@ class TsvWriter:
                             pass
                             #print("found duplicate key %s" % header)
 
-                for key in ("E(dPSI)", "P(|dPSI|>=0.20)", "P(|dPSI|<=0.05)"):
+                thresh_key = "P(|dPSI|>=%.2f)" % self.config.threshold
+                high_prob_thresh_key = "P(|dPSI|<=%.2f)" % self.config.non_changing_threshold
+                for key in ("E(dPSI)", thresh_key, high_prob_thresh_key):
                     header = "%s_%s" % ('-'.join(group_names), key)
                     if not header in tmp:
                         if key == "E(dPSI)":
                             tmp[header] = _dpsi_dpsi(voila_file)
-                        elif key == "P(|dPSI|>=0.20)":
+                        elif key == thresh_key:
                             tmp[header] = _dpsi_p_thresh(voila_file)
-                        elif key == "P(|dPSI|<=0.05)":
+                        elif key == high_prob_thresh_key:
                             tmp[header] = _dpsi_p_nonchange(voila_file)
                     else:
                         pass

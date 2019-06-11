@@ -170,6 +170,8 @@ classify_parser.add_argument('--threshold', type=float, default=0.2,
                         help='Threshold in delta-PSI quantification column. The default is "0.2".')
 classify_parser.add_argument('--non-changing-threshold', type=float, default=0.05,
                         help='Threshold in delta-PSI quantification column. The default is "0.05".')
+classify_parser.add_argument('--probability-threshold', type=float, default=None,
+                        help='This is off by default.')
 required_classify_parser = classify_parser.add_argument_group('required named arguments')
 required_classify_parser.add_argument('-d', '--directory', required=True, help="All generated TSV files will be dumped in"
                                                                           " this directory")
