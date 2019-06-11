@@ -36,7 +36,7 @@ def classify_gene(args):
         writer = TsvWriter(graph, gene_id)
 
 
-        if config.multi_gene_regions:
+        if config.putative_multi_gene_regions:
             writer.p_multi_gene_region()
 
         else:

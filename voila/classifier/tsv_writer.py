@@ -238,7 +238,7 @@ class TsvWriter:
 
     @staticmethod
     def tsv_names():
-        if ClassifyConfig().multi_gene_regions:
+        if ClassifyConfig().putative_multi_gene_regions:
             return ['p_multi_gene_region.tsv']
         names = ['summary.tsv', 'cassette.tsv', 'alt3prime.tsv', 'alt5prime.tsv', 'alt3and5prime.tsv',
                  'mutually_exclusive.tsv', 'alternate_last_exon.tsv', 'alternate_first_exon.tsv',
@@ -324,7 +324,7 @@ class TsvWriter:
 
     def start_all_headers(self):
 
-        if self.config.multi_gene_regions:
+        if self.config.putative_multi_gene_regions:
             headers = ['Gene ID_Region', 'Gene ID', 'Gene Name', 'Chr', 'Strand', 'First Exon Start coord',
                        'First Exon End coord', 'Last Exon Start coord', "Last Exon End coord"]
             self.start_headers(headers, 'p_multi_gene_region.tsv')

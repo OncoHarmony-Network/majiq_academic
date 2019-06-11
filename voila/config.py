@@ -24,7 +24,8 @@ _ClassifyConfig = namedtuple('ClassifyConfig', ['directory', 'voila_files', 'voi
                                       'nproc', 'decomplexify_psi_threshold', 'decomplexify_deltapsi_threshold',
                                       'decomplexify_reads_threshold', 'analysis_type', 'gene_ids',
                                       'debug', 'silent', 'keep_constitutive', 'show_all_modules', 'output_complex',
-                                      'untrimmed_exons', 'multi_gene_regions', 'threshold', 'non_changing_threshold'])
+                                      'untrimmed_exons', 'putative_multi_gene_regions',
+                                                'threshold', 'non_changing_threshold'])
 _ClassifyConfig.__new__.__defaults__ = (None,) * len(_ClassifyConfig._fields)
 
 # global config variable to act as the singleton instance of the config.
@@ -323,14 +324,15 @@ class ClassifyConfig:
             for float_key in ['decomplexify_psi_threshold', 'decomplexify_deltapsi_threshold',
                               'non_changing_threshold', 'threshold']:
                 settings[float_key] = config_parser['SETTINGS'].getfloat(float_key)
-            for bool_key in ['debug', 'show_all_modules', 'output_complex', 'untrimmed_exons', 'multi_gene_regions']:
+            for bool_key in ['debug', 'show_all_modules', 'output_complex', 'untrimmed_exons',
+                             'putative_multi_gene_regions']:
                 settings[bool_key] = config_parser['SETTINGS'].getboolean(bool_key)
 
             if settings['decomplexify_reads_threshold'] == 0:
                 voila_log().warning("--decomplexify-reads-threshold 0 is not recommended and not tested!")
 
             # implications
-            if settings['multi_gene_regions']:
+            if settings['putative_multi_gene_regions']:
                 settings['keep_constitutive'] = True
             if settings['keep_constitutive']:
                 settings['show_all_modules'] = True

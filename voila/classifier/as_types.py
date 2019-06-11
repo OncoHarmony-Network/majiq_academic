@@ -1407,7 +1407,7 @@ class Graph:
             """
             ret = []
 
-            if ClassifyConfig().multi_gene_regions:
+            if ClassifyConfig().putative_multi_gene_regions:
                 for region in self.p_multi_gene_regions:
                     region['event'] = 'p_multi_gene_region'
                     ret.append(region)
