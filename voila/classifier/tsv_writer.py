@@ -246,7 +246,6 @@ class TsvWriter:
                  'tandem_cassette.tsv', 'exitron.tsv', 'p_alternate_last_exon.tsv', 'p_alternate_first_exon.tsv']
         if ClassifyConfig().keep_constitutive:
             names.append('constitutive.tsv')
-            names.append('constitutive_intron.tsv')
         return names
 
     @staticmethod
@@ -362,14 +361,12 @@ class TsvWriter:
             headers.append("Constitutive Intron")
         headers += ["Multi Exon Spanning", "Exitron", "Complex", "Number of Events", "Collapsed Event Name"]
         self.start_headers(headers, 'summary.tsv')
-
         if self.config.keep_constitutive:
-            headers = self.common_headers + ['Junction Coordinate', 'Intron Retention', 'Collapsed Event Name']
-            self.start_headers(headers, 'constitutive.tsv')
             headers = self.common_headers + ['Reference Exon Coordinate', 'Exon Spliced With',
                                              'Exon Spliced With Coordinate', 'Junction Name',
-                                             'Junction Coordinate'] + self.quantification_headers
-            self.start_headers(headers, 'constitutive_intron.tsv')
+                                             'Junction Coordinate', 'Is Intron',
+                                             'Collapsed Event Name'] + self.quantification_headers
+            self.start_headers(headers, 'constitutive.tsv')
 
     def cassette(self):
         with open(os.path.join(self.config.directory, 'cassette.tsv.%s' % self.pid), 'a', newline='') as csvfile:
@@ -755,18 +752,11 @@ class TsvWriter:
                     for event in events:
                         if event['event'] == 'constitutive':
                             common = self.common_data(module)
-                            row = [event['Junc'].range_str(), str(event['Junc'].ir), module.collapsed_event_name]
-                            writer.writerow(common + row)
+                            row = [event['C2'].range_str(), 'C1', event['C1'].range_str(), 'C2_C1',
+                                   event['Junc'].range_str(), 'False', module.collapsed_event_name]
+                            writer.writerow(common + row + self.quantifications(module, edge=event['Junc']))
 
-    def constitutive_intron(self):
-        with open(os.path.join(self.config.directory, 'constitutive_intron.tsv.%s' % self.pid), 'a',
-                  newline='') as csvfile:
-            writer = csv.writer(csvfile, dialect='excel-tab', delimiter='\t')
-            for module in self.modules:
-                events, _complex, _total_events = self.as_types[module.idx]
-                if not _complex or self.config.output_complex:
-                    for event in events:
-                        if event['event'] == 'constitutive_intron':
+                        elif event['event'] == 'constitutive_intron':
                             src_common = self.common_data(module, 's')
                             trg_common = self.common_data(module, 't')
 
@@ -776,11 +766,11 @@ class TsvWriter:
                             if any(':t:' in _l for _l in event['Intron'].lsvs) and not \
                                any(':s:' in _l for _l in event['Intron'].lsvs):
                                 row = [event['C2'].range_str(), 'C1', event['C1'].range_str(), 'C2_C1_intron',
-                                       event['Intron'].range_str()]
+                                       event['Intron'].range_str(), 'True', module.collapsed_event_name]
                                 writer.writerow(trg_common + row + self.quantifications(module, 't', event['Intron']))
                             else:
                                 row = [event['C1'].range_str(), 'C2', event['C2'].range_str(), 'C1_C2_intron',
-                                       event['Intron'].range_str()]
+                                       event['Intron'].range_str(), 'True', module.collapsed_event_name]
                                 writer.writerow(src_common + row + self.quantifications(module, 's', event['Intron']))
 
 

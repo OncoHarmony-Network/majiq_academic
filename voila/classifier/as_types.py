@@ -1358,7 +1358,8 @@ class Graph:
                                 continue
 
                             if junc_reads >= config.keep_constitutive:
-                                found.append({'event': 'constitutive', 'Junc': junc})
+                                found.append({'event': 'constitutive', 'Junc': junc, 'Spliced': junc,
+                                              'C1': n2, 'C2': n1})
 
             return found
 
