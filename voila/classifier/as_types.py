@@ -375,6 +375,7 @@ class Graph:
                 psi = max(map(max, (v['psi'] for v in self.edges[i].lsvs.values())), default=None)
                 delta_psi = max((abs(y) for v in self.edges[i].lsvs.values() for y in v['delta_psi']), default=None)
 
+
                 # print(delta_psi)
                 #
                 # print(self.config.decomplexify_deltapsi_threshold and delta_psi is not None)
@@ -428,11 +429,19 @@ class Graph:
             for exon in sg.exons(self.gene_id):
                 self._add_exon(exon)
             for junc in sg.junctions(self.gene_id, omit_simplified=True):
-                if [x for x in sg.junction_reads_exp(junc, self.experiment_names)]:
-                    self._add_junc(junc)
+                try:
+                    if next(sg.junction_reads_exp(junc, self.experiment_names))['reads'] >= self.config.decomplexify_reads_threshold:
+                        self._add_junc(junc)
+                except StopIteration:
+                    if self.config.decomplexify_reads_threshold == 0:
+                        self._add_junc(junc)
             for ir in sg.intron_retentions(self.gene_id, omit_simplified=True):
-                if [x for x in sg.intron_retention_reads_exp(ir, self.experiment_names)]:
-                    self._add_junc(ir, ir=True)
+                try:
+                    if next(sg.intron_retention_reads_exp(ir, self.experiment_names))['reads'] >= self.config.decomplexify_reads_threshold:
+                        self._add_junc(ir, ir=True)
+                except StopIteration:
+                    if self.config.decomplexify_reads_threshold == 0:
+                        self._add_junc(ir, ir=True)
 
 
         # remove exons that don't have any junctions

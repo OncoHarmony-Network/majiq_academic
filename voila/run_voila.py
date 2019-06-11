@@ -163,6 +163,9 @@ classify_parser.add_argument('--decomplexify-deltapsi-threshold', type=float, de
                          help='Filter out junctions where abs(E(dPSI)) is below a certain value (between 0.0 and 1.0). If multiple '
                               'input files are used, only the biggest difference (dPSI) value is used. If 0 (or 0.0) is specified, '
                               'no filtering fill be done. The default is "0.0". ')
+classify_parser.add_argument('--decomplexify-reads-threshold', type=int, default=1,
+                         help='Filter out junctions where the number of reads is below a certain value (integer). If multiple '
+                              'input files are used, only the biggest number of reads is used. The default is "1". ')
 classify_parser.add_argument('--threshold', type=float, default=0.2,
                         help='Threshold in delta-PSI quantification column. The default is "0.2".')
 classify_parser.add_argument('--non-changing-threshold', type=float, default=0.05,
