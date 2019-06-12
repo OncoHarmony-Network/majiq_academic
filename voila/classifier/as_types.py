@@ -453,10 +453,8 @@ class Graph:
         self._remove_empty_exons()
         self._trim_exons()
 
-
         self.edges.sort()
         self.nodes.sort()
-
 
     def _trim_exons(self):
         """
@@ -537,6 +535,21 @@ class Graph:
             if trim_end:
                 node.exon['end'] = global_max
 
+        # after all the regular trimming is done, there still may be some collision cases due to AFE/ALE that are
+        # collided. We look for any remaining collisions, and trim the exon without junctions by one unit to
+        # resolve the collision
+        for i, node in enumerate(self.nodes[:-1]):
+            if node.end == self.nodes[i + 1].start:
+
+                if not node.edges:
+                    node.untrimmed_end = node.end
+                    node.exon['end'] -= 1
+                elif not self.nodes[i + 1].back_edges:
+                    self.nodes[i + 1].untrimmed_start = self.nodes[i + 1].start
+                    self.nodes[i + 1].exon['start'] += 1
+                else:
+                    voila_log().warning(
+                        "Found two exons in gene %s which are collided and both have junctions! Can not trim!" % self.gene_id)
 
 
     def modules(self):
