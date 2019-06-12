@@ -10,7 +10,7 @@ from voila.config import ClassifyConfig
 import multiprocessing
 import numpy as np
 from voila.vlsv import get_expected_psi, matrix_area
-
+from itertools import combinations
 
 def semicolon(value_list):
     return ';'.join(str(x) for x in value_list)
@@ -159,7 +159,35 @@ class TsvWriter:
                             group_means = []
                             psis = np.array(list(lsv.get('mean_psi'))).transpose((1, 0, 2))[group_idx]
                             for junc_mean in list(get_expected_psi(x) for x in psis):
-                                group_means.append(round(junc_mean, SIG_FIGS))
+                                group_means.append(junc_mean)
+                            return (round(x, SIG_FIGS) for x in group_means)
+                return ''
+            return f
+
+        def _het_dpsi(voila_files, group_idx1, group_idx2):
+            def f(lsv_id, edge=None):
+                for voila_file in voila_files:
+                    with Matrix(voila_file) as m:
+                        lsv = m.heterogen(lsv_id)
+                        if edge:
+
+                            edge_idx = _filter_edges(edge, lsv)
+
+                            if edge_idx is None:
+                                continue
+                            else:
+                                arr = np.array(list(lsv.get('mean_psi'))).transpose((1, 0, 2))
+                                psi_g1 = get_expected_psi(arr[group_idx1][edge_idx])
+                                psi_g2 = get_expected_psi(arr[group_idx2][edge_idx])
+
+                                return round(psi_g1-psi_g2, SIG_FIGS)
+                        else:
+                            group_means = []
+                            arr = np.array(list(lsv.get('mean_psi'))).transpose((1, 0, 2))
+                            psis_g1 = arr[group_idx1]
+                            psis_g2 = arr[group_idx2]
+                            for psi_g1, psi_g2 in zip(psis_g1, psis_g2):
+                                group_means.append(get_expected_psi(psi_g1) - get_expected_psi(psi_g2))
                             return (round(x, SIG_FIGS) for x in group_means)
                 return ''
             return f
@@ -258,7 +286,10 @@ class TsvWriter:
 
 
             elif analysis_type == constants.ANALYSIS_HETEROGEN:
+
+                group_idxs = {}
                 for i, group in enumerate(group_names):
+                    group_idxs[group] = i
                     for key in ("E(PSI)",):
                         header = "%s_HET_%s" % (group, key)
                         if header in tmp:
@@ -266,6 +297,15 @@ class TsvWriter:
                         else:
                             if key == "E(PSI)":
                                 tmp[header] = (_het_psi, [voila_file], i)
+
+                for group1, group2 in combinations(group_names, 2):
+                    for key in ("E(dPSI)",):
+                        header = "%s-%s_HET_%s" % (group1, group2, key)
+                        if header in tmp:
+                            tmp[header][1].append(voila_file)
+                        else:
+                            if key == "E(dPSI)":
+                                tmp[header] = (_het_dpsi, [voila_file], group_idxs[group1], group_idxs[group2])
 
             else:
                 for i, group in enumerate(group_names):
