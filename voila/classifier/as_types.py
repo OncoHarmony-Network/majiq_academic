@@ -397,7 +397,7 @@ class Graph:
                     del self.edges[i]
 
 
-        voila_log().debug("Decomplexifier removed %d junction(s)" % num_filtered)
+
 
     def _remove_empty_exons(self):
         """

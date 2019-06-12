@@ -65,12 +65,16 @@ def classify_gene(args):
 
             if ClassifyConfig().keep_constitutive:
                 writer.constitutive()
+    except KeyboardInterrupt:
+        raise
+
     except:
         if config.debug:
             print(traceback.format_exc())
         voila_log().warning("Some error processing gene %s , turn on --debug for more info" % gene_id)
 
-    q.put(None)
+    if q:
+        q.put(None)
 
 def run_classifier():
 
@@ -93,31 +97,44 @@ def run_classifier():
 
     #total_genes = len(gene_ids)
     TsvWriter.delete_tsvs()
-
-
-    manager = Manager()
-    q = manager.Queue()
-
-    p = Pool(config.nproc)
     work_size = len(gene_ids)
 
+    if config.debug:
+        try:
+            for i, gene_id in enumerate(gene_ids):
+                classify_gene((gene_id, None,))
+                print('Processing Genes and Modules [%d/%d]\r' % (i, work_size), end="")
+        except KeyboardInterrupt:
+            print('                                                  \r', end="")
 
 
-    # voila_index = p.map(self._heterogen_pool_add_index, zip(lsv_ids, range(work_size), repeat(work_size)))
-    classifier_pool = p.map_async(classify_gene, ((x, q) for x in gene_ids),)
+        print('                                                  \r', end="")
 
-    # monitor loop
-    while True:
+    else:
+        manager = Manager()
+        q = manager.Queue()
 
-        if classifier_pool.ready():
-            break
-        else:
-            size = q.qsize()
-            print('Processing Genes and Modules [%d/%d]\r' % (size, work_size), end="")
-            time.sleep(2)
+        p = Pool(config.nproc)
 
-    print('                                                  \r', end="")
-    res = classifier_pool.get()
+
+
+
+        # voila_index = p.map(self._heterogen_pool_add_index, zip(lsv_ids, range(work_size), repeat(work_size)))
+        classifier_pool = p.map_async(classify_gene, ((x, q) for x in gene_ids),)
+
+        # monitor loop
+        while True:
+
+            if classifier_pool.ready():
+                break
+            else:
+                size = q.qsize()
+                print('Processing Genes and Modules [%d/%d]\r' % (size, work_size), end="")
+                time.sleep(2)
+
+        print('                                                  \r', end="")
+        res = classifier_pool.get()
+
     voila_log().info("Concatenating Results")
 
     writer = TsvWriter(None, None)
