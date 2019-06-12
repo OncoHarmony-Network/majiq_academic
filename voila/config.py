@@ -104,7 +104,7 @@ def find_voila_files(vs):
     return voila_files
 
 def get_mixed_analysis_type_str(voila_files):
-    types = {'psi': 0, 'delta_psi': 0}
+    types = {'psi': 0, 'delta_psi': 0, 'het': 0}
     for mf in voila_files:
 
         with Matrix(mf) as m:
@@ -112,15 +112,20 @@ def get_mixed_analysis_type_str(voila_files):
             if m.analysis_type == constants.ANALYSIS_PSI:
                 types['psi'] += 1
 
-            if m.analysis_type == constants.ANALYSIS_DELTAPSI:
+            elif m.analysis_type == constants.ANALYSIS_DELTAPSI:
                 types['delta_psi'] += 1
 
-    if not types['psi']:
-        return "dPSIx%d" % types['delta_psi']
-    elif not types['delta_psi']:
-        return "PSIx%d" % types['psi']
-    else:
-        return "PSIx%d dPSIx%d" % (types['psi'], types['delta_psi'])
+            elif m.analysis_type == constants.ANALYSIS_HETEROGEN:
+                types['het'] += 1
+
+    strsout = []
+    if types['psi']:
+        strsout.append("PSIx%d" % types['psi'])
+    if types['delta_psi']:
+        strsout.append("dPSIx%d" % types['delta_psi'])
+    if types['het']:
+        strsout.append("HETx%d" % types['het'])
+    return ' '.join(strsout)
 
 def find_analysis_type(voila_files):
     """
