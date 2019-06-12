@@ -13,6 +13,8 @@ import argparse
 from voila.classifier.tsv_writer import TsvWriter
 from voila.config import ClassifyConfig
 from voila.exceptions import GeneIdNotFoundInVoilaFile, VoilaException
+from voila.vlsv import get_expected_psi, matrix_area
+import numpy as np
 
 def check_file(value):
     """
@@ -68,10 +70,12 @@ class Graph:
         self.edges = []  # all edges in the graph
         self.gene_id = gene_id
         self.config = ClassifyConfig()
-        self.experiment_names = []
+        self.experiment_names = set()
+
         for voila_file in self.config.voila_files:
             with Matrix(voila_file) as m:
-                self.experiment_names.append(m.experiment_names[0][0])
+                self.experiment_names.add(m.experiment_names[0][0])
+
 
         # populate the graph with data from the splice graph
         self._populate()
@@ -659,8 +663,29 @@ class Graph:
             self._psi(voila_file)
         elif analysis_type == constants.ANALYSIS_DELTAPSI:
             self._delta_psi(voila_file)
+        elif analysis_type == constants.ANALYSIS_HETEROGEN:
+            self._heterogen(voila_file)
         else:
             raise UnsupportedVoilaFile()
+
+    def _add_lsvs_to_edges(self, lsv_store):
+        for edge in self.edges:
+            key = str(edge.start) + '-' + str(edge.end)
+            # if we found values for this edge in the voila file
+            if key in lsv_store:
+                # if the edge already has values found from another voila file
+                if edge.lsvs:
+                    # for each lsv in the voila file just read
+                    for lsv_id in lsv_store[key]:
+                        if lsv_id in edge.lsvs:
+                            for means in lsv_store[key][lsv_id]['psi']:
+                                edge.lsvs[lsv_id]['psi'].add(means)
+                            for means in lsv_store[key][lsv_id]['delta_psi']:
+                                edge.lsvs[lsv_id]['delta_psi'].add(means)
+                        else:
+                            edge.lsvs[lsv_id] = lsv_store[key][lsv_id]
+                else:
+                    edge.lsvs = lsv_store[key]
 
     def _psi(self, voila_file):
         """
@@ -675,6 +700,9 @@ class Graph:
             for lsv_id in m.lsv_ids(gene_ids=[self.gene_id]):
                 lsv = m.psi(lsv_id)
 
+                print('~~~~~~~~~~~~')
+                print(lsv.get('means'))
+                print('~~~~~~~~~~~~')
 
                 for (start, end), means in zip(lsv.junctions, lsv.get('means')):
 
@@ -690,24 +718,7 @@ class Graph:
 
                     lsv_store[key][lsv_id]['psi'].add(means)
 
-        for edge in self.edges:
-            key = str(edge.start) + '-' + str(edge.end)
-            # if we found values for this edge in the voila file
-            if key in lsv_store:
-                # if the edge already has values found from another voila file
-                if edge.lsvs:
-                    # for each lsv in the voila file just read
-                    for lsv_id in lsv_store[key]:
-                        if lsv_id in edge.lsvs:
-                            for means in lsv_store[key][lsv_id]['psi']:
-
-                                edge.lsvs[lsv_id]['psi'].add(means)
-                            for means in lsv_store[key][lsv_id]['delta_psi']:
-                                edge.lsvs[lsv_id]['delta_psi'].add(means)
-                        else:
-                            edge.lsvs[lsv_id] = lsv_store[key][lsv_id]
-                else:
-                    edge.lsvs = lsv_store[key]
+        self._add_lsvs_to_edges(lsv_store)
 
     def _delta_psi(self, voila_file):
         """
@@ -740,23 +751,46 @@ class Graph:
                     key = str(start) + '-' + str(end)
                     lsv_store[key][lsv_id]['delta_psi'].add(means)
 
-        for edge in self.edges:
-            key = str(edge.start) + '-' + str(edge.end)
-            # if we found values for this edge in the voila file
-            if key in lsv_store:
-                # if the edge already has values found from another voila file
-                if edge.lsvs:
-                    # for each lsv in the voila file just read
-                    for lsv_id in lsv_store[key]:
-                        if lsv_id in edge.lsvs:
-                            for means in lsv_store[key][lsv_id]['psi']:
-                                edge.lsvs[lsv_id]['psi'].add(means)
-                            for means in lsv_store[key][lsv_id]['delta_psi']:
-                                edge.lsvs[lsv_id]['delta_psi'].add(means)
-                        else:
-                            edge.lsvs[lsv_id] = lsv_store[key][lsv_id]
-                else:
-                    edge.lsvs = lsv_store[key]
+        self._add_lsvs_to_edges(lsv_store)
+
+
+    def _heterogen(self, voila_file):
+        """
+        When a psi voila file is supplied, this is where the psi data is added to the junctions.
+        :return: None
+        """
+
+        lsv_store = {}
+
+        with Matrix(voila_file) as m:
+            for lsv_id in m.lsv_ids(gene_ids=[self.gene_id]):
+                lsv = m.heterogen(lsv_id)
+
+
+                #group_names = list(m.group_names)
+                mean_psi = list(lsv.get('mean_psi'))
+
+                group_means = []
+
+                #for grp, mean in zip(group_names, np.array(mean_psi).transpose((1, 0, 2))):
+                for mean in np.array(mean_psi).transpose((1, 0, 2)):
+                    group_means.append(list(get_expected_psi(x) for x in mean))
+
+
+                for group_mean in group_means:
+                    for (start, end), means in zip(lsv.junctions, group_mean):
+
+                        key = str(start) + '-' + str(end)
+
+                        if key not in lsv_store:
+                            lsv_store[key] = {}
+
+                        if lsv_id not in lsv_store[key]:
+                            lsv_store[key][lsv_id] = {'psi': set(), 'delta_psi': set()}
+
+                        lsv_store[key][lsv_id]['psi'].add(means)
+
+        self._add_lsvs_to_edges(lsv_store)
 
     class Module:
         def __init__(self, nodes, graph):

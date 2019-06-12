@@ -113,6 +113,26 @@ class TsvWriter:
                         return (round(x, SIG_FIGS) for x in generate_variances([lsv.get('bins')[0]]))
             return f
 
+        def _het_psi(voila_file, group_idx):
+            def f(lsv_id, edge=None):
+                with Matrix(voila_file) as m:
+                    lsv = m.psi(lsv_id)
+                    if edge:
+                        edge_idx = _filter_edges(edge, lsv)
+                        if edge_idx is None:
+                            return ''
+                        else:
+
+                            psi2 = get_expected_psi(np.array(list(lsv.get('mean_psi'))).transpose((1, 0, 2))[group_idx][edge_idx])
+                            return round(psi2, SIG_FIGS)
+                    else:
+                        group_means = []
+                        psis = np.array(list(lsv.get('mean_psi'))).transpose((1, 0, 2))[group_idx]
+                        for junc_mean in list(get_expected_psi(x) for x in psis):
+                            group_means.append(round(junc_mean, SIG_FIGS))
+                        return (round(x, SIG_FIGS) for x in group_means)
+            return f
+
         def _dpsi_psi(voila_file, group_idx):
             def f(lsv_id, edge=None):
                 with Matrix(voila_file) as m:
@@ -196,6 +216,17 @@ class TsvWriter:
                                 tmp[header] = _psi_psi(voila_file)
                             elif key == "Var(E(PSI))":
                                 tmp[header] = _psi_var(voila_file)
+                        else:
+                            pass
+                            #print("found duplicate key %s" % header)
+
+            elif analysis_type == constants.ANALYSIS_HETEROGEN:
+                for i, group in enumerate(group_names):
+                    for key in ("E(PSI)",):
+                        header = "%s_%s" % (group, key)
+                        if not header in tmp:
+                            if key == "E(PSI)":
+                                tmp[header] = _het_psi(voila_file, i)
                         else:
                             pass
                             #print("found duplicate key %s" % header)
