@@ -700,10 +700,6 @@ class Graph:
             for lsv_id in m.lsv_ids(gene_ids=[self.gene_id]):
                 lsv = m.psi(lsv_id)
 
-                print('~~~~~~~~~~~~')
-                print(lsv.get('means'))
-                print('~~~~~~~~~~~~')
-
                 for (start, end), means in zip(lsv.junctions, lsv.get('means')):
 
                     key = str(start) + '-' + str(end)
