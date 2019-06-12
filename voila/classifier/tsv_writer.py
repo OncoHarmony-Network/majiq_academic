@@ -69,6 +69,24 @@ class TsvWriter:
         """
         Look at all psi and dpsi quant headers and find the appropriate intersection
         we need to then define which function should be called for each resulting column
+
+        This is likely a very confusing section so what is going on requires some context.
+
+        Basically, for each combination group name + stat, we only want to show one column for it in the TSV
+        However, when looking at all files, we may come across it twice. In order to determine if we have
+        the information for it in a specific voila file, we need to follow a specific algoruthm to get the data from
+        the voila file in the first place.
+
+        So, we loop over all possible voila files associated with that stat, and once we find a valid value, we
+        return it.
+
+        The bottom half of this function loops over all voila files to build up a list of stats keys to the functions
+        that will be run for each event to get the required ddata for that event. (all of the "_" functions inside
+        this function, return functions)
+
+        This is an efficiency compromise, because we can build the list of functions once for a gene, and only need
+        to open and read the voila files again when the quantification function is called.
+
         :return:
         """
         SIG_FIGS = 3
@@ -78,125 +96,144 @@ class TsvWriter:
                 edge = [edge]
             for _edge in edge:
                 # loop through junctions to find one matching range of edge
-                for j, junc in enumerate(lsv.get('junctions')):
-                    if junc[0] == _edge.start and junc[1] == _edge.end:
-                        return j
-                else:
-                    # junction not quantified by majiq
+                try:
+                    for j, junc in enumerate(lsv.get('junctions')):
+                        if junc[0] == _edge.start and junc[1] == _edge.end:
+                            return j
+                    else:
+                        # junction not quantified by majiq
+                        pass
+                except:
                     pass
 
-        def _psi_psi(voila_file):
+        def _psi_psi(voila_files):
             def f(lsv_id, edge=None):
-                with Matrix(voila_file) as m:
-                    lsv = m.psi(lsv_id)
-                    if edge:
-                        edge_idx = _filter_edges(edge, lsv)
-                        if edge_idx is None:
-                            return ''
+                for voila_file in voila_files:
+                    with Matrix(voila_file) as m:
+                        lsv = m.psi(lsv_id)
+                        if edge:
+                            edge_idx = _filter_edges(edge, lsv)
+                            if edge_idx is None:
+                                continue
+                            else:
+                                return round(lsv.get('means')[edge_idx], SIG_FIGS)
                         else:
-                            return round(lsv.get('means')[edge_idx], SIG_FIGS)
-                    else:
-                        return (round(x, SIG_FIGS) for x in lsv.get('means'))
+                            return (round(x, SIG_FIGS) for x in lsv.get('means'))
+                return ''
             return f
 
-        def _psi_var(voila_file):
+        def _psi_var(voila_files):
             def f(lsv_id, edge=None):
-                with Matrix(voila_file) as m:
-                    lsv = m.psi(lsv_id)
-                    if edge:
-                        edge_idx = _filter_edges(edge, lsv)
-                        if edge_idx is None:
-                            return ''
+                for voila_file in voila_files:
+                    with Matrix(voila_file) as m:
+                        lsv = m.psi(lsv_id)
+                        if edge:
+                            edge_idx = _filter_edges(edge, lsv)
+                            if edge_idx is None:
+                                continue
+                            else:
+                                return round(generate_variances([lsv.get('bins')][0])[edge_idx], SIG_FIGS)
                         else:
-                            return round(generate_variances([lsv.get('bins')][0])[edge_idx], SIG_FIGS)
-                    else:
-                        return (round(x, SIG_FIGS) for x in generate_variances([lsv.get('bins')[0]]))
+                            return (round(x, SIG_FIGS) for x in generate_variances([lsv.get('bins')[0]]))
+                return ''
             return f
 
-        def _het_psi(voila_file, group_idx):
+        def _het_psi(voila_files, group_idx):
             def f(lsv_id, edge=None):
-                with Matrix(voila_file) as m:
-                    lsv = m.psi(lsv_id)
-                    if edge:
-                        edge_idx = _filter_edges(edge, lsv)
-                        if edge_idx is None:
-                            return ''
-                        else:
+                for voila_file in voila_files:
+                    with Matrix(voila_file) as m:
+                        lsv = m.heterogen(lsv_id)
+                        if edge:
 
-                            psi2 = get_expected_psi(np.array(list(lsv.get('mean_psi'))).transpose((1, 0, 2))[group_idx][edge_idx])
-                            return round(psi2, SIG_FIGS)
-                    else:
-                        group_means = []
-                        psis = np.array(list(lsv.get('mean_psi'))).transpose((1, 0, 2))[group_idx]
-                        for junc_mean in list(get_expected_psi(x) for x in psis):
-                            group_means.append(round(junc_mean, SIG_FIGS))
-                        return (round(x, SIG_FIGS) for x in group_means)
+                            edge_idx = _filter_edges(edge, lsv)
+
+                            if edge_idx is None:
+                                continue
+                            else:
+
+                                psi2 = get_expected_psi(np.array(list(lsv.get('mean_psi'))).transpose((1, 0, 2))[group_idx][edge_idx])
+
+
+                                return round(psi2, SIG_FIGS)
+                        else:
+                            group_means = []
+                            psis = np.array(list(lsv.get('mean_psi'))).transpose((1, 0, 2))[group_idx]
+                            for junc_mean in list(get_expected_psi(x) for x in psis):
+                                group_means.append(round(junc_mean, SIG_FIGS))
+                            return (round(x, SIG_FIGS) for x in group_means)
+                return ''
             return f
 
-        def _dpsi_psi(voila_file, group_idx):
+        def _dpsi_psi(voila_files, group_idx):
             def f(lsv_id, edge=None):
-                with Matrix(voila_file) as m:
-                    lsv = m.delta_psi(lsv_id)
-                    if edge:
-                        edge_idx = _filter_edges(edge, lsv)
-                        if edge_idx is None:
-                            return ''
+                for voila_file in voila_files:
+                    with Matrix(voila_file) as m:
+                        lsv = m.delta_psi(lsv_id)
+                        if edge:
+                            edge_idx = _filter_edges(edge, lsv)
+                            if edge_idx is None:
+                                continue
+                            else:
+                                return round(lsv.get('group_means')[group_idx][edge_idx], SIG_FIGS)
                         else:
-                            return round(lsv.get('group_means')[group_idx][edge_idx], SIG_FIGS)
-                    else:
-                        return (round(x, SIG_FIGS) for x in lsv.get('group_means')[group_idx])
+                            return (round(x, SIG_FIGS) for x in lsv.get('group_means')[group_idx])
+                return ''
             return f
 
-        def _dpsi_dpsi(voila_file):
+        def _dpsi_dpsi(voila_files):
             def f(lsv_id, edge=None):
-                with view_matrix.ViewDeltaPsi(voila_file) as m:
-                    lsv = m.lsv(lsv_id)
-                    bins = lsv.get('group_bins')
-                    if edge:
-                        edge_idx = _filter_edges(edge, lsv)
-                        if edge_idx is None:
-                            return ''
+                for voila_file in voila_files:
+                    with view_matrix.ViewDeltaPsi(voila_file) as m:
+                        lsv = m.lsv(lsv_id)
+                        bins = lsv.get('group_bins')
+                        if edge:
+                            edge_idx = _filter_edges(edge, lsv)
+                            if edge_idx is None:
+                                continue
+                            else:
+                                return round(lsv.excl_incl[edge_idx][1] - lsv.excl_incl[edge_idx][0], SIG_FIGS)
                         else:
-                            return round(lsv.excl_incl[edge_idx][1] - lsv.excl_incl[edge_idx][0], SIG_FIGS)
-                    else:
-                        return (
-                                    round(x, SIG_FIGS) for x in ((lsv.excl_incl[i][1] - lsv.excl_incl[i][0] for i in
-                                    range(np.size(bins, 0))))
-                                )
+                            return (
+                                        round(x, SIG_FIGS) for x in ((lsv.excl_incl[i][1] - lsv.excl_incl[i][0] for i in
+                                        range(np.size(bins, 0))))
+                                    )
+                return ''
             return f
 
-        def _dpsi_p_thresh(voila_file):
+        def _dpsi_p_thresh(voila_files):
             def f(lsv_id, edge=None):
-                with view_matrix.ViewDeltaPsi(voila_file) as m:
-                    lsv = m.lsv(lsv_id)
+                for voila_file in voila_files:
+                    with view_matrix.ViewDeltaPsi(voila_file) as m:
+                        lsv = m.lsv(lsv_id)
 
-                    bins = lsv.bins
-                    if edge:
-                        edge_idx = _filter_edges(edge, lsv)
-                        if edge_idx is None:
-                            return ''
+                        bins = lsv.bins
+                        if edge:
+                            edge_idx = _filter_edges(edge, lsv)
+                            if edge_idx is None:
+                                continue
+                            else:
+                                return round(matrix_area(bins[edge_idx], self.config.threshold), SIG_FIGS)
                         else:
-                            return round(matrix_area(bins[edge_idx], self.config.threshold), SIG_FIGS)
-                    else:
-                        return (
-                                    round(matrix_area(b, self.config.threshold), SIG_FIGS) for b in bins
-                                )
+                            return (
+                                        round(matrix_area(b, self.config.threshold), SIG_FIGS) for b in bins
+                                    )
+                return ''
             return f
 
-        def _dpsi_p_nonchange(voila_file):
+        def _dpsi_p_nonchange(voila_files):
             def f(lsv_id, edge=None):
-                #lsv = m.delta_psi(lsv_id)
-                with view_matrix.ViewDeltaPsi(voila_file) as m:
-                    lsv = m.lsv(lsv_id)
-                    if edge:
-                        edge_idx = _filter_edges(edge, lsv)
-                        if edge_idx is None:
-                            return ''
+                for voila_file in voila_files:
+                    with view_matrix.ViewDeltaPsi(voila_file) as m:
+                        lsv = m.lsv(lsv_id)
+                        if edge:
+                            edge_idx = _filter_edges(edge, lsv)
+                            if edge_idx is None:
+                                continue
+                            else:
+                                return round(lsv.high_probability_non_changing()[edge_idx], SIG_FIGS)
                         else:
-                            return round(lsv.high_probability_non_changing()[edge_idx], SIG_FIGS)
-                    else:
-                        return (round(x, SIG_FIGS) for x in lsv.high_probability_non_changing())
-
+                            return (round(x, SIG_FIGS) for x in lsv.high_probability_non_changing())
+                return ''
             return f
 
         tmp = OrderedDict()
@@ -211,56 +248,48 @@ class TsvWriter:
                 for group in group_names:
                     for key in ("E(PSI)", "Var(E(PSI))",):
                         header = "%s_%s" % (group, key)
-                        if not header in tmp:
-                            if key == "E(PSI)":
-                                tmp[header] = _psi_psi(voila_file)
-                            elif key == "Var(E(PSI))":
-                                tmp[header] = _psi_var(voila_file)
+                        if header in tmp:
+                            tmp[header][1].append(voila_file)
                         else:
-                            pass
-                            #print("found duplicate key %s" % header)
+                            if key == "E(PSI)":
+                                tmp[header] = (_psi_psi, [voila_file])
+                            elif key == "Var(E(PSI))":
+                                tmp[header] = (_psi_var, [voila_file])
+
 
             elif analysis_type == constants.ANALYSIS_HETEROGEN:
                 for i, group in enumerate(group_names):
                     for key in ("E(PSI)",):
-                        header = "%s_%s" % (group, key)
-                        if not header in tmp:
-                            if key == "E(PSI)":
-                                tmp[header] = _het_psi(voila_file, i)
+                        header = "%s_HET_%s" % (group, key)
+                        if header in tmp:
+                            tmp[header][1].append(voila_file)
                         else:
-                            pass
-                            #print("found duplicate key %s" % header)
+                            if key == "E(PSI)":
+                                tmp[header] = (_het_psi, [voila_file], i)
+
             else:
                 for i, group in enumerate(group_names):
                     for key in ("E(PSI)",):
                         header = "%s_%s" % (group, key)
-                        if not header in tmp:
-                            if key == "E(PSI)":
-                                tmp[header] = _dpsi_psi(voila_file, i)
+                        if header in tmp:
+                            tmp[header][1].append(voila_file)
                         else:
-                            pass
-                            #print("found duplicate key %s" % header)
+                            if key == "E(PSI)":
+                                tmp[header] = (_dpsi_psi, [voila_file], i)
 
                 thresh_key = "P(|dPSI|>=%.2f)" % self.config.threshold
                 high_prob_thresh_key = "P(|dPSI|<=%.2f)" % self.config.non_changing_threshold
                 for key in ("E(dPSI)", thresh_key, high_prob_thresh_key):
                     header = "%s_%s" % ('-'.join(group_names), key)
-                    if not header in tmp:
-                        if key == "E(dPSI)":
-                            tmp[header] = _dpsi_dpsi(voila_file)
-                        elif key == thresh_key:
-                            tmp[header] = _dpsi_p_thresh(voila_file)
-                        elif key == high_prob_thresh_key:
-                            tmp[header] = _dpsi_p_nonchange(voila_file)
+                    if header in tmp:
+                        tmp[header][1].append(voila_file)
                     else:
-                        pass
-                        #print("found duplicate key %s" % header)
-
-                # tmp.append('%s_E(dPSI) per LSV junction' % trunc_name)
-                # tmp.append('%s_E(dPSI) per LSV junction' % trunc_name)
-                # tmp.append('%s_E(dPSI) per LSV junction' % trunc_name)
-                # tmp.append('%s_E(dPSI) per LSV junction' % trunc_name)
-                # tmp.append('%s_E(dPSI) per LSV junction' % trunc_name)
+                        if key == "E(dPSI)":
+                            tmp[header] = (_dpsi_dpsi, [voila_file])
+                        elif key == thresh_key:
+                            tmp[header] = (_dpsi_p_thresh, [voila_file])
+                        elif key == high_prob_thresh_key:
+                            tmp[header] = (_dpsi_p_nonchange, [voila_file])
 
         return tmp
 
@@ -335,7 +364,7 @@ class TsvWriter:
                 try:
 
                     #print(self.quantifications_int[field](lsv_id, edge))
-                    quantification_vals.append(self.quantifications_int[field](lsv_id, edge))
+                    quantification_vals.append(self.quantifications_int[field][0](*self.quantifications_int[field][1:])(lsv_id, edge))
                 except (GeneIdNotFoundInVoilaFile, LsvIdNotFoundInVoilaFile) as e:
                     quantification_vals.append('')
                     #print(e)
