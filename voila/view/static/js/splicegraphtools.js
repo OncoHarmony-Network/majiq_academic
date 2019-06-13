@@ -34,7 +34,7 @@ class SpliceGraphTools {
         });
 
         // (and click inside the options does not hide it)
-        $(".splice-graph-tools").click(function () {
+        $(".splice-graph-tools").click(function (event) {
            event.stopPropagation();
         });
 

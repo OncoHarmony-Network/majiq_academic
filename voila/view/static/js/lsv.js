@@ -644,7 +644,7 @@ class Lsv {
         var MARGINS = [10, 2, 2, 2];
         var SEP_FIG_TEXT = canvas.height * .05;
         var SEP_FIG = canvas.width * .02;
-        var num_fig = 8;
+        var num_fig = 10;
         var area_figures = [
             canvas.width - MARGINS[0] - MARGINS[1] - (num_fig - 1) * SEP_FIG,
             canvas.height * .7 - MARGINS[2] - SEP_FIG_TEXT
@@ -744,9 +744,22 @@ class Lsv {
         ctx.lineWidth = 1.2;
         this.draw_rectangle(ctx, x, y, Math.round((area_figures[0] / num_fig) / 3 - SEP_FIG), Math.round(area_figures[1]), true);
         this.draw_rectangle(ctx, Math.round(x + (area_figures[0] / num_fig) * 2 / 3), y, Math.round((area_figures[0] / num_fig) / 3 - SEP_FIG), Math.round(area_figures[1]), true);
-        this.draw_rectangle(ctx, Math.round(x + (area_figures[0] / num_fig) / 3 - SEP_FIG), y + area_figures[1] / 4, Math.round((area_figures[0] / num_fig - SEP_FIG) * 2 / 3), Math.round(area_figures[1] / 2), true);
+        this.draw_rectangle(ctx, Math.round(x + (area_figures[0] / num_fig) / 3 - SEP_FIG), y + area_figures[1] / 4, Math.round((area_figures[0] / num_fig - SEP_FIG) * 2 / 3) + 4, Math.round(area_figures[1] / 2), true);
         ctx.fillStyle = "rgba(0, 0, 0, 1)";
         ctx.fillText("Intron Ret.", x + Math.round((area_figures[0] / num_fig - SEP_FIG) / 2), canvas.height - MARGINS[3]);
+        x = x + area_figures[0] / num_fig + SEP_FIG;
+
+        ctx.font = "22pt Arial";
+        ctx.fillText("↳", x + Math.round((area_figures[0] / num_fig - SEP_FIG) / 2), y + area_figures[1]);
+        ctx.font = "7pt Arial";
+        ctx.fillText("DB TSS", x + Math.round((area_figures[0] / num_fig - SEP_FIG) / 2), canvas.height - MARGINS[3]);
+        x = x + area_figures[0] / num_fig + SEP_FIG;
+
+        ctx.font = "22pt Arial";
+        ctx.fillText("^", x + Math.round((area_figures[0] / num_fig - SEP_FIG) / 2), y + area_figures[1] + 4);
+        ctx.font = "7pt Arial";
+        ctx.fillText("DB TES", x + Math.round((area_figures[0] / num_fig - SEP_FIG) / 2), canvas.height - MARGINS[3]);
+
 
 
         ctx.lineWidth = 1;
