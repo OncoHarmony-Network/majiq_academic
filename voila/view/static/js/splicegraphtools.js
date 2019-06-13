@@ -47,6 +47,12 @@ class SpliceGraphTools {
             });
 
 
+        if($('.splice-graph-container .splice-graph').length === 0){
+            setTimeout(function(){$('.splice-graph-form button').eq(0).trigger('click')}, 0);
+        }
+
+
+
         // populate splice graph selector groups
         d3.select('.groups select')
             .selectAll('option')
