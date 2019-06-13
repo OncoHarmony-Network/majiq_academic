@@ -8,14 +8,21 @@ from voila.api.matrix_utils import generate_means
 
 from voila.classifier.as_types import Graph
 from voila.classifier.tsv_writer import TsvWriter
-from voila.classifier.tests_expected import expected_modules, expected_cassette_exons, expected_alternative_intron, expected_modules_constitutive, expected_alt3ss, expected_alt5ss
+
 
 from subprocess import Popen, PIPE, STDOUT
 import os, shutil
 import csv
 
-sg_file = '/home/paul/PycharmProjects/majiq/test_cases/classifier/caleb1/splicegraph.sql'
-psi_file = '/home/paul/PycharmProjects/majiq/test_cases/classifier/caleb1/ran_treg.psi.voila'
+
+
+# this should vary depending on the group of tests to run
+
+from voila.classifier.tests_expected_t_cells_1 import *
+
+
+
+
 out_dir = '/home/paul/PycharmProjects/majiq/test_cases/classifier/caleb1/testout'
 
 def run_voila_classify(gene_id, additional_args=[]):

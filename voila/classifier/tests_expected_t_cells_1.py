@@ -1,3 +1,6 @@
+sg_file = '/home/paul/PycharmProjects/majiq/test_cases/classifier/t_cells_1/splicegraph.sql'
+psi_file = '/home/paul/PycharmProjects/majiq/test_cases/classifier/t_cells_1/ran_treg.psi.voila'
+
 expected_modules = {
     "gene:ENSG00000266967": [
         {
@@ -55,7 +58,7 @@ expected_modules = {
             "alt5ss": "",
             "p_alt3ss": "",
             "p_alt5ss": "1",
-            
+
             "mutually_exclusive": "",
             "ale": "1",
             "afe": "",
@@ -75,7 +78,7 @@ expected_modules = {
             "alt5ss": "",
             "p_alt3ss": "",
             "p_alt5ss": "",
-            
+
             "mutually_exclusive": "",
             "ale": "",
             "afe": "",
@@ -93,7 +96,7 @@ expected_modules = {
             "alt5ss": "",
             "p_alt3ss": "",
             "p_alt5ss": "",
-            
+
             "mutually_exclusive": "",
             "ale": "",
             "afe": "",
@@ -113,7 +116,7 @@ expected_modules = {
             "alt5ss": "",
             "p_alt3ss": "",
             "p_alt5ss": "",
-            
+
             "mutually_exclusive": "",
             "ale": "",
             "afe": "",
@@ -131,7 +134,7 @@ expected_modules = {
             "alt5ss": "1",
             "p_alt3ss": "1",
             "p_alt5ss": "2",
-            
+
             "mutually_exclusive": "",
             "ale": "",
             "afe": "",
@@ -149,7 +152,7 @@ expected_modules = {
             "alt5ss": "",
             "p_alt3ss": "",
             "p_alt5ss": "",
-            
+
             "mutually_exclusive": "",
             "ale": "",
             "afe": "",
@@ -169,7 +172,7 @@ expected_modules = {
             "alt5ss": "",
             "p_alt3ss": "",
             "p_alt5ss": "",
-            
+
             "mutually_exclusive": "",
             "ale": "",
             "afe": "",
@@ -187,7 +190,7 @@ expected_modules = {
             "alt5ss": "",
             "p_alt3ss": "",
             "p_alt5ss": "",
-            
+
             "mutually_exclusive": "",
             "ale": "",
             "afe": "",
@@ -207,7 +210,7 @@ expected_modules = {
             "alt5ss": "",
             "p_alt3ss": "",
             "p_alt5ss": "",
-            
+
             "mutually_exclusive": "",
             "ale": "",
             "afe": "",
@@ -225,7 +228,7 @@ expected_modules = {
             "alt5ss": "",
             "p_alt3ss": "",
             "p_alt5ss": "",
-            
+
             "mutually_exclusive": "",
             "ale": "",
             "afe": "",
@@ -245,7 +248,7 @@ expected_modules = {
             "alt5ss": "",
             "p_alt3ss": "",
             "p_alt5ss": "",
-            
+
             "mutually_exclusive": "",
             "ale": "",
             "afe": "1",
@@ -263,7 +266,7 @@ expected_modules = {
             "alt5ss": "",
             "p_alt3ss": "",
             "p_alt5ss": "",
-            
+
             "mutually_exclusive": "",
             "ale": "",
             "afe": "",
@@ -281,7 +284,7 @@ expected_modules = {
             "alt5ss": "",
             "p_alt3ss": "",
             "p_alt5ss": "",
-            
+
             "mutually_exclusive": "",
             "ale": "",
             "afe": "",
@@ -299,7 +302,7 @@ expected_modules = {
             "alt5ss": "",
             "p_alt3ss": "",
             "p_alt5ss": "",
-            
+
             "mutually_exclusive": "",
             "ale": "",
             "afe": "",
@@ -319,7 +322,7 @@ expected_modules = {
             "alt5ss": "1",
             "p_alt3ss": "",
             "p_alt5ss": "",
-            
+
             "mutually_exclusive": "",
             "ale": "",
             "afe": "",
@@ -337,7 +340,7 @@ expected_modules = {
             "alt5ss": "",
             "p_alt3ss": "",
             "p_alt5ss": "1",
-            
+
             "mutually_exclusive": "",
             "ale": "",
             "afe": "",
@@ -355,7 +358,7 @@ expected_modules = {
             "alt5ss": "",
             "p_alt3ss": "",
             "p_alt5ss": "",
-            
+
             "mutually_exclusive": "",
             "ale": "",
             "afe": "",
@@ -375,7 +378,7 @@ expected_modules = {
             "alt5ss": "",
             "p_alt3ss": "",
             "p_alt5ss": "",
-            
+
             "mutually_exclusive": "1",
             "ale": "",
             "afe": "",
@@ -395,7 +398,7 @@ expected_modules = {
             "alt5ss": "",
             "p_alt3ss": "",
             "p_alt5ss": "",
-            
+
             "mutually_exclusive": "",
             "ale": "1",
             "afe": "",
@@ -413,7 +416,7 @@ expected_modules = {
             "alt5ss": "",
             "p_alt3ss": "",
             "p_alt5ss": "",
-            
+
             "mutually_exclusive": "",
             "ale": "",
             "afe": "",
@@ -431,7 +434,7 @@ expected_modules = {
             "alt5ss": "",
             "p_alt3ss": "",
             "p_alt5ss": "",
-            
+
             "mutually_exclusive": "",
             "ale": "",
             "afe": "",
@@ -451,7 +454,7 @@ expected_modules = {
             "alt5ss": "",
             "p_alt3ss": "",
             "p_alt5ss": "",
-            
+
             "mutually_exclusive": "",
             "ale": "",
             "afe": "",
@@ -469,7 +472,7 @@ expected_modules = {
             "alt5ss": "1",
             "p_alt3ss": "",
             "p_alt5ss": "",
-            
+
             "mutually_exclusive": "",
             "ale": "",
             "afe": "",
@@ -487,7 +490,7 @@ expected_modules = {
             "alt5ss": "",
             "p_alt3ss": "",
             "p_alt5ss": "",
-            
+
             "mutually_exclusive": "",
             "ale": "1",
             "afe": "",
@@ -507,7 +510,7 @@ expected_modules = {
             "alt5ss": "",
             "p_alt3ss": "",
             "p_alt5ss": "",
-            
+
             "mutually_exclusive": "",
             "ale": "",
             "afe": "",
@@ -525,7 +528,7 @@ expected_modules = {
             "alt5ss": "",
             "p_alt3ss": "",
             "p_alt5ss": "",
-            
+
             "mutually_exclusive": "",
             "ale": "",
             "afe": "",
@@ -543,7 +546,7 @@ expected_modules = {
             "alt5ss": "",
             "p_alt3ss": "",
             "p_alt5ss": "",
-            
+
             "mutually_exclusive": "",
             "ale": "",
             "afe": "1",
@@ -561,7 +564,7 @@ expected_modules = {
             "alt5ss": "",
             "p_alt3ss": "",
             "p_alt5ss": "",
-            
+
             "mutually_exclusive": "",
             "ale": "",
             "afe": "",
@@ -579,7 +582,7 @@ expected_modules = {
             "alt5ss": "",
             "p_alt3ss": "",
             "p_alt5ss": "",
-            
+
             "mutually_exclusive": "",
             "ale": "",
             "afe": "",
@@ -597,7 +600,7 @@ expected_modules = {
             "alt5ss": "",
             "p_alt3ss": "",
             "p_alt5ss": "",
-            
+
             "mutually_exclusive": "",
             "ale": "",
             "afe": "",
@@ -615,7 +618,7 @@ expected_modules = {
             "alt5ss": "",
             "p_alt3ss": "",
             "p_alt5ss": "",
-            
+
             "mutually_exclusive": "",
             "ale": "",
             "afe": "",
@@ -633,7 +636,7 @@ expected_modules = {
             "alt5ss": "",
             "p_alt3ss": "",
             "p_alt5ss": "",
-            
+
             "mutually_exclusive": "",
             "ale": "",
             "afe": "",
@@ -653,7 +656,7 @@ expected_modules = {
             "alt5ss": "1",
             "p_alt3ss": "",
             "p_alt5ss": "",
-            
+
             "mutually_exclusive": "",
             "ale": "1",
             "afe": "2",
@@ -671,7 +674,7 @@ expected_modules = {
             "alt5ss": "",
             "p_alt3ss": "",
             "p_alt5ss": "",
-            
+
             "mutually_exclusive": "",
             "ale": "",
             "afe": "",
@@ -691,7 +694,7 @@ expected_modules = {
             "alt5ss": "",
             "p_alt3ss": "",
             "p_alt5ss": "",
-            
+
             "mutually_exclusive": "",
             "ale": "",
             "afe": "2",
@@ -709,7 +712,7 @@ expected_modules = {
             "alt5ss": "",
             "p_alt3ss": "",
             "p_alt5ss": "",
-            
+
             "mutually_exclusive": "",
             "ale": "",
             "afe": "",
@@ -727,7 +730,7 @@ expected_modules = {
             "alt5ss": "",
             "p_alt3ss": "",
             "p_alt5ss": "",
-            
+
             "mutually_exclusive": "",
             "ale": "",
             "afe": "",
@@ -745,7 +748,7 @@ expected_modules = {
             "alt5ss": "",
             "p_alt3ss": "",
             "p_alt5ss": "",
-            
+
             "mutually_exclusive": "",
             "ale": "",
             "afe": "",
@@ -763,7 +766,7 @@ expected_modules = {
             "alt5ss": "",
             "p_alt3ss": "",
             "p_alt5ss": "",
-            
+
             "mutually_exclusive": "",
             "ale": "",
             "afe": "",
@@ -781,7 +784,7 @@ expected_modules = {
             "alt5ss": "",
             "p_alt3ss": "",
             "p_alt5ss": "",
-            
+
             "mutually_exclusive": "",
             "ale": "",
             "afe": "",
@@ -801,7 +804,7 @@ expected_modules = {
             "alt5ss": "",
             "p_alt3ss": "",
             "p_alt5ss": "",
-            
+
             "mutually_exclusive": "",
             "ale": "",
             "afe": "",
@@ -819,7 +822,7 @@ expected_modules = {
             "alt5ss": "",
             "p_alt3ss": "",
             "p_alt5ss": "1",
-            
+
             "mutually_exclusive": "",
             "ale": "",
             "afe": "",
@@ -837,7 +840,7 @@ expected_modules = {
             "alt5ss": "",
             "p_alt3ss": "",
             "p_alt5ss": "",
-            
+
             "mutually_exclusive": "",
             "ale": "",
             "afe": "",
@@ -855,7 +858,7 @@ expected_modules = {
             "alt5ss": "",
             "p_alt3ss": "",
             "p_alt5ss": "1",
-            
+
             "mutually_exclusive": "",
             "ale": "",
             "afe": "",
@@ -873,7 +876,7 @@ expected_modules = {
             "alt5ss": "",
             "p_alt3ss": "",
             "p_alt5ss": "",
-            
+
             "mutually_exclusive": "",
             "ale": "",
             "afe": "",
@@ -893,7 +896,7 @@ expected_modules = {
             "alt5ss": "",
             "p_alt3ss": "",
             "p_alt5ss": "",
-            
+
             "mutually_exclusive": "",
             "ale": "",
             "afe": "",
@@ -911,7 +914,7 @@ expected_modules = {
             "alt5ss": "",
             "p_alt3ss": "",
             "p_alt5ss": "",
-            
+
             "mutually_exclusive": "",
             "ale": "",
             "afe": "",
@@ -929,7 +932,7 @@ expected_modules = {
             "alt5ss": "",
             "p_alt3ss": "",
             "p_alt5ss": "",
-            
+
             "mutually_exclusive": "",
             "ale": "",
             "afe": "",
@@ -947,7 +950,7 @@ expected_modules = {
             "alt5ss": "",
             "p_alt3ss": "1",
             "p_alt5ss": "1",
-            
+
             "mutually_exclusive": "",
             "ale": "",
             "afe": "",
@@ -967,7 +970,7 @@ expected_modules = {
             "alt5ss": "",
             "p_alt3ss": "",
             "p_alt5ss": "",
-            
+
             "mutually_exclusive": "",
             "ale": "",
             "afe": "1",
@@ -985,7 +988,7 @@ expected_modules = {
             "alt5ss": "",
             "p_alt3ss": "",
             "p_alt5ss": "1",
-            
+
             "mutually_exclusive": "",
             "ale": "",
             "afe": "",
@@ -1005,7 +1008,7 @@ expected_modules = {
             "alt5ss": "",
             "p_alt3ss": "",
             "p_alt5ss": "",
-            
+
             "mutually_exclusive": "",
             "ale": "1",
             "afe": "",
@@ -1023,7 +1026,7 @@ expected_modules = {
             "alt5ss": "",
             "p_alt3ss": "1",
             "p_alt5ss": "",
-            
+
             "mutually_exclusive": "",
             "ale": "1",
             "afe": "1",
@@ -1041,7 +1044,7 @@ expected_modules = {
             "alt5ss": "",
             "p_alt3ss": "",
             "p_alt5ss": "",
-            
+
             "mutually_exclusive": "",
             "ale": "",
             "afe": "",
@@ -1061,7 +1064,7 @@ expected_modules = {
             "alt5ss": "",
             "p_alt3ss": "",
             "p_alt5ss": "",
-            
+
             "mutually_exclusive": "",
             "ale": "",
             "afe": "",
@@ -1081,7 +1084,7 @@ expected_modules = {
             "alt5ss": "",
             "p_alt3ss": "",
             "p_alt5ss": "",
-            
+
             "mutually_exclusive": "",
             "ale": "",
             "afe": "",
@@ -1099,7 +1102,7 @@ expected_modules = {
             "alt5ss": "",
             "p_alt3ss": "",
             "p_alt5ss": "",
-            
+
             "mutually_exclusive": "",
             "ale": "",
             "afe": "",
@@ -1119,7 +1122,7 @@ expected_modules = {
             "alt5ss": "",
             "p_alt3ss": "",
             "p_alt5ss": "",
-            
+
             "mutually_exclusive": "",
             "ale": "",
             "afe": "",
@@ -1137,7 +1140,7 @@ expected_modules = {
             "alt5ss": "",
             "p_alt3ss": "",
             "p_alt5ss": "",
-            
+
             "mutually_exclusive": "",
             "ale": "",
             "afe": "",
@@ -1155,7 +1158,7 @@ expected_modules = {
             "alt5ss": "",
             "p_alt3ss": "",
             "p_alt5ss": "",
-            
+
             "mutually_exclusive": "",
             "ale": "",
             "afe": "",
@@ -1185,7 +1188,7 @@ expected_modules = {
             "alt3and5ss": "1",
             "p_alt3ss": "",
             "p_alt5ss": "",
-            
+
             "mutually_exclusive": "",
             "ale": "",
             "afe": "",
