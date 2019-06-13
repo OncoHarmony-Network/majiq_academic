@@ -269,6 +269,7 @@
 
                     n.querySelectorAll('.psi-violin-plot')
                         .forEach(v => {
+
                             v.querySelectorAll('circle')
                                 .forEach(c => {
                                     const tool_tip = document.querySelector('.violin-tool-tip');
@@ -280,18 +281,24 @@
                                     };
                                     c.onmouseout = () => {
                                         c.style.fill = null;
-                                        tool_tip.style.display = 'none';
-                                    };
-                                    c.onmousemove = (e) => {
-                                        tool_tip.style.top = (e.pageY - 90) + 'px';
-                                        tool_tip.style.left = (e.pageX + 10) + 'px';
+                                        tool_tip.querySelector('.value').textContent = '';
+                                        tool_tip.querySelector('.sample').textContent = '';
+                                        //tool_tip.style.display = 'none';
                                     };
                                 });
 
                             v.querySelectorAll('.violin, .swarm-group')
                                 .forEach(h => {
                                     const outline_color = '#61D836';
+                                    const tool_tip = document.querySelector('.violin-tool-tip');
                                     h.onmouseover = () => {
+
+                                        const expected = $(h).data('expected');
+                                        if(expected){
+                                            tool_tip.querySelector('.expected').textContent = "E(PSI) = " + $(h).data('expected');
+                                        }
+                                        tool_tip.style.display = 'block';
+
                                         const idx = h.dataset.groupIdx;
                                         var cur_row = 0;
                                         h
@@ -374,7 +381,14 @@
                                             .closest('tr')
                                             .querySelectorAll('.heat-map rect')
                                             .forEach(r => r.style.opacity = r.style.stroke = null)
+
+                                            tool_tip.style.display = 'none';
+
                                     }
+                                    h.onmousemove = (e) => {
+                                        tool_tip.style.top = (e.pageY - 90) + 'px';
+                                        tool_tip.style.left = (e.pageX + 10) + 'px';
+                                    };
                                 })
                         });
                 }));
@@ -414,6 +428,7 @@
                                 element.setAttribute('height', '0');
 
                                 violin.heterogen(element);
+
 
 
                                 return element.outerHTML
@@ -501,6 +516,7 @@
     <div class="violin-tool-tip" style="display: none;">
         <div class="sample"></div>
         <div class="value"></div>
+        <div class="expected"></div>
     </div>
 
     <div class="lsv-container">

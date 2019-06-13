@@ -26,6 +26,25 @@ function perform_swap(el1, el2, transform){
     }
 }
 
+function dotp(x,y) {
+    function dotp_sum(a,b) { return a + b; }
+    function dotp_times(a,i) { return x[i] * y[i]; }
+    if (x.length != y.length)
+        throw "can't find dot product: arrays have different lengths";
+    return x.map(dotp_times).reduce(dotp_sum,0);
+}
+
+function expectation_value(bins){
+    var step = 1/bins.length;
+    var cur = step / 2;
+    var comp_arr = [];
+    while(cur < 1){
+        comp_arr.push(cur);
+            cur += step;
+    }
+    return dotp(comp_arr, bins);
+}
+
 class Violin {
     constructor(violin_data) {
         this.data = violin_data;
@@ -182,6 +201,8 @@ class Violin {
 
     heterogen(svg) {
         const data = this.data;
+
+
         
         this.violin_count = data.group_names.length;
         svg.setAttribute('height', this.svg_height);
@@ -196,6 +217,7 @@ class Violin {
         const g = d3.select(svg)
             .append('g')
             .attr('transform', `translate(${this.y_axis_width}, ${this.top_padding})`);
+
 
         const hist = g
             .append('g')
@@ -361,7 +383,8 @@ class Violin {
                 y.domain([0, d.length - 1]);
                 return area(d)
             })
-            .attr('data-group-idx', (d, i) => i);
+            .attr('data-group-idx', (d, i) => i)
+            .attr('data-expected', (d) => expectation_value(d));
 
         // console.log(g.selectAll('.violin'))
         // dragHandler(g.selectAll('.violin'))
