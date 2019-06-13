@@ -46,6 +46,12 @@ def check_file(value):
     else:
         raise CanNotFindFile(value)
 
+def check_positive(value):
+    ivalue = float(value)
+    if ivalue <= 0:
+        raise argparse.ArgumentTypeError("%s is an invalid positive float value" % value)
+    return ivalue
+
 
 parser = argparse.ArgumentParser(description='VOILA is a visualization package '
                                              'for Alternative Local Splicing Events.')
@@ -166,6 +172,13 @@ classify_parser.add_argument('--decomplexify-deltapsi-threshold', type=float, de
 classify_parser.add_argument('--decomplexify-reads-threshold', type=int, default=1,
                          help='Filter out junctions where the number of reads is below a certain value (integer). If multiple '
                               'input files are used, only the biggest number of reads is used. The default is "1". ')
+classify_parser.add_argument('--min-experiments', default=0.5, type=check_positive,
+                        help='Lower threshold for group filters. min_experiments set the minimum number of experiments '
+                             'where the different filters check in order to pass an lsv or junction.\n'
+                             '\t + <  1 the value is the fraction of the experiments in the group\n'
+                             '\t + >= 1 the value is the actual number of experiments. If the number is set to a '
+                             'greater number than the size of the group, we use the size instead.\n'
+                             '[Default: %(default)s]]')
 classify_parser.add_argument('--threshold', type=float, default=0.2,
                         help='Threshold in delta-PSI quantification column. The default is "0.2".')
 classify_parser.add_argument('--non-changing-threshold', type=float, default=0.05,

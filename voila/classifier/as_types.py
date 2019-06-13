@@ -74,7 +74,10 @@ class Graph:
 
         for voila_file in self.config.voila_files:
             with Matrix(voila_file) as m:
-                self.experiment_names.add(m.experiment_names[0][0])
+                for grp in m.experiment_names:
+                    for exp in grp:
+                        if exp:
+                            self.experiment_names.add(exp)
 
 
         # populate the graph with data from the splice graph
@@ -423,6 +426,39 @@ class Graph:
             return True
         return False
 
+    def _enough_reads(self, reads):
+        """
+        We check all the experiments in this group, and find if enough of them are above the read threshold
+        (or the % of experiments threshold)
+        :param junc: splicegraph object representing the junc
+        :return: True of False
+        """
+
+        if self.config.min_experiments < 1:
+            # we need to find based on percentage of experiments
+            num_acceptable = 0.0
+            percent_acceptable = 0.0
+            exps = [x for x in reads]
+
+            for exp in exps:
+                if exp['reads'] >= self.config.decomplexify_reads_threshold:
+                    num_acceptable += 1
+                    percent_acceptable = num_acceptable / float(len(exps))
+
+                if percent_acceptable >= self.config.min_experiments:
+                    return True
+        else:
+            # we need to find based on raw number of acceptable experiments
+            num_acceptable = 0
+            for exp in reads:
+                if exp['reads'] >= self.config.decomplexify_reads_threshold:
+                    num_acceptable += 1
+                if num_acceptable >= self.config.min_experiments:
+                    return True
+
+        return False
+
+
     def _populate(self):
         """
         Add all juctions and exons to graph and sort those lists.
@@ -433,20 +469,13 @@ class Graph:
             for exon in sg.exons(self.gene_id):
                 self._add_exon(exon)
             for junc in sg.junctions(self.gene_id, omit_simplified=True):
-                try:
-                    if next(sg.junction_reads_exp(junc, self.experiment_names))['reads'] >= self.config.decomplexify_reads_threshold:
-                        self._add_junc(junc)
-                except StopIteration:
-                    if self.config.decomplexify_reads_threshold == 0:
-                        self._add_junc(junc)
+                if self.config.decomplexify_reads_threshold == 0 or self._enough_reads(
+                        sg.junction_reads_exp(junc, self.experiment_names)):
+                    self._add_junc(junc)
             for ir in sg.intron_retentions(self.gene_id, omit_simplified=True):
-                try:
-                    if next(sg.intron_retention_reads_exp(ir, self.experiment_names))['reads'] >= self.config.decomplexify_reads_threshold:
-                        self._add_junc(ir, ir=True)
-                except StopIteration:
-                    if self.config.decomplexify_reads_threshold == 0:
-                        self._add_junc(ir, ir=True)
-
+                if self.config.decomplexify_reads_threshold == 0 or self._enough_reads(
+                        sg.intron_retention_reads_exp(ir, self.experiment_names)):
+                    self._add_junc(ir, ir=True)
 
         # remove exons that don't have any junctions
         # this is done by looking at the start and end of each junction and seeing if any of those ends
