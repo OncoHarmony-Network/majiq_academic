@@ -237,6 +237,15 @@ class Violin {
     };
 
     draw_histograms(g, bins) {
+
+        // removing data from bins...with no data!
+        // (setting to an empty array makes it so nothing is shown on the violin plot)
+        $.each(bins, function(i, bin){
+            if(bin.every( (val, i, arr) => val === -1 )){
+                bins[i] = [];
+            }
+        });
+
         const x = d3.scaleLinear()
             .range([0, this.violin_width / 2]);
 
