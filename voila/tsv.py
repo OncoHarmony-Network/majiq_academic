@@ -340,7 +340,7 @@ class PsiTsv(AnalysisTypeTsv):
                             'Num. Exons': psi.exon_count,
                             'chr': gene['chromosome'],
                             'strand': gene['strand'],
-                            'De Novo Junctions': semicolon(annot_juncs),
+                            'De Novo Junctions': semicolon((1 if x == 0 else 0 for x in annot_juncs)),  # reverse flags
                             'Junctions coords': semicolon(
                                 '{0}-{1}'.format(start, end) for start, end in lsv_junctions
                             ),
@@ -425,7 +425,7 @@ class HeterogenTsv(AnalysisTypeTsv):
                             'Num. Exons': het.exon_count,
                             'chr': gene['chromosome'],
                             'strand': gene['strand'],
-                            'De Novo Junctions': semicolon(annot_juncs),
+                            'De Novo Junctions': semicolon((1 if x == 0 else 0 for x in annot_juncs)),  # reverse flags
                             'Junctions coords': semicolon(
                                 '{0}-{1}'.format(start, end) for start, end in lsv_junctions
                             ),
@@ -497,7 +497,7 @@ class DeltaPsiTsv(AnalysisTypeTsv):
                             'Num. Exons': dpsi.exon_count,
                             'chr': gene['chromosome'],
                             'strand': gene['strand'],
-                            'De Novo Junctions': semicolon(annot_juncs),
+                            'De Novo Junctions': semicolon((1 if x == 0 else 0 for x in annot_juncs)),  # reverse flags
                             'Junctions coords': semicolon(
                                 '{0}-{1}'.format(start, end) for start, end in lsv_junctions
                             ),
