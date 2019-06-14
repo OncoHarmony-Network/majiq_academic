@@ -687,10 +687,11 @@ namespace grimoire {
 
         unsigned int jidx = 0 ;
         int prev_coord = 0 ;
-
+        map<string, unsigned int > exDct ;
         for (const auto &ptr: sp_list){
             jidx = (prev_coord != ptr.ref_coord) ? jidx+1 : jidx ;
             prev_coord = ptr.ref_coord ;
+
             const string exid = to_string((ptr.ex_ptr)->get_start()) + "-" + to_string((ptr.ex_ptr)->get_end()) ;
             if (exid == ref_exon_id) continue ;
 
@@ -713,11 +714,12 @@ namespace grimoire {
                  pos = distance(ss_set.begin(), ss_set.find((ptr.jun_ptr)->get_start()))+1 ;
 
             }
-            if(prev_ex != exid){
-                prev_ex = exid ;
+
+            if( exDct.count(exid) == 0 ){
+                exDct[exid] = excount ;
                 excount += 1 ;
             }
-            ext_type = ext_type + "|" + to_string(jidx) + "e" + to_string(excount) + "."
+            ext_type = ext_type + "|" + to_string(jidx) + "e" + to_string(exDct[exid]) + "."
                                 + to_string(pos) + "o" +  to_string(total) ;
             junctions_.push_back(ptr.jun_ptr) ;
         }

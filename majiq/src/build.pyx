@@ -345,7 +345,7 @@ cdef _find_junctions(list file_list, map[string, Gene*]& gene_map, vector[string
 
                 if n_junctions == 0 or pvalue_limit <= 0:
                     if n_junctions == 0:
-                        logger.warning('No junctions where found on sample %s' % bamfile)
+                        logger.warning('No junctions were found on sample %s' % bamfile)
                     fitfunc_r = 0
                 else:
                     fitfunc_r = fit_nb(c_iobam.junc_vec, n_junctions, eff_len, nbdisp=0.1, logger=logger)

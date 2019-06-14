@@ -233,7 +233,6 @@ cdef void _core_independent(object self):
     for cond_name, cond_list in file_cond.items():
         max_nfiles = max(max_nfiles, len(cond_list))
 
-    logger.info('Computation done, saving results....')
     with Matrix(get_quantifier_voila_filename(self.outDir, self.names, het=True), 'w') as out_h5p:
         out_h5p.file_version = VOILA_FILE_VERSION
         out_h5p.analysis_type = ANALYSIS_HETEROGEN
