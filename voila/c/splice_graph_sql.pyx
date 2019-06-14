@@ -30,16 +30,16 @@ cdef:
                         "(gene_id,start,end,annotated_start,annotated_end,annotated) " \
                         "VALUES ('%s',%d,%d,%d,%d,%d);"
     char *junc_insert = "INSERT INTO junction " \
-                        "(gene_id,start,end,has_reads,annotated, is_simplified) " \
-                        "VALUES ('%s',%d,%d,0,%d,%d);"
+                        "(gene_id,start,end,has_reads,annotated,is_simplified,is_constitutive) " \
+                        "VALUES ('%s',%d,%d,0,%d,%d,%d);"
     char *junc_reads_insert = "INSERT INTO junction_reads " \
                               "(reads,experiment_name,junction_gene_id,junction_start,junction_end) " \
                               "VALUES (%d,'%s','%s',%d,%d);" \
                               "UPDATE junction SET has_reads=1 " \
                               "WHERE gene_id='%s' AND start=%d AND end=%d;"
     char *ir_insert = "INSERT INTO intron_retention " \
-                      "(gene_id,start,end,has_reads,annotated, is_simplified) " \
-                      "VALUES ('%s',%d,%d,0,%d,%d);"
+                      "(gene_id,start,end,has_reads,annotated,is_simplified,is_constitutive) " \
+                      "VALUES ('%s',%d,%d,0,%d,%d,%d);"
     char *ir_reads_insert = "INSERT INTO intron_retention_reads " \
                             "(reads,experiment_name,intron_retention_gene_id,intron_retention_start,intron_retention_end) " \
                             "VALUES (%d,'%s','%s',%d,%d); " \
@@ -175,18 +175,18 @@ cdef int exon(sqlite3 *db, string gene_id, int start, int end, int annotated_sta
     free(sql)
     return rc
 
-cdef int junction(sqlite3 *db, string gene_id, int start, int end, bint annotated, bint is_simplified) nogil:
+cdef int junction(sqlite3 *db, string gene_id, int start, int end, bint annotated, bint is_simplified, bint is_constitutive) nogil:
     cdef:
         int rc
         int arg_len
         int rm_chars_len
         char *sql
 
-    arg_len = gene_id.length() + int_len(start) + int_len(end) + int_len(annotated) + int_len(is_simplified)
-    rm_chars_len = 5 * 2
+    arg_len = gene_id.length() + int_len(start) + int_len(end) + int_len(annotated) + int_len(is_simplified) + int_len(is_constitutive)
+    rm_chars_len = 6 * 2
 
     sql = <char *> malloc(sizeof(char) * (strlen(junc_insert) + arg_len - rm_chars_len + 1))
-    sprintf(sql, junc_insert, gene_id.c_str(), start, end, annotated, is_simplified)
+    sprintf(sql, junc_insert, gene_id.c_str(), start, end, annotated, is_simplified, is_constitutive)
 
     rc = exec_db(db, sql)
     free(sql)
