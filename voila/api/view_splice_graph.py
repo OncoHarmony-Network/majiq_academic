@@ -72,6 +72,16 @@ class ViewSpliceGraph(SpliceGraph):
         query = self.conn.execute('SELECT id FROM gene')
         return [x for x, in query.fetchall()]
 
+    @property
+    def gene_ids2gene_names(self):
+        """
+        Dict of all gene_ids to gene_names
+        :return: list
+        """
+
+        query = self.conn.execute('SELECT id, name FROM gene')
+        return {x[0]: x[1] for x in query.fetchall()}
+
     def view_gene(self, gene_id):
         """
         Add information to gene dictionary that is used by javascript splice graph.

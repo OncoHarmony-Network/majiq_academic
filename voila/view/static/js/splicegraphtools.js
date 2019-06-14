@@ -34,7 +34,7 @@ class SpliceGraphTools {
         });
 
         // (and click inside the options does not hide it)
-        $(".splice-graph-tools").click(function () {
+        $(".splice-graph-tools").click(function (event) {
            event.stopPropagation();
         });
 
@@ -45,6 +45,12 @@ class SpliceGraphTools {
                     .classed('hide-tools-menu', true);
                 document.querySelector('.lsv-tools.tools-menu').classList.toggle('hide-tools-menu');
             });
+
+
+        if($('.splice-graph-container .splice-graph').length === 0){
+            setTimeout(function(){$('.splice-graph-form button').eq(0).trigger('click')}, 0);
+        }
+
 
 
         // populate splice graph selector groups
@@ -152,6 +158,7 @@ class SpliceGraphTools {
 
         document.querySelector('#reads-greater-than').oninput = junctions_filter;
         document.querySelector('#reads-less-than').oninput = junctions_filter;
+        junctions_filter();
 
 
     }
