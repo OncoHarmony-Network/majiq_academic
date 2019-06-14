@@ -180,7 +180,7 @@ def write(args):
     # Get settings from arguments.
     config_parser.add_section(settings)
     for key, value in attrs.items():
-        if isinstance(value, int) or value:
+        if isinstance(value, int) or isinstance(value, float) or value:
             config_parser.set(settings, key, str(value))
     config_parser.set(settings, 'analysis_type', analysis_type)
 
