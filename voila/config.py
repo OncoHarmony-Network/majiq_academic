@@ -214,7 +214,7 @@ def write(args):
     # Get settings from arguments.
     config_parser.add_section(settings)
     for key, value in attrs.items():
-        if isinstance(value, int) or value:
+        if isinstance(value, int) or isinstance(value, float) or value:
             config_parser.set(settings, key, str(value))
     config_parser.set(settings, 'analysis_type', analysis_type)
 
@@ -324,6 +324,7 @@ class ClassifyConfig:
             }
 
             settings = dict(config_parser['SETTINGS'])
+
             for int_key in ['nproc', 'keep_constitutive', 'decomplexify_reads_threshold']:
                 settings[int_key] = config_parser['SETTINGS'].getint(int_key)
             for float_key in ['decomplexify_psi_threshold', 'decomplexify_deltapsi_threshold',

@@ -230,7 +230,7 @@ class Graph:
             self.junc = junc  # junction dictionary
             self.node = None  # node this junction connects to
             self.lsvs = {}
-
+            self.is_constitutive = self.junc.get('is_constitutive', False)
 
         def __lt__(self, other):
             """
@@ -362,49 +362,35 @@ class Graph:
 
     def _decomplexify(self):
         """
-        Remove any edges which are under a certain PSI value from the Graph
+        Pre Module-building discarding of junctions
+
         :return:
         """
         for voila_file in self.config.voila_files:
             self._add_matrix_values(voila_file)
 
-
-        num_filtered = 0
         for i in range(len(self.edges) - 1, -1, -1):
             if self.edges[i].lsvs:
-
-                # check both psi and delta_psi here
-                # print(self.edges[i].lsvs)
-                # print(self.edges[i].lsvs.values())
-                # print([x for x in (abs(y) for v in self.edges[i].lsvs.values() for y in v['delta_psi'])])
-
 
                 psi = max(map(max, (v['psi'] for v in self.edges[i].lsvs.values())), default=None)
                 delta_psi = max((abs(y) for v in self.edges[i].lsvs.values() for y in v['delta_psi']), default=None)
 
+                # We need both psi and deltapsi to pass threshold to keep
+                assert psi is not None or delta_psi is not None
 
-                # print(delta_psi)
-                #
-                # print(self.config.decomplexify_deltapsi_threshold and delta_psi is not None)
-
-                if self.config.decomplexify_psi_threshold and psi is not None and self.config.decomplexify_deltapsi_threshold and delta_psi is not None:
-                    # if both filters applied, we only filter if both values are below the threshold
-                    if psi < self.config.decomplexify_psi_threshold and delta_psi < self.config.decomplexify_deltapsi_threshold:
-                        num_filtered += 1
-                        del self.edges[i]
-                elif self.config.decomplexify_psi_threshold and psi is not None and psi < self.config.decomplexify_psi_threshold:
-                    num_filtered += 1
+                if psi is not None and psi < self.config.decomplexify_psi_threshold:
                     del self.edges[i]
-                elif self.config.decomplexify_deltapsi_threshold and delta_psi is not None and delta_psi < self.config.decomplexify_deltapsi_threshold:
-                    num_filtered += 1
+                elif delta_psi is not None and delta_psi < self.config.decomplexify_deltapsi_threshold:
                     del self.edges[i]
 
-
-
+            else:
+                # if there are no lsvs, and it is not flagged constitutive by Majiq, delete it
+                if not self.edges[i].is_constitutive:
+                    del self.edges[i]
 
     def _remove_empty_exons(self):
         """
-        Remove exons / nodes wiht no junctions
+        Remove exons / nodes with no junctions
         """
         self.nodes[:] = [x for x in self.nodes if
                          any(self.in_exon(x, edge.end) or self.in_exon(x, edge.start) for edge in self.edges)]
