@@ -412,7 +412,7 @@ cdef void gene_to_splicegraph(Gene * gne, sqlite3 * db) nogil:
             continue
         # with gil:
         #     print("## ", gne_id, jj.get_start(), jj.get_end(), jj.get_annot(), jj.get_simpl_fltr())
-        sg_junction(db, gne_id, jj.get_start(), jj.get_end(), jj.get_annot(), jj.get_simpl_fltr())
+        sg_junction(db, gne_id, jj.get_start(), jj.get_end(), jj.get_annot(), jj.get_simpl_fltr(), 0)
 
     for ex_pair in gne.exon_map_:
         ex = ex_pair.second

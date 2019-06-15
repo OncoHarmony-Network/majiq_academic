@@ -162,11 +162,16 @@ class HeatMap {
         // So we are expecting the LSV ID (which should be unique) to be set on each of these instances to use
         const uniq = this.lsv_id;
 
+        const max_label_len = Math.cos(45) * Math.max(...(grp_names.map(el => el.length))) * 6.5;
+        const general_offset = (cell_size * hm.length) + max_label_len + 10;
+
         d3.select(el)
 
             .attr('class', 'heat-map-outer')
-            .attr('height', (cell_size * hm.length) + 100).attr('width', (cell_size * hm.length) + 125)
-
+            .attr('height', general_offset + 20).attr('width', general_offset + 20)
+            .style('padding-top', `${max_label_len}px`)
+            .style('padding-left', `${max_label_len}px`)
+            //.style('transform', `translateX(${max_label_len * 6}px) translateY(${max_label_len * 6}px)`)
             // this section generates the (repetitive) pattern element for the hatch style
             .append("defs")
             .append('linearGradient')
@@ -233,7 +238,7 @@ class HeatMap {
             .append("svg")
             .attr('class', "hm-upper-legend")
             .style('overflow', 'visible')
-            .attr('x',  (cell_size * hm.length) + 50 + 10).attr('y', (((cell_size * hm.length) + 100) / 2) - 5)
+            .attr('x',  (cell_size * hm.length) + 10).attr('y', (((cell_size * hm.length) + 100) / 2) - 50)
             .append('rect')
             .attr('x', 0).attr('y', 0).attr('width', 60).attr('height', 15)
             .attr('fill', 'url(#upperGradient)')
@@ -254,7 +259,7 @@ class HeatMap {
             .append("svg")
             .attr('class', "hm-lower-legend")
             .style('overflow', 'visible')
-            .attr('x', (((cell_size * hm.length) + 100) / 2) - 30).attr('y', ((cell_size * hm.length) + 70))
+            .attr('x', (((cell_size * hm.length) + 100) / 2) - 75).attr('y', ((cell_size * hm.length) + 20))
             .append('rect')
             .attr('x', 0).attr('y', 0).attr('width', 60).attr('height', 15)
             .attr('fill', 'url(#lowerGradient)')
@@ -274,7 +279,7 @@ class HeatMap {
             .append("svg")
             .attr('class', "hm-left-titles")
             .style('overflow', 'visible')
-            .attr('x', 40).attr('y', 68)
+            .attr('x', -16).attr('y', 28)
             .selectAll('text')
             .data(grp_names)
             .enter()
@@ -291,7 +296,7 @@ class HeatMap {
             .append("svg")
             .attr('class', "hm-top-titles")
             .style('overflow', 'visible')
-            .attr('x', 68).attr('y', 40)
+            .attr('x', 24).attr('y', -14)
             .selectAll('text')
             .data(grp_names)
             .enter()
@@ -307,7 +312,7 @@ class HeatMap {
             // main heatmap svg
             .append("svg")
             .attr('class', 'heat-map')
-            .attr('x', 50).attr('y', 50)
+            //.attr('x', 50).attr('y', 50)
             .attr('height', cell_size * hm.length).attr('width', cell_size * hm.length)
             .attr('data-stat-name', this.data.stat_name)
 

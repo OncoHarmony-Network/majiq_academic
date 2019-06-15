@@ -57,6 +57,7 @@ def run_service():
         options = {
             'bind': '%s:%s' % (host, port),
             'workers': ViewConfig().num_web_workers,
+            'timeout': 9999999
         }
         GunicornStandaloneApplication(run_app, options).run()
     elif web_server == 'flask':
@@ -164,16 +165,6 @@ def lsv_boundries(lsv_exons):
 
 def gene_view(summary_template, gene_id, view_matrix, **kwargs):
 
-
-    if kwargs.get('voila_file'):
-        with view_matrix(voila_file=kwargs.get('voila_file')) as m:
-            if gene_id not in m.gene_ids:
-                return redirect(url_for('index'))
-    else:
-        with view_matrix() as m:
-            if gene_id not in m.gene_ids:
-                return redirect(url_for('index'))
-
     with ViewSpliceGraph() as sg:
         gene = sg.gene(gene_id)
 
@@ -185,6 +176,8 @@ def gene_view(summary_template, gene_id, view_matrix, **kwargs):
         session['highlight'] = highlight
 
         exons = list(sg.exons(gene_id))
+        if not exons:
+            return redirect(url_for('index'))
         start = min(e['start'] for e in exons if e['start'] != -1)
         end = max(e['end'] for e in exons if e['end'] != -1)
         href = ucsc_href(sg.genome, gene['chromosome'], start, end)

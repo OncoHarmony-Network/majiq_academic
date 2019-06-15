@@ -26,6 +26,25 @@ function perform_swap(el1, el2, transform){
     }
 }
 
+function dotp(x,y) {
+    function dotp_sum(a,b) { return a + b; }
+    function dotp_times(a,i) { return x[i] * y[i]; }
+    if (x.length != y.length)
+        throw "can't find dot product: arrays have different lengths";
+    return x.map(dotp_times).reduce(dotp_sum,0);
+}
+
+function expectation_value(bins){
+    var step = 1/bins.length;
+    var cur = step / 2;
+    var comp_arr = [];
+    while(cur < 1){
+        comp_arr.push(cur);
+            cur += step;
+    }
+    return dotp(comp_arr, bins);
+}
+
 class Violin {
     constructor(violin_data) {
         this.data = violin_data;
@@ -182,6 +201,8 @@ class Violin {
 
     heterogen(svg) {
         const data = this.data;
+
+
         
         this.violin_count = data.group_names.length;
         svg.setAttribute('height', this.svg_height);
@@ -196,6 +217,7 @@ class Violin {
         const g = d3.select(svg)
             .append('g')
             .attr('transform', `translate(${this.y_axis_width}, ${this.top_padding})`);
+
 
         const hist = g
             .append('g')
@@ -237,6 +259,15 @@ class Violin {
     };
 
     draw_histograms(g, bins) {
+
+        // removing data from bins...with no data!
+        // (setting to an empty array makes it so nothing is shown on the violin plot)
+        $.each(bins, function(i, bin){
+            if(bin.every( (val, i, arr) => val === -1 )){
+                bins[i] = [];
+            }
+        });
+
         const x = d3.scaleLinear()
             .range([0, this.violin_width / 2]);
 
@@ -352,7 +383,8 @@ class Violin {
                 y.domain([0, d.length - 1]);
                 return area(d)
             })
-            .attr('data-group-idx', (d, i) => i);
+            .attr('data-group-idx', (d, i) => i)
+            .attr('data-expected', (d) => expectation_value(d));
 
         // console.log(g.selectAll('.violin'))
         // dragHandler(g.selectAll('.violin'))
@@ -600,6 +632,12 @@ class Violin {
             .attr('y', this.svg_height - this.x_axis_height + 6)
             .append('text')
             .attr('font-size', 12)
+            .attr('textLength', d =>{
+                if(d.length > 10){
+                    return "77px";
+                }
+            })
+            .attr('lengthAdjust', "spacingAndGlyphs")
             .text(d => {
                 try {
                     return parseFloat(d.toPrecision(3))
@@ -614,21 +652,22 @@ class Violin {
             .select(function() { return this.parentNode; })
             .each((d, i, a) => {
                 const el = a[i];
-                if (d.length > 7) {
-                    el.setAttribute('x', (this.violin_width + this.violin_pad) * (i + .45));
-                    el.setAttribute("data-x", (this.violin_width + this.violin_pad) * (i + .45));
-                    el.setAttribute("data-orig-x", (this.violin_width + this.violin_pad) * (i + .45));
-                    el.setAttribute('y', this.svg_height - this.x_axis_height + 6);
-                    el.setAttribute('transform', `rotate(90,${a[i].getAttribute('x')},${a[i].getAttribute('y')})`);
-                    el.setAttribute('text-anchor', 'left');
-
-                } else {
+                // if (d.length > 7) {
+                //     el.setAttribute('x', (this.violin_width + this.violin_pad) * (i + .45));
+                //     el.setAttribute("data-x", (this.violin_width + this.violin_pad) * (i + .45));
+                //     el.setAttribute("data-orig-x", (this.violin_width + this.violin_pad) * (i + .45));
+                //     el.setAttribute('y', this.svg_height - this.x_axis_height + 6);
+                //     el.setAttribute('transform', `rotate(90,${a[i].getAttribute('x')},${a[i].getAttribute('y')})`);
+                //     el.setAttribute('text-anchor', 'left');
+                //
+                // } else {
                     el.setAttribute('x', (this.violin_width + this.violin_pad) * (i + .5));
                     el.setAttribute("data-x", (this.violin_width + this.violin_pad) * (i + .5));
                     el.setAttribute("data-orig-x", (this.violin_width + this.violin_pad) * (i + .5));
                     el.setAttribute('y', this.svg_height - this.x_axis_height + 10);
                     el.setAttribute('text-anchor', 'middle');
-                }
+                //                }
+                el.setAttribute('textLength', '40px')
                 el.setAttribute('data-group-idx', i)
             })
 
