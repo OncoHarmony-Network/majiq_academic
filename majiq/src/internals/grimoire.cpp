@@ -363,17 +363,23 @@ namespace grimoire {
         sort(ex_vector.begin(), ex_vector.end(), Exon::islowerRegion<Exon>) ;
 
         for(const auto &ex: ex_vector){
-            if ((ex->ob).size()>1 || ((ex->ob).size()==1 && ex->ob_irptr != nullptr))
+            unsigned int cj = 0 ;
+            if (ex->is_lsv(true))
                 continue ;
             else{
-                if ((ex->ob).size()==1 && ex->ob_irptr == nullptr){
+                if (ex->ob_irptr == nullptr){
                     Junction * jnc = *(ex->ob.begin()) ;
                     if (FIRST_LAST_JUNC == jnc->get_end() || !jnc->get_bld_fltr() || jnc->get_simpl_fltr()){
                         continue ;
                     }
+
                     // check acceptor
                     Exon * accex = jnc->get_acceptor() ;
-                    if((accex->ib).size()>1 || accex->ib_irptr != nullptr){
+//                    unsigned int acc_cj = 0 ;
+//                    for (const auto &p: (accex->ib))
+//                        acc_cj += (p->get_bld_fltr() & !p->get_simpl_fltr()) ? 1 : 0 ;
+//                    if(acc_cj>1 || accex->ib_irptr != nullptr){
+                    if(accex->is_lsv(false)){
                         continue ;
                     }
                     string str_ln = id_ + "\t" + chromosome_ + "\t" +
