@@ -199,7 +199,7 @@ cdef int intron_retention(sqlite3 *db, string gene_id, int start, int end, bint 
         int rm_chars_len
         char *sql
 
-    arg_len = gene_id.length() + int_len(start) + int_len(end) + int_len(annotated) + int_len(is_simplified)
+    arg_len = gene_id.length() + int_len(start) + int_len(end) + int_len(annotated) + int_len(is_simplified) + int_len(is_constitutive)
     rm_chars_len = 5 * 2
 
     sql = <char *> malloc(sizeof(char) * (strlen(ir_insert) + arg_len - rm_chars_len + 1))
