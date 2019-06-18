@@ -13,7 +13,7 @@ cdef int exon(sqlite3 *db, string gene_id, int start, int end, int annotated_sta
 cdef int junction(sqlite3 *db, string gene_id, int start, int end, bint annotated, bint is_simplified, bint is_constitutive) nogil
 cdef int junction_reads(sqlite3 *db, int reads, string exp_name, string junc_gene_id, int junc_start,
                          int junc_end) nogil
-cdef int intron_retention(sqlite3 *db, string gene_id, int start, int end, bint annotated, bint is_simplified, bint is_constitutive) nogil
+cdef int intron_retention(sqlite3 *db, string gene_id, int start, int end, bint annotated, bint is_simplified) nogil
 cdef int intron_retention_reads(sqlite3 *db, int reads, string exp_name, string ir_gene_id, int ir_start,
                                  int ir_end) nogil
 cdef int alt_start(sqlite3 *db, string gene_id, int coordinate) nogil
