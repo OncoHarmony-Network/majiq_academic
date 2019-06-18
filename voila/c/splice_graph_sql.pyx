@@ -192,7 +192,7 @@ cdef int junction(sqlite3 *db, string gene_id, int start, int end, bint annotate
     free(sql)
     return rc
 
-cdef int intron_retention(sqlite3 *db, string gene_id, int start, int end, bint annotated, bint is_simplified) nogil:
+cdef int intron_retention(sqlite3 *db, string gene_id, int start, int end, bint annotated, bint is_simplified, bint is_constitutive) nogil:
     cdef:
         int rc
         int arg_len
@@ -203,7 +203,7 @@ cdef int intron_retention(sqlite3 *db, string gene_id, int start, int end, bint 
     rm_chars_len = 5 * 2
 
     sql = <char *> malloc(sizeof(char) * (strlen(ir_insert) + arg_len - rm_chars_len + 1))
-    sprintf(sql, ir_insert, gene_id.c_str(), start, end, annotated, is_simplified)
+    sprintf(sql, ir_insert, gene_id.c_str(), start, end, annotated, is_simplified, is_constitutive)
 
     rc = exec_db(db, sql)
     free(sql)

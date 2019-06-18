@@ -367,7 +367,7 @@ namespace grimoire {
             if (ex->is_lsv(true))
                 continue ;
             else{
-                if (ex->ob_irptr == nullptr){
+                if ((ex->ob).size()>0 && ex->ob_irptr == nullptr){
                     Junction * jnc = *(ex->ob.begin()) ;
                     if (FIRST_LAST_JUNC == jnc->get_end() || !jnc->get_bld_fltr() || jnc->get_simpl_fltr()){
                         continue ;
