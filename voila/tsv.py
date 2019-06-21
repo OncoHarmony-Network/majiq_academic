@@ -53,7 +53,7 @@ def intron_retention_coords(lsv, juncs):
     :param juncs: list of LSV junctions which contain the coordinates of the IR at the end.
     :return: String
     """
-    if lsv.alternative_intron:
+    if lsv.intron_retention:
         return '-'.join(map(str, juncs[-1]))
     else:
         return ''
