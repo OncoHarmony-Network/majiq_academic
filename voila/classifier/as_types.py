@@ -402,7 +402,8 @@ class Graph:
         probs = []
         for edge in module.get_all_edges():
             for lsv_quants in edge.lsvs.values():
-                probs.append(max(matrix_area(b, self.config.decomplexify_deltapsi_threshold) for b in unpack_bins(lsv_quants['delta_psi_bins'])))
+                if lsv_quants['delta_psi_bins']:
+                    probs.append(max(matrix_area(b, self.config.decomplexify_deltapsi_threshold) for b in unpack_bins(lsv_quants['delta_psi_bins'])))
 
         return any(x >= self.config.probability_changing_threshold for x in probs)
 
@@ -417,7 +418,7 @@ class Graph:
         probs = []
         for edge in module.get_all_edges():
             for lsv_quants in edge.lsvs.values():
-                if len(lsv_quants['prior']):
+                if len(lsv_quants['prior']) and lsv_quants['delta_psi_bins']:
                     probs.append(max(generate_high_probability_non_changing(lsv_quants['has_ir'],
                                                                         lsv_quants['prior'],
                                                                         self.config.non_changing_threshold,
@@ -850,6 +851,7 @@ class Graph:
         lsv_store = {}
 
         with Matrix(voila_file) as m:
+
             for lsv_id in m.lsv_ids(gene_ids=[self.gene_id]):
                 lsv = m.heterogen(lsv_id)
 
@@ -859,13 +861,16 @@ class Graph:
 
                 group_means = []
 
+                deltas = []
                 #for grp, mean in zip(group_names, np.array(mean_psi).transpose((1, 0, 2))):
                 for mean in np.array(mean_psi).transpose((1, 0, 2)):
                     group_means.append(list(get_expected_psi(x) for x in mean))
+                    deltas.append([])
 
 
                 for group_mean in group_means:
-                    for (start, end), means in zip(lsv.junctions, group_mean):
+
+                    for i, (start, end), means in zip(range(len(deltas)), lsv.junctions, group_mean):
 
                         key = str(start) + '-' + str(end)
 
@@ -873,9 +878,21 @@ class Graph:
                             lsv_store[key] = {}
 
                         if lsv_id not in lsv_store[key]:
-                            lsv_store[key][lsv_id] = {'psi': set(), 'delta_psi': set()}
+                            lsv_store[key][lsv_id] = {'psi': set(), 'delta_psi': set(), 'delta_psi_bins': [],
+                                                      'has_ir': False, 'prior': None}
 
+                        deltas[i].append(means)
+                        # print(key)
+                        # print(means)
                         lsv_store[key][lsv_id]['psi'].add(means)
+
+                deltas = [d1-d2 for x in deltas for d1, d2 in combinations(x, 2)]
+                for (start, end), delta in zip(lsv.junctions, deltas):
+                    key = str(start) + '-' + str(end)
+                    lsv_store[key][lsv_id]['delta_psi'].add(delta)
+
+                # psi_g1 = get_expected_psi(arr[group_idx1][edge_idx])
+                # psi_g2 = get_expected_psi(arr[group_idx2][edge_idx])
 
         self._add_lsvs_to_edges(lsv_store)
 
