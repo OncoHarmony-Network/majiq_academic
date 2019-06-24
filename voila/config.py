@@ -3,7 +3,7 @@ import inspect
 import sqlite3
 from collections import namedtuple
 from pathlib import Path
-
+import sys
 from voila import constants
 
 from voila.api import Matrix, SpliceGraph
@@ -25,7 +25,8 @@ _ClassifyConfig = namedtuple('ClassifyConfig', ['directory', 'voila_files', 'voi
                                       'decomplexify_reads_threshold', 'analysis_type', 'gene_ids',
                                       'debug', 'silent', 'keep_constitutive', 'show_all_modules', 'output_complex',
                                       'untrimmed_exons', 'putative_multi_gene_regions', 'min_experiments',
-                                                'threshold', 'non_changing_threshold', 'probability_threshold'])
+                                                'threshold', 'non_changing_threshold', 'probability_changing_threshold',
+                                                 'probability_non_changing_threshold', 'changing', 'non_changing'])
 _ClassifyConfig.__new__.__defaults__ = (None,) * len(_ClassifyConfig._fields)
 
 # global config variable to act as the singleton instance of the config.
@@ -216,6 +217,22 @@ def write(args):
     for key, value in attrs.items():
         if isinstance(value, int) or isinstance(value, float) or value:
             config_parser.set(settings, key, str(value))
+
+    if args.func.__name__ == "Classify":
+        # check if default = default for some args depending on the type of classify being run.
+        # we store a default of none and apply the actual default if the user does not specify another value
+        if not config_parser.has_option(settings, 'decomplexify_psi_threshold'):
+            if config_parser.getboolean(settings, 'changing') or config_parser.getboolean(settings, 'non_changing'):
+                config_parser.set(settings, 'decomplexify_psi_threshold', '0.05')
+            else:
+                config_parser.set(settings, 'decomplexify_psi_threshold', '0.0')
+
+        if not config_parser.has_option(settings, 'decomplexify_deltapsi_threshold'):
+            if config_parser.getboolean(settings, 'changing') or config_parser.getboolean(settings, 'non_changing'):
+                config_parser.set(settings, 'decomplexify_deltapsi_threshold', '0.1')
+            else:
+                config_parser.set(settings, 'decomplexify_deltapsi_threshold', '0.0')
+
     config_parser.set(settings, 'analysis_type', analysis_type)
 
     # Get files from arguments
@@ -325,13 +342,17 @@ class ClassifyConfig:
 
             settings = dict(config_parser['SETTINGS'])
 
+
+
+
             for int_key in ['nproc', 'keep_constitutive', 'decomplexify_reads_threshold']:
                 settings[int_key] = config_parser['SETTINGS'].getint(int_key)
             for float_key in ['decomplexify_psi_threshold', 'decomplexify_deltapsi_threshold',
-                              'non_changing_threshold', 'threshold', 'probability_threshold', 'min_experiments']:
+                              'non_changing_threshold', 'threshold', 'probability_changing_threshold',
+                              'probability_non_changing_threshold', 'min_experiments']:
                 settings[float_key] = config_parser['SETTINGS'].getfloat(float_key)
             for bool_key in ['debug', 'show_all_modules', 'output_complex', 'untrimmed_exons',
-                             'putative_multi_gene_regions']:
+                             'putative_multi_gene_regions', 'changing', 'non_changing']:
                 settings[bool_key] = config_parser['SETTINGS'].getboolean(bool_key)
 
             if settings['decomplexify_reads_threshold'] == 0:
@@ -342,6 +363,19 @@ class ClassifyConfig:
                 settings['keep_constitutive'] = True
             if settings['keep_constitutive']:
                 settings['show_all_modules'] = True
+
+            # some settings combinations don't make sense
+            if settings['changing'] and settings['non_changing']:
+                voila_log().critical("You may not specify both --changing and --non-changing")
+                sys.exit(1)
+
+            if settings['changing'] or settings['non_changing']:
+                if 'HET' not in settings['analysis_type'] and 'dPSI' not in settings['analysis_type']:
+                    voila_log().critical("To use --changing or --non-changing, please provide at least one dPSI or HET input file")
+                    sys.exit(1)
+
+
+
 
             filters = {}
             if config_parser.has_section('FILTERS'):

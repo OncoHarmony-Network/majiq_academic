@@ -161,11 +161,11 @@ classify_parser.add_argument('--output-complex', action='store_true',
                          help='Complex module data is dumped to all output TSVs, not only summary')
 classify_parser.add_argument('--untrimmed-exons', action='store_true',
                          help='Display original Exon coordinates instead of Trimmed coordinates in output TSVs')
-classify_parser.add_argument('--decomplexify-psi-threshold', type=float, default=0.01,
+classify_parser.add_argument('--decomplexify-psi-threshold', type=float, default=None,
                          help='Filter out junctions where PSI is below a certain value (between 0.0 and 1.0). If multiple '
                               'input files are used, only the highest PSI value is used. If 0 (or 0.0) is specified, '
                               'no filtering fill be done. The default is "0.01". (1%%)')
-classify_parser.add_argument('--decomplexify-deltapsi-threshold', type=float, default=0.0,
+classify_parser.add_argument('--decomplexify-deltapsi-threshold', type=float, default=None,
                          help='Filter out junctions where abs(E(dPSI)) is below a certain value (between 0.0 and 1.0). If multiple '
                               'input files are used, only the biggest difference (dPSI) value is used. If 0 (or 0.0) is specified, '
                               'no filtering fill be done. The default is "0.0". ')
@@ -183,8 +183,14 @@ classify_parser.add_argument('--threshold', type=float, default=0.2,
                         help='Threshold in delta-PSI quantification column. The default is "0.2".')
 classify_parser.add_argument('--non-changing-threshold', type=float, default=0.05,
                         help='Threshold in delta-PSI quantification column. The default is "0.05".')
-classify_parser.add_argument('--probability-threshold', type=float, default=None,
-                        help='This is off by default.')
+classify_parser.add_argument('--probability-changing-threshold', type=float, default=0.95,
+                        help='The default is "0.95"')
+classify_parser.add_argument('--probability-non-changing-threshold', type=float, default=0.95,
+                        help='The default is "0.95"')
+classify_parser.add_argument('--changing', action='store_true',
+                         help='In general, find classifications for events which are changing (between multiple analysis). Requires at least one deltapsi or het voila file')
+classify_parser.add_argument('--non-changing', action='store_true',
+                         help='In general, find classifications for events which are not changing (between multiple analysis). Requires at least one deltapsi or het voila file')
 required_classify_parser = classify_parser.add_argument_group('required named arguments')
 required_classify_parser.add_argument('-d', '--directory', required=True, help="All generated TSV files will be dumped in"
                                                                           " this directory")

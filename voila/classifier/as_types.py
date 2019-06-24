@@ -4,7 +4,7 @@ from pathlib import Path
 from voila.voila_log import voila_log
 from voila import constants
 from voila.api import SpliceGraph, Matrix
-from voila.api.matrix_utils import generate_means
+from voila.api.matrix_utils import generate_means, unpack_bins, generate_high_probability_non_changing
 
 from operator import itemgetter
 import csv
@@ -370,6 +370,7 @@ class Graph:
             self._add_matrix_values(voila_file)
 
         for i in range(len(self.edges) - 1, -1, -1):
+
             if self.edges[i].lsvs:
 
                 psi = max(map(max, (v['psi'] for v in self.edges[i].lsvs.values())), default=None)
@@ -387,6 +388,43 @@ class Graph:
                 # if there are no lsvs, and it is not flagged constitutive by Majiq, delete it
                 if not self.edges[i].is_constitutive:
                     del self.edges[i]
+
+    def _confidence_changing(self, module):
+        """
+        Post Module-building discarding of modules -- this does not actually remove modules in this function,
+        but it calculates if the current group of nodes will pass the confidence filter (otherwise, no module is
+        even made, to save on efficiency)
+
+        at least N juncs have:
+            any(max(Prob(|E(dPSI)|>=detlapsi-thresh)))>=probability-changing-thresh
+        """
+
+        probs = []
+        for edge in module.get_all_edges():
+            for lsv_quants in edge.lsvs.values():
+                probs.append(max(matrix_area(b, self.config.decomplexify_deltapsi_threshold) for b in unpack_bins(lsv_quants['delta_psi_bins'])))
+
+        return any(x >= self.config.probability_changing_threshold for x in probs)
+
+
+    def _confidence_non_changing(self, module):
+        """
+        Similar to above, but for the non changing run type
+
+        at least N juncs have:
+            any(max(Prob(|E(dPSI)|<non-changing-thresh)))>=probability-non-changing-thresh
+        """
+        probs = []
+        for edge in module.get_all_edges():
+            for lsv_quants in edge.lsvs.values():
+                if len(lsv_quants['prior']):
+                    probs.append(max(generate_high_probability_non_changing(lsv_quants['has_ir'],
+                                                                        lsv_quants['prior'],
+                                                                        self.config.non_changing_threshold,
+                                                                        unpack_bins(lsv_quants['delta_psi_bins']))))
+
+        return any(x >= self.config.probability_non_changing_threshold for x in probs)
+
 
     def _remove_empty_exons(self):
         """
@@ -571,6 +609,32 @@ class Graph:
                         "Found two exons in gene %s which are collided and both have junctions! Can not trim!" % self.gene_id)
 
 
+    def _module_is_valid(self, module):
+        """
+        Make sure that module passes checks pertaining to current settings, before being added to module list
+        :return:
+        """
+
+        # removing modules with no lsv ids
+        if not self.config.show_all_modules:
+            if not module.source_lsv_ids and not module.target_lsv_ids:
+                return False
+
+        # removing modules with only one junction
+        if not self.config.keep_constitutive:
+            if not module.get_num_edges(ir=True) > 1:
+                return False
+
+        if self.config.changing:
+            if not self._confidence_changing(module):
+                return False
+        elif self.config.non_changing:
+            if not self._confidence_non_changing(module):
+                return False
+
+        return True
+
+
     def modules(self):
         """
         Search through edges to find where they don't cross.  At this point is where the previous module ends and the
@@ -603,11 +667,14 @@ class Graph:
                             # handling case like exon 19-20 in ENSMUSG00000021820
                             # we aim to make sure that the half exons are in the middle of the module
                             # so that we don't mark the next module as having that half exon
-
-                            modules.append(self.Module(self.nodes[start_idx: i + 1 + 1], self))
+                            module = self.Module(self.nodes[start_idx: i + 1 + 1], self)
+                            if self._module_is_valid(module):
+                                modules.append(module)
                             nextEndShift = 1
                         else:
-                            modules.append(self.Module(self.nodes[start_idx + nextEndShift: i + 1], self))
+                            module = self.Module(self.nodes[start_idx + nextEndShift: i + 1], self)
+                            if self._module_is_valid(module):
+                                modules.append(module)
                             nextEndShift = 0
 
                         start_idx = i
@@ -615,17 +682,7 @@ class Graph:
         if self.strand == '-':
             modules.reverse()
 
-        # removing modules with no lsv ids
-        if not self.config.show_all_modules:
-            modules[:] = [x for x in modules if x.source_lsv_ids or x.target_lsv_ids]
-
-
-        # removing modules with only one junction
-        if not self.config.keep_constitutive:
-            modules[:] = [x for x in modules if x.get_num_edges(ir=True) > 1]
-
-
-        # removing beginning mode of module if it does not have any forward junctions
+        # removing beginning node of module if it does not have any forward junctions
         # this can happen when there are complete breaks in the gene
         # this section also serves to calculate the broken gene region "events" for later
         last_break_idx = 0
@@ -684,9 +741,15 @@ class Graph:
             raise UnsupportedVoilaFile()
 
     def _add_lsvs_to_edges(self, lsv_store):
+
         for edge in self.edges:
-            key = str(edge.start) + '-' + str(edge.end)
+
+            if edge.ir:
+                key = str(edge.start + 1) + '-' + str(edge.end - 1)
+            else:
+                key = str(edge.start) + '-' + str(edge.end)
             # if we found values for this edge in the voila file
+
             if key in lsv_store:
                 # if the edge already has values found from another voila file
                 if edge.lsvs:
@@ -715,6 +778,8 @@ class Graph:
             for lsv_id in m.lsv_ids(gene_ids=[self.gene_id]):
                 lsv = m.psi(lsv_id)
 
+
+
                 for (start, end), means in zip(lsv.junctions, lsv.get('means')):
 
                     key = str(start) + '-' + str(end)
@@ -725,9 +790,11 @@ class Graph:
                         lsv_store[key] = {}
 
                     if lsv_id not in lsv_store[key]:
-                        lsv_store[key][lsv_id] = {'psi': set(), 'delta_psi': set()}
+                        lsv_store[key][lsv_id] = {'psi': set(), 'delta_psi': set(), 'delta_psi_bins': [],
+                                                  'has_ir': False, 'prior': []}
 
                     lsv_store[key][lsv_id]['psi'].add(means)
+                    lsv_store[key][lsv_id]['has_ir'] = lsv.intron_retention
 
         self._add_lsvs_to_edges(lsv_store)
 
@@ -754,13 +821,22 @@ class Graph:
                             lsv_store[key] = {}
 
                         if lsv_id not in lsv_store[key]:
-                            lsv_store[key][lsv_id] = {'psi': set(), 'delta_psi': set()}
+                            lsv_store[key][lsv_id] = {'psi': set(), 'delta_psi': set(), 'delta_psi_bins': [],
+                                                      'has_ir': False, 'prior': None}
 
                         lsv_store[key][lsv_id]['psi'].add(means)
+                        lsv_store[key][lsv_id]['has_ir'] = lsv.intron_retention
 
-                for (start, end), means in zip(juncs, generate_means(lsv.get('bins'))):
+                _bins = lsv.get('bins')
+                if self.config.non_changing:
+                    _prior = lsv.matrix_hdf5.prior
+                else:
+                    _prior = None
+                for (start, end), means, bins in zip(juncs, generate_means(_bins), _bins):
                     key = str(start) + '-' + str(end)
                     lsv_store[key][lsv_id]['delta_psi'].add(means)
+                    lsv_store[key][lsv_id]['delta_psi_bins'].append(bins)
+                    lsv_store[key][lsv_id]['prior'] = _prior
 
         self._add_lsvs_to_edges(lsv_store)
 

@@ -80,6 +80,8 @@ def run_classifier():
 
     config = ClassifyConfig()
 
+
+
     if not config.gene_ids:
         with SpliceGraph(config.splice_graph_file) as sg:
            gene_ids = list(g['id'] for g in sg.genes())
