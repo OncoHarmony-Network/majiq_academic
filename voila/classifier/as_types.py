@@ -385,9 +385,10 @@ class Graph:
                     del self.edges[i]
 
             else:
-                # if there are no lsvs, and it is not flagged constitutive by Majiq, delete it
-                if not self.edges[i].is_constitutive:
-                    del self.edges[i]
+                if not self.config.keep_no_lsvs:
+                    # if there are no lsvs, and it is not flagged constitutive by Majiq, delete it
+                    if not self.edges[i].is_constitutive:
+                        del self.edges[i]
 
     def _confidence_changing(self, module):
         """
