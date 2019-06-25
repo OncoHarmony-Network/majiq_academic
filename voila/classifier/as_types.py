@@ -414,7 +414,7 @@ class Graph:
         Similar to above, but for the non changing run type
 
         at least N juncs have:
-            any(max(Prob(|E(dPSI)|<non-changing-thresh)))>=probability-non-changing-thresh
+            all(max(Prob(|E(dPSI)|<non-changing-thresh)))>=probability-non-changing-thresh
         """
         probs = []
         for edge in module.get_all_edges():
@@ -424,8 +424,12 @@ class Graph:
                                                                         lsv_quants['prior'],
                                                                         self.config.non_changing_threshold,
                                                                         unpack_bins(lsv_quants['delta_psi_bins']))))
+        # if not probs:
+        #     print("XXXXXXXXXXXX")
+        # else:
+        #     print(probs)
 
-        return any(x >= self.config.probability_non_changing_threshold for x in probs)
+        return all(x >= self.config.probability_non_changing_threshold for x in probs)
 
 
     def _remove_empty_exons(self):
