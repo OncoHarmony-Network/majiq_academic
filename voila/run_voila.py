@@ -193,6 +193,8 @@ classify_parser.add_argument('--changing', action='store_true',
                          help='In general, find classifications for events which are changing (between multiple analysis). Requires at least one deltapsi or het voila file')
 classify_parser.add_argument('--non-changing', action='store_true',
                          help='In general, find classifications for events which are not changing (between multiple analysis). Requires at least one deltapsi or het voila file')
+classify_parser.add_argument('--debug-num-genes', type=int,
+                         help='Classify only n many genes, mainly used for debugging')
 required_classify_parser = classify_parser.add_argument_group('required named arguments')
 required_classify_parser.add_argument('-d', '--directory', required=True, help="All generated TSV files will be dumped in"
                                                                           " this directory")

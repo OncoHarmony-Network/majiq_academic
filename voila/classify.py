@@ -11,6 +11,7 @@ import os
 from multiprocessing import Manager, Pool
 import glob
 import traceback
+from itertools import islice
 
 class Classify:
     def __init__(self):
@@ -84,7 +85,10 @@ def run_classifier():
 
     if not config.gene_ids:
         with SpliceGraph(config.splice_graph_file) as sg:
-           gene_ids = list(g['id'] for g in sg.genes())
+            if config.debug_num_genes:
+                gene_ids = list(g['id'] for g in islice(sg.genes(), config.debug_num_genes))
+            else:
+                gene_ids = list(g['id'] for g in sg.genes())
     else:
         gene_ids = config.gene_ids
 
