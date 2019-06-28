@@ -28,11 +28,11 @@ class Classify:
 
 def classify_gene(args):
 
-    gene_id, q = args
+    gene_id, experiment_names, q = args
     config = ClassifyConfig()
 
     try:
-        graph = Graph(gene_id)
+        graph = Graph(gene_id, experiment_names)
 
         writer = TsvWriter(graph, gene_id)
 
@@ -81,6 +81,13 @@ def run_classifier():
 
     config = ClassifyConfig()
 
+    experiment_names = set()
+    for voila_file in config.voila_files:
+        with Matrix(voila_file) as m:
+            for grp in m.experiment_names:
+                for exp in grp:
+                    if exp:
+                        experiment_names.add(exp)
 
 
     if not config.gene_ids:
@@ -108,7 +115,10 @@ def run_classifier():
     if config.debug:
         try:
             for i, gene_id in enumerate(gene_ids):
-                classify_gene((gene_id, None,))
+                t1 = time.time()
+                classify_gene((gene_id, experiment_names, None,))
+                t2 = time.time()
+                print(t2-t1)
                 print('Processing Genes and Modules [%d/%d]\r' % (i, work_size), end="")
         except KeyboardInterrupt:
             print('                                                  \r', end="")
@@ -124,9 +134,8 @@ def run_classifier():
 
 
 
-
         # voila_index = p.map(self._heterogen_pool_add_index, zip(lsv_ids, range(work_size), repeat(work_size)))
-        classifier_pool = p.map_async(classify_gene, ((x, q) for x in gene_ids),)
+        classifier_pool = p.map_async(classify_gene, ((x, experiment_names, q) for x in gene_ids),)
 
         # monitor loop
         while True:

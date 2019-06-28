@@ -57,7 +57,7 @@ class Printable_Event:
             return '{}-{}'.format(self.start, self.end)
 
 class Graph:
-    def __init__(self, gene_id):
+    def __init__(self, gene_id, experiment_names):
         """
         This contains the edges and nodes used to find modules.
 
@@ -70,14 +70,9 @@ class Graph:
         self.edges = []  # all edges in the graph
         self.gene_id = gene_id
         self.config = ClassifyConfig()
-        self.experiment_names = set()
+        self.experiment_names = experiment_names
 
-        for voila_file in self.config.voila_files:
-            with Matrix(voila_file) as m:
-                for grp in m.experiment_names:
-                    for exp in grp:
-                        if exp:
-                            self.experiment_names.add(exp)
+
 
 
         # populate the graph with data from the splice graph
