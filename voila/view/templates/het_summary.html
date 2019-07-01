@@ -214,6 +214,31 @@
                     if(n.nodeType === 3){
                         return;
                     }
+                    n.querySelectorAll('.pairwise-check')
+                        .forEach(h => {
+                            h.onclick = (e) => {
+
+                                const current = d3.select(h);
+                                const main_svg =  d3.select($(h).closest('.psi-violin-plot')[0]);
+                                const add_lines = !(current.attr('data-checked') === 'true');
+                                main_svg.select('.overbars').remove();
+                                main_svg.selectAll(".pairwise-check")
+                                    .attr('data-checked', 'false')
+                                    .attr('fill', 'white');
+                                if(add_lines){
+                                    current.attr('data-checked', 'true');
+                                    current.attr('fill', 'black');
+                                    // get current index
+                                    // add pairwise lines
+                                    draw_pairwise_plot(main_svg);
+
+                                }else{
+                                    main_svg.attr('height', 160);
+                                    $(main_svg.node()).children('g').attr('transform', 'translate(40, 5)');
+                                }
+
+                            }
+                        })
                     n.querySelectorAll('.heat-map')
                         .forEach(h => {
                             const tool_tip = document.querySelector('.heat-map-tool-tip');
