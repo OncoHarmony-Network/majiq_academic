@@ -65,12 +65,12 @@ class Index:
                 voila_log().info('Removing index from HDF5')
                 del h['index']
 
-            voila_files = ViewConfig().voila_files
+            # voila_files = ViewConfig().voila_files
 
-            if 'input_hash' in h:
-                prior = h.get('input_hash')[0].decode('utf-8')
-                new = Index._get_files_hash(voila_files)
-                index_in_h = (prior == new)
+            # if 'input_hash' in h:
+            #     prior = h.get('input_hash')[0].decode('utf-8')
+            #     new = Index._get_files_hash(voila_files)
+            #     index_in_h = (prior == new)
 
             return index_in_h
 
