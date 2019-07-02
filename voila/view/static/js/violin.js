@@ -117,7 +117,6 @@ function draw_pairwise_plot(main_svg){
         // draw lines to the left
         $.each(x_vals.slice(0, cur_index).reverse(), function(i, x){
             const significance = pairwise_significance(cur_index, cur_index - i - 1);
-            console.log(significance)
             if(significance === null){
                 y_offset1 ++;
             }else{
