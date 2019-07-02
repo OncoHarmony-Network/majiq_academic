@@ -20,6 +20,7 @@ psi_keys = ['lsv_id', 'gene_id', 'gene_name'] + lsv_filters
 dpsi_keys = ['lsv_id', 'gene_id', 'gene_name', 'excl_incl', 'dpsi_threshold', 'confidence_threshold'] + lsv_filters
 het_keys = ['lsv_id', 'gene_id', 'gene_name'] + lsv_filters
 
+skip_strict_indexing = False
 
 class Index:
     def __init__(self):
@@ -27,7 +28,11 @@ class Index:
         Factory class to generate the index for the supplied analysis type.
         """
 
-        analysis_type = ViewConfig().analysis_type
+        self.config = ViewConfig()
+        analysis_type = self.config.analysis_type
+
+        global skip_strict_indexing
+        skip_strict_indexing = self.config.skip_type_indexing
 
         # The case where there's no analysis type, we're assuming this is splice graph only.
         if analysis_type:
@@ -158,6 +163,14 @@ class Index:
 
         row = (lsv_id, gene_id, gene_name)
 
+        if skip_strict_indexing:
+            lsv_f = [True for _ in lsv_filters]
+        else:
+            lsv_f = [getattr(het, f) for f in lsv_filters]
+
+        # For some reason, numpy needs these in tuples.
+        row = tuple(chain(row, lsv_f))
+
         q.put(row)
         return row
 
@@ -234,9 +247,18 @@ class Index:
             confidence_thresh = list(max(matrix_area(b, x) for b in bins) for x in np.linspace(0, 1, 10))
             confidence_thresh = json.dumps(confidence_thresh)
 
-        gene_name = g[gene_id]
+            gene_name = g[gene_id]
 
-        row = (lsv_id, gene_id, gene_name, excl_incl, dpsi_thresh, confidence_thresh)
+            row = (lsv_id, gene_id, gene_name, excl_incl, dpsi_thresh, confidence_thresh)
+
+            if skip_strict_indexing:
+                lsv_f = [True for _ in lsv_filters]
+            else:
+                lsv_f = [getattr(dpsi, f) for f in lsv_filters]
+
+
+        # For some reason, numpy needs these in tuples.
+        row = tuple(chain(row, lsv_f))
 
         q.put(row)
         return row
@@ -300,6 +322,14 @@ class Index:
         gene_name = g[gene_id]
 
         row = (lsv_id, gene_id, gene_name)
+
+        if skip_strict_indexing:
+            lsv_f = [True for _ in lsv_filters]
+        else:
+            lsv_f = [getattr(lsv, f) for f in lsv_filters]
+
+        # For some reason, numpy needs these in tuples.
+        row = tuple(chain(row, lsv_f))
 
         q.put(row)
         return row
