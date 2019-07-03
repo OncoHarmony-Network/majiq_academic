@@ -20,6 +20,10 @@ _TsvConfig = namedtuple('TsvConfig', ['file_name', 'voila_files', 'voila_file', 
                                       'debug', 'probability_threshold', 'silent', 'gene_ids', 'gene_names', 'lsv_ids',
                                       'lsv_types', 'strict_indexing'])
 _TsvConfig.__new__.__defaults__ = (None,) * len(_TsvConfig._fields)
+_FilterConfig = namedtuple('FilterConfig', ['directory', 'voila_files', 'voila_file', 'splice_graph_file',
+                                            'nproc', 'gene_ids', 'debug', 'silent', 'analysis_type', 'overwrite',
+                                            'gene_ids_file'])
+_FilterConfig.__new__.__defaults__ = (None,) * len(_FilterConfig._fields)
 
 # global config variable to act as the singleton instance of the config.
 this_config = None
@@ -96,6 +100,29 @@ def find_voila_files(vs):
 
     return voila_files
 
+def get_mixed_analysis_type_str(voila_files):
+    types = {'psi': 0, 'delta_psi': 0, 'het': 0}
+    for mf in voila_files:
+
+        with Matrix(mf) as m:
+
+            if m.analysis_type == constants.ANALYSIS_PSI:
+                types['psi'] += 1
+
+            elif m.analysis_type == constants.ANALYSIS_DELTAPSI:
+                types['delta_psi'] += 1
+
+            elif m.analysis_type == constants.ANALYSIS_HETEROGEN:
+                types['het'] += 1
+
+    strsout = []
+    if types['psi']:
+        strsout.append("PSIx%d" % types['psi'])
+    if types['delta_psi']:
+        strsout.append("dPSIx%d" % types['delta_psi'])
+    if types['het']:
+        strsout.append("HETx%d" % types['het'])
+    return ' '.join(strsout)
 
 def find_analysis_type(voila_files):
     """
@@ -147,7 +174,10 @@ def write(args):
     else:
 
         voila_files = find_voila_files(args.files)
-        analysis_type = find_analysis_type(voila_files)
+        if args.func.__name__ == "Filter":
+            analysis_type = get_mixed_analysis_type_str(voila_files)
+        else:
+            analysis_type = find_analysis_type(voila_files)
 
     # raise multi-file error if trying to run voila in TSV mode with multiple input files
     # (currently, multiple input is only supported in View mode)
@@ -267,5 +297,45 @@ class TsvConfig:
                     filters[key] = config_parser['FILTERS'][key].split('\n')
 
             this_config = _TsvConfig(**{**files, **settings, **filters})
+
+        return this_config
+
+class FilterConfig:
+    def __new__(cls, *args, **kwargs):
+        """
+        Before the object is created, we'll parse the ini file, save the named tuple to a global variable, and use it
+        as the sington object. This class is specifically for the TSV output.
+
+        :param args: arguments
+        :param kwargs: keyword arguments
+        :return: named tuple config
+        """
+        global this_config
+
+        if this_config is None:
+            voila_log().debug('Generating config object')
+            config_parser = configparser.ConfigParser()
+            config_parser.read(constants.CONFIG_FILE)
+
+            files = {
+                'voila_files': config_parser['FILES']['voila'].split('\n'),
+                'voila_file': config_parser['FILES']['voila'].split('\n')[0],
+                'splice_graph_file': config_parser['FILES']['splice_graph']
+            }
+
+            settings = dict(config_parser['SETTINGS'])
+            for int_key in ['nproc']:
+                settings[int_key] = config_parser['SETTINGS'].getint(int_key)
+            for float_key in []:
+                settings[float_key] = config_parser['SETTINGS'].getfloat(float_key)
+            for bool_key in ['debug', 'overwrite']:
+                settings[bool_key] = config_parser['SETTINGS'].getboolean(bool_key)
+
+            filters = {}
+            if config_parser.has_section('FILTERS'):
+                for key, value in config_parser['FILTERS'].items():
+                    filters[key] = config_parser['FILTERS'][key].split('\n')
+
+            this_config = _FilterConfig(**{**files, **settings, **filters})
 
         return this_config

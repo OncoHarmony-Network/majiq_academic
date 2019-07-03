@@ -10,6 +10,7 @@ from voila.exceptions import VoilaException, CanNotFindFile
 from voila.tsv import Tsv
 from voila.voila_log import voila_log
 from voila.view.views import run_service
+from voila.filter import Filter
 
 
 def check_list_file(value):
@@ -138,6 +139,25 @@ view_parser.add_argument('--strict-indexing', action='store_true',
                               'slows down the indexing process.')
 view_parser.add_argument('--splice-graph-only', action='store_true', help=argparse.SUPPRESS)
 
+
+# filter parser
+filter_parser = argparse.ArgumentParser(add_help=False)
+filter_parser.add_argument('files', nargs='+', type=check_file,
+                         help='List of files or directories which contains the splice graph and voila files.')
+filter_parser.add_argument('--overwrite', action='store_true',
+                         help='If the output filename already exists in the destination directory, overwrite'
+                              'it instead of skipping with a warning')
+filter_parser.add_argument('--gene-ids', nargs='*', default=[],
+                        help='Gene IDs, separated by spaces, which should remain in the results. e.g. GENE_ID1 '
+                             'GENE_ID2 ...')
+filter_parser.add_argument('--gene-ids-file', type=check_file,
+                        help='Specify Gene IDs to retain in a file instead of on the command line. One Gene ID per line')
+required_filter_parser = filter_parser.add_argument_group('required named arguments')
+required_filter_parser.add_argument('-d', '--directory', required=True, help="All filtered files will be dumped in"
+                                                                          " this directory")
+
+
+
 # subparsers
 subparsers = parser.add_subparsers(help='')
 subparsers.add_parser('tsv', parents=[tsv_parser, sys_parser, log_parser],
@@ -145,6 +165,10 @@ subparsers.add_parser('tsv', parents=[tsv_parser, sys_parser, log_parser],
 subparsers.add_parser('view', parents=[view_parser, sys_parser, log_parser, webserver_parser],
                       help='Start service to view the visualization for the supplied files.').set_defaults(
     func=run_service)
+subparsers.add_parser('filter', parents=[filter_parser, sys_parser, log_parser],
+                      help='Make truncated versions of the input files of a more manageable file size for easier'
+                           ' collaboration.').set_defaults(
+    func=Filter)
 
 
 
