@@ -32,7 +32,17 @@
     <div class="heatmap-form pure-form pure-form-aligned" style="float: right; margin-right: 10px;">
     <div id="heatmap-stat-choices">
         {% for stat_name in stat_names %}
-            <label for="{{ stat_name }}" class="pure-radio">
+            <label for="{{ stat_name }}" class="pure-radio"
+            {% if stat_name == "TNOM" %}
+                title="TNOM (Total Number Of Mistakes),tests the separability of two-class, one-dimensional data using a single threshold value to discriminate the two classes. For the current LSV, the set of labeled samples ψi is sorted by Ψ. For each possible threshold, every experiment with ψi to the left of that threshold is classified in one group, and everything to the right in the other. The number of classification errors is counted for both possible group assignments, and the lower of the two is the score for that threshold. The threshold with the lowest score is selected, and its score is the TNOM statistic for that set of samples."
+            {% elif stat_name == "INFOSCORE" %}
+                title="InfoScore is constructed similarly to TNOM. Again, labeled ψi samples are sorted by value, an optimal threshold is selected, and an exact p-value is computed using dynamic programming. This time, the score is the mutual information content between the threshold and the true labels, rather than the total classification error."
+            {% elif stat_name == "WILCOXON" %}
+                title="The Wilcoxon rank sums statistic is a standard rank-based statistic wherein each ψi sample is ranked by value, and the statistic is the sum of the ranks of the positively-labeled samples i.e. all the experiments from condition group 1."
+            {% elif stat_name == "TTEST" %}
+                title="The Student’s t-test is a statistical test that compares the mean and standard deviation of two samples to see if there is a significant difference between them."
+            {% endif %}
+            >
                 <input id="{{ stat_name }}" type="radio" name="stat-name" value="{{ stat_name }}"
                        {% if loop.first %}checked{% endif %}>
                 {{ stat_name }}</label>
