@@ -25,7 +25,7 @@ summaryVars2Headers = {
     'p_alt5ss': 'P_Alt 5',
     'alt3and5ss': 'Alt 3 and Alt 5',
     'mutually_exclusive': 'MXE',
-    'alternative_intron': 'Intron Retention',
+    'alternative_intron': 'Alternative Intron',
     'ale': 'ALE',
     'afe': 'AFE',
     'p_ale': 'P_ALE',
