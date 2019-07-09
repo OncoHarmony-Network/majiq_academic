@@ -34,13 +34,13 @@
         {% for stat_name in stat_names %}
             <label for="{{ stat_name }}" class="pure-radio"
             {% if stat_name == "TNOM" %}
-                title="TNOM (Total Number Of Mistakes),tests the separability of two-class, one-dimensional data using a single threshold value to discriminate the two classes. For the current LSV, the set of labeled samples ψi is sorted by Ψ. For each possible threshold, every experiment with ψi to the left of that threshold is classified in one group, and everything to the right in the other. The number of classification errors is counted for both possible group assignments, and the lower of the two is the score for that threshold. The threshold with the lowest score is selected, and its score is the TNOM statistic for that set of samples."
+                title="A rank order statistic. It computes the  lowest Total Number Of Mistakes (TNOM) when setting a threshold over the observed values (PSI) to separate two classes. Given the number of observed values in each class this score can then be translated efficiently to a p-value under a random ordering null hypothesis."
             {% elif stat_name == "INFOSCORE" %}
-                title="InfoScore is constructed similarly to TNOM. Again, labeled ψi samples are sorted by value, an optimal threshold is selected, and an exact p-value is computed using dynamic programming. This time, the score is the mutual information content between the threshold and the true labels, rather than the total classification error."
+                title="A rank order statistic. Computes the highest mutual information between two class labels and a classification based on a threshold for the observed values (PSI). This score is then translated to a matching p-value under a null of random ordering."
             {% elif stat_name == "WILCOXON" %}
-                title="The Wilcoxon rank sums statistic is a standard rank-based statistic wherein each ψi sample is ranked by value, and the statistic is the sum of the ranks of the positively-labeled samples i.e. all the experiments from condition group 1."
+                title="The standard ran based statistic where the ranks of observed values (PSI) from each group are summed and compared."
             {% elif stat_name == "TTEST" %}
-                title="The Student’s t-test is a statistical test that compares the mean and standard deviation of two samples to see if there is a significant difference between them."
+                title="Standard  t-test for whether the mean of the values (PSI) in each group are the same."
             {% endif %}
             >
                 <input id="{{ stat_name }}" type="radio" name="stat-name" value="{{ stat_name }}"
