@@ -11,6 +11,7 @@ import multiprocessing
 import numpy as np
 from voila.vlsv import get_expected_psi, matrix_area
 from itertools import combinations
+from operator import itemgetter
 
 def semicolon(value_list):
     return ';'.join(str(x) for x in value_list)
@@ -55,6 +56,9 @@ class TsvWriter:
         self.config = ClassifyConfig()
         self.quantifications_int = self.quantification_intersection()
         self.pid = multiprocessing.current_process().pid
+
+        self.heatmap_cache = []
+
 
         # we could do some crazy thing to yield to all of the different output types at once (across each method)
         # (in order to save memory) But for now we just save modules in a list. Will ammend later if memory use
@@ -345,7 +349,8 @@ class TsvWriter:
         names = ['summary.tsv', 'cassette.tsv', 'alt3prime.tsv', 'alt5prime.tsv', 'alt3and5prime.tsv',
                  'mutually_exclusive.tsv', 'alternate_last_exon.tsv', 'alternate_first_exon.tsv',
                  'alternative_intron.tsv', 'p_alt5prime.tsv', 'p_alt3prime.tsv', 'multi_exon_spanning.tsv',
-                 'tandem_cassette.tsv', 'exitron.tsv', 'p_alternate_last_exon.tsv', 'p_alternate_first_exon.tsv']
+                 'tandem_cassette.tsv', 'exitron.tsv', 'p_alternate_last_exon.tsv', 'p_alternate_first_exon.tsv',
+                 'heatmap.tsv']
         if ClassifyConfig().keep_constitutive:
             names.append('constitutive.tsv')
         return names
@@ -469,6 +474,8 @@ class TsvWriter:
                                              'Junction Coordinate', 'Is Intron',
                                              'Collapsed Event Name'] + self.quantification_headers
             self.start_headers(headers, 'constitutive.tsv')
+        headers = self.common_headers + ['Collapsed Event Name', 'Complex'] + self.quantification_headers
+        self.start_headers(headers, 'heatmap.tsv')
 
     def cassette(self):
         with open(os.path.join(self.config.directory, 'cassette.tsv.%s' % self.pid), 'a', newline='') as csvfile:
@@ -497,6 +504,14 @@ class TsvWriter:
                                    event['Include2'].range_str()]
                             writer.writerow(trg_common + row + self.quantifications(module, 't', event['Include2'], event['C2']))
 
+                            if True:
+                                quant_keys = ((src_common, 's', 'Skip', 'C1'),
+                                              (src_common, 's', 'Include1', 'C1'),
+                                              (trg_common, 't', 'Include2', 'C2'))
+                                sj = min(quant_keys, key=lambda k: event[k[2]].end - event[k[2]].start)
+                                self.heatmap_cache.append(
+                                    [module, sj[0], self.quantifications(module, sj[1], event[sj[2]], event[sj[3]])])
+
     def alt3prime(self):
         with open(os.path.join(self.config.directory, 'alt3prime.tsv.%s' % self.pid), 'a', newline='') as csvfile:
             writer = csv.writer(csvfile, dialect='excel-tab', delimiter='\t')
@@ -523,6 +538,19 @@ class TsvWriter:
                                        event['Distal'].range_str()]
                                 writer.writerow(trg_common + row + self.quantifications(module, 't', event['Distal']))
 
+                            if True:
+                                if src_common[5]:
+                                    quant_keys = ((src_common, 's', 'Proximal'),
+                                                  (src_common, 's', 'Distal'))
+                                    sj = min(quant_keys, key=lambda k: event[k[2]].end - event[k[2]].start)
+                                elif trg_common[5]:
+                                    quant_keys = ((trg_common, 't', 'Proximal'),
+                                                  (trg_common, 't', 'Distal'))
+                                    sj = min(quant_keys, key=lambda k: event[k[2]].end - event[k[2]].start)
+                                self.heatmap_cache.append(
+                                    [module, sj[0], self.quantifications(module, sj[1], event[sj[2]])])
+
+
     def alt5prime(self):
         with open(os.path.join(self.config.directory, 'alt5prime.tsv.%s' % self.pid), 'a', newline='') as csvfile:
             writer = csv.writer(csvfile, dialect='excel-tab', delimiter='\t')
@@ -547,6 +575,18 @@ class TsvWriter:
                                 row = [event['E2'].range_str(), 'E1', event['E1'].range_str(), 'E2_E1_Distal',
                                        event['Distal'].range_str()]
                                 writer.writerow(trg_common + row + self.quantifications(module, 't', event['Distal']))
+
+                            if True:
+                                if src_common[5]:
+                                    quant_keys = ((src_common, 's', 'Proximal'),
+                                                  (src_common, 's', 'Distal'))
+                                    sj = min(quant_keys, key=lambda k: event[k[2]].end - event[k[2]].start)
+                                elif trg_common[5]:
+                                    quant_keys = ((trg_common, 't', 'Proximal'),
+                                                  (trg_common, 't', 'Distal'))
+                                    sj = min(quant_keys, key=lambda k: event[k[2]].end - event[k[2]].start)
+                                self.heatmap_cache.append(
+                                    [module, sj[0], self.quantifications(module, sj[1], event[sj[2]])])
 
     def p_alt5prime(self):
         with open(os.path.join(self.config.directory, 'p_alt5prime.tsv.%s' % self.pid), 'a', newline='') as csvfile:
@@ -573,6 +613,14 @@ class TsvWriter:
                             row = [event['C2'].range_str(), 'E2', event['A'].range_str(), 'E1_E2_Intron',
                                    event['Include1'].range_str()]
                             writer.writerow(trg_common + row + self.quantifications(module, 't', event['Include1']))
+
+                            if True:
+                                quant_keys = ((src_common, 's', 'Skip'),
+                                              (src_common, 's', 'Include1'),
+                                              (trg_common, 't', 'Include2'))
+                                sj = min(quant_keys, key=lambda k: event[k[2]].end - event[k[2]].start)
+                                self.heatmap_cache.append(
+                                    [module, sj[0], self.quantifications(module, sj[1], event[sj[2]])])
 
 
     def p_alt3prime(self):
@@ -601,6 +649,14 @@ class TsvWriter:
                                    event['Include2'].range_str()]
                             writer.writerow(trg_common + row + self.quantifications(module, 't', event['Include2']))
 
+                            if True:
+                                quant_keys = ((src_common, 's', 'Skip'),
+                                              (src_common, 's', 'Include1'),
+                                              (trg_common, 't', 'Include2'))
+                                sj = min(quant_keys, key=lambda k: event[k[2]].end - event[k[2]].start)
+                                self.heatmap_cache.append(
+                                    [module, sj[0], self.quantifications(module, sj[1], event[sj[2]])])
+
     def alt3and5prime(self):
         with open(os.path.join(self.config.directory, 'alt3and5prime.tsv.%s' % self.pid), 'a', newline='') as csvfile:
             writer = csv.writer(csvfile, dialect='excel-tab', delimiter='\t')
@@ -623,6 +679,15 @@ class TsvWriter:
                             row = [event['E2'].range_str(), 'E1', event['E1'].range_str(), 'E2_E1_J2',
                                    event['J2'].range_str()]
                             writer.writerow(trg_common + row + self.quantifications(module, 't', event['J2']))
+
+                            if True:
+                                quant_keys = ((src_common, 's', 'J1'),
+                                              (src_common, 's', 'J2'),
+                                              (trg_common, 't', 'J1'),
+                                              (trg_common, 't', 'J2'),)
+                                sj = min(quant_keys, key=lambda k: event[k[2]].end - event[k[2]].start)
+                                self.heatmap_cache.append(
+                                    [module, sj[0], self.quantifications(module, sj[1], event[sj[2]])])
 
     def mutually_exclusive(self):
         with open(os.path.join(self.config.directory, 'mutually_exclusive.tsv.%s' % self.pid), 'a',
@@ -648,6 +713,15 @@ class TsvWriter:
                                    event['SkipA2'].range_str()]
                             writer.writerow(trg_common + row + self.quantifications(module, 't', event['SkipA2']))
 
+                            if True:
+                                quant_keys = ((src_common, 's', 'Include1'),
+                                              (src_common, 's', 'SkipA1'),
+                                              (trg_common, 't', 'Include2'),
+                                              (trg_common, 't', 'SkipA2'),)
+                                sj = min(quant_keys, key=lambda k: event[k[2]].end - event[k[2]].start)
+                                self.heatmap_cache.append(
+                                    [module, sj[0], self.quantifications(module, sj[1], event[sj[2]])])
+
     def alternate_last_exon(self):
         with open(os.path.join(self.config.directory, 'alternate_last_exon.tsv.%s' % self.pid), 'a',
                   newline='') as csvfile:
@@ -669,6 +743,7 @@ class TsvWriter:
                                            'C_A_Distal',
                                            junc.range_str()]
                                     writer.writerow(src_common + row + self.quantifications(module, 's', junc))
+
 
     def alternate_first_exon(self):
         with open(os.path.join(self.config.directory, 'alternate_first_exon.tsv.%s' % self.pid), 'a',
@@ -774,6 +849,7 @@ class TsvWriter:
                                 row = [event['C1'].range_str(), 'C2', event['C2'].range_str(), 'C1_C2_spliced',
                                        semicolon((x.range_str() for x in event['Spliced']))]
                                 writer.writerow(src_common + row + self.quantifications(module, 's', event['Spliced']))
+
 
     def multi_exon_spanning(self):
         with open(os.path.join(self.config.directory, 'multi_exon_spanning.tsv.%s' % self.pid), 'a',
@@ -889,6 +965,20 @@ class TsvWriter:
                                event['ExonStart'].end, event['ExonEnd'].start,
                                event['ExonEnd'].end]
                         writer.writerow(row)
+
+    def heatmap(self):
+        """
+        Write the easily excel-able file
+        This is similar to the other non-summary event files and also part of the summary file
+        It lists rows like the non-summary files, but only chooses the shortest junction
+        """
+        with open(os.path.join(self.config.directory, 'heatmap.tsv.%s' % self.pid), 'a', newline='') as csvfile:
+            writer = csv.writer(csvfile, dialect='excel-tab', delimiter='\t')
+
+            for module, common_data, quantifications in self.heatmap_cache:
+                events, _complex, _total_events = self.as_types[module.idx]
+
+                writer.writerow(common_data + [module.collapsed_event_name, str(_complex)] + quantifications)
 
     def summary(self):
         """
