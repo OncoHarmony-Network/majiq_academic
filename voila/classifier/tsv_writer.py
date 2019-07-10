@@ -530,7 +530,7 @@ class TsvWriter:
                                 row = [event['E1'].range_str(), 'E2', event['E2'].range_str(), 'E1_E2_Distal',
                                        event['Distal'].range_str()]
                                 writer.writerow(src_common + row + self.quantifications(module, 's', event['Distal']))
-                            if trg_common[5]:
+                            elif trg_common[5]:
                                 row = [event['E2'].range_str(), 'E1', event['E1'].range_str(), 'E2_E1_Proximal',
                                        event['Proximal'].range_str()]
                                 writer.writerow(trg_common + row + self.quantifications(module, 't', event['Proximal']))
@@ -561,13 +561,6 @@ class TsvWriter:
                         if event['event'] == 'alt5ss':
                             src_common = self.common_data(module, 's', node=event['E1'])
                             trg_common = self.common_data(module, 't', node=event['E2'])
-                            if src_common[5]:
-                                row = [event['E1'].range_str(), 'E2', event['E2'].range_str(), 'E1_E2_Proximal',
-                                       event['Proximal'].range_str()]
-                                writer.writerow(src_common + row + self.quantifications(module, 's', event['Proximal']))
-                                row = [event['E1'].range_str(), 'E2', event['E2'].range_str(), 'E1_E2_Distal',
-                                       event['Distal'].range_str()]
-                                writer.writerow(src_common + row + self.quantifications(module, 's', event['Distal']))
                             if trg_common[5]:
                                 row = [event['E2'].range_str(), 'E1', event['E1'].range_str(), 'E2_E1_Proximal',
                                        event['Proximal'].range_str()]
@@ -575,16 +568,24 @@ class TsvWriter:
                                 row = [event['E2'].range_str(), 'E1', event['E1'].range_str(), 'E2_E1_Distal',
                                        event['Distal'].range_str()]
                                 writer.writerow(trg_common + row + self.quantifications(module, 't', event['Distal']))
+                            elif src_common[5]:
+                                row = [event['E1'].range_str(), 'E2', event['E2'].range_str(), 'E1_E2_Proximal',
+                                       event['Proximal'].range_str()]
+                                writer.writerow(src_common + row + self.quantifications(module, 's', event['Proximal']))
+                                row = [event['E1'].range_str(), 'E2', event['E2'].range_str(), 'E1_E2_Distal',
+                                       event['Distal'].range_str()]
+                                writer.writerow(src_common + row + self.quantifications(module, 's', event['Distal']))
 
                             if True:
-                                if src_common[5]:
-                                    quant_keys = ((src_common, 's', 'Proximal'),
-                                                  (src_common, 's', 'Distal'))
-                                    sj = min(quant_keys, key=lambda k: event[k[2]].end - event[k[2]].start)
-                                elif trg_common[5]:
+                                if trg_common[5]:
                                     quant_keys = ((trg_common, 't', 'Proximal'),
                                                   (trg_common, 't', 'Distal'))
                                     sj = min(quant_keys, key=lambda k: event[k[2]].end - event[k[2]].start)
+                                elif src_common[5]:
+                                    quant_keys = ((src_common, 's', 'Proximal'),
+                                                  (src_common, 's', 'Distal'))
+                                    sj = min(quant_keys, key=lambda k: event[k[2]].end - event[k[2]].start)
+
                                 self.heatmap_cache.append(
                                     [module, sj[0], self.quantifications(module, sj[1], event[sj[2]])])
 
