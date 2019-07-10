@@ -1635,6 +1635,8 @@ class Graph:
             if HIDE_SUB_COMPLEX and complex:
                 ret = []
 
+            self.is_complex = complex
+
             return ret, complex, total_events
 
 

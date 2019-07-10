@@ -50,10 +50,14 @@ class TsvWriter:
         :param graph: the Graph object of the gene
         """
 
-        self.common_headers = ['Module ID', 'Gene ID', 'Gene Name', 'Chr', 'Strand', 'LSV ID(s)']
+        self.config = ClassifyConfig()
+        self.common_headers = ['Module ID', 'Gene ID', 'Gene Name', 'Chr', 'Strand']
+        if self.config.output_complex:
+            self.common_headers.append('Complex')
+        self.common_headers.append('LSV ID(s)')
         self.graph = graph
         self.gene_id = gene_id
-        self.config = ClassifyConfig()
+
         self.quantifications_int = self.quantification_intersection()
         self.pid = multiprocessing.current_process().pid
 
@@ -389,8 +393,13 @@ class TsvWriter:
         """
         lsvs = self.parity2lsv(module, parity, edge, node)
 
-        return ["%s_%d" % (self.gene_id, module.idx), self.gene_id, self.graph.gene_name,
-                self.graph.chromosome, self.graph.strand, semicolon(lsvs)]
+        out = ["%s_%d" % (self.gene_id, module.idx), self.gene_id, self.graph.gene_name,
+               self.graph.chromosome, self.graph.strand]
+
+        if self.config.output_complex:
+            out.append(str(module.is_complex))
+        out.append(semicolon(lsvs))
+        return out
 
     def quantifications(self, module, parity=None, edge=None, node=None):
         """
@@ -466,6 +475,8 @@ class TsvWriter:
         if self.config.keep_constitutive:
             headers.append("Constitutive Junction")
             headers.append("Constitutive Intron")
+        if self.config.output_complex:
+            headers.remove("Complex")
         headers += ["Multi Exon Spanning", "Exitron", "Complex", "Number of Events", "Collapsed Event Name"]
         self.start_headers(headers, 'summary.tsv')
         if self.config.keep_constitutive:
@@ -474,7 +485,8 @@ class TsvWriter:
                                              'Junction Coordinate', 'Is Intron',
                                              'Collapsed Event Name'] + self.quantification_headers
             self.start_headers(headers, 'constitutive.tsv')
-        headers = self.common_headers + ['Collapsed Event Name', 'Complex'] + self.quantification_headers
+
+        headers = self.common_headers + ['Collapsed Event Name'] + self.quantification_headers
         self.start_headers(headers, 'heatmap.tsv')
 
     def cassette(self):
@@ -983,9 +995,7 @@ class TsvWriter:
             writer = csv.writer(csvfile, dialect='excel-tab', delimiter='\t')
 
             for module, common_data, quantifications in self.heatmap_cache:
-                events, _complex, _total_events = self.as_types[module.idx]
-
-                writer.writerow(common_data + [module.collapsed_event_name, str(_complex)] + quantifications)
+                writer.writerow(common_data + [module.collapsed_event_name] + quantifications)
 
     def summary(self):
         """
