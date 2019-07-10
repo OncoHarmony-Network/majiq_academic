@@ -17,6 +17,22 @@ class Filter:
 
         run_filter()
 
+def lsv_ids2gene_ids(lsv_ids):
+    gene_ids = set()
+    for lsv_id in lsv_ids:
+        parts = lsv_id.split(':s:')
+        if not len(parts) == 2:
+            parts = lsv_id.split(':t:')
+        gene_ids.add(parts[0])
+    return gene_ids
+
+def read_ids_file(file_path):
+    ids = set()
+    with open(file_path, 'r') as f:
+        for _id in f:
+            if not _id.isspace():
+                ids.add(_id.replace('\n', ''))
+    return ids
 
 def filter_splicegraph(gene_ids):
     config = FilterConfig()
@@ -80,30 +96,38 @@ def run_filter():
 
     config = FilterConfig()
 
-    if not config.gene_ids and not config.gene_ids_file:
-        voila_log().critical("In order to filter, you must specify either --gene-ids or --gene-ids-file")
+    num_primary_filters = sum(bool(x) for x in (config.gene_ids, config.gene_ids_file, config.lsv_ids, config.lsv_ids_file))
+    if num_primary_filters == 0:
+        voila_log().critical(
+            "In order to filter, you must specify --gene-ids, --gene-ids-file, --lsv-ids, --lsv-ids-file")
         sys.exit(2)
-    elif config.gene_ids and config.gene_ids_file:
-        voila_log().critical("In order to filter, you must specify either --gene-ids or --gene-ids-file (not both)")
+    if num_primary_filters > 1:
+        voila_log().critical(
+            "Please specify only one of --gene-ids, --gene-ids-file, --lsv-ids, --lsv-ids-file")
         sys.exit(2)
+
+    if config.lsv_ids:
+        lsv_ids = config.lsv_ids
+        gene_ids = lsv_ids2gene_ids(lsv_ids)
+    elif config.lsv_ids_file:
+        lsv_ids = read_ids_file(config.lsv_ids_file)
+        gene_ids = lsv_ids2gene_ids(lsv_ids)
     elif config.gene_ids:
+        lsv_ids = []
         gene_ids = config.gene_ids
     elif config.gene_ids_file:
-        gene_ids = []
-        with open(config.gene_ids_file, 'r') as f:
-            for gene_id in f:
-                if not gene_id.isspace():
-                    gene_ids.append(gene_id.replace('\n', ''))
+        lsv_ids = []
+        gene_ids = read_ids_file(config.gene_ids_file)
+
     else:
         voila_log().error("Should not get here")
         gene_ids = []
-
-
+        lsv_ids = []
 
     if not os.path.exists(config.directory):
         os.makedirs(config.directory)
 
-    voila_log().info("Filtering input to %d gene(s)" % len(gene_ids))
+    voila_log().info("Filtering input to %d gene(s) %s" % (len(gene_ids), "; %d LSV(s)" % len(lsv_ids) if lsv_ids else ''))
     voila_log().info("One splicegraph and %d voila files" % len(config.voila_files))
     voila_log().info("Writing output files to %s" % os.path.abspath(config.directory))
 
@@ -119,25 +143,20 @@ def run_filter():
 
         with h5py.File(voila_file, 'r', libver='latest') as m, h5py.File(new_voila_file, 'w', libver='latest') as m_new:
             #m.lsv_ids()
-            lsv_grp = m_new.create_group('lsvs')
+            main_grp = m_new.create_group('lsvs')
             #new_meta_group = m_new.create_group('metadata')
             m.copy('metadata', m_new)
             for gene_id in gene_ids:
 
                 #new_gene_group = m_new.create_group('lsvs/%s' % gene_id)
-                m.copy('lsvs/%s' % gene_id, lsv_grp)
-
-
+                if not lsv_ids:
+                    m.copy('lsvs/%s' % gene_id, main_grp)
+                else:
+                    lsv_grp = m_new.create_group('lsvs/%s' % gene_id)
+                    for lsv_id in lsv_ids:
+                        m.copy('lsvs/%s/%s' % (gene_id, lsv_id), lsv_grp)
 
     filter_splicegraph(gene_ids)
-
-
-
-
-
-
-
-
 
 
     voila_log().info("Filtering Complete")

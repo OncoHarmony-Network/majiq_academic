@@ -152,6 +152,11 @@ filter_parser.add_argument('--gene-ids', nargs='*', default=[],
                              'GENE_ID2 ...')
 filter_parser.add_argument('--gene-ids-file', type=check_file,
                         help='Specify Gene IDs to retain in a file instead of on the command line. One Gene ID per line')
+filter_parser.add_argument('--lsv-ids', nargs='*', default=[],
+                        help='LSV IDs, separated by spaces, which should remain in the results. e.g. LSV_ID1 '
+                             'GENE_ID2 ...')
+filter_parser.add_argument('--lsv-ids-file', type=check_file,
+                        help='Specify LSV IDs to retain in a file instead of on the command line. One LSV ID per line')
 required_filter_parser = filter_parser.add_argument_group('required named arguments')
 required_filter_parser.add_argument('-d', '--directory', required=True, help="All filtered files will be dumped in"
                                                                           " this directory")

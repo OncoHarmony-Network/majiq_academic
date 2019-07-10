@@ -22,7 +22,7 @@ _TsvConfig = namedtuple('TsvConfig', ['file_name', 'voila_files', 'voila_file', 
 _TsvConfig.__new__.__defaults__ = (None,) * len(_TsvConfig._fields)
 _FilterConfig = namedtuple('FilterConfig', ['directory', 'voila_files', 'voila_file', 'splice_graph_file',
                                             'nproc', 'gene_ids', 'debug', 'silent', 'analysis_type', 'overwrite',
-                                            'gene_ids_file'])
+                                            'gene_ids_file', 'lsv_ids', 'lsv_ids_file'])
 _FilterConfig.__new__.__defaults__ = (None,) * len(_FilterConfig._fields)
 
 # global config variable to act as the singleton instance of the config.
