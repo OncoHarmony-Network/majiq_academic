@@ -600,24 +600,30 @@ class TsvWriter:
                             src_common = self.common_data(module, 's')
                             trg_common = self.common_data(module, 't')
 
-                            row = [event['C1'].range_str(), 'E2', event['A'].range_str(), 'E3_E2_Proximal',
-                                   event['Include2'].range_str()]
-                            writer.writerow(src_common + row + self.quantifications(module, 's', event['Include2']))
-
-                            row = [event['C1'].range_str(), 'E1', event['C2'].range_str(), 'E3_E1_Distal',
+                            row = [event['C1'].range_str(), 'E3', event['C2'].range_str(), 'E1_E3_Distal',
                                    event['Skip'].range_str()]
                             writer.writerow(src_common + row + self.quantifications(module, 's', event['Skip']))
 
                             event['Include1'].junc['start'] += 1
                             event['Include1'].junc['end'] -= 1
 
-                            row = [event['C2'].range_str(), 'E2', event['A'].range_str(), 'E1_E2_Intron',
+                            row = [event['C1'].range_str(), 'E2', event['A'].range_str(), 'E1_E2_Intron',
                                    event['Include1'].range_str()]
-                            writer.writerow(trg_common + row + self.quantifications(module, 't', event['Include1']))
+                            writer.writerow(src_common + row + self.quantifications(module, 's', event['Include1']))
+
+                            row = [event['C2'].range_str(), 'E1', event['C1'].range_str(), 'E3_E1_Distal',
+                                   event['Skip'].range_str()]
+                            writer.writerow(trg_common + row + self.quantifications(module, 't', event['Skip']))
+
+                            row = [event['C2'].range_str(), 'E2', event['A'].range_str(), 'E3_E2_Proximal',
+                                   event['Include2'].range_str()]
+                            writer.writerow(trg_common + row + self.quantifications(module, 't', event['Include2']))
+
 
                             if True:
                                 quant_keys = ((src_common, 's', 'Skip'),
                                               (src_common, 's', 'Include1'),
+                                              (trg_common, 't', 'Skip'),
                                               (trg_common, 't', 'Include2'))
                                 sj = min(quant_keys, key=lambda k: event[k[2]].end - event[k[2]].start)
                                 self.heatmap_cache.append(
