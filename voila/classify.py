@@ -117,10 +117,10 @@ def run_classifier():
     if config.debug:
         try:
             for i, gene_id in enumerate(gene_ids):
-                t1 = time.time()
+                # t1 = time.time()
                 classify_gene((gene_id, experiment_names, None,))
-                t2 = time.time()
-                print(t2-t1)
+                # t2 = time.time()
+                # print(t2-t1)
                 print('Processing Genes and Modules [%d/%d]\r' % (i, work_size), end="")
         except KeyboardInterrupt:
             print('                                                  \r', end="")

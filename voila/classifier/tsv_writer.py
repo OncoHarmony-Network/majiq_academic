@@ -61,7 +61,7 @@ class TsvWriter:
         self.quantifications_int = self.quantification_intersection()
         self.pid = multiprocessing.current_process().pid
 
-        self.heatmap_cache = []
+        self.heatmap_cache = {}
 
 
         # we could do some crazy thing to yield to all of the different output types at once (across each method)
@@ -114,19 +114,26 @@ class TsvWriter:
                 except:
                     pass
 
+        def _inner_edge_aggregate(lsv, all_quants, edge):
+            if edge:
+                edges = [edge] if not type(edge) is list else edge
+                vals = []
+                for _edge in edges:
+                    edge_idx = _filter_edges(_edge, lsv)
+                    if edge_idx is None:
+                        continue
+                    else:
+                        vals.append(round(all_quants[edge_idx], SIG_FIGS))
+                return semicolon(vals)
+            else:
+                return semicolon(round(x, SIG_FIGS) for x in all_quants)
+
         def _psi_psi(voila_files):
             def f(lsv_id, edge=None):
                 for voila_file in voila_files:
                     with Matrix(voila_file) as m:
                         lsv = m.psi(lsv_id)
-                        if edge:
-                            edge_idx = _filter_edges(edge, lsv)
-                            if edge_idx is None:
-                                continue
-                            else:
-                                return round(lsv.get('means')[edge_idx], SIG_FIGS)
-                        else:
-                            return (round(x, SIG_FIGS) for x in lsv.get('means'))
+                        return _inner_edge_aggregate(lsv, lsv.get('means'), edge)
                 return ''
             return f
 
@@ -135,14 +142,7 @@ class TsvWriter:
                 for voila_file in voila_files:
                     with Matrix(voila_file) as m:
                         lsv = m.psi(lsv_id)
-                        if edge:
-                            edge_idx = _filter_edges(edge, lsv)
-                            if edge_idx is None:
-                                continue
-                            else:
-                                return round(generate_variances([lsv.get('bins')][0])[edge_idx], SIG_FIGS)
-                        else:
-                            return (round(x, SIG_FIGS) for x in generate_variances([lsv.get('bins')[0]]))
+                        return _inner_edge_aggregate(lsv, generate_variances([lsv.get('bins')][0]), edge)
                 return ''
             return f
 
@@ -151,24 +151,7 @@ class TsvWriter:
                 for voila_file in voila_files:
                     with Matrix(voila_file) as m:
                         lsv = m.heterogen(lsv_id)
-                        if edge:
-
-                            edge_idx = _filter_edges(edge, lsv)
-
-                            if edge_idx is None:
-                                continue
-                            else:
-
-                                psi2 = get_expected_psi(np.array(list(lsv.get('mean_psi'))).transpose((1, 0, 2))[group_idx][edge_idx])
-
-
-                                return round(psi2, SIG_FIGS)
-                        else:
-                            group_means = []
-                            psis = np.array(list(lsv.get('mean_psi'))).transpose((1, 0, 2))[group_idx]
-                            for junc_mean in list(get_expected_psi(x) for x in psis):
-                                group_means.append(junc_mean)
-                            return (round(x, SIG_FIGS) for x in group_means)
+                        return _inner_edge_aggregate(lsv, get_expected_psi(np.array(list(lsv.get('mean_psi'))).transpose((1, 0, 2))[group_idx]), edge)
                 return ''
             return f
 
@@ -176,19 +159,22 @@ class TsvWriter:
             def f(lsv_id, edge=None):
                 for voila_file in voila_files:
                     with Matrix(voila_file) as m:
+                        # for this one the _inner_edge_aggregate is not general enough - I had to do it manually
                         lsv = m.heterogen(lsv_id)
                         if edge:
+                            edges = [edge] if not type(edge) is list else edge
+                            vals = []
 
-                            edge_idx = _filter_edges(edge, lsv)
-
-                            if edge_idx is None:
-                                continue
-                            else:
-                                arr = np.array(list(lsv.get('mean_psi'))).transpose((1, 0, 2))
-                                psi_g1 = get_expected_psi(arr[group_idx1][edge_idx])
-                                psi_g2 = get_expected_psi(arr[group_idx2][edge_idx])
-
-                                return round(psi_g1-psi_g2, SIG_FIGS)
+                            for _edge in edges:
+                                edge_idx = _filter_edges(_edge, lsv)
+                                if edge_idx is None:
+                                    continue
+                                else:
+                                    arr = np.array(list(lsv.get('mean_psi'))).transpose((1, 0, 2))
+                                    psi_g1 = get_expected_psi(arr[group_idx1][edge_idx])
+                                    psi_g2 = get_expected_psi(arr[group_idx2][edge_idx])
+                                    vals.append(round(psi_g1-psi_g2, SIG_FIGS))
+                            return semicolon(vals)
                         else:
                             group_means = []
                             arr = np.array(list(lsv.get('mean_psi'))).transpose((1, 0, 2))
@@ -205,14 +191,7 @@ class TsvWriter:
                 for voila_file in voila_files:
                     with Matrix(voila_file) as m:
                         lsv = m.delta_psi(lsv_id)
-                        if edge:
-                            edge_idx = _filter_edges(edge, lsv)
-                            if edge_idx is None:
-                                continue
-                            else:
-                                return round(lsv.get('group_means')[group_idx][edge_idx], SIG_FIGS)
-                        else:
-                            return (round(x, SIG_FIGS) for x in lsv.get('group_means')[group_idx])
+                        return _inner_edge_aggregate(lsv, lsv.get('group_means')[group_idx], edge)
                 return ''
             return f
 
@@ -220,14 +199,20 @@ class TsvWriter:
             def f(lsv_id, edge=None):
                 for voila_file in voila_files:
                     with view_matrix.ViewDeltaPsi(voila_file) as m:
+                        # for this one the _inner_edge_aggregate is not general enough - I had to do it manually
                         lsv = m.lsv(lsv_id)
                         bins = lsv.get('group_bins')
+
                         if edge:
-                            edge_idx = _filter_edges(edge, lsv)
-                            if edge_idx is None:
-                                continue
-                            else:
-                                return round(lsv.excl_incl[edge_idx][1] - lsv.excl_incl[edge_idx][0], SIG_FIGS)
+                            edges = [edge] if not type(edge) is list else edge
+                            vals = []
+                            for _edge in edges:
+                                edge_idx = _filter_edges(_edge, lsv)
+                                if edge_idx is None:
+                                    continue
+                                else:
+                                    vals.append(round(lsv.excl_incl[edge_idx][1] - lsv.excl_incl[edge_idx][0], SIG_FIGS))
+                            return semicolon(vals)
                         else:
                             return (
                                         round(x, SIG_FIGS) for x in ((lsv.excl_incl[i][1] - lsv.excl_incl[i][0] for i in
@@ -240,15 +225,19 @@ class TsvWriter:
             def f(lsv_id, edge=None):
                 for voila_file in voila_files:
                     with view_matrix.ViewDeltaPsi(voila_file) as m:
+                        # for this one the _inner_edge_aggregate is not general enough - I had to do it manually
                         lsv = m.lsv(lsv_id)
-
                         bins = lsv.bins
                         if edge:
-                            edge_idx = _filter_edges(edge, lsv)
-                            if edge_idx is None:
-                                continue
-                            else:
-                                return round(matrix_area(bins[edge_idx], self.config.threshold), SIG_FIGS)
+                            edges = [edge] if not type(edge) is list else edge
+                            vals = []
+                            for _edge in edges:
+                                edge_idx = _filter_edges(_edge, lsv)
+                                if edge_idx is None:
+                                    continue
+                                else:
+                                    vals.append(round(matrix_area(bins[edge_idx], self.config.threshold), SIG_FIGS))
+                            return semicolon(vals)
                         else:
                             return (
                                         round(matrix_area(b, self.config.threshold), SIG_FIGS) for b in bins
@@ -261,14 +250,7 @@ class TsvWriter:
                 for voila_file in voila_files:
                     with view_matrix.ViewDeltaPsi(voila_file) as m:
                         lsv = m.lsv(lsv_id)
-                        if edge:
-                            edge_idx = _filter_edges(edge, lsv)
-                            if edge_idx is None:
-                                continue
-                            else:
-                                return round(lsv.high_probability_non_changing()[edge_idx], SIG_FIGS)
-                        else:
-                            return (round(x, SIG_FIGS) for x in lsv.high_probability_non_changing())
+                        return _inner_edge_aggregate(lsv, lsv.high_probability_non_changing(), edge)
                 return ''
             return f
 
@@ -517,12 +499,8 @@ class TsvWriter:
                             writer.writerow(trg_common + row + self.quantifications(module, 't', event['Include2'], event['C2']))
 
                             if True:
-                                quant_keys = ((src_common, 's', 'Skip', 'C1'),
-                                              (src_common, 's', 'Include1', 'C1'),
-                                              (trg_common, 't', 'Include2', 'C2'))
-                                sj = min(quant_keys, key=lambda k: event[k[2]].end - event[k[2]].start)
-                                self.heatmap_cache.append(
-                                    [module, sj[0], self.quantifications(module, sj[1], event[sj[2]], event[sj[3]])])
+                                self.heatmap_add(module, trg_common, self.quantifications(module, 't', event['Include2'], event['C2']),
+                                                 event['Include2'].end - event['Include2'].start)
 
     def alt3prime(self):
         with open(os.path.join(self.config.directory, 'alt3prime.tsv.%s' % self.pid), 'a', newline='') as csvfile:
@@ -552,15 +530,11 @@ class TsvWriter:
 
                             if True:
                                 if src_common[5]:
-                                    quant_keys = ((src_common, 's', 'Proximal'),
-                                                  (src_common, 's', 'Distal'))
-                                    sj = min(quant_keys, key=lambda k: event[k[2]].end - event[k[2]].start)
+                                    self.heatmap_add(module, src_common, self.quantifications(module, 's', event['Proximal']),
+                                                     event['Proximal'].end - event['Proximal'].start)
                                 elif trg_common[5]:
-                                    quant_keys = ((trg_common, 't', 'Proximal'),
-                                                  (trg_common, 't', 'Distal'))
-                                    sj = min(quant_keys, key=lambda k: event[k[2]].end - event[k[2]].start)
-                                self.heatmap_cache.append(
-                                    [module, sj[0], self.quantifications(module, sj[1], event[sj[2]])])
+                                    self.heatmap_add(module, trg_common, self.quantifications(module, 't', event['Proximal']),
+                                                     event['Proximal'].end - event['Proximal'].start)
 
 
     def alt5prime(self):
@@ -590,16 +564,13 @@ class TsvWriter:
 
                             if True:
                                 if trg_common[5]:
-                                    quant_keys = ((trg_common, 't', 'Proximal'),
-                                                  (trg_common, 't', 'Distal'))
-                                    sj = min(quant_keys, key=lambda k: event[k[2]].end - event[k[2]].start)
+                                    self.heatmap_add(module, trg_common, self.quantifications(module, 't', event['Proximal']),
+                                                     event['Proximal'].end - event['Proximal'].start)
                                 elif src_common[5]:
-                                    quant_keys = ((src_common, 's', 'Proximal'),
-                                                  (src_common, 's', 'Distal'))
-                                    sj = min(quant_keys, key=lambda k: event[k[2]].end - event[k[2]].start)
+                                    self.heatmap_add(module, src_common, self.quantifications(module, 's', event['Proximal']),
+                                                     event['Proximal'].end - event['Proximal'].start)
 
-                                self.heatmap_cache.append(
-                                    [module, sj[0], self.quantifications(module, sj[1], event[sj[2]])])
+
 
     def p_alt5prime(self):
         with open(os.path.join(self.config.directory, 'p_alt5prime.tsv.%s' % self.pid), 'a', newline='') as csvfile:
@@ -631,15 +602,12 @@ class TsvWriter:
                                    event['Include2'].range_str()]
                             writer.writerow(trg_common + row + self.quantifications(module, 't', event['Include2']))
 
-
                             if True:
-                                quant_keys = ((src_common, 's', 'Skip'),
-                                              (src_common, 's', 'Include1'),
-                                              (trg_common, 't', 'Skip'),
-                                              (trg_common, 't', 'Include2'))
-                                sj = min(quant_keys, key=lambda k: event[k[2]].end - event[k[2]].start)
-                                self.heatmap_cache.append(
-                                    [module, sj[0], self.quantifications(module, sj[1], event[sj[2]])])
+                                self.heatmap_add(module, trg_common, self.quantifications(module, 't', event['Include2']),
+                                                 event['Include2'].end - event['Include2'].start)
+
+                            event['Include1'].junc['start'] -= 1
+                            event['Include1'].junc['end'] += 1
 
 
     def p_alt3prime(self):
@@ -669,12 +637,11 @@ class TsvWriter:
                             writer.writerow(trg_common + row + self.quantifications(module, 't', event['Include2']))
 
                             if True:
-                                quant_keys = ((src_common, 's', 'Skip'),
-                                              (src_common, 's', 'Include1'),
-                                              (trg_common, 't', 'Include2'))
-                                sj = min(quant_keys, key=lambda k: event[k[2]].end - event[k[2]].start)
-                                self.heatmap_cache.append(
-                                    [module, sj[0], self.quantifications(module, sj[1], event[sj[2]])])
+                                self.heatmap_add(module, src_common, self.quantifications(module, 's', event['Include1']),
+                                                 event['Include1'].end - event['Include1'].start)
+
+                            event['Include2'].junc['start'] -= 1
+                            event['Include2'].junc['end'] += 1
 
     def alt3and5prime(self):
         with open(os.path.join(self.config.directory, 'alt3and5prime.tsv.%s' % self.pid), 'a', newline='') as csvfile:
@@ -700,13 +667,8 @@ class TsvWriter:
                             writer.writerow(trg_common + row + self.quantifications(module, 't', event['J2']))
 
                             if True:
-                                quant_keys = ((src_common, 's', 'J1'),
-                                              (src_common, 's', 'J2'),
-                                              (trg_common, 't', 'J1'),
-                                              (trg_common, 't', 'J2'),)
-                                sj = min(quant_keys, key=lambda k: event[k[2]].end - event[k[2]].start)
-                                self.heatmap_cache.append(
-                                    [module, sj[0], self.quantifications(module, sj[1], event[sj[2]])])
+                                self.heatmap_add(module, trg_common, self.quantifications(module, 't', event['J2']),
+                                                 event['J2'].end - event['J2'].start)
 
     def mutually_exclusive(self):
         with open(os.path.join(self.config.directory, 'mutually_exclusive.tsv.%s' % self.pid), 'a',
@@ -733,13 +695,8 @@ class TsvWriter:
                             writer.writerow(trg_common + row + self.quantifications(module, 't', event['SkipA2']))
 
                             if True:
-                                quant_keys = ((src_common, 's', 'Include1'),
-                                              (src_common, 's', 'SkipA1'),
-                                              (trg_common, 't', 'Include2'),
-                                              (trg_common, 't', 'SkipA2'),)
-                                sj = min(quant_keys, key=lambda k: event[k[2]].end - event[k[2]].start)
-                                self.heatmap_cache.append(
-                                    [module, sj[0], self.quantifications(module, sj[1], event[sj[2]])])
+                                self.heatmap_add(module, trg_common, self.quantifications(module, 't', event['Include2']),
+                                                 event['Include2'].end - event['Include2'].start)
 
     def alternate_last_exon(self):
         with open(os.path.join(self.config.directory, 'alternate_last_exon.tsv.%s' % self.pid), 'a',
@@ -763,6 +720,15 @@ class TsvWriter:
                                            junc.range_str()]
                                     writer.writerow(src_common + row + self.quantifications(module, 's', junc))
 
+                                if True:
+                                    if event['SkipA2']:
+                                        self.heatmap_add(module, src_common,
+                                                         self.quantifications(module, 's', event['SkipA2'][0]),
+                                                         event['SkipA2'][0].end - event['SkipA2'][0].start)
+                                    elif event['SkipA1']:
+                                        self.heatmap_add(module, src_common,
+                                                         self.quantifications(module, 's', event['SkipA1'][0]),
+                                                         event['SkipA1'][0].end - event['SkipA1'][0].start)
 
     def alternate_first_exon(self):
         with open(os.path.join(self.config.directory, 'alternate_first_exon.tsv.%s' % self.pid), 'a',
@@ -785,6 +751,18 @@ class TsvWriter:
                                            'C_A_Distal',
                                            junc.range_str()]
                                     writer.writerow(trg_common + row + self.quantifications(module, 't', junc))
+
+                                if True:
+                                    if event['SkipA1']:
+                                        self.heatmap_add(module, trg_common,
+                                                         self.quantifications(module, 't', event['SkipA1'][0]),
+                                                         event['SkipA1'][0].end - event['SkipA1'][0].start)
+                                    elif event['SkipA2']:
+                                        self.heatmap_add(module, trg_common,
+                                                         self.quantifications(module, 't', event['SkipA2'][0]),
+                                                         event['SkipA2'][0].end - event['SkipA2'][0].start)
+
+
 
     def p_alternate_last_exon(self):
         with open(os.path.join(self.config.directory, 'p_alternate_last_exon.tsv.%s' % self.pid), 'a',
@@ -812,6 +790,16 @@ class TsvWriter:
                                            junc.range_str()]
                                     writer.writerow(src_common + row + self.quantifications(module, 's', junc))
 
+                                if True:
+                                    if event['SkipA2']:
+                                        self.heatmap_add(module, src_common,
+                                                         self.quantifications(module, 's', event['SkipA2'][0]),
+                                                         event['SkipA2'][0].end - event['SkipA2'][0].start)
+                                    elif event['SkipA1']:
+                                        self.heatmap_add(module, src_common,
+                                                         self.quantifications(module, 's', event['SkipA1'][0]),
+                                                         event['SkipA1'][0].end - event['SkipA1'][0].start)
+
     def p_alternate_first_exon(self):
         with open(os.path.join(self.config.directory, 'p_alternate_first_exon.tsv.%s' % self.pid), 'a',
                   newline='') as csvfile:
@@ -838,6 +826,16 @@ class TsvWriter:
                                            junc.range_str()]
                                     writer.writerow(trg_common + row + self.quantifications(module, 't', junc))
 
+                                if True:
+                                    if event['SkipA1']:
+                                        self.heatmap_add(module, trg_common,
+                                                         self.quantifications(module, 't', event['SkipA1'][0]),
+                                                         event['SkipA1'][0].end - event['SkipA1'][0].start)
+                                    elif event['SkipA2']:
+                                        self.heatmap_add(module, trg_common,
+                                                         self.quantifications(module, 't', event['SkipA2'][0]),
+                                                         event['SkipA2'][0].end - event['SkipA2'][0].start)
+
     def alternative_intron(self):
         with open(os.path.join(self.config.directory, 'alternative_intron.tsv.%s' % self.pid), 'a',
                   newline='') as csvfile:
@@ -853,6 +851,7 @@ class TsvWriter:
                             # put coordinates back to Jordi's offset numbers
                             event['Intron'].junc['start'] += 1
                             event['Intron'].junc['end'] -= 1
+
                             if any(':t:' in _l for _l in event['Intron'].lsvs) and not \
                                any(':s:' in _l for _l in event['Intron'].lsvs):
                                 row = [event['C2'].range_str(), 'C1', event['C1'].range_str(), 'C2_C1_intron',
@@ -861,6 +860,10 @@ class TsvWriter:
                                 row = [event['C2'].range_str(), 'C1', event['C1'].range_str(), 'C2_C1_spliced',
                                        semicolon((x.range_str() for x in event['Spliced']))]
                                 writer.writerow(trg_common + row + self.quantifications(module, 't', event['Spliced']))
+
+                                if True:
+                                    self.heatmap_add(module, trg_common, self.quantifications(module, 't', event['Intron']),
+                                                     event['Intron'].end - event['Intron'].start)
                             else:
                                 row = [event['C1'].range_str(), 'C2', event['C2'].range_str(), 'C1_C2_intron',
                                        event['Intron'].range_str()]
@@ -868,6 +871,13 @@ class TsvWriter:
                                 row = [event['C1'].range_str(), 'C2', event['C2'].range_str(), 'C1_C2_spliced',
                                        semicolon((x.range_str() for x in event['Spliced']))]
                                 writer.writerow(src_common + row + self.quantifications(module, 's', event['Spliced']))
+
+                                if True:
+                                    self.heatmap_add(module, src_common, self.quantifications(module, 's', event['Intron']),
+                                                     event['Intron'].end - event['Intron'].start)
+
+                            event['Intron'].junc['start'] -= 1
+                            event['Intron'].junc['end'] += 1
 
 
     def multi_exon_spanning(self):
@@ -925,6 +935,10 @@ class TsvWriter:
                                    semicolon((x.range_str() for x in event['Include2']))]
                             writer.writerow(trg_common + row + self.quantifications(module, 't', event['Include2'][0], event['C2']))
 
+                            if True:
+                                self.heatmap_add(module, trg_common, self.quantifications(module, 't', event['Include2'][0]),
+                                                 event['Include2'][0].end - event['Include2'][0].start)
+
     def exitron(self):
         with open(os.path.join(self.config.directory, 'exitron.tsv.%s' % self.pid), 'a', newline='') as csvfile:
             writer = csv.writer(csvfile, dialect='excel-tab', delimiter='\t')
@@ -970,6 +984,9 @@ class TsvWriter:
                                        event['Intron'].range_str(), 'True', module.collapsed_event_name]
                                 writer.writerow(src_common + row + self.quantifications(module, 's', event['Intron']))
 
+                            event['Intron'].junc['start'] -= 1
+                            event['Intron'].junc['end'] += 1
+
 
     def p_multi_gene_region(self):
         with open(os.path.join(self.config.directory, 'p_multi_gene_region.tsv.%s' % self.pid), 'a',
@@ -985,6 +1002,17 @@ class TsvWriter:
                                event['ExonEnd'].end]
                         writer.writerow(row)
 
+    def heatmap_add(self, module, common, quants, junc_len):
+        """
+        Conditionally add a row toe heatmap cache by comparing it to what exists there already
+        """
+
+        if not module.idx in self.heatmap_cache:
+            self.heatmap_cache[module.idx] = (module, common, quants, junc_len)
+        else:
+            if self.heatmap_cache[module.idx][3] > junc_len:
+                self.heatmap_cache[module.idx] = (module, common, quants, junc_len)
+
     def heatmap(self):
         """
         Write the easily excel-able file
@@ -994,7 +1022,7 @@ class TsvWriter:
         with open(os.path.join(self.config.directory, 'heatmap.tsv.%s' % self.pid), 'a', newline='') as csvfile:
             writer = csv.writer(csvfile, dialect='excel-tab', delimiter='\t')
 
-            for module, common_data, quantifications in self.heatmap_cache:
+            for module, common_data, quantifications, junc_len in self.heatmap_cache.values():
                 writer.writerow(common_data + [module.collapsed_event_name] + quantifications)
 
     def summary(self):

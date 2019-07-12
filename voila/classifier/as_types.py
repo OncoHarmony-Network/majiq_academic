@@ -1122,7 +1122,11 @@ class Graph:
                 for edge in fwd_connects:
                     if edge.ir:
                         if len(n1.edges) > 1 or len(n2.back_edges) > 1:
-                            spliced = n1.connects(n2)
+                            #spliced = n1.connects(n2)
+                            spliced = [j for j in n1.edges if not j.ir]
+                            for junc in n2.back_edges:
+                                if not any(j == junc for j in spliced) and not junc.ir:
+                                    spliced.append(junc)
                             found.append({'event': 'alternative_intron', 'C1': n1, 'C2': n2,
                                           'Intron': edge, 'Spliced': spliced})
 
