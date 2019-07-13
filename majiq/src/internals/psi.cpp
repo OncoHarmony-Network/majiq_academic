@@ -236,7 +236,8 @@ void get_samples_from_psi(float* osamps, hetLSV* lsvObj, int psi_samples, psi_di
     return ;
 }
 
-void test_calc(vector<psi_distr_t>& oPvals, HetStats* HetStatsObj, hetLSV* lsvObj, int psamples, float quant){
+void test_calc(vector<psi_distr_t>& oPvals, psi_distr_t& oScore, HetStats* HetStatsObj, hetLSV* lsvObj,
+                                                                        int psamples, float quant){
 //void test_calc(float* oPvals, HetStats* HetStatsObj, hetLSV* lsvObj, int psamples, float quant){
 
     const int nstats = (HetStatsObj->statistics).size() ;
@@ -247,6 +248,7 @@ void test_calc(vector<psi_distr_t>& oPvals, HetStats* HetStatsObj, hetLSV* lsvOb
     for (int j=0; j<njunc; j++){
 
         vector<vector<float>> pval_vect (nstats, vector<float>(psamples)) ;
+        psi_distr_t score_vect(psamples) ;
         for(int s=0; s<psamples; s++){
 
             default_random_engine generator;
@@ -271,14 +273,18 @@ void test_calc(vector<psi_distr_t>& oPvals, HetStats* HetStatsObj, hetLSV* lsvOb
             csamps = apply_permutation(csamps, p);
             labels = apply_permutation(labels, p);
 
+
             for(int i=0; i<nstats; i++){
-                pval_vect[i][s] = (float)(HetStatsObj->statistics)[i]->Calc_pval(csamps, labels) ;
+                pval_vect[i][s] = (float)(HetStatsObj->statistics)[i]->Calc_pval(csamps, labels, &score_vect[s]) ;
             }
         }
         for(int i=0; i<nstats; i++){
             float mmm = quantile(pval_vect[i], quant) ;
             oPvals[j][i] = mmm ;
-
+            if ((HetStatsObj->names)[i] == "TNOM"){
+                float ss = median(score_vect) ;
+                oScore[j] = ss ;
+            }
         }
     }
 }

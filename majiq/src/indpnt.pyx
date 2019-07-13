@@ -41,6 +41,8 @@ cdef int _statistical_test_computation(object out_h5p, dict comparison, list lis
     cdef list statlist
     cdef np.ndarray[np.float32_t, ndim=2, mode="c"]  oPvals
     cdef map[string, vector[psi_distr_t]] output
+    cdef map[string,psi_distr_t] oScore
+    cdef np.ndarray[np.float32_t, ndim=1, mode="c"] score
     cdef string lsv_id, stname
     cdef HetStats* StatsObj = new HetStats()
     cdef int nstats
@@ -88,7 +90,8 @@ cdef int _statistical_test_computation(object out_h5p, dict comparison, list lis
                 hetObj_ptr.add_condition2(<np.float32_t *> k.data, fidx, nways, psi_samples)
 
         output[lsv_id] = vector[psi_distr_t](nways, psi_distr_t(nstats))
-        test_calc(output[lsv_id], StatsObj, hetObj_ptr, psi_samples, test_percentile)
+        oScore[lsv_id] = psi_distr_t(nways)
+        test_calc(output[lsv_id], oScore[lsv_id], StatsObj, hetObj_ptr, psi_samples, test_percentile)
         hetObj_ptr.clear()
 
 
@@ -96,11 +99,13 @@ cdef int _statistical_test_computation(object out_h5p, dict comparison, list lis
     for lsv in list_of_lsv:
         nways =lsv_vec[lsv].get_num_ways()
         oPvals = np.zeros(shape=(nways, nstats), dtype=np.float32)
+        score = np.zeros(shape=nways, dtype=np.float32)
         for ii in range(nways):
             for jj in range(nstats):
                 # print(output[lsv_id][ii][jj])
                 oPvals[ii, jj] = output[lsv][ii][jj]
-        out_h5p.heterogen(lsv.decode('utf-8')).add(junction_stats=oPvals)
+            score[ii] = oScore[lsv][ii]
+        out_h5p.heterogen(lsv.decode('utf-8')).add(junction_stats=oPvals, tnom_score=score)
 
 
 cdef int _het_computation(object out_h5p, dict file_cond, list list_of_lsv, map[string, qLSV*] lsv_vec,

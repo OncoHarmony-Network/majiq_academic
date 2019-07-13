@@ -129,7 +129,7 @@ namespace MajiqStats{
             }
 
         public:
-            double Calc_pval(vector<float>& data, vector<int>& labels){
+            double Calc_pval(vector<float>& data, vector<int>& labels, float* score){
                 // n = number of columms in the data set
                 // BestLoss - minimum num of mistakes
 
@@ -178,7 +178,7 @@ namespace MajiqStats{
                         LastValue = X;
                     }
                 }
-
+                *score = (float)BestLoss;
                 return ComputePValue(LeftClass[0], LeftClass[1], (int)BestLoss) ;
             }
     };

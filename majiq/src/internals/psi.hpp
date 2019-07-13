@@ -167,7 +167,7 @@ void get_samples_from_psi2(vector<psi_distr_t>& i_psi, float* osamps, float* o_m
                           int psi_samples, int j_offset, psi_distr_t& psi_border2, int njunc, int msamples, int nbins,
                           bool is_ir) ;
 
-void test_calc(vector<psi_distr_t>& oPvals, HetStats* HetStatsObj, hetLSV* lsvObj, int psamples, float quant) ;
+void test_calc(vector<psi_distr_t>& oPvals, psi_distr_t& oScore, HetStats* HetStatsObj, hetLSV* lsvObj, int psamples, float quant) ;
 void get_psi_border(psi_distr_t& psi_border, int nbins) ;
 
 int adjustdelta(psi_distr_t& o_mixtpdf, psi_distr_t& emp_dpsi, int num_iter, int nbins) ;

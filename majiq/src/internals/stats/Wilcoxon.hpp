@@ -62,7 +62,7 @@ namespace MajiqStats{
             }
 
         public:
-            double Calc_pval(vector<float> & data, vector<int>& labels){
+            double Calc_pval(vector<float> & data, vector<int>& labels, float* score){
 
 //                #pragma omp critical
 //                {
