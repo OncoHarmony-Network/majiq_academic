@@ -378,7 +378,7 @@ class HeterogenTsv(AnalysisTypeTsv):
     def tab_output(self):
         with ViewHeterogens() as m:
             group_names = m.group_names
-            stats_column_names = list(m.junction_stats_column_names)
+            stats_column_names = list(m.junction_stats_column_names) + list(m.junction_scores_column_names)
 
             fieldnames = ['#Gene Name', 'Gene ID', 'LSV ID', 'LSV Type', 'strand', 'chr'] + \
                          ['%s E(PSI)' % group for group in group_names] + stats_column_names + \
@@ -440,6 +440,9 @@ class HeterogenTsv(AnalysisTypeTsv):
                             row[grp + ' E(PSI)'] = semicolon(get_expected_psi(x) for x in mean)
 
                         for key, value in het.junction_stats:
+                            row[key] = semicolon(value)
+
+                        for key, value in het.junction_scores:
                             row[key] = semicolon(value)
 
                         lock.acquire()

@@ -738,6 +738,35 @@ class ViewHeterogens(ViewMulti):
                     except (GeneIdNotFoundInVoilaFile, LsvIdNotFoundInVoilaFile):
                         pass
 
+        @property
+        def junction_scores(self):
+            """
+            This gets associates stat test score names with their values. (if any exist)
+            :return: generator key/value
+            """
+            config = ViewConfig()
+            voila_files = config.voila_files
+            for f in voila_files:
+                with ViewHeterogen(f) as m:
+                    groups = '_'.join(m.group_names)
+                    score_names = ('tnom_score',)
+                    try:
+                        try:
+                            score_vals = m.get(self.lsv_id, 'tnom_score').T
+                        except KeyError:
+                            score_names = ()
+
+                        for score_name in score_names:
+                            if len(voila_files) == 1:
+                                yield score_name, score_vals
+                            else:
+                                yield groups + ' ' + score_name, score_vals
+
+                    except (GeneIdNotFoundInVoilaFile, LsvIdNotFoundInVoilaFile):
+                        pass
+
+
+
     @property
     def stat_names(self):
         """
@@ -765,6 +794,23 @@ class ViewHeterogens(ViewMulti):
             with ViewHeterogen(f) as m:
                 groups = '_'.join(m.group_names)
                 for name in m.stat_names:
+                    if len(voila_files) == 1:
+                        yield name
+                    else:
+                        yield groups + ' ' + name
+
+    @property
+    def junction_scores_column_names(self):
+        """
+        Stat column names for tsv output.
+        :return: generator
+        """
+        voila_files = ViewConfig().voila_files
+
+        for f in voila_files:
+            with ViewHeterogen(f) as m:
+                groups = '_'.join(m.group_names)
+                for name in ('tnom_score',):
                     if len(voila_files) == 1:
                         yield name
                     else:

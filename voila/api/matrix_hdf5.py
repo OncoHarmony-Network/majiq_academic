@@ -166,7 +166,7 @@ class MatrixHdf5:
         try:
             return lsv_grp[key][()]
         except KeyError:
-            print(dict(lsv_grp))
+
             raise
 
     def get_many(self, lsv_id: str, keys: List[str]):
