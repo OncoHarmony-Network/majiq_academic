@@ -3,9 +3,14 @@ from voila import constants
 from voila.voila_log import voila_log
 from voila.api import SpliceGraph, Matrix
 from voila.api.matrix_hdf5 import MatrixHdf5
+from voila.api.view_matrix import ViewHeterogen, ViewPsi, ViewDeltaPsi
+from voila.constants import *
 import h5py
 import sqlite3
 import os, sys
+import numpy as np
+from voila.vlsv import get_expected_psi, matrix_area
+from itertools import combinations
 
 class Filter:
     def __init__(self):
@@ -97,7 +102,7 @@ def run_filter():
     config = FilterConfig()
 
     num_primary_filters = sum(bool(x) for x in (config.gene_ids, config.gene_ids_file, config.lsv_ids, config.lsv_ids_file))
-    if num_primary_filters == 0:
+    if num_primary_filters == 0 and not config.decomplexify_psi_threshold > 0 and not config.decomplexify_deltapsi_threshold > 0:
         voila_log().critical(
             "In order to filter, you must specify --gene-ids, --gene-ids-file, --lsv-ids, --lsv-ids-file")
         sys.exit(2)
@@ -107,22 +112,21 @@ def run_filter():
         sys.exit(2)
 
     if config.lsv_ids:
-        lsv_ids = config.lsv_ids
+        lsv_ids = set(config.lsv_ids)
         gene_ids = lsv_ids2gene_ids(lsv_ids)
     elif config.lsv_ids_file:
-        lsv_ids = read_ids_file(config.lsv_ids_file)
+        lsv_ids = set(read_ids_file(config.lsv_ids_file))
         gene_ids = lsv_ids2gene_ids(lsv_ids)
     elif config.gene_ids:
-        lsv_ids = []
+        lsv_ids = set()
         gene_ids = config.gene_ids
     elif config.gene_ids_file:
-        lsv_ids = []
+        lsv_ids = set()
         gene_ids = read_ids_file(config.gene_ids_file)
-
     else:
-        voila_log().error("Should not get here")
+        # only secondary filters
         gene_ids = []
-        lsv_ids = []
+        lsv_ids = set()
 
     if not os.path.exists(config.directory):
         os.makedirs(config.directory)
@@ -133,6 +137,7 @@ def run_filter():
 
     # voila files part
     for voila_file in config.voila_files:
+        voila_log().info("Filtering %s" % voila_file)
         new_voila_file = os.path.join(config.directory, os.path.basename(voila_file))
         if os.path.exists(new_voila_file):
             if config.overwrite:
@@ -141,22 +146,114 @@ def run_filter():
                 voila_log().warning("%s already exists, skipping writing this file. (--overwrite to bypass)" % new_voila_file)
                 continue
 
+        with MatrixHdf5(voila_file) as m:
+            analysis_type = m.analysis_type
+
+        included_lsv_ids = set()
+        excluded_lsv_ids = set()
+        # for PSI filter, any input file can be used
+        # for dPSI filter, only matters for dPSI and HET files
+
+        if config.decomplexify_psi_threshold > 0 or config.decomplexify_deltapsi_threshold > 0:
+
+            if analysis_type == ANALYSIS_PSI:
+                with ViewPsi(voila_file) as m:
+                    if not lsv_ids:
+                        lsv_ids = list(m.lsv_ids())
+
+
+                    for lsv in m.lsvs():
+                        if lsv.lsv_id in lsv_ids:
+                            included_lsv_ids.add(lsv.lsv_id)
+                            if config.decomplexify_psi_threshold > 0:
+                                if any(v < config.decomplexify_psi_threshold for v in lsv.means):
+                                    excluded_lsv_ids.add(lsv.lsv_id)
+                                    continue
+
+            elif analysis_type == ANALYSIS_DELTAPSI:
+                with ViewDeltaPsi(voila_file) as m:
+                    if not lsv_ids:
+                        lsv_ids = list(m.lsv_ids())
+
+                    for lsv in m.lsvs():
+                        if lsv.lsv_id in lsv_ids:
+                            included_lsv_ids.add(lsv.lsv_id)
+                            if config.decomplexify_psi_threshold > 0:
+                                for means in lsv.group_means:
+                                    # means: (name, means,)
+                                    if any(v < config.decomplexify_psi_threshold for v in means[1]):
+                                        excluded_lsv_ids.add(lsv.lsv_id)
+                                        break
+
+                            if config.decomplexify_deltapsi_threshold > 0:
+                                excl_incl = lsv.excl_incl
+                                #print(list(v for v in excl_incl))
+                                if any((v[0] > 0 and v[0] < config.decomplexify_deltapsi_threshold) or \
+                                       (v[1] > 0 and v[1] < config.decomplexify_deltapsi_threshold) for v in excl_incl):
+                                    excluded_lsv_ids.add(lsv.lsv_id)
+
+
+
+            elif analysis_type == ANALYSIS_HETEROGEN:
+                with ViewHeterogen(voila_file) as m:
+                    if not lsv_ids:
+                        lsv_ids = list(m.lsv_ids())
+
+                    for lsv in m.lsvs():
+                        if lsv.lsv_id in lsv_ids:
+                            included_lsv_ids.add(lsv.lsv_id)
+                            if config.decomplexify_psi_threshold > 0:
+                                if not lsv.lsv_id in excluded_lsv_ids:
+                                    for mean in np.array(lsv.mean_psi).transpose((1, 0, 2)):
+                                        if any(get_expected_psi(v) < config.decomplexify_psi_threshold for v in mean):
+                                            excluded_lsv_ids.add(lsv.lsv_id)
+                                            break
+                            if config.decomplexify_deltapsi_threshold > 0:
+                                if not lsv.lsv_id in excluded_lsv_ids:
+                                    for psis_g1, psis_g2 in combinations(np.array(lsv.mean_psi).transpose((1, 0, 2)), 2):
+                                        for psi_g1, psi_g2 in zip(psis_g1, psis_g2):
+                                            if abs(get_expected_psi(psi_g1) - get_expected_psi(psi_g2)) < config.decomplexify_deltapsi_threshold:
+                                                excluded_lsv_ids.add(lsv.lsv_id)
+                                                break
+                                        else:
+                                            continue
+                                        break
+
+        else:
+            included_lsv_ids = lsv_ids
+
+        if not gene_ids:
+            _gene_ids = lsv_ids2gene_ids(included_lsv_ids)
+        else:
+            _gene_ids = gene_ids
+
+        if config.decomplexify_psi_threshold > 0 or config.decomplexify_deltapsi_threshold > 0:
+            voila_log().info("Got %d LSVs" % (len(included_lsv_ids) - len(excluded_lsv_ids)))
+            if not included_lsv_ids:
+                voila_log().critical("For voila file %s, no lsvs matched the specified filters!" % voila_file)
+                sys.exit(1)
+
         with h5py.File(voila_file, 'r', libver='latest') as m, h5py.File(new_voila_file, 'w', libver='latest') as m_new:
             #m.lsv_ids()
             main_grp = m_new.create_group('lsvs')
             #new_meta_group = m_new.create_group('metadata')
             m.copy('metadata', m_new)
-            for gene_id in gene_ids:
+            for gene_id in _gene_ids:
 
                 #new_gene_group = m_new.create_group('lsvs/%s' % gene_id)
-                if not lsv_ids:
+                if not lsv_ids and not config.decomplexify_psi_threshold > 0 and not config.decomplexify_deltapsi_threshold > 0:
+                    # this part only makes sense if copying ALL lsv ids...
                     m.copy('lsvs/%s' % gene_id, main_grp)
                 else:
                     lsv_grp = m_new.create_group('lsvs/%s' % gene_id)
-                    for lsv_id in lsv_ids:
-                        m.copy('lsvs/%s/%s' % (gene_id, lsv_id), lsv_grp)
 
-    filter_splicegraph(gene_ids)
+                    for lsv_id in included_lsv_ids:
+                        if lsv_id.startswith(gene_id) and not lsv_id in excluded_lsv_ids:
+                            m.copy('lsvs/%s/%s' % (gene_id, lsv_id), lsv_grp)
+
+    if not config.voila_files_only:
+        voila_log().info("Filtering Splicegraph")
+        filter_splicegraph(gene_ids)
 
 
     voila_log().info("Filtering Complete")

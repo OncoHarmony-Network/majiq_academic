@@ -147,6 +147,8 @@ filter_parser.add_argument('files', nargs='+', type=check_file,
 filter_parser.add_argument('--overwrite', action='store_true',
                          help='If the output filename already exists in the destination directory, overwrite'
                               'it instead of skipping with a warning')
+filter_parser.add_argument('--voila-files-only', action='store_true',
+                         help='Only filter the voila files, not the splicegraph')
 filter_parser.add_argument('--gene-ids', nargs='*', default=[],
                         help='Gene IDs, separated by spaces, which should remain in the results. e.g. GENE_ID1 '
                              'GENE_ID2 ...')
@@ -157,6 +159,10 @@ filter_parser.add_argument('--lsv-ids', nargs='*', default=[],
                              'GENE_ID2 ...')
 filter_parser.add_argument('--lsv-ids-file', type=check_file,
                         help='Specify LSV IDs to retain in a file instead of on the command line. One LSV ID per line')
+filter_parser.add_argument('--decomplexify-psi-threshold', type=float, default=0.0,
+                        help='Specify minimum required PSI value for a junction in a LSV to preserve that LSV in the final result')
+filter_parser.add_argument('--decomplexify-deltapsi-threshold', type=float, default=0.0,
+                        help='Specify minimum required dPSI value for a junction in a LSV to preserve that LSV in the final result')
 required_filter_parser = filter_parser.add_argument_group('required named arguments')
 required_filter_parser.add_argument('-d', '--directory', required=True, help="All filtered files will be dumped in"
                                                                           " this directory")
