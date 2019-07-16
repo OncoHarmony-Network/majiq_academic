@@ -149,6 +149,8 @@ filter_parser.add_argument('--overwrite', action='store_true',
                               'it instead of skipping with a warning')
 filter_parser.add_argument('--voila-files-only', action='store_true',
                          help='Only filter the voila files, not the splicegraph')
+filter_parser.add_argument('--splice-graph-only', action='store_true',
+                         help='Only filter the splicegraph, not the voila files')
 filter_parser.add_argument('--gene-ids', nargs='*', default=[],
                         help='Gene IDs, separated by spaces, which should remain in the results. e.g. GENE_ID1 '
                              'GENE_ID2 ...')

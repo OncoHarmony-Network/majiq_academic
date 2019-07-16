@@ -23,7 +23,7 @@ _TsvConfig.__new__.__defaults__ = (None,) * len(_TsvConfig._fields)
 _FilterConfig = namedtuple('FilterConfig', ['directory', 'voila_files', 'voila_file', 'splice_graph_file',
                                             'nproc', 'gene_ids', 'debug', 'silent', 'analysis_type', 'overwrite',
                                             'gene_ids_file', 'lsv_ids', 'lsv_ids_file', 'decomplexify_psi_threshold',
-                                            'decomplexify_deltapsi_threshold', 'voila_files_only'])
+                                            'decomplexify_deltapsi_threshold', 'voila_files_only', 'splice_graph_only'])
 _FilterConfig.__new__.__defaults__ = (None,) * len(_FilterConfig._fields)
 
 # global config variable to act as the singleton instance of the config.
@@ -329,7 +329,7 @@ class FilterConfig:
                 settings[int_key] = config_parser['SETTINGS'].getint(int_key)
             for float_key in ['decomplexify_psi_threshold', 'decomplexify_deltapsi_threshold']:
                 settings[float_key] = config_parser['SETTINGS'].getfloat(float_key)
-            for bool_key in ['debug', 'overwrite', 'voila_files_only']:
+            for bool_key in ['debug', 'overwrite', 'voila_files_only', 'splice_graph_only']:
                 settings[bool_key] = config_parser['SETTINGS'].getboolean(bool_key)
 
             filters = {}
