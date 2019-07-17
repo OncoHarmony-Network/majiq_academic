@@ -181,7 +181,7 @@ classify_parser.add_argument('--min-experiments', default=0.5, type=check_positi
                              '\t + >= 1 the value is the actual number of experiments. If the number is set to a '
                              'greater number than the size of the group, we use the size instead.\n'
                              '[Default: %(default)s]]')
-classify_parser.add_argument('--threshold', type=float, default=0.2,
+classify_parser.add_argument('--changing-threshold', type=float, default=0.2,
                         help='Threshold in delta-PSI quantification column. The default is "0.2".')
 classify_parser.add_argument('--non-changing-threshold', type=float, default=0.05,
                         help='Threshold in delta-PSI quantification column. The default is "0.05".')

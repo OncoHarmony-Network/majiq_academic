@@ -392,14 +392,14 @@ class Graph:
         even made, to save on efficiency)
 
         at least N juncs have:
-            any(max(Prob(|E(dPSI)|>=detlapsi-thresh)))>=probability-changing-thresh
+            any(max(Prob(|E(dPSI)|>=changing-thresh)))>=probability-changing-thresh
         """
 
         probs = []
         for edge in module.get_all_edges():
             for lsv_quants in edge.lsvs.values():
                 if lsv_quants['delta_psi_bins']:
-                    probs.append(max(matrix_area(b, self.config.decomplexify_deltapsi_threshold) for b in unpack_bins(lsv_quants['delta_psi_bins'])))
+                    probs.append(max(matrix_area(b, self.config.changing_threshold) for b in unpack_bins(lsv_quants['delta_psi_bins'])))
 
         return any(x >= self.config.probability_changing_threshold for x in probs)
 

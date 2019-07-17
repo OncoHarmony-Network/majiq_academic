@@ -221,7 +221,7 @@ class TsvWriter:
                 return ''
             return f
 
-        def _dpsi_p_thresh(voila_files):
+        def _dpsi_p_change(voila_files):
             def f(lsv_id, edge=None):
                 for voila_file in voila_files:
                     with view_matrix.ViewDeltaPsi(voila_file) as m:
@@ -236,11 +236,11 @@ class TsvWriter:
                                 if edge_idx is None:
                                     continue
                                 else:
-                                    vals.append(round(matrix_area(bins[edge_idx], self.config.threshold), SIG_FIGS))
+                                    vals.append(round(matrix_area(bins[edge_idx], self.config.changing_threshold), SIG_FIGS))
                             return semicolon(vals)
                         else:
                             return (
-                                        round(matrix_area(b, self.config.threshold), SIG_FIGS) for b in bins
+                                        round(matrix_area(b, self.config.changing_threshold), SIG_FIGS) for b in bins
                                     )
                 return ''
             return f
@@ -307,18 +307,18 @@ class TsvWriter:
                             if key == "E(PSI)":
                                 tmp[header] = (_dpsi_psi, [voila_file], i)
 
-                thresh_key = "P(|dPSI|>=%.2f)" % self.config.threshold
-                high_prob_thresh_key = "P(|dPSI|<=%.2f)" % self.config.non_changing_threshold
-                for key in ("E(dPSI)", thresh_key, high_prob_thresh_key):
+                changing_thresh_key = "P(|dPSI|>=%.2f)" % self.config.changing_threshold
+                non_changing_thresh_key = "P(|dPSI|<=%.2f)" % self.config.non_changing_threshold
+                for key in ("E(dPSI)", changing_thresh_key, non_changing_thresh_key):
                     header = "%s_%s" % ('-'.join(group_names), key)
                     if header in tmp:
                         tmp[header][1].append(voila_file)
                     else:
                         if key == "E(dPSI)":
                             tmp[header] = (_dpsi_dpsi, [voila_file])
-                        elif key == thresh_key:
-                            tmp[header] = (_dpsi_p_thresh, [voila_file])
-                        elif key == high_prob_thresh_key:
+                        elif key == changing_thresh_key:
+                            tmp[header] = (_dpsi_p_change, [voila_file])
+                        elif key == non_changing_thresh_key:
                             tmp[header] = (_dpsi_p_nonchange, [voila_file])
 
         return tmp
