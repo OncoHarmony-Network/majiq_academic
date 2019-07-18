@@ -458,31 +458,35 @@ class Graph:
         :param junc: splicegraph object representing the junc
         :return: True of False
         """
-
-        if self.config.min_experiments < 1:
-            # we need to find based on percentage of experiments
-            num_acceptable = 0.0
-            percent_acceptable = 0.0
-            exps = [x for x in reads]
-
-            for exp in exps:
-                if exp['reads'] >= self.config.decomplexify_reads_threshold:
-                    num_acceptable += 1
-                    percent_acceptable = num_acceptable / float(len(exps))
-
-                if percent_acceptable >= self.config.min_experiments:
-                    return True
-        else:
-            # we need to find based on raw number of acceptable experiments
-            num_acceptable = 0
-            for exp in reads:
-                if exp['reads'] >= self.config.decomplexify_reads_threshold:
-                    num_acceptable += 1
-                if num_acceptable >= self.config.min_experiments:
-                    return True
-
+        for exp in reads:
+            # temporarialy changed to just one experiment overcoming reads threshold is acceptable
+            if exp['reads'] >= self.config.decomplexify_reads_threshold:
+                return True
         return False
 
+        # if self.config.min_experiments < 1:
+        #     # we need to find based on percentage of experiments
+        #     num_acceptable = 0.0
+        #     percent_acceptable = 0.0
+        #     exps = [x for x in reads]
+        #
+        #     for exp in exps:
+        #         if exp['reads'] >= self.config.decomplexify_reads_threshold:
+        #             num_acceptable += 1
+        #             percent_acceptable = num_acceptable / float(len(exps))
+        #
+        #         if percent_acceptable >= self.config.min_experiments:
+        #             return True
+        # else:
+        #     # we need to find based on raw number of acceptable experiments
+        #     num_acceptable = 0
+        #     for exp in reads:
+        #         if exp['reads'] >= self.config.decomplexify_reads_threshold:
+        #             num_acceptable += 1
+        #         if num_acceptable >= self.config.min_experiments:
+        #             return True
+        #
+        # return False
 
     def _populate(self):
         """
