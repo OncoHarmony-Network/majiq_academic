@@ -151,7 +151,7 @@ class TsvWriter:
                 for voila_file in voila_files:
                     with Matrix(voila_file) as m:
                         lsv = m.heterogen(lsv_id)
-                        return _inner_edge_aggregate(lsv, get_expected_psi(np.array(list(lsv.get('mean_psi'))).transpose((1, 0, 2))[group_idx]), edge)
+                        return _inner_edge_aggregate(lsv, [get_expected_psi(x) for x in np.array(list(lsv.get('mean_psi'))).transpose((1, 0, 2))[group_idx]], edge)
                 return ''
             return f
 
@@ -393,7 +393,6 @@ class TsvWriter:
         lsvs = self.parity2lsv(module, parity, node=node)
 
         out = []
-
         for field in self.quantifications_int:
             quantification_vals = []
             for lsv_id in lsvs:
