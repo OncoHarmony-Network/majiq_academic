@@ -26,6 +26,34 @@ class Classify:
         run_classifier()
 
 
+
+def print_filter_summary():
+    config = ClassifyConfig()
+    jst = 64
+    voila_log().info("╔═══════════════════════════════════════════════════════════════╗")
+
+    if config.decomplexify_reads_threshold or config.decomplexify_deltapsi_threshold or config.decomplexify_psi_threshold:
+        voila_log().info(("╠╡ Before Classification:").ljust(jst)[:jst] + "║")
+        if config.decomplexify_psi_threshold:
+            voila_log().info(("║     Dropping junctions with max(PSI) < %0.3f" % config.decomplexify_psi_threshold).ljust(jst)[:jst] + "║")
+        if config.decomplexify_deltapsi_threshold:
+            voila_log().info(("║     Dropping junctions with max(dPSI) < %0.3f" % config.decomplexify_deltapsi_threshold).ljust(jst)[:jst] + "║")
+        if config.decomplexify_reads_threshold:
+            voila_log().info(("║     Dropping junctions with max(number_of_reads) <= %d" % config.decomplexify_reads_threshold).ljust(jst)[:jst] + "║")
+    else:
+        voila_log().info(("╠╡ Not dropping any junctions").ljust(jst)[:jst] + "║")
+
+    if config.changing or config.non_changing:
+        voila_log().info(("╠╡ After Classification:").ljust(jst)[:jst] + "║")
+        if config.changing:
+            voila_log().info(("║     Dropping modules if none(max(P(|dPSI|>=%.3f)) >= %.3f)" %
+                             (config.changing_threshold, config.probability_changing_threshold)).ljust(jst)[:jst] + "║")
+        elif config.non_changing:
+            voila_log().info(("║     Dropping modules if any(max(P(|dPSI|<=%.3f)) >= %.3f)" %
+                             (config.non_changing_threshold, config.probability_non_changing_threshold)).ljust(jst)[:jst] + "║")
+
+    voila_log().info("╚═══════════════════════════════════════════════════════════════╝")
+
 def classify_gene(args):
 
     gene_id, experiment_names, q = args
@@ -108,6 +136,9 @@ def run_classifier():
 
     voila_log().info("Classifying %d gene(s)" % len(gene_ids))
     voila_log().info("Quantifications based on %d input file(s)" % len(config.voila_files))
+
+    print_filter_summary()
+
     voila_log().info("Writing TSVs to %s" % os.path.abspath(config.directory))
 
     #total_genes = len(gene_ids)
