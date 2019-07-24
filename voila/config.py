@@ -27,7 +27,7 @@ _ClassifyConfig = namedtuple('ClassifyConfig', ['directory', 'voila_files', 'voi
                                       'untrimmed_exons', 'putative_multi_gene_regions',
                                                 'changing_threshold', 'non_changing_threshold', 'probability_changing_threshold',
                                                  'probability_non_changing_threshold', 'changing', 'non_changing',
-                                                'keep_no_lsvs', 'debug_num_genes'])
+                                                'keep_no_lsvs', 'debug_num_genes', 'overwrite'])
 _ClassifyConfig.__new__.__defaults__ = (None,) * len(_ClassifyConfig._fields)
 
 # global config variable to act as the singleton instance of the config.
@@ -352,7 +352,7 @@ class ClassifyConfig:
                               'non_changing_threshold', 'changing_threshold', 'probability_changing_threshold',
                               'probability_non_changing_threshold']:
                 settings[float_key] = config_parser['SETTINGS'].getfloat(float_key)
-            for bool_key in ['debug', 'show_all_modules', 'output_complex', 'untrimmed_exons',
+            for bool_key in ['debug', 'show_all_modules', 'output_complex', 'untrimmed_exons', 'overwrite',
                              'putative_multi_gene_regions', 'changing', 'non_changing', 'keep_no_lsvs']:
                 settings[bool_key] = config_parser['SETTINGS'].getboolean(bool_key)
 

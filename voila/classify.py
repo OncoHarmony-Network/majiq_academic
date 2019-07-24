@@ -7,7 +7,7 @@ from voila.classifier.as_types import Graph
 from voila.classifier.tsv_writer import TsvWriter
 from math import ceil
 import time
-import os
+import os, sys
 from multiprocessing import Manager, Pool
 import glob
 import traceback
@@ -133,6 +133,16 @@ def run_classifier():
 
     if not os.path.exists(config.directory):
         os.makedirs(config.directory)
+
+    if os.listdir(config.directory):
+        if config.overwrite:
+            for _file in os.listdir(config.directory):
+                os.remove(os.path.join(config.directory, _file))
+        else:
+            voila_log().critical(
+                "Files already present in %s; not running classifier "
+                "(--overwrite to delete files in this directory and run anyway)" % config.directory)
+            sys.exit(1)
 
     voila_log().info("Classifying %d gene(s)" % len(gene_ids))
     voila_log().info("Quantifications based on %d input file(s)" % len(config.voila_files))
