@@ -39,7 +39,7 @@ def print_filter_summary():
         if config.decomplexify_deltapsi_threshold:
             voila_log().info(("║     Dropping junctions with max(dPSI) < %0.3f" % config.decomplexify_deltapsi_threshold).ljust(jst)[:jst] + "║")
         if config.decomplexify_reads_threshold:
-            voila_log().info(("║     Dropping junctions with max(number_of_reads) <= %d" % config.decomplexify_reads_threshold).ljust(jst)[:jst] + "║")
+            voila_log().info(("║     Dropping junctions with max(number_of_reads) < %d" % config.decomplexify_reads_threshold).ljust(jst)[:jst] + "║")
     else:
         voila_log().info(("╠╡ Not dropping any junctions").ljust(jst)[:jst] + "║")
 
