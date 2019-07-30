@@ -403,6 +403,7 @@ class TsvWriter:
                 except (GeneIdNotFoundInVoilaFile, LsvIdNotFoundInVoilaFile) as e:
                     quantification_vals.append('')
                     #print(e)
+
             out.append(semicolon(quantification_vals))
 
 
@@ -529,10 +530,10 @@ class TsvWriter:
 
                             if True:
                                 if src_common[5]:
-                                    self.heatmap_add(module, src_common, self.quantifications(module, 's', event['Proximal']),
+                                    self.heatmap_add(module, src_common, self.quantifications(module, 's', event['Proximal'], event['E1']),
                                                      event['Proximal'].end - event['Proximal'].start)
                                 elif trg_common[5]:
-                                    self.heatmap_add(module, trg_common, self.quantifications(module, 't', event['Proximal']),
+                                    self.heatmap_add(module, trg_common, self.quantifications(module, 't', event['Proximal'], event['E2']),
                                                      event['Proximal'].end - event['Proximal'].start)
 
 
@@ -563,10 +564,10 @@ class TsvWriter:
 
                             if True:
                                 if trg_common[5]:
-                                    self.heatmap_add(module, trg_common, self.quantifications(module, 't', event['Proximal']),
+                                    self.heatmap_add(module, trg_common, self.quantifications(module, 't', event['Proximal'], event['E2']),
                                                      event['Proximal'].end - event['Proximal'].start)
                                 elif src_common[5]:
-                                    self.heatmap_add(module, src_common, self.quantifications(module, 's', event['Proximal']),
+                                    self.heatmap_add(module, src_common, self.quantifications(module, 's', event['Proximal'], event['E1']),
                                                      event['Proximal'].end - event['Proximal'].start)
 
 
@@ -726,11 +727,11 @@ class TsvWriter:
                                 if True:
                                     if event['SkipA2']:
                                         self.heatmap_add(module, src_common,
-                                                         self.quantifications(module, 's', event['SkipA2'][0]),
+                                                         self.quantifications(module, 's', event['SkipA2'][0], event['Reference']),
                                                          event['SkipA2'][0].end - event['SkipA2'][0].start)
                                     elif event['SkipA1']:
                                         self.heatmap_add(module, src_common,
-                                                         self.quantifications(module, 's', event['SkipA1'][0]),
+                                                         self.quantifications(module, 's', event['SkipA1'][0], event['Reference']),
                                                          event['SkipA1'][0].end - event['SkipA1'][0].start)
 
     def alternate_first_exon(self):
@@ -758,11 +759,11 @@ class TsvWriter:
                                 if True:
                                     if event['SkipA1']:
                                         self.heatmap_add(module, trg_common,
-                                                         self.quantifications(module, 't', event['SkipA1'][0]),
+                                                         self.quantifications(module, 't', event['SkipA1'][0], event['Reference']),
                                                          event['SkipA1'][0].end - event['SkipA1'][0].start)
                                     elif event['SkipA2']:
                                         self.heatmap_add(module, trg_common,
-                                                         self.quantifications(module, 't', event['SkipA2'][0]),
+                                                         self.quantifications(module, 't', event['SkipA2'][0], event['Reference']),
                                                          event['SkipA2'][0].end - event['SkipA2'][0].start)
 
 
@@ -796,11 +797,11 @@ class TsvWriter:
                                 if True:
                                     if event['SkipA2']:
                                         self.heatmap_add(module, src_common,
-                                                         self.quantifications(module, 's', event['SkipA2'][0]),
+                                                         self.quantifications(module, 's', event['SkipA2'][0], event['Reference']),
                                                          event['SkipA2'][0].end - event['SkipA2'][0].start)
                                     elif event['SkipA1']:
                                         self.heatmap_add(module, src_common,
-                                                         self.quantifications(module, 's', event['SkipA1'][0]),
+                                                         self.quantifications(module, 's', event['SkipA1'][0], event['Reference']),
                                                          event['SkipA1'][0].end - event['SkipA1'][0].start)
 
     def p_alternate_first_exon(self):
@@ -832,11 +833,11 @@ class TsvWriter:
                                 if True:
                                     if event['SkipA1']:
                                         self.heatmap_add(module, trg_common,
-                                                         self.quantifications(module, 't', event['SkipA1'][0]),
+                                                         self.quantifications(module, 't', event['SkipA1'][0], event['Reference']),
                                                          event['SkipA1'][0].end - event['SkipA1'][0].start)
                                     elif event['SkipA2']:
                                         self.heatmap_add(module, trg_common,
-                                                         self.quantifications(module, 't', event['SkipA2'][0]),
+                                                         self.quantifications(module, 't', event['SkipA2'][0], event['Reference']),
                                                          event['SkipA2'][0].end - event['SkipA2'][0].start)
 
     def alternative_intron(self):
@@ -939,7 +940,7 @@ class TsvWriter:
                             writer.writerow(trg_common + row + self.quantifications(module, 't', event['Include2'][0], event['C2']))
 
                             if True:
-                                self.heatmap_add(module, trg_common, self.quantifications(module, 't', event['Include2'][0]),
+                                self.heatmap_add(module, trg_common, self.quantifications(module, 't', event['Include2'][0], event['C2']),
                                                  event['Include2'][0].end - event['Include2'][0].start)
 
     def exitron(self):
