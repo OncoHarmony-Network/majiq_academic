@@ -580,8 +580,8 @@ class TsvWriter:
                 if not _complex or self.config.output_complex:
                     for event in events:
                         if event['event'] == 'p_alt5ss':
-                            src_common = self.common_data(module, 's')
-                            trg_common = self.common_data(module, 't')
+                            src_common = self.common_data(module, 's', node=event['C1'])
+                            trg_common = self.common_data(module, 't', node=event['C2'])
 
                             row = [event['C1'].range_str(), 'E3', event['C2'].range_str(), 'E1_E3_Distal',
                                    event['Skip'].range_str()]
@@ -603,8 +603,13 @@ class TsvWriter:
                             writer.writerow(trg_common + row + self.quantifications(module, 't', event['Include2']))
 
                             if True:
-                                self.heatmap_add(module, trg_common, self.quantifications(module, 't', event['Include2']),
+                                if trg_common[5]:
+                                    self.heatmap_add(module, trg_common, self.quantifications(module, 't', event['Include2'], event['C2']),
                                                  event['Include2'].end - event['Include2'].start)
+                                else:
+                                    self.heatmap_add(module, src_common,
+                                                     self.quantifications(module, 's', event['Include1'], event['C1']),
+                                                     event['Include1'].end - event['Include1'].start)
 
                             event['Include1'].junc['start'] -= 1
                             event['Include1'].junc['end'] += 1
@@ -618,8 +623,8 @@ class TsvWriter:
                 if not _complex or self.config.output_complex:
                     for event in events:
                         if event['event'] == 'p_alt3ss':
-                            src_common = self.common_data(module, 's')
-                            trg_common = self.common_data(module, 't')
+                            src_common = self.common_data(module, 's', node=event['C1'])
+                            trg_common = self.common_data(module, 't', node=event['C2'])
 
                             event['Include2'].junc['start'] += 1
                             event['Include2'].junc['end'] -= 1
@@ -641,8 +646,13 @@ class TsvWriter:
                             writer.writerow(trg_common + row + self.quantifications(module, 't', event['Skip']))
 
                             if True:
-                                self.heatmap_add(module, src_common, self.quantifications(module, 's', event['Include1']),
+                                if src_common[5]:
+                                    self.heatmap_add(module, src_common, self.quantifications(module, 's', event['Include1'], event['C1']),
                                                  event['Include1'].end - event['Include1'].start)
+                                else:
+                                    self.heatmap_add(module, trg_common,
+                                                     self.quantifications(module, 't', event['Include2'], event['C2']),
+                                                     event['Include2'].end - event['Include2'].start)
 
                             event['Include2'].junc['start'] -= 1
                             event['Include2'].junc['end'] += 1
@@ -671,8 +681,12 @@ class TsvWriter:
                             writer.writerow(trg_common + row + self.quantifications(module, 't', event['J2']))
 
                             if True:
-                                self.heatmap_add(module, trg_common, self.quantifications(module, 't', event['J2']),
+                                if trg_common[5]:
+                                    self.heatmap_add(module, trg_common, self.quantifications(module, 't', event['J2']),
                                                  event['J2'].end - event['J2'].start)
+                                else:
+                                    self.heatmap_add(module, src_common, self.quantifications(module, 's', event['J1']),
+                                                     event['J1'].end - event['J1'].start)
 
     def mutually_exclusive(self):
         with open(os.path.join(self.config.directory, 'mutually_exclusive.tsv.%s' % self.pid), 'a',
@@ -849,12 +863,14 @@ class TsvWriter:
                 if not _complex or self.config.output_complex:
                     for event in events:
                         if event['event'] == 'alternative_intron':
-                            src_common = self.common_data(module, 's')
-                            trg_common = self.common_data(module, 't')
 
                             # put coordinates back to Jordi's offset numbers
                             event['Intron'].junc['start'] += 1
                             event['Intron'].junc['end'] -= 1
+
+                            src_common = self.common_data(module, 's', event['Intron'])
+                            trg_common = self.common_data(module, 't', event['Intron'])
+
 
                             if any(':t:' in _l for _l in event['Intron'].lsvs) and not \
                                any(':s:' in _l for _l in event['Intron'].lsvs):
@@ -865,9 +881,8 @@ class TsvWriter:
                                        semicolon((x.range_str() for x in event['Spliced']))]
                                 writer.writerow(trg_common + row + self.quantifications(module, 't', event['Spliced']))
 
-                                if True:
-                                    self.heatmap_add(module, trg_common, self.quantifications(module, 't', event['Intron']),
-                                                     event['Intron'].end - event['Intron'].start)
+
+
                             else:
                                 row = [event['C1'].range_str(), 'C2', event['C2'].range_str(), 'C1_C2_intron',
                                        event['Intron'].range_str()]
@@ -876,8 +891,17 @@ class TsvWriter:
                                        semicolon((x.range_str() for x in event['Spliced']))]
                                 writer.writerow(src_common + row + self.quantifications(module, 's', event['Spliced']))
 
-                                if True:
-                                    self.heatmap_add(module, src_common, self.quantifications(module, 's', event['Intron']),
+
+                            if True:
+                                if trg_common[5]:
+                                    self.heatmap_add(module, trg_common,
+                                                     self.quantifications(module, 't', event['Intron']),
+                                                     event['Intron'].end - event['Intron'].start)
+
+                            if True:
+                                if src_common[5]:
+                                    self.heatmap_add(module, src_common,
+                                                     self.quantifications(module, 's', event['Intron']),
                                                      event['Intron'].end - event['Intron'].start)
 
                             event['Intron'].junc['start'] -= 1
