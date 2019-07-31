@@ -499,8 +499,13 @@ class TsvWriter:
                             writer.writerow(trg_common + row + self.quantifications(module, 't', event['Include2'], event['C2']))
 
                             if True:
-                                self.heatmap_add(module, trg_common, self.quantifications(module, 't', event['Include2'], event['C2']),
-                                                 event['Include2'].end - event['Include2'].start)
+                                if trg_common[5]:
+                                    self.heatmap_add(module, trg_common, self.quantifications(module, 't', event['Include2'], event['C2']),
+                                                     event['Include2'].end - event['Include2'].start)
+                                elif src_common[5]:
+                                    self.heatmap_add(module, src_common,
+                                                     self.quantifications(module, 's', event['Include1'], event['C1']),
+                                                     event['Include1'].end - event['Include1'].start)
 
     def alt3prime(self):
         with open(os.path.join(self.config.directory, 'alt3prime.tsv.%s' % self.pid), 'a', newline='') as csvfile:
