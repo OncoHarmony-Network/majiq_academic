@@ -11,6 +11,8 @@ from voila.tsv import Tsv
 from voila.classify import Classify
 from voila.voila_log import voila_log
 from voila.view.views import run_service
+from voila.filter import Filter
+from voila.splitter import splitter, recombine
 
 
 def check_list_file(value):
@@ -135,6 +137,9 @@ view_parser.add_argument('--force-index', action='store_true',
 view_parser.add_argument('--index-file', type=str, default='',
                          help='Location of index file. If specified, will use a separate HDF5 based file for storing '
                               'index data, rather than using input Voila file')
+view_parser.add_argument('--skip-type-indexing', action='store_true',
+                         help='Skips creating index for lsv type data (alt3, alt5, binary, etc). These filters will'
+                              ' no longer function, but there will be a significant indexing speedup')
 view_parser.add_argument('--strict-indexing', action='store_true',
                          help='When building an index for a study that uses multiple input voila files (such as '
                               'heterogen), verifies that values for each LSV are the same across all input files. '
@@ -194,6 +199,69 @@ required_classify_parser = classify_parser.add_argument_group('required named ar
 required_classify_parser.add_argument('-d', '--directory', required=True, help="All generated TSV files will be dumped in"
                                                                           " this directory")
 
+# filter parser
+filter_parser = argparse.ArgumentParser(add_help=False)
+filter_parser.add_argument('files', nargs='+', type=check_file,
+                         help='List of files or directories which contains the splice graph and voila files.')
+filter_parser.add_argument('--overwrite', action='store_true',
+                         help='If the output filename already exists in the destination directory, overwrite'
+                              'it instead of skipping with a warning')
+filter_parser.add_argument('--voila-files-only', action='store_true',
+                         help='Only filter the voila files, not the splicegraph')
+filter_parser.add_argument('--splice-graph-only', action='store_true',
+                         help='Only filter the splicegraph, not the voila files')
+filter_parser.add_argument('--gene-ids', nargs='*', default=[],
+                        help='Gene IDs, separated by spaces, which should remain in the results. e.g. GENE_ID1 '
+                             'GENE_ID2 ...')
+filter_parser.add_argument('--gene-ids-file', type=check_file,
+                        help='Specify Gene IDs to retain in a file instead of on the command line. One Gene ID per line')
+filter_parser.add_argument('--lsv-ids', nargs='*', default=[],
+                        help='LSV IDs, separated by spaces, which should remain in the results. e.g. LSV_ID1 '
+                             'GENE_ID2 ...')
+filter_parser.add_argument('--lsv-ids-file', type=check_file,
+                        help='Specify LSV IDs to retain in a file instead of on the command line. One LSV ID per line')
+filter_parser.add_argument('--changing-threshold', type=float, default=0.2,
+                        help='Threshold in delta-PSI quantification column. The default is "0.2".')
+filter_parser.add_argument('--non-changing-threshold', type=float, default=0.05,
+                        help='Threshold in delta-PSI quantification column. The default is "0.05".')
+filter_parser.add_argument('--probability-changing-threshold', type=float, default=0.95,
+                        help='The default is "0.95"')
+filter_parser.add_argument('--probability-non-changing-threshold', type=float, default=0.95,
+                        help='The default is "0.95"')
+filter_parser.add_argument('--changing', action='store_true',
+                         help='In general, find classifications for events which are changing (between multiple analysis). Requires at least one deltapsi or het voila file')
+filter_parser.add_argument('--non-changing', action='store_true',
+                         help='In general, find classifications for events which are not changing (between multiple analysis). Requires at least one deltapsi or het voila file')
+required_filter_parser = filter_parser.add_argument_group('required named arguments')
+required_filter_parser.add_argument('-d', '--directory', required=True, help="All filtered files will be dumped in"
+                                                                          " this directory")
+
+
+split_parser = argparse.ArgumentParser(add_help=False)
+split_parser.add_argument('files', nargs='+', type=check_file,
+                         help='List of files or directories which contains the splice graph and voila files.')
+split_parser.add_argument('--copy-only', action='store_true',
+                         help='The input files will not actually be split at all, they will just be duplicated to the '
+                              'output directories as if they had been split. This may make the process much faster, '
+                              'if you have the disk space to spare')
+split_parser.add_argument('--overwrite', action='store_true',
+                         help='If there are files inside of specified --directory, delete them and run splitter anyway')
+
+required_split_parser = split_parser.add_argument_group('required named arguments')
+required_split_parser.add_argument('-d', '--directory', required=True, help="Directories for each split will be created"
+                                                                          " in this directory")
+required_split_parser.add_argument('-n', '--num-divisions', required=True, type=int,
+                         help='The number of separate directories to split the input into')
+
+
+recombine_parser = argparse.ArgumentParser(add_help=False)
+required_recombine_parser = recombine_parser.add_argument_group('required named arguments')
+required_recombine_parser.add_argument('directories', nargs='+', help="Directory or directories"
+                                                                " to search recursively for tsv files to combine")
+required_recombine_parser.add_argument('-d', '--directory', required=True, help="Directories for each split will be created"
+                                                                          " in this directory")
+
+
 
 
 # subparsers
@@ -206,6 +274,16 @@ subparsers.add_parser('view', parents=[view_parser, sys_parser, log_parser, webs
 subparsers.add_parser('classify', parents=[classify_parser, sys_parser, log_parser],
                       help='Classify Splicing events and generate a breakdown of the classification in '
                            'multiple TSV files.').set_defaults(func=Classify)
+subparsers.add_parser('filter', parents=[filter_parser, sys_parser, log_parser],
+                      help='Make truncated versions of the input files of a more manageable file size for easier'
+                           ' collaboration.').set_defaults(
+    func=Filter)
+subparsers.add_parser('split', parents=[split_parser, sys_parser, log_parser],
+                      help='Split classifier input dataset (splicegraph and voila files) into <N> equal parts'
+                           ', for the purpose of running on a compute cluster').set_defaults(func=splitter)
+subparsers.add_parser('recombine', parents=[recombine_parser, sys_parser, log_parser],
+                      help='Used to combine output from a `voila split` run, after all initial '
+                           'runs are complete').set_defaults(func=recombine)
 
 
 

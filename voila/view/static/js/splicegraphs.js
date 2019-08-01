@@ -996,13 +996,24 @@ class SpliceGraphs {
             .querySelectorAll('.splice-graph')
             .forEach(sg => {
                 const experiment = sg.dataset.experiment;
-                const reads = gene.junction_reads[experiment];
+                const junction_reads = gene.junction_reads[experiment];
+                const intron_retention_reads = gene.intron_retention_reads[experiment];
 
                 d3.selectAll(sg.querySelectorAll('.junction-grp'))
                     .classed('reads-filter', d => {
                         let r;
                         try {
-                            r = parseInt(reads[d.start][d.end]) || 0;
+                            r = parseInt(junction_reads[d.start][d.end]) || 0;
+                        } catch (TypeError) {
+                            r = 0;
+                        }
+                        return (!isNaN(gt) && !isNaN(lt) && r <= gt || r >= lt) || (!isNaN(gt) && r <= gt) || (!isNaN(lt) && r >= lt);
+                    })
+                d3.selectAll(sg.querySelectorAll('.intron-retention-grp'))
+                    .classed('reads-filter', d => {
+                        let r;
+                        try {
+                            r = parseInt(intron_retention_reads[d.start][d.end]) || 0;
                         } catch (TypeError) {
                             r = 0;
                         }

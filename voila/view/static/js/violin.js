@@ -45,6 +45,152 @@ function expectation_value(bins){
     return dotp(comp_arr, bins);
 }
 
+function draw_pairwise_plot(main_svg){
+
+        function pairwise_significance(v1_idx, v2_idx){
+            const i1 = parseInt($(main_svg.node()).find(`.violin`).eq(v1_idx).attr('data-group-idx'));
+            const i2 = parseInt($(main_svg.node()).find(`.violin`).eq(v2_idx).attr('data-group-idx'));
+            let comp_val;
+
+            // we want the row index to always be larger than the col index to get the low half of the heatmap
+            if(i1 > i2){
+                comp_val = parseFloat($(main_svg.node()).closest('tr').find('.heat-map g').eq(i1).find('rect').eq(i2).attr('data-value'));
+            }else{
+                comp_val = parseFloat($(main_svg.node()).closest('tr').find('.heat-map g').eq(i2).find('rect').eq(i1).attr('data-value'));
+            }
+
+            if(comp_val < 0){
+                return null;
+            }
+            //comp_val = Math.log(comp_val);
+            //comp_val = 10 ** comp_val;
+
+
+
+            if(comp_val > 0.05){
+                return null
+            }else{
+                if(comp_val > 0.001){
+                    return "*"
+                }else{
+                    var exp = 4;
+                    var stars = '*';
+                    while(true){
+                        stars = stars + '*';
+                        exp += 1;
+                        if(comp_val > (1/(10 ** exp))){
+                            return stars;
+                        }else if(exp > 100){
+                            return "Overflow!";
+                        }
+                    }
+                }
+            }
+        }
+
+        // each bar needs to be drawn from the inside out, with max height being the maximum number of
+        // plots which are away to the left or the right of the chosen
+        // we will minimize vertical distance by using the same height for plots to the left and the right
+        // when applicable
+
+        const cur_index = $(main_svg.node()).find('[data-checked="true"]').parent().index();
+        main_svg.select('.overbars').remove();
+        if(cur_index === -1){
+            return;
+        }
+
+        // get violin plots center lines
+        var x_vals = [];
+        main_svg.selectAll(".violin").each(function() {
+            x_vals.push(parseInt(this.getAttribute('x')));
+        });
+
+
+        var overbars = main_svg.append('svg')
+            .attr('class', 'overbars')
+            .style('overflow', 'visible')
+            .attr('x', x_vals[0])
+
+        // for lines skipped due to no correlation, we subtract this index from the main index
+        var y_offset1 = 0;
+
+        // draw lines to the left
+        $.each(x_vals.slice(0, cur_index).reverse(), function(i, x){
+            const significance = pairwise_significance(cur_index, cur_index - i - 1);
+            if(significance === null){
+                y_offset1 ++;
+            }else{
+                //horizontal
+                overbars.append('line')
+                    .attr('stroke', 'black')
+                    .attr('x1', x_vals[cur_index])
+                    .attr('y1', -(((i-y_offset1) * 15) + 15))
+                    .attr('x2', x)
+                    .attr('y2', -(((i-y_offset1) * 15) + 15))
+                //vertical
+                overbars.append('line')
+                    .attr('stroke', 'black')
+                    .attr('x1', x)
+                    .attr('y1', -(((i-y_offset1) * 15) + 15))
+                    .attr('x2', x)
+                    .attr('y2', 0)
+                // 'data point'
+                overbars.append('text')
+                    .text(significance)
+                    .attr('font-size', 12)
+                    .attr('text-anchor', 'middle')
+                    .attr('x', x + (Math.abs(x - x_vals[cur_index]) / 2))
+                    .attr('y', -(((i-y_offset1) * 15) + 17))
+            }
+
+        });
+
+        var y_offset2 = 0;
+        // draw lines to the right
+        $.each(x_vals.slice(cur_index + 1, x_vals.length), function(i, x){
+            const significance = pairwise_significance(cur_index, cur_index + i + 1);
+            if(significance === null){
+                y_offset2 ++;
+            }else {
+                //horizontal
+                overbars.append('line')
+                    .attr('stroke', 'black')
+                    .attr('x1', x_vals[cur_index])
+                    .attr('y1', -(((i - y_offset2) * 15) + 15))
+                    .attr('x2', x)
+                    .attr('y2', -(((i - y_offset2) * 15) + 15))
+                //vertical
+                overbars.append('line')
+                    .attr('stroke', 'black')
+                    .attr('x1', x)
+                    .attr('y1', -(((i - y_offset2) * 15) + 15))
+                    .attr('x2', x)
+                    .attr('y2', 0)
+                // 'data point'
+                overbars.append('text')
+                    .text(significance)
+                    .attr('font-size', 12)
+                    .attr('text-anchor', 'middle')
+                    .attr('x', x_vals[cur_index] + (Math.abs(x - x_vals[cur_index]) / 2))
+                    .attr('y', -(((i - y_offset2) * 15) + 17))
+            }
+        });
+
+        //final vertical line in the 'center'
+        //height determined by either items to the left or right of the selected item having more commections
+        const max_y = Math.max((cur_index-y_offset1), x_vals.length - cur_index - 1 - y_offset2) * 15;
+        overbars.append('line')
+                .attr('stroke', 'black')
+                .attr('x1', x_vals[cur_index])
+                .attr('y1', 0)
+                .attr('x2', x_vals[cur_index])
+                .attr('y2', -max_y)
+
+        main_svg.attr('height', 160 + max_y);
+        overbars.attr('y', max_y);
+        $(main_svg.node()).children('g').attr('transform', `translate(40, ${5 + max_y})`);
+    }
+
 class Violin {
     constructor(violin_data) {
         this.data = violin_data;
@@ -241,7 +387,7 @@ class Violin {
         this.swarm(g2, color);
         this.draw_x_axis(g, data.group_names);
         this.draw_view_icons(g, data.group_names);
-        this.pairwise_plot_triggers(g);
+        //this.pairwise_plot_triggers(g);
     }
 
     transform_plot(i) {
@@ -677,186 +823,8 @@ class Violin {
         }
 
     }
-    draw_pairwise_plot(main_svg){
-
-        function pairwise_significance(v1_idx, v2_idx){
-            const i1 = parseInt($(main_svg.node()).find(`.violin`).eq(v1_idx).attr('data-group-idx'));
-            const i2 = parseInt($(main_svg.node()).find(`.violin`).eq(v2_idx).attr('data-group-idx'));
-            let comp_val;
-
-            // we want the row index to always be larger than the col index to get the low half of the heatmap
-            if(i1 > i2){
-                comp_val = parseFloat($(main_svg.node()).closest('tr').find('.heat-map g').eq(i1).find('rect').eq(i2).attr('data-value'));
-            }else{
-                comp_val = parseFloat($(main_svg.node()).closest('tr').find('.heat-map g').eq(i2).find('rect').eq(i1).attr('data-value'));
-            }
-
-            if(comp_val < 0){
-                return null;
-            }
-            //comp_val = Math.log(comp_val);
-            //comp_val = 10 ** comp_val;
-            //console.log(comp_val)
 
 
-            if(comp_val > 0.05){
-                return null
-            }else{
-                if(comp_val > 0.001){
-                    return "*"
-                }else{
-                    var exp = 4;
-                    var stars = '*';
-                    while(true){
-                        stars = stars + '*';
-                        exp += 1;
-                        if(comp_val > (1/(10 ** exp))){
-                            return stars;
-                        }else if(exp > 100){
-                            return "Overflow!";
-                        }
-                    }
-                }
-            }
-        }
-
-        // each bar needs to be drawn from the inside out, with max height being the maximum number of
-        // plots which are away to the left or the right of the chosen
-        // we will minimize vertical distance by using the same height for plots to the left and the right
-        // when applicable
-
-        const cur_index = $(main_svg.node()).find('[data-checked="true"]').parent().index();
-        main_svg.select('.overbars').remove();
-        if(cur_index === -1){
-            return;
-        }
-
-        // get violin plots center lines
-        var x_vals = [];
-        main_svg.selectAll(".violin").each(function() {
-            x_vals.push(parseInt(this.getAttribute('x')));
-        });
-
-
-        var overbars = main_svg.append('svg')
-            .attr('class', 'overbars')
-            .style('overflow', 'visible')
-            .attr('x', x_vals[0])
-
-        // for lines skipped due to no correlation, we subtract this index from the main index
-        var y_offset1 = 0;
-
-        // draw lines to the left
-        $.each(x_vals.slice(0, cur_index).reverse(), function(i, x){
-            const significance = pairwise_significance(cur_index, cur_index - i - 1);
-            if(significance === null){
-                y_offset1 ++;
-            }else{
-                //horizontal
-                overbars.append('line')
-                    .attr('stroke', 'black')
-                    .attr('x1', x_vals[cur_index])
-                    .attr('y1', -(((i-y_offset1) * 15) + 15))
-                    .attr('x2', x)
-                    .attr('y2', -(((i-y_offset1) * 15) + 15))
-                //vertical
-                overbars.append('line')
-                    .attr('stroke', 'black')
-                    .attr('x1', x)
-                    .attr('y1', -(((i-y_offset1) * 15) + 15))
-                    .attr('x2', x)
-                    .attr('y2', 0)
-                // 'data point'
-                overbars.append('text')
-                    .text(significance)
-                    .attr('font-size', 12)
-                    .attr('text-anchor', 'middle')
-                    .attr('x', x + (Math.abs(x - x_vals[cur_index]) / 2))
-                    .attr('y', -(((i-y_offset1) * 15) + 17))
-            }
-
-        });
-
-        var y_offset2 = 0;
-        // draw lines to the right
-        $.each(x_vals.slice(cur_index + 1, x_vals.length), function(i, x){
-            const significance = pairwise_significance(cur_index, cur_index + i + 1);
-            if(significance === null){
-                y_offset2 ++;
-            }else {
-                //horizontal
-                overbars.append('line')
-                    .attr('stroke', 'black')
-                    .attr('x1', x_vals[cur_index])
-                    .attr('y1', -(((i - y_offset2) * 15) + 15))
-                    .attr('x2', x)
-                    .attr('y2', -(((i - y_offset2) * 15) + 15))
-                //vertical
-                overbars.append('line')
-                    .attr('stroke', 'black')
-                    .attr('x1', x)
-                    .attr('y1', -(((i - y_offset2) * 15) + 15))
-                    .attr('x2', x)
-                    .attr('y2', 0)
-                // 'data point'
-                overbars.append('text')
-                    .text(significance)
-                    .attr('font-size', 12)
-                    .attr('text-anchor', 'middle')
-                    .attr('x', x_vals[cur_index] + (Math.abs(x - x_vals[cur_index]) / 2))
-                    .attr('y', -(((i - y_offset2) * 15) + 17))
-            }
-        });
-
-        //final vertical line in the 'center'
-        //height determined by either items to the left or right of the selected item having more commections
-        const max_y = Math.max((cur_index-y_offset1), x_vals.length - cur_index - 1 - y_offset2) * 15;
-        overbars.append('line')
-                .attr('stroke', 'black')
-                .attr('x1', x_vals[cur_index])
-                .attr('y1', 0)
-                .attr('x2', x_vals[cur_index])
-                .attr('y2', -max_y)
-
-        main_svg.attr('height', 160 + max_y);
-        overbars.attr('y', max_y);
-        $(main_svg.node()).children('g').attr('transform', `translate(40, ${5 + max_y})`);
-    }
-
-    pairwise_plot_triggers(svg) {
-
-        // I am completely mystified by this d3 behaviour with regard to attaching click / drag events to selections
-        // for some reason, the only way to attach the events is through a d3.select() - we are not able to use helpful
-        // elements from the construction, like a passed in d3 selection of the current svg, group, etc.
-        // so in order to attach the events to the correct elements, and not end up doubling, we need to do a
-        // d3.select and filter results based on the lsv-id of the caller
-        //
-        // it seems that even with global d3.selectall like it is, it only selects in the correct lsv_id after all
-        const self = this;
-
-        d3.selectAll(`.pairwise-check`).on('click', function () {
-
-            const current = d3.select(this);
-            const main_svg =  d3.select($(this).closest('.psi-violin-plot')[0]);
-            const add_lines = !(current.attr('data-checked') === 'true');
-            main_svg.select('.overbars').remove();
-            main_svg.selectAll(".pairwise-check")
-                .attr('data-checked', 'false')
-                .attr('fill', 'white');
-            if(add_lines){
-                current.attr('data-checked', 'true');
-                current.attr('fill', 'black');
-                // get current index
-                // add pairwise lines
-                self.draw_pairwise_plot(main_svg);
-
-            }else{
-                main_svg.attr('height', 160);
-                $(main_svg.node()).children('g').attr('transform', 'translate(40, 5)');
-            }
-
-        })
-    }
 
     draw_psi_y_axis(svg) {
         var y = d3.scaleLinear().domain([0, 1]).range([this.violin_height, 0]);
