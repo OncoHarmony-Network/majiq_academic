@@ -25,7 +25,7 @@ def filter_splicegraph(args):
     config = SplitterConfig()
     # sqlite part
 
-    #log.info("Working on %s" % output_path)
+    log.debug("Working on %s" % output_path)
 
     src_conn = open_db(config.splice_graph_file)
     dest_conn = open_db(output_path)
@@ -46,7 +46,7 @@ def filter_splicegraph(args):
     copy_table('junction', src_conn, dest_conn, gene_ids, 'gene_id')
     copy_table('junction_reads', src_conn, dest_conn, gene_ids, 'junction_gene_id')
 
-    #log.info("Finished %s" % output_path)
+    log.debug("Finished %s" % output_path)
 
     q.put(None)
 
@@ -55,7 +55,7 @@ def filter_voila_file(args):
     voila_file, gene_ids, output_path, q = args
     log = voila_log()
 
-    #log.info("Working on %s" % output_path)
+    log.debug("Working on %s" % output_path)
 
     with h5py.File(voila_file, 'r', libver='latest') as m, h5py.File(output_path, 'w', libver='latest') as m_new:
         # m.lsv_ids()
