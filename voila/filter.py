@@ -60,8 +60,7 @@ def copy_table(table, src, dest, gene_ids=None, gene_ids_colname=None):
     dc.execute("CREATE TABLE %s (%s)" % (table, ','.join(cols)))
     ins = 'INSERT INTO %s (%s) VALUES (%s)' % (table, ','.join(cols), ','.join(['?'] * len(cols)))
 
-    rows = list(sc.fetchall())
-    dc.executemany(ins, rows)
+    dc.executemany(ins, sc.fetchall())
 
     dest.commit()
 

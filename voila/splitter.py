@@ -109,7 +109,9 @@ def splitter():
     manager = Manager()
     q = manager.Queue()
 
-    p = Pool(config.nproc)
+    pool = Pool(config.nproc)
+
+
     work_size = 0
 
     for i, partial_gene_ids in enumerate(split_gene_ids(config.num_divisions), start=1):
@@ -117,12 +119,12 @@ def splitter():
         os.makedirs(part_dir, exist_ok=True)
 
         output_path = os.path.join(part_dir, os.path.basename(config.splice_graph_file))
-        pool = p.apply_async(filter_splicegraph, [(partial_gene_ids, output_path, q)])
+        pool.apply_async(filter_splicegraph, [(partial_gene_ids, output_path, q)])
         work_size += 1
 
         for voila_file in config.voila_files:
             output_path = os.path.join(part_dir, os.path.basename(voila_file))
-            pool = p.apply_async(filter_voila_file, [(voila_file, partial_gene_ids, output_path, q)])
+            pool.apply_async(filter_voila_file, [(voila_file, partial_gene_ids, output_path, q)])
             work_size += 1
 
 
@@ -132,15 +134,14 @@ def splitter():
     # monitor loop
     while True:
 
-        if pool.ready():
+        size = q.qsize()
+        print('Running split [%d/%d]\r' % (size, work_size), end="")
+        time.sleep(1)
+        if size == work_size:
             break
-        else:
-            size = q.qsize()
-            print('Running split [%d/%d]\r' % (size, work_size), end="")
-            time.sleep(1)
 
     #print('                                                  \r', end="")
-    pool.get()
+
 
 
 
