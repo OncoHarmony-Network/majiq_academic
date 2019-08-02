@@ -210,7 +210,7 @@ def write(args):
         raise FoundMoreThanOneVoilaFile()
 
     # attributes that don't need to be in the ini file
-    for remove_key in ['files', 'func', 'logger', 'splice_graph_only']:
+    for remove_key in ['files', 'func', 'logger']:
         try:
             del attrs[remove_key]
         except KeyError:

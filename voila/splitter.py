@@ -116,14 +116,16 @@ def splitter():
         part_dir = os.path.join(config.directory, str(i))
         os.makedirs(part_dir, exist_ok=True)
 
+        output_path = os.path.join(part_dir, os.path.basename(config.splice_graph_file))
+        pool = p.apply_async(filter_splicegraph, [(partial_gene_ids, output_path, q)])
+        work_size += 1
+
         for voila_file in config.voila_files:
             output_path = os.path.join(part_dir, os.path.basename(voila_file))
             pool = p.apply_async(filter_voila_file, [(voila_file, partial_gene_ids, output_path, q)])
             work_size += 1
 
-        output_path = os.path.join(part_dir, os.path.basename(config.splice_graph_file))
-        pool = p.apply_async(filter_splicegraph, [(partial_gene_ids, output_path, q)])
-        work_size += 1
+
 
     log.info('output %d files' % work_size)
 
