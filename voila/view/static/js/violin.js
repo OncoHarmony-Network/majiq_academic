@@ -75,7 +75,7 @@ function draw_pairwise_plot(main_svg){
                 }else{
                     var exp = 4;
                     var stars = '*';
-                    while(true){
+                    while(stars !== '***'){
                         stars = stars + '*';
                         exp += 1;
                         if(comp_val > (1/(10 ** exp))){
@@ -84,6 +84,7 @@ function draw_pairwise_plot(main_svg){
                             return "Overflow!";
                         }
                     }
+                    return stars;
                 }
             }
         }

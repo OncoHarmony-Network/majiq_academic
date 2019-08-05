@@ -32,7 +32,17 @@
     <div class="heatmap-form pure-form pure-form-aligned" style="float: right; margin-right: 10px;">
     <div id="heatmap-stat-choices">
         {% for stat_name in stat_names %}
-            <label for="{{ stat_name }}" class="pure-radio">
+            <label for="{{ stat_name }}" class="pure-radio"
+            {% if stat_name == "TNOM" %}
+                title="A rank order statistic. It computes the  lowest Total Number Of Mistakes (TNOM) when setting a threshold over the observed values (PSI) to separate two classes. Given the number of observed values in each class this score can then be translated efficiently to a p-value under a random ordering null hypothesis."
+            {% elif stat_name == "INFOSCORE" %}
+                title="A rank order statistic. Computes the highest mutual information between two class labels and a classification based on a threshold for the observed values (PSI). This score is then translated to a matching p-value under a null of random ordering."
+            {% elif stat_name == "WILCOXON" %}
+                title="The standard ran based statistic where the ranks of observed values (PSI) from each group are summed and compared."
+            {% elif stat_name == "TTEST" %}
+                title="Standard  t-test for whether the mean of the values (PSI) in each group are the same."
+            {% endif %}
+            >
                 <input id="{{ stat_name }}" type="radio" name="stat-name" value="{{ stat_name }}"
                        {% if loop.first %}checked{% endif %}>
                 {{ stat_name }}</label>
@@ -197,6 +207,23 @@
 
                     highlight_lsvs();
                 }));
+
+            $('.lsv-table tbody').on('mouseenter', 'tr', function(){
+                const hl_data = [[$(this).closest('.lsv-table').data('lsv-id'), true, false]];
+                const junc_coords = $(this).children().eq(0).text().split('-').map(function (x){return parseInt(x, 10)});
+                send_ajax('{{ url_for("lsv_highlight") }}', hl_data).then(lsvs => {
+                    $.each(lsvs, function(i, v){
+                        lsvs[i]['junctions'] = lsvs[i]['junctions'].filter(function(junc){return junc[0] === junc_coords[0] && junc[1] === junc_coords[1]});
+                        if (!(lsvs[i]['intron_retention'][0] === junc_coords[0] && lsvs[i]['intron_retention'][1] === junc_coords[1])){
+                            lsvs[i]['intron_retention'] = [];
+                        }
+                    });
+                    sgs.highlight(lsvs);
+                })
+            }).on('mouseleave', 'tr', function(){
+                highlight_lsvs();
+            });
+
         });
 
         document.querySelectorAll('.lsv-cartoon').forEach(async function (c) {
@@ -207,6 +234,8 @@
                     lsv.cartoon(c)
                 })
         });
+
+
 
         new MutationObserver(mutations => {
             mutations
