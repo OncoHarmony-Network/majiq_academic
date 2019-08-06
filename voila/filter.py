@@ -47,20 +47,30 @@ def open_db(db_file_path):
     # conn.row_factory = sqlite3.Row
     return conn
 
+
+def divide_chunks(l, n):
+    # read from list and return chunks of length n
+    for i in range(0, len(l), n):
+        yield l[i:i + n]
+
 def copy_table(table, src, dest, gene_ids=None, gene_ids_colname=None):
     if gene_ids and gene_ids_colname:
-        format_strings = ','.join(['?'] * len(gene_ids))
-        sc = src.execute('SELECT * FROM %s WHERE %s in (%s)' % (table, gene_ids_colname, format_strings),
-                         tuple(gene_ids))
+        scs = []
+        for gene_ids_chunk in divide_chunks(gene_ids, 999):
+            format_strings = ','.join(['?'] * len(gene_ids_chunk))
+            scs.append(src.execute('SELECT * FROM %s WHERE %s in (%s)' % (table, gene_ids_colname, format_strings),
+                             tuple(gene_ids_chunk)))
     else:
-        sc = src.execute('SELECT * FROM %s' % table)
+        scs = [src.execute('SELECT * FROM %s' % table)]
     dc = dest.cursor()
 
-    cols = [description[0] for description in sc.description]
-    dc.execute("CREATE TABLE %s (%s)" % (table, ','.join(cols)))
-    ins = 'INSERT INTO %s (%s) VALUES (%s)' % (table, ','.join(cols), ','.join(['?'] * len(cols)))
-
-    dc.executemany(ins, sc.fetchall())
+    cols = None
+    for i, sc in enumerate(scs):
+        if i == 0:
+            cols = [description[0] for description in sc.description]
+            dc.execute("CREATE TABLE %s (%s)" % (table, ','.join(cols)))
+        ins = 'INSERT INTO %s (%s) VALUES (%s)' % (table, ','.join(cols), ','.join(['?'] * len(cols)))
+        dc.executemany(ins, sc.fetchall())
 
     dest.commit()
 
