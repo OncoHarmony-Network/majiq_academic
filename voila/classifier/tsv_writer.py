@@ -8,13 +8,11 @@ from voila.api import view_matrix
 from collections import OrderedDict
 from voila.config import ClassifyConfig
 import multiprocessing
+from voila.classifier.quantification_finder import QuantificationWriter
 import numpy as np
 from voila.vlsv import get_expected_psi, matrix_area
 from itertools import combinations
 from operator import itemgetter
-
-def semicolon(value_list):
-    return ';'.join(str(x) for x in value_list)
 
 
 summaryVars2Headers = {
@@ -38,7 +36,7 @@ summaryVars2Headers = {
     'exitron': 'Exitron',
 }
 
-class TsvWriter:
+class BaseTsvWriter(QuantificationWriter):
     """
     Output AS data from one gene
     """
@@ -49,20 +47,81 @@ class TsvWriter:
         :param output_path: The folder where all output TSV files will be written under
         :param graph: the Graph object of the gene
         """
+        super().__init__()
 
-        self.config = ClassifyConfig()
         self.common_headers = ['Module ID', 'Gene ID', 'Gene Name', 'Chr', 'Strand']
-        if self.config.output_complex:
-            self.common_headers.append('Complex')
-        self.common_headers.append('LSV ID(s)')
+
         self.graph = graph
         self.gene_id = gene_id
 
-        self.quantifications_int = self.quantification_intersection()
+
         self.pid = multiprocessing.current_process().pid
 
         self.heatmap_cache = {}
 
+
+
+    @property
+    def quantification_headers(self):
+        return list(self.quantifications_int.keys())
+
+    @staticmethod
+    def tsv_names():
+        return []
+
+    @classmethod
+    def delete_tsvs(cls):
+        for tsv_file in cls.tsv_names():
+            config = ClassifyConfig()
+            path = os.path.join(config.directory, tsv_file)
+            if os.path.exists(path):
+                os.remove(path)
+
+    def common_data(self, module, parity=None, edge=None, node=None):
+        """
+        Extract the certain cols from the CSV which are generally similar across all outputs,
+
+        """
+        lsvs = self.parity2lsv(module, parity, edge, node)
+
+        out = ["%s_%d" % (self.gene_id, module.idx), self.gene_id, self.graph.gene_name,
+               self.graph.chromosome, self.graph.strand]
+
+        if self.config.output_complex:
+            out.append(str(module.is_complex))
+        out.append(self.semicolon(lsvs))
+        return out
+
+
+    def start_headers(self, headers, filename):
+        """
+        Start a tsv file with the required headers, only if it does not yet exist
+
+        """
+        if not os.path.exists(os.path.join(self.config.directory, filename)):
+            with open(os.path.join(self.config.directory, filename), 'w', newline='') as csvfile:
+                writer = csv.writer(csvfile, dialect='excel-tab', delimiter='\t')
+                writer.writerow(headers)
+
+    def _collapsed_event_name(self, counts):
+        """
+        function to generate the collapsed event name from event counts
+        """
+        out = []
+        for count in counts:
+            if counts[count]:
+                out.append("%sx%d" % (summaryVars2Headers[count], counts[count]))
+        return '_'.join(out)
+
+
+class TsvWriter(BaseTsvWriter):
+
+    def __init__(self, graph, gene_id):
+        super().__init__(graph, gene_id)
+
+        if self.config.output_complex:
+            self.common_headers.append('Complex')
+        self.common_headers.append('LSV ID(s)')
 
         # we could do some crazy thing to yield to all of the different output types at once (across each method)
         # (in order to save memory) But for now we just save modules in a list. Will ammend later if memory use
@@ -73,259 +132,7 @@ class TsvWriter:
             # self.as_types = {x.idx: x.as_types() for x in self.modules}
             self.as_types = {x.idx: x.as_types() for x in self.modules}
 
-    def quantification_intersection(self):
-        """
-        Look at all psi and dpsi quant headers and find the appropriate intersection
-        we need to then define which function should be called for each resulting column
 
-        This is likely a very confusing section so what is going on requires some context.
-
-        Basically, for each combination group name + stat, we only want to show one column for it in the TSV
-        However, when looking at all files, we may come across it twice. In order to determine if we have
-        the information for it in a specific voila file, we need to follow a specific algoruthm to get the data from
-        the voila file in the first place.
-
-        So, we loop over all possible voila files associated with that stat, and once we find a valid value, we
-        return it.
-
-        The bottom half of this function loops over all voila files to build up a list of stats keys to the functions
-        that will be run for each event to get the required ddata for that event. (all of the "_" functions inside
-        this function, return functions)
-
-        This is an efficiency compromise, because we can build the list of functions once for a gene, and only need
-        to open and read the voila files again when the quantification function is called.
-
-        :return:
-        """
-        SIG_FIGS = 3
-
-        def _filter_edges(edge, lsv):
-            if type(edge) != list:
-                edge = [edge]
-            for _edge in edge:
-                # loop through junctions to find one matching range of edge
-                try:
-                    for j, junc in enumerate(lsv.get('junctions')):
-                        if junc[0] == _edge.start and junc[1] == _edge.end:
-                            return j
-                    else:
-                        # junction not quantified by majiq
-                        pass
-                except:
-                    pass
-
-        def _inner_edge_aggregate(lsv, all_quants, edge):
-            if edge:
-                edges = [edge] if not type(edge) is list else edge
-                vals = []
-                for _edge in edges:
-                    edge_idx = _filter_edges(_edge, lsv)
-                    if edge_idx is None:
-                        continue
-                    else:
-                        vals.append(round(all_quants[edge_idx], SIG_FIGS))
-                return semicolon(vals)
-            else:
-                return semicolon(round(x, SIG_FIGS) for x in all_quants)
-
-        def _psi_psi(voila_files):
-            def f(lsv_id, edge=None):
-                for voila_file in voila_files:
-                    with Matrix(voila_file) as m:
-                        lsv = m.psi(lsv_id)
-                        return _inner_edge_aggregate(lsv, lsv.get('means'), edge)
-                return ''
-            return f
-
-        def _psi_var(voila_files):
-            def f(lsv_id, edge=None):
-                for voila_file in voila_files:
-                    with Matrix(voila_file) as m:
-                        lsv = m.psi(lsv_id)
-                        return _inner_edge_aggregate(lsv, generate_variances([lsv.get('bins')][0]), edge)
-                return ''
-            return f
-
-        def _het_psi(voila_files, group_idx):
-            def f(lsv_id, edge=None):
-                for voila_file in voila_files:
-                    with Matrix(voila_file) as m:
-                        lsv = m.heterogen(lsv_id)
-                        return _inner_edge_aggregate(lsv, [get_expected_psi(x) for x in np.array(list(lsv.get('mean_psi'))).transpose((1, 0, 2))[group_idx]], edge)
-                return ''
-            return f
-
-        def _het_dpsi(voila_files, group_idx1, group_idx2):
-            def f(lsv_id, edge=None):
-                for voila_file in voila_files:
-                    with Matrix(voila_file) as m:
-                        # for this one the _inner_edge_aggregate is not general enough - I had to do it manually
-                        lsv = m.heterogen(lsv_id)
-                        if edge:
-                            edges = [edge] if not type(edge) is list else edge
-                            vals = []
-
-                            for _edge in edges:
-                                edge_idx = _filter_edges(_edge, lsv)
-                                if edge_idx is None:
-                                    continue
-                                else:
-                                    arr = np.array(list(lsv.get('mean_psi'))).transpose((1, 0, 2))
-                                    psi_g1 = get_expected_psi(arr[group_idx1][edge_idx])
-                                    psi_g2 = get_expected_psi(arr[group_idx2][edge_idx])
-                                    vals.append(round(psi_g1-psi_g2, SIG_FIGS))
-                            return semicolon(vals)
-                        else:
-                            group_means = []
-                            arr = np.array(list(lsv.get('mean_psi'))).transpose((1, 0, 2))
-                            psis_g1 = arr[group_idx1]
-                            psis_g2 = arr[group_idx2]
-                            for psi_g1, psi_g2 in zip(psis_g1, psis_g2):
-                                group_means.append(get_expected_psi(psi_g1) - get_expected_psi(psi_g2))
-                            return (round(x, SIG_FIGS) for x in group_means)
-                return ''
-            return f
-
-        def _dpsi_psi(voila_files, group_idx):
-            def f(lsv_id, edge=None):
-                for voila_file in voila_files:
-                    with Matrix(voila_file) as m:
-                        lsv = m.delta_psi(lsv_id)
-                        return _inner_edge_aggregate(lsv, lsv.get('group_means')[group_idx], edge)
-                return ''
-            return f
-
-        def _dpsi_dpsi(voila_files):
-            def f(lsv_id, edge=None):
-                for voila_file in voila_files:
-                    with view_matrix.ViewDeltaPsi(voila_file) as m:
-                        # for this one the _inner_edge_aggregate is not general enough - I had to do it manually
-                        lsv = m.lsv(lsv_id)
-                        bins = lsv.get('group_bins')
-
-                        if edge:
-                            edges = [edge] if not type(edge) is list else edge
-                            vals = []
-                            for _edge in edges:
-                                edge_idx = _filter_edges(_edge, lsv)
-                                if edge_idx is None:
-                                    continue
-                                else:
-                                    vals.append(round(lsv.excl_incl[edge_idx][1] - lsv.excl_incl[edge_idx][0], SIG_FIGS))
-                            return semicolon(vals)
-                        else:
-                            return (
-                                        round(x, SIG_FIGS) for x in ((lsv.excl_incl[i][1] - lsv.excl_incl[i][0] for i in
-                                        range(np.size(bins, 0))))
-                                    )
-                return ''
-            return f
-
-        def _dpsi_p_change(voila_files):
-            def f(lsv_id, edge=None):
-                for voila_file in voila_files:
-                    with view_matrix.ViewDeltaPsi(voila_file) as m:
-                        # for this one the _inner_edge_aggregate is not general enough - I had to do it manually
-                        lsv = m.lsv(lsv_id)
-                        bins = lsv.bins
-                        if edge:
-                            edges = [edge] if not type(edge) is list else edge
-                            vals = []
-                            for _edge in edges:
-                                edge_idx = _filter_edges(_edge, lsv)
-                                if edge_idx is None:
-                                    continue
-                                else:
-                                    vals.append(round(matrix_area(bins[edge_idx], self.config.changing_threshold), SIG_FIGS))
-                            return semicolon(vals)
-                        else:
-                            return (
-                                        round(matrix_area(b, self.config.changing_threshold), SIG_FIGS) for b in bins
-                                    )
-                return ''
-            return f
-
-        def _dpsi_p_nonchange(voila_files):
-            def f(lsv_id, edge=None):
-                for voila_file in voila_files:
-                    with view_matrix.ViewDeltaPsi(voila_file) as m:
-                        lsv = m.lsv(lsv_id)
-                        return _inner_edge_aggregate(lsv, lsv.high_probability_non_changing(), edge)
-                return ''
-            return f
-
-        tmp = OrderedDict()
-        for voila_file in self.config.voila_files:
-
-            with Matrix(voila_file) as m:
-                analysis_type = m.analysis_type
-                group_names = m.group_names
-
-
-            if analysis_type == constants.ANALYSIS_PSI:
-                for group in group_names:
-                    for key in ("E(PSI)", "Var(E(PSI))",):
-                        header = "%s_%s" % (group, key)
-                        if header in tmp:
-                            tmp[header][1].append(voila_file)
-                        else:
-                            if key == "E(PSI)":
-                                tmp[header] = (_psi_psi, [voila_file])
-                            elif key == "Var(E(PSI))":
-                                tmp[header] = (_psi_var, [voila_file])
-
-
-            elif analysis_type == constants.ANALYSIS_HETEROGEN:
-
-                group_idxs = {}
-                for i, group in enumerate(group_names):
-                    group_idxs[group] = i
-                    for key in ("E(PSI)",):
-                        header = "%s_HET_%s" % (group, key)
-                        if header in tmp:
-                            tmp[header][1].append(voila_file)
-                        else:
-                            if key == "E(PSI)":
-                                tmp[header] = (_het_psi, [voila_file], i)
-
-                for group1, group2 in combinations(group_names, 2):
-                    for key in ("E(dPSI)",):
-                        header = "%s-%s_HET_%s" % (group1, group2, key)
-                        if header in tmp:
-                            tmp[header][1].append(voila_file)
-                        else:
-                            if key == "E(dPSI)":
-                                tmp[header] = (_het_dpsi, [voila_file], group_idxs[group1], group_idxs[group2])
-
-            else:
-                for i, group in enumerate(group_names):
-                    for key in ("E(PSI)",):
-                        header = "%s_%s" % (group, key)
-                        if header in tmp:
-                            tmp[header][1].append(voila_file)
-                        else:
-                            if key == "E(PSI)":
-                                tmp[header] = (_dpsi_psi, [voila_file], i)
-
-                changing_thresh_key = "P(|dPSI|>=%.2f)" % self.config.changing_threshold
-                non_changing_thresh_key = "P(|dPSI|<=%.2f)" % self.config.non_changing_threshold
-                for key in ("E(dPSI)", changing_thresh_key, non_changing_thresh_key):
-                    header = "%s_%s" % ('-'.join(group_names), key)
-                    if header in tmp:
-                        tmp[header][1].append(voila_file)
-                    else:
-                        if key == "E(dPSI)":
-                            tmp[header] = (_dpsi_dpsi, [voila_file])
-                        elif key == changing_thresh_key:
-                            tmp[header] = (_dpsi_p_change, [voila_file])
-                        elif key == non_changing_thresh_key:
-                            tmp[header] = (_dpsi_p_nonchange, [voila_file])
-
-        return tmp
-
-    @property
-    def quantification_headers(self):
-        return list(self.quantifications_int.keys())
 
 
     @staticmethod
@@ -341,92 +148,9 @@ class TsvWriter:
             names.append('constitutive.tsv')
         return names
 
-    @staticmethod
-    def delete_tsvs():
-        for tsv_file in TsvWriter.tsv_names():
-            config = ClassifyConfig()
-            path = os.path.join(config.directory, tsv_file)
-            if os.path.exists(path):
-                os.remove(path)
-
-    def parity2lsv(self, module, parity, edge=None, node=None):
-
-        if parity == 's':
-            lsvs = module.source_lsv_ids
-            if edge or node:
-                if not node:
-                    node = self.graph.start_node(edge)
-                lsvs = set(filter(lambda lsv: lsv.endswith(node.untrimmed_range_str()), lsvs))
-
-        elif parity == 't':
-            lsvs = module.target_lsv_ids
-            if edge or node:
-                if not node:
-                    node = self.graph.end_node(edge)
-                lsvs = set(filter(lambda lsv: lsv.endswith(node.untrimmed_range_str()), lsvs))
-        else:
-            lsvs = module.target_lsv_ids.union(module.source_lsv_ids)
-        return lsvs
-
-    def common_data(self, module, parity=None, edge=None, node=None):
-        """
-        Extract the certain cols from the CSV which are generally similar across all outputs,
-
-        """
-        lsvs = self.parity2lsv(module, parity, edge, node)
-
-        out = ["%s_%d" % (self.gene_id, module.idx), self.gene_id, self.graph.gene_name,
-               self.graph.chromosome, self.graph.strand]
-
-        if self.config.output_complex:
-            out.append(str(module.is_complex))
-        out.append(semicolon(lsvs))
-        return out
-
-    def quantifications(self, module, parity=None, edge=None, node=None):
-        """
-        Edge / Parity is used to find LSVs
-        Node is used to filter lsvs to specific node (the node that has THAT lsv)
-        :return:
-        """
-
-        lsvs = self.parity2lsv(module, parity, node=node)
-
-        out = []
-        for field in self.quantifications_int:
-            quantification_vals = []
-            for lsv_id in lsvs:
-                try:
-
-                    #print(self.quantifications_int[field](lsv_id, edge))
-                    quantification_vals.append(self.quantifications_int[field][0](*self.quantifications_int[field][1:])(lsv_id, edge))
-                except (GeneIdNotFoundInVoilaFile, LsvIdNotFoundInVoilaFile) as e:
-                    quantification_vals.append('')
-                    #print(e)
-
-            out.append(semicolon(quantification_vals))
-
-
-        return out
-
-
-    def start_headers(self, headers, filename):
-        """
-        Start a tsv file with the required headers, only if it does not yet exist
-
-        """
-        if not os.path.exists(os.path.join(self.config.directory, filename)):
-            with open(os.path.join(self.config.directory, filename), 'w', newline='') as csvfile:
-                writer = csv.writer(csvfile, dialect='excel-tab', delimiter='\t')
-                writer.writerow(headers)
 
     def start_all_headers(self):
 
-        if self.config.putative_multi_gene_regions:
-            headers = ['Gene ID_Region', 'Gene ID', 'Gene Name', 'Chr', 'Strand', 'First Exon Start coord',
-                       'First Exon End coord', 'Last Exon Start coord', "Last Exon End coord"]
-            self.start_headers(headers, 'p_multi_gene_region.tsv')
-            return
 
         headers = self.common_headers + ['Reference Exon Coordinate', 'Exon Spliced With',
                                          'Exon Spliced With Coordinate', 'Junction Name',
@@ -470,6 +194,7 @@ class TsvWriter:
 
         headers = self.common_headers + ['Collapsed Event Name'] + self.quantification_headers
         self.start_headers(headers, 'heatmap.tsv')
+
 
     def cassette(self):
         with open(os.path.join(self.config.directory, 'cassette.tsv.%s' % self.pid), 'a', newline='') as csvfile:
@@ -883,7 +608,7 @@ class TsvWriter:
                                        event['Intron'].range_str()]
                                 writer.writerow(trg_common + row + self.quantifications(module, 't', event['Intron']))
                                 row = [event['C2'].range_str(), 'C1', event['C1'].range_str(), 'C2_C1_spliced',
-                                       semicolon((x.range_str() for x in event['Spliced']))]
+                                       self.semicolon((x.range_str() for x in event['Spliced']))]
                                 writer.writerow(trg_common + row + self.quantifications(module, 't', event['Spliced']))
 
 
@@ -893,7 +618,7 @@ class TsvWriter:
                                        event['Intron'].range_str()]
                                 writer.writerow(src_common + row + self.quantifications(module, 's', event['Intron']))
                                 row = [event['C1'].range_str(), 'C2', event['C2'].range_str(), 'C1_C2_spliced',
-                                       semicolon((x.range_str() for x in event['Spliced']))]
+                                       self.semicolon((x.range_str() for x in event['Spliced']))]
                                 writer.writerow(src_common + row + self.quantifications(module, 's', event['Spliced']))
 
 
@@ -925,20 +650,20 @@ class TsvWriter:
                             src_common = self.common_data(module, 's')
                             trg_common = self.common_data(module, 't')
                             row = [event['C1'].range_str(), 'C2', event['C2'].range_str(),
-                                   semicolon((x.range_str() for x in event['As'])), len(event['As']), 'C1_C2',
-                                   semicolon((x.range_str() for x in event['Skip']))]
+                                   self.semicolon((x.range_str() for x in event['As'])), len(event['As']), 'C1_C2',
+                                   self.semicolon((x.range_str() for x in event['Skip']))]
                             writer.writerow(src_common + row + self.quantifications(module, 's'))
                             row = [event['C1'].range_str(), 'A1', event['As'][0].range_str(),
-                                   semicolon((x.range_str() for x in event['As'])), len(event['As']), 'C1_A',
-                                   semicolon((x.range_str() for x in event['Include1']))]
+                                   self.semicolon((x.range_str() for x in event['As'])), len(event['As']), 'C1_A',
+                                   self.semicolon((x.range_str() for x in event['Include1']))]
                             writer.writerow(src_common + row + self.quantifications(module, 's')), event['C1']
                             row = [event['C2'].range_str(), 'C1', event['C1'].range_str(),
-                                   semicolon((x.range_str() for x in event['As'])), len(event['As']), 'C2_C1',
-                                   semicolon((x.range_str() for x in event['Skip']))]
+                                   self.semicolon((x.range_str() for x in event['As'])), len(event['As']), 'C2_C1',
+                                   self.semicolon((x.range_str() for x in event['Skip']))]
                             writer.writerow(trg_common + row + self.quantifications(module, 't'))
                             row = [event['C2'].range_str(), 'A_Last', '',
-                                   semicolon((x.range_str() for x in event['As'])), len(event['As']), 'A_Last_C2',
-                                   semicolon((x.range_str() for x in event['Include2']))]
+                                   self.semicolon((x.range_str() for x in event['As'])), len(event['As']), 'A_Last_C2',
+                                   self.semicolon((x.range_str() for x in event['Include2']))]
                             writer.writerow(trg_common + row + self.quantifications(module, 't'))
 
     def tandem_cassette(self):
@@ -952,20 +677,20 @@ class TsvWriter:
                             src_common = self.common_data(module, 's', node=event['C1'])
                             trg_common = self.common_data(module, 't', node=event['C2'])
                             row = [event['C1'].range_str(), 'C2', event['C2'].range_str(),
-                                   semicolon((x.range_str() for x in event['As'])), len(event['As']), 'C1_C2',
-                                   semicolon((x.range_str() for x in event['Skip']))]
+                                   self.semicolon((x.range_str() for x in event['As'])), len(event['As']), 'C1_C2',
+                                   self.semicolon((x.range_str() for x in event['Skip']))]
                             writer.writerow(src_common + row + self.quantifications(module, 's', event['Skip'][0], event['C1']))
                             row = [event['C1'].range_str(), 'A1', event['As'][0].range_str(),
-                                   semicolon((x.range_str() for x in event['As'])), len(event['As']), 'C1_A',
-                                   semicolon((x.range_str() for x in event['Include1']))]
+                                   self.semicolon((x.range_str() for x in event['As'])), len(event['As']), 'C1_A',
+                                   self.semicolon((x.range_str() for x in event['Include1']))]
                             writer.writerow(src_common + row + self.quantifications(module, 's', event['Include1'][0], event['C1']))
                             row = [event['C2'].range_str(), 'C1', event['C1'].range_str(),
-                                   semicolon((x.range_str() for x in event['As'])), len(event['As']), 'C2_C1',
-                                   semicolon((x.range_str() for x in event['Skip']))]
+                                   self.semicolon((x.range_str() for x in event['As'])), len(event['As']), 'C2_C1',
+                                   self.semicolon((x.range_str() for x in event['Skip']))]
                             writer.writerow(trg_common + row + self.quantifications(module, 't', event['Skip'][0], event['C2']))
                             row = [event['C2'].range_str(), 'A_Last', event['As'][-1].range_str(),
-                                   semicolon((x.range_str() for x in event['As'])), len(event['As']), 'A_Last_C2',
-                                   semicolon((x.range_str() for x in event['Include2']))]
+                                   self.semicolon((x.range_str() for x in event['As'])), len(event['As']), 'A_Last_C2',
+                                   self.semicolon((x.range_str() for x in event['Include2']))]
                             writer.writerow(trg_common + row + self.quantifications(module, 't', event['Include2'][0], event['C2']))
 
                             if True:
@@ -1098,18 +823,10 @@ class TsvWriter:
 
                 writer.writerow(["%s_%d" % (self.gene_id, module.idx),
                                  self.gene_id, self.graph.gene_name, self.graph.chromosome, self.graph.strand,
-                                 semicolon(module.target_lsv_ids.union(module.source_lsv_ids))] +
+                                 self.semicolon(module.target_lsv_ids.union(module.source_lsv_ids))] +
                                 [v if v else '' for v in counts.values()] + [str(_complex), str(_total_events),
                                                                              module.collapsed_event_name]
                                 )
 
-    def _collapsed_event_name(self, counts):
-        """
-        function to generate the collapsed event name from event counts
-        """
-        out = []
-        for count in counts:
-            if counts[count]:
-                out.append("%sx%d" % (summaryVars2Headers[count], counts[count]))
-        return '_'.join(out)
+
 

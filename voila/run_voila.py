@@ -164,6 +164,8 @@ classify_parser.add_argument('--keep-no-lsvs', action='store_true',
 classify_parser.add_argument('--putative-multi-gene-regions', action='store_true',
                          help='Only output a single TSV file describing regions found in inputs with complete breaks '
                               'in the gene (no junctions connecting at all). Implies "--keep-constitutive"')
+classify_parser.add_argument('--output-training-data', action='store_true',
+                         help='Normal file outputs are suppressed, instead three files of training data are output.')
 classify_parser.add_argument('--output-complex', action='store_true',
                          help='Complex module data is dumped to all output TSVs, not only summary')
 classify_parser.add_argument('--untrimmed-exons', action='store_true',

@@ -5,6 +5,7 @@ from voila.exceptions import VoilaException, UnknownAnalysisType, UnsupportedAna
 from voila.api import SpliceGraph, Matrix
 from voila.classifier.as_types import Graph
 from voila.classifier.tsv_writer import TsvWriter
+from voila.classifier.training_writer import TrainingWriter
 from math import ceil
 import time
 import os, sys
@@ -12,6 +13,7 @@ from multiprocessing import Manager, Pool
 import glob
 import traceback
 from itertools import islice
+
 
 class Classify:
     def __init__(self):
@@ -62,40 +64,51 @@ def classify_gene(args):
     try:
         graph = Graph(gene_id, experiment_names)
 
-        writer = TsvWriter(graph, gene_id)
+
+        if not config.output_training_data:
+
+            writer = TsvWriter(graph, gene_id)
 
 
-        if config.putative_multi_gene_regions:
-            writer.p_multi_gene_region()
+            if config.putative_multi_gene_regions:
+                writer.p_multi_gene_region()
+
+            else:
+                writer.cassette()
+
+                writer.alt3prime()
+                writer.alt5prime()
+                writer.alt3and5prime()
+
+                writer.p_alt3prime()
+                writer.p_alt5prime()
+
+                writer.mutually_exclusive()
+                writer.alternative_intron()
+
+                writer.alternate_first_exon()
+                writer.alternate_last_exon()
+                writer.p_alternate_first_exon()
+                writer.p_alternate_last_exon()
+
+                writer.multi_exon_spanning()
+                writer.tandem_cassette()
+                writer.exitron()
+
+                writer.summary()
+
+                writer.heatmap()
+
+                if ClassifyConfig().keep_constitutive:
+                    writer.constitutive()
 
         else:
-            writer.cassette()
+            writer = TrainingWriter(graph, gene_id)
+            writer.adjacency_matrix()
+            writer.exons_tsv()
+            writer.junctions_tsv()
 
-            writer.alt3prime()
-            writer.alt5prime()
-            writer.alt3and5prime()
 
-            writer.p_alt3prime()
-            writer.p_alt5prime()
-
-            writer.mutually_exclusive()
-            writer.alternative_intron()
-
-            writer.alternate_first_exon()
-            writer.alternate_last_exon()
-            writer.p_alternate_first_exon()
-            writer.p_alternate_last_exon()
-
-            writer.multi_exon_spanning()
-            writer.tandem_cassette()
-            writer.exitron()
-
-            writer.summary()
-
-            writer.heatmap()
-
-            if ClassifyConfig().keep_constitutive:
-                writer.constitutive()
     except KeyboardInterrupt:
         raise
 
@@ -152,7 +165,14 @@ def run_classifier():
     voila_log().info("Writing TSVs to %s" % os.path.abspath(config.directory))
 
     #total_genes = len(gene_ids)
-    TsvWriter.delete_tsvs()
+    if not config.output_training_data:
+        writerClass = TsvWriter
+    else:
+        writerClass = TrainingWriter
+        TrainingWriter.delete_tsvs()
+
+    writerClass.delete_tsvs()
+
     work_size = len(gene_ids)
 
     if config.debug:
@@ -195,10 +215,11 @@ def run_classifier():
 
     voila_log().info("Concatenating Results")
 
-    writer = TsvWriter(None, None)
+
+    writer = writerClass(None, None)
     writer.start_all_headers()
 
-    for _tsv in TsvWriter.tsv_names():
+    for _tsv in writerClass.tsv_names():
         read_files = glob.glob(os.path.join(config.directory, _tsv) + ".*")
         with open(os.path.join(config.directory, _tsv), "rb") as outfile:
             headers = outfile.read()
@@ -208,6 +229,12 @@ def run_classifier():
                 with open(f, "rb") as infile:
                     outfile.write(infile.read())
                 os.remove(f)
+
+    if config.output_training_data:
+        read_files = glob.glob(os.path.join(config.directory, 'adjacency_matrix.hdf5') + ".*")
+        writer.combine_hdf5s(read_files)
+
+
 
     voila_log().info("Classification Complete")
 

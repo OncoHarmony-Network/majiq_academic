@@ -323,6 +323,7 @@ class Graph:
             junc['end'] += 1
 
         edge = self.Edge(junc, ir)
+        edge.idx = len(self.edges)+1
 
         #start_node = self.start_node(edge)
         end_node = self.end_node(edge)
@@ -339,8 +340,9 @@ class Graph:
         :param exon: exon dictionary from splice graph
         :return: None
         """
-
-        self.nodes.append(self.Node(exon))
+        node = self.Node(exon)
+        node.idx = len(self.nodes)+1
+        self.nodes.append(node)
 
     def _find_connections(self):
         """
