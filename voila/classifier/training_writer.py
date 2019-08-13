@@ -1,3 +1,4 @@
+from voila.voila_log import voila_log
 from voila.config import ClassifyConfig
 import numpy as np
 import h5py
@@ -18,6 +19,7 @@ class TrainingWriter(BaseTsvWriter):
 
         self.config = ClassifyConfig()
         self.avg_multival = True
+        self.log = voila_log()
 
         self.graph = graph
         self.gene_id = gene_id
@@ -186,8 +188,10 @@ class TrainingWriter(BaseTsvWriter):
                             else:
                                 edges = ny.connects(nx)
 
-                            #print(edges)
-                            assert len(edges) <= 1
+                            # if len(edges) > 1:
+                            #     self.log.warning("For Gene id %s ; Found multiple edges between nodes: %s" %
+                            #                      (self.gene_id, str(edges)))
+
 
                             if filename == 'identity':
                                 mat[i][j] = 1 if edges else 0
@@ -264,6 +268,7 @@ class TrainingWriter(BaseTsvWriter):
                             for edge in n1.back_edges:
                                 new_edge = self.graph.Edge({'start':edge.start, 'end':edge.end})
                                 new_edge.node = dupe
+                                new_edge.lsvs = edge.lsvs
                                 #index = self.graph.edges.index(edge)
                                 #self.graph.edges.insert(index, edge)
                                 dupe.back_edges.append(edge)
@@ -305,7 +310,7 @@ class TrainingWriter(BaseTsvWriter):
                             dupe.back_edges = [junc]
                             for edge in n2.edges:
                                 new_edge = self.graph.Edge({'start':edge.start, 'end':edge.end})
-
+                                new_edge.lsvs = edge.lsvs
                                 #index = self.graph.edges.index(edge)
                                 #self.graph.edges.insert(index, edge)
                                 dupe.edges.append(new_edge)
