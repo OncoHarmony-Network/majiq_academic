@@ -94,6 +94,12 @@ class Graph:
         # find connections between nodes
         self._find_connections()
 
+
+
+
+
+
+
     class Node(Printable_Event):
         def __init__(self, exon):
             """
@@ -195,7 +201,6 @@ class Graph:
             :param only_ir: include ONLY IR edges and NOT standard junctions if true
             :return: boolean
             """
-
             edges = self.edges
             if filter:
                 edges = filter(edges)
@@ -213,6 +218,7 @@ class Graph:
                 if edge.node == node:
                     connected.append(edge)
             return connected
+
 
     class Edge(Printable_Event):
         def __init__(self, junc, ir=False):
@@ -323,7 +329,6 @@ class Graph:
             junc['end'] += 1
 
         edge = self.Edge(junc, ir)
-        edge.idx = len(self.edges)+1
 
         #start_node = self.start_node(edge)
         end_node = self.end_node(edge)
@@ -341,12 +346,12 @@ class Graph:
         :return: None
         """
         node = self.Node(exon)
-        node.idx = len(self.nodes)+1
+        node.idx = "%d_%d" % (exon['start'], exon['end'])
         self.nodes.append(node)
 
     def _find_connections(self):
         """
-        When this has completed, each exon should have a list of exons that start there.
+        When this has completed, each exon should have a list of exons that start/end there.
         :return: None
         """
 
@@ -503,15 +508,15 @@ class Graph:
                 if self.config.decomplexify_reads_threshold == 0 or self._enough_reads(
                         sg.junction_reads_exp(junc, self.experiment_names)):
                     self._add_junc(junc)
-            for ir in sg.intron_retentions(self.gene_id, omit_simplified=True):
-                if self.config.decomplexify_reads_threshold == 0 or self._enough_reads(
-                        sg.intron_retention_reads_exp(ir, self.experiment_names)):
-                    self._add_junc(ir, ir=True)
+            if not self.config.output_training_data:
+                for ir in sg.intron_retentions(self.gene_id, omit_simplified=True):
+                    if self.config.decomplexify_reads_threshold == 0 or self._enough_reads(
+                            sg.intron_retention_reads_exp(ir, self.experiment_names)):
+                        self._add_junc(ir, ir=True)
 
         # remove exons that don't have any junctions
         # this is done by looking at the start and end of each junction and seeing if any of those ends
         # fall inside of each node
-
 
         self._decomplexify()
         self._remove_empty_exons()
@@ -519,6 +524,14 @@ class Graph:
 
         self.edges.sort()
         self.nodes.sort()
+
+
+
+
+    def _clear_connections(self):
+        for node in self.nodes:
+            node.edges = []
+            node.back_edges = []
 
     def _trim_exons(self):
         """
@@ -951,6 +964,7 @@ class Graph:
                 connections = node.connects(n2, ir=ir)
                 if connections:
                     edges += connections
+
             return edges
 
         def get_num_edges(self, ir=False):

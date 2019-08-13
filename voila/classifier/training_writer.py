@@ -3,6 +3,8 @@ import numpy as np
 import h5py
 from voila.classifier.tsv_writer import BaseTsvWriter
 import os, csv
+from itertools import combinations
+import copy, glob
 
 class TrainingWriter(BaseTsvWriter):
 
@@ -15,12 +17,15 @@ class TrainingWriter(BaseTsvWriter):
         super().__init__(graph, gene_id)
 
         self.config = ClassifyConfig()
+        self.avg_multival = True
 
         self.graph = graph
         self.gene_id = gene_id
 
         if self.graph:
             self.modules = self.graph.modules()
+            self._split_exons()
+
 
     @staticmethod
     def tsv_names():
@@ -30,8 +35,8 @@ class TrainingWriter(BaseTsvWriter):
     @staticmethod
     def delete_hdf5s():
         config = ClassifyConfig()
-        path = os.path.join(config.directory, 'adjacency_matrix.hdf5')
-        if os.path.exists(path):
+        paths = glob.glob(config.directory + '/*.hdf5.*')
+        for path in paths:
             os.remove(path)
 
     def start_all_headers(self):
@@ -50,6 +55,14 @@ class TrainingWriter(BaseTsvWriter):
         self.start_headers(headers, 'junctions.tsv')
 
     def exons_tsv(self):
+        """
+        exons.list format:
+        Exon ID:  "gene_id"_"chr"_"strand"_"start"_"end".
+
+        If there are two exon entries (an exon has two 5' or 3' splice sites) ,
+         then the ID will have "gene_id"_"chr"_"strand"_"maximal-start"_"maximal-end"_1"
+          and "gene_id"_"chr"_"strand"_"maximal-start"_"maximal-end"_2"
+        """
         with open(os.path.join(self.config.directory, 'exons.tsv.%s' % self.pid), 'a', newline='') as csvfile:
             writer = csv.writer(csvfile, dialect='excel-tab', delimiter='\t')
 
@@ -61,39 +74,37 @@ class TrainingWriter(BaseTsvWriter):
                 rows = []
                 for i, node in enumerate(module.nodes):
 
-                    if i != len(module.nodes)-1:
-                        fwd_connections = [e for e in node.edges if not e.ir]
 
+
+                    if hasattr(node, 'num_times_split'):
+                        # should be the base node of a split, need to use extended ID
+                        node_id = "{gene_id}_{chr}_{strand}_{max_start}_{max_end}_{idx}".format(
+                            gene_id=self.gene_id,
+                            chr=self.graph.chromosome,
+                            strand=self.graph.strand,
+                            max_start=node.start,
+                            max_end=node.end,
+                            idx=1
+                        )
+                    elif hasattr(node, 'split_index'):
+                        # a shorter node made from a split, need to use extended ID
+                        node_id = "{gene_id}_{chr}_{strand}_{max_start}_{max_end}_{idx}".format(
+                            gene_id=self.gene_id,
+                            chr=self.graph.chromosome,
+                            strand=self.graph.strand,
+                            max_start=node.maximal_start,
+                            max_end=node.maximal_end,
+                            idx=node.split_index
+                        )
                     else:
-                        fwd_connections = []
-                    if i != 0:
-                        back_connections = [e for e in node.back_edges if not e.ir]
-
-                    else:
-                        back_connections = []
-
-                    # remove introns
-                    all_connections = []
-
-                    if fwd_connections:
-                        fwd_coords = set()
-                        for edge in fwd_connections:
-                            # we need to find all connections that do not share a start coord
-                            if not edge.start in fwd_coords:
-                                fwd_coords.add(edge.start)
-                                all_connections.append(edge)
-                    if back_connections:
-                        back_coords = set()
-                        for edge in back_connections:
-                            # we need to find all connections that do not share a start coord
-                            if not edge.end in back_coords:
-                                back_coords.add(edge.end)
-                                all_connections.append(edge)
-
-                    #tmp = []
-                    for j, edge in enumerate(all_connections, start=1):
-                        rows.append(common_data + ['%s.%s' % (node.idx,
-                                                              j), node.start, node.end])
+                        node_id = "{gene_id}_{chr}_{strand}_{start}_{end}".format(
+                            gene_id=self.gene_id,
+                            chr=self.graph.chromosome,
+                            strand=self.graph.strand,
+                            start=node.start,
+                            end=node.end
+                        )
+                    rows.append(common_data + [node_id, node.start, node.end])
 
                     # if module.graph.strand == '+':
                     #     rows = rows + tmp
@@ -113,6 +124,7 @@ class TrainingWriter(BaseTsvWriter):
                                self.graph.chromosome, self.graph.strand]
 
                 rows = []
+
                 for i, edge in enumerate(module.get_all_edges()):
 
                     # remove introns
@@ -121,51 +133,46 @@ class TrainingWriter(BaseTsvWriter):
 
                     n1 = self.graph.start_node(edge)
                     n2 = self.graph.end_node(edge)
+                    junc_id = "{gene_id}_{chr}_{strand}_{start}_{end}".format(
+                        gene_id=self.gene_id,
+                        chr=self.graph.chromosome,
+                        strand=self.graph.strand,
+                        start=edge.start,
+                        end=edge.end
+                    )
 
-                    rows.append(common_data + [edge.idx, edge.start, edge.end,
+                    rows.append(common_data + [junc_id, edge.start, edge.end,
                                          n1.idx, n1.start, n1.end,
                                          n2.idx, n2.start, n2.end])
 
                 writer.writerows(rows)
 
-    def _mat_identity(self, nx, ny):
-        if nx.connects(ny) or ny.connects(nx):
-            return 1
-        return 0
-
-    def _mat_psi1(self, nx, ny):
-        self.quantifications()
-        if nx.connects(ny) or ny.connects(nx):
-            return 1
-        return 0
-
-    def _mat_psi2(self, nx, ny):
-        if nx.connects(ny) or ny.connects(nx):
-            return 1
-        return 0
-
-    def _mat_dpsi(self, nx, ny):
-        if nx.connects(ny) or ny.connects(nx):
-            return 1
-        return 0
 
     def adjacency_matrix(self):
 
 
-        modules = self.graph.modules()
         #as_types = {x.idx: x.as_types() for x in modules}
 
 
 
         # print([x for x in modules[0].nodes])
         # print([x for x in modules[0].get_all_edges()])
+        files_to_create = ['identity']
+        for _type in self.types2headers:
+            if _type == 'psi':
+                for filename in self.types2headers[_type]:
+                    files_to_create.append(filename)
+            elif _type == 'dpsi':
+                for filename in self.types2headers[_type]:
+                    files_to_create.append(filename)
 
 
-        with h5py.File(os.path.join(self.config.directory, 'adjacency_matrix.hdf5.%s' % self.pid), "a") as hf:
+        for filename in files_to_create:
 
-            for mat_func in [(self._mat_identity, 'identity',)]:
+            with h5py.File(os.path.join(self.config.directory, '%s.hdf5.%s' % (filename, self.pid)), "a") as hf:
 
-                for module in modules:
+                for module in self.modules:
+
                     num_nodes = len(module.nodes)
 
                     mat = np.empty(shape=(num_nodes, num_nodes))
@@ -173,21 +180,148 @@ class TrainingWriter(BaseTsvWriter):
                     for i, ny in enumerate(module.nodes):
                         for j, nx in enumerate(module.nodes):
 
-                            mat[i][j] = mat_func[0](nx, ny)
+                            quants = None
+                            if i > j:
+                                edges = nx.connects(ny)
+                            else:
+                                edges = ny.connects(nx)
 
-                    hf.create_dataset('%s_%s/%s' % (self.gene_id, module.idx, mat_func[1]), data=mat)
+                            #print(edges)
+                            assert len(edges) <= 1
+
+                            if filename == 'identity':
+                                mat[i][j] = 1 if edges else 0
+                            else:
+                                if edges:
+                                    #quants = self.quantifications(module, edge=edges[0])
+                                    quant = self.edge_quant(module, edges[0], filename)
+                                    mat[i][j] = quant
+                                else:
+                                    mat[i][j] = 0
+
+                    dset = hf.create_dataset('%s_%s' % (self.gene_id, module.idx), data=mat)
+                    dset.attrs['exons'] = " ".join((n.idx for n in module.nodes))
 
 
-    def combine_hdf5s(self, file_paths):
-        with h5py.File(os.path.join(self.config.directory, 'adjacency_matrix.hdf5'), "w") as out_hf:
+    def combine_hdf5s(self, dest_path, file_paths):
+        with h5py.File(dest_path, "w") as out_hf:
             for hdf5_file in file_paths:
                 with h5py.File(hdf5_file, "r") as in_hf:
-
                     for gene_id in in_hf['/']:
                         #print(gene_id)
                         gene_id = gene_id.encode('utf-8')
                         h5py.h5o.copy(in_hf.id, gene_id, out_hf.id, gene_id)
                 os.remove(hdf5_file)
 
+    def _split_exons(self):
+        """
+        For training data, we need to make additional nodes for each time that there are two junctions
+        in different positions in one exon, basically, any not at the ends after trimming. (alt3/5 ish)
+        """
+        for module in self.modules:
+
+
+            # find non intronic edged that are not at the start or end of each exon (somewhere in the middle)
+            # for i, node in enumerate(self.nodes):
+            #     dupes_to_create = []
+            #     for edge in node.edges:
+            #         if not edge.ir and not edge.start == node.end:
+            #             dupes_to_create.append(edge)
+            #     for edge in node.back_edges:
+            #         if not edge.ir and not edge.end == node.start:
+            #             dupes_to_create.append(edge)
+            #
+            #     for new_exon in dupes_to_create:
+            #         # for each of the found edges, we need to remove all dupe edges
+            #         # clone the exon that many times, and add one of the dups junctions
+            #         # if it is a back junction, we need to remove the current back junction
+
+
+            for n1, n2 in combinations(module.nodes, 2):
+                # look for cases with multiple connections
+                fwd_connects = n1.connects(n2, ir=False)
+                if len(fwd_connects) > 1:
+                    # print(n1, n2)
+                    # for all connections not the outermost, clone the node, remove all connections except that one,
+                    # and trim the exon to it
+                    for junc in fwd_connects:
+                        if not junc.start == n1.end:
+                            #self._add_exon({'start': n1.start, 'end': junc.start})
+                            dupe = self.graph.Node({'start': n1.start, 'end': junc.start})
+
+                            if hasattr(n1, 'num_times_split'):
+                                n1.num_times_split += 1
+                            else:
+                                n1.num_times_split = 1
+                            dupe.split_index = n1.num_times_split + 1
+                            dupe.maximal_start = n1.start
+                            dupe.maximal_end = n1.end
+
+                            junc.node = n2
+                            #print(junc)
+                            #dupe.end = junc.start
+                            dupe.edges = [junc]
+                            for edge in n1.back_edges:
+                                new_edge = self.graph.Edge({'start':edge.start, 'end':edge.end})
+                                new_edge.node = dupe
+                                #index = self.graph.edges.index(edge)
+                                #self.graph.edges.insert(index, edge)
+                                dupe.back_edges.append(edge)
+                                # need to get the node that the back edge connects to, and add the new edge to it
+                                n0 = self.graph.start_node(edge)
+
+                                n0.edges.append(new_edge)
+
+                            #dupe.back_edges = n1.back_edges
+                            dupe.idx = "%d_%d" % (dupe.start, dupe.end)
+                            #dupes.append(dupe)
+                            #print("added dupe fwd", n1.start, junc.start)
+                            n1.edges.remove(junc)
+                            #n2.back_edges.remove(junc)
+                            # need to find the other end of all back edges, and make sure that they
+                            # connect to the new junction as well
+
+                            # need to append this node directly before / after the dupe node
+                            index = module.nodes.index(n1)+1
+                            module.nodes.insert(index, dupe)
+
+
+                        if not junc.end == n2.start:
+                            #self._add_exon({'start': junc.end, 'end': n2.end})
+                            #print("added dupe back", junc.end, n2.end)
+                            dupe = self.graph.Node({'start': junc.end, 'end': n2.end})
+
+                            if hasattr(n2, 'num_times_split'):
+                                n2.num_times_split += 1
+                            else:
+                                n2.num_times_split = 1
+                            dupe.split_index = n2.num_times_split + 1
+                            dupe.maximal_start = n2.start
+                            dupe.maximal_end = n2.end
+
+                            junc.node = dupe
+                            #print(junc, junc.node)
+                            #dupe.end = junc.start
+                            dupe.back_edges = [junc]
+                            for edge in n2.edges:
+                                new_edge = self.graph.Edge({'start':edge.start, 'end':edge.end})
+
+                                #index = self.graph.edges.index(edge)
+                                #self.graph.edges.insert(index, edge)
+                                dupe.edges.append(new_edge)
+                                # need to get the node that the back edge connects to, and add the new edge to it
+                                n0 = self.graph.end_node(edge)
+
+                                n0.back_edges.append(new_edge)
+                                new_edge.node = n0
+
+                            dupe.edges = n2.edges
+                            dupe.idx = "%d_%d" % (dupe.start, dupe.end)
+                            #dupes.append(dupe)
+                            #n1.edges.remove(junc)
+                            n2.back_edges.remove(junc)
+
+                            index = module.nodes.index(n1)+1
+                            module.nodes.insert(index, dupe)
 
 

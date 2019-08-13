@@ -231,8 +231,20 @@ def run_classifier():
                 os.remove(f)
 
     if config.output_training_data:
-        read_files = glob.glob(os.path.join(config.directory, 'adjacency_matrix.hdf5') + ".*")
-        writer.combine_hdf5s(read_files)
+        # in this case we can't know each specific prefix ahead of time, we need to search for them
+        # (group files starting with X name, then '.hdf5.' then some number
+        groups = {}
+        read_files = glob.glob(config.directory + '/*.hdf5.*')
+        for _file in read_files:
+
+            group, ext, proc = _file.split('.')
+            dest = "%s.%s" % (group, ext)
+            if not dest in groups:
+                groups[dest] = []
+            groups[dest].append(_file)
+
+        for group in groups:
+            writer.combine_hdf5s(group, groups[group])
 
 
 

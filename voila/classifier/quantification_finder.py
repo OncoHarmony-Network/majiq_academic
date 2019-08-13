@@ -10,13 +10,19 @@ from voila.api.matrix_utils import generate_variances
 from voila.api import view_matrix
 from collections import OrderedDict
 
+SIG_FIGS = 3
 
 class QuantificationWriter:
 
     def __init__(self):
+        """
+
+        :param avg_multival: if true, when finding quantifications with multiple matches, instead of semicolon, avg them
+        """
 
         self.config = ClassifyConfig()
         self.quantifications_int = self.quantification_intersection()
+        self.avg_multival = False
 
     @staticmethod
     def semicolon(value_list):
@@ -38,10 +44,19 @@ class QuantificationWriter:
                 try:
 
                     #print(self.quantifications_int[field](lsv_id, edge))
-                    quantification_vals.append(self.quantifications_int[field][0](*self.quantifications_int[field][1:])(lsv_id, edge))
+
+                    quants = self.quantifications_int[field][0](*self.quantifications_int[field][1:])(lsv_id, edge)
+                    if quants is None:
+                        quantification_vals.append('')
+                    else:
+                        for val in quants:
+                            quantification_vals.append(val)
+
+
                 except (GeneIdNotFoundInVoilaFile, LsvIdNotFoundInVoilaFile) as e:
                     quantification_vals.append('')
-                    #print(e)
+
+
 
             out.append(self.semicolon(quantification_vals))
 
@@ -67,10 +82,20 @@ class QuantificationWriter:
             lsvs = module.target_lsv_ids.union(module.source_lsv_ids)
         return lsvs
 
-    def lsv_quant(self, lsv_id):
+    def edge_quant(self, module, edge, field):
         """
-        Get one quantification number for a specific lsv_id
+        Get one quantification number for a specific edge
         """
+        lsvs = self.parity2lsv(module, None, edge=edge)
+        to_avg = []
+        for lsv_id in lsvs:
+
+            vals = self.quantifications_int[field][0](*self.quantifications_int[field][1:])(lsv_id, edge)
+
+            for val in vals:
+                to_avg.append(val)
+        # print(to_avg)
+        return np.mean(to_avg)
 
     def quantification_intersection(self):
         """
@@ -96,7 +121,7 @@ class QuantificationWriter:
 
         :return:
         """
-        SIG_FIGS = 3
+
 
         def _filter_edges(edge, lsv):
             if type(edge) != list:
@@ -122,10 +147,13 @@ class QuantificationWriter:
                     if edge_idx is None:
                         continue
                     else:
-                        vals.append(round(all_quants[edge_idx], SIG_FIGS))
-                return self.semicolon(vals)
+                        vals.append(all_quants[edge_idx])
+
+                return (round(x, SIG_FIGS) for x in vals)
             else:
-                return self.semicolon(round(x, SIG_FIGS) for x in all_quants)
+                if self.avg_multival and all_quants:
+                    return np.mean(all_quants)
+                return (round(x, SIG_FIGS) for x in all_quants)
 
         def _psi_psi(voila_files):
             def f(lsv_id, edge=None):
@@ -133,7 +161,7 @@ class QuantificationWriter:
                     with Matrix(voila_file) as m:
                         lsv = m.psi(lsv_id)
                         return _inner_edge_aggregate(lsv, lsv.get('means'), edge)
-                return ''
+                return None
             return f
 
         def _psi_var(voila_files):
@@ -142,7 +170,7 @@ class QuantificationWriter:
                     with Matrix(voila_file) as m:
                         lsv = m.psi(lsv_id)
                         return _inner_edge_aggregate(lsv, generate_variances([lsv.get('bins')][0]), edge)
-                return ''
+                return None
             return f
 
         def _het_psi(voila_files, group_idx):
@@ -151,7 +179,7 @@ class QuantificationWriter:
                     with Matrix(voila_file) as m:
                         lsv = m.heterogen(lsv_id)
                         return _inner_edge_aggregate(lsv, [get_expected_psi(x) for x in np.array(list(lsv.get('mean_psi'))).transpose((1, 0, 2))[group_idx]], edge)
-                return ''
+                return None
             return f
 
         def _het_dpsi(voila_files, group_idx1, group_idx2):
@@ -172,8 +200,9 @@ class QuantificationWriter:
                                     arr = np.array(list(lsv.get('mean_psi'))).transpose((1, 0, 2))
                                     psi_g1 = get_expected_psi(arr[group_idx1][edge_idx])
                                     psi_g2 = get_expected_psi(arr[group_idx2][edge_idx])
-                                    vals.append(round(psi_g1-psi_g2, SIG_FIGS))
-                            return self.semicolon(vals)
+                                    vals.append(psi_g1-psi_g2)
+
+                            return (round(x, SIG_FIGS) for x in vals)
                         else:
                             group_means = []
                             arr = np.array(list(lsv.get('mean_psi'))).transpose((1, 0, 2))
@@ -181,8 +210,10 @@ class QuantificationWriter:
                             psis_g2 = arr[group_idx2]
                             for psi_g1, psi_g2 in zip(psis_g1, psis_g2):
                                 group_means.append(get_expected_psi(psi_g1) - get_expected_psi(psi_g2))
+                            if self.avg_multival:
+                                return np.mean(group_means)
                             return (round(x, SIG_FIGS) for x in group_means)
-                return ''
+                return None
             return f
 
         def _dpsi_psi(voila_files, group_idx):
@@ -191,7 +222,7 @@ class QuantificationWriter:
                     with Matrix(voila_file) as m:
                         lsv = m.delta_psi(lsv_id)
                         return _inner_edge_aggregate(lsv, lsv.get('group_means')[group_idx], edge)
-                return ''
+                return None
             return f
 
         def _dpsi_dpsi(voila_files):
@@ -210,14 +241,17 @@ class QuantificationWriter:
                                 if edge_idx is None:
                                     continue
                                 else:
-                                    vals.append(round(lsv.excl_incl[edge_idx][1] - lsv.excl_incl[edge_idx][0], SIG_FIGS))
-                            return self.semicolon(vals)
+                                    vals.append(lsv.excl_incl[edge_idx][1] - lsv.excl_incl[edge_idx][0])
+
+                            return (round(x, SIG_FIGS) for x in vals)
                         else:
+                            if self.avg_multival:
+                                return np.mean((lsv.excl_incl[i][1] - lsv.excl_incl[i][0] for i in range(np.size(bins, 0))))
                             return (
                                         round(x, SIG_FIGS) for x in ((lsv.excl_incl[i][1] - lsv.excl_incl[i][0] for i in
                                         range(np.size(bins, 0))))
                                     )
-                return ''
+                return None
             return f
 
         def _dpsi_p_change(voila_files):
@@ -235,13 +269,15 @@ class QuantificationWriter:
                                 if edge_idx is None:
                                     continue
                                 else:
-                                    vals.append(round(matrix_area(bins[edge_idx], self.config.changing_threshold), SIG_FIGS))
-                            return self.semicolon(vals)
+                                    vals.append(matrix_area(bins[edge_idx], self.config.changing_threshold))
+                            return (round(x, SIG_FIGS) for x in vals)
                         else:
+                            if self.avg_multival:
+                                return np.mean((matrix_area(b, self.config.changing_threshold) for b in bins))
                             return (
                                         round(matrix_area(b, self.config.changing_threshold), SIG_FIGS) for b in bins
                                     )
-                return ''
+                return None
             return f
 
         def _dpsi_p_nonchange(voila_files):
@@ -250,10 +286,13 @@ class QuantificationWriter:
                     with view_matrix.ViewDeltaPsi(voila_file) as m:
                         lsv = m.lsv(lsv_id)
                         return _inner_edge_aggregate(lsv, lsv.high_probability_non_changing(), edge)
-                return ''
+                return None
             return f
 
+
+
         tmp = OrderedDict()
+        self.types2headers = {'psi':[], 'dpsi':[]}
         for voila_file in self.config.voila_files:
 
             with Matrix(voila_file) as m:
@@ -305,6 +344,7 @@ class QuantificationWriter:
                         else:
                             if key == "E(PSI)":
                                 tmp[header] = (_dpsi_psi, [voila_file], i)
+                        self.types2headers['psi'].append(header)
 
                 changing_thresh_key = "P(|dPSI|>=%.2f)" % self.config.changing_threshold
                 non_changing_thresh_key = "P(|dPSI|<=%.2f)" % self.config.non_changing_threshold
@@ -315,9 +355,42 @@ class QuantificationWriter:
                     else:
                         if key == "E(dPSI)":
                             tmp[header] = (_dpsi_dpsi, [voila_file])
+                            self.types2headers['dpsi'].append(header)
                         elif key == changing_thresh_key:
                             tmp[header] = (_dpsi_p_change, [voila_file])
                         elif key == non_changing_thresh_key:
                             tmp[header] = (_dpsi_p_nonchange, [voila_file])
+
+        # else:
+        #     # in the case of training data, the output needs to be explicitly for each input file
+        #     # we need a kind of format like {'input file name': {'psi1': psi1 function
+        #     tmp = OrderedDict()
+        #     for voila_file in self.config.voila_files:
+        #         with Matrix(voila_file) as m:
+        #             analysis_type = m.analysis_type
+        #             group_names = m.group_names
+        #
+        #         for i, group in enumerate(group_names):
+        #             for key in ("E(PSI)",):
+        #                 header = "%s_%s" % (group, key)
+        #                 if header in tmp:
+        #                     tmp[header][1].append(voila_file)
+        #                 else:
+        #                     if key == "E(PSI)":
+        #                         tmp[header] = (_dpsi_psi, [voila_file], i)
+        #
+        #         changing_thresh_key = "P(|dPSI|>=%.2f)" % self.config.changing_threshold
+        #         non_changing_thresh_key = "P(|dPSI|<=%.2f)" % self.config.non_changing_threshold
+        #         for key in ("E(dPSI)", changing_thresh_key, non_changing_thresh_key):
+        #             header = "%s_%s" % ('-'.join(group_names), key)
+        #             if header in tmp:
+        #                 tmp[header][1].append(voila_file)
+        #             else:
+        #                 if key == "E(dPSI)":
+        #                     tmp[header] = (_dpsi_dpsi, [voila_file])
+        #                 elif key == changing_thresh_key:
+        #                     tmp[header] = (_dpsi_p_change, [voila_file])
+        #                 elif key == non_changing_thresh_key:
+        #                     tmp[header] = (_dpsi_p_nonchange, [voila_file])
 
         return tmp
