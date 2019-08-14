@@ -56,6 +56,37 @@ class TrainingWriter(BaseTsvWriter):
                                          'Exon 2 ID', 'Exon 2 ID Start Coordinate', 'Exon 2 ID End Coordinate']
         self.start_headers(headers, 'junctions.tsv')
 
+    def _get_node_id(self, node):
+        if hasattr(node, 'num_times_split'):
+            # should be the base node of a split, need to use extended ID
+            node_id = "{gene_id}_{chr}_{strand}_{max_start}_{max_end}_{idx}".format(
+                gene_id=self.gene_id,
+                chr=self.graph.chromosome,
+                strand=self.graph.strand,
+                max_start=node.start,
+                max_end=node.end,
+                idx=1
+            )
+        elif hasattr(node, 'split_index'):
+            # a shorter node made from a split, need to use extended ID
+            node_id = "{gene_id}_{chr}_{strand}_{max_start}_{max_end}_{idx}".format(
+                gene_id=self.gene_id,
+                chr=self.graph.chromosome,
+                strand=self.graph.strand,
+                max_start=node.maximal_start,
+                max_end=node.maximal_end,
+                idx=node.split_index
+            )
+        else:
+            node_id = "{gene_id}_{chr}_{strand}_{start}_{end}".format(
+                gene_id=self.gene_id,
+                chr=self.graph.chromosome,
+                strand=self.graph.strand,
+                start=node.start,
+                end=node.end
+            )
+        return node_id
+
     def exons_tsv(self):
         """
         exons.list format:
@@ -76,37 +107,7 @@ class TrainingWriter(BaseTsvWriter):
                 rows = []
                 for i, node in enumerate(module.nodes):
 
-
-
-                    if hasattr(node, 'num_times_split'):
-                        # should be the base node of a split, need to use extended ID
-                        node_id = "{gene_id}_{chr}_{strand}_{max_start}_{max_end}_{idx}".format(
-                            gene_id=self.gene_id,
-                            chr=self.graph.chromosome,
-                            strand=self.graph.strand,
-                            max_start=node.start,
-                            max_end=node.end,
-                            idx=1
-                        )
-                    elif hasattr(node, 'split_index'):
-                        # a shorter node made from a split, need to use extended ID
-                        node_id = "{gene_id}_{chr}_{strand}_{max_start}_{max_end}_{idx}".format(
-                            gene_id=self.gene_id,
-                            chr=self.graph.chromosome,
-                            strand=self.graph.strand,
-                            max_start=node.maximal_start,
-                            max_end=node.maximal_end,
-                            idx=node.split_index
-                        )
-                    else:
-                        node_id = "{gene_id}_{chr}_{strand}_{start}_{end}".format(
-                            gene_id=self.gene_id,
-                            chr=self.graph.chromosome,
-                            strand=self.graph.strand,
-                            start=node.start,
-                            end=node.end
-                        )
-                    rows.append(common_data + [node_id, node.start, node.end])
+                    rows.append(common_data + [self._get_node_id(node), node.start, node.end])
 
                     # if module.graph.strand == '+':
                     #     rows = rows + tmp
@@ -204,7 +205,7 @@ class TrainingWriter(BaseTsvWriter):
                                     mat[i][j] = 0
 
                     dset = hf.create_dataset('%s_%s' % (self.gene_id, module.idx), data=mat)
-                    dset.attrs['exons'] = " ".join((n.idx for n in module.nodes))
+                    dset.attrs['exons'] = " ".join((self._get_node_id(n) for n in module.nodes))
 
 
     def combine_hdf5s(self, dest_path, file_paths):
