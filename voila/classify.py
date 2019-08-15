@@ -98,6 +98,7 @@ def classify_gene(args):
                 writer.summary()
 
                 writer.heatmap()
+                writer.junctions()
 
                 if ClassifyConfig().keep_constitutive:
                     writer.constitutive()
