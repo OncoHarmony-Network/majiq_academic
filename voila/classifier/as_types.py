@@ -229,6 +229,7 @@ class Graph:
 
             self.ir = ir
             self.junc = junc  # junction dictionary
+            self.de_novo = True if junc.get('annotated', 1) == 0 else False
             self.node = None  # node this junction connects to
             self.lsvs = {}
             self.is_constitutive = self.junc.get('is_constitutive', False)
@@ -953,7 +954,6 @@ class Graph:
             self.graph = graph
             self.source_lsv_ids, self.target_lsv_ids = self.get_lsv_ids()
             self.p_multi_gene_regions = []  # meta event
-
 
         def set_idx(self, idx):
             self.idx = idx

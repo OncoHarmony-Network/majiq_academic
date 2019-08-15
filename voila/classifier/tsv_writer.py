@@ -152,7 +152,7 @@ class TsvWriter(BaseTsvWriter):
     def start_all_headers(self):
 
 
-        headers = self.common_headers + ['Reference Exon Coordinate', 'Exon Spliced With',
+        headers = self.common_headers + ['De Novo', 'Reference Exon Coordinate', 'Exon Spliced With',
                                          'Exon Spliced With Coordinate', 'Junction Name',
                                          'Junction Coordinate'] + self.quantification_headers
         self.start_headers(headers, 'cassette.tsv')
@@ -167,12 +167,12 @@ class TsvWriter(BaseTsvWriter):
         self.start_headers(headers, 'p_alternate_last_exon.tsv')
         self.start_headers(headers, 'p_alternate_first_exon.tsv')
         self.start_headers(headers, 'alternative_intron.tsv')
-        headers = self.common_headers + ['Reference Exon Coordinate', 'Exon Spliced With',
+        headers = self.common_headers + ['De Novo', 'Reference Exon Coordinate', 'Exon Spliced With',
                                          'Exon Spliced With Coordinate', 'Tandem Exon Coordinates', 'Num_Tandem_Exons',
                                          'Junction Name', 'Junction Coordinate'] + self.quantification_headers
         self.start_headers(headers, 'multi_exon_spanning.tsv')
         self.start_headers(headers, 'tandem_cassette.tsv')
-        headers = self.common_headers + ['Exon coordinate', 'Junction Coordinate'] + self.quantification_headers
+        headers = self.common_headers + ['De Novo', 'Exon coordinate', 'Junction Coordinate'] + self.quantification_headers
         self.start_headers(headers, 'exitron.tsv')
         headers = self.common_headers + ["Cassette", "Tandem Cassette",
                                          "Alt 3", "Alt 5", "P_Alt 3", "P_Alt 5", "Alt 3 and Alt 5", "MXE",
@@ -183,10 +183,12 @@ class TsvWriter(BaseTsvWriter):
             headers.append("Constitutive Intron")
         if self.config.output_complex:
             headers.remove("Complex")
-        headers += ["Multi Exon Spanning", "Exitron", "Complex", "Number of Events", "Collapsed Event Name"]
+        headers += ["Multi Exon Spanning", "Exitron", "Complex", 'De Novo Junctions', 'De Novo Introns',
+                    "Number of Events", "Collapsed Event Name"
+                    ]
         self.start_headers(headers, 'summary.tsv')
         if self.config.keep_constitutive:
-            headers = self.common_headers + ['Reference Exon Coordinate', 'Exon Spliced With',
+            headers = self.common_headers + ['De Novo', 'Reference Exon Coordinate', 'Exon Spliced With',
                                              'Exon Spliced With Coordinate', 'Junction Name',
                                              'Junction Coordinate', 'Is Intron',
                                              'Collapsed Event Name'] + self.quantification_headers
@@ -207,19 +209,19 @@ class TsvWriter(BaseTsvWriter):
                             src_common = self.common_data(module, 's', event['C1'])
                             trg_common = self.common_data(module, 't', event['C2'])
 
-                            row = [event['C1'].range_str(), 'C2', event['C2'].range_str(), 'C1_C2',
+                            row = [event['Skip'].de_novo, event['C1'].range_str(), 'C2', event['C2'].range_str(), 'C1_C2',
                                    event['Skip'].range_str()]
                             writer.writerow(src_common + row + self.quantifications(module, 's', event['Skip'], event['C1']))
 
-                            row = [event['C1'].range_str(), 'A', event['A'].range_str(), 'C1_A',
+                            row = [event['Include1'].de_novo, event['C1'].range_str(), 'A', event['A'].range_str(), 'C1_A',
                                    event['Include1'].range_str()]
                             writer.writerow(src_common + row + self.quantifications(module, 's', event['Include1'], event['C1']))
 
-                            row = [event['C2'].range_str(), 'C1', event['C1'].range_str(), 'C2_C1',
+                            row = [event['Skip'].de_novo, event['C2'].range_str(), 'C1', event['C1'].range_str(), 'C2_C1',
                                    event['Skip'].range_str()]
                             writer.writerow(trg_common + row + self.quantifications(module, 't', event['Skip'], event['C2']))
 
-                            row = [event['C2'].range_str(), 'A', event['A'].range_str(), 'C2_A',
+                            row = [event['Include2'].de_novo, event['C2'].range_str(), 'A', event['A'].range_str(), 'C2_A',
                                    event['Include2'].range_str()]
                             writer.writerow(trg_common + row + self.quantifications(module, 't', event['Include2'], event['C2']))
 
@@ -244,17 +246,17 @@ class TsvWriter(BaseTsvWriter):
                             trg_common = self.common_data(module, 't', node=event['E2'])
 
                             if src_common[5]:
-                                row = [event['E1'].range_str(), 'E2', event['E2'].range_str(), 'E1_E2_Proximal',
+                                row = [event['Proximal'].de_novo, event['E1'].range_str(), 'E2', event['E2'].range_str(), 'E1_E2_Proximal',
                                        event['Proximal'].range_str()]
                                 writer.writerow(src_common + row + self.quantifications(module, 's', event['Proximal']))
-                                row = [event['E1'].range_str(), 'E2', event['E2'].range_str(), 'E1_E2_Distal',
+                                row = [event['Distal'].de_novo, event['E1'].range_str(), 'E2', event['E2'].range_str(), 'E1_E2_Distal',
                                        event['Distal'].range_str()]
                                 writer.writerow(src_common + row + self.quantifications(module, 's', event['Distal']))
                             elif trg_common[5]:
-                                row = [event['E2'].range_str(), 'E1', event['E1'].range_str(), 'E2_E1_Proximal',
+                                row = [event['Proximal'].de_novo, event['E2'].range_str(), 'E1', event['E1'].range_str(), 'E2_E1_Proximal',
                                        event['Proximal'].range_str()]
                                 writer.writerow(trg_common + row + self.quantifications(module, 't', event['Proximal']))
-                                row = [event['E2'].range_str(), 'E1', event['E1'].range_str(), 'E2_E1_Distal',
+                                row = [event['Distal'].de_novo, event['E2'].range_str(), 'E1', event['E1'].range_str(), 'E2_E1_Distal',
                                        event['Distal'].range_str()]
                                 writer.writerow(trg_common + row + self.quantifications(module, 't', event['Distal']))
 
@@ -278,17 +280,17 @@ class TsvWriter(BaseTsvWriter):
                             src_common = self.common_data(module, 's', node=event['E1'])
                             trg_common = self.common_data(module, 't', node=event['E2'])
                             if trg_common[5]:
-                                row = [event['E2'].range_str(), 'E1', event['E1'].range_str(), 'E2_E1_Proximal',
+                                row = [event['Proximal'].de_novo, event['E2'].range_str(), 'E1', event['E1'].range_str(), 'E2_E1_Proximal',
                                        event['Proximal'].range_str()]
                                 writer.writerow(trg_common + row + self.quantifications(module, 't', event['Proximal']))
-                                row = [event['E2'].range_str(), 'E1', event['E1'].range_str(), 'E2_E1_Distal',
+                                row = [event['Distal'].de_novo, event['E2'].range_str(), 'E1', event['E1'].range_str(), 'E2_E1_Distal',
                                        event['Distal'].range_str()]
                                 writer.writerow(trg_common + row + self.quantifications(module, 't', event['Distal']))
                             elif src_common[5]:
-                                row = [event['E1'].range_str(), 'E2', event['E2'].range_str(), 'E1_E2_Proximal',
+                                row = [event['Proximal'].de_novo, event['E1'].range_str(), 'E2', event['E2'].range_str(), 'E1_E2_Proximal',
                                        event['Proximal'].range_str()]
                                 writer.writerow(src_common + row + self.quantifications(module, 's', event['Proximal']))
-                                row = [event['E1'].range_str(), 'E2', event['E2'].range_str(), 'E1_E2_Distal',
+                                row = [event['Distal'].de_novo, event['E1'].range_str(), 'E2', event['E2'].range_str(), 'E1_E2_Distal',
                                        event['Distal'].range_str()]
                                 writer.writerow(src_common + row + self.quantifications(module, 's', event['Distal']))
 
@@ -313,22 +315,22 @@ class TsvWriter(BaseTsvWriter):
                             src_common = self.common_data(module, 's', node=event['C1'])
                             trg_common = self.common_data(module, 't', node=event['C2'])
 
-                            row = [event['C1'].range_str(), 'E3', event['C2'].range_str(), 'E1_E3_Distal',
+                            row = [event['Skip'].de_novo, event['C1'].range_str(), 'E3', event['C2'].range_str(), 'E1_E3_Distal',
                                    event['Skip'].range_str()]
                             writer.writerow(src_common + row + self.quantifications(module, 's', event['Skip']))
 
                             event['Include1'].junc['start'] += 1
                             event['Include1'].junc['end'] -= 1
 
-                            row = [event['C1'].range_str(), 'E2', event['A'].range_str(), 'E1_E2_Intron',
+                            row = [event['Include1'].de_novo, event['C1'].range_str(), 'E2', event['A'].range_str(), 'E1_E2_Intron',
                                    event['Include1'].range_str()]
                             writer.writerow(src_common + row + self.quantifications(module, 's', event['Include1']))
 
-                            row = [event['C2'].range_str(), 'E1', event['C1'].range_str(), 'E3_E1_Distal',
+                            row = [event['Skip'].de_novo, event['C2'].range_str(), 'E1', event['C1'].range_str(), 'E3_E1_Distal',
                                    event['Skip'].range_str()]
                             writer.writerow(trg_common + row + self.quantifications(module, 't', event['Skip']))
 
-                            row = [event['C2'].range_str(), 'E2', event['A'].range_str(), 'E3_E2_Proximal',
+                            row = [event['Include2'].de_novo, event['C2'].range_str(), 'E2', event['A'].range_str(), 'E3_E2_Proximal',
                                    event['Include2'].range_str()]
                             writer.writerow(trg_common + row + self.quantifications(module, 't', event['Include2']))
 
@@ -359,19 +361,19 @@ class TsvWriter(BaseTsvWriter):
                             event['Include2'].junc['start'] += 1
                             event['Include2'].junc['end'] -= 1
 
-                            row = [event['C2'].range_str(), 'E3', event['C1'].range_str(), 'E1_E3_Distal',
+                            row = [event['Skip'].de_novo, event['C2'].range_str(), 'E3', event['C1'].range_str(), 'E1_E3_Distal',
                                    event['Skip'].range_str()]
                             writer.writerow(src_common + row + self.quantifications(module, 's', event['Skip']))
 
-                            row = [event['C2'].range_str(), 'E2', event['A'].range_str(), 'E1_E2_Proximal',
+                            row = [event['Include1'].de_novo, event['C2'].range_str(), 'E2', event['A'].range_str(), 'E1_E2_Proximal',
                                    event['Include1'].range_str()]
                             writer.writerow(src_common + row + self.quantifications(module, 's', event['Include1']))
 
-                            row = [event['C1'].range_str(), 'E2', event['A'].range_str(), 'E3_E2_Intron',
+                            row = [event['Include2'].de_novo, event['C1'].range_str(), 'E2', event['A'].range_str(), 'E3_E2_Intron',
                                    event['Include2'].range_str()]
                             writer.writerow(trg_common + row + self.quantifications(module, 't', event['Include2']))
 
-                            row = [event['C1'].range_str(), 'E1', event['C2'].range_str(), 'E3_E1_Distal',
+                            row = [event['Skip'].de_novo, event['C1'].range_str(), 'E1', event['C2'].range_str(), 'E3_E1_Distal',
                                    event['Skip'].range_str()]
                             writer.writerow(trg_common + row + self.quantifications(module, 't', event['Skip']))
 
@@ -397,16 +399,16 @@ class TsvWriter(BaseTsvWriter):
                         if event['event'] == 'alt3and5ss':
                             src_common = self.common_data(module, 's')
                             trg_common = self.common_data(module, 't')
-                            row = [event['E1'].range_str(), 'E2', event['E2'].range_str(), 'E1_E2_J1',
+                            row = [event['J1'].de_novo, event['E1'].range_str(), 'E2', event['E2'].range_str(), 'E1_E2_J1',
                                    event['J1'].range_str()]
                             writer.writerow(src_common + row + self.quantifications(module, 's', event['J1']))
-                            row = [event['E1'].range_str(), 'E2', event['E2'].range_str(), 'E1_E2_J2',
+                            row = [event['J2'].de_novo, event['E1'].range_str(), 'E2', event['E2'].range_str(), 'E1_E2_J2',
                                    event['J2'].range_str()]
                             writer.writerow(src_common + row + self.quantifications(module, 's', event['J2']))
-                            row = [event['E2'].range_str(), 'E1', event['E1'].range_str(), 'E2_E1_J1',
+                            row = [event['J1'].de_novo, event['E2'].range_str(), 'E1', event['E1'].range_str(), 'E2_E1_J1',
                                    event['J1'].range_str()]
                             writer.writerow(trg_common + row + self.quantifications(module, 't', event['J1']))
-                            row = [event['E2'].range_str(), 'E1', event['E1'].range_str(), 'E2_E1_J2',
+                            row = [event['J2'].de_novo, event['E2'].range_str(), 'E1', event['E1'].range_str(), 'E2_E1_J2',
                                    event['J2'].range_str()]
                             writer.writerow(trg_common + row + self.quantifications(module, 't', event['J2']))
 
@@ -429,16 +431,16 @@ class TsvWriter(BaseTsvWriter):
                         if event['event'] == 'mutually_exclusive':
                             src_common = self.common_data(module, 's')
                             trg_common = self.common_data(module, 't')
-                            row = [event['C1'].range_str(), 'A1', event['A1'].range_str(), 'C1_A1',
+                            row = [event['Include1'].de_novo, event['C1'].range_str(), 'A1', event['A1'].range_str(), 'C1_A1',
                                    event['Include1'].range_str()]
                             writer.writerow(src_common + row + self.quantifications(module, 's', event['Include1']))
-                            row = [event['C1'].range_str(), 'A2', event['A2'].range_str(), 'C1_A2',
+                            row = [event['SkipA1'].de_novo, event['C1'].range_str(), 'A2', event['A2'].range_str(), 'C1_A2',
                                    event['SkipA1'].range_str()]
                             writer.writerow(src_common + row + self.quantifications(module, 's', event['SkipA1']))
-                            row = [event['C2'].range_str(), 'A1', event['A1'].range_str(), 'C2_A1',
+                            row = [event['Include2'].de_novo, event['C2'].range_str(), 'A1', event['A1'].range_str(), 'C2_A1',
                                    event['Include2'].range_str()]
                             writer.writerow(trg_common + row + self.quantifications(module, 't', event['Include2']))
-                            row = [event['C2'].range_str(), 'A2', event['A2'].range_str(), 'C2_A2',
+                            row = [event['SkipA2'].de_novo, event['C2'].range_str(), 'A2', event['A2'].range_str(), 'C2_A2',
                                    event['SkipA2'].range_str()]
                             writer.writerow(trg_common + row + self.quantifications(module, 't', event['SkipA2']))
 
@@ -458,12 +460,12 @@ class TsvWriter(BaseTsvWriter):
                             src_common = self.common_data(module, 's', node=event['Reference'])
                             if src_common[5]:
                                 for junc in event['SkipA2']:
-                                    row = [event['Reference'].range_str(), 'A_Proximal', event['Proximal'].range_str(),
+                                    row = [junc.de_novo, event['Reference'].range_str(), 'A_Proximal', event['Proximal'].range_str(),
                                            'C_A_Proximal',
                                            junc.range_str()]
                                     writer.writerow(src_common + row + self.quantifications(module, 's', junc))
                                 for junc in event['SkipA1']:
-                                    row = [event['Reference'].range_str(), 'A_Distal', event['Distal'].range_str(),
+                                    row = [junc.de_novo, event['Reference'].range_str(), 'A_Distal', event['Distal'].range_str(),
                                            'C_A_Distal',
                                            junc.range_str()]
                                     writer.writerow(src_common + row + self.quantifications(module, 's', junc))
@@ -490,12 +492,12 @@ class TsvWriter(BaseTsvWriter):
                             trg_common = self.common_data(module, 't', node=event['Reference'])
                             if trg_common[5]:
                                 for junc in event['SkipA1']:
-                                    row = [event['Reference'].range_str(), 'A_Proximal', event['Proximal'].range_str(),
+                                    row = [junc.de_novo, event['Reference'].range_str(), 'A_Proximal', event['Proximal'].range_str(),
                                            'C_A_Proximal',
                                            junc.range_str()]
                                     writer.writerow(trg_common + row + self.quantifications(module, 't', junc))
                                 for junc in event['SkipA2']:
-                                    row = [event['Reference'].range_str(), 'A_Distal', event['Distal'].range_str(),
+                                    row = [junc.de_novo, event['Reference'].range_str(), 'A_Distal', event['Distal'].range_str(),
                                            'C_A_Distal',
                                            junc.range_str()]
                                     writer.writerow(trg_common + row + self.quantifications(module, 't', junc))
@@ -528,12 +530,12 @@ class TsvWriter(BaseTsvWriter):
                                 proxStr = "{}-nan".format(event['Proximal'].start)
                             if src_common[5]:
                                 for junc in event['SkipA2']:
-                                    row = [event['Reference'].range_str(), 'A', proxStr,
+                                    row = [junc.de_novo, event['Reference'].range_str(), 'A', proxStr,
                                            'C_A_Proximal',
                                            junc.range_str()]
                                     writer.writerow(src_common + row + self.quantifications(module, 's', junc))
                                 for junc in event['SkipA1']:
-                                    row = [event['Reference'].range_str(), 'A', event['Distal'].range_str(),
+                                    row = [junc.de_novo, event['Reference'].range_str(), 'A', event['Distal'].range_str(),
                                            'C_A_Distal',
                                            junc.range_str()]
                                     writer.writerow(src_common + row + self.quantifications(module, 's', junc))
@@ -564,12 +566,12 @@ class TsvWriter(BaseTsvWriter):
                             trg_common = self.common_data(module, 't', node=event['Reference'])
                             if trg_common[5]:
                                 for junc in event['SkipA1']:
-                                    row = [event['Reference'].range_str(), 'A', proxStr,
+                                    row = [junc.de_novo, event['Reference'].range_str(), 'A', proxStr,
                                            'C_A_Proximal',
                                            junc.range_str()]
                                     writer.writerow(trg_common + row + self.quantifications(module, 't', junc))
                                 for junc in event['SkipA2']:
-                                    row = [event['Reference'].range_str(), 'A', event['Distal'].range_str(),
+                                    row = [junc.de_novo, event['Reference'].range_str(), 'A', event['Distal'].range_str(),
                                            'C_A_Distal',
                                            junc.range_str()]
                                     writer.writerow(trg_common + row + self.quantifications(module, 't', junc))
@@ -604,20 +606,23 @@ class TsvWriter(BaseTsvWriter):
 
                             if any(':t:' in _l for _l in event['Intron'].lsvs) and not \
                                any(':s:' in _l for _l in event['Intron'].lsvs):
-                                row = [event['C2'].range_str(), 'C1', event['C1'].range_str(), 'C2_C1_intron',
+                                row = [event['Intron'].de_novo, event['C2'].range_str(), 'C1', event['C1'].range_str(), 'C2_C1_intron',
                                        event['Intron'].range_str()]
                                 writer.writerow(trg_common + row + self.quantifications(module, 't', event['Intron']))
-                                row = [event['C2'].range_str(), 'C1', event['C1'].range_str(), 'C2_C1_spliced',
+                                row = [self.semicolon((x.de_novo for x in event['Spliced'])),
+                                       event['C2'].range_str(), 'C1', event['C1'].range_str(), 'C2_C1_spliced',
                                        self.semicolon((x.range_str() for x in event['Spliced']))]
                                 writer.writerow(trg_common + row + self.quantifications(module, 't', event['Spliced']))
 
 
 
                             else:
-                                row = [event['C1'].range_str(), 'C2', event['C2'].range_str(), 'C1_C2_intron',
+                                row = [event['Intron'].de_novo,
+                                       event['C1'].range_str(), 'C2', event['C2'].range_str(), 'C1_C2_intron',
                                        event['Intron'].range_str()]
                                 writer.writerow(src_common + row + self.quantifications(module, 's', event['Intron']))
-                                row = [event['C1'].range_str(), 'C2', event['C2'].range_str(), 'C1_C2_spliced',
+                                row = [self.semicolon((x.de_novo for x in event['Spliced'])),
+                                       event['C1'].range_str(), 'C2', event['C2'].range_str(), 'C1_C2_spliced',
                                        self.semicolon((x.range_str() for x in event['Spliced']))]
                                 writer.writerow(src_common + row + self.quantifications(module, 's', event['Spliced']))
 
@@ -649,19 +654,23 @@ class TsvWriter(BaseTsvWriter):
                         if event['event'] == 'multi_exon_spanning':
                             src_common = self.common_data(module, 's')
                             trg_common = self.common_data(module, 't')
-                            row = [event['C1'].range_str(), 'C2', event['C2'].range_str(),
+                            row = [self.semicolon((x.de_novo for x in event['Skip'])),
+                                   event['C1'].range_str(), 'C2', event['C2'].range_str(),
                                    self.semicolon((x.range_str() for x in event['As'])), len(event['As']), 'C1_C2',
                                    self.semicolon((x.range_str() for x in event['Skip']))]
                             writer.writerow(src_common + row + self.quantifications(module, 's'))
-                            row = [event['C1'].range_str(), 'A1', event['As'][0].range_str(),
+                            row = [self.semicolon((x.de_novo for x in event['Include1'])),
+                                   event['C1'].range_str(), 'A1', event['As'][0].range_str(),
                                    self.semicolon((x.range_str() for x in event['As'])), len(event['As']), 'C1_A',
                                    self.semicolon((x.range_str() for x in event['Include1']))]
                             writer.writerow(src_common + row + self.quantifications(module, 's')), event['C1']
-                            row = [event['C2'].range_str(), 'C1', event['C1'].range_str(),
+                            row = [self.semicolon((x.de_novo for x in event['Skip'])),
+                                   event['C2'].range_str(), 'C1', event['C1'].range_str(),
                                    self.semicolon((x.range_str() for x in event['As'])), len(event['As']), 'C2_C1',
                                    self.semicolon((x.range_str() for x in event['Skip']))]
                             writer.writerow(trg_common + row + self.quantifications(module, 't'))
-                            row = [event['C2'].range_str(), 'A_Last', '',
+                            row = [self.semicolon((x.de_novo for x in event['Include2'])),
+                                   event['C2'].range_str(), 'A_Last', '',
                                    self.semicolon((x.range_str() for x in event['As'])), len(event['As']), 'A_Last_C2',
                                    self.semicolon((x.range_str() for x in event['Include2']))]
                             writer.writerow(trg_common + row + self.quantifications(module, 't'))
@@ -676,19 +685,23 @@ class TsvWriter(BaseTsvWriter):
                         if event['event'] == 'tandem_cassette':
                             src_common = self.common_data(module, 's', node=event['C1'])
                             trg_common = self.common_data(module, 't', node=event['C2'])
-                            row = [event['C1'].range_str(), 'C2', event['C2'].range_str(),
+                            row = [self.semicolon((x.de_novo for x in event['Skip'])),
+                                   event['C1'].range_str(), 'C2', event['C2'].range_str(),
                                    self.semicolon((x.range_str() for x in event['As'])), len(event['As']), 'C1_C2',
                                    self.semicolon((x.range_str() for x in event['Skip']))]
                             writer.writerow(src_common + row + self.quantifications(module, 's', event['Skip'][0], event['C1']))
-                            row = [event['C1'].range_str(), 'A1', event['As'][0].range_str(),
+                            row = [self.semicolon((x.de_novo for x in event['Include1'])),
+                                   event['C1'].range_str(), 'A1', event['As'][0].range_str(),
                                    self.semicolon((x.range_str() for x in event['As'])), len(event['As']), 'C1_A',
                                    self.semicolon((x.range_str() for x in event['Include1']))]
                             writer.writerow(src_common + row + self.quantifications(module, 's', event['Include1'][0], event['C1']))
-                            row = [event['C2'].range_str(), 'C1', event['C1'].range_str(),
+                            row = [self.semicolon((x.de_novo for x in event['Skip'])),
+                                   event['C2'].range_str(), 'C1', event['C1'].range_str(),
                                    self.semicolon((x.range_str() for x in event['As'])), len(event['As']), 'C2_C1',
                                    self.semicolon((x.range_str() for x in event['Skip']))]
                             writer.writerow(trg_common + row + self.quantifications(module, 't', event['Skip'][0], event['C2']))
-                            row = [event['C2'].range_str(), 'A_Last', event['As'][-1].range_str(),
+                            row = [self.semicolon((x.de_novo for x in event['Include2'])),
+                                   event['C2'].range_str(), 'A_Last', event['As'][-1].range_str(),
                                    self.semicolon((x.range_str() for x in event['As'])), len(event['As']), 'A_Last_C2',
                                    self.semicolon((x.range_str() for x in event['Include2']))]
                             writer.writerow(trg_common + row + self.quantifications(module, 't', event['Include2'][0], event['C2']))
@@ -707,9 +720,9 @@ class TsvWriter(BaseTsvWriter):
                         if event['event'] == 'exitron':
                             src_common = self.common_data(module, 's')
                             trg_common = self.common_data(module, 't')
-                            row = [event['Exon'].range_str(), event['Junc'].range_str()]
+                            row = [event['Junc'].de_novo, event['Exon'].range_str(), event['Junc'].range_str()]
                             writer.writerow(src_common + row + self.quantifications(module, 's'))
-                            row = [event['Exon'].range_str(), event['Junc'].range_str()]
+                            row = [event['Junc'].de_novo, event['Exon'].range_str(), event['Junc'].range_str()]
                             writer.writerow(trg_common + row + self.quantifications(module, 't'))
 
     def constitutive(self):
@@ -721,7 +734,8 @@ class TsvWriter(BaseTsvWriter):
                     for event in events:
                         if event['event'] == 'constitutive':
                             common = self.common_data(module)
-                            row = [event['C2'].range_str(), 'C1', event['C1'].range_str(), 'C2_C1',
+                            row = [event['Junc'].de_novo,
+                                   event['C2'].range_str(), 'C1', event['C1'].range_str(), 'C2_C1',
                                    event['Junc'].range_str(), 'False', module.collapsed_event_name]
                             writer.writerow(common + row + self.quantifications(module, edge=event['Junc']))
 
@@ -734,11 +748,13 @@ class TsvWriter(BaseTsvWriter):
                             event['Intron'].junc['end'] -= 1
                             if any(':t:' in _l for _l in event['Intron'].lsvs) and not \
                                any(':s:' in _l for _l in event['Intron'].lsvs):
-                                row = [event['C2'].range_str(), 'C1', event['C1'].range_str(), 'C2_C1_intron',
+                                row = [event['Intron'].de_novo,
+                                       event['C2'].range_str(), 'C1', event['C1'].range_str(), 'C2_C1_intron',
                                        event['Intron'].range_str(), 'True', module.collapsed_event_name]
                                 writer.writerow(trg_common + row + self.quantifications(module, 't', event['Intron']))
                             else:
-                                row = [event['C1'].range_str(), 'C2', event['C2'].range_str(), 'C1_C2_intron',
+                                row = [event['Intron'].de_novo,
+                                       event['C1'].range_str(), 'C2', event['C2'].range_str(), 'C1_C2_intron',
                                        event['Intron'].range_str(), 'True', module.collapsed_event_name]
                                 writer.writerow(src_common + row + self.quantifications(module, 's', event['Intron']))
 
@@ -817,6 +833,14 @@ class TsvWriter(BaseTsvWriter):
                 for event in events:
                     if event['event'] in counts:
                         counts[event['event']] += 1
+                de_novo_junctions = 0
+                de_novo_introns = 0
+                for edge in module.get_all_edges(ir=True):
+                    if edge.de_novo:
+                        if edge.ir:
+                            de_novo_introns += 1
+                        else:
+                            de_novo_junctions += 1
 
                 # we store collapsed event name on module, because we need it for constitutive
                 module.collapsed_event_name = self._collapsed_event_name(counts)
@@ -824,8 +848,9 @@ class TsvWriter(BaseTsvWriter):
                 writer.writerow(["%s_%d" % (self.gene_id, module.idx),
                                  self.gene_id, self.graph.gene_name, self.graph.chromosome, self.graph.strand,
                                  self.semicolon(module.target_lsv_ids.union(module.source_lsv_ids))] +
-                                [v if v else '' for v in counts.values()] + [str(_complex), str(_total_events),
-                                                                             module.collapsed_event_name]
+                                [v if v else '' for v in counts.values()] +
+                                [str(_complex), str(de_novo_junctions), str(de_novo_introns),
+                                 str(_total_events), module.collapsed_event_name]
                                 )
 
 
