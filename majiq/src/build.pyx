@@ -483,7 +483,8 @@ cdef int simplify(list file_list, map[string, Gene*] gene_map, vector[string] gi
                         strand  = <char> jid.split(b':')[1][0]
 
                     if irbool == 0:
-                        junc_tlb[jid] = sreads
+                        with gil:
+                            junc_tlb[jid] = sreads
 
                     elif irb:
                         find_gene_from_junc(gene_list, chrom, strand, coord1, coord2, gene_l, irbool, bsimpl)
