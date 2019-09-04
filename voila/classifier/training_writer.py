@@ -53,7 +53,8 @@ class TrainingWriter(BaseTsvWriter):
         self.start_headers(headers, 'exons.tsv')
         headers = self.common_headers + ['Junc ID', 'Junc ID Start Coordinate', 'Junc ID End Coordinate',
                                          'Exon 1 ID', 'Exon 1 ID Start Coordinate', 'Exon 1 ID End Coordinate',
-                                         'Exon 2 ID', 'Exon 2 ID Start Coordinate', 'Exon 2 ID End Coordinate']
+                                         'Exon 2 ID', 'Exon 2 ID Start Coordinate', 'Exon 2 ID End Coordinate',
+                                         'Is Intron']
         self.start_headers(headers, 'junctions.tsv')
 
     def _get_node_id(self, node):
@@ -128,11 +129,7 @@ class TrainingWriter(BaseTsvWriter):
 
                 rows = []
 
-                for i, edge in enumerate(module.get_all_edges()):
-
-                    # remove introns
-                    if edge.ir:
-                        continue
+                for i, edge in enumerate(module.get_all_edges(True)):
 
                     n1 = self.graph.start_node(edge)
                     n2 = self.graph.end_node(edge)
@@ -146,7 +143,7 @@ class TrainingWriter(BaseTsvWriter):
 
                     rows.append(common_data + [junc_id, edge.start, edge.end,
                                          n1.idx, n1.start, n1.end,
-                                         n2.idx, n2.start, n2.end])
+                                         n2.idx, n2.start, n2.end, edge.ir])
 
                 writer.writerows(rows)
 

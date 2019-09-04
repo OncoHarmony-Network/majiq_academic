@@ -509,11 +509,10 @@ class Graph:
                 if self.config.decomplexify_reads_threshold == 0 or self._enough_reads(
                         sg.junction_reads_exp(junc, self.experiment_names)):
                     self._add_junc(junc)
-            if not self.config.output_training_data:
-                for ir in sg.intron_retentions(self.gene_id, omit_simplified=True):
-                    if self.config.decomplexify_reads_threshold == 0 or self._enough_reads(
-                            sg.intron_retention_reads_exp(ir, self.experiment_names)):
-                        self._add_junc(ir, ir=True)
+            for ir in sg.intron_retentions(self.gene_id, omit_simplified=True):
+                if self.config.decomplexify_reads_threshold == 0 or self._enough_reads(
+                        sg.intron_retention_reads_exp(ir, self.experiment_names)):
+                    self._add_junc(ir, ir=True)
 
         # remove exons that don't have any junctions
         # this is done by looking at the start and end of each junction and seeing if any of those ends
