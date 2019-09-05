@@ -426,7 +426,7 @@ class Graph:
         for edge in module.get_all_edges():
             for lsv_quants in edge.lsvs.values():
                 for dpsi_bins, prior in zip(lsv_quants['delta_psi_bins'], lsv_quants['prior']):
-                    if len(prior) and dpsi_bins:
+                    if len(prior) and len(dpsi_bins):
                         probs.append(max(generate_high_probability_non_changing(lsv_quants['has_ir'],
                                                                             prior,
                                                                             self.config.non_changing_threshold,
@@ -509,6 +509,7 @@ class Graph:
                 if self.config.decomplexify_reads_threshold == 0 or self._enough_reads(
                         sg.junction_reads_exp(junc, self.experiment_names)):
                     self._add_junc(junc)
+
             for ir in sg.intron_retentions(self.gene_id, omit_simplified=True):
                 if self.config.decomplexify_reads_threshold == 0 or self._enough_reads(
                         sg.intron_retention_reads_exp(ir, self.experiment_names)):
