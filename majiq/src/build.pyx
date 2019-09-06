@@ -424,7 +424,8 @@ cdef void gene_to_splicegraph(Gene * gne, sqlite3 * db) nogil:
             if ir.get_ir_flag():
                 # with gil:
                 #     print(gne_id, ir.get_start(), ir.get_end(), ir.get_annot(), ir.is_connected())
-                sg_intron_retention(db, gne_id, ir.get_start(), ir.get_end(), ir.get_annot(), ir.get_simpl_fltr(), 0)
+                sg_intron_retention(db, gne_id, ir.get_start(), ir.get_end(), ir.get_annot(), ir.get_simpl_fltr(),
+                                    ir.get_constitutive())
 
 
 cdef int simplify(list file_list, map[string, Gene*] gene_map, vector[string] gid_vec,
