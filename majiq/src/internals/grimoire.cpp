@@ -364,6 +364,19 @@ namespace grimoire {
 
         for(const auto &ex: ex_vector){
             unsigned int cj = 0 ;
+
+            // Mark first if intron is the only connection in/out the exon. This first if could be an
+            // else if (instead of else continue) but for clarity we leave it here.
+
+            if ((ex->ob).size()==0 && ex->ob_irptr != nullptr)
+            {
+                (ex->ob_irptr)->set_const_donor() ;
+            }
+            if ((ex->ib).size()==0 && ex->ib_irptr != nullptr)
+            {
+                (ex->ib_irptr)->set_const_acceptor() ;
+            }
+
             if (ex->is_lsv(true))
                 continue ;
             else{
@@ -375,13 +388,10 @@ namespace grimoire {
 
                     // check acceptor
                     Exon * accex = jnc->get_acceptor() ;
-//                    unsigned int acc_cj = 0 ;
-//                    for (const auto &p: (accex->ib))
-//                        acc_cj += (p->get_bld_fltr() & !p->get_simpl_fltr()) ? 1 : 0 ;
-//                    if(acc_cj>1 || accex->ib_irptr != nullptr){
                     if(accex->is_lsv(false)){
                         continue ;
                     }
+                    jnc->set_constitutive() ;
                     string str_ln = id_ + "\t" + chromosome_ + "\t" +
                                     to_string(jnc->get_start()) + "\t" + to_string(jnc->get_end()) + "\t" +
                                     to_string(ex->get_start()) + "\t" + to_string(ex->get_end()) + "\t" +

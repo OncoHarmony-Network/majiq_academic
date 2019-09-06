@@ -28,6 +28,7 @@ cdef extern from "grimoire.hpp" namespace "grimoire":
         bint         get_bld_fltr() nogil ;
         bint         get_denovo_bl() nogil ;
         bint         get_simpl_fltr() nogil ;
+        bint         get_constitutive() nogil;
 
         unsigned int nreads;
 
@@ -45,7 +46,7 @@ cdef extern from "grimoire.hpp" namespace "grimoire":
         bint    get_ir_flag() nogil ;
         bint    is_connected() nogil ;
         bint    get_simpl_fltr() nogil ;
-
+        bint    get_constitutive() nogil;
 
     cdef cppclass Gene:
         Gene() nogil except +

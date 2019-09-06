@@ -101,6 +101,7 @@ namespace grimoire{
             bool bld_fltr_ ;
             bool denovo_bl_ ;
             bool simpl_fltr_ ;
+            bool constitutive_ ;
             unsigned int denovo_cnt_ ;
             unsigned int flter_cnt_ ;
             unsigned int simpl_cnt_in_ ;
@@ -123,6 +124,7 @@ namespace grimoire{
                 nreads_ = nullptr ;
                 simpl_cnt_in_ = 0 ;
                 simpl_cnt_out_ = 0 ;
+                constitutive_  = false ;
             }
             ~Junction()             { clear_nreads(true) ; }
 
@@ -136,6 +138,9 @@ namespace grimoire{
             bool    get_denovo_bl() { return denovo_bl_ ; }
             Exon*   get_acceptor()  { return acceptor_ ; }
             Exon*   get_donor()     { return donor_ ; }
+
+            bool  get_constitutive() { return constitutive_ ; }
+            void  set_constitutive() { constitutive_ = true ; }
             void  set_nreads_ptr(float * nreads1) { nreads_ = nreads1 ; }
             void  set_acceptor(Exon * acc) { acceptor_ = acc ; }
             void  set_donor(Exon * don) { donor_ = don ; }
@@ -248,11 +253,14 @@ namespace grimoire{
 
     class Intron: public _Region{
         private:
-            bool    annot_ ;
+
             Gene *  gObj_ ;
             int     flt_count_ ;
             bool    ir_flag_ ;
             bool    markd_ ;
+            bool    annot_ ;
+            bool    const_donor_ ;
+            bool    const_acceptor_ ;
 
             int     nxbin_off_ ;
             int     nxbin_mod_ ;
@@ -276,8 +284,10 @@ namespace grimoire{
                 nxbin_mod_  = 0 ;
                 markd_      = false ;
                 numbins_    = 0 ;
-                simpl_cnt_in_  = 0 ;
+                simpl_cnt_in_   = 0 ;
                 simpl_cnt_out_  = 0 ;
+                const_donor_    = false ;
+                const_acceptor_ = false ;
             }
 
             bool    get_annot()             { return annot_ ; }
@@ -290,6 +300,10 @@ namespace grimoire{
             int     get_nxbin_mod()         { return nxbin_mod_ ; }
             int     get_numbins()           { return numbins_ ; }
             int     get_fltcount()          { return flt_count_ ; }
+            bool    get_constitutive()      { return const_donor_ && const_acceptor_ ; }
+
+            void    set_const_donor()       { const_donor_ = true ; }
+            void    set_const_acceptor()    { const_acceptor_ = true ; }
             void    set_markd()             { markd_ = true ; }
             void    unset_markd()           { markd_ = false ; }
             bool    is_connected()          { return markd_ ; }
