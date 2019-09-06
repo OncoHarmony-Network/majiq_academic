@@ -323,11 +323,11 @@ cdef _find_junctions(list file_list, map[string, Gene*]& gene_map, vector[string
                                                                                   len(group_list), min_experiments))
         for j in group_list:
             if file_list[j][2]:
-                logger.info('Reading %s file %s' %(JUNC_FILE_FORMAT, file_list[j][0]))
+                logger.info('Reading %s file %s' %(JUNC_FILE_FORMAT, file_list[j][1]))
                 _parse_junction_file(file_list[j], gene_map, gid_vec,gene_list, min_experiments, (j==last_it_grp),
                                      conf, logger)
             else:
-                logger.info('Reading %s file %s' %(SEQ_FILE_FORMAT, file_list[j][0]))
+                logger.info('Reading %s file %s' %(SEQ_FILE_FORMAT, file_list[j][1]))
                 bamfile = ('%s' % (file_list[j][1])).encode('utf-8')
                 strandness = conf.strand_specific[file_list[j][0]]
 
