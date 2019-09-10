@@ -32,7 +32,17 @@
     <div class="heatmap-form pure-form pure-form-aligned" style="float: right; margin-right: 10px;">
     <div id="heatmap-stat-choices">
         {% for stat_name in stat_names %}
-            <label for="{{ stat_name }}" class="pure-radio">
+            <label for="{{ stat_name }}" class="pure-radio"
+            {% if stat_name == "TNOM" %}
+                title="A rank order statistic. It computes the  lowest Total Number Of Mistakes (TNOM) when setting a threshold over the observed values (PSI) to separate two classes. Given the number of observed values in each class this score can then be translated efficiently to a p-value under a random ordering null hypothesis."
+            {% elif stat_name == "INFOSCORE" %}
+                title="A rank order statistic. Computes the highest mutual information between two class labels and a classification based on a threshold for the observed values (PSI). This score is then translated to a matching p-value under a null of random ordering."
+            {% elif stat_name == "WILCOXON" %}
+                title="The standard ran based statistic where the ranks of observed values (PSI) from each group are summed and compared."
+            {% elif stat_name == "TTEST" %}
+                title="Standard  t-test for whether the mean of the values (PSI) in each group are the same."
+            {% endif %}
+            >
                 <input id="{{ stat_name }}" type="radio" name="stat-name" value="{{ stat_name }}"
                        {% if loop.first %}checked{% endif %}>
                 {{ stat_name }}</label>
@@ -197,6 +207,23 @@
 
                     highlight_lsvs();
                 }));
+
+            $('.lsv-table tbody').on('mouseenter', 'tr', function(){
+                const hl_data = [[$(this).closest('.lsv-table').data('lsv-id'), true, false]];
+                const junc_coords = $(this).children().eq(0).text().split('-').map(function (x){return parseInt(x, 10)});
+                send_ajax('{{ url_for("lsv_highlight") }}', hl_data).then(lsvs => {
+                    $.each(lsvs, function(i, v){
+                        lsvs[i]['junctions'] = lsvs[i]['junctions'].filter(function(junc){return junc[0] === junc_coords[0] && junc[1] === junc_coords[1]});
+                        if (!(lsvs[i]['intron_retention'][0] === junc_coords[0] && lsvs[i]['intron_retention'][1] === junc_coords[1])){
+                            lsvs[i]['intron_retention'] = [];
+                        }
+                    });
+                    sgs.highlight(lsvs);
+                })
+            }).on('mouseleave', 'tr', function(){
+                highlight_lsvs();
+            });
+
         });
 
         document.querySelectorAll('.lsv-cartoon').forEach(async function (c) {
@@ -208,12 +235,44 @@
                 })
         });
 
+
+
         new MutationObserver(mutations => {
             mutations
                 .forEach(m => m.addedNodes.forEach(n => {
                     if(n.nodeType === 3){
                         return;
                     }
+                    n.querySelectorAll('.pairwise-check')
+                        .forEach(h => {
+                            h.onclick = (e) => {
+
+                                const current = d3.select(h);
+                                const main_svg =  d3.select($(h).closest('.psi-violin-plot')[0]);
+                                const add_lines = !(current.attr('data-checked') === 'true');
+                                const violin_elem = $(h).closest('.psi-violin-plot').find(`.violin[data-group-idx="${$(h).parent().data('group-idx')}"]`)[0];
+                                main_svg.select('.overbars').remove();
+                                main_svg.selectAll(".pairwise-check")
+                                    .attr('data-checked', 'false')
+                                    .attr('fill', 'white');
+                                if(add_lines){
+                                    current.attr('data-checked', 'true');
+                                    current.attr('fill', 'black');
+                                    // get current index
+                                    // add pairwise lines
+                                    draw_pairwise_plot(main_svg);
+
+                                    hide_rowcol_highlight(violin_elem);
+                                    draw_rowcol_highlight(violin_elem);
+
+                                }else{
+                                    main_svg.attr('height', 160);
+                                    $(main_svg.node()).children('g').attr('transform', 'translate(40, 5)');
+                                    hide_rowcol_highlight(violin_elem);
+                                }
+
+                            }
+                        })
                     n.querySelectorAll('.heat-map')
                         .forEach(h => {
                             const tool_tip = document.querySelector('.heat-map-tool-tip');
@@ -277,6 +336,7 @@
                                         c.style.fill = 'orange';
                                         tool_tip.querySelector('.value').textContent = c.dataset.mu;
                                         tool_tip.querySelector('.sample').textContent = c.dataset.expName;
+                                        tool_tip.querySelector('.expected').textContent = '';
                                         tool_tip.style.display = 'block';
                                     };
                                     c.onmouseout = () => {
@@ -289,100 +349,25 @@
 
                             v.querySelectorAll('.violin, .swarm-group')
                                 .forEach(h => {
-                                    const outline_color = '#61D836';
+
                                     const tool_tip = document.querySelector('.violin-tool-tip');
                                     h.onmouseover = () => {
+                                        if(!$(h).closest('.psi-violin-plot').find('.pairwise-check[data-checked="true"]').length){
+                                            const expected = $(h).data('expected');
+                                            if(expected){
+                                                tool_tip.querySelector('.expected').textContent = "E(PSI) = " + $(h).data('expected');
+                                            }
+                                            tool_tip.style.display = 'block';
 
-                                        const expected = $(h).data('expected');
-                                        if(expected){
-                                            tool_tip.querySelector('.expected').textContent = "E(PSI) = " + $(h).data('expected');
+                                            draw_rowcol_highlight(h);
                                         }
-                                        tool_tip.style.display = 'block';
-
-                                        const idx = h.dataset.groupIdx;
-                                        var cur_row = 0;
-                                        h
-                                            .closest('tr')
-                                            .querySelectorAll('.heat-map rect')
-                                            .forEach((r, i , arr) => {
-                                                const num_cols = Math.sqrt(arr.length);
-
-                                                if(r.dataset.columnIdx === idx){
-                                                    // vertical boxes
-                                                    r.style.stroke = outline_color;
-                                                    r.style.strokeWidth = '2px';
-
-                                                    if(cur_row === (num_cols - 1)){
-                                                        r.style.strokeDasharray = "0, 20, 60";
-                                                    }else if(cur_row === 0) {
-                                                        r.style.strokeDasharray = "40, 20";
-                                                    }else{
-                                                        r.style.strokeDashoffset = "20";
-                                                        r.style.strokeDasharray = "20, 20";
-                                                    }
-                                                    cur_row++;
-
-                                                }else{
-                                                    r.style.opacity = '0.2'
-                                                }
-                                            });
-                                        h
-                                            .closest('tr')
-                                            .querySelectorAll('.heat-map g')
-                                            .forEach(g => {
-                                                if (g.dataset.rowIdx === idx) {
-                                                    g.querySelectorAll('rect')
-                                                        .forEach((r, i, arr) => {
-                                                            const mx_i = String(arr.length - 1);
-                                                            r.style.opacity = null;
-                                                            // row ; horizontal boxes
-                                                            // first case: intersection point
-                                                            if(r.dataset.columnIdx === idx) {
-                                                                // literal corner cases
-                                                                if(r.dataset.columnIdx === '0' && g.dataset.rowIdx === '0'){
-                                                                    r.style.stroke = outline_color;
-                                                                    r.style.strokeWidth = '2px';
-                                                                    r.style.strokeDasharray = "20, 40";
-                                                                }else if(r.dataset.columnIdx === mx_i && g.dataset.rowIdx === mx_i){
-                                                                    r.style.stroke = outline_color;
-                                                                    r.style.strokeWidth = '2px';
-                                                                    r.style.strokeDasharray = "40";
-                                                                    r.style.strokeDashoffset = '60';
-                                                                }else{
-                                                                    r.style.stroke = null;
-                                                                }
-
-                                                            }else{
-                                                                r.style.stroke = outline_color;
-                                                                r.style.strokeWidth = '2px';
-                                                                // left end cap
-                                                                if(r.dataset.columnIdx === '0') {
-                                                                    r.style.strokeDashoffset = null;
-                                                                    r.style.strokeDasharray = "20, 20, 40";
-                                                                // right end cap
-                                                                }else if(String(i) === mx_i) {
-                                                                    r.style.strokeDashoffset = null;
-                                                                    r.style.strokeDasharray = "60, 20";
-                                                                // everything else
-                                                                }else {
-                                                                    r.style.strokeDashoffset = null;
-                                                                    r.style.strokeDasharray = "20, 20";
-                                                                }
-                                                            }
-
-
-                                                        })
-                                                }
-                                            })
                                     };
 
                                     h.onmouseout = () => {
-                                        h
-                                            .closest('tr')
-                                            .querySelectorAll('.heat-map rect')
-                                            .forEach(r => r.style.opacity = r.style.stroke = null)
-
-                                            tool_tip.style.display = 'none';
+                                        if(!$(h).closest('.psi-violin-plot').find('.pairwise-check[data-checked="true"]').length) {
+                                            hide_rowcol_highlight(h);
+                                        }
+                                        tool_tip.style.display = 'none';
 
                                     }
                                     h.onmousemove = (e) => {

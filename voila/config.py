@@ -13,7 +13,7 @@ from voila.voila_log import voila_log
 
 _ViewConfig = namedtuple('ViewConfig', ['voila_file', 'voila_files', 'splice_graph_file', 'analysis_type', 'nproc',
                                         'force_index', 'debug', 'silent', 'port', 'host', 'web_server', 'index_file',
-                                        'num_web_workers', 'strict_indexing'])
+                                        'num_web_workers', 'strict_indexing', 'skip_type_indexing', 'splice_graph_only'])
 _ViewConfig.__new__.__defaults__ = (None,) * len(_ViewConfig._fields)
 _TsvConfig = namedtuple('TsvConfig', ['file_name', 'voila_files', 'voila_file', 'splice_graph_file',
                                       'non_changing_threshold', 'nproc', 'threshold', 'analysis_type', 'show_all',
@@ -75,7 +75,6 @@ def find_voila_files(vs):
     voila_files = []
 
     for v in vs:
-
         v = Path(v)
 
         if v.is_file() and v.name.endswith('.voila'):
@@ -84,6 +83,7 @@ def find_voila_files(vs):
                 with Matrix(v):
                     voila_files.append(v)
             except OSError:
+                voila_log().warning('Error opening voila file %s , skipping this file' % str(v))
                 pass
 
         elif v.is_dir():
@@ -221,7 +221,7 @@ class ViewConfig:
             settings = dict(config_parser['SETTINGS'])
             for int_key in ['nproc', 'port', 'num_web_workers']:
                 settings[int_key] = config_parser['SETTINGS'].getint(int_key)
-            for bool_key in ['force_index', 'silent', 'debug', 'strict_indexing']:
+            for bool_key in ['force_index', 'silent', 'debug', 'strict_indexing', 'skip_type_indexing']:
                 settings[bool_key] = config_parser['SETTINGS'].getboolean(bool_key)
 
             this_config = _ViewConfig(**{**files, **settings})
