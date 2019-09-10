@@ -75,7 +75,6 @@ def find_voila_files(vs):
     voila_files = []
 
     for v in vs:
-
         v = Path(v)
 
         if v.is_file() and v.name.endswith('.voila'):
@@ -84,6 +83,7 @@ def find_voila_files(vs):
                 with Matrix(v):
                     voila_files.append(v)
             except OSError:
+                voila_log().warning('Error opening voila file %s , skipping this file' % str(v))
                 pass
 
         elif v.is_dir():
