@@ -158,10 +158,10 @@ class SpliceGraphSQL:
 
 
 gene_fieldnames = ('id', 'name', 'strand', 'chromosome')
-junc_fieldnames = ('gene_id', 'start', 'end', 'has_reads', 'annotated')
+junc_fieldnames = ('gene_id', 'start', 'end', 'has_reads', 'annotated', 'is_simplified', 'is_constitutive')
 junc_reads_fieldnames = ('reads', 'experiment_name')
 exon_fieldnames = ('gene_id', 'start', 'end', 'annotated_start', 'annotated_end', 'annotated')
-ir_fieldnames = ('gene_id', 'start', 'end', 'has_reads', 'annotated')
+ir_fieldnames = ('gene_id', 'start', 'end', 'has_reads', 'annotated', 'is_simplified', 'is_constitutive')
 ir_reads_fieldnames = ('reads', 'experiment_name')
 alt_starts_fieldnames = ('coordinate',)
 alt_ends_fieldnames = ('coordinate',)
