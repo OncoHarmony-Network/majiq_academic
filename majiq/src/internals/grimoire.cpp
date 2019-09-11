@@ -612,7 +612,7 @@ namespace grimoire {
         }
         const float c = (npos>0) ? (npos/numbins_) : 0 ;
         bool b = (c >= min_bins) ;
-        return b ;
+        return b || ir_flag_ ;
     }
 
 /*
