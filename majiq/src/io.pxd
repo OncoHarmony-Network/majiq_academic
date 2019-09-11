@@ -6,7 +6,7 @@ cimport numpy as np
 import numpy as np
 from majiq.src.internals.qLSV cimport qLSV
 
-cdef int read_gff(str filename, map[string, Gene*]& all_genes, vector[string]& gid_vec, bint simpl,
+cdef int read_gff(str filename, map[string, Gene*]& all_genes, vector[string]& gid_vec, bint simpl, bint enable_anot_ir,
                   object logging) except -1
 cdef void get_coverage_mat_lsv(map[string, qLSV*]& result, list file_list, int nthreads, bint fltr,
                                int minreads, int minnonzero)

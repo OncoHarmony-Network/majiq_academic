@@ -254,19 +254,20 @@ namespace grimoire{
     class Intron: public _Region{
         private:
 
-            Gene *  gObj_ ;
-            int     flt_count_ ;
-            bool    ir_flag_ ;
-            bool    markd_ ;
             bool    annot_ ;
+            Gene *  gObj_ ;
+            bool    simpl_fltr_ ;
+            bool    ir_flag_ ;
+
+            int     flt_count_ ;
+            bool    markd_ ;
             bool    const_donor_ ;
             bool    const_acceptor_ ;
-
             int     nxbin_off_ ;
             int     nxbin_mod_ ;
             int     nxbin_ ;
             int     numbins_ ;
-            bool    simpl_fltr_ ;
+
             unsigned int simpl_cnt_in_ ;
             unsigned int simpl_cnt_out_ ;
 
@@ -278,6 +279,22 @@ namespace grimoire{
                                                                      annot_(annot1), gObj_(gObj1), simpl_fltr_(simpl1){
                 flt_count_  = 0 ;
                 ir_flag_    = false ;
+                read_rates_ = nullptr ;
+                nxbin_      = 0 ;
+                nxbin_off_  = 0 ;
+                nxbin_mod_  = 0 ;
+                markd_      = false ;
+                numbins_    = 0 ;
+                simpl_cnt_in_   = 0 ;
+                simpl_cnt_out_  = 0 ;
+                const_donor_    = false ;
+                const_acceptor_ = false ;
+            }
+
+             Intron (int start1, int end1, bool annot1, Gene* gObj1, bool simpl1, bool enable_annot):
+                      _Region(start1, end1), annot_(annot1), gObj_(gObj1), simpl_fltr_(simpl1), ir_flag_(enable_annot){
+
+                flt_count_  = 0 ;
                 read_rates_ = nullptr ;
                 nxbin_      = 0 ;
                 nxbin_off_  = 0 ;
@@ -443,8 +460,8 @@ namespace grimoire{
             char    get_strand()    { return strand_ ;}
             string  get_name()      { return name_ ;}
             void    set_simpl_fltr(bool val) {};
-            void    create_annot_intron(int start_ir, int end_ir, bool simpl){
-                Intron * ir = new Intron(start_ir +1, end_ir -1, true, this, simpl) ;
+            void    create_annot_intron(int start_ir, int end_ir, bool simpl, bool enable_anot_ir){
+                Intron * ir = new Intron(start_ir +1, end_ir -1, true, this, simpl, enable_anot_ir) ;
                 intron_vec_.push_back(ir) ;
             }
 

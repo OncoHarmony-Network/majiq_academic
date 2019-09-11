@@ -124,6 +124,8 @@ def main():
     buildparser.add_argument('--irnbins', default=0.5, type=float, help='This values defines the number of bins with '
                                                                         'some coverage that an intron needs to pass '
                                                                         'to be accepted as real [Default: %(default)s]')
+    buildparser.add_argument('--annotated_ir_always',  dest="annot_ir_always", action='store_true', default=False,
+                             help='When this flag is set all the annotated ir will be accepted even if they do not pass the filters.')
 
     buildparser.add_argument('--simplify-denovo', dest="simpl_denovo", default=0, type=int,
                              help='Minimum number of reads threshold combining all positions of an denovo junction to '

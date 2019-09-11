@@ -534,9 +534,10 @@ cdef _core_build(str transcripts, list file_list, object conf, object logger):
     cdef bint bsimpl = (conf.simpl_psi >= 0)
     cdef bint dumpCJunctions = conf.dump_const_j
     cdef vector[string] cjuncs
+    cdef bint enable_anot_ir = conf.annot_ir_always
 
     logger.info("Parsing GFF3")
-    majiq_io.read_gff(transcripts, gene_map, gid_vec, bsimpl, logger)
+    majiq_io.read_gff(transcripts, gene_map, gid_vec, bsimpl, enable_anot_ir, logger)
 
     prepare_genelist(gene_map, gene_list)
     n = gene_map.size()

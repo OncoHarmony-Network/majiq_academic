@@ -28,7 +28,7 @@ cdef list gene_id_keys = ['ID', 'gene_id']
 
 
 
-cdef int  read_gff(str filename, map[string, Gene*] all_genes, vector[string] gid_vec, bint simpl,
+cdef int  read_gff(str filename, map[string, Gene*] all_genes, vector[string] gid_vec, bint simpl, bint enable_anot_ir,
                    object logging) except -1:
     """
     :param filename: GFF input filename
@@ -121,11 +121,11 @@ cdef int  read_gff(str filename, map[string, Gene*] all_genes, vector[string] gi
 
         key = ('%s-%s' % (last_ss, FIRST_LAST_JUNC)).encode('utf-8')
         all_genes[gene_id].junc_map_[key] = new Junction(last_ss, FIRST_LAST_JUNC, True, simpl)
-    merge_exons(exon_dict, all_genes, simpl)
+    merge_exons(exon_dict, all_genes, simpl, enable_anot_ir)
     return 0
 
 
-cdef int merge_exons(dict exon_dict, map[string, Gene*]& all_genes, bint simpl) except -1:
+cdef int merge_exons(dict exon_dict, map[string, Gene*]& all_genes, bint simpl, bint enable_anot_ir) except -1:
     cdef list ex_list
     cdef string gne_id, key
     cdef tuple x
@@ -148,7 +148,7 @@ cdef int merge_exons(dict exon_dict, map[string, Gene*]& all_genes, bint simpl) 
                     all_genes[gne_id].exon_map_[key] = new Exon(ex_start, ex_end, True)
 
                     if nopen > 0 and (ex_end+4) < (coord-1):
-                        all_genes[gne_id].create_annot_intron(ex_end, coord, simpl)
+                        all_genes[gne_id].create_annot_intron(ex_end, coord, simpl, enable_anot_ir)
                        # pass
 #                    else:
                         # all_genes[gne_id].create_annot_intron(ex_end+1, coord-1)
