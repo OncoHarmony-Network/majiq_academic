@@ -568,16 +568,13 @@ cdef _core_build(str transcripts, list file_list, object conf, object logger):
         simplify(file_list, gene_map, gid_vec, gene_list, conf, logger)
     for i in prange(n, nogil=True, num_threads=nthreads):
         gg = gene_map[gid_vec[i]]
+        gg.get_constitutive_junctions(cjuncs)
         gene_to_splicegraph(gg, db)
         with gil:
             logger.debug("[%s] Detect LSVs" % gg.get_id())
         nlsv = gg.detect_lsvs(out_lsvlist)
 
-        if dumpCJunctions:
-            gg.get_constitutive_junctions(cjuncs)
-
-
-    if cjuncs.size()>0:
+    if cjuncs.size()>0 and dumpCJunctions:
         with open("%s/constitutive_junctions.tsv" % conf.outDir, 'w+') as fp:
             fp.write('#GENEID\tCHROMOSOME\tJUNC_START\tJUNC_END\tDONOR_START\tDONOR_END\tACCEPTOR_START\tACCEPTOR_END\n')
             for jstr in cjuncs:
