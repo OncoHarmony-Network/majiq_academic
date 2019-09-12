@@ -154,7 +154,6 @@ cdef int merge_exons(dict exon_dict, map[string, Gene*]& all_genes, bint simpl, 
                         # all_genes[gne_id].create_annot_intron(ex_end+1, coord-1)
                         #tlist.append([ex_end+1, coord-1, 1, IR_TYPE])
                     ex_end = -1
-                    nopen = 0
                     ex_start = coord
 
                 ex_start = coord if ex_start == -1 or coord < ex_start else ex_start
