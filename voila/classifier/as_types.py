@@ -555,6 +555,8 @@ class Graph:
                 if node.start < edge.start < node.end and node.start < edge.end < node.end:
                     exitrons.append(edge)
 
+            coords_in_exon = []
+
             trim_end = False
             for edge in self.edges:
                 # look through all edges
@@ -570,6 +572,7 @@ class Graph:
                         if edge.start <= exitron.end:
                             break
                     else:
+                        coords_in_exon.append(edge.start)
                         trim_end = True
 
             trim_start = False
@@ -583,7 +586,14 @@ class Graph:
                         if edge.end >= exitron.start:
                             break
                     else:
+                        coords_in_exon.append(edge.end)
                         trim_start = True
+
+            # need to check for the special case that there are is only one coordinate on the exon where
+            # all junctions are connected. In this case we should not trim
+            if coords_in_exon and all(x == coords_in_exon[0] for x in coords_in_exon):
+                trim_start = False
+                trim_end = False
 
             # end find conditions part ---
 
