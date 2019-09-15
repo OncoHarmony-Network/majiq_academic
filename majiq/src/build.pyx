@@ -234,6 +234,7 @@ cdef _parse_junction_file(tuple filetp, map[string, Gene*]& gene_map, vector[str
     cdef np.float32_t min_ir_cov = conf.min_intronic_cov
     cdef np.float32_t ir_numbins = conf.irnbins
     cdef int jlimit
+    cdef unsigned int local_readlen
 
     c_iobam = IOBam(filetp[1].encode('utf-8'), strandness, eff_len, nthreads, gene_list, bsimpl)
 
@@ -241,6 +242,9 @@ cdef _parse_junction_file(tuple filetp, map[string, Gene*]& gene_map, vector[str
         junc_ids = fp['junc_info']
         if ir:
             ir_cov = fp['ir_cov']
+            if len(ir_cov) == 0:
+                logger.warning('File does not contain IR coverage information')
+            local_readlen = len(ir_cov[0])
         jlimit = fp['meta'][0][2]
     njunc = junc_ids.shape[0]
 
@@ -262,6 +266,8 @@ cdef _parse_junction_file(tuple filetp, map[string, Gene*]& gene_map, vector[str
                 gid = b':'.join(jid.split(b':')[3:])
                 ir_vec = vector[np.float32_t](eff_len)
                 for i in range(eff_len):
+                    if i >= local_readlen:
+                        break;
                     ir_vec[i] = ir_cov[j - jlimit][i]
 
                 # logger.info("IR VEC: %s %s" %(eff_len, ir_vec.size()))
@@ -559,6 +565,7 @@ cdef _core_build(str transcripts, list file_list, object conf, object logger):
         with gil:
             logger.debug("%s] Detect exons" % gg.get_id())
         gg.detect_exons()
+
         if ir:
             with gil:
                 logger.debug("%s] Connect introns" % gg.get_id())
