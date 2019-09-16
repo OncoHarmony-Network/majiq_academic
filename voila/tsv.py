@@ -399,7 +399,6 @@ class HeterogenTsv(AnalysisTypeTsv):
                 writer = csv.DictWriter(tsv, fieldnames=fieldnames, delimiter='\t')
 
                 for gene_id in self.gene_ids(q, e):
-
                     gene = sg.gene(gene_id)
                     chromosome = gene['chromosome']
 
@@ -437,7 +436,12 @@ class HeterogenTsv(AnalysisTypeTsv):
                         }
 
                         for grp, mean in zip(group_names, np.array(mean_psi).transpose((1, 0, 2))):
-                            row[grp + ' E(PSI)'] = semicolon(get_expected_psi(x) for x in mean)
+                            # the way that the mean_psi algo works, if the LSV is missing for certain groups, it is left
+                            # as a '-1' matrix. In this case we fill in NA for that slot.
+                            if all(all(x == -1 for x in y)for y in mean):
+                                row[grp + ' E(PSI)'] = 'NA'
+                            else:
+                                row[grp + ' E(PSI)'] = semicolon(get_expected_psi(x) for x in mean)
 
                         for key, value in het.junction_stats:
                             row[key] = semicolon(value)
