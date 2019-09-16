@@ -244,7 +244,9 @@ cdef _parse_junction_file(tuple filetp, map[string, Gene*]& gene_map, vector[str
             ir_cov = fp['ir_cov']
             if len(ir_cov) == 0:
                 logger.warning('File does not contain IR coverage information')
-            local_readlen = len(ir_cov[0])
+                local_readlen = 0
+            else:
+                local_readlen = len(ir_cov[0])
         jlimit = fp['meta'][0][2]
     njunc = junc_ids.shape[0]
 
