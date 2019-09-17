@@ -349,7 +349,7 @@ class PsiTsv(AnalysisTypeTsv):
                             ),
                             'IR coords': ir_coords,
                             'E(PSI) per LSV junction': semicolon(psi.means),
-                            'Var(E(PSI)) per LSV junction': semicolon(psi.variances),
+                            'StDev(E(PSI)) per LSV junction': semicolon(psi.standard_deviations),
                             'UCSC LSV Link': views.ucsc_href(genome, chromosome, start, end)
                         }
 
@@ -360,7 +360,7 @@ class PsiTsv(AnalysisTypeTsv):
                     q.task_done()
 
     def tab_output(self):
-        fieldnames = ['#Gene Name', 'Gene ID', 'LSV ID', 'E(PSI) per LSV junction', 'Var(E(PSI)) per LSV junction',
+        fieldnames = ['#Gene Name', 'Gene ID', 'LSV ID', 'E(PSI) per LSV junction', 'StDev(E(PSI)) per LSV junction',
                       'LSV Type', 'A5SS', 'A3SS', 'ES', 'Num. Junctions', 'Num. Exons', 'De Novo Junctions', 'chr',
                       'strand', 'Junctions coords', 'Exons coords', 'IR coords', 'UCSC LSV Link']
 
@@ -399,7 +399,6 @@ class HeterogenTsv(AnalysisTypeTsv):
                 writer = csv.DictWriter(tsv, fieldnames=fieldnames, delimiter='\t')
 
                 for gene_id in self.gene_ids(q, e):
-
                     gene = sg.gene(gene_id)
                     chromosome = gene['chromosome']
 
@@ -437,7 +436,12 @@ class HeterogenTsv(AnalysisTypeTsv):
                         }
 
                         for grp, mean in zip(group_names, np.array(mean_psi).transpose((1, 0, 2))):
-                            row[grp + ' E(PSI)'] = semicolon(get_expected_psi(x) for x in mean)
+                            # the way that the mean_psi algo works, if the LSV is missing for certain groups, it is left
+                            # as a '-1' matrix. In this case we fill in NA for that slot.
+                            if all(all(x == -1 for x in y)for y in mean):
+                                row[grp + ' E(PSI)'] = 'NA'
+                            else:
+                                row[grp + ' E(PSI)'] = semicolon(get_expected_psi(x) for x in mean)
 
                         for key, value in het.junction_stats:
                             row[key] = semicolon(value)

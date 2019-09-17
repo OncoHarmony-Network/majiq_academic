@@ -7,7 +7,7 @@ import numpy as np
 
 from voila.api.matrix_hdf5 import DeltaPsi, Psi, Heterogen, MatrixType
 from voila.api.matrix_utils import unpack_means, unpack_bins, generate_excl_incl, generate_means, \
-    generate_high_probability_non_changing, generate_variances
+    generate_high_probability_non_changing, generate_variances, generate_standard_deviations
 from voila.config import ViewConfig
 from voila.exceptions import LsvIdNotFoundInVoilaFile, GeneIdNotFoundInVoilaFile, LsvIdNotFoundInAnyVoilaFile
 from voila.vlsv import is_lsv_changing, matrix_area, get_expected_psi
@@ -405,6 +405,14 @@ class ViewPsi(Psi, ViewMatrix):
             :return: list
             """
             return generate_variances(self.bins)
+
+        @property
+        def standard_deviations(self):
+            """
+            Create variance data of bins data.
+            :return: list
+            """
+            return generate_standard_deviations(self.bins)
 
     def lsv(self, lsv_id):
         """
