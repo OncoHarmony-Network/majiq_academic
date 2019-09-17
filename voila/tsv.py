@@ -349,7 +349,7 @@ class PsiTsv(AnalysisTypeTsv):
                             ),
                             'IR coords': ir_coords,
                             'E(PSI) per LSV junction': semicolon(psi.means),
-                            'Var(E(PSI)) per LSV junction': semicolon(psi.variances),
+                            'StDev(E(PSI)) per LSV junction': semicolon(psi.standard_deviations),
                             'UCSC LSV Link': views.ucsc_href(genome, chromosome, start, end)
                         }
 
@@ -360,7 +360,7 @@ class PsiTsv(AnalysisTypeTsv):
                     q.task_done()
 
     def tab_output(self):
-        fieldnames = ['#Gene Name', 'Gene ID', 'LSV ID', 'E(PSI) per LSV junction', 'Var(E(PSI)) per LSV junction',
+        fieldnames = ['#Gene Name', 'Gene ID', 'LSV ID', 'E(PSI) per LSV junction', 'StDev(E(PSI)) per LSV junction',
                       'LSV Type', 'A5SS', 'A3SS', 'ES', 'Num. Junctions', 'Num. Exons', 'De Novo Junctions', 'chr',
                       'strand', 'Junctions coords', 'Exons coords', 'IR coords', 'UCSC LSV Link']
 
