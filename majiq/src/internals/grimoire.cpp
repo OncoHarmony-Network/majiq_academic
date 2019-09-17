@@ -363,16 +363,29 @@ namespace grimoire {
         sort(ex_vector.begin(), ex_vector.end(), Exon::islowerRegion<Exon>) ;
 
         for(const auto &ex: ex_vector){
-            unsigned int cj = 0 ;
+            unsigned int cj = 0, cj2 ;
 
             // Mark first if intron is the only connection in/out the exon. This first if could be an
             // else if (instead of else continue) but for clarity we leave it here.
 
-            if ((ex->ob).size()==0 && ex->ob_irptr != nullptr)
+
+            for(const auto &juncIt:  (ex->ob)){
+                const int coord = juncIt->get_end() ;
+                if (FIRST_LAST_JUNC != coord && juncIt->get_bld_fltr() && !juncIt->get_simpl_fltr()) {
+                    ++cj ;
+                }
+            }
+            for(const auto &juncIt:  (ex->ib)){
+                const int coord = juncIt->get_start() ;
+                if (FIRST_LAST_JUNC != coord && juncIt->get_bld_fltr() && !juncIt->get_simpl_fltr()) {
+                    ++cj2 ;
+                }
+            }
+            if (cj==0 && ex->ob_irptr != nullptr)
             {
                 (ex->ob_irptr)->set_const_donor() ;
             }
-            if ((ex->ib).size()==0 && ex->ib_irptr != nullptr)
+            if (cj2==0 && ex->ib_irptr != nullptr)
             {
                 (ex->ib_irptr)->set_const_acceptor() ;
             }
