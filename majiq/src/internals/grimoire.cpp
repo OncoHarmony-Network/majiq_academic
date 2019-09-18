@@ -368,7 +368,6 @@ namespace grimoire {
             // Mark first if intron is the only connection in/out the exon. This first if could be an
             // else if (instead of else continue) but for clarity we leave it here.
 
-
             for(const auto &juncIt:  (ex->ob)){
                 const int coord = juncIt->get_end() ;
                 if (FIRST_LAST_JUNC != coord && juncIt->get_bld_fltr() && !juncIt->get_simpl_fltr()) {
