@@ -4,7 +4,8 @@ from pathlib import Path
 from voila.voila_log import voila_log
 from voila import constants
 from voila.api import SpliceGraph, Matrix
-from voila.api.matrix_utils import generate_means, unpack_bins, generate_high_probability_non_changing
+from voila.api.matrix_utils import generate_means, unpack_bins, generate_high_probability_non_changing, \
+    generate_bins_prior_removed, generate_prior_removed_expected_dpsi
 
 from operator import itemgetter
 import csv
@@ -13,7 +14,7 @@ import argparse
 from voila.classifier.tsv_writer import TsvWriter
 from voila.config import ClassifyConfig
 from voila.exceptions import GeneIdNotFoundInVoilaFile, VoilaException
-from voila.vlsv import get_expected_psi, matrix_area
+from voila.vlsv import get_expected_psi, matrix_area, get_expected_dpsi
 import numpy as np
 
 def check_file(value):
@@ -86,15 +87,14 @@ class Graph:
                 raise VoilaException("Gene ID not found in SpliceGraph File: %s" % self.gene_id)
             self.strand, self.gene_name, self.chromosome = itemgetter('strand', 'name', 'chromosome')(gene_meta)
 
-
-
-
+        self.priors = {}
+        if self.config.non_changing:
+            for voila_file in self.config.voila_files:
+                self.priors[voila_file] = Matrix(voila_file).prior
 
 
         # find connections between nodes
         self._find_connections()
-
-
 
 
 
@@ -403,16 +403,23 @@ class Graph:
             any(max(Prob(|E(dPSI)|>=changing-thresh)))>=probability-changing-thresh
         """
 
-        probs = []
+        passed_edpsi = []
         for edge in module.get_all_edges():
             for lsv_quants in edge.lsvs.values():
                 if lsv_quants['delta_psi_bins']:
-                    probs.append(max(matrix_area(b, self.config.changing_threshold) for b in lsv_quants['delta_psi_bins']))
-        #     print(edge.start, edge.end)
-        #     print(list(edge.lsvs.keys()))
-        # print(probs)
+                    if max(get_expected_dpsi(bins) >= self.config.changing_threshold for bins in lsv_quants['delta_psi_bins']):
+                        passed_edpsi.append(lsv_quants['delta_psi_bins'])
 
-        return any(x >= self.config.probability_changing_threshold for x in probs)
+        #print(passed_edpsi)
+        if not passed_edpsi:
+            return False
+
+        for bins in passed_edpsi:
+            if max(matrix_area(b, self.config.changing_threshold) for b in bins) \
+                >= self.config.probability_changing_threshold:
+                return True
+
+        return False
 
 
     def _confidence_non_changing(self, module):
@@ -422,17 +429,33 @@ class Graph:
         at least N juncs have:
             all(max(Prob(|E(dPSI)|<non-changing-thresh)))>=probability-non-changing-thresh
         """
-        probs = []
+
+        # remove the priors
+        prior_removed = []
         for edge in module.get_all_edges():
             for lsv_quants in edge.lsvs.values():
-                for dpsi_bins, prior in zip(lsv_quants['delta_psi_bins'], lsv_quants['prior']):
-                    if len(prior) and len(dpsi_bins):
-                        probs.append(max(generate_high_probability_non_changing(lsv_quants['has_ir'],
-                                                                            prior,
-                                                                            self.config.non_changing_threshold,
-                                                                            dpsi_bins)))
+                prior_removed.append(generate_bins_prior_removed(lsv_quants['has_ir'],
+                                                                        self.priors[lsv_quants['voila_file']],
+                                                                        lsv_quants['delta_psi_bins']))
 
-        return all(x >= self.config.probability_non_changing_threshold for x in probs)
+        # first check for edpsi thresholds
+        passed_edpsi = all(max(generate_prior_removed_expected_dpsi(None,
+                                                                    None,
+                                                                    pr_removed_bins=bins))
+                           <= self.config.non_changing_threshold for bins in prior_removed)
+
+        if not passed_edpsi:
+            return False
+
+        #return all(x >= self.config.probability_non_changing_threshold for x in probs)
+
+        passed_prob = all(max(generate_high_probability_non_changing(None,
+                                                                    None,
+                                                                    self.config.non_changing_threshold,
+                                                                    pr_removed_bins=bins))
+                      >= self.config.probability_non_changing_threshold for bins in prior_removed)
+
+        return passed_prob
 
 
     def _remove_empty_exons(self):
@@ -824,7 +847,7 @@ class Graph:
 
                     if lsv_id not in lsv_store[key]:
                         lsv_store[key][lsv_id] = {'psi': set(), 'delta_psi': set(), 'delta_psi_bins': [],
-                                                  'has_ir': False, 'prior': []}
+                                                  'has_ir': False, 'voila_file': voila_file}
 
                     lsv_store[key][lsv_id]['psi'].add(means)
                     lsv_store[key][lsv_id]['has_ir'] = lsv.intron_retention
@@ -855,22 +878,22 @@ class Graph:
 
                         if lsv_id not in lsv_store[key]:
                             lsv_store[key][lsv_id] = {'psi': set(), 'delta_psi': set(), 'delta_psi_bins': [],
-                                                      'has_ir': False, 'prior': []}
+                                                      'has_ir': False, 'voila_file': voila_file}
 
                         lsv_store[key][lsv_id]['psi'].add(means)
                         lsv_store[key][lsv_id]['has_ir'] = lsv.intron_retention
 
                 _bins = lsv.get('bins')
-                if self.config.non_changing:
-                    _prior = lsv.matrix_hdf5.prior
-                else:
-                    _prior = None
+                # if self.config.non_changing:
+                #     _prior = lsv.matrix_hdf5.prior
+                # else:
+                #     _prior = None
 
                 for (start, end), means, bins in zip(juncs, generate_means(_bins), _bins):
                     key = str(start) + '-' + str(end)
                     lsv_store[key][lsv_id]['delta_psi'].add(means)
                     lsv_store[key][lsv_id]['delta_psi_bins'].append(bins)
-                    lsv_store[key][lsv_id]['prior'].append(_prior)
+                    #lsv_store[key][lsv_id]['prior'].append(_prior)
 
 
 
@@ -918,7 +941,7 @@ class Graph:
 
                         if lsv_id not in lsv_store[key]:
                             lsv_store[key][lsv_id] = {'psi': set(), 'delta_psi': set(), 'delta_psi_bins': [],
-                                                      'has_ir': False, 'prior': []}
+                                                      'has_ir': False, 'voila_file': voila_file}
 
                         deltas[i].append(_means)
                         bins[i].append(_bins)
@@ -928,20 +951,20 @@ class Graph:
 
 
                 deltas = [d1-d2 for x in deltas for d1, d2 in combinations(x, 2)]
-                if self.config.non_changing:
-                    try:
-                        _prior = lsv.matrix_hdf5.prior
-                    except:
-                        _prior = []
-                else:
-                    _prior = None
+                # if self.config.non_changing:
+                #     try:
+                #         self.priors[] = lsv.matrix_hdf5.prior
+                #     except:
+                #         self.priors[] = None
+                # else:
+                #     _prior = None
 
 
                 for (start, end), _bins, delta in zip(lsv.junctions, generate_means(bins), deltas):
                     key = str(start) + '-' + str(end)
                     lsv_store[key][lsv_id]['delta_psi'].add(delta)
                     lsv_store[key][lsv_id]['delta_psi_bins'].append(_bins)
-                    lsv_store[key][lsv_id]['prior'].append(_prior)
+                    #lsv_store[key][lsv_id]['prior'].append(_prior)
                     # print(lsv_id)
                     # print(_bins)
 
