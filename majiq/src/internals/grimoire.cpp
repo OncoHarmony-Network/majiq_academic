@@ -363,7 +363,7 @@ namespace grimoire {
         sort(ex_vector.begin(), ex_vector.end(), Exon::islowerRegion<Exon>) ;
 
         for(const auto &ex: ex_vector){
-            unsigned int cj = 0, cj2 ;
+            unsigned int cj = 0, cj2 = 0 ;
 
             // Mark first if intron is the only connection in/out the exon. This first if could be an
             // else if (instead of else continue) but for clarity we leave it here.
