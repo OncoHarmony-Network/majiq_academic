@@ -74,33 +74,37 @@ def classify_gene(args):
                 writer.p_multi_gene_region()
 
             else:
-                writer.cassette()
+                if 'events' in config.enabled_outputs:
+                    writer.cassette()
 
-                writer.alt3prime()
-                writer.alt5prime()
-                writer.alt3and5prime()
+                    writer.alt3prime()
+                    writer.alt5prime()
+                    writer.alt3and5prime()
 
-                writer.p_alt3prime()
-                writer.p_alt5prime()
+                    writer.p_alt3prime()
+                    writer.p_alt5prime()
 
-                writer.mutually_exclusive()
-                writer.alternative_intron()
+                    writer.mutually_exclusive()
+                    writer.alternative_intron()
 
-                writer.alternate_first_exon()
-                writer.alternate_last_exon()
-                writer.p_alternate_first_exon()
-                writer.p_alternate_last_exon()
+                    writer.alternate_first_exon()
+                    writer.alternate_last_exon()
+                    writer.p_alternate_first_exon()
+                    writer.p_alternate_last_exon()
 
-                writer.multi_exon_spanning()
-                writer.tandem_cassette()
-                writer.exitron()
+                    writer.multi_exon_spanning()
+                    writer.tandem_cassette()
+                    writer.exitron()
 
-                writer.summary()
+                if 'summary' in config.enabled_outputs:
+                    writer.summary()
 
-                writer.heatmap()
-                writer.junctions()
+                if 'heatmap' in config.enabled_outputs:
+                    writer.heatmap()
+                if 'junctions' in config.enabled_outputs:
+                    writer.junctions()
 
-                if ClassifyConfig().keep_constitutive:
+                if ClassifyConfig().keep_constitutive and 'events' in config.enabled_outputs:
                     writer.constitutive()
 
         else:

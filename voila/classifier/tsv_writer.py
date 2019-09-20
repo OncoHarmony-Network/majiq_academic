@@ -138,67 +138,93 @@ class TsvWriter(BaseTsvWriter):
 
     @staticmethod
     def tsv_names():
-        if ClassifyConfig().putative_multi_gene_regions:
+        config = ClassifyConfig()
+        if config.putative_multi_gene_regions:
             return ['p_multi_gene_region.tsv']
-        names = ['summary.tsv', 'cassette.tsv', 'alt3prime.tsv', 'alt5prime.tsv', 'alt3and5prime.tsv',
+        names = []
+        if 'events' in config.enabled_outputs:
+            names += ['cassette.tsv', 'alt3prime.tsv', 'alt5prime.tsv', 'alt3and5prime.tsv',
                  'mutually_exclusive.tsv', 'alternate_last_exon.tsv', 'alternate_first_exon.tsv',
                  'alternative_intron.tsv', 'p_alt5prime.tsv', 'p_alt3prime.tsv', 'multi_exon_spanning.tsv',
-                 'tandem_cassette.tsv', 'exitron.tsv', 'p_alternate_last_exon.tsv', 'p_alternate_first_exon.tsv',
-                 'heatmap.tsv', 'junctions.tsv']
-        if ClassifyConfig().keep_constitutive:
+                 'tandem_cassette.tsv', 'exitron.tsv', 'p_alternate_last_exon.tsv', 'p_alternate_first_exon.tsv']
+        if 'heatmap' in config.enabled_outputs:
+            names += ['heatmap.tsv']
+        if 'junctions' in config.enabled_outputs:
+            names += ['junctions.tsv']
+        if 'summary' in config.enabled_outputs:
+            names += ['summary.tsv']
+        if config.keep_constitutive:
             names.append('constitutive.tsv')
         return names
 
 
     def start_all_headers(self):
 
+        if self.config.putative_multi_gene_regions:
+            headers = self.common_headers + ['Exon1Start', 'Exon1End', 'Exon2Start', 'Exon2End']
+            self.start_headers(headers, 'p_multi_gene_region.tsv')
 
-        headers = self.common_headers + ['De Novo', 'Reference Exon Coordinate', 'Exon Spliced With',
-                                         'Exon Spliced With Coordinate', 'Junction Name',
-                                         'Junction Coordinate'] + self.quantification_headers
-        self.start_headers(headers, 'cassette.tsv')
-        self.start_headers(headers, 'alt3prime.tsv')
-        self.start_headers(headers, 'alt5prime.tsv')
-        self.start_headers(headers, 'p_alt5prime.tsv')
-        self.start_headers(headers, 'p_alt3prime.tsv')
-        self.start_headers(headers, 'alt3and5prime.tsv')
-        self.start_headers(headers, 'mutually_exclusive.tsv')
-        self.start_headers(headers, 'alternate_last_exon.tsv')
-        self.start_headers(headers, 'alternate_first_exon.tsv')
-        self.start_headers(headers, 'p_alternate_last_exon.tsv')
-        self.start_headers(headers, 'p_alternate_first_exon.tsv')
-        self.start_headers(headers, 'alternative_intron.tsv')
-        headers = self.common_headers + ['De Novo', 'Reference Exon Coordinate', 'Exon Spliced With',
-                                         'Exon Spliced With Coordinate', 'Tandem Exon Coordinates', 'Num_Tandem_Exons',
-                                         'Junction Name', 'Junction Coordinate'] + self.quantification_headers
-        self.start_headers(headers, 'multi_exon_spanning.tsv')
-        self.start_headers(headers, 'tandem_cassette.tsv')
-        headers = self.common_headers + ['De Novo', 'Exon coordinate', 'Junction Coordinate'] + self.quantification_headers
-        self.start_headers(headers, 'exitron.tsv')
-        headers = self.common_headers + ["Cassette", "Tandem Cassette",
-                                         "Alt 3", "Alt 5", "P_Alt 3", "P_Alt 5", "Alt 3 and Alt 5", "MXE",
-                                         "Alternative Intron", "ALE", "AFE",
-                                         "P_ALE", "P_AFE", "Orphan Junction"]
-        if self.config.keep_constitutive:
-            headers.append("Constitutive Junction")
-            headers.append("Constitutive Intron")
-        if self.config.output_complex:
-            headers.remove("Complex")
-        headers += ["Multi Exon Spanning", "Exitron", "Complex", 'De Novo Junctions', 'De Novo Introns',
-                    "Number of Events", "Collapsed Event Name"
-                    ]
-        self.start_headers(headers, 'summary.tsv')
-        if self.config.keep_constitutive:
+        else:
             headers = self.common_headers + ['De Novo', 'Reference Exon Coordinate', 'Exon Spliced With',
                                              'Exon Spliced With Coordinate', 'Junction Name',
-                                             'Junction Coordinate', 'Is Intron',
-                                             'Collapsed Event Name'] + self.quantification_headers
-            self.start_headers(headers, 'constitutive.tsv')
+                                             'Junction Coordinate'] + self.quantification_headers
+            if 'events' in self.config.enabled_outputs:
 
-        headers = self.common_headers + ['Collapsed Event Name'] + self.quantification_headers
-        self.start_headers(headers, 'heatmap.tsv')
-        headers = self.common_headers + ['Collapsed Event Name', 'Junction Name', 'Junction Coordinate', 'De Novo'] + self.quantification_headers
-        self.start_headers(headers, 'junctions.tsv')
+                self.start_headers(headers, 'cassette.tsv')
+                self.start_headers(headers, 'alt3prime.tsv')
+                self.start_headers(headers, 'alt5prime.tsv')
+                self.start_headers(headers, 'p_alt5prime.tsv')
+                self.start_headers(headers, 'p_alt3prime.tsv')
+                self.start_headers(headers, 'alt3and5prime.tsv')
+                self.start_headers(headers, 'mutually_exclusive.tsv')
+                self.start_headers(headers, 'alternate_last_exon.tsv')
+                self.start_headers(headers, 'alternate_first_exon.tsv')
+                self.start_headers(headers, 'p_alternate_last_exon.tsv')
+                self.start_headers(headers, 'p_alternate_first_exon.tsv')
+                self.start_headers(headers, 'alternative_intron.tsv')
+                headers = self.common_headers + ['De Novo', 'Reference Exon Coordinate', 'Exon Spliced With',
+                                                 'Exon Spliced With Coordinate', 'Tandem Exon Coordinates', 'Num_Tandem_Exons',
+                                                 'Junction Name', 'Junction Coordinate'] + self.quantification_headers
+                self.start_headers(headers, 'multi_exon_spanning.tsv')
+                self.start_headers(headers, 'tandem_cassette.tsv')
+                headers = self.common_headers + ['De Novo', 'Exon coordinate', 'Junction Coordinate'] + self.quantification_headers
+                self.start_headers(headers, 'exitron.tsv')
+
+                if self.config.keep_constitutive:
+                    headers = self.common_headers + ['De Novo', 'Reference Exon Coordinate', 'Exon Spliced With',
+                                                     'Exon Spliced With Coordinate', 'Junction Name',
+                                                     'Junction Coordinate', 'Is Intron',
+                                                     'Collapsed Event Name'] + self.quantification_headers
+                    self.start_headers(headers, 'constitutive.tsv')
+
+
+
+
+
+            if 'summary' in self.config.enabled_outputs:
+                headers = self.common_headers + ["Cassette", "Tandem Cassette",
+                                                 "Alt 3", "Alt 5", "P_Alt 3", "P_Alt 5", "Alt 3 and Alt 5", "MXE",
+                                                 "Alternative Intron", "ALE", "AFE",
+                                                 "P_ALE", "P_AFE", "Orphan Junction"]
+                if self.config.keep_constitutive:
+                    headers.append("Constitutive Junction")
+                    headers.append("Constitutive Intron")
+
+                if self.config.output_complex:
+                    headers.remove("Complex")
+
+                headers += ["Multi Exon Spanning", "Exitron", "Complex", 'De Novo Junctions', 'De Novo Introns',
+                            "Number of Events", "Collapsed Event Name"
+                            ]
+                self.start_headers(headers, 'summary.tsv')
+
+            if 'heatmap' in self.config.enabled_outputs:
+                headers = self.common_headers + ['Collapsed Event Name'] + self.quantification_headers
+                self.start_headers(headers, 'heatmap.tsv')
+
+            if 'junctions' in self.config.enabled_outputs:
+                headers = self.common_headers + ['Collapsed Event Name', 'Junction Name', 'Junction Coordinate', 'De Novo'] + self.quantification_headers
+                self.start_headers(headers, 'junctions.tsv')
 
 
 

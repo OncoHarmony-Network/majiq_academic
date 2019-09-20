@@ -27,7 +27,7 @@ _ClassifyConfig = namedtuple('ClassifyConfig', ['directory', 'voila_files', 'voi
                                       'untrimmed_exons', 'putative_multi_gene_regions', 'output_training_data',
                                                 'changing_threshold', 'non_changing_threshold', 'probability_changing_threshold',
                                                  'probability_non_changing_threshold', 'changing', 'non_changing',
-                                                'keep_no_lsvs', 'debug_num_genes', 'overwrite'])
+                                                'keep_no_lsvs', 'debug_num_genes', 'overwrite', 'enabled_outputs'])
 _ClassifyConfig.__new__.__defaults__ = (None,) * len(_ClassifyConfig._fields)
 _FilterConfig = namedtuple('FilterConfig', ['directory', 'voila_files', 'voila_file', 'splice_graph_file',
                                             'nproc', 'gene_ids', 'debug', 'silent', 'analysis_type', 'overwrite',
@@ -389,6 +389,31 @@ class ClassifyConfig:
             if settings['changing'] and settings['non_changing']:
                 voila_log().critical("You may not specify both --changing and --non-changing")
                 sys.exit(1)
+            if 'enabled_outputs' in settings and settings['putative_multi_gene_regions']:
+                voila_log().critical("You may not specify both --putative_multi_gene_regions and --enabled_outputs")
+                sys.exit(1)
+
+
+            if not settings['putative_multi_gene_regions']:
+                if 'enabled_outputs' in settings:
+                    if settings['enabled_outputs'] == 'all':
+                        settings['enabled_outputs'] = ['summary', 'events', 'junctions', 'heatmap']
+                    else:
+                        settings['enabled_outputs'] = settings['enabled_outputs'].split(',')
+                        for enabled_output in settings['enabled_outputs']:
+                            if not enabled_output in ('summary', 'events', 'junctions', 'heatmap'):
+                                voila_log().critical("Unrecognized enabled output: %s" % enabled_output)
+                                sys.exit(1)
+                        if ('junctions' in settings['enabled_outputs'] or 'heatmap' in settings['enabled_outputs']) and not \
+                            'events' in settings['enabled_outputs']:
+                            settings['enabled_outputs'].append('events')
+                else:
+                    settings['enabled_outputs'] = ['summary']
+
+
+
+
+
 
             if settings['changing'] or settings['non_changing']:
                 if 'HET' not in settings['analysis_type'] and 'dPSI' not in settings['analysis_type']:
