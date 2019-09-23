@@ -410,6 +410,10 @@ class ClassifyConfig:
                 else:
                     settings['enabled_outputs'] = ['summary']
 
+                if settings['keep_constitutive'] and not 'summary' in settings['enabled_outputs']:
+                    settings['enabled_outputs'].append('summary')
+
+
 
 
 

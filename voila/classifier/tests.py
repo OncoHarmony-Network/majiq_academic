@@ -18,23 +18,24 @@ import csv
 
 # this should vary depending on the group of tests to run
 
-from voila.classifier.tests_expected_t_cells_1 import *
+from voila.classifier.tests_expected_t_cells_2 import *
 
 
 
 
 out_dir = '/home/paul/PycharmProjects/majiq/test_cases/classifier/caleb1/testout'
 
-def run_voila_classify(gene_id, additional_args=[]):
+def run_voila_classify(gene_ids, additional_args=[]):
     os.environ['PYTHONPATH'] = '/home/paul/PycharmProjects/majiq'
     cmd = ['python3',
            '/home/paul/PycharmProjects/majiq/voila/run_voila.py',
            'classify', psi_file, sg_file, '-d', out_dir,
-           '--gene-id', gene_id,
-           '--decomplexify-psi-threshold', '0.0'
-           ]
+           '--enabled-outputs', 'all', '--overwrite',
+           '--decomplexify-psi-threshold', '0.0', '--gene-ids',
+           ] + gene_ids
     for arg in additional_args:
         cmd.append(arg)
+    #print(' '.join(cmd))
 
     p = Popen(cmd, stdout=PIPE, stderr=STDOUT)
     output = ''
@@ -66,7 +67,8 @@ def verify_tsvs(gene_id):
         headers = next(reader, None)
         events = []
         for line in reader:
-            events.append(line)
+            if line[1] == gene_id:
+                events.append(line)
 
         if gene_id in expected_cassette_exons:
             for i, mod in enumerate(expected_cassette_exons[gene_id]):
@@ -85,7 +87,8 @@ def verify_tsvs(gene_id):
         headers = next(reader, None)
         events = []
         for line in reader:
-            events.append(line)
+            if line[1] == gene_id:
+                events.append(line)
 
         if gene_id in expected_alt5ss:
             for i, mod in enumerate(expected_alt5ss[gene_id]):
@@ -104,7 +107,8 @@ def verify_tsvs(gene_id):
         headers = next(reader, None)
         events = []
         for line in reader:
-            events.append(line)
+            if line[1] == gene_id:
+                events.append(line)
 
         if gene_id in expected_alt3ss:
             for i, mod in enumerate(expected_alt3ss[gene_id]):
@@ -122,7 +126,8 @@ def verify_tsvs(gene_id):
         headers = next(reader, None)
         events = []
         for line in reader:
-            events.append(line)
+            if line[1] == gene_id:
+                events.append(line)
 
         if gene_id in expected_alternative_intron:
             for i, mod in enumerate(expected_alternative_intron[gene_id]):
@@ -142,7 +147,8 @@ def verify_tsvs(gene_id):
         headers = next(reader, None)
         modules = []
         for line in reader:
-            modules.append(line)
+            if line[1] == gene_id:
+                modules.append(line)
 
         if gene_id in expected_modules:
             if expected_modules[gene_id]:
@@ -177,7 +183,8 @@ def verify_constitutive(gene_id):
         headers = next(reader, None)
         modules = []
         for line in reader:
-            modules.append(line)
+            if line[1] == gene_id:
+                modules.append(line)
 
         if gene_id in expected_modules_constitutive:
             try:
@@ -216,12 +223,13 @@ def run_tests():
             verify_constitutive(sys.argv[-1])
 
     else:
+
+        run_voila_classify([gene_id for gene_id in expected_modules])
         for gene_id in expected_modules:
-            run_voila_classify(gene_id)
             verify_tsvs(gene_id)
 
         for gene_id in expected_modules_constitutive:
-            run_voila_classify(gene_id, ['--keep-constitutive'])
+            run_voila_classify([gene_id for gene_id in expected_modules], ['--keep-constitutive'])
             verify_constitutive(gene_id)
 
 

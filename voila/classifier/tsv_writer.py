@@ -147,14 +147,15 @@ class TsvWriter(BaseTsvWriter):
                  'mutually_exclusive.tsv', 'alternate_last_exon.tsv', 'alternate_first_exon.tsv',
                  'alternative_intron.tsv', 'p_alt5prime.tsv', 'p_alt3prime.tsv', 'multi_exon_spanning.tsv',
                  'tandem_cassette.tsv', 'exitron.tsv', 'p_alternate_last_exon.tsv', 'p_alternate_first_exon.tsv']
+            if config.keep_constitutive:
+                names.append('constitutive.tsv')
         if 'heatmap' in config.enabled_outputs:
             names += ['heatmap.tsv']
         if 'junctions' in config.enabled_outputs:
             names += ['junctions.tsv']
         if 'summary' in config.enabled_outputs:
             names += ['summary.tsv']
-        if config.keep_constitutive:
-            names.append('constitutive.tsv')
+
         return names
 
 
