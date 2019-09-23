@@ -43,7 +43,6 @@ class BaseTsvWriter(QuantificationWriter):
 
     def __init__(self, graph, gene_id):
         """
-
         :param output_path: The folder where all output TSV files will be written under
         :param graph: the Graph object of the gene
         """
@@ -80,7 +79,7 @@ class BaseTsvWriter(QuantificationWriter):
 
     def common_data(self, module, parity=None, edge=None, node=None):
         """
-        Extract the certain cols from the CSV which are generally similar across all outputs,
+        Extract the certain cols from the TSV which are generally similar across all outputs,
 
         """
         lsvs = self.parity2lsv(module, parity, edge, node)
