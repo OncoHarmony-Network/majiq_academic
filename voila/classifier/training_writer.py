@@ -131,8 +131,10 @@ class TrainingWriter(BaseTsvWriter):
 
                 for i, edge in enumerate(module.get_all_edges(True)):
 
+
                     n1 = self.graph.start_node(edge)
                     n2 = self.graph.end_node(edge)
+
                     junc_id = "{gene_id}_{chr}_{strand}_{start}_{end}".format(
                         gene_id=self.gene_id,
                         chr=self.graph.chromosome,
@@ -141,6 +143,13 @@ class TrainingWriter(BaseTsvWriter):
                         end=edge.end
                     )
 
+                    # if common_data + [junc_id, edge.start, edge.end,
+                    #                      n1.idx, n1.start, n1.end,
+                    #                      n2.idx, n2.start, n2.end, edge.ir] in rows:
+                    #     print("DUP: %s " % str(common_data + [junc_id, edge.start, edge.end,
+                    #                      n1.idx, n1.start, n1.end,
+                    #                      n2.idx, n2.start, n2.end, edge.ir]))
+                    #    # assert False
                     rows.append(common_data + [junc_id, edge.start, edge.end,
                                          n1.idx, n1.start, n1.end,
                                          n2.idx, n2.start, n2.end, edge.ir])
@@ -238,16 +247,32 @@ class TrainingWriter(BaseTsvWriter):
             #         # clone the exon that many times, and add one of the dups junctions
             #         # if it is a back junction, we need to remove the current back junction
 
+            # Prior we used the case that the end of the junction should equal the start of the exon, or vice versa,
+            # if we wanted to check for alt3/5 cases. Now, we will need a different method, because introns being
+            # included kind of ruin the trimming
+            # so, we check for back-junctions that are not introns, and check that all their end coords are the same
 
             for n1, n2 in combinations(module.nodes, 2):
                 # look for cases with multiple connections
                 fwd_connects = n1.connects(n2, ir=False)
                 if len(fwd_connects) > 1:
+                    # print('fwd_connects', fwd_connects)
+                    # print([f.start == fwd_connects[0].start for f in fwd_connects])
+                    # print([f.end == fwd_connects[0].end for f in fwd_connects])
                     # print(n1, n2)
                     # for all connections not the outermost, clone the node, remove all connections except that one,
                     # and trim the exon to it
+
+                    # find the absolute first and last non intronic junction
+
+                    earliest_junc = min(fwd_connects, key=lambda j: j.end)
+                    latest_junc = max(fwd_connects, key=lambda j: j.start)
+
                     for junc in fwd_connects:
-                        if not junc.start == n1.end:
+
+
+                        if not junc.start == latest_junc.start:
+                            #print('not starting at at end of exon', junc)
                             #self._add_exon({'start': n1.start, 'end': junc.start})
                             dupe = self.graph.Node({'start': n1.start, 'end': junc.start})
 
@@ -260,13 +285,16 @@ class TrainingWriter(BaseTsvWriter):
                             dupe.maximal_end = n1.end
 
                             junc.node = n2
-                            #print(junc)
-                            #dupe.end = junc.start
+
+                            # constructing edges that go forward from the exon of interest
                             dupe.edges = [junc]
                             for edge in n1.back_edges:
                                 new_edge = self.graph.Edge({'start':edge.start, 'end':edge.end})
                                 new_edge.node = dupe
                                 new_edge.lsvs = edge.lsvs
+                                #print('c1', n1, n2, dupe)
+                                #new_edge.start_node = n1
+                                new_edge.end_node = dupe
                                 #index = self.graph.edges.index(edge)
                                 #self.graph.edges.insert(index, edge)
                                 dupe.back_edges.append(edge)
@@ -288,8 +316,9 @@ class TrainingWriter(BaseTsvWriter):
                             index = module.nodes.index(n1)+1
                             module.nodes.insert(index, dupe)
 
-
-                        if not junc.end == n2.start:
+                        # if we find one junction that is in the middle of the exon somewhere (alt3/5)...
+                        if not junc.end == earliest_junc.end:
+                            #print('not ending at at start of exon', junc, n2)
                             #self._add_exon({'start': junc.end, 'end': n2.end})
                             #print("added dupe back", junc.end, n2.end)
                             dupe = self.graph.Node({'start': junc.end, 'end': n2.end})
@@ -305,10 +334,17 @@ class TrainingWriter(BaseTsvWriter):
                             junc.node = dupe
                             #print(junc, junc.node)
                             #dupe.end = junc.start
+                            # constructing edges that go backward from the exon of interest
                             dupe.back_edges = [junc]
                             for edge in n2.edges:
                                 new_edge = self.graph.Edge({'start':edge.start, 'end':edge.end})
+
+                                new_edge.start_node = dupe
                                 new_edge.lsvs = edge.lsvs
+
+                                #new_edge.end_node = n1
+
+                                #print('c2', n1, n2, dupe, new_edge)
                                 #index = self.graph.edges.index(edge)
                                 #self.graph.edges.insert(index, edge)
                                 dupe.edges.append(new_edge)
@@ -318,7 +354,7 @@ class TrainingWriter(BaseTsvWriter):
                                 n0.back_edges.append(new_edge)
                                 new_edge.node = n0
 
-                            dupe.edges = n2.edges
+                            #dupe.edges = n2.edges
                             dupe.idx = "%d_%d" % (dupe.start, dupe.end)
                             #dupes.append(dupe)
                             #n1.edges.remove(junc)

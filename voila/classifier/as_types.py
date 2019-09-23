@@ -39,7 +39,7 @@ PSI_THRESHOLD = 0.0
 DPSI_THRESHOLD = None
 HIDE_SUB_COMPLEX = False
 
-
+#np.seterr(all='raise')
 
 
 class UnsupportedVoilaFile(Exception):
@@ -303,7 +303,8 @@ class Graph:
         :param edge: supplied junction
         :return: node object
         """
-
+        if hasattr(edge, 'start_node'):
+            return edge.start_node
         i = bisect_left(self.nodes, edge)
         return self.nodes[i]
 
@@ -313,7 +314,8 @@ class Graph:
         :param edge: supplied junction
         :return: node object
         """
-
+        if hasattr(edge, 'end_node'):
+            return edge.end_node
         i = bisect_right(self.nodes, edge)
         return self.nodes[i - 1]
 
@@ -352,7 +354,7 @@ class Graph:
 
     def _find_connections(self):
         """
-        When this has completed, each exon should have a list of exons that start/end there.
+        When this has completed, each exon should have a list of junctions that start/end there.
         :return: None
         """
 

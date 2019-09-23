@@ -95,7 +95,10 @@ class QuantificationWriter:
             for val in vals:
                 to_avg.append(val)
         # print(to_avg)
-        return np.mean(to_avg)
+        if to_avg:
+            return np.mean(to_avg)
+        else:
+            return -1
 
     def quantification_intersection(self):
         """
