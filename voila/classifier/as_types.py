@@ -303,8 +303,6 @@ class Graph:
         :param edge: supplied junction
         :return: node object
         """
-        if hasattr(edge, 'start_node'):
-            return edge.start_node
         i = bisect_left(self.nodes, edge)
         return self.nodes[i]
 
@@ -314,8 +312,6 @@ class Graph:
         :param edge: supplied junction
         :return: node object
         """
-        if hasattr(edge, 'end_node'):
-            return edge.end_node
         i = bisect_right(self.nodes, edge)
         return self.nodes[i - 1]
 

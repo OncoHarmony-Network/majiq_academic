@@ -26,12 +26,13 @@ class TrainingWriter(BaseTsvWriter):
 
         if self.graph:
             self.modules = self.graph.modules()
-            self._split_exons()
+            #self._split_exons()
 
 
     @staticmethod
     def tsv_names():
         names = ['exons.tsv', 'junctions.tsv']
+
         return names
 
     @staticmethod
@@ -129,18 +130,19 @@ class TrainingWriter(BaseTsvWriter):
 
                 rows = []
 
-                for i, edge in enumerate(module.get_all_edges(True)):
+
+                junctions = self._all_junctions()
 
 
-                    n1 = self.graph.start_node(edge)
-                    n2 = self.graph.end_node(edge)
+                for e1_start, e1_end, e2_start, e2_end, ir in junctions:
+                    junc_start, junc_end = e1_end, e2_start
 
                     junc_id = "{gene_id}_{chr}_{strand}_{start}_{end}".format(
                         gene_id=self.gene_id,
                         chr=self.graph.chromosome,
                         strand=self.graph.strand,
-                        start=edge.start,
-                        end=edge.end
+                        start=junc_start,
+                        end=junc_end
                     )
 
                     # if common_data + [junc_id, edge.start, edge.end,
@@ -150,9 +152,14 @@ class TrainingWriter(BaseTsvWriter):
                     #                      n1.idx, n1.start, n1.end,
                     #                      n2.idx, n2.start, n2.end, edge.ir]))
                     #    # assert False
-                    rows.append(common_data + [junc_id, edge.start, edge.end,
-                                         n1.idx, n1.start, n1.end,
-                                         n2.idx, n2.start, n2.end, edge.ir])
+                    #print(edge, n1, n2, edge.end == n2.start, edge.start == n1.end)
+
+                    # assert edge.end == n2.start
+                    # assert edge.start == n1.end
+
+                    rows.append(common_data + [junc_id, junc_start, junc_end,
+                                         "%d_%d" % (e1_start, e1_end), e1_start, e1_end,
+                                         "%d_%d" % (e2_start, e2_end), e2_start, e2_end, ir])
 
                 writer.writerows(rows)
 
@@ -224,8 +231,62 @@ class TrainingWriter(BaseTsvWriter):
                         h5py.h5o.copy(in_hf.id, gene_id, out_hf.id, gene_id)
                 os.remove(hdf5_file)
 
+
+
+
+    def _all_junctions(self):
+        """
+        For each specific junction, find all possible exon combinations for each side
+        (all path splits on that exon which have a more 'outer' coordinate (less on E1 for + strand,
+        greater on E2 for - strand) Make a new row for each of these possibilities.
+        :return:
+        """
+        junctions = set()
+        for module in self.modules:
+            for junc in module.get_all_edges(ir=True):
+                e1 = self.graph.start_node(junc)
+                e2 = self.graph.end_node(junc)
+
+                # gather all possible points where a junction attaches ... do we care about fwd cases on e1 or just back?
+
+                if self.graph.strand == '+':
+                    e1_splice_sites = [j.end for j in e1.back_edges if j.end < junc.start]
+                else:
+                    e1_splice_sites = [j.end for j in e1.back_edges if j.end > junc.start]
+                # same for e2, seems we may only care about fwd edges, not back, but verify
+                if self.graph.strand == '+':
+                    e2_splice_sites = [j.start for j in e2.edges if j.start > junc.end]
+                else:
+                    e2_splice_sites = [j.start for j in e2.edges if j.start < junc.end]
+
+                e1_splice_sites.append(junc.start)
+                e2_splice_sites.append(junc.end)
+
+
+                # 'exponential' part, find all combinations of exons that can exist from combinations of e1 and e2
+                for e1ss in e1_splice_sites:
+                    for e2ss in e2_splice_sites:
+                        # e1_start, e1_end, e2_start, e2_end, ir
+                        junc_row = (e1ss, junc.start, junc.end, e2ss, junc.ir)
+                        # if junc_row in junctions:
+                        #     print("dup foind: " + str(junc_row))
+                        junctions.add(junc_row)
+                        # if junc.start == 228147699 and junc.end == 228148371:
+                        #     print(junc_row)
+
+
+        return junctions
+                #     print(e1, e1_splice_sites)
+                #     print(e2, e2_splice_sites)
+
+
+
+
+
+
     def _split_exons(self):
         """
+        <DEFUNCT METHOD, PRESERVED IF WE MIGHT ANALYZE IT FOR RE-PURPOSE LATER>
         For training data, we need to make additional nodes for each time that there are two junctions
         in different positions in one exon, basically, any not at the ends after trimming. (alt3/5 ish)
         """
@@ -249,7 +310,7 @@ class TrainingWriter(BaseTsvWriter):
 
             for n1, n2 in combinations(module.nodes, 2):
                 # look for cases with multiple connections
-                fwd_connects = n1.connects(n2, ir=False)
+                fwd_connects = n1.connects(n2, ir=True)
                 if len(fwd_connects) > 1:
                     # print(n1, n2)
                     # for all connections not the outermost, clone the node, remove all connections except that one,
