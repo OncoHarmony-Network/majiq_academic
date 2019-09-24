@@ -223,7 +223,7 @@ class Junctions(SpliceGraphSQL):
         :return: list of junction dictionaries
         """
         query = self.conn.execute('''
-                                SELECT gene_id, start, end, has_reads, annotated, is_simplified
+                                SELECT gene_id, start, end, has_reads, annotated, is_simplified, is_constitutive
                                 FROM junction 
                                 WHERE gene_id=?
                                 ''' + (" AND is_simplified = 0" if omit_simplified else ''), (gene_id,))
@@ -258,7 +258,7 @@ class IntronRetentions(SpliceGraphSQL):
         :return: list of intron retention dictionaries
         """
         query = self.conn.execute('''
-                                SELECT gene_id, start, end, has_reads, annotated
+                                SELECT gene_id, start, end, has_reads, annotated, is_simplified, is_constitutive
                                 FROM intron_retention
                                 WHERE gene_id=?
                                 ''' + (" AND is_simplified = 0" if omit_simplified else ''), (gene_id,))
