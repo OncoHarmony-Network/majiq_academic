@@ -259,8 +259,11 @@ class TrainingWriter(BaseTsvWriter):
                 else:
                     e2_splice_sites = [j.start for j in e2.edges if j.start < junc.end]
 
-                e1_splice_sites.append(junc.start)
-                e2_splice_sites.append(junc.end)
+                # if the outermost edge of the exon is missing, add it
+                if not e1.start in e1_splice_sites:
+                    e1_splice_sites.append(e1.start)
+                if not e2.end in e2_splice_sites:
+                    e2_splice_sites.append(e2.end)
 
 
                 # 'exponential' part, find all combinations of exons that can exist from combinations of e1 and e2
