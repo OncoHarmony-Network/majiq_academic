@@ -31,8 +31,12 @@ class TrainingWriter(BaseTsvWriter):
 
     @staticmethod
     def tsv_names():
-        names = ['exons.tsv', 'junctions.tsv']
-
+        config = ClassifyConfig()
+        names = []
+        if 'exons' in config.enabled_outputs:
+            names.append('exons.tsv')
+        if 'junctions' in config.enabled_outputs:
+            names.append('junctions.tsv')
         return names
 
     @staticmethod
@@ -44,19 +48,15 @@ class TrainingWriter(BaseTsvWriter):
 
     def start_all_headers(self):
 
-        if self.config.putative_multi_gene_regions:
-            headers = ['Gene ID_Region', 'Gene ID', 'Gene Name', 'Chr', 'Strand', 'First Exon Start coord',
-                       'First Exon End coord', 'Last Exon Start coord', "Last Exon End coord"]
-            self.start_headers(headers, 'p_multi_gene_region.tsv')
-            return
-
-        headers = self.common_headers + ['Exon ID', 'Exon ID Start Coordinate', 'Exon ID End Coordinate']
-        self.start_headers(headers, 'exons.tsv')
-        headers = self.common_headers + ['Junc ID', 'Junc ID Start Coordinate', 'Junc ID End Coordinate',
-                                         'Exon 1 ID', 'Exon 1 ID Start Coordinate', 'Exon 1 ID End Coordinate',
-                                         'Exon 2 ID', 'Exon 2 ID Start Coordinate', 'Exon 2 ID End Coordinate',
-                                         'Is Intron']
-        self.start_headers(headers, 'junctions.tsv')
+        if 'exons' in self.config.enabled_outputs:
+            headers = self.common_headers + ['Exon ID', 'Exon ID Start Coordinate', 'Exon ID End Coordinate']
+            self.start_headers(headers, 'exons.tsv')
+        if 'junctions' in self.config.enabled_outputs:
+            headers = self.common_headers + ['Junc ID', 'Junc ID Start Coordinate', 'Junc ID End Coordinate',
+                                             'Exon 1 ID', 'Exon 1 ID Start Coordinate', 'Exon 1 ID End Coordinate',
+                                             'Exon 2 ID', 'Exon 2 ID Start Coordinate', 'Exon 2 ID End Coordinate',
+                                             'Is Intron']
+            self.start_headers(headers, 'junctions.tsv')
 
     def _get_node_id(self, node):
         if hasattr(node, 'num_times_split'):

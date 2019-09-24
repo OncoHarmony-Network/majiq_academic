@@ -395,25 +395,36 @@ class ClassifyConfig:
 
 
             if not settings['putative_multi_gene_regions']:
-                if 'enabled_outputs' in settings:
-                    if settings['enabled_outputs'] == 'all':
-                        settings['enabled_outputs'] = ['summary', 'events', 'junctions', 'heatmap']
+                if settings['output_training_data']:
+                    if 'enabled_outputs' in settings:
+                        if settings['enabled_outputs'] == 'all':
+                            settings['enabled_outputs'] = ['matrices', 'junctions', 'exons']
+                        else:
+                            settings['enabled_outputs'] = settings['enabled_outputs'].split(',')
+                            for enabled_output in settings['enabled_outputs']:
+                                if not enabled_output in ('matrices', 'junctions', 'exons'):
+                                    voila_log().critical("Unrecognized enabled output: %s" % enabled_output)
+                                    sys.exit(1)
                     else:
-                        settings['enabled_outputs'] = settings['enabled_outputs'].split(',')
-                        for enabled_output in settings['enabled_outputs']:
-                            if not enabled_output in ('summary', 'events', 'junctions', 'heatmap'):
-                                voila_log().critical("Unrecognized enabled output: %s" % enabled_output)
-                                sys.exit(1)
-                        if ('junctions' in settings['enabled_outputs'] or 'heatmap' in settings['enabled_outputs']) and not \
-                            'events' in settings['enabled_outputs']:
-                            settings['enabled_outputs'].append('events')
+                        settings['enabled_outputs'] = ['matrices', 'junctions', 'exons']
                 else:
-                    settings['enabled_outputs'] = ['summary']
+                    if 'enabled_outputs' in settings:
+                        if settings['enabled_outputs'] == 'all':
+                            settings['enabled_outputs'] = ['summary', 'events', 'junctions', 'heatmap']
+                        else:
+                            settings['enabled_outputs'] = settings['enabled_outputs'].split(',')
+                            for enabled_output in settings['enabled_outputs']:
+                                if not enabled_output in ('summary', 'events', 'junctions', 'heatmap'):
+                                    voila_log().critical("Unrecognized enabled output: %s" % enabled_output)
+                                    sys.exit(1)
+                            if ('junctions' in settings['enabled_outputs'] or 'heatmap' in settings['enabled_outputs']) and not \
+                                'events' in settings['enabled_outputs']:
+                                settings['enabled_outputs'].append('events')
+                    else:
+                        settings['enabled_outputs'] = ['summary']
 
-                if settings['keep_constitutive'] and not 'summary' in settings['enabled_outputs']:
-                    settings['enabled_outputs'].append('summary')
-
-
+                    if settings['keep_constitutive'] and not 'summary' in settings['enabled_outputs']:
+                        settings['enabled_outputs'].append('summary')
 
 
 
