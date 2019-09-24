@@ -26,6 +26,7 @@ class TrainingWriter(BaseTsvWriter):
 
         if self.graph:
             self.modules = self.graph.modules()
+            self.resolved_junctions = self._all_junctions()
             #self._split_exons()
 
 
@@ -58,34 +59,43 @@ class TrainingWriter(BaseTsvWriter):
                                              'Is Intron']
             self.start_headers(headers, 'junctions.tsv')
 
-    def _get_node_id(self, node):
-        if hasattr(node, 'num_times_split'):
-            # should be the base node of a split, need to use extended ID
-            node_id = "{gene_id}_{chr}_{strand}_{max_start}_{max_end}_{idx}".format(
+    def _get_node_id(self, start, end, idx=None):
+        # if hasattr(node, 'num_times_split'):
+        #     # should be the base node of a split, need to use extended ID
+        #     node_id = "{gene_id}_{chr}_{strand}_{max_start}_{max_end}_{idx}".format(
+        #         gene_id=self.gene_id,
+        #         chr=self.graph.chromosome,
+        #         strand=self.graph.strand,
+        #         max_start=node.start,
+        #         max_end=node.end,
+        #         idx=1
+        #     )
+        # elif hasattr(node, 'split_index'):
+        #     # a shorter node made from a split, need to use extended ID
+        #     node_id = "{gene_id}_{chr}_{strand}_{max_start}_{max_end}_{idx}".format(
+        #         gene_id=self.gene_id,
+        #         chr=self.graph.chromosome,
+        #         strand=self.graph.strand,
+        #         max_start=node.maximal_start,
+        #         max_end=node.maximal_end,
+        #         idx=node.split_index
+        #     )
+        if idx is not None:
+            node_id = "{gene_id}_{chr}_{strand}_{start}_{end}_{idx}".format(
                 gene_id=self.gene_id,
                 chr=self.graph.chromosome,
                 strand=self.graph.strand,
-                max_start=node.start,
-                max_end=node.end,
-                idx=1
-            )
-        elif hasattr(node, 'split_index'):
-            # a shorter node made from a split, need to use extended ID
-            node_id = "{gene_id}_{chr}_{strand}_{max_start}_{max_end}_{idx}".format(
-                gene_id=self.gene_id,
-                chr=self.graph.chromosome,
-                strand=self.graph.strand,
-                max_start=node.maximal_start,
-                max_end=node.maximal_end,
-                idx=node.split_index
+                start=start,
+                end=end,
+                idx=idx
             )
         else:
             node_id = "{gene_id}_{chr}_{strand}_{start}_{end}".format(
                 gene_id=self.gene_id,
                 chr=self.graph.chromosome,
                 strand=self.graph.strand,
-                start=node.start,
-                end=node.end
+                start=start,
+                end=end
             )
         return node_id
 
@@ -97,19 +107,28 @@ class TrainingWriter(BaseTsvWriter):
         If there are two exon entries (an exon has two 5' or 3' splice sites) ,
          then the ID will have "gene_id"_"chr"_"strand"_"maximal-start"_"maximal-end"_1"
           and "gene_id"_"chr"_"strand"_"maximal-start"_"maximal-end"_2"
+
+        The re-written job follows along from the all_junctions, as below.
+        For each junction from the originally ran junctions, grab each left and right exon and
+        remove duplicates. This should give the required information about the exons.
+
         """
         with open(os.path.join(self.config.directory, 'exons.tsv.%s' % self.pid), 'a', newline='') as csvfile:
             writer = csv.writer(csvfile, dialect='excel-tab', delimiter='\t')
+            rows = []
+            written_exons = set()
+            for module_idx, e1_start, e1_end, e2_start, e2_end, ir in self.resolved_junctions:
 
-            for module in self.modules:
+                common_data = ["%s_%d" % (self.gene_id, module_idx), self.gene_id, self.graph.gene_name,
+                               self.graph.chromosome, self.graph.strand]
 
-                common_data = ["%s_%d" % (self.gene_id, module.idx), self.gene_id, self.graph.gene_name,
-                       self.graph.chromosome, self.graph.strand]
+                if not (e1_start, e1_end,) in written_exons:
+                    rows.append(common_data + [self._get_node_id(e1_start, e1_end), e1_start, e1_end])
+                    written_exons.add((e1_start, e1_end,))
 
-                rows = []
-                for i, node in enumerate(module.nodes):
-
-                    rows.append(common_data + [self._get_node_id(node), node.start, node.end])
+                if not (e2_start, e2_end,) in written_exons:
+                    rows.append(common_data + [self._get_node_id(e2_start, e2_end), e2_start, e2_end])
+                    written_exons.add((e2_start, e2_end,))
 
                     # if module.graph.strand == '+':
                     #     rows = rows + tmp
@@ -117,51 +136,45 @@ class TrainingWriter(BaseTsvWriter):
                     #     rows = tmp + rows
 
 
-                writer.writerows(rows)
+            writer.writerows(rows)
 
 
     def junctions_tsv(self):
         with open(os.path.join(self.config.directory, 'junctions.tsv.%s' % self.pid), 'a', newline='') as csvfile:
             writer = csv.writer(csvfile, dialect='excel-tab', delimiter='\t')
-            for module in self.modules:
+            rows = []
+            for module_idx, e1_start, e1_end, e2_start, e2_end, ir in self.resolved_junctions:
 
-                common_data = ["%s_%d" % (self.gene_id, module.idx), self.gene_id, self.graph.gene_name,
+                common_data = ["%s_%d" % (self.gene_id, module_idx), self.gene_id, self.graph.gene_name,
                                self.graph.chromosome, self.graph.strand]
 
-                rows = []
+                junc_start, junc_end = e1_end, e2_start
 
+                junc_id = "{gene_id}_{chr}_{strand}_{start}_{end}".format(
+                    gene_id=self.gene_id,
+                    chr=self.graph.chromosome,
+                    strand=self.graph.strand,
+                    start=junc_start,
+                    end=junc_end
+                )
 
-                junctions = self._all_junctions()
+                # if common_data + [junc_id, edge.start, edge.end,
+                #                      n1.idx, n1.start, n1.end,
+                #                      n2.idx, n2.start, n2.end, edge.ir] in rows:
+                #     print("DUP: %s " % str(common_data + [junc_id, edge.start, edge.end,
+                #                      n1.idx, n1.start, n1.end,
+                #                      n2.idx, n2.start, n2.end, edge.ir]))
+                #    # assert False
+                #print(edge, n1, n2, edge.end == n2.start, edge.start == n1.end)
 
+                # assert edge.end == n2.start
+                # assert edge.start == n1.end
 
-                for e1_start, e1_end, e2_start, e2_end, ir in junctions:
-                    junc_start, junc_end = e1_end, e2_start
+                rows.append(common_data + [junc_id, junc_start, junc_end,
+                                     "%d_%d" % (e1_start, e1_end), e1_start, e1_end,
+                                     "%d_%d" % (e2_start, e2_end), e2_start, e2_end, ir])
 
-                    junc_id = "{gene_id}_{chr}_{strand}_{start}_{end}".format(
-                        gene_id=self.gene_id,
-                        chr=self.graph.chromosome,
-                        strand=self.graph.strand,
-                        start=junc_start,
-                        end=junc_end
-                    )
-
-                    # if common_data + [junc_id, edge.start, edge.end,
-                    #                      n1.idx, n1.start, n1.end,
-                    #                      n2.idx, n2.start, n2.end, edge.ir] in rows:
-                    #     print("DUP: %s " % str(common_data + [junc_id, edge.start, edge.end,
-                    #                      n1.idx, n1.start, n1.end,
-                    #                      n2.idx, n2.start, n2.end, edge.ir]))
-                    #    # assert False
-                    #print(edge, n1, n2, edge.end == n2.start, edge.start == n1.end)
-
-                    # assert edge.end == n2.start
-                    # assert edge.start == n1.end
-
-                    rows.append(common_data + [junc_id, junc_start, junc_end,
-                                         "%d_%d" % (e1_start, e1_end), e1_start, e1_end,
-                                         "%d_%d" % (e2_start, e2_end), e2_start, e2_end, ir])
-
-                writer.writerows(rows)
+            writer.writerows(rows)
 
 
     def adjacency_matrix(self):
@@ -269,8 +282,8 @@ class TrainingWriter(BaseTsvWriter):
                 # 'exponential' part, find all combinations of exons that can exist from combinations of e1 and e2
                 for e1ss in e1_splice_sites:
                     for e2ss in e2_splice_sites:
-                        # e1_start, e1_end, e2_start, e2_end, ir
-                        junc_row = (e1ss, junc.start, junc.end, e2ss, junc.ir)
+                        # module_idx, e1_start, e1_end, e2_start, e2_end, ir
+                        junc_row = (module.idx, e1ss, junc.start, junc.end, e2ss, junc.ir)
                         # if junc_row in junctions:
                         #     print("dup foind: " + str(junc_row))
                         junctions.add(junc_row)
