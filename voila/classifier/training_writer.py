@@ -231,7 +231,7 @@ class TrainingWriter(BaseTsvWriter):
                                     mat[i][j] = 0
 
                     dset = hf.create_dataset('%s_%s' % (self.gene_id, module.idx), data=mat)
-                    dset.attrs['exons'] = " ".join((self._get_node_id(n) for n in module.nodes))
+                    dset.attrs['exons'] = " ".join((self._get_node_id(n.start, n.end) for n in module.nodes))
 
 
     def combine_hdf5s(self, dest_path, file_paths):
