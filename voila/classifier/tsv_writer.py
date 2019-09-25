@@ -808,9 +808,6 @@ class TsvWriter(BaseTsvWriter):
                 if not _complex or self.config.output_complex:
                     for event in events:
                         if event['event'] == 'tandem_cassette':
-
-
-
                             row = [self.semicolon((x.de_novo for x in event['Skip'])),
                                    event['C1'].range_str(), 'C2', event['C2'].range_str(),
                                    self.semicolon((x.range_str() for x in event['As'])), len(event['As']), 'C1_C2',
