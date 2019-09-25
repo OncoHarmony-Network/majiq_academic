@@ -786,7 +786,7 @@ class TsvWriter(BaseTsvWriter):
                             quants = self.quantifications(module, 's', event['Skip'], event['C1'])
                             common = self.common_data(module, 's', node=event['C1'], edge=event['Skip'])
                             writer.writerow(common + row + quants)
-                            self.junction_cache.append((module, common, quants, row[0], row[4], row[5]))
+                            self.junction_cache.append((module, common, quants, row[1], '', row[0]))
                             # Target LSV side
                             row = [self.semicolon((x.range_str() for x in event['Skip'])),  # junction coord
                                    self.semicolon((x.de_novo for x in event['Skip'])),  # de novo?
@@ -797,7 +797,7 @@ class TsvWriter(BaseTsvWriter):
                             quants = self.quantifications(module, 't', event['Skip'], event['C2'])
                             common = self.common_data(module, 't', node=event['C2'], edge=event['Skip'])
                             writer.writerow(common + row + quants)
-                            self.junction_cache.append((module, common, quants, row[0], row[4], row[5]))
+                            self.junction_cache.append((module, common, quants, row[1], '', row[0]))
 
 
     def tandem_cassette(self):
