@@ -40,7 +40,6 @@ class BaseTsvWriter(QuantificationWriter):
     """
     Output AS data from one gene
     """
-
     def __init__(self, graph, gene_id):
         """
         :param output_path: The folder where all output TSV files will be written under
@@ -182,10 +181,18 @@ class TsvWriter(BaseTsvWriter):
                 self.start_headers(headers, 'p_alternate_last_exon.tsv')
                 self.start_headers(headers, 'p_alternate_first_exon.tsv')
                 self.start_headers(headers, 'alternative_intron.tsv')
-                headers = self.common_headers + ['De Novo', 'Reference Exon Coordinate', 'Exon Spliced With',
-                                                 'Exon Spliced With Coordinate', 'Tandem Exon Coordinates', 'Num_Tandem_Exons',
-                                                 'Junction Name', 'Junction Coordinate'] + self.quantification_headers
+                headers = self.common_headers + ['Junction Coordinate',
+                                                 'De Novo',
+                                                 'Reference Exon Coordinate',
+                                                 'Exon Spliced With Coordinate',
+                                                 'Coordinates of Exons Spanned',
+                                                 'Number of Exons Spanned'
+                                                 ] + self.quantification_headers
                 self.start_headers(headers, 'multi_exon_spanning.tsv')
+                headers = self.common_headers + ['De Novo', 'Reference Exon Coordinate', 'Exon Spliced With',
+                                                 'Exon Spliced With Coordinate', 'Tandem Exon Coordinates',
+                                                 'Num_Tandem_Exons',
+                                                 'Junction Name', 'Junction Coordinate'] + self.quantification_headers
                 self.start_headers(headers, 'tandem_cassette.tsv')
                 headers = self.common_headers + ['De Novo', 'Exon coordinate', 'Junction Coordinate'] + self.quantification_headers
                 self.start_headers(headers, 'exitron.tsv')
@@ -223,7 +230,8 @@ class TsvWriter(BaseTsvWriter):
                 self.start_headers(headers, 'heatmap.tsv')
 
             if 'junctions' in self.config.enabled_outputs:
-                headers = self.common_headers + ['Collapsed Event Name', 'Junction Name', 'Junction Coordinate', 'De Novo'] + self.quantification_headers
+                headers = self.common_headers + ['Collapsed Event Name', 'Junction Name',
+                                                 'Junction Coordinate', 'De Novo'] + self.quantification_headers
                 self.start_headers(headers, 'junctions.tsv')
 
 
@@ -768,39 +776,29 @@ class TsvWriter(BaseTsvWriter):
                     for event in events:
                         if event['event'] == 'multi_exon_spanning':
                             #src_common = self.common_data(module, 's')
-
-                            row = [self.semicolon((x.de_novo for x in event['Skip'])),
-                                   event['C1'].range_str(), 'C2', event['C2'].range_str(),
-                                   self.semicolon((x.range_str() for x in event['As'])), len(event['As']), 'C1_C2',
-                                   self.semicolon((x.range_str() for x in event['Skip']))]
-                            quants = self.quantifications(module, 's')
+                            # Source LSV side
+                            row = [self.semicolon((x.range_str() for x in event['Skip'])),  # junction coord
+                                    self.semicolon((x.de_novo for x in event['Skip'])), # de novo?
+                                    event['C1'].range_str(), # reference exon
+                                    event['C2'].range_str(), # exon spliced with
+                                    self.semicolon((x.range_str() for x in event['As'])), # exons spanned
+                                    len(event['As'])] # num exons spanned
+                            quants = self.quantifications(module, 's', event['Skip'], event['C1'])
                             common = self.common_data(module, 's', node=event['C1'], edge=event['Skip'])
                             writer.writerow(common + row + quants)
-                            self.junction_cache.append((module, common, quants, row[0], row[4], row[5]))
-                            row = [self.semicolon((x.de_novo for x in event['Include1'])),
-                                   event['C1'].range_str(), 'A1', event['As'][0].range_str(),
-                                   self.semicolon((x.range_str() for x in event['As'])), len(event['As']), 'C1_A',
-                                   self.semicolon((x.range_str() for x in event['Include1']))]
-                            common = self.common_data(module, 's', node=event['C1'], edge=event['Include1'])
-                            quants = self.quantifications(module, 's')
-                            writer.writerow(common + row + quants)
-                            self.junction_cache.append((module, common, quants, row[0], row[4], row[5]))
-                            row = [self.semicolon((x.de_novo for x in event['Skip'])),
-                                   event['C2'].range_str(), 'C1', event['C1'].range_str(),
-                                   self.semicolon((x.range_str() for x in event['As'])), len(event['As']), 'C2_C1',
-                                   self.semicolon((x.range_str() for x in event['Skip']))]
+                            self.junction_cache.append((module, common, quants, row[1], '', row[0]))
+                            # Target LSV side
+                            row = [self.semicolon((x.range_str() for x in event['Skip'])),  # junction coord
+                                   self.semicolon((x.de_novo for x in event['Skip'])),  # de novo?
+                                   event['C2'].range_str(),  # reference exon
+                                   event['C1'].range_str(),  # exon spliced with
+                                   self.semicolon((x.range_str() for x in event['As'])),  # exons spanned
+                                   len(event['As'])]  # num exons spanned
+                            quants = self.quantifications(module, 't', event['Skip'], event['C2'])
                             common = self.common_data(module, 't', node=event['C2'], edge=event['Skip'])
-                            quants = self.quantifications(module, 't')
                             writer.writerow(common + row + quants)
-                            self.junction_cache.append((module, common, quants, row[0], row[4], row[5]))
-                            row = [self.semicolon((x.de_novo for x in event['Include2'])),
-                                   event['C2'].range_str(), 'A_Last', '',
-                                   self.semicolon((x.range_str() for x in event['As'])), len(event['As']), 'A_Last_C2',
-                                   self.semicolon((x.range_str() for x in event['Include2']))]
-                            common = self.common_data(module, 't', node=event['C2'], edge=event['Include2'])
-                            quants = self.quantifications(module, 't')
-                            writer.writerow(common + row + quants)
-                            self.junction_cache.append((module, common, quants, row[0], row[4], row[5]))
+                            self.junction_cache.append((module, common, quants, row[1], '', row[0]))
+
 
     def tandem_cassette(self):
         with open(os.path.join(self.config.directory, 'tandem_cassette.tsv.%s' % self.pid), 'a', newline='') as csvfile:
@@ -810,9 +808,6 @@ class TsvWriter(BaseTsvWriter):
                 if not _complex or self.config.output_complex:
                     for event in events:
                         if event['event'] == 'tandem_cassette':
-
-
-
                             row = [self.semicolon((x.de_novo for x in event['Skip'])),
                                    event['C1'].range_str(), 'C2', event['C2'].range_str(),
                                    self.semicolon((x.range_str() for x in event['As'])), len(event['As']), 'C1_C2',
