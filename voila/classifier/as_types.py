@@ -1702,19 +1702,19 @@ class Graph:
                 if len(thisnode.edges) > 1:
                     constitutive_regions = []
                     backedges = thisnode.back_edges
-                    if len(backedges) == 1:
-                        print(" ## backedge of thisnode %s is %s " % (thisnode, backedges))
+                    #if len(backedges) == 1:
+                        #print(" ## backedge of thisnode %s is %s " % (thisnode, backedges))
                     while len(backedges) <= 1:
                         if len(backedges) == 0:
                             break
                         # only one backedge...
                         backedge = backedges[0]
-                        print("backedge: %s" % backedge)
+                        #print("backedge: %s" % backedge)
                         if backedge.ir:
                             constitutive_regions.append(backedge)
                         # "end_node" is actually upstream, b/c neg strand..
                         upstream_node = self.graph.start_node(backedge)
-                        print("upstream: %s, upstream_node.edges %s" % (upstream_node, upstream_node.edges))
+                        #print("upstream: %s, upstream_node.edges %s" % (upstream_node, upstream_node.edges))
                         # if upstream node only forward connects to thisnode
                         if len(upstream_node.edges) == 1:
                             constitutive_regions.append(upstream_node)
@@ -1745,18 +1745,18 @@ class Graph:
                 if len(thisnode.back_edges) > 1:
                     constitutive_regions = []
                     backedges = thisnode.edges
-                    if len(backedges) == 1:
-                        print(" ## edge of thisnode %s is %s " % (thisnode, backedges))
+                    # if len(backedges) == 1:
+                    #     print(" ## edge of thisnode %s is %s " % (thisnode, backedges))
                     while len(backedges) <= 1:
                         if len(backedges) == 0:
                             break
                         # only one backedge...
                         backedge = backedges[0]
-                        print("backedge: %s" % backedge)
+                        # print("backedge: %s" % backedge)
                         if backedge.ir:
                             constitutive_regions.append(backedge)
                         upstream_node = self.graph.end_node(backedge) # Fix?
-                        print("upstream: %s, upstream_node.back_edges %s" % (upstream_node, upstream_node.back_edges))
+                        # print("upstream: %s, upstream_node.back_edges %s" % (upstream_node, upstream_node.back_edges))
                         # if upstream node only forward connects to thisnode
                         if len(upstream_node.back_edges) == 1:
                             constitutive_regions.append(upstream_node)

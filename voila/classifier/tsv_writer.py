@@ -967,7 +967,6 @@ class TsvWriter(BaseTsvWriter):
         """
         with open(os.path.join(self.config.directory, 'mpe_primerable_regions.tsv.%s' % self.pid), 'a', newline='') as csvfile:
             writer = csv.writer(csvfile, dialect='excel-tab', delimiter='\t')
-            print("uhhh")
             for module in self.modules:
                 events = self.mpe_regions[module.idx]
                 for event in events:
@@ -992,8 +991,6 @@ class TsvWriter(BaseTsvWriter):
                     constitutive_coords = ";".join([region.range_str() for region in constitutive_regions])
                     constitutive_denovo = ";".join([region.is_de_novo() for region in constitutive_regions])
                     constitutive_types = ";".join([region.what_am_i() for region in constitutive_regions])
-                    print("Event is %s" % event)
-                    print(constitutive_denovo)
                     ref_exon = event['reference_exon']
                     ref_exon_coord = ref_exon.range_str()
                     ref_exon_exitrons = ";".join(ref_exon.get_exitrons())
