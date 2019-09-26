@@ -192,6 +192,13 @@ class Graph:
         def is_half_exon(self):
             return self.exon['end'] == -1 or self.exon['start'] == -1
 
+        def what_am_i(self):
+            # 'e' for Exon
+            return "e"
+
+        def is_de_novo(self):
+            return str(0 if self.exon['annotated'] else 1)
+
         def connects(self, node, filter=None, ir=False, only_ir=False):
             """
             Search through junctions for this exon to see if this exon has a junction that connects to supplied exon.
@@ -296,6 +303,13 @@ class Graph:
             """
 
             return self.end
+
+        def what_am_i(self):
+            # 'i' for Intron
+            return "i"
+
+        def is_de_novo(self):
+            return "1" if self.de_novo else "0"
 
     def start_node(self, edge):
         """
@@ -980,6 +994,7 @@ class Graph:
         def __init__(self, nodes, graph):
             """
             Module is subset of a gene.  The divide between modules is where junctions don't cross.
+
             :param nodes: list of nodes that belong to module
             """
 
@@ -1062,10 +1077,13 @@ class Graph:
                     # assert len(skip) > 1
                     #for include1, include2, skip in product(include1s, include2s, skips):
 
-                    found.append({'event': 'cassette_exon', 'C1': self.strand_case(n1, n3),
+                    found.append({'event': 'cassette_exon',
+                                  'C1': self.strand_case(n1, n3),
                                   'C2': self.strand_case(n3, n1),
-                                  'A': n2, 'Include1': self.strand_case(include1s[0], include2s[0]),
-                                  'Include2': self.strand_case(include2s[0], include1s[0]), 'Skip': skips[0]})
+                                  'A': n2,
+                                  'Include1': self.strand_case(include1s[0], include2s[0]),
+                                  'Include2': self.strand_case(include2s[0], include1s[0]),
+                                  'Skip': skips[0]})
 
             return found
 
@@ -1575,7 +1593,7 @@ class Graph:
 
         def constitutive(self):
             found = []
-
+            # why populate nodes to check and not just check all combos of 2?
             nodes_to_check = []
             if len(self.nodes[0].edges) == 1:
                 nodes_to_check.append(self.nodes[0])
@@ -1586,13 +1604,13 @@ class Graph:
                     nodes_to_check.append(node)
 
             for n1, n2 in combinations(nodes_to_check, 2):
-                junc = n1.connects(n2, ir=True)
+                junc = n1.connects(n2, ir=True) # TBD; set ir=False?
                 if junc and len(junc) == 1:
 
                     junc = junc[0]
                     config = ClassifyConfig()
 
-                    if not junc.ir:
+                    if not junc.ir: # TBD; if set ir=False, no need to check here?
                         with SpliceGraph(config.splice_graph_file) as sg:
                             try:
                                 junc_reads = next(sg.junction_reads_exp({'start': junc.start, 'end': junc.end,
@@ -1634,6 +1652,127 @@ class Graph:
 
             return found
 
+
+        # def mpe_single_targets(self):
+        #     """
+        #     Identify single target splice graph splits plus downstream constitutive regions.
+        #     """
+        #     found = []
+        #
+        #     return found
+
+
+        def mpe_single_sources(self):
+            """
+            Identify single source splice graph splits plus upstream constitutive regions.
+
+            Event dicts structured as follows:
+            {
+            'event': 'mpe_source',
+            'reference_exon': <reference exon node>
+            'at_module_edge': Boolean : is the reference exon the leftmost node in the module?
+            'constitutive_regions': <[list of nodes (or introns) that are upstream constitutive]>
+            }
+            """
+            found = []
+            # skip certain types of modules (i.e. constituive)
+            if len(self.nodes) == 2:
+                n1 = self.nodes[0]
+                n2 = self.nodes[1]
+                connection = n1.connects(n2)
+                # if connected by single junction
+                if connection and len(connection)==1:
+                    # if constitutive...
+                    if len(n1.edges) == 1 and len(n2.back_edges) == 1:
+                        return found
+            for ii in range(len(self.nodes)):
+                thisnode = self.nodes[ii]
+                if self.graph.strand == "+":
+                    print("+ strand...")
+                    # node has with 2+ (forward) edges, so single source
+                    if len(thisnode.edges) > 1:
+                        if ii == 0:
+                            is_first_exon = True
+                        else:
+                            is_first_exon = False
+                        constitutive_regions = []
+                        backedges = thisnode.back_edges
+                        # # if only one junction splices into thisnode
+                        # if len(backedges) == 1:
+                        #     # save this as the potential first region upstream of the reference node
+                        #     first_non_constitutive_region = self.start_node(backedges[0])
+                        # else:
+                        #     first_non_constitutive_region = False
+                        if len(backedges) == 1:
+                            print(" ## thisnode is %s" % thisnode)
+                        while len(backedges) <= 1:
+                            if len(backedges) == 0:
+                                break
+                            # only one backedge...
+                            backedge = backedges[0]
+                            print("backedge: %s" % backedge)
+                            if backedge.ir:
+                                constitutive_regions.append(backedge)
+                            # "end_node" is actually upstream, b/c neg strand..
+                            upstream_node = self.graph.start_node(backedge)
+                            print("upstream: %s, upstream_node.edges %s" % (upstream_node, upstream_node.edges))
+                            # if upstream node only forward connects to thisnode
+                            if len(upstream_node.edges) == 1:
+                                constitutive_regions.append(upstream_node)
+                            else:
+                                break
+                            backedges = upstream_node.back_edges
+                        found.append(
+                            {
+                            'event': 'mpe_source',
+                            'reference_exon': thisnode,
+                            'at_module_edge': is_first_exon,
+                            'constitutive_regions': constitutive_regions
+                            })
+                else: # negative strand gene...
+                    print("- strand %s" % thisnode)
+                    # node has with 2+ (forward) edges, so single source
+                    if len(thisnode.back_edges) > 1:
+                        print("\t source ?")
+                        if ii == (len(self.nodes)-1): # neg strand, so it is the last node in the module, list-wise
+                            is_first_exon = True
+                        else:
+                            is_first_exon = False
+                        constitutive_regions = []
+                        backedges = thisnode.edges
+                        if len(backedges) == 1:
+                            print(" ## thisnode is %s" % thisnode)
+                        while len(backedges) <= 1:
+                            if len(backedges) == 0:
+                                break
+                            # only one backedge...
+                            backedge = backedges[0]
+                            print("backedge: %s" % backedge)
+                            if backedge.ir:
+                                constitutive_regions.append(backedge)
+                            upstream_node = self.graph.end_node(backedge) # Fix?
+                            print("upstream: %s, upstream_node.back_edges %s" % (upstream_node, upstream_node.back_edges))
+                            # if upstream node only forward connects to thisnode
+                            if len(upstream_node.back_edges) == 1:
+                                constitutive_regions.append(upstream_node)
+                            else:
+                                break
+                            backedges = upstream_node.edges
+                        found.append(
+                            {
+                            'event': 'mpe_source',
+                            'reference_exon': thisnode,
+                            'at_module_edge': is_first_exon,
+                            'constitutive_regions': constitutive_regions
+                            })
+            return found
+
+        def mpe_regions(self):
+            """
+            Gets the mpe_source events and the mpe_target events
+            :return: [mpe_single_sources] [mpe_single_targets]
+            """
+            return self.mpe_single_sources() #TBD mpe_single_targets()
 
         def as_types(self):
             """

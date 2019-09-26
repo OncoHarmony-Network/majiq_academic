@@ -397,11 +397,11 @@ class ClassifyConfig:
             if not settings['putative_multi_gene_regions']:
                 if 'enabled_outputs' in settings:
                     if settings['enabled_outputs'] == 'all':
-                        settings['enabled_outputs'] = ['summary', 'events', 'junctions', 'heatmap']
+                        settings['enabled_outputs'] = ['summary', 'events', 'junctions', 'heatmap', 'mpe']
                     else:
                         settings['enabled_outputs'] = settings['enabled_outputs'].split(',')
                         for enabled_output in settings['enabled_outputs']:
-                            if not enabled_output in ('summary', 'events', 'junctions', 'heatmap'):
+                            if not enabled_output in ('summary', 'events', 'junctions', 'heatmap', 'mpe'):
                                 voila_log().critical("Unrecognized enabled output: %s" % enabled_output)
                                 sys.exit(1)
                         if ('junctions' in settings['enabled_outputs'] or 'heatmap' in settings['enabled_outputs']) and not \
@@ -413,19 +413,16 @@ class ClassifyConfig:
                 if settings['keep_constitutive'] and not 'summary' in settings['enabled_outputs']:
                     settings['enabled_outputs'].append('summary')
 
-
-
-
-
+                if 'mpe' in settings['enabled_outputs']:
+                    settings['keep_constitutive'] = True
+                    settings['show_all_modules'] = True
+                    settings['keep_no_lsvs'] = True
 
 
             if settings['changing'] or settings['non_changing']:
                 if 'HET' not in settings['analysis_type'] and 'dPSI' not in settings['analysis_type']:
                     voila_log().critical("To use --changing or --non-changing, please provide at least one dPSI or HET input file")
                     sys.exit(1)
-
-
-
 
             filters = {}
             if config_parser.has_section('FILTERS'):

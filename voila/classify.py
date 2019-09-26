@@ -103,6 +103,8 @@ def classify_gene(args):
                     writer.heatmap()
                 if 'junctions' in config.enabled_outputs:
                     writer.junctions()
+                if 'mpe' in config.enabled_outputs:
+                    writer.mpe()
 
                 if ClassifyConfig().keep_constitutive and 'events' in config.enabled_outputs:
                     writer.constitutive()
