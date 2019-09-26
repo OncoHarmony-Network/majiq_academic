@@ -1661,21 +1661,12 @@ class Graph:
         #
         #     return found
 
-
-        def mpe_single_sources(self):
+        # Appropriate to be a static Class method?
+        def module_is_constitutive(self):
             """
-            Identify single source splice graph splits plus upstream constitutive regions.
-
-            Event dicts structured as follows:
-            {
-            'event': 'mpe_source',
-            'reference_exon': <reference exon node>
-            'at_module_edge': Boolean : is the reference exon the leftmost node in the module?
-            'constitutive_regions': <[list of nodes (or introns) that are upstream constitutive]>
-            }
+            Detects whether the module is a pair of constitutively (by junction or intron) joined exons ...
+            :return: Boolean
             """
-            found = []
-            # skip certain types of modules (i.e. constituive)
             if len(self.nodes) == 2:
                 n1 = self.nodes[0]
                 n2 = self.nodes[1]
@@ -1684,85 +1675,112 @@ class Graph:
                 if connection and len(connection)==1:
                     # if constitutive...
                     if len(n1.edges) == 1 and len(n2.back_edges) == 1:
-                        return found
+                        return True
+            return False
+
+
+        def mpe(self):
+            """
+            Identify splice graph splits and associated constitutive regions (upstream if source, downstream if target).
+
+            Event dicts structured as follows:
+            {
+            'event': 'mpe_source' or 'mpe_target',
+            'reference_exon': <reference exon node>
+            'at_module_edge': Boolean : is the reference exon at the appropriate edge the module?
+                (appropriate meaning left if source and right if target)
+            'constitutive_regions': <[list of nodes (or introns) that are upstream constitutive]>
+            }
+            """
+            found = []
+            # skip certain types of modules (i.e. constitutive)
+            if self.module_is_constitutive():
+                return found
             for ii in range(len(self.nodes)):
                 thisnode = self.nodes[ii]
-                if self.graph.strand == "+":
-                    print("+ strand...")
-                    # node has with 2+ (forward) edges, so single source
-                    if len(thisnode.edges) > 1:
-                        if ii == 0:
-                            is_first_exon = True
+                # node has with 2+ (forward) edges, so single source
+                if len(thisnode.edges) > 1:
+                    constitutive_regions = []
+                    backedges = thisnode.back_edges
+                    if len(backedges) == 1:
+                        print(" ## backedge of thisnode %s is %s " % (thisnode, backedges))
+                    while len(backedges) <= 1:
+                        if len(backedges) == 0:
+                            break
+                        # only one backedge...
+                        backedge = backedges[0]
+                        print("backedge: %s" % backedge)
+                        if backedge.ir:
+                            constitutive_regions.append(backedge)
+                        # "end_node" is actually upstream, b/c neg strand..
+                        upstream_node = self.graph.start_node(backedge)
+                        print("upstream: %s, upstream_node.edges %s" % (upstream_node, upstream_node.edges))
+                        # if upstream node only forward connects to thisnode
+                        if len(upstream_node.edges) == 1:
+                            constitutive_regions.append(upstream_node)
                         else:
-                            is_first_exon = False
-                        constitutive_regions = []
-                        backedges = thisnode.back_edges
-                        # # if only one junction splices into thisnode
-                        # if len(backedges) == 1:
-                        #     # save this as the potential first region upstream of the reference node
-                        #     first_non_constitutive_region = self.start_node(backedges[0])
-                        # else:
-                        #     first_non_constitutive_region = False
-                        if len(backedges) == 1:
-                            print(" ## thisnode is %s" % thisnode)
-                        while len(backedges) <= 1:
-                            if len(backedges) == 0:
-                                break
-                            # only one backedge...
-                            backedge = backedges[0]
-                            print("backedge: %s" % backedge)
-                            if backedge.ir:
-                                constitutive_regions.append(backedge)
-                            # "end_node" is actually upstream, b/c neg strand..
-                            upstream_node = self.graph.start_node(backedge)
-                            print("upstream: %s, upstream_node.edges %s" % (upstream_node, upstream_node.edges))
-                            # if upstream node only forward connects to thisnode
-                            if len(upstream_node.edges) == 1:
-                                constitutive_regions.append(upstream_node)
-                            else:
-                                break
-                            backedges = upstream_node.back_edges
+                            break
+                        backedges = upstream_node.back_edges
+                    if self.graph.strand == "+":
+                        event_type = "mpe_source"
+                    else:
+                        event_type = "mpe_target"
+                    if ii == 0:
+                        at_edge = True
+                    else:
+                        at_edge = False
+                    if ii == (len(self.nodes) - 1):
+                        at_opposite_edge = True
+                    else:
+                        at_opposite_edge = False
+                    if not at_opposite_edge:
                         found.append(
                             {
-                            'event': 'mpe_source',
+                            'event': event_type,
                             'reference_exon': thisnode,
-                            'at_module_edge': is_first_exon,
+                            'at_module_edge': at_edge,
                             'constitutive_regions': constitutive_regions
                             })
-                else: # negative strand gene...
-                    print("- strand %s" % thisnode)
-                    # node has with 2+ (forward) edges, so single source
-                    if len(thisnode.back_edges) > 1:
-                        print("\t source ?")
-                        if ii == (len(self.nodes)-1): # neg strand, so it is the last node in the module, list-wise
-                            is_first_exon = True
+                # node has with 2+ (forward) edges, so single source
+                if len(thisnode.back_edges) > 1:
+                    constitutive_regions = []
+                    backedges = thisnode.edges
+                    if len(backedges) == 1:
+                        print(" ## edge of thisnode %s is %s " % (thisnode, backedges))
+                    while len(backedges) <= 1:
+                        if len(backedges) == 0:
+                            break
+                        # only one backedge...
+                        backedge = backedges[0]
+                        print("backedge: %s" % backedge)
+                        if backedge.ir:
+                            constitutive_regions.append(backedge)
+                        upstream_node = self.graph.end_node(backedge) # Fix?
+                        print("upstream: %s, upstream_node.back_edges %s" % (upstream_node, upstream_node.back_edges))
+                        # if upstream node only forward connects to thisnode
+                        if len(upstream_node.back_edges) == 1:
+                            constitutive_regions.append(upstream_node)
                         else:
-                            is_first_exon = False
-                        constitutive_regions = []
-                        backedges = thisnode.edges
-                        if len(backedges) == 1:
-                            print(" ## thisnode is %s" % thisnode)
-                        while len(backedges) <= 1:
-                            if len(backedges) == 0:
-                                break
-                            # only one backedge...
-                            backedge = backedges[0]
-                            print("backedge: %s" % backedge)
-                            if backedge.ir:
-                                constitutive_regions.append(backedge)
-                            upstream_node = self.graph.end_node(backedge) # Fix?
-                            print("upstream: %s, upstream_node.back_edges %s" % (upstream_node, upstream_node.back_edges))
-                            # if upstream node only forward connects to thisnode
-                            if len(upstream_node.back_edges) == 1:
-                                constitutive_regions.append(upstream_node)
-                            else:
-                                break
-                            backedges = upstream_node.edges
+                            break
+                        backedges = upstream_node.edges
+                    if self.graph.strand == "+":
+                        event_type = "mpe_target"
+                    else:
+                        event_type = "mpe_source"
+                    if ii == (len(self.nodes) - 1):
+                        at_edge = True
+                    else:
+                        at_edge = False
+                    if ii == 0:
+                        at_opposite_edge = True
+                    else:
+                        at_opposite_edge = False
+                    if not at_opposite_edge:
                         found.append(
                             {
-                            'event': 'mpe_source',
+                            'event': event_type,
                             'reference_exon': thisnode,
-                            'at_module_edge': is_first_exon,
+                            'at_module_edge': at_edge,
                             'constitutive_regions': constitutive_regions
                             })
             return found
@@ -1772,7 +1790,7 @@ class Graph:
             Gets the mpe_source events and the mpe_target events
             :return: [mpe_single_sources] [mpe_single_targets]
             """
-            return self.mpe_single_sources() #TBD mpe_single_targets()
+            return self.mpe()
 
         def as_types(self):
             """
