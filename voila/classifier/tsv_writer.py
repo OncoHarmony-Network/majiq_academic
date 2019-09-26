@@ -237,11 +237,15 @@ class TsvWriter(BaseTsvWriter):
 
             if 'mpe' in self.config.enabled_outputs:
                 headers = self.common_headers
+                headers[-1].replace("(s)","") # only 1 LSV, not multiple
                 headers += ['Collapsed Event Name',
                         'Type',
                         'Edge of the Module',
                         'Reference Exon Coord',
                         'Reference Exon De Novo',
+                        'Reference Exon Exitrons',
+                        'Reference Exon Constant Region',
+                        'Reference Exon Trimmed',
                         'Constitutive Direction',
                         'Constitutive Regions',
                         'Constitutive De Novo',
@@ -991,10 +995,17 @@ class TsvWriter(BaseTsvWriter):
                     print("Event is %s" % event)
                     print(constitutive_denovo)
                     ref_exon = event['reference_exon']
-                    ref_exon_coord =  ref_exon.range_str()
+                    ref_exon_coord = ref_exon.range_str()
+                    ref_exon_exitrons = ";".join(ref_exon.get_exitrons())
+                    const_reg = ref_exon.get_constant_region()
+                    if const_reg == ref_exon_coord:
+                        was_trimmed = 0
+                    else:
+                        was_trimmed = 1
                     row = common # ModID, GeneID, GeneName, Chr, Strand, Complex, LSV(s)
                     row += [module.collapsed_event_name, eventtype, isfirst]
-                    row += [ref_exon_coord, ref_exon.is_de_novo(), constitutive_direction]
+                    row += [ref_exon_coord, ref_exon.is_de_novo(), ref_exon_exitrons]
+                    row += [const_reg, was_trimmed, constitutive_direction]
                     row += [constitutive_coords, constitutive_denovo, constitutive_types]
                     writer.writerow(row)
 
