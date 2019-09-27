@@ -200,10 +200,14 @@ class Graph:
             return str(0 if self.exon['annotated'] else 1)
 
         def get_exitrons(self):
+            """
+            From a node, return exitron str coordinates in a list. Returns empty list if no exitrons found.
+            :return: [<exitron coord>, <exitron coord>, <etc>]
+            """
             exitrons = []
             for edge in self.edges:
                 if self.start < edge.start < self.end and self.start < edge.end < self.end:
-                    exitrons.append(edge)
+                    exitrons.append(edge.range_str())
             return exitrons
 
         def get_constant_region(self):
