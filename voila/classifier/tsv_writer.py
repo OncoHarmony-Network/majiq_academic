@@ -237,7 +237,7 @@ class TsvWriter(BaseTsvWriter):
 
             if 'mpe' in self.config.enabled_outputs:
                 headers = self.common_headers
-                headers[-1].replace("(s)","") # only 1 LSV, not multiple
+                headers[-1].replace("(s)","")
                 headers += ['Collapsed Event Name',
                         'Type',
                         'Edge of the Module',

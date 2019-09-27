@@ -199,6 +199,44 @@ class Graph:
         def is_de_novo(self):
             return str(0 if self.exon['annotated'] else 1)
 
+        def get_exitrons(self):
+            exitrons = []
+            for edge in self.edges:
+                if self.start < edge.start < self.end and self.start < edge.end < self.end:
+                    exitrons.append(edge)
+            return exitrons
+
+        def get_constant_region(self):
+            exitrons = self.get_exitrons()
+            if len(exitrons) > 0:
+                return ""
+            # TBD do something about exitrons...
+            # find first start from non-exitron edges that falls within exon bounds
+            # if no edges, use node end (i.e. last exon)
+            if len(self.edges) == 0:
+                first_start = self.end
+            else:
+                first_start = float("Inf")
+                for edge in self.edges:
+                    if edge in exitrons:
+                        continue
+                    if edge.start < first_start and self.start <= edge.start and self.end >= edge.start:
+                        first_start = edge.start
+
+            # find last end from non-exitron edges that falls within exon bounds
+            # if no back edges, use node start (i.e. first exon)
+            if len(self.back_edges) == 0:
+                last_end = self.start
+            else:
+                last_end = float("-Inf")
+                for edge in self.back_edges:
+                    if edge in exitrons:
+                        continue
+                    if edge.end > last_end and self.start <= edge.end and self.end >= edge.end:
+                        last_end = edge.end
+            return ("%s-%s" % (last_end, first_start))
+
+
         def connects(self, node, filter=None, ir=False, only_ir=False):
             """
             Search through junctions for this exon to see if this exon has a junction that connects to supplied exon.
@@ -675,6 +713,131 @@ class Graph:
                 else:
                     voila_log().warning(
                         "Found two exons in gene %s which are collided and both have junctions! Can not trim!" % self.gene_id)
+
+
+    # TBD version that handles exitrons...?
+    # def get_exon_to_constant_regions(self):
+    #     """
+    #    get parts of exons which exist between inner junction connections...
+    #     """
+    #
+    #     for i, node in enumerate(self.nodes):
+    #
+    #         # find conditions where we should not trim! ---
+    #
+    #         # not half exon
+    #         if node.is_half_exon:
+    #             continue
+    #
+    #         # first find exitrons, we will need them later
+    #         exitrons = []
+    #         for edge in self.edges:
+    #             # this is different then using in_exon() because it is exclusive instead of inclusive
+    #             # this is how we differentiate exitrons from junctions in overlapping exons
+    #             if node.start < edge.start < node.end and node.start < edge.end < node.end:
+    #                 exitrons.append(edge)
+    #
+    #         potential_regions = []
+    #         for exitron in
+    #
+    #         # find first start from non-exitron edges
+    #         first_start = float("-Inf")
+    #         for edge in self.edges:
+    #             if edge in exitrons:
+    #                 continue
+    #             if edge.start < first_start:
+    #                 first_start = edge.start
+    #
+    #         # find last end from non-exitron edges
+    #         last_end = float("Inf")
+    #         for edge in self.edges:
+    #             if edge in exitrons:
+    #                 continue
+    #             if edge.end > last_end:
+    #                 last_end = edge.end
+    #
+    #
+    #
+    #         coords_in_exon = []
+    #
+    #         trim_end = False
+    #         for edge in self.edges:
+    #             # look through all edges
+    #             # if we can't find any going ahead (other end greater value than exon), don't trim end
+    #             if self.in_exon(node, edge.start) and edge.end >= node.end:
+    #                 # check that the edge allowing trimming fwd is completely ahead of exitrons, otherwise
+    #                 # if does not count
+    #                 for exitron in exitrons:
+    #                     if edge.start <= exitron.end:
+    #                         break
+    #                 else:
+    #                     coords_in_exon.append(edge.start)
+    #                     trim_end = True
+    #
+    #         trim_start = False
+    #         for edge in self.edges:
+    #             # similar for backwards
+    #             if self.in_exon(node, edge.end) and edge.start <= node.start:
+    #                 if edge.ir:
+    #                     trim_start = False
+    #                     break
+    #                 for exitron in exitrons:
+    #                     if edge.end >= exitron.start:
+    #                         break
+    #                 else:
+    #                     coords_in_exon.append(edge.end)
+    #                     trim_start = True
+    #
+    #         # need to check for the special case that there are is only one coordinate on the exon where
+    #         # all junctions are connected. In this case we should not trim
+    #         if coords_in_exon and all(x == coords_in_exon[0] for x in coords_in_exon):
+    #             trim_start = False
+    #             trim_end = False
+    #
+    #         # end find conditions part ---
+    #
+    #         node.untrimmed_start = node.start
+    #         node.untrimmed_end = node.end
+    #
+    #         global_min = float('inf')
+    #         global_max = float('-inf')
+    #         if trim_end or trim_start:
+    #
+    #             edges_starting = []
+    #             edges_ending = []
+    #             for _e in self.edges:
+    #                 if self.in_exon(node, _e.start) and not _e.start == node.start:
+    #                     global_max = max(_e.start, global_max)
+    #                     global_min = min(_e.start, global_min)
+    #                     edges_starting.append(_e)
+    #             for _e in self.edges:
+    #                 if self.in_exon(node, _e.end) and not _e.end == node.end:
+    #                     global_max = max(_e.end, global_max)
+    #                     global_min = min(_e.end, global_min)
+    #                     edges_ending.append(_e)
+    #
+    #         if trim_start:
+    #             node.exon['start'] = global_min
+    #
+    #         if trim_end:
+    #             node.exon['end'] = global_max
+    #
+    #     # after all the regular trimming is done, there still may be some collision cases due to AFE/ALE that are
+    #     # collided. We look for any remaining collisions, and trim the exon without junctions by one unit to
+    #     # resolve the collision
+    #     for i, node in enumerate(self.nodes[:-1]):
+    #         if node.end == self.nodes[i + 1].start:
+    #
+    #             if not node.edges:
+    #                 node.untrimmed_end = node.end
+    #                 node.exon['end'] -= 1
+    #             elif not self.nodes[i + 1].back_edges:
+    #                 self.nodes[i + 1].untrimmed_start = self.nodes[i + 1].start
+    #                 self.nodes[i + 1].exon['start'] += 1
+    #             else:
+    #                 voila_log().warning(
+    #                     "Found two exons in gene %s which are collided and both have junctions! Can not trim!" % self.gene_id)
+
 
 
     def _module_is_valid(self, module):
