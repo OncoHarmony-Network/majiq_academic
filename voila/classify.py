@@ -111,9 +111,16 @@ def classify_gene(args):
 
         else:
             writer = TrainingWriter(graph, gene_id)
-            writer.adjacency_matrix()
-            writer.exons_tsv()
-            writer.junctions_tsv()
+
+            if 'matrices' in config.enabled_outputs:
+                writer.adjacency_matrix()
+
+            if 'exons' in config.enabled_outputs:
+                writer.exons_tsv()
+
+            if 'junctions' in config.enabled_outputs:
+                writer.junctions_tsv()
+
 
 
     except KeyboardInterrupt:
