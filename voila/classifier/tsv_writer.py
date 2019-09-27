@@ -999,8 +999,12 @@ class TsvWriter(BaseTsvWriter):
                         was_trimmed = 0
                     else:
                         was_trimmed = 1
+                    if "events" in self.config.enabled_outputs:
+                        collapsed_event_name = module.collapsed_event_name
+                    else:
+                        collapsed_event_name = "ND"
                     row = common # ModID, GeneID, GeneName, Chr, Strand, Complex, LSV(s)
-                    row += [module.collapsed_event_name, eventtype, isfirst]
+                    row += [collapsed_event_name, eventtype, isfirst]
                     row += [ref_exon_coord, ref_exon.is_de_novo(), ref_exon_exitrons]
                     row += [const_reg, was_trimmed, constitutive_direction]
                     row += [constitutive_coords, constitutive_denovo, constitutive_types]
