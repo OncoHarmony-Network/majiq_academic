@@ -348,7 +348,7 @@ class Graph:
 
         def what_am_i(self):
             # 'i' for Intron
-            if self.ir
+            if self.ir:
                 return "i"
             else:
                 return "j"
