@@ -2,58 +2,160 @@ sg_file = '/home/paul/PycharmProjects/majiq/test_cases/classifier/t_cells_2/spli
 psi_file = '/home/paul/PycharmProjects/majiq/test_cases/classifier/t_cells_2/ran_treg.psi.voila'
 
 expected_modules = {
-"gene:ENSG00000111653": [
-        # {
-        #     "module_id": "gene:ENSG00000111653_1",
-        #     "cassette_exon": "2",
-        #     "alt3ss": "",
-        #     "alt5ss": "",
-        #     "p_alt3ss": "",
-        #     "p_alt5ss": "",
-        #
-        #     "mutually_exclusive": "",
-        #     "ale": "",
-        #     "afe": "",
-        #     "p_ale": "",
-        #     "p_afe": "",
-        #     "multi_exon_spanning": "2",
-        #     "alternative_intron": "",
-        #     "complex": "True"
-        # },
-        # {
-        #     "module_id": "gene:ENSG00000111653_2",
-        #     "cassette_exon": "",
-        #     "alt3ss": "",
-        #     "alt5ss": "1",
-        #     "p_alt3ss": "",
-        #     "p_alt5ss": "",
-        #     "mutually_exclusive": "",
-        #     "ale": "",
-        #     "afe": "",
-        #     "p_ale": "",
-        #     "p_afe": "",
-        #     "multi_exon_spanning": "",
-        #     "alternative_intron": "",
-        #     "complex": "False"
-        # },
-        # {
-        #     "module_id": "gene:ENSG00000111653_3",
-        #     "cassette_exon": "",
-        #     "alt3ss": "",
-        #     "alt5ss": "",
-        #     "p_alt3ss": "",
-        #     "p_alt5ss": "",
-        #
-        #     "mutually_exclusive": "",
-        #     "ale": "1",
-        #     "afe": "",
-        #     "p_ale": "",
-        #     "p_afe": "",
-        #     "multi_exon_spanning": "",
-        #     "alternative_intron": "",
-        #     "complex": "False"
-        # }
-    ],
+#"gene:ENSG00000083168": [
+    #     {
+    #         "cassette_exon": "1",
+    #         "alt3ss": "",
+    #         "alt5ss": "1",
+    #         "p_alt3ss": "",
+    #         "p_alt5ss": "",
+    #
+    #         "mutually_exclusive": "",
+    #         "ale": "",
+    #         "afe": "",
+    #         "p_ale": "",
+    #         "p_afe": "",
+    #         "multi_exon_spanning": "",
+    #         "alternative_intron": "",
+    #         "complex": "True"
+    #     },
+    #     {
+    #         "cassette_exon": "",
+    #         "alt3ss": "",
+    #         "alt5ss": "",
+    #         "p_alt3ss": "",
+    #         # "p_alt5ss": "1",
+    #
+    #         "mutually_exclusive": "",
+    #         "ale": "",
+    #         "afe": "",
+    #         "p_ale": "",
+    #         "p_afe": "",
+    #         "multi_exon_spanning": "1",
+    #         "alternative_intron": "2",
+    #         "complex": "True"},
+    #     {
+    #         "cassette_exon": "",
+    #         "alt3ss": "",
+    #         "alt5ss": "1",
+    #         "p_alt3ss": "",
+    #         # "p_alt5ss": "1",
+    #
+    #         "mutually_exclusive": "",
+    #         "ale": "",
+    #         "afe": "",
+    #         "p_ale": "",
+    #         "p_afe": "",
+    #         "multi_exon_spanning": "",
+    #         "alternative_intron": "",
+    #         "complex": "False"
+    #     },
+    #     {},
+    #     {
+    #         "cassette_exon": "1",
+    #         "alt3ss": "1",
+    #         "alt5ss": "",
+    #         "p_alt3ss": "",
+    #         "p_alt5ss": "",
+    #
+    #         "mutually_exclusive": "",
+    #         "ale": "",
+    #         "afe": "",
+    #         "p_ale": "",
+    #         "p_afe": "",
+    #         "multi_exon_spanning": "",
+    #         "alternative_intron": "",
+    #         "complex": "True"
+    #     }
+    # ],
+# "gene:ENSG00000081307": [
+    #     {
+    #         "module_id": "gene:ENSG00000081307_1",
+    #         "cassette_exon": "",
+    #         "alt3ss": "",
+    #         "alt5ss": "",
+    #         "p_alt3ss": "",
+    #         "p_alt5ss": "",
+    #
+    #         "mutually_exclusive": "",
+    #         "ale": "",
+    #         "afe": "1",
+    #         "p_ale": "",
+    #         "p_afe": "",
+    #         "multi_exon_spanning": "1",
+    #         "alternative_intron": "2",
+    #         "complex": "True"
+    #     },
+    #     {
+    #         "module_id": "gene:ENSG00000081307_2",
+    #         "cassette_exon": "1",
+    #         "alt3ss": "",
+    #         "alt5ss": "",
+    #         "p_alt3ss": "",
+    #         "p_alt5ss": "1",
+    #
+    #         "mutually_exclusive": "",
+    #         "ale": "",
+    #         "afe": "",
+    #         "p_ale": "",
+    #         "p_afe": "",
+    #         "multi_exon_spanning": "",
+    #         "alternative_intron": "1",
+    #         "complex": "True"
+    #     }
+    # ],
+# "gene:ENSG00000111653": [
+#         {
+#             "module_id": "gene:ENSG00000111653_1",
+#             "cassette_exon": "2",
+#             "alt3ss": "",
+#             "alt5ss": "",
+#             "p_alt3ss": "",
+#             "p_alt5ss": "",
+#
+#             "mutually_exclusive": "",
+#             "ale": "",
+#             "afe": "",
+#             "p_ale": "",
+#             "p_afe": "",
+#             "multi_exon_spanning": "2",
+#             "alternative_intron": "",
+#             "complex": "True"
+#         },
+#         {
+#             "module_id": "gene:ENSG00000111653_2",
+#             "cassette_exon": "",
+#             "alt3ss": "",
+#             "alt5ss": "1",
+#             "p_alt3ss": "",
+#             "p_alt5ss": "",
+#             "mutually_exclusive": "",
+#             "ale": "",
+#             "afe": "",
+#             "p_ale": "",
+#             "p_afe": "",
+#             "multi_exon_spanning": "",
+#             "alternative_intron": "",
+#             "complex": "False"
+#         },
+#         {
+#             "module_id": "gene:ENSG00000111653_3",
+#             "cassette_exon": "",
+#             "alt3ss": "",
+#             "alt5ss": "",
+#             "p_alt3ss": "",
+#             "p_alt5ss": "",
+#
+#             "mutually_exclusive": "",
+#             "ale": "1",
+#             "afe": "",
+#             "p_ale": "",
+#             "p_afe": "",
+#             "multi_exon_spanning": "",
+#             "alternative_intron": "",
+#             "complex": "False"
+#         }
+#     ],
 "gene:ENSG00000082074": [
 
         {
@@ -140,114 +242,113 @@ expected_modules = {
             "complex": "False"
         }
     ],
-    # "gene:ENSG00000083168": [
-    #     {
-    #         "module_id": "gene:ENSG00000083168_1",
-    #         "lsv_ids": "gene:ENSG00000083168:t:42045878-42049302;gene:ENSG00000083168:s:42051901-42052026",
-    #         "cassette_exon": "1",
-    #         "alt3ss": "",
-    #         "alt5ss": "1",
-    #         "p_alt3ss": "",
-    #         "p_alt5ss": "",
-    #
-    #         "mutually_exclusive": "",
-    #         "ale": "",
-    #         "afe": "",
-    #         "p_ale": "",
-    #         "p_afe": "",
-    #         "multi_exon_spanning": "",
-    #         "alternative_intron": "",
-    #         "complex": "True"
-    #     },
-    #     {
-    #         "module_id": "gene:ENSG00000083168_2",
-    #         "lsv_ids": "gene:ENSG00000083168:t:41955296-41955411;gene:ENSG00000083168:s:41973404-41974734",
-    #         "cassette_exon": "",
-    #         "alt3ss": "",
-    #         "alt5ss": "",
-    #         "p_alt3ss": "",
-    #         # "p_alt5ss": "1",
-    #
-    #         "mutually_exclusive": "",
-    #         "ale": "",
-    #         "afe": "",
-    #         "p_ale": "",
-    #         "p_afe": "",
-    #         "multi_exon_spanning": "1",
-    #         "alternative_intron": "1",
-    #         "complex": "True"
-    #     },
-    #     {
-    #         "module_id": "gene:ENSG00000083168_3",
-    #         "lsv_ids": "gene:ENSG00000083168:s:41955296-41955411",
-    #         "cassette_exon": "",
-    #         "alt3ss": "",
-    #         "alt5ss": "",
-    #         "p_alt3ss": "",
-    #         "p_alt5ss": "",
-    #
-    #         "mutually_exclusive": "",
-    #         "ale": "",
-    #         "afe": "",
-    #         "p_ale": "",
-    #         "p_afe": "",
-    #         "multi_exon_spanning": "",
-    #         "alternative_intron": "1",
-    #         "complex": "False"
-    #     }
-    # ],
-    # "gene:ENSG00000177239": [
-    #     {}, {}, {}, {}, {
-    #         # 'exitron': "3"
-    #     }, {}, {}
-    # ],
-    # "gene:ENSG00000205744": [
-    #     {}, {}, {},
-    #     {
-    #         "mutually_exclusive": "1",
-    #         "alternative_intron": "1"
-    #     },
-    #     {}
-    # ],
-    # "gene:ENSG00000003756": [
-    #     {}, {}, {}, {}, {}, {},
-    #     {
-    #         # 'tandem_cassette': '1'
-    #     },
-    #     {}, {}
-    # ],
-    # "gene:ENSG00000164674":[
-    #     {},
-    #     {
-    #         "module_id": "gene:ENSG00000164674_2",
-    #         "mutually_exclusive": "",
-    #         # "exitron": "1",
-    #         "p_alt3ss": "",
-    #         "p_alt5ss": "1",
-    #         "alternative_intron": "2"
-    #
-    #     }, {}, {}, {}, {}
-    # ],
-    # "gene:ENSG00000111540": [
-    #     {
-    #         "module_id": "gene:ENSG00000111540_1",
-    #         "lsv_ids": "gene:ENSG00000111540:s:55974011-55974139",
-    #         "cassette_exon": "",
-    #         "alt3ss": "",
-    #         "alt5ss": "",
-    #         "p_alt3ss": "",
-    #         "p_alt5ss": "",
-    #
-    #         "mutually_exclusive": "",
-    #         "ale": "1",
-    #         "afe": "",
-    #         "p_ale": "",
-    #         "p_afe": "",
-    #         "multi_exon_spanning": "",
-    #         "alternative_intron": "1",
-    #         "complex": "True"
-    #     }
-    # ],
+
+    "gene:ENSG00000177239": [
+        {"cassette_exon": "1",
+         "alt3ss": "",
+         "alt5ss": "",
+         "p_alt3ss": "",
+         "p_alt5ss": "",
+         "mutually_exclusive": "",
+         "ale": "",
+         "afe": "",
+         "p_ale": "",
+         "p_afe": "",
+         "multi_exon_spanning": "",
+         "alternative_intron": "",
+         },
+        {"cassette_exon": "",
+         "alt3ss": "",
+         "alt5ss": "",
+         "p_alt3ss": "",
+         "p_alt5ss": "",
+         "mutually_exclusive": "",
+         "ale": "",
+         "afe": "",
+         "p_ale": "",
+         "p_afe": "",
+         "multi_exon_spanning": "",
+         "alternative_intron": "1",
+         },
+        {"cassette_exon": "1",
+         "alt3ss": "1",
+         "alt5ss": "",
+         "alt3and5ss": "2",
+         "p_alt3ss": "",
+         "p_alt5ss": "",
+         "mutually_exclusive": "",
+         "ale": "1",
+         "afe": "",
+         "p_ale": "",
+         "p_afe": "",
+         "multi_exon_spanning": "1",
+         "alternative_intron": "1",
+         "exitron": ""  #hmmph
+         },
+        {"cassette_exon": "",
+         "alt3ss": "1",
+         "alt5ss": "",
+         "p_alt3ss": "",
+         "p_alt5ss": "",
+         "mutually_exclusive": "",
+         "ale": "",
+         "afe": "",
+         "p_ale": "",
+         "p_afe": "",
+         "multi_exon_spanning": "",
+         "alternative_intron": "",
+         },
+
+    ],
+    "gene:ENSG00000205744": [
+        {}, {}, {},
+        {
+            "mutually_exclusive": "1",
+            "alternative_intron": ""
+        }
+    ],
+    "gene:ENSG00000003756": [
+        {}, {}, {}, {}, {}, {}, {}, {}, {},
+        {
+            'tandem_cassette': '1'
+        },
+        {}, {}
+    ],
+    "gene:ENSG00000164674":[
+        {},
+        {
+            "module_id": "gene:ENSG00000164674_2",
+            "mutually_exclusive": "",
+            # "exitron": "1",
+            "p_alt3ss": "",
+            "p_alt5ss": "",
+            "alternative_intron": "1"
+
+        }, {}, {}, {}, {}
+    ],
+    "gene:ENSG00000111540": [
+        {
+            "module_id": "gene:ENSG00000111540_1",
+            "lsv_ids": "gene:ENSG00000111540:s:55974011-55974139",
+            "cassette_exon": "",
+            "alt3ss": "",
+            "alt5ss": "",
+            "p_alt3ss": "",
+            "p_alt5ss": "",
+
+            "mutually_exclusive": "",
+            "ale": "2",
+            "afe": "1",
+            "p_ale": "",
+            "p_afe": "",
+            "multi_exon_spanning": "1",
+            "alternative_intron": "",
+            "complex": "True"
+        }, {
+            "ale": "1",
+            "afe": "1"
+        }
+    ],
     "gene:ENSG00000266967": [
         {
             'afe': '1'
@@ -263,12 +364,6 @@ expected_modules = {
             'tandem_cassette': ''
         }, {}
     ],
-
-
-
-
-
-
     "gene:ENSG00000082213": [
         {
             "module_id": "gene:ENSG00000082213_1",
@@ -888,42 +983,7 @@ expected_modules = {
             "complex": "True"
         }
     ],
-    # "gene:ENSG00000081307": [
-    #     {
-    #         "module_id": "gene:ENSG00000081307_1",
-    #         "cassette_exon": "",
-    #         "alt3ss": "",
-    #         "alt5ss": "",
-    #         "p_alt3ss": "",
-    #         "p_alt5ss": "",
-    #
-    #         "mutually_exclusive": "",
-    #         "ale": "",
-    #         "afe": "1",
-    #         "p_ale": "",
-    #         "p_afe": "",
-    #         "multi_exon_spanning": "1",
-    #         "alternative_intron": "2",
-    #         "complex": "True"
-    #     },
-    #     {
-    #         "module_id": "gene:ENSG00000081307_2",
-    #         "cassette_exon": "1",
-    #         "alt3ss": "",
-    #         "alt5ss": "",
-    #         "p_alt3ss": "",
-    #         "p_alt5ss": "1",
-    #
-    #         "mutually_exclusive": "",
-    #         "ale": "",
-    #         "afe": "",
-    #         "p_ale": "",
-    #         "p_afe": "",
-    #         "multi_exon_spanning": "",
-    #         "alternative_intron": "1",
-    #         "complex": "True"
-    #     }
-    # ],
+
     "gene:ENSG00000081665": [
         {
             "module_id": "gene:ENSG00000081665_1",
