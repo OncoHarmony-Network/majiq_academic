@@ -990,7 +990,7 @@ class TsvWriter(BaseTsvWriter):
                     constitutive_regions = event['constitutive_regions']
                     constitutive_coords = ";".join([region.range_str() for region in constitutive_regions])
                     constitutive_denovo = ";".join([region.is_de_novo() for region in constitutive_regions])
-                    constitutive_types = ";".join([region.what_am_i() for region in constitutive_regions])
+                    constitutive_types = ";".join([region.short_name() for region in constitutive_regions])
                     ref_exon = event['reference_exon']
                     ref_exon_coord = ref_exon.range_str()
                     ref_exon_exitrons = ";".join(ref_exon.get_exitrons())
