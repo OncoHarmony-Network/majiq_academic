@@ -18,7 +18,7 @@ import csv
 
 # this should vary depending on the group of tests to run
 # changed relative import path here:
-from tests_expected_t_cells_2_caleb import *
+from tests_expected_t_cells_3 import *
 
 
 
@@ -37,9 +37,7 @@ def run_voila_classify(gene_ids, enabled_outputs='all', additional_args=[]):
 
     cmd.append('--gene-ids')
     cmd += gene_ids
-
     #print(' '.join(cmd))
-
     p = Popen(cmd, stdout=PIPE, stderr=STDOUT)
     output = ''
     error = False

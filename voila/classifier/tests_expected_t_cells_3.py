@@ -1162,6 +1162,14 @@ expected_modules_constitutive = {
         }, {
             'constitutive_intron': '1'
         }
+    ],
+    "gene:ENSG00000223509":[
+        {},
+        {'constitutive_junction': '1'},
+        {'constitutive_junction': '1'},
+        {'constitutive_junction': '1'},
+        {},
+        {}
     ]
 }
 
@@ -1226,5 +1234,10 @@ expected_mpes = {
          "Reference Exon Constant Region":"37201642-37201726"},
         {"LSV ID(s)":"gene:ENSG00000218739:t:37204304-37204741",
          "Reference Exon Constant Region":"37204304-37204741"}
+    ],
+    "gene:ENSG00000223509":[
+        {"Constitutive Exon or Intron":"e;e;e"},
+        {"Constitutive Exon or Intron":"h"},#half exon
+        {"Constitutive Exon or Intron":"e;e;e"}
     ]
 }
