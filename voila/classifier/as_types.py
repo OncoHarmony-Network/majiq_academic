@@ -194,7 +194,7 @@ class Graph:
 
         def short_name(self):
             # 'h' for half-exon
-            if self.is_half_exon():
+            if self.is_half_exon:
                 return "h"
             # 'e' for Exon
             return "e"

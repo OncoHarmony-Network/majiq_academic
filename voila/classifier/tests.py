@@ -17,20 +17,20 @@ import csv
 
 
 # this should vary depending on the group of tests to run
-
-from voila.classifier.tests_expected_t_cells_2 import *
-
-
+# changed relative import path here:
+from tests_expected_t_cells_2_caleb import *
 
 
-out_dir = '/home/paul/PycharmProjects/majiq/test_cases/classifier/caleb1/testout'
 
-def run_voila_classify(gene_ids, additional_args=[]):
-    os.environ['PYTHONPATH'] = '/home/paul/PycharmProjects/majiq'
+
+out_dir = '/Users/calebradens/Documents/majiq_dev/classifier_dev/classified'
+
+def run_voila_classify(gene_ids, enabled_outputs='all', additional_args=[]):
+    os.environ['PYTHONPATH'] = '/Users/calebradens/PycharmProjects/classifier_caleb_dev/'
     cmd = ['python3',
-           '/home/paul/PycharmProjects/majiq/voila/run_voila.py',
+           '/Users/calebradens/PycharmProjects/classifier_caleb_dev/voila/run_voila.py',
            'classify', psi_file, sg_file, '-d', out_dir,
-           '--enabled-outputs', 'all', '--overwrite',
+           '--enabled-outputs', enabled_outputs, '--overwrite',
            '--decomplexify-psi-threshold', '0.0']
     for arg in additional_args:
         cmd.append(arg)
@@ -62,6 +62,12 @@ expected_headers_constitutive = ['module_id', 'gene_id', 'gene_name', "Chr","Str
                     'p_alt5ss', 'alt3and5ss', 'mutually_exclusive', 'alternative_intron', 'ale', 'afe', 'p_ale', 'p_afe', 'orphan_junction',
                                  'constitutive_junction', 'constitutive_intron',
                     'multi_exon_spanning',   'exitron', 'complex', 'number-of-events']
+expected_headers_mpe= ['Module ID', 'Gene ID', 'Gene Name', "Chr","Strand", 'LSV ID(s)',
+                       "Collapsed Event Name","Type","Edge of the Module",
+                       "Reference Exon Coord","Reference Exon De Novo","Reference Exon Exitrons","Reference Exon Constant Region",
+                       "Reference Exon Trimmed","Constitutive Direction","Constitutive Regions",
+                       "Constitutive De Novo","Constitutive Exon or Intron"]
+
 
 def verify_tsvs(gene_id):
 
@@ -158,6 +164,9 @@ def verify_tsvs(gene_id):
                 try:
                     assert len(modules) == len(expected_modules[gene_id])
                 except:
+                    if gene_id == "gene:ENSG00000082074":
+                        for mod in modules:
+                            print(mod)
                     print("expt: %d found: %d (%s)" % (len(expected_modules[gene_id]), len(modules), gene_id))
                     raise
 
@@ -190,6 +199,7 @@ def verify_constitutive(gene_id):
                 modules.append(line)
 
         if gene_id in expected_modules_constitutive:
+            print("Veryify %s constitutive..." % gene_id)
             if expected_modules_constitutive[gene_id]:
                 try:
                     assert len(modules) == len(expected_modules_constitutive[gene_id])
@@ -216,6 +226,39 @@ def verify_constitutive(gene_id):
 
 
 
+def verify_mpe(gene_id):
+    with open(os.path.join(out_dir, 'mpe_primerable_regions.tsv'), 'r', newline='') as csvfile:
+        reader = csv.reader(csvfile, dialect='excel-tab', delimiter='\t')
+
+        headers = next(reader, None)
+        mpe_rows = []
+        for line in reader:
+            if line[1] == gene_id:
+                mpe_rows.append(line)
+
+        if gene_id in expected_mpes:
+            print("Veryify %s mpe..." % gene_id)
+            if expected_mpes[gene_id]:
+                try:
+                    assert len(mpe_rows) == len(expected_mpes[gene_id])
+                except:
+                    print("expt: %d found: %d (%s)" % (len(expected_mpes[gene_id]), len(mpe_rows), gene_id))
+                    raise
+
+
+                for i, exectedmperow in enumerate(expected_mpes[gene_id]):
+                    print(mpe_rows[i])
+                    print(exectedmperow)
+
+                    for expected_header, v in exectedmperow.items():
+                        try:
+                            assert v == mpe_rows[i][expected_headers_mpe.index(expected_header)]
+                        except:
+                            print("expt: %s found: %s (%d, %s, %s)" % (v, mpe_rows[i][expected_headers_mpe.index(expected_header)], i+1,
+                                                                       headers[expected_headers_mpe.index(expected_header)], gene_id))
+                            raise
+
+
 
 import sys
 
@@ -231,13 +274,18 @@ def run_tests():
 
     else:
 
-        run_voila_classify([gene_id for gene_id in expected_modules])
+        run_voila_classify([gene_id for gene_id in expected_modules],
+                           additional_args=['--debug'])
         for gene_id in expected_modules:
             verify_tsvs(gene_id)
 
+
+        run_voila_classify([gene_id for gene_id in expected_modules_constitutive],
+                           enabled_outputs="summary,mpe",
+                           additional_args=['--keep-constitutive', '--debug'])
         for gene_id in expected_modules_constitutive:
-            run_voila_classify([gene_id for gene_id in expected_modules_constitutive], ['--keep-constitutive'])
             verify_constitutive(gene_id)
+            verify_mpe(gene_id)
 
 
     print("Success!")
