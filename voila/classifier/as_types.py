@@ -348,7 +348,10 @@ class Graph:
 
         def what_am_i(self):
             # 'i' for Intron
-            return "i"
+            if self.ir
+                return "i"
+            else:
+                return "j"
 
         def is_de_novo(self):
             return "1" if self.de_novo else "0"
