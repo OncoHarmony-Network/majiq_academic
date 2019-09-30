@@ -192,6 +192,55 @@ class Graph:
         def is_half_exon(self):
             return self.exon['end'] == -1 or self.exon['start'] == -1
 
+        def what_am_i(self):
+            # 'e' for Exon
+            return "e"
+
+        def is_de_novo(self):
+            return str(0 if self.exon['annotated'] else 1)
+
+        def get_exitrons(self):
+            """
+            From a node, return exitron str coordinates in a list. Returns empty list if no exitrons found.
+            :return: [<exitron coord>, <exitron coord>, <etc>]
+            """
+            exitrons = []
+            for edge in self.edges:
+                if self.start < edge.start < self.end and self.start < edge.end < self.end:
+                    exitrons.append(edge.range_str())
+            return exitrons
+
+        def get_constant_region(self):
+            exitrons = self.get_exitrons()
+            if len(exitrons) > 0:
+                return ""
+            # TBD do something about exitrons...
+            # find first start from non-exitron edges that falls within exon bounds
+            # if no edges, use node end (i.e. last exon)
+            if len(self.edges) == 0:
+                first_start = self.end
+            else:
+                first_start = float("Inf")
+                for edge in self.edges:
+                    if edge in exitrons:
+                        continue
+                    if edge.start < first_start and self.start <= edge.start and self.end >= edge.start:
+                        first_start = edge.start
+
+            # find last end from non-exitron edges that falls within exon bounds
+            # if no back edges, use node start (i.e. first exon)
+            if len(self.back_edges) == 0:
+                last_end = self.start
+            else:
+                last_end = float("-Inf")
+                for edge in self.back_edges:
+                    if edge in exitrons:
+                        continue
+                    if edge.end > last_end and self.start <= edge.end and self.end >= edge.end:
+                        last_end = edge.end
+            return ("%s-%s" % (last_end, first_start))
+
+
         def connects(self, node, filter=None, ir=False, only_ir=False):
             """
             Search through junctions for this exon to see if this exon has a junction that connects to supplied exon.
@@ -296,6 +345,16 @@ class Graph:
             """
 
             return self.end
+
+        def what_am_i(self):
+            # 'i' for Intron
+            if self.ir
+                return "i"
+            else:
+                return "j"
+
+        def is_de_novo(self):
+            return "1" if self.de_novo else "0"
 
     def start_node(self, edge):
         """
@@ -661,6 +720,131 @@ class Graph:
                         "Found two exons in gene %s which are collided and both have junctions! Can not trim!" % self.gene_id)
 
 
+    # TBD version that handles exitrons...?
+    # def get_exon_to_constant_regions(self):
+    #     """
+    #    get parts of exons which exist between inner junction connections...
+    #     """
+    #
+    #     for i, node in enumerate(self.nodes):
+    #
+    #         # find conditions where we should not trim! ---
+    #
+    #         # not half exon
+    #         if node.is_half_exon:
+    #             continue
+    #
+    #         # first find exitrons, we will need them later
+    #         exitrons = []
+    #         for edge in self.edges:
+    #             # this is different then using in_exon() because it is exclusive instead of inclusive
+    #             # this is how we differentiate exitrons from junctions in overlapping exons
+    #             if node.start < edge.start < node.end and node.start < edge.end < node.end:
+    #                 exitrons.append(edge)
+    #
+    #         potential_regions = []
+    #         for exitron in
+    #
+    #         # find first start from non-exitron edges
+    #         first_start = float("-Inf")
+    #         for edge in self.edges:
+    #             if edge in exitrons:
+    #                 continue
+    #             if edge.start < first_start:
+    #                 first_start = edge.start
+    #
+    #         # find last end from non-exitron edges
+    #         last_end = float("Inf")
+    #         for edge in self.edges:
+    #             if edge in exitrons:
+    #                 continue
+    #             if edge.end > last_end:
+    #                 last_end = edge.end
+    #
+    #
+    #
+    #         coords_in_exon = []
+    #
+    #         trim_end = False
+    #         for edge in self.edges:
+    #             # look through all edges
+    #             # if we can't find any going ahead (other end greater value than exon), don't trim end
+    #             if self.in_exon(node, edge.start) and edge.end >= node.end:
+    #                 # check that the edge allowing trimming fwd is completely ahead of exitrons, otherwise
+    #                 # if does not count
+    #                 for exitron in exitrons:
+    #                     if edge.start <= exitron.end:
+    #                         break
+    #                 else:
+    #                     coords_in_exon.append(edge.start)
+    #                     trim_end = True
+    #
+    #         trim_start = False
+    #         for edge in self.edges:
+    #             # similar for backwards
+    #             if self.in_exon(node, edge.end) and edge.start <= node.start:
+    #                 if edge.ir:
+    #                     trim_start = False
+    #                     break
+    #                 for exitron in exitrons:
+    #                     if edge.end >= exitron.start:
+    #                         break
+    #                 else:
+    #                     coords_in_exon.append(edge.end)
+    #                     trim_start = True
+    #
+    #         # need to check for the special case that there are is only one coordinate on the exon where
+    #         # all junctions are connected. In this case we should not trim
+    #         if coords_in_exon and all(x == coords_in_exon[0] for x in coords_in_exon):
+    #             trim_start = False
+    #             trim_end = False
+    #
+    #         # end find conditions part ---
+    #
+    #         node.untrimmed_start = node.start
+    #         node.untrimmed_end = node.end
+    #
+    #         global_min = float('inf')
+    #         global_max = float('-inf')
+    #         if trim_end or trim_start:
+    #
+    #             edges_starting = []
+    #             edges_ending = []
+    #             for _e in self.edges:
+    #                 if self.in_exon(node, _e.start) and not _e.start == node.start:
+    #                     global_max = max(_e.start, global_max)
+    #                     global_min = min(_e.start, global_min)
+    #                     edges_starting.append(_e)
+    #             for _e in self.edges:
+    #                 if self.in_exon(node, _e.end) and not _e.end == node.end:
+    #                     global_max = max(_e.end, global_max)
+    #                     global_min = min(_e.end, global_min)
+    #                     edges_ending.append(_e)
+    #
+    #         if trim_start:
+    #             node.exon['start'] = global_min
+    #
+    #         if trim_end:
+    #             node.exon['end'] = global_max
+    #
+    #     # after all the regular trimming is done, there still may be some collision cases due to AFE/ALE that are
+    #     # collided. We look for any remaining collisions, and trim the exon without junctions by one unit to
+    #     # resolve the collision
+    #     for i, node in enumerate(self.nodes[:-1]):
+    #         if node.end == self.nodes[i + 1].start:
+    #
+    #             if not node.edges:
+    #                 node.untrimmed_end = node.end
+    #                 node.exon['end'] -= 1
+    #             elif not self.nodes[i + 1].back_edges:
+    #                 self.nodes[i + 1].untrimmed_start = self.nodes[i + 1].start
+    #                 self.nodes[i + 1].exon['start'] += 1
+    #             else:
+    #                 voila_log().warning(
+    #                     "Found two exons in gene %s which are collided and both have junctions! Can not trim!" % self.gene_id)
+
+
+
     def _module_is_valid(self, module):
         """
         Make sure that module passes checks pertaining to current settings, before being added to module list
@@ -978,6 +1162,7 @@ class Graph:
         def __init__(self, nodes, graph):
             """
             Module is subset of a gene.  The divide between modules is where junctions don't cross.
+
             :param nodes: list of nodes that belong to module
             """
 
@@ -1060,10 +1245,13 @@ class Graph:
                     # assert len(skip) > 1
                     #for include1, include2, skip in product(include1s, include2s, skips):
 
-                    found.append({'event': 'cassette_exon', 'C1': self.strand_case(n1, n3),
+                    found.append({'event': 'cassette_exon',
+                                  'C1': self.strand_case(n1, n3),
                                   'C2': self.strand_case(n3, n1),
-                                  'A': n2, 'Include1': self.strand_case(include1s[0], include2s[0]),
-                                  'Include2': self.strand_case(include2s[0], include1s[0]), 'Skip': skips[0]})
+                                  'A': n2,
+                                  'Include1': self.strand_case(include1s[0], include2s[0]),
+                                  'Include2': self.strand_case(include2s[0], include1s[0]),
+                                  'Skip': skips[0]})
 
             return found
 
@@ -1573,7 +1761,7 @@ class Graph:
 
         def constitutive(self):
             found = []
-
+            # why populate nodes to check and not just check all combos of 2?
             nodes_to_check = []
             if len(self.nodes[0].edges) == 1:
                 nodes_to_check.append(self.nodes[0])
@@ -1584,13 +1772,13 @@ class Graph:
                     nodes_to_check.append(node)
 
             for n1, n2 in combinations(nodes_to_check, 2):
-                junc = n1.connects(n2, ir=True)
+                junc = n1.connects(n2, ir=True) # TBD; set ir=False?
                 if junc and len(junc) == 1:
 
                     junc = junc[0]
                     config = ClassifyConfig()
 
-                    if not junc.ir:
+                    if not junc.ir: # TBD; if set ir=False, no need to check here?
                         with SpliceGraph(config.splice_graph_file) as sg:
                             try:
                                 junc_reads = next(sg.junction_reads_exp({'start': junc.start, 'end': junc.end,
@@ -1632,6 +1820,145 @@ class Graph:
 
             return found
 
+
+        # def mpe_single_targets(self):
+        #     """
+        #     Identify single target splice graph splits plus downstream constitutive regions.
+        #     """
+        #     found = []
+        #
+        #     return found
+
+        # Appropriate to be a static Class method?
+        def module_is_constitutive(self):
+            """
+            Detects whether the module is a pair of constitutively (by junction or intron) joined exons ...
+            :return: Boolean
+            """
+            if len(self.nodes) == 2:
+                n1 = self.nodes[0]
+                n2 = self.nodes[1]
+                connection = n1.connects(n2)
+                # if connected by single junction
+                if connection and len(connection)==1:
+                    # if constitutive...
+                    if len(n1.edges) == 1 and len(n2.back_edges) == 1:
+                        return True
+            return False
+
+
+        def mpe(self):
+            """
+            Identify splice graph splits and associated constitutive regions (upstream if source, downstream if target).
+
+            Event dicts structured as follows:
+            {
+            'event': 'mpe_source' or 'mpe_target',
+            'reference_exon': <reference exon node>
+            'at_module_edge': Boolean : is the reference exon at the appropriate edge the module?
+                (appropriate meaning left if source and right if target)
+            'constitutive_regions': <[list of nodes (or introns) that are upstream constitutive]>
+            }
+            """
+            found = []
+            # skip certain types of modules (i.e. constitutive)
+            if self.module_is_constitutive():
+                return found
+            for ii in range(len(self.nodes)):
+                thisnode = self.nodes[ii]
+                # node has with 2+ (forward) edges, so single source
+                if len(thisnode.edges) > 1:
+                    constitutive_regions = []
+                    backedges = thisnode.back_edges
+                    #if len(backedges) == 1:
+                        #print(" ## backedge of thisnode %s is %s " % (thisnode, backedges))
+                    while len(backedges) <= 1:
+                        if len(backedges) == 0:
+                            break
+                        # only one backedge...
+                        backedge = backedges[0]
+                        #print("backedge: %s" % backedge)
+                        if backedge.ir:
+                            constitutive_regions.append(backedge)
+                        # "end_node" is actually upstream, b/c neg strand..
+                        upstream_node = self.graph.start_node(backedge)
+                        #print("upstream: %s, upstream_node.edges %s" % (upstream_node, upstream_node.edges))
+                        # if upstream node only forward connects to thisnode
+                        if len(upstream_node.edges) == 1:
+                            constitutive_regions.append(upstream_node)
+                        else:
+                            break
+                        backedges = upstream_node.back_edges
+                    if self.graph.strand == "+":
+                        event_type = "mpe_source"
+                    else:
+                        event_type = "mpe_target"
+                    if ii == 0:
+                        at_edge = True
+                    else:
+                        at_edge = False
+                    if ii == (len(self.nodes) - 1):
+                        at_opposite_edge = True
+                    else:
+                        at_opposite_edge = False
+                    if not at_opposite_edge:
+                        found.append(
+                            {
+                            'event': event_type,
+                            'reference_exon': thisnode,
+                            'at_module_edge': at_edge,
+                            'constitutive_regions': constitutive_regions
+                            })
+                # node has with 2+ (forward) edges, so single source
+                if len(thisnode.back_edges) > 1:
+                    constitutive_regions = []
+                    backedges = thisnode.edges
+                    # if len(backedges) == 1:
+                    #     print(" ## edge of thisnode %s is %s " % (thisnode, backedges))
+                    while len(backedges) <= 1:
+                        if len(backedges) == 0:
+                            break
+                        # only one backedge...
+                        backedge = backedges[0]
+                        # print("backedge: %s" % backedge)
+                        if backedge.ir:
+                            constitutive_regions.append(backedge)
+                        upstream_node = self.graph.end_node(backedge) # Fix?
+                        # print("upstream: %s, upstream_node.back_edges %s" % (upstream_node, upstream_node.back_edges))
+                        # if upstream node only forward connects to thisnode
+                        if len(upstream_node.back_edges) == 1:
+                            constitutive_regions.append(upstream_node)
+                        else:
+                            break
+                        backedges = upstream_node.edges
+                    if self.graph.strand == "+":
+                        event_type = "mpe_target"
+                    else:
+                        event_type = "mpe_source"
+                    if ii == (len(self.nodes) - 1):
+                        at_edge = True
+                    else:
+                        at_edge = False
+                    if ii == 0:
+                        at_opposite_edge = True
+                    else:
+                        at_opposite_edge = False
+                    if not at_opposite_edge:
+                        found.append(
+                            {
+                            'event': event_type,
+                            'reference_exon': thisnode,
+                            'at_module_edge': at_edge,
+                            'constitutive_regions': constitutive_regions
+                            })
+            return found
+
+        def mpe_regions(self):
+            """
+            Gets the mpe_source events and the mpe_target events
+            :return: [mpe_single_sources] [mpe_single_targets]
+            """
+            return self.mpe()
 
         def as_types(self):
             """

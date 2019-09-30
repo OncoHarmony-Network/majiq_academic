@@ -130,8 +130,7 @@ class TsvWriter(BaseTsvWriter):
 
             # self.as_types = {x.idx: x.as_types() for x in self.modules}
             self.as_types = {x.idx: x.as_types() for x in self.modules}
-
-
+            self.mpe_regions = {x.idx: x.mpe_regions() for x in self.modules}
 
 
     @staticmethod
@@ -153,6 +152,8 @@ class TsvWriter(BaseTsvWriter):
             names += ['junctions.tsv']
         if 'summary' in config.enabled_outputs:
             names += ['summary.tsv']
+        if 'mpe' in config.enabled_outputs:
+            names += ['mpe_primerable_regions.tsv']
 
         return names
 
@@ -234,7 +235,22 @@ class TsvWriter(BaseTsvWriter):
                                                  'Junction Coordinate', 'De Novo'] + self.quantification_headers
                 self.start_headers(headers, 'junctions.tsv')
 
-
+            if 'mpe' in self.config.enabled_outputs:
+                headers = self.common_headers
+                headers[-1].replace("(s)","")
+                headers += ['Collapsed Event Name',
+                        'Type',
+                        'Edge of the Module',
+                        'Reference Exon Coord',
+                        'Reference Exon De Novo',
+                        'Reference Exon Exitrons',
+                        'Reference Exon Constant Region',
+                        'Reference Exon Trimmed',
+                        'Constitutive Direction',
+                        'Constitutive Regions',
+                        'Constitutive De Novo',
+                        'Constitutive Exon or Intron']
+                self.start_headers(headers, 'mpe_primerable_regions.tsv')
 
 
     def cassette(self):
@@ -943,6 +959,56 @@ class TsvWriter(BaseTsvWriter):
 
             for module, common_data, quantifications, de_novo, junction_name, coordinates in self.junction_cache:
                 writer.writerow(common_data + [module.collapsed_event_name, junction_name, coordinates, de_novo] + quantifications)
+
+    def mpe(self):
+        """
+        Write a file with a listing of all primerable regions
+        :return:
+        """
+        with open(os.path.join(self.config.directory, 'mpe_primerable_regions.tsv.%s' % self.pid), 'a', newline='') as csvfile:
+            writer = csv.writer(csvfile, dialect='excel-tab', delimiter='\t')
+            for module in self.modules:
+                events = self.mpe_regions[module.idx]
+                for event in events:
+                    n_assigned_lids = 0
+                    lsvid = ""
+                    if event['event'] == "mpe_source":
+                        common = self.common_data(module, 's', event['reference_exon'])
+                        eventtype = "Single Source" # SingleSource
+                        constitutive_direction = "Upstream"
+                    else:
+                        common = self.common_data(module, 't', event['reference_exon'])
+                        eventtype = "Single Target" # SingleTarget
+                        constitutive_direction = "Downstream"
+                    lsvids = common[-1].split(";")
+                    if len(lsvids) > 1:
+                        raise ValueError("Multiple LSV IDs (%s) unexpected ... %s" % (lsvids, event))
+                    if event['at_module_edge']:
+                        isfirst = 1
+                    else:
+                        isfirst = 0
+                    constitutive_regions = event['constitutive_regions']
+                    constitutive_coords = ";".join([region.range_str() for region in constitutive_regions])
+                    constitutive_denovo = ";".join([region.is_de_novo() for region in constitutive_regions])
+                    constitutive_types = ";".join([region.what_am_i() for region in constitutive_regions])
+                    ref_exon = event['reference_exon']
+                    ref_exon_coord = ref_exon.range_str()
+                    ref_exon_exitrons = ";".join(ref_exon.get_exitrons())
+                    const_reg = ref_exon.get_constant_region()
+                    if const_reg == ref_exon_coord:
+                        was_trimmed = 0
+                    else:
+                        was_trimmed = 1
+                    if "events" in self.config.enabled_outputs:
+                        collapsed_event_name = module.collapsed_event_name
+                    else:
+                        collapsed_event_name = "ND"
+                    row = common # ModID, GeneID, GeneName, Chr, Strand, Complex, LSV(s)
+                    row += [collapsed_event_name, eventtype, isfirst]
+                    row += [ref_exon_coord, ref_exon.is_de_novo(), ref_exon_exitrons]
+                    row += [const_reg, was_trimmed, constitutive_direction]
+                    row += [constitutive_coords, constitutive_denovo, constitutive_types]
+                    writer.writerow(row)
 
     def heatmap(self):
         """
