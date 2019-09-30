@@ -48,9 +48,13 @@ def print_filter_summary():
     if config.changing or config.non_changing:
         voila_log().info(("╠╡ After Classification:").ljust(jst)[:jst] + "║")
         if config.changing:
+            voila_log().info(("║     Dropping modules if none(max(E(|dPSI|)) >= %.3f)" % config.non_changing_threshold).ljust(jst)[
+                             :jst] + "║")
             voila_log().info(("║     Dropping modules if none(max(P(|dPSI|>=%.3f)) >= %.3f)" %
                              (config.changing_threshold, config.probability_changing_threshold)).ljust(jst)[:jst] + "║")
         elif config.non_changing:
+            voila_log().info(("║     Dropping modules if any(max(E(|dPSI|)) <= %.3f)" % config.non_changing_threshold).ljust(jst)[
+                             :jst] + "║")
             voila_log().info(("║     Dropping modules if any(max(P(|dPSI|<=%.3f)) >= %.3f)" %
                              (config.non_changing_threshold, config.probability_non_changing_threshold)).ljust(jst)[:jst] + "║")
 
