@@ -984,21 +984,21 @@ class TsvWriter(BaseTsvWriter):
                     if len(lsvids) > 1:
                         raise ValueError("Multiple LSV IDs (%s) unexpected ... %s" % (lsvids, event))
                     if event['at_module_edge']:
-                        isfirst = 1
+                        isfirst = True
                     else:
-                        isfirst = 0
+                        isfirst = False
                     constitutive_regions = event['constitutive_regions']
                     constitutive_coords = ";".join([region.range_str() for region in constitutive_regions])
-                    constitutive_denovo = ";".join([region.is_de_novo() for region in constitutive_regions])
+                    constitutive_denovo = ";".join([str(region.is_de_novo()) for region in constitutive_regions])
                     constitutive_types = ";".join([region.what_am_i() for region in constitutive_regions])
                     ref_exon = event['reference_exon']
                     ref_exon_coord = ref_exon.range_str()
                     ref_exon_exitrons = ";".join(ref_exon.get_exitrons())
                     const_reg = ref_exon.get_constant_region()
                     if const_reg == ref_exon_coord:
-                        was_trimmed = 0
+                        was_trimmed = False
                     else:
-                        was_trimmed = 1
+                        was_trimmed = True
                     if "events" in self.config.enabled_outputs:
                         collapsed_event_name = module.collapsed_event_name
                     else:
