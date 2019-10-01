@@ -197,7 +197,7 @@ class Graph:
             return "e"
 
         def is_de_novo(self):
-            return str(0 if self.exon['annotated'] else 1)
+            return False if self.exon['annotated'] else True
 
         def get_exitrons(self):
             """
