@@ -529,9 +529,11 @@ class Graph:
 
 
 
-    def in_exon(self, exon, coordinate):
+    def in_exon(self,
+                exon,
+                coordinate):
         """
-        Check if the coordinate falls inside the exon (inclusive)
+        Check if the coordinate falls inside the exon
         :param exon:
         :param coordinate:
         :return:
@@ -540,9 +542,7 @@ class Graph:
             return coordinate == exon.end
         elif exon.end == -1:
             return coordinate == exon.start
-        if exon.start <= coordinate <= exon.end:
-            return True
-        return False
+        return exon.start <= coordinate <= exon.end
 
     def _enough_reads(self, reads):
         """
@@ -623,9 +623,7 @@ class Graph:
         """
         modify self.nodes to remove parts of exons which exist outside of any junction connection
         """
-
         for i, node in enumerate(self.nodes):
-
             # find conditions where we should not trim! ---
 
             # not half exon
@@ -684,11 +682,9 @@ class Graph:
 
             node.untrimmed_start = node.start
             node.untrimmed_end = node.end
-
             global_min = float('inf')
             global_max = float('-inf')
             if trim_end or trim_start:
-
                 edges_starting = []
                 edges_ending = []
                 for _e in self.edges:
@@ -713,11 +709,12 @@ class Graph:
         # resolve the collision
         for i, node in enumerate(self.nodes[:-1]):
             if node.end == self.nodes[i + 1].start:
-
-                if not node.edges:
+                #if not node.edges: # I don't think this is possible at this point? No edges yet?
+                if not node.end in [edge.start for edge in self.edges]:
                     node.untrimmed_end = node.end
                     node.exon['end'] -= 1
-                elif not self.nodes[i + 1].back_edges:
+                #elif not self.nodes[i + 1].back_edges: # I don't think this is possible at this point? No backedges yet?
+                elif not node.start in [edge.end for edge in self.edges]:
                     self.nodes[i + 1].untrimmed_start = self.nodes[i + 1].start
                     self.nodes[i + 1].exon['start'] += 1
                 else:
@@ -1825,14 +1822,6 @@ class Graph:
 
             return found
 
-
-        # def mpe_single_targets(self):
-        #     """
-        #     Identify single target splice graph splits plus downstream constitutive regions.
-        #     """
-        #     found = []
-        #
-        #     return found
 
         # Appropriate to be a static Class method?
         def module_is_constitutive(self):
