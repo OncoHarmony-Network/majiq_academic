@@ -241,6 +241,8 @@ class Graph:
                         continue
                     if edge.end > last_end and self.start <= edge.end and self.end >= edge.end:
                         last_end = edge.end
+            if last_end >= first_start:
+                return "No Constant Region"
             return ("%s-%s" % (last_end, first_start))
 
 
