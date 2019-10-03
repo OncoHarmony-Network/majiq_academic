@@ -1852,6 +1852,7 @@ class Graph:
             'at_module_edge': Boolean : is the reference exon at the appropriate edge the module?
                 (appropriate meaning left if source and right if target)
             'constitutive_regions': <[list of nodes (or introns) that are upstream constitutive]>
+            'edge_of_transcript': True/False is ref exon first/last exon of a transcript, potentially?
             }
             """
             found = []
@@ -1895,13 +1896,19 @@ class Graph:
                         at_opposite_edge = True
                     else:
                         at_opposite_edge = False
+                    # is this potentially first or last exon in a transcript?
+                    if len(thisnode.back_edges) == 0:
+                        edge_of_transcript = True
+                    else:
+                        edge_of_transcript = False
                     if not at_opposite_edge:
                         found.append(
                             {
                             'event': event_type,
                             'reference_exon': thisnode,
                             'at_module_edge': at_edge,
-                            'constitutive_regions': constitutive_regions
+                            'constitutive_regions': constitutive_regions,
+                            'edge_of_transcript':edge_of_transcript
                             })
                 # node has with 2+ (forward) edges, so single source
                 if len(thisnode.back_edges) > 1:
@@ -1937,13 +1944,19 @@ class Graph:
                         at_opposite_edge = True
                     else:
                         at_opposite_edge = False
+                    # is this potentially first or last exon in a transcript?
+                    if len(thisnode.edges) == 0:
+                        edge_of_transcript = True
+                    else:
+                        edge_of_transcript = False
                     if not at_opposite_edge:
                         found.append(
                             {
                             'event': event_type,
                             'reference_exon': thisnode,
                             'at_module_edge': at_edge,
-                            'constitutive_regions': constitutive_regions
+                            'constitutive_regions': constitutive_regions,
+                            'edge_of_transcript':edge_of_transcript
                             })
             return found
 

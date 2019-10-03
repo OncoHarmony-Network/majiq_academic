@@ -241,6 +241,7 @@ class TsvWriter(BaseTsvWriter):
                 headers += ['Collapsed Event Name',
                         'Type',
                         'Edge of the Module',
+                        'Edge of Transcript',
                         'Reference Exon Coord',
                         'Reference Exon De Novo',
                         'Reference Exon Exitrons',
@@ -972,14 +973,19 @@ class TsvWriter(BaseTsvWriter):
                 for event in events:
                     n_assigned_lids = 0
                     lsvid = ""
+                    edge_type = ""
                     if event['event'] == "mpe_source":
                         common = self.common_data(module, 's', event['reference_exon'])
                         eventtype = "Single Source" # SingleSource
                         constitutive_direction = "Upstream"
+                        if event['edge_of_transcript']:
+                            edge_type = "first_exon"
                     else:
                         common = self.common_data(module, 't', event['reference_exon'])
                         eventtype = "Single Target" # SingleTarget
                         constitutive_direction = "Downstream"
+                        if event['edge_of_transcript']:
+                            edge_type = "last_exon"
                     lsvids = common[-1].split(";")
                     if len(lsvids) > 1:
                         raise ValueError("Multiple LSV IDs (%s) unexpected ... %s" % (lsvids, event))
@@ -1004,7 +1010,7 @@ class TsvWriter(BaseTsvWriter):
                     else:
                         collapsed_event_name = "ND"
                     row = common # ModID, GeneID, GeneName, Chr, Strand, Complex, LSV(s)
-                    row += [collapsed_event_name, eventtype, isfirst]
+                    row += [collapsed_event_name, eventtype, isfirst, edge_type]
                     row += [ref_exon_coord, ref_exon.is_de_novo(), ref_exon_exitrons]
                     row += [const_reg, was_trimmed, constitutive_direction]
                     row += [constitutive_coords, constitutive_denovo, constitutive_types]
