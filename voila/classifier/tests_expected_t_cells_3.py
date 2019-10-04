@@ -1238,6 +1238,7 @@ expected_mpes = {
     "gene:ENSG00000223509":[
         {"Constitutive Exon or Intron":"e;e;e"},
         {"Constitutive Exon or Intron":"h"},#half exon
-        {"Constitutive Exon or Intron":"e;e;e"}
+        {"Constitutive Exon or Intron":"e;e;e",
+         "Constitutive De Novo":"False;False;False"}
     ]
 }

@@ -206,7 +206,7 @@ class Graph:
         def get_exitrons(self):
             """
             From a node, return exitron str coordinates in a list. Returns empty list if no exitrons found.
-            :return: [<exitron coord>, <exitron coord>, <etc>]
+            :return: [<exitron coord>, <exitron coord>, <etc>]f
             """
             exitrons = []
             for edge in self.edges:
@@ -361,7 +361,7 @@ class Graph:
                 return "j"
 
         def is_de_novo(self):
-            return "1" if self.de_novo else "0"
+            return True if self.de_novo else False
 
     def start_node(self, edge):
         """
