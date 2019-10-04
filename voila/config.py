@@ -398,15 +398,15 @@ class ClassifyConfig:
                 if settings['output_training_data']:
                     if 'enabled_outputs' in settings:
                         if settings['enabled_outputs'] == 'all':
-                            settings['enabled_outputs'] = ['matrices', 'junctions', 'exons']
+                            settings['enabled_outputs'] = ['matrices', 'junctions', 'exons', 'paths']
                         else:
                             settings['enabled_outputs'] = settings['enabled_outputs'].split(',')
                             for enabled_output in settings['enabled_outputs']:
-                                if not enabled_output in ('matrices', 'junctions', 'exons'):
+                                if not enabled_output in ('matrices', 'junctions', 'exons', 'paths'):
                                     voila_log().critical("Unrecognized enabled output: %s" % enabled_output)
                                     sys.exit(1)
                     else:
-                        settings['enabled_outputs'] = ['matrices', 'junctions', 'exons']
+                        settings['enabled_outputs'] = ['matrices', 'junctions', 'exons', 'paths']
                 else:
                     if 'enabled_outputs' in settings:
                         if settings['enabled_outputs'] == 'all':

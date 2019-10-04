@@ -125,6 +125,8 @@ def classify_gene(args):
             if 'junctions' in config.enabled_outputs:
                 writer.junctions_tsv()
 
+            if 'paths' in config.enabled_outputs:
+                writer.paths_tsv()
 
 
     except KeyboardInterrupt:
