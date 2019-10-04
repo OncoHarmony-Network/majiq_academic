@@ -410,7 +410,7 @@ class ClassifyConfig:
                 else:
                     if 'enabled_outputs' in settings:
                         if settings['enabled_outputs'] == 'all':
-                            settings['enabled_outputs'] = ['summary', 'events', 'junctions', 'heatmap', 'mpe']
+                            settings['enabled_outputs'] = ['summary', 'events', 'junctions', 'heatmap']
                         else:
                             settings['enabled_outputs'] = settings['enabled_outputs'].split(',')
                             for enabled_output in settings['enabled_outputs']:

@@ -192,7 +192,11 @@ class Graph:
         def is_half_exon(self):
             return self.exon['end'] == -1 or self.exon['start'] == -1
 
-        def what_am_i(self):
+        @property
+        def short_name(self):
+            # 'h' for half-exon
+            if self.is_half_exon:
+                return "h"
             # 'e' for Exon
             return "e"
 
@@ -202,7 +206,7 @@ class Graph:
         def get_exitrons(self):
             """
             From a node, return exitron str coordinates in a list. Returns empty list if no exitrons found.
-            :return: [<exitron coord>, <exitron coord>, <etc>]
+            :return: [<exitron coord>, <exitron coord>, <etc>]f
             """
             exitrons = []
             for edge in self.edges:
@@ -238,6 +242,8 @@ class Graph:
                         continue
                     if edge.end > last_end and self.start <= edge.end and self.end >= edge.end:
                         last_end = edge.end
+            if last_end >= first_start:
+                return "No Constant Region"
             return ("%s-%s" % (last_end, first_start))
 
 
@@ -346,7 +352,8 @@ class Graph:
 
             return self.end
 
-        def what_am_i(self):
+        @property
+        def short_name(self):
             # 'i' for Intron
             if self.ir:
                 return "i"
@@ -354,7 +361,7 @@ class Graph:
                 return "j"
 
         def is_de_novo(self):
-            return "1" if self.de_novo else "0"
+            return True if self.de_novo else False
 
     def start_node(self, edge):
         """
@@ -524,9 +531,11 @@ class Graph:
 
 
 
-    def in_exon(self, exon, coordinate):
+    def in_exon(self,
+                exon,
+                coordinate):
         """
-        Check if the coordinate falls inside the exon (inclusive)
+        Check if the coordinate falls inside the exon
         :param exon:
         :param coordinate:
         :return:
@@ -535,9 +544,7 @@ class Graph:
             return coordinate == exon.end
         elif exon.end == -1:
             return coordinate == exon.start
-        if exon.start <= coordinate <= exon.end:
-            return True
-        return False
+        return exon.start <= coordinate <= exon.end
 
     def _enough_reads(self, reads):
         """
@@ -618,9 +625,7 @@ class Graph:
         """
         modify self.nodes to remove parts of exons which exist outside of any junction connection
         """
-
         for i, node in enumerate(self.nodes):
-
             # find conditions where we should not trim! ---
 
             # not half exon
@@ -679,11 +684,9 @@ class Graph:
 
             node.untrimmed_start = node.start
             node.untrimmed_end = node.end
-
             global_min = float('inf')
             global_max = float('-inf')
             if trim_end or trim_start:
-
                 edges_starting = []
                 edges_ending = []
                 for _e in self.edges:
@@ -708,11 +711,12 @@ class Graph:
         # resolve the collision
         for i, node in enumerate(self.nodes[:-1]):
             if node.end == self.nodes[i + 1].start:
-
-                if not node.edges:
+                #if not node.edges: # I don't think this is possible at this point? No edges yet?
+                if not node.end in [edge.start for edge in self.edges]:
                     node.untrimmed_end = node.end
                     node.exon['end'] -= 1
-                elif not self.nodes[i + 1].back_edges:
+                #elif not self.nodes[i + 1].back_edges: # I don't think this is possible at this point? No backedges yet?
+                elif not node.start in [edge.end for edge in self.edges]:
                     self.nodes[i + 1].untrimmed_start = self.nodes[i + 1].start
                     self.nodes[i + 1].exon['start'] += 1
                 else:
@@ -1821,14 +1825,6 @@ class Graph:
             return found
 
 
-        # def mpe_single_targets(self):
-        #     """
-        #     Identify single target splice graph splits plus downstream constitutive regions.
-        #     """
-        #     found = []
-        #
-        #     return found
-
         # Appropriate to be a static Class method?
         def module_is_constitutive(self):
             """
@@ -1858,6 +1854,7 @@ class Graph:
             'at_module_edge': Boolean : is the reference exon at the appropriate edge the module?
                 (appropriate meaning left if source and right if target)
             'constitutive_regions': <[list of nodes (or introns) that are upstream constitutive]>
+            'edge_of_transcript': True/False is ref exon first/last exon of a transcript, potentially?
             }
             """
             found = []
@@ -1901,13 +1898,19 @@ class Graph:
                         at_opposite_edge = True
                     else:
                         at_opposite_edge = False
+                    # is this potentially first or last exon in a transcript?
+                    if len(thisnode.back_edges) == 0:
+                        edge_of_transcript = True
+                    else:
+                        edge_of_transcript = False
                     if not at_opposite_edge:
                         found.append(
                             {
                             'event': event_type,
                             'reference_exon': thisnode,
                             'at_module_edge': at_edge,
-                            'constitutive_regions': constitutive_regions
+                            'constitutive_regions': constitutive_regions,
+                            'edge_of_transcript':edge_of_transcript
                             })
                 # node has with 2+ (forward) edges, so single source
                 if len(thisnode.back_edges) > 1:
@@ -1943,13 +1946,19 @@ class Graph:
                         at_opposite_edge = True
                     else:
                         at_opposite_edge = False
+                    # is this potentially first or last exon in a transcript?
+                    if len(thisnode.edges) == 0:
+                        edge_of_transcript = True
+                    else:
+                        edge_of_transcript = False
                     if not at_opposite_edge:
                         found.append(
                             {
                             'event': event_type,
                             'reference_exon': thisnode,
                             'at_module_edge': at_edge,
-                            'constitutive_regions': constitutive_regions
+                            'constitutive_regions': constitutive_regions,
+                            'edge_of_transcript':edge_of_transcript
                             })
             return found
 
