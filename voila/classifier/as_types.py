@@ -192,6 +192,7 @@ class Graph:
         def is_half_exon(self):
             return self.exon['end'] == -1 or self.exon['start'] == -1
 
+        @property
         def short_name(self):
             # 'h' for half-exon
             if self.is_half_exon:
@@ -351,6 +352,7 @@ class Graph:
 
             return self.end
 
+        @property
         def short_name(self):
             # 'i' for Intron
             if self.ir:
