@@ -18,17 +18,22 @@ import csv
 
 # this should vary depending on the group of tests to run
 # changed relative import path here:
-from tests_expected_t_cells_3 import *
+from tests_expected_t_cells_2 import *
+#from tests_expected_t_cells_3 import *
 
 
 
 
-out_dir = '/Users/calebradens/Documents/majiq_dev/classifier_dev/classified'
+#out_dir = '/Users/calebradens/Documents/majiq_dev/classifier_dev/classified'
+out_dir = '/home/paul/PycharmProjects/majiq/test_cases/classifier/caleb1/testout'
+
 
 def run_voila_classify(gene_ids, enabled_outputs='all', additional_args=[]):
-    os.environ['PYTHONPATH'] = '/Users/calebradens/PycharmProjects/classifier_caleb_dev/'
+    #os.environ['PYTHONPATH'] = '/Users/calebradens/PycharmProjects/classifier_caleb_dev/'
+    os.environ['PYTHONPATH'] = '/home/paul/PycharmProjects/majiq'
     cmd = ['python3',
-           '/Users/calebradens/PycharmProjects/classifier_caleb_dev/voila/run_voila.py',
+           #'/Users/calebradens/PycharmProjects/classifier_caleb_dev/voila/run_voila.py',
+           '/home/paul/PycharmProjects/majiq/voila/run_voila.py',
            'classify', psi_file, sg_file, '-d', out_dir,
            '--enabled-outputs', enabled_outputs, '--overwrite',
            '--decomplexify-psi-threshold', '0.0']

@@ -525,9 +525,27 @@ class Graph:
     def _remove_empty_exons(self):
         """
         Remove exons / nodes with no junctions
+        Also remove nodes that only have either:
+            -a forward junction at the very beginning
+            or
+            -a backward junction at the very end
+        These are not supposed to exist but come up in the case of collided exons sometimes.
         """
-        self.nodes[:] = [x for x in self.nodes if
-                         any(self.in_exon(x, edge.end) or self.in_exon(x, edge.start) for edge in self.edges)]
+        new_nodes = []
+        for node in self.nodes:
+            for i, edge in enumerate(self.edges):
+                end_in = self.in_exon(node, edge.end)
+                start_in = self.in_exon(node, edge.start)
+                # if (exitron junction) or (start in or end in but not start == beginning of exon or end == end of exon)
+                if (start_in and end_in) or ((self.in_exon(node, edge.end) or self.in_exon(node, edge.start)) and
+                                             not (edge.start == node.start or edge.end == node.end)):
+                    new_nodes.append(node)
+                    break
+            else:
+                #print("Removed", node)
+                pass
+
+        self.nodes[:] = new_nodes
 
 
 
@@ -720,6 +738,7 @@ class Graph:
                     self.nodes[i + 1].untrimmed_start = self.nodes[i + 1].start
                     self.nodes[i + 1].exon['start'] += 1
                 else:
+
                     voila_log().warning(
                         "Found two exons in gene %s which are collided and both have junctions! Can not trim!" % self.gene_id)
 
@@ -1982,9 +2001,9 @@ class Graph:
                     ret.append(region)
                 return ret, False, len(ret)
 
-            # print('---------------------------', self.idx, '--------------------------------')
-            # print(self.nodes)
-            # print(self.get_all_edges())
+            print('---------------------------', self.idx, '--------------------------------')
+            print(self.nodes)
+            print(self.get_all_edges())
 
             as_type_dict = {
                 # 'alt_downstream': self.alternate_downstream,
