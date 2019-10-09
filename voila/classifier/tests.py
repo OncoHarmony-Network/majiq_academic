@@ -64,7 +64,8 @@ expected_headers_constitutive = ['module_id', 'gene_id', 'gene_name', "Chr","Str
                     'multi_exon_spanning',   'exitron', 'complex', 'number-of-events']
 expected_headers_mpe= ['Module ID', 'Gene ID', 'Gene Name', "Chr","Strand", 'LSV ID(s)',
                        "Collapsed Event Name","Type","Edge of the Module",'Edge of Transcript',
-                       "Reference Exon Coord","Reference Exon De Novo","Reference Exon Exitrons","Reference Exon Constant Region",
+                       "Reference Exon Coord","Reference Exon De Novo",
+                       "Exitrons","Reference Exon Constant Region",
                        "Reference Exon Trimmed","Constitutive Direction","Constitutive Regions",
                        "Constitutive De Novo","Constitutive Exon or Intron"]
 expected_headers_junctions=['Module ID', 'Gene ID', 'Gene Name', "Chr","Strand", "Complex",'LSV ID(s)',
@@ -72,6 +73,19 @@ expected_headers_junctions=['Module ID', 'Gene ID', 'Gene Name', "Chr","Strand",
                             "mon_treg_E(PSI)","mon_naive_E(PSI)","mon_treg-mon_naive_E(dPSI)",
                             "mon_treg-mon_naive_P(|dPSI|>=0.20)","mon_treg-mon_naive_P(|dPSI|<=0.05)"]
 
+
+def print_full(x):
+    pd.set_option('display.max_rows', len(x))
+    pd.set_option('display.max_columns', None)
+    pd.set_option('display.width', 2000)
+    pd.set_option('display.float_format', '{:20,.2f}'.format)
+    pd.set_option('display.max_colwidth', -1)
+    print(x)
+    pd.reset_option('display.max_rows')
+    pd.reset_option('display.max_columns')
+    pd.reset_option('display.width')
+    pd.reset_option('display.float_format')
+    pd.reset_option('display.max_colwidth')
 
 
 def verify_tsvs(gene_id, expected):
@@ -247,6 +261,8 @@ def verify_mpe(gene_id, expected):
                 try:
                     assert len(mpe_rows) == len(expected[gene_id])
                 except:
+                    print("A")
+                    print_full(pd.DataFrame(mpe_rows, columns=expected_headers_mpe))
                     print("expt: %d found: %d (%s)" % (len(expected[gene_id]), len(mpe_rows), gene_id))
                     raise
 
@@ -259,23 +275,11 @@ def verify_mpe(gene_id, expected):
                         try:
                             assert v == mpe_rows[i][expected_headers_mpe.index(expected_header)]
                         except:
+                            print("Unexpected %s" % expected_header)
+                            print_full(pd.DataFrame(mpe_rows, columns=expected_headers_mpe))
                             print("expt: %s found: %s (%d, %s, %s)" % (v, mpe_rows[i][expected_headers_mpe.index(expected_header)], i+1,
                                                                        headers[expected_headers_mpe.index(expected_header)], gene_id))
                             raise
-
-
-def print_full(x):
-    pd.set_option('display.max_rows', len(x))
-    pd.set_option('display.max_columns', None)
-    pd.set_option('display.width', 2000)
-    pd.set_option('display.float_format', '{:20,.2f}'.format)
-    pd.set_option('display.max_colwidth', -1)
-    print(x)
-    pd.reset_option('display.max_rows')
-    pd.reset_option('display.max_columns')
-    pd.reset_option('display.width')
-    pd.reset_option('display.float_format')
-    pd.reset_option('display.max_colwidth')
 
 
 def verify_junctions_tsv(gene_id, expected):
@@ -318,16 +322,16 @@ def run_tests():
 
     if len(sys.argv) > 1:
         if sys.argv[-1] in expected_modules:
-            run_voila_classify(sys.argv[-1])
-            verify_tsvs(sys.argv[-1])
+            run_voila_classify(sys.argv[-1], voila_file=psi_file, splicegraph=sg_file)
+            verify_tsvs(sys.argv[-1], expected = expected_modules)
         elif sys.argv[-1] in expected_modules_constitutive:
-            run_voila_classify(sys.argv[-1], ['--keep-constitutive'])
-            verify_constitutive(sys.argv[-1])
+            run_voila_classify(sys.argv[-1], ['--keep-constitutive','--output-complex'], voila_file=psi_file, splicegraph=sg_file)
+            verify_constitutive(sys.argv[-1], expected=expected_modules_constitutive)
 
     else:
 
         run_voila_classify([gene_id for gene_id in expected_modules],
-                           additional_args=['--debug'],
+                           additional_args=['--debug','--output-complex'],
                            voila_file=psi_file,splicegraph=sg_file)
         for gene_id in expected_modules:
             verify_tsvs(gene_id, expected = expected_modules)

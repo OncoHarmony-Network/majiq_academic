@@ -237,7 +237,9 @@ class TsvWriter(BaseTsvWriter):
 
             if 'mpe' in self.config.enabled_outputs:
                 headers = self.common_headers
-                headers[-1].replace("(s)","")
+                lids_col_ii = headers.index("LSV ID(s)")
+                # Only 1 LSV ID per row possible.
+                headers[lids_col_ii].replace("(s)","")
                 headers += ['Collapsed Event Name',
                         'Type',
                         'Edge of the Module',
@@ -825,43 +827,62 @@ class TsvWriter(BaseTsvWriter):
                 if not _complex or self.config.output_complex:
                     for event in events:
                         if event['event'] == 'tandem_cassette':
-                            row = [self.semicolon((x.de_novo for x in event['Skip'])),
-                                   event['C1'].range_str(), 'C2', event['C2'].range_str(),
-                                   self.semicolon((x.range_str() for x in event['As'])), len(event['As']), 'C1_C2',
-                                   self.semicolon((x.range_str() for x in event['Skip']))]
+                            # if event['Skip'][0].range_str() == "65976202-65980224":
+                            #     print(event['Skip'][0].range_str())
+                            #     exit(1)
+                            row = [event['Skip'].de_novo,
+                                   event['C1'].range_str(),
+                                   'C2',
+                                   event['C2'].range_str(),
+                                   self.semicolon((x.range_str() for x in event['Tandem_Exons'])),
+                                   len(event['Tandem_Exons']),
+                                   'C1_C2',
+                                   event['Skip'].range_str()]
                             common = self.common_data(module, 's', node=event['C1'], edge=event['Skip'])
-                            quants = self.quantifications(module, 's', event['Skip'][0], event['C1'])
+                            quants = self.quantifications(module, 's', event['Skip'], event['C1'])
                             writer.writerow(common + row + quants)
                             self.junction_cache.append((module, common, quants, row[0], row[4], row[5]))
-                            row = [self.semicolon((x.de_novo for x in event['Include1'])),
-                                   event['C1'].range_str(), 'A1', event['As'][0].range_str(),
-                                   self.semicolon((x.range_str() for x in event['As'])), len(event['As']), 'C1_A',
-                                   self.semicolon((x.range_str() for x in event['Include1']))]
+                            row = [event['Include1'].de_novo,
+                                   event['C1'].range_str(),
+                                   'A1',
+                                   event['Tandem_Exons'][0].range_str(),
+                                   self.semicolon((x.range_str() for x in event['Tandem_Exons'])),
+                                   len(event['Tandem_Exons']),
+                                   'C1_A',
+                                   event['Include1'].range_str()]
                             common = self.common_data(module, 's', node=event['C1'], edge=event['Include1'])
-                            quants = self.quantifications(module, 's', event['Include1'][0], event['C1'])
+                            quants = self.quantifications(module, 's', event['Include1'], event['C1'])
                             writer.writerow(common + row + quants)
                             self.junction_cache.append((module, common, quants, row[0], row[4], row[5]))
-                            row = [self.semicolon((x.de_novo for x in event['Skip'])),
-                                   event['C2'].range_str(), 'C1', event['C1'].range_str(),
-                                   self.semicolon((x.range_str() for x in event['As'])), len(event['As']), 'C2_C1',
-                                   self.semicolon((x.range_str() for x in event['Skip']))]
+                            row = [event['Skip'].de_novo,
+                                   event['C2'].range_str(),
+                                   'C1',
+                                   event['C1'].range_str(),
+                                   self.semicolon((x.range_str() for x in event['Tandem_Exons'])),
+                                   len(event['Tandem_Exons']),
+                                   'C2_C1',
+                                   event['Skip'].range_str()]
                             common = self.common_data(module, 't', node=event['C2'], edge=event['Skip'])
-                            quants = self.quantifications(module, 't', event['Skip'][0], event['C2'])
+                            quants = self.quantifications(module, 't', event['Skip'], event['C2'])
                             writer.writerow(common + row + quants)
                             self.junction_cache.append((module, common, quants, row[0], row[4], row[5]))
-                            row = [self.semicolon((x.de_novo for x in event['Include2'])),
-                                   event['C2'].range_str(), 'A_Last', event['As'][-1].range_str(),
-                                   self.semicolon((x.range_str() for x in event['As'])), len(event['As']), 'A_Last_C2',
-                                   self.semicolon((x.range_str() for x in event['Include2']))]
+                            row = [event['Include2'].de_novo,
+                                   event['C2'].range_str(),
+                                   'A_Last',
+                                   event['Tandem_Exons'][-1].range_str(),
+                                   self.semicolon((x.range_str() for x in event['Tandem_Exons'])),
+                                   len(event['Tandem_Exons']),
+                                   'C2_A_Last',
+                                   event['Include2'].range_str()]
                             common = self.common_data(module, 't', node=event['C2'], edge=event['Include2'])
-                            quants = self.quantifications(module, 't', event['Include2'][0], event['C2'])
+                            quants = self.quantifications(module, 't', event['Include2'], event['C2'])
                             writer.writerow(common + row + quants)
                             self.junction_cache.append((module, common, quants, row[0], row[4], row[5]))
 
                             if True:
                                 common = self.common_data(module, 't', node=event['C2'], edge=event['Include2'])
-                                self.heatmap_add(module, common, self.quantifications(module, 't', event['Include2'][0], event['C2']),
-                                                 event['Include2'][0].end - event['Include2'][0].start)
+                                self.heatmap_add(module, common, self.quantifications(module, 't', event['Include2'], event['C2']),
+                                                 event['Include2'].end - event['Include2'].start)
 
     def exitron(self):
         with open(os.path.join(self.config.directory, 'exitron.tsv.%s' % self.pid), 'a', newline='') as csvfile:
@@ -1005,11 +1026,11 @@ class TsvWriter(BaseTsvWriter):
                         was_trimmed = "False"
                     else:
                         was_trimmed = "True"
-                    if "events" in self.config.enabled_outputs:
+                    if "events" in self.config.enabled_outputs or "summary" in self.config.enabled_outputs:
                         collapsed_event_name = module.collapsed_event_name
                     else:
                         collapsed_event_name = "ND"
-                    row = common # ModID, GeneID, GeneName, Chr, Strand, Complex, LSV(s)
+                    row = common # ModID, GeneID, GeneName, Chr, Strand, LSV(s)
                     row += [collapsed_event_name, eventtype, isfirst, edge_type]
                     row += [ref_exon_coord, ref_exon.is_de_novo(), ref_exon_exitrons]
                     row += [const_reg, was_trimmed, constitutive_direction]
