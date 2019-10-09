@@ -1248,14 +1248,14 @@ class Graph:
                     # assert len(include2) > 1
                     # assert len(skip) > 1
                     #for include1, include2, skip in product(include1s, include2s, skips):
-
-                    found.append({'event': 'cassette_exon',
-                                  'C1': self.strand_case(n1, n3),
-                                  'C2': self.strand_case(n3, n1),
-                                  'A': n2,
-                                  'Include1': self.strand_case(include1s[0], include2s[0]),
-                                  'Include2': self.strand_case(include2s[0], include1s[0]),
-                                  'Skip': skips[0]})
+                    if include1s[0].start == skips[0].start and include2s[0].end == skips[0].end:
+                        found.append({'event': 'cassette_exon',
+                                      'C1': self.strand_case(n1, n3),
+                                      'C2': self.strand_case(n3, n1),
+                                      'A': n2,
+                                      'Include1': self.strand_case(include1s[0], include2s[0]),
+                                      'Include2': self.strand_case(include2s[0], include1s[0]),
+                                      'Skip': skips[0]})
 
             return found
 
