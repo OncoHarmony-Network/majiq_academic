@@ -38,6 +38,8 @@ class TrainingWriter(BaseTsvWriter):
             names.append('exons.tsv')
         if 'junctions' in config.enabled_outputs:
             names.append('junctions.tsv')
+        if 'paths' in config.enabled_outputs:
+            names.append('paths.tsv')
         return names
 
     @staticmethod
@@ -58,6 +60,9 @@ class TrainingWriter(BaseTsvWriter):
                                              'Exon 2 ID', 'Exon 2 ID Start Coordinate', 'Exon 2 ID End Coordinate',
                                              'Is Intron']
             self.start_headers(headers, 'junctions.tsv')
+        if 'paths' in self.config.enabled_outputs:
+            headers = self.common_headers + ['Path ID', 'Path', 'Edge Type', 'Exon Length mod 3']
+            self.start_headers(headers, 'paths.tsv')
 
     def _get_node_id(self, start, end, idx=None):
         # if hasattr(node, 'num_times_split'):
@@ -99,6 +104,54 @@ class TrainingWriter(BaseTsvWriter):
             )
         return node_id
 
+    def paths_tsv(self):
+        """
+        Paths through a module
+
+        format:
+        Path ID:  "module_id"_"chr"_"strand"_"index"
+
+
+
+
+
+        """
+        with open(os.path.join(self.config.directory, 'paths.tsv.%s' % self.pid), 'a', newline='') as csvfile:
+            writer = csv.writer(csvfile, dialect='excel-tab', delimiter='\t')
+            rows = []
+
+            for module_idx, path_idx, paths_found, frameshift in self.paths_through_module():
+
+                common_data = ["%s_%d" % (self.gene_id, module_idx), self.gene_id, self.graph.gene_name,
+                               self.graph.chromosome, self.graph.strand]
+
+                rows.append(common_data + ["%s_%d" % (self.gene_id, path_idx),
+                                           '_'.join(junc.range_str() for junc in paths_found),
+                                           '_'.join(junc.short_name for junc in paths_found), frameshift])
+
+
+
+            # for module_idx, e1_start, e1_end, e2_start, e2_end, ir in self.resolved_junctions:
+            #
+            #     common_data = ["%s_%d" % (self.gene_id, module_idx), self.gene_id, self.graph.gene_name,
+            #                    self.graph.chromosome, self.graph.strand]
+            #
+            #     if not (e1_start, e1_end,) in written_exons:
+            #         rows.append(common_data + [self._get_node_id(e1_start, e1_end), e1_start, e1_end])
+            #         written_exons.add((e1_start, e1_end,))
+            #
+            #     if not (e2_start, e2_end,) in written_exons:
+            #         rows.append(common_data + [self._get_node_id(e2_start, e2_end), e2_start, e2_end])
+            #         written_exons.add((e2_start, e2_end,))
+
+                    # if module.graph.strand == '+':
+                    #     rows = rows + tmp
+                    # else:
+                    #     rows = tmp + rows
+
+
+            writer.writerows(rows)
+
     def exons_tsv(self):
         """
         exons.list format:
@@ -138,6 +191,62 @@ class TrainingWriter(BaseTsvWriter):
 
             writer.writerows(rows)
 
+    def paths_through_module(self):
+        """
+        For each module, recursively find paths out of the last exon entered in that path and add then to the running
+        list of junctions in the path until we reach the last exon in the module. Then output an ordered list of
+        paths that were found in each iteration.
+
+        This will end up skipping alt-first and "p-alt-first" because there are no junctions entering
+        So we need to manually run the algorithm starting at these nodes as well as the first node.
+        :return:
+        """
+
+
+        paths_found = []
+        for module in self.modules:
+            path_idx = 0
+            #print('=====================')
+
+            def add_junctions_out(node, prev_juncs, exon_length, is_module_length):
+                nonlocal path_idx
+                #print('iter', node, prev_juncs, node.edges, node == module.nodes[-1])
+                if not node.edges or node == module.nodes[-1]:
+                    if (not node.edges and node != module.nodes[-1]) or node.end == -1:
+                        # takes care of checking for ALE cases and p_ALE cases (they will always be at the end)
+                        is_module_length = False
+                    # got to end of possible path
+                    #print(node)
+                    exon_length = exon_length + (node.end - prev_juncs[-1].end) + 1
+                    if is_module_length:
+                        frameshift = str(exon_length % 3)
+                    else:
+                        frameshift = 'N/A'
+                    path_idx += 1
+                    paths_found.append((module.idx, path_idx, prev_juncs, frameshift))
+                else:
+                    for junc in node.edges:
+                        _prev_juncs = prev_juncs[:]
+                        _prev_juncs.append(junc)
+                        next_node = self.graph.end_node(junc)
+                        add_junctions_out(next_node, _prev_juncs,
+                                      exon_length + (junc.start - node.start) - (junc.end - next_node.start) + 1,
+                                          is_module_length)
+
+
+            # run over junctions from the start of the module
+            add_junctions_out(module.nodes[0], [], 0, True)
+            # find other possible starting nodes like afe, p_afe, and run over those
+            for node in module.nodes[1:-1]:
+                if not node.back_edges:
+                    add_junctions_out(node, [], 0, False)
+
+        return paths_found
+
+
+
+
+
 
     def junctions_tsv(self):
         with open(os.path.join(self.config.directory, 'junctions.tsv.%s' % self.pid), 'a', newline='') as csvfile:
@@ -175,6 +284,8 @@ class TrainingWriter(BaseTsvWriter):
                                      "%d_%d" % (e2_start, e2_end), e2_start, e2_end, ir])
 
             writer.writerows(rows)
+
+
 
 
     def adjacency_matrix(self):

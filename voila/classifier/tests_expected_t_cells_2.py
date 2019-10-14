@@ -1209,3 +1209,5 @@ expected_alt5ss = {
 # expected_alt5ss = {
 #     'gene:ENSG00000138085'
 # }
+
+expected_mpes = {}

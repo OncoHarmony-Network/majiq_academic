@@ -1,7 +1,8 @@
 sg_file = '/home/paul/PycharmProjects/majiq/test_cases/classifier/t_cells_2/splicegraph.sql'
 psi_file = '/home/paul/PycharmProjects/majiq/test_cases/classifier/t_cells_2/ran_treg.psi.voila'
-sg_file = '/Users/calebradens/Documents/majiq_dev/classifier_dev/splicegraph.sql'
-psi_file = '/Users/calebradens/Documents/majiq_dev/classifier_dev/ran_treg.psi.voila'
+# sg_file = '/Users/calebradens/Documents/majiq_dev/classifier_dev/splicegraph.sql'
+# psi_file = '/Users/calebradens/Documents/majiq_dev/classifier_dev/ran_treg.psi.voila'
+
 # source ~/bin/majiq2/voila_viewer/voila_view_env/bin/activate
 # voila view /Users/calebradens/Documents/majiq_dev/classifier_dev/splicegraph.sql /Users/calebradens/Documents/majiq_dev/classifier_dev/ran_treg.psi.voila
 

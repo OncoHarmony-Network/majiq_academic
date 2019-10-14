@@ -9,7 +9,6 @@ from voila.api.matrix_utils import generate_means
 from voila.classifier.as_types import Graph
 from voila.classifier.tsv_writer import TsvWriter
 
-import pandas as pd
 
 from subprocess import Popen, PIPE, STDOUT
 import os, shutil
@@ -19,21 +18,25 @@ import csv
 
 # this should vary depending on the group of tests to run
 # changed relative import path here:
+# from tests_expected_t_cells_2 import *
 # from tests_expected_t_cells_3 import *
 from tests_expected_t_cells_dpsi import *
 #from tests_expected_jsl1 import *
 
 
-out_dir = '/Users/calebradens/Documents/majiq_dev/classifier_dev/classified'
+#out_dir = '/Users/calebradens/Documents/majiq_dev/classifier_dev/classified'
+out_dir = '/home/paul/PycharmProjects/majiq/test_cases/classifier/caleb1/testout'
+
 
 def run_voila_classify(gene_ids, voila_file, splicegraph, enabled_outputs='all', additional_args=[]):
-    os.environ['PYTHONPATH'] = '/Users/calebradens/PycharmProjects/classifier_caleb_dev/'
+    #os.environ['PYTHONPATH'] = '/Users/calebradens/PycharmProjects/classifier_caleb_dev/'
+    os.environ['PYTHONPATH'] = '/home/paul/PycharmProjects/majiq'
     cmd = ['python3',
-           '/Users/calebradens/PycharmProjects/classifier_caleb_dev/voila/run_voila.py',
+           #'/Users/calebradens/PycharmProjects/classifier_caleb_dev/voila/run_voila.py',
+           '/home/paul/PycharmProjects/majiq/voila/run_voila.py',
            'classify', voila_file, splicegraph, '-d', out_dir,
            '--enabled-outputs', enabled_outputs, '--overwrite',
-           '--decomplexify-psi-threshold', '0.0']#,
-           #'--decomplexify-reads-threshold', '0']
+           '--decomplexify-psi-threshold', '0.0']
     for arg in additional_args:
         cmd.append(arg)
 
@@ -75,6 +78,7 @@ expected_headers_junctions=['Module ID', 'Gene ID', 'Gene Name', "Chr","Strand",
 
 
 def print_full(x):
+    import pandas as pd
     pd.set_option('display.max_rows', len(x))
     pd.set_option('display.max_columns', None)
     pd.set_option('display.width', 2000)
@@ -275,6 +279,7 @@ def verify_mpe(gene_id, expected):
                         try:
                             assert v == mpe_rows[i][expected_headers_mpe.index(expected_header)]
                         except:
+                            import pandas as pd
                             print("Unexpected %s" % expected_header)
                             print_full(pd.DataFrame(mpe_rows, columns=expected_headers_mpe))
                             print("expt: %s found: %s (%d, %s, %s)" % (v, mpe_rows[i][expected_headers_mpe.index(expected_header)], i+1,
