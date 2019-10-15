@@ -417,12 +417,6 @@ namespace io_bam {
             add_junction(chrom, strand, start, end, 0, 0, sreads) ;
             for (const auto &gObj: (*low)->glist){
                 gObj->updateFlagsFromJunc(key, sreads, minreads_t, npos, minpos_t, denovo_t, denovo, minexp, reset) ;
-
-//                if (gObj->junc_map_.count(key) > 0){
-//                    Junction * jnc = gObj->junc_map_[key] ;
-//                    jnc->update_flags(sreads, minreads_t, npos, minpos_t, denovo_t, minexp, denovo) ;
-//                    jnc->clear_nreads(reset) ;
-//                }
             }
 
         }
