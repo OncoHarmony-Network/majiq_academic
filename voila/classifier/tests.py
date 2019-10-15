@@ -19,21 +19,23 @@ import csv
 # this should vary depending on the group of tests to run
 # changed relative import path here:
 from tests_expected_t_cells_2 import *
+import tempfile
 #from tests_expected_t_cells_3 import *
 
 
+if 'VOILA_TEST_OUTPUT_DIR' in os.environ:
+    out_dir = os.environ['VOILA_TEST_OUTPUT_DIR']
+else:
+    out_dir = tempfile.mkdtemp()
 
+os.makedirs(out_dir, exist_ok=True)
 
-#out_dir = '/Users/calebradens/Documents/majiq_dev/classifier_dev/classified'
-out_dir = '/home/paul/PycharmProjects/majiq/test_cases/classifier/caleb1/testout'
-
+majiq_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
 
 def run_voila_classify(gene_ids, enabled_outputs='all', additional_args=[]):
-    #os.environ['PYTHONPATH'] = '/Users/calebradens/PycharmProjects/classifier_caleb_dev/'
-    os.environ['PYTHONPATH'] = '/home/paul/PycharmProjects/majiq'
+    os.environ['PYTHONPATH'] = majiq_dir
     cmd = ['python3',
-           #'/Users/calebradens/PycharmProjects/classifier_caleb_dev/voila/run_voila.py',
-           '/home/paul/PycharmProjects/majiq/voila/run_voila.py',
+           os.path.join(majiq_dir, 'voila', 'run_voila.py'),
            'classify', psi_file, sg_file, '-d', out_dir,
            '--enabled-outputs', enabled_outputs, '--overwrite',
            '--decomplexify-psi-threshold', '0.0']
@@ -267,31 +269,41 @@ import sys
 
 def run_tests():
 
-    if len(sys.argv) > 1:
-        if sys.argv[-1] in expected_modules:
-            run_voila_classify(sys.argv[-1])
-            verify_tsvs(sys.argv[-1])
-        elif sys.argv[-1] in expected_modules_constitutive:
-            run_voila_classify(sys.argv[-1], ['--keep-constitutive'])
-            verify_constitutive(sys.argv[-1])
+    retain_output = '-k' in sys.argv
+    if retain_output:
+        sys.argv.remove('-k')
+    try:
+        if len(sys.argv) > 1:
+            if sys.argv[-1] in expected_modules:
+                run_voila_classify(sys.argv[-1])
+                verify_tsvs(sys.argv[-1])
+            elif sys.argv[-1] in expected_modules_constitutive:
+                run_voila_classify(sys.argv[-1], ['--keep-constitutive'])
+                verify_constitutive(sys.argv[-1])
 
-    else:
+        else:
 
-        run_voila_classify([gene_id for gene_id in expected_modules],
-                           additional_args=['--debug'])
-        for gene_id in expected_modules:
-            verify_tsvs(gene_id)
-
-
-        run_voila_classify([gene_id for gene_id in expected_modules_constitutive],
-                           enabled_outputs="summary,mpe",
-                           additional_args=['--keep-constitutive', '--debug'])
-        for gene_id in expected_modules_constitutive:
-            verify_constitutive(gene_id)
-            verify_mpe(gene_id)
+            run_voila_classify([gene_id for gene_id in expected_modules],
+                               additional_args=['--debug'])
+            for gene_id in expected_modules:
+                verify_tsvs(gene_id)
 
 
-    print("Success!")
+            run_voila_classify([gene_id for gene_id in expected_modules_constitutive],
+                               enabled_outputs="summary,mpe",
+                               additional_args=['--keep-constitutive', '--debug'])
+            for gene_id in expected_modules_constitutive:
+                verify_constitutive(gene_id)
+                verify_mpe(gene_id)
+
+        print("Success!")
+    except:
+        print("Some test failed!")
+    finally:
+        if retain_output:
+            print("Output folder %s was retained" % out_dir)
+        else:
+            shutil.rmtree(out_dir)
 
 if __name__ == "__main__":
     run_tests()
