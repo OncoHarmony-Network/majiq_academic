@@ -1896,9 +1896,9 @@ class Graph:
                     ret.append(region)
                 return ret, False, len(ret)
 
-            print('---------------------------', self.idx, '--------------------------------')
-            print(self.nodes)
-            print(self.get_all_edges())
+            # print('---------------------------', self.idx, '--------------------------------')
+            # print(self.nodes)
+            # print(self.get_all_edges())
 
             as_type_dict = {
                 # 'alt_downstream': self.alternate_downstream,
