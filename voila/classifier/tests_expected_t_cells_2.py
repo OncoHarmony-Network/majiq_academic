@@ -198,7 +198,7 @@ expected_modules = {
         },
         {
             "module_id": "gene:ENSG00000082074_4",
-            "cassette_exon": "1",
+            "cassette_exon": "2",
             "alternative_intron": "2",
             "alt5ss": "1",
             "p_alt3ss": "1",
@@ -270,7 +270,7 @@ expected_modules = {
          "multi_exon_spanning": "",
          "alternative_intron": "1",
          },
-        {"cassette_exon": "1",
+        {"cassette_exon": "",
          "alt3ss": "1",
          "alt5ss": "",
          "alt3and5ss": "2",
