@@ -768,7 +768,6 @@ class TsvWriter(BaseTsvWriter):
                                 writer.writerow(src_common + row + quants)
                                 self.junction_cache.append((module, src_common, quants, row[0], row[4], row[5]))
 
-
                             if True:
                                 if trg_common[5]:
                                     self.heatmap_add(module, trg_common,
@@ -895,11 +894,13 @@ class TsvWriter(BaseTsvWriter):
                             src_common = self.common_data(module, 's')
                             trg_common = self.common_data(module, 't')
                             row = [event['Junc'].de_novo, event['Exon'].range_str(), event['Junc'].range_str()]
-                            quants = self.quantifications(module, 's')
+                            # just in case exitrons are ever quantified, somehow, *try* to get
+                            # the exitron's junction quantification (won't exist for now... which is desired)
+                            quants = self.quantifications(module, 's', edge=event['Junc'])
                             writer.writerow(src_common + row + quants)
                             self.junction_cache.append((module, src_common, quants, row[0], 'Exitron', row[2]))
                             row = [event['Junc'].de_novo, event['Exon'].range_str(), event['Junc'].range_str()]
-                            quants = self.quantifications(module, 't')
+                            quants = self.quantifications(module, 't', edge=event['Junc'])
                             writer.writerow(trg_common + row + quants)
                             self.junction_cache.append((module, trg_common, quants, row[0], 'Exitron', row[2]))
 
