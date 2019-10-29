@@ -1158,6 +1158,20 @@ expected_modules_constitutive = {
         }, {
             'constitutive_intron': '1'
         }
+    ],
+    'gene:ENSG00000177239': [
+        {},
+        {},
+        {},
+        {},
+        {},
+        {},
+        {},
+        {}, # big one with 8 exitrons
+        {},
+        {},
+        {},
+        {}
     ]
 }
 
