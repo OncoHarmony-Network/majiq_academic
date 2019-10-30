@@ -424,7 +424,7 @@ class ViewPsi(Psi, ViewMatrix):
 
 
 class ViewDeltaPsi(DeltaPsi, ViewMatrix):
-    def __init__(self):
+    def __init__(self, voila_file=None):
         """
         View for delta psi matrix.  This is used in creation of tsv and html files.
         """
