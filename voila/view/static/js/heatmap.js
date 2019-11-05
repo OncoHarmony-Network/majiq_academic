@@ -1,4 +1,90 @@
+const outline_color = '#61D836';
 
+function draw_rowcol_highlight(h){
+
+    const idx = h.dataset.groupIdx;
+    var cur_row = 0;
+    h
+        .closest('tr')
+        .querySelectorAll('.heat-map rect')
+        .forEach((r, i , arr) => {
+            const num_cols = Math.sqrt(arr.length);
+
+            if(r.dataset.columnIdx === idx){
+                // vertical boxes
+                r.style.stroke = outline_color;
+                r.style.strokeWidth = '2px';
+
+                if(cur_row === (num_cols - 1)){
+                    r.style.strokeDasharray = "0, 20, 60";
+                }else if(cur_row === 0) {
+                    r.style.strokeDasharray = "40, 20";
+                }else{
+                    r.style.strokeDashoffset = "20";
+                    r.style.strokeDasharray = "20, 20";
+                }
+                cur_row++;
+
+            }else{
+                r.style.opacity = '0.2'
+            }
+        });
+    h
+        .closest('tr')
+        .querySelectorAll('.heat-map g')
+        .forEach(g => {
+            if (g.dataset.rowIdx === idx) {
+                g.querySelectorAll('rect')
+                    .forEach((r, i, arr) => {
+                        const mx_i = String(arr.length - 1);
+                        r.style.opacity = null;
+                        // row ; horizontal boxes
+                        // first case: intersection point
+                        if(r.dataset.columnIdx === idx) {
+                            // literal corner cases
+                            if(r.dataset.columnIdx === '0' && g.dataset.rowIdx === '0'){
+                                r.style.stroke = outline_color;
+                                r.style.strokeWidth = '2px';
+                                r.style.strokeDasharray = "20, 40";
+                            }else if(r.dataset.columnIdx === mx_i && g.dataset.rowIdx === mx_i){
+                                r.style.stroke = outline_color;
+                                r.style.strokeWidth = '2px';
+                                r.style.strokeDasharray = "40";
+                                r.style.strokeDashoffset = '60';
+                            }else{
+                                r.style.stroke = null;
+                            }
+
+                        }else{
+                            r.style.stroke = outline_color;
+                            r.style.strokeWidth = '2px';
+                            // left end cap
+                            if(r.dataset.columnIdx === '0') {
+                                r.style.strokeDashoffset = null;
+                                r.style.strokeDasharray = "20, 20, 40";
+                            // right end cap
+                            }else if(String(i) === mx_i) {
+                                r.style.strokeDashoffset = null;
+                                r.style.strokeDasharray = "60, 20";
+                            // everything else
+                            }else {
+                                r.style.strokeDashoffset = null;
+                                r.style.strokeDasharray = "20, 20";
+                            }
+                        }
+
+
+                    })
+            }
+        })
+}
+
+function hide_rowcol_highlight(h){
+    h
+    .closest('tr')
+    .querySelectorAll('.heat-map rect')
+    .forEach(r => r.style.opacity = r.style.stroke = null)
+}
 
 const stat_color = function(val){
     const stopMin = 'blue';

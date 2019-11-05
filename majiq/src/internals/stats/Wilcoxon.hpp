@@ -62,7 +62,7 @@ namespace MajiqStats{
             }
 
         public:
-            double Calc_pval(vector<float> & data, vector<int>& labels){
+            double Calc_pval(vector<float> & data, vector<int>& labels, float* score){
 
 //                #pragma omp critical
 //                {
@@ -118,11 +118,16 @@ namespace MajiqStats{
                         PValue = AddLog(PValue, Count(n1+n2,n1,s1)) ;
                     }
                 }
-                PValue -= lgamma(n1+n2 + 1) ;
-//                #pragma omp critical
-//                cerr << "Wilcoxon PValue (" << n1+n2 << ", " << n1 << ", " << s <<") = " << exp(PValue)*2 << " compare to " << 2*GaussCDF(-fabs(_ZScore), 0, 1) << "\n";
 
-                return exp(PValue)*2 ;
+                PValue -= lgamma(n1+n2 + 1) ;
+                double pval = exp(PValue)*2 ;
+
+                // #pragma omp critical
+                //    cerr << "Wilcoxon PValue (" << n1+n2 << ", " << n1 << ", " << s <<") = " << pval << " compare to " << 2*GaussCDF(-fabs(_ZScore), 0, 1) << "\n";
+
+                pval = (pval > 1) ? 2*GaussCDF(-fabs(_ZScore), 0, 1) : pval ;
+                return pval;
+
             }
     } ;
 }

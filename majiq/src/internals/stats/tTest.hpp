@@ -21,7 +21,7 @@ namespace MajiqStats{
             unordered_map<tTRecord, double, hash_fn> _pval_cache ;
 
         public:
-            double Calc_pval(vector<float>& data, vector<int>& labels){
+            double Calc_pval(vector<float>& data, vector<int>& labels, float* score){
 
                 // calculate mean and var for the expression values and num of samples in each class.
                 double Count[2] ;

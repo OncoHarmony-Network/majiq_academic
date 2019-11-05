@@ -7,7 +7,7 @@ import numpy as np
 
 from voila import constants
 from voila.api.matrix_utils import generate_excl_incl, generate_means, generate_high_probability_non_changing, \
-    generate_variances
+    generate_variances, generate_standard_deviations
 from voila.exceptions import LsvIdNotFoundInVoilaFile, GeneIdNotFoundInVoilaFile
 from voila.vlsv import collapse_matrix, matrix_area
 
@@ -166,7 +166,7 @@ class MatrixHdf5:
         try:
             return lsv_grp[key][()]
         except KeyError:
-            print(dict(lsv_grp))
+
             raise
 
     def get_many(self, lsv_id: str, keys: List[str]):
@@ -675,7 +675,7 @@ class Psi(MatrixHdf5):
             PSI fieldnames.
             :return: list of psi fieldnames
             """
-            return ['Gene ID', 'LSV ID', 'LSV Type', 'E(PSI) per LSV junction', 'Var(E(PSI)) per LSV junction', 'A5SS',
+            return ['Gene ID', 'LSV ID', 'LSV Type', 'E(PSI) per LSV junction', 'StDev(E(PSI)) per LSV junction', 'A5SS',
                     'A3SS', 'ES', 'Num. Junctions', 'Num. Exons', 'Junctions coords', 'IR coords']
 
         @staticmethod
@@ -688,7 +688,7 @@ class Psi(MatrixHdf5):
             bins = kwargs['bins']
             return {
                 'E(PSI) per LSV junction': ';'.join(map(str, kwargs['means'])),
-                'Var(E(PSI)) per LSV junction': ';'.join(map(str, generate_variances(bins)))
+                'StDev(E(PSI)) per LSV junction': ';'.join(map(str, generate_standard_deviations(bins)))
             }
 
     def psi(self, lsv_id):

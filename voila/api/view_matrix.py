@@ -7,7 +7,7 @@ import numpy as np
 
 from voila.api.matrix_hdf5 import DeltaPsi, Psi, Heterogen, MatrixType
 from voila.api.matrix_utils import unpack_means, unpack_bins, generate_excl_incl, generate_means, \
-    generate_high_probability_non_changing, generate_variances
+    generate_high_probability_non_changing, generate_variances, generate_standard_deviations
 from voila.config import ViewConfig
 from voila.exceptions import LsvIdNotFoundInVoilaFile, GeneIdNotFoundInVoilaFile, LsvIdNotFoundInAnyVoilaFile
 from voila.vlsv import is_lsv_changing, matrix_area, get_expected_psi
@@ -406,6 +406,14 @@ class ViewPsi(Psi, ViewMatrix):
             """
             return generate_variances(self.bins)
 
+        @property
+        def standard_deviations(self):
+            """
+            Create variance data of bins data.
+            :return: list
+            """
+            return generate_standard_deviations(self.bins)
+
     def lsv(self, lsv_id):
         """
         Get lsv object by lsv id.
@@ -416,7 +424,7 @@ class ViewPsi(Psi, ViewMatrix):
 
 
 class ViewDeltaPsi(DeltaPsi, ViewMatrix):
-    def __init__(self):
+    def __init__(self, voila_file=None):
         """
         View for delta psi matrix.  This is used in creation of tsv and html files.
         """
@@ -738,6 +746,35 @@ class ViewHeterogens(ViewMulti):
                     except (GeneIdNotFoundInVoilaFile, LsvIdNotFoundInVoilaFile):
                         pass
 
+        @property
+        def junction_scores(self):
+            """
+            This gets associates stat test score names with their values. (if any exist)
+            :return: generator key/value
+            """
+            config = ViewConfig()
+            voila_files = config.voila_files
+            for f in voila_files:
+                with ViewHeterogen(f) as m:
+                    groups = '_'.join(m.group_names)
+                    score_names = ('tnom_score',)
+                    try:
+                        try:
+                            score_vals = m.get(self.lsv_id, 'tnom_score').T
+                        except KeyError:
+                            score_names = ()
+
+                        for score_name in score_names:
+                            if len(voila_files) == 1:
+                                yield score_name, score_vals
+                            else:
+                                yield groups + ' ' + score_name, score_vals
+
+                    except (GeneIdNotFoundInVoilaFile, LsvIdNotFoundInVoilaFile):
+                        pass
+
+
+
     @property
     def stat_names(self):
         """
@@ -765,6 +802,23 @@ class ViewHeterogens(ViewMulti):
             with ViewHeterogen(f) as m:
                 groups = '_'.join(m.group_names)
                 for name in m.stat_names:
+                    if len(voila_files) == 1:
+                        yield name
+                    else:
+                        yield groups + ' ' + name
+
+    @property
+    def junction_scores_column_names(self):
+        """
+        Stat column names for tsv output.
+        :return: generator
+        """
+        voila_files = ViewConfig().voila_files
+
+        for f in voila_files:
+            with ViewHeterogen(f) as m:
+                groups = '_'.join(m.group_names)
+                for name in ('tnom_score',):
                     if len(voila_files) == 1:
                         yield name
                     else:

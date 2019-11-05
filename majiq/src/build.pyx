@@ -234,6 +234,7 @@ cdef _parse_junction_file(tuple filetp, map[string, Gene*]& gene_map, vector[str
     cdef np.float32_t min_ir_cov = conf.min_intronic_cov
     cdef np.float32_t ir_numbins = conf.irnbins
     cdef int jlimit
+    cdef unsigned int local_readlen
 
     c_iobam = IOBam(filetp[1].encode('utf-8'), strandness, eff_len, nthreads, gene_list, bsimpl)
 
@@ -241,6 +242,11 @@ cdef _parse_junction_file(tuple filetp, map[string, Gene*]& gene_map, vector[str
         junc_ids = fp['junc_info']
         if ir:
             ir_cov = fp['ir_cov']
+            if len(ir_cov) == 0:
+                logger.warning('File does not contain IR coverage information')
+                local_readlen = 0
+            else:
+                local_readlen = len(ir_cov[0])
         jlimit = fp['meta'][0][2]
     njunc = junc_ids.shape[0]
 
@@ -262,6 +268,8 @@ cdef _parse_junction_file(tuple filetp, map[string, Gene*]& gene_map, vector[str
                 gid = b':'.join(jid.split(b':')[3:])
                 ir_vec = vector[np.float32_t](eff_len)
                 for i in range(eff_len):
+                    if i >= local_readlen:
+                        break;
                     ir_vec[i] = ir_cov[j - jlimit][i]
 
                 # logger.info("IR VEC: %s %s" %(eff_len, ir_vec.size()))
@@ -323,11 +331,11 @@ cdef _find_junctions(list file_list, map[string, Gene*]& gene_map, vector[string
                                                                                   len(group_list), min_experiments))
         for j in group_list:
             if file_list[j][2]:
-                logger.info('Reading %s file %s' %(JUNC_FILE_FORMAT, file_list[j][0]))
+                logger.info('Reading %s file %s' %(JUNC_FILE_FORMAT, file_list[j][1]))
                 _parse_junction_file(file_list[j], gene_map, gid_vec,gene_list, min_experiments, (j==last_it_grp),
                                      conf, logger)
             else:
-                logger.info('Reading %s file %s' %(SEQ_FILE_FORMAT, file_list[j][0]))
+                logger.info('Reading %s file %s' %(SEQ_FILE_FORMAT, file_list[j][1]))
                 bamfile = ('%s' % (file_list[j][1])).encode('utf-8')
                 strandness = conf.strand_specific[file_list[j][0]]
 
@@ -412,7 +420,7 @@ cdef void gene_to_splicegraph(Gene * gne, sqlite3 * db) nogil:
             continue
         # with gil:
         #     print("## ", gne_id, jj.get_start(), jj.get_end(), jj.get_annot(), jj.get_simpl_fltr())
-        sg_junction(db, gne_id, jj.get_start(), jj.get_end(), jj.get_annot(), jj.get_simpl_fltr(), 0)
+        sg_junction(db, gne_id, jj.get_start(), jj.get_end(), jj.get_annot(), jj.get_simpl_fltr(), jj.get_constitutive())
 
     for ex_pair in gne.exon_map_:
         ex = ex_pair.second
@@ -424,7 +432,8 @@ cdef void gene_to_splicegraph(Gene * gne, sqlite3 * db) nogil:
             if ir.get_ir_flag():
                 # with gil:
                 #     print(gne_id, ir.get_start(), ir.get_end(), ir.get_annot(), ir.is_connected())
-                sg_intron_retention(db, gne_id, ir.get_start(), ir.get_end(), ir.get_annot(), ir.get_simpl_fltr())
+                sg_intron_retention(db, gne_id, ir.get_start(), ir.get_end(), ir.get_annot(), ir.get_simpl_fltr(),
+                                    ir.get_constitutive())
 
 
 cdef int simplify(list file_list, map[string, Gene*] gene_map, vector[string] gid_vec,
@@ -483,7 +492,8 @@ cdef int simplify(list file_list, map[string, Gene*] gene_map, vector[string] gi
                         strand  = <char> jid.split(b':')[1][0]
 
                     if irbool == 0:
-                        junc_tlb[jid] = sreads
+                        with gil:
+                            junc_tlb[jid] = sreads
 
                     elif irb:
                         find_gene_from_junc(gene_list, chrom, strand, coord1, coord2, gene_l, irbool, bsimpl)
@@ -532,9 +542,10 @@ cdef _core_build(str transcripts, list file_list, object conf, object logger):
     cdef bint bsimpl = (conf.simpl_psi >= 0)
     cdef bint dumpCJunctions = conf.dump_const_j
     cdef vector[string] cjuncs
+    cdef bint enable_anot_ir = conf.annot_ir_always
 
     logger.info("Parsing GFF3")
-    majiq_io.read_gff(transcripts, gene_map, gid_vec, bsimpl, logger)
+    majiq_io.read_gff(transcripts, gene_map, gid_vec, bsimpl, enable_anot_ir, logger)
 
     prepare_genelist(gene_map, gene_list)
     n = gene_map.size()
@@ -556,6 +567,7 @@ cdef _core_build(str transcripts, list file_list, object conf, object logger):
         with gil:
             logger.debug("%s] Detect exons" % gg.get_id())
         gg.detect_exons()
+
         if ir:
             with gil:
                 logger.debug("%s] Connect introns" % gg.get_id())
@@ -565,16 +577,13 @@ cdef _core_build(str transcripts, list file_list, object conf, object logger):
         simplify(file_list, gene_map, gid_vec, gene_list, conf, logger)
     for i in prange(n, nogil=True, num_threads=nthreads):
         gg = gene_map[gid_vec[i]]
+        gg.get_constitutive_junctions(cjuncs)
         gene_to_splicegraph(gg, db)
         with gil:
             logger.debug("[%s] Detect LSVs" % gg.get_id())
         nlsv = gg.detect_lsvs(out_lsvlist)
 
-        if dumpCJunctions:
-            gg.get_constitutive_junctions(cjuncs)
-
-
-    if cjuncs.size()>0:
+    if cjuncs.size()>0 and dumpCJunctions:
         with open("%s/constitutive_junctions.tsv" % conf.outDir, 'w+') as fp:
             fp.write('#GENEID\tCHROMOSOME\tJUNC_START\tJUNC_END\tDONOR_START\tDONOR_END\tACCEPTOR_START\tACCEPTOR_END\n')
             for jstr in cjuncs:

@@ -2,9 +2,10 @@ import os
 from bisect import bisect
 from operator import itemgetter
 from statistics import median
-
+import tempfile
 import numpy as np
 from flask import Flask, render_template, jsonify, url_for, request, session, Response
+from flask_session import Session
 
 from voila.api.view_matrix import ViewHeterogens
 from voila.api.view_splice_graph import ViewSpliceGraph
@@ -12,9 +13,27 @@ from voila.index import Index
 from voila.view import views
 from voila.view.datatables import DataTables
 from voila.view.forms import LsvFiltersForm
+import atexit, shutil
+
 
 app = Flask(__name__)
 app.secret_key = os.urandom(16)
+app.config['SESSION_TYPE'] = 'filesystem'
+session_dir = tempfile.mkdtemp()
+app.config['SESSION_FILE_DIR'] = session_dir
+
+# this runs in shutdown
+def close_running_threads():
+    try:
+        shutil.rmtree(session_dir)
+    except:
+        pass
+
+atexit.register(close_running_threads)
+Session(app)
+
+
+
 
 @app.before_request
 def init_session():
@@ -159,11 +178,8 @@ def splice_graph(gene_id):
 
 @app.route('/psi-splice-graphs', methods=('POST',))
 def psi_splice_graphs():
-    try:
-        sg_init = session['psi_init_splice_graphs']
-    except KeyError:
-        sg_init = []
 
+    sg_init = session.get('psi_init_splice_graphs', [])
     json_data = request.get_json()
 
     if json_data:
@@ -175,7 +191,9 @@ def psi_splice_graphs():
             sg_init = filter(lambda s: s != json_data['remove'], sg_init)
             sg_init = list(sg_init)
 
-    session['psi_init_splice_graphs'] = sg_init
+
+    if sg_init:
+        session['psi_init_splice_graphs'] = sg_init
 
     return jsonify(sg_init)
 

@@ -77,6 +77,14 @@ def generate_high_probability_non_changing(ir, prior, non_changing_threshold, bi
 
     return x
 
+def generate_standard_deviations(bins):
+    """
+    Calulate standard deviations for lsv junctions.
+    :param bins: bins data from voila file.
+    :return: list
+    """
+    v = np.sqrt(generate_variances(bins))
+    return v
 
 def generate_variances(bins):
     """

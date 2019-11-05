@@ -45,7 +45,7 @@ namespace MajiqStats{
         public:
             TestStat() {}
             ~TestStat() {}
-            virtual double Calc_pval(std::vector<float>& data, std::vector<int>& labels) { return 0 ;}
+            virtual double Calc_pval(std::vector<float>& data, std::vector<int>& labels, float* score) { return 0 ;}
     } ;
 }
 
