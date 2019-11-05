@@ -115,7 +115,7 @@ class MatrixHdf5:
 
         if intron_ret:
             junc_coords = junctions[:-1]
-            ir_coords = junctions[-2:-1]
+            ir_coords = junctions[-1:]
         else:
             junc_coords = junctions
             ir_coords = []
