@@ -113,11 +113,10 @@ class MatrixHdf5:
         lsv_type = kwargs.get('lsv_type', '')
         intron_ret = int(lsv_type[-1] == 'i')
 
+        junc_coords = junctions
         if intron_ret:
-            junc_coords = junctions[:-1]
-            ir_coords = junctions[-2:-1]
+            ir_coords = junctions[-1:]
         else:
-            junc_coords = junctions
             ir_coords = []
 
         row = matrix_type.tsv_row(**kwargs)
