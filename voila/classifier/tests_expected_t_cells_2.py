@@ -1,5 +1,7 @@
 sg_file = '/home/paul/PycharmProjects/majiq/test_cases/classifier/t_cells_2/splicegraph.sql'
 psi_file = '/home/paul/PycharmProjects/majiq/test_cases/classifier/t_cells_2/ran_treg.psi.voila'
+sg_file = '/Users/calebradens/Documents/majiq_dev/classifier_dev/splicegraph.sql'
+psi_file = '/Users/calebradens/Documents/majiq_dev/classifier_dev/ran_treg.psi.voila'
 
 expected_modules = {
 #"gene:ENSG00000083168": [
@@ -1197,13 +1199,7 @@ expected_alternative_intron = {
 }
 
 expected_alt3ss = {
-    "gene:ENSG00000100796":[
-        {'ran_treg_E(PSI)': '0.992'},
-        {'ran_treg_E(PSI)': '0.008'}
-    ],
     "gene:ENSG00000124151":[
-        {'ran_treg_E(PSI)': '0.86'},
-        {'ran_treg_E(PSI)': '0.14'},
         {'ran_treg_E(PSI)': '0.665'},
         {'ran_treg_E(PSI)': '0.335'}
     ]
@@ -1214,9 +1210,9 @@ expected_alt5ss = {
         {'ran_treg_E(PSI)': '0.391'},
         {'ran_treg_E(PSI)': '0.609'}
     ],
-    "gene:ENSG00000087206":[
-        {'ran_treg_E(PSI)': '0.039'},
-        {'ran_treg_E(PSI)': '0.961'}
+    "gene:ENSG00000177479":[
+        {'ran_treg_E(PSI)': '0.816'},
+        {'ran_treg_E(PSI)': '0.184'}
     ]
 }
 
