@@ -86,9 +86,9 @@ class BaseTsvWriter(QuantificationWriter):
         out = ["%s_%d" % (self.gene_id, module.idx), self.gene_id, self.graph.gene_name,
                self.graph.chromosome, self.graph.strand]
 
+        out.append(self.semicolon(lsvs))
         if self.config.output_complex:
             out.append(str(module.is_complex))
-        out.append(self.semicolon(lsvs))
         return out
 
 
@@ -118,9 +118,9 @@ class TsvWriter(BaseTsvWriter):
     def __init__(self, graph, gene_id):
         super().__init__(graph, gene_id)
 
+        self.common_headers.append('LSV ID(s)')
         if self.config.output_complex:
             self.common_headers.append('Complex')
-        self.common_headers.append('LSV ID(s)')
 
         # we could do some crazy thing to yield to all of the different output types at once (across each method)
         # (in order to save memory) But for now we just save modules in a list. Will ammend later if memory use
@@ -375,7 +375,6 @@ class TsvWriter(BaseTsvWriter):
                                 quants = self.quantifications(module, 's', event['Distal'])
                                 writer.writerow(src_common + row + quants)
                                 self.junction_cache.append((module, src_common, quants, row[0], row[4], row[5]))
-
                             if True:
                                 if trg_common[5]:
                                     self.heatmap_add(module, trg_common, self.quantifications(module, 't', event['Proximal'], event['E2']),
