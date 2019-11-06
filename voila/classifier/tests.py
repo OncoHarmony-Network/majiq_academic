@@ -76,84 +76,84 @@ expected_headers_mpe= ['Module ID', 'Gene ID', 'Gene Name', "Chr","Strand", 'LSV
 
 def verify_tsvs(gene_id):
 
-    # with open(os.path.join(out_dir, 'cassette.tsv'), 'r', newline='') as csvfile:
-    #     reader = csv.reader(csvfile, dialect='excel-tab', delimiter='\t')
-    #     headers = next(reader, None)
-    #     events = []
-    #     for line in reader:
-    #         if line[1] == gene_id:
-    #             events.append(line)
-    #
-    #     if gene_id in expected_cassette_exons:
-    #         for i, mod in enumerate(expected_cassette_exons[gene_id]):
-    #             print(mod)
-    #
-    #             for k, v in mod.items():
-    #                 try:
-    #                     assert v == events[i][headers.index(k)]
-    #                 except:
-    #                     print("expt: %s found: %s (%d, %s, %s)" % (v, events[i][headers.index(k)], i+1,
-    #                                                                events[i][headers.index(k)], gene_id))
-    #                     raise
-    #
-    # with open(os.path.join(out_dir, 'alt5prime.tsv'), 'r', newline='') as csvfile:
-    #     reader = csv.reader(csvfile, dialect='excel-tab', delimiter='\t')
-    #     headers = next(reader, None)
-    #     events = []
-    #     for line in reader:
-    #         if line[1] == gene_id:
-    #             events.append(line)
-    #
-    #     if gene_id in expected_alt5ss:
-    #         for i, mod in enumerate(expected_alt5ss[gene_id]):
-    #             print(mod)
-    #
-    #             for k, v in mod.items():
-    #                 try:
-    #                     assert v == events[i][headers.index(k)]
-    #                 except:
-    #                     print("expt: %s found: %s (%d, %s, %s)" % (v, events[i][headers.index(k)], i+1,
-    #                                                                events[i][headers.index(k)], gene_id))
-    #                     raise
-    #
-    # with open(os.path.join(out_dir, 'alt3prime.tsv'), 'r', newline='') as csvfile:
-    #     reader = csv.reader(csvfile, dialect='excel-tab', delimiter='\t')
-    #     headers = next(reader, None)
-    #     events = []
-    #     for line in reader:
-    #         if line[1] == gene_id:
-    #             events.append(line)
-    #
-    #     if gene_id in expected_alt3ss:
-    #         for i, mod in enumerate(expected_alt3ss[gene_id]):
-    #             print(mod)
-    #
-    #             for k, v in mod.items():
-    #                 try:
-    #                     assert v == events[i][headers.index(k)]
-    #                 except:
-    #                     print("expt: %s found: %s (%d, %s, %s)" % (v, events[i][headers.index(k)], i+1,
-    #                                                                events[i][headers.index(k)], gene_id))
-    #
-    # with open(os.path.join(out_dir, 'alternative_intron.tsv'), 'r', newline='') as csvfile:
-    #     reader = csv.reader(csvfile, dialect='excel-tab', delimiter='\t')
-    #     headers = next(reader, None)
-    #     events = []
-    #     for line in reader:
-    #         if line[1] == gene_id:
-    #             events.append(line)
-    #
-    #     if gene_id in expected_alternative_intron:
-    #         for i, mod in enumerate(expected_alternative_intron[gene_id]):
-    #             print(mod)
-    #
-    #             for k, v in mod.items():
-    #                 try:
-    #                     assert v == events[i][headers.index(k)]
-    #                 except:
-    #                     print("expt: %s found: %s (%d, %s, %s)" % (v, events[i][headers.index(k)], i+1,
-    #                                                                events[i][headers.index(k)], gene_id))
-    #                     raise
+    with open(os.path.join(out_dir, 'cassette.tsv'), 'r', newline='') as csvfile:
+        reader = csv.reader(csvfile, dialect='excel-tab', delimiter='\t')
+        headers = next(reader, None)
+        events = []
+        for line in reader:
+            if line[1] == gene_id:
+                events.append(line)
+
+        if gene_id in expected_cassette_exons:
+            for i, mod in enumerate(expected_cassette_exons[gene_id]):
+                print(mod)
+
+                for k, v in mod.items():
+                    try:
+                        assert v == events[i][headers.index(k)]
+                    except:
+                        print("expt: %s found: %s (%d, %s, %s)" % (v, events[i][headers.index(k)], i+1,
+                                                                   events[i][headers.index(k)], gene_id))
+                        raise
+
+    with open(os.path.join(out_dir, 'alt5prime.tsv'), 'r', newline='') as csvfile:
+        reader = csv.reader(csvfile, dialect='excel-tab', delimiter='\t')
+        headers = next(reader, None)
+        events = []
+        for line in reader:
+            if line[1] == gene_id:
+                events.append(line)
+
+        if gene_id in expected_alt5ss:
+            for i, mod in enumerate(expected_alt5ss[gene_id]):
+                print(mod)
+
+                for k, v in mod.items():
+                    try:
+                        assert v == events[i][headers.index(k)]
+                    except:
+                        print("expt: %s found: %s (%d, %s, %s)" % (v, events[i][headers.index(k)], i+1,
+                                                                   events[i][headers.index(k)], gene_id))
+                        raise
+
+    with open(os.path.join(out_dir, 'alt3prime.tsv'), 'r', newline='') as csvfile:
+        reader = csv.reader(csvfile, dialect='excel-tab', delimiter='\t')
+        headers = next(reader, None)
+        events = []
+        for line in reader:
+            if line[1] == gene_id:
+                events.append(line)
+
+        if gene_id in expected_alt3ss:
+            for i, mod in enumerate(expected_alt3ss[gene_id]):
+                print(mod)
+
+                for k, v in mod.items():
+                    try:
+                        assert v == events[i][headers.index(k)]
+                    except:
+                        print("expt: %s found: %s (%d, %s, %s)" % (v, events[i][headers.index(k)], i+1,
+                                                                   events[i][headers.index(k)], gene_id))
+
+    with open(os.path.join(out_dir, 'alternative_intron.tsv'), 'r', newline='') as csvfile:
+        reader = csv.reader(csvfile, dialect='excel-tab', delimiter='\t')
+        headers = next(reader, None)
+        events = []
+        for line in reader:
+            if line[1] == gene_id:
+                events.append(line)
+
+        if gene_id in expected_alternative_intron:
+            for i, mod in enumerate(expected_alternative_intron[gene_id]):
+                print(mod)
+
+                for k, v in mod.items():
+                    try:
+                        assert v == events[i][headers.index(k)]
+                    except:
+                        print("expt: %s found: %s (%d, %s, %s)" % (v, events[i][headers.index(k)], i+1,
+                                                                   events[i][headers.index(k)], gene_id))
+                        raise
 
     with open(os.path.join(out_dir, 'summary.tsv'), 'r', newline='') as csvfile:
         reader = csv.reader(csvfile, dialect='excel-tab', delimiter='\t')
