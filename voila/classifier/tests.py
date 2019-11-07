@@ -290,8 +290,11 @@ def run_tests():
 
 
             run_voila_classify([gene_id for gene_id in expected_modules_constitutive],
-                               enabled_outputs="summary,mpe",
-                               additional_args=['--keep-constitutive', '--debug'])
+                               enabled_outputs="summary,mpe,events,junctions",
+                               additional_args=['--keep-constitutive',
+                                                '--debug',
+                                                '--output-complex',
+                                                '--keep-no-lsv'])
             for gene_id in expected_modules_constitutive:
                 verify_constitutive(gene_id)
                 verify_mpe(gene_id)

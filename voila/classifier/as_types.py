@@ -254,7 +254,7 @@ class Graph:
             :param filter: function to filter junctions
             :param ir: include IR edges and standard junctions if true
             :param only_ir: include ONLY IR edges and NOT standard junctions if true
-            :return: boolean
+            :return: list of edges connecting self node and other node, or empty list
             """
             edges = self.edges
             if filter:
@@ -743,131 +743,6 @@ class Graph:
                         "Found two exons in gene %s which are collided and both have junctions! Can not trim!" % self.gene_id)
 
 
-    # TBD version that handles exitrons...?
-    # def get_exon_to_constant_regions(self):
-    #     """
-    #    get parts of exons which exist between inner junction connections...
-    #     """
-    #
-    #     for i, node in enumerate(self.nodes):
-    #
-    #         # find conditions where we should not trim! ---
-    #
-    #         # not half exon
-    #         if node.is_half_exon:
-    #             continue
-    #
-    #         # first find exitrons, we will need them later
-    #         exitrons = []
-    #         for edge in self.edges:
-    #             # this is different then using in_exon() because it is exclusive instead of inclusive
-    #             # this is how we differentiate exitrons from junctions in overlapping exons
-    #             if node.start < edge.start < node.end and node.start < edge.end < node.end:
-    #                 exitrons.append(edge)
-    #
-    #         potential_regions = []
-    #         for exitron in
-    #
-    #         # find first start from non-exitron edges
-    #         first_start = float("-Inf")
-    #         for edge in self.edges:
-    #             if edge in exitrons:
-    #                 continue
-    #             if edge.start < first_start:
-    #                 first_start = edge.start
-    #
-    #         # find last end from non-exitron edges
-    #         last_end = float("Inf")
-    #         for edge in self.edges:
-    #             if edge in exitrons:
-    #                 continue
-    #             if edge.end > last_end:
-    #                 last_end = edge.end
-    #
-    #
-    #
-    #         coords_in_exon = []
-    #
-    #         trim_end = False
-    #         for edge in self.edges:
-    #             # look through all edges
-    #             # if we can't find any going ahead (other end greater value than exon), don't trim end
-    #             if self.in_exon(node, edge.start) and edge.end >= node.end:
-    #                 # check that the edge allowing trimming fwd is completely ahead of exitrons, otherwise
-    #                 # if does not count
-    #                 for exitron in exitrons:
-    #                     if edge.start <= exitron.end:
-    #                         break
-    #                 else:
-    #                     coords_in_exon.append(edge.start)
-    #                     trim_end = True
-    #
-    #         trim_start = False
-    #         for edge in self.edges:
-    #             # similar for backwards
-    #             if self.in_exon(node, edge.end) and edge.start <= node.start:
-    #                 if edge.ir:
-    #                     trim_start = False
-    #                     break
-    #                 for exitron in exitrons:
-    #                     if edge.end >= exitron.start:
-    #                         break
-    #                 else:
-    #                     coords_in_exon.append(edge.end)
-    #                     trim_start = True
-    #
-    #         # need to check for the special case that there are is only one coordinate on the exon where
-    #         # all junctions are connected. In this case we should not trim
-    #         if coords_in_exon and all(x == coords_in_exon[0] for x in coords_in_exon):
-    #             trim_start = False
-    #             trim_end = False
-    #
-    #         # end find conditions part ---
-    #
-    #         node.untrimmed_start = node.start
-    #         node.untrimmed_end = node.end
-    #
-    #         global_min = float('inf')
-    #         global_max = float('-inf')
-    #         if trim_end or trim_start:
-    #
-    #             edges_starting = []
-    #             edges_ending = []
-    #             for _e in self.edges:
-    #                 if self.in_exon(node, _e.start) and not _e.start == node.start:
-    #                     global_max = max(_e.start, global_max)
-    #                     global_min = min(_e.start, global_min)
-    #                     edges_starting.append(_e)
-    #             for _e in self.edges:
-    #                 if self.in_exon(node, _e.end) and not _e.end == node.end:
-    #                     global_max = max(_e.end, global_max)
-    #                     global_min = min(_e.end, global_min)
-    #                     edges_ending.append(_e)
-    #
-    #         if trim_start:
-    #             node.exon['start'] = global_min
-    #
-    #         if trim_end:
-    #             node.exon['end'] = global_max
-    #
-    #     # after all the regular trimming is done, there still may be some collision cases due to AFE/ALE that are
-    #     # collided. We look for any remaining collisions, and trim the exon without junctions by one unit to
-    #     # resolve the collision
-    #     for i, node in enumerate(self.nodes[:-1]):
-    #         if node.end == self.nodes[i + 1].start:
-    #
-    #             if not node.edges:
-    #                 node.untrimmed_end = node.end
-    #                 node.exon['end'] -= 1
-    #             elif not self.nodes[i + 1].back_edges:
-    #                 self.nodes[i + 1].untrimmed_start = self.nodes[i + 1].start
-    #                 self.nodes[i + 1].exon['start'] += 1
-    #             else:
-    #                 voila_log().warning(
-    #                     "Found two exons in gene %s which are collided and both have junctions! Can not trim!" % self.gene_id)
-
-
-
     def _module_is_valid(self, module):
         """
         Make sure that module passes checks pertaining to current settings, before being added to module list
@@ -1247,6 +1122,7 @@ class Graph:
             """
 
             found = []
+            i = 0
             # b = self.Filters.target_source_psi
             # s = self.Filters.source_psi
             # t = self.Filters.target_psi
@@ -1259,22 +1135,32 @@ class Graph:
                 # print(n1.connects(n3))
                 # print('--------------------')
                 # print(n2.connects(n3))
+                # list of edges connecting n1 and n2
                 include1s = n1.connects(n2)
+                # list of edges connecting n2 and n3
                 include2s = n2.connects(n3)
+                # list of edges connecting n1 and n3
                 skips = n1.connects(n3)
                 if include1s and include2s and skips:
-                    # assert len(include1) > 1
-                    # assert len(include2) > 1
-                    # assert len(skip) > 1
-                    #for include1, include2, skip in product(include1s, include2s, skips):
-
-                    found.append({'event': 'cassette_exon',
-                                  'C1': self.strand_case(n1, n3),
-                                  'C2': self.strand_case(n3, n1),
-                                  'A': n2,
-                                  'Include1': self.strand_case(include1s[0], include2s[0]),
-                                  'Include2': self.strand_case(include2s[0], include1s[0]),
-                                  'Skip': skips[0]})
+                    assert len(include1s) >= 1
+                    assert len(include2s) >= 1
+                    assert len(skips) >= 1
+                    for include1, include2, skip in product(include1s, include2s, skips):
+                        # ensure skipping junction shares start with include 1
+                        # and skipping junction shares end with include 2
+                        if include1.start == skip.start and include2.end == skip.end:
+                            # if self.graph.gene_id ==  "gene:ENSG00000177239":
+                            #     import pdb
+                            #     pdb.set_trace()
+                            found.append({'event': 'cassette_exon',
+                                          'C1': self.strand_case(n1, n3),
+                                          'C2': self.strand_case(n3, n1),
+                                          'A': n2,
+                                          'Include1': self.strand_case(include1, include2),
+                                          'Include2': self.strand_case(include2, include1),
+                                          'Skip': skip,
+                                          'event_id': 'CE_%s' % i})
+                            i += 1
 
             return found
 
@@ -1285,6 +1171,7 @@ class Graph:
             """
 
             found = []
+            i = 0
 
             if len(self.nodes) < 4:
                 return []
@@ -1301,8 +1188,9 @@ class Graph:
             for i, n1 in enumerate(full_exons):
                 for j, n2 in enumerate(full_exons):
                     if j - i > 2:
-                        skip = n1.connects(n2)
-                        if skip:
+                        # list of edges connecting n1 and n2
+                        skips = n1.connects(n2)
+                        if len(skips) >= 1:
                             conns = []
                             for k in range(j - i):
                                 conns.append(self.nodes[i+k].connects(self.nodes[i+k+1]))
@@ -1311,23 +1199,30 @@ class Graph:
                             if not all(len(x) > 0 for x in conns):
                                 continue
 
-                            include1 = self.strand_case(n1.connects(self.nodes[i + 1]), self.nodes[j-1].connects(n2))
-                            include2 = self.strand_case(self.nodes[j-1].connects(n2), n1.connects(self.nodes[i + 1]))
+                            # list of edges that connect C1 and A1
+                            include1s = self.strand_case(n1.connects(self.nodes[i + 1]), self.nodes[j-1].connects(n2))
+                            # list of edges that connect C2 and A_last
+                            include2s = self.strand_case(self.nodes[j-1].connects(n2), n1.connects(self.nodes[i + 1]))
 
-                            if include1 and include2:
-                                # checking that first and last connections match skip coordinates
-                                if self.strand_case(include1[0].start == skip[0].start and include2[0].end == skip[0].end,
-                                                    include1[0].end == skip[0].end and include2[0].start == skip[0].start):
+                            if len(include1s)>0 and len(include2s)>0:
+                                for skip, include1, include2 in product(skips, include1s, include2s):
+                                    # checking that first and last connections match skip coordinates
+                                    if self.strand_case(include1.start == skip.start and include2.end == skip.end,
+                                                        include1.end == skip.end and include2.start == skip.start):
 
-                                    c1 = self.strand_case(n1, n2)
-                                    c2 = self.strand_case(n2, n1)
+                                        c1 = self.strand_case(n1, n2)
+                                        c2 = self.strand_case(n2, n1)
 
-                                    includes = []
-                                    found.append({'event': 'tandem_cassette', 'C1': c1,
-                                                  'C2': c2, 'As': self.nodes[i + 1:j],
-                                                  'Skip': skip, 'Include1': include1,
-                                                  'Include2': include2,
-                                                  'Tandem_Exons': self.nodes[i + 1:j], 'Includes': includes})
+                                        # includes = [] # not used?
+                                        found.append({'event': 'tandem_cassette', 'C1': c1,
+                                                      'C2': c2,
+                                                      #'As': self.nodes[i + 1:j], redundant?
+                                                      'Skip': skip, 'Include1': include1,
+                                                      'Include2': include2,
+                                                      'Tandem_Exons': self.nodes[i + 1:j],
+                                                      #'Includes': includes, # not used?
+                                                      'event_id':'TCE_%s' % i})
+                                        i += 1
             return found
 
         def multi_exon_spanning(self):

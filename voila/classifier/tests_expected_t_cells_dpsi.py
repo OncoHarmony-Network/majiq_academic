@@ -1,5 +1,10 @@
 sg_file = '/home/paul/PycharmProjects/majiq/test_cases/classifier/t_cells_2/splicegraph.sql'
-psi_file = '/home/paul/PycharmProjects/majiq/test_cases/classifier/t_cells_2/ran_treg.psi.voila'
+sg_file = '/Users/calebradens/Documents/majiq_dev/classifier_dev/splicegraph.sql'
+psi_file = '/Users/calebradens/Documents/majiq_dev/classifier_dev/ran_treg.psi.voila'
+deltapsi_file = '/Users/calebradens/Documents/majiq_dev/classifier_dev/mon_treg_mon_naive.deltapsi.voila'
+# source ~/bin/majiq2/voila_viewer/voila_view_env/bin/activate
+# voila view /Users/calebradens/Documents/majiq_dev/classifier_dev/splicegraph.sql /Users/calebradens/Documents/majiq_dev/classifier_dev/ran_treg.psi.voila
+
 
 expected_modules = {
 #"gene:ENSG00000083168": [
@@ -270,7 +275,7 @@ expected_modules = {
          "multi_exon_spanning": "",
          "alternative_intron": "1",
          },
-        {"cassette_exon": "",
+        {"cassette_exon": "", # should be 0!
          "alt3ss": "1",
          "alt5ss": "",
          "alt3and5ss": "2",
@@ -1131,6 +1136,12 @@ expected_modules = {
     ],
     "gene:ENSG00000124151":[
 
+    ],
+    'gene:ENSG00000169919': [
+        {},
+        {},
+        {},
+        {}
     ]
 
 }
@@ -1159,15 +1170,18 @@ expected_modules_constitutive = {
             'constitutive_intron': '1'
         }
     ],
-    'gene:ENSG00000177239': [
+    "gene:ENSG00000223509":[
+        {},
+        {'constitutive_junction': '1'},
+        {'constitutive_junction': '1'},
+        {'constitutive_junction': '1'},
+        {},
+        {}
+    ],
+    'gene:ENSG00000169919': [
         {},
         {},
         {},
-        {},
-        {},
-        {},
-        {},
-        {}, # big one with 8 exitrons
         {},
         {},
         {},
@@ -1224,4 +1238,38 @@ expected_alt5ss = {
 #     'gene:ENSG00000138085'
 # }
 
-expected_mpes = {}
+expected_mpes = {
+    "gene:ENSG00000218739":[
+        {"LSV ID(s)":"",
+         "Reference Exon Constant Region":"37196488-37196520"},
+        {"LSV ID(s)":"",
+         "Reference Exon Constant Region":"37199704-37199819"},
+        {"LSV ID(s)":"gene:ENSG00000218739:t:37201048-37201092",
+         "Reference Exon Constant Region":"37201048-37201092"},
+        {"LSV ID(s)":"gene:ENSG00000218739:s:37201642-37201726",
+         "Reference Exon Constant Region":"37201642-37201726"},
+        {"LSV ID(s)":"gene:ENSG00000218739:t:37204304-37204741",
+         "Reference Exon Constant Region":"37204304-37204741"}
+    ],
+    "gene:ENSG00000223509":[
+        {"Constitutive Exon or Intron":"e;e;e"},
+        {"Constitutive Exon or Intron":"h"},#half exon
+        {"Constitutive Exon or Intron":"e;e;e",
+         "Constitutive De Novo":"False;False;False"}
+    ]
+}
+
+expected_dpsi_junctions = {
+    "gene:ENSG00000169919":[
+        {},{},{},{},{},
+{},{},
+{},{},{},{},{},{},
+{},{},{},{},{},{},{},
+{},{},{},{},{},{},{},{},
+{},{},{},{},{},{},{},{}
+    ],
+    # "gene:ENSG00000170919":[ # alt 3' that are multi exon spanning
+    #     {},
+    #     {}
+    # ]
+}
