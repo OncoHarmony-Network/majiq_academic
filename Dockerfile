@@ -30,8 +30,10 @@ RUN rm htslib-1.9.tar.bz2
 # install majiq
 RUN yum -y install git gcc-c++
 WORKDIR /tmp
-RUN git clone https://bitbucket.org/biociphers/majiq.git
-WORKDIR majiq
+RUN git clone https://bitbucket.org/biociphers/majiq_stable.git
+WORKDIR majiq_stable
+RUN pip3.6 install --no-cache-dir -U pip
+RUN pip3.6 install --no-cache-dir -r requirements.txt
 RUN python3.6 setup.py install
 WORKDIR /tmp
 RUN rm -rf majiq
@@ -39,10 +41,17 @@ RUN rm -rf majiq
 # clean yum cache
 RUN yum clean all
 
-ENTRYPOINT ["majiq"]
+# remove these lines to go back to default majiq/voila usage
+#COPY gen_majiq_cwl.py /opt/gen_majiq_cwl.py
+#RUN chmod +x /opt/gen_majiq_cwl.py
+#ENTRYPOINT ["/opt/gen_majiq_cwl.py"]
+# end lines to remove
+
 CMD []
 
-# To build image: docker build --squash -t majiq .
-# To save image: docker save majiq -o majiq.tar
-# To load image: docker load -i majiq.tar
-# To run loaded image: docker run majiq -v
+# To build image: docker build -t voila .
+# To save image: docker save majiq -o voila.tar
+# To load image: docker load -i voila.tar
+
+# To run loaded image: docker run -v /path/to/voila/data/files:/mnt -p 5010:5010 voila view /mnt --host 0.0.0.0 -p 5010 -j4
+# note that you will not see the line "Serving on 0.0.0.0:5010" for some reason, but it will work anyway
