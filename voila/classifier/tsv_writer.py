@@ -686,6 +686,9 @@ class TsvWriter(BaseTsvWriter):
                     for event in events:
                         if event['event'] == 'p_ale':
                             src_common = self.common_data(module, 's', node=event['Reference'])
+                            # print(event)
+                            # print(src_common)
+                            # print(self.heatmap_cache[module.idx])
                             if event['Proximal'].start == -1:
                                 proxStr = "nan-{}".format(event['Proximal'].end)
                             else:
@@ -695,22 +698,28 @@ class TsvWriter(BaseTsvWriter):
                                     row = [junc.de_novo, event['Reference'].range_str(), 'A', proxStr,
                                            'C_A_Proximal',
                                            junc.range_str()]
-                                    quants = self.quantifications(module, 's', junc, event['Reference'])
+                                    quants = self.quantifications(module, 's', junc)
                                     writer.writerow(src_common + row + quants)
                                     self.junction_cache.append((module, src_common, quants, row[0], row[4], row[5]))
                                     self.heatmap_add(module, src_common, quants,
                                                      junc.end - junc.start,
                                                      row[0], row[4], row[5])
+                                    # print("A2", junc)
+                                    # print(quants)
+                                    # print(self.heatmap_cache[module.idx])
                                 for junc in event['SkipA1']:
                                     row = [junc.de_novo, event['Reference'].range_str(), 'A', event['Distal'].range_str(),
                                            'C_A_Distal',
                                            junc.range_str()]
-                                    quants = self.quantifications(module, 's', junc, event['Reference'])
+                                    quants = self.quantifications(module, 's', junc)
                                     writer.writerow(src_common + row + quants)
                                     self.junction_cache.append((module, src_common, quants, row[0], row[4], row[5]))
                                     self.heatmap_add(module, src_common, quants,
                                                      junc.end - junc.start,
                                                      row[0], row[4], row[5])
+                                    # print("A1", junc)
+                                    # print(quants)
+                                    # print(self.heatmap_cache[module.idx])
 
 
     def p_alternate_first_exon(self):
@@ -732,7 +741,7 @@ class TsvWriter(BaseTsvWriter):
                                     row = [junc.de_novo, event['Reference'].range_str(), 'A', proxStr,
                                            'C_A_Proximal',
                                            junc.range_str()]
-                                    quants = self.quantifications(module, 't', junc, event['Proximal'])
+                                    quants = self.quantifications(module, 't', junc)
                                     writer.writerow(trg_common + row + quants)
                                     self.junction_cache.append((module, trg_common, quants, row[0], row[4], row[5]))
                                     self.heatmap_add(module, trg_common, quants,
@@ -772,8 +781,18 @@ class TsvWriter(BaseTsvWriter):
                             # I think this fails when there is a source LSV in the middle exon
                             # if any(':t:' in _l for _l in event['Intron'].lsvs) and not \
                             #    any(':s:' in _l for _l in event['Intron'].lsvs):
-                            # Instead this should work to check if there is an appropriate target LSV:
-                            if trg_common[5]:
+                            # The quantifications for the alternative intron must be from EITHER Target or Source point of view
+                            #   To check if we should use the target point of view:
+                            junc_in_trg_lsv_count = 0
+                            # for every 'spliced' junction
+                            for junc in event['Spliced']:
+                                # ensure the junction and intron are both quantified by the same target LSV
+                                if len(set(trg_common[5].split(";")) & set(junc.lsvs.keys())) == 1:
+                                    # if yes, add one to the junc count
+                                    junc_in_trg_lsv_count += 1
+                            # if every junction passed above test, we know the Target point of view quantified the intron
+                            # as well as all possible 'spliced' junctions
+                            if junc_in_trg_lsv_count == len(event['Spliced']):
                                 row = [event['Intron'].de_novo, event['C2'].range_str(), 'C1', event['C1'].range_str(), 'C2_C1_intron',
                                        event['Intron'].range_str()]
                                 quants = self.quantifications(module, 't', event['Intron'])
@@ -796,7 +815,7 @@ class TsvWriter(BaseTsvWriter):
                                                      junc.end - junc.start,
                                                      junc.de_novo, row[4], junc.range_str())
 
-
+                            # Else the intron and 'spliced' junctions are quantified from source point of view...
                             else:
                                 row = [event['Intron'].de_novo,
                                        event['C1'].range_str(), 'C2', event['C2'].range_str(), 'C1_C2_intron',
@@ -820,7 +839,6 @@ class TsvWriter(BaseTsvWriter):
                                     self.heatmap_add(module, src_common, quants,
                                                      junc.end - junc.start,
                                                      junc.de_novo, row[4], junc.range_str())
-
 
                             event['Intron'].junc['start'] -= 1
                             event['Intron'].junc['end'] += 1
