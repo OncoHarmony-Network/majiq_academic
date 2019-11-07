@@ -495,8 +495,12 @@ class TsvWriter(BaseTsvWriter):
                 if not _complex or self.config.output_complex:
                     for event in events:
                         if event['event'] == 'alt3and5ss':
-                            src_common = self.common_data(module, 's')
-                            trg_common = self.common_data(module, 't')
+                            src_common = self.common_data(module, 's',
+                                                          edge=event["J1"],
+                                                          node=event["E1"])
+                            trg_common = self.common_data(module, 't',
+                                                          edge=event["J1"],
+                                                          node=event["E2"])
                             row = [event['J1'].de_novo, event['E1'].range_str(), 'E2', event['E2'].range_str(), 'E1_E2_J1',
                                    event['J1'].range_str()]
                             quants = self.quantifications(module, 's', event['J1'])
@@ -519,10 +523,15 @@ class TsvWriter(BaseTsvWriter):
                             self.junction_cache.append((module, trg_common, quants, row[0], row[4], row[5]))
 
                             if True:
-                                # if trg_common[5]:
+                                # Unsure if J2 or J1 is shorter...
+                                # For J2, could be source or target LSV
                                 self.heatmap_add(module, trg_common, self.quantifications(module, 't', event['J2']),
                                              event['J2'].end - event['J2'].start)
-                                # else:
+                                self.heatmap_add(module, src_common, self.quantifications(module, 's', event['J2']),
+                                             event['J2'].end - event['J2'].start)
+                                # For J1, could be source or target LSV
+                                self.heatmap_add(module, trg_common, self.quantifications(module, 't', event['J1']),
+                                                 event['J1'].end - event['J1'].start)
                                 self.heatmap_add(module, src_common, self.quantifications(module, 's', event['J1']),
                                                  event['J1'].end - event['J1'].start)
 
@@ -733,15 +742,12 @@ class TsvWriter(BaseTsvWriter):
                             # put coordinates back to Jordi's offset numbers
                             event['Intron'].junc['start'] += 1
                             event['Intron'].junc['end'] -= 1
-                            # I think there was a method for when we want to be aware of the strand, but I can't recall
-                            # what the method was
-                            if self.graph.strand == "+":
-                                src_common = self.common_data(module, 's', event['Intron'], node=event['C1'])
-                                trg_common = self.common_data(module, 't', event['Intron'], node=event["C2"])
-                            else:
-                                src_common = self.common_data(module, 's', event['Intron'], node=event['C2'])
-                                trg_common = self.common_data(module, 't', event['Intron'], node=event["C1"])
-
+                            src_common = self.common_data(module, 's', event['Intron'],
+                                                          node=module.strand_case(case_plus=event['C1'],
+                                                                                  case_minus=event['C2']))
+                            trg_common = self.common_data(module, 't', event['Intron'],
+                                                          node=module.strand_case(case_plus=event['C2'],
+                                                                                  case_minus=event['C1']))
                             if any(':t:' in _l for _l in event['Intron'].lsvs) and not \
                                any(':s:' in _l for _l in event['Intron'].lsvs):
                                 row = [event['Intron'].de_novo, event['C2'].range_str(), 'C1', event['C1'].range_str(), 'C2_C1_intron',
