@@ -227,13 +227,13 @@ class TsvWriter(BaseTsvWriter):
                 self.start_headers(headers, 'summary.tsv')
 
             if 'heatmap' in self.config.enabled_outputs:
-                headers = self.common_headers + ['Collapsed Event Name', 'Junction Name',
-                                                 'Junction Coordinate', 'De Novo'] + self.quantification_headers
+                headers = self.common_headers + ['Collapsed Event Name', 'De Novo', 'Junction Name',
+                                                 'Junction Coordinate'] + self.quantification_headers
                 self.start_headers(headers, 'heatmap.tsv')
 
             if 'junctions' in self.config.enabled_outputs:
-                headers = self.common_headers + ['Collapsed Event Name', 'Junction Name',
-                                                 'Junction Coordinate', 'De Novo'] + self.quantification_headers
+                headers = self.common_headers + ['Collapsed Event Name', 'De Novo', 'Junction Name',
+                                                 'Junction Coordinate'] + self.quantification_headers
                 self.start_headers(headers, 'junctions.tsv')
 
             if 'mpe' in self.config.enabled_outputs:
@@ -1011,7 +1011,7 @@ class TsvWriter(BaseTsvWriter):
             writer = csv.writer(csvfile, dialect='excel-tab', delimiter='\t')
 
             for module, common_data, quantifications, de_novo, junction_name, coordinates in self.junction_cache:
-                writer.writerow(common_data + [module.collapsed_event_name, junction_name, coordinates, de_novo] + quantifications)
+                writer.writerow(common_data + [module.collapsed_event_name, de_novo, junction_name, coordinates] + quantifications)
 
     def mpe(self):
         """
