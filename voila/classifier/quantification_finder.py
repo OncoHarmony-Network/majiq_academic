@@ -76,7 +76,7 @@ class QuantificationWriter:
             if edge or node:
                 if not node:
                     node = self.graph.end_node(edge)
-                lsvs = set(filter(lambda lsv: lsv.endswith(node.untrimmed_range_str()), lsvs))
+                lsvs = set(filter(lambda lsv: lsv.endswith(node.untrimmed_range_str(replace_w_na=True)), lsvs))
         else:
             lsvs = module.target_lsv_ids.union(module.source_lsv_ids)
         return lsvs
