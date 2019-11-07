@@ -47,10 +47,13 @@ class UnsupportedVoilaFile(Exception):
 
 class Printable_Event:
 
-    def untrimmed_range_str(self):
-            return '{}-{}'.format(getattr(self, 'untrimmed_start', self.start),
-                                  getattr(self, 'untrimmed_end', self.end))
-
+    def untrimmed_range_str(self, replace_w_na=False):
+            if not replace_w_na:
+                return '{}-{}'.format(getattr(self, 'untrimmed_start', self.start),
+                                      getattr(self, 'untrimmed_end', self.end))
+            else:
+                return '{}-{}'.format(str(getattr(self, 'untrimmed_start', self.start)).replace("-1", "na"),
+                                      str(getattr(self, 'untrimmed_end', self.end)).replace("-1", "na"))
     def range_str(self):
         if ClassifyConfig().untrimmed_exons:
             return self.untrimmed_range_str()
