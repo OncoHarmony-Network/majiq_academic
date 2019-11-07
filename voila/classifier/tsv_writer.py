@@ -732,14 +732,12 @@ class TsvWriter(BaseTsvWriter):
                                     row = [junc.de_novo, event['Reference'].range_str(), 'A', proxStr,
                                            'C_A_Proximal',
                                            junc.range_str()]
-                                    quants = self.quantifications(module, 't', junc)
+                                    quants = self.quantifications(module, 't', junc, event['Proximal'])
                                     writer.writerow(trg_common + row + quants)
                                     self.junction_cache.append((module, trg_common, quants, row[0], row[4], row[5]))
                                     self.heatmap_add(module, trg_common, quants,
                                                      junc.end - junc.start,
                                                      row[0], row[4], row[5])
-                                    # print("uh1")
-                                    # print(self.junction_cache[-1])
                                 for junc in event['SkipA2']:
                                     row = [junc.de_novo, event['Reference'].range_str(), 'A', event['Distal'].range_str(),
                                            'C_A_Distal',
@@ -750,8 +748,6 @@ class TsvWriter(BaseTsvWriter):
                                     self.heatmap_add(module, trg_common, quants,
                                                      junc.end - junc.start,
                                                      row[0], row[4], row[5])
-                                    # print("uh2")
-                                    # print(self.junction_cache[-1])
 
 
     def alternative_intron(self):
@@ -796,18 +792,12 @@ class TsvWriter(BaseTsvWriter):
                                     quants = self.quantifications(module, 't', junc)
                                     self.junction_cache.append((module, trg_common, quants,
                                                                 junc.de_novo, row[4], junc.range_str()))
-                                    # print("uh")
-                                    # print(self.junction_cache[-1])
                                     self.heatmap_add(module, trg_common, quants,
                                                      junc.end - junc.start,
                                                      junc.de_novo, row[4], junc.range_str())
 
 
                             else:
-                                print(event)
-                                print(event['Intron'].lsvs.keys())
-                                print(src_common)
-                                print(trg_common)
                                 row = [event['Intron'].de_novo,
                                        event['C1'].range_str(), 'C2', event['C2'].range_str(), 'C1_C2_intron',
                                        event['Intron'].range_str()]
@@ -827,8 +817,6 @@ class TsvWriter(BaseTsvWriter):
                                     quants = self.quantifications(module, 's', junc)
                                     self.junction_cache.append((module, src_common, quants,
                                                                 junc.de_novo, row[4], junc.range_str()))
-                                    # print("uh2")
-                                    # print(self.junction_cache[-1])
                                     self.heatmap_add(module, src_common, quants,
                                                      junc.end - junc.start,
                                                      junc.de_novo, row[4], junc.range_str())
