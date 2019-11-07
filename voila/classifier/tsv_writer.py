@@ -943,12 +943,27 @@ class TsvWriter(BaseTsvWriter):
         """
         Conditionally add a row toe heatmap cache by comparing it to what exists there already
         """
+        if self.config.heatmap_selection == 'max_abs_dpsi':
+            try:
+                max_abs_dpsi = max((abs(float(quants[i])) if quants[i] else 0.0 for i in self.dpsi_quant_idxs))
+            except ValueError:
+                # this problem only happens with semicolon separated values, which we are planning to get rid of
+                # which is why it is just try/except for now
+                max_abs_dpsi = 0.0
 
-        if not module.idx in self.heatmap_cache:
-            self.heatmap_cache[module.idx] = (module, common, quants, junc_len)
+            if not module.idx in self.heatmap_cache:
+                self.heatmap_cache[module.idx] = (module, common, quants, max_abs_dpsi)
+            else:
+                if self.heatmap_cache[module.idx][3] < max_abs_dpsi:
+                    self.heatmap_cache[module.idx] = (module, common, quants, max_abs_dpsi)
+
         else:
-            if self.heatmap_cache[module.idx][3] > junc_len:
+
+            if not module.idx in self.heatmap_cache:
                 self.heatmap_cache[module.idx] = (module, common, quants, junc_len)
+            else:
+                if self.heatmap_cache[module.idx][3] > junc_len:
+                    self.heatmap_cache[module.idx] = (module, common, quants, junc_len)
 
     def junctions(self):
         """
@@ -1025,7 +1040,7 @@ class TsvWriter(BaseTsvWriter):
         with open(os.path.join(self.config.directory, 'heatmap.tsv.%s' % self.pid), 'a', newline='') as csvfile:
             writer = csv.writer(csvfile, dialect='excel-tab', delimiter='\t')
 
-            for module, common_data, quantifications, junc_len in self.heatmap_cache.values():
+            for module, common_data, quantifications, _ in self.heatmap_cache.values():
                 writer.writerow(common_data + [module.collapsed_event_name] + quantifications)
 
     def summary(self):
