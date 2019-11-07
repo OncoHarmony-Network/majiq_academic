@@ -734,10 +734,8 @@ class TsvWriter(BaseTsvWriter):
                             # put coordinates back to Jordi's offset numbers
                             event['Intron'].junc['start'] += 1
                             event['Intron'].junc['end'] -= 1
-
-                            src_common = self.common_data(module, 's', event['Intron'])
-                            trg_common = self.common_data(module, 't', event['Intron'])
-
+                            src_common = self.common_data(module, 's', event['Intron'], node=event['C1'])
+                            trg_common = self.common_data(module, 't', event['Intron'], node=event["C2"])
 
                             if any(':t:' in _l for _l in event['Intron'].lsvs) and not \
                                any(':s:' in _l for _l in event['Intron'].lsvs):
