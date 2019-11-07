@@ -193,6 +193,9 @@ classify_parser.add_argument('--changing', action='store_true',
                          help='In general, find classifications for events which are changing (between multiple analysis). Requires at least one deltapsi or het voila file')
 classify_parser.add_argument('--non-changing', action='store_true',
                          help='In general, find classifications for events which are not changing (between multiple analysis). Requires at least one deltapsi or het voila file')
+classify_parser.add_argument('--heatmap-selection', choices=['shortest_junction', 'max_abs_dpsi'],
+                         help='For the classifier output "heatmap", the quantification values may be derived from either the shortest junction in the module (default), '
+                              'or optionally, if a het or dpsi file is provided, from the junction with the maximum dpsi value')
 classify_parser.add_argument('--debug-num-genes', type=int,
                          help='Classify only n many genes, mainly used for debugging')
 classify_parser.add_argument('--overwrite', action='store_true',

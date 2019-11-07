@@ -983,24 +983,53 @@ class TsvWriter(BaseTsvWriter):
             **The final heatmap should have the shortest quantifiable junction from the module.**
             If none of the junctions in the module were quantifiable, heatmap has the shortest junction
         """
-        if not module.idx in self.heatmap_cache:
-            self.heatmap_cache[module.idx] = (module, common, quants, junc_len, denovo, juncname, junccoord)
-        else:
-            # if existing junc lacks an LSV (thus no quantification)
-            if not self.heatmap_cache[module.idx][1][5]:
-                # if new junc does have LSV, update
-                if common[5]:
-                    self.heatmap_cache[module.idx] = (module, common, quants, junc_len, denovo, juncname, junccoord)
-                # else, if new junc shorter, update
-                elif self.heatmap_cache[module.idx][3] > junc_len:
-                    self.heatmap_cache[module.idx] = (module, common, quants, junc_len, denovo, juncname, junccoord)
-            # else existing junc has LSV
+
+        if self.config.heatmap_selection == 'max_abs_dpsi':
+            try:
+                max_abs_dpsi = max((abs(float(quants[i])) if quants[i] else 0.0 for i in self.dpsi_quant_idxs))
+            except ValueError:
+                # this problem only happens with semicolon separated values, which we are planning to get rid of
+                # which is why it is just try/except for now
+                max_abs_dpsi = 0.0
+
+            if not module.idx in self.heatmap_cache:
+                self.heatmap_cache[module.idx] = (module, common, quants, max_abs_dpsi, denovo, juncname, junccoord)
             else:
-                # only if new junc has LSV
-                if common[5]:
-                    # and if new junc is shorter
-                    if self.heatmap_cache[module.idx][3] > junc_len:
+                # if existing junc lacks an LSV (thus no quantification)
+                if not self.heatmap_cache[module.idx][1][5]:
+                    # if new junc does have LSV, update
+                    if common[5]:
+                        self.heatmap_cache[module.idx] = (module, common, quants, max_abs_dpsi, denovo, juncname, junccoord)
+                    # else, if new junc shorter, update
+                    elif self.heatmap_cache[module.idx][3] < max_abs_dpsi:
+                        self.heatmap_cache[module.idx] = (module, common, quants, max_abs_dpsi, denovo, juncname, junccoord)
+                # else existing junc has LSV
+                else:
+                    # only if new junc has LSV
+                    if common[5]:
+                        # and if new junc is shorter
+                        if self.heatmap_cache[module.idx][3] < max_abs_dpsi:
+                            self.heatmap_cache[module.idx] = (module, common, quants, max_abs_dpsi, denovo, juncname, junccoord)
+
+        else:
+            if not module.idx in self.heatmap_cache:
+                self.heatmap_cache[module.idx] = (module, common, quants, junc_len, denovo, juncname, junccoord)
+            else:
+                # if existing junc lacks an LSV (thus no quantification)
+                if not self.heatmap_cache[module.idx][1][5]:
+                    # if new junc does have LSV, update
+                    if common[5]:
                         self.heatmap_cache[module.idx] = (module, common, quants, junc_len, denovo, juncname, junccoord)
+                    # else, if new junc shorter, update
+                    elif self.heatmap_cache[module.idx][3] > junc_len:
+                        self.heatmap_cache[module.idx] = (module, common, quants, junc_len, denovo, juncname, junccoord)
+                # else existing junc has LSV
+                else:
+                    # only if new junc has LSV
+                    if common[5]:
+                        # and if new junc is shorter
+                        if self.heatmap_cache[module.idx][3] > junc_len:
+                            self.heatmap_cache[module.idx] = (module, common, quants, junc_len, denovo, juncname, junccoord)
 
     def junctions(self):
         """
@@ -1077,7 +1106,7 @@ class TsvWriter(BaseTsvWriter):
         with open(os.path.join(self.config.directory, 'heatmap.tsv.%s' % self.pid), 'a', newline='') as csvfile:
             writer = csv.writer(csvfile, dialect='excel-tab', delimiter='\t')
 
-            for module, common_data, quantifications, junc_len, de_novo, junction_name, coordinates in self.heatmap_cache.values():
+            for module, common_data, quantifications, _, de_novo, junction_name, coordinates in self.heatmap_cache.values():
                 writer.writerow(common_data + [module.collapsed_event_name, de_novo, junction_name, coordinates] + quantifications)
 
     def summary(self):

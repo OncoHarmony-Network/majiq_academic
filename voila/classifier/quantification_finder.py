@@ -21,8 +21,10 @@ class QuantificationWriter:
         """
 
         self.config = ClassifyConfig()
+        self.dpsi_quant_idxs = []
         self.quantifications_int = self.quantification_intersection()
         self.avg_multival = False
+
 
     @staticmethod
     def semicolon(value_list):
@@ -335,7 +337,9 @@ class QuantificationWriter:
                             tmp[header][1].append(voila_file)
                         else:
                             if key == "E(dPSI)":
+                                self.dpsi_quant_idxs.append(len(tmp))
                                 tmp[header] = (_het_dpsi, [voila_file], group_idxs[group1], group_idxs[group2])
+
 
             else:
                 for i, group in enumerate(group_names):
@@ -356,8 +360,10 @@ class QuantificationWriter:
                         tmp[header][1].append(voila_file)
                     else:
                         if key == "E(dPSI)":
+                            self.dpsi_quant_idxs.append(len(tmp))
                             tmp[header] = (_dpsi_dpsi, [voila_file])
                             self.types2headers['dpsi'].append(header)
+
                         elif key == changing_thresh_key:
                             tmp[header] = (_dpsi_p_change, [voila_file])
                         elif key == non_changing_thresh_key:
