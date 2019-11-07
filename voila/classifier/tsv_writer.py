@@ -312,7 +312,6 @@ class TsvWriter(BaseTsvWriter):
                         if event['event'] == 'alt3ss':
                             src_common = self.common_data(module, 's', node=event['E1'])
                             trg_common = self.common_data(module, 't', node=event['E2'])
-
                             if src_common[5]:
                                 row = [event['Proximal'].de_novo, event['E1'].range_str(), 'E2', event['E2'].range_str(), 'E1_E2_Proximal',
                                        event['Proximal'].range_str()]
@@ -734,8 +733,14 @@ class TsvWriter(BaseTsvWriter):
                             # put coordinates back to Jordi's offset numbers
                             event['Intron'].junc['start'] += 1
                             event['Intron'].junc['end'] -= 1
-                            src_common = self.common_data(module, 's', event['Intron'], node=event['C1'])
-                            trg_common = self.common_data(module, 't', event['Intron'], node=event["C2"])
+                            # I think there was a method for when we want to be aware of the strand, but I can't recall
+                            # what the method was
+                            if self.graph.strand == "+":
+                                src_common = self.common_data(module, 's', event['Intron'], node=event['C1'])
+                                trg_common = self.common_data(module, 't', event['Intron'], node=event["C2"])
+                            else:
+                                src_common = self.common_data(module, 's', event['Intron'], node=event['C2'])
+                                trg_common = self.common_data(module, 't', event['Intron'], node=event["C1"])
 
                             if any(':t:' in _l for _l in event['Intron'].lsvs) and not \
                                any(':s:' in _l for _l in event['Intron'].lsvs):
