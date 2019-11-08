@@ -900,7 +900,7 @@ class TsvWriter(BaseTsvWriter):
                             self.junction_cache.append((module, common, quants, row[0], row[6], row[7]))
                             self.heatmap_add(module, common, quants,
                                              event['Skip'].end - event['Skip'].start,
-                                             row[0], row[4], row[5])
+                                             row[0], row[6], row[7])
 
                             row = [event['Include1'].de_novo,
                                    event['C1'].range_str(),
