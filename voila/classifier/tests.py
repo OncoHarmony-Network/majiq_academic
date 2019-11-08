@@ -74,86 +74,42 @@ expected_headers_mpe= ['Module ID', 'Gene ID', 'Gene Name', "Chr","Strand", 'LSV
                        "Constitutive De Novo","Constitutive Exon or Intron"]
 
 
+# map of globals from the expected test cases file to tsv filenames to read
+quant_verif_groups = {'expected_alternative_intron': 'alternative_intron.tsv',
+                      'expected_cassette_exons': 'cassette.tsv',
+                      'expected_alt3ss': 'alt3prime.tsv',
+                      'expected_alt5ss': 'alt5prime.tsv',}
+
+
 def verify_tsvs(gene_id):
 
-    with open(os.path.join(out_dir, 'cassette.tsv'), 'r', newline='') as csvfile:
-        reader = csv.reader(csvfile, dialect='excel-tab', delimiter='\t')
-        headers = next(reader, None)
-        events = []
-        for line in reader:
-            if line[1] == gene_id:
-                events.append(line)
+    for quant_verification in quant_verif_groups:
+        # check if the group of tests is defined in the expected file
+        if quant_verification in globals():
+            quants_to_verify = globals().get(quant_verification)
 
-        if gene_id in expected_cassette_exons:
-            for i, mod in enumerate(expected_cassette_exons[gene_id]):
-                print(mod)
 
-                for k, v in mod.items():
-                    try:
-                        assert v == events[i][headers.index(k)]
-                    except:
-                        print("expt: %s found: %s (%d, %s, %s)" % (v, events[i][headers.index(k)], i+1,
-                                                                   events[i][headers.index(k)], gene_id))
-                        raise
+            with open(os.path.join(out_dir, quant_verif_groups[quant_verification]), 'r', newline='') as csvfile:
+                reader = csv.reader(csvfile, dialect='excel-tab', delimiter='\t')
+                headers = next(reader, None)
+                events = []
+                for line in reader:
+                    if line[1] == gene_id:
+                        events.append(line)
 
-    with open(os.path.join(out_dir, 'alt5prime.tsv'), 'r', newline='') as csvfile:
-        reader = csv.reader(csvfile, dialect='excel-tab', delimiter='\t')
-        headers = next(reader, None)
-        events = []
-        for line in reader:
-            if line[1] == gene_id:
-                events.append(line)
 
-        if gene_id in expected_alt5ss:
-            for i, mod in enumerate(expected_alt5ss[gene_id]):
-                print(mod)
+                if gene_id in quants_to_verify:
+                    for i, mod in enumerate(quants_to_verify[gene_id]):
+                        print(mod)
 
-                for k, v in mod.items():
-                    try:
-                        assert v == events[i][headers.index(k)]
-                    except:
-                        print("expt: %s found: %s (%d, %s, %s)" % (v, events[i][headers.index(k)], i+1,
-                                                                   events[i][headers.index(k)], gene_id))
-                        raise
+                        for k, v in mod.items():
+                            try:
+                                assert v == events[i][headers.index(k)]
+                            except:
+                                print("expt: %s found: %s (%d, %s, %s)" % (v, events[i][headers.index(k)], i+1,
+                                                                           events[i][headers.index(k)], gene_id))
+                                raise
 
-    with open(os.path.join(out_dir, 'alt3prime.tsv'), 'r', newline='') as csvfile:
-        reader = csv.reader(csvfile, dialect='excel-tab', delimiter='\t')
-        headers = next(reader, None)
-        events = []
-        for line in reader:
-            if line[1] == gene_id:
-                events.append(line)
-
-        if gene_id in expected_alt3ss:
-            for i, mod in enumerate(expected_alt3ss[gene_id]):
-                print(mod)
-
-                for k, v in mod.items():
-                    try:
-                        assert v == events[i][headers.index(k)]
-                    except:
-                        print("expt: %s found: %s (%d, %s, %s)" % (v, events[i][headers.index(k)], i+1,
-                                                                   events[i][headers.index(k)], gene_id))
-
-    with open(os.path.join(out_dir, 'alternative_intron.tsv'), 'r', newline='') as csvfile:
-        reader = csv.reader(csvfile, dialect='excel-tab', delimiter='\t')
-        headers = next(reader, None)
-        events = []
-        for line in reader:
-            if line[1] == gene_id:
-                events.append(line)
-
-        if gene_id in expected_alternative_intron:
-            for i, mod in enumerate(expected_alternative_intron[gene_id]):
-                print(mod)
-
-                for k, v in mod.items():
-                    try:
-                        assert v == events[i][headers.index(k)]
-                    except:
-                        print("expt: %s found: %s (%d, %s, %s)" % (v, events[i][headers.index(k)], i+1,
-                                                                   events[i][headers.index(k)], gene_id))
-                        raise
 
     with open(os.path.join(out_dir, 'summary.tsv'), 'r', newline='') as csvfile:
         reader = csv.reader(csvfile, dialect='excel-tab', delimiter='\t')
@@ -283,9 +239,15 @@ def run_tests():
 
         else:
 
-            run_voila_classify([gene_id for gene_id in expected_modules],
+            gene_ids = list(expected_modules.keys())
+            for quant_verification in quant_verif_groups:
+                # check if the group of tests is defined in the expected file
+                if quant_verification in globals():
+                    gene_ids += list(globals().get(quant_verification).keys())
+
+            run_voila_classify(gene_ids,
                                additional_args=['--debug'])
-            for gene_id in expected_modules:
+            for gene_id in gene_ids:
                 verify_tsvs(gene_id)
 
 
@@ -302,6 +264,8 @@ def run_tests():
         print("Success!")
     except:
         print("Some test failed!")
+        import traceback
+        print(traceback.format_exc())
     finally:
         if retain_output:
             print("Output folder %s was retained" % out_dir)
