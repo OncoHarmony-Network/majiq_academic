@@ -403,6 +403,10 @@ namespace grimoire {
                     if(accex->is_lsv(false)){
                         continue ;
                     }
+                    if (accex == jnc->get_donor()) {
+                        // this junction is an "exitron", not constitutive
+                        continue ;
+                    }
                     jnc->set_constitutive() ;
                     string str_ln = id_ + "\t" + chromosome_ + "\t" +
                                     to_string(jnc->get_start()) + "\t" + to_string(jnc->get_end()) + "\t" +
