@@ -186,6 +186,16 @@ class QuantificationWriter:
                 return None
             return f
 
+
+        def _het_stats(voila_files, stat_idx):
+            def f(lsv_id, edge=None):
+                for voila_file in voila_files:
+                    with view_matrix.ViewHeterogen(voila_file) as m:
+                        lsv = m.heterogen(lsv_id)
+                        return _inner_edge_aggregate(lsv, [x[stat_idx] for x in m.lsv(lsv_id).junction_stats], edge)
+                return None
+            return f
+
         def _het_dpsi(voila_files, group_idx1, group_idx2):
             def f(lsv_id, edge=None):
                 for voila_file in voila_files:
@@ -219,6 +229,7 @@ class QuantificationWriter:
                             return (round(x, SIG_FIGS) for x in group_means)
                 return None
             return f
+
 
         def _dpsi_psi(voila_files, group_idx):
             def f(lsv_id, edge=None):
@@ -302,6 +313,10 @@ class QuantificationWriter:
             with Matrix(voila_file) as m:
                 analysis_type = m.analysis_type
                 group_names = m.group_names
+                if analysis_type == constants.ANALYSIS_HETEROGEN:
+                    stat_names = m.stat_names
+                else:
+                    stat_names = None
 
 
             if analysis_type == constants.ANALYSIS_PSI:
@@ -330,6 +345,8 @@ class QuantificationWriter:
                             if key == "E(PSI)":
                                 tmp[header] = (_het_psi, [voila_file], i)
 
+
+
                 for group1, group2 in combinations(group_names, 2):
                     for key in ("E(dPSI)",):
                         header = "%s-%s_HET_%s" % (group1, group2, key)
@@ -339,6 +356,13 @@ class QuantificationWriter:
                             if key == "E(dPSI)":
                                 self.dpsi_quant_idxs.append(len(tmp))
                                 tmp[header] = (_het_dpsi, [voila_file], group_idxs[group1], group_idxs[group2])
+
+                    for j, key in enumerate(stat_names):
+                        header = "%s-%s_HET_%s" % (group1, group2, key)
+                        if header in tmp:
+                            tmp[header][1].append(voila_file)
+                        else:
+                            tmp[header] = (_het_stats, [voila_file], j)
 
 
             else:
