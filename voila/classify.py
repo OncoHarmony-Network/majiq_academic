@@ -99,6 +99,7 @@ def classify_gene(args):
                     writer.multi_exon_spanning()
                     writer.tandem_cassette()
                     writer.exitron()
+                    writer.orphan_junction()
 
                 if 'summary' in config.enabled_outputs:
                     writer.summary()

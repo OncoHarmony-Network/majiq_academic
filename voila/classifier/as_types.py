@@ -1665,8 +1665,8 @@ class Graph:
 
                 if n1.is_half_exon and n2.is_half_exon:
                     conn = n1.connects(n2)
-                    if conn:
-                        found.append({'event': 'orphan_junction', 'A1': n1, 'A2': n2, 'Junc': conn})
+                    for _conn in conn:
+                        found.append({'event': 'orphan_junction', 'A1': n1, 'A2': n2, 'Junc': _conn})
             return found
 
 

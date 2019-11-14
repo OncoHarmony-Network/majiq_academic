@@ -143,7 +143,8 @@ class TsvWriter(BaseTsvWriter):
             names += ['cassette.tsv', 'alt3prime.tsv', 'alt5prime.tsv', 'alt3and5prime.tsv',
                  'mutually_exclusive.tsv', 'alternate_last_exon.tsv', 'alternate_first_exon.tsv',
                  'alternative_intron.tsv', 'p_alt5prime.tsv', 'p_alt3prime.tsv', 'multi_exon_spanning.tsv',
-                 'tandem_cassette.tsv', 'exitron.tsv', 'p_alternate_last_exon.tsv', 'p_alternate_first_exon.tsv']
+                 'tandem_cassette.tsv', 'exitron.tsv', 'orphan_junction.tsv',
+                 'p_alternate_last_exon.tsv', 'p_alternate_first_exon.tsv']
             if config.keep_constitutive:
                 names.append('constitutive.tsv')
         if 'heatmap' in config.enabled_outputs:
@@ -197,6 +198,8 @@ class TsvWriter(BaseTsvWriter):
                 self.start_headers(headers, 'tandem_cassette.tsv')
                 headers = self.common_headers + ['De Novo', 'Exon coordinate', 'Junction Coordinate'] + self.quantification_headers
                 self.start_headers(headers, 'exitron.tsv')
+                headers = self.common_headers + ['De Novo', 'Exon1 coordinate', 'Exon2 coordinate', 'Junction Coordinate'] + self.quantification_headers
+                self.start_headers(headers, 'orphan_junction.tsv')
 
                 if self.config.keep_constitutive:
                     headers = self.common_headers + ['De Novo', 'Reference Exon Coordinate', 'Exon Spliced With',
@@ -918,6 +921,38 @@ class TsvWriter(BaseTsvWriter):
                             quants = self.quantifications(module, 't', edge=event['Junc'])
                             writer.writerow(trg_common + row + quants)
                             self.junction_cache.append((module, trg_common, quants, row[0], 'Exitron', row[2]))
+
+    def orphan_junction(self):
+        with open(os.path.join(self.config.directory, 'orphan_junction.tsv.%s' % self.pid), 'a', newline='') as csvfile:
+            writer = csv.writer(csvfile, dialect='excel-tab', delimiter='\t')
+            for module in self.modules:
+                events, _complex, _total_events = self.as_types[module.idx]
+                if not _complex or self.config.output_complex:
+                    for event in events:
+                        if event['event'] == 'orphan_junction':
+                            src_common = self.common_data(module, 's')
+                            trg_common = self.common_data(module, 't')
+                            row = [event['Junc'].de_novo, event['A1'].range_str(), event['A2'].range_str(),
+                                   event['Junc'].range_str()]
+                            # just in case exitrons are ever quantified, somehow, *try* to get
+                            # the exitron's junction quantification (won't exist for now... which is desired)
+                            quants = self.quantifications(module, 's', edge=event['Junc'])
+                            writer.writerow(src_common + row + quants)
+                            self.junction_cache.append((module, src_common, quants, row[0], 'Exitron', row[3]))
+
+                            if True:
+                                self.heatmap_add(module, src_common, quants,
+                                                 event['Junc'].end - event['Junc'].start)
+
+                            row = [event['Junc'].de_novo, event['A1'].range_str(), event['A2'].range_str(),
+                                   event['Junc'].range_str()]
+                            quants = self.quantifications(module, 't', edge=event['Junc'])
+                            writer.writerow(trg_common + row + quants)
+                            self.junction_cache.append((module, trg_common, quants, row[0], 'Exitron', row[3]))
+
+                            if True:
+                                self.heatmap_add(module, trg_common, quants,
+                                                 event['Junc'].end - event['Junc'].start)
 
     def constitutive(self):
         with open(os.path.join(self.config.directory, 'constitutive.tsv.%s' % self.pid), 'a', newline='') as csvfile:
