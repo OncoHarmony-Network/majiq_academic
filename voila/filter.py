@@ -136,6 +136,10 @@ def filter_voila_file(args):
     # for PSI filter, any input file can be used
     # for dPSI filter, only matters for dPSI and HET files
 
+    # if no relevant filters provided, basically skip it
+    if not config.changing and not config.non_changing:
+            #and not config.decomplexify_psi_threshold > 0 and not config.decomplexify_deltapsi_threshold > 0:
+        included_lsv_ids = lsv_ids
 
     if config.changing:
 
@@ -221,8 +225,73 @@ def filter_voila_file(args):
                             if False:
                                 excluded_lsv_ids.add(lsv.lsv_id)
 
-    else:
-        included_lsv_ids = lsv_ids
+
+    # if config.decomplexify_psi_threshold > 0 or config.decomplexify_deltapsi_threshold > 0:
+    #     # standard psi / dpsi based filters
+    #
+    #     if analysis_type == ANALYSIS_PSI:
+    #         with ViewPsi(voila_file) as m:
+    #             if not lsv_ids:
+    #                 lsv_ids = list(m.lsv_ids())
+    #
+    #             for lsv in m.lsvs():
+    #                 if lsv.lsv_id in lsv_ids:
+    #                     included_lsv_ids.add(lsv.lsv_id)
+    #                     if config.decomplexify_psi_threshold > 0:
+    #                         if any(v < config.decomplexify_psi_threshold for v in lsv.means):
+    #                             excluded_lsv_ids.add(lsv.lsv_id)
+    #                             continue
+    #
+    #     elif analysis_type == ANALYSIS_DELTAPSI:
+    #         with ViewDeltaPsi(voila_file) as m:
+    #             if not lsv_ids:
+    #                 lsv_ids = list(m.lsv_ids())
+    #
+    #             for lsv in m.lsvs():
+    #                 if lsv.lsv_id in lsv_ids:
+    #                     included_lsv_ids.add(lsv.lsv_id)
+    #                     if config.decomplexify_psi_threshold > 0:
+    #                         for means in lsv.group_means:
+    #                             # means: (name, means,)
+    #                             if any(v < config.decomplexify_psi_threshold for v in means[1]):
+    #                                 excluded_lsv_ids.add(lsv.lsv_id)
+    #                                 break
+    #
+    #                     if config.decomplexify_deltapsi_threshold > 0:
+    #                         excl_incl = lsv.excl_incl
+    #                         # print(list(v for v in excl_incl))
+    #                         if any((v[0] > 0 and v[0] < config.decomplexify_deltapsi_threshold) or \
+    #                                (v[1] > 0 and v[1] < config.decomplexify_deltapsi_threshold) for v in excl_incl):
+    #                             excluded_lsv_ids.add(lsv.lsv_id)
+    #
+    #
+    #
+    #     elif analysis_type == ANALYSIS_HETEROGEN:
+    #         with ViewHeterogen(voila_file) as m:
+    #             if not lsv_ids:
+    #                 lsv_ids = list(m.lsv_ids())
+    #
+    #             for lsv in m.lsvs():
+    #                 if lsv.lsv_id in lsv_ids:
+    #                     included_lsv_ids.add(lsv.lsv_id)
+    #                     if config.decomplexify_psi_threshold > 0:
+    #                         if not lsv.lsv_id in excluded_lsv_ids:
+    #                             for mean in np.array(lsv.mean_psi).transpose((1, 0, 2)):
+    #                                 if any(get_expected_psi(v) < config.decomplexify_psi_threshold for v in mean):
+    #                                     excluded_lsv_ids.add(lsv.lsv_id)
+    #                                     break
+    #                     if config.decomplexify_deltapsi_threshold > 0:
+    #                         if not lsv.lsv_id in excluded_lsv_ids:
+    #                             for psis_g1, psis_g2 in combinations(np.array(lsv.mean_psi).transpose((1, 0, 2)), 2):
+    #                                 for psi_g1, psi_g2 in zip(psis_g1, psis_g2):
+    #                                     if abs(get_expected_psi(psi_g1) - get_expected_psi(
+    #                                             psi_g2)) < config.decomplexify_deltapsi_threshold:
+    #                                         excluded_lsv_ids.add(lsv.lsv_id)
+    #                                         break
+    #                                 else:
+    #                                     continue
+    #                                 break
+
 
     if not gene_ids:
         _gene_ids = lsv_ids2gene_ids(included_lsv_ids)
@@ -245,7 +314,8 @@ def filter_voila_file(args):
         for gene_id in _gene_ids:
 
             # new_gene_group = m_new.create_group('lsvs/%s' % gene_id)
-            if not lsv_ids and not config.decomplexify_psi_threshold > 0 and not config.decomplexify_deltapsi_threshold > 0:
+            if not lsv_ids and not config.changing and not config.non_changing:
+                #and not config.decomplexify_psi_threshold > 0 and not config.decomplexify_deltapsi_threshold > 0:\
                 # this part only makes sense if copying ALL lsv ids...
                 m.copy('lsvs/%s' % gene_id, main_grp)
             else:
@@ -335,7 +405,7 @@ def run_filter():
         gene_ids = lsv_ids2gene_ids(final_lsv_ids)
 
     if not config.voila_files_only:
-        splicegraph_pool = p.map_async(filter_splicegraph, ((gene_ids, q),))
+        splicegraph_pool = p.map_async(filter_splicegraph, ((list(gene_ids), q),))
 
         # monitor loop
         while True:
