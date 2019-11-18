@@ -306,6 +306,7 @@ def filter_voila_file(args):
             return []
 
     final_lsv_ids = []
+    at_least_one_success = False
     with h5py.File(voila_file, 'r', libver='latest') as m, h5py.File(new_voila_file, 'w', libver='latest') as m_new:
         # m.lsv_ids()
         main_grp = m_new.create_group('lsvs')
@@ -317,17 +318,28 @@ def filter_voila_file(args):
             if not lsv_ids and not config.changing and not config.non_changing:
                 #and not config.decomplexify_psi_threshold > 0 and not config.decomplexify_deltapsi_threshold > 0:\
                 # this part only makes sense if copying ALL lsv ids...
-                m.copy('lsvs/%s' % gene_id, main_grp)
+                try:
+                    m.copy('lsvs/%s' % gene_id, main_grp)
+                    at_least_one_success = True
+                except KeyError:
+                    voila_log().warning("Unable to find gene_id %s in file %s, so not copying" % (gene_id, voila_file))
             else:
                 lsv_grp = m_new.create_group('lsvs/%s' % gene_id)
 
                 for lsv_id in included_lsv_ids:
                     if lsv_id.startswith(gene_id) and not lsv_id in excluded_lsv_ids:
                         final_lsv_ids.append(lsv_id)
-                        m.copy('lsvs/%s/%s' % (gene_id, lsv_id), lsv_grp)
+                        try:
+                            m.copy('lsvs/%s/%s' % (gene_id, lsv_id), lsv_grp)
+                            at_least_one_success = True
+                        except KeyError:
+                            voila_log().warning("Unable to find gene_id %s / lsv_id %s in file %s, so not copying" % (gene_id, lsv_id, voila_file))
 
-    voila_log().info("Finished writing %s" % new_voila_file)
-
+    if at_least_one_success:
+        voila_log().info("Finished writing %s" % new_voila_file)
+    else:
+        voila_log().warning("For voila file %s , no valid LSVs / gene_ids were found, so the file was not created" % voila_file)
+        os.remove(new_voila_file)
 
     q.put(final_lsv_ids, True)
     return final_lsv_ids
@@ -362,6 +374,7 @@ def run_filter():
         # only secondary filters
         gene_ids = []
         lsv_ids = set()
+
 
     if not os.path.exists(config.directory):
         os.makedirs(config.directory)
