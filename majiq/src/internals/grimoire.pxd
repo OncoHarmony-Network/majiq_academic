@@ -64,6 +64,7 @@ cdef extern from "grimoire.hpp" namespace "grimoire":
         void    detect_exons()   nogil ;
         # void    detect_introns() nogil ;
         void    connect_introns() nogil ;
+        void    reset_flags()    nogil ;
 
         void    create_annot_intron(int start_ir, int end_ir, bint simpl, bint enable_anot_ir) nogil ;
         void    add_elements(map[string, Junction*] junc_map, map[string, Exon*] exon_map) nogil ;

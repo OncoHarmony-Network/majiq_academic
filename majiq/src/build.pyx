@@ -278,6 +278,14 @@ cdef _parse_junction_file(tuple filetp, map[string, Gene*]& gene_map, vector[str
                                min_experiments, reset)
 
 
+
+    if reset:
+        # we didn't reset flags for junctions/introns not seen in this sample
+        for i in prange(n, nogil=True, num_threads=nthreads):
+            # so let's take the time to reset this information...
+            gg = gene_map[gid_vec[i]]
+            gg.reset_flags()
+
     # for i in prange(n, nogil=True, num_threads=nthreads):
     #     gg = gene_map[gid_vec[i]]
     #     gg.update_junc_flags(1, reset, minreads, 0, denovo_thresh, min_experiments, denovo)
