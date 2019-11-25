@@ -991,11 +991,11 @@ class TsvWriter(BaseTsvWriter):
                             # the exitron's junction quantification (won't exist for now... which is desired)
                             quants = self.quantifications(module, 's', edge=event['Junc'])
                             writer.writerow(src_common + row + quants)
-                            self.junction_cache.append((module, src_common, quants, row[0], 'Exitron', row[3]))
+                            self.junction_cache.append((module, src_common, quants, row[0], 'Orphan', row[3]))
 
                             if True:
                                 self.heatmap_add(module, src_common, quants,
-                                                 event['Junc'].end - event['Junc'].start)
+                                                 event['Junc'].end - event['Junc'].start, row[0], 'Orphan', row[3])
 
                             row = [event['Junc'].de_novo, event['A1'].range_str(), event['A2'].range_str(),
                                    event['Junc'].range_str()]
@@ -1005,7 +1005,7 @@ class TsvWriter(BaseTsvWriter):
 
                             if True:
                                 self.heatmap_add(module, trg_common, quants,
-                                                 event['Junc'].end - event['Junc'].start)
+                                                 event['Junc'].end - event['Junc'].start, row[0], 'Orphan', row[3])
 
     def constitutive(self):
         with open(os.path.join(self.config.directory, 'constitutive.tsv.%s' % self.pid), 'a', newline='') as csvfile:

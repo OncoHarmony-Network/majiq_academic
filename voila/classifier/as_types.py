@@ -299,8 +299,8 @@ class Graph:
             :param other: other junction
             :return: boolean
             """
-            #return self.start < other.start and self.end < other.start
-            return self.view_start < other.view_start and self.view_end < other.view_start
+            return self.start < other.start and self.end < other.start
+            #return self.view_start < other.view_start and self.view_end < other.view_start
 
         def __eq__(self, other):
             """
@@ -1286,7 +1286,7 @@ class Graph:
                         if e1.node != e2.node and not (e1.node.connects(e2.node) or e2.node.connects(e1.node)):
                             for i1 in e1.node.edges:
                                 for i2 in e2.node.edges:
-                                    if i1.node == i2.node:
+                                    if i1.node == i2.node and not (i1.ir or i2.ir):
                                         found.append({'event': 'mutually_exclusive',
                                                       'C1': self.strand_case(n1, i1.node),
                                                       'C2': self.strand_case(i1.node, n1),
@@ -1296,6 +1296,7 @@ class Graph:
                                                       'SkipA1': self.strand_case(e2, i1),
                                                       'Include2': self.strand_case(i1, e2),
                                                       'SkipA2': self.strand_case(i2, e1)})
+
             return found
 
         def alternative_intron(self):
@@ -1902,6 +1903,7 @@ class Graph:
             # print('---------------------------', self.idx, '--------------------------------')
             # print(self.nodes)
             # print(self.get_all_edges())
+            # print([e.de_novo for e in self.get_all_edges()])
 
             as_type_dict = {
                 # 'alt_downstream': self.alternate_downstream,
