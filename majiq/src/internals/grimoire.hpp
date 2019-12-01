@@ -465,6 +465,15 @@ namespace grimoire{
                 intron_vec_.push_back(ir) ;
             }
 
+            void reset_flags(){
+                // clear reads, minreads, minpos for next group
+                for (const auto &p: junc_map_){
+                    (p.second)->clear_nreads(true) ;
+                }
+                for (const auto &ir: intron_vec_){
+                    ir->clear_nreads(true) ;
+                }
+            }
             void reset_exons(){
                 for (auto p  = exon_map_.begin(); p!= exon_map_.end();){
                     map <string, Exon*>::iterator pit = p ;
