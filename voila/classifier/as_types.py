@@ -469,18 +469,16 @@ class Graph:
         at least N juncs have:
             any(max(Prob(|E(dPSI)|>=changing-thresh)))>=probability-changing-thresh
         """
-
         passed_edpsi = []
         for edge in module.get_all_edges():
             for lsv_quants in edge.lsvs.values():
                 if lsv_quants['delta_psi_bins']:
-                    if max(get_expected_dpsi(bins) >= self.config.changing_threshold for bins in lsv_quants['delta_psi_bins']):
+                    if max(abs(get_expected_dpsi(bins)) >= self.config.changing_threshold for bins in lsv_quants['delta_psi_bins']):
                         passed_edpsi.append(lsv_quants['delta_psi_bins'])
 
         #print(passed_edpsi)
         if not passed_edpsi:
             return False
-
         for bins in passed_edpsi:
             if max(matrix_area(b, self.config.changing_threshold) for b in bins) \
                 >= self.config.probability_changing_threshold:
@@ -506,6 +504,7 @@ class Graph:
                                                                         lsv_quants['delta_psi_bins']))
 
         # first check for edpsi thresholds
+        # TODO: abs of dpsi here?
         passed_edpsi = all(max(generate_prior_removed_expected_dpsi(None,
                                                                     None,
                                                                     pr_removed_bins=bins))
