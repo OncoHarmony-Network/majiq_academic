@@ -522,7 +522,6 @@ class TsvWriter(BaseTsvWriter):
                             self.heatmap_add(module, src_common, quants,
                                              event['Skip'].end - event['Skip'].start,
                                              row[0], row[4], row[5])
-
                             event['Include1'].junc['start'] += 1
                             event['Include1'].junc['end'] -= 1
 
@@ -831,8 +830,11 @@ class TsvWriter(BaseTsvWriter):
                                            event['Reference'].range_str(),
                                            'A_Proximal',
                                            event['Proximal'].range_str(),
-                                           'C_A_Proximal',
-                                           junc.range_str()]
+                                           'C_A_Proximal']
+                                    if junc.ir:
+                                        row.append('{}-{}'.format(junc.start + 1, junc.end - 1))
+                                    else:
+                                        row.append(junc.range_str())
                                     quants = self.quantifications(module, 's', junc, event['Reference'])
                                     writer.writerow(src_common + row + quants)
                                     self.junction_cache.append((module, src_common, quants, row[0], row[4], row[5]))
@@ -876,8 +878,11 @@ class TsvWriter(BaseTsvWriter):
                                            event['Reference'].range_str(),
                                            'A_Proximal',
                                            event['Proximal'].range_str(),
-                                           'C_A_Proximal',
-                                           junc.range_str()]
+                                           'C_A_Proximal']
+                                    if junc.ir:
+                                        row.append('{}-{}'.format(junc.start + 1, junc.end - 1))
+                                    else:
+                                        row.append(junc.range_str())
                                     quants = self.quantifications(module, 't', junc, event['Reference'])
                                     writer.writerow(trg_common + row + quants)
                                     self.junction_cache.append((module, trg_common, quants, row[0], row[4], row[5]))
@@ -1131,6 +1136,8 @@ class TsvWriter(BaseTsvWriter):
                                     self.semicolon((x.range_str() for x in event['As'])), # exons spanned
                                     len(event['As'])] # num exons spanned
                             quants = self.quantifications(module, 's', event['Skip'], event['C1'])
+                            # if self.semicolon((x.range_str() for x in event['Skip'])) == "133702469-133709729":
+
                             common = self.common_data(module,
                                                       's',
                                                       node=event['C1'],

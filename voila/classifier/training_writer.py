@@ -394,6 +394,7 @@ class TrainingWriter(BaseTsvWriter):
                 for e1ss in e1_splice_sites:
                     for e2ss in e2_splice_sites:
                         # module_idx, e1_start, e1_end, e2_start, e2_end, ir
+                        # TODO: should junc.start and junc.end be adjusted if ir?
                         junc_row = (module.idx, e1ss, junc.start, junc.end, e2ss, junc.ir)
                         # if junc_row in junctions:
                         #     print("dup foind: " + str(junc_row))
