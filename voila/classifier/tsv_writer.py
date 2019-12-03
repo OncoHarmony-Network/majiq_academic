@@ -31,7 +31,7 @@ summaryVars2Headers = {
     'p_afe': 'P_AFE',
     'orphan_junction': 'Orphan Junction',
     'constitutive': 'Constitutive Junction',
-    'constitutive_intron': 'Constitutive Intron',
+    'constitutive_intron': 'Persistent Intron',
     'multi_exon_spanning': 'Multi Exon Spanning',
     'exitron': 'Exitron',
 }
@@ -227,7 +227,7 @@ class TsvWriter(BaseTsvWriter):
                                                  "P_ALE", "P_AFE", "Orphan Junction"]
                 if self.config.keep_constitutive:
                     headers.append("Constitutive Junction")
-                    headers.append("Constitutive Intron")
+                    headers.append("Persistent Intron")
 
                 if self.config.output_complex:
                     headers.remove("Complex")
