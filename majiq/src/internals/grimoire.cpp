@@ -165,6 +165,7 @@ namespace grimoire {
             }
         }
         sort(ss_vec.begin(), ss_vec.end(), sort_ss) ;
+
         for(const auto & ss : ss_vec){
             if (ss.donor_ss) {
                 if (opened_exon.size() > 0){
@@ -180,6 +181,7 @@ namespace grimoire {
                 }
                 last_5prime = ss.j ;
             }else{
+
                 if (opened_exon.size() > 0){
                     if (nullptr != last_5prime){
                         for (const auto &jj2: opened_exon){
@@ -197,7 +199,7 @@ namespace grimoire {
             }
         }
         for (const auto &jj2: opened_exon){
-            newExonDefinition(jj2->get_end(), jj2->get_end()+10, jj2, nullptr, false) ;
+            newExonDefinition(jj2->get_end(), last_5prime->get_start(), jj2, last_5prime, false) ;
         }
         ss_vec.clear() ;
         ss_vec.shrink_to_fit();
