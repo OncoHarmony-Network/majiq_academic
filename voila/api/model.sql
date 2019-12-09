@@ -62,7 +62,8 @@ CREATE TABLE junction (
   PRIMARY KEY (gene_id, start, "end"),
   FOREIGN KEY (gene_id) REFERENCES gene (id),
   CHECK (has_reads IN (0, 1)),
-  CHECK (annotated IN (0, 1))
+  CHECK (annotated IN (0, 1)),
+  CHECK (is_constitutive IN (0, 1))
 );
 
 CREATE TABLE exon (
@@ -88,7 +89,8 @@ CREATE TABLE intron_retention (
   PRIMARY KEY (gene_id, start, "end"),
   FOREIGN KEY (gene_id) REFERENCES gene (id),
   CHECK (has_reads IN (0, 1)),
-  CHECK (annotated IN (0, 1))
+  CHECK (annotated IN (0, 1)),
+  CHECK (is_constitutive IN (0, 1))
 );
 
 CREATE TABLE  gene_overlap (
