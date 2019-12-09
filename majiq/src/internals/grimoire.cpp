@@ -199,7 +199,8 @@ namespace grimoire {
             }
         }
         for (const auto &jj2: opened_exon){
-            newExonDefinition(jj2->get_end(), last_5prime->get_start(), jj2, last_5prime, false) ;
+            int coord = last_5prime == nullptr ? jj2->get_end()+10 : last_5prime->get_start() ; 
+            newExonDefinition(jj2->get_end(), coord, jj2, last_5prime, false) ;
         }
         ss_vec.clear() ;
         ss_vec.shrink_to_fit();
