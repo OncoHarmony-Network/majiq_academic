@@ -59,11 +59,13 @@ CREATE TABLE junction (
   annotated BOOLEAN,
   is_simplified BOOLEAN,
   is_constitutive BOOLEAN,
+  has_flag BOOLEAN,
   PRIMARY KEY (gene_id, start, "end"),
   FOREIGN KEY (gene_id) REFERENCES gene (id),
   CHECK (has_reads IN (0, 1)),
   CHECK (annotated IN (0, 1)),
-  CHECK (is_constitutive IN (0, 1))
+  CHECK (is_constitutive IN (0, 1)),
+  CHECK (has_flag IN (0, 1))
 );
 
 CREATE TABLE exon (
@@ -86,11 +88,13 @@ CREATE TABLE intron_retention (
   annotated BOOLEAN,
   is_simplified BOOLEAN,
   is_constitutive BOOLEAN,
+  has_flag BOOLEAN,
   PRIMARY KEY (gene_id, start, "end"),
   FOREIGN KEY (gene_id) REFERENCES gene (id),
   CHECK (has_reads IN (0, 1)),
   CHECK (annotated IN (0, 1)),
-  CHECK (is_constitutive IN (0, 1))
+  CHECK (is_constitutive IN (0, 1)),
+  CHECK (has_flag IN (0, 1))
 );
 
 CREATE TABLE  gene_overlap (
