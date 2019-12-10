@@ -318,7 +318,7 @@ namespace grimoire{
             int     get_nxbin_mod()         { return nxbin_mod_ ; }
             int     get_numbins()           { return numbins_ ; }
             int     get_fltcount()          { return flt_count_ ; }
-            bool    get_constitutive()      { return const_donor_ && const_acceptor_ ; }
+            bool    get_constitutive()      { return const_donor_ && const_acceptor_ && ir_flag_ && !simpl_fltr_ ; }
 
             void    set_const_donor()       { const_donor_ = true ; }
             void    set_const_acceptor()    { const_acceptor_ = true ; }
