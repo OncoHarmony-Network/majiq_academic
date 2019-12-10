@@ -365,62 +365,79 @@ namespace grimoire {
         sort(ex_vector.begin(), ex_vector.end(), Exon::islowerRegion<Exon>) ;
 
         for(const auto &ex: ex_vector){
-            unsigned int cj = 0, cj2 = 0 ;
+            // first, we look at inbound connections to determine whether
+            // inbound intron has constitutive acceptor (but only if we have a
+            // valid inbound intron in the first place)
+            if (ex->ib_irptr != nullptr && !(ex->ib_irptr)->get_simpl_fltr()) {
+                bool has_junctions = false ;  // we haven't seen junctions yet
+                for (const auto &juncIt: (ex->ib)) {
+                    const int coord = juncIt->get_start() ;
+                    if (FIRST_LAST_JUNC != coord && !juncIt->get_simpl_fltr() && !juncIt->is_exitron()) {
+                        has_junctions = true ;  // we have seen a junction
+                        break ;  // there's no point at looking for more junctions
+                    }
+                }
+                // if we don't have any in-bound junctions, constitutive acceptor
+                if ((ex->ib_irptr)->get_ir_flag() && !has_junctions) {
+                    // if ir passed group filters and there were no junctions...
+                    (ex->ib_irptr)->set_const_acceptor() ;
+                }
+            }
 
-            // Mark first if intron is the only connection in/out the exon. This first if could be an
-            // else if (instead of else continue) but for clarity we leave it here.
-
-            for(const auto &juncIt:  (ex->ob)){
+            // now, we look at outbound connections.
+            // we want to determine whether we have constitutive donor intron
+            // or constitutive junction
+            unsigned int num_outbound_junctions = 0 ;  // counting valid junctions
+            Junction * jnc = nullptr ;  // will be assigned an outbound junction
+            for (const auto &juncIt: (ex->ob)) {
                 const int coord = juncIt->get_end() ;
-                if (FIRST_LAST_JUNC != coord && juncIt->get_bld_fltr() && !juncIt->get_simpl_fltr()) {
-                    ++cj ;
+                if (FIRST_LAST_JUNC != coord && !juncIt->get_simpl_fltr() && !juncIt->is_exitron()) {
+                    // this junction is valid for being part of an event
+                    ++num_outbound_junctions ;
+                    if (num_outbound_junctions > 1) {
+                        // there are multiple junctions so, no constitutive
+                        // donor intron or constitutive junction.
+                        // There is no point in looping over more junctions
+                        break ;
+                    }
+                    jnc = juncIt ;  // change from nullptr to last junction
                 }
             }
-            for(const auto &juncIt:  (ex->ib)){
-                const int coord = juncIt->get_start() ;
-                if (FIRST_LAST_JUNC != coord && juncIt->get_bld_fltr() && !juncIt->get_simpl_fltr()) {
-                    ++cj2 ;
-                }
-            }
-            if (cj==0 && ex->ob_irptr != nullptr)
-            {
-                (ex->ob_irptr)->set_const_donor() ;
-            }
-            if (cj2==0 && ex->ib_irptr != nullptr)
-            {
-                (ex->ib_irptr)->set_const_acceptor() ;
-            }
-
-            if (ex->is_lsv(true))
+            // if there are multiple junctions, go to next exon
+            if (num_outbound_junctions > 1) {
                 continue ;
-            else{
-                if ((ex->ob).size()>0 && ex->ob_irptr == nullptr){
-                    Junction * jnc = *(ex->ob.begin()) ;
-                    if (FIRST_LAST_JUNC == jnc->get_end() || !jnc->get_bld_fltr() || jnc->get_simpl_fltr()){
-                        continue ;
-                    }
-
-                    // check acceptor
-                    Exon * accex = jnc->get_acceptor() ;
-                    if(accex->is_lsv(false)){
-                        continue ;
-                    }
-                    if (accex == jnc->get_donor()) {
-                        // this junction is an "exitron", not constitutive
-                        continue ;
-                    }
-                    jnc->set_constitutive() ;
-                    string str_ln = id_ + "\t" + chromosome_ + "\t" +
-                                    to_string(jnc->get_start()) + "\t" + to_string(jnc->get_end()) + "\t" +
-                                    to_string(ex->get_start()) + "\t" + to_string(ex->get_end()) + "\t" +
-                                    to_string(accex->get_start()) + "\t" + to_string(accex->get_end()) ;
-                    #pragma omp critical
-                        v.push_back(str_ln) ;
-                }
-                else{
-                    continue ;
-                }
             }
+            // 3 scenarios -- constitutive junction(1)/intron(2) or 1 junction, 1 intron
+            if (ex->ob_irptr != nullptr && !(ex->ob_irptr)->get_simpl_fltr()) {
+                // this is a valid intron.
+                if ((ex->ob_irptr)->get_ir_flag() && num_outbound_junctions < 1) {
+                    // the intron passed build filters, and no outbound
+                    // junctions, so the intron is a const_donor
+                    (ex->ob_irptr)->set_const_donor() ;
+                }  // otherwise, it has 2 valid connections
+            } else {
+                // there is no valid intron.
+                // if there is a junction that passed previous conditions and
+                // passed build filters, then it is is a constant donor
+                if (jnc != nullptr && jnc->get_bld_fltr()) {
+                    // is it also a constitutive acceptor?
+                    Exon * accex = jnc->get_acceptor() ;
+                    if(!accex->is_lsv(false)){
+                        // it is a constitutive acceptor, so our junction is
+                        // indeed constitutive
+                        jnc->set_constitutive() ;
+                        // get tab-delimited output for dump-constitutive
+                        string str_ln = id_ + "\t" + chromosome_ + "\t" +
+                                        to_string(jnc->get_start()) + "\t" + to_string(jnc->get_end()) + "\t" +
+                                        to_string(ex->get_start()) + "\t" + to_string(ex->get_end()) + "\t" +
+                                        to_string(accex->get_start()) + "\t" + to_string(accex->get_end()) ;
+                        // push tab-delimited output to shared memory
+                        #pragma omp critical
+                            v.push_back(str_ln) ;
+                    }
+                }  // otherwise, no junctions/introns or 1 junction that didn't pass build filters
+            }
+            // done looking at all exons
         }
         return 0 ;
     }
