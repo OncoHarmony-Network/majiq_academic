@@ -638,18 +638,25 @@ namespace grimoire {
 */
 
     bool Exon::is_lsv(bool ss){
-        unsigned int c1 = 0 ;
-        unsigned int c2 = 0 ;
+        // True if we have multiple valid junctions/introns, with at least one
+        // passing group filters
+        unsigned int c1 = 0 ;  // count junctions/introns passing group filters
+        unsigned int c2 = 0 ;  // count valid junctions/introns
         set<Junction*> &juncSet = ss? ob : ib ;
         for(const auto &juncIt:  juncSet){
+            if (juncIt->is_exitron()){
+                // we don't count exitrons towards junction count for LSV
+                continue ;
+            }
             const int coord = ss? juncIt->get_end() : juncIt->get_start() ;
-            c2 += (FIRST_LAST_JUNC != coord && !juncIt->get_simpl_fltr()) ? 1:0 ;
-            if (FIRST_LAST_JUNC != coord && juncIt->get_bld_fltr() && !juncIt->get_simpl_fltr()) {
+            bool is_valid = FIRST_LAST_JUNC != coord && !juncIt->get_simpl_fltr() ;
+            c2 += is_valid ? 1:0 ;
+            if (is_valid && juncIt->get_bld_fltr()) {
                 ++c1 ;
             }
         }
         Intron * ir_ptr = ss? ob_irptr : ib_irptr ;
-        if (ir_ptr != nullptr){
+        if (ir_ptr != nullptr && !ir_ptr->get_simpl_fltr()){
             ++c2 ;
             const int c = ir_ptr->get_ir_flag()? 1 : 0 ;
             c1 = c1 + c ;
