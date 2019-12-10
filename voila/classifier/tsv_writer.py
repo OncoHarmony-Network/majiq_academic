@@ -742,7 +742,7 @@ class TsvWriter(BaseTsvWriter):
                                                           edge=event['Include1'],
                                                           event_name="MXE",
                                                           event_ii=event_i)
-                            quants = self.quantifications(module, 's', event['Include1'])
+                            quants = self.quantifications(module, 's', edge=event['Include1'],node=event['C1'])
                             writer.writerow(src_common + row + quants)
                             self.junction_cache.append((module, src_common, quants, row[0], row[4], row[5]))
                             self.heatmap_add(module, src_common, quants,
@@ -761,7 +761,7 @@ class TsvWriter(BaseTsvWriter):
                                                           edge=event['SkipA1'],
                                                           event_name="MXE",
                                                           event_ii=event_i)
-                            quants = self.quantifications(module, 's', event['SkipA1'])
+                            quants = self.quantifications(module, 's', edge=event['SkipA1'],node=event['C1'])
                             writer.writerow(src_common + row + quants)
                             self.junction_cache.append((module, src_common, quants, row[0], row[4], row[5]))
                             self.heatmap_add(module, src_common, quants,
@@ -780,7 +780,7 @@ class TsvWriter(BaseTsvWriter):
                                                           edge=event['Include2'],
                                                           event_name="MXE",
                                                           event_ii=event_i)
-                            quants = self.quantifications(module, 't', event['Include2'])
+                            quants = self.quantifications(module, 't', edge=event['Include2'], node=event['C2'])
                             writer.writerow(trg_common + row + quants)
                             self.junction_cache.append((module, trg_common, quants, row[0], row[4], row[5]))
                             self.heatmap_add(module, trg_common, quants,
@@ -799,7 +799,7 @@ class TsvWriter(BaseTsvWriter):
                                                           edge=event['SkipA2'],
                                                           event_name="MXE",
                                                           event_ii=event_i)
-                            quants = self.quantifications(module, 't', event['SkipA2'])
+                            quants = self.quantifications(module, 't', edge=event['SkipA2'], node=event['C2'])
                             writer.writerow(trg_common + row + quants)
                             self.junction_cache.append((module, trg_common, quants, row[0], row[4], row[5]))
                             self.heatmap_add(module, trg_common, quants,
