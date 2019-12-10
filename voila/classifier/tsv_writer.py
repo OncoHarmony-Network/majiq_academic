@@ -1064,22 +1064,20 @@ class TsvWriter(BaseTsvWriter):
                                 self.heatmap_add(module, trg_common, quants,
                                                  event['Intron'].end - event['Intron'].start,
                                                  row[0], row[4], row[5])
-
-                                row = [self.semicolon((x.de_novo for x in event['Spliced'])),
-                                       event['C2'].range_str(),
-                                       'C1',
-                                       event['C1'].range_str(),
-                                       'C2_C1_spliced',
-                                       self.semicolon((x.range_str() for x in event['Spliced']))]
-                                quants = self.quantifications(module, 't', edge=event['Spliced'], node=event['C2'])
-                                writer.writerow(trg_common + row + quants)
-                                for junc in event['Spliced']:
-                                    quants = self.quantifications(module, 't', junc)
+                                for spliced in event['Spliced']:
+                                    row = [spliced.de_novo,
+                                           event['C2'].range_str(),
+                                           'C1',
+                                           event['C1'].range_str(),
+                                           'C2_C1_spliced',
+                                           spliced]
+                                    quants = self.quantifications(module, 't', edge=spliced, node=event['C2'])
+                                    writer.writerow(trg_common + row + quants)
                                     self.junction_cache.append((module, trg_common, quants,
-                                                                junc.de_novo, row[4], junc.range_str()))
+                                                                spliced.de_novo, row[4], spliced.range_str()))
                                     self.heatmap_add(module, trg_common, quants,
-                                                     junc.end - junc.start,
-                                                     junc.de_novo, row[4], junc.range_str())
+                                                     spliced.end - spliced.start,
+                                                     spliced.de_novo, row[4], spliced.range_str())
 
                             # Else the intron and 'spliced' junctions are quantified from source point of view...
                             else:
@@ -1095,22 +1093,20 @@ class TsvWriter(BaseTsvWriter):
                                 self.heatmap_add(module, src_common, quants,
                                                  event['Intron'].end - event['Intron'].start,
                                                  row[0], row[4], row[5])
-
-                                row = [self.semicolon((x.de_novo for x in event['Spliced'])),
-                                       event['C1'].range_str(),
-                                       'C2',
-                                       event['C2'].range_str(),
-                                       'C1_C2_spliced',
-                                       self.semicolon((x.range_str() for x in event['Spliced']))]
-                                quants = self.quantifications(module, 's', edge=event['Spliced'], node=event['C1'])
-                                writer.writerow(src_common + row + quants)
-                                for junc in event['Spliced']:
-                                    quants = self.quantifications(module, 's', junc)
+                                for spliced in event['Spliced']:
+                                    row = [spliced.de_novo,
+                                           event['C1'].range_str(),
+                                           'C2',
+                                           event['C2'].range_str(),
+                                           'C1_C2_spliced',
+                                           spliced.range_str()]
+                                    quants = self.quantifications(module, 's', edge=spliced, node=event['C1'])
+                                    writer.writerow(src_common + row + quants)
                                     self.junction_cache.append((module, src_common, quants,
-                                                                junc.de_novo, row[4], junc.range_str()))
+                                                                spliced.de_novo, row[4], spliced.range_str()))
                                     self.heatmap_add(module, src_common, quants,
-                                                     junc.end - junc.start,
-                                                     junc.de_novo, row[4], junc.range_str())
+                                                     spliced.end - spliced.start,
+                                                     spliced.de_novo, row[4], spliced.range_str())
 
                             event['Intron'].junc['start'] -= 1
                             event['Intron'].junc['end'] += 1
