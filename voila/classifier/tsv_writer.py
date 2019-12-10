@@ -368,7 +368,7 @@ class TsvWriter(BaseTsvWriter):
                                        event['E2'].range_str(),
                                        'E1_E2_Proximal',
                                        event['Proximal'].range_str()]
-                                quants = self.quantifications(module, 's', event['Proximal'])
+                                quants = self.quantifications(module, 's', edge=event['Proximal'], node=event['E1'])
                                 writer.writerow(src_common + row + quants)
                                 self.junction_cache.append((module, src_common, quants, row[0], row[4], row[5]))
                                 self.heatmap_add(module, src_common, quants,
@@ -381,7 +381,7 @@ class TsvWriter(BaseTsvWriter):
                                        event['E2'].range_str(),
                                        'E1_E2_Distal',
                                        event['Distal'].range_str()]
-                                quants = self.quantifications(module, 's', event['Distal'])
+                                quants = self.quantifications(module, 's', edge=event['Distal'], node=event['E1'])
                                 writer.writerow(src_common + row + quants)
                                 self.junction_cache.append((module, src_common, quants, row[0], row[4], row[5]))
                                 self.heatmap_add(module, src_common, quants,
@@ -394,7 +394,7 @@ class TsvWriter(BaseTsvWriter):
                                        event['E1'].range_str(),
                                        'E2_E1_Proximal',
                                        event['Proximal'].range_str()]
-                                quants = self.quantifications(module, 't', event['Proximal'])
+                                quants = self.quantifications(module, 't', edge=event['Proximal'], node=event['E2'])
                                 writer.writerow(trg_common + row + quants)
                                 self.junction_cache.append((module, trg_common, quants, row[0], row[4], row[5]))
                                 self.heatmap_add(module, trg_common, quants,
@@ -407,7 +407,7 @@ class TsvWriter(BaseTsvWriter):
                                        event['E1'].range_str(),
                                        'E2_E1_Distal',
                                        event['Distal'].range_str()]
-                                quants = self.quantifications(module, 't', event['Distal'])
+                                quants = self.quantifications(module, 't', edge=event['Distal'], node=event['E2'])
                                 writer.writerow(trg_common + row + quants)
                                 self.junction_cache.append((module, trg_common, quants, row[0], row[4], row[5]))
                                 self.heatmap_add(module, trg_common, quants,
@@ -442,7 +442,7 @@ class TsvWriter(BaseTsvWriter):
                                        event['E1'].range_str(),
                                        'E2_E1_Proximal',
                                        event['Proximal'].range_str()]
-                                quants = self.quantifications(module, 't', event['Proximal'])
+                                quants = self.quantifications(module, 't', edge=event['Proximal'], node=event['E2'])
                                 writer.writerow(trg_common + row + quants)
                                 self.junction_cache.append((module, trg_common, quants, row[0], row[4], row[5]))
                                 self.heatmap_add(module, trg_common, quants,
@@ -455,7 +455,7 @@ class TsvWriter(BaseTsvWriter):
                                        event['E1'].range_str(),
                                        'E2_E1_Distal',
                                        event['Distal'].range_str()]
-                                quants = self.quantifications(module, 't', event['Distal'])
+                                quants = self.quantifications(module, 't', edge=event['Distal'], node=event['E2'])
                                 writer.writerow(trg_common + row + quants)
                                 self.junction_cache.append((module, trg_common, quants, row[0], row[4], row[5]))
                                 self.heatmap_add(module, trg_common, quants,
@@ -468,7 +468,7 @@ class TsvWriter(BaseTsvWriter):
                                        event['E2'].range_str(),
                                        'E1_E2_Proximal',
                                        event['Proximal'].range_str()]
-                                quants = self.quantifications(module, 's', event['Proximal'])
+                                quants = self.quantifications(module, 's', edge=event['Proximal'], node=event['E1'])
                                 writer.writerow(src_common + row + quants)
                                 self.junction_cache.append((module, src_common, quants, row[0], row[4], row[5]))
                                 self.heatmap_add(module, src_common, quants,
@@ -481,7 +481,7 @@ class TsvWriter(BaseTsvWriter):
                                        event['E2'].range_str(),
                                        'E1_E2_Distal',
                                        event['Distal'].range_str()]
-                                quants = self.quantifications(module, 's', event['Distal'])
+                                quants = self.quantifications(module, 's', edge=event['Distal'], node=event['E1'])
                                 writer.writerow(src_common + row + quants)
                                 self.junction_cache.append((module, src_common, quants, row[0], row[4], row[5]))
                                 self.heatmap_add(module, src_common, quants,
