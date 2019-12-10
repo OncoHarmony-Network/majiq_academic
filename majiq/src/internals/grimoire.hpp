@@ -138,6 +138,7 @@ namespace grimoire{
             bool    get_denovo_bl() { return denovo_bl_ ; }
             Exon*   get_acceptor()  { return acceptor_ ; }
             Exon*   get_donor()     { return donor_ ; }
+            bool    is_exitron()    { return get_donor() == get_acceptor() ; }
 
             bool  get_constitutive() { return constitutive_ ; }
             void  set_constitutive() { constitutive_ = true ; }
