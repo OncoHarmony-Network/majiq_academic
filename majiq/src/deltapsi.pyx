@@ -149,8 +149,9 @@ cdef int _core_deltapsi(object self) except -1:
         pmatrix_ir = np.ndarray(shape=(nbins, nbins), dtype=np.float32, order="c")
         for x in range(nbins):
             for y in range(nbins):
-                pmatrix[x, y]    = prior_matrix[0][x][y]
-                pmatrix_ir[x, y] = prior_matrix[1][x][y]
+                # prior_matrix as log-probabilities, convert to probabilities
+                pmatrix[x, y]    = np.exp(prior_matrix[0][x][y])
+                pmatrix_ir[x, y] = np.exp(prior_matrix[1][x][y])
         out_h5p.prior = [pmatrix, pmatrix_ir]
         # print ("PRIOR1", pmatrix)
         # print ("PRIOR1", pmatrix_ir)
