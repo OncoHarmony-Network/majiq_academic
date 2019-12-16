@@ -343,7 +343,7 @@ namespace grimoire {
 //    cerr << "#2 " << ir_start << "-" << ir_end<< " :: " << ir_ptr->get_gene() << ":" << ir_ptr->get_start() << "-" << ir_ptr->get_end()<< "\n" ;
                         prev_ex->ob_irptr = ir_ptr ;
                         (ex.second)->ib_irptr = ir_ptr ;
-                        ir_ptr->update_boundaries(prev_ex->get_end(), (ex.second)->get_start()) ;
+                        ir_ptr->update_boundaries(prev_ex->get_end() +1, (ex.second)->get_start() -1) ;
                         ir_ptr->set_markd();
                     }
 
