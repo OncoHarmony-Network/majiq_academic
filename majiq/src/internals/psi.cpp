@@ -203,10 +203,15 @@ void get_samples_from_psi(float* osamps, hetLSV* lsvObj, int psi_samples, psi_di
             psi_distr_t psi_lkh (nbins, 0.0) ;
 
             temp_mupsi[m] = calc_mupsi(jnc_val, all_val, alpha, beta) ;
+            // get discretized log-posterior over bins for bootstrap replicate
+            // (regularized by pseudocount-probability of PSEUDO)
             prob_data_sample_given_psi(psi_lkh, jnc_val, all_val, psi_border, nbins, alpha, beta) ;
+            // get log-normalizing constant
             const float Z = logsumexp(psi_lkh, nbins) ;
             for (int i=0; i< nbins; i++){
                 psi_lkh[i] -= Z ;
+                // add normalized posterior for the bootstrap replicate for
+                // unnormalized average of posteriors across bootstraps
                 temp_postpsi[i] += exp(psi_lkh[i]) ;
 //                lsvObj->post_psi[cidx][j][i] += exp(psi_lkh[i]) ;
             }
@@ -215,20 +220,26 @@ void get_samples_from_psi(float* osamps, hetLSV* lsvObj, int psi_samples, psi_di
         sort (temp_mupsi.begin(), temp_mupsi.end()) ;
         lsvObj->mu_psi[cidx][fidx][j] = median(temp_mupsi) ;
         for (int i=0; i<nbins; i++){
+            // normalize posterior distribution for this sample
             temp_postpsi[i] /= msamples ;
+            // add per-sample posterior distribution to create unnormalized
+            // mean distribution over the condition indexed by `cidx`
             lsvObj->post_psi[cidx][j][i] += temp_postpsi[i] ;
-//            lsvObj->post_psi[cidx][j][i] /= msamples ;
         }
         if (psi_samples == 1){
             osamps[j+j_offset] = lsvObj->mu_psi[cidx][fidx][j] ;
         }else{
             default_random_engine generator ;
-            discrete_distribution<int> psi_distribution (lsvObj->post_psi[cidx][j].begin(),
-                                                         lsvObj->post_psi[cidx][j].end());
+            // sample index for PSI sample from per-sample distribution instead
+            // of per-condition distribution
+            discrete_distribution<int> psi_distribution (temp_postpsi.begin(), temp_postpsi.end());
             for(int i=0; i<psi_samples; i++){
-                float p = psi_distribution(generator) ;
+                // get index of bin from psi_distribution
+                int p_ndx = psi_distribution(generator) ;
+                // get index for output sample
                 const int idx_2d = ((j+j_offset)*psi_samples) + i ;
-                osamps[idx_2d] = psi_space[p] ;
+                // put midpoint of PSI bin indexed by p_ndx into output array
+                osamps[idx_2d] = psi_space[p_ndx] ;
             }
         }
     }
