@@ -58,10 +58,13 @@ def generate_means(bins):
 def generate_high_probability_non_changing(ir, prior, non_changing_threshold, bins):
     """
     Calculate the probability of non changing lsv junctions.
+
+    Done with respect to posterior with prior factored out to focus on 'truly
+    non-changing events' that are not non-changing only because of the prior.
     :param ir: Does this lsv have intron retention.
-    :param prior: prior matrix from voila file.
+    :param prior: prior matrix from voila file (absolute probabilities).
     :param non_changing_threshold: non-changing threshold set by user.
-    :param bins: bins data from voila file.
+    :param bins: bins data from voila file (absolute probabilities).
     :return: list
     """
     x = []
@@ -71,7 +74,9 @@ def generate_high_probability_non_changing(ir, prior, non_changing_threshold, bi
         bin = np.array(bin)
         bin += MINVAL
         bin /= bin.sum()
-        A = np.log(bin) - prior
+        # factor out prior from posterior (in logspace to reduce underflow)
+        A = np.log(bin) - np.log(prior)
+        # subtract logsumexp to renormalize to 1, then transform back
         R = np.exp(A - special.logsumexp(A))
         x.append(matrix_area(R, non_changing_threshold, non_changing=True))
 
