@@ -199,7 +199,8 @@ namespace grimoire {
             }
         }
         for (const auto &jj2: opened_exon){
-            newExonDefinition(jj2->get_end(), last_5prime->get_start(), jj2, last_5prime, false) ;
+            int coord = last_5prime == nullptr ? jj2->get_end()+10 : last_5prime->get_start() ; 
+            newExonDefinition(jj2->get_end(), coord, jj2, last_5prime, false) ;
         }
         ss_vec.clear() ;
         ss_vec.shrink_to_fit();
@@ -342,7 +343,7 @@ namespace grimoire {
 //    cerr << "#2 " << ir_start << "-" << ir_end<< " :: " << ir_ptr->get_gene() << ":" << ir_ptr->get_start() << "-" << ir_ptr->get_end()<< "\n" ;
                         prev_ex->ob_irptr = ir_ptr ;
                         (ex.second)->ib_irptr = ir_ptr ;
-                        ir_ptr->update_boundaries(prev_ex->get_end(), (ex.second)->get_start()) ;
+                        ir_ptr->update_boundaries(prev_ex->get_end() +1, (ex.second)->get_start() -1) ;
                         ir_ptr->set_markd();
                     }
 
