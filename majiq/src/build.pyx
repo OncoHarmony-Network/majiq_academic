@@ -428,7 +428,7 @@ cdef void gene_to_splicegraph(Gene * gne, sqlite3 * db) nogil:
             continue
         # with gil:
         #     print("## ", gne_id, jj.get_start(), jj.get_end(), jj.get_annot(), jj.get_simpl_fltr())
-        sg_junction(db, gne_id, jj.get_start(), jj.get_end(), jj.get_annot(), jj.get_simpl_fltr(), jj.get_constitutive())
+        sg_junction(db, gne_id, jj.get_start(), jj.get_end(), jj.get_annot(), jj.get_simpl_fltr(), jj.get_constitutive(), jj.get_bld_fltr())
 
     for ex_pair in gne.exon_map_:
         ex = ex_pair.second
@@ -441,7 +441,7 @@ cdef void gene_to_splicegraph(Gene * gne, sqlite3 * db) nogil:
                 # with gil:
                 #     print(gne_id, ir.get_start(), ir.get_end(), ir.get_annot(), ir.is_connected())
                 sg_intron_retention(db, gne_id, ir.get_start(), ir.get_end(), ir.get_annot(), ir.get_simpl_fltr(),
-                                    ir.get_constitutive())
+                                    ir.get_constitutive(), ir.get_ir_flag())
 
 
 cdef int simplify(list file_list, map[string, Gene*] gene_map, vector[string] gid_vec,
