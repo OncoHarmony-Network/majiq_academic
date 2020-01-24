@@ -1023,18 +1023,20 @@ class TsvWriter(BaseTsvWriter):
                             # put coordinates back to Jordi's offset numbers
                             event['Intron'].junc['start'] += 1
                             event['Intron'].junc['end'] -= 1
+                            c1_node = module.strand_case(case_plus=event['C1'],
+                                                         case_minus=event['C2'])
+                            c2_node = module.strand_case(case_plus=event['C2'],
+                                                         case_minus=event['C1'])
                             src_common = self.common_data(module,
                                                           's',
                                                           event['Intron'],
-                                                          node=module.strand_case(case_plus=event['C1'],
-                                                                                  case_minus=event['C2']),
+                                                          node=c1_node,
                                                           event_ii=event_i,
                                                           event_name="AI")
                             trg_common = self.common_data(module,
                                                           't',
                                                           event['Intron'],
-                                                          node=module.strand_case(case_plus=event['C2'],
-                                                                                  case_minus=event['C1']),
+                                                          node=c2_node,
                                                           event_ii=event_i,
                                                           event_name="AI")
                             # I think this fails when there is a source LSV in the middle exon
@@ -1053,12 +1055,15 @@ class TsvWriter(BaseTsvWriter):
                             # as well as all possible 'spliced' junctions
                             if junc_in_trg_lsv_count == len(event['Spliced']):
                                 row = [event['Intron'].de_novo,
-                                       event['C2'].range_str(),
+                                       c2_node.range_str(),
                                        'C1',
-                                       event['C1'].range_str(),
+                                       c1_node.range_str(),
                                        'C2_C1_intron',
                                        event['Intron'].range_str()]
-                                quants = self.quantifications(module, 't', edge=event['Intron'], node=event['C2'])
+                                quants = self.quantifications(module,
+                                                              't',
+                                                              edge=event['Intron'],
+                                                              node=c2_node)
                                 writer.writerow(trg_common + row + quants)
                                 self.junction_cache.append((module, trg_common, quants, row[0], row[4], row[5]))
                                 self.heatmap_add(module, trg_common, quants,
@@ -1066,12 +1071,15 @@ class TsvWriter(BaseTsvWriter):
                                                  row[0], row[4], row[5])
                                 for spliced in event['Spliced']:
                                     row = [spliced.de_novo,
-                                           event['C2'].range_str(),
+                                           c1_node.range_str(),
                                            'C1',
-                                           event['C1'].range_str(),
+                                           c1_node.range_str(),
                                            'C2_C1_spliced',
                                            spliced]
-                                    quants = self.quantifications(module, 't', edge=spliced, node=event['C2'])
+                                    quants = self.quantifications(module,
+                                                                  't',
+                                                                  edge=spliced,
+                                                                  node=c2_node)
                                     writer.writerow(trg_common + row + quants)
                                     self.junction_cache.append((module, trg_common, quants,
                                                                 spliced.de_novo, row[4], spliced.range_str()))
@@ -1082,12 +1090,12 @@ class TsvWriter(BaseTsvWriter):
                             # Else the intron and 'spliced' junctions are quantified from source point of view...
                             else:
                                 row = [event['Intron'].de_novo,
-                                       event['C1'].range_str(),
+                                       c1_node.range_str(),
                                        'C2',
-                                       event['C2'].range_str(),
+                                       c2_node.range_str(),
                                        'C1_C2_intron',
                                        event['Intron'].range_str()]
-                                quants = self.quantifications(module, 's', edge=event['Intron'], node=event['C1'])
+                                quants = self.quantifications(module, 's', edge=event['Intron'], node=c1_node)
                                 writer.writerow(src_common + row + quants)
                                 self.junction_cache.append((module, src_common, quants, row[0], row[4], row[5]))
                                 self.heatmap_add(module, src_common, quants,
@@ -1095,12 +1103,15 @@ class TsvWriter(BaseTsvWriter):
                                                  row[0], row[4], row[5])
                                 for spliced in event['Spliced']:
                                     row = [spliced.de_novo,
-                                           event['C1'].range_str(),
+                                           c1_node.range_str(),
                                            'C2',
-                                           event['C2'].range_str(),
+                                           c2_node.range_str(),
                                            'C1_C2_spliced',
                                            spliced.range_str()]
-                                    quants = self.quantifications(module, 's', edge=spliced, node=event['C1'])
+                                    quants = self.quantifications(module,
+                                                                  's',
+                                                                  edge=spliced,
+                                                                  node=c1_node)
                                     writer.writerow(src_common + row + quants)
                                     self.junction_cache.append((module, src_common, quants,
                                                                 spliced.de_novo, row[4], spliced.range_str()))
