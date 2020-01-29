@@ -13,12 +13,13 @@ from voila.voila_log import voila_log
 
 _ViewConfig = namedtuple('ViewConfig', ['voila_file', 'voila_files', 'splice_graph_file', 'analysis_type', 'nproc',
                                         'force_index', 'debug', 'silent', 'port', 'host', 'web_server', 'index_file',
-                                        'num_web_workers', 'strict_indexing', 'skip_type_indexing', 'splice_graph_only'])
+                                        'num_web_workers', 'strict_indexing', 'skip_type_indexing',
+                                        'splice_graph_only', 'logger'])
 _ViewConfig.__new__.__defaults__ = (None,) * len(_ViewConfig._fields)
 _TsvConfig = namedtuple('TsvConfig', ['file_name', 'voila_files', 'voila_file', 'splice_graph_file',
                                       'non_changing_threshold', 'nproc', 'threshold', 'analysis_type', 'show_all',
                                       'debug', 'probability_threshold', 'silent', 'gene_ids', 'gene_names', 'lsv_ids',
-                                      'lsv_types', 'strict_indexing'])
+                                      'lsv_types', 'strict_indexing', 'logger'])
 _TsvConfig.__new__.__defaults__ = (None,) * len(_TsvConfig._fields)
 _ClassifyConfig = namedtuple('ClassifyConfig', ['directory', 'voila_files', 'voila_file', 'splice_graph_file',
                                       'nproc', 'decomplexify_psi_threshold', 'decomplexify_deltapsi_threshold',
@@ -26,9 +27,9 @@ _ClassifyConfig = namedtuple('ClassifyConfig', ['directory', 'voila_files', 'voi
                                       'debug', 'silent', 'keep_constitutive', 'show_all_modules', 'output_complex',
                                       'untrimmed_exons', 'putative_multi_gene_regions', 'output_training_data',
                                                 'changing_threshold', 'non_changing_threshold', 'probability_changing_threshold',
-                                                 'probability_non_changing_threshold', 'changing', 'non_changing',
+                                                'probability_non_changing_threshold', 'changing', 'non_changing',
                                                 'keep_no_lsvs', 'debug_num_genes', 'overwrite', 'enabled_outputs',
-                                                'heatmap_selection'])
+                                                'heatmap_selection', 'logger'])
 _ClassifyConfig.__new__.__defaults__ = (None,) * len(_ClassifyConfig._fields)
 _FilterConfig = namedtuple('FilterConfig', ['directory', 'voila_files', 'voila_file', 'splice_graph_file',
                                             'nproc', 'gene_ids', 'debug', 'silent', 'analysis_type', 'overwrite',
@@ -37,13 +38,13 @@ _FilterConfig = namedtuple('FilterConfig', ['directory', 'voila_files', 'voila_f
                                             'changing_threshold', 'non_changing_threshold',
                                             'probability_changing_threshold',
                                             'probability_non_changing_threshold', 'changing', 'non_changing',
-                                            ])
+                                            'logger'])
 _FilterConfig.__new__.__defaults__ = (None,) * len(_FilterConfig._fields)
 _SplitterConfig = namedtuple('SplitterConfig', ['directory', 'voila_files', 'voila_file', 'splice_graph_file',
                                       'nproc', 'debug', 'silent', 'num_divisions', 'copy_only', 'analysis_type',
-                                                'overwrite'])
+                                                'overwrite', 'logger'])
 _SplitterConfig.__new__.__defaults__ = (None,) * len(_SplitterConfig._fields)
-_RecombineConfig = namedtuple('RecombineConfig', ['directories', 'directory', 'nproc', 'debug', 'silent', 'analysis_type'])
+_RecombineConfig = namedtuple('RecombineConfig', ['directories', 'directory', 'nproc', 'debug', 'silent', 'analysis_type', 'logger'])
 _RecombineConfig.__new__.__defaults__ = (None,) * len(_RecombineConfig._fields)
 
 # global config variable to act as the singleton instance of the config.
@@ -211,7 +212,7 @@ def write(args):
         raise FoundMoreThanOneVoilaFile()
 
     # attributes that don't need to be in the ini file
-    for remove_key in ['files', 'func', 'logger']:
+    for remove_key in ['files', 'func']:
         try:
             del attrs[remove_key]
         except KeyError:
@@ -264,6 +265,11 @@ def write(args):
     # Write ini file.
     with open(constants.CONFIG_FILE, 'w') as configfile:
         config_parser.write(configfile)
+
+    # dump config file to log
+    with open(constants.CONFIG_FILE, 'r') as configfile:
+        for line in configfile:
+            voila_log().debug('CFG| ' + line[:-1])
 
 
 class ViewConfig:

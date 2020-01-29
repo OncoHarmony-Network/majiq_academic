@@ -170,8 +170,10 @@ def run_classifier():
 
     if os.listdir(config.directory):
         if config.overwrite:
+            log_file_relpath = config.logger.split('/')[-1] if config.logger else None
             for _file in os.listdir(config.directory):
-                os.remove(os.path.join(config.directory, _file))
+                if _file != log_file_relpath:
+                    os.remove(os.path.join(config.directory, _file))
         else:
             voila_log().critical(
                 "Files already present in %s; not running classifier "

@@ -305,6 +305,10 @@ args = parser.parse_args()
 
 log = voila_log(filename=args.logger, silent=args.silent, debug=args.debug)
 
+# dump all options on debug
+for arg in vars(args):
+    log.debug(f"Argument; {arg}: {getattr(args, arg)}")
+
 
 def main():
     """

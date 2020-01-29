@@ -24,6 +24,7 @@ def voila_log(filename=None, silent=False, debug=False):
     formatter = Formatter("%(asctime)s (PID:%(process)s) - %(levelname)s - %(message)s")
 
     log = getLogger(VOILA_LOG_NAME)
+    log.setLevel(logging.DEBUG)
 
     if filename:
         filename = Path(filename).expanduser().resolve()
@@ -31,16 +32,18 @@ def voila_log(filename=None, silent=False, debug=False):
         # keep newest 2 gigs of logs in two files
         handler = RotatingFileHandler(filename, maxBytes=1000 * 1000 * 1000, backupCount=2)
         handler.setFormatter(formatter)
+        handler.setLevel(logging.DEBUG)
         log.addHandler(handler)
 
     if not silent:
         streamHandler = StreamHandler()
         streamHandler.setFormatter(formatter)
+        if debug:
+            streamHandler.setLevel(logging.DEBUG)
+        else:
+            streamHandler.setLevel(logging.INFO)
         log.addHandler(streamHandler)
 
-    if debug:
-        log.setLevel(logging.DEBUG)
-    else:
-        log.setLevel(logging.INFO)
+
 
     return log
