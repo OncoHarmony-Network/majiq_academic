@@ -303,6 +303,10 @@ if len(sys.argv) == 1:
 
 args = parser.parse_args()
 
+if args.func == Classify:
+    args.logger = args.directory + '/voila.log'
+
+
 log = voila_log(filename=args.logger, silent=args.silent, debug=args.debug)
 
 # dump all options on debug
