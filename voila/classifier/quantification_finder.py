@@ -379,7 +379,7 @@ class QuantificationWriter:
                 changing_thresh_key = "P(|dPSI|>=%.2f)" % self.config.changing_threshold
                 non_changing_thresh_key = "P(|dPSI|<=%.2f)" % self.config.non_changing_threshold
                 for key in ("E(dPSI)", changing_thresh_key, non_changing_thresh_key):
-                    header = "%s_%s" % ('-'.join(group_names), key)
+                    header = "%s_%s" % ('-'.join(reversed(group_names)), key)
                     if header in tmp:
                         tmp[header][1].append(voila_file)
                     else:
