@@ -2,6 +2,7 @@ import logging
 from logging import Formatter, StreamHandler, getLogger, Logger
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
+import os
 
 from voila.constants import VOILA_LOG_NAME
 
@@ -28,6 +29,7 @@ def voila_log(filename=None, silent=False, debug=False):
 
     if filename:
         filename = Path(filename).expanduser().resolve()
+        os.makedirs(os.path.dirname(filename), exist_ok=True)
 
         # keep newest 2 gigs of logs in two files
         handler = RotatingFileHandler(filename, maxBytes=1000 * 1000 * 1000, backupCount=2)

@@ -168,7 +168,7 @@ def run_classifier():
     if not os.path.exists(config.directory):
         os.makedirs(config.directory)
 
-    if os.listdir(config.directory):
+    if any(f.endswith('tsv') for f in os.listdir(config.directory)):
         if config.overwrite:
             log_file_relpath = config.logger.split('/')[-1] if config.logger else None
             for _file in os.listdir(config.directory):
