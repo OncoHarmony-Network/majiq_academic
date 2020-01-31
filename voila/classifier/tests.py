@@ -18,7 +18,10 @@ import csv
 
 # this should vary depending on the group of tests to run
 # changed relative import path here:
-from tests_expected_t_cells_2 import *
+try:
+    from .tests_expected_t_cells_2 import *
+except:
+    from tests_expected_t_cells_2 import *
 import tempfile
 #from tests_expected_t_cells_3 import *
 
@@ -33,10 +36,12 @@ os.makedirs(out_dir, exist_ok=True)
 majiq_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
 
 def run_voila_classify(gene_ids, enabled_outputs='all', additional_args=[]):
-    os.environ['PYTHONPATH'] = majiq_dir
-    cmd = ['python3',
-           os.path.join(majiq_dir, 'voila', 'run_voila.py'),
-           'classify', psi_file, sg_file, '-d', out_dir,
+    if os.environ.get('JENKINS_HOME', None):
+        cmd = ['voila']
+    else:
+        os.environ['PYTHONPATH'] = majiq_dir
+        cmd = ['python3', os.path.join(majiq_dir, 'voila', 'run_voila.py')]
+    cmd += ['classify', psi_file, sg_file, '-d', out_dir,
            '--enabled-outputs', enabled_outputs, '--overwrite',
            '--decomplexify-psi-threshold', '0.0']
     for arg in additional_args:
@@ -223,7 +228,8 @@ def verify_mpe(gene_id):
 
 import sys
 
-def run_tests():
+def test_run_functional_tests():
+    #print('test run', expected_modules, quant_verif_groups)
 
     retain_output = '-k' in sys.argv
     if retain_output:
@@ -240,6 +246,7 @@ def run_tests():
         else:
 
             gene_ids = list(expected_modules.keys())
+            print(gene_ids)
             for quant_verification in quant_verif_groups:
                 # check if the group of tests is defined in the expected file
                 if quant_verification in globals():
@@ -273,4 +280,4 @@ def run_tests():
             shutil.rmtree(out_dir)
 
 if __name__ == "__main__":
-    run_tests()
+    test_run_functional_tests()

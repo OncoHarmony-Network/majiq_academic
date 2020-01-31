@@ -1074,29 +1074,39 @@ class TsvWriter(BaseTsvWriter):
         if self.config.heatmap_selection == 'max_abs_dpsi':
             try:
                 max_abs_dpsi = max((abs(float(quants[i])) if quants[i] else 0.0 for i in self.dpsi_quant_idxs))
+
+
             except ValueError:
                 # this problem only happens with semicolon separated values, which we are planning to get rid of
                 # which is why it is just try/except for now
                 max_abs_dpsi = 0.0
 
             if not module.idx in self.heatmap_cache:
-                self.heatmap_cache[module.idx] = (module, common, quants, max_abs_dpsi, denovo, juncname, junccoord)
+                self.heatmap_cache[module.idx] = (module, common, quants, max_abs_dpsi, denovo, juncname, junccoord, junc_len)
             else:
                 # if existing junc lacks an LSV (thus no quantification)
                 if not self.heatmap_cache[module.idx][1][5]:
                     # if new junc does have LSV, update
                     if common[5]:
-                        self.heatmap_cache[module.idx] = (module, common, quants, max_abs_dpsi, denovo, juncname, junccoord)
-                    # else, if new junc shorter, update
+                        self.heatmap_cache[module.idx] = (module, common, quants, max_abs_dpsi, denovo, juncname, junccoord, junc_len)
+                    # if there is a tie, retain the shorter junction
+                    elif round(self.heatmap_cache[module.idx][3], 3) == round(max_abs_dpsi, 3):
+                        if junc_len < self.heatmap_cache[module.idx][7]:
+                            self.heatmap_cache[module.idx] = (module, common, quants, max_abs_dpsi, denovo, juncname, junccoord, junc_len)
+                    # else, if new max dpsi larger, update
                     elif self.heatmap_cache[module.idx][3] < max_abs_dpsi:
-                        self.heatmap_cache[module.idx] = (module, common, quants, max_abs_dpsi, denovo, juncname, junccoord)
+                        self.heatmap_cache[module.idx] = (module, common, quants, max_abs_dpsi, denovo, juncname, junccoord, junc_len)
                 # else existing junc has LSV
                 else:
                     # only if new junc has LSV
                     if common[5]:
-                        # and if new junc is shorter
-                        if self.heatmap_cache[module.idx][3] < max_abs_dpsi:
-                            self.heatmap_cache[module.idx] = (module, common, quants, max_abs_dpsi, denovo, juncname, junccoord)
+                        # and if new max dpsi ties, and junction is shorter
+                        if round(self.heatmap_cache[module.idx][3], 3) == round(max_abs_dpsi, 3):
+                            if junc_len < self.heatmap_cache[module.idx][7]:
+                                self.heatmap_cache[module.idx] = (module, common, quants, max_abs_dpsi, denovo, juncname, junccoord, junc_len)
+                        # or if new max dpsi is larger
+                        elif self.heatmap_cache[module.idx][3] < max_abs_dpsi:
+                            self.heatmap_cache[module.idx] = (module, common, quants, max_abs_dpsi, denovo, juncname, junccoord, junc_len)
 
         else:
             if not module.idx in self.heatmap_cache:
