@@ -469,18 +469,16 @@ class Graph:
         at least N juncs have:
             any(max(Prob(|E(dPSI)|>=changing-thresh)))>=probability-changing-thresh
         """
-
         passed_edpsi = []
         for edge in module.get_all_edges():
             for lsv_quants in edge.lsvs.values():
                 if lsv_quants['delta_psi_bins']:
-                    if max(get_expected_dpsi(bins) >= self.config.changing_threshold for bins in lsv_quants['delta_psi_bins']):
+                    if max(abs(get_expected_dpsi(bins)) >= self.config.changing_threshold for bins in lsv_quants['delta_psi_bins']):
                         passed_edpsi.append(lsv_quants['delta_psi_bins'])
 
         #print(passed_edpsi)
         if not passed_edpsi:
             return False
-
         for bins in passed_edpsi:
             if max(matrix_area(b, self.config.changing_threshold) for b in bins) \
                 >= self.config.probability_changing_threshold:
@@ -506,6 +504,7 @@ class Graph:
                                                                         lsv_quants['delta_psi_bins']))
 
         # first check for edpsi thresholds
+        # TODO: abs of dpsi here?
         passed_edpsi = all(max(generate_prior_removed_expected_dpsi(None,
                                                                     None,
                                                                     pr_removed_bins=bins))
@@ -1254,14 +1253,15 @@ class Graph:
                     if j - i > 2:
                         skip = n1.connects(n2)
                         if skip:
-                            include1 = n1.connects(self.nodes[i+1])
-                            include2 = self.nodes[j-1].connects(n2)
-                            includes = []
-                            found.append({'event': 'multi_exon_spanning', 'C1': self.strand_case(n1, n2),
-                                          'C2': self.strand_case(n2, n1), 'As': self.nodes[i+1:j],
-                                          'Skip': skip, 'Include1': self.strand_case(include1, include2),
-                                          'Include2': self.strand_case(include2, include1),
-                                          'Includes': includes})
+                            include1 = n1.connects(self.nodes[i + 1])
+                            include2 = self.nodes[j - 1].connects(n2)
+                            for sk in skip:
+                                includes = [] # ??
+                                found.append({'event': 'multi_exon_spanning', 'C1': self.strand_case(n1, n2),
+                                              'C2': self.strand_case(n2, n1), 'As': self.nodes[i+1:j],
+                                              'Skip': [sk], 'Include1': self.strand_case(include1, include2),
+                                              'Include2': self.strand_case(include2, include1),
+                                              'Includes': includes})
             return found
 
         def mutually_exclusive(self):
