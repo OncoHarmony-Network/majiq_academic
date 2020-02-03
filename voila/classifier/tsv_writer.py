@@ -1072,6 +1072,7 @@ class TsvWriter(BaseTsvWriter):
         """
 
         if self.config.heatmap_selection == 'max_abs_dpsi':
+
             try:
                 max_abs_dpsi = max((abs(float(quants[i])) if quants[i] else 0.0 for i in self.dpsi_quant_idxs))
 
@@ -1082,51 +1083,51 @@ class TsvWriter(BaseTsvWriter):
                 max_abs_dpsi = 0.0
 
             if not module.idx in self.heatmap_cache:
-                self.heatmap_cache[module.idx] = (module, common, quants, max_abs_dpsi, denovo, juncname, junccoord, junc_len)
+                self.heatmap_cache[module.idx] = (module, common, quants, junc_len, denovo, juncname, junccoord, max_abs_dpsi)
             else:
                 # if existing junc lacks an LSV (thus no quantification)
                 if not self.heatmap_cache[module.idx][1][5]:
                     # if new junc does have LSV, update
                     if common[5]:
-                        self.heatmap_cache[module.idx] = (module, common, quants, max_abs_dpsi, denovo, juncname, junccoord, junc_len)
+                        self.heatmap_cache[module.idx] = (module, common, quants, junc_len, denovo, juncname, junccoord, max_abs_dpsi)
                     # if there is a tie, retain the shorter junction
-                    elif round(self.heatmap_cache[module.idx][3], 3) == round(max_abs_dpsi, 3):
-                        if junc_len < self.heatmap_cache[module.idx][7]:
-                            self.heatmap_cache[module.idx] = (module, common, quants, max_abs_dpsi, denovo, juncname, junccoord, junc_len)
+                    elif round(self.heatmap_cache[module.idx][7], 3) == round(max_abs_dpsi, 3):
+                        if junc_len < self.heatmap_cache[module.idx][3]:
+                            self.heatmap_cache[module.idx] = (module, common, quants, junc_len, denovo, juncname, junccoord, max_abs_dpsi)
                     # else, if new max dpsi larger, update
-                    elif self.heatmap_cache[module.idx][3] < max_abs_dpsi:
-                        self.heatmap_cache[module.idx] = (module, common, quants, max_abs_dpsi, denovo, juncname, junccoord, junc_len)
+                    elif self.heatmap_cache[module.idx][7] < max_abs_dpsi:
+                        self.heatmap_cache[module.idx] = (module, common, quants, junc_len, denovo, juncname, junccoord, max_abs_dpsi)
                 # else existing junc has LSV
                 else:
                     # only if new junc has LSV
                     if common[5]:
                         # and if new max dpsi ties, and junction is shorter
-                        if round(self.heatmap_cache[module.idx][3], 3) == round(max_abs_dpsi, 3):
-                            if junc_len < self.heatmap_cache[module.idx][7]:
-                                self.heatmap_cache[module.idx] = (module, common, quants, max_abs_dpsi, denovo, juncname, junccoord, junc_len)
+                        if round(self.heatmap_cache[module.idx][7], 3) == round(max_abs_dpsi, 3):
+                            if junc_len < self.heatmap_cache[module.idx][3]:
+                                self.heatmap_cache[module.idx] = (module, common, quants, junc_len, denovo, juncname, junccoord, max_abs_dpsi)
                         # or if new max dpsi is larger
-                        elif self.heatmap_cache[module.idx][3] < max_abs_dpsi:
-                            self.heatmap_cache[module.idx] = (module, common, quants, max_abs_dpsi, denovo, juncname, junccoord, junc_len)
+                        elif self.heatmap_cache[module.idx][7] < max_abs_dpsi:
+                            self.heatmap_cache[module.idx] = (module, common, quants, junc_len, denovo, juncname, junccoord, max_abs_dpsi)
 
         else:
             if not module.idx in self.heatmap_cache:
-                self.heatmap_cache[module.idx] = (module, common, quants, junc_len, denovo, juncname, junccoord)
+                self.heatmap_cache[module.idx] = (module, common, quants, junc_len, denovo, juncname, junccoord, None)
             else:
                 # if existing junc lacks an LSV (thus no quantification)
                 if not self.heatmap_cache[module.idx][1][5]:
                     # if new junc does have LSV, update
                     if common[5]:
-                        self.heatmap_cache[module.idx] = (module, common, quants, junc_len, denovo, juncname, junccoord)
+                        self.heatmap_cache[module.idx] = (module, common, quants, junc_len, denovo, juncname, junccoord, None)
                     # else, if new junc shorter, update
                     elif self.heatmap_cache[module.idx][3] > junc_len:
-                        self.heatmap_cache[module.idx] = (module, common, quants, junc_len, denovo, juncname, junccoord)
+                        self.heatmap_cache[module.idx] = (module, common, quants, junc_len, denovo, juncname, junccoord, None)
                 # else existing junc has LSV
                 else:
                     # only if new junc has LSV
                     if common[5]:
                         # and if new junc is shorter
                         if self.heatmap_cache[module.idx][3] > junc_len:
-                            self.heatmap_cache[module.idx] = (module, common, quants, junc_len, denovo, juncname, junccoord)
+                            self.heatmap_cache[module.idx] = (module, common, quants, junc_len, denovo, juncname, junccoord, None)
 
     def junctions(self):
         """
@@ -1203,7 +1204,7 @@ class TsvWriter(BaseTsvWriter):
         with open(os.path.join(self.config.directory, 'heatmap.tsv.%s' % self.pid), 'a', newline='') as csvfile:
             writer = csv.writer(csvfile, dialect='excel-tab', delimiter='\t')
 
-            for module, common_data, quantifications, _, de_novo, junction_name, coordinates in self.heatmap_cache.values():
+            for module, common_data, quantifications, _, de_novo, junction_name, coordinates, _ in self.heatmap_cache.values():
                 writer.writerow(common_data + [module.collapsed_event_name, de_novo, junction_name, coordinates] + quantifications)
 
     def summary(self):
