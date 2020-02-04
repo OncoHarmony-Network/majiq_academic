@@ -302,11 +302,10 @@ class SpliceGraphs {
 
                 const found = lsvs
                     .filter(l => l.weighted)
-                    .filter(l => SpliceGraphs.array_equal(l.intron_retention, [d.start, d.end]))
+                    .filter(l => SpliceGraphs.array_equal(l.intron_retention, [d.start, d.end]));
 
                 if (found.length === 1) {
                     // last group mean should always be intron retention
-                    // intron_height *= found[0].group_means[grp][exp][found[0].group_means[grp][exp].length-1];
                     return [
                     [x(d.start), y(exon_height / 2)].join(' '),
                     [x(d.end), y(exon_height / 2)].join(' '),
@@ -357,7 +356,7 @@ class SpliceGraphs {
             .attr('stroke-width', d => {
                 const x = lsvs
                     .filter(l => l.weighted)
-                    .filter(l => SpliceGraphs.array_equal(l.intron_retention, [d.start, d.end]))
+                    .filter(l => SpliceGraphs.array_equal(l.intron_retention, [d.start, d.end]));
 
                 let w = 1.5;
 
