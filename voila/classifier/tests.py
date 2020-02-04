@@ -269,15 +269,19 @@ def test_run_functional_tests():
                 verify_mpe(gene_id)
 
         print("Success!")
+        exit_code = 0
     except:
         print("Some test failed!")
         import traceback
         print(traceback.format_exc())
+        exit_code = 1
     finally:
         if retain_output:
             print("Output folder %s was retained" % out_dir)
         else:
             shutil.rmtree(out_dir)
+
+    sys.exit(exit_code)
 
 if __name__ == "__main__":
     test_run_functional_tests()

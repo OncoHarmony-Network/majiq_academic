@@ -1,6 +1,9 @@
 import os
 
-if os.path.exists('/Users/calebradens'):
+if os.environ.get('JENKINS_HOME', None):
+    sg_file = '/data/jenkins_test_data/voila/splicegraph.sql'
+    psi_file = '/data/jenkins_test_data/voila/ran_treg.psi.voila'
+elif os.path.exists('/Users/calebradens'):
     sg_file = '/Users/calebradens/Documents/majiq_dev/classifier_dev/splicegraph.sql'
     psi_file = '/Users/calebradens/Documents/majiq_dev/classifier_dev/ran_treg.psi.voila'
 else:
@@ -8,9 +11,7 @@ else:
     psi_file = '/home/pjewell/t_cells_2/ran_treg.psi.voila'
 
 
-if os.environ.get('JENKINS_HOME', None):
-    sg_file = '/data/jenkins_test_data/voila/splicegraph.sql'
-    psi_file = '/data/jenkins_test_data/voila/ran_treg.psi.voila'
+
 
 expected_modules = {
 #"gene:ENSG00000083168": [
