@@ -290,21 +290,37 @@ class SpliceGraphs {
 
     };
 
-    intron_retention(sg) {
+    intron_retention(sg, lsvs) {
         const x = this.x;
         const y = this.y;
         const exon_height = this.exon_height;
 
-        d3.select(sg).selectAll('.intron-retention')
+         d3.select(sg).selectAll('.intron-retention')
             .interrupt()
             .transition(this.t())
             .attr('points', function (d) {
-                return [
+
+                const found = lsvs
+                    .filter(l => l.weighted)
+                    .filter(l => SpliceGraphs.array_equal(l.intron_retention, [d.start, d.end]))
+
+                if (found.length === 1) {
+                    // last group mean should always be intron retention
+                    // intron_height *= found[0].group_means[grp][exp][found[0].group_means[grp][exp].length-1];
+                    return [
+                    [x(d.start), y(exon_height / 2)].join(' '),
+                    [x(d.end), y(exon_height / 2)].join(' '),
+                    [x(d.end), y(exon_height / 2)].join(' '),
+                    [x(d.start), y(exon_height / 2)].join(' ')
+                    ].join(', ')
+                }else{
+                    return [
                     [x(d.start), y(exon_height / 4)].join(' '),
                     [x(d.end), y(exon_height / 4)].join(' '),
                     [x(d.end), y(exon_height * (3 / 4))].join(' '),
                     [x(d.start), y(exon_height * (3 / 4))].join(' ')
-                ].join(', ')
+                    ].join(', ')
+                }
             });
     }
 
@@ -331,11 +347,27 @@ class SpliceGraphs {
 
     style_intron_retention(sg, gene, lsvs) {
         const colors = new Colors();
+        const exp = sg.dataset.experiment;
+        const grp = sg.dataset.group;
 
         d3.select(sg).selectAll('.intron-retention-grp')
             .attr('opacity', d => lsvs.length && !lsvs.some(lsv => this.ir_in_lsv(d, lsv)) ? .2 : null);
 
         d3.select(sg).selectAll('.intron-retention')
+            .attr('stroke-width', d => {
+                const x = lsvs
+                    .filter(l => l.weighted)
+                    .filter(l => SpliceGraphs.array_equal(l.intron_retention, [d.start, d.end]))
+
+                let w = 1.5;
+
+                if (x.length === 1) {
+                    // last group mean should always be intron retention
+                    w = x[0].group_means[grp][exp][x[0].group_means[grp][exp].length-1] * 3;
+                }
+                return w;
+
+            })
             .attr('fill-opacity', .3)
             .attr('stroke-linejoin', 'round')
             .each((d, i, a) => {
@@ -883,7 +915,7 @@ class SpliceGraphs {
         this.svg(sg);
         this.exons(sg);
         this.half_exons(sg);
-        this.intron_retention(sg);
+        this.intron_retention(sg, lsvs);
         this.intron_retention_reads(sg, gene);
         this.exon_numbers(sg, gene);
         this.junctions(sg, gene);
