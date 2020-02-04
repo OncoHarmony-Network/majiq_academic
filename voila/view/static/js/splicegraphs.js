@@ -604,7 +604,7 @@ class SpliceGraphs {
                     });
                 }
 
-                return Math.max(w, 1.0);
+                return w;
 
             })
             .attr('stroke-dasharray', function (d) {
