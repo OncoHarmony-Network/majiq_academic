@@ -29,11 +29,13 @@ class InstallCommand(install):
 
     user_options = install.user_options + [
         ('voila-only', None, 'Install VOILA only'),
+        ('debug-gdb', None, 'Add debugging flags for use with GDB (note: reduces performance)'),
     ]
 
     def initialize_options(self):
         install.initialize_options(self)
         self.voila_only = 0
+        self.debug_gdb = 0
 
     def finalize_options(self):
         install.finalize_options(self)
@@ -51,6 +53,8 @@ class InstallCommand(install):
             HTSLIB_INC_DIRS = [os.environ.get("HTSLIB_INCLUDE_DIR", '/usr/local/include')]
 
             compile_args = ['-fopenmp']
+            if self.debug_gdb:
+                compile_args += ["-O0", "-g"]
             scythe_compiler_args = ['-DSCYTHE_COMPILE_DIRECT', '-DSCYTHE_PTHREAD']
             linker_args = ['-lgomp']
 
