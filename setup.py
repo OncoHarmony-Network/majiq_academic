@@ -27,7 +27,9 @@ def requirements():
 
 class InstallCommand(install):
 
-    user_options = install.user_options + [('voila-only', 'v', None),]
+    user_options = install.user_options + [
+        ('voila-only', None, 'Install VOILA only'),
+    ]
 
     def initialize_options(self):
         install.initialize_options(self)
