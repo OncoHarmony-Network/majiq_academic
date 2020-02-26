@@ -41,7 +41,7 @@ def parse_gff3(filename):
     # cdef object infile
 
     open_func = gzip.open if filename.endswith(".gz") else open
-    with open_func(filename) as infile:
+    with open_func(filename, mode="rt") as infile:
 
         for line in infile:
 
