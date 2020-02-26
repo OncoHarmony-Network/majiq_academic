@@ -255,7 +255,7 @@ def lsv_highlight():
                                 if comb_name not in group_means[grp_name]:
                                     group_means[grp_name][comb_name] = []
 
-                                group_means[grp_name][comb_name].append(median(exp))
+                                group_means[grp_name][comb_name].append(median((v for v in exp if v != -1)))
 
                     lsvs.append({
                         'junctions': junctions,

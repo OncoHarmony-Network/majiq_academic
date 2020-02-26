@@ -41,7 +41,12 @@ RUN rm -rf majiq
 # clean yum cache
 RUN yum clean all
 
-ENTRYPOINT ["voila"]
+# remove these lines to go back to default majiq/voila usage
+#COPY gen_majiq_cwl.py /opt/gen_majiq_cwl.py
+#RUN chmod +x /opt/gen_majiq_cwl.py
+#ENTRYPOINT ["/opt/gen_majiq_cwl.py"]
+# end lines to remove
+
 CMD []
 
 # To build image: docker build -t voila .
