@@ -351,9 +351,6 @@ namespace grimoire{
              * handful of reads could potentially cover the entire intron
              *
              * @return boolean indicating if intron is reliable
-             *
-             * @note currently also normalizes readrates using read/intron
-             * length as a side effect
              */
             bool is_reliable(float min_bins, int eff_len);
 

@@ -649,9 +649,6 @@ namespace grimoire {
             return false;
         }
 
-        // normalize read rates as side effect
-        normalize_readrates();
-
         // no need to distribute coverage if intron previously known reliable
         if (ir_flag_) {
             return true;
