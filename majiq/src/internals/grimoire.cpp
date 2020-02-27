@@ -628,21 +628,6 @@ namespace grimoire {
                + ":" + gObj->get_id()) ;
     }
 
-    void Intron::normalize_readrates() {
-        if (read_rates_ == nullptr) {
-            return;
-        }
-        for (int i = 0; i < numbins_; ++i) {
-            if (read_rates_[i] > 0) {
-                // use the number of intronic positions assigned to the i-th
-                // bin to normalize read rates
-                const int positions_in_bin = i < nxbin_mod_ ? nxbin_ + 1 : nxbin_;
-                read_rates_[i] = read_rates_[i] / positions_in_bin;
-            }
-        }
-        return;
-    }
-
     bool Intron::is_reliable(float min_bins, int eff_len) {
         // exit early if possible
         if (length() <= 0 || numbins_ <= 0 || read_rates_ == nullptr) {
