@@ -51,8 +51,8 @@ class InstallCommand(install):
 
     def run(self):
         print(self.__dict__)
-        # print(user_options)
-        if(self.voila_only):
+
+        if (self.voila_only):
 
             self.distribution.packages = ['voila', 'voila.api', 'voila.view', 'voila.utils', 'voila.view']
         else:
@@ -155,7 +155,7 @@ setup(
     author_email='majiq@biociphers.org',
     url='https://biociphers.org',
     keywords=['rna', 'splicing', 'psi', 'splicegraph'],
-    license='LICENSE.txt',
+    license='No License',
     packages=find_packages(),
     setup_requires = setup_requirements(),
     install_requires = requirements(),
@@ -164,13 +164,12 @@ setup(
     entry_points = {'console_scripts': ['voila = voila.run_voila:main']},
     cmdclass={'install': InstallCommand},
     classifiers=[
-        'Development Status :: 4 - Beta',
+        'Development Status :: 5 - Production/Stable',
         'Environment :: Console',
         'Intended Audience :: Bioinformaticians',
-        'License :: OSI Approved :: BSD License',
         'Operating System :: MacOS',
         'Operating System :: Microsoft :: Windows',
         'Operating System :: POSIX',
-        'Programming Language :: Python :: 3.4']
+        'Programming Language :: Python :: 3.8']
 )
 
