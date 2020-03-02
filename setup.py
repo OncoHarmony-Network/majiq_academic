@@ -2,7 +2,6 @@ from setuptools import setup, find_packages
 from setuptools.command.install import install
 from distutils.core import Extension
 from majiq.src.constants import VERSION, store_git_version
-import numpy
 import sys
 import os
 
@@ -24,6 +23,11 @@ def requirements():
         reql = [l.strip() for l in f.readlines()]
         # print(reql)
         return reql
+
+
+def setup_requirements(search=["Cython", "numpy"]):
+    return [x for x in requirements() if any(y in x for y in search)]
+
 
 class InstallCommand(install):
 
@@ -47,6 +51,8 @@ class InstallCommand(install):
 
             self.distribution.packages = ['voila', 'voila.api', 'voila.view', 'voila.utils', 'voila.view']
         else:
+            import numpy
+
             extensions = []
             HTSLIB_LIBRARY = ['hts', 'z']
             HTSLIB_LIB_DIRS = [os.environ.get("HTSLIB_LIBRARY_DIR", '/usr/local/lib')]
@@ -122,8 +128,8 @@ class InstallCommand(install):
             self.distribution.entry_points['console_scripts'].append('majiq = majiq.run_majiq:main')
             self.distribution.ext_modules = cythonize(extensions, language_level=3)
 
+        self.do_egg_install()
 
-        install.run(self)
 
 setup(
     name = 'majiq',
@@ -135,6 +141,7 @@ setup(
     keywords=['rna', 'splicing', 'psi', 'splicegraph'],
     license='LICENSE.txt',
     packages=find_packages(),
+    setup_requires = setup_requirements(),
     install_requires = requirements(),
     include_package_data = True,
     zip_safe = False,
