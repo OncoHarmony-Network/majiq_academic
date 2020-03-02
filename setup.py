@@ -1,10 +1,9 @@
 from setuptools import setup, find_packages
 from setuptools.command.install import install
 from setuptools import Extension
-#from distutils.core import Extension
 from majiq.src.constants import VERSION, store_git_version
 import numpy
-import shutil
+#import shutil
 import sys
 import os
 
@@ -36,6 +35,9 @@ class InstallCommand(install):
                                                                " extensions")
                                            ]
 
+    def finalize_options(self):
+        install.finalize_options(self)
+
     def initialize_options(self):
         install.initialize_options(self)
         self.voila_only = 0
@@ -43,12 +45,12 @@ class InstallCommand(install):
         self.num_threads = 1
 
     def run(self):
+        print(self.__dict__)
+
         if (self.voila_only):
 
             self.distribution.packages = ['voila', 'voila.api', 'voila.view', 'voila.utils', 'voila.view']
         else:
-            print(self.__dict__)
-            # print(user_options)
 
             extensions = []
             HTSLIB_LIBRARY = ['hts', 'z']
@@ -145,7 +147,7 @@ setup(
     author_email='majiq@biociphers.org',
     url='https://biociphers.org',
     keywords=['rna', 'splicing', 'psi', 'splicegraph'],
-    license='LICENSE.txt',
+    license='No License',
     packages=find_packages(),
     install_requires = requirements(),
     include_package_data = True,
@@ -153,13 +155,12 @@ setup(
     entry_points = {'console_scripts': ['voila = voila.run_voila:main']},
     cmdclass={'install': InstallCommand},
     classifiers=[
-        'Development Status :: 4 - Beta',
+        'Development Status :: 5 - Production/Stable',
         'Environment :: Console',
         'Intended Audience :: Bioinformaticians',
-        'License :: OSI Approved :: BSD License',
         'Operating System :: MacOS',
         'Operating System :: Microsoft :: Windows',
         'Operating System :: POSIX',
-        'Programming Language :: Python :: 3.4']
+        'Programming Language :: Python :: 3.8']
 )
 
