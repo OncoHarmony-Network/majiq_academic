@@ -345,11 +345,12 @@ namespace grimoire{
             }
 
             void add_read_rates_buff(int eff_len){
-                nxbin_      = (int) ((length()+ eff_len) / eff_len) ;
-                nxbin_mod_  = (length() % eff_len) ;
-                nxbin_off_  = nxbin_mod_ * ( nxbin_+1 ) ;
-                numbins_    = eff_len ;
-                read_rates_ = (float*) calloc(numbins_, sizeof(float)) ;
+                // set up buffer and constants to bin raw positions to eff_len equivalent junction positions
+                nxbin_      = (int) ((length() + eff_len) / eff_len);  // minimum number of raw positions per equivalent junction position
+                nxbin_mod_  = length() % eff_len;  // number of equivalent positions that have 1 more raw position than nxbin_
+                nxbin_off_  = nxbin_mod_ * (nxbin_ + 1);  // offset of raw position -- before: nxbin_+1 per position, after: nxbin_ per position
+                numbins_    = eff_len;  // number of equivalent junction positions (keep value)
+                read_rates_ = (float*) calloc(numbins_, sizeof(float));  // allocate per-position read rate buffer as zeroes
             }
 
             void initReadCovFromVector(vector<float>& cov){
@@ -359,7 +360,7 @@ namespace grimoire{
 
             }
 
-            void  add_read(int read_pos, int eff_len, int s){
+            void add_read(int read_pos, int eff_len, int s){
                 int st = get_start() - eff_len ;
                 if (read_rates_ == nullptr){
                     add_read_rates_buff(eff_len) ;
@@ -370,7 +371,7 @@ namespace grimoire{
                 const int off1 = (int) ((offset - nxbin_off_) / nxbin_) + nxbin_mod_ ;
                 const int off2 = (int) offset / (nxbin_+1) ;
                 offset = (int)(offset < nxbin_off_) ? off2: off1 ;
-                read_rates_[offset] += s ;
+                read_rates_[offset] += s;
             }
 
             inline void  update_flags(float min_coverage, int min_exps, float min_bins) {

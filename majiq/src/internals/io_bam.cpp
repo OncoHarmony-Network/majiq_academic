@@ -99,125 +99,199 @@ namespace io_bam {
     void IOBam::add_junction(string chrom, char strand, int start, int end, int read_pos, int first_offpos, int sreads) {
 
         const unsigned int offset = (first_offpos == -1) ? (start - (read_pos+ MIN_BP_OVERLAP)) : first_offpos ;
-        if (offset >= eff_len_) return ;
+        if (offset >= eff_len_ || offset < 0) {
+            // XXX -- should warn that we are losing reads (should handle offsets
+            // earlier, this function should not need to check a second time
+            return;
+        }
+        // get string-based key to map over junctions (index of 2d coverage vector)
         string key = chrom + ":" + strand + ":" + to_string(start) + "-" + to_string(end) ;
 
+        // indicator if this is the first time we have seen this junction
         bool new_j = false ;
+        // pointer to junction coverage per position/offset
         float * v ;
+        // acquire lock for working with junc_map/junc_vec
         omp_set_lock(&map_lck_) ;
         {
             if (junc_map.count(key) == 0 ) {
-                junc_map[key] = junc_vec.size() ;
+                // we haven't seen this junction before
+                junc_map[key] = junc_vec.size();  // index to add to junc_vec
+                // allocate array of floating point zeros
                 v = (float*) calloc(eff_len_, sizeof(float)) ;
+                // add array to junc_vec at position junc_map[key]
                 junc_vec.push_back(v) ;
+                // mark as new junction
                 new_j = true ;
             } else {
+                // get previously created coverage array for the junction
                 v = junc_vec[junc_map[key]] ;
             }
         }
         omp_unset_lock(&map_lck_) ;
 
         if (new_j) {
+            // associate junction with genes (prioritizing annotated, other stages for denovo)
             find_junction_genes(chrom, strand, start, end, v) ;
         }
         #pragma omp atomic
-            junc_vec[junc_map[key]][offset] += sreads ;
-
+            v[offset] += sreads;  // add reads to junction array
         return ;
     }
 
 
+    /**
+     * Parse input read for split reads and add to position coverage array
+     *
+     * @param header SAM header with information sequence ids (chromosomes)
+     * @param read SAM alignment being parsed
+     *
+     * @return 0 after adding junctions from primary alignments that have
+     * sufficient overlap into the read
+     *
+     */
     int IOBam::parse_read_into_junctions(bam_hdr_t *header, bam1_t *read) {
-        int n_cigar = read->core.n_cigar;
-        if (!_unique(read) || _unmapped(read)) // max one cigar operation exists(likely all matches)
+        if (!_unique(read) || _unmapped(read)) {
+            // ignore unmapped reads and secondary alignments
             return 0;
+        }
 
-        int read_pos = read->core.pos;
+        // get genomic position of start of read (zero-based coordinate)
         string chrom(header->target_name[read->core.tid]);
+        int read_pos = read->core.pos;
 
+        // get cigar operations
+        int n_cigar = read->core.n_cigar;
         uint32_t *cigar = bam_get_cigar(read) ;
 
-        int off = 0 ;
+        // track offset on genomic position for junction coordinates
+        int genomic_offset = 0;
         int first_offpos = -1 ;
+        // iterate over cigar operations, look for split reads
         for (int i = 0; i < n_cigar; ++i) {
-            const char op = bam_cigar_op(cigar[i]);
-            const int ol = bam_cigar_oplen(cigar[i]);
-            if (op == BAM_CMATCH || op == BAM_CDEL ||  op == BAM_CEQUAL || op == BAM_CDIFF){
-                 off += ol ;
+            // extract operation and offset for the operation from cigar[i]
+            const char cigar_op = bam_cigar_op(cigar[i]);
+            const int cigar_oplen = bam_cigar_oplen(cigar[i]);
+            if (cigar_op == BAM_CMATCH || cigar_op == BAM_CDEL ||  cigar_op == BAM_CEQUAL || cigar_op == BAM_CDIFF){
+                 genomic_offset+= cigar_oplen ;
             }
-            else if( op == BAM_CREF_SKIP ){
-                const int rlen = read->core.l_qseq ;
-                if (off >= MIN_BP_OVERLAP && off<= (rlen - MIN_BP_OVERLAP)){
-                    const int j_end = read->core.pos + off + ol +1 ;
-                    const int j_start =  read->core.pos + off ;
-                    first_offpos  = (first_offpos == -1) ? (j_start - (read_pos+ MIN_BP_OVERLAP)) : first_offpos ;
+            else if( cigar_op == BAM_CREF_SKIP ){
+                const int read_length = read->core.l_qseq ;
+                if (genomic_offset>= MIN_BP_OVERLAP && genomic_offset<= (read_length - MIN_BP_OVERLAP)){
+                    // get start and end of junction
+                    const int junction_start = read->core.pos + genomic_offset;
+                    const int junction_end = junction_start + cigar_oplen + 1;
+                    // get junction position
+                    first_offpos  = (first_offpos == -1) ? (junction_start - (read_pos+ MIN_BP_OVERLAP)) : first_offpos ;
 
+                    // add the junction at the specified position
                     try {
-                        add_junction(chrom, _get_strand(read), j_start, j_end, read_pos, first_offpos, 1) ;
+                        add_junction(chrom, _get_strand(read), junction_start, junction_end, read_pos, first_offpos, 1) ;
                     } catch (const std::logic_error& e) {
                         cout << "ERROR" << e.what() << '\n';
                     }
                 }
-                off += ol ;
+                genomic_offset += cigar_oplen;
             }
         }
+        // done processing this read
         return 0;
     }
 
 
+    /**
+     * Parse input read for introns and add to position coverage array
+     *
+     * @param header SAM header with information sequence ids (chromosomes)
+     * @param read SAM alignment being parsed
+     *
+     * @return 0 after adding introns from primary alignments that have
+     * sufficient overlap into the read
+     *
+     */
     int IOBam::parse_read_for_ir(bam_hdr_t *header, bam1_t *read) {
-        int n_cigar = read->core.n_cigar ;
-        if (!_unique(read) || _unmapped(read)) // max one cigar operation exists(likely all matches)
+        if (!_unique(read) || _unmapped(read)) {
+            // ignore unmapped reads and secondary alignments
             return 0;
-        const int read_pos = read->core.pos;
+        }
 
-        const string chrom(header->target_name[read->core.tid]) ;
-        if (intronVec_.count(chrom) == 0)
-             return 0 ;
-        const int rlen = read->core.l_qseq ;
-        vector<Intron *>::iterator low = lower_bound (intronVec_[chrom].begin(), intronVec_[chrom].end(),
-                                                      read_pos, _Region::func_comp ) ;
-        if (low ==  intronVec_[chrom].end()) return 0 ;
+        // get genomic position of start of read (zero-based coordinate)
+        string chrom(header->target_name[read->core.tid]) ;
+        if (intronVec_.count(chrom) == 0) {
+            // if there is nothing to count in this chromosome, don't bother
+             return 0;
+        }
+        int read_pos = read->core.pos;
+
+        // get iterator over all introns with end position after alignment start
+        vector<Intron *>::iterator low = lower_bound(intronVec_[chrom].begin(), intronVec_[chrom].end(),
+                                                     read_pos, _Region::func_comp ) ;
+        if (low == intronVec_[chrom].end()) {
+            // this read can't contribute to any of the introns, so exit here
+            return 0;
+        }
+
+        // fill records of junctions splitting read (ignore introns if intersect)
         vector<pair<int, int>> junc_record ;
 
-        const char read_strand = _get_strand(read) ;
-        int off = 0 ;
+        // get length of read
+        const int read_length = read->core.l_qseq;
+
+        // get cigar operations
+        int n_cigar = read->core.n_cigar ;
         uint32_t *cigar = bam_get_cigar(read) ;
+
+        // parse CIGAR operations for junc_record
+        int genomic_offset = 0;
         for (int i = 0; i < n_cigar; ++i) {
-            const char op = bam_cigar_op(cigar[i]);
-            const int ol = bam_cigar_oplen(cigar[i]);
-            if (op == BAM_CMATCH || op == BAM_CDEL ||  op == BAM_CEQUAL || op == BAM_CDIFF){
-                 off += ol;
+            // extract operation and offset for the operation from cigar[i]
+            const char cigar_op = bam_cigar_op(cigar[i]);
+            const int cigar_oplen = bam_cigar_oplen(cigar[i]);
+            if (cigar_op == BAM_CMATCH || cigar_op == BAM_CDEL ||  cigar_op == BAM_CEQUAL || cigar_op == BAM_CDIFF){
+                 genomic_offset += cigar_oplen;
             }
-            else if( op == BAM_CREF_SKIP && off >= MIN_BP_OVERLAP){
-                const int j_end = read->core.pos + off + ol +1;
-                const int j_start =  read->core.pos + off;
+            else if( cigar_op == BAM_CREF_SKIP && genomic_offset>= MIN_BP_OVERLAP){
+                const int junction_start =  read->core.pos + genomic_offset;
+                const int junction_end = junction_start + cigar_oplen + 1;
                 try {
-                    junc_record.push_back({j_start, j_end}) ;
+                    junc_record.push_back({junction_start, junction_end});
                 } catch (const std::logic_error& e) {
                     cout << "ERROR" << e.what() << '\n';
                 }
-                off += ol ;
+                genomic_offset += cigar_oplen ;
             }
         }
 
-        for (; low != intronVec_[chrom].end() ; low++){
+        const char read_strand = _get_strand(read);
 
-            bool junc_found = false ;
-            Intron * intron = *low;
+        // loop over introns
+        for (; low != intronVec_[chrom].end(); ++low) {
+            Intron * intron = *low;  // current intron from the iterator
+
+            // is intron outside of admissible coordinates?
+            if (intron->get_end() <= read_pos) {
+                continue;  // intron cannot overlap enough
+            }
+            if (intron->get_start() > read_pos + read_length) {
+                break;  // this and all subsequent introns cannot overlap enough
+            }
+
+            // is read compatible with gene strand?
             const char gstrand = intron->get_gene()->get_strand() ;
-
-            if(intron->get_start()> read_pos+rlen) break ;
-            if (intron->get_end() <= read_pos) continue ;
-            if (read_strand == '.' || gstrand == read_strand){
-                for (const auto & j:junc_record){
+            if (read_strand == '.' || gstrand == read_strand) {
+                // does read include junctions overlapping intron?
+                bool junc_found = false ;
+                for (const auto &j: junc_record) {
                     if (j.first < intron->get_end() && intron->get_start() < j.second) {
-                        junc_found = true ;
-                        break ;
+                        junc_found = true;
+                        break;
+                    } else if (j.second >= intron.get_end()) {
+                        // none of the remaining junctions (sorted) can intersect intron
+                        break;
                     }
                 }
-                if (!junc_found){
-                  #pragma omp critical
+                if (!junc_found) {
+                    #pragma omp critical
                         intron->add_read(read_pos, eff_len_, 1) ;
                 }
             }
