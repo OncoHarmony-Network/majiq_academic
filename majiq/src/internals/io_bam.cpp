@@ -44,6 +44,69 @@ namespace io_bam {
         return ((read->core.flag & 0x4) == 0x4) ;
     }
 
+    // returns true if associated cigar operation offsets position on read
+    inline bool _cigar_advance_read(const char cigar_op) {
+        return (
+            cigar_op == BAM_CMATCH || cigar_op == BAM_CEQUAL || cigar_op == BAM_CDIFF
+            || cigar_op == BAM_CINS || cigar_op == BAM_CSOFT_CLIP
+        );
+    }
+
+    // returns true if associated cigar operation offsets position on reference
+    inline bool _cigar_advance_reference(const char cigar_op) {
+        return (
+            cigar_op == BAM_CMATCH || cigar_op == BAM_CEQUAL || cigar_op == BAM_CDIFF
+            || cigar_op == BAM_CDEL || cigar_op == BAM_CREF_SKIP
+        );
+    }
+
+    /**
+     * adjust cigar_ptr, n_cigar, read_length to ignore clipping
+     *
+     * @param n_cigar number of cigar operations passed by reference (adjusted by call)
+     * @param cigar_ptr pointer to array of cigar operations (adjusted by call)
+     * @param read_length length of read passed by reference (adjusted by call)
+     *
+     */
+    void _length_adjust_cigar_soft_clipping(
+            int &n_cigar, uint32_t** cigar_ptr, int &read_length
+    ) {
+        uint32_t* base_cigar = *cigar_ptr;  // original cigar array
+        int length_removed = 0;  // keep track of how many bases removed
+        // remove clipping on the right
+        for (int i = n_cigar - 1; i >= 0; --i) {  // iterate backwards
+            const char cigar_op = bam_cigar_op(base_cigar[i]);
+            // ignore clipping operations and contribution to read length
+            if (cigar_op == BAM_CHARD_CLIP) {
+                --n_cigar;
+            } else if (cigar_op == BAM_CSOFT_CLIP) {
+                --n_cigar;
+                read_length -= bam_cigar_oplen(base_cigar[i]);
+            } else {
+                break;
+            }
+        }
+        // remove clipping on the left
+        int lhs_clipping = 0;  // offset to apply to *cigar_ptr
+        for (int i = 0; i < n_cigar; ++i) {
+            const char cigar_op = bam_cigar_op(base_cigar[i]);
+            // ignore clipping operations and contribution to read length
+            if (cigar_op == BAM_CHARD_CLIP) {
+                ++lhs_clipping;
+            } else if (cigar_op == BAM_CSOFT_CLIP) {
+                ++lhs_clipping;
+                read_length -= bam_cigar_oplen(base_cigar[i]);
+            } else {
+                break;
+            }
+        }
+        if (lhs_clipping > 0) {
+            n_cigar -= lhs_clipping;
+            *cigar_ptr = base_cigar + lhs_clipping;
+        }
+        return;
+    }
+
     void IOBam::find_junction_genes(string chrom, char strand, int start, int end,
                                     float* nreads_ptr){
 //        const int n = glist_[chrom].size() ;
@@ -96,9 +159,18 @@ namespace io_bam {
     }
 
 
-    void IOBam::add_junction(string chrom, char strand, int start, int end, int read_pos, int first_offpos, int sreads) {
-
-        const unsigned int offset = (first_offpos == -1) ? (start - (read_pos+ MIN_BP_OVERLAP)) : first_offpos ;
+    /**
+     * Add junction at position/strand to junction coverage array
+     *
+     * @param chrom sequence id where junction was found
+     * @param strand information of if junction count was stranded/its direction
+     * @param start, end boundaries of the junction (1-based coordinates)
+     * @param offset position to add reads to
+     * genomic-position-based offset.
+     * @param sreads number of reads to add to junction at stranded position
+     *
+     */
+    void IOBam::add_junction(string chrom, char strand, int start, int end, const int offset, int sreads) {
         if (offset >= eff_len_ || offset < 0) {
             // XXX -- should warn that we are losing reads (should handle offsets
             // earlier, this function should not need to check a second time
@@ -160,38 +232,54 @@ namespace io_bam {
         string chrom(header->target_name[read->core.tid]);
         int read_pos = read->core.pos;
 
-        // get cigar operations
+        // get length of read
+        int read_length = read->core.l_qseq;
+
+        // get cigar operations, adjust them and read length to ignore clipping
         int n_cigar = read->core.n_cigar;
         uint32_t *cigar = bam_get_cigar(read) ;
+        _length_adjust_cigar_soft_clipping(n_cigar, &cigar, read_length);
 
-        // track offset on genomic position for junction coordinates
+        // track offsets on genomic and read position for moving along alignment
         int genomic_offset = 0;
-        int first_offpos = -1 ;
+        int read_offset = 0;
+
         // iterate over cigar operations, look for split reads
         for (int i = 0; i < n_cigar; ++i) {
             // extract operation and offset for the operation from cigar[i]
             const char cigar_op = bam_cigar_op(cigar[i]);
             const int cigar_oplen = bam_cigar_oplen(cigar[i]);
-            if (cigar_op == BAM_CMATCH || cigar_op == BAM_CDEL ||  cigar_op == BAM_CEQUAL || cigar_op == BAM_CDIFF){
-                 genomic_offset+= cigar_oplen ;
-            }
-            else if( cigar_op == BAM_CREF_SKIP ){
-                const int read_length = read->core.l_qseq ;
-                if (genomic_offset>= MIN_BP_OVERLAP && genomic_offset<= (read_length - MIN_BP_OVERLAP)){
-                    // get start and end of junction
-                    const int junction_start = read->core.pos + genomic_offset;
-                    const int junction_end = junction_start + cigar_oplen + 1;
-                    // get junction position
-                    first_offpos  = (first_offpos == -1) ? (junction_start - (read_pos+ MIN_BP_OVERLAP)) : first_offpos ;
-
-                    // add the junction at the specified position
-                    try {
-                        add_junction(chrom, _get_strand(read), junction_start, junction_end, read_pos, first_offpos, 1) ;
-                    } catch (const std::logic_error& e) {
-                        cout << "ERROR" << e.what() << '\n';
+            if (cigar_op == BAM_CREF_SKIP) {
+                if (read_offset < MIN_BP_OVERLAP) {
+                    // too early in read, not enough overlap yet
+                    continue;
+                }
+                // if we make it here, this is in a valid position to add
+                // get start and end of junction
+                const int junction_start = read_pos + genomic_offset;
+                const int junction_end = junction_start + cigar_oplen + 1;
+                // get junction position
+                const int junction_pos = read_offset - MIN_BP_OVERLAP;
+                // add the junction at the specified position
+                try {
+                    add_junction(chrom, _get_strand(read), junction_start,
+                                 junction_end, junction_pos, 1);
+                } catch (const std::logic_error& e) {
+                    cout << "ERROR" << e.what() << '\n';
+                }
+                // finally, update the genomic offset
+                genomic_offset += cigar_oplen;
+            } else {
+                // handle all other operations
+                if (_cigar_advance_read(cigar_op)) {
+                    read_offset += cigar_oplen;
+                    if (read_offset > read_length - MIN_BP_OVERLAP) {
+                        break;  // future operations will not lead to valid junction
                     }
                 }
-                genomic_offset += cigar_oplen;
+                if (_cigar_advance_reference(cigar_op)) {
+                    genomic_offset += cigar_oplen;
+                }
             }
         }
         // done processing this read
@@ -231,34 +319,69 @@ namespace io_bam {
             return 0;
         }
 
+        // fill records of genomic/read offsets to determine offset of introns
+        vector<pair<int, int>> genomic_read_offsets;
+        genomic_read_offsets.push_back({read_pos, 0});
         // fill records of junctions splitting read (ignore introns if intersect)
         vector<pair<int, int>> junc_record ;
+        // first and last genomic positions an intron can include to be considered
+        int first_pos = -10;  // -10 is placeholder value
+        int last_pos = -10;
 
         // get length of read
-        const int read_length = read->core.l_qseq;
+        int read_length = read->core.l_qseq;
 
-        // get cigar operations
+        // get cigar operations, adjust them and read length to ignore clipping
         int n_cigar = read->core.n_cigar ;
         uint32_t *cigar = bam_get_cigar(read) ;
+        _length_adjust_cigar_soft_clipping(n_cigar, &cigar, read_length);
 
-        // parse CIGAR operations for junc_record
+        // parse CIGAR operations for genomic_read_offsets, junc_record, {first,last}_pos
         int genomic_offset = 0;
+        int read_offset = 0;
         for (int i = 0; i < n_cigar; ++i) {
             // extract operation and offset for the operation from cigar[i]
             const char cigar_op = bam_cigar_op(cigar[i]);
             const int cigar_oplen = bam_cigar_oplen(cigar[i]);
-            if (cigar_op == BAM_CMATCH || cigar_op == BAM_CDEL ||  cigar_op == BAM_CEQUAL || cigar_op == BAM_CDIFF){
-                 genomic_offset += cigar_oplen;
-            }
-            else if( cigar_op == BAM_CREF_SKIP && genomic_offset>= MIN_BP_OVERLAP){
-                const int junction_start =  read->core.pos + genomic_offset;
+            if (cigar_op == BAM_CREF_SKIP) {
+                // get start and end of junction
+                const int junction_start = read_pos + genomic_offset;
                 const int junction_end = junction_start + cigar_oplen + 1;
                 try {
                     junc_record.push_back({junction_start, junction_end});
                 } catch (const std::logic_error& e) {
                     cout << "ERROR" << e.what() << '\n';
                 }
-                genomic_offset += cigar_oplen ;
+            }
+            const bool advance_read = _cigar_advance_read(cigar_op);
+            const bool advance_reference = _cigar_advance_reference(cigar_op);
+            if (advance_read) {
+                // check if this operation gives us first/last position for valid intron
+                if (
+                        (read_offset <= MIN_BP_OVERLAP)
+                        && ((read_offset + cigar_oplen) > MIN_BP_OVERLAP)
+                ) {
+                    // + 1 magic number for 0-->1-based indexing for intron start
+                    first_pos = read_pos + genomic_offset + 1
+                        + (advance_reference ? MIN_BP_OVERLAP - read_offset : 0);
+                }
+                if (
+                        ((read_offset + cigar_oplen) >= read_length - MIN_BP_OVERLAP)
+                        && (read_offset < read_length - MIN_BP_OVERLAP)
+                ) {
+                    last_pos = read_pos + genomic_offset
+                        + (advance_reference ? read_length - MIN_BP_OVERLAP - read_offset : 0);
+                }
+                read_offset += cigar_oplen;
+            }
+            if (advance_reference) {
+                genomic_offset += cigar_oplen;
+            }
+            if (advance_reference != advance_read) {
+                // only need update if one advanced but not the other
+                const int current_genomic_pos = read_pos + genomic_offset;
+                const int current_offset = read_offset;
+                genomic_read_offsets.push_back({current_genomic_pos, current_offset});
             }
         }
 
@@ -269,31 +392,59 @@ namespace io_bam {
             Intron * intron = *low;  // current intron from the iterator
 
             // is intron outside of admissible coordinates?
-            if (intron->get_end() <= read_pos) {
+            if (intron->get_end() < first_pos) {
                 continue;  // intron cannot overlap enough
             }
-            if (intron->get_start() > read_pos + read_length) {
+            if (intron->get_start() > last_pos) {
                 break;  // this and all subsequent introns cannot overlap enough
             }
 
             // is read compatible with gene strand?
             const char gstrand = intron->get_gene()->get_strand() ;
-            if (read_strand == '.' || gstrand == read_strand) {
-                // does read include junctions overlapping intron?
-                bool junc_found = false ;
-                for (const auto &j: junc_record) {
-                    if (j.first < intron->get_end() && intron->get_start() < j.second) {
-                        junc_found = true;
-                        break;
-                    } else if (j.second >= intron.get_end()) {
-                        // none of the remaining junctions (sorted) can intersect intron
+            if (read_strand != '.' && gstrand != read_strand) {
+                continue;  // read strand not compatible with intron gene strand
+            }
+
+            // does read include junctions overlapping intron?
+            bool junc_found = false;
+            for (const auto &j: junc_record) {
+                if (j.first < intron->get_end() && intron->get_start() < j.second) {
+                    junc_found = true;
+                    break;
+                } else if (j.second >= intron->get_end()) {
+                    // none of the remaining junctions (sorted) can intersect intron
+                    break;
+                }
+            }
+            if (junc_found) {
+                continue;  // read not compatible with intron due to junctions
+            }
+
+            // since read includes intron within acceptable bounds, add intron
+            // with appropriate offset
+            // calculate relative to last acceptable position in read, which has offset read_length - MIN_BP_OVERLAP
+            int relative_offset = 0;
+            int read_start_vs_intron_start = read_pos - intron->get_start();
+            if (read_start_vs_intron_start >= 0) {
+                // read start at or after intron start, further away from end of read
+                relative_offset = read_start_vs_intron_start;
+            } else {
+                int i = 1;  // get index of first offset past intron start
+                for (; i < genomic_read_offsets.size(); ++i) {
+                    // could replace with something like std::lower_bound for log(n) search
+                    // but premature optimization unless many cigar operations
+                    if (genomic_read_offsets[i].first >= intron->get_start()) {
                         break;
                     }
                 }
-                if (!junc_found) {
-                    #pragma omp critical
-                        intron->add_read(read_pos, eff_len_, 1) ;
-                }
+                relative_offset =
+                    (genomic_read_offsets[i - 1].first - intron->get_start())  // how far this genomic coordinate was from intron start
+                    - genomic_read_offsets[i - 1].second;  // adjust relative offset on read
+            }
+            int intron_offset = read_length - MIN_BP_OVERLAP + relative_offset;
+            #pragma omp critical
+            {
+                intron->add_read(intron_offset, eff_len_, 1);
             }
         }
         return 0 ;
@@ -487,7 +638,7 @@ namespace io_bam {
             }
         } else {
             string key = to_string(start) + "-" + to_string(end) ;
-            add_junction(chrom, strand, start, end, 0, 0, sreads) ;
+            add_junction(chrom, strand, start, end, 0, sreads) ;
             for (const auto &gObj: (*low)->glist){
                 gObj->updateFlagsFromJunc(key, sreads, minreads_t, npos, minpos_t, denovo_t, denovo, minexp, reset) ;
             }
