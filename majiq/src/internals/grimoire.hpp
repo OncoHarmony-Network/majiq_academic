@@ -64,7 +64,7 @@ namespace grimoire{
             int         get_end()               { return end_ ; }
             void        set_start(int start1)   { start_ = start1 ; }
             void        set_end(int end1)       { end_ = end1 ; }
-            inline int  length()                { return end_ - start_ ; }
+            inline int  length()                { return 1 + end_ - start_ ; }
             virtual void  set_simpl_fltr(bool val, bool in) { cerr << "NOT SHOW\n" ;}
 
 
