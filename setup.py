@@ -1,8 +1,10 @@
 from setuptools import setup, find_packages
 from setuptools.command.install import install
-from distutils.core import Extension
+from setuptools import Extension
+#from distutils.core import Extension
 from majiq.src.constants import VERSION, store_git_version
 import numpy
+import shutil
 import sys
 import os
 
@@ -25,32 +27,49 @@ def requirements():
         # print(reql)
         return reql
 
+
 class InstallCommand(install):
 
-    user_options = install.user_options + [('voila-only', 'v', None),]
+    user_options = install.user_options + [('voila-only', 'v', None),
+                                           ('development', None, 'Compile faster without optimizations'),
+                                           ('num-threads=', 'j', "Max number of threads to use for compiling"
+                                                               " extensions")
+                                           ]
 
     def initialize_options(self):
         install.initialize_options(self)
         self.voila_only = 0
-
-    def finalize_options(self):
-        install.finalize_options(self)
+        self.development = False
+        self.num_threads = 1
 
     def run(self):
-        print(self.__dict__)
-        # print(user_options)
-        if(self.voila_only):
+        if (self.voila_only):
 
             self.distribution.packages = ['voila', 'voila.api', 'voila.view', 'voila.utils', 'voila.view']
         else:
+            print(self.__dict__)
+            # print(user_options)
+
             extensions = []
             HTSLIB_LIBRARY = ['hts', 'z']
             HTSLIB_LIB_DIRS = [os.environ.get("HTSLIB_LIBRARY_DIR", '/usr/local/lib')]
             HTSLIB_INC_DIRS = [os.environ.get("HTSLIB_INCLUDE_DIR", '/usr/local/include')]
 
             compile_args = ['-fopenmp']
+            if self.development:
+                compile_args += ['-O0']
+            else:
+                compile_args += ['-O3']
+
             scythe_compiler_args = ['-DSCYTHE_COMPILE_DIRECT', '-DSCYTHE_PTHREAD']
             linker_args = ['-lgomp']
+
+            # if not self.no_lld:
+            #     lld_linker = shutil.which('ld.lld')
+            #     if lld_linker:
+            #         print("Using LLD Linker in place of GNU LD")
+            #         os.environ['LDSHARED'] = lld_linker
+            #         linker_args += ['-Wl', '--threads' '-Wl', '--thread-count', self.num_threads]
 
             if sys.platform == 'darwin':
                 # os.environ['CLANG_DEFAULT_CXX_STDLIB'] = 'libc++'
@@ -114,8 +133,7 @@ class InstallCommand(install):
             from Cython.Build import cythonize
 
             self.distribution.entry_points['console_scripts'].append('majiq = majiq.run_majiq:main')
-            self.distribution.ext_modules = cythonize(extensions, language_level=3)
-
+            self.distribution.ext_modules = cythonize(extensions, language_level=3, nthreads=int(self.num_threads))
 
         install.run(self)
 
@@ -133,7 +151,7 @@ setup(
     include_package_data = True,
     zip_safe = False,
     entry_points = {'console_scripts': ['voila = voila.run_voila:main']},
-    cmdclass={'install': InstallCommand,},
+    cmdclass={'install': InstallCommand},
     classifiers=[
         'Development Status :: 4 - Beta',
         'Environment :: Console',
