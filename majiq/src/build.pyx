@@ -230,28 +230,31 @@ cdef _parse_junction_file(tuple filetp, map[string, Gene*]& gene_map, vector[str
     cdef bint ir = conf.ir
     cdef np.ndarray[np.float32_t, ndim=2, mode="c"] ir_cov
     cdef vector[np.float32_t] ir_vec
-    cdef unsigned int eff_len = conf.readLen - 2*MIN_BP_OVERLAP + 1
+    cdef unsigned int eff_len  # number of valid positions inferred from file
     cdef np.float32_t min_ir_cov = conf.min_intronic_cov
     cdef np.float32_t ir_numbins = conf.irnbins
     cdef int jlimit
-    cdef unsigned int local_readlen
 
-    c_iobam = IOBam(filetp[1].encode('utf-8'), strandness, eff_len, nthreads, gene_list, bsimpl)
-
+    # obtain relevant buffers/variables from sj file
     with np.load(filetp[1]) as fp:
         junc_ids = fp['junc_info']
         if ir:
             ir_cov = fp['ir_cov']
             if len(ir_cov) == 0:
                 logger.warning('File does not contain IR coverage information')
-                local_readlen = 0
-            else:
-                local_readlen = len(ir_cov[0])
+            eff_len = ir_cov.shape[1]
+        else:
+            eff_len = fp['ir_cov'].shape[1]  # don't keep ir_cov buffer in memory
         jlimit = fp['meta'][0][2]
     njunc = junc_ids.shape[0]
 
+    # initialize object that translates sj files to gene junctions/introns
+    c_iobam = IOBam(filetp[1].encode('utf-8'), strandness, eff_len, nthreads, gene_list, bsimpl)
+
+    # parallel loop over junctions/introns, pass experiment/group filters?
     for j in prange(njunc, nogil=True, num_threads=nthreads):
         gene_l = Gene_vect_t()
+        # extract relevant information from junction entries
         with gil:
             jid     = junc_ids[j][0]
             coord1  = junc_ids[j][1]
@@ -268,16 +271,11 @@ cdef _parse_junction_file(tuple filetp, map[string, Gene*]& gene_map, vector[str
                 gid = b':'.join(jid.split(b':')[3:])
                 ir_vec = vector[np.float32_t](eff_len)
                 for i in range(eff_len):
-                    if i >= local_readlen:
-                        break;
                     ir_vec[i] = ir_cov[j - jlimit][i]
-
-                # logger.info("IR VEC: %s %s" %(eff_len, ir_vec.size()))
+        # process information, update information for inferring splicegraph
         c_iobam.parseJuncEntry(gene_list, gid, chrom, strand, coord1, coord2, sreads, minreads, npos, minpos,
                                denovo_thresh, denovo, gene_l, irbool==1, ir_vec, min_ir_cov, ir_numbins,
                                min_experiments, reset)
-
-
 
     if reset:
         # we didn't reset flags for junctions/introns not seen in this sample
@@ -286,10 +284,7 @@ cdef _parse_junction_file(tuple filetp, map[string, Gene*]& gene_map, vector[str
             gg = gene_map[gid_vec[i]]
             gg.reset_flags()
 
-    # for i in prange(n, nogil=True, num_threads=nthreads):
-    #     gg = gene_map[gid_vec[i]]
-    #     gg.update_junc_flags(1, reset, minreads, 0, denovo_thresh, min_experiments, denovo)
-
+    # clear any allocated objects for this file
     c_iobam.free_iobam()
     logger.info('Done Reading file %s' %(filetp[0]))
 
