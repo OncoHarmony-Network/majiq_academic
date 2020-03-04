@@ -227,25 +227,26 @@ namespace io_bam {
     }
 
 
-    int IOBam::ParseJunctionsFromFile(bool ir_func){
-
-        samFile *in;
+    /**
+     * Set up file for reading with given number of threads
+     */
+    inline int _init_samfile(
+            const char* bam_path,
+            samFile* &in, bam_hdr_t* &header, bam1_t* &aln,
+            htsThreadPool &p, const unsigned int nthreads
+    ) {
         int ignore_sam_err = 0;
-        bam_hdr_t *header ;
-        bam1_t *aln;
-
-        int r = 0, exit_code = 0;
-//        hts_opt *in_opts = NULL;
         int extra_hdr_nuls = 0;
 
-        in = sam_open(bam_.c_str(), "rb") ;
+        in = sam_open(bam_path, "rb") ;
         if (NULL == in) {
-            fprintf(stderr, "Error opening \"%s\"\n", bam_.c_str());
+            fprintf(stderr, "Error opening \"%s\"\n", bam_path);
             return EXIT_FAILURE;
         }
         header = sam_hdr_read(in);
         if (NULL == header) {
-            fprintf(stderr, "Couldn't read header for \"%s\"\n", bam_.c_str());
+            fprintf(stderr, "Couldn't read header for \"%s\"\n", bam_path);
+            sam_close(in);
             return EXIT_FAILURE;
         }
         header->ignore_sam_err = ignore_sam_err;
@@ -253,6 +254,8 @@ namespace io_bam {
             char *new_text = (char*) realloc(header->text, header->l_text + extra_hdr_nuls);
             if (new_text == NULL) {
                 fprintf(stderr, "Error reallocing header text\n");
+                sam_close(in);
+                bam_hdr_destroy(header);
                 return EXIT_FAILURE;
             }
             header->text = new_text;
@@ -261,22 +264,55 @@ namespace io_bam {
         }
 
         aln = bam_init1();
-        htsThreadPool p = {NULL, 0};
-        if (nthreads_ > 0) {
-            p.pool = hts_tpool_init(nthreads_);
+        if (nthreads > 0) {
+            p.pool = hts_tpool_init(nthreads);
             if (!p.pool) {
                 fprintf(stderr, "Error creating thread pool\n");
-                exit_code = 1;
             } else {
                 hts_set_opt(in,  HTS_OPT_THREAD_POOL, &p);
             }
+        }
+        return 0;
+    }
+
+
+    /**
+     * Close file for reading
+     */
+    inline int _close_samfile(
+            samFile* &in, bam_hdr_t* &header, bam1_t* &aln, htsThreadPool &p
+    ) {
+        int exit_code = 0;
+        // close the read/header/input file, check if there was an error closing input
+        bam_destroy1(aln);
+        bam_hdr_destroy(header);
+        if (sam_close(in) < 0) {
+            fprintf(stderr, "Error closing input.\n");
+            exit_code = 1 ;
+        }
+        if (p.pool)
+            hts_tpool_destroy(p.pool);
+
+        return exit_code;
+    }
+
+
+    int IOBam::ParseJunctionsFromFile(bool ir_func) {
+        samFile *in;
+        bam_hdr_t *header ;
+        bam1_t *aln;
+        htsThreadPool p = {NULL, 0};
+        // open the sam file
+        int exit_code = _init_samfile(bam_.c_str(), in, header, aln, p, nthreads_);
+        if (exit_code) {
+            return exit_code;  // there was an error, so end with error code
         }
 
         int (IOBam::*parse_func)(bam_hdr_t *, bam1_t *) ;
         if(ir_func) parse_func = &IOBam::parse_read_for_ir ;
         else parse_func = &IOBam::parse_read_into_junctions ;
 
-
+        int r = 0;  // error code from htslib
         while ((r = sam_read1(in, header, aln)) >= 0) {
             (this->*parse_func)(header, aln) ;
         }
@@ -284,18 +320,11 @@ namespace io_bam {
             fprintf(stderr, "Error parsing input.\n");
             exit_code = 1;
         }
-        bam_destroy1(aln);
-        bam_hdr_destroy(header);
-
-        r = sam_close(in);
         if(!ir_func)
             junc_limit_index_ = junc_vec.size() ;
-        if (r < 0) {
-            fprintf(stderr, "Error closing input.\n");
-            exit_code = 1 ;
-        }
-        if (p.pool)
-            hts_tpool_destroy(p.pool);
+
+        // close the sam file
+        exit_code |= _close_samfile(in, header, aln, p);
 
         return exit_code ;
     }
