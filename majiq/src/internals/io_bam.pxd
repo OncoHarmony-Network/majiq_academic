@@ -36,3 +36,4 @@ cdef extern from "io_bam.hpp" namespace "io_bam":
 
     void free_genelist(map[string, overGene_vect_t]& geneList) nogil ;
     void prepare_genelist(map[string, Gene*]& gene_map, map[string, overGene_vect_t]& geneList) nogil ;
+    unsigned int eff_len_from_read_length(int read_length) nogil

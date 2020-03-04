@@ -18,6 +18,13 @@
 
 using namespace std;
 namespace io_bam {
+    unsigned int eff_len_from_read_length(int read_length) {
+        if (read_length <= 2 * MIN_BP_OVERLAP) {
+            return 0;
+        } else {
+            return read_length + 1 - (2 * MIN_BP_OVERLAP);
+        }
+    }
 
     char IOBam::_get_strand(bam1_t * read){
         char strn = '.';

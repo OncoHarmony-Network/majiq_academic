@@ -3,7 +3,7 @@ import sys
 import psutil
 
 from majiq.src.internals.grimoire cimport Junction, Gene, Exon, LSV, Jinfo, Intron
-from majiq.src.internals.io_bam cimport IOBam, prepare_genelist, overGene_vect_t, free_genelist
+from majiq.src.internals.io_bam cimport IOBam, prepare_genelist, overGene_vect_t, free_genelist, eff_len_from_read_length
 from majiq.src.internals.grimoire cimport find_intron_retention, find_gene_from_junc, isNullJinfo, fill_junc_tlb
 from majiq.src.internals.grimoire cimport key_format, free_JinfoVec, Gene_vect_t, free_lsvlist
 from majiq.src.basic_pipeline import BasicPipeline, pipeline_run
@@ -303,7 +303,7 @@ cdef _find_junctions(list file_list, map[string, Gene*]& gene_map, vector[string
     cdef int k=conf.k, m=conf.m
     cdef np.float32_t pvalue_limit=conf.pvalue_limit
     cdef unsigned int min_experiments
-    cdef unsigned int eff_len = conf.readLen - 2*MIN_BP_OVERLAP + 1
+    cdef unsigned int eff_len = eff_len_from_read_length(conf.readLen)
     cdef bint ir = conf.ir
     cdef bint bsimpl = (conf.simpl_psi >= 0)
     cdef np.float32_t ir_numbins=conf.irnbins

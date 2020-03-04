@@ -35,6 +35,11 @@ using namespace grimoire;
 //using namespace interval;
 
 namespace io_bam{
+    /**
+     * Determine eff_len associated with read length
+     */
+    unsigned int eff_len_from_read_length(int read_length);
+
     class IOBam {
         private:
             string bam_;
@@ -112,5 +117,6 @@ namespace io_bam{
     void prepare_genelist(map<string, Gene*>& gene_map, map<string, vector<overGene*>> & geneList) ;
     bool juncGeneSearch(Gene* t1, Junction* t2) ;
     void free_genelist(map<string, vector<overGene*>> & geneList) ;
+
 }
 #endif
