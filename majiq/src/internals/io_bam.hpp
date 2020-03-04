@@ -53,6 +53,8 @@ namespace io_bam{
             bool simpl_ ;
             omp_lock_t map_lck_ ;
 
+            void update_eff_len(const unsigned int new_eff_len);
+
         public:
             vector<float *> junc_vec ;
             IOBam(){ }
@@ -87,6 +89,7 @@ namespace io_bam{
             void set_junction_strand(bam1_t  *aln, Junction& j1) ;
             void find_junction_genes(string chrom, char strand, int start, int end, float * nreads_ptr ) ;
             int  ParseJunctionsFromFile(bool ir_func) ;
+            void EstimateEffLenFromFile(int num_reads);
             void parseJuncEntry(map<string, vector<overGene*>> & glist, string gid, string chrom, char strand,
                                int start, int end, unsigned int sreads, unsigned int minreads_t, unsigned int npos,
                                unsigned int minpos_t, unsigned int denovo_t, bool denovo, vector<Gene*>& oGeneList,
@@ -98,6 +101,7 @@ namespace io_bam{
 
             int parse_read_for_ir(bam_hdr_t *header, bam1_t *read) ;
             int get_njuncs() ;
+            int get_eff_len() { return eff_len_; }
             const map<string, unsigned int> &get_junc_map() ;
             const vector<Junction *>& get_junc_vec() ;
             void free_iobam() {

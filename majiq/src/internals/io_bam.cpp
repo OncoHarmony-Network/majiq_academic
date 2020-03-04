@@ -51,6 +51,18 @@ namespace io_bam {
         return ((read->core.flag & 0x4) == 0x4) ;
     }
 
+    /**
+     * Update effective length, appropriately resizing things
+     */
+    void IOBam::update_eff_len(const unsigned int new_eff_len) {
+        // XXX for now, just update eff_len_, don't worry about buffers
+        // TODO add lock on eff_len_?
+        if (new_eff_len > eff_len_) {
+            eff_len_ = new_eff_len;
+            // TODO expand buffers?
+        }
+    }
+
     void IOBam::find_junction_genes(string chrom, char strand, int start, int end,
                                     float* nreads_ptr){
 //        const int n = glist_[chrom].size() ;
@@ -301,6 +313,48 @@ namespace io_bam {
             hts_tpool_destroy(p.pool);
 
         return exit_code;
+    }
+
+
+    /**
+     * Obtain lower bound on eff_len from first num_reads, update eff_len
+     */
+    void IOBam::EstimateEffLenFromFile(int num_reads) {
+        samFile *in;
+        bam_hdr_t *header ;
+        bam1_t *aln;
+        htsThreadPool p = {NULL, 0};
+        // open the sam file
+        int exit_code = _init_samfile(bam_.c_str(), in, header, aln, p, nthreads_);
+        if (exit_code) {
+            cerr << "Error parsing input\n";
+            return;
+        }
+        int read_ct = 0;
+        int max_read_length = 0;
+        int r = 0;  // error code from htslib
+        // loop over the first num_reads reads
+        while (read_ct < num_reads && (r = sam_read1(in, header, aln)) >= 0) {
+            ++read_ct;  // increment the number of reads proceessed
+            const int read_length = aln->core.l_qseq;  // current read length
+            if (read_length > max_read_length) {
+                max_read_length = read_length;
+            }
+        }
+        if (r < -1) {
+            cerr << "Error parsing input\n";
+            return;
+        }
+        // close the sam file
+        exit_code |= _close_samfile(in, header, aln, p);
+        if (exit_code) {
+            cerr << "Error closing input\n";
+        }
+        // update eff_len_ if greater than current value
+        const unsigned int est_eff_len = eff_len_from_read_length(max_read_length);
+        if (est_eff_len > eff_len_) {
+            update_eff_len(est_eff_len);
+        }
     }
 
 

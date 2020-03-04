@@ -304,6 +304,7 @@ cdef _find_junctions(list file_list, map[string, Gene*]& gene_map, vector[string
     cdef np.float32_t pvalue_limit=conf.pvalue_limit
     cdef unsigned int min_experiments
     cdef unsigned int eff_len = eff_len_from_read_length(conf.readLen)
+    cdef unsigned int local_eff_len
     cdef bint ir = conf.ir
     cdef bint bsimpl = (conf.simpl_psi >= 0)
     cdef np.float32_t ir_numbins=conf.irnbins
@@ -325,6 +326,7 @@ cdef _find_junctions(list file_list, map[string, Gene*]& gene_map, vector[string
     cdef int* jvec
     cdef map[string, unsigned int] j_ids
     cdef pair[string, unsigned int] it
+    cdef int estimate_eff_reads = ESTIMATE_NUM_READS
 
     for tmp_str, group_list in conf.tissue_repl.items():
         name = tmp_str.encode('utf-8')
@@ -344,7 +346,9 @@ cdef _find_junctions(list file_list, map[string, Gene*]& gene_map, vector[string
 
                 with nogil:
                     c_iobam = IOBam(bamfile, strandness, eff_len, nthreads, gene_list, bsimpl)
-                    c_iobam.ParseJunctionsFromFile(False)
+                    c_iobam.EstimateEffLenFromFile(estimate_eff_reads)  # lower bound eff_len
+                    c_iobam.ParseJunctionsFromFile(False)  # parse for junctions, get true eff_len
+                    local_eff_len = c_iobam.get_eff_len()  # get local eff_len after parsing all junctions
                     n_junctions = c_iobam.get_njuncs()
                     if ir:
                         with gil:
@@ -359,7 +363,7 @@ cdef _find_junctions(list file_list, map[string, Gene*]& gene_map, vector[string
                         logger.warning('No junctions were found on sample %s' % bamfile)
                     fitfunc_r = 0
                 else:
-                    fitfunc_r = fit_nb(c_iobam.junc_vec, n_junctions, eff_len, nbdisp=0.1, logger=logger)
+                    fitfunc_r = fit_nb(c_iobam.junc_vec, n_junctions, local_eff_len, nbdisp=0.1, logger=logger)
 
                 boots = np.zeros(shape=(njunc, m), dtype=np.float32)
                 with nogil:
@@ -368,7 +372,7 @@ cdef _find_junctions(list file_list, map[string, Gene*]& gene_map, vector[string
                     jvec   = c_iobam.get_junc_vec_summary()
                     jlimit = c_iobam.get_junc_limit_index()
 
-                ir_raw_cov = np.zeros(shape=(njunc - jlimit, eff_len), dtype=np.float32)
+                ir_raw_cov = np.zeros(shape=(njunc - jlimit, local_eff_len), dtype=np.float32)
                 if ir:
                     with nogil:
                         c_iobam.get_intron_raw_cov(<np.float32_t *> ir_raw_cov.data)
@@ -376,7 +380,7 @@ cdef _find_junctions(list file_list, map[string, Gene*]& gene_map, vector[string
                 logger.debug("Update flags")
                 for i in prange(n, nogil=True, num_threads=nthreads):
                     gg = gene_map[gid_vec[i]]
-                    gg.update_junc_flags(eff_len, (j==last_it_grp), minreads, minpos, denovo_thresh, min_experiments, denovo)
+                    gg.update_junc_flags(local_eff_len, (j==last_it_grp), minreads, minpos, denovo_thresh, min_experiments, denovo)
 
                 logger.debug("Done Update flags")
                 junc_ids = [0] * njunc

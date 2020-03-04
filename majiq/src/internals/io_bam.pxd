@@ -16,6 +16,7 @@ cdef extern from "io_bam.hpp" namespace "io_bam":
         IOBam() nogil except +
         IOBam(string, int, unsigned int, unsigned int, map[string, overGene_vect_t], bint simpl1) nogil except +
         int ParseJunctionsFromFile(bint ir_func) nogil
+        void EstimateEffLenFromFile(int num_reads) nogil
         int boostrap_samples(int msamples, int ksamples, np.float32_t* boots, float fitfunc_r, np.float32_t pvalue_limit) nogil
         void detect_introns(np.float32_t min_intron_cov, unsigned int min_experiments, np.float32_t min_bins, bint reset) nogil
         int get_njuncs() nogil
@@ -31,6 +32,7 @@ cdef extern from "io_bam.hpp" namespace "io_bam":
                                unsigned int minpos_t, unsigned int denovo_t, bint denovo, vector[Gene*]& oGeneList,
                                bint ir, vector[np.float32_t]& ircov, np.float32_t min_intron_cov, np.float32_t min_bins,
                                int minexp, bint reset) nogil ;
+        unsigned int get_eff_len() nogil
 
         vector[np.float32_t *] junc_vec ;
 
