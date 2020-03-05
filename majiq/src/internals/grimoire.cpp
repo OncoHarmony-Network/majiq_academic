@@ -228,7 +228,7 @@ namespace grimoire {
         }
     }
 
-    void Gene::initialize_junction(string key, int start, int end, float* nreads_ptr, bool simpl){
+    void Gene::initialize_junction(string key, int start, int end, shared_ptr<vector<float>> nreads_ptr, bool simpl){
 
         omp_set_lock(&map_lck_) ;
         if (junc_map_.count(key) == 0){
@@ -631,9 +631,10 @@ namespace grimoire {
     bool Intron::is_reliable(float min_bins, int eff_len){
 
         float npos = 0 ;
-        if (length() <=0 || numbins_ <= 0 || read_rates_ == nullptr) return false ;
+        if (length() <= 0 || numbins_ <= 0 || read_rates_ptr_ == nullptr) return false ;
         const int ext = (int) (eff_len / (nxbin_+1)) ;
         vector<float> cov (numbins_) ;
+        vector<float> &read_rates_ = *read_rates_ptr_;
 
         for(int i =0 ; i< numbins_; i++){
             if (read_rates_[i] < 0) continue ;

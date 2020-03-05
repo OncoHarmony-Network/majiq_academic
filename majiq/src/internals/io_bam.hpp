@@ -8,6 +8,7 @@
 #include "htslib/sam.h"
 #include <map>
 #include <set>
+#include <memory>
 #include <omp.h>
 //#include "interval.hpp"
 
@@ -15,6 +16,7 @@
 #define MIN_BP_OVERLAP 8
 #define MIN_JUNC_LENGTH 2
 #define NUM_INTRON_BINS 10
+#define MIN_BUFF_LEN 64
 
 #define UNSTRANDED 0
 #define FWD_STRANDED 1
@@ -45,6 +47,7 @@ namespace io_bam{
             string bam_;
             int strandness_;
             unsigned int eff_len_;
+            unsigned int buff_len_;
             map<string, unsigned int> junc_map ;
             unsigned int nthreads_;
             map<string, vector<overGene*>> glist_ ;
@@ -56,21 +59,19 @@ namespace io_bam{
             void update_eff_len(const unsigned int new_eff_len);
 
         public:
-            vector<float *> junc_vec ;
+            vector<shared_ptr<vector<float>>> junc_vec;
             IOBam(){ }
 
             IOBam(string bam1, int strandness1, unsigned int eff_len1, unsigned int nthreads1,
                   map<string, vector<overGene*>> glist1, bool simpl1): strandness_(strandness1), eff_len_(eff_len1),
                                                                   nthreads_(nthreads1), glist_(glist1), simpl_(simpl1){
+                const unsigned int min_buff_len = MIN_BUFF_LEN;
+                buff_len_ = std::max(eff_len_, min_buff_len);
                 omp_init_lock( &map_lck_ ) ;
                 bam_ = bam1 ;
             }
 
             ~IOBam(){
-
-                for(const auto &p1: junc_vec){
-                    free(p1) ;
-                }
                 junc_vec.clear() ;
                 omp_destroy_lock( &map_lck_ ) ;
             }
@@ -87,7 +88,7 @@ namespace io_bam{
 
             char _get_strand(bam1_t * read) ;
             void set_junction_strand(bam1_t  *aln, Junction& j1) ;
-            void find_junction_genes(string chrom, char strand, int start, int end, float * nreads_ptr ) ;
+            void find_junction_genes(string chrom, char strand, int start, int end, shared_ptr<vector<float>> nreads_ptr);
             int  ParseJunctionsFromFile(bool ir_func) ;
             void EstimateEffLenFromFile(int num_reads);
             void parseJuncEntry(map<string, vector<overGene*>> & glist, string gid, string chrom, char strand,
@@ -105,16 +106,9 @@ namespace io_bam{
             const map<string, unsigned int> &get_junc_map() ;
             const vector<Junction *>& get_junc_vec() ;
             void free_iobam() {
-                int idx = 0 ;
-                for(const auto &p1: junc_vec){
-                    free(p1) ;
-                    idx ++ ;
-                }
                 junc_vec.clear() ;
                 junc_map.clear() ;
                 intronVec_.clear() ;
-
-
             }
 
     };

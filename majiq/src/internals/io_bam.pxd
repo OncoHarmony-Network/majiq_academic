@@ -2,6 +2,7 @@ from libcpp.string cimport string
 from libcpp.map cimport map
 from libcpp.pair cimport pair
 from libcpp.vector cimport vector
+from libcpp.memory cimport shared_ptr
 cimport numpy as np
 from majiq.src.internals.grimoire cimport Junction, Gene, overGene
 
@@ -34,7 +35,7 @@ cdef extern from "io_bam.hpp" namespace "io_bam":
                                int minexp, bint reset) nogil ;
         unsigned int get_eff_len() nogil
 
-        vector[np.float32_t *] junc_vec ;
+        vector[shared_ptr[vector[np.float32_t]]] junc_vec ;
 
     void free_genelist(map[string, overGene_vect_t]& geneList) nogil ;
     void prepare_genelist(map[string, Gene*]& gene_map, map[string, overGene_vect_t]& geneList) nogil ;

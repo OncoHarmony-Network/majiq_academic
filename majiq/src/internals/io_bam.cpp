@@ -53,18 +53,29 @@ namespace io_bam {
 
     /**
      * Update effective length, appropriately resizing things
+     *
+     * @note this should not be called after introns are inserted because
+     * positional information mapped to bins will lose meaning
      */
     void IOBam::update_eff_len(const unsigned int new_eff_len) {
-        // XXX for now, just update eff_len_, don't worry about buffers
         // TODO add lock on eff_len_?
         if (new_eff_len > eff_len_) {
             eff_len_ = new_eff_len;
-            // TODO expand buffers?
+            if (eff_len_ > buff_len_) {
+                // we need to expand buffers
+                // determine new buff_len_ to use XXX give safety factor
+                buff_len_ = eff_len_;
+                // TODO add lock to junc_vec/threads?
+                // TODO the memory reallocation here could be parallelized
+                for (unsigned int i = 0; i < junc_vec.size(); ++i) {
+                    junc_vec[i]->resize(buff_len_, 0);
+                }
+            }
         }
     }
 
     void IOBam::find_junction_genes(string chrom, char strand, int start, int end,
-                                    float* nreads_ptr){
+                                    shared_ptr<vector<float>> nreads_ptr){
 //        const int n = glist_[chrom].size() ;
         bool found_stage1 = false ;
         bool found_stage2 = false ;
@@ -122,25 +133,24 @@ namespace io_bam {
         string key = chrom + ":" + strand + ":" + to_string(start) + "-" + to_string(end) ;
 
         bool new_j = false ;
-        float * v ;
         omp_set_lock(&map_lck_) ;
         {
             if (junc_map.count(key) == 0 ) {
                 junc_map[key] = junc_vec.size() ;
-                v = (float*) calloc(eff_len_, sizeof(float)) ;
-                junc_vec.push_back(v) ;
+                junc_vec.push_back(make_shared<vector<float>>(buff_len_, 0));
+                // this is a new junction
                 new_j = true ;
-            } else {
-                v = junc_vec[junc_map[key]] ;
             }
         }
         omp_unset_lock(&map_lck_) ;
+        shared_ptr<vector<float>> v_ptr = junc_vec[junc_map[key]];
+        vector<float> &v = *v_ptr;
 
         if (new_j) {
-            find_junction_genes(chrom, strand, start, end, v) ;
+            find_junction_genes(chrom, strand, start, end, v_ptr) ;
         }
         #pragma omp atomic
-            junc_vec[junc_map[key]][offset] += sreads ;
+            v[offset] += sreads ;
 
         return ;
     }
@@ -421,14 +431,15 @@ namespace io_bam {
         #pragma omp parallel for num_threads(nthreads_)
         for(int jidx=0; jidx < njunc; jidx++){
 
+            vector<float> &coverage = *(junc_vec[jidx]);
             vector<float> vec ;
             int npos = 0 ;
             float sreads = 0 ;
             for(unsigned int i=0; i<eff_len_; ++i){
-                if (junc_vec[jidx][i]>0){
+                if (coverage[i] > 0) {
                     npos ++ ;
-                    sreads += junc_vec[jidx][i] ;
-                    vec.push_back(junc_vec[jidx][i]) ;
+                    sreads += coverage[i];
+                    vec.push_back(coverage[i]);
                 }
             }
             if (npos == 0) continue ;
@@ -461,11 +472,12 @@ namespace io_bam {
 
         #pragma omp parallel for num_threads(nthreads_)
         for(int jidx=0; jidx < njunc; ++jidx){
+            vector<float> &coverage = *(junc_vec[jidx]);
             float ss = 0 ;
             int np = 0 ;
             for(unsigned int i=0; i<eff_len_; ++i){
-                ss += junc_vec[jidx][i] ;
-                np += (junc_vec[jidx][i]>0)? 1 : 0 ;
+                ss += coverage[i];
+                np += (coverage[i] > 0) ? 1 : 0;
             }
             res[jidx] = (int) ss ;
             res[jidx+njunc] = np ;
@@ -496,7 +508,7 @@ namespace io_bam {
                 {
                     if (junc_map.count(key) == 0) {
                         junc_map[key] = junc_vec.size() ;
-                        junc_vec.push_back(irptr->read_rates_) ;
+                        junc_vec.push_back(irptr->read_rates_ptr_) ;
                         gObj->add_intron(irptr, min_intron_cov, minexp, min_bins, reset) ;
                     }
                 }
@@ -546,7 +558,7 @@ namespace io_bam {
                     {
                         if (junc_map.count(key) == 0) {
                             junc_map[key] = junc_vec.size() ;
-                            junc_vec.push_back(intrn_it->read_rates_) ;
+                            junc_vec.push_back(intrn_it->read_rates_ptr_) ;
                             (intrn_it->get_gene())->add_intron(intrn_it, min_intron_cov, min_experiments, min_bins, reset) ;
                         }
                     }
@@ -563,10 +575,11 @@ namespace io_bam {
         const unsigned int all_junc = junc_vec.size() ;
         #pragma omp parallel for num_threads(nthreads_)
         for(unsigned int idx = junc_limit_index_; idx<all_junc; idx++){
+            const vector<float> &coverage = *(junc_vec[idx]);
             const unsigned int i = idx - junc_limit_index_ ;
             for (unsigned int j=0; j<eff_len_; j++){
                 const unsigned int indx_2d = i*eff_len_ + j ;
-                out_cov[indx_2d] = junc_vec[idx][j] ;
+                out_cov[indx_2d] = coverage[j] ;
             }
         }
     }
