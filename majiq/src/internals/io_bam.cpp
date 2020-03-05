@@ -57,16 +57,13 @@ namespace io_bam {
      * @note this should not be called after introns are inserted because
      * positional information mapped to bins will lose meaning
      *
-     * @note XXX this is halfway done in the sense that right now there is no
-     * multithreading performed in BAM parsing except in IO by htslib. However,
-     * there are openmp locks/threading set up as if we intend to do so. If we
-     * do want to do multithreading, this will need to have locks set up to
-     * protect junc_vec elements while being resized. However, if we are
-     * single-threaded, we could expand buffers only as needed and use exactly
-     * the space we need
+     * @note XXX this is not thread-safe! assumes that there are no parallel
+     * threads accessing eff_len_or junc_vec. This is true when parsing BAM
+     * files. Otherwise, we would need to add locks on eff_len_ and junc_vec.
+     * Alternatively, we could use tbb::concurrent_vector to avoid the need for
+     * locks if we were okay with adding a new library
      */
     void IOBam::update_eff_len(const unsigned int new_eff_len) {
-        // TODO add lock on eff_len_?
         if (new_eff_len > eff_len_) {
             eff_len_ = new_eff_len;
             if (eff_len_ > buff_len_) {
@@ -76,8 +73,8 @@ namespace io_bam {
                         eff_len_,
                         static_cast<unsigned int>(eff_len_ * BUFF_LEN_SAFETY_FACTOR)
                 );
-                // TODO add lock to junc_vec/threads?
-                // TODO the memory reallocation here could be parallelized
+                // resize all the buffers in parallel
+                #pragma omp parallel for num_threads(nthreads_)
                 for (unsigned int i = 0; i < junc_vec.size(); ++i) {
                     junc_vec[i]->resize(buff_len_, 0);
                 }
