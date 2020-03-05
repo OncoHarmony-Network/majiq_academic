@@ -74,7 +74,6 @@ namespace io_bam{
 
             ~IOBam(){
                 junc_vec.clear() ;
-                omp_destroy_lock( &map_lck_ ) ;
             }
 
             int parse_read_into_junctions(bam_hdr_t *header, bam1_t *read) ;
