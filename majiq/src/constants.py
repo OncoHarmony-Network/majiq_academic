@@ -50,8 +50,12 @@ GIT_VERSION_FILE = 'git_version'
 all_stats = ["TNOM", "INFOSCORE", "WILCOXON"]
 
 
-import numpy as np
-EPSILON = np.finfo(np.float64).eps
+try:
+    import numpy as np
+
+    EPSILON = np.finfo(np.float64).eps
+except ModuleNotFoundError:  # when importing in setup, don't need numpy yet
+    EPSILON = 2e-16  # slightly less than float64 epsilon
 
 
 def get_quantifier_voila_filename(outdir, name, deltapsi=False, het=False):

@@ -1,8 +1,7 @@
 from setuptools import setup, find_packages
 from setuptools.command.install import install
-from distutils.core import Extension
+from setuptools import Extension
 from majiq.src.constants import VERSION, store_git_version
-import numpy
 import sys
 import os
 
@@ -25,28 +24,40 @@ def requirements():
         # print(reql)
         return reql
 
+
+def setup_requirements(search=["Cython", "numpy"]):
+    return [x for x in requirements() if any(y in x for y in search)]
+
+
 class InstallCommand(install):
 
-    user_options = install.user_options + [
-        ('voila-only', None, 'Install VOILA only'),
-        ('debug-gdb', None, 'Add debugging flags for use with GDB (note: reduces performance)'),
-    ]
+    user_options = install.user_options + [('voila-only', 'v', None),
+                                           ('debug-gdb', None,
+                                            'Add debugging flags for use with GDB (note: reduces performance)'),
+                                           ('num-threads=', 'j', "Max number of threads to use for compiling"
+                                                               " extensions")
+                                           ]
 
     def initialize_options(self):
         install.initialize_options(self)
         self.voila_only = 0
         self.debug_gdb = 0
+        self.num_threads = 1
 
     def finalize_options(self):
         install.finalize_options(self)
 
+
+
     def run(self):
         print(self.__dict__)
-        # print(user_options)
-        if(self.voila_only):
+
+        if (self.voila_only):
 
             self.distribution.packages = ['voila', 'voila.api', 'voila.view', 'voila.utils', 'voila.view']
         else:
+            import numpy
+
             extensions = []
             HTSLIB_LIBRARY = ['hts', 'z']
             HTSLIB_LIB_DIRS = [os.environ.get("HTSLIB_LIBRARY_DIR", '/usr/local/lib')]
@@ -55,8 +66,18 @@ class InstallCommand(install):
             compile_args = ['-fopenmp']
             if self.debug_gdb:
                 compile_args += ["-O0", "-g"]
+            else:
+                compile_args += ['-O3']
+
             scythe_compiler_args = ['-DSCYTHE_COMPILE_DIRECT', '-DSCYTHE_PTHREAD']
             linker_args = ['-lgomp']
+
+            # if not self.no_lld:
+            #     lld_linker = shutil.which('ld.lld')
+            #     if lld_linker:
+            #         print("Using LLD Linker in place of GNU LD")
+            #         os.environ['LDSHARED'] = lld_linker
+            #         linker_args += ['-Wl', '--threads' '-Wl', '--thread-count', self.num_threads]
 
             if sys.platform == 'darwin':
                 # os.environ['CLANG_DEFAULT_CXX_STDLIB'] = 'libc++'
@@ -120,10 +141,11 @@ class InstallCommand(install):
             from Cython.Build import cythonize
 
             self.distribution.entry_points['console_scripts'].append('majiq = majiq.run_majiq:main')
-            self.distribution.ext_modules = cythonize(extensions, language_level=3)
+            self.distribution.ext_modules = cythonize(extensions, language_level=3, nthreads=int(self.num_threads))
+
+        self.do_egg_install()
 
 
-        install.run(self)
 
 setup(
     name = 'majiq',
@@ -133,21 +155,21 @@ setup(
     author_email='majiq@biociphers.org',
     url='https://biociphers.org',
     keywords=['rna', 'splicing', 'psi', 'splicegraph'],
-    license='LICENSE.txt',
+    license='No License',
     packages=find_packages(),
+    setup_requires = setup_requirements(),
     install_requires = requirements(),
     include_package_data = True,
     zip_safe = False,
     entry_points = {'console_scripts': ['voila = voila.run_voila:main']},
-    cmdclass={'install': InstallCommand,},
+    cmdclass={'install': InstallCommand},
     classifiers=[
-        'Development Status :: 4 - Beta',
+        'Development Status :: 5 - Production/Stable',
         'Environment :: Console',
         'Intended Audience :: Bioinformaticians',
-        'License :: OSI Approved :: BSD License',
         'Operating System :: MacOS',
         'Operating System :: Microsoft :: Windows',
         'Operating System :: POSIX',
-        'Programming Language :: Python :: 3.4']
+        'Programming Language :: Python :: 3.8']
 )
 
