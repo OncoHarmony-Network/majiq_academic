@@ -56,6 +56,14 @@ namespace io_bam {
      *
      * @note this should not be called after introns are inserted because
      * positional information mapped to bins will lose meaning
+     *
+     * @note XXX this is halfway done in the sense that right now there is no
+     * multithreading performed in BAM parsing except in IO by htslib. However,
+     * there are openmp locks/threading set up as if we intend to do so. If we
+     * do want to do multithreading, this will need to have locks set up to
+     * protect junc_vec elements while being resized. However, if we are
+     * single-threaded, we could expand buffers only as needed and use exactly
+     * the space we need
      */
     void IOBam::update_eff_len(const unsigned int new_eff_len) {
         // TODO add lock on eff_len_?
@@ -63,8 +71,11 @@ namespace io_bam {
             eff_len_ = new_eff_len;
             if (eff_len_ > buff_len_) {
                 // we need to expand buffers
-                // determine new buff_len_ to use XXX give safety factor
-                buff_len_ = eff_len_;
+                // give safety factor but make sure no less than eff_len_
+                buff_len_ = std::max(
+                        eff_len_,
+                        static_cast<unsigned int>(eff_len_ * BUFF_LEN_SAFETY_FACTOR)
+                );
                 // TODO add lock to junc_vec/threads?
                 // TODO the memory reallocation here could be parallelized
                 for (unsigned int i = 0; i < junc_vec.size(); ++i) {

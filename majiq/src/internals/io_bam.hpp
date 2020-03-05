@@ -17,6 +17,7 @@
 #define MIN_JUNC_LENGTH 2
 #define NUM_INTRON_BINS 10
 #define MIN_BUFF_LEN 64
+#define BUFF_LEN_SAFETY_FACTOR 1.2  // factor to multiply eff_len by
 
 #define UNSTRANDED 0
 #define FWD_STRANDED 1
