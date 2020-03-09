@@ -61,7 +61,7 @@ namespace grimoire {
         for (exon_mapIt = exon_map.begin(); exon_mapIt != exon_map.end(); ++exon_mapIt) {
             Exon *x = exon_mapIt->second ;
             if (   ( x->get_start() != EMPTY_COORD ) && ( x->get_end() != EMPTY_COORD )
-                && ( start < x->get_end() ) && ( end > x->get_start()) ) {
+                && ( start <= x->get_end() ) && ( end >= x->get_start()) ) {
                 return x ;
             }
         }
