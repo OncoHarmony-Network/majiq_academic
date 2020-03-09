@@ -72,7 +72,6 @@ namespace io_bam {
             int &n_cigar, uint32_t** cigar_ptr, int &read_length
     ) {
         uint32_t* base_cigar = *cigar_ptr;  // original cigar array
-        int length_removed = 0;  // keep track of how many bases removed
         // remove clipping on the right
         for (int i = n_cigar - 1; i >= 0; --i) {  // iterate backwards
             const char cigar_op = bam_cigar_op(base_cigar[i]);
@@ -170,7 +169,7 @@ namespace io_bam {
      * @param sreads number of reads to add to junction at stranded position
      *
      */
-    void IOBam::add_junction(string chrom, char strand, int start, int end, const int offset, int sreads) {
+    void IOBam::add_junction(string chrom, char strand, int start, int end, const unsigned int offset, int sreads) {
         if (offset >= eff_len_ || offset < 0) {
             // XXX -- should warn that we are losing reads (should handle offsets
             // earlier, this function should not need to check a second time
@@ -259,7 +258,7 @@ namespace io_bam {
                 const int junction_start = read_pos + genomic_offset;
                 const int junction_end = junction_start + cigar_oplen + 1;
                 // get junction position
-                const int junction_pos = read_offset - MIN_BP_OVERLAP;
+                const unsigned int junction_pos = read_offset - MIN_BP_OVERLAP;
                 // add the junction at the specified position
                 try {
                     add_junction(chrom, _get_strand(read), junction_start,
@@ -429,7 +428,7 @@ namespace io_bam {
                 // read start at or after intron start, further away from end of read
                 relative_offset = read_start_vs_intron_start;
             } else {
-                int i = 1;  // get index of first offset past intron start
+                unsigned int i = 1;  // get index of first offset past intron start
                 for (; i < genomic_read_offsets.size(); ++i) {
                     // could replace with something like std::lower_bound for log(n) search
                     // but premature optimization unless many cigar operations
