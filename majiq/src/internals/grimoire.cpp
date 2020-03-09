@@ -94,7 +94,7 @@ namespace grimoire {
         string key ;
         stringstream s1 ;
         stringstream s2 ;
-        if ((end - start) < 1) return ;
+        if ((end - start) < 0) return ;
         ex1 = exonOverlap(exon_map_, start, end) ;
         if (nullptr != inbound_j && nullptr != outbound_j && inbound_j->get_intronic() && outbound_j->get_intronic()) {
             s1 << start ; s2 << end ;
