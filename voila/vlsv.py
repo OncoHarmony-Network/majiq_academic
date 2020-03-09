@@ -1,4 +1,5 @@
 import numpy as np
+from scipy import special
 
 
 def get_expected_value(bins, left=0, right=1):
@@ -36,17 +37,19 @@ def get_expected_psi(bins):
 
 def collapse_matrix(matrix):
     """
-    Collapse the diagonals probabilities in 1-D and return them.
-    :param matrix: numpy matrix
-    :return: collapsed numpy array
+    Collapse the matrix of log-probabilities on psi1, psi2 to marginalize over
+    deltapsi
+    :param matrix: numpy matrix of log-prior on psi1, psi2
+    :return: collapsed numpy array of log-prior on dpsi = psi1 - psi2
     """
 
-    collapse = []
     matrix_corner = matrix.shape[0]
-    for i in range(-matrix_corner + 1, matrix_corner):
-        collapse.append(np.diagonal(matrix, offset=i).sum())
-
-    return np.array(collapse)
+    return np.array([
+        # get sum of probabilities back in log-space without losing precision
+        special.logsumexp(np.diagonal(matrix, offset=i))
+        # over each diagonal (corresponding to same value of dpsi)
+        for i in range(-matrix_corner + 1, matrix_corner)
+    ])
 
 
 def matrix_area(matrix, threshold, non_changing=False):
