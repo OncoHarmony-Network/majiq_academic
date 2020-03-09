@@ -116,11 +116,13 @@ cdef int  read_gff(str filename, map[string, Gene*] all_genes, vector[string] gi
         for xx, yy in coord_list:
             key = ('%s-%s' % (last_ss, xx)).encode('utf-8')
 
-            all_genes[gene_id].junc_map_[key] = new Junction(last_ss, xx, True, simpl)
+            if all_genes[gene_id].junc_map_.count(key) == 0:
+                all_genes[gene_id].junc_map_[key] = new Junction(last_ss, xx, True, simpl)
             last_ss = yy
 
         key = ('%s-%s' % (last_ss, FIRST_LAST_JUNC)).encode('utf-8')
-        all_genes[gene_id].junc_map_[key] = new Junction(last_ss, FIRST_LAST_JUNC, True, simpl)
+        if all_genes[gene_id].junc_map_.count(key) == 0:
+            all_genes[gene_id].junc_map_[key] = new Junction(last_ss, FIRST_LAST_JUNC, True, simpl)
     merge_exons(exon_dict, all_genes, simpl, enable_anot_ir)
     return 0
 
