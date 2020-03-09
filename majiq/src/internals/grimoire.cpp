@@ -35,7 +35,7 @@ namespace grimoire {
     bool sort_ss(const Ssite &a, const Ssite &b){
 
         bool crd =  (a.coord<b.coord) ;
-        bool r = (a.coord == b.coord) && (a.donor_ss > b.donor_ss);
+        bool r = (a.coord == b.coord) && (a.donor_ss < b.donor_ss);  // acceptors before donors if given same coordinate
         bool same = (a.coord == b.coord) && (a.donor_ss == b.donor_ss) && ((a.j->length()) < b.j->length()) ;
         return  crd || r || same ;
     }
