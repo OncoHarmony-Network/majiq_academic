@@ -4,12 +4,15 @@
 //#include <algorithm>
 #include <iomanip>
 #include <iostream>
+#include <random>
 #include "grimoire.hpp"
 #include "htslib/sam.h"
 #include <map>
 #include <set>
 #include <omp.h>
 //#include "interval.hpp"
+
+#define BOOTSTRAP_SEED 20200309
 
 #define MIN_INTRON_LEN 1000
 #define MIN_BP_OVERLAP 8
@@ -48,6 +51,11 @@ namespace io_bam{
             bool simpl_ ;
             omp_lock_t map_lck_ ;
 
+            // random number generation persistent in class
+            // XXX -- consider using Mersenne-Twister to give more uniform
+            // implementation across architectures/less compiler-dependent
+            static vector<default_random_engine> generators_;
+
         public:
             vector<float *> junc_vec ;
             IOBam(){ }
@@ -57,6 +65,11 @@ namespace io_bam{
                                                                   nthreads_(nthreads1), glist_(glist1), simpl_(simpl1){
                 omp_init_lock( &map_lck_ ) ;
                 bam_ = bam1 ;
+                // initialize any new generators for the number of threads being used
+                generators_.reserve(nthreads_);
+                for (unsigned int i = generators_.size(); i < nthreads_; ++i) {
+                    generators_.emplace_back(i + BOOTSTRAP_SEED);
+                }
             }
 
             ~IOBam(){
