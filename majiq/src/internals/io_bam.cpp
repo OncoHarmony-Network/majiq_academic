@@ -64,23 +64,22 @@ namespace io_bam {
      * adjust cigar_ptr, n_cigar, read_length to ignore clipping
      *
      * @param n_cigar number of cigar operations passed by reference (adjusted by call)
-     * @param cigar_ptr pointer to array of cigar operations (adjusted by call)
+     * @param cigar array of cigar operations passed by reference (adjusted by call)
      * @param read_length length of read passed by reference (adjusted by call)
      *
      */
     void _length_adjust_cigar_soft_clipping(
-            int &n_cigar, uint32_t** cigar_ptr, int &read_length
+            int &n_cigar, uint32_t* &cigar, int &read_length
     ) {
-        uint32_t* base_cigar = *cigar_ptr;  // original cigar array
         // remove clipping on the right
         for (int i = n_cigar - 1; i >= 0; --i) {  // iterate backwards
-            const char cigar_op = bam_cigar_op(base_cigar[i]);
+            const char cigar_op = bam_cigar_op(cigar[i]);
             // ignore clipping operations and contribution to read length
             if (cigar_op == BAM_CHARD_CLIP) {
                 --n_cigar;
             } else if (cigar_op == BAM_CSOFT_CLIP) {
                 --n_cigar;
-                read_length -= bam_cigar_oplen(base_cigar[i]);
+                read_length -= bam_cigar_oplen(cigar[i]);
             } else {
                 break;
             }
@@ -88,20 +87,20 @@ namespace io_bam {
         // remove clipping on the left
         int lhs_clipping = 0;  // offset to apply to *cigar_ptr
         for (int i = 0; i < n_cigar; ++i) {
-            const char cigar_op = bam_cigar_op(base_cigar[i]);
+            const char cigar_op = bam_cigar_op(cigar[i]);
             // ignore clipping operations and contribution to read length
             if (cigar_op == BAM_CHARD_CLIP) {
                 ++lhs_clipping;
             } else if (cigar_op == BAM_CSOFT_CLIP) {
                 ++lhs_clipping;
-                read_length -= bam_cigar_oplen(base_cigar[i]);
+                read_length -= bam_cigar_oplen(cigar[i]);
             } else {
                 break;
             }
         }
         if (lhs_clipping > 0) {
             n_cigar -= lhs_clipping;
-            *cigar_ptr = base_cigar + lhs_clipping;
+            cigar = cigar + lhs_clipping;
         }
         return;
     }
@@ -237,7 +236,7 @@ namespace io_bam {
         // get cigar operations, adjust them and read length to ignore clipping
         int n_cigar = read->core.n_cigar;
         uint32_t *cigar = bam_get_cigar(read) ;
-        _length_adjust_cigar_soft_clipping(n_cigar, &cigar, read_length);
+        _length_adjust_cigar_soft_clipping(n_cigar, cigar, read_length);
 
         // track offsets on genomic and read position for moving along alignment
         int genomic_offset = 0;
@@ -333,7 +332,7 @@ namespace io_bam {
         // get cigar operations, adjust them and read length to ignore clipping
         int n_cigar = read->core.n_cigar ;
         uint32_t *cigar = bam_get_cigar(read) ;
-        _length_adjust_cigar_soft_clipping(n_cigar, &cigar, read_length);
+        _length_adjust_cigar_soft_clipping(n_cigar, cigar, read_length);
 
         // parse CIGAR operations for genomic_read_offsets, junc_record, {first,last}_pos
         int genomic_offset = 0;
