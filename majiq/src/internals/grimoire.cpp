@@ -268,7 +268,7 @@ namespace grimoire {
             } else {
                 if (start_ir <= 0) {
                     continue ;
-                } else if ((ss.coord - start_ir) > 2) {
+                } else if ((ss.coord - start_ir) >= 2) {
                     end_ir = ss.coord ;
 
                     #pragma omp critical
