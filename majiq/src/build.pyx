@@ -217,7 +217,8 @@ cdef _parse_junction_file(tuple filetp, map[string, Gene*]& gene_map, vector[str
     cdef unsigned int denovo_thresh= conf.min_denovo
     cdef bint denovo = conf.denovo
     cdef IOBam c_iobam
-    cdef int njunc, i, j
+    cdef int njunc, j
+    cdef unsigned int i
     cdef np.ndarray junc_ids
     cdef object fp
     cdef Gene_vect_t gene_l
