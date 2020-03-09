@@ -329,34 +329,13 @@ namespace grimoire{
             void    calculate_lambda() ;
 
             /**
-             * fraction of bins there are per possible position on intron with
-             * specified effective read length
-             */
-            inline float bins_per_position(int eff_len) {
-                return (static_cast<float>(numbins_)) / (length() + eff_len);
-            }
-
-            /**
              * Adjusts read rates relative to intron and (max) read length.
              *
              * @note calling more than once currently causes normalization to
              * be applied twice; that is, we do not maintain state as to
              * whether normalization has been performed previously
-             *
-             * @param eff_len effective read length to perform scaling with
              */
-            void normalize_readrates(int eff_len) {
-                if (read_rates_ == nullptr) {
-                    return;
-                }
-                const float normalization_scale = bins_per_position(eff_len);
-                for (int i = 0; i < numbins_; ++i) {
-                    if (read_rates_[i] > 0) {
-                        read_rates_[i] = read_rates_[i] * normalization_scale;
-                    }
-                }
-                return;
-            }
+            void normalize_readrates();
 
             /**
              * Return boolean indicating if intron is "reliable"

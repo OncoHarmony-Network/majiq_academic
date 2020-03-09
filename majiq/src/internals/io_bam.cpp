@@ -451,8 +451,7 @@ namespace io_bam {
                 Intron * intrn_it = (it.second)[idx] ;
                 const bool pass = intrn_it->is_reliable(min_bins, eff_len_);
                 if (pass) {
-                    // normalized read rates only if intron passed
-                    intrn_it->normalize_readrates(eff_len_);
+                    intrn_it->normalize_readrates();  // normalize readrates if it passed
                     const string key = intrn_it->get_key(intrn_it->get_gene()) ;
                     #pragma omp critical
                     {
