@@ -325,7 +325,7 @@ namespace io_bam {
         return npos ;
     }
 
-    int IOBam::boostrap_samples(int msamples, int ksamples, float* boots, float fitfunc_r, float pvalue_limit){
+    int IOBam::bootstrap_samples(int msamples, int ksamples, float* boots, float fitfunc_r, float pvalue_limit) {
         const int njunc = junc_map.size();
 
         #pragma omp parallel for num_threads(nthreads_)

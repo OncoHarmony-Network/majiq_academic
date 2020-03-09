@@ -72,7 +72,7 @@ namespace io_bam{
             int* get_junc_vec_summary() ;
             unsigned int get_junc_limit_index() { return junc_limit_index_ ; };
             int normalize_stacks(vector<float> vec, float sreads, int npos, float fitfunc_r, float pvalue_limit) ;
-            int boostrap_samples(int msamples, int ksamples, float* boots, float fitfunc_r, float pvalue_limit) ;
+            int bootstrap_samples(int msamples, int ksamples, float* boots, float fitfunc_r, float pvalue_limit);
             void detect_introns(float min_intron_cov, unsigned int min_experiments, float min_bins, bool reset) ;
 
             void get_intron_raw_cov(float* out_cov) ;
