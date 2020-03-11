@@ -300,7 +300,33 @@ namespace io_bam {
         return exit_code ;
     }
 
-    int IOBam::normalize_stacks(vector<float> &vec, float sreads, int npos, const float fitfunc_r, const float pvalue_limit){
+    /**
+     * sort vec, identify positions 0:npos that are not stacks, return npos
+     *
+     * @param &vec vector of nonzero coverage values, sorted as side effect
+     * @param sreads previously computed sum of coverage over vec
+     * @param fitfunc_r negative binomial distribution parameter
+     * @param pvalue_limit positions with coverage with right-tailed p-value
+     * less than this limit will be marked as stacks
+     *
+     * @return the number of positions that are not stacks. The coverage at
+     * these positions are found in sorted order as the corresponding first
+     * values in vec
+     *
+     * @note Sorts vec as side effect to test only the most extreme values of
+     * vec
+     * @note Does not remove the stacks from vec. The return value gives enough
+     * information to ignore these values in subsequent computation
+     * @note Stacks are computed with respect to leave-one-out mean of all
+     * other positions before any stacks removed. This means that previously
+     * removed stacks will contribute to the distribution mean. It would be
+     * trivial to modify this so that stack removal takes place against the
+     * running leave-one-out mean after each stack removal
+     */
+    unsigned int IOBam::normalize_stacks(
+            vector<float> &vec, float sreads, const float fitfunc_r,
+            const float pvalue_limit
+    ) {
         // get cdf function to handle fitfunc_r == 0 vs > 0
         std::function<float(float, float)> cdf_func;
         if (fitfunc_r == 0.0) {
@@ -315,23 +341,28 @@ namespace io_bam {
                 return scythe::pnbinom(x, r, r / (x + r));
             };
         }
-        // normalize stacks accordingly
-        const int other_npos = npos - 1;  // denominator used for leave-one-out mean coverage
-        for (auto it = vec.cbegin(); it != vec.cend(); /* increment in loop */) {
+
+        // sort coverage so we only need to test extremes
+        sort(vec.begin(), vec.end());
+        // number of positions that remain/for denominator
+        unsigned int npos = vec.size();
+        const unsigned int other_npos = npos - 1;  // denominator for leave-one-out mean
+        // starting from highest coverage positions, identify stacks
+        for (auto it = vec.rbegin(); it != vec.rend(); ++it) {
             // coverage at current position
             const float vec_i = *it;
             // leave-one-out mean coverage at other positions
             const float mean_reads = (other_npos == 0) ? 0.5: (sreads - vec_i) / other_npos;
             // p-value at current position
             const float pvalue = 1 - cdf_func(vec_i, mean_reads);
-            // remove position if less than p-value limit
+            // decrement number of valid positions if outlier
             if (pvalue < pvalue_limit) {
                 --npos;  // decrement npos for return value
-                it = vec.erase(it);  // get next position after deleting current position
             } else {
-                ++it;  // get next position without deleting current position
+                break;  // don't need to test remaining positions
             }
         }
+        // finally: values vec[:npos] are not stacks, vec[npos:] are stacks
         return npos;
     }
 
@@ -342,20 +373,21 @@ namespace io_bam {
         for(int jidx=0; jidx < njunc; jidx++){
 
             vector<float> vec ;
-            int npos = 0 ;
             float sreads = 0 ;
             for(unsigned int i=0; i<eff_len_; ++i){
                 if (junc_vec[jidx][i]>0){
-                    npos ++ ;
                     sreads += junc_vec[jidx][i] ;
                     vec.push_back(junc_vec[jidx][i]) ;
                 }
             }
-            if (npos == 0) continue ;
-            if (pvalue_limit > 0) npos = normalize_stacks(vec, sreads, npos, fitfunc_r, pvalue_limit) ;
-            if (npos == 0) continue ;
+            if (vec.size() == 0) continue ;  // can't bootstrap from 0 positions
+
+            // get number of positions to bootstrap over after stack removal
+            const unsigned int npos = pvalue_limit <= 0 ?
+                    vec.size() : normalize_stacks(vec, sreads, fitfunc_r, pvalue_limit);
+            if (npos == 0) continue ;  // can't bootstrap from 0 positions
             default_random_engine generator;
-            uniform_int_distribution<int> distribution(0, npos-1);
+            uniform_int_distribution<unsigned int> distribution(0, npos - 1);
             for (int m=0; m<msamples; m++){
                 float lambda = 0;
                 for (int k=0; k<ksamples; k++)lambda += vec[distribution(generator)] ;
