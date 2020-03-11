@@ -300,7 +300,7 @@ namespace io_bam {
         return exit_code ;
     }
 
-    int IOBam::normalize_stacks(vector<float> vec, float sreads, int npos, float fitfunc_r, float pvalue_limit){
+    int IOBam::normalize_stacks(vector<float> &vec, float sreads, int npos, float fitfunc_r, float pvalue_limit){
         if (fitfunc_r == 0.0){
             for (int i=0; i<(int)vec.size(); i++){
                 const float mean_reads = (npos == 1) ? 0.5: (sreads-vec[i]) / (npos - 1) ;

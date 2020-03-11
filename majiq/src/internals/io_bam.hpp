@@ -71,7 +71,11 @@ namespace io_bam{
             void add_junction(string chrom, char strand, int start, int end, int read_pos, int first_offpos, int sreads) ;
             int* get_junc_vec_summary() ;
             unsigned int get_junc_limit_index() { return junc_limit_index_ ; };
-            int normalize_stacks(vector<float> vec, float sreads, int npos, float fitfunc_r, float pvalue_limit) ;
+
+            /**
+             * remove outlier coverage values in vec and return npos - positions removed
+             */
+            int normalize_stacks(vector<float> &vec, float sreads, int npos, float fitfunc_r, float pvalue_limit) ;
             int boostrap_samples(int msamples, int ksamples, float* boots, float fitfunc_r, float pvalue_limit) ;
             void detect_introns(float min_intron_cov, unsigned int min_experiments, float min_bins, bool reset) ;
 
