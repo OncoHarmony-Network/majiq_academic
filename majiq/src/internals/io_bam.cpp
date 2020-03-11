@@ -301,9 +301,10 @@ namespace io_bam {
     }
 
     int IOBam::normalize_stacks(vector<float> &vec, float sreads, int npos, float fitfunc_r, float pvalue_limit){
+        const int other_npos = npos - 1;  // denominator used for leave-one-out mean coverage
         if (fitfunc_r == 0.0){
             for (int i=0; i<(int)vec.size(); i++){
-                const float mean_reads = (npos == 1) ? 0.5: (sreads-vec[i]) / (npos - 1) ;
+                const float mean_reads = (other_npos == 0) ? 0.5 : (sreads - vec[i]) / other_npos;
                 const float pvalue = 1 - scythe::ppois(vec[i], mean_reads) ;
                 if (pvalue< pvalue_limit){
                     vec.erase(vec.begin() + i) ;
@@ -312,7 +313,7 @@ namespace io_bam {
             }
         }else{
             for (int i=0; i<(int) vec.size(); i++){
-                const float mean_reads = (npos == 1) ? 0.5: (sreads-vec[i]) / (npos - 1) ;
+                const float mean_reads = (other_npos == 0) ? 0.5 : (sreads - vec[i]) / other_npos;
                 const float r = 1 / fitfunc_r ;
                 const float p = r/(mean_reads + r) ;
                 const float pvalue = 1 - scythe::pnbinom(vec[i], r, p) ;
