@@ -300,30 +300,39 @@ namespace io_bam {
         return exit_code ;
     }
 
-    int IOBam::normalize_stacks(vector<float> &vec, float sreads, int npos, float fitfunc_r, float pvalue_limit){
+    int IOBam::normalize_stacks(vector<float> &vec, float sreads, int npos, const float fitfunc_r, const float pvalue_limit){
+        // get cdf function to handle fitfunc_r == 0 vs > 0
+        std::function<float(float, float)> cdf_func;
+        if (fitfunc_r == 0.0) {
+            cdf_func = [](float x, float mean) -> float {
+                return scythe::ppois(x, mean);
+            };
+        } else {
+            // get negative-binomial parameters (in scythestat formulation)
+            const float r = 1 / fitfunc_r;
+            // const float p = r / (mean + r);
+            cdf_func = [r](float x, float mean) -> float {
+                return scythe::pnbinom(x, r, r / (x + r));
+            };
+        }
+        // normalize stacks accordingly
         const int other_npos = npos - 1;  // denominator used for leave-one-out mean coverage
-        if (fitfunc_r == 0.0){
-            for (int i=0; i<(int)vec.size(); i++){
-                const float mean_reads = (other_npos == 0) ? 0.5 : (sreads - vec[i]) / other_npos;
-                const float pvalue = 1 - scythe::ppois(vec[i], mean_reads) ;
-                if (pvalue< pvalue_limit){
-                    vec.erase(vec.begin() + i) ;
-                    npos -- ;
-                }
-            }
-        }else{
-            for (int i=0; i<(int) vec.size(); i++){
-                const float mean_reads = (other_npos == 0) ? 0.5 : (sreads - vec[i]) / other_npos;
-                const float r = 1 / fitfunc_r ;
-                const float p = r/(mean_reads + r) ;
-                const float pvalue = 1 - scythe::pnbinom(vec[i], r, p) ;
-                if (pvalue< pvalue_limit){
-                    vec.erase(vec.begin() + i);
-                    npos -- ;
-                }
+        for (auto it = vec.cbegin(); it != vec.cend(); /* increment in loop */) {
+            // coverage at current position
+            const float vec_i = *it;
+            // leave-one-out mean coverage at other positions
+            const float mean_reads = (other_npos == 0) ? 0.5: (sreads - vec_i) / other_npos;
+            // p-value at current position
+            const float pvalue = 1 - cdf_func(vec_i, mean_reads);
+            // remove position if less than p-value limit
+            if (pvalue < pvalue_limit) {
+                --npos;  // decrement npos for return value
+                it = vec.erase(it);  // get next position after deleting current position
+            } else {
+                ++it;  // get next position without deleting current position
             }
         }
-        return npos ;
+        return npos;
     }
 
     int IOBam::boostrap_samples(int msamples, int ksamples, float* boots, float fitfunc_r, float pvalue_limit){
