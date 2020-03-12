@@ -497,7 +497,12 @@ namespace grimoire{
             void    add_intron(Intron * inIR_ptr, float min_coverage, unsigned int min_exps, float min_bins, bool reset) ;
             void    newExonDefinition(int start, int end, Junction *inbound_j, Junction *outbound_j, bool in_db) ;
             void    fill_junc_tlb(map<string, vector<string>> &tlb) ;
-            int     detect_lsvs(vector<LSV*> &out_lsvlist) ;
+
+            /**
+             * Output nonredundant (strict) vs non-mutually-redundant LSVs to
+             * out_lsvlist, return number of LSVS added
+             */
+            int detect_lsvs(vector<LSV*> &out_lsvlist, bool lsv_strict);
             int     get_constitutive_junctions(vector<string>& v) ;
             void    simplify(map<string, int>& junc_tlb, float simpl_percent, int strandness, int denovo_simpl,
                              int db_simple, int ir_simpl, bool last, unsigned int min_experiments) ;
