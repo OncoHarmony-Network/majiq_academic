@@ -55,8 +55,8 @@ namespace io_bam {
     // returns true if associated cigar operation offsets position on reference
     inline bool _cigar_advance_reference(const char cigar_op) {
         return (
-            cigar_op == BAM_CMATCH || cigar_op == BAM_CEQUAL || cigar_op == BAM_CDIFF
-            || cigar_op == BAM_CDEL || cigar_op == BAM_CREF_SKIP
+            cigar_op == BAM_CREF_SKIP || cigar_op == BAM_CMATCH ||
+            cigar_op == BAM_CEQUAL || cigar_op == BAM_CDIFF || cigar_op == BAM_CDEL
         );
     }
 
@@ -247,13 +247,12 @@ namespace io_bam {
             // extract operation and offset for the operation from cigar[i]
             const char cigar_op = bam_cigar_op(cigar[i]);
             const int cigar_oplen = bam_cigar_oplen(cigar[i]);
-            if (cigar_op == BAM_CREF_SKIP) {
-                if (read_offset < MIN_BP_OVERLAP) {
-                    // too early in read, not enough overlap yet
-                    continue;
-                }
-                // if we make it here, this is in a valid position to add
-                // get start and end of junction
+            // check if we have a junction we can add
+            if (cigar_op == BAM_CREF_SKIP && read_offset >= MIN_BP_OVERLAP) {
+                // this is a junction overlapping sufficiently with the read
+                // (we don't need to check read_offset <= read_length - MIN_BP_OVERLAP
+                // because we exit early when advancing read offset)
+                // get genomic start and end of junction
                 const int junction_start = read_pos + genomic_offset;
                 const int junction_end = junction_start + cigar_oplen + 1;
                 // get junction position
@@ -265,19 +264,16 @@ namespace io_bam {
                 } catch (const std::logic_error& e) {
                     cout << "ERROR" << e.what() << '\n';
                 }
-                // finally, update the genomic offset
+            }
+            // update read and genomic offsets
+            if (_cigar_advance_read(cigar_op)) {
+                read_offset += cigar_oplen;
+                if (read_offset > read_length - MIN_BP_OVERLAP) {
+                    break;  // future operations will not lead to valid junction
+                }
+            }
+            if (_cigar_advance_reference(cigar_op)) {
                 genomic_offset += cigar_oplen;
-            } else {
-                // handle all other operations
-                if (_cigar_advance_read(cigar_op)) {
-                    read_offset += cigar_oplen;
-                    if (read_offset > read_length - MIN_BP_OVERLAP) {
-                        break;  // future operations will not lead to valid junction
-                    }
-                }
-                if (_cigar_advance_reference(cigar_op)) {
-                    genomic_offset += cigar_oplen;
-                }
             }
         }
         // done processing this read
