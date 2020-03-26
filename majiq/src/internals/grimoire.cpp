@@ -761,13 +761,31 @@ namespace grimoire {
 
             if (ss) {
                  for (const auto &j: (ptr.ex_ptr)->ib){
-                    ss_set.insert(j->get_end()) ;
+                     if (
+                         j->get_donor() == nullptr
+                         || j->get_start() < 0
+                         || j->get_simpl_fltr()
+                     ) {
+                         // only count junctions that could make junc_list
+                         // (i.e. junction starting/ending at exon(s), unsimplified)
+                         continue;
+                     }
+                     ss_set.insert(j->get_end());
                  }
                  total = ss_set.size() ;
                  pos = distance(ss_set.begin(), ss_set.find((ptr.jun_ptr)->get_end()))+1 ;
             }else{
                  for (const auto &j: (ptr.ex_ptr)->ob){
-                    ss_set.insert(j->get_start()) ;
+                     if (
+                         j->get_acceptor() == nullptr
+                         || j->get_end() < 0
+                         || j->get_simpl_fltr()
+                     ) {
+                         // only count junctions that could make junc_list
+                         // (i.e. junction starting/ending at exon(s), unsimplified)
+                         continue;
+                     }
+                     ss_set.insert(j->get_start()) ;
                  }
                  total = ss_set.size() ;
                  pos = distance(ss_set.begin(), ss_set.find((ptr.jun_ptr)->get_start()))+1 ;
