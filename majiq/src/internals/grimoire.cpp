@@ -739,8 +739,6 @@ namespace grimoire {
 
         string ext_type = (ss != b) ? "t" : "s" ;
 
-        string prev_ex = to_string(sp_list[0].ex_ptr->get_start()) + "-" + to_string(sp_list[0].ex_ptr->get_end()) ;
-        unsigned int excount = 1 ;
         if (ss) for (const auto &j: ref_ex->ob) ref_ss_set.insert(j->get_start()) ;
         else for (const auto &j: ref_ex->ib) ref_ss_set.insert(j->get_end()) ;
 
@@ -765,10 +763,8 @@ namespace grimoire {
         }
         for (const auto &ex_pair: other_exons) {
             const string exid = ex_pair.second;
-            if( exDct.count(exid) == 0 ){
-                exDct[exid] = excount ;
-                excount += 1 ;
-            }
+            const unsigned int ex_ct = exDct.size() + 1;
+            exDct[exid] = ex_ct;
         }
 
         // now loop over junctions
@@ -787,42 +783,35 @@ namespace grimoire {
             if (ss) {
                  for (const auto &j: (ptr.ex_ptr)->ib){
                      if (
-                         j->get_donor() == nullptr
-                         || j->get_start() < 0
-                         || j->get_simpl_fltr()
+                         j->get_donor() != nullptr
+                         && j->get_start() >= 0
+                         && !(j->get_simpl_fltr())
                      ) {
                          // only count junctions that could make junc_list
                          // (i.e. junction starting/ending at exon(s), unsimplified)
-                         continue;
+                         ss_set.insert(j->get_end());
                      }
-                     ss_set.insert(j->get_end());
                  }
                  total = ss_set.size() ;
                  pos = distance(ss_set.begin(), ss_set.find((ptr.jun_ptr)->get_end()))+1 ;
             }else{
                  for (const auto &j: (ptr.ex_ptr)->ob){
                      if (
-                         j->get_acceptor() == nullptr
-                         || j->get_end() < 0
-                         || j->get_simpl_fltr()
+                         j->get_acceptor() != nullptr
+                         && j->get_end() >= 0
+                         && !(j->get_simpl_fltr())
                      ) {
                          // only count junctions that could make junc_list
                          // (i.e. junction starting/ending at exon(s), unsimplified)
-                         continue;
+                         ss_set.insert(j->get_start()) ;
                      }
-                     ss_set.insert(j->get_start()) ;
                  }
                  total = ss_set.size() ;
                  pos = distance(ss_set.begin(), ss_set.find((ptr.jun_ptr)->get_start()))+1 ;
 
             }
 
-            if( exDct.count(exid) == 0 ){
-                // XXX this shouldn't ever happen
-                exDct[exid] = excount ;
-                excount += 1 ;
-            }
-            ext_type = ext_type + "|" + to_string(jidx) + "e" + to_string(exDct[exid]) + "."
+            ext_type = ext_type + "|" + to_string(jidx) + "e" + to_string(exDct.at(exid)) + "."
                                 + to_string(pos) + "o" +  to_string(total) ;
             junctions_.push_back(ptr.jun_ptr) ;
         }
