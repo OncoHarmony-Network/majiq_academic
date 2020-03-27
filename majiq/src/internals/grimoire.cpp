@@ -746,7 +746,32 @@ namespace grimoire {
 
         unsigned int jidx = 0 ;
         int prev_coord = 0 ;
-        map<string, unsigned int > exDct ;
+        map<string, unsigned int > exDct;  // exon key -> exon count in strand order
+
+        // fill exDct beforehand since it is not in same order as junctions
+        set <pair<int, string>> other_exons;
+        for (const auto &ptr: sp_list) {
+            // don't add exon for exitrons
+            if (ptr.ex_ptr == ref_ex) {
+                continue;
+            }
+            // get exon id for exDct
+            const string exid = to_string((ptr.ex_ptr)->get_start()) + "-" + to_string((ptr.ex_ptr)->get_end());
+            // get coordinate for sorting
+            // we use this coordinate because unique and handles half exons in order
+            const int sort_coordinate = (b ? 1 : -1) * (ss ? ptr.ex_ptr->get_start() : ptr.ex_ptr->get_end());
+            // should be unique pair, sorted by valid coordinate
+            other_exons.insert(make_pair(sort_coordinate, exid));
+        }
+        for (const auto &ex_pair: other_exons) {
+            const string exid = ex_pair.second;
+            if( exDct.count(exid) == 0 ){
+                exDct[exid] = excount ;
+                excount += 1 ;
+            }
+        }
+
+        // now loop over junctions
         for (const auto &ptr: sp_list){
             jidx = (prev_coord != ptr.ref_coord) ? jidx+1 : jidx ;
             prev_coord = ptr.ref_coord ;
@@ -793,6 +818,7 @@ namespace grimoire {
             }
 
             if( exDct.count(exid) == 0 ){
+                // XXX this shouldn't ever happen
                 exDct[exid] = excount ;
                 excount += 1 ;
             }
