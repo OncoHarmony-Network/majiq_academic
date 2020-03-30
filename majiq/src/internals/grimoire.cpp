@@ -811,8 +811,19 @@ namespace grimoire {
 
             }
 
-            ext_type = ext_type + "|" + to_string(jidx) + "e" + to_string(exDct.at(exid)) + "."
-                                + to_string(pos) + "o" +  to_string(total) ;
+            try {
+                ext_type = (
+                    ext_type
+                    + "|" + to_string(jidx) + "e" + to_string(exDct.at(exid))
+                    + "." + to_string(pos) + "o" + to_string(total)
+                );
+            } catch (const std::out_of_range& e) {
+                // exid wasn't in exDct
+                // this key should have been added during its construction...
+                cerr << "Assertion error: exon (exid = '" << exid
+                    << "') not found in exDct in LSV::set_type()\n";
+                throw(std::out_of_range("Missing key " + exid + " in exDct"));
+            }
             junctions_.push_back(ptr.jun_ptr) ;
         }
 
