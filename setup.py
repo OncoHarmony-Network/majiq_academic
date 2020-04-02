@@ -69,7 +69,6 @@ class InstallCommand(install):
             else:
                 compile_args += ['-O3']
 
-            scythe_compiler_args = ['-DSCYTHE_COMPILE_DIRECT', '-DSCYTHE_PTHREAD']
             linker_args = ['-lgomp']
 
             # if not self.no_lld:
@@ -103,7 +102,7 @@ class InstallCommand(install):
                                      library_dirs=HTSLIB_LIB_DIRS + MAJIQ_LIB_DIRS,
                                      libraries=HTSLIB_LIBRARY,
                                      runtime_library_dirs=HTSLIB_LIB_DIRS + MAJIQ_LIB_DIRS,
-                                     extra_compile_args=compile_args + scythe_compiler_args,
+                                     extra_compile_args=compile_args,
                                      extra_link_args=linker_args,
                                      language='c++')]
 
@@ -111,7 +110,7 @@ class InstallCommand(install):
                                      include_dirs=MAJIQ_INC_DIRS + NPY_INC_DIRS,
                                      library_dirs=MAJIQ_LIB_DIRS,
                                      runtime_library_dirs=MAJIQ_LIB_DIRS,
-                                     extra_compile_args=compile_args + scythe_compiler_args,
+                                     extra_compile_args=compile_args,
                                      extra_link_args=linker_args,
                                      language='c++')]
 
@@ -119,7 +118,7 @@ class InstallCommand(install):
                                      include_dirs=MAJIQ_INC_DIRS + NPY_INC_DIRS,
                                      library_dirs=MAJIQ_LIB_DIRS,
                                      runtime_library_dirs=MAJIQ_LIB_DIRS,
-                                     extra_compile_args=compile_args + scythe_compiler_args,
+                                     extra_compile_args=compile_args,
                                      extra_link_args=linker_args,
                                      language='c++')]
 
@@ -127,7 +126,7 @@ class InstallCommand(install):
                                      include_dirs=MAJIQ_INC_DIRS + NPY_INC_DIRS + MAJIQ_INC_STATS_DIR,
                                      library_dirs=MAJIQ_LIB_DIRS,
                                      runtime_library_dirs=MAJIQ_LIB_DIRS,
-                                     extra_compile_args=compile_args + scythe_compiler_args,
+                                     extra_compile_args=compile_args,
                                      extra_link_args=linker_args,
                                      language='c++')]
 
