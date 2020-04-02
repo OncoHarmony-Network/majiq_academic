@@ -2,7 +2,7 @@
 #define TTEST_H
 #include "MathFunctions.h"
 #include "testStats.hpp"
-#include "scythestat/distributions.h"
+#include "boost/math/distributions/students_t.hpp"
 #include <random>
 #include <algorithm>
 #include <string>
@@ -59,7 +59,8 @@ namespace MajiqStats{
                 double U = fabs(_Stat) ;
 //                double P, Q ;
 //                cumt( &U, &_Deg, &P, &Q ) ;
-                double Q = scythe::pt(U, _Deg) ;
+                const boost::math::students_t_distribution<double> t_dist(_Deg);
+                double Q = boost::math::cdf(t_dist, U);
 //                double Q = 0 ;
                 return (1-Q) ;
             }
