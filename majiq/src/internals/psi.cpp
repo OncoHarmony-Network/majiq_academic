@@ -170,21 +170,23 @@ void deltapsi_posterior(dpsiLSV*lsvObj, vector<psi_distr_t>& prior_matrix, psi_d
  *
  * @param osamps array of output psi samples
  * @param lsvObj pointer to LSV with readrate information that will have
- * @praram psi_samples number of samples to generate per junction
+ * @param psi_samples number of samples to generate per junction for stats
+ * @param visualization_samples number of samples to generate per junction for visualization
  * @param psi_border ends of bins for visualization/discretizing posterior
  * @param nbins number of bins for discretizing posterior
  * @param cidx, fidx comparison/file index
  * @param generator source of randomness for sampling distributions
  */
 void get_samples_from_psi(
-    float* osamps, hetLSV* lsvObj, int psi_samples, psi_distr_t& psi_border,
-    int nbins, int cidx, int fidx, std::mt19937 &generator
+    float* osamps, hetLSV* lsvObj, int psi_samples, int visualization_samples,
+    psi_distr_t& psi_border, int nbins, int cidx, int fidx, std::mt19937 &generator
 ) {
-
-//    cout<< "MM1\n" ;
     const int njunc = lsvObj->get_num_ways() ;
     const int j_offset = lsvObj->get_junction_index() ;
     const int msamples = lsvObj->samps[0].size() ;
+    const int total_samples = std::max(psi_samples, visualization_samples);
+    // uniform distribution over the bootstrap replicates
+    uniform_int_distribution<int> source_distribution(0, msamples - 1);
 
     if (!lsvObj->is_enabled()){
         for (int j=0; j<njunc; j++){
@@ -207,63 +209,59 @@ void get_samples_from_psi(
         }
     }
 
-   for (int j=0; j<njunc; j++){
+    for (int j=0; j<njunc; j++){
+        // prior on alpha/beta
         const float alpha = alpha_beta_prior[j][0] ;
         const float beta = alpha_beta_prior[j][1] ;
+        // mean/samping distribution per bootstrap replicate
         psi_distr_t temp_mupsi(msamples) ;
-        psi_distr_t temp_postpsi (nbins, 0.0) ;
-        for (int m=0; m<msamples; m++){
+        vector<boost::random::beta_distribution<float>> distributions;
+        distributions.reserve(msamples);
+        for (int m = 0; m < msamples; ++m) {
+            // per junction vs total read counts
             const float jnc_val = lsvObj->samps[j][m] ;
             const float all_val = all_m[m] ;
-            psi_distr_t psi_lkh (nbins, 0.0) ;
-
+            // obtain posterior mean for current replicate
             temp_mupsi[m] = calc_mupsi(jnc_val, all_val, alpha, beta) ;
-            // get discretized log-posterior over bins for bootstrap replicate
-            // (regularized by pseudocount-probability of PSEUDO)
-            prob_data_sample_given_psi(psi_lkh, jnc_val, all_val, psi_border, nbins, alpha, beta) ;
-            // get log-normalizing constant
-            const float Z = logsumexp(psi_lkh, nbins) ;
-            for (int i=0; i< nbins; i++){
-                psi_lkh[i] -= Z ;
-                // add normalized posterior for the bootstrap replicate for
-                // unnormalized average of posteriors across bootstraps
-                temp_postpsi[i] += exp(psi_lkh[i]) ;
-//                lsvObj->post_psi[cidx][j][i] += exp(psi_lkh[i]) ;
-            }
-            psi_lkh.clear() ;
+            // obtain parameters for bootstrap replicate distribution
+            const float a = jnc_val + alpha;
+            const float b = (all_val - jnc_val) + beta;
+            distributions.push_back(boost::random::beta_distribution<float>(a, b));
         }
+        // get median of posterior means for this junction and save it
         sort (temp_mupsi.begin(), temp_mupsi.end()) ;
         lsvObj->mu_psi[cidx][fidx][j] = median(temp_mupsi) ;
-        for (int i=0; i<nbins; i++){
-            // normalize posterior distribution for this sample
-            temp_postpsi[i] /= msamples ;
-            // add per-sample posterior distribution to create unnormalized
-            // mean distribution over the condition indexed by `cidx`
-            lsvObj->post_psi[cidx][j][i] += temp_postpsi[i] ;
-        }
-        if (psi_samples == 1){
-            osamps[j+j_offset] = lsvObj->mu_psi[cidx][fidx][j] ;
-        }else{
-            // distributions we are sampling from
-            vector<boost::random::beta_distribution<float>> distributions;
-            distributions.reserve(msamples);
-            for (int m = 0; m < msamples; ++m) {
-                // get parameters for bootstrap replicate distribution
-                // XXX could be mixed in with earlier code better
-                const float jnc_val = lsvObj->samps[j][m];
-                const float all_val = all_m[m];
-                const float a = jnc_val + alpha;
-                const float b = (all_val - jnc_val) + beta;
-                distributions.push_back(boost::random::beta_distribution<float>(a, b));
-            }
-            // sample uniformly from bootstrap replicates
-            uniform_int_distribution<int> source_distribution(0, msamples - 1);
-            for(int i = 0; i < psi_samples; ++i) {
+
+        // perform sampling for testing/visualization ({psi,visualization}_samples)
+        psi_distr_t &visualization_distribution = lsvObj->post_psi[cidx][j];
+        float visualization_impact = 1. / total_samples;  // to distribution
+        for (int i = 0; i < total_samples; ++i) {
+            // sample psi from uniform mixture of betas distribution
+            const float sampled_psi = distributions[source_distribution(generator)](generator);
+            // track sampled psi for statistical tests?
+            if (psi_samples > 1 && i < psi_samples) {
+                // we are sampling for test statistic and this is sample to use
                 // get index for output sample
                 const int idx_2d = ((j + j_offset) * psi_samples) + i;
                 // generate output: sample from uniformly selected bootstrap distribution
-                osamps[idx_2d] = distributions[source_distribution(generator)](generator);
+                osamps[idx_2d] = sampled_psi;
             }
+            // track sampled psi for visualization always
+            // get position of sampled_psi among bins
+            int idx_bin = static_cast<int>(
+                std::upper_bound(psi_border.begin(), psi_border.end(), sampled_psi)
+                - psi_border.begin()
+            ) - 1;
+            if (idx_bin < 0) idx_bin = 0;
+            if (idx_bin >= nbins) idx_bin = nbins - 1;
+            // update unnormalized visualization distribution
+            visualization_distribution[idx_bin] += visualization_impact;
+        }
+        if (psi_samples == 1) {
+            // we don't want to use the sampled points for statistical tests
+            // use posterior mean instead
+            const int idx_2d = j + j_offset;
+            osamps[idx_2d] = lsvObj->mu_psi[cidx][fidx][j] ;
         }
     }
     all_m.clear() ;

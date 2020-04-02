@@ -157,8 +157,11 @@ cdef int _het_computation(object out_h5p, dict file_cond, list list_of_lsv, map[
 
                 thread_idx = threadid()
 
-                get_samples_from_psi(<np.float32_t *> osamps.data, <hetLSV*> lsv_vec[lsv], psi_samples, psi_border,
-                                     nbins, cidx, fidx, generators[thread_idx])
+                get_samples_from_psi(
+                    <np.float32_t *> osamps.data, <hetLSV*> lsv_vec[lsv],
+                    psi_samples, psi_samples,  # TODO visualization_samples for given error
+                    psi_border, nbins, cidx, fidx, generators[thread_idx]
+                )
                 lsv_vec[lsv].reset_samps()
             fname = get_tmp_psisample_file(outdir, "%s_%s" %(cond_name, fidx) )
             majiq_io.dump_hettmp_file(fname, osamps)

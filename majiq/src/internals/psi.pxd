@@ -33,8 +33,8 @@ cdef extern from "psi.hpp":
                                    int msamples, int nbins, bint is_ir) nogil ;
 
     cdef void get_samples_from_psi(
-        float* osamps, hetLSV* lsvObj, int psi_samples, psi_distr_t psi_border,
-        int nbins, int cidx, int fidx, mt19937 &generator
+        float* osamps, hetLSV* lsvObj, int psi_samples, int visualization_samples,
+        psi_distr_t psi_border, int nbins, int cidx, int fidx, mt19937 &generator
     ) nogil;
 
     cdef void get_samples_from_psi3(vector[psi_distr_t]& i_psi, vector[psi_distr_t]& osamps, psi_distr_t& o_mupsi,
