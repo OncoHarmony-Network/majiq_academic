@@ -2,6 +2,7 @@
 #include <algorithm>
 #include <string>
 #include "boost/math/distributions/beta.hpp"
+#include "boost/random/beta_distribution.hpp"
 #include <math.h>
 #include "psi.hpp"
 #include "qLSV.hpp"
@@ -230,17 +231,27 @@ void get_samples_from_psi(float* osamps, hetLSV* lsvObj, int psi_samples, psi_di
         if (psi_samples == 1){
             osamps[j+j_offset] = lsvObj->mu_psi[cidx][fidx][j] ;
         }else{
-            default_random_engine generator ;
-            // sample index for PSI sample from per-sample distribution instead
-            // of per-condition distribution
-            discrete_distribution<int> psi_distribution (temp_postpsi.begin(), temp_postpsi.end());
-            for(int i=0; i<psi_samples; i++){
-                // get index of bin from psi_distribution
-                int p_ndx = psi_distribution(generator) ;
+            // pseudorandom number generator we are using
+            std::mt19937 generator;
+            // distributions we are sampling from
+            vector<boost::random::beta_distribution<float>> distributions;
+            distributions.reserve(msamples);
+            for (int m = 0; m < msamples; ++m) {
+                // get parameters for bootstrap replicate distribution
+                // XXX could be mixed in with earlier code better
+                const float jnc_val = lsvObj->samps[j][m];
+                const float all_val = all_m[m];
+                const float a = jnc_val + alpha;
+                const float b = (all_val - jnc_val) + beta;
+                distributions.push_back(boost::random::beta_distribution<float>(a, b));
+            }
+            // sample uniformly from bootstrap replicates
+            uniform_int_distribution<int> source_distribution(0, msamples - 1);
+            for(int i = 0; i < psi_samples; ++i) {
                 // get index for output sample
-                const int idx_2d = ((j+j_offset)*psi_samples) + i ;
-                // put midpoint of PSI bin indexed by p_ndx into output array
-                osamps[idx_2d] = psi_space[p_ndx] ;
+                const int idx_2d = ((j + j_offset) * psi_samples) + i;
+                // generate output: sample from uniformly selected bootstrap distribution
+                osamps[idx_2d] = distributions[source_distribution(generator)](generator);
             }
         }
     }
@@ -263,21 +274,17 @@ void test_calc(vector<psi_distr_t>& oPvals, psi_distr_t& oScore, HetStats* HetSt
         psi_distr_t score_vect(psamples) ;
         for(int s=0; s<psamples; s++){
 
-            default_random_engine generator;
-            normal_distribution<double> dist(0.002, 0.001);
-
-
             vector<float> csamps ;
             vector<int> labels ;
 
             for (int i=0; i<n1; i++){
-                csamps.push_back(lsvObj->cond_sample1[i][j][s] + dist(generator)) ;
+                csamps.push_back(lsvObj->cond_sample1[i][j][s]) ;
                 labels.push_back(0) ;
             }
 
             for (int i=0; i<n2; i++){
 
-                csamps.push_back(lsvObj->cond_sample2[i][j][s] + dist(generator)) ;
+                csamps.push_back(lsvObj->cond_sample2[i][j][s]) ;
                 labels.push_back(1) ;
             }
 
