@@ -194,6 +194,14 @@ def main():
                         help='For each one of the statistical tests, we combine all pvalue per psi sample by '
                              'percentile calculation. This argument allows the user define with percentile they '
                              'want to use [Default: %(default)d]')
+    htrgen.add_argument(
+        '--visualization-std',
+        type=float,
+        default=1e-2,
+        help='Change stochastic estimation error in terms of standard deviation'
+        ' of discretized average posterior per group by sampling additional'
+        ' values of PSI when number of samples is low [Default: %(default)f]'
+    )
 
     #calcpsi flags
     subparsers = parser.add_subparsers(help='')
