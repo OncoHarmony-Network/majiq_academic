@@ -52,9 +52,7 @@ namespace io_bam{
             omp_lock_t map_lck_ ;
 
             // random number generation persistent in class
-            // XXX -- consider using Mersenne-Twister to give more uniform
-            // implementation across architectures/less compiler-dependent
-            static vector<default_random_engine> generators_;
+            static vector<std::mt19937> generators_;
 
         public:
             vector<float *> junc_vec ;
