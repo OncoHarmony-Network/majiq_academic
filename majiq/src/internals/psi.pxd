@@ -12,6 +12,13 @@ import sys
 cimport numpy as np
 import cython
 
+cdef extern from "<random>" namespace "std":
+    cdef cppclass mt19937:
+        # example from <https://stackoverflow.com/questions/40976880/canonical-way-to-generate-random-numbers-in-cython>
+        mt19937() # we need to define this constructor to stack allocate classes in Cython
+        mt19937(unsigned int seed) # not worrying about matching the exact int type for seed
+        void seed(unsigned int seed)
+
 cdef extern from "psi.hpp":
 
     cdef psi_distr_t& get_psi_border(psi_distr_t& psi_border, int nbins) nogil ;
@@ -25,8 +32,10 @@ cdef extern from "psi.hpp":
                                    np.float32_t* o_postpsi, int psi_samples, int j_offset, psi_distr_t& psi_border, int njunc,
                                    int msamples, int nbins, bint is_ir) nogil ;
 
-    cdef void get_samples_from_psi(float* osamps, hetLSV* lsvObj, int psi_samples, psi_distr_t psi_border,
-                                   int nbins, int cidx, int fidx) nogil ;
+    cdef void get_samples_from_psi(
+        float* osamps, hetLSV* lsvObj, int psi_samples, psi_distr_t psi_border,
+        int nbins, int cidx, int fidx, mt19937 &generator
+    ) nogil;
 
     cdef void get_samples_from_psi3(vector[psi_distr_t]& i_psi, vector[psi_distr_t]& osamps, psi_distr_t& o_mupsi,
                                    vector[psi_distr_t]& o_postpsi, int psi_samples, int j_offset,

@@ -165,8 +165,21 @@ void deltapsi_posterior(dpsiLSV*lsvObj, vector<psi_distr_t>& prior_matrix, psi_d
 }
 
 
-void get_samples_from_psi(float* osamps, hetLSV* lsvObj, int psi_samples, psi_distr_t& psi_border,
-                          int nbins, int cidx, int fidx){
+/**
+ * Given input LSV reads, update statistics in lsvObj and osamps
+ *
+ * @param osamps array of output psi samples
+ * @param lsvObj pointer to LSV with readrate information that will have
+ * @praram psi_samples number of samples to generate per junction
+ * @param psi_border ends of bins for visualization/discretizing posterior
+ * @param nbins number of bins for discretizing posterior
+ * @param cidx, fidx comparison/file index
+ * @param generator source of randomness for sampling distributions
+ */
+void get_samples_from_psi(
+    float* osamps, hetLSV* lsvObj, int psi_samples, psi_distr_t& psi_border,
+    int nbins, int cidx, int fidx, std::mt19937 &generator
+) {
 
 //    cout<< "MM1\n" ;
     const int njunc = lsvObj->get_num_ways() ;
@@ -231,8 +244,6 @@ void get_samples_from_psi(float* osamps, hetLSV* lsvObj, int psi_samples, psi_di
         if (psi_samples == 1){
             osamps[j+j_offset] = lsvObj->mu_psi[cidx][fidx][j] ;
         }else{
-            // pseudorandom number generator we are using
-            std::mt19937 generator;
             // distributions we are sampling from
             vector<boost::random::beta_distribution<float>> distributions;
             distributions.reserve(msamples);

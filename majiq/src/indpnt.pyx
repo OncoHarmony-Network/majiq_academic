@@ -8,7 +8,7 @@ from majiq.src.constants import *
 from majiq.src.internals.mtypes cimport *
 from majiq.src.internals.HetStats cimport HetStats
 from majiq.src.internals.qLSV cimport hetLSV, qLSV
-from majiq.src.internals.psi cimport get_samples_from_psi, get_psi_border, test_calc
+from majiq.src.internals.psi cimport get_samples_from_psi, get_psi_border, test_calc, mt19937
 
 from voila.api import Matrix
 from voila.constants import ANALYSIS_HETEROGEN, VOILA_FILE_VERSION
@@ -17,7 +17,7 @@ from libcpp.string cimport string
 from libcpp.map cimport map
 from libcpp.pair cimport pair
 from libcpp.vector cimport vector
-from cython.parallel import prange
+from cython.parallel import prange, threadid
 
 cimport numpy as np
 import numpy as np
@@ -138,6 +138,12 @@ cdef int _het_computation(object out_h5p, dict file_cond, list list_of_lsv, map[
         nways = lsv_vec[lsv].get_num_ways()
         total_njuncs += nways
 
+    # initialize source of randomness
+    cdef vector[mt19937] generators = vector[mt19937](nthreads)
+    cdef int thread_idx
+    for thread_idx in range(nthreads):
+        generators[thread_idx].seed(HET_SAMPLING_SEED + thread_idx)
+
     conditions = list(file_cond.keys())
     for cidx, cond_name in enumerate(conditions):
         cond_list = file_cond[cond_name]
@@ -149,8 +155,10 @@ cdef int _het_computation(object out_h5p, dict file_cond, list list_of_lsv, map[
                 with gil:
                     lsv = list_of_lsv[i]
 
+                thread_idx = threadid()
+
                 get_samples_from_psi(<np.float32_t *> osamps.data, <hetLSV*> lsv_vec[lsv], psi_samples, psi_border,
-                                     nbins, cidx, fidx)
+                                     nbins, cidx, fidx, generators[thread_idx])
                 lsv_vec[lsv].reset_samps()
             fname = get_tmp_psisample_file(outdir, "%s_%s" %(cond_name, fidx) )
             majiq_io.dump_hettmp_file(fname, osamps)
