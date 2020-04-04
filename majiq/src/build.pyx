@@ -217,7 +217,8 @@ cdef _parse_junction_file(tuple filetp, map[string, Gene*]& gene_map, vector[str
     cdef unsigned int denovo_thresh= conf.min_denovo
     cdef bint denovo = conf.denovo
     cdef IOBam c_iobam
-    cdef int njunc, i, j
+    cdef int njunc, j
+    cdef unsigned int i
     cdef np.ndarray junc_ids
     cdef object fp
     cdef Gene_vect_t gene_l
@@ -368,7 +369,7 @@ cdef _find_junctions(list file_list, map[string, Gene*]& gene_map, vector[string
 
                 boots = np.zeros(shape=(njunc, m), dtype=np.float32)
                 with nogil:
-                    c_iobam.boostrap_samples(m, k, <np.float32_t *> boots.data, fitfunc_r, pvalue_limit)
+                    c_iobam.bootstrap_samples(m, k, <np.float32_t *> boots.data, fitfunc_r, pvalue_limit)
                     j_ids  = c_iobam.get_junc_map()
                     jvec   = c_iobam.get_junc_vec_summary()
                     jlimit = c_iobam.get_junc_limit_index()
