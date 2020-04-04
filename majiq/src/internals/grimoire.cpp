@@ -268,16 +268,23 @@ namespace grimoire {
             } else {
                 if (start_ir <= 0) {
                     continue ;
-                } else if ((ss.coord - start_ir) >= 2) {
-                    end_ir = ss.coord ;
-
-                    #pragma omp critical
-                    {
-                        Intron * irObj = new Intron(start_ir +1, end_ir -1, false, this, simpl) ;
-                        intronlist.push_back(irObj) ;
+                } else {
+                    // are we going to close a valid intron?
+                    if ((ss.coord - start_ir) >= 2) {
+                        // the intron has positive length, so yes!
+                        end_ir = ss.coord;
+                        // create the intron
+                        Intron * irObj = new Intron(
+                            start_ir + 1, end_ir - 1, false, this, simpl
+                        );
+                        // critical region to add the intron to intronlist
+                        #pragma omp critical
+                        {
+                            intronlist.push_back(irObj);
+                        }
                     }
-
-                    start_ir = 0 ;
+                    // either way, close open intron
+                    start_ir = 0;
                 }
             }
         }
