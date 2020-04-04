@@ -4,12 +4,15 @@
 //#include <algorithm>
 #include <iomanip>
 #include <iostream>
+#include <random>
 #include "grimoire.hpp"
 #include "htslib/sam.h"
 #include <map>
 #include <set>
 #include <omp.h>
 //#include "interval.hpp"
+
+#define BOOTSTRAP_SEED 20200309
 
 #define MIN_INTRON_LEN 1000
 #define MIN_BP_OVERLAP 8
@@ -48,6 +51,11 @@ namespace io_bam{
             bool simpl_ ;
             omp_lock_t map_lck_ ;
 
+            // random number generation persistent in class
+            // XXX -- consider using Mersenne-Twister to give more uniform
+            // implementation across architectures/less compiler-dependent
+            static vector<default_random_engine> generators_;
+
         public:
             vector<float *> junc_vec ;
             IOBam(){ }
@@ -57,6 +65,11 @@ namespace io_bam{
                                                                   nthreads_(nthreads1), glist_(glist1), simpl_(simpl1){
                 omp_init_lock( &map_lck_ ) ;
                 bam_ = bam1 ;
+                // initialize any new generators for the number of threads being used
+                generators_.reserve(nthreads_);
+                for (unsigned int i = generators_.size(); i < nthreads_; ++i) {
+                    generators_.emplace_back(i + BOOTSTRAP_SEED);
+                }
             }
 
             ~IOBam(){
@@ -76,8 +89,8 @@ namespace io_bam{
              * return number of nonoutlier stacks in vec, which are sorted into
              * corresponding first positions of vec
              */
-            unsigned int normalize_stacks(vector<float> &vec, float sreads, const float fitfunc_r, const float pvalue_limit) ;
-            int boostrap_samples(int msamples, int ksamples, float* boots, float fitfunc_r, float pvalue_limit) ;
+            unsigned int normalize_stacks(vector<float> &vec, float sreads, const float fitfunc_r, const float pvalue_limit);
+            int bootstrap_samples(int msamples, int ksamples, float* boots, float fitfunc_r, float pvalue_limit);
             void detect_introns(float min_intron_cov, unsigned int min_experiments, float min_bins, bool reset) ;
 
             void get_intron_raw_cov(float* out_cov) ;

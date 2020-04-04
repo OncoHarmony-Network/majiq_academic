@@ -16,6 +16,10 @@
 #include "htslib/thread_pool.h"
 #include "scythestat/distributions.h"
 
+
+// initialize static random state
+vector<default_random_engine> io_bam::IOBam::generators_ = vector<default_random_engine>(0);
+
 using namespace std;
 namespace io_bam {
 
@@ -366,7 +370,7 @@ namespace io_bam {
         return npos;
     }
 
-    int IOBam::boostrap_samples(int msamples, int ksamples, float* boots, float fitfunc_r, float pvalue_limit){
+    int IOBam::bootstrap_samples(int msamples, int ksamples, float* boots, float fitfunc_r, float pvalue_limit) {
         const int njunc = junc_map.size();
 
         #pragma omp parallel for num_threads(nthreads_)
@@ -386,7 +390,7 @@ namespace io_bam {
             const unsigned int npos = pvalue_limit <= 0 ?
                     vec.size() : normalize_stacks(vec, sreads, fitfunc_r, pvalue_limit);
             if (npos == 0) continue ;  // can't bootstrap from 0 positions
-            default_random_engine generator;
+            default_random_engine &generator = generators_[omp_get_thread_num()];
             uniform_int_distribution<unsigned int> distribution(0, npos - 1);
             for (int m=0; m<msamples; m++){
                 float lambda = 0;
