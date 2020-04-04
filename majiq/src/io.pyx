@@ -188,34 +188,6 @@ cdef int dump_lsv_coverage_mat(str filename, list cov_list, list type_list, list
         np.savez(ofp, **xx)
 
 
-cdef dict _get_extract_lsv_list(list list_of_lsv_id, list file_list):
-    cdef dict result = {}
-    cdef int n_exp = len(file_list)
-    cdef str lsv_id, lsv_type, fname
-    cdef int fidx
-    cdef np.ndarray cov, lsv_cov
-
-    for fidx, fname in enumerate(file_list):
-        with open(fname, 'rb') as fp:
-            data = np.load(fp)
-            for lsv_id in list_of_lsv_id:
-                try:
-                    cov = data[lsv_id]
-                except KeyError:
-                    continue
-                try:
-                    # print(lsv_id, result[lsv_id].coverage[fidx].shape)
-                    result[lsv_id].coverage[fidx] = cov
-                except KeyError:
-                    njunc = cov.shape[0]
-                    msamples = cov.shape[1]
-                    lsv_cov = np.zeros(shape=(n_exp, njunc, msamples),  dtype=float)
-                    lsv_cov[fidx] = cov
-                    result[lsv_id] = quant_lsv(lsv_id, lsv_cov)
-
-    return result
-
-
 cdef int dump_hettmp_file(str fname, np.ndarray[np.float32_t, ndim=2, mode="c"] osamps):
     with open(fname, 'w+b') as fp:
         np.save(fp, osamps)

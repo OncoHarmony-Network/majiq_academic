@@ -4,6 +4,7 @@
 //#include <algorithm>
 #include <iomanip>
 #include <iostream>
+#include <random>
 #include "grimoire.hpp"
 #include "htslib/sam.h"
 #include <map>
@@ -11,6 +12,8 @@
 #include <memory>
 #include <omp.h>
 //#include "interval.hpp"
+
+#define BOOTSTRAP_SEED 20200309
 
 #define MIN_INTRON_LEN 1000
 #define MIN_BP_OVERLAP 8
@@ -59,6 +62,11 @@ namespace io_bam{
 
             void update_eff_len(const unsigned int new_eff_len);
 
+            // random number generation persistent in class
+            // XXX -- consider using Mersenne-Twister to give more uniform
+            // implementation across architectures/less compiler-dependent
+            static vector<default_random_engine> generators_;
+
         public:
             vector<shared_ptr<vector<float>>> junc_vec;
             IOBam(){ }
@@ -70,6 +78,11 @@ namespace io_bam{
                 buff_len_ = std::max(eff_len_, min_buff_len);
                 omp_init_lock( &map_lck_ ) ;
                 bam_ = bam1 ;
+                // initialize any new generators for the number of threads being used
+                generators_.reserve(nthreads_);
+                for (unsigned int i = generators_.size(); i < nthreads_; ++i) {
+                    generators_.emplace_back(i + BOOTSTRAP_SEED);
+                }
             }
 
             ~IOBam(){
@@ -81,7 +94,7 @@ namespace io_bam{
             int* get_junc_vec_summary() ;
             unsigned int get_junc_limit_index() { return junc_limit_index_ ; };
             int normalize_stacks(vector<float> vec, float sreads, int npos, float fitfunc_r, float pvalue_limit) ;
-            int boostrap_samples(int msamples, int ksamples, float* boots, float fitfunc_r, float pvalue_limit) ;
+            int bootstrap_samples(int msamples, int ksamples, float* boots, float fitfunc_r, float pvalue_limit);
             void detect_introns(float min_intron_cov, unsigned int min_experiments, float min_bins, bool reset) ;
 
             void get_intron_raw_cov(float* out_cov) ;
