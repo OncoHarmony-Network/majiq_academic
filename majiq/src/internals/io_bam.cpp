@@ -342,7 +342,7 @@ namespace io_bam {
             const float r = 1 / fitfunc_r;
             // const float p = r / (mean + r);
             cdf_func = [r](float x, float mean) -> float {
-                return scythe::pnbinom(x, r, r / (x + r));
+                return scythe::pnbinom(x, r, r / (mean + r));
             };
         }
 
