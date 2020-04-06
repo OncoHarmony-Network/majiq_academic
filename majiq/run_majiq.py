@@ -15,27 +15,11 @@ class FRange01(argparse.Action):
         setattr(namespace, self.dest, values)
 
 
-def get_vwindow(param):
-    param = float(param)
-    assert 0.0 <= param <= 1.0
-    return param
-
-
-def get_bins(param):
-    return np.linspace(0, 1, num=int(param) + 1)
-
-
-def get_minsamps(param):
-    param = int(param)
-    assert param >= 2
-    return param
-
 def check_positive(value):
     ivalue = float(value)
     if ivalue <= 0:
         raise argparse.ArgumentTypeError("%s is an invalid positive float value" % value)
     return ivalue
-
 
 
 def new_subparser():
@@ -204,16 +188,8 @@ def main():
     htrgen.add_argument('--psi-samples', type=int, default=100, dest="psi_samples",
                         help='Number of PSI samples to take per LSV junction. If equal to 1, use expected value only. '
                              '[Default: %(default)d]')
-    htrgen.add_argument('--vwindow', type=get_vwindow, default=0.0,
-                        help='Width of sample rejection window. If equal to 0, do not reject samples. '
-                             '[Default: %(default)0.02f.]')
-    htrgen.add_argument('--bins', type=get_bins, default=get_bins(40),
-                        help='Fixed-width binning resolution of PSI distributions. [Default: 40')
     htrgen.add_argument('--stats', nargs='+', default=['ALL'],
                         help='Test statistics to run. [Default: %(default)s]')
-    htrgen.add_argument('--minsamps', type=get_minsamps, default=2,
-                        help='Minimum number of samples that need to be present for an LSV junction in order to '
-                             'perform each test statistic. [Default: %(default)d]')
     htrgen.add_argument('--test_percentile', type=float, default=0.95,
                         help='For each one of the statistical tests, we combine all pvalue per psi sample by '
                              'percentile calculation. This argument allows the user define with percentile they '
