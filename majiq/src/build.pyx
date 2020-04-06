@@ -39,10 +39,10 @@ cdef extern from "sqlite3.h":
 cdef int C_FIRST_LAST_JUNC = FIRST_LAST_JUNC
 
 
-cdef _store_junc_file(np.ndarray boots, np.ndarray ir_cov, list junc_ids, str experiment_name, np.ndarray meta, str outDir):
+cdef _store_junc_file(np.ndarray boots, np.ndarray ir_cov, np.ndarray junc_cov, list junc_ids, str experiment_name, np.ndarray meta, str outDir):
 
     cdef str out_file = "%s/%s.%s" % (outDir, experiment_name, JUNC_FILE_FORMAT)
-    cdef dict vals = {'bootstrap': boots, 'ir_cov': ir_cov}
+    cdef dict vals = {'bootstrap': boots, 'ir_cov': ir_cov, 'junc_cov': junc_cov}
     dt = np.dtype('S250, u4, u4, f4, f4, u4')
     vals['junc_info'] = np.array(junc_ids, dtype=dt)
     vals['meta'] = meta
@@ -313,6 +313,7 @@ cdef _find_junctions(list file_list, map[string, Gene*]& gene_map, vector[string
     cdef bint ir = conf.ir
     cdef bint bsimpl = (conf.simpl_psi >= 0)
     cdef np.float32_t ir_numbins=conf.irnbins
+    cdef bint dump_coverage = conf.dump_coverage
 
     cdef int i, j
     cdef int strandness, njunc
@@ -325,6 +326,7 @@ cdef _find_junctions(list file_list, map[string, Gene*]& gene_map, vector[string
     cdef str tmp_str
     cdef np.ndarray[np.float32_t, ndim=2, mode="c"] boots
     cdef np.ndarray[np.float32_t, ndim=2, mode="c"] ir_raw_cov
+    cdef np.ndarray[np.float32_t, ndim=2, mode="c"] junc_raw_cov
     cdef list junc_ids
     cdef np.float32_t fitfunc_r
     cdef unsigned int jlimit
@@ -379,6 +381,16 @@ cdef _find_junctions(list file_list, map[string, Gene*]& gene_map, vector[string
                     with nogil:
                         c_iobam.get_intron_raw_cov(<np.float32_t *> ir_raw_cov.data)
 
+                if dump_coverage:
+                    # optional to dump raw junction coverage b/c not used downstream
+                    # create array for junctions and fill just like for introns
+                    junc_raw_cov = np.zeros(shape=(jlimit, eff_len), dtype=np.float32)
+                    with nogil:
+                        c_iobam.get_junction_raw_cov(<np.float32_t *> junc_raw_cov.data)
+                else:
+                    # empty array
+                    junc_raw_cov = np.zeros(shape=(0, eff_len), dtype=np.float32)
+
                 logger.debug("Update flags")
                 for i in prange(n, nogil=True, num_threads=nthreads):
                     gg = gene_map[gid_vec[i]]
@@ -395,7 +407,10 @@ cdef _find_junctions(list file_list, map[string, Gene*]& gene_map, vector[string
                 logger.info('Done Reading file %s' %(file_list[j][0]))
                 dt = np.dtype('|S250, |S25, u4')
                 meta = np.array([(file_list[j][0], VERSION, jlimit)], dtype=dt)
-                _store_junc_file(boots, ir_raw_cov, junc_ids, file_list[j][0], meta, conf.outDir)
+                _store_junc_file(
+                    boots, ir_raw_cov, junc_raw_cov,
+                    junc_ids, file_list[j][0], meta, conf.outDir
+                )
                 c_iobam.free_iobam()
                 del boots
                 del ir_raw_cov

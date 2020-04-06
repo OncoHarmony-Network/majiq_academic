@@ -485,6 +485,16 @@ namespace io_bam {
         }
     }
 
+    void IOBam::get_junction_raw_cov(float* out_cov) {
+        #pragma omp parallel for num_threads(nthreads_)
+        for(unsigned int i = 0; i < junc_limit_index_; ++i) {
+            for (unsigned int j = 0; j < eff_len_; ++j) {
+                const unsigned int indx_2d = i * eff_len_ + j;
+                out_cov[indx_2d] = junc_vec[i][j];
+            }
+        }
+    }
+
     void prepare_genelist(map<string, Gene*>& gene_map, map<string, vector<overGene*>> & geneList){
         map<string, vector<Gene*>> gmp ;
 
