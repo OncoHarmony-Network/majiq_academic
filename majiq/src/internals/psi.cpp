@@ -1,7 +1,7 @@
 #include <random>
 #include <algorithm>
 #include <string>
-#include "scythestat/distributions.h"
+#include "boost/math/distributions/beta.hpp"
 #include <math.h>
 #include "psi.hpp"
 #include "qLSV.hpp"
@@ -26,10 +26,11 @@ void prob_data_sample_given_psi(psi_distr_t& out_array, float sample, float all_
 
     const float a = sample + alpha_prior ;
     const float b = (all_sample - sample) + beta_prior ;
+    boost::math::beta_distribution<float> beta_dist(a, b);
 //cerr << "a=" << sample << "+"<< alpha_prior <<" b=" << b << " nbins=" << nbins << " betap="<< beta_prior <<"\n" ;
-    float prev = scythe::pbeta(psi_border[0], a, b) ;
+    float prev = boost::math::cdf(beta_dist, psi_border[0]);
     for (int i=0; i<nbins; i++){
-        float res = scythe::pbeta(psi_border[i+1], a, b) ;
+        float res = boost::math::cdf(beta_dist, psi_border[i + 1]);
         out_array[i] = log((res - prev) + PSEUDO) ;
         prev = res ;
     }

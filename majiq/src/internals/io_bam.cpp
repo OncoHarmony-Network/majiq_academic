@@ -14,7 +14,8 @@
 #include "htslib/faidx.h"
 #include "htslib/kstring.h"
 #include "htslib/thread_pool.h"
-#include "scythestat/distributions.h"
+#include "boost/math/distributions/poisson.hpp"
+#include "boost/math/distributions/negative_binomial.hpp"
 
 
 // initialize static random state
@@ -331,18 +332,20 @@ namespace io_bam {
             vector<float> &vec, float sreads, const float fitfunc_r,
             const float pvalue_limit
     ) {
-        // get cdf function to handle fitfunc_r == 0 vs > 0
-        std::function<float(float, float)> cdf_func;
+        // get sf (1 - cdf) function to handle fitfunc_r == 0 vs > 0
+        std::function<float(float, float)> sf_func;
         if (fitfunc_r == 0.0) {
-            cdf_func = [](float x, float mean) -> float {
-                return scythe::ppois(x, mean);
+            sf_func = [](float x, float mean) -> float {
+                const boost::math::poisson_distribution<float> stack_dist(mean);
+                return boost::math::cdf(boost::math::complement(stack_dist, x));
             };
         } else {
-            // get negative-binomial parameters (in scythestat formulation)
+            // get negative-binomial parameters (in boost formulation)
             const float r = 1 / fitfunc_r;
-            // const float p = r / (mean + r);
-            cdf_func = [r](float x, float mean) -> float {
-                return scythe::pnbinom(x, r, r / (mean + r));
+            sf_func = [r](float x, float mean) -> float {
+                const float p = r / (mean + r);
+                const boost::math::negative_binomial_distribution<float> stack_dist(r, p);
+                return boost::math::cdf(boost::math::complement(stack_dist, x));
             };
         }
 
@@ -358,7 +361,7 @@ namespace io_bam {
             // leave-one-out mean coverage at other positions
             const float mean_reads = (other_npos == 0) ? 0.5: (sreads - vec_i) / other_npos;
             // p-value at current position
-            const float pvalue = 1 - cdf_func(vec_i, mean_reads);
+            const float pvalue = sf_func(vec_i, mean_reads);
             // decrement number of valid positions if outlier
             if (pvalue < pvalue_limit) {
                 --npos;  // decrement npos for return value
