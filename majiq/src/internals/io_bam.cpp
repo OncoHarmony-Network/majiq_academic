@@ -392,15 +392,31 @@ namespace io_bam {
             // get number of positions to bootstrap over after stack removal
             const unsigned int npos = pvalue_limit <= 0 ?
                     vec.size() : normalize_stacks(vec, sreads, fitfunc_r, pvalue_limit);
-            if (npos == 0) continue ;  // can't bootstrap from 0 positions
-            default_random_engine &generator = generators_[omp_get_thread_num()];
-            uniform_int_distribution<unsigned int> distribution(0, npos - 1);
-            for (int m=0; m<msamples; m++){
-                float lambda = 0;
-                for (int k=0; k<ksamples; k++)lambda += vec[distribution(generator)] ;
-                lambda /= ksamples ;
-                const int idx2d = (jidx*msamples) + m ;
-                boots[idx2d] = (lambda * npos) ;
+            // handle cases for getting bootstrap replicates
+            if (npos == 0) {
+                // can't bootstrap from 0 positions (everything is default 0)
+                continue;
+            } else if (npos == 1) {
+                // could bootstrap, but that would be a waste of effort
+                // the resulting value is always equal to the one position left
+                for (int m = 0; m < msamples; ++m) {
+                    const int idx2d = (jidx * msamples) + m;
+                    boots[idx2d] = vec[0];
+                }
+            } else {  // npos > 1, where bootstrapping matters
+                default_random_engine &generator = generators_[omp_get_thread_num()];
+                uniform_int_distribution<unsigned int> distribution(0, npos - 1);
+                for (int m = 0; m < msamples; ++m) {
+                    // index to update
+                    const int idx2d = (jidx * msamples) + m;
+                    // accumulate ksamples reads from nonzero positions
+                    float lambda = 0;
+                    for (int k = 0; k < ksamples; ++k) {
+                        lambda += vec[distribution(generator)];
+                    }
+                    // estimate per-position coverage using lambda, extrapolate to nonzero positions
+                    boots[idx2d] = (lambda * npos) / ksamples;
+                }
             }
         }
         return 0 ;
