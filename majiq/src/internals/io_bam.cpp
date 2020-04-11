@@ -396,12 +396,13 @@ namespace io_bam {
             if (npos == 0) {
                 // can't bootstrap from 0 positions (everything is default 0)
                 continue;
-            } else if (npos == 1) {
-                // could bootstrap, but that would be a waste of effort
-                // the resulting value is always equal to the one position left
+            } else if (npos == 1 || vec[0] == vec[npos - 1]) {
+                // could bootstrap, but that would be a waste of effort since
+                // all valid positions for bootstrapping are the same
+                const float nreads = vec[0] * npos;  // inevitable result
                 for (int m = 0; m < msamples; ++m) {
                     const int idx2d = (jidx * msamples) + m;
-                    boots[idx2d] = vec[0];
+                    boots[idx2d] = nreads;
                 }
             } else {  // npos > 1, where bootstrapping matters
                 default_random_engine &generator = generators_[omp_get_thread_num()];
