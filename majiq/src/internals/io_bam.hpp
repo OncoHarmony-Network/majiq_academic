@@ -9,6 +9,7 @@
 #include "htslib/sam.h"
 #include <map>
 #include <set>
+#include <memory>
 #include <omp.h>
 //#include "interval.hpp"
 
@@ -18,6 +19,8 @@
 #define MIN_BP_OVERLAP 8
 #define MIN_JUNC_LENGTH 2
 #define NUM_INTRON_BINS 10
+#define MIN_BUFF_LEN 64
+#define BUFF_LEN_SAFETY_FACTOR 1.2  // factor to multiply eff_len by
 
 #define UNSTRANDED 0
 #define FWD_STRANDED 1
@@ -38,11 +41,17 @@ using namespace grimoire;
 //using namespace interval;
 
 namespace io_bam{
+    /**
+     * Determine eff_len associated with read length
+     */
+    unsigned int eff_len_from_read_length(int read_length);
+
     class IOBam {
         private:
             string bam_;
             int strandness_;
             unsigned int eff_len_;
+            unsigned int buff_len_;
             map<string, unsigned int> junc_map ;
             unsigned int nthreads_;
             map<string, vector<overGene*>> glist_ ;
@@ -51,18 +60,22 @@ namespace io_bam{
             bool simpl_ ;
             omp_lock_t map_lck_ ;
 
+            void update_eff_len(const unsigned int new_eff_len);
+
             // random number generation persistent in class
             // XXX -- consider using Mersenne-Twister to give more uniform
             // implementation across architectures/less compiler-dependent
             static vector<default_random_engine> generators_;
 
         public:
-            vector<float *> junc_vec ;
+            vector<shared_ptr<vector<float>>> junc_vec;
             IOBam(){ }
 
             IOBam(string bam1, int strandness1, unsigned int eff_len1, unsigned int nthreads1,
                   map<string, vector<overGene*>> glist1, bool simpl1): strandness_(strandness1), eff_len_(eff_len1),
                                                                   nthreads_(nthreads1), glist_(glist1), simpl_(simpl1){
+                const unsigned int min_buff_len = MIN_BUFF_LEN;
+                buff_len_ = std::max(eff_len_, min_buff_len);
                 omp_init_lock( &map_lck_ ) ;
                 bam_ = bam1 ;
                 // initialize any new generators for the number of threads being used
@@ -73,10 +86,6 @@ namespace io_bam{
             }
 
             ~IOBam(){
-
-                for(const auto &p1: junc_vec){
-                    free(p1) ;
-                }
                 junc_vec.clear() ;
             }
 
@@ -92,8 +101,9 @@ namespace io_bam{
 
             char _get_strand(bam1_t * read) ;
             void set_junction_strand(bam1_t  *aln, Junction& j1) ;
-            void find_junction_genes(string chrom, char strand, int start, int end, float * nreads_ptr ) ;
+            void find_junction_genes(string chrom, char strand, int start, int end, shared_ptr<vector<float>> nreads_ptr);
             int  ParseJunctionsFromFile(bool ir_func) ;
+            void EstimateEffLenFromFile(int num_reads);
             void parseJuncEntry(map<string, vector<overGene*>> & glist, string gid, string chrom, char strand,
                                int start, int end, unsigned int sreads, unsigned int minreads_t, unsigned int npos,
                                unsigned int minpos_t, unsigned int denovo_t, bool denovo, vector<Gene*>& oGeneList,
@@ -105,19 +115,13 @@ namespace io_bam{
 
             int parse_read_for_ir(bam_hdr_t *header, bam1_t *read) ;
             int get_njuncs() ;
+            int get_eff_len() { return eff_len_; }
             const map<string, unsigned int> &get_junc_map() ;
             const vector<Junction *>& get_junc_vec() ;
             void free_iobam() {
-                int idx = 0 ;
-                for(const auto &p1: junc_vec){
-                    free(p1) ;
-                    idx ++ ;
-                }
                 junc_vec.clear() ;
                 junc_map.clear() ;
                 intronVec_.clear() ;
-
-
             }
 
     };
@@ -125,5 +129,6 @@ namespace io_bam{
     void prepare_genelist(map<string, Gene*>& gene_map, map<string, vector<overGene*>> & geneList) ;
     bool juncGeneSearch(Gene* t1, Junction* t2) ;
     void free_genelist(map<string, vector<overGene*>> & geneList) ;
+
 }
 #endif
