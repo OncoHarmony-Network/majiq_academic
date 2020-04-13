@@ -35,7 +35,7 @@ namespace grimoire {
     bool sort_ss(const Ssite &a, const Ssite &b){
 
         bool crd =  (a.coord<b.coord) ;
-        bool r = (a.coord == b.coord) && (a.donor_ss > b.donor_ss);
+        bool r = (a.coord == b.coord) && (a.donor_ss < b.donor_ss);  // acceptors before donors if given same coordinate
         bool same = (a.coord == b.coord) && (a.donor_ss == b.donor_ss) && ((a.j->length()) < b.j->length()) ;
         return  crd || r || same ;
     }
@@ -61,7 +61,7 @@ namespace grimoire {
         for (exon_mapIt = exon_map.begin(); exon_mapIt != exon_map.end(); ++exon_mapIt) {
             Exon *x = exon_mapIt->second ;
             if (   ( x->get_start() != EMPTY_COORD ) && ( x->get_end() != EMPTY_COORD )
-                && ( start < x->get_end() ) && ( end > x->get_start()) ) {
+                && ( start <= x->get_end() ) && ( end >= x->get_start()) ) {
                 return x ;
             }
         }
@@ -94,7 +94,7 @@ namespace grimoire {
         string key ;
         stringstream s1 ;
         stringstream s2 ;
-        if ((end - start) < 1) return ;
+        if ((end - start) < 0) return ;
         ex1 = exonOverlap(exon_map_, start, end) ;
         if (nullptr != inbound_j && nullptr != outbound_j && inbound_j->get_intronic() && outbound_j->get_intronic()) {
             s1 << start ; s2 << end ;
@@ -268,16 +268,23 @@ namespace grimoire {
             } else {
                 if (start_ir <= 0) {
                     continue ;
-                } else if ((ss.coord - start_ir) > 2) {
-                    end_ir = ss.coord ;
-
-                    #pragma omp critical
-                    {
-                        Intron * irObj = new Intron(start_ir +1, end_ir -1, false, this, simpl) ;
-                        intronlist.push_back(irObj) ;
+                } else {
+                    // are we going to close a valid intron?
+                    if ((ss.coord - start_ir) >= 2) {
+                        // the intron has positive length, so yes!
+                        end_ir = ss.coord;
+                        // create the intron
+                        Intron * irObj = new Intron(
+                            start_ir + 1, end_ir - 1, false, this, simpl
+                        );
+                        // critical region to add the intron to intronlist
+                        #pragma omp critical
+                        {
+                            intronlist.push_back(irObj);
+                        }
                     }
-
-                    start_ir = 0 ;
+                    // either way, close open intron
+                    start_ir = 0;
                 }
             }
         }

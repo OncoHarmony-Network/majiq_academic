@@ -136,7 +136,7 @@ cdef int merge_exons(dict exon_dict, map[string, Gene*]& all_genes, bint simpl, 
 
 
     for gne_id, ex_list in exon_dict.items():
-        ex_list.sort(key=lambda x:(x[0], x[1]))
+        ex_list.sort(key=lambda x:(x[0], not x[1]))
         ex_start = -1
         ex_end = -1
         nopen = 0
