@@ -329,7 +329,32 @@ namespace grimoire{
             bool    is_connected()          { return markd_ ; }
             string  get_key(Gene * gObj) ;
             void    calculate_lambda() ;
-            bool    is_reliable(float min_bins, int eff_len) ;
+
+            /**
+             * Adjusts read rates relative to intron and (max) read length.
+             *
+             * @note calling more than once currently causes normalization to
+             * be applied twice; that is, we do not maintain state as to
+             * whether normalization has been performed previously
+             */
+            void normalize_readrates();
+
+            /**
+             * Return boolean indicating if intron is "reliable"
+             *
+             * @note an intron is considered reliable if it is annotated or
+             * previously passed group filters, or if it has sufficient
+             * positions with nonzero coverage
+             *
+             * @params min_bins the percentage of bins that need nonzero
+             * coverage distributed over them (in some way)
+             * @param eff_len effective length of read to use in propagating
+             * coverage to nearby bins used for short introns where only a
+             * handful of reads could potentially cover the entire intron
+             *
+             * @return boolean indicating if intron is reliable
+             */
+            bool is_reliable(float min_bins, int eff_len);
 
             void set_simpl_fltr(bool val, bool in){
                 if (in)

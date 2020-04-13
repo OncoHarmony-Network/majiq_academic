@@ -561,10 +561,11 @@ namespace io_bam {
             const int n = (it.second).size() ;
 
             #pragma omp parallel for num_threads(nthreads_)
-            for(int idx = 0; idx<n; idx++){
+            for (int idx = 0; idx < n; idx++) {
                 Intron * intrn_it = (it.second)[idx] ;
-                const bool pass = intrn_it->is_reliable(min_bins, eff_len_) ;
-                if( pass ){
+                const bool pass = intrn_it->is_reliable(min_bins, eff_len_);
+                if (pass) {
+                    intrn_it->normalize_readrates();  // normalize readrates if it passed
                     const string key = intrn_it->get_key(intrn_it->get_gene()) ;
                     #pragma omp critical
                     {
@@ -574,7 +575,7 @@ namespace io_bam {
                             (intrn_it->get_gene())->add_intron(intrn_it, min_intron_cov, min_experiments, min_bins, reset) ;
                         }
                     }
-                }else{
+                } else {
                     intrn_it->free_nreads() ;
                     delete intrn_it ;
                 }

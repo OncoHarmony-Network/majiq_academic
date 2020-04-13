@@ -637,29 +637,63 @@ namespace grimoire {
                + ":" + gObj->get_id()) ;
     }
 
-    bool Intron::is_reliable(float min_bins, int eff_len){
-
-        float npos = 0 ;
-        if (length() <= 0 || numbins_ <= 0 || read_rates_ptr_ == nullptr) return false ;
-        const int ext = (int) (eff_len / (nxbin_+1)) ;
-        vector<float> cov (numbins_) ;
+   void Intron::normalize_readrates() {
+        // exit early if nothing to normalize
+        if (read_rates_ptr_ == nullptr) {
+            return;
+        }
+        // get read rates vector from shared pointer
         vector<float> &read_rates_ = *read_rates_ptr_;
-
-        for(int i =0 ; i< numbins_; i++){
-            if (read_rates_[i] < 0) continue ;
-            const int binsz = i< nxbin_mod_ ? nxbin_ +1 : nxbin_ ;
-            read_rates_[i] = (read_rates_[i]>0) ? (read_rates_[i] /  binsz) : 0 ;
-            for (int j=0; j<ext && (i+j)<numbins_; j++){
-                cov[i+j] += read_rates_[i] ;
+        // normalize each position
+        for (int i = 0; i < numbins_; ++i) {
+            if (read_rates_[i] > 0) {
+                // use the number of intronic positions assigned to the i-th
+                // bin to normalize read rates
+                const int positions_in_bin = i < nxbin_mod_ ? nxbin_ + 1 : nxbin_;
+                read_rates_[i] = read_rates_[i] / positions_in_bin;
             }
         }
-        for (const auto &p: cov){
-            npos += (p>0)? 1: 0 ;
-        }
-        const float c = (npos>0) ? (npos/numbins_) : 0 ;
-        bool b = (c >= min_bins) ;
-        return b || ir_flag_ ;
+        return;
     }
+
+    bool Intron::is_reliable(float min_bins, int eff_len) {
+        // exit early if possible
+        if (length() <= 0 || numbins_ <= 0 || read_rates_ptr_ == nullptr) {
+            return false;
+        }
+
+        // no need to distribute coverage if intron previously known reliable
+        if (ir_flag_) {
+            return true;
+        }
+        // otherwise, need to look at percent positions with nonzero coverage
+
+        // how many bins could a read with eff_len cover given that nxbin_ + 1
+        // is the maximum number of positions per bin?
+        const int ext = (int) (eff_len / (nxbin_ + 1));
+        // initialize vector of read coverage where we share coverage with up
+        // to ext adjacent bins
+        vector<float> cov (numbins_);
+        // get read rates vector from shared pointer
+        vector<float> &read_rates_ = *read_rates_ptr_;
+        // distribute read_rates per bin to coverage shared among adjacent bins
+        for(int i = 0; i < numbins_; i++) {
+            if (read_rates_[i] > 0) {
+                // XXX this only distributes coverage to the right, which could
+                // be problematic for extremely short introns
+                for (int j = 0; j < ext && (i + j) < numbins_; j++) {
+                    cov[i + j] += read_rates_[i];
+                }
+            }
+        }
+        // get the numer/percent positions covered
+        float npos = 0;
+        for (const auto &p: cov) {
+            npos += (p > 0) ? 1 : 0;
+        }
+        const float pct_pos = (npos > 0) ? (npos / numbins_) : 0;
+        return (pct_pos >= min_bins);
+     }
 
 /*
     LSV fuctions
