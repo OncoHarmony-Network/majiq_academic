@@ -739,14 +739,35 @@ namespace grimoire {
 
         string ext_type = (ss != b) ? "t" : "s" ;
 
-        string prev_ex = to_string(sp_list[0].ex_ptr->get_start()) + "-" + to_string(sp_list[0].ex_ptr->get_end()) ;
-        unsigned int excount = 1 ;
         if (ss) for (const auto &j: ref_ex->ob) ref_ss_set.insert(j->get_start()) ;
         else for (const auto &j: ref_ex->ib) ref_ss_set.insert(j->get_end()) ;
 
         unsigned int jidx = 0 ;
         int prev_coord = 0 ;
-        map<string, unsigned int > exDct ;
+        map<string, unsigned int > exDct;  // exon key -> exon count in strand order
+
+        // fill exDct beforehand since it is not in same order as junctions
+        set <pair<int, string>> other_exons;
+        for (const auto &ptr: sp_list) {
+            // don't add exon for exitrons
+            if (ptr.ex_ptr == ref_ex) {
+                continue;
+            }
+            // get exon id for exDct
+            const string exid = to_string((ptr.ex_ptr)->get_start()) + "-" + to_string((ptr.ex_ptr)->get_end());
+            // get coordinate for sorting
+            // we use this coordinate because unique and handles half exons in order
+            const int sort_coordinate = (b ? 1 : -1) * (ss ? ptr.ex_ptr->get_start() : ptr.ex_ptr->get_end());
+            // should be unique pair, sorted by valid coordinate
+            other_exons.insert(make_pair(sort_coordinate, exid));
+        }
+        for (const auto &ex_pair: other_exons) {
+            const string exid = ex_pair.second;
+            const unsigned int ex_ct = exDct.size() + 1;
+            exDct[exid] = ex_ct;
+        }
+
+        // now loop over junctions
         for (const auto &ptr: sp_list){
             jidx = (prev_coord != ptr.ref_coord) ? jidx+1 : jidx ;
             prev_coord = ptr.ref_coord ;
@@ -761,25 +782,48 @@ namespace grimoire {
 
             if (ss) {
                  for (const auto &j: (ptr.ex_ptr)->ib){
-                    ss_set.insert(j->get_end()) ;
+                     if (
+                         j->get_donor() != nullptr
+                         && j->get_start() >= 0
+                         && !(j->get_simpl_fltr())
+                     ) {
+                         // only count junctions that could make junc_list
+                         // (i.e. junction starting/ending at exon(s), unsimplified)
+                         ss_set.insert(j->get_end());
+                     }
                  }
                  total = ss_set.size() ;
                  pos = distance(ss_set.begin(), ss_set.find((ptr.jun_ptr)->get_end()))+1 ;
             }else{
                  for (const auto &j: (ptr.ex_ptr)->ob){
-                    ss_set.insert(j->get_start()) ;
+                     if (
+                         j->get_acceptor() != nullptr
+                         && j->get_end() >= 0
+                         && !(j->get_simpl_fltr())
+                     ) {
+                         // only count junctions that could make junc_list
+                         // (i.e. junction starting/ending at exon(s), unsimplified)
+                         ss_set.insert(j->get_start()) ;
+                     }
                  }
                  total = ss_set.size() ;
                  pos = distance(ss_set.begin(), ss_set.find((ptr.jun_ptr)->get_start()))+1 ;
 
             }
 
-            if( exDct.count(exid) == 0 ){
-                exDct[exid] = excount ;
-                excount += 1 ;
+            try {
+                ext_type = (
+                    ext_type
+                    + "|" + to_string(jidx) + "e" + to_string(exDct.at(exid))
+                    + "." + to_string(pos) + "o" + to_string(total)
+                );
+            } catch (const std::out_of_range& e) {
+                // exid wasn't in exDct
+                // this key should have been added during its construction...
+                cerr << "Assertion error: exon (exid = '" << exid
+                    << "') not found in exDct in LSV::set_type()\n";
+                throw(std::out_of_range("Missing key " + exid + " in exDct"));
             }
-            ext_type = ext_type + "|" + to_string(jidx) + "e" + to_string(exDct[exid]) + "."
-                                + to_string(pos) + "o" +  to_string(total) ;
             junctions_.push_back(ptr.jun_ptr) ;
         }
 
