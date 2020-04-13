@@ -450,7 +450,7 @@ namespace grimoire {
         return 0 ;
     }
 
-    int Gene::detect_lsvs(vector<LSV*> &lsv_list){
+    int Gene::detect_lsvs(vector<LSV*> &lsv_list, bool lsv_strict) {
 
         map<string, Exon*>::iterator exon_mapIt ;
         vector<LSV*> lsvGenes ;
@@ -486,17 +486,19 @@ namespace grimoire {
                 bool rem_src = false ;
 
                 for (const auto &slvs: source){
-                    set<string> d1 ;
-                    set<string> d2 ;
+                    set<string> d1 ;  // fill with connections unique to source
+                    set<string> d2 ;  // fill with connections unique to target
                     set_difference((slvs.first).begin(), (slvs.first).end(), t1.begin(), t1.end(), inserter(d1, d1.begin())) ;
                     set_difference(t1.begin(), t1.end(), (slvs.first).begin(), (slvs.first).end(), inserter(d2, d2.begin())) ;
 
-                    if (d2.size() == 0){
-                        rem_src = true ;
+                    // when do we remove target LSV from output?
+                    if (d2.size() == 0 && (lsv_strict || d1.size() == 0)) {
+                        rem_src = true ;  // remove target LSV
                         break ;
                     }
 
-                    if (d1.size() == 0 && d2.size() > 0) {
+                    // when do we remove source LSV from output?
+                    if (lsv_strict && (d1.size() == 0 && d2.size() > 0)) {
                         remLsv.insert(slvs.second->get_id()) ;
                     }
                 }

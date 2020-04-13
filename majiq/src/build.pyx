@@ -538,6 +538,7 @@ cdef _core_build(str transcripts, list file_list, object conf, object logger):
     cdef int nsamples = len(file_list)
     cdef int k=conf.k, m=conf.m
     cdef bint ir = conf.ir
+    cdef bint lsv_strict = conf.lsv_strict
     cdef int nlsv
     cdef map[string, Gene*] gene_map
     cdef map[string, overGene_vect_t] gene_list
@@ -590,7 +591,7 @@ cdef _core_build(str transcripts, list file_list, object conf, object logger):
         gene_to_splicegraph(gg, db)
         with gil:
             logger.debug("[%s] Detect LSVs" % gg.get_id())
-        nlsv = gg.detect_lsvs(out_lsvlist)
+        nlsv = gg.detect_lsvs(out_lsvlist, lsv_strict)
 
     if cjuncs.size()>0 and dumpCJunctions:
         with open("%s/constitutive_junctions.tsv" % conf.outDir, 'w+') as fp:

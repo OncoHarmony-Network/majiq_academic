@@ -135,6 +135,20 @@ def main():
                                   'containing all the junctions that are structurally constitutive, the junctions pass'
                                   ' minreads and minpos filters. [Default: %(default)s]')
 
+    buildparser.add_argument(
+        "--permissive",
+        dest="lsv_strict",
+        default=True,
+        action="store_false",
+        help="By default, MAJIQ ignores all events for which their connections"
+        " are all present in another event (def: redundant events) unless"
+        " they are mutually redundant, in which case the events are equivalent"
+        " and the single-source event is selected."
+        " There are some cases where we would like to quantify these redundant"
+        " events (excluding the equivalent mutually-redundant events); this"
+        " flag enables more permissive output of splicing events.",
+    )
+
 
 
     sampling = new_subparser()
