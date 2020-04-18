@@ -94,7 +94,7 @@ class InstallCommand(install):
             NPY_INC_DIRS = [numpy.get_include()]
 
             extensions += [Extension('majiq.src.polyfitnb', ['majiq/src/polyfitnb.pyx'], language='c++',
-                                     include_dirs=NPY_INC_DIRS)]
+                                     extra_compile_args=compile_args, include_dirs=NPY_INC_DIRS)]
             extensions += [Extension('majiq.src.build', ['majiq/src/build.pyx',
                                                          'majiq/src/internals/io_bam.cpp',
                                                          'majiq/src/internals/grimoire.cpp'],

@@ -35,7 +35,7 @@ namespace grimoire {
     bool sort_ss(const Ssite &a, const Ssite &b){
 
         bool crd =  (a.coord<b.coord) ;
-        bool r = (a.coord == b.coord) && (a.donor_ss > b.donor_ss);
+        bool r = (a.coord == b.coord) && (a.donor_ss < b.donor_ss);  // acceptors before donors if given same coordinate
         bool same = (a.coord == b.coord) && (a.donor_ss == b.donor_ss) && ((a.j->length()) < b.j->length()) ;
         return  crd || r || same ;
     }
@@ -61,7 +61,7 @@ namespace grimoire {
         for (exon_mapIt = exon_map.begin(); exon_mapIt != exon_map.end(); ++exon_mapIt) {
             Exon *x = exon_mapIt->second ;
             if (   ( x->get_start() != EMPTY_COORD ) && ( x->get_end() != EMPTY_COORD )
-                && ( start < x->get_end() ) && ( end > x->get_start()) ) {
+                && ( start <= x->get_end() ) && ( end >= x->get_start()) ) {
                 return x ;
             }
         }
@@ -94,7 +94,7 @@ namespace grimoire {
         string key ;
         stringstream s1 ;
         stringstream s2 ;
-        if ((end - start) < 1) return ;
+        if ((end - start) < 0) return ;
         ex1 = exonOverlap(exon_map_, start, end) ;
         if (nullptr != inbound_j && nullptr != outbound_j && inbound_j->get_intronic() && outbound_j->get_intronic()) {
             s1 << start ; s2 << end ;
@@ -228,7 +228,7 @@ namespace grimoire {
         }
     }
 
-    void Gene::initialize_junction(string key, int start, int end, float* nreads_ptr, bool simpl){
+    void Gene::initialize_junction(string key, int start, int end, shared_ptr<vector<float>> nreads_ptr, bool simpl){
 
         omp_set_lock(&map_lck_) ;
         if (junc_map_.count(key) == 0){
@@ -268,16 +268,23 @@ namespace grimoire {
             } else {
                 if (start_ir <= 0) {
                     continue ;
-                } else if ((ss.coord - start_ir) > 2) {
-                    end_ir = ss.coord ;
-
-                    #pragma omp critical
-                    {
-                        Intron * irObj = new Intron(start_ir +1, end_ir -1, false, this, simpl) ;
-                        intronlist.push_back(irObj) ;
+                } else {
+                    // are we going to close a valid intron?
+                    if ((ss.coord - start_ir) >= 2) {
+                        // the intron has positive length, so yes!
+                        end_ir = ss.coord;
+                        // create the intron
+                        Intron * irObj = new Intron(
+                            start_ir + 1, end_ir - 1, false, this, simpl
+                        );
+                        // critical region to add the intron to intronlist
+                        #pragma omp critical
+                        {
+                            intronlist.push_back(irObj);
+                        }
                     }
-
-                    start_ir = 0 ;
+                    // either way, close open intron
+                    start_ir = 0;
                 }
             }
         }
@@ -443,7 +450,7 @@ namespace grimoire {
         return 0 ;
     }
 
-    int Gene::detect_lsvs(vector<LSV*> &lsv_list){
+    int Gene::detect_lsvs(vector<LSV*> &lsv_list, bool lsv_strict) {
 
         map<string, Exon*>::iterator exon_mapIt ;
         vector<LSV*> lsvGenes ;
@@ -479,17 +486,19 @@ namespace grimoire {
                 bool rem_src = false ;
 
                 for (const auto &slvs: source){
-                    set<string> d1 ;
-                    set<string> d2 ;
+                    set<string> d1 ;  // fill with connections unique to source
+                    set<string> d2 ;  // fill with connections unique to target
                     set_difference((slvs.first).begin(), (slvs.first).end(), t1.begin(), t1.end(), inserter(d1, d1.begin())) ;
                     set_difference(t1.begin(), t1.end(), (slvs.first).begin(), (slvs.first).end(), inserter(d2, d2.begin())) ;
 
-                    if (d2.size() == 0){
-                        rem_src = true ;
+                    // when do we remove target LSV from output?
+                    if (d2.size() == 0 && (lsv_strict || d1.size() == 0)) {
+                        rem_src = true ;  // remove target LSV
                         break ;
                     }
 
-                    if (d1.size() == 0 && d2.size() > 0) {
+                    // when do we remove source LSV from output?
+                    if (lsv_strict && (d1.size() == 0 && d2.size() > 0)) {
                         remLsv.insert(slvs.second->get_id()) ;
                     }
                 }
@@ -628,28 +637,63 @@ namespace grimoire {
                + ":" + gObj->get_id()) ;
     }
 
-    bool Intron::is_reliable(float min_bins, int eff_len){
-
-        float npos = 0 ;
-        if (length() <=0 || numbins_ <= 0 || read_rates_ == nullptr) return false ;
-        const int ext = (int) (eff_len / (nxbin_+1)) ;
-        vector<float> cov (numbins_) ;
-
-        for(int i =0 ; i< numbins_; i++){
-            if (read_rates_[i] < 0) continue ;
-            const int binsz = i< nxbin_mod_ ? nxbin_ +1 : nxbin_ ;
-            read_rates_[i] = (read_rates_[i]>0) ? (read_rates_[i] /  binsz) : 0 ;
-            for (int j=0; j<ext && (i+j)<numbins_; j++){
-                cov[i+j] += read_rates_[i] ;
+   void Intron::normalize_readrates() {
+        // exit early if nothing to normalize
+        if (read_rates_ptr_ == nullptr) {
+            return;
+        }
+        // get read rates vector from shared pointer
+        vector<float> &read_rates_ = *read_rates_ptr_;
+        // normalize each position
+        for (int i = 0; i < numbins_; ++i) {
+            if (read_rates_[i] > 0) {
+                // use the number of intronic positions assigned to the i-th
+                // bin to normalize read rates
+                const int positions_in_bin = i < nxbin_mod_ ? nxbin_ + 1 : nxbin_;
+                read_rates_[i] = read_rates_[i] / positions_in_bin;
             }
         }
-        for (const auto &p: cov){
-            npos += (p>0)? 1: 0 ;
-        }
-        const float c = (npos>0) ? (npos/numbins_) : 0 ;
-        bool b = (c >= min_bins) ;
-        return b || ir_flag_ ;
+        return;
     }
+
+    bool Intron::is_reliable(float min_bins, int eff_len) {
+        // exit early if possible
+        if (length() <= 0 || numbins_ <= 0 || read_rates_ptr_ == nullptr) {
+            return false;
+        }
+
+        // no need to distribute coverage if intron previously known reliable
+        if (ir_flag_) {
+            return true;
+        }
+        // otherwise, need to look at percent positions with nonzero coverage
+
+        // how many bins could a read with eff_len cover given that nxbin_ + 1
+        // is the maximum number of positions per bin?
+        const int ext = (int) (eff_len / (nxbin_ + 1));
+        // initialize vector of read coverage where we share coverage with up
+        // to ext adjacent bins
+        vector<float> cov (numbins_);
+        // get read rates vector from shared pointer
+        vector<float> &read_rates_ = *read_rates_ptr_;
+        // distribute read_rates per bin to coverage shared among adjacent bins
+        for(int i = 0; i < numbins_; i++) {
+            if (read_rates_[i] > 0) {
+                // XXX this only distributes coverage to the right, which could
+                // be problematic for extremely short introns
+                for (int j = 0; j < ext && (i + j) < numbins_; j++) {
+                    cov[i + j] += read_rates_[i];
+                }
+            }
+        }
+        // get the numer/percent positions covered
+        float npos = 0;
+        for (const auto &p: cov) {
+            npos += (p > 0) ? 1 : 0;
+        }
+        const float pct_pos = (npos > 0) ? (npos / numbins_) : 0;
+        return (pct_pos >= min_bins);
+     }
 
 /*
     LSV fuctions
@@ -739,14 +783,35 @@ namespace grimoire {
 
         string ext_type = (ss != b) ? "t" : "s" ;
 
-        string prev_ex = to_string(sp_list[0].ex_ptr->get_start()) + "-" + to_string(sp_list[0].ex_ptr->get_end()) ;
-        unsigned int excount = 1 ;
         if (ss) for (const auto &j: ref_ex->ob) ref_ss_set.insert(j->get_start()) ;
         else for (const auto &j: ref_ex->ib) ref_ss_set.insert(j->get_end()) ;
 
         unsigned int jidx = 0 ;
         int prev_coord = 0 ;
-        map<string, unsigned int > exDct ;
+        map<string, unsigned int > exDct;  // exon key -> exon count in strand order
+
+        // fill exDct beforehand since it is not in same order as junctions
+        set <pair<int, string>> other_exons;
+        for (const auto &ptr: sp_list) {
+            // don't add exon for exitrons
+            if (ptr.ex_ptr == ref_ex) {
+                continue;
+            }
+            // get exon id for exDct
+            const string exid = to_string((ptr.ex_ptr)->get_start()) + "-" + to_string((ptr.ex_ptr)->get_end());
+            // get coordinate for sorting
+            // we use this coordinate because unique and handles half exons in order
+            const int sort_coordinate = (b ? 1 : -1) * (ss ? ptr.ex_ptr->get_start() : ptr.ex_ptr->get_end());
+            // should be unique pair, sorted by valid coordinate
+            other_exons.insert(make_pair(sort_coordinate, exid));
+        }
+        for (const auto &ex_pair: other_exons) {
+            const string exid = ex_pair.second;
+            const unsigned int ex_ct = exDct.size() + 1;
+            exDct[exid] = ex_ct;
+        }
+
+        // now loop over junctions
         for (const auto &ptr: sp_list){
             jidx = (prev_coord != ptr.ref_coord) ? jidx+1 : jidx ;
             prev_coord = ptr.ref_coord ;
@@ -761,25 +826,48 @@ namespace grimoire {
 
             if (ss) {
                  for (const auto &j: (ptr.ex_ptr)->ib){
-                    ss_set.insert(j->get_end()) ;
+                     if (
+                         j->get_donor() != nullptr
+                         && j->get_start() >= 0
+                         && !(j->get_simpl_fltr())
+                     ) {
+                         // only count junctions that could make junc_list
+                         // (i.e. junction starting/ending at exon(s), unsimplified)
+                         ss_set.insert(j->get_end());
+                     }
                  }
                  total = ss_set.size() ;
                  pos = distance(ss_set.begin(), ss_set.find((ptr.jun_ptr)->get_end()))+1 ;
             }else{
                  for (const auto &j: (ptr.ex_ptr)->ob){
-                    ss_set.insert(j->get_start()) ;
+                     if (
+                         j->get_acceptor() != nullptr
+                         && j->get_end() >= 0
+                         && !(j->get_simpl_fltr())
+                     ) {
+                         // only count junctions that could make junc_list
+                         // (i.e. junction starting/ending at exon(s), unsimplified)
+                         ss_set.insert(j->get_start()) ;
+                     }
                  }
                  total = ss_set.size() ;
                  pos = distance(ss_set.begin(), ss_set.find((ptr.jun_ptr)->get_start()))+1 ;
 
             }
 
-            if( exDct.count(exid) == 0 ){
-                exDct[exid] = excount ;
-                excount += 1 ;
+            try {
+                ext_type = (
+                    ext_type
+                    + "|" + to_string(jidx) + "e" + to_string(exDct.at(exid))
+                    + "." + to_string(pos) + "o" + to_string(total)
+                );
+            } catch (const std::out_of_range& e) {
+                // exid wasn't in exDct
+                // this key should have been added during its construction...
+                cerr << "Assertion error: exon (exid = '" << exid
+                    << "') not found in exDct in LSV::set_type()\n";
+                throw(std::out_of_range("Missing key " + exid + " in exDct"));
             }
-            ext_type = ext_type + "|" + to_string(jidx) + "e" + to_string(exDct[exid]) + "."
-                                + to_string(pos) + "o" +  to_string(total) ;
             junctions_.push_back(ptr.jun_ptr) ;
         }
 
