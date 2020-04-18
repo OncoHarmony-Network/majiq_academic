@@ -22,6 +22,13 @@ vector<default_random_engine> io_bam::IOBam::generators_ = vector<default_random
 
 using namespace std;
 namespace io_bam {
+    unsigned int eff_len_from_read_length(int read_length) {
+        if (read_length <= 2 * MIN_BP_OVERLAP) {
+            return 0;
+        } else {
+            return read_length + 1 - (2 * MIN_BP_OVERLAP);
+        }
+    }
 
     char IOBam::_get_strand(bam1_t * read){
         char strn = '.';
@@ -109,8 +116,39 @@ namespace io_bam {
         return;
     }
 
+    /**
+     * Update effective length, appropriately resizing things
+     *
+     * @note this should not be called after introns are inserted because
+     * positional information mapped to bins will lose meaning
+     *
+     * @note XXX this is not thread-safe! assumes that there are no parallel
+     * threads accessing eff_len_or junc_vec. This is true when parsing BAM
+     * files. Otherwise, we would need to add locks on eff_len_ and junc_vec.
+     * Alternatively, we could use tbb::concurrent_vector to avoid the need for
+     * locks if we were okay with adding a new library
+     */
+    void IOBam::update_eff_len(const unsigned int new_eff_len) {
+        if (new_eff_len > eff_len_) {
+            eff_len_ = new_eff_len;
+            if (eff_len_ > buff_len_) {
+                // we need to expand buffers
+                // give safety factor but make sure no less than eff_len_
+                buff_len_ = std::max(
+                        eff_len_,
+                        static_cast<unsigned int>(eff_len_ * BUFF_LEN_SAFETY_FACTOR)
+                );
+                // resize all the buffers in parallel
+                #pragma omp parallel for num_threads(nthreads_)
+                for (unsigned int i = 0; i < junc_vec.size(); ++i) {
+                    junc_vec[i]->resize(buff_len_, 0);
+                }
+            }
+        }
+    }
+
     void IOBam::find_junction_genes(string chrom, char strand, int start, int end,
-                                    float* nreads_ptr){
+                                    shared_ptr<vector<float>> nreads_ptr){
 //        const int n = glist_[chrom].size() ;
         bool found_stage1 = false ;
         bool found_stage2 = false ;
@@ -183,30 +221,24 @@ namespace io_bam {
 
         // indicator if this is the first time we have seen this junction
         bool new_j = false ;
-        // pointer to junction coverage per position/offset
-        float * v ;
         // acquire lock for working with junc_map/junc_vec
         omp_set_lock(&map_lck_) ;
         {
             if (junc_map.count(key) == 0 ) {
                 // we haven't seen this junction before
                 junc_map[key] = junc_vec.size();  // index to add to junc_vec
-                // allocate array of floating point zeros
-                v = (float*) calloc(eff_len_, sizeof(float)) ;
-                // add array to junc_vec at position junc_map[key]
-                junc_vec.push_back(v) ;
+                junc_vec.push_back(make_shared<vector<float>>(buff_len_, 0));
                 // mark as new junction
                 new_j = true ;
-            } else {
-                // get previously created coverage array for the junction
-                v = junc_vec[junc_map[key]] ;
             }
         }
         omp_unset_lock(&map_lck_) ;
+        shared_ptr<vector<float>> v_ptr = junc_vec[junc_map[key]];
+        vector<float> &v = *v_ptr;
 
         if (new_j) {
             // associate junction with genes (prioritizing annotated, other stages for denovo)
-            find_junction_genes(chrom, strand, start, end, v) ;
+            find_junction_genes(chrom, strand, start, end, v_ptr);
         }
         #pragma omp atomic
             v[offset] += sreads;  // add reads to junction array
@@ -449,25 +481,26 @@ namespace io_bam {
     }
 
 
-    int IOBam::ParseJunctionsFromFile(bool ir_func){
-
-        samFile *in;
+    /**
+     * Set up file for reading with given number of threads
+     */
+    inline int _init_samfile(
+            const char* bam_path,
+            samFile* &in, bam_hdr_t* &header, bam1_t* &aln,
+            htsThreadPool &p, const unsigned int nthreads
+    ) {
         int ignore_sam_err = 0;
-        bam_hdr_t *header ;
-        bam1_t *aln;
-
-        int r = 0, exit_code = 0;
-//        hts_opt *in_opts = NULL;
         int extra_hdr_nuls = 0;
 
-        in = sam_open(bam_.c_str(), "rb") ;
+        in = sam_open(bam_path, "rb") ;
         if (NULL == in) {
-            fprintf(stderr, "Error opening \"%s\"\n", bam_.c_str());
+            fprintf(stderr, "Error opening \"%s\"\n", bam_path);
             return EXIT_FAILURE;
         }
         header = sam_hdr_read(in);
         if (NULL == header) {
-            fprintf(stderr, "Couldn't read header for \"%s\"\n", bam_.c_str());
+            fprintf(stderr, "Couldn't read header for \"%s\"\n", bam_path);
+            sam_close(in);
             return EXIT_FAILURE;
         }
         header->ignore_sam_err = ignore_sam_err;
@@ -475,6 +508,8 @@ namespace io_bam {
             char *new_text = (char*) realloc(header->text, header->l_text + extra_hdr_nuls);
             if (new_text == NULL) {
                 fprintf(stderr, "Error reallocing header text\n");
+                sam_close(in);
+                bam_hdr_destroy(header);
                 return EXIT_FAILURE;
             }
             header->text = new_text;
@@ -483,22 +518,97 @@ namespace io_bam {
         }
 
         aln = bam_init1();
-        htsThreadPool p = {NULL, 0};
-        if (nthreads_ > 0) {
-            p.pool = hts_tpool_init(nthreads_);
+        if (nthreads > 0) {
+            p.pool = hts_tpool_init(nthreads);
             if (!p.pool) {
                 fprintf(stderr, "Error creating thread pool\n");
-                exit_code = 1;
             } else {
                 hts_set_opt(in,  HTS_OPT_THREAD_POOL, &p);
             }
+        }
+        return 0;
+    }
+
+
+    /**
+     * Close file for reading
+     */
+    inline int _close_samfile(
+            samFile* &in, bam_hdr_t* &header, bam1_t* &aln, htsThreadPool &p
+    ) {
+        int exit_code = 0;
+        // close the read/header/input file, check if there was an error closing input
+        bam_destroy1(aln);
+        bam_hdr_destroy(header);
+        if (sam_close(in) < 0) {
+            fprintf(stderr, "Error closing input.\n");
+            exit_code = 1 ;
+        }
+        if (p.pool)
+            hts_tpool_destroy(p.pool);
+
+        return exit_code;
+    }
+
+
+    /**
+     * Obtain lower bound on eff_len from first num_reads, update eff_len
+     */
+    void IOBam::EstimateEffLenFromFile(int num_reads) {
+        samFile *in;
+        bam_hdr_t *header ;
+        bam1_t *aln;
+        htsThreadPool p = {NULL, 0};
+        // open the sam file
+        int exit_code = _init_samfile(bam_.c_str(), in, header, aln, p, nthreads_);
+        if (exit_code) {
+            cerr << "Error parsing input\n";
+            return;
+        }
+        int read_ct = 0;
+        int max_read_length = 0;
+        int r = 0;  // error code from htslib
+        // loop over the first num_reads reads
+        while (read_ct < num_reads && (r = sam_read1(in, header, aln)) >= 0) {
+            ++read_ct;  // increment the number of reads proceessed
+            const int read_length = aln->core.l_qseq;  // current read length
+            if (read_length > max_read_length) {
+                max_read_length = read_length;
+            }
+        }
+        if (r < -1) {
+            cerr << "Error parsing input\n";
+            return;
+        }
+        // close the sam file
+        exit_code |= _close_samfile(in, header, aln, p);
+        if (exit_code) {
+            cerr << "Error closing input\n";
+        }
+        // update eff_len_ if greater than current value
+        const unsigned int est_eff_len = eff_len_from_read_length(max_read_length);
+        if (est_eff_len > eff_len_) {
+            update_eff_len(est_eff_len);
+        }
+    }
+
+
+    int IOBam::ParseJunctionsFromFile(bool ir_func) {
+        samFile *in;
+        bam_hdr_t *header ;
+        bam1_t *aln;
+        htsThreadPool p = {NULL, 0};
+        // open the sam file
+        int exit_code = _init_samfile(bam_.c_str(), in, header, aln, p, nthreads_);
+        if (exit_code) {
+            return exit_code;  // there was an error, so end with error code
         }
 
         int (IOBam::*parse_func)(bam_hdr_t *, bam1_t *) ;
         if(ir_func) parse_func = &IOBam::parse_read_for_ir ;
         else parse_func = &IOBam::parse_read_into_junctions ;
 
-
+        int r = 0;  // error code from htslib
         while ((r = sam_read1(in, header, aln)) >= 0) {
             (this->*parse_func)(header, aln) ;
         }
@@ -506,18 +616,11 @@ namespace io_bam {
             fprintf(stderr, "Error parsing input.\n");
             exit_code = 1;
         }
-        bam_destroy1(aln);
-        bam_hdr_destroy(header);
-
-        r = sam_close(in);
         if(!ir_func)
             junc_limit_index_ = junc_vec.size() ;
-        if (r < 0) {
-            fprintf(stderr, "Error closing input.\n");
-            exit_code = 1 ;
-        }
-        if (p.pool)
-            hts_tpool_destroy(p.pool);
+
+        // close the sam file
+        exit_code |= _close_samfile(in, header, aln, p);
 
         return exit_code ;
     }
@@ -553,14 +656,15 @@ namespace io_bam {
         #pragma omp parallel for num_threads(nthreads_)
         for(int jidx=0; jidx < njunc; jidx++){
 
+            vector<float> &coverage = *(junc_vec[jidx]);
             vector<float> vec ;
             int npos = 0 ;
             float sreads = 0 ;
             for(unsigned int i=0; i<eff_len_; ++i){
-                if (junc_vec[jidx][i]>0){
+                if (coverage[i] > 0) {
                     npos ++ ;
-                    sreads += junc_vec[jidx][i] ;
-                    vec.push_back(junc_vec[jidx][i]) ;
+                    sreads += coverage[i];
+                    vec.push_back(coverage[i]);
                 }
             }
             if (npos == 0) continue ;
@@ -593,11 +697,12 @@ namespace io_bam {
 
         #pragma omp parallel for num_threads(nthreads_)
         for(int jidx=0; jidx < njunc; ++jidx){
+            vector<float> &coverage = *(junc_vec[jidx]);
             float ss = 0 ;
             int np = 0 ;
             for(unsigned int i=0; i<eff_len_; ++i){
-                ss += junc_vec[jidx][i] ;
-                np += (junc_vec[jidx][i]>0)? 1 : 0 ;
+                ss += coverage[i];
+                np += (coverage[i] > 0) ? 1 : 0;
             }
             res[jidx] = (int) ss ;
             res[jidx+njunc] = np ;
@@ -628,7 +733,7 @@ namespace io_bam {
                 {
                     if (junc_map.count(key) == 0) {
                         junc_map[key] = junc_vec.size() ;
-                        junc_vec.push_back(irptr->read_rates_) ;
+                        junc_vec.push_back(irptr->read_rates_ptr_) ;
                         gObj->add_intron(irptr, min_intron_cov, minexp, min_bins, reset) ;
                     }
                 }
@@ -669,20 +774,21 @@ namespace io_bam {
             const int n = (it.second).size() ;
 
             #pragma omp parallel for num_threads(nthreads_)
-            for(int idx = 0; idx<n; idx++){
+            for (int idx = 0; idx < n; idx++) {
                 Intron * intrn_it = (it.second)[idx] ;
-                const bool pass = intrn_it->is_reliable(min_bins, eff_len_) ;
-                if( pass ){
+                const bool pass = intrn_it->is_reliable(min_bins, eff_len_);
+                if (pass) {
+                    intrn_it->normalize_readrates();  // normalize readrates if it passed
                     const string key = intrn_it->get_key(intrn_it->get_gene()) ;
                     #pragma omp critical
                     {
                         if (junc_map.count(key) == 0) {
                             junc_map[key] = junc_vec.size() ;
-                            junc_vec.push_back(intrn_it->read_rates_) ;
+                            junc_vec.push_back(intrn_it->read_rates_ptr_) ;
                             (intrn_it->get_gene())->add_intron(intrn_it, min_intron_cov, min_experiments, min_bins, reset) ;
                         }
                     }
-                }else{
+                } else {
                     intrn_it->free_nreads() ;
                     delete intrn_it ;
                 }
@@ -695,10 +801,11 @@ namespace io_bam {
         const unsigned int all_junc = junc_vec.size() ;
         #pragma omp parallel for num_threads(nthreads_)
         for(unsigned int idx = junc_limit_index_; idx<all_junc; idx++){
+            const vector<float> &coverage = *(junc_vec[idx]);
             const unsigned int i = idx - junc_limit_index_ ;
             for (unsigned int j=0; j<eff_len_; j++){
                 const unsigned int indx_2d = i*eff_len_ + j ;
-                out_cov[indx_2d] = junc_vec[idx][j] ;
+                out_cov[indx_2d] = coverage[j] ;
             }
         }
     }
