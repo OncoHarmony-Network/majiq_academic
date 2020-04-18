@@ -136,6 +136,20 @@ def main():
                                   ' minreads and minpos filters. [Default: %(default)s]')
 
     buildparser.add_argument(
+        "--permissive",
+        dest="lsv_strict",
+        default=True,
+        action="store_false",
+        help="By default, MAJIQ ignores all events for which their connections"
+        " are all present in another event (def: redundant events) unless"
+        " they are mutually redundant, in which case the events are equivalent"
+        " and the single-source event is selected."
+        " There are some cases where we would like to quantify these redundant"
+        " events (excluding the equivalent mutually-redundant events); this"
+        " flag enables more permissive output of splicing events.",
+    )
+
+    buildparser.add_argument(
         '--dump-coverage',
         dest='dump_coverage',
         action='store_true',
