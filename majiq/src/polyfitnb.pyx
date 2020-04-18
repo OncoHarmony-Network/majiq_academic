@@ -3,6 +3,8 @@ cimport numpy as np
 from scipy.stats import nbinom, poisson
 import cython
 from libcpp.vector cimport vector
+from libcpp.memory cimport shared_ptr
+from cython.operator cimport dereference as deref
 
 ctypedef np.float64_t DTYPE_t
 
@@ -103,7 +105,7 @@ cdef tuple _adjust_fit(float starting_a, np.ndarray[DTYPE_t, ndim=2] junctions, 
 @cython.boundscheck(False) # turn off bounds-checking for entire function
 @cython.wraparound(False)  # turn off negative index wrapping for entire function
 # cpdef float fit_nb(vector[np.float32_t *] junctionl, int total_juncs, int eff_length, float nbdisp=0.1, object logger=None) except -1:
-cdef float fit_nb(vector[np.float32_t *] junctionl, int total_juncs, int eff_length, float nbdisp, object logger):
+cdef float fit_nb(vector[shared_ptr[vector[np.float32_t]]] junctionl, int total_juncs, int eff_length, float nbdisp, object logger):
     cdef np.ndarray[np.int64_t, ndim=1] indices
     cdef np.ndarray[DTYPE_t, ndim=1] mean_junc, std_junc
     cdef np.ndarray[DTYPE_t, ndim=1] ecdf, pvalues
@@ -126,7 +128,7 @@ cdef float fit_nb(vector[np.float32_t *] junctionl, int total_juncs, int eff_len
 
     for i in range(total_juncs):
         for j in range(eff_length):
-            junctions[i,j] = junctionl[i][j]
+            junctions[i, j] = deref(junctionl[i])[j]
 
     junctions = junctions[junctions.sum(axis=1)>=10]
     if junctions.shape[0] < 10:
