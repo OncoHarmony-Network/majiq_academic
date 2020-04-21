@@ -28,6 +28,7 @@ cdef extern from "io_bam.hpp" namespace "io_bam":
         void simplify() nogil ;
         void free_iobam() nogil ;
         void get_intron_raw_cov(np.float32_t* out_cov) nogil ;
+        void get_junction_raw_cov(np.float32_t* out_cov) nogil;
         void parseJuncEntry(map[string, overGene_vect_t]& glist, string gid, string chrom, char strand,
                                int start, int end, unsigned int sreads, unsigned int minreads_t, unsigned int npos,
                                unsigned int minpos_t, unsigned int denovo_t, bint denovo, vector[Gene*]& oGeneList,
