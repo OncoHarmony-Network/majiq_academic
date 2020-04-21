@@ -383,12 +383,12 @@ cdef _find_junctions(list file_list, map[string, Gene*]& gene_map, vector[string
                 if dump_coverage:
                     # optional to dump raw junction coverage b/c not used downstream
                     # create array for junctions and fill just like for introns
-                    junc_raw_cov = np.zeros(shape=(jlimit, eff_len), dtype=np.float32)
+                    junc_raw_cov = np.zeros(shape=(jlimit, local_eff_len), dtype=np.float32)
                     with nogil:
                         c_iobam.get_junction_raw_cov(<np.float32_t *> junc_raw_cov.data)
                 else:
                     # empty array
-                    junc_raw_cov = np.zeros(shape=(0, eff_len), dtype=np.float32)
+                    junc_raw_cov = np.zeros(shape=(0, local_eff_len), dtype=np.float32)
 
                 logger.debug("Update flags")
                 for i in prange(n, nogil=True, num_threads=nthreads):
