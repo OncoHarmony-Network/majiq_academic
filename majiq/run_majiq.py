@@ -149,6 +149,15 @@ def main():
         " flag enables more permissive output of splicing events.",
     )
 
+    buildparser.add_argument(
+        '--dump-coverage',
+        dest='dump_coverage',
+        action='store_true',
+        default=False,
+        help='Optionally dump raw junction coverage by position to created SJ'
+        'files for experimental/debugging purposes'
+    )
+
 
 
     sampling = new_subparser()
