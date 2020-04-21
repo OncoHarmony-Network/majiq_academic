@@ -103,6 +103,7 @@ namespace io_bam{
             void detect_introns(float min_intron_cov, unsigned int min_experiments, float min_bins, bool reset) ;
 
             void get_intron_raw_cov(float* out_cov) ;
+            void get_junction_raw_cov(float* out_cov);
 
             char _get_strand(bam1_t * read) ;
             void set_junction_strand(bam1_t  *aln, Junction& j1) ;
