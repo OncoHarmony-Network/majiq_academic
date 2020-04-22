@@ -388,18 +388,20 @@ namespace io_bam {
             if (advance_read) {
                 // check if this operation gives us first/last position for valid intron
                 if (
-                        (read_offset <= MIN_BP_OVERLAP)
-                        && ((read_offset + cigar_oplen) > MIN_BP_OVERLAP)
+                        (read_offset < MIN_BP_OVERLAP)
+                        && ((read_offset + cigar_oplen) >= MIN_BP_OVERLAP)
                 ) {
-                    // + 1 magic number for 0-->1-based indexing for intron start
-                    first_pos = read_pos + genomic_offset + 1
+                    // first valid value for intron_end
+                    first_pos = read_pos + genomic_offset
                         + (advance_reference ? MIN_BP_OVERLAP - read_offset : 0);
                 }
                 if (
-                        ((read_offset + cigar_oplen) >= read_length - MIN_BP_OVERLAP)
-                        && (read_offset < read_length - MIN_BP_OVERLAP)
+                        ((read_offset + cigar_oplen) > read_length - MIN_BP_OVERLAP)
+                        && (read_offset <= read_length - MIN_BP_OVERLAP)
                 ) {
-                    last_pos = read_pos + genomic_offset
+                    // last valid value for intron_start
+                    // don't forget +1 for 1-indexed (read_pos) to 1-indexed intron_start
+                    last_pos = (1 + read_pos) + genomic_offset
                         + (advance_reference ? read_length - MIN_BP_OVERLAP - read_offset : 0);
                 }
                 read_offset += cigar_oplen;
@@ -454,7 +456,9 @@ namespace io_bam {
             // with appropriate offset
             // calculate relative to last acceptable position in read, which has offset read_length - MIN_BP_OVERLAP
             int relative_offset = 0;
-            int read_start_vs_intron_start = read_pos - intron->get_start();
+            // don't forget 1 in front of read_pos, genomic offsets, which are
+            // zero-indexed vs 1-indexed intron starts
+            int read_start_vs_intron_start = (1 + read_pos) - intron->get_start();
             if (read_start_vs_intron_start >= 0) {
                 // read start at or after intron start, further away from end of read
                 relative_offset = read_start_vs_intron_start;
@@ -468,7 +472,7 @@ namespace io_bam {
                     }
                 }
                 relative_offset =
-                    (genomic_read_offsets[i - 1].first - intron->get_start())  // how far this genomic coordinate was from intron start
+                    ((1 + genomic_read_offsets[i - 1].first) - intron->get_start())  // how far this genomic coordinate was from intron start
                     - genomic_read_offsets[i - 1].second;  // adjust relative offset on read
             }
             int intron_offset = read_length - MIN_BP_OVERLAP + relative_offset;
