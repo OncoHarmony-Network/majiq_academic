@@ -296,8 +296,10 @@ namespace io_bam {
                 // get genomic start and end of junction
                 const int junction_start = read_pos + genomic_offset;
                 const int junction_end = junction_start + cigar_oplen + 1;
-                // get junction position
-                const unsigned int junction_pos = alignment_offset - MIN_BP_OVERLAP;
+                // get junction position relative to read offset (not alignment
+                // offset). This requires adjustment for soft clipping on left
+                const unsigned int junction_pos = alignment_offset
+                    + clipping_lengths.first - MIN_BP_OVERLAP;
                 // add the junction at the specified position
                 try {
                     add_junction(chrom, _get_strand(read), junction_start,
@@ -479,7 +481,12 @@ namespace io_bam {
                     (genomic_alignment_offsets[i - 1].first - intron->get_start())  // how far this genomic coordinate was from intron start
                     - genomic_alignment_offsets[i - 1].second;  // adjust relative offset on alignment
             }
-            int intron_offset = alignment_length - MIN_BP_OVERLAP + relative_offset;
+            // get intron offset relative to read (not alignment), which
+            // requires adjusting for soft clipping on *right* (this is in
+            // contrast to junctions -- intron coordinates are sort of inverted
+            // relative to junctions for historical reasons)
+            int intron_offset = alignment_length - MIN_BP_OVERLAP
+                + relative_offset + clipping_lengths.second;
             #pragma omp critical
             {
                 intron->add_read(intron_offset, eff_len_, 1);
