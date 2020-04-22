@@ -72,25 +72,26 @@ namespace io_bam {
     }
 
     /**
-     * adjust cigar_ptr, n_cigar, read_length to ignore clipping
+     * adjust cigar_ptr, n_cigar to ignore clipping, return length of clipping on left and right
      *
      * @param n_cigar number of cigar operations passed by reference (adjusted by call)
      * @param cigar array of cigar operations passed by reference (adjusted by call)
-     * @param read_length length of read passed by reference (adjusted by call)
      *
      */
-    void _length_adjust_cigar_soft_clipping(
-            int &n_cigar, uint32_t* &cigar, int &read_length
-    ) {
+    pair<int, int> _adjust_cigar_soft_clipping(int &n_cigar, uint32_t* &cigar) {
+        // initialize lengths of soft clipping on left/right to return
+        int left_length = 0;
+        int right_length = 0;
         // remove clipping on the right
         for (int i = n_cigar - 1; i >= 0; --i) {  // iterate backwards
             const char cigar_op = bam_cigar_op(cigar[i]);
-            // ignore clipping operations and contribution to read length
             if (cigar_op == BAM_CHARD_CLIP) {
+                // ignore hard clipping cigar operations on right
                 --n_cigar;
             } else if (cigar_op == BAM_CSOFT_CLIP) {
+                // ignore soft clipping cigar operations, update right length
                 --n_cigar;
-                read_length -= bam_cigar_oplen(cigar[i]);
+                right_length += bam_cigar_oplen(cigar[i]);
             } else {
                 break;
             }
@@ -99,12 +100,13 @@ namespace io_bam {
         int lhs_clipping = 0;  // offset to apply to *cigar_ptr
         for (int i = 0; i < n_cigar; ++i) {
             const char cigar_op = bam_cigar_op(cigar[i]);
-            // ignore clipping operations and contribution to read length
             if (cigar_op == BAM_CHARD_CLIP) {
+                // ignore hard clipping cigar operations on left
                 ++lhs_clipping;
             } else if (cigar_op == BAM_CSOFT_CLIP) {
+                // ignore soft clipping cigar operations, update left length
                 ++lhs_clipping;
-                read_length -= bam_cigar_oplen(cigar[i]);
+                left_length += bam_cigar_oplen(cigar[i]);
             } else {
                 break;
             }
@@ -113,7 +115,7 @@ namespace io_bam {
             n_cigar -= lhs_clipping;
             cigar = cigar + lhs_clipping;
         }
-        return;
+        return make_pair(left_length, right_length);
     }
 
     /**
@@ -266,17 +268,20 @@ namespace io_bam {
         string chrom(header->target_name[read->core.tid]);
         int read_pos = read->core.pos;
 
-        // get length of read
-        int read_length = read->core.l_qseq;
+        // get length of read as initial length of alignment
+        const int read_length = read->core.l_qseq;
 
-        // get cigar operations, adjust them and read length to ignore clipping
+        // get cigar operations, adjust them and alignment length to ignore clipping
         int n_cigar = read->core.n_cigar;
         uint32_t *cigar = bam_get_cigar(read) ;
-        _length_adjust_cigar_soft_clipping(n_cigar, cigar, read_length);
+        const pair<int, int> clipping_lengths = _adjust_cigar_soft_clipping(
+                n_cigar, cigar
+        );
+        const int alignment_length = read_length - clipping_lengths.first - clipping_lengths.second;
 
-        // track offsets on genomic and read position for moving along alignment
+        // track offsets on genomic position and alignment as we iterate over cigar
         int genomic_offset = 0;
-        int read_offset = 0;
+        int alignment_offset = 0;
 
         // iterate over cigar operations, look for split reads
         for (int i = 0; i < n_cigar; ++i) {
@@ -284,15 +289,15 @@ namespace io_bam {
             const char cigar_op = bam_cigar_op(cigar[i]);
             const int cigar_oplen = bam_cigar_oplen(cigar[i]);
             // check if we have a junction we can add
-            if (cigar_op == BAM_CREF_SKIP && read_offset >= MIN_BP_OVERLAP) {
-                // this is a junction overlapping sufficiently with the read
-                // (we don't need to check read_offset <= read_length - MIN_BP_OVERLAP
-                // because we exit early when advancing read offset)
+            if (cigar_op == BAM_CREF_SKIP && alignment_offset >= MIN_BP_OVERLAP) {
+                // this is a junction overlapping sufficiently with the alignment
+                // (we don't need to check alignment_offset <= alignment_length - MIN_BP_OVERLAP
+                // because we exit early when advancing alignment offset)
                 // get genomic start and end of junction
                 const int junction_start = read_pos + genomic_offset;
                 const int junction_end = junction_start + cigar_oplen + 1;
                 // get junction position
-                const unsigned int junction_pos = read_offset - MIN_BP_OVERLAP;
+                const unsigned int junction_pos = alignment_offset - MIN_BP_OVERLAP;
                 // add the junction at the specified position
                 try {
                     add_junction(chrom, _get_strand(read), junction_start,
@@ -301,10 +306,10 @@ namespace io_bam {
                     cout << "ERROR" << e.what() << '\n';
                 }
             }
-            // update read and genomic offsets
+            // update alignment and genomic offsets
             if (_cigar_advance_read(cigar_op)) {
-                read_offset += cigar_oplen;
-                if (read_offset > read_length - MIN_BP_OVERLAP) {
+                alignment_offset += cigar_oplen;
+                if (alignment_offset > alignment_length - MIN_BP_OVERLAP) {
                     break;  // future operations will not lead to valid junction
                 }
             }
@@ -350,8 +355,8 @@ namespace io_bam {
         }
 
         // fill records of genomic/read offsets to determine offset of introns
-        vector<pair<int, int>> genomic_read_offsets;
-        genomic_read_offsets.push_back({read_pos, 0});
+        vector<pair<int, int>> genomic_alignment_offsets;
+        genomic_alignment_offsets.push_back({read_pos, 0});
         // fill records of junctions splitting read (ignore introns if intersect)
         vector<pair<int, int>> junc_record ;
         // first and last genomic positions an intron can include to be considered
@@ -359,16 +364,19 @@ namespace io_bam {
         int last_pos = -10;
 
         // get length of read
-        int read_length = read->core.l_qseq;
+        const int read_length = read->core.l_qseq;
 
-        // get cigar operations, adjust them and read length to ignore clipping
+        // get cigar operations, adjust them and alignment length to ignore clipping
         int n_cigar = read->core.n_cigar ;
         uint32_t *cigar = bam_get_cigar(read) ;
-        _length_adjust_cigar_soft_clipping(n_cigar, cigar, read_length);
+        const pair<int, int> clipping_lengths = _adjust_cigar_soft_clipping(
+                n_cigar, cigar
+        );
+        const int alignment_length = read_length - clipping_lengths.first - clipping_lengths.second;
 
-        // parse CIGAR operations for genomic_read_offsets, junc_record, {first,last}_pos
+        // parse CIGAR operations for genomic_alignment_offsets, junc_record, {first,last}_pos
         int genomic_offset = 0;
-        int read_offset = 0;
+        int alignment_offset = 0;
         for (int i = 0; i < n_cigar; ++i) {
             // extract operation and offset for the operation from cigar[i]
             const char cigar_op = bam_cigar_op(cigar[i]);
@@ -388,21 +396,21 @@ namespace io_bam {
             if (advance_read) {
                 // check if this operation gives us first/last position for valid intron
                 if (
-                        (read_offset <= MIN_BP_OVERLAP)
-                        && ((read_offset + cigar_oplen) > MIN_BP_OVERLAP)
+                        (alignment_offset <= MIN_BP_OVERLAP)
+                        && ((alignment_offset + cigar_oplen) > MIN_BP_OVERLAP)
                 ) {
                     // + 1 magic number for 0-->1-based indexing for intron start
                     first_pos = read_pos + genomic_offset + 1
-                        + (advance_reference ? MIN_BP_OVERLAP - read_offset : 0);
+                        + (advance_reference ? MIN_BP_OVERLAP - alignment_offset : 0);
                 }
                 if (
-                        ((read_offset + cigar_oplen) >= read_length - MIN_BP_OVERLAP)
-                        && (read_offset < read_length - MIN_BP_OVERLAP)
+                        ((alignment_offset + cigar_oplen) >= alignment_length - MIN_BP_OVERLAP)
+                        && (alignment_offset < alignment_length - MIN_BP_OVERLAP)
                 ) {
                     last_pos = read_pos + genomic_offset
-                        + (advance_reference ? read_length - MIN_BP_OVERLAP - read_offset : 0);
+                        + (advance_reference ? alignment_length - MIN_BP_OVERLAP - alignment_offset : 0);
                 }
-                read_offset += cigar_oplen;
+                alignment_offset += cigar_oplen;
             }
             if (advance_reference) {
                 genomic_offset += cigar_oplen;
@@ -410,8 +418,8 @@ namespace io_bam {
             if (advance_reference != advance_read) {
                 // only need update if one advanced but not the other
                 const int current_genomic_pos = read_pos + genomic_offset;
-                const int current_offset = read_offset;
-                genomic_read_offsets.push_back({current_genomic_pos, current_offset});
+                const int current_offset = alignment_offset;
+                genomic_alignment_offsets.push_back({current_genomic_pos, current_offset});
             }
         }
 
@@ -452,7 +460,7 @@ namespace io_bam {
 
             // since read includes intron within acceptable bounds, add intron
             // with appropriate offset
-            // calculate relative to last acceptable position in read, which has offset read_length - MIN_BP_OVERLAP
+            // calculate relative to last acceptable position in alignment, which has offset alignment_length - MIN_BP_OVERLAP
             int relative_offset = 0;
             int read_start_vs_intron_start = read_pos - intron->get_start();
             if (read_start_vs_intron_start >= 0) {
@@ -460,18 +468,18 @@ namespace io_bam {
                 relative_offset = read_start_vs_intron_start;
             } else {
                 unsigned int i = 1;  // get index of first offset past intron start
-                for (; i < genomic_read_offsets.size(); ++i) {
+                for (; i < genomic_alignment_offsets.size(); ++i) {
                     // could replace with something like std::lower_bound for log(n) search
                     // but premature optimization unless many cigar operations
-                    if (genomic_read_offsets[i].first >= intron->get_start()) {
+                    if (genomic_alignment_offsets[i].first >= intron->get_start()) {
                         break;
                     }
                 }
                 relative_offset =
-                    (genomic_read_offsets[i - 1].first - intron->get_start())  // how far this genomic coordinate was from intron start
-                    - genomic_read_offsets[i - 1].second;  // adjust relative offset on read
+                    (genomic_alignment_offsets[i - 1].first - intron->get_start())  // how far this genomic coordinate was from intron start
+                    - genomic_alignment_offsets[i - 1].second;  // adjust relative offset on alignment
             }
-            int intron_offset = read_length - MIN_BP_OVERLAP + relative_offset;
+            int intron_offset = alignment_length - MIN_BP_OVERLAP + relative_offset;
             #pragma omp critical
             {
                 intron->add_read(intron_offset, eff_len_, 1);
