@@ -75,18 +75,12 @@ class Config(object):
 
 
             self.genome = general['genome']
-            try:
-                self.readLen = int(general['readlen'])
-            except KeyError:
-                self.readLen = 0
-            else:
-                # TODO: fully deprecate parameter and no longer support it,
+
+            if 'readlen' in general:
                 # removing it from function/class definitions/initializations
                 warnings.warn(
-                    '"readlen" parameter is deprecated. MAJIQ now detects the maximum read length'
-                    ' of each experiment automatically. Setting a lower value will be automatically'
-                    ' corrected, and setting a higher value will be respected for now for backwards'
-                    ' compatibility, but can lead to systematically overestimated ir coverage'
+                    '"readlen" parameter is deprecated and will not be used. MAJIQ now detects the maximum read length'
+                    ' of each experiment automatically. '
                 )
 
             exps = Config.config_section_map(config, "experiments")
