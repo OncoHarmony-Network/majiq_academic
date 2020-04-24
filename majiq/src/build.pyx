@@ -304,7 +304,6 @@ cdef _find_junctions(list file_list, map[string, Gene*]& gene_map, vector[string
     cdef int k=conf.k, m=conf.m
     cdef np.float32_t pvalue_limit=conf.pvalue_limit
     cdef unsigned int min_experiments
-    cdef unsigned int eff_len = eff_len_from_read_length(conf.readLen)
     cdef unsigned int local_eff_len
     cdef bint ir = conf.ir
     cdef bint bsimpl = (conf.simpl_psi >= 0)
@@ -348,7 +347,7 @@ cdef _find_junctions(list file_list, map[string, Gene*]& gene_map, vector[string
                 strandness = conf.strand_specific[file_list[j][0]]
 
                 with nogil:
-                    c_iobam = IOBam(bamfile, strandness, eff_len, nthreads, gene_list, bsimpl)
+                    c_iobam = IOBam(bamfile, strandness, 0, nthreads, gene_list, bsimpl)
                     c_iobam.EstimateEffLenFromFile(estimate_eff_reads)  # lower bound eff_len
                     c_iobam.ParseJunctionsFromFile(False)  # parse for junctions, get true eff_len
                     local_eff_len = c_iobam.get_eff_len()  # get local eff_len after parsing all junctions
