@@ -170,7 +170,7 @@ namespace grimoire{
                     ++ flter_cnt_ ;
                     bld_fltr_ = bld_fltr_ || (flter_cnt_ >= min_experiments) ;
                 }
-                if (sreads >= denovo_t){
+                if ((npos >= minpos_t) && (sreads >= denovo_t)) {
                     ++ denovo_cnt_  ;
                     denovo_bl_ = denovo_bl_ || (denovo_cnt_ >= min_experiments) ;
                     if (!(denovo || annot_))
