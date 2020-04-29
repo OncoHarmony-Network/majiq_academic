@@ -191,6 +191,10 @@ cdef int _het_computation(
         )
         max_nfiles = max(max_nfiles, len(cond_list))
         for fidx, f in enumerate(cond_list):
+            logger.info(
+                f"(group {cidx + 1}/2, experiment {fidx + 1}/{len(cond_list)})"
+                f" Group {cond_name} sampling PSI from '{f}'"
+            )
             osamps = np.zeros(shape=(total_njuncs, psi_samples), dtype=np.float32)
             majiq_io.get_coverage_mat_lsv(lsv_vec, [f], nthreads, True, minreads, minnonzero)
             for i in prange(nlsv, nogil=True, num_threads=nthreads):
