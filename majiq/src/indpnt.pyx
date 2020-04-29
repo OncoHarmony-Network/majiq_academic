@@ -33,8 +33,9 @@ cdef int _statistical_test_computation(object out_h5p, dict comparison, list lis
     cdef vector[np.float32_t*] cond2_smpl
 
     cdef np.ndarray[np.float32_t, ndim=2, mode="c"]  k
-    cdef str cc_path
-    cdef int cond, xx, i
+    cdef object cc
+    cdef int cond, xx, i, lsv_chunk_idx
+    cdef int lsv_min_idx, lsv_max_idx, junction_min, junction_max
     cdef str cond_name, statsnames
     cdef int index, nways, lsv_index
     cdef list file_list = []
@@ -48,6 +49,8 @@ cdef int _statistical_test_computation(object out_h5p, dict comparison, list lis
     cdef int nstats
 
     cdef hetLSV* hetObj_ptr
+    cdef hetLSV* lsv_min
+    cdef hetLSV* lsv_max
 
     if not StatsObj.initialize_statistics(stats_list):
         print('ERROR stats')
@@ -62,37 +65,66 @@ cdef int _statistical_test_computation(object out_h5p, dict comparison, list lis
     logger.info("Using statistics: %s" % " ".join(statlist))
     nstats = StatsObj.get_number_stats()
 
-    index = 0
-
     print(comparison)
+    # XXX NOTE: chunking of LSVs assumes that `list_of_lsv` LSVs are
+    # aligned/share order with junctions in psi samples files
 
-    for cond_name, cond in comparison.items():
-        file_list.append([])
-        for xx in range(cond):
-            cc_path = get_tmp_psisample_file(outDir, "%s_%s" %(cond_name, xx))
-            file_list[index].append(cc_path)
-        index +=1
+    # get number of LSVs to read in at a time
+    # 250000 magic number -- roughly 0.5-1.5G total depending on average number
+    # of junctions per LSV
+    cdef int lsv_chunksize = 1 + 250000 // sum(comparison.values())
+    # get indices of LSVs to read in at a time
+    cdef list lsv_chunks = list(range(0, nlsv, lsv_chunksize))
+    if lsv_chunks[-1] < nlsv:
+        lsv_chunks.append(nlsv)
 
-    for i in prange(nlsv, nogil=True, num_threads=nthreads):
-        with gil:
-            lsv_id = list_of_lsv[i]
-            hetObj_ptr = <hetLSV*> lsv_vec[lsv_id]
-            hetObj_ptr.create_condition_samples(len(file_list[0]), len(file_list[1]), psi_samples)
-            lsv_index = hetObj_ptr.get_junction_index()
-            nways = hetObj_ptr.get_num_ways()
+    for lsv_chunk_idx in range(len(lsv_chunks) - 1):
+        # get indices of junctions in LSVs to process in this chunk
+        lsv_min_idx = lsv_chunks[lsv_chunk_idx]
+        lsv_max_idx = lsv_chunks[lsv_chunk_idx + 1]
+        lsv_min = <hetLSV*> lsv_vec[list_of_lsv[lsv_min_idx]]
+        lsv_max = <hetLSV*> lsv_vec[list_of_lsv[lsv_max_idx - 1]]
+        junction_min = lsv_min.get_junction_index()
+        junction_max = lsv_max.get_junction_index() + lsv_max.get_num_ways()
+        # load LSVs to process in this chunk
+        index = 0
+        for cond_name, cond in comparison.items():
+            file_list.append([])
+            for xx in range(cond):
+                cc = np.ascontiguousarray(
+                    np.load(
+                        get_tmp_psisample_file(outDir, "%s_%s" %(cond_name, xx)),
+                        "r"
+                    )[junction_min:junction_max]
+                )
+                file_list[index].append(cc)
+            index +=1
+        # for each of the LSVs in this chunk... (in parallel)
+        for i in prange(lsv_min_idx, lsv_max_idx, nogil=True, num_threads=nthreads):
+            with gil:
+                lsv_id = list_of_lsv[i]
+                hetObj_ptr = <hetLSV*> lsv_vec[lsv_id]
+                hetObj_ptr.create_condition_samples(len(file_list[0]), len(file_list[1]), psi_samples)
+                # get index into chunked arrays (offset by junction_min)
+                lsv_index = hetObj_ptr.get_junction_index() - junction_min
+                nways = hetObj_ptr.get_num_ways()
 
-            for fidx, cc_path in enumerate(file_list[0]):
-                k = np.ascontiguousarray(np.load(cc_path, "r")[lsv_index:lsv_index+nways])
-                hetObj_ptr.add_condition1(<np.float32_t *> k.data, fidx, nways, psi_samples)
+                for fidx, cc in enumerate(file_list[0]):
+                    k = cc[lsv_index:lsv_index+nways]
+                    hetObj_ptr.add_condition1(<np.float32_t *> k.data, fidx, nways, psi_samples)
 
-            for fidx, cc_path in enumerate(file_list[1]):
-                k = np.ascontiguousarray(np.load(cc_path, "r")[lsv_index:lsv_index+nways])
-                hetObj_ptr.add_condition2(<np.float32_t *> k.data, fidx, nways, psi_samples)
+                for fidx, cc in enumerate(file_list[1]):
+                    k = cc[lsv_index:lsv_index+nways]
+                    hetObj_ptr.add_condition2(<np.float32_t *> k.data, fidx, nways, psi_samples)
 
-        output[lsv_id] = vector[psi_distr_t](nways, psi_distr_t(nstats))
-        oScore[lsv_id] = psi_distr_t(nways)
-        test_calc(output[lsv_id], oScore[lsv_id], StatsObj, hetObj_ptr, psi_samples, test_percentile)
-        hetObj_ptr.clear()
+            output[lsv_id] = vector[psi_distr_t](nways, psi_distr_t(nstats))
+            oScore[lsv_id] = psi_distr_t(nways)
+            test_calc(output[lsv_id], oScore[lsv_id], StatsObj, hetObj_ptr, psi_samples, test_percentile)
+            hetObj_ptr.clear()
+        # clear out loaded arrays
+        for cc_list in file_list:
+            cc_list.clear()
+        file_list.clear()
 
 
     logger.info('Storing Voila file statistics')
