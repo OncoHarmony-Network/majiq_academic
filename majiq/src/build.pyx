@@ -216,6 +216,7 @@ cdef _parse_junction_file(tuple filetp, map[string, Gene*]& gene_map, vector[str
     cdef unsigned int minpos   = conf.minpos
     cdef unsigned int denovo_thresh= conf.min_denovo
     cdef bint denovo = conf.denovo
+    cdef bint denovo_ir = conf.denovo_ir
     cdef IOBam c_iobam
     cdef int njunc, j
     cdef unsigned int i
@@ -275,7 +276,7 @@ cdef _parse_junction_file(tuple filetp, map[string, Gene*]& gene_map, vector[str
                     ir_vec[i] = ir_cov[j - jlimit][i]
         # process information, update information for inferring splicegraph
         c_iobam.parseJuncEntry(gene_list, gid, chrom, strand, coord1, coord2, sreads, minreads, npos, minpos,
-                               denovo_thresh, denovo, gene_l, irbool==1, ir_vec, min_ir_cov, ir_numbins,
+                               denovo_thresh, denovo, denovo_ir, gene_l, irbool==1, ir_vec, min_ir_cov, ir_numbins,
                                min_experiments, reset)
 
     if reset:
@@ -300,11 +301,11 @@ cdef _find_junctions(list file_list, map[string, Gene*]& gene_map, vector[string
     cdef unsigned int minreads = conf.minreads
     cdef unsigned int denovo_thresh= conf.min_denovo
     cdef bint denovo = conf.denovo
+    cdef bint denovo_ir = conf.denovo_ir
     cdef np.float32_t min_ir_cov = conf.min_intronic_cov
     cdef int k=conf.k, m=conf.m
     cdef np.float32_t pvalue_limit=conf.pvalue_limit
     cdef unsigned int min_experiments
-    cdef unsigned int eff_len = eff_len_from_read_length(conf.readLen)
     cdef unsigned int local_eff_len
     cdef bint ir = conf.ir
     cdef bint bsimpl = (conf.simpl_psi >= 0)
@@ -348,7 +349,7 @@ cdef _find_junctions(list file_list, map[string, Gene*]& gene_map, vector[string
                 strandness = conf.strand_specific[file_list[j][0]]
 
                 with nogil:
-                    c_iobam = IOBam(bamfile, strandness, eff_len, nthreads, gene_list, bsimpl)
+                    c_iobam = IOBam(bamfile, strandness, 0, nthreads, gene_list, bsimpl)
                     c_iobam.EstimateEffLenFromFile(estimate_eff_reads)  # lower bound eff_len
                     c_iobam.ParseJunctionsFromFile(False)  # parse for junctions, get true eff_len
                     local_eff_len = c_iobam.get_eff_len()  # get local eff_len after parsing all junctions
@@ -356,7 +357,7 @@ cdef _find_junctions(list file_list, map[string, Gene*]& gene_map, vector[string
                     if ir:
                         with gil:
                             logger.info('Detect Intron retention %s' %(file_list[j][0]))
-                        c_iobam.detect_introns(min_ir_cov, min_experiments, ir_numbins, (j==last_it_grp))
+                        c_iobam.detect_introns(min_ir_cov, min_experiments, ir_numbins, (j==last_it_grp), denovo_ir)
                     njunc = c_iobam.get_njuncs()
                     with gil:
                         logger.debug('Total Junctions and introns %s' %(njunc))

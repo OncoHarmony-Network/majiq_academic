@@ -71,8 +71,13 @@ def main():
                              help='Disables intron retention detection [Default: ir enabled]')
 
     buildparser.add_argument('--disable-denovo', dest="denovo", action='store_false', default=True,
-                             help='Disables denovo detection of junction, splicesites and exons. This will speedup the '
+                             help='Disables denovo detection of junctions, splicesites and exons. This will speedup the '
                                   'execution but reduce the number of LSVs detected. [Default: denovo enabled]')
+
+    buildparser.add_argument('--disable-denovo-ir', dest="denovo_ir", action='store_false', default=True,
+                             help='Disables denovo detection of introns. This will speedup the '
+                                  'execution but reduce the number of LSVs detected. [Default: denovo introns enabled]')
+
     buildparser.add_argument('--junc-files-only', dest="juncfiles_only", action='store_true', default=False,
                              help='Only extract junction information from BAMs and exports .junc file'
                                   ' [Default: ir enabled]')
