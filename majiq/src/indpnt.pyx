@@ -33,7 +33,7 @@ cdef int _statistical_test_computation(object out_h5p, dict comparison, list lis
     cdef vector[np.float32_t*] cond2_smpl
 
     cdef np.ndarray[np.float32_t, ndim=2, mode="c"]  k
-    cdef object cc
+    cdef object cc, cc_memmap
     cdef int cond, xx, i, lsv_chunk_idx
     cdef int lsv_min_idx, lsv_max_idx, junction_min, junction_max
     cdef str cond_name, statsnames
@@ -86,18 +86,25 @@ cdef int _statistical_test_computation(object out_h5p, dict comparison, list lis
         lsv_max = <hetLSV*> lsv_vec[list_of_lsv[lsv_max_idx - 1]]
         junction_min = lsv_min.get_junction_index()
         junction_max = lsv_max.get_junction_index() + lsv_max.get_num_ways()
+        if len(lsv_chunks) > 2:
+            logger.info(
+                f"Calculating statistics for LSVs {lsv_min_idx} to {lsv_max_idx}"
+                f" out of {nlsv} (progress:"
+                f" {lsv_min_idx / nlsv:.1%}-{lsv_max_idx / nlsv:.1%})"
+            )
         # load LSVs to process in this chunk
         index = 0
         for cond_name, cond in comparison.items():
             file_list.append([])
             for xx in range(cond):
-                cc = np.ascontiguousarray(
-                    np.load(
-                        get_tmp_psisample_file(outDir, "%s_%s" %(cond_name, xx)),
-                        "r"
-                    )[junction_min:junction_max]
+                cc_memmap = np.load(
+                    get_tmp_psisample_file(outDir, "%s_%s" %(cond_name, xx)), "r"
                 )
+                # load contiguous chunk of the array all at once, add to filelist
+                cc = np.array(cc_memmap[junction_min:junction_max])
                 file_list[index].append(cc)
+                # close the memory map (note cc_memmap unusable until new np.load)
+                cc_memmap._mmap.close()
             index +=1
         # for each of the LSVs in this chunk... (in parallel)
         for i in prange(lsv_min_idx, lsv_max_idx, nogil=True, num_threads=nthreads):
