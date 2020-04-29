@@ -69,7 +69,7 @@ cdef int _statistical_test_computation(object out_h5p, dict comparison, list lis
     for cond_name, cond in comparison.items():
         file_list.append([])
         for xx in range(cond):
-            cc = np.load(open(get_tmp_psisample_file(outDir, "%s_%s" %(cond_name, xx)), 'rb'))
+            cc = np.load(get_tmp_psisample_file(outDir, "%s_%s" %(cond_name, xx)), 'r')
             file_list[index].append(cc)
         index +=1
 
@@ -82,11 +82,11 @@ cdef int _statistical_test_computation(object out_h5p, dict comparison, list lis
             nways = hetObj_ptr.get_num_ways()
 
             for fidx, cc in enumerate(file_list[0]):
-                k = cc[lsv_index:lsv_index+nways]
+                k = np.ascontiguousarray(cc[lsv_index:lsv_index+nways])
                 hetObj_ptr.add_condition1(<np.float32_t *> k.data, fidx, nways, psi_samples)
 
             for fidx, cc in enumerate(file_list[1]):
-                k = cc[lsv_index:lsv_index+nways]
+                k = np.ascontiguousarray(cc[lsv_index:lsv_index+nways])
                 hetObj_ptr.add_condition2(<np.float32_t *> k.data, fidx, nways, psi_samples)
 
         output[lsv_id] = vector[psi_distr_t](nways, psi_distr_t(nstats))
