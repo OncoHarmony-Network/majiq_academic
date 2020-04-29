@@ -100,7 +100,7 @@ namespace io_bam{
              */
             unsigned int normalize_stacks(vector<float> &vec, float sreads, const float fitfunc_r, const float pvalue_limit);
             int bootstrap_samples(int msamples, int ksamples, float* boots, float fitfunc_r, float pvalue_limit);
-            void detect_introns(float min_intron_cov, unsigned int min_experiments, float min_bins, bool reset) ;
+            void detect_introns(float min_intron_cov, unsigned int min_experiments, float min_bins, bool reset, bool denovo) ;
 
             void get_intron_raw_cov(float* out_cov) ;
             void get_junction_raw_cov(float* out_cov);
@@ -112,7 +112,7 @@ namespace io_bam{
             void EstimateEffLenFromFile(int num_reads);
             void parseJuncEntry(map<string, vector<overGene*>> & glist, string gid, string chrom, char strand,
                                int start, int end, unsigned int sreads, unsigned int minreads_t, unsigned int npos,
-                               unsigned int minpos_t, unsigned int denovo_t, bool denovo, vector<Gene*>& oGeneList,
+                               unsigned int minpos_t, unsigned int denovo_t, bool denovo, bool denovo_ir, vector<Gene*>& oGeneList,
                                bool ir, vector<float>& ircov, float min_intron_cov, float min_bins, int minexp,
                                bool reset) ;
             inline void update_junction_read(string key, int read_start, int count) ;
