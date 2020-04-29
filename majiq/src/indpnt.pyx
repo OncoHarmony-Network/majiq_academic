@@ -33,7 +33,7 @@ cdef int _statistical_test_computation(object out_h5p, dict comparison, list lis
     cdef vector[np.float32_t*] cond2_smpl
 
     cdef np.ndarray[np.float32_t, ndim=2, mode="c"]  k
-    cdef object cc
+    cdef str cc_path
     cdef int cond, xx, i
     cdef str cond_name, statsnames
     cdef int index, nways, lsv_index
@@ -69,8 +69,8 @@ cdef int _statistical_test_computation(object out_h5p, dict comparison, list lis
     for cond_name, cond in comparison.items():
         file_list.append([])
         for xx in range(cond):
-            cc = np.load(get_tmp_psisample_file(outDir, "%s_%s" %(cond_name, xx)), 'r')
-            file_list[index].append(cc)
+            cc_path = get_tmp_psisample_file(outDir, "%s_%s" %(cond_name, xx))
+            file_list[index].append(cc_path)
         index +=1
 
     for i in prange(nlsv, nogil=True, num_threads=nthreads):
@@ -81,12 +81,12 @@ cdef int _statistical_test_computation(object out_h5p, dict comparison, list lis
             lsv_index = hetObj_ptr.get_junction_index()
             nways = hetObj_ptr.get_num_ways()
 
-            for fidx, cc in enumerate(file_list[0]):
-                k = np.ascontiguousarray(cc[lsv_index:lsv_index+nways])
+            for fidx, cc_path in enumerate(file_list[0]):
+                k = np.ascontiguousarray(np.load(cc_path, "r")[lsv_index:lsv_index+nways])
                 hetObj_ptr.add_condition1(<np.float32_t *> k.data, fidx, nways, psi_samples)
 
-            for fidx, cc in enumerate(file_list[1]):
-                k = np.ascontiguousarray(cc[lsv_index:lsv_index+nways])
+            for fidx, cc_path in enumerate(file_list[1]):
+                k = np.ascontiguousarray(np.load(cc_path, "r")[lsv_index:lsv_index+nways])
                 hetObj_ptr.add_condition2(<np.float32_t *> k.data, fidx, nways, psi_samples)
 
         output[lsv_id] = vector[psi_distr_t](nways, psi_distr_t(nstats))
