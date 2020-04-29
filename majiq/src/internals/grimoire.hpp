@@ -533,7 +533,8 @@ namespace grimoire{
             void    detect_exons() ;
             void    connect_introns() ;
             void    detect_introns(vector<Intron*> &intronlist, bool simpl) ;
-            void    add_intron(Intron * inIR_ptr, float min_coverage, unsigned int min_exps, float min_bins, bool reset) ;
+            void    add_intron(Intron * inIR_ptr, float min_coverage, unsigned int min_exps, float min_bins, bool reset,
+                               bool denovo) ;
             void    newExonDefinition(int start, int end, Junction *inbound_j, Junction *outbound_j, bool in_db) ;
             void    fill_junc_tlb(map<string, vector<string>> &tlb) ;
 
