@@ -1,6 +1,6 @@
 // tTest.hpp
 //
-// Implementation of Student's t-test (two-sample t-test assuming equal
+// Implementation of Welch's t-test (two-sample t-test assuming unequal
 // variances) for use in MAJIQ.
 //
 // Authors: Joseph K Aicher, Jorge Vaquero-Garcia
@@ -17,27 +17,35 @@ namespace MajiqStats{
     namespace details {
         struct tTestSummary {
             private:
-                /** Pooled dof/t-test denominator assuming equal variance
+                /** Estimate pooled degrees of freedom for Welch t-test
                  *
-                 * @param rss1 residual sum of squares of first sample (n1 - 1) * var1
-                 * @param rss2 residual sum of squares of seconod sample (n2 - 1) * var2
+                 * Estimate pooled degrees of freedom for Welch t-test using
+                 * Welch-Satterthwaite equation
+                 *
+                 * @param var1 sample variance of first sample
+                 * @param var2 sample variance of second sample
                  * @param n1 sample size of first sample
                  * @param n2 sample size of second sample
                  *
-                 * @note Modeled after _equal_var_ttest_denom in SciPy
+                 * @note Modeled after _unequal_var_ttest_denom in SciPy
                  *
                  * @returns degrees of freedom, denominator for t-statistic
                  */
-                inline std::pair<double, double> DOFEqualVariance(
-                        double rss1, double rss2,
+                inline std::pair<double, double> DOFWelchSatterthwaite(
+                        double var1, double var2,
                         int n1, int n2
                 ) {
-                    const double dof = static_cast<double>(n1 + n2 - 2);
-                    const double var_pooled = (rss1 + rss2) / dof;
-                    const double t_denom = std::sqrt(
-                            var_pooled
-                            * (1. / static_cast<double>(n1) + 1. / static_cast<double>(n2))
-                    );
+                    // compute ratio of variance to sample size
+                    const double ratio1 = var1 / n1;
+                    const double ratio2 = var2 / n2;
+                    // compute components of dof
+                    const double numerator_term = ratio1 + ratio2;
+                    const double denom1 = ratio1 * ratio1 / (n1 - 1);
+                    const double denom2 = ratio2 * ratio2 / (n2 - 1);
+                    // estimated degrees of freedom are
+                    const double dof = numerator_term * numerator_term / (denom1 + denom2);
+                    // denominator for t-test is
+                    const double t_denom = std::sqrt(ratio1 + ratio2);
                     // return pair of dof, t_denom
                     return std::make_pair(dof, t_denom);
                 }
@@ -53,6 +61,8 @@ namespace MajiqStats{
                  *
                  * @note calculate mean/variance per group in single-pass using
                  * Welford's algorithm, which is numerically stable
+                 * @note t-statistic/dof are calculated assuming unequal
+                 * variances as per Welch's t-test
                  */
                 tTestSummary(
                         std::vector<float>& data,
@@ -101,11 +111,11 @@ namespace MajiqStats{
                         return;
                     }
                     // // get sample variance using Bessel's correction
-                    // double var1 = rss1 / (n1 - 1);
-                    // double var2 = rss2 / (n2 - 1);
+                    const double var1 = rss1 / (n1 - 1);
+                    const double var2 = rss2 / (n2 - 1);
                     // pool variance terms together
                     const std::pair<double, double> pooled_variance_stats =
-                        DOFEqualVariance(rss1, rss2, n1, n2);
+                        DOFWelchSatterthwaite(var1, var2, n1, n2);
                     // final summary statistics
                     dof = pooled_variance_stats.first;
                     t = (mean1 - mean2) / pooled_variance_stats.second;
