@@ -1,7 +1,7 @@
 from operator import itemgetter
 from urllib.parse import urlencode
 
-from flask import jsonify, redirect, url_for, session, render_template, request
+from flask import jsonify, redirect, url_for, session, render_template, request, abort
 from waitress import serve
 
 from voila import constants
@@ -10,6 +10,7 @@ from voila.config import ViewConfig
 from voila.exceptions import UnknownAnalysisType
 from voila.index import Index
 from voila.view import deltapsi, heterogen, psi, splicegraph
+from voila.voila_log import voila_log
 import os
 
 
@@ -49,6 +50,9 @@ def run_service():
     run_app = get_app()
     web_server = ViewConfig().web_server
 
+    if ViewConfig().enable_passcode:
+        voila_log().info(f'Passcode access: http://{host}:{port}/{ViewConfig().enable_passcode}')
+
     if web_server == 'waitress':
         serve(run_app, port=port, host=host)
     elif web_server == 'gunicorn':
@@ -64,7 +68,6 @@ def run_service():
         run_app.run(host=host, port=port, debug=True)
     else:
         raise Exception("Unsupported web server %s specified" % web_server)
-
 
 
 def get_app():
@@ -85,6 +88,18 @@ def get_app():
 
     else:
         raise UnknownAnalysisType(analysis_type)
+
+    if ViewConfig().enable_passcode:
+        @run_app.before_request
+        def password_check():
+            if request.path == '/' + ViewConfig().enable_passcode:
+                # url has correct passcode, set session
+                session[ViewConfig().enable_passcode] = True
+                return redirect('/')
+            elif not ViewConfig().enable_passcode in session:
+                # the correct passcode is not in session either, deny access
+                return abort(403)
+
 
     return run_app
 

@@ -137,6 +137,9 @@ view_parser.add_argument('--strict-indexing', action='store_true',
                               'This protects against accidentally mixing or using inputs from different runs, but '
                               'slows down the indexing process.')
 view_parser.add_argument('--splice-graph-only', action='store_true', help=argparse.SUPPRESS)
+view_parser.add_argument('--enable-passcode', action='store_true',
+                         help='Disallow access to the viewer unless the special link is used to start the session'
+                              ' (provides some security against port scanners accessing your app')
 
 # subparsers
 subparsers = parser.add_subparsers(help='')
