@@ -49,6 +49,10 @@ namespace MajiqStats{
                             Var[i] = 0.0000000001 ;
                     }
                 }
+                if (Count[0] < 2 || Count[1] < 2) {
+                    // unable to calculate sample variance, set p value to 1
+                    return 1.;
+                }
                 double _Stat = sqrt(Count[0]+Count[1] - 2) * ( Mean[0] - Mean[1] ) ;
                 _Stat /= sqrt((1.0/Count[0] + 1.0/Count[1])*(Count[0]*Var[0] + Count[1]*Var[1])) ;
 

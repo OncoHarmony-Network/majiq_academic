@@ -280,16 +280,24 @@ void test_calc(vector<psi_distr_t>& oPvals, psi_distr_t& oScore, HetStats* HetSt
 
             vector<float> csamps ;
             vector<int> labels ;
+            // reserve space in advance to avoid expanding vector multiple times
+            csamps.reserve(n1 + n2);
+            labels.reserve(n1 + n2);
 
             for (int i=0; i<n1; i++){
-                csamps.push_back(lsvObj->cond_sample1[i][j][s] + dist(generator)) ;
-                labels.push_back(0) ;
+                if (lsvObj->cond_sample1[i][j][s] >= 0) {
+                    // add only nonmissing quantifications
+                    csamps.push_back(lsvObj->cond_sample1[i][j][s] + dist(generator));
+                    labels.push_back(0);
+                }
             }
 
             for (int i=0; i<n2; i++){
-
-                csamps.push_back(lsvObj->cond_sample2[i][j][s] + dist(generator)) ;
-                labels.push_back(1) ;
+                if (lsvObj->cond_sample2[i][j][s] >= 0) {
+                    // add only nonmissing quantifications
+                    csamps.push_back(lsvObj->cond_sample2[i][j][s] + dist(generator));
+                    labels.push_back(1);
+                }
             }
 
             auto p = sort_permutation <float>(csamps, less<float>() ) ;
