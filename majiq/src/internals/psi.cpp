@@ -172,9 +172,21 @@ void get_samples_from_psi(float* osamps, hetLSV* lsvObj, int psi_samples, psi_di
     const int msamples = lsvObj->samps[0].size() ;
 
     if (!lsvObj->is_enabled()){
+        // this experiment should not be quantified
+        // Use -1 (generally, negative value) to indicate missing value
         for (int j=0; j<njunc; j++){
-            lsvObj->mu_psi[cidx][fidx][j] = -1 ;
+            // E(PSI) for junction is -1
+            lsvObj->mu_psi[cidx][fidx][j] = -1.;
+            // output psisamples should be -1
+            for (int i = 0; i < psi_samples; ++i) {
+                // j_offset is first junction in LSV, 2d index --> 1d index
+                const int idx_2d = ((j + j_offset) * psi_samples) + i;
+                // set osamps to -1
+                osamps[idx_2d] = -1.;
+            }
         }
+        // we do not want to do any further quantification in this case
+        return;
     }
 
     vector<psi_distr_t> alpha_beta_prior(njunc, psi_distr_t(2)) ;

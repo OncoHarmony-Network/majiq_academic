@@ -144,7 +144,12 @@ cdef int _het_computation(object out_h5p, dict file_cond, list list_of_lsv, map[
         max_nfiles = max(max_nfiles, len(cond_list))
         for fidx, f in enumerate(cond_list):
             osamps = np.zeros(shape=(total_njuncs, psi_samples), dtype=np.float32)
-            majiq_io.get_coverage_mat_lsv(lsv_vec, [f], nthreads, True, minreads, minnonzero)
+            # lsvs should be made unpassed, require get_coverage_mat_lsv to pass LSVs using minreads/minnonzero
+            for i in prange(nlsv, nogil=True, num_threads=nthreads):
+                with gil:
+                    lsv = list_of_lsv[i]
+                lsv_vec[lsv].set_bool(False)
+            majiq_io.get_coverage_mat_lsv(lsv_vec, [f], nthreads, False, minreads, minnonzero)
             for i in prange(nlsv, nogil=True, num_threads=nthreads):
                 with gil:
                     lsv = list_of_lsv[i]
