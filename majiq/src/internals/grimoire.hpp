@@ -19,7 +19,6 @@
 #define MAX_TYPE_LENGTH 245
 #define NA_LSV  "na"
 using namespace std ;
-//extern typedef vector<float> psi_distr_t ;
 typedef vector<float> psi_distr_t ;
 
 namespace grimoire{
@@ -117,7 +116,6 @@ namespace grimoire{
             Junction(int start1, int end1, bool annot1, bool simpl1): _Region(start1, end1),
                                                                       annot_(annot1), simpl_fltr_(simpl1){
                 denovo_bl_ = annot1 ;
-//                denovo_bl_ = false ;
                 denovo_cnt_ = 0 ;
                 bld_fltr_ = false ;
                 flter_cnt_ = 0 ;
@@ -194,7 +192,6 @@ namespace grimoire{
                     npos += nreads[i]? 1 : 0 ;
                 }
                 update_flags(sum_reads, num_reads, npos, num_pos, denovo_thresh, min_experiments,  denovo) ;
-//cerr << "UPDATE FLAGS " << get_key() << " bool:" << denovo_bl_<< " denovothresh: " << denovo_thresh << " sum_reads: " << sum_reads << "\n" ;
                 return ;
             }
 

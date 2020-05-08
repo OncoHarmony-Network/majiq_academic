@@ -297,14 +297,12 @@ namespace grimoire {
             if (ir->get_end() < inIR_ptr->get_start() || ir->get_start() > inIR_ptr->get_end()) continue ;
             if (ir->get_end() >= inIR_ptr->get_start() && ir->get_start() <= inIR_ptr->get_end()){
                 ir->overlaping_intron(inIR_ptr) ;
-//cerr << "found " << ir->get_key() << endl ;
                 ir->update_flags(min_coverage, min_exps, min_bins) ;
                 ir->clear_nreads(reset) ;
                 found = true ;
             }
         }
         if(!found && denovo){
-//cerr << "NOT found " << inIR_ptr->get_key() << endl ;
 
             inIR_ptr->update_flags(min_coverage, min_exps, min_bins) ;
             inIR_ptr->clear_nreads(reset) ;
@@ -347,8 +345,6 @@ namespace grimoire {
                         if (prev_ex->ob_irptr != nullptr){
                             (prev_ex->ob_irptr)->unset_markd() ;
                         }
-//    cerr << "#1 " << ir_start << "-" << ir_end<< " :: " << prev_ex->ob_irptr->get_gene() << ":" << prev_ex->ob_irptr->get_start() << "-" << prev_ex->ob_irptr->get_end()<< "\n" ;
-//    cerr << "#2 " << ir_start << "-" << ir_end<< " :: " << ir_ptr->get_gene() << ":" << ir_ptr->get_start() << "-" << ir_ptr->get_end()<< "\n" ;
                         prev_ex->ob_irptr = ir_ptr ;
                         (ex.second)->ib_irptr = ir_ptr ;
                         ir_ptr->update_boundaries(prev_ex->get_end() +1, (ex.second)->get_start() -1) ;
@@ -613,8 +609,6 @@ namespace grimoire {
             for(const auto &ex: exon_map_){
                 if ((ex.second)->ib_irptr != nullptr)
                     ((ex.second)->ib_irptr)->update_simpl_flags(min_experiments) ;
-//                if ((ex.second)->ob_irptr != nullptr)
-//                    ((ex.second)->ob_irptr)->update_simpl_flags(min_experiments, false) ;
             }
         }
     }
@@ -741,7 +735,6 @@ namespace grimoire {
         float * s1 ;
         float * t1 = target ;
         unsigned int count = 0 ;
-//        cout<< id_ << " source @: " << source<< " target @: " << target<<" ##\n" ;
         for(const auto &j: junctions_){
             const string key = gObj_->get_chromosome() + ":" + to_string(j->get_start()) + "-" + to_string(j->get_end()) ;
             if(tlb.count(key)>0){

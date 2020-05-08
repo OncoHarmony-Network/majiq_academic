@@ -88,7 +88,6 @@ namespace io_bam {
 
     void IOBam::find_junction_genes(string chrom, char strand, int start, int end,
                                     shared_ptr<vector<float>> nreads_ptr){
-//        const int n = glist_[chrom].size() ;
         bool found_stage1 = false ;
         bool found_stage2 = false ;
         vector<Gene*> temp_vec1 ;
@@ -101,7 +100,6 @@ namespace io_bam {
             return ;
 
         for (const auto &gObj: (*low)->glist){
-//            if (gObj->get_start() >= end) break ;
             if (gObj->get_start() >= end) continue ;
             if (gObj->get_end() < start) continue ;
             if (start< gObj->get_start() || end> gObj->get_end()) continue ;
