@@ -525,7 +525,7 @@ namespace io_bam {
                 omp_unset_lock(&map_lck_) ;
             }
         } else {
-            coord_key_t key = to_string(start) + "-" + to_string(end);
+            coord_key_t key = std::make_pair(start, end);
             add_junction(chrom, strand, start, end, 0, 0, sreads) ;
             for (const auto &gObj: (*low)->glist){
                 gObj->updateFlagsFromJunc(key, sreads, minreads_t, npos, minpos_t, denovo_t, denovo, minexp, reset) ;

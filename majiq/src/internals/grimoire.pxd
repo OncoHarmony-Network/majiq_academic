@@ -3,11 +3,12 @@ from libcpp.map cimport map
 from libcpp.vector cimport vector
 from libcpp.set cimport set
 from libcpp.list cimport list as clist
+from libcpp.pair cimport pair
 from majiq.src.internals.mtypes cimport *
 
 ctypedef vector[overGene*] overGene_vect_t
 ctypedef vector[Gene*] Gene_vect_t
-ctypedef string coord_key_t
+ctypedef pair[int, int] coord_key_t
 ctypedef string lsv_id_t
 cdef extern from "grimoire.hpp" namespace "grimoire":
     cdef cppclass overGene:

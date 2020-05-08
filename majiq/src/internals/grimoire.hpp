@@ -20,7 +20,7 @@
 #define NA_LSV  "na"
 using namespace std ;
 typedef vector<float> psi_distr_t ;
-typedef string coord_key_t;
+typedef std::pair<int, int> coord_key_t;
 typedef string lsv_id_t;
 
 namespace grimoire{
@@ -129,7 +129,7 @@ namespace grimoire{
             }
             ~Junction()             { clear_nreads(true) ; }
 
-            coord_key_t get_key() { return(to_string(start_) + "-" + to_string(end_)); }
+            coord_key_t get_key() { return std::make_pair(start_, end_); }
             string  get_key(Gene * gObj) ;
             string  get_key(Gene * gObj, int strandness) ;
             bool    get_annot()     { return annot_ ; }
@@ -235,7 +235,7 @@ namespace grimoire{
             void    simplify(map<string, int>& junc_tlb, float simpl_percent, Gene* gObj, int strandness,
                         int denovo_simpl, int db_simple, int ir_simpl, bool last, unsigned int min_experiments) ;
             bool    has_out_intron()        { return ob_irptr != nullptr ; }
-            coord_key_t get_key() { return(to_string(start_) + "-" + to_string(end_)); }
+            coord_key_t get_key() { return std::make_pair(start_, end_); }
             void set_simpl_fltr(bool val) {};
             void    revert_to_db(){
                 set_start(db_start_) ;
@@ -312,7 +312,7 @@ namespace grimoire{
             bool    get_annot()             { return annot_ ; }
             Gene*   get_gene()              { return gObj_ ; }
             bool    get_ir_flag()           { return ir_flag_ ; }
-            coord_key_t get_key() { return (to_string(start_) + "-" + to_string(end_)); }
+            coord_key_t get_key() { return std::make_pair(start_, end_); }
             bool    get_simpl_fltr()        { return simpl_fltr_ ; }
             int     get_nxbin()             { return nxbin_ ; }
             int     get_nxbin_off()         { return nxbin_off_ ; }

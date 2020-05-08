@@ -45,7 +45,7 @@ namespace grimoire {
         Exon * ex ;
         int start1 = (start == EMPTY_COORD) ? end - 10 : start;
         int end1 = (end == EMPTY_COORD) ? start + 10 : end;
-        const coord_key_t key = to_string(start1) + "-" + to_string(end1);
+        const coord_key_t key = std::make_pair(start1, end1);
         if (exon_map.count(key) > 0){
             ex = exon_map[key];
         } else {
@@ -92,13 +92,10 @@ namespace grimoire {
 
         Exon *ex1 = nullptr, *ex2 = nullptr ;
         coord_key_t key;
-        stringstream s1 ;
-        stringstream s2 ;
         if ((end - start) < 0) return ;
         ex1 = exonOverlap(exon_map_, start, end) ;
         if (nullptr != inbound_j && nullptr != outbound_j && inbound_j->get_intronic() && outbound_j->get_intronic()) {
-            s1 << start ; s2 << end ;
-            key = s1.str() + "-" + s2.str() ;
+            key = std::make_pair(start, end);
             if (exon_map_.count(key) > 0){
                 ex1 = exon_map_[key] ;
                 ex2 = ex1 ;
