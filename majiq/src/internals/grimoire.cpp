@@ -342,44 +342,48 @@ namespace grimoire {
             // otherwise, intron between prev/cur exon has coordinates intron start/end:
             const int intron_end = cur_start - 1;
             // loop over remaining introns until past this possible intron
-            for (; intron_idx < intron_vec_.size()
-                    && intron_vec_[intron_idx]->get_start() <= intron_end;
-                    ++intron_idx) {
+            while (intron_idx < intron_vec_.size()) {
                 Intron * ir_ptr = intron_vec_[intron_idx];
-                // skip current intron if no overlap (surprising if this happens)
-                if (ir_ptr->get_end() < intron_start) {
-                    std::cerr << "WARNING: intron " << ir_ptr->get_key(this)
-                        << " was unable to be connected\n";
-                    continue;
+                if (ir_ptr->get_start() > intron_end) {
+                    // go to next pair of exons if ir_ptr is (intron_start, intron_end)
+                    break;
+                } else if (ir_ptr->get_end() >= intron_start) {
+                    // this intron overlaps (intron_start, intron_end)!
+                    // It is possible that this intron was split by the current exon?
+                    if (ir_ptr->get_end() > cur_end) {
+                        // In this case, we copy the intron so that it can be added again
+                        intron_vec_.insert(
+                                // insert at next position
+                                intron_vec_.cbegin() + intron_idx + 1,
+                                // copy constructor for new intron at next position
+                                new Intron(*ir_ptr));
+                    }
+                    // disconnect previously connected introns
+                    if (prev_exon->ob_irptr != nullptr) {
+                        // previous outbound intron of previous exon now disconnected
+                        prev_exon->ob_irptr->unset_markd();
+                    }
+                    if (cur_exon->ib_irptr != nullptr) {
+                        // previous inbound intron of current exon now disconnected
+                        cur_exon->ib_irptr->unset_markd();
+                    }
+                    // connect adjacent exons to ir_ptr
+                    prev_exon->ob_irptr = ir_ptr;
+                    cur_exon->ib_irptr = ir_ptr;
+                    // update boundaries and mark intron as connected
+                    ir_ptr->update_boundaries(intron_start, intron_end);
+                    ir_ptr->set_markd();
+                    // stop iterating over introns since we found one
+                    ++intron_idx;  // don't visit this intron again
+                    break;
+                } else {
+                    // this intron was not between exons in valid way.
+                    // this happens because of exon extension to the point that
+                    // there is no longer a valid intron there.
+                    // Delete the no longer valid intron and try the next one.
+                    delete ir_ptr;  // free memory for intron since not using it anymore
+                    intron_vec_.erase(intron_vec_.cbegin() + intron_idx);
                 }
-                // otherwise, this intron overlaps (intron_start, intron_end)!
-                // It is possible that this intron was split by the current exon?
-                if (ir_ptr->get_end() > cur_end) {
-                    // In this case, we copy the intron so that it can be added again
-                    intron_vec_.insert(
-                            // insert at next position
-                            intron_vec_.cbegin() + intron_idx + 1,
-                            // copy constructor for new intron at next position
-                            new Intron(*ir_ptr));
-                }
-                // disconnect previously connected introns
-                if (prev_exon->ob_irptr != nullptr) {
-                    // previous outbound intron of previous exon now disconnected
-                    prev_exon->ob_irptr->unset_markd();
-                }
-                if (cur_exon->ib_irptr != nullptr) {
-                    // previous inbound intron of current exon now disconnected
-                    cur_exon->ib_irptr->unset_markd();
-                }
-                // connect adjacent exons to ir_ptr
-                prev_exon->ob_irptr = ir_ptr;
-                cur_exon->ib_irptr = ir_ptr;
-                // update boundaries and mark intron as connected
-                ir_ptr->update_boundaries(intron_start, intron_end);
-                ir_ptr->set_markd();
-                // stop iterating over introns since we found one
-                ++intron_idx;  // don't visit this intron again
-                break;
             }
             // keep information about current exon as next previous exon
             prev_exon = cur_exon;
