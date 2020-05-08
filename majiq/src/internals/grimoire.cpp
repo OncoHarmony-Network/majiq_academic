@@ -309,53 +309,82 @@ namespace grimoire {
         }
     }
 
-    void Gene::connect_introns(){
+    /**
+     * Associate introns with adjacent exons, adjusting coordinates/splitting as necessary
+     */
+    void Gene::connect_introns() {
+        // get introns in sorted order
+        sort(intron_vec_.begin(), intron_vec_.end(), Intron::islowerRegion<Intron>);
 
-        sort(intron_vec_.begin(), intron_vec_.end(), Intron::islowerRegion<Intron>) ;
+        // get index of next intron to look at (in sorted order)
+        unsigned int intron_idx = 0;
+        // information about last exon (starts as null values)
+        Exon * prev_exon = nullptr;
+        int intron_start = -1;
 
-        const int n_itrons = intron_vec_.size() ;
-        int intron_index = 0 ;
-        Exon * prev_ex = nullptr ;
-        int ir_start = 0 ;
-
-        for(const auto & ex: exon_map_ ){
-
-            if (((ex.second)->get_start() < 0) || (ex.second)->get_end()<0)
-                continue ;
-            const int ex_start = ((ex.second)->get_start() < 0) ? (ex.second)->get_end()-10 : (ex.second)->get_start() ;
-            const int ex_end = ((ex.second)->get_end() < 0) ? (ex.second)->get_start()+10 : (ex.second)->get_end() ;
-
-            if (ir_start == 0 ) {
-                ir_start = ex_end + 1;
-                prev_ex = (ex.second) ;
-                continue ;
+        // loop over exons in sorted order
+        for (const auto & ex_pair : exon_map_) {
+            // current exon is the value from exon_map
+            Exon * cur_exon = ex_pair.second;
+            // current exon coordinates
+            const int cur_start = cur_exon->get_start();
+            const int cur_end = cur_exon->get_end();
+            // ignore half exons
+            if (cur_exon->get_start() < 0 || cur_exon->get_end() < 0) {
+                continue;
             }
-
-            if( prev_ex->get_end()> 0 && (ex.second)->get_start()>0) {
-                const int ir_end = ex_start - 1 ;
-
-                while(intron_index< n_itrons){
-                    Intron * ir_ptr = intron_vec_[intron_index];
-                    if (ir_ptr->get_end() >= ex_end ) break ;
-                    if (ir_start <= ir_ptr->get_end() && ir_end >= ir_ptr->get_start() && ir_ptr->get_ir_flag()){
-
-                        if (prev_ex->ob_irptr != nullptr){
-                            (prev_ex->ob_irptr)->unset_markd() ;
-                        }
-                        prev_ex->ob_irptr = ir_ptr ;
-                        (ex.second)->ib_irptr = ir_ptr ;
-                        ir_ptr->update_boundaries(prev_ex->get_end() +1, (ex.second)->get_start() -1) ;
-                        ir_ptr->set_markd();
-                    }
-
-                    ++intron_index ;
+            // if this is the first real exon, store it and go to next exon
+            if (intron_start < 0) {
+                prev_exon = cur_exon;
+                intron_start = cur_end + 1;  // next valid intron start
+                continue;
+            }
+            // otherwise, intron between prev/cur exon has coordinates intron start/end:
+            const int intron_end = cur_start - 1;
+            // loop over remaining introns until past this possible intron
+            for (; intron_idx < intron_vec_.size()
+                    && intron_vec_[intron_idx]->get_start() <= intron_end;
+                    ++intron_idx) {
+                Intron * ir_ptr = intron_vec_[intron_idx];
+                // skip current intron if no overlap (surprising if this happens)
+                if (ir_ptr->get_end() < intron_start) {
+                    std::cerr << "WARNING: intron " << ir_ptr->get_key(this)
+                        << " was unable to be connected\n";
+                    continue;
                 }
-                ir_start = ex_end + 1;
-                prev_ex = (ex.second) ;
+                // otherwise, this intron overlaps (intron_start, intron_end)!
+                // It is possible that this intron was split by the current exon?
+                if (ir_ptr->get_end() > cur_end) {
+                    // In this case, we copy the intron so that it can be added again
+                    intron_vec_.insert(
+                            // insert at next position
+                            intron_vec_.cbegin() + intron_idx + 1,
+                            // copy constructor for new intron at next position
+                            new Intron(*ir_ptr));
+                }
+                // disconnect previously connected introns
+                if (prev_exon->ob_irptr != nullptr) {
+                    // previous outbound intron of previous exon now disconnected
+                    prev_exon->ob_irptr->unset_markd();
+                }
+                if (cur_exon->ib_irptr != nullptr) {
+                    // previous inbound intron of current exon now disconnected
+                    cur_exon->ib_irptr->unset_markd();
+                }
+                // connect adjacent exons to ir_ptr
+                prev_exon->ob_irptr = ir_ptr;
+                cur_exon->ib_irptr = ir_ptr;
+                // update boundaries and mark intron as connected
+                ir_ptr->update_boundaries(intron_start, intron_end);
+                ir_ptr->set_markd();
+                // stop iterating over introns since we found one
+                ++intron_idx;  // don't visit this intron again
+                break;
             }
-
+            // keep information about current exon as next previous exon
+            prev_exon = cur_exon;
+            intron_start = cur_end + 1;  // next valid intron start
         }
-
     }
 
     int
