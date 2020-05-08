@@ -2,7 +2,7 @@ from libcpp.string cimport string
 from libcpp.map cimport map
 from libcpp.vector cimport vector
 
-from majiq.src.internals.grimoire cimport Gene, Exon, Junction
+from majiq.src.internals.grimoire cimport Gene, Exon, Junction, coord_key_t
 from majiq.src.internals import quant_lsv
 from majiq.src.internals.mtypes cimport *
 from majiq.src.internals.qLSV cimport qLSV
@@ -45,7 +45,8 @@ cdef int  read_gff(str filename, map[string, Gene*] all_genes, vector[string] gi
     cdef int start, end
     cdef bint bb
     cdef list ind_list, tlist
-    cdef string gene_id, key, gene_name, parent_tx_id
+    cdef string gene_id, gene_name, parent_tx_id
+    cdef coord_key_t key
     # cdef map[string, Gene*] all_genes
 
     for record in parse_gff3(filename):
@@ -129,7 +130,8 @@ cdef int  read_gff(str filename, map[string, Gene*] all_genes, vector[string] gi
 
 cdef int merge_exons(dict exon_dict, map[string, Gene*]& all_genes, bint simpl, bint enable_anot_ir) except -1:
     cdef list ex_list
-    cdef string gne_id, key
+    cdef string gne_id
+    cdef coord_key_t key
     cdef tuple x
     cdef int ex_start, ex_end, nopen, coord
     cdef bint is_start

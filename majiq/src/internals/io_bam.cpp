@@ -93,7 +93,7 @@ namespace io_bam {
         vector<Gene*> temp_vec1 ;
         vector<Gene*> temp_vec2 ;
         Junction * junc = new Junction(start, end, false, simpl_) ;
-        const string key = junc->get_key() ;
+        const coord_key_t key = junc->get_key();
 
         vector<overGene*>::iterator low = lower_bound (glist_[chrom].begin(), glist_[chrom].end(), start, _Region::func_comp ) ;
         if (low == glist_[chrom].end())
@@ -525,7 +525,7 @@ namespace io_bam {
                 omp_unset_lock(&map_lck_) ;
             }
         } else {
-            string key = to_string(start) + "-" + to_string(end) ;
+            coord_key_t key = to_string(start) + "-" + to_string(end);
             add_junction(chrom, strand, start, end, 0, 0, sreads) ;
             for (const auto &gObj: (*low)->glist){
                 gObj->updateFlagsFromJunc(key, sreads, minreads_t, npos, minpos_t, denovo_t, denovo, minexp, reset) ;

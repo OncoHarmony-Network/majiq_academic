@@ -40,12 +40,12 @@ namespace grimoire {
         return  crd || r || same ;
     }
 
-    Exon* addExon (map<string, Exon*> &exon_map, int start, int end, bool in_db){
+    Exon* addExon (map<coord_key_t, Exon*> &exon_map, int start, int end, bool in_db) {
 
         Exon * ex ;
-        unsigned int start1 = (start == EMPTY_COORD) ? end - 10 : start ;
-        unsigned int end1 = (end == EMPTY_COORD) ? start + 10 : end ;
-        const string key = to_string(start1) + "-" + to_string(end1) ;
+        int start1 = (start == EMPTY_COORD) ? end - 10 : start;
+        int end1 = (end == EMPTY_COORD) ? start + 10 : end;
+        const coord_key_t key = to_string(start1) + "-" + to_string(end1);
         if (exon_map.count(key) > 0){
             ex = exon_map[key];
         } else {
@@ -55,9 +55,9 @@ namespace grimoire {
         return (ex) ;
     }
 
-    inline Exon* exonOverlap(map<string, Exon*> &exon_map, int start, int end){
+    inline Exon* exonOverlap(map<coord_key_t, Exon*> &exon_map, int start, int end) {
 
-        map<string, Exon*>::iterator exon_mapIt ;
+        map<coord_key_t, Exon*>::iterator exon_mapIt;
         for (exon_mapIt = exon_map.begin(); exon_mapIt != exon_map.end(); ++exon_mapIt) {
             Exon *x = exon_mapIt->second ;
             if (   ( x->get_start() != EMPTY_COORD ) && ( x->get_end() != EMPTY_COORD )
@@ -91,7 +91,7 @@ namespace grimoire {
     void Gene::newExonDefinition(int start, int end, Junction *inbound_j, Junction *outbound_j, bool in_db){
 
         Exon *ex1 = nullptr, *ex2 = nullptr ;
-        string key ;
+        coord_key_t key;
         stringstream s1 ;
         stringstream s2 ;
         if ((end - start) < 0) return ;
@@ -217,8 +217,8 @@ namespace grimoire {
         return ;
     }
 
-    void Gene::updateFlagsFromJunc(string key, unsigned int sreads, unsigned int minreads_t, unsigned int npos,
-                               unsigned int minpos_t, unsigned int denovo_t, bool denovo, int minexp, bool reset){
+    void Gene::updateFlagsFromJunc(coord_key_t key, unsigned int sreads, unsigned int minreads_t, unsigned int npos,
+                               unsigned int minpos_t, unsigned int denovo_t, bool denovo, int minexp, bool reset) {
         if (junc_map_.count(key) > 0){
             omp_set_lock(&map_lck_) ;
             Junction * jnc = junc_map_[key] ;
@@ -228,7 +228,7 @@ namespace grimoire {
         }
     }
 
-    void Gene::initialize_junction(string key, int start, int end, shared_ptr<vector<float>> nreads_ptr, bool simpl){
+    void Gene::initialize_junction(coord_key_t key, int start, int end, shared_ptr<vector<float>> nreads_ptr, bool simpl) {
 
         omp_set_lock(&map_lck_) ;
         if (junc_map_.count(key) == 0){
@@ -451,9 +451,9 @@ namespace grimoire {
 
         map<string, Exon*>::iterator exon_mapIt ;
         vector<LSV*> lsvGenes ;
-        set<pair<set<string>, LSV*>> source ;
+        set<pair<set<coord_key_t>, LSV*>> source;
         LSV * lsvObj ;
-        set<string> remLsv ;
+        set<lsv_id_t> remLsv;
         const bool ss = strand_ == '+' ;
 
         vector<Exon*> ex_vector ;
@@ -469,22 +469,22 @@ namespace grimoire {
 
             if (ex->is_lsv(ss)) {
                 lsvObj = new LSV(this, ex, ss) ;
-                set<string> t1 ;
+                set<coord_key_t> t1;
                 lsvObj->get_variations(t1) ;
-                pair<set<string>, LSV*> _p1 (t1, lsvObj) ;
+                pair<set<coord_key_t>, LSV*> _p1 (t1, lsvObj);
                 source.insert(_p1) ;
                 lsvGenes.push_back(lsvObj) ;
             }
 
             if (ex->is_lsv(!ss)) {
                 lsvObj = new LSV(this, ex, !ss) ;
-                set<string> t1 ;
+                set<coord_key_t> t1;
                 lsvObj->get_variations(t1) ;
                 bool rem_src = false ;
 
                 for (const auto &slvs: source){
-                    set<string> d1 ;  // fill with connections unique to source
-                    set<string> d2 ;  // fill with connections unique to target
+                    set<coord_key_t> d1;  // fill with connections unique to source
+                    set<coord_key_t> d2;  // fill with connections unique to target
                     set_difference((slvs.first).begin(), (slvs.first).end(), t1.begin(), t1.end(), inserter(d1, d1.begin())) ;
                     set_difference(t1.begin(), t1.end(), (slvs.first).begin(), (slvs.first).end(), inserter(d2, d2.begin())) ;
 
@@ -613,20 +613,6 @@ namespace grimoire {
         }
     }
 
-
-    void Gene::print_exons(){
-
-        for(const auto & ex: exon_map_ ){
-            cerr << "EXON:: "<< ex.first << "\n" ;
-            for (const auto & j1: (ex.second)->ib){
-                cerr << "<<< " << j1->get_start() << "-" << j1->get_end() << "\n" ;
-            }
-            for (const auto & j1: (ex.second)->ob){
-                cerr << ">>>" << j1->get_start() << "-" << j1->get_end() << "\n" ;
-            }
-        }
-    }
-
     string Intron::get_key(Gene * gObj) {
         return(gObj->get_chromosome() + ":" + gObj->get_strand() + ":" + to_string(start_) + "-" + to_string(end_)
                + ":" + gObj->get_id()) ;
@@ -721,7 +707,7 @@ namespace grimoire {
         return (c2>1 and c1>0);
     }
 
-    inline void LSV::get_variations(set<string> &t1){
+    inline void LSV::get_variations(set<coord_key_t> &t1) {
         for (const auto &jl1: junctions_){
             t1.insert(jl1->get_key()) ;
         }
@@ -918,7 +904,7 @@ namespace grimoire {
                              vector<Gene*>& oGeneList, bool ir, bool simpl){
 
         Junction * junc = new Junction(start, end, false, simpl) ;
-        const string key = junc->get_key() ;
+        const coord_key_t key = junc->get_key();
         vector<overGene*>::iterator low = lower_bound (glist[chrom].begin(), glist[chrom].end(),
                                                        start, _Region::func_comp ) ;
         if (low == glist[chrom].end())
