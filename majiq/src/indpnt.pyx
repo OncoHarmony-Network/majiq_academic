@@ -8,7 +8,7 @@ from majiq.src.constants import *
 from majiq.src.internals.mtypes cimport *
 from majiq.src.internals.HetStats cimport HetStats
 from majiq.src.internals.qLSV cimport hetLSV, qLSV
-from majiq.src.internals.psi cimport get_samples_from_psi, get_psi_border, test_calc
+from majiq.src.internals.psi cimport get_samples_from_psi, get_psi_border, test_calc, mt19937
 
 from voila.api import Matrix
 from voila.constants import ANALYSIS_HETEROGEN, VOILA_FILE_VERSION
@@ -17,7 +17,7 @@ from libcpp.string cimport string
 from libcpp.map cimport map
 from libcpp.pair cimport pair
 from libcpp.vector cimport vector
-from cython.parallel import prange
+from cython.parallel import prange, threadid
 
 cimport numpy as np
 import numpy as np
@@ -108,9 +108,12 @@ cdef int _statistical_test_computation(object out_h5p, dict comparison, list lis
         out_h5p.heterogen(lsv.decode('utf-8')).add(junction_stats=oPvals, tnom_score=score)
 
 
-cdef int _het_computation(object out_h5p, dict file_cond, list list_of_lsv, map[string, qLSV*] lsv_vec,
-                          dict lsv_type_dict, dict junc_info, int psi_samples, int nthreads, int nbins, str outdir,
-                          int minreads, int minnonzero, object logger ) except -1:
+cdef int _het_computation(
+    object out_h5p, dict file_cond, list list_of_lsv,
+    map[string, qLSV*] lsv_vec, dict lsv_type_dict, dict junc_info,
+    int psi_samples, int nthreads, int nbins, str outdir, int minreads,
+    int minnonzero, float visualization_var_max, object logger
+) except -1:
     cdef string lsv
     cdef list cond_list, conditions
     cdef str f, cond_name, fname ;
@@ -128,6 +131,7 @@ cdef int _het_computation(object out_h5p, dict file_cond, list list_of_lsv, map[
     cdef int total_njuncs = 0
     cdef bint is_ir
     cdef hetLSV* hetObj_ptr
+    cdef int visualization_samples  # done per condition given var_max and experiments
 
     # cdef list narray_mu, na_postpsi
     # cdef ArrayWrapper mu_w0, mu_w1, ppsi_w0, ppsi_w1
@@ -138,9 +142,21 @@ cdef int _het_computation(object out_h5p, dict file_cond, list list_of_lsv, map[
         nways = lsv_vec[lsv].get_num_ways()
         total_njuncs += nways
 
+    # initialize source of randomness
+    cdef vector[mt19937] generators = vector[mt19937](nthreads)
+    cdef int thread_idx
+    for thread_idx in range(nthreads):
+        generators[thread_idx].seed(HET_SAMPLING_SEED + thread_idx)
+
     conditions = list(file_cond.keys())
     for cidx, cond_name in enumerate(conditions):
         cond_list = file_cond[cond_name]
+        # posterior estimate has variance < 1 / (4 * num_experiments * num_samples_per_exp)
+        visualization_samples = int(max(np.ceil(1 / (4 * len(cond_list) * visualization_var_max)), 1))
+        logger.info(
+            f"Group {cond_name} performing at least {visualization_samples} psi"
+            " samples per experiment to bound visualization error"
+        )
         max_nfiles = max(max_nfiles, len(cond_list))
         for fidx, f in enumerate(cond_list):
             osamps = np.zeros(shape=(total_njuncs, psi_samples), dtype=np.float32)
@@ -154,8 +170,13 @@ cdef int _het_computation(object out_h5p, dict file_cond, list list_of_lsv, map[
                 with gil:
                     lsv = list_of_lsv[i]
 
-                get_samples_from_psi(<np.float32_t *> osamps.data, <hetLSV*> lsv_vec[lsv], psi_samples, psi_border,
-                                     nbins, cidx, fidx)
+                thread_idx = threadid()
+
+                get_samples_from_psi(
+                    <np.float32_t *> osamps.data, <hetLSV*> lsv_vec[lsv],
+                    psi_samples, visualization_samples,
+                    psi_border, nbins, cidx, fidx, generators[thread_idx]
+                )
                 lsv_vec[lsv].reset_samps()
             fname = get_tmp_psisample_file(outdir, "%s_%s" %(cond_name, fidx) )
             majiq_io.dump_hettmp_file(fname, osamps)
@@ -201,6 +222,7 @@ cdef void _core_independent(object self):
     cdef dict comparison = {self.names[0]: len(self.files1), self.names[1]: len(self.files2)}
     cdef hetLSV* m
     cdef int max_nfiles = 0
+    cdef float visualization_var_max = self.visualization_std * self.visualization_std
 
     majiq_logger.create_if_not_exists(self.outDir)
     logger = majiq_logger.get_logger("%s/het_majiq.log" % self.outDir, silent=self.silent,
@@ -258,8 +280,11 @@ cdef void _core_independent(object self):
             j_offset += nways
 
         logger.info('Sampling from PSI')
-        _het_computation(out_h5p, file_cond, list_of_lsv, lsv_map, lsv_type_dict, junc_info, self.psi_samples,
-                         nthreads, nbins, self.outDir, self.minreads, self.minpos, logger)
+        _het_computation(
+            out_h5p, file_cond, list_of_lsv, lsv_map, lsv_type_dict, junc_info,
+            self.psi_samples, nthreads, nbins, self.outDir, self.minreads,
+            self.minpos, visualization_var_max, logger
+        )
 
         logger.info('Calculating statistics pvalues')
         _statistical_test_computation(out_h5p, comparison, list_of_lsv, stats_vec, self.psi_samples, lsv_map,

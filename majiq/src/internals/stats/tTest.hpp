@@ -11,7 +11,7 @@
 #include <vector>
 #include <iostream>
 #include "testStats.hpp"
-#include "scythestat/distributions.h"
+#include "boost/math/distributions/students_t.hpp"
 
 namespace MajiqStats{
     namespace details {
@@ -131,7 +131,8 @@ namespace MajiqStats{
              * @note does not check for invalid degrees of freedom
              */
             double TwoSidedPValue(double dof, double t) {
-                return 2 * scythe::pt(-std::fabs(t), dof);
+                const boost::math::students_t_distribution<double> t_dist(dof);
+                return 2 * boost::math::cdf(t_dist, -std::fabs(t));
             }
 
             /** Calculate two-sided p-value for t-test given data/labels

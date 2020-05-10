@@ -63,9 +63,7 @@ namespace io_bam{
             void update_eff_len(const unsigned int new_eff_len);
 
             // random number generation persistent in class
-            // XXX -- consider using Mersenne-Twister to give more uniform
-            // implementation across architectures/less compiler-dependent
-            static vector<default_random_engine> generators_;
+            static vector<std::mt19937> generators_;
 
         public:
             vector<shared_ptr<vector<float>>> junc_vec;

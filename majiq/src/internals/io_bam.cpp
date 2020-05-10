@@ -14,11 +14,12 @@
 #include "htslib/faidx.h"
 #include "htslib/kstring.h"
 #include "htslib/thread_pool.h"
-#include "scythestat/distributions.h"
+#include "boost/math/distributions/poisson.hpp"
+#include "boost/math/distributions/negative_binomial.hpp"
 
 
 // initialize static random state
-vector<default_random_engine> io_bam::IOBam::generators_ = vector<default_random_engine>(0);
+vector<std::mt19937> io_bam::IOBam::generators_ = vector<std::mt19937>(0);
 
 using namespace std;
 namespace io_bam {
@@ -651,7 +652,10 @@ namespace io_bam {
         if (fitfunc_r == 0.0){
             for (int i=0; i<(int)vec.size(); i++){
                 const float mean_reads = (npos == 1) ? 0.5: (sreads-vec[i]) / (npos - 1) ;
-                const float pvalue = 1 - scythe::ppois(vec[i], mean_reads) ;
+                const boost::math::poisson_distribution<float> stack_dist(mean_reads);
+                const float pvalue = boost::math::cdf(boost::math::complement(
+                    stack_dist, vec[i]
+                ));
                 if (pvalue< pvalue_limit){
                     vec.erase(vec.begin() + i) ;
                     npos -- ;
@@ -662,7 +666,10 @@ namespace io_bam {
                 const float mean_reads = (npos == 1) ? 0.5: (sreads-vec[i]) / (npos - 1) ;
                 const float r = 1 / fitfunc_r ;
                 const float p = r/(mean_reads + r) ;
-                const float pvalue = 1 - scythe::pnbinom(vec[i], r, p) ;
+                const boost::math::negative_binomial_distribution<float> stack_dist(r, p);
+                const float pvalue = boost::math::cdf(boost::math::complement(
+                    stack_dist, vec[i]
+                ));
                 if (pvalue< pvalue_limit){
                     vec.erase(vec.begin() + i);
                     npos -- ;
@@ -692,7 +699,7 @@ namespace io_bam {
             if (npos == 0) continue ;
             if (pvalue_limit > 0) npos = normalize_stacks(vec, sreads, npos, fitfunc_r, pvalue_limit) ;
             if (npos == 0) continue ;
-            default_random_engine &generator = generators_[omp_get_thread_num()];
+            std::mt19937 &generator = generators_[omp_get_thread_num()];
             uniform_int_distribution<int> distribution(0, npos-1);
             for (int m=0; m<msamples; m++){
                 float lambda = 0;
