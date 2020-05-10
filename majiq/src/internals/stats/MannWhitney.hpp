@@ -495,7 +495,8 @@ namespace MajiqStats {
              * @param labels vector of binary values (0 or 1) indicating class
              * label, corresponding to values of data
              * @param score pointer to float that will hold the test statistic
-             * (for class 0)
+             * (for class 0). This is currently reserved for use by TNOM
+             * statistic and unused by MannWhitney test
              *
              * If the sample size is greater than MANNWHITNEY_MAXSIZE, use
              * normal approximation
@@ -508,8 +509,8 @@ namespace MajiqStats {
             ) {
                 // get summary statistic from data
                 details::MannWhitneySummary summary(data, labels);
-                // set score to value of U1
-                *score = static_cast<float>(summary.U1);
+                // // set score to value of U1
+                // *score = static_cast<float>(summary.U1);
                 // determine whether we are doing asymptotic p value or not
                 if (summary.n1 + summary.n2 <= MANNWHITNEY_MAXSIZE) {
                     return ExactPValue(summary.n1, summary.n2, summary.U1);
