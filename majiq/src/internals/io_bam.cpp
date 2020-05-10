@@ -500,7 +500,7 @@ namespace io_bam {
 
     void IOBam::parseJuncEntry(map<string, vector<overGene*>> & glist, string gid, string chrom, char strand,
                                int start, int end, unsigned int sreads, unsigned int minreads_t, unsigned int npos,
-                               unsigned int minpos_t, unsigned int denovo_t, bool denovo, vector<Gene*>& oGeneList,
+                               unsigned int minpos_t, unsigned int denovo_t, bool denovo, bool denovo_ir, vector<Gene*>& oGeneList,
                                bool ir, vector<float>& ircov, float min_intron_cov, float min_bins, int minexp,
                                bool reset){
 
@@ -521,7 +521,7 @@ namespace io_bam {
                     if (junc_map.count(key) == 0) {
                         junc_map[key] = junc_vec.size() ;
                         junc_vec.push_back(irptr->read_rates_ptr_) ;
-                        gObj->add_intron(irptr, min_intron_cov, minexp, min_bins, reset) ;
+                        gObj->add_intron(irptr, min_intron_cov, minexp, min_bins, reset, denovo_ir) ;
                     }
                 }
                 omp_unset_lock(&map_lck_) ;
@@ -538,8 +538,7 @@ namespace io_bam {
 
     }
 
-
-    void IOBam::detect_introns(float min_intron_cov, unsigned int min_experiments, float min_bins, bool reset){
+    void IOBam::detect_introns(float min_intron_cov, unsigned int min_experiments, float min_bins, bool reset, bool denovo){
         for (const auto & it: glist_){
             if (intronVec_.count(it.first)==0){
                 intronVec_[it.first] = vector<Intron*>() ;
@@ -572,7 +571,8 @@ namespace io_bam {
                         if (junc_map.count(key) == 0) {
                             junc_map[key] = junc_vec.size() ;
                             junc_vec.push_back(intrn_it->read_rates_ptr_) ;
-                            (intrn_it->get_gene())->add_intron(intrn_it, min_intron_cov, min_experiments, min_bins, reset) ;
+                            (intrn_it->get_gene())->add_intron(intrn_it, min_intron_cov, min_experiments, min_bins,
+                                                               reset, denovo) ;
                         }
                     }
                 } else {
