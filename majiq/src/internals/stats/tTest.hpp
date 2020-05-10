@@ -141,9 +141,9 @@ namespace MajiqStats{
             ) {
                 // extract summary statistics from data
                 details::tTestSummary summary(data, labels);
-                // set score to value of t statistic (unfortunately useless
-                // without degrees of freedom)
-                *score = static_cast<float>(summary.t);
+                // // set score to value of t statistic (unfortunately useless
+                // // without degrees of freedom)
+                // *score = static_cast<float>(summary.t);
                 // determine p-value using statistics
                 if (summary.dof > 0) {
                     return TwoSidedPValue(summary.dof, summary.t);
