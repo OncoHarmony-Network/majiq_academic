@@ -1,7 +1,7 @@
 #ifndef stats_H
 #define stats_H
 #include "TNOM.hpp"
-#include "Wilcoxon.hpp"
+#include "MannWhitney.hpp"
 #include "Info.hpp"
 #include "tTest.hpp"
 #include "testStats.hpp"
@@ -29,7 +29,7 @@ class HetStats{
                 if (st == "TNOM")
                     statistics.push_back((MajiqStats::TestStat*) new MajiqStats::TNOM()) ;
                 if (st == "WILCOXON")
-                    statistics.push_back((MajiqStats::TestStat*) new MajiqStats::Wilcoxon()) ;
+                    statistics.push_back((MajiqStats::TestStat*) new MajiqStats::MannWhitney()) ;
                 if (st == "INFOSCORE")
                     statistics.push_back((MajiqStats::TestStat*) new MajiqStats::InfoScore()) ;
                 if (st == "TTEST")
@@ -42,7 +42,7 @@ class HetStats{
                     names.push_back("TNOM") ;
                     statistics.push_back((MajiqStats::TestStat*) new MajiqStats::tTest()) ;
                     names.push_back("TTEST") ;
-                    statistics.push_back((MajiqStats::TestStat*) new MajiqStats::Wilcoxon()) ;
+                    statistics.push_back((MajiqStats::TestStat*) new MajiqStats::MannWhitney()) ;
                     names.push_back("WILCOXON") ;
                     break ;
                 } else
