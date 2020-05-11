@@ -2,7 +2,7 @@ import os
 import sys
 import psutil
 
-from majiq.src.internals.grimoire cimport Junction, Gene, Exon, LSV, Jinfo, Intron
+from majiq.src.internals.grimoire cimport Junction, Gene, Exon, LSV, Jinfo, Intron, coord_key_t
 from majiq.src.internals.io_bam cimport IOBam, prepare_genelist, overGene_vect_t, free_genelist, eff_len_from_read_length
 from majiq.src.internals.grimoire cimport find_intron_retention, find_gene_from_junc, isNullJinfo, fill_junc_tlb
 from majiq.src.internals.grimoire cimport key_format, free_JinfoVec, Gene_vect_t, free_lsvlist
@@ -424,9 +424,9 @@ cdef init_splicegraph(string filename, object conf):
 
 cdef void gene_to_splicegraph(Gene * gne, sqlite3 * db) nogil:
 
-    cdef pair[string, Junction *] jj_pair
+    cdef pair[coord_key_t, Junction *] jj_pair
     cdef Junction * jj
-    cdef pair[string, Exon *] ex_pair
+    cdef pair[coord_key_t, Exon *] ex_pair
     cdef Exon * ex
     cdef string gne_id = gne.get_id()
 

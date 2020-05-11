@@ -152,20 +152,18 @@ namespace io_bam {
 
     void IOBam::find_junction_genes(string chrom, char strand, int start, int end,
                                     shared_ptr<vector<float>> nreads_ptr){
-//        const int n = glist_[chrom].size() ;
         bool found_stage1 = false ;
         bool found_stage2 = false ;
         vector<Gene*> temp_vec1 ;
         vector<Gene*> temp_vec2 ;
         Junction * junc = new Junction(start, end, false, simpl_) ;
-        const string key = junc->get_key() ;
+        const coord_key_t key = junc->get_key();
 
         vector<overGene*>::iterator low = lower_bound (glist_[chrom].begin(), glist_[chrom].end(), start, _Region::func_comp ) ;
         if (low == glist_[chrom].end())
             return ;
 
         for (const auto &gObj: (*low)->glist){
-//            if (gObj->get_start() >= end) break ;
             if (gObj->get_start() >= end) continue ;
             if (gObj->get_end() < start) continue ;
             if (start< gObj->get_start() || end> gObj->get_end()) continue ;
@@ -824,8 +822,8 @@ namespace io_bam {
                 omp_unset_lock(&map_lck_) ;
             }
         } else {
-            string key = to_string(start) + "-" + to_string(end) ;
-            add_junction(chrom, strand, start, end, 0, sreads) ;
+            coord_key_t key = std::make_pair(start, end);
+            add_junction(chrom, strand, start, end, 0, sreads);
             for (const auto &gObj: (*low)->glist){
                 gObj->updateFlagsFromJunc(key, sreads, minreads_t, npos, minpos_t, denovo_t, denovo, minexp, reset) ;
             }

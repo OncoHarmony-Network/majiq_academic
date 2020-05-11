@@ -40,12 +40,12 @@ namespace grimoire {
         return  crd || r || same ;
     }
 
-    Exon* addExon (map<string, Exon*> &exon_map, int start, int end, bool in_db){
+    Exon* addExon (map<coord_key_t, Exon*> &exon_map, int start, int end, bool in_db) {
 
         Exon * ex ;
-        unsigned int start1 = (start == EMPTY_COORD) ? end - 10 : start ;
-        unsigned int end1 = (end == EMPTY_COORD) ? start + 10 : end ;
-        const string key = to_string(start1) + "-" + to_string(end1) ;
+        int start1 = (start == EMPTY_COORD) ? end - 10 : start;
+        int end1 = (end == EMPTY_COORD) ? start + 10 : end;
+        const coord_key_t key = std::make_pair(start1, end1);
         if (exon_map.count(key) > 0){
             ex = exon_map[key];
         } else {
@@ -55,9 +55,9 @@ namespace grimoire {
         return (ex) ;
     }
 
-    inline Exon* exonOverlap(map<string, Exon*> &exon_map, int start, int end){
+    inline Exon* exonOverlap(map<coord_key_t, Exon*> &exon_map, int start, int end) {
 
-        map<string, Exon*>::iterator exon_mapIt ;
+        map<coord_key_t, Exon*>::iterator exon_mapIt;
         for (exon_mapIt = exon_map.begin(); exon_mapIt != exon_map.end(); ++exon_mapIt) {
             Exon *x = exon_mapIt->second ;
             if (   ( x->get_start() != EMPTY_COORD ) && ( x->get_end() != EMPTY_COORD )
@@ -91,14 +91,11 @@ namespace grimoire {
     void Gene::newExonDefinition(int start, int end, Junction *inbound_j, Junction *outbound_j, bool in_db){
 
         Exon *ex1 = nullptr, *ex2 = nullptr ;
-        string key ;
-        stringstream s1 ;
-        stringstream s2 ;
+        coord_key_t key;
         if ((end - start) < 0) return ;
         ex1 = exonOverlap(exon_map_, start, end) ;
         if (nullptr != inbound_j && nullptr != outbound_j && inbound_j->get_intronic() && outbound_j->get_intronic()) {
-            s1 << start ; s2 << end ;
-            key = s1.str() + "-" + s2.str() ;
+            key = std::make_pair(start, end);
             if (exon_map_.count(key) > 0){
                 ex1 = exon_map_[key] ;
                 ex2 = ex1 ;
@@ -224,8 +221,8 @@ namespace grimoire {
         return ;
     }
 
-    void Gene::updateFlagsFromJunc(string key, unsigned int sreads, unsigned int minreads_t, unsigned int npos,
-                               unsigned int minpos_t, unsigned int denovo_t, bool denovo, int minexp, bool reset){
+    void Gene::updateFlagsFromJunc(coord_key_t key, unsigned int sreads, unsigned int minreads_t, unsigned int npos,
+                               unsigned int minpos_t, unsigned int denovo_t, bool denovo, int minexp, bool reset) {
         if (junc_map_.count(key) > 0){
             omp_set_lock(&map_lck_) ;
             Junction * jnc = junc_map_[key] ;
@@ -235,7 +232,7 @@ namespace grimoire {
         }
     }
 
-    void Gene::initialize_junction(string key, int start, int end, shared_ptr<vector<float>> nreads_ptr, bool simpl){
+    void Gene::initialize_junction(coord_key_t key, int start, int end, shared_ptr<vector<float>> nreads_ptr, bool simpl) {
 
         omp_set_lock(&map_lck_) ;
         if (junc_map_.count(key) == 0){
@@ -304,14 +301,12 @@ namespace grimoire {
             if (ir->get_end() < inIR_ptr->get_start() || ir->get_start() > inIR_ptr->get_end()) continue ;
             if (ir->get_end() >= inIR_ptr->get_start() && ir->get_start() <= inIR_ptr->get_end()){
                 ir->overlaping_intron(inIR_ptr) ;
-//cerr << "found " << ir->get_key() << endl ;
                 ir->update_flags(min_coverage, min_exps, min_bins) ;
                 ir->clear_nreads(reset) ;
                 found = true ;
             }
         }
         if(!found && denovo){
-//cerr << "NOT found " << inIR_ptr->get_key() << endl ;
 
             inIR_ptr->update_flags(min_coverage, min_exps, min_bins) ;
             inIR_ptr->clear_nreads(reset) ;
@@ -321,55 +316,86 @@ namespace grimoire {
         }
     }
 
-    void Gene::connect_introns(){
+    /**
+     * Associate introns with adjacent exons, adjusting coordinates/splitting as necessary
+     */
+    void Gene::connect_introns() {
+        // get introns in sorted order
+        sort(intron_vec_.begin(), intron_vec_.end(), Intron::islowerRegion<Intron>);
 
-        sort(intron_vec_.begin(), intron_vec_.end(), Intron::islowerRegion<Intron>) ;
+        // get index of next intron to look at (in sorted order)
+        unsigned int intron_idx = 0;
+        // information about last exon (starts as null values)
+        Exon * prev_exon = nullptr;
+        int intron_start = -1;
 
-        const int n_itrons = intron_vec_.size() ;
-        int intron_index = 0 ;
-        Exon * prev_ex = nullptr ;
-        int ir_start = 0 ;
-
-        for(const auto & ex: exon_map_ ){
-
-            if (((ex.second)->get_start() < 0) || (ex.second)->get_end()<0)
-                continue ;
-            const int ex_start = ((ex.second)->get_start() < 0) ? (ex.second)->get_end()-10 : (ex.second)->get_start() ;
-            const int ex_end = ((ex.second)->get_end() < 0) ? (ex.second)->get_start()+10 : (ex.second)->get_end() ;
-
-            if (ir_start == 0 ) {
-                ir_start = ex_end + 1;
-                prev_ex = (ex.second) ;
-                continue ;
+        // loop over exons in sorted order
+        for (const auto & ex_pair : exon_map_) {
+            // current exon is the value from exon_map
+            Exon * cur_exon = ex_pair.second;
+            // current exon coordinates
+            const int cur_start = cur_exon->get_start();
+            const int cur_end = cur_exon->get_end();
+            // ignore half exons
+            if (cur_exon->get_start() < 0 || cur_exon->get_end() < 0) {
+                continue;
             }
-
-            if( prev_ex->get_end()> 0 && (ex.second)->get_start()>0) {
-                const int ir_end = ex_start - 1 ;
-
-                while(intron_index< n_itrons){
-                    Intron * ir_ptr = intron_vec_[intron_index];
-                    if (ir_ptr->get_end() >= ex_end ) break ;
-                    if (ir_start <= ir_ptr->get_end() && ir_end >= ir_ptr->get_start() && ir_ptr->get_ir_flag()){
-
-                        if (prev_ex->ob_irptr != nullptr){
-                            (prev_ex->ob_irptr)->unset_markd() ;
-                        }
-//    cerr << "#1 " << ir_start << "-" << ir_end<< " :: " << prev_ex->ob_irptr->get_gene() << ":" << prev_ex->ob_irptr->get_start() << "-" << prev_ex->ob_irptr->get_end()<< "\n" ;
-//    cerr << "#2 " << ir_start << "-" << ir_end<< " :: " << ir_ptr->get_gene() << ":" << ir_ptr->get_start() << "-" << ir_ptr->get_end()<< "\n" ;
-                        prev_ex->ob_irptr = ir_ptr ;
-                        (ex.second)->ib_irptr = ir_ptr ;
-                        ir_ptr->update_boundaries(prev_ex->get_end() +1, (ex.second)->get_start() -1) ;
-                        ir_ptr->set_markd();
+            // if this is the first real exon, store it and go to next exon
+            if (intron_start < 0) {
+                prev_exon = cur_exon;
+                intron_start = cur_end + 1;  // next valid intron start
+                continue;
+            }
+            // otherwise, intron between prev/cur exon has coordinates intron start/end:
+            const int intron_end = cur_start - 1;
+            // loop over remaining introns until past this possible intron
+            while (intron_idx < intron_vec_.size()) {
+                Intron * ir_ptr = intron_vec_[intron_idx];
+                if (ir_ptr->get_start() > intron_end) {
+                    // go to next pair of exons if ir_ptr is (intron_start, intron_end)
+                    break;
+                } else if (ir_ptr->get_end() >= intron_start) {
+                    // this intron overlaps (intron_start, intron_end)!
+                    // It is possible that this intron was split by the current exon?
+                    if (ir_ptr->get_end() > cur_end) {
+                        // In this case, we copy the intron so that it can be added again
+                        intron_vec_.insert(
+                                // insert at next position
+                                intron_vec_.cbegin() + intron_idx + 1,
+                                // copy constructor for new intron at next position
+                                new Intron(*ir_ptr));
                     }
-
-                    ++intron_index ;
+                    // disconnect previously connected introns
+                    if (prev_exon->ob_irptr != nullptr) {
+                        // previous outbound intron of previous exon now disconnected
+                        prev_exon->ob_irptr->unset_markd();
+                    }
+                    if (cur_exon->ib_irptr != nullptr) {
+                        // previous inbound intron of current exon now disconnected
+                        cur_exon->ib_irptr->unset_markd();
+                    }
+                    // connect adjacent exons to ir_ptr
+                    prev_exon->ob_irptr = ir_ptr;
+                    cur_exon->ib_irptr = ir_ptr;
+                    // update boundaries and mark intron as connected
+                    ir_ptr->update_boundaries(intron_start, intron_end);
+                    ir_ptr->set_markd();
+                    // stop iterating over introns since we found one
+                    ++intron_idx;  // don't visit this intron again
+                    break;
+                } else {
+                    // this intron was not between exons in valid way.
+                    // this happens because of exon extension to the point that
+                    // there is no longer a valid intron there.
+                    // Delete the no longer valid intron and try the next one.
+                    delete ir_ptr;  // free memory for intron since not using it anymore
+                    intron_vec_.erase(intron_vec_.cbegin() + intron_idx);
                 }
-                ir_start = ex_end + 1;
-                prev_ex = (ex.second) ;
             }
-
+            // keep information about current exon as next previous exon
+            prev_exon = cur_exon;
+            intron_start = cur_end + 1;  // next valid intron start
         }
-
     }
 
     int
@@ -462,9 +488,9 @@ namespace grimoire {
 
         map<string, Exon*>::iterator exon_mapIt ;
         vector<LSV*> lsvGenes ;
-        set<pair<set<string>, LSV*>> source ;
+        set<pair<set<coord_key_t>, LSV*>> source;
         LSV * lsvObj ;
-        set<string> remLsv ;
+        set<lsv_id_t> remLsv;
         const bool ss = strand_ == '+' ;
 
         vector<Exon*> ex_vector ;
@@ -480,22 +506,22 @@ namespace grimoire {
 
             if (ex->is_lsv(ss)) {
                 lsvObj = new LSV(this, ex, ss) ;
-                set<string> t1 ;
+                set<coord_key_t> t1;
                 lsvObj->get_variations(t1) ;
-                pair<set<string>, LSV*> _p1 (t1, lsvObj) ;
+                pair<set<coord_key_t>, LSV*> _p1 (t1, lsvObj);
                 source.insert(_p1) ;
                 lsvGenes.push_back(lsvObj) ;
             }
 
             if (ex->is_lsv(!ss)) {
                 lsvObj = new LSV(this, ex, !ss) ;
-                set<string> t1 ;
+                set<coord_key_t> t1;
                 lsvObj->get_variations(t1) ;
                 bool rem_src = false ;
 
                 for (const auto &slvs: source){
-                    set<string> d1 ;  // fill with connections unique to source
-                    set<string> d2 ;  // fill with connections unique to target
+                    set<coord_key_t> d1;  // fill with connections unique to source
+                    set<coord_key_t> d2;  // fill with connections unique to target
                     set_difference((slvs.first).begin(), (slvs.first).end(), t1.begin(), t1.end(), inserter(d1, d1.begin())) ;
                     set_difference(t1.begin(), t1.end(), (slvs.first).begin(), (slvs.first).end(), inserter(d2, d2.begin())) ;
 
@@ -620,22 +646,6 @@ namespace grimoire {
             for(const auto &ex: exon_map_){
                 if ((ex.second)->ib_irptr != nullptr)
                     ((ex.second)->ib_irptr)->update_simpl_flags(min_experiments) ;
-//                if ((ex.second)->ob_irptr != nullptr)
-//                    ((ex.second)->ob_irptr)->update_simpl_flags(min_experiments, false) ;
-            }
-        }
-    }
-
-
-    void Gene::print_exons(){
-
-        for(const auto & ex: exon_map_ ){
-            cerr << "EXON:: "<< ex.first << "\n" ;
-            for (const auto & j1: (ex.second)->ib){
-                cerr << "<<< " << j1->get_start() << "-" << j1->get_end() << "\n" ;
-            }
-            for (const auto & j1: (ex.second)->ob){
-                cerr << ">>>" << j1->get_start() << "-" << j1->get_end() << "\n" ;
             }
         }
     }
@@ -734,7 +744,7 @@ namespace grimoire {
         return (c2>1 and c1>0);
     }
 
-    inline void LSV::get_variations(set<string> &t1){
+    inline void LSV::get_variations(set<coord_key_t> &t1) {
         for (const auto &jl1: junctions_){
             t1.insert(jl1->get_key()) ;
         }
@@ -748,7 +758,6 @@ namespace grimoire {
         float * s1 ;
         float * t1 = target ;
         unsigned int count = 0 ;
-//        cout<< id_ << " source @: " << source<< " target @: " << target<<" ##\n" ;
         for(const auto &j: junctions_){
             const string key = gObj_->get_chromosome() + ":" + to_string(j->get_start()) + "-" + to_string(j->get_end()) ;
             if(tlb.count(key)>0){
@@ -932,7 +941,7 @@ namespace grimoire {
                              vector<Gene*>& oGeneList, bool ir, bool simpl){
 
         Junction * junc = new Junction(start, end, false, simpl) ;
-        const string key = junc->get_key() ;
+        const coord_key_t key = junc->get_key();
         vector<overGene*>::iterator low = lower_bound (glist[chrom].begin(), glist[chrom].end(),
                                                        start, _Region::func_comp ) ;
         if (low == glist[chrom].end())

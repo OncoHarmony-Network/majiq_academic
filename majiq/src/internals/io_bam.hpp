@@ -1,7 +1,6 @@
 #ifndef IO_BAM_H
 #define IO_BAM_H
 
-//#include <algorithm>
 #include <iomanip>
 #include <iostream>
 #include <random>
@@ -11,7 +10,6 @@
 #include <set>
 #include <memory>
 #include <omp.h>
-//#include "interval.hpp"
 
 #define BOOTSTRAP_SEED 20200309
 
@@ -29,11 +27,6 @@
 #define is_read1(b)   (((b)->core.flag & BAM_FREAD1) != 0)
 #define is_read2(b)   (((b)->core.flag & BAM_FREAD2) != 0)
 #define is_read_reverse(b) (((b)->core.flag & BAM_FREVERSE) == 0x10)
-////Sort a vector of junctions
-//template <class CollectionType>
-//inline void sort_junctions(CollectionType &junctions) {
-//    sort(junctions.begin(), junctions.end(), compare_junctions);
-//}
 
 //The class that deals with creating the junctions
 using namespace std;
