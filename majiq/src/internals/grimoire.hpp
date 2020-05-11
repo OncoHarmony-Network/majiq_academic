@@ -164,19 +164,48 @@ namespace grimoire{
                 simpl_cnt_out_ = 0 ;
             }
 
+            /**
+             * Identify if junction passes current experiments to update build/denovo filters
+             *
+             * @param sreads the number of reads for junction in current experiment
+             * @param minreads_t the minimum number of reads to pass build filter
+             * @param npos the number of nonzero positions in current experiment
+             * @param minpos_t the minimum number of nonzero positions to pass
+             * build/denovo filters
+             * @param denovo_t the minimum number of reads to pass denovo filter
+             * @param min_experiments the total number of experiments in a
+             * build group required to pass build/denovo filters
+             * @param denovo are we accepting denovo junctions?
+             *
+             * @note Update counts of experiments passing build or denovo
+             * filters, and update flag indicating if junction passed
+             * corresponding filter if enough experiments passed in this build
+             * group. Only requires one build group to pass
+             */
             inline void update_flags(unsigned int sreads, unsigned int minreads_t, unsigned int npos, unsigned int minpos_t,
                               unsigned int denovo_t, unsigned int min_experiments, bool denovo){
-                if (( npos >= minpos_t) && (sreads >= minreads_t)){
-                    ++ flter_cnt_ ;
-                    bld_fltr_ = bld_fltr_ || (flter_cnt_ >= min_experiments) ;
+                // only update flags if experiment has enough nonzero positions
+                if (npos >= minpos_t) {
+                    // only try updating build filter if hasn't passed and enough reads
+                    if (!bld_fltr_ && sreads >= minreads_t) {
+                        // increment number of experiments passing build filters
+                        ++flter_cnt_;
+                        // update flag for junction if enough experiments passed
+                        if (flter_cnt_ >= min_experiments) {
+                            bld_fltr_ = true;
+                        }
+                    }
+                    // only try updating denovo filter if processing denovo,
+                    // hasn't passed, and enough reads
+                    if (denovo && !denovo_bl_ && sreads >= denovo_t) {
+                        // increment number of experiments passing build filters
+                        ++denovo_cnt_;
+                        // update flag for junction if enough experiments passed
+                        if (denovo_cnt_ >= min_experiments) {
+                            denovo_bl_ = true;
+                        }
+                    }
                 }
-                if (sreads >= denovo_t){
-                    ++ denovo_cnt_  ;
-                    denovo_bl_ = denovo_bl_ || (denovo_cnt_ >= min_experiments) ;
-                    if (!(denovo || annot_))
-                        denovo_bl_ = false ;
-                }
-
                 return ;
             }
 
