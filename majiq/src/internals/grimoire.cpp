@@ -318,83 +318,91 @@ namespace grimoire {
 
     /**
      * Associate introns with adjacent exons, adjusting coordinates/splitting as necessary
+     *
+     * @note it is possible to have length zero intron
+     * @note throws logic_error if has intron that was unable to be matched to
+     * a pair of exons
      */
     void Gene::connect_introns() {
-        // get introns in sorted order
+        // no need to do anything if there are no introns
+        if (intron_vec_.size() == 0) {
+            return;
+        }
+        // otherwise, we need to process introns in sorted order
         sort(intron_vec_.begin(), intron_vec_.end(), Intron::islowerRegion<Intron>);
 
         // get index of next intron to look at (in sorted order)
         unsigned int intron_idx = 0;
-        // information about last exon (starts as null values)
-        Exon * prev_exon = nullptr;
-        int intron_start = -1;
+        Intron * cur_intron = intron_vec_[intron_idx];  // current intron
 
-        // loop over exons in sorted order
+        // information about previous exon (for pairs of exons with potential introns)
+        Exon * prev_exon = nullptr;
+
+        // find pair of adjacent full exons
         for (const auto & ex_pair : exon_map_) {
             // current exon is the value from exon_map
             Exon * cur_exon = ex_pair.second;
-            // current exon coordinates
-            const int cur_start = cur_exon->get_start();
-            const int cur_end = cur_exon->get_end();
             // ignore half exons
             if (cur_exon->get_start() < 0 || cur_exon->get_end() < 0) {
                 continue;
             }
-            // if this is the first real exon, store it and go to next exon
-            if (intron_start < 0) {
-                prev_exon = cur_exon;
-                intron_start = cur_end + 1;  // next valid intron start
-                continue;
-            }
-            // otherwise, intron between prev/cur exon has coordinates intron start/end:
-            const int intron_end = cur_start - 1;
-            // loop over remaining introns until past this possible intron
-            while (intron_idx < intron_vec_.size()) {
-                Intron * ir_ptr = intron_vec_[intron_idx];
-                if (ir_ptr->get_start() > intron_end) {
-                    // go to next pair of exons if ir_ptr is (intron_start, intron_end)
-                    break;
-                } else if (ir_ptr->get_end() >= intron_start) {
-                    // this intron overlaps (intron_start, intron_end)!
-                    // It is possible that this intron was split by the current exon?
-                    if (ir_ptr->get_end() > cur_end) {
-                        // In this case, we copy the intron so that it can be added again
-                        intron_vec_.insert(
-                                // insert at next position
-                                intron_vec_.cbegin() + intron_idx + 1,
-                                // copy constructor for new intron at next position
-                                new Intron(*ir_ptr));
-                    }
-                    // disconnect previously connected introns
-                    if (prev_exon->ob_irptr != nullptr) {
-                        // previous outbound intron of previous exon now disconnected
-                        prev_exon->ob_irptr->unset_markd();
-                    }
-                    if (cur_exon->ib_irptr != nullptr) {
-                        // previous inbound intron of current exon now disconnected
-                        cur_exon->ib_irptr->unset_markd();
-                    }
-                    // connect adjacent exons to ir_ptr
-                    prev_exon->ob_irptr = ir_ptr;
-                    cur_exon->ib_irptr = ir_ptr;
-                    // update boundaries and mark intron as connected
-                    ir_ptr->update_boundaries(intron_start, intron_end);
-                    ir_ptr->set_markd();
-                    // stop iterating over introns since we found one
-                    ++intron_idx;  // don't visit this intron again
-                    break;
-                } else {
-                    // this intron was not between exons in valid way.
-                    // this happens because of exon extension to the point that
-                    // there is no longer a valid intron there.
-                    // Delete the no longer valid intron and try the next one.
-                    delete ir_ptr;  // free memory for intron since not using it anymore
-                    intron_vec_.erase(intron_vec_.cbegin() + intron_idx);
+            // if we already have previous exon, compare exon pair to current intron
+            if (prev_exon != nullptr && cur_intron->get_start() <= cur_exon->get_start()) {
+                // We have exon pair, and current intron is before end of exon pair.
+                // Since we are processing introns/exons in sorted orders, this
+                // should be a match.
+                if (cur_intron->get_end() < prev_exon->get_end()) {
+                    // but we apparently don't match, which shouldn't ever happen.
+                    std::cerr << "ASSERTION ERROR: skipped disconnected intron "
+                        << cur_intron->get_key(this) << "\n";
+                    throw(std::logic_error("Introns found not between exons"));
+                } else if (cur_intron->get_end() >= cur_exon->get_end()) {
+                    // we match with this pair, but also with the next one.
+                    // so, we need to split the intron
+                    intron_vec_.insert(
+                            // insert at next position
+                            intron_vec_.cbegin() + intron_idx + 1,
+                            // copy constructor for new intron at next position
+                            new Intron(*cur_intron));
+                }
+                // update exon pair/intron accordingly
+                // disconnect previously connected introns
+                if (prev_exon->ob_irptr != nullptr) {
+                    // previous outbound intron of previous exon now disconnected
+                    prev_exon->ob_irptr->unset_markd();
+                }
+                if (cur_exon->ib_irptr != nullptr) {
+                    // previous inbound intron of current exon now disconnected
+                    cur_exon->ib_irptr->unset_markd();
+                }
+                // connect adjacent exons to current intron
+                prev_exon->ob_irptr = cur_intron;
+                cur_exon->ib_irptr = cur_intron;
+                // update boundaries and mark intron as connected
+                cur_intron->update_boundaries(prev_exon->get_end() + 1,
+                                              cur_exon->get_start() - 1);
+                cur_intron->set_markd();
+                // update which intron we will be looking at next time
+                ++intron_idx;  // don't visit this intron again
+                cur_intron = intron_vec_[intron_idx];  // get the next intron
+                if (intron_idx >= intron_vec_.size()) {
+                    // we are done processing introns
+                    return;
                 }
             }
-            // keep information about current exon as next previous exon
+            // Either this was first exon, exon pair was before intron, or we
+            // just processed a intron that matched current exon pair.
+            // Regardless, all we have to do now is update prev_exon for next
+            // pair.
             prev_exon = cur_exon;
-            intron_start = cur_end + 1;  // next valid intron start
+        }
+        // if we have any remaining introns, we missed some...
+        if (intron_idx < intron_vec_.size()) {
+            for (; intron_idx < intron_vec_.size(); ++intron_idx) {
+                std::cerr << "ASSERTION ERROR: skipped disconnected intron "
+                    << intron_vec_[intron_idx]->get_key(this) << "\n";
+            }
+            throw(std::logic_error("Introns found not between exons"));
         }
     }
 
