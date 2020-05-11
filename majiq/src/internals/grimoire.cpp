@@ -184,7 +184,11 @@ namespace grimoire {
 
                 if (opened_exon.size() > 0){
                     if (nullptr != last_5prime){
-                        for (const auto &jj2: opened_exon){
+                        for (auto jj2_it = opened_exon.crbegin();
+                                jj2_it != opened_exon.crend(); ++jj2_it) {
+                            // loop backwards for maximal exon extension
+                            // compatible with maximum denovo difference
+                            Junction* jj2 = *jj2_it;
                             newExonDefinition(jj2->get_end(), last_5prime->get_start(), jj2, last_5prime, false) ;
                         }
                         last_5prime = nullptr ;
@@ -198,7 +202,10 @@ namespace grimoire {
                 opened_exon.push_back(ss.j) ;
             }
         }
-        for (const auto &jj2: opened_exon){
+        for (auto jj2_it = opened_exon.crbegin(); jj2_it != opened_exon.crend(); ++jj2_it) {
+            // loop backwards for maximal exon extension
+            // compatible with maximum denovo difference
+            Junction* jj2 = *jj2_it;
             int coord = last_5prime == nullptr ? jj2->get_end()+10 : last_5prime->get_start() ; 
             newExonDefinition(jj2->get_end(), coord, jj2, last_5prime, false) ;
         }
