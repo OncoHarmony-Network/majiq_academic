@@ -274,8 +274,8 @@ namespace grimoire {
                     continue ;
                 } else {
                     // are we going to close a valid intron?
-                    if ((ss.coord - start_ir) >= 2) {
-                        // the intron has positive length, so yes!
+                    if ((ss.coord - start_ir) > 0) {
+                        // the intron has non-negative length, so yes!
                         end_ir = ss.coord;
                         // create the intron
                         Intron * irObj = new Intron(
@@ -298,8 +298,8 @@ namespace grimoire {
                           bool denovo){
         bool found = false ;
         for (const auto &ir: intron_vec_){
-            if (ir->get_end() < inIR_ptr->get_start() || ir->get_start() > inIR_ptr->get_end()) continue ;
-            if (ir->get_end() >= inIR_ptr->get_start() && ir->get_start() <= inIR_ptr->get_end()){
+            // if passed intron overlaps, combine information with inIR_ptr
+            if (ir->get_end() > inIR_ptr->get_start() - 2 && ir->get_start() - 2 < inIR_ptr->get_end()) {
                 ir->overlaping_intron(inIR_ptr) ;
                 ir->update_flags(min_coverage, min_exps, min_bins) ;
                 ir->clear_nreads(reset) ;
@@ -684,7 +684,7 @@ namespace grimoire {
 
     bool Intron::is_reliable(float min_bins, int eff_len) {
         // exit early if possible
-        if (length() <= 0 || numbins_ <= 0 || read_rates_ptr_ == nullptr) {
+        if (length() < 0 || numbins_ <= 0 || read_rates_ptr_ == nullptr) {
             return false;
         }
 
