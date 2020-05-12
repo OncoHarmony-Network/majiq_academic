@@ -56,6 +56,20 @@ namespace io_bam{
             unsigned int nthreads_;
             map<string, vector<overGene*>> glist_ ;
             map<string, vector<Intron*>> intronVec_ ;
+            /**
+             * cumulative maximum ends for intronVec_
+             *
+             * vectors are same length as intronVec_ but enable binary
+             * search operations to be performed on intervals sorted in
+             * lexicographical order on interval ends (since raw ends are not
+             * properly partitioned)
+             *
+             * @note We do not have one for glist_ although we use lower_bound_
+             * operation because it is partitioned by construction in
+             * prepare_genelist()
+             */
+            map<string, vector<int>> intronVec_end_cummax_;
+
             unsigned int junc_limit_index_ ;
             bool simpl_ ;
             omp_lock_t map_lck_ ;
