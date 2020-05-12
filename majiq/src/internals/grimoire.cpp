@@ -918,22 +918,53 @@ namespace grimoire {
         }
     }
 
+    /**
+     * Obtain vector of intron pointers that are valid and intersect provided coordinates
+     *
+     * @note coordinates of intron and input start/end are for closed 1-indexed
+     * intervals. To handle length-0 introns, we implicitly adjust the
+     * coordinates by +/- 1 to work with open 1-indexed coordinates, so that
+     * intervals for length-0 introns are not degenerate and thus easier to
+     * reason with
+     * @note std::lower_bound assumes that gObj->intron_vec_ is partitioned
+     * with respect to _Region::func_comp (compares intron end to a single
+     * value). In connect_introns, we sorted in coordinate order (start, end).
+     * Since we know that we should not have overlapping introns, this is
+     * equivalent to sorting by just start, or more importantly, by just end,
+     * which is sufficient to make the vector appropriately partitioned. Thus,
+     * this function requires the gene's intron vector to be appropriately
+     * partitioned, for which sorting by coordinate is a sufficient condition.
+     * Under current use (applied after Gene::connect_introns(), this condition
+     * is met.
+     */
     vector<Intron *> find_intron_retention(Gene * gObj, int start, int end){
         vector<Intron*> ir_vec ;
-        vector<Intron *>::iterator low = lower_bound (gObj->intron_vec_.begin(), gObj->intron_vec_.end(),
-                                                      start, _Region::func_comp ) ;
-        if (low ==  gObj->intron_vec_.end()) return ir_vec ;
+        // iterator over intron_vec_ starting with first intron where intron.end + 1 >= start - 1
+        vector<Intron *>::iterator low = lower_bound(
+                gObj->intron_vec_.begin(), gObj->intron_vec_.end(),
+                start - 2, _Region::func_comp);
+        // are there any introns that are past the start coordinate?
+        if (low ==  gObj->intron_vec_.end()) {
+            // no, return the empty vector
+            return ir_vec;
+        }
+        // keep adding introns that match and are valid until no longer possible
         for (; low != gObj->intron_vec_.end() ; low++){
             Intron * irp = *low;
-
-            if(irp->get_start()> end){
+            // if introns are past input coordinates, we have accumulated all
+            // possible values
+            if(irp->get_start() - 2 >= end) {
                 break ;
             }
-            if(irp->get_end() < start){
+            // current intron does not intersect
+            if(irp->get_end() <= start - 2) {
                 continue ;
             }
-            if (irp->get_ir_flag() && irp->is_connected())
-                ir_vec.push_back(irp) ;
+            // only if we get here is the intron intersecting, make sure it's valid
+            if (irp->get_ir_flag() && irp->is_connected()) {
+                // we want this intron pointer, so add it to the returned vector
+                ir_vec.push_back(irp);
+            }
         }
         return ir_vec ;
     }
