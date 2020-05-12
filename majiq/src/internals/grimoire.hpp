@@ -630,6 +630,11 @@ namespace grimoire{
             }
     };
 
+    /**
+     * Group of genes over a region. Region is union over genes. Typically
+     * constructed to partition genes on chromosome into directly/indirectly
+     * overlapping gene lists
+     */
     class overGene: public _Region{
         public:
             vector<Gene *> glist ;
