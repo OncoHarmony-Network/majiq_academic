@@ -97,7 +97,7 @@
         </a>
         <ul class="pure-menu-list">
             <li class="pure-menu-item">
-                <a href="{{ url_for('index') }}" class="pure-menu-link">Index</a>
+                <a href="{{ url_for('main.index') }}" class="pure-menu-link">Index</a>
             </li>
             <li class="pure-menu-item">
                 <span class="tools-menu-btn splice-graph-tools pure-menu-link" id="splice-graph-menu-btn">Splice Graph</span>
@@ -133,7 +133,7 @@
                     <strong>Note:</strong> overlaps with the following Genes:
                     {% set sep = joiner(" ; ") %}
                     {% for _gene in gene.overlap %}
-                        {{ sep() }}<a href="{{ url_for('gene', gene_id=_gene[0])}}">{{ _gene[1] }}</a>
+                        {{ sep() }}<a href="{{ url_for('main.gene', gene_id=_gene[0])}}">{{ _gene[1] }}</a>
                     {% endfor %}
                 </div>
             {% endif %}

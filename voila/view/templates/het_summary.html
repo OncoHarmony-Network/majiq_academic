@@ -153,7 +153,7 @@
             }
         })));
 
-        json_ajax('{{ url_for("nav", gene_id=gene.id) }}').then(json => {
+        json_ajax('{{ url_for("main.nav", gene_id=gene.id) }}').then(json => {
             document.querySelector('.prev-gene').addEventListener('click', () => {
                 window.location.href = json.prev;
             });
@@ -163,13 +163,13 @@
             });
         });
 
-        json_ajax('{{ url_for("splice_graph", gene_id=gene.id) }}').then(gene => {
+        json_ajax('{{ url_for("main.splice_graph", gene_id=gene.id) }}').then(gene => {
             const sgs = new SpliceGraphs('.splice-graph-container', {
                 gene: gene,
                 remove_img: '{{ url_for('static', filename='img/remove.svg')}}',
                 remove_fn: event => {
                     const sg = event.target.closest('.splice-graph');
-                    send_ajax('{{ url_for('psi_splice_graphs') }}', {'remove': [sg.dataset.group, sg.dataset.experiment]})
+                    send_ajax('{{ url_for('main.psi_splice_graphs') }}', {'remove': [sg.dataset.group, sg.dataset.experiment]})
                         .then(() => {
                             sg.remove();
                             SpliceGraphTools._populate_sg_form();
@@ -187,7 +187,7 @@
                         return [lsv_id, highlight, weighted];
                     });
 
-                send_ajax('{{ url_for("lsv_highlight") }}', hl_data).then(lsvs => {
+                send_ajax('{{ url_for("main.lsv_highlight") }}', hl_data).then(lsvs => {
                     sgs.highlight(lsvs);
                 })
 
@@ -211,7 +211,7 @@
             $('.lsv-table tbody').on('mouseenter', 'tr', function(){
                 const hl_data = [[$(this).closest('.lsv-table').data('lsv-id'), true, false]];
                 const junc_coords = $(this).children().eq(0).text().split('-').map(function (x){return parseInt(x, 10)});
-                send_ajax('{{ url_for("lsv_highlight") }}', hl_data).then(lsvs => {
+                send_ajax('{{ url_for("main.lsv_highlight") }}', hl_data).then(lsvs => {
                     $.each(lsvs, function(i, v){
                         lsvs[i]['junctions'] = lsvs[i]['junctions'].filter(function(junc){return junc[0] === junc_coords[0] && junc[1] === junc_coords[1]});
                         if (!(lsvs[i]['intron_retention'][0] === junc_coords[0] && lsvs[i]['intron_retention'][1] === junc_coords[1])){
@@ -228,7 +228,7 @@
 
         document.querySelectorAll('.lsv-cartoon').forEach(async function (c) {
             const lsv_id = c.closest('.lsv').dataset.lsvId;
-            json_ajax('{{ url_for("lsv_data") }}/' + encodeURIComponent(lsv_id))
+            json_ajax('{{ url_for("main.lsv_data") }}/' + encodeURIComponent(lsv_id))
                 .then(lsv_data => {
                     const lsv = new Lsv(lsv_data);
                     lsv.cartoon(c)
@@ -393,7 +393,7 @@
                     searching: false,
                     info: false,
                     ajax: {
-                        url: '{{ url_for('summary_table') }}',
+                        url: '{{ url_for('main.summary_table') }}',
                         data: d => {
                             d['lsv_id'] = lsv_table.dataset.lsvId;
                             d['stat_name'] = document.querySelector('input[name=stat-name]:checked').value;
@@ -460,7 +460,7 @@
         document.querySelectorAll('.lsv')
             .forEach(l => {
                 const lsv_id = l.dataset.lsvId;
-                copy_lsv_modal_dropdown(l, '{{ url_for("copy_lsv") }}/' + encodeURIComponent(lsv_id))
+                copy_lsv_modal_dropdown(l, '{{ url_for("main.copy_lsv") }}/' + encodeURIComponent(lsv_id))
             })
 
         $('.save-lsv').click(function(){

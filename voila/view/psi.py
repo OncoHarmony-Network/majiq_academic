@@ -2,7 +2,7 @@ import os
 from bisect import bisect
 from operator import itemgetter
 
-from flask import render_template, url_for, jsonify, request, session, Flask, Response
+from flask import render_template, url_for, jsonify, request, session, Response
 
 from voila.api.view_matrix import ViewPsi, ViewPsis
 from voila.api.view_splice_graph import ViewSpliceGraph
@@ -13,27 +13,26 @@ from voila.view.forms import LsvFiltersForm
 from voila.config import ViewConfig
 from voila.exceptions import LsvIdNotFoundInVoilaFile, LsvIdNotFoundInAnyVoilaFile, GeneIdNotFoundInVoilaFile
 
-app = Flask(__name__)
-app.secret_key = os.urandom(16)
+app, bp = views.get_bp(__name__)
 
-@app.before_request
+@bp.before_request
 def init_session():
     if not 'omit_simplified' in session:
         session['omit_simplified'] = True
 
-@app.route('/')
+@bp.route('/')
 def index():
     form = LsvFiltersForm()
     return render_template('psi_index.html', form=form,
                            multi_view=len(ViewConfig().voila_files) > 1)
 
 
-@app.route('/toggle-simplified', methods=('POST',))
+@bp.route('/toggle-simplified', methods=('POST',))
 def toggle_simplified():
     session['omit_simplified'] = not session['omit_simplified']
     return jsonify({'ok':1})
 
-@app.route('/gene/<gene_id>/')
+@bp.route('/gene/<gene_id>/')
 def gene(gene_id):
 
     with ViewPsis() as m, ViewSpliceGraph() as sg:
@@ -88,7 +87,7 @@ def gene(gene_id):
                                )
 
 
-@app.route('/index-table', methods=('POST',))
+@bp.route('/index-table', methods=('POST',))
 def index_table():
 
     with ViewPsis() as v, ViewSpliceGraph(omit_simplified=session.get('omit_simplified', False)) as sg:
@@ -108,7 +107,7 @@ def index_table():
             ucsc = views.ucsc_href(sg.genome, gene['chromosome'], start, end)
 
             records[idx] = [
-                {'href': url_for('gene', gene_id=gene_id), 'gene_name': gene_name},
+                {'href': url_for('main.gene', gene_id=gene_id), 'gene_name': gene_name},
                 lsv_id,
                 psi.lsv_type
             ]
@@ -119,25 +118,25 @@ def index_table():
         return jsonify(dict(dt))
 
 
-@app.route('/nav/<gene_id>', methods=('POST',))
+@bp.route('/nav/<gene_id>', methods=('POST',))
 def nav(gene_id):
     with ViewPsis() as h:
         gene_ids = list(sorted(h.gene_ids))
 
         if len(gene_ids) == 1:
             return jsonify({
-                'next': url_for('gene', gene_id=gene_ids[0]),
-                'prev': url_for('gene', gene_id=gene_ids[0])
+                'next': url_for('main.gene', gene_id=gene_ids[0]),
+                'prev': url_for('main.gene', gene_id=gene_ids[0])
             })
         idx = bisect(gene_ids, gene_id)
 
         return jsonify({
-            'next': url_for('gene', gene_id=gene_ids[idx % len(gene_ids)]),
-            'prev': url_for('gene', gene_id=gene_ids[(idx % len(gene_ids)) - 2])
+            'next': url_for('main.gene', gene_id=gene_ids[idx % len(gene_ids)]),
+            'prev': url_for('main.gene', gene_id=gene_ids[(idx % len(gene_ids)) - 2])
         })
 
 
-@app.route('/splice-graph/<gene_id>', methods=('POST', 'GET'))
+@bp.route('/splice-graph/<gene_id>', methods=('POST', 'GET'))
 def splice_graph(gene_id):
     with ViewSpliceGraph(omit_simplified=session.get('omit_simplified', False)) as sg, ViewPsis() as v:
         exp_names = v.splice_graph_experiment_names
@@ -147,7 +146,7 @@ def splice_graph(gene_id):
         return jsonify(gd)
 
 
-@app.route('/summary-table/<gene_id>', methods=('POST',))
+@bp.route('/summary-table/<gene_id>', methods=('POST',))
 def summary_table(gene_id):
 
     with ViewPsis() as v, ViewSpliceGraph(omit_simplified=session.get('omit_simplified', False)) as sg:
@@ -188,7 +187,7 @@ def summary_table(gene_id):
         return jsonify(dict(dt))
 
 
-@app.route('/psi-splice-graphs', methods=('POST',))
+@bp.route('/psi-splice-graphs', methods=('POST',))
 def psi_splice_graphs():
     with ViewPsis() as v:
         try:
@@ -211,8 +210,8 @@ def psi_splice_graphs():
         return jsonify(sg_init)
 
 
-@app.route('/lsv-data', methods=('POST',))
-@app.route('/lsv-data/<lsv_id>', methods=('POST',))
+@bp.route('/lsv-data', methods=('POST',))
+@bp.route('/lsv-data/<lsv_id>', methods=('POST',))
 def lsv_data(lsv_id):
 
     with ViewSpliceGraph(omit_simplified=session.get('omit_simplified', False)) as sg, ViewPsis() as m:
@@ -234,8 +233,8 @@ def lsv_data(lsv_id):
             'exon_number': exon_number
         })
 
-@app.route('/violin-data', methods=('POST',))
-@app.route('/violin-data/<lsv_id>', methods=('POST',))
+@bp.route('/violin-data', methods=('POST',))
+@bp.route('/violin-data/<lsv_id>', methods=('POST',))
 def violin_data(lsv_id):
     config = ViewConfig()
     if 'hidden_idx' in request.form:
@@ -319,7 +318,7 @@ def violin_data(lsv_id):
         return jsonify(dict(dt))
 
 
-@app.route('/lsv-highlight', methods=('POST',))
+@bp.route('/lsv-highlight', methods=('POST',))
 def lsv_highlight():
     json_data = request.get_json()
 
@@ -368,7 +367,7 @@ def lsv_highlight():
         return jsonify(lsvs)
 
 
-@app.route('/download-lsvs', methods=('POST',))
+@bp.route('/download-lsvs', methods=('POST',))
 def download_lsvs():
     dt = DataTables(Index.psi(), ('gene_name', 'lsv_id'), slice=False)
 
@@ -378,7 +377,7 @@ def download_lsvs():
     return Response(data, mimetype='text/plain')
 
 
-@app.route('/download-genes', methods=('POST',))
+@bp.route('/download-genes', methods=('POST',))
 def download_genes():
     dt = DataTables(Index.psi(), ('gene_name', 'lsv_id'), slice=False)
 
@@ -388,7 +387,10 @@ def download_genes():
     return Response(data, mimetype='text/plain')
 
 
-@app.route('/copy-lsv', methods=('POST',))
-@app.route('/copy-lsv/<lsv_id>', methods=('POST',))
+@bp.route('/copy-lsv', methods=('POST',))
+@bp.route('/copy-lsv/<lsv_id>', methods=('POST',))
 def copy_lsv(lsv_id):
     return views.copy_lsv(lsv_id, ViewPsi, voila_file=ViewConfig().voila_files[0])
+
+
+app.register_blueprint(bp)

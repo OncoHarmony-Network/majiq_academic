@@ -742,7 +742,7 @@ class SpliceGraphs {
         sg.classList.add('splice-graph');
 
         this.splice_graph_init(sg);
-        send_ajax('/psi-splice-graphs', {'add': [sg.dataset.group, sg.dataset.experiment]});
+        send_ajax(base_url+'/psi-splice-graphs', {'add': [sg.dataset.group, sg.dataset.experiment]});
 
         // if there's a scroll bar, then run update one more time to remove it.
         if (document.querySelector('.top').scrollWidth > document.querySelector('.top').clientWidth)
@@ -750,7 +750,7 @@ class SpliceGraphs {
     }
 
     init_create() {
-        return json_ajax('/psi-splice-graphs')
+        return json_ajax(base_url+'/psi-splice-graphs')
             .then(json => json.forEach(x => this.create(x[0], x[1])))
             .then(() => this)
     }

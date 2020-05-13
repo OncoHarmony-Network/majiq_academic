@@ -5,7 +5,7 @@
         const view_type = 'dpsi';
         const filter_exon_numbers = {{ filter_exon_numbers|tojson }};
 
-        json_ajax('{{ url_for("nav", gene_id=gene.id) }}').then(json => {
+        json_ajax('{{ url_for("main.nav", gene_id=gene.id) }}').then(json => {
             document.querySelector('.prev-gene').addEventListener('click', () => {
                 window.location.href = json.prev;
             });
@@ -15,7 +15,7 @@
             });
         });
 
-        json_ajax('{{ url_for("splice_graph", gene_id=gene.id) }}').then(gene => {
+        json_ajax('{{ url_for("main.splice_graph", gene_id=gene.id) }}').then(gene => {
 
             const sgs = new SpliceGraphs('.splice-graph-container', {
                 gene: gene,
@@ -24,7 +24,7 @@
                     const sg = event.target.closest('.splice-graph');
                     const grp = sg.dataset.group;
                     const exp = sg.dataset.exp;
-                    send_ajax('{{ url_for('psi_splice_graphs') }}', {'remove': [grp, exp]})
+                    send_ajax('{{ url_for('main.psi_splice_graphs') }}', {'remove': [grp, exp]})
                         .then(() => {
                             sg.remove();
                             SpliceGraphTools._populate_sg_form();
@@ -44,7 +44,7 @@
                         return [lsv_id, highlight, weighted];
                     });
 
-                send_ajax('{{ url_for("lsv_highlight") }}', hl_data).then(lsvs => {
+                send_ajax('{{ url_for("main.lsv_highlight") }}', hl_data).then(lsvs => {
                     sgs.highlight(lsvs);
                 })
             };
@@ -58,7 +58,7 @@
                             return;
 
                         const lsv_id = tds[1].textContent;
-                        json_ajax('{{ url_for("lsv_data") }}/' + encodeURIComponent(lsv_id))
+                        json_ajax('{{ url_for("main.lsv_data") }}/' + encodeURIComponent(lsv_id))
                             .then(lsv_data => {
                                 const lsv = new Lsv(lsv_data);
                                 const violin = new Violin(lsv_data.lsv);
@@ -107,7 +107,7 @@
                             });
 
 
-                        copy_lsv_modal(n, '{{ url_for("copy_lsv") }}/' + encodeURIComponent(lsv_id))
+                        copy_lsv_modal(n, '{{ url_for("main.copy_lsv") }}/' + encodeURIComponent(lsv_id))
 
                     })
                 );
@@ -123,7 +123,7 @@
                 lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, "All"]],
                 order: [[1, "asc"]],
                 ajax: {
-                    url: '{{ url_for('summary_table', gene_id=gene.id) }}',
+                    url: '{{ url_for('main.summary_table', gene_id=gene.id) }}',
                     type: 'POST'
                 },
                 columnDefs: [
