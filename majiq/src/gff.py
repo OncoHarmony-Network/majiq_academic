@@ -2,7 +2,17 @@ from collections import namedtuple
 import urllib.parse as urllib
 import gzip
 
-gffInfoFields = ["seqid", "source", "type", "start", "end", "score", "strand", "phase", "attributes"]
+gffInfoFields = [
+    "seqid",
+    "source",
+    "type",
+    "start",
+    "end",
+    "score",
+    "strand",
+    "phase",
+    "attributes",
+]
 GFFRecord = namedtuple("GFFRecord", gffInfoFields)
 
 
@@ -12,7 +22,6 @@ def __parse_gff_attributes(attribute_string):
     :param attribute_string:
     """
 
-
     if attribute_string == ".":
         return {}
     ret = {}
@@ -20,7 +29,7 @@ def __parse_gff_attributes(attribute_string):
         key, value = attribute.split("=")
         key = urllib.unquote(key)
         if key in ret:
-            key = 'extra_%s' % key
+            key = "extra_%s" % key
             if key not in ret:
                 ret[key] = []
             ret[key].append(urllib.unquote(value))
@@ -60,8 +69,8 @@ def parse_gff3(filename):
                 "score": None if parts[5] == "." else float(parts[5]),
                 "strand": None if parts[6] == "." else urllib.unquote(parts[6]),
                 "phase": None if parts[7] == "." else urllib.unquote(parts[7]),
-                "attributes": __parse_gff_attributes(parts[8])
+                "attributes": __parse_gff_attributes(parts[8]),
             }
             # Alternatively, you can emit the dictionary here, if you need mutabwility:
-            #yield normalized_info
+            # yield normalized_info
             yield GFFRecord(**normalized_info)

@@ -15,7 +15,6 @@ def pipeline_run(pipeline):
 
 
 class BasicPipeline:
-
     def __init__(self, args):
         """Basic configuration shared by all pipelines"""
 
