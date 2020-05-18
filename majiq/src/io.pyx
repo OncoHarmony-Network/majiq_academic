@@ -197,6 +197,38 @@ cdef int dump_hettmp_file(str fname, np.ndarray[np.float32_t, ndim=2, mode="c"] 
 
 cdef void get_coverage_mat_lsv(map[string, qLSV*]& result, list file_list, int nthreads,
                                bint fltr, int minreads, int minnonzero):
+    """ Add coverage from file_list majiq files to named LSVs in result
+
+    Parameters
+    ----------
+    result: map[string, qLSV*]
+        Map from lsv_id string to LSV object pointer with coverage information
+        and enabled information, updated by reference
+    file_list: List[str]
+        List of file paths with MAJIQ coverage information
+    nthreads: int
+        Number of threads, which is currently unused
+    fltr: bool
+        If True, use all LSVs regardless of coverage. If False (used by HET),
+        only add coverage for an experiment if passes minreads/minnonzero
+        filters.
+    minreads, minnonzero: int
+        per-experiment filters to be used on reads/positions
+
+    Notes
+    -----
+    Each LSV has a global flag indicating whether it is enabled, which is
+    modified by qLSV::set_bool(). This is used by HET on a per-experiment
+    basis. If fltr is True, any LSV found in any of the MAJIQ files that also
+    passed group filters (and is thus in result) will have this set to enabled.
+    Otherwise (fltr is False), if the LSV was previously enabled, it will stay
+    enabled, but otherwise, it will only be set to enabled if it passes
+    per-experiment filters in at least one of the input MAJIQ files. This is
+    used in HET to disable LSVs on per-experiment basis by disabling all LSVs
+    and only re-enabling the LSVs found above per-experiment filters in each
+    file individually each time (file_list of length 1 each time after
+    resetting all LSVs to disabled)
+    """
     cdef int n_exp = len(file_list)
     cdef str lid, lsv_type, fname
     cdef string lsv_id
@@ -225,8 +257,10 @@ cdef void get_coverage_mat_lsv(map[string, qLSV*]& result, list file_list, int n
 
                     if prev_lsvid != lsv_id:
                         if prev_lsvid != empty_string:
+                            # update add coverage/set status for previous LSV
                             result[prev_lsvid].add(<np.float32_t *> cov.data, msamples)
-                            result[prev_lsvid].set_bool( bflt )
+                            result[prev_lsvid].set_bool(bflt or result[prev_lsvid].is_enabled())
+                        # if fltr, LSV will be used no matter what
                         bflt = fltr or (row[3] >=minreads and row[4] >= minnonzero)
                         prev_lsvid = lsv_id
                         prev_juncidx = -1
@@ -238,7 +272,9 @@ cdef void get_coverage_mat_lsv(map[string, qLSV*]& result, list file_list, int n
                         bflt = bflt or (row[3] >=minreads and row[4] >= minnonzero)
                     prev_juncidx += 1
                     cov[prev_juncidx] = data[idx]
+            # make sure to add coverage/set status for final LSV
             result[prev_lsvid].add(<np.float32_t *> cov.data, msamples)
+            result[prev_lsvid].set_bool(bflt or result[prev_lsvid].is_enabled())
 
     return
 
