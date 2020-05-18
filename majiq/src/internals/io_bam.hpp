@@ -63,9 +63,7 @@ namespace io_bam{
             void update_eff_len(const unsigned int new_eff_len);
 
             // random number generation persistent in class
-            // XXX -- consider using Mersenne-Twister to give more uniform
-            // implementation across architectures/less compiler-dependent
-            static vector<default_random_engine> generators_;
+            static vector<std::mt19937> generators_;
 
         public:
             vector<shared_ptr<vector<float>>> junc_vec;
@@ -90,10 +88,15 @@ namespace io_bam{
             }
 
             int parse_read_into_junctions(bam_hdr_t *header, bam1_t *read) ;
-            void add_junction(string chrom, char strand, int start, int end, int read_pos, int first_offpos, int sreads) ;
+            void add_junction(string chrom, char strand, int start, int end, const unsigned int offset, int sreads) ;
             int* get_junc_vec_summary() ;
             unsigned int get_junc_limit_index() { return junc_limit_index_ ; };
-            int normalize_stacks(vector<float> vec, float sreads, int npos, float fitfunc_r, float pvalue_limit) ;
+
+            /**
+             * return number of nonoutlier stacks in vec, which are sorted into
+             * corresponding first positions of vec
+             */
+            unsigned int normalize_stacks(vector<float> &vec, float sreads, const float fitfunc_r, const float pvalue_limit);
             int bootstrap_samples(int msamples, int ksamples, float* boots, float fitfunc_r, float pvalue_limit);
             void detect_introns(float min_intron_cov, unsigned int min_experiments, float min_bins, bool reset, bool denovo) ;
 

@@ -401,11 +401,12 @@ namespace grimoire{
             }
 
             void add_read_rates_buff(int eff_len){
-                nxbin_      = (int) ((length()+ eff_len) / eff_len) ;
-                nxbin_mod_  = (length() % eff_len) ;
-                nxbin_off_  = nxbin_mod_ * ( nxbin_+1 ) ;
-                numbins_    = eff_len ;
-                read_rates_ptr_ = make_shared<vector<float>>(numbins_, 0);
+                // set up buffer and constants to bin raw positions to eff_len equivalent junction positions
+                nxbin_      = (int) ((length() + eff_len) / eff_len);  // minimum number of raw positions per equivalent junction position
+                nxbin_mod_  = length() % eff_len;  // number of equivalent positions that have 1 more raw position than nxbin_
+                nxbin_off_  = nxbin_mod_ * (nxbin_ + 1);  // offset of raw position -- before: nxbin_+1 per position, after: nxbin_ per position
+                numbins_    = eff_len;  // number of equivalent junction positions (keep value)
+                read_rates_ptr_ = make_shared<vector<float>>(numbins_, 0);  // allocate per-position read rate buffer as zeroes
             }
 
             void initReadCovFromVector(vector<float>& cov){
@@ -415,17 +416,31 @@ namespace grimoire{
 
             }
 
-            void  add_read(int read_pos, int eff_len, int s){
-                int st = get_start() - eff_len ;
-                if (read_rates_ptr_ == nullptr) {
-                    add_read_rates_buff(eff_len) ;
+            /**
+             * Add s reads to intron at the given offset with respect to intron start
+             *
+             * @param intron_offset genomic/read offset of intron start to last
+             * admissible position on read
+             * @param eff_len number of bins for different positions
+             * @param s number of reads to add
+             */
+            void add_read(int intron_offset, int eff_len, int s){
+                if (intron_offset < 0 || intron_offset >= length() + eff_len) {
+                    cerr << "Intron offset " << intron_offset << " miscalculated\n";  // XXX
+                    return;
                 }
-                int offset = (read_pos - st) ;
-                offset = (offset >=0) ? offset: 0 ;
-
-                const int off1 = (int) ((offset - nxbin_off_) / nxbin_) + nxbin_mod_ ;
-                const int off2 = (int) offset / (nxbin_+1) ;
-                offset = (int)(offset < nxbin_off_) ? off2: off1 ;
+                if (read_rates_ptr_ == nullptr) {
+                    add_read_rates_buff(eff_len);
+                }
+                // get offset over the eff_len bins using intron_offset
+                int offset = 0;
+                if (intron_offset < nxbin_off_) {
+                    // nxbin_ + 1 positions per bin
+                    offset = (int) intron_offset / (nxbin_ + 1);
+                } else {
+                    // nxbin_ positions per bin after nxbin_mod_
+                    offset = (int) ((intron_offset - nxbin_off_) / nxbin_) + nxbin_mod_;
+                }
                 (*read_rates_ptr_)[offset] += s;
             }
 

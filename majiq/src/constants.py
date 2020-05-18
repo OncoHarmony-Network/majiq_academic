@@ -49,6 +49,7 @@ MINVAL = 1e-300
 GIT_VERSION_FILE = 'git_version'
 
 
+HET_SAMPLING_SEED = 20200401
 all_stats = ["TNOM", "INFOSCORE", "WILCOXON"]
 
 
