@@ -740,15 +740,43 @@ namespace io_bam {
             if (npos == 0) {
                 // can't bootstrap from 0 positions (everything is default 0)
                 continue;
-            } else if (npos == 1 || vec[0] == vec[npos - 1]) {
-                // could bootstrap, but that would be a waste of effort since
-                // all valid positions for bootstrapping are the same
-                const float nreads = vec[0] * npos;  // inevitable result
+            }
+            // we perform parametric vs nonparametric bootstrap sampling
+            // depending on whether variance of bootstrap distribution is
+            // less than mean
+            // obviously parametric if constant
+            bool parametric_bootstrap = (npos == 1 || vec[0] == vec[npos - 1]);
+            float bootstrap_mean;
+            if (parametric_bootstrap) {
+                bootstrap_mean = vec[0];
+            } else {
+                // determine bootstrap mean and variance to determine if we
+                // want to go to parametric approach
+                // use Welford's online algorithm (see Wikipedia) to accumulate
+                bootstrap_mean = 0.;  // current value of mean
+                float cur_rss = 0.;  // current residual sum of squares
+                for (unsigned int cur_n = 0; cur_n < npos; ++cur_n) {
+                    const float x = vec[cur_n];
+                    const float dx = x - bootstrap_mean;
+                    bootstrap_mean += dx / (cur_n + 1);
+                    cur_rss += dx * (x - bootstrap_mean);
+                }
+                // current value bootstrap_mean is mean over all valid values
+                const float bootstrap_variance = cur_rss / npos;  // population variance
+                parametric_bootstrap = bootstrap_variance < bootstrap_mean;
+            }
+
+            std::mt19937 &generator = generators_[omp_get_thread_num()];
+            if (parametric_bootstrap) {
+                // variance < mean if we bootstrapped nonparametrically, so use
+                // Poisson distribution instead as conservative estimate of
+                // overdispersed variance
+                poisson_distribution<int> distribution(bootstrap_mean * npos);
                 for (int m = 0; m < msamples; ++m) {
                     const int idx2d = (jidx * msamples) + m;
-                    boots[idx2d] = nreads;
+                    boots[idx2d] = static_cast<float>(distribution(generator));
                 }
-            } else {  // npos > 1, where bootstrapping matters
+            } else {  // performing nonparametric sampling where overdispersed
                 // by sampling npos - 1 positions to sum, bootstrap samples will
                 // have correct variance (variance of difference between
                 // two draws from bootstrap distribution equals difference
@@ -758,7 +786,6 @@ namespace io_bam {
                 // rescale sum to be comparable to sum over all nonzero positions
                 const float scale_sum = npos / ksamples;
                 // generate random numbers
-                std::mt19937 &generator = generators_[omp_get_thread_num()];
                 uniform_int_distribution<unsigned int> distribution(0, npos - 1);
                 for (int m = 0; m < msamples; ++m) {
                     // index to update
