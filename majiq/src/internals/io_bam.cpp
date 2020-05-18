@@ -716,7 +716,7 @@ namespace io_bam {
         return npos;
     }
 
-    int IOBam::bootstrap_samples(int msamples, int ksamples, float* boots, float fitfunc_r, float pvalue_limit) {
+    int IOBam::bootstrap_samples(int msamples, float* boots, float fitfunc_r, float pvalue_limit) {
         const int njunc = junc_map.size();
 
         #pragma omp parallel for num_threads(nthreads_)
@@ -749,6 +749,15 @@ namespace io_bam {
                     boots[idx2d] = nreads;
                 }
             } else {  // npos > 1, where bootstrapping matters
+                // by sampling npos - 1 positions to sum, bootstrap samples will
+                // have correct variance (variance of difference between
+                // two draws from bootstrap distribution equals difference
+                // between two draws from generating distribution under
+                // appropriate assumptions)
+                const unsigned int ksamples = npos - 1;
+                // rescale sum to be comparable to sum over all nonzero positions
+                const float scale_sum = npos / ksamples;
+                // generate random numbers
                 std::mt19937 &generator = generators_[omp_get_thread_num()];
                 uniform_int_distribution<unsigned int> distribution(0, npos - 1);
                 for (int m = 0; m < msamples; ++m) {
@@ -756,11 +765,11 @@ namespace io_bam {
                     const int idx2d = (jidx * msamples) + m;
                     // accumulate ksamples reads from nonzero positions
                     float lambda = 0;
-                    for (int k = 0; k < ksamples; ++k) {
+                    for (unsigned int k = 0; k < ksamples; ++k) {
                         lambda += vec[distribution(generator)];
                     }
-                    // estimate per-position coverage using lambda, extrapolate to nonzero positions
-                    boots[idx2d] = (lambda * npos) / ksamples;
+                    // save rescaled sum over bootstrapped positions to output buffer
+                    boots[idx2d] = lambda * scale_sum;
                 }
             }
         }

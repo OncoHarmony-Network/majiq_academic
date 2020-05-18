@@ -106,8 +106,6 @@ def main():
                              help='Mark stack positions. Expects a p-value. Use a negative value in order to '
                                   'disable it. [Default: %(default)s]')
 
-    buildparser.add_argument('--k', default=50, type=int,
-                             help='Number of positions to sample per iteration. [Default: %(default)s]')
     buildparser.add_argument('--m', default=30, type=int,
                              help='Number of bootstrapping samples. [Default: %(default)s]')
     buildparser.add_argument('--irnbins', default=0.5, type=float, help='This values defines the number of bins with '
