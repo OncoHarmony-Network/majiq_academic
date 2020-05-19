@@ -115,7 +115,7 @@ cdef inline print_prior(vector[vector[psi_distr_t]] matrix, int nbins):
 
 
 cdef inline int gen_prior_matrix(vector[vector[psi_distr_t]]& prior_matrix, dict lsv_type, dict lsv_empirical_psi1,
-                            dict lsv_empirical_psi2, str output, list names, str plotpath, int iter, float binsize,
+                            dict lsv_empirical_psi2, str output, list names, int iter, float binsize,
                             int numbins, bint defaultprior, int minpercent, object logger) except -1:
 
     cdef psi_distr_t mixture_pdf = psi_distr_t(numbins*2)
@@ -172,9 +172,6 @@ cdef inline int gen_prior_matrix(vector[vector[psi_distr_t]]& prior_matrix, dict
                 np_pmatrix[prior_idx] /= np.sum(np_pmatrix[prior_idx])
 
             # renormalize so it sums 1
-
-        # plot_matrix(prior_matrix[prior_idx], "Prior Matrix , version %s" % prior_idx,
-        #             "prior_matrix_jun_%s" % nj, plotpath)
 
     for xx in range(numbins):
         for yy in range(numbins):

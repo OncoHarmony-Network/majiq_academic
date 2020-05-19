@@ -100,13 +100,6 @@ def main():
         " to pass individually. [Default: %(default)s]",
     )
 
-    common.add_argument(
-        "--plotpath",
-        default=None,
-        help="(UNUSED) Path to save the plot to, if not provided will show"
-        " on a matplotlib popup window. [Default: %(default)s]",
-    )
-
     buildparser = new_subparser()
     buildparser.add_argument(
         "transcripts", action="store", help="Annotation database in GFF3 format",
