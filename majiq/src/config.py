@@ -6,9 +6,8 @@ Class for parsing configuration files for MAJIQ build wrapping configparser
 
 import os
 import configparser
-from scipy import interpolate
 import numpy as np
-from majiq.src.constants import *
+import majiq.src.constants as constants
 import warnings
 
 
@@ -115,14 +114,12 @@ class Config(object):
                     mexp = self.min_exp
                 self.min_experiments[name] = int(min(len(ind_list), mexp))
                 for exp_idx in ind_list:
-                    found = False
+                    # try to find input file with this prefix from input folders
+                    prefix = self.exp_list[exp_idx]
+                    found = False  # update once found
                     if self.aggregate:
                         for j_dir in junc_dirlist:
-                            juncfile = "%s/%s.%s" % (
-                                j_dir,
-                                self.exp_list[exp_idx],
-                                JUNC_FILE_FORMAT,
-                            )
+                            juncfile = f"{j_dir}/{prefix}.{constants.JUNC_FILE_FORMAT}"
                             if os.path.isfile(juncfile):
                                 found = True
                                 self.sam_list.append(
@@ -132,16 +129,8 @@ class Config(object):
                     if found:
                         continue
                     for s_dir in sam_dirlist:
-                        bamfile = "%s/%s.%s" % (
-                            s_dir,
-                            self.exp_list[exp_idx],
-                            SEQ_FILE_FORMAT,
-                        )
-                        baifile = "%s/%s.%s" % (
-                            s_dir,
-                            self.exp_list[exp_idx],
-                            SEQ_INDEX_FILE_FORMAT,
-                        )
+                        bamfile = f"{s_dir}/{prefix}.{constants.SEQ_FILE_FORMAT}"
+                        baifile = f"{s_dir}/{prefix}.{constants.SEQ_INDEX_FILE_FORMAT}"
 
                         if os.path.isfile(bamfile) and os.path.isfile(baifile):
                             found = True
@@ -152,27 +141,23 @@ class Config(object):
 
                     if not found:
                         raise RuntimeError(
-                            "Error %s (and %s) or %s not "
-                            "found for file %s in any of "
-                            "the paths"
-                            % (
-                                SEQ_FILE_FORMAT,
-                                SEQ_INDEX_FILE_FORMAT,
-                                JUNC_FILE_FORMAT,
-                                self.exp_list[exp_idx],
-                            )
+                            f"No matching {constants.SEQ_FILE_FORMAT}"
+                            f" (and {constants.SEQ_INDEX_FILE_FORMAT})"
+                            f" or {constants.JUNC_FILE_FORMAT} file was found"
+                            f" matching the experiment {prefix} in any of"
+                            " the provided paths in the build configuration"
                         )
 
             opt_dict = {"strandness": self._set_strandness}
             strandness = {
-                "forward": FWD_STRANDED,
-                "reverse": REV_STRANDED,
-                "none": UNSTRANDED,
+                "forward": constants.FWD_STRANDED,
+                "reverse": constants.REV_STRANDED,
+                "none": constants.UNSTRANDED,
             }
             if "strandness" in general:
                 try:
                     global_strand = strandness[general["strandness"].lower()]
-                except:
+                except Exception:
                     raise RuntimeError(
                         "Incorrect Strand-specific option [forward, reverse, none]"
                     )
@@ -210,7 +195,7 @@ class Config(object):
                 dict1[option] = config_d.get(section, option)
                 if dict1[option] == -1:
                     print("skip: %s" % option)
-            except:
+            except Exception:
                 print("exception on %s!" % option)
                 dict1[option] = None
         return dict1

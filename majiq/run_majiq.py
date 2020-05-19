@@ -13,7 +13,7 @@ from majiq.src.build import build
 from majiq.src.calc_psi import calcpsi
 from majiq.src.deltapsi import deltapsi
 from majiq.src.indpnt import calc_independent
-from majiq.src.constants import *
+import majiq.src.constants as constants
 import sys
 
 
@@ -53,7 +53,9 @@ def main():
     )
 
     parser.add_argument(
-        "-v", action="version", version="%s-%s" % (VERSION, get_git_version())
+        "-v",
+        action="version",
+        version=f"{constants.VERSION}-{constants.get_git_version()}",
     )
 
     common = new_subparser()
