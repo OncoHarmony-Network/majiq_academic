@@ -116,13 +116,28 @@ def main():
     )
 
     buildparser.add_argument(
-        "--disable-ir",
-        dest="ir",
-        action="store_false",
-        default=True,
-        help="Disables intron retention detection [Default: ir enabled]",
+        "--minreads",
+        default=3,
+        type=int,
+        help="Minimum number of reads threshold combining all positions in a"
+        " LSV to consider that the LSV exist in the data. [Default: %(default)s]",
+    )
+    buildparser.add_argument(
+        "--minpos",
+        default=2,
+        type=int,
+        help="Minimum number of start positions with at least 1 read in a LSV"
+        " to consider that the LSV exist in the data. [Default: %(default)s]",
     )
 
+    # denovo flags
+    buildparser.add_argument(
+        "--min-denovo",
+        default=5,
+        type=int,
+        help="Minimum number of reads threshold combining all positions in a"
+        " LSV to consider that denovo junction is real. [Default: %(default)s]",
+    )
     buildparser.add_argument(
         "--disable-denovo",
         dest="denovo",
@@ -133,6 +148,28 @@ def main():
         " detected. [Default: denovo enabled]",
     )
 
+    # intron retention flags
+    buildparser.add_argument(
+        "--irnbins",
+        default=0.5,
+        type=float,
+        help="This values defines the number of bins with some coverage that"
+        "an intron needs to pass to be accepted as real [Default: %(default)s]",
+    )
+    buildparser.add_argument(
+        "--min-intronic-cov",
+        default=0.01,
+        type=float,
+        help="Minimum number of reads on average in intronic sites, only for"
+        " intron retention. Default: %(default)s]",
+    )
+    buildparser.add_argument(
+        "--disable-ir",
+        dest="ir",
+        action="store_false",
+        default=True,
+        help="Disables intron retention detection [Default: ir enabled]",
+    )
     buildparser.add_argument(
         "--disable-denovo-ir",
         dest="denovo_ir",
@@ -141,6 +178,14 @@ def main():
         help="Disables denovo detection of introns. This will speedup the"
         " execution but reduce the number of LSVs detected. [Default: denovo"
         " introns enabled]",
+    )
+    buildparser.add_argument(
+        "--annotated_ir_always",
+        dest="annot_ir_always",
+        action="store_true",
+        default=False,
+        help="When this flag is set all the annotated ir will be accepted even"
+        " if they do not pass the filters.",
     )
 
     buildparser.add_argument(
@@ -160,37 +205,6 @@ def main():
         " and unified splicegraph. Default: %(default)s]",
     )
 
-    buildparser.add_argument(
-        "--min-intronic-cov",
-        default=0.01,
-        type=float,
-        help="Minimum number of reads on average in intronic sites, only for"
-        " intron retention. Default: %(default)s]",
-    )
-
-    buildparser.add_argument(
-        "--min-denovo",
-        default=5,
-        type=int,
-        help="Minimum number of reads threshold combining all positions in a"
-        " LSV to consider that denovo junction is real. [Default: %(default)s]",
-    )
-
-    buildparser.add_argument(
-        "--minreads",
-        default=3,
-        type=int,
-        help="Minimum number of reads threshold combining all positions in a"
-        " LSV to consider that the LSV exist in the data. [Default: %(default)s]",
-    )
-
-    buildparser.add_argument(
-        "--minpos",
-        default=2,
-        type=int,
-        help="Minimum number of start positions with at least 1 read in a LSV"
-        " to consider that the LSV exist in the data. [Default: %(default)s]",
-    )
 
     buildparser.add_argument(
         "--markstacks",
@@ -200,13 +214,6 @@ def main():
         help="Mark stack positions. Expects a p-value. Use a negative value in"
         "order to disable it. [Default: %(default)s]",
     )
-
-    buildparser.add_argument(
-        "--k",
-        default=50,
-        type=int,
-        help="Number of positions to sample per iteration. [Default: %(default)s]",
-    )
     buildparser.add_argument(
         "--m",
         default=30,
@@ -214,19 +221,10 @@ def main():
         help="Number of bootstrapping samples. [Default: %(default)s]",
     )
     buildparser.add_argument(
-        "--irnbins",
-        default=0.5,
-        type=float,
-        help="This values defines the number of bins with some coverage that"
-        "an intron needs to pass to be accepted as real [Default: %(default)s]",
-    )
-    buildparser.add_argument(
-        "--annotated_ir_always",
-        dest="annot_ir_always",
-        action="store_true",
-        default=False,
-        help="When this flag is set all the annotated ir will be accepted even"
-        " if they do not pass the filters.",
+        "--k",
+        default=50,
+        type=int,
+        help="Number of positions to sample per iteration. [Default: %(default)s]",
     )
 
     buildparser.add_argument(
@@ -239,7 +237,6 @@ def main():
         " it is real. Simplified junctions are discarded from any lsv."
         " [Default: %(default)s]",
     )
-
     buildparser.add_argument(
         "--simplify-annotated",
         dest="simpl_db",
@@ -250,7 +247,6 @@ def main():
         " it is real. Simplified junctions are discarded from any lsv."
         " [Default: %(default)s]",
     )
-
     buildparser.add_argument(
         "--simplify-ir",
         dest="simpl_ir",
@@ -260,7 +256,6 @@ def main():
         " ir to consider if it will be simplified, even knowing it is real."
         " Simplified junctions are discarded from any lsv. [Default: %(default)s]",
     )
-
     buildparser.add_argument(
         "--simplify",
         dest="simpl_psi",
@@ -270,17 +265,6 @@ def main():
         const=0.01,
         help="Minimum fraction of the usage of any junction in a LSV to"
         " consider that junction is real. [Default: %(default)s]",
-    )
-
-    buildparser.add_argument(
-        "--dump-constitutive",
-        dest="dump_const_j",
-        action="store_true",
-        default=False,
-        help="With this option enabled, MAJIQ will create a"
-        " constitutive_junctions.tsv file containing all the junctions that"
-        " are structurally constitutive, the junctions pass minreads and"
-        " minpos filters. [Default: %(default)s]",
     )
 
     buildparser.add_argument(
@@ -295,6 +279,18 @@ def main():
         " There are some cases where we would like to quantify these redundant"
         " events (excluding the equivalent mutually-redundant events); this"
         " flag enables more permissive output of splicing events.",
+    )
+
+    # flag to provide information about constitutive junctions
+    buildparser.add_argument(
+        "--dump-constitutive",
+        dest="dump_const_j",
+        action="store_true",
+        default=False,
+        help="With this option enabled, MAJIQ will create a"
+        " constitutive_junctions.tsv file containing all the junctions that"
+        " are structurally constitutive, the junctions pass minreads and"
+        " minpos filters. [Default: %(default)s]",
     )
 
     buildparser.add_argument(
