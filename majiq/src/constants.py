@@ -1,3 +1,9 @@
+"""
+constants.py
+
+Constants used by MAJIQ
+"""
+
 import os
 
 VERSION = "2.1"

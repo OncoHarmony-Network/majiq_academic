@@ -1,3 +1,9 @@
+"""
+gff.py
+
+Functions for basic parsing of GFF3 format files
+"""
+
 from collections import namedtuple
 import urllib.parse as urllib
 import gzip
@@ -21,7 +27,6 @@ def __parse_gff_attributes(attribute_string):
     Parse the GFF3 attribute column and return a dict
     :param attribute_string:
     """
-
     if attribute_string == ".":
         return {}
     ret = {}
@@ -46,9 +51,6 @@ def parse_gff3(filename):
     Supports transparent gzip decompression.
     """
     # Parse with transparent decompression
-
-    # cdef object infile
-
     open_func = gzip.open if filename.endswith(".gz") else open
     with open_func(filename, mode="rt") as infile:
 

@@ -1,3 +1,9 @@
+"""
+logger.py
+
+Functions for logging progress in MAJIQ
+"""
+
 import logging
 import os
 import resource

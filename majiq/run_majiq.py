@@ -1,3 +1,13 @@
+#!/usr/bin/env python
+"""
+run_majiq.py
+
+Entrypoint into different MAJIQ tools. Parse options from command-line and
+launch the associated MAJIQ pipeline.
+
+Authors: Jorge Vaquero-Garcia, Juan Gonzalez-Vallinas, Joseph K Aicher
+"""
+
 import argparse
 from majiq.src.build import build
 from majiq.src.calc_psi import calcpsi

@@ -1,3 +1,9 @@
+"""
+config.py
+
+Class for parsing configuration files for MAJIQ build wrapping configparser
+"""
+
 import os
 import configparser
 from scipy import interpolate
@@ -91,10 +97,8 @@ class Config(object):
             self.juncfile_list = []
             for exp_idx, lstnames in exps.items():
                 self.tissue_repl[exp_idx] = []
-                # self.juncfile_list[exp_idx] = []
                 elist = lstnames.split(",")
                 for exp in elist:
-
                     self.exp_list.append(exp)
                     self.tissue_repl[exp_idx].append(count)
                     count += 1
