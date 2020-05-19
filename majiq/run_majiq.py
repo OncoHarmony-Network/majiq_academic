@@ -16,6 +16,8 @@ class FRange01(argparse.Action):
 
 
 def check_positive(value):
+    """ Function for argparse.ArgumentParser(type=...) for float(x) > 0
+    """
     ivalue = float(value)
     if ivalue <= 0:
         raise argparse.ArgumentTypeError(
@@ -25,6 +27,8 @@ def check_positive(value):
 
 
 def new_subparser():
+    """ Just get an empty subparser
+    """
     return argparse.ArgumentParser(add_help=False)
 
 
@@ -34,8 +38,8 @@ def main():
     """
     # REMINDER parser.add_parser(..... parents='[bla, ble]')
     parser = argparse.ArgumentParser(
-        description="MAJIQ is a suite of tools for the Splicing Events and"
-        " Alternative Splicing Quantification."
+        description="MAJIQ is a suite of tools to detect and quantify local"
+        " splicing variations (LSVs) from RNA-seq data."
     )
 
     parser.add_argument(
@@ -48,14 +52,14 @@ def main():
         "--nproc",
         default=4,
         type=int,
-        help="Number of processes to use. [Default: %(default)s]",
+        help="Number of threads to use. [Default: %(default)s]",
     )
     common.add_argument(
         "-o",
         "--output",
         dest="outDir",
         required=True,
-        help="Path to save the pickle output to.",
+        help="Path for output directory to which output files will be saved.",
     )
 
     common.add_argument(
@@ -71,15 +75,15 @@ def main():
         "--debug",
         default=False,
         action="store_true",
-        help="Activate this flag for debugging purposes, activates logger and"
-        " jumps some processing steps. [Default: %(default)s]",
+        help="This flag is used for debugging purposes. It activates more"
+        " verbose logging and skips some processing steps. [Default: %(default)s]",
     )
 
     common.add_argument(
         "--mem-profile",
         default=False,
         action="store_true",
-        help="Print memory usage summary at the end of the execution."
+        help="Print memory usage summary at the end of program execution."
         " [Default: %(default)s]",
     )
 
@@ -88,46 +92,63 @@ def main():
         default=0.5,
         type=check_positive,
         dest="min_exp",
-        help="Lower threshold for group filters. min_experiments set the"
-        " minimum number of experiments where the different filters check in"
-        " order to pass an lsv or junction.\n"
-        "\t + <  1 the value is the fraction of the experiments in the group\n"
-        "\t + >= 1 the value is the actual number of experiments. If the"
-        " number is set to a greater number than the size of the group, we use"
-        " the size instead.\n"
-        "[Default: %(default)s]]",
+        help="Threshold for group filters. This specifies the fraction"
+        " (value < 1) or absolute number (value >= 1) of experiments passing"
+        " per-experiment filters (i.e. minreads, minpos, etc.) that must pass"
+        " individually in order to pass an LSV or junction. If greater than"
+        " the total number of experiments in a group, requires all experiments"
+        " to pass individually. [Default: %(default)s]",
     )
 
     common.add_argument(
         "--plotpath",
         default=None,
-        help="Path to save the plot to, if not provided will show on a"
-        " matplotlib popup window. [Default: %(default)s]",
+        help="(UNUSED) Path to save the plot to, if not provided will show"
+        " on a matplotlib popup window. [Default: %(default)s]",
     )
 
     buildparser = new_subparser()
-    buildparser.add_argument("transcripts", action="store", help="Annotation db ")
+    buildparser.add_argument(
+        "transcripts", action="store", help="Annotation database in GFF3 format",
+    )
     buildparser.add_argument(
         "-c",
         "--conf",
         default=None,
         required=True,
-        help="Provide study configuration file with all the execution information",
+        help="Path to study configuration file specifying paths to BAM/SJ"
+        " files, samples for each group, and sample-specific information."
+        " Format follows rules for INI files, with required/optional fields"
+        " used by MAJIQ described in the MAJIQ quick start:"
+        " <https://biociphers.bitbucket.io/majiq/quick.html>",
     )
 
+    # per-experiment filters for all junctions
     buildparser.add_argument(
         "--minreads",
         default=3,
         type=int,
-        help="Minimum number of reads threshold combining all positions in a"
-        " LSV to consider that the LSV exist in the data. [Default: %(default)s]",
+        help="Threshold on the minimum total number of reads for any junction"
+        " to meet per-experiment filters for the LSVs it is a part of. When"
+        " the minimum numbers of reads and positions (--minpos) are both met"
+        " in enough experiments for a group in any junction that is part of an"
+        " LSV, the LSV is considered admissible and saved in output MAJIQ"
+        " files for potential downstream quantification. [Default: %(default)s]",
     )
     buildparser.add_argument(
         "--minpos",
         default=2,
         type=int,
-        help="Minimum number of start positions with at least 1 read in a LSV"
-        " to consider that the LSV exist in the data. [Default: %(default)s]",
+        help="Threshold on the minimum number of read positions with at least"
+        " 1 read for any junction to meet per-experiment filters for the LSVs"
+        " it is a part of. Positions are relative to the aligned query"
+        " sequences, ignoring soft clipping, and the first few bases of"
+        " overhang on either end are ignored. When the minimum numbers of"
+        " reads (--minreads) and positions are both met in enough experiments"
+        " for a group in any junction that is part of an LSV, the LSV is"
+        " considered admissible and associated coverage per experiment saved"
+        " in the output MAJIQ files for potential downstream quantification."
+        " [Default: %(default)s]",
     )
 
     # denovo flags
@@ -135,17 +156,21 @@ def main():
         "--min-denovo",
         default=5,
         type=int,
-        help="Minimum number of reads threshold combining all positions in a"
-        " LSV to consider that denovo junction is real. [Default: %(default)s]",
+        help="Threshold on the minimum total number of reads for a denovo"
+        " junction to be detected for inclusion in the splicegraph. This"
+        " per-experiment filter requires the --minpos filter to be satisfied"
+        " at the same time. [Default: %(default)s]",
     )
     buildparser.add_argument(
         "--disable-denovo",
         dest="denovo",
         action="store_false",
         default=True,
-        help="Disables denovo detection of junctions, splicesites and exons."
-        " This will speedup the execution but reduce the number of LSVs"
-        " detected. [Default: denovo enabled]",
+        help="Disable denovo detection of junctions, splicesites and exons."
+        " This will restrict analysis to junctions and exons found in provided"
+        " annotations file, reducing the number of LSVs detected. Note that"
+        " this does not disable detection of unannotated intron retention"
+        " (see --disable-denovo-ir). [Default: denovo enabled]",
     )
 
     # intron retention flags
@@ -153,80 +178,96 @@ def main():
         "--irnbins",
         default=0.5,
         type=float,
-        help="This values defines the number of bins with some coverage that"
-        "an intron needs to pass to be accepted as real [Default: %(default)s]",
+        help="Threshold on fraction of intronic read positions"
+        " (aggregated/normalized to match junctions) with sufficient coverage"
+        " (set by --min-intronic-cov) to pass per-experiment filters on"
+        " introns. [Default: %(default)s]",
     )
     buildparser.add_argument(
         "--min-intronic-cov",
         default=0.01,
         type=float,
-        help="Minimum number of reads on average in intronic sites, only for"
-        " intron retention. Default: %(default)s]",
+        help="Threshold on per-position normalized intronic readrate to be"
+        " considered to have sufficient coverage at that position. Used with"
+        " --irnbins to define per-experiment filters on introns."
+        " [Default: %(default)s]",
     )
     buildparser.add_argument(
         "--disable-ir",
         dest="ir",
         action="store_false",
         default=True,
-        help="Disables intron retention detection [Default: ir enabled]",
+        help="Disable intron retention detection. This applies to both"
+        " annotated and unannotated retained introns."
+        " [Default: intron retention enabled]",
     )
     buildparser.add_argument(
         "--disable-denovo-ir",
         dest="denovo_ir",
         action="store_false",
         default=True,
-        help="Disables denovo detection of introns. This will speedup the"
-        " execution but reduce the number of LSVs detected. [Default: denovo"
-        " introns enabled]",
+        help="Disable detection of denovo introns only, keeping detection of"
+        " annotated introns enabled. [Default: denovo introns enabled]",
     )
     buildparser.add_argument(
         "--annotated_ir_always",
         dest="annot_ir_always",
         action="store_true",
         default=False,
-        help="When this flag is set all the annotated ir will be accepted even"
-        " if they do not pass the filters.",
+        help="Automatically pass all annotated introns regardless of coverage."
+        " By default, introns with insufficient coverage (not passing group"
+        " filters) are excluded from the splicegraph and associated LSV"
+        " definitions even if they are present in the annotations; this flag"
+        " forces them to be kept.",
     )
 
+    # incremental flags
     buildparser.add_argument(
         "--junc-files-only",
         dest="juncfiles_only",
         action="store_true",
         default=False,
-        help="Only extract junction information from BAMs and exports .junc"
-        " file [Default: ir enabled]",
+        help="Stop MAJIQ builder execution after extracting junction"
+        " information from BAM files into output SJ (*.sj) files for use in"
+        " MAJIQ incremental builds. [Default: disabled]",
     )
     buildparser.add_argument(
         "--incremental",
         dest="aggregate",
         action="store_true",
         default=False,
-        help="Uses previously generated junc files to generate a ground truth"
-        " and unified splicegraph. Default: %(default)s]",
+        help="Enable use of SJ files generated by previous builds. This"
+        " removes the need to reprocess the original BAM file again."
+        " [Default: %(default)s]",
     )
-
 
     buildparser.add_argument(
         "--markstacks",
-        default=0.0000001,
+        default=1e-7,
         type=float,
         dest="pvalue_limit",
-        help="Mark stack positions. Expects a p-value. Use a negative value in"
-        "order to disable it. [Default: %(default)s]",
+        help="P-value threshold used for detecting and removing read stacks"
+        " (outlier per-position read coverage under Poisson or"
+        " negative-binomial null distribution). Use a negative value to"
+        " disable stack detection/removal. [Default: %(default)s]",
     )
     buildparser.add_argument(
         "--m",
         default=30,
         type=int,
-        help="Number of bootstrapping samples. [Default: %(default)s]",
+        help="Number of bootstrap samples of total read coverage to save in"
+        " output SJ and MAJIQ files for downstream quantification."
+        " [Default: %(default)s]",
     )
     buildparser.add_argument(
         "--k",
         default=50,
         type=int,
-        help="Number of positions to sample per iteration. [Default: %(default)s]",
+        help="(TO BE DEPRECATED) Number of positions to sample per iteration."
+        " [Default: %(default)s]",
     )
 
+    # simplifier flags
     buildparser.add_argument(
         "--simplify-denovo",
         dest="simpl_denovo",
@@ -267,15 +308,17 @@ def main():
         " consider that junction is real. [Default: %(default)s]",
     )
 
+    # flag to save all possible LSVs
     buildparser.add_argument(
         "--permissive",
         dest="lsv_strict",
         default=True,
         action="store_false",
-        help="By default, MAJIQ ignores all events for which their connections"
-        " are all present in another event (def: redundant events) unless"
-        " they are mutually redundant, in which case the events are equivalent"
-        " and the single-source event is selected."
+        help="Consider all distinct LSVs, including events which are contained"
+        " by other LSVs. By default, MAJIQ ignores all events for which their"
+        " connections are all present in another event (def: redundant events)"
+        " unless they are mutually redundant, in which case the events are"
+        " equivalent (in this case the single-source event is selected)."
         " There are some cases where we would like to quantify these redundant"
         " events (excluding the equivalent mutually-redundant events); this"
         " flag enables more permissive output of splicing events.",
@@ -287,19 +330,19 @@ def main():
         dest="dump_const_j",
         action="store_true",
         default=False,
-        help="With this option enabled, MAJIQ will create a"
-        " constitutive_junctions.tsv file containing all the junctions that"
-        " are structurally constitutive, the junctions pass minreads and"
-        " minpos filters. [Default: %(default)s]",
+        help="Create constitutive_junctions.tsv file listing all junctions"
+        " that pass group filters but are not part of any LSV because they"
+        " are structurally constitutive. [Default: %(default)s]",
     )
 
+    # flag to save per-position coverage for debugging to SJ files
     buildparser.add_argument(
         "--dump-coverage",
         dest="dump_coverage",
         action="store_true",
         default=False,
         help="Optionally dump raw junction coverage by position to created SJ"
-        "files for experimental/debugging purposes",
+        " files for experimental/debugging purposes",
     )
 
     sampling = new_subparser()
@@ -308,57 +351,79 @@ def main():
         "--minreads",
         default=10,
         type=int,
-        help="Minimum number of reads combining all positions in an event to"
-        " be considered. [Default: %(default)s]",
+        help="Threshold on the minimum total number of reads for any junction"
+        " or intron to meet per-experiment filters for the LSVs it is a part"
+        " of. When the minimum numbers of reads and positions (--minpos) are"
+        " both met in enough experiments for a group in any one"
+        " junction/intron that is part of a LSV, the LSV is considered"
+        " quantifiable in that group. [Default: %(default)s]",
     )
     sampling.add_argument(
         "--minpos",
         default=3,
         type=int,
-        help="Minimum number of start positions with at least 1 read for an"
-        " event to be considered. [Default: %(default)s]",
+        help="Threshold on the minimum total number of read positions with at"
+        " least 1 read for any junction or intron to meet per-experiment"
+        " filters for the LSVs it is a part of. When the minimum number of"
+        " reads (--minreads) and positions are both met in enough experiments"
+        " for a group in any one junction/intron that is part of a LSV, the"
+        " LSV is considered quantifiable in that group. [Default: %(default)s]",
     )
 
     psi = new_subparser()
     psi.add_argument(
         "files",
         nargs="+",
-        help="The experiment files to analyze. You can include more than one"
-        " (they will all be analyzed independently though) Glob syntax"
-        " supported.",
+        help="Paths to MAJIQ files for the experiment(s) to aggregate for"
+        " PSI quantification as a single group.",
     )
     psi.add_argument(
         "-n",
         "--name",
         required=True,
-        help="The names that identify each of the experiments.",
+        help="Name used to identify the single group of experiments being"
+        " quantified for output file name(s) and visualization using VOILA.",
     )
 
     psi.add_argument(
         "--output-type",
         choices=["voila", "tsv", "all"],
         default="all",
-        help="Defines the type of output file to be generated, voila file to"
-        " be used in voila, tsv with the lsv information or both."
-        " [Default: %(default)s]",
+        help="Specify the type(s) of output files to produce: voila file to"
+        " use with voila, TSV file with basic quantifications per LSV, or"
+        " both. [Default: %(default)s]",
     )
 
     delta = new_subparser()
-    delta.add_argument("-grp1", dest="files1", nargs="+", required=True)
-    delta.add_argument("-grp2", dest="files2", nargs="+", required=True)
+    delta.add_argument(
+        "-grp1",
+        dest="files1",
+        nargs="+",
+        required=True,
+        help="Paths to MAJIQ files for the experiment(s) to aggregate for"
+        " quantification as part of the first group",
+    )
+    delta.add_argument(
+        "-grp2",
+        dest="files2",
+        nargs="+",
+        required=True,
+        help="Paths to MAJIQ files for the experiment(s) to aggregate for"
+        " quantification as part of the second group",
+    )
     delta.add_argument(
         "--default-prior",
         action="store_true",
         default=False,
-        help="Use a default prior instead of computing it using the empirical"
-        " data. [Default: default prior disabled]",
+        help="Use a default prior instead of computing empirical prior from"
+        " the data. [Default: default prior disabled]",
     )
     delta.add_argument(
         "-n",
         "--names",
         nargs=2,
         required=True,
-        help="The names that identify each of the experiments.",
+        help="The names that identify the groups being compared.",
     )
     delta.add_argument(
         "--binsize",
@@ -392,20 +457,34 @@ def main():
         "--output-type",
         choices=["voila", "tsv", "all"],
         default="all",
-        help="Defines the type of output file to be generated, voila file to"
-        " be used in voila, tsv with the lsv information or both."
-        " [Default: %(default)s]",
+        help="Specify the type(s) of output files to produce: voila file to"
+        " use with voila, TSV file with basic quantifications per LSV, or"
+        " both. [Default: %(default)s]",
     )
 
     htrgen = new_subparser()
-    htrgen.add_argument("-grp1", dest="files1", nargs="+", required=True)
-    htrgen.add_argument("-grp2", dest="files2", nargs="+", required=True)
+    htrgen.add_argument(
+        "-grp1",
+        dest="files1",
+        nargs="+",
+        required=True,
+        help="Paths to MAJIQ files for the experiment(s) to quantify"
+        " independently for statistical analysis as part of the first group",
+    )
+    htrgen.add_argument(
+        "-grp2",
+        dest="files2",
+        nargs="+",
+        required=True,
+        help="Paths to MAJIQ files for the experiment(s) to quantify"
+        " independently for statistical analysis as part of the second group",
+    )
     htrgen.add_argument(
         "-n",
         "--names",
         nargs="+",
         required=True,
-        help="The names that identify each of the experiments.",
+        help="The names that identify the groups being compared.",
     )
     htrgen.add_argument(
         "--keep-tmpfiles",
@@ -459,24 +538,25 @@ def main():
 
     parser_calcpsi = subparsers.add_parser(
         "psi",
-        help="Calculate PSI values for N experiments, given a folder of"
-        " preprocessed events by 'majiq preprocess' or SAM/BAM files",
+        help="Calculate aggregated PSI values for N experiments as a single"
+        " group using MAJIQ files produced by `majiq build`",
         parents=[common, psi, sampling],
     )
     parser_calcpsi.set_defaults(func=calcpsi)
 
     parser_deltagroup = subparsers.add_parser(
         "deltapsi",
-        help="Calculate Delta PSI values given a pair of experiments (1 VS 1"
-        " conditions *with* replicas)",
+        help="Calculate Delta PSI values between two groups of experiments"
+        " (treated as replicates) using MAJIQ files produced by `majiq build`",
         parents=[common, delta, sampling],
     )
     parser_deltagroup.set_defaults(func=deltapsi)
 
     parser_heterogen = subparsers.add_parser(
         "heterogen",
-        help="Calculate Delta PSI values given a pair of experiments groups."
-        " This approach does not assume underlying PSI)",
+        help="Perform independent quantification and statistical comparison of"
+        " PSI values between experiments/samples from two groups using MAJIQ"
+        " files produced by `majiq build`",
         parents=[common, sampling, htrgen],
     )
     parser_heterogen.set_defaults(func=calc_independent)
