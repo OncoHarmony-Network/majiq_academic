@@ -113,10 +113,11 @@ def main():
     )
 
     buildparser = new_subparser()
-    buildparser.add_argument(
+    buildparser_required = buildparser.add_argument_group("Required arguments")
+    buildparser_required.add_argument(
         "transcripts", action="store", help="Annotation database in GFF3 format",
     )
-    buildparser.add_argument(
+    buildparser_required.add_argument(
         "-c",
         "--conf",
         default=None,
@@ -129,7 +130,8 @@ def main():
     )
 
     # per-experiment filters for all junctions
-    buildparser.add_argument(
+    buildparser_junctions = buildparser.add_argument_group("Junction filters")
+    buildparser_junctions.add_argument(
         "--minreads",
         default=3,
         type=int,
@@ -140,7 +142,7 @@ def main():
         " LSV, the LSV is considered admissible and saved in output MAJIQ"
         " files for potential downstream quantification. [Default: %(default)s]",
     )
-    buildparser.add_argument(
+    buildparser_junctions.add_argument(
         "--minpos",
         default=2,
         type=int,
@@ -157,7 +159,8 @@ def main():
     )
 
     # denovo flags
-    buildparser.add_argument(
+    buildparser_denovo = buildparser.add_argument_group("Denovo junctions options")
+    buildparser_denovo.add_argument(
         "--min-denovo",
         default=5,
         type=int,
@@ -166,7 +169,7 @@ def main():
         " per-experiment filter requires the --minpos filter to be satisfied"
         " at the same time. [Default: %(default)s]",
     )
-    buildparser.add_argument(
+    buildparser_denovo.add_argument(
         "--disable-denovo",
         dest="denovo",
         action="store_false",
@@ -179,7 +182,8 @@ def main():
     )
 
     # intron retention flags
-    buildparser.add_argument(
+    buildparser_introns = buildparser.add_argument_group("Intron options")
+    buildparser_introns.add_argument(
         "--irnbins",
         default=0.5,
         type=float,
@@ -188,7 +192,7 @@ def main():
         " (set by --min-intronic-cov) to pass per-experiment filters on"
         " introns. [Default: %(default)s]",
     )
-    buildparser.add_argument(
+    buildparser_introns.add_argument(
         "--min-intronic-cov",
         default=0.01,
         type=float,
@@ -197,7 +201,7 @@ def main():
         " --irnbins to define per-experiment filters on introns."
         " [Default: %(default)s]",
     )
-    buildparser.add_argument(
+    buildparser_introns.add_argument(
         "--disable-ir",
         dest="ir",
         action="store_false",
@@ -206,7 +210,7 @@ def main():
         " annotated and unannotated retained introns."
         " [Default: intron retention enabled]",
     )
-    buildparser.add_argument(
+    buildparser_introns.add_argument(
         "--disable-denovo-ir",
         dest="denovo_ir",
         action="store_false",
@@ -214,7 +218,7 @@ def main():
         help="Disable detection of denovo introns only, keeping detection of"
         " annotated introns enabled. [Default: denovo introns enabled]",
     )
-    buildparser.add_argument(
+    buildparser_introns.add_argument(
         "--annotated_ir_always",
         dest="annot_ir_always",
         action="store_true",
@@ -227,7 +231,10 @@ def main():
     )
 
     # incremental flags
-    buildparser.add_argument(
+    buildparser_incremental = buildparser.add_argument_group(
+        "Incremental build options"
+    )
+    buildparser_incremental.add_argument(
         "--junc-files-only",
         dest="juncfiles_only",
         action="store_true",
@@ -236,7 +243,7 @@ def main():
         " information from BAM files into output SJ (*.sj) files for use in"
         " MAJIQ incremental builds. [Default: disabled]",
     )
-    buildparser.add_argument(
+    buildparser_incremental.add_argument(
         "--incremental",
         dest="aggregate",
         action="store_true",
@@ -246,34 +253,9 @@ def main():
         " [Default: %(default)s]",
     )
 
-    buildparser.add_argument(
-        "--markstacks",
-        default=1e-7,
-        type=float,
-        dest="pvalue_limit",
-        help="P-value threshold used for detecting and removing read stacks"
-        " (outlier per-position read coverage under Poisson or"
-        " negative-binomial null distribution). Use a negative value to"
-        " disable stack detection/removal. [Default: %(default)s]",
-    )
-    buildparser.add_argument(
-        "--m",
-        default=30,
-        type=int,
-        help="Number of bootstrap samples of total read coverage to save in"
-        " output SJ and MAJIQ files for downstream quantification."
-        " [Default: %(default)s]",
-    )
-    buildparser.add_argument(
-        "--k",
-        default=50,
-        type=int,
-        help="(TO BE DEPRECATED) Number of positions to sample per iteration."
-        " [Default: %(default)s]",
-    )
-
     # simplifier flags
-    buildparser.add_argument(
+    buildparser_simplifier = buildparser.add_argument_group("Simplifier options")
+    buildparser_simplifier.add_argument(
         "--simplify-denovo",
         dest="simpl_denovo",
         default=0,
@@ -283,7 +265,7 @@ def main():
         " it is real. Simplified junctions are discarded from any lsv."
         " [Default: %(default)s]",
     )
-    buildparser.add_argument(
+    buildparser_simplifier.add_argument(
         "--simplify-annotated",
         dest="simpl_db",
         default=0,
@@ -293,7 +275,7 @@ def main():
         " it is real. Simplified junctions are discarded from any lsv."
         " [Default: %(default)s]",
     )
-    buildparser.add_argument(
+    buildparser_simplifier.add_argument(
         "--simplify-ir",
         dest="simpl_ir",
         default=0,
@@ -302,7 +284,7 @@ def main():
         " ir to consider if it will be simplified, even knowing it is real."
         " Simplified junctions are discarded from any lsv. [Default: %(default)s]",
     )
-    buildparser.add_argument(
+    buildparser_simplifier.add_argument(
         "--simplify",
         dest="simpl_psi",
         default=-1,
@@ -313,8 +295,39 @@ def main():
         " consider that junction is real. [Default: %(default)s]",
     )
 
+    # bootstrapping
+    buildparser_bootstrap = buildparser.add_argument_group(
+        "Bootstrap coverage sampling"
+    )
+    buildparser_bootstrap.add_argument(
+        "--markstacks",
+        default=1e-7,
+        type=float,
+        dest="pvalue_limit",
+        help="P-value threshold used for detecting and removing read stacks"
+        " (outlier per-position read coverage under Poisson or"
+        " negative-binomial null distribution). Use a negative value to"
+        " disable stack detection/removal. [Default: %(default)s]",
+    )
+    buildparser_bootstrap.add_argument(
+        "--m",
+        default=30,
+        type=int,
+        help="Number of bootstrap samples of total read coverage to save in"
+        " output SJ and MAJIQ files for downstream quantification."
+        " [Default: %(default)s]",
+    )
+    buildparser_bootstrap.add_argument(
+        "--k",
+        default=50,
+        type=int,
+        help="(TO BE DEPRECATED) Number of positions to sample per iteration."
+        " [Default: %(default)s]",
+    )
+
+    buildparser_advanced = buildparser.add_argument_group("Advanced options")
     # flag to save all possible LSVs
-    buildparser.add_argument(
+    buildparser_advanced.add_argument(
         "--permissive",
         dest="lsv_strict",
         default=True,
@@ -330,7 +343,7 @@ def main():
     )
 
     # flag to provide information about constitutive junctions
-    buildparser.add_argument(
+    buildparser_advanced.add_argument(
         "--dump-constitutive",
         dest="dump_const_j",
         action="store_true",
@@ -341,7 +354,7 @@ def main():
     )
 
     # flag to save per-position coverage for debugging to SJ files
-    buildparser.add_argument(
+    buildparser_advanced.add_argument(
         "--dump-coverage",
         dest="dump_coverage",
         action="store_true",
