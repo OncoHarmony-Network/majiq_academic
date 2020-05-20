@@ -100,7 +100,7 @@ cdef int _core_deltapsi(object self) except -1:
     logger.info("Number quantifiable LSVs: %s" % len(list_of_lsv))
     prior_matrix = vector[vector[psi_distr_t]](2, vector[psi_distr_t](nbins, psi_distr_t(nbins, 0)))
     gen_prior_matrix(prior_matrix, lsv_type_dict, lsv_empirical_psi1, lsv_empirical_psi2, self.outDir,
-                     names=self.names, plotpath=self.plotpath, iter=self.iter, binsize=self.binsize, numbins=nbins,
+                     names=self.names, iter=self.iter, binsize=self.binsize, numbins=nbins,
                      defaultprior=self.default_prior, minpercent=self.min_exp, logger=logger)
 
 

@@ -1,10 +1,17 @@
-import os
-VERSION = '2.1'
+"""
+constants.py
 
-JUNC_FILE_FORMAT = 'sj'
-SEQ_FILE_FORMAT = 'bam'
-SEQ_INDEX_FILE_FORMAT = 'bam.bai'
-MAJIQ_FILE_FORMAT = 'majiq'
+Constants used by MAJIQ
+"""
+
+import os
+
+VERSION = "2.1"
+
+JUNC_FILE_FORMAT = "sj"
+SEQ_FILE_FORMAT = "bam"
+SEQ_INDEX_FILE_FORMAT = "bam.bai"
+MAJIQ_FILE_FORMAT = "majiq"
 
 UNSTRANDED = 0
 FWD_STRANDED = 1
@@ -14,7 +21,7 @@ EX_TYPE = 0
 IR_TYPE = 1
 J_TYPE = 2
 
-#QUEUE MESSAGE CODES
+# QUEUE MESSAGE CODES
 
 QUEUE_MESSAGE_END_WORKER = -1
 QUEUE_MESSAGE_BUILD_JUNCTION = 0
@@ -38,15 +45,15 @@ ESTIMATE_NUM_READS = 100
 EMPTY_COORD = -1
 FIRST_LAST_JUNC = -2
 
-SIMPLIFY_ALL = 'all'
-SIMPLIFY_DB = 'annotated'
-SIMPLIFY_DENOVO = 'denovo'
+SIMPLIFY_ALL = "all"
+SIMPLIFY_DB = "annotated"
+SIMPLIFY_DENOVO = "denovo"
 
-WEIGTHS_AUTO = 'auto'
-WEIGTHS_NONE = 'none'
+WEIGTHS_AUTO = "auto"
+WEIGTHS_NONE = "none"
 MINVAL = 1e-300
 
-GIT_VERSION_FILE = 'git_version'
+GIT_VERSION_FILE = "git_version"
 
 
 HET_SAMPLING_SEED = 20200401
@@ -91,22 +98,22 @@ def get_weights_filename(outdir, name):
 
 
 def get_tmp_psisample_file(outdir, name):
-    return "%s/%s.psisamples.tmp" %(outdir, name)
+    return "%s/%s.psisamples.tmp" % (outdir, name)
 
 
 def store_git_version(short_sha):
 
     direc = os.path.dirname(__file__)
-    with open('%s/../data/%s' % (direc, GIT_VERSION_FILE), 'w+') as ofp:
-        ofp.write('%s\n' % short_sha)
+    with open("%s/../data/%s" % (direc, GIT_VERSION_FILE), "w+") as ofp:
+        ofp.write("%s\n" % short_sha)
 
 
 def get_git_version():
     direc = os.path.dirname(__file__)
     try:
-        with open('%s/../data/%s' % (direc, GIT_VERSION_FILE), 'r') as ofp:
+        with open("%s/../data/%s" % (direc, GIT_VERSION_FILE), "r") as ofp:
             ver = ofp.readline().strip()
     except FileNotFoundError:
-        ver = '<hash_not_found>'
+        ver = "<hash_not_found>"
 
     return ver
