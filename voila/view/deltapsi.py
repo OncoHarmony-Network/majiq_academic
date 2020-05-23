@@ -1,7 +1,7 @@
 import os
 from bisect import bisect
 
-from flask import Flask, render_template, jsonify, url_for, request, session, Response
+from flask import render_template, jsonify, url_for, request, session, Response
 
 from voila.api.view_matrix import ViewDeltaPsi
 from voila.api.view_splice_graph import ViewSpliceGraph
@@ -10,26 +10,25 @@ from voila.view import views
 from voila.view.datatables import DataTables
 from voila.view.forms import LsvFiltersForm, DeltaPsiFiltersForm
 
-app = Flask(__name__)
-app.secret_key = os.urandom(16)
+app, bp = views.get_bp(__name__)
 
-@app.before_request
+@bp.before_request
 def init_session():
     if not 'omit_simplified' in session:
         session['omit_simplified'] = True
 
-@app.route('/')
+@bp.route('/')
 def index():
     form = LsvFiltersForm()
     dpsi_form = DeltaPsiFiltersForm()
     return render_template('dpsi_index.html', form=form, dpsi_form=dpsi_form)
 
-@app.route('/toggle-simplified', methods=('POST',))
+@bp.route('/toggle-simplified', methods=('POST',))
 def toggle_simplified():
     session['omit_simplified'] = not session['omit_simplified']
     return jsonify({'ok':1})
 
-@app.route('/gene/<gene_id>/')
+@bp.route('/gene/<gene_id>/')
 def gene(gene_id):
     with ViewDeltaPsi() as m, ViewSpliceGraph() as sg:
         filter_exon_numbers = {}
@@ -46,8 +45,8 @@ def gene(gene_id):
     return views.gene_view('dpsi_summary.html', gene_id, ViewDeltaPsi, filter_exon_numbers=filter_exon_numbers)
 
 
-@app.route('/lsv-data', methods=('POST',))
-@app.route('/lsv-data/<lsv_id>', methods=('POST',))
+@bp.route('/lsv-data', methods=('POST',))
+@bp.route('/lsv-data/<lsv_id>', methods=('POST',))
 def lsv_data(lsv_id):
     with ViewSpliceGraph(omit_simplified=session.get('omit_simplified', False)) as sg, ViewDeltaPsi() as m:
         dpsi = m.lsv(lsv_id)
@@ -78,7 +77,7 @@ def lsv_data(lsv_id):
         })
 
 
-@app.route('/index-table', methods=('POST',))
+@bp.route('/index-table', methods=('POST',))
 def index_table():
     with ViewDeltaPsi() as p, ViewSpliceGraph(omit_simplified=session.get('omit_simplified', False)) as sg:
         dt = DataTables(Index.delta_psi(), ('gene_name', 'lsv_id', '', 'excl_incl'), slice=False)
@@ -100,7 +99,7 @@ def index_table():
             ucsc = views.ucsc_href(sg.genome, gene['chromosome'], start, end)
 
             records[idx] = [
-                [url_for('gene', gene_id=gene_id), gene_name],
+                [url_for('main.gene', gene_id=gene_id), gene_name],
                 lsv_id,
                 dpsi.lsv_type,
                 excl_incl,
@@ -110,24 +109,24 @@ def index_table():
         return jsonify(dict(dt))
 
 
-@app.route('/nav/<gene_id>', methods=('POST',))
+@bp.route('/nav/<gene_id>', methods=('POST',))
 def nav(gene_id):
     with ViewDeltaPsi() as h:
         gene_ids = list(sorted(h.gene_ids))
         if len(gene_ids) == 1:
             return jsonify({
-                'next': url_for('gene', gene_id=gene_ids[0]),
-                'prev': url_for('gene', gene_id=gene_ids[0])
+                'next': url_for('main.gene', gene_id=gene_ids[0]),
+                'prev': url_for('main.gene', gene_id=gene_ids[0])
             })
         idx = bisect(gene_ids, gene_id)
 
         return jsonify({
-            'next': url_for('gene', gene_id=gene_ids[idx % len(gene_ids)]),
-            'prev': url_for('gene', gene_id=gene_ids[(idx % len(gene_ids)) - 2])
+            'next': url_for('main.gene', gene_id=gene_ids[idx % len(gene_ids)]),
+            'prev': url_for('main.gene', gene_id=gene_ids[(idx % len(gene_ids)) - 2])
         })
 
 
-@app.route('/splice-graph/<gene_id>', methods=('POST', 'GET'))
+@bp.route('/splice-graph/<gene_id>', methods=('POST', 'GET'))
 def splice_graph(gene_id):
     with ViewSpliceGraph(omit_simplified=session.get('omit_simplified', False)) as sg, ViewDeltaPsi() as v:
         exp_names = v.splice_graph_experiment_names
@@ -137,7 +136,7 @@ def splice_graph(gene_id):
         return jsonify(gd)
 
 
-@app.route('/psi-splice-graphs', methods=('POST',))
+@bp.route('/psi-splice-graphs', methods=('POST',))
 def psi_splice_graphs():
     with ViewDeltaPsi() as v:
         grp_names = v.group_names
@@ -165,7 +164,7 @@ def psi_splice_graphs():
         return jsonify(sg_init)
 
 
-@app.route('/lsv-highlight', methods=('POST',))
+@bp.route('/lsv-highlight', methods=('POST',))
 def lsv_highlight():
     json_data = request.get_json()
 
@@ -215,7 +214,7 @@ def lsv_highlight():
         return jsonify(lsvs)
 
 
-@app.route('/summary-table/<gene_id>', methods=('POST',))
+@bp.route('/summary-table/<gene_id>', methods=('POST',))
 def summary_table(gene_id):
     with ViewDeltaPsi() as v, ViewSpliceGraph(omit_simplified=session.get('omit_simplified', False)) as sg:
 
@@ -260,7 +259,7 @@ def summary_table(gene_id):
         return jsonify(dict(dt))
 
 
-@app.route('/download-lsvs', methods=('POST',))
+@bp.route('/download-lsvs', methods=('POST',))
 def download_lsvs():
     dt = DataTables(Index.delta_psi(), ('gene_name', 'lsv_id', '', 'excl_incl'), slice=False)
     dt.delta_psi_filters()
@@ -271,7 +270,7 @@ def download_lsvs():
     return Response(data, mimetype='text/plain')
 
 
-@app.route('/download-genes', methods=('POST',))
+@bp.route('/download-genes', methods=('POST',))
 def download_genes():
     dt = DataTables(Index.delta_psi(), ('gene_name', 'lsv_id', '', 'excl_incl'), slice=False)
     dt.delta_psi_filters()
@@ -282,7 +281,10 @@ def download_genes():
     return Response(data, mimetype='text/plain')
 
 
-@app.route('/copy-lsv', methods=('POST',))
-@app.route('/copy-lsv/<lsv_id>', methods=('POST',))
+@bp.route('/copy-lsv', methods=('POST',))
+@bp.route('/copy-lsv/<lsv_id>', methods=('POST',))
 def copy_lsv(lsv_id):
     return views.copy_lsv(lsv_id, ViewDeltaPsi)
+
+
+app.register_blueprint(bp)

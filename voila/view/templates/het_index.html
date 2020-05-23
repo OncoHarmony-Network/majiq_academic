@@ -12,7 +12,7 @@
 
                     const lsv_id = tds[1].textContent;
 
-                    json_ajax('{{ url_for("lsv_data") }}/' + encodeURIComponent(lsv_id))
+                    json_ajax('{{ url_for("main.lsv_data") }}/' + encodeURIComponent(lsv_id))
                         .then(lsv_data => {
                             const lsv = new Lsv(lsv_data);
                             const violin = new Violin(lsv_data.lsv);
@@ -31,7 +31,7 @@
                                 .forEach(s => lsv.cartoon(s));
                         });
 
-                    copy_lsv_modal_dropdown(n, '{{ url_for("copy_lsv") }}/' + encodeURIComponent(lsv_id))
+                    copy_lsv_modal_dropdown(n, '{{ url_for("main.copy_lsv") }}/' + encodeURIComponent(lsv_id))
 
                 })
             );
@@ -54,7 +54,7 @@
             autoWidth: false,
             lengthMenu: [[10, 25, 50, 100, 1000], [10, 25, 50, 100, 1000]],
             ajax: {
-                url: '{{ url_for("index_table") }}',
+                url: '{{ url_for("main.index_table") }}',
                 type: 'POST',
                 data: json_data => form_to_json(json_data)
             },
@@ -143,7 +143,7 @@
             form_to_json(form_data);
             form_data['search[value]'] = search.value;
 
-            send_form_ajax('{{ url_for("download_lsvs") }}', $.param(form_data))
+            send_form_ajax('{{ url_for("main.download_lsvs") }}', $.param(form_data))
                 .then(data => download('lsvs.txt', data));
         };
 
@@ -155,7 +155,7 @@
             form_to_json(form_data);
             form_data['search[value]'] = search.value;
 
-            send_form_ajax('{{ url_for("download_genes") }}', $.param(form_data))
+            send_form_ajax('{{ url_for("main.download_genes") }}', $.param(form_data))
                 .then(data => download('genes.txt', data));
         };
 

@@ -9,9 +9,10 @@ from voila.api.view_splice_graph import ViewSpliceGraph
 from voila.config import ViewConfig
 from voila.exceptions import UnknownAnalysisType
 from voila.index import Index
-from voila.view import deltapsi, heterogen, psi, splicegraph
 import os
-
+from flask import Blueprint, Flask
+from flask_session import Session
+import tempfile, atexit, shutil
 
 
 if os.name != 'nt':
@@ -34,13 +35,40 @@ if os.name != 'nt':
         def load(self):
             return self.application
 
+def get_bp(name):
+
+    env_confs = {}
+    if os.environ.get('VOILA_EXT_STATIC_FOLDER', None):
+        env_confs['static_folder'] = os.environ['VOILA_EXT_STATIC_FOLDER']
+    if os.environ.get('VOILA_EXT_STATIC_URL_PATH', None):
+        env_confs['static_url_path'] = os.environ['VOILA_EXT_STATIC_URL_PATH']
+
+    app = Flask(name, **env_confs)
+    app.secret_key = os.urandom(16)
+    app.config['EXT_URL_PREFIX'] = os.environ.get('VOILA_EXT_URL_PREFIX', '')
+    app.config['SESSION_TYPE'] = 'filesystem'
+    session_dir = tempfile.mkdtemp()
+    app.config['SESSION_FILE_DIR'] = session_dir
+
+    # we use blueprint to allow specifying the url_prefix for installation under uncooperative web server admins
+    # this does not seem to be supported using the base app routes
+
+    bp = Blueprint('main', name, url_prefix=app.config['EXT_URL_PREFIX'])
+
+    # this runs in shutdown
+    def close_running_threads():
+        try:
+            shutil.rmtree(session_dir)
+        except:
+            pass
+
+    atexit.register(close_running_threads)
+    Session(app)
+
+    return app, bp
 
 
-
-
-
-
-
+from voila.view import deltapsi, heterogen, psi, splicegraph
 
 
 def run_service():
@@ -87,6 +115,10 @@ def get_app():
         raise UnknownAnalysisType(analysis_type)
 
     return run_app
+
+
+
+
 
 
 def copy_lsv(lsv_id, view_matrix, voila_file=None):
@@ -177,7 +209,7 @@ def gene_view(summary_template, gene_id, view_matrix, **kwargs):
 
         exons = list(sg.exons(gene_id))
         if not exons:
-            return redirect(url_for('index'))
+            return redirect(url_for('main.index'))
         start = min(e['start'] for e in exons if e['start'] != -1)
         end = max(e['end'] for e in exons if e['end'] != -1)
         href = ucsc_href(sg.genome, gene['chromosome'], start, end)

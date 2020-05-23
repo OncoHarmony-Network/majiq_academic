@@ -11,7 +11,6 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/copy_lsv.css') }}">
     {% block style %}{% endblock %}
 
-
 </head>
 <body>
 <div class="modal">
@@ -25,6 +24,9 @@
 {% block content %}{% endblock %}
 {% block footer %}{% endblock %}
 </body>
+<script>
+    const base_url = '{{ config['EXT_URL_PREFIX'] }}';
+</script>
 <script src="{{ url_for('static', filename='js/lib/jquery.min.js') }}"></script>
 <script src="{{ url_for('static', filename='js/lib/jquery.dataTables.min.js') }}"></script>
 <script src="{{ url_for('static', filename='js/lib/d3.v5.min.js') }}"></script>

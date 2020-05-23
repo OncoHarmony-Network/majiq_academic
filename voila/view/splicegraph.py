@@ -1,61 +1,60 @@
 import os
 from bisect import bisect
 
-from flask import url_for, jsonify, request, session, Flask, redirect
+from flask import url_for, jsonify, request, session, redirect
 
 from voila.api.view_splice_graph import ViewSpliceGraph
 from voila.view import views
 
-app = Flask(__name__)
-app.secret_key = os.urandom(16)
+app, bp = views.get_bp(__name__)
 
-@app.before_request
+@bp.before_request
 def init_session():
     if not 'omit_simplified' in session:
         session['omit_simplified'] = True
 
-@app.route('/')
+@bp.route('/')
 def index():
     with ViewSpliceGraph(omit_simplified=session.get('omit_simplified', False)) as sg:
         first_gene_id = sorted(sg.gene_ids)[0]
-        return redirect(url_for('gene', gene_id=first_gene_id))
+        return redirect(url_for('main.gene', gene_id=first_gene_id))
 
-@app.route('/toggle-simplified', methods=('POST',))
+@bp.route('/toggle-simplified', methods=('POST',))
 def toggle_simplified():
     session['omit_simplified'] = not session['omit_simplified']
     return jsonify({'ok':1})
 
-@app.route('/gene/<gene_id>/')
-@app.route('/gene')
+@bp.route('/gene/<gene_id>/')
+@bp.route('/gene')
 def gene(gene_id=None):
     with ViewSpliceGraph(omit_simplified=session.get('omit_simplified', False)) as sg:
         if gene_id not in sg.gene_ids:
-            return redirect(url_for('gene_not_found', gene_id=gene_id))
+            return redirect(url_for('main.gene_not_found', gene_id=gene_id))
     return views.gene_view('sg_summary.html', gene_id, ViewSpliceGraph)
 
 
-@app.route('/gene-not-found/<gene_id>/')
+@bp.route('/gene-not-found/<gene_id>/')
 def gene_not_found(gene_id):
     with ViewSpliceGraph(omit_simplified=session.get('omit_simplified', False)) as sg:
         if gene_id in sg.gene_ids:
-            return redirect(url_for('gene', gene_id=gene_id))
+            return redirect(url_for('main.gene', gene_id=gene_id))
 
     return '<h1>' + gene_id + '</h1>' + '<h3>Gene ID was not found in splice graph.</h3>'
 
 
-@app.route('/nav/<gene_id>', methods=('POST',))
+@bp.route('/nav/<gene_id>', methods=('POST',))
 def nav(gene_id):
     with ViewSpliceGraph(omit_simplified=session.get('omit_simplified', False)) as sg:
         gene_ids = sorted(sg.gene_ids)
         idx = bisect(gene_ids, gene_id)
 
         return jsonify({
-            'next': url_for('gene', gene_id=gene_ids[idx % len(gene_ids)]),
-            'prev': url_for('gene', gene_id=gene_ids[(idx % len(gene_ids)) - 2])
+            'next': url_for('main.gene', gene_id=gene_ids[idx % len(gene_ids)]),
+            'prev': url_for('main.gene', gene_id=gene_ids[(idx % len(gene_ids)) - 2])
         })
 
 
-@app.route('/splice-graph/<gene_id>', methods=('POST', 'GET'))
+@bp.route('/splice-graph/<gene_id>', methods=('POST', 'GET'))
 def splice_graph(gene_id):
     with ViewSpliceGraph(omit_simplified=session.get('omit_simplified', False)) as sg:
         exp_names = [sg.experiment_names]
@@ -65,7 +64,7 @@ def splice_graph(gene_id):
         return jsonify(gd)
 
 
-@app.route('/psi-splice-graphs', methods=('POST',))
+@bp.route('/psi-splice-graphs', methods=('POST',))
 def psi_splice_graphs():
     with ViewSpliceGraph(omit_simplified=session.get('omit_simplified', False)) as sg:
         try:
@@ -87,3 +86,6 @@ def psi_splice_graphs():
         session['psi_init_splice_graphs'] = sg_init
 
         return jsonify(sg_init)
+
+
+app.register_blueprint(bp)
