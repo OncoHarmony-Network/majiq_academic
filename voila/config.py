@@ -13,7 +13,8 @@ from voila.voila_log import voila_log
 
 _ViewConfig = namedtuple('ViewConfig', ['voila_file', 'voila_files', 'splice_graph_file', 'analysis_type', 'nproc',
                                         'force_index', 'debug', 'silent', 'port', 'host', 'web_server', 'index_file',
-                                        'num_web_workers', 'strict_indexing', 'skip_type_indexing', 'splice_graph_only'])
+                                        'num_web_workers', 'strict_indexing', 'skip_type_indexing', 'splice_graph_only',
+                                        'enable_passcode'])
 _ViewConfig.__new__.__defaults__ = (None,) * len(_ViewConfig._fields)
 _TsvConfig = namedtuple('TsvConfig', ['file_name', 'voila_files', 'voila_file', 'splice_graph_file',
                                       'non_changing_threshold', 'nproc', 'threshold', 'analysis_type', 'show_all',
@@ -177,6 +178,12 @@ def write(args):
 
             del attrs[lsv_filter]
 
+    if attrs['enable_passcode']:
+        import random, string
+        attrs['enable_passcode'] = ''.join(random.choices(string.ascii_letters + string.digits, k=20))
+    else:
+        attrs['enable_passcode'] = ''
+
     # Get settings from arguments.
     config_parser.add_section(settings)
     for key, value in attrs.items():
@@ -223,6 +230,7 @@ class ViewConfig:
                 settings[int_key] = config_parser['SETTINGS'].getint(int_key)
             for bool_key in ['force_index', 'silent', 'debug', 'strict_indexing', 'skip_type_indexing']:
                 settings[bool_key] = config_parser['SETTINGS'].getboolean(bool_key)
+
 
             this_config = _ViewConfig(**{**files, **settings})
 
