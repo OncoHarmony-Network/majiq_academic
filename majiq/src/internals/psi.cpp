@@ -464,10 +464,6 @@ int adjustdelta(psi_distr_t& o_mixtpdf, psi_distr_t& emp_dpsi, int num_iter, int
     beta_params[1] = calculate_beta_params(0.5, my_variance(cnt_mean, center_dst)) ;
     beta_params[2] = calculate_beta_params(0.5, my_variance(spk_mean, spike_dst)) ;
 
-
-//     _em_beta_mix(D, p_mixture, beta_params, num_iter, min_ratio=1e-5, logger=logger, plotpath=plotpath, nj=njunc,
-//                 labels=labels)
-
     calc_mixture_pdf(o_mixtpdf, beta_params, p_mixture, psi_border, nbins) ;
 
 //    print_mixture(dpsi_border,  hist, o_mixtpdf) ;

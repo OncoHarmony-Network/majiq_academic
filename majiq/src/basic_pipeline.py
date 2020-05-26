@@ -1,8 +1,10 @@
-import abc
+"""
+basic_pipeline.py
 
-# ###############################
-# Data loading and Boilerplate #
-################################
+Base class for different MAJIQ pipelines
+"""
+
+import abc
 
 
 def pipeline_run(pipeline):
@@ -15,7 +17,6 @@ def pipeline_run(pipeline):
 
 
 class BasicPipeline:
-
     def __init__(self, args):
         """Basic configuration shared by all pipelines"""
 
