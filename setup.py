@@ -31,12 +31,15 @@ def setup_requirements(search=["Cython", "numpy"]):
 
 class InstallCommand(install):
 
-    user_options = install.user_options + [('voila-only', 'v', None),
-                                           ('debug-gdb', None,
-                                            'Add debugging flags for use with GDB (note: reduces performance)'),
-                                           ('num-threads=', 'j', "Max number of threads to use for compiling"
-                                                               " extensions")
-                                           ]
+    user_options = install.user_options + [
+        ("voila-only", "v", "Install VOILA only (no need to compile MAJIQ)"),
+        (
+            "debug-gdb",
+            None,
+            "Add debugging flags for use with GDB (note: reduces performance)",
+        ),
+        ("num-threads=", "j", "Max number of threads to use for compiling extensions")
+    ]
 
     def initialize_options(self):
         install.initialize_options(self)
