@@ -1,15 +1,19 @@
+"""
+config.py
+
+Class for parsing configuration files for MAJIQ build wrapping configparser
+"""
+
 import os
 import configparser
-from scipy import interpolate
 import numpy as np
-from majiq.src.constants import *
+import majiq.src.constants as constants
 import warnings
 
 
 class SingletonMetaClass(type):
-
     def __init__(cls, name, bases, dict):
-        super(SingletonMetaClass, cls).__init__(name,bases, dict)
+        super(SingletonMetaClass, cls).__init__(name, bases, dict)
         original_new = cls.__new__
 
         def my_new(cls, *args, **kwds):
@@ -17,6 +21,7 @@ class SingletonMetaClass(type):
             if cls.instance:
                 cls.instance = original_new(cls, *args, **kwds)
             return cls.instance
+
         cls.instance = None
         cls.__new__ = staticmethod(my_new)
 
@@ -37,7 +42,6 @@ class Config(object):
         return setattr(self.instance, name)
 
     class __Config(object):
-
         def _set_strandness(self, experiment_name, val):
             self.strand_specific[experiment_name] = val
 
@@ -58,39 +62,42 @@ class Config(object):
             if not os.path.exists(self.outDir):
                 os.makedirs(self.outDir)
 
+            try:
+                sam_dirlist = general["bamdirs"].split(",")
+            except KeyError:
+                if "samdir" in general:
+                    raise UserWarning(
+                        "samdir is a deprecated value, please use bamdirs instead"
+                    )
+                sam_dirlist = ["."]
+                warnings.warn(
+                    'bamdirs parameter not found in config file, using "./" instead'
+                )
 
             try:
-                sam_dirlist = general['bamdirs'].split(',')
+                junc_dirlist = general["sjdirs"].split(",")
             except KeyError:
-                if 'samdir' in general:
-                    raise UserWarning("samdir is a deprecated value, please use bamdirs instead")
-                sam_dirlist  = ['.']
-                warnings.warn('bamdirs parameter not found in config file, using "./" instead')
+                junc_dirlist = ["."]
+                warnings.warn(
+                    'sjdirs parameter not found in config file, using "./" instead'
+                )
 
-            try:
-                junc_dirlist = general['sjdirs'].split(',')
-            except KeyError:
-                junc_dirlist = ['.']
-                warnings.warn('sjdirs parameter not found in config file, using "./" instead')
+            self.genome = general["genome"]
 
-
-            self.genome = general['genome']
-
-            if 'readlen' in general:
+            if "readlen" in general:
                 # removing it from function/class definitions/initializations
                 warnings.warn(
-                    '"readlen" parameter is deprecated and will not be used. MAJIQ now detects the maximum read length'
-                    ' of each experiment automatically. '
+                    '"readlen" parameter is deprecated and will not be used.'
+                    " MAJIQ now detects the maximum read length of each"
+                    " experiment automatically. "
                 )
 
             exps = Config.config_section_map(config, "experiments")
             self.juncfile_list = []
             for exp_idx, lstnames in exps.items():
                 self.tissue_repl[exp_idx] = []
-                # self.juncfile_list[exp_idx] = []
-                elist = lstnames.split(',')
+                elist = lstnames.split(",")
                 for exp in elist:
-
                     self.exp_list.append(exp)
                     self.tissue_repl[exp_idx].append(count)
                     count += 1
@@ -107,52 +114,69 @@ class Config(object):
                     mexp = self.min_exp
                 self.min_experiments[name] = int(min(len(ind_list), mexp))
                 for exp_idx in ind_list:
-                    found = False
+                    # try to find input file with this prefix from input folders
+                    prefix = self.exp_list[exp_idx]
+                    found = False  # update once found
                     if self.aggregate:
                         for j_dir in junc_dirlist:
-                            juncfile = "%s/%s.%s" % (j_dir, self.exp_list[exp_idx], JUNC_FILE_FORMAT)
+                            juncfile = f"{j_dir}/{prefix}.{constants.JUNC_FILE_FORMAT}"
                             if os.path.isfile(juncfile):
                                 found = True
-                                self.sam_list.append((self.exp_list[exp_idx], juncfile, True))
+                                self.sam_list.append(
+                                    (self.exp_list[exp_idx], juncfile, True)
+                                )
                                 break
                     if found:
                         continue
                     for s_dir in sam_dirlist:
-                        bamfile = "%s/%s.%s" % (s_dir, self.exp_list[exp_idx], SEQ_FILE_FORMAT)
-                        baifile = "%s/%s.%s" % (s_dir, self.exp_list[exp_idx], SEQ_INDEX_FILE_FORMAT)
+                        bamfile = f"{s_dir}/{prefix}.{constants.SEQ_FILE_FORMAT}"
+                        baifile = f"{s_dir}/{prefix}.{constants.SEQ_INDEX_FILE_FORMAT}"
 
                         if os.path.isfile(bamfile) and os.path.isfile(baifile):
                             found = True
-                            self.sam_list.append((self.exp_list[exp_idx], bamfile, False))
+                            self.sam_list.append(
+                                (self.exp_list[exp_idx], bamfile, False)
+                            )
                             break
 
                     if not found:
-                        raise RuntimeError("Error %s (and %s) or %s not "
-                                           "found for file %s in any of "
-                                           "the paths" % (SEQ_FILE_FORMAT, SEQ_INDEX_FILE_FORMAT, JUNC_FILE_FORMAT,
-                                                          self.exp_list[exp_idx]))
+                        raise RuntimeError(
+                            f"No matching {constants.SEQ_FILE_FORMAT}"
+                            f" (and {constants.SEQ_INDEX_FILE_FORMAT})"
+                            f" or {constants.JUNC_FILE_FORMAT} file was found"
+                            f" matching the experiment {prefix} in any of"
+                            " the provided paths in the build configuration"
+                        )
 
-            opt_dict = {'strandness': self._set_strandness}
-            strandness = {'forward': FWD_STRANDED, 'reverse': REV_STRANDED, 'none': UNSTRANDED}
-            if 'strandness' in general:
+            opt_dict = {"strandness": self._set_strandness}
+            strandness = {
+                "forward": constants.FWD_STRANDED,
+                "reverse": constants.REV_STRANDED,
+                "none": constants.UNSTRANDED,
+            }
+            if "strandness" in general:
                 try:
-                    global_strand = strandness[general['strandness'].lower()]
-                except:
-                    raise RuntimeError('Incorrect Strand-specific option [forward, reverse, none]')
+                    global_strand = strandness[general["strandness"].lower()]
+                except Exception:
+                    raise RuntimeError(
+                        "Incorrect Strand-specific option [forward, reverse, none]"
+                    )
             else:
-                global_strand = strandness['none']
+                global_strand = strandness["none"]
             self.strand_specific = {xx: global_strand for xx in self.exp_list}
 
             opt = Config.config_section_map(config, "opts")
             for exp_id, opts_list in opt.items():
-                elist = opts_list.split(',')
+                elist = opts_list.split(",")
                 for opt in elist:
-                    op_id, op_val = opt.split(':')
+                    op_id, op_val = opt.split(":")
                     try:
                         opt_dict[op_id](exp_id, op_val)
                     except KeyError:
-                        raise RuntimeError('Option %s do not exist. The options available '
-                                           'are %s' % (op_id, ','.join(opt_dict.keys())))
+                        raise RuntimeError(
+                            "Option %s do not exist. The options available "
+                            "are %s" % (op_id, ",".join(opt_dict.keys()))
+                        )
 
             return
 
@@ -171,7 +195,7 @@ class Config(object):
                 dict1[option] = config_d.get(section, option)
                 if dict1[option] == -1:
                     print("skip: %s" % option)
-            except:
+            except Exception:
                 print("exception on %s!" % option)
                 dict1[option] = None
         return dict1
