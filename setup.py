@@ -93,7 +93,12 @@ class InstallCommand(install):
 
             NPY_INC_DIRS = [numpy.get_include()]
 
+            # We are currently using a deprecated API (since numpy v1.7)
+            # silence deprecation warnings for now
+            SILENCE_DEPRECATION = [("NPY_NO_DEPRECATED_API", 0)]
+
             extensions += [Extension('majiq.src.polyfitnb', ['majiq/src/polyfitnb.pyx'], language='c++',
+                                     define_macros=SILENCE_DEPRECATION,
                                      extra_compile_args=compile_args, include_dirs=NPY_INC_DIRS)]
             extensions += [Extension('majiq.src.build', ['majiq/src/build.pyx',
                                                          'majiq/src/internals/io_bam.cpp',
@@ -104,6 +109,7 @@ class InstallCommand(install):
                                      runtime_library_dirs=HTSLIB_LIB_DIRS + MAJIQ_LIB_DIRS,
                                      extra_compile_args=compile_args,
                                      extra_link_args=linker_args,
+                                     define_macros=SILENCE_DEPRECATION,
                                      language='c++')]
 
             extensions += [Extension('majiq.src.calc_psi', ['majiq/src/calc_psi.pyx', 'majiq/src/internals/psi.cpp'],
@@ -112,6 +118,7 @@ class InstallCommand(install):
                                      runtime_library_dirs=MAJIQ_LIB_DIRS,
                                      extra_compile_args=compile_args,
                                      extra_link_args=linker_args,
+                                     define_macros=SILENCE_DEPRECATION,
                                      language='c++')]
 
             extensions += [Extension('majiq.src.deltapsi', ['majiq/src/deltapsi.pyx', 'majiq/src/internals/psi.cpp'],
@@ -120,6 +127,7 @@ class InstallCommand(install):
                                      runtime_library_dirs=MAJIQ_LIB_DIRS,
                                      extra_compile_args=compile_args,
                                      extra_link_args=linker_args,
+                                     define_macros=SILENCE_DEPRECATION,
                                      language='c++')]
 
             extensions += [Extension('majiq.src.indpnt', ['majiq/src/indpnt.pyx', 'majiq/src/internals/psi.cpp'],
@@ -128,9 +136,11 @@ class InstallCommand(install):
                                      runtime_library_dirs=MAJIQ_LIB_DIRS,
                                      extra_compile_args=compile_args,
                                      extra_link_args=linker_args,
+                                     define_macros=SILENCE_DEPRECATION,
                                      language='c++')]
 
             extensions += [Extension('majiq.src.io', ['majiq/src/io.pyx'], include_dirs=NPY_INC_DIRS + MAJIQ_INC_DIRS,
+                                     define_macros=SILENCE_DEPRECATION,
                                      extra_compile_args=compile_args, extra_link_args=linker_args, language='c++')]
 
             extensions += [Extension('voila.c.splice_graph_sql', ['voila/c/splice_graph_sql.pyx', 'voila/c/sqlite3.c'],
