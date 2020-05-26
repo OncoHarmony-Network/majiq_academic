@@ -1,3 +1,9 @@
+"""
+logger.py
+
+Functions for logging progress in MAJIQ
+"""
+
 import logging
 import os
 import resource
@@ -5,7 +11,9 @@ import sys
 
 
 def monitor(msg):
-    print("MONITOR", msg, resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1000, 'MB')
+    print(
+        "MONITOR", msg, resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1000, "MB"
+    )
     sys.stdout.flush()
 
 
@@ -22,14 +30,14 @@ def create_if_not_exists(my_dir, logger=False):
 
 def get_logger(logger_name, silent=False, debug=False):
     """
-    Returns a logger instance. silent=False will silence the logger, debug will give
-    more information intended for debugging purposes.
+    Returns a logger instance. silent=False will silence the logger, debug will
+    give more information intended for debugging purposes.
     """
     logging_format = "%(asctime)s (PID:%(process)s) - %(levelname)s - %(message)s"
     logger = logging.getLogger(logger_name)
     formatter = logging.Formatter(logging_format)
 
-    file_handler = logging.FileHandler(logger_name, mode='a')
+    file_handler = logging.FileHandler(logger_name, mode="a")
     file_handler.setFormatter(formatter)
 
     stream_handler = logging.StreamHandler()
@@ -54,4 +62,3 @@ def close_logger(logger):
         handler.close()
         logger.removeHandler(handler)
     logging.shutdown()
-
