@@ -59,6 +59,7 @@
 #include <unordered_map>
 #include <iostream>
 #include <omp.h>
+#include "boost/math/distributions/normal.hpp"
 #include "testStats.hpp"
 
 // maximum total sample size (n1 + n2) used for exact p-value calculation
@@ -229,9 +230,11 @@ namespace MajiqStats {
             omp_lock_t lock_count_cache_;
             omp_lock_t lock_choose_cache_;
             omp_lock_t lock_cumcount_cache_;
+            // standard normal distribution set by constructor (mean 0, var 1)
+            const boost::math::normal_distribution<double> z_dist_;
 
         public:
-            MannWhitney() {
+            MannWhitney() : z_dist_(0., 1.) {
                 // set up locks
                 omp_init_lock(&lock_count_cache_);
                 omp_init_lock(&lock_choose_cache_);
@@ -479,13 +482,8 @@ namespace MajiqStats {
                 // continuity correction of 0.5 in numerator towards 0
                 // use negative numerator so we can just use CDF
                 const double z_numerator = -std::max(std::fabs(U1 - mean_U) - 0.5, 0.);
-                // calculate p-value using normal distribution
-                // TODO use nicer implementation of 2 * standard normal CDF
-                const double pval = 1.
-                    + std::erf(
-                            z_numerator
-                            / (M_SQRT2 * std_U + std::numeric_limits<double>::epsilon())
-                    );
+                // calculate p-value using standard normal distribution
+                const double pval = 2. * boost::math::cdf(z_dist_, z_numerator / std_U);
                 return std::max(0., std::min(pval, 1.));
             }
 
