@@ -453,10 +453,13 @@ namespace io_bam {
             // does read include junctions overlapping intron?
             bool junc_found = false;
             for (const auto &j: junc_record) {
-                if (j.first < intron->get_end() && intron->get_start() < j.second) {
+                if (j.first <= intron->get_end() && intron->get_start() <= j.second) {
+                    // there is a junction that starts or ends within intronic
+                    // coordinates, or there is a junction that goes over this
+                    // intron entirely
                     junc_found = true;
                     break;
-                } else if (j.second >= intron->get_end()) {
+                } else if (j.second > intron->get_end()) {
                     // none of the remaining junctions (sorted) can intersect intron
                     break;
                 }
