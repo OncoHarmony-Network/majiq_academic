@@ -2,7 +2,7 @@ from libcpp.string cimport string
 from libcpp.map cimport map
 from libcpp.vector cimport vector
 
-from majiq.src.internals.grimoire cimport Gene, Exon, Junction
+from majiq.src.internals.grimoire cimport Gene, Exon, Junction, coord_key_t
 from majiq.src.internals import quant_lsv
 from majiq.src.internals.mtypes cimport *
 from majiq.src.internals.qLSV cimport qLSV
@@ -45,7 +45,8 @@ cdef int  read_gff(str filename, map[string, Gene*] all_genes, vector[string] gi
     cdef int start, end
     cdef bint bb
     cdef list ind_list, tlist
-    cdef string gene_id, key, gene_name, parent_tx_id
+    cdef string gene_id, gene_name, parent_tx_id
+    cdef coord_key_t key
     # cdef map[string, Gene*] all_genes
 
     for record in parse_gff3(filename):
@@ -114,13 +115,13 @@ cdef int  read_gff(str filename, map[string, Gene*] all_genes, vector[string] gi
         # if gene_id == 'ENSMUSG00000006498': print (coord_list)
         if len(coord_list) == 0 : continue
         for xx, yy in coord_list:
-            key = ('%s-%s' % (last_ss, xx)).encode('utf-8')
+            key = coord_key_t(last_ss, xx)
 
             if all_genes[gene_id].junc_map_.count(key) == 0:
                 all_genes[gene_id].junc_map_[key] = new Junction(last_ss, xx, True, simpl)
             last_ss = yy
 
-        key = ('%s-%s' % (last_ss, FIRST_LAST_JUNC)).encode('utf-8')
+        key = coord_key_t(last_ss, FIRST_LAST_JUNC)
         if all_genes[gene_id].junc_map_.count(key) == 0:
             all_genes[gene_id].junc_map_[key] = new Junction(last_ss, FIRST_LAST_JUNC, True, simpl)
     merge_exons(exon_dict, all_genes, simpl, enable_anot_ir)
@@ -129,7 +130,8 @@ cdef int  read_gff(str filename, map[string, Gene*] all_genes, vector[string] gi
 
 cdef int merge_exons(dict exon_dict, map[string, Gene*]& all_genes, bint simpl, bint enable_anot_ir) except -1:
     cdef list ex_list
-    cdef string gne_id, key
+    cdef string gne_id
+    cdef coord_key_t key
     cdef tuple x
     cdef int ex_start, ex_end, nopen, coord
     cdef bint is_start
@@ -146,15 +148,12 @@ cdef int merge_exons(dict exon_dict, map[string, Gene*]& all_genes, bint simpl, 
                 if ex_end != -1:
                     start1 = ex_end -10  if ex_start == EMPTY_COORD else ex_start
                     end1 = ex_start +10  if ex_end == EMPTY_COORD else ex_end
-                    key = ('%s-%s' % (start1, end1)).encode('utf-8')
+                    key = coord_key_t(start1, end1)
                     all_genes[gne_id].exon_map_[key] = new Exon(ex_start, ex_end, True)
 
-                    if nopen > 0 and (ex_end+4) < (coord-1):
+                    if nopen > 0 and ex_end < coord:
+                        # create annotated intron (function adjusts coordinates using exon coordinates)
                         all_genes[gne_id].create_annot_intron(ex_end, coord, simpl, enable_anot_ir)
-                       # pass
-#                    else:
-                        # all_genes[gne_id].create_annot_intron(ex_end+1, coord-1)
-                        #tlist.append([ex_end+1, coord-1, 1, IR_TYPE])
                     ex_end = -1
                     ex_start = coord
 
@@ -166,7 +165,7 @@ cdef int merge_exons(dict exon_dict, map[string, Gene*]& all_genes, bint simpl, 
                 ex_end = coord if coord > ex_end else ex_end
 
         if ex_end != -1:
-            key = ('%s-%s' % (ex_start, ex_end)).encode('utf-8')
+            key = coord_key_t(ex_start, ex_end)
             all_genes[gne_id].exon_map_[key] = new Exon(ex_start, ex_end, True)
 
 

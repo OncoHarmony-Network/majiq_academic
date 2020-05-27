@@ -152,20 +152,18 @@ namespace io_bam {
 
     void IOBam::find_junction_genes(string chrom, char strand, int start, int end,
                                     shared_ptr<vector<float>> nreads_ptr){
-//        const int n = glist_[chrom].size() ;
         bool found_stage1 = false ;
         bool found_stage2 = false ;
         vector<Gene*> temp_vec1 ;
         vector<Gene*> temp_vec2 ;
         Junction * junc = new Junction(start, end, false, simpl_) ;
-        const string key = junc->get_key() ;
+        const coord_key_t key = junc->get_key();
 
         vector<overGene*>::iterator low = lower_bound (glist_[chrom].begin(), glist_[chrom].end(), start, _Region::func_comp ) ;
         if (low == glist_[chrom].end())
             return ;
 
         for (const auto &gObj: (*low)->glist){
-//            if (gObj->get_start() >= end) break ;
             if (gObj->get_start() >= end) continue ;
             if (gObj->get_end() < start) continue ;
             if (start< gObj->get_start() || end> gObj->get_end()) continue ;
@@ -349,9 +347,13 @@ namespace io_bam {
         }
         int read_pos = read->core.pos;
 
-        // get iterator over all introns with end position after alignment start
-        vector<Intron *>::iterator low = lower_bound(intronVec_[chrom].begin(), intronVec_[chrom].end(),
-                                                     read_pos, _Region::func_comp ) ;
+        // get iterator with all introns with end position after alignment start
+        vector<Intron *>::iterator low = intronVec_[chrom].begin()
+            // get lower-bound using cumulative maximum to meet conditions to
+            // do correct O(log(n)) binary search using std::lower_bound
+            + (lower_bound(intronVec_end_cummax_[chrom].begin(),
+                           intronVec_end_cummax_[chrom].end(), read_pos)
+               - intronVec_end_cummax_[chrom].begin());
         if (low == intronVec_[chrom].end()) {
             // this read can't contribute to any of the introns, so exit here
             return 0;
@@ -824,8 +826,8 @@ namespace io_bam {
                 omp_unset_lock(&map_lck_) ;
             }
         } else {
-            string key = to_string(start) + "-" + to_string(end) ;
-            add_junction(chrom, strand, start, end, 0, sreads) ;
+            coord_key_t key = std::make_pair(start, end);
+            add_junction(chrom, strand, start, end, 0, sreads);
             for (const auto &gObj: (*low)->glist){
                 gObj->updateFlagsFromJunc(key, sreads, minreads_t, npos, minpos_t, denovo_t, denovo, minexp, reset) ;
             }
@@ -849,8 +851,20 @@ namespace io_bam {
                     g->reset_exons() ;
                 }
             }
+            // get introns per chromosome in sorted order
             sort(intronVec_[it.first].begin(), intronVec_[it.first].end(), Intron::islowerRegion<Intron>) ;
-
+            // get cumulative maximum for previous intron ends
+            vector<int> cumulative_max;
+            cumulative_max.reserve(intronVec_[it.first].size());
+            int max_value = -1;  // initial maximum value
+            for (const auto & intron : intronVec_[it.first]) {
+                const int intron_end = intron->get_end();
+                if (intron_end > max_value) {
+                    max_value = intron_end;
+                }
+                cumulative_max.push_back(max_value);
+            }
+            intronVec_end_cummax_[it.first] = cumulative_max;
         }
         ParseJunctionsFromFile(true) ;
         for (const auto & it: intronVec_){
@@ -905,18 +919,23 @@ namespace io_bam {
         }
     }
 
+    /**
+     * Partition genes into chromosomes and groups of intersecting genes (overGenes) in sorted order
+     */
     void prepare_genelist(map<string, Gene*>& gene_map, map<string, vector<overGene*>> & geneList){
-        map<string, vector<Gene*>> gmp ;
-
+        // construct lists of genes per chromosome
+        map<string, vector<Gene*>> gmp;  // genes per chromosome
         for(const auto & p: gene_map){
             const string chrom = (p.second)->get_chromosome() ;
             if (gmp.count(chrom) == 0 )
                 gmp[chrom] = vector<Gene*>() ;
             gmp[chrom].push_back(p.second)  ;
         }
-
+        // for each chromosome/list of genes
         for (auto &gl: gmp){
+            // iterate over genes in sorted order
             sort((gl.second).begin(), (gl.second).end(), Gene::islowerRegion<Gene>) ;
+            // group genes (into overGene) that directly/indirectly overlap
             int gstart = 0, gend = 0 ;
             overGene * ov = nullptr ;
 
@@ -924,13 +943,17 @@ namespace io_bam {
 
                 int st = g->get_start() ;
                 int nd = g->get_end() ;
+                // if current gene overlaps previous overgene, add it
                 if (st <= gend && nd >= gstart){
+                    // update overgene boundaries to include new gene
                     gstart = (gstart == 0) ? st : min(gstart, st) ;
                     gend = (gend == 0) ? nd : max(gend, nd) ;
                     ov->set_start(gstart) ;
                     ov->set_end(gend) ;
                 }
                 else{
+                    // otherwise, done constructing current overgene, start new
+                    // one for current gene
                     if (ov != nullptr )
                         geneList[gl.first].push_back(ov) ;
                     ov = new overGene(st, nd) ;

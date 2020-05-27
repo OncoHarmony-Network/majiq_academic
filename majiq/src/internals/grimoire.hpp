@@ -19,8 +19,9 @@
 #define MAX_TYPE_LENGTH 245
 #define NA_LSV  "na"
 using namespace std ;
-//extern typedef vector<float> psi_distr_t ;
 typedef vector<float> psi_distr_t ;
+typedef std::pair<int, int> coord_key_t;
+typedef string lsv_id_t;
 
 namespace grimoire{
     class Exon ;
@@ -117,7 +118,6 @@ namespace grimoire{
             Junction(int start1, int end1, bool annot1, bool simpl1): _Region(start1, end1),
                                                                       annot_(annot1), simpl_fltr_(simpl1){
                 denovo_bl_ = annot1 ;
-//                denovo_bl_ = false ;
                 denovo_cnt_ = 0 ;
                 bld_fltr_ = false ;
                 flter_cnt_ = 0 ;
@@ -129,7 +129,7 @@ namespace grimoire{
             }
             ~Junction()             { clear_nreads(true) ; }
 
-            string  get_key()       { return(to_string(start_) + "-" + to_string(end_)) ; }
+            coord_key_t get_key() { return std::make_pair(start_, end_); }
             string  get_key(Gene * gObj) ;
             string  get_key(Gene * gObj, int strandness) ;
             bool    get_annot()     { return annot_ ; }
@@ -164,19 +164,48 @@ namespace grimoire{
                 simpl_cnt_out_ = 0 ;
             }
 
+            /**
+             * Identify if junction passes current experiments to update build/denovo filters
+             *
+             * @param sreads the number of reads for junction in current experiment
+             * @param minreads_t the minimum number of reads to pass build filter
+             * @param npos the number of nonzero positions in current experiment
+             * @param minpos_t the minimum number of nonzero positions to pass
+             * build/denovo filters
+             * @param denovo_t the minimum number of reads to pass denovo filter
+             * @param min_experiments the total number of experiments in a
+             * build group required to pass build/denovo filters
+             * @param denovo are we accepting denovo junctions?
+             *
+             * @note Update counts of experiments passing build or denovo
+             * filters, and update flag indicating if junction passed
+             * corresponding filter if enough experiments passed in this build
+             * group. Only requires one build group to pass
+             */
             inline void update_flags(unsigned int sreads, unsigned int minreads_t, unsigned int npos, unsigned int minpos_t,
                               unsigned int denovo_t, unsigned int min_experiments, bool denovo){
-                if (( npos >= minpos_t) && (sreads >= minreads_t)){
-                    ++ flter_cnt_ ;
-                    bld_fltr_ = bld_fltr_ || (flter_cnt_ >= min_experiments) ;
+                // only update flags if experiment has enough nonzero positions
+                if (npos >= minpos_t) {
+                    // only try updating build filter if hasn't passed and enough reads
+                    if (!bld_fltr_ && sreads >= minreads_t) {
+                        // increment number of experiments passing build filters
+                        ++flter_cnt_;
+                        // update flag for junction if enough experiments passed
+                        if (flter_cnt_ >= min_experiments) {
+                            bld_fltr_ = true;
+                        }
+                    }
+                    // only try updating denovo filter if processing denovo,
+                    // hasn't passed, and enough reads
+                    if (denovo && !denovo_bl_ && sreads >= denovo_t) {
+                        // increment number of experiments passing build filters
+                        ++denovo_cnt_;
+                        // update flag for junction if enough experiments passed
+                        if (denovo_cnt_ >= min_experiments) {
+                            denovo_bl_ = true;
+                        }
+                    }
                 }
-                if (sreads >= denovo_t){
-                    ++ denovo_cnt_  ;
-                    denovo_bl_ = denovo_bl_ || (denovo_cnt_ >= min_experiments) ;
-                    if (!(denovo || annot_))
-                        denovo_bl_ = false ;
-                }
-
                 return ;
             }
 
@@ -194,7 +223,6 @@ namespace grimoire{
                     npos += nreads[i]? 1 : 0 ;
                 }
                 update_flags(sum_reads, num_reads, npos, num_pos, denovo_thresh, min_experiments,  denovo) ;
-//cerr << "UPDATE FLAGS " << get_key() << " bool:" << denovo_bl_<< " denovothresh: " << denovo_thresh << " sum_reads: " << sum_reads << "\n" ;
                 return ;
             }
 
@@ -236,7 +264,7 @@ namespace grimoire{
             void    simplify(map<string, int>& junc_tlb, float simpl_percent, Gene* gObj, int strandness,
                         int denovo_simpl, int db_simple, int ir_simpl, bool last, unsigned int min_experiments) ;
             bool    has_out_intron()        { return ob_irptr != nullptr ; }
-            string  get_key()       { return(to_string(start_) + "-" + to_string(end_)) ; }
+            coord_key_t get_key() { return std::make_pair(start_, end_); }
             void set_simpl_fltr(bool val) {};
             void    revert_to_db(){
                 set_start(db_start_) ;
@@ -313,7 +341,7 @@ namespace grimoire{
             bool    get_annot()             { return annot_ ; }
             Gene*   get_gene()              { return gObj_ ; }
             bool    get_ir_flag()           { return ir_flag_ ; }
-            string  get_key()               { return (to_string(start_) + "-" + to_string(end_)) ; }
+            coord_key_t get_key() { return std::make_pair(start_, end_); }
             bool    get_simpl_fltr()        { return simpl_fltr_ ; }
             int     get_nxbin()             { return nxbin_ ; }
             int     get_nxbin_off()         { return nxbin_off_ ; }
@@ -472,8 +500,8 @@ namespace grimoire{
             omp_lock_t map_lck_ ;
 
         public:
-            map <string, Junction*> junc_map_ ;
-            map <string, Exon*> exon_map_ ;
+            map <coord_key_t, Junction*> junc_map_;
+            map <coord_key_t, Exon*> exon_map_;
             vector <Intron*> intron_vec_ ;
 
 
@@ -516,7 +544,7 @@ namespace grimoire{
             }
             void reset_exons(){
                 for (auto p  = exon_map_.begin(); p!= exon_map_.end();){
-                    map <string, Exon*>::iterator pit = p ;
+                    map <coord_key_t, Exon*>::iterator pit = p ;
                     Exon * e = p->second ;
                     e->revert_to_db() ;
                     ++p ;
@@ -529,7 +557,6 @@ namespace grimoire{
             }
 
             string  get_region() ;
-            void    print_exons() ;
             void    detect_exons() ;
             void    connect_introns() ;
             void    detect_introns(vector<Intron*> &intronlist, bool simpl) ;
@@ -546,10 +573,10 @@ namespace grimoire{
             int     get_constitutive_junctions(vector<string>& v) ;
             void    simplify(map<string, int>& junc_tlb, float simpl_percent, int strandness, int denovo_simpl,
                              int db_simple, int ir_simpl, bool last, unsigned int min_experiments) ;
-            void    initialize_junction(string key, int start, int end, shared_ptr<vector<float>> nreads_ptr, bool simpl) ;
+            void    initialize_junction(coord_key_t key, int start, int end, shared_ptr<vector<float>> nreads_ptr, bool simpl) ;
             void    update_junc_flags(int efflen, bool is_last_exp, unsigned int minreads, unsigned int minpos,
                                       unsigned int denovo_thresh, unsigned int min_experiments, bool denovo) ;
-            void    updateFlagsFromJunc(string key, unsigned int sreads, unsigned int minreads_t, unsigned int npos,
+            void    updateFlagsFromJunc(coord_key_t key, unsigned int sreads, unsigned int minreads_t, unsigned int npos,
                                         unsigned int minpos_t, unsigned int denovo_t, bool denovo, int minexp,
                                         bool reset) ;
 
@@ -557,7 +584,7 @@ namespace grimoire{
 
     class LSV{
         private:
-            string              id_ ;
+            lsv_id_t id_;
             vector<Junction *>  junctions_ ;
             Intron *            ir_ptr_ ;
             string              type_ ;
@@ -585,9 +612,9 @@ namespace grimoire{
             bool gather_lsv_info (float* source, float* target, list<Jinfo*> &info, map<string, Jinfo> &tlb,
                                   unsigned int msample) ;
             string      set_type (Exon* ex, bool ss) ;
-            inline void get_variations(set<string> &t1) ;
+            inline void get_variations(set<coord_key_t> &t1) ;
             string      get_type ()                  { return type_ ; }
-            string      get_id ()                    { return id_ ; }
+            lsv_id_t get_id() { return id_; }
             Gene*       get_gene()                   { return gObj_ ; }
             int         get_num_junctions()          { return junctions_.size() ; }
             vector<Junction *>& get_junctions()      { return junctions_ ; }
@@ -603,6 +630,11 @@ namespace grimoire{
             }
     };
 
+    /**
+     * Group of genes over a region. Region is union over genes. Typically
+     * constructed to partition genes on chromosome into directly/indirectly
+     * overlapping gene lists
+     */
     class overGene: public _Region{
         public:
             vector<Gene *> glist ;
