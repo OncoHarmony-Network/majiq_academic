@@ -52,6 +52,82 @@ namespace grimoire{
         Junction *  jun_ptr ;
     } ;
 
+    /**
+     * mix-in class for objects that can be simplified
+     */
+    class _Simplifiable {
+        protected:
+            // is this object simplified?
+            bool simpl_fltr_;
+
+        private:
+            // within current build group, number of experiments that give
+            // evidence for keeping it simplified
+            unsigned int simpl_cnt_in_;
+            unsigned int simpl_cnt_out_;
+
+        public:
+            /**
+             * virtual destructor
+             */
+            virtual ~_Simplifiable() {}
+            /**
+             * empty constructor
+             */
+            _Simplifiable() {}
+            /**
+             * Initialize simplifiable details
+             *
+             * @param simpl1 Does the object start simplified or not?
+             */
+            _Simplifiable(bool simpl1) : simpl_fltr_(simpl1),
+                                         simpl_cnt_in_(0),
+                                         simpl_cnt_out_(0) {
+            }
+            /**
+             * Is the object simplified?
+             */
+            bool get_simpl_fltr() const { return simpl_fltr_; }
+            /**
+             * Count experiment as having evidence for simplification in
+             * specified direction
+             *
+             * @param val experiment has evidence for keeping it simplified
+             * @param in evidence is for junction as part of event going in vs
+             * out of exon
+             */
+            void set_simpl_fltr(bool val, bool in) {
+                if (val) {
+                    if (in) {
+                        ++simpl_cnt_in_;
+                    } else {
+                        ++simpl_cnt_out_;
+                    }
+                }
+            }
+            /**
+             * Update if simplified using aggregated build group and reset counts
+             *
+             * @param min_experiments Minimum number of experiments with
+             * evidence of being simplifiable to keep being simplified
+             *
+             * @note object stays simplified if both directions had enough
+             * experiments that were under simplification thresholds
+             */
+            void update_simpl_flags(unsigned int min_experiments) {
+                // we only need to do anything if currently simplified
+                if (simpl_fltr_) {
+                    // stays simplified if both directions had enough
+                    // experiments that were under simplification thresholds
+                    simpl_fltr_ = simpl_cnt_in_ >= min_experiments
+                        && simpl_cnt_out_ >= min_experiments;
+                }
+                // reset counts
+                simpl_cnt_in_ = 0;
+                simpl_cnt_out_ = 0;
+            }
+    };
+
     class _Region{
         protected:
             int start_ ;
@@ -66,7 +142,6 @@ namespace grimoire{
             void        set_start(int start1)   { start_ = start1 ; }
             void        set_end(int end1)       { end_ = end1 ; }
             inline int  length()                { return 1 + end_ - start_ ; }
-            virtual void  set_simpl_fltr(bool val, bool in) { cerr << "NOT SHOW\n" ;}
 
 
             static bool func_comp (_Region* a, int coord){
@@ -95,18 +170,15 @@ namespace grimoire{
     };
 
 
-    class Junction: public _Region{
+    class Junction: public _Region, public _Simplifiable {
         private:
             bool annot_ ;
             bool intronic_ ;
             bool bld_fltr_ ;
             bool denovo_bl_ ;
-            bool simpl_fltr_ ;
             bool constitutive_ ;
             unsigned int denovo_cnt_ ;
             unsigned int flter_cnt_ ;
-            unsigned int simpl_cnt_in_ ;
-            unsigned int simpl_cnt_out_ ;
             Exon * acceptor_;
             Exon * donor_;
 
@@ -114,8 +186,10 @@ namespace grimoire{
             shared_ptr<vector<float>> nreads_ptr_;
 
             Junction() {}
-            Junction(int start1, int end1, bool annot1, bool simpl1): _Region(start1, end1),
-                                                                      annot_(annot1), simpl_fltr_(simpl1){
+            Junction(int start1, int end1, bool annot1, bool simpl1)
+                    : _Region(start1, end1),
+                      _Simplifiable(simpl1),
+                      annot_(annot1) {
                 denovo_bl_ = annot1 ;
 //                denovo_bl_ = false ;
                 denovo_cnt_ = 0 ;
@@ -123,8 +197,6 @@ namespace grimoire{
                 flter_cnt_ = 0 ;
                 intronic_ = false ;
                 nreads_ptr_ = nullptr ;
-                simpl_cnt_in_ = 0 ;
-                simpl_cnt_out_ = 0 ;
                 constitutive_  = false ;
             }
             ~Junction()             { clear_nreads(true) ; }
@@ -135,7 +207,6 @@ namespace grimoire{
             bool    get_annot()     { return annot_ ; }
             bool    get_intronic()  { return intronic_ ; }
             bool    get_bld_fltr()  { return bld_fltr_ ; }
-            bool    get_simpl_fltr(){ return simpl_fltr_ ; }
             bool    get_denovo_bl() { return denovo_bl_ ; }
             Exon*   get_acceptor()  { return acceptor_ ; }
             Exon*   get_donor()     { return donor_ ; }
@@ -149,19 +220,6 @@ namespace grimoire{
             void  exonReset(){
                 acceptor_ = nullptr ;
                 donor_ = nullptr ;
-            }
-
-            void set_simpl_fltr(bool val, bool in){
-                if (in)
-                    simpl_cnt_in_ += val? 1 : 0 ;
-                else
-                    simpl_cnt_out_ += val? 1 : 0 ;
-            }
-
-            void update_simpl_flags(unsigned int min_experiments){
-                simpl_fltr_ = simpl_fltr_ && simpl_cnt_in_ >= min_experiments && simpl_cnt_out_ >= min_experiments ;
-                simpl_cnt_in_ = 0 ;
-                simpl_cnt_out_ = 0 ;
             }
 
             inline void update_flags(unsigned int sreads, unsigned int minreads_t, unsigned int npos, unsigned int minpos_t,
@@ -237,7 +295,6 @@ namespace grimoire{
                         int denovo_simpl, int db_simple, int ir_simpl, bool last, unsigned int min_experiments) ;
             bool    has_out_intron()        { return ob_irptr != nullptr ; }
             string  get_key()       { return(to_string(start_) + "-" + to_string(end_)) ; }
-            void set_simpl_fltr(bool val) {};
             void    revert_to_db(){
                 set_start(db_start_) ;
                 set_end(db_end_) ;
@@ -254,12 +311,11 @@ namespace grimoire{
 
     };
 
-    class Intron: public _Region{
+    class Intron: public _Region, public _Simplifiable {
         private:
 
             bool    annot_ ;
             Gene *  gObj_ ;
-            bool    simpl_fltr_ ;
             bool    ir_flag_ ;
 
             int     flt_count_ ;
@@ -271,15 +327,15 @@ namespace grimoire{
             int     nxbin_ ;
             int     numbins_ ;
 
-            unsigned int simpl_cnt_in_ ;
-            unsigned int simpl_cnt_out_ ;
-
         public:
             shared_ptr<vector<float>> read_rates_ptr_;
 
             Intron () {}
-            Intron (int start1, int end1, bool annot1, Gene* gObj1, bool simpl1): _Region(start1, end1),
-                                                                     annot_(annot1), gObj_(gObj1), simpl_fltr_(simpl1){
+            Intron (int start1, int end1, bool annot1, Gene* gObj1, bool simpl1)
+                    : _Region(start1, end1),
+                      _Simplifiable(simpl1),
+                      annot_(annot1),
+                      gObj_(gObj1) {
                 flt_count_  = 0 ;
                 ir_flag_    = false ;
                 read_rates_ptr_ = nullptr;
@@ -288,15 +344,16 @@ namespace grimoire{
                 nxbin_mod_  = 0 ;
                 markd_      = false ;
                 numbins_    = 0 ;
-                simpl_cnt_in_   = 0 ;
-                simpl_cnt_out_  = 0 ;
                 const_donor_    = false ;
                 const_acceptor_ = false ;
             }
 
-             Intron (int start1, int end1, bool annot1, Gene* gObj1, bool simpl1, bool enable_annot):
-                      _Region(start1, end1), annot_(annot1), gObj_(gObj1), simpl_fltr_(simpl1), ir_flag_(enable_annot){
-
+             Intron (int start1, int end1, bool annot1, Gene* gObj1, bool simpl1, bool enable_annot)
+                    : _Region(start1, end1),
+                      _Simplifiable(simpl1),
+                      annot_(annot1),
+                      gObj_(gObj1),
+                      ir_flag_(enable_annot) {
                 flt_count_  = 0 ;
                 read_rates_ptr_ = nullptr;
                 nxbin_      = 0 ;
@@ -304,8 +361,6 @@ namespace grimoire{
                 nxbin_mod_  = 0 ;
                 markd_      = false ;
                 numbins_    = 0 ;
-                simpl_cnt_in_   = 0 ;
-                simpl_cnt_out_  = 0 ;
                 const_donor_    = false ;
                 const_acceptor_ = false ;
             }
@@ -314,7 +369,6 @@ namespace grimoire{
             Gene*   get_gene()              { return gObj_ ; }
             bool    get_ir_flag()           { return ir_flag_ ; }
             string  get_key()               { return (to_string(start_) + "-" + to_string(end_)) ; }
-            bool    get_simpl_fltr()        { return simpl_fltr_ ; }
             int     get_nxbin()             { return nxbin_ ; }
             int     get_nxbin_off()         { return nxbin_off_ ; }
             int     get_nxbin_mod()         { return nxbin_mod_ ; }
@@ -355,21 +409,6 @@ namespace grimoire{
              * @return boolean indicating if intron is reliable
              */
             bool is_reliable(float min_bins, int eff_len);
-
-            void set_simpl_fltr(bool val, bool in){
-                if (in)
-                    simpl_cnt_in_ += val? 1 : 0 ;
-                else
-                    simpl_cnt_out_ += val? 1 : 0 ;
-            }
-
-            void update_simpl_flags(unsigned int min_experiments){
-
-                simpl_fltr_ = simpl_fltr_ && simpl_cnt_in_ >= min_experiments && simpl_cnt_out_ >= min_experiments ;
-                simpl_cnt_in_  = 0 ;
-                simpl_cnt_out_  = 0 ;
-
-            }
 
             void add_read_rates_buff(int eff_len){
                 // set up buffer and constants to bin raw positions to eff_len equivalent junction positions
@@ -499,7 +538,6 @@ namespace grimoire{
             string  get_chromosome(){ return chromosome_ ;}
             char    get_strand()    { return strand_ ;}
             string  get_name()      { return name_ ;}
-            void    set_simpl_fltr(bool val) {};
             void    create_annot_intron(int start_ir, int end_ir, bool simpl, bool enable_anot_ir){
                 Intron * ir = new Intron(start_ir +1, end_ir -1, true, this, simpl, enable_anot_ir) ;
                 intron_vec_.push_back(ir) ;
