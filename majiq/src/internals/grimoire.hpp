@@ -62,7 +62,7 @@ namespace grimoire{
 
         private:
             // within current build group, number of experiments that give
-            // evidence for keeping it simplified
+            // evidence against simplification
             unsigned int simpl_cnt_in_;
             unsigned int simpl_cnt_out_;
 
@@ -89,15 +89,17 @@ namespace grimoire{
              */
             bool get_simpl_fltr() const { return simpl_fltr_; }
             /**
-             * Count experiment as having evidence for simplification in
-             * specified direction
+             * Count experiment as having evidence for or against
+             * simplification in specified direction
              *
              * @param val experiment has evidence for keeping it simplified
              * @param in evidence is for junction as part of event going in vs
              * out of exon
              */
             void set_simpl_fltr(bool val, bool in) {
-                if (val) {
+                if (!val) {
+                    // we only count experiments where evidence is against
+                    // simplification
                     if (in) {
                         ++simpl_cnt_in_;
                     } else {
@@ -109,18 +111,18 @@ namespace grimoire{
              * Update if simplified using aggregated build group and reset counts
              *
              * @param min_experiments Minimum number of experiments with
-             * evidence of being simplifiable to keep being simplified
+             * evidence against simplification, making it unsimplified
              *
-             * @note object stays simplified if both directions had enough
-             * experiments that were under simplification thresholds
+             * @note object stays simplified only if both directions had
+             * insufficient experiments to make not simplified
              */
             void update_simpl_flags(unsigned int min_experiments) {
                 // we only need to do anything if currently simplified
                 if (simpl_fltr_) {
-                    // stays simplified if both directions had enough
-                    // experiments that were under simplification thresholds
-                    simpl_fltr_ = simpl_cnt_in_ >= min_experiments
-                        && simpl_cnt_out_ >= min_experiments;
+                    // object stays simplified only if both directions had
+                    // insufficient experiments to make not simplified
+                    simpl_fltr_ = simpl_cnt_in_ < min_experiments
+                        && simpl_cnt_out_ < min_experiments;
                 }
                 // reset counts
                 simpl_cnt_in_ = 0;
