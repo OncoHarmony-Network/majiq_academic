@@ -113,7 +113,8 @@ class Config(object):
                     self.min_exp, len(ind_list)
                 )
                 self.simplifier_min_experiments[name] = self._group_min_experiments(
-                    self.min_exp, len(ind_list)
+                    self.simpl_min_exp if self.simpl_min_exp else self.min_exp,
+                    len(ind_list),
                 )
                 for exp_idx in ind_list:
                     # try to find input file with this prefix from input folders
@@ -186,9 +187,7 @@ class Config(object):
             return repr(self) + self.val
 
         @staticmethod
-        def _group_min_experiments(
-            min_experiments: float, group_size: int,
-        ) -> int:
+        def _group_min_experiments(min_experiments: float, group_size: int) -> int:
             """ Get minimum number of experiments for group with specified size
 
             Get minimum number of experiments for group with specified size.

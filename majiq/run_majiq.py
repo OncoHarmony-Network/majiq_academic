@@ -272,6 +272,17 @@ def main():
         " [Default: %(default)s]",
     )
     buildparser_simplifier.add_argument(
+        "--simplify-min-experiments",
+        default=None,
+        type=check_positive,
+        dest="simpl_min_exp",
+        help="Override minimum number of experiments used for simplifier,"
+        " alllowing for more relaxed or stringent number of experiments"
+        " passing filters for/against simplification. Specified as with"
+        " --min-experiments (fraction or absolute number). This is disabled by"
+        " default and the value from --min-experiments is used instead.",
+    )
+    buildparser_simplifier.add_argument(
         "--simplify-annotated",
         dest="simpl_db",
         default=0,
