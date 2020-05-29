@@ -108,11 +108,9 @@ class Config(object):
 
             self.min_experiments = {}
             for name, ind_list in self.tissue_repl.items():
-                if self.min_exp < 1:
-                    mexp = np.ceil(len(ind_list) * self.min_exp)
-                else:
-                    mexp = self.min_exp
-                self.min_experiments[name] = int(min(len(ind_list), mexp))
+                self.min_experiments[name] = self._group_min_experiments(
+                    self.min_exp, len(ind_list)
+                )
                 for exp_idx in ind_list:
                     # try to find input file with this prefix from input folders
                     prefix = self.exp_list[exp_idx]
@@ -182,6 +180,43 @@ class Config(object):
 
         def __str__(self):
             return repr(self) + self.val
+
+        @staticmethod
+        def _group_min_experiments(
+            min_experiments: float, group_size: int,
+        ) -> int:
+            """ Get minimum number of experiments for group with specified size
+
+            Get minimum number of experiments for group with specified size.
+            Handles two cases in which minimum number of experiments is
+            specified: less than one, where it is treated as a percentage of
+            the group size, and above that, where it directly specifies the
+            number of experiments (unless greater than group size).
+
+            Parameters
+            ----------
+            min_experiments: float
+                Minimum number of experiments specified for all build groups.
+                If nonpositive, raises error. If less than 1, treated as a
+                percentage of the group size. Otherwise, cast to integer or use
+                group size depending on which is smaller.
+            group_size: int
+                Number of experiments in group
+
+            Returns
+            -------
+            min_exp: int
+                Number of experiments (0 < min_exp <= group_size) required to
+                pass some set of filters
+            """
+            if min_experiments <= 0:
+                raise ValueError("MAJIQ disallows negative --min-experiments")
+            elif min_experiments < 1:
+                # apply as proportion of group size (minimum result is 1.)
+                min_experiments = np.ceil(group_size * min_experiments)
+            # Can be no greater than group size, return as integer
+            # note: int(x) rounds towards zero (equivalent to floor here)
+            return int(min(group_size, min_experiments))
 
     @staticmethod
     def config_section_map(config_d, section):
