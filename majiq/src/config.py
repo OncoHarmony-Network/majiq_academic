@@ -107,8 +107,12 @@ class Config(object):
             self.sam_list = []
 
             self.min_experiments = {}
+            self.simplifier_min_experiments = {}  # for simplifier
             for name, ind_list in self.tissue_repl.items():
                 self.min_experiments[name] = self._group_min_experiments(
+                    self.min_exp, len(ind_list)
+                )
+                self.simplifier_min_experiments[name] = self._group_min_experiments(
                     self.min_exp, len(ind_list)
                 )
                 for exp_idx in ind_list:
