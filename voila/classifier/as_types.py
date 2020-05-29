@@ -1173,7 +1173,7 @@ class Graph:
             """
 
             found = []
-            i = 0
+            k = 0
 
             if len(self.nodes) < 4:
                 return []
@@ -1223,8 +1223,8 @@ class Graph:
                                                       'Include2': include2,
                                                       'Tandem_Exons': self.nodes[i + 1:j],
                                                       #'Includes': includes, # not used?
-                                                      'event_id':'TCE_%s' % i})
-                                        i += 1
+                                                      'event_id':'TCE_%s' % k})
+                                        k += 1
             return found
 
         def multi_exon_spanning(self):
