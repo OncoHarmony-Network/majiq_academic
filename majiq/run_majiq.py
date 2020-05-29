@@ -256,13 +256,19 @@ def main():
     # simplifier flags
     buildparser_simplifier = buildparser.add_argument_group("Simplifier options")
     buildparser_simplifier.add_argument(
-        "--simplify-denovo",
-        dest="simpl_denovo",
-        default=0,
-        type=int,
-        help="Minimum number of reads threshold combining all positions of an"
-        " denovo junction to consider if it will be simplified, even knowing"
-        " it is real. Simplified junctions are discarded from any lsv."
+        "--simplify",
+        dest="simpl_psi",
+        default=-1,
+        type=float,
+        nargs="?",
+        const=0.01,
+        help="Enable the simplifier. Simplification ignores junctions and"
+        " introns with consistently low usage within and between build groups"
+        " in subsequent quantification. Optional threshold specifies maximum"
+        " value of raw PSI considered as low usage (if not specified, uses"
+        " %(const)s). If enabled, a junction/intron will be simplified if it"
+        " has PSI above this threshold in less than min-experiments"
+        " experiments for each build group and event it belongs to."
         " [Default: %(default)s]",
     )
     buildparser_simplifier.add_argument(
@@ -270,29 +276,33 @@ def main():
         dest="simpl_db",
         default=0,
         type=int,
-        help="Minimum number of reads threshold combining all positions of an"
-        "annotated junction to consider if it will be simplified, even knowing"
-        " it is real. Simplified junctions are discarded from any lsv."
-        " [Default: %(default)s]",
+        help="Simplifier minimum number or reads threshold for annotated"
+        " junctions. If specified, an annotated junction must simultaneously"
+        " have at least the specified number of reads (in addition to being"
+        " above the PSI threshold from --simplify) in enough experiments to"
+        " avoid removal by simplification. [Default: %(default)s]",
+    )
+    buildparser_simplifier.add_argument(
+        "--simplify-denovo",
+        dest="simpl_denovo",
+        default=0,
+        type=int,
+        help="Simplifier minimum number or reads threshold for denovo"
+        " junctions. If specified, a denovo junction must simultaneously have"
+        "at least the specified number of reads (in addition to being above"
+        " the PSI threshold from --simplify) in enough experiments to avoid"
+        " removal by simplification. [Default: %(default)s]",
     )
     buildparser_simplifier.add_argument(
         "--simplify-ir",
         dest="simpl_ir",
         default=0,
         type=int,
-        help="Minimum number of reads threshold combining all positions of an"
-        " ir to consider if it will be simplified, even knowing it is real."
-        " Simplified junctions are discarded from any lsv. [Default: %(default)s]",
-    )
-    buildparser_simplifier.add_argument(
-        "--simplify",
-        dest="simpl_psi",
-        default=-1,
-        type=float,
-        nargs="?",
-        const=0.01,
-        help="Minimum fraction of the usage of any junction in a LSV to"
-        " consider that junction is real. [Default: %(default)s]",
+        help="Simplifier minimum readrate threshold for intron retention."
+        " If specified, a retained intron must simultaneously have at least"
+        " the specified minimum normalized readrate (in addition to being"
+        " above the PSI threshold from --simplify) in enough experiments to"
+        " avoid removal by simplification. [Default: %(default)s]",
     )
 
     # bootstrapping
