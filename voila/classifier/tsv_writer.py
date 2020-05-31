@@ -231,11 +231,17 @@ class TsvWriter(BaseTsvWriter):
 
                 if self.config.output_complex:
                     headers.remove("Complex")
+                    # not wanted in summary
+                    event_id_ii = headers.index("Event ID")
+                    headers.pop(event_id_ii)
 
                 headers += ["Multi Exon Spanning", "Exitron", "Complex", 'De Novo Junctions', 'De Novo Introns',
                             "Number of Events", "Collapsed Event Name"
                             ]
                 self.start_headers(headers, 'summary.tsv')
+                if self.config.output_complex:
+                    # add back in the event id for the other TSVs, in same index
+                    headers.insert(event_id_ii, "Event ID")
 
             if 'heatmap' in self.config.enabled_outputs:
                 headers = self.common_headers + ['Collapsed Event Name', 'De Novo', 'Junction Name',
