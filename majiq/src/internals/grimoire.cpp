@@ -573,7 +573,7 @@ namespace grimoire {
         float sumall = 0 ;
         {
             vector<float> sumj ;
-            vector<_Region *> jnc_vec ;
+            vector<_Simplifiable *> jnc_vec ;
             vector<int> thrshld_vect;
             unsigned int i = 0 ;
             for(const auto &juncIt: ib){
@@ -607,7 +607,7 @@ namespace grimoire {
         sumall = 0 ;
         {
             vector<float> sumj ;
-            vector<_Region *> jnc_vec ;
+            vector<_Simplifiable *> jnc_vec ;
             vector<int> thrshld_vect;
             unsigned int i = 0 ;
             for(const auto &juncIt: ob){

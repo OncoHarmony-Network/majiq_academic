@@ -490,7 +490,7 @@ cdef int simplify(list file_list, map[string, Gene*] gene_map, vector[string] gi
     for tmp_str, group_list in conf.tissue_repl.items():
         name = tmp_str.encode('utf-8')
         last_it_grp = group_list[len(group_list) - 1]
-        min_experiments = conf.min_experiments[tmp_str]
+        min_experiments = conf.simplifier_min_experiments[tmp_str]
 
         for i in group_list:
 
