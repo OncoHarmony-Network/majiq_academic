@@ -1,6 +1,7 @@
 import os
 import sys
 import psutil
+import re
 
 from majiq.src.internals.grimoire cimport Junction, Gene, Exon, LSV, Jinfo, Intron
 from majiq.src.internals.io_bam cimport IOBam, prepare_genelist, overGene_vect_t, free_genelist, eff_len_from_read_length
@@ -331,6 +332,9 @@ cdef _find_junctions(list file_list, map[string, Gene*]& gene_map, vector[string
     cdef map[string, unsigned int] j_ids
     cdef pair[string, unsigned int] it
     cdef int estimate_eff_reads = ESTIMATE_NUM_READS
+    # regex/matches of sj ids for start-end
+    cdef object sj_id_prog = re.compile(r"^.+:[+-.]:(?P<start>\d+)-(?P<end>\d+)(?::.+)?$")
+    cdef object sj_id_match
 
     for tmp_str, group_list in conf.tissue_repl.items():
         name = tmp_str.encode('utf-8')
@@ -399,9 +403,12 @@ cdef _find_junctions(list file_list, map[string, Gene*]& gene_map, vector[string
                 logger.debug("Done Update flags")
                 junc_ids = [0] * njunc
                 for it in j_ids:
-                    tmp_str = it.first.decode('utf-8').split(':')[2]
-                    start, end = (int(xx) for xx in tmp_str.split('-'))
-                    junc_ids[it.second] = (it.first.decode('utf-8'), start, end, jvec[it.second], jvec[it.second + njunc],
+                    tmp_str = it.first.decode("utf-8")  # the SJ ID for output
+                    sj_id_match = sj_id_prog.match(tmp_str)  # match start/end
+                    # extract start/end from the match as integers
+                    start = int(sj_id_match.groups()[0])
+                    end = int(sj_id_match.groups()[1])
+                    junc_ids[it.second] = (tmp_str, start, end, jvec[it.second], jvec[it.second + njunc],
                                            int(it.second>= jlimit))
 
                 logger.info('Done Reading file %s' %(file_list[j][0]))
