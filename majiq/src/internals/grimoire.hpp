@@ -224,19 +224,6 @@ namespace grimoire{
                 donor_ = nullptr ;
             }
 
-            void set_simpl_fltr(bool val, bool in){
-                if (in)
-                    simpl_cnt_in_ += val? 1 : 0 ;
-                else
-                    simpl_cnt_out_ += val? 1 : 0 ;
-            }
-
-            void update_simpl_flags(unsigned int min_experiments){
-                simpl_fltr_ = simpl_fltr_ && simpl_cnt_in_ >= min_experiments && simpl_cnt_out_ >= min_experiments ;
-                simpl_cnt_in_ = 0 ;
-                simpl_cnt_out_ = 0 ;
-            }
-
             /**
              * Identify if junction passes current experiments to update build/denovo filters
              *
