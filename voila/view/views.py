@@ -9,7 +9,6 @@ from voila.api.view_splice_graph import ViewSpliceGraph
 from voila.config import ViewConfig
 from voila.exceptions import UnknownAnalysisType
 from voila.index import Index
-from voila.view import deltapsi, heterogen, psi, splicegraph
 from voila.voila_log import voila_log
 import os
 from flask import Blueprint, Flask
