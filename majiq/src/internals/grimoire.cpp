@@ -245,53 +245,42 @@ namespace grimoire {
 
 
     void Gene::detect_introns(vector<Intron*> &intronlist, bool simpl){
+        // first, update exon boundaries and connect junctions to them
+        detect_exons();
 
-        vector<Ssite> ss_vec ;
-        vector<Junction *> opened_exon ;
-        int start_ir = 0 ;
-        int end_ir = 0 ;
-
-        for (const auto &jnc : junc_map_){
-            if (!(jnc.second)->get_denovo_bl()) continue ;
-
-
-            if ((jnc.second)->get_start() > 0 && (jnc.second)->get_donor()->get_start()>0) {
-                Ssite s = {(jnc.second)->get_start(), true, jnc.second} ;
-                ss_vec.push_back(s) ;
+        // second, use updated exon boundaries to infer potential introns
+        // between them
+        Exon *prev_exon = nullptr;  // track last full exon
+        for (const auto &ex_pair : exon_map_) {  // in sorted order
+            Exon *cur_exon = ex_pair.second;
+            // ignore half exons
+            if (cur_exon->get_start() < 0 || cur_exon->get_end() < 0) {
+                continue;
             }
-            if ((jnc.second)->get_end() > 0 && (jnc.second)->get_acceptor()->get_end()>0) {
-                Ssite s = {(jnc.second)->get_end(), false, jnc.second} ;
-                ss_vec.push_back(s) ;
-            }
-        }
-        sort(ss_vec.begin(), ss_vec.end(), sort_ss) ;
-
-        for(const auto & ss : ss_vec){
-            if (ss.donor_ss) {
-                start_ir = ss.coord ;
-            } else {
-                if (start_ir <= 0) {
-                    continue ;
-                } else {
-                    // are we going to close a valid intron?
-                    if ((ss.coord - start_ir) > 0) {
-                        // the intron has non-negative length, so yes!
-                        end_ir = ss.coord;
-                        // create the intron
-                        Intron * irObj = new Intron(
-                            start_ir + 1, end_ir - 1, false, this, simpl
-                        );
-                        // critical region to add the intron to intronlist
-                        #pragma omp critical
-                        {
-                            intronlist.push_back(irObj);
-                        }
-                    }
-                    // either way, close open intron
-                    start_ir = 0;
+            if (prev_exon != nullptr) {
+                // prev_exon and cur_exon are both full exons, so potential
+                // intron between them
+                int ir_start = prev_exon->get_end();
+                int ir_end = cur_exon->get_start();
+                // raise exception if exons overlap
+                if (ir_start >= ir_end) {
+                    std::cerr << "ASSERTION ERROR: overlapping exons in"
+                        << " gene::detect_introns() (gene_id=" << this->get_id()
+                        << ")\n";
+                    throw std::logic_error("Overlapping exons in gene splicegraph");
+                }
+                Intron *irObj = new Intron(ir_start + 1, ir_end - 1, false, this, simpl);
+                // critical region: add the intron to intronlist
+                #pragma omp critical
+                {
+                    intronlist.push_back(irObj);
                 }
             }
+            prev_exon = cur_exon;  // update previous exon for next iteration
         }
+
+        // finally, reset exons to original annotated state
+        reset_exons();
     }
 
     void Gene::add_intron(Intron * inIR_ptr, float min_coverage, unsigned int min_exps, float min_bins, bool reset,
