@@ -842,9 +842,7 @@ namespace io_bam {
             #pragma omp parallel for num_threads(nthreads_)
             for(int g_it = 0; g_it<n; g_it++){
                 for (const auto &g: ((it.second)[g_it])->glist){
-                    g->detect_exons() ;
                     g->detect_introns(intronVec_[it.first], simpl_) ;
-                    g->reset_exons() ;
                 }
             }
             sort(intronVec_[it.first].begin(), intronVec_[it.first].end(), Intron::islowerRegion<Intron>) ;

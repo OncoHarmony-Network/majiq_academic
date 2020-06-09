@@ -238,7 +238,11 @@ namespace grimoire {
 
 
     void Gene::detect_introns(vector<Intron*> &intronlist, bool simpl){
+        // first, update exon boundaries and connect junctions to them
+        detect_exons();
 
+        // second, use donors/acceptors of appropriate junctions to infer
+        // introns in largely annotation-free way
         vector<Ssite> ss_vec ;
         vector<Junction *> opened_exon ;
         int start_ir = 0 ;
@@ -285,6 +289,9 @@ namespace grimoire {
                 }
             }
         }
+
+        // finally, reset exons to original annotated state
+        reset_exons();
     }
 
     void Gene::add_intron(Intron * inIR_ptr, float min_coverage, unsigned int min_exps, float min_bins, bool reset,
