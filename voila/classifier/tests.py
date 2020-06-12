@@ -35,6 +35,49 @@ os.makedirs(out_dir, exist_ok=True)
 
 majiq_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
 
+def run_voila_tsv(gene_ids, additional_args=[]):
+    if os.environ.get('JENKINS_HOME', None):
+        cmd = ['voila']
+    else:
+        os.environ['PYTHONPATH'] = majiq_dir
+        cmd = ['python3', os.path.join(majiq_dir, 'voila', 'run_voila.py')]
+    cmd += ['tsv', '-f', os.path.join(out_dir, 'comp_tsv.tsv'), psi_file, sg_file]
+
+    for arg in additional_args:
+        cmd.append(arg)
+    cmd.append('--gene-ids')
+    cmd += gene_ids
+
+    p = Popen(cmd, stdout=PIPE, stderr=STDOUT)
+    output = ''
+    error = False
+    for line in p.stdout:
+        output += line.decode()
+        if 'Traceback' in output:
+            error = True
+        if True:
+            print(line.decode().replace('\n', ''))
+    if error:
+        print(output)
+        assert False
+    os.environ['PYTHONPATH'] = ''
+
+def read_voila_tsv_juncs():
+    with open(os.path.join(out_dir, 'comp_tsv.tsv'), 'r', newline='') as csvfile:
+        reader = csv.reader(csvfile, dialect='excel-tab', delimiter='\t')
+        headers = next(reader, None)
+        for line in reader:
+            yield line
+
+
+def read_voila_classify_juncs():
+    with open(os.path.join(out_dir, 'junctions.tsv'), 'r', newline='') as csvfile:
+        reader = csv.reader(csvfile, dialect='excel-tab', delimiter='\t')
+        headers = next(reader, None)
+        for line in reader:
+            yield line
+
+
 def run_voila_classify(gene_ids, enabled_outputs='all', additional_args=[]):
     if os.environ.get('JENKINS_HOME', None):
         cmd = ['voila']
@@ -245,6 +288,9 @@ def test_run_functional_tests():
 
         else:
 
+
+
+
             gene_ids = list(expected_modules.keys())
             print(gene_ids)
             for quant_verification in quant_verif_groups:
@@ -252,10 +298,31 @@ def test_run_functional_tests():
                 if quant_verification in globals():
                     gene_ids += list(globals().get(quant_verification).keys())
 
+            # run_voila_tsv(gene_ids,
+            #               additional_args=['--debug'])
+            # lsv_ids_from_voila_tsv = set()
+            # lsv_ids_from_voila_classify = set()
+            # for l in read_voila_tsv_juncs():
+            #     lsv_ids_from_voila_tsv.add(l[2])
+            #
+            #
+            # run_voila_classify(gene_ids,
+            #                    additional_args=['--debug', '--output-complex'])
+            # for l in read_voila_classify_juncs():
+            #     lsv_ids_from_voila_classify.add(l[5])
+            #
+            # print(len(lsv_ids_from_voila_classify))
+            # print(len(lsv_ids_from_voila_tsv))
+            #
+            # return
+
             run_voila_classify(gene_ids,
                                additional_args=['--debug'])
             for gene_id in gene_ids:
                 verify_tsvs(gene_id)
+
+
+            return
 
 
             run_voila_classify([gene_id for gene_id in expected_modules_constitutive],
