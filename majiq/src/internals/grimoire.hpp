@@ -599,6 +599,12 @@ namespace grimoire{
             string  get_region() ;
             void    detect_exons() ;
             void    connect_introns() ;
+            /**
+             * Fill intronlist with potential introns between exons
+             *
+             * @note uses denovo junctions that have passed from preceding
+             * experiments to exclude denovo exonic regions
+             */
             void    detect_introns(vector<Intron*> &intronlist, bool simpl) ;
             void    add_intron(Intron * inIR_ptr, float min_coverage, unsigned int min_exps, float min_bins, bool reset,
                                bool denovo) ;
