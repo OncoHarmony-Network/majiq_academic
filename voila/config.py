@@ -178,7 +178,7 @@ def write(args):
 
             del attrs[lsv_filter]
 
-    if attrs['enable_passcode']:
+    if attrs.get('enable_passcode', False):
         import random, string
         attrs['enable_passcode'] = ''.join(random.choices(string.ascii_letters + string.digits, k=20))
     else:
