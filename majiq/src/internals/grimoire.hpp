@@ -602,8 +602,7 @@ namespace grimoire{
             /**
              * Fill intronlist with potential introns between exons
              *
-             * @note uses denovo junctions that have passed from preceding
-             * experiments to exclude denovo exonic regions
+             * @note uses annotated exon boundaries to define potential introns
              */
             void    detect_introns(vector<Intron*> &intronlist, bool simpl) ;
             void    add_intron(Intron * inIR_ptr, float min_coverage, unsigned int min_exps, float min_bins, bool reset,

@@ -245,11 +245,15 @@ namespace grimoire {
 
 
     void Gene::detect_introns(vector<Intron*> &intronlist, bool simpl){
-        // first, update exon boundaries and connect junctions to them
-        detect_exons();
+        // NOTE: if we book-ended this with detect_exons()/reset_exons(), we
+        // infer potential introns with respect to running splicegraph
+        // topology. This was the previous behavior, but this affected the
+        // reproducibility/interpretation of SJ files by making them dependent
+        // on all BAM files that were processed rather than its own BAM file.
+        // This also made majiq build potentially yield different results
+        // depending on the order experiments were given to it.
 
-        // second, use updated exon boundaries to infer potential introns
-        // between them
+        // use exon boundaries to infer potential introns between them
         Exon *prev_exon = nullptr;  // track last full exon
         for (const auto &ex_pair : exon_map_) {  // in sorted order
             Exon *cur_exon = ex_pair.second;
@@ -278,9 +282,6 @@ namespace grimoire {
             }
             prev_exon = cur_exon;  // update previous exon for next iteration
         }
-
-        // finally, reset exons to original annotated state
-        reset_exons();
     }
 
     void Gene::add_intron(Intron * inIR_ptr, float min_coverage, unsigned int min_exps, float min_bins, bool reset,
