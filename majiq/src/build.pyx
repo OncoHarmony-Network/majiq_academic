@@ -303,7 +303,7 @@ cdef _find_junctions(list file_list, map[string, Gene*]& gene_map, vector[string
     cdef bint denovo = conf.denovo
     cdef bint denovo_ir = conf.denovo_ir
     cdef np.float32_t min_ir_cov = conf.min_intronic_cov
-    cdef int k=conf.k, m=conf.m
+    cdef int m = conf.m
     cdef np.float32_t pvalue_limit=conf.pvalue_limit
     cdef unsigned int min_experiments
     cdef unsigned int local_eff_len
@@ -371,7 +371,7 @@ cdef _find_junctions(list file_list, map[string, Gene*]& gene_map, vector[string
 
                 boots = np.zeros(shape=(njunc, m), dtype=np.float32)
                 with nogil:
-                    c_iobam.bootstrap_samples(m, k, <np.float32_t *> boots.data, fitfunc_r, pvalue_limit)
+                    c_iobam.bootstrap_samples(m, <np.float32_t *> boots.data, fitfunc_r, pvalue_limit)
                     j_ids  = c_iobam.get_junc_map()
                     jvec   = c_iobam.get_junc_vec_summary()
                     jlimit = c_iobam.get_junc_limit_index()
@@ -551,7 +551,7 @@ cdef _core_build(str transcripts, list file_list, object conf, object logger):
     cdef map[string, int] lsv_juncs_tlb
     cdef vector[LSV*] out_lsvlist
     cdef int nsamples = len(file_list)
-    cdef int k=conf.k, m=conf.m
+    cdef int m = conf.m
     cdef bint ir = conf.ir
     cdef bint lsv_strict = conf.lsv_strict
     cdef int nlsv

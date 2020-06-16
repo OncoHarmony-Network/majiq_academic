@@ -338,13 +338,6 @@ def main():
         " output SJ and MAJIQ files for downstream quantification."
         " [Default: %(default)s]",
     )
-    buildparser_bootstrap.add_argument(
-        "--k",
-        default=50,
-        type=int,
-        help="(TO BE DEPRECATED) Number of positions to sample per iteration."
-        " [Default: %(default)s]",
-    )
 
     buildparser_advanced = buildparser.add_argument_group("Advanced options")
     # flag to save all possible LSVs

@@ -104,7 +104,7 @@ namespace io_bam{
              * corresponding first positions of vec
              */
             unsigned int normalize_stacks(vector<float> &vec, float sreads, const float fitfunc_r, const float pvalue_limit);
-            int bootstrap_samples(int msamples, int ksamples, float* boots, float fitfunc_r, float pvalue_limit);
+            int bootstrap_samples(int msamples, float* boots, float fitfunc_r, float pvalue_limit);
             void detect_introns(float min_intron_cov, unsigned int min_experiments, float min_bins, bool reset, bool denovo) ;
 
             void get_intron_raw_cov(float* out_cov) ;

@@ -721,7 +721,7 @@ namespace io_bam {
         return npos;
     }
 
-    int IOBam::bootstrap_samples(int msamples, int ksamples, float* boots, float fitfunc_r, float pvalue_limit) {
+    int IOBam::bootstrap_samples(int msamples, float* boots, float fitfunc_r, float pvalue_limit) {
         const int njunc = junc_map.size();
 
         #pragma omp parallel for num_threads(nthreads_)
@@ -745,27 +745,63 @@ namespace io_bam {
             if (npos == 0) {
                 // can't bootstrap from 0 positions (everything is default 0)
                 continue;
-            } else if (npos == 1 || vec[0] == vec[npos - 1]) {
-                // could bootstrap, but that would be a waste of effort since
-                // all valid positions for bootstrapping are the same
-                const float nreads = vec[0] * npos;  // inevitable result
+            }
+            // we perform parametric vs nonparametric bootstrap sampling
+            // depending on whether variance of bootstrap distribution is
+            // less than mean
+            // obviously parametric if constant
+            bool parametric_bootstrap = (npos == 1 || vec[0] == vec[npos - 1]);
+            float bootstrap_mean;
+            if (parametric_bootstrap) {
+                bootstrap_mean = vec[0];
+            } else {
+                // determine bootstrap mean and variance to determine if we
+                // want to go to parametric approach
+                // use Welford's online algorithm (see Wikipedia) to accumulate
+                bootstrap_mean = 0.;  // current value of mean
+                float cur_rss = 0.;  // current residual sum of squares
+                for (unsigned int cur_n = 0; cur_n < npos; ++cur_n) {
+                    const float x = vec[cur_n];
+                    const float dx = x - bootstrap_mean;
+                    bootstrap_mean += dx / (cur_n + 1);
+                    cur_rss += dx * (x - bootstrap_mean);
+                }
+                // current value bootstrap_mean is mean over all valid values
+                const float bootstrap_variance = cur_rss / npos;  // population variance
+                parametric_bootstrap = bootstrap_variance < bootstrap_mean;
+            }
+
+            std::mt19937 &generator = generators_[omp_get_thread_num()];
+            if (parametric_bootstrap) {
+                // variance < mean if we bootstrapped nonparametrically, so use
+                // Poisson distribution instead as conservative estimate of
+                // overdispersed variance
+                poisson_distribution<int> distribution(bootstrap_mean * npos);
                 for (int m = 0; m < msamples; ++m) {
                     const int idx2d = (jidx * msamples) + m;
-                    boots[idx2d] = nreads;
+                    boots[idx2d] = static_cast<float>(distribution(generator));
                 }
-            } else {  // npos > 1, where bootstrapping matters
-                std::mt19937 &generator = generators_[omp_get_thread_num()];
+            } else {  // performing nonparametric sampling where overdispersed
+                // by sampling npos - 1 positions to sum, bootstrap samples will
+                // have correct variance (variance of difference between
+                // two draws from bootstrap distribution equals difference
+                // between two draws from generating distribution under
+                // appropriate assumptions)
+                const unsigned int ksamples = npos - 1;
+                // rescale sum to be comparable to sum over all nonzero positions
+                const float scale_sum = npos / ksamples;
+                // generate random numbers
                 uniform_int_distribution<unsigned int> distribution(0, npos - 1);
                 for (int m = 0; m < msamples; ++m) {
                     // index to update
                     const int idx2d = (jidx * msamples) + m;
                     // accumulate ksamples reads from nonzero positions
                     float lambda = 0;
-                    for (int k = 0; k < ksamples; ++k) {
+                    for (unsigned int k = 0; k < ksamples; ++k) {
                         lambda += vec[distribution(generator)];
                     }
-                    // estimate per-position coverage using lambda, extrapolate to nonzero positions
-                    boots[idx2d] = (lambda * npos) / ksamples;
+                    // save rescaled sum over bootstrapped positions to output buffer
+                    boots[idx2d] = lambda * scale_sum;
                 }
             }
         }
