@@ -6,7 +6,7 @@ Constants used by MAJIQ
 
 import os
 
-VERSION = "2.1"
+VERSION = "2.2"
 
 JUNC_FILE_FORMAT = "sj"
 SEQ_FILE_FORMAT = "bam"
