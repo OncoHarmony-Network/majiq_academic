@@ -1,11 +1,12 @@
 import csv
 import multiprocessing
-import os
+import os, sys
 from datetime import datetime
 from pathlib import Path
 from queue import Empty
 
 import numpy as np
+import json
 
 from voila import constants
 from voila.api.view_matrix import ViewHeterogens, ViewPsi, ViewDeltaPsi
@@ -106,6 +107,18 @@ class AnalysisTypeTsv:
 
         elapsed_time = datetime.now() - start_time
         voila_log().info('Duration: ' + str(elapsed_time))
+
+    def get_metadata(self):
+        return self.get_base_metadata()
+
+    def get_base_metadata(self):
+        with self.view_matrix() as m:
+            metadata = {'voila_version': constants.VERSION,
+                        'command': ' '.join(sys.argv),
+                        'group_names': m.group_names
+                        }
+
+        return metadata
 
     def tsv_row(self, q, e, tsv_file, fieldnames):
         """
@@ -285,6 +298,13 @@ class AnalysisTypeTsv:
         fill_queue_proc.start()
 
         with tsv_file.open('w') as tsv:
+
+            metadata = self.get_metadata()
+
+            metadata_string = '\n'.join([f"# {l}" for l in json.dumps(metadata, sort_keys=True,
+                                        indent=4, separators=(',', ': ')).split('\n')]) + '\n'
+            tsv.write(metadata_string)
+
             writer = csv.DictWriter(tsv, fieldnames=fieldnames, delimiter='\t')
             writer.writeheader()
 
@@ -294,6 +314,8 @@ class AnalysisTypeTsv:
             [r.get() for r in multiple_results]
 
         fill_queue_proc.join()
+
+
 
         log.info("Delimited output file successfully created in: " + str(tsv_file))
 
@@ -305,6 +327,9 @@ class PsiTsv(AnalysisTypeTsv):
         """
 
         super().__init__(ViewPsi)
+
+    def get_metadata(self):
+        return self.get_base_metadata()
 
     def tsv_row(self, q, e, tsv_file, fieldnames):
         log = voila_log()
@@ -371,6 +396,12 @@ class HeterogenTsv(AnalysisTypeTsv):
         """
 
         super().__init__(ViewHeterogens)
+
+    def get_metadata(self):
+        metadata = self.get_base_metadata()
+        with ViewHeterogens() as m:
+            metadata['stat_names'] = m.stat_names
+        return metadata
 
     def tab_output(self):
         with ViewHeterogens() as m:
@@ -457,6 +488,14 @@ class DeltaPsiTsv(AnalysisTypeTsv):
         Class to write TSV file for Delta PSI analysis type.
         """
         super().__init__(ViewDeltaPsi)
+
+    def get_metadata(self):
+        metadata = self.get_base_metadata()
+        config = TsvConfig()
+        metadata['changing_threshold'] = config.threshold
+        metadata['non_changing_threshold'] = config.non_changing_threshold
+        return metadata
+
 
     def tsv_row(self, q, e, tsv_file, fieldnames):
         log = voila_log()
