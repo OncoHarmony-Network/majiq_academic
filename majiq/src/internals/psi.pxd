@@ -146,7 +146,7 @@ cdef inline int gen_prior_matrix(vector[vector[psi_distr_t]]& prior_matrix, dict
                 if prior_idx == 0:
                     __load_default_prior(prior_matrix)
                 else:
-                    prior_matrix[1] = prior_matrix[0]
+                    np_pmatrix[1][:] = np_pmatrix[0][:]
                 break
 
             logger.debug("Parametrizing 'best set'...%s", prior_idx)
