@@ -11,7 +11,7 @@ import json
 from voila import constants
 from voila.api.view_matrix import ViewHeterogens, ViewPsi, ViewDeltaPsi
 from voila.api.view_splice_graph import ViewSpliceGraph
-from voila.config import ViewConfig, TsvConfig
+from voila.config import TsvConfig
 from voila.exceptions import VoilaException, UnknownAnalysisType
 from voila.view import views
 from voila.vlsv import get_expected_psi, matrix_area
@@ -281,7 +281,7 @@ class AnalysisTypeTsv:
         log = voila_log()
         log.info("Creating Tab-delimited output file")
 
-        config = ViewConfig()
+        config = TsvConfig()
         nproc = config.nproc
         multiple_results = []
 
@@ -569,7 +569,6 @@ class DeltaPsiTsv(AnalysisTypeTsv):
                     q.task_done()
 
     def tab_output(self):
-        config = ViewConfig()
 
         with ViewDeltaPsi() as v:
             grp_names = v.group_names
