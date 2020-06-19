@@ -360,7 +360,7 @@ class PsiTsv(AnalysisTypeTsv):
                             'lsv_type': psi.lsv_type,
                             'num_junctions': psi.junction_count,
                             'num_exons': psi.exon_count,
-                            'chr': gene['chromosome'],
+                            'seqid': gene['chromosome'],
                             'strand': gene['strand'],
                             'de_novo_junctions': semicolon((1 if x == 0 else 0 for x in annot_juncs)),  # reverse flags
                             'junctions_coords': semicolon(
@@ -370,8 +370,8 @@ class PsiTsv(AnalysisTypeTsv):
                                 '{0}-{1}'.format(start, end) for start, end in exon_str(lsv_exons)
                             ),
                             'ir_coords': ir_coords,
-                            'e(psi)_per_lsv_junction': semicolon(psi.means),
-                            'stdev(e(psi))_per_lsv_junction': semicolon(psi.standard_deviations),
+                            'mean_psi_per_lsv_junction': semicolon(psi.means),
+                            'stdev_psi_per_lsv_junction': semicolon(psi.standard_deviations),
                             'ucsc_lsv_link': views.ucsc_href(genome, chromosome, start, end)
                         }
 
@@ -382,8 +382,8 @@ class PsiTsv(AnalysisTypeTsv):
                     q.task_done()
 
     def tab_output(self):
-        fieldnames = ['gene_name', 'gene_id', 'lsv_id', 'e(psi)_per_lsv_junction', 'stdev(e(psi))_per_lsv_junction',
-                      'lsv_type', 'num_junctions', 'num_exons', 'de_novo_junctions', 'chr',
+        fieldnames = ['gene_name', 'gene_id', 'lsv_id', 'mean_psi_per_lsv_junction', 'stdev_psi_per_lsv_junction',
+                      'lsv_type', 'num_junctions', 'num_exons', 'de_novo_junctions', 'seqid',
                       'strand', 'junctions_coords', 'exons_coords', 'ir_coords', 'ucsc_lsv_link']
 
         self.write_tsv(fieldnames)
@@ -408,8 +408,8 @@ class HeterogenTsv(AnalysisTypeTsv):
             group_names = m.group_names
             stats_column_names = list(m.junction_stats_column_names) + list(m.junction_scores_column_names)
 
-            fieldnames = ['gene_name', 'gene_id', 'lsv_id', 'lsv_type', 'strand', 'chr'] + \
-                         ['%s_e(psi)' % group for group in group_names] + stats_column_names + \
+            fieldnames = ['gene_name', 'gene_id', 'lsv_id', 'lsv_type', 'strand', 'seqid'] + \
+                         ['%s_mean_psi' % group for group in group_names] + stats_column_names + \
                          ['num_junctions', 'num_exons', 'de_novo_junctions',
                           'junctions_coords', 'exons_coords', 'ir_coords', 'ucsc_lsv_link']
 
@@ -447,7 +447,7 @@ class HeterogenTsv(AnalysisTypeTsv):
                             'lsv_type': het.lsv_type,
                             'num_junctions': len(lsv_junctions),
                             'num_exons': het.exon_count,
-                            'chr': gene['chromosome'],
+                            'seqid': gene['chromosome'],
                             'strand': gene['strand'],
                             'de_novo_junctions': semicolon((1 if x == 0 else 0 for x in annot_juncs)),  # reverse flags
                             'junctions_coords': semicolon(
@@ -464,9 +464,9 @@ class HeterogenTsv(AnalysisTypeTsv):
                             # the way that the mean_psi algo works, if the LSV is missing for certain groups, it is left
                             # as a '-1' matrix. In this case we fill in NA for that slot.
                             if all(all(x == -1 for x in y)for y in mean):
-                                row[grp + '_e(psi)'] = 'NA'
+                                row[grp + '_mean_psi'] = 'NA'
                             else:
-                                row[grp + '_e(psi)'] = semicolon(get_expected_psi(x) for x in mean)
+                                row[grp + '_mean_psi'] = semicolon(get_expected_psi(x) for x in mean)
 
                         for key, value in het.junction_stats:
                             row[key] = semicolon(value)
@@ -532,7 +532,7 @@ class DeltaPsiTsv(AnalysisTypeTsv):
                             'lsv_type': dpsi.lsv_type,
                             'num_junctions': dpsi.junction_count,
                             'num_exons': dpsi.exon_count,
-                            'chr': gene['chromosome'],
+                            'seqid': gene['chromosome'],
                             'strand': gene['strand'],
                             'de_novo_junctions': semicolon((1 if x == 0 else 0 for x in annot_juncs)),  # reverse flags
                             'junctions_coords': semicolon(
@@ -542,20 +542,20 @@ class DeltaPsiTsv(AnalysisTypeTsv):
                                 '{0}-{1}'.format(start, end) for start, end in exon_str(lsv_exons)
                             ),
                             'ir_coords': ir_coords,
-                            'e(dpsi)_per_lsv_junction': semicolon(
+                            'mean_dpsi_per_lsv_junction': semicolon(
                                 excl_incl[i][1] - excl_incl[i][0] for i in
                                 range(np.size(bins, 0))
                             ),
-                            'p(|dpsi|>=%.2f)_per_lsv_junction' % config.threshold: semicolon(
+                            'probability_changing': semicolon(
                                 matrix_area(b, config.threshold) for b in bins
                             ),
-                            'p(|dpsi|<=%.2f)_per_lsv_junction' % config.non_changing_threshold: semicolon(
+                            'probability_non_changing': semicolon(
                                 dpsi.high_probability_non_changing()
                             ),
-                            '%s_e(psi)' % group1: semicolon(
+                            '%s_mean_psi' % group1: semicolon(
                                 '%.3f' % i for i in group_means[group1]
                             ),
-                            '%s_e(psi)' % group2: semicolon(
+                            '%s_mean_psi' % group2: semicolon(
                                 '%.3f' % i for i in group_means[group2]
                             ),
                             'ucsc_lsv_link': views.ucsc_href(genome, chromosome, start, end)
@@ -574,11 +574,11 @@ class DeltaPsiTsv(AnalysisTypeTsv):
         with ViewDeltaPsi() as v:
             grp_names = v.group_names
 
-            fieldnames = ['gene_name', 'gene_id', 'lsv_id', 'e(dpsi)_per_lsv_junction',
-                          'p(|dpsi|>=%.2f)_per_lsv_junction' % config.threshold,
-                          'p(|dpsi|<=%.2f)_per_lsv_junction' % config.non_changing_threshold,
-                          '%s_e(psi)' % grp_names[0], '%s_e(psi)' % grp_names[1], 'lsv_type',
-                          'num_junctions', 'num_exons', 'de_novo_junctions', 'chr', 'strand', 'junctions_coords',
+            fieldnames = ['gene_name', 'gene_id', 'lsv_id', 'mean_dpsi_per_lsv_junction',
+                          'probability_changing',
+                          'probability_non_changing',
+                          '%s_mean_psi' % grp_names[0], '%s_mean_psi' % grp_names[1], 'lsv_type',
+                          'num_junctions', 'num_exons', 'de_novo_junctions', 'seqid', 'strand', 'junctions_coords',
                           'exons_coords', 'ir_coords', 'ucsc_lsv_link']
 
         self.write_tsv(fieldnames)
