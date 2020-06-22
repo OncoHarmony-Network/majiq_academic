@@ -649,6 +649,13 @@ cdef _core_build(str transcripts, list file_list, object conf, object logger):
 
 
 def build(args):
+
+    # incremental with nproc > 1 has caused segfaults in the past which were difficult to reproduce
+    # due to incremental being a mainly I/O bound process anyway, we have decided to temporarily
+    # disable j > 1 for incremental builds
+    if args.aggregate:
+        args.nproc = 1
+
     pipeline_run(Builder(args))
 
 class Builder(BasicPipeline):
