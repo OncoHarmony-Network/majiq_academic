@@ -351,7 +351,7 @@ namespace grimoire {
                     // so, we need to split the intron
                     intron_vec_.insert(
                             // insert at next position
-                            intron_vec_.cbegin() + intron_idx + 1,
+                            intron_vec_.begin() + intron_idx + 1,
                             // copy constructor for new intron at next position
                             new Intron(*cur_intron));
                 }
