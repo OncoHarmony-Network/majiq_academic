@@ -155,7 +155,7 @@ class InstallCommand(install):
             self.distribution.entry_points['console_scripts'].append('majiq = majiq.run_majiq:main')
             self.distribution.ext_modules = cythonize(extensions, language_level=3, nthreads=int(self.num_threads))
 
-        self.do_egg_install()
+        install.run(self)
 
 
 
