@@ -494,70 +494,6 @@ def main():
         " both. [Default: %(default)s]",
     )
 
-    htrgen = new_subparser()
-    htrgen.add_argument(
-        "-grp1",
-        dest="files1",
-        nargs="+",
-        required=True,
-        help="Paths to MAJIQ files for the experiment(s) to quantify"
-        " independently for statistical analysis as part of the first group",
-    )
-    htrgen.add_argument(
-        "-grp2",
-        dest="files2",
-        nargs="+",
-        required=True,
-        help="Paths to MAJIQ files for the experiment(s) to quantify"
-        " independently for statistical analysis as part of the second group",
-    )
-    htrgen.add_argument(
-        "-n",
-        "--names",
-        nargs="+",
-        required=True,
-        help="The names that identify the groups being compared.",
-    )
-    htrgen.add_argument(
-        "--keep-tmpfiles",
-        action="store_true",
-        default=False,
-        dest="keep_tmpfiles",
-        help="When this argument is specified, majiq heterogen will not remove"
-        " the psi files that are temporary generated during the execution"
-        " [Default: %(default)d]",
-    )
-    htrgen.add_argument(
-        "--psi-samples",
-        type=int,
-        default=100,
-        dest="psi_samples",
-        help="Number of PSI samples to take per LSV junction. If equal to 1,"
-        " use expected value only. [Default: %(default)d]",
-    )
-    htrgen.add_argument(
-        "--stats",
-        nargs="+",
-        default=["ALL"],
-        help="Test statistics to run. [Default: %(default)s]",
-    )
-    htrgen.add_argument(
-        "--test_percentile",
-        type=float,
-        default=0.95,
-        help="For each one of the statistical tests, we combine all pvalue per"
-        " psi sample by percentile calculation. This argument allows the user"
-        " define with percentile they want to use [Default: %(default)d]",
-    )
-    htrgen.add_argument(
-        "--visualization-std",
-        type=float,
-        default=1e-2,
-        help="Change stochastic estimation error in terms of standard deviation"
-        " of discretized average posterior per group by sampling additional"
-        " values of PSI when number of samples is low [Default: %(default)f]",
-    )
-
     # calcpsi flags
     subparsers = parser.add_subparsers(help="")
     parser_preprocess = subparsers.add_parser(
@@ -584,14 +520,6 @@ def main():
     )
     parser_deltagroup.set_defaults(func=deltapsi)
 
-    parser_heterogen = subparsers.add_parser(
-        "heterogen",
-        help="Perform independent quantification and statistical comparison of"
-        " PSI values between experiments/samples from two groups using MAJIQ"
-        " files produced by `majiq build`",
-        parents=[common, sampling, htrgen],
-    )
-    parser_heterogen.set_defaults(func=calc_independent)
 
     if len(sys.argv) == 1:
         parser.print_help()

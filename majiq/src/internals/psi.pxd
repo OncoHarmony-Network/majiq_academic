@@ -71,28 +71,26 @@ cdef inline tuple _empirical_delta_psi(list list_of_lsv, dict lsv_empirical_psi1
     return np.array(delta_psi, dtype=np.float32), np.array(delta_psi_ir, dtype=np.float32)
     # return delta_psi, delta_psi_ir
 
-@cython.boundscheck(False) # turn off bounds-checking for entire function
-@cython.wraparound(False)  # turn off negative index wrapping for entire function
-cdef inline void __load_default_prior(vector[vector[psi_distr_t]]& prior_matrix):
-
-    cdef int numbins = prior_matrix[0].size()
-    cdef int xx, yy
-
-    encoding = sys.getfilesystemencoding()
-    direc = os.path.dirname(__file__)
-
-    fop = open('%s/../data/defaultprior.pickle' % direc, 'rb')
-    fast_pickler = pickle.Unpickler(fop)
-    data = fast_pickler.load().astype(np.float32)
-    fop.close()
-    # print_prior(data, numbins)
-    data /= np.sum(data)
-    # for xx in range(numbins):
-    #     for yy in range(numbins):
-    #         prior_matrix[0][xx][yy] = np.log(data[xx][yy])
-    #         prior_matrix[1][xx][yy] = np.log(data[xx][yy])
-
-    return
+# @cython.boundscheck(False) # turn off bounds-checking for entire function
+# @cython.wraparound(False)  # turn off negative index wrapping for entire function
+# cdef inline void __load_default_prior(vector[vector[psi_distr_t]]& prior_matrix) nogil:
+#
+#     cdef int numbins = prior_matrix[0].size()
+#     cdef int xx, yy
+#
+#     encoding = sys.getfilesystemencoding()
+#     direc = os.path.dirname(__file__)
+#
+#     fop = open('%s/../data/defaultprior.pickle' % direc, 'rb')
+#     fast_pickler = pickle.Unpickler(fop)
+#     data = fast_pickler.load().astype(np.float32)
+#     fop.close()
+#     # print_prior(data, numbins)
+#     data /= np.sum(data)
+#     for xx in range(numbins):
+#         for yy in range(numbins):
+#             prior_matrix[0][xx][yy] = np.log(data[xx][yy])
+#             prior_matrix[1][xx][yy] = np.log(data[xx][yy])
 
 @cython.boundscheck(False) # turn off bounds-checking for entire function
 @cython.wraparound(False)  # turn off negative index wrapping for entire function
@@ -118,6 +116,8 @@ cdef inline int gen_prior_matrix(vector[vector[psi_distr_t]]& prior_matrix, dict
                             dict lsv_empirical_psi2, str output, list names, int iter, float binsize,
                             int numbins, bint defaultprior, int minpercent, object logger) except -1:
 
+    import pickle
+
     cdef psi_distr_t mixture_pdf = psi_distr_t(numbins*2)
     cdef list list_of_lsv, njun_prior
     cdef int prior_idx
@@ -128,7 +128,19 @@ cdef inline int gen_prior_matrix(vector[vector[psi_distr_t]]& prior_matrix, dict
     #Start prior matrix
     logger.info("Calculating prior matrix...")
     if defaultprior:
-        __load_default_prior(prior_matrix)
+
+        # TODO --- repeated code, refactor into cython function
+        with open('%s/../data/defaultprior.pickle' % os.path.dirname(__file__), 'rb') as f:
+            fast_pickler = pickle.Unpickler(f)
+            data = fast_pickler.load().astype(np.float32)
+
+        data /= np.sum(data)
+        for xx in range(numbins):
+            for yy in range(numbins):
+                np_pmatrix[0][xx][yy] = data[xx][yy]
+                np_pmatrix[1][xx][yy] = data[xx][yy]
+        # end repeated code
+
     else:
 
         logger.debug('Filtering to obtain "best set"...')
@@ -144,7 +156,19 @@ cdef inline int gen_prior_matrix(vector[vector[psi_distr_t]]& prior_matrix, dict
 
             if len(best_delta_psi) <= 100:
                 if prior_idx == 0:
-                    __load_default_prior(prior_matrix)
+
+                    # TODO --- repeated code, refactor into cython function
+                    with open('%s/../data/defaultprior.pickle' % os.path.dirname(__file__), 'rb') as f:
+                        fast_pickler = pickle.Unpickler(f)
+                        data = fast_pickler.load().astype(np.float32)
+
+                    data /= np.sum(data)
+                    for xx in range(numbins):
+                        for yy in range(numbins):
+                            np_pmatrix[0][xx][yy] = data[xx][yy]
+                            np_pmatrix[1][xx][yy] = data[xx][yy]
+                    # end repeated code
+
                 else:
                     np_pmatrix[1][:] = np_pmatrix[0][:]
                 break
