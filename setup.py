@@ -45,7 +45,7 @@ class InstallCommand(install):
         install.initialize_options(self)
         self.voila_only = 0
         self.debug_gdb = 0
-        self.num_threads = 1
+        self.num_threads = 0
 
     def finalize_options(self):
         install.finalize_options(self)
