@@ -120,7 +120,7 @@ def get_app():
     if ViewConfig().enable_passcode:
         @run_app.before_request
         def password_check():
-            if request.path == '/' + ViewConfig().enable_passcode:
+            if request.path.endswith(ViewConfig().enable_passcode):
                 # url has correct passcode, set session
                 session[ViewConfig().enable_passcode] = True
                 return redirect('/')
