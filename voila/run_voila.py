@@ -132,8 +132,8 @@ view_parser.add_argument('--skip-type-indexing', action='store_true',
                          help='Skips creating index for lsv type data (alt3, alt5, binary, etc). These filters will'
                               ' no longer function, but there will be a significant indexing speedup')
 view_parser.add_argument('--strict-indexing', action='store_true',
-                         help='When building an index for a study that uses multiple input voila files,  '
-                              ' verifies that values for each LSV are the same across all input files. '
+                         help='When building an index for a study that uses multiple input voila files (such as '
+                              'heterogen), verifies that values for each LSV are the same across all input files. '
                               'This protects against accidentally mixing or using inputs from different runs, but '
                               'slows down the indexing process.')
 view_parser.add_argument('--splice-graph-only', action='store_true', help=argparse.SUPPRESS)
