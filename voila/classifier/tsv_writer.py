@@ -34,6 +34,7 @@ summaryVars2Headers = {
     'constitutive_intron': 'Persistent Intron',
     'multi_exon_spanning': 'Multi Exon Spanning',
     'exitron': 'Exitron',
+    'other_event': 'Other'
 }
 
 class BaseTsvWriter(QuantificationWriter):
@@ -84,7 +85,10 @@ class BaseTsvWriter(QuantificationWriter):
         lsvs = self.parity2lsv(module, parity, edge, node)
 
         module_id = "%s_%d" % (self.gene_id, module.idx)
-        event_id = "%s_%s_%s" % (module_id, event_name, event_ii)
+        if event_ii is None:
+            event_id = "%s_%s" % (module_id, event_name)
+        else:
+            event_id = "%s_%s_%s" % (module_id, event_name, event_ii)
 
         out = [module_id,
                self.gene_id,
@@ -152,7 +156,7 @@ class TsvWriter(BaseTsvWriter):
                  'mutually_exclusive.tsv', 'alternate_last_exon.tsv', 'alternate_first_exon.tsv',
                  'alternative_intron.tsv', 'p_alt5prime.tsv', 'p_alt3prime.tsv', 'multi_exon_spanning.tsv',
                  'tandem_cassette.tsv', 'exitron.tsv', 'orphan_junction.tsv',
-                 'p_alternate_last_exon.tsv', 'p_alternate_first_exon.tsv']
+                 'p_alternate_last_exon.tsv', 'p_alternate_first_exon.tsv', 'other.tsv']
             if config.keep_constitutive:
                 names.append('constitutive.tsv')
         if 'heatmap' in config.enabled_outputs:
@@ -208,6 +212,8 @@ class TsvWriter(BaseTsvWriter):
                 self.start_headers(headers, 'exitron.tsv')
                 headers = self.common_headers + ['De Novo', 'Exon1 coordinate', 'Exon2 coordinate', 'Junction Coordinate'] + self.quantification_headers
                 self.start_headers(headers, 'orphan_junction.tsv')
+                headers = self.common_headers + ["Junctions", "Exons"]# + self.quantification_headers
+                self.start_headers(headers, 'other.tsv')
 
                 if self.config.keep_constitutive:
                     headers = self.common_headers + ['De Novo', 'Reference Exon Coordinate', 'Exon Spliced With',
@@ -224,7 +230,7 @@ class TsvWriter(BaseTsvWriter):
                 headers = self.common_headers + ["Cassette", "Tandem Cassette",
                                                  "Alt 3", "Alt 5", "P_Alt 3", "P_Alt 5", "Alt 3 and Alt 5", "MXE",
                                                  "Alternative Intron", "ALE", "AFE",
-                                                 "P_ALE", "P_AFE", "Orphan Junction"]
+                                                 "P_ALE", "P_AFE", "Orphan Junction", "Other"]
                 if self.config.keep_constitutive:
                     headers.append("Constitutive Junction")
                     headers.append("Persistent Intron")
@@ -367,6 +373,7 @@ class TsvWriter(BaseTsvWriter):
                                                           node=event['E2'],
                                                           event_name="A3",
                                                           event_ii=event_i)
+                            # preferentially use source LSV
                             if src_common[5]:
                                 row = [event['Proximal'].de_novo,
                                        event['E1'].range_str(),
@@ -441,6 +448,7 @@ class TsvWriter(BaseTsvWriter):
                                                           node=event['E2'],
                                                           event_name="A5",
                                                           event_ii=event_i)
+                            # preferentially use target LSV
                             if trg_common[5]:
                                 row = [event['Proximal'].de_novo,
                                        event['E2'].range_str(),
@@ -1413,6 +1421,106 @@ class TsvWriter(BaseTsvWriter):
                             event['Intron'].junc['end'] += 1
                         event_i += 1
 
+    def other_event(self):
+        with open(os.path.join(self.config.directory, 'other.tsv.%s' % self.pid), 'a',
+                  newline='') as csvfile:
+            writer = csv.writer(csvfile, dialect='excel-tab', delimiter='\t')
+            for module in self.modules:
+                events, _complex, _total_events = self.as_types[module.idx]
+                if not _complex or self.config.output_complex:
+                    event_i = 1
+                    for event in events:
+                        if event['event'] == 'other_event':
+                            juncs = event['edges']
+                            exons = event['nodes']
+                            lsvs = event['lsvs']
+
+                            # gets all LSVs
+                            row_common = self.common_data(module,
+                                                          parity=None,
+                                                          edge=None,
+                                                          node=None,
+                                                          event_ii=None,
+                                                          event_name="Other")
+                            # update lsvs with relevant LSVs
+                            row_common[5]  = ";".join(lsvs)
+                            juncs_l = [j.range_str() for j in juncs]
+                            juncs_str = ";".join(juncs_l)
+                            exons_str = ";".join([e.range_str() for e in exons])
+                            row = [juncs_str, exons_str]
+
+                            writer.writerow(row_common + row)
+                            # still want 1 row per quantification in junctions.tsv and heatmap.tsv
+                            junc_i = 0
+                            # for n1, n2 in combinations(exons, 2):
+                            lsvs_seen = []
+                            seen_junc = {
+                                "s": None,
+                                "t": None
+                            }
+                            for junc in juncs:
+                                junc_i += 1
+                                this_node = junc.node
+                                # TODO: handle na type?
+                                for lsv_type in ["s", "t"]:
+                                    j_quants = self.quantifications(module,
+                                                                  lsv_type,
+                                                                  edge=junc,
+                                                                  node=this_node)
+                                    j_common = self.common_data(module,
+                                                  parity=lsv_type,
+                                                  edge=junc,
+                                                  node=this_node,
+                                                  event_ii=None,
+                                                  event_name="Other")
+                                    # de_novo, junction_name, coordinates
+                                    both_infos = [
+                                        junc.de_novo,
+                                        "J%s" % junc_i,  # junction name
+                                        junc.range_str()
+                                    ]
+                                    # module, common_data, quantifications, de_novo, junction_name, coordinates
+                                    junction_cache_row = (module,
+                                         j_common,
+                                         j_quants,
+                                         both_infos[0],
+                                         both_infos[1],
+                                         both_infos[2]
+                                         )
+                                    # module, common, quants, junc_len, denovo, juncname, junccoord
+                                    heatmap_row = (module,
+                                        j_common,
+                                        j_quants,
+                                        junc.end - junc.start,
+                                        both_infos[0],
+                                        both_infos[1],
+                                        both_infos[2]
+                                    )
+                                    if seen_junc[lsv_type] is None:
+                                        seen_junc[lsv_type] = (junction_cache_row, heatmap_row)
+                                    # if LSV here
+                                    if len(j_common[5]) > 0:
+                                        lsvs_seen.append(lsv_type)
+                                        seen_junc[lsv_type] = (junction_cache_row, heatmap_row)
+                                # only add 1 row per junction
+                                # (or 2, if the junction was quantifable by source & target LSV...
+                                if len(lsvs_seen) == 0:
+                                    lsvs_seen = ["s"]
+                                for lsv_type in lsvs_seen:
+                                    self.junction_cache.append(
+                                        seen_junc[lsv_type][0]
+                                    )
+                                    self.heatmap_add(
+                                        seen_junc[lsv_type][1][0],
+                                        seen_junc[lsv_type][1][1],
+                                        seen_junc[lsv_type][1][2],
+                                        seen_junc[lsv_type][1][3],
+                                        seen_junc[lsv_type][1][4],
+                                        seen_junc[lsv_type][1][5],
+                                        seen_junc[lsv_type][1][6]
+                                    )
+                        event_i += 1
+
 
     def p_multi_gene_region(self):
         with open(os.path.join(self.config.directory, 'p_multi_gene_region.tsv.%s' % self.pid), 'a',
@@ -1597,6 +1705,7 @@ class TsvWriter(BaseTsvWriter):
                 counts['p_ale'] = 0
                 counts['p_afe'] = 0
                 counts['orphan_junction'] = 0
+                counts['other_event'] = 0
                 if self.config.keep_constitutive:
                     counts['constitutive'] = 0
                     counts['constitutive_intron'] = 0
@@ -1617,13 +1726,21 @@ class TsvWriter(BaseTsvWriter):
                 # we store collapsed event name on module, because we need it for constitutive
                 module.collapsed_event_name = self._collapsed_event_name(counts)
 
-                writer.writerow(["%s_%d" % (self.gene_id, module.idx),
-                                 self.gene_id, self.graph.gene_name, self.graph.chromosome, self.graph.strand,
-                                 self.semicolon(module.target_lsv_ids.union(module.source_lsv_ids))] +
+                writer.writerow(
+                    ["%s_%d" % (self.gene_id, module.idx),
+                     self.gene_id,
+                     self.graph.gene_name,
+                     self.graph.chromosome,
+                     self.graph.strand,
+                     self.semicolon(module.target_lsv_ids.union(module.source_lsv_ids))] +
                                 [v if v else '' for v in counts.values()] +
-                                [str(_complex), str(de_novo_junctions), str(de_novo_introns),
-                                 str(_total_events), module.collapsed_event_name]
-                                )
+                                [str(_complex),
+                                 str(de_novo_junctions),
+                                 str(de_novo_introns),
+                                 str(_total_events),
+                                 module.collapsed_event_name
+                                 ]
+                )
 
 
 

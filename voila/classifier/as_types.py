@@ -302,6 +302,9 @@ class Graph:
             return self.start < other.start and self.end < other.start
             #return self.view_start < other.view_start and self.view_end < other.view_start
 
+        def __hash__(self):
+            return hash(str(self))
+
         def __eq__(self, other):
             """
             Equality is determined by start and end of junction.
@@ -1069,6 +1072,11 @@ class Graph:
             self.nodes = nodes  # subset of nodes for this module
             self.graph = graph
             self.source_lsv_ids, self.target_lsv_ids = self.get_lsv_ids()
+            # junctions that have been classified in this module
+            self.classified_lsvs = list()
+            self.classified_junctions = list()
+            # LSV IDs to classify
+            self.all_lsvs = self.source_lsv_ids | self.target_lsv_ids
             self.p_multi_gene_regions = []  # meta event
 
         def set_idx(self, idx):
@@ -1089,15 +1097,17 @@ class Graph:
                 num_edges += len(node.connects(n2, ir=ir))
             return num_edges
 
-        def get_lsv_ids(self):
+        def get_lsv_ids(self, nodes_in=None):
             """
             This is just used for outputting to tsv later
             :return:
             """
             sources = set()
             targets = set()
+            if nodes_in is None:
+                nodes_in = self.nodes
 
-            for node, n2 in permutations(self.nodes, 2):
+            for node, n2 in permutations(nodes_in, 2):
                 connections = node.connects(n2)
                 if connections:
                     for edge in connections:
@@ -1116,6 +1126,32 @@ class Graph:
                 return case_plus
             else:
                 return case_minus
+
+            
+        def other_event(self, edges_of_interest, lsvs):
+            """
+            Catch-all for modules lacking events that match classic AS type definitions
+            
+            
+            :return: catch-all event
+            """
+            nodes_other = []
+            for n1, n2 in permutations(self.nodes, 2):
+                connections = n1.connects(n2)
+                for conn in connections:
+                    if conn in edges_of_interest:
+                        for n in [n1, n2]:
+                            if n not in nodes_other:
+                                nodes_other.append(n)
+
+            other_event = {
+                'event': 'other_event',
+                'nodes': nodes_other,
+                'edges': edges_of_interest,
+                'lsvs': lsvs
+            }
+            return [other_event]
+        
 
         def cassette_exon(self):
             """
@@ -1151,9 +1187,14 @@ class Graph:
                         # ensure skipping junction shares start with include 1
                         # and skipping junction shares end with include 2
                         if include1.start == skip.start and include2.end == skip.end:
-                            # if self.graph.gene_id ==  "gene:ENSG00000177239":
-                            #     import pdb
-                            #     pdb.set_trace()
+                            # update Module's seen junctions
+                            # will only see LSVs associated with skip junction
+                            # include junctions might have extra LSV with ref exon as alternative exon
+                            # this LSV won't ever be associated with the cassette (appropriately)
+                            for edge in [skip]:
+                                if len(edge.lsvs) > 0:
+                                    self.classified_lsvs.extend(edge.lsvs)
+                                self.classified_junctions.extend([include1, include2, edge])
                             found.append({'event': 'cassette_exon',
                                           'C1': self.strand_case(n1, n3),
                                           'C2': self.strand_case(n3, n1),
@@ -1215,6 +1256,11 @@ class Graph:
                                         c1 = self.strand_case(n1, n2)
                                         c2 = self.strand_case(n2, n1)
 
+                                        # update Module's seen junctions
+                                        for edge in [skip]:
+                                            if len(edge.lsvs) > 0:
+                                                self.classified_lsvs.extend(edge.lsvs)
+                                            self.classified_junctions.extend([include1, include2, edge])
                                         # includes = [] # not used?
                                         found.append({'event': 'tandem_cassette', 'C1': c1,
                                                       'C2': c2,
@@ -1255,6 +1301,11 @@ class Graph:
                         if skip:
                             include1 = n1.connects(self.nodes[i + 1])
                             include2 = self.nodes[j - 1].connects(n2)
+                            # update Module's seen junctions
+                            for edge in skip:
+                                if len(edge.lsvs) > 0:
+                                    self.classified_lsvs.extend(edge.lsvs)
+                                self.classified_junctions.append(edge)
                             for sk in skip:
                                 includes = [] # ??
                                 found.append({'event': 'multi_exon_spanning', 'C1': self.strand_case(n1, n2),
@@ -1287,15 +1338,26 @@ class Graph:
                             for i1 in e1.node.edges:
                                 for i2 in e2.node.edges:
                                     if i1.node == i2.node and not (i1.ir or i2.ir):
+                                        skipA1 = self.strand_case(e2, i1)
+                                        include1 = self.strand_case(e1, i2)
+                                        skipA2 = self.strand_case(i2, e1)
+                                        include2 = self.strand_case(i1, e2)
+                                        # update Module's seen junctions
+                                        for edge1, edge2 in zip([skipA1, skipA2], [include1, include2]):
+                                            # the C1 source or C2 target LSVs only!
+                                            shared_lsv = set(edge1.lsvs) & set(edge2.lsvs)
+                                            if len(shared_lsv) == 1:
+                                                self.classified_lsvs.append(shared_lsv.pop())
+                                        self.classified_junctions.extend([skipA1, skipA2,include1, include2])
                                         found.append({'event': 'mutually_exclusive',
                                                       'C1': self.strand_case(n1, i1.node),
                                                       'C2': self.strand_case(i1.node, n1),
                                                       'A1': self.strand_case(e1.node, e2.node),
                                                       'A2': self.strand_case(e2.node, e1.node),
-                                                      'Include1': self.strand_case(e1, i2),
-                                                      'SkipA1': self.strand_case(e2, i1),
-                                                      'Include2': self.strand_case(i1, e2),
-                                                      'SkipA2': self.strand_case(i2, e1)})
+                                                      'Include1': include1,
+                                                      'SkipA1': skipA1,
+                                                      'Include2': include2,
+                                                      'SkipA2': skipA2})
 
             return found
 
@@ -1315,6 +1377,11 @@ class Graph:
                             for junc in n2.back_edges:
                                 if not any(j == junc for j in spliced) and not junc.ir:
                                     spliced.append(junc)
+                            for junc in spliced:
+                                if len(junc.lsvs)>0:
+                                    self.classified_lsvs.extend(junc.lsvs)
+                            self.classified_junctions.extend(spliced)
+                            self.classified_junctions.append(edge)
                             found.append({'event': 'alternative_intron', 'C1': n1, 'C2': n2,
                                           'Intron': edge, 'Spliced': spliced})
 
@@ -1343,7 +1410,18 @@ class Graph:
                                 distal = self.strand_case(e1, e2)
                                 n_e1 = self.strand_case(n1, n2)
                                 n_e2 = self.strand_case(n2, n1)
-
+                            # update seen junctions in module
+                            # preferentially add target LSV, just like the TSV writer does
+                            associated_lsv = None
+                            for lid in proximal.lsvs:
+                                if associated_lsv is None:
+                                    associated_lsv = lid
+                                if ":t:" in lid:
+                                    associated_lsv = lid
+                            if associated_lsv is not None:
+                                self.classified_lsvs.append(associated_lsv)
+                            self.classified_junctions.append(proximal)
+                            self.classified_junctions.append(distal)
                             found.append({'event': 'alt5ss', 'E1': n_e1, 'E2': n_e2,
                                           'Proximal': proximal, 'Distal': distal})
             return found
@@ -1370,7 +1448,18 @@ class Graph:
                                 distal = self.strand_case(e2, e1)
                                 n_e1 = self.strand_case(n1, n2)
                                 n_e2 = self.strand_case(n2, n1)
-
+                            # update seen junctions in module
+                            # preferentially add source LSV, just like the TSV writer does
+                            associated_lsv = None
+                            for lid in proximal.lsvs:
+                                if associated_lsv is None:
+                                    associated_lsv = lid
+                                if ":s:" in lid:
+                                    associated_lsv = lid
+                            if associated_lsv is not None:
+                                self.classified_lsvs.append(associated_lsv)
+                            self.classified_junctions.append(proximal)
+                            self.classified_junctions.append(distal)
                             found.append({'event': 'alt3ss', 'E1': n_e1, 'E2': n_e2,
                                           'Proximal': proximal, 'Distal': distal})
             return found
@@ -1415,6 +1504,10 @@ class Graph:
 
                     for include1, include2, skip in product(include1s, include2s, skips):
                         if len(set((self.strand_case(x.end, x.start) for x in (skip, include2,)))) == 1:
+                            # update seen junctions in Module
+                            if len(skip.lsvs) > 0:
+                                self.classified_lsvs.extend(skip.lsvs)
+                            self.classified_junctions.extend([skip, include1, include2])
                             found.append({'event': 'p_alt5ss', 'C1': n1, 'C2': n3,
                                       'A': n2, 'Include1': include1,
                                       'Include2': include2, 'Skip': skip})
@@ -1463,6 +1556,10 @@ class Graph:
 
                     for include1, include2, skip in product(include1s, include2s, skips):
                         if len(set((self.strand_case(x.start, x.end) for x in (include1, skip,)))) == 1:
+                            # update seen junctions in Module
+                            if len(skip.lsvs) > 0:
+                                self.classified_lsvs.extend(skip.lsvs)
+                            self.classified_junctions.extend([skip, include1, include2])
                             found.append({'event': 'p_alt3ss', 'C1': n1, 'C2': n3,
                                           'A': n2, 'Include1': include1,
                                           'Include2': include2, 'Skip': skip})
@@ -1479,7 +1576,11 @@ class Graph:
                 if connections and len(connections) > 1:
                     for e1, e2 in combinations(connections, 2):
                         if e1.start != e2.start and e1.end != e2.end:
-
+                            # update seen junctions in Module
+                            for edge in [e1, e2]:
+                                if len(edge.lsvs) > 0:
+                                    self.classified_lsvs.extend(edge.lsvs)
+                                self.classified_junctions.append(edge)
                             found.append(
                                 {'event': 'alt3and5ss', 'E1': self.strand_case(n1, n2),
                                  'E2': self.strand_case(n2, n1),
@@ -1531,6 +1632,13 @@ class Graph:
 
                     skipA1 = a2.connects(c1, ir=True) + c1.connects(a2, ir=True)
                     skipA2 = c1.connects(node, ir=True) + node.connects(c1, ir=True)
+                    # update seen junctions in Module
+                    for sk1, sk2 in zip(skipA1, skipA2):
+                        shared_lsv = set(sk1.lsvs) & set(sk2.lsvs)
+                        if len(shared_lsv) == 1:
+                            self.classified_lsvs.append(shared_lsv.pop())
+                    self.classified_junctions.extend(skipA1)
+                    self.classified_junctions.extend(skipA2)
                     found.append({'event': 'p_ale', 'Proximal': node,
                                   'Distal': a2, 'Reference': c1,
                                   'SkipA2': skipA2,
@@ -1574,6 +1682,13 @@ class Graph:
 
                     skipA1 = node.connects(c1, ir=True) + c1.connects(node, ir=True)
                     skipA2 = a1.connects(c1, ir=True) + c1.connects(a1, ir=True)
+                    # update seen junctions in Module
+                    for sk1, sk2 in zip(skipA1, skipA2):
+                        shared_lsv = set(sk1.lsvs) & set(sk2.lsvs)
+                        if len(shared_lsv) == 1:
+                            self.classified_lsvs.append(shared_lsv.pop())
+                    self.classified_junctions.extend(skipA1)
+                    self.classified_junctions.extend(skipA2)
                     found.append({'event': 'p_afe', 'Proximal': node,
                                   'Distal': a1, 'Reference': c1,
                                   'SkipA2': skipA2,
@@ -1614,6 +1729,13 @@ class Graph:
 
                     skipA1 = node.connects(c1, ir=True) + c1.connects(node, ir=True)
                     skipA2 = a1.connects(c1, ir=True) + c1.connects(a1, ir=True)
+                    # update seen junctions in Module
+                    for sk1, sk2 in zip(skipA1, skipA2):
+                        shared_lsv = set(sk1.lsvs) & set(sk2.lsvs)
+                        if len(shared_lsv) == 1:
+                            self.classified_lsvs.append(shared_lsv.pop())
+                    self.classified_junctions.extend(skipA1)
+                    self.classified_junctions.extend(skipA2)
                     found.append({'event': 'afe', 'Proximal': node,
                                   'Distal': a1, 'Reference': c1,
                                   'SkipA2': skipA2,
@@ -1653,6 +1775,13 @@ class Graph:
 
                     skipA1 = a2.connects(c1, ir=True) + c1.connects(a2, ir=True)
                     skipA2 = c1.connects(node, ir=True) + node.connects(c1, ir=True)
+                    # update seen junctions in Module
+                    for sk1, sk2 in zip(skipA1, skipA2):
+                        shared_lsv = set(sk1.lsvs) & set(sk2.lsvs)
+                        if len(shared_lsv) == 1:
+                            self.classified_lsvs.append(shared_lsv.pop())
+                    self.classified_junctions.extend(skipA1)
+                    self.classified_junctions.extend(skipA2)
                     found.append({'event': 'ale', 'Proximal': node,
                                   'Distal': a2, 'Reference': c1,
                                   'SkipA2': skipA2,
@@ -1667,6 +1796,10 @@ class Graph:
                 if n1.is_half_exon and n2.is_half_exon:
                     conn = n1.connects(n2)
                     for _conn in conn:
+                        # update seen lsvs in Module
+                        if len(_conn.lsvs) > 0:
+                            self.classified_lsvs.extend(_conn.lsvs)
+                        self.classified_junctions.append(_conn)
                         found.append({'event': 'orphan_junction', 'A1': n1, 'A2': n2, 'Junc': _conn})
             return found
 
@@ -1678,7 +1811,6 @@ class Graph:
                 for edge in node.edges:
                     if edge.start > node.start and edge.end < node.end:
                         found.append({'event': 'exitron', 'Exon': node, 'Junc': edge})
-
             return found
 
         def constitutive(self):
@@ -1710,6 +1842,10 @@ class Graph:
                                 continue
 
                             if junc_reads >= config.keep_constitutive:
+                                # update seen junctions in Module
+                                if len(junc.lsvs) > 0:
+                                    self.classified_lsvs.extend(junc.lsvs)
+                                self.classified_junctions.append(junc)
                                 found.append({'event': 'constitutive', 'Junc': junc, 'Spliced': junc,
                                               'C1': n2, 'C2': n1})
 
@@ -1737,6 +1873,10 @@ class Graph:
                                     continue
 
                                 if junc_reads >= config.keep_constitutive:
+                                    # update seen junctions in Module
+                                    if len(edge.lsvs) > 0:
+                                        self.classified_lsvs.extend(edge.lsvs)
+                                    self.classified_junctions.append(edge)
                                     found.append({'event': 'constitutive_intron', 'C1': n1, 'C2': n2,
                                               'Intron': edge, 'Spliced': edge})
 
@@ -1951,7 +2091,12 @@ class Graph:
 
             complex = False
 
+            # if 'gene:ENSG00000205744:s:6475837-6475937' in self.non_classified_lsv_ids:
+            #     print(self.classified_junctions)
+            #     print("WHAT")
+
             for k, v in as_type_dict.items():
+                # call function to check if each event exists
                 res = v()
                 ret += res
 
@@ -1969,6 +2114,49 @@ class Graph:
                 complex = False
             elif check_events > 1:
                 complex = True
+
+
+            non_classified_lsvs = set(self.all_lsvs) - set(self.classified_lsvs)
+            non_classified_junctions = set(self.get_all_edges()) - set(self.classified_junctions)
+            # try:
+            #     print(set(self.get_all_edges()))
+            #     # non_classified_junctions = set(self.get_all_edges()) - set(self.classified_junctions)
+            # except:
+            #     print("set(self.get_all_edges())")
+            #     exit(1)
+            # try:
+            #     print(set(self.classified_junctions))
+            #     # non_classified_junctions = set(self.get_all_edges()) - set(self.classified_junctions)
+            # except:
+            #     print("set(self.classified_junctions)")
+            #     print(self.classified_junctions)
+            #     exit(1)
+
+
+            # if len(non_classified_lsvs) > 0:
+            #     print("SEEN")
+            #     print(set(self.classified_lsvs))
+            #     print(set(self.classified_junctions))
+            #     print("EXPECTED")
+            #     print(self.all_lsvs)
+            #     print(self.get_all_edges())
+            #     print("LEFTOVER")
+            #     print(non_classified_lsvs)
+            #     print(non_classified_junctions)
+                # exit(1)
+
+            # If there are LSVs that we not classified
+            if len(non_classified_lsvs) > 0:
+                these_t_lsvs = self.target_lsv_ids
+                these_s_lsvs = self.source_lsv_ids
+                if len(these_t_lsvs) > 0 or len(these_s_lsvs) > 0:
+                    # print(these_t_lsvs, these_s_lsvs)
+                    # print(self.get_all_edges())
+                    # then I guess label this complex since they didn't meet as_types definitions?
+                    complex = True
+                    # create an 'other_event' for this module
+                    ret += self.other_event(edges_of_interest=non_classified_junctions, lsvs=non_classified_lsvs)
+                    total_events += 1
 
             if HIDE_SUB_COMPLEX and complex:
                 ret = []

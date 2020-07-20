@@ -101,6 +101,8 @@ def classify_gene(args):
                     writer.exitron()
                     writer.orphan_junction()
 
+                    writer.other_event()
+
                 if 'summary' in config.enabled_outputs:
                     writer.summary()
 
