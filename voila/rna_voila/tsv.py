@@ -120,7 +120,7 @@ class AnalysisTypeTsv:
 
         return metadata
 
-    def tsv_row(self, q, e, tsv_file, fieldnames):
+    def tsv_row(self, q, e, tsv_file, fieldnames, gene_ids=None):
         """
         Used in multi-processing to write each row of the tsv file.
         :param q: Queue containing gene_ids
@@ -289,14 +289,6 @@ class AnalysisTypeTsv:
         os.makedirs(os.path.dirname(tsv_file) or '.', exist_ok=True)
         tsv_file = Path(tsv_file)
 
-        mgr = multiprocessing.Manager()
-
-        queue = mgr.Queue(nproc * 2)
-        event = mgr.Event()
-
-        fill_queue_proc = multiprocessing.Process(target=self.fill_queue, args=(queue, event))
-        fill_queue_proc.start()
-
         with tsv_file.open('w') as tsv:
 
             metadata = self.get_metadata()
@@ -308,12 +300,24 @@ class AnalysisTypeTsv:
             writer = csv.DictWriter(tsv, fieldnames=fieldnames, delimiter='\t')
             writer.writeheader()
 
-        with multiprocessing.Pool(processes=nproc) as pool:
-            for _ in range(nproc):
-                multiple_results.append(pool.apply_async(self.tsv_row, (queue, event, tsv_file, fieldnames)))
-            [r.get() for r in multiple_results]
+        if nproc > 1:
+            mgr = multiprocessing.Manager()
 
-        fill_queue_proc.join()
+            queue = mgr.Queue(nproc * 2)
+            event = mgr.Event()
+
+            fill_queue_proc = multiprocessing.Process(target=self.fill_queue, args=(queue, event))
+            fill_queue_proc.start()
+
+            with multiprocessing.Pool(processes=nproc) as pool:
+                for _ in range(nproc):
+                    multiple_results.append(pool.apply_async(self.tsv_row, (queue, event, tsv_file, fieldnames)))
+                [r.get() for r in multiple_results]
+
+            fill_queue_proc.join()
+        else:
+            with self.view_matrix() as m:
+                self.tsv_row(None, None, tsv_file, fieldnames, m.gene_ids)
 
 
 
@@ -331,7 +335,7 @@ class PsiTsv(AnalysisTypeTsv):
     def get_metadata(self):
         return self.get_base_metadata()
 
-    def tsv_row(self, q, e, tsv_file, fieldnames):
+    def tsv_row(self, q, e, tsv_file, fieldnames, gene_ids=None):
         log = voila_log()
 
         with ViewSpliceGraph() as sg:
@@ -340,7 +344,7 @@ class PsiTsv(AnalysisTypeTsv):
             with tsv_file.open('a') as tsv:
                 writer = csv.DictWriter(tsv, fieldnames=fieldnames, delimiter='\t')
 
-                for gene_id in self.gene_ids(q, e):
+                for gene_id in self.gene_ids(q, e) if q else gene_ids:
 
                     gene = sg.gene(gene_id)
                     chromosome = gene['chromosome']
@@ -375,11 +379,14 @@ class PsiTsv(AnalysisTypeTsv):
                             'ucsc_lsv_link': views.ucsc_href(genome, chromosome, start, end)
                         }
 
-                        lock.acquire()
+                        if lock:
+                            lock.acquire()
                         log.debug('Write TSV row for {0}'.format(lsv_id))
                         writer.writerow(row)
-                        lock.release()
-                    q.task_done()
+                        if lock:
+                            lock.release()
+                    if q:
+                        q.task_done()
 
     def tab_output(self):
         fieldnames = ['gene_name', 'gene_id', 'lsv_id', 'mean_psi_per_lsv_junction', 'stdev_psi_per_lsv_junction',
@@ -415,7 +422,7 @@ class HeterogenTsv(AnalysisTypeTsv):
 
         self.write_tsv(fieldnames)
 
-    def tsv_row(self, q, e, tsv_file, fieldnames):
+    def tsv_row(self, q, e, tsv_file, fieldnames, gene_ids=None):
         log = voila_log()
         # config = TsvConfig()
         group_names = self.group_names
@@ -426,7 +433,7 @@ class HeterogenTsv(AnalysisTypeTsv):
             with tsv_file.open('a') as tsv:
                 writer = csv.DictWriter(tsv, fieldnames=fieldnames, delimiter='\t')
 
-                for gene_id in self.gene_ids(q, e):
+                for gene_id in self.gene_ids(q, e) if q else gene_ids:
                     gene = sg.gene(gene_id)
                     chromosome = gene['chromosome']
 
@@ -474,12 +481,14 @@ class HeterogenTsv(AnalysisTypeTsv):
                         for key, value in het.junction_scores:
                             row[key] = semicolon(value)
 
-                        lock.acquire()
+                        if lock:
+                            lock.acquire()
                         log.debug('Write TSV row for {0}'.format(lsv_id))
                         writer.writerow(row)
-                        lock.release()
-
-                    q.task_done()
+                        if lock:
+                            lock.release()
+                    if q:
+                        q.task_done()
 
 
 class DeltaPsiTsv(AnalysisTypeTsv):
@@ -497,7 +506,7 @@ class DeltaPsiTsv(AnalysisTypeTsv):
         return metadata
 
 
-    def tsv_row(self, q, e, tsv_file, fieldnames):
+    def tsv_row(self, q, e, tsv_file, fieldnames, gene_ids=None):
         log = voila_log()
         config = TsvConfig()
         group1, group2 = self.group_names
@@ -508,7 +517,7 @@ class DeltaPsiTsv(AnalysisTypeTsv):
             with tsv_file.open('a') as tsv:
                 writer = csv.DictWriter(tsv, fieldnames=fieldnames, delimiter='\t')
 
-                for gene_id in self.gene_ids(q, e):
+                for gene_id in self.gene_ids(q, e) if q else gene_ids:
 
                     gene = sg.gene(gene_id)
                     chromosome = gene['chromosome']
@@ -561,12 +570,14 @@ class DeltaPsiTsv(AnalysisTypeTsv):
                             'ucsc_lsv_link': views.ucsc_href(genome, chromosome, start, end)
                         }
 
-                        lock.acquire()
+                        if lock:
+                            lock.acquire()
                         log.debug('Write TSV row for {0}'.format(lsv_id))
                         writer.writerow(row)
-                        lock.release()
-
-                    q.task_done()
+                        if lock:
+                            lock.release()
+                    if q:
+                        q.task_done()
 
     def tab_output(self):
 
