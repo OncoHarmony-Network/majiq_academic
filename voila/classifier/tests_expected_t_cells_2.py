@@ -958,7 +958,8 @@ expected_modules = {
             "p_afe": "",
             "multi_exon_spanning": "",
             "alternative_intron": "",
-            "complex": "False"
+            "other":"1",
+            "complex": "True"
         },
         {
             "module_id": "gene:ENSG00000160201_3",
@@ -1012,7 +1013,8 @@ expected_modules = {
             "p_afe": "",
             "multi_exon_spanning": "",
             "alternative_intron": "",
-            "complex": "False"
+            "complex": "True",
+            "other": "1"
         },
         {
             "module_id": "gene:ENSG00000081665_2",
