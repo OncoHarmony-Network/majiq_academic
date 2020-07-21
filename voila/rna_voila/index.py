@@ -171,7 +171,8 @@ class Index:
         # For some reason, numpy needs these in tuples.
         row = tuple(chain(row, lsv_f))
 
-        q.put(row)
+        if q:
+            q.put(row)
         return row
 
     def _heterogen(self):
@@ -191,32 +192,40 @@ class Index:
 
             log.info('Creating index: ' + voila_file)
 
-            manager = Manager()
-            q = manager.Queue()
-
             with ViewSpliceGraph() as sg:
                 g = sg.gene_ids2gene_names
 
-            with ViewHeterogens() as m:
-                lsv_ids = [(x, g, m, q) for x in m.lsv_ids()]
+            if config.nproc > 1:
+                manager = Manager()
+                q = manager.Queue()
 
-            p = Pool(config.nproc)
-            work_size = len(lsv_ids)
+                with ViewHeterogens() as m:
+                    lsv_ids = [(x, g, m, q) for x in m.lsv_ids()]
 
-            # voila_index = p.map(self._heterogen_pool_add_index, zip(lsv_ids, range(work_size), repeat(work_size)))
-            voila_index = p.map_async(self._heterogen_pool_add_index, lsv_ids)
+                p = Pool(config.nproc)
+                work_size = len(lsv_ids)
 
-            # monitor loop
-            while True:
-                if voila_index.ready():
-                    break
-                else:
-                    size = q.qsize()
-                    print("Indexing LSV IDs: %d / %d" % (size, work_size))
-                    time.sleep(2)
+                # voila_index = p.map(self._heterogen_pool_add_index, zip(lsv_ids, range(work_size), repeat(work_size)))
+                voila_index = p.map_async(self._heterogen_pool_add_index, lsv_ids)
 
-            log.info('Writing index: ' + voila_file)
-            voila_index = voila_index.get()
+                # monitor loop
+                while True:
+                    if voila_index.ready():
+                        break
+                    else:
+                        size = q.qsize()
+                        print("Indexing LSV IDs: %d / %d" % (size, work_size))
+                        time.sleep(2)
+
+                log.info('Writing index: ' + voila_file)
+                voila_index = voila_index.get()
+
+            else:
+                voila_index = []
+                with ViewHeterogens() as m:
+                    for x in m.lsv_ids():
+                        args = (x, g, m, None)
+                        voila_index.append(self._heterogen_pool_add_index(args))
 
             dtype = self._create_dtype(voila_index)
             self._write_index(voila_file, voila_index, dtype)
@@ -259,8 +268,8 @@ class Index:
 
         # For some reason, numpy needs these in tuples.
         row = tuple(chain(row, lsv_f))
-
-        q.put(row)
+        if q:
+            q.put(row)
         return row
 
     def _deltapsi(self):
@@ -279,31 +288,39 @@ class Index:
 
             log.info('Creating index: ' + voila_file)
 
-            manager = Manager()
-            q = manager.Queue()
-
             with ViewSpliceGraph() as sg:
                 g = sg.gene_ids2gene_names
 
-            with ViewDeltaPsi() as m:
-                lsv_ids = [(x, g, q) for x in m.lsv_ids()]
-            p = Pool(config.nproc)
-            work_size = len(lsv_ids)
+            if config.nproc > 1:
 
-            voila_index = p.map_async(self._deltapsi_pool_add_index, lsv_ids)
+                manager = Manager()
+                q = manager.Queue()
 
-            # monitor loop
-            while True:
-                if voila_index.ready():
-                    break
-                else:
-                    size = q.qsize()
-                    print("Indexing LSV IDs: %d / %d" % (size, work_size))
-                    time.sleep(2)
+                with ViewDeltaPsi() as m:
+                    lsv_ids = [(x, g, q) for x in m.lsv_ids()]
+                p = Pool(config.nproc)
+                work_size = len(lsv_ids)
 
-            log.info('Writing index: ' + voila_file)
-            voila_index = voila_index.get()
+                voila_index = p.map_async(self._deltapsi_pool_add_index, lsv_ids)
 
+                # monitor loop
+                while True:
+                    if voila_index.ready():
+                        break
+                    else:
+                        size = q.qsize()
+                        print("Indexing LSV IDs: %d / %d" % (size, work_size))
+                        time.sleep(2)
+
+                log.info('Writing index: ' + voila_file)
+                voila_index = voila_index.get()
+
+            else:
+                voila_index = []
+                with ViewDeltaPsi() as m:
+                    for x in m.lsv_ids():
+                        args = (x, g, None)
+                        voila_index.append(self._deltapsi_pool_add_index(args))
 
             dtype = self._create_dtype(voila_index)
             self._write_index(voila_file, voila_index, dtype)
@@ -331,7 +348,8 @@ class Index:
         # For some reason, numpy needs these in tuples.
         row = tuple(chain(row, lsv_f))
 
-        q.put(row)
+        if q:
+            q.put(row)
         return row
 
     def _psi(self):
@@ -349,31 +367,39 @@ class Index:
 
             log.info('Creating index: ' + voila_file)
 
-            manager = Manager()
-            q = manager.Queue()
-
             with ViewSpliceGraph() as sg:
                 g = sg.gene_ids2gene_names
 
-            with ViewPsis() as m:
-                lsv_ids = [(x, g, m, q) for x in m.lsv_ids()]
-            p = Pool(config.nproc)
-            work_size = len(lsv_ids)
+            if config.nproc > 1:
 
-            voila_index = p.map_async(self._psi_pool_add_index, lsv_ids)
+                manager = Manager()
+                q = manager.Queue()
 
-            # monitor loop
-            while True:
-                if voila_index.ready():
-                    break
-                else:
-                    size = q.qsize()
-                    print("Indexing LSV IDs: %d / %d" % (size, work_size))
-                    time.sleep(2)
+                with ViewPsis() as m:
+                    lsv_ids = [(x, g, m, q) for x in m.lsv_ids()]
+                p = Pool(config.nproc)
+                work_size = len(lsv_ids)
 
-            log.info('Writing index: ' + voila_file)
-            voila_index = voila_index.get()
+                voila_index = p.map_async(self._psi_pool_add_index, lsv_ids)
 
+                # monitor loop
+                while True:
+                    if voila_index.ready():
+                        break
+                    else:
+                        size = q.qsize()
+                        print("Indexing LSV IDs: %d / %d" % (size, work_size))
+                        time.sleep(2)
+
+                log.info('Writing index: ' + voila_file)
+                voila_index = voila_index.get()
+
+            else:
+                voila_index = []
+                with ViewPsis() as m:
+                    for x in m.lsv_ids():
+                        args = (x, g, m, None)
+                        voila_index.append(self._psi_pool_add_index(args))
 
             dtype = self._create_dtype(voila_index)
             self._write_index(voila_file, voila_index, dtype)
