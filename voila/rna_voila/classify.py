@@ -149,6 +149,7 @@ def run_classifier():
 
     experiment_names = set()
     for voila_file in config.voila_files:
+
         with Matrix(voila_file) as m:
             for grp in m.experiment_names:
                 for exp in grp:
@@ -199,6 +200,12 @@ def run_classifier():
     writerClass.delete_tsvs()
 
     work_size = len(gene_ids)
+
+    voila_files_chunk_size = 1000
+
+
+    # load data for N genes into shared memory
+    # shared block is (chunk_size, num_voila_files)
 
     if config.debug:
         try:
