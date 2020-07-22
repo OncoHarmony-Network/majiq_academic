@@ -1,8 +1,8 @@
-from voila.voila_log import voila_log
-from voila.config import ClassifyConfig
+from rna_voila.voila_log import voila_log
+from rna_voila.config import ClassifyConfig
 import numpy as np
 import h5py
-from voila.classifier.tsv_writer import BaseTsvWriter
+from rna_voila.classifier.tsv_writer import BaseTsvWriter
 import os, csv
 from itertools import combinations
 import copy, glob

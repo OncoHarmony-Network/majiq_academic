@@ -2,12 +2,12 @@ from bisect import bisect_left, bisect_right
 from itertools import combinations
 from pathlib import Path
 
-from voila import constants
-from voila.api import SpliceGraph, Matrix
-from voila.api.matrix_utils import generate_means
+from rna_voila import constants
+from rna_voila.api import SpliceGraph, Matrix
+from rna_voila.api.matrix_utils import generate_means
 
-from voila.classifier.as_types import Graph
-from voila.classifier.tsv_writer import TsvWriter
+from rna_voila.classifier.as_types import Graph
+from rna_voila.classifier.tsv_writer import TsvWriter
 
 
 from subprocess import Popen, PIPE, STDOUT

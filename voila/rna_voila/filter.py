@@ -1,19 +1,19 @@
-from voila.config import FilterConfig
-from voila import constants
-from voila.voila_log import voila_log
-from voila.api import SpliceGraph, Matrix
-from voila.api.matrix_hdf5 import MatrixHdf5
-from voila.api.view_matrix import ViewHeterogen, ViewPsi, ViewDeltaPsi
-from voila.constants import *
+from rna_voila.config import FilterConfig
+from rna_voila import constants
+from rna_voila.voila_log import voila_log
+from rna_voila.api import SpliceGraph, Matrix
+from rna_voila.api.matrix_hdf5 import MatrixHdf5
+from rna_voila.api.view_matrix import ViewHeterogen, ViewPsi, ViewDeltaPsi
+from rna_voila.constants import *
 import h5py
 import sqlite3
 import os, sys
 import numpy as np
-from voila.vlsv import get_expected_psi, matrix_area
+from rna_voila.vlsv import get_expected_psi, matrix_area
 from itertools import combinations
 from multiprocessing import Manager, Pool
 import time
-from voila.api.matrix_utils import generate_means, unpack_bins, generate_high_probability_non_changing
+from rna_voila.api.matrix_utils import generate_means, unpack_bins, generate_high_probability_non_changing
 
 class Filter:
     def __init__(self):

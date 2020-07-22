@@ -1,13 +1,13 @@
-from voila.config import ClassifyConfig
+from rna_voila.config import ClassifyConfig
 import numpy as np
-from voila.vlsv import get_expected_psi, matrix_area
+from rna_voila.vlsv import get_expected_psi, matrix_area
 from itertools import combinations
 from operator import itemgetter
-from voila.api import Matrix
-from voila import constants
-from voila.exceptions import GeneIdNotFoundInVoilaFile, LsvIdNotFoundInVoilaFile
-from voila.api.matrix_utils import generate_variances
-from voila.api import view_matrix
+from rna_voila.api import Matrix
+from rna_voila import constants
+from rna_voila.exceptions import GeneIdNotFoundInVoilaFile, LsvIdNotFoundInVoilaFile
+from rna_voila.api.matrix_utils import generate_variances
+from rna_voila.api import view_matrix
 from collections import OrderedDict
 
 SIG_FIGS = 3

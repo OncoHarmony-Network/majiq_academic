@@ -1,20 +1,20 @@
 from bisect import bisect_left, bisect_right
 from itertools import combinations, permutations, product
 from pathlib import Path
-from voila.voila_log import voila_log
-from voila import constants
-from voila.api import SpliceGraph, Matrix
-from voila.api.matrix_utils import generate_means, unpack_bins, generate_high_probability_non_changing, \
+from rna_voila.voila_log import voila_log
+from rna_voila import constants
+from rna_voila.api import SpliceGraph, Matrix
+from rna_voila.api.matrix_utils import generate_means, unpack_bins, generate_high_probability_non_changing, \
     generate_bins_prior_removed, generate_prior_removed_expected_dpsi
 
 from operator import itemgetter
 import csv
 
 import argparse
-from voila.classifier.tsv_writer import TsvWriter
-from voila.config import ClassifyConfig
-from voila.exceptions import GeneIdNotFoundInVoilaFile, VoilaException
-from voila.vlsv import get_expected_psi, matrix_area, get_expected_dpsi
+from rna_voila.classifier.tsv_writer import TsvWriter
+from rna_voila.config import ClassifyConfig
+from rna_voila.exceptions import GeneIdNotFoundInVoilaFile, VoilaException
+from rna_voila.vlsv import get_expected_psi, matrix_area, get_expected_dpsi
 import numpy as np
 
 def check_file(value):

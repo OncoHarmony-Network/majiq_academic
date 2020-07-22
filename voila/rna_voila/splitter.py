@@ -1,12 +1,12 @@
-from voila.config import SplitterConfig, RecombineConfig
+from rna_voila.config import SplitterConfig, RecombineConfig
 import os, sys
 import shutil
-from voila.voila_log import voila_log
-from voila.filter import open_db, copy_table
+from rna_voila.voila_log import voila_log
+from rna_voila.filter import open_db, copy_table
 import h5py
 from multiprocessing import Manager, Pool
 import time
-from voila.api.view_splice_graph import ViewSpliceGraph
+from rna_voila.api.view_splice_graph import ViewSpliceGraph
 import ast
 
 """

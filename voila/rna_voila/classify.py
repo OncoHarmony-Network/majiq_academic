@@ -1,11 +1,11 @@
-from voila.config import ClassifyConfig
-from voila import constants
-from voila.voila_log import voila_log
-from voila.exceptions import VoilaException, UnknownAnalysisType, UnsupportedAnalysisType
-from voila.api import SpliceGraph, Matrix
-from voila.classifier.as_types import Graph
-from voila.classifier.tsv_writer import TsvWriter
-from voila.classifier.training_writer import TrainingWriter
+from rna_voila.config import ClassifyConfig
+from rna_voila import constants
+from rna_voila.voila_log import voila_log
+from rna_voila.exceptions import VoilaException, UnknownAnalysisType, UnsupportedAnalysisType
+from rna_voila.api import SpliceGraph, Matrix
+from rna_voila.classifier.as_types import Graph
+from rna_voila.classifier.tsv_writer import TsvWriter
+from rna_voila.classifier.training_writer import TrainingWriter
 from math import ceil
 import time
 import os, sys
