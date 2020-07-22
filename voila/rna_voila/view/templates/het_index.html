@@ -1,0 +1,230 @@
+{% extends 'base_index.html' %}
+
+{% block script %}
+    <script>
+        new MutationObserver(mutations => {
+            mutations.forEach(m => m.addedNodes
+                .forEach(n => {
+                    const tds = n.querySelectorAll('td:not(.dataTables_empty)');
+
+                    if (!tds.length)
+                        return;
+
+                    const lsv_id = tds[1].textContent;
+
+                    json_ajax('{{ url_for("main.lsv_data") }}/' + encodeURIComponent(lsv_id))
+                        .then(lsv_data => {
+                            const lsv = new Lsv(lsv_data);
+                            const violin = new Violin(lsv_data.lsv);
+                            n.querySelectorAll('.excl-incl-rect')
+                                .forEach(s => {
+                                    lsv.draw_delta_lsv_compact_svg(s);
+                                });
+
+                            n.querySelectorAll('.dpsi-violin')
+                                .forEach(s => {
+                                    $(s).hide();
+                                    violin.deltapsi(s);
+                                });
+
+                            n.querySelectorAll('.lsv-cartoon')
+                                .forEach(s => lsv.cartoon(s));
+                        });
+
+                    copy_lsv_modal_dropdown(n, '{{ url_for("main.copy_lsv") }}/' + encodeURIComponent(lsv_id))
+
+                })
+            );
+        })
+            .observe(document.querySelector('#results tbody'), {
+                childList: true,
+            });
+
+        const form_to_json = (json_data) => {
+            $('.lsv-filters')
+                .serializeArray()
+                .map(d => {
+                    json_data[`lsv_filter[${d.name}]`] = d.value
+                });
+        };
+
+        const $results = $('#results').DataTable({
+            processing: true,
+            serverSide: true,
+            autoWidth: false,
+            lengthMenu: [[10, 25, 50, 100, 1000], [10, 25, 50, 100, 1000]],
+            ajax: {
+                url: '{{ url_for("main.index_table") }}',
+                type: 'POST',
+                data: json_data => form_to_json(json_data)
+            },
+            columnDefs: [
+                {
+                    targets: 0,
+                    render: data => {
+                        const element = document.createElement('a');
+                        element.href = data[0];
+                        element.target = '_blank';
+                        element.rel = "noopener noreferrer";
+                        element.textContent = data[1];
+                        return element.outerHTML
+                    }
+                },
+                {
+                    targets: 2,
+                    sortable: false,
+                    render: data => {
+                        const element = document.createElement('canvas');
+                        element.setAttribute('width', '200');
+                        element.setAttribute('height', '80');
+                        element.classList.add('lsv-cartoon');
+                        element.dataset.lsvType = data;
+                        return element.outerHTML
+                    }
+                },
+                {
+                    targets: 3,
+                    orderable: false,
+                    render: data => {
+                        const copy_lsv_dd = document.createElement('select');
+                        copy_lsv_dd.classList.add('copy-lsv');
+                        const opt = document.createElement('option');
+                        opt.textContent = 'Copy LSV';
+                        copy_lsv_dd.appendChild(opt);
+                        data.group_names.forEach(n => {
+                            const g_opt = document.createElement('option');
+                            g_opt.textContent = n;
+                            g_opt.value = n;
+                            copy_lsv_dd.appendChild(g_opt);
+                        });
+
+                        const ucsc_a = document.createElement('a');
+                        ucsc_a.href = data.ucsc;
+                        ucsc_a.target = '_blank';
+                        ucsc_a.rel = "noopener noreferrer";
+                        const ucsc_img = document.createElement('img');
+                        ucsc_img.src = '{{ url_for('static', filename="img/ucsc.png") }}';
+                        ucsc_a.appendChild(ucsc_img);
+
+                        return copy_lsv_dd.outerHTML + ucsc_a.outerHTML
+                    }
+                }
+            ]
+        });
+
+        let to;
+        const reload_table = () => {
+            clearTimeout(to);
+            to = setTimeout(() => {
+                $results.ajax.reload()
+            }, 400);
+        };
+
+        function download(filename, text) {
+            var element = document.createElement('a');
+            element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(text));
+            element.setAttribute('download', filename);
+
+            element.style.display = 'none';
+            document.body.appendChild(element);
+
+            element.click();
+
+            document.body.removeChild(element);
+        }
+
+        document.querySelector('.lsv-filters').onchange = reload_table;
+
+        document.querySelector('.download-lsvs').onclick = (event) => {
+            event.preventDefault();
+
+            const search = document.querySelector('.lsv-container input[type=search]');
+            const form_data = {};
+            form_to_json(form_data);
+            form_data['search[value]'] = search.value;
+
+            send_form_ajax('{{ url_for("main.download_lsvs") }}', $.param(form_data))
+                .then(data => download('lsvs.txt', data));
+        };
+
+        document.querySelector('.download-genes').onclick = (event) => {
+            event.preventDefault();
+
+            const search = document.querySelector('.lsv-container input[type=search]');
+            const form_data = {};
+            form_to_json(form_data);
+            form_data['search[value]'] = search.value;
+
+            send_form_ajax('{{ url_for("main.download_genes") }}', $.param(form_data))
+                .then(data => download('genes.txt', data));
+        };
+
+        $('#results tbody')
+            .on('click', '.excl-incl-rect, .dpsi-violin', event => {
+                const parent = event.target.closest('td');
+                const excl_incl = parent.querySelector('.excl-incl-rect');
+                const violin = parent.querySelector('.dpsi-violin');
+                $(violin).toggle();
+                $(excl_incl).toggle();
+            });
+
+    </script>
+{% endblock %}
+
+{% block filters %}
+    <form class="lsv-filters pure-form pure-form-aligned">
+        <fieldset>
+            <legend>LSV Filters</legend>
+            <div class="pure-g">
+                {% for field in form %}
+                    {% if field.type != 'CSRFTokenField' %}
+                        <div class="pure-u-1-3">
+                            {{ field }}
+                            {{ field.label }}
+                        </div>
+                    {% endif %}
+                {% endfor %}
+            </div>
+        </fieldset>
+    </form>
+
+    <hr>
+
+    <form class="psi-filters pure-form pure-form-aligned">
+        <fieldset>
+            <div class="pure-g">
+                <div class="pure-u-1-4">
+                    <button type="submit" class="download-lsvs pure-button pure-button-primary">Download LSVs
+                    </button>
+                </div>
+
+                <div class="pure-u-1-4">
+                    <button type="submit" class="download-genes pure-button pure-button-primary">Download Genes
+                    </button>
+                </div>
+
+            </div>
+        </fieldset>
+    </form>
+{% endblock %}
+
+{% block index_table %}
+    <div class="content">
+    </div>
+    <div class="lsv-container">
+        <div>
+            <table id="results" class="pure-table">
+                <thead>
+                <tr>
+                    <th>Gene Name</th>
+                    <th>LSV ID</th>
+                    <th>LSV Type</th>
+                    <th>Links</th>
+                </tr>
+                </thead>
+                <tbody>
+                </tbody>
+            </table>
+        </div>
+    </div>
+{% endblock %}

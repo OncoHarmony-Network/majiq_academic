@@ -1,0 +1,262 @@
+{% extends 'base.html' %}
+
+{% block style %}
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/summary.css') }}">
+{% endblock %}
+
+{% block script %}
+    <script src="{{ url_for('static', filename='js/lsvtools.js') }}"></script>
+    <script>
+        const legend = document.querySelector('.legend');
+        new Lsv().renderFloatingLegend(legend)
+        var highlightFirst = false;
+
+        const sg_simplified_view = "{{ session.get('omit_simplified', False) }}";
+        if (sg_simplified_view === 'True') $('#sg-simplified-view').prop('checked', true);
+        $('#sg-simplified-view').change(function(){
+            json_ajax('/toggle-simplified')
+            .then(() => location.reload());
+        });
+
+        // capture double clicking on exon numbers in splicegraph
+        $('.top').on('dblclick', '.exon-grp', function(){
+            // look for the matching exon number table without the prev attr (there might be two)
+            const exon_number = $(this).children('text').eq(0).text();
+
+            //split logic is we are in a paginated / table view or not, we determine this based on
+            //whether filter_exon_numbers (which should be provided for paginated views) is defined
+
+            if (typeof filter_exon_numbers !== 'undefined') {
+                const input_box = $('#results_filter input');
+                // paginated method, just search for the correct LSV ID(s) filter the table by it
+                if(exon_number in filter_exon_numbers){
+                    const current_val = input_box.val();
+                    const coord_range = filter_exon_numbers[exon_number][0].split(':').pop();
+                    if(current_val === coord_range){
+                        // we already selected this one before, so clear selection
+                        input_box.val('');
+                        input_box.trigger('input');
+                    }else{
+                        // filter by range
+                        input_box.val(coord_range);
+                        input_box.trigger('input');
+                        // check the first highlight box
+                        highlightFirst = true;
+                    }
+                }else{
+                    input_box.val('');
+                    dispFadeAlert("No LSV found for this Exon Number");
+                    input_box.trigger('input');
+                }                
+
+            }else{
+                // non-paginated method, find exactly the LSV table and scroll to it, possible alternating between
+                // source and target exons/junctions if both exist
+                var setOne = false; // flag used to that we don't double set attribute on the first double click event
+                const lsv_tables = $(`.lsv[data-exon-number="${exon_number}"]`)
+                if(!lsv_tables.length){
+                    dispFadeAlert("No LSV found for this Exon Number");
+                }
+                lsv_tables.each(function(i, el){
+                    const $self = $(this);
+                    if(!$self.is('[data-select]') || lsv_tables.length === 1){
+                        if(!setOne){
+                            // scroll to it
+
+                            $self.css('background-color', '#ff7878');
+                            $self.css('transition', 'background 1.5s');
+
+                            $('.bottom').animate({
+                                scrollTop: $self[0].offsetTop - ($('.gene-header').height() + 80)
+                            }, 500, 'linear', function(){
+                                $self.css('background-color', 'transparent');
+                            });
+
+                            // set the attr, so it will not be chosen next time
+                            $self.attr('data-select', 't');
+                            setOne = true;
+                        }
+                    }else{
+                        // unset for the other one
+                        $self.attr('data-select', null);
+                    }
+                })
+            }
+
+
+        });
+
+    </script>
+    {% block analysis_type_script %}{% endblock %}
+{% endblock %}
+
+{% block content %}
+    <div class="menu pure-menu pure-menu-horizontal">
+        <a href class="pure-menu-heading">
+            <img height="30" src="{{ url_for('static', filename='img/LogoOnly_white.svg') }}">
+        </a>
+        <ul class="pure-menu-list">
+            <li class="pure-menu-item">
+                <a href="{{ url_for('main.index') }}" class="pure-menu-link">Index</a>
+            </li>
+            <li class="pure-menu-item">
+                <span class="tools-menu-btn splice-graph-tools pure-menu-link" id="splice-graph-menu-btn">Splice Graph</span>
+            </li>
+            {#            <li class="pure-menu-item">#}
+            {#                <span class="tools-menu-btn lsv-tools pure-menu-link">LSV</span>#}
+            {#            </li>#}
+        </ul>
+
+        <ul class="menu-right pure-menu-list">
+            <li class="pure-menu-item">
+                <img height="30" class="prev-gene pure-menu-link"
+                     src="{{ url_for('static', filename='img/left_arrow.svg') }}">
+            </li>
+            <li class="pure-menu-item">
+                <img height="30" class="next-gene pure-menu-link"
+                     src="{{ url_for('static', filename='img/right_arrow.svg') }}">
+            </li>
+
+        </ul>
+    </div>
+
+    <div class="gene-header">
+        <div>
+            <div class="gene-name">Gene
+                name: {{ gene.name }}; {{ gene.chromosome }}:{{ gene.strand }}:{{ gene.start }}-{{ gene.end }};
+            </div>
+            <div class="gene-id">
+                Gene ID: {{ gene.id }};
+            </div>
+            {% if gene.overlap %}
+                <div class="gene-overlap">
+                    <strong>Note:</strong> overlaps with the following Genes:
+                    {% set sep = joiner(" ; ") %}
+                    {% for _gene in gene.overlap %}
+                        {{ sep() }}<a href="{{ url_for('main.gene', gene_id=_gene[0])}}">{{ _gene[1] }}</a>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        </div>
+        <div>
+            <a class="ucsc-gene" target="_blank" rel="noopener noreferrer" href="{{ gene.href }}">
+                <img src="{{ url_for('static', filename='img/ucsc.png') }}">
+            </a>
+        </div>
+        <div>
+            <img class="toggle-scale" src="{{ url_for('static', filename='img/solve-icon16.png') }}">
+            <img class="zoom-in" src="{{ url_for('static', filename='img/zoom_in.png') }}">
+            <img class="zoom-out" src="{{ url_for('static', filename='img/zoom_out.png') }}">
+            <img class="zoom-reset" src="{{ url_for('static', filename='img/undo.png') }}">
+        </div>
+        <div>
+            <div>
+                <canvas width="650px" height="40px" class="legend"></canvas>
+            </div>
+            <div class="coordinates"></div>
+        </div>
+        {% block heatmap_form %}{% endblock %}
+    </div>
+
+    <div class="tools-menu splice-graph-tools hide-tools-menu pure-g">
+        <div class="pure-u-1-3">
+            <form class="splice-graph-form pure-form pure-form-aligned">
+                <fieldset>
+                    <div class="groups pure-control-group">
+                        <label for="groups">Groups</label>
+                        <select id="groups"></select>
+                    </div>
+
+                    <div class="experiments pure-control-group">
+                        <label for="experiments">Experiments</label>
+                        <select id="experiments">
+                        </select>
+                    </div>
+
+                    <div class="pure-controls">
+                        <button type="submit" class="pure-button pure-button-primary">Add</button>
+                    </div>
+                </fieldset>
+            </form>
+        </div>
+        <div class="pure-u-1-3">
+            <form class="splice-graph-form pure-form pure-form-aligned">
+                <fieldset>
+                    <div class="pure-control-group">
+                        <label for="junction-reads-filter">Reads Filter</label>
+                        <input id="junction-reads-filter" type="checkbox" checked>
+                    </div>
+                    <div class="junction-filter pure-control-group">
+                        <label for="reads-greater-than">Reads Greater Than</label>
+                        <input id="reads-greater-than" value="0" disabled>
+                    </div>
+                    <div class="junction-filter pure-control-group">
+                        <label for="reads-less-than">Reads Less Than</label>
+                        <input id="reads-less-than" disabled>
+                    </div>
+                </fieldset>
+            </form>
+        </div>
+        <div class="pure-u-1-3">
+            <form class="splice-graph-form pure-form pure-form-aligned">
+                <fieldset>
+                    <div class="pure-control-group">
+                        <label for="sg-simplified-view">Simplified View</label>
+                        <input id="sg-simplified-view" type="checkbox">
+                    </div>
+                </fieldset>
+            </form>
+        </div>
+
+    </div>
+
+
+    <div class="tools-menu lsv-tools hide-tools-menu pure-g">
+        <div class="pure-u-1-2">
+            <form class="lsv-filters pure-form pure-form-aligned">
+                <fieldset>
+                    <div class="pure-control-group">
+                        <label for="prime-5">5 Prime</label>
+                        <input type="checkbox" id="prime-5">
+                    </div>
+                    <div class="pure-control-group">
+                        <label for="prime-3">3 Prime</label>
+                        <input type="checkbox" id="prime-3">
+                    </div>
+                    <div class="pure-control-group">
+                        <label for="exon-skipping">Exon Skipping</label>
+                        <input type="checkbox" id="exon-skipping">
+                    </div>
+                    <div class="pure-control-group">
+                        <label for="target">Target</label>
+                        <input type="checkbox" id="target">
+                    </div>
+                    <div class="pure-control-group">
+                        <label for="source">Source</label>
+                        <input type="checkbox" id="source">
+                    </div>
+                    <div class="pure-control-group">
+                        <label for="binary">Binary</label>
+                        <input type="checkbox" id="binary">
+                    </div>
+                    <div class="pure-control-group">
+                        <label for="complex">Complex</label>
+                        <input type="checkbox" id="complex">
+                    </div>
+                </fieldset>
+            </form>
+        </div>
+    </div>
+
+
+    <div class="content">
+        <div class="top">
+            <div class="splice-graph-container default-view"></div>
+        </div>
+
+        <div class="bottom">
+            {% block bottom %}{% endblock %}
+        </div>
+
+    </div>
+{% endblock %}
