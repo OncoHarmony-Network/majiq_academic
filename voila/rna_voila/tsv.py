@@ -415,10 +415,26 @@ class HeterogenTsv(AnalysisTypeTsv):
             group_names = m.group_names
             stats_column_names = list(m.junction_stats_column_names) + list(m.junction_scores_column_names)
 
-            fieldnames = ['gene_name', 'gene_id', 'lsv_id', 'lsv_type', 'strand', 'seqid'] + \
-                         ['%s_mean_psi' % group for group in group_names] + stats_column_names + \
-                         ['num_junctions', 'num_exons', 'de_novo_junctions',
-                          'junctions_coords', 'exons_coords', 'ir_coords', 'ucsc_lsv_link']
+            fieldnames = [
+                'gene_name',
+                'gene_id',
+                'lsv_id',
+                'lsv_type',
+                'strand',
+                'seqid',
+                *(
+                    f'{group}_mean_psi' for group in group_names
+                ),
+                *stats_column_names,
+                *m.nonchanging_column_names,
+                'num_junctions',
+                'num_exons',
+                'de_novo_junctions',
+                'junctions_coords',
+                'exons_coords',
+                'ir_coords',
+                'ucsc_lsv_link'
+            ]
 
         self.write_tsv(fieldnames)
 
@@ -464,7 +480,8 @@ class HeterogenTsv(AnalysisTypeTsv):
                                 '{0}-{1}'.format(start, end) for start, end in exon_str(lsv_exons)
                             ),
                             'ir_coords': ir_coords,
-                            'ucsc_lsv_link': views.ucsc_href(genome, chromosome, start, end)
+                            'ucsc_lsv_link': views.ucsc_href(genome, chromosome, start, end),
+                            **{key: semicolon(values) for key, values in het.nonchanging()},
                         }
 
                         for grp, mean in zip(group_names, np.array(mean_psi).transpose((1, 0, 2))):
