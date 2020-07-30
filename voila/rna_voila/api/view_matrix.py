@@ -749,6 +749,56 @@ class ViewHeterogens(ViewMulti):
                     except (GeneIdNotFoundInVoilaFile, LsvIdNotFoundInVoilaFile):
                         pass
 
+        def nonchanging(
+            self,
+            pvalue_threshold: float = 0.05,
+            within_group_iqr: float = 0.10,
+            between_group_dpsi: float = 0.05
+        ):
+            """ Boolean of heuristic for nonchanging heterogeneous events
+
+            We define highly-confident non-changing events from MAJIQ Heterogen
+            as being (1) above a nominal p-value threshold, (2) within-group
+            variance is sufficiently low as measured by IQR, (3) between-group
+            dPSI is sufficiently low as measured by difference in medians. We
+            accept that between-group dPSI threshold may be redundant in
+            combination with the other two thresholds.
+
+            Parameters
+            ----------
+            pvalue_threshold: float
+                Minimum p-value for which an LSV/junction can return true. Uses
+                minimum p-value from all tests provided
+            within_group_iqr: float
+                Maximum IQR within a group for which an LSV/junction can return
+                true
+            between_group_dpsi: float
+                Maximum absolute difference in median values of PSI for which
+                an LSV/junction can return true
+
+            Returns
+            -------
+            Generator yielding group names and boolean array per junction
+            """
+            config = ViewConfig()
+            voila_files = config.voila_files
+            for f in voila_files:
+                with ViewHeterogen(f) as m:
+                    het = m.lsv(self.lsv_id)
+                    groups = '_'.join(m.group_names)
+                    try:
+                        nonchanging = het.nonchanging(
+                            pvalue_threshold=pvalue_threshold,
+                            within_group_iqr=within_group_iqr,
+                            between_group_dpsi=between_group_dpsi
+                        )
+                        if len(voila_files) == 1:
+                            yield "nonchanging", nonchanging
+                        else:
+                            yield f"{groups} nonchanging", nonchanging
+                    except (GeneIdNotFoundInVoilaFile, LsvIdNotFoundInVoilaFile):
+                        pass
+
         @property
         def junction_scores(self):
             """
@@ -809,6 +859,21 @@ class ViewHeterogens(ViewMulti):
                         yield name
                     else:
                         yield groups + ' ' + name
+
+    @property
+    def nonchanging_column_names(self):
+        """ Column names associated with nonchanging values
+        """
+        voila_files = ViewConfig().voila_files
+
+        if len(voila_files) == 1:
+            return "nonchanging"
+        else:
+            for f in voila_files:
+                with ViewHeterogen(f) as m:
+                    groups = '_'.join(m.group_names)
+                    yield f"{groups} nonchanging"
+
 
     @property
     def junction_scores_column_names(self):
@@ -979,6 +1044,49 @@ class ViewHeterogen(Heterogen, ViewMatrix):
         @property
         def junction_stats(self):
             return self.get('junction_stats')
+
+        def nonchanging(
+            self,
+            pvalue_threshold: float = 0.05,
+            within_group_iqr: float = 0.10,
+            between_group_dpsi: float = 0.05
+        ):
+            """ Boolean of heuristic for nonchanging heterogeneous events
+
+            We define highly-confident non-changing events from MAJIQ Heterogen
+            as being (1) above a nominal p-value threshold, (2) within-group
+            variance is sufficiently low as measured by IQR, (3) between-group
+            dPSI is sufficiently low as measured by difference in medians. We
+            accept that between-group dPSI threshold may be redundant in
+            combination with the other two thresholds.
+
+            Parameters
+            ----------
+            pvalue_threshold: float
+                Minimum p-value for which an LSV/junction can return true. Uses
+                minimum p-value from all tests provided
+            within_group_iqr: float
+                Maximum IQR within a group for which an LSV/junction can return
+                true
+            between_group_dpsi: float
+                Maximum absolute difference in median values of PSI for which
+                an LSV/junction can return true
+            """
+            # recall junction_stats has shape (njunctions, nstats)
+            pvalue_passed = np.nanmin(self.junction_stats, axis=-1) >= pvalue_threshold
+            # recall that mu_psi has shape (njunctions, ngroups, maxsamples)
+            mu_psi = self.mu_psi  # load mu psi ndarray into memory
+            mu_psi = np.where(mu_psi >= 0, mu_psi, np.nan)  # mask unquantified
+            # get quantiles of psi (0.25, 0.5, 0.75) for each junction/group
+            # use to compute IQR and median
+            quantiles_psi = np.nanquantile(mu_psi, [0.25, 0.5, 0.75], axis=-1)
+            iqr_psi = quantiles_psi[2] - quantiles_psi[0]  # (njunctions, ngroups)
+            median_psi = quantiles_psi[1]
+            # did IQR pass threshold?
+            iqr_passed = (iqr_psi <= within_group_iqr).all(axis=-1)  # both groups
+            dpsi_passed = np.abs(median_psi[:, 1] - median_psi[:, 0]) <= between_group_dpsi
+            return pvalue_passed & iqr_passed & dpsi_passed  # all have to pass
+
 
     def lsv(self, lsv_id):
         return self._ViewHeterogen(self, lsv_id)
