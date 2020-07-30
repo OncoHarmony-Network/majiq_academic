@@ -1,9 +1,8 @@
 *.pyc
 *.c
 !voila/c/sqlite3.c
-majiq/src/internals/seq_parse.cpp
-majiq/src/*.cpp
-voila/c/*.cpp
+majiq/rna_majiq/src/*.cpp
+majiq/rna_majiq/c/*.cpp
 .DS_Store
 .idea
 voila/templates/.idea
@@ -13,7 +12,8 @@ voila/templates/spliceGraphD3.html
 *.log
 voila/sandbox/*
 dist/*.egg
-majiq.egg-info
+majiq/rna_majiq.egg-info
+voila/rna_voila.egg-info
 */git_version
 
 
