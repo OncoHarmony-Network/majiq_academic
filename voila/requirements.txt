@@ -1,5 +1,4 @@
 Click==7.0
-Cython==0.29.14
 Flask==1.0.2
 Flask-Session==0.3.1
 Flask-WTF==0.14.2
