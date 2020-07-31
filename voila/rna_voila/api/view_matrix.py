@@ -867,7 +867,7 @@ class ViewHeterogens(ViewMulti):
         voila_files = ViewConfig().voila_files
 
         if len(voila_files) == 1:
-            return "nonchanging"
+            yield "nonchanging"
         else:
             for f in voila_files:
                 with ViewHeterogen(f) as m:
