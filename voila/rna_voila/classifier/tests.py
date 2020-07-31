@@ -40,7 +40,7 @@ def run_voila_tsv(gene_ids, additional_args=[]):
         cmd = ['voila']
     else:
         os.environ['PYTHONPATH'] = majiq_dir
-        cmd = ['python3', os.path.join(majiq_dir, 'voila', 'run_voila.py')]
+        cmd = ['python3', os.path.join(majiq_dir, 'rna_voila', 'run_voila.py')]
     cmd += ['tsv', '-f', os.path.join(out_dir, 'comp_tsv.tsv'), psi_file, sg_file]
 
     for arg in additional_args:
@@ -83,7 +83,7 @@ def run_voila_classify(gene_ids, enabled_outputs='all', additional_args=[]):
         cmd = ['voila']
     else:
         os.environ['PYTHONPATH'] = majiq_dir
-        cmd = ['python3', os.path.join(majiq_dir, 'voila', 'run_voila.py')]
+        cmd = ['python3', os.path.join(majiq_dir, 'rna_voila', 'run_voila.py')]
     cmd += ['classify', psi_file, sg_file, '-d', out_dir,
            '--enabled-outputs', enabled_outputs, '--overwrite',
            '--decomplexify-psi-threshold', '0.0']

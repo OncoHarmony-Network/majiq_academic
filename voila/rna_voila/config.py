@@ -250,13 +250,13 @@ def write(args):
         # check if default = default for some args depending on the type of classify being run.
         # we store a default of none and apply the actual default if the user does not specify another value
         if not config_parser.has_option(settings, 'decomplexify_psi_threshold'):
-            if config_parser.getboolean(settings, 'changing') or config_parser.getboolean(settings, 'non_changing'):
+            if config_parser.getboolean(settings, 'changing'):
                 config_parser.set(settings, 'decomplexify_psi_threshold', '0.05')
             else:
                 config_parser.set(settings, 'decomplexify_psi_threshold', '0.0')
 
         if not config_parser.has_option(settings, 'decomplexify_deltapsi_threshold'):
-            if config_parser.getboolean(settings, 'changing') or config_parser.getboolean(settings, 'non_changing'):
+            if config_parser.getboolean(settings, 'changing'):
                 config_parser.set(settings, 'decomplexify_deltapsi_threshold', '0.1')
             else:
                 config_parser.set(settings, 'decomplexify_deltapsi_threshold', '0.0')

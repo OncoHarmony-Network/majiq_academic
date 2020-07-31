@@ -91,9 +91,11 @@ class Graph:
             self.strand, self.gene_name, self.chromosome = itemgetter('strand', 'name', 'chromosome')(gene_meta)
 
         self.priors = {}
-        if self.config.non_changing:
-            for voila_file in self.config.voila_files:
-                self.priors[voila_file] = Matrix(voila_file).prior
+
+        for voila_file in self.config.voila_files:
+            with Matrix(voila_file) as m:
+                if m.analysis_type in (constants.ANALYSIS_DELTAPSI, constants.ANALYSIS_HETEROGEN,):
+                    self.priors[voila_file] = Matrix(voila_file).prior
 
 
         # find connections between nodes
@@ -490,43 +492,6 @@ class Graph:
         return False
 
 
-    def _confidence_non_changing(self, module):
-        """
-        Similar to above, but for the non changing run type
-
-        at least N juncs have:
-            all(max(Prob(|E(dPSI)|<non-changing-thresh)))>=probability-non-changing-thresh
-        """
-
-        # remove the priors
-        prior_removed = []
-        for edge in module.get_all_edges():
-            for lsv_quants in edge.lsvs.values():
-                prior_removed.append(generate_bins_prior_removed(lsv_quants['has_ir'],
-                                                                        self.priors[lsv_quants['voila_file']],
-                                                                        lsv_quants['delta_psi_bins']))
-
-        # first check for edpsi thresholds
-        # TODO: abs of dpsi here?
-        passed_edpsi = all(max(generate_prior_removed_expected_dpsi(None,
-                                                                    None,
-                                                                    pr_removed_bins=bins))
-                           <= self.config.non_changing_threshold for bins in prior_removed)
-
-        if not passed_edpsi:
-            return False
-
-        #return all(x >= self.config.probability_non_changing_threshold for x in probs)
-
-        passed_prob = all(max(generate_high_probability_non_changing(None,
-                                                                    None,
-                                                                    self.config.non_changing_threshold,
-                                                                    pr_removed_bins=bins))
-                      >= self.config.probability_non_changing_threshold for bins in prior_removed)
-
-        return passed_prob
-
-
     def _remove_empty_exons(self):
         """
         Remove exons / nodes with no junctions
@@ -767,9 +732,6 @@ class Graph:
         if self.config.changing:
             if not self._confidence_changing(module):
                 return False
-        elif self.config.non_changing:
-            if not self._confidence_non_changing(module):
-                return False
 
         return True
 
@@ -969,10 +931,6 @@ class Graph:
                         lsv_store[key][lsv_id]['has_ir'] = lsv.intron_retention
 
                 _bins = lsv.get('bins')
-                # if self.config.non_changing:
-                #     _prior = lsv.matrix_hdf5.prior
-                # else:
-                #     _prior = None
 
                 for (start, end), means, bins in zip(juncs, generate_means(_bins), _bins):
                     key = str(start) + '-' + str(end)
@@ -1036,13 +994,6 @@ class Graph:
 
 
                 deltas = [d1-d2 for x in deltas for d1, d2 in combinations(x, 2)]
-                # if self.config.non_changing:
-                #     try:
-                #         self.priors[] = lsv.matrix_hdf5.prior
-                #     except:
-                #         self.priors[] = None
-                # else:
-                #     _prior = None
 
 
                 for (start, end), _bins, delta in zip(lsv.junctions, generate_means(bins), deltas):
