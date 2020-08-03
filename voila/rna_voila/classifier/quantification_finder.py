@@ -41,6 +41,7 @@ class QuantificationWriter:
 
         out = []
         for field in self.quantifications_int:
+
             quantification_vals = []
             for lsv_id in lsvs:
                 try:
@@ -304,10 +305,116 @@ class QuantificationWriter:
                 return None
             return f
 
+        def _global_changing(voila_files):
+            def f(lsv_id, edge=None):
+
+                junc_results = []
+                edges = [edge] if not type(edge) is list else edge
+
+                for voila_file in voila_files:
+                    with Matrix(voila_file) as m1:
+                        analysis_type = m1.analysis_type
+
+                    if edge:
+
+                        for _edge in edges:
+
+                            if analysis_type == constants.ANALYSIS_HETEROGEN:
+                                with view_matrix.ViewHeterogen(voila_file) as m:
+                                    lsv = m.lsv(lsv_id)
+
+                                    edge_idx = _filter_edges(_edge, lsv)
+                                    if edge_idx is None:
+                                        continue
+                                    else:
+
+                                        is_changing = lsv.changing(edge_idx,
+                                                     self.config.changing_threshold,
+                                                     self.config.probability_changing_threshold)
+
+                                        junc_results.append(is_changing)
+
+                            elif analysis_type == constants.ANALYSIS_DELTAPSI:
+                                with view_matrix.ViewDeltaPsi(voila_file) as m:
+                                    lsv = m.lsv(lsv_id)
+
+                                    edge_idx = _filter_edges(_edge, lsv)
+                                    if edge_idx is None:
+                                        continue
+                                    else:
+                                        changing_quant = lsv.high_probability_changing(
+                                            self.config.changing_threshold, edge_idx)
+
+                                        is_changing = changing_quant >= self.config.probability_changing_threshold
+
+                                        junc_results.append(is_changing)
+
+                if not junc_results:
+                    return ''
+
+                # bool() needed here because they are of type "numpy._bool" by default
+                return [any(bool(x) is True for x in junc_results)]
+
+            return f
+
+        def _global_non_changing(voila_files):
+            def f(lsv_id, edge=None):
+
+                junc_results = []
+                edges = [edge] if not type(edge) is list else edge
+
+                for voila_file in voila_files:
+                    with Matrix(voila_file) as m1:
+                        analysis_type = m1.analysis_type
+
+                    if edge:
+
+                        for _edge in edges:
+
+                            if analysis_type == constants.ANALYSIS_HETEROGEN:
+                                with view_matrix.ViewHeterogen(voila_file) as m:
+                                    lsv = m.lsv(lsv_id)
+
+                                    edge_idx = _filter_edges(_edge, lsv)
+                                    if edge_idx is None:
+                                        continue
+                                    else:
+                                        is_non_changing = lsv.nonchanging(self.config.non_changing_pvalue_threshold,
+                                                                self.config.non_changing_within_group_iqr,
+                                                                self.config.non_changing_between_group_dpsi,
+                                                                edge_idx)
+                                        junc_results.append(is_non_changing)
+
+                            elif analysis_type == constants.ANALYSIS_DELTAPSI:
+                                with view_matrix.ViewDeltaPsi(voila_file) as m:
+                                    lsv = m.lsv(lsv_id)
+
+                                    edge_idx = _filter_edges(_edge, lsv)
+                                    if edge_idx is None:
+                                        continue
+                                    else:
+                                        non_changing_quant = lsv.high_probability_non_changing(
+                                            self.config.non_changing_threshold, edge_idx)
+
+                                        is_non_changing = non_changing_quant >= self.config.probability_non_changing_threshold
+
+                                        junc_results.append(is_non_changing)
+
+                if not junc_results:
+                    return ''
+
+                # bool() needed here because they are of type "numpy._bool" by default
+                return [all(bool(x) is True for x in junc_results)]
+
+            return f
 
 
         tmp = OrderedDict()
         self.types2headers = {'psi':[], 'dpsi':[]}
+
+        tmp['changing'] = (_global_changing, self.config.voila_files)
+        tmp['non_changing'] = (_global_non_changing, self.config.voila_files)
+
         for voila_file in self.config.voila_files:
 
             with Matrix(voila_file) as m:

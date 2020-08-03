@@ -45,7 +45,7 @@ def print_filter_summary():
     else:
         voila_log().info(("╠╡ Not dropping any junctions").ljust(jst)[:jst] + "║")
 
-    if config.changing or config.non_changing:
+    if config.changing:
         voila_log().info(("╠╡ After Classification:").ljust(jst)[:jst] + "║")
         if config.changing:
             voila_log().info(("║     Dropping modules if none(max(E(|dPSI|)) >= %.3f)" % config.changing_threshold).ljust(jst)[

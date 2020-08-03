@@ -94,7 +94,7 @@ class Graph:
 
         for voila_file in self.config.voila_files:
             with Matrix(voila_file) as m:
-                if m.analysis_type in (constants.ANALYSIS_DELTAPSI, constants.ANALYSIS_HETEROGEN,):
+                if m.analysis_type is constants.ANALYSIS_DELTAPSI:
                     self.priors[voila_file] = Matrix(voila_file).prior
 
 

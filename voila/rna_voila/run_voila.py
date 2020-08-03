@@ -183,6 +183,15 @@ classify_parser.add_argument('--decomplexify-deltapsi-threshold', type=float, de
 classify_parser.add_argument('--decomplexify-reads-threshold', type=int, default=1,
                          help='Filter out junctions where the number of reads is below a certain value (integer). If multiple '
                               'input files are used, only the biggest number of reads is used. The default is "1". ')
+classify_parser.add_argument('--non-changing-pvalue-threshold', type=float, default=0.5,
+                        help='For determining non-changing with HET inputs. Minimum p-value for which an LSV/junction'
+                             ' can return true. Uses minimum p-value from all tests provided. The default is "0.05".')
+classify_parser.add_argument('--non-changing-within-group-iqr', type=float, default=0.1,
+                        help='For determining non-changing with HET inputs. Maximum IQR within a group for which an '
+                             'LSV/junction can return true. The default is "0.1".')
+classify_parser.add_argument('--non-changing-between-group-dpsi', type=float, default=0.05,
+                        help='For determining non-changing with HET inputs. Maximum absolute difference in median '
+                             'values of PSI for which an LSV/junction can return true. The default is "0.05".')
 classify_parser.add_argument('--changing-threshold', type=float, default=0.2,
                         help='Threshold in delta-PSI quantification column. The default is "0.2".')
 classify_parser.add_argument('--non-changing-threshold', type=float, default=0.05,
