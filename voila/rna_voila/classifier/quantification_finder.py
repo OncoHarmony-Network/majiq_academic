@@ -328,9 +328,10 @@ class QuantificationWriter:
                                         continue
                                     else:
 
-                                        is_changing = lsv.changing(edge_idx,
+                                        is_changing = lsv.changing(
                                                      self.config.changing_threshold,
-                                                     self.config.probability_changing_threshold)
+                                                     self.config.probability_changing_threshold,
+                                                     edge_idx)
 
                                         junc_results.append(is_changing)
 
@@ -342,10 +343,10 @@ class QuantificationWriter:
                                     if edge_idx is None:
                                         continue
                                     else:
-                                        changing_quant = lsv.high_probability_changing(
-                                            self.config.changing_threshold, edge_idx)
-
-                                        is_changing = changing_quant >= self.config.probability_changing_threshold
+                                        is_changing = lsv.changing(
+                                            self.config.changing_threshold,
+                                            self.config.probability_changing_threshold,
+                                            edge_idx)
 
                                         junc_results.append(is_changing)
 

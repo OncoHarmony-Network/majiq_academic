@@ -6,6 +6,8 @@ from rna_voila import constants
 from rna_voila.api import SpliceGraph, Matrix
 from rna_voila.api.matrix_utils import generate_means, unpack_bins, generate_high_probability_non_changing, \
     generate_bins_prior_removed, generate_prior_removed_expected_dpsi
+from rna_voila.api import view_matrix
+from rna_voila.exceptions import LsvIdNotFoundInVoilaFile
 
 from operator import itemgetter
 import csv
@@ -392,6 +394,8 @@ class Graph:
     def _add_junc(self, junc, ir=False):
         """
         Add junction to graph as edge object. If junction starts and ends in the same exon, it is not added to graph.
+        This function follows decomplexify rules accordingly. Voila files will be read for this junction. If the
+        thresholds are not passed, the munction is not added.
         :param junc: junction dictionary from splice graph.
         :param ir: junction is intron retention
         :return: None
@@ -474,20 +478,36 @@ class Graph:
         at least N juncs have:
             any(max(Prob(|E(dPSI)|>=changing-thresh)))>=probability-changing-thresh
         """
-        passed_edpsi = []
-        for edge in module.get_all_edges():
-            for lsv_quants in edge.lsvs.values():
-                if lsv_quants['delta_psi_bins']:
-                    if max(abs(get_expected_dpsi(bins)) >= self.config.changing_threshold for bins in lsv_quants['delta_psi_bins']):
-                        passed_edpsi.append(lsv_quants['delta_psi_bins'])
 
-        #print(passed_edpsi)
-        if not passed_edpsi:
-            return False
-        for bins in passed_edpsi:
-            if max(matrix_area(b, self.config.changing_threshold) for b in bins) \
-                >= self.config.probability_changing_threshold:
-                return True
+        all_edge_lsv_ids = set((y for x in module.get_all_edges(ir=True) for y in x.lsvs.keys()))
+
+        for voila_file in self.config.voila_files:
+            with Matrix(voila_file) as m1:
+                analysis_type = m1.analysis_type
+
+            if analysis_type == constants.ANALYSIS_HETEROGEN:
+                with view_matrix.ViewHeterogen(voila_file) as m:
+
+                    for lsv_id in all_edge_lsv_ids:
+                        try:
+                            lsv = m.lsv(lsv_id)
+                            if lsv.changing(self.config.changing_threshold,
+                                            self.config.probability_changing_threshold):
+                                return True
+                        except LsvIdNotFoundInVoilaFile:
+                            continue
+
+            elif analysis_type == constants.ANALYSIS_DELTAPSI:
+                with view_matrix.ViewDeltaPsi(voila_file) as m:
+
+                    for lsv_id in all_edge_lsv_ids:
+                        try:
+                            lsv = m.lsv(lsv_id)
+                            if lsv.changing(self.config.changing_threshold,
+                                            self.config.probability_changing_threshold):
+                                return True
+                        except LsvIdNotFoundInVoilaFile:
+                            continue
 
         return False
 
@@ -861,8 +881,6 @@ class Graph:
                                 edge.lsvs[lsv_id]['psi'].add(means)
                             for means in lsv_store[key][lsv_id]['delta_psi']:
                                 edge.lsvs[lsv_id]['delta_psi'].add(means)
-                            for means in lsv_store[key][lsv_id]['delta_psi_bins']:
-                                edge.lsvs[lsv_id]['delta_psi_bins'].append(means)
                         else:
                             edge.lsvs[lsv_id] = lsv_store[key][lsv_id]
                 else:
@@ -893,11 +911,10 @@ class Graph:
                         lsv_store[key] = {}
 
                     if lsv_id not in lsv_store[key]:
-                        lsv_store[key][lsv_id] = {'psi': set(), 'delta_psi': set(), 'delta_psi_bins': [],
-                                                  'has_ir': False, 'voila_file': voila_file}
+                        lsv_store[key][lsv_id] = {'psi': set(), 'delta_psi': set(), 'voila_file': voila_file}
 
                     lsv_store[key][lsv_id]['psi'].add(means)
-                    lsv_store[key][lsv_id]['has_ir'] = lsv.intron_retention
+
 
         self._add_lsvs_to_edges(lsv_store)
 
@@ -924,20 +941,15 @@ class Graph:
                             lsv_store[key] = {}
 
                         if lsv_id not in lsv_store[key]:
-                            lsv_store[key][lsv_id] = {'psi': set(), 'delta_psi': set(), 'delta_psi_bins': [],
-                                                      'has_ir': False, 'voila_file': voila_file}
+                            lsv_store[key][lsv_id] = {'psi': set(), 'delta_psi': set(), 'voila_file': voila_file}
 
                         lsv_store[key][lsv_id]['psi'].add(means)
-                        lsv_store[key][lsv_id]['has_ir'] = lsv.intron_retention
 
                 _bins = lsv.get('bins')
 
                 for (start, end), means, bins in zip(juncs, generate_means(_bins), _bins):
                     key = str(start) + '-' + str(end)
                     lsv_store[key][lsv_id]['delta_psi'].add(means)
-                    lsv_store[key][lsv_id]['delta_psi_bins'].append(bins)
-                    #lsv_store[key][lsv_id]['prior'].append(_prior)
-
 
 
         self._add_lsvs_to_edges(lsv_store)
@@ -957,7 +969,6 @@ class Graph:
                 lsv = m.heterogen(lsv_id)
 
 
-                #group_names = list(m.group_names)
                 mean_psi = list(lsv.get('mean_psi'))
 
 
@@ -983,12 +994,10 @@ class Graph:
                             lsv_store[key] = {}
 
                         if lsv_id not in lsv_store[key]:
-                            lsv_store[key][lsv_id] = {'psi': set(), 'delta_psi': set(), 'delta_psi_bins': [],
-                                                      'has_ir': False, 'voila_file': voila_file}
+                            lsv_store[key][lsv_id] = {'psi': set(), 'delta_psi': set(), 'voila_file': voila_file}
 
                         deltas[i].append(_means)
                         bins[i].append(_bins)
-
 
                         lsv_store[key][lsv_id]['psi'].add(_means)
 
@@ -999,14 +1008,6 @@ class Graph:
                 for (start, end), _bins, delta in zip(lsv.junctions, generate_means(bins), deltas):
                     key = str(start) + '-' + str(end)
                     lsv_store[key][lsv_id]['delta_psi'].add(delta)
-                    lsv_store[key][lsv_id]['delta_psi_bins'].append(_bins)
-                    #lsv_store[key][lsv_id]['prior'].append(_prior)
-                    # print(lsv_id)
-                    # print(_bins)
-
-                    #print("het %s %s" % (key, lsv_id) )
-                # psi_g1 = get_expected_psi(arr[group_idx1][edge_idx])
-                # psi_g2 = get_expected_psi(arr[group_idx2][edge_idx])
 
 
 

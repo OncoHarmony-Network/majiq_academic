@@ -494,17 +494,19 @@ class ViewDeltaPsi(DeltaPsi, ViewMatrix):
             threshold = args.probability_threshold
             return any(matrix_area(b, threshold=threshold) >= probability_threshold for b in self.bins)
 
-        def high_probability_changing(self, changing_threshold, junc_i):
+        def changing(self, changing_threshold, probability_changing_threshold, junc_i=None):
             """
             Yet another changing function wrapper, because I can't figure out how the legacy ones were even being used
             This is used for creating the changing column in voila classifier. It functions similar in API to the
             non changing function below
 
             """
+            for _junc_i in range(len(self.bins)) if junc_i is None else [junc_i]:
+                junc_bins = self.bins[_junc_i]
+                if matrix_area(junc_bins, threshold=changing_threshold) >= probability_changing_threshold:
+                    return True
 
-            junc_bins = self.bins[junc_i]
-            return matrix_area(junc_bins, threshold=changing_threshold)
-
+            return False
 
         def high_probability_non_changing(self, non_changing_threshold=None, junc_i=None):
             """
@@ -1066,17 +1068,22 @@ class ViewHeterogen(Heterogen, ViewMatrix):
         def junction_stats(self):
             return self.get('junction_stats')
 
-        def changing(self, junc_i, changing_threshold, probability_changing_threshold):
+        def changing(
+            self,
+            changing_threshold: float,
+            probability_changing_threshold: float,
+            junc_i: int = None
+        ):
+            for _junc_i in range(len(self.mean_psi)) if junc_i is None else [junc_i]:
+                for bins_g1, bins_g2 in combinations(self.mean_psi[_junc_i], 2):
 
-            for bins_g1, bins_g2 in combinations(self.mean_psi[junc_i], 2):
+                    delta_bins = np.abs(bins_g1 - bins_g2)
 
-                delta_bins = np.abs(bins_g1 - bins_g2)
+                    changing_quant = matrix_area(delta_bins,
+                                                 threshold=changing_threshold)
 
-                changing_quant = matrix_area(delta_bins,
-                                             threshold=changing_threshold)
-
-                if changing_quant >= probability_changing_threshold:
-                    return True
+                    if changing_quant >= probability_changing_threshold:
+                        return True
 
             return False
 
