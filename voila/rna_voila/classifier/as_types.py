@@ -455,6 +455,8 @@ class Graph:
                 psi = max(map(max, (v['psi'] for v in self.edges[i].lsvs.values())), default=None)
                 delta_psi = max((abs(y) for v in self.edges[i].lsvs.values() for y in v['delta_psi']), default=None)
 
+
+
                 # We need both psi and deltapsi to pass threshold to keep
                 assert psi is not None or delta_psi is not None
 
@@ -865,6 +867,7 @@ class Graph:
 
         for edge in self.edges:
 
+
             if edge.ir:
                 key = str(edge.start + 1) + '-' + str(edge.end - 1)
             else:
@@ -963,53 +966,30 @@ class Graph:
 
         lsv_store = {}
 
-        with Matrix(voila_file) as m:
+        with view_matrix.ViewHeterogen(voila_file) as m:
 
             for lsv_id in m.lsv_ids(gene_ids=[self.gene_id]):
-                lsv = m.heterogen(lsv_id)
+                lsv = m.lsv(lsv_id)
 
+                for junc_i, junc in enumerate(lsv.junctions):
 
-                mean_psi = list(lsv.get('mean_psi'))
+                    key = str(junc[0]) + '-' + str(junc[1])
 
+                    if key not in lsv_store:
+                        lsv_store[key] = {}
 
-                group_means = []
+                    if lsv_id not in lsv_store[key]:
+                        lsv_store[key][lsv_id] = {'psi': set(), 'delta_psi': set(), 'voila_file': voila_file}
 
-                deltas = []
-                bins = []
-                #for grp, mean in zip(group_names, np.array(mean_psi).transpose((1, 0, 2))):
-                for mean in np.array(mean_psi).transpose((1, 0, 2)):
-                    group_means.append((list(get_expected_psi(x) for x in mean), mean))
-                    bins.append([])
-                    deltas.append([])
+                    junc_mean_psi = lsv.get('mean_psi')[junc_i]
+                    mean_psi_grp1 = get_expected_psi(junc_mean_psi[0])
+                    mean_psi_grp2 = get_expected_psi(junc_mean_psi[1])
 
+                    dpsi_val = lsv.dpsi_signed[junc_i]
 
-                for group_mean in group_means:
-
-                    for i, (start, end), _means, _bins in zip(range(len(deltas)), lsv.junctions, group_mean[0], group_mean[1]):
-
-                        key = str(start) + '-' + str(end)
-
-
-                        if key not in lsv_store:
-                            lsv_store[key] = {}
-
-                        if lsv_id not in lsv_store[key]:
-                            lsv_store[key][lsv_id] = {'psi': set(), 'delta_psi': set(), 'voila_file': voila_file}
-
-                        deltas[i].append(_means)
-                        bins[i].append(_bins)
-
-                        lsv_store[key][lsv_id]['psi'].add(_means)
-
-
-                deltas = [d1-d2 for x in deltas for d1, d2 in combinations(x, 2)]
-
-
-                for (start, end), _bins, delta in zip(lsv.junctions, generate_means(bins), deltas):
-                    key = str(start) + '-' + str(end)
-                    lsv_store[key][lsv_id]['delta_psi'].add(delta)
-
-
+                    lsv_store[key][lsv_id]['psi'].add(mean_psi_grp1)
+                    lsv_store[key][lsv_id]['psi'].add(mean_psi_grp2)
+                    lsv_store[key][lsv_id]['delta_psi'].add(dpsi_val)
 
         self._add_lsvs_to_edges(lsv_store)
 
