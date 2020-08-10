@@ -1070,22 +1070,27 @@ class ViewHeterogen(Heterogen, ViewMatrix):
 
         def changing(
             self,
-            changing_threshold: float,
-            probability_changing_threshold: float,
+            pvalue_threshold: float,
+            between_group_dpsi: float,
             junc_i: int = None
         ):
-            for _junc_i in range(len(self.mean_psi)) if junc_i is None else [junc_i]:
-                for bins_g1, bins_g2 in combinations(self.mean_psi[_junc_i], 2):
+            if junc_i is None:
+                pvalue_passed = np.nanmax(self.junction_stats, axis=-1) <= pvalue_threshold
+            else:
+                pvalue_passed = np.nanmax(self.junction_stats[junc_i]) <= pvalue_threshold
 
-                    delta_bins = np.abs(bins_g1 - bins_g2)
+            mu_psi = self.mu_psi if junc_i is None else self.mu_psi[junc_i]
+            mu_psi = np.where(mu_psi >= 0, mu_psi, np.nan)
 
-                    changing_quant = matrix_area(delta_bins,
-                                                 threshold=changing_threshold)
+            quantiles_psi = np.nanquantile(mu_psi, [0.25, 0.5, 0.75], axis=-1)
+            median_psi = quantiles_psi[1]
 
-                    if changing_quant >= probability_changing_threshold:
-                        return True
+            if junc_i is None:
+                dpsi_passed = np.abs(median_psi[:, 1] - median_psi[:, 0]) >= between_group_dpsi
+            else:
+                dpsi_passed = np.abs(median_psi[1] - median_psi[0]) >= between_group_dpsi
 
-            return False
+            return pvalue_passed & dpsi_passed
 
         def nonchanging(
             self,

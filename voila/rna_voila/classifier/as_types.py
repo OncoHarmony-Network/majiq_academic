@@ -492,7 +492,7 @@ class Graph:
                         try:
                             lsv = m.lsv(lsv_id)
                             if lsv.changing(self.config.changing_threshold,
-                                            self.config.probability_changing_threshold):
+                                            self.config.probability_changing_threshold).any():
                                 return True
                         except LsvIdNotFoundInVoilaFile:
                             continue
