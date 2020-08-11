@@ -119,6 +119,9 @@ class BaseTsvWriter(QuantificationWriter):
         """
         out = []
         for count in counts:
+            # do not include 'Other' in the collapsed event name.
+            if count == "other_event":
+                continue
             if counts[count]:
                 out.append("%sx%d" % (summaryVars2Headers[count], counts[count]))
         return '_'.join(out)
@@ -212,7 +215,7 @@ class TsvWriter(BaseTsvWriter):
                 self.start_headers(headers, 'exitron.tsv')
                 headers = self.common_headers + ['De Novo', 'Exon1 coordinate', 'Exon2 coordinate', 'Junction Coordinate'] + self.quantification_headers
                 self.start_headers(headers, 'orphan_junction.tsv')
-                headers = self.common_headers + ["Junctions", "Exons"]# + self.quantification_headers
+                headers = self.common_headers + ["other_junctions", "other_exons"]# + self.quantification_headers
                 self.start_headers(headers, 'other.tsv')
 
                 if self.config.keep_constitutive:

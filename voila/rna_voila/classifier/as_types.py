@@ -1068,18 +1068,25 @@ class Graph:
             :return: catch-all event
             """
             nodes_other = []
-            for n1, n2 in permutations(self.nodes, 2):
-                connections = n1.connects(n2)
-                for conn in connections:
-                    if conn in edges_of_interest:
+            edges_other = []
+            if len(edges_of_interest) > 0:
+                for n1, n2 in permutations(self.nodes, 2):
+                    connections = n1.connects(n2)
+                    for conn in connections:
+                        # other.tsv only ouptuts junction coordinates
+                        # that were *not* already accounted for in another event in the module
+                        if conn not in edges_of_interest:
+                            continue
+                        edges_other.append(conn)
                         for n in [n1, n2]:
                             if n not in nodes_other:
                                 nodes_other.append(n)
 
+
             other_event = {
                 'event': 'other_event',
                 'nodes': nodes_other,
-                'edges': edges_of_interest,
+                'edges': edges_other,
                 'lsvs': lsvs
             }
             return [other_event]
@@ -2047,45 +2054,20 @@ class Graph:
             elif check_events > 1:
                 complex = True
 
-
             non_classified_lsvs = set(self.all_lsvs) - set(self.classified_lsvs)
             non_classified_junctions = set(self.get_all_edges()) - set(self.classified_junctions)
-            # try:
-            #     print(set(self.get_all_edges()))
-            #     # non_classified_junctions = set(self.get_all_edges()) - set(self.classified_junctions)
-            # except:
-            #     print("set(self.get_all_edges())")
-            #     exit(1)
-            # try:
-            #     print(set(self.classified_junctions))
-            #     # non_classified_junctions = set(self.get_all_edges()) - set(self.classified_junctions)
-            # except:
-            #     print("set(self.classified_junctions)")
-            #     print(self.classified_junctions)
-            #     exit(1)
 
-
-            # if len(non_classified_lsvs) > 0:
-            #     print("SEEN")
-            #     print(set(self.classified_lsvs))
-            #     print(set(self.classified_junctions))
-            #     print("EXPECTED")
-            #     print(self.all_lsvs)
-            #     print(self.get_all_edges())
-            #     print("LEFTOVER")
-            #     print(non_classified_lsvs)
-            #     print(non_classified_junctions)
-                # exit(1)
-
-            # If there are LSVs that we not classified
+            # If there are LSVs that were not classified
             if len(non_classified_lsvs) > 0:
+                # if there are junctions in module that were not classified
+                if len(non_classified_junctions) > 0:
+                    # then label this complex since the junction(s) isn't an a standard event definition
+                    complex = True
                 these_t_lsvs = self.target_lsv_ids
                 these_s_lsvs = self.source_lsv_ids
                 if len(these_t_lsvs) > 0 or len(these_s_lsvs) > 0:
                     # print(these_t_lsvs, these_s_lsvs)
                     # print(self.get_all_edges())
-                    # then I guess label this complex since they didn't meet as_types definitions?
-                    complex = True
                     # create an 'other_event' for this module
                     ret += self.other_event(edges_of_interest=non_classified_junctions, lsvs=non_classified_lsvs)
                     total_events += 1
