@@ -802,6 +802,44 @@ class ViewHeterogens(ViewMulti):
                                 yield groups + ' ' + name, stat
                     except (GeneIdNotFoundInVoilaFile, LsvIdNotFoundInVoilaFile):
                         pass
+                    
+        def changing(
+            self,
+            pvalue_threshold: float = 0.05,
+            between_group_dpsi: float = 0.05
+        ):
+            """ Boolean of heuristic for changing heterogeneous events
+
+            Parameters
+            ----------
+            pvalue_threshold: float
+                Minimum p-value for which an LSV/junction can return true. Uses
+                minimum p-value from all tests provided
+            between_group_dpsi: float
+                Maximum absolute difference in median values of PSI for which
+                an LSV/junction can return true
+
+            Returns
+            -------
+            Generator yielding group names and boolean array per junction
+            """
+            config = ViewConfig()
+            voila_files = config.voila_files
+            for f in voila_files:
+                with ViewHeterogen(f) as m:
+                    het = m.lsv(self.lsv_id)
+                    groups = '_'.join(m.group_names)
+                    try:
+                        changing = het.changing(
+                            pvalue_threshold=pvalue_threshold,
+                            between_group_dpsi=between_group_dpsi
+                        )
+                        if len(voila_files) == 1:
+                            yield "changing", changing
+                        else:
+                            yield f"{groups} changing", changing
+                    except (GeneIdNotFoundInVoilaFile, LsvIdNotFoundInVoilaFile):
+                        pass
 
         def nonchanging(
             self,
@@ -914,20 +952,28 @@ class ViewHeterogens(ViewMulti):
                     else:
                         yield groups + ' ' + name
 
-    @property
-    def nonchanging_column_names(self):
-        """ Column names associated with nonchanging values
-        """
+    def _per_group_column_names(self, prefix):
         voila_files = ViewConfig().voila_files
 
         if len(voila_files) == 1:
-            yield "nonchanging"
+            yield prefix
         else:
             for f in voila_files:
                 with ViewHeterogen(f) as m:
                     groups = '_'.join(m.group_names)
-                    yield f"{groups} nonchanging"
+                    yield f"{groups} {prefix}"
 
+    @property
+    def changing_column_names(self):
+        """ Column names associated with changing values
+        """
+        return self._per_group_column_names('changing')
+
+    @property
+    def nonchanging_column_names(self):
+        """ Column names associated with nonchanging values
+        """
+        return self._per_group_column_names('nonchanging')
 
     @property
     def junction_scores_column_names(self):
