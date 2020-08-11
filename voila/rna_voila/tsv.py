@@ -415,10 +415,26 @@ class HeterogenTsv(AnalysisTypeTsv):
             group_names = m.group_names
             stats_column_names = list(m.junction_stats_column_names) + list(m.junction_scores_column_names)
 
-            fieldnames = ['gene_name', 'gene_id', 'lsv_id', 'lsv_type', 'strand', 'seqid'] + \
-                         ['%s_mean_psi' % group for group in group_names] + stats_column_names + \
-                         ['num_junctions', 'num_exons', 'de_novo_junctions',
-                          'junctions_coords', 'exons_coords', 'ir_coords', 'ucsc_lsv_link']
+            fieldnames = [
+                'gene_name',
+                'gene_id',
+                'lsv_id',
+                'lsv_type',
+                'strand',
+                'seqid',
+                *(
+                    f'{group}_median_psi' for group in group_names
+                ),
+                *stats_column_names,
+                *m.nonchanging_column_names,
+                'num_junctions',
+                'num_exons',
+                'de_novo_junctions',
+                'junctions_coords',
+                'exons_coords',
+                'ir_coords',
+                'ucsc_lsv_link'
+            ]
 
         self.write_tsv(fieldnames)
 
@@ -443,7 +459,6 @@ class HeterogenTsv(AnalysisTypeTsv):
                         lsv_junctions = het.junctions
                         annot_juncs = sg.annotated_junctions(gene_id, lsv_junctions)
                         lsv_exons = sg.lsv_exons(gene_id, lsv_junctions)
-                        mean_psi = list(het.mean_psi)
                         ir_coords = intron_retention_coords(het, lsv_junctions)
                         start, end = views.lsv_boundries(lsv_exons)
 
@@ -464,16 +479,15 @@ class HeterogenTsv(AnalysisTypeTsv):
                                 '{0}-{1}'.format(start, end) for start, end in exon_str(lsv_exons)
                             ),
                             'ir_coords': ir_coords,
-                            'ucsc_lsv_link': views.ucsc_href(genome, chromosome, start, end)
+                            'ucsc_lsv_link': views.ucsc_href(genome, chromosome, start, end),
+                            **{key: semicolon(values) for key, values in het.nonchanging()},
                         }
 
-                        for grp, mean in zip(group_names, np.array(mean_psi).transpose((1, 0, 2))):
-                            # the way that the mean_psi algo works, if the LSV is missing for certain groups, it is left
-                            # as a '-1' matrix. In this case we fill in NA for that slot.
-                            if all(all(x == -1 for x in y)for y in mean):
-                                row[grp + '_mean_psi'] = 'NA'
+                        for grp, medians in zip(group_names, het.median_psi):
+                            if (medians < 0).all():
+                                row[grp + '_median_psi'] = 'NA'
                             else:
-                                row[grp + '_mean_psi'] = semicolon(get_expected_psi(x) for x in mean)
+                                row[grp + '_median_psi'] = semicolon(x for x in medians)
 
                         for key, value in het.junction_stats:
                             row[key] = semicolon(value)
