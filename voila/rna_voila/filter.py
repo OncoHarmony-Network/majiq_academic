@@ -157,7 +157,7 @@ def filter_voila_file(args):
 
                         # calc confidence thresh
                         bins = lsv.bins
-                        conf_change = (matrix_area(b, config.changing_threshold) for b in bins)
+                        conf_change = (matrix_area(b, config.changing_between_group_dpsi) for b in bins)
 
                         # print(list(v for v in excl_incl))
 
@@ -175,7 +175,7 @@ def filter_voila_file(args):
 
                         if not lsv.lsv_id in excluded_lsv_ids:
 
-                            conf_change = (matrix_area(b, config.changing_threshold) for b in generate_means(np.array(lsv.mean_psi).transpose((1, 0, 2))))
+                            conf_change = (matrix_area(b, config.changing_between_group_dpsi) for b in generate_means(np.array(lsv.mean_psi).transpose((1, 0, 2))))
                             if not any(cc >= config.probability_changing_threshold for cc in conf_change):
                                 excluded_lsv_ids.add(lsv.lsv_id)
 

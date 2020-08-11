@@ -493,8 +493,8 @@ class Graph:
                     for lsv_id in all_edge_lsv_ids:
                         try:
                             lsv = m.lsv(lsv_id)
-                            if lsv.changing(self.config.changing_threshold,
-                                            self.config.probability_changing_threshold).any():
+                            if lsv.changing(self.config.changing_pvalue_threshold,
+                                            self.config.changing_between_group_dpsi).any():
                                 return True
                         except LsvIdNotFoundInVoilaFile:
                             continue
@@ -505,7 +505,7 @@ class Graph:
                     for lsv_id in all_edge_lsv_ids:
                         try:
                             lsv = m.lsv(lsv_id)
-                            if lsv.changing(self.config.changing_threshold,
+                            if lsv.changing(self.config.changing_between_group_dpsi,
                                             self.config.probability_changing_threshold):
                                 return True
                         except LsvIdNotFoundInVoilaFile:

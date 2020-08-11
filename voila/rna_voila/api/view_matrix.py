@@ -1192,10 +1192,12 @@ class ViewHeterogen(Heterogen, ViewMatrix):
 
         def changing(
             self,
-            pvalue_threshold: float,
-            between_group_dpsi: float,
+            pvalue_threshold: float = 0.05,
+            between_group_dpsi: float = 0.05,
             junc_i: int = None
         ):
+
+
             if junc_i is None:
                 junc_i = slice(None)  # vectorize over all junctions
 
@@ -1210,6 +1212,7 @@ class ViewHeterogen(Heterogen, ViewMatrix):
             dpsi_passed = np.abs(median_psi[..., 1] - median_psi[..., 0]) >= between_group_dpsi
 
             # pvalue and dpsi thresholds must all pass
+
             return pvalue_passed & dpsi_passed
 
         def nonchanging(

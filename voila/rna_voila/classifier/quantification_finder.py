@@ -285,13 +285,13 @@ class QuantificationWriter:
                                 if edge_idx is None:
                                     continue
                                 else:
-                                    vals.append(matrix_area(bins[edge_idx], self.config.changing_threshold))
+                                    vals.append(matrix_area(bins[edge_idx], self.config.changing_between_group_dpsi))
                             return (round(x, SIG_FIGS) for x in vals)
                         else:
                             if self.avg_multival:
-                                return np.mean((matrix_area(b, self.config.changing_threshold) for b in bins))
+                                return np.mean((matrix_area(b, self.config.changing_between_group_dpsi) for b in bins))
                             return (
-                                        round(matrix_area(b, self.config.changing_threshold), SIG_FIGS) for b in bins
+                                        round(matrix_area(b, self.config.changing_between_group_dpsi), SIG_FIGS) for b in bins
                                     )
                 return None
             return f
@@ -329,8 +329,8 @@ class QuantificationWriter:
                                     else:
 
                                         is_changing = lsv.changing(
-                                                     self.config.changing_threshold,
-                                                     self.config.probability_changing_threshold,
+                                                     self.config.changing_pvalue_threshold,
+                                                     self.config.changing_between_group_dpsi,
                                                      edge_idx)
 
                                         junc_results.append(is_changing)
@@ -344,7 +344,7 @@ class QuantificationWriter:
                                         continue
                                     else:
                                         is_changing = lsv.changing(
-                                            self.config.changing_threshold,
+                                            self.config.changing_between_group_dpsi,
                                             self.config.probability_changing_threshold,
                                             edge_idx)
 
@@ -484,7 +484,7 @@ class QuantificationWriter:
                                 tmp[header] = (_dpsi_psi, [voila_file], i)
                         self.types2headers['psi'].append(header)
 
-                changing_thresh_key = "P(|dPSI|>=%.2f)" % self.config.changing_threshold
+                changing_thresh_key = "P(|dPSI|>=%.2f)" % self.config.changing_between_group_dpsi
                 non_changing_thresh_key = "P(|dPSI|<=%.2f)" % self.config.non_changing_threshold
                 for key in ("E(dPSI)", changing_thresh_key, non_changing_thresh_key):
                     header = "%s_%s" % ('-'.join(reversed(group_names)), key)
