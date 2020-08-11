@@ -4,6 +4,7 @@ from functools import reduce
 from itertools import chain
 
 import numpy as np
+import scipy.stats
 
 from rna_voila.api.matrix_hdf5 import DeltaPsi, Psi, Heterogen, MatrixType
 from rna_voila.api.matrix_utils import unpack_means, unpack_bins, generate_excl_incl, generate_means, \
@@ -679,6 +680,38 @@ class ViewHeterogens(ViewMulti):
             return s.tolist()
 
         @property
+        def median_psi(self):
+            """ Find median_psi per group in all het voila files
+
+            Returns
+            -------
+            np.array(shape=(num_groups, num_junctions))
+                The median PSI per junction for each group. -1 if not quantified
+            """
+            voila_files = ViewConfig().voila_files
+            group_names = self.matrix_hdf5.group_names
+            juncs_len = len(self.junctions)
+            grps_len = len(group_names)
+            # fill result
+            median_psi = np.empty((grps_len, juncs_len))
+            median_psi.fill(-1)
+
+            for f in voila_files:
+                with ViewHeterogen(f) as m:
+                    try:
+                        het = m.lsv(self.lsv_id)
+
+                        medians = het.median_psi()
+                        # get index into medians (second axis) per group
+                        for ndx, grp in enumerate(m.group_names):
+                            idx = group_names.index(grp)  # index to median_psi
+                            median_psi[idx, :] = medians[:, ndx]  # fill median_psi
+
+                    except (LsvIdNotFoundInVoilaFile, GeneIdNotFoundInVoilaFile):
+                        pass
+            return median_psi
+
+        @property
         def mu_psi(self):
             """
             Find mu_psi in all het voila files and create a matrix that matches the new unified set of group/experiment
@@ -1065,8 +1098,53 @@ class ViewHeterogen(Heterogen, ViewMatrix):
             return self.get('mu_psi')
 
         @property
+        def mu_psi_nanmasked(self):
+            """ Mask missing/unquantified values in mu_psi with nan
+            """
+            mu_psi = self.mu_psi  # load mu psi ndarray into memory
+            return np.where(mu_psi >= 0, mu_psi, np.nan)  # mask unquantified
+
+        @property
         def junction_stats(self):
             return self.get('junction_stats')
+
+        def median_psi(self, mu_psi=None):
+            """ Get group medians of psi_mean (per junction if present)
+
+            Parameters
+            ----------
+            mu_psi: Optional[np.array(shape=(..., 2, num_experiments))]
+                Values to compute median per group, with unquantified values
+                masked as nan. If not specified, use self.mu_psi_nanmasked.
+                Preceding axes typically correspond to junctions.
+
+            Returns
+            -------
+            np.array(shape=(..., 2))
+                Median value of quantified values of PSI per group/junction
+            """
+            if mu_psi is None:
+                mu_psi = self.mu_psi_nanmasked
+            return np.nanmedian(mu_psi, axis=-1)
+
+        def iqr_psi(self, mu_psi=None):
+            """ Get group IQRs of psi_mean (per junction if present)
+
+            Parameters
+            ----------
+            mu_psi: Optional[np.array(shape=(..., 2, num_experiments))]
+                Values to compute median per group, with unquantified values
+                masked as nan. If not specified, use self.mu_psi_nanmasked.
+                Preceding axes typically correspond to junctions.
+
+            Returns
+            -------
+            np.array(shape=(..., 2))
+                IQR of PSI per group/junction
+            """
+            if mu_psi is None:
+                mu_psi = self.mu_psi_nanmasked
+            return scipy.stats.iqr(mu_psi, axis=-1, nan_policy="omit")
 
         def changing(
             self,
@@ -1075,21 +1153,19 @@ class ViewHeterogen(Heterogen, ViewMatrix):
             junc_i: int = None
         ):
             if junc_i is None:
-                pvalue_passed = np.nanmax(self.junction_stats, axis=-1) <= pvalue_threshold
-            else:
-                pvalue_passed = np.nanmax(self.junction_stats[junc_i]) <= pvalue_threshold
+                junc_i = slice(None)  # vectorize over all junctions
 
-            mu_psi = self.mu_psi if junc_i is None else self.mu_psi[junc_i]
-            mu_psi = np.where(mu_psi >= 0, mu_psi, np.nan)
+            # all statistics must be less than p-value threshold
+            pvalue_passed = np.nanmax(self.junction_stats[junc_i], axis=-1) <= pvalue_threshold
 
-            quantiles_psi = np.nanquantile(mu_psi, [0.25, 0.5, 0.75], axis=-1)
-            median_psi = quantiles_psi[1]
+            # get masked mean values of psi per group/experiment
+            mu_psi = self.mu_psi_nanmasked[junc_i]
+            # use to compute median psi per group
+            median_psi = self.median_psi(mu_psi)
+            # did difference in medians pass threshold?
+            dpsi_passed = np.abs(median_psi[..., 1] - median_psi[..., 0]) >= between_group_dpsi
 
-            if junc_i is None:
-                dpsi_passed = np.abs(median_psi[:, 1] - median_psi[:, 0]) >= between_group_dpsi
-            else:
-                dpsi_passed = np.abs(median_psi[1] - median_psi[0]) >= between_group_dpsi
-
+            # pvalue and dpsi thresholds must all pass
             return pvalue_passed & dpsi_passed
 
         def nonchanging(
@@ -1123,27 +1199,24 @@ class ViewHeterogen(Heterogen, ViewMatrix):
                 Only calculate result for one junction from the LSV at the specified index
                 None (default) returns a list of
             """
-            # recall junction_stats has shape (njunctions, nstats)
             if junc_i is None:
-                pvalue_passed = np.nanmin(self.junction_stats, axis=-1) >= pvalue_threshold
-            else:
-                pvalue_passed = np.nanmin(self.junction_stats[junc_i]) >= pvalue_threshold
+                junc_i = slice(None)  # vectorize over all junctions
 
-            # recall that mu_psi has shape (njunctions, ngroups, maxsamples)
-            mu_psi = self.mu_psi if junc_i is None else self.mu_psi[junc_i]  # load mu psi ndarray into memory
-            mu_psi = np.where(mu_psi >= 0, mu_psi, np.nan)  # mask unquantified
-            # get quantiles of psi (0.25, 0.5, 0.75) for each junction/group
+            # all statistics must be greater than p-value threshold
+            pvalue_passed = np.nanmin(self.junction_stats[junc_i], axis=-1) >= pvalue_threshold
+            # mean values of PSI per group/experiment for requested junctions
+            # missing quantifications are masked as nan
+            mu_psi = self.mu_psi_nanmasked[junc_i]
             # use to compute IQR and median
-            quantiles_psi = np.nanquantile(mu_psi, [0.25, 0.5, 0.75], axis=-1)
-            iqr_psi = quantiles_psi[2] - quantiles_psi[0]  # (njunctions, ngroups)
-            median_psi = quantiles_psi[1]
+            iqr_psi = self.iqr_psi(mu_psi)
+            median_psi = self.median_psi(mu_psi)
             # did IQR pass threshold?
             iqr_passed = (iqr_psi <= within_group_iqr).all(axis=-1)  # both groups
-            if junc_i is None:
-                dpsi_passed = np.abs(median_psi[:, 1] - median_psi[:, 0]) <= between_group_dpsi
-            else:
-                dpsi_passed = np.abs(median_psi[1] - median_psi[0]) <= between_group_dpsi
-            return pvalue_passed & iqr_passed & dpsi_passed  # all have to pass
+            # did difference in medians pass threshold?
+            dpsi_passed = np.abs(median_psi[..., 1] - median_psi[..., 0]) <= between_group_dpsi
+
+            # pvalue, iqr, and dpsi thresholds must all pass
+            return pvalue_passed & iqr_passed & dpsi_passed
 
     def lsv(self, lsv_id):
         return self._ViewHeterogen(self, lsv_id)
