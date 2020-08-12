@@ -135,7 +135,7 @@ class QuantificationWriter:
                 # loop through junctions to find one matching range of edge
                 try:
                     for j, junc in enumerate(lsv.get('junctions')):
-                        if junc[0] == _edge.start and junc[1] == _edge.end:
+                        if junc[0] == _edge.absolute_start and junc[1] == _edge.absolute_end:
                             return j
                     else:
                         # junction not quantified by majiq

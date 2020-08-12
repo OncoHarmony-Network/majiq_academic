@@ -196,6 +196,14 @@ class Graph:
             return end
 
         @property
+        def absolute_start(self):
+            return self.start
+
+        @property
+        def absolute_end(self):
+            return self.end
+
+        @property
         def is_half_exon(self):
             return self.exon['end'] == -1 or self.exon['start'] == -1
 
@@ -326,6 +334,12 @@ class Graph:
 
             return '<{} {},{}>'.format(self.__class__.__name__, self.start, self.end)
 
+        def range_str(self):
+            if ClassifyConfig().untrimmed_exons:
+                return self.untrimmed_range_str()
+            else:
+                return '{}-{}'.format(self.absolute_start, self.absolute_end)
+
         @property
         def start(self):
             """
@@ -361,6 +375,18 @@ class Graph:
             """
 
             return self.end
+
+        @property
+        def absolute_start(self):
+            if not self.ir:
+                return self.start
+            return self.start + 1
+
+        @property
+        def absolute_end(self):
+            if not self.ir:
+                return self.end
+            return self.end - 1
 
         @property
         def short_name(self):
