@@ -30,7 +30,7 @@ class QuantificationWriter:
     def semicolon(value_list):
         return ';'.join(str(x) for x in value_list)
 
-    def quantifications(self, module, parity=None, edge=None, node=None):
+    def quantifications(self, module, parity=None, edge=None, node=None, prev_quants=None):
         """
         Edge / Parity is used to find LSVs
         Node is used to filter lsvs to specific node (the node that has THAT lsv)
@@ -63,6 +63,21 @@ class QuantificationWriter:
 
             out.append(self.semicolon(quantification_vals))
 
+        if prev_quants is not None and len(prev_quants) > 1:
+
+            if prev_quants[0] is True or out[0] is True:
+                out[0] = True
+            elif prev_quants[0] == '' and out[0] == '':
+                out[0] = ''
+            else:
+                out[0] = False
+
+            if prev_quants[1] is False or out[1] is False:
+                out[1] = False
+            elif prev_quants[1] == '' and out[1] == '':
+                out[1] = ''
+            else:
+                out[1] = True
 
         return out
 
@@ -413,8 +428,8 @@ class QuantificationWriter:
         tmp = OrderedDict()
         self.types2headers = {'psi':[], 'dpsi':[]}
 
-        tmp['changing'] = (_global_changing, self.config.voila_files)
-        tmp['non_changing'] = (_global_non_changing, self.config.voila_files)
+        tmp['event_changing'] = (_global_changing, self.config.voila_files)
+        tmp['event_non_changing'] = (_global_non_changing, self.config.voila_files)
 
         for voila_file in self.config.voila_files:
 
