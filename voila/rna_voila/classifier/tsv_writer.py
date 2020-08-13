@@ -1345,7 +1345,7 @@ class TsvWriter(BaseTsvWriter):
                             self.junction_cache.append((module, trg_common, quants, row[0], 'Exitron', row[3]))
                             if True: #?
                                 self.heatmap_add(module, trg_common, quants,
-                                                 event['Junc'].endabsolute_ - event['Junc'].absolute_start,
+                                                 event['Junc'].absolute_end - event['Junc'].absolute_start,
                                                  row[0], 'Orphan', row[3])
                             event_i += 1
 
