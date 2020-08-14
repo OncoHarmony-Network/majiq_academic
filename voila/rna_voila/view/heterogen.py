@@ -205,43 +205,47 @@ def lsv_highlight():
                     else:
                         intron_retention = []
 
-                    means = np.array(het.mu_psi).transpose((1, 2, 0))
-
-                    for gn, ens, xs in zip(m.group_names, m.experiment_names, means):
-
-                        if any(sg[0] == gn for sg in splice_graphs):
-
-                            for en, x in zip(ens, xs):
-
-                                if any(sg[1] == en for sg in splice_graphs):
-
-                                    x = x.tolist()
-
-                                    try:
-                                        group_means[gn][en] = x
-                                    except KeyError:
-                                        group_means[gn] = {en: x}
-
-                    for junc in het.mu_psi:
-                        for grp_name, exp in zip(m.group_names, junc):
-                            if any(sg[0] == grp_name and sg[1].endswith(' Combined') for sg in splice_graphs):
-                                comb_name = grp_name + ' Combined'
-
-                                if grp_name not in group_means:
-                                    group_means[grp_name] = {}
-
-                                if comb_name not in group_means[grp_name]:
-                                    group_means[grp_name][comb_name] = []
-
-                                group_means[grp_name][comb_name].append(median((v for v in exp if v != -1)))
-
-                    lsvs.append({
+                    output_lsv_data = {
                         'junctions': junctions,
                         'intron_retention': intron_retention,
                         'reference_exon': het.reference_exon,
-                        'weighted': weighted,
-                        'group_means': group_means
-                    })
+                        'weighted': weighted
+                    }
+
+                    if weighted:
+                        means = np.array(het.mu_psi).transpose((1, 2, 0))
+
+                        for gn, ens, xs in zip(m.group_names, m.experiment_names, means):
+
+                            if any(sg[0] == gn for sg in splice_graphs):
+
+                                for en, x in zip(ens, xs):
+
+                                    if any(sg[1] == en for sg in splice_graphs):
+
+                                        x = x.tolist()
+
+                                        try:
+                                            group_means[gn][en] = x
+                                        except KeyError:
+                                            group_means[gn] = {en: x}
+
+                        for junc in het.mu_psi:
+                            for grp_name, exp in zip(m.group_names, junc):
+                                if any(sg[0] == grp_name and sg[1].endswith(' Combined') for sg in splice_graphs):
+                                    comb_name = grp_name + ' Combined'
+
+                                    if grp_name not in group_means:
+                                        group_means[grp_name] = {}
+
+                                    if comb_name not in group_means[grp_name]:
+                                        group_means[grp_name][comb_name] = []
+
+                                    group_means[grp_name][comb_name].append(median((v for v in exp if v != -1)))
+
+                        output_lsv_data['group_means'] = group_means
+
+                    lsvs.append(output_lsv_data)
 
         return jsonify(lsvs)
 
