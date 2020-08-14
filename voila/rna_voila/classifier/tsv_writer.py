@@ -82,7 +82,11 @@ class BaseTsvWriter(QuantificationWriter):
         Extract the certain cols from the TSV which are generally similar across all outputs,
 
         """
-        lsvs = self.parity2lsv(module, parity, edge, node)
+
+        if not edge and node is not None:
+            lsvs = self.parity2lsv_node(module, parity, node)
+        else:
+            lsvs = self.parity2lsv(module, parity, edge)
 
         module_id = "%s_%d" % (self.gene_id, module.idx)
         if event_ii is None:
@@ -101,7 +105,6 @@ class BaseTsvWriter(QuantificationWriter):
             out.append(event_id)
             out.append(str(module.is_complex))
         return out
-
 
     def start_headers(self, headers, filename):
         """
@@ -296,12 +299,12 @@ class TsvWriter(BaseTsvWriter):
                             all_event_quants = []
                             src_common = self.common_data(module,
                                                           's',
-                                                          event['C1'],
+                                                          node=event['C1'],
                                                           event_name="CE",
                                                           event_ii=event_i)
                             trg_common = self.common_data(module,
                                                           't',
-                                                          event['C2'],
+                                                          node=event['C2'],
                                                           event_name="CE",
                                                           event_ii=event_i)
 

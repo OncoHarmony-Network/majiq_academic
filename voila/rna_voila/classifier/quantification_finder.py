@@ -37,7 +37,9 @@ class QuantificationWriter:
         :return:
         """
 
-        lsvs = self.parity2lsv(module, parity, node=node)
+
+        lsvs = self.parity2lsv(module, parity, edge=edge)
+
 
         out = []
         for field in self.quantifications_int:
@@ -60,7 +62,6 @@ class QuantificationWriter:
                     quantification_vals.append('')
 
 
-
             out.append(self.semicolon(quantification_vals))
 
         if prev_quants is not None and len(prev_quants) > 1:
@@ -81,23 +82,37 @@ class QuantificationWriter:
 
         return out
 
-    def parity2lsv(self, module, parity, edge=None, node=None):
+    def parity2lsv_node(self, module, parity, node=None):
 
         if parity == 's':
             lsvs = module.source_lsv_ids
-            if edge or node:
-                if not node:
-                    node = self.graph.start_node(edge)
+            if node:
                 lsvs = set(filter(lambda lsv: lsv.endswith(node.untrimmed_range_str(replace_w_na=True)), lsvs))
         elif parity == 't':
             lsvs = module.target_lsv_ids
-            if edge or node:
-                if not node:
-                    node = self.graph.end_node(edge)
+            if node:
                 lsvs = set(filter(lambda lsv: lsv.endswith(node.untrimmed_range_str(replace_w_na=True)), lsvs))
         else:
             lsvs = module.target_lsv_ids.union(module.source_lsv_ids)
         return lsvs
+
+    def parity2lsv(self, module, parity, edge=None):
+
+        if parity == 's':
+            lsv_ids_mod = module.source_lsv_ids
+        elif parity == 't':
+            lsv_ids_mod = module.target_lsv_ids
+        else:
+            lsv_ids_mod = module.target_lsv_ids.union(module.source_lsv_ids)
+
+        if edge is not None:
+            lsvs = set()
+            edges = [edge] if type(edge) is not list else edge
+            for _edge in edges:
+                lsvs = lsvs.union(set([lsv_id for lsv_id in _edge.lsvs if lsv_id in lsv_ids_mod]))
+            return lsvs
+
+        return set(lsv_ids_mod)
 
     def edge_quant(self, module, edge, field):
         """
