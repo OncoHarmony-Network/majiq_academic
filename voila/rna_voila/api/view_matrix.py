@@ -1193,7 +1193,7 @@ class ViewHeterogen(Heterogen, ViewMatrix):
         def changing(
             self,
             pvalue_threshold: float = 0.05,
-            between_group_dpsi: float = 0.05,
+            between_group_dpsi: float = 0.2,
             junc_i: int = None
         ):
 
