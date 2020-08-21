@@ -286,6 +286,24 @@ class TsvWriter(BaseTsvWriter):
                 self.start_headers(headers, 'mpe_primerable_regions.tsv')
 
 
+    def _determine_changing(self, all_quants):
+
+        s = set(x[0] for x in all_quants)
+        if 'True' in s:
+            return 'True'
+        elif 'False' in s:
+            return 'False'
+        return ''
+
+    def _determine_non_changing(self, all_quants):
+
+        s = set(x[1] for x in all_quants)
+        if 'False' in s:
+            return 'False'
+        elif 'True' in s:
+            return 'True'
+        return ''
+
     def cassette(self):
         with open(os.path.join(self.config.directory, 'cassette.tsv.%s' % self.pid), 'a', newline='') as csvfile:
             writer = csv.writer(csvfile, dialect='excel-tab', delimiter='\t')
@@ -295,7 +313,6 @@ class TsvWriter(BaseTsvWriter):
                     event_i = 1
                     for event in events:
                         if event['event'] == 'cassette_exon':
-                            quants = None
                             all_event_quants = []
                             src_common = self.common_data(module,
                                                           's',
@@ -316,20 +333,18 @@ class TsvWriter(BaseTsvWriter):
                                    event['Skip'].range_str()]
 
                             # gather all quantifications
-                            all_event_quants.append(self.quantifications(module, 's', event['Skip'], event['C1'],
-                                                              prev_quants=quants))
-                            all_event_quants.append(self.quantifications(module, 's', event['Include1'], event['C1'],
-                                                          prev_quants=quants))
-                            all_event_quants.append(self.quantifications(module, 't', event['Skip'], event['C2'],
-                                                          prev_quants=quants))
-                            all_event_quants.append(self.quantifications(module, 't', event['Include2'], event['C2'],
-                                                          prev_quants=quants))
+                            all_event_quants.append(self.quantifications(module, 's', event['Skip'], event['C1']))
+                            all_event_quants.append(self.quantifications(module, 's', event['Include1'], event['C1']))
+                            all_event_quants.append(self.quantifications(module, 't', event['Skip'], event['C2']))
+                            all_event_quants.append(self.quantifications(module, 't', event['Include2'], event['C2']))
 
 
                             # final changing, non_changing taken from the very last one calculated
                             # we overwrite all changing, non_changing for the event with the final result
+                            changing, non_changing = self._determine_changing(all_event_quants),\
+                                                     self._determine_non_changing(all_event_quants)
                             for _q in all_event_quants:
-                                _q[0], _q[1] = all_event_quants[-1][0], all_event_quants[-1][1]
+                                _q[0], _q[1] = changing, non_changing
 
 
                             quants = all_event_quants.pop(0)
@@ -392,7 +407,6 @@ class TsvWriter(BaseTsvWriter):
                     event_i = 1
                     for event in events:
                         if event['event'] == 'alt3ss':
-                            quants = None
                             all_event_quants = []
                             src_common = self.common_data(module,
                                                           's',
@@ -406,13 +420,13 @@ class TsvWriter(BaseTsvWriter):
                                                           event_ii=event_i)
                             # preferentially use source LSV
                             if src_common[5]:
-                                all_event_quants.append(self.quantifications(module, 's', edge=event['Proximal'], node=event['E1'],
-                                                          prev_quants=quants))
-                                all_event_quants.append(self.quantifications(module, 's', edge=event['Distal'], node=event['E1'],
-                                                              prev_quants=quants))
+                                all_event_quants.append(self.quantifications(module, 's', edge=event['Proximal'], node=event['E1']))
+                                all_event_quants.append(self.quantifications(module, 's', edge=event['Distal'], node=event['E1']))
 
+                                changing, non_changing = self._determine_changing(all_event_quants), \
+                                                         self._determine_non_changing(all_event_quants)
                                 for _q in all_event_quants:
-                                    _q[0], _q[1] = all_event_quants[-1][0], all_event_quants[-1][1]
+                                    _q[0], _q[1] = changing, non_changing
 
                                 row = [event['Proximal'].de_novo,
                                        event['E1'].range_str(),
@@ -440,13 +454,13 @@ class TsvWriter(BaseTsvWriter):
                                                  event['Distal'].absolute_end - event['Distal'].absolute_start,
                                                  row[0], row[4], row[5])
                             elif trg_common[5]:
-                                all_event_quants.append(self.quantifications(module, 't', edge=event['Proximal'], node=event['E2'],
-                                                              prev_quants=quants))
-                                all_event_quants.append(self.quantifications(module, 't', edge=event['Distal'], node=event['E2'],
-                                                              prev_quants=quants))
+                                all_event_quants.append(self.quantifications(module, 't', edge=event['Proximal'], node=event['E2']))
+                                all_event_quants.append(self.quantifications(module, 't', edge=event['Distal'], node=event['E2']))
 
+                                changing, non_changing = self._determine_changing(all_event_quants), \
+                                                         self._determine_non_changing(all_event_quants)
                                 for _q in all_event_quants:
-                                    _q[0], _q[1] = all_event_quants[-1][0], all_event_quants[-1][1]
+                                    _q[0], _q[1] = changing, non_changing
 
                                 row = [event['Proximal'].de_novo,
                                        event['E2'].range_str(),
@@ -485,7 +499,6 @@ class TsvWriter(BaseTsvWriter):
                     event_i = 1
                     for event in events:
                         if event['event'] == 'alt5ss':
-                            quants = None
                             all_event_quants = []
                             src_common = self.common_data(module,
                                                           's',
@@ -499,13 +512,13 @@ class TsvWriter(BaseTsvWriter):
                                                           event_ii=event_i)
                             # preferentially use target LSV
                             if trg_common[5]:
-                                all_event_quants.append(self.quantifications(module, 't', edge=event['Proximal'], node=event['E2'],
-                                                          prev_quants=quants))
-                                all_event_quants.append(self.quantifications(module, 't', edge=event['Distal'], node=event['E2'],
-                                                              prev_quants=quants))
+                                all_event_quants.append(self.quantifications(module, 't', edge=event['Proximal'], node=event['E2']))
+                                all_event_quants.append(self.quantifications(module, 't', edge=event['Distal'], node=event['E2']))
 
+                                changing, non_changing = self._determine_changing(all_event_quants), \
+                                                         self._determine_non_changing(all_event_quants)
                                 for _q in all_event_quants:
-                                    _q[0], _q[1] = all_event_quants[-1][0], all_event_quants[-1][1]
+                                    _q[0], _q[1] = changing, non_changing
 
                                 row = [event['Proximal'].de_novo,
                                        event['E2'].range_str(),
@@ -534,14 +547,14 @@ class TsvWriter(BaseTsvWriter):
                                                  row[0], row[4], row[5])
                             elif src_common[5]:
                                 all_event_quants.append(
-                                    self.quantifications(module, 's', edge=event['Proximal'], node=event['E1'],
-                                                         prev_quants=quants))
+                                    self.quantifications(module, 's', edge=event['Proximal'], node=event['E1']))
                                 all_event_quants.append(
-                                    self.quantifications(module, 's', edge=event['Distal'], node=event['E1'],
-                                                         prev_quants=quants))
+                                    self.quantifications(module, 's', edge=event['Distal'], node=event['E1']))
 
+                                changing, non_changing = self._determine_changing(all_event_quants), \
+                                                         self._determine_non_changing(all_event_quants)
                                 for _q in all_event_quants:
-                                    _q[0], _q[1] = all_event_quants[-1][0], all_event_quants[-1][1]
+                                    _q[0], _q[1] = changing, non_changing
 
                                 row = [event['Proximal'].de_novo,
                                        event['E1'].range_str(),
@@ -580,7 +593,6 @@ class TsvWriter(BaseTsvWriter):
                     event_i = 1
                     for event in events:
                         if event['event'] == 'p_alt5ss':
-                            quants = None
                             all_event_quants = []
                             src_common = self.common_data(module,
                                                           's',
@@ -593,17 +605,15 @@ class TsvWriter(BaseTsvWriter):
                                                           event_name="pA5",
                                                           event_ii=event_i)
 
-                            all_event_quants.append(self.quantifications(module, 's', event['Skip'],
-                                                          prev_quants=quants))
-                            all_event_quants.append(self.quantifications(module, 's', event['Include1'],
-                                                              prev_quants=quants))
-                            all_event_quants.append(self.quantifications(module, 't', event['Skip'],
-                                                              prev_quants=quants))
-                            all_event_quants.append(self.quantifications(module, 't', event['Include2'],
-                                                              prev_quants=quants))
+                            all_event_quants.append(self.quantifications(module, 's', event['Skip']))
+                            all_event_quants.append(self.quantifications(module, 's', event['Include1']))
+                            all_event_quants.append(self.quantifications(module, 't', event['Skip']))
+                            all_event_quants.append(self.quantifications(module, 't', event['Include2']))
 
+                            changing, non_changing = self._determine_changing(all_event_quants), \
+                                                     self._determine_non_changing(all_event_quants)
                             for _q in all_event_quants:
-                                _q[0], _q[1] = all_event_quants[-1][0], all_event_quants[-1][1]
+                                _q[0], _q[1] = changing, non_changing
 
                             row = [event['Skip'].de_novo,
                                    event['C1'].range_str(),
@@ -669,7 +679,6 @@ class TsvWriter(BaseTsvWriter):
                     event_i = 1
                     for event in events:
                         if event['event'] == 'p_alt3ss':
-                            quants = None
                             all_event_quants = []
                             # TODO: why am I using strand_case for putative alt3, but not putative alt 5?
                             src_common = self.common_data(module,
@@ -685,17 +694,15 @@ class TsvWriter(BaseTsvWriter):
                                                           event_name="pA3",
                                                           event_ii=event_i)
 
-                            all_event_quants.append(self.quantifications(module, 's', event['Skip'],
-                                                          prev_quants=quants))
-                            all_event_quants.append(self.quantifications(module, 's', event['Include1'],
-                                                              prev_quants=quants))
-                            all_event_quants.append(self.quantifications(module, 't', event['Include2'],
-                                                              prev_quants=quants))
-                            all_event_quants.append(self.quantifications(module, 't', event['Skip'],
-                                                              prev_quants=quants))
+                            all_event_quants.append(self.quantifications(module, 's', event['Skip']))
+                            all_event_quants.append(self.quantifications(module, 's', event['Include1']))
+                            all_event_quants.append(self.quantifications(module, 't', event['Include2']))
+                            all_event_quants.append(self.quantifications(module, 't', event['Skip']))
 
+                            changing, non_changing = self._determine_changing(all_event_quants), \
+                                                     self._determine_non_changing(all_event_quants)
                             for _q in all_event_quants:
-                                _q[0], _q[1] = all_event_quants[-1][0], all_event_quants[-1][1]
+                                _q[0], _q[1] = changing, non_changing
 
                             row = [event['Skip'].de_novo,
                                    event['C2'].range_str(),
@@ -760,7 +767,6 @@ class TsvWriter(BaseTsvWriter):
                     event_i = 1
                     for event in events:
                         if event['event'] == 'alt3and5ss':
-                            quants = None
                             all_event_quants = []
                             src_common = self.common_data(module, 's',
                                                           edge=event["J1"],
@@ -773,17 +779,15 @@ class TsvWriter(BaseTsvWriter):
                                                           event_name="A3A5",
                                                           event_ii=event_i)
 
-                            all_event_quants.append(self.quantifications(module, 's', event['J1'],
-                                                          prev_quants=quants))
-                            all_event_quants.append(self.quantifications(module, 's', event['J2'],
-                                                              prev_quants=quants))
-                            all_event_quants.append(self.quantifications(module, 't', event['J1'],
-                                                              prev_quants=quants))
-                            all_event_quants.append(self.quantifications(module, 't', event['J2'],
-                                                              prev_quants=quants))
+                            all_event_quants.append(self.quantifications(module, 's', event['J1']))
+                            all_event_quants.append(self.quantifications(module, 's', event['J2']))
+                            all_event_quants.append(self.quantifications(module, 't', event['J1']))
+                            all_event_quants.append(self.quantifications(module, 't', event['J2']))
 
+                            changing, non_changing = self._determine_changing(all_event_quants), \
+                                                     self._determine_non_changing(all_event_quants)
                             for _q in all_event_quants:
-                                _q[0], _q[1] = all_event_quants[-1][0], all_event_quants[-1][1]
+                                _q[0], _q[1] = changing, non_changing
 
                             row = [event['J1'].de_novo,
                                    event['E1'].range_str(),
@@ -845,20 +849,17 @@ class TsvWriter(BaseTsvWriter):
                     event_i = 1
                     for event in events:
                         if event['event'] == 'mutually_exclusive':
-                            quants = None
                             all_event_quants = []
 
-                            all_event_quants.append(self.quantifications(module, 's', edge=event['Include1'],node=event['C1'],
-                                                          prev_quants=quants))
-                            all_event_quants.append(self.quantifications(module, 's', edge=event['SkipA1'],node=event['C1'],
-                                                              prev_quants=quants))
-                            all_event_quants.append(self.quantifications(module, 't', edge=event['Include2'], node=event['C2'],
-                                                              prev_quants=quants))
-                            all_event_quants.append(self.quantifications(module, 't', edge=event['SkipA2'], node=event['C2'],
-                                                              prev_quants=quants))
+                            all_event_quants.append(self.quantifications(module, 's', edge=event['Include1'],node=event['C1']))
+                            all_event_quants.append(self.quantifications(module, 's', edge=event['SkipA1'],node=event['C1']))
+                            all_event_quants.append(self.quantifications(module, 't', edge=event['Include2'], node=event['C2']))
+                            all_event_quants.append(self.quantifications(module, 't', edge=event['SkipA2'], node=event['C2']))
 
+                            changing, non_changing = self._determine_changing(all_event_quants), \
+                                                     self._determine_non_changing(all_event_quants)
                             for _q in all_event_quants:
-                                _q[0], _q[1] = all_event_quants[-1][0], all_event_quants[-1][1]
+                                _q[0], _q[1] = changing, non_changing
 
                             row = [event['Include1'].de_novo,
                                    event['C1'].range_str(),
@@ -948,7 +949,6 @@ class TsvWriter(BaseTsvWriter):
                     event_i = 1
                     for event in events:
                         if event['event'] == 'ale':
-                            quants = None
                             all_event_quants = []
                             src_common = self.common_data(module,
                                                           's',
@@ -961,16 +961,16 @@ class TsvWriter(BaseTsvWriter):
                                 for junc in event['SkipA2']:
 
                                     all_event_quants.append(
-                                        self.quantifications(module, 's', junc, event['Reference'],
-                                                             prev_quants=quants))
+                                        self.quantifications(module, 's', junc, event['Reference']))
 
                                 for junc in event['SkipA1']:
                                     all_event_quants.append(
-                                        self.quantifications(module, 's', junc, event['Reference'],
-                                                             prev_quants=quants))
+                                        self.quantifications(module, 's', junc, event['Reference']))
 
+                                changing, non_changing = self._determine_changing(all_event_quants), \
+                                                         self._determine_non_changing(all_event_quants)
                                 for _q in all_event_quants:
-                                    _q[0], _q[1] = all_event_quants[-1][0], all_event_quants[-1][1]
+                                    _q[0], _q[1] = changing, non_changing
 
                                 for junc in event['SkipA2']:
                                     row = [junc.de_novo,
@@ -1013,7 +1013,6 @@ class TsvWriter(BaseTsvWriter):
                     event_i = 1
                     for event in events:
                         if event['event'] == 'afe':
-                            quants = None
                             all_event_quants = []
                             trg_common = self.common_data(module,
                                                           't',
@@ -1025,16 +1024,16 @@ class TsvWriter(BaseTsvWriter):
 
                                 for junc in event['SkipA1']:
                                     all_event_quants.append(
-                                        self.quantifications(module, 't', junc, event['Reference'],
-                                                             prev_quants=quants))
+                                        self.quantifications(module, 't', junc, event['Reference']))
 
                                 for junc in event['SkipA2']:
                                     all_event_quants.append(
-                                        self.quantifications(module, 't', junc, event['Reference'],
-                                                             prev_quants=quants))
+                                        self.quantifications(module, 't', junc, event['Reference']))
 
+                                changing, non_changing = self._determine_changing(all_event_quants), \
+                                                         self._determine_non_changing(all_event_quants)
                                 for _q in all_event_quants:
-                                    _q[0], _q[1] = all_event_quants[-1][0], all_event_quants[-1][1]
+                                    _q[0], _q[1] = changing, non_changing
 
                                 for junc in event['SkipA1']:
                                     row = [junc.de_novo,
@@ -1078,7 +1077,6 @@ class TsvWriter(BaseTsvWriter):
                     event_i = 1
                     for event in events:
                         if event['event'] == 'p_ale':
-                            quants = None
                             all_event_quants = []
                             src_common = self.common_data(module,
                                                           's',
@@ -1096,16 +1094,16 @@ class TsvWriter(BaseTsvWriter):
 
                                 for junc in event['SkipA2']:
                                     all_event_quants.append(
-                                        self.quantifications(module, 's', junc,
-                                                             prev_quants=quants))
+                                        self.quantifications(module, 's', junc))
 
                                 for junc in event['SkipA1']:
                                     all_event_quants.append(
-                                        self.quantifications(module, 's', junc,
-                                                             prev_quants=quants))
+                                        self.quantifications(module, 's', junc))
 
+                                changing, non_changing = self._determine_changing(all_event_quants), \
+                                                         self._determine_non_changing(all_event_quants)
                                 for _q in all_event_quants:
-                                    _q[0], _q[1] = all_event_quants[-1][0], all_event_quants[-1][1]
+                                    _q[0], _q[1] = changing, non_changing
 
                                 for junc in event['SkipA2']:
                                     row = [junc.de_novo,
@@ -1151,7 +1149,6 @@ class TsvWriter(BaseTsvWriter):
                     event_i = 1
                     for event in events:
                         if event['event'] == 'p_afe':
-                            quants = None
                             all_event_quants = []
                             if event['Proximal'].start == -1:
                                 proxStr = "nan-{}".format(event['Proximal'].end)
@@ -1166,16 +1163,16 @@ class TsvWriter(BaseTsvWriter):
 
                                 for junc in event['SkipA1']:
                                     all_event_quants.append(
-                                        self.quantifications(module, 't', junc,
-                                                             prev_quants=quants))
+                                        self.quantifications(module, 't', junc))
 
                                 for junc in event['SkipA2']:
                                     all_event_quants.append(
-                                        self.quantifications(module, 't', junc,
-                                                             prev_quants=quants))
+                                        self.quantifications(module, 't', junc))
 
+                                changing, non_changing = self._determine_changing(all_event_quants), \
+                                                         self._determine_non_changing(all_event_quants)
                                 for _q in all_event_quants:
-                                    _q[0], _q[1] = all_event_quants[-1][0], all_event_quants[-1][1]
+                                    _q[0], _q[1] = changing, non_changing
 
                                 for junc in event['SkipA1']:
                                     row = [junc.de_novo,
@@ -1215,7 +1212,6 @@ class TsvWriter(BaseTsvWriter):
                     event_i = 1
                     for event in events:
                         if event['event'] == 'alternative_intron':
-                            quants = None
                             all_event_quants = []
                             # put coordinates back to Jordi's offset numbers
 
@@ -1257,18 +1253,18 @@ class TsvWriter(BaseTsvWriter):
                                 all_event_quants.append(self.quantifications(module,
                                                               't',
                                                               edge=event['Intron'],
-                                                              node=c2_node,
-                                                          prev_quants=quants))
+                                                              node=c2_node))
 
                                 for spliced in event['Spliced']:
                                     all_event_quants.append(self.quantifications(module,
                                                                   't',
                                                                   edge=spliced,
-                                                                  node=c2_node,
-                                                          prev_quants=quants))
+                                                                  node=c2_node))
 
+                                changing, non_changing = self._determine_changing(all_event_quants), \
+                                                         self._determine_non_changing(all_event_quants)
                                 for _q in all_event_quants:
-                                    _q[0], _q[1] = all_event_quants[-1][0], all_event_quants[-1][1]
+                                    _q[0], _q[1] = changing, non_changing
 
                                 row = [event['Intron'].de_novo,
                                        c2_node.range_str(),
@@ -1300,18 +1296,18 @@ class TsvWriter(BaseTsvWriter):
                             # Else the intron and 'spliced' junctions are quantified from source point of view...
                             else:
 
-                                all_event_quants.append(self.quantifications(module, 's', edge=event['Intron'], node=c1_node,
-                                                          prev_quants=quants))
+                                all_event_quants.append(self.quantifications(module, 's', edge=event['Intron'], node=c1_node))
 
                                 for spliced in event['Spliced']:
                                     all_event_quants.append(self.quantifications(module,
                                                                   's',
                                                                   edge=spliced,
-                                                                  node=c1_node,
-                                                          prev_quants=quants))
+                                                                  node=c1_node))
 
+                                changing, non_changing = self._determine_changing(all_event_quants), \
+                                                         self._determine_non_changing(all_event_quants)
                                 for _q in all_event_quants:
-                                    _q[0], _q[1] = all_event_quants[-1][0], all_event_quants[-1][1]
+                                    _q[0], _q[1] = changing, non_changing
 
                                 row = [event['Intron'].de_novo,
                                        c1_node.range_str(),
@@ -1353,17 +1349,15 @@ class TsvWriter(BaseTsvWriter):
                     event_i = 1
                     for event in events:
                         if event['event'] == 'multi_exon_spanning':
-                            quants = None
                             all_event_quants = []
 
-                            all_event_quants.append(self.quantifications(module, 's', event['Skip'], event['C1'],
-                                                          prev_quants=quants))
-                            all_event_quants.append(self.quantifications(module, 't', event['Skip'], event['C2'],
-                                                          prev_quants=quants))
+                            all_event_quants.append(self.quantifications(module, 's', event['Skip'], event['C1']))
+                            all_event_quants.append(self.quantifications(module, 't', event['Skip'], event['C2']))
 
-
+                            changing, non_changing = self._determine_changing(all_event_quants), \
+                                                     self._determine_non_changing(all_event_quants)
                             for _q in all_event_quants:
-                                _q[0], _q[1] = all_event_quants[-1][0], all_event_quants[-1][1]
+                                _q[0], _q[1] = changing, non_changing
 
                             #src_common = self.common_data(module, 's')
                             # Source LSV side
@@ -1412,20 +1406,17 @@ class TsvWriter(BaseTsvWriter):
                     event_i = 1
                     for event in events:
                         if event['event'] == 'tandem_cassette':
-                            quants = None
                             all_event_quants = []
 
-                            all_event_quants.append(self.quantifications(module, 's', event['Skip'], event['C1'],
-                                                          prev_quants=quants))
-                            all_event_quants.append(self.quantifications(module, 's', event['Include1'], event['C1'],
-                                                          prev_quants=quants))
-                            all_event_quants.append(self.quantifications(module, 't', event['Skip'], event['C2'],
-                                                          prev_quants=quants))
-                            all_event_quants.append(self.quantifications(module, 't', event['Include2'], event['C2'],
-                                                          prev_quants=quants))
+                            all_event_quants.append(self.quantifications(module, 's', event['Skip'], event['C1']))
+                            all_event_quants.append(self.quantifications(module, 's', event['Include1'], event['C1']))
+                            all_event_quants.append(self.quantifications(module, 't', event['Skip'], event['C2']))
+                            all_event_quants.append(self.quantifications(module, 't', event['Include2'], event['C2']))
 
+                            changing, non_changing = self._determine_changing(all_event_quants), \
+                                                     self._determine_non_changing(all_event_quants)
                             for _q in all_event_quants:
-                                _q[0], _q[1] = all_event_quants[-1][0], all_event_quants[-1][1]
+                                _q[0], _q[1] = changing, non_changing
 
                             row = [event['Skip'].de_novo,
                                    event['C1'].range_str(),
@@ -1522,16 +1513,15 @@ class TsvWriter(BaseTsvWriter):
                     event_i = 1
                     for event in events:
                         if event['event'] == 'exitron':
-                            quants = None
                             all_event_quants = []
 
-                            all_event_quants.append(self.quantifications(module, 's', edge=event['Junc'],
-                                                          prev_quants=quants))
-                            all_event_quants.append(self.quantifications(module, 't', edge=event['Junc'],
-                                                          prev_quants=quants))
+                            all_event_quants.append(self.quantifications(module, 's', edge=event['Junc']))
+                            all_event_quants.append(self.quantifications(module, 't', edge=event['Junc']))
 
+                            changing, non_changing = self._determine_changing(all_event_quants), \
+                                                     self._determine_non_changing(all_event_quants)
                             for _q in all_event_quants:
-                                _q[0], _q[1] = all_event_quants[-1][0], all_event_quants[-1][1]
+                                _q[0], _q[1] = changing, non_changing
 
                             src_common = self.common_data(module,
                                                           's',
@@ -1566,16 +1556,15 @@ class TsvWriter(BaseTsvWriter):
                     event_i = 1
                     for event in events:
                         if event['event'] == 'orphan_junction':
-                            quants = None
                             all_event_quants = []
 
-                            all_event_quants.append(self.quantifications(module, 's', edge=event['Junc'],
-                                                          prev_quants=quants))
-                            all_event_quants.append(self.quantifications(module, 't', edge=event['Junc'],
-                                                          prev_quants=quants))
+                            all_event_quants.append(self.quantifications(module, 's', edge=event['Junc']))
+                            all_event_quants.append(self.quantifications(module, 't', edge=event['Junc']))
 
+                            changing, non_changing = self._determine_changing(all_event_quants), \
+                                                     self._determine_non_changing(all_event_quants)
                             for _q in all_event_quants:
-                                _q[0], _q[1] = all_event_quants[-1][0], all_event_quants[-1][1]
+                                _q[0], _q[1] = changing, non_changing
 
                             src_common = self.common_data(module,
                                                           's',
@@ -1620,8 +1609,6 @@ class TsvWriter(BaseTsvWriter):
                 if not _complex or self.config.output_complex:
                     event_i = 1
                     for event in events:
-                        quants = None
-
                         if event['event'] == 'constitutive':
 
                             common = self.common_data(module,
@@ -1634,8 +1621,7 @@ class TsvWriter(BaseTsvWriter):
                                    event['Junc'].range_str(),
                                    'False',
                                    module.collapsed_event_name]
-                            quants = self.quantifications(module, edge=event['Junc'],
-                                                          prev_quants=quants)
+                            quants = self.quantifications(module, edge=event['Junc'])
                             writer.writerow(common + row + quants)
                             self.junction_cache.append((module, common, quants, row[0], row[4], row[5]))
 
@@ -1659,8 +1645,7 @@ class TsvWriter(BaseTsvWriter):
                                        event['Intron'].range_str(),
                                        'True',
                                        module.collapsed_event_name]
-                                quants = self.quantifications(module, 't', event['Intron'],
-                                                          prev_quants=quants)
+                                quants = self.quantifications(module, 't', event['Intron'])
                                 writer.writerow(trg_common + row + quants)
                                 self.junction_cache.append((module, trg_common, quants, row[0], row[4], row[5]))
                             else:
@@ -1672,8 +1657,7 @@ class TsvWriter(BaseTsvWriter):
                                        event['Intron'].range_str(),
                                        'True',
                                        module.collapsed_event_name]
-                                quants = self.quantifications(module, 's', event['Intron'],
-                                                          prev_quants=quants)
+                                quants = self.quantifications(module, 's', event['Intron'])
                                 writer.writerow(src_common + row + quants)
                                 self.junction_cache.append((module, src_common, quants, row[0], row[4], row[5]))
 
@@ -1689,7 +1673,6 @@ class TsvWriter(BaseTsvWriter):
                     event_i = 1
                     for event in events:
                         if event['event'] == 'other_event':
-                            quants = None
                             all_event_quants = []
 
 
@@ -1730,11 +1713,12 @@ class TsvWriter(BaseTsvWriter):
                                     all_event_quants.append(self.quantifications(module,
                                                                   lsv_type,
                                                                   edge=junc,
-                                                                  node=this_node,
-                                                          prev_quants=quants))
+                                                                  node=this_node))
 
+                            changing, non_changing = self._determine_changing(all_event_quants), \
+                                                     self._determine_non_changing(all_event_quants)
                             for _q in all_event_quants:
-                                _q[0], _q[1] = all_event_quants[-1][0], all_event_quants[-1][1]
+                                _q[0], _q[1] = changing, non_changing
 
 
                             for junc in juncs:
