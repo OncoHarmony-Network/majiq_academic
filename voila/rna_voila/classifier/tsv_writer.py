@@ -1304,7 +1304,7 @@ class TsvWriter(BaseTsvWriter):
                                            'C1',
                                            c1_node.range_str(),
                                            'C2_C1_spliced',
-                                           spliced]
+                                           spliced.range_str()]
                                     quants = all_event_quants.pop(0)
                                     writer.writerow(trg_common + row + [event_size] + quants)
                                     self.junction_cache.append((module, trg_common, quants,
