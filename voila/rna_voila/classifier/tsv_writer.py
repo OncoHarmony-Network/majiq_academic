@@ -619,7 +619,7 @@ class TsvWriter(BaseTsvWriter):
                                                           event_name="pA5",
                                                           event_ii=event_i)
 
-                            event_size = abs(event['Include1'].end - event['Include1'].start) + 1 + \
+                            event_size = abs(event['Include1'].absolute_end - event['Include1'].absolute_start) + 1 + \
                                          abs(event['A'].end - event['A'].start) + 1
 
                             all_event_quants.append(self.quantifications(module, 's', event['Skip']))
@@ -711,7 +711,7 @@ class TsvWriter(BaseTsvWriter):
                                                           event_name="pA3",
                                                           event_ii=event_i)
 
-                            event_size = abs(event['Include2'].end - event['Include2'].start) + 1 + \
+                            event_size = abs(event['Include2'].absolute_end - event['Include2'].absolute_start) + 1 + \
                                          abs(event['A'].end - event['A'].start) + 1
 
                             all_event_quants.append(self.quantifications(module, 's', event['Skip']))
@@ -1252,7 +1252,7 @@ class TsvWriter(BaseTsvWriter):
                                                           event_ii=event_i,
                                                           event_name="AI")
 
-                            event_size = abs(event['Intron'].end - event['Intron'].start) + 1
+                            event_size = abs(event['Intron'].absolute_end - event['Intron'].absolute_start) + 1
 
                             # I think this fails when there is a source LSV in the middle exon
                             # if any(':t:' in _l for _l in event['Intron'].lsvs) and not \
