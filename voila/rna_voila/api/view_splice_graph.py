@@ -2,7 +2,8 @@ from operator import itemgetter
 
 from rna_voila.api import SpliceGraph
 from rna_voila.config import ViewConfig
-
+from statistics import median, StatisticsError
+from math import ceil
 
 class ViewSpliceGraph(SpliceGraph):
     def __init__(self, omit_simplified=False):
@@ -390,13 +391,15 @@ class ViewSpliceGraph(SpliceGraph):
                                     yield junc_reads[n][junc_start][junc_end]
                                 except KeyError:
                                     pass
-
-                        summed_reads = sum(get_junc_reads())
+                        try:
+                            median_reads = ceil(median(get_junc_reads()))
+                        except StatisticsError:
+                            median_reads = 0
 
                         try:
-                            junc_reads[combined_name][junc_start][junc_end] = summed_reads
+                            junc_reads[combined_name][junc_start][junc_end] = median_reads
                         except KeyError:
-                            junc_reads[combined_name][junc_start] = {junc_end: summed_reads}
+                            junc_reads[combined_name][junc_start] = {junc_end: median_reads}
 
             for ir in self.intron_retentions(gene_id, omit_simplified=self.omit_simplified):
                 ir_start, ir_end = itemgetter('start', 'end')(ir)
@@ -418,12 +421,15 @@ class ViewSpliceGraph(SpliceGraph):
                             except KeyError:
                                 pass
 
-                    summed_reads = sum(get_ir_reads())
+                    try:
+                        median_reads = ceil(median(get_ir_reads()))
+                    except StatisticsError:
+                        median_reads = 0
 
                     try:
-                        ir_reads[combined_name][ir_start][ir_end] = summed_reads
+                        ir_reads[combined_name][ir_start][ir_end] = median_reads
                     except KeyError:
-                        ir_reads[combined_name][ir_start] = {ir_end: summed_reads}
+                        ir_reads[combined_name][ir_start] = {ir_end: median_reads}
 
         gene_dict = dict(self.view_gene(gene_id))
         gene_dict['exons'] = tuple(dict(e) for e in self.view_exons(gene_id))
