@@ -145,12 +145,6 @@ def splitter():
 
 
 
-
-
-
-
-
-
 def recombine():
 
     log = voila_log()
@@ -186,7 +180,10 @@ def recombine():
                     if wrote_headers is False:
                         wrote_headers = True
                     else:
-                        next(infile)
+                        while True:
+                            _line = next(infile)
+                            if not _line.startswith('#'):
+                                break
                     for line in infile:
                         outfile.write(line)
 

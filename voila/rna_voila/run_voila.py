@@ -283,10 +283,8 @@ recombine_parser = argparse.ArgumentParser(add_help=False)
 required_recombine_parser = recombine_parser.add_argument_group('required named arguments')
 required_recombine_parser.add_argument('directories', nargs='+', help="Directory or directories"
                                                                 " to search recursively for tsv files to combine")
-required_recombine_parser.add_argument('-d', '--directory', required=True, help="Directories for each split will be created"
-                                                                          " in this directory")
-
-
+required_recombine_parser.add_argument('-d', '--directory', required=True, help="Directory where recombined classifier "
+                                                                                "output will be created.")
 
 
 # subparsers
