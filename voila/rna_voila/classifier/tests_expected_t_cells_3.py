@@ -1177,45 +1177,45 @@ expected_modules_constitutive = {
 expected_cassette_exons = {
     'gene:ENSG00000138073': [
         {
-            'ran_treg_E(PSI)': '0.125',
+            'ran_treg_mean_psi': '0.125',
         },{
-            'ran_treg_E(PSI)': '0.875',
+            'ran_treg_mean_psi': '0.875',
         },{
-            'ran_treg_E(PSI)': '0.07913184',
+            'ran_treg_mean_psi': '0.07913184',
         },{
-            'ran_treg_E(PSI)': '0.90108526',
+            'ran_treg_mean_psi': '0.90108526',
         }
     ]
 }
 
 expected_alternative_intron = {
     'gene:ENSG00000123146': [
-        {'Reference Exon Coordinate': '14381156-14381545'},
+        {'reference_exon_coord': '14381156-14381545'},
         {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}
     ]
 }
 
 expected_alt3ss = {
     "gene:ENSG00000100796":[
-        {'ran_treg_E(PSI)': '0.992'},
-        {'ran_treg_E(PSI)': '0.008'}
+        {'ran_treg_mean_psi': '0.992'},
+        {'ran_treg_mean_psi': '0.008'}
     ],
     "gene:ENSG00000124151":[
-        {'ran_treg_E(PSI)': '0.86'},
-        {'ran_treg_E(PSI)': '0.14'},
-        {'ran_treg_E(PSI)': '0.665'},
-        {'ran_treg_E(PSI)': '0.335'}
+        {'ran_treg_mean_psi': '0.86'},
+        {'ran_treg_mean_psi': '0.14'},
+        {'ran_treg_mean_psi': '0.665'},
+        {'ran_treg_mean_psi': '0.335'}
     ]
 }
 
 expected_alt5ss = {
     "gene:ENSG00000122390":[
-        {'ran_treg_E(PSI)': '0.391'},
-        {'ran_treg_E(PSI)': '0.609'}
+        {'ran_treg_mean_psi': '0.391'},
+        {'ran_treg_mean_psi': '0.609'}
     ],
     "gene:ENSG00000087206":[
-        {'ran_treg_E(PSI)': '0.039'},
-        {'ran_treg_E(PSI)': '0.961'}
+        {'ran_treg_mean_psi': '0.039'},
+        {'ran_treg_mean_psi': '0.961'}
     ]
 }
 

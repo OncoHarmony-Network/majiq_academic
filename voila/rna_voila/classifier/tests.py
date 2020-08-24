@@ -108,15 +108,15 @@ def run_voila_classify(gene_ids, enabled_outputs='all', additional_args=[]):
     os.environ['PYTHONPATH'] = ''
 
 
-expected_headers = ['module_id', 'gene_id', 'gene_name', "Chr","Strand", 'lsv_ids', 'cassette_exon', 'tandem_cassette', 'alt3ss', 'alt5ss', 'p_alt3ss',
+expected_headers = ['module_id', 'gene_id', 'gene_name', 'seqid','strand', 'lsv_ids', 'cassette_exon', 'tandem_cassette', 'alt3ss', 'alt5ss', 'p_alt3ss',
                     'p_alt5ss', 'alt3and5ss', 'mutually_exclusive', 'alternative_intron', 'ale', 'afe', 'p_ale', 'p_afe', 'orphan_junction', 'other',
                     'multi_exon_spanning',   'exitron', 'complex', 'number-of-events']
-expected_headers_constitutive = ['module_id', 'gene_id', 'gene_name', "Chr","Strand", 'lsv_ids', 'cassette_exon', 'tandem_cassette', 'alt3ss', 'alt5ss', 'p_alt3ss',
+expected_headers_constitutive = ['module_id', 'gene_id', 'gene_name', 'seqid','strand', 'lsv_ids', 'cassette_exon', 'tandem_cassette', 'alt3ss', 'alt5ss', 'p_alt3ss',
                     'p_alt5ss', 'alt3and5ss', 'mutually_exclusive', 'alternative_intron', 'ale', 'afe', 'p_ale', 'p_afe', 'orphan_junction', 'other',
                                  'constitutive_junction', 'constitutive_intron',
                     'multi_exon_spanning',   'exitron', 'complex', 'number-of-events']
-expected_headers_mpe= ['Module ID', 'Gene ID', 'Gene Name', "Chr","Strand", 'LSV ID(s)',
-                       "Collapsed Event Name","Type","Edge of the Module",
+expected_headers_mpe= ['module_id', 'gene_id', 'gene_name', 'seqid','strand', 'lsv_id',
+                       'module_event_combination',"Type","Edge of the Module",
                        "Reference Exon Coord","Reference Exon De Novo","Reference Exon Exitrons","Reference Exon Constant Region",
                        "Reference Exon Trimmed","Constitutive Direction","Constitutive Regions",
                        "Constitutive De Novo","Constitutive Exon or Intron"]

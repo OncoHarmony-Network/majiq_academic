@@ -444,14 +444,14 @@ class QuantificationWriter:
 
             if analysis_type == constants.ANALYSIS_PSI:
                 for group in group_names:
-                    for key in ("E(PSI)", "Var(E(PSI))",):
+                    for key in ("mean_psi", "var_psi",):
                         header = "%s_%s" % (group, key)
                         if header in tmp:
                             tmp[header][1].append(voila_file)
                         else:
-                            if key == "E(PSI)":
+                            if key == "mean_psi":
                                 tmp[header] = (_psi_psi, [voila_file])
-                            elif key == "Var(E(PSI))":
+                            elif key == "var_psi":
                                 tmp[header] = (_psi_var, [voila_file])
 
 
@@ -460,28 +460,28 @@ class QuantificationWriter:
                 group_idxs = {}
                 for i, group in enumerate(group_names):
                     group_idxs[group] = i
-                    for key in ("E(PSI)",):
-                        header = "%s_HET_%s" % (group, key)
+                    for key in ("mean_psi",):
+                        header = "%s_het_%s" % (group, key)
                         if header in tmp:
                             tmp[header][1].append(voila_file)
                         else:
-                            if key == "E(PSI)":
+                            if key == "mean_psi":
                                 tmp[header] = (_het_psi, [voila_file], i)
 
 
 
                 for group1, group2 in combinations(group_names, 2):
-                    for key in ("E(dPSI)",):
-                        header = "%s-%s_HET_%s" % (group1, group2, key)
+                    for key in ("mean_dpsi",):
+                        header = "%s-%s_het_%s" % (group1, group2, key)
                         if header in tmp:
                             tmp[header][1].append(voila_file)
                         else:
-                            if key == "E(dPSI)":
+                            if key == "mean_dpsi":
                                 self.dpsi_quant_idxs.append(len(tmp))
                                 tmp[header] = (_het_dpsi, [voila_file], group_idxs[group1], group_idxs[group2])
 
                     for j, key in enumerate(stat_names):
-                        header = "%s-%s_HET_%s" % (group1, group2, key)
+                        header = "%s-%s_het_%s" % (group1, group2, key.lower())
                         if header in tmp:
                             tmp[header][1].append(voila_file)
                         else:
@@ -490,23 +490,23 @@ class QuantificationWriter:
 
             else:
                 for i, group in enumerate(group_names):
-                    for key in ("E(PSI)",):
+                    for key in ("mean_psi",):
                         header = "%s_%s" % (group, key)
                         if header in tmp:
                             tmp[header][1].append(voila_file)
                         else:
-                            if key == "E(PSI)":
+                            if key == "mean_psi":
                                 tmp[header] = (_dpsi_psi, [voila_file], i)
                         self.types2headers['psi'].append(header)
 
-                changing_thresh_key = "P(|dPSI|>=%.2f)" % self.config.changing_between_group_dpsi
-                non_changing_thresh_key = "P(|dPSI|<=%.2f)" % self.config.non_changing_threshold
-                for key in ("E(dPSI)", changing_thresh_key, non_changing_thresh_key):
+                changing_thresh_key = "probability_changing" % self.config.changing_between_group_dpsi
+                non_changing_thresh_key = "probability_non_changing" % self.config.non_changing_threshold
+                for key in ("mean_dpsi", changing_thresh_key, non_changing_thresh_key):
                     header = "%s_%s" % ('-'.join(reversed(group_names)), key)
                     if header in tmp:
                         tmp[header][1].append(voila_file)
                     else:
-                        if key == "E(dPSI)":
+                        if key == "mean_dpsi":
                             self.dpsi_quant_idxs.append(len(tmp))
                             tmp[header] = (_dpsi_dpsi, [voila_file])
                             self.types2headers['dpsi'].append(header)
@@ -526,22 +526,22 @@ class QuantificationWriter:
         #             group_names = m.group_names
         #
         #         for i, group in enumerate(group_names):
-        #             for key in ("E(PSI)",):
+        #             for key in ("mean_psi",):
         #                 header = "%s_%s" % (group, key)
         #                 if header in tmp:
         #                     tmp[header][1].append(voila_file)
         #                 else:
-        #                     if key == "E(PSI)":
+        #                     if key == "mean_psi":
         #                         tmp[header] = (_dpsi_psi, [voila_file], i)
         #
-        #         changing_thresh_key = "P(|dPSI|>=%.2f)" % self.config.changing_threshold
-        #         non_changing_thresh_key = "P(|dPSI|<=%.2f)" % self.config.non_changing_threshold
-        #         for key in ("E(dPSI)", changing_thresh_key, non_changing_thresh_key):
+        #         changing_thresh_key = "probability_changing" % self.config.changing_threshold
+        #         non_changing_thresh_key = "probability_non_changing" % self.config.non_changing_threshold
+        #         for key in ("mean_dpsi", changing_thresh_key, non_changing_thresh_key):
         #             header = "%s_%s" % ('-'.join(group_names), key)
         #             if header in tmp:
         #                 tmp[header][1].append(voila_file)
         #             else:
-        #                 if key == "E(dPSI)":
+        #                 if key == "mean_dpsi":
         #                     tmp[header] = (_dpsi_dpsi, [voila_file])
         #                 elif key == changing_thresh_key:
         #                     tmp[header] = (_dpsi_p_change, [voila_file])

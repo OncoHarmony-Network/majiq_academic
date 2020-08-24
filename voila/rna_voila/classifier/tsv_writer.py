@@ -16,25 +16,25 @@ from operator import itemgetter
 
 
 summaryVars2Headers = {
-    'cassette_exon': 'Cassette',
-    'tandem_cassette': 'Tandem Cassette',
-    'alt3ss': 'Alt 3',
-    'alt5ss': 'Alt 5',
-    'p_alt3ss': 'P_Alt 3',
-    'p_alt5ss': 'P_Alt 5',
-    'alt3and5ss': 'Alt 3 and Alt 5',
-    'mutually_exclusive': 'MXE',
-    'alternative_intron': 'Alternative Intron',
-    'ale': 'ALE',
-    'afe': 'AFE',
-    'p_ale': 'P_ALE',
-    'p_afe': 'P_AFE',
-    'orphan_junction': 'Orphan Junction',
-    'constitutive': 'Constitutive Junction',
-    'constitutive_intron': 'Persistent Intron',
-    'multi_exon_spanning': 'Multi Exon Spanning',
-    'exitron': 'Exitron',
-    'other_event': 'Other'
+    'cassette_exon': 'cassette',
+    'tandem_cassette': 'tandem_cassette',
+    'alt3ss': 'alt3',
+    'alt5ss': 'alt5',
+    'p_alt3ss': 'putative_alt3',
+    'p_alt5ss': 'putative_alt5',
+    'alt3and5ss': 'alt3_5',
+    'mutually_exclusive': 'mxe',
+    'alternative_intron': 'ir',
+    'ale': 'ale',
+    'afe': 'afe',
+    'p_ale': 'putative_ale',
+    'p_afe': 'putative_afe',
+    'orphan_junction': 'orphan_junc',
+    'constitutive': 'constitutive_junc',
+    'constitutive_intron': 'persistent_ir',
+    'multi_exon_spanning': 'multi_exon_spanning',
+    'exitron': 'exitron',
+    'other_event': 'other'
 }
 
 class BaseTsvWriter(QuantificationWriter):
@@ -48,7 +48,7 @@ class BaseTsvWriter(QuantificationWriter):
         """
         super().__init__()
 
-        self.common_headers = ['Module ID', 'Gene ID', 'Gene Name', 'Chr', 'Strand']
+        self.common_headers = ['module_id', 'gene_id', 'gene_name', 'seqid', 'strand']
 
         self.graph = graph
         self.gene_id = gene_id
@@ -122,7 +122,7 @@ class BaseTsvWriter(QuantificationWriter):
         """
         out = []
         for count in counts:
-            # do not include 'Other' in the collapsed event name.
+            # do not include 'other' in the collapsed event name.
             if count == "other_event":
                 continue
             if counts[count]:
@@ -135,10 +135,10 @@ class TsvWriter(BaseTsvWriter):
     def __init__(self, graph, gene_id):
         super().__init__(graph, gene_id)
 
-        self.common_headers.append('LSV ID(s)')
+        self.common_headers.append('lsv_id')
         if self.config.output_complex:
-            self.common_headers.append('Event ID')
-            self.common_headers.append('Complex')
+            self.common_headers.append('event_id')
+            self.common_headers.append('complex')
 
         # we could do some crazy thing to yield to all of the different output types at once (across each method)
         # (in order to save memory) But for now we just save modules in a list. Will ammend later if memory use
@@ -184,48 +184,48 @@ class TsvWriter(BaseTsvWriter):
             self.start_headers(headers, 'p_multi_gene_region.tsv')
 
         else:
-            relatively_common_headers = ['De Novo', 'Reference Exon Coordinate', 'Exon Spliced With',
-                                             'Exon Spliced With Coordinate', 'Junction Name',
-                                             'Junction Coordinate']
+            relatively_common_headers = ['denovo', 'reference_exon_coord', 'spliced_with',
+                                             'spliced_with_coord', 'junction_name',
+                                             'junction_coord']
             if 'events' in self.config.enabled_outputs:
 
-                self.start_headers(self.common_headers + relatively_common_headers + ['Event Size'] + self.quantification_headers, 'cassette.tsv')
-                self.start_headers(self.common_headers + relatively_common_headers + ['Event Size'] + self.quantification_headers, 'alt3prime.tsv')
-                self.start_headers(self.common_headers + relatively_common_headers + ['Event Size'] + self.quantification_headers, 'alt5prime.tsv')
-                self.start_headers(self.common_headers + relatively_common_headers + ['Event Size'] + self.quantification_headers, 'p_alt5prime.tsv')
-                self.start_headers(self.common_headers + relatively_common_headers + ['Event Size'] + self.quantification_headers, 'p_alt3prime.tsv')
+                self.start_headers(self.common_headers + relatively_common_headers + ['event_size'] + self.quantification_headers, 'cassette.tsv')
+                self.start_headers(self.common_headers + relatively_common_headers + ['event_size'] + self.quantification_headers, 'alt3prime.tsv')
+                self.start_headers(self.common_headers + relatively_common_headers + ['event_size'] + self.quantification_headers, 'alt5prime.tsv')
+                self.start_headers(self.common_headers + relatively_common_headers + ['event_size'] + self.quantification_headers, 'p_alt5prime.tsv')
+                self.start_headers(self.common_headers + relatively_common_headers + ['event_size'] + self.quantification_headers, 'p_alt3prime.tsv')
                 self.start_headers(self.common_headers + relatively_common_headers + self.quantification_headers, 'alt3and5prime.tsv')
                 self.start_headers(self.common_headers + relatively_common_headers + self.quantification_headers, 'mutually_exclusive.tsv')
                 self.start_headers(self.common_headers + relatively_common_headers + self.quantification_headers, 'alternate_last_exon.tsv')
                 self.start_headers(self.common_headers + relatively_common_headers + self.quantification_headers, 'alternate_first_exon.tsv')
                 self.start_headers(self.common_headers + relatively_common_headers + self.quantification_headers, 'p_alternate_last_exon.tsv')
                 self.start_headers(self.common_headers + relatively_common_headers + self.quantification_headers, 'p_alternate_first_exon.tsv')
-                self.start_headers(self.common_headers + relatively_common_headers + ['Event Size'] + self.quantification_headers, 'alternative_intron.tsv')
-                headers = self.common_headers + ['Junction Coordinate',
-                                                 'De Novo',
-                                                 'Reference Exon Coordinate',
-                                                 'Exon Spliced With Coordinate',
-                                                 'Coordinates of Exons Spanned',
-                                                 'Number of Exons Spanned'
+                self.start_headers(self.common_headers + relatively_common_headers + ['event_size'] + self.quantification_headers, 'alternative_intron.tsv')
+                headers = self.common_headers + ['junction_coord',
+                                                 'denovo',
+                                                 'reference_exon_coord',
+                                                 'spliced_with_coord',
+                                                 'exons_skipped_coords',
+                                                 'num_skipped_exons'
                                                  ] + self.quantification_headers
                 self.start_headers(headers, 'multi_exon_spanning.tsv')
-                headers = self.common_headers + ['De Novo', 'Reference Exon Coordinate', 'Exon Spliced With',
-                                                 'Exon Spliced With Coordinate', 'Tandem Exon Coordinates',
-                                                 'Num_Tandem_Exons',
-                                                 'Junction Name', 'Junction Coordinate'] + ['Event Size'] + self.quantification_headers
+                headers = self.common_headers + ['denovo', 'reference_exon_coord', 'spliced_with',
+                                                 'spliced_with_coord', 'exons_skipped_coords',
+                                                 'num_skipped_exons',
+                                                 'junction_name', 'junction_coord'] + ['event_size'] + self.quantification_headers
                 self.start_headers(headers, 'tandem_cassette.tsv')
-                headers = self.common_headers + ['De Novo', 'Exon coordinate', 'Junction Coordinate'] + self.quantification_headers
+                headers = self.common_headers + ['denovo', 'exon_coord', 'junction_coord'] + self.quantification_headers
                 self.start_headers(headers, 'exitron.tsv')
-                headers = self.common_headers + ['De Novo', 'Exon1 coordinate', 'Exon2 coordinate', 'Junction Coordinate'] + self.quantification_headers
+                headers = self.common_headers + ['denovo', 'exon1_coord', 'Exon2 coordinate', 'junction_coord'] + self.quantification_headers
                 self.start_headers(headers, 'orphan_junction.tsv')
                 headers = self.common_headers + ["other_junctions", "other_exons"]# + self.quantification_headers
                 self.start_headers(headers, 'other.tsv')
 
                 if self.config.keep_constitutive:
-                    headers = self.common_headers + ['De Novo', 'Reference Exon Coordinate', 'Exon Spliced With',
-                                                     'Exon Spliced With Coordinate', 'Junction Name',
-                                                     'Junction Coordinate', 'Is Intron',
-                                                     'Collapsed Event Name'] + self.quantification_headers
+                    headers = self.common_headers + ['denovo', 'reference_exon_coord', 'spliced_with',
+                                                     'spliced_with_coord', 'junction_name',
+                                                     'junction_coord', 'Is Intron',
+                                                     'module_event_combination'] + self.quantification_headers
                     self.start_headers(headers, 'constitutive.tsv')
 
 
@@ -233,36 +233,36 @@ class TsvWriter(BaseTsvWriter):
 
 
             if 'summary' in self.config.enabled_outputs:
-                headers = self.common_headers + ["Cassette", "Tandem Cassette",
-                                                 "Alt 3", "Alt 5", "P_Alt 3", "P_Alt 5", "Alt 3 and Alt 5", "MXE",
-                                                 "Alternative Intron", "ALE", "AFE",
-                                                 "P_ALE", "P_AFE", "Orphan Junction", "Other"]
+                headers = self.common_headers + ['cassette', 'tandem_cassette',
+                                                 'alt3', 'alt5', 'putative_alt3', 'putative_alt5', 'alt3_5', 'mxe',
+                                                 'ir', 'ale', 'afe',
+                                                 'putative_ale', 'putative_afe', 'orphan_junc', 'other']
                 if self.config.keep_constitutive:
-                    headers.append("Constitutive Junction")
-                    headers.append("Persistent Intron")
+                    headers.append('constitutive_junc')
+                    headers.append('persistent_ir')
 
                 if self.config.output_complex:
-                    headers.remove("Complex")
+                    headers.remove('complex')
                     # not wanted in summary
-                    event_id_ii = headers.index("Event ID")
+                    event_id_ii = headers.index("event_id")
                     headers.pop(event_id_ii)
 
-                headers += ["Multi Exon Spanning", "Exitron", "Complex", 'De Novo Junctions', 'De Novo Introns',
-                            "Number of Events", "Collapsed Event Name"
+                headers += ['multi_exon_spanning', 'exitron', 'complex', 'denovo_juncs', 'denovo_introns',
+                            'num_events', 'module_event_combination'
                             ]
                 self.start_headers(headers, 'summary.tsv')
                 if self.config.output_complex:
                     # add back in the event id for the other TSVs, in same index
-                    headers.insert(event_id_ii, "Event ID")
+                    headers.insert(event_id_ii, "event_id")
 
             if 'heatmap' in self.config.enabled_outputs:
-                headers = self.common_headers + ['Collapsed Event Name', 'De Novo', 'Junction Name',
-                                                 'Junction Coordinate'] + self.quantification_headers
+                headers = self.common_headers + ['module_event_combination', 'denovo', 'junction_name',
+                                                 'junction_coord'] + self.quantification_headers
                 self.start_headers(headers, 'heatmap.tsv')
 
             if 'junctions' in self.config.enabled_outputs:
-                headers = self.common_headers + ['Collapsed Event Name', 'De Novo', 'Junction Name',
-                                                 'Junction Coordinate'] + self.quantification_headers
+                headers = self.common_headers + ['module_event_combination', 'denovo', 'junction_name',
+                                                 'junction_coord'] + self.quantification_headers
                 self.start_headers(headers, 'junctions.tsv')
 
             if 'mpe' in self.config.enabled_outputs:
@@ -270,7 +270,7 @@ class TsvWriter(BaseTsvWriter):
                 lids_col_ii = headers.index("LSV ID(s)")
                 # Only 1 LSV ID per row possible.
                 headers[lids_col_ii].replace("(s)","")
-                headers += ['Collapsed Event Name',
+                headers += ['module_event_combination',
                         'Type',
                         'Edge of the Module',
                         'Edge of Transcript',
@@ -891,7 +891,7 @@ class TsvWriter(BaseTsvWriter):
                                                           's',
                                                           node=event['C1'],
                                                           edge=event['Include1'],
-                                                          event_name="MXE",
+                                                          event_name='mxe',
                                                           event_ii=event_i)
                             quants = all_event_quants.pop(0)
                             writer.writerow(src_common + row + quants)
@@ -910,7 +910,7 @@ class TsvWriter(BaseTsvWriter):
                                                           's',
                                                           node=event['C1'],
                                                           edge=event['SkipA1'],
-                                                          event_name="MXE",
+                                                          event_name='mxe',
                                                           event_ii=event_i)
                             quants = all_event_quants.pop(0)
                             writer.writerow(src_common + row + quants)
@@ -929,7 +929,7 @@ class TsvWriter(BaseTsvWriter):
                                                           't',
                                                           node=event['C2'],
                                                           edge=event['Include2'],
-                                                          event_name="MXE",
+                                                          event_name='mxe',
                                                           event_ii=event_i)
                             quants = all_event_quants.pop(0)
                             writer.writerow(trg_common + row + quants)
@@ -948,7 +948,7 @@ class TsvWriter(BaseTsvWriter):
                                                           't',
                                                           node=event['C2'],
                                                           edge=event['SkipA2'],
-                                                          event_name="MXE",
+                                                          event_name='mxe',
                                                           event_ii=event_i)
                             quants = all_event_quants.pop(0)
                             writer.writerow(trg_common + row + quants)
@@ -973,7 +973,7 @@ class TsvWriter(BaseTsvWriter):
                             src_common = self.common_data(module,
                                                           's',
                                                           node=event['Reference'],
-                                                          event_name="ALE",
+                                                          event_name='ale',
                                                           event_ii=event_i)
                             # only ever write ALEs that are quantified by LSV
                             if src_common[5]:
@@ -1038,7 +1038,7 @@ class TsvWriter(BaseTsvWriter):
                                                           't',
                                                           node=event['Reference'],
                                                           event_ii=event_i,
-                                                          event_name="AFE")
+                                                          event_name='afe')
                             # only ever write AFEs that are quantified by LSV
                             if trg_common[5]:
 
@@ -1560,13 +1560,13 @@ class TsvWriter(BaseTsvWriter):
                             # the exitron's junction quantification (won't exist for now... which is desired)
                             quants = all_event_quants.pop(0)
                             writer.writerow(src_common + row + quants)
-                            self.junction_cache.append((module, src_common, quants, row[0], 'Exitron', row[2]))
+                            self.junction_cache.append((module, src_common, quants, row[0], 'exitron', row[2]))
                             row = [event['Junc'].de_novo,
                                    event['Exon'].range_str(),
                                    event['Junc'].range_str()]
                             quants = all_event_quants.pop(0)
                             writer.writerow(trg_common + row + quants)
-                            self.junction_cache.append((module, trg_common, quants, row[0], 'Exitron', row[2]))
+                            self.junction_cache.append((module, trg_common, quants, row[0], 'exitron', row[2]))
                             event_i += 1
 
     def orphan_junction(self):
@@ -1616,7 +1616,7 @@ class TsvWriter(BaseTsvWriter):
                                    event['Junc'].range_str()]
                             quants = all_event_quants.pop(0)
                             writer.writerow(trg_common + row + quants)
-                            self.junction_cache.append((module, trg_common, quants, row[0], 'Exitron', row[3]))
+                            self.junction_cache.append((module, trg_common, quants, row[0], 'exitron', row[3]))
                             if True: #?
                                 self.heatmap_add(module, trg_common, quants,
                                                  event['Junc'].absolute_end - event['Junc'].absolute_start,
@@ -1709,7 +1709,7 @@ class TsvWriter(BaseTsvWriter):
                                                           edge=None,
                                                           node=None,
                                                           event_ii=None,
-                                                          event_name="Other")
+                                                          event_name='other')
                             # update lsvs with relevant LSVs
                             row_common[5]  = ";".join(lsvs)
                             juncs_l = [j.range_str() for j in juncs]
@@ -1754,7 +1754,7 @@ class TsvWriter(BaseTsvWriter):
                                                   edge=junc,
                                                   node=this_node,
                                                   event_ii=None,
-                                                  event_name="Other")
+                                                  event_name='other')
                                     # de_novo, junction_name, coordinates
                                     both_infos = [
                                         junc.de_novo,
