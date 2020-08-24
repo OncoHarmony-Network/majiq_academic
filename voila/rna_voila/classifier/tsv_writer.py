@@ -13,7 +13,7 @@ import numpy as np
 from rna_voila.vlsv import get_expected_psi, matrix_area
 from itertools import combinations
 from operator import itemgetter
-
+import sys, json
 
 summaryVars2Headers = {
     'cassette_exon': 'cassette',
@@ -58,8 +58,6 @@ class BaseTsvWriter(QuantificationWriter):
 
         self.heatmap_cache = {}
         self.junction_cache = []
-
-
 
     @property
     def quantification_headers(self):
@@ -111,8 +109,39 @@ class BaseTsvWriter(QuantificationWriter):
         Start a tsv file with the required headers, only if it does not yet exist
 
         """
+        _has_dpsi_voila_files = False
+        _has_het_voila_files = False
+        for voila_file in self.config.voila_files:
+            with Matrix(voila_file) as m:
+                if m.analysis_type == constants.ANALYSIS_DELTAPSI:
+                    _has_dpsi_voila_files = True
+                if m.analysis_type == constants.ANALYSIS_HETEROGEN:
+                    _has_het_voila_files = True
+
         if not os.path.exists(os.path.join(self.config.directory, filename)):
             with open(os.path.join(self.config.directory, filename), 'w', newline='') as csvfile:
+
+                metadata = {
+                    'voila_version': constants.VERSION,
+                    'command': ' '.join(sys.argv),
+                }
+                if _has_dpsi_voila_files:
+                    metadata['dpsi_changing_threshold'] = self.config.changing_between_group_dpsi
+                    metadata['dpsi_probably_changing_threshold'] = self.config.probability_changing_threshold
+                    metadata['dpsi_nonchanging_threshold'] = self.config.probability_non_changing_threshold
+
+                if _has_het_voila_files:
+                    metadata['het_changing_threshold'] = self.config.changing_between_group_dpsi
+                    metadata['het_pvalue_changing_threshold'] = self.config.changing_pvalue_threshold
+                    metadata['het_nonchanging_threshold'] = self.config.non_changing_between_group_dpsi
+                    metadata['het_pvalue_nonchanging_threshold'] = self.config.non_changing_pvalue_threshold
+                    metadata['het_IQR_nonchanging_threshold'] = self.config.non_changing_within_group_iqr
+
+                metadata_string = '\n'.join([f"# {l}" for l in json.dumps(metadata, sort_keys=True,
+                                                                          indent=4, separators=(',', ': ')).split(
+                    '\n')]) + '\n'
+                csvfile.write(metadata_string)
+
                 writer = csv.writer(csvfile, dialect='excel-tab', delimiter='\t')
                 writer.writerow(headers)
 
@@ -403,6 +432,7 @@ class TsvWriter(BaseTsvWriter):
     def alt3prime(self):
         with open(os.path.join(self.config.directory, 'alt3prime.tsv.%s' % self.pid), 'a', newline='') as csvfile:
             writer = csv.writer(csvfile, dialect='excel-tab', delimiter='\t')
+
             for module in self.modules:
                 events, _complex, _total_events = self.as_types[module.idx]
                 if not _complex or self.config.output_complex:
