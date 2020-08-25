@@ -25,6 +25,29 @@ class FRange01(argparse.Action):
         setattr(namespace, self.dest, values)
 
 
+class StoreRequiredUniqueAction(argparse.Action):
+    """ Require that stored values are unique
+    """
+
+    def __call__(self, parser, namespace, values, option_string=None):
+        """ Check that values are unique if list
+        """
+        unique_values = set(values)  # set of unique values
+        if isinstance(values, list) and len(values) != len(unique_values):
+            # values are not all unique...
+            repeated_values = set()  # determine which values were repeated
+            # remove unique values (if done twice, added to repeated_values)
+            for x in values:
+                try:
+                    unique_values.remove(x)
+                except KeyError:
+                    repeated_values.add(x)
+            raise argparse.ArgumentError(
+                self, f"values must be unique (repeated values: {repeated_values})"
+            )
+        setattr(namespace, self.dest, values)
+
+
 def check_positive(value):
     """ Function for argparse.ArgumentParser(type=...) for float(x) > 0
     """
@@ -406,6 +429,7 @@ def main():
     psi.add_argument(
         "files",
         nargs="+",
+        action=StoreRequiredUniqueAction,
         help="Paths to MAJIQ files for the experiment(s) to aggregate for"
         " PSI quantification as a single group.",
     )
@@ -426,36 +450,43 @@ def main():
         " both. [Default: %(default)s]",
     )
 
-    delta = new_subparser()
-    delta.add_argument(
+    comparison = new_subparser()
+    comparison_req = comparison.add_argument_group("Required specification of groups")
+    comparison_req.add_argument(
         "-grp1",
         dest="files1",
         nargs="+",
         required=True,
-        help="Paths to MAJIQ files for the experiment(s) to aggregate for"
-        " quantification as part of the first group",
+        action=StoreRequiredUniqueAction,
+        help="Paths to MAJIQ files for the experiment(s) to quantify for first"
+        " group (aggregated as replicates if deltapsi, independently if heterogen)",
     )
-    delta.add_argument(
+    comparison_req.add_argument(
         "-grp2",
         dest="files2",
         nargs="+",
         required=True,
-        help="Paths to MAJIQ files for the experiment(s) to aggregate for"
-        " quantification as part of the second group",
+        action=StoreRequiredUniqueAction,
+        help="Paths to MAJIQ files for the experiment(s) to quantify for first"
+        " group (aggregated as replicates if deltapsi, independently if heterogen)",
     )
+    comparison_req.add_argument(
+        "-n",
+        "--names",
+        nargs=2,
+        metavar=("NAME_GRP1", "NAME_GRP2"),
+        required=True,
+        action=StoreRequiredUniqueAction,
+        help="The names that identify the groups being compared.",
+    )
+
+    delta = new_subparser()
     delta.add_argument(
         "--default-prior",
         action="store_true",
         default=False,
         help="Use a default prior instead of computing empirical prior from"
         " the data. [Default: default prior disabled]",
-    )
-    delta.add_argument(
-        "-n",
-        "--names",
-        nargs=2,
-        required=True,
-        help="The names that identify the groups being compared.",
     )
     delta.add_argument(
         "--binsize",
@@ -495,29 +526,6 @@ def main():
     )
 
     htrgen = new_subparser()
-    htrgen.add_argument(
-        "-grp1",
-        dest="files1",
-        nargs="+",
-        required=True,
-        help="Paths to MAJIQ files for the experiment(s) to quantify"
-        " independently for statistical analysis as part of the first group",
-    )
-    htrgen.add_argument(
-        "-grp2",
-        dest="files2",
-        nargs="+",
-        required=True,
-        help="Paths to MAJIQ files for the experiment(s) to quantify"
-        " independently for statistical analysis as part of the second group",
-    )
-    htrgen.add_argument(
-        "-n",
-        "--names",
-        nargs="+",
-        required=True,
-        help="The names that identify the groups being compared.",
-    )
     htrgen.add_argument(
         "--keep-tmpfiles",
         action="store_true",
@@ -572,7 +580,7 @@ def main():
         "psi",
         help="Calculate aggregated PSI values for N experiments as a single"
         " group using MAJIQ files produced by `majiq build`",
-        parents=[common, psi, sampling],
+        parents=[common, sampling, psi],
     )
     parser_calcpsi.set_defaults(func=calcpsi)
 
@@ -580,7 +588,7 @@ def main():
         "deltapsi",
         help="Calculate Delta PSI values between two groups of experiments"
         " (treated as replicates) using MAJIQ files produced by `majiq build`",
-        parents=[common, delta, sampling],
+        parents=[common, sampling, comparison, delta],
     )
     parser_deltagroup.set_defaults(func=deltapsi)
 
@@ -589,7 +597,7 @@ def main():
         help="Perform independent quantification and statistical comparison of"
         " PSI values between experiments/samples from two groups using MAJIQ"
         " files produced by `majiq build`",
-        parents=[common, sampling, htrgen],
+        parents=[common, sampling, comparison, htrgen],
     )
     parser_heterogen.set_defaults(func=calc_independent)
 
