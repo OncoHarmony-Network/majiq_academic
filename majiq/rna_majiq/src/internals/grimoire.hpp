@@ -15,7 +15,6 @@
 #define EMPTY_COORD  -1
 #define FIRST_LAST_JUNC  -2
 #define MAX_DENOVO_DIFFERENCE 400
-#define MIN_INTRON_BINSIZE 1000
 #define MAX_TYPE_LENGTH 245
 #define NA_LSV  "na"
 using namespace std ;

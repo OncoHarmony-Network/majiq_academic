@@ -13,10 +13,7 @@
 
 #define BOOTSTRAP_SEED 20200309
 
-#define MIN_INTRON_LEN 1000
 #define MIN_BP_OVERLAP 8
-#define MIN_JUNC_LENGTH 2
-#define NUM_INTRON_BINS 10
 #define MIN_BUFF_LEN 64
 #define BUFF_LEN_SAFETY_FACTOR 1.2  // factor to multiply eff_len by
 
