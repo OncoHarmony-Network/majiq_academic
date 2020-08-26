@@ -155,8 +155,8 @@ class BaseTsvWriter(QuantificationWriter):
             if count == "other_event":
                 continue
             if counts[count]:
-                out.append("%sx%d" % (summaryVars2Headers[count], counts[count]))
-        return '_'.join(out)
+                out.append("%s^%d" % (summaryVars2Headers[count], counts[count]))
+        return '|'.join(out)
 
 
 class TsvWriter(BaseTsvWriter):
