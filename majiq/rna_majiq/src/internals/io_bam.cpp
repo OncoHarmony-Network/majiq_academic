@@ -150,53 +150,115 @@ namespace io_bam {
         }
     }
 
-    void IOBam::find_junction_genes(string chrom, char strand, int start, int end,
-                                    shared_ptr<vector<float>> nreads_ptr){
-        bool found_stage1 = false ;
-        bool found_stage2 = false ;
-        vector<Gene*> temp_vec1 ;
-        vector<Gene*> temp_vec2 ;
-        Junction * junc = new Junction(start, end, false, simpl_) ;
-        const coord_key_t key = junc->get_key();
+    /**
+     * Associate junction nreads_ptr with appropriate genes
+     */
+    void IOBam::find_junction_genes(
+            string chrom, char strand, int start, int end,
+            shared_ptr<vector<float>> nreads_ptr) {
+        // find the set of overlapping genes that this junction could overlap with
+        vector<overGene*>::iterator low = lower_bound(
+                glist_[chrom].begin(),
+                glist_[chrom].end(),
+                start,
+                _Region::func_comp);
 
-        vector<overGene*>::iterator low = lower_bound (glist_[chrom].begin(), glist_[chrom].end(), start, _Region::func_comp ) ;
-        if (low == glist_[chrom].end())
-            return ;
+        // what is the set of all possible genes?
+        if (low == glist_[chrom].end()) {
+            // junction is after all genes for the contig
+            return;
+        }
+        // otherwise, the set of all possible genes is:
+        const auto& possible_genes = (*low)->glist;
 
-        for (const auto &gObj: (*low)->glist){
-            if (gObj->get_start() >= end) continue ;
-            if (gObj->get_end() < start) continue ;
-            if (start< gObj->get_start() || end> gObj->get_end()) continue ;
-            if (strand == '.' || strand == gObj->get_strand()) {
-                if(gObj->junc_map_.count(key) >0 ){
-                    found_stage1 = true ;
-                    gObj->initialize_junction(key, start, end, nreads_ptr, simpl_) ;
-                } else if(found_stage1){
-                    continue ;
-                } else {
-                    for(const auto &ex: gObj->exon_map_){
-                        if (((ex.second)->get_start()-MAX_DENOVO_DIFFERENCE) <= start && ((ex.second)->get_end()+MAX_DENOVO_DIFFERENCE) >= end){
-                            found_stage2 = true ;
-                            temp_vec1.push_back(gObj) ;
+        // we can have 3 kinds of matches of our junction to the genes in this
+        // list:
+        // Stage 1: the gene already has the junction
+        // Stage 2: the junction start and end are "close" to exons in the gene
+        //  (within MAX_DENOVO_DIFFERENCE) of exon boundary in correct
+        //  direction but not stage 1
+        // Stage 3: the junction is intragenic (contained in gene boundaries)
+        //  but not stage 1 or 2
+        bool found_stage1 = false;  // did we already find stage 1 genes?
+        vector<Gene*> stage2_genes;  // genes that match stage 2
+        vector<Gene*> stage3_genes;  // genes that match stage 3
+        // get key for junction to match against
+        Junction junc(start, end, false, simpl_);
+        const coord_key_t key = junc.get_key();
+
+
+        // the junction could be in any of the genes from the first set
+        for (const auto &gObj: possible_genes) {
+            // try to rule out being any stage...
+            if (strand != '.' && strand != gObj->get_strand()) {
+                // junction must be matched to gene that matches its strand
+                continue;
+            }
+            if (start < gObj->get_start() || end > gObj->get_end()) {
+                // junction must be matched to gene where it is intragenic
+                continue;
+            }
+            // junction is matched to this gene in either stage 1, 2, or 3
+            // Stage 1: is the junction already present for the gene?
+            if (gObj->junc_map_.count(key) > 0) {
+                found_stage1 = true;
+                // stage 1 genes initialized as they are found
+                gObj->initialize_junction(key, start, end, nreads_ptr, simpl_);
+            } else if (found_stage1) {
+                // there is no point in distinguishing between stage 2 and 3,
+                // because we will only use stage 1 matches
+                continue;
+            } else {
+                // unless we find a stage 1 gene, we need to know if this is
+                // stage 2 or stage 3 gene. So check whether start and end are
+                // close enough to any of the gene's exons
+                bool start_near_exon = false;  // is junction start near exon?
+                bool end_near_exon = false;  // is junction end near exon?
+                for (const auto &ex: gObj->exon_map_) {
+                    // compare junction to exon boundaries
+                    const int exon_start = ex.second->get_start();
+                    const int exon_end = ex.second->get_end();
+                    // skip half exons
+                    if (exon_start < 0 || exon_end < 0) {
+                        continue;
+                    }
+                    // is the junction close the the full-exon boundaries?
+                    if (!start_near_exon) {
+                        if (start <= exon_start) {
+                            // this nor subsequent exons will be close to
+                            // start (not stage 2)
+                            break;
+                        } else if (start <= exon_end + MAX_DENOVO_DIFFERENCE) {
+                            start_near_exon = true;
+                            // still need to see if end is near exon
                         }
-                        else temp_vec2.push_back(gObj) ;
+                    }
+                    if (end < exon_start - MAX_DENOVO_DIFFERENCE) {
+                        // this nor subsequent exons will be close to end (not
+                        // stage 2)
+                        break;
+                    } else if (end < exon_end) {
+                        end_near_exon = true;
+                        break;
                     }
                 }
-            }
-        }
-        delete junc ;
-        if (!found_stage1){
-            if (found_stage2){
-                for(const auto &g: temp_vec1){
-                    g->initialize_junction(key, start, end, nreads_ptr, simpl_) ;
-                }
-            }else{
-                for(const auto &g: temp_vec2){
-                    g->initialize_junction(key, start, end, nreads_ptr, simpl_) ;
+                // was this stage 2 or stage 3?
+                if (start_near_exon && end_near_exon) {
+                    stage2_genes.push_back(gObj);
+                } else {
+                    stage3_genes.push_back(gObj);
                 }
             }
         }
-        return ;
+        // initialize genes for this junction if there were no stage 1 genes
+        // (stage 1 genes are initialized online when found)
+        if (!found_stage1) {
+            // initialize stage2 genes if any found, otherwise any stage3 genes
+            for (const auto &g: (stage2_genes.size() > 0 ? stage2_genes : stage3_genes)) {
+                g->initialize_junction(key, start, end, nreads_ptr, simpl_);
+            }
+        }
+        return;
     }
 
 
