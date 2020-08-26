@@ -76,11 +76,18 @@ class Config(object):
 
             try:
                 junc_dirlist = general["sjdirs"].split(",")
+                if not self.aggregate:
+                    # sjdirs provided but not incremental...
+                    warnings.warn(
+                        "sjdirs parameter provided but --incremental was not"
+                        " set -- directories will not be used"
+                    )
             except KeyError:
                 junc_dirlist = ["."]
-                warnings.warn(
-                    'sjdirs parameter not found in config file, using "./" instead'
-                )
+                if self.aggregate:
+                    warnings.warn(
+                        'sjdirs parameter not found in config file, using "./" instead'
+                    )
 
             self.genome = general["genome"]
 
@@ -143,13 +150,22 @@ class Config(object):
                             break
 
                     if not found:
-                        raise RuntimeError(
-                            f"No matching {constants.SEQ_FILE_FORMAT}"
-                            f" (and {constants.SEQ_INDEX_FILE_FORMAT})"
-                            f" or {constants.JUNC_FILE_FORMAT} file was found"
-                            f" matching the experiment {prefix} in any of"
-                            " the provided paths in the build configuration"
-                        )
+                        if self.aggregate:
+                            raise RuntimeError(
+                                f"No matching {constants.SEQ_FILE_FORMAT}"
+                                f" (and {constants.SEQ_INDEX_FILE_FORMAT})"
+                                f" or {constants.JUNC_FILE_FORMAT} file was found"
+                                f" matching the experiment {prefix} in any of"
+                                " the provided paths in the build configuration"
+                            )
+                        else:
+                            raise RuntimeError(
+                                f"No matching {constants.SEQ_FILE_FORMAT}"
+                                f" (and {constants.SEQ_INDEX_FILE_FORMAT})"
+                                " was found"
+                                f" matching the experiment {prefix} in any of"
+                                " the provided paths in the build configuration"
+                            )
 
             opt_dict = {"strandness": self._set_strandness}
             strandness = {
