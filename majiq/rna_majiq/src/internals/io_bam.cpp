@@ -175,7 +175,7 @@ namespace io_bam {
                     continue ;
                 } else {
                     for(const auto &ex: gObj->exon_map_){
-                        if (((ex.second)->get_start()-500) <= start && ((ex.second)->get_end()+500) >= end){
+                        if (((ex.second)->get_start()-MAX_DENOVO_DIFFERENCE) <= start && ((ex.second)->get_end()+MAX_DENOVO_DIFFERENCE) >= end){
                             found_stage2 = true ;
                             temp_vec1.push_back(gObj) ;
                         }
