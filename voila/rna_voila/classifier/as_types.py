@@ -1463,6 +1463,16 @@ class Graph:
 
                     for include1, include2, skip in product(include1s, include2s, skips):
                         if len(set((self.strand_case(x.end, x.start) for x in (skip, include2,)))) == 1:
+
+                            # skip when there are any junctions connecting the two intron-connected exons
+                            # which share coordinate with the skip junction
+                            if self.graph.strand == '+':
+                                if any(_j.start == skip.start for _j in n1.connects(n2)):
+                                    continue
+                            else:
+                                if any(_j.end == skip.end for _j in n2.connects(n3)):
+                                    continue
+
                             # update seen junctions in Module
                             if len(skip.lsvs) > 0:
                                 self.classified_lsvs.extend(skip.lsvs)
@@ -1515,6 +1525,16 @@ class Graph:
 
                     for include1, include2, skip in product(include1s, include2s, skips):
                         if len(set((self.strand_case(x.start, x.end) for x in (include1, skip,)))) == 1:
+
+                            # skip when there are any junctions connecting the two intron-connected exons
+                            # which share coordinate with the skip junction
+                            if self.graph.strand == '+':
+                                if any(_j.end == skip.end for _j in n2.connects(n3)):
+                                    continue
+                            else:
+                                if any(_j.start == skip.start for _j in n1.connects(n2)):
+                                    continue
+
                             # update seen junctions in Module
                             if len(skip.lsvs) > 0:
                                 self.classified_lsvs.extend(skip.lsvs)
