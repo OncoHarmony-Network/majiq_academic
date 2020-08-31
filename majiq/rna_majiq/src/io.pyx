@@ -139,13 +139,13 @@ cdef int merge_exons(dict exon_dict, map[string, Gene*]& all_genes, bint simpl, 
 
     for gne_id, ex_list in exon_dict.items():
         ex_list.sort(key=lambda x:(x[0], not x[1]))
-        ex_start = -1
-        ex_end = -1
+        ex_start = EMPTY_COORD
+        ex_end = EMPTY_COORD
         nopen = 0
 
         for coord, is_start in ex_list:
             if is_start:
-                if ex_end != -1:
+                if ex_end != EMPTY_COORD:
                     start1 = ex_end -10  if ex_start == EMPTY_COORD else ex_start
                     end1 = ex_start +10  if ex_end == EMPTY_COORD else ex_end
                     key = coord_key_t(start1, end1)
@@ -154,17 +154,17 @@ cdef int merge_exons(dict exon_dict, map[string, Gene*]& all_genes, bint simpl, 
                     if nopen > 0 and ex_end < coord:
                         # create annotated intron (function adjusts coordinates using exon coordinates)
                         all_genes[gne_id].create_annot_intron(ex_end, coord, simpl, enable_anot_ir)
-                    ex_end = -1
+                    ex_end = EMPTY_COORD
                     ex_start = coord
 
-                ex_start = coord if ex_start == -1 or coord < ex_start else ex_start
+                ex_start = coord if ex_start == EMPTY_COORD or coord < ex_start else ex_start
                 nopen += 1
 
             else:
                 nopen -= 1
                 ex_end = coord if coord > ex_end else ex_end
 
-        if ex_end != -1:
+        if ex_end != EMPTY_COORD:
             key = coord_key_t(ex_start, ex_end)
             all_genes[gne_id].exon_map_[key] = new Exon(ex_start, ex_end, True)
 
