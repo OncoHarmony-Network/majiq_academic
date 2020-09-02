@@ -23,10 +23,10 @@ lock = multiprocessing.Lock()
 
 def exon_str(exons):
     """
-    Take in a list of exons and is an exon coordinate is -1, return 'nan' instead.  This helps with parsing the tsv file
+    Take in a list of exons and is an exon coordinate is -1, return 'na' instead.  This helps with parsing the tsv file
     and something that is expected.
     :param exons: list of exon coordinates
-    :return: exon coordinates or 'nan'
+    :return: exon coordinates or 'na'
     """
     for exon in exons:
         if exon[0] == -1:
