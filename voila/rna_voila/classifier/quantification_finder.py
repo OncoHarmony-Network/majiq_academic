@@ -65,11 +65,11 @@ class QuantificationWriter:
         if parity == 's':
             lsvs = module.source_lsv_ids
             if node:
-                lsvs = set(filter(lambda lsv: lsv.endswith(node.untrimmed_range_str(replace_w_na=True)), lsvs))
+                lsvs = set(filter(lambda lsv: lsv.endswith(node.untrimmed_range_str()), lsvs))
         elif parity == 't':
             lsvs = module.target_lsv_ids
             if node:
-                lsvs = set(filter(lambda lsv: lsv.endswith(node.untrimmed_range_str(replace_w_na=True)), lsvs))
+                lsvs = set(filter(lambda lsv: lsv.endswith(node.untrimmed_range_str()), lsvs))
         else:
             lsvs = module.target_lsv_ids.union(module.source_lsv_ids)
         return lsvs

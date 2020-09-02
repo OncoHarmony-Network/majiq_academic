@@ -49,18 +49,18 @@ class UnsupportedVoilaFile(Exception):
 
 class Printable_Event:
 
-    def untrimmed_range_str(self, replace_w_na=False):
-            if not replace_w_na:
-                return '{}-{}'.format(getattr(self, 'untrimmed_start', self.start),
+    def _ranges_to_string(self, start, end):
+        return f'{"na" if start == -1 else start}-{"na" if end == -1 else end}'
+
+    def untrimmed_range_str(self):
+        return self._ranges_to_string(getattr(self, 'untrimmed_start', self.start),
                                       getattr(self, 'untrimmed_end', self.end))
-            else:
-                return '{}-{}'.format(str(getattr(self, 'untrimmed_start', self.start)).replace("-1", "na"),
-                                      str(getattr(self, 'untrimmed_end', self.end)).replace("-1", "na"))
+
     def range_str(self):
         if ClassifyConfig().untrimmed_exons:
             return self.untrimmed_range_str()
         else:
-            return '{}-{}'.format(self.start, self.end)
+            return self._ranges_to_string(self.start, self.end)
 
 class Graph:
     def __init__(self, gene_id, experiment_names):
