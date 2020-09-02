@@ -30,9 +30,9 @@ def exon_str(exons):
     """
     for exon in exons:
         if exon[0] == -1:
-            yield 'nan', exon[1]
+            yield 'na', exon[1]
         elif exon[1] == -1:
-            yield exon[0], 'nan'
+            yield exon[0], 'na'
         else:
             yield exon
 
