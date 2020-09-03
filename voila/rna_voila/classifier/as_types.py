@@ -2042,7 +2042,7 @@ class Graph:
                 'multi_exon_spanning': self.multi_exon_spanning,
                 'tandem_cassette': self.tandem_cassette,
                 'orphan_junction': self.orphan_junction,
-                'exitron': self.exitron
+                'exitron': self.exitron,
             }
             if ClassifyConfig().keep_constitutive:
                 as_type_dict['constitutive'] = self.constitutive
@@ -2065,7 +2065,7 @@ class Graph:
                 'orphan_junction': 0,
                 'exitron': 0,
                 'constitutive': 0,
-                'constitutive_intron': 0
+                'constitutive_intron': 0,
             }
 
             complex = False
@@ -2101,7 +2101,7 @@ class Graph:
             if len(non_classified_lsvs) > 0:
                 # if there are junctions in module that were not classified
                 if len(non_classified_junctions) > 0:
-                    # then label this complex since the junction(s) isn't an a standard event definition
+                    # then label this complex since the junction(s) isn't in a standard event definition
                     complex = True
                 these_t_lsvs = self.target_lsv_ids
                 these_s_lsvs = self.source_lsv_ids
@@ -2111,6 +2111,8 @@ class Graph:
                     # create an 'other_event' for this module
                     ret += self.other_event(edges_of_interest=non_classified_junctions, lsvs=non_classified_lsvs)
                     total_events += 1
+                    if complex:
+                        ret[-1]['novel'] = True
 
             if HIDE_SUB_COMPLEX and complex:
                 ret = []

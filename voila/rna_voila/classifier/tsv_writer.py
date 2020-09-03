@@ -145,7 +145,7 @@ class BaseTsvWriter(QuantificationWriter):
                 writer = csv.writer(csvfile, dialect='excel-tab', delimiter='\t')
                 writer.writerow(headers)
 
-    def _collapsed_event_name(self, counts):
+    def _collapsed_event_name(self, counts, other_novel_count=0):
         """
         function to generate the collapsed event name from event counts
         """
@@ -156,6 +156,8 @@ class BaseTsvWriter(QuantificationWriter):
                 continue
             if counts[count]:
                 out.append("%s^%d" % (summaryVars2Headers[count], counts[count]))
+        if other_novel_count > 0:
+            out.append("%s^%d" % (summaryVars2Headers['other_event'], other_novel_count))
         return '|'.join(out)
 
 
@@ -2023,9 +2025,12 @@ class TsvWriter(BaseTsvWriter):
                     counts['constitutive_intron'] = 0
                 counts['multi_exon_spanning'] = 0
                 counts['exitron'] = 0
+                other_novel_count = 0
                 for event in events:
                     if event['event'] in counts:
                         counts[event['event']] += 1
+                        if event['event'] == 'other_event' and event.get('novel', False) is True:
+                            other_novel_count += 1
                 de_novo_junctions = 0
                 de_novo_introns = 0
                 for edge in module.get_all_edges(ir=True):
@@ -2036,7 +2041,7 @@ class TsvWriter(BaseTsvWriter):
                             de_novo_junctions += 1
 
                 # we store collapsed event name on module, because we need it for constitutive
-                module.collapsed_event_name = self._collapsed_event_name(counts)
+                module.collapsed_event_name = self._collapsed_event_name(counts, other_novel_count)
 
                 writer.writerow(
                     ["%s_%d" % (self.gene_id, module.idx),
