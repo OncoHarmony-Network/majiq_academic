@@ -403,6 +403,7 @@ class ClassifyConfig:
                 settings['keep_constitutive'] = True
             if settings['keep_constitutive']:
                 settings['show_all_modules'] = True
+                settings['keep_no_lsvs'] = True
 
             # some settings combinations don't make sense
             if 'enabled_outputs' in settings and settings['putative_multi_gene_regions']:
