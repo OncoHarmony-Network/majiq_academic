@@ -524,8 +524,8 @@ class QuantificationWriter:
                                 tmp[header] = (_dpsi_psi, [voila_file], i)
                         self.types2headers['psi'].append(header)
 
-                changing_thresh_key = "probability_changing" % self.config.changing_between_group_dpsi
-                non_changing_thresh_key = "probability_non_changing" % self.config.non_changing_threshold
+                changing_thresh_key = "probability_changing"
+                non_changing_thresh_key = "probability_non_changing"
                 for key in ("mean_dpsi", changing_thresh_key, non_changing_thresh_key):
                     header = "%s_%s" % ('-'.join(reversed(group_names)), key)
                     if header in tmp:
