@@ -298,7 +298,7 @@ class TsvWriter(BaseTsvWriter):
 
             if 'mpe' in self.config.enabled_outputs:
                 headers = self.common_headers
-                lids_col_ii = headers.index("LSV ID(s)")
+                lids_col_ii = headers.index("lsv_id")
                 # Only 1 LSV ID per row possible.
                 headers[lids_col_ii].replace("(s)","")
                 headers += ['module_event_combination',
@@ -1935,18 +1935,30 @@ class TsvWriter(BaseTsvWriter):
             writer = csv.writer(csvfile, dialect='excel-tab', delimiter='\t')
             for module in self.modules:
                 events = self.mpe_regions[module.idx]
+                event_i = 1
                 for event in events:
                     n_assigned_lids = 0
                     lsvid = ""
                     edge_type = ""
                     if event['event'] == "mpe_source":
-                        common = self.common_data(module, 's', event['reference_exon'])
+
+                        common = self.common_data(module,
+                                                  's',
+                                                  node=event['reference_exon'],
+                                                  event_ii=event_i,
+                                                  event_name="MPE")
+
                         eventtype = "Single Source" # SingleSource
                         constitutive_direction = "Upstream"
                         if event['edge_of_transcript']:
                             edge_type = "first_exon"
                     else:
-                        common = self.common_data(module, 't', event['reference_exon'])
+                        common = self.common_data(module,
+                                                  't',
+                                                  node=event['reference_exon'],
+                                                  event_ii=event_i,
+                                                  event_name="MPE")
+
                         eventtype = "Single Target" # SingleTarget
                         constitutive_direction = "Downstream"
                         if event['edge_of_transcript']:
@@ -1980,6 +1992,7 @@ class TsvWriter(BaseTsvWriter):
                     row += [const_reg, was_trimmed, constitutive_direction]
                     row += [constitutive_coords, constitutive_denovo, constitutive_types]
                     writer.writerow(row)
+                    event_i += 1
 
     def heatmap(self):
         """
