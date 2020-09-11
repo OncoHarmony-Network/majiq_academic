@@ -305,8 +305,8 @@ class Graph:
             :param other: other junction
             :return: boolean
             """
-            return self.start < other.start and self.end < other.start
-            #return self.view_start < other.view_start and self.view_end < other.view_start
+            #return self.start < other.start and self.end < other.start
+            return self.view_start < other.view_start and self.view_end < other.view_start
 
         def __hash__(self):
             return hash(str(self))
@@ -409,6 +409,7 @@ class Graph:
         :return: node object
         """
         i = bisect_right(self.nodes, edge)
+        assert i > 0  # this should never be negative / loop to the last / first node
         return self.nodes[i - 1]
 
     def _add_junc(self, junc, ir=False):
@@ -427,14 +428,10 @@ class Graph:
 
         edge = self.Edge(junc, ir)
 
-        #start_node = self.start_node(edge)
-        end_node = self.end_node(edge)
-
         # Since majiq doesn't quantify junctions that start/stop in same exon, filter them.
         #if start_node != end_node:
 
         self.edges.append(edge)
-        edge.node = end_node
 
     def _add_exon(self, exon):
         """
@@ -643,6 +640,9 @@ class Graph:
         self.edges.sort()
         self.nodes.sort()
 
+        # setting end_node wont work properly until sorting is finished
+        for edge in self.edges:
+            edge.node = self.end_node(edge)
 
 
 
