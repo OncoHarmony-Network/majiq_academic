@@ -356,14 +356,19 @@ class TsvWriter(BaseTsvWriter):
                                                           event_name="CE",
                                                           event_ii=event_i)
 
+                            c1_range_str = f"{event['C1'].start}-{event['Include1'].start}"
+                            a_range_str = f"{event['Include1'].end}-{event['Include2'].start}"
+                            c2_range_str = f"{event['Include2'].end}-{event['C2'].end}"
+                            event_size = abs(event['Include1'].end - event['Include2'].start) + 1
+
                             row = [event['Skip'].de_novo,
-                                   event['C1'].range_str(),
+                                   c1_range_str,
                                    'C2',
-                                   event['C2'].range_str(),
+                                   c2_range_str,
                                    'C1_C2',
                                    event['Skip'].range_str()]
 
-                            event_size = abs(event['A'].start - event['A'].end) + 1
+
 
                             # gather all quantifications
                             all_event_quants.append(self.quantifications(module, 's', event['Skip'], event['C1']))
@@ -388,9 +393,9 @@ class TsvWriter(BaseTsvWriter):
                                              row[0], row[4], row[5])
 
                             row = [event['Include1'].de_novo,
-                                   event['C1'].range_str(),
+                                   c1_range_str,
                                    'A',
-                                   event['A'].range_str(),
+                                   a_range_str,
                                    'C1_A',
                                    event['Include1'].range_str()]
 
@@ -402,9 +407,9 @@ class TsvWriter(BaseTsvWriter):
                                              row[0], row[4], row[5])
 
                             row = [event['Skip'].de_novo,
-                                   event['C2'].range_str(),
+                                   c2_range_str,
                                    'C1',
-                                   event['C1'].range_str(),
+                                   c1_range_str,
                                    'C2_C1',
                                    event['Skip'].range_str()]
 
@@ -416,9 +421,9 @@ class TsvWriter(BaseTsvWriter):
                                              row[0], row[4], row[5])
 
                             row = [event['Include2'].de_novo,
-                                   event['C2'].range_str(),
+                                   c2_range_str,
                                    'A',
-                                   event['A'].range_str(),
+                                   a_range_str,
                                    'C2_A',
                                    event['Include2'].range_str()]
 
@@ -468,10 +473,13 @@ class TsvWriter(BaseTsvWriter):
                                 for _q in all_event_quants:
                                     _q[0], _q[1] = changing, non_changing
 
+                                e1_range_str = f"{event['E1'].start}-{event['Proximal'].start}"
+                                e2_range_str = f"{event['Proximal'].end}-{event['E2'].end}"
+
                                 row = [event['Proximal'].de_novo,
-                                       event['E1'].range_str(),
+                                       e1_range_str,
                                        'E2',
-                                       event['E2'].range_str(),
+                                       e2_range_str,
                                        'E1_E2_Proximal',
                                        event['Proximal'].range_str()]
                                 quants = all_event_quants.pop(0)
@@ -482,9 +490,9 @@ class TsvWriter(BaseTsvWriter):
                                                  row[0], row[4], row[5])
 
                                 row = [event['Distal'].de_novo,
-                                       event['E1'].range_str(),
+                                       e1_range_str,
                                        'E2',
-                                       event['E2'].range_str(),
+                                       e2_range_str,
                                        'E1_E2_Distal',
                                        event['Distal'].range_str()]
                                 quants = all_event_quants.pop(0)
@@ -502,10 +510,13 @@ class TsvWriter(BaseTsvWriter):
                                 for _q in all_event_quants:
                                     _q[0], _q[1] = changing, non_changing
 
+                                e1_range_str = f"{event['E1'].start}-{event['Proximal'].start}"
+                                e2_range_str = f"{event['Proximal'].end}-{event['E2'].end}"
+
                                 row = [event['Proximal'].de_novo,
-                                       event['E2'].range_str(),
+                                       e2_range_str,
                                        'E1',
-                                       event['E1'].range_str(),
+                                       e1_range_str,
                                        'E2_E1_Proximal',
                                        event['Proximal'].range_str()]
                                 quants = all_event_quants.pop(0)
@@ -516,9 +527,9 @@ class TsvWriter(BaseTsvWriter):
                                                  row[0], row[4], row[5])
 
                                 row = [event['Distal'].de_novo,
-                                       event['E2'].range_str(),
+                                       e2_range_str,
                                        'E1',
-                                       event['E1'].range_str(),
+                                       e1_range_str,
                                        'E2_E1_Distal',
                                        event['Distal'].range_str()]
                                 quants = all_event_quants.pop(0)
@@ -566,10 +577,13 @@ class TsvWriter(BaseTsvWriter):
                                 for _q in all_event_quants:
                                     _q[0], _q[1] = changing, non_changing
 
+                                e1_range_str = f"{event['E1'].start}-{event['Proximal'].start}"
+                                e2_range_str = f"{event['Proximal'].end}-{event['E2'].end}"
+
                                 row = [event['Proximal'].de_novo,
-                                       event['E2'].range_str(),
+                                       e2_range_str,
                                        'E1',
-                                       event['E1'].range_str(),
+                                       e1_range_str,
                                        'E2_E1_Proximal',
                                        event['Proximal'].range_str()]
                                 quants = all_event_quants.pop(0)
@@ -580,9 +594,9 @@ class TsvWriter(BaseTsvWriter):
                                                  row[0], row[4], row[5])
 
                                 row = [event['Distal'].de_novo,
-                                       event['E2'].range_str(),
+                                       e2_range_str,
                                        'E1',
-                                       event['E1'].range_str(),
+                                       e1_range_str,
                                        'E2_E1_Distal',
                                        event['Distal'].range_str()]
                                 quants = all_event_quants.pop(0)
@@ -602,10 +616,13 @@ class TsvWriter(BaseTsvWriter):
                                 for _q in all_event_quants:
                                     _q[0], _q[1] = changing, non_changing
 
+                                e1_range_str = f"{event['E1'].start}-{event['Proximal'].start}"
+                                e2_range_str = f"{event['Proximal'].end}-{event['E2'].end}"
+
                                 row = [event['Proximal'].de_novo,
-                                       event['E1'].range_str(),
+                                       e1_range_str,
                                        'E2',
-                                       event['E2'].range_str(),
+                                       e2_range_str,
                                        'E1_E2_Proximal',
                                        event['Proximal'].range_str()]
                                 quants = all_event_quants.pop(0)
@@ -616,9 +633,9 @@ class TsvWriter(BaseTsvWriter):
                                                  row[0], row[4], row[5])
 
                                 row = [event['Distal'].de_novo,
-                                       event['E1'].range_str(),
+                                       e1_range_str,
                                        'E2',
-                                       event['E2'].range_str(),
+                                       e2_range_str,
                                        'E1_E2_Distal',
                                        event['Distal'].range_str()]
                                 quants = all_event_quants.pop(0)
@@ -664,10 +681,14 @@ class TsvWriter(BaseTsvWriter):
                             for _q in all_event_quants:
                                 _q[0], _q[1] = changing, non_changing
 
+                            c1_range_str = event['C1'].range_str()
+                            a_range_str = f"{event['A'].start}-{event['Include2'].start}"
+                            c2_range_str = f"{event['Include2'].end}-{event['C2'].end}"
+
                             row = [event['Skip'].de_novo,
-                                   event['C1'].range_str(),
+                                   c1_range_str,
                                    'E3',
-                                   event['C2'].range_str(),
+                                   c2_range_str,
                                    'E1_E3_Distal',
                                    event['Skip'].range_str()]
                             quants = all_event_quants.pop(0)
@@ -678,9 +699,9 @@ class TsvWriter(BaseTsvWriter):
                                              row[0], row[4], row[5])
 
                             row = [event['Include1'].de_novo,
-                                   event['C1'].range_str(),
+                                   c1_range_str,
                                    'E2',
-                                   event['A'].range_str(),
+                                   a_range_str,
                                    'E1_E2_Intron',
                                    event['Include1'].range_str()]
                             quants = all_event_quants.pop(0)
@@ -691,9 +712,9 @@ class TsvWriter(BaseTsvWriter):
                                              row[0], row[4], row[5])
 
                             row = [event['Skip'].de_novo,
-                                   event['C2'].range_str(),
+                                   c2_range_str,
                                    'E1',
-                                   event['C1'].range_str(),
+                                   c1_range_str,
                                    'E3_E1_Distal',
                                    event['Skip'].range_str()]
                             quants = all_event_quants.pop(0)
@@ -704,9 +725,9 @@ class TsvWriter(BaseTsvWriter):
                                              row[0], row[4], row[5])
 
                             row = [event['Include2'].de_novo,
-                                   event['C2'].range_str(),
+                                   c2_range_str,
                                    'E2',
-                                   event['A'].range_str(),
+                                   a_range_str,
                                    'E3_E2_Proximal',
                                    event['Include2'].range_str()]
                             quants = all_event_quants.pop(0)
@@ -756,10 +777,14 @@ class TsvWriter(BaseTsvWriter):
                             for _q in all_event_quants:
                                 _q[0], _q[1] = changing, non_changing
 
+                            c1_range_str = f"{event['C1'].start}-{event['Include1'].start}"
+                            a_range_str = f"{event['Include1'].end}-{event['A'].end}"
+                            c2_range_str = event['C2'].range_str()
+
                             row = [event['Skip'].de_novo,
-                                   event['C2'].range_str(),
+                                   c2_range_str,
                                    'E3',
-                                   event['C1'].range_str(),
+                                   c1_range_str,
                                    'E1_E3_Distal',
                                    event['Skip'].range_str()]
                             quants = all_event_quants.pop(0)
@@ -770,9 +795,9 @@ class TsvWriter(BaseTsvWriter):
                                              row[0], row[4], row[5])
 
                             row = [event['Include1'].de_novo,
-                                   event['C2'].range_str(),
+                                   c2_range_str,
                                    'E2',
-                                   event['A'].range_str(),
+                                   a_range_str,
                                    'E1_E2_Proximal',
                                    event['Include1'].range_str()]
                             quants = all_event_quants.pop(0)
@@ -783,9 +808,9 @@ class TsvWriter(BaseTsvWriter):
                                              row[0], row[4], row[5])
 
                             row = [event['Include2'].de_novo,
-                                   event['C1'].range_str(),
+                                   c1_range_str,
                                    'E2',
-                                   event['A'].range_str(),
+                                   a_range_str,
                                    'E3_E2_Intron',
                                    event['Include2'].range_str()]
                             quants = all_event_quants.pop(0)
@@ -796,9 +821,9 @@ class TsvWriter(BaseTsvWriter):
                                              row[0], row[4], row[5])
 
                             row = [event['Skip'].de_novo,
-                                   event['C1'].range_str(),
+                                   c1_range_str,
                                    'E1',
-                                   event['C2'].range_str(),
+                                   c2_range_str,
                                    'E3_E1_Distal',
                                    event['Skip'].range_str()]
                             quants = all_event_quants.pop(0)
@@ -841,10 +866,13 @@ class TsvWriter(BaseTsvWriter):
                             for _q in all_event_quants:
                                 _q[0], _q[1] = changing, non_changing
 
+                            e1_range_str = f"{event['E1'].start}-{event['J2'].start}"
+                            e2_range_str = f"{event['J2'].end}-{event['E2'].end}"
+
                             row = [event['J1'].de_novo,
-                                   event['E1'].range_str(),
+                                   e1_range_str,
                                    'E2',
-                                   event['E2'].range_str(),
+                                   e2_range_str,
                                    'E1_E2_J1',
                                    event['J1'].range_str()]
                             quants = all_event_quants.pop(0)
@@ -855,9 +883,9 @@ class TsvWriter(BaseTsvWriter):
                                              row[0], row[4], row[5])
 
                             row = [event['J2'].de_novo,
-                                   event['E1'].range_str(),
+                                   e1_range_str,
                                    'E2',
-                                   event['E2'].range_str(),
+                                   e2_range_str,
                                    'E1_E2_J2',
                                    event['J2'].range_str()]
                             quants = all_event_quants.pop(0)
@@ -868,9 +896,9 @@ class TsvWriter(BaseTsvWriter):
                                              row[0], row[4], row[5])
 
                             row = [event['J1'].de_novo,
-                                   event['E2'].range_str(),
+                                   e2_range_str,
                                    'E1',
-                                   event['E1'].range_str(),
+                                   e1_range_str,
                                    'E2_E1_J1',
                                    event['J1'].range_str()]
                             quants = all_event_quants.pop(0)
@@ -880,7 +908,11 @@ class TsvWriter(BaseTsvWriter):
                                              event['J1'].absolute_end - event['J1'].absolute_start,
                                              row[0], row[4], row[5])
 
-                            row = [event['J2'].de_novo, event['E2'].range_str(), 'E1', event['E1'].range_str(), 'E2_E1_J2',
+                            row = [event['J2'].de_novo,
+                                   e2_range_str,
+                                   'E1',
+                                   e1_range_str,
+                                   'E2_E1_J2',
                                    event['J2'].range_str()]
                             quants = all_event_quants.pop(0)
                             writer.writerow(trg_common + row + quants)
@@ -913,10 +945,15 @@ class TsvWriter(BaseTsvWriter):
                             for _q in all_event_quants:
                                 _q[0], _q[1] = changing, non_changing
 
+                            c1_range_str = f"{event['C1'].start}-{event['Include1'].start}"
+                            a1_range_str = f"{event['Include2'].end}-{event['SkipA2'].start}"
+                            a2_range_str = f"{event['SkipA1'].end}-{event['Include2'].start}"
+                            c2_range_str = f"{event['Include2'].end}-{event['C2'].end}"
+
                             row = [event['Include1'].de_novo,
-                                   event['C1'].range_str(),
+                                   c1_range_str,
                                    'A1',
-                                   event['A1'].range_str(),
+                                   a1_range_str,
                                    'C1_A1',
                                    event['Include1'].range_str()]
                             src_common = self.common_data(module,
@@ -933,9 +970,9 @@ class TsvWriter(BaseTsvWriter):
                                              row[0], row[4], row[5])
 
                             row = [event['SkipA1'].de_novo,
-                                   event['C1'].range_str(),
+                                   c1_range_str,
                                    'A2',
-                                   event['A2'].range_str(),
+                                   a2_range_str,
                                    'C1_A2',
                                    event['SkipA1'].range_str()]
                             src_common = self.common_data(module,
@@ -952,9 +989,9 @@ class TsvWriter(BaseTsvWriter):
                                              row[0], row[4], row[5])
 
                             row = [event['Include2'].de_novo,
-                                   event['C2'].range_str(),
+                                   c2_range_str,
                                    'A1',
-                                   event['A1'].range_str(),
+                                   a1_range_str,
                                    'C2_A1',
                                    event['Include2'].range_str()]
                             trg_common = self.common_data(module,
@@ -971,9 +1008,9 @@ class TsvWriter(BaseTsvWriter):
                                             row[0], row[4], row[5])
 
                             row = [event['SkipA2'].de_novo,
-                                   event['C2'].range_str(),
+                                   c2_range_str,
                                    'A2',
-                                   event['A2'].range_str(),
+                                   a2_range_str,
                                    'C2_A2',
                                    event['SkipA2'].range_str()]
                             trg_common = self.common_data(module,
@@ -1025,10 +1062,14 @@ class TsvWriter(BaseTsvWriter):
                                     _q[0], _q[1] = changing, non_changing
 
                                 for junc in event['SkipA2']:
+
+                                    reference_range_str = f"{event['Reference'].start}-{junc.start}"
+                                    proximal_range_str = f"{junc.end}-{event['Proximal'].end}"
+
                                     row = [junc.de_novo,
-                                           event['Reference'].range_str(),
+                                           reference_range_str,
                                            'A_Proximal',
-                                           event['Proximal'].range_str(),
+                                           proximal_range_str,
                                            'C_A_Proximal']
                                     if junc.ir:
                                         row.append('{}-{}'.format(junc.start + 1, junc.end - 1))
@@ -1041,9 +1082,14 @@ class TsvWriter(BaseTsvWriter):
                                                      junc.absolute_end - junc.absolute_start,
                                                      row[0], row[4], row[5])
                                 for junc in event['SkipA1']:
+
+                                    reference_range_str = f"{event['Reference'].start}-{junc.start}"
+                                    distal_range_str = f"{junc.end}-{event['Distal'].end}"
+
                                     row = [junc.de_novo,
-                                           event['Reference'].range_str(),
-                                           'A_Distal', event['Distal'].range_str(),
+                                           reference_range_str,
+                                           'A_Distal',
+                                           distal_range_str,
                                            'C_A_Distal',
                                            junc.range_str()]
                                     quants = all_event_quants.pop(0)
@@ -1088,10 +1134,14 @@ class TsvWriter(BaseTsvWriter):
                                     _q[0], _q[1] = changing, non_changing
 
                                 for junc in event['SkipA1']:
+
+                                    reference_range_str = f"{junc.end}-{event['Reference'].end}"
+                                    proximal_range_str = f"{event['Proximal'].start}-{junc.start}"
+
                                     row = [junc.de_novo,
-                                           event['Reference'].range_str(),
+                                           reference_range_str,
                                            'A_Proximal',
-                                           event['Proximal'].range_str(),
+                                           proximal_range_str,
                                            'C_A_Proximal']
                                     if junc.ir:
                                         row.append('{}-{}'.format(junc.start + 1, junc.end - 1))
@@ -1104,10 +1154,14 @@ class TsvWriter(BaseTsvWriter):
                                                      junc.absolute_end - junc.absolute_start,
                                                      row[0], row[4], row[5])
                                 for junc in event['SkipA2']:
+
+                                    reference_range_str = f"{junc.end}-{event['Reference'].end}"
+                                    distal_range_str = f"{event['Distal'].start}-{junc.start}"
+
                                     row = [junc.de_novo,
-                                           event['Reference'].range_str(),
+                                           reference_range_str,
                                            'A_Distal',
-                                           event['Distal'].range_str(),
+                                           distal_range_str,
                                            'C_A_Distal',
                                            junc.range_str()]
                                     quants = all_event_quants.pop(0)
@@ -1158,8 +1212,11 @@ class TsvWriter(BaseTsvWriter):
                                     _q[0], _q[1] = changing, non_changing
 
                                 for junc in event['SkipA2']:
+
+                                    reference_range_str = f"{event['Reference'].start}-{junc.start}"
+
                                     row = [junc.de_novo,
-                                           event['Reference'].range_str(),
+                                           reference_range_str,
                                            'A', proxStr,
                                            'C_A_Proximal',
                                            junc.range_str()]
@@ -1173,10 +1230,14 @@ class TsvWriter(BaseTsvWriter):
                                     # print(quants)
                                     # print(self.heatmap_cache[module.idx])
                                 for junc in event['SkipA1']:
+
+                                    reference_range_str = f"{event['Reference'].start}-{junc.start}"
+                                    distal_range_str = f"{junc.end}-{event['Distal'].end}"
+
                                     row = [junc.de_novo,
-                                           event['Reference'].range_str(),
+                                           reference_range_str,
                                            'A',
-                                           event['Distal'].range_str(),
+                                           distal_range_str,
                                            'C_A_Distal',
                                            junc.range_str()]
                                     quants = all_event_quants.pop(0)
@@ -1227,8 +1288,11 @@ class TsvWriter(BaseTsvWriter):
                                     _q[0], _q[1] = changing, non_changing
 
                                 for junc in event['SkipA1']:
+
+                                    reference_range_str = f"{junc.end}-{event['Reference'].end}"
+
                                     row = [junc.de_novo,
-                                           event['Reference'].range_str(),
+                                           reference_range_str,
                                            'A', proxStr,
                                            'C_A_Proximal',
                                            junc.range_str()]
@@ -1239,10 +1303,14 @@ class TsvWriter(BaseTsvWriter):
                                                      junc.absolute_end - junc.absolute_start,
                                                      row[0], row[4], row[5])
                                 for junc in event['SkipA2']:
+
+                                    reference_range_str = f"{junc.end}-{event['Reference'].end}"
+                                    distal_range_str = f"{event['Distal'].start}-{junc.start}"
+
                                     row = [junc.de_novo,
-                                           event['Reference'].range_str(),
+                                           reference_range_str,
                                            'A',
-                                           event['Distal'].range_str(),
+                                           distal_range_str,
                                            'C_A_Distal',
                                            junc.range_str()]
                                     quants = all_event_quants.pop(0)
@@ -1411,12 +1479,15 @@ class TsvWriter(BaseTsvWriter):
                             for _q in all_event_quants:
                                 _q[0], _q[1] = changing, non_changing
 
+                            c1_range_str = f"{event['C1'].start}-{event['Skip'][0].start}"
+                            c2_range_str = f"{event['Skip'][-1].end}-{event['C2'].end}"
+
                             #src_common = self.common_data(module, 's')
                             # Source LSV side
                             row = [self.semicolon((x.range_str() for x in event['Skip'])),  # junction coord
                                     self.semicolon((x.de_novo for x in event['Skip'])), # de novo?
-                                    event['C1'].range_str(), # reference exon
-                                    event['C2'].range_str(), # exon spliced with
+                                    c1_range_str, # reference exon
+                                    c2_range_str, # exon spliced with
                                     self.semicolon((x.range_str() for x in event['As'])), # exons spanned
                                     len(event['As'])] # num exons spanned
                             quants = all_event_quants.pop(0)
@@ -1433,8 +1504,8 @@ class TsvWriter(BaseTsvWriter):
                             # Target LSV side
                             row = [self.semicolon((x.range_str() for x in event['Skip'])),  # junction coord
                                    self.semicolon((x.de_novo for x in event['Skip'])),  # de novo?
-                                   event['C2'].range_str(),  # reference exon
-                                   event['C1'].range_str(),  # exon spliced with
+                                   c2_range_str,  # reference exon
+                                   c1_range_str,  # exon spliced with
                                    self.semicolon((x.range_str() for x in event['As'])),  # exons spanned
                                    len(event['As'])]  # num exons spanned
                             quants = all_event_quants.pop(0)
@@ -1470,13 +1541,27 @@ class TsvWriter(BaseTsvWriter):
                             for _q in all_event_quants:
                                 _q[0], _q[1] = changing, non_changing
 
-                            event_size = sum(abs(x.start - x.end) + 1 for x in event['Tandem_Exons'])
+                            c1_range_str = f"{event['C1'].start}-{event['Skip'].start}"
+                            c2_range_str = f"{event['Skip'].end}-{event['C2'].end}"
+
+                            event_sizes = []
+                            tandem_exons_range_strs = []
+                            tandem_exons_range_strs.append(f"{event['Include1'].end}-{event['Includes'][0].start}")
+                            event_sizes.append(abs(event['Include1'].end - event['Includes'][0].start) + 1)
+                            for include_junc_i in range(len(event['Includes'])-1):
+                                tandem_exons_range_strs.append(f"{event['Includes'][include_junc_i].end}-{event['Includes'][include_junc_i+1].start}")
+                                event_sizes.append(abs(event['Includes'][include_junc_i].end - event['Includes'][include_junc_i+1].start) + 1)
+                            tandem_exons_range_strs.append(f"{event['Includes'][-1].end}-{event['Include2'].start}")
+                            event_sizes.append(abs(event['Includes'][-1].end - event['Include2'].start) + 1)
+                            tandem_exons_range_strs = self.semicolon(tandem_exons_range_strs)
+                            event_size = sum(event_sizes)
+
 
                             row = [event['Skip'].de_novo,
-                                   event['C1'].range_str(),
+                                   c1_range_str,
                                    'C2',
-                                   event['C2'].range_str(),
-                                   self.semicolon((x.range_str() for x in event['Tandem_Exons'])),
+                                   c2_range_str,
+                                   tandem_exons_range_strs,
                                    len(event['Tandem_Exons']),
                                    'C1_C2',
                                    event['Skip'].range_str()]
@@ -1494,10 +1579,10 @@ class TsvWriter(BaseTsvWriter):
                                              row[0], row[6], row[7])
 
                             row = [event['Include1'].de_novo,
-                                   event['C1'].range_str(),
+                                   c1_range_str,
                                    'A1',
                                    event['Tandem_Exons'][0].range_str(),
-                                   self.semicolon((x.range_str() for x in event['Tandem_Exons'])),
+                                   tandem_exons_range_strs,
                                    len(event['Tandem_Exons']),
                                    'C1_A',
                                    event['Include1'].range_str()]
@@ -1517,8 +1602,8 @@ class TsvWriter(BaseTsvWriter):
                             row = [event['Skip'].de_novo,
                                    event['C2'].range_str(),
                                    'C1',
-                                   event['C1'].range_str(),
-                                   self.semicolon((x.range_str() for x in event['Tandem_Exons'])),
+                                   c1_range_str,
+                                   tandem_exons_range_strs,
                                    len(event['Tandem_Exons']),
                                    'C2_C1',
                                    event['Skip'].range_str()]
@@ -1536,10 +1621,10 @@ class TsvWriter(BaseTsvWriter):
                                              row[0], row[6], row[7])
 
                             row = [event['Include2'].de_novo,
-                                   event['C2'].range_str(),
+                                   c2_range_str,
                                    'A_Last',
                                    event['Tandem_Exons'][-1].range_str(),
-                                   self.semicolon((x.range_str() for x in event['Tandem_Exons'])),
+                                   tandem_exons_range_strs,
                                    len(event['Tandem_Exons']),
                                    'C2_A_Last',
                                    event['Include2'].range_str()]
@@ -1668,9 +1753,13 @@ class TsvWriter(BaseTsvWriter):
                             common = self.common_data(module,
                                                       event_ii=event_i,
                                                       event_name="CJ")
+
+                            c1_range_str = f"{event['C1'].start}-{event['Junc'].start}"
+                            c2_range_str = f"{event['Junc'].end}-{event['C2'].end}"
+
                             row = [event['Junc'].de_novo,
-                                   event['C2'].range_str(),
-                                   'C1', event['C1'].range_str(),
+                                   c2_range_str,
+                                   'C1', c1_range_str,
                                    'C2_C1',
                                    event['Junc'].range_str(),
                                    'False',

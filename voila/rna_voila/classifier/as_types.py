@@ -1240,14 +1240,19 @@ class Graph:
                                             if len(edge.lsvs) > 0:
                                                 self.classified_lsvs.extend(edge.lsvs)
                                             self.classified_junctions.extend([include1, include2, edge])
-                                        # includes = [] # not used?
+
+                                        # build include list
+                                        includes = []
+                                        for exon_i in range(i+1, j-1):
+                                            includes.append(self.nodes[exon_i].connects(self.nodes[exon_i+1])[0])
+
                                         found.append({'event': 'tandem_cassette', 'C1': c1,
                                                       'C2': c2,
                                                       #'As': self.nodes[i + 1:j], redundant?
                                                       'Skip': skip, 'Include1': include1,
                                                       'Include2': include2,
                                                       'Tandem_Exons': self.nodes[i + 1:j],
-                                                      #'Includes': includes, # not used?
+                                                      'Includes': includes,
                                                       'event_id':'TCE_%s' % k})
                                         k += 1
             return found
