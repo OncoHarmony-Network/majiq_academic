@@ -223,6 +223,20 @@ class Graph:
                     exitrons.append(edge.range_str())
             return exitrons
 
+        @property
+        def edges_no_exitrons(self):
+            """
+            get self.edges, excluding exitrons
+            """
+            return [x for x in self.edges if not x.is_exitron(self)]
+
+        @property
+        def back_edges_no_exitrons(self):
+            """
+            get self.edges, excluding exitrons
+            """
+            return [x for x in self.back_edges if not x.is_exitron(self)]
+
         def get_constant_region(self):
             exitrons = self.get_exitrons()
             if len(exitrons) > 0:
@@ -392,6 +406,12 @@ class Graph:
 
         def is_de_novo(self):
             return True if self.de_novo else False
+
+        def is_exitron(self, node):
+            if node.is_half_exon or self.ir:
+                return False
+            return self.start >= node.start and self.end <= node.end
+
 
     def start_node(self, edge):
         """
@@ -1796,12 +1816,12 @@ class Graph:
             found = []
             # why populate nodes to check and not just check all combos of 2?
             nodes_to_check = []
-            if len(self.nodes[0].edges) == 1:
+            if len(self.nodes[0].edges_no_exitrons) == 1:
                 nodes_to_check.append(self.nodes[0])
-            if len(self.nodes[-1].back_edges) == 1:
+            if len(self.nodes[-1].back_edges_no_exitrons) == 1:
                 nodes_to_check.append(self.nodes[-1])
             for node in self.nodes[1:-1]:
-                if len(node.edges) == 1 and len(node.back_edges) == 1:
+                if len(node.edges_no_exitrons) == 1 and len(node.back_edges_no_exitrons) == 1:
                     nodes_to_check.append(node)
 
             for n1, n2 in combinations(nodes_to_check, 2):
