@@ -197,8 +197,9 @@ classify_parser.add_argument('--changing-pvalue-threshold', type=float, default=
                         help='For determining changing with HET inputs. Maximum p-value for which an LSV/junction'
                              ' can return true. Uses maximum p-value from all tests provided. The default is "%(default)s".')
 classify_parser.add_argument('--changing-between-group-dpsi', type=float, default=0.2,
-                        help='For determining changing with HET inputs. Minimum absolute difference in median '
-                             'values of PSI for which an LSV/junction can return true. The default is "%(default)s".')
+                        help='For determining changing with HET or delta-PSI inputs. For HET, minimum absolute difference in median '
+                             'values of PSI for which an LSV/junction can return true. For delta-PSI, min(E(dPSI)).'
+                             ' The default is "%(default)s".')
 classify_parser.add_argument('--non-changing-threshold', type=float, default=0.05,
                         help='Threshold in delta-PSI quantification column. The default is "%(default)s".')
 classify_parser.add_argument('--probability-changing-threshold', type=float, default=0.95,
