@@ -200,6 +200,11 @@ classify_parser.add_argument('--changing-between-group-dpsi', type=float, defaul
                         help='For determining changing with HET or delta-PSI inputs. For HET, minimum absolute difference in median '
                              'values of PSI for which an LSV/junction can return true. For delta-PSI, min(E(dPSI)).'
                              ' The default is "%(default)s".')
+classify_parser.add_argument('--changing-between-group-dpsi-secondary', type=float, default=0.1,
+                        help='Set the secondary changing event definition. In order to be considered "changing", and junction in an event must'
+                             ' meet the other changing definitions, and ALL junctions in an event must meet this condition (DPSI value'
+                             ' of the junction >= this value)'
+                             ' The default is "%(default)s".')
 classify_parser.add_argument('--non-changing-threshold', type=float, default=0.05,
                         help='Threshold in delta-PSI quantification column. The default is "%(default)s".')
 classify_parser.add_argument('--probability-changing-threshold', type=float, default=0.95,

@@ -30,7 +30,7 @@ _ClassifyConfig = namedtuple('ClassifyConfig', ['directory', 'voila_files', 'voi
                                                 'probability_non_changing_threshold', 'changing',
                                                 'non_changing_pvalue_threshold', 'non_changing_within_group_iqr',
                                                 'non_changing_between_group_dpsi', 'changing_pvalue_threshold',
-                                                'changing_between_group_dpsi',
+                                                'changing_between_group_dpsi', 'changing_between_group_dpsi_secondary',
                                                 'keep_no_lsvs', 'debug_num_genes', 'overwrite', 'enabled_outputs',
                                                 'heatmap_selection', 'logger'])
 _ClassifyConfig.__new__.__defaults__ = (None,) * len(_ClassifyConfig._fields)
@@ -388,7 +388,8 @@ class ClassifyConfig:
                               'non_changing_threshold', 'probability_changing_threshold',
                               'probability_non_changing_threshold', 'non_changing_pvalue_threshold',
                               'non_changing_within_group_iqr', 'non_changing_between_group_dpsi',
-                              'changing_pvalue_threshold', 'changing_between_group_dpsi']:
+                              'changing_pvalue_threshold', 'changing_between_group_dpsi',
+                              'changing_between_group_dpsi_secondary']:
                 settings[float_key] = config_parser['SETTINGS'].getfloat(float_key)
             for bool_key in ['debug', 'show_all_modules', 'output_complex', 'untrimmed_exons', 'overwrite',
                              'putative_multi_gene_regions', 'changing', 'keep_no_lsvs',

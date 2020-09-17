@@ -341,6 +341,7 @@ class QuantificationWriter:
             def f(lsv_id, edge=None):
 
                 junc_results = []
+                junc_results_secondary = []
                 edges = [edge] if not type(edge) is list else edge
 
                 for voila_file in voila_files:
@@ -368,6 +369,12 @@ class QuantificationWriter:
 
                                             junc_results.append(is_changing)
 
+                                            is_changing_secondary = lsv.changing(
+                                                         1.0,
+                                                         self.config.changing_between_group_dpsi_secondary,
+                                                         edge_idx)
+                                            junc_results_secondary.append(is_changing_secondary)
+
                                 elif analysis_type == constants.ANALYSIS_DELTAPSI:
                                     with view_matrix.ViewDeltaPsi(voila_file) as m:
                                         lsv = m.lsv(lsv_id)
@@ -382,6 +389,15 @@ class QuantificationWriter:
                                                 edge_idx)
 
                                             junc_results.append(is_changing)
+
+                                            is_changing_secondary = lsv.changing(
+                                                self.config.changing_between_group_dpsi_secondary,
+                                                self.config.probability_changing_threshold,
+                                                edge_idx)
+
+                                            junc_results_secondary.append(is_changing_secondary)
+
+
                     except (GeneIdNotFoundInVoilaFile, LsvIdNotFoundInVoilaFile) as e:
                         continue
 
@@ -389,7 +405,7 @@ class QuantificationWriter:
                     return ''
 
                 # bool() needed here because they are of type "numpy._bool" by default
-                return [any(bool(x) is True for x in junc_results)]
+                return [any(bool(x) is True for x in junc_results) and all(bool(x) is True for x in junc_results_secondary)]
 
             return f
 
