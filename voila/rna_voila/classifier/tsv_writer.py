@@ -522,7 +522,7 @@ class TsvWriter(BaseTsvWriter):
                                        e1_range_str,
                                        'E2',
                                        e2_range_str,
-                                       'E1_E2_Proximal',
+                                       'Proximal',
                                        event['Proximal'].range_str()]
                                 quants = all_event_quants.pop(0)
                                 writer.writerow(src_common + row + [event_size] + quants)
@@ -535,7 +535,7 @@ class TsvWriter(BaseTsvWriter):
                                        e1_range_str,
                                        'E2',
                                        e2_range_str,
-                                       'E1_E2_Distal',
+                                       'Distal',
                                        event['Distal'].range_str()]
                                 quants = all_event_quants.pop(0)
                                 writer.writerow(src_common + row + [event_size] + quants)
@@ -560,7 +560,7 @@ class TsvWriter(BaseTsvWriter):
                                        e2_range_str,
                                        'E1',
                                        e1_range_str,
-                                       'E2_E1_Proximal',
+                                       'Proximal',
                                        event['Proximal'].range_str()]
                                 quants = all_event_quants.pop(0)
                                 writer.writerow(trg_common + row + [event_size] + quants)
@@ -573,7 +573,7 @@ class TsvWriter(BaseTsvWriter):
                                        e2_range_str,
                                        'E1',
                                        e1_range_str,
-                                       'E2_E1_Distal',
+                                       'Distal',
                                        event['Distal'].range_str()]
                                 quants = all_event_quants.pop(0)
                                 writer.writerow(trg_common + row + [event_size] + quants)
@@ -627,7 +627,7 @@ class TsvWriter(BaseTsvWriter):
                                        e2_range_str,
                                        'E1',
                                        e1_range_str,
-                                       'E2_E1_Proximal',
+                                       'Proximal',
                                        event['Proximal'].range_str()]
                                 quants = all_event_quants.pop(0)
                                 writer.writerow(trg_common + row + [event_size] + quants)
@@ -640,7 +640,7 @@ class TsvWriter(BaseTsvWriter):
                                        e2_range_str,
                                        'E1',
                                        e1_range_str,
-                                       'E2_E1_Distal',
+                                       'Distal',
                                        event['Distal'].range_str()]
                                 quants = all_event_quants.pop(0)
                                 writer.writerow(trg_common + row + [event_size] + quants)
@@ -667,7 +667,7 @@ class TsvWriter(BaseTsvWriter):
                                        e1_range_str,
                                        'E2',
                                        e2_range_str,
-                                       'E1_E2_Proximal',
+                                       'Proximal',
                                        event['Proximal'].range_str()]
                                 quants = all_event_quants.pop(0)
                                 writer.writerow(src_common + row + [event_size] + quants)
@@ -680,7 +680,7 @@ class TsvWriter(BaseTsvWriter):
                                        e1_range_str,
                                        'E2',
                                        e2_range_str,
-                                       'E1_E2_Distal',
+                                       'Distal',
                                        event['Distal'].range_str()]
                                 quants = all_event_quants.pop(0)
                                 writer.writerow(src_common + row + [event_size] + quants)
@@ -735,7 +735,7 @@ class TsvWriter(BaseTsvWriter):
                                    c1_range_str,
                                    'E3',
                                    c2_range_str,
-                                   'E1_E3_Distal',
+                                   'Distal',
                                    event['Skip'].range_str()]
                             quants = all_event_quants.pop(0)
                             writer.writerow(src_common + row + [event_size] + quants)
@@ -748,7 +748,7 @@ class TsvWriter(BaseTsvWriter):
                                    c1_range_str,
                                    'E2',
                                    a_range_str,
-                                   'E1_E2_Intron',
+                                   'Intron',
                                    event['Include1'].range_str()]
                             quants = all_event_quants.pop(0)
                             writer.writerow(src_common + row + [event_size] + quants)
@@ -761,7 +761,7 @@ class TsvWriter(BaseTsvWriter):
                                    c2_range_str,
                                    'E1',
                                    c1_range_str,
-                                   'E3_E1_Distal',
+                                   'Distal',
                                    event['Skip'].range_str()]
                             quants = all_event_quants.pop(0)
                             writer.writerow(trg_common + row + [event_size] + quants)
@@ -774,7 +774,7 @@ class TsvWriter(BaseTsvWriter):
                                    c2_range_str,
                                    'E2',
                                    a_range_str,
-                                   'E3_E2_Proximal',
+                                   'Proximal',
                                    event['Include2'].range_str()]
                             quants = all_event_quants.pop(0)
                             writer.writerow(trg_common + row + [event_size] + quants)
@@ -833,7 +833,7 @@ class TsvWriter(BaseTsvWriter):
                                    c2_range_str,
                                    'E3',
                                    c1_range_str,
-                                   'E1_E3_Distal',
+                                   'Distal',
                                    event['Skip'].range_str()]
                             quants = all_event_quants.pop(0)
                             writer.writerow(src_common + row + [event_size] + quants)
@@ -846,7 +846,7 @@ class TsvWriter(BaseTsvWriter):
                                    c2_range_str,
                                    'E2',
                                    a_range_str,
-                                   'E1_E2_Proximal',
+                                   'Proximal',
                                    event['Include1'].range_str()]
                             quants = all_event_quants.pop(0)
                             writer.writerow(src_common + row + [event_size] + quants)
@@ -859,7 +859,7 @@ class TsvWriter(BaseTsvWriter):
                                    c1_range_str,
                                    'E2',
                                    a_range_str,
-                                   'E3_E2_Intron',
+                                   'Intron',
                                    event['Include2'].range_str()]
                             quants = all_event_quants.pop(0)
                             writer.writerow(trg_common + row + [event_size] + quants)
@@ -872,7 +872,7 @@ class TsvWriter(BaseTsvWriter):
                                    c1_range_str,
                                    'E1',
                                    c2_range_str,
-                                   'E3_E1_Distal',
+                                   'Distal',
                                    event['Skip'].range_str()]
                             quants = all_event_quants.pop(0)
                             writer.writerow(trg_common + row + [event_size] + quants)
@@ -1123,9 +1123,9 @@ class TsvWriter(BaseTsvWriter):
 
                                     row = [junc.de_novo,
                                            reference_range_str,
-                                           'A_Proximal',
+                                           'A',
                                            proximal_range_str,
-                                           'C_A_Proximal']
+                                           'Proximal']
                                     if junc.ir:
                                         row.append('{}-{}'.format(junc.start + 1, junc.end - 1))
                                     else:
@@ -1143,9 +1143,9 @@ class TsvWriter(BaseTsvWriter):
 
                                     row = [junc.de_novo,
                                            reference_range_str,
-                                           'A_Distal',
+                                           'A',
                                            distal_range_str,
-                                           'C_A_Distal',
+                                           'Distal',
                                            junc.range_str()]
                                     quants = all_event_quants.pop(0)
                                     writer.writerow(src_common + row + quants)
@@ -1199,9 +1199,9 @@ class TsvWriter(BaseTsvWriter):
 
                                     row = [junc.de_novo,
                                            reference_range_str,
-                                           'A_Proximal',
+                                           'A',
                                            proximal_range_str,
-                                           'C_A_Proximal']
+                                           'Proximal']
                                     if junc.ir:
                                         row.append('{}-{}'.format(junc.start + 1, junc.end - 1))
                                     else:
@@ -1219,9 +1219,9 @@ class TsvWriter(BaseTsvWriter):
 
                                     row = [junc.de_novo,
                                            reference_range_str,
-                                           'A_Distal',
+                                           'A',
                                            distal_range_str,
-                                           'C_A_Distal',
+                                           'Distal',
                                            junc.range_str()]
                                     quants = all_event_quants.pop(0)
                                     writer.writerow(trg_common + row + self.quantifications(module, 't', junc))
@@ -1281,7 +1281,7 @@ class TsvWriter(BaseTsvWriter):
                                     row = [junc.de_novo,
                                            reference_range_str,
                                            'A', proxStr,
-                                           'C_A_Proximal',
+                                           'Proximal',
                                            junc.range_str()]
                                     quants = all_event_quants.pop(0)
                                     writer.writerow(src_common + row + quants)
@@ -1301,7 +1301,7 @@ class TsvWriter(BaseTsvWriter):
                                            reference_range_str,
                                            'A',
                                            distal_range_str,
-                                           'C_A_Distal',
+                                           'Distal',
                                            junc.range_str()]
                                     quants = all_event_quants.pop(0)
                                     writer.writerow(src_common + row + quants)
@@ -1361,7 +1361,7 @@ class TsvWriter(BaseTsvWriter):
                                     row = [junc.de_novo,
                                            reference_range_str,
                                            'A', proxStr,
-                                           'C_A_Proximal',
+                                           'Proximal',
                                            junc.range_str()]
                                     quants = all_event_quants.pop(0)
                                     writer.writerow(trg_common + row + quants)
@@ -1378,7 +1378,7 @@ class TsvWriter(BaseTsvWriter):
                                            reference_range_str,
                                            'A',
                                            distal_range_str,
-                                           'C_A_Distal',
+                                           'Distal',
                                            junc.range_str()]
                                     quants = all_event_quants.pop(0)
                                     writer.writerow(trg_common + row + quants)
