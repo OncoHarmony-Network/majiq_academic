@@ -68,7 +68,7 @@ class BaseTsvWriter(QuantificationWriter):
 
     @property
     def quantification_headers(self):
-        return list(self.quantifications_int.keys())
+        return ['junction_changing'] + list(self.quantifications_int.keys())
 
     @staticmethod
     def tsv_names():
@@ -419,8 +419,10 @@ class TsvWriter(BaseTsvWriter):
                             # we overwrite all changing, non_changing for the event with the final result
                             changing, non_changing = self._determine_changing(all_event_quants),\
                                                      self._determine_non_changing(all_event_quants)
+
                             for _q in all_event_quants:
-                                _q[0], _q[1] = changing, non_changing
+                                _q.insert(0, _q[0]) # prepend quantification for just the junction changing
+                                _q[1], _q[2] = changing, non_changing
 
 
                             quants = all_event_quants.pop(0)
@@ -507,8 +509,10 @@ class TsvWriter(BaseTsvWriter):
 
                                 changing, non_changing = self._determine_changing(all_event_quants), \
                                                          self._determine_non_changing(all_event_quants)
+
                                 for _q in all_event_quants:
-                                    _q[0], _q[1] = changing, non_changing
+                                    _q.insert(0, _q[0])  # prepend quantification for just the junction changing
+                                    _q[1], _q[2] = changing, non_changing
 
 
                                 e1_range_str = self._trim_strand_case_range_str(event['E1'], 'start', event['Proximal'], 'start', strand)
@@ -546,7 +550,8 @@ class TsvWriter(BaseTsvWriter):
                                 changing, non_changing = self._determine_changing(all_event_quants), \
                                                          self._determine_non_changing(all_event_quants)
                                 for _q in all_event_quants:
-                                    _q[0], _q[1] = changing, non_changing
+                                    _q.insert(0, _q[0])  # prepend quantification for just the junction changing
+                                    _q[1], _q[2] = changing, non_changing
 
                                 e1_range_str = f"{event['E1'].start}-{event['Proximal'].start}"
                                 e2_range_str = f"{event['Proximal'].end}-{event['E2'].end}"
@@ -612,7 +617,8 @@ class TsvWriter(BaseTsvWriter):
                                 changing, non_changing = self._determine_changing(all_event_quants), \
                                                          self._determine_non_changing(all_event_quants)
                                 for _q in all_event_quants:
-                                    _q[0], _q[1] = changing, non_changing
+                                    _q.insert(0, _q[0])  # prepend quantification for just the junction changing
+                                    _q[1], _q[2] = changing, non_changing
 
                                 e1_range_str = self._trim_strand_case_range_str(event['E1'], 'start', event['Proximal'], 'start', strand)
                                 e2_range_str = self._trim_strand_case_range_str(event['Proximal'], 'end', event['E2'], 'end', strand)
@@ -651,7 +657,8 @@ class TsvWriter(BaseTsvWriter):
                                 changing, non_changing = self._determine_changing(all_event_quants), \
                                                          self._determine_non_changing(all_event_quants)
                                 for _q in all_event_quants:
-                                    _q[0], _q[1] = changing, non_changing
+                                    _q.insert(0, _q[0])  # prepend quantification for just the junction changing
+                                    _q[1], _q[2] = changing, non_changing
 
                                 e1_range_str = f"{event['E1'].start}-{event['Proximal'].start}"
                                 e2_range_str = f"{event['Proximal'].end}-{event['E2'].end}"
@@ -717,7 +724,8 @@ class TsvWriter(BaseTsvWriter):
                             changing, non_changing = self._determine_changing(all_event_quants), \
                                                      self._determine_non_changing(all_event_quants)
                             for _q in all_event_quants:
-                                _q[0], _q[1] = changing, non_changing
+                                _q.insert(0, _q[0])  # prepend quantification for just the junction changing
+                                _q[1], _q[2] = changing, non_changing
 
                             c1_range_str = event['C1'].range_str()
                             a_range_str = self._trim_strand_case_range_str(event['A'], 'start', event['Include2'], 'start', strand)
@@ -814,7 +822,8 @@ class TsvWriter(BaseTsvWriter):
                             changing, non_changing = self._determine_changing(all_event_quants), \
                                                      self._determine_non_changing(all_event_quants)
                             for _q in all_event_quants:
-                                _q[0], _q[1] = changing, non_changing
+                                _q.insert(0, _q[0])  # prepend quantification for just the junction changing
+                                _q[1], _q[2] = changing, non_changing
 
                             c1_range_str = self._trim_strand_case_range_str(event['C1'], 'start', event['Include1'], 'start', strand)
                             a_range_str = self._trim_strand_case_range_str(event['Include1'], 'end', event['A'], 'end', strand)
@@ -903,7 +912,8 @@ class TsvWriter(BaseTsvWriter):
                             changing, non_changing = self._determine_changing(all_event_quants), \
                                                      self._determine_non_changing(all_event_quants)
                             for _q in all_event_quants:
-                                _q[0], _q[1] = changing, non_changing
+                                _q.insert(0, _q[0])  # prepend quantification for just the junction changing
+                                _q[1], _q[2] = changing, non_changing
 
                             strand = event['E1'].start < event['E2'].end
                             e1_range_str = self._trim_strand_case_range_str(event['E1'], 'start', event['J2'], 'start', strand)
@@ -983,7 +993,8 @@ class TsvWriter(BaseTsvWriter):
                             changing, non_changing = self._determine_changing(all_event_quants), \
                                                      self._determine_non_changing(all_event_quants)
                             for _q in all_event_quants:
-                                _q[0], _q[1] = changing, non_changing
+                                _q.insert(0, _q[0])  # prepend quantification for just the junction changing
+                                _q[1], _q[2] = changing, non_changing
 
                             strand = event['C1'].start < event['C2'].end
                             c1_range_str = self._trim_strand_case_range_str(event['C1'], 'start', event['Include1'], 'start', strand)
@@ -1102,7 +1113,8 @@ class TsvWriter(BaseTsvWriter):
                                 changing, non_changing = self._determine_changing(all_event_quants), \
                                                          self._determine_non_changing(all_event_quants)
                                 for _q in all_event_quants:
-                                    _q[0], _q[1] = changing, non_changing
+                                    _q.insert(0, _q[0])  # prepend quantification for just the junction changing
+                                    _q[1], _q[2] = changing, non_changing
 
                                 for junc in event['SkipA2']:
 
@@ -1177,7 +1189,8 @@ class TsvWriter(BaseTsvWriter):
                                 changing, non_changing = self._determine_changing(all_event_quants), \
                                                          self._determine_non_changing(all_event_quants)
                                 for _q in all_event_quants:
-                                    _q[0], _q[1] = changing, non_changing
+                                    _q.insert(0, _q[0])  # prepend quantification for just the junction changing
+                                    _q[1], _q[2] = changing, non_changing
 
                                 for junc in event['SkipA1']:
 
@@ -1258,7 +1271,8 @@ class TsvWriter(BaseTsvWriter):
                                 changing, non_changing = self._determine_changing(all_event_quants), \
                                                          self._determine_non_changing(all_event_quants)
                                 for _q in all_event_quants:
-                                    _q[0], _q[1] = changing, non_changing
+                                    _q.insert(0, _q[0])  # prepend quantification for just the junction changing
+                                    _q[1], _q[2] = changing, non_changing
 
                                 for junc in event['SkipA2']:
 
@@ -1337,7 +1351,8 @@ class TsvWriter(BaseTsvWriter):
                                 changing, non_changing = self._determine_changing(all_event_quants), \
                                                          self._determine_non_changing(all_event_quants)
                                 for _q in all_event_quants:
-                                    _q[0], _q[1] = changing, non_changing
+                                    _q.insert(0, _q[0])  # prepend quantification for just the junction changing
+                                    _q[1], _q[2] = changing, non_changing
 
                                 for junc in event['SkipA1']:
 
@@ -1436,7 +1451,8 @@ class TsvWriter(BaseTsvWriter):
                                 changing, non_changing = self._determine_changing(all_event_quants), \
                                                          self._determine_non_changing(all_event_quants)
                                 for _q in all_event_quants:
-                                    _q[0], _q[1] = changing, non_changing
+                                    _q.insert(0, _q[0])  # prepend quantification for just the junction changing
+                                    _q[1], _q[2] = changing, non_changing
 
                                 row = [event['Intron'].de_novo,
                                        c2_node.range_str(),
@@ -1479,7 +1495,8 @@ class TsvWriter(BaseTsvWriter):
                                 changing, non_changing = self._determine_changing(all_event_quants), \
                                                          self._determine_non_changing(all_event_quants)
                                 for _q in all_event_quants:
-                                    _q[0], _q[1] = changing, non_changing
+                                    _q.insert(0, _q[0])  # prepend quantification for just the junction changing
+                                    _q[1], _q[2] = changing, non_changing
 
                                 row = [event['Intron'].de_novo,
                                        c1_node.range_str(),
@@ -1529,7 +1546,8 @@ class TsvWriter(BaseTsvWriter):
                             changing, non_changing = self._determine_changing(all_event_quants), \
                                                      self._determine_non_changing(all_event_quants)
                             for _q in all_event_quants:
-                                _q[0], _q[1] = changing, non_changing
+                                _q.insert(0, _q[0])  # prepend quantification for just the junction changing
+                                _q[1], _q[2] = changing, non_changing
 
                             strand = event['C1'].start < event['C2'].end
 
@@ -1593,7 +1611,8 @@ class TsvWriter(BaseTsvWriter):
                             changing, non_changing = self._determine_changing(all_event_quants), \
                                                      self._determine_non_changing(all_event_quants)
                             for _q in all_event_quants:
-                                _q[0], _q[1] = changing, non_changing
+                                _q.insert(0, _q[0])  # prepend quantification for just the junction changing
+                                _q[1], _q[2] = changing, non_changing
 
                             strand = event['C1'].start < event['C2'].end
                             c1_range_str = self._trim_strand_case_range_str(event['C1'], 'start', event['Skip'], 'start', strand)
@@ -1715,7 +1734,8 @@ class TsvWriter(BaseTsvWriter):
                             changing, non_changing = self._determine_changing(all_event_quants), \
                                                      self._determine_non_changing(all_event_quants)
                             for _q in all_event_quants:
-                                _q[0], _q[1] = changing, non_changing
+                                _q.insert(0, _q[0])  # prepend quantification for just the junction changing
+                                _q[1], _q[2] = changing, non_changing
 
                             src_common = self.common_data(module,
                                                           's',
@@ -1758,7 +1778,8 @@ class TsvWriter(BaseTsvWriter):
                             changing, non_changing = self._determine_changing(all_event_quants), \
                                                      self._determine_non_changing(all_event_quants)
                             for _q in all_event_quants:
-                                _q[0], _q[1] = changing, non_changing
+                                _q.insert(0, _q[0])  # prepend quantification for just the junction changing
+                                _q[1], _q[2] = changing, non_changing
 
                             src_common = self.common_data(module,
                                                           's',
@@ -1917,7 +1938,8 @@ class TsvWriter(BaseTsvWriter):
                             changing, non_changing = self._determine_changing(all_event_quants), \
                                                      self._determine_non_changing(all_event_quants)
                             for _q in all_event_quants:
-                                _q[0], _q[1] = changing, non_changing
+                                _q.insert(0, _q[0])  # prepend quantification for just the junction changing
+                                _q[1], _q[2] = changing, non_changing
 
 
                             for junc in juncs:
