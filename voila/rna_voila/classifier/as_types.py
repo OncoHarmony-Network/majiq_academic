@@ -1283,20 +1283,21 @@ class Graph:
                     if j - i > 2:
                         skip = n1.connects(n2)
                         if skip:
-                            include1 = n1.connects(self.nodes[i + 1])
-                            include2 = self.nodes[j - 1].connects(n2)
+                            include1s = n1.connects(self.nodes[i + 1])
+                            include2s = self.nodes[j - 1].connects(n2)
                             # update Module's seen junctions
                             for edge in skip:
                                 if len(edge.lsvs) > 0:
                                     self.classified_lsvs.extend(edge.lsvs)
                                 self.classified_junctions.append(edge)
                             for sk in skip:
-                                includes = [] # ??
-                                found.append({'event': 'multi_exon_spanning', 'C1': self.strand_case(n1, n2),
-                                              'C2': self.strand_case(n2, n1), 'As': self.nodes[i+1:j],
-                                              'Skip': [sk], 'Include1': self.strand_case(include1, include2),
-                                              'Include2': self.strand_case(include2, include1),
-                                              'Includes': includes})
+                                for include1 in include1s:
+                                    for include2 in include2s:
+                                        found.append({'event': 'multi_exon_spanning', 'C1': self.strand_case(n1, n2),
+                                                      'C2': self.strand_case(n2, n1), 'As': self.nodes[i+1:j],
+                                                      'Skip': sk, 'Include1': self.strand_case(include1, include2),
+                                                      'Include2': self.strand_case(include2, include1),
+                                                      })
             return found
 
         def mutually_exclusive(self):

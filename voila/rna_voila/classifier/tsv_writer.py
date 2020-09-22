@@ -1548,13 +1548,13 @@ class TsvWriter(BaseTsvWriter):
 
                             strand = event['C1'].start < event['C2'].end
 
-                            c1_range_str = self._trim_strand_case_range_str(event['C1'], 'start', event['Skip'][0], 'start', strand)
-                            c2_range_str = self._trim_strand_case_range_str(event['Skip'][-1], 'end', event['C2'], 'end', strand)
+                            c1_range_str = self._trim_strand_case_range_str(event['C1'], 'start', event['Skip'], 'start', strand)
+                            c2_range_str = self._trim_strand_case_range_str(event['Skip'], 'end', event['C2'], 'end', strand)
 
                             #src_common = self.common_data(module, 's')
                             # Source LSV side
-                            row = [self.semicolon((x.range_str() for x in event['Skip'])),  # junction coord
-                                    self.semicolon((x.de_novo for x in event['Skip'])), # de novo?
+                            row = [event['Skip'].range_str(),  # junction coord
+                                    event['Skip'].de_novo, # de novo?
                                     c1_range_str, # reference exon
                                     c2_range_str, # exon spliced with
                                     self.semicolon((x.range_str() for x in event['As'])), # exons spanned
@@ -1571,8 +1571,8 @@ class TsvWriter(BaseTsvWriter):
                             writer.writerow(common + row + quants)
                             self.junction_cache.append((module, common, quants, row[1], 'C1_C2', row[0]))
                             # Target LSV side
-                            row = [self.semicolon((x.range_str() for x in event['Skip'])),  # junction coord
-                                   self.semicolon((x.de_novo for x in event['Skip'])),  # de novo?
+                            row = [event['Skip'].range_str(),  # junction coord
+                                   event['Skip'].de_novo,  # de novo?
                                    c2_range_str,  # reference exon
                                    c1_range_str,  # exon spliced with
                                    self.semicolon((x.range_str() for x in event['As'])),  # exons spanned
