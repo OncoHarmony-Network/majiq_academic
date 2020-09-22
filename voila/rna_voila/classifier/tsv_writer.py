@@ -1101,58 +1101,53 @@ class TsvWriter(BaseTsvWriter):
 
                             if src_common[5]:
 
-                                for junc in event['SkipA2']:
+                                all_event_quants.append(
+                                    self.quantifications(module, 's', event['SkipA2'], event['Reference']))
 
-                                    all_event_quants.append(
-                                        self.quantifications(module, 's', junc, event['Reference']))
-
-                                for junc in event['SkipA1']:
-                                    all_event_quants.append(
-                                        self.quantifications(module, 's', junc, event['Reference']))
+                                all_event_quants.append(
+                                    self.quantifications(module, 's', event['SkipA1'], event['Reference']))
 
                                 changing, non_changing = self._determine_changing(all_event_quants), \
                                                          self._determine_non_changing(all_event_quants)
+
                                 for _q in all_event_quants:
                                     _q.insert(0, _q[0])  # prepend quantification for just the junction changing
                                     _q[1], _q[2] = changing, non_changing
 
-                                for junc in event['SkipA2']:
+                                reference_range_str = self._trim_strand_case_range_str(event['Reference'], 'start', event['SkipA2'], 'start', strand)
+                                proximal_range_str = self._trim_strand_case_range_str(event['SkipA2'], 'end', event['Proximal'], 'end', strand)
 
-                                    reference_range_str = self._trim_strand_case_range_str(event['Reference'], 'start', junc, 'start', strand)
-                                    proximal_range_str = self._trim_strand_case_range_str(junc, 'end', event['Proximal'], 'end', strand)
+                                row = [event['SkipA2'].de_novo,
+                                       reference_range_str,
+                                       'A',
+                                       proximal_range_str,
+                                       'Proximal']
+                                if event['SkipA2'].ir:
+                                    row.append('{}-{}'.format(event['SkipA2'].absolute_start, event['SkipA2'].absolute_end))
+                                else:
+                                    row.append(event['SkipA2'].range_str())
+                                quants = all_event_quants.pop(0)
+                                writer.writerow(src_common + row + quants)
+                                self.junction_cache.append((module, src_common, quants, row[0], row[4], row[5]))
+                                self.heatmap_add(module, src_common, quants,
+                                                 event['SkipA2'].absolute_end - event['SkipA2'].absolute_start,
+                                                 row[0], row[4], row[5])
 
-                                    row = [junc.de_novo,
-                                           reference_range_str,
-                                           'A',
-                                           proximal_range_str,
-                                           'Proximal']
-                                    if junc.ir:
-                                        row.append('{}-{}'.format(junc.start + 1, junc.end - 1))
-                                    else:
-                                        row.append(junc.range_str())
-                                    quants = all_event_quants.pop(0)
-                                    writer.writerow(src_common + row + quants)
-                                    self.junction_cache.append((module, src_common, quants, row[0], row[4], row[5]))
-                                    self.heatmap_add(module, src_common, quants,
-                                                     junc.absolute_end - junc.absolute_start,
-                                                     row[0], row[4], row[5])
-                                for junc in event['SkipA1']:
+                                reference_range_str = self._trim_strand_case_range_str(event['Reference'], 'start', event['SkipA1'], 'start', strand)
+                                distal_range_str = self._trim_strand_case_range_str(event['SkipA1'], 'end', event['Distal'], 'end', strand)
 
-                                    reference_range_str = self._trim_strand_case_range_str(event['Reference'], 'start', junc, 'start', strand)
-                                    distal_range_str = self._trim_strand_case_range_str(junc, 'end', event['Distal'], 'end', strand)
-
-                                    row = [junc.de_novo,
-                                           reference_range_str,
-                                           'A',
-                                           distal_range_str,
-                                           'Distal',
-                                           junc.range_str()]
-                                    quants = all_event_quants.pop(0)
-                                    writer.writerow(src_common + row + quants)
-                                    self.junction_cache.append((module, src_common, quants, row[0], row[4], row[5]))
-                                    self.heatmap_add(module, src_common, quants,
-                                                     junc.absolute_end - junc.absolute_start,
-                                                     row[0], row[4], row[5])
+                                row = [event['SkipA1'].de_novo,
+                                       reference_range_str,
+                                       'A',
+                                       distal_range_str,
+                                       'Distal',
+                                       event['SkipA1'].range_str()]
+                                quants = all_event_quants.pop(0)
+                                writer.writerow(src_common + row + quants)
+                                self.junction_cache.append((module, src_common, quants, row[0], row[4], row[5]))
+                                self.heatmap_add(module, src_common, quants,
+                                                 event['SkipA1'].absolute_end - event['SkipA1'].absolute_start,
+                                                 row[0], row[4], row[5])
                                 event_i += 1
 
 
@@ -1178,13 +1173,11 @@ class TsvWriter(BaseTsvWriter):
                             # only ever write AFEs that are quantified by LSV
                             if trg_common[5]:
 
-                                for junc in event['SkipA1']:
-                                    all_event_quants.append(
-                                        self.quantifications(module, 't', junc, event['Reference']))
+                                all_event_quants.append(
+                                    self.quantifications(module, 't', event['SkipA1'], event['Reference']))
 
-                                for junc in event['SkipA2']:
-                                    all_event_quants.append(
-                                        self.quantifications(module, 't', junc, event['Reference']))
+                                all_event_quants.append(
+                                    self.quantifications(module, 't', event['SkipA2'], event['Reference']))
 
                                 changing, non_changing = self._determine_changing(all_event_quants), \
                                                          self._determine_non_changing(all_event_quants)
@@ -1192,43 +1185,40 @@ class TsvWriter(BaseTsvWriter):
                                     _q.insert(0, _q[0])  # prepend quantification for just the junction changing
                                     _q[1], _q[2] = changing, non_changing
 
-                                for junc in event['SkipA1']:
+                                reference_range_str = self._trim_strand_case_range_str(event['SkipA1'], 'end', event['Reference'], 'end', strand)
+                                proximal_range_str = self._trim_strand_case_range_str(event['Proximal'], 'start', event['SkipA1'], 'start', strand)
 
-                                    reference_range_str = self._trim_strand_case_range_str(junc, 'end', event['Reference'], 'end', strand)
-                                    proximal_range_str = self._trim_strand_case_range_str(event['Proximal'], 'start', junc, 'start', strand)
+                                row = [event['SkipA1'].de_novo,
+                                       reference_range_str,
+                                       'A',
+                                       proximal_range_str,
+                                       'Proximal']
+                                if event['SkipA1'].ir:
+                                    row.append('{}-{}'.format(event['SkipA1'].absolute_start, event['SkipA1'].absolute_end))
+                                else:
+                                    row.append(event['SkipA1'].range_str())
+                                quants = all_event_quants.pop(0)
+                                writer.writerow(trg_common + row + quants)
+                                self.junction_cache.append((module, trg_common, quants, row[0], row[4], row[5]))
+                                self.heatmap_add(module, trg_common, quants,
+                                                 event['SkipA1'].absolute_end - event['SkipA1'].absolute_start,
+                                                 row[0], row[4], row[5])
 
-                                    row = [junc.de_novo,
-                                           reference_range_str,
-                                           'A',
-                                           proximal_range_str,
-                                           'Proximal']
-                                    if junc.ir:
-                                        row.append('{}-{}'.format(junc.start + 1, junc.end - 1))
-                                    else:
-                                        row.append(junc.range_str())
-                                    quants = all_event_quants.pop(0)
-                                    writer.writerow(trg_common + row + quants)
-                                    self.junction_cache.append((module, trg_common, quants, row[0], row[4], row[5]))
-                                    self.heatmap_add(module, trg_common, quants,
-                                                     junc.absolute_end - junc.absolute_start,
-                                                     row[0], row[4], row[5])
-                                for junc in event['SkipA2']:
+                                reference_range_str = self._trim_strand_case_range_str(event['SkipA2'], 'end', event['Reference'], 'end', strand)
+                                distal_range_str = self._trim_strand_case_range_str(event['Distal'], 'start', event['SkipA2'], 'start', strand)
 
-                                    reference_range_str = self._trim_strand_case_range_str(junc, 'end', event['Reference'], 'end', strand)
-                                    distal_range_str = self._trim_strand_case_range_str(event['Distal'], 'start', junc, 'start', strand)
-
-                                    row = [junc.de_novo,
-                                           reference_range_str,
-                                           'A',
-                                           distal_range_str,
-                                           'Distal',
-                                           junc.range_str()]
-                                    quants = all_event_quants.pop(0)
-                                    writer.writerow(trg_common + row + self.quantifications(module, 't', junc))
-                                    self.junction_cache.append((module, trg_common, quants, row[0], row[4], row[5]))
-                                    self.heatmap_add(module, trg_common, quants,
-                                                     junc.absolute_end - junc.absolute_start,
-                                                     row[0], row[4], row[5])
+                                row = [event['SkipA2'].de_novo,
+                                       reference_range_str,
+                                       'A',
+                                       distal_range_str,
+                                       'Distal',
+                                       event['SkipA2'].range_str()]
+                                quants = all_event_quants.pop(0)
+                                writer.writerow(trg_common + row + self.quantifications(module, 't', event['SkipA2']))
+                                self.junction_cache.append((module, trg_common, quants, row[0], row[4], row[5]))
+                                self.heatmap_add(module, trg_common, quants,
+                                                 event['SkipA2'].absolute_end - event['SkipA2'].absolute_start,
+                                                 row[0], row[4], row[5])
                                 event_i += 1
 
 
