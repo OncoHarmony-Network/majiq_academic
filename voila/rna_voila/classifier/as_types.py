@@ -1366,8 +1366,9 @@ class Graph:
                                     self.classified_lsvs.extend(junc.lsvs)
                             self.classified_junctions.extend(spliced)
                             self.classified_junctions.append(edge)
-                            found.append({'event': 'alternative_intron', 'C1': n1, 'C2': n2,
-                                          'Intron': edge, 'Spliced': spliced})
+                            for non_intron_junc in spliced:
+                                found.append({'event': 'alternative_intron', 'C1': n1, 'C2': n2,
+                                              'Intron': edge, 'Spliced': non_intron_junc})
 
             return found
 
