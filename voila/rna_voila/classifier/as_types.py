@@ -485,14 +485,33 @@ class Graph:
         for voila_file in self.config.voila_files:
             self._add_matrix_values(voila_file)
 
+        #assert False
+
         for i in range(len(self.edges) - 1, -1, -1):
 
             if self.edges[i].lsvs:
 
-                psi = max(map(max, (v['psi'] for v in self.edges[i].lsvs.values())), default=None)
+                group_means_psi = []
+                for v in self.edges[i].lsvs.values():
+                    for group_vals in v['group_psi'].values():
+                        group_means_psi.append(sum(group_vals) / len(group_vals))
+
+                try:
+                    max_single_psi = max(map(max, (v['psi'] for v in self.edges[i].lsvs.values())), default=None)
+                except ValueError:
+                    max_single_psi = None
+
+                max_group_psi = max(group_means_psi) if group_means_psi else None
+
+                if max_single_psi and max_group_psi:
+                    psi = max(max_single_psi, max_group_psi)
+                elif max_single_psi:
+                    psi = max_single_psi
+                elif max_group_psi:
+                    psi = max_group_psi
+                else:
+                    psi = None
                 delta_psi = max((abs(y) for v in self.edges[i].lsvs.values() for y in v['delta_psi']), default=None)
-
-
 
                 # We need both psi and deltapsi to pass threshold to keep
                 assert psi is not None or delta_psi is not None
@@ -924,6 +943,10 @@ class Graph:
                                 edge.lsvs[lsv_id]['psi'].add(means)
                             for means in lsv_store[key][lsv_id]['delta_psi']:
                                 edge.lsvs[lsv_id]['delta_psi'].add(means)
+                            for group_name in lsv_store[key][lsv_id]['group_psi']:
+                                if not group_name in edge.lsvs[lsv_id]['group_psi']:
+                                    edge.lsvs[lsv_id]['group_psi'][group_name] = set()
+                                edge.lsvs[lsv_id]['group_psi'][group_name].update(lsv_store[key][lsv_id]['group_psi'][group_name])
                         else:
                             edge.lsvs[lsv_id] = lsv_store[key][lsv_id]
                 else:
@@ -954,9 +977,11 @@ class Graph:
                         lsv_store[key] = {}
 
                     if lsv_id not in lsv_store[key]:
-                        lsv_store[key][lsv_id] = {'psi': set(), 'delta_psi': set(), 'voila_file': voila_file}
+                        lsv_store[key][lsv_id] = {'psi': set(), 'delta_psi': set(), 'voila_file': voila_file,
+                                                  'group_psi': {}}
 
                     lsv_store[key][lsv_id]['psi'].add(means)
+
 
 
         self._add_lsvs_to_edges(lsv_store)
@@ -984,9 +1009,11 @@ class Graph:
                             lsv_store[key] = {}
 
                         if lsv_id not in lsv_store[key]:
-                            lsv_store[key][lsv_id] = {'psi': set(), 'delta_psi': set(), 'voila_file': voila_file}
+                            lsv_store[key][lsv_id] = {'psi': set(), 'delta_psi': set(), 'voila_file': voila_file,
+                                                      'group_psi': {}}
 
                         lsv_store[key][lsv_id]['psi'].add(means)
+
 
                 _bins = lsv.get('bins')
 
@@ -1019,16 +1046,20 @@ class Graph:
                         lsv_store[key] = {}
 
                     if lsv_id not in lsv_store[key]:
-                        lsv_store[key][lsv_id] = {'psi': set(), 'delta_psi': set(), 'voila_file': voila_file}
+                        lsv_store[key][lsv_id] = {'psi': set(), 'delta_psi': set(), 'voila_file': voila_file,
+                                                  'group_psi': {}}
 
                     junc_mean_psi = lsv.get('mean_psi')[junc_i]
-                    mean_psi_grp1 = get_expected_psi(junc_mean_psi[0])
-                    mean_psi_grp2 = get_expected_psi(junc_mean_psi[1])
+
+                    for i, group_name in enumerate(m.group_names):
+                        if not group_name in lsv_store[key][lsv_id]['group_psi']:
+                            lsv_store[key][lsv_id]['group_psi'][group_name] = set()
+
+                        mean_psi_grp = get_expected_psi(junc_mean_psi[i])
+                        lsv_store[key][lsv_id]['group_psi'][group_name].add(mean_psi_grp)
 
                     dpsi_val = lsv.dpsi_signed[junc_i]
 
-                    lsv_store[key][lsv_id]['psi'].add(mean_psi_grp1)
-                    lsv_store[key][lsv_id]['psi'].add(mean_psi_grp2)
                     lsv_store[key][lsv_id]['delta_psi'].add(dpsi_val)
 
         self._add_lsvs_to_edges(lsv_store)

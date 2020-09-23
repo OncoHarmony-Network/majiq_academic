@@ -151,7 +151,7 @@ class QuantificationWriter:
                 except:
                     pass
 
-        def _inner_edge_aggregate(lsv, all_quants, edge):
+        def _inner_edge_aggregate(lsv, all_quants, edge, _round=True):
             if edge:
                 edges = [edge] if not type(edge) is list else edge
                 vals = []
@@ -162,11 +162,11 @@ class QuantificationWriter:
                     else:
                         vals.append(all_quants[edge_idx])
 
-                return (round(x, SIG_FIGS) for x in vals)
+                return (round(x, SIG_FIGS) for x in vals) if _round else vals
             else:
                 if self.avg_multival and all_quants:
                     return np.mean(all_quants)
-                return (round(x, SIG_FIGS) for x in all_quants)
+                return (round(x, SIG_FIGS) for x in all_quants) if _round else all_quants
 
         def _psi_psi(voila_files):
             def f(lsv_id, edge=None):
@@ -194,16 +194,19 @@ class QuantificationWriter:
 
         def _het_psi(voila_files, group_idxs):
             def f(lsv_id, edge=None):
+                found_psis = []
                 for voila_file, group_idx in zip(voila_files, group_idxs):
                     with Matrix(voila_file) as m:
                         try:
                             lsv = m.heterogen(lsv_id)
-                            return _inner_edge_aggregate(lsv, [get_expected_psi(x) for x in np.array(list(lsv.get('mean_psi'))).transpose((1, 0, 2))[group_idx]], edge)
+                            found_psis += _inner_edge_aggregate(lsv, [get_expected_psi(x) for x in np.array(list(lsv.get('mean_psi'))).transpose((1, 0, 2))[group_idx]], edge, _round=False)
                         except (GeneIdNotFoundInVoilaFile, LsvIdNotFoundInVoilaFile) as e:
                             continue
-                return None
+                if not found_psis:
+                    return None
+                else:
+                    return [round(sum(found_psis) / len(found_psis), SIG_FIGS)]
             return f
-
 
         def _het_stats(voila_files, stat_idx):
             def f(lsv_id, edge=None):
