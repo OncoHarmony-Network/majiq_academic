@@ -25,6 +25,11 @@ import numpy as np
 
 
 def calcpsi(args):
+
+    # argument validation checks
+    if not set(args.name).issubset(ALLOWED_GROUP_NAME_CHARS):
+        raise Exception("Group names may only contain alphanumeric and underscore characters")
+
     return pipeline_run(CalcPsi(args))
 
 

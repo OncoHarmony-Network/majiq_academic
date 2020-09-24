@@ -5,6 +5,7 @@ Constants used by MAJIQ
 """
 
 import os
+import string as pystring  # just importing it as string causes cython errors
 
 VERSION = "2.2"
 
@@ -13,6 +14,10 @@ JUNC_FILE_FORMAT = "sj"
 SEQ_FILE_FORMAT = "bam"
 SEQ_INDEX_FILE_FORMAT = "bam.bai"
 MAJIQ_FILE_FORMAT = "majiq"
+
+# filename constants
+GROUP_NAME_SEP = '-'
+ALLOWED_GROUP_NAME_CHARS = set(pystring.ascii_letters + pystring.digits + '_')
 
 # integer codes for strandedness
 UNSTRANDED = 0
@@ -34,6 +39,7 @@ HET_SAMPLING_SEED = 20200401
 all_stats = ["TNOM", "INFOSCORE", "WILCOXON"]
 
 
+
 try:
     import numpy as np
 
@@ -44,12 +50,11 @@ except ModuleNotFoundError:  # when importing in setup, don't need numpy yet
 
 def get_quantifier_voila_filename(outdir, name, deltapsi=False, het=False):
     if deltapsi:
-        return "%s/%s_%s.deltapsi.voila" % (outdir, name[0], name[1])
+        return f"{outdir}/{name[0]}{GROUP_NAME_SEP}{name[1]}.deltapsi.voila"
     elif het:
-        return "%s/%s_%s.het.voila" % (outdir, name[0], name[1])
+        return f"{outdir}/{name[0]}{GROUP_NAME_SEP}{name[1]}.het.voila"
     else:
-        return "%s/%s.psi.voila" % (outdir, name)
-
+        return f"{outdir}/{name}.psi.voila"
 
 def get_prior_matrix_filename(outdir, names):
     return "%s/%s_%s.priormatrix.pkl" % (outdir, names[0], names[1])

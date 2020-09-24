@@ -21,9 +21,14 @@ from rna_voila.api import Matrix
 from rna_voila.constants import ANALYSIS_DELTAPSI, VOILA_FILE_VERSION
 cimport numpy as np
 import numpy as np
-# import collections
+
 
 def deltapsi(args):
+
+    # argument validation checks
+    if not all(set(group_name).issubset(ALLOWED_GROUP_NAME_CHARS) for group_name in args.names):
+        raise Exception("Group names may only contain alphanumeric and underscore characters")
+
     return pipeline_run(DeltaPsi(args))
 
 
@@ -183,9 +188,7 @@ cdef int _core_deltapsi(object self) except -1:
         mem_allocated = int(psutil.Process().memory_info().rss) / (1024 ** 2)
         logger.info("Max Memory used %.2f MB" % mem_allocated)
 
-    logger.info("DeltaPSI calculation for %s_%s ended successfully! Result can be found at %s" % (self.names[0],
-                                                                                                 self.names[1],
-                                                                                                 self.outDir))
+    logger.info(f"DeltaPSI calculation for {self.names[0]}{GROUP_NAME_SEP}{self.names[1]} ended successfully! Result can be found at {self.outDir}")
 
 
 class DeltaPsi(BasicPipeline):
