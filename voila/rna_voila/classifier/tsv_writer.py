@@ -1214,7 +1214,7 @@ class TsvWriter(BaseTsvWriter):
                                        'Distal',
                                        event['SkipA2'].range_str()]
                                 quants = all_event_quants.pop(0)
-                                writer.writerow(trg_common + row + self.quantifications(module, 't', event['SkipA2']))
+                                writer.writerow(trg_common + row + quants)
                                 self.junction_cache.append((module, trg_common, quants, row[0], row[4], row[5]))
                                 self.heatmap_add(module, trg_common, quants,
                                                  event['SkipA2'].absolute_end - event['SkipA2'].absolute_start,
