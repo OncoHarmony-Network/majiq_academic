@@ -1412,35 +1412,44 @@ class Graph:
 
             for n1, n2 in combinations(self.nodes, 2):
                 connections = n1.connects(n2)
-                if len(connections) > 1:
-                    for e2 in connections[1:]:
-                        e1 = connections[0]
-                        if len(set((self.strand_case(x.end, x.start) for x in (e1, e2,)))) == 1:
+                #print(connections, n1)
 
-                            if self.strand_case(e1.end, e1.start) < self.strand_case(e1.end, e1.start):
-                                proximal = self.strand_case(e1, e2)
-                                distal = self.strand_case(e2, e1)
-                                n_e1 = self.strand_case(n2, n1)
-                                n_e2 = self.strand_case(n1, n2)
-                            else:
-                                proximal = self.strand_case(e2, e1)
-                                distal = self.strand_case(e1, e2)
-                                n_e1 = self.strand_case(n1, n2)
-                                n_e2 = self.strand_case(n2, n1)
-                            # update seen junctions in module
-                            # preferentially add target LSV, just like the TSV writer does
-                            associated_lsv = None
-                            for lid in proximal.lsvs:
-                                if associated_lsv is None:
-                                    associated_lsv = lid
-                                if ":t:" in lid:
-                                    associated_lsv = lid
-                            if associated_lsv is not None:
-                                self.classified_lsvs.append(associated_lsv)
-                            self.classified_junctions.append(proximal)
-                            self.classified_junctions.append(distal)
-                            found.append({'event': 'alt5ss', 'E1': n_e1, 'E2': n_e2,
-                                          'Proximal': proximal, 'Distal': distal})
+
+                    
+                    
+                if len(connections) > 1:
+
+                    for i in range(len(connections)):
+
+                        e1 = connections[i]  # should be proximal for this case
+
+                        for e2 in connections[:i] + connections[i+1:]:
+
+                            # check that two of the ends meet at the same coordinate
+                            if len(set((self.strand_case(x.end, x.start) for x in (e1, e2,)))) == 1:
+
+                                # check that e1 is proximal and e2 is distal
+                                if self.strand_case(e1.start, e2.end) > self.strand_case(e2.start, e1.end):
+                                    proximal = e1
+                                    distal = e2
+                                    n_e1 = self.strand_case(n1, n2)
+                                    n_e2 = self.strand_case(n2, n1)
+
+                                    # update seen junctions in module
+                                    # preferentially add target LSV, just like the TSV writer does
+                                    associated_lsv = None
+                                    for lid in proximal.lsvs:
+                                        if associated_lsv is None:
+                                            associated_lsv = lid
+                                        if ":t:" in lid:
+                                            associated_lsv = lid
+                                    if associated_lsv is not None:
+                                        self.classified_lsvs.append(associated_lsv)
+                                    self.classified_junctions.append(proximal)
+                                    self.classified_junctions.append(distal)
+                                    found.append({'event': 'alt5ss', 'E1': n_e1, 'E2': n_e2,
+                                                  'Proximal': proximal, 'Distal': distal})
+
             return found
 
 
@@ -1451,34 +1460,36 @@ class Graph:
             for n1, n2 in combinations(self.nodes, 2):
                 connections = n1.connects(n2)
                 if len(connections) > 1:
-                    for e2 in connections[1:]:
-                        e1 = connections[0]
-                        if len(set((self.strand_case(x.start, x.end) for x in (e1, e2,)))) == 1:
 
-                            if self.strand_case(e1.end, e1.start) > self.strand_case(e1.end, e1.start):
-                                proximal = self.strand_case(e2, e1)
-                                distal = self.strand_case(e1, e2)
-                                n_e1 = self.strand_case(n2, n1)
-                                n_e2 = self.strand_case(n1, n2)
-                            else:
-                                proximal = self.strand_case(e1, e2)
-                                distal = self.strand_case(e2, e1)
-                                n_e1 = self.strand_case(n1, n2)
-                                n_e2 = self.strand_case(n2, n1)
-                            # update seen junctions in module
-                            # preferentially add source LSV, just like the TSV writer does
-                            associated_lsv = None
-                            for lid in proximal.lsvs:
-                                if associated_lsv is None:
-                                    associated_lsv = lid
-                                if ":s:" in lid:
-                                    associated_lsv = lid
-                            if associated_lsv is not None:
-                                self.classified_lsvs.append(associated_lsv)
-                            self.classified_junctions.append(proximal)
-                            self.classified_junctions.append(distal)
-                            found.append({'event': 'alt3ss', 'E1': n_e1, 'E2': n_e2,
-                                          'Proximal': proximal, 'Distal': distal})
+                    for i in range(len(connections)):
+
+                        e1 = connections[i]  # should be proximal for this case
+                        for e2 in connections[:i] + connections[i+1:]:
+
+                            # check that two of the ends meet at the same coordinate
+                            if len(set((self.strand_case(x.start, x.end) for x in (e1, e2,)))) == 1:
+
+                                # check that e1 is proximal and e2 is distal
+                                if self.strand_case(e2.end, e1.start) > self.strand_case(e1.end, e2.start):
+                                    proximal = e1
+                                    distal = e2
+                                    n_e1 = self.strand_case(n1, n2)
+                                    n_e2 = self.strand_case(n2, n1)
+
+                                    # update seen junctions in module
+                                    # preferentially add source LSV, just like the TSV writer does
+                                    associated_lsv = None
+                                    for lid in proximal.lsvs:
+                                        if associated_lsv is None:
+                                            associated_lsv = lid
+                                        if ":s:" in lid:
+                                            associated_lsv = lid
+                                    if associated_lsv is not None:
+                                        self.classified_lsvs.append(associated_lsv)
+                                    self.classified_junctions.append(proximal)
+                                    self.classified_junctions.append(distal)
+                                    found.append({'event': 'alt3ss', 'E1': n_e1, 'E2': n_e2,
+                                                  'Proximal': proximal, 'Distal': distal})
             return found
 
 
