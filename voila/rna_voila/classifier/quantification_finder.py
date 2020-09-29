@@ -12,6 +12,7 @@ from collections import OrderedDict
 
 SIG_FIGS = 3
 
+
 class QuantificationWriter:
 
     def __init__(self):
@@ -110,6 +111,21 @@ class QuantificationWriter:
         else:
             return -1
 
+    def _filter_edges(self, edge, lsv):
+        if type(edge) != list:
+            edge = [edge]
+        for _edge in edge:
+            # loop through junctions to find one matching range of edge
+            try:
+                for j, junc in enumerate(lsv.get('junctions')):
+                    if junc[0] == _edge.absolute_start and junc[1] == _edge.absolute_end:
+                        return j
+                else:
+                    # junction not quantified by majiq
+                    pass
+            except:
+                pass
+
     def quantification_intersection(self):
         """
         Look at all psi and dpsi quant headers and find the appropriate intersection
@@ -135,28 +151,12 @@ class QuantificationWriter:
         :return:
         """
 
-
-        def _filter_edges(edge, lsv):
-            if type(edge) != list:
-                edge = [edge]
-            for _edge in edge:
-                # loop through junctions to find one matching range of edge
-                try:
-                    for j, junc in enumerate(lsv.get('junctions')):
-                        if junc[0] == _edge.absolute_start and junc[1] == _edge.absolute_end:
-                            return j
-                    else:
-                        # junction not quantified by majiq
-                        pass
-                except:
-                    pass
-
         def _inner_edge_aggregate(lsv, all_quants, edge, _round=True):
             if edge:
                 edges = [edge] if not type(edge) is list else edge
                 vals = []
                 for _edge in edges:
-                    edge_idx = _filter_edges(_edge, lsv)
+                    edge_idx = self._filter_edges(_edge, lsv)
                     if edge_idx is None:
                         continue
                     else:
@@ -232,7 +232,7 @@ class QuantificationWriter:
                                 vals = []
 
                                 for _edge in edges:
-                                    edge_idx = _filter_edges(_edge, lsv)
+                                    edge_idx = self._filter_edges(_edge, lsv)
                                     if edge_idx is None:
                                         continue
                                     else:
@@ -283,7 +283,7 @@ class QuantificationWriter:
                                 edges = [edge] if not type(edge) is list else edge
                                 vals = []
                                 for _edge in edges:
-                                    edge_idx = _filter_edges(_edge, lsv)
+                                    edge_idx = self._filter_edges(_edge, lsv)
                                     if edge_idx is None:
                                         continue
                                     else:
@@ -313,7 +313,7 @@ class QuantificationWriter:
                             edges = [edge] if not type(edge) is list else edge
                             vals = []
                             for _edge in edges:
-                                edge_idx = _filter_edges(_edge, lsv)
+                                edge_idx = self._filter_edges(_edge, lsv)
                                 if edge_idx is None:
                                     continue
                                 else:
@@ -340,11 +340,15 @@ class QuantificationWriter:
                 return None
             return f
 
-        def _global_changing(voila_files):
+        def _junction_changing(voila_files):
+
+            # should only have one edge specified --
+            # iterate through voila files, if we fine any case where junction is changing,
+            # return true
+
             def f(lsv_id, edge=None):
 
-                junc_results = []
-                junc_results_secondary = []
+                found_quant = False
                 edges = [edge] if not type(edge) is list else edge
 
                 for voila_file in voila_files:
@@ -360,7 +364,7 @@ class QuantificationWriter:
                                     with view_matrix.ViewHeterogen(voila_file) as m:
                                         lsv = m.lsv(lsv_id)
 
-                                        edge_idx = _filter_edges(_edge, lsv)
+                                        edge_idx = self._filter_edges(_edge, lsv)
                                         if edge_idx is None:
                                             continue
                                         else:
@@ -369,20 +373,16 @@ class QuantificationWriter:
                                                          self.config.changing_pvalue_threshold,
                                                          self.config.changing_between_group_dpsi,
                                                          edge_idx)
+                                            found_quant = True
 
-                                            junc_results.append(is_changing)
-
-                                            is_changing_secondary = lsv.changing(
-                                                         1.0,
-                                                         self.config.changing_between_group_dpsi_secondary,
-                                                         edge_idx)
-                                            junc_results_secondary.append(is_changing_secondary)
+                                            if bool(is_changing):
+                                                return [True]
 
                                 elif analysis_type == constants.ANALYSIS_DELTAPSI:
                                     with view_matrix.ViewDeltaPsi(voila_file) as m:
                                         lsv = m.lsv(lsv_id)
 
-                                        edge_idx = _filter_edges(_edge, lsv)
+                                        edge_idx = self._filter_edges(_edge, lsv)
                                         if edge_idx is None:
                                             continue
                                         else:
@@ -390,87 +390,26 @@ class QuantificationWriter:
                                                 self.config.changing_between_group_dpsi,
                                                 self.config.probability_changing_threshold,
                                                 edge_idx)
+                                            found_quant = True
 
-                                            junc_results.append(is_changing)
-
-                                            is_changing_secondary = lsv.changing(
-                                                self.config.changing_between_group_dpsi_secondary,
-                                                self.config.probability_changing_threshold,
-                                                edge_idx)
-
-                                            junc_results_secondary.append(is_changing_secondary)
+                                            if bool(is_changing):
+                                                return [True]
 
 
                     except (GeneIdNotFoundInVoilaFile, LsvIdNotFoundInVoilaFile) as e:
                         continue
 
-                if not junc_results:
-                    return ''
-
-                # bool() needed here because they are of type "numpy._bool" by default
-                return [any(bool(x) is True for x in junc_results) and all(bool(x) is True for x in junc_results_secondary)]
+                return [False] if found_quant else ""
 
             return f
 
-        def _global_non_changing(voila_files):
-            def f(lsv_id, edge=None):
 
-                junc_results = []
-                edges = [edge] if not type(edge) is list else edge
-
-                for voila_file in voila_files:
-                    try:
-                        with Matrix(voila_file) as m1:
-                            analysis_type = m1.analysis_type
-
-                        if edge:
-
-                            for _edge in edges:
-
-                                if analysis_type == constants.ANALYSIS_HETEROGEN:
-                                    with view_matrix.ViewHeterogen(voila_file) as m:
-                                        lsv = m.lsv(lsv_id)
-
-                                        edge_idx = _filter_edges(_edge, lsv)
-                                        if edge_idx is None:
-                                            continue
-                                        else:
-                                            is_non_changing = lsv.nonchanging(self.config.non_changing_pvalue_threshold,
-                                                                    self.config.non_changing_within_group_iqr,
-                                                                    self.config.non_changing_between_group_dpsi,
-                                                                    edge_idx)
-                                            junc_results.append(is_non_changing)
-
-                                elif analysis_type == constants.ANALYSIS_DELTAPSI:
-                                    with view_matrix.ViewDeltaPsi(voila_file) as m:
-                                        lsv = m.lsv(lsv_id)
-
-                                        edge_idx = _filter_edges(_edge, lsv)
-                                        if edge_idx is None:
-                                            continue
-                                        else:
-                                            non_changing_quant = lsv.high_probability_non_changing(
-                                                self.config.non_changing_threshold, edge_idx)
-
-                                            is_non_changing = non_changing_quant >= self.config.probability_non_changing_threshold
-
-                                            junc_results.append(is_non_changing)
-                    except (GeneIdNotFoundInVoilaFile, LsvIdNotFoundInVoilaFile) as e:
-                        continue
-                if not junc_results:
-                    return ''
-
-                # bool() needed here because they are of type "numpy._bool" by default
-                return [all(bool(x) is True for x in junc_results)]
-
-            return f
 
 
         tmp = OrderedDict()
         self.types2headers = {'psi':[], 'dpsi':[]}
 
-        tmp['event_changing'] = (_global_changing, self.config.voila_files)
-        tmp['event_non_changing'] = (_global_non_changing, self.config.voila_files)
+        tmp['junction_changing'] = (_junction_changing, self.config.voila_files)
 
         for voila_file in self.config.voila_files:
 
@@ -593,3 +532,154 @@ class QuantificationWriter:
         #                     tmp[header] = (_dpsi_p_nonchange, [voila_file])
 
         return tmp
+
+
+class MultiQuantWriter(QuantificationWriter):
+
+    def __init__(self):
+
+        super().__init__()
+        self.config = ClassifyConfig()
+
+    def gen_lsvs_list(self, module, quant_identifiers):
+        lsvs = []
+        for parity, edge in quant_identifiers:
+            lsv_ids = self.parity2lsv(module, parity, edge=edge)
+            if lsv_ids:
+                lsvs.append((lsv_ids.pop(), edge,))
+        return lsvs
+
+    def event_changing(self, module, quant_identifiers):
+
+        # should only have one edge specified --
+        # iterate through voila files, if we fine any case where junction is changing,
+        # return true
+        lsvs = self.gen_lsvs_list(module, quant_identifiers)
+        found_quant = False
+
+        for voila_file in self.config.voila_files:
+
+            with Matrix(voila_file) as m1:
+                analysis_type = m1.analysis_type
+
+            junc_results = []
+
+            for lsv_id, _edge in lsvs:
+
+                try:
+
+                    if analysis_type == constants.ANALYSIS_HETEROGEN:
+                        with view_matrix.ViewHeterogen(voila_file) as m:
+                            lsv = m.lsv(lsv_id)
+
+                            edge_idx = self._filter_edges(_edge, lsv)
+                            if edge_idx is None:
+                                continue
+                            else:
+
+                                is_changing = lsv.changing(
+                                    self.config.changing_pvalue_threshold,
+                                    self.config.changing_between_group_dpsi,
+                                    edge_idx)
+
+                                junc_results.append(is_changing)
+
+                                is_changing_secondary = lsv.changing(
+                                    1.0,
+                                    self.config.changing_between_group_dpsi_secondary,
+                                    edge_idx)
+
+                                found_quant = True
+
+                                if not is_changing_secondary:
+                                    break
+
+                    elif analysis_type == constants.ANALYSIS_DELTAPSI:
+                        with view_matrix.ViewDeltaPsi(voila_file) as m:
+                            lsv = m.lsv(lsv_id)
+
+                            edge_idx = self._filter_edges(_edge, lsv)
+                            if edge_idx is None:
+                                continue
+                            else:
+                                is_changing = lsv.changing(
+                                    self.config.changing_between_group_dpsi,
+                                    self.config.probability_changing_threshold,
+                                    edge_idx)
+
+                                junc_results.append(is_changing)
+
+                                is_changing_secondary = lsv.changing(
+                                    self.config.changing_between_group_dpsi_secondary,
+                                    self.config.probability_changing_threshold,
+                                    edge_idx)
+
+                                found_quant = True
+
+                                if not is_changing_secondary:
+                                    break
+
+                except (GeneIdNotFoundInVoilaFile, LsvIdNotFoundInVoilaFile) as e:
+                    continue
+
+                else:
+                    # this executes is we never broke, in other words, all secondary filters passed
+                    # so we check if any primary ones passed, if this is not true, we move to the next
+                    # voila file...
+                    if any(bool(x) is True for x in junc_results):
+                        return True
+
+        return False if found_quant else ''
+
+
+    def event_non_changing(self, module, quant_identifiers):
+
+        lsvs = self.gen_lsvs_list(module, quant_identifiers)
+
+        junc_results = []
+
+        for voila_file in self.config.voila_files:
+
+            with Matrix(voila_file) as m1:
+                analysis_type = m1.analysis_type
+
+
+            for lsv_id, _edge in lsvs:
+                try:
+                    if analysis_type == constants.ANALYSIS_HETEROGEN:
+                        with view_matrix.ViewHeterogen(voila_file) as m:
+                            lsv = m.lsv(lsv_id)
+
+                            edge_idx = self._filter_edges(_edge, lsv)
+                            if edge_idx is None:
+                                continue
+                            else:
+                                is_non_changing = lsv.nonchanging(self.config.non_changing_pvalue_threshold,
+                                                        self.config.non_changing_within_group_iqr,
+                                                        self.config.non_changing_between_group_dpsi,
+                                                        edge_idx)
+                                junc_results.append(is_non_changing)
+
+                    elif analysis_type == constants.ANALYSIS_DELTAPSI:
+                        with view_matrix.ViewDeltaPsi(voila_file) as m:
+                            lsv = m.lsv(lsv_id)
+
+                            edge_idx = self._filter_edges(_edge, lsv)
+                            if edge_idx is None:
+                                continue
+                            else:
+                                non_changing_quant = lsv.high_probability_non_changing(
+                                    self.config.non_changing_threshold, edge_idx)
+
+                                is_non_changing = non_changing_quant >= self.config.probability_non_changing_threshold
+
+                                junc_results.append(is_non_changing)
+
+                except (GeneIdNotFoundInVoilaFile, LsvIdNotFoundInVoilaFile) as e:
+                    continue
+
+        if not junc_results:
+            return ''
+
+        # bool() needed here because they are of type "numpy._bool" by default
+        return all(bool(x) is True for x in junc_results)
