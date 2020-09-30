@@ -414,12 +414,12 @@ class QuantificationWriter:
 
             if analysis_type == constants.ANALYSIS_PSI:
                 for group in group_names:
-                    for key in ("mean_psi", "var_psi",):
+                    for key in ("median_psi", "var_psi",):
                         header = "%s_%s" % (group, key)
                         if header in tmp:
                             tmp[header][1].append(voila_file)
                         else:
-                            if key == "mean_psi":
+                            if key == "median_psi":
                                 tmp[header] = (_psi_psi, [voila_file])
                             elif key == "var_psi":
                                 tmp[header] = (_psi_var, [voila_file])
@@ -430,26 +430,26 @@ class QuantificationWriter:
                 group_idxs = {}
                 for i, group in enumerate(group_names):
                     group_idxs[group] = i
-                    for key in ("mean_psi",):
+                    for key in ("median_psi",):
                         header = "%s_het_%s" % (group, key)
                         if header in tmp:
                             tmp[header][1].append(voila_file)
                             tmp[header][2].append(i)
                         else:
-                            if key == "mean_psi":
+                            if key == "median_psi":
                                 tmp[header] = (_het_psi, [voila_file], [i])
 
 
 
                 for group1, group2 in combinations(group_names, 2):
-                    for key in ("mean_dpsi",):
+                    for key in ("median_dpsi",):
                         header = "%s-%s_het_%s" % (group1, group2, key)
                         if header in tmp:
                             tmp[header][1].append(voila_file)
                             tmp[header][2].append(group_idxs[group1])
                             tmp[header][3].append(group_idxs[group2])
                         else:
-                            if key == "mean_dpsi":
+                            if key == "median_dpsi":
                                 self.dpsi_quant_idxs.append(len(tmp))
                                 tmp[header] = (_het_dpsi, [voila_file], [group_idxs[group1]], [group_idxs[group2]])
 
@@ -463,23 +463,23 @@ class QuantificationWriter:
 
             else:
                 for i, group in enumerate(group_names):
-                    for key in ("mean_psi",):
+                    for key in ("median_psi",):
                         header = "%s_%s" % (group, key)
                         if header in tmp:
                             tmp[header][1].append(voila_file)
                         else:
-                            if key == "mean_psi":
+                            if key == "median_psi":
                                 tmp[header] = (_dpsi_psi, [voila_file], i)
                         self.types2headers['psi'].append(header)
 
                 changing_thresh_key = "probability_changing"
                 non_changing_thresh_key = "probability_non_changing"
-                for key in ("mean_dpsi", changing_thresh_key, non_changing_thresh_key):
+                for key in ("median_dpsi", changing_thresh_key, non_changing_thresh_key):
                     header = "%s_%s" % ('-'.join(reversed(group_names)), key)
                     if header in tmp:
                         tmp[header][1].append(voila_file)
                     else:
-                        if key == "mean_dpsi":
+                        if key == "median_dpsi":
                             self.dpsi_quant_idxs.append(len(tmp))
                             tmp[header] = (_dpsi_dpsi, [voila_file])
                             self.types2headers['dpsi'].append(header)
@@ -488,38 +488,6 @@ class QuantificationWriter:
                             tmp[header] = (_dpsi_p_change, [voila_file])
                         elif key == non_changing_thresh_key:
                             tmp[header] = (_dpsi_p_nonchange, [voila_file])
-
-        # else:
-        #     # in the case of training data, the output needs to be explicitly for each input file
-        #     # we need a kind of format like {'input file name': {'psi1': psi1 function
-        #     tmp = OrderedDict()
-        #     for voila_file in self.config.voila_files:
-        #         with Matrix(voila_file) as m:
-        #             analysis_type = m.analysis_type
-        #             group_names = m.group_names
-        #
-        #         for i, group in enumerate(group_names):
-        #             for key in ("mean_psi",):
-        #                 header = "%s_%s" % (group, key)
-        #                 if header in tmp:
-        #                     tmp[header][1].append(voila_file)
-        #                 else:
-        #                     if key == "mean_psi":
-        #                         tmp[header] = (_dpsi_psi, [voila_file], i)
-        #
-        #         changing_thresh_key = "probability_changing" % self.config.changing_threshold
-        #         non_changing_thresh_key = "probability_non_changing" % self.config.non_changing_threshold
-        #         for key in ("mean_dpsi", changing_thresh_key, non_changing_thresh_key):
-        #             header = "%s_%s" % ('-'.join(group_names), key)
-        #             if header in tmp:
-        #                 tmp[header][1].append(voila_file)
-        #             else:
-        #                 if key == "mean_dpsi":
-        #                     tmp[header] = (_dpsi_dpsi, [voila_file])
-        #                 elif key == changing_thresh_key:
-        #                     tmp[header] = (_dpsi_p_change, [voila_file])
-        #                 elif key == non_changing_thresh_key:
-        #                     tmp[header] = (_dpsi_p_nonchange, [voila_file])
 
         return tmp
 
