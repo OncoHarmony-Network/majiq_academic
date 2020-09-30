@@ -1049,16 +1049,15 @@ class Graph:
                         lsv_store[key][lsv_id] = {'psi': set(), 'delta_psi': set(), 'voila_file': voila_file,
                                                   'group_psi': {}}
 
-                    junc_mean_psi = lsv.get('mean_psi')[junc_i]
+                    junc_median_psi = lsv.median_psi()[junc_i]
 
                     for i, group_name in enumerate(m.group_names):
                         if not group_name in lsv_store[key][lsv_id]['group_psi']:
                             lsv_store[key][lsv_id]['group_psi'][group_name] = set()
 
-                        mean_psi_grp = get_expected_psi(junc_mean_psi[i])
-                        lsv_store[key][lsv_id]['group_psi'][group_name].add(mean_psi_grp)
+                        lsv_store[key][lsv_id]['group_psi'][group_name].add(junc_median_psi[i])
 
-                    dpsi_val = lsv.dpsi_signed[junc_i]
+                    dpsi_val = lsv.median_psi()[junc_i][0] - lsv.median_psi()[junc_i][1]
 
                     lsv_store[key][lsv_id]['delta_psi'].add(dpsi_val)
 

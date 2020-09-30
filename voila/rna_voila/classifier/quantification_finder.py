@@ -4,6 +4,7 @@ from rna_voila.vlsv import get_expected_psi, matrix_area
 from itertools import combinations
 from operator import itemgetter
 from rna_voila.api import Matrix
+from rna_voila.api.view_matrix import ViewHeterogen
 from rna_voila import constants
 from rna_voila.exceptions import GeneIdNotFoundInVoilaFile, LsvIdNotFoundInVoilaFile
 from rna_voila.api.matrix_utils import generate_variances
@@ -196,10 +197,13 @@ class QuantificationWriter:
             def f(lsv_id, edge=None):
                 found_psis = []
                 for voila_file, group_idx in zip(voila_files, group_idxs):
-                    with Matrix(voila_file) as m:
+                    with ViewHeterogen(voila_file) as m:
                         try:
-                            lsv = m.heterogen(lsv_id)
-                            found_psis += _inner_edge_aggregate(lsv, [get_expected_psi(x) for x in np.array(list(lsv.get('mean_psi'))).transpose((1, 0, 2))[group_idx]], edge, _round=False)
+                            lsv = m.lsv(lsv_id)
+                            edge_idx = self._filter_edges(edge, lsv)
+                            medians = lsv.median_psi()
+                            psi = medians[edge_idx][group_idx]
+                            found_psis.append(psi)
                         except (GeneIdNotFoundInVoilaFile, LsvIdNotFoundInVoilaFile) as e:
                             continue
                 if not found_psis:
@@ -221,37 +225,30 @@ class QuantificationWriter:
             return f
 
         def _het_dpsi(voila_files, group_idxs1, group_idxs2):
-            def f(lsv_id, edge=None):
+            def f(lsv_id, edge):
                 for voila_file, group_idx1, group_idx2 in zip(voila_files, group_idxs1, group_idxs2):
-                    with Matrix(voila_file) as m:
+                    with ViewHeterogen(voila_file) as m:
                         try:
                             # for this one the _inner_edge_aggregate is not general enough - I had to do it manually
-                            lsv = m.heterogen(lsv_id)
-                            if edge:
-                                edges = [edge] if not type(edge) is list else edge
-                                vals = []
+                            lsv = m.lsv(lsv_id)
 
-                                for _edge in edges:
-                                    edge_idx = self._filter_edges(_edge, lsv)
-                                    if edge_idx is None:
-                                        continue
-                                    else:
-                                        arr = np.array(list(lsv.get('mean_psi'))).transpose((1, 0, 2))
-                                        psi_g1 = get_expected_psi(arr[group_idx1][edge_idx])
-                                        psi_g2 = get_expected_psi(arr[group_idx2][edge_idx])
-                                        vals.append(psi_g1-psi_g2)
+                            edges = [edge] if not type(edge) is list else edge
+                            vals = []
 
-                                return (round(x, SIG_FIGS) for x in vals)
-                            else:
-                                group_means = []
-                                arr = np.array(list(lsv.get('mean_psi'))).transpose((1, 0, 2))
-                                psis_g1 = arr[group_idx1]
-                                psis_g2 = arr[group_idx2]
-                                for psi_g1, psi_g2 in zip(psis_g1, psis_g2):
-                                    group_means.append(get_expected_psi(psi_g1) - get_expected_psi(psi_g2))
-                                if self.avg_multival:
-                                    return np.mean(group_means)
-                                return (round(x, SIG_FIGS) for x in group_means)
+                            for _edge in edges:
+                                edge_idx = self._filter_edges(_edge, lsv)
+                                if edge_idx is None:
+                                    continue
+                                else:
+                                    medians = lsv.median_psi()
+
+                                    psi_g1 = medians[edge_idx][group_idx1]
+                                    psi_g2 = medians[edge_idx][group_idx2]
+
+                                    vals.append(psi_g1-psi_g2)
+
+                            return (round(x, SIG_FIGS) for x in vals)
+
                         except (GeneIdNotFoundInVoilaFile, LsvIdNotFoundInVoilaFile) as e:
                             continue
                 return None
@@ -271,7 +268,7 @@ class QuantificationWriter:
             return f
 
         def _dpsi_dpsi(voila_files):
-            def f(lsv_id, edge=None):
+            def f(lsv_id, edge):
                 for voila_file in voila_files:
                     with view_matrix.ViewDeltaPsi(voila_file) as m:
                         try:
@@ -279,24 +276,17 @@ class QuantificationWriter:
                             lsv = m.lsv(lsv_id)
                             bins = lsv.get('group_bins')
 
-                            if edge:
-                                edges = [edge] if not type(edge) is list else edge
-                                vals = []
-                                for _edge in edges:
-                                    edge_idx = self._filter_edges(_edge, lsv)
-                                    if edge_idx is None:
-                                        continue
-                                    else:
-                                        vals.append(lsv.excl_incl[edge_idx][1] - lsv.excl_incl[edge_idx][0])
+                            edges = [edge] if not type(edge) is list else edge
+                            vals = []
+                            for _edge in edges:
+                                edge_idx = self._filter_edges(_edge, lsv)
+                                if edge_idx is None:
+                                    continue
+                                else:
+                                    vals.append(lsv.excl_incl[edge_idx][1] - lsv.excl_incl[edge_idx][0])
 
-                                return (round(x, SIG_FIGS) for x in vals)
-                            else:
-                                if self.avg_multival:
-                                    return np.mean((lsv.excl_incl[i][1] - lsv.excl_incl[i][0] for i in range(np.size(bins, 0))))
-                                return (
-                                            round(x, SIG_FIGS) for x in ((lsv.excl_incl[i][1] - lsv.excl_incl[i][0] for i in
-                                            range(np.size(bins, 0))))
-                                        )
+                            return (round(x, SIG_FIGS) for x in vals)
+
                         except (GeneIdNotFoundInVoilaFile, LsvIdNotFoundInVoilaFile) as e:
                             continue
                 return None
