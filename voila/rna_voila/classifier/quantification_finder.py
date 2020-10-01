@@ -532,7 +532,7 @@ class MultiQuantWriter(QuantificationWriter):
 
                             edge_idx = self._filter_edges(_edge, lsv)
                             if edge_idx is None:
-                                continue
+                                break
                             else:
 
                                 is_changing = lsv.changing(
@@ -578,14 +578,14 @@ class MultiQuantWriter(QuantificationWriter):
                                     break
 
                 except (GeneIdNotFoundInVoilaFile, LsvIdNotFoundInVoilaFile) as e:
-                    continue
+                    break
 
-                else:
-                    # this executes is we never broke, in other words, all secondary filters passed
-                    # so we check if any primary ones passed, if this is not true, we move to the next
-                    # voila file...
-                    if any(bool(x) is True for x in junc_results):
-                        return True
+            else:
+                # this executes is we never broke, in other words, all secondary filters passed
+                # so we check if any primary ones passed, if this is not true, we move to the next
+                # voila file...
+                if any(bool(x) is True for x in junc_results):
+                    return True
 
         return False if found_quant else ''
 
