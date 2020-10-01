@@ -1313,8 +1313,8 @@ class Graph:
                     if j - i > 2:
                         skip = n1.connects(n2)
                         if skip:
-                            include1s = n1.connects(self.nodes[i + 1])
-                            include2s = self.nodes[j - 1].connects(n2)
+                            include1s = n1.connects(self.nodes[i + 1], ir=True)
+                            include2s = self.nodes[j - 1].connects(n2, ir=True)
                             # update Module's seen junctions
                             for edge in skip:
                                 if len(edge.lsvs) > 0:

@@ -239,8 +239,10 @@ class TsvWriter(BaseTsvWriter):
                 self.start_headers(self.common_headers + relatively_common_headers + self.quantification_headers, 'p_alternate_last_exon.tsv')
                 self.start_headers(self.common_headers + relatively_common_headers + self.quantification_headers, 'p_alternate_first_exon.tsv')
                 self.start_headers(self.common_headers + relatively_common_headers + ['event_size'] + self.quantification_headers, 'alternative_intron.tsv')
-                headers = self.common_headers + ['junction_coord',
+                headers = self.common_headers + ['junction_name',
+                                                 'junction_coord',
                                                  'denovo',
+                                                 'intron',
                                                  'reference_exon_coord',
                                                  'spliced_with_coord',
                                                  'exons_skipped_coords',
@@ -1464,7 +1466,9 @@ class TsvWriter(BaseTsvWriter):
 
                             quant_identifiers = (
                                 ('s', event['Skip']),
+                                ('s', event['Include1']),
                                 ('t', event['Skip']),
+                                ('t', event['Include2'])
                             )
                             event_non_changing = self.event_non_changing(module, quant_identifiers)
                             event_changing = self.event_changing(module, quant_identifiers)
@@ -1474,16 +1478,17 @@ class TsvWriter(BaseTsvWriter):
                             c1_range_str = self._trim_strand_case_range_str(event['C1'], 'start', event['Skip'], 'start', strand)
                             c2_range_str = self._trim_strand_case_range_str(event['Skip'], 'end', event['C2'], 'end', strand)
 
-                            #src_common = self.common_data(module, 's')
+
                             # Source LSV side
-                            row = [event['Skip'].range_str(),  # junction coord
-                                    event['Skip'].de_novo, # de novo?
-                                    c1_range_str, # reference exon
-                                    c2_range_str, # exon spliced with
-                                    self.semicolon((x.range_str() for x in event['As'])), # exons spanned
-                                    len(event['As'])] # num exons spanned
+                            row = ['Distal',
+                                   event['Skip'].range_str(),  # junction coord
+                                   event['Skip'].de_novo, # de novo?
+                                   event['Skip'].ir,
+                                   c1_range_str, # reference exon
+                                   c2_range_str, # exon spliced with
+                                   self.semicolon((x.range_str() for x in event['As'])), # exons spanned
+                                   len(event['As'])] # num exons spanned
                             quants = [event_non_changing, event_changing] + self.quantifications(module, 's', event['Skip'], event['C1'])
-                            # if self.semicolon((x.range_str() for x in event['Skip'])) == "133702469-133709729":
 
                             common = self.common_data(module,
                                                       's',
@@ -1491,11 +1496,28 @@ class TsvWriter(BaseTsvWriter):
                                                       edge=event['Skip'],
                                                       event_ii=event_i,
                                                       event_name="MES")
+
                             writer.writerow(common + row + quants)
-                            self.junction_cache.append((module, common, quants, row[1], 'C1_C2', row[0]))
+                            self.junction_cache.append((module, common, quants, row[2], 'C1_C2', row[1]))
+
+                            row = ['Proximal',
+                                   event['Include1'].range_str(),  # junction coord
+                                   event['Include1'].de_novo,  # de novo?
+                                   event['Include1'].ir,
+                                   c1_range_str,  # reference exon
+                                   c2_range_str,  # exon spliced with
+                                   self.semicolon((x.range_str() for x in event['As'])),  # exons spanned
+                                   len(event['As'])]  # num exons spanned
+                            quants = [event_non_changing, event_changing] + self.quantifications(module, 's',
+                                                                                                 event['Include1'])
+                            writer.writerow(common + row + quants)
+                            self.junction_cache.append((module, common, quants, row[2], 'C1_A', row[1]))
+
                             # Target LSV side
-                            row = [event['Skip'].range_str(),  # junction coord
+                            row = ['Distal',
+                                   event['Skip'].range_str(),  # junction coord
                                    event['Skip'].de_novo,  # de novo?
+                                   event['Skip'].ir,
                                    c2_range_str,  # reference exon
                                    c1_range_str,  # exon spliced with
                                    self.semicolon((x.range_str() for x in event['As'])),  # exons spanned
@@ -1508,7 +1530,22 @@ class TsvWriter(BaseTsvWriter):
                                                       event_ii=event_i,
                                                       event_name="MES")
                             writer.writerow(common + row + quants)
-                            self.junction_cache.append((module, common, quants, row[1], 'C2_C1', row[0]))
+                            self.junction_cache.append((module, common, quants, row[2], 'C2_C1', row[1]))
+
+                            row = ['Proximal',
+                                   event['Include2'].range_str(),  # junction coord
+                                   event['Include2'].de_novo,  # de novo?
+                                   event['Include2'].ir,
+                                   c1_range_str,  # reference exon
+                                   c2_range_str,  # exon spliced with
+                                   self.semicolon((x.range_str() for x in event['As'])),  # exons spanned
+                                   len(event['As'])]  # num exons spanned
+                            quants = [event_non_changing, event_changing] + self.quantifications(module, 't',
+                                                                                                 event['Include2'])
+                            writer.writerow(common + row + quants)
+                            self.junction_cache.append((module, common, quants, row[2], 'A_C2', row[1]))
+
+
                             event_i += 1
 
 
