@@ -1736,30 +1736,38 @@ class TsvWriter(BaseTsvWriter):
                                                           't',
                                                           event_ii=event_i,
                                                           event_name="OR")
-                            row = [event['Junc'].de_novo,
-                                   event['A1'].range_str(),
-                                   event['A2'].range_str(),
-                                   event['Junc'].range_str()]
-                            # just in case exitrons are ever quantified, somehow, *try* to get
-                            # the exitron's junction quantification (won't exist for now... which is desired)
-                            quants = [event_non_changing, event_changing] + self.quantifications(module, 's', edge=event['Junc'])
-                            writer.writerow(src_common + row + quants)
-                            self.junction_cache.append((module, src_common, quants, row[0], 'Orphan', row[3]))
-                            self.heatmap_add(module, src_common, quants,
-                                             event['Junc'].absolute_end - event['Junc'].absolute_start,
-                                             row[0], 'Orphan', row[3])
 
                             row = [event['Junc'].de_novo,
-                                   event['A1'].range_str(),
-                                   event['A2'].range_str(),
-                                   event['Junc'].range_str()]
-                            quants = [event_non_changing, event_changing] + self.quantifications(module, 't', edge=event['Junc'])
-                            writer.writerow(trg_common + row + quants)
-                            self.junction_cache.append((module, trg_common, quants, row[0], 'exitron', row[3]))
-                            self.heatmap_add(module, trg_common, quants,
-                                             event['Junc'].absolute_end - event['Junc'].absolute_start,
-                                             row[0], 'Orphan', row[3])
-                            event_i += 1
+                                  event['A1'].range_str(),
+                                  event['A2'].range_str(),
+                                  event['Junc'].range_str()]
+
+                            if src_common[5]:
+
+                                # just in case exitrons are ever quantified, somehow, *try* to get
+                                # the exitron's junction quantification (won't exist for now... which is desired)
+                                quants = [event_non_changing, event_changing] + self.quantifications(module, 's', edge=event['Junc'])
+                                writer.writerow(src_common + row + quants)
+                                self.junction_cache.append((module, src_common, quants, row[0], 'Orphan', row[3]))
+                                self.heatmap_add(module, src_common, quants,
+                                                 event['Junc'].absolute_end - event['Junc'].absolute_start,
+                                                 row[0], 'Orphan', row[3])
+
+                                event_i += 1
+
+                            elif trg_common[5]:
+
+                                # just in case exitrons are ever quantified, somehow, *try* to get
+                                # the exitron's junction quantification (won't exist for now... which is desired)
+                                quants = [event_non_changing, event_changing] + self.quantifications(module, 't',
+                                                                                                     edge=event['Junc'])
+                                writer.writerow(trg_common + row + quants)
+                                self.junction_cache.append((module, trg_common, quants, row[0], 'Orphan', row[3]))
+                                self.heatmap_add(module, trg_common, quants,
+                                                 event['Junc'].absolute_end - event['Junc'].absolute_start,
+                                                 row[0], 'Orphan', row[3])
+
+                                event_i += 1
 
     def constitutive(self):
         with open(os.path.join(self.config.directory, 'constitutive.tsv.%s' % self.pid), 'a', newline='') as csvfile:
