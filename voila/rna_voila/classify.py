@@ -68,68 +68,51 @@ def classify_gene(args):
     try:
         graph = Graph(gene_id, experiment_names)
 
-
-        if not config.output_training_data:
-
-            writer = TsvWriter(graph, gene_id)
+        writer = TsvWriter(graph, gene_id)
 
 
-            if config.putative_multi_gene_regions:
-                writer.p_multi_gene_region()
-
-            else:
-                if 'events' in config.enabled_outputs:
-                    writer.cassette()
-
-                    writer.alt3prime()
-                    writer.alt5prime()
-                    writer.alt3and5prime()
-
-                    writer.p_alt3prime()
-                    writer.p_alt5prime()
-
-                    writer.mutually_exclusive()
-                    writer.alternative_intron()
-
-                    writer.alternate_first_exon()
-                    writer.alternate_last_exon()
-                    writer.p_alternate_first_exon()
-                    writer.p_alternate_last_exon()
-
-                    writer.multi_exon_spanning()
-                    writer.tandem_cassette()
-                    writer.exitron()
-                    writer.orphan_junction()
-
-                    writer.other_event()
-
-                if 'summary' in config.enabled_outputs:
-                    writer.summary()
-
-                if 'heatmap' in config.enabled_outputs:
-                    writer.heatmap()
-                if 'junctions' in config.enabled_outputs:
-                    writer.junctions()
-                if 'mpe' in config.enabled_outputs:
-                    writer.mpe()
-
-                if ClassifyConfig().keep_constitutive and 'events' in config.enabled_outputs:
-                    writer.constitutive()
+        if config.putative_multi_gene_regions:
+            writer.p_multi_gene_region()
 
         else:
-            writer = TrainingWriter(graph, gene_id)
+            if 'events' in config.enabled_outputs:
+                writer.cassette()
 
-            if 'matrices' in config.enabled_outputs:
-                writer.adjacency_matrix()
+                writer.alt3prime()
+                writer.alt5prime()
+                writer.alt3and5prime()
 
-            if 'exons' in config.enabled_outputs:
-                writer.exons_tsv()
+                writer.p_alt3prime()
+                writer.p_alt5prime()
 
+                writer.mutually_exclusive()
+                writer.alternative_intron()
+
+                writer.alternate_first_exon()
+                writer.alternate_last_exon()
+                writer.p_alternate_first_exon()
+                writer.p_alternate_last_exon()
+
+                writer.multi_exon_spanning()
+                writer.tandem_cassette()
+                writer.exitron()
+                writer.orphan_junction()
+
+                writer.other_event()
+
+            if 'summary' in config.enabled_outputs:
+                writer.summary()
+
+            if 'heatmap' in config.enabled_outputs:
+                writer.heatmap()
             if 'junctions' in config.enabled_outputs:
-                writer.junctions_tsv()
+                writer.junctions()
+            if 'mpe' in config.enabled_outputs:
+                writer.mpe()
 
-            if 'paths' in config.enabled_outputs:
-                writer.paths_tsv()
+            if ClassifyConfig().keep_constitutive and 'events' in config.enabled_outputs:
+                writer.constitutive()
+
 
 
     except KeyboardInterrupt:
@@ -191,12 +174,7 @@ def run_classifier():
     voila_log().info("Writing TSVs to %s" % os.path.abspath(config.directory))
 
     #total_genes = len(gene_ids)
-    if not config.output_training_data:
-        writerClass = TsvWriter
-    else:
-        writerClass = TrainingWriter
-        TrainingWriter.delete_tsvs()
-
+    writerClass = TsvWriter
     writerClass.delete_tsvs()
 
     work_size = len(gene_ids)
@@ -261,22 +239,6 @@ def run_classifier():
                 with open(f, "rb") as infile:
                     outfile.write(infile.read())
                 os.remove(f)
-
-    if config.output_training_data:
-        # in this case we can't know each specific prefix ahead of time, we need to search for them
-        # (group files starting with X name, then '.hdf5.' then some number
-        groups = {}
-        read_files = glob.glob(config.directory + '/*.hdf5.*')
-        for _file in read_files:
-
-            group, ext, proc = _file.split('.')
-            dest = "%s.%s" % (group, ext)
-            if not dest in groups:
-                groups[dest] = []
-            groups[dest].append(_file)
-
-        for group in groups:
-            writer.combine_hdf5s(group, groups[group])
 
 
 
