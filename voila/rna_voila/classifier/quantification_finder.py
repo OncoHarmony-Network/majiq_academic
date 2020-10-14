@@ -501,18 +501,23 @@ class MultiQuantWriter(QuantificationWriter):
 
     def gen_lsvs_list(self, module, quant_identifiers):
         lsvs = []
+        missing_any = False
         for parity, edge in quant_identifiers:
             lsv_ids = self.parity2lsv(module, parity, edge=edge)
             if lsv_ids:
                 lsvs.append((lsv_ids.pop(), edge,))
-        return lsvs
+            else:
+                missing_any = True
+        return lsvs, missing_any
 
     def event_changing(self, module, quant_identifiers):
 
         # should only have one edge specified --
         # iterate through voila files, if we fine any case where junction is changing,
         # return true
-        lsvs = self.gen_lsvs_list(module, quant_identifiers)
+        lsvs, missing_any = self.gen_lsvs_list(module, quant_identifiers)
+        if missing_any:
+            return False
         found_quant = False
 
         for voila_file in self.config.voila_files:
@@ -531,6 +536,7 @@ class MultiQuantWriter(QuantificationWriter):
                             lsv = m.lsv(lsv_id)
 
                             edge_idx = self._filter_edges(_edge, lsv)
+
                             if edge_idx is None:
                                 break
                             else:
@@ -592,7 +598,9 @@ class MultiQuantWriter(QuantificationWriter):
 
     def event_non_changing(self, module, quant_identifiers):
 
-        lsvs = self.gen_lsvs_list(module, quant_identifiers)
+        lsvs, missing_any = self.gen_lsvs_list(module, quant_identifiers)
+        if missing_any:
+            return False
 
         junc_results = []
 
