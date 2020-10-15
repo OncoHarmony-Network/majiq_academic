@@ -1997,8 +1997,9 @@ class TsvWriter(BaseTsvWriter):
         if self.config.heatmap_selection == 'max_abs_dpsi':
 
             try:
-                max_abs_dpsi = max((abs(float(quants[i])) if quants[i] else 0.0 for i in self.dpsi_quant_idxs))
-
+                # i + 2, because quants contains event_changing and event_non_changing which are
+                # not considered for offsets by the rest of the quantifications class.
+                max_abs_dpsi = max((abs(float(quants[i+2])) if quants[i+2] else 0.0 for i in self.dpsi_quant_idxs))
 
             except ValueError:
                 # this problem only happens with semicolon separated values, which we are planning to get rid of
