@@ -81,7 +81,6 @@ def filter_splicegraph(args):
     # sqlite part
 
 
-
     new_splice_graph_file = os.path.join(config.directory, os.path.basename(config.splice_graph_file))
 
     if os.path.exists(new_splice_graph_file):
@@ -112,7 +111,8 @@ def filter_splicegraph(args):
     copy_table('junction_reads', src_conn, dest_conn, gene_ids, 'junction_gene_id')
 
     voila_log().info("Finished Filtering Splicegraph")
-    q.put(None)
+    if q:
+        q.put(None)
 
 def filter_voila_file(args):
     voila_file, gene_ids, lsv_ids, q = args
@@ -298,6 +298,7 @@ def filter_voila_file(args):
     else:
         _gene_ids = gene_ids
 
+
     if config.changing or config.non_changing:
         voila_log().info("Filtered to %d LSVs for %s, writing output" % (len(included_lsv_ids) - len(excluded_lsv_ids), voila_file))
         if not included_lsv_ids:
@@ -341,7 +342,8 @@ def filter_voila_file(args):
         voila_log().warning("For voila file %s , no valid LSVs / gene_ids were found, so the file was not created" % voila_file)
         os.remove(new_voila_file)
 
-    q.put(final_lsv_ids, True)
+    if q:
+        q.put(final_lsv_ids, True)
     return final_lsv_ids
 
 def run_filter():
@@ -386,53 +388,66 @@ def run_filter():
 
     # voila files part
 
-    manager = Manager()
-    q = manager.Queue()
+    if config.nproc > 1:
+        manager = Manager()
+        q = manager.Queue()
 
-    p = Pool(config.nproc)
+        p = Pool(config.nproc)
 
     # voila_index = p.map(self._heterogen_pool_add_index, zip(lsv_ids, range(work_size), repeat(work_size)))
 
     final_lsv_ids = set()
 
     if not config.splice_graph_only:
-        voila_files_pool = p.map_async(filter_voila_file,
-                                   ((voila_file, gene_ids, lsv_ids, q) for voila_file in config.voila_files), )
 
 
-        # monitor loop
-        while True:
+        if config.nproc > 1:
+            pool_args = ((voila_file, gene_ids, lsv_ids, q) for voila_file in config.voila_files)
+            voila_files_pool = p.map_async(filter_voila_file, pool_args, )
 
-            if voila_files_pool.ready():
-                break
-            else:
-                #size = q.qsize()
-                #print('Processing Genes and Modules [%d/%d]\r' % (size, work_size), end="")
-                time.sleep(1)
 
-        #print('                                                  \r', end="")
-        for voila_file_res in voila_files_pool.get(True):
-            for lsv_id in voila_file_res:
-                final_lsv_ids.add(lsv_id)
+            # monitor loop
+            while True:
+
+                if voila_files_pool.ready():
+                    break
+                else:
+                    #size = q.qsize()
+                    #print('Processing Genes and Modules [%d/%d]\r' % (size, work_size), end="")
+                    time.sleep(1)
+
+            #print('                                                  \r', end="")
+            for voila_file_res in voila_files_pool.get(True):
+                for lsv_id in voila_file_res:
+                    final_lsv_ids.add(lsv_id)
+        else:
+            pool_args = ((voila_file, gene_ids, lsv_ids, None) for voila_file in config.voila_files)
+            for arglist in pool_args:
+                voila_file_res = filter_voila_file(arglist)
+                for lsv_id in voila_file_res:
+                    final_lsv_ids.add(lsv_id)
 
         gene_ids = lsv_ids2gene_ids(final_lsv_ids)
 
     if not config.voila_files_only:
-        splicegraph_pool = p.map_async(filter_splicegraph, ((list(gene_ids), q),))
 
-        # monitor loop
-        while True:
+        if config.nproc > 1:
+            splicegraph_pool = p.map_async(filter_splicegraph, ((list(gene_ids), q),))
 
-            if splicegraph_pool.ready():
-                break
-            else:
-                # size = q.qsize()
-                # print('Processing Genes and Modules [%d/%d]\r' % (size, work_size), end="")
-                time.sleep(1)
+            # monitor loop
+            while True:
 
-        # print('                                                  \r', end="")
-        splicegraph_pool.get()
+                if splicegraph_pool.ready():
+                    break
+                else:
+                    # size = q.qsize()
+                    # print('Processing Genes and Modules [%d/%d]\r' % (size, work_size), end="")
+                    time.sleep(1)
 
+            # print('                                                  \r', end="")
+            splicegraph_pool.get()
+        else:
+            filter_splicegraph((list(gene_ids), None))
 
     voila_log().info("Filtering Complete")
 
