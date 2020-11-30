@@ -327,7 +327,7 @@ void test_calc(vector<psi_distr_t>& oPvals, psi_distr_t& oScore, HetStats* HetSt
             }
         }
         for(int i=0; i<nstats; i++){
-            float mmm = quantile(pval_vect[i], quant) ;
+            float mmm = quantile(pval_vect[i].begin(), pval_vect[i].end(), quant);
             oPvals[j][i] = mmm ;
             if ((HetStatsObj->names)[i] == "TNOM"){
                 float ss = median(score_vect) ;

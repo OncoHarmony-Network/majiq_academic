@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <string>
 #include <math.h>
+#include <cmath>
 #include <omp.h>
 #include "qLSV.hpp"
 #include "stats/stats.hpp"
@@ -56,16 +57,51 @@ inline void get_prior_params( vector<psi_distr_t>& o_priors, int njunc, bool ir)
     return ;
 }
 
-inline float quantile(vector<float> set, float quant){
-    const int n = set.size() ;
-    if (n==1) return set[0] ;
-    float idx = n * quant ;
-    float c_idx = min(ceilf(idx), (float)n) ;
-    if (c_idx == idx){
-        int idxp = min(idx+1, (float)n) ;
-        return (set[idx] + set[idxp]) / 2 ;
-    }else{
-        return set[c_idx] ;
+/**
+ * Obtains the specified quantile of values between first and last
+ *
+ * @param first, last random-access iterators. Note: values will be reordered
+ * @param quantile the quantile to evaluate
+ *
+ * Obtains quantile between observations using linear interpolation (i.e. NumPy
+ * default)
+ */
+template<class It>
+inline
+#if __cplusplus >= 201703L
+constexpr  // required for c++17 and later
+#endif
+typename std::iterator_traits<It>::value_type quantile(It first, It last, float quantile) {
+    // should be random iterator
+    static_assert(std::is_same<
+            std::random_access_iterator_tag, typename std::iterator_traits<It>::iterator_category
+            >::value,
+            "quantile() only accepts random-access iterators as input\n");
+    // how many elements?
+    const auto n = std::distance(first, last);
+    if (n < 1) {
+        throw std::runtime_error("Empty set of values passed to quantile()");
+    } else if (n == 1) {
+        return *first;
+    } else {
+        // otherwise, we need to determine where we belong between 0 and n-1
+        if (quantile <= 0) {
+            return *std::min_element(first, last);
+        } else if (quantile >= 1) {
+            return *std::max_element(first, last);
+        } else {
+            // between which indexes in sorted array is our quantile?
+            const float idx_float = (n - 1) * quantile;
+            const float idx_floor_float = std::floor(idx_float);
+            It it_floor = first + static_cast<int>(idx_floor_float);
+            // partial sort of values to put correct value at it_floor
+            std::nth_element(first, it_floor, last);
+            // get values around idx_float
+            const auto value_below = *it_floor;
+            const auto value_above = *std::min_element(it_floor + 1, last);
+            // linear interpolation between the two:
+            return value_below + (idx_float - idx_floor_float) * (value_above - value_below);
+        }
     }
 }
 
