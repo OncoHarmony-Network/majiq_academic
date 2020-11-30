@@ -71,8 +71,7 @@ void psi_posterior(psiLSV*lsvObj, psi_distr_t& psi_border, int nbins){
                 lsvObj->post_psi[j][i] += exp(psi_lkh[i]) ;
             }
         }
-        sort (temp_mupsi.begin(), temp_mupsi.end()) ;
-        lsvObj->mu_psi[j] = median(temp_mupsi) ;
+        lsvObj->mu_psi[j] = median(temp_mupsi.begin(), temp_mupsi.end());
         for (int i=0; i<nbins; i++){
             lsvObj->post_psi[j][i] /= msamples ;
         }
@@ -143,10 +142,8 @@ void deltapsi_posterior(dpsiLSV*lsvObj, vector<psi_distr_t>& prior_matrix, psi_d
                 }
             }
         }
-        sort (temp_mupsi1.begin(), temp_mupsi1.end()) ;
-        sort (temp_mupsi2.begin(), temp_mupsi2.end()) ;
-        lsvObj->mu_psi1[j] = median(temp_mupsi1) ;
-        lsvObj->mu_psi2[j] = median(temp_mupsi2) ;
+        lsvObj->mu_psi1[j] = median(temp_mupsi1.begin(), temp_mupsi1.end());
+        lsvObj->mu_psi2[j] = median(temp_mupsi2.begin(), temp_mupsi2.end());
 
         for (int i=0; i<nbins; i++){
             lsvObj->post_psi1[j][i] /= msamples ;
@@ -241,8 +238,7 @@ void get_samples_from_psi(
             distributions.push_back(boost::random::beta_distribution<float>(a, b));
         }
         // get median of posterior means for this junction and save it
-        sort (temp_mupsi.begin(), temp_mupsi.end()) ;
-        lsvObj->mu_psi[cidx][fidx][j] = median(temp_mupsi) ;
+        lsvObj->mu_psi[cidx][fidx][j] = median(temp_mupsi.begin(), temp_mupsi.end());
 
         // perform sampling for testing/visualization ({psi,visualization}_samples)
         psi_distr_t &visualization_distribution = lsvObj->post_psi[cidx][j];
@@ -330,7 +326,7 @@ void test_calc(vector<psi_distr_t>& oPvals, psi_distr_t& oScore, HetStats* HetSt
             float mmm = quantile(pval_vect[i], quant) ;
             oPvals[j][i] = mmm ;
             if ((HetStatsObj->names)[i] == "TNOM"){
-                float ss = median(score_vect) ;
+                float ss = median(score_vect.begin(), score_vect.end());
                 oScore[j] = ss ;
             }
         }
