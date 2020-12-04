@@ -159,6 +159,21 @@ class hetLSV: public qLSV{
     private:
         int joffset_ ;
 
+        /**
+         * Add values in k to vector v (used by add_condition1, add_condition2)
+         */
+        inline void add_condition_v(
+                float* k, int x, int nways, int psi_samples,
+                vector<vector<psi_distr_t>>& v) {
+            const int samples_shape = psi_samples + 1;  // additional value for psi_mean
+            for (int i = 0; i < nways; ++i) {
+                for (int j = 0; j < samples_shape; ++j) {
+                    int index = (i * samples_shape) + j;
+                    v[x][i][j] = k[index];
+                }
+            }
+        }
+
     public:
 
 //TODO: move vectors to private and create setter and adders functions
@@ -183,26 +198,17 @@ class hetLSV: public qLSV{
         }
 
         void create_condition_samples(int size1, int size2, int psi_samples){
-            cond_sample1 = vector<vector<psi_distr_t>>(size1, vector<psi_distr_t>(nways_, psi_distr_t(psi_samples))) ;
-            cond_sample2 = vector<vector<psi_distr_t>>(size2, vector<psi_distr_t>(nways_, psi_distr_t(psi_samples))) ;
+            const int samples_shape = psi_samples + 1;  // additional value for psi_mean
+            cond_sample1 = vector<vector<psi_distr_t>>(size1, vector<psi_distr_t>(nways_, psi_distr_t(samples_shape))) ;
+            cond_sample2 = vector<vector<psi_distr_t>>(size2, vector<psi_distr_t>(nways_, psi_distr_t(samples_shape))) ;
         }
 
         void add_condition1(float * k, int x, int nways, int psi_samples){
-            for (int i=0; i< nways; i++){
-                for (int j=0; j< psi_samples; j++){
-                    int  index = (i*psi_samples) + j ;
-                    cond_sample1[x][i][j] = k[index] ;
-                }
-            }
+            add_condition_v(k, x, nways, psi_samples, cond_sample1);
         }
 
         void add_condition2(float * k, int x, int nways, int psi_samples){
-            for (int i=0; i< nways; i++){
-                for (int j=0; j< psi_samples; j++){
-                    int  index = (i*psi_samples) + j ;
-                    cond_sample2[x][i][j] = k[index] ;
-                }
-            }
+            add_condition_v(k, x, nways, psi_samples, cond_sample2);
         }
 
         void clear(){

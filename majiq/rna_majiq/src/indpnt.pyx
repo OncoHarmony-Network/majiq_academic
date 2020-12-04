@@ -45,8 +45,10 @@ cdef int _statistical_test_computation(object out_h5p, dict comparison, list lis
     cdef int index, nways, lsv_index
     cdef list file_list = []
     cdef list statlist
-    cdef np.ndarray[np.float32_t, ndim=2, mode="c"]  oPvals
-    cdef map[string, vector[psi_distr_t]] output
+    cdef np.ndarray[np.float32_t, ndim=2, mode="c"] np_psisamples_pval_percentile
+    cdef np.ndarray[np.float32_t, ndim=2, mode="c"] np_psimean_pval
+    cdef map[string, vector[psi_distr_t]] psisamples_pval_percentile
+    cdef map[string, vector[psi_distr_t]] psimean_pval
     cdef map[string,psi_distr_t] oScore
     cdef np.ndarray[np.float32_t, ndim=1, mode="c"] score
     cdef string lsv_id, stname
@@ -129,9 +131,11 @@ cdef int _statistical_test_computation(object out_h5p, dict comparison, list lis
                     k = cc[lsv_index:lsv_index+nways]
                     hetObj_ptr.add_condition2(<np.float32_t *> k.data, fidx, nways, psi_samples)
 
-            output[lsv_id] = vector[psi_distr_t](nways, psi_distr_t(nstats))
-            oScore[lsv_id] = psi_distr_t(nways)
-            test_calc(output[lsv_id], oScore[lsv_id], StatsObj, hetObj_ptr, psi_samples, test_percentile)
+                # insertions into maps are not thread-safe
+                psisamples_pval_percentile[lsv_id] = vector[psi_distr_t](nways, psi_distr_t(nstats))
+                psimean_pval[lsv_id] = vector[psi_distr_t](nways, psi_distr_t(nstats))
+                oScore[lsv_id] = psi_distr_t(nways)
+            test_calc(psimean_pval[lsv_id], psisamples_pval_percentile[lsv_id], oScore[lsv_id], StatsObj, hetObj_ptr, psi_samples, test_percentile)
             hetObj_ptr.clear()
         # clear out loaded arrays
         for cc_list in file_list:
@@ -142,14 +146,19 @@ cdef int _statistical_test_computation(object out_h5p, dict comparison, list lis
     logger.info('Storing Voila file statistics')
     for lsv in list_of_lsv:
         nways =lsv_vec[lsv].get_num_ways()
-        oPvals = np.zeros(shape=(nways, nstats), dtype=np.float32)
+        np_psisamples_pval_percentile = np.zeros(shape=(nways, nstats), dtype=np.float32)
+        np_psimean_pval = np.zeros(shape=(nways, nstats), dtype=np.float32)
         score = np.zeros(shape=nways, dtype=np.float32)
         for ii in range(nways):
             for jj in range(nstats):
-                # print(output[lsv_id][ii][jj])
-                oPvals[ii, jj] = output[lsv][ii][jj]
+                np_psisamples_pval_percentile[ii, jj] = psisamples_pval_percentile[lsv][ii][jj]
+                np_psimean_pval[ii, jj] = psimean_pval[lsv][ii][jj]
             score[ii] = oScore[lsv][ii]
-        out_h5p.heterogen(lsv.decode('utf-8')).add(junction_stats=oPvals, tnom_score=score)
+        out_h5p.heterogen(lsv.decode('utf-8')).add(
+            junction_stats=np_psimean_pval,
+            junction_psisamples_stats=np_psisamples_pval_percentile,
+            tnom_score=score
+        )
 
 
 cdef int _het_computation(
@@ -207,7 +216,8 @@ cdef int _het_computation(
                 f"(group {cidx + 1}/2, experiment {fidx + 1}/{len(cond_list)})"
                 f" Group {cond_name} sampling PSI from '{f}'"
             )
-            osamps = np.zeros(shape=(total_njuncs, psi_samples), dtype=np.float32)
+            # osamps[..., 0] corresponds to posterior mean, osamps[..., 1:] to psisamples
+            osamps = np.zeros(shape=(total_njuncs, psi_samples + 1), dtype=np.float32)
             # lsvs should be made unpassed, require get_coverage_mat_lsv to pass LSVs using minreads/minnonzero
             for i in prange(nlsv, nogil=True, num_threads=nthreads):
                 with gil:
