@@ -80,7 +80,7 @@ typename std::iterator_traits<It>::value_type quantile(It first, It last, float 
     // how many elements?
     const auto n = std::distance(first, last);
     if (n < 1) {
-        throw std::runtime_error("Empty set of values passed to quantile()");
+        return std::numeric_limits<typename std::iterator_traits<It>::value_type>::quiet_NaN();
     } else if (n == 1) {
         return *first;
     } else {
