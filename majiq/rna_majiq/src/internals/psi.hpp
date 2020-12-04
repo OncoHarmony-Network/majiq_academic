@@ -31,12 +31,12 @@ typename std::iterator_traits<It>::value_type median(It first, It last) {
     static_assert(std::is_same<
             std::random_access_iterator_tag, typename std::iterator_traits<It>::iterator_category
             >::value,
-            "quantile() only accepts random-access iterators as input\n");
+            "median() only accepts random-access iterators as input\n");
     // how many elements?
     const auto n = std::distance(first, last);
     // 3 cases
     if (n < 1) {
-        throw std::runtime_error("Emppty set of values passed to median()");
+        return std::numeric_limits<typename std::iterator_traits<It>::value_type>::quiet_NaN();
     } else if (n == 1) {
         return *first;
     } else if (n == 2) {
