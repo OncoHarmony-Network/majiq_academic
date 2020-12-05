@@ -611,7 +611,7 @@ def main():
     )
     htrgen.add_argument(
         "--psi-samples",
-        type=check_positive_int,
+        type=check_nonnegative_int,
         default=100,
         dest="psi_samples",
         help="Number of PSI samples to take per LSV junction. If equal to 0,"
