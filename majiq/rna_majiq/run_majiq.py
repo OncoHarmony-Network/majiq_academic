@@ -25,27 +25,89 @@ class FRange01(argparse.Action):
         setattr(namespace, self.dest, values)
 
 
-class StoreRequiredUniqueAction(argparse.Action):
-    """ Require that stored values are unique
+def StoreRequiredUniqueActionFactory():
+    """ Return class that pools shared values (do not allow overlap)
     """
 
-    def __call__(self, parser, namespace, values, option_string=None):
-        """ Check that values are unique if list
-        """
-        unique_values = set(values)  # set of unique values
-        if isinstance(values, list) and len(values) != len(unique_values):
-            # values are not all unique...
-            repeated_values = set()  # determine which values were repeated
-            # remove unique values (if done twice, added to repeated_values)
-            for x in values:
-                try:
-                    unique_values.remove(x)
-                except KeyError:
-                    repeated_values.add(x)
-            raise argparse.ArgumentError(
-                self, f"values must be unique (repeated values: {repeated_values})"
-            )
-        setattr(namespace, self.dest, values)
+    class StoreRequiredUniqueAction(argparse.Action):
+
+        # class variable with shared values known to all instances
+        shared_values = {}  # Dict[str, Set[str]]
+
+        @staticmethod
+        def repeated_values(values):
+            """ Returns repeated values (that occur more than twice)
+
+            Returns
+            -------
+            Set[str]
+            """
+            unique_values = set(values)  # set of unique values
+            repeated_values = set()  # set of values that were repeated
+            if isinstance(values, list) and len(values) != len(unique_values):
+                # values are not all unique...
+                repeated_values = set()  # determine which values were repeated
+                # remove unique values (if done twice, added to repeated_values)
+                for x in values:
+                    try:
+                        unique_values.remove(x)
+                    except KeyError:
+                        repeated_values.add(x)
+            return repeated_values
+
+        @classmethod
+        def overlapping_values(cls, dest, values):
+            """ Updates shared_values and returns overlapping values with other
+            parameters
+
+            Parameters
+            ----------
+            dest: str
+                Key to ignore in shared_values
+            values:
+                Values to compare with other shared values
+
+            Returns
+            -------
+            Dict[str, Set[str]]
+                Keys for other parameter names, values correspond to overlaps
+                between them
+            """
+            unique_values = set(values)
+            overlapping_values = {
+                other_key: other_values & unique_values
+                for other_key, other_values in cls.shared_values.items()
+                if other_key != dest and other_values & unique_values
+            }
+            # update shared values
+            cls.shared_values[dest] = unique_values
+            # remove any keys with zero overlaps
+            return {k: v for k, v in overlapping_values.items() if v}
+
+        def __call__(self, parser, namespace, values, option_string=None):
+            """ Check that values are unique if list, not in shared_values
+            """
+            # no repeated or overlapping values
+            repeated_values = self.repeated_values(values)
+            if repeated_values:
+                raise argparse.ArgumentError(
+                    self, f"values must be unique (repeated values: {repeated_values})"
+                )
+            overlapping_values = self.overlapping_values(self.dest, values)
+            if overlapping_values:
+                raise argparse.ArgumentError(
+                    self,
+                    "values must not overlap shared parameters"
+                    f" (overlaps: {overlapping_values})",
+                )
+            # no non-unique or overlapping values, so save updated values
+            setattr(namespace, self.dest, values)
+
+    return StoreRequiredUniqueAction
+
+
+StoreGroupNames = StoreRequiredUniqueActionFactory()
+StoreExperimentPaths = StoreRequiredUniqueActionFactory()
 
 
 def check_positive(value):
@@ -429,7 +491,7 @@ def main():
     psi.add_argument(
         "files",
         nargs="+",
-        action=StoreRequiredUniqueAction,
+        action=StoreExperimentPaths,
         help="Paths to MAJIQ files for the experiment(s) to aggregate for"
         " PSI quantification as a single group.",
     )
@@ -457,7 +519,7 @@ def main():
         dest="files1",
         nargs="+",
         required=True,
-        action=StoreRequiredUniqueAction,
+        action=StoreExperimentPaths,
         help="Paths to MAJIQ files for the experiment(s) to quantify for first"
         " group (aggregated as replicates if deltapsi, independently if heterogen)",
     )
@@ -466,7 +528,7 @@ def main():
         dest="files2",
         nargs="+",
         required=True,
-        action=StoreRequiredUniqueAction,
+        action=StoreExperimentPaths,
         help="Paths to MAJIQ files for the experiment(s) to quantify for first"
         " group (aggregated as replicates if deltapsi, independently if heterogen)",
     )
@@ -476,7 +538,7 @@ def main():
         nargs=2,
         metavar=("NAME_GRP1", "NAME_GRP2"),
         required=True,
-        action=StoreRequiredUniqueAction,
+        action=StoreGroupNames,
         help="The names that identify the groups being compared.",
     )
 
