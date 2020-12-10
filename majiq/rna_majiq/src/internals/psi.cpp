@@ -178,6 +178,7 @@ void get_samples_from_psi(
     float* osamps, hetLSV* lsvObj, int psi_samples, int visualization_samples,
     psi_distr_t& psi_border, int nbins, int cidx, int fidx, std::mt19937 &generator
 ) {
+    const int osamps_shape1 = psi_samples + 1;  // shape of axis 1 of osamps
     const int njunc = lsvObj->get_num_ways() ;
     const int j_offset = lsvObj->get_junction_index() ;
     const int msamples = lsvObj->samps[0].size() ;
@@ -192,9 +193,9 @@ void get_samples_from_psi(
             // E(PSI) for junction is -1
             lsvObj->mu_psi[cidx][fidx][j] = -1.;
             // output psisamples should be -1
-            for (int i = 0; i < psi_samples; ++i) {
+            for (int i = 0; i < osamps_shape1; ++i) {
                 // j_offset is first junction in LSV, 2d index --> 1d index
-                const int idx_2d = ((j + j_offset) * psi_samples) + i;
+                const int idx_2d = ((j + j_offset) * osamps_shape1) + i;
                 // set osamps to -1
                 osamps[idx_2d] = -1.;
             }
@@ -238,7 +239,9 @@ void get_samples_from_psi(
             distributions.push_back(boost::random::beta_distribution<float>(a, b));
         }
         // get median of posterior means for this junction and save it
-        lsvObj->mu_psi[cidx][fidx][j] = median(temp_mupsi.begin(), temp_mupsi.end());
+        const float psi_mean = median(temp_mupsi.begin(), temp_mupsi.end());
+        lsvObj->mu_psi[cidx][fidx][j] = psi_mean;
+        osamps[(j + j_offset) * osamps_shape1] = psi_mean;  // first value is psi mean
 
         // perform sampling for testing/visualization ({psi,visualization}_samples)
         psi_distr_t &visualization_distribution = lsvObj->post_psi[cidx][j];
@@ -247,10 +250,10 @@ void get_samples_from_psi(
             // sample psi from uniform mixture of betas distribution
             const float sampled_psi = distributions[source_distribution(generator)](generator);
             // track sampled psi for statistical tests?
-            if (psi_samples > 1 && i < psi_samples) {
+            if (i < psi_samples) {
                 // we are sampling for test statistic and this is sample to use
-                // get index for output sample
-                const int idx_2d = ((j + j_offset) * psi_samples) + i;
+                // get index for output sample (off by 1 since first value is psi_mean
+                const int idx_2d = ((j + j_offset) * osamps_shape1) + i + 1;
                 // generate output: sample from uniformly selected bootstrap distribution
                 osamps[idx_2d] = sampled_psi;
             }
@@ -265,20 +268,13 @@ void get_samples_from_psi(
             // update unnormalized visualization distribution
             visualization_distribution[idx_bin] += visualization_impact;
         }
-        if (psi_samples == 1) {
-            // we don't want to use the sampled points for statistical tests
-            // use posterior mean instead
-            const int idx_2d = j + j_offset;
-            osamps[idx_2d] = lsvObj->mu_psi[cidx][fidx][j] ;
-        }
     }
     all_m.clear() ;
     return ;
 }
 
-void test_calc(vector<psi_distr_t>& oPvals, psi_distr_t& oScore, HetStats* HetStatsObj, hetLSV* lsvObj,
+void test_calc(vector<psi_distr_t>& mean_pvalues, vector<psi_distr_t>& sample_pvalues, psi_distr_t& oScore, HetStats* HetStatsObj, hetLSV* lsvObj,
                                                                         int psamples, float quant){
-//void test_calc(float* oPvals, HetStats* HetStatsObj, hetLSV* lsvObj, int psamples, float quant){
 
     const int nstats = (HetStatsObj->statistics).size() ;
     const int n1 = lsvObj->cond_sample1.size() ;
@@ -287,9 +283,9 @@ void test_calc(vector<psi_distr_t>& oPvals, psi_distr_t& oScore, HetStats* HetSt
 
     for (int j=0; j<njunc; j++){
 
-        vector<vector<float>> pval_vect (nstats, vector<float>(psamples)) ;
-        psi_distr_t score_vect(psamples) ;
-        for(int s=0; s<psamples; s++){
+        vector<vector<float>> pval_vect (nstats, vector<float>(psamples + 1)) ;
+        psi_distr_t score_vect(psamples + 1) ;
+        for(int s=0; s<psamples + 1; s++){
 
             vector<float> csamps ;
             vector<int> labels ;
@@ -323,10 +319,10 @@ void test_calc(vector<psi_distr_t>& oPvals, psi_distr_t& oScore, HetStats* HetSt
             }
         }
         for(int i=0; i<nstats; i++){
-            float mmm = quantile(pval_vect[i].begin(), pval_vect[i].end(), quant);
-            oPvals[j][i] = mmm ;
+            mean_pvalues[j][i] = pval_vect[i][0];  // pvalue from mean
+            sample_pvalues[j][i] = quantile(pval_vect[i].begin() + 1, pval_vect[i].end(), quant);
             if ((HetStatsObj->names)[i] == "TNOM"){
-                float ss = median(score_vect.begin(), score_vect.end());
+                float ss = median(score_vect.begin() + 1, score_vect.end());
                 oScore[j] = ss ;
             }
         }

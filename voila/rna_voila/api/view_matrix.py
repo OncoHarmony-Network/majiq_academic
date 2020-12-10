@@ -758,6 +758,28 @@ class ViewHeterogens(ViewMulti):
             return mean_psi.tolist()
 
         @property
+        def junction_psisamples_stats(self):
+            """
+            Get stats from psisamples quantiles with values
+            :return: generator key/value
+            """
+            config = ViewConfig()
+            voila_files = config.voila_files
+            for f in voila_files:
+                with ViewHeterogen(f) as m:
+                    het = m.lsv(self.lsv_id)
+                    groups = '_'.join(m.group_names)
+                    stat_names = m.stat_names
+                    try:
+                        for name, stat in zip(stat_names, het.junction_psisamples_stats.T):
+                            if len(voila_files) == 1:
+                                yield f"{name}_quantile", stat
+                            else:
+                                yield f"{groups} {name}_quantile", stat
+                    except (GeneIdNotFoundInVoilaFile, LsvIdNotFoundInVoilaFile):
+                        pass
+
+        @property
         def junction_stats(self):
             """
             This gets associates stat test names with their values.
@@ -872,6 +894,10 @@ class ViewHeterogens(ViewMulti):
                     names.add(s)
 
         return list(sorted(names))
+
+    @property
+    def junction_psisamples_stats_column_names(self):
+        return (f"{x}_quantile" for x in self.junction_stats_column_names)
 
     @property
     def junction_stats_column_names(self):
@@ -1086,7 +1112,15 @@ class ViewHeterogen(Heterogen, ViewMatrix):
 
         @property
         def junction_stats(self):
+            """ Junction statistics computed on posterior means
+            """
             return self.get('junction_stats')
+
+        @property
+        def junction_psisamples_stats(self):
+            """ Quantile from junction statistics on posterior samples
+            """
+            return self.get('junction_psisamples_stats')
 
         def median_psi(self, mu_psi=None):
             """ Get group medians of psi_mean per junction

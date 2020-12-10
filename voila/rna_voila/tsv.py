@@ -413,7 +413,11 @@ class HeterogenTsv(AnalysisTypeTsv):
     def tab_output(self):
         with ViewHeterogens() as m:
             group_names = m.group_names
-            stats_column_names = list(m.junction_stats_column_names) + list(m.junction_scores_column_names)
+            stats_column_names = (
+                list(m.junction_stats_column_names)
+                + list(m.junction_psisamples_stats_column_names)
+                + list(m.junction_scores_column_names)
+            )
 
             fieldnames = [
                 'gene_name',
@@ -490,6 +494,9 @@ class HeterogenTsv(AnalysisTypeTsv):
                                 row[grp + '_median_psi'] = semicolon(x for x in medians)
 
                         for key, value in het.junction_stats:
+                            row[key] = semicolon(value)
+
+                        for key, value in het.junction_psisamples_stats:
                             row[key] = semicolon(value)
 
                         for key, value in het.junction_scores:
