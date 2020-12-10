@@ -48,15 +48,27 @@ class StoreRequiredUniqueAction(argparse.Action):
         setattr(namespace, self.dest, values)
 
 
-def check_positive(value):
-    """ Function for argparse.ArgumentParser(type=...) for float(x) > 0
+def check_nonnegative_factory(cast_fn, reject_zero: bool):
+    """ Returns argparse type function to casted type, rejecting negative values
     """
-    ivalue = float(value)
-    if ivalue <= 0:
-        raise argparse.ArgumentTypeError(
-            "%s is an invalid positive float value" % value
-        )
-    return ivalue
+    invalid_predicate = (lambda x: x <= 0) if reject_zero else (lambda x: x < 0)
+    invalid_message = "parameter must be {}, {{}} is not".format(
+        "positive" if reject_zero else "nonnegative"
+    )
+
+    def return_function(value):
+        ivalue = cast_fn(value)
+        if invalid_predicate(ivalue):
+            raise argparse.ArgumentTypeError(invalid_message.format(value))
+        return ivalue
+
+    return return_function
+
+
+check_positive = check_nonnegative_factory(float, True)
+check_nonnegative = check_nonnegative_factory(float, False)
+check_positive_int = check_nonnegative_factory(int, True)
+check_nonnegative_int = check_nonnegative_factory(int, False)
 
 
 def new_subparser():
@@ -86,7 +98,7 @@ def main():
         "-j",
         "--nproc",
         default=4,
-        type=int,
+        type=check_positive_int,
         help="Number of threads to use. [Default: %(default)s]",
     )
     common.add_argument(
@@ -157,7 +169,7 @@ def main():
     buildparser_junctions.add_argument(
         "--minreads",
         default=3,
-        type=int,
+        type=check_positive_int,
         help="Threshold on the minimum total number of reads for any junction"
         " to meet per-experiment filters for the LSVs it is a part of. When"
         " the minimum numbers of reads and positions (--minpos) are both met"
@@ -168,7 +180,7 @@ def main():
     buildparser_junctions.add_argument(
         "--minpos",
         default=2,
-        type=int,
+        type=check_positive_int,
         help="Threshold on the minimum number of read positions with at least"
         " 1 read for any junction to meet per-experiment filters for the LSVs"
         " it is a part of. Positions are relative to the aligned query"
@@ -186,7 +198,7 @@ def main():
     buildparser_denovo.add_argument(
         "--min-denovo",
         default=5,
-        type=int,
+        type=check_positive_int,
         help="Threshold on the minimum total number of reads for a denovo"
         " junction to be detected for inclusion in the splicegraph. This"
         " per-experiment filter requires the --minpos filter to be satisfied"
@@ -209,7 +221,7 @@ def main():
     buildparser_introns.add_argument(
         "--irnbins",
         default=0.5,
-        type=float,
+        type=check_positive,
         help="Threshold on fraction of intronic read positions"
         " (aggregated/normalized to match junctions) with sufficient coverage"
         " (set by --min-intronic-cov) to pass per-experiment filters on"
@@ -218,7 +230,7 @@ def main():
     buildparser_introns.add_argument(
         "--min-intronic-cov",
         default=0.01,
-        type=float,
+        type=check_positive,
         help="Threshold on per-position normalized intronic readrate to be"
         " considered to have sufficient coverage at that position. Used with"
         " --irnbins to define per-experiment filters on introns."
@@ -356,7 +368,7 @@ def main():
     buildparser_bootstrap.add_argument(
         "--m",
         default=30,
-        type=int,
+        type=check_positive_int,
         help="Number of bootstrap samples of total read coverage to save in"
         " output SJ and MAJIQ files for downstream quantification."
         " [Default: %(default)s]",
@@ -405,7 +417,7 @@ def main():
     sampling.add_argument(
         "--minreads",
         default=10,
-        type=int,
+        type=check_positive_int,
         help="Threshold on the minimum total number of reads for any junction"
         " or intron to meet per-experiment filters for the LSVs it is a part"
         " of. When the minimum numbers of reads and positions (--minpos) are"
@@ -416,7 +428,7 @@ def main():
     sampling.add_argument(
         "--minpos",
         default=3,
-        type=int,
+        type=check_positive_int,
         help="Threshold on the minimum total number of read positions with at"
         " least 1 read for any junction or intron to meet per-experiment"
         " filters for the LSVs it is a part of. When the minimum number of"
@@ -498,7 +510,7 @@ def main():
     delta.add_argument(
         "--prior-minreads",
         default=20,
-        type=int,
+        type=check_positive_int,
         help="Minimum number of reads combining all positions in a junction to"
         " be considered (for the 'best set' calculation)."
         " [Default: %(default)s]",
@@ -506,13 +518,13 @@ def main():
     delta.add_argument(
         "--prior-minnonzero",
         default=10,
-        type=int,
+        type=check_positive_int,
         help="Minimum number of positions for the best set. [Default: %(default)s]",
     )
     delta.add_argument(
         "--prior-iter",
         default=1,
-        type=int,
+        type=check_positive_int,
         dest="iter",
         help="Max number of iterations of the EM. [Default: %(default)s]",
     )
@@ -537,7 +549,7 @@ def main():
     )
     htrgen.add_argument(
         "--psi-samples",
-        type=int,
+        type=check_positive_int,
         default=100,
         dest="psi_samples",
         help="Number of PSI samples to take per LSV junction. If equal to 1,"
@@ -559,7 +571,7 @@ def main():
     )
     htrgen.add_argument(
         "--visualization-std",
-        type=float,
+        type=check_positive,
         default=1e-2,
         help="Change stochastic estimation error in terms of standard deviation"
         " of discretized average posterior per group by sampling additional"
