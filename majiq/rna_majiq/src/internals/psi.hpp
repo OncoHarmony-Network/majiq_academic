@@ -16,19 +16,45 @@ typedef vector<float> psi_distr_t ;
 typedef pair<int, int> pair_int_t ;
 #define PSEUDO 1e-20
 
-inline float median(psi_distr_t a){
-    const int n = a.size() ;
-    sort(a.begin(), a.end()) ;
-    if (n % 2 != 0) return (float)a[n/2] ;
 
-//    const float m = (float)(a[(n-1)/2] + a[n/2])/2.0 ;
-//cerr << "MEDIAN: " << m << " :: " ;
-//    for (auto const &c: a)
-//        cerr << c << ", " ;
-//    cerr << "\n" ;
-//    return m ;
-
-    return (float)(a[(n-1)/2] + a[n/2])/2.0 ;
+/**
+ * Obtains median of values between first and last
+ *
+ * @param first, last random-access iterators. Note: values will be reordered
+ */
+template<class It>
+inline
+#if __cplusplus >= 201703L
+constexpr  // required for c++17 and later
+#endif
+typename std::iterator_traits<It>::value_type median(It first, It last) {
+    // should be random iterator
+    static_assert(std::is_same<
+            std::random_access_iterator_tag, typename std::iterator_traits<It>::iterator_category
+            >::value,
+            "median() only accepts random-access iterators as input\n");
+    // how many elements?
+    const auto n = std::distance(first, last);
+    // 3 cases
+    if (n < 1) {
+        return std::numeric_limits<typename std::iterator_traits<It>::value_type>::quiet_NaN();
+    } else if (n == 1) {
+        return *first;
+    } else if (n == 2) {
+        // no need to sort anything
+        return (first[0] + first[1]) / 2;
+    } else {
+        // sort to get the value that would be in the middle if sorted
+        It it_below = first + ((n - 1) / 2);
+        std::nth_element(first, it_below, last);
+        if (n % 2 == 1) {
+            // odd means that this is the median
+            return *it_below;
+        } else {
+            // we need the value that follows and take the average
+            return (*it_below + *std::min_element(it_below + 1, last)) / 2;
+        }
+    }
 }
 
 inline void get_prior_params( vector<psi_distr_t>& o_priors, int njunc, bool ir){
