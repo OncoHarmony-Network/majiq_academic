@@ -789,7 +789,7 @@ namespace io_bam {
                 // appropriate assumptions)
                 const unsigned int ksamples = npos - 1;
                 // rescale sum to be comparable to sum over all nonzero positions
-                const float scale_sum = npos / ksamples;
+                const float scale_sum = static_cast<float>(npos) / ksamples;
                 // generate random numbers
                 uniform_int_distribution<unsigned int> distribution(0, npos - 1);
                 for (int m = 0; m < msamples; ++m) {
