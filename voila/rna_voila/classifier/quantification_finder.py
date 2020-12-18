@@ -296,25 +296,28 @@ class QuantificationWriter:
             def f(lsv_id, edge=None):
                 for voila_file in voila_files:
                     with view_matrix.ViewDeltaPsi(voila_file) as m:
-                        # for this one the _inner_edge_aggregate is not general enough - I had to do it manually
-                        lsv = m.lsv(lsv_id)
-                        bins = lsv.bins
-                        if edge:
-                            edges = [edge] if not type(edge) is list else edge
-                            vals = []
-                            for _edge in edges:
-                                edge_idx = self._filter_edges(_edge, lsv)
-                                if edge_idx is None:
-                                    continue
-                                else:
-                                    vals.append(matrix_area(bins[edge_idx], self.config.changing_between_group_dpsi))
-                            return (round(x, SIG_FIGS) for x in vals)
-                        else:
-                            if self.avg_multival:
-                                return np.mean((matrix_area(b, self.config.changing_between_group_dpsi) for b in bins))
-                            return (
-                                        round(matrix_area(b, self.config.changing_between_group_dpsi), SIG_FIGS) for b in bins
-                                    )
+                        try:
+                            # for this one the _inner_edge_aggregate is not general enough - I had to do it manually
+                            lsv = m.lsv(lsv_id)
+                            bins = lsv.bins
+                            if edge:
+                                edges = [edge] if not type(edge) is list else edge
+                                vals = []
+                                for _edge in edges:
+                                    edge_idx = self._filter_edges(_edge, lsv)
+                                    if edge_idx is None:
+                                        continue
+                                    else:
+                                        vals.append(matrix_area(bins[edge_idx], self.config.changing_between_group_dpsi))
+                                return (round(x, SIG_FIGS) for x in vals)
+                            else:
+                                if self.avg_multival:
+                                    return np.mean((matrix_area(b, self.config.changing_between_group_dpsi) for b in bins))
+                                return (
+                                            round(matrix_area(b, self.config.changing_between_group_dpsi), SIG_FIGS) for b in bins
+                                        )
+                        except (GeneIdNotFoundInVoilaFile, LsvIdNotFoundInVoilaFile) as e:
+                            continue
                 return None
             return f
 
