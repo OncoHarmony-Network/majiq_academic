@@ -109,6 +109,8 @@ def classify_gene(args):
                 writer.junctions()
             if 'mpe' in config.enabled_outputs:
                 writer.mpe()
+            if 'training_junctions' in config.enabled_outputs:
+                writer.training_junctions()
 
             if ClassifyConfig().keep_constitutive and 'events' in config.enabled_outputs:
                 writer.constitutive()
