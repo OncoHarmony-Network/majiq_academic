@@ -36,8 +36,6 @@ GIT_VERSION_FILE = "git_version"
 
 # majiq het constants
 HET_SAMPLING_SEED = 20200401
-all_stats = ["TNOM", "INFOSCORE", "WILCOXON"]
-
 
 
 try:

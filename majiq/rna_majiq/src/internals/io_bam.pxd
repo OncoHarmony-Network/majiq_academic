@@ -7,8 +7,6 @@ cimport numpy as np
 from rna_majiq.src.internals.grimoire cimport Junction, Gene, overGene
 
 ctypedef np.float64_t DTYPE_t
-# ctypedef vector[pair[int, vector[Gene*]]] gene_vect_t
-# ctypedef vector[Intron] intron_vect_t
 ctypedef vector[overGene*] overGene_vect_t
 
 cdef extern from "io_bam.hpp" namespace "io_bam":

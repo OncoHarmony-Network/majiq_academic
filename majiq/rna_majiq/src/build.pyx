@@ -90,7 +90,6 @@ cdef int _output_majiq_file(vector[LSV*] lsvlist, map[string, overGene_vect_t] g
     logger.info('DUMP file %s' % experiment_name)
     jobj_vec = jinfoptr_vec_t(njlsv)
 
-    # sg_filename = get_builder_splicegraph_filename(outDir.decode('utf-8')).encode('utf-8')
     if fname[2]:
         junc_file = fname[1]
     else:
@@ -225,7 +224,6 @@ cdef _parse_junction_file(tuple filetp, map[string, Gene*]& gene_map, vector[str
     cdef object fp
     cdef Gene_vect_t gene_l
     cdef string key, chrom, lsvid, gid, jid
-    # cdef int coord1, coord2, sreads, npos, strand
     cdef unsigned int irbool, coord1, coord2, sreads, npos
     cdef int n = gene_map.size()
     cdef char strand
@@ -294,7 +292,6 @@ cdef _parse_junction_file(tuple filetp, map[string, Gene*]& gene_map, vector[str
 
 cdef _find_junctions(list file_list, map[string, Gene*]& gene_map, vector[string] gid_vec,
                      map[string, overGene_vect_t] gene_list, object conf, object logger):
-
     cdef int n = gene_map.size()
     cdef int nthreads = conf.nthreads
 
@@ -320,7 +317,7 @@ cdef _find_junctions(list file_list, map[string, Gene*]& gene_map, vector[string
 
     cdef Gene * gg
     cdef IOBam c_iobam
-    cdef string name, bamfile
+    cdef string bamfile
     cdef str tmp_str
     cdef np.ndarray[np.float32_t, ndim=2, mode="c"] boots
     cdef np.ndarray[np.float32_t, ndim=2, mode="c"] ir_raw_cov
@@ -495,7 +492,6 @@ cdef int simplify(list file_list, map[string, Gene*] gene_map, vector[string] gi
 
     logger.info('Starting simplification %s' % bsimpl)
     for tmp_str, group_list in conf.tissue_repl.items():
-        name = tmp_str.encode('utf-8')
         last_it_grp = group_list[len(group_list) - 1]
         min_experiments = conf.simplifier_min_experiments[tmp_str]
 
@@ -661,8 +657,6 @@ def build(args):
 class Builder(BasicPipeline):
 
     def run(self):
-        # if self.simplify is not None and len(self.simplify) not in (0, 2):
-        #     raise RuntimeError('Simplify requires 2 values type of junctions afected and E(PSI) threshold.')
         if not os.path.exists(self.conf):
             raise RuntimeError("Config file %s does not exist" % self.conf)
         majiq_config = Config(self.conf, self)

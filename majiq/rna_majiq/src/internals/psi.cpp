@@ -362,26 +362,6 @@ cerr << "BETA PARAMS: " << "a: " << a << " b: " << b << " p: " << p  << " vari: 
     return pair<float, float>(a, b) ;
 }
 
-void print_mixture( psi_distr_t& dpsi_mean, psi_distr_t& hst, psi_distr_t& mixt){
-
-    for (long unsigned int i=0; i < hst.size(); i++){
-        const float  dpsi = (dpsi_mean[i] + dpsi_mean[i+1] ) /2 ;
-        cerr << dpsi << ", " << hst[i] << ", " << mixt[i]<< "\n" ;
-    }
-}
-
-void print_vals( psi_distr_t& hst, string fname ){
-
-    ofstream myfile ;
-    myfile.open (fname) ;
-
-    for (long unsigned int i=0; i < hst.size(); i++){
-        myfile << hst[i]<< "\n" ;
-    }
-    myfile.close() ;
-}
-
-
 int adjustdelta(psi_distr_t& o_mixtpdf, psi_distr_t& emp_dpsi, int num_iter, int nbins){
 
     psi_distr_t psi_border(nbins+1) ;
@@ -431,10 +411,6 @@ int adjustdelta(psi_distr_t& o_mixtpdf, psi_distr_t& emp_dpsi, int num_iter, int
         }
     }
 
-//    print_vals(emp_dpsi, "./all.csv") ;
-//    print_vals(center_dst, "./center_dst.csv") ;
-//    print_vals(spike_dst, "./spike_dst.csv") ;
-
     float total_cnt =  emp_dpsi.size() ;
     float spike_cnt =  spike_dst.size() ;
     float center_cnt = center_dst.size() ;
@@ -457,8 +433,6 @@ int adjustdelta(psi_distr_t& o_mixtpdf, psi_distr_t& emp_dpsi, int num_iter, int
     beta_params[2] = calculate_beta_params(0.5, my_variance(spk_mean, spike_dst)) ;
 
     calc_mixture_pdf(o_mixtpdf, beta_params, p_mixture, psi_border, nbins) ;
-
-//    print_mixture(dpsi_border,  hist, o_mixtpdf) ;
 
     return 0 ;
 }

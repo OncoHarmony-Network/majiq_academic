@@ -6,7 +6,6 @@ from rna_majiq.src.internals.grimoire cimport Gene, Exon, Junction, coord_key_t
 from rna_majiq.src.internals import quant_lsv
 from rna_majiq.src.internals.mtypes cimport *
 from rna_majiq.src.internals.qLSV cimport qLSV
-from rna_majiq.src.internals.io_utils cimport get_aggr_coverage
 
 from rna_majiq.src.gff import parse_gff3
 from rna_majiq.src.constants import *

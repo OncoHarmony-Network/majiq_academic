@@ -291,14 +291,8 @@ cdef void _core_independent(object self):
     logger.info("GROUP1: %s" % self.files1)
     logger.info("GROUP2: %s" % self.files2)
 
-    try:
-        for stats_name in self.stats:
-            stats_vec.push_back(stats_name.upper().encode('utf-8'))
-
-    except ImportError:
-        logger.error("The %s statistic is not one of the available statistics, ")
-                     #"in  [ %s ]" % (stats_name, ' | '.join(all_stats)))
-        return
+    for stats_name in self.stats:
+        stats_vec.push_back(stats_name.upper().encode('utf-8'))
 
     list_of_lsv1, exps1 = majiq_io.extract_lsv_summary(self.files1, types_dict=lsv_type_dict,
                                                        minnonzero=self.minpos, min_reads=self.minreads,
