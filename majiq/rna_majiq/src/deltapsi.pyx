@@ -5,9 +5,9 @@ import psutil
 
 import rna_majiq.src.logger as majiq_logger
 from rna_majiq.src.basic_pipeline import BasicPipeline, pipeline_run
-from rna_majiq.src.constants import *
+import rna_majiq.src.constants as constants
 from rna_majiq.src.internals.qLSV cimport dpsiLSV, qLSV
-from rna_majiq.src.internals.mtypes cimport *
+from rna_majiq.src.internals.mtypes cimport psi_distr_t
 from rna_majiq.src.internals.psi cimport deltapsi_posterior, get_psi_border
 from rna_majiq.src.internals.psi cimport gen_prior_matrix
 
@@ -75,7 +75,7 @@ cdef int _core_deltapsi(object self) except -1:
     majiq_logger.create_if_not_exists(self.outDir)
     logger = majiq_logger.get_logger("%s/deltapsi_majiq.log" % self.outDir, silent=self.silent,
                                      debug=self.debug)
-    logger.info("Majiq deltapsi v%s-%s" % (VERSION, get_git_version()))
+    logger.info("Majiq deltapsi v%s-%s" % (constants.VERSION, constants.get_git_version()))
     logger.info("Command: %s" % " ".join(sys.argv))
     logger.info("GROUP1: %s" % self.files1)
     logger.info("GROUP2: %s" % self.files2)
@@ -142,7 +142,7 @@ cdef int _core_deltapsi(object self) except -1:
 
 
     logger.info('Computation done, saving results....')
-    with Matrix(get_quantifier_voila_filename(self.outDir, self.names, deltapsi=True), 'w',
+    with Matrix(constants.get_quantifier_voila_filename(self.outDir, self.names, deltapsi=True), 'w',
                 voila_file=voilafile, voila_tsv=tsvfile) as out_h5p:
 
         out_h5p.file_version = VOILA_FILE_VERSION
@@ -188,7 +188,7 @@ cdef int _core_deltapsi(object self) except -1:
         mem_allocated = int(psutil.Process().memory_info().rss) / (1024 ** 2)
         logger.info("Max Memory used %.2f MB" % mem_allocated)
 
-    logger.info(f"DeltaPSI calculation for {self.names[0]}{GROUP_NAME_SEP}{self.names[1]} ended successfully! Result can be found at {self.outDir}")
+    logger.info(f"DeltaPSI calculation for {self.names[0]}{constants.GROUP_NAME_SEP}{self.names[1]} ended successfully! Result can be found at {self.outDir}")
 
 
 class DeltaPsi(BasicPipeline):

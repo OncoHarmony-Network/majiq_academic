@@ -12,7 +12,7 @@ from rna_majiq.src.polyfitnb cimport fit_nb
 from rna_majiq.src.config import Config
 import rna_majiq.src.logger as majiq_logger
 cimport rna_majiq.src.io as majiq_io
-from rna_majiq.src.constants import *
+import rna_majiq.src.constants as constants
 from rna_majiq.c.splice_graph_sql cimport open_db, close_db
 from rna_majiq.c.splice_graph_sql cimport gene as sg_gene
 from rna_majiq.c.splice_graph_sql cimport junction as sg_junction
@@ -37,12 +37,12 @@ cimport numpy as np
 cdef extern from "sqlite3.h":
     struct sqlite3
 
-cdef int C_FIRST_LAST_JUNC = FIRST_LAST_JUNC
+cdef int C_FIRST_LAST_JUNC = constants.FIRST_LAST_JUNC
 
 
 cdef _store_junc_file(np.ndarray boots, np.ndarray ir_cov, np.ndarray junc_cov, list junc_ids, str experiment_name, np.ndarray meta, str outDir):
 
-    cdef str out_file = "%s/%s.%s" % (outDir, experiment_name, JUNC_FILE_FORMAT)
+    cdef str out_file = "%s/%s.%s" % (outDir, experiment_name, constants.JUNC_FILE_FORMAT)
     cdef dict vals = {'bootstrap': boots, 'ir_cov': ir_cov, 'junc_cov': junc_cov}
     dt = np.dtype('S250, u4, u4, f4, f4, u4')
     vals['junc_info'] = np.array(junc_ids, dtype=dt)
@@ -93,8 +93,8 @@ cdef int _output_majiq_file(vector[LSV*] lsvlist, map[string, overGene_vect_t] g
     if fname[2]:
         junc_file = fname[1]
     else:
-        junc_file = "%s/%s.%s" % (outDir.decode('utf-8'), experiment_name.decode('utf-8'), JUNC_FILE_FORMAT)
-    out_file = "%s/%s.%s" % (outDir.decode('utf-8'), experiment_name.decode('utf-8'), MAJIQ_FILE_FORMAT)
+        junc_file = "%s/%s.%s" % (outDir.decode('utf-8'), experiment_name.decode('utf-8'), constants.JUNC_FILE_FORMAT)
+    out_file = "%s/%s.%s" % (outDir.decode('utf-8'), experiment_name.decode('utf-8'), constants.MAJIQ_FILE_FORMAT)
     with open(junc_file, 'rb') as fp:
         junc_ids = np.load(fp)['junc_info']
     njunc = junc_ids.shape[0]
@@ -328,7 +328,7 @@ cdef _find_junctions(list file_list, map[string, Gene*]& gene_map, vector[string
     cdef int* jvec
     cdef map[string, unsigned int] j_ids
     cdef pair[string, unsigned int] it
-    cdef int estimate_eff_reads = ESTIMATE_NUM_READS
+    cdef int estimate_eff_reads = constants.ESTIMATE_NUM_READS
     # regex/matches of sj ids for start-end
     cdef object sj_id_prog = re.compile(r"^.+:[+-.]:(?P<start>\d+)-(?P<end>\d+)(?::.+)?$")
     cdef object sj_id_match
@@ -341,11 +341,11 @@ cdef _find_junctions(list file_list, map[string, Gene*]& gene_map, vector[string
                                                                                   len(group_list), min_experiments))
         for j in group_list:
             if file_list[j][2]:
-                logger.info('Reading %s file %s' %(JUNC_FILE_FORMAT, file_list[j][1]))
+                logger.info('Reading %s file %s' %(constants.JUNC_FILE_FORMAT, file_list[j][1]))
                 _parse_junction_file(file_list[j], gene_map, gid_vec,gene_list, min_experiments, (j==last_it_grp),
                                      conf, logger)
             else:
-                logger.info('Reading %s file %s' %(SEQ_FILE_FORMAT, file_list[j][1]))
+                logger.info('Reading %s file %s' %(constants.SEQ_FILE_FORMAT, file_list[j][1]))
                 bamfile = ('%s' % (file_list[j][1])).encode('utf-8')
                 strandness = conf.strand_specific[file_list[j][0]]
 
@@ -410,7 +410,7 @@ cdef _find_junctions(list file_list, map[string, Gene*]& gene_map, vector[string
 
                 logger.info('Done Reading file %s' %(file_list[j][0]))
                 dt = np.dtype('|S250, |S25, u4')
-                meta = np.array([(file_list[j][0], VERSION, jlimit)], dtype=dt)
+                meta = np.array([(file_list[j][0], constants.VERSION, jlimit)], dtype=dt)
                 _store_junc_file(
                     boots, ir_raw_cov, junc_raw_cov,
                     junc_ids, file_list[j][0], meta, conf.outDir
@@ -501,7 +501,7 @@ cdef int simplify(list file_list, map[string, Gene*] gene_map, vector[string] gi
             if file_list[i][2]:
                 junc_file =  file_list[i][1]
             else:
-                junc_file = "%s/%s.%s" % (conf.outDir, file_list[i][0], JUNC_FILE_FORMAT)
+                junc_file = "%s/%s.%s" % (conf.outDir, file_list[i][0], constants.JUNC_FILE_FORMAT)
 
             with open(junc_file, 'rb') as fp:
                 junc_ids = np.load(fp)['junc_info']
@@ -562,7 +562,7 @@ cdef _core_build(str transcripts, list file_list, object conf, object logger):
     cdef map[string, overGene_vect_t] gene_list
 
     cdef vector[string] gid_vec
-    cdef string sg_filename = get_builder_splicegraph_filename(conf.outDir).encode('utf-8')
+    cdef string sg_filename = constants.get_builder_splicegraph_filename(conf.outDir).encode('utf-8')
     cdef string fname
     cdef string outDir = conf.outDir.encode('utf-8')
     cdef int strandness, cnt
@@ -665,7 +665,7 @@ class Builder(BasicPipeline):
     def builder(self, majiq_config):
 
         logger = majiq_logger.get_logger("%s/majiq.log" % majiq_config.outDir, silent=self.silent, debug=self.debug)
-        logger.info("Majiq Build v%s-%s" % (VERSION, get_git_version()))
+        logger.info("Majiq Build v%s-%s" % (constants.VERSION, constants.get_git_version()))
         logger.info("Command: %s" % " ".join(sys.argv))
 
         _core_build(self.transcripts, majiq_config.sam_list, majiq_config, logger)

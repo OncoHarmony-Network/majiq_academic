@@ -5,8 +5,8 @@ import psutil
 
 import rna_majiq.src.logger as majiq_logger
 from rna_majiq.src.basic_pipeline import BasicPipeline, pipeline_run
-from rna_majiq.src.constants import *
-from rna_majiq.src.internals.mtypes cimport *
+import rna_majiq.src.constants as constants
+from rna_majiq.src.internals.mtypes cimport psi_distr_t
 from rna_majiq.src.internals.psi cimport psi_posterior, get_psi_border
 from rna_majiq.src.internals.qLSV cimport psiLSV, qLSV
 
@@ -58,7 +58,7 @@ cdef _core_calcpsi(object self):
     majiq_logger.create_if_not_exists(self.outDir)
 
     logger = majiq_logger.get_logger("%s/psi_majiq.log" % self.outDir, silent=self.silent, debug=self.debug)
-    logger.info("Majiq psi v%s-%s" % (VERSION, get_git_version()))
+    logger.info("Majiq psi v%s-%s" % (constants.VERSION, constants.get_git_version()))
     logger.info("Command: %s" % " ".join(sys.argv))
     logger.info("Running Psi ...")
     logger.info("GROUP: %s" % self.files)
@@ -98,7 +98,7 @@ cdef _core_calcpsi(object self):
         psi_posterior(<psiLSV*> lsv_map[lsv], psi_border, nbins)
 
     logger.info('Computation done, saving results....')
-    with Matrix(get_quantifier_voila_filename(self.outDir, self.name), 'w',
+    with Matrix(constants.get_quantifier_voila_filename(self.outDir, self.name), 'w',
                 voila_file=voilafile, voila_tsv=tsvfile) as out_h5p:
         out_h5p.file_version = VOILA_FILE_VERSION
         out_h5p.analysis_type = ANALYSIS_PSI

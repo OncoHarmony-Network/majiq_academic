@@ -2,12 +2,12 @@ from libcpp.string cimport string
 from libcpp.map cimport map
 from libcpp.pair cimport pair
 from libcpp.vector cimport vector
-from rna_majiq.src.constants import *
 from rna_majiq.src.internals.HetStats cimport HetStats
 from rna_majiq.src.internals.qLSV cimport dpsiLSV, hetLSV, qLSV, psiLSV
-from rna_majiq.src.internals.mtypes cimport *
+from rna_majiq.src.internals.mtypes cimport psi_distr_t
 import numpy as np
 import pickle
+import os
 import sys
 cimport numpy as np
 import cython

@@ -1,11 +1,15 @@
+import os
 import sys
 import rna_majiq.src.io as majiq_io
 cimport rna_majiq.src.io as majiq_io
 import psutil
 import rna_majiq.src.logger as majiq_logger
 from rna_majiq.src.basic_pipeline import BasicPipeline, pipeline_run
-from rna_majiq.src.constants import *
-from rna_majiq.src.internals.mtypes cimport *
+import rna_majiq.src.constants as constants
+from rna_majiq.src.internals.mtypes cimport (
+    pair_int_t,
+    psi_distr_t,
+)
 from rna_majiq.src.internals.HetStats cimport HetStats
 from rna_majiq.src.internals.qLSV cimport hetLSV, qLSV
 from rna_majiq.src.internals.psi cimport get_samples_from_psi, get_psi_border, test_calc, mt19937
@@ -105,7 +109,7 @@ cdef int _statistical_test_computation(object out_h5p, dict comparison, list lis
             file_list.append([])
             for xx in range(cond):
                 cc_memmap = np.load(
-                    get_tmp_psisample_file(outDir, "%s_%s" %(cond_name, xx)), "r"
+                    constants.get_tmp_psisample_file(outDir, "%s_%s" %(cond_name, xx)), "r"
                 )
                 # load contiguous chunk of the array all at once, add to filelist
                 cc = np.array(cc_memmap[junction_min:junction_max])
@@ -199,7 +203,7 @@ cdef int _het_computation(
     cdef vector[mt19937] generators = vector[mt19937](nthreads)
     cdef int thread_idx
     for thread_idx in range(nthreads):
-        generators[thread_idx].seed(HET_SAMPLING_SEED + thread_idx)
+        generators[thread_idx].seed(constants.HET_SAMPLING_SEED + thread_idx)
 
     conditions = list(file_cond.keys())
     for cidx, cond_name in enumerate(conditions):
@@ -236,7 +240,7 @@ cdef int _het_computation(
                     psi_border, nbins, cidx, fidx, generators[thread_idx]
                 )
                 lsv_vec[lsv].reset_samps()
-            fname = get_tmp_psisample_file(outdir, "%s_%s" %(cond_name, fidx) )
+            fname = constants.get_tmp_psisample_file(outdir, "%s_%s" %(cond_name, fidx) )
             majiq_io.dump_hettmp_file(fname, osamps)
 
 
@@ -286,7 +290,7 @@ cdef void _core_independent(object self):
     logger = majiq_logger.get_logger("%s/het_majiq.log" % self.outDir, silent=self.silent,
                                      debug=self.debug)
 
-    logger.info("Majiq deltapsi heterogeneous v%s-%s" % (VERSION, get_git_version()))
+    logger.info("Majiq deltapsi heterogeneous v%s-%s" % (constants.VERSION, constants.get_git_version()))
     logger.info("Command: %s" % " ".join(sys.argv))
     logger.info("GROUP1: %s" % self.files1)
     logger.info("GROUP2: %s" % self.files2)
@@ -317,7 +321,7 @@ cdef void _core_independent(object self):
     for cond_name, cond_list in file_cond.items():
         max_nfiles = max(max_nfiles, len(cond_list))
 
-    with Matrix(get_quantifier_voila_filename(self.outDir, self.names, het=True), 'w') as out_h5p:
+    with Matrix(constants.get_quantifier_voila_filename(self.outDir, self.names, het=True), 'w') as out_h5p:
         out_h5p.file_version = VOILA_FILE_VERSION
         out_h5p.analysis_type = ANALYSIS_HETEROGEN
         out_h5p.group_names = self.names
@@ -346,14 +350,14 @@ cdef void _core_independent(object self):
     if not self.keep_tmpfiles:
         for cond_name in file_cond.keys():
             for fidx in range(len(file_cond[cond_name])):
-                fname = get_tmp_psisample_file(self.outDir, "%s_%s" %(cond_name, fidx) )
+                fname = constants.get_tmp_psisample_file(self.outDir, "%s_%s" %(cond_name, fidx) )
                 if os.path.exists(fname):
                     os.remove(fname)
 
     if self.mem_profile:
         mem_allocated = int(psutil.Process().memory_info().rss) / (1024 ** 2)
         logger.info("Max Memory used %.2f MB" % mem_allocated)
-    logger.info(f"Majiq Heterogeneous calculation for {self.names[0]}{GROUP_NAME_SEP}{self.names[1]} ended successfully! "
+    logger.info(f"Majiq Heterogeneous calculation for {self.names[0]}{constants.GROUP_NAME_SEP}{self.names[1]} ended successfully! "
                 f"Result can be found at {self.outDir}")
 
 

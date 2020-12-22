@@ -4,7 +4,8 @@ from libcpp.vector cimport vector
 from libcpp.set cimport set
 from libcpp.list cimport list as clist
 from libcpp.pair cimport pair
-from rna_majiq.src.internals.mtypes cimport *
+cimport numpy as np
+from rna_majiq.src.internals.mtypes cimport psi_distr_t
 
 ctypedef vector[overGene*] overGene_vect_t
 ctypedef vector[Gene*] Gene_vect_t
