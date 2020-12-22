@@ -23,11 +23,6 @@ cimport numpy as np
 import numpy as np
 
 def calc_independent(args):
-
-    # argument validation checks
-    if not all(set(group_name).issubset(ALLOWED_GROUP_NAME_CHARS) for group_name in args.names):
-        raise Exception("Group names may only contain alphanumeric and underscore characters")
-
     pipeline_run(independent(args))
 
 cdef int _statistical_test_computation(object out_h5p, dict comparison, list list_of_lsv, vector[string] stats_list,
