@@ -57,19 +57,13 @@ namespace io_bam {
     }
 
     // returns true if associated cigar operation offsets position on read
-    inline bool _cigar_advance_read(const char cigar_op) {
-        return (
-            cigar_op == BAM_CMATCH || cigar_op == BAM_CEQUAL || cigar_op == BAM_CDIFF
-            || cigar_op == BAM_CINS || cigar_op == BAM_CSOFT_CLIP
-        );
+    inline bool _cigar_advance_read(const char cigar_type) {
+        return cigar_type & 1;
     }
 
     // returns true if associated cigar operation offsets position on reference
-    inline bool _cigar_advance_reference(const char cigar_op) {
-        return (
-            cigar_op == BAM_CREF_SKIP || cigar_op == BAM_CMATCH ||
-            cigar_op == BAM_CEQUAL || cigar_op == BAM_CDIFF || cigar_op == BAM_CDEL
-        );
+    inline bool _cigar_advance_reference(const char cigar_type) {
+        return cigar_type & 2;
     }
 
     /**
@@ -370,13 +364,14 @@ namespace io_bam {
                 }
             }
             // update alignment and genomic offsets
-            if (_cigar_advance_read(cigar_op)) {
+            const char cigar_type = bam_cigar_type(cigar[i]);
+            if (_cigar_advance_read(cigar_type)) {
                 alignment_offset += cigar_oplen;
                 if (alignment_offset > alignment_length - MIN_BP_OVERLAP) {
                     break;  // future operations will not lead to valid junction
                 }
             }
-            if (_cigar_advance_reference(cigar_op)) {
+            if (_cigar_advance_reference(cigar_type)) {
                 genomic_offset += cigar_oplen;
             }
         }
@@ -458,8 +453,9 @@ namespace io_bam {
                     cout << "ERROR" << e.what() << '\n';
                 }
             }
-            const bool advance_read = _cigar_advance_read(cigar_op);
-            const bool advance_reference = _cigar_advance_reference(cigar_op);
+            const char cigar_type = bam_cigar_type(cigar_op);
+            const bool advance_read = _cigar_advance_read(cigar_type);
+            const bool advance_reference = _cigar_advance_reference(cigar_type);
             if (advance_read) {
                 // check if this operation gives us first/last position for valid intron
                 if (
