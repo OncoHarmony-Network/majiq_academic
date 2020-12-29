@@ -1,5 +1,5 @@
 from libcpp.vector cimport vector
-from rna_majiq.src.internals.mtypes cimport *
+from rna_majiq.src.internals.mtypes cimport psi_distr_t
 cimport numpy as np
 
 cdef extern from "qLSV.hpp":

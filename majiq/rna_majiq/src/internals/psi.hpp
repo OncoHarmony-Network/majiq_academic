@@ -227,9 +227,6 @@ void get_samples_from_psi(
     float* osamps, hetLSV* lsvObj, int psi_samples, int visualization_samples,
     psi_distr_t& psi_border, int nbins, int cidx, int fidx, std::mt19937 &generator
 );
-void get_samples_from_psi2(vector<psi_distr_t>& i_psi, float* osamps, float* o_mu_psi, float* o_postpsi,
-                          int psi_samples, int j_offset, psi_distr_t& psi_border2, int njunc, int msamples, int nbins,
-                          bool is_ir) ;
 
 void test_calc(vector<psi_distr_t>& mean_pvalues, vector<psi_distr_t>& sample_pvalues, psi_distr_t& oScore, HetStats* HetStatsObj, hetLSV* lsvObj, int psamples, float quant) ;
 void get_psi_border(psi_distr_t& psi_border, int nbins) ;

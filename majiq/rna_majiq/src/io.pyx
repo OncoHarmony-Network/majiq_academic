@@ -1,15 +1,14 @@
+import os
 from libcpp.string cimport string
 from libcpp.map cimport map
 from libcpp.vector cimport vector
 
 from rna_majiq.src.internals.grimoire cimport Gene, Exon, Junction, coord_key_t
 from rna_majiq.src.internals import quant_lsv
-from rna_majiq.src.internals.mtypes cimport *
 from rna_majiq.src.internals.qLSV cimport qLSV
-from rna_majiq.src.internals.io_utils cimport get_aggr_coverage
 
 from rna_majiq.src.gff import parse_gff3
-from rna_majiq.src.constants import *
+import rna_majiq.src.constants as constants
 from math import ceil
 from cython.parallel import prange
 
@@ -110,7 +109,7 @@ cdef int  read_gff(str filename, map[string, Gene*] all_genes, vector[string] gi
                                 "doesn't have valid mRNA %s" % parent_tx_id)
 
     for parent_tx_id, (gene_id, coord_list) in trcpt_id_dict.items():
-        last_ss = FIRST_LAST_JUNC
+        last_ss = constants.FIRST_LAST_JUNC
         coord_list.sort(key=lambda x: (x[0], x[1]))
         # if gene_id == 'ENSMUSG00000006498': print (coord_list)
         if len(coord_list) == 0 : continue
@@ -121,9 +120,9 @@ cdef int  read_gff(str filename, map[string, Gene*] all_genes, vector[string] gi
                 all_genes[gene_id].junc_map_[key] = new Junction(last_ss, xx, True, simpl)
             last_ss = yy
 
-        key = coord_key_t(last_ss, FIRST_LAST_JUNC)
+        key = coord_key_t(last_ss, constants.FIRST_LAST_JUNC)
         if all_genes[gene_id].junc_map_.count(key) == 0:
-            all_genes[gene_id].junc_map_[key] = new Junction(last_ss, FIRST_LAST_JUNC, True, simpl)
+            all_genes[gene_id].junc_map_[key] = new Junction(last_ss, constants.FIRST_LAST_JUNC, True, simpl)
     merge_exons(exon_dict, all_genes, simpl, enable_anot_ir)
     return 0
 
@@ -139,32 +138,32 @@ cdef int merge_exons(dict exon_dict, map[string, Gene*]& all_genes, bint simpl, 
 
     for gne_id, ex_list in exon_dict.items():
         ex_list.sort(key=lambda x:(x[0], not x[1]))
-        ex_start = EMPTY_COORD
-        ex_end = EMPTY_COORD
+        ex_start = constants.EMPTY_COORD
+        ex_end = constants.EMPTY_COORD
         nopen = 0
 
         for coord, is_start in ex_list:
             if is_start:
-                if ex_end != EMPTY_COORD:
-                    start1 = ex_end -10  if ex_start == EMPTY_COORD else ex_start
-                    end1 = ex_start +10  if ex_end == EMPTY_COORD else ex_end
+                if ex_end != constants.EMPTY_COORD:
+                    start1 = ex_end -10  if ex_start == constants.EMPTY_COORD else ex_start
+                    end1 = ex_start +10  if ex_end == constants.EMPTY_COORD else ex_end
                     key = coord_key_t(start1, end1)
                     all_genes[gne_id].exon_map_[key] = new Exon(ex_start, ex_end, True)
 
                     if nopen > 0 and ex_end < coord:
                         # create annotated intron (function adjusts coordinates using exon coordinates)
                         all_genes[gne_id].create_annot_intron(ex_end, coord, simpl, enable_anot_ir)
-                    ex_end = EMPTY_COORD
+                    ex_end = constants.EMPTY_COORD
                     ex_start = coord
 
-                ex_start = coord if ex_start == EMPTY_COORD or coord < ex_start else ex_start
+                ex_start = coord if ex_start == constants.EMPTY_COORD or coord < ex_start else ex_start
                 nopen += 1
 
             else:
                 nopen -= 1
                 ex_end = coord if coord > ex_end else ex_end
 
-        if ex_end != EMPTY_COORD:
+        if ex_end != constants.EMPTY_COORD:
             key = coord_key_t(ex_start, ex_end)
             all_genes[gne_id].exon_map_[key] = new Exon(ex_start, ex_end, True)
 
@@ -185,7 +184,7 @@ cdef int dump_lsv_coverage_mat(str filename, list cov_list, list type_list, list
         xx['junc_info'] = np.array(junc_info, dtype=dt)
         xx['coverage'] = np.array(cov_list, dtype=np.float32)
         dt = np.dtype('|S250, |S25')
-        xx['meta'] = np.array([(exp_name, VERSION)], dtype=dt)
+        xx['meta'] = np.array([(exp_name, constants.VERSION)], dtype=dt)
         np.savez(ofp, **xx)
 
 

@@ -135,7 +135,6 @@ namespace io_bam{
     };
 
     void prepare_genelist(map<string, Gene*>& gene_map, map<string, vector<overGene*>> & geneList) ;
-    bool juncGeneSearch(Gene* t1, Junction* t2) ;
     void free_genelist(map<string, vector<overGene*>> & geneList) ;
 
 }

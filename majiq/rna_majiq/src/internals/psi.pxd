@@ -2,12 +2,12 @@ from libcpp.string cimport string
 from libcpp.map cimport map
 from libcpp.pair cimport pair
 from libcpp.vector cimport vector
-from rna_majiq.src.constants import *
 from rna_majiq.src.internals.HetStats cimport HetStats
 from rna_majiq.src.internals.qLSV cimport dpsiLSV, hetLSV, qLSV, psiLSV
-from rna_majiq.src.internals.mtypes cimport *
+from rna_majiq.src.internals.mtypes cimport psi_distr_t
 import numpy as np
 import pickle
+import os
 import sys
 cimport numpy as np
 import cython
@@ -28,24 +28,15 @@ cdef extern from "psi.hpp":
     cdef void deltapsi_posterior(dpsiLSV* lsvObj, vector[psi_distr_t]& prior_matrix, psi_distr_t& psi_border,
                                  int nbins) nogil ;
 
-    cdef void get_samples_from_psi2(vector[psi_distr_t]& i_psi, np.float32_t* osamps, np.float32_t* o_mu_psi,
-                                   np.float32_t* o_postpsi, int psi_samples, int j_offset, psi_distr_t& psi_border, int njunc,
-                                   int msamples, int nbins, bint is_ir) nogil ;
-
     cdef void get_samples_from_psi(
         float* osamps, hetLSV* lsvObj, int psi_samples, int visualization_samples,
         psi_distr_t psi_border, int nbins, int cidx, int fidx, mt19937 &generator
     ) nogil;
 
-    cdef void get_samples_from_psi3(vector[psi_distr_t]& i_psi, vector[psi_distr_t]& osamps, psi_distr_t& o_mupsi,
-                                   vector[psi_distr_t]& o_postpsi, int psi_samples, int j_offset,
-                                   psi_distr_t psi_border, int njunc, int msamples, int nbins, bint is_ir) nogil ;
-
     cdef void test_calc(vector[psi_distr_t]& mean_pvalues, vector[psi_distr_t]& sample_pvalues, psi_distr_t& oScore, HetStats* HetStatsObj, hetLSV* lsvObj,
                         int psamples, np.float32_t quant) nogil ;
 
     cdef int adjustdelta(psi_distr_t& o_mixtpdf, psi_distr_t& emp_dpsi, int num_iter, int nbins) nogil ;
-
 
 
 @cython.boundscheck(False) # turn off bounds-checking for entire function
@@ -69,47 +60,6 @@ cdef inline tuple _empirical_delta_psi(list list_of_lsv, dict lsv_empirical_psi1
         delta_psi_res.append(lsv_empirical_psi2[lsv][0] - lsv_empirical_psi1[lsv][0])
 
     return np.array(delta_psi, dtype=np.float32), np.array(delta_psi_ir, dtype=np.float32)
-    # return delta_psi, delta_psi_ir
-
-# @cython.boundscheck(False) # turn off bounds-checking for entire function
-# @cython.wraparound(False)  # turn off negative index wrapping for entire function
-# cdef inline void __load_default_prior(vector[vector[psi_distr_t]]& prior_matrix) nogil:
-#
-#     cdef int numbins = prior_matrix[0].size()
-#     cdef int xx, yy
-#
-#     encoding = sys.getfilesystemencoding()
-#     direc = os.path.dirname(__file__)
-#
-#     fop = open('%s/../data/defaultprior.pickle' % direc, 'rb')
-#     fast_pickler = pickle.Unpickler(fop)
-#     data = fast_pickler.load().astype(np.float32)
-#     fop.close()
-#     # print_prior(data, numbins)
-#     data /= np.sum(data)
-#     for xx in range(numbins):
-#         for yy in range(numbins):
-#             prior_matrix[0][xx][yy] = np.log(data[xx][yy])
-#             prior_matrix[1][xx][yy] = np.log(data[xx][yy])
-
-@cython.boundscheck(False) # turn off bounds-checking for entire function
-@cython.wraparound(False)  # turn off negative index wrapping for entire function
-cdef inline print_prior(vector[vector[psi_distr_t]] matrix, int nbins):
-    cdef float sum = 0.0
-    for xx in range(nbins):
-        for yy in range(nbins):
-            sys.stderr.write("%.4f, " % np.exp(matrix[0][xx][yy]))
-            sum += np.exp(matrix[0][xx][yy])
-        sys.stderr.write("\n")
-    sys.stderr.write('##MATRIX [0] sum: %.4f\n' % sum)
-
-    sum = 0
-    for xx in range(nbins):
-        for yy in range(nbins):
-            sys.stderr.write("%.4f, " % np.exp(matrix[1][xx][yy]))
-            sum += np.exp(matrix[1][xx][yy])
-        sys.stderr.write("\n")
-    sys.stderr.write('##MATRIX [1] sum: %.4f\n' % sum)
 
 
 cdef inline int gen_prior_matrix(vector[vector[psi_distr_t]]& prior_matrix, dict lsv_type, dict lsv_empirical_psi1,
@@ -201,5 +151,3 @@ cdef inline int gen_prior_matrix(vector[vector[psi_distr_t]]& prior_matrix, dict
         for yy in range(numbins):
             prior_matrix[0][xx][yy] = np.log(np_pmatrix[0, xx, yy])
             prior_matrix[1][xx][yy] = np.log(np_pmatrix[1, xx, yy])
-            # print('KLKKK2')
-    # print_prior(prior_ma
