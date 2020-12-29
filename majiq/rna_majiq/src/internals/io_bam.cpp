@@ -716,7 +716,6 @@ namespace io_bam {
      *
      * @param &vec vector of nonzero coverage values, sorted as side effect
      * @param sreads previously computed sum of coverage over vec
-     * @param fitfunc_r negative binomial distribution parameter
      * @param pvalue_limit positions with coverage with right-tailed p-value
      * less than this limit will be marked as stacks
      *
@@ -735,25 +734,10 @@ namespace io_bam {
      * running leave-one-out mean after each stack removal
      */
     unsigned int IOBam::normalize_stacks(
-            vector<float> &vec, float sreads, const float fitfunc_r,
-            const float pvalue_limit
-    ) {
-        // get sf (1 - cdf) function to handle fitfunc_r == 0 vs > 0
-        std::function<float(float, float)> sf_func;
-        if (fitfunc_r == 0.0) {
-            sf_func = [](float x, float mean) -> float {
-                const boost::math::poisson_distribution<float> stack_dist(mean);
-                return boost::math::cdf(boost::math::complement(stack_dist, x));
-            };
-        } else {
-            // get negative-binomial parameters (in boost formulation)
-            const float r = 1 / fitfunc_r;
-            sf_func = [r](float x, float mean) -> float {
-                const float p = r / (mean + r);
-                const boost::math::negative_binomial_distribution<float> stack_dist(r, p);
-                return boost::math::cdf(boost::math::complement(stack_dist, x));
-            };
-        }
+            vector<float> &vec, float sreads, const float pvalue_limit) {
+        using boost::math::poisson_distribution;
+        using boost::math::cdf;
+        using boost::math::complement;
 
         // sort coverage so we only need to test extremes
         sort(vec.begin(), vec.end());
@@ -767,7 +751,8 @@ namespace io_bam {
             // leave-one-out mean coverage at other positions
             const float mean_reads = (other_npos == 0) ? 0.5: (sreads - vec_i) / other_npos;
             // p-value at current position
-            const float pvalue = sf_func(vec_i, mean_reads);
+            const poisson_distribution<float> stack_dist(mean_reads);
+            const float pvalue = cdf(complement(stack_dist, vec_i));
             // decrement number of valid positions if outlier
             if (pvalue < pvalue_limit) {
                 --npos;  // decrement npos for return value
@@ -779,7 +764,7 @@ namespace io_bam {
         return npos;
     }
 
-    int IOBam::bootstrap_samples(int msamples, float* boots, float fitfunc_r, float pvalue_limit) {
+    int IOBam::bootstrap_samples(int msamples, float* boots, float pvalue_limit) {
         const int njunc = junc_map.size();
 
         #pragma omp parallel for num_threads(nthreads_)
@@ -798,7 +783,7 @@ namespace io_bam {
 
             // get number of positions to bootstrap over after stack removal
             const unsigned int npos = pvalue_limit <= 0 ?
-                    vec.size() : normalize_stacks(vec, sreads, fitfunc_r, pvalue_limit);
+                    vec.size() : normalize_stacks(vec, sreads, pvalue_limit);
             // handle cases for getting bootstrap replicates
             if (npos == 0) {
                 // can't bootstrap from 0 positions (everything is default 0)

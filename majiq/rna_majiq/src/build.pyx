@@ -322,7 +322,6 @@ cdef _find_junctions(list file_list, map[string, Gene*]& gene_map, vector[string
     cdef np.ndarray[np.float32_t, ndim=2, mode="c"] ir_raw_cov
     cdef np.ndarray[np.float32_t, ndim=2, mode="c"] junc_raw_cov
     cdef list junc_ids
-    cdef np.float32_t fitfunc_r
     cdef unsigned int jlimit
     cdef int* jvec
     cdef map[string, unsigned int] j_ids
@@ -362,11 +361,9 @@ cdef _find_junctions(list file_list, map[string, Gene*]& gene_map, vector[string
                     with gil:
                         logger.debug('Total Junctions and introns %s' %(njunc))
 
-                fitfunc_r = 0  # always use poisson statistics
-
                 boots = np.zeros(shape=(njunc, m), dtype=np.float32)
                 with nogil:
-                    c_iobam.bootstrap_samples(m, <np.float32_t *> boots.data, fitfunc_r, pvalue_limit)
+                    c_iobam.bootstrap_samples(m, <np.float32_t *> boots.data, pvalue_limit)
                     j_ids  = c_iobam.get_junc_map()
                     jvec   = c_iobam.get_junc_vec_summary()
                     jlimit = c_iobam.get_junc_limit_index()
