@@ -13,124 +13,26 @@ from rna_majiq.src.build import build
 from rna_majiq.src.calc_psi import calcpsi
 from rna_majiq.src.deltapsi import deltapsi
 from rna_majiq.src.indpnt import calc_independent
+from rna_majiq.majiq_args import (
+    StoreRequiredUniqueActionFactory,
+    check_nonnegative_factory,
+    check_characters_factory,
+)
 import rna_majiq.src.constants as constants
 import sys
-
-
-class FRange01(argparse.Action):
-    def __call__(self, parser, namespace, values, option_string=None):
-        values = float(values)
-        if values < 0 or values > 1:
-            raise ValueError("must be in range [0, 1]")
-        setattr(namespace, self.dest, values)
-
-
-def StoreRequiredUniqueActionFactory():
-    """ Return class that pools shared values (do not allow overlap)
-    """
-
-    class StoreRequiredUniqueAction(argparse.Action):
-
-        # class variable with shared values known to all instances
-        shared_values = {}  # Dict[str, Set[str]]
-
-        @staticmethod
-        def repeated_values(values):
-            """ Returns repeated values (that occur more than twice)
-
-            Returns
-            -------
-            Set[str]
-            """
-            unique_values = set(values)  # set of unique values
-            repeated_values = set()  # set of values that were repeated
-            if isinstance(values, list) and len(values) != len(unique_values):
-                # values are not all unique...
-                repeated_values = set()  # determine which values were repeated
-                # remove unique values (if done twice, added to repeated_values)
-                for x in values:
-                    try:
-                        unique_values.remove(x)
-                    except KeyError:
-                        repeated_values.add(x)
-            return repeated_values
-
-        @classmethod
-        def overlapping_values(cls, dest, values):
-            """ Updates shared_values and returns overlapping values with other
-            parameters
-
-            Parameters
-            ----------
-            dest: str
-                Key to ignore in shared_values
-            values:
-                Values to compare with other shared values
-
-            Returns
-            -------
-            Dict[str, Set[str]]
-                Keys for other parameter names, values correspond to overlaps
-                between them
-            """
-            unique_values = set(values)
-            overlapping_values = {
-                other_key: other_values & unique_values
-                for other_key, other_values in cls.shared_values.items()
-                if other_key != dest and other_values & unique_values
-            }
-            # update shared values
-            cls.shared_values[dest] = unique_values
-            # remove any keys with zero overlaps
-            return {k: v for k, v in overlapping_values.items() if v}
-
-        def __call__(self, parser, namespace, values, option_string=None):
-            """ Check that values are unique if list, not in shared_values
-            """
-            # no repeated or overlapping values
-            repeated_values = self.repeated_values(values)
-            if repeated_values:
-                raise argparse.ArgumentError(
-                    self, f"values must be unique (repeated values: {repeated_values})"
-                )
-            overlapping_values = self.overlapping_values(self.dest, values)
-            if overlapping_values:
-                raise argparse.ArgumentError(
-                    self,
-                    "values must not overlap shared parameters"
-                    f" (overlaps: {overlapping_values})",
-                )
-            # no non-unique or overlapping values, so save updated values
-            setattr(namespace, self.dest, values)
-
-    return StoreRequiredUniqueAction
 
 
 StoreGroupNames = StoreRequiredUniqueActionFactory()
 StoreExperimentPaths = StoreRequiredUniqueActionFactory()
 
-
-def check_nonnegative_factory(cast_fn, reject_zero: bool):
-    """ Returns argparse type function to casted type, rejecting negative values
-    """
-    invalid_predicate = (lambda x: x <= 0) if reject_zero else (lambda x: x < 0)
-    invalid_message = "parameter must be {}, {{}} is not".format(
-        "positive" if reject_zero else "nonnegative"
-    )
-
-    def return_function(value):
-        ivalue = cast_fn(value)
-        if invalid_predicate(ivalue):
-            raise argparse.ArgumentTypeError(invalid_message.format(value))
-        return ivalue
-
-    return return_function
-
-
 check_positive = check_nonnegative_factory(float, True)
 check_nonnegative = check_nonnegative_factory(float, False)
 check_positive_int = check_nonnegative_factory(int, True)
 check_nonnegative_int = check_nonnegative_factory(int, False)
+
+check_group_chars = check_characters_factory(
+    constants.ALLOWED_GROUP_NAME_CHARS, "alphanumeric or underscore characters"
+)
 
 
 def new_subparser():
@@ -511,6 +413,7 @@ def main():
         "-n",
         "--name",
         required=True,
+        type=check_group_chars,
         help="Name used to identify the single group of experiments being"
         " quantified for output file name(s) and visualization using VOILA.",
     )
@@ -551,6 +454,7 @@ def main():
         metavar=("NAME_GRP1", "NAME_GRP2"),
         required=True,
         action=StoreGroupNames,
+        type=check_group_chars,
         help="The names that identify the groups being compared.",
     )
 
