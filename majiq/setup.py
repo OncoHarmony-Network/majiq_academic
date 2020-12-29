@@ -95,9 +95,6 @@ class InstallCommand(install):
         # silence deprecation warnings for now
         SILENCE_DEPRECATION = [("NPY_NO_DEPRECATED_API", 0)]
 
-        extensions += [Extension('rna_majiq.src.polyfitnb', ['rna_majiq/src/polyfitnb.pyx'], language='c++',
-                                 define_macros=SILENCE_DEPRECATION,
-                                 extra_compile_args=compile_args, include_dirs=NPY_INC_DIRS)]
         extensions += [Extension('rna_majiq.src.build', ['rna_majiq/src/build.pyx',
                                                      'rna_majiq/src/internals/io_bam.cpp',
                                                      'rna_majiq/src/internals/grimoire.cpp'],

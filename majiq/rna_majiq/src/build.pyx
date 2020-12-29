@@ -8,7 +8,6 @@ from rna_majiq.src.internals.io_bam cimport IOBam, prepare_genelist, overGene_ve
 from rna_majiq.src.internals.grimoire cimport find_intron_retention, find_gene_from_junc, isNullJinfo, fill_junc_tlb
 from rna_majiq.src.internals.grimoire cimport key_format, free_JinfoVec, Gene_vect_t, free_lsvlist
 from rna_majiq.src.basic_pipeline import BasicPipeline, pipeline_run
-from rna_majiq.src.polyfitnb cimport fit_nb
 from rna_majiq.src.config import Config
 import rna_majiq.src.logger as majiq_logger
 cimport rna_majiq.src.io as majiq_io
@@ -363,12 +362,7 @@ cdef _find_junctions(list file_list, map[string, Gene*]& gene_map, vector[string
                     with gil:
                         logger.debug('Total Junctions and introns %s' %(njunc))
 
-                if n_junctions == 0 or pvalue_limit <= 0:
-                    if n_junctions == 0:
-                        logger.warning('No junctions were found on sample %s' % bamfile)
-                    fitfunc_r = 0
-                else:
-                    fitfunc_r = fit_nb(c_iobam.junc_vec, n_junctions, local_eff_len, nbdisp=0.1, logger=logger)
+                fitfunc_r = 0  # always use poisson statistics
 
                 boots = np.zeros(shape=(njunc, m), dtype=np.float32)
                 with nogil:
