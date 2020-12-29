@@ -15,7 +15,6 @@
 #include "htslib/kstring.h"
 #include "htslib/thread_pool.h"
 #include "boost/math/distributions/poisson.hpp"
-#include "boost/math/distributions/negative_binomial.hpp"
 
 
 // initialize static random state
