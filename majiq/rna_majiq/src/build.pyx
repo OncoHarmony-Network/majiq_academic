@@ -8,7 +8,6 @@ from rna_majiq.src.internals.io_bam cimport IOBam, prepare_genelist, overGene_ve
 from rna_majiq.src.internals.grimoire cimport find_intron_retention, find_gene_from_junc, isNullJinfo, fill_junc_tlb
 from rna_majiq.src.internals.grimoire cimport key_format, free_JinfoVec, Gene_vect_t, free_lsvlist
 from rna_majiq.src.basic_pipeline import BasicPipeline, pipeline_run
-from rna_majiq.src.polyfitnb cimport fit_nb
 from rna_majiq.src.config import Config
 import rna_majiq.src.logger as majiq_logger
 cimport rna_majiq.src.io as majiq_io
@@ -323,7 +322,6 @@ cdef _find_junctions(list file_list, map[string, Gene*]& gene_map, vector[string
     cdef np.ndarray[np.float32_t, ndim=2, mode="c"] ir_raw_cov
     cdef np.ndarray[np.float32_t, ndim=2, mode="c"] junc_raw_cov
     cdef list junc_ids
-    cdef np.float32_t fitfunc_r
     cdef unsigned int jlimit
     cdef int* jvec
     cdef map[string, unsigned int] j_ids
@@ -363,16 +361,9 @@ cdef _find_junctions(list file_list, map[string, Gene*]& gene_map, vector[string
                     with gil:
                         logger.debug('Total Junctions and introns %s' %(njunc))
 
-                if n_junctions == 0 or pvalue_limit <= 0:
-                    if n_junctions == 0:
-                        logger.warning('No junctions were found on sample %s' % bamfile)
-                    fitfunc_r = 0
-                else:
-                    fitfunc_r = fit_nb(c_iobam.junc_vec, n_junctions, local_eff_len, nbdisp=0.1, logger=logger)
-
                 boots = np.zeros(shape=(njunc, m), dtype=np.float32)
                 with nogil:
-                    c_iobam.bootstrap_samples(m, <np.float32_t *> boots.data, fitfunc_r, pvalue_limit)
+                    c_iobam.bootstrap_samples(m, <np.float32_t *> boots.data, pvalue_limit)
                     j_ids  = c_iobam.get_junc_map()
                     jvec   = c_iobam.get_junc_vec_summary()
                     jlimit = c_iobam.get_junc_limit_index()
