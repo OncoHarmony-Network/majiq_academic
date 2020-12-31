@@ -711,7 +711,7 @@ namespace io_bam {
     }
 
     /**
-     * sort vec, identify positions 0:npos that are not stacks, return npos
+     * sort vec, identify positions 0:numpos that are not stacks, return numpos
      *
      * @param &vec vector of nonzero coverage values, sorted as side effect
      * @param sreads previously computed sum of coverage over vec
@@ -741,8 +741,8 @@ namespace io_bam {
         // sort coverage so we only need to test extremes
         sort(vec.begin(), vec.end());
         // number of positions that remain/for denominator
-        unsigned int npos = vec.size();
-        const unsigned int other_npos = npos - 1;  // denominator for leave-one-out mean
+        unsigned int numpos = vec.size();
+        const unsigned int other_npos = numpos - 1;  // denominator for leave-one-out mean
         // starting from highest coverage positions, identify stacks
         for (auto it = vec.rbegin(); it != vec.rend(); ++it) {
             // coverage at current position
@@ -754,13 +754,13 @@ namespace io_bam {
             const float pvalue = cdf(complement(stack_dist, vec_i));
             // decrement number of valid positions if outlier
             if (pvalue < pvalue_limit) {
-                --npos;  // decrement npos for return value
+                --numpos;  // decrement numpos for return value
             } else {
                 break;  // don't need to test remaining positions
             }
         }
-        // finally: values vec[:npos] are not stacks, vec[npos:] are stacks
-        return npos;
+        // finally: values vec[:numpos] are not stacks, vec[numpos:] are stacks
+        return numpos;
     }
 
     int IOBam::bootstrap_samples(int msamples, float* boots, float pvalue_limit) {
@@ -781,10 +781,10 @@ namespace io_bam {
             if (vec.size() == 0) continue ;  // can't bootstrap from 0 positions
 
             // get number of positions to bootstrap over after stack removal
-            const unsigned int npos = pvalue_limit <= 0 ?
+            const unsigned int numpos = pvalue_limit <= 0 ?
                     vec.size() : normalize_stacks(vec, sreads, pvalue_limit);
             // handle cases for getting bootstrap replicates
-            if (npos == 0) {
+            if (numpos == 0) {
                 // can't bootstrap from 0 positions (everything is default 0)
                 continue;
             }
@@ -792,7 +792,7 @@ namespace io_bam {
             // depending on whether variance of bootstrap distribution is
             // less than mean
             // obviously parametric if constant
-            bool parametric_bootstrap = (npos == 1 || vec[0] == vec[npos - 1]);
+            bool parametric_bootstrap = (numpos == 1 || vec[0] == vec[numpos - 1]);
             float bootstrap_mean;
             if (parametric_bootstrap) {
                 bootstrap_mean = vec[0];
@@ -802,14 +802,14 @@ namespace io_bam {
                 // use Welford's online algorithm (see Wikipedia) to accumulate
                 bootstrap_mean = 0.;  // current value of mean
                 float cur_rss = 0.;  // current residual sum of squares
-                for (unsigned int cur_n = 0; cur_n < npos; ++cur_n) {
+                for (unsigned int cur_n = 0; cur_n < numpos; ++cur_n) {
                     const float x = vec[cur_n];
                     const float dx = x - bootstrap_mean;
                     bootstrap_mean += dx / (cur_n + 1);
                     cur_rss += dx * (x - bootstrap_mean);
                 }
                 // current value bootstrap_mean is mean over all valid values
-                const float bootstrap_variance = cur_rss / npos;  // population variance
+                const float bootstrap_variance = cur_rss / numpos;  // population variance
                 parametric_bootstrap = bootstrap_variance < bootstrap_mean;
             }
 
@@ -818,22 +818,22 @@ namespace io_bam {
                 // variance < mean if we bootstrapped nonparametrically, so use
                 // Poisson distribution instead as conservative estimate of
                 // overdispersed variance
-                poisson_distribution<int> distribution(bootstrap_mean * npos);
+                poisson_distribution<int> distribution(bootstrap_mean * numpos);
                 for (int m = 0; m < msamples; ++m) {
                     const int idx2d = (jidx * msamples) + m;
                     boots[idx2d] = static_cast<float>(distribution(generator));
                 }
             } else {  // performing nonparametric sampling where overdispersed
-                // by sampling npos - 1 positions to sum, bootstrap samples will
+                // by sampling numpos - 1 positions to sum, bootstrap samples will
                 // have correct variance (variance of difference between
                 // two draws from bootstrap distribution equals difference
                 // between two draws from generating distribution under
                 // appropriate assumptions)
-                const unsigned int ksamples = npos - 1;
+                const unsigned int ksamples = numpos - 1;
                 // rescale sum to be comparable to sum over all nonzero positions
-                const float scale_sum = static_cast<float>(npos) / ksamples;
+                const float scale_sum = static_cast<float>(numpos) / ksamples;
                 // generate random numbers
-                uniform_int_distribution<unsigned int> distribution(0, npos - 1);
+                uniform_int_distribution<unsigned int> distribution(0, numpos - 1);
                 for (int m = 0; m < msamples; ++m) {
                     // index to update
                     const int idx2d = (jidx * msamples) + m;
@@ -879,7 +879,7 @@ namespace io_bam {
 
 
     void IOBam::parseJuncEntry(map<string, vector<overGene*>> & glist, string gid, string chrom, char strand,
-                               int start, int end, unsigned int sreads, unsigned int minreads_t, unsigned int npos,
+                               int start, int end, unsigned int sreads, unsigned int minreads_t, unsigned int numpos,
                                unsigned int minpos_t, unsigned int denovo_t, bool denovo, bool denovo_ir, vector<Gene*>& oGeneList,
                                bool ir, vector<float>& ircov, float min_intron_cov, float min_bins, int minexp,
                                bool reset){
@@ -910,7 +910,7 @@ namespace io_bam {
             coord_key_t key = std::make_pair(start, end);
             add_junction(chrom, strand, start, end, 0, sreads);
             for (const auto &gObj: (*low)->glist){
-                gObj->updateFlagsFromJunc(key, sreads, minreads_t, npos, minpos_t, denovo_t, denovo, minexp, reset) ;
+                gObj->updateFlagsFromJunc(key, sreads, minreads_t, numpos, minpos_t, denovo_t, denovo, minexp, reset) ;
             }
 
         }

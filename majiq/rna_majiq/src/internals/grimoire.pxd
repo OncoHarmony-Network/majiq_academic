@@ -116,7 +116,7 @@ cdef extern from "grimoire.hpp" namespace "grimoire":
     cdef cppclass Jinfo:
         unsigned int index ;
         int sreads ;
-        int npos ;
+        int numpos ;
         Jinfo() nogil ;
         Jinfo(unsigned int index1, int sreads1, int npos1) nogil ;
 

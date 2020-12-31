@@ -39,10 +39,10 @@ namespace grimoire{
         public:
             unsigned int    index ;
             int             sreads ;
-            int             npos ;
+            int             numpos ;
 
             Jinfo() {}
-            Jinfo(unsigned int index1, int sreads1, int npos1): index(index1), sreads(sreads1), npos(npos1) {}
+            Jinfo(unsigned int index1, int sreads1, int npos1): index(index1), sreads(sreads1), numpos(npos1) {}
     } ;
 
     struct lsvtype {
@@ -228,7 +228,7 @@ namespace grimoire{
              *
              * @param sreads the number of reads for junction in current experiment
              * @param minreads_t the minimum number of reads to pass build filter
-             * @param npos the number of nonzero positions in current experiment
+             * @param numpos the number of nonzero positions in current experiment
              * @param minpos_t the minimum number of nonzero positions to pass
              * build/denovo filters
              * @param denovo_t the minimum number of reads to pass denovo filter
@@ -241,10 +241,10 @@ namespace grimoire{
              * corresponding filter if enough experiments passed in this build
              * group. Only requires one build group to pass
              */
-            inline void update_flags(unsigned int sreads, unsigned int minreads_t, unsigned int npos, unsigned int minpos_t,
+            inline void update_flags(unsigned int sreads, unsigned int minreads_t, unsigned int numpos, unsigned int minpos_t,
                               unsigned int denovo_t, unsigned int min_experiments, bool denovo){
                 // only update flags if experiment has enough nonzero positions
-                if (npos >= minpos_t) {
+                if (numpos >= minpos_t) {
                     // only try updating build filter if hasn't passed and enough reads
                     if (!bld_fltr_ && sreads >= minreads_t) {
                         // increment number of experiments passing build filters
@@ -275,13 +275,13 @@ namespace grimoire{
                 }
                 const vector<float> nreads = *nreads_ptr_;
                 unsigned int sum_reads = 0 ;
-                unsigned int npos = 0 ;
+                unsigned int numpos = 0 ;
 
                 for(int i=0; i<efflen; ++i){
                     sum_reads += nreads[i] ;
-                    npos += nreads[i]? 1 : 0 ;
+                    numpos += nreads[i]? 1 : 0 ;
                 }
-                update_flags(sum_reads, num_reads, npos, num_pos, denovo_thresh, min_experiments,  denovo) ;
+                update_flags(sum_reads, num_reads, numpos, num_pos, denovo_thresh, min_experiments,  denovo) ;
                 return ;
             }
 
@@ -620,7 +620,7 @@ namespace grimoire{
             void    initialize_junction(coord_key_t key, int start, int end, shared_ptr<vector<float>> nreads_ptr, bool simpl) ;
             void    update_junc_flags(int efflen, bool is_last_exp, unsigned int minreads, unsigned int minpos,
                                       unsigned int denovo_thresh, unsigned int min_experiments, bool denovo) ;
-            void    updateFlagsFromJunc(coord_key_t key, unsigned int sreads, unsigned int minreads_t, unsigned int npos,
+            void    updateFlagsFromJunc(coord_key_t key, unsigned int sreads, unsigned int minreads_t, unsigned int numpos,
                                         unsigned int minpos_t, unsigned int denovo_t, bool denovo, int minexp,
                                         bool reset) ;
 

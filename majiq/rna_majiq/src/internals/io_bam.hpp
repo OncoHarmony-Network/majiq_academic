@@ -113,7 +113,7 @@ namespace io_bam{
             int  ParseJunctionsFromFile(bool ir_func) ;
             void EstimateEffLenFromFile(int num_reads);
             void parseJuncEntry(map<string, vector<overGene*>> & glist, string gid, string chrom, char strand,
-                               int start, int end, unsigned int sreads, unsigned int minreads_t, unsigned int npos,
+                               int start, int end, unsigned int sreads, unsigned int minreads_t, unsigned int numpos,
                                unsigned int minpos_t, unsigned int denovo_t, bool denovo, bool denovo_ir, vector<Gene*>& oGeneList,
                                bool ir, vector<float>& ircov, float min_intron_cov, float min_bins, int minexp,
                                bool reset) ;

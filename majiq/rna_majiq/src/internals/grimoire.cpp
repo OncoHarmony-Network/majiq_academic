@@ -221,12 +221,12 @@ namespace grimoire {
         return ;
     }
 
-    void Gene::updateFlagsFromJunc(coord_key_t key, unsigned int sreads, unsigned int minreads_t, unsigned int npos,
+    void Gene::updateFlagsFromJunc(coord_key_t key, unsigned int sreads, unsigned int minreads_t, unsigned int numpos,
                                unsigned int minpos_t, unsigned int denovo_t, bool denovo, int minexp, bool reset) {
         if (junc_map_.count(key) > 0){
             omp_set_lock(&map_lck_) ;
             Junction * jnc = junc_map_[key] ;
-            jnc->update_flags(sreads, minreads_t, npos, minpos_t, denovo_t, minexp, denovo) ;
+            jnc->update_flags(sreads, minreads_t, numpos, minpos_t, denovo_t, minexp, denovo) ;
             jnc->clear_nreads(reset) ;
             omp_unset_lock(&map_lck_) ;
         }
@@ -703,11 +703,11 @@ namespace grimoire {
             }
         }
         // get the numer/percent positions covered
-        float npos = 0;
+        float numpos = 0;
         for (const auto &p: cov) {
-            npos += (p > 0) ? 1 : 0;
+            numpos += (p > 0) ? 1 : 0;
         }
-        const float pct_pos = (npos > 0) ? (npos / numbins_) : 0;
+        const float pct_pos = (numpos > 0) ? (numpos / numbins_) : 0;
         return (pct_pos >= min_bins);
      }
 

@@ -62,7 +62,7 @@ cdef int _output_majiq_file(vector[LSV*] lsvlist, map[string, overGene_vect_t] g
                             tuple fname, string outDir, sqlite3* db, unsigned int msamples,
                             bint irb, bint simpl, object logger, int nthreads) except -1:
 
-    cdef unsigned int irbool, coord1, coord2, sreads, npos
+    cdef unsigned int irbool, coord1, coord2, sreads, numpos
     cdef unsigned int nlsv = lsvlist.size()
     cdef list cov_l, type_list = []
     cdef list junc_info = []
@@ -106,7 +106,7 @@ cdef int _output_majiq_file(vector[LSV*] lsvlist, map[string, overGene_vect_t] g
             coord1  = junc_ids[i][1]
             coord2  = junc_ids[i][2]
             sreads  = junc_ids[i][3]
-            npos    = junc_ids[i][4]
+            numpos    = junc_ids[i][4]
             irbool  = junc_ids[i][5]
             chrom   = jid.split(b':')[0]
             strand  = <char> jid.split(b':')[1][0]
@@ -118,7 +118,7 @@ cdef int _output_majiq_file(vector[LSV*] lsvlist, map[string, overGene_vect_t] g
                 with gil:
                     key = key_format(gneObj.get_id(), coord1, coord2, False)
                     if j_tlb.count(key) > 0:
-                        jobj_ptr = new Jinfo(i, sreads, npos)
+                        jobj_ptr = new Jinfo(i, sreads, numpos)
                         jobj_vec[j_tlb[key]] = jobj_ptr
 
         elif irb:
@@ -134,7 +134,7 @@ cdef int _output_majiq_file(vector[LSV*] lsvlist, map[string, overGene_vect_t] g
                     with gil:
                         key = key_format(gneObj.get_id(), ir_ptr.get_start(), ir_ptr.get_end(), True)
                         if j_tlb.count(key) > 0:
-                            jobj_ptr = new Jinfo(i, sreads, npos)
+                            jobj_ptr = new Jinfo(i, sreads, numpos)
                             jobj_vec[j_tlb[key]] = jobj_ptr
 
         gene_l.clear()
@@ -170,7 +170,7 @@ cdef int _output_majiq_file(vector[LSV*] lsvlist, map[string, overGene_vect_t] g
             if j_tlb.count(key) > 0 and not isNullJinfo(jobj_vec[j_tlb[key]]):
                 jobj_ptr = jobj_vec[j_tlb[key]]
                 tmp_juncinfo[junc_idx][2] = jobj_ptr.sreads
-                tmp_juncinfo[junc_idx][3] = jobj_ptr.npos
+                tmp_juncinfo[junc_idx][3] = jobj_ptr.numpos
                 for m in range(msamples):
                     tmp_boots[junc_idx][m] = boots[jobj_ptr.index][m]
 
@@ -184,7 +184,7 @@ cdef int _output_majiq_file(vector[LSV*] lsvlist, map[string, overGene_vect_t] g
             if j_tlb.count(key) > 0 and not isNullJinfo(jobj_vec[j_tlb[key]]):
                 jobj_ptr = jobj_vec[j_tlb[key]]
                 tmp_juncinfo[njunc-1][2] = jobj_ptr.sreads
-                tmp_juncinfo[njunc-1][3] = jobj_ptr.npos
+                tmp_juncinfo[njunc-1][3] = jobj_ptr.numpos
                 for m in range(msamples):
                     tmp_boots[njunc-1][m] = boots[jobj_ptr.index][m]
 
@@ -223,7 +223,7 @@ cdef _parse_junction_file(tuple filetp, map[string, Gene*]& gene_map, vector[str
     cdef object fp
     cdef Gene_vect_t gene_l
     cdef string key, chrom, lsvid, gid, jid
-    cdef unsigned int irbool, coord1, coord2, sreads, npos
+    cdef unsigned int irbool, coord1, coord2, sreads, numpos
     cdef int n = gene_map.size()
     cdef char strand
     cdef bint bsimpl = (conf.simpl_psi >= 0)
@@ -260,7 +260,7 @@ cdef _parse_junction_file(tuple filetp, map[string, Gene*]& gene_map, vector[str
             coord1  = junc_ids[j][1]
             coord2  = junc_ids[j][2]
             sreads  = junc_ids[j][3]
-            npos    = junc_ids[j][4]
+            numpos    = junc_ids[j][4]
             irbool  = junc_ids[j][5]
             chrom   = jid.split(b':')[0]
             strand  = <char> jid.split(b':')[1][0]
@@ -273,7 +273,7 @@ cdef _parse_junction_file(tuple filetp, map[string, Gene*]& gene_map, vector[str
                 for i in range(eff_len):
                     ir_vec[i] = ir_cov[j - jlimit][i]
         # process information, update information for inferring splicegraph
-        c_iobam.parseJuncEntry(gene_list, gid, chrom, strand, coord1, coord2, sreads, minreads, npos, minpos,
+        c_iobam.parseJuncEntry(gene_list, gid, chrom, strand, coord1, coord2, sreads, minreads, numpos, minpos,
                                denovo_thresh, denovo, denovo_ir, gene_l, irbool==1, ir_vec, min_ir_cov, ir_numbins,
                                min_experiments, reset)
 
@@ -467,7 +467,7 @@ cdef int simplify(list file_list, map[string, Gene*] gene_map, vector[string] gi
     cdef int n = gene_map.size()
     cdef int njunc
     cdef int strandness
-    cdef unsigned int irbool, coord1, coord2, sreads, npos
+    cdef unsigned int irbool, coord1, coord2, sreads, numpos
     cdef unsigned int min_experiments
     cdef map[string, int] junc_tlb
     cdef Gene * gg
