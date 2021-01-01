@@ -44,8 +44,10 @@ void psi_posterior(psiLSV*lsvObj, psi_distr_t& psi_border, int nbins){
     const int njunc = lsvObj->get_num_ways() ;
     const int msamples = lsvObj->samps[0].size() ;
 
-    vector<psi_distr_t> alpha_beta_prior(njunc, psi_distr_t(2)) ;
-    get_prior_params(alpha_beta_prior, njunc, lsvObj->is_ir()) ;
+    // prior for LSV with njunc connections
+    const std::pair<float, float> alpha_beta_prior = get_prior_params(njunc);
+    const float alpha = alpha_beta_prior.first;
+    const float beta = alpha_beta_prior.second;
 
     psi_distr_t all_m(msamples, 0.0) ;
     for (int j=0; j<njunc; j++){
@@ -55,8 +57,6 @@ void psi_posterior(psiLSV*lsvObj, psi_distr_t& psi_border, int nbins){
     }
 
     for (int j=0; j<njunc; j++){
-        const float alpha = alpha_beta_prior[j][0] ;
-        const float beta = alpha_beta_prior[j][1] ;
         psi_distr_t temp_mupsi(msamples) ;
         for (int m=0; m<msamples; m++){
 
@@ -85,8 +85,10 @@ void deltapsi_posterior(dpsiLSV*lsvObj, vector<psi_distr_t>& prior_matrix, psi_d
     const int njunc    = lsvObj->get_num_ways() ;
     const int msamples = lsvObj->cond_sample1[0].size() ;
 
-    vector<psi_distr_t> alpha_beta_prior(njunc, psi_distr_t(2)) ;
-    get_prior_params(alpha_beta_prior, njunc, lsvObj->is_ir()) ;
+    // prior for LSV with njunc connections
+    const std::pair<float, float> alpha_beta_prior = get_prior_params(njunc);
+    const float alpha = alpha_beta_prior.first;
+    const float beta = alpha_beta_prior.second;
 
     psi_distr_t all_m1(msamples, 0.0) ;
     psi_distr_t all_m2(msamples, 0.0) ;
@@ -99,9 +101,6 @@ void deltapsi_posterior(dpsiLSV*lsvObj, vector<psi_distr_t>& prior_matrix, psi_d
     }
 
     for (int j=0; j<njunc; j++){
-        const float alpha = alpha_beta_prior[j][0] ;
-        const float beta  = alpha_beta_prior[j][1] ;
-
         vector<psi_distr_t> dpsi_matrix(nbins, psi_distr_t(nbins, 0)) ;
         psi_distr_t temp_mupsi1(msamples) ;
         psi_distr_t temp_mupsi2(msamples) ;
@@ -204,8 +203,10 @@ void get_samples_from_psi(
         return;
     }
 
-    vector<psi_distr_t> alpha_beta_prior(njunc, psi_distr_t(2)) ;
-    get_prior_params(alpha_beta_prior, njunc, lsvObj->is_ir()) ;
+    // prior for LSV with njunc connections
+    const std::pair<float, float> alpha_beta_prior = get_prior_params(njunc);
+    const float alpha = alpha_beta_prior.first;
+    const float beta = alpha_beta_prior.second;
 
     psi_distr_t psi_space(nbins) ;
     for(int i=0; i<nbins; i++){
@@ -220,9 +221,6 @@ void get_samples_from_psi(
     }
 
     for (int j=0; j<njunc; j++){
-        // prior on alpha/beta
-        const float alpha = alpha_beta_prior[j][0] ;
-        const float beta = alpha_beta_prior[j][1] ;
         // mean/samping distribution per bootstrap replicate
         psi_distr_t temp_mupsi(msamples) ;
         vector<boost::random::beta_distribution<float>> distributions;

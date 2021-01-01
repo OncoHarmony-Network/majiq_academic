@@ -57,30 +57,13 @@ typename std::iterator_traits<It>::value_type median(It first, It last) {
     }
 }
 
-inline void get_prior_params( vector<psi_distr_t>& o_priors, int njunc, bool ir){
-
-//    int nways = ir ? njunc -1 : njunc ;
-    int nways = njunc ;
-    float alpha = 1.0/ nways ;
-    float fnjunc = (float)njunc ;
-
-//    if (ir){
-    if( 0){
-        alpha *= (fnjunc / (fnjunc+1)) ;
-        for (int i=0; i<fnjunc-1; i++){
-            o_priors[i][0] = alpha ;
-            o_priors[i][1] = 1 - alpha ;
-        }
-        o_priors[njunc-1][0] = 1 / (fnjunc + 1) ;
-        o_priors[njunc-1][1] = 1 - alpha ;
-    }else{
-        const float beta = (fnjunc-1) / fnjunc ;
-        for (int i=0; i<fnjunc; i++){
-            o_priors[i][0] = alpha ;
-            o_priors[i][1] = beta ;
-        }
-    }
-    return ;
+/**
+ * Beta-distribution prior (1 / njunc, (njunc - 1) / njunc)
+ */
+inline std::pair<float, float> get_prior_params(int njunc) {
+    float alpha = 1.0 / njunc;
+    float beta = 1.0 - alpha;
+    return std::make_pair(alpha, beta);
 }
 
 /**
