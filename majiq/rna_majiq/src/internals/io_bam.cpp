@@ -9,6 +9,7 @@
 #include <cmath>
 #include <algorithm>
 #include "io_bam.hpp"
+#include "majiq_utils.hpp"
 #include "htslib/sam.h"
 #include "htslib/hts.h"
 #include "htslib/faidx.h"
@@ -797,19 +798,10 @@ namespace io_bam {
             if (parametric_bootstrap) {
                 bootstrap_mean = vec[0];
             } else {
-                // determine bootstrap mean and variance to determine if we
-                // want to go to parametric approach
-                // use Welford's online algorithm (see Wikipedia) to accumulate
-                bootstrap_mean = 0.;  // current value of mean
-                float cur_rss = 0.;  // current residual sum of squares
-                for (unsigned int cur_n = 0; cur_n < numpos; ++cur_n) {
-                    const float x = vec[cur_n];
-                    const float dx = x - bootstrap_mean;
-                    bootstrap_mean += dx / (cur_n + 1);
-                    cur_rss += dx * (x - bootstrap_mean);
-                }
-                // current value bootstrap_mean is mean over all valid values
-                const float bootstrap_variance = cur_rss / numpos;  // population variance
+                bootstrap_mean = majiq::mean(vec.begin(), vec.begin() + numpos);
+                // variance<0> for ddof=0 --> population variance
+                const float bootstrap_variance = majiq::variance<0>(
+                    vec.begin(), vec.begin() + numpos, bootstrap_mean);
                 parametric_bootstrap = bootstrap_variance < bootstrap_mean;
             }
 
