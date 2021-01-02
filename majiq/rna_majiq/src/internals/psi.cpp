@@ -5,6 +5,7 @@
 #include "boost/random/beta_distribution.hpp"
 #include <math.h>
 #include "psi.hpp"
+#include "majiq_utils.hpp"
 #include "qLSV.hpp"
 #include "stats/stats.hpp"
 
@@ -65,12 +66,14 @@ void psi_posterior(psiLSV*lsvObj, psi_distr_t& psi_border, int nbins){
             psi_distr_t psi_lkh (nbins, 0.0) ;
             temp_mupsi[m] = calc_mupsi(jnc_val, all_val, alpha, beta) ;
             prob_data_sample_given_psi(psi_lkh, jnc_val, all_val, psi_border, nbins, alpha, beta) ;
-            const float Z = logsumexp(psi_lkh, nbins) ;
+            using majiq::logsumexp;
+            const float Z = logsumexp(psi_lkh.begin(), psi_lkh.end());
             for (int i=0; i< nbins; i++){
                 psi_lkh[i] -= Z ;
                 lsvObj->post_psi[j][i] += exp(psi_lkh[i]) ;
             }
         }
+        using majiq::median;
         lsvObj->mu_psi[j] = median(temp_mupsi.begin(), temp_mupsi.end());
         for (int i=0; i<nbins; i++){
             lsvObj->post_psi[j][i] /= msamples ;
@@ -117,8 +120,9 @@ void deltapsi_posterior(dpsiLSV*lsvObj, vector<psi_distr_t>& prior_matrix, psi_d
             temp_mupsi2[m] = calc_mupsi(jnc_val, all_val, alpha, beta) ;
             prob_data_sample_given_psi(psi_lkh2, jnc_val, all_val, psi_border, nbins, alpha, beta) ;
 
-            const float Z1 = logsumexp(psi_lkh1, nbins) ;
-            const float Z2 = logsumexp(psi_lkh2, nbins) ;
+            using majiq::logsumexp;
+            const float Z1 = logsumexp(psi_lkh1.begin(), psi_lkh1.end());
+            const float Z2 = logsumexp(psi_lkh2.begin(), psi_lkh2.end());
             for (int i=0; i< nbins; i++){
                 psi_lkh1[i] -= Z1 ;
                 lsvObj->post_psi1[j][i] += exp(psi_lkh1[i]) ;
@@ -133,7 +137,8 @@ void deltapsi_posterior(dpsiLSV*lsvObj, vector<psi_distr_t>& prior_matrix, psi_d
                 }
             }
 
-            const float Z = logsumexp_2D(A, nbins) ;
+            using majiq::logsumexp_2D;
+            const float Z = logsumexp_2D(A);
             for (int x=0; x<nbins; x++) {
                 for (int y=0; y<nbins; y++) {
                     A[x][y] -= Z ;
@@ -141,6 +146,7 @@ void deltapsi_posterior(dpsiLSV*lsvObj, vector<psi_distr_t>& prior_matrix, psi_d
                 }
             }
         }
+        using majiq::median;
         lsvObj->mu_psi1[j] = median(temp_mupsi1.begin(), temp_mupsi1.end());
         lsvObj->mu_psi2[j] = median(temp_mupsi2.begin(), temp_mupsi2.end());
 
@@ -237,6 +243,7 @@ void get_samples_from_psi(
             distributions.push_back(boost::random::beta_distribution<float>(a, b));
         }
         // get median of posterior means for this junction and save it
+        using majiq::median;
         const float psi_mean = median(temp_mupsi.begin(), temp_mupsi.end());
         lsvObj->mu_psi[cidx][fidx][j] = psi_mean;
         osamps[(j + j_offset) * osamps_shape1] = psi_mean;  // first value is psi mean
@@ -318,8 +325,10 @@ void test_calc(vector<psi_distr_t>& mean_pvalues, vector<psi_distr_t>& sample_pv
         }
         for(int i=0; i<nstats; i++){
             mean_pvalues[j][i] = pval_vect[i][0];  // pvalue from mean
+            using majiq::quantile;
             sample_pvalues[j][i] = quantile(pval_vect[i].begin() + 1, pval_vect[i].end(), quant);
             if ((HetStatsObj->names)[i] == "TNOM"){
+                using majiq::median;
                 float ss = median(score_vect.begin() + 1, score_vect.end());
                 oScore[j] = ss ;
             }
@@ -425,10 +434,10 @@ int adjustdelta(psi_distr_t& o_mixtpdf, psi_distr_t& emp_dpsi, int num_iter, int
 
     beta_params[0] =  std::make_pair(1, 1) ;
 
-    float cnt_mean = my_mean(center_dst) ;
-    float spk_mean = my_mean(spike_dst) ;
-    beta_params[1] = calculate_beta_params(0.5, my_variance(cnt_mean, center_dst)) ;
-    beta_params[2] = calculate_beta_params(0.5, my_variance(spk_mean, spike_dst)) ;
+    beta_params[1] = calculate_beta_params(0.5,
+            majiq::variance<1>(center_dst.begin(), center_dst.end()));
+    beta_params[2] = calculate_beta_params(0.5,
+            majiq::variance<1>(spike_dst.begin(), spike_dst.end()));
 
     calc_mixture_pdf(o_mixtpdf, beta_params, p_mixture, psi_border, nbins) ;
 
