@@ -100,7 +100,7 @@ namespace io_bam{
              * return number of nonoutlier stacks in vec, which are sorted into
              * corresponding first positions of vec
              */
-            unsigned int normalize_stacks(vector<float> &vec, float sreads, const float pvalue_limit);
+            unsigned int normalize_stacks(vector<float> &vec, const float pvalue_limit);
             int bootstrap_samples(int msamples, float* boots, float pvalue_limit);
             void detect_introns(float min_intron_cov, unsigned int min_experiments, float min_bins, bool reset, bool denovo) ;
 

@@ -715,7 +715,6 @@ namespace io_bam {
      * sort vec, identify positions 0:numpos that are not stacks, return numpos
      *
      * @param &vec vector of nonzero coverage values, sorted as side effect
-     * @param sreads previously computed sum of coverage over vec
      * @param pvalue_limit positions with coverage with right-tailed p-value
      * less than this limit will be marked as stacks
      *
@@ -734,13 +733,15 @@ namespace io_bam {
      * running leave-one-out mean after each stack removal
      */
     unsigned int IOBam::normalize_stacks(
-            vector<float> &vec, float sreads, const float pvalue_limit) {
+            vector<float> &vec, const float pvalue_limit) {
         using boost::math::poisson_distribution;
         using boost::math::cdf;
         using boost::math::complement;
 
         // sort coverage so we only need to test extremes
         sort(vec.begin(), vec.end());
+        // get sum of reads
+        float sreads = std::accumulate(vec.begin(), vec.end(), float{});
         // number of positions that remain/for denominator
         unsigned int numpos = vec.size();
         const unsigned int other_npos = numpos - 1;  // denominator for leave-one-out mean
@@ -771,19 +772,16 @@ namespace io_bam {
         for(int jidx=0; jidx < njunc; jidx++){
 
             vector<float> &coverage = *(junc_vec[jidx]);
-            vector<float> vec ;
-            float sreads = 0 ;
-            for(unsigned int i=0; i<eff_len_; ++i){
-                if (coverage[i] > 0) {
-                    sreads += coverage[i];
-                    vec.push_back(coverage[i]);
-                }
-            }
-            if (vec.size() == 0) continue ;  // can't bootstrap from 0 positions
+            // copy nonzero coverage values to vec
+            std::vector<float> vec;
+            std::copy_if(coverage.begin(), coverage.end(),
+                std::back_inserter(vec), [](float x) { return x > 0; });
+            // if there are no nonzero positions, skip...
+            if (vec.empty()) continue;
 
             // get number of positions to bootstrap over after stack removal
             const unsigned int numpos = pvalue_limit <= 0 ?
-                    vec.size() : normalize_stacks(vec, sreads, pvalue_limit);
+                    vec.size() : normalize_stacks(vec, pvalue_limit);
             // handle cases for getting bootstrap replicates
             if (numpos == 0) {
                 // can't bootstrap from 0 positions (everything is default 0)
