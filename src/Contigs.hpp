@@ -77,7 +77,7 @@ struct KnownContig {
     return contig_idx == rhs.contig_idx;
   }
 };
-class Contigs : std::enable_shared_from_this<Contigs> {
+class Contigs : public std::enable_shared_from_this<Contigs> {
  private:
   std::map<Contig, size_t> contig_idx_map_;
   std::vector<Contig> contigs_vec_;
@@ -112,6 +112,14 @@ class Contigs : std::enable_shared_from_this<Contigs> {
     }
   }
   size_t add(const seqid_t& x) { return add(Contig{x}); }
+
+  /**
+   * get known contig from input (combine add and operator[]
+   *
+   * @note: requires this to be managed by shared_ptr
+   */
+  const KnownContig make_known(const Contig& x) { return operator[](add(x)); }
+  const KnownContig make_known(const seqid_t& x) { return operator[](add(x)); }
 
   // constructors
   Contigs() : contig_idx_map_{}, contigs_vec_{} {}

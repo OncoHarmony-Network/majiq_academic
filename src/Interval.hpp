@@ -36,21 +36,34 @@ struct Interval {
   bool is_invalid() const { return !(has_start() || has_end()); }
 
   // valid positions (if any)
-  const position_t& first_pos() const { return has_start() ? start : end; }
-  const position_t& last_pos() const { return has_end() ? end : start; }
-
-  // ordering
-  bool operator<(const Interval& rhs) const {
-    return std::tie(first_pos(), last_pos())
-      < std::tie(rhs.first_pos(), rhs.last_pos());
+  const position_t& first_pos() const noexcept {
+    return has_start() ? start : end;
   }
-  // equality
-  bool operator==(const Interval& rhs) const {
-    return start == rhs.start && end == rhs.end;
+  const position_t& last_pos() const noexcept {
+    return has_end() ? end : start;
   }
-  bool operator!=(const Interval& rhs) const { return !operator==(rhs); }
 };
-
+// ordering
+inline bool operator<(const Interval& x, const Interval& y) noexcept {
+    return std::tie(x.first_pos(), x.last_pos())
+      < std::tie(y.first_pos(), y.last_pos());
+}
+inline bool operator>(const Interval& x, const Interval& y) noexcept {
+  return y < x;
+}
+inline bool operator<=(const Interval& x, const Interval& y) noexcept {
+  return !(x > y);
+}
+inline bool operator>=(const Interval& x, const Interval& y) noexcept {
+  return !(x < y);
+}
+// equality
+inline bool operator==(const Interval& x, const Interval& y) noexcept {
+  return x.start == y.start && x.end == y.end;
+}
+inline bool operator!=(const Interval& x, const Interval& y) noexcept {
+  return !(x == y);
+}
 }  // namespace detail
 
 

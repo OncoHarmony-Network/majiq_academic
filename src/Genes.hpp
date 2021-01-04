@@ -61,20 +61,20 @@ struct Gene {
       : Gene(g.contig, g.interval, g.strand, g.geneid, g.genename) {
   }
 
-  /**
-   * Ordering with respect to genomic position
-   */
-  bool operator<(const Gene& rhs) const {
-    return std::tie(contig, interval, strand, geneid)
-      < std::tie(rhs.contig, rhs.interval, rhs.strand, rhs.geneid);
-  }
-  /**
-   * Equality only by geneid
-   */
-  bool operator==(const Gene& rhs) const {
-    return geneid == rhs.geneid;
-  }
 };
+// ordering with respect to genomic position
+inline bool operator<(const Gene& lhs, const Gene& rhs) {
+  return std::tie(lhs.contig, lhs.interval, lhs.strand, lhs.geneid)
+    < std::tie(rhs.contig, rhs.interval, rhs.strand, rhs.geneid);
+}
+inline bool operator>(const Gene& lhs, const Gene& rhs) { return rhs < lhs; }
+inline bool operator<=(const Gene& x, const Gene& y) { return !(x > y); }
+inline bool operator>=(const Gene& x, const Gene& y) { return !(x < y); }
+// equality only by gene id
+inline bool operator==(const Gene& lhs, const Gene& rhs) {
+  return lhs.geneid == rhs.geneid;
+}
+inline bool operator!=(const Gene& x, const Gene& y) { return !(x == y); }
 // allow Gene to be passed into output stream (e.g. std::cout)
 std::ostream& operator<<(std::ostream& os, const Gene& x) noexcept {
   os << x.geneid;
@@ -131,7 +131,7 @@ struct KnownGene {
   }
 };
 
-class Genes : std::enable_shared_from_this<Genes> {
+class Genes : public std::enable_shared_from_this<Genes> {
  private:
   std::map<geneid_t, size_t> id_idx_map_;
   std::vector<Gene> genes_vec_;
@@ -156,11 +156,17 @@ class Genes : std::enable_shared_from_this<Genes> {
     } else {
       const size_t new_gene_idx = size();
       id_idx_map_[x.geneid] = new_gene_idx;
-      is_sorted_ = is_sorted_ && genes_vec_[new_gene_idx - 1] < x;
+      is_sorted_ = is_sorted_
+        && (new_gene_idx == 0 || genes_vec_[new_gene_idx - 1] <= x);
       genes_vec_.push_back(x);
       return new_gene_idx;
     }
   }
+
+  /**
+   * get known gene from input (combine add, operator[], requires shared_ptr
+   */
+  KnownGene make_known(const Gene& x) { return operator[](add(x)); }
 
   // constructors
   Genes() : id_idx_map_{}, genes_vec_{}, is_sorted_{true} {}

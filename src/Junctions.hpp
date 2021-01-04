@@ -8,73 +8,52 @@
 #ifndef MAJIQ_JUNCTIONS_HPP
 #define MAJIQ_JUNCTIONS_HPP
 
-#include <iostream>
 #include <tuple>
 #include <boost/functional/hash.hpp>
 
+#include "Regions.hpp"
 #include "Interval.hpp"
 #include "Contigs.hpp"
 #include "Genes.hpp"
 
 
 namespace majiq {
-struct ContigJunction {
+struct ContigJunction : public detail::ContigRegion {
  public:
-  // location
-  KnownContig contig;
-  ClosedInterval coordinates;
-  GeneStrandness strand;
-
   // constructors
   ContigJunction(KnownContig _contig, ClosedInterval _coordinates,
       GeneStrandness _strand)
-      : contig{_contig}, coordinates{_coordinates}, strand{_strand} {
+      : detail::ContigRegion{_contig, _coordinates, _strand} {
   }
   ContigJunction(const ContigJunction& x)
       : ContigJunction{x.contig, x.coordinates, x.strand} {
   }
 
-  /**
-   * Order junctions by genomic position
-   */
-  bool operator<(const ContigJunction& rhs) const {
-    return std::tie(contig, coordinates, strand)
-      < std::tie(rhs.contig, rhs.coordinates, rhs.strand);
-  }
+  // comparison for equality
   bool operator==(const ContigJunction& rhs) const {
     return std::tie(contig, coordinates, strand)
       == std::tie(rhs.contig, rhs.coordinates, rhs.strand);
   }
 };
 
-struct GeneJunction {
-  // location
-  KnownGene gene;
-  ClosedInterval coordinates;
-
+struct GeneJunction : public detail::GeneRegion {
+ public:
   // constructors
   GeneJunction(KnownGene _gene, ClosedInterval _coordinates)
-      : gene{_gene}, coordinates{_coordinates} {
+      : detail::GeneRegion{_gene, _coordinates} {
   }
   GeneJunction(const GeneJunction& x) : GeneJunction{x.gene, x.coordinates} {}
 
-  // downcast to junction
-  ContigJunction AsContigJunction() const {
-    const Gene& g = gene.get();
-    return ContigJunction{g.contig, coordinates, g.strand};
-  }
-
-  /**
-   * Order junctions by genomic position
-   */
-  bool operator<(const GeneJunction& rhs) const {
-    return std::tie(gene, coordinates)
-      < std::tie(rhs.gene, rhs.coordinates);
-  }
+  // comparison for equality
   bool operator==(const GeneJunction& rhs) const {
     return std::tie(gene, coordinates)
       == std::tie(rhs.gene, rhs.coordinates);
   }
+
+  /**
+   * Do we match with specified contig junction (strand matches if same or if
+   * contig junction has ambiguous strand)
+   */
   // matching with contig junction -- awareness of ambiguous gene strandness
   bool matches(const ContigJunction& rhs) const {
     if (coordinates != rhs.coordinates) {
@@ -87,19 +66,6 @@ struct GeneJunction {
     }
   }
 };
-
-// allow Junction to be passed into output stream (e.g. std::cout)
-std::ostream& operator<<(std::ostream& os, const ContigJunction& x) noexcept {
-  os << x.contig.get()
-    << ":" << x.strand
-    << ":"<< x.coordinates.start << "-" << x.coordinates.end;
-  return os;
-}
-std::ostream& operator<<(std::ostream& os, const GeneJunction& x) noexcept {
-  os << x.gene.get()
-    << ":"<< x.coordinates.start << "-" << x.coordinates.end;
-  return os;
-}
 
 // override boost::hash
 std::size_t hash_value(const ContigJunction& x) noexcept {
