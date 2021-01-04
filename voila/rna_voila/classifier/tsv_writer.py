@@ -330,10 +330,10 @@ class TsvWriter(BaseTsvWriter):
                 self.start_headers(headers, 'mpe_primerable_regions.tsv')
 
             if 'training_junctions' in self.config.enabled_outputs:
-                headers = self.common_headers + ['Junc ID', 'Junc ID Start Coordinate', 'Junc ID End Coordinate',
-                                                 'Exon 1 ID', 'Exon 1 ID Start Coordinate', 'Exon 1 ID End Coordinate',
-                                                 'Exon 2 ID', 'Exon 2 ID Start Coordinate', 'Exon 2 ID End Coordinate',
-                                                 'Is Intron'] + self.quantification_headers
+                headers = self.common_headers + ['junc_id', 'junc_start_coordinate', 'junc_end_coordinate',
+                                                 'exon_1_id', 'exon_1_start_coordinate', 'exon_1_end_coordinate',
+                                                 'exon_2_id', 'exon_2_start_coordinate', 'exon_2_end_coordinate',
+                                                 'is_intron'] + self.quantification_headers
                 self.start_headers(headers, 'training_junctions.tsv')
 
 
