@@ -124,10 +124,10 @@ struct KnownGene {
   KnownGene remapped(const std::shared_ptr<Genes> new_known_genes) const;
   // sorting/equality based on underlying gene
   bool operator<(const KnownGene& rhs) const {
-    return get() < rhs.get();
+    return gene_idx < rhs.gene_idx;
   }
   bool operator==(const KnownGene& rhs) const {
-    return get() == rhs.get();
+    return gene_idx == rhs.gene_idx && known_genes == rhs.known_genes;
   }
 };
 
