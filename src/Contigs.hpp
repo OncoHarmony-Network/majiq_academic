@@ -17,6 +17,7 @@
 #include <memory>
 #include <map>
 #include <vector>
+#include <boost/functional/hash.hpp>
 
 
 // define individual contig
@@ -68,7 +69,7 @@ struct KnownContig {
   KnownContig(const KnownContig& x)
       : KnownContig{x.contig_idx, x.known_contigs} {
   }
-  const Contig& get();
+  const Contig& get() const;
   bool operator<(const KnownContig& rhs) const {
     return contig_idx < rhs.contig_idx;
   }
@@ -126,7 +127,23 @@ class Contigs : std::enable_shared_from_this<Contigs> {
     }
   }
 };
-const Contig& KnownContig::get() { return known_contigs->get(contig_idx); }
+const Contig& KnownContig::get() const {
+  return known_contigs->get(contig_idx);
+}
+// specialize hash for KnownContig
+std::size_t hash_value(const KnownContig& x) noexcept {
+  std::size_t result = std::hash<size_t>{}(x.contig_idx);
+  boost::hash_combine(result, x.known_contigs);
+  return result;
+}
 }  // namespace majiq
+namespace std {
+// override std::hash<KnownContig>
+template <> struct hash<majiq::KnownContig> {
+  std::size_t operator()(const majiq::KnownContig& x) const noexcept {
+    return majiq::hash_value(x);
+  }
+};
+}
 
 #endif  // MAJIQ_CONTIGS_HPP

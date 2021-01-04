@@ -17,6 +17,7 @@
 #include <memory>
 #include <vector>
 #include <map>
+#include <boost/functional/hash.hpp>
 
 #include "Contigs.hpp"
 #include "Interval.hpp"
@@ -75,19 +76,27 @@ std::ostream& operator<<(std::ostream& os, const Gene& x) noexcept {
   os << x.geneid;
   return os;
 }
-// override boost::hash<Gene>
+// override boost::hash
+std::size_t hash_value(const GeneStrandness& x) noexcept {
+  return std::hash<char>{}(static_cast<char>(x));
+}
 std::size_t hash_value(const Gene& x) noexcept {
   return std::hash<geneid_t>{}(x.geneid);
 }
 }  // namespace majiq
-// override std::hash<Gene>
+// override std::hash
 namespace std {
+template <> struct hash<majiq::GeneStrandness> {
+  std::size_t operator()(const majiq::GeneStrandness& x) const noexcept {
+    return majiq::hash_value(x);
+  }
+};
 template <> struct hash<majiq::Gene> {
   std::size_t operator()(const majiq::Gene& x) const noexcept {
     return majiq::hash_value(x);
   }
 };
-}
+}  // namespace std
 
 namespace majiq {
 class Genes;
@@ -193,6 +202,21 @@ KnownGene KnownGene::remapped(
   size_t new_gene_idx = new_known_genes->add(get());
   return {new_gene_idx, new_known_genes};
 }
+
+// specialize boost::hash_value for KnownGene
+std::size_t hash_value(const KnownGene& x) {
+  std::size_t result = std::hash<size_t>{}(x.gene_idx);
+  boost::hash_combine(result, x.known_genes);
+  return result;
+}
 }  // namespace majiq
+// specialize std::hash for KnownGene
+namespace std {
+template <> struct hash<majiq::KnownGene> {
+  std::size_t operator()(const majiq::KnownGene& x) const noexcept {
+    return majiq::hash_value(x);
+  }
+};
+}  // namespace std
 
 #endif  // MAJIQ_GENES_HPP

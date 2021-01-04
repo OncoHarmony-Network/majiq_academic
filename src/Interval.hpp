@@ -11,6 +11,8 @@
 #include <tuple>
 #include <stdexcept>
 #include <iostream>
+#include <functional>
+#include <boost/functional/hash.hpp>
 
 #include "MajiqTypes.hpp"
 
@@ -46,6 +48,7 @@ struct Interval {
   bool operator==(const Interval& rhs) const {
     return start == rhs.start && end == rhs.end;
   }
+  bool operator!=(const Interval& rhs) const { return !operator==(rhs); }
 };
 
 }  // namespace detail
@@ -137,6 +140,29 @@ std::ostream& operator<<(std::ostream& os, const OpenInterval& x) {
   return os;
 }
 
-
+// how to hash intervals
+std::size_t hash_value(const OpenInterval& x) noexcept {
+  std::size_t result = boost::hash_value(x.start);
+  boost::hash_combine(result, x.end);
+  return result;
+}
+std::size_t hash_value(const ClosedInterval& x) noexcept {
+  std::size_t result = boost::hash_value(x.start);
+  boost::hash_combine(result, x.end);
+  return result;
+}
 }  // namespace majiq
+namespace std {
+// specialize std::hash for intervals
+template <> struct hash<majiq::OpenInterval> {
+  std::size_t operator()(const majiq::OpenInterval& x) const noexcept {
+    return majiq::hash_value(x);
+  }
+};
+template <> struct hash<majiq::ClosedInterval> {
+  std::size_t operator()(const majiq::ClosedInterval& x) const noexcept {
+    return majiq::hash_value(x);
+  }
+};
+}  // namespace std
 #endif  // MAJIQ_INTERVAL_HPP
