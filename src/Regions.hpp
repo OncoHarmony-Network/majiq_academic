@@ -35,7 +35,6 @@ struct ContigRegion {
   ContigRegion(const ContigRegion& x)
       : ContigRegion{x.contig, x.coordinates, x.strand} {
   }
-
 };
 // order regions by genomic position
 inline bool operator<(const ContigRegion& x, const ContigRegion& y) noexcept {
@@ -53,31 +52,34 @@ struct GeneRegion {
       : gene{_gene}, coordinates{_coordinates} {
   }
   GeneRegion(const GeneRegion& x) : GeneRegion{x.gene, x.coordinates} {}
-
-  /**
-   * Order regions by gene, then position
-   */
-  friend bool operator<(
-      const GeneRegion& lhs, const GeneRegion& rhs) noexcept {
-    return std::tie(lhs.gene, lhs.coordinates)
-      < std::tie(rhs.gene, rhs.coordinates);
-  }
-  /**
-   * Compare to contig regions (ignore strand)
-   */
-  friend bool operator<(
-      const GeneRegion& lhs, const ContigRegion& rhs) noexcept {
-    const Gene& g_lhs = lhs.gene.get();
-    return std::tie(g_lhs.contig, lhs.coordinates)
-      < std::tie(rhs.contig, rhs.coordinates);
-  }
-  friend bool operator<(
-      const ContigRegion& lhs, const GeneRegion& rhs) noexcept {
-    const Gene& g_rhs = rhs.gene.get();
-    return std::tie(lhs.contig, lhs.coordinates)
-      < std::tie(g_rhs.contig, rhs.coordinates);
-  }
 };
+/**
+ * Order regions by gene, then position
+ */
+inline bool operator<(const GeneRegion& x, const GeneRegion& y) noexcept {
+  return std::tie(x.gene, x.coordinates) < std::tie(y.gene, y.coordinates);
+}
+/**
+ * Compare to genes
+ */
+inline bool operator<(const GeneRegion& lhs, const KnownGene& rhs) noexcept {
+  return lhs.gene < rhs;
+}
+inline bool operator<(const KnownGene& lhs, const GeneRegion rhs) noexcept {
+  return lhs < rhs.gene;
+}
+/**
+ * Compare to contig regions (ignore strand)
+ */
+inline bool operator<(
+    const GeneRegion& x, const ContigRegion& y) noexcept {
+  const Gene& gx = x.gene.get();
+  return std::tie(gx.contig, x.coordinates) < std::tie(y.contig, y.coordinates);
+}
+inline bool operator<(const ContigRegion& x, const GeneRegion& y) noexcept {
+  const Gene& gy = y.gene.get();
+  return std::tie(x.contig, x.coordinates) < std::tie(gy.contig, y.coordinates);
+}
 
 // allow regions to be passed into output stream (e.g. std::cout)
 std::ostream& operator<<(std::ostream& os, const ContigRegion& x) noexcept {
