@@ -5,8 +5,8 @@
  *
  * Copyright 2020 <University of Pennsylvania>
  */
-#ifndef MAJIQ_EXONS_HPP
-#define MAJIQ_EXONS_HPP
+#ifndef MAJIQ_INTRONS_HPP
+#define MAJIQ_INTRONS_HPP
 
 #include <tuple>
 #include <boost/functional/hash.hpp>
@@ -49,4 +49,4 @@ template <> struct hash<majiq::Intron> {
 };
 }  // namespace std
 
-#endif  // MAJIQ_EXONS_HPP
+#endif  // MAJIQ_INTRONS_HPP
