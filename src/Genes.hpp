@@ -167,6 +167,10 @@ class Genes : public std::enable_shared_from_this<Genes> {
    * get known gene from input (combine add, operator[], requires shared_ptr
    */
   KnownGene make_known(const Gene& x) { return operator[](add(x)); }
+  /**
+   * get known gene from gene id (fails if doesn't exist)
+   */
+  KnownGene known(const geneid_t& id) { return operator[](get_gene_idx(id)); }
 
   // constructors
   Genes() : id_idx_map_{}, genes_vec_{}, is_sorted_{true} {}
