@@ -11,6 +11,11 @@
 
 #include <iostream>
 #include <tuple>
+#include <vector>
+#include <set>
+#include <unordered_set>
+#include <algorithm>
+#include <memory>
 
 #include "Interval.hpp"
 #include "Contigs.hpp"
@@ -175,6 +180,165 @@ inline bool operator>=(const GeneRegion& x, const ContigRegion& y) noexcept {
 inline bool operator>=(const ContigRegion& x, const GeneRegion y) noexcept {
   return !(x < y);
 }
+
+
+// implement template container of gene regions
+template <class RegionT>
+class GeneRegions {
+ public:
+  static_assert(std::is_base_of<GeneRegion, RegionT>::value,
+      "GeneRegions type must be subclass of GeneRegion");
+  using vecRegionT = std::vector<RegionT>;
+  using setRegionT = std::unordered_set<RegionT>;
+
+ protected:
+  vecRegionT sorted_vec_;
+  setRegionT region_set_;  // temporary regions that couldn't be added/sorted
+
+  // static functions used by constructors, etc.
+  /**
+   * Get sorted vector out of sorted vector and new set of items
+   * @note explicitly defining for unordered_set vs (ordered) set, which
+   * doesn't require sorting step
+   */
+  static vecRegionT _combine_sorted(
+      vecRegionT sorted, std::unordered_set<RegionT> unsorted) {
+    // get unsorted values in sorted order
+    vecRegionT unsorted_vec{unsorted.begin(), unsorted.end()};
+    std::sort(unsorted_vec.begin(), unsorted_vec.end());
+    // merge the two sorted vectors for final result
+    vecRegionT result;
+    result.reserve(sorted.size() + unsorted.size());
+    std::merge(
+        sorted.begin(), sorted.end(),
+        unsorted_vec.begin(), unsorted_vec.end(),
+        std::back_inserter(result));
+    // return final result
+    return result;
+  }
+  /**
+   * Get sorted vector out of sorted vector and sorted set of items
+   * @note explicitly defining for unordered_set vs (ordered) set, which
+   * doesn't require sorting step
+   */
+  static vecRegionT _combine_sorted(
+      vecRegionT sorted, std::set<RegionT> set_sorted) {
+    vecRegionT result;
+    result.reserve(sorted.size() + set_sorted.size());
+    std::merge(
+        sorted.begin(), sorted.end(),
+        set_sorted.begin(), set_sorted.end(),
+        std::back_inserter(result));
+    // return final result
+    return result;
+  }
+
+  /**
+   * sorted vector when remapping genes in the exons
+   */
+  static vecRegionT _remap_combine(
+      vecRegionT regions_vec, setRegionT regions_set,
+      const std::shared_ptr<Genes>& new_genes) {
+    // initialize/reserve resulting vector
+    vecRegionT new_vec;
+    new_vec.reserve(regions_vec.size() + regions_set.size());
+    // transform exons using genes, add to back of new_vec
+    auto remapper = [new_genes](RegionT x) -> RegionT {
+      x.gene = x.gene.remapped(new_genes);
+      return x;
+    };
+    std::transform(
+        regions_vec.begin(), regions_vec.end(),
+        std::back_inserter(new_vec), remapper);
+    std::transform(
+        regions_set.begin(), regions_set.end(),
+        std::back_inserter(new_vec), remapper);
+    // sort new_vec
+    std::sort(new_vec.begin(), new_vec.end());
+    // return the result
+    return new_vec;
+  }
+
+  // helper functions for determining if a region is present
+  bool _sorted_contains(const RegionT& x) const {
+    auto eq_range = std::equal_range(sorted_vec_.begin(), sorted_vec_.end(), x);
+    return eq_range.first != eq_range.second;
+  }
+  bool _set_contains(const RegionT& x) const {
+    return region_set_.count(x) > 0;
+  }
+
+ public:
+  size_t size() const { return sorted_vec_.size() + region_set_.size(); }
+  bool unsorted() const { return region_set_.size() > 0; }
+  void sort() {
+    if (unsorted()) {
+      sorted_vec_ = _combine_sorted(sorted_vec_, region_set_);
+      region_set_.clear();
+    }
+    return;
+  }
+  void remap_genes(const std::shared_ptr<Genes>& new_genes) {
+    sorted_vec_ = _remap_combine(sorted_vec_, region_set_, new_genes);
+    region_set_.clear();
+    return;
+  }
+  // access exons
+  const RegionT& operator[](size_t idx) {
+    sort();
+    return sorted_vec_[idx];
+  }
+  const RegionT& operator[](size_t idx) const {
+    // NOTE assumes sorted, so make sure constructors always sorted
+    return sorted_vec_[idx];
+  }
+
+  // membership
+  bool contains(const RegionT& x) const {
+    return _sorted_contains(x) || _set_contains(x);
+  }
+
+  // insertion of new elements
+  void insert(const RegionT& x) {
+    if (sorted_vec_.size() == 0 || sorted_vec_.back() < x) {
+      // it belongs at end of the sorted vector
+      sorted_vec_.push_back(x);
+      return;
+    } else if (contains(x)) {
+      // we already have it
+      return;
+    } else {
+      // can't put it at end of sorted vector, but we don't have it
+      region_set_.insert(x);
+      return;
+    }
+  }
+
+  // constructors
+  GeneRegions() : sorted_vec_{}, region_set_{} { }
+  GeneRegions(const vecRegionT& v, const setRegionT& s)
+      : sorted_vec_{_combine_sorted(v, s)}, region_set_{} {
+  }
+  explicit GeneRegions(const vecRegionT& v) : GeneRegions{v, setRegionT{}} { }
+  GeneRegions(const GeneRegions& x)
+      : GeneRegions{x.sorted_vec_, x.region_set_} {
+  }
+  GeneRegions(const vecRegionT& v, const setRegionT& s,
+      const std::shared_ptr<Genes>& g)
+      : sorted_vec_{_remap_combine(v, s, g)}, region_set_{} {
+  }
+  GeneRegions(const vecRegionT& v, const std::shared_ptr<Genes>& g)
+      : GeneRegions{v, setRegionT{}, g} {
+  }
+  GeneRegions(const GeneRegions& x, const std::shared_ptr<Genes>& g)
+      : GeneRegions{x.sorted_vec_, x.region_set_, g} {
+  }
+
+  // comparisons
+  friend inline bool operator==(const GeneRegions& x, const GeneRegions& y) {
+    return x.sorted_vec_ == y.sorted_vec_ && x.region_set_ == y.region_set_;
+  }
+};
 }  // namespace detail
 }  // namespace majiq
 
