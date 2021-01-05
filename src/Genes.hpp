@@ -151,7 +151,7 @@ struct KnownGene {
   /**
    * Get matching known gene from another Genes object
    */
-  KnownGene remapped(const std::shared_ptr<Genes> new_known_genes) const;
+  KnownGene remapped(const std::shared_ptr<Genes>& new_known_genes) const;
   // sorting/equality based on underlying gene
   bool operator<(const KnownGene& rhs) const {
     return gene_idx < rhs.gene_idx;
@@ -247,7 +247,7 @@ class Genes : public std::enable_shared_from_this<Genes> {
 // implement KnownGene::remapped and KnownGene::get using Genes definition
 Gene& KnownGene::get() const { return known_genes->get(gene_idx); }
 KnownGene KnownGene::remapped(
-    const std::shared_ptr<Genes> new_known_genes) const {
+    const std::shared_ptr<Genes>& new_known_genes) const {
   // get idx for this gene in new_known_genes
   size_t new_gene_idx = new_known_genes->add(get());
   return {new_gene_idx, new_known_genes};
