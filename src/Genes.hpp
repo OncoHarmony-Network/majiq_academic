@@ -60,26 +60,56 @@ struct Gene {
   Gene(const Gene& g)
       : Gene(g.contig, g.interval, g.strand, g.geneid, g.genename) {
   }
-
 };
 // ordering with respect to genomic position
 inline bool operator<(const Gene& lhs, const Gene& rhs) {
   return std::tie(lhs.contig, lhs.interval, lhs.strand, lhs.geneid)
     < std::tie(rhs.contig, rhs.interval, rhs.strand, rhs.geneid);
 }
-inline bool operator>(const Gene& lhs, const Gene& rhs) { return rhs < lhs; }
-inline bool operator<=(const Gene& x, const Gene& y) { return !(x > y); }
-inline bool operator>=(const Gene& x, const Gene& y) { return !(x < y); }
 // equality only by gene id
 inline bool operator==(const Gene& lhs, const Gene& rhs) {
   return lhs.geneid == rhs.geneid;
 }
-inline bool operator!=(const Gene& x, const Gene& y) { return !(x == y); }
 // allow Gene to be passed into output stream (e.g. std::cout)
 std::ostream& operator<<(std::ostream& os, const Gene& x) noexcept {
   os << x.geneid;
   return os;
 }
+
+// comparison to contigs
+inline bool operator<(const Gene& x, const KnownContig& y) {
+  return x.contig < y;
+}
+inline bool operator<(const KnownContig& x, const Gene& y) {
+  return x < y.contig;
+}
+
+// derived comparisons (Gene, Gene)
+inline bool operator>(const Gene& x, const Gene& y) { return y < x; }
+inline bool operator<=(const Gene& x, const Gene& y) { return !(y < x); }
+inline bool operator>=(const Gene& x, const Gene& y) { return !(x < y); }
+inline bool operator!=(const Gene& x, const Gene& y) { return !(x == y); }
+
+// derived comparisons (Gene, KnownContig)
+inline bool operator>(const KnownContig& x, const Gene& y) noexcept {
+  return y < x;
+}
+inline bool operator>(const Gene& x, const KnownContig y) noexcept {
+  return y < x;
+}
+inline bool operator<=(const KnownContig& x, const Gene& y) noexcept {
+  return !(y < x);
+}
+inline bool operator<=(const Gene& x, const KnownContig y) noexcept {
+  return !(y < x);
+}
+inline bool operator>=(const KnownContig& x, const Gene& y) noexcept {
+  return !(x < y);
+}
+inline bool operator>=(const Gene& x, const KnownContig y) noexcept {
+  return !(x < y);
+}
+
 // override boost::hash
 std::size_t hash_value(const GeneStrandness& x) noexcept {
   return std::hash<char>{}(static_cast<char>(x));
