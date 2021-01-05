@@ -162,10 +162,33 @@ struct KnownGene {
 };
 
 class Genes : public std::enable_shared_from_this<Genes> {
+ public:
+  using vecGene = std::vector<Gene>;
+  using mapGeneIdx = std::map<geneid_t, size_t>;
+
  private:
-  std::map<geneid_t, size_t> id_idx_map_;
-  std::vector<Gene> genes_vec_;
+  vecGene genes_vec_;
+  mapGeneIdx id_idx_map_;
   bool is_sorted_;
+
+  // static functions to enable constructors to always be sorted
+  template <typename GeneIt>
+  static vecGene _sorted_genes_vector(GeneIt start, GeneIt end) {
+    static_assert(
+        std::is_same<Gene,
+          typename std::iterator_traits<GeneIt>::value_type>::value,
+        "GeneIt must have Gene values in _sorted_genes_vector()");
+    vecGene result{start, end};
+    std::sort(result.begin(), result.end());
+    return result;
+  }
+  static mapGeneIdx _geneid_indexes(vecGene v) {
+    mapGeneIdx result{};
+    for (size_t idx = 0; idx < v.size(); ++idx) {
+      result[v[idx].geneid] = idx;
+    }
+    return result;
+  }
 
  public:
   Gene& get(size_t idx) { return genes_vec_[idx]; }
@@ -208,42 +231,27 @@ class Genes : public std::enable_shared_from_this<Genes> {
    */
   KnownGene known(const geneid_t& id) { return operator[](get_gene_idx(id)); }
 
-  // constructors
-  Genes() : id_idx_map_{}, genes_vec_{}, is_sorted_{true} {}
-  Genes(const Genes& x)
-      : id_idx_map_{x.id_idx_map_.begin(), x.id_idx_map_.end()},
-        genes_vec_{x.genes_vec_.begin(), x.genes_vec_.end()},
-        is_sorted_{x.is_sorted_} {
+  // constructors always ensure that result is sorted
+  Genes() : genes_vec_{}, id_idx_map_{}, is_sorted_{true} {}
+  template <class GeneIt>
+  Genes(GeneIt start, GeneIt end)
+      : genes_vec_{_sorted_genes_vector(start, end)},
+        id_idx_map_{_geneid_indexes(genes_vec_)},
+        is_sorted_{true} {
   }
-  template <class It>
-  Genes(It first, It last) : Genes{} {
-    for (It it = first; it != last; ++it) {
-      add(*it);
-    }
-  }
+  Genes(const Genes& x) : Genes{x.genes_vec_.begin(), x.genes_vec_.end()} { }
   /**
    * Shared pointer to Genes object with same genes but guaranteed sorted order
    * (if sorted, return self, otherwise create sorted copy)
    */
   std::shared_ptr<Genes> sorted() {
-    if (is_sorted_) {
-      return shared_from_this();
-    } else {
-      // create empty genes
-      std::shared_ptr<Genes> result = std::make_shared<Genes>();
-      // copy of genes vector to new empty genes, then sort
-      result->genes_vec_ = genes_vec_;
-      std::sort(result->genes_vec_.begin(), result->genes_vec_.end());
-      // update result->id_idx_map_ with newly sorted genes
-      for (size_t idx = 0; idx < result->genes_vec_.size(); ++idx) {
-        result->id_idx_map_[result->genes_vec_[idx].geneid] = idx;
-      }
-      // it's sorted...
-      result->is_sorted_ = true;
-      return result;
-    }
+    return is_sorted_ ? shared_from_this() : std::make_shared<Genes>(*this);
+  }
+  std::shared_ptr<const Genes> sorted() const {
+    return is_sorted_ ? shared_from_this() : std::make_shared<Genes>(*this);
   }
 };
+
 // implement KnownGene::remapped and KnownGene::get using Genes definition
 Gene& KnownGene::get() const { return known_genes->get(gene_idx); }
 KnownGene KnownGene::remapped(
