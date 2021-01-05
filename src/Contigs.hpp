@@ -102,13 +102,15 @@ class Contigs : public std::enable_shared_from_this<Contigs> {
    * Existing or new contig_idx for input contig
    */
   size_t add(const Contig& x) {
-    if (contains(x)) {
-      return get_contig_idx(x);
-    } else {
+    // get iterator to match (or end if match doesn't exist)
+    auto match = contig_idx_map_.find(x);
+    if (match == contig_idx_map_.end()) {
       const size_t new_contig_idx = size();
       contig_idx_map_[x] = new_contig_idx;
       contigs_vec_.push_back(x);
       return new_contig_idx;
+    } else {
+      return match->second;
     }
   }
   size_t add(const seqid_t& x) { return add(Contig{x}); }
