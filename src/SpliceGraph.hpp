@@ -46,7 +46,7 @@ class SpliceGraph {
     exons_.insert(Exon{genes_->known(geneid), interval});
     return;
   }
-  void AddJunction(geneid_t geneid, ClosedInterval interval) {
+  void AddJunction(geneid_t geneid, OpenInterval interval) {
     junctions_.insert(GeneJunction{genes_->known(geneid), interval});
     return;
   }

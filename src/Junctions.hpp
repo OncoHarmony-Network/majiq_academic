@@ -18,12 +18,12 @@
 
 
 namespace majiq {
-struct ContigJunction : public detail::ContigRegion {
+struct ContigJunction : public detail::ContigRegion<OpenInterval> {
  public:
   // constructors
-  ContigJunction(KnownContig _contig, ClosedInterval _coordinates,
+  ContigJunction(KnownContig _contig, OpenInterval _coordinates,
       GeneStrandness _strand)
-      : detail::ContigRegion{_contig, _coordinates, _strand} {
+      : detail::ContigRegion<OpenInterval>{_contig, _coordinates, _strand} {
   }
   ContigJunction(const ContigJunction& x)
       : ContigJunction{x.contig, x.coordinates, x.strand} {
@@ -36,11 +36,11 @@ struct ContigJunction : public detail::ContigRegion {
   }
 };
 
-struct GeneJunction : public detail::GeneRegion {
+struct GeneJunction : public detail::GeneRegion<OpenInterval> {
  public:
   // constructors
-  GeneJunction(KnownGene _gene, ClosedInterval _coordinates)
-      : detail::GeneRegion{_gene, _coordinates} {
+  GeneJunction(KnownGene _gene, OpenInterval _coordinates)
+      : detail::GeneRegion<OpenInterval>{_gene, _coordinates} {
   }
   GeneJunction(const GeneJunction& x) : GeneJunction{x.gene, x.coordinates} {}
 

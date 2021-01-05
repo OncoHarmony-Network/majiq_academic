@@ -18,11 +18,11 @@
 
 
 namespace majiq {
-struct Intron : detail::GeneRegion {
+struct Intron : detail::GeneRegion<ClosedInterval> {
  public:
   // constructors
   Intron(KnownGene _gene, ClosedInterval _coordinates)
-      : detail::GeneRegion{_gene, _coordinates} {
+      : detail::GeneRegion<ClosedInterval>{_gene, _coordinates} {
   }
   Intron(const Intron& x) : Intron{x.gene, x.coordinates} {}
 

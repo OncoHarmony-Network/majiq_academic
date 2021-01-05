@@ -25,15 +25,19 @@
 namespace majiq {
 namespace detail {
 
+template <class T>
 struct ContigRegion {
+  using IntervalT = T;
+  static_assert(std::is_base_of<Interval, IntervalT>::value,
+      "IntervalT must be derived from Interval (Open or Closed)");
  public:
   // location
   KnownContig contig;
-  ClosedInterval coordinates;
+  IntervalT coordinates;
   GeneStrandness strand;
 
   // constructors
-  ContigRegion(KnownContig _contig, ClosedInterval _coordinates,
+  ContigRegion(KnownContig _contig, IntervalT _coordinates,
       GeneStrandness _strand)
       : contig{_contig}, coordinates{_coordinates}, strand{_strand} {
   }
@@ -42,142 +46,190 @@ struct ContigRegion {
   }
 };
 
+template <class T>
 struct GeneRegion {
+  using IntervalT = T;
+  static_assert(std::is_base_of<Interval, IntervalT>::value,
+      "IntervalT must be derived from Interval (Open or Closed)");
  public:
   // location
   KnownGene gene;
-  ClosedInterval coordinates;
+  IntervalT coordinates;
 
   // constructors
-  GeneRegion(KnownGene _gene, ClosedInterval _coordinates)
+  GeneRegion(KnownGene _gene, IntervalT _coordinates)
       : gene{_gene}, coordinates{_coordinates} {
   }
   GeneRegion(const GeneRegion& x) : GeneRegion{x.gene, x.coordinates} {}
 };
 
 // order regions by genomic position and strand
-inline bool operator<(const ContigRegion& x, const ContigRegion& y) noexcept {
+template <class T1, class T2>
+inline bool operator<(
+    const ContigRegion<T1>& x, const ContigRegion<T2>& y) noexcept {
   return std::tie(x.contig, x.coordinates, x.strand)
     < std::tie(y.contig, y.coordinates, y.strand);
 }
 /**
  * Order regions by gene, then position
  */
-inline bool operator<(const GeneRegion& x, const GeneRegion& y) noexcept {
+template <class T1, class T2>
+inline bool operator<(
+    const GeneRegion<T1>& x, const GeneRegion<T2>& y) noexcept {
   return std::tie(x.gene, x.coordinates) < std::tie(y.gene, y.coordinates);
 }
 /**
  * Compare to genes
  */
-inline bool operator<(const GeneRegion& lhs, const KnownGene& rhs) noexcept {
+template <class T>
+inline bool operator<(const GeneRegion<T>& lhs, const KnownGene& rhs) noexcept {
   return lhs.gene < rhs;
 }
-inline bool operator<(const KnownGene& lhs, const GeneRegion rhs) noexcept {
+template <class T>
+inline bool operator<(const KnownGene& lhs, const GeneRegion<T>& rhs) noexcept {
   return lhs < rhs.gene;
 }
 /**
  * Compare to contig regions
  */
+template <class T1, class T2>
 inline bool operator<(
-    const GeneRegion& x, const ContigRegion& y) noexcept {
+    const GeneRegion<T1>& x, const ContigRegion<T2>& y) noexcept {
   const Gene& gx = x.gene.get();
   return std::tie(gx.contig, x.coordinates, gx.strand)
     < std::tie(y.contig, y.coordinates, y.strand);
 }
-inline bool operator<(const ContigRegion& x, const GeneRegion& y) noexcept {
+template <class T1, class T2>
+inline bool operator<(
+    const ContigRegion<T1>& x, const GeneRegion<T2>& y) noexcept {
   const Gene& gy = y.gene.get();
   return std::tie(x.contig, x.coordinates, x.strand)
     < std::tie(gy.contig, y.coordinates, gy.strand);
 }
 
 // unstranded comparison with contig region
+template <class T1, class T2>
 inline bool CompareUnstranded(
-    const ContigRegion& x, const ContigRegion& y) noexcept {
+    const ContigRegion<T1>& x, const ContigRegion<T2>& y) noexcept {
   return std::tie(x.contig, x.coordinates) < std::tie(y.contig, y.coordinates);
 }
+template <class T1, class T2>
 inline bool CompareUnstranded(
-    const ContigRegion& x, const GeneRegion& y) noexcept {
+    const ContigRegion<T1>& x, const GeneRegion<T2>& y) noexcept {
   const Gene& gy = y.gene.get();
   return std::tie(x.contig, x.coordinates) < std::tie(gy.contig, y.coordinates);
 }
+template <class T1, class T2>
 inline bool CompareUnstranded(
-    const GeneRegion& x, const ContigRegion& y) noexcept {
+    const GeneRegion<T1>& x, const ContigRegion<T2>& y) noexcept {
   const Gene& gx = x.gene.get();
   return std::tie(gx.contig, x.coordinates) < std::tie(y.contig, y.coordinates);
 }
 
 // allow regions to be passed into output stream (e.g. std::cout)
-std::ostream& operator<<(std::ostream& os, const ContigRegion& x) noexcept {
+template <class T>
+std::ostream& operator<<(std::ostream& os, const ContigRegion<T>& x) noexcept {
   os << x.contig.get()
     << ":" << x.strand
     << ":"<< x.coordinates.start << "-" << x.coordinates.end;
   return os;
 }
-std::ostream& operator<<(std::ostream& os, const GeneRegion& x) noexcept {
+template <class T>
+std::ostream& operator<<(std::ostream& os, const GeneRegion<T>& x) noexcept {
   os << x.gene.get()
     << ":"<< x.coordinates.start << "-" << x.coordinates.end;
   return os;
 }
 
 // derived comparisons (ContigRegion, ContigRegion)
-inline bool operator>(const ContigRegion& x, const ContigRegion& y) noexcept {
+template <class T1, class T2>
+inline bool operator>(
+    const ContigRegion<T1>& x, const ContigRegion<T2>& y) noexcept {
   return y < x;
 }
-inline bool operator<=(const ContigRegion& x, const ContigRegion& y) noexcept {
+template <class T1, class T2>
+inline bool operator<=(
+    const ContigRegion<T1>& x, const ContigRegion<T2>& y) noexcept {
   return !(y < x);
 }
-inline bool operator>=(const ContigRegion& x, const ContigRegion& y) noexcept {
+template <class T1, class T2>
+inline bool operator>=(
+    const ContigRegion<T1>& x, const ContigRegion<T2>& y) noexcept {
   return !(x < y);
 }
 
 // derived comparisons (GeneRegion, GeneRegion)
-inline bool operator>(const GeneRegion& x, const GeneRegion& y) noexcept {
+template <class T1, class T2>
+inline bool operator>(
+    const GeneRegion<T1>& x, const GeneRegion<T2>& y) noexcept {
   return y < x;
 }
-inline bool operator>=(const GeneRegion& x, const GeneRegion& y) noexcept {
+template <class T1, class T2>
+inline bool operator>=(
+    const GeneRegion<T1>& x, const GeneRegion<T2>& y) noexcept {
   return !(x < y);
 }
-inline bool operator<=(const GeneRegion& x, const GeneRegion& y) noexcept {
+template <class T1, class T2>
+inline bool operator<=(
+    const GeneRegion<T1>& x, const GeneRegion<T2>& y) noexcept {
   return !(y < x);
 }
 
 // derived comparisons (KnownGene, GeneRegion)
-inline bool operator>(const GeneRegion& x, const KnownGene& y) noexcept {
+template <class T>
+inline bool operator>(const GeneRegion<T>& x, const KnownGene& y) noexcept {
   return y < x;
 }
-inline bool operator>(const KnownGene& x, const GeneRegion y) noexcept {
+template <class T>
+inline bool operator>(const KnownGene& x, const GeneRegion<T>& y) noexcept {
   return y < x;
 }
-inline bool operator<=(const GeneRegion& x, const KnownGene& y) noexcept {
+template <class T>
+inline bool operator<=(const GeneRegion<T>& x, const KnownGene& y) noexcept {
   return !(y < x);
 }
-inline bool operator<=(const KnownGene& x, const GeneRegion y) noexcept {
+template <class T>
+inline bool operator<=(const KnownGene& x, const GeneRegion<T>& y) noexcept {
   return !(y < x);
 }
-inline bool operator>=(const GeneRegion& x, const KnownGene& y) noexcept {
+template <class T>
+inline bool operator>=(const GeneRegion<T>& x, const KnownGene& y) noexcept {
   return !(x < y);
 }
-inline bool operator>=(const KnownGene& x, const GeneRegion y) noexcept {
+template <class T>
+inline bool operator>=(const KnownGene& x, const GeneRegion<T>& y) noexcept {
   return !(x < y);
 }
 
 // derived comparisons (ContigRegion, GeneRegion)
-inline bool operator>(const GeneRegion& x, const ContigRegion& y) noexcept {
+template <class T1, class T2>
+inline bool operator>(
+    const GeneRegion<T1>& x, const ContigRegion<T2>& y) noexcept {
   return y < x;
 }
-inline bool operator>(const ContigRegion& x, const GeneRegion y) noexcept {
+template <class T1, class T2>
+inline bool operator>(
+    const ContigRegion<T1>& x, const GeneRegion<T2>& y) noexcept {
   return y < x;
 }
-inline bool operator<=(const GeneRegion& x, const ContigRegion& y) noexcept {
+template <class T1, class T2>
+inline bool operator<=(
+    const GeneRegion<T1>& x, const ContigRegion<T2>& y) noexcept {
   return !(y < x);
 }
-inline bool operator<=(const ContigRegion& x, const GeneRegion y) noexcept {
+template <class T1, class T2>
+inline bool operator<=(
+    const ContigRegion<T1>& x, const GeneRegion<T2>& y) noexcept {
   return !(y < x);
 }
-inline bool operator>=(const GeneRegion& x, const ContigRegion& y) noexcept {
+template <class T1, class T2>
+inline bool operator>=(
+    const GeneRegion<T1>& x, const ContigRegion<T2>& y) noexcept {
   return !(x < y);
 }
-inline bool operator>=(const ContigRegion& x, const GeneRegion y) noexcept {
+template <class T1, class T2>
+inline bool operator>=(
+    const ContigRegion<T1>& x, const GeneRegion<T2>& y) noexcept {
   return !(x < y);
 }
 
@@ -186,10 +238,11 @@ inline bool operator>=(const ContigRegion& x, const GeneRegion y) noexcept {
 template <class RegionT>
 class GeneRegions {
  public:
-  static_assert(std::is_base_of<GeneRegion, RegionT>::value,
-      "GeneRegions type must be subclass of GeneRegion");
   using vecRegionT = std::vector<RegionT>;
   using setRegionT = std::unordered_set<RegionT>;
+  using IntervalT = typename RegionT::IntervalT;
+  static_assert(std::is_base_of<GeneRegion<IntervalT>, RegionT>::value,
+      "GeneRegions type must be subclass of GeneRegion");
 
  protected:
   vecRegionT sorted_vec_;

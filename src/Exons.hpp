@@ -18,11 +18,11 @@
 
 
 namespace majiq {
-struct Exon : detail::GeneRegion {
+struct Exon : detail::GeneRegion<ClosedInterval> {
  public:
   // constructors
   Exon(KnownGene _gene, ClosedInterval _coordinates)
-      : detail::GeneRegion{_gene, _coordinates} {
+      : detail::GeneRegion<ClosedInterval>{_gene, _coordinates} {
   }
   Exon(const Exon& x) : Exon{x.gene, x.coordinates} {}
 
