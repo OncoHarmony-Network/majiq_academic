@@ -49,4 +49,14 @@ template <> struct hash<majiq::Intron> {
 };
 }  // namespace std
 
+namespace majiq {
+/**
+ * Introns in sorted contiguous container, with extra set for introns that could
+ * not be easily added in sorted order to defer sorting/reordering vector until
+ * necessary
+ */
+class Introns : public detail::GeneRegions<Intron> {
+};
+}  // namespace majiq
+
 #endif  // MAJIQ_INTRONS_HPP

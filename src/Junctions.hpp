@@ -93,4 +93,15 @@ template <> struct hash<majiq::GeneJunction> {
   }
 };
 }  // namespace std
+
+namespace majiq {
+/**
+ * GeneJunctions in sorted contiguous container, with extra set for junctions
+ * that could not be easily added in sorted order to defer sorting/reordering
+ * vector until necessary
+ */
+class GeneJunctions : public detail::GeneRegions<GeneJunction> {
+};
+}  // namespace majiq
+
 #endif  // MAJIQ_JUNCTIONS_HPP
