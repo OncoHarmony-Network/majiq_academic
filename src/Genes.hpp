@@ -175,22 +175,28 @@ class Genes : public std::enable_shared_from_this<Genes> {
   size_t size() const { return genes_vec_.size(); }
   bool contains(const geneid_t& id) const { return id_idx_map_.count(id) > 0; }
   bool contains(const Gene& x) const { return contains(x.geneid); }
+  // get gene_idx (throw error if not present)
   size_t get_gene_idx(const geneid_t& id) const { return id_idx_map_.at(id); }
   size_t get_gene_idx(const Gene& x) const { return get_gene_idx(x.geneid); }
   /**
-   * Index (old or new) of specified gene
+   * get gene_idx (add if not present)
    */
   size_t add(const Gene& x) {
-    if (contains(x)) {
-      return get_gene_idx(x);
-    } else {
-      const size_t new_gene_idx = size();
-      id_idx_map_[x.geneid] = new_gene_idx;
-      is_sorted_ = is_sorted_
-        && (new_gene_idx == 0 || genes_vec_[new_gene_idx - 1] <= x);
-      genes_vec_.push_back(x);
-      return new_gene_idx;
+    const size_t prev_size = size();
+    if (!is_sorted_ || (prev_size > 0 && genes_vec_.back() >= x)) {
+      // not sorted or doesn't belong at end, so find if it is here
+      auto match = id_idx_map_.find(x.geneid);
+      if (match != id_idx_map_.end()) {
+        return match->second;
+      } else {
+        // we don't have it, and adding it will make it not sorted
+        is_sorted_ = false;
+      }
     }
+    // not present, so we add to end
+    id_idx_map_[x.geneid] = prev_size;
+    genes_vec_.push_back(x);
+    return prev_size;
   }
 
   /**
