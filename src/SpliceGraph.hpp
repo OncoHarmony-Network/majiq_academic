@@ -26,14 +26,16 @@ class SpliceGraph {
  protected:
   std::shared_ptr<Contigs> contigs_;
   std::shared_ptr<Genes> genes_;
-  std::vector<Exon> exons_;
+  // std::vector<Exon> exons_;
+  Exons exons_;
   std::vector<GeneJunction> junctions_;
   std::vector<Intron> introns_;
   // NOTE: if we add additional objects with KnownGene, update sort()
 
  public:
-  KnownGene AddGene(Contig contig, ClosedInterval interval, GeneStrandness
-      strand, geneid_t geneid, genename_t genename) {
+  KnownGene AddGene(const Contig& contig, const ClosedInterval& interval,
+      GeneStrandness strand, const geneid_t& geneid,
+      const genename_t& genename) {
     return genes_->make_known(
         Gene{contigs_->make_known(contig),
           interval,
@@ -41,9 +43,9 @@ class SpliceGraph {
           geneid,
           genename});
   }
-  const Exon& AddExon(geneid_t geneid, ClosedInterval interval) {
-    exons_.push_back(Exon{genes_->known(geneid), interval});
-    return exons_.back();
+  void AddExon(geneid_t geneid, ClosedInterval interval) {
+    exons_.insert(Exon{genes_->known(geneid), interval});
+    return;
   }
   const GeneJunction& AddJunction(geneid_t geneid, ClosedInterval interval) {
     junctions_.push_back(GeneJunction{genes_->known(geneid), interval});
@@ -61,10 +63,11 @@ class SpliceGraph {
     // get sorted genes
     std::shared_ptr<Genes> sorted_genes = genes_->sorted();
     if (sorted_genes != genes_) {
+      // update genes_
+      genes_ = sorted_genes;
+      // update exons
+      exons_.remap_genes(sorted_genes);
       // we need to update gene_idx for all objects with KnownGene
-      for (auto& x : exons_) {
-        x.gene = x.gene.remapped(sorted_genes);
-      }
       for (auto& x : junctions_) {
         x.gene = x.gene.remapped(sorted_genes);
       }
@@ -74,7 +77,6 @@ class SpliceGraph {
       // NOTE: update any other objects with KnownGene
     }
     // sort the vectors (NOTE update with additional vectors to sort)
-    std::sort(exons_.begin(), exons_.end());
     std::sort(junctions_.begin(), junctions_.end());
     std::sort(introns_.begin(), introns_.end());
     // done
@@ -93,7 +95,7 @@ class SpliceGraph {
   SpliceGraph(const SpliceGraph& sg)
       : contigs_{sg.contigs_},
         genes_{sg.genes_},
-        exons_{sg.exons_.begin(), sg.exons_.end()},
+        exons_{sg.exons_},
         junctions_{sg.junctions_.begin(), sg.junctions_.end()},
         introns_{sg.introns_.begin(), sg.introns_.end()} {
   }
