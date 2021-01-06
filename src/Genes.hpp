@@ -252,6 +252,10 @@ class Genes : public std::enable_shared_from_this<Genes> {
       : genes_vec_{_sorted_genes_vector(start, end)},
         id_idx_map_{_geneid_indexes(genes_vec_)},
         is_sorted_{true} {
+    static_assert(
+        std::is_same<Gene,
+          typename std::iterator_traits<GeneIt>::value_type>::value,
+        "GeneIt must have Gene values in Genes iterator template constructor");
   }
   Genes(const Genes& x) : Genes{x.genes_vec_.begin(), x.genes_vec_.end()} { }
   /**

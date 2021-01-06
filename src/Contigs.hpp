@@ -132,6 +132,11 @@ class Contigs : public std::enable_shared_from_this<Contigs> {
   }
   template <class It>
   Contigs(It first, It last) : Contigs{} {
+    using TypeIt = typename std::iterator_traits<It>::value_type;
+    static_assert(
+        std::is_same<Contig, TypeIt>::value
+        || std::is_same<seqid_t, TypeIt>::value,
+        "Iterator constructor must be given values of Contig or seqid_t");
     // add each contig from the iterator
     for (It it = first; it != last; ++it) {
       add(*it);
