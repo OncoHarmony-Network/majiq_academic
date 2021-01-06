@@ -13,6 +13,7 @@
 #include <sstream>
 #include <memory>
 #include <stdexcept>
+#include <vector>
 
 #include "MajiqTypes.hpp"
 #include "SpliceGraph.hpp"
@@ -21,6 +22,41 @@
 #define MACRO_STRINGIFY(x) STRINGIFY(x)
 
 namespace py = pybind11;
+
+
+// <https://stackoverflow.com/questions/13180842/how-to-calculate-offset-of-a-class-member-at-compile-time>
+template <typename T, typename U>
+constexpr size_t offsetOf(U T::*member) {
+  return reinterpret_cast<char*>(&(static_cast<T*>(nullptr)->*member))
+    - static_cast<char*>(nullptr);
+}
+/*
+ * Create read-only array view into vector with offset (i.e. for struct member)
+ */
+template <class OutputT, class InputT>
+py::array_t<OutputT> ArrayFromVectorAndOffset(
+    const std::vector<InputT>& src,
+    size_t offset,
+    py::object& handle) {
+  // pointer to first element of src after adding specified memory offset
+  const OutputT* first = reinterpret_cast<const OutputT*>(
+      reinterpret_cast<const char*>(src.data()) + offset);
+  // construct array
+  py::array_t<OutputT> result = py::array_t(
+      // shape
+      {src.size()},
+      // strides
+      {sizeof(InputT)},
+      // pointer to first element
+      first,
+      // object to handle array
+      handle);
+  // set array to readonly -- discourage Python from editing it
+  py::detail::array_proxy(result.ptr())->flags
+    &= ~py::detail::npy_api::NPY_ARRAY_WRITEABLE_;
+  // return resulting array
+  return result;
+}
 
 
 PYBIND11_MODULE(new_majiq, m) {
@@ -71,14 +107,45 @@ PYBIND11_MODULE(new_majiq, m) {
       "Splicegraph contigs");
 
   pyGenes
+    .def_property_readonly("strand",
+        [](py::object& genes_obj) -> py::array_t<char> {
+        Genes& genes = genes_obj.cast<Genes&>();
+        const size_t offset = offsetOf(&majiq::Gene::strand);
+        return ArrayFromVectorAndOffset<char, majiq::Gene>(
+            genes.data(), offset, genes_obj);
+        },
+        "array[char] of characters indicating strand of each gene")
+    .def_property_readonly("contig_idx",
+        [](py::object& genes_obj) -> py::array_t<size_t> {
+        Genes& genes = genes_obj.cast<Genes&>();
+        const size_t offset = offsetOf(&majiq::Gene::contig)
+            + offsetOf(&majiq::KnownContig::contig_idx);
+        return ArrayFromVectorAndOffset<size_t, majiq::Gene>(
+            genes.data(), offset, genes_obj);
+        },
+        "array[int] of indexes indicating contig gene belongs to")
+    .def_property_readonly("start",
+        [](py::object& genes_obj) -> py::array_t<position_t> {
+        Genes& genes = genes_obj.cast<Genes&>();
+        const size_t offset = offsetOf(&majiq::Gene::interval)
+            + offsetOf(&majiq::ClosedInterval::start);
+        return ArrayFromVectorAndOffset<position_t, majiq::Gene>(
+            genes.data(), offset, genes_obj);
+        },
+        "array[int] of gene starts matching gene_idx")
+    .def_property_readonly("end",
+        [](py::object& genes_obj) -> py::array_t<position_t> {
+        Genes& genes = genes_obj.cast<Genes&>();
+        const size_t offset = offsetOf(&majiq::Gene::interval)
+            + offsetOf(&majiq::ClosedInterval::end);
+        return ArrayFromVectorAndOffset<position_t, majiq::Gene>(
+            genes.data(), offset, genes_obj);
+        },
+        "array[int] of gene ends matching gene_idx")
     .def_property_readonly("gene_id", &Genes::geneids,
-        R"pbdoc(
-        Sequence[str] of gene ids in order matching gene_idx
-        )pbdoc")
+        "Sequence[str] of gene ids in order matching gene_idx")
     .def_property_readonly("gene_name", &Genes::genenames,
-        R"pbdoc(
-        Sequence[str] of gene names in order matching gene_idx
-        )pbdoc")
+        "Sequence[str] of gene names in order matching gene_idx")
     .def("__repr__", [](const Genes& self) -> std::string {
         std::ostringstream oss;
         oss << "Genes<" << self.size() << " total>";

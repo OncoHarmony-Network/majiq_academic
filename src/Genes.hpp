@@ -264,6 +264,8 @@ class Genes : public std::enable_shared_from_this<Genes> {
   std::shared_ptr<const Genes> sorted() const {
     return is_sorted_ ? shared_from_this() : std::make_shared<Genes>(*this);
   }
+  // view into genes object for pybind11
+  const std::vector<Gene>& data() { return genes_vec_; }
 };
 
 // implement KnownGene::remapped and KnownGene::get using Genes definition
