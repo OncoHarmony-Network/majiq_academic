@@ -391,6 +391,9 @@ class GeneRegions {
   friend inline bool operator==(const GeneRegions& x, const GeneRegions& y) {
     return x.sorted_vec_ == y.sorted_vec_ && x.region_set_ == y.region_set_;
   }
+
+  // view into regionT vector for pybind11
+  const vecRegionT& data() { sort(); return sorted_vec_; }
 };
 }  // namespace detail
 }  // namespace majiq

@@ -106,6 +106,111 @@ PYBIND11_MODULE(new_majiq, m) {
   auto pyContigs = py::class_<Contigs, std::shared_ptr<Contigs>>(m, "Contigs",
       "Splicegraph contigs");
 
+  pyExons
+    .def_property_readonly("gene_idx",
+        [](py::object& exons_obj) -> py::array_t<size_t> {
+        Exons& exons = exons_obj.cast<Exons&>();
+        const size_t offset = offsetOf(&majiq::Exon::gene)
+            + offsetOf(&majiq::KnownGene::gene_idx);
+        return ArrayFromVectorAndOffset<size_t, majiq::Exon>(
+            exons.data(), offset, exons_obj);
+        },
+        "array[int] of indexes indicating gene exon belongs to")
+    .def_property_readonly("start",
+        [](py::object& exons_obj) -> py::array_t<position_t> {
+        Exons& exons = exons_obj.cast<Exons&>();
+        const size_t offset = offsetOf(&majiq::Exon::coordinates)
+            + offsetOf(&majiq::ClosedInterval::start);
+        return ArrayFromVectorAndOffset<position_t, majiq::Exon>(
+            exons.data(), offset, exons_obj);
+        },
+        "array[int] of exon starts")
+    .def_property_readonly("end",
+        [](py::object& exons_obj) -> py::array_t<position_t> {
+        Exons& exons = exons_obj.cast<Exons&>();
+        const size_t offset = offsetOf(&majiq::Exon::coordinates)
+            + offsetOf(&majiq::ClosedInterval::end);
+        return ArrayFromVectorAndOffset<position_t, majiq::Exon>(
+            exons.data(), offset, exons_obj);
+        },
+        "array[int] of exon ends")
+    .def("__repr__", [](const Exons& self) -> std::string {
+        std::ostringstream oss;
+        oss << "Exons<" << self.size() << " total>";
+        return oss.str();
+        })
+    .def("__len__", &Exons::size);
+
+  pyIntrons
+    .def_property_readonly("gene_idx",
+        [](py::object& introns_obj) -> py::array_t<size_t> {
+        Introns& introns = introns_obj.cast<Introns&>();
+        const size_t offset = offsetOf(&majiq::Intron::gene)
+            + offsetOf(&majiq::KnownGene::gene_idx);
+        return ArrayFromVectorAndOffset<size_t, majiq::Intron>(
+            introns.data(), offset, introns_obj);
+        },
+        "array[int] of indexes indicating gene intron belongs to")
+    .def_property_readonly("start",
+        [](py::object& introns_obj) -> py::array_t<position_t> {
+        Introns& introns = introns_obj.cast<Introns&>();
+        const size_t offset = offsetOf(&majiq::Intron::coordinates)
+            + offsetOf(&majiq::ClosedInterval::start);
+        return ArrayFromVectorAndOffset<position_t, majiq::Intron>(
+            introns.data(), offset, introns_obj);
+        },
+        "array[int] of intron starts")
+    .def_property_readonly("end",
+        [](py::object& introns_obj) -> py::array_t<position_t> {
+        Introns& introns = introns_obj.cast<Introns&>();
+        const size_t offset = offsetOf(&majiq::Intron::coordinates)
+            + offsetOf(&majiq::ClosedInterval::end);
+        return ArrayFromVectorAndOffset<position_t, majiq::Intron>(
+            introns.data(), offset, introns_obj);
+        },
+        "array[int] of intron ends")
+    .def("__repr__", [](const Introns& self) -> std::string {
+        std::ostringstream oss;
+        oss << "Introns<" << self.size() << " total>";
+        return oss.str();
+        })
+    .def("__len__", &Introns::size);
+
+  pyGeneJunctions
+    .def_property_readonly("gene_idx",
+        [](py::object& junctions_obj) -> py::array_t<size_t> {
+        GeneJunctions& junctions = junctions_obj.cast<GeneJunctions&>();
+        const size_t offset = offsetOf(&majiq::GeneJunction::gene)
+            + offsetOf(&majiq::KnownGene::gene_idx);
+        return ArrayFromVectorAndOffset<size_t, majiq::GeneJunction>(
+            junctions.data(), offset, junctions_obj);
+        },
+        "array[int] of indexes indicating gene junction belongs to")
+    .def_property_readonly("start",
+        [](py::object& junctions_obj) -> py::array_t<position_t> {
+        GeneJunctions& junctions = junctions_obj.cast<GeneJunctions&>();
+        const size_t offset = offsetOf(&majiq::GeneJunction::coordinates)
+            + offsetOf(&majiq::OpenInterval::start);
+        return ArrayFromVectorAndOffset<position_t, majiq::GeneJunction>(
+            junctions.data(), offset, junctions_obj);
+        },
+        "array[int] of junction starts")
+    .def_property_readonly("end",
+        [](py::object& junctions_obj) -> py::array_t<position_t> {
+        GeneJunctions& junctions = junctions_obj.cast<GeneJunctions&>();
+        const size_t offset = offsetOf(&majiq::GeneJunction::coordinates)
+            + offsetOf(&majiq::OpenInterval::end);
+        return ArrayFromVectorAndOffset<position_t, majiq::GeneJunction>(
+            junctions.data(), offset, junctions_obj);
+        },
+        "array[int] of junction ends")
+    .def("__repr__", [](const GeneJunctions& self) -> std::string {
+        std::ostringstream oss;
+        oss << "GeneJunctions<" << self.size() << " total>";
+        return oss.str();
+        })
+    .def("__len__", &GeneJunctions::size);
+
   pyGenes
     .def_property_readonly("strand",
         [](py::object& genes_obj) -> py::array_t<char> {
