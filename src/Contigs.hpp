@@ -17,6 +17,7 @@
 #include <memory>
 #include <map>
 #include <vector>
+#include <algorithm>
 #include <boost/functional/hash.hpp>
 
 
@@ -135,6 +136,14 @@ class Contigs : public std::enable_shared_from_this<Contigs> {
     for (It it = first; it != last; ++it) {
       add(*it);
     }
+  }
+
+  // get vector of seqids
+  const std::vector<seqid_t> seqids() const {
+    std::vector<seqid_t> result{size()};
+    std::transform(contigs_vec_.begin(), contigs_vec_.end(), result.begin(),
+        [](const Contig& x) -> seqid_t { return x.seqid; });
+    return result;
   }
 };
 const Contig& KnownContig::get() const {
