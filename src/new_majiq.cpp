@@ -7,6 +7,7 @@
  */
 #include <pybind11/pybind11.h>
 #include <pybind11/numpy.h>
+#include <pybind11/stl_bind.h>
 
 #include <string>
 #include <sstream>
@@ -46,6 +47,9 @@ PYBIND11_MODULE(new_majiq, m) {
   using majiq::Genes;
   using majiq::Contigs;
 
+  // vector<string> will be bound to Python list
+  py::bind_vector<std::vector<std::string>>(m, "VectorString");
+
   // allow nonconst operations
   auto pySpliceGraph = py::class_<SpliceGraph>(m, "SpliceGraph",
       "Splicegraph managing exons, junctions, and introns within genes");
@@ -66,6 +70,41 @@ PYBIND11_MODULE(new_majiq, m) {
   auto pyContigs = py::class_<Contigs, std::shared_ptr<Contigs>>(m, "Contigs",
       "Splicegraph contigs");
 
+  pyGenes
+    .def_property_readonly("gene_id", &Genes::geneids,
+        R"pbdoc(
+        Sequence[str] of gene ids in order matching gene_idx
+        )pbdoc")
+    .def_property_readonly("gene_name", &Genes::genenames,
+        R"pbdoc(
+        Sequence[str] of gene names in order matching gene_idx
+        )pbdoc")
+    .def("__repr__", [](const Genes& self) -> std::string {
+        std::ostringstream oss;
+        oss << "Genes<" << self.size() << " total>";
+        return oss.str();
+        })
+    .def("__len__", &Genes::size)
+    .def("__contains__",
+        [](const Genes& self, geneid_t x) { return self.contains(x); })
+    .def("__getitem__",
+        [](const Genes& self, geneid_t x) { return self.get_gene_idx(x); },
+        "gene_idx for specified gene_id", py::arg("gene_id"));
+
+
+  pyContigs
+    .def_property_readonly("seqid", &Contigs::seqids,
+        R"pbdoc(
+        Sequence[str] of contig ids in order matching contig_idx
+        )pbdoc")
+    .def("__repr__", [](const Contigs& self) -> std::string {
+        std::ostringstream oss;
+        oss << self;
+        return oss.str();
+        })
+    .def("__len__", &Contigs::size)
+    .def("__contains__",
+        [](const Contigs& s, seqid_t x) -> bool { return s.contains(x); });
 
   pySpliceGraph
     // empty constructor

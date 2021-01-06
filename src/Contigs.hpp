@@ -145,7 +145,22 @@ class Contigs : public std::enable_shared_from_this<Contigs> {
         [](const Contig& x) -> seqid_t { return x.seqid; });
     return result;
   }
+
+  // make printable
+  friend std::ostream& operator<<(std::ostream& os, const Contigs& x) noexcept;
 };
+std::ostream& operator<<(std::ostream& os, const Contigs& contigs) noexcept {
+  os << "Contigs[";
+  if (contigs.size() > 0) {
+    for (size_t i = 0; i < contigs.size(); ++i) {
+      os << contigs.get(i) << (i < contigs.size() - 1 ? ", " : "]");
+    }
+  } else {
+    os << "]";
+  }
+  return os;
+}
+// implement forward declaration of get() now that we've defined Contigs
 const Contig& KnownContig::get() const {
   return known_contigs->get(contig_idx);
 }

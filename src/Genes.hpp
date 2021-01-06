@@ -191,6 +191,20 @@ class Genes : public std::enable_shared_from_this<Genes> {
   }
 
  public:
+  // access vector<string> objects
+  const std::vector<geneid_t> geneids() const {
+    std::vector<geneid_t> result{size()};
+    std::transform(genes_vec_.begin(), genes_vec_.end(), result.begin(),
+        [](const Gene& g) { return g.geneid; });
+    return result;
+  }
+  const std::vector<genename_t> genenames() const {
+    std::vector<genename_t> result{size()};
+    std::transform(genes_vec_.begin(), genes_vec_.end(), result.begin(),
+        [](const Gene& g) { return g.genename; });
+    return result;
+  }
+
   Gene& get(size_t idx) { return genes_vec_[idx]; }
   KnownGene operator[](size_t idx) { return {idx, shared_from_this()}; }
 
