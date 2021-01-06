@@ -9,6 +9,7 @@
 #define MAJIQ_EXONS_HPP
 
 #include <tuple>
+#include <functional>
 #include <boost/functional/hash.hpp>
 
 #include "Regions.hpp"
@@ -55,7 +56,8 @@ namespace majiq {
  * not be easily added in sorted order to defer sorting/reordering vector until
  * necessary
  */
-class Exons : public detail::GeneRegions<Exon> {
+template <class CompareExonT = std::less<>>
+class Exons : public detail::GeneRegions<Exon, CompareExonT> {
 };
 }  // namespace majiq
 

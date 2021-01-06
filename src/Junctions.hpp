@@ -9,6 +9,7 @@
 #define MAJIQ_JUNCTIONS_HPP
 
 #include <tuple>
+#include <functional>
 #include <boost/functional/hash.hpp>
 
 #include "Regions.hpp"
@@ -100,7 +101,9 @@ namespace majiq {
  * that could not be easily added in sorted order to defer sorting/reordering
  * vector until necessary
  */
-class GeneJunctions : public detail::GeneRegions<GeneJunction> {
+template <class CompareJunctionT = std::less<>>
+class GeneJunctions
+    : public detail::GeneRegions<GeneJunction, CompareJunctionT> {
 };
 }  // namespace majiq
 

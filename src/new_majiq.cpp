@@ -78,9 +78,9 @@ PYBIND11_MODULE(new_majiq, m) {
   using majiq::genename_t;
 
   using majiq::SpliceGraph;
-  using majiq::Exons;
-  using majiq::Introns;
-  using majiq::GeneJunctions;
+  using Exons = majiq::Exons<>;
+  using Introns = majiq::Introns<>;
+  using GeneJunctions = majiq::GeneJunctions<>;
   using majiq::Genes;
   using majiq::Contigs;
 

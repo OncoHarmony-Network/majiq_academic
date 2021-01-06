@@ -9,6 +9,7 @@
 #define MAJIQ_INTRONS_HPP
 
 #include <tuple>
+#include <functional>
 #include <boost/functional/hash.hpp>
 
 #include "Regions.hpp"
@@ -55,7 +56,8 @@ namespace majiq {
  * not be easily added in sorted order to defer sorting/reordering vector until
  * necessary
  */
-class Introns : public detail::GeneRegions<Intron> {
+template <class CompareIntronT = std::less<>>
+class Introns : public detail::GeneRegions<Intron, CompareIntronT> {
 };
 }  // namespace majiq
 

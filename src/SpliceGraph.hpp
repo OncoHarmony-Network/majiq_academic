@@ -26,9 +26,9 @@ class SpliceGraph {
  protected:
   std::shared_ptr<Contigs> contigs_;
   std::shared_ptr<Genes> genes_;
-  std::shared_ptr<Exons> exons_;
-  std::shared_ptr<GeneJunctions> junctions_;
-  std::shared_ptr<Introns> introns_;
+  std::shared_ptr<Exons<>> exons_;
+  std::shared_ptr<GeneJunctions<>> junctions_;
+  std::shared_ptr<Introns<>> introns_;
   // NOTE: if we add additional objects with KnownGene, update sort()
 
  public:
@@ -82,25 +82,25 @@ class SpliceGraph {
   // NOTE: these sort the containers
   std::shared_ptr<Contigs> contigs() { return contigs_; }
   std::shared_ptr<Genes> genes() { sort(); return genes_; }
-  std::shared_ptr<Exons> exons() { sort(); return exons_; }
-  std::shared_ptr<GeneJunctions> junctions() { sort(); return junctions_; }
-  std::shared_ptr<Introns> introns() { sort(); return introns_; }
+  std::shared_ptr<Exons<>> exons() { sort(); return exons_; }
+  std::shared_ptr<GeneJunctions<>> junctions() { sort(); return junctions_; }
+  std::shared_ptr<Introns<>> introns() { sort(); return introns_; }
 
   // constructors
   SpliceGraph()
       : contigs_{std::make_shared<Contigs>()},
         genes_{std::make_shared<Genes>()},
-        exons_{std::make_shared<Exons>()},
-        junctions_{std::make_shared<GeneJunctions>()},
-        introns_{std::make_shared<Introns>()} {
+        exons_{std::make_shared<Exons<>>()},
+        junctions_{std::make_shared<GeneJunctions<>>()},
+        introns_{std::make_shared<Introns<>>()} {
   }
   // copy shares contigs/genes but copies exons, junctions, introns
   SpliceGraph(const SpliceGraph& sg)
       : contigs_{sg.contigs_},
         genes_{sg.genes_},
-        exons_{std::make_shared<Exons>(*sg.exons_)},
-        junctions_{std::make_shared<GeneJunctions>(*sg.junctions_)},
-        introns_{std::make_shared<Introns>(*sg.introns_)} {
+        exons_{std::make_shared<Exons<>>(*sg.exons_)},
+        junctions_{std::make_shared<GeneJunctions<>>(*sg.junctions_)},
+        introns_{std::make_shared<Introns<>>(*sg.introns_)} {
   }
 
   // to be declared later
