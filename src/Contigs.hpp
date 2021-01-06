@@ -30,7 +30,7 @@ struct Contig {
   seqid_t seqid;
 
   explicit Contig(const seqid_t& _seqid) : seqid{_seqid} {}
-  explicit Contig(const Contig& x) : Contig(x.seqid) {}
+  Contig(const Contig& x) : Contig(x.seqid) {}
 
   bool operator<(const Contig& rhs) const { return seqid < rhs.seqid; }
   bool operator==(const Contig& rhs) const { return seqid == rhs.seqid; }
