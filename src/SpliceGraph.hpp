@@ -32,13 +32,6 @@ class SpliceGraph {
   // NOTE: if we add additional objects with KnownGene, update sort()
 
  public:
-  // access const pointers
-  std::shared_ptr<const Contigs> contigs() const { return contigs_; }
-  std::shared_ptr<const Genes> genes() const { return genes_; }
-  std::shared_ptr<const Exons> exons() const { return exons_; }
-  std::shared_ptr<const GeneJunctions> junctions() const { return junctions_; }
-  std::shared_ptr<const Introns> introns() const { return introns_; }
-
   // add to splicegraph
   void AddGene(const geneid_t& geneid, const seqid_t& seqid,
       const position_t& start, const position_t& end, bool strand_forward,
@@ -84,6 +77,14 @@ class SpliceGraph {
     // done
     return;
   }
+
+  // access non const pointers for use by pybind11 interface...
+  // NOTE: these sort the containers
+  std::shared_ptr<Contigs> contigs() { return contigs_; }
+  std::shared_ptr<Genes> genes() { sort(); return genes_; }
+  std::shared_ptr<Exons> exons() { sort(); return exons_; }
+  std::shared_ptr<GeneJunctions> junctions() { sort(); return junctions_; }
+  std::shared_ptr<Introns> introns() { sort(); return introns_; }
 
   // constructors
   SpliceGraph()
