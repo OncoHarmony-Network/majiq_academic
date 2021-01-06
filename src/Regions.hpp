@@ -107,20 +107,54 @@ inline bool operator<(
     < std::tie(gy.contig, y.coordinates, gy.strand);
 }
 
-// unstranded comparison with contig region
+// compare regions with respect to contig-coordinates but also stranded
+// (when involving ContigRegion just an alias for operator<)
 template <class T1, class T2>
-inline bool CompareUnstranded(
+inline bool CompareContigStranded(
+    const GeneRegion<T1>& x, const GeneRegion<T2>& y) noexcept {
+  const Gene& gx = x.gene.get();
+  const Gene& gy = y.gene.get();
+  return std::tie(gx.contig, x.coordinates, gx.strand)
+    < std::tie(gy.contig, y.coordinates, gy.strand);
+}
+template <class T1, class T2>
+inline bool CompareContigStranded(
+    const ContigRegion<T1>& x, const ContigRegion<T2>& y) noexcept {
+  return x < y;
+}
+template <class T1, class T2>
+inline bool CompareContigStranded(
+    const GeneRegion<T1>& x, const ContigRegion<T2>& y) noexcept {
+  return x < y;
+}
+template <class T1, class T2>
+inline bool CompareContigStranded(
+    const ContigRegion<T1>& x, const GeneRegion<T2>& y) noexcept {
+  return x < y;
+}
+
+// unstranded comparison with contig-coordinates
+template <class T1, class T2>
+inline bool CompareContigUnstranded(
+    const GeneRegion<T1>& x, const GeneRegion<T2>& y) noexcept {
+  const Gene& gx = x.gene.get();
+  const Gene& gy = y.gene.get();
+  return std::tie(gx.contig, x.coordinates)
+    < std::tie(gy.contig, y.coordinates);
+}
+template <class T1, class T2>
+inline bool CompareContigUnstranded(
     const ContigRegion<T1>& x, const ContigRegion<T2>& y) noexcept {
   return std::tie(x.contig, x.coordinates) < std::tie(y.contig, y.coordinates);
 }
 template <class T1, class T2>
-inline bool CompareUnstranded(
+inline bool CompareContigUnstranded(
     const ContigRegion<T1>& x, const GeneRegion<T2>& y) noexcept {
   const Gene& gy = y.gene.get();
   return std::tie(x.contig, x.coordinates) < std::tie(gy.contig, y.coordinates);
 }
 template <class T1, class T2>
-inline bool CompareUnstranded(
+inline bool CompareContigUnstranded(
     const GeneRegion<T1>& x, const ContigRegion<T2>& y) noexcept {
   const Gene& gx = x.gene.get();
   return std::tie(gx.contig, x.coordinates) < std::tie(y.contig, y.coordinates);
