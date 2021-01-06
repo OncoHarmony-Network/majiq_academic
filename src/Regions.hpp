@@ -16,6 +16,7 @@
 #include <unordered_set>
 #include <algorithm>
 #include <memory>
+#include <functional>
 
 #include "Interval.hpp"
 #include "Contigs.hpp"
@@ -114,8 +115,9 @@ inline bool CompareContigStranded(
     const GeneRegion<T1>& x, const GeneRegion<T2>& y) noexcept {
   const Gene& gx = x.gene.get();
   const Gene& gy = y.gene.get();
-  return std::tie(gx.contig, x.coordinates, gx.strand)
-    < std::tie(gy.contig, y.coordinates, gy.strand);
+  // still complete ordering, just gene least important
+  return std::tie(gx.contig, x.coordinates, gx.strand, x.gene)
+    < std::tie(gy.contig, y.coordinates, gy.strand, y.gene);
 }
 template <class T1, class T2>
 inline bool CompareContigStranded(
@@ -133,7 +135,7 @@ inline bool CompareContigStranded(
   return x < y;
 }
 
-// unstranded comparison with contig-coordinates
+// unstranded comparison with contig-coordinates (ignore strand, gene)
 template <class T1, class T2>
 inline bool CompareContigUnstranded(
     const GeneRegion<T1>& x, const GeneRegion<T2>& y) noexcept {
@@ -269,11 +271,15 @@ inline bool operator>=(
 
 
 // implement template container of gene regions
-template <class RegionT>
+template <class RegionT, class CompareRegionT = std::less<RegionT>>
 class GeneRegions {
  public:
+  using value_type = RegionT;
+  using key_compare = CompareRegionT;
   using vecRegionT = std::vector<RegionT>;
-  using setRegionT = std::unordered_set<RegionT>;
+  using _setRegionT_unordered = std::unordered_set<RegionT>;
+  using _setRegionT_ordered = std::set<RegionT, CompareRegionT>;
+  using setRegionT = _setRegionT_unordered;  // what we are actually using
   using IntervalT = typename RegionT::IntervalT;
   static_assert(std::is_base_of<GeneRegion<IntervalT>, RegionT>::value,
       "GeneRegions type must be subclass of GeneRegion");
@@ -284,71 +290,73 @@ class GeneRegions {
 
   // static functions used by constructors, etc.
   /**
-   * Get sorted vector out of sorted vector and new set of items
-   * @note explicitly defining for unordered_set vs (ordered) set, which
-   * doesn't require sorting step
+   * Combine two containers of unique RegionT into single sorted unique vector
+   *
+   * @note container other assumed to be sorted if matches _setRegionT_ordered
+   * or other_sorted is True
    */
-  static vecRegionT _combine_sorted(
-      vecRegionT sorted, std::unordered_set<RegionT> unsorted) {
-    // get unsorted values in sorted order
-    vecRegionT unsorted_vec{unsorted.begin(), unsorted.end()};
-    std::sort(unsorted_vec.begin(), unsorted_vec.end());
-    // merge the two sorted vectors for final result
+  template <bool other_sorted = false, class T>
+  static vecRegionT _combine_sorted(vecRegionT sorted, T other) {
+    static_assert(
+        std::is_same<RegionT, typename T::value_type>::value,
+        "other must have RegionT values in _combine_sorted");
+    if (other.size() == 0) {
+      return sorted;
+    }
     vecRegionT result;
-    result.reserve(sorted.size() + unsorted.size());
-    std::merge(
-        sorted.begin(), sorted.end(),
-        unsorted_vec.begin(), unsorted_vec.end(),
-        std::back_inserter(result));
-    // return final result
-    return result;
-  }
-  /**
-   * Get sorted vector out of sorted vector and sorted set of items
-   * @note explicitly defining for unordered_set vs (ordered) set, which
-   * doesn't require sorting step
-   */
-  static vecRegionT _combine_sorted(
-      vecRegionT sorted, std::set<RegionT> set_sorted) {
-    vecRegionT result;
-    result.reserve(sorted.size() + set_sorted.size());
-    std::merge(
-        sorted.begin(), sorted.end(),
-        set_sorted.begin(), set_sorted.end(),
-        std::back_inserter(result));
-    // return final result
+    result.reserve(sorted.size() + other.size());
+    if constexpr(other_sorted || std::is_same<T, _setRegionT_ordered>::value) {
+      // region_set ordered the way we need it to be already
+      std::set_union(
+          sorted.begin(), sorted.end(), other.begin(), other.end(),
+          std::back_inserter(result), CompareRegionT{});
+    } else {
+      // not sure if sorted, so dump to temporary array to sort the way we want
+      vecRegionT other_vec{other.begin(), other.end()};
+      std::sort(other_vec.begin(), other_vec.end(), CompareRegionT{});
+      std::set_union(
+          sorted.begin(), sorted.end(), other_vec.begin(), other_vec.end(),
+          std::back_inserter(result), CompareRegionT{});
+    }
     return result;
   }
 
   /**
-   * sorted vector when remapping genes in the exons
+   * get sorted vector, remapping genes in the regions passed in from two
+   * containers
    */
+  template <class T1, class T2>
   static vecRegionT _remap_combine(
-      vecRegionT regions_vec, setRegionT regions_set,
+      T1 regions1, T2 regions2,
       const std::shared_ptr<Genes>& new_genes) {
+    static_assert(
+        std::is_same<RegionT, typename T1::value_type>::value,
+        "regions1 must have elements of RegionT in _remap_combine");
+    static_assert(
+        std::is_same<RegionT, typename T2::value_type>::value,
+        "regions2 must have elements of RegionT in _remap_combine");
     // initialize/reserve resulting vector
-    vecRegionT new_vec;
-    new_vec.reserve(regions_vec.size() + regions_set.size());
+    vecRegionT out;
+    out.reserve(regions1.size() + regions2.size());
     // transform exons using genes, add to back of new_vec
-    auto remapper = [new_genes](RegionT x) -> RegionT {
+    auto remapper = [&new_genes](RegionT x) -> RegionT {
       x.gene = x.gene.remapped(new_genes);
       return x;
     };
     std::transform(
-        regions_vec.begin(), regions_vec.end(),
-        std::back_inserter(new_vec), remapper);
+        regions1.begin(), regions1.end(), std::back_inserter(out), remapper);
     std::transform(
-        regions_set.begin(), regions_set.end(),
-        std::back_inserter(new_vec), remapper);
+        regions2.begin(), regions2.end(), std::back_inserter(out), remapper);
     // sort new_vec
-    std::sort(new_vec.begin(), new_vec.end());
+    std::sort(out.begin(), out.end(), CompareRegionT{});
     // return the result
-    return new_vec;
+    return out;
   }
 
   // helper functions for determining if a region is present
   bool _sorted_contains(const RegionT& x) const {
-    auto eq_range = std::equal_range(sorted_vec_.begin(), sorted_vec_.end(), x);
+    auto eq_range = std::equal_range(
+        sorted_vec_.begin(), sorted_vec_.end(), x, CompareRegionT{});
     return eq_range.first != eq_range.second;
   }
   bool _set_contains(const RegionT& x) const {
@@ -366,8 +374,15 @@ class GeneRegions {
     return;
   }
   void remap_genes(const std::shared_ptr<Genes>& new_genes) {
-    sorted_vec_ = _remap_combine(sorted_vec_, region_set_, new_genes);
-    region_set_.clear();
+    if (region_set_.size() > 0) {
+      sorted_vec_ = _remap_combine(sorted_vec_, region_set_, new_genes);
+      region_set_.clear();
+    } else {
+      // remap/sort in place...
+      std::for_each(sorted_vec_.begin(), sorted_vec_.end(),
+          [&new_genes](RegionT& x) { x.gene = x.gene.remapped(new_genes); });
+      std::sort(sorted_vec_.begin(), sorted_vec_.end(), CompareRegionT{});
+    }
     return;
   }
   // access exons
@@ -376,8 +391,37 @@ class GeneRegions {
     return sorted_vec_[idx];
   }
   const RegionT& operator[](size_t idx) const {
-    // NOTE assumes sorted, so make sure constructors always sorted
-    return sorted_vec_[idx];
+    if (unsorted()) {
+      std::cerr << "operator[] on unsorted const Regions not intended/ideal\n";
+      return GeneRegions<RegionT, CompareRegionT>(this)[idx];
+    } else {
+      return sorted_vec_[idx];
+    }
+  }
+  // iterators
+  constexpr typename vecRegionT::const_iterator begin() {
+    sort();
+    return sorted_vec_.begin();
+  }
+  constexpr typename vecRegionT::const_iterator begin() const {
+    if (unsorted()) {
+      std::cerr << "begin() on unsorted const Regions not intended/ideal\n";
+      return GeneRegions<RegionT, CompareRegionT>(this).begin();
+    } else {
+      return sorted_vec_.begin();
+    }
+  }
+  constexpr typename vecRegionT::const_iterator end() {
+    sort();
+    return sorted_vec_.end();
+  }
+  constexpr typename vecRegionT::const_iterator end() const {
+    if (unsorted()) {
+      std::cerr << "end() on unsorted const Regions not intended/ideal\n";
+      return GeneRegions<RegionT, CompareRegionT>(this).end();
+    } else {
+      return sorted_vec_.end();
+    }
   }
 
   // membership
@@ -387,7 +431,7 @@ class GeneRegions {
 
   // insertion of new elements
   void insert(const RegionT& x) {
-    if (sorted_vec_.size() == 0 || sorted_vec_.back() < x) {
+    if (sorted_vec_.size() == 0 || CompareRegionT{}(sorted_vec_.back(), x)) {
       // it belongs at end of the sorted vector
       sorted_vec_.push_back(x);
       return;
