@@ -108,59 +108,63 @@ inline bool operator<(
     < std::tie(gy.contig, y.coordinates, gy.strand);
 }
 
-// compare regions with respect to contig-coordinates but also stranded
-// (when involving ContigRegion just an alias for operator<)
+// compare regions with respect to contig-coordinates, including strand
+// NOTE: Satisfies Compare (full ordering) when between same type
 template <class T1, class T2>
-inline bool CompareContigStranded(
-    const GeneRegion<T1>& x, const GeneRegion<T2>& y) noexcept {
-  const Gene& gx = x.gene.get();
-  const Gene& gy = y.gene.get();
-  // still complete ordering, just gene least important
-  return std::tie(gx.contig, x.coordinates, gx.strand, x.gene)
-    < std::tie(gy.contig, y.coordinates, gy.strand, y.gene);
-}
-template <class T1, class T2>
-inline bool CompareContigStranded(
-    const ContigRegion<T1>& x, const ContigRegion<T2>& y) noexcept {
-  return x < y;
-}
-template <class T1, class T2>
-inline bool CompareContigStranded(
-    const GeneRegion<T1>& x, const ContigRegion<T2>& y) noexcept {
-  return x < y;
-}
-template <class T1, class T2>
-inline bool CompareContigStranded(
-    const ContigRegion<T1>& x, const GeneRegion<T2>& y) noexcept {
-  return x < y;
-}
+struct CompareContigStranded {
+  inline bool operator()(
+      const GeneRegion<T1>& x, const GeneRegion<T2>& y) noexcept {
+    const Gene& gx = x.gene.get();
+    const Gene& gy = y.gene.get();
+    // still complete ordering, just gene least important
+    return std::tie(gx.contig, x.coordinates, gx.strand, x.gene)
+      < std::tie(gy.contig, y.coordinates, gy.strand, y.gene);
+  }
+  inline bool operator()(
+      const ContigRegion<T1>& x, const ContigRegion<T2>& y) noexcept {
+    return x < y;
+  }
+  inline bool operator()(
+      const GeneRegion<T1>& x, const ContigRegion<T2>& y) noexcept {
+    return x < y;
+  }
+  inline bool operator()(
+      const ContigRegion<T1>& x, const GeneRegion<T2>& y) noexcept {
+    return x < y;
+  }
+};
 
 // unstranded comparison with contig-coordinates (ignore strand, gene)
+// NOTE: partial ordering (not Compare requirements)
+// Compatible with CompareContigStranded -- sorted by CompareContigStranded -->
+// sorted by CompareContigUnstranded
 template <class T1, class T2>
-inline bool CompareContigUnstranded(
-    const GeneRegion<T1>& x, const GeneRegion<T2>& y) noexcept {
-  const Gene& gx = x.gene.get();
-  const Gene& gy = y.gene.get();
-  return std::tie(gx.contig, x.coordinates)
-    < std::tie(gy.contig, y.coordinates);
-}
-template <class T1, class T2>
-inline bool CompareContigUnstranded(
-    const ContigRegion<T1>& x, const ContigRegion<T2>& y) noexcept {
-  return std::tie(x.contig, x.coordinates) < std::tie(y.contig, y.coordinates);
-}
-template <class T1, class T2>
-inline bool CompareContigUnstranded(
-    const ContigRegion<T1>& x, const GeneRegion<T2>& y) noexcept {
-  const Gene& gy = y.gene.get();
-  return std::tie(x.contig, x.coordinates) < std::tie(gy.contig, y.coordinates);
-}
-template <class T1, class T2>
-inline bool CompareContigUnstranded(
-    const GeneRegion<T1>& x, const ContigRegion<T2>& y) noexcept {
-  const Gene& gx = x.gene.get();
-  return std::tie(gx.contig, x.coordinates) < std::tie(y.contig, y.coordinates);
-}
+struct CompareContigUnstranded {
+  inline bool operator()(
+      const GeneRegion<T1>& x, const GeneRegion<T2>& y) noexcept {
+    const Gene& gx = x.gene.get();
+    const Gene& gy = y.gene.get();
+    return std::tie(gx.contig, x.coordinates)
+      < std::tie(gy.contig, y.coordinates);
+  }
+  inline bool operator()(
+      const ContigRegion<T1>& x, const ContigRegion<T2>& y) noexcept {
+    return std::tie(x.contig, x.coordinates)
+      < std::tie(y.contig, y.coordinates);
+  }
+  inline bool operator()(
+      const ContigRegion<T1>& x, const GeneRegion<T2>& y) noexcept {
+    const Gene& gy = y.gene.get();
+    return std::tie(x.contig, x.coordinates)
+      < std::tie(gy.contig, y.coordinates);
+  }
+  inline bool operator()(
+      const GeneRegion<T1>& x, const ContigRegion<T2>& y) noexcept {
+    const Gene& gx = x.gene.get();
+    return std::tie(gx.contig, x.coordinates)
+      < std::tie(y.contig, y.coordinates);
+  }
+};
 
 // allow regions to be passed into output stream (e.g. std::cout)
 template <class T>
