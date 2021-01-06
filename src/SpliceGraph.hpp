@@ -26,32 +26,41 @@ class SpliceGraph {
  protected:
   std::shared_ptr<Contigs> contigs_;
   std::shared_ptr<Genes> genes_;
-  Exons exons_;
-  GeneJunctions junctions_;
-  Introns introns_;
+  std::shared_ptr<Exons> exons_;
+  std::shared_ptr<GeneJunctions> junctions_;
+  std::shared_ptr<Introns> introns_;
   // NOTE: if we add additional objects with KnownGene, update sort()
 
  public:
-  KnownGene AddGene(const Contig& contig, const ClosedInterval& interval,
-      GeneStrandness strand, const geneid_t& geneid,
-      const genename_t& genename) {
-    return genes_->make_known(
-        Gene{contigs_->make_known(contig),
-          interval,
-          strand,
-          geneid,
-          genename});
-  }
-  void AddExon(geneid_t geneid, ClosedInterval interval) {
-    exons_.insert(Exon{genes_->known(geneid), interval});
+  // access const pointers
+  std::shared_ptr<const Contigs> contigs() const { return contigs_; }
+  std::shared_ptr<const Genes> genes() const { return genes_; }
+  std::shared_ptr<const Exons> exons() const { return exons_; }
+  std::shared_ptr<const GeneJunctions> junctions() const { return junctions_; }
+  std::shared_ptr<const Introns> introns() const { return introns_; }
+
+  // add to splicegraph
+  void AddGene(const geneid_t& geneid, const seqid_t& seqid,
+      const position_t& start, const position_t& end, bool strand_forward,
+      genename_t genename) {
+    genes_->add(Gene{
+        contigs_->make_known(seqid), ClosedInterval{start, end},
+        strand_forward ? GeneStrandness::FORWARD : GeneStrandness::REVERSE,
+        geneid, genename});
     return;
   }
-  void AddJunction(geneid_t geneid, OpenInterval interval) {
-    junctions_.insert(GeneJunction{genes_->known(geneid), interval});
+  void AddExon(geneid_t geneid, position_t start, position_t end) {
+    exons_->insert(Exon{genes_->known(geneid), ClosedInterval{start, end}});
     return;
   }
-  void AddIntron(geneid_t geneid, ClosedInterval interval) {
-    introns_.insert(Intron{genes_->known(geneid), interval});
+  void AddJunction(geneid_t geneid, position_t start, position_t end) {
+    junctions_->insert(GeneJunction{
+        genes_->known(geneid), OpenInterval{start, end}});
+    return;
+  }
+  void AddIntron(geneid_t geneid, position_t start, position_t end) {
+    introns_->insert(Intron{
+        genes_->known(geneid), ClosedInterval{start, end}});
     return;
   }
 
@@ -63,14 +72,14 @@ class SpliceGraph {
     std::shared_ptr<Genes> sorted_genes = genes_->sorted();
     if (sorted_genes != genes_) {
       genes_ = sorted_genes;
-      exons_.remap_genes(sorted_genes);
-      junctions_.remap_genes(sorted_genes);
-      introns_.remap_genes(sorted_genes);
+      exons_->remap_genes(sorted_genes);
+      junctions_->remap_genes(sorted_genes);
+      introns_->remap_genes(sorted_genes);
       // NOTE: update any other objects with KnownGene
     } else {
-      exons_.sort();
-      junctions_.sort();
-      introns_.sort();
+      exons_->sort();
+      junctions_->sort();
+      introns_->sort();
     }
     // done
     return;
@@ -80,17 +89,17 @@ class SpliceGraph {
   SpliceGraph()
       : contigs_{std::make_shared<Contigs>()},
         genes_{std::make_shared<Genes>()},
-        exons_{},
-        junctions_{},
-        introns_{} {
+        exons_{std::make_shared<Exons>()},
+        junctions_{std::make_shared<GeneJunctions>()},
+        introns_{std::make_shared<Introns>()} {
   }
   // copy shares contigs/genes but copies exons, junctions, introns
   SpliceGraph(const SpliceGraph& sg)
       : contigs_{sg.contigs_},
         genes_{sg.genes_},
-        exons_{sg.exons_},
-        junctions_{sg.junctions_},
-        introns_{sg.introns_} {
+        exons_{std::make_shared<Exons>(*sg.exons_)},
+        junctions_{std::make_shared<GeneJunctions>(*sg.junctions_)},
+        introns_{std::make_shared<Introns>(*sg.introns_)} {
   }
 
   // to be declared later
@@ -102,9 +111,9 @@ class SpliceGraph {
 bool operator==(const SpliceGraph& x, const SpliceGraph& y) noexcept {
   return x.contigs_ == y.contigs_
     && x.genes_ == y.genes_
-    && x.exons_ == y.exons_
-    && x.junctions_ == y.junctions_
-    && x.introns_ == y.introns_;
+    && *x.exons_ == *y.exons_
+    && *x.junctions_ == *y.junctions_
+    && *x.introns_ == *y.introns_;
 }
 
 // how to represent splicegraph in output stream
@@ -112,9 +121,9 @@ std::ostream& operator<<(std::ostream& os, const SpliceGraph& sg) noexcept {
   os << "SpliceGraph<"
     << sg.contigs_->size() << " contigs, "
     << sg.genes_->size() << " genes, "
-    << sg.exons_.size() << " exons, "
-    << sg.junctions_.size() << " junctions, "
-    << sg.introns_.size() << " introns"
+    << sg.exons_->size() << " exons, "
+    << sg.junctions_->size() << " junctions, "
+    << sg.introns_->size() << " introns"
     << ">";
   return os;
 }
