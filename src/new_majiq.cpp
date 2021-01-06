@@ -14,6 +14,7 @@
 #include <memory>
 #include <stdexcept>
 #include <vector>
+#include <array>
 
 #include "MajiqTypes.hpp"
 #include "SpliceGraph.hpp"
@@ -213,10 +214,10 @@ PYBIND11_MODULE(new_majiq, m) {
 
   pyGenes
     .def_property_readonly("strand",
-        [](py::object& genes_obj) -> py::array_t<char> {
+        [](py::object& genes_obj) -> py::array_t<std::array<char, 1>> {
         Genes& genes = genes_obj.cast<Genes&>();
         const size_t offset = offsetOf(&majiq::Gene::strand);
-        return ArrayFromVectorAndOffset<char, majiq::Gene>(
+        return ArrayFromVectorAndOffset<std::array<char, 1>, majiq::Gene>(
             genes.data(), offset, genes_obj);
         },
         "array[char] of characters indicating strand of each gene")
