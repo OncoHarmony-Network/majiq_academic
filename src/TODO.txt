@@ -1,0 +1,62 @@
++ build filters, denovo filters
++ connections
++ update exons
++ update introns
++ Simplifying junctions/introns
+
+Denovo filters to add to splicegraph
+Build filters for LSVs, constitutive
+
+Denovo and build filters are accumulated on ContigJunctions
+Subclass GeneJunction to include denovo and build status
++ Should have easy way to query contig junctions for having 1+ matching gene
+  junction
++ Update gene junction denovo/build status
++ Way to assign unfound contig junctions to genes (need exons)
+
+If we have this, we have denovo junctions.
+
+Then, we can use resulting junctions and *annotated exons* to update exon
+boundaries
++ Subclass Exon to include bool denovo and annotated coordinates
++ Exons can give us back annotated exons (or just a view of them?)
++ How to process with GeneJunctions to create new Exons
+
+(If we have this, we also have a way of combining splicegraphs. More or less.
+Introns are okay)
+
+If we have this, we have updated exon boundaries. Then,
++ we can identify potential introns (between annotated full exons)
++ we can subclass intron to include denovo and build status
++ we can update/include existing introns when figuring out potential introns
++ these are the units for identifying intron coverage on
++ map intron coverage units to splicegraph potential introns for determining if
+  passed filters, eventual coverage for accepted splicegraph introns
+
+If we have this, we can
++ connect the splicegraph and identify events
++ mask over junctions and introns for simplification
++ which we can use as additional parameter to identify simplified events
+
+We can then also resolve the following issues:
++ Python interface
++ Reading in of coverage for junctions and introns (htslib)
++ de/seriaization of coverage for junctions and introns (likely via Python)
++ Serialization of coverage for quantification (likely via Python)
++ Serialization of splicegraph (likely via Python)
+
+
+Other thoughts:
+
+It seems as if there would be a strong benefit of switching between sorting by
+contig-cooordinates vs gene-coordinates in different parts of this pipeline:
++ ContigJunctions/GeneJunctions --> easier when sorted by contigs
++ Detect exons --> sorted by genes
++ Identifying potential introns --> sorted by genes
++ Identifying intron coverage --> introns, exons, sorted by contigs
++ Identifying events --> sorted by genes
++ coverage for simplification --> easier when sorted by contigs
+
+Really any time that we are doing something with coverage, we want to be sorted
+by contigs, but otherwise not. Could make contig-sorted copies available/saved
+on demand, indexing to map back as well.
