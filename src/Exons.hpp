@@ -25,14 +25,14 @@ struct Exon : detail::GeneRegion<ClosedInterval> {
   Exon(KnownGene _gene, ClosedInterval _coordinates)
       : detail::GeneRegion<ClosedInterval>{_gene, _coordinates} {
   }
-  Exon(const Exon& x) : Exon{x.gene, x.coordinates} {}
-
-  // comparison for equality
-  bool operator==(const Exon& rhs) const {
-    return std::tie(gene, coordinates)
-      == std::tie(rhs.gene, rhs.coordinates);
-  }
+  Exon(const Exon& x) = default;
+  Exon(Exon&& x) = default;
+  Exon& operator=(const Exon& x) = default;
+  Exon& operator=(Exon&& x) = default;
 };
+inline bool operator==(const Exon& x, const Exon& y) noexcept {
+  return std::tie(x.gene, x.coordinates) == std::tie(y.gene, y.coordinates);
+}
 
 // override boost hashing
 std::size_t hash_value(const Exon& x) noexcept {
@@ -63,6 +63,12 @@ class Exons : public detail::GeneRegions<Exon, CompareExonT> {
   using BaseT::remap_genes;
   using BaseT::size;
   using BaseT::make_contiguous;
+
+  Exons() = default;
+  Exons(const Exons& x) = default;
+  Exons(Exons&& x) = default;
+  Exons& operator=(const Exons& x) = default;
+  Exons& operator=(Exons&& x) = default;
 };
 }  // namespace majiq
 

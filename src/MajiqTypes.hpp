@@ -12,8 +12,8 @@
 
 namespace majiq {
 
-typedef float real_t;  // value for numerics
-typedef int64_t position_t;  // coordinates (or difference in coordinates)
+using real_t = float;  // for numerics
+using position_t = int64_t;  // for coordinates, difference in coordinates
 
 }  // namespace majiq
 

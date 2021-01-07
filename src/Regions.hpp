@@ -45,9 +45,10 @@ struct ContigRegion {
       GeneStrandness _strand)
       : contig{_contig}, coordinates{_coordinates}, strand{_strand} {
   }
-  ContigRegion(const ContigRegion& x)
-      : ContigRegion{x.contig, x.coordinates, x.strand} {
-  }
+  ContigRegion(const ContigRegion& x) = default;
+  ContigRegion(ContigRegion&& x) = default;
+  ContigRegion& operator=(const ContigRegion& x) = default;
+  ContigRegion& operator=(ContigRegion&& x) = default;
 };
 
 template <class T>
@@ -64,7 +65,10 @@ struct GeneRegion {
   GeneRegion(KnownGene _gene, IntervalT _coordinates)
       : gene{_gene}, coordinates{_coordinates} {
   }
-  GeneRegion(const GeneRegion& x) : GeneRegion{x.gene, x.coordinates} {}
+  GeneRegion(const GeneRegion& x) = default;
+  GeneRegion(GeneRegion&& x) = default;
+  GeneRegion& operator=(const GeneRegion& x) = default;
+  GeneRegion& operator=(GeneRegion&& x) = default;
 };
 
 // order regions by genomic position and strand
@@ -277,7 +281,10 @@ inline bool operator>=(
 }
 
 
-template <class RegionT, class CompareRegionT = std::less<RegionT>, class SetUnion = utils::DefaultSetUnion<RegionT, CompareRegionT>>
+template <
+  class RegionT,
+  class CompareRegionT = std::less<RegionT>,
+  class SetUnion = utils::DefaultSetUnion<RegionT, CompareRegionT>>
 class GeneRegions
     : public utils::contiguous_set<RegionT, CompareRegionT, SetUnion> {
  public:

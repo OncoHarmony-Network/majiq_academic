@@ -26,7 +26,10 @@ struct Interval {
 
   // constructors
   Interval(position_t a, position_t b) : start{a}, end{b} { }
-  Interval(const Interval& x) : Interval(x.start, x.end) { }
+  Interval(const Interval& x) = default;
+  Interval(Interval&& x) = default;
+  Interval& operator=(const Interval& x) = default;
+  Interval& operator=(Interval&& x) = default;
 
   // full interval or otherwise?
   bool has_start() const { return start >= 0; }
@@ -86,7 +89,10 @@ struct ClosedInterval : public detail::Interval {
       throw std::invalid_argument("Interval must have nonnegative length");
     }
   }
-  ClosedInterval(const ClosedInterval& x) : ClosedInterval(x.start, x.end) { }
+  ClosedInterval(const ClosedInterval& x) = default;
+  ClosedInterval(ClosedInterval&& x) = default;
+  ClosedInterval& operator=(const ClosedInterval& x) = default;
+  ClosedInterval& operator=(ClosedInterval&& x) = default;
 };
 
 /**
@@ -108,7 +114,10 @@ struct OpenInterval : public detail::Interval {
       throw std::invalid_argument("Interval must have nonnegative length");
     }
   }
-  OpenInterval(const OpenInterval& x) : OpenInterval(x.start, x.end) { }
+  OpenInterval(const OpenInterval& x) = default;
+  OpenInterval(OpenInterval&& x) = default;
+  OpenInterval& operator=(const OpenInterval& x) = default;
+  OpenInterval& operator=(OpenInterval&& x) = default;
 };
 
 // intersection of intervals

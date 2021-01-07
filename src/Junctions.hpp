@@ -26,16 +26,16 @@ struct ContigJunction : public detail::ContigRegion<OpenInterval> {
       GeneStrandness _strand)
       : detail::ContigRegion<OpenInterval>{_contig, _coordinates, _strand} {
   }
-  ContigJunction(const ContigJunction& x)
-      : ContigJunction{x.contig, x.coordinates, x.strand} {
-  }
-
-  // comparison for equality
-  bool operator==(const ContigJunction& rhs) const {
-    return std::tie(contig, coordinates, strand)
-      == std::tie(rhs.contig, rhs.coordinates, rhs.strand);
-  }
+  ContigJunction(const ContigJunction& x) = default;
+  ContigJunction(ContigJunction&& x) = default;
+  ContigJunction& operator=(const ContigJunction& x) = default;
+  ContigJunction& operator=(ContigJunction&& x) = default;
 };
+inline bool operator==(
+    const ContigJunction& x, const ContigJunction& y) noexcept {
+  return std::tie(x.contig, x.coordinates, x.strand)
+    == std::tie(y.contig, y.coordinates, y.strand);
+}
 
 struct GeneJunction : public detail::GeneRegion<OpenInterval> {
  public:
@@ -43,14 +43,10 @@ struct GeneJunction : public detail::GeneRegion<OpenInterval> {
   GeneJunction(KnownGene _gene, OpenInterval _coordinates)
       : detail::GeneRegion<OpenInterval>{_gene, _coordinates} {
   }
-  GeneJunction(const GeneJunction& x) : GeneJunction{x.gene, x.coordinates} {}
-
-  // comparison for equality
-  bool operator==(const GeneJunction& rhs) const {
-    return std::tie(gene, coordinates)
-      == std::tie(rhs.gene, rhs.coordinates);
-  }
-
+  GeneJunction(const GeneJunction& x) = default;
+  GeneJunction(GeneJunction&& x) = default;
+  GeneJunction& operator=(const GeneJunction& x) = default;
+  GeneJunction& operator=(GeneJunction&& x) = default;
   /**
    * Do we match with specified contig junction (strand matches if same or if
    * contig junction has ambiguous strand)
@@ -67,6 +63,10 @@ struct GeneJunction : public detail::GeneRegion<OpenInterval> {
     }
   }
 };
+inline bool operator==(const GeneJunction& x, const GeneJunction& y) noexcept {
+  return std::tie(x.gene, x.coordinates) == std::tie(y.gene, y.coordinates);
+}
+
 
 // override boost::hash
 std::size_t hash_value(const ContigJunction& x) noexcept {
@@ -106,10 +106,15 @@ class GeneJunctions
     : public detail::GeneRegions<GeneJunction, CompareJunctionT> {
  public:
   using BaseT = detail::GeneRegions<GeneJunction, CompareJunctionT>;
-  using BaseBaseT = typename BaseT::BaseT;
   using BaseT::remap_genes;
   using BaseT::size;
   using BaseT::make_contiguous;
+
+  GeneJunctions() = default;
+  GeneJunctions(const GeneJunctions& x) = default;
+  GeneJunctions(GeneJunctions&& x) = default;
+  GeneJunctions& operator=(const GeneJunctions& x) = default;
+  GeneJunctions& operator=(GeneJunctions&& x) = default;
 };
 }  // namespace majiq
 

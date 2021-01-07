@@ -25,14 +25,14 @@ struct Intron : detail::GeneRegion<ClosedInterval> {
   Intron(KnownGene _gene, ClosedInterval _coordinates)
       : detail::GeneRegion<ClosedInterval>{_gene, _coordinates} {
   }
-  Intron(const Intron& x) : Intron{x.gene, x.coordinates} {}
-
-  // comparison for equality
-  bool operator==(const Intron& rhs) const {
-    return std::tie(gene, coordinates)
-      == std::tie(rhs.gene, rhs.coordinates);
-  }
+  Intron(const Intron& x) = default;
+  Intron(Intron&& x) = default;
+  Intron& operator=(const Intron& x) = default;
+  Intron& operator=(Intron&& x) = default;
 };
+inline bool operator==(const Intron& x, const Intron& y) noexcept {
+  return std::tie(x.gene, x.coordinates) == std::tie(y.gene, y.coordinates);
+}
 
 // override boost hashing
 std::size_t hash_value(const Intron& x) noexcept {
@@ -63,6 +63,12 @@ class Introns : public detail::GeneRegions<Intron, CompareIntronT> {
   using BaseT::remap_genes;
   using BaseT::size;
   using BaseT::make_contiguous;
+
+  Introns() = default;
+  Introns(const Introns& x) = default;
+  Introns(Introns&& x) = default;
+  Introns& operator=(const Introns& x) = default;
+  Introns& operator=(Introns&& x) = default;
 };
 }  // namespace majiq
 

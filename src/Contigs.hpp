@@ -24,19 +24,26 @@
 // define individual contig
 namespace majiq {
 
-typedef std::string seqid_t;  // type for contig ids
+using seqid_t = std::string;  // type for contig ids
 
 struct Contig {
  public:
   seqid_t seqid;
 
   explicit Contig(const seqid_t& _seqid) : seqid{_seqid} {}
-  Contig(const Contig& x) : Contig(x.seqid) {}
-
-  bool operator<(const Contig& rhs) const { return seqid < rhs.seqid; }
-  bool operator==(const Contig& rhs) const { return seqid == rhs.seqid; }
+  explicit Contig(seqid_t&& _seqid) : seqid{_seqid} {}
+  Contig(const Contig& x) = default;
+  Contig(Contig&& x) = default;
+  Contig& operator=(const Contig& x) = default;
+  Contig& operator=(Contig&& x) = default;
 };
-std::ostream& operator<<(std::ostream& os, const Contig& x) {
+inline bool operator<(const Contig& x, const Contig& y) noexcept {
+  return x.seqid < y.seqid;
+}
+inline bool operator==(const Contig& x, const Contig& y) noexcept {
+  return x.seqid == y.seqid;
+}
+inline std::ostream& operator<<(std::ostream& os, const Contig& x) noexcept {
   os << x.seqid;
   return os;
 }
@@ -56,28 +63,36 @@ template <> struct hash<majiq::Contig> {
 }  // namespace std
 
 namespace majiq {
-class Contigs;
+class Contigs;  // forward declaration implemented later in file
+
 struct KnownContig {
  public:
+  // data
   size_t contig_idx;
   std::shared_ptr<Contigs> known_contigs;
+
+  // access true contig data
+  const Contig& get() const;
+
+  // constructors
   KnownContig(
       size_t _contig_idx,
       const std::shared_ptr<Contigs>& _known_contigs)
       : contig_idx{_contig_idx},
         known_contigs{_known_contigs} {
   }
-  KnownContig(const KnownContig& x)
-      : KnownContig{x.contig_idx, x.known_contigs} {
-  }
-  const Contig& get() const;
-  bool operator<(const KnownContig& rhs) const {
-    return contig_idx < rhs.contig_idx;
-  }
-  bool operator==(const KnownContig& rhs) const {
-    return contig_idx == rhs.contig_idx;
-  }
+  KnownContig(const KnownContig& x) = default;
+  KnownContig(KnownContig&& x) = default;
+  KnownContig& operator=(const KnownContig& x) = default;
+  KnownContig& operator=(KnownContig&& x) = default;
 };
+inline bool operator<(const KnownContig& x, const KnownContig& y) noexcept {
+  return x.contig_idx < y.contig_idx;
+}
+inline bool operator==(const KnownContig& x, const KnownContig& y) noexcept {
+  return x.contig_idx == y.contig_idx;
+}
+
 class Contigs : public std::enable_shared_from_this<Contigs> {
  private:
   std::map<Contig, size_t> contig_idx_map_;
@@ -89,7 +104,9 @@ class Contigs : public std::enable_shared_from_this<Contigs> {
   /**
    * Access KnownContig, which requires Contigs managed by shared_ptr
    */
-  const KnownContig operator[](size_t idx) { return {idx, shared_from_this()}; }
+  const KnownContig operator[](size_t idx) {
+    return KnownContig{idx, shared_from_this()};
+  }
 
   // check/add contigs
   size_t size() const { return contigs_vec_.size(); }
@@ -125,11 +142,11 @@ class Contigs : public std::enable_shared_from_this<Contigs> {
   const KnownContig make_known(const seqid_t& x) { return operator[](add(x)); }
 
   // constructors
-  Contigs() : contig_idx_map_{}, contigs_vec_{} {}
-  Contigs(const Contigs& x)
-      : contig_idx_map_{x.contig_idx_map_.begin(), x.contig_idx_map_.end()},
-        contigs_vec_{x.contigs_vec_.begin(), x.contigs_vec_.end()} {
-  }
+  Contigs() = default;
+  Contigs(const Contigs& x) = default;
+  Contigs(Contigs&& x) = default;
+  Contigs& operator=(const Contigs& x) = default;
+  Contigs& operator=(Contigs&& x) = default;
   template <class It>
   Contigs(It first, It last) : Contigs{} {
     using TypeIt = typename std::iterator_traits<It>::value_type;

@@ -25,15 +25,16 @@
 
 namespace majiq {
 
-typedef std::string geneid_t;
-typedef std::string genename_t;
+using geneid_t = std::string;
+using genename_t = std::string;
 
 enum class GeneStrandness : char {
   FORWARD = '+',
   REVERSE = '-',
   AMBIGUOUS = '.',
 };
-std::ostream& operator<<(std::ostream& os, const GeneStrandness& x) noexcept {
+inline std::ostream& operator<<(
+    std::ostream& os, const GeneStrandness& x) noexcept {
   os << static_cast<char>(x);
   return os;
 }
@@ -57,38 +58,45 @@ struct Gene {
         geneid{_geneid},
         genename{_genename} {
   }
-  Gene(const Gene& g)
-      : Gene(g.contig, g.interval, g.strand, g.geneid, g.genename) {
-  }
+  Gene(const Gene& g) = default;
+  Gene(Gene&& g) = default;
+  Gene& operator=(const Gene& g) = default;
+  Gene& operator=(Gene&& g) = default;
 };
 // ordering with respect to genomic position
-inline bool operator<(const Gene& lhs, const Gene& rhs) {
+inline bool operator<(const Gene& lhs, const Gene& rhs) noexcept {
   return std::tie(lhs.contig, lhs.interval, lhs.strand, lhs.geneid)
     < std::tie(rhs.contig, rhs.interval, rhs.strand, rhs.geneid);
 }
 // equality only by gene id
-inline bool operator==(const Gene& lhs, const Gene& rhs) {
+inline bool operator==(const Gene& lhs, const Gene& rhs) noexcept {
   return lhs.geneid == rhs.geneid;
 }
 // allow Gene to be passed into output stream (e.g. std::cout)
-std::ostream& operator<<(std::ostream& os, const Gene& x) noexcept {
+inline std::ostream& operator<<(std::ostream& os, const Gene& x) noexcept {
   os << x.geneid;
   return os;
 }
 
 // comparison to contigs
-inline bool operator<(const Gene& x, const KnownContig& y) {
+inline bool operator<(const Gene& x, const KnownContig& y) noexcept {
   return x.contig < y;
 }
-inline bool operator<(const KnownContig& x, const Gene& y) {
+inline bool operator<(const KnownContig& x, const Gene& y) noexcept {
   return x < y.contig;
 }
 
 // derived comparisons (Gene, Gene)
-inline bool operator>(const Gene& x, const Gene& y) { return y < x; }
-inline bool operator<=(const Gene& x, const Gene& y) { return !(y < x); }
-inline bool operator>=(const Gene& x, const Gene& y) { return !(x < y); }
-inline bool operator!=(const Gene& x, const Gene& y) { return !(x == y); }
+inline bool operator>(const Gene& x, const Gene& y) noexcept { return y < x; }
+inline bool operator<=(const Gene& x, const Gene& y) noexcept {
+  return !(y < x);
+}
+inline bool operator>=(const Gene& x, const Gene& y) noexcept {
+  return !(x < y);
+}
+inline bool operator!=(const Gene& x, const Gene& y) noexcept {
+  return !(x == y);
+}
 
 // derived comparisons (Gene, KnownContig)
 inline bool operator>(const KnownContig& x, const Gene& y) noexcept {
@@ -139,11 +147,16 @@ struct KnownGene {
   // fields
   size_t gene_idx;
   std::shared_ptr<Genes> known_genes;
+
   // constructors
   KnownGene(size_t _gene_idx, std::shared_ptr<Genes> _known_genes)
       : gene_idx{_gene_idx}, known_genes{_known_genes} {
   }
-  KnownGene(const KnownGene& x) : KnownGene(x.gene_idx, x.known_genes) { }
+  KnownGene(const KnownGene& x) = default;
+  KnownGene(KnownGene&& x) = default;
+  KnownGene& operator=(const KnownGene& x) = default;
+  KnownGene& operator=(KnownGene&& x) = default;
+
   /**
    * Get underying gene
    */
@@ -152,14 +165,16 @@ struct KnownGene {
    * Get matching known gene from another Genes object
    */
   KnownGene remapped(const std::shared_ptr<Genes>& new_known_genes) const;
-  // sorting/equality based on underlying gene
-  bool operator<(const KnownGene& rhs) const {
-    return gene_idx < rhs.gene_idx;
-  }
-  bool operator==(const KnownGene& rhs) const {
-    return gene_idx == rhs.gene_idx && known_genes == rhs.known_genes;
-  }
 };
+// sorting/equality based on underlying gene
+inline bool operator<(const KnownGene& x, const KnownGene& y) noexcept {
+  return std::tie(x.gene_idx, x.known_genes)
+    < std::tie(y.gene_idx, y.known_genes);
+}
+inline bool operator==(const KnownGene& x, const KnownGene& y) noexcept {
+  return std::tie(x.gene_idx, x.known_genes)
+    == std::tie(y.gene_idx, y.known_genes);
+}
 
 class Genes : public std::enable_shared_from_this<Genes> {
  public:
@@ -171,18 +186,7 @@ class Genes : public std::enable_shared_from_this<Genes> {
   mapGeneIdx id_idx_map_;
   bool is_sorted_;
 
-  // static functions to enable constructors to always be sorted
-  template <typename GeneIt>
-  static vecGene _sorted_genes_vector(GeneIt start, GeneIt end) {
-    static_assert(
-        std::is_same<Gene,
-          typename std::iterator_traits<GeneIt>::value_type>::value,
-        "GeneIt must have Gene values in _sorted_genes_vector()");
-    vecGene result{start, end};
-    std::sort(result.begin(), result.end());
-    return result;
-  }
-  static mapGeneIdx _geneid_indexes(vecGene v) {
+  static mapGeneIdx _geneid_indexes(const vecGene& v) {
     mapGeneIdx result{};
     for (size_t idx = 0; idx < v.size(); ++idx) {
       result[v[idx].geneid] = idx;
@@ -247,17 +251,15 @@ class Genes : public std::enable_shared_from_this<Genes> {
 
   // constructors always ensure that result is sorted
   Genes() : genes_vec_{}, id_idx_map_{}, is_sorted_{true} {}
-  template <class GeneIt>
-  Genes(GeneIt start, GeneIt end)
-      : genes_vec_{_sorted_genes_vector(start, end)},
-        id_idx_map_{_geneid_indexes(genes_vec_)},
-        is_sorted_{true} {
-    static_assert(
-        std::is_same<Gene,
-          typename std::iterator_traits<GeneIt>::value_type>::value,
-        "GeneIt must have Gene values in Genes iterator template constructor");
+  Genes(const Genes& x)
+      : genes_vec_{x.genes_vec_}, id_idx_map_{}, is_sorted_{true} {
+    std::sort(genes_vec_.begin(), genes_vec_.end());
+    id_idx_map_ = _geneid_indexes(genes_vec_);
   }
-  Genes(const Genes& x) : Genes{x.genes_vec_.begin(), x.genes_vec_.end()} { }
+  Genes(Genes&& x) : genes_vec_{x.genes_vec_}, id_idx_map_{}, is_sorted_{true} {
+    std::sort(genes_vec_.begin(), genes_vec_.end());
+    id_idx_map_ = _geneid_indexes(genes_vec_);
+  }
   /**
    * Shared pointer to Genes object with same genes but guaranteed sorted order
    * (if sorted, return self, otherwise create sorted copy)
