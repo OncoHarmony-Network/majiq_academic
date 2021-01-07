@@ -83,7 +83,7 @@ struct ClosedInterval : public detail::Interval {
   // constructors
   ClosedInterval(position_t a, position_t b) : detail::Interval(a, b) {
     if (length() < 0) {
-      throw std::logic_error("ClosedInterval must have nonnegative length");
+      throw std::invalid_argument("Interval must have nonnegative length");
     }
   }
   ClosedInterval(const ClosedInterval& x) : ClosedInterval(x.start, x.end) { }
@@ -105,7 +105,7 @@ struct OpenInterval : public detail::Interval {
   // constructors
   OpenInterval(position_t a, position_t b) : detail::Interval(a, b) {
     if (length() < 0) {
-      throw std::logic_error("OpenInterval must have nonnegative length");
+      throw std::invalid_argument("Interval must have nonnegative length");
     }
   }
   OpenInterval(const OpenInterval& x) : OpenInterval(x.start, x.end) { }
