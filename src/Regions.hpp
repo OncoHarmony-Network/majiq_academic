@@ -17,10 +17,13 @@
 #include <algorithm>
 #include <memory>
 #include <functional>
+#include <initializer_list>
+#include <utility>
 
 #include "Interval.hpp"
 #include "Contigs.hpp"
 #include "Genes.hpp"
+#include "utils/ContiguousSet.hpp"
 
 
 namespace majiq {
@@ -274,208 +277,73 @@ inline bool operator>=(
 }
 
 
-// implement template container of gene regions
-template <class RegionT, class CompareRegionT = std::less<RegionT>>
-class GeneRegions {
+template <class RegionT, class CompareRegionT = std::less<RegionT>, class SetUnion = utils::DefaultSetUnion<RegionT, CompareRegionT>>
+class GeneRegions
+    : public utils::contiguous_set<RegionT, CompareRegionT, SetUnion> {
  public:
-  using value_type = RegionT;
-  using key_compare = CompareRegionT;
-  using vecRegionT = std::vector<RegionT>;
-  using _setRegionT_unordered = std::unordered_set<RegionT>;
-  using _setRegionT_ordered = std::set<RegionT, CompareRegionT>;
-  using setRegionT = _setRegionT_unordered;  // what we are actually using
   using IntervalT = typename RegionT::IntervalT;
   static_assert(std::is_base_of<GeneRegion<IntervalT>, RegionT>::value,
       "GeneRegions type must be subclass of GeneRegion");
 
- protected:
-  vecRegionT sorted_vec_;
-  setRegionT region_set_;  // temporary regions that couldn't be added/sorted
+  using BaseT = utils::contiguous_set<RegionT, CompareRegionT, SetUnion>;
+  using typename BaseT::vecT;
+  using BaseT::is_contiguous;
+  using BaseT::make_contiguous;
+  using BaseT::size;
+  using BaseT::sorted_vec_;
+  using BaseT::lazy_set_;
 
-  // static functions used by constructors, etc.
-  /**
-   * Combine two containers of unique RegionT into single sorted unique vector
-   *
-   * @note container other assumed to be sorted if matches _setRegionT_ordered
-   * or other_sorted is True
-   */
-  template <bool other_sorted = false, class T>
-  static vecRegionT _combine_sorted(vecRegionT sorted, T other) {
-    static_assert(
-        std::is_same<RegionT, typename T::value_type>::value,
-        "other must have RegionT values in _combine_sorted");
-    if (other.size() == 0) {
-      return sorted;
-    }
-    vecRegionT result;
-    result.reserve(sorted.size() + other.size());
-    if constexpr(other_sorted || std::is_same<T, _setRegionT_ordered>::value) {
-      // region_set ordered the way we need it to be already
-      std::set_union(
-          sorted.begin(), sorted.end(), other.begin(), other.end(),
-          std::back_inserter(result), CompareRegionT{});
-    } else {
-      // not sure if sorted, so dump to temporary array to sort the way we want
-      vecRegionT other_vec{other.begin(), other.end()};
-      std::sort(other_vec.begin(), other_vec.end(), CompareRegionT{});
-      std::set_union(
-          sorted.begin(), sorted.end(), other_vec.begin(), other_vec.end(),
-          std::back_inserter(result), CompareRegionT{});
-    }
-    return result;
-  }
-
-  /**
-   * get sorted vector, remapping genes in the regions passed in from two
-   * containers
-   */
-  template <class T1, class T2>
-  static vecRegionT _remap_combine(
-      T1 regions1, T2 regions2,
-      const std::shared_ptr<Genes>& new_genes) {
-    static_assert(
-        std::is_same<RegionT, typename T1::value_type>::value,
-        "regions1 must have elements of RegionT in _remap_combine");
-    static_assert(
-        std::is_same<RegionT, typename T2::value_type>::value,
-        "regions2 must have elements of RegionT in _remap_combine");
-    // initialize/reserve resulting vector
-    vecRegionT out;
-    out.reserve(regions1.size() + regions2.size());
-    // transform exons using genes, add to back of new_vec
-    auto remapper = [&new_genes](RegionT x) -> RegionT {
-      x.gene = x.gene.remapped(new_genes);
-      return x;
-    };
-    std::transform(
-        regions1.begin(), regions1.end(), std::back_inserter(out), remapper);
-    std::transform(
-        regions2.begin(), regions2.end(), std::back_inserter(out), remapper);
-    // sort new_vec
-    std::sort(out.begin(), out.end(), CompareRegionT{});
-    // return the result
-    return out;
-  }
-
-  // helper functions for determining if a region is present
-  bool _sorted_contains(const RegionT& x) const {
-    auto eq_range = std::equal_range(
-        sorted_vec_.begin(), sorted_vec_.end(), x, CompareRegionT{});
-    return eq_range.first != eq_range.second;
-  }
-  bool _set_contains(const RegionT& x) const {
-    return region_set_.count(x) > 0;
-  }
-
- public:
-  size_t size() const { return sorted_vec_.size() + region_set_.size(); }
-  bool unsorted() const { return region_set_.size() > 0; }
-  void sort() {
-    if (unsorted()) {
-      sorted_vec_ = _combine_sorted(sorted_vec_, region_set_);
-      region_set_.clear();
-    }
-    return;
-  }
   void remap_genes(const std::shared_ptr<Genes>& new_genes) {
-    if (region_set_.size() > 0) {
-      sorted_vec_ = _remap_combine(sorted_vec_, region_set_, new_genes);
-      region_set_.clear();
-    } else {
-      // remap/sort in place...
+    // remap genes
+    if (is_contiguous()) {
+      // remap in place
       std::for_each(sorted_vec_.begin(), sorted_vec_.end(),
           [&new_genes](RegionT& x) { x.gene = x.gene.remapped(new_genes); });
-      std::sort(sorted_vec_.begin(), sorted_vec_.end(), CompareRegionT{});
-    }
-    return;
-  }
-  // access exons
-  const RegionT& operator[](size_t idx) {
-    sort();
-    return sorted_vec_[idx];
-  }
-  const RegionT& operator[](size_t idx) const {
-    if (unsorted()) {
-      std::cerr << "operator[] on unsorted const Regions not intended/ideal\n";
-      return GeneRegions<RegionT, CompareRegionT>(this)[idx];
     } else {
-      return sorted_vec_[idx];
+      vecT temp;
+      temp.reserve(size());
+      auto remapper = [&new_genes](RegionT x) {
+        x.gene = x.gene.remapped(new_genes);
+        return x;
+      };
+      std::transform(sorted_vec_.begin(), sorted_vec_.end(),
+          std::back_inserter(temp), remapper);
+      std::transform(lazy_set_.begin(), lazy_set_.end(),
+          std::back_inserter(temp), remapper);
+      sorted_vec_ = std::move(temp);
+      lazy_set_.clear();
     }
-  }
-  // iterators
-  constexpr typename vecRegionT::const_iterator begin() {
-    sort();
-    return sorted_vec_.begin();
-  }
-  constexpr typename vecRegionT::const_iterator begin() const {
-    if (unsorted()) {
-      std::cerr << "begin() on unsorted const Regions not intended/ideal\n";
-      return GeneRegions<RegionT, CompareRegionT>(this).begin();
-    } else {
-      return sorted_vec_.begin();
-    }
-  }
-  constexpr typename vecRegionT::const_iterator end() {
-    sort();
-    return sorted_vec_.end();
-  }
-  constexpr typename vecRegionT::const_iterator end() const {
-    if (unsorted()) {
-      std::cerr << "end() on unsorted const Regions not intended/ideal\n";
-      return GeneRegions<RegionT, CompareRegionT>(this).end();
-    } else {
-      return sorted_vec_.end();
-    }
-  }
-
-  // membership
-  bool contains(const RegionT& x) const {
-    return _sorted_contains(x) || _set_contains(x);
-  }
-
-  // insertion of new elements
-  void insert(const RegionT& x) {
-    if (sorted_vec_.size() == 0 || CompareRegionT{}(sorted_vec_.back(), x)) {
-      // it belongs at end of the sorted vector
-      sorted_vec_.push_back(x);
-      return;
-    } else if (contains(x)) {
-      // we already have it
-      return;
-    } else {
-      // can't put it at end of sorted vector, but we don't have it
-      region_set_.insert(x);
-      return;
-    }
+    std::sort(sorted_vec_.begin(), sorted_vec_.end());
   }
 
   // constructors
-  GeneRegions() : sorted_vec_{}, region_set_{} { }
-  GeneRegions(const vecRegionT& v, const setRegionT& s)
-      : sorted_vec_{_combine_sorted(v, s)}, region_set_{} {
+  GeneRegions() = default;
+  GeneRegions(const GeneRegions& x) = default;
+  GeneRegions(GeneRegions&& x) = default;
+  GeneRegions& operator=(const GeneRegions& x) = default;
+  GeneRegions& operator=(GeneRegions&& x) = default;
+  // construct and remap
+  GeneRegions(const std::shared_ptr<Genes>& new_genes, GeneRegions&& x)
+      : GeneRegions{x} {
+    remap_genes(new_genes);
   }
-  explicit GeneRegions(const vecRegionT& v) : GeneRegions{v, setRegionT{}} { }
-  GeneRegions(const GeneRegions& x)
-      : GeneRegions{x.sorted_vec_, x.region_set_} {
+  GeneRegions(
+      const std::shared_ptr<Genes>& new_genes,
+      std::initializer_list<const GeneRegions&> regions_list)
+      : GeneRegions{} {
+    for (const auto& regions : regions_list) {
+      auto remap_and_insert = [this, &new_genes](RegionT x) {
+        x.gene = x.gene.remapped(new_genes);
+        insert(x);
+        return;
+      };
+      for_each(regions.sorted_vec_.begin(), regions.sorted_vec_.end(),
+          remap_and_insert);
+      for_each(regions.lazy_set_.begin(), regions.lazy_set_.end(),
+          remap_and_insert);
+    }
+    make_contiguous();
   }
-  GeneRegions(const vecRegionT& v, const setRegionT& s,
-      const std::shared_ptr<Genes>& g)
-      : sorted_vec_{_remap_combine(v, s, g)}, region_set_{} {
-  }
-  GeneRegions(const vecRegionT& v, const std::shared_ptr<Genes>& g)
-      : GeneRegions{v, setRegionT{}, g} {
-  }
-  GeneRegions(const GeneRegions& x, const std::shared_ptr<Genes>& g)
-      : GeneRegions{x.sorted_vec_, x.region_set_, g} {
-  }
-
-  // comparisons
-  friend inline bool operator==(const GeneRegions& x, const GeneRegions& y) {
-    return x.sorted_vec_ == y.sorted_vec_ && x.region_set_ == y.region_set_;
-  }
-
-  // view into regionT vector for pybind11
-  const vecRegionT& data() { sort(); return sorted_vec_; }
 };
 }  // namespace detail
 }  // namespace majiq

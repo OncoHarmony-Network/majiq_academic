@@ -58,6 +58,11 @@ namespace majiq {
  */
 template <class CompareIntronT = std::less<>>
 class Introns : public detail::GeneRegions<Intron, CompareIntronT> {
+ public:
+  using BaseT = detail::GeneRegions<Intron, CompareIntronT>;
+  using BaseT::remap_genes;
+  using BaseT::size;
+  using BaseT::make_contiguous;
 };
 }  // namespace majiq
 

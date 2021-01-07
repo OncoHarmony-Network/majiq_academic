@@ -70,9 +70,9 @@ class SpliceGraph {
       introns_->remap_genes(sorted_genes);
       // NOTE: update any other objects with KnownGene
     } else {
-      exons_->sort();
-      junctions_->sort();
-      introns_->sort();
+      exons_->make_contiguous();
+      junctions_->make_contiguous();
+      introns_->make_contiguous();
     }
     // done
     return;

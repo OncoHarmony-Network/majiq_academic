@@ -104,6 +104,12 @@ namespace majiq {
 template <class CompareJunctionT = std::less<>>
 class GeneJunctions
     : public detail::GeneRegions<GeneJunction, CompareJunctionT> {
+ public:
+  using BaseT = detail::GeneRegions<GeneJunction, CompareJunctionT>;
+  using BaseBaseT = typename BaseT::BaseT;
+  using BaseT::remap_genes;
+  using BaseT::size;
+  using BaseT::make_contiguous;
 };
 }  // namespace majiq
 
