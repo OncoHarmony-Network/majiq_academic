@@ -402,10 +402,6 @@ class SpliceGraphBuilder {
     }
     // construct splicegraph
     SpliceGraph result{std::move(contigs_), std::move(sorted_genes),
-      // std::make_shared<Exons>(exons, Exons::NoCheckValid{}),
-      // std::make_shared<GeneJunctions>(junctions, GeneJunctions::NoCheckValid{}),
-      // std::make_shared<Introns>(introns, Introns::NoCheckValid{})
-      // XXX right now we want to verify that it's sorted correctly
       std::make_shared<Exons>(exons),
       std::make_shared<GeneJunctions>(junctions),
       std::make_shared<Introns>(introns)
