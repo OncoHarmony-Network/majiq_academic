@@ -16,14 +16,22 @@
 #include "Interval.hpp"
 #include "Contigs.hpp"
 #include "Genes.hpp"
+#include "Connection.hpp"
 
 
 namespace majiq {
-struct Intron : detail::GeneRegion<ClosedInterval> {
+struct Intron
+  : public detail::GeneRegion<ClosedInterval>,
+    public detail::Connection {
  public:
   // constructors
-  Intron(KnownGene _gene, ClosedInterval _coordinates)
-      : detail::GeneRegion<ClosedInterval>{_gene, _coordinates} {
+  Intron(KnownGene gene, ClosedInterval coordinates,
+      bool denovo, bool passed_build, bool simplified)
+      : detail::GeneRegion<ClosedInterval>{gene, coordinates},
+        detail::Connection{denovo, passed_build, simplified} {
+  }
+  Intron(KnownGene gene, ClosedInterval coordinates)
+      : Intron{gene, coordinates, false, false, false} {
   }
   Intron(const Intron& x) = default;
   Intron(Intron&& x) = default;

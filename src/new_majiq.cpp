@@ -189,6 +189,30 @@ PYBIND11_MODULE(new_majiq, m) {
             introns.data(), offset, introns_obj);
         },
         "array[int] of intron ends")
+    .def_property_readonly("denovo",
+        [](py::object& introns_obj) -> py::array_t<bool> {
+        Introns& introns = introns_obj.cast<Introns&>();
+        const size_t offset = offsetOf(&majiq::Intron::denovo);
+        return ArrayFromVectorAndOffset<bool, majiq::Intron>(
+            introns.data(), offset, introns_obj);
+        },
+        "array[bool] indicating if connection was not found in annotations")
+    .def_property_readonly("passed_build",
+        [](py::object& introns_obj) -> py::array_t<bool> {
+        Introns& introns = introns_obj.cast<Introns&>();
+        const size_t offset = offsetOf(&majiq::Intron::passed_build);
+        return ArrayFromVectorAndOffset<bool, majiq::Intron>(
+            introns.data(), offset, introns_obj);
+        },
+        "array[bool] indicating if passed build criteria to be in LSV")
+    .def_property_readonly("simplified",
+        [](py::object& introns_obj) -> py::array_t<bool> {
+        Introns& introns = introns_obj.cast<Introns&>();
+        const size_t offset = offsetOf(&majiq::Intron::simplified);
+        return ArrayFromVectorAndOffset<bool, majiq::Intron>(
+            introns.data(), offset, introns_obj);
+        },
+        "array[bool] indicating if the connection is simplified")
     .def("__repr__", [](const Introns& self) -> std::string {
         std::ostringstream oss;
         oss << "Introns<" << self.size() << " total>";
@@ -224,6 +248,30 @@ PYBIND11_MODULE(new_majiq, m) {
             junctions.data(), offset, junctions_obj);
         },
         "array[int] of junction ends")
+    .def_property_readonly("denovo",
+        [](py::object& junctions_obj) -> py::array_t<bool> {
+        GeneJunctions& junctions = junctions_obj.cast<GeneJunctions&>();
+        const size_t offset = offsetOf(&majiq::GeneJunction::denovo);
+        return ArrayFromVectorAndOffset<bool, majiq::GeneJunction>(
+            junctions.data(), offset, junctions_obj);
+        },
+        "array[bool] indicating if connection was not found in annotations")
+    .def_property_readonly("passed_build",
+        [](py::object& junctions_obj) -> py::array_t<bool> {
+        GeneJunctions& junctions = junctions_obj.cast<GeneJunctions&>();
+        const size_t offset = offsetOf(&majiq::GeneJunction::passed_build);
+        return ArrayFromVectorAndOffset<bool, majiq::GeneJunction>(
+            junctions.data(), offset, junctions_obj);
+        },
+        "array[bool] indicating if passed build criteria to be in LSV")
+    .def_property_readonly("simplified",
+        [](py::object& junctions_obj) -> py::array_t<bool> {
+        GeneJunctions& junctions = junctions_obj.cast<GeneJunctions&>();
+        const size_t offset = offsetOf(&majiq::GeneJunction::simplified);
+        return ArrayFromVectorAndOffset<bool, majiq::GeneJunction>(
+            junctions.data(), offset, junctions_obj);
+        },
+        "array[bool] indicating if the connection is simplified")
     .def("__repr__", [](const GeneJunctions& self) -> std::string {
         std::ostringstream oss;
         oss << "GeneJunctions<" << self.size() << " total>";

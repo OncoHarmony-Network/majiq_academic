@@ -16,15 +16,16 @@
 #include "Interval.hpp"
 #include "Contigs.hpp"
 #include "Genes.hpp"
+#include "Connection.hpp"
 
 
 namespace majiq {
 struct ContigJunction : public detail::ContigRegion<OpenInterval> {
  public:
   // constructors
-  ContigJunction(KnownContig _contig, OpenInterval _coordinates,
-      GeneStrandness _strand)
-      : detail::ContigRegion<OpenInterval>{_contig, _coordinates, _strand} {
+  ContigJunction(KnownContig contig, OpenInterval coordinates,
+      GeneStrandness strand)
+      : detail::ContigRegion<OpenInterval>{contig, coordinates, strand} {
   }
   ContigJunction(const ContigJunction& x) = default;
   ContigJunction(ContigJunction&& x) = default;
@@ -37,11 +38,18 @@ inline bool operator==(
     == std::tie(y.contig, y.coordinates, y.strand);
 }
 
-struct GeneJunction : public detail::GeneRegion<OpenInterval> {
+struct GeneJunction
+  : public detail::GeneRegion<OpenInterval>,
+    public detail::Connection {
  public:
   // constructors
-  GeneJunction(KnownGene _gene, OpenInterval _coordinates)
-      : detail::GeneRegion<OpenInterval>{_gene, _coordinates} {
+  GeneJunction(KnownGene gene, OpenInterval coordinates,
+      bool denovo, bool passed_build, bool simplified)
+      : detail::GeneRegion<OpenInterval>{gene, coordinates},
+        detail::Connection{denovo, passed_build, simplified} {
+  }
+  GeneJunction(KnownGene gene, OpenInterval coordinates)
+      : GeneJunction{gene, coordinates, false, false, false} {
   }
   GeneJunction(const GeneJunction& x) = default;
   GeneJunction(GeneJunction&& x) = default;
