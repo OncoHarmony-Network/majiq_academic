@@ -278,6 +278,11 @@ class Genes : public std::enable_shared_from_this<Genes> {
   }
   // view into genes object for pybind11
   const std::vector<Gene>& data() { return genes_vec_; }
+
+  // equality of genes
+  friend bool operator==(const Genes& x, const Genes&y) noexcept {
+    return x.genes_vec_ == y.genes_vec_;
+  }
 };
 
 // implement KnownGene::remapped and KnownGene::get using Genes definition
