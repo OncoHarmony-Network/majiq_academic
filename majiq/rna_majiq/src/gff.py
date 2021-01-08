@@ -30,8 +30,12 @@ def __parse_gff_attributes(attribute_string):
     if attribute_string == ".":
         return {}
     ret = {}
-    for attribute in attribute_string.split(";"):
-        key, value = attribute.split("=")
+    for attribute in (x for x in attribute_string.split(";") if x):
+        try:
+            key, value = attribute.split("=")
+        except ValueError as e:
+            print(f"Unable to unpack attribute {attribute} not in GFF3 style")
+            raise e
         key = urllib.unquote(key)
         if key in ret:
             key = "extra_%s" % key
