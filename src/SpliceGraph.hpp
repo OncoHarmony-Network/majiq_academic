@@ -94,6 +94,20 @@ class SpliceGraph {
         junctions_{std::make_shared<GeneJunctions<>>()},
         introns_{std::make_shared<Introns<>>()} {
   }
+  SpliceGraph(
+      std::shared_ptr<Contigs>&& contigs,
+      std::shared_ptr<Genes>&& genes,
+      std::shared_ptr<Exons<>>&& exons,
+      std::shared_ptr<GeneJunctions<>>&& junctions,
+      std::shared_ptr<Introns<>>&& introns)
+      : contigs_{contigs},
+        genes_{genes},
+        exons_{exons},
+        junctions_{junctions},
+        introns_{introns} {
+    sort();
+  }
+
   // copy shares contigs/genes but copies exons, junctions, introns
   SpliceGraph(const SpliceGraph& sg)
       : contigs_{sg.contigs_},

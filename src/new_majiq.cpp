@@ -18,6 +18,7 @@
 
 #include "MajiqTypes.hpp"
 #include "SpliceGraph.hpp"
+#include "GFF3.hpp"
 
 #define STRINGIFY(x) #x
 #define MACRO_STRINGIFY(x) STRINGIFY(x)
@@ -282,6 +283,14 @@ PYBIND11_MODULE(new_majiq, m) {
   pySpliceGraph
     // empty constructor
     .def(py::init<>(), "Create empty SpliceGraph")
+    .def(py::init(
+          [](std::string gff3_path, bool process_ir) {
+            using majiq::gff3::SpliceGraphBuilder;
+            SpliceGraphBuilder builder{};
+            return builder.from_gff3(gff3_path, process_ir);
+          }),
+        "Create splicegraph from input GFF3 file",
+        py::arg("gff3_path"), py::arg("process_ir"))
     // TODO(jaicher) Make more useful constructors
     // string representation of splicegraph
     .def("__repr__", [](const SpliceGraph& sg) -> std::string {

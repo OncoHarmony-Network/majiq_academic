@@ -219,6 +219,12 @@ class Genes : public std::enable_shared_from_this<Genes> {
   // get gene_idx (throw error if not present)
   size_t get_gene_idx(const geneid_t& id) const { return id_idx_map_.at(id); }
   size_t get_gene_idx(const Gene& x) const { return get_gene_idx(x.geneid); }
+  // get gene_idx (-1 if not present)
+  size_t safe_gene_idx(const geneid_t& id) const {
+    auto match = id_idx_map_.find(id);
+    return match == id_idx_map_.end() ? -1 : match->second;
+  }
+  size_t safe_gene_idx(const Gene& x) const { return safe_gene_idx(x.geneid); }
   /**
    * get gene_idx (add if not present)
    */
