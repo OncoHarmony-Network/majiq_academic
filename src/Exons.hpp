@@ -51,25 +51,7 @@ template <> struct hash<majiq::Exon> {
 }  // namespace std
 
 namespace majiq {
-/**
- * Exons in sorted contiguous container, with extra set for exons that could
- * not be easily added in sorted order to defer sorting/reordering vector until
- * necessary
- */
-template <class CompareExonT = std::less<>>
-class Exons : public detail::GeneRegions<Exon, CompareExonT> {
- public:
-  using BaseT = detail::GeneRegions<Exon, CompareExonT>;
-  using BaseT::remap_genes;
-  using BaseT::size;
-  using BaseT::make_contiguous;
-
-  Exons() = default;
-  Exons(const Exons& x) = default;
-  Exons(Exons&& x) = default;
-  Exons& operator=(const Exons& x) = default;
-  Exons& operator=(Exons&& x) = default;
-};
+using Exons = detail::GeneRegions<Exon, std::less<Exon>>;
 }  // namespace majiq
 
 #endif  // MAJIQ_EXONS_HPP

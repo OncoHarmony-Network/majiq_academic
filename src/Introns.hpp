@@ -51,25 +51,7 @@ template <> struct hash<majiq::Intron> {
 }  // namespace std
 
 namespace majiq {
-/**
- * Introns in sorted contiguous container, with extra set for introns that could
- * not be easily added in sorted order to defer sorting/reordering vector until
- * necessary
- */
-template <class CompareIntronT = std::less<>>
-class Introns : public detail::GeneRegions<Intron, CompareIntronT> {
- public:
-  using BaseT = detail::GeneRegions<Intron, CompareIntronT>;
-  using BaseT::remap_genes;
-  using BaseT::size;
-  using BaseT::make_contiguous;
-
-  Introns() = default;
-  Introns(const Introns& x) = default;
-  Introns(Introns&& x) = default;
-  Introns& operator=(const Introns& x) = default;
-  Introns& operator=(Introns&& x) = default;
-};
+using Introns = detail::GeneRegions<Intron, std::less<Intron>>;
 }  // namespace majiq
 
 #endif  // MAJIQ_INTRONS_HPP

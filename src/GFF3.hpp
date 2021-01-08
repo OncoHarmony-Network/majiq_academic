@@ -276,18 +276,19 @@ class SpliceGraphBuilder {
   }
 
   // NOTE: right now we are ignoring transcript start/ends
-  template <class T, class U, class V>
   void FlattenGene(
-      size_t gene_idx,
-      const std::shared_ptr<Exons<T>>& exons,
-      const std::shared_ptr<GeneJunctions<U>>& junctions,
-      const std::shared_ptr<Introns<V>>& introns,
+      KnownGene gene,
+      // flatten the gene models
+      const std::map<transcript_id_t, transcript_exons_t>& gene_models,
+      // into the following vectors
+      std::vector<Exon>* exons,
+      std::vector<GeneJunction>* junctions,
+      std::vector<Intron>* introns,
+      // whether we do anything with introns...
       bool process_ir) {
-    if (known_exons_[gene_idx].empty()) {
+    if (gene_models.empty()) {
       return;
     }
-    // get known gene associated with gene_idx
-    KnownGene gene = (*genes_)[gene_idx];
     // build up a set of junctions for this gene so we can add in order
     std::set<OpenInterval> gene_junctions;
     // exons and introns sorted and unique by construction
@@ -298,7 +299,7 @@ class SpliceGraphBuilder {
     std::vector<std::pair<position_t, bool>> splice_sites;
 
     // collect junctions and splicesites (TODO(jaicher): tx start/ends too)
-    for (const auto& [tx_id, tx_exons] : known_exons_[gene_idx]) {
+    for (const auto& [tx_id, tx_exons] : gene_models) {
       position_t last_end = -2;
       for (const auto& iv : tx_exons) {
         // start and end of exon
@@ -365,37 +366,49 @@ class SpliceGraphBuilder {
     // update junctions/exons/introns now past possible exceptions
     std::for_each(gene_junctions.begin(), gene_junctions.end(),
         [gene, &junctions](OpenInterval iv) {
-          junctions->insert(GeneJunction{gene, iv});
+          junctions->push_back(GeneJunction{gene, iv});
         });
     std::for_each(gene_exons.begin(), gene_exons.end(),
         [gene, &exons](ClosedInterval iv) {
-          exons->insert(Exon{gene, iv});
+          exons->push_back(Exon{gene, iv});
         });
     std::for_each(gene_introns.begin(), gene_introns.end(),
         [gene, &introns](ClosedInterval iv) {
-          introns->insert(Intron{gene, iv});
+          introns->push_back(Intron{gene, iv});
         });
-    // clear transcript data
-    known_exons_[gene_idx].clear();
     return;
   }
 
   SpliceGraph BuildSpliceGraph(bool process_ir) {
     // shared pointers
-    auto exons = std::make_shared<Exons<>>();
-    auto junctions = std::make_shared<GeneJunctions<>>();
-    auto introns = std::make_shared<Introns<>>();
-    // for each gene
-    // NOTE: flattening everything is parallelizable but writing to exons,
-    // junctions, introns is not (requires locks) since we are using contiguous
-    // memory. But if we do the loop in order, everything should be added
-    // pretty efficiently (in gene-interval order)
+    std::vector<Exon> exons;
+    std::vector<GeneJunction> junctions;
+    std::vector<Intron> introns;
+    // get sorted genes
+    std::shared_ptr<Genes> sorted_genes = genes_->sorted();
+    // for each gene in order to make result sorted in order
     for (size_t gene_idx = 0; gene_idx < known_exons_.size(); ++gene_idx) {
-      FlattenGene(gene_idx, exons, junctions, introns, process_ir);
+      // flatten the sorted genes in order
+      const KnownGene g = (*sorted_genes)[gene_idx];
+      // get the corresponding gene model
+      auto& model = known_exons_[
+        sorted_genes == genes_
+        ? gene_idx
+        : genes_->get_gene_idx(sorted_genes->get(gene_idx))
+      ];
+      FlattenGene(g, model, &exons, &junctions, &introns, process_ir);
+      // clear out model
+      model.clear();
     }
     // construct splicegraph
-    SpliceGraph result{std::move(contigs_), std::move(genes_),
-      std::move(exons), std::move(junctions), std::move(introns)
+    SpliceGraph result{std::move(contigs_), std::move(sorted_genes),
+      // std::make_shared<Exons>(exons, Exons::NoCheckValid{}),
+      // std::make_shared<GeneJunctions>(junctions, GeneJunctions::NoCheckValid{}),
+      // std::make_shared<Introns>(introns, Introns::NoCheckValid{})
+      // XXX right now we want to verify that it's sorted correctly
+      std::make_shared<Exons>(exons),
+      std::make_shared<GeneJunctions>(junctions),
+      std::make_shared<Introns>(introns)
     };
     // reset builder
     contigs_ = std::make_shared<Contigs>();

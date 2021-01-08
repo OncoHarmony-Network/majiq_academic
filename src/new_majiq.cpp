@@ -79,9 +79,9 @@ PYBIND11_MODULE(new_majiq, m) {
   using majiq::genename_t;
 
   using majiq::SpliceGraph;
-  using Exons = majiq::Exons<>;
-  using Introns = majiq::Introns<>;
-  using GeneJunctions = majiq::GeneJunctions<>;
+  using Exons = majiq::Exons;
+  using Introns = majiq::Introns;
+  using GeneJunctions = majiq::GeneJunctions;
   using majiq::Genes;
   using majiq::Contigs;
 
@@ -281,8 +281,7 @@ PYBIND11_MODULE(new_majiq, m) {
         [](const Contigs& s, seqid_t x) -> bool { return s.contains(x); });
 
   pySpliceGraph
-    // empty constructor
-    .def(py::init<>(), "Create empty SpliceGraph")
+    // constructor from GFF3
     .def(py::init(
           [](std::string gff3_path, bool process_ir) {
             using majiq::gff3::SpliceGraphBuilder;
@@ -308,41 +307,7 @@ PYBIND11_MODULE(new_majiq, m) {
     .def_property_readonly("genes", &SpliceGraph::genes,
         "Access the splicegraph's genes")
     .def_property_readonly("contigs", &SpliceGraph::contigs,
-        "Access the splicegraph's contigs")
-    // add elements one at a time
-    // (we probably won't be using these outside of early debugging)
-    .def("add_gene", &SpliceGraph::AddGene,
-        R"pbdoc(
-        Register the specified gene as valid in the splicegraph
-
-        Parameters
-        ----------
-        gene_id: str
-            Unique ID of specified gene (e.g. ENSG0000...)
-        seqid: str
-            Identifier of contig/chromosome gene is on
-        start, end: int
-            Coordinates from annotation for gene
-        strand_forward: bool
-            True if forward strand ('+'), False if reverse strand ('-')
-        gene_name: str
-            Alternative symbol for gene (e.g. HGNC ID)
-
-        Notes
-        -----
-        Calls with previously added gene_id will be ignored.
-        )pbdoc",
-        py::arg("gene_id"), py::arg("seqid"), py::arg("start"), py::arg("end"),
-        py::arg("strand_forward"), py::arg("gene_name"))
-    .def("add_exon", &SpliceGraph::AddExon,
-        "Add exon to splicegraph. Unregistered gene_id will raise error.",
-        py::arg("gene_id"), py::arg("start"), py::arg("end"))
-    .def("add_junction", &SpliceGraph::AddJunction,
-        "Add junction to splicegraph. Unregistered gene_id will raise error.",
-        py::arg("gene_id"), py::arg("start"), py::arg("end"))
-    .def("add_intron", &SpliceGraph::AddIntron,
-        "Add intron to splicegraph. Unregistered gene_id will raise error.",
-        py::arg("gene_id"), py::arg("start"), py::arg("end"));
+        "Access the splicegraph's contigs");
 
 
 #ifdef VERSION_INFO

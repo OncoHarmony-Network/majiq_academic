@@ -23,7 +23,6 @@
 #include "Interval.hpp"
 #include "Contigs.hpp"
 #include "Genes.hpp"
-#include "utils/ContiguousSet.hpp"
 
 
 namespace majiq {
@@ -78,6 +77,12 @@ inline bool operator<(
   return std::tie(x.contig, x.coordinates, x.strand)
     < std::tie(y.contig, y.coordinates, y.strand);
 }
+template <class T1, class T2>
+inline bool operator==(
+    const ContigRegion<T1>& x, const ContigRegion<T2>& y) noexcept {
+  return std::tie(x.contig, x.coordinates, x.strand)
+    == std::tie(y.contig, y.coordinates, y.strand);
+}
 /**
  * Order regions by gene, then position
  */
@@ -85,6 +90,11 @@ template <class T1, class T2>
 inline bool operator<(
     const GeneRegion<T1>& x, const GeneRegion<T2>& y) noexcept {
   return std::tie(x.gene, x.coordinates) < std::tie(y.gene, y.coordinates);
+}
+template <class T1, class T2>
+inline bool operator==(
+    const GeneRegion<T1>& x, const GeneRegion<T2>& y) noexcept {
+  return std::tie(x.gene, x.coordinates) == std::tie(y.gene, y.coordinates);
 }
 /**
  * Compare to genes
@@ -283,73 +293,88 @@ inline bool operator>=(
 
 template <
   class RegionT,
-  class CompareRegionT = std::less<RegionT>,
-  class SetUnion = utils::DefaultSetUnion<RegionT, CompareRegionT>>
-class GeneRegions
-    : public utils::contiguous_set<RegionT, CompareRegionT, SetUnion> {
+  class CompareRegionT = std::less<RegionT>>
+class GeneRegions {
  public:
   using IntervalT = typename RegionT::IntervalT;
-  static_assert(std::is_base_of<GeneRegion<IntervalT>, RegionT>::value,
+  using BaseRegion = GeneRegion<IntervalT>;
+  static_assert(std::is_base_of<BaseRegion, RegionT>::value,
       "GeneRegions type must be subclass of GeneRegion");
+  using value_type = RegionT;
+  using key_compare = CompareRegionT;
 
-  using BaseT = utils::contiguous_set<RegionT, CompareRegionT, SetUnion>;
-  using typename BaseT::vecT;
-  using BaseT::is_contiguous;
-  using BaseT::make_contiguous;
-  using BaseT::size;
-  using BaseT::sorted_vec_;
-  using BaseT::lazy_set_;
+  using vecT = std::vector<value_type>;
+  using vecConstT = std::vector<const value_type>;
+  using const_iterator = typename vecT::const_iterator;
+  struct NoCheckValid { };
 
-  void remap_genes(const std::shared_ptr<Genes>& new_genes) {
-    // remap genes
-    if (is_contiguous()) {
-      // remap in place
-      std::for_each(sorted_vec_.begin(), sorted_vec_.end(),
-          [&new_genes](RegionT& x) { x.gene = x.gene.remapped(new_genes); });
-    } else {
-      vecT temp;
-      temp.reserve(size());
-      auto remapper = [&new_genes](RegionT x) {
-        x.gene = x.gene.remapped(new_genes);
-        return x;
-      };
-      std::transform(sorted_vec_.begin(), sorted_vec_.end(),
-          std::back_inserter(temp), remapper);
-      std::transform(lazy_set_.begin(), lazy_set_.end(),
-          std::back_inserter(temp), remapper);
-      sorted_vec_ = std::move(temp);
-      lazy_set_.clear();
+ private:
+  vecT elements_;
+  std::shared_ptr<Genes> genes_;
+
+  static bool is_valid(const vecT& x, const std::shared_ptr<Genes>& genes) {
+    // 0 elements
+    if (x.empty()) {
+      return true;
     }
-    std::sort(sorted_vec_.begin(), sorted_vec_.end());
+    // first element
+    if (genes != x[0].gene.known_genes) {
+      return false;
+    }
+    // subsequent elements
+    for (size_t i = 1; i < x.size(); ++i) {
+      // if not sorted or if there are equal regions, it is invalid
+      if (CompareRegionT{}(x[i], x[i - 1])
+          || (static_cast<BaseRegion>(x[i])
+            == static_cast<BaseRegion>(x[i - 1]))
+          || genes != x[i].gene.known_genes) {
+        return false;
+      }
+    }
+    // passed all conditions for validity
+    return true;
   }
 
-  // constructors
-  GeneRegions() = default;
+ public:
+  GeneRegions(vecT&& x, NoCheckValid)
+      : elements_{x}, genes_{x.empty() ? nullptr : x[0].gene.known_genes} { }
+  GeneRegions(const vecT& x, NoCheckValid)
+      : elements_{x}, genes_{x.empty() ? nullptr : x[0].gene.known_genes} { }
+  explicit GeneRegions(vecT&& x) : GeneRegions{x, NoCheckValid{}} {
+    if (!is_valid(x, genes_)) {
+      throw std::invalid_argument("vector input to GeneRegions is invalid");
+    }
+  }
+  explicit GeneRegions(const vecT& x) : GeneRegions{x, NoCheckValid{}} {
+    if (!is_valid(x, genes_)) {
+      throw std::invalid_argument("vector input to GeneRegions is invalid");
+    }
+  }
   GeneRegions(const GeneRegions& x) = default;
   GeneRegions(GeneRegions&& x) = default;
   GeneRegions& operator=(const GeneRegions& x) = default;
   GeneRegions& operator=(GeneRegions&& x) = default;
-  // construct and remap
-  GeneRegions(const std::shared_ptr<Genes>& new_genes, GeneRegions&& x)
-      : GeneRegions{x} {
-    remap_genes(new_genes);
+
+  size_t size() const noexcept { return elements_.size(); }
+  bool empty() const noexcept { return elements_.empty(); }
+
+  const value_type& operator[](size_t idx) const { return elements_[idx]; }
+  const_iterator begin() const { return elements_.cbegin(); }
+  const_iterator end() const { return elements_.cend(); }
+  const vecT& data() { return elements_; }
+  const vecConstT& data() const { return elements_; }
+
+  const_iterator find(const value_type& key) const {
+    // run lower-bound and uppper-bound simultaneously
+    auto&& [lb, ub] = std::equal_range(begin(), end(), key, key_compare{});
+    // end of range if no match (lb==ub), otherwise first match
+    return lb == ub ? end() : lb;
   }
-  GeneRegions(
-      const std::shared_ptr<Genes>& new_genes,
-      std::initializer_list<const GeneRegions&> regions_list)
-      : GeneRegions{} {
-    for (const auto& regions : regions_list) {
-      auto remap_and_insert = [this, &new_genes](RegionT x) {
-        x.gene = x.gene.remapped(new_genes);
-        insert(x);
-        return;
-      };
-      for_each(regions.sorted_vec_.begin(), regions.sorted_vec_.end(),
-          remap_and_insert);
-      for_each(regions.lazy_set_.begin(), regions.lazy_set_.end(),
-          remap_and_insert);
-    }
-    make_contiguous();
+  size_t count(const value_type& key) const {
+    return find(key) == end() ? 0 : 1;
+  }
+  friend inline bool operator==(const GeneRegions& x, const GeneRegions& y) {
+    return x.elements_ == y.elements_;
   }
 };
 }  // namespace detail

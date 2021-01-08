@@ -26,9 +26,9 @@ class SpliceGraph {
  protected:
   std::shared_ptr<Contigs> contigs_;
   std::shared_ptr<Genes> genes_;
-  std::shared_ptr<Exons<>> exons_;
-  std::shared_ptr<GeneJunctions<>> junctions_;
-  std::shared_ptr<Introns<>> introns_;
+  std::shared_ptr<Exons> exons_;
+  std::shared_ptr<GeneJunctions> junctions_;
+  std::shared_ptr<Introns> introns_;
   // NOTE: if we add additional objects with KnownGene, update sort()
 
  public:
@@ -42,80 +42,31 @@ class SpliceGraph {
         geneid, genename});
     return;
   }
-  void AddExon(geneid_t geneid, position_t start, position_t end) {
-    exons_->insert(Exon{genes_->known(geneid), ClosedInterval{start, end}});
-    return;
-  }
-  void AddJunction(geneid_t geneid, position_t start, position_t end) {
-    junctions_->insert(GeneJunction{
-        genes_->known(geneid), OpenInterval{start, end}});
-    return;
-  }
-  void AddIntron(geneid_t geneid, position_t start, position_t end) {
-    introns_->insert(Intron{
-        genes_->known(geneid), ClosedInterval{start, end}});
-    return;
-  }
-
-  /**
-   * Sort splicegraph in place
-   */
-  void sort() {
-    // get sorted genes
-    std::shared_ptr<Genes> sorted_genes = genes_->sorted();
-    if (sorted_genes != genes_) {
-      genes_ = sorted_genes;
-      exons_->remap_genes(sorted_genes);
-      junctions_->remap_genes(sorted_genes);
-      introns_->remap_genes(sorted_genes);
-      // NOTE: update any other objects with KnownGene
-    } else {
-      exons_->make_contiguous();
-      junctions_->make_contiguous();
-      introns_->make_contiguous();
-    }
-    // done
-    return;
-  }
 
   // access non const pointers for use by pybind11 interface...
-  // NOTE: these sort the containers
   std::shared_ptr<Contigs> contigs() { return contigs_; }
-  std::shared_ptr<Genes> genes() { sort(); return genes_; }
-  std::shared_ptr<Exons<>> exons() { sort(); return exons_; }
-  std::shared_ptr<GeneJunctions<>> junctions() { sort(); return junctions_; }
-  std::shared_ptr<Introns<>> introns() { sort(); return introns_; }
+  std::shared_ptr<Genes> genes() { return genes_; }
+  std::shared_ptr<Exons> exons() { return exons_; }
+  std::shared_ptr<GeneJunctions> junctions() { return junctions_; }
+  std::shared_ptr<Introns> introns() { return introns_; }
 
   // constructors
-  SpliceGraph()
-      : contigs_{std::make_shared<Contigs>()},
-        genes_{std::make_shared<Genes>()},
-        exons_{std::make_shared<Exons<>>()},
-        junctions_{std::make_shared<GeneJunctions<>>()},
-        introns_{std::make_shared<Introns<>>()} {
-  }
   SpliceGraph(
       std::shared_ptr<Contigs>&& contigs,
       std::shared_ptr<Genes>&& genes,
-      std::shared_ptr<Exons<>>&& exons,
-      std::shared_ptr<GeneJunctions<>>&& junctions,
-      std::shared_ptr<Introns<>>&& introns)
+      std::shared_ptr<Exons>&& exons,
+      std::shared_ptr<GeneJunctions>&& junctions,
+      std::shared_ptr<Introns>&& introns)
       : contigs_{contigs},
         genes_{genes},
         exons_{exons},
         junctions_{junctions},
         introns_{introns} {
-    sort();
   }
-
-  // copy shares contigs/genes but copies exons, junctions, introns
-  SpliceGraph(const SpliceGraph& sg)
-      : contigs_{sg.contigs_},
-        genes_{sg.genes_},
-        exons_{std::make_shared<Exons<>>(*sg.exons_)},
-        junctions_{std::make_shared<GeneJunctions<>>(*sg.junctions_)},
-        introns_{std::make_shared<Introns<>>(*sg.introns_)} {
-  }
+  SpliceGraph(const SpliceGraph& sg) = default;
+  SpliceGraph(SpliceGraph&& sg) = default;
+  SpliceGraph& operator=(const SpliceGraph& sg) = default;
+  SpliceGraph& operator=(SpliceGraph&& sg) = default;
 
   // to be declared later
   friend bool operator==(const SpliceGraph& x, const SpliceGraph& y) noexcept;

@@ -96,26 +96,8 @@ template <> struct hash<majiq::GeneJunction> {
 }  // namespace std
 
 namespace majiq {
-/**
- * GeneJunctions in sorted contiguous container, with extra set for junctions
- * that could not be easily added in sorted order to defer sorting/reordering
- * vector until necessary
- */
-template <class CompareJunctionT = std::less<>>
-class GeneJunctions
-    : public detail::GeneRegions<GeneJunction, CompareJunctionT> {
- public:
-  using BaseT = detail::GeneRegions<GeneJunction, CompareJunctionT>;
-  using BaseT::remap_genes;
-  using BaseT::size;
-  using BaseT::make_contiguous;
-
-  GeneJunctions() = default;
-  GeneJunctions(const GeneJunctions& x) = default;
-  GeneJunctions(GeneJunctions&& x) = default;
-  GeneJunctions& operator=(const GeneJunctions& x) = default;
-  GeneJunctions& operator=(GeneJunctions&& x) = default;
-};
+using GeneJunctions
+  = detail::GeneRegions<GeneJunction, std::less<GeneJunction>>;
 }  // namespace majiq
 
 #endif  // MAJIQ_JUNCTIONS_HPP
