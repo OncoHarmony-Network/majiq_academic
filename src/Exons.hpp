@@ -10,6 +10,8 @@
 
 #include <tuple>
 #include <functional>
+#include <vector>
+#include <algorithm>
 #include <boost/functional/hash.hpp>
 
 #include "Regions.hpp"
@@ -28,20 +30,6 @@ struct Exon : detail::GeneRegion<ClosedInterval> {
   // exon-specific members
   ClosedInterval annotated_coordinates;
 
-  // exon-specific information
-  inline bool is_denovo() const noexcept {
-    return annotated_coordinates.is_invalid();
-  }
-  inline bool is_half_exon() const noexcept {
-    return coordinates.is_half_interval();
-  }
-  /**
-   * If denovo, return current coordinates to match previous MAJIQ
-   */
-  inline const ClosedInterval& legacy_annotated_coordinates() const noexcept {
-    return is_denovo() ? coordinates : annotated_coordinates;
-  }
-
   // constructors
   Exon(KnownGene _gene, ClosedInterval _coordinates, ClosedInterval _annotated)
       : BaseT{_gene, _coordinates}, annotated_coordinates{_annotated} {
@@ -56,6 +44,32 @@ struct Exon : detail::GeneRegion<ClosedInterval> {
   Exon(Exon&& x) = default;
   Exon& operator=(const Exon& x) = default;
   Exon& operator=(Exon&& x) = default;
+
+  // exon-specific information
+  inline bool is_denovo() const noexcept {
+    return annotated_coordinates.is_invalid();
+  }
+  inline bool is_half_exon() const noexcept {
+    return coordinates.is_half_interval();
+  }
+  inline bool is_invalid() const noexcept {
+    return coordinates.is_invalid();
+  }
+  /**
+   * If denovo, return current coordinates to match previous MAJIQ
+   */
+  inline const ClosedInterval& legacy_annotated_coordinates() const noexcept {
+    return is_denovo() ? coordinates : annotated_coordinates;
+  }
+  /**
+   * Get annotated version of exon
+   *
+   * @note if exon is not annotated -- returns exon with same coordinates which
+   * is marked as annotated with same coordinates
+   */
+  Exon get_annotated() const {
+    return Exon{gene, legacy_annotated_coordinates(), DefaultAnnotated{}};
+  }
 };
 inline bool operator==(const Exon& x, const Exon& y) noexcept {
   return std::tie(x.gene, x.coordinates) == std::tie(y.gene, y.coordinates);
@@ -79,6 +93,16 @@ template <> struct hash<majiq::Exon> {
 
 namespace majiq {
 using Exons = detail::GeneRegions<Exon, std::less<Exon>>;
+
+Exons ExtractAnnotatedExons(const Exons& base) {
+  std::vector<Exon> annotated;
+  annotated.reserve(base.size());
+  std::for_each(base.begin(), base.end(),
+      [&annotated](const Exon& x) {
+        if (!x.is_denovo()) { annotated.push_back(x.get_annotated()); }
+      });
+  return Exons{annotated, Exons::NoCheckValid{}};
+}
 }  // namespace majiq
 
 #endif  // MAJIQ_EXONS_HPP
