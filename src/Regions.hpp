@@ -363,6 +363,7 @@ class GeneRegions {
   const_iterator end() const { return elements_.cend(); }
   const vecT& data() { return elements_; }
   const vecConstT& data() const { return elements_; }
+  const std::shared_ptr<Genes>& genes() const { return genes_; }
 
   const_iterator find(const value_type& key) const {
     // run lower-bound and uppper-bound simultaneously
@@ -374,7 +375,7 @@ class GeneRegions {
     return find(key) == end() ? 0 : 1;
   }
   friend inline bool operator==(const GeneRegions& x, const GeneRegions& y) {
-    return x.elements_ == y.elements_;
+    return std::tie(x.genes_, x.elements_) == std::tie(y.genes_, y.elements_);
   }
 };
 }  // namespace detail
