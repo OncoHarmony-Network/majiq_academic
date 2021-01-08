@@ -21,9 +21,36 @@
 namespace majiq {
 struct Exon : detail::GeneRegion<ClosedInterval> {
  public:
+  using BaseT = detail::GeneRegion<ClosedInterval>;
+  struct DefaultAnnotated { };
+  struct MakeDenovo { };
+
+  // exon-specific members
+  ClosedInterval annotated_coordinates;
+
+  // exon-specific information
+  inline bool is_denovo() const noexcept {
+    return annotated_coordinates.is_invalid();
+  }
+  inline bool is_half_exon() const noexcept {
+    return coordinates.is_half_interval();
+  }
+  /**
+   * If denovo, return current coordinates to match previous MAJIQ
+   */
+  inline const ClosedInterval& legacy_annotated_coordinates() const noexcept {
+    return is_denovo() ? coordinates : annotated_coordinates;
+  }
+
   // constructors
-  Exon(KnownGene _gene, ClosedInterval _coordinates)
-      : detail::GeneRegion<ClosedInterval>{_gene, _coordinates} {
+  Exon(KnownGene _gene, ClosedInterval _coordinates, ClosedInterval _annotated)
+      : BaseT{_gene, _coordinates}, annotated_coordinates{_annotated} {
+  }
+  Exon(KnownGene _gene, ClosedInterval _coordinates, DefaultAnnotated)
+      : Exon{_gene, _coordinates, _coordinates} {
+  }
+  Exon(KnownGene _gene, ClosedInterval _coordinates, MakeDenovo)
+      : Exon{_gene, _coordinates, ClosedInterval{-1, -1}} {
   }
   Exon(const Exon& x) = default;
   Exon(Exon&& x) = default;

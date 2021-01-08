@@ -136,6 +136,24 @@ PYBIND11_MODULE(new_majiq, m) {
             exons.data(), offset, exons_obj);
         },
         "array[int] of exon ends")
+    .def_property_readonly("annotated_start",
+        [](py::object& exons_obj) -> py::array_t<position_t> {
+        Exons& exons = exons_obj.cast<Exons&>();
+        const size_t offset = offsetOf(&majiq::Exon::annotated_coordinates)
+            + offsetOf(&majiq::ClosedInterval::start);
+        return ArrayFromVectorAndOffset<position_t, majiq::Exon>(
+            exons.data(), offset, exons_obj);
+        },
+        "array[int] of annotated exon starts")
+    .def_property_readonly("annotated_end",
+        [](py::object& exons_obj) -> py::array_t<position_t> {
+        Exons& exons = exons_obj.cast<Exons&>();
+        const size_t offset = offsetOf(&majiq::Exon::annotated_coordinates)
+            + offsetOf(&majiq::ClosedInterval::end);
+        return ArrayFromVectorAndOffset<position_t, majiq::Exon>(
+            exons.data(), offset, exons_obj);
+        },
+        "array[int] of annotated exon ends")
     .def("__repr__", [](const Exons& self) -> std::string {
         std::ostringstream oss;
         oss << "Exons<" << self.size() << " total>";

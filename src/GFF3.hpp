@@ -370,7 +370,7 @@ class SpliceGraphBuilder {
         });
     std::for_each(gene_exons.begin(), gene_exons.end(),
         [gene, &exons](ClosedInterval iv) {
-          exons->push_back(Exon{gene, iv});
+          exons->push_back(Exon{gene, iv, Exon::DefaultAnnotated{}});
         });
     std::for_each(gene_introns.begin(), gene_introns.end(),
         [gene, &introns](ClosedInterval iv) {
