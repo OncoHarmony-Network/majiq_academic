@@ -19,6 +19,7 @@
 #include "Junctions.hpp"
 #include "Exons.hpp"
 #include "Introns.hpp"
+#include "OverGenes.hpp"
 
 
 namespace majiq {
@@ -29,26 +30,48 @@ class SpliceGraph {
   std::shared_ptr<Exons> exons_;
   std::shared_ptr<GeneJunctions> junctions_;
   std::shared_ptr<Introns> introns_;
-  // NOTE: if we add additional objects with KnownGene, update sort()
 
- public:
-  // add to splicegraph
-  void AddGene(const geneid_t& geneid, const seqid_t& seqid,
-      const position_t& start, const position_t& end, bool strand_forward,
-      genename_t genename) {
-    genes_->add(Gene{
-        contigs_->make_known(seqid), ClosedInterval{start, end},
-        strand_forward ? GeneStrandness::FORWARD : GeneStrandness::REVERSE,
-        geneid, genename});
-    return;
+  // indexing from contigs to overlapping genes
+  std::shared_ptr<OverGenes> overgenes_;
+  // indexing from genes to exon/junction/intron features
+  std::vector<size_t> gene_exons_idx_;
+  std::vector<size_t> gene_junctions_idx_;
+  std::vector<size_t> gene_introns_idx_;
+
+  /**
+   * Index into regions that are sorted by gene
+   */
+  template <class ContainerT>
+  static std::vector<size_t> index_gene_regions(
+      const std::shared_ptr<Genes>& genes, ContainerT regions) {
+    // initialize result
+    std::vector<size_t> result(genes->size() + 1);
+    // index into genes
+    size_t gene_idx = 0;
+    for (size_t region_idx = 0; region_idx < regions.size(); ++region_idx) {
+      const size_t region_gene_idx = regions[region_idx].gene.gene_idx;
+      while (gene_idx < region_gene_idx) {
+        result[++gene_idx] = region_idx;
+      }
+    }
+    for (; gene_idx < genes->size();) {
+      result[++gene_idx] = regions.size();
+    }
+    return result;
   }
 
+ public:
   // access non const pointers for use by pybind11 interface...
   std::shared_ptr<Contigs> contigs() { return contigs_; }
   std::shared_ptr<Genes> genes() { return genes_; }
   std::shared_ptr<Exons> exons() { return exons_; }
+  const std::vector<size_t>& gene_exons_idx() { return gene_exons_idx_; }
   std::shared_ptr<GeneJunctions> junctions() { return junctions_; }
+  const std::vector<size_t>& gene_junctions_idx() {
+    return gene_junctions_idx_;
+  }
   std::shared_ptr<Introns> introns() { return introns_; }
+  const std::vector<size_t>& gene_introns_idx() { return gene_introns_idx_; }
 
   // constructors
   SpliceGraph(
@@ -61,7 +84,11 @@ class SpliceGraph {
         genes_{genes},
         exons_{exons},
         junctions_{junctions},
-        introns_{introns} {
+        introns_{introns},
+        overgenes_{std::make_shared<OverGenes>(contigs_, genes_)},
+        gene_exons_idx_{index_gene_regions(genes_, *exons_)},
+        gene_junctions_idx_{index_gene_regions(genes_, *junctions_)},
+        gene_introns_idx_{index_gene_regions(genes_, *introns_)} {
   }
   SpliceGraph(const SpliceGraph& sg) = default;
   SpliceGraph(SpliceGraph&& sg) = default;

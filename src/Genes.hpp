@@ -278,6 +278,8 @@ class Genes : public std::enable_shared_from_this<Genes> {
   }
   // view into genes object for pybind11
   const std::vector<Gene>& data() { return genes_vec_; }
+  // expose whether it is sorted
+  inline bool is_sorted() const noexcept { return is_sorted_; }
 
   // equality of genes
   friend bool operator==(const Genes& x, const Genes&y) noexcept {
