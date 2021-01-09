@@ -95,83 +95,58 @@ class OverGenes {
   // constructors
   OverGenes(
       const std::shared_ptr<Contigs>& contigs,
-      const std::shared_ptr<Genes>& genes) {
+      const std::shared_ptr<Genes>& genes)
+      : contig_offsets_{1},
+        overgenes_{},
+        overgene_offsets_{1} {
     if (!genes->is_sorted()) {
       throw std::runtime_error("OverGenes requires genes in sorted order");
     }
-    // initial offsets for contigs, overgenes
-    contig_offsets_.push_back(0);
-    overgene_offsets_.push_back(0);
-
     // current contig
     size_t contig_idx = 0;
+
     // current overgene
     // overgene_idx = overgene.size()
     constexpr position_t EMPTY = -1;
     position_t og_start = EMPTY;
     position_t og_end = EMPTY;
-    // current gene
-    size_t gene_idx = 0;
 
-    // we add overgenes by pushing current contig, og interval, current gene
-    auto addOverGene =
-        [contig_idx, gene_idx, this, &contigs, &og_start, &og_end]() {
-      if (og_start != EMPTY || og_end != EMPTY) {
-        // add interval for the overgene
+    for (size_t gene_idx = 0; gene_idx < genes->size(); ++gene_idx) {
+      const Gene& gene = genes->get(gene_idx);
+      if (
+          (contig_idx < gene.contig.contig_idx || og_end < gene.interval.start)
+          && og_start != EMPTY
+          && og_end != EMPTY) {
+        // add an overgene
         overgenes_.push_back(
-            OverGene{(*contigs)[contig_idx],
-              ClosedInterval{og_start, og_end},
+            OverGene{(*contigs)[contig_idx], ClosedInterval{og_start, og_end},
               GeneStrandness::AMBIGUOUS});
-        // mark exclusive end among genes for this overgene
         overgene_offsets_.push_back(gene_idx);
+        // reset og_start, og_end
+        og_start = gene.interval.start;
+        og_end = gene.interval.end;
+      } else {
+        // start shouldn't change based on ordering, but og_end could
+        og_end = std::max(og_end, gene.interval.end);
       }
-      og_start = EMPTY;
-      og_end = EMPTY;
-    };
-    // we advance contig by adding an overgene, noting current overgene...
-    auto advanceContig = [&addOverGene, this, &contig_idx]() {
-      // add any last overgene from end of contig
-      addOverGene();
-      // mark exclusive end of contig among the overgenes
+      while (contig_idx < gene.contig.contig_idx) {
+        // add/note end of contig
+        contig_offsets_.push_back(overgenes_.size());
+        ++contig_idx;
+      }
+    }
+    // add last overgene, if any
+    if (og_start != EMPTY && og_end != EMPTY) {
+      overgenes_.push_back(
+          OverGene{(*contigs)[contig_idx], ClosedInterval{og_start, og_end},
+            GeneStrandness::AMBIGUOUS});
+      overgene_offsets_.push_back(genes->size());
+    }
+    // fill in any remaining contigs
+    while (contig_idx < contigs->size()) {
+      // add/note end of contig
       contig_offsets_.push_back(overgenes_.size());
-      // advance which contig we are looking at
       ++contig_idx;
-    };
-    // we advance gene by updating coordinates, adding overgene when necessary
-    auto advanceGene =
-        [&addOverGene, &og_start, &og_end, &gene_idx](const Gene& cur_gene) {
-      if (cur_gene.interval.start < og_start) {
-        throw std::logic_error("Genes weren't actually sorted in OverGenes");
-      } else if (og_end < cur_gene.interval.start) {
-        // add preceding overgene on this contig
-        addOverGene();
-        og_start = cur_gene.interval.start;
-        og_end = cur_gene.interval.end;
-      } else {
-        og_end = std::max(og_end, cur_gene.interval.end);
-      }
-      // advance which gene we are looking at
-      ++gene_idx;
-    };
-
-    // iterate over contigs, genes in order
-    while (contig_idx < contigs->size() && gene_idx < genes->size()) {
-      const Gene& cur_gene = genes->get(gene_idx);
-      if (cur_gene.contig.contig_idx < contig_idx) {
-        throw std::logic_error("Genes weren't actually sorted in OverGenes");
-      } else if (contig_idx < cur_gene.contig.contig_idx) {
-        advanceContig();
-      } else {
-        advanceGene(cur_gene);
-      }
-    }
-    // finish advancing contigs
-    for (; contig_idx < contigs->size();) {
-      advanceContig();
-    }
-    if (gene_idx < genes->size()) {
-      // we should never have any genes left over
-      throw std::logic_error("Leftover genes in OverGenes violate assumptions");
     }
     return;
   }

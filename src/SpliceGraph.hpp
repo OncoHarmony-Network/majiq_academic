@@ -54,7 +54,7 @@ class SpliceGraph {
         result[++gene_idx] = region_idx;
       }
     }
-    for (; gene_idx < genes->size();) {
+    while (gene_idx < genes->size()) {
       result[++gene_idx] = regions.size();
     }
     return result;
