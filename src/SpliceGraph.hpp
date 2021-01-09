@@ -64,12 +64,16 @@ class SpliceGraph {
   // access non const pointers for use by pybind11 interface...
   std::shared_ptr<Contigs> contigs() { return contigs_; }
   std::shared_ptr<Genes> genes() { return genes_; }
+  std::shared_ptr<OverGenes> overgenes() { return overgenes_; }
+
   std::shared_ptr<Exons> exons() { return exons_; }
   const std::vector<size_t>& gene_exons_idx() { return gene_exons_idx_; }
+
   std::shared_ptr<GeneJunctions> junctions() { return junctions_; }
   const std::vector<size_t>& gene_junctions_idx() {
     return gene_junctions_idx_;
   }
+
   std::shared_ptr<Introns> introns() { return introns_; }
   const std::vector<size_t>& gene_introns_idx() { return gene_introns_idx_; }
 

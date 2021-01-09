@@ -80,11 +80,12 @@ PYBIND11_MODULE(new_majiq, m) {
   using majiq::genename_t;
 
   using majiq::SpliceGraph;
-  using Exons = majiq::Exons;
-  using Introns = majiq::Introns;
-  using GeneJunctions = majiq::GeneJunctions;
+  using majiq::Exons;
+  using majiq::Introns;
+  using majiq::GeneJunctions;
   using majiq::Genes;
   using majiq::Contigs;
+  using majiq::OverGenes;
 
   // vector<string> will be bound to Python list
   py::bind_vector<std::vector<std::string>>(m, "VectorString");
@@ -155,6 +156,18 @@ PYBIND11_MODULE(new_majiq, m) {
             exons.data(), offset, exons_obj);
         },
         "array[int] of annotated exon ends")
+    .def_property_readonly("df",
+        [](py::object& exons_obj) -> py::object {
+        py::module_ pd = py::module_::import("pandas");
+        py::dict columns = py::dict(
+            "gene_idx"_a = exons_obj.attr("gene_idx"),
+            "start"_a = exons_obj.attr("start"),
+            "end"_a = exons_obj.attr("end"),
+            "annotated_start"_a = exons_obj.attr("annotated_start"),
+            "annotated_end"_a = exons_obj.attr("annotated_end"));
+        return pd.attr("DataFrame")(columns);
+        },
+        "Pandas dataframe with exon information")
     .def("__repr__", [](const Exons& self) -> std::string {
         std::ostringstream oss;
         oss << "Exons<" << self.size() << " total>";
@@ -214,6 +227,19 @@ PYBIND11_MODULE(new_majiq, m) {
             introns.data(), offset, introns_obj);
         },
         "array[bool] indicating if the connection is simplified")
+    .def_property_readonly("df",
+        [](py::object& introns_obj) -> py::object {
+        py::module_ pd = py::module_::import("pandas");
+        py::dict columns = py::dict(
+            "gene_idx"_a = introns_obj.attr("gene_idx"),
+            "start"_a = introns_obj.attr("start"),
+            "end"_a = introns_obj.attr("end"),
+            "denovo"_a = introns_obj.attr("denovo"),
+            "passed_build"_a = introns_obj.attr("passed_build"),
+            "simplified"_a = introns_obj.attr("simplified"));
+        return pd.attr("DataFrame")(columns);
+        },
+        "Pandas dataframe with intron information")
     .def("__repr__", [](const Introns& self) -> std::string {
         std::ostringstream oss;
         oss << "Introns<" << self.size() << " total>";
@@ -281,7 +307,7 @@ PYBIND11_MODULE(new_majiq, m) {
             "start"_a = junctions_obj.attr("start"),
             "end"_a = junctions_obj.attr("end"),
             "denovo"_a = junctions_obj.attr("denovo"),
-            "build_passed"_a = junctions_obj.attr("build_passed"),
+            "passed_build"_a = junctions_obj.attr("passed_build"),
             "simplified"_a = junctions_obj.attr("simplified"));
         return pd.attr("DataFrame")(columns);
         },
@@ -333,6 +359,22 @@ PYBIND11_MODULE(new_majiq, m) {
         "Sequence[str] of gene ids in order matching gene_idx")
     .def_property_readonly("gene_name", &Genes::genenames,
         "Sequence[str] of gene names in order matching gene_idx")
+    .def_property_readonly("df",
+        [](py::object& genes_obj) -> py::object {
+        Genes& genes = genes_obj.cast<Genes&>();
+        py::module_ pd = py::module_::import("pandas");
+        py::dict columns = py::dict(
+            "contig_idx"_a = genes_obj.attr("contig_idx"),
+            "start"_a = genes_obj.attr("start"),
+            "end"_a = genes_obj.attr("end"),
+            "strand"_a = genes_obj.attr("strand"),
+            "gene_id"_a = genes_obj.attr("gene_id"),
+            "gene_name"_a = genes_obj.attr("gene_name"));
+        py::object index
+          = pd.attr("RangeIndex")(genes.size(), "name"_a = "gene_idx");
+        return pd.attr("DataFrame")(columns, "index"_a = index);
+        },
+        "Pandas dataframe with gene information")
     .def("__repr__", [](const Genes& self) -> std::string {
         std::ostringstream oss;
         oss << "Genes<" << self.size() << " total>";
@@ -351,6 +393,17 @@ PYBIND11_MODULE(new_majiq, m) {
         R"pbdoc(
         Sequence[str] of contig ids in order matching contig_idx
         )pbdoc")
+    .def_property_readonly("df",
+        [](py::object& contigs_obj) -> py::object {
+        Contigs& contigs = contigs_obj.cast<Contigs&>();
+        py::module_ pd = py::module_::import("pandas");
+        py::dict columns = py::dict(
+            "seqid"_a = contigs_obj.attr("seqid"));
+        py::object index
+          = pd.attr("RangeIndex")(contigs.size(), "name"_a = "contig_idx");
+        return pd.attr("DataFrame")(columns, "index"_a = index);
+        },
+        "Pandas dataframe with contig information")
     .def("__repr__", [](const Contigs& self) -> std::string {
         std::ostringstream oss;
         oss << self;
