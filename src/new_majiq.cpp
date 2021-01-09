@@ -24,6 +24,7 @@
 #define MACRO_STRINGIFY(x) STRINGIFY(x)
 
 namespace py = pybind11;
+using namespace pybind11::literals;  // bring in _a literal
 
 
 // <https://stackoverflow.com/questions/13180842/how-to-calculate-offset-of-a-class-member-at-compile-time>
@@ -272,6 +273,19 @@ PYBIND11_MODULE(new_majiq, m) {
             junctions.data(), offset, junctions_obj);
         },
         "array[bool] indicating if the connection is simplified")
+    .def_property_readonly("df",
+        [](py::object& junctions_obj) -> py::object {
+        py::module_ pd = py::module_::import("pandas");
+        py::dict columns = py::dict(
+            "gene_idx"_a = junctions_obj.attr("gene_idx"),
+            "start"_a = junctions_obj.attr("start"),
+            "end"_a = junctions_obj.attr("end"),
+            "denovo"_a = junctions_obj.attr("denovo"),
+            "build_passed"_a = junctions_obj.attr("build_passed"),
+            "simplified"_a = junctions_obj.attr("simplified"));
+        return pd.attr("DataFrame")(columns);
+        },
+        "Pandas dataframe with junction information")
     .def("__repr__", [](const GeneJunctions& self) -> std::string {
         std::ostringstream oss;
         oss << "GeneJunctions<" << self.size() << " total>";
