@@ -156,7 +156,7 @@ PYBIND11_MODULE(new_majiq, m) {
             exons.data(), offset, exons_obj);
         },
         "array[int] of annotated exon ends")
-    .def_property_readonly("df",
+    .def("df",
         [](py::object& exons_obj) -> py::object {
         py::module_ pd = py::module_::import("pandas");
         py::dict columns = py::dict(
@@ -167,7 +167,7 @@ PYBIND11_MODULE(new_majiq, m) {
             "annotated_end"_a = exons_obj.attr("annotated_end"));
         return pd.attr("DataFrame")(columns);
         },
-        "Pandas dataframe with exon information")
+        "Pandas dataframe with exon information (copy)")
     .def("__repr__", [](const Exons& self) -> std::string {
         std::ostringstream oss;
         oss << "Exons<" << self.size() << " total>";
@@ -227,7 +227,7 @@ PYBIND11_MODULE(new_majiq, m) {
             introns.data(), offset, introns_obj);
         },
         "array[bool] indicating if the connection is simplified")
-    .def_property_readonly("df",
+    .def("df",
         [](py::object& introns_obj) -> py::object {
         py::module_ pd = py::module_::import("pandas");
         py::dict columns = py::dict(
@@ -239,7 +239,7 @@ PYBIND11_MODULE(new_majiq, m) {
             "simplified"_a = introns_obj.attr("simplified"));
         return pd.attr("DataFrame")(columns);
         },
-        "Pandas dataframe with intron information")
+        "Pandas dataframe with intron information (copy)")
     .def("__repr__", [](const Introns& self) -> std::string {
         std::ostringstream oss;
         oss << "Introns<" << self.size() << " total>";
@@ -299,7 +299,7 @@ PYBIND11_MODULE(new_majiq, m) {
             junctions.data(), offset, junctions_obj);
         },
         "array[bool] indicating if the connection is simplified")
-    .def_property_readonly("df",
+    .def("df",
         [](py::object& junctions_obj) -> py::object {
         py::module_ pd = py::module_::import("pandas");
         py::dict columns = py::dict(
@@ -311,7 +311,7 @@ PYBIND11_MODULE(new_majiq, m) {
             "simplified"_a = junctions_obj.attr("simplified"));
         return pd.attr("DataFrame")(columns);
         },
-        "Pandas dataframe with junction information")
+        "Pandas dataframe with junction information (copy)")
     .def("__repr__", [](const GeneJunctions& self) -> std::string {
         std::ostringstream oss;
         oss << "GeneJunctions<" << self.size() << " total>";
@@ -359,7 +359,7 @@ PYBIND11_MODULE(new_majiq, m) {
         "Sequence[str] of gene ids in order matching gene_idx")
     .def_property_readonly("gene_name", &Genes::genenames,
         "Sequence[str] of gene names in order matching gene_idx")
-    .def_property_readonly("df",
+    .def("df",
         [](py::object& genes_obj) -> py::object {
         Genes& genes = genes_obj.cast<Genes&>();
         py::module_ pd = py::module_::import("pandas");
@@ -374,7 +374,7 @@ PYBIND11_MODULE(new_majiq, m) {
           = pd.attr("RangeIndex")(genes.size(), "name"_a = "gene_idx");
         return pd.attr("DataFrame")(columns, "index"_a = index);
         },
-        "Pandas dataframe with gene information")
+        "Pandas dataframe with gene information (copy)")
     .def("__repr__", [](const Genes& self) -> std::string {
         std::ostringstream oss;
         oss << "Genes<" << self.size() << " total>";
@@ -393,7 +393,7 @@ PYBIND11_MODULE(new_majiq, m) {
         R"pbdoc(
         Sequence[str] of contig ids in order matching contig_idx
         )pbdoc")
-    .def_property_readonly("df",
+    .def("df",
         [](py::object& contigs_obj) -> py::object {
         Contigs& contigs = contigs_obj.cast<Contigs&>();
         py::module_ pd = py::module_::import("pandas");
@@ -403,7 +403,7 @@ PYBIND11_MODULE(new_majiq, m) {
           = pd.attr("RangeIndex")(contigs.size(), "name"_a = "contig_idx");
         return pd.attr("DataFrame")(columns, "index"_a = index);
         },
-        "Pandas dataframe with contig information")
+        "Pandas dataframe with contig information (copy)")
     .def("__repr__", [](const Contigs& self) -> std::string {
         std::ostringstream oss;
         oss << self;
@@ -424,23 +424,39 @@ PYBIND11_MODULE(new_majiq, m) {
         "Create splicegraph from input GFF3 file",
         py::arg("gff3_path"), py::arg("process_ir"))
     // TODO(jaicher) Make more useful constructors
+    // access underlying data
+    .def_property_readonly("_exons", &SpliceGraph::exons,
+        "Access the splicegraph's exons")
+    .def_property_readonly("_introns", &SpliceGraph::introns,
+        "Access the splicegraph's introns")
+    .def_property_readonly("_junctions", &SpliceGraph::junctions,
+        "Access the splicegraph's junctions")
+    .def_property_readonly("_genes", &SpliceGraph::genes,
+        "Access the splicegraph's genes")
+    .def_property_readonly("_contigs", &SpliceGraph::contigs,
+        "Access the splicegraph's contigs")
+    // access underlyinig data as a dataframe
+    .def_property_readonly("exons",
+        [](py::object& sg) { return sg.attr("_exons").attr("df")(); },
+        "pd.DataFrame view of splicegraph's exons (note: this does a copy)")
+    .def_property_readonly("introns",
+        [](py::object& sg) { return sg.attr("_introns").attr("df")(); },
+        "pd.DataFrame view of splicegraph's introns (note: this does a copy)")
+    .def_property_readonly("junctions",
+        [](py::object& sg) { return sg.attr("_junctions").attr("df")(); },
+        "pd.DataFrame view of splicegraph's junctions (note: this does a copy)")
+    .def_property_readonly("genes",
+        [](py::object& sg) { return sg.attr("_genes").attr("df")(); },
+        "pd.DataFrame view of splicegraph's genes (note: this does a copy)")
+    .def_property_readonly("contigs",
+        [](py::object& sg) { return sg.attr("_contigs").attr("df")(); },
+        "pd.DataFrame view of splicegraph's contigs (note: this does a copy)")
     // string representation of splicegraph
     .def("__repr__", [](const SpliceGraph& sg) -> std::string {
         std::ostringstream oss;
         oss << sg;
         return oss.str();
-        })
-    // access underlying data
-    .def_property_readonly("exons", &SpliceGraph::exons,
-        "Access the splicegraph's exons")
-    .def_property_readonly("introns", &SpliceGraph::introns,
-        "Access the splicegraph's introns")
-    .def_property_readonly("junctions", &SpliceGraph::junctions,
-        "Access the splicegraph's junctions")
-    .def_property_readonly("genes", &SpliceGraph::genes,
-        "Access the splicegraph's genes")
-    .def_property_readonly("contigs", &SpliceGraph::contigs,
-        "Access the splicegraph's contigs");
+        });
 
 
 #ifdef VERSION_INFO
