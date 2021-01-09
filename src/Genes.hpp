@@ -257,6 +257,11 @@ class Genes : public std::enable_shared_from_this<Genes> {
 
   // constructors always ensure that result is sorted
   Genes() : genes_vec_{}, id_idx_map_{}, is_sorted_{true} {}
+  explicit Genes(vecGene&& genes)
+      : genes_vec_{genes},
+        id_idx_map_{_geneid_indexes(genes_vec_)},
+        is_sorted_{std::is_sorted(genes_vec_.begin(), genes_vec_.end())} {
+  }
   Genes(const Genes& x)
       : genes_vec_{x.genes_vec_}, id_idx_map_{}, is_sorted_{true} {
     std::sort(genes_vec_.begin(), genes_vec_.end());

@@ -143,6 +143,11 @@ class Contigs : public std::enable_shared_from_this<Contigs> {
 
   // constructors
   Contigs() = default;
+  explicit Contigs(std::vector<Contig>&& contigs) : contigs_vec_{contigs} {
+    for (size_t idx = 0; idx < contigs_vec_.size(); ++idx) {
+      contig_idx_map_[contigs_vec_[idx]] = idx;
+    }
+  }
   Contigs(const Contigs& x) = default;
   Contigs(Contigs&& x) = default;
   Contigs& operator=(const Contigs& x) = default;
