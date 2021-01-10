@@ -505,6 +505,33 @@ PYBIND11_MODULE(new_majiq, m) {
     .def_property_readonly("contigs",
         [](py::object& sg) { return sg.attr("_contigs").attr("df")(); },
         "xr.Dataset view of splicegraph's contigs")
+    // save to file
+    .def("to_netcdf",
+        [](py::object& sg, py::str output_path) {
+        // don't write to existing file
+        py::object Path = py::module_::import("pathlib").attr("Path");
+        if (Path(output_path).attr("exists")().cast<bool>()) {
+          std::ostringstream oss;
+          oss << "Cannot save result to already existing file "
+              << output_path.cast<std::string>();
+          throw std::invalid_argument(oss.str());
+        }
+        sg.attr("exons").attr("to_netcdf")(output_path, "mode"_a = "w", "group"_a = "exons");
+        sg.attr("introns").attr("to_netcdf")(output_path, "mode"_a = "a", "group"_a = "introns");
+        sg.attr("junctions").attr("to_netcdf")(output_path, "mode"_a = "a", "group"_a = "junctions");
+        sg.attr("genes").attr("to_netcdf")(output_path, "mode"_a = "a", "group"_a = "genes");
+        sg.attr("contigs").attr("to_netcdf")(output_path, "mode"_a = "a", "group"_a = "contigs");
+        return;
+        },
+        R"pbdoc(
+        Serialize splicegraph to netCDF file
+
+        Parameters
+        ----------
+        output_path: str
+            Path for resulting file. Raises error if file already exists.
+        )pbdoc",
+        py::arg("output_path"))
     // string representation of splicegraph
     .def("__repr__", [](const SpliceGraph& sg) -> std::string {
         std::ostringstream oss;
