@@ -711,6 +711,42 @@ PYBIND11_MODULE(new_majiq, m) {
         "Access the spicegraph's overgenes")
     .def_property_readonly("_contigs", &SpliceGraph::contigs,
         "Access the splicegraph's contigs")
+    .def_property_readonly("_gene_exons_begin",
+        [](py::object& sg_obj) -> py::array_t<size_t> {
+        auto sg = sg_obj.cast<SpliceGraph&>();
+        return ArrayFromOffsetsVector(sg.gene_exons_idx(), true, sg_obj);
+        },
+        "array[int] of first exon_idx for each gene")
+    .def_property_readonly("_gene_exons_end",
+        [](py::object& sg_obj) -> py::array_t<size_t> {
+        auto sg = sg_obj.cast<SpliceGraph&>();
+        return ArrayFromOffsetsVector(sg.gene_exons_idx(), false, sg_obj);
+        },
+        "array[int] of exon_idx after last for each gene")
+    .def_property_readonly("_gene_junctions_begin",
+        [](py::object& sg_obj) -> py::array_t<size_t> {
+        auto sg = sg_obj.cast<SpliceGraph&>();
+        return ArrayFromOffsetsVector(sg.gene_junctions_idx(), true, sg_obj);
+        },
+        "array[int] of first junction_idx for each gene")
+    .def_property_readonly("_gene_junctions_end",
+        [](py::object& sg_obj) -> py::array_t<size_t> {
+        auto sg = sg_obj.cast<SpliceGraph&>();
+        return ArrayFromOffsetsVector(sg.gene_junctions_idx(), false, sg_obj);
+        },
+        "array[int] of junction_idx after last for each gene")
+    .def_property_readonly("_gene_introns_begin",
+        [](py::object& sg_obj) -> py::array_t<size_t> {
+        auto sg = sg_obj.cast<SpliceGraph&>();
+        return ArrayFromOffsetsVector(sg.gene_introns_idx(), true, sg_obj);
+        },
+        "array[int] of first intron_idx for each gene")
+    .def_property_readonly("_gene_introns_end",
+        [](py::object& sg_obj) -> py::array_t<size_t> {
+        auto sg = sg_obj.cast<SpliceGraph&>();
+        return ArrayFromOffsetsVector(sg.gene_introns_idx(), false, sg_obj);
+        },
+        "array[int] of intron_idx after last for each gene")
     // access underlying data as xarray datasets
     .def_property_readonly("exons",
         [](py::object& sg) { return sg.attr("_exons").attr("df")(); },
@@ -722,7 +758,26 @@ PYBIND11_MODULE(new_majiq, m) {
         [](py::object& sg) { return sg.attr("_junctions").attr("df")(); },
         "xr.Dataset view of splicegraph's junctions")
     .def_property_readonly("genes",
-        [](py::object& sg) { return sg.attr("_genes").attr("df")(); },
+        [](py::object& sg) {
+        auto get_xr = [&sg](py::str x) {
+          py::function xr_DataArray = py::module_::import("xarray").attr("DataArray");
+          return xr_DataArray(sg.attr(x), "dims"_a = "gene_idx");
+        };
+        auto genes_base = sg.attr("_genes").attr("df")();
+        auto exon_begin = get_xr("_gene_exons_begin");
+        auto exon_end = get_xr("_gene_exons_end");
+        auto junction_begin = get_xr("_gene_junctions_begin");
+        auto junction_end = get_xr("_gene_junctions_end");
+        auto intron_begin = get_xr("_gene_introns_begin");
+        auto intron_end = get_xr("_gene_introns_end");
+        return genes_base.attr("assign_coords")(
+            "exon_idx_begin"_a = exon_begin,
+            "exon_idx_end"_a = exon_end,
+            "junction_idx_begin"_a = junction_begin,
+            "junction_idx_end"_a = junction_end,
+            "intron_idx_begin"_a = intron_begin,
+            "intron_idx_end"_a = intron_end);
+        },
         "xr.Dataset view of splicegraph's genes")
     .def_property_readonly("overgenes",
         [](py::object& sg) { return sg.attr("_overgenes").attr("df")(); },
