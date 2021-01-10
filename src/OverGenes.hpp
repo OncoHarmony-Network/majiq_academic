@@ -102,12 +102,15 @@ class OverGenes {
   OverGenes(
       const std::shared_ptr<Contigs>& contigs,
       const std::shared_ptr<Genes>& genes)
-      : contig_offsets_{1},
+      : contig_offsets_{},
         overgenes_{},
-        overgene_offsets_{1} {
+        overgene_offsets_{} {
     if (!genes->is_sorted()) {
       throw std::runtime_error("OverGenes requires genes in sorted order");
     }
+    // offsets start at zero
+    contig_offsets_.push_back(0);
+    overgene_offsets_.push_back(0);
     // current contig
     size_t contig_idx = 0;
 
@@ -130,11 +133,10 @@ class OverGenes {
         overgene_offsets_.push_back(gene_idx);
         // reset og_start, og_end
         og_start = gene.interval.start;
-        og_end = gene.interval.end;
-      } else {
-        // start shouldn't change based on ordering, but og_end could
-        og_end = std::max(og_end, gene.interval.end);
+      } else if (og_start == EMPTY) {
+        og_start = gene.interval.start;
       }
+      og_end = std::max(og_end, gene.interval.end);
       while (contig_idx < gene.contig.contig_idx) {
         // add/note end of contig
         contig_offsets_.push_back(overgenes_.size());
