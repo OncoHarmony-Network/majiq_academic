@@ -59,6 +59,32 @@ py::array_t<OutputT> ArrayFromVectorAndOffset(
   // return resulting array
   return result;
 }
+/*
+ * Create read-only array view into vector with offset (i.e. for struct member)
+ */
+template <class OutputT>
+py::array_t<OutputT> ArrayFromOffsetsVector(
+    const std::vector<OutputT>& src,
+    bool is_start,
+    py::object& handle) {
+  // pointer to first element of src after adding offset for start or end
+  const OutputT* first = src.data() + (is_start ? 0 : 1);
+  // construct array
+  py::array_t<OutputT> result = py::array_t(
+      // shape
+      {src.size() - 1},
+      // strides
+      {sizeof(OutputT)},
+      // pointer to first element
+      first,
+      // object to handle array
+      handle);
+  // set array to readonly -- discourage Python from editing it
+  py::detail::array_proxy(result.ptr())->flags
+    &= ~py::detail::npy_api::NPY_ARRAY_WRITEABLE_;
+  // return resulting array
+  return result;
+}
 
 using majiq::position_t;
 using majiq::seqid_t;
@@ -226,6 +252,8 @@ PYBIND11_MODULE(new_majiq, m) {
     >(m, "GeneJunctions", "Splicegraph junctions");
   auto pyGenes = py::class_<Genes, std::shared_ptr<Genes>>(m, "Genes",
       "Splicegraph genes");
+  auto pyOverGenes = py::class_<OverGenes, std::shared_ptr<OverGenes>>(
+      m, "OverGenes", "Splicegraph groups of overlapping genes");
   auto pyContigs = py::class_<Contigs, std::shared_ptr<Contigs>>(m, "Contigs",
       "Splicegraph contigs");
 
@@ -551,6 +579,79 @@ PYBIND11_MODULE(new_majiq, m) {
         [](const Genes& self, geneid_t x) { return self.get_gene_idx(x); },
         "gene_idx for specified gene_id", py::arg("gene_id"));
 
+  pyOverGenes
+    .def_property_readonly("contig_idx",
+        [](py::object& overgenes_obj) -> py::array_t<size_t> {
+        OverGenes& overgenes = overgenes_obj.cast<OverGenes&>();
+        const size_t offset = offsetOf(&majiq::OverGene::contig)
+            + offsetOf(&majiq::KnownContig::contig_idx);
+        return ArrayFromVectorAndOffset<size_t, majiq::OverGene>(
+            overgenes.overgenes(), offset, overgenes_obj);
+        },
+        "array[int] of indexes indicating contig overgene belongs to")
+    .def_property_readonly("start",
+        [](py::object& overgenes_obj) -> py::array_t<position_t> {
+        OverGenes& overgenes = overgenes_obj.cast<OverGenes&>();
+        const size_t offset = offsetOf(&majiq::OverGene::coordinates)
+            + offsetOf(&majiq::ClosedInterval::start);
+        return ArrayFromVectorAndOffset<position_t, majiq::OverGene>(
+            overgenes.overgenes(), offset, overgenes_obj);
+        },
+        "array[int] of overgene starts")
+    .def_property_readonly("end",
+        [](py::object& overgenes_obj) -> py::array_t<position_t> {
+        OverGenes& overgenes = overgenes_obj.cast<OverGenes&>();
+        const size_t offset = offsetOf(&majiq::OverGene::coordinates)
+            + offsetOf(&majiq::ClosedInterval::end);
+        return ArrayFromVectorAndOffset<position_t, majiq::OverGene>(
+            overgenes.overgenes(), offset, overgenes_obj);
+        },
+        "array[int] of overgene ends")
+    .def_property_readonly("gene_idx_begin",
+        [](py::object& overgenes_obj) -> py::array_t<size_t> {
+        OverGenes& overgenes = overgenes_obj.cast<OverGenes&>();
+        return ArrayFromOffsetsVector(
+            overgenes.overgene_offsets(), true, overgenes_obj);
+        },
+        "array[int] of gene_idx for first gene in the overgene")
+    .def_property_readonly("gene_idx_end",
+        [](py::object& overgenes_obj) -> py::array_t<size_t> {
+        OverGenes& overgenes = overgenes_obj.cast<OverGenes&>();
+        return ArrayFromOffsetsVector(
+            overgenes.overgene_offsets(), false, overgenes_obj);
+        },
+        "array[int] of gene_idx following that of last gene in the overgene")
+    .def("df",
+        [](py::object& overgenes) -> py::object {
+        py::module_ np = py::module_::import("numpy");
+        py::module_ xr = py::module_::import("xarray");
+        py::function xr_DataArray = xr.attr("DataArray");
+        py::function xr_Dataset = xr.attr("Dataset");
+        py::function np_arange = np.attr("arange");
+        // get coordinates for overgene
+        auto index = py::tuple(2);
+        index[0] = py::str("overgene_idx");
+        index[1] = np_arange(overgenes.attr("__len__")());
+        // list of coordinates for DataArray
+        auto index_list = py::list();
+        index_list.append(index);
+        // so the values we want out are:
+        auto coordinates = py::dict(
+            "contig_idx"_a = xr_DataArray(overgenes.attr("contig_idx"), index_list),
+            "start"_a = xr_DataArray(overgenes.attr("start"), index_list),
+            "end"_a = xr_DataArray(overgenes.attr("end"), index_list),
+            "gene_idx_begin"_a = xr_DataArray(overgenes.attr("gene_idx_begin"), index_list),
+            "gene_idx_end"_a = xr_DataArray(overgenes.attr("gene_idx_end"), index_list));
+        return xr_Dataset("coords"_a = coordinates);
+        },
+        "View on overgene information as xarray Dataset")
+    .def("__repr__", [](const OverGenes& self) -> std::string {
+        std::ostringstream oss;
+        oss << "OverGenes<" << self.size() << " total>";
+        return oss.str();
+        })
+    .def("__len__", &OverGenes::size);
+
 
   pyContigs
     .def_property_readonly("seqid", &Contigs::seqids,
@@ -606,6 +707,8 @@ PYBIND11_MODULE(new_majiq, m) {
         "Access the splicegraph's junctions")
     .def_property_readonly("_genes", &SpliceGraph::genes,
         "Access the splicegraph's genes")
+    .def_property_readonly("_overgenes", &SpliceGraph::overgenes,
+        "Access the spicegraph's overgenes")
     .def_property_readonly("_contigs", &SpliceGraph::contigs,
         "Access the splicegraph's contigs")
     // access underlying data as xarray datasets
@@ -621,6 +724,9 @@ PYBIND11_MODULE(new_majiq, m) {
     .def_property_readonly("genes",
         [](py::object& sg) { return sg.attr("_genes").attr("df")(); },
         "xr.Dataset view of splicegraph's genes")
+    .def_property_readonly("overgenes",
+        [](py::object& sg) { return sg.attr("_overgenes").attr("df")(); },
+        "xr.Dataset view of splicegraph's overgenes")
     .def_property_readonly("contigs",
         [](py::object& sg) { return sg.attr("_contigs").attr("df")(); },
         "xr.Dataset view of splicegraph's contigs")

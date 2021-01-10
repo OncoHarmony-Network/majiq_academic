@@ -21,9 +21,10 @@
 
 
 namespace majiq {
+using OverGene = detail::ContigRegion<ClosedInterval>;
+
 class OverGenes {
  public:
-  using OverGene = detail::ContigRegion<ClosedInterval>;
   using VecOverGene = std::vector<OverGenes>;
 
  private:
@@ -52,6 +53,11 @@ class OverGenes {
     return std::make_pair(
         overgene_offsets_[overgene_idx], overgene_offsets_[overgene_idx + 1]);
   }
+
+  // access for pybind
+  const std::vector<size_t>& contig_offsets() { return contig_offsets_; }
+  const std::vector<OverGene>& overgenes() { return overgenes_; }
+  const std::vector<size_t>& overgene_offsets() { return overgene_offsets_; }
 
   /**
    * overgene_idx identifies the index of the unique overgene that contains
