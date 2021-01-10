@@ -4,9 +4,6 @@
 + update introns
 + Simplifying junctions/introns
 
-Denovo filters to add to splicegraph
-Build filters for LSVs, constitutive
-
 Denovo and build filters are accumulated on ContigJunctions
 Subclass GeneJunction to include denovo and build status
 + Should have easy way to query contig junctions for having 1+ matching gene
@@ -39,11 +36,9 @@ If we have this, we can
 + which we can use as additional parameter to identify simplified events
 
 We can then also resolve the following issues:
-+ Python interface
 + Reading in of coverage for junctions and introns (htslib)
 + de/seriaization of coverage for junctions and introns (likely via Python)
 + Serialization of coverage for quantification (likely via Python)
-+ Serialization of splicegraph (likely via Python)
 
 
 Other thoughts:
