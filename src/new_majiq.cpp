@@ -26,7 +26,6 @@
 namespace py = pybind11;
 using namespace pybind11::literals;  // bring in _a literal
 
-
 // <https://stackoverflow.com/questions/13180842/how-to-calculate-offset-of-a-class-member-at-compile-time>
 template <typename T, typename U>
 constexpr size_t offsetOf(U T::*member) {
@@ -61,6 +60,138 @@ py::array_t<OutputT> ArrayFromVectorAndOffset(
   return result;
 }
 
+using majiq::position_t;
+using majiq::seqid_t;
+using majiq::geneid_t;
+using majiq::genename_t;
+
+using majiq::SpliceGraph;
+using majiq::Exons;
+using majiq::Introns;
+using majiq::GeneJunctions;
+using majiq::Genes;
+using majiq::Contigs;
+using majiq::OverGenes;
+
+std::shared_ptr<Contigs> ContigsFromDataset(py::object xr_contigs) {
+  auto result = std::make_shared<Contigs>();
+  py::list seqids = xr_contigs
+    .attr("__getitem__")("seqid")
+    .attr("values").attr("tolist")();
+  for (auto seqid : seqids) {
+    result->add(seqid.cast<std::string>());
+  }
+  return result;
+}
+std::shared_ptr<Genes> GenesFromDataset(
+    std::shared_ptr<Contigs> contigs, py::object xr_genes) {
+  py::function np_array = py::module_::import("numpy").attr("array");
+  // extract usable values from dataset
+  py::array_t<size_t> arr_contig_idx
+    = np_array(xr_genes.attr("__getitem__")("contig_idx"));
+  py::array_t<position_t> arr_start
+    = np_array(xr_genes.attr("__getitem__")("start"));
+  py::array_t<position_t> arr_end
+    = np_array(xr_genes.attr("__getitem__")("end"));
+  py::array_t<std::array<char, 1>> arr_strand
+    = np_array(xr_genes.attr("__getitem__")("strand"));
+  py::list geneid
+    = py::list(np_array(xr_genes.attr("__getitem__")("gene_id")));
+  py::list genename
+    = py::list(np_array(xr_genes.attr("__getitem__")("gene_name")));
+  // unchecked accesses to numpy array
+  auto contig_idx = arr_contig_idx.unchecked<1>();
+  auto start = arr_start.unchecked<1>();
+  auto end = arr_end.unchecked<1>();
+  auto strand = arr_strand.unchecked<1>();
+  // create vector of genes matching input arrays
+  using majiq::Gene;
+  using majiq::KnownContig;
+  using majiq::ClosedInterval;
+  using majiq::GeneStrandness;
+
+  std::vector<Gene> gene_vec{};
+  gene_vec.reserve(geneid.size());
+  for (size_t i = 0; i < geneid.size(); ++i) {
+    gene_vec.push_back(Gene{
+        KnownContig{contig_idx(i), contigs}, ClosedInterval{start(i), end(i)},
+        static_cast<GeneStrandness>(strand(i)[0]),
+        geneid[i].cast<geneid_t>(), genename[i].cast<genename_t>()});
+  }
+  return std::make_shared<Genes>(std::move(gene_vec));
+}
+std::shared_ptr<Exons> ExonsFromDataset(
+    std::shared_ptr<Genes> genes, py::object xr_exons) {
+  py::function np_array = py::module_::import("numpy").attr("array");
+  // extract usable values from dataset
+  py::array_t<size_t> arr_gene_idx
+    = np_array(xr_exons.attr("__getitem__")("gene_idx"));
+  py::array_t<position_t> arr_start
+    = np_array(xr_exons.attr("__getitem__")("start"));
+  py::array_t<position_t> arr_end
+    = np_array(xr_exons.attr("__getitem__")("end"));
+  py::array_t<position_t> arr_ann_start
+    = np_array(xr_exons.attr("__getitem__")("annotated_start"));
+  py::array_t<position_t> arr_ann_end
+    = np_array(xr_exons.attr("__getitem__")("annotated_end"));
+  // unchecked accesses to numpy array
+  auto gene_idx = arr_gene_idx.unchecked<1>();
+  auto start = arr_start.unchecked<1>();
+  auto end = arr_end.unchecked<1>();
+  auto ann_start = arr_ann_start.unchecked<1>();
+  auto ann_end = arr_ann_end.unchecked<1>();
+  // create vector of genes matching input arrays
+  using majiq::Exon;
+  using majiq::KnownGene;
+  using majiq::ClosedInterval;
+
+  std::vector<Exon> exon_vec{};
+  exon_vec.reserve(gene_idx.shape(0));
+  for (size_t i = 0; i < gene_idx.shape(0); ++i) {
+    exon_vec.push_back(Exon{
+        KnownGene{gene_idx(i), genes}, ClosedInterval{start(i), end(i)},
+        ClosedInterval{ann_start(i), ann_end(i)}});
+  }
+  return std::make_shared<Exons>(std::move(exon_vec));
+}
+template <class Connections>
+std::shared_ptr<Connections> ConnectionsFromDataset(
+    std::shared_ptr<Genes> genes, py::object xr_connections) {
+  using IntervalT = typename Connections::IntervalT;
+  using RegionT = typename Connections::value_type;
+  py::function np_array = py::module_::import("numpy").attr("array");
+  // extract usable values from dataset
+  py::array_t<size_t> arr_gene_idx
+    = np_array(xr_connections.attr("__getitem__")("gene_idx"));
+  py::array_t<position_t> arr_start
+    = np_array(xr_connections.attr("__getitem__")("start"));
+  py::array_t<position_t> arr_end
+    = np_array(xr_connections.attr("__getitem__")("end"));
+  py::array_t<bool> arr_denovo
+    = np_array(xr_connections.attr("__getitem__")("denovo"));
+  py::array_t<bool> arr_passed_build
+    = np_array(xr_connections.attr("__getitem__")("passed_build"));
+  py::array_t<bool> arr_simplified
+    = np_array(xr_connections.attr("__getitem__")("simplified"));
+  // unchecked accesses to numpy array
+  auto gene_idx = arr_gene_idx.unchecked<1>();
+  auto start = arr_start.unchecked<1>();
+  auto end = arr_end.unchecked<1>();
+  auto denovo = arr_denovo.unchecked<1>();
+  auto passed_build = arr_passed_build.unchecked<1>();
+  auto simplified = arr_simplified.unchecked<1>();
+  // create vector of genes matching input arrays
+  using majiq::KnownGene;
+
+  std::vector<RegionT> connection_vec{};
+  connection_vec.reserve(gene_idx.shape(0));
+  for (size_t i = 0; i < gene_idx.shape(0); ++i) {
+    connection_vec.push_back(RegionT{
+        KnownGene{gene_idx(i), genes}, IntervalT{start(i), end(i)},
+        denovo(i), passed_build(i), simplified(i)});
+  }
+  return std::make_shared<Connections>(std::move(connection_vec));
+}
 
 PYBIND11_MODULE(new_majiq, m) {
   // documentation of module
@@ -74,18 +205,6 @@ PYBIND11_MODULE(new_majiq, m) {
     ClosedInterval
   )pbdoc";
 
-  using majiq::position_t;
-  using majiq::seqid_t;
-  using majiq::geneid_t;
-  using majiq::genename_t;
-
-  using majiq::SpliceGraph;
-  using majiq::Exons;
-  using majiq::Introns;
-  using majiq::GeneJunctions;
-  using majiq::Genes;
-  using majiq::Contigs;
-  using majiq::OverGenes;
 
   // vector<string> will be bound to Python list
   py::bind_vector<std::vector<std::string>>(m, "VectorString");
@@ -532,6 +651,24 @@ PYBIND11_MODULE(new_majiq, m) {
             Path for resulting file. Raises error if file already exists.
         )pbdoc",
         py::arg("output_path"))
+    .def(py::init([](py::str netcdf_path) {
+          py::function load_dataset
+            = py::module_::import("xarray").attr("load_dataset");
+          auto contigs = ContigsFromDataset(
+              load_dataset(netcdf_path, "group"_a = "contigs"));
+          auto genes = GenesFromDataset(
+              contigs, load_dataset(netcdf_path, "group"_a = "genes"));
+          auto exons = ExonsFromDataset(
+              genes, load_dataset(netcdf_path, "group"_a = "exons"));
+          auto junctions = ConnectionsFromDataset<GeneJunctions>(
+              genes, load_dataset(netcdf_path, "group"_a = "junctions"));
+          auto introns = ConnectionsFromDataset<Introns>(
+              genes, load_dataset(netcdf_path, "group"_a = "introns"));
+          return SpliceGraph{
+              std::move(contigs), std::move(genes), std::move(exons),
+              std::move(junctions), std::move(introns)};
+          }),
+        "Load splicegraph from netCDF file", py::arg("netcdf_path"))
     // string representation of splicegraph
     .def("__repr__", [](const SpliceGraph& sg) -> std::string {
         std::ostringstream oss;
