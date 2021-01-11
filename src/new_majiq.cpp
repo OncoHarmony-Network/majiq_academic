@@ -16,6 +16,7 @@
 #include <vector>
 #include <array>
 #include <initializer_list>
+#include <cstddef>
 
 #include "MajiqTypes.hpp"
 #include "SpliceGraph.hpp"
@@ -27,12 +28,6 @@
 namespace py = pybind11;
 using namespace pybind11::literals;  // bring in _a literal
 
-// <https://stackoverflow.com/questions/13180842/how-to-calculate-offset-of-a-class-member-at-compile-time>
-template <typename T, typename U>
-constexpr size_t offsetOf(U T::*member) {
-  return reinterpret_cast<char*>(&(static_cast<T*>(nullptr)->*member))
-    - static_cast<char*>(nullptr);
-}
 /*
  * Create read-only array view into vector with offset (i.e. for struct member)
  */
@@ -279,8 +274,7 @@ PYBIND11_MODULE(new_majiq, m) {
     .def_property_readonly("gene_idx",
         [](py::object& exons_obj) -> py::array_t<size_t> {
         Exons& exons = exons_obj.cast<Exons&>();
-        const size_t offset = offsetOf(&majiq::Exon::gene)
-            + offsetOf(&majiq::KnownGene::gene_idx);
+        const size_t offset = offsetof(majiq::Exon, gene.gene_idx);
         return ArrayFromVectorAndOffset<size_t, majiq::Exon>(
             exons.data(), offset, exons_obj);
         },
@@ -288,8 +282,7 @@ PYBIND11_MODULE(new_majiq, m) {
     .def_property_readonly("start",
         [](py::object& exons_obj) -> py::array_t<position_t> {
         Exons& exons = exons_obj.cast<Exons&>();
-        const size_t offset = offsetOf(&majiq::Exon::coordinates)
-            + offsetOf(&majiq::ClosedInterval::start);
+        const size_t offset = offsetof(majiq::Exon, coordinates.start);
         return ArrayFromVectorAndOffset<position_t, majiq::Exon>(
             exons.data(), offset, exons_obj);
         },
@@ -297,8 +290,7 @@ PYBIND11_MODULE(new_majiq, m) {
     .def_property_readonly("end",
         [](py::object& exons_obj) -> py::array_t<position_t> {
         Exons& exons = exons_obj.cast<Exons&>();
-        const size_t offset = offsetOf(&majiq::Exon::coordinates)
-            + offsetOf(&majiq::ClosedInterval::end);
+        const size_t offset = offsetof(majiq::Exon, coordinates.end);
         return ArrayFromVectorAndOffset<position_t, majiq::Exon>(
             exons.data(), offset, exons_obj);
         },
@@ -306,8 +298,7 @@ PYBIND11_MODULE(new_majiq, m) {
     .def_property_readonly("annotated_start",
         [](py::object& exons_obj) -> py::array_t<position_t> {
         Exons& exons = exons_obj.cast<Exons&>();
-        const size_t offset = offsetOf(&majiq::Exon::data)
-            + offsetOf(&majiq::ClosedInterval::start);
+        const size_t offset = offsetof(majiq::Exon, data.start);
         return ArrayFromVectorAndOffset<position_t, majiq::Exon>(
             exons.data(), offset, exons_obj);
         },
@@ -315,8 +306,7 @@ PYBIND11_MODULE(new_majiq, m) {
     .def_property_readonly("annotated_end",
         [](py::object& exons_obj) -> py::array_t<position_t> {
         Exons& exons = exons_obj.cast<Exons&>();
-        const size_t offset = offsetOf(&majiq::Exon::data)
-            + offsetOf(&majiq::ClosedInterval::end);
+        const size_t offset = offsetof(majiq::Exon, data.end);
         return ArrayFromVectorAndOffset<position_t, majiq::Exon>(
             exons.data(), offset, exons_obj);
         },
@@ -338,8 +328,7 @@ PYBIND11_MODULE(new_majiq, m) {
     .def_property_readonly("gene_idx",
         [](py::object& introns_obj) -> py::array_t<size_t> {
         Introns& introns = introns_obj.cast<Introns&>();
-        const size_t offset = offsetOf(&majiq::Intron::gene)
-            + offsetOf(&majiq::KnownGene::gene_idx);
+        const size_t offset = offsetof(majiq::Intron, gene.gene_idx);
         return ArrayFromVectorAndOffset<size_t, majiq::Intron>(
             introns.data(), offset, introns_obj);
         },
@@ -347,8 +336,7 @@ PYBIND11_MODULE(new_majiq, m) {
     .def_property_readonly("start",
         [](py::object& introns_obj) -> py::array_t<position_t> {
         Introns& introns = introns_obj.cast<Introns&>();
-        const size_t offset = offsetOf(&majiq::Intron::coordinates)
-            + offsetOf(&majiq::ClosedInterval::start);
+        const size_t offset = offsetof(majiq::Intron, coordinates.start);
         return ArrayFromVectorAndOffset<position_t, majiq::Intron>(
             introns.data(), offset, introns_obj);
         },
@@ -356,8 +344,7 @@ PYBIND11_MODULE(new_majiq, m) {
     .def_property_readonly("end",
         [](py::object& introns_obj) -> py::array_t<position_t> {
         Introns& introns = introns_obj.cast<Introns&>();
-        const size_t offset = offsetOf(&majiq::Intron::coordinates)
-            + offsetOf(&majiq::ClosedInterval::end);
+        const size_t offset = offsetof(majiq::Intron, coordinates.end);
         return ArrayFromVectorAndOffset<position_t, majiq::Intron>(
             introns.data(), offset, introns_obj);
         },
@@ -365,8 +352,7 @@ PYBIND11_MODULE(new_majiq, m) {
     .def_property_readonly("denovo",
         [](py::object& introns_obj) -> py::array_t<bool> {
         Introns& introns = introns_obj.cast<Introns&>();
-        const size_t offset = offsetOf(&majiq::Intron::data)
-            + offsetOf(&majiq::detail::Connection::denovo);
+        const size_t offset = offsetof(majiq::Intron, data.denovo);
         return ArrayFromVectorAndOffset<bool, majiq::Intron>(
             introns.data(), offset, introns_obj);
         },
@@ -374,8 +360,7 @@ PYBIND11_MODULE(new_majiq, m) {
     .def_property_readonly("passed_build",
         [](py::object& introns_obj) -> py::array_t<bool> {
         Introns& introns = introns_obj.cast<Introns&>();
-        const size_t offset = offsetOf(&majiq::Intron::data)
-            + offsetOf(&majiq::detail::Connection::passed_build);
+        const size_t offset = offsetof(majiq::Intron, data.passed_build);
         return ArrayFromVectorAndOffset<bool, majiq::Intron>(
             introns.data(), offset, introns_obj);
         },
@@ -383,8 +368,7 @@ PYBIND11_MODULE(new_majiq, m) {
     .def_property_readonly("simplified",
         [](py::object& introns_obj) -> py::array_t<bool> {
         Introns& introns = introns_obj.cast<Introns&>();
-        const size_t offset = offsetOf(&majiq::Intron::data)
-            + offsetOf(&majiq::detail::Connection::simplified);
+        const size_t offset = offsetof(majiq::Intron, data.simplified);
         return ArrayFromVectorAndOffset<bool, majiq::Intron>(
             introns.data(), offset, introns_obj);
         },
@@ -407,8 +391,7 @@ PYBIND11_MODULE(new_majiq, m) {
     .def_property_readonly("gene_idx",
         [](py::object& junctions_obj) -> py::array_t<size_t> {
         GeneJunctions& junctions = junctions_obj.cast<GeneJunctions&>();
-        const size_t offset = offsetOf(&majiq::GeneJunction::gene)
-            + offsetOf(&majiq::KnownGene::gene_idx);
+        const size_t offset = offsetof(majiq::GeneJunction, gene.gene_idx);
         return ArrayFromVectorAndOffset<size_t, majiq::GeneJunction>(
             junctions.data(), offset, junctions_obj);
         },
@@ -416,8 +399,7 @@ PYBIND11_MODULE(new_majiq, m) {
     .def_property_readonly("start",
         [](py::object& junctions_obj) -> py::array_t<position_t> {
         GeneJunctions& junctions = junctions_obj.cast<GeneJunctions&>();
-        const size_t offset = offsetOf(&majiq::GeneJunction::coordinates)
-            + offsetOf(&majiq::OpenInterval::start);
+        const size_t offset = offsetof(majiq::GeneJunction, coordinates.start);
         return ArrayFromVectorAndOffset<position_t, majiq::GeneJunction>(
             junctions.data(), offset, junctions_obj);
         },
@@ -425,8 +407,7 @@ PYBIND11_MODULE(new_majiq, m) {
     .def_property_readonly("end",
         [](py::object& junctions_obj) -> py::array_t<position_t> {
         GeneJunctions& junctions = junctions_obj.cast<GeneJunctions&>();
-        const size_t offset = offsetOf(&majiq::GeneJunction::coordinates)
-            + offsetOf(&majiq::OpenInterval::end);
+        const size_t offset = offsetof(majiq::GeneJunction, coordinates.end);
         return ArrayFromVectorAndOffset<position_t, majiq::GeneJunction>(
             junctions.data(), offset, junctions_obj);
         },
@@ -434,8 +415,7 @@ PYBIND11_MODULE(new_majiq, m) {
     .def_property_readonly("denovo",
         [](py::object& junctions_obj) -> py::array_t<bool> {
         GeneJunctions& junctions = junctions_obj.cast<GeneJunctions&>();
-        const size_t offset = offsetOf(&majiq::GeneJunction::data)
-            + offsetOf(&majiq::detail::Connection::denovo);
+        const size_t offset = offsetof(majiq::GeneJunction, data.denovo);
         return ArrayFromVectorAndOffset<bool, majiq::GeneJunction>(
             junctions.data(), offset, junctions_obj);
         },
@@ -443,8 +423,7 @@ PYBIND11_MODULE(new_majiq, m) {
     .def_property_readonly("passed_build",
         [](py::object& junctions_obj) -> py::array_t<bool> {
         GeneJunctions& junctions = junctions_obj.cast<GeneJunctions&>();
-        const size_t offset = offsetOf(&majiq::GeneJunction::data)
-            + offsetOf(&majiq::detail::Connection::passed_build);
+        const size_t offset = offsetof(majiq::GeneJunction, data.passed_build);
         return ArrayFromVectorAndOffset<bool, majiq::GeneJunction>(
             junctions.data(), offset, junctions_obj);
         },
@@ -452,8 +431,7 @@ PYBIND11_MODULE(new_majiq, m) {
     .def_property_readonly("simplified",
         [](py::object& junctions_obj) -> py::array_t<bool> {
         GeneJunctions& junctions = junctions_obj.cast<GeneJunctions&>();
-        const size_t offset = offsetOf(&majiq::GeneJunction::data)
-            + offsetOf(&majiq::detail::Connection::simplified);
+        const size_t offset = offsetof(majiq::GeneJunction, data.simplified);
         return ArrayFromVectorAndOffset<bool, majiq::GeneJunction>(
             junctions.data(), offset, junctions_obj);
         },
@@ -476,7 +454,7 @@ PYBIND11_MODULE(new_majiq, m) {
     .def_property_readonly("strand",
         [](py::object& genes_obj) -> py::array_t<std::array<char, 1>> {
         Genes& genes = genes_obj.cast<Genes&>();
-        const size_t offset = offsetOf(&majiq::Gene::strand);
+        const size_t offset = offsetof(majiq::Gene, strand);
         return ArrayFromVectorAndOffset<std::array<char, 1>, majiq::Gene>(
             genes.data(), offset, genes_obj);
         },
@@ -484,8 +462,7 @@ PYBIND11_MODULE(new_majiq, m) {
     .def_property_readonly("contig_idx",
         [](py::object& genes_obj) -> py::array_t<size_t> {
         Genes& genes = genes_obj.cast<Genes&>();
-        const size_t offset = offsetOf(&majiq::Gene::contig)
-            + offsetOf(&majiq::KnownContig::contig_idx);
+        const size_t offset = offsetof(majiq::Gene, contig.contig_idx);
         return ArrayFromVectorAndOffset<size_t, majiq::Gene>(
             genes.data(), offset, genes_obj);
         },
@@ -493,8 +470,7 @@ PYBIND11_MODULE(new_majiq, m) {
     .def_property_readonly("start",
         [](py::object& genes_obj) -> py::array_t<position_t> {
         Genes& genes = genes_obj.cast<Genes&>();
-        const size_t offset = offsetOf(&majiq::Gene::interval)
-            + offsetOf(&majiq::ClosedInterval::start);
+        const size_t offset = offsetof(majiq::Gene, interval.start);
         return ArrayFromVectorAndOffset<position_t, majiq::Gene>(
             genes.data(), offset, genes_obj);
         },
@@ -502,8 +478,7 @@ PYBIND11_MODULE(new_majiq, m) {
     .def_property_readonly("end",
         [](py::object& genes_obj) -> py::array_t<position_t> {
         Genes& genes = genes_obj.cast<Genes&>();
-        const size_t offset = offsetOf(&majiq::Gene::interval)
-            + offsetOf(&majiq::ClosedInterval::end);
+        const size_t offset = offsetof(majiq::Gene, interval.end);
         return ArrayFromVectorAndOffset<position_t, majiq::Gene>(
             genes.data(), offset, genes_obj);
         },
@@ -534,8 +509,7 @@ PYBIND11_MODULE(new_majiq, m) {
     .def_property_readonly("contig_idx",
         [](py::object& overgenes_obj) -> py::array_t<size_t> {
         OverGenes& overgenes = overgenes_obj.cast<OverGenes&>();
-        const size_t offset = offsetOf(&majiq::OverGene::contig)
-            + offsetOf(&majiq::KnownContig::contig_idx);
+        const size_t offset = offsetof(majiq::OverGene, contig.contig_idx);
         return ArrayFromVectorAndOffset<size_t, majiq::OverGene>(
             overgenes.overgenes(), offset, overgenes_obj);
         },
@@ -543,8 +517,7 @@ PYBIND11_MODULE(new_majiq, m) {
     .def_property_readonly("start",
         [](py::object& overgenes_obj) -> py::array_t<position_t> {
         OverGenes& overgenes = overgenes_obj.cast<OverGenes&>();
-        const size_t offset = offsetOf(&majiq::OverGene::coordinates)
-            + offsetOf(&majiq::ClosedInterval::start);
+        const size_t offset = offsetof(majiq::OverGene, coordinates.start);
         return ArrayFromVectorAndOffset<position_t, majiq::OverGene>(
             overgenes.overgenes(), offset, overgenes_obj);
         },
@@ -552,8 +525,7 @@ PYBIND11_MODULE(new_majiq, m) {
     .def_property_readonly("end",
         [](py::object& overgenes_obj) -> py::array_t<position_t> {
         OverGenes& overgenes = overgenes_obj.cast<OverGenes&>();
-        const size_t offset = offsetOf(&majiq::OverGene::coordinates)
-            + offsetOf(&majiq::ClosedInterval::end);
+        const size_t offset = offsetof(majiq::OverGene, coordinates.end);
         return ArrayFromVectorAndOffset<position_t, majiq::OverGene>(
             overgenes.overgenes(), offset, overgenes_obj);
         },
