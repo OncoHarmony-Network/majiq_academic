@@ -420,12 +420,14 @@ class ClassifyConfig:
                     else:
                         settings['enabled_outputs'] = settings['enabled_outputs'].split(',')
                         for enabled_output in settings['enabled_outputs']:
-                            if not enabled_output in ('summary', 'events', 'junctions', 'heatmap', 'mpe', 'training_junctions'):
+                            if not enabled_output in ('summary', 'events', 'junctions', 'heatmap', 'mpe',
+                                                      'training_junctions', 'training_paths'):
                                 voila_log().critical("Unrecognized enabled output: %s" % enabled_output)
                                 sys.exit(1)
                         if ('junctions' in settings['enabled_outputs'] or
                             'heatmap' in settings['enabled_outputs'] or
-                            'training_junctions' in settings['enabled_outputs']) and not \
+                            'training_junctions' in settings['enabled_outputs'] or
+                            'training_paths' in settings['enabled_outputs']) and not \
                             'events' in settings['enabled_outputs']:
                             settings['enabled_outputs'].append('events')
                 else:

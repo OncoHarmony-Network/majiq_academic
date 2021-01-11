@@ -14,6 +14,7 @@ from rna_voila.vlsv import get_expected_psi, matrix_area
 from itertools import combinations
 from operator import itemgetter
 import sys, json
+import networkx as nx
 
 summaryVars2Headers = {
     'cassette_exon': 'cassette',
@@ -65,7 +66,7 @@ class BaseTsvWriter(MultiQuantWriter):
 
         self.heatmap_cache = {}
         self.junction_cache = []
-        self.training_junction_cache = []
+        self.training_junction_cache = {}
 
 
     @property
@@ -215,6 +216,8 @@ class TsvWriter(BaseTsvWriter):
             names += ['mpe_primerable_regions.tsv']
         if 'training_junctions' in config.enabled_outputs:
             names += ['training_junctions.tsv']
+        if 'training_paths' in config.enabled_outputs:
+            names += ['training_paths.tsv']
 
         return names
 
@@ -336,6 +339,11 @@ class TsvWriter(BaseTsvWriter):
                                                  'is_intron'] + self.quantification_headers
                 self.start_headers(headers, 'training_junctions.tsv')
 
+            if 'training_paths' in self.config.enabled_outputs:
+                headers = ['gene_id', 'seqid', 'strand', 'path_id', 'path', 'edge_type', 'junc_ids', 'exon_length_mod_3']
+                self.start_headers(headers, 'training_paths.tsv')
+
+
 
     def _determine_changing(self, all_quants):
 
@@ -379,21 +387,83 @@ class TsvWriter(BaseTsvWriter):
             return abs(getattr(e1, pos1)-getattr(e2, pos2))
         return abs(getattr(e2, reverse_strand_map[pos2])-getattr(e1, reverse_strand_map[pos1]))
 
-    def _add_training_junction(self, common, edge, quants):
-        if 'training_junctions' in self.config.enabled_outputs:
-            self.training_junction_cache.append((common, edge, quants,))
+    def _add_training_junction(self, common, edge, quants, module_idx):
+        if 'training_junctions' in self.config.enabled_outputs or 'training_paths' in self.config.enabled_outputs:
+            if not module_idx in self.training_junction_cache:
+                self.training_junction_cache[module_idx] = []
+            self.training_junction_cache[module_idx].append((common, edge, quants,))
+
+    def training_paths(self):
+        with open(os.path.join(self.config.directory, 'training_paths.tsv.%s' % self.pid), 'a', newline='') as csvfile:
+            writer = csv.writer(csvfile, dialect='excel-tab', delimiter='\t')
+
+            for module_idx, junc_list in self.training_junction_cache.items():
+                # for each module, build a subgraph based only on junctions from events in the module
+                g = nx.DiGraph()
+                for common, edge, quants in junc_list:
+                    e1 = self.graph.start_node(edge)
+                    e2 = self.graph.end_node(edge)
+
+                    g.add_edge(edge.absolute_start, edge.absolute_end, ir=edge.ir, _type='j')
+                    g.add_edge(e1.absolute_start, e1.absolute_end, _type='e')
+                    g.add_edge(e2.absolute_start, e2.absolute_end, _type='e')
+
+
+                sink_nodes = [node for node, outdegree in g.out_degree(g.nodes()) if outdegree == 0]
+                source_nodes = [node for node, indegree in g.in_degree(g.nodes()) if indegree == 0]
+
+
+                path_idx = 0
+                for source in source_nodes:
+                    for sink in sink_nodes:
+                        for path in nx.all_simple_paths(g, source=source, target=sink):
+                            path_idx += 1
+                            # one row for one path
+
+                            path_id = f"{self.gene_id}_{self.graph.chromosome}_{self.graph.strand}_{module_idx}_{path_idx}"
+                            junc_coords = []
+                            junc_types = []
+                            junc_ids = []
+                            exon_lengths = []
+
+                            for n1, n2 in zip(path, path[1:]):
+                                data = g.get_edge_data(n1, n2)
+                                if data['_type'] == 'e':
+                                    exon_lengths.append(n2-n1)
+                                    continue
+                                _type = 'I' if data['ir'] else 'J'
+                                junc_coords.append(f"{n1}-{n2}")
+                                junc_types.append(_type)
+                                junc_ids.append(f"{self.gene_id}_{self.graph.chromosome}_{self.graph.strand}_{n1}_{n2}_{_type}")
+
+                            if len(exon_lengths) <= 2:
+                                exon_mod = 'N/A'
+                            else:
+                                exon_mod = str(sum(exon_lengths[1:-1]) % 3)
+
+                            path_out = "_".join(junc_coords)
+                            edge_type_out = "_".join(junc_types)
+                            junc_ids_out = "_".join(junc_ids)
+
+                            writer.writerow([self.gene_id, self.graph.chromosome, self.graph.strand,
+                                             path_id, path_out, edge_type_out, junc_ids_out, exon_mod])
+
+
+
+
 
     def training_junctions(self):
         with open(os.path.join(self.config.directory, 'training_junctions.tsv.%s' % self.pid), 'a', newline='') as csvfile:
             writer = csv.writer(csvfile, dialect='excel-tab', delimiter='\t')
-            for common, edge, quants in self.training_junction_cache:
-                exon1 = self.graph.start_node(edge)
-                exon2 = self.graph.end_node(edge)
-                junc_id = f"{self.gene_id}_{self.graph.chromosome}_{self.graph.strand}_{edge.absolute_start}_{edge.absolute_end}_{'I' if edge.ir else 'J'}"
-                writer.writerow(common + [junc_id, edge.absolute_start, edge.absolute_end,
-                                 '', exon1.absolute_start, exon1.absolute_end,
-                                 '', exon2.absolute_start, exon2.absolute_end,
-                                 edge.ir] + quants)
+            for junc_list in self.training_junction_cache.values():
+                for common, edge, quants in junc_list:
+                    exon1 = self.graph.start_node(edge)
+                    exon2 = self.graph.end_node(edge)
+                    junc_id = f"{self.gene_id}_{self.graph.chromosome}_{self.graph.strand}_{edge.absolute_start}_{edge.absolute_end}_{'I' if edge.ir else 'J'}"
+                    writer.writerow(common + [junc_id, edge.absolute_start, edge.absolute_end,
+                                     '', exon1.absolute_start, exon1.absolute_end,
+                                     '', exon2.absolute_start, exon2.absolute_end,
+                                     edge.ir] + quants)
 
             # for module in self.modules:
             #     events, _complex, _total_events = self.as_types[module.idx]
@@ -488,7 +558,7 @@ class TsvWriter(BaseTsvWriter):
                             quants = [event_non_changing, event_changing] + self.quantifications(module, 's', event['Skip'], event['C1'])
                             writer.writerow(src_common + row + [event_size] + quants)
                             self.junction_cache.append((module, src_common, quants, row[0], row[4], row[5]))
-                            self._add_training_junction(src_common, event['Skip'], quants)
+                            self._add_training_junction(src_common, event['Skip'], quants, module.idx)
                             self.heatmap_add(module, src_common, quants,
                                              event['Skip'].absolute_end - event['Skip'].absolute_start,
                                              row[0], row[4], row[5])
@@ -503,7 +573,7 @@ class TsvWriter(BaseTsvWriter):
                             quants = [event_non_changing, event_changing] + self.quantifications(module, 's', event['Include1'], event['C1'])
                             writer.writerow(src_common + row + [event_size] + quants)
                             self.junction_cache.append((module, src_common, quants, row[0], row[4], row[5]))
-                            self._add_training_junction(src_common, event['Include1'], quants)
+                            self._add_training_junction(src_common, event['Include1'], quants, module.idx)
                             self.heatmap_add(module, src_common, quants,
                                              event['Include1'].absolute_end - event['Include1'].absolute_start,
                                              row[0], row[4], row[5])
@@ -518,7 +588,7 @@ class TsvWriter(BaseTsvWriter):
                             quants = [event_non_changing, event_changing] + self.quantifications(module, 't', event['Skip'], event['C2'])
                             writer.writerow(trg_common + row + [event_size] + quants)
                             self.junction_cache.append((module, trg_common, quants, row[0], row[4], row[5]))
-                            self._add_training_junction(trg_common, event['Skip'], quants)
+                            self._add_training_junction(trg_common, event['Skip'], quants, module.idx)
                             self.heatmap_add(module, trg_common, quants,
                                              event['Skip'].absolute_end - event['Skip'].absolute_start,
                                              row[0], row[4], row[5])
@@ -533,7 +603,7 @@ class TsvWriter(BaseTsvWriter):
                             quants = [event_non_changing, event_changing] + self.quantifications(module, 't', event['Include2'], event['C2'])
                             writer.writerow(trg_common + row + [event_size] + quants)
                             self.junction_cache.append((module, trg_common, quants, row[0], row[4], row[5]))
-                            self._add_training_junction(trg_common, event['Include2'], quants)
+                            self._add_training_junction(trg_common, event['Include2'], quants, module.idx)
                             self.heatmap_add(module, trg_common, quants,
                                              event['Include2'].absolute_end - event['Include2'].absolute_start,
                                              row[0], row[4], row[5])
