@@ -10,6 +10,7 @@
 
 #include <tuple>
 #include <functional>
+#include <vector>
 #include <boost/functional/hash.hpp>
 
 #include "Regions.hpp"
@@ -67,6 +68,17 @@ template <> struct hash<majiq::Intron> {
 
 namespace majiq {
 using Introns = detail::GeneRegions<Intron, std::less<Intron>>;
+
+Introns FilterPassedIntrons(const Introns& base, bool keep_annotated) {
+  std::vector<Intron> passed;
+  std::for_each(base.begin(), base.end(),
+      [&passed, keep_annotated](const Intron& x) {
+        if (x.passed_build() || (keep_annotated && !x.denovo())) {
+          passed.push_back(x);
+        }
+      });
+  return Introns{passed, Introns::NoCheckValid{}};
+}
 }  // namespace majiq
 
 #endif  // MAJIQ_INTRONS_HPP
