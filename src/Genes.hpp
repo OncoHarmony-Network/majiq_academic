@@ -149,6 +149,7 @@ struct KnownGene {
   std::shared_ptr<Genes> known_genes;
 
   // constructors
+  KnownGene() = default;
   KnownGene(size_t _gene_idx, std::shared_ptr<Genes> _known_genes)
       : gene_idx{_gene_idx}, known_genes{_known_genes} {
   }

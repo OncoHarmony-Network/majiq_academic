@@ -64,6 +64,10 @@ struct ContigRegion {
       GeneStrandness _strand)
       : ContigRegion{_contig, _coordinates, _strand, DataT{}} {
   }
+  ContigRegion()
+      : ContigRegion{KnownContig{}, IntervalT{}, GeneStrandness::AMBIGUOUS,
+        DataT{}} {
+  }
   ContigRegion(const ContigRegion& x) = default;
   ContigRegion(ContigRegion&& x) = default;
   ContigRegion& operator=(const ContigRegion& x) = default;
@@ -89,6 +93,7 @@ struct GeneRegion {
   GeneRegion(KnownGene _gene, IntervalT _coordinates)
       : GeneRegion{_gene, _coordinates, DataT{}} {
   }
+  GeneRegion() : GeneRegion{KnownGene{}, IntervalT{}} { }
   GeneRegion(const GeneRegion& x) = default;
   GeneRegion(GeneRegion&& x) = default;
   GeneRegion& operator=(const GeneRegion& x) = default;

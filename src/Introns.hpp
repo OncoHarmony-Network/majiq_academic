@@ -41,6 +41,7 @@ struct Intron : public detail::GeneRegion<ClosedInterval, detail::Connection> {
   Intron(KnownGene gene, ClosedInterval coordinates)
       : Intron{gene, coordinates, false, false, false} {
   }
+  Intron() : Intron{KnownGene{}, ClosedInterval{}} { }
   Intron(const Intron& x) = default;
   Intron(Intron&& x) = default;
   Intron& operator=(const Intron& x) = default;

@@ -27,6 +27,10 @@ struct ContigJunction : public detail::ContigRegion<OpenInterval> {
       GeneStrandness strand)
       : detail::ContigRegion<OpenInterval>{contig, coordinates, strand} {
   }
+  ContigJunction()
+      : ContigJunction{KnownContig{}, OpenInterval{},
+        GeneStrandness::AMBIGUOUS} {
+  }
   ContigJunction(const ContigJunction& x) = default;
   ContigJunction(ContigJunction&& x) = default;
   ContigJunction& operator=(const ContigJunction& x) = default;
@@ -59,6 +63,7 @@ struct GeneJunction
   GeneJunction(KnownGene gene, OpenInterval coordinates)
       : GeneJunction{gene, coordinates, false, false, false} {
   }
+  GeneJunction() : GeneJunction{KnownGene{}, OpenInterval{}} { }
   GeneJunction(const GeneJunction& x) = default;
   GeneJunction(GeneJunction&& x) = default;
   GeneJunction& operator=(const GeneJunction& x) = default;

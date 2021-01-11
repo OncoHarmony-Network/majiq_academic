@@ -75,6 +75,7 @@ struct KnownContig {
   const Contig& get() const;
 
   // constructors
+  KnownContig() = default;
   KnownContig(
       size_t _contig_idx,
       const std::shared_ptr<Contigs>& _known_contigs)

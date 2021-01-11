@@ -41,8 +41,9 @@ struct Exon : detail::GeneRegion<ClosedInterval, ClosedInterval> {
       : Exon{_gene, _coordinates, _coordinates} {
   }
   Exon(KnownGene _gene, ClosedInterval _coordinates, MakeDenovo)
-      : Exon{_gene, _coordinates, ClosedInterval{-1, -1}} {
+      : Exon{_gene, _coordinates, ClosedInterval{}} {
   }
+  Exon() : Exon{KnownGene{}, ClosedInterval{}, ClosedInterval{}} { }
   Exon(const Exon& x) = default;
   Exon(Exon&& x) = default;
   Exon& operator=(const Exon& x) = default;
