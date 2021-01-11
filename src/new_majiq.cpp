@@ -15,6 +15,7 @@
 #include <stdexcept>
 #include <vector>
 #include <array>
+#include <initializer_list>
 
 #include "MajiqTypes.hpp"
 #include "SpliceGraph.hpp"
@@ -86,6 +87,29 @@ py::array_t<OutputT> ArrayFromOffsetsVector(
   return result;
 }
 
+/**
+ * Extract attrs from features to build xarray Dataset
+ */
+py::object XarrayDatasetFromObject(
+    py::object features,
+    py::str idx_name,
+    std::initializer_list<py::str> attrs) {
+  py::function np_arange = py::module_::import("numpy").attr("arange");
+  py::module_ xr = py::module_::import("xarray");
+  py::function xr_Dataset = xr.attr("Dataset");
+  py::function xr_DataArray = xr.attr("DataArray");
+  // coordinates for dataset in dictionary
+  py::dict coordinates;
+  // define the index dimension
+  coordinates[idx_name] = xr_DataArray(
+      np_arange(features.attr("__len__")()), "dims"_a = idx_name);
+  // extract remaining attributes
+  for (auto x : attrs) {
+    coordinates[x] = xr_DataArray(features.attr(x), "dims"_a = idx_name);
+  }
+  return xr_Dataset("coords"_a = coordinates);
+}
+
 using majiq::position_t;
 using majiq::seqid_t;
 using majiq::geneid_t;
@@ -111,20 +135,19 @@ std::shared_ptr<Contigs> ContigsFromDataset(py::object xr_contigs) {
 }
 std::shared_ptr<Genes> GenesFromDataset(
     std::shared_ptr<Contigs> contigs, py::object xr_genes) {
-  py::function np_array = py::module_::import("numpy").attr("array");
+  auto get_array = [&xr_genes](py::str key) {
+    py::function np_array = py::module_::import("numpy").attr("array");
+    return np_array(xr_genes.attr("__getitem__")(key));
+  };
   // extract usable values from dataset
-  py::array_t<size_t> arr_contig_idx
-    = np_array(xr_genes.attr("__getitem__")("contig_idx"));
-  py::array_t<position_t> arr_start
-    = np_array(xr_genes.attr("__getitem__")("start"));
-  py::array_t<position_t> arr_end
-    = np_array(xr_genes.attr("__getitem__")("end"));
-  py::array_t<std::array<char, 1>> arr_strand
-    = np_array(xr_genes.attr("__getitem__")("strand"));
+  py::array_t<size_t> arr_contig_idx = get_array("contig_idx");
+  py::array_t<position_t> arr_start = get_array("start");
+  py::array_t<position_t> arr_end = get_array("end");
+  py::array_t<std::array<char, 1>> arr_strand = get_array("strand");
   py::list geneid
-    = py::list(np_array(xr_genes.attr("__getitem__")("gene_id")));
+    = xr_genes.attr("__getitem__")("gene_id").attr("values").attr("tolist")();
   py::list genename
-    = py::list(np_array(xr_genes.attr("__getitem__")("gene_name")));
+    = xr_genes.attr("__getitem__")("gene_name").attr("values").attr("tolist")();
   // unchecked accesses to numpy array
   auto contig_idx = arr_contig_idx.unchecked<1>();
   auto start = arr_start.unchecked<1>();
@@ -148,18 +171,16 @@ std::shared_ptr<Genes> GenesFromDataset(
 }
 std::shared_ptr<Exons> ExonsFromDataset(
     std::shared_ptr<Genes> genes, py::object xr_exons) {
-  py::function np_array = py::module_::import("numpy").attr("array");
+  auto get_array = [&xr_exons](py::str key) {
+    py::function np_array = py::module_::import("numpy").attr("array");
+    return np_array(xr_exons.attr("__getitem__")(key));
+  };
   // extract usable values from dataset
-  py::array_t<size_t> arr_gene_idx
-    = np_array(xr_exons.attr("__getitem__")("gene_idx"));
-  py::array_t<position_t> arr_start
-    = np_array(xr_exons.attr("__getitem__")("start"));
-  py::array_t<position_t> arr_end
-    = np_array(xr_exons.attr("__getitem__")("end"));
-  py::array_t<position_t> arr_ann_start
-    = np_array(xr_exons.attr("__getitem__")("annotated_start"));
-  py::array_t<position_t> arr_ann_end
-    = np_array(xr_exons.attr("__getitem__")("annotated_end"));
+  py::array_t<size_t> arr_gene_idx = get_array("gene_idx");
+  py::array_t<position_t> arr_start = get_array("start");
+  py::array_t<position_t> arr_end = get_array("end");
+  py::array_t<position_t> arr_ann_start = get_array("annotated_start");
+  py::array_t<position_t> arr_ann_end = get_array("annotated_end");
   // unchecked accesses to numpy array
   auto gene_idx = arr_gene_idx.unchecked<1>();
   auto start = arr_start.unchecked<1>();
@@ -185,20 +206,17 @@ std::shared_ptr<Connections> ConnectionsFromDataset(
     std::shared_ptr<Genes> genes, py::object xr_connections) {
   using IntervalT = typename Connections::IntervalT;
   using RegionT = typename Connections::value_type;
-  py::function np_array = py::module_::import("numpy").attr("array");
+  auto get_array = [&xr_connections](py::str key) {
+    py::function np_array = py::module_::import("numpy").attr("array");
+    return np_array(xr_connections.attr("__getitem__")(key));
+  };
   // extract usable values from dataset
-  py::array_t<size_t> arr_gene_idx
-    = np_array(xr_connections.attr("__getitem__")("gene_idx"));
-  py::array_t<position_t> arr_start
-    = np_array(xr_connections.attr("__getitem__")("start"));
-  py::array_t<position_t> arr_end
-    = np_array(xr_connections.attr("__getitem__")("end"));
-  py::array_t<bool> arr_denovo
-    = np_array(xr_connections.attr("__getitem__")("denovo"));
-  py::array_t<bool> arr_passed_build
-    = np_array(xr_connections.attr("__getitem__")("passed_build"));
-  py::array_t<bool> arr_simplified
-    = np_array(xr_connections.attr("__getitem__")("simplified"));
+  py::array_t<size_t> arr_gene_idx = get_array("gene_idx");
+  py::array_t<position_t> arr_start = get_array("start");
+  py::array_t<position_t> arr_end = get_array("end");
+  py::array_t<bool> arr_denovo = get_array("denovo");
+  py::array_t<bool> arr_passed_build = get_array("passed_build");
+  py::array_t<bool> arr_simplified = get_array("simplified");
   // unchecked accesses to numpy array
   auto gene_idx = arr_gene_idx.unchecked<1>();
   auto start = arr_start.unchecked<1>();
@@ -305,26 +323,8 @@ PYBIND11_MODULE(new_majiq, m) {
         "array[int] of annotated exon ends")
     .def("df",
         [](py::object& exons) -> py::object {
-        py::module_ np = py::module_::import("numpy");
-        py::module_ xr = py::module_::import("xarray");
-        py::function xr_DataArray = xr.attr("DataArray");
-        py::function xr_Dataset = xr.attr("Dataset");
-        py::function np_arange = np.attr("arange");
-        // get coordinates for exon
-        auto index = py::tuple(2);
-        index[0] = py::str("exon_idx");
-        index[1] = np_arange(exons.attr("__len__")());
-        // list of coordinates for DataArray
-        auto index_list = py::list();
-        index_list.append(index);
-        // so the values we want out are:
-        auto coordinates = py::dict(
-            "gene_idx"_a = xr_DataArray(exons.attr("gene_idx"), index_list),
-            "start"_a = xr_DataArray(exons.attr("start"), index_list),
-            "end"_a = xr_DataArray(exons.attr("end"), index_list),
-            "annotated_start"_a = xr_DataArray(exons.attr("annotated_start"), index_list),
-            "annotated_end"_a = xr_DataArray(exons.attr("annotated_end"), index_list));
-        return xr_Dataset("coords"_a = coordinates);
+        return XarrayDatasetFromObject(exons, "exon_idx",
+            {"gene_idx", "start", "end", "annotated_start", "annotated_end"});
         },
         "View on exon information as xarray Dataset")
     .def("__repr__", [](const Exons& self) -> std::string {
@@ -388,27 +388,9 @@ PYBIND11_MODULE(new_majiq, m) {
         "array[bool] indicating if the connection is simplified")
     .def("df",
         [](py::object& introns) -> py::object {
-        py::module_ np = py::module_::import("numpy");
-        py::module_ xr = py::module_::import("xarray");
-        py::function xr_DataArray = xr.attr("DataArray");
-        py::function xr_Dataset = xr.attr("Dataset");
-        py::function np_arange = np.attr("arange");
-        // get coordinates for intron
-        auto index = py::tuple(2);
-        index[0] = py::str("intron_idx");
-        index[1] = np_arange(introns.attr("__len__")());
-        // list of coordinates for DataArray
-        auto index_list = py::list();
-        index_list.append(index);
-        // so the values we want out are:
-        auto coordinates = py::dict(
-            "gene_idx"_a = xr_DataArray(introns.attr("gene_idx"), index_list),
-            "start"_a = xr_DataArray(introns.attr("start"), index_list),
-            "end"_a = xr_DataArray(introns.attr("end"), index_list),
-            "denovo"_a = xr_DataArray(introns.attr("denovo"), index_list),
-            "passed_build"_a = xr_DataArray(introns.attr("passed_build"), index_list),
-            "simplified"_a = xr_DataArray(introns.attr("simplified"), index_list));
-        return xr_Dataset("coords"_a = coordinates);
+        return XarrayDatasetFromObject(introns, "intron_idx",
+            {"gene_idx", "start", "end",
+            "denovo", "passed_build", "simplified"});
         },
         "View on intron information as xarray Dataset")
     .def("__repr__", [](const Introns& self) -> std::string {
@@ -472,27 +454,9 @@ PYBIND11_MODULE(new_majiq, m) {
         "array[bool] indicating if the connection is simplified")
     .def("df",
         [](py::object& junctions) -> py::object {
-        py::module_ np = py::module_::import("numpy");
-        py::module_ xr = py::module_::import("xarray");
-        py::function xr_DataArray = xr.attr("DataArray");
-        py::function xr_Dataset = xr.attr("Dataset");
-        py::function np_arange = np.attr("arange");
-        // get coordinates for junction
-        auto index = py::tuple(2);
-        index[0] = py::str("junction_idx");
-        index[1] = np_arange(junctions.attr("__len__")());
-        // list of coordinates for DataArray
-        auto index_list = py::list();
-        index_list.append(index);
-        // so the values we want out are:
-        auto coordinates = py::dict(
-            "gene_idx"_a = xr_DataArray(junctions.attr("gene_idx"), index_list),
-            "start"_a = xr_DataArray(junctions.attr("start"), index_list),
-            "end"_a = xr_DataArray(junctions.attr("end"), index_list),
-            "denovo"_a = xr_DataArray(junctions.attr("denovo"), index_list),
-            "passed_build"_a = xr_DataArray(junctions.attr("passed_build"), index_list),
-            "simplified"_a = xr_DataArray(junctions.attr("simplified"), index_list));
-        return xr_Dataset("coords"_a = coordinates);
+        return XarrayDatasetFromObject(junctions, "junction_idx",
+            {"gene_idx", "start", "end",
+            "denovo", "passed_build", "simplified"});
         },
         "View on junction information as xarray Dataset")
     .def("__repr__", [](const GeneJunctions& self) -> std::string {
@@ -544,27 +508,8 @@ PYBIND11_MODULE(new_majiq, m) {
         "Sequence[str] of gene names in order matching gene_idx")
     .def("df",
         [](py::object& genes) -> py::object {
-        py::module_ np = py::module_::import("numpy");
-        py::module_ xr = py::module_::import("xarray");
-        py::function xr_DataArray = xr.attr("DataArray");
-        py::function xr_Dataset = xr.attr("Dataset");
-        py::function np_arange = np.attr("arange");
-        // get coordinates for gene
-        auto index = py::tuple(2);
-        index[0] = py::str("gene_idx");
-        index[1] = np_arange(genes.attr("__len__")());
-        // list of coordinates for DataArray
-        auto index_list = py::list();
-        index_list.append(index);
-        // so the values we want out are:
-        auto coordinates = py::dict(
-            "contig_idx"_a = xr_DataArray(genes.attr("contig_idx"), index_list),
-            "start"_a = xr_DataArray(genes.attr("start"), index_list),
-            "end"_a = xr_DataArray(genes.attr("end"), index_list),
-            "strand"_a = xr_DataArray(genes.attr("strand"), index_list),
-            "gene_id"_a = xr_DataArray(genes.attr("gene_id"), index_list),
-            "gene_name"_a = xr_DataArray(genes.attr("gene_name"), index_list));
-        return xr_Dataset("coords"_a = coordinates);
+        return XarrayDatasetFromObject(genes, "gene_idx",
+            {"contig_idx", "start", "end", "strand", "gene_id", "gene_name"});
         },
         "View on gene information as xarray Dataset")
     .def("__repr__", [](const Genes& self) -> std::string {
@@ -623,26 +568,8 @@ PYBIND11_MODULE(new_majiq, m) {
         "array[int] of gene_idx following that of last gene in the overgene")
     .def("df",
         [](py::object& overgenes) -> py::object {
-        py::module_ np = py::module_::import("numpy");
-        py::module_ xr = py::module_::import("xarray");
-        py::function xr_DataArray = xr.attr("DataArray");
-        py::function xr_Dataset = xr.attr("Dataset");
-        py::function np_arange = np.attr("arange");
-        // get coordinates for overgene
-        auto index = py::tuple(2);
-        index[0] = py::str("overgene_idx");
-        index[1] = np_arange(overgenes.attr("__len__")());
-        // list of coordinates for DataArray
-        auto index_list = py::list();
-        index_list.append(index);
-        // so the values we want out are:
-        auto coordinates = py::dict(
-            "contig_idx"_a = xr_DataArray(overgenes.attr("contig_idx"), index_list),
-            "start"_a = xr_DataArray(overgenes.attr("start"), index_list),
-            "end"_a = xr_DataArray(overgenes.attr("end"), index_list),
-            "gene_idx_begin"_a = xr_DataArray(overgenes.attr("gene_idx_begin"), index_list),
-            "gene_idx_end"_a = xr_DataArray(overgenes.attr("gene_idx_end"), index_list));
-        return xr_Dataset("coords"_a = coordinates);
+        return XarrayDatasetFromObject(overgenes, "overgene_idx",
+            {"contig_idx", "start", "end", "gene_idx_begin", "gene_idx_end"});
         },
         "View on overgene information as xarray Dataset")
     .def("__repr__", [](const OverGenes& self) -> std::string {
@@ -660,22 +587,7 @@ PYBIND11_MODULE(new_majiq, m) {
         )pbdoc")
     .def("df",
         [](py::object& contigs) -> py::object {
-        py::module_ np = py::module_::import("numpy");
-        py::module_ xr = py::module_::import("xarray");
-        py::function xr_DataArray = xr.attr("DataArray");
-        py::function xr_Dataset = xr.attr("Dataset");
-        py::function np_arange = np.attr("arange");
-        // get coordinates for contig
-        auto index = py::tuple(2);
-        index[0] = py::str("contig_idx");
-        index[1] = np_arange(contigs.attr("__len__")());
-        // list of coordinates for DataArray
-        auto index_list = py::list();
-        index_list.append(index);
-        // so the values we want out are:
-        auto coordinates = py::dict(
-            "seqid"_a = xr_DataArray(contigs.attr("seqid"), index_list));
-        return xr_Dataset("coords"_a = coordinates);
+        return XarrayDatasetFromObject(contigs, "contig_idx", {"seqid"});
         },
         "View on contig information as xarray Dataset")
     .def("__repr__", [](const Contigs& self) -> std::string {
@@ -796,11 +708,15 @@ PYBIND11_MODULE(new_majiq, m) {
               << output_path.cast<std::string>();
           throw std::invalid_argument(oss.str());
         }
-        sg.attr("exons").attr("to_netcdf")(output_path, "mode"_a = "w", "group"_a = "exons");
-        sg.attr("introns").attr("to_netcdf")(output_path, "mode"_a = "a", "group"_a = "introns");
-        sg.attr("junctions").attr("to_netcdf")(output_path, "mode"_a = "a", "group"_a = "junctions");
-        sg.attr("genes").attr("to_netcdf")(output_path, "mode"_a = "a", "group"_a = "genes");
-        sg.attr("contigs").attr("to_netcdf")(output_path, "mode"_a = "a", "group"_a = "contigs");
+        auto save = [&sg, &output_path](py::str key, py::str mode) {
+          sg.attr(key).attr("to_netcdf")(
+              output_path, "mode"_a = mode, "group"_a = key);
+        };
+        save("exons", "w");
+        save("introns", "a");
+        save("junctions", "a");
+        save("genes", "a");
+        save("contigs", "a");
         return;
         },
         R"pbdoc(
