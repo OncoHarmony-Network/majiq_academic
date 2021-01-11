@@ -189,7 +189,7 @@ std::shared_ptr<Exons> ExonsFromDataset(
 
   std::vector<Exon> exon_vec{};
   exon_vec.reserve(gene_idx.shape(0));
-  for (size_t i = 0; i < gene_idx.shape(0); ++i) {
+  for (py::ssize_t i = 0; i < gene_idx.shape(0); ++i) {
     exon_vec.push_back(Exon{
         KnownGene{gene_idx(i), genes}, ClosedInterval{start(i), end(i)},
         ClosedInterval{ann_start(i), ann_end(i)}});
@@ -224,7 +224,7 @@ std::shared_ptr<Connections> ConnectionsFromDataset(
 
   std::vector<RegionT> connection_vec{};
   connection_vec.reserve(gene_idx.shape(0));
-  for (size_t i = 0; i < gene_idx.shape(0); ++i) {
+  for (py::ssize_t i = 0; i < gene_idx.shape(0); ++i) {
     connection_vec.push_back(RegionT{
         KnownGene{gene_idx(i), genes}, IntervalT{start(i), end(i)},
         denovo(i), passed_build(i), simplified(i)});
