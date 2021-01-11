@@ -21,18 +21,21 @@
 
 
 namespace majiq {
-struct Exon : detail::GeneRegion<ClosedInterval> {
+struct Exon : detail::GeneRegion<ClosedInterval, ClosedInterval> {
  public:
-  using BaseT = detail::GeneRegion<ClosedInterval>;
+  using BaseT = detail::GeneRegion<ClosedInterval, ClosedInterval>;
   struct DefaultAnnotated { };
   struct MakeDenovo { };
 
   // exon-specific members
-  ClosedInterval annotated_coordinates;
+  inline ClosedInterval& annotated_coordinates() noexcept { return data; }
+  inline const ClosedInterval& annotated_coordinates() const noexcept {
+    return data;
+  }
 
   // constructors
   Exon(KnownGene _gene, ClosedInterval _coordinates, ClosedInterval _annotated)
-      : BaseT{_gene, _coordinates}, annotated_coordinates{_annotated} {
+      : BaseT{_gene, _coordinates, _annotated} {
   }
   Exon(KnownGene _gene, ClosedInterval _coordinates, DefaultAnnotated)
       : Exon{_gene, _coordinates, _coordinates} {
@@ -47,7 +50,7 @@ struct Exon : detail::GeneRegion<ClosedInterval> {
 
   // exon-specific information
   inline bool is_denovo() const noexcept {
-    return annotated_coordinates.is_invalid();
+    return annotated_coordinates().is_invalid();
   }
   inline bool is_half_exon() const noexcept {
     return coordinates.is_half_interval();
@@ -59,7 +62,7 @@ struct Exon : detail::GeneRegion<ClosedInterval> {
    * If denovo, return current coordinates to match previous MAJIQ
    */
   inline const ClosedInterval& legacy_annotated_coordinates() const noexcept {
-    return is_denovo() ? coordinates : annotated_coordinates;
+    return is_denovo() ? coordinates : annotated_coordinates();
   }
   /**
    * Get annotated version of exon

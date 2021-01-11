@@ -20,15 +20,22 @@
 
 
 namespace majiq {
-struct Intron
-  : public detail::GeneRegion<ClosedInterval>,
-    public detail::Connection {
+struct Intron : public detail::GeneRegion<ClosedInterval, detail::Connection> {
  public:
+  using BaseT = detail::GeneRegion<ClosedInterval, detail::Connection>;
+  // access data nicely
+  const bool& denovo() const noexcept { return data.denovo; }
+  bool& denovo() noexcept { return data.denovo; }
+  const bool& passed_build() const noexcept { return data.passed_build; }
+  bool& passed_build() noexcept { return data.passed_build; }
+  const bool& simplified() const noexcept { return data.simplified; }
+  bool& simplified() noexcept { return data.simplified; }
+
   // constructors
   Intron(KnownGene gene, ClosedInterval coordinates,
       bool denovo, bool passed_build, bool simplified)
-      : detail::GeneRegion<ClosedInterval>{gene, coordinates},
-        detail::Connection{denovo, passed_build, simplified} {
+      : BaseT{gene, coordinates,
+        detail::Connection{denovo, passed_build, simplified}} {
   }
   Intron(KnownGene gene, ClosedInterval coordinates)
       : Intron{gene, coordinates, false, false, false} {

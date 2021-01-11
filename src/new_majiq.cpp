@@ -306,7 +306,7 @@ PYBIND11_MODULE(new_majiq, m) {
     .def_property_readonly("annotated_start",
         [](py::object& exons_obj) -> py::array_t<position_t> {
         Exons& exons = exons_obj.cast<Exons&>();
-        const size_t offset = offsetOf(&majiq::Exon::annotated_coordinates)
+        const size_t offset = offsetOf(&majiq::Exon::data)
             + offsetOf(&majiq::ClosedInterval::start);
         return ArrayFromVectorAndOffset<position_t, majiq::Exon>(
             exons.data(), offset, exons_obj);
@@ -315,7 +315,7 @@ PYBIND11_MODULE(new_majiq, m) {
     .def_property_readonly("annotated_end",
         [](py::object& exons_obj) -> py::array_t<position_t> {
         Exons& exons = exons_obj.cast<Exons&>();
-        const size_t offset = offsetOf(&majiq::Exon::annotated_coordinates)
+        const size_t offset = offsetOf(&majiq::Exon::data)
             + offsetOf(&majiq::ClosedInterval::end);
         return ArrayFromVectorAndOffset<position_t, majiq::Exon>(
             exons.data(), offset, exons_obj);
@@ -365,7 +365,8 @@ PYBIND11_MODULE(new_majiq, m) {
     .def_property_readonly("denovo",
         [](py::object& introns_obj) -> py::array_t<bool> {
         Introns& introns = introns_obj.cast<Introns&>();
-        const size_t offset = offsetOf(&majiq::Intron::denovo);
+        const size_t offset = offsetOf(&majiq::Intron::data)
+            + offsetOf(&majiq::detail::Connection::denovo);
         return ArrayFromVectorAndOffset<bool, majiq::Intron>(
             introns.data(), offset, introns_obj);
         },
@@ -373,7 +374,8 @@ PYBIND11_MODULE(new_majiq, m) {
     .def_property_readonly("passed_build",
         [](py::object& introns_obj) -> py::array_t<bool> {
         Introns& introns = introns_obj.cast<Introns&>();
-        const size_t offset = offsetOf(&majiq::Intron::passed_build);
+        const size_t offset = offsetOf(&majiq::Intron::data)
+            + offsetOf(&majiq::detail::Connection::passed_build);
         return ArrayFromVectorAndOffset<bool, majiq::Intron>(
             introns.data(), offset, introns_obj);
         },
@@ -381,7 +383,8 @@ PYBIND11_MODULE(new_majiq, m) {
     .def_property_readonly("simplified",
         [](py::object& introns_obj) -> py::array_t<bool> {
         Introns& introns = introns_obj.cast<Introns&>();
-        const size_t offset = offsetOf(&majiq::Intron::simplified);
+        const size_t offset = offsetOf(&majiq::Intron::data)
+            + offsetOf(&majiq::detail::Connection::simplified);
         return ArrayFromVectorAndOffset<bool, majiq::Intron>(
             introns.data(), offset, introns_obj);
         },
@@ -431,7 +434,8 @@ PYBIND11_MODULE(new_majiq, m) {
     .def_property_readonly("denovo",
         [](py::object& junctions_obj) -> py::array_t<bool> {
         GeneJunctions& junctions = junctions_obj.cast<GeneJunctions&>();
-        const size_t offset = offsetOf(&majiq::GeneJunction::denovo);
+        const size_t offset = offsetOf(&majiq::GeneJunction::data)
+            + offsetOf(&majiq::detail::Connection::denovo);
         return ArrayFromVectorAndOffset<bool, majiq::GeneJunction>(
             junctions.data(), offset, junctions_obj);
         },
@@ -439,7 +443,8 @@ PYBIND11_MODULE(new_majiq, m) {
     .def_property_readonly("passed_build",
         [](py::object& junctions_obj) -> py::array_t<bool> {
         GeneJunctions& junctions = junctions_obj.cast<GeneJunctions&>();
-        const size_t offset = offsetOf(&majiq::GeneJunction::passed_build);
+        const size_t offset = offsetOf(&majiq::GeneJunction::data)
+            + offsetOf(&majiq::detail::Connection::passed_build);
         return ArrayFromVectorAndOffset<bool, majiq::GeneJunction>(
             junctions.data(), offset, junctions_obj);
         },
@@ -447,7 +452,8 @@ PYBIND11_MODULE(new_majiq, m) {
     .def_property_readonly("simplified",
         [](py::object& junctions_obj) -> py::array_t<bool> {
         GeneJunctions& junctions = junctions_obj.cast<GeneJunctions&>();
-        const size_t offset = offsetOf(&majiq::GeneJunction::simplified);
+        const size_t offset = offsetOf(&majiq::GeneJunction::data)
+            + offsetOf(&majiq::detail::Connection::simplified);
         return ArrayFromVectorAndOffset<bool, majiq::GeneJunction>(
             junctions.data(), offset, junctions_obj);
         },
