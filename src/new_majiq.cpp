@@ -620,6 +620,9 @@ PYBIND11_MODULE(new_majiq, m) {
     .def_property_readonly("contigs",
         [](py::object& sg) { return sg.attr("_contigs").attr("df")(); },
         "xr.Dataset view of splicegraph's contigs")
+    // computation
+    .def("potential_introns", &SpliceGraph::potential_introns,
+        "potential introns between splicegraph exons")
     // save to file
     .def("to_netcdf",
         [](py::object& sg, py::str output_path) {
