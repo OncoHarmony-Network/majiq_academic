@@ -21,6 +21,12 @@ enum class GeneStrandness : char {
   AMBIGUOUS = '.',
 };
 
+enum class ExperimentStrandness : char {
+  FORWARD = 'F',  // read 1 is in forward direction, Salmon ISF
+  REVERSE = 'R',  // read 2 is in forward direction, Salmon ISR
+  NONE = 'N',  // could be either way, Salmon IU
+};
+
 }  // namespace majiq
 
 #endif  // MAJIQ_TYPES_HPP
