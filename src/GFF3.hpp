@@ -25,7 +25,7 @@
 
 #include "Contigs.hpp"
 #include "Genes.hpp"
-#include "Junctions.hpp"
+#include "GeneJunctions.hpp"
 #include "Introns.hpp"
 #include "Exons.hpp"
 #include "SpliceGraph.hpp"

@@ -16,7 +16,7 @@
 #include "Interval.hpp"
 #include "Contigs.hpp"
 #include "Genes.hpp"
-#include "Junctions.hpp"
+#include "GeneJunctions.hpp"
 #include "Exons.hpp"
 #include "Introns.hpp"
 #include "OverGenes.hpp"
