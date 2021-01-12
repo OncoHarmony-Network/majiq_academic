@@ -15,6 +15,12 @@ namespace majiq {
 using real_t = float;  // for numerics
 using position_t = int64_t;  // for coordinates, difference in coordinates
 
+enum class GeneStrandness : char {
+  FORWARD = '+',
+  REVERSE = '-',
+  AMBIGUOUS = '.',
+};
+
 }  // namespace majiq
 
 #endif  // MAJIQ_TYPES_HPP

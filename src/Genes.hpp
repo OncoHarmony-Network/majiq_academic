@@ -21,6 +21,7 @@
 
 #include "Contigs.hpp"
 #include "Interval.hpp"
+#include "MajiqTypes.hpp"
 
 
 namespace majiq {
@@ -28,11 +29,6 @@ namespace majiq {
 using geneid_t = std::string;
 using genename_t = std::string;
 
-enum class GeneStrandness : char {
-  FORWARD = '+',
-  REVERSE = '-',
-  AMBIGUOUS = '.',
-};
 inline std::ostream& operator<<(
     std::ostream& os, const GeneStrandness& x) noexcept {
   os << static_cast<char>(x);
