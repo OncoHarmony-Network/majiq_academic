@@ -14,6 +14,8 @@ namespace majiq {
 
 using real_t = float;  // for numerics
 using position_t = int64_t;  // for coordinates, difference in coordinates
+using junction_pos_t = uint32_t;  // position for junctions
+using junction_ct_t = uint32_t;  // counts of reads with splits
 
 enum class GeneStrandness : char {
   FORWARD = '+',

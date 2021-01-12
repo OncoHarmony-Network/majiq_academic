@@ -16,7 +16,6 @@
 
 namespace majiq {
 namespace bam {
-using junction_pos_t = uint32_t;
 
 // forward declaration of iterator on CigarJunctions
 template<uint32_t min_overhang>
