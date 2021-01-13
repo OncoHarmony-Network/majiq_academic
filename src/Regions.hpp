@@ -354,27 +354,15 @@ class GeneRegions {
   vecT elements_;
   std::shared_ptr<Genes> genes_;
 
-  static bool is_valid(const vecT& x, const std::shared_ptr<Genes>& genes) {
-    // 0 elements
-    if (x.empty()) {
-      return true;
-    }
-    // first element
-    if (genes != x[0].gene.known_genes) {
-      return false;
-    }
-    // subsequent elements
-    for (size_t i = 1; i < x.size(); ++i) {
-      // if not sorted or if there are equal regions, it is invalid
-      if (CompareRegionT{}(x[i], x[i - 1])
-          || (static_cast<BaseRegion>(x[i])
-            == static_cast<BaseRegion>(x[i - 1]))
-          || genes != x[i].gene.known_genes) {
-        return false;
-      }
-    }
-    // passed all conditions for validity
-    return true;
+  static bool is_valid(const vecT& x) {
+    return x.end() == std::adjacent_find(x.begin(), x.end(),
+        [](const value_type& a, const value_type& b) {
+        // should be sorted and have equal pointers, return if not
+        return !(
+            CompareRegionT{}(b, a)
+            || static_cast<BaseRegion>(a) == static_cast<BaseRegion>(b)
+            || a.gene.known_genes == b.gene.known_genes);
+        });
   }
 
  public:
@@ -383,12 +371,12 @@ class GeneRegions {
   GeneRegions(const vecT& x, NoCheckValid)
       : elements_{x}, genes_{x.empty() ? nullptr : x[0].gene.known_genes} { }
   explicit GeneRegions(vecT&& x) : GeneRegions{x, NoCheckValid{}} {
-    if (!is_valid(x, genes_)) {
+    if (!is_valid(x)) {
       throw std::invalid_argument("vector input to GeneRegions is invalid");
     }
   }
   explicit GeneRegions(const vecT& x) : GeneRegions{x, NoCheckValid{}} {
-    if (!is_valid(x, genes_)) {
+    if (!is_valid(x)) {
       throw std::invalid_argument("vector input to GeneRegions is invalid");
     }
   }
