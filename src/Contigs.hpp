@@ -174,6 +174,10 @@ class Contigs : public std::enable_shared_from_this<Contigs> {
     return result;
   }
 
+  friend inline bool operator==(const Contigs& x, const Contigs& y) noexcept {
+    return x.contigs_vec_ == y.contigs_vec_;
+  }
+
   // make printable
   friend std::ostream& operator<<(std::ostream& os, const Contigs& x) noexcept;
 };
