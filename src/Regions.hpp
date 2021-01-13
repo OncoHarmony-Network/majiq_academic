@@ -72,6 +72,14 @@ struct ContigRegion {
   ContigRegion(ContigRegion&& x) = default;
   ContigRegion& operator=(const ContigRegion& x) = default;
   ContigRegion& operator=(ContigRegion&& x) = default;
+
+  // drop data between templates
+  template <class OtherDataT>
+  ContigRegion(const ContigRegion<IntervalT, OtherDataT>& x)
+      : ContigRegion{x.contig, x.coordinates, x.strand} { }
+  template <class OtherDataT>
+  ContigRegion(ContigRegion<IntervalT, OtherDataT>&& x)
+      : ContigRegion{x.contig, x.coordinates, x.strand} { }
 };
 
 template <class T, class DT = EmptyDataT>
