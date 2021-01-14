@@ -260,7 +260,8 @@ SJJunctionsAll JunctionsFromBam(
       std::ostringstream oss;
       oss << "Error parsing read from BAM " << infile
         << " (error code: " << r << ")";
-      throw std::runtime_error(oss.str());
+      // throw std::runtime_error(oss.str());
+      std::cerr << oss.str() << std::endl;
     }  // otherwise r = 0 and at end of file
   }  // done processing BAM file
   // number of valid positions (note that type may be unsigned)
