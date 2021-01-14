@@ -579,12 +579,12 @@ PYBIND11_MODULE(new_majiq, m) {
 
   pySpliceGraph
     // constructor from GFF3
-    .def(py::init(
-          [](std::string gff3_path, bool process_ir) {
-            using majiq::gff3::SpliceGraphBuilder;
-            SpliceGraphBuilder builder{};
-            return builder.from_gff3(gff3_path, process_ir);
-          }),
+    .def_static("from_gff3",
+        [](std::string gff3_path, bool process_ir) {
+          using majiq::gff3::SpliceGraphBuilder;
+          SpliceGraphBuilder builder{};
+          return builder.from_gff3(gff3_path, process_ir);
+        },
         "Create splicegraph from input GFF3 file",
         py::arg("gff3_path"), py::arg("process_ir"))
     // TODO(jaicher) Make more useful constructors
