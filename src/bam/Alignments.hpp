@@ -12,7 +12,7 @@
 #include <htslib/thread_pool.h>
 #include <sstream>
 #include <stdexcept>
-#include "CigarIntrons.hpp"
+// #include "CigarIntrons.hpp"
 #include "CigarJunctions.hpp"
 #include "../MajiqTypes.hpp"
 
@@ -73,14 +73,14 @@ class AlignmentRecord {
     return CigarJunctions<min_overhang>(
         pos(), read_length(), bam_get_cigar(b_), b_->core.n_cigar);
   }
-  /**
-   * information about introns from cigar array
-   */
-  template <uint32_t min_overhang>
-  CigarIntrons<min_overhang> cigar_introns() const {
-    return CigarIntrons<min_overhang>(
-        pos(), read_length(), bam_get_cigar(b_), b_->core.n_cigar);
-  }
+  // /**
+  //  * information about introns from cigar array
+  //  */
+  // template <uint32_t min_overhang>
+  // CigarIntrons<min_overhang> cigar_introns() const {
+  //   return CigarIntrons<min_overhang>(
+  //       pos(), read_length(), bam_get_cigar(b_), b_->core.n_cigar);
+  // }
 
   /**
    * given experimental protocol, was it +/- strand?

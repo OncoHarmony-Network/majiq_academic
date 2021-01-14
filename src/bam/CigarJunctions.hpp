@@ -44,7 +44,7 @@ class CigarJunctionsIterator {
   using iterator_category = std::input_iterator_tag;
   using value_type = std::pair<OpenInterval, junction_pos_t>;
   using difference_type = int;
-  using pointer = value_type*
+  using pointer = value_type*;
   using reference = value_type&;
 
  private:
@@ -79,7 +79,7 @@ class CigarJunctionsIterator {
   friend inline bool operator==(
       const CigarJunctionsIterator& x,
       const CigarJunctionsIterator& y) noexcept {
-    return x.cigar_ndx_ == y.cigar_ndx_ && x.x_.cigar_ == y.x_.cigar;
+    return x.cigar_ndx_ == y.cigar_ndx_ && x.x_.cigar_ == y.x_.cigar_;
   }
   friend inline bool operator!=(
       const CigarJunctionsIterator& x,
@@ -111,7 +111,7 @@ class CigarJunctionsIterator {
       // cigar_type: bit 1 if consumes query, 2 if consumes reference
       const char cigar_type = bam_cigar_type(cigar_op);
       // update offset on query (i.e. alignment)
-      if (cigar_type & details::CIGAR_CONSUMES_QUERY) {
+      if (cigar_type & detail::CIGAR_CONSUMES_QUERY) {
         alignment_offset_ += cigar_oplen;
         if (alignment_offset_ > x_.alignment_length_ - min_overhang) {
           // future operations can not lead to valid junction
@@ -121,7 +121,7 @@ class CigarJunctionsIterator {
         }
       }
       // update offset on reference (i.e. genome)
-      if (cigar_type & details::CIGAR_CONSUMES_REFERENCE) {
+      if (cigar_type & detail::CIGAR_CONSUMES_REFERENCE) {
         genomic_offset_ += cigar_oplen;
       }
     }

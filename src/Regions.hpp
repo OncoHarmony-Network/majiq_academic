@@ -424,7 +424,7 @@ class ContigRegions {
   using const_iterator = typename vecT::const_iterator;
   struct NoCheckValid { };
 
- private:
+ protected:
   vecT elements_;
   std::shared_ptr<Contigs> contigs_;
 

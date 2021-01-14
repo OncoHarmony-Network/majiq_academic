@@ -11,7 +11,7 @@
 #include <utility>
 
 #include "htslib/sam.h"
-#include "IOBamTypes.hpp"
+#include "../MajiqTypes.hpp"
 #include "CigarUtils.hpp"
 
 namespace majiq
