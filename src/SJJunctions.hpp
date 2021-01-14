@@ -340,14 +340,29 @@ void GroupJunctionsGenerator::AddExperiment(const SJJunctions& experiment) {
         // make sure index available for contig
         counts_.resize(contig_idx + 1);
       }
-      // get reference to value for contig/coordinates/strand
-      auto& counts = counts_[contig_idx][
-        std::make_pair(junction.coordinates, junction.strand)];
-      if (minreads_passed) {
-        ++(counts.numpassed);
+      // get reference to value for contig/coordinates/strand to add
+      // make two copies of unstranded junctions to handle experiments with
+      // mixed strandedness (unstranded/stranded)
+      std::vector<GeneStrandness> strands;
+      if (junction.strand == GeneStrandness::AMBIGUOUS) {
+        // both strands in sorted order
+        if constexpr(GeneStrandness::FORWARD < GeneStrandness::REVERSE) {
+          strands = {GeneStrandness::FORWARD, GeneStrandness::REVERSE};
+        } else {
+          strands = {GeneStrandness::REVERSE, GeneStrandness::FORWARD};
+        }
+      } else {
+        strands = {junction.strand};
       }
-      if (mindenovo_passed) {
-        ++(counts.numdenovo);
+      for (GeneStrandness strand : strands) {
+        auto& counts = counts_[contig_idx][
+          std::make_pair(junction.coordinates, strand)];
+        if (minreads_passed) {
+          ++(counts.numpassed);
+        }
+        if (mindenovo_passed) {
+          ++(counts.numdenovo);
+        }
       }
     }  // done adding junction that passed
   }  // end loop over junctions
