@@ -18,9 +18,9 @@
 #include <initializer_list>
 #include <cstddef>
 
-#include "MajiqTypes.hpp"
-#include "SpliceGraph.hpp"
-#include "GFF3.hpp"
+#include "internals/MajiqTypes.hpp"
+#include "internals/SpliceGraph.hpp"
+#include "internals/GFF3.hpp"
 
 #define STRINGIFY(x) #x
 #define MACRO_STRINGIFY(x) STRINGIFY(x)
