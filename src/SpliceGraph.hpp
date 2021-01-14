@@ -43,22 +43,7 @@ class SpliceGraph {
    */
   template <class ContainerT>
   static std::vector<size_t> index_gene_regions(
-      const std::shared_ptr<Genes>& genes, ContainerT regions) {
-    // initialize result
-    std::vector<size_t> result(genes->size() + 1);
-    // index into genes
-    size_t gene_idx = 0;
-    for (size_t region_idx = 0; region_idx < regions.size(); ++region_idx) {
-      const size_t region_gene_idx = regions[region_idx].gene.gene_idx;
-      while (gene_idx < region_gene_idx) {
-        result[++gene_idx] = region_idx;
-      }
-    }
-    while (gene_idx < genes->size()) {
-      result[++gene_idx] = regions.size();
-    }
-    return result;
-  }
+      const std::shared_ptr<Genes>& genes, ContainerT regions);
 
  public:
   // access non const pointers for use by pybind11 interface...
@@ -166,6 +151,26 @@ Introns SpliceGraph::potential_introns() const {
   }
   // return introns initialized with this vector
   return Introns{intron_vec};
+}
+
+// how to index regions that are sorted by gene
+template <class ContainerT>
+std::vector<size_t> SpliceGraph::index_gene_regions(
+    const std::shared_ptr<Genes>& genes, ContainerT regions) {
+  // initialize result
+  std::vector<size_t> result(genes->size() + 1);
+  // index into genes
+  size_t gene_idx = 0;
+  for (size_t region_idx = 0; region_idx < regions.size(); ++region_idx) {
+    const size_t region_gene_idx = regions[region_idx].gene.gene_idx;
+    while (gene_idx < region_gene_idx) {
+      result[++gene_idx] = region_idx;
+    }
+  }
+  while (gene_idx < genes->size()) {
+    result[++gene_idx] = regions.size();
+  }
+  return result;
 }
 }  // namespace majiq
 
