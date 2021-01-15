@@ -13,15 +13,10 @@
 #include <memory>
 #include <array>
 
-#include "internals/Contigs.hpp"
-#include "internals/Genes.hpp"
-
 
 namespace majiq_pybind {
 namespace py = pybind11;
 
-constexpr char CONTIGS_NC_GROUP[] = "contigs";
-constexpr char GENES_NC_GROUP[] = "genes";
 
 /*
  * Create read-only array view into vector with offset (i.e. for struct member)
@@ -107,51 +102,6 @@ inline py::object OpenXarrayDataset(py::str netcdf_path, py::str group) {
       netcdf_path, "group"_a = group);
 }
 
-inline std::shared_ptr<majiq::Contigs> ContigsFromNetcdf(py::str netcdf_path) {
-  auto xr_contigs = OpenXarrayDataset(netcdf_path, py::str(CONTIGS_NC_GROUP));
-  auto result = std::make_shared<majiq::Contigs>();
-  py::list seqids = xr_contigs
-    .attr("__getitem__")("seqid").attr("values").attr("tolist")();
-  for (auto seqid : seqids) {
-    result->add(seqid.cast<majiq::seqid_t>());
-  }
-  return result;
-}
-
-inline std::shared_ptr<majiq::Genes> GenesFromNetcdf(
-    std::shared_ptr<majiq::Contigs> contigs, py::str netcdf_path) {
-  using majiq::position_t;
-  using majiq::geneid_t;
-  using majiq::genename_t;
-  auto xr_genes = OpenXarrayDataset(netcdf_path, py::str(GENES_NC_GROUP));
-  auto get_array = [&xr_genes](py::str key) {
-    py::function np_array = py::module_::import("numpy").attr("array");
-    return np_array(xr_genes.attr("__getitem__")(key));
-  };
-  py::array_t<size_t> _contig_idx = get_array("contig_idx");
-  auto contig_idx = _contig_idx.unchecked<1>();
-  py::array_t<position_t> _start = get_array("start");
-  auto start = _start.unchecked<1>();
-  py::array_t<position_t> _end = get_array("end");
-  auto end = _end.unchecked<1>();
-  py::array_t<std::array<char, 1>> _strand = get_array("strand");
-  auto strand = _strand.unchecked<1>();
-  py::list geneid
-    = xr_genes.attr("__getitem__")("gene_id").attr("values").attr("tolist")();
-  py::list genename
-    = xr_genes.attr("__getitem__")("gene_name").attr("values").attr("tolist")();
-  std::vector<majiq::Gene> gene_vec{};
-  gene_vec.reserve(geneid.size());
-  for (size_t i = 0; i < geneid.size(); ++i) {
-    gene_vec.push_back(majiq::Gene{
-        majiq::KnownContig{contig_idx(i), contigs},
-        majiq::ClosedInterval{start(i), end(i)},
-        static_cast<majiq::GeneStrandness>(strand(i)[0]),
-        geneid[i].cast<majiq::geneid_t>(),
-        genename[i].cast<majiq::genename_t>()});
-  }
-  return std::make_shared<majiq::Genes>(gene_vec);
-}
 
 }  // namespace majiq_pybind
 
