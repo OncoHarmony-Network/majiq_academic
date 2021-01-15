@@ -156,22 +156,22 @@ inline bool IntervalSubsets(
 }
 
 // how to print intervals
-std::ostream& operator<<(std::ostream& os, const ClosedInterval& x) {
+inline std::ostream& operator<<(std::ostream& os, const ClosedInterval& x) {
   os << "[" << x.start << ", " << x.end << "]";
   return os;
 }
-std::ostream& operator<<(std::ostream& os, const OpenInterval& x) {
+inline std::ostream& operator<<(std::ostream& os, const OpenInterval& x) {
   os << "(" << x.start << ", " << x.end << ")";
   return os;
 }
 
 // how to hash intervals
-std::size_t hash_value(const OpenInterval& x) noexcept {
+static std::size_t hash_value(const OpenInterval& x) noexcept {
   std::size_t result = boost::hash_value(x.start);
   boost::hash_combine(result, x.end);
   return result;
 }
-std::size_t hash_value(const ClosedInterval& x) noexcept {
+static std::size_t hash_value(const ClosedInterval& x) noexcept {
   std::size_t result = boost::hash_value(x.start);
   boost::hash_combine(result, x.end);
   return result;

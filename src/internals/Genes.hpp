@@ -115,10 +115,10 @@ inline bool operator>=(const Gene& x, const KnownContig y) noexcept {
 }
 
 // override boost::hash
-std::size_t hash_value(const GeneStrandness& x) noexcept {
+static std::size_t hash_value(const GeneStrandness& x) noexcept {
   return std::hash<char>{}(static_cast<char>(x));
 }
-std::size_t hash_value(const Gene& x) noexcept {
+static std::size_t hash_value(const Gene& x) noexcept {
   return std::hash<geneid_t>{}(x.geneid);
 }
 }  // namespace majiq
@@ -157,11 +157,12 @@ struct KnownGene {
   /**
    * Get underying gene
    */
-  Gene& get() const;
+  inline Gene& get() const;
   /**
    * Get matching known gene from another Genes object
    */
-  KnownGene remapped(const std::shared_ptr<Genes>& new_known_genes) const;
+  inline KnownGene remapped(
+      const std::shared_ptr<Genes>& new_known_genes) const;
 };
 // sorting/equality based on underlying gene
 inline bool operator<(const KnownGene& x, const KnownGene& y) noexcept {
@@ -254,6 +255,11 @@ class Genes : public std::enable_shared_from_this<Genes> {
 
   // constructors always ensure that result is sorted
   Genes() : genes_vec_{}, id_idx_map_{}, is_sorted_{true} {}
+  explicit Genes(const vecGene& genes)
+      : genes_vec_{genes},
+        id_idx_map_{_geneid_indexes(genes_vec_)},
+        is_sorted_{std::is_sorted(genes_vec_.begin(), genes_vec_.end())} {
+  }
   explicit Genes(vecGene&& genes)
       : genes_vec_{genes},
         id_idx_map_{_geneid_indexes(genes_vec_)},
@@ -290,8 +296,8 @@ class Genes : public std::enable_shared_from_this<Genes> {
 };
 
 // implement KnownGene::remapped and KnownGene::get using Genes definition
-Gene& KnownGene::get() const { return known_genes->get(gene_idx); }
-KnownGene KnownGene::remapped(
+inline Gene& KnownGene::get() const { return known_genes->get(gene_idx); }
+inline KnownGene KnownGene::remapped(
     const std::shared_ptr<Genes>& new_known_genes) const {
   // get idx for this gene in new_known_genes
   size_t new_gene_idx = new_known_genes->add(get());
@@ -299,7 +305,7 @@ KnownGene KnownGene::remapped(
 }
 
 // specialize boost::hash_value for KnownGene
-std::size_t hash_value(const KnownGene& x) {
+static std::size_t hash_value(const KnownGene& x) {
   std::size_t result = std::hash<size_t>{}(x.gene_idx);
   boost::hash_combine(result, x.known_genes);
   return result;

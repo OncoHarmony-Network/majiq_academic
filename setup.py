@@ -15,7 +15,11 @@ sh.MACOS = False
 ext_modules = [
     Pybind11Extension(
         "new_majiq",
-        sorted(["src/pyContigs.cpp", "src/new_majiq.cpp"]),
+        sorted([
+            "src/pyContigs.cpp",
+            "src/pyGenes.cpp",
+            "src/new_majiq.cpp",
+        ]),
         define_macros=[('VERSION_INFO', __version__), ("DEBUG", )],
         include_dirs=["src/"],
         cxx_std=17,
