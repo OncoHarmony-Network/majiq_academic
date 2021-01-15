@@ -217,8 +217,8 @@ class Config(object):
             min_experiments: float
                 Minimum number of experiments specified for all build groups.
                 If nonpositive, raises error. If less than 1, treated as a
-                percentage of the group size. Otherwise, cast to integer or use
-                group size depending on which is smaller.
+                percentage of the group size. Otherwise, round up to next
+                integer or use group size, depending on which is smaller.
             group_size: int
                 Number of experiments in group
 
@@ -232,10 +232,9 @@ class Config(object):
                 raise ValueError("MAJIQ disallows negative --min-experiments")
             elif min_experiments < 1:
                 # apply as proportion of group size (minimum result is 1.)
-                min_experiments = np.ceil(group_size * min_experiments)
+                min_experiments *= group_size
             # Can be no greater than group size, return as integer
-            # note: int(x) rounds towards zero (equivalent to floor here)
-            return int(min(group_size, min_experiments))
+            return min(group_size, int(np.ceil(min_experiments)))
 
     @staticmethod
     def config_section_map(config_d, section):
