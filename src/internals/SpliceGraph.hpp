@@ -64,6 +64,22 @@ class SpliceGraph {
 
   // constructors
   SpliceGraph(
+      const std::shared_ptr<Contigs>& contigs,
+      const std::shared_ptr<Genes>& genes,
+      const std::shared_ptr<Exons>& exons,
+      const std::shared_ptr<GeneJunctions>& junctions,
+      const std::shared_ptr<Introns>& introns)
+      : contigs_{contigs},
+        genes_{genes},
+        exons_{exons},
+        junctions_{junctions},
+        introns_{introns},
+        overgenes_{std::make_shared<OverGenes>(contigs_, genes_)},
+        gene_exons_idx_{index_gene_regions(genes_, *exons_)},
+        gene_junctions_idx_{index_gene_regions(genes_, *junctions_)},
+        gene_introns_idx_{index_gene_regions(genes_, *introns_)} {
+  }
+  SpliceGraph(
       std::shared_ptr<Contigs>&& contigs,
       std::shared_ptr<Genes>&& genes,
       std::shared_ptr<Exons>&& exons,

@@ -44,16 +44,6 @@ using majiq::Genes;
 using majiq::Contigs;
 using majiq::OverGenes;
 
-std::shared_ptr<Contigs> ContigsFromDataset(py::object xr_contigs) {
-  auto result = std::make_shared<Contigs>();
-  py::list seqids = xr_contigs
-    .attr("__getitem__")("seqid")
-    .attr("values").attr("tolist")();
-  for (auto seqid : seqids) {
-    result->add(seqid.cast<std::string>());
-  }
-  return result;
-}
 std::shared_ptr<Genes> GenesFromDataset(
     std::shared_ptr<Contigs> contigs, py::object xr_genes) {
   auto get_array = [&xr_genes](py::str key) {
@@ -158,6 +148,8 @@ std::shared_ptr<Connections> ConnectionsFromDataset(
   return std::make_shared<Connections>(std::move(connection_vec));
 }
 
+void init_Contigs(py::class_<Contigs, std::shared_ptr<Contigs>>& pyContigs);
+
 PYBIND11_MODULE(new_majiq, m) {
   // documentation of module
   m.doc() = R"pbdoc(
@@ -195,6 +187,8 @@ PYBIND11_MODULE(new_majiq, m) {
       m, "OverGenes", "Splicegraph groups of overlapping genes");
   auto pyContigs = py::class_<Contigs, std::shared_ptr<Contigs>>(m, "Contigs",
       "Splicegraph contigs");
+
+  init_Contigs(pyContigs);
 
   pyExons
     .def_property_readonly("gene_idx",
@@ -484,24 +478,6 @@ PYBIND11_MODULE(new_majiq, m) {
     .def("__len__", &OverGenes::size);
 
 
-  pyContigs
-    .def_property_readonly("seqid", &Contigs::seqids,
-        R"pbdoc(
-        Sequence[str] of contig ids in order matching contig_idx
-        )pbdoc")
-    .def("df",
-        [](py::object& contigs) -> py::object {
-        return XarrayDatasetFromObject(contigs, "contig_idx", {"seqid"});
-        },
-        "View on contig information as xarray Dataset")
-    .def("__repr__", [](const Contigs& self) -> std::string {
-        std::ostringstream oss;
-        oss << self;
-        return oss.str();
-        })
-    .def("__len__", &Contigs::size)
-    .def("__contains__",
-        [](const Contigs& s, seqid_t x) -> bool { return s.contains(x); });
 
   pySpliceGraph
     // constructor from GFF3
@@ -568,7 +544,7 @@ PYBIND11_MODULE(new_majiq, m) {
         save("introns", "a");
         save("junctions", "a");
         save("genes", "a");
-        save("contigs", "a");
+        sg.attr("_contigs").attr("to_netcdf")(output_path, "a");
         return;
         },
         R"pbdoc(
@@ -580,11 +556,10 @@ PYBIND11_MODULE(new_majiq, m) {
             Path for resulting file. Raises error if file already exists.
         )pbdoc",
         py::arg("output_path"))
-    .def(py::init([](py::str netcdf_path) {
+    .def(py::init([&m](py::str netcdf_path) {
           py::function load_dataset
             = py::module_::import("xarray").attr("load_dataset");
-          auto contigs = ContigsFromDataset(
-              load_dataset(netcdf_path, "group"_a = "contigs"));
+          auto contigs = majiq_pybind::ContigsFromNetcdf(netcdf_path);
           auto genes = GenesFromDataset(
               contigs, load_dataset(netcdf_path, "group"_a = "genes"));
           auto exons = ExonsFromDataset(
@@ -593,9 +568,7 @@ PYBIND11_MODULE(new_majiq, m) {
               genes, load_dataset(netcdf_path, "group"_a = "junctions"));
           auto introns = ConnectionsFromDataset<Introns>(
               genes, load_dataset(netcdf_path, "group"_a = "introns"));
-          return SpliceGraph{
-              std::move(contigs), std::move(genes), std::move(exons),
-              std::move(junctions), std::move(introns)};
+          return SpliceGraph{contigs, genes, exons, junctions, introns};
           }),
         "Load splicegraph from netCDF file", py::arg("netcdf_path"))
     // string representation of splicegraph

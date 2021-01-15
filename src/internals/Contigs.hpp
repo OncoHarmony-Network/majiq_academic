@@ -48,7 +48,7 @@ inline std::ostream& operator<<(std::ostream& os, const Contig& x) noexcept {
   return os;
 }
 // override boost::hash<Contig>
-std::size_t hash_value(const Contig& x) noexcept {
+static std::size_t hash_value(const Contig& x) noexcept {
   return std::hash<seqid_t>{}(x.seqid);
 }
 }  // namespace majiq
@@ -72,7 +72,7 @@ struct KnownContig {
   std::shared_ptr<Contigs> known_contigs;
 
   // access true contig data
-  const Contig& get() const;
+  inline const Contig& get() const;
 
   // constructors
   KnownContig() = default;
@@ -108,6 +108,7 @@ class Contigs : public std::enable_shared_from_this<Contigs> {
   const KnownContig operator[](size_t idx) {
     return KnownContig{idx, shared_from_this()};
   }
+  std::shared_ptr<Contigs> get_shared() { return shared_from_this(); }
 
   // check/add contigs
   size_t size() const { return contigs_vec_.size(); }
@@ -181,7 +182,8 @@ class Contigs : public std::enable_shared_from_this<Contigs> {
   // make printable
   friend std::ostream& operator<<(std::ostream& os, const Contigs& x) noexcept;
 };
-std::ostream& operator<<(std::ostream& os, const Contigs& contigs) noexcept {
+inline std::ostream& operator<<(
+    std::ostream& os, const Contigs& contigs) noexcept {
   os << "Contigs[";
   if (contigs.size() > 0) {
     for (size_t i = 0; i < contigs.size(); ++i) {
@@ -193,11 +195,11 @@ std::ostream& operator<<(std::ostream& os, const Contigs& contigs) noexcept {
   return os;
 }
 // implement forward declaration of get() now that we've defined Contigs
-const Contig& KnownContig::get() const {
+inline const Contig& KnownContig::get() const {
   return known_contigs->get(contig_idx);
 }
 // specialize hash for KnownContig
-std::size_t hash_value(const KnownContig& x) noexcept {
+static std::size_t hash_value(const KnownContig& x) noexcept {
   std::size_t result = std::hash<size_t>{}(x.contig_idx);
   boost::hash_combine(result, x.known_contigs);
   return result;

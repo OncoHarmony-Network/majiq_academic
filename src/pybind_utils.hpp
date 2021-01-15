@@ -10,17 +10,22 @@
 #include <pybind11/numpy.h>
 
 #include <vector>
+#include <memory>
+
+#include "internals/Contigs.hpp"
 
 
 namespace majiq_pybind {
 namespace py = pybind11;
 using namespace pybind11::literals;  // bring in _a literal
 
+constexpr char CONTIGS_NC_GROUP[] = "contigs";
+
 /*
  * Create read-only array view into vector with offset (i.e. for struct member)
  */
 template <class OutputT, class InputT>
-py::array_t<OutputT> ArrayFromVectorAndOffset(
+inline py::array_t<OutputT> ArrayFromVectorAndOffset(
     const std::vector<InputT>& src,
     size_t offset,
     py::object& handle) {
@@ -47,7 +52,7 @@ py::array_t<OutputT> ArrayFromVectorAndOffset(
  * Create read-only array view into vector with offset (i.e. for struct member)
  */
 template <class OutputT>
-py::array_t<OutputT> ArrayFromOffsetsVector(
+inline py::array_t<OutputT> ArrayFromOffsetsVector(
     const std::vector<OutputT>& src,
     bool is_start,
     py::object& handle) {
@@ -73,7 +78,7 @@ py::array_t<OutputT> ArrayFromOffsetsVector(
 /**
  * Extract attrs from features to build xarray Dataset
  */
-py::object XarrayDatasetFromObject(
+inline py::object XarrayDatasetFromObject(
     py::object features,
     py::str idx_name,
     std::initializer_list<py::str> attrs) {
@@ -91,6 +96,22 @@ py::object XarrayDatasetFromObject(
     coordinates[x] = xr_DataArray(features.attr(x), "dims"_a = idx_name);
   }
   return xr_Dataset("coords"_a = coordinates);
+}
+
+inline py::object OpenXarrayDataset(py::str netcdf_path, py::str group) {
+  return py::module_::import("xarray").attr("open_dataset")(
+      netcdf_path, "group"_a = group);
+}
+
+inline std::shared_ptr<majiq::Contigs> ContigsFromNetcdf(py::str netcdf_path) {
+  auto xr_contigs = OpenXarrayDataset(netcdf_path, py::str(CONTIGS_NC_GROUP));
+  auto result = std::make_shared<majiq::Contigs>();
+  py::list seqids = xr_contigs
+    .attr("__getitem__")("seqid").attr("values").attr("tolist")();
+  for (auto seqid : seqids) {
+    result->add(seqid.cast<majiq::seqid_t>());
+  }
+  return result;
 }
 
 }  // namespace majiq_pybind
