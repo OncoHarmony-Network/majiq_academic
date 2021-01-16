@@ -15,6 +15,7 @@
 namespace py = pybind11;
 
 void init_SpliceGraphAll(py::module_&);
+void init_SJJunctionsModule(py::module_&);
 
 PYBIND11_MODULE(new_majiq, m) {
   // documentation of module
@@ -32,6 +33,7 @@ PYBIND11_MODULE(new_majiq, m) {
   py::bind_vector<std::vector<std::string>>(m, "VectorString");
 
   init_SpliceGraphAll(m);
+  init_SJJunctionsModule(m);
 
 
 #ifdef VERSION_INFO

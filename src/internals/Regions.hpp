@@ -366,6 +366,7 @@ class GeneRegions {
   }
 
  public:
+  GeneRegions() : elements_{}, genes_{nullptr} { }
   GeneRegions(vecT&& x, NoCheckValid)
       : elements_{x}, genes_{x.empty() ? nullptr : x[0].gene.known_genes} { }
   GeneRegions(const vecT& x, NoCheckValid)
@@ -437,6 +438,7 @@ class ContigRegions {
   }
 
  public:
+  ContigRegions() : elements_{}, contigs_{nullptr} { }
   ContigRegions(vecT&& x, NoCheckValid)
       : elements_{x},
         contigs_{x.empty() ? nullptr : x[0].contig.known_contigs} { }

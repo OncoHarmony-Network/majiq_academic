@@ -76,15 +76,11 @@ class CigarJunctionsIterator {
   const value_type operator*() const noexcept {
     return std::make_pair(junction_, position_);
   }
-  friend inline bool operator==(
-      const CigarJunctionsIterator& x,
-      const CigarJunctionsIterator& y) noexcept {
-    return x.cigar_ndx_ == y.cigar_ndx_ && x.x_.cigar_ == y.x_.cigar_;
+  inline bool operator==(const CigarJunctionsIterator& other) const noexcept {
+    return cigar_ndx_ == other.cigar_ndx_ && x_.cigar_ == other.x_.cigar_;
   }
-  friend inline bool operator!=(
-      const CigarJunctionsIterator& x,
-      const CigarJunctionsIterator& y) noexcept {
-    return !(x == y);
+  inline bool operator!=(const CigarJunctionsIterator& other) const noexcept {
+    return !(*this == other);
   }
   /**
    * Move iterator to next junction or end of cigar string

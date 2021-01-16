@@ -17,13 +17,13 @@ using position_t = int64_t;  // for coordinates, difference in coordinates
 using junction_pos_t = uint32_t;  // position for junctions
 using junction_ct_t = uint32_t;  // counts of reads with splits
 
-enum class GeneStrandness : char {
+enum class GeneStrandness : unsigned char {
   FORWARD = '+',
   REVERSE = '-',
   AMBIGUOUS = '.',
 };
 
-enum class ExperimentStrandness : char {
+enum class ExperimentStrandness : unsigned char {
   FORWARD = 'F',  // read 1 is in forward direction, Salmon ISF
   REVERSE = 'R',  // read 2 is in forward direction, Salmon ISR
   NONE = 'N',  // could be either way, Salmon IU

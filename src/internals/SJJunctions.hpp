@@ -105,108 +105,97 @@ inline bool operator<(const PositionReads& x, const PositionReads& y) noexcept {
   return std::tie(x.reads, x.pos) < std::tie(y.reads, y.pos);
 }
 
-class SJPositionReads {
+class SJJunctionsPositions {
  private:
+  std::shared_ptr<SJJunctions> junctions_;
   std::vector<PositionReads> reads_;
   std::vector<size_t> offsets_;
+  junction_pos_t num_positions_;
 
-  static bool is_valid(const std::vector<PositionReads>& reads,
-      const std::vector<size_t>& offsets) {
-    if (offsets.empty() || offsets.back() != reads.size()) { return false; }
-    return offsets.end() == std::adjacent_find(offsets.begin(), offsets.end(),
-        [&reads](size_t start, size_t end) {
-        // found invalid if offsets decreasing or reads not sorted
-        return end < start
-          || !std::is_sorted(reads.begin() + start, reads.begin() + end);
-        });
+  static bool is_valid(
+      const std::shared_ptr<SJJunctions>& junctions,
+      const std::vector<PositionReads>& reads,
+      const std::vector<size_t>& offsets,
+      junction_pos_t num_positions) {
+    if (junctions == nullptr
+        || offsets.empty()
+        || junctions->size() != offsets.size() - 1
+        || offsets.back() != reads.size()) { return false; }
+    for (size_t jidx = 0; jidx < junctions->size(); ++jidx) {
+      auto jp_start = reads.begin() + offsets[jidx];
+      auto jp_end = reads.begin() + offsets[jidx + 1];
+      if (jp_end < jp_start
+          || jp_end - jp_start != (*junctions)[jidx].data.numpos
+          || (*junctions)[jidx].data.numpos > num_positions
+          || !std::all_of(jp_start, jp_end,
+            [num_positions](const PositionReads& x) {
+            return x.pos < num_positions;
+            })
+          || std::accumulate(jp_start, jp_end, junction_ct_t{},
+            [](junction_ct_t s, const PositionReads& x) { return s + x.reads; })
+            != (*junctions)[jidx].data.numreads
+          || !std::is_sorted(jp_start, jp_end)) {
+        return false;
+      }
+      return true;
+    }
   }
 
  public:
-  inline size_t num_junctions() const noexcept { return offsets_.size() - 1; }
+  inline size_t num_junctions() const noexcept { return junctions_->size(); }
+  inline size_t size() const noexcept { return reads_.size(); }
+  inline junction_pos_t num_positions() const { return num_positions_; }
+  const std::shared_ptr<SJJunctions>& junctions() { return junctions_; }
   const std::vector<PositionReads>& reads() { return reads_; }
   const std::vector<size_t>& offsets() { return offsets_; }
 
-  SJPositionReads() : reads_{}, offsets_{0} { }
-  SJPositionReads(const std::vector<PositionReads>& reads,
-      const std::vector<size_t>& offsets) {
-    if (!is_valid(reads, offsets)) {
-      throw std::invalid_argument("SJPositionReads given invalid arguments");
-    }
-    reads_ = reads;
-    offsets_ = offsets;
-  }
-  SJPositionReads(std::vector<PositionReads>&& reads,
-      std::vector<size_t>&& offsets) {
-    if (!is_valid(reads, offsets)) {
-      throw std::invalid_argument("SJPositionReads given invalid arguments");
-    }
-    reads_ = reads;
-    offsets_ = offsets;
-  }
-  SJPositionReads(const SJPositionReads& x) = default;
-  SJPositionReads(SJPositionReads&& x) = default;
-  SJPositionReads& operator=(const SJPositionReads& x) = default;
-  SJPositionReads& operator=(SJPositionReads&& x) = default;
-};
-
-class SJJunctionsAll {
- private:
-  std::shared_ptr<SJJunctions> junctions_;
-  std::shared_ptr<SJPositionReads> reads_;
-  junction_pos_t num_positions_;
-
-  static bool is_valid(const std::shared_ptr<SJJunctions>& junctions,
-      const std::shared_ptr<SJPositionReads>& reads) {
-    return junctions == nullptr
-      || reads == nullptr
-      || junctions->size() == reads->num_junctions();
-  }
-
- public:
-  void set_junctions(std::shared_ptr<SJJunctions> junctions) {
-    if (!is_valid(junctions, reads_)) {
-      throw std::runtime_error("SJJunctionsAll mismatch of junctions/reads");
-    }
-    junctions_ = junctions;
-  }
-  void set_reads(std::shared_ptr<SJPositionReads> reads) {
-    if (!is_valid(junctions_, reads)) {
-      throw std::runtime_error("SJJunctionsAll mismatch of junctions/reads");
-    }
-    reads_ = reads;
-  }
-  junction_pos_t num_positions() const { return num_positions_; }
-  const std::shared_ptr<SJJunctions>& junctions() { return junctions_; }
-  const std::shared_ptr<SJPositionReads>& reads() { return reads_; }
-
-  SJJunctionsAll(
+  SJJunctionsPositions()
+      : junctions_{std::make_shared<SJJunctions>()},
+        reads_{},
+        offsets_{0},
+        num_positions_{0} { }
+  SJJunctionsPositions(
       const std::shared_ptr<SJJunctions>& junctions,
-      const std::shared_ptr<SJPositionReads>& reads,
+      const std::vector<PositionReads>& reads,
+      const std::vector<size_t>& offsets,
       junction_pos_t num_positions) {
-    if (!is_valid(junctions, reads)) {
-      throw std::runtime_error("SJJunctionsAll mismatch of junctions/reads");
+    if (!is_valid(junctions, reads, offsets, num_positions)) {
+      throw std::invalid_argument(
+          "SJJunctionsPositions given invalid arguments");
     }
     junctions_ = junctions;
     reads_ = reads;
-    // NOTE not checking that num_positions is compatible right now
+    offsets_ = offsets;
     num_positions_ = num_positions;
   }
-  SJJunctionsAll() = default;
-  SJJunctionsAll(const SJJunctionsAll& x) = default;
-  SJJunctionsAll(SJJunctionsAll&& x) = default;
-  SJJunctionsAll& operator=(const SJJunctionsAll& x) = default;
-  SJJunctionsAll& operator=(SJJunctionsAll&& x) = default;
+  SJJunctionsPositions(
+      std::shared_ptr<SJJunctions>&& junctions,
+      std::vector<PositionReads>&& reads,
+      std::vector<size_t>&& offsets,
+      junction_pos_t num_positions) {
+    if (!is_valid(junctions, reads, offsets, num_positions)) {
+      throw std::invalid_argument(
+          "SJJunctionsPositions given invalid arguments");
+    }
+    junctions_ = junctions;
+    reads_ = reads;
+    offsets_ = offsets;
+    num_positions_ = num_positions;
+  }
+  SJJunctionsPositions(const SJJunctionsPositions& x) = default;
+  SJJunctionsPositions(SJJunctionsPositions&& x) = default;
+  SJJunctionsPositions& operator=(const SJJunctionsPositions& x) = default;
+  SJJunctionsPositions& operator=(SJJunctionsPositions&& x) = default;
 };
 
 
 template <uint32_t min_overhang>
-SJJunctionsAll JunctionsFromBam(
+SJJunctionsPositions JunctionsFromBam(
     const char* infile, int nthreads, ExperimentStrandness exp_strandness) {
   auto contigs = std::make_shared<Contigs>();
   junction_pos_t max_read_length = 0;
   size_t num_junctions = 0;
   size_t num_junction_positions = 0;
-  size_t total_junction_positions = 0;  // how many
   // counts per contig, junction, strand, position
   std::vector<  // per contig
     std::map<  // per junction/strand
@@ -214,6 +203,7 @@ SJJunctionsAll JunctionsFromBam(
       std::map<junction_pos_t, junction_ct_t>
     >
   > counts;
+
   // open up bam and process
   {
     // open up bam for reading with specified number of threads
@@ -224,7 +214,6 @@ SJJunctionsAll JunctionsFromBam(
         [&contigs](char* seqid) { contigs->add(std::string{seqid}); });
     // expand junctions for all contigs
     counts.resize(in.n_targets());
-
     // iterate over alignments
     bam::AlignmentRecord aln{};
     int r = 0;
@@ -264,6 +253,7 @@ SJJunctionsAll JunctionsFromBam(
       std::cerr << oss.str() << std::endl;
     }  // otherwise r = 0 and at end of file
   }  // done processing BAM file
+
   // number of valid positions (note that type may be unsigned)
   junction_pos_t eff_len
     = (max_read_length + 1 > 2 * min_overhang)
@@ -303,10 +293,8 @@ SJJunctionsAll JunctionsFromBam(
     }
   }
   // finally, create desired result
-  return SJJunctionsAll{
-    std::make_shared<SJJunctions>(junctions),
-    std::make_shared<SJPositionReads>(reads, reads_offsets),
-    eff_len
+  return SJJunctionsPositions{
+    std::make_shared<SJJunctions>(junctions), reads, reads_offsets, eff_len
   };
 }
 

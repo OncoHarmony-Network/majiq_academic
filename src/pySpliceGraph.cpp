@@ -26,12 +26,6 @@
 #include "internals/GFF3.hpp"
 
 
-constexpr char CONTIGS_NC_GROUP[] = "contigs";
-constexpr char GENES_NC_GROUP[] = "genes";
-constexpr char EXONS_NC_GROUP[] = "exons";
-constexpr char JUNCTIONS_NC_GROUP[] = "junctions";
-constexpr char INTRONS_NC_GROUP[] = "introns";
-
 namespace py = pybind11;
 
 
@@ -522,6 +516,20 @@ void init_Introns(
 void init_SpliceGraph(py::class_<majiq::SpliceGraph>& pySpliceGraph) {
   using majiq::SpliceGraph;
   pySpliceGraph
+    // expose constructor from individual components
+    .def(py::init<const std::shared_ptr<majiq::Contigs>&,
+                  const std::shared_ptr<majiq::Genes>&,
+                  const std::shared_ptr<majiq::Exons>&,
+                  const std::shared_ptr<majiq::GeneJunctions>&,
+                  const std::shared_ptr<majiq::Introns>&>(),
+        R"pbdoc(
+        Initialize splicegraph from components
+
+        Initialize splicegraph from components. Typically will want to use the
+        factory methods `from_netcdf` and `from_gff3` to create all components
+        )pbdoc",
+        py::arg("contigs"), py::arg("genes"), py::arg("exons"),
+        py::arg("junctions"), py::arg("introns"))
     // constructors from netcdf, gff3
     .def_static("from_netcdf",
         [](py::str netcdf_path) {
