@@ -7,6 +7,7 @@
 #include <pybind11/numpy.h>
 
 #include <array>
+#include <vector>
 #include <memory>
 #include <cstddef>
 
@@ -17,6 +18,77 @@
 
 namespace py = pybind11;
 
+
+std::shared_ptr<majiq::SJJunctions> JunctionsFromNetcdf(py::str netcdf_path) {
+  using majiq::position_t;
+  using majiq::junction_ct_t;
+  using majiq::junction_pos_t;
+  auto xr_junctions = majiq_pybind::OpenXarrayDataset(
+      netcdf_path, py::str(SJ_JUNCTIONS_NC_GROUP));
+  auto get_array = [&xr_junctions](py::str key) {
+    py::function np_array = py::module_::import("numpy").attr("array");
+    return np_array(xr_junctions.attr("__getitem__")(key));
+  };
+  py::array_t<size_t> _contig_idx = get_array("contig_idx");
+  auto contig_idx = _contig_idx.unchecked<1>();
+  py::array_t<position_t> _start = get_array("start");
+  auto start = _start.unchecked<1>();
+  py::array_t<position_t> _end = get_array("end");
+  auto end = _end.unchecked<1>();
+  py::array_t<std::array<char, 1>> _strand = get_array("strand");
+  auto strand = _strand.unchecked<1>();
+  py::array_t<junction_pos_t> _numpos = get_array("numpos");
+  auto numpos = _numpos.unchecked<1>();
+  py::array_t<junction_ct_t> _numreads = get_array("numreads");
+  auto numreads = _numreads.unchecked<1>();
+
+  // load contigs
+  auto contigs = majiq_pybind::ContigsFromNetcdf(netcdf_path);
+
+  // fill in junctions
+  std::vector<majiq::SJJunction> sj_vec(numpos.shape(0));
+  for (size_t i = 0; i < sj_vec.size(); ++i) {
+    sj_vec[i] = majiq::SJJunction{
+      majiq::KnownContig{contig_idx(i), contigs},
+      majiq::OpenInterval{start(i), end(i)},
+      static_cast<majiq::GeneStrandness>(strand(i)[0]),
+      majiq::ExperimentCounts{numreads(i), numpos(i)}
+    };
+  }
+  return std::make_shared<majiq::SJJunctions>(std::move(sj_vec));
+}
+
+majiq::SJJunctionsPositions JunctionsRawFromNetcdf(py::str netcdf_path) {
+  auto xr_raw = majiq_pybind::OpenXarrayDataset(
+      netcdf_path, py::str(SJ_JUNCTIONS_RAW_NC_GROUP));
+  auto get_array = [&xr_raw](py::str key) {
+    py::function np_array = py::module_::import("numpy").attr("array");
+    return np_array(xr_raw.attr("__getitem__")(key));
+  };
+  using majiq::junction_ct_t;
+  using majiq::junction_pos_t;
+  py::array_t<junction_ct_t> _position_reads = get_array("position_reads");
+  auto position_reads = _position_reads.unchecked<1>();
+  py::array_t<junction_pos_t> _position = get_array("position");
+  auto position = _position.unchecked<1>();
+  py::array_t<size_t> _offsets = get_array("_offsets");
+  auto offsets = _offsets.unchecked<1>();
+  py::dict xr_raw_attrs = xr_raw.attr("attrs");
+
+  auto num_positions = xr_raw_attrs["num_positions"].cast<junction_pos_t>();
+  std::vector<size_t> offsets_vec(offsets.shape(0));
+  for (size_t i = 0; i < offsets_vec.size(); ++i) {
+    offsets_vec[i] = offsets(i);
+  }
+  std::vector<majiq::PositionReads> pr_vec(position_reads.shape(0));
+  for (size_t i = 0; i < pr_vec.size(); ++i) {
+    pr_vec[i] = majiq::PositionReads{position(i), position_reads(i)};
+  }
+  auto junctions = JunctionsFromNetcdf(netcdf_path);
+
+  return majiq::SJJunctionsPositions{std::move(junctions), std::move(pr_vec),
+                                     std::move(offsets_vec), num_positions};
+}
 
 void init_SJJunctionsModule(py::module_& m) {
   using majiq::position_t;
@@ -94,6 +166,9 @@ void init_SJJunctionsModule(py::module_& m) {
         },
         "array[int] for total number of nonzero positions")
     .def("__len__", &SJJunctions::size, "Number of junctions")
+    .def_static("from_netcdf", &JunctionsFromNetcdf,
+        "Load junctions from netcdf",
+        py::arg("netcdf_path"))
     .def("df",
         [](py::object& sj) -> py::object {
         using majiq_pybind::XarrayDatasetFromObject;
@@ -127,6 +202,13 @@ void init_SJJunctionsModule(py::module_& m) {
             sj.reads(), offset, sj_obj);
         },
         "Position index for junction/position")
+    .def_property_readonly("_offsets",
+        [](py::object& sj_obj) {
+        SJJunctionsPositions& sj = sj_obj.cast<SJJunctionsPositions&>();
+        return ArrayFromVectorAndOffset<size_t, size_t>(
+            sj.offsets(), 0, sj_obj);
+        },
+        "Raw offsets for jpidx_start and jpidx_end")
     .def_property_readonly("jpidx_start",
         [](py::object& sj_obj) {
         SJJunctionsPositions& sj = sj_obj.cast<SJJunctionsPositions&>();
@@ -146,20 +228,56 @@ void init_SJJunctionsModule(py::module_& m) {
             {"position_reads", "position"});
         },
         "View on junction-position information as xarray Dataset")
-    .def("jidx_to_jpidx",
-        [](py::object& sj) -> py::object {
-        using majiq_pybind::XarrayDatasetFromObject;
-        return XarrayDatasetFromObject(
-            sj, "jidx", {"jpidx_start", "jpidx_end"});
-        },
-        "Map from jidx to starts/ends for jpidx")
     .def_property_readonly("junctions",
         [](py::object& sj) -> py::object {
+        using namespace py::literals;
         auto base = sj.attr("_junctions").attr("df")();
-        auto jpidx_map = sj.attr("jidx_to_jpidx")();
-        return base.attr("combine_first")(jpidx_map);
+        auto get_xr = [&sj](py::str key) {
+          return py::module_::import("xarray").attr("DataArray")(
+              sj.attr(key), "dims"_a = "jidx");
+        };
+        return base.attr("assign_coords")(
+            "jpidx_start"_a = get_xr("jpidx_start"),
+            "jpidx_end"_a = get_xr("jpidx_end"));
         },
         "View on junction information as xarray Dataset")
+    .def("to_netcdf",
+        [](py::object& sj, py::str output_path) {
+        // don't write to existing file
+        py::object Path = py::module_::import("pathlib").attr("Path");
+        if (Path(output_path).attr("exists")().cast<bool>()) {
+          std::ostringstream oss;
+          oss << "Cannot save result to already existing file "
+              << output_path.cast<std::string>();
+          throw std::invalid_argument(oss.str());
+        }
+        using namespace py::literals;
+        // save contigs
+        sj.attr("_junctions").attr("_contigs").attr("to_netcdf")(
+            output_path, "mode"_a = "w");
+        // save junctions
+        sj.attr("_junctions").attr("df")().attr("to_netcdf")(
+            output_path,
+            "group"_a = py::str(SJ_JUNCTIONS_NC_GROUP),
+            "mode"_a = "a");
+        // save junction positions
+        auto xr_jp
+          = sj.attr("df")()
+          .attr("assign_coords")(
+              "_offsets"_a = py::module_::import("xarray").attr("DataArray")(
+                sj.attr("_offsets"), "dims"_a = "offset_idx"))
+          .attr("assign_attrs")("num_positions"_a = sj.attr("num_positions"));
+        xr_jp.attr("to_netcdf")(
+            output_path,
+            "group"_a = py::str(SJ_JUNCTIONS_RAW_NC_GROUP),
+            "mode"_a = "a");
+        return;
+        },
+        "Serialize junction counts to specified file",
+        py::arg("output_path"))
+    .def_static("from_netcdf", &JunctionsRawFromNetcdf,
+        "Load junctions and per-position counts from netcdf",
+        py::arg("netcdf_path"))
     .def_static("from_bam",
         [](const char* infile, ExperimentStrandness strand, int nthreads) {
         return majiq::JunctionsFromBam<BAM_MIN_OVERHANG>(

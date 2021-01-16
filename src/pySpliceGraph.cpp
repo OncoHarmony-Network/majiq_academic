@@ -28,18 +28,7 @@
 
 namespace py = pybind11;
 
-
-std::shared_ptr<majiq::Contigs> ContigsFromNetcdf(py::str netcdf_path) {
-  auto xr_contigs = majiq_pybind::OpenXarrayDataset(
-      netcdf_path, py::str(CONTIGS_NC_GROUP));
-  auto result = std::make_shared<majiq::Contigs>();
-  py::list seqids = xr_contigs
-    .attr("__getitem__")("seqid").attr("values").attr("tolist")();
-  for (auto seqid : seqids) {
-    result->add(seqid.cast<majiq::seqid_t>());
-  }
-  return result;
-}
+using majiq_pybind::ContigsFromNetcdf;
 
 std::shared_ptr<majiq::Genes> GenesFromNetcdf(
     std::shared_ptr<majiq::Contigs> contigs, py::str netcdf_path) {
