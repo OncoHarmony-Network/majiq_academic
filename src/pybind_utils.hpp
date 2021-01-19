@@ -149,21 +149,6 @@ inline py::object OpenXarrayDataset(py::str netcdf_path, py::str group) {
       netcdf_path, "group"_a = group);
 }
 
-/**
- * Load contigs from Netcdf
- */
-inline std::shared_ptr<majiq::Contigs> ContigsFromNetcdf(py::str netcdf_path) {
-  auto xr_contigs = OpenXarrayDataset(
-      netcdf_path, py::str(CONTIGS_NC_GROUP));
-  auto result = std::make_shared<majiq::Contigs>();
-  py::list seqids = xr_contigs
-    .attr("__getitem__")("seqid").attr("values").attr("tolist")();
-  for (auto seqid : seqids) {
-    result->add(seqid.cast<majiq::seqid_t>());
-  }
-  return result;
-}
-
 }  // namespace majiq_pybind
 
 
