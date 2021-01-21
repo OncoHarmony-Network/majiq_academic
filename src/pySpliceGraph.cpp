@@ -29,93 +29,17 @@
 
 namespace py = pybind11;
 
-std::shared_ptr<majiq::Contigs> ContigsFromNetcdf(py::str netcdf_path) {
-  auto xr_contigs = majiq_pybind::OpenXarrayDataset(
-      netcdf_path, py::str(CONTIGS_NC_GROUP));
-  auto result = std::make_shared<majiq::Contigs>();
-  py::list seqids = xr_contigs
-    .attr("__getitem__")("seqid").attr("values").attr("tolist")();
-  for (auto seqid : seqids) {
-    result->add(seqid.cast<majiq::seqid_t>());
-  }
-  return result;
-}
+struct ConnectionsArrays {
+  py::array_t<size_t> gene_idx;
+  py::array_t<majiq::position_t> start;
+  py::array_t<majiq::position_t> end;
+  py::array_t<bool> denovo;
+  py::array_t<bool> passed_build;
+  py::array_t<bool> simplified;
+};
 
-std::shared_ptr<majiq::Genes> GenesFromNetcdf(
-    std::shared_ptr<majiq::Contigs> contigs, py::str netcdf_path) {
-  using majiq::position_t;
-  using majiq::geneid_t;
-  using majiq::genename_t;
-  auto xr_genes = majiq_pybind::OpenXarrayDataset(
-      netcdf_path, py::str(GENES_NC_GROUP));
-  auto get_array = [&xr_genes](py::str key) {
-    py::function np_array = py::module_::import("numpy").attr("array");
-    return np_array(xr_genes.attr("__getitem__")(key));
-  };
-  py::array_t<size_t> _contig_idx = get_array("contig_idx");
-  auto contig_idx = _contig_idx.unchecked<1>();
-  py::array_t<position_t> _start = get_array("start");
-  auto start = _start.unchecked<1>();
-  py::array_t<position_t> _end = get_array("end");
-  auto end = _end.unchecked<1>();
-  py::array_t<std::array<char, 1>> _strand = get_array("strand");
-  auto strand = _strand.unchecked<1>();
-  py::list geneid
-    = xr_genes.attr("__getitem__")("gene_id").attr("values").attr("tolist")();
-  py::list genename
-    = xr_genes.attr("__getitem__")("gene_name").attr("values").attr("tolist")();
-  std::vector<majiq::Gene> gene_vec{};
-  gene_vec.reserve(geneid.size());
-  for (size_t i = 0; i < geneid.size(); ++i) {
-    gene_vec.push_back(majiq::Gene{
-        majiq::KnownContig{contig_idx(i), contigs},
-        majiq::ClosedInterval{start(i), end(i)},
-        static_cast<majiq::GeneStrandness>(strand(i)[0]),
-        geneid[i].cast<majiq::geneid_t>(),
-        genename[i].cast<majiq::genename_t>()});
-  }
-  return std::make_shared<majiq::Genes>(std::move(gene_vec));
-}
-
-std::shared_ptr<majiq::Exons> ExonsFromNetcdf(
-    std::shared_ptr<majiq::Genes> genes, py::str netcdf_path) {
-  using majiq::position_t;
-  auto xr_exons = majiq_pybind::OpenXarrayDataset(
-      netcdf_path, py::str(EXONS_NC_GROUP));
-  auto get_array = [&xr_exons](py::str key) {
-    py::function np_array = py::module_::import("numpy").attr("array");
-    return np_array(xr_exons.attr("__getitem__")(key));
-  };
-  // extract usable values from dataset
-  py::array_t<size_t> arr_gene_idx = get_array("gene_idx");
-  py::array_t<position_t> arr_start = get_array("start");
-  py::array_t<position_t> arr_end = get_array("end");
-  py::array_t<position_t> arr_ann_start = get_array("annotated_start");
-  py::array_t<position_t> arr_ann_end = get_array("annotated_end");
-  // unchecked accesses to numpy array
-  auto gene_idx = arr_gene_idx.unchecked<1>();
-  auto start = arr_start.unchecked<1>();
-  auto end = arr_end.unchecked<1>();
-  auto ann_start = arr_ann_start.unchecked<1>();
-  auto ann_end = arr_ann_end.unchecked<1>();
-  // create vector of genes matching input arrays
-  std::vector<majiq::Exon> exon_vec{};
-  exon_vec.reserve(gene_idx.shape(0));
-  for (py::ssize_t i = 0; i < gene_idx.shape(0); ++i) {
-    exon_vec.push_back(majiq::Exon{
-        majiq::KnownGene{gene_idx(i), genes},
-        majiq::ClosedInterval{start(i), end(i)},
-        majiq::ClosedInterval{ann_start(i), ann_end(i)}});
-  }
-  return std::make_shared<majiq::Exons>(std::move(exon_vec));
-}
-
-template <class Connections, const char group_str[]>
-std::shared_ptr<Connections> ConnectionsFromNetcdf(
-    std::shared_ptr<majiq::Genes> genes, py::str netcdf_path) {
-  using IntervalT = typename Connections::IntervalT;
-  using RegionT = typename Connections::value_type;
-  using majiq::position_t;
+template <const char group_str[]>
+ConnectionsArrays ConnectionsArraysFromNetcdf(py::str netcdf_path) {
   auto xr_connections = majiq_pybind::OpenXarrayDataset(
       netcdf_path, py::str(group_str));
   auto get_array = [&xr_connections](py::str key) {
@@ -123,22 +47,31 @@ std::shared_ptr<Connections> ConnectionsFromNetcdf(
     return np_array(xr_connections.attr("__getitem__")(key));
   };
   // extract usable values from dataset
-  py::array_t<size_t> arr_gene_idx = get_array("gene_idx");
-  py::array_t<position_t> arr_start = get_array("start");
-  py::array_t<position_t> arr_end = get_array("end");
-  py::array_t<bool> arr_denovo = get_array("denovo");
-  py::array_t<bool> arr_passed_build = get_array("passed_build");
-  py::array_t<bool> arr_simplified = get_array("simplified");
-  // unchecked accesses to numpy array
-  auto gene_idx = arr_gene_idx.unchecked<1>();
-  auto start = arr_start.unchecked<1>();
-  auto end = arr_end.unchecked<1>();
-  auto denovo = arr_denovo.unchecked<1>();
-  auto passed_build = arr_passed_build.unchecked<1>();
-  auto simplified = arr_simplified.unchecked<1>();
-  // create vector of genes matching input arrays
-  using majiq::KnownGene;
+  using majiq::position_t;
+  py::array_t<size_t> gene_idx = get_array("gene_idx");
+  py::array_t<position_t> start = get_array("start");
+  py::array_t<position_t> end = get_array("end");
+  py::array_t<bool> denovo = get_array("denovo");
+  py::array_t<bool> passed_build = get_array("passed_build");
+  py::array_t<bool> simplified = get_array("simplified");
+  // return result
+  return ConnectionsArrays{gene_idx, start, end,
+                           denovo, passed_build, simplified};
+}
 
+template <class Connections>
+std::shared_ptr<Connections> MakeConnections(
+    std::shared_ptr<majiq::Genes> genes, const ConnectionsArrays& values) {
+  // unchecked accesses to numpy array
+  auto gene_idx = values.gene_idx.unchecked<1>();
+  auto start = values.start.unchecked<1>();
+  auto end = values.end.unchecked<1>();
+  auto denovo = values.denovo.unchecked<1>();
+  auto passed_build = values.passed_build.unchecked<1>();
+  auto simplified = values.simplified.unchecked<1>();
+  // create vector of genes matching input arrays for specified connections
+  using IntervalT = typename Connections::IntervalT;
+  using RegionT = typename Connections::value_type;
   std::vector<RegionT> connection_vec{};
   connection_vec.reserve(gene_idx.shape(0));
   for (py::ssize_t i = 0; i < gene_idx.shape(0); ++i) {
@@ -146,80 +79,9 @@ std::shared_ptr<Connections> ConnectionsFromNetcdf(
         majiq::KnownGene{gene_idx(i), genes}, IntervalT{start(i), end(i)},
         denovo(i), passed_build(i), simplified(i)});
   }
+  // create shared pointer to connections object
   return std::make_shared<Connections>(std::move(connection_vec));
 }
-
-std::shared_ptr<majiq::SJJunctions> JunctionsFromNetcdf(py::str netcdf_path) {
-  using majiq::position_t;
-  using majiq::junction_ct_t;
-  using majiq::junction_pos_t;
-  auto xr_junctions = majiq_pybind::OpenXarrayDataset(
-      netcdf_path, py::str(SJ_JUNCTIONS_NC_GROUP));
-  auto get_array = [&xr_junctions](py::str key) {
-    py::function np_array = py::module_::import("numpy").attr("array");
-    return np_array(xr_junctions.attr("__getitem__")(key));
-  };
-  py::array_t<size_t> _contig_idx = get_array("contig_idx");
-  auto contig_idx = _contig_idx.unchecked<1>();
-  py::array_t<position_t> _start = get_array("start");
-  auto start = _start.unchecked<1>();
-  py::array_t<position_t> _end = get_array("end");
-  auto end = _end.unchecked<1>();
-  py::array_t<std::array<char, 1>> _strand = get_array("strand");
-  auto strand = _strand.unchecked<1>();
-  py::array_t<junction_pos_t> _numpos = get_array("numpos");
-  auto numpos = _numpos.unchecked<1>();
-  py::array_t<junction_ct_t> _numreads = get_array("numreads");
-  auto numreads = _numreads.unchecked<1>();
-
-  // load contigs
-  auto contigs = ContigsFromNetcdf(netcdf_path);
-
-  // fill in junctions
-  std::vector<majiq::SJJunction> sj_vec(numpos.shape(0));
-  for (size_t i = 0; i < sj_vec.size(); ++i) {
-    sj_vec[i] = majiq::SJJunction{
-      majiq::KnownContig{contig_idx(i), contigs},
-      majiq::OpenInterval{start(i), end(i)},
-      static_cast<majiq::GeneStrandness>(strand(i)[0]),
-      majiq::ExperimentCounts{numreads(i), numpos(i)}
-    };
-  }
-  return std::make_shared<majiq::SJJunctions>(std::move(sj_vec));
-}
-
-majiq::SJJunctionsPositions JunctionsRawFromNetcdf(py::str netcdf_path) {
-  auto xr_raw = majiq_pybind::OpenXarrayDataset(
-      netcdf_path, py::str(SJ_JUNCTIONS_RAW_NC_GROUP));
-  auto get_array = [&xr_raw](py::str key) {
-    py::function np_array = py::module_::import("numpy").attr("array");
-    return np_array(xr_raw.attr("__getitem__")(key));
-  };
-  using majiq::junction_ct_t;
-  using majiq::junction_pos_t;
-  py::array_t<junction_ct_t> _position_reads = get_array("position_reads");
-  auto position_reads = _position_reads.unchecked<1>();
-  py::array_t<junction_pos_t> _position = get_array("position");
-  auto position = _position.unchecked<1>();
-  py::array_t<size_t> _offsets = get_array("_offsets");
-  auto offsets = _offsets.unchecked<1>();
-  py::dict xr_raw_attrs = xr_raw.attr("attrs");
-
-  auto num_positions = xr_raw_attrs["num_positions"].cast<junction_pos_t>();
-  std::vector<size_t> offsets_vec(offsets.shape(0));
-  for (size_t i = 0; i < offsets_vec.size(); ++i) {
-    offsets_vec[i] = offsets(i);
-  }
-  std::vector<majiq::PositionReads> pr_vec(position_reads.shape(0));
-  for (size_t i = 0; i < pr_vec.size(); ++i) {
-    pr_vec[i] = majiq::PositionReads{position(i), position_reads(i)};
-  }
-  auto junctions = JunctionsFromNetcdf(netcdf_path);
-
-  return majiq::SJJunctionsPositions{std::move(junctions), std::move(pr_vec),
-                                     std::move(offsets_vec), num_positions};
-}
-
 
 void init_Contigs(
     py::class_<majiq::Contigs, std::shared_ptr<majiq::Contigs>>& pyContigs) {
@@ -227,8 +89,24 @@ void init_Contigs(
   using majiq::Contigs;
   using namespace py::literals;
   pyContigs
+    .def(
+        py::init([](py::list seqids) {
+          auto result = std::make_shared<Contigs>();
+          for (auto seqid : seqids) {
+            result->add(seqid.cast<seqid_t>());
+          }
+          return result;
+        }),
+        "Set up Contigs object using specified identifiers",
+        py::arg("seqids"))
     .def_static("from_netcdf",
-        [](py::str x) { return ContigsFromNetcdf(x); },
+        [](py::str netcdf_path) {
+          auto xr_contigs = majiq_pybind::OpenXarrayDataset(
+              netcdf_path, py::str(CONTIGS_NC_GROUP));
+          py::list seqids = xr_contigs
+            .attr("__getitem__")("seqid").attr("values").attr("tolist")();
+          return py::module_::import("new_majiq").attr("Contigs")(seqids);
+        },
         "Load contigs from netcdf file", py::arg("netcdf_path"))
     .def("to_netcdf",
         [](py::object& self, py::str out, py::str mode) {
@@ -267,9 +145,53 @@ void init_Genes(
   using majiq::position_t;
   using majiq::geneid_t;
   pyGenes
+    .def(
+        py::init([](
+            std::shared_ptr<Contigs> contigs,
+            py::array_t<size_t> _contig_idx,
+            py::array_t<position_t> _start,
+            py::array_t<position_t> _end,
+            py::array_t<std::array<char, 1>> _strand,
+            py::list geneid,
+            py::list genename) {
+          auto contig_idx = _contig_idx.unchecked<1>();
+          auto start = _start.unchecked<1>();
+          auto end = _end.unchecked<1>();
+          auto strand = _strand.unchecked<1>();
+          std::vector<majiq::Gene> gene_vec{};
+          gene_vec.reserve(geneid.size());
+          for (size_t i = 0; i < geneid.size(); ++i) {
+            gene_vec.push_back(majiq::Gene{
+                majiq::KnownContig{contig_idx(i), contigs},
+                majiq::ClosedInterval{start(i), end(i)},
+                static_cast<majiq::GeneStrandness>(strand(i)[0]),
+                geneid[i].cast<majiq::geneid_t>(),
+                genename[i].cast<majiq::genename_t>()});
+          }
+          return std::make_shared<Genes>(std::move(gene_vec));
+        }),
+        "Create Genes object using Contigs object and arrays defining genes",
+        py::arg("contigs"), py::arg("contig_idx"),
+        py::arg("start"), py::arg("end"), py::arg("strand"),
+        py::arg("gene_id"), py::arg("gene_name"))
     .def_static("from_netcdf",
-        [](py::str x, std::shared_ptr<Contigs> contigs) {
-        return GenesFromNetcdf(contigs, x);
+        [](py::str netcdf_path, std::shared_ptr<Contigs> contigs) {
+        auto xr_genes = majiq_pybind::OpenXarrayDataset(
+            netcdf_path, py::str(GENES_NC_GROUP));
+        auto get_array = [&xr_genes](py::str key) {
+          py::function np_array = py::module_::import("numpy").attr("array");
+          return np_array(xr_genes.attr("__getitem__")(key));
+        };
+        py::array_t<size_t> contig_idx = get_array("contig_idx");
+        py::array_t<position_t> start = get_array("start");
+        py::array_t<position_t> end = get_array("end");
+        py::array_t<std::array<char, 1>> strand = get_array("strand");
+        py::list geneid = xr_genes.attr("__getitem__")("gene_id")
+          .attr("values").attr("tolist")();
+        py::list genename = xr_genes.attr("__getitem__")("gene_name")
+          .attr("values").attr("tolist")();
+        return py::module_::import("new_majiq").attr("Genes")(
+            contigs, contig_idx, start, end, strand, geneid, genename);
         },
         "Load genes from netcdf file",
         py::arg("netcdf_path"), py::arg("contigs"))
@@ -346,9 +268,51 @@ void init_Exons(
   using majiq::position_t;
   using majiq_pybind::ArrayFromVectorAndOffset;
   pyExons
+    .def(py::init([](
+            std::shared_ptr<majiq::Genes> genes,
+            py::array_t<size_t> _gene_idx,
+            py::array_t<position_t> _start,
+            py::array_t<position_t> _end,
+            py::array_t<position_t> _ann_start,
+            py::array_t<position_t> _ann_end) {
+          // unchecked accesses to numpy array
+          auto gene_idx = _gene_idx.unchecked<1>();
+          auto start = _start.unchecked<1>();
+          auto end = _end.unchecked<1>();
+          auto ann_start = _ann_start.unchecked<1>();
+          auto ann_end = _ann_end.unchecked<1>();
+          // create vector of genes matching input arrays
+          std::vector<majiq::Exon> exon_vec{};
+          exon_vec.reserve(gene_idx.shape(0));
+          for (py::ssize_t i = 0; i < gene_idx.shape(0); ++i) {
+            exon_vec.push_back(majiq::Exon{
+                majiq::KnownGene{gene_idx(i), genes},
+                majiq::ClosedInterval{start(i), end(i)},
+                majiq::ClosedInterval{ann_start(i), ann_end(i)}});
+          }
+          return std::make_shared<Exons>(std::move(exon_vec));
+        }),
+        "Create Exons object using Genes and info about each exon",
+        py::arg("genes"), py::arg("gene_idx"),
+        py::arg("start"), py::arg("end"),
+        py::arg("annotated_start"), py::arg("annotated_end"))
     .def_static("from_netcdf",
-        [](py::str x, std::shared_ptr<majiq::Genes> genes) {
-        return ExonsFromNetcdf(genes, x);
+        [](py::str netcdf_path, std::shared_ptr<majiq::Genes> genes) {
+        using majiq::position_t;
+        auto xr_exons = majiq_pybind::OpenXarrayDataset(
+            netcdf_path, py::str(EXONS_NC_GROUP));
+        auto get_array = [&xr_exons](py::str key) {
+          py::function np_array = py::module_::import("numpy").attr("array");
+          return np_array(xr_exons.attr("__getitem__")(key));
+        };
+        // extract usable values from dataset
+        py::array_t<size_t> gene_idx = get_array("gene_idx");
+        py::array_t<position_t> start = get_array("start");
+        py::array_t<position_t> end = get_array("end");
+        py::array_t<position_t> ann_start = get_array("annotated_start");
+        py::array_t<position_t> ann_end = get_array("annotated_end");
+        return py::module_::import("new_majiq").attr("Exons")(
+            genes, gene_idx, start, end, ann_start, ann_end);
         },
         "Load exons from netcdf file",
         py::arg("netcdf_path"), py::arg("genes"))
@@ -421,10 +385,25 @@ void init_GeneJunctions(
   using majiq::position_t;
   using majiq_pybind::ArrayFromVectorAndOffset;
   pyGeneJunctions
+    .def(py::init([](
+            std::shared_ptr<majiq::Genes> genes,
+            py::array_t<size_t> gene_idx,
+            py::array_t<position_t> start,
+            py::array_t<position_t> end,
+            py::array_t<bool> denovo,
+            py::array_t<bool> passed_build,
+            py::array_t<bool> simplified) {
+          return MakeConnections<GeneJunctions>(genes, ConnectionsArrays{
+              gene_idx, start, end, denovo, passed_build, simplified});
+        }),
+        "Create GeneJunctions using Genes and arrays defining each junction",
+        py::arg("genes"),
+        py::arg("gene_idx"), py::arg("start"), py::arg("end"),
+        py::arg("denovo"), py::arg("passed_build"), py::arg("simplified"))
     .def_static("from_netcdf",
         [](py::str x, std::shared_ptr<majiq::Genes> genes) {
-        return ConnectionsFromNetcdf<GeneJunctions, JUNCTIONS_NC_GROUP>(
-            genes, x);
+        return MakeConnections<GeneJunctions>(
+            genes, ConnectionsArraysFromNetcdf<JUNCTIONS_NC_GROUP>(x));
         },
         "Load junctions from netcdf file",
         py::arg("netcdf_path"), py::arg("genes"))
@@ -506,9 +485,25 @@ void init_Introns(
   using majiq::position_t;
   using majiq_pybind::ArrayFromVectorAndOffset;
   pyIntrons
+    .def(py::init([](
+            std::shared_ptr<majiq::Genes> genes,
+            py::array_t<size_t> gene_idx,
+            py::array_t<position_t> start,
+            py::array_t<position_t> end,
+            py::array_t<bool> denovo,
+            py::array_t<bool> passed_build,
+            py::array_t<bool> simplified) {
+          return MakeConnections<Introns>(genes, ConnectionsArrays{
+              gene_idx, start, end, denovo, passed_build, simplified});
+        }),
+        "Create Introns using Genes and arrays defining each intron",
+        py::arg("genes"),
+        py::arg("gene_idx"), py::arg("start"), py::arg("end"),
+        py::arg("denovo"), py::arg("passed_build"), py::arg("simplified"))
     .def_static("from_netcdf",
         [](py::str x, std::shared_ptr<majiq::Genes> genes) {
-        return ConnectionsFromNetcdf<Introns, INTRONS_NC_GROUP>(genes, x);
+        return MakeConnections<Introns>(
+            genes, ConnectionsArraysFromNetcdf<INTRONS_NC_GROUP>(x));
         },
         "Load introns from netcdf file",
         py::arg("netcdf_path"), py::arg("genes"))
@@ -589,7 +584,60 @@ void init_SJJunctions(py::class_<majiq::SJJunctions, std::shared_ptr<majiq::SJJu
   using majiq::SJJunctions;
   using majiq_pybind::ArrayFromVectorAndOffset;
   pySJJunctions
-    // NOTE majiq::Contigs needs to be bound prior to this function being called
+    .def(py::init([](
+            std::shared_ptr<majiq::Contigs> contigs,
+            py::array_t<size_t> _contig_idx,
+            py::array_t<position_t> _start,
+            py::array_t<position_t> _end,
+            py::array_t<std::array<char, 1>> _strand,
+            py::array_t<majiq::junction_pos_t> _numpos,
+            py::array_t<majiq::junction_ct_t> _numreads) {
+          auto contig_idx = _contig_idx.unchecked<1>();
+          auto start = _start.unchecked<1>();
+          auto end = _end.unchecked<1>();
+          auto strand = _strand.unchecked<1>();
+          auto numpos = _numpos.unchecked<1>();
+          auto numreads = _numreads.unchecked<1>();
+          // fill in junctions
+          std::vector<majiq::SJJunction> sj_vec(numpos.shape(0));
+          for (size_t i = 0; i < sj_vec.size(); ++i) {
+            sj_vec[i] = majiq::SJJunction{
+              majiq::KnownContig{contig_idx(i), contigs},
+              majiq::OpenInterval{start(i), end(i)},
+              static_cast<majiq::GeneStrandness>(strand(i)[0]),
+              majiq::ExperimentCounts{numreads(i), numpos(i)}
+            };
+          }
+          return std::make_shared<majiq::SJJunctions>(std::move(sj_vec));
+        }),
+        "Create SJJunctions object from contigs and arrays",
+        py::arg("contigs"),
+        py::arg("contig_idx"), py::arg("start"), py::arg("end"),
+        py::arg("strand"), py::arg("numpos"), py::arg("numreads"))
+    .def_static("from_netcdf",
+        [](py::str x) {
+        // load contigs
+        auto new_majiq = py::module_::import("new_majiq");
+        auto contigs = new_majiq.attr("Contigs").attr("from_netcdf")(x);
+        // load sj arrays
+        auto xr_junctions = majiq_pybind::OpenXarrayDataset(
+            x, py::str(SJ_JUNCTIONS_NC_GROUP));
+        auto get_array = [&xr_junctions](py::str key) {
+          py::function np_array = py::module_::import("numpy").attr("array");
+          return np_array(xr_junctions.attr("__getitem__")(key));
+        };
+        py::array_t<size_t> contig_idx = get_array("contig_idx");
+        py::array_t<position_t> start = get_array("start");
+        py::array_t<position_t> end = get_array("end");
+        py::array_t<std::array<char, 1>> strand = get_array("strand");
+        py::array_t<majiq::junction_pos_t> numpos = get_array("numpos");
+        py::array_t<majiq::junction_ct_t> numreads = get_array("numreads");
+        // use Python constructor
+        return new_majiq.attr("SJJunctions")(
+            contigs, contig_idx, start, end, strand, numpos, numreads);
+        },
+        "Load junctions from netcdf",
+        py::arg("netcdf_path"))
     .def_property_readonly("_contigs", &SJJunctions::contigs,
         "Underlying contigs corresponding to contig_idx")
     .def_property_readonly("contigs",
@@ -644,9 +692,6 @@ void init_SJJunctions(py::class_<majiq::SJJunctions, std::shared_ptr<majiq::SJJu
         },
         "array[int] for total number of nonzero positions")
     .def("__len__", &SJJunctions::size, "Number of junctions")
-    .def_static("from_netcdf", &JunctionsFromNetcdf,
-        "Load junctions from netcdf",
-        py::arg("netcdf_path"))
     .def("df",
         [](py::object& sj) -> py::object {
         using majiq_pybind::XarrayDatasetFromObject;
@@ -662,6 +707,55 @@ void init_SJJunctionsPositions(py::class_<majiq::SJJunctionsPositions, std::shar
   using majiq_pybind::ArrayFromVectorAndOffset;
 
   pySJJunctionsPositions
+    .def(py::init([](
+            std::shared_ptr<majiq::SJJunctions> junctions,
+            py::array_t<majiq::junction_ct_t> _position_reads,
+            py::array_t<majiq::junction_pos_t> _position,
+            py::array_t<size_t> _offsets,
+            majiq::junction_pos_t num_positions) {
+          auto position_reads = _position_reads.unchecked<1>();
+          auto position = _position.unchecked<1>();
+          auto offsets = _offsets.unchecked<1>();
+          std::vector<size_t> offsets_vec(offsets.shape(0));
+          for (size_t i = 0; i < offsets_vec.size(); ++i) {
+            offsets_vec[i] = offsets(i);
+          }
+          std::vector<majiq::PositionReads> pr_vec(position_reads.shape(0));
+          for (size_t i = 0; i < pr_vec.size(); ++i) {
+            pr_vec[i] = majiq::PositionReads{position(i), position_reads(i)};
+          }
+          return majiq::SJJunctionsPositions{
+            std::move(junctions),
+            std::move(pr_vec), std::move(offsets_vec), num_positions};
+        }),
+        "Create SJJunctionsPositions for junctions with per-position coverage",
+        py::arg("sj_junctions"),
+        py::arg("position_reads"), py::arg("position"), py::arg("_offsets"),
+        py::arg("num_positions"))
+    .def_static("from_netcdf",
+        [](py::str x) {
+        auto xr_raw = majiq_pybind::OpenXarrayDataset(
+            x, py::str(SJ_JUNCTIONS_RAW_NC_GROUP));
+        auto get_array = [&xr_raw](py::str key) {
+          py::function np_array = py::module_::import("numpy").attr("array");
+          return np_array(xr_raw.attr("__getitem__")(key));
+        };
+        using majiq::junction_ct_t;
+        using majiq::junction_pos_t;
+        py::array_t<junction_ct_t> position_reads = get_array("position_reads");
+        py::array_t<junction_pos_t> position = get_array("position");
+        py::array_t<size_t> offsets = get_array("_offsets");
+        py::dict xr_raw_attrs = xr_raw.attr("attrs");
+        auto num_positions = xr_raw_attrs["num_positions"]
+          .cast<junction_pos_t>();
+        // load information about junctions, then call Python constructor
+        auto new_majiq = py::module_::import("new_majiq");
+        auto junctions = new_majiq.attr("SJJunctions").attr("from_netcdf")(x);
+        return new_majiq.attr("SJJunctionsPositions")(
+            junctions, position_reads, position, offsets, num_positions);
+        },
+        "Load junctions and per-position counts from netcdf",
+        py::arg("netcdf_path"))
     .def_property_readonly("_junctions", &SJJunctionsPositions::junctions,
         "Underlying junctions and summarized counts")
     .def_property_readonly("num_positions",
@@ -757,10 +851,7 @@ void init_SJJunctionsPositions(py::class_<majiq::SJJunctionsPositions, std::shar
         return;
         },
         "Serialize junction counts to specified file",
-        py::arg("output_path"))
-    .def_static("from_netcdf", &JunctionsRawFromNetcdf,
-        "Load junctions and per-position counts from netcdf",
-        py::arg("netcdf_path"));
+        py::arg("output_path"));
 }
 
 void init_SpliceGraph(py::class_<majiq::SpliceGraph>& pySpliceGraph) {
@@ -785,16 +876,20 @@ void init_SpliceGraph(py::class_<majiq::SpliceGraph>& pySpliceGraph) {
         [](py::str netcdf_path) {
         py::function load_dataset
           = py::module_::import("xarray").attr("load_dataset");
-        auto contigs = ContigsFromNetcdf(netcdf_path);
-        auto genes = GenesFromNetcdf(contigs, netcdf_path);
-        auto exons = ExonsFromNetcdf(genes, netcdf_path);
+        auto new_majiq = py::module_::import("new_majiq");
+        auto contigs
+          = new_majiq.attr("Contigs").attr("from_netcdf")(netcdf_path);
+        auto genes
+          = new_majiq.attr("Genes").attr("from_netcdf")(netcdf_path, contigs);
+        auto exons
+          = new_majiq.attr("Exons").attr("from_netcdf")(netcdf_path, genes);
         auto junctions
-          = ConnectionsFromNetcdf<majiq::GeneJunctions, JUNCTIONS_NC_GROUP>(
-              genes, netcdf_path);
+          = new_majiq.attr("GeneJunctions")
+            .attr("from_netcdf")(netcdf_path, genes);
         auto introns
-          = ConnectionsFromNetcdf<majiq::Introns, INTRONS_NC_GROUP>(
-              genes, netcdf_path);
-        return SpliceGraph{contigs, genes, exons, junctions, introns};
+          = new_majiq.attr("Introns").attr("from_netcdf")(netcdf_path, genes);
+        return new_majiq
+          .attr("SpliceGraph")(contigs, genes, exons, junctions, introns);
         },
         "Load splicegraph from netCDF file",
         py::arg("netcdf_path"))
