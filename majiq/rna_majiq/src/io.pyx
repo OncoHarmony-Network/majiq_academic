@@ -291,11 +291,7 @@ cdef list _extract_lsv_summary(list files, int minnonzero, int min_reads, dict t
     cdef dict epsi = {}
     cdef int percent
 
-    if nexp < 1:
-        percent = ceil(nfiles * nexp)
-    else:
-        percent =int(nexp)
-    percent = min(int(percent), nfiles)
+    percent = min(nfiles, int(ceil(nfiles * nexp if nexp < 1 else nexp)))
 
     for fidx, ff in enumerate(files):
         if not os.path.isfile(ff):
