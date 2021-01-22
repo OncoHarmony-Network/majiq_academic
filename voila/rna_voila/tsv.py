@@ -402,6 +402,7 @@ class HeterogenTsv(AnalysisTypeTsv):
         Class to write TSV file for Heterogen analysis type.
         """
 
+        self._quantiles = (0.05, 0.25, 0.75, 0.95,)
         super().__init__(ViewHeterogens)
 
     def get_metadata(self):
@@ -428,6 +429,9 @@ class HeterogenTsv(AnalysisTypeTsv):
                 'seqid',
                 *(
                     f'{group}_median_psi' for group in group_names
+                ),
+                *(
+                    f'{group}_percentile{quant * 100:02.0f}_psi' for group in group_names for quant in self._quantiles
                 ),
                 *stats_column_names,
                 *m.nonchanging_column_names,
@@ -489,9 +493,16 @@ class HeterogenTsv(AnalysisTypeTsv):
 
                         for grp, medians in zip(group_names, het.median_psi):
                             if (medians < 0).all():
-                                row[grp + '_median_psi'] = 'NA'
+                                row[f'{grp}_median_psi'] = 'NA'
                             else:
-                                row[grp + '_median_psi'] = semicolon(x for x in medians)
+                                row[f'{grp}_median_psi'] = semicolon(x for x in medians)
+
+                        for quant in self._quantiles:
+                            for grp, medians in zip(group_names, het.quantile_psi(quant)):
+                                if (medians < 0).all():
+                                    row[f'{grp}_percentile{quant * 100:02.0f}_psi'] = 'NA'
+                                else:
+                                    row[f'{grp}_percentile{quant * 100:02.0f}_psi'] = semicolon(x for x in medians)
 
                         for key, value in het.junction_stats:
                             row[key] = semicolon(value)

@@ -657,6 +657,12 @@ class ViewHeterogens(ViewMulti):
 
         @property
         def median_psi(self):
+            return self._median_psi()
+
+        def quantile_psi(self, quantile):
+            return self._median_psi(quantile=quantile)
+
+        def _median_psi(self, quantile=None):
             """ Find median_psi per group in all het voila files
 
             Returns
@@ -677,7 +683,10 @@ class ViewHeterogens(ViewMulti):
                     try:
                         het = m.lsv(self.lsv_id)
 
-                        medians = het.median_psi()
+                        if quantile is None:
+                            medians = het.median_psi()
+                        else:
+                            medians = het.quantile_psi(quantile)
                         # get index into medians (second axis) per group
                         for ndx, grp in enumerate(m.group_names):
                             idx = group_names.index(grp)  # index to median_psi
@@ -1139,6 +1148,9 @@ class ViewHeterogen(Heterogen, ViewMatrix):
             if mu_psi is None:
                 mu_psi = self.mu_psi_nanmasked
             return np.nanmedian(mu_psi, axis=-1)
+
+        def quantile_psi(self, quantile):
+            return np.nanquantile(self.mu_psi_nanmasked, quantile, axis=-1)
 
         def iqr_psi(self, mu_psi=None):
             """ Get group IQRs of psi_mean per junction
