@@ -402,7 +402,7 @@ class HeterogenTsv(AnalysisTypeTsv):
         Class to write TSV file for Heterogen analysis type.
         """
 
-        self._quantiles = (0.05, 0.25, 0.75, 0.95,)
+        self._quantiles = (0.25, 0.75,)
         super().__init__(ViewHeterogens)
 
     def get_metadata(self):
