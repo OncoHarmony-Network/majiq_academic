@@ -123,7 +123,9 @@ class OverGenes {
     for (size_t gene_idx = 0; gene_idx < genes->size(); ++gene_idx) {
       const Gene& gene = genes->get(gene_idx);
       if (
+          // change in contig or past current max end --> start of overgene
           (contig_idx < gene.contig.contig_idx || og_end < gene.interval.start)
+          // so if we also have an overgene in progress, add it now
           && og_start != EMPTY
           && og_end != EMPTY) {
         // add an overgene
@@ -137,6 +139,7 @@ class OverGenes {
         og_start = gene.interval.start;
       }
       og_end = std::max(og_end, gene.interval.end);
+      // update contig_idx, tracking contig offsets into overgenes
       while (contig_idx < gene.contig.contig_idx) {
         // add/note end of contig
         contig_offsets_.push_back(overgenes_.size());
