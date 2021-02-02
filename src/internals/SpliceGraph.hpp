@@ -103,8 +103,6 @@ class SpliceGraph {
   // to be declared later
   friend bool operator==(const SpliceGraph& x, const SpliceGraph& y) noexcept;
   friend std::ostream& operator<<(std::ostream&, const SpliceGraph&) noexcept;
-  // get potential introns between exons
-  Introns potential_introns() const;
 };
 
 // equality of splicegraphs
@@ -128,46 +126,6 @@ std::ostream& operator<<(std::ostream& os, const SpliceGraph& sg) noexcept {
   return os;
 }
 
-// how to extract potential introns from splicegraph
-Introns SpliceGraph::potential_introns() const {
-  constexpr bool default_denovo = true;
-  constexpr bool default_passed = false;
-  constexpr bool default_simplified = false;
-  // initialize intron vector
-  std::vector<Intron> intron_vec(exons_->size() - genes_->size());
-  // for each gene
-  for (size_t gene_idx = 0; gene_idx < genes_->size(); ++gene_idx) {
-    // iterate over current introns and adjacent exons (exon_idx - 1, exon_idx)
-    size_t old_intron_idx = gene_introns_idx_[gene_idx];
-    for (size_t exon_idx = 1 + gene_exons_idx_[gene_idx];
-        exon_idx < gene_exons_idx_[gene_idx + 1]; ++exon_idx) {
-      // create new intron with default connection details
-      Intron new_intron{
-        (*exons_)[exon_idx].gene,
-        ClosedInterval{
-          (*exons_)[exon_idx - 1].coordinates.end + 1,
-          (*exons_)[exon_idx].coordinates.start - 1},
-        default_denovo, default_passed, default_simplified};
-      // skip old introns that cannot intersect
-      while (old_intron_idx < gene_introns_idx_[gene_idx + 1]
-          && ((*introns_)[old_intron_idx].coordinates.end
-            < new_intron.coordinates.start)) {
-        ++old_intron_idx;
-      }
-      // if we have an old intron that does intersect, we update new intron
-      if (old_intron_idx < gene_introns_idx_[gene_idx + 1]
-          && IntervalIntersects(
-            new_intron.coordinates, (*introns_)[old_intron_idx].coordinates)) {
-        // update connection data using intersecting intron
-        new_intron.data &= (*introns_)[old_intron_idx].data;
-      }
-      // set new intron
-      intron_vec[exon_idx - 1 - gene_idx] = new_intron;
-    }
-  }
-  // return introns initialized with this vector
-  return Introns{intron_vec};
-}
 
 // how to index regions that are sorted by gene
 template <class ContainerT>

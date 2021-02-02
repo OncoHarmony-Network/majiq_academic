@@ -27,20 +27,7 @@ struct Connection {
   Connection(Connection&& x) = default;
   Connection& operator=(const Connection& x) = default;
   Connection& operator=(Connection&& x) = default;
-  Connection& operator&=(const Connection& rhs) noexcept;
 };
-Connection operator&(const Connection& x, const Connection& y) noexcept {
-  return Connection{
-    x.denovo && y.denovo,
-    x.passed_build || y.passed_build,
-    x.simplified && y.simplified};
-}
-Connection& Connection::operator&=(const Connection& rhs) noexcept {
-  denovo = denovo && rhs.denovo;
-  passed_build = passed_build || rhs.passed_build;
-  simplified = simplified && rhs.simplified;
-  return *this;
-}
 }  // namespace detail
 }  // namespace majiq
 
