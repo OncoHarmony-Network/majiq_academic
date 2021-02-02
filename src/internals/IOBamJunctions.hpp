@@ -18,6 +18,7 @@
 #include <vector>
 
 #include "SJJunctions.hpp"
+#include "SJJunctionsPositions.hpp"
 #include "bam/Alignments.hpp"
 #include "bam/CigarJunctions.hpp"
 

@@ -21,6 +21,7 @@ ext_modules = [
     Pybind11Extension(
         "new_majiq",
         sorted([
+            "src/internals/SJJunctions.cpp",
             "src/pySJJunctions.cpp",
             "src/pySpliceGraph.cpp",
             "src/new_majiq.cpp",

@@ -25,6 +25,7 @@
 #include "internals/SpliceGraph.hpp"
 #include "internals/GFF3.hpp"
 #include "internals/SJJunctions.hpp"
+#include "internals/SJJunctionsPositions.hpp"
 
 
 namespace py = pybind11;

@@ -13,6 +13,7 @@
 
 #include "pybind_utils.hpp"
 #include "internals/SJJunctions.hpp"
+#include "internals/SJJunctionsPositions.hpp"
 #include "internals/IOBamJunctions.hpp"
 
 
