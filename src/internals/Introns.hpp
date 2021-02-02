@@ -70,7 +70,7 @@ template <> struct hash<majiq::Intron> {
 namespace majiq {
 using Introns = detail::GeneRegions<Intron, std::less<Intron>>;
 
-Introns FilterPassedIntrons(const Introns& base, bool keep_annotated) {
+inline Introns FilterPassedIntrons(const Introns& base, bool keep_annotated) {
   std::vector<Intron> passed;
   std::for_each(base.begin(), base.end(),
       [&passed, keep_annotated](const Intron& x) {

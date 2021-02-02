@@ -98,7 +98,7 @@ template <> struct hash<majiq::Exon> {
 namespace majiq {
 using Exons = detail::GeneRegions<Exon, std::less<Exon>>;
 
-Exons ExtractAnnotatedExons(const Exons& base) {
+inline Exons ExtractAnnotatedExons(const Exons& base) {
   std::vector<Exon> annotated;
   annotated.reserve(base.size());
   std::for_each(base.begin(), base.end(),
