@@ -134,13 +134,11 @@ class SpliceGraphBuilder {
         record[COL_ATTRIBUTES], regex_transcript_id_vec);
     geneid_t geneid = attribute_value(
         record[COL_ATTRIBUTES], regex_parent_vec);
-    size_t gene_idx = genes_->safe_gene_idx(geneid);
-    if (gene_idx < 0) {
-      // unknown gene --> orphan transcript
-      orphan_transcripts_[id] = geneid;
+    std::optional<size_t> gene_idx = genes_->safe_gene_idx(geneid);
+    if (gene_idx.has_value()) {
+      known_transcripts_[id] = *gene_idx;
     } else {
-      // known gene --> track which transcripts belong to which genes
-      known_transcripts_[id] = gene_idx;
+      orphan_transcripts_[id] = geneid;
     }
   }
 
@@ -228,12 +226,13 @@ class SpliceGraphBuilder {
     // what do we do when we are processing a transcript?
     auto process_transcript = [this, &it_transcripts]() {
       // do we recognize this gene now?
-      size_t gene_idx = genes_->safe_gene_idx(it_transcripts->second);
-      if (gene_idx < 0) {
+      std::optional<size_t> gene_idx
+        = genes_->safe_gene_idx(it_transcripts->second);
+      if (gene_idx.has_value()) {
+        known_transcripts_[it_transcripts->first] = *gene_idx;
+      } else {
         std::cerr << "Orphan transcript " << it_transcripts->first
           << " with unfound gene " << it_transcripts->second << "\n";
-      } else {
-        known_transcripts_[it_transcripts->first] = gene_idx;
       }
       // remove from orphan_transcripts_
       orphan_transcripts_.erase(it_transcripts++);

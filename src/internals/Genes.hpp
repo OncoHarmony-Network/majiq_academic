@@ -17,6 +17,7 @@
 #include <memory>
 #include <vector>
 #include <map>
+#include <optional>
 #include <boost/functional/hash.hpp>
 
 #include "Contigs.hpp"
@@ -218,11 +219,17 @@ class Genes : public std::enable_shared_from_this<Genes> {
   size_t get_gene_idx(const geneid_t& id) const { return id_idx_map_.at(id); }
   size_t get_gene_idx(const Gene& x) const { return get_gene_idx(x.geneid); }
   // get gene_idx (-1 if not present)
-  size_t safe_gene_idx(const geneid_t& id) const {
+  std::optional<size_t> safe_gene_idx(const geneid_t& id) const {
+    std::optional<size_t> result;
     auto match = id_idx_map_.find(id);
-    return match == id_idx_map_.end() ? -1 : match->second;
+    if (match != id_idx_map_.end()) {
+      result = match->second;
+    }
+    return result;
   }
-  size_t safe_gene_idx(const Gene& x) const { return safe_gene_idx(x.geneid); }
+  std::optional<size_t> safe_gene_idx(const Gene& x) const {
+    return safe_gene_idx(x.geneid);
+  }
   /**
    * get gene_idx (add if not present)
    */
@@ -253,7 +260,6 @@ class Genes : public std::enable_shared_from_this<Genes> {
    */
   KnownGene known(const geneid_t& id) { return operator[](get_gene_idx(id)); }
 
-  // constructors always ensure that result is sorted
   Genes() : genes_vec_{}, id_idx_map_{}, is_sorted_{true} {}
   explicit Genes(const vecGene& genes)
       : genes_vec_{genes},
