@@ -7,6 +7,7 @@
  */
 #include <pybind11/pybind11.h>
 #include <pybind11/numpy.h>
+#include <pybind11/stl_bind.h>
 
 #include <string>
 #include <sstream>
@@ -895,13 +896,14 @@ void init_SpliceGraph(py::class_<majiq::SpliceGraph>& pySpliceGraph) {
         "Load splicegraph from netCDF file",
         py::arg("netcdf_path"))
     .def_static("from_gff3",
-        [](std::string gff3_path, bool process_ir) {
+        [](std::string gff3_path, bool process_ir,
+            majiq::gff3::featuretype_map_t gff3_types) {
           using majiq::gff3::GFF3ExonHierarchy;
           using majiq::gff3::GFF3TranscriptModels;
           using majiq::gff3::ToTranscriptModels;
           // load gff3 exon hierarchy, convert to MAJIQ gene/transcript/exons
           auto gff3_models
-            = ToTranscriptModels(GFF3ExonHierarchy{gff3_path});
+            = ToTranscriptModels(GFF3ExonHierarchy{gff3_path, gff3_types});
           // TODO(jaicher) print info about skipped types more Python-friendly
           for (const auto& [tx_type, tx_ct]
               : gff3_models.skipped_transcript_type_ct_) {
@@ -921,7 +923,10 @@ void init_SpliceGraph(py::class_<majiq::SpliceGraph>& pySpliceGraph) {
           return gff3_models.models_.ToSpliceGraph(process_ir);
         },
         "Create splicegraph from input GFF3 file",
-        py::arg("gff3_path"), py::arg("process_ir") = true)
+        py::arg("gff3_path"),
+        py::arg("process_ir") = true,
+        py::arg_v("gff3_types", majiq::gff3::default_gff3_types,
+            "new_majiq._default_gff3_types()"))
     // save to file
     .def("to_netcdf",
         [](py::object& sg, py::str output_path) {
@@ -1022,6 +1027,58 @@ void init_SpliceGraphAll(py::module_& m) {
     .value("FORWARD", ExperimentStrandness::FORWARD)
     .value("REVERSE", ExperimentStrandness::REVERSE)
     .value("NONE", ExperimentStrandness::NONE);
+  auto pyGFFFeatureTypes = py::enum_<majiq::gff3::FeatureType>(
+      m, "GFF3FeatureType")
+    .value("EXON", majiq::gff3::FeatureType::EXON,
+        "Indicates feature type defining transcript exons")
+    .value("ACCEPT_GENE", majiq::gff3::FeatureType::ACCEPT_GENE,
+        R"pbdoc(
+        Indicates feature type that would be accepted as a gene
+
+        Also accepted as a transcript if has exons as direct children
+        )pbdoc")
+    .value("ACCEPT_TRANSCRIPT", majiq::gff3::FeatureType::ACCEPT_TRANSCRIPT,
+        R"pbdoc(
+        Indicates feature type accepted as transcript if has exon children
+
+        Unlike ACCEPT_GENE, requires parent that maps to ACCEPT_GENE, otherwise
+        any exons belonging to it will be ignored
+        )pbdoc")
+    .value("REJECT_SILENT", majiq::gff3::FeatureType::REJECT_SILENT,
+        R"pbdoc(
+        Known feature type that is not accepted as transcript or gene
+
+        Can be part of chain of ancestors of an exon for determining transcript
+        gene, but:
+        + cannot serve as transcript: direct exon children are ignored
+        + cannot serve as gene: if top-level feature, all descendants
+          are ignored
+        Unlike REJECT_OTHER, these rejections as potential transcripts/genes
+        will not be kept track of (rejected silently)
+        )pbdoc")
+    .value("REJECT_OTHER", majiq::gff3::FeatureType::REJECT_OTHER,
+        R"pbdoc(
+        Potentially unknown feature type not accepted as transcript or gene
+
+        Can be part of chain of ancestors of an exon for determining transcript
+        gene, but:
+        + cannot serve as transcript: direct exon children are ignored
+        + cannot serve as gene: if top-level feature, all descendants
+          are ignored
+        When these features are parents of exons or top-level features for
+        descendant exons, will be accounted for
+        )pbdoc")
+    .value("HARD_SKIP", majiq::gff3::FeatureType::HARD_SKIP,
+        R"pbdoc(
+        Ignore this feature when building exon hierarchy
+
+        If it is a parent of an exon or an ancestor of an accepted transcript,
+        will raise exception when parsing annotation. To be used with care
+        to ignore records that are completely unrelated to exons
+        )pbdoc");
+  py::bind_map<majiq::gff3::featuretype_map_t>(m, "GFF3Types");
+  m.def("_default_gff3_types",
+      []() { return majiq::gff3::default_gff3_types; });
   auto pySpliceGraph = py::class_<SpliceGraph>(m, "SpliceGraph",
       "Splicegraph managing exons, junctions, and introns within genes");
 
