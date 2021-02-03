@@ -116,10 +116,10 @@ inline bool operator>=(const Gene& x, const KnownContig y) noexcept {
 }
 
 // override boost::hash
-static std::size_t hash_value(const GeneStrandness& x) noexcept {
+inline std::size_t hash_value(const GeneStrandness& x) noexcept {
   return std::hash<char>{}(static_cast<char>(x));
 }
-static std::size_t hash_value(const Gene& x) noexcept {
+inline std::size_t hash_value(const Gene& x) noexcept {
   return std::hash<geneid_t>{}(x.geneid);
 }
 }  // namespace majiq
@@ -296,7 +296,7 @@ class Genes : public std::enable_shared_from_this<Genes> {
   inline bool is_sorted() const noexcept { return is_sorted_; }
 
   // equality of genes
-  friend bool operator==(const Genes& x, const Genes&y) noexcept {
+  friend inline bool operator==(const Genes& x, const Genes&y) noexcept {
     return x.genes_vec_ == y.genes_vec_;
   }
 };
@@ -311,7 +311,7 @@ inline KnownGene KnownGene::remapped(
 }
 
 // specialize boost::hash_value for KnownGene
-static std::size_t hash_value(const KnownGene& x) {
+inline std::size_t hash_value(const KnownGene& x) {
   std::size_t result = std::hash<size_t>{}(x.gene_idx);
   boost::hash_combine(result, x.known_genes);
   return result;

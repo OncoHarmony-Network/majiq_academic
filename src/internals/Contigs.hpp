@@ -48,7 +48,7 @@ inline std::ostream& operator<<(std::ostream& os, const Contig& x) noexcept {
   return os;
 }
 // override boost::hash<Contig>
-static std::size_t hash_value(const Contig& x) noexcept {
+inline std::size_t hash_value(const Contig& x) noexcept {
   return std::hash<seqid_t>{}(x.seqid);
 }
 }  // namespace majiq

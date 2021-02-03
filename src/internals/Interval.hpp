@@ -166,12 +166,12 @@ inline std::ostream& operator<<(std::ostream& os, const OpenInterval& x) {
 }
 
 // how to hash intervals
-static std::size_t hash_value(const OpenInterval& x) noexcept {
+inline std::size_t hash_value(const OpenInterval& x) noexcept {
   std::size_t result = boost::hash_value(x.start);
   boost::hash_combine(result, x.end);
   return result;
 }
-static std::size_t hash_value(const ClosedInterval& x) noexcept {
+inline std::size_t hash_value(const ClosedInterval& x) noexcept {
   std::size_t result = boost::hash_value(x.start);
   boost::hash_combine(result, x.end);
   return result;
