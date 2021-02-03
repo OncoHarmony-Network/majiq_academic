@@ -480,8 +480,10 @@ class ContigRegions {
   size_t count(const value_type& key) const {
     return find(key) == end() ? 0 : 1;
   }
-  friend inline bool operator==(const ContigRegions& x, const ContigRegions& y) {
-    return std::tie(x.contigs_, x.elements_) == std::tie(y.contigs_, y.elements_);
+  friend inline bool operator==(
+      const ContigRegions& x, const ContigRegions& y) {
+    return std::tie(x.contigs_, x.elements_)
+      == std::tie(y.contigs_, y.elements_);
   }
 };
 }  // namespace detail
