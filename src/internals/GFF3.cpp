@@ -16,7 +16,7 @@
 #include <map>
 #include <vector>
 #include <algorithm>
-#include <fstream>
+#include <zstr/zstr.hpp>
 #include <string>
 #include <regex>
 
@@ -222,7 +222,7 @@ inline GeneStrandness convert_strand(const std::string& col_strand) {
 // load GFF3 exon hierarchy from input file
 GFF3ExonHierarchy::GFF3ExonHierarchy(const std::string& gff3_filename)
     : contigs_{std::make_shared<Contigs>()}, genes_{std::make_shared<Genes>()} {
-  std::ifstream in{gff3_filename};
+  zstr::ifstream in{gff3_filename};
   if (!in) {
     std::ostringstream oss;
     oss << "Failed to open "<< gff3_filename
