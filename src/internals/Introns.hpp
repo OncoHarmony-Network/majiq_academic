@@ -52,7 +52,7 @@ inline bool operator==(const Intron& x, const Intron& y) noexcept {
 }
 
 // override boost hashing
-std::size_t hash_value(const Intron& x) noexcept {
+inline std::size_t hash_value(const Intron& x) noexcept {
   std::size_t result = hash_value(x.gene);
   boost::hash_combine(result, x.coordinates);
   return result;

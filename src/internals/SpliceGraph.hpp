@@ -101,12 +101,14 @@ class SpliceGraph {
   SpliceGraph& operator=(SpliceGraph&& sg) = default;
 
   // to be declared later
-  friend bool operator==(const SpliceGraph& x, const SpliceGraph& y) noexcept;
-  friend std::ostream& operator<<(std::ostream&, const SpliceGraph&) noexcept;
+  friend inline bool operator==(
+      const SpliceGraph& x, const SpliceGraph& y) noexcept;
+  friend inline std::ostream& operator<<(
+      std::ostream&, const SpliceGraph&) noexcept;
 };
 
 // equality of splicegraphs
-bool operator==(const SpliceGraph& x, const SpliceGraph& y) noexcept {
+inline bool operator==(const SpliceGraph& x, const SpliceGraph& y) noexcept {
   return x.contigs_ == y.contigs_
     && x.genes_ == y.genes_
     && *x.exons_ == *y.exons_
@@ -115,7 +117,8 @@ bool operator==(const SpliceGraph& x, const SpliceGraph& y) noexcept {
 }
 
 // how to represent splicegraph in output stream
-std::ostream& operator<<(std::ostream& os, const SpliceGraph& sg) noexcept {
+inline std::ostream& operator<<(
+    std::ostream& os, const SpliceGraph& sg) noexcept {
   os << "SpliceGraph<"
     << sg.contigs_->size() << " contigs, "
     << sg.genes_->size() << " genes, "

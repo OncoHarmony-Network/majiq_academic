@@ -80,7 +80,7 @@ inline bool operator==(const Exon& x, const Exon& y) noexcept {
 }
 
 // override boost hashing
-std::size_t hash_value(const Exon& x) noexcept {
+inline std::size_t hash_value(const Exon& x) noexcept {
   std::size_t result = hash_value(x.gene);
   boost::hash_combine(result, x.coordinates);
   return result;

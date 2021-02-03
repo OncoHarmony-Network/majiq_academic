@@ -54,7 +54,7 @@ inline bool operator==(const GeneJunction& x, const GeneJunction& y) noexcept {
 
 
 // override boost::hash
-std::size_t hash_value(const GeneJunction& x) noexcept {
+inline std::size_t hash_value(const GeneJunction& x) noexcept {
   std::size_t result = hash_value(x.gene);
   boost::hash_combine(result, x.coordinates);
   return result;
