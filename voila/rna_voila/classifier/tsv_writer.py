@@ -785,8 +785,11 @@ class TsvWriter(BaseTsvWriter):
                                 event_non_changing = self.event_non_changing(module, quant_identifiers)
                                 event_changing = self.event_changing(module, quant_identifiers)
 
-                                e1_range_str = f"{event['E1'].start}-{event['Proximal'].start}"
-                                e2_range_str = f"{event['Proximal'].end}-{event['E2'].end}"
+                                e1_range_str = self._trim_strand_case_range_str(event['E1'], 'start', event['Proximal'],
+                                                                                'start', strand)
+
+                                e2_range_str = self._trim_strand_case_range_str(event['Proximal'], 'end', event['E2'],
+                                                                                'end', strand)
 
                                 row = [event['Proximal'].de_novo,
                                        e1_range_str,
