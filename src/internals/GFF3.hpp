@@ -33,10 +33,72 @@ constexpr size_t COL_END = 4;
 constexpr size_t COL_STRAND = 6;
 constexpr size_t COL_ATTRIBUTES = 8;
 
-
 using feature_id_t = std::string;
 using gene_or_ancestor_id_t = std::variant<size_t, feature_id_t>;
 using skipped_features_ct_t = std::map<std::string, unsigned int>;
+constexpr unsigned char _FLAG_IS_EXON = 1 << 0;
+constexpr unsigned char _FLAG_IN_HIERARCHY = 1 << 1;
+constexpr unsigned char _FLAG_ACCEPT_TRANSCRIPT = 1 << 2;
+constexpr unsigned char _FLAG_SILENT = 1 << 3;
+constexpr unsigned char _FLAG_IS_GENE = 1 << 4;
+enum class FeatureType : unsigned char {
+  EXON = _FLAG_IS_EXON,
+  ACCEPT_GENE
+    = _FLAG_IN_HIERARCHY | _FLAG_ACCEPT_TRANSCRIPT
+    | _FLAG_IS_GENE | _FLAG_SILENT,
+  ACCEPT_TRANSCRIPT = _FLAG_IN_HIERARCHY | _FLAG_ACCEPT_TRANSCRIPT,
+  REJECT_SILENT = _FLAG_IN_HIERARCHY | _FLAG_SILENT,
+  REJECT_OTHER = _FLAG_IN_HIERARCHY,
+  HARD_SKIP = 0
+};
+inline bool type_in_hierarchy(FeatureType x) {
+  return static_cast<unsigned char>(x) & _FLAG_IN_HIERARCHY;
+}
+inline bool type_accepted_transcript(FeatureType x) {
+  return static_cast<unsigned char>(x) & _FLAG_ACCEPT_TRANSCRIPT;
+}
+inline bool type_is_silent(FeatureType x) {
+  return static_cast<unsigned char>(x) & _FLAG_SILENT;
+}
+using featuretype_map_t = std::map<std::string, FeatureType>;
+using featuretype_info_t = std::pair<FeatureType, std::string>;
+
+static const featuretype_map_t default_gff3_types = {
+  // genes
+  {"gene", FeatureType::ACCEPT_GENE},
+  {"ncRNA_gene", FeatureType::ACCEPT_GENE},
+  {"pseudogene", FeatureType::ACCEPT_GENE},
+  {"ncRNA_gene", FeatureType::ACCEPT_GENE},
+  {"bidirectional_promoter_lncRNA", FeatureType::ACCEPT_GENE},
+  // transcripts
+  {"mRNA", FeatureType::ACCEPT_TRANSCRIPT},
+  {"transcript", FeatureType::ACCEPT_TRANSCRIPT},
+  {"lnc_RNA", FeatureType::ACCEPT_TRANSCRIPT},
+  {"miRNA", FeatureType::ACCEPT_TRANSCRIPT},
+  {"ncRNA", FeatureType::ACCEPT_TRANSCRIPT},
+  {"rRNA", FeatureType::ACCEPT_TRANSCRIPT},
+  {"scRNA", FeatureType::ACCEPT_TRANSCRIPT},
+  {"snRNA", FeatureType::ACCEPT_TRANSCRIPT},
+  {"snoRNA", FeatureType::ACCEPT_TRANSCRIPT},
+  {"tRNA", FeatureType::ACCEPT_TRANSCRIPT},
+  {"pseudogenic_transcript", FeatureType::ACCEPT_TRANSCRIPT},
+  {"C_gene_segment", FeatureType::ACCEPT_TRANSCRIPT},
+  {"D_gene_segment", FeatureType::ACCEPT_TRANSCRIPT},
+  {"J_gene_segment", FeatureType::ACCEPT_TRANSCRIPT},
+  {"V_gene_segment", FeatureType::ACCEPT_TRANSCRIPT},
+  {"unconfirmed_transcript", FeatureType::ACCEPT_TRANSCRIPT},
+  {"three_prime_overlapping_ncrna", FeatureType::ACCEPT_TRANSCRIPT},
+  // exons
+  {"exon", FeatureType::EXON}
+};
+// get feature type associated with type column. If no match, is "OTHER"
+inline FeatureType get_feature_type(
+    const std::string& type_str, const featuretype_map_t& gff3_types) {
+  auto result_it = gff3_types.find(type_str);
+  return result_it != gff3_types.end()
+    ? result_it->second : FeatureType::REJECT_OTHER;
+}
+
 
 struct GFF3TranscriptModels {
   const TranscriptModels models_;
@@ -69,9 +131,8 @@ class GFF3ExonHierarchy {
   std::unordered_map<feature_id_t, gene_or_ancestor_id_t> feature_genes_;
   // the set of exons that are children to a given feature id
   std::unordered_map<feature_id_t, transcript_exons_t> feature_exons_;
-  // track feature types that aren't exons. Empty if accepted transcript/gene
-  std::unordered_map<feature_id_t, std::optional<std::string>>
-    feature_types_;
+  // track feature types that aren't exons. Track names when OTHER
+  std::unordered_map<feature_id_t, featuretype_info_t> feature_types_;
 
   /**
    * clear out non-const values when done using it (i.e. after std::move)
@@ -98,7 +159,9 @@ class GFF3ExonHierarchy {
   /**
    * Load GFF3ExonHierarchy from specified input path
    */
-  explicit GFF3ExonHierarchy(const std::string& gff3_filename);
+  GFF3ExonHierarchy(const std::string& gff3_filename, const featuretype_map_t&);
+  explicit GFF3ExonHierarchy(const std::string& gff3_filename)
+      : GFF3ExonHierarchy{gff3_filename, default_gff3_types} { }
   // default or deleted constructors/operators
   GFF3ExonHierarchy() = delete;
   GFF3ExonHierarchy(const GFF3ExonHierarchy&) = default;

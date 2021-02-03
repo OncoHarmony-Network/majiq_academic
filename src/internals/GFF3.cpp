@@ -82,17 +82,25 @@ GFF3TranscriptModels ToTranscriptModels(GFF3ExonHierarchy&& x) {
   // loop over feature exons, assigning them appropriately
   // (could erase as we went, but probably premature optimization)
   for (const auto& [parent_id, exons] : x.feature_exons_) {
-    // did we see parent_id? was it accepted (empty) or something else?
-    const auto feature_types_it = x.feature_types_.find(parent_id);
-    if (feature_types_it == x.feature_types_.end()) {
-      // throw error if we don't have parent at all
-      std::ostringstream oss;
-      oss << "Found exons with parent id '" << parent_id << "' never defined";
-      throw std::runtime_error(oss.str());
-    } else if (feature_types_it->second.has_value()) {
-      // skip this transcript, count unrecognized id towards skipped transcripts
-      ++skipped_transcript_type_ct[*(feature_types_it->second)];
-      continue;
+    {
+      // did we see parent_id?
+      const auto feature_types_it = x.feature_types_.find(parent_id);
+      if (feature_types_it == x.feature_types_.end()) {
+        // throw error if we don't have parent at all
+        std::ostringstream oss;
+        oss << "Found exons with parent id '" << parent_id << "' never defined";
+        throw std::runtime_error(oss.str());
+      }
+      const auto& [parent_type, parent_type_str] = feature_types_it->second;
+      // acceptable as a transcript?
+      if (!type_accepted_transcript(parent_type)) {
+        // no, so we skip these exons
+        if (!type_is_silent(parent_type)) {
+          // we also report the type of this one
+          ++skipped_transcript_type_ct[parent_type_str];
+        }
+        continue;
+      }
     }
 
     // is it or one of its ancestors a gene?
@@ -124,7 +132,10 @@ GFF3TranscriptModels ToTranscriptModels(GFF3ExonHierarchy&& x) {
 
   // count types of skipped genes
   for (const auto& gene_id : skipped_genes) {
-    ++skipped_gene_type_ct[*(x.feature_types_[gene_id])];
+    const auto& [gene_type, gene_type_str] = x.feature_types_[gene_id];
+    if (!type_is_silent(gene_type)) {
+      ++skipped_gene_type_ct[gene_type_str];
+    }
   }
   // clear state of non-const elements of x (since passed as rvalue reference)
   x.clear();
@@ -134,48 +145,6 @@ GFF3TranscriptModels ToTranscriptModels(GFF3ExonHierarchy&& x) {
     std::move(skipped_transcript_type_ct), std::move(skipped_gene_type_ct)};
 }
 
-// is the type an acceptable exon
-inline bool is_exon(const std::string& type_str) {
-  return type_str == "exon";
-}
-
-// types for acceptable genes
-static const std::set<std::string> accepted_gene_types = {
-  "gene",
-  "ncRNA_gene",
-  "pseudogene",
-  "ncRNA_gene",
-  "bidirectional_promoter_lncRNA"
-};
-inline bool is_acceptable_gene(const std::string& type_str) {
-  return accepted_gene_types.count(type_str) > 0;
-}
-// types for acceptable transcripts (note: genes are considered acceptable
-// transcripts too due to observations in RefSeq)
-static const std::set<std::string> accepted_transcript_types = {
-  "mRNA",
-  "transcript",
-  "lnc_RNA",
-  "miRNA",
-  "ncRNA",
-  "rRNA",
-  "scRNA",
-  "snRNA",
-  "snoRNA",
-  "tRNA",
-  "pseudogenic_transcript",
-  "C_gene_segment",
-  "D_gene_segment",
-  "J_gene_segment",
-  "V_gene_segment",
-  "unconfirmed_transcript",
-  "three_prime_overlapping_ncrna"
-};
-inline bool is_acceptable_transcript(
-    bool is_gene, const std::string& type_str) {
-  // genes are acceptable transcripts, otherwise search set
-  return is_gene || (accepted_transcript_types.count(type_str) > 0);
-}
 
 static const std::vector<std::regex> regex_parent_vec = {
   std::regex{"(?:^|;)Parent=([^;]+)"}
@@ -220,7 +189,8 @@ inline GeneStrandness convert_strand(const std::string& col_strand) {
 }
 
 // load GFF3 exon hierarchy from input file
-GFF3ExonHierarchy::GFF3ExonHierarchy(const std::string& gff3_filename)
+GFF3ExonHierarchy::GFF3ExonHierarchy(
+    const std::string& gff3_filename, const featuretype_map_t& gff3_types)
     : contigs_{std::make_shared<Contigs>()}, genes_{std::make_shared<Genes>()} {
   zstr::ifstream in{gff3_filename};
   if (!in) {
@@ -248,7 +218,9 @@ GFF3ExonHierarchy::GFF3ExonHierarchy(const std::string& gff3_filename)
     }
 
     // parse exon vs parent features (especially genes)
-    if (is_exon(record[COL_TYPE])) {
+    FeatureType record_type = get_feature_type(record[COL_TYPE], gff3_types);
+    if (record_type == FeatureType::EXON) {
+      // assign interval for the exon to its parent
       const auto record_parent_opt
         = attribute_value(record[COL_ATTRIBUTES], regex_parent_vec);
       if (!record_parent_opt.has_value()) {
@@ -259,47 +231,42 @@ GFF3ExonHierarchy::GFF3ExonHierarchy(const std::string& gff3_filename)
       } else {
         feature_exons_[*record_parent_opt].insert(get_interval(record));
       }
-    } else {
+    } else if (type_in_hierarchy(record_type)) {
       // does non-exon record have an id?
       const auto record_id_opt
         = attribute_value(record[COL_ATTRIBUTES], regex_id_vec);
-      if (record_id_opt.has_value()) {
-        const std::string& record_id = *record_id_opt;
+      if (!record_id_opt.has_value()) { continue; }
+      const std::string& record_id = *record_id_opt;
 
-        // save type for this record (empty for genes/transcripts)
-        const bool is_gene = is_acceptable_gene(record[COL_TYPE]);
-        const bool is_transcript = is_acceptable_transcript(
-            is_gene, record[COL_TYPE]);
-        feature_types_[record_id]
-          = is_transcript
-          ? std::optional<std::string>{} : std::make_optional(record[COL_TYPE]);
+      // save type for this record (more detailed if not silent)
+      feature_types_[record_id] = std::make_pair(record_type,
+          type_is_silent(record_type) ? std::string{} : record[COL_TYPE]);
 
-        // get parent or gene_idx for the record
-        const auto record_parent_opt
-          = attribute_value(record[COL_ATTRIBUTES], regex_parent_vec);
-        gene_or_ancestor_id_t record_parent
-          = record_parent_opt.value_or(record_id);
-        // special processing for genes, replace record_parent with gene_idx
-        if (is_gene) {
-          // extract contig information
-          KnownContig contig = contigs_->make_known(record[COL_SEQID]);
-          // construct gene components
-          ClosedInterval interval = get_interval(record);
-          GeneStrandness strand = convert_strand(record[COL_STRAND]);
-          geneid_t geneid = record_id;
-          // if no gene name defined, use gene id as name
-          genename_t genename
-            = attribute_value(record[COL_ATTRIBUTES], regex_gene_name_vec)
-            .value_or(geneid);
-          // add gene to genes_, get gene_idx for it
-          size_t gene_idx
-            = genes_->add(Gene{contig, interval, strand, geneid, genename});
-          // update record_parent with gene_idx
-          record_parent = gene_idx;
-        }
-        // initialize disjoint sets data structure with parent
-        feature_genes_[record_id] = record_parent;
-      }  // end handling non-exon feature with ID
+      // get parent or gene_idx for the record
+      const auto record_parent_opt
+        = attribute_value(record[COL_ATTRIBUTES], regex_parent_vec);
+      gene_or_ancestor_id_t record_parent
+        = record_parent_opt.value_or(record_id);
+      // special processing for genes, replace record_parent with gene_idx
+      if (record_type == FeatureType::ACCEPT_GENE) {
+        // extract contig information
+        KnownContig contig = contigs_->make_known(record[COL_SEQID]);
+        // construct gene components
+        ClosedInterval interval = get_interval(record);
+        GeneStrandness strand = convert_strand(record[COL_STRAND]);
+        geneid_t geneid = record_id;
+        // if no gene name defined, use gene id as name
+        genename_t genename
+          = attribute_value(record[COL_ATTRIBUTES], regex_gene_name_vec)
+          .value_or(geneid);
+        // add gene to genes_, get gene_idx for it
+        size_t gene_idx
+          = genes_->add(Gene{contig, interval, strand, geneid, genename});
+        // update record_parent with gene_idx
+        record_parent = gene_idx;
+      }
+      // initialize disjoint sets data structure with parent
+      feature_genes_[record_id] = record_parent;
     }  // end handling non-exon feature (or exon previous ifelse block)
   }  // end iteration over lines in GFF3 file
 }
