@@ -921,7 +921,7 @@ void init_SpliceGraph(py::class_<majiq::SpliceGraph>& pySpliceGraph) {
           return gff3_models.models_.ToSpliceGraph(process_ir);
         },
         "Create splicegraph from input GFF3 file",
-        py::arg("gff3_path"), py::arg("process_ir"))
+        py::arg("gff3_path"), py::arg("process_ir") = true)
     // save to file
     .def("to_netcdf",
         [](py::object& sg, py::str output_path) {
