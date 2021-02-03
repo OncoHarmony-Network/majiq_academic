@@ -8,10 +8,7 @@
 #ifndef MAJIQ_GFF3_HPP
 #define MAJIQ_GFF3_HPP
 
-#include <cstdlib>
 #include <memory>
-#include <vector>
-#include <unordered_set>
 #include <set>
 #include <map>
 #include <unordered_map>
@@ -22,7 +19,7 @@
 
 #include "Contigs.hpp"
 #include "Genes.hpp"
-#include "SpliceGraph.hpp"
+#include "TranscriptModels.hpp"
 
 namespace majiq {
 namespace gff3 {
@@ -36,47 +33,30 @@ constexpr size_t COL_END = 4;
 constexpr size_t COL_STRAND = 6;
 constexpr size_t COL_ATTRIBUTES = 8;
 
-using transcript_exons_t = std::set<ClosedInterval>;
-
-// TODO(jaicher): move this out of GFF3.hpp
-class MajiqTranscriptExons {
- public:
-  const std::shared_ptr<Contigs> contigs_;
-  const std::shared_ptr<Genes> genes_;  // assumed in sorted order
-  const std::vector<std::vector<transcript_exons_t>> gene_transcript_exons_;
-  // TODO(jaicher): make these part of some templated data struct
-  const std::map<std::string, unsigned int> skipped_transcript_type_ct_;
-  const std::map<std::string, unsigned int> skipped_gene_type_ct_;
-
-  SpliceGraph ToSpliceGraph(bool process_ir) const;
-
-  MajiqTranscriptExons(
-      const std::shared_ptr<Contigs>& contigs,
-      const std::shared_ptr<Genes>& genes,
-      const std::vector<std::vector<transcript_exons_t>>& gene_transcript_exons,
-      const std::map<std::string, unsigned int>& skipped_transcript_type_ct,
-      const std::map<std::string, unsigned int>& skipped_gene_type_ct)
-      : contigs_{contigs},
-        genes_{genes},
-        gene_transcript_exons_{gene_transcript_exons},
-        skipped_transcript_type_ct_{skipped_transcript_type_ct},
-        skipped_gene_type_ct_{skipped_gene_type_ct} {
-    if (contigs_ == nullptr) {
-      throw std::runtime_error("MajiqTranscriptExons needs non-null contigs");
-    } else if (genes_ == nullptr) {
-      throw std::runtime_error("MajiqTranscriptExons needs non-null genes");
-    } else if (genes_->size() != gene_transcript_exons_.size()) {
-      throw std::runtime_error("size mismatch in MajiqTranscriptExons");
-    } else if (!genes_->is_sorted()) {
-      throw std::runtime_error("MajiqTranscriptExons requires sorted genes");
-    }
-  }
-
-  size_t size() const noexcept { return gene_transcript_exons_.size(); }
-};
 
 using feature_id_t = std::string;
 using gene_or_ancestor_id_t = std::variant<size_t, feature_id_t>;
+using skipped_features_ct_t = std::map<std::string, unsigned int>;
+
+struct GFF3TranscriptModels {
+  const TranscriptModels models_;
+  const skipped_features_ct_t skipped_transcript_type_ct_;
+  const skipped_features_ct_t skipped_gene_type_ct_;
+
+  GFF3TranscriptModels(
+      TranscriptModels&& models,
+      skipped_features_ct_t&& skipped_transcript_type_ct,
+      skipped_features_ct_t&& skipped_gene_type_ct)
+      : models_{models},
+        skipped_transcript_type_ct_{skipped_transcript_type_ct},
+        skipped_gene_type_ct_{skipped_gene_type_ct} {
+  }
+  GFF3TranscriptModels() = delete;
+  GFF3TranscriptModels(const GFF3TranscriptModels&) = default;
+  GFF3TranscriptModels(GFF3TranscriptModels&&) = default;
+  GFF3TranscriptModels& operator=(const GFF3TranscriptModels&) = delete;
+  GFF3TranscriptModels& operator=(GFF3TranscriptModels&&) = delete;
+};
 
 class GFF3ExonHierarchy {
  private:
@@ -113,7 +93,7 @@ class GFF3ExonHierarchy {
 
  public:
   // convert gff3 exon hierarchy to majiq transcript exons for processing
-  friend MajiqTranscriptExons ToMajiqTranscriptExons(GFF3ExonHierarchy&&);
+  friend GFF3TranscriptModels ToTranscriptModels(GFF3ExonHierarchy&&);
 
   /**
    * Load GFF3ExonHierarchy from specified input path
@@ -127,7 +107,7 @@ class GFF3ExonHierarchy {
   GFF3ExonHierarchy& operator=(GFF3ExonHierarchy&&) = delete;
 };
 
-MajiqTranscriptExons ToMajiqTranscriptExons(GFF3ExonHierarchy&&);
+GFF3TranscriptModels ToTranscriptModels(GFF3ExonHierarchy&&);
 
 
 }  // namespace gff3

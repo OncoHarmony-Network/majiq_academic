@@ -897,28 +897,28 @@ void init_SpliceGraph(py::class_<majiq::SpliceGraph>& pySpliceGraph) {
     .def_static("from_gff3",
         [](std::string gff3_path, bool process_ir) {
           using majiq::gff3::GFF3ExonHierarchy;
-          using majiq::gff3::MajiqTranscriptExons;
-          using majiq::gff3::ToMajiqTranscriptExons;
+          using majiq::gff3::GFF3TranscriptModels;
+          using majiq::gff3::ToTranscriptModels;
           // load gff3 exon hierarchy, convert to MAJIQ gene/transcript/exons
-          auto majiq_gene_tx
-            = ToMajiqTranscriptExons(GFF3ExonHierarchy{gff3_path});
+          auto gff3_models
+            = ToTranscriptModels(GFF3ExonHierarchy{gff3_path});
           // TODO(jaicher) print info about skipped types more Python-friendly
           for (const auto& [tx_type, tx_ct]
-              : majiq_gene_tx.skipped_transcript_type_ct_) {
+              : gff3_models.skipped_transcript_type_ct_) {
             std::cerr << "Skipped exons for "
               << tx_ct
               << " potential transcripts with unaccepted parent type '"
               << tx_type << "'\n";
           }
           for (const auto& [gene_type, gene_ct]
-              : majiq_gene_tx.skipped_gene_type_ct_) {
+              : gff3_models.skipped_gene_type_ct_) {
             std::cerr << "Skipped exons for "
               << gene_ct
               << " potential genes with unaccepted top-level type '"
               << gene_type << "'\n";
           }
           // convert to splicegraph
-          return majiq_gene_tx.ToSpliceGraph(process_ir);
+          return gff3_models.models_.ToSpliceGraph(process_ir);
         },
         "Create splicegraph from input GFF3 file",
         py::arg("gff3_path"), py::arg("process_ir"))
