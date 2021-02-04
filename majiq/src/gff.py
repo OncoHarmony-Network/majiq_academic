@@ -58,25 +58,29 @@ def parse_gff3(filename):
     open_func = gzip.open if filename.endswith(".gz") else open
     with open_func(filename, mode="rt") as infile:
 
-        for line in infile:
+        for ndx, line in enumerate(infile):
 
             if line.startswith("#"):
                 continue
             parts = line.strip().split("\t")
-            # If this fails, the file format is not standard-compatible
-            assert len(parts) == len(gffInfoFields)
-            # Normalize data
-            normalized_info = {
-                "seqid": None if parts[0] == "." else urllib.unquote(parts[0]),
-                "source": None if parts[1] == "." else urllib.unquote(parts[0]),
-                "type": None if parts[2] == "." else urllib.unquote(parts[2]),
-                "start": None if parts[3] == "." else int(parts[3]),
-                "end": None if parts[4] == "." else int(parts[4]),
-                "score": None if parts[5] == "." else float(parts[5]),
-                "strand": None if parts[6] == "." else urllib.unquote(parts[6]),
-                "phase": None if parts[7] == "." else urllib.unquote(parts[7]),
-                "attributes": __parse_gff_attributes(parts[8]),
-            }
+            try:
+                # If this fails, the file format is not standard-compatible
+                assert len(parts) == len(gffInfoFields)
+                # Normalize data
+                normalized_info = {
+                    "seqid": None if parts[0] == "." else urllib.unquote(parts[0]),
+                    "source": None if parts[1] == "." else urllib.unquote(parts[0]),
+                    "type": None if parts[2] == "." else urllib.unquote(parts[2]),
+                    "start": None if parts[3] == "." else int(parts[3]),
+                    "end": None if parts[4] == "." else int(parts[4]),
+                    "score": None if parts[5] == "." else float(parts[5]),
+                    "strand": None if parts[6] == "." else urllib.unquote(parts[6]),
+                    "phase": None if parts[7] == "." else urllib.unquote(parts[7]),
+                    "attributes": __parse_gff_attributes(parts[8]),
+                }
+            except Exception as e:
+                print(f"Error parsing GFF3 line {ndx + 1}:\n{line}")
+                raise e
             # Alternatively, you can emit the dictionary here, if you need mutabwility:
             # yield normalized_info
             yield GFFRecord(**normalized_info)
