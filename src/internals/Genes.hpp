@@ -40,17 +40,17 @@ struct Gene {
  public:
   // location
   KnownContig contig;
-  ClosedInterval interval;
+  ClosedInterval coordinates;
   GeneStrandness strand;
   // identification
   geneid_t geneid;  // unique key
   genename_t genename;
 
   // constructors
-  Gene(KnownContig _contig, ClosedInterval _interval, GeneStrandness _strand,
+  Gene(KnownContig _contig, ClosedInterval _coordinates, GeneStrandness _strand,
       geneid_t _geneid, genename_t _genename)
       : contig{_contig},
-        interval{_interval},
+        coordinates{_coordinates},
         strand{_strand},
         geneid{_geneid},
         genename{_genename} {
@@ -62,8 +62,8 @@ struct Gene {
 };
 // ordering with respect to genomic position
 inline bool operator<(const Gene& lhs, const Gene& rhs) noexcept {
-  return std::tie(lhs.contig, lhs.interval, lhs.strand, lhs.geneid)
-    < std::tie(rhs.contig, rhs.interval, rhs.strand, rhs.geneid);
+  return std::tie(lhs.contig, lhs.coordinates, lhs.strand, lhs.geneid)
+    < std::tie(rhs.contig, rhs.coordinates, rhs.strand, rhs.geneid);
 }
 // equality only by gene id
 inline bool operator==(const Gene& lhs, const Gene& rhs) noexcept {

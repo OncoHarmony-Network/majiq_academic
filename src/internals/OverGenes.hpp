@@ -1,7 +1,7 @@
 /**
  * OverGenes.hpp
  *
- * Identify offsets and intervals for contigs, overlapping genes
+ * Identify offsets and coordinates for contigs, overlapping genes
  *
  * Copyright 2020 <University of Pennsylvania
  */
@@ -74,7 +74,7 @@ class OverGenes {
     // iterators for range of overgenes for the contig
     auto contig_begin = overgenes_.begin() + contig_offsets_[contig_idx];
     auto contig_end = overgenes_.begin() + contig_offsets_[contig_idx + 1];
-    // iterator to first interval that is greater than x in the range
+    // iterator to first coordinates that is greater than x in the range
     auto ub = std::upper_bound(contig_begin,  contig_end, x,
         [](const OverGene& lhs, const detail::Interval& rhs) -> bool {
           return lhs.coordinates < rhs;
@@ -124,7 +124,8 @@ class OverGenes {
       const Gene& gene = genes->get(gene_idx);
       if (
           // change in contig or past current max end --> start of overgene
-          (contig_idx < gene.contig.contig_idx || og_end < gene.interval.start)
+          (contig_idx < gene.contig.contig_idx
+           || og_end < gene.coordinates.start)
           // so if we also have an overgene in progress, add it now
           && og_start != EMPTY
           && og_end != EMPTY) {
@@ -134,11 +135,11 @@ class OverGenes {
               GeneStrandness::AMBIGUOUS});
         overgene_offsets_.push_back(gene_idx);
         // reset og_start, og_end
-        og_start = gene.interval.start;
+        og_start = gene.coordinates.start;
       } else if (og_start == EMPTY) {
-        og_start = gene.interval.start;
+        og_start = gene.coordinates.start;
       }
-      og_end = std::max(og_end, gene.interval.end);
+      og_end = std::max(og_end, gene.coordinates.end);
       // update contig_idx, tracking contig offsets into overgenes
       while (contig_idx < gene.contig.contig_idx) {
         // add/note end of contig

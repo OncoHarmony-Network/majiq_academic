@@ -71,10 +71,10 @@ SJJunctionsPositions JunctionsFromBam(
       GeneStrandness strand = aln.strandness(exp_strandness);
       // add each junction in this alignment
       for (; cur_junc != junctions.end(); ++cur_junc) {
-        auto& [interval, position] = *cur_junc;
+        auto& [coordinates, position] = *cur_junc;
         // counts for junction
         auto& junction_counts = contig_counts[
-          std::make_pair(interval, strand)];
+          std::make_pair(coordinates, strand)];
         // increment num_junctions if we haven't seen it before
         if (junction_counts.empty()) { ++num_junctions; }
         // increment position, and num_junction_positions if new

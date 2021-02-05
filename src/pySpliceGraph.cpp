@@ -225,7 +225,7 @@ void init_Genes(
     .def_property_readonly("start",
         [](py::object& genes_obj) -> py::array_t<position_t> {
         Genes& genes = genes_obj.cast<Genes&>();
-        const size_t offset = offsetof(majiq::Gene, interval.start);
+        const size_t offset = offsetof(majiq::Gene, coordinates.start);
         return ArrayFromVectorAndOffset<position_t, majiq::Gene>(
             genes.data(), offset, genes_obj);
         },
@@ -233,7 +233,7 @@ void init_Genes(
     .def_property_readonly("end",
         [](py::object& genes_obj) -> py::array_t<position_t> {
         Genes& genes = genes_obj.cast<Genes&>();
-        const size_t offset = offsetof(majiq::Gene, interval.end);
+        const size_t offset = offsetof(majiq::Gene, coordinates.end);
         return ArrayFromVectorAndOffset<position_t, majiq::Gene>(
             genes.data(), offset, genes_obj);
         },

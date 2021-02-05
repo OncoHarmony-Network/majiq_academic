@@ -16,10 +16,10 @@
 #include <map>
 #include <vector>
 #include <algorithm>
-#include <zstr/zstr.hpp>
 #include <string>
 #include <regex>
 
+#include <zstr/zstr.hpp>
 #include <boost/algorithm/string.hpp>
 
 namespace majiq {
@@ -169,7 +169,7 @@ inline std::optional<std::string> attribute_value(
   return std::nullopt;
 }
 
-inline ClosedInterval get_interval(const std::vector<std::string>& record) {
+inline ClosedInterval get_coordinates(const std::vector<std::string>& record) {
   position_t start = std::atol(record[COL_START].c_str());
   position_t end = std::atol(record[COL_END].c_str());
   return ClosedInterval{start, end};
@@ -220,7 +220,7 @@ GFF3ExonHierarchy::GFF3ExonHierarchy(
     // parse exon vs parent features (especially genes)
     FeatureType record_type = get_feature_type(record[COL_TYPE], gff3_types);
     if (record_type == FeatureType::EXON) {
-      // assign interval for the exon to its parent
+      // assign coordinates for the exon to its parent
       const auto record_parent_opt
         = attribute_value(record[COL_ATTRIBUTES], regex_parent_vec);
       if (!record_parent_opt.has_value()) {
@@ -229,7 +229,7 @@ GFF3ExonHierarchy::GFF3ExonHierarchy(
         oss << "GFF3 has exon record without defined parent:\n" << cur_line;
         throw std::runtime_error(oss.str());
       } else {
-        feature_exons_[*record_parent_opt].insert(get_interval(record));
+        feature_exons_[*record_parent_opt].insert(get_coordinates(record));
       }
     } else if (type_in_hierarchy(record_type)) {
       // does non-exon record have an id?
@@ -252,7 +252,7 @@ GFF3ExonHierarchy::GFF3ExonHierarchy(
         // extract contig information
         KnownContig contig = contigs_->make_known(record[COL_SEQID]);
         // construct gene components
-        ClosedInterval interval = get_interval(record);
+        ClosedInterval coordinates = get_coordinates(record);
         GeneStrandness strand = convert_strand(record[COL_STRAND]);
         geneid_t geneid = record_id;
         // if no gene name defined, use gene id as name
@@ -261,7 +261,7 @@ GFF3ExonHierarchy::GFF3ExonHierarchy(
           .value_or(geneid);
         // add gene to genes_, get gene_idx for it
         size_t gene_idx
-          = genes_->add(Gene{contig, interval, strand, geneid, genename});
+          = genes_->add(Gene{contig, coordinates, strand, geneid, genename});
         // update record_parent with gene_idx
         record_parent = gene_idx;
       }
