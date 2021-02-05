@@ -10,6 +10,7 @@
 
 #include <cstdint>
 #include <string>
+#include <iostream>
 
 namespace majiq {
 
@@ -29,6 +30,11 @@ enum class GeneStrandness : unsigned char {
   REVERSE = '-',
   AMBIGUOUS = '.',
 };
+inline std::ostream& operator<<(
+    std::ostream& os, const GeneStrandness& x) noexcept {
+  os << static_cast<char>(x);
+  return os;
+}
 
 enum class ExperimentStrandness : unsigned char {
   FORWARD = 'F',  // read 1 is in forward direction, Salmon ISF

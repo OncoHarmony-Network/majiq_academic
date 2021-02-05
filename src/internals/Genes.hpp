@@ -27,12 +27,6 @@
 
 namespace majiq {
 
-inline std::ostream& operator<<(
-    std::ostream& os, const GeneStrandness& x) noexcept {
-  os << static_cast<char>(x);
-  return os;
-}
-
 struct Gene {
  public:
   // location
