@@ -54,23 +54,44 @@ struct KnownGene {
   inline KnownGene remapped(
       const std::shared_ptr<Genes>& new_known_genes) const;
   KnownContig& contig() const { return get().contig; }
+  GeneStrandness& strand() const { return get().strand; }
 };
-// sorting/equality based on underlying gene
-inline bool operator<(const KnownGene& x, const KnownGene& y) noexcept {
-  return std::tie(x.gene_idx, x.known_genes)
-    < std::tie(y.gene_idx, y.known_genes);
-}
+// equality of known genes
 inline bool operator==(const KnownGene& x, const KnownGene& y) noexcept {
   return std::tie(x.gene_idx, x.known_genes)
     == std::tie(y.gene_idx, y.known_genes);
 }
-// compare KnownGene to KnownContig
-inline bool operator<(const KnownGene& x, const KnownContig& y) noexcept {
-  return x.contig() < y;
+// sorting/ordering based on underlying gene
+inline bool operator<(const KnownGene& x, const KnownGene& y) noexcept {
+  return std::tie(x.gene_idx, x.known_genes)
+    < std::tie(y.gene_idx, y.known_genes);
 }
-inline bool operator<(const KnownContig& x, const KnownGene& y) noexcept {
-  return x < y.contig();
+// comparisons against objects with KnownGene gene or gene()
+template <typename T>
+inline bool operator<(const T& x, const KnownGene& y) noexcept {
+  constexpr bool has_field = detail::has_gene_field<T>::value;
+  constexpr bool has_function = detail::has_gene_function<T>::value;
+  static_assert(has_field || has_function,
+      "Type T does not have gene to compare to KnownGene");
+  if (has_field) {
+    return x.gene < y;
+  } else {
+    return x.gene() < y;
+  }
 }
+template <typename T>
+inline bool operator<(const KnownGene& x, const T& y) noexcept {
+  constexpr bool has_field = detail::has_gene_field<T>::value;
+  constexpr bool has_function = detail::has_gene_function<T>::value;
+  static_assert(has_field || has_function,
+      "Type T does not have gene to compare to KnownGene");
+  if (has_field) {
+    return x < y.gene;
+  } else {
+    return x < y.gene();
+  }
+}
+
 
 class Genes : public std::enable_shared_from_this<Genes> {
  public:

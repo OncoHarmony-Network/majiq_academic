@@ -14,10 +14,38 @@
 
 #include "Contig.hpp"
 #include "KnownFeatures.hpp"
+#include "Meta.hpp"
 
 namespace majiq {
-class Contigs;
+class Contigs;  // forward declaration to define KnownContig
+
 using KnownContig = detail::KnownFeature<Contigs>;
+// enable comparisons against objects with KnownContig contig or contig()
+template <typename T>
+inline bool operator<(const T& x, const KnownContig& y) noexcept {
+  constexpr bool has_field = detail::has_contig_field<T>::value;
+  constexpr bool has_function = detail::has_contig_function<T>::value;
+  static_assert(has_field || has_function,
+      "Type T does not have contig to compare to KnownContig");
+  if constexpr(has_field) {
+    return x.contig < y;
+  } else {
+    return x.contig() < y;
+  }
+}
+template <typename T>
+inline bool operator<(const KnownContig& x, const T& y) noexcept {
+  constexpr bool has_field = detail::has_contig_field<T>::value;
+  constexpr bool has_function = detail::has_contig_function<T>::value;
+  static_assert(has_field || has_function,
+      "Type T does not have contig to compare to KnownContig");
+  if constexpr(has_field) {
+    return x < y.contig;
+  } else {
+    return x < y.contig();
+  }
+}
+
 class Contigs
     : public detail::KnownFeatures<std::vector<Contig>>,
       public std::enable_shared_from_this<Contigs> {

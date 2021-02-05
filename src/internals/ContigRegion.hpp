@@ -58,37 +58,61 @@ struct ContigRegion {
       : ContigRegion{x.contig, x.coordinates, x.strand} { }
 };
 
-// order regions by genomic position and strand, ignoring data.
-template <class T1, class T2, class D1, class D2>
-inline bool operator<(
-    const ContigRegion<T1, D1>& x, const ContigRegion<T2, D2>& y) noexcept {
-  return std::tie(x.contig, x.coordinates, x.strand)
-    < std::tie(y.contig, y.coordinates, y.strand);
-}
 // ignore data when determining 'equality'
-template <class T1, class T2, class D1, class D2>
+template <typename T1, typename T2, typename D1, typename D2>
 inline bool operator==(
     const ContigRegion<T1, D1>& x, const ContigRegion<T2, D2>& y) noexcept {
   return std::tie(x.contig, x.coordinates, x.strand)
     == std::tie(y.contig, y.coordinates, y.strand);
 }
 
-// derived comparisons (ContigRegion, ContigRegion)
-template <class T1, class T2, class D1, class D2>
-inline bool operator>(
+// order regions by genomic position and strand, ignoring data
+template <typename T1, typename T2, typename D1, typename D2>
+inline bool operator<(
     const ContigRegion<T1, D1>& x, const ContigRegion<T2, D2>& y) noexcept {
-  return y < x;
+  return std::tie(x.contig, x.coordinates, x.strand)
+    < std::tie(y.contig, y.coordinates, y.strand);
 }
-template <class T1, class T2, class D1, class D2>
-inline bool operator<=(
-    const ContigRegion<T1, D1>& x, const ContigRegion<T2, D2>& y) noexcept {
-  return !(y < x);
+// will have types (i.e. GeneRegion) that expose contig() and strand() instead
+template <typename T, typename D, typename U>
+inline bool operator<(const ContigRegion<T, D>& x, const U& y) noexcept {
+  return std::tie(x.contig, x.coordinates, x.strand)
+    < std::tie(y.contig(), y.coordinates, y.strand());
 }
-template <class T1, class T2, class D1, class D2>
-inline bool operator>=(
-    const ContigRegion<T1, D1>& x, const ContigRegion<T2, D2>& y) noexcept {
-  return !(x < y);
+template <typename U, typename T, typename D>
+inline bool operator<(const U& x, const ContigRegion<T, D>& y) noexcept {
+  return std::tie(x.contig(), x.coordinates, x.strand())
+    < std::tie(y.contig, y.coordinates, y.strand);
 }
+
+// unstranded comparison with contig-coordinates
+template <typename T, typename U>
+struct CompareContigUnstranded {
+  inline bool operator()(const T& x, const U& y) noexcept {
+    constexpr bool T_field = detail::has_contig_field<T>::value;
+    constexpr bool T_function = detail::has_contig_function<T>::value;
+    constexpr bool U_field = detail::has_contig_field<U>::value;
+    constexpr bool U_function = detail::has_contig_function<U>::value;
+    static_assert((T_field || T_function),
+        "T does not have contig for unstranded contigregion comparison");
+    static_assert((U_field || U_function),
+        "U does not have contig for unstranded contigregion comparison");
+    if constexpr(T_field && U_field) {
+      return std::tie(x.contig, x.coordinates)
+        < std::tie(y.contig, y.coordinates);
+    } else if constexpr(T_field && U_function) {
+      return std::tie(x.contig(), x.coordinates)
+        < std::tie(y.contig, y.coordinates);
+    } else if constexpr(T_function && U_field) {
+      return std::tie(x.contig, x.coordinates)
+        < std::tie(y.contig(), y.coordinates);
+    } else {
+      return std::tie(x.contig(), x.coordinates)
+        < std::tie(y.contig(), y.coordinates);
+    }
+  }
+};
+
 
 }  // namespace detail
 }  // namespace majiq
