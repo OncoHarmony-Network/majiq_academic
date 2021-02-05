@@ -53,6 +53,7 @@ struct KnownGene {
    */
   inline KnownGene remapped(
       const std::shared_ptr<Genes>& new_known_genes) const;
+  KnownContig& contig() const { return get().contig; }
 };
 // sorting/equality based on underlying gene
 inline bool operator<(const KnownGene& x, const KnownGene& y) noexcept {
@@ -62,6 +63,13 @@ inline bool operator<(const KnownGene& x, const KnownGene& y) noexcept {
 inline bool operator==(const KnownGene& x, const KnownGene& y) noexcept {
   return std::tie(x.gene_idx, x.known_genes)
     == std::tie(y.gene_idx, y.known_genes);
+}
+// compare KnownGene to KnownContig
+inline bool operator<(const KnownGene& x, const KnownContig& y) noexcept {
+  return x.contig() < y;
+}
+inline bool operator<(const KnownContig& x, const KnownGene& y) noexcept {
+  return x < y.contig();
 }
 
 class Genes : public std::enable_shared_from_this<Genes> {
