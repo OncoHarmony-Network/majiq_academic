@@ -20,49 +20,49 @@
 #include <optional>
 #include <boost/functional/hash.hpp>
 
-#include "Contigs.hpp"
+#include "ContigRegion.hpp"
 #include "Interval.hpp"
 #include "MajiqTypes.hpp"
 
 
 namespace majiq {
 
-struct Gene {
- public:
-  // location
-  KnownContig contig;
-  ClosedInterval coordinates;
-  GeneStrandness strand;
-  // identification
-  geneid_t geneid;  // unique key
-  genename_t genename;
+struct GeneInfo {
+  geneid_t gene_id;  // unique key
+  genename_t gene_name;
+};
 
-  // constructors
+struct Gene : public detail::ContigRegion<ClosedInterval, GeneInfo> {
+  using BaseT = detail::ContigRegion<ClosedInterval, GeneInfo>;
+  geneid_t& gene_id() noexcept { return data.gene_id; }
+  const geneid_t& gene_id() const noexcept { return data.gene_id; }
+  genename_t& gene_name() noexcept { return data.gene_name; }
+  const genename_t& gene_name() const noexcept { return data.gene_name; }
+  geneid_t unique_key() const noexcept { return gene_id(); }  // for KnownFeatures
+  Gene(KnownContig _contig, ClosedInterval _coordinates, GeneStrandness _strand,
+      GeneInfo _info)
+      : BaseT{_contig, _coordinates, _strand, _info} { }
   Gene(KnownContig _contig, ClosedInterval _coordinates, GeneStrandness _strand,
       geneid_t _geneid, genename_t _genename)
-      : contig{_contig},
-        coordinates{_coordinates},
-        strand{_strand},
-        geneid{_geneid},
-        genename{_genename} {
-  }
-  Gene(const Gene& g) = default;
-  Gene(Gene&& g) = default;
-  Gene& operator=(const Gene& g) = default;
-  Gene& operator=(Gene&& g) = default;
+      : Gene{_contig, _coordinates, _strand, GeneInfo{_geneid, _genename}} { }
+  Gene() = default;
+  Gene(const Gene&) = default;
+  Gene(Gene&&) = default;
+  Gene& operator=(const Gene&) = default;
+  Gene& operator=(Gene&&) = default;
 };
 // ordering with respect to genomic position
 inline bool operator<(const Gene& lhs, const Gene& rhs) noexcept {
-  return std::tie(lhs.contig, lhs.coordinates, lhs.strand, lhs.geneid)
-    < std::tie(rhs.contig, rhs.coordinates, rhs.strand, rhs.geneid);
+  return std::tie(lhs.contig, lhs.coordinates, lhs.strand, lhs.gene_id())
+    < std::tie(rhs.contig, rhs.coordinates, rhs.strand, rhs.gene_id());
 }
 // equality only by gene id
 inline bool operator==(const Gene& lhs, const Gene& rhs) noexcept {
-  return lhs.geneid == rhs.geneid;
+  return lhs.gene_id() == rhs.gene_id();
 }
 // allow Gene to be passed into output stream (e.g. std::cout)
 inline std::ostream& operator<<(std::ostream& os, const Gene& x) noexcept {
-  os << x.geneid;
+  os << x.gene_id();
   return os;
 }
 
@@ -111,7 +111,7 @@ inline std::size_t hash_value(const GeneStrandness& x) noexcept {
   return std::hash<char>{}(static_cast<char>(x));
 }
 inline std::size_t hash_value(const Gene& x) noexcept {
-  return std::hash<geneid_t>{}(x.geneid);
+  return std::hash<geneid_t>{}(x.gene_id());
 }
 }  // namespace majiq
 // override std::hash
@@ -179,7 +179,7 @@ class Genes : public std::enable_shared_from_this<Genes> {
   static mapGeneIdx _geneid_indexes(const vecGene& v) {
     mapGeneIdx result{};
     for (size_t idx = 0; idx < v.size(); ++idx) {
-      result[v[idx].geneid] = idx;
+      result[v[idx].gene_id()] = idx;
     }
     return result;
   }
@@ -189,13 +189,13 @@ class Genes : public std::enable_shared_from_this<Genes> {
   const std::vector<geneid_t> geneids() const {
     std::vector<geneid_t> result{size()};
     std::transform(genes_vec_.begin(), genes_vec_.end(), result.begin(),
-        [](const Gene& g) { return g.geneid; });
+        [](const Gene& g) { return g.gene_id(); });
     return result;
   }
   const std::vector<genename_t> genenames() const {
     std::vector<genename_t> result{size()};
     std::transform(genes_vec_.begin(), genes_vec_.end(), result.begin(),
-        [](const Gene& g) { return g.genename; });
+        [](const Gene& g) { return g.gene_name(); });
     return result;
   }
 
@@ -205,10 +205,10 @@ class Genes : public std::enable_shared_from_this<Genes> {
   // check/add genes
   size_t size() const { return genes_vec_.size(); }
   bool contains(const geneid_t& id) const { return id_idx_map_.count(id) > 0; }
-  bool contains(const Gene& x) const { return contains(x.geneid); }
+  bool contains(const Gene& x) const { return contains(x.gene_id()); }
   // get gene_idx (throw error if not present)
   size_t get_gene_idx(const geneid_t& id) const { return id_idx_map_.at(id); }
-  size_t get_gene_idx(const Gene& x) const { return get_gene_idx(x.geneid); }
+  size_t get_gene_idx(const Gene& x) const { return get_gene_idx(x.gene_id()); }
   // get gene_idx (-1 if not present)
   std::optional<size_t> safe_gene_idx(const geneid_t& id) const {
     std::optional<size_t> result;
@@ -219,7 +219,7 @@ class Genes : public std::enable_shared_from_this<Genes> {
     return result;
   }
   std::optional<size_t> safe_gene_idx(const Gene& x) const {
-    return safe_gene_idx(x.geneid);
+    return safe_gene_idx(x.gene_id());
   }
   /**
    * get gene_idx (add if not present)
@@ -228,7 +228,7 @@ class Genes : public std::enable_shared_from_this<Genes> {
     const size_t prev_size = size();
     if (!is_sorted_ || (prev_size > 0 && genes_vec_.back() >= x)) {
       // not sorted or doesn't belong at end, so find if it is here
-      auto match = id_idx_map_.find(x.geneid);
+      auto match = id_idx_map_.find(x.gene_id());
       if (match != id_idx_map_.end()) {
         return match->second;
       } else {
@@ -237,7 +237,7 @@ class Genes : public std::enable_shared_from_this<Genes> {
       }
     }
     // not present, so we add to end
-    id_idx_map_[x.geneid] = prev_size;
+    id_idx_map_[x.gene_id()] = prev_size;
     genes_vec_.push_back(x);
     return prev_size;
   }

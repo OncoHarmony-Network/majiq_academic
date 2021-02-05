@@ -25,9 +25,9 @@ struct Contig {
   explicit Contig(seqid_t&& _seqid) : seqid{std::move(_seqid)} {}
   Contig(const Contig&) = default;
   Contig(Contig&&) = default;
-  Contig() = delete;
-  Contig& operator=(const Contig&) = delete;
-  Contig& operator=(Contig&&) = delete;
+  Contig() = default;
+  Contig& operator=(const Contig&) = default;
+  Contig& operator=(Contig&&) = default;
 };
 inline bool operator<(const Contig& x, const Contig& y) noexcept {
   return x.seqid < y.seqid;

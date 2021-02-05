@@ -75,7 +75,7 @@ SpliceGraph TranscriptModels::ToSpliceGraph(bool process_ir) const {
       if (nopen < 0) {
         std::ostringstream oss;
         oss << "More exon ends before starts when flattening gene "
-          << gene.get().geneid;
+          << gene.get().gene_id();
         throw std::logic_error(oss.str());
       }
 
@@ -113,7 +113,7 @@ SpliceGraph TranscriptModels::ToSpliceGraph(bool process_ir) const {
       // we have had more starts than ends. This should never happen.
       std::ostringstream oss;
       oss << "Found more exon starts than ends when flattening gene "
-        << gene.get().geneid;
+        << gene.get().gene_id();
       throw std::logic_error(oss.str());
     }
   }  // end iteration over all genes and their transcripts
