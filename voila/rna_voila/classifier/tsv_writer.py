@@ -633,7 +633,7 @@ class TsvWriter(BaseTsvWriter):
 
                             strand = event['E1'].start < event['E2'].end
 
-                            event_size = self._trim_strand_case_event_size(event['Proximal'], 'end', event['Distal'], 'end', strand) + 1
+                            event_size = self._trim_strand_case_event_size(event['Proximal'], 'end', event['Distal'], 'end', strand)
 
                             # preferentially use source LSV
                             if src_common[5]:
@@ -736,7 +736,7 @@ class TsvWriter(BaseTsvWriter):
 
                             strand = event['E1'].start < event['E2'].end
 
-                            event_size = self._trim_strand_case_event_size(event['Proximal'], 'start', event['Distal'], 'start', strand) + 1
+                            event_size = self._trim_strand_case_event_size(event['Proximal'], 'start', event['Distal'], 'start', strand)
 
                             # preferentially use target LSV
                             if trg_common[5]:
