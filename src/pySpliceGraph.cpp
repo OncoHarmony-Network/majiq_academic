@@ -89,13 +89,14 @@ void init_Contigs(
     py::class_<majiq::Contigs, std::shared_ptr<majiq::Contigs>>& pyContigs) {
   using majiq::seqid_t;
   using majiq::Contigs;
+  using majiq::Contig;
   using namespace py::literals;
   pyContigs
     .def(
         py::init([](py::list seqids) {
           auto result = std::make_shared<Contigs>();
           for (auto seqid : seqids) {
-            result->add(seqid.cast<seqid_t>());
+            result->add(Contig{seqid.cast<seqid_t>()});
           }
           return result;
         }),
@@ -136,7 +137,7 @@ void init_Contigs(
         })
     .def("__len__", &Contigs::size)
     .def("__contains__",
-        [](const Contigs& s, seqid_t x) -> bool { return s.contains(x); });
+        [](const Contigs& s, seqid_t x) -> bool { return s.count(x) > 0; });
 }
 
 void init_Genes(
@@ -217,7 +218,7 @@ void init_Genes(
     .def_property_readonly("contig_idx",
         [](py::object& genes_obj) -> py::array_t<size_t> {
         Genes& genes = genes_obj.cast<Genes&>();
-        const size_t offset = offsetof(majiq::Gene, contig.contig_idx);
+        const size_t offset = offsetof(majiq::Gene, contig.idx_);
         return ArrayFromVectorAndOffset<size_t, majiq::Gene>(
             genes.data(), offset, genes_obj);
         },
@@ -648,7 +649,7 @@ void init_SJJunctions(py::class_<majiq::SJJunctions, std::shared_ptr<majiq::SJJu
     .def_property_readonly("contig_idx",
         [](py::object& sj_obj) -> py::array_t<size_t> {
         SJJunctions& sj = sj_obj.cast<SJJunctions&>();
-        const size_t offset = offsetof(majiq::SJJunction, contig.contig_idx);
+        const size_t offset = offsetof(majiq::SJJunction, contig.idx_);
         return ArrayFromVectorAndOffset<size_t, majiq::SJJunction>(
             sj.data(), offset, sj_obj);
         },

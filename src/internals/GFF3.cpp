@@ -250,7 +250,7 @@ GFF3ExonHierarchy::GFF3ExonHierarchy(
       // special processing for genes, replace record_parent with gene_idx
       if (record_type == FeatureType::ACCEPT_GENE) {
         // extract contig information
-        KnownContig contig = contigs_->make_known(record[COL_SEQID]);
+        KnownContig contig = contigs_->make_known(Contig{record[COL_SEQID]});
         // construct gene components
         ClosedInterval coordinates = get_coordinates(record);
         GeneStrandness strand = convert_strand(record[COL_STRAND]);

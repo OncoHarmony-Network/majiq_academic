@@ -27,10 +27,10 @@ struct Interval {
   // constructors
   Interval(position_t a, position_t b) : start{a}, end{b} { }
   Interval() : Interval{-1, -1} { }
-  Interval(const Interval& x) = default;
-  Interval(Interval&& x) = default;
-  Interval& operator=(const Interval& x) = default;
-  Interval& operator=(Interval&& x) = default;
+  Interval(const Interval&) = default;
+  Interval(Interval&&) = default;
+  Interval& operator=(const Interval&) = default;
+  Interval& operator=(Interval&&) = default;
 
   // full interval or otherwise?
   bool has_start() const { return start >= 0; }
@@ -91,10 +91,10 @@ struct ClosedInterval : public detail::Interval {
     }
   }
   ClosedInterval() : ClosedInterval{-1, -1} { }
-  ClosedInterval(const ClosedInterval& x) = default;
-  ClosedInterval(ClosedInterval&& x) = default;
-  ClosedInterval& operator=(const ClosedInterval& x) = default;
-  ClosedInterval& operator=(ClosedInterval&& x) = default;
+  ClosedInterval(const ClosedInterval&) = default;
+  ClosedInterval(ClosedInterval&&) = default;
+  ClosedInterval& operator=(const ClosedInterval&) = default;
+  ClosedInterval& operator=(ClosedInterval&&) = default;
 };
 
 /**
@@ -117,10 +117,10 @@ struct OpenInterval : public detail::Interval {
     }
   }
   OpenInterval() : OpenInterval{-1, -1} { }
-  OpenInterval(const OpenInterval& x) = default;
-  OpenInterval(OpenInterval&& x) = default;
-  OpenInterval& operator=(const OpenInterval& x) = default;
-  OpenInterval& operator=(OpenInterval&& x) = default;
+  OpenInterval(const OpenInterval&) = default;
+  OpenInterval(OpenInterval&&) = default;
+  OpenInterval& operator=(const OpenInterval&) = default;
+  OpenInterval& operator=(OpenInterval&&) = default;
 };
 
 // intersection of intervals

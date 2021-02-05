@@ -91,7 +91,7 @@ class OverGenes {
   }
   template <class IntervalT>
   size_t overgene_idx(const detail::ContigRegion<IntervalT>& x) const noexcept {
-    return overgene_idx(x.contig.contig_idx, x.coordinates);
+    return overgene_idx(x.contig.idx_, x.coordinates);
   }
   template <class IntervalT>
   size_t overgene_idx(const detail::GeneRegion<IntervalT>& x) const noexcept {
@@ -124,7 +124,7 @@ class OverGenes {
       const Gene& gene = genes->get(gene_idx);
       if (
           // change in contig or past current max end --> start of overgene
-          (contig_idx < gene.contig.contig_idx
+          (contig_idx < gene.contig.idx_
            || og_end < gene.coordinates.start)
           // so if we also have an overgene in progress, add it now
           && og_start != EMPTY
@@ -141,7 +141,7 @@ class OverGenes {
       }
       og_end = std::max(og_end, gene.coordinates.end);
       // update contig_idx, tracking contig offsets into overgenes
-      while (contig_idx < gene.contig.contig_idx) {
+      while (contig_idx < gene.contig.idx_) {
         // add/note end of contig
         contig_offsets_.push_back(overgenes_.size());
         ++contig_idx;

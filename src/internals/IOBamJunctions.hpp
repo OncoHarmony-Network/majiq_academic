@@ -47,7 +47,7 @@ SJJunctionsPositions JunctionsFromBam(
 
     // track contigs -- just copy over contigs from alignment file
     std::for_each(in.target_name(), in.target_name() + in.n_targets(),
-        [&contigs](char* seqid) { contigs->add(std::string{seqid}); });
+        [&contigs](char* seqid) { contigs->add(Contig{std::string{seqid}}); });
     // expand junctions for all contigs
     counts.resize(in.n_targets());
     // iterate over alignments

@@ -433,7 +433,7 @@ class ContigRegions {
     return x.end() == std::adjacent_find(x.begin(), x.end(),
         [](const value_type& a, const value_type& b) {
         // should be sorted and have equal pointers, return if not
-        return !(a < b && a.contig.known_contigs == b.contig.known_contigs);
+        return !(a < b && a.contig.ptr_ == b.contig.ptr_);
         });
   }
 
@@ -441,10 +441,10 @@ class ContigRegions {
   ContigRegions() : elements_{}, contigs_{nullptr} { }
   ContigRegions(vecT&& x, NoCheckValid)
       : elements_{x},
-        contigs_{x.empty() ? nullptr : x[0].contig.known_contigs} { }
+        contigs_{x.empty() ? nullptr : x[0].contig.ptr_} { }
   ContigRegions(const vecT& x, NoCheckValid)
       : elements_{x},
-        contigs_{x.empty() ? nullptr : x[0].contig.known_contigs} { }
+        contigs_{x.empty() ? nullptr : x[0].contig.ptr_} { }
   explicit ContigRegions(vecT&& x) : ContigRegions{x, NoCheckValid{}} {
     if (!is_valid(x)) {
       throw std::invalid_argument("vector input to ContigRegions is invalid");
