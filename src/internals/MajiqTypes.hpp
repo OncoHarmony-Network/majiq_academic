@@ -11,6 +11,8 @@
 #include <cstdint>
 #include <string>
 #include <iostream>
+#include <functional>
+#include <boost/functional/hash.hpp>
 
 namespace majiq {
 
@@ -35,13 +37,24 @@ inline std::ostream& operator<<(
   os << static_cast<char>(x);
   return os;
 }
+inline std::size_t hash_value(const GeneStrandness& x) noexcept {
+  return std::hash<char>{}(static_cast<char>(x));
+}
 
 enum class ExperimentStrandness : unsigned char {
   FORWARD = 'F',  // read 1 is in forward direction, Salmon ISF
   REVERSE = 'R',  // read 2 is in forward direction, Salmon ISR
   NONE = 'N',  // could be either way, Salmon IU
 };
-
 }  // namespace majiq
+
+namespace std {
+template <> struct hash<majiq::GeneStrandness> {
+  std::size_t operator()(const majiq::GeneStrandness& x) const noexcept {
+    return majiq::hash_value(x);
+  }
+};
+}  // namespace std
+
 
 #endif  // MAJIQ_TYPES_HPP
