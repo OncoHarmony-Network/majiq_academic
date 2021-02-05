@@ -319,7 +319,9 @@ class _ViewMulti:
 
 class ViewPsis(ViewMulti):
 
-    def __init__(self):
+    def __init__(self, voila_file=None):
+        if voila_file != None:
+            print("Warning, view multipsi calling with specific voila file not supported, using all voila inputs")
         super().__init__(ViewPsi)
 
     class _ViewPsis(_ViewMulti):
@@ -539,7 +541,9 @@ class ViewDeltaPsi(DeltaPsi, ViewMatrix):
 
 class ViewHeterogens(ViewMulti):
 
-    def __init__(self):
+    def __init__(self, voila_file=None):
+        if voila_file != None:
+            print("Warning, view heterogen calling with specific voila file not supported, using all voila inputs")
         super().__init__(ViewHeterogen)
 
     class _ViewHeterogens(_ViewMulti):
