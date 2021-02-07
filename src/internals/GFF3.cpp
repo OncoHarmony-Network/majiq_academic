@@ -34,46 +34,43 @@ namespace gff3 {
  * ancestor, top_level indicates if top level or just missing information
  * about oldest ancestor (unable to follow to end at this time)
  */
-std::pair<bool, gene_or_ancestor_id_t> GFF3ExonHierarchy::GetFeatureGene(
-    feature_id_t id) {
-auto cur_parent = feature_genes_.find(id);
-if (cur_parent != feature_genes_.end()) {
-  // get gene or parent id that was found
-  const auto& gene_or_parent_id = cur_parent->second;
-  // if it is a gene_idx, we are done
-  if (auto gene_idx_ptr = std::get_if<size_t>(&gene_or_parent_id)) {
-    return std::make_pair(true, gene_or_ancestor_id_t{*gene_idx_ptr});
+std::pair<bool, feature_id_t> GFF3ExonHierarchy::GetFeatureGene(
+    const feature_id_t& id) {
+  // if id is for gene, we are done
+  if (feature_types_[id].first == FeatureType::ACCEPT_GENE) {
+    return std::make_pair(true, id);
   }
-  // otherwise, we have a parent id
-  const auto& parent_id = std::get<feature_id_t>(gene_or_parent_id);
-  // if parent is self, this is top level!
-  if (id == parent_id) {
-    return std::make_pair(true, gene_or_ancestor_id_t{parent_id});
+  // otherwise we look at parent
+  auto cur_parent = feature_genes_.find(id);
+  if (cur_parent != feature_genes_.end()) {
+    // get gene or parent id that was found
+    const feature_id_t& parent_id = cur_parent->second;
+    // if parent is self, this is top level!
+    if (id == parent_id) {
+      return std::make_pair(true, parent_id);
+    } else {
+      // get result
+      auto result = GetFeatureGene(parent_id);
+      // bind to values
+      const auto& [is_top_level, final_gene_or_ancestor] = result;
+      // update where id points to
+      feature_genes_[id] = final_gene_or_ancestor;
+      // pass result on down
+      return result;
+    }
   } else {
-    // get result
-    auto result = GetFeatureGene(parent_id);
-    // bind to values
-    const auto& [is_top_level, final_gene_or_ancestor] = result;
-    // update where id points to
-    feature_genes_[id] = final_gene_or_ancestor;
-    // pass result on down
-    return result;
+    // otherwise, no parent so not top level
+    return std::make_pair(false, id);
   }
-}
-// otherwise, no parent so not top level
-return std::make_pair(false, gene_or_ancestor_id_t{id});
 }
 
 /**
  * Consume parsed GFF3 exon hierarchy, make majiq exon hierarchy
  */
 GFF3TranscriptModels ToTranscriptModels(GFF3ExonHierarchy&& x) {
-  // get genes in sorted order
-  std::shared_ptr<Genes> genes = x.genes_->sorted();
-  bool x_genes_sorted = genes == x.genes_;
   // initialize vector of transcript/gene models per gene
   std::vector<std::vector<transcript_exons_t>> gene_transcript_exons(
-      genes->size());
+      x.genes_->size());
   // initialize counts of skipped types
   std::map<std::string, unsigned int> skipped_transcript_type_ct;
   std::map<std::string, unsigned int> skipped_gene_type_ct;
@@ -110,21 +107,15 @@ GFF3TranscriptModels ToTranscriptModels(GFF3ExonHierarchy&& x) {
       // throw error if we don't have final gene or top-level ancestor...
       std::ostringstream oss;
       oss << "Found exons with undefined ancestor (ancestor ID: '"
-        << std::get<feature_id_t>(final_gene_or_ancestor)
-        << "')";
+        << final_gene_or_ancestor << "')";
       throw std::runtime_error(oss.str());
-    } else if (auto skipped_id_ptr
-        = std::get_if<feature_id_t>(&final_gene_or_ancestor)) {
+    } else if (x.feature_types_[final_gene_or_ancestor].first
+        != FeatureType::ACCEPT_GENE) {
       // we are skipping this gene and not processing these
-      skipped_genes.insert(*skipped_id_ptr);
+      skipped_genes.insert(final_gene_or_ancestor);
     } else {
-      // index into original genes built when parsing gff3
-      const auto& x_gene_idx = std::get<size_t>(final_gene_or_ancestor);
-      // index into sorted genes
-      const size_t gene_idx
-        = x_genes_sorted
-        ? x_gene_idx
-        : genes->get_gene_idx(x.genes_->get(x_gene_idx));
+      // get gene_idx from x.genes_
+      const size_t gene_idx = x.genes_->get_idx(final_gene_or_ancestor);
       // steal exons from x.feature_exons_ for resulting gene_transcript_exons
       gene_transcript_exons[gene_idx].push_back(std::move(exons));
     }
@@ -141,7 +132,7 @@ GFF3TranscriptModels ToTranscriptModels(GFF3ExonHierarchy&& x) {
   x.clear();
   // construct and return result
   return GFF3TranscriptModels{
-    TranscriptModels{x.contigs_, genes, std::move(gene_transcript_exons)},
+    TranscriptModels{x.contigs_, x.genes_, std::move(gene_transcript_exons)},
     std::move(skipped_transcript_type_ct), std::move(skipped_gene_type_ct)};
 }
 
@@ -191,7 +182,7 @@ inline GeneStrandness convert_strand(const std::string& col_strand) {
 // load GFF3 exon hierarchy from input file
 GFF3ExonHierarchy::GFF3ExonHierarchy(
     const std::string& gff3_filename, const featuretype_map_t& gff3_types)
-    : contigs_{std::make_shared<Contigs>()}, genes_{std::make_shared<Genes>()} {
+    : contigs_{std::make_shared<Contigs>()}, genes_{} {
   zstr::ifstream in{gff3_filename};
   if (!in) {
     std::ostringstream oss;
@@ -199,6 +190,7 @@ GFF3ExonHierarchy::GFF3ExonHierarchy(
       << " for constructing GFF3ExonHierarchy";
     throw std::runtime_error(oss.str());
   }
+  std::vector<Gene> genes_vec;
   std::string cur_line;  // holds current GFF3 line being processed
   while (std::getline(in, cur_line)) {
     if (cur_line.empty() || cur_line[0] == '#') {
@@ -245,9 +237,9 @@ GFF3ExonHierarchy::GFF3ExonHierarchy(
       // get parent or gene_idx for the record
       const auto record_parent_opt
         = attribute_value(record[COL_ATTRIBUTES], regex_parent_vec);
-      gene_or_ancestor_id_t record_parent
+      feature_id_t record_parent
         = record_parent_opt.value_or(record_id);
-      // special processing for genes, replace record_parent with gene_idx
+      // special processing for genes (create contig, gene)
       if (record_type == FeatureType::ACCEPT_GENE) {
         // extract contig information
         KnownContig contig = contigs_->make_known(Contig{record[COL_SEQID]});
@@ -260,15 +252,14 @@ GFF3ExonHierarchy::GFF3ExonHierarchy(
           = attribute_value(record[COL_ATTRIBUTES], regex_gene_name_vec)
           .value_or(geneid);
         // add gene to genes_, get gene_idx for it
-        size_t gene_idx
-          = genes_->add(Gene{contig, coordinates, strand, geneid, genename});
-        // update record_parent with gene_idx
-        record_parent = gene_idx;
+        genes_vec.emplace_back(contig, coordinates, strand, geneid, genename);
       }
       // initialize disjoint sets data structure with parent
       feature_genes_[record_id] = record_parent;
     }  // end handling non-exon feature (or exon previous ifelse block)
   }  // end iteration over lines in GFF3 file
+  std::sort(genes_vec.begin(), genes_vec.end());
+  genes_ = std::make_shared<Genes>(std::move(genes_vec));
 }
 
 }  // namespace gff3

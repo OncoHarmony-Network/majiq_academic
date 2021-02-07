@@ -250,8 +250,6 @@ void init_Genes(
             {"contig_idx", "start", "end", "strand", "gene_id", "gene_name"});
         },
         "View on gene information as xarray Dataset")
-    .def_property_readonly("is_sorted", &majiq::Genes::is_sorted,
-        "True if the genes sorted in contig/coordinate order")
     .def("__repr__", [](const majiq::Genes& self) -> std::string {
         std::ostringstream oss;
         oss << "Genes<" << self.size() << " total>";
@@ -259,9 +257,9 @@ void init_Genes(
         })
     .def("__len__", &majiq::Genes::size)
     .def("__contains__",
-        [](const Genes& self, geneid_t x) { return self.contains(x); })
+        [](const Genes& self, geneid_t x) { return self.count(x) > 0; })
     .def("__getitem__",
-        [](const Genes& self, geneid_t x) { return self.get_gene_idx(x); },
+        [](const Genes& self, geneid_t x) { return self.get_idx(x); },
         "gene_idx for specified gene_id", py::arg("gene_id"));
 }
 

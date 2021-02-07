@@ -16,6 +16,7 @@
 #include <stdexcept>
 
 #include "MajiqTypes.hpp"
+#include "ContigRegion.hpp"
 #include "Regions.hpp"
 #include "Interval.hpp"
 #include "Contigs.hpp"

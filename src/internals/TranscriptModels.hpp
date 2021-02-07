@@ -50,8 +50,6 @@ class TranscriptModels {
       throw std::runtime_error("TranscriptModels needs non-null genes");
     } else if (genes_->size() != gene_transcript_exons_.size()) {
       throw std::runtime_error("size mismatch in TranscriptModels");
-    } else if (!genes_->is_sorted()) {
-      throw std::runtime_error("TranscriptModels requires sorted genes");
     }
   }
 };

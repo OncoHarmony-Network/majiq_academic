@@ -12,6 +12,7 @@
 #include <functional>
 #include <boost/functional/hash.hpp>
 
+#include "GeneRegion.hpp"
 #include "Regions.hpp"
 #include "Interval.hpp"
 #include "Contigs.hpp"

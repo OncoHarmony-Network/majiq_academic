@@ -105,9 +105,6 @@ class OverGenes {
       : contig_offsets_{},
         overgenes_{},
         overgene_offsets_{} {
-    if (!genes->is_sorted()) {
-      throw std::runtime_error("OverGenes requires genes in sorted order");
-    }
     // offsets start at zero
     contig_offsets_.push_back(0);
     overgene_offsets_.push_back(0);

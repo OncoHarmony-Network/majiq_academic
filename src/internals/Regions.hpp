@@ -20,9 +20,6 @@
 #include <initializer_list>
 #include <utility>
 
-#include "ContigRegion.hpp"
-#include "GeneRegion.hpp"
-
 
 namespace majiq {
 namespace detail {
@@ -162,8 +159,7 @@ class Regions {
   Regions& operator=(Regions&&) = delete;
 
   friend inline bool operator==(const Regions& x, const Regions& y) {
-    return std::tie(x.parents_, x.elements_)
-      == std::tie(y.parents_, y.elements_);
+    return x.elements_ == y.elements_;
   }
 };
 

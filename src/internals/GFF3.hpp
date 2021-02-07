@@ -34,7 +34,6 @@ constexpr size_t COL_STRAND = 6;
 constexpr size_t COL_ATTRIBUTES = 8;
 
 using feature_id_t = std::string;
-using gene_or_ancestor_id_t = std::variant<size_t, feature_id_t>;
 using skipped_features_ct_t = std::map<std::string, unsigned int>;
 constexpr unsigned char _FLAG_IS_EXON = 1 << 0;
 constexpr unsigned char _FLAG_IN_HIERARCHY = 1 << 1;
@@ -124,11 +123,11 @@ class GFF3ExonHierarchy {
  private:
   // contigs and genes recognized so far
   const std::shared_ptr<Contigs> contigs_;
-  const std::shared_ptr<Genes> genes_;
+  std::shared_ptr<Genes> genes_;
   // feature_genes_: feature id --> size_t if known gene, otherwise some
   // ancestor (or self if top-level feature). Updated toward top-level feature
   // or first gene ancestor using disjoint set find
-  std::unordered_map<feature_id_t, gene_or_ancestor_id_t> feature_genes_;
+  std::unordered_map<feature_id_t, feature_id_t> feature_genes_;
   // the set of exons that are children to a given feature id
   std::unordered_map<feature_id_t, transcript_exons_t> feature_exons_;
   // track feature types that aren't exons. Track names when OTHER
@@ -150,7 +149,7 @@ class GFF3ExonHierarchy {
    * ancestor, top_level indicates if top level or just missing information
    * about oldest ancestor (unable to follow to end at this time)
    */
-  std::pair<bool, gene_or_ancestor_id_t> GetFeatureGene(feature_id_t id);
+  std::pair<bool, feature_id_t> GetFeatureGene(const feature_id_t& id);
 
  public:
   // convert gff3 exon hierarchy to majiq transcript exons for processing

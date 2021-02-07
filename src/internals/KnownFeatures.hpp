@@ -16,6 +16,7 @@
 #include <tuple>
 #include <optional>
 #include <functional>
+#include <vector>
 #include <boost/functional/hash.hpp>
 
 
@@ -23,7 +24,7 @@ namespace majiq {
 namespace detail {
 template <typename ContainerT> class KnownFeatures;
 template <typename KnownFeaturesT> struct KnownFeature {
-  using FeatureT = typename KnownFeaturesT::FeatureT;
+  using FeatureT = decltype(std::declval<KnownFeaturesT>().get(0));
   size_t idx_;
   std::shared_ptr<KnownFeaturesT> ptr_;
 
@@ -37,13 +38,16 @@ template <typename KnownFeaturesT> struct KnownFeature {
   KnownFeature& operator=(const KnownFeature&) = default;
   KnownFeature& operator=(KnownFeature&&) = default;
 
-  friend inline bool operator<(const KnownFeature& x, const KnownFeature& y) noexcept {
+  friend inline bool operator<(
+      const KnownFeature& x, const KnownFeature& y) noexcept {
     return std::tie(x.ptr_, x.idx_) < std::tie(y.ptr_, y.idx_);
   }
-  friend inline bool operator==(const KnownFeature& x, const KnownFeature& y) noexcept {
+  friend inline bool operator==(
+      const KnownFeature& x, const KnownFeature& y) noexcept {
     return x.idx_ == y.idx_ && x.ptr_ == y.ptr_;
   }
-  friend inline bool operator!=(const KnownFeature& x, const KnownFeature& y) noexcept {
+  friend inline bool operator!=(
+      const KnownFeature& x, const KnownFeature& y) noexcept {
     return !(x == y);
   }
 };
@@ -51,7 +55,8 @@ template <typename KnownFeaturesT> struct KnownFeature {
 template <typename ContainerT>
 class KnownFeatures {
  public:
-  using FeatureT = typename ContainerT::value_type;
+  using FeatureT = std::remove_const_t<std::remove_reference_t<
+    decltype(std::declval<ContainerT>()[0])>>;
   using KeyT = decltype(std::declval<FeatureT>().unique_key());
 
  protected:
@@ -61,11 +66,6 @@ class KnownFeatures {
  public:
   // retrieve underlying features
   const FeatureT& get(size_t idx) const { return features_[idx]; }
-
-  // NOTE: need pointer to *derived* classes, so add appropriately to subclasses
-  // // get "known" reference to these elements
-  // using Known = KnownFeature<KnownFeatures>;
-  // const Known operator[](size_t idx) { return Known{idx, this->shared_from_this()}; }
 
   // work with data that's there
   size_t size() const { return features_.size(); }
@@ -81,19 +81,29 @@ class KnownFeatures {
     }
     return result;
   }
-  std::optional<size_t> safe_idx(const FeatureT& x) { return safe_idx(x.unique_key()); }
+  std::optional<size_t> safe_idx(const FeatureT& x) {
+    return safe_idx(x.unique_key());
+  }
 
-  explicit KnownFeatures(ContainerT&& features)
-      : features_{std::move(features)} {
+  // move constructor for ContainerT
+  template <typename CT,
+           std::enable_if_t<std::is_same_v<CT, ContainerT>, bool> = true>
+  explicit KnownFeatures(CT&& features) : features_{std::move(features)} {
     for (size_t idx = 0; idx < features_.size(); ++idx) {
       idx_map_[features_[idx].unique_key()] = idx;
     }
   }
+  // move constructor for vector over features, which does not conflict if it's
+  // the same as ContainerT
+  template <typename CT, std::enable_if_t<
+    std::is_same_v<CT, std::vector<FeatureT>>
+    && !std::is_same_v<CT, ContainerT>, bool> = true>
+  explicit KnownFeatures(CT&& x) : KnownFeatures{ContainerT{std::move(x)}} { }
   KnownFeatures() = default;
   KnownFeatures(const KnownFeatures&) = default;
   KnownFeatures(KnownFeatures&&) = default;
-  KnownFeatures& operator=(const KnownFeatures&) = delete;
-  KnownFeatures& operator=(KnownFeatures&&) = delete;
+  KnownFeatures& operator=(const KnownFeatures&) = default;
+  KnownFeatures& operator=(KnownFeatures&&) = default;
 
   friend inline bool operator==(
       const KnownFeatures& x, const KnownFeatures& y) noexcept {
@@ -111,7 +121,8 @@ inline std::size_t hash_value(const KnownFeature<T>& x) noexcept {
 
 namespace std {
 template <typename T> struct hash<majiq::detail::KnownFeature<T>> {
-  std::size_t operator()(const majiq::detail::KnownFeature<T>& x) const noexcept {
+  std::size_t operator()(
+      const majiq::detail::KnownFeature<T>& x) const noexcept {
     return majiq::detail::hash_value(x);
   }
 };
