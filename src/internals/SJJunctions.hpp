@@ -37,8 +37,8 @@ using ContigJunction = detail::ContigRegion<OpenInterval, EmptyDataT>;
 using SJJunction = detail::ContigRegion<OpenInterval, ExperimentCounts>;
 using GroupJunction = detail::ContigRegion<OpenInterval, GroupPassed>;
 
-using SJJunctions = detail::ContigRegions<SJJunction>;
-using GroupJunctions = detail::ContigRegions<GroupJunction>;
+using SJJunctions = detail::Regions<SJJunction, true>;
+using GroupJunctions = detail::Regions<GroupJunction, true>;
 
 
 // how do we get from SJJunctions to GroupJunctions?
@@ -96,7 +96,7 @@ class GroupJunctionsGenerator {
       }
     }
     // create GroupJunctions
-    return GroupJunctions{passed};
+    return GroupJunctions{std::move(passed)};
   }
   /**
    * Add junctions from experiment to group towards group filters

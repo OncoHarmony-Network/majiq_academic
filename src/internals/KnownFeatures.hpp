@@ -43,6 +43,9 @@ template <typename KnownFeaturesT> struct KnownFeature {
   friend inline bool operator==(const KnownFeature& x, const KnownFeature& y) noexcept {
     return x.idx_ == y.idx_ && x.ptr_ == y.ptr_;
   }
+  friend inline bool operator!=(const KnownFeature& x, const KnownFeature& y) noexcept {
+    return !(x == y);
+  }
 };
 
 template <typename ContainerT>

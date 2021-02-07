@@ -130,7 +130,7 @@ SJJunctionsPositions JunctionsFromBam(
   }
   // finally, create desired result
   return SJJunctionsPositions{
-    std::make_shared<SJJunctions>(junctions), reads, reads_offsets, eff_len
+    std::make_shared<SJJunctions>(std::move(junctions)), reads, reads_offsets, eff_len
   };
 }
 

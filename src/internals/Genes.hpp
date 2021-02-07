@@ -61,6 +61,9 @@ inline bool operator==(const KnownGene& x, const KnownGene& y) noexcept {
   return std::tie(x.idx_, x.ptr_)
     == std::tie(y.idx_, y.ptr_);
 }
+inline bool operator!=(const KnownGene& x, const KnownGene& y) noexcept {
+  return !(x == y);
+}
 // sorting/ordering based on underlying gene
 inline bool operator<(const KnownGene& x, const KnownGene& y) noexcept {
   return std::tie(x.idx_, x.ptr_)

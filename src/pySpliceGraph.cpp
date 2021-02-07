@@ -641,7 +641,7 @@ void init_SJJunctions(py::class_<majiq::SJJunctions, std::shared_ptr<majiq::SJJu
         },
         "Load junctions from netcdf",
         py::arg("netcdf_path"))
-    .def_property_readonly("_contigs", &SJJunctions::contigs,
+    .def_property_readonly("_contigs", &SJJunctions::parents,
         "Underlying contigs corresponding to contig_idx")
     .def_property_readonly("contigs",
         [](py::object& self) { return self.attr("_contigs").attr("df")(); },
@@ -651,7 +651,7 @@ void init_SJJunctions(py::class_<majiq::SJJunctions, std::shared_ptr<majiq::SJJu
         SJJunctions& sj = sj_obj.cast<SJJunctions&>();
         const size_t offset = offsetof(majiq::SJJunction, contig.idx_);
         return ArrayFromVectorAndOffset<size_t, majiq::SJJunction>(
-            sj.data(), offset, sj_obj);
+            sj.elements_, offset, sj_obj);
         },
         "array[int] of indexes indicating contig junction belongs to")
     .def_property_readonly("start",
@@ -659,7 +659,7 @@ void init_SJJunctions(py::class_<majiq::SJJunctions, std::shared_ptr<majiq::SJJu
         SJJunctions& sj = sj_obj.cast<SJJunctions&>();
         const size_t offset = offsetof(majiq::SJJunction, coordinates.start);
         return ArrayFromVectorAndOffset<position_t, majiq::SJJunction>(
-            sj.data(), offset, sj_obj);
+            sj.elements_, offset, sj_obj);
         },
         "array[int] for junction start")
     .def_property_readonly("end",
@@ -667,7 +667,7 @@ void init_SJJunctions(py::class_<majiq::SJJunctions, std::shared_ptr<majiq::SJJu
         SJJunctions& sj = sj_obj.cast<SJJunctions&>();
         const size_t offset = offsetof(majiq::SJJunction, coordinates.end);
         return ArrayFromVectorAndOffset<position_t, majiq::SJJunction>(
-            sj.data(), offset, sj_obj);
+            sj.elements_, offset, sj_obj);
         },
         "array[int] for junction end")
     .def_property_readonly("strand",
@@ -675,7 +675,7 @@ void init_SJJunctions(py::class_<majiq::SJJunctions, std::shared_ptr<majiq::SJJu
         SJJunctions& sj = sj_obj.cast<SJJunctions&>();
         const size_t offset = offsetof(majiq::SJJunction, strand);
         return ArrayFromVectorAndOffset<std::array<char, 1>, majiq::SJJunction>(
-            sj.data(), offset, sj_obj);
+            sj.elements_, offset, sj_obj);
         },
         "array[char] for junction strand")
     .def_property_readonly("numreads",
@@ -683,7 +683,7 @@ void init_SJJunctions(py::class_<majiq::SJJunctions, std::shared_ptr<majiq::SJJu
         SJJunctions& sj = sj_obj.cast<SJJunctions&>();
         const size_t offset = offsetof(majiq::SJJunction, data.numreads);
         return ArrayFromVectorAndOffset<majiq::junction_ct_t, majiq::SJJunction>(
-            sj.data(), offset, sj_obj);
+            sj.elements_, offset, sj_obj);
         },
         "array[int] for total number of reads")
     .def_property_readonly("numpos",
@@ -691,7 +691,7 @@ void init_SJJunctions(py::class_<majiq::SJJunctions, std::shared_ptr<majiq::SJJu
         SJJunctions& sj = sj_obj.cast<SJJunctions&>();
         const size_t offset = offsetof(majiq::SJJunction, data.numpos);
         return ArrayFromVectorAndOffset<majiq::junction_pos_t, majiq::SJJunction>(
-            sj.data(), offset, sj_obj);
+            sj.elements_, offset, sj_obj);
         },
         "array[int] for total number of nonzero positions")
     .def("__len__", &SJJunctions::size, "Number of junctions")
