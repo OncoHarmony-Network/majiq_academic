@@ -118,8 +118,8 @@ SpliceGraph TranscriptModels::ToSpliceGraph(bool process_ir) const {
     }
   }  // end iteration over all genes and their transcripts
   return SpliceGraph{contigs_, genes_,
-    std::make_shared<Exons>(exons),
-    std::make_shared<GeneJunctions>(junctions),
-    std::make_shared<Introns>(introns)};
+    std::make_shared<Exons>(std::move(exons)),
+    std::make_shared<GeneJunctions>(std::move(junctions)),
+    std::make_shared<Introns>(std::move(introns))};
 }
 }  // namespace majiq

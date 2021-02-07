@@ -12,6 +12,7 @@
 #include <functional>
 #include <vector>
 #include <algorithm>
+#include <utility>
 #include <boost/functional/hash.hpp>
 
 #include "Regions.hpp"
@@ -96,7 +97,7 @@ template <> struct hash<majiq::Exon> {
 }  // namespace std
 
 namespace majiq {
-using Exons = detail::GeneRegions<Exon, std::less<Exon>>;
+using Exons = detail::Regions<Exon, false>;
 
 inline Exons ExtractAnnotatedExons(const Exons& base) {
   std::vector<Exon> annotated;
@@ -105,7 +106,7 @@ inline Exons ExtractAnnotatedExons(const Exons& base) {
       [&annotated](const Exon& x) {
         if (!x.is_denovo()) { annotated.push_back(x.get_annotated()); }
       });
-  return Exons{annotated, Exons::NoCheckValid{}};
+  return Exons{std::move(annotated)};
 }
 }  // namespace majiq
 

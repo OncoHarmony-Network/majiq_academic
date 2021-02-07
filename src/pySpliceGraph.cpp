@@ -333,7 +333,7 @@ void init_Exons(
         Exons& exons = exons_obj.cast<Exons&>();
         const size_t offset = offsetof(majiq::Exon, gene.idx_);
         return ArrayFromVectorAndOffset<size_t, majiq::Exon>(
-            exons.data(), offset, exons_obj);
+            exons.elements_, offset, exons_obj);
         },
         "array[int] of indexes indicating gene exon belongs to")
     .def_property_readonly("start",
@@ -341,7 +341,7 @@ void init_Exons(
         Exons& exons = exons_obj.cast<Exons&>();
         const size_t offset = offsetof(majiq::Exon, coordinates.start);
         return ArrayFromVectorAndOffset<position_t, majiq::Exon>(
-            exons.data(), offset, exons_obj);
+            exons.elements_, offset, exons_obj);
         },
         "array[int] of exon starts")
     .def_property_readonly("end",
@@ -349,7 +349,7 @@ void init_Exons(
         Exons& exons = exons_obj.cast<Exons&>();
         const size_t offset = offsetof(majiq::Exon, coordinates.end);
         return ArrayFromVectorAndOffset<position_t, majiq::Exon>(
-            exons.data(), offset, exons_obj);
+            exons.elements_, offset, exons_obj);
         },
         "array[int] of exon ends")
     .def_property_readonly("annotated_start",
@@ -357,7 +357,7 @@ void init_Exons(
         Exons& exons = exons_obj.cast<Exons&>();
         const size_t offset = offsetof(majiq::Exon, data.start);
         return ArrayFromVectorAndOffset<position_t, majiq::Exon>(
-            exons.data(), offset, exons_obj);
+            exons.elements_, offset, exons_obj);
         },
         "array[int] of annotated exon starts")
     .def_property_readonly("annotated_end",
@@ -365,7 +365,7 @@ void init_Exons(
         Exons& exons = exons_obj.cast<Exons&>();
         const size_t offset = offsetof(majiq::Exon, data.end);
         return ArrayFromVectorAndOffset<position_t, majiq::Exon>(
-            exons.data(), offset, exons_obj);
+            exons.elements_, offset, exons_obj);
         },
         "array[int] of annotated exon ends")
     .def("df",
@@ -424,7 +424,7 @@ void init_GeneJunctions(
         GeneJunctions& junctions = junctions_obj.cast<GeneJunctions&>();
         const size_t offset = offsetof(majiq::GeneJunction, gene.idx_);
         return ArrayFromVectorAndOffset<size_t, majiq::GeneJunction>(
-            junctions.data(), offset, junctions_obj);
+            junctions.elements_, offset, junctions_obj);
         },
         "array[int] of indexes indicating gene junction belongs to")
     .def_property_readonly("start",
@@ -432,7 +432,7 @@ void init_GeneJunctions(
         GeneJunctions& junctions = junctions_obj.cast<GeneJunctions&>();
         const size_t offset = offsetof(majiq::GeneJunction, coordinates.start);
         return ArrayFromVectorAndOffset<position_t, majiq::GeneJunction>(
-            junctions.data(), offset, junctions_obj);
+            junctions.elements_, offset, junctions_obj);
         },
         "array[int] of junction starts")
     .def_property_readonly("end",
@@ -440,7 +440,7 @@ void init_GeneJunctions(
         GeneJunctions& junctions = junctions_obj.cast<GeneJunctions&>();
         const size_t offset = offsetof(majiq::GeneJunction, coordinates.end);
         return ArrayFromVectorAndOffset<position_t, majiq::GeneJunction>(
-            junctions.data(), offset, junctions_obj);
+            junctions.elements_, offset, junctions_obj);
         },
         "array[int] of junction ends")
     .def_property_readonly("denovo",
@@ -448,7 +448,7 @@ void init_GeneJunctions(
         GeneJunctions& junctions = junctions_obj.cast<GeneJunctions&>();
         const size_t offset = offsetof(majiq::GeneJunction, data.denovo);
         return ArrayFromVectorAndOffset<bool, majiq::GeneJunction>(
-            junctions.data(), offset, junctions_obj);
+            junctions.elements_, offset, junctions_obj);
         },
         "array[bool] indicating if connection was not found in annotations")
     .def_property_readonly("passed_build",
@@ -456,7 +456,7 @@ void init_GeneJunctions(
         GeneJunctions& junctions = junctions_obj.cast<GeneJunctions&>();
         const size_t offset = offsetof(majiq::GeneJunction, data.passed_build);
         return ArrayFromVectorAndOffset<bool, majiq::GeneJunction>(
-            junctions.data(), offset, junctions_obj);
+            junctions.elements_, offset, junctions_obj);
         },
         "array[bool] indicating if passed build criteria to be in LSV")
     .def_property_readonly("simplified",
@@ -464,7 +464,7 @@ void init_GeneJunctions(
         GeneJunctions& junctions = junctions_obj.cast<GeneJunctions&>();
         const size_t offset = offsetof(majiq::GeneJunction, data.simplified);
         return ArrayFromVectorAndOffset<bool, majiq::GeneJunction>(
-            junctions.data(), offset, junctions_obj);
+            junctions.elements_, offset, junctions_obj);
         },
         "array[bool] indicating if the connection is simplified")
     .def("df",
@@ -524,7 +524,7 @@ void init_Introns(
         Introns& introns = introns_obj.cast<Introns&>();
         const size_t offset = offsetof(majiq::Intron, gene.idx_);
         return ArrayFromVectorAndOffset<size_t, majiq::Intron>(
-            introns.data(), offset, introns_obj);
+            introns.elements_, offset, introns_obj);
         },
         "array[int] of indexes indicating gene intron belongs to")
     .def_property_readonly("start",
@@ -532,7 +532,7 @@ void init_Introns(
         Introns& introns = introns_obj.cast<Introns&>();
         const size_t offset = offsetof(majiq::Intron, coordinates.start);
         return ArrayFromVectorAndOffset<position_t, majiq::Intron>(
-            introns.data(), offset, introns_obj);
+            introns.elements_, offset, introns_obj);
         },
         "array[int] of intron starts")
     .def_property_readonly("end",
@@ -540,7 +540,7 @@ void init_Introns(
         Introns& introns = introns_obj.cast<Introns&>();
         const size_t offset = offsetof(majiq::Intron, coordinates.end);
         return ArrayFromVectorAndOffset<position_t, majiq::Intron>(
-            introns.data(), offset, introns_obj);
+            introns.elements_, offset, introns_obj);
         },
         "array[int] of intron ends")
     .def_property_readonly("denovo",
@@ -548,7 +548,7 @@ void init_Introns(
         Introns& introns = introns_obj.cast<Introns&>();
         const size_t offset = offsetof(majiq::Intron, data.denovo);
         return ArrayFromVectorAndOffset<bool, majiq::Intron>(
-            introns.data(), offset, introns_obj);
+            introns.elements_, offset, introns_obj);
         },
         "array[bool] indicating if connection was not found in annotations")
     .def_property_readonly("passed_build",
@@ -556,7 +556,7 @@ void init_Introns(
         Introns& introns = introns_obj.cast<Introns&>();
         const size_t offset = offsetof(majiq::Intron, data.passed_build);
         return ArrayFromVectorAndOffset<bool, majiq::Intron>(
-            introns.data(), offset, introns_obj);
+            introns.elements_, offset, introns_obj);
         },
         "array[bool] indicating if passed build criteria to be in LSV")
     .def_property_readonly("simplified",
@@ -564,7 +564,7 @@ void init_Introns(
         Introns& introns = introns_obj.cast<Introns&>();
         const size_t offset = offsetof(majiq::Intron, data.simplified);
         return ArrayFromVectorAndOffset<bool, majiq::Intron>(
-            introns.data(), offset, introns_obj);
+            introns.elements_, offset, introns_obj);
         },
         "array[bool] indicating if the connection is simplified")
     .def("df",

@@ -70,8 +70,7 @@ template <> struct hash<majiq::GeneJunction> {
 }  // namespace std
 
 namespace majiq {
-using GeneJunctions
-  = detail::GeneRegions<GeneJunction, std::less<GeneJunction>>;
+using GeneJunctions = detail::Regions<GeneJunction, true>;
 }  // namespace majiq
 
 #endif  // MAJIQ_GENEJUNCTIONS_HPP
