@@ -29,9 +29,12 @@ struct GeneRegion {
   IntervalT coordinates;
   DataT data;
 
+  // access
+  const KnownGene& parent() const noexcept { return gene; }
+
   // expose contig/strand
-  KnownContig& contig() const { return gene.contig(); }
-  GeneStrandness& strand() const { return gene.strand(); }
+  KnownContig& contig() const { return gene.get().contig(); }
+  GeneStrandness& strand() const { return gene.get().strand(); }
 
   // constructors
   GeneRegion(KnownGene _gene, IntervalT _coordinates, DataT _data)

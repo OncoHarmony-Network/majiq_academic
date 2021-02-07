@@ -139,7 +139,7 @@ std::vector<size_t> SpliceGraph::index_gene_regions(
   // index into genes
   size_t gene_idx = 0;
   for (size_t region_idx = 0; region_idx < regions.size(); ++region_idx) {
-    const size_t region_gene_idx = regions[region_idx].gene.gene_idx;
+    const size_t region_gene_idx = regions[region_idx].gene.idx_;
     while (gene_idx < region_gene_idx) {
       result[++gene_idx] = region_idx;
     }

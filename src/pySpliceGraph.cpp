@@ -331,7 +331,7 @@ void init_Exons(
     .def_property_readonly("gene_idx",
         [](py::object& exons_obj) -> py::array_t<size_t> {
         Exons& exons = exons_obj.cast<Exons&>();
-        const size_t offset = offsetof(majiq::Exon, gene.gene_idx);
+        const size_t offset = offsetof(majiq::Exon, gene.idx_);
         return ArrayFromVectorAndOffset<size_t, majiq::Exon>(
             exons.data(), offset, exons_obj);
         },
@@ -422,7 +422,7 @@ void init_GeneJunctions(
     .def_property_readonly("gene_idx",
         [](py::object& junctions_obj) -> py::array_t<size_t> {
         GeneJunctions& junctions = junctions_obj.cast<GeneJunctions&>();
-        const size_t offset = offsetof(majiq::GeneJunction, gene.gene_idx);
+        const size_t offset = offsetof(majiq::GeneJunction, gene.idx_);
         return ArrayFromVectorAndOffset<size_t, majiq::GeneJunction>(
             junctions.data(), offset, junctions_obj);
         },
@@ -522,7 +522,7 @@ void init_Introns(
     .def_property_readonly("gene_idx",
         [](py::object& introns_obj) -> py::array_t<size_t> {
         Introns& introns = introns_obj.cast<Introns&>();
-        const size_t offset = offsetof(majiq::Intron, gene.gene_idx);
+        const size_t offset = offsetof(majiq::Intron, gene.idx_);
         return ArrayFromVectorAndOffset<size_t, majiq::Intron>(
             introns.data(), offset, introns_obj);
         },

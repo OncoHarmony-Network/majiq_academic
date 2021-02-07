@@ -31,13 +31,13 @@ class Genes;
 struct KnownGene {
  public:
   // fields
-  size_t gene_idx;
-  std::shared_ptr<Genes> known_genes;
+  size_t idx_;
+  std::shared_ptr<Genes> ptr_;
 
   // constructors
   KnownGene() = default;
   KnownGene(size_t _gene_idx, std::shared_ptr<Genes> _known_genes)
-      : gene_idx{_gene_idx}, known_genes{_known_genes} {
+      : idx_{_gene_idx}, ptr_{_known_genes} {
   }
   KnownGene(const KnownGene& x) = default;
   KnownGene(KnownGene&& x) = default;
@@ -58,13 +58,13 @@ struct KnownGene {
 };
 // equality of known genes
 inline bool operator==(const KnownGene& x, const KnownGene& y) noexcept {
-  return std::tie(x.gene_idx, x.known_genes)
-    == std::tie(y.gene_idx, y.known_genes);
+  return std::tie(x.idx_, x.ptr_)
+    == std::tie(y.idx_, y.ptr_);
 }
 // sorting/ordering based on underlying gene
 inline bool operator<(const KnownGene& x, const KnownGene& y) noexcept {
-  return std::tie(x.gene_idx, x.known_genes)
-    < std::tie(y.gene_idx, y.known_genes);
+  return std::tie(x.idx_, x.ptr_)
+    < std::tie(y.idx_, y.ptr_);
 }
 // comparisons against objects with KnownGene gene or gene()
 template <typename T>
@@ -220,7 +220,7 @@ class Genes : public std::enable_shared_from_this<Genes> {
 };
 
 // implement KnownGene::remapped and KnownGene::get using Genes definition
-inline Gene& KnownGene::get() const { return known_genes->get(gene_idx); }
+inline Gene& KnownGene::get() const { return ptr_->get(idx_); }
 inline KnownGene KnownGene::remapped(
     const std::shared_ptr<Genes>& new_known_genes) const {
   // get idx for this gene in new_known_genes
@@ -230,8 +230,8 @@ inline KnownGene KnownGene::remapped(
 
 // specialize boost::hash_value for KnownGene
 inline std::size_t hash_value(const KnownGene& x) {
-  std::size_t result = std::hash<size_t>{}(x.gene_idx);
-  boost::hash_combine(result, x.known_genes);
+  std::size_t result = std::hash<size_t>{}(x.idx_);
+  boost::hash_combine(result, x.ptr_);
   return result;
 }
 }  // namespace majiq

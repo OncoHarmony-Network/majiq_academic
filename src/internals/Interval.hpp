@@ -49,9 +49,17 @@ struct Interval {
 };
 // ordering
 inline bool operator<(const Interval& x, const Interval& y) noexcept {
-    return std::tie(x.first_pos(), x.last_pos())
-      < std::tie(y.first_pos(), y.last_pos());
+  return std::tie(x.first_pos(), x.last_pos())
+    < std::tie(y.first_pos(), y.last_pos());
 }
+// ordering vs coordinate is against first position
+inline bool operator<(const Interval& x, const position_t& y) noexcept {
+  return x.first_pos() < y;
+}
+inline bool operator<(const position_t& x, const Interval& y) noexcept {
+  return x < y.first_pos();
+}
+// derived orderings
 inline bool operator>(const Interval& x, const Interval& y) noexcept {
   return y < x;
 }

@@ -33,6 +33,9 @@ struct ContigRegion {
   GeneStrandness strand;
   DataT data;
 
+  // access
+  const KnownContig& parent() const noexcept { return contig; }
+
   // constructors
   ContigRegion(
       KnownContig _contig, IntervalT _coordinates, GeneStrandness _strand, DataT _data)
