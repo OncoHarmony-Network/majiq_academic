@@ -21,29 +21,25 @@ class Contigs;  // forward declaration to define KnownContig
 
 using KnownContig = detail::KnownFeature<Contigs>;
 // enable comparisons against objects with KnownContig contig or contig()
-template <typename T>
+template <typename T,
+         std::enable_if_t<detail::has_contig_field<T>::value, bool> = true>
 inline bool operator<(const T& x, const KnownContig& y) noexcept {
-  constexpr bool has_field = detail::has_contig_field<T>::value;
-  constexpr bool has_function = detail::has_contig_function<T>::value;
-  static_assert(has_field || has_function,
-      "Type T does not have contig to compare to KnownContig");
-  if constexpr(has_field) {
-    return x.contig < y;
-  } else {
-    return x.contig() < y;
-  }
+  return x.contig < y;
 }
-template <typename T>
+template <typename T,
+         std::enable_if_t<detail::has_contig_field<T>::value, bool> = true>
 inline bool operator<(const KnownContig& x, const T& y) noexcept {
-  constexpr bool has_field = detail::has_contig_field<T>::value;
-  constexpr bool has_function = detail::has_contig_function<T>::value;
-  static_assert(has_field || has_function,
-      "Type T does not have contig to compare to KnownContig");
-  if constexpr(has_field) {
-    return x < y.contig;
-  } else {
-    return x < y.contig();
-  }
+  return x < y.contig;
+}
+template <typename T,
+         std::enable_if_t<detail::has_contig_function<T>::value, bool> = true>
+inline bool operator<(const T& x, const KnownContig& y) noexcept {
+  return x.contig() < y;
+}
+template <typename T,
+         std::enable_if_t<detail::has_contig_function<T>::value, bool> = true>
+inline bool operator<(const KnownContig& x, const T& y) noexcept {
+  return x < y.contig();
 }
 
 class Contigs
@@ -51,7 +47,9 @@ class Contigs
       public std::enable_shared_from_this<Contigs> {
  public:
   // implement creation/viewing of KnownContig as defined
-  const KnownContig operator[](size_t idx) { return KnownContig{idx, shared_from_this()}; }
+  const KnownContig operator[](size_t idx) {
+    return KnownContig{idx, shared_from_this()};
+  }
 
   size_t add(const Contig& x) {
     auto key = x.unique_key();

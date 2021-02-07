@@ -31,42 +31,14 @@
 
 
 namespace majiq {
-class Genes;
-using KnownGene = detail::KnownFeature<Genes>;
-
-// comparisons against objects with KnownGene gene or gene()
-template <typename T>
-inline bool operator<(const T& x, const KnownGene& y) noexcept {
-  constexpr bool has_field = detail::has_gene_field<T>::value;
-  constexpr bool has_function = detail::has_gene_function<T>::value;
-  static_assert(has_field || has_function,
-      "Type T does not have gene to compare to KnownGene");
-  if constexpr(has_field) {
-    return x.gene < y;
-  } else {
-    return x.gene() < y;
-  }
-}
-template <typename T>
-inline bool operator<(const KnownGene& x, const T& y) noexcept {
-  constexpr bool has_field = detail::has_gene_field<T>::value;
-  constexpr bool has_function = detail::has_gene_function<T>::value;
-  static_assert(has_field || has_function,
-      "Type T does not have gene to compare to KnownGene");
-  if constexpr(has_field) {
-    return x < y.gene;
-  } else {
-    return x < y.gene();
-  }
-}
-
+class KnownGene;
 
 class Genes
     : public detail::KnownFeatures<detail::Regions<Gene, true>>,
       public std::enable_shared_from_this<Genes> {
  public:
-  // implement creation/viewing of KnownGene as defined
-  const KnownGene operator[](size_t idx) { return KnownGene{idx, shared_from_this()}; }
+  // forward declaration of creation/viewing of KnownGene
+  const KnownGene operator[](size_t idx);
   // access vector<string> objects
   const std::vector<geneid_t> geneids() const {
     std::vector<geneid_t> result{size()};
@@ -86,6 +58,46 @@ class Genes
   explicit Genes(std::vector<Gene>&& x)
       : detail::KnownFeatures<detail::Regions<Gene, true>>(std::move(x)) { }
 };
+
+class KnownGene : public detail::KnownFeature<Genes> {
+ public:
+  const KnownContig& contig() const { return get().contig; }
+  const GeneStrandness& strand() const { return get().strand; }
+
+  KnownGene(size_t idx, std::shared_ptr<Genes> ptr)
+      : detail::KnownFeature<Genes>{idx, ptr} { }
+  KnownGene() = default;
+  KnownGene(const KnownGene&) = default;
+  KnownGene(KnownGene&&) = default;
+  KnownGene& operator=(const KnownGene&) = default;
+  KnownGene& operator=(KnownGene&&) = default;
+};
+
+inline const KnownGene Genes::operator[](size_t idx) {
+  return KnownGene{idx, shared_from_this()};
+}
+
+// comparisons against objects with KnownGene gene or gene()
+template <typename T,
+         std::enable_if_t<detail::has_gene_field<T>::value, bool> = true>
+inline bool operator<(const T& x, const KnownGene& y) noexcept {
+  return x.gene < y;
+}
+template <typename T,
+         std::enable_if_t<detail::has_gene_field<T>::value, bool> = true>
+inline bool operator<(const KnownGene& x, const T& y) noexcept {
+  return x < y.gene;
+}
+template <typename T,
+         std::enable_if_t<detail::has_gene_function<T>::value, bool> = true>
+inline bool operator<(const T& x, const KnownGene& y) noexcept {
+  return x.gene() < y;
+}
+template <typename T,
+         std::enable_if_t<detail::has_gene_function<T>::value, bool> = true>
+inline bool operator<(const KnownGene& x, const T& y) noexcept {
+  return x < y.gene();
+}
 
 // specialize boost::hash_value for KnownGene
 inline std::size_t hash_value(const KnownGene& x) {
