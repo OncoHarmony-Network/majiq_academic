@@ -71,10 +71,11 @@ class Regions {
         }
       } else {
         if (i > 0
+            && (elements[i - 1].parent() == elements[i].parent())
             && (elements[i].coordinates.first_pos()
               <= elements[i - 1].coordinates.last_pos())) {
           throw std::invalid_argument(
-              "Regions must be in sorted and non-overlapping");
+              "Regions must be in sorted order and non-overlapping");
         }
       }
     }
