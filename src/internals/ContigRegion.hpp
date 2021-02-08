@@ -77,12 +77,18 @@ inline bool operator<(
     < std::tie(y.contig, y.coordinates, y.strand);
 }
 // will have types (i.e. GeneRegion) that expose contig() and strand() instead
-template <typename T, typename D, typename U>
+template <typename T, typename D, typename U,
+         std::enable_if_t<
+         detail::has_contig_function<U>::value
+         && detail::has_strand_function<U>::value> = true>
 inline bool operator<(const ContigRegion<T, D>& x, const U& y) noexcept {
   return std::tie(x.contig, x.coordinates, x.strand)
     < std::tie(y.contig(), y.coordinates, y.strand());
 }
-template <typename U, typename T, typename D>
+template <typename U, typename T, typename D,
+         std::enable_if_t<
+         detail::has_contig_function<U>::value
+         && detail::has_strand_function<U>::value> = true>
 inline bool operator<(const U& x, const ContigRegion<T, D>& y) noexcept {
   return std::tie(x.contig(), x.coordinates, x.strand())
     < std::tie(y.contig, y.coordinates, y.strand);
