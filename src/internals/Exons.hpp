@@ -77,9 +77,6 @@ struct Exon : detail::GeneRegion<ClosedInterval, ClosedInterval> {
     return Exon{gene, legacy_annotated_coordinates(), DefaultAnnotated{}};
   }
 };
-inline bool operator==(const Exon& x, const Exon& y) noexcept {
-  return std::tie(x.gene, x.coordinates) == std::tie(y.gene, y.coordinates);
-}
 
 // override boost hashing
 inline std::size_t hash_value(const Exon& x) noexcept {

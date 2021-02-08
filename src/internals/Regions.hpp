@@ -65,8 +65,17 @@ class Regions {
         throw std::invalid_argument(
             "Regions must all point to same container of parents");
       }
-      if (i > 0 && !(elements[i - 1] < elements[i])) {
-        throw std::invalid_argument("Regions must be in sorted order");
+      if constexpr(HAS_OVERLAPS) {
+        if (i > 0 && !(elements[i - 1] < elements[i])) {
+          throw std::invalid_argument("Regions must be in sorted order");
+        }
+      } else {
+        if (i > 0
+            && (elements[i].coordinates.first_pos()
+              <= elements[i - 1].coordinates.last_pos())) {
+          throw std::invalid_argument(
+              "Regions must be in sorted and non-overlapping");
+        }
       }
     }
     // fill in remaining offsets to end of elements
@@ -102,23 +111,27 @@ class Regions {
   const_iterator begin() const { return elements_.cbegin(); }
   const_iterator end() const { return elements_.cend(); }
   const ParentsPtrT& parents() const { return parents_; }
+  const_iterator begin_parent(size_t idx) const {
+    return begin() + parent_idx_offsets_[idx];
+  }
+  const_iterator end_parent(size_t idx) const { return begin_parent(1 + idx); }
 
 
   const_iterator find(const RegionT& key) const {
     // iterator into elements_ that are first vs last
-    const_iterator first = begin() + parent_idx_offsets_[key.parent().idx_];
-    const_iterator last = begin() + parent_idx_offsets_[1 + key.parent().idx_];
+    const_iterator first = begin_parent(key.parent().idx_);
+    const_iterator last = end_parent(key.parent().idx_);
     // do search on this subset. NOTE: assumes not < and not > --> ==
     auto lb = std::lower_bound(first, last, key);
     return (lb == end() || *lb != key) ? end() : lb;
   }
   const_iterator overlap_lower_bound(
       const ParentT& parent, position_t coordinate) const {
-    // offsets into elements_ that are first vs last for given parent
-    size_t idx_first = parent_idx_offsets_[parent.idx_];
-    size_t idx_last = parent_idx_offsets_[1 + parent.idx_];
     // first interval that can overlap with coordinate has end >= coordinate
     if constexpr(HAS_OVERLAPS) {
+      // offsets into elements_ that are first vs last for given parent
+      size_t idx_first = parent_idx_offsets_[parent.idx_];
+      size_t idx_last = parent_idx_offsets_[1 + parent.idx_];
       auto cummax_lb = std::lower_bound(
           elements_end_cummax_.begin() + idx_first,
           elements_end_cummax_.begin() + idx_last,
@@ -126,8 +139,8 @@ class Regions {
       return begin() + (cummax_lb - elements_end_cummax_.begin());
     } else {
       return std::lower_bound(
-          begin() + idx_first,
-          begin() + idx_last,
+          begin_parent(parent.idx_),
+          end_parent(parent.idx_),
           coordinate,
           [](const RegionT& region, const position_t& x) {
           return region.coordinates.last_pos() < x;
@@ -139,8 +152,7 @@ class Regions {
     // first interval that can overlap with coordinate has start > coordinate
     return std::upper_bound(
         // index into elements that share parent
-        begin() + parent_idx_offsets_[parent.idx_],
-        begin() + parent_idx_offsets_[1 + parent.idx_],
+        begin_parent(parent.idx_), end_parent(parent.idx_),
         coordinate,
         [](const RegionT& region, const position_t& x) {
         return region.coordinates.first_pos() < x;

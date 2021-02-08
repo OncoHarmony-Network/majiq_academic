@@ -49,10 +49,6 @@ struct GeneJunction
   GeneJunction& operator=(const GeneJunction& x) = default;
   GeneJunction& operator=(GeneJunction&& x) = default;
 };
-inline bool operator==(const GeneJunction& x, const GeneJunction& y) noexcept {
-  return std::tie(x.gene, x.coordinates) == std::tie(y.gene, y.coordinates);
-}
-
 
 // override boost::hash
 inline std::size_t hash_value(const GeneJunction& x) noexcept {

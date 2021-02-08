@@ -48,9 +48,6 @@ struct Intron : public detail::GeneRegion<ClosedInterval, detail::Connection> {
   Intron& operator=(const Intron& x) = default;
   Intron& operator=(Intron&& x) = default;
 };
-inline bool operator==(const Intron& x, const Intron& y) noexcept {
-  return std::tie(x.gene, x.coordinates) == std::tie(y.gene, y.coordinates);
-}
 
 // override boost hashing
 inline std::size_t hash_value(const Intron& x) noexcept {
