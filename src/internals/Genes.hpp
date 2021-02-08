@@ -54,6 +54,7 @@ class Genes
   }
   // view into genes object for pybind11
   const std::vector<Gene>& data() { return features_.elements_; }
+  const std::vector<position_t>& position_cummax() { return features_.elements_end_cummax_; }
 
   explicit Genes(std::vector<Gene>&& x)
       : detail::KnownFeatures<detail::Regions<Gene, true>>(std::move(x)) { }
