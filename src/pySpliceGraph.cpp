@@ -27,6 +27,7 @@
 #include "internals/GFF3.hpp"
 #include "internals/SJJunctions.hpp"
 #include "internals/SJJunctionsPositions.hpp"
+#include "internals/ContigIntrons.hpp"
 
 
 namespace py = pybind11;
@@ -478,6 +479,69 @@ void init_GeneJunctions(
         return oss.str();
         })
     .def("__len__", &GeneJunctions::size);
+}
+
+void init_ContigIntrons(
+    py::class_<majiq::ContigIntrons,
+    std::shared_ptr<majiq::ContigIntrons>>& pyContigIntrons) {
+  using majiq::position_t;
+  using majiq::Contigs;
+  using majiq::ContigIntrons;
+  using majiq_pybind::ArrayFromVectorAndOffset;
+  pyContigIntrons
+    .def_property_readonly("strand",
+        [](py::object& introns_obj) -> py::array_t<std::array<char, 1>> {
+        ContigIntrons& introns = introns_obj.cast<ContigIntrons&>();
+        const size_t offset = offsetof(majiq::ContigIntron, strand);
+        return ArrayFromVectorAndOffset<std::array<char, 1>, majiq::ContigIntron>(
+            introns.elements_, offset, introns_obj);
+        },
+        "array[char] of characters indicating strand of each intron")
+    .def_property_readonly("contig_idx",
+        [](py::object& introns_obj) -> py::array_t<size_t> {
+        ContigIntrons& introns = introns_obj.cast<ContigIntrons&>();
+        const size_t offset = offsetof(majiq::ContigIntron, contig.idx_);
+        return ArrayFromVectorAndOffset<size_t, majiq::ContigIntron>(
+            introns.elements_, offset, introns_obj);
+        },
+        "array[int] of indexes indicating contig intron belongs to")
+    .def_property_readonly("start",
+        [](py::object& introns_obj) -> py::array_t<position_t> {
+        ContigIntrons& introns = introns_obj.cast<ContigIntrons&>();
+        const size_t offset = offsetof(majiq::ContigIntron, coordinates.start);
+        return ArrayFromVectorAndOffset<position_t, majiq::ContigIntron>(
+            introns.elements_, offset, introns_obj);
+        },
+        "array[int] of intron starts matching intron_idx")
+    .def_property_readonly("end",
+        [](py::object& introns_obj) -> py::array_t<position_t> {
+        ContigIntrons& introns = introns_obj.cast<ContigIntrons&>();
+        const size_t offset = offsetof(majiq::ContigIntron, coordinates.end);
+        return ArrayFromVectorAndOffset<position_t, majiq::ContigIntron>(
+            introns.elements_, offset, introns_obj);
+        },
+        "array[int] of intron ends matching intron_idx")
+    .def_property_readonly("annotated",
+        [](py::object& introns_obj) -> py::array_t<bool> {
+        ContigIntrons& introns = introns_obj.cast<ContigIntrons&>();
+        const size_t offset = offsetof(majiq::ContigIntron, data.annotated_);
+        return ArrayFromVectorAndOffset<bool, majiq::ContigIntron>(
+            introns.elements_, offset, introns_obj);
+        },
+        "array[bool] indicating if intron is annotated (exon in annotation)")
+    .def("df",
+        [](py::object& introns) -> py::object {
+        using majiq_pybind::XarrayDatasetFromObject;
+        return XarrayDatasetFromObject(introns, "intron_idx",
+            {"contig_idx", "start", "end", "strand", "annotated"});
+        },
+        "View on intron information as xarray Dataset")
+    .def("__repr__", [](const majiq::ContigIntrons& self) -> std::string {
+        std::ostringstream oss;
+        oss << "ContigIntrons<" << self.size() << " total>";
+        return oss.str();
+        })
+    .def("__len__", &majiq::ContigIntrons::size);
 }
 
 void init_Introns(
@@ -985,6 +1049,12 @@ void init_SpliceGraph(py::class_<majiq::SpliceGraph>& pySpliceGraph) {
     .def_property_readonly("contigs",
         [](py::object& sg) { return sg.attr("_contigs").attr("df")(); },
         "xr.Dataset view of splicegraph's contigs")
+    .def("contig_introns", [](SpliceGraph& sg, bool stranded) {
+        return majiq::ContigIntrons::FromGeneExonsAndIntrons(
+            *sg.exons(), *sg.introns(), stranded);
+        },
+        "Get contig introns (by strand or not) for splicegraph",
+        py::arg("stranded") = false)
     // string representation of splicegraph
     .def("__repr__", [](const SpliceGraph& sg) -> std::string {
         std::ostringstream oss;
@@ -1005,6 +1075,8 @@ void init_SpliceGraphAll(py::module_& m) {
   using majiq::SJJunctions;
   using majiq::SJJunctionsPositions;
   using majiq::ExperimentStrandness;
+  using majiq::GeneStrandness;
+  using majiq::ContigIntrons;
   auto pyContigs = py::class_<Contigs, std::shared_ptr<Contigs>>(m, "Contigs",
       "Splicegraph contigs");
   auto pyGenes = py::class_<Genes, std::shared_ptr<Genes>>(m, "Genes",
@@ -1016,11 +1088,17 @@ void init_SpliceGraphAll(py::module_& m) {
   auto pyGeneJunctions = py::class_<
       GeneJunctions, std::shared_ptr<GeneJunctions>
     >(m, "GeneJunctions", "Splicegraph junctions");
+  auto pyContigIntrons = py::class_<ContigIntrons, std::shared_ptr<ContigIntrons>>(m, "ContigIntrons");
   auto pySJJunctions = py::class_<SJJunctions, std::shared_ptr<SJJunctions>>(
       m, "SJJunctions", "Summarized junction counts for an experiment");
   auto pySJJunctionsPositions = py::class_<SJJunctionsPositions, std::shared_ptr<SJJunctionsPositions>>(
       m, "SJJunctionsPositions",
       "Summarized and per-position counts for an experiment");
+  auto pyGeneStrandness = py::enum_<GeneStrandness>(
+      m, "GeneStrandness")
+    .value("forward", GeneStrandness::FORWARD)
+    .value("reverse", GeneStrandness::REVERSE)
+    .value("ambiguous", GeneStrandness::AMBIGUOUS);
   auto pyExperimentStrandness = py::enum_<ExperimentStrandness>(
       m, "ExperimentStrandness")
     .value("FORWARD", ExperimentStrandness::FORWARD)
@@ -1089,5 +1167,6 @@ void init_SpliceGraphAll(py::module_& m) {
   init_SpliceGraph(pySpliceGraph);
   init_SJJunctions(pySJJunctions);
   init_SJJunctionsPositions(pySJJunctionsPositions);
+  init_ContigIntrons(pyContigIntrons);
   enable_IOBamJunctions(pySJJunctionsPositions);
 }

@@ -21,6 +21,7 @@ ext_modules = [
     Pybind11Extension(
         "new_majiq",
         sorted([
+            "src/internals/ContigIntrons.cpp",
             "src/internals/SJJunctions.cpp",
             "src/internals/GFF3.cpp",
             "src/internals/TranscriptModels.cpp",
