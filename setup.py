@@ -23,9 +23,9 @@ ext_modules = [
         sorted([
             "src/internals/ContigIntrons.cpp",
             "src/internals/SJJunctions.cpp",
+            "src/internals/SJJunctionsPositions.cpp",
             "src/internals/GFF3.cpp",
             "src/internals/TranscriptModels.cpp",
-            "src/pySJJunctions.cpp",
             "src/pySpliceGraph.cpp",
             "src/new_majiq.cpp",
         ]),

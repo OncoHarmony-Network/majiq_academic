@@ -797,6 +797,22 @@ void init_SJJunctionsPositions(py::class_<majiq::SJJunctionsPositions, std::shar
         py::arg("sj_junctions"),
         py::arg("position_reads"), py::arg("position"), py::arg("_offsets"),
         py::arg("num_positions"))
+    .def_static("from_bam", &SJJunctionsPositions::FromBam,
+        R"pbdoc(
+        Load junctions and per-position counts for an aligned BAM file
+
+        Parameters
+        ----------
+        bam_path: str
+            Path for input BAM fille
+        experiment_strandness: ExperimentStrandness
+            Strandness of RNA-seq library
+        nthreads: int
+            Number of threads to use when reading in BAM file
+        )pbdoc",
+        py::arg("bam_path"),
+        py::arg("experiment_strandness") = majiq::ExperimentStrandness::NONE,
+        py::arg("nthreads") = 1)
     .def_static("from_netcdf",
         [](py::str x) {
         auto xr_raw = majiq_pybind::OpenXarrayDataset(
@@ -1063,8 +1079,6 @@ void init_SpliceGraph(py::class_<majiq::SpliceGraph>& pySpliceGraph) {
         });
 }
 
-void enable_IOBamJunctions(py::class_<majiq::SJJunctionsPositions, std::shared_ptr<majiq::SJJunctionsPositions>>&);
-
 void init_SpliceGraphAll(py::module_& m) {
   using majiq::Contigs;
   using majiq::Genes;
@@ -1168,5 +1182,4 @@ void init_SpliceGraphAll(py::module_& m) {
   init_SJJunctions(pySJJunctions);
   init_SJJunctionsPositions(pySJJunctionsPositions);
   init_ContigIntrons(pyContigIntrons);
-  enable_IOBamJunctions(pySJJunctionsPositions);
 }

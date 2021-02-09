@@ -1,33 +1,73 @@
 /**
- * IOBamJunctions.hpp
+ * SJJunctionsPositions.cpp
  *
- * Load SJJunctions from BAM file
+ * Implementation of non-inline functions in SJJunctionsPositions
  *
  * Copyright 2020 <University of Pennsylvania>
  */
-#ifndef MAJIQ_IOBAMJUNCTIONS_HPP
-#define MAJIQ_IOBAMJUNCTIONS_HPP
 
-#include <algorithm>
-#include <map>
+#include "SJJunctionsPositions.hpp"
+
 #include <memory>
+#include <map>
+#include <vector>
+#include <algorithm>
 #include <numeric>
 #include <sstream>
-#include <string>
 #include <utility>
-#include <vector>
 
 #include "SJJunctions.hpp"
-#include "SJJunctionsPositions.hpp"
 #include "bam/Alignments.hpp"
 #include "bam/CigarJunctions.hpp"
 
 
 namespace majiq {
 
-template <uint32_t min_overhang>
-SJJunctionsPositions JunctionsFromBam(
-    const char* infile, int nthreads, ExperimentStrandness exp_strandness) {
+bool SJJunctionsPositions::is_valid(
+    const std::shared_ptr<SJJunctions>& junctions,
+    const std::vector<PositionReads>& reads,
+    const std::vector<size_t>& offsets,
+    junction_pos_t num_positions) {
+  if (
+      // must have junctions
+      junctions == nullptr
+      // offsets[i], offsets[i + 1] correspond to junctions[i] --> match sizes
+      || junctions->size() != offsets.size() - 1
+      // last offset must correspond to size of reads
+      || offsets.back() != reads.size()) {
+    return false;
+  }
+  // for each junction
+  for (size_t jidx = 0; jidx < junctions->size(); ++jidx) {
+    // offsets into junction positions
+    auto jp_start = reads.begin() + offsets[jidx];
+    auto jp_end = reads.begin() + offsets[jidx + 1];
+    if (
+        // offsets must be non-decreasing
+        jp_end < jp_start
+        // difference in offsets correspond to numpos
+        || jp_end - jp_start != (*junctions)[jidx].data.numpos
+        // can't have numpos greater than total possible
+        || (*junctions)[jidx].data.numpos > num_positions
+        // all junction positions must be in [0, num_positions)
+        || !std::all_of(jp_start, jp_end,
+          [num_positions](const PositionReads& x) {
+          return x.pos < num_positions;
+          })
+        // sum of position reads equals junction numreads
+        || std::accumulate(jp_start, jp_end, junction_ct_t{},
+          [](junction_ct_t s, const PositionReads& x) { return s + x.reads; })
+          != (*junctions)[jidx].data.numreads
+        // PositionReads in sorted order (by number of reads)
+        || !std::is_sorted(jp_start, jp_end)) {
+      return false;
+    }
+  }
+  return true;
+}
+
+SJJunctionsPositions SJJunctionsPositions::FromBam(
+    const char* infile, ExperimentStrandness exp_strandness, int nthreads) {
   auto contigs = std::make_shared<Contigs>();
   junction_pos_t max_read_length = 0;
   size_t num_junctions = 0;
@@ -62,7 +102,7 @@ SJJunctionsPositions JunctionsFromBam(
       if (!aln.unique_mapped()) { continue; }
       // parse junctions from uniquely mapped alignments
       // process cigar for junctions
-      auto junctions = aln.cigar_junctions<min_overhang>();
+      auto junctions = aln.cigar_junctions<USE_MIN_OVERHANG>();
       auto cur_junc = junctions.begin();
       // only process if there are any valid junctions (given overhang)
       if (cur_junc == junctions.end()) { continue; }
@@ -92,8 +132,8 @@ SJJunctionsPositions JunctionsFromBam(
 
   // number of valid positions (note that type may be unsigned)
   junction_pos_t eff_len
-    = (max_read_length + 1 > 2 * min_overhang)
-    ? max_read_length + 1 - 2 * min_overhang : 0;
+    = (max_read_length + 1 > 2 * USE_MIN_OVERHANG)
+    ? max_read_length + 1 - 2 * USE_MIN_OVERHANG : 0;
   // initialize vectors for outputs
   std::vector<SJJunction> junctions(num_junctions);
   std::vector<PositionReads> reads(num_junction_positions);
@@ -135,5 +175,3 @@ SJJunctionsPositions JunctionsFromBam(
 }
 
 }  // namespace majiq
-
-#endif  // MAJIQ_IOBAMJUNCTIONS_HPP

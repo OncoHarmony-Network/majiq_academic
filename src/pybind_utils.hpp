@@ -28,8 +28,6 @@ constexpr char INTRONS_NC_GROUP[] = "introns";
 constexpr char SJ_JUNCTIONS_NC_GROUP[] = "sj_junctions";
 constexpr char SJ_JUNCTIONS_RAW_NC_GROUP[] = "sj_junctions_raw";
 
-constexpr uint32_t BAM_MIN_OVERHANG = 8;
-
 
 namespace majiq_pybind {
 namespace py = pybind11;
