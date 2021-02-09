@@ -137,13 +137,23 @@ ContigIntrons ContigIntrons::FromGeneExonsAndIntrons(
     auto stranded_evidence
       = OverGeneEvidence(exons, introns, overgene, stranded);
     // update result_vec using evidence
-    size_t prev_size = result_vec.size();
+    // each strand gets put in in sorted order, so we can set up merges between
+    // them if necessary.
+    // NOTE: we only expect to ever see two outputs. Three would be unusual
+    // (suggesting third strand type, which is impossible), but we handle this
+    // impossibility rather than checking for it and throwing an error
+    std::vector<size_t> prev_sizes;
+    prev_sizes.reserve(1 + stranded_evidence.size());
+    prev_sizes.push_back(result_vec.size());
     for (const auto& [strand, evidence] : stranded_evidence) {
       AddIntronsFromEvidence(overgene.contig, strand, evidence, result_vec);
+      prev_sizes.push_back(result_vec.size());
     }
-    if (stranded_evidence.size() > 1) {
-      // may not be in sorted order if we had multiple strands, so sort...
-      std::sort(result_vec.begin() + prev_size, result_vec.end());
+    for (size_t merge_idx = 2; merge_idx < prev_sizes.size(); ++merge_idx) {
+      std::inplace_merge(
+          result_vec.begin() + prev_sizes[0],
+          result_vec.begin() + prev_sizes[merge_idx - 1],
+          result_vec.begin() + prev_sizes[merge_idx]);
     }
   }
   // get final result
