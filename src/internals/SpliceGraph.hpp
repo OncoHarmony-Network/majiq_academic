@@ -19,7 +19,6 @@
 #include "GeneJunctions.hpp"
 #include "Exons.hpp"
 #include "Introns.hpp"
-#include "OverGenes.hpp"
 
 
 namespace majiq {
@@ -31,14 +30,10 @@ class SpliceGraph {
   std::shared_ptr<GeneJunctions> junctions_;
   std::shared_ptr<Introns> introns_;
 
-  // indexing from contigs to overlapping genes
-  std::shared_ptr<OverGenes> overgenes_;
-
  public:
   // access non const pointers for use by pybind11 interface...
   std::shared_ptr<Contigs> contigs() { return contigs_; }
   std::shared_ptr<Genes> genes() { return genes_; }
-  std::shared_ptr<OverGenes> overgenes() { return overgenes_; }
 
   std::shared_ptr<Exons> exons() { return exons_; }
 
@@ -57,8 +52,7 @@ class SpliceGraph {
         genes_{genes},
         exons_{exons},
         junctions_{junctions},
-        introns_{introns},
-        overgenes_{std::make_shared<OverGenes>(contigs_, genes_)} { }
+        introns_{introns} { }
   SpliceGraph(
       std::shared_ptr<Contigs>&& contigs,
       std::shared_ptr<Genes>&& genes,
@@ -69,8 +63,7 @@ class SpliceGraph {
         genes_{genes},
         exons_{exons},
         junctions_{junctions},
-        introns_{introns},
-        overgenes_{std::make_shared<OverGenes>(contigs_, genes_)} { }
+        introns_{introns} { }
   SpliceGraph(const SpliceGraph& sg) = default;
   SpliceGraph(SpliceGraph&& sg) = default;
   SpliceGraph& operator=(const SpliceGraph& sg) = default;

@@ -62,18 +62,46 @@ class Genes
       : detail::KnownFeatures<detail::Regions<Gene, true>>(std::move(x)) { }
 };
 
-class KnownGene : public detail::KnownFeature<Genes> {
+class KnownGene : public detail::KnownFeature<Genes, KnownGene> {
  public:
   const KnownContig& contig() const { return get().contig; }
   const GeneStrandness& strand() const { return get().strand; }
+  const ClosedInterval& coordinates() const { return get().coordinates; }
+  const position_t& position_cummax() const {
+    return ptr_->position_cummax()[idx_];
+  }
 
   KnownGene(size_t idx, std::shared_ptr<Genes> ptr)
-      : detail::KnownFeature<Genes>{idx, ptr} { }
+      : detail::KnownFeature<Genes, KnownGene>{idx, ptr} { }
   KnownGene() = default;
   KnownGene(const KnownGene&) = default;
   KnownGene(KnownGene&&) = default;
   KnownGene& operator=(const KnownGene&) = default;
   KnownGene& operator=(KnownGene&&) = default;
+
+  /**
+   * True when this gene does not overlap with previous gene
+   */
+  bool IsOverGeneStart() const {
+    return (
+        // start
+        idx_ == 0
+        // past the end
+        || idx_ >= ptr_->size()
+        // new contig
+        || contig() != (*this - 1).contig()
+        // coordinates past previous max
+        || coordinates().start > (*this - 1).coordinates().end);
+  }
+  KnownGene NextOverGeneStart() const {
+    const KnownGene end = ptr_->end();
+    if (*this >= end) {
+      return end;
+    } else {
+      return std::find_if(*this + 1, end,
+          [](const KnownGene& x) { return x.IsOverGeneStart(); });
+    }
+  }
 };
 
 inline KnownGene Genes::operator[](size_t idx) {

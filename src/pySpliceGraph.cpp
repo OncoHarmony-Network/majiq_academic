@@ -1042,8 +1042,6 @@ void init_SpliceGraph(py::class_<majiq::SpliceGraph>& pySpliceGraph) {
         "Access the splicegraph's junctions")
     .def_property_readonly("_genes", &SpliceGraph::genes,
         "Access the splicegraph's genes")
-    .def_property_readonly("_overgenes", &SpliceGraph::overgenes,
-        "Access the spicegraph's overgenes")
     .def_property_readonly("_contigs", &SpliceGraph::contigs,
         "Access the splicegraph's contigs")
     // access underlying data as xarray datasets
@@ -1059,9 +1057,6 @@ void init_SpliceGraph(py::class_<majiq::SpliceGraph>& pySpliceGraph) {
     .def_property_readonly("genes",
         [](py::object& sg) { return sg.attr("_genes").attr("df")(); },
         "xr.Dataset view of splicegraph's genes")
-    .def_property_readonly("overgenes",
-        [](py::object& sg) { return sg.attr("_overgenes").attr("df")(); },
-        "xr.Dataset view of splicegraph's overgenes")
     .def_property_readonly("contigs",
         [](py::object& sg) { return sg.attr("_contigs").attr("df")(); },
         "xr.Dataset view of splicegraph's contigs")

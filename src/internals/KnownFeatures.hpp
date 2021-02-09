@@ -23,7 +23,10 @@
 namespace majiq {
 namespace detail {
 template <typename ContainerT> class KnownFeatures;
-template <typename KnownFeaturesT> struct KnownFeature {
+
+// NOTE: must put DerivedKnownT = name of class inheriting KnownFeature
+template <typename KnownFeaturesT, typename DerivedKnownT>
+struct KnownFeature {
   using FeatureT = decltype(std::declval<KnownFeaturesT>().get(0));
   size_t idx_;
   std::shared_ptr<KnownFeaturesT> ptr_;
@@ -47,54 +50,45 @@ template <typename KnownFeaturesT> struct KnownFeature {
     return x.idx_ == y.idx_;
   }
 
+  // NOTE: hack to avoid reimplementing this for derived classes
   // make this a random_access_iterator of itself (over KnownFeaturesT
   using iterator_category = std::random_access_iterator_tag;
-  using value_type = KnownFeature;  // itself!
+  using value_type = DerivedKnownT;  // itself!
   using difference_type = std::ptrdiff_t;
   using pointer = value_type*;
   using reference = value_type&;
 
-  reference operator*() const noexcept {
-    return *this;  // itself!
+  reference operator*() noexcept {
+    return *static_cast<DerivedKnownT*>(this);  // itself!
   }
-  KnownFeature& operator++() noexcept {
+  DerivedKnownT& operator++() noexcept {
     ++idx_;
-    return *this;
+    return *static_cast<DerivedKnownT*>(this);
   }
-  KnownFeature& operator++(int) noexcept {
-    KnownFeature old = *this;
+  DerivedKnownT& operator++(int) noexcept {
+    DerivedKnownT old = *static_cast<DerivedKnownT*>(this);
     operator++();
     return old;
   }
-  KnownFeature& operator--() noexcept {
+  DerivedKnownT& operator--() noexcept {
     --idx_;
-    return *this;
+    return *static_cast<DerivedKnownT*>(this);
   }
-  KnownFeature& operator--(int) noexcept {
-    KnownFeature old = *this;
+  DerivedKnownT& operator--(int) noexcept {
+    DerivedKnownT old = *static_cast<DerivedKnownT*>(this);
     operator--();
     return old;
   }
-  KnownFeature& operator+=(difference_type n) noexcept {
+  DerivedKnownT& operator+=(difference_type n) noexcept {
     idx_ += n;
-    return *this;
+    return *static_cast<DerivedKnownT*>(this);
   }
-  friend KnownFeature operator+(
-      const KnownFeature& lhs, difference_type n) noexcept {
-    return KnownFeature{lhs.idx_ + n, lhs.ptr_};
+  friend DerivedKnownT operator+(
+      const DerivedKnownT& lhs, difference_type n) noexcept {
+    return DerivedKnownT{lhs.idx_ + n, lhs.ptr_};
   }
 
   // derived
-  KnownFeature& operator-=(difference_type n) noexcept { return (*this += -n); }
-  friend KnownFeature operator-(
-      const KnownFeature& lhs, difference_type n) noexcept {
-    return lhs + (-n);
-  }
-  friend difference_type operator-(
-      const KnownFeature& lhs, const KnownFeature& rhs) noexcept {
-    return lhs.idx_ - rhs.idx_;
-  }
-  reference operator[](difference_type n) { return *(*this + n); }
   friend inline bool operator>(
       const KnownFeature& x, const KnownFeature& y) noexcept {
     return y < x;
@@ -110,6 +104,20 @@ template <typename KnownFeaturesT> struct KnownFeature {
   friend inline bool operator!=(
       const KnownFeature& x, const KnownFeature& y) noexcept {
     return !(x == y);
+  }
+  DerivedKnownT& operator-=(difference_type n) noexcept {
+    return (*static_cast<DerivedKnownT*>(this) += -n);
+  }
+  friend DerivedKnownT operator-(
+      const DerivedKnownT& lhs, difference_type n) noexcept {
+    return lhs + (-n);
+  }
+  friend difference_type operator-(
+      const DerivedKnownT& lhs, const DerivedKnownT& rhs) noexcept {
+    return lhs.idx_ - rhs.idx_;
+  }
+  reference operator[](difference_type n) {
+    return *(*static_cast<DerivedKnownT*>(this) + n);
   }
 };
 
@@ -171,8 +179,8 @@ class KnownFeatures {
     return x.features_ == y.features_;
   }
 };
-template <typename T>
-inline std::size_t hash_value(const KnownFeature<T>& x) noexcept {
+template <typename T, typename U>
+inline std::size_t hash_value(const KnownFeature<T, U>& x) noexcept {
   std::size_t result = std::hash<size_t>{}(x.idx_);
   boost::hash_combine(result, x.ptr_);
   return result;
@@ -181,9 +189,10 @@ inline std::size_t hash_value(const KnownFeature<T>& x) noexcept {
 }  // namespace majiq
 
 namespace std {
-template <typename T> struct hash<majiq::detail::KnownFeature<T>> {
+template <typename T, typename U>
+struct hash<majiq::detail::KnownFeature<T, U>> {
   std::size_t operator()(
-      const majiq::detail::KnownFeature<T>& x) const noexcept {
+      const majiq::detail::KnownFeature<T, U>& x) const noexcept {
     return majiq::detail::hash_value(x);
   }
 };
