@@ -47,9 +47,11 @@ class Contigs
       public std::enable_shared_from_this<Contigs> {
  public:
   // implement creation/viewing of KnownContig as defined
-  const KnownContig operator[](size_t idx) {
+  KnownContig operator[](size_t idx) {
     return KnownContig{idx, shared_from_this()};
   }
+  KnownContig begin() { return operator[](0); }
+  KnownContig end() { return operator[](size()); }
 
   size_t add(const Contig& x) {
     auto key = x.unique_key();

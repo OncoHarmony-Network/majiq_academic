@@ -38,7 +38,9 @@ class Genes
       public std::enable_shared_from_this<Genes> {
  public:
   // forward declaration of creation/viewing of KnownGene
-  const KnownGene operator[](size_t idx);
+  KnownGene operator[](size_t idx);
+  KnownGene begin();
+  KnownGene end();
   // access vector<string> objects
   const std::vector<geneid_t> geneids() const {
     std::vector<geneid_t> result{size()};
@@ -74,9 +76,11 @@ class KnownGene : public detail::KnownFeature<Genes> {
   KnownGene& operator=(KnownGene&&) = default;
 };
 
-inline const KnownGene Genes::operator[](size_t idx) {
+inline KnownGene Genes::operator[](size_t idx) {
   return KnownGene{idx, shared_from_this()};
 }
+inline KnownGene Genes::begin() { return operator[](0); }
+inline KnownGene Genes::end() { return operator[](size()); }
 
 // comparisons against objects with KnownGene gene or gene()
 template <typename T,

@@ -40,11 +40,72 @@ template <typename KnownFeaturesT> struct KnownFeature {
 
   friend inline bool operator<(
       const KnownFeature& x, const KnownFeature& y) noexcept {
-    return std::tie(x.ptr_, x.idx_) < std::tie(y.ptr_, y.idx_);
+    return x.idx_ < y.idx_;
   }
   friend inline bool operator==(
       const KnownFeature& x, const KnownFeature& y) noexcept {
-    return x.idx_ == y.idx_ && x.ptr_ == y.ptr_;
+    return x.idx_ == y.idx_;
+  }
+
+  // make this a random_access_iterator of itself (over KnownFeaturesT
+  using iterator_category = std::random_access_iterator_tag;
+  using value_type = KnownFeature;  // itself!
+  using difference_type = std::ptrdiff_t;
+  using pointer = value_type*;
+  using reference = value_type&;
+
+  reference operator*() const noexcept {
+    return *this;  // itself!
+  }
+  KnownFeature& operator++() noexcept {
+    ++idx_;
+    return *this;
+  }
+  KnownFeature& operator++(int) noexcept {
+    KnownFeature old = *this;
+    operator++();
+    return old;
+  }
+  KnownFeature& operator--() noexcept {
+    --idx_;
+    return *this;
+  }
+  KnownFeature& operator--(int) noexcept {
+    KnownFeature old = *this;
+    operator--();
+    return old;
+  }
+  KnownFeature& operator+=(difference_type n) noexcept {
+    idx_ += n;
+    return *this;
+  }
+  friend KnownFeature operator+(
+      const KnownFeature& lhs, difference_type n) noexcept {
+    return KnownFeature{lhs.idx_ + n, lhs.ptr_};
+  }
+
+  // derived
+  KnownFeature& operator-=(difference_type n) noexcept { return (*this += -n); }
+  friend KnownFeature operator-(
+      const KnownFeature& lhs, difference_type n) noexcept {
+    return lhs + (-n);
+  }
+  friend difference_type operator-(
+      const KnownFeature& lhs, const KnownFeature& rhs) noexcept {
+    return lhs.idx_ - rhs.idx_;
+  }
+  reference operator[](difference_type n) { return *(*this + n); }
+  friend inline bool operator>(
+      const KnownFeature& x, const KnownFeature& y) noexcept {
+    return y < x;
+  }
+  friend inline bool operator>=(
+      const KnownFeature& x, const KnownFeature& y) noexcept {
+    return !(x < y);
+  }
+  friend inline bool operator<=(
+      const KnownFeature& x, const KnownFeature& y) noexcept {
+    return !(y < x);
   }
   friend inline bool operator!=(
       const KnownFeature& x, const KnownFeature& y) noexcept {
