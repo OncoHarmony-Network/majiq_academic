@@ -116,6 +116,13 @@ class Regions {
     return begin() + parent_idx_offsets_[idx];
   }
   const_iterator end_parent(size_t idx) const { return begin_parent(1 + idx); }
+  const_iterator begin_parent(const ParentT& parent) const {
+    return begin_parent(parent.idx_);
+  }
+  const_iterator end_parent(const ParentT& parent) const {
+    return end_parent(parent.idx_);
+  }
+
 
 
   const_iterator find(const RegionT& key) const {

@@ -35,28 +35,28 @@ using evidence_t = std::pair<position_t, ContigIntronEvidenceType>;
 
 std::map<GeneStrandness, std::vector<evidence_t>> OverGeneEvidence(
     const Exons& exons, const Introns& introns,
-    size_t gene_idx, size_t over_idx, bool stranded) {
+    const OverGene& overgene, bool stranded) {
   std::map<GeneStrandness, std::vector<evidence_t>> result;
-  for (; gene_idx < over_idx; ++gene_idx) {
+  for (KnownGene gene = overgene.first(); gene < overgene.last(); ++gene) {
     // evidence from gene's exons
-    for (auto it = exons.begin_parent(gene_idx);
-        it != exons.end_parent(gene_idx); ++it) {
+    for (auto it = exons.begin_parent(gene);
+        it != exons.end_parent(gene); ++it) {
       if (it->coordinates.is_full_interval()) {
         GeneStrandness strand
           = stranded ? it->gene.strand() : GeneStrandness::AMBIGUOUS;
         result[strand].emplace_back(it->coordinates.start,
-            it == exons.begin_parent(gene_idx)
+            it == exons.begin_parent(gene)
             ? ContigIntronEvidenceType::FIRST_EXON_START
             : ContigIntronEvidenceType::EXON_START);
         result[strand].emplace_back(it->coordinates.end,
-            it == std::prev(exons.end_parent(gene_idx))
+            it == std::prev(exons.end_parent(gene))
             ? ContigIntronEvidenceType::LAST_EXON_END
             : ContigIntronEvidenceType::EXON_END);
       }
     }
     // evidence from gene's introns
-    for (auto it = introns.begin_parent(gene_idx);
-        it != introns.end_parent(gene_idx); ++it) {
+    for (auto it = introns.begin_parent(gene);
+        it != introns.end_parent(gene); ++it) {
       if (!(it->denovo()) && it->coordinates.is_full_interval()) {
         GeneStrandness strand
           = stranded ? it->gene.strand() : GeneStrandness::AMBIGUOUS;
@@ -67,7 +67,7 @@ std::map<GeneStrandness, std::vector<evidence_t>> OverGeneEvidence(
             ContigIntronEvidenceType::ANNOTATED_INTRON_END);
       }
     }
-  }  // done combining information from all overlapping genes
+  }
   // sort evidence for each strand
   for (auto&& [strand, evidence_vec] : result) {
     std::sort(evidence_vec.begin(), evidence_vec.end());
@@ -131,31 +131,20 @@ ContigIntrons ContigIntrons::FromGeneExonsAndIntrons(
   std::vector<ContigIntron> result_vec;
   // otherwise, operate on sets of genes at a time that overlap
   const auto& genes_ptr = exons.parents_;
-  size_t gene_idx = 0;
-  while (gene_idx < genes_ptr->size()) {
-    // get first over_idx past end, non-matching contig, or start past end
-    size_t over_idx = 1 + gene_idx;
-    for (; over_idx < genes_ptr->size()
-        && (genes_ptr->get(over_idx).contig
-          == genes_ptr->get(over_idx - 1).contig)
-        && (genes_ptr->get(over_idx).coordinates.start
-          <= genes_ptr->position_cummax()[over_idx - 1]); ++over_idx) { }
-    // combined evidence for contig introns for these genes into a sorted vector
-    // to process in sorted order
-    auto stranded_evidence = OverGeneEvidence(
-        exons, introns, gene_idx, over_idx, stranded);
-    // loop over each strand/evidence for introns in each strand, add to result
-    KnownContig contig = genes_ptr->get(gene_idx).contig;
+  for (OverGene overgene = genes_ptr->overgene_begin();
+      overgene != genes_ptr->overgene_end(); ++overgene) {
+    // get evidence from current set of overlapping genes
+    auto stranded_evidence
+      = OverGeneEvidence(exons, introns, overgene, stranded);
+    // update result_vec using evidence
     size_t prev_size = result_vec.size();
     for (const auto& [strand, evidence] : stranded_evidence) {
-      AddIntronsFromEvidence(contig, strand, evidence, result_vec);
+      AddIntronsFromEvidence(overgene.contig, strand, evidence, result_vec);
     }
     if (stranded_evidence.size() > 1) {
-      // may not be in sorted order, so sort what we just added
+      // may not be in sorted order if we had multiple strands, so sort...
       std::sort(result_vec.begin() + prev_size, result_vec.end());
     }
-    // update gene_idx to over_idx
-    gene_idx = over_idx;
   }
   // get final result
   return ContigIntrons{std::move(result_vec)};
