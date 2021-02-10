@@ -46,9 +46,9 @@ bool SJJunctionsPositions::is_valid(
         // offsets must be non-decreasing
         jp_end < jp_start
         // difference in offsets correspond to numpos
-        || jp_end - jp_start != (*junctions)[jidx].data.numpos
+        || jp_end - jp_start != (*junctions)[jidx].numpos()
         // can't have numpos greater than total possible
-        || (*junctions)[jidx].data.numpos > num_positions
+        || (*junctions)[jidx].numpos() > num_positions
         // all junction positions must be in [0, num_positions)
         || !std::all_of(jp_start, jp_end,
           [num_positions](const PositionReads& x) {
@@ -57,7 +57,7 @@ bool SJJunctionsPositions::is_valid(
         // sum of position reads equals junction numreads
         || std::accumulate(jp_start, jp_end, junction_ct_t{},
           [](junction_ct_t s, const PositionReads& x) { return s + x.reads; })
-          != (*junctions)[jidx].data.numreads
+          != (*junctions)[jidx].numreads()
         // PositionReads in sorted order (by number of reads)
         || !std::is_sorted(jp_start, jp_end)) {
       return false;

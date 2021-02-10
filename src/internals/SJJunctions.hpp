@@ -14,6 +14,7 @@
 #include <utility>
 #include <memory>
 #include <stdexcept>
+#include <algorithm>
 
 #include "MajiqTypes.hpp"
 #include "ContigRegion.hpp"
@@ -22,88 +23,65 @@
 #include "Contigs.hpp"
 
 namespace majiq {
+
+// did a junction pass different thresholds?
+enum class JunctionPassedStatus : unsigned char {
+  NOT_PASSED,
+  ANNOTATED_PASSED,
+  DENOVO_PASSED
+};
+
 // total reads and nonzero positions for a junction
 struct ExperimentCounts {
   junction_ct_t numreads;
   junction_pos_t numpos;
+  ExperimentCounts() : numreads{}, numpos{} { }
+  ExperimentCounts(junction_ct_t _numreads, junction_pos_t _numpos)
+      : numreads{_numreads}, numpos{_numpos} { }
+  ExperimentCounts(const ExperimentCounts&) = default;
+  ExperimentCounts(ExperimentCounts&&) = default;
+  ExperimentCounts& operator=(const ExperimentCounts&) = default;
+  ExperimentCounts& operator=(ExperimentCounts&&) = default;
+  JunctionPassedStatus passed(junction_ct_t minreads, junction_ct_t mindenovo,
+      junction_pos_t minpos) const noexcept {
+    // NOTE: assumes mindenovo >= minreads
+    if (numpos < minpos || numreads < minreads) {
+      return JunctionPassedStatus::NOT_PASSED;
+    } else if (numreads >= mindenovo) {
+      return JunctionPassedStatus::DENOVO_PASSED;
+    } else {  // minreads <= numreads < mindenovo
+      return JunctionPassedStatus::ANNOTATED_PASSED;
+    }
+  }
 };
-// group passed (build, denovo)
-struct GroupPassed {
-  bool build_passed;
-  bool denovo_passed;
-};
 
 
-using SJJunction = detail::ContigRegion<OpenInterval, ExperimentCounts>;
-using GroupJunction = detail::ContigRegion<OpenInterval, GroupPassed>;
-
-using SJJunctions = detail::Regions<SJJunction, true>;
-using GroupJunctions = detail::Regions<GroupJunction, true>;
-
-
-// how do we get from SJJunctions to GroupJunctions?
-class GroupJunctionsGenerator {
- private:
-  const junction_ct_t minreads_;
-  const junction_ct_t mindenovo_;  // REQUIRED >= minreads
-  const junction_pos_t minpos_;
-
-  std::shared_ptr<Contigs> contigs_;
-
-  // number of experiments passing filters
-  struct GroupCounts {
-    uint32_t numpassed;  // passing build filters
-    uint32_t numdenovo;  // passing denovo filters
-  };
-  size_t num_experiments_;
-  std::vector<  // over contigs
-    std::map<std::pair<OpenInterval, GeneStrandness>, GroupCounts>> counts_;
+class SJJunction : public detail::ContigRegion<OpenInterval, ExperimentCounts> {
+  using BaseT = detail::ContigRegion<OpenInterval, ExperimentCounts>;
 
  public:
-  GroupJunctionsGenerator(junction_ct_t minreads, junction_ct_t mindenovo,
-      junction_pos_t minpos, std::shared_ptr<Contigs> contigs)
-      : minreads_{minreads}, mindenovo_{mindenovo}, minpos_{minpos},
-        contigs_{contigs == nullptr ? std::make_shared<Contigs>() : contigs} {
-    if (minreads > mindenovo) {
-      throw std::invalid_argument("mindenovo must be at least minreads");
-    }
+  const junction_ct_t& numreads() const noexcept { return data.numreads; }
+  junction_ct_t& numreads() noexcept { return data.numreads; }
+  const junction_pos_t& numpos() const noexcept { return data.numpos; }
+  junction_pos_t& numpos() noexcept { return data.numpos; }
+  JunctionPassedStatus passed(junction_ct_t minreads, junction_ct_t mindenovo,
+      junction_pos_t minpos) const noexcept {
+    return data.passed(minreads, mindenovo, minpos);
   }
-  GroupJunctionsGenerator(junction_ct_t minreads, junction_ct_t mindenovo,
-      junction_pos_t minpos)
-      : GroupJunctionsGenerator{minreads, mindenovo, minpos, nullptr} {
-  }
-  GroupJunctionsGenerator(const GroupJunctionsGenerator& x) = default;
-  GroupJunctionsGenerator(GroupJunctionsGenerator&& x) = default;
-  GroupJunctionsGenerator& operator=(
-      const GroupJunctionsGenerator& x) = delete;
-  GroupJunctionsGenerator& operator=(GroupJunctionsGenerator&& x) = delete;
 
-  /**
-   * Create group junctions with data aggregated from input experiments,
-   * filtering unpassed junctions using min_experiment
-   */
-  GroupJunctions PassedJunctions(size_t min_experiments) {
-    std::vector<GroupJunction> passed;
-    for (size_t contig_idx = 0; contig_idx < contigs_->size(); ++contig_idx) {
-      for (auto&& [coord_strand, ct] : counts_[contig_idx]) {
-        if (ct.numpassed >= min_experiments) {
-          const auto& [coordinates, strand] = coord_strand;
-          passed.emplace_back(
-              (*contigs_)[contig_idx], coordinates, strand,
-              GroupPassed{ct.numpassed >= min_experiments,
-                          ct.numdenovo >= min_experiments});
-        }
-      }
-    }
-    // create GroupJunctions
-    return GroupJunctions{std::move(passed)};
-  }
-  /**
-   * Add junctions from experiment to group towards group filters
-   */
-  void AddExperiment(const SJJunctions& experiment);
+  SJJunction(KnownContig contig, OpenInterval coordinates,
+      GeneStrandness strand, ExperimentCounts counts)
+      : BaseT{contig, coordinates, strand, counts} { }
+  SJJunction(KnownContig contig, OpenInterval coordinates,
+      GeneStrandness strand)
+      : SJJunction{contig, coordinates, strand, ExperimentCounts{}} { }
+  SJJunction() : SJJunction{KnownContig{}, OpenInterval{}, GeneStrandness{}} { }
+  SJJunction(const SJJunction&) = default;
+  SJJunction(SJJunction&&) = default;
+  SJJunction& operator=(const SJJunction&) = default;
+  SJJunction& operator=(SJJunction&&) = default;
 };
-
+using SJJunctions = detail::Regions<SJJunction, true>;
 
 }  // namespace majiq
 

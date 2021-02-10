@@ -22,7 +22,6 @@ ext_modules = [
         "new_majiq",
         sorted([
             "src/internals/ContigIntrons.cpp",
-            "src/internals/SJJunctions.cpp",
             "src/internals/SJJunctionsPositions.cpp",
             "src/internals/GFF3.cpp",
             "src/internals/TranscriptModels.cpp",
