@@ -34,7 +34,6 @@ struct GroupPassed {
 };
 
 
-using ContigJunction = detail::ContigRegion<OpenInterval, EmptyDataT>;
 using SJJunction = detail::ContigRegion<OpenInterval, ExperimentCounts>;
 using GroupJunction = detail::ContigRegion<OpenInterval, GroupPassed>;
 
