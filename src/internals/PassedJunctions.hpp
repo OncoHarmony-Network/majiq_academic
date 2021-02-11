@@ -169,8 +169,8 @@ class GroupJunctionsGenerator {
   }
 
  public:
-  GroupJunctionsGenerator(junction_ct_t minreads, junction_ct_t mindenovo,
-      junction_pos_t minpos, const std::shared_ptr<Contigs>& contigs)
+  GroupJunctionsGenerator(const std::shared_ptr<Contigs>& contigs,
+      junction_ct_t minreads, junction_ct_t mindenovo, junction_pos_t minpos)
       : minreads_{minreads},
         mindenovo_{std::max(mindenovo, minreads_)},
         minpos_{minpos},
@@ -251,7 +251,7 @@ class PassedJunctionsGenerator {
    */
   GroupJunctionsGenerator StartGroup(junction_ct_t minreads,
       junction_ct_t mindenovo, junction_pos_t minpos) const {
-    return GroupJunctionsGenerator{minreads, mindenovo, minpos, contigs_};
+    return GroupJunctionsGenerator{contigs_, minreads, mindenovo, minpos};
   }
   size_t size() const {
     return std::accumulate(passed_.begin(), passed_.end(), size_t{},
