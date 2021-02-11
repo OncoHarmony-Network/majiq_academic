@@ -31,6 +31,16 @@
 
 
 namespace py = pybind11;
+template <typename T>
+using pyClassShared_t = py::class_<T, std::shared_ptr<T>>;
+using pyContigs_t = pyClassShared_t<majiq::Contigs>;
+using pyGenes_t = pyClassShared_t<majiq::Genes>;
+using pyExons_t = pyClassShared_t<majiq::Exons>;
+using pyIntrons_t = pyClassShared_t<majiq::Introns>;
+using pyGeneJunctions_t = pyClassShared_t<majiq::GeneJunctions>;
+using pyContigIntrons_t = pyClassShared_t<majiq::ContigIntrons>;
+using pySJJunctions_t = pyClassShared_t<majiq::SJJunctions>;
+using pySJJunctionsPositions_t = pyClassShared_t<majiq::SJJunctionsPositions>;
 
 struct ConnectionsArrays {
   py::array_t<size_t> gene_idx;
@@ -86,8 +96,7 @@ std::shared_ptr<Connections> MakeConnections(
   return std::make_shared<Connections>(std::move(connection_vec));
 }
 
-void init_Contigs(
-    py::class_<majiq::Contigs, std::shared_ptr<majiq::Contigs>>& pyContigs) {
+void init_Contigs(pyContigs_t& pyContigs) {
   using majiq::seqid_t;
   using majiq::Contigs;
   using majiq::Contig;
@@ -141,8 +150,7 @@ void init_Contigs(
         [](const Contigs& s, seqid_t x) -> bool { return s.count(x) > 0; });
 }
 
-void init_Genes(
-    py::class_<majiq::Genes, std::shared_ptr<majiq::Genes>>& pyGenes) {
+void init_Genes(pyGenes_t& pyGenes) {
   using majiq_pybind::ArrayFromVectorAndOffset;
   using majiq::Contigs;
   using majiq::Genes;
@@ -264,8 +272,7 @@ void init_Genes(
         "gene_idx for specified gene_id", py::arg("gene_id"));
 }
 
-void init_Exons(
-    py::class_<majiq::Exons, std::shared_ptr<majiq::Exons>>& pyExons) {
+void init_Exons(pyExons_t& pyExons) {
   using majiq::Exons;
   using majiq::position_t;
   using majiq_pybind::ArrayFromVectorAndOffset;
@@ -381,8 +388,7 @@ void init_Exons(
     .def("__len__", &Exons::size);
 }
 
-void init_GeneJunctions(
-    py::class_<majiq::GeneJunctions, std::shared_ptr<majiq::GeneJunctions>>& pyGeneJunctions) {
+void init_GeneJunctions(pyGeneJunctions_t& pyGeneJunctions) {
   using majiq::GeneJunctions;
   using majiq::position_t;
   using majiq_pybind::ArrayFromVectorAndOffset;
@@ -481,9 +487,7 @@ void init_GeneJunctions(
     .def("__len__", &GeneJunctions::size);
 }
 
-void init_ContigIntrons(
-    py::class_<majiq::ContigIntrons,
-    std::shared_ptr<majiq::ContigIntrons>>& pyContigIntrons) {
+void init_ContigIntrons(pyContigIntrons_t& pyContigIntrons) {
   using majiq::position_t;
   using majiq::Contigs;
   using majiq::ContigIntrons;
@@ -544,8 +548,7 @@ void init_ContigIntrons(
     .def("__len__", &majiq::ContigIntrons::size);
 }
 
-void init_Introns(
-    py::class_<majiq::Introns, std::shared_ptr<majiq::Introns>>& pyIntrons) {
+void init_Introns(pyIntrons_t& pyIntrons) {
   using majiq::Introns;
   using majiq::position_t;
   using majiq_pybind::ArrayFromVectorAndOffset;
@@ -644,7 +647,7 @@ void init_Introns(
     .def("__len__", &Introns::size);
 }
 
-void init_SJJunctions(py::class_<majiq::SJJunctions, std::shared_ptr<majiq::SJJunctions>>& pySJJunctions) {
+void init_SJJunctions(pySJJunctions_t& pySJJunctions) {
   using majiq::position_t;
   using majiq::SJJunctions;
   using majiq_pybind::ArrayFromVectorAndOffset;
@@ -766,7 +769,7 @@ void init_SJJunctions(py::class_<majiq::SJJunctions, std::shared_ptr<majiq::SJJu
         },
         "View on junction information as xarray Dataset");
 }
-void init_SJJunctionsPositions(py::class_<majiq::SJJunctionsPositions, std::shared_ptr<majiq::SJJunctionsPositions>>& pySJJunctionsPositions) {
+void init_SJJunctionsPositions(pySJJunctionsPositions_t& pySJJunctionsPositions) {
   using majiq::SJJunctionsPositions;
   using majiq_pybind::ArrayFromOffsetsVector;
   using majiq_pybind::ArrayFromVectorAndOffset;
@@ -1086,21 +1089,19 @@ void init_SpliceGraphAll(py::module_& m) {
   using majiq::ExperimentStrandness;
   using majiq::GeneStrandness;
   using majiq::ContigIntrons;
-  auto pyContigs = py::class_<Contigs, std::shared_ptr<Contigs>>(m, "Contigs",
-      "Splicegraph contigs");
-  auto pyGenes = py::class_<Genes, std::shared_ptr<Genes>>(m, "Genes",
+  auto pyContigs = pyContigs_t(m, "Contigs", "Splicegraph contigs");
+  auto pyGenes = pyGenes_t(m, "Genes",
       "Splicegraph genes");
-  auto pyExons = py::class_<Exons, std::shared_ptr<Exons>>(m, "Exons",
+  auto pyExons = pyExons_t(m, "Exons",
       "Splicegraph exons");
-  auto pyIntrons = py::class_<Introns, std::shared_ptr<Introns>>(m, "Introns",
+  auto pyIntrons = pyIntrons_t(m, "Introns",
       "Splicegraph introns");
-  auto pyGeneJunctions = py::class_<
-      GeneJunctions, std::shared_ptr<GeneJunctions>
-    >(m, "GeneJunctions", "Splicegraph junctions");
-  auto pyContigIntrons = py::class_<ContigIntrons, std::shared_ptr<ContigIntrons>>(m, "ContigIntrons");
-  auto pySJJunctions = py::class_<SJJunctions, std::shared_ptr<SJJunctions>>(
+  auto pyGeneJunctions = pyGeneJunctions_t(
+      m, "GeneJunctions", "Splicegraph junctions");
+  auto pyContigIntrons = pyContigIntrons_t(m, "ContigIntrons");
+  auto pySJJunctions = pySJJunctions_t(
       m, "SJJunctions", "Summarized junction counts for an experiment");
-  auto pySJJunctionsPositions = py::class_<SJJunctionsPositions, std::shared_ptr<SJJunctionsPositions>>(
+  auto pySJJunctionsPositions = pySJJunctionsPositions_t(
       m, "SJJunctionsPositions",
       "Summarized and per-position counts for an experiment");
   auto pyGeneStrandness = py::enum_<GeneStrandness>(
