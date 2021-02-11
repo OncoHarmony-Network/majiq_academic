@@ -191,7 +191,6 @@ void init_Contigs(pyContigs_t& pyContigs) {
   using majiq::seqid_t;
   using majiq::Contigs;
   using majiq::Contig;
-  using namespace py::literals;
   pyContigs
     .def(
         py::init([](py::list seqids) {
@@ -214,9 +213,10 @@ void init_Contigs(pyContigs_t& pyContigs) {
         "Load contigs from netcdf file", py::arg("netcdf_path"))
     .def("to_netcdf",
         [](py::object& self, py::str out, py::str mode) {
-        using namespace py::literals;
         self.attr("df")().attr("to_netcdf")(
-            out, "mode"_a = mode, "group"_a = py::str(CONTIGS_NC_GROUP));
+            out,
+            py::arg("mode") = mode,
+            py::arg("group") = py::str(CONTIGS_NC_GROUP));
         return;
         },
         "Save contigs to netcdf file",
@@ -301,9 +301,10 @@ void init_Genes(pyGenes_t& pyGenes) {
         py::arg("netcdf_path"), py::arg("contigs"))
     .def("to_netcdf",
         [](py::object& self, py::str out, py::str mode) {
-        using namespace py::literals;
         self.attr("df")().attr("to_netcdf")(
-            out, "mode"_a = mode, "group"_a = py::str(GENES_NC_GROUP));
+            out,
+            py::arg("mode") = mode,
+            py::arg("group") = py::str(GENES_NC_GROUP));
         return;
         },
         "Save contigs to netcdf file",
@@ -387,9 +388,10 @@ void init_Exons(pyExons_t& pyExons) {
         py::arg("netcdf_path"), py::arg("genes"))
     .def("to_netcdf",
         [](py::object& self, py::str out, py::str mode) {
-        using namespace py::literals;
         self.attr("df")().attr("to_netcdf")(
-            out, "mode"_a = mode, "group"_a = py::str(EXONS_NC_GROUP));
+            out,
+            py::arg("mode") = mode,
+            py::arg("group") = py::str(EXONS_NC_GROUP));
         return;
         },
         "Save exons to netcdf file",
@@ -453,9 +455,10 @@ void init_GeneJunctions(pyGeneJunctions_t& pyGeneJunctions) {
         py::arg("netcdf_path"), py::arg("genes"))
     .def("to_netcdf",
         [](py::object& self, py::str out, py::str mode) {
-        using namespace py::literals;
         self.attr("df")().attr("to_netcdf")(
-            out, "mode"_a = mode, "group"_a = py::str(JUNCTIONS_NC_GROUP));
+            out,
+            py::arg("mode") = mode,
+            py::arg("group") = py::str(JUNCTIONS_NC_GROUP));
         return;
         },
         "Save junctions to netcdf file",
@@ -533,9 +536,10 @@ void init_Introns(pyIntrons_t& pyIntrons) {
         py::arg("netcdf_path"), py::arg("genes"))
     .def("to_netcdf",
         [](py::object& self, py::str out, py::str mode) {
-        using namespace py::literals;
         self.attr("df")().attr("to_netcdf")(
-            out, "mode"_a = mode, "group"_a = py::str(INTRONS_NC_GROUP));
+            out,
+            py::arg("mode") = mode,
+            py::arg("group") = py::str(INTRONS_NC_GROUP));
         return;
         },
         "Save introns to netcdf file",
@@ -689,8 +693,8 @@ void init_SJJunctionsPositions(pySJJunctionsPositions_t& pySJJunctionsPositions)
             Number of threads to use when reading in BAM file
         )pbdoc",
         py::arg("bam_path"),
-        py::arg("experiment_strandness") = majiq::ExperimentStrandness::NONE,
-        py::arg("nthreads") = 1)
+        py::arg("experiment_strandness") = DEFAULT_BAM_STRANDNESS,
+        py::arg("nthreads") = DEFAULT_BAM_NTHREADS)
     .def_static("from_netcdf",
         [](py::str x) {
         auto xr_raw = majiq_pybind::OpenXarrayDataset(
@@ -766,15 +770,14 @@ void init_SJJunctionsPositions(pySJJunctionsPositions_t& pySJJunctionsPositions)
         "View on junction-position information as xarray Dataset")
     .def_property_readonly("junctions",
         [](py::object& sj) -> py::object {
-        using namespace py::literals;
         auto base = sj.attr("_junctions").attr("df")();
         auto get_xr = [&sj](py::str key) {
           return py::module_::import("xarray").attr("DataArray")(
-              sj.attr(key), "dims"_a = "jidx");
+              sj.attr(key), py::arg("dims") = "jidx");
         };
         return base.attr("assign_coords")(
-            "jpidx_start"_a = get_xr("jpidx_start"),
-            "jpidx_end"_a = get_xr("jpidx_end"));
+            py::arg("jpidx_start") = get_xr("jpidx_start"),
+            py::arg("jpidx_end") = get_xr("jpidx_end"));
         },
         "View on junction information as xarray Dataset")
     .def("to_netcdf",
@@ -787,26 +790,25 @@ void init_SJJunctionsPositions(pySJJunctionsPositions_t& pySJJunctionsPositions)
               << output_path.cast<std::string>();
           throw std::invalid_argument(oss.str());
         }
-        using namespace py::literals;
         // save contigs
         sj.attr("_junctions").attr("_contigs").attr("to_netcdf")(
-            output_path, "mode"_a = "w");
+            output_path, py::arg("mode") = "w");
         // save junctions
         sj.attr("_junctions").attr("df")().attr("to_netcdf")(
             output_path,
-            "group"_a = py::str(SJ_JUNCTIONS_NC_GROUP),
-            "mode"_a = "a");
+            py::arg("group") = py::str(SJ_JUNCTIONS_NC_GROUP),
+            py::arg("mode") = "a");
         // save junction positions
         auto xr_jp
           = sj.attr("df")()
           .attr("assign_coords")(
-              "_offsets"_a = py::module_::import("xarray").attr("DataArray")(
-                sj.attr("_offsets"), "dims"_a = "offset_idx"))
-          .attr("assign_attrs")("num_positions"_a = sj.attr("num_positions"));
+              py::arg("_offsets") = py::module_::import("xarray").attr("DataArray")(
+                sj.attr("_offsets"), py::arg("dims") = "offset_idx"))
+          .attr("assign_attrs")(py::arg("num_positions") = sj.attr("num_positions"));
         xr_jp.attr("to_netcdf")(
             output_path,
-            "group"_a = py::str(SJ_JUNCTIONS_RAW_NC_GROUP),
-            "mode"_a = "a");
+            py::arg("group") = py::str(SJ_JUNCTIONS_RAW_NC_GROUP),
+            py::arg("mode") = "a");
         return;
         },
         "Serialize junction counts to specified file",
@@ -826,7 +828,9 @@ void init_pyGroupJunctionsGen(pyGroupJunctionsGen_t& pyGroupJunctionsGen) {
       PassedJunctions.
       )pbdoc",
       py::arg("contigs"),
-      py::arg("minreads") = 3, py::arg("mindenovo") = 5, py::arg("minpos") = 2)
+      py::arg("minreads") = DEFAULT_BUILD_MINREADS,
+      py::arg("mindenovo") = DEFAULT_BUILD_MINDENOVO,
+      py::arg("minpos") = DEFAULT_BUILD_MINPOS)
     .def("add_experiment", &majiq::GroupJunctionsGenerator::AddExperiment,
         "Increment count of passed junctions from input experiment",
         py::arg("sj"))
@@ -844,7 +848,8 @@ void init_pyPassedJunctionsGen(pyPassedJunctionsGen_t& pyPassedJunctionsGen) {
       py::arg("contigs"))
     .def("add_group", &majiq::PassedJunctionsGenerator::AddGroup,
         "Combine passed junctions from build group of experiments",
-        py::arg("group"), py::arg("min_experiments") = 0.5)
+        py::arg("group"),
+        py::arg("min_experiments") = DEFAULT_BUILD_MINEXPERIMENTS)
     .def("to_passed", &majiq::PassedJunctionsGenerator::ToPassedJunctions,
         "Get static, array-based representation of passed junctions")
     .def("__len__", &majiq::PassedJunctionsGenerator::size);
@@ -939,7 +944,7 @@ void init_SpliceGraph(py::class_<majiq::SpliceGraph>& pySpliceGraph) {
         },
         "Create splicegraph from input GFF3 file",
         py::arg("gff3_path"),
-        py::arg("process_ir") = true,
+        py::arg("process_ir") = DEFAULT_BUILD_PROCESS_IR,
         py::arg_v("gff3_types", majiq::gff3::default_gff3_types,
             "new_majiq._default_gff3_types()"))
     // save to file
@@ -1001,7 +1006,7 @@ void init_SpliceGraph(py::class_<majiq::SpliceGraph>& pySpliceGraph) {
             *sg.exons(), *sg.introns(), stranded);
         },
         "Get contig introns (by strand or not) for splicegraph",
-        py::arg("stranded") = false)
+        py::arg("stranded"))
     // string representation of splicegraph
     .def("__repr__", [](const SpliceGraph& sg) -> std::string {
         std::ostringstream oss;

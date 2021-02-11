@@ -16,7 +16,7 @@
 #include <array>
 #include <stdexcept>
 
-#include "internals/Contigs.hpp"
+#include "internals/MajiqTypes.hpp"
 
 
 // groups for netcdf
@@ -27,6 +27,16 @@ constexpr char JUNCTIONS_NC_GROUP[] = "junctions";
 constexpr char INTRONS_NC_GROUP[] = "introns";
 constexpr char SJ_JUNCTIONS_NC_GROUP[] = "sj_junctions";
 constexpr char SJ_JUNCTIONS_RAW_NC_GROUP[] = "sj_junctions_raw";
+
+constexpr bool DEFAULT_BUILD_PROCESS_IR = true;
+constexpr majiq::junction_ct_t DEFAULT_BUILD_MINREADS = 3;
+constexpr majiq::junction_ct_t DEFAULT_BUILD_MINDENOVO = 5;
+constexpr majiq::junction_pos_t DEFAULT_BUILD_MINPOS = 2;
+constexpr float DEFAULT_BUILD_MINEXPERIMENTS = 0.5;
+constexpr majiq::ExperimentStrandness DEFAULT_BAM_STRANDNESS
+  = majiq::ExperimentStrandness::NONE;
+constexpr int DEFAULT_BAM_NTHREADS = 1;
+
 
 
 namespace majiq_pybind {
@@ -95,7 +105,6 @@ inline py::object XarrayDatasetFromObject(
     py::str idx_name,
     std::initializer_list<py::str> attrs,
     std::initializer_list<py::str> data_attrs = {}) {
-  using namespace py::literals;
   py::function np_arange = py::module_::import("numpy").attr("arange");
   py::module_ xr = py::module_::import("xarray");
   py::function xr_Dataset = xr.attr("Dataset");
@@ -128,23 +137,24 @@ inline py::object XarrayDatasetFromObject(
   // coordinates for dataset in dictionary
   py::dict coordinates;
   coordinates[idx_name] = xr_DataArray(
-      np_arange(inferred_length), "dims"_a = idx_name);
+      np_arange(inferred_length), py::arg("dims") = idx_name);
   // extract attributes
   for (auto x : attrs) {
-    coordinates[x] = xr_DataArray(features.attr(x), "dims"_a = idx_name);
+    coordinates[x] = xr_DataArray(features.attr(x), py::arg("dims") = idx_name);
   }
   py::dict data_vars;
   for (auto x : data_attrs) {
-    data_vars[x] = xr_DataArray(features.attr(x), "dims"_a = idx_name);
+    data_vars[x] = xr_DataArray(features.attr(x), py::arg("dims") = idx_name);
   }
   // define the index dimension
-  return xr_Dataset("data_vars"_a = data_vars, "coords"_a = coordinates);
+  return xr_Dataset(
+      py::arg("data_vars") = data_vars,
+      py::arg("coords") = coordinates);
 }
 
 inline py::object OpenXarrayDataset(py::str netcdf_path, py::str group) {
-  using namespace py::literals;
   return py::module_::import("xarray").attr("open_dataset")(
-      netcdf_path, "group"_a = group);
+      netcdf_path, py::arg("group") = group);
 }
 
 }  // namespace majiq_pybind
