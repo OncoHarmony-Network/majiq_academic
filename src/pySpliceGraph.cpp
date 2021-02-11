@@ -47,13 +47,24 @@ using pyGroupJunctionsGen_t = pyClassShared_t<majiq::GroupJunctionsGenerator>;
 using pyPassedJunctionsGen_t = pyClassShared_t<majiq::PassedJunctionsGenerator>;
 using pyPassedJunctions_t = pyClassShared_t<majiq::PassedJunctions>;
 
-template <typename RegionsT,
+template <const char* REGIONS_NC_GROUP,
+         typename RegionsT,
          typename RegionT = std::remove_const_t<std::remove_reference_t<
           decltype(std::declval<RegionsT>().data()[0])>>>
 void define_coordinates_properties(pyClassShared_t<RegionsT>& pyRegions) {
   using majiq::position_t;
   using majiq_pybind::ArrayFromVectorAndOffset;
   pyRegions
+    .def("to_netcdf",
+        [](py::object& self, py::str out, py::str mode) {
+        self.attr("df")().attr("to_netcdf")(
+            out,
+            py::arg("mode") = mode,
+            py::arg("group") = py::str(REGIONS_NC_GROUP));
+        return;
+        },
+        "Save to netcdf file",
+        py::arg("netcdf_path"), py::arg("mode"))
     .def("__len__", &RegionsT::size)
     .def_property_readonly("start",
         [](py::object& regions_obj) -> py::array_t<position_t> {
@@ -247,7 +258,7 @@ void init_Genes(pyGenes_t& pyGenes) {
   using majiq::Genes;
   using majiq::position_t;
   using majiq::geneid_t;
-  define_coordinates_properties(pyGenes);
+  define_coordinates_properties<GENES_NC_GROUP>(pyGenes);
   pyGenes
     .def(
         py::init([](
@@ -299,16 +310,6 @@ void init_Genes(pyGenes_t& pyGenes) {
         },
         "Load genes from netcdf file",
         py::arg("netcdf_path"), py::arg("contigs"))
-    .def("to_netcdf",
-        [](py::object& self, py::str out, py::str mode) {
-        self.attr("df")().attr("to_netcdf")(
-            out,
-            py::arg("mode") = mode,
-            py::arg("group") = py::str(GENES_NC_GROUP));
-        return;
-        },
-        "Save contigs to netcdf file",
-        py::arg("netcdf_path"), py::arg("mode"))
     .def_property_readonly("gene_id", &majiq::Genes::geneids,
         "Sequence[str] of gene ids in order matching gene_idx")
     .def_property_readonly("gene_name", &majiq::Genes::genenames,
@@ -336,7 +337,7 @@ void init_Exons(pyExons_t& pyExons) {
   using majiq::Exons;
   using majiq::position_t;
   using majiq_pybind::ArrayFromVectorAndOffset;
-  define_coordinates_properties(pyExons);
+  define_coordinates_properties<EXONS_NC_GROUP>(pyExons);
   pyExons
     .def(py::init([](
             std::shared_ptr<majiq::Genes> genes,
@@ -386,16 +387,6 @@ void init_Exons(pyExons_t& pyExons) {
         },
         "Load exons from netcdf file",
         py::arg("netcdf_path"), py::arg("genes"))
-    .def("to_netcdf",
-        [](py::object& self, py::str out, py::str mode) {
-        self.attr("df")().attr("to_netcdf")(
-            out,
-            py::arg("mode") = mode,
-            py::arg("group") = py::str(EXONS_NC_GROUP));
-        return;
-        },
-        "Save exons to netcdf file",
-        py::arg("netcdf_path"), py::arg("mode"))
     .def_property_readonly("annotated_start",
         [](py::object& exons_obj) -> py::array_t<position_t> {
         Exons& exons = exons_obj.cast<Exons&>();
@@ -429,7 +420,7 @@ void init_GeneJunctions(pyGeneJunctions_t& pyGeneJunctions) {
   using majiq::GeneJunctions;
   using majiq::position_t;
   using majiq_pybind::ArrayFromVectorAndOffset;
-  define_coordinates_properties(pyGeneJunctions);
+  define_coordinates_properties<JUNCTIONS_NC_GROUP>(pyGeneJunctions);
   pyGeneJunctions
     .def(py::init([](
             std::shared_ptr<majiq::Genes> genes,
@@ -453,16 +444,6 @@ void init_GeneJunctions(pyGeneJunctions_t& pyGeneJunctions) {
         },
         "Load junctions from netcdf file",
         py::arg("netcdf_path"), py::arg("genes"))
-    .def("to_netcdf",
-        [](py::object& self, py::str out, py::str mode) {
-        self.attr("df")().attr("to_netcdf")(
-            out,
-            py::arg("mode") = mode,
-            py::arg("group") = py::str(JUNCTIONS_NC_GROUP));
-        return;
-        },
-        "Save junctions to netcdf file",
-        py::arg("netcdf_path"), py::arg("mode"))
     .def("df",
         [](py::object& junctions) -> py::object {
         return majiq_pybind::XarrayDatasetFromObject(junctions, "junction_idx",
@@ -482,7 +463,7 @@ void init_ContigIntrons(pyContigIntrons_t& pyContigIntrons) {
   using majiq::Contigs;
   using majiq::ContigIntrons;
   using majiq_pybind::ArrayFromVectorAndOffset;
-  define_coordinates_properties(pyContigIntrons);
+  define_coordinates_properties<CONTIG_INTRONS_NC_GROUP>(pyContigIntrons);
   pyContigIntrons
     .def_property_readonly("annotated",
         [](py::object& introns_obj) -> py::array_t<bool> {
@@ -510,7 +491,7 @@ void init_Introns(pyIntrons_t& pyIntrons) {
   using majiq::Introns;
   using majiq::position_t;
   using majiq_pybind::ArrayFromVectorAndOffset;
-  define_coordinates_properties(pyIntrons);
+  define_coordinates_properties<INTRONS_NC_GROUP>(pyIntrons);
   pyIntrons
     .def(py::init([](
             std::shared_ptr<majiq::Genes> genes,
@@ -534,16 +515,6 @@ void init_Introns(pyIntrons_t& pyIntrons) {
         },
         "Load introns from netcdf file",
         py::arg("netcdf_path"), py::arg("genes"))
-    .def("to_netcdf",
-        [](py::object& self, py::str out, py::str mode) {
-        self.attr("df")().attr("to_netcdf")(
-            out,
-            py::arg("mode") = mode,
-            py::arg("group") = py::str(INTRONS_NC_GROUP));
-        return;
-        },
-        "Save introns to netcdf file",
-        py::arg("netcdf_path"), py::arg("mode"))
     .def("df",
         [](py::object& introns) -> py::object {
         return majiq_pybind::XarrayDatasetFromObject(introns, "intron_idx",
@@ -562,7 +533,7 @@ void init_SJJunctions(pySJJunctions_t& pySJJunctions) {
   using majiq::position_t;
   using majiq::SJJunctions;
   using majiq_pybind::ArrayFromVectorAndOffset;
-  define_coordinates_properties(pySJJunctions);
+  define_coordinates_properties<SJ_JUNCTIONS_NC_GROUP>(pySJJunctions);
   pySJJunctions
     .def(py::init([](
             std::shared_ptr<majiq::Contigs> contigs,
@@ -858,7 +829,7 @@ void init_pyPassedJunctionsGen(pyPassedJunctionsGen_t& pyPassedJunctionsGen) {
 void init_pyPassedJunctions(pyPassedJunctions_t& pyPassedJunctions) {
   using majiq_pybind::ArrayFromVectorAndOffset;
   using majiq::PassedJunctions;
-  define_coordinates_properties(pyPassedJunctions);
+  define_coordinates_properties<PASSED_JUNCTIONS_NC_GROUP>(pyPassedJunctions);
   pyPassedJunctions
     .def_property_readonly("status",
         [](py::object& junctions_obj) -> py::array_t<unsigned char> {
