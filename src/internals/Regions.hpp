@@ -43,6 +43,7 @@ class Regions {
   // if there are overlaps we can know the max position seen so ends are
   // ordered too (NOTE: assumes sorted within parent by (start, end))
   const std::vector<position_t> elements_end_cummax_;
+  const vecT& data() { return elements_; }
 
  private:
   static std::vector<size_t> validate_and_parent_offsets(

@@ -28,6 +28,7 @@
 #include "internals/SJJunctions.hpp"
 #include "internals/SJJunctionsPositions.hpp"
 #include "internals/ContigIntrons.hpp"
+#include "internals/Meta.hpp"
 
 
 namespace py = pybind11;
@@ -41,6 +42,92 @@ using pyGeneJunctions_t = pyClassShared_t<majiq::GeneJunctions>;
 using pyContigIntrons_t = pyClassShared_t<majiq::ContigIntrons>;
 using pySJJunctions_t = pyClassShared_t<majiq::SJJunctions>;
 using pySJJunctionsPositions_t = pyClassShared_t<majiq::SJJunctionsPositions>;
+
+template <typename RegionsT,
+         typename RegionT = std::remove_const_t<std::remove_reference_t<
+          decltype(std::declval<RegionsT>().data()[0])>>>
+void define_coordinates_properties(pyClassShared_t<RegionsT>& pyRegions) {
+  using majiq::position_t;
+  using majiq_pybind::ArrayFromVectorAndOffset;
+  pyRegions
+    .def("__len__", &RegionsT::size)
+    .def_property_readonly("start",
+        [](py::object& regions_obj) -> py::array_t<position_t> {
+        RegionsT& regions = regions_obj.cast<RegionsT&>();
+        const size_t offset = offsetof(RegionT, coordinates.start);
+        return ArrayFromVectorAndOffset<position_t, RegionT>(
+            regions.data(), offset, regions_obj);
+        },
+        "array[int] of starts for each feature")
+    .def_property_readonly("end",
+        [](py::object& regions_obj) -> py::array_t<position_t> {
+        RegionsT& regions = regions_obj.cast<RegionsT&>();
+        const size_t offset = offsetof(RegionT, coordinates.end);
+        return ArrayFromVectorAndOffset<position_t, RegionT>(
+            regions.data(), offset, regions_obj);
+        },
+        "array[int] of ends for each feature");
+  if constexpr(majiq::detail::has_contig_field<RegionT>::value) {
+    pyRegions.def_property_readonly("contig_idx",
+        [](py::object& regions_obj) -> py::array_t<size_t> {
+        RegionsT& regions = regions_obj.cast<RegionsT&>();
+        const size_t offset = offsetof(RegionT, contig.idx_);
+        return ArrayFromVectorAndOffset<size_t, RegionT>(
+            regions.data(), offset, regions_obj);
+        },
+        "array[int] of indexes indicating contig feature belongs to");
+  }
+  if constexpr(majiq::detail::has_strand_field<RegionT>::value) {
+    pyRegions.def_property_readonly("strand",
+        [](py::object& regions_obj) -> py::array_t<std::array<char, 1>> {
+        RegionsT& regions = regions_obj.cast<RegionsT&>();
+        const size_t offset = offsetof(RegionT, strand);
+        return ArrayFromVectorAndOffset<std::array<char, 1>, RegionT>(
+            regions.data(), offset, regions_obj);
+        },
+        "array[char] of characters indicating strand of each feature");
+  }
+  if constexpr(majiq::detail::has_gene_field<RegionT>::value) {
+    pyRegions.def_property_readonly("gene_idx",
+        [](py::object& regions_obj) -> py::array_t<size_t> {
+        RegionsT& regions = regions_obj.cast<RegionsT&>();
+        const size_t offset = offsetof(RegionT, gene.idx_);
+        return ArrayFromVectorAndOffset<size_t, RegionT>(
+            regions.data(), offset, regions_obj);
+        },
+        "array[int] of indexes indicating gene feature belongs to");
+  }
+  if constexpr(
+      std::is_same_v<decltype(std::declval<RegionT>().data),
+                     majiq::detail::Connection>) {
+    pyRegions
+      .def_property_readonly("denovo",
+          [](py::object& regions_obj) -> py::array_t<bool> {
+          RegionsT& regions = regions_obj.cast<RegionsT&>();
+          const size_t offset = offsetof(RegionT, data.denovo);
+          return ArrayFromVectorAndOffset<bool, RegionT>(
+              regions.data(), offset, regions_obj);
+          },
+          "array[bool] indicating if connection was not found in annotations")
+      .def_property_readonly("passed_build",
+          [](py::object& regions_obj) -> py::array_t<bool> {
+          RegionsT& regions = regions_obj.cast<RegionsT&>();
+          const size_t offset = offsetof(RegionT, data.passed_build);
+          return ArrayFromVectorAndOffset<bool, RegionT>(
+              regions.data(), offset, regions_obj);
+          },
+          "array[bool] indicating if passed build criteria to be in LSV")
+      .def_property_readonly("simplified",
+          [](py::object& regions_obj) -> py::array_t<bool> {
+          RegionsT& regions = regions_obj.cast<RegionsT&>();
+          const size_t offset = offsetof(RegionT, data.simplified);
+          return ArrayFromVectorAndOffset<bool, RegionT>(
+              regions.data(), offset, regions_obj);
+          },
+          "array[bool] indicating if the connection is simplified");
+  }
+  return;
+}
 
 struct ConnectionsArrays {
   py::array_t<size_t> gene_idx;
@@ -156,6 +243,7 @@ void init_Genes(pyGenes_t& pyGenes) {
   using majiq::Genes;
   using majiq::position_t;
   using majiq::geneid_t;
+  define_coordinates_properties(pyGenes);
   pyGenes
     .def(
         py::init([](
@@ -216,38 +304,6 @@ void init_Genes(pyGenes_t& pyGenes) {
         },
         "Save contigs to netcdf file",
         py::arg("netcdf_path"), py::arg("mode"))
-    .def_property_readonly("strand",
-        [](py::object& genes_obj) -> py::array_t<std::array<char, 1>> {
-        Genes& genes = genes_obj.cast<Genes&>();
-        const size_t offset = offsetof(majiq::Gene, strand);
-        return ArrayFromVectorAndOffset<std::array<char, 1>, majiq::Gene>(
-            genes.data(), offset, genes_obj);
-        },
-        "array[char] of characters indicating strand of each gene")
-    .def_property_readonly("contig_idx",
-        [](py::object& genes_obj) -> py::array_t<size_t> {
-        Genes& genes = genes_obj.cast<Genes&>();
-        const size_t offset = offsetof(majiq::Gene, contig.idx_);
-        return ArrayFromVectorAndOffset<size_t, majiq::Gene>(
-            genes.data(), offset, genes_obj);
-        },
-        "array[int] of indexes indicating contig gene belongs to")
-    .def_property_readonly("start",
-        [](py::object& genes_obj) -> py::array_t<position_t> {
-        Genes& genes = genes_obj.cast<Genes&>();
-        const size_t offset = offsetof(majiq::Gene, coordinates.start);
-        return ArrayFromVectorAndOffset<position_t, majiq::Gene>(
-            genes.data(), offset, genes_obj);
-        },
-        "array[int] of gene starts matching gene_idx")
-    .def_property_readonly("end",
-        [](py::object& genes_obj) -> py::array_t<position_t> {
-        Genes& genes = genes_obj.cast<Genes&>();
-        const size_t offset = offsetof(majiq::Gene, coordinates.end);
-        return ArrayFromVectorAndOffset<position_t, majiq::Gene>(
-            genes.data(), offset, genes_obj);
-        },
-        "array[int] of gene ends matching gene_idx")
     .def_property_readonly("gene_id", &majiq::Genes::geneids,
         "Sequence[str] of gene ids in order matching gene_idx")
     .def_property_readonly("gene_name", &majiq::Genes::genenames,
@@ -264,7 +320,6 @@ void init_Genes(pyGenes_t& pyGenes) {
         oss << "Genes<" << self.size() << " total>";
         return oss.str();
         })
-    .def("__len__", &majiq::Genes::size)
     .def("__contains__",
         [](const Genes& self, geneid_t x) { return self.count(x) > 0; })
     .def("__getitem__",
@@ -276,6 +331,7 @@ void init_Exons(pyExons_t& pyExons) {
   using majiq::Exons;
   using majiq::position_t;
   using majiq_pybind::ArrayFromVectorAndOffset;
+  define_coordinates_properties(pyExons);
   pyExons
     .def(py::init([](
             std::shared_ptr<majiq::Genes> genes,
@@ -334,36 +390,12 @@ void init_Exons(pyExons_t& pyExons) {
         },
         "Save exons to netcdf file",
         py::arg("netcdf_path"), py::arg("mode"))
-    .def_property_readonly("gene_idx",
-        [](py::object& exons_obj) -> py::array_t<size_t> {
-        Exons& exons = exons_obj.cast<Exons&>();
-        const size_t offset = offsetof(majiq::Exon, gene.idx_);
-        return ArrayFromVectorAndOffset<size_t, majiq::Exon>(
-            exons.elements_, offset, exons_obj);
-        },
-        "array[int] of indexes indicating gene exon belongs to")
-    .def_property_readonly("start",
-        [](py::object& exons_obj) -> py::array_t<position_t> {
-        Exons& exons = exons_obj.cast<Exons&>();
-        const size_t offset = offsetof(majiq::Exon, coordinates.start);
-        return ArrayFromVectorAndOffset<position_t, majiq::Exon>(
-            exons.elements_, offset, exons_obj);
-        },
-        "array[int] of exon starts")
-    .def_property_readonly("end",
-        [](py::object& exons_obj) -> py::array_t<position_t> {
-        Exons& exons = exons_obj.cast<Exons&>();
-        const size_t offset = offsetof(majiq::Exon, coordinates.end);
-        return ArrayFromVectorAndOffset<position_t, majiq::Exon>(
-            exons.elements_, offset, exons_obj);
-        },
-        "array[int] of exon ends")
     .def_property_readonly("annotated_start",
         [](py::object& exons_obj) -> py::array_t<position_t> {
         Exons& exons = exons_obj.cast<Exons&>();
         const size_t offset = offsetof(majiq::Exon, data.start);
         return ArrayFromVectorAndOffset<position_t, majiq::Exon>(
-            exons.elements_, offset, exons_obj);
+            exons.data(), offset, exons_obj);
         },
         "array[int] of annotated exon starts")
     .def_property_readonly("annotated_end",
@@ -371,7 +403,7 @@ void init_Exons(pyExons_t& pyExons) {
         Exons& exons = exons_obj.cast<Exons&>();
         const size_t offset = offsetof(majiq::Exon, data.end);
         return ArrayFromVectorAndOffset<position_t, majiq::Exon>(
-            exons.elements_, offset, exons_obj);
+            exons.data(), offset, exons_obj);
         },
         "array[int] of annotated exon ends")
     .def("df",
@@ -384,14 +416,14 @@ void init_Exons(pyExons_t& pyExons) {
         std::ostringstream oss;
         oss << "Exons<" << self.size() << " total>";
         return oss.str();
-        })
-    .def("__len__", &Exons::size);
+        });
 }
 
 void init_GeneJunctions(pyGeneJunctions_t& pyGeneJunctions) {
   using majiq::GeneJunctions;
   using majiq::position_t;
   using majiq_pybind::ArrayFromVectorAndOffset;
+  define_coordinates_properties(pyGeneJunctions);
   pyGeneJunctions
     .def(py::init([](
             std::shared_ptr<majiq::Genes> genes,
@@ -424,54 +456,6 @@ void init_GeneJunctions(pyGeneJunctions_t& pyGeneJunctions) {
         },
         "Save junctions to netcdf file",
         py::arg("netcdf_path"), py::arg("mode"))
-    .def_property_readonly("gene_idx",
-        [](py::object& junctions_obj) -> py::array_t<size_t> {
-        GeneJunctions& junctions = junctions_obj.cast<GeneJunctions&>();
-        const size_t offset = offsetof(majiq::GeneJunction, gene.idx_);
-        return ArrayFromVectorAndOffset<size_t, majiq::GeneJunction>(
-            junctions.elements_, offset, junctions_obj);
-        },
-        "array[int] of indexes indicating gene junction belongs to")
-    .def_property_readonly("start",
-        [](py::object& junctions_obj) -> py::array_t<position_t> {
-        GeneJunctions& junctions = junctions_obj.cast<GeneJunctions&>();
-        const size_t offset = offsetof(majiq::GeneJunction, coordinates.start);
-        return ArrayFromVectorAndOffset<position_t, majiq::GeneJunction>(
-            junctions.elements_, offset, junctions_obj);
-        },
-        "array[int] of junction starts")
-    .def_property_readonly("end",
-        [](py::object& junctions_obj) -> py::array_t<position_t> {
-        GeneJunctions& junctions = junctions_obj.cast<GeneJunctions&>();
-        const size_t offset = offsetof(majiq::GeneJunction, coordinates.end);
-        return ArrayFromVectorAndOffset<position_t, majiq::GeneJunction>(
-            junctions.elements_, offset, junctions_obj);
-        },
-        "array[int] of junction ends")
-    .def_property_readonly("denovo",
-        [](py::object& junctions_obj) -> py::array_t<bool> {
-        GeneJunctions& junctions = junctions_obj.cast<GeneJunctions&>();
-        const size_t offset = offsetof(majiq::GeneJunction, data.denovo);
-        return ArrayFromVectorAndOffset<bool, majiq::GeneJunction>(
-            junctions.elements_, offset, junctions_obj);
-        },
-        "array[bool] indicating if connection was not found in annotations")
-    .def_property_readonly("passed_build",
-        [](py::object& junctions_obj) -> py::array_t<bool> {
-        GeneJunctions& junctions = junctions_obj.cast<GeneJunctions&>();
-        const size_t offset = offsetof(majiq::GeneJunction, data.passed_build);
-        return ArrayFromVectorAndOffset<bool, majiq::GeneJunction>(
-            junctions.elements_, offset, junctions_obj);
-        },
-        "array[bool] indicating if passed build criteria to be in LSV")
-    .def_property_readonly("simplified",
-        [](py::object& junctions_obj) -> py::array_t<bool> {
-        GeneJunctions& junctions = junctions_obj.cast<GeneJunctions&>();
-        const size_t offset = offsetof(majiq::GeneJunction, data.simplified);
-        return ArrayFromVectorAndOffset<bool, majiq::GeneJunction>(
-            junctions.elements_, offset, junctions_obj);
-        },
-        "array[bool] indicating if the connection is simplified")
     .def("df",
         [](py::object& junctions) -> py::object {
         return majiq_pybind::XarrayDatasetFromObject(junctions, "junction_idx",
@@ -483,8 +467,7 @@ void init_GeneJunctions(pyGeneJunctions_t& pyGeneJunctions) {
         std::ostringstream oss;
         oss << "GeneJunctions<" << self.size() << " total>";
         return oss.str();
-        })
-    .def("__len__", &GeneJunctions::size);
+        });
 }
 
 void init_ContigIntrons(pyContigIntrons_t& pyContigIntrons) {
@@ -492,45 +475,14 @@ void init_ContigIntrons(pyContigIntrons_t& pyContigIntrons) {
   using majiq::Contigs;
   using majiq::ContigIntrons;
   using majiq_pybind::ArrayFromVectorAndOffset;
+  define_coordinates_properties(pyContigIntrons);
   pyContigIntrons
-    .def_property_readonly("strand",
-        [](py::object& introns_obj) -> py::array_t<std::array<char, 1>> {
-        ContigIntrons& introns = introns_obj.cast<ContigIntrons&>();
-        const size_t offset = offsetof(majiq::ContigIntron, strand);
-        return ArrayFromVectorAndOffset<std::array<char, 1>, majiq::ContigIntron>(
-            introns.elements_, offset, introns_obj);
-        },
-        "array[char] of characters indicating strand of each intron")
-    .def_property_readonly("contig_idx",
-        [](py::object& introns_obj) -> py::array_t<size_t> {
-        ContigIntrons& introns = introns_obj.cast<ContigIntrons&>();
-        const size_t offset = offsetof(majiq::ContigIntron, contig.idx_);
-        return ArrayFromVectorAndOffset<size_t, majiq::ContigIntron>(
-            introns.elements_, offset, introns_obj);
-        },
-        "array[int] of indexes indicating contig intron belongs to")
-    .def_property_readonly("start",
-        [](py::object& introns_obj) -> py::array_t<position_t> {
-        ContigIntrons& introns = introns_obj.cast<ContigIntrons&>();
-        const size_t offset = offsetof(majiq::ContigIntron, coordinates.start);
-        return ArrayFromVectorAndOffset<position_t, majiq::ContigIntron>(
-            introns.elements_, offset, introns_obj);
-        },
-        "array[int] of intron starts matching intron_idx")
-    .def_property_readonly("end",
-        [](py::object& introns_obj) -> py::array_t<position_t> {
-        ContigIntrons& introns = introns_obj.cast<ContigIntrons&>();
-        const size_t offset = offsetof(majiq::ContigIntron, coordinates.end);
-        return ArrayFromVectorAndOffset<position_t, majiq::ContigIntron>(
-            introns.elements_, offset, introns_obj);
-        },
-        "array[int] of intron ends matching intron_idx")
     .def_property_readonly("annotated",
         [](py::object& introns_obj) -> py::array_t<bool> {
         ContigIntrons& introns = introns_obj.cast<ContigIntrons&>();
         const size_t offset = offsetof(majiq::ContigIntron, data.annotated_);
         return ArrayFromVectorAndOffset<bool, majiq::ContigIntron>(
-            introns.elements_, offset, introns_obj);
+            introns.data(), offset, introns_obj);
         },
         "array[bool] indicating if intron is annotated (exon in annotation)")
     .def("df",
@@ -544,14 +496,14 @@ void init_ContigIntrons(pyContigIntrons_t& pyContigIntrons) {
         std::ostringstream oss;
         oss << "ContigIntrons<" << self.size() << " total>";
         return oss.str();
-        })
-    .def("__len__", &majiq::ContigIntrons::size);
+        });
 }
 
 void init_Introns(pyIntrons_t& pyIntrons) {
   using majiq::Introns;
   using majiq::position_t;
   using majiq_pybind::ArrayFromVectorAndOffset;
+  define_coordinates_properties(pyIntrons);
   pyIntrons
     .def(py::init([](
             std::shared_ptr<majiq::Genes> genes,
@@ -584,54 +536,6 @@ void init_Introns(pyIntrons_t& pyIntrons) {
         },
         "Save introns to netcdf file",
         py::arg("netcdf_path"), py::arg("mode"))
-    .def_property_readonly("gene_idx",
-        [](py::object& introns_obj) -> py::array_t<size_t> {
-        Introns& introns = introns_obj.cast<Introns&>();
-        const size_t offset = offsetof(majiq::Intron, gene.idx_);
-        return ArrayFromVectorAndOffset<size_t, majiq::Intron>(
-            introns.elements_, offset, introns_obj);
-        },
-        "array[int] of indexes indicating gene intron belongs to")
-    .def_property_readonly("start",
-        [](py::object& introns_obj) -> py::array_t<position_t> {
-        Introns& introns = introns_obj.cast<Introns&>();
-        const size_t offset = offsetof(majiq::Intron, coordinates.start);
-        return ArrayFromVectorAndOffset<position_t, majiq::Intron>(
-            introns.elements_, offset, introns_obj);
-        },
-        "array[int] of intron starts")
-    .def_property_readonly("end",
-        [](py::object& introns_obj) -> py::array_t<position_t> {
-        Introns& introns = introns_obj.cast<Introns&>();
-        const size_t offset = offsetof(majiq::Intron, coordinates.end);
-        return ArrayFromVectorAndOffset<position_t, majiq::Intron>(
-            introns.elements_, offset, introns_obj);
-        },
-        "array[int] of intron ends")
-    .def_property_readonly("denovo",
-        [](py::object& introns_obj) -> py::array_t<bool> {
-        Introns& introns = introns_obj.cast<Introns&>();
-        const size_t offset = offsetof(majiq::Intron, data.denovo);
-        return ArrayFromVectorAndOffset<bool, majiq::Intron>(
-            introns.elements_, offset, introns_obj);
-        },
-        "array[bool] indicating if connection was not found in annotations")
-    .def_property_readonly("passed_build",
-        [](py::object& introns_obj) -> py::array_t<bool> {
-        Introns& introns = introns_obj.cast<Introns&>();
-        const size_t offset = offsetof(majiq::Intron, data.passed_build);
-        return ArrayFromVectorAndOffset<bool, majiq::Intron>(
-            introns.elements_, offset, introns_obj);
-        },
-        "array[bool] indicating if passed build criteria to be in LSV")
-    .def_property_readonly("simplified",
-        [](py::object& introns_obj) -> py::array_t<bool> {
-        Introns& introns = introns_obj.cast<Introns&>();
-        const size_t offset = offsetof(majiq::Intron, data.simplified);
-        return ArrayFromVectorAndOffset<bool, majiq::Intron>(
-            introns.elements_, offset, introns_obj);
-        },
-        "array[bool] indicating if the connection is simplified")
     .def("df",
         [](py::object& introns) -> py::object {
         return majiq_pybind::XarrayDatasetFromObject(introns, "intron_idx",
@@ -643,14 +547,14 @@ void init_Introns(pyIntrons_t& pyIntrons) {
         std::ostringstream oss;
         oss << "Introns<" << self.size() << " total>";
         return oss.str();
-        })
-    .def("__len__", &Introns::size);
+        });
 }
 
 void init_SJJunctions(pySJJunctions_t& pySJJunctions) {
   using majiq::position_t;
   using majiq::SJJunctions;
   using majiq_pybind::ArrayFromVectorAndOffset;
+  define_coordinates_properties(pySJJunctions);
   pySJJunctions
     .def(py::init([](
             std::shared_ptr<majiq::Contigs> contigs,
@@ -711,44 +615,12 @@ void init_SJJunctions(pySJJunctions_t& pySJJunctions) {
     .def_property_readonly("contigs",
         [](py::object& self) { return self.attr("_contigs").attr("df")(); },
         "View underlying contigs as xarray Dataset")
-    .def_property_readonly("contig_idx",
-        [](py::object& sj_obj) -> py::array_t<size_t> {
-        SJJunctions& sj = sj_obj.cast<SJJunctions&>();
-        const size_t offset = offsetof(majiq::SJJunction, contig.idx_);
-        return ArrayFromVectorAndOffset<size_t, majiq::SJJunction>(
-            sj.elements_, offset, sj_obj);
-        },
-        "array[int] of indexes indicating contig junction belongs to")
-    .def_property_readonly("start",
-        [](py::object& sj_obj) -> py::array_t<position_t> {
-        SJJunctions& sj = sj_obj.cast<SJJunctions&>();
-        const size_t offset = offsetof(majiq::SJJunction, coordinates.start);
-        return ArrayFromVectorAndOffset<position_t, majiq::SJJunction>(
-            sj.elements_, offset, sj_obj);
-        },
-        "array[int] for junction start")
-    .def_property_readonly("end",
-        [](py::object& sj_obj) -> py::array_t<position_t> {
-        SJJunctions& sj = sj_obj.cast<SJJunctions&>();
-        const size_t offset = offsetof(majiq::SJJunction, coordinates.end);
-        return ArrayFromVectorAndOffset<position_t, majiq::SJJunction>(
-            sj.elements_, offset, sj_obj);
-        },
-        "array[int] for junction end")
-    .def_property_readonly("strand",
-        [](py::object& sj_obj) -> py::array_t<std::array<char, 1>> {
-        SJJunctions& sj = sj_obj.cast<SJJunctions&>();
-        const size_t offset = offsetof(majiq::SJJunction, strand);
-        return ArrayFromVectorAndOffset<std::array<char, 1>, majiq::SJJunction>(
-            sj.elements_, offset, sj_obj);
-        },
-        "array[char] for junction strand")
     .def_property_readonly("numreads",
         [](py::object& sj_obj) -> py::array_t<majiq::junction_ct_t> {
         SJJunctions& sj = sj_obj.cast<SJJunctions&>();
         const size_t offset = offsetof(majiq::SJJunction, data.numreads);
         return ArrayFromVectorAndOffset<majiq::junction_ct_t, majiq::SJJunction>(
-            sj.elements_, offset, sj_obj);
+            sj.data(), offset, sj_obj);
         },
         "array[int] for total number of reads")
     .def_property_readonly("numpos",
@@ -756,10 +628,9 @@ void init_SJJunctions(pySJJunctions_t& pySJJunctions) {
         SJJunctions& sj = sj_obj.cast<SJJunctions&>();
         const size_t offset = offsetof(majiq::SJJunction, data.numpos);
         return ArrayFromVectorAndOffset<majiq::junction_pos_t, majiq::SJJunction>(
-            sj.elements_, offset, sj_obj);
+            sj.data(), offset, sj_obj);
         },
         "array[int] for total number of nonzero positions")
-    .def("__len__", &SJJunctions::size, "Number of junctions")
     .def("df",
         [](py::object& sj) -> py::object {
         using majiq_pybind::XarrayDatasetFromObject;
