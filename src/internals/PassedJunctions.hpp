@@ -259,6 +259,8 @@ class PassedJunctionsGenerator {
         return s + x.size();
         });
   }
+  // TODO(jaicher) add operator+= for PassedJunctions, PassedJunctionsGenerator
+  // TODO(jaicher) implement FromPassedJunctions using operator+
   PassedJunctions ToPassedJunctions() const {
     // initialize passed junctions
     std::vector<PassedJunction> result_vec(size());
