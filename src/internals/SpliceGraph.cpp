@@ -9,6 +9,7 @@
 #include "SpliceGraph.hpp"
 
 #include <vector>
+#include <set>
 #include <utility>
 #include <algorithm>
 
@@ -44,26 +45,25 @@ void GeneInferExons(
   // reduce to inferring exons on using splice sites, but making special note
   // of annotated exons
   enum class SpliceT : unsigned char {
-    JUNCTION_END,
-    ANN_EXON_START,
+    ANN_EXON_START = 0,
+    JUNCTION_END = 1,
     // we will ignore any junctions between start/end of annotated exons
-    ANN_EXON_END,
-    JUNCTION_START
+    JUNCTION_START = 2,
+    ANN_EXON_END = 3
   };
   using ss_t = std::pair<position_t, SpliceT>;
   // get sorted list of splicesites to work with
-  std::vector<ss_t> sites;
+  std::set<ss_t> sites;
   for (auto jit = junctions_begin; jit != junctions_end; ++jit) {
-    sites.emplace_back(jit->coordinates.start, SpliceT::JUNCTION_START);
-    sites.emplace_back(jit->coordinates.end, SpliceT::JUNCTION_END);
+    sites.emplace(jit->coordinates.start, SpliceT::JUNCTION_START);
+    sites.emplace(jit->coordinates.end, SpliceT::JUNCTION_END);
   }
   for (auto eit = exons_begin; eit != exons_end; ++eit) {
     // only use full annotated exons
     if (eit->is_denovo() || !eit->is_full_exon()) { continue; }
-    sites.emplace_back(eit->coordinates.start, SpliceT::ANN_EXON_START);
-    sites.emplace_back(eit->coordinates.end, SpliceT::ANN_EXON_END);
+    sites.emplace(eit->coordinates.start, SpliceT::ANN_EXON_START);
+    sites.emplace(eit->coordinates.end, SpliceT::ANN_EXON_END);
   }
-  std::sort(sites.begin(), sites.end());
 
   // iterate over sites to build our result
   // define state: potential half-acceptors/extension, current exon.
