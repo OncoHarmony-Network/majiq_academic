@@ -945,6 +945,10 @@ void init_SpliceGraph(py::class_<majiq::SpliceGraph>& pySpliceGraph) {
             Path for resulting file. Raises error if file already exists.
         )pbdoc",
         py::arg("output_path"))
+    // XXX debug
+    .def_static("infer_exons", &SpliceGraph::InferExons,
+        "Infer exons from base annotated exons and junctions",
+        py::arg("base_exons"), py::arg("junctions"))
     // access underlying data
     .def_property_readonly("_exons", &SpliceGraph::exons,
         "Access the splicegraph's exons")

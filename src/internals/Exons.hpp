@@ -55,6 +55,9 @@ struct Exon : detail::GeneRegion<ClosedInterval, ClosedInterval> {
   inline bool is_denovo() const noexcept {
     return annotated_coordinates().is_invalid();
   }
+  inline bool is_full_exon() const noexcept {
+    return coordinates.is_full_interval();
+  }
   inline bool is_half_exon() const noexcept {
     return coordinates.is_half_interval();
   }
