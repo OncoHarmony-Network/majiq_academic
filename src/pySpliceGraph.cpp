@@ -949,6 +949,12 @@ void init_SpliceGraph(py::class_<majiq::SpliceGraph>& pySpliceGraph) {
     .def_static("infer_exons", &SpliceGraph::InferExons,
         "Infer exons from base annotated exons and junctions",
         py::arg("base_exons"), py::arg("junctions"))
+    .def_static("assign_junctions", &SpliceGraph::AssignPassedJunctions,
+        "Updated gene junctions using passed junctions",
+        py::arg("base_junctions"),
+        py::arg("exons"),
+        py::arg("passed_junctions"),
+        py::arg("add_denovo") = DEFAULT_BUILD_DENOVO_JUNCTIONS)
     // access underlying data
     .def_property_readonly("_exons", &SpliceGraph::exons,
         "Access the splicegraph's exons")
