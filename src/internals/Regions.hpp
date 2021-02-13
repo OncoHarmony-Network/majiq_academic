@@ -152,8 +152,7 @@ class Regions {
           end_parent(parent.idx_),
           coordinate,
           [](const RegionT& region, const position_t& x) {
-          return region.coordinates.last_pos() < x;
-          });
+          return x < region.coordinates.last_pos(); });
     }
   }
   const_iterator overlap_upper_bound(
@@ -163,9 +162,8 @@ class Regions {
         // index into elements that share parent
         begin_parent(parent.idx_), end_parent(parent.idx_),
         coordinate,
-        [](const RegionT& region, const position_t& x) {
-        return region.coordinates.first_pos() < x;
-        });
+        [](const position_t& x, const RegionT& region) {
+        return x < region.coordinates.first_pos(); });
   }
 
   explicit Regions(vecT&& x)
