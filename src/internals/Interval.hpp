@@ -145,22 +145,10 @@ inline bool IntervalIntersects(
 }
 
 // subset/superset of intervals when they are the same type
-template <class IntervalT>
-inline bool IntervalSubsets(const IntervalT& sub, const IntervalT& sup) {
+template <class T1, class T2>
+inline bool IntervalSubsets(const T1& sub, const T2& sup) {
   return sub.is_full_interval() && sup.is_full_interval()
     && sup.start <= sub.start && sub.end <= sup.end;
-}
-inline bool IntervalSubsets(
-    const OpenInterval& sub, const ClosedInterval& sup) {
-  return sub.is_full_interval() && sup.is_full_interval()
-    // adjust for open interval
-    && sup.start <= sub.start + 1 && sub.end - 1 <= sup.end;
-}
-inline bool IntervalSubsets(
-    const ClosedInterval& sub, const OpenInterval& sup) {
-  return sub.is_full_interval() && sup.is_full_interval()
-    // adjust for open interval
-    && sup.start + 1 <= sub.start && sub.end <= sup.end - 1;
 }
 
 // how to print intervals
