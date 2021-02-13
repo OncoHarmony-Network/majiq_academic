@@ -68,6 +68,23 @@ inline bool operator==(
   return std::tie(x.contig, x.coordinates, x.strand)
     == std::tie(y.contig, y.coordinates, y.strand);
 }
+// will have types (i.e. GeneRegion) that expose contig() and strand() instead
+template <typename T, typename D, typename U,
+         std::enable_if_t<
+         detail::has_contig_function<U>::value
+         && detail::has_strand_function<U>::value, bool> = true>
+inline bool operator==(const ContigRegion<T, D>& x, const U& y) noexcept {
+  return std::tie(x.contig, x.coordinates, x.strand)
+    == std::tie(y.contig(), y.coordinates, y.strand());
+}
+template <typename T, typename D, typename U,
+         std::enable_if_t<
+         detail::has_contig_function<U>::value
+         && detail::has_strand_function<U>::value, bool> = true>
+inline bool operator==(const U& x, const ContigRegion<T, D>& y) noexcept {
+  return std::tie(x.contig(), x.coordinates, x.strand())
+    == std::tie(y.contig, y.coordinates, y.strand);
+}
 
 // order regions by genomic position and strand, ignoring data
 template <typename T1, typename T2, typename D1, typename D2>
@@ -80,22 +97,44 @@ inline bool operator<(
 template <typename T, typename D, typename U,
          std::enable_if_t<
          detail::has_contig_function<U>::value
-         && detail::has_strand_function<U>::value> = true>
+         && detail::has_strand_function<U>::value, bool> = true>
 inline bool operator<(const ContigRegion<T, D>& x, const U& y) noexcept {
   return std::tie(x.contig, x.coordinates, x.strand)
     < std::tie(y.contig(), y.coordinates, y.strand());
 }
-template <typename U, typename T, typename D,
+template <typename T, typename D, typename U,
          std::enable_if_t<
          detail::has_contig_function<U>::value
-         && detail::has_strand_function<U>::value> = true>
+         && detail::has_strand_function<U>::value, bool> = true>
 inline bool operator<(const U& x, const ContigRegion<T, D>& y) noexcept {
   return std::tie(x.contig(), x.coordinates, x.strand())
     < std::tie(y.contig, y.coordinates, y.strand);
 }
 
+template <typename T, typename U = T,
+         std::enable_if_t<
+           detail::has_contig_function<T>::value
+           && detail::has_contig_function<U>::value
+           && detail::has_strand_function<T>::value
+           && detail::has_strand_function<U>::value, bool
+         > = true>
+struct CompareContigStranded {
+  inline bool operator()(const T& x, const U& y) noexcept {
+    return std::tie(x.contig(), x.coordinates, x.strand())
+      < std::tie(y.contig(), y.coordinates, y.strand());
+  }
+  template <typename IT, typename DT>
+  inline bool operator()(const T& x, const ContigRegion<IT, DT>& y) {
+    return x < y;
+  }
+  template <typename IT, typename DT>
+  inline bool operator()(const ContigRegion<IT, DT>& x, const T& y) {
+    return x < y;
+  }
+};
+
 // unstranded comparison with contig-coordinates
-template <typename T, typename U>
+template <typename T, typename U = T>
 struct CompareContigUnstranded {
   inline bool operator()(const T& x, const U& y) noexcept {
     constexpr bool T_field = detail::has_contig_field<T>::value;
