@@ -98,6 +98,12 @@ class PassedJunction : public detail::ContigRegion<OpenInterval, BuildPassed> {
  public:
   const JunctionPassedStatus& status() const noexcept { return data.status_; }
   JunctionPassedStatus& status() noexcept { return data.status_; }
+  bool passed_build() const noexcept {
+    return status() != JunctionPassedStatus::NOT_PASSED;
+  }
+  bool passed_denovo() const noexcept {
+    return status() == JunctionPassedStatus::DENOVO_PASSED;
+  }
   PassedJunction(KnownContig contig, OpenInterval coordinates,
       GeneStrandness strand, BuildPassed status)
       : BaseT{contig, coordinates, strand, status} { }
