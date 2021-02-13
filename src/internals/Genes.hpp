@@ -44,6 +44,8 @@ class Genes
   KnownGene end();
   OverGene overgene_begin();
   OverGene overgene_end();
+  // access contigs that are parent to this
+  std::shared_ptr<Contigs> contigs() const { return features_.parents(); }
   // access vector<string> objects
   const std::vector<geneid_t> geneids() const {
     std::vector<geneid_t> result{size()};
