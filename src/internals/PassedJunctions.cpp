@@ -21,20 +21,24 @@ inline bool CloseToPrecedingAnnotatedExon(
     const Exons& exons, const KnownGene& gene, position_t x) {
   // get first exon past x
   auto it = exons.overlap_upper_bound(gene, x);
-  --it;  // first exon behind that (overlaps or behind)
-  // keep going backwards until full exon, too far away, or different gene
-  for (; it != exons.begin(); --it) {
-    if (it->gene != gene
-        || (it->is_full_exon() && !(it->is_denovo()))
-        || (it->annotated_coordinates().last_pos()
-          < x - MAX_DENOVO_DIFFERENCE)) {
-      break;
+  if (it == exons.begin()) { return false; }  // no exon overlapping or behind
+  do {
+    --it;  // decrement to exons behind x (or maybe overlapping first time)
+    if (it->gene != gene) {
+      // got to next gene, so no exon
+      return false;
+    } else if (it->coordinates.last_pos() + MAX_DENOVO_DIFFERENCE < x) {
+      // we are too far away now
+      return false;
+    } else if (it->is_full_exon()
+        && !(it->is_denovo())
+        && it->annotated_coordinates().start <= x
+        && x <= it->annotated_coordinates().end + MAX_DENOVO_DIFFERENCE) {
+      // we have a close enough annotated exon!
+      return true;
     }
-  }
-  return (it->gene == gene
-      && (it->is_full_exon() && !(it->is_denovo()))
-      && x >= it->annotated_coordinates().start
-      && x <= it->annotated_coordinates().end + MAX_DENOVO_DIFFERENCE);
+  } while (it != exons.begin());
+  return false;
 }
 inline bool CloseToFollowingAnnotatedExon(
     const Exons& exons, const KnownGene& gene, position_t x) {
@@ -42,18 +46,21 @@ inline bool CloseToFollowingAnnotatedExon(
   auto it = exons.overlap_lower_bound(gene, x);
   // keep going forwards until full exon, too far away, or different gene
   for (; it != exons.end(); ++it) {
-    if (it->gene != gene
-        || (it->is_full_exon() && !(it->is_denovo()))
-        || (it->annotated_coordinates().first_pos()
-          > x + MAX_DENOVO_DIFFERENCE)) {
-      break;
+    if (it->gene != gene) {
+      // got to next gene, so no exon
+      return false;
+    } else if (it->coordinates.first_pos() - MAX_DENOVO_DIFFERENCE > x) {
+      // we are too far away now
+      return false;
+    } else if (it->is_full_exon()
+        && !(it->is_denovo())
+        && it->annotated_coordinates().start - MAX_DENOVO_DIFFERENCE <= x
+        && x <= it->annotated_coordinates().end) {
+      // we have a close enough annotated exon!
+      return true;
     }
   }
-  return (it != exons.end()
-      && it->gene == gene
-      && (it->is_full_exon() && !(it->is_denovo()))
-      && x >= it->annotated_coordinates().start - MAX_DENOVO_DIFFERENCE
-      && x <= it->annotated_coordinates().end);
+  return false;  // no more exons for any gene
 }
 
 /**
