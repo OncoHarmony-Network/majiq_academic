@@ -104,7 +104,7 @@ class KnownGene : public detail::KnownFeature<Genes, KnownGene> {
         // new contig
         || contig() != (*this - 1).contig()
         // coordinates past previous max
-        || coordinates().start > (*this - 1).coordinates().end);
+        || coordinates().start > (*this - 1).position_cummax());
   }
   KnownGene NextOverGeneStart() const {
     if (ptr_ == nullptr) { return *this; }

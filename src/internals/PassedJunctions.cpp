@@ -76,11 +76,13 @@ void AssignDenovoJunction(const SJJunction& junction, const KnownGene& first,
 
   // check all of the overgenes
   for (KnownGene gene = first; gene != last; ++gene) {
-    if ((junction.strand != GeneStrandness::AMBIGUOUS
-          && junction.strand != gene.strand())
-        || !IntervalSubsets(junction.coordinates, gene.coordinates())) {
-      // we assume that contig matches (when selecting overgene)
-      // but junction incompatible with individual genes on coordinates, strand
+    // if strand doesn't match, ignore
+    if (!(junction.strand == GeneStrandness::AMBIGUOUS
+          || junction.strand == gene.strand())) {
+      continue;
+    }
+    // if junction cannot be placed inside of gene, ignore
+    if (!IntervalSubsets(junction.coordinates, gene.coordinates())) {
       continue;
     }
     // count how many of start/end are close to exon
@@ -154,9 +156,9 @@ void GroupJunctionsGenerator::AddExperiment(
       std::for_each(og.first(), og.last(),
           [&known_found, this, &junction, &status](const KnownGene& gene) {
           auto key = GeneJunction{gene, junction.coordinates};
-          auto match = this->known_->find(
+          auto match = known_->find(
               GeneJunction{gene, junction.coordinates});
-          if (match != this->known_->end()
+          if (match != known_->end()
               // it's conceivable that we know denovo junctions, so if denovo,
               // we have to check that it passed denovo filters
               && (!match->denovo()
