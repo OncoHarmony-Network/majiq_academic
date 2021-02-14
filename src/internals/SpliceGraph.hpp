@@ -32,8 +32,6 @@ class SpliceGraph {
   std::shared_ptr<Introns> introns_;
 
  public:
-  // how far can an individual denovo junction extend an exon?
-  static constexpr position_t MAX_DENOVO_DIFFERENCE = 400;
   // access non const pointers for use by pybind11 interface...
   std::shared_ptr<Contigs> contigs() { return contigs_; }
   std::shared_ptr<Genes> genes() { return genes_; }
@@ -71,12 +69,6 @@ class SpliceGraph {
   SpliceGraph(SpliceGraph&& sg) = default;
   SpliceGraph& operator=(const SpliceGraph& sg) = default;
   SpliceGraph& operator=(SpliceGraph&& sg) = default;
-
-  static GeneJunctions AssignPassedJunctions(
-      const GeneJunctions& source,
-      const Exons& exons,
-      const PassedJunctions& passed,
-      bool add_denovo);
 
   static Exons InferExons(const Exons& source, const GeneJunctions& junctions);
 

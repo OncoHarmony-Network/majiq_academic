@@ -56,6 +56,11 @@ inline bool operator==(
     const GeneRegion<T1, D1>& x, const GeneRegion<T2, D2>& y) noexcept {
   return std::tie(x.gene, x.coordinates) == std::tie(y.gene, y.coordinates);
 }
+template <typename T1, typename T2, typename D1, typename D2>
+inline bool operator!=(
+    const GeneRegion<T1, D1>& x, const GeneRegion<T2, D2>& y) noexcept {
+  return !(x == y);
+}
 
 // order regions by gene, then coordinates
 template <typename T1, typename T2, typename D1, typename D2>

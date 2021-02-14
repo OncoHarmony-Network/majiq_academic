@@ -42,6 +42,10 @@ class Genes
   KnownGene operator[](size_t idx);
   KnownGene begin();
   KnownGene end();
+  KnownGene begin_contig(size_t idx);
+  KnownGene end_contig(size_t idx);
+  KnownGene begin_contig(const KnownContig& contig);
+  KnownGene end_contig(const KnownContig& contig);
   OverGene overgene_begin();
   OverGene overgene_end();
   // access contigs that are parent to this
@@ -131,6 +135,16 @@ inline KnownGene Genes::operator[](size_t idx) {
 }
 inline KnownGene Genes::begin() { return operator[](0); }
 inline KnownGene Genes::end() { return operator[](size()); }
+inline KnownGene Genes::begin_contig(size_t idx) {
+  return operator[](features_.parent_idx_offsets_[idx]);
+}
+inline KnownGene Genes::end_contig(size_t idx) { return begin_contig(1 + idx); }
+inline KnownGene Genes::begin_contig(const KnownContig& contig) {
+  return begin_contig(contig.idx_);
+}
+inline KnownGene Genes::end_contig(const KnownContig& contig) {
+  return end_contig(contig.idx_);
+}
 
 // define overgenes
 struct OverGeneData {

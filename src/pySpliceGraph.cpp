@@ -45,7 +45,6 @@ using pySJJunctions_t = pyClassShared_t<majiq::SJJunctions>;
 using pySJJunctionsPositions_t = pyClassShared_t<majiq::SJJunctionsPositions>;
 using pyGroupJunctionsGen_t = pyClassShared_t<majiq::GroupJunctionsGenerator>;
 using pyPassedJunctionsGen_t = pyClassShared_t<majiq::PassedJunctionsGenerator>;
-using pyPassedJunctions_t = pyClassShared_t<majiq::PassedJunctions>;
 
 template <const char* REGIONS_NC_GROUP,
          typename RegionsT,
@@ -789,62 +788,55 @@ void init_SJJunctionsPositions(pySJJunctionsPositions_t& pySJJunctionsPositions)
 void init_pyGroupJunctionsGen(pyGroupJunctionsGen_t& pyGroupJunctionsGen) {
   pyGroupJunctionsGen
     .def(
-      py::init<const std::shared_ptr<majiq::Contigs>&,
-      majiq::junction_ct_t, majiq::junction_ct_t, majiq::junction_pos_t>(),
-      R"pbdoc(
-      Accumulator of SJJunctions in the same build group.
-
-      Accumulator of SJJunctions in the same build group. Tracks the number of
-      experiments passing per-experiment thresholds for use in creating
-      PassedJunctions.
-      )pbdoc",
-      py::arg("contigs"),
-      py::arg("minreads") = DEFAULT_BUILD_MINREADS,
-      py::arg("mindenovo") = DEFAULT_BUILD_MINDENOVO,
-      py::arg("minpos") = DEFAULT_BUILD_MINPOS)
+      py::init<const std::shared_ptr<majiq::GeneJunctions>&,
+      const std::shared_ptr<majiq::Exons>&>(),
+      "Accumulate SJJunctions for build group for input junctions/exons",
+      py::arg("junctions"),
+      py::arg("exons"))
     .def("add_experiment", &majiq::GroupJunctionsGenerator::AddExperiment,
         "Increment count of passed junctions from input experiment",
-        py::arg("sj"))
+        py::arg("sj"),
+        py::arg("minreads") = DEFAULT_BUILD_MINREADS,
+        py::arg("mindenovo") = DEFAULT_BUILD_MINDENOVO,
+        py::arg("minpos") = DEFAULT_BUILD_MINPOS,
+        py::arg("add_denovo") = DEFAULT_BUILD_DENOVO_JUNCTIONS)
+    .def("pass_known_inplace",
+        &majiq::GroupJunctionsGenerator::UpdateKnownInplace,
+        "Update known junctions with their build status (ignore denovos)",
+        py::arg("min_experiments") = DEFAULT_BUILD_MINEXPERIMENTS)
+    .def_property_readonly("num_experiments",
+        &majiq::GroupJunctionsGenerator::num_experiments,
+        "Number of experiments that have been added to this group")
+    .def_property_readonly("num_known",
+        &majiq::GroupJunctionsGenerator::num_annotated,
+        "Number of junctions known when constructed")
+    .def_property_readonly("num_denovo",
+        &majiq::GroupJunctionsGenerator::num_denovo,
+        "Number of denovo junctions passing experiment-filters for 1+ inputs")
     .def("__len__", &majiq::GroupJunctionsGenerator::size);
 }
 
 void init_pyPassedJunctionsGen(pyPassedJunctionsGen_t& pyPassedJunctionsGen) {
   pyPassedJunctionsGen
     .def(
-      py::init<const std::shared_ptr<majiq::Contigs>&>(),
+      py::init<const std::shared_ptr<majiq::GeneJunctions>&>(),
       R"pbdoc(
       Accumulator of GroupJunctionsGenerator for different build groups
-
       )pbdoc",
-      py::arg("contigs"))
+      py::arg("junctions"))
     .def("add_group", &majiq::PassedJunctionsGenerator::AddGroup,
         "Combine passed junctions from build group of experiments",
         py::arg("group"),
         py::arg("min_experiments") = DEFAULT_BUILD_MINEXPERIMENTS)
-    .def("to_passed", &majiq::PassedJunctionsGenerator::ToPassedJunctions,
+    .def("get_passed", &majiq::PassedJunctionsGenerator::PassedJunctions,
         "Get static, array-based representation of passed junctions")
+    .def_property_readonly("num_known",
+        &majiq::PassedJunctionsGenerator::num_annotated,
+        "Number of junctions known when constructed")
+    .def_property_readonly("num_denovo",
+        &majiq::PassedJunctionsGenerator::num_denovo,
+        "Number of denovo junctions passing filters, previously not known")
     .def("__len__", &majiq::PassedJunctionsGenerator::size);
-}
-
-void init_pyPassedJunctions(pyPassedJunctions_t& pyPassedJunctions) {
-  using majiq_pybind::ArrayFromVectorAndOffset;
-  using majiq::PassedJunctions;
-  define_coordinates_properties<PASSED_JUNCTIONS_NC_GROUP>(pyPassedJunctions);
-  pyPassedJunctions
-    .def_property_readonly("status",
-        [](py::object& junctions_obj) -> py::array_t<unsigned char> {
-        PassedJunctions& junctions = junctions_obj.cast<PassedJunctions&>();
-        const size_t offset = offsetof(majiq::PassedJunction, data.status_);
-        return ArrayFromVectorAndOffset<unsigned char, majiq::PassedJunction>(
-            junctions.data(), offset, junctions_obj);
-        },
-        "array[unsigned char] for passed status (representation of enum)")
-    .def("df",
-        [](py::object& passed) -> py::object {
-        return majiq_pybind::XarrayDatasetFromObject(passed, "jidx",
-            {"contig_idx", "start", "end", "strand", "status"});
-        },
-        "View on passed junction information as xarray Dataset");
 }
 
 void init_SpliceGraph(py::class_<majiq::SpliceGraph>& pySpliceGraph) {
@@ -949,12 +941,14 @@ void init_SpliceGraph(py::class_<majiq::SpliceGraph>& pySpliceGraph) {
     .def_static("infer_exons", &SpliceGraph::InferExons,
         "Infer exons from base annotated exons and junctions",
         py::arg("base_exons"), py::arg("junctions"))
-    .def_static("assign_junctions", &SpliceGraph::AssignPassedJunctions,
-        "Updated gene junctions using passed junctions",
-        py::arg("base_junctions"),
-        py::arg("exons"),
-        py::arg("passed_junctions"),
-        py::arg("add_denovo") = DEFAULT_BUILD_DENOVO_JUNCTIONS)
+    .def("make_group_junctions", [](SpliceGraph& sg) {
+        return majiq::GroupJunctionsGenerator(sg.junctions(), sg.exons());
+        },
+        "Create GroupJunctionsGenerator for the splicegraph junctions/exons")
+    .def("make_build_junctions", [](SpliceGraph& sg) {
+        return majiq::PassedJunctionsGenerator(sg.junctions());
+        },
+        "Create PassedJunctionsGenerator for splicegraph junctions")
     // access underlying data
     .def_property_readonly("_exons", &SpliceGraph::exons,
         "Access the splicegraph's exons")
@@ -1029,9 +1023,6 @@ void init_SpliceGraphAll(py::module_& m) {
   auto pyPassedJunctionsGen = pyPassedJunctionsGen_t(
       m, "PassedJunctionsGenerator",
       "Accumulator of GroupJunctionsGenerator from multiple build groups");
-  auto pyPassedJunctions = pyPassedJunctions_t(
-      m, "PassedJunctions",
-      "Junctions that have passed all input build groups and experiments");
   auto pyGeneStrandness = py::enum_<GeneStrandness>(
       m, "GeneStrandness")
     .value("forward", GeneStrandness::FORWARD)
@@ -1108,5 +1099,4 @@ void init_SpliceGraphAll(py::module_& m) {
   init_ContigIntrons(pyContigIntrons);
   init_pyGroupJunctionsGen(pyGroupJunctionsGen);
   init_pyPassedJunctionsGen(pyPassedJunctionsGen);
-  init_pyPassedJunctions(pyPassedJunctions);
 }
