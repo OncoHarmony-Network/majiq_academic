@@ -12,56 +12,9 @@
 #include <set>
 #include <algorithm>
 
-#include "MajiqConstants.hpp"
-
 
 namespace majiq {
 
-inline bool CloseToPrecedingAnnotatedExon(
-    const Exons& exons, const KnownGene& gene, position_t x) {
-  // get first exon past x
-  auto it = exons.overlap_upper_bound(gene, x);
-  if (it == exons.begin()) { return false; }  // no exon overlapping or behind
-  do {
-    --it;  // decrement to exons behind x (or maybe overlapping first time)
-    if (it->gene != gene) {
-      // got to next gene, so no exon
-      return false;
-    } else if (it->coordinates.last_pos() + MAX_DENOVO_DIFFERENCE < x) {
-      // we are too far away now
-      return false;
-    } else if (it->is_full_exon()
-        && !(it->is_denovo())
-        && it->annotated_coordinates().start <= x
-        && x <= it->annotated_coordinates().end + MAX_DENOVO_DIFFERENCE) {
-      // we have a close enough annotated exon!
-      return true;
-    }
-  } while (it != exons.begin());
-  return false;
-}
-inline bool CloseToFollowingAnnotatedExon(
-    const Exons& exons, const KnownGene& gene, position_t x) {
-  // get first exon overlapping or past x
-  auto it = exons.overlap_lower_bound(gene, x);
-  // keep going forwards until full exon, too far away, or different gene
-  for (; it != exons.end(); ++it) {
-    if (it->gene != gene) {
-      // got to next gene, so no exon
-      return false;
-    } else if (it->coordinates.first_pos() - MAX_DENOVO_DIFFERENCE > x) {
-      // we are too far away now
-      return false;
-    } else if (it->is_full_exon()
-        && !(it->is_denovo())
-        && it->annotated_coordinates().start - MAX_DENOVO_DIFFERENCE <= x
-        && x <= it->annotated_coordinates().end) {
-      // we have a close enough annotated exon!
-      return true;
-    }
-  }
-  return false;  // no more exons for any gene
-}
 
 /**
  * Assign denovo junction junction to potential matched genes in range [first,
@@ -94,11 +47,11 @@ void AssignDenovoJunction(const SJJunction& junction, const KnownGene& first,
     }
     // count how many of start/end are close to exon
     int n_close = 0;  // how many of start/end close to an exon?
-    if (CloseToPrecedingAnnotatedExon(
+    if (detail::CloseToPrecedingAnnotatedExon(
           exons, gene, junction.coordinates.start)) {
       ++n_close;
     }
-    if (CloseToFollowingAnnotatedExon(
+    if (detail::CloseToFollowingAnnotatedExon(
           exons, gene, junction.coordinates.end)) {
       ++n_close;
     }

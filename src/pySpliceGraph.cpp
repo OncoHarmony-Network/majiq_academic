@@ -46,13 +46,33 @@ using pySJJunctionsPositions_t = pyClassShared_t<majiq::SJJunctionsPositions>;
 using pyGroupJunctionsGen_t = pyClassShared_t<majiq::GroupJunctionsGenerator>;
 using pyPassedJunctionsGen_t = pyClassShared_t<majiq::PassedJunctionsGenerator>;
 
+template <typename T>
+using base_t = std::remove_cv_t<std::remove_reference_t<T>>;
+
 template <const char* REGIONS_NC_GROUP,
          typename RegionsT,
-         typename RegionT = std::remove_const_t<std::remove_reference_t<
-          decltype(std::declval<RegionsT>().data()[0])>>>
+         typename RegionT
+           = base_t<decltype(std::declval<RegionsT>().data()[0])>,
+         typename ParentT = base_t<decltype(std::declval<RegionT>().parent())>,
+         typename IntervalT = decltype(std::declval<RegionT>().coordinates)>
 void define_coordinates_properties(pyClassShared_t<RegionsT>& pyRegions) {
   using majiq::position_t;
   using majiq_pybind::ArrayFromVectorAndOffset;
+  using majiq_pybind::ArrayFromOffsetsVector;
+  if constexpr(std::is_same_v<ParentT, majiq::KnownGene>) {
+    pyRegions
+      .def("find",
+          [](const RegionsT& self,
+            size_t gene_idx, position_t start, position_t end) {
+          auto it = self.find(
+              RegionT{(*self.parents_)[gene_idx], IntervalT{start, end}});
+          return it == self.end() ? -1 : it - self.begin();
+          },
+          "Get index for specified region (or -1 if it doesn't exist)",
+          py::arg("gene_idx"),
+          py::arg("start"),
+          py::arg("end"));
+  }
   pyRegions
     .def("to_netcdf",
         [](py::object& self, py::str out, py::str mode) {
@@ -65,6 +85,20 @@ void define_coordinates_properties(pyClassShared_t<RegionsT>& pyRegions) {
         "Save to netcdf file",
         py::arg("netcdf_path"), py::arg("mode"))
     .def("__len__", &RegionsT::size)
+    .def_property_readonly("_parent_idx_start",
+        [](py::object& regions_obj) {
+        RegionsT& regions = regions_obj.cast<RegionsT&>();
+        return ArrayFromOffsetsVector<size_t>(
+            regions.parent_idx_offsets(), true, regions_obj);
+        },
+        "First index into regions corresponding to associated parent")
+    .def_property_readonly("_parent_idx_start",
+        [](py::object& regions_obj) {
+        RegionsT& regions = regions_obj.cast<RegionsT&>();
+        return ArrayFromOffsetsVector<size_t>(
+            regions.parent_idx_offsets(), false, regions_obj);
+        },
+        "One after last index into regions corresponding to associated parent")
     .def_property_readonly("start",
         [](py::object& regions_obj) -> py::array_t<position_t> {
         RegionsT& regions = regions_obj.cast<RegionsT&>();
@@ -320,6 +354,15 @@ void init_Genes(pyGenes_t& pyGenes) {
             {"contig_idx", "start", "end", "strand", "gene_id", "gene_name"});
         },
         "View on gene information as xarray Dataset")
+    .def("overgene_subset", [](majiq::Genes& self, size_t gene_idx) {
+        auto og = majiq::OverGene{self[gene_idx]};
+        const auto it = self.data().begin();
+        std::vector<majiq::Gene> result_vec(
+            it + og.first().idx_, it + og.last().idx_);
+        return std::make_shared<majiq::Genes>(std::move(result_vec));
+        },
+        "Get Genes OverGene subset for selected gene",
+        py::arg("gene_idx"))
     .def("__repr__", [](const majiq::Genes& self) -> std::string {
         std::ostringstream oss;
         oss << "Genes<" << self.size() << " total>";
@@ -841,6 +884,7 @@ void init_pyPassedJunctionsGen(pyPassedJunctionsGen_t& pyPassedJunctionsGen) {
 
 void init_SpliceGraph(py::class_<majiq::SpliceGraph>& pySpliceGraph) {
   using majiq::SpliceGraph;
+  using majiq::position_t;
   pySpliceGraph
     // expose constructor from individual components
     .def(py::init<const std::shared_ptr<majiq::Contigs>&,
@@ -949,6 +993,18 @@ void init_SpliceGraph(py::class_<majiq::SpliceGraph>& pySpliceGraph) {
         return majiq::PassedJunctionsGenerator(sg.junctions());
         },
         "Create PassedJunctionsGenerator for splicegraph junctions")
+    .def("close_to_annotated_exon",
+        [](SpliceGraph& sg, size_t gene_idx, position_t x, bool to_following) {
+        majiq::KnownGene g = (*sg.genes())[gene_idx];
+        const majiq::Exons& exons = *sg.exons();
+        return to_following
+          ? majiq::detail::CloseToFollowingAnnotatedExon(exons, g, x)
+          : majiq::detail::CloseToPrecedingAnnotatedExon(exons, g, x);
+        },
+        "True if position close to following/preceding annotated exon in gene",
+        py::arg("gene_idx"),
+        py::arg("x"),
+        py::arg("to_following") = true)
     // access underlying data
     .def_property_readonly("_exons", &SpliceGraph::exons,
         "Access the splicegraph's exons")
