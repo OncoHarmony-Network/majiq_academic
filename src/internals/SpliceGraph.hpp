@@ -79,6 +79,15 @@ class SpliceGraph {
     return PassedJunctionsGenerator(junctions_);
   }
 
+  SpliceGraph BuildJunctionExons(const PassedJunctionsGenerator& passed) {
+    auto updated_junctions
+      = std::make_shared<GeneJunctions>(passed.PassedJunctions());
+    auto updated_exons
+      = std::make_shared<Exons>(InferExons(*exons_, *updated_junctions));
+    return SpliceGraph{
+      contigs_, genes_, updated_exons, updated_junctions, introns_};
+  }
+
   // to be declared later
   friend inline bool operator==(
       const SpliceGraph& x, const SpliceGraph& y) noexcept;

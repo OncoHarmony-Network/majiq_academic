@@ -989,6 +989,9 @@ void init_SpliceGraph(py::class_<majiq::SpliceGraph>& pySpliceGraph) {
         "Create GroupJunctionsGenerator for the splicegraph junctions/exons")
     .def("make_build_junctions", &SpliceGraph::MakePassedGenerator,
         "Create PassedJunctionsGenerator for splicegraph junctions")
+    .def("build_junctions", &SpliceGraph::BuildJunctionExons,
+        "New splicegraph with updated junctions/exons using build junctions",
+        py::arg("build_junctions"))
     .def("close_to_annotated_exon",
         [](SpliceGraph& sg, size_t gene_idx, position_t x, bool to_following) {
         majiq::KnownGene g = (*sg.genes())[gene_idx];
