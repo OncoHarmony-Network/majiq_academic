@@ -72,6 +72,13 @@ class SpliceGraph {
 
   static Exons InferExons(const Exons& source, const GeneJunctions& junctions);
 
+  GroupJunctionsGenerator MakeGroupGenerator() {
+    return GroupJunctionsGenerator(junctions_, exons_);
+  }
+  PassedJunctionsGenerator MakePassedGenerator() {
+    return PassedJunctionsGenerator(junctions_);
+  }
+
   // to be declared later
   friend inline bool operator==(
       const SpliceGraph& x, const SpliceGraph& y) noexcept;

@@ -985,13 +985,9 @@ void init_SpliceGraph(py::class_<majiq::SpliceGraph>& pySpliceGraph) {
     .def_static("infer_exons", &SpliceGraph::InferExons,
         "Infer exons from base annotated exons and junctions",
         py::arg("base_exons"), py::arg("junctions"))
-    .def("make_group_junctions", [](SpliceGraph& sg) {
-        return majiq::GroupJunctionsGenerator(sg.junctions(), sg.exons());
-        },
+    .def("make_group_junctions", &SpliceGraph::MakeGroupGenerator,
         "Create GroupJunctionsGenerator for the splicegraph junctions/exons")
-    .def("make_build_junctions", [](SpliceGraph& sg) {
-        return majiq::PassedJunctionsGenerator(sg.junctions());
-        },
+    .def("make_build_junctions", &SpliceGraph::MakePassedGenerator,
         "Create PassedJunctionsGenerator for splicegraph junctions")
     .def("close_to_annotated_exon",
         [](SpliceGraph& sg, size_t gene_idx, position_t x, bool to_following) {
