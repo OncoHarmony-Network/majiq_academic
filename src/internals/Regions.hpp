@@ -54,7 +54,7 @@ class Regions {
     // parent offsets are 0 if no parents
     if (parents == nullptr) { return {0}; }
     // otherwise, we at least know the length of the result
-    std::vector<size_t> result(parents->size());
+    std::vector<size_t> result(1 + parents->size());
     // loop through elements, noting when we have a new parent
     // also, validate that it is sorted
     size_t cur_parent_idx = 0;
