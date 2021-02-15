@@ -65,6 +65,9 @@ class Genes
   }
   // view into genes object for pybind11
   const std::vector<Gene>& data() { return features_.data(); }
+  const std::vector<size_t>& parent_idx_offsets() {
+    return features_.parent_idx_offsets();
+  }
   const std::vector<position_t>& position_cummax() {
     return features_.elements_end_cummax_;
   }

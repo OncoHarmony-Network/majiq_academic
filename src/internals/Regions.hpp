@@ -44,6 +44,9 @@ class Regions {
   // ordered too (NOTE: assumes sorted within parent by (start, end))
   const std::vector<position_t> elements_end_cummax_;
   const vecT& data() { return elements_; }
+  const std::vector<size_t>& parent_idx_offsets() {
+    return parent_idx_offsets_;
+  }
 
  private:
   static std::vector<size_t> validate_and_parent_offsets(
