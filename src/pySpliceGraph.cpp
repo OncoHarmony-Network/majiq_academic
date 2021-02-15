@@ -92,7 +92,7 @@ void define_coordinates_properties(pyClassShared_t<RegionsT>& pyRegions) {
             regions.parent_idx_offsets(), true, regions_obj);
         },
         "First index into regions corresponding to associated parent")
-    .def_property_readonly("_parent_idx_start",
+    .def_property_readonly("_parent_idx_end",
         [](py::object& regions_obj) {
         RegionsT& regions = regions_obj.cast<RegionsT&>();
         return ArrayFromOffsetsVector<size_t>(
