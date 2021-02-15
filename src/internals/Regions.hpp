@@ -155,7 +155,7 @@ class Regions {
           end_parent(parent.idx_),
           coordinate,
           [](const RegionT& region, const position_t& x) {
-          return x < region.coordinates.last_pos(); });
+          return region.coordinates.last_pos() < x; });
     }
   }
   const_iterator overlap_upper_bound(
