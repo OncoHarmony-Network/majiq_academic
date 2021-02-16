@@ -37,7 +37,7 @@ class CigarRegions : public CigarBase {
 
   struct Region {
     ClosedInterval coordinates_;
-    position_t position_;
+    position_t position_;  // alignment offset
     RegionType type_;
 
     Region() : coordinates_{}, position_{-1}, type_{RegionType::END} { }
@@ -65,6 +65,7 @@ class CigarRegions : public CigarBase {
     const CigarRegions& parent_;
     uint32_t idx_;
     value_type region_;
+    uint32_t prev_dposition_;  // previous change in alignment offset
 
     // apply next cigar operation (increment_idx = 0 used for first index)
     template <uint32_t increment_idx>
@@ -78,13 +79,21 @@ class CigarRegions : public CigarBase {
       }
       const char cigar_op = bam_cigar_op(parent_.cigar_[idx_]);
       const char cigar_type = bam_cigar_type(cigar_op);
-      const uint32_t cigar_oplen = bam_cigar_oplen(parent_.cigar_[idx_]);
-      if (region_.type_ == RegionType::ON_GENOME) {
-        region_.position_ += region_.coordinates_.length();
+      if (cigar_type == 0) {
+        // does not advance either reference/query so we can just ignore
+        apply_next_op<1>();
+        return;
       }
+      const uint32_t cigar_oplen = bam_cigar_oplen(parent_.cigar_[idx_]);
+      // update position, next change in position
+      region_.position_ += prev_dposition_;
+      prev_dposition_
+        = cigar_type & detail::CIGAR_CONSUMES_QUERY ? cigar_oplen : 0;
+      // update coordinates
       region_.coordinates_ = ClosedInterval::FromStartLength(
           1 + region_.coordinates_.end,
           cigar_type & detail::CIGAR_CONSUMES_REFERENCE ? cigar_oplen : 0);
+      // update type for region
       region_.type_
         = cigar_type == detail::CIGAR_CONSUMES_REFERENCE
           ? (cigar_op == BAM_CREF_SKIP
@@ -97,7 +106,8 @@ class CigarRegions : public CigarBase {
     Iterator(const CigarRegions& parent, bool begin)
         : parent_{parent},
           idx_{begin ? 0 : parent_.n_cigar_},
-          region_{begin ? Region{1 + parent_.genomic_pos_} : Region{}} {
+          region_{begin ? Region{1 + parent_.genomic_pos_} : Region{}},
+          prev_dposition_{0} {
       apply_next_op<0>();
     }
     const reference operator*() noexcept {

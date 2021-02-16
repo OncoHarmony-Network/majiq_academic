@@ -36,7 +36,8 @@ std::pair<int32_t, int32_t> adjust_cigar_soft_clipping(
  * Acquires relevant information after removing contribution from clipping
  */
 class CigarBase {
- protected:
+ // protected:
+ public:
   // mapping position (genome/target) at start of alignment
   const position_t genomic_pos_;
   // read length ~ left-clipping + alignment + right-clipping

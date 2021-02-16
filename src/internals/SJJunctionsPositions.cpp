@@ -102,8 +102,11 @@ SJJunctionsPositions SJJunctionsPositions::FromBam(
       // only process if unique/mapped
       if (!aln.unique_mapped()) { continue; }
       // parse junctions from uniquely mapped alignments
-      for (const auto& region : aln.cigar_regions()) {
-        if (region.position_ > aln.read_length() - USE_MIN_OVERHANG) {
+      bam::CigarRegions aln_regions = aln.cigar_regions();
+      for (auto it = aln_regions.begin(); it != aln_regions.end(); ++it) {
+        const auto& region = *it;
+        if (region.position_
+            > aln_regions.alignment_length_ - USE_MIN_OVERHANG) {
           break;
         } else if (region.position_ >= USE_MIN_OVERHANG
             && (region.type_
@@ -115,7 +118,9 @@ SJJunctionsPositions SJJunctionsPositions::FromBam(
           // increment num_junctions if we haven't seen it before
           if (junction_counts.empty()) { ++num_junctions; }
           // increment position, and num_junction_positions if new
-          if (1 == ++junction_counts[region.position_ - USE_MIN_OVERHANG]) {
+          auto use_pos = region.position_
+            + aln_regions.clipping_lengths_.first - USE_MIN_OVERHANG;
+          if (1 == ++junction_counts[use_pos]) {
             ++num_junction_positions;
           }
         }
