@@ -19,6 +19,7 @@
 #include "SJJunctions.hpp"
 #include "bam/Alignments.hpp"
 #include "bam/CigarJunctions.hpp"
+#include "bam/CigarRegions.hpp"
 
 
 namespace majiq {
@@ -101,24 +102,23 @@ SJJunctionsPositions SJJunctionsPositions::FromBam(
       // only process if unique/mapped
       if (!aln.unique_mapped()) { continue; }
       // parse junctions from uniquely mapped alignments
-      // process cigar for junctions
-      auto junctions = aln.cigar_junctions<USE_MIN_OVERHANG>();
-      auto cur_junc = junctions.begin();
-      // only process if there are any valid junctions (given overhang)
-      if (cur_junc == junctions.end()) { continue; }
-      // at least one junction
-      auto& contig_counts = counts[aln.tid()];  // index into contig
-      GeneStrandness strand = aln.strandness(exp_strandness);
-      // add each junction in this alignment
-      for (; cur_junc != junctions.end(); ++cur_junc) {
-        auto& [coordinates, position] = *cur_junc;
-        // counts for junction
-        auto& junction_counts = contig_counts[
-          std::make_pair(coordinates, strand)];
-        // increment num_junctions if we haven't seen it before
-        if (junction_counts.empty()) { ++num_junctions; }
-        // increment position, and num_junction_positions if new
-        if (1 == ++junction_counts[position]) { ++num_junction_positions; }
+      for (const auto& region : aln.cigar_regions()) {
+        if (region.position_ > aln.read_length() - USE_MIN_OVERHANG) {
+          break;
+        } else if (region.position_ >= USE_MIN_OVERHANG
+            && (region.type_
+              == bam::CigarRegions::RegionType::OFF_GENOME_JUNCTION)) {
+          // counts for this junction
+          auto& junction_counts
+            = counts[aln.tid()][std::make_pair(
+                region.coordinates_.AsOpen(), aln.strandness(exp_strandness))];
+          // increment num_junctions if we haven't seen it before
+          if (junction_counts.empty()) { ++num_junctions; }
+          // increment position, and num_junction_positions if new
+          if (1 == ++junction_counts[region.position_ - USE_MIN_OVERHANG]) {
+            ++num_junction_positions;
+          }
+        }
       }  // added each junction
     }  // while successfully loading next read
     if (r < -1) {

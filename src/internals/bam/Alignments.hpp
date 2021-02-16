@@ -14,6 +14,7 @@
 #include <stdexcept>
 // #include "CigarIntrons.hpp"
 #include "CigarJunctions.hpp"
+#include "CigarRegions.hpp"
 #include "../MajiqTypes.hpp"
 
 namespace majiq {
@@ -73,6 +74,14 @@ class AlignmentRecord {
     return CigarJunctions<min_overhang>(
         pos(), read_length(), bam_get_cigar(b_), b_->core.n_cigar);
   }
+  /**
+   * Information about aligned/skipped regions from CIGAR string
+   */
+  CigarRegions cigar_regions() const {
+    return CigarRegions(
+        pos(), read_length(), bam_get_cigar(b_), b_->core.n_cigar);
+  }
+
   // /**
   //  * information about introns from cigar array
   //  */
