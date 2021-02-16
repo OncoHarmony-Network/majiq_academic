@@ -78,6 +78,8 @@ inline bool operator!=(const Interval& x, const Interval& y) noexcept {
 }
 }  // namespace detail
 
+struct OpenInterval;
+struct ClosedInterval;
 
 /**
  * Closed intervals
@@ -103,6 +105,10 @@ struct ClosedInterval : public detail::Interval {
   ClosedInterval(ClosedInterval&&) = default;
   ClosedInterval& operator=(const ClosedInterval&) = default;
   ClosedInterval& operator=(ClosedInterval&&) = default;
+  static ClosedInterval FromStartLength(position_t start, position_t length) {
+    return ClosedInterval{start, start + length - 1};
+  }
+  OpenInterval AsOpen() const;
 };
 
 /**
@@ -129,7 +135,20 @@ struct OpenInterval : public detail::Interval {
   OpenInterval(OpenInterval&&) = default;
   OpenInterval& operator=(const OpenInterval&) = default;
   OpenInterval& operator=(OpenInterval&&) = default;
+  static OpenInterval FromStartLength(position_t start, position_t length) {
+    return OpenInterval{start, start + length + 1};
+  }
+  ClosedInterval AsClosed() const;
 };
+
+inline ClosedInterval OpenInterval::AsClosed() const {
+  return is_full_interval()
+    ? ClosedInterval{start + 1, end - 1} : ClosedInterval{start, end};
+}
+inline OpenInterval ClosedInterval::AsOpen() const {
+  return is_full_interval()
+    ? OpenInterval{start - 1, end + 1} : OpenInterval{start, end};
+}
 
 // intersection of intervals
 template <class I1, class I2>
