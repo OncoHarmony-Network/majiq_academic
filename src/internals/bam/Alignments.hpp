@@ -12,8 +12,6 @@
 #include <htslib/thread_pool.h>
 #include <sstream>
 #include <stdexcept>
-// #include "CigarIntrons.hpp"
-#include "CigarJunctions.hpp"
 #include "CigarRegions.hpp"
 #include "../MajiqTypes.hpp"
 
@@ -67,29 +65,12 @@ class AlignmentRecord {
   }
 
   /**
-   * information about junctions from cigar array
-   */
-  template <uint32_t min_overhang>
-  CigarJunctions<min_overhang> cigar_junctions() const {
-    return CigarJunctions<min_overhang>(
-        pos(), read_length(), bam_get_cigar(b_), b_->core.n_cigar);
-  }
-  /**
    * Information about aligned/skipped regions from CIGAR string
    */
   CigarRegions cigar_regions() const {
     return CigarRegions(
         pos(), read_length(), bam_get_cigar(b_), b_->core.n_cigar);
   }
-
-  // /**
-  //  * information about introns from cigar array
-  //  */
-  // template <uint32_t min_overhang>
-  // CigarIntrons<min_overhang> cigar_introns() const {
-  //   return CigarIntrons<min_overhang>(
-  //       pos(), read_length(), bam_get_cigar(b_), b_->core.n_cigar);
-  // }
 
   /**
    * given experimental protocol, was it +/- strand?

@@ -18,7 +18,6 @@
 
 #include "SJJunctions.hpp"
 #include "bam/Alignments.hpp"
-#include "bam/CigarJunctions.hpp"
 #include "bam/CigarRegions.hpp"
 
 
