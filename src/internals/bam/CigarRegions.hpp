@@ -170,13 +170,14 @@ class CigarRegions {
           prev_dposition_{0} {
       apply_next_op<0>();
     }
-    const reference operator*() noexcept {
-      return region_;
-    }
     Iterator& operator++() {
       apply_next_op<1>();
       return *this;
     }
+
+    const reference operator*() noexcept { return region_; }
+    pointer operator->() noexcept { return &region_; }
+
     bool operator==(const Iterator& rhs) const {
       return idx_ == rhs.idx_;
     }

@@ -14,6 +14,7 @@
 #include <stdexcept>
 
 #include "SJJunctions.hpp"
+#include "ContigIntrons.hpp"
 #include "MajiqConstants.hpp"
 
 
@@ -90,6 +91,56 @@ class SJJunctionsPositions {
   SJJunctionsPositions(SJJunctionsPositions&& x) = default;
   SJJunctionsPositions& operator=(const SJJunctionsPositions& x) = delete;
   SJJunctionsPositions& operator=(SJJunctionsPositions&& x) = delete;
+};
+
+class SJIntronsBins {
+ private:
+  const ContigIntrons introns_;
+  const std::vector<PositionReads> reads_;
+  const std::vector<size_t> offsets_;
+  const junction_pos_t num_bins_;
+
+  void check_valid() const;  // raise error if defined inconsistently
+
+ public:
+  static SJIntronsBins FromBam(
+      const char* infile, ExperimentStrandness exp_strandness,
+      const Exons& exons, const Introns& gene_introns,
+      const junction_pos_t num_bins, int nthreads);
+
+  size_t num_introns() const noexcept { return introns_.size(); }
+  size_t size() const noexcept { return reads_.size(); }
+  junction_pos_t num_bins() const noexcept { return num_bins_; }
+  const ContigIntrons& introns() { return introns_; }
+  const std::vector<PositionReads>& reads() { return reads_; }
+  const std::vector<size_t>& offsets() { return offsets_; }
+
+  SJIntronsBins(
+      const ContigIntrons& introns,
+      const std::vector<PositionReads>& reads,
+      const std::vector<size_t>& offsets,
+      junction_pos_t num_bins)
+      : introns_{introns},
+        reads_{reads},
+        offsets_{offsets},
+        num_bins_{num_bins} {
+    check_valid();
+  }
+  SJIntronsBins(
+      ContigIntrons&& introns,
+      std::vector<PositionReads>&& reads,
+      std::vector<size_t>&& offsets,
+      junction_pos_t num_bins)
+      : introns_{introns},
+        reads_{reads},
+        offsets_{offsets},
+        num_bins_{num_bins} {
+    check_valid();
+  }
+  SJIntronsBins(const SJIntronsBins&) = default;
+  SJIntronsBins(SJIntronsBins&&) = default;
+  SJIntronsBins& operator=(const SJIntronsBins&) = delete;
+  SJIntronsBins& operator=(SJIntronsBins&&) = delete;
 };
 
 }  // namespace majiq
