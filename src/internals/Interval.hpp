@@ -12,6 +12,7 @@
 #include <stdexcept>
 #include <iostream>
 #include <functional>
+#include <algorithm>
 #include <boost/functional/hash.hpp>
 
 #include "MajiqTypes.hpp"
@@ -160,7 +161,14 @@ template <>  // explicit override for closed vs closed
 inline bool IntervalIntersects(
     const ClosedInterval& x, const ClosedInterval& y) {
   return !(x.is_invalid() || y.is_invalid())
-    && x.first_pos() <= y.last_pos() && y.first_pos() <= x.last_pos();
+    && x.first_pos() <= std::max(y.start, y.end)
+    && y.first_pos() <= std::max(x.start, y.end);
+}
+
+inline bool IntervalPrecedes(const ClosedInterval& before,
+    const ClosedInterval& after) {
+  return before.is_full_interval() && after.is_full_interval()
+    && std::max(before.start, before.end) < after.start;
 }
 
 // subset/superset of intervals when they are the same type
