@@ -14,6 +14,7 @@
 #include <stdexcept>
 
 #include "SJJunctions.hpp"
+#include "MajiqConstants.hpp"
 
 
 namespace majiq {
@@ -32,10 +33,7 @@ class SJJunctionsPositions {
   std::shared_ptr<SJJunctions> junctions_;
   std::vector<PositionReads> reads_;
   std::vector<size_t> offsets_;
-  junction_pos_t num_positions_;
-
-  // used by FromBam
-  static constexpr uint32_t USE_MIN_OVERHANG = 8;
+  const junction_pos_t num_positions_;
 
   // check that input values together are valid
   static bool is_valid(
@@ -90,8 +88,8 @@ class SJJunctionsPositions {
   }
   SJJunctionsPositions(const SJJunctionsPositions& x) = default;
   SJJunctionsPositions(SJJunctionsPositions&& x) = default;
-  SJJunctionsPositions& operator=(const SJJunctionsPositions& x) = default;
-  SJJunctionsPositions& operator=(SJJunctionsPositions&& x) = default;
+  SJJunctionsPositions& operator=(const SJJunctionsPositions& x) = delete;
+  SJJunctionsPositions& operator=(SJJunctionsPositions&& x) = delete;
 };
 
 }  // namespace majiq
