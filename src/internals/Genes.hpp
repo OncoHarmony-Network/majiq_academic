@@ -160,7 +160,7 @@ struct OverGeneData {
     return genes_ptr() != nullptr && first_.idx_ < genes_ptr()->size();
   }
   const KnownContig contig() const {
-    return valid() ? KnownContig{} : first_.contig();
+    return valid() ? first_.contig() : KnownContig{};
   }
   const ClosedInterval coordinates() const {
     return valid()
