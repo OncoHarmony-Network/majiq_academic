@@ -18,7 +18,7 @@
 #include "Genes.hpp"
 #include "GeneJunctions.hpp"
 #include "Exons.hpp"
-#include "Introns.hpp"
+#include "GeneIntrons.hpp"
 #include "PassedJunctions.hpp"
 
 
@@ -29,7 +29,7 @@ class SpliceGraph {
   std::shared_ptr<Genes> genes_;
   std::shared_ptr<Exons> exons_;
   std::shared_ptr<GeneJunctions> junctions_;
-  std::shared_ptr<Introns> introns_;
+  std::shared_ptr<GeneIntrons> introns_;
 
  public:
   // access non const pointers for use by pybind11 interface...
@@ -40,7 +40,7 @@ class SpliceGraph {
 
   std::shared_ptr<GeneJunctions> junctions() { return junctions_; }
 
-  std::shared_ptr<Introns> introns() { return introns_; }
+  std::shared_ptr<GeneIntrons> introns() { return introns_; }
 
   // constructors
   SpliceGraph(
@@ -48,7 +48,7 @@ class SpliceGraph {
       const std::shared_ptr<Genes>& genes,
       const std::shared_ptr<Exons>& exons,
       const std::shared_ptr<GeneJunctions>& junctions,
-      const std::shared_ptr<Introns>& introns)
+      const std::shared_ptr<GeneIntrons>& introns)
       : contigs_{contigs},
         genes_{genes},
         exons_{exons},
@@ -59,7 +59,7 @@ class SpliceGraph {
       std::shared_ptr<Genes>&& genes,
       std::shared_ptr<Exons>&& exons,
       std::shared_ptr<GeneJunctions>&& junctions,
-      std::shared_ptr<Introns>&& introns)
+      std::shared_ptr<GeneIntrons>&& introns)
       : contigs_{contigs},
         genes_{genes},
         exons_{exons},

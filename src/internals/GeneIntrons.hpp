@@ -1,12 +1,12 @@
 /**
- * Introns.hpp
+ * GeneIntrons.hpp
  *
- * Introns for splicegraph
+ * Gene introns for splicegraph
  *
  * Copyright 2020 <University of Pennsylvania>
  */
-#ifndef MAJIQ_INTRONS_HPP
-#define MAJIQ_INTRONS_HPP
+#ifndef MAJIQ_GENEINTRONS_HPP
+#define MAJIQ_GENEINTRONS_HPP
 
 #include <tuple>
 #include <functional>
@@ -22,7 +22,7 @@
 
 
 namespace majiq {
-struct Intron : public detail::GeneRegion<ClosedInterval, detail::Connection> {
+struct GeneIntron : public detail::GeneRegion<ClosedInterval, detail::Connection> {
  public:
   using BaseT = detail::GeneRegion<ClosedInterval, detail::Connection>;
   // access data nicely
@@ -34,40 +34,40 @@ struct Intron : public detail::GeneRegion<ClosedInterval, detail::Connection> {
   bool& simplified() noexcept { return data.simplified; }
 
   // constructors
-  Intron(KnownGene gene, ClosedInterval coordinates,
+  GeneIntron(KnownGene gene, ClosedInterval coordinates,
       bool denovo, bool passed_build, bool simplified)
       : BaseT{gene, coordinates,
         detail::Connection{denovo, passed_build, simplified}} {
   }
-  Intron(KnownGene gene, ClosedInterval coordinates)
-      : Intron{gene, coordinates, false, false, false} {
+  GeneIntron(KnownGene gene, ClosedInterval coordinates)
+      : GeneIntron{gene, coordinates, false, false, false} {
   }
-  Intron() : Intron{KnownGene{}, ClosedInterval{}} { }
-  Intron(const Intron& x) = default;
-  Intron(Intron&& x) = default;
-  Intron& operator=(const Intron& x) = default;
-  Intron& operator=(Intron&& x) = default;
+  GeneIntron() : GeneIntron{KnownGene{}, ClosedInterval{}} { }
+  GeneIntron(const GeneIntron& x) = default;
+  GeneIntron(GeneIntron&& x) = default;
+  GeneIntron& operator=(const GeneIntron& x) = default;
+  GeneIntron& operator=(GeneIntron&& x) = default;
 };
 
 // override boost hashing
-inline std::size_t hash_value(const Intron& x) noexcept {
+inline std::size_t hash_value(const GeneIntron& x) noexcept {
   std::size_t result = hash_value(x.gene);
   boost::hash_combine(result, x.coordinates);
   return result;
 }
 }  // namespace majiq
-// specialize std::hash for Intron
+// specialize std::hash for GeneIntron
 namespace std {
-template <> struct hash<majiq::Intron> {
-  std::size_t operator()(const majiq::Intron& x) const noexcept {
+template <> struct hash<majiq::GeneIntron> {
+  std::size_t operator()(const majiq::GeneIntron& x) const noexcept {
     return majiq::hash_value(x);
   }
 };
 }  // namespace std
 
 namespace majiq {
-using Introns = detail::Regions<Intron, false>;
+using GeneIntrons = detail::Regions<GeneIntron, false>;
 
 }  // namespace majiq
 
-#endif  // MAJIQ_INTRONS_HPP
+#endif  // MAJIQ_GENEINTRONS_HPP

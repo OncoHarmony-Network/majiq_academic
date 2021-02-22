@@ -14,6 +14,8 @@
 #include <stdexcept>
 
 #include "SJJunctions.hpp"
+#include "Exons.hpp"
+#include "GeneIntrons.hpp"
 #include "ContigIntrons.hpp"
 #include "MajiqConstants.hpp"
 
@@ -105,7 +107,7 @@ class SJIntronsBins {
  public:
   static SJIntronsBins FromBam(
       const char* infile, const junction_pos_t num_bins, const Exons& exons,
-      const Introns& gene_introns, ExperimentStrandness exp_strandness,
+      const GeneIntrons& gene_introns, ExperimentStrandness exp_strandness,
       int nthreads);
 
   size_t num_introns() const noexcept { return introns_.size(); }

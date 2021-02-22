@@ -13,7 +13,7 @@
 #include "ContigRegion.hpp"
 #include "Regions.hpp"
 #include "Exons.hpp"
-#include "Introns.hpp"
+#include "GeneIntrons.hpp"
 
 namespace majiq {
 
@@ -61,7 +61,7 @@ class ContigIntrons : public detail::Regions<ContigIntron, true> {
   using BaseT = detail::Regions<ContigIntron, true>;
  public:
   static ContigIntrons FromGeneExonsAndIntrons(
-      const Exons& exons, const Introns& introns, const bool stranded);
+      const Exons& exons, const GeneIntrons& gene_introns, const bool stranded);
 
   explicit ContigIntrons(std::vector<ContigIntron>&& x)
       : BaseT{std::move(x)} { }

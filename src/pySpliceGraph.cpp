@@ -22,7 +22,7 @@
 #include "internals/Genes.hpp"
 #include "internals/Exons.hpp"
 #include "internals/GeneJunctions.hpp"
-#include "internals/Introns.hpp"
+#include "internals/GeneIntrons.hpp"
 #include "internals/SpliceGraph.hpp"
 #include "internals/GFF3.hpp"
 #include "internals/SJJunctions.hpp"
@@ -38,7 +38,7 @@ using pyClassShared_t = py::class_<T, std::shared_ptr<T>>;
 using pyContigs_t = pyClassShared_t<majiq::Contigs>;
 using pyGenes_t = pyClassShared_t<majiq::Genes>;
 using pyExons_t = pyClassShared_t<majiq::Exons>;
-using pyIntrons_t = pyClassShared_t<majiq::Introns>;
+using pyGeneIntrons_t = pyClassShared_t<majiq::GeneIntrons>;
 using pyGeneJunctions_t = pyClassShared_t<majiq::GeneJunctions>;
 using pyContigIntrons_t = pyClassShared_t<majiq::ContigIntrons>;
 using pySJJunctions_t = pyClassShared_t<majiq::SJJunctions>;
@@ -550,7 +550,7 @@ void init_SJIntronsBins(pySJIntronsBins_t& pySJIntronsBins) {
             from junctions
         exons: Exons
             Gene exons defining potential introns for coverage
-        gene_introns: Introns
+        gene_introns: GeneIntrons
             Gene introns indicating annotated introns for coverage
         experiment_strandness: ExperimentStrandness
             Strandness of RNA-seq library
@@ -627,12 +627,12 @@ void init_SJIntronsBins(pySJIntronsBins_t& pySJIntronsBins) {
     .def("__len__", &SJIntronsBins::size);
 }
 
-void init_Introns(pyIntrons_t& pyIntrons) {
-  using majiq::Introns;
+void init_GeneIntrons(pyGeneIntrons_t& pyGeneIntrons) {
+  using majiq::GeneIntrons;
   using majiq::position_t;
   using majiq_pybind::ArrayFromVectorAndOffset;
-  define_coordinates_properties<INTRONS_NC_GROUP>(pyIntrons);
-  pyIntrons
+  define_coordinates_properties<INTRONS_NC_GROUP>(pyGeneIntrons);
+  pyGeneIntrons
     .def(py::init([](
             std::shared_ptr<majiq::Genes> genes,
             py::array_t<size_t> gene_idx,
@@ -641,16 +641,16 @@ void init_Introns(pyIntrons_t& pyIntrons) {
             py::array_t<bool> denovo,
             py::array_t<bool> passed_build,
             py::array_t<bool> simplified) {
-          return MakeConnections<Introns>(genes, ConnectionsArrays{
+          return MakeConnections<GeneIntrons>(genes, ConnectionsArrays{
               gene_idx, start, end, denovo, passed_build, simplified});
         }),
-        "Create Introns using Genes and arrays defining each intron",
+        "Create GeneIntrons using Genes and arrays defining each intron",
         py::arg("genes"),
         py::arg("gene_idx"), py::arg("start"), py::arg("end"),
         py::arg("denovo"), py::arg("passed_build"), py::arg("simplified"))
     .def_static("from_netcdf",
         [](py::str x, std::shared_ptr<majiq::Genes> genes) {
-        return MakeConnections<Introns>(
+        return MakeConnections<GeneIntrons>(
             genes, ConnectionsArraysFromNetcdf<INTRONS_NC_GROUP>(x));
         },
         "Load introns from netcdf file",
@@ -662,9 +662,9 @@ void init_Introns(pyIntrons_t& pyIntrons) {
             "denovo", "passed_build", "simplified"});
         },
         "View on intron information as xarray Dataset")
-    .def("__repr__", [](const Introns& self) -> std::string {
+    .def("__repr__", [](const GeneIntrons& self) -> std::string {
         std::ostringstream oss;
-        oss << "Introns<" << self.size() << " total>";
+        oss << "GeneIntrons<" << self.size() << " total>";
         return oss.str();
         });
 }
@@ -989,7 +989,7 @@ void init_SpliceGraph(py::class_<majiq::SpliceGraph>& pySpliceGraph) {
                   const std::shared_ptr<majiq::Genes>&,
                   const std::shared_ptr<majiq::Exons>&,
                   const std::shared_ptr<majiq::GeneJunctions>&,
-                  const std::shared_ptr<majiq::Introns>&>(),
+                  const std::shared_ptr<majiq::GeneIntrons>&>(),
         R"pbdoc(
         Initialize splicegraph from components
 
@@ -1014,7 +1014,8 @@ void init_SpliceGraph(py::class_<majiq::SpliceGraph>& pySpliceGraph) {
           = new_majiq.attr("GeneJunctions")
             .attr("from_netcdf")(netcdf_path, genes);
         auto introns
-          = new_majiq.attr("Introns").attr("from_netcdf")(netcdf_path, genes);
+          = new_majiq.attr("GeneIntrons").attr("from_netcdf")(
+              netcdf_path, genes);
         return new_majiq
           .attr("SpliceGraph")(contigs, genes, exons, junctions, introns);
         },
@@ -1147,7 +1148,7 @@ void init_SpliceGraphAll(py::module_& m) {
   using majiq::Contigs;
   using majiq::Genes;
   using majiq::Exons;
-  using majiq::Introns;
+  using majiq::GeneIntrons;
   using majiq::GeneJunctions;
   using majiq::SpliceGraph;
   using majiq::SJJunctions;
@@ -1160,7 +1161,7 @@ void init_SpliceGraphAll(py::module_& m) {
       "Splicegraph genes");
   auto pyExons = pyExons_t(m, "Exons",
       "Splicegraph exons");
-  auto pyIntrons = pyIntrons_t(m, "Introns",
+  auto pyGeneIntrons = pyGeneIntrons_t(m, "GeneIntrons",
       "Splicegraph introns");
   auto pyGeneJunctions = pyGeneJunctions_t(
       m, "GeneJunctions", "Splicegraph junctions");
@@ -1247,7 +1248,7 @@ void init_SpliceGraphAll(py::module_& m) {
   init_Genes(pyGenes);
   init_Exons(pyExons);
   init_GeneJunctions(pyGeneJunctions);
-  init_Introns(pyIntrons);
+  init_GeneIntrons(pyGeneIntrons);
   init_SpliceGraph(pySpliceGraph);
   init_SJJunctions(pySJJunctions);
   init_SJJunctionsPositions(pySJJunctionsPositions);

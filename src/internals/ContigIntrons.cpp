@@ -34,7 +34,7 @@ enum class ContigIntronEvidenceType : unsigned char {
 using evidence_t = std::pair<position_t, ContigIntronEvidenceType>;
 
 std::map<GeneStrandness, std::vector<evidence_t>> OverGeneEvidence(
-    const Exons& exons, const Introns& introns,
+    const Exons& exons, const GeneIntrons& gene_introns,
     const OverGene& overgene, bool stranded) {
   std::map<GeneStrandness, std::vector<evidence_t>> result;
   for (KnownGene gene = overgene.first(); gene < overgene.last(); ++gene) {
@@ -55,8 +55,8 @@ std::map<GeneStrandness, std::vector<evidence_t>> OverGeneEvidence(
       }
     }
     // evidence from gene's introns
-    for (auto it = introns.begin_parent(gene);
-        it != introns.end_parent(gene); ++it) {
+    for (auto it = gene_introns.begin_parent(gene);
+        it != gene_introns.end_parent(gene); ++it) {
       if (!(it->denovo()) && it->coordinates.is_full_interval()) {
         GeneStrandness strand
           = stranded ? it->gene.strand() : GeneStrandness::AMBIGUOUS;
@@ -120,8 +120,8 @@ void AddIntronsFromEvidence(KnownContig contig, GeneStrandness strand,
 }
 
 ContigIntrons ContigIntrons::FromGeneExonsAndIntrons(
-    const Exons& exons, const Introns& introns, const bool stranded) {
-  if (exons.parents_ != introns.parents_) {
+    const Exons& exons, const GeneIntrons& gene_introns, const bool stranded) {
+  if (exons.parents_ != gene_introns.parents_) {
     throw std::invalid_argument(
         "ContigIntrons gene exons and introns do not share same genes");
   }
@@ -135,7 +135,7 @@ ContigIntrons ContigIntrons::FromGeneExonsAndIntrons(
       overgene != genes_ptr->overgene_end(); ++overgene) {
     // get evidence from current set of overlapping genes
     auto stranded_evidence
-      = OverGeneEvidence(exons, introns, overgene, stranded);
+      = OverGeneEvidence(exons, gene_introns, overgene, stranded);
     // update result_vec using evidence
     // each strand gets put in in sorted order, so we can set up merges between
     // them if necessary.

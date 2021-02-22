@@ -213,7 +213,7 @@ void SJIntronsBins::check_valid() const {
 
 SJIntronsBins SJIntronsBins::FromBam(const char* infile,
     const junction_pos_t num_bins, const Exons& exons,
-    const Introns& gene_introns, ExperimentStrandness exp_strandness,
+    const GeneIntrons& gene_introns, ExperimentStrandness exp_strandness,
     int nthreads) {
   // get introns we will be quantifying against
   ContigIntrons introns = ContigIntrons::FromGeneExonsAndIntrons(

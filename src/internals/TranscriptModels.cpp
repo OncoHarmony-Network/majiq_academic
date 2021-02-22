@@ -20,7 +20,7 @@ SpliceGraph TranscriptModels::ToSpliceGraph(bool process_ir) const {
   // build exons, junctions, introns per gene
   std::vector<Exon> exons;
   std::vector<GeneJunction> junctions;
-  std::vector<Intron> introns;
+  std::vector<GeneIntron> introns;
   // for each gene (in sorted order)
   for (size_t gene_idx = 0; gene_idx < size(); ++gene_idx) {
     // get transcripts associated with this gene, next one if no transcripts
@@ -120,6 +120,6 @@ SpliceGraph TranscriptModels::ToSpliceGraph(bool process_ir) const {
   return SpliceGraph{contigs_, genes_,
     std::make_shared<Exons>(std::move(exons)),
     std::make_shared<GeneJunctions>(std::move(junctions)),
-    std::make_shared<Introns>(std::move(introns))};
+    std::make_shared<GeneIntrons>(std::move(introns))};
 }
 }  // namespace majiq
