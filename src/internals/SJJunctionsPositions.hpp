@@ -104,9 +104,9 @@ class SJIntronsBins {
 
  public:
   static SJIntronsBins FromBam(
-      const char* infile, ExperimentStrandness exp_strandness,
-      const Exons& exons, const Introns& gene_introns,
-      const junction_pos_t num_bins, int nthreads);
+      const char* infile, const junction_pos_t num_bins, const Exons& exons,
+      const Introns& gene_introns, ExperimentStrandness exp_strandness,
+      int nthreads);
 
   size_t num_introns() const noexcept { return introns_.size(); }
   size_t size() const noexcept { return reads_.size(); }
