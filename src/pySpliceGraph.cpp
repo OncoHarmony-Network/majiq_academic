@@ -646,6 +646,9 @@ void init_GeneIntrons(pyGeneIntrons_t& pyGeneIntrons) {
         },
         "Load introns from netcdf file",
         py::arg("netcdf_path"), py::arg("genes"))
+    .def("potential_introns", &GeneIntrons::PotentialIntrons,
+        "Get potential gene introns from exons keeping annotations from self",
+        py::arg("exons"))
     .def("df",
         [](py::object& introns) -> py::object {
         return majiq_pybind::XarrayDatasetFromObject(introns, "intron_idx",
