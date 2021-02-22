@@ -231,7 +231,7 @@ std::shared_ptr<Connections> MakeConnections(
         denovo(i), passed_build(i), simplified(i)});
   }
   // create shared pointer to connections object
-  return std::make_shared<Connections>(std::move(connection_vec));
+  return std::make_shared<Connections>(genes, std::move(connection_vec));
 }
 
 void init_Contigs(pyContigs_t& pyContigs) {
@@ -319,7 +319,7 @@ void init_Genes(pyGenes_t& pyGenes) {
                 geneid[i].cast<majiq::geneid_t>(),
                 genename[i].cast<majiq::genename_t>()});
           }
-          return std::make_shared<Genes>(std::move(gene_vec));
+          return std::make_shared<Genes>(contigs, std::move(gene_vec));
         }),
         "Create Genes object using Contigs object and arrays defining genes",
         py::arg("contigs"), py::arg("contig_idx"),
@@ -357,15 +357,6 @@ void init_Genes(pyGenes_t& pyGenes) {
             {"contig_idx", "start", "end", "strand", "gene_id", "gene_name"});
         },
         "View on gene information as xarray Dataset")
-    .def("overgene_subset", [](majiq::Genes& self, size_t gene_idx) {
-        auto og = majiq::OverGene{self[gene_idx]};
-        const auto it = self.data().begin();
-        std::vector<majiq::Gene> result_vec(
-            it + og.first().idx_, it + og.last().idx_);
-        return std::make_shared<majiq::Genes>(std::move(result_vec));
-        },
-        "Get Genes OverGene subset for selected gene",
-        py::arg("gene_idx"))
     .def("__repr__", [](const majiq::Genes& self) -> std::string {
         std::ostringstream oss;
         oss << "Genes<" << self.size() << " total>";
@@ -406,7 +397,7 @@ void init_Exons(pyExons_t& pyExons) {
                 majiq::ClosedInterval{start(i), end(i)},
                 majiq::ClosedInterval{ann_start(i), ann_end(i)}});
           }
-          return std::make_shared<Exons>(std::move(exon_vec));
+          return std::make_shared<Exons>(genes, std::move(exon_vec));
         }),
         "Create Exons object using Genes and info about each exon",
         py::arg("genes"), py::arg("gene_idx"),
@@ -699,7 +690,8 @@ void init_SJJunctions(pySJJunctions_t& pySJJunctions) {
               majiq::ExperimentCounts{numreads(i), numpos(i)}
             };
           }
-          return std::make_shared<majiq::SJJunctions>(std::move(sj_vec));
+          return std::make_shared<majiq::SJJunctions>(
+              contigs, std::move(sj_vec));
         }),
         "Create SJJunctions object from contigs and arrays",
         py::arg("contigs"),

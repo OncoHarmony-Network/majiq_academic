@@ -169,12 +169,12 @@ class Regions {
         return x < region.coordinates.first_pos(); });
   }
 
-  explicit Regions(vecT&& x)
+  Regions(const ParentsPtrT& parents, vecT&& x)
       : elements_{std::move(x)},
-        parents_{elements_.empty() ? nullptr : elements_[0].parent().ptr_},
+        parents_{parents},
         parent_idx_offsets_{validate_and_parent_offsets(elements_, parents_)},
         elements_end_cummax_{get_cummax_ends(elements_)} { }
-  Regions() : Regions{vecT{}} { }
+  Regions() : Regions{nullptr, vecT{}} { }
   Regions(const Regions&) = default;
   Regions(Regions&&) = default;
   Regions& operator=(const Regions&) = delete;

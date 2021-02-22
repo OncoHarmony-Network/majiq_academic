@@ -172,7 +172,7 @@ Exons SpliceGraph::InferExons(
         junctions.begin_parent(gene_idx), junctions.end_parent(gene_idx),
         result_vec);
   }
-  return Exons{std::move(result_vec)};
+  return Exons{source.parents(), std::move(result_vec)};
 }
 
 }  // namespace majiq

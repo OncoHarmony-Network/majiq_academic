@@ -162,12 +162,6 @@ class KnownFeatures {
       idx_map_[features_[idx].unique_key()] = idx;
     }
   }
-  // move constructor for vector over features, which does not conflict if it's
-  // the same as ContainerT
-  template <typename CT, std::enable_if_t<
-    std::is_same_v<CT, std::vector<FeatureT>>
-    && !std::is_same_v<CT, ContainerT>, bool> = true>
-  explicit KnownFeatures(CT&& x) : KnownFeatures{ContainerT{std::move(x)}} { }
   KnownFeatures() = default;
   KnownFeatures(const KnownFeatures&) = default;
   KnownFeatures(KnownFeatures&&) = default;

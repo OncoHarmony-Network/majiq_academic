@@ -157,7 +157,7 @@ ContigIntrons ContigIntrons::FromGeneExonsAndIntrons(
     }
   }
   // get final result
-  return ContigIntrons{std::move(result_vec)};
+  return ContigIntrons{exons.parents()->parents(), std::move(result_vec)};
 }
 
 }  // namespace majiq

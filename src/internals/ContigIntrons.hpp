@@ -9,6 +9,8 @@
 #define MAJIQ_CONTIGINTRONS_HPP
 
 #include <vector>
+#include <memory>
+#include <utility>
 
 #include "ContigRegion.hpp"
 #include "Regions.hpp"
@@ -63,8 +65,9 @@ class ContigIntrons : public detail::Regions<ContigIntron, true> {
   static ContigIntrons FromGeneExonsAndIntrons(
       const Exons& exons, const GeneIntrons& gene_introns, const bool stranded);
 
-  explicit ContigIntrons(std::vector<ContigIntron>&& x)
-      : BaseT{std::move(x)} { }
+  explicit ContigIntrons(
+      const std::shared_ptr<Contigs>& contigs, std::vector<ContigIntron>&& x)
+      : BaseT{contigs, std::move(x)} { }
   ContigIntrons() : BaseT{} { }
   ContigIntrons(const ContigIntrons&) = default;
   ContigIntrons(ContigIntrons&&) = default;

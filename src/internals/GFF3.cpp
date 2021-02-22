@@ -259,7 +259,7 @@ GFF3ExonHierarchy::GFF3ExonHierarchy(
     }  // end handling non-exon feature (or exon previous ifelse block)
   }  // end iteration over lines in GFF3 file
   std::sort(genes_vec.begin(), genes_vec.end());
-  genes_ = std::make_shared<Genes>(std::move(genes_vec));
+  genes_ = std::make_shared<Genes>(contigs_, std::move(genes_vec));
 }
 
 }  // namespace gff3

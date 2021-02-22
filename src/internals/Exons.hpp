@@ -110,7 +110,7 @@ inline Exons ExtractAnnotatedExons(const Exons& base) {
       [&annotated](const Exon& x) {
         if (!x.is_denovo()) { annotated.push_back(x.get_annotated()); }
       });
-  return Exons{std::move(annotated)};
+  return Exons{base.parents(), std::move(annotated)};
 }
 }  // namespace majiq
 

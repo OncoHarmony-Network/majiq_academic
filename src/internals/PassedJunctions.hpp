@@ -201,7 +201,7 @@ class PassedJunctionsGenerator {
         *r_it = *d_it;
       }
     }  // done filling result_vec
-    return GeneJunctions{std::move(result_vec)};
+    return GeneJunctions{known_->parents(), std::move(result_vec)};
   }
 };
 

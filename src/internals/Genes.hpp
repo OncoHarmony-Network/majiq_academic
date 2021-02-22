@@ -73,8 +73,9 @@ class Genes
     return features_.elements_end_cummax_;
   }
 
-  explicit Genes(std::vector<Gene>&& x)
-      : detail::KnownFeatures<detail::Regions<Gene, true>>(std::move(x)) { }
+  Genes(const std::shared_ptr<Contigs>& contigs, std::vector<Gene>&& x)
+      : detail::KnownFeatures<detail::Regions<Gene, true>>(
+          detail::Regions<Gene, true>{contigs, std::move(x)}) { }
 };
 
 class KnownGene : public detail::KnownFeature<Genes, KnownGene> {
