@@ -221,7 +221,13 @@ SJIntronsBins SJIntronsBins::FromBam(const char* infile,
   // get contigs for these introns
   auto contigs = introns.parents();
   // count number of reads per intron bin
-  std::vector<std::map<junction_pos_t, junction_ct_t>> counts(introns.size());
+  std::vector<junction_ct_t> counts2d(introns.size() * num_bins);
+  auto counts_mut = [&counts2d, &num_bins](
+      size_t intron_idx, junction_pos_t bin_idx) -> junction_ct_t& {
+    return counts2d[intron_idx * num_bins + bin_idx];
+  };
+  // count number of nonzero bins
+  size_t ct_nonzero = 0;
 
   // open up bam and process
   {
@@ -254,7 +260,7 @@ SJIntronsBins SJIntronsBins::FromBam(const char* infile,
       auto intron_it
         = introns.overlap_lower_bound(contig, aln_it->coordinates_.start - 1);
       // If we have intron and last cigar region that intersects it, how to add?
-      auto AddIntron = [&counts, &aln_regions, &num_bins](
+      auto AddIntron = [&counts_mut, &ct_nonzero, &aln_regions, &num_bins](
           size_t intron_idx,
           const bam::CigarRegions::Region& cigar_region,
           const ContigIntron& intron) {
@@ -264,6 +270,8 @@ SJIntronsBins SJIntronsBins::FromBam(const char* infile,
           = cigar_region.position_
           + (cigar_region.type_ == bam::CigarRegions::RegionType::ON_GENOME
               ? intron.coordinates.end - cigar_region.coordinates_.start
+              // i.e. non-junction deletions crossing intron end get last
+              // position in intron before deletion
               : 0);
         // 1. alignment overlaps intron end by 1 + raw_alignment_position
         // bases
@@ -296,7 +304,10 @@ SJIntronsBins SJIntronsBins::FromBam(const char* infile,
                 + ((raw_read_position - first_pos_without_extra)
                   / min_pos_per_bin));
           // update counts for this intron/bin
-          ++counts[intron_idx][resulting_bin];
+          if (1 == (++counts_mut(intron_idx, resulting_bin))) {
+            // if first count for this intron/bin, update ct_nonzero
+            ++ct_nonzero;
+          }
         }
       };
       // loop over cigar regions
@@ -362,20 +373,22 @@ SJIntronsBins SJIntronsBins::FromBam(const char* infile,
   }  // done processing BAM file
   // get offsets vector
   std::vector<size_t> offsets(1 + introns.size());
-  for (size_t i = 0; i < counts.size(); ++i) {
-    offsets[i + 1] = offsets[i] + counts[i].size();
-  }
-  // get reads vector
-  std::vector<PositionReads> reads(offsets.back());
-  for (size_t i = 0; i < counts.size(); ++i) {
-    auto reads_i_begin = reads.begin() + offsets[i];
-    auto reads_i_end = reads.begin() + offsets[i + 1];
-    std::transform(counts[i].begin(), counts[i].end(),
-        reads.begin() + offsets[i],
-        [](const std::pair<junction_pos_t, junction_ct_t>& x) {
-        return PositionReads{x.first, x.second};
-        });
-    std::sort(reads_i_begin, reads_i_end);
+  std::vector<PositionReads> reads(ct_nonzero);
+  size_t read_idx = 0;
+  for (size_t intron_idx = 0; intron_idx < introns.size(); ++intron_idx) {
+    const size_t start_idx = read_idx;
+    for (junction_pos_t bin_idx = 0; bin_idx < num_bins; ++bin_idx) {
+      // get count for intron/bin
+      const junction_ct_t& bin_ct = counts_mut(intron_idx, bin_idx);
+      if (bin_ct > 0) {
+        // nonzero counts get added to reads
+        reads[read_idx++] = PositionReads{bin_idx, bin_ct};
+      }
+    }
+    // get reads in sorted order per intron
+    std::sort(reads.begin() + start_idx, reads.begin() + read_idx);
+    // offset for this intron
+    offsets[1 + intron_idx] = read_idx;
   }
   return SJIntronsBins(
       std::move(introns), std::move(reads), std::move(offsets), num_bins);
