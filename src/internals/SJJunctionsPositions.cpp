@@ -275,7 +275,7 @@ SJIntronsBins SJIntronsBins::FromBam(const char* infile,
             1 + raw_alignment_position >= USE_MIN_OVERHANG
             // suffcient overlap on intron start
             && ((
-                aln_regions.alignment_length_ + intron_length - 1
+                intron_length + aln_regions.alignment_length_ - 1
                 - raw_alignment_position)
               >= USE_MIN_OVERHANG)) {
           // get raw read position, adjusting for overhang
