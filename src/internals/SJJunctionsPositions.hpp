@@ -38,12 +38,7 @@ class SJJunctionsPositions {
   std::vector<size_t> offsets_;
   const junction_pos_t num_positions_;
 
-  // check that input values together are valid
-  static bool is_valid(
-      const std::shared_ptr<SJJunctions>& junctions,
-      const std::vector<PositionReads>& reads,
-      const std::vector<size_t>& offsets,
-      junction_pos_t num_positions);
+  void check_valid() const;
 
  public:
   static SJJunctionsPositions FromBam(
@@ -69,12 +64,7 @@ class SJJunctionsPositions {
       : junctions_{junctions},
         reads_{reads},
         offsets_{offsets},
-        num_positions_{num_positions} {
-    if (!is_valid(junctions_, reads_, offsets_, num_positions_)) {
-      throw std::invalid_argument(
-          "SJJunctionsPositions given invalid arguments");
-    }
-  }
+        num_positions_{num_positions} { check_valid(); }
   SJJunctionsPositions(
       std::shared_ptr<SJJunctions>&& junctions,
       std::vector<PositionReads>&& reads,
@@ -83,12 +73,7 @@ class SJJunctionsPositions {
       : junctions_{junctions},
         reads_{reads},
         offsets_{offsets},
-        num_positions_{num_positions} {
-    if (!is_valid(junctions_, reads_, offsets_, num_positions_)) {
-      throw std::invalid_argument(
-          "SJJunctionsPositions given invalid arguments");
-    }
-  }
+        num_positions_{num_positions} { check_valid(); }
   SJJunctionsPositions(const SJJunctionsPositions& x) = default;
   SJJunctionsPositions(SJJunctionsPositions&& x) = default;
   SJJunctionsPositions& operator=(const SJJunctionsPositions& x) = delete;

@@ -26,47 +26,51 @@
 
 namespace majiq {
 
-bool SJJunctionsPositions::is_valid(
-    const std::shared_ptr<SJJunctions>& junctions,
-    const std::vector<PositionReads>& reads,
-    const std::vector<size_t>& offsets,
-    junction_pos_t num_positions) {
-  if (
-      // must have junctions
-      junctions == nullptr
-      // offsets[i], offsets[i + 1] correspond to junctions[i] --> match sizes
-      || junctions->size() != offsets.size() - 1
-      // last offset must correspond to size of reads
-      || offsets.back() != reads.size()) {
-    return false;
+void SJJunctionsPositions::check_valid() const {
+  if (junctions_ == nullptr) {
+    throw std::runtime_error(
+        "SJJunctionsPositions has null junctions");
+  } else if (junctions_->size() != offsets_.size() - 1) {
+    throw std::runtime_error(
+        "SJJunctionsPositions offsets do not correspond to junctions");
+  } else if (offsets_.back() != reads_.size()) {
+    throw std::runtime_error(
+        "SJJunctionsPositions offsets do not correspond to reads per position");
+  } else {
+    for (size_t jidx = 0; jidx < junctions_->size(); ++jidx) {
+      const SJJunction& curj = (*junctions_)[jidx];
+      if (offsets_[jidx] > offsets_[jidx + 1]) {
+        throw std::runtime_error(
+            "SJJunctionsPositions has nonmonotonically increasing offsets");
+      } else if (curj.numpos() != offsets_[1 + jidx] - offsets_[jidx]) {
+        throw std::runtime_error(
+            "SJJunctionsPositions offsets do not match junction numpos");
+      } else if (curj.numpos() > num_positions_) {
+        throw std::runtime_error(
+            "SJJunctionsPositions has reads for more positions than possible");
+      } else if (
+          std::any_of(reads_.begin() + offsets_[jidx],
+            reads_.begin() + offsets_[1 + jidx],
+            [num_positions=num_positions_](const PositionReads& x) -> bool {
+            return x.pos >= num_positions;
+            })) {
+        throw std::runtime_error(
+            "SJJunctionsPositions has invalid read position");
+      } else if (
+          std::accumulate(reads_.begin() + offsets_[jidx],
+            reads_.begin() + offsets_[1 + jidx],
+            junction_ct_t{},
+            [](junction_ct_t s, const PositionReads& x) { return s + x.reads; })
+          != curj.numreads()) {
+        throw std::runtime_error(
+            "SJJunctionsPositions sum position reads does not match junction");
+      } else if (!std::is_sorted(reads_.begin() + offsets_[jidx],
+            reads_.begin() + offsets_[1 + jidx])) {
+        throw std::runtime_error(
+            "SJJunctionsPositions is not appropriately sorted per junction");
+      }
+    }  // end loop over junctions
   }
-  // for each junction
-  for (size_t jidx = 0; jidx < junctions->size(); ++jidx) {
-    // offsets into junction positions
-    auto jp_start = reads.begin() + offsets[jidx];
-    auto jp_end = reads.begin() + offsets[jidx + 1];
-    if (
-        // offsets must be non-decreasing
-        jp_end < jp_start
-        // difference in offsets correspond to numpos
-        || jp_end - jp_start != (*junctions)[jidx].numpos()
-        // can't have numpos greater than total possible
-        || (*junctions)[jidx].numpos() > num_positions
-        // all junction positions must be in [0, num_positions)
-        || !std::all_of(jp_start, jp_end,
-          [num_positions](const PositionReads& x) {
-          return x.pos < num_positions;
-          })
-        // sum of position reads equals junction numreads
-        || std::accumulate(jp_start, jp_end, junction_ct_t{},
-          [](junction_ct_t s, const PositionReads& x) { return s + x.reads; })
-          != (*junctions)[jidx].numreads()
-        // PositionReads in sorted order (by number of reads)
-        || !std::is_sorted(jp_start, jp_end)) {
-      return false;
-    }
-  }
-  return true;
 }
 
 SJJunctionsPositions SJJunctionsPositions::FromBam(
