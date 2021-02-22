@@ -221,7 +221,7 @@ SJIntronsBins SJIntronsBins::FromBam(const char* infile,
   // get contigs for these introns
   auto contigs = introns.parents();
   // count number of reads per intron bin
-  std::vector<std::map<junction_pos_t, junction_ct_t>> counts;
+  std::vector<std::map<junction_pos_t, junction_ct_t>> counts(introns.size());
 
   // open up bam and process
   {
