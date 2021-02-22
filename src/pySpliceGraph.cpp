@@ -1,5 +1,5 @@
 /**
- * pyContigs.cpp
+ * pySpliceGraph.cpp
  *
  * Set up python bindings to contigs
  *
@@ -45,6 +45,7 @@ using pySJJunctions_t = pyClassShared_t<majiq::SJJunctions>;
 using pySJJunctionsPositions_t = pyClassShared_t<majiq::SJJunctionsPositions>;
 using pyGroupJunctionsGen_t = pyClassShared_t<majiq::GroupJunctionsGenerator>;
 using pyPassedJunctionsGen_t = pyClassShared_t<majiq::PassedJunctionsGenerator>;
+using pySJIntronsBins_t = pyClassShared_t<majiq::SJIntronsBins>;
 
 template <typename T>
 using base_t = std::remove_cv_t<std::remove_reference_t<T>>;
@@ -85,6 +86,8 @@ void define_coordinates_properties(pyClassShared_t<RegionsT>& pyRegions) {
         "Save to netcdf file",
         py::arg("netcdf_path"), py::arg("mode"))
     .def("__len__", &RegionsT::size)
+    .def_property_readonly("_parents", &RegionsT::parents,
+        "Get parents object on which regions are defined (e.g. contigs, genes)")
     .def_property_readonly("_parent_idx_start",
         [](py::object& regions_obj) {
         RegionsT& regions = regions_obj.cast<RegionsT&>();
@@ -527,6 +530,101 @@ void init_ContigIntrons(pyContigIntrons_t& pyContigIntrons) {
         oss << "ContigIntrons<" << self.size() << " total>";
         return oss.str();
         });
+}
+
+void init_SJIntronsBins(pySJIntronsBins_t& pySJIntronsBins) {
+  using majiq::SJIntronsBins;
+  using majiq_pybind::ArrayFromOffsetsVector;
+  using majiq_pybind::ArrayFromVectorAndOffset;
+  pySJIntronsBins
+    .def_static("from_bam", &SJIntronsBins::FromBam,
+        R"pbdoc(
+        Load introns and per-bin counts for an aligned BAM file
+
+        Parameters
+        ----------
+        bam_path: str
+            Path for input BAM fille
+        num_bins: int
+            Number of bins to split coverage. Typically set to num_positions
+            from junctions
+        exons: Exons
+            Gene exons defining potential introns for coverage
+        gene_introns: Introns
+            Gene introns indicating annotated introns for coverage
+        experiment_strandness: ExperimentStrandness
+            Strandness of RNA-seq library
+        nthreads: int
+            Number of threads to use when reading in BAM file
+        )pbdoc",
+        py::arg("bam_path"),
+        py::arg("num_bins"),
+        py::arg("exons"),
+        py::arg("gene_introns"),
+        py::arg("experiment_strandness") = DEFAULT_BAM_STRANDNESS,
+        py::arg("nthreads") = DEFAULT_BAM_NTHREADS)
+    .def_property_readonly("_introns",
+        [](SJIntronsBins& self) { return self.introns(); },
+        "Underlying ContigIntrons for which coverage was quantified")
+    .def_property_readonly("position_reads",
+        [](py::object& sj_obj) {
+        SJIntronsBins& sj = sj_obj.cast<SJIntronsBins&>();
+        const size_t offset = offsetof(majiq::PositionReads, reads);
+        return ArrayFromVectorAndOffset<majiq::junction_ct_t, majiq::PositionReads>(
+            sj.reads(), offset, sj_obj);
+        },
+        "Number of reads for intron/bin")
+    .def_property_readonly("position",
+        [](py::object& sj_obj) {
+        SJIntronsBins& sj = sj_obj.cast<SJIntronsBins&>();
+        const size_t offset = offsetof(majiq::PositionReads, pos);
+        return ArrayFromVectorAndOffset<majiq::junction_pos_t, majiq::PositionReads>(
+            sj.reads(), offset, sj_obj);
+        },
+        "Position index for intron bin")
+    .def_property_readonly("jpidx_start",
+        [](py::object& sj_obj) {
+        SJIntronsBins& sj = sj_obj.cast<SJIntronsBins&>();
+        return ArrayFromOffsetsVector<size_t>(sj.offsets(), true, sj_obj);
+        },
+        "First index into junctions/positions for each junction")
+    .def_property_readonly("jpidx_end",
+        [](py::object& sj_obj) {
+        SJIntronsBins& sj = sj_obj.cast<SJIntronsBins&>();
+        return ArrayFromOffsetsVector<size_t>(sj.offsets(), false, sj_obj);
+        },
+        "One after last index into junctions/positions for each junction")
+    .def("df",
+        [](py::object& sj) -> py::object {
+        using majiq_pybind::XarrayDatasetFromObject;
+        return XarrayDatasetFromObject(sj, "jpidx", {},
+            {"position_reads", "position"});
+        },
+        "View on junction-position information as xarray Dataset")
+    .def_property_readonly("introns",
+        [](py::object& sj) -> py::object {
+        auto base = sj.attr("_introns").attr("df")();
+        auto get_xr = [&sj](py::str key) {
+          return py::module_::import("xarray").attr("DataArray")(
+              sj.attr(key), py::arg("dims") = "intron_idx");
+        };
+        return base.attr("assign_coords")(
+            py::arg("jpidx_start") = get_xr("jpidx_start"),
+            py::arg("jpidx_end") = get_xr("jpidx_end"));
+        },
+        "View on intron information as xarray Dataset")
+    .def_property_readonly("_offsets",
+        [](py::object& sj_obj) {
+        SJIntronsBins& sj = sj_obj.cast<SJIntronsBins&>();
+        return ArrayFromVectorAndOffset<size_t, size_t>(
+            sj.offsets(), 0, sj_obj);
+        },
+        "Raw offsets for jpidx_start and jpidx_end")
+    .def_property_readonly("num_bins", &SJIntronsBins::num_bins,
+        "Number of positional bins intron coverage was split into")
+    .def_property_readonly("num_introns", &SJIntronsBins::num_introns,
+        "Number of introns being quantified")
+    .def("__len__", &SJIntronsBins::size);
 }
 
 void init_Introns(pyIntrons_t& pyIntrons) {
@@ -1067,6 +1165,8 @@ void init_SpliceGraphAll(py::module_& m) {
   auto pyGeneJunctions = pyGeneJunctions_t(
       m, "GeneJunctions", "Splicegraph junctions");
   auto pyContigIntrons = pyContigIntrons_t(m, "ContigIntrons");
+  auto pySJIntronsBins = pySJIntronsBins_t(m, "SJIntronsBins",
+      "Summarized and per-bin counts for introns from an experiment");
   auto pySJJunctions = pySJJunctions_t(
       m, "SJJunctions", "Summarized junction counts for an experiment");
   auto pySJJunctionsPositions = pySJJunctionsPositions_t(
@@ -1152,6 +1252,7 @@ void init_SpliceGraphAll(py::module_& m) {
   init_SJJunctions(pySJJunctions);
   init_SJJunctionsPositions(pySJJunctionsPositions);
   init_ContigIntrons(pyContigIntrons);
+  init_SJIntronsBins(pySJIntronsBins);
   init_pyGroupJunctionsGen(pyGroupJunctionsGen);
   init_pyPassedJunctionsGen(pyPassedJunctionsGen);
 }
