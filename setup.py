@@ -35,6 +35,7 @@ ext_modules = [
         library_dirs=[*HTSLIB_LIB_DIRS],
         libraries=[*HTSLIB_LIBRARY],
         cxx_std=17,
+        # extra_compile_args=["-O0", "-g"],
     ),
 ]
 
