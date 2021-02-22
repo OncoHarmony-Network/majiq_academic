@@ -162,7 +162,7 @@ inline bool IntervalIntersects(
     const ClosedInterval& x, const ClosedInterval& y) {
   return !(x.is_invalid() || y.is_invalid())
     && x.first_pos() <= std::max(y.start, y.end)
-    && y.first_pos() <= std::max(x.start, y.end);
+    && y.first_pos() <= std::max(x.start, x.end);
 }
 
 inline bool IntervalPrecedes(const ClosedInterval& before,
