@@ -73,9 +73,26 @@ class Genes
     return features_.elements_end_cummax_;
   }
 
+// only allow Genes to be created as shared_ptr by Genes::create()
+ private:
   Genes(const std::shared_ptr<Contigs>& contigs, std::vector<Gene>&& x)
       : detail::KnownFeatures<detail::Regions<Gene, true>>(
           detail::Regions<Gene, true>{contigs, std::move(x)}) { }
+  struct CreateKey {
+    const std::shared_ptr<Contigs>& contigs_;
+    std::vector<Gene>& x_;
+    CreateKey(const std::shared_ptr<Contigs>& contigs, std::vector<Gene>& x)
+        : contigs_{contigs}, x_{x} { }
+  };
+
+ public:
+  // public constructor requiring private type
+  explicit Genes(CreateKey key) : Genes{key.contigs_, std::move(key.x_)} { }
+  // allowing std::make_shared to be used in private manner
+  static std::shared_ptr<Genes> create(
+      const std::shared_ptr<Contigs>& contigs, std::vector<Gene>&& x) {
+    return std::make_shared<Genes>(CreateKey{contigs, x});
+  }
 };
 
 class KnownGene : public detail::KnownFeature<Genes, KnownGene> {

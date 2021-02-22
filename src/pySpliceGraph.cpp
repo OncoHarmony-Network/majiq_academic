@@ -319,7 +319,7 @@ void init_Genes(pyGenes_t& pyGenes) {
                 geneid[i].cast<majiq::geneid_t>(),
                 genename[i].cast<majiq::genename_t>()});
           }
-          return std::make_shared<Genes>(contigs, std::move(gene_vec));
+          return Genes::create(contigs, std::move(gene_vec));
         }),
         "Create Genes object using Contigs object and arrays defining genes",
         py::arg("contigs"), py::arg("contig_idx"),
