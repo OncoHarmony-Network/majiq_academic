@@ -142,7 +142,7 @@ class KnownFeatures {
   size_t count(const FeatureT& x) const { return count(x.unique_key()); }
   size_t get_idx(const KeyT& key) const { return idx_map_.at(key); }
   size_t get_idx(const FeatureT& x) const { return get_idx(x.unique_key()); }
-  std::optional<size_t> safe_idx(const KeyT& key) {
+  std::optional<size_t> safe_idx(const KeyT& key) const {
     std::optional<size_t> result;
     auto match = idx_map_.find(key);
     if (match != idx_map_.end()) {
@@ -150,7 +150,7 @@ class KnownFeatures {
     }
     return result;
   }
-  std::optional<size_t> safe_idx(const FeatureT& x) {
+  std::optional<size_t> safe_idx(const FeatureT& x) const {
     return safe_idx(x.unique_key());
   }
 
