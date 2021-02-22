@@ -281,7 +281,7 @@ SJIntronsBins SJIntronsBins::FromBam(const char* infile,
           // get raw read position, adjusting for overhang
           const junction_pos_t raw_read_position
             = raw_alignment_position + aln_regions.clipping_lengths_.first
-            - USE_MIN_OVERHANG;
+            - (USE_MIN_OVERHANG - 1);
           // map to appropriate intron bin
           const junction_pos_t min_pos_per_bin
             = (num_bins + intron_length) / num_bins;
