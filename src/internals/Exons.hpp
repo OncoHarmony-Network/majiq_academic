@@ -101,17 +101,9 @@ template <> struct hash<majiq::Exon> {
 }  // namespace std
 
 namespace majiq {
+
 using Exons = detail::Regions<Exon, false>;
 
-inline Exons ExtractAnnotatedExons(const Exons& base) {
-  std::vector<Exon> annotated;
-  annotated.reserve(base.size());
-  std::for_each(base.begin(), base.end(),
-      [&annotated](const Exon& x) {
-        if (!x.is_denovo()) { annotated.push_back(x.get_annotated()); }
-      });
-  return Exons{base.parents(), std::move(annotated)};
-}
 }  // namespace majiq
 
 #endif  // MAJIQ_EXONS_HPP
