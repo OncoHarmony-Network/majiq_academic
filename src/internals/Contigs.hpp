@@ -49,6 +49,19 @@ class Contigs
         [](const Contig& x) -> seqid_t { return x.seqid; });
     return result;
   }
+
+// only allow Contigs to be created as shared_ptr by Contigs::create()
+ private:
+  struct CreateKey { };
+  Contigs() = default;
+
+ public:
+  // public constructor, but requires private type
+  explicit Contigs(CreateKey) : Contigs{} { }
+  // this allows std::make_shared to be used in private manner
+  static std::shared_ptr<Contigs> create() {
+    return std::make_shared<Contigs>(CreateKey{});
+  }
 };
 
 class KnownContig : public detail::KnownFeature<Contigs, KnownContig> {

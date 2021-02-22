@@ -75,7 +75,7 @@ void SJJunctionsPositions::check_valid() const {
 
 SJJunctionsPositions SJJunctionsPositions::FromBam(
     const char* infile, ExperimentStrandness exp_strandness, int nthreads) {
-  auto contigs = std::make_shared<Contigs>();
+  auto contigs = Contigs::create();
   junction_pos_t max_read_length = 0;
   size_t num_junctions = 0;
   size_t num_junction_positions = 0;

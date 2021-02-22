@@ -241,7 +241,7 @@ void init_Contigs(pyContigs_t& pyContigs) {
   pyContigs
     .def(
         py::init([](py::list seqids) {
-          auto result = std::make_shared<Contigs>();
+          auto result = Contigs::create();
           for (auto seqid : seqids) {
             result->add(Contig{seqid.cast<seqid_t>()});
           }

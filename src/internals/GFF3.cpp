@@ -182,7 +182,7 @@ inline GeneStrandness convert_strand(const std::string& col_strand) {
 // load GFF3 exon hierarchy from input file
 GFF3ExonHierarchy::GFF3ExonHierarchy(
     const std::string& gff3_filename, const featuretype_map_t& gff3_types)
-    : contigs_{std::make_shared<Contigs>()}, genes_{} {
+    : contigs_{Contigs::create()}, genes_{} {
   zstr::ifstream in{gff3_filename};
   if (!in) {
     std::ostringstream oss;
