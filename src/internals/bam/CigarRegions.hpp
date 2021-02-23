@@ -97,11 +97,11 @@ class CigarRegions {
 
   struct Region {
     ClosedInterval coordinates_;
-    uint32_t position_;  // alignment offset
+    junction_pos_t position_;  // alignment offset
     RegionType type_;
 
     Region() : coordinates_{}, position_{}, type_{RegionType::END} { }
-    Region(ClosedInterval coordinates, uint32_t position, RegionType type)
+    Region(ClosedInterval coordinates, junction_pos_t position, RegionType type)
         : coordinates_{coordinates}, position_{position}, type_{type} { }
     explicit Region(position_t begin_at)
         : coordinates_{ClosedInterval::FromStartLength(begin_at, 0)},
@@ -125,7 +125,7 @@ class CigarRegions {
     const CigarRegions& parent_;
     uint32_t idx_;
     value_type region_;
-    uint32_t prev_dposition_;  // previous change in alignment offset
+    junction_pos_t prev_dposition_;  // previous change in alignment offset
 
     // apply next cigar operation (increment_idx = 0 used for first index)
     template <uint32_t increment_idx>

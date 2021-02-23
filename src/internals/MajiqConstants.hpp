@@ -17,7 +17,7 @@ constexpr position_t MAX_DENOVO_DIFFERENCE = 400;
 static_assert(
     MAX_DENOVO_DIFFERENCE >= 0, "MAX_DENOVO_DIFFERENCE must be non-negative");
 // how many bases does alignment have to overlap exons?
-constexpr uint32_t USE_MIN_OVERHANG = 8;
+constexpr junction_pos_t USE_MIN_OVERHANG = 8;
 static_assert(USE_MIN_OVERHANG > 0, "USE_MIN_OVERHANG must be positive");
 
 }  // namespace majiq
