@@ -12,6 +12,8 @@
 #include <memory>
 #include <tuple>
 #include <stdexcept>
+#include <algorithm>
+#include <numeric>
 #include <utility>
 
 #include "SJJunctions.hpp"
@@ -140,6 +142,57 @@ class SJIntronsBins {
   const std::vector<PositionReads>& reads() { return reads_; }
   const std::vector<size_t>& offsets() { return offsets_; }
 
+  // summaries per intron
+  junction_pos_t numbins_nonzero(size_t intron_idx) const {
+    return offsets_[1 + intron_idx] - offsets_[intron_idx];
+  }
+  junction_pos_t numbins_mincov(size_t intron_idx, junction_ct_t mincov) const {
+    if (mincov == 0) {
+      return numbins_nonzero(intron_idx);
+    } else {
+      return std::count_if(
+          reads_.begin() + offsets_[intron_idx],
+          reads_.begin() + offsets_[1 + intron_idx],
+          [&mincov](const PositionReads& x) { return x.reads >= mincov; });
+    }
+  }
+  junction_ct_t numreads(size_t intron_idx, junction_pos_t num_stacks) const {
+    size_t nonstack_end
+      = num_stacks == 0 || num_stacks < numbins_nonzero(intron_idx)
+      ? offsets_[1 + intron_idx] - num_stacks : offsets_[intron_idx];
+    return std::accumulate(
+        reads_.begin() + offsets_[intron_idx],
+        reads_.begin() + nonstack_end,
+        junction_ct_t{},
+        [](junction_ct_t s, const PositionReads& x) { return s + x.reads; });
+  }
+  real_t scaled_numreads(size_t intron_idx, junction_pos_t num_stacks) const {
+    using detail::IntronCoarseBins;
+    auto intron_length = introns_[intron_idx].coordinates.length();
+    return static_cast<real_t>(numreads(intron_idx, num_stacks) * intron_length)
+      / IntronCoarseBins::num_raw_positions(intron_length, num_bins_);
+  }
+  const PositionReads& reads_elem(
+      size_t intron_idx, junction_pos_t nonzero_idx) const {
+    // NOTE: assumes nonzero_idx < numbins_nonzero(intron_idx)
+    return reads_[offsets_[intron_idx] + nonzero_idx];
+  }
+  // scaled NOT to junctions but to fractional positions per bin (average)
+  real_t scaled_reads_elem(
+      size_t intron_idx, junction_pos_t nonzero_idx) const {
+    using detail::IntronCoarseBins;
+    // get average number of positions per bin
+    auto total_positions = IntronCoarseBins::num_raw_positions(
+        introns_[intron_idx].coordinates.length(), num_bins_);
+    real_t avg_num_positions = static_cast<real_t>(total_positions) / num_bins_;
+    // compare to actual element
+    const auto& raw_elem = reads_elem(intron_idx, nonzero_idx);
+    auto bin_num_positions = (
+        IntronCoarseBins(total_positions, num_bins_)
+        .bin_num_positions(raw_elem.pos));
+    // rescale
+    return raw_elem.reads * avg_num_positions / bin_num_positions;
+  }
 
   SJIntronsBins(
       ContigIntrons&& introns,
