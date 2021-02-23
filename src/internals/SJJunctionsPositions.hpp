@@ -15,7 +15,6 @@
 #include <algorithm>
 #include <numeric>
 #include <utility>
-
 #include "SJJunctions.hpp"
 #include "Exons.hpp"
 #include "GeneIntrons.hpp"
@@ -24,59 +23,139 @@
 
 
 namespace majiq {
-// identity/read count for nonzero junction positions
-struct PositionReads {
-  junction_pos_t pos;
-  junction_ct_t reads;
+// identity/read count for nonzero intron/junction bins
+struct BinReads {
+  junction_pos_t bin_idx;
+  junction_ct_t bin_reads;
 };
-inline bool operator<(const PositionReads& x, const PositionReads& y) noexcept {
-  // sorted by reads first
-  return std::tie(x.reads, x.pos) < std::tie(y.reads, y.pos);
+inline bool operator<(const BinReads& x, const BinReads& y) noexcept {
+  return std::tie(x.bin_reads, x.bin_idx) < std::tie(y.bin_reads, y.bin_idx);
 }
 
-class SJJunctionsPositions {
- private:
-  std::shared_ptr<SJJunctions> junctions_;
-  std::vector<PositionReads> reads_;
-  std::vector<size_t> offsets_;
-  const junction_pos_t num_positions_;
+namespace detail {
+template <typename RegionsT>
+class SJRegionBinReads {
+ protected:
+  const std::shared_ptr<RegionsT> regions_;
+  const std::vector<BinReads> reads_;
+  const std::vector<size_t> offsets_;
+  const junction_pos_t total_bins_;
 
-  void check_valid() const;
+ public:
+  size_t num_regions() const noexcept { return regions_->size(); }
+  size_t size() const noexcept { return reads_.size(); }
+  junction_pos_t total_bins() const noexcept { return total_bins_; }
+  const std::shared_ptr<RegionsT>& regions() { return regions_; }
+  const std::vector<BinReads>& reads() { return reads_; }
+  const std::vector<size_t>& offsets() { return offsets_; }
+
+  // per region summaries
+  junction_pos_t numbins_nonzero(size_t i) const {
+    return offsets_[1 + i] - offsets_[i];
+  }
+  junction_pos_t numbins_minreads(size_t i, junction_ct_t minreads) const {
+    if (minreads == 0) {
+      return numbins_nonzero(i);
+    } else {
+      return std::count_if(
+          reads_.begin() + offsets_[i], reads_.begin() + offsets_[1 + i],
+          [minreads](const BinReads& x) { return x.bin_reads >= minreads; });
+    }
+  }
+  junction_ct_t numreads(size_t i, junction_pos_t num_stacks) const {
+    const size_t nonstack_end
+      = num_stacks == 0 ? offsets_[1 + i] : (
+          num_stacks < numbins_nonzero(i)
+          ? offsets_[1 + i] - num_stacks : offsets_[i]);
+    return std::accumulate(
+        reads_.begin() + offsets_[i], reads_.begin() + nonstack_end,
+        junction_ct_t{},
+        [](junction_ct_t s, const BinReads& x) { return s + x.bin_reads; });
+  }
+  const BinReads& reads_elem(size_t i, junction_pos_t nonzero_idx) const {
+    return reads_[offsets_[i] + nonzero_idx];
+  }
+
+ private:
+  void check_valid() const {
+    if (regions_ == nullptr) {
+      throw std::runtime_error("SJRegionBinReads object has null regions");
+    } else if (regions_->size() + 1 != offsets_.size()) {
+      throw std::runtime_error(
+          "SJRegionBinReads offsets do not correspond to regions");
+    } else if (offsets_.back() != reads_.size()) {
+      throw std::runtime_error(
+          "SJRegionBinReads offsets do not correspond to reads per bin");
+    } else {
+      for (size_t i = 0; i < regions_->size(); ++i) {
+        if (offsets_[i] > offsets_[1 + i]) {
+          throw std::runtime_error(
+              "SJRegionBinReads has nonmonotonically increasing offsets");
+        } else if (numbins_nonzero(i) > total_bins_) {
+          throw std::runtime_error(
+              "SJRegionBinReads has region with more bins than possible");
+        } else if (
+            !std::all_of(
+              reads_.begin() + offsets_[i], reads_.begin() + offsets_[1 + i],
+              [total_bins = total_bins_](const BinReads& x) {
+              return x.bin_idx < total_bins; })) {
+          throw std::runtime_error(
+              "SJRegionBinReads has reported bin_idx outside valid range");
+        } else if (!std::is_sorted(
+              reads_.begin() + offsets_[i], reads_.begin() + offsets_[1 + i])) {
+          throw std::runtime_error(
+              "SJRegionBinReads is not appropriately sorted per region");
+        }
+      }  // loop over regions
+    }
+  }
+
+ public:
+  SJRegionBinReads(
+      const std::shared_ptr<RegionsT>& regions,
+      std::vector<BinReads>&& reads,
+      std::vector<size_t>&& offsets,
+      junction_pos_t total_bins)
+      : regions_{regions},
+        reads_{std::move(reads)},
+        offsets_{std::move(offsets)},
+        total_bins_{total_bins} { }
+  SJRegionBinReads(const SJRegionBinReads&) = default;
+  SJRegionBinReads(SJRegionBinReads&&) = default;
+  SJRegionBinReads& operator=(const SJRegionBinReads&) = delete;
+  SJRegionBinReads& operator=(SJRegionBinReads&&) = delete;
+};  // class SJRegionPositions
+
+}  // namespace detail
+
+class SJJunctionsPositions : public detail::SJRegionBinReads<SJJunctions> {
+  using BaseT = detail::SJRegionBinReads<SJJunctions>;
+
+ private:
+  // already have check_valid from parent class, but check SJJunctions data
+  void check_junctions() const {
+    for (size_t i = 0; i < regions_->size(); ++i) {
+      const SJJunction& curj = (*regions_)[i];
+      if (curj.numpos() != numbins_nonzero(i)) {
+        throw std::runtime_error("SJJunctions/Positions mismatch on numpos");
+      } else if (curj.numreads() != numreads(i, 0)) {
+        throw std::runtime_error("SJJunctions/Positions mismatch on numreads");
+      }
+    }
+  }
 
  public:
   static SJJunctionsPositions FromBam(
       const char* infile, ExperimentStrandness exp_strandness, int nthreads);
 
-  size_t num_junctions() const noexcept { return junctions_->size(); }
-  size_t size() const noexcept { return reads_.size(); }
-  junction_pos_t num_positions() const { return num_positions_; }
-  const std::shared_ptr<SJJunctions>& junctions() { return junctions_; }
-  const std::vector<PositionReads>& reads() { return reads_; }
-  const std::vector<size_t>& offsets() { return offsets_; }
-
-  SJJunctionsPositions()
-      : junctions_{std::make_shared<SJJunctions>()},
-        reads_{},
-        offsets_{0},
-        num_positions_{0} { }
   SJJunctionsPositions(
       const std::shared_ptr<SJJunctions>& junctions,
-      const std::vector<PositionReads>& reads,
-      const std::vector<size_t>& offsets,
-      junction_pos_t num_positions)
-      : junctions_{junctions},
-        reads_{reads},
-        offsets_{offsets},
-        num_positions_{num_positions} { check_valid(); }
-  SJJunctionsPositions(
-      std::shared_ptr<SJJunctions>&& junctions,
-      std::vector<PositionReads>&& reads,
+      std::vector<BinReads>&& reads,
       std::vector<size_t>&& offsets,
       junction_pos_t num_positions)
-      : junctions_{junctions},
-        reads_{reads},
-        offsets_{offsets},
-        num_positions_{num_positions} { check_valid(); }
+      : BaseT{junctions, std::move(reads), std::move(offsets), num_positions} {
+    check_junctions();
+  }
   SJJunctionsPositions(const SJJunctionsPositions& x) = default;
   SJJunctionsPositions(SJJunctionsPositions&& x) = default;
   SJJunctionsPositions& operator=(const SJJunctionsPositions& x) = delete;
@@ -120,14 +199,8 @@ struct IntronCoarseBins {
 };
 }  // namespace detail
 
-class SJIntronsBins {
- private:
-  const ContigIntrons introns_;
-  const std::vector<PositionReads> reads_;
-  const std::vector<size_t> offsets_;
-  const junction_pos_t num_bins_;
-
-  void check_valid() const;  // raise error if defined inconsistently
+class SJIntronsBins : public detail::SJRegionBinReads<ContigIntrons> {
+  using BaseT = detail::SJRegionBinReads<ContigIntrons>;
 
  public:
   static SJIntronsBins FromBam(
@@ -135,78 +208,38 @@ class SJIntronsBins {
       const GeneIntrons& gene_introns, ExperimentStrandness exp_strandness,
       int nthreads);
 
-  size_t num_introns() const noexcept { return introns_.size(); }
-  size_t size() const noexcept { return reads_.size(); }
-  junction_pos_t num_bins() const noexcept { return num_bins_; }
-  const ContigIntrons& introns() { return introns_; }
-  const std::vector<PositionReads>& reads() { return reads_; }
-  const std::vector<size_t>& offsets() { return offsets_; }
-
-  // summaries per intron
-  junction_pos_t numbins_nonzero(size_t intron_idx) const {
-    return offsets_[1 + intron_idx] - offsets_[intron_idx];
-  }
-  junction_pos_t numbins_mincov(size_t intron_idx, junction_ct_t mincov) const {
-    if (mincov == 0) {
-      return numbins_nonzero(intron_idx);
-    } else {
-      return std::count_if(
-          reads_.begin() + offsets_[intron_idx],
-          reads_.begin() + offsets_[1 + intron_idx],
-          [&mincov](const PositionReads& x) { return x.reads >= mincov; });
-    }
-  }
-  junction_ct_t numreads(size_t intron_idx, junction_pos_t num_stacks) const {
-    size_t nonstack_end
-      = num_stacks == 0 || num_stacks < numbins_nonzero(intron_idx)
-      ? offsets_[1 + intron_idx] - num_stacks : offsets_[intron_idx];
-    return std::accumulate(
-        reads_.begin() + offsets_[intron_idx],
-        reads_.begin() + nonstack_end,
-        junction_ct_t{},
-        [](junction_ct_t s, const PositionReads& x) { return s + x.reads; });
-  }
-  real_t scaled_numreads(size_t intron_idx, junction_pos_t num_stacks) const {
+  real_t scaled_numreads(size_t i, junction_pos_t num_stacks) const {
     using detail::IntronCoarseBins;
-    auto intron_length = introns_[intron_idx].coordinates.length();
-    return static_cast<real_t>(numreads(intron_idx, num_stacks) * intron_length)
-      / IntronCoarseBins::num_raw_positions(intron_length, num_bins_);
+    const auto intron_length = (*regions_)[i].coordinates.length();
+    return static_cast<real_t>(numreads(i, num_stacks) * intron_length)
+      / IntronCoarseBins::num_raw_positions(intron_length, total_bins_);
   }
-  const PositionReads& reads_elem(
-      size_t intron_idx, junction_pos_t nonzero_idx) const {
-    // NOTE: assumes nonzero_idx < numbins_nonzero(intron_idx)
-    return reads_[offsets_[intron_idx] + nonzero_idx];
-  }
-  // scaled NOT to junctions but to fractional positions per bin (average)
-  real_t scaled_reads_elem(
-      size_t intron_idx, junction_pos_t nonzero_idx) const {
+  real_t scaled_bin_reads_elem(size_t i, junction_pos_t nonzero_idx) const {
     using detail::IntronCoarseBins;
     // get average number of positions per bin
-    auto total_positions = IntronCoarseBins::num_raw_positions(
-        introns_[intron_idx].coordinates.length(), num_bins_);
-    real_t avg_num_positions = static_cast<real_t>(total_positions) / num_bins_;
+    const auto total_positions = IntronCoarseBins::num_raw_positions(
+        (*regions_)[i].coordinates.length(), total_bins_);
+    const real_t avg_num_positions
+      = static_cast<real_t>(total_positions) / total_bins_;
     // compare to actual element
-    const auto& raw_elem = reads_elem(intron_idx, nonzero_idx);
-    auto bin_num_positions = (
-        IntronCoarseBins(total_positions, num_bins_)
-        .bin_num_positions(raw_elem.pos));
+    const auto& raw_elem = reads_elem(i, nonzero_idx);
+    const auto bin_num_positions = (
+        IntronCoarseBins(total_positions, total_bins_)
+        .bin_num_positions(raw_elem.bin_idx));
     // rescale
-    return raw_elem.reads * avg_num_positions / bin_num_positions;
+    return raw_elem.bin_reads * avg_num_positions / bin_num_positions;
   }
 
   SJIntronsBins(
-      ContigIntrons&& introns,
-      std::vector<PositionReads>&& reads,
+      const std::shared_ptr<ContigIntrons>& introns,
+      std::vector<BinReads>&& reads,
       std::vector<size_t>&& offsets,
-      junction_pos_t num_bins)
-      : introns_{std::move(introns)},
-        reads_{std::move(reads)},
-        offsets_{std::move(offsets)},
-        num_bins_{num_bins} { check_valid(); }
-  SJIntronsBins(const SJIntronsBins&) = default;
-  SJIntronsBins(SJIntronsBins&&) = default;
-  SJIntronsBins& operator=(const SJIntronsBins&) = delete;
-  SJIntronsBins& operator=(SJIntronsBins&&) = delete;
+      junction_pos_t total_bins)
+      : BaseT{introns, std::move(reads), std::move(offsets), total_bins} { }
+  SJIntronsBins(const SJIntronsBins& x) = default;
+  SJIntronsBins(SJIntronsBins&& x) = default;
+  SJIntronsBins& operator=(const SJIntronsBins& x) = delete;
+  SJIntronsBins& operator=(SJIntronsBins&& x) = delete;
 };
 
 }  // namespace majiq

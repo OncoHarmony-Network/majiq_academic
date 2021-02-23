@@ -555,21 +555,21 @@ void init_SJIntronsBins(pySJIntronsBins_t& pySJIntronsBins) {
         py::arg("experiment_strandness") = DEFAULT_BAM_STRANDNESS,
         py::arg("nthreads") = DEFAULT_BAM_NTHREADS)
     .def_property_readonly("_introns",
-        [](SJIntronsBins& self) { return self.introns(); },
+        [](SJIntronsBins& self) { return self.regions(); },
         "Underlying ContigIntrons for which coverage was quantified")
     .def_property_readonly("position_reads",
         [](py::object& sj_obj) {
         SJIntronsBins& sj = sj_obj.cast<SJIntronsBins&>();
-        const size_t offset = offsetof(majiq::PositionReads, reads);
-        return ArrayFromVectorAndOffset<majiq::junction_ct_t, majiq::PositionReads>(
+        const size_t offset = offsetof(majiq::BinReads, bin_reads);
+        return ArrayFromVectorAndOffset<majiq::junction_ct_t, majiq::BinReads>(
             sj.reads(), offset, sj_obj);
         },
         "Number of reads for intron/bin")
     .def_property_readonly("position",
         [](py::object& sj_obj) {
         SJIntronsBins& sj = sj_obj.cast<SJIntronsBins&>();
-        const size_t offset = offsetof(majiq::PositionReads, pos);
-        return ArrayFromVectorAndOffset<majiq::junction_pos_t, majiq::PositionReads>(
+        const size_t offset = offsetof(majiq::BinReads, bin_idx);
+        return ArrayFromVectorAndOffset<majiq::junction_pos_t, majiq::BinReads>(
             sj.reads(), offset, sj_obj);
         },
         "Position index for intron bin")
@@ -611,9 +611,9 @@ void init_SJIntronsBins(pySJIntronsBins_t& pySJIntronsBins) {
             sj.offsets(), 0, sj_obj);
         },
         "Raw offsets for jpidx_start and jpidx_end")
-    .def_property_readonly("num_bins", &SJIntronsBins::num_bins,
+    .def_property_readonly("num_bins", &SJIntronsBins::total_bins,
         "Number of positional bins intron coverage was split into")
-    .def_property_readonly("num_introns", &SJIntronsBins::num_introns,
+    .def_property_readonly("num_introns", &SJIntronsBins::num_regions,
         "Number of introns being quantified")
     .def("__len__", &SJIntronsBins::size);
 }
@@ -773,12 +773,12 @@ void init_SJJunctionsPositions(pySJJunctionsPositions_t& pySJJunctionsPositions)
           for (size_t i = 0; i < offsets_vec.size(); ++i) {
             offsets_vec[i] = offsets(i);
           }
-          std::vector<majiq::PositionReads> pr_vec(position_reads.shape(0));
+          std::vector<majiq::BinReads> pr_vec(position_reads.shape(0));
           for (size_t i = 0; i < pr_vec.size(); ++i) {
-            pr_vec[i] = majiq::PositionReads{position(i), position_reads(i)};
+            pr_vec[i] = majiq::BinReads{position(i), position_reads(i)};
           }
           return majiq::SJJunctionsPositions{
-            std::move(junctions),
+            junctions,
             std::move(pr_vec), std::move(offsets_vec), num_positions};
         }),
         "Create SJJunctionsPositions for junctions with per-position coverage",
@@ -825,26 +825,26 @@ void init_SJJunctionsPositions(pySJJunctionsPositions_t& pySJJunctionsPositions)
         },
         "Load junctions and per-position counts from netcdf",
         py::arg("netcdf_path"))
-    .def_property_readonly("_junctions", &SJJunctionsPositions::junctions,
+    .def_property_readonly("_junctions", &SJJunctionsPositions::regions,
         "Underlying junctions and summarized counts")
     .def_property_readonly("num_positions",
-        &SJJunctionsPositions::num_positions,
+        &SJJunctionsPositions::total_bins,
         "Number of valid positions possible (function of max read length)")
     .def("__len__", &SJJunctionsPositions::size,
         "Number of junction positions")
     .def_property_readonly("position_reads",
         [](py::object& sj_obj) {
         SJJunctionsPositions& sj = sj_obj.cast<SJJunctionsPositions&>();
-        const size_t offset = offsetof(majiq::PositionReads, reads);
-        return ArrayFromVectorAndOffset<majiq::junction_ct_t, majiq::PositionReads>(
+        const size_t offset = offsetof(majiq::BinReads, bin_reads);
+        return ArrayFromVectorAndOffset<majiq::junction_ct_t, majiq::BinReads>(
             sj.reads(), offset, sj_obj);
         },
         "Number of reads for a junction/position")
     .def_property_readonly("position",
         [](py::object& sj_obj) {
         SJJunctionsPositions& sj = sj_obj.cast<SJJunctionsPositions&>();
-        const size_t offset = offsetof(majiq::PositionReads, pos);
-        return ArrayFromVectorAndOffset<majiq::junction_pos_t, majiq::PositionReads>(
+        const size_t offset = offsetof(majiq::BinReads, bin_idx);
+        return ArrayFromVectorAndOffset<majiq::junction_pos_t, majiq::BinReads>(
             sj.reads(), offset, sj_obj);
         },
         "Position index for junction/position")

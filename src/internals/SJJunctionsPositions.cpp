@@ -26,53 +26,6 @@
 
 namespace majiq {
 
-void SJJunctionsPositions::check_valid() const {
-  if (junctions_ == nullptr) {
-    throw std::runtime_error(
-        "SJJunctionsPositions has null junctions");
-  } else if (junctions_->size() != offsets_.size() - 1) {
-    throw std::runtime_error(
-        "SJJunctionsPositions offsets do not correspond to junctions");
-  } else if (offsets_.back() != reads_.size()) {
-    throw std::runtime_error(
-        "SJJunctionsPositions offsets do not correspond to reads per position");
-  } else {
-    for (size_t jidx = 0; jidx < junctions_->size(); ++jidx) {
-      const SJJunction& curj = (*junctions_)[jidx];
-      if (offsets_[jidx] > offsets_[jidx + 1]) {
-        throw std::runtime_error(
-            "SJJunctionsPositions has nonmonotonically increasing offsets");
-      } else if (curj.numpos() != offsets_[1 + jidx] - offsets_[jidx]) {
-        throw std::runtime_error(
-            "SJJunctionsPositions offsets do not match junction numpos");
-      } else if (curj.numpos() > num_positions_) {
-        throw std::runtime_error(
-            "SJJunctionsPositions has reads for more positions than possible");
-      } else if (
-          std::any_of(reads_.begin() + offsets_[jidx],
-            reads_.begin() + offsets_[1 + jidx],
-            [num_positions=num_positions_](const PositionReads& x) -> bool {
-            return x.pos >= num_positions;
-            })) {
-        throw std::runtime_error(
-            "SJJunctionsPositions has invalid read position");
-      } else if (
-          std::accumulate(reads_.begin() + offsets_[jidx],
-            reads_.begin() + offsets_[1 + jidx],
-            junction_ct_t{},
-            [](junction_ct_t s, const PositionReads& x) { return s + x.reads; })
-          != curj.numreads()) {
-        throw std::runtime_error(
-            "SJJunctionsPositions sum position reads does not match junction");
-      } else if (!std::is_sorted(reads_.begin() + offsets_[jidx],
-            reads_.begin() + offsets_[1 + jidx])) {
-        throw std::runtime_error(
-            "SJJunctionsPositions is not appropriately sorted per junction");
-      }
-    }  // end loop over junctions
-  }
-}
-
 SJJunctionsPositions SJJunctionsPositions::FromBam(
     const char* infile, ExperimentStrandness exp_strandness, int nthreads) {
   auto contigs = Contigs::create();
@@ -147,7 +100,7 @@ SJJunctionsPositions SJJunctionsPositions::FromBam(
     ? max_read_length + 1 - 2 * USE_MIN_OVERHANG : 0;
   // initialize vectors for outputs
   std::vector<SJJunction> junctions(num_junctions);
-  std::vector<PositionReads> reads(num_junction_positions);
+  std::vector<BinReads> reads(num_junction_positions);
   std::vector<size_t> reads_offsets(num_junctions + 1);
   size_t jidx = 0;
   size_t jpidx = 0;
@@ -160,15 +113,15 @@ SJJunctionsPositions SJJunctionsPositions::FromBam(
       std::transform(position_reads.begin(), position_reads.end(),
           reads.begin() + jpidx,
           [](const std::pair<junction_pos_t, junction_ct_t>& x) {
-          return PositionReads{x.first, x.second};
+          return BinReads{x.first, x.second};
           });
       std::sort(reads.begin() + jpidx, reads.begin() + jpidx + num_positions);
       // summarize total reads
       const junction_ct_t num_reads = std::accumulate(
           reads.begin() + jpidx, reads.begin() + jpidx + num_positions,
           junction_ct_t{},
-          [](junction_ct_t acc, const PositionReads& x) {
-          return acc + x.reads;
+          [](junction_ct_t acc, const BinReads& x) {
+          return acc + x.bin_reads;
           });
       // update junctions, offsets
       junctions[jidx] = SJJunction{contig, pos_strand.first, pos_strand.second,
@@ -182,37 +135,7 @@ SJJunctionsPositions SJJunctionsPositions::FromBam(
   // finally, create desired result
   return SJJunctionsPositions{
       std::make_shared<SJJunctions>(contigs, std::move(junctions)),
-      reads, reads_offsets, eff_len};
-}
-
-void SJIntronsBins::check_valid() const {
-  if (offsets_.empty()) {
-    throw std::runtime_error("SJIntronsBins cannot have empty offsets");
-  } else if (introns_.size() != offsets_.size() - 1) {
-    throw std::runtime_error(
-        "SJIntronsBins offsets do not correspond to number of introns");
-  } else if (offsets_.back() != reads_.size()) {
-    throw std::runtime_error(
-        "SJIntronsBins offsets do not correspond to reads per bin");
-  } else {
-    for (size_t jidx = 0; jidx < introns_.size(); ++jidx) {
-      if (offsets_[jidx] > offsets_[jidx + 1]) {
-        throw std::runtime_error(
-            "SJIntronsBins has nonmonotonically increasing offsets");
-      } else if (offsets_[jidx + 1] - offsets_[jidx] > num_bins_) {
-        throw std::runtime_error(
-            "SJIntronsBins has reads for more bins than possible");
-      } else if (
-          !std::all_of(
-            reads_.begin() + offsets_[jidx],
-            reads_.begin() + offsets_[jidx + 1],
-            [num_bins = num_bins_](const PositionReads& x) {
-            return x.pos < num_bins; })) {
-        throw std::runtime_error(
-            "SJIntronsBins has intron with invalid read position");
-      }
-    }  // end loop over introns
-  }
+      std::move(reads), std::move(reads_offsets), eff_len};
 }
 
 SJIntronsBins SJIntronsBins::FromBam(const char* infile,
@@ -220,8 +143,10 @@ SJIntronsBins SJIntronsBins::FromBam(const char* infile,
     const GeneIntrons& gene_introns, ExperimentStrandness exp_strandness,
     int nthreads) {
   // get introns we will be quantifying against
-  ContigIntrons introns = ContigIntrons::FromGeneExonsAndIntrons(
-      exons, gene_introns, exp_strandness != ExperimentStrandness::NONE);
+  const auto introns_ptr = std::make_shared<ContigIntrons>(
+      ContigIntrons::FromGeneExonsAndIntrons(exons, gene_introns,
+        exp_strandness != ExperimentStrandness::NONE));
+  const ContigIntrons& introns = *introns_ptr;
   // get contigs for these introns
   auto contigs = introns.parents();
   // count number of reads per intron bin
@@ -371,7 +296,7 @@ SJIntronsBins SJIntronsBins::FromBam(const char* infile,
   }  // done processing BAM file
   // get offsets vector
   std::vector<size_t> offsets(1 + introns.size());
-  std::vector<PositionReads> reads(ct_nonzero);
+  std::vector<BinReads> reads(ct_nonzero);
   size_t read_idx = 0;
   for (size_t intron_idx = 0; intron_idx < introns.size(); ++intron_idx) {
     const size_t start_idx = read_idx;
@@ -380,7 +305,7 @@ SJIntronsBins SJIntronsBins::FromBam(const char* infile,
       const junction_ct_t& bin_ct = counts_mut(intron_idx, bin_idx);
       if (bin_ct > 0) {
         // nonzero counts get added to reads
-        reads[read_idx++] = PositionReads{bin_idx, bin_ct};
+        reads[read_idx++] = BinReads{bin_idx, bin_ct};
       }
     }
     // get reads in sorted order per intron
@@ -389,7 +314,7 @@ SJIntronsBins SJIntronsBins::FromBam(const char* infile,
     offsets[1 + intron_idx] = read_idx;
   }
   return SJIntronsBins(
-      std::move(introns), std::move(reads), std::move(offsets), num_bins);
+      introns_ptr, std::move(reads), std::move(offsets), num_bins);
 }
 
 }  // namespace majiq
