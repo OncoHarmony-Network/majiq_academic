@@ -109,7 +109,7 @@ class GroupJunctionsGenerator {
   /**
    * Update known junctions in place for passing
    */
-  std::shared_ptr<GeneJunctions> UpdateKnownInplace(float min_experiments_f) {
+  std::shared_ptr<GeneJunctions> UpdateKnownInplace(real_t min_experiments_f) {
     size_t min_experiments = detail::min_experiments_from_float(
         num_experiments_, min_experiments_f);
     for (size_t idx = 0; idx < known_num_passed_.size(); ++idx) {
@@ -138,7 +138,7 @@ class PassedJunctionsGenerator {
         known_passed_build_(known->size(), false),
         denovos_passed_build_{} { }
 
-  void AddGroup(const GroupJunctionsGenerator& group, float min_experiments_f) {
+  void AddGroup(const GroupJunctionsGenerator& group, real_t min_experiments_f) {
     if (known_ != group.known_) {
       throw std::invalid_argument(
           "Added group junctions have different set of known gene junctions");

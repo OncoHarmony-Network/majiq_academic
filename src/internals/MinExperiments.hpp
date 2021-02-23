@@ -16,7 +16,7 @@ namespace majiq {
 namespace detail {
 
 inline size_t min_experiments_from_float(
-    size_t num_experiments, float min_experiments_f) {
+    size_t num_experiments, real_t min_experiments_f) {
   // get min_experiments as size_t from input
   if (min_experiments_f < 0) {
     throw std::invalid_argument("min_experiments must be non-negative");

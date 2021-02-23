@@ -33,7 +33,7 @@ constexpr bool DEFAULT_BUILD_PROCESS_IR = true;
 constexpr majiq::junction_ct_t DEFAULT_BUILD_MINREADS = 3;
 constexpr majiq::junction_ct_t DEFAULT_BUILD_MINDENOVO = 5;
 constexpr majiq::junction_pos_t DEFAULT_BUILD_MINPOS = 2;
-constexpr float DEFAULT_BUILD_MINEXPERIMENTS = 0.5;
+constexpr majiq::real_t DEFAULT_BUILD_MINEXPERIMENTS = 0.5;
 constexpr bool DEFAULT_BUILD_DENOVO_JUNCTIONS = true;
 constexpr majiq::ExperimentStrandness DEFAULT_BAM_STRANDNESS
   = majiq::ExperimentStrandness::NONE;
