@@ -295,18 +295,12 @@ SJIntronsBins SJIntronsBins::FromBam(const char* infile,
             = raw_alignment_position + aln_regions.clipping_lengths_.first
             - (USE_MIN_OVERHANG - 1);
           // map to appropriate intron bin
-          const junction_pos_t min_pos_per_bin
-            = (num_bins + intron_length) / num_bins;
-          const junction_pos_t bins_with_extra
-            = (num_bins + intron_length) % num_bins;
-          const junction_pos_t first_pos_without_extra
-            = bins_with_extra * (1 + min_pos_per_bin);
-          const junction_pos_t resulting_bin
-            = raw_read_position < first_pos_without_extra
-            ? raw_read_position / (1 + min_pos_per_bin)
-            : (bins_with_extra
-                + ((raw_read_position - first_pos_without_extra)
-                  / min_pos_per_bin));
+          using detail::IntronCoarseBins;
+          const junction_pos_t resulting_bin = (
+              IntronCoarseBins(
+                IntronCoarseBins::num_raw_positions(intron_length, num_bins),
+                num_bins)
+              .resulting_bin(raw_read_position));
           // update counts for this intron/bin
           if (1 == (++counts_mut(intron_idx, resulting_bin))) {
             // if first count for this intron/bin, update ct_nonzero

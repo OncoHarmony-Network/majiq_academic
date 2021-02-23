@@ -12,6 +12,7 @@
 #include <memory>
 #include <tuple>
 #include <stdexcept>
+#include <utility>
 
 #include "SJJunctions.hpp"
 #include "Exons.hpp"
@@ -80,6 +81,43 @@ class SJJunctionsPositions {
   SJJunctionsPositions& operator=(SJJunctionsPositions&& x) = delete;
 };
 
+namespace detail {
+/**
+ * Define how raw positions are coarsely binned to match junctions
+ */
+struct IntronCoarseBins {
+  // how many positions in smallest bin
+  const junction_pos_t min_pos_per_bin;
+  // how many bins with exactly 1 more than min
+  const junction_pos_t bins_with_extra;
+
+  static junction_pos_t num_raw_positions(
+      junction_pos_t intron_length, junction_pos_t num_bins) {
+    return intron_length + num_bins;
+  }
+
+  IntronCoarseBins(junction_pos_t num_raw_positions, junction_pos_t num_bins)
+      : min_pos_per_bin{num_raw_positions / num_bins},
+        bins_with_extra{num_raw_positions % num_bins} { }
+
+  junction_pos_t resulting_bin(junction_pos_t raw_read_position) const {
+    // bins with extra position go in front, find position that divides that
+    const junction_pos_t first_pos_without_extra
+      = bins_with_extra * (1 + min_pos_per_bin);
+    // determine where to put position relative to that
+    return (
+        raw_read_position < first_pos_without_extra
+        ? raw_read_position / (1 + min_pos_per_bin)
+        : (bins_with_extra
+          + ((raw_read_position - first_pos_without_extra)
+            / min_pos_per_bin)));
+  }
+  junction_pos_t bin_num_positions(junction_pos_t bin_idx) const {
+    return bin_idx < bins_with_extra ? 1 + min_pos_per_bin : min_pos_per_bin;
+  }
+};
+}  // namespace detail
+
 class SJIntronsBins {
  private:
   const ContigIntrons introns_;
@@ -102,28 +140,16 @@ class SJIntronsBins {
   const std::vector<PositionReads>& reads() { return reads_; }
   const std::vector<size_t>& offsets() { return offsets_; }
 
-  SJIntronsBins(
-      const ContigIntrons& introns,
-      const std::vector<PositionReads>& reads,
-      const std::vector<size_t>& offsets,
-      junction_pos_t num_bins)
-      : introns_{introns},
-        reads_{reads},
-        offsets_{offsets},
-        num_bins_{num_bins} {
-    check_valid();
-  }
+
   SJIntronsBins(
       ContigIntrons&& introns,
       std::vector<PositionReads>&& reads,
       std::vector<size_t>&& offsets,
       junction_pos_t num_bins)
-      : introns_{introns},
-        reads_{reads},
-        offsets_{offsets},
-        num_bins_{num_bins} {
-    check_valid();
-  }
+      : introns_{std::move(introns)},
+        reads_{std::move(reads)},
+        offsets_{std::move(offsets)},
+        num_bins_{num_bins} { check_valid(); }
   SJIntronsBins(const SJIntronsBins&) = default;
   SJIntronsBins(SJIntronsBins&&) = default;
   SJIntronsBins& operator=(const SJIntronsBins&) = delete;
