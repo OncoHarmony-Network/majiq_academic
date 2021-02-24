@@ -48,7 +48,7 @@ class SJRegionBinReads {
   size_t num_regions() const noexcept { return regions_->size(); }
   size_t size() const noexcept { return reads_.size(); }
   junction_pos_t total_bins() const noexcept { return total_bins_; }
-  const std::shared_ptr<RegionsT>& regions() { return regions_; }
+  const std::shared_ptr<RegionsT>& regions() const { return regions_; }
   const std::vector<BinReads<CountT>>& reads() { return reads_; }
   const std::vector<size_t>& offsets() { return offsets_; }
 

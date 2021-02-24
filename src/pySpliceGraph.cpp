@@ -29,10 +29,16 @@
 #include "internals/SJJunctionsPositions.hpp"
 #include "internals/ContigIntrons.hpp"
 #include "internals/PassedJunctions.hpp"
+#include "internals/PassedIntrons.hpp"
 #include "internals/Meta.hpp"
 
 #include "internals/ExperimentThresholds.hpp"
 
+// default value of ExperimentThresholds
+static const auto DEFAULT_THRESHOLDS = majiq::ExperimentThresholds(
+    DEFAULT_BUILD_MINREADS, DEFAULT_BUILD_MINDENOVO, DEFAULT_BUILD_MINPOS,
+    DEFAULT_BUILD_MAX_PCTBINS, DEFAULT_BUILD_MATCH_JUNCTION_PROBABILITY,
+    DEFAULT_BUILD_MATCH_INTRON_PROBABILITY);
 
 namespace py = pybind11;
 template <typename T>
@@ -47,6 +53,7 @@ using pySJJunctions_t = pyClassShared_t<majiq::SJJunctions>;
 using pySJJunctionsPositions_t = pyClassShared_t<majiq::SJJunctionsPositions>;
 using pyGroupJunctionsGen_t = pyClassShared_t<majiq::GroupJunctionsGenerator>;
 using pyPassedJunctionsGen_t = pyClassShared_t<majiq::PassedJunctionsGenerator>;
+using pyGroupIntronsGen_t = pyClassShared_t<majiq::GroupIntronsGenerator>;
 using pySJIntronsBins_t = pyClassShared_t<majiq::SJIntronsBins>;
 
 using pyExperimentThresholds_t = pyClassShared_t<majiq::ExperimentThresholds>;
@@ -653,6 +660,10 @@ void init_GeneIntrons(pyGeneIntrons_t& pyGeneIntrons) {
         },
         "Load introns from netcdf file",
         py::arg("netcdf_path"), py::arg("genes"))
+    .def("create_build_group", [](std::shared_ptr<GeneIntrons>& gene_introns) {
+        return majiq::GroupIntronsGenerator(gene_introns);
+        },
+        "Create build group to update passed introns in place")
     .def("potential_introns", &GeneIntrons::PotentialIntrons,
         "Get potential gene introns from exons keeping annotations from self",
         py::arg("exons"))
@@ -940,9 +951,7 @@ void init_pyGroupJunctionsGen(pyGroupJunctionsGen_t& pyGroupJunctionsGen) {
     .def("add_experiment", &majiq::GroupJunctionsGenerator::AddExperiment,
         "Increment count of passed junctions from input experiment",
         py::arg("sj"),
-        py::arg("thresholds")
-          = majiq::ExperimentThresholds(DEFAULT_BUILD_MINREADS,
-            DEFAULT_BUILD_MINDENOVO, DEFAULT_BUILD_MINPOS),
+        py::arg("thresholds") = DEFAULT_THRESHOLDS,
         py::arg("add_denovo") = DEFAULT_BUILD_DENOVO_JUNCTIONS)
     .def("pass_known_inplace",
         &majiq::GroupJunctionsGenerator::UpdateKnownInplace,
@@ -958,6 +967,46 @@ void init_pyGroupJunctionsGen(pyGroupJunctionsGen_t& pyGroupJunctionsGen) {
         &majiq::GroupJunctionsGenerator::num_denovo,
         "Number of denovo junctions passing experiment-filters for 1+ inputs")
     .def("__len__", &majiq::GroupJunctionsGenerator::size);
+}
+
+void init_pyGroupIntronsGen(pyGroupIntronsGen_t& pyGroupIntronsGen) {
+  using majiq::GroupIntronsGenerator;
+  using majiq_pybind::ArrayFromVectorAndOffset;
+  pyGroupIntronsGen
+    .def(
+        py::init<const std::shared_ptr<majiq::GeneIntrons>&>(),
+        "Accumulate SJIntronsBins for build group of introns",
+        py::arg("gene_introns"))
+    .def_property_readonly("num_experiments",
+        &GroupIntronsGenerator::num_experiments,
+        "Number of experiments in current group")
+    .def_property_readonly("_introns", &GroupIntronsGenerator::introns)
+    .def_property_readonly("num_passed",
+        [](py::object& self_obj) -> py::array_t<size_t> {
+        GroupIntronsGenerator& self = self_obj.cast<GroupIntronsGenerator&>();
+        return ArrayFromVectorAndOffset<size_t, size_t>(
+            self.num_passed(), 0, self_obj);
+        },
+        "Number of experiments or which each intron has passed")
+    .def("df",
+        [](py::object& self) -> py::object {
+        auto base = self.attr("_introns").attr("df")();
+        auto get_xr = [&self](py::str key) {
+          return py::module_::import("xarray").attr("DataArray")(
+              self.attr(key), py::arg("dims") = "intron_idx");
+        };
+        return base.attr("assign_coords")(
+            py::arg("num_passed") = get_xr("num_passed"));
+        },
+        "View of gene introns and how many times they have passed")
+    .def("__len__", &GroupIntronsGenerator::size)
+    .def("add_experiment", &GroupIntronsGenerator::AddExperiment,
+        "Add SJIntronsBins to build group",
+        py::arg("sj"),
+        py::arg("thresholds") = DEFAULT_THRESHOLDS)
+    .def("update_introns", &GroupIntronsGenerator::UpdateInplace,
+        "Pass introns that pass min-experiments in place, reset for next group",
+        py::arg("min_experiments") = DEFAULT_BUILD_MINEXPERIMENTS);
 }
 
 void init_pyPassedJunctionsGen(pyPassedJunctionsGen_t& pyPassedJunctionsGen) {
@@ -1152,12 +1201,18 @@ void init_pyExperimentThresholds(
   using majiq::ExperimentThresholds;
   using majiq::junction_ct_t;
   using majiq::junction_pos_t;
+  using majiq::real_t;
   pyExperimentThresholds
-    .def(py::init<junction_ct_t, junction_ct_t, junction_pos_t>(),
+    .def(py::init<junction_ct_t, junction_ct_t, junction_pos_t, real_t, real_t, real_t>(),
         "per-experiment thresholds for junctions",
         py::arg("minreads") = DEFAULT_BUILD_MINREADS,
         py::arg("mindenovo") = DEFAULT_BUILD_MINDENOVO,
-        py::arg("minpos") = DEFAULT_BUILD_MINPOS)
+        py::arg("minpos") = DEFAULT_BUILD_MINPOS,
+        py::arg("max_pctbins") = DEFAULT_BUILD_MAX_PCTBINS,
+        py::arg("junction_acceptance_probability")
+          = DEFAULT_BUILD_MATCH_JUNCTION_PROBABILITY,
+        py::arg("intron_acceptance_probability")
+          = DEFAULT_BUILD_MATCH_INTRON_PROBABILITY)
     .def_property_readonly("minreads",
         [](const ExperimentThresholds& x) { return x.minreads_; },
         "Minimum number of reads for an annotated junction to pass")
@@ -1167,12 +1222,28 @@ void init_pyExperimentThresholds(
     .def_property_readonly("minpos",
         [](const ExperimentThresholds& x) { return x.minpos_; },
         "Minimum number of nonzero positions for a junction to pass")
+    .def_property_readonly("max_pctbins",
+        [](const ExperimentThresholds& x) { return x.max_pctbins_; },
+        "Maximum percentage of bins to require coverage in for intron to pass")
+    .def_property_readonly("junction_acceptance_probability",
+        [](const ExperimentThresholds& x) {
+        return x.junction_acceptance_probability_; },
+        "Set intron thresholds to match junction readrate with probability")
+    .def_property_readonly("intron_acceptance_probability",
+        [](const ExperimentThresholds& x) {
+        return x.intron_acceptance_probability_; },
+        "Intron thresholds pass per-position readrate with probability")
     .def("__repr__", [](const ExperimentThresholds& x) -> std::string {
         std::ostringstream oss;
-        oss << "ExperimentThresholds(minreads="
-            << x.minreads_ << ", mindenovo="
-            << x.mindenovo_ << ", minpos="
-            << x.minpos_ << ")";
+        oss << "ExperimentThresholds(minreads=" << x.minreads_
+            << ", mindenovo=" << x.mindenovo_
+            << ", minpos=" << x.minpos_
+            << ", max_pctbins=" << x.max_pctbins_
+            << ", junction_acceptance_probability="
+            << x.junction_acceptance_probability_
+            << ", intron_acceptance_probability="
+            << x.intron_acceptance_probability_
+            << ")";
         return oss.str();
         })
     .def("intron_thresholds_generator",
@@ -1185,22 +1256,8 @@ void init_pyExperimentThresholds(
         total_bins: int
             Maximum number of bins/positions for each junction/intron for
             quantification
-        max_pctbins: float
-            Maximum percent of bins that can be required to have some minimum
-            amount of coverage in order to pass
-        junction_acceptance_probability: float
-            Match per raw-position readrate that would pass junction thresholds
-            with this probability
-        intron_acceptance_probability: float
-            Set intron thresholds so that solved-for raw-position readrate would
-            be accepted with this probability (or just below this probability)
         )pbdoc",
-        py::arg("total_bins"),
-        py::arg("max_pctbins") = DEFAULT_BUILD_MAX_PCTBINS,
-        py::arg("junction_acceptance_probability")
-          = DEFAULT_BUILD_MATCH_JUNCTION_PROBABILITY,
-        py::arg("intron_acceptance_probability")
-          = DEFAULT_BUILD_MATCH_INTRON_PROBABILITY);
+        py::arg("total_bins"));
 }
 
 void init_pyIntronThresholdsGenerator(
@@ -1257,6 +1314,9 @@ void init_SpliceGraphAll(py::module_& m) {
   auto pyPassedJunctionsGen = pyPassedJunctionsGen_t(
       m, "PassedJunctionsGenerator",
       "Accumulator of GroupJunctionsGenerator from multiple build groups");
+  auto pyGroupIntronsGen = pyGroupIntronsGen_t(
+      m, "GroupIntronsGenerator",
+      "Accumulator of SJIntronsBins in the same build group");
   auto pyGeneStrandness = py::enum_<GeneStrandness>(
       m, "GeneStrandness")
     .value("forward", GeneStrandness::FORWARD)
@@ -1341,4 +1401,5 @@ void init_SpliceGraphAll(py::module_& m) {
   init_SJIntronsBins(pySJIntronsBins);
   init_pyGroupJunctionsGen(pyGroupJunctionsGen);
   init_pyPassedJunctionsGen(pyPassedJunctionsGen);
+  init_pyGroupIntronsGen(pyGroupIntronsGen);
 }

@@ -101,7 +101,7 @@ void GroupJunctionsGenerator::AddExperiment(const SJJunctions& sj,
       if (status == JunctionPassedStatus::NOT_PASSED) { continue; }
       // update og until could overlap with junction
       for (; og != og_end
-          && IntervalPrecedes(og.coordinates, junction.coordinates)
+          && IntervalPrecedes(og.coordinates, junction.coordinates);
           ++og) { }
       // if we have run out of overgenes in contig, futile to look at any more
       // junctions on the contigs

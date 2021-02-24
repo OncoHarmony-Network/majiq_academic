@@ -402,21 +402,27 @@ class ExperimentThresholds {
   const junction_ct_t minreads_;
   const junction_ct_t mindenovo_;
   const junction_pos_t minpos_;
+  const real_t max_pctbins_;
+  const real_t junction_acceptance_probability_;
+  const real_t intron_acceptance_probability_;
 
   ExperimentThresholds(
-      junction_ct_t minreads, junction_ct_t mindenovo, junction_pos_t minpos)
+      junction_ct_t minreads, junction_ct_t mindenovo, junction_pos_t minpos,
+      real_t max_pctbins, real_t junction_acceptance_probability,
+      real_t intron_acceptance_probability)
       : minreads_{std::max(1, minreads)},
         mindenovo_{std::max(minreads_, mindenovo)},
-        minpos_{std::max(1, minpos)} { }
+        minpos_{std::max(1, minpos)},
+        max_pctbins_{max_pctbins},
+        junction_acceptance_probability_{junction_acceptance_probability},
+        intron_acceptance_probability_{intron_acceptance_probability} { }
 
 
   IntronThresholdsGenerator intron_thresholds_generator(
-      junction_pos_t total_bins, real_t max_pctbins,
-      real_t junction_acceptance_probability,
-      real_t intron_acceptance_probability) {
+      junction_pos_t total_bins) const {
     return IntronThresholdsGenerator(
-        mindenovo_, minpos_, total_bins, max_pctbins,
-        junction_acceptance_probability, intron_acceptance_probability);
+        mindenovo_, minpos_, total_bins, max_pctbins_,
+        junction_acceptance_probability_, intron_acceptance_probability_);
   }
 };
 
