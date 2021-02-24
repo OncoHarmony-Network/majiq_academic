@@ -31,6 +31,8 @@
 #include "internals/PassedJunctions.hpp"
 #include "internals/Meta.hpp"
 
+#include "internals/ExperimentThresholds.hpp"
+
 
 namespace py = pybind11;
 template <typename T>
@@ -46,6 +48,10 @@ using pySJJunctionsPositions_t = pyClassShared_t<majiq::SJJunctionsPositions>;
 using pyGroupJunctionsGen_t = pyClassShared_t<majiq::GroupJunctionsGenerator>;
 using pyPassedJunctionsGen_t = pyClassShared_t<majiq::PassedJunctionsGenerator>;
 using pySJIntronsBins_t = pyClassShared_t<majiq::SJIntronsBins>;
+
+using pyExperimentThresholds_t = pyClassShared_t<majiq::ExperimentThresholds>;
+using pyIntronThresholdsGenerator_t
+  = pyClassShared_t<majiq::IntronThresholdsGenerator>;
 
 template <typename T>
 using base_t = std::remove_cv_t<std::remove_reference_t<T>>;
@@ -1139,6 +1145,73 @@ void init_SpliceGraph(py::class_<majiq::SpliceGraph>& pySpliceGraph) {
         });
 }
 
+void init_pyExperimentThresholds(
+    pyExperimentThresholds_t& pyExperimentThresholds) {
+  using majiq::ExperimentThresholds;
+  using majiq::junction_ct_t;
+  using majiq::junction_pos_t;
+  pyExperimentThresholds
+    .def(py::init<junction_ct_t, junction_ct_t, junction_pos_t>(),
+        "per-experiment thresholds for junctions",
+        py::arg("minreads") = DEFAULT_BUILD_MINREADS,
+        py::arg("mindenovo") = DEFAULT_BUILD_MINDENOVO,
+        py::arg("minpos") = DEFAULT_BUILD_MINPOS)
+    .def_property_readonly("minreads",
+        [](const ExperimentThresholds& x) { return x.minreads_; },
+        "Minimum number of reads for an annotated junction to pass")
+    .def_property_readonly("mindenovo",
+        [](const ExperimentThresholds& x) { return x.mindenovo_; },
+        "Minimum number of reads for a denovo junction to pass")
+    .def_property_readonly("minpos",
+        [](const ExperimentThresholds& x) { return x.minpos_; },
+        "Minimum number of nonzero positions for a junction to pass")
+    .def("intron_thresholds_generator",
+        &ExperimentThresholds::intron_thresholds_generator,
+        R"pbdoc(
+        Create IntronThresholdsGenerator for intron thresholds by length
+
+        Parameters
+        ----------
+        total_bins: int
+            Maximum number of bins/positions for each junction/intron for
+            quantification
+        max_pctbins: float
+            Maximum percent of bins that can be required to have some minimum
+            amount of coverage in order to pass
+        junction_acceptance_probability: float
+            Match per raw-position readrate that would pass junction thresholds
+            with this probability
+        intron_acceptance_probability: float
+            Set intron thresholds so that solved-for raw-position readrate would
+            be accepted with this probability (or just below this probability)
+        )pbdoc",
+        py::arg("total_bins"),
+        py::arg("max_pctbins") = DEFAULT_BUILD_MAX_PCTBINS,
+        py::arg("junction_acceptance_probability")
+          = DEFAULT_BUILD_MATCH_JUNCTION_PROBABILITY,
+        py::arg("intron_acceptance_probability")
+          = DEFAULT_BUILD_MATCH_INTRON_PROBABILITY);
+}
+
+void init_pyIntronThresholdsGenerator(
+    pyIntronThresholdsGenerator_t& pyIntronThresholdsGenerator) {
+  using majiq::IntronThresholdsGenerator;
+  using majiq::IntronThresholds;
+  using majiq::junction_ct_t;
+  using majiq::junction_pos_t;
+  PYBIND11_NUMPY_DTYPE(IntronThresholds, minbins_, mincov_);
+  pyIntronThresholdsGenerator
+    .def("__call__",
+        [](const IntronThresholdsGenerator& gen,
+          py::array_t<junction_pos_t> intron_lengths) {
+        // function per-element of intron_lengths
+        auto f = [&gen](junction_pos_t x) { return gen(x); };
+        return py::vectorize(f)(intron_lengths);
+        },
+        "Get intron thresholds for specified intron lengths",
+        py::arg("intron_lengths"));
+}
+
 void init_SpliceGraphAll(py::module_& m) {
   using majiq::Contigs;
   using majiq::Genes;
@@ -1239,6 +1312,11 @@ void init_SpliceGraphAll(py::module_& m) {
   auto pySpliceGraph = py::class_<SpliceGraph>(m, "SpliceGraph",
       "Splicegraph managing exons, junctions, and introns within genes");
 
+  auto pyExperimentThresholds
+    = pyExperimentThresholds_t(m, "ExperimentThresholds");
+  auto pyIntronThresholdsGenerator
+    = pyIntronThresholdsGenerator_t(m, "IntronThresholdsGenerator");
+
   init_Contigs(pyContigs);
   init_Genes(pyGenes);
   init_Exons(pyExons);
@@ -1251,4 +1329,6 @@ void init_SpliceGraphAll(py::module_& m) {
   init_SJIntronsBins(pySJIntronsBins);
   init_pyGroupJunctionsGen(pyGroupJunctionsGen);
   init_pyPassedJunctionsGen(pyPassedJunctionsGen);
+  init_pyExperimentThresholds(pyExperimentThresholds);
+  init_pyIntronThresholdsGenerator(pyIntronThresholdsGenerator);
 }

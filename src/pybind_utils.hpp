@@ -33,6 +33,9 @@ constexpr bool DEFAULT_BUILD_PROCESS_IR = true;
 constexpr majiq::junction_ct_t DEFAULT_BUILD_MINREADS = 3;
 constexpr majiq::junction_ct_t DEFAULT_BUILD_MINDENOVO = 5;
 constexpr majiq::junction_pos_t DEFAULT_BUILD_MINPOS = 2;
+constexpr majiq::real_t DEFAULT_BUILD_MAX_PCTBINS = 0.6;
+constexpr majiq::real_t DEFAULT_BUILD_MATCH_JUNCTION_PROBABILITY = 0.5;
+constexpr majiq::real_t DEFAULT_BUILD_MATCH_INTRON_PROBABILITY = 0.95;
 constexpr majiq::real_t DEFAULT_BUILD_MINEXPERIMENTS = 0.5;
 constexpr bool DEFAULT_BUILD_DENOVO_JUNCTIONS = true;
 constexpr majiq::ExperimentStrandness DEFAULT_BAM_STRANDNESS

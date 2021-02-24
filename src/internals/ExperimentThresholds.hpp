@@ -1,11 +1,11 @@
 /**
- * IntronThresholds.hpp
- *
- * Copyright 2020 <University of Pennsylvania>
+ * ExperimentThresholds.hpp
  *
  * Class for determining thresholds for acceptance of MAJIQ introns of various
  * lengths by matching junction acceptance threshold probability with identical
  * per-position readrate.
+ *
+ * Copyright 2020 <University of Pennsylvania>
  *
  * Model: each position on a transcript feature (junction, intron) has the same
  * underlying readrate. We observe reads for each position as a Poisson random
@@ -25,8 +25,8 @@
  * readrate.
  */
 
-#ifndef MAJIQ_INTRONTHRESHOLDS_HPP
-#define MAJIQ_INTRONTHRESHOLDS_HPP
+#ifndef MAJIQ_EXPERIMENTTHRESHOLDS_HPP
+#define MAJIQ_EXPERIMENTTHRESHOLDS_HPP
 
 #include <algorithm>
 #include <cmath>
@@ -40,12 +40,12 @@
 
 
 namespace majiq {
-namespace intron_thresholds {
+namespace detail {
 
 /**
  * Readrate with at least minreads with sufficient probability
  */
-real_t ReadrateMinreads(
+inline real_t ReadrateMinreads(
     junction_ct_t minreads,
     real_t match_probability) {
   // edge cases
@@ -88,7 +88,7 @@ real_t ReadrateMinreads(
 /**
  * Per-position readrate meeting minreads with sufficient probability
  */
-real_t ReadrateJunctionMinreads(
+inline real_t ReadrateJunctionMinreads(
     junction_ct_t minreads,
     junction_pos_t numbins,
     real_t acceptance_probability) {
@@ -100,7 +100,7 @@ real_t ReadrateJunctionMinreads(
  * acceptance_probability when requiring specified minbins no less than
  * mincov
  */
-real_t ProbBinMincovFromBinomial(
+inline real_t ProbBinMincovFromBinomial(
     junction_pos_t minbins,
     junction_pos_t numbins,
     real_t acceptance_probability) {
@@ -112,7 +112,7 @@ real_t ProbBinMincovFromBinomial(
 /**
  * Per-position readrate meeting minpos with sufficient probability
  */
-real_t ReadrateJunctionMinpos(
+inline real_t ReadrateJunctionMinpos(
     junction_pos_t minpos,
     junction_pos_t numbins,
     real_t acceptance_probability) {
@@ -126,7 +126,7 @@ real_t ReadrateJunctionMinpos(
 /**
  * Per-position readrate meeting intron thresholds for given length
  */
-real_t ReadrateIntronThresholds(
+inline real_t ReadrateIntronThresholds(
     junction_pos_t minbins,
     junction_ct_t mincov,
     junction_pos_t numbins,
@@ -144,7 +144,7 @@ real_t ReadrateIntronThresholds(
 /**
  * Longest intron length with nonzero coverage probability less than input
  */
-junction_pos_t MaxLengthNonzeroCoverage(
+inline junction_pos_t MaxLengthNonzeroCoverage(
     real_t readrate,
     junction_pos_t numbins,
     real_t prob_mincov) {
@@ -161,7 +161,7 @@ junction_pos_t MaxLengthNonzeroCoverage(
 /**
  * total readrate aggregated over all intron positions
  */
-real_t TotalReadrate(real_t readrate, junction_pos_t numbins,
+inline real_t TotalReadrate(real_t readrate, junction_pos_t numbins,
     junction_pos_t intron_length) {
   return readrate * (numbins + intron_length);
 }
@@ -170,7 +170,7 @@ real_t TotalReadrate(real_t readrate, junction_pos_t numbins,
  * readrate for intron bin given positional readrate assuming fractional
  * positions per bin: (numbins + intron_length) / numbins
  */
-real_t BinReadrate(
+inline real_t BinReadrate(
     real_t readrate, junction_pos_t numbins, junction_pos_t intron_length) {
   return TotalReadrate(readrate, numbins, intron_length) / numbins;
 }
@@ -179,7 +179,7 @@ real_t BinReadrate(
  * The probability that an intron bin has at least mincov reads given Poisson
  * rate per position, number of bins, and intron length
  */
-real_t ProbBinMincovFromPoisson(
+inline real_t ProbBinMincovFromPoisson(
     real_t readrate,
     junction_pos_t numbins,
     junction_pos_t intron_length,
@@ -204,7 +204,7 @@ real_t ProbBinMincovFromPoisson(
  * acceptance_probability given readrate, total number of bins, intron
  * length, and mincov = 1
  */
-junction_pos_t MinbinsFromAcceptance(
+inline junction_pos_t MinbinsFromAcceptance(
     real_t readrate,
     junction_pos_t numbins,
     real_t acceptance_probability,
@@ -233,7 +233,7 @@ junction_pos_t MinbinsFromAcceptance(
  * Smallest value of minreads that has probability no greater than
  * acceptance_probability given total readrate
  */
-junction_ct_t MinreadsFromAcceptance(
+inline junction_ct_t MinreadsFromAcceptance(
     real_t total_readrate,
     real_t acceptance_probability) {
   // consider the total count distribution
@@ -255,7 +255,7 @@ junction_ct_t MinreadsFromAcceptance(
  * Smallest value of mincov that has probability no greater than
  * prob_bin_mincov given readrate, total number of bins, intron length
  */
-junction_ct_t MincovFromAcceptance(
+inline junction_ct_t MincovFromAcceptance(
     real_t readrate,
     junction_pos_t numbins,
     junction_pos_t intron_length,
@@ -267,7 +267,7 @@ junction_ct_t MincovFromAcceptance(
 /**
  * Intron acceptance probability for provided thresholds
  */
-real_t IntronAcceptanceProbability(
+inline real_t IntronAcceptanceProbability(
     real_t readrate,
     junction_pos_t numbins,
     junction_pos_t intron_length,
@@ -287,7 +287,7 @@ real_t IntronAcceptanceProbability(
 /**
  * Junction minreads acceptance probability
  */
-real_t JunctionMinreadsAcceptanceProbability(
+inline real_t JunctionMinreadsAcceptanceProbability(
     real_t readrate,
     junction_pos_t numbins,
     junction_ct_t minreads) {
@@ -307,7 +307,7 @@ real_t JunctionMinreadsAcceptanceProbability(
 /**
  * Junction minpos acceptance probability
  */
-real_t JunctionMinposAcceptanceProbability(
+inline real_t JunctionMinposAcceptanceProbability(
     real_t readrate,
     junction_pos_t numbins,
     junction_pos_t minpos) {
@@ -318,58 +318,59 @@ real_t JunctionMinposAcceptanceProbability(
       equivalent_intron_length, minpos, mincov);
 }
 
+}  // namespace detail
+
 struct IntronThresholds {
   junction_pos_t minbins_;  // minimum bins with at least
-  junction_ct_t mincov_;  // mincov reads (unnormalized) for intron to pass
+  junction_ct_t mincov_;  // mincov reads for intron to pass
 };
 
 class IntronThresholdsGenerator {
  private:
-  // total number of bins
-  const junction_pos_t numbins_;
-  // maximum value for minbins
+  // total number of bins present
+  const junction_pos_t total_bins_;
+  // maximum value for minbins_
   const junction_pos_t max_minbins_;
-  // acceptance probability to match
+  // acceptance probability being matched
   const real_t acceptance_probability_;
   // per-position readrate being matched
   const real_t readrate_;
   // binomial probability for max_minbins to match acceptance
   const real_t prob_bin_mincov_;
-  // maximum length where mincov = 1 (use different algorithm)
+  // maximum length where mincov = 1 (use different algorithm afterwards)
   const junction_pos_t max_length_nonzerocov_;
 
  public:
   /**
    * @param minreads, minpos junction thresholds
-   * @param numbins number of bins for each feature (also positions for
+   * @param total_bins number of bins for each feature (also positions for
    * junctions)
-   * @param max_minbins maximum number of bins for minbins. Must be no more
-   * than numbins.
+   * @param max_pctbins maximum percent of total bins for minbins
    * @param junction_acceptance_probability determine positional readrate so
    * that junctions have this acceptance probability given junction thresholds
    * @param intron_acceptance_probability intron thresholds set so that
    * determined positional readrate has just under this acceptance probability
    */
   IntronThresholdsGenerator(
-      int minreads,
-      junction_pos_t minpos,
-      junction_pos_t numbins,
-      junction_pos_t max_minbins,
+      junction_ct_t minreads, junction_pos_t minpos,
+      junction_pos_t total_bins, real_t max_pctbins,
       real_t junction_acceptance_probability,
       real_t intron_acceptance_probability)
-      : numbins_{numbins},
-        max_minbins_{max_minbins},
+      : total_bins_{total_bins},
+        max_minbins_{
+          std::max(1,
+              static_cast<junction_pos_t>(
+                total_bins_ * std::clamp(max_pctbins, real_t{0}, real_t{1})))},
         acceptance_probability_{intron_acceptance_probability},
         readrate_{std::max(
-            ReadrateJunctionMinreads(minreads, numbins_,
-              junction_acceptance_probability),
-            ReadrateJunctionMinpos(minpos, numbins_,
-              junction_acceptance_probability))},
-        prob_bin_mincov_{ProbBinMincovFromBinomial(max_minbins_, numbins_,
-            acceptance_probability_)},
-        max_length_nonzerocov_{MaxLengthNonzeroCoverage(readrate_, numbins_,
-            prob_bin_mincov_)} {
-  }
+            detail::ReadrateJunctionMinreads(
+              minreads, total_bins_, junction_acceptance_probability),
+            detail::ReadrateJunctionMinpos(
+              minpos, total_bins_, junction_acceptance_probability))},
+        prob_bin_mincov_{detail::ProbBinMincovFromBinomial(
+            max_minbins_, total_bins_, acceptance_probability_)},
+        max_length_nonzerocov_{detail::MaxLengthNonzeroCoverage(
+            readrate_, total_bins_, prob_bin_mincov_)} { }
 
   /**
    * intron thresholds that match junction threshold acceptance_probability for
@@ -378,33 +379,40 @@ class IntronThresholdsGenerator {
   IntronThresholds operator()(junction_pos_t intron_length) const {
     if (intron_length <= max_length_nonzerocov_) {
       return {
-          MinbinsFromAcceptance(readrate_, numbins_, acceptance_probability_,
-            intron_length),
+        detail::MinbinsFromAcceptance(
+              readrate_, total_bins_, acceptance_probability_, intron_length),
           1};
     } else {
       return {
           max_minbins_,
-          MincovFromAcceptance(readrate_, numbins_, intron_length,
-            prob_bin_mincov_)};
+          detail::MincovFromAcceptance(
+              readrate_, total_bins_, intron_length, prob_bin_mincov_)};
     }
   }
-
-  /**
-   * Underlying shared positional readrate
-   */
-  const real_t& readrate() const { return readrate_; }
-  /**
-   * Acceptance probability that is being (approximately) matched
-   */
-  const real_t& acceptance_probability() const {
-    return acceptance_probability_;
-  }
-  /**
-   * Number of bins (and junction positions)
-   */
-  const junction_pos_t numbins() const { return numbins_; }
 };
 
-}  // namespace intron_thresholds
+class ExperimentThresholds {
+ public:
+  const junction_ct_t minreads_;
+  const junction_ct_t mindenovo_;
+  const junction_pos_t minpos_;
+
+  ExperimentThresholds(
+      junction_ct_t minreads, junction_ct_t mindenovo, junction_pos_t minpos)
+      : minreads_{std::max(1, minreads)},
+        mindenovo_{std::max(minreads_, mindenovo)},
+        minpos_{std::max(1, minpos)} { }
+
+
+  IntronThresholdsGenerator intron_thresholds_generator(
+      junction_pos_t total_bins, real_t max_pctbins,
+      real_t junction_acceptance_probability,
+      real_t intron_acceptance_probability) {
+    return IntronThresholdsGenerator(
+        mindenovo_, minpos_, total_bins, max_pctbins,
+        junction_acceptance_probability, intron_acceptance_probability);
+  }
+};
+
 }  // namespace majiq
-#endif
+#endif  // MAJIQ_EXPERIMENTTHRESHOLDS_HPP
