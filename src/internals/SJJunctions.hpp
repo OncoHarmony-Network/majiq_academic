@@ -21,6 +21,7 @@
 #include "Regions.hpp"
 #include "Interval.hpp"
 #include "Contigs.hpp"
+#include "ExperimentThresholds.hpp"
 
 namespace majiq {
 
@@ -42,12 +43,11 @@ struct ExperimentCounts {
   ExperimentCounts(ExperimentCounts&&) = default;
   ExperimentCounts& operator=(const ExperimentCounts&) = default;
   ExperimentCounts& operator=(ExperimentCounts&&) = default;
-  JunctionPassedStatus passed(junction_ct_t minreads, junction_ct_t mindenovo,
-      junction_pos_t minpos) const noexcept {
-    // NOTE: assumes mindenovo >= minreads
-    if (numpos < minpos || numreads < minreads) {
+  JunctionPassedStatus passed(
+      const ExperimentThresholds& thresholds) const noexcept {
+    if (numpos < thresholds.minpos_ || numreads < thresholds.minreads_) {
       return JunctionPassedStatus::NOT_PASSED;
-    } else if (numreads >= mindenovo) {
+    } else if (numreads >= thresholds.mindenovo_) {
       return JunctionPassedStatus::DENOVO_PASSED;
     } else {  // minreads <= numreads < mindenovo
       return JunctionPassedStatus::ANNOTATED_PASSED;
@@ -64,9 +64,9 @@ class SJJunction : public detail::ContigRegion<OpenInterval, ExperimentCounts> {
   junction_ct_t& numreads() noexcept { return data.numreads; }
   const junction_pos_t& numpos() const noexcept { return data.numpos; }
   junction_pos_t& numpos() noexcept { return data.numpos; }
-  JunctionPassedStatus passed(junction_ct_t minreads, junction_ct_t mindenovo,
-      junction_pos_t minpos) const noexcept {
-    return data.passed(minreads, mindenovo, minpos);
+  JunctionPassedStatus passed(
+      const ExperimentThresholds& thresholds) const noexcept {
+    return data.passed(thresholds);
   }
 
   SJJunction(KnownContig contig, OpenInterval coordinates,

@@ -938,9 +938,9 @@ void init_pyGroupJunctionsGen(pyGroupJunctionsGen_t& pyGroupJunctionsGen) {
     .def("add_experiment", &majiq::GroupJunctionsGenerator::AddExperiment,
         "Increment count of passed junctions from input experiment",
         py::arg("sj"),
-        py::arg("minreads") = DEFAULT_BUILD_MINREADS,
-        py::arg("mindenovo") = DEFAULT_BUILD_MINDENOVO,
-        py::arg("minpos") = DEFAULT_BUILD_MINPOS,
+        py::arg("thresholds")
+          = majiq::ExperimentThresholds(DEFAULT_BUILD_MINREADS,
+            DEFAULT_BUILD_MINDENOVO, DEFAULT_BUILD_MINPOS),
         py::arg("add_denovo") = DEFAULT_BUILD_DENOVO_JUNCTIONS)
     .def("pass_known_inplace",
         &majiq::GroupJunctionsGenerator::UpdateKnownInplace,
@@ -1165,6 +1165,14 @@ void init_pyExperimentThresholds(
     .def_property_readonly("minpos",
         [](const ExperimentThresholds& x) { return x.minpos_; },
         "Minimum number of nonzero positions for a junction to pass")
+    .def("__repr__", [](const ExperimentThresholds& x) -> std::string {
+        std::ostringstream oss;
+        oss << "ExperimentThresholds(minreads="
+            << x.minreads_ << ", mindenovo="
+            << x.mindenovo_ << ", minpos="
+            << x.minpos_ << ")";
+        return oss.str();
+        })
     .def("intron_thresholds_generator",
         &ExperimentThresholds::intron_thresholds_generator,
         R"pbdoc(
@@ -1317,6 +1325,8 @@ void init_SpliceGraphAll(py::module_& m) {
   auto pyIntronThresholdsGenerator
     = pyIntronThresholdsGenerator_t(m, "IntronThresholdsGenerator");
 
+  init_pyExperimentThresholds(pyExperimentThresholds);
+  init_pyIntronThresholdsGenerator(pyIntronThresholdsGenerator);
   init_Contigs(pyContigs);
   init_Genes(pyGenes);
   init_Exons(pyExons);
@@ -1329,6 +1339,4 @@ void init_SpliceGraphAll(py::module_& m) {
   init_SJIntronsBins(pySJIntronsBins);
   init_pyGroupJunctionsGen(pyGroupJunctionsGen);
   init_pyPassedJunctionsGen(pyPassedJunctionsGen);
-  init_pyExperimentThresholds(pyExperimentThresholds);
-  init_pyIntronThresholdsGenerator(pyIntronThresholdsGenerator);
 }

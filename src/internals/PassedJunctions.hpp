@@ -104,8 +104,8 @@ class GroupJunctionsGenerator {
   size_t num_denovo() const noexcept { return denovos_num_passed_.size(); }
   size_t size() const noexcept { return num_annotated() + num_denovo(); }
 
-  void AddExperiment(const SJJunctions& sj, junction_ct_t minreads,
-      junction_ct_t mindenovo, junction_pos_t minpos, bool process_denovo);
+  void AddExperiment(const SJJunctions& sj,
+      const ExperimentThresholds& thresholds, bool process_denovo);
   /**
    * Update known junctions in place for passing
    */
