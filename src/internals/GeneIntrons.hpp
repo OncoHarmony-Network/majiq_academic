@@ -78,8 +78,19 @@ class GeneIntrons : public detail::Regions<GeneIntron, false> {
   GeneIntrons(
       const typename BaseT::ParentsPtrT& parents, typename BaseT::vecT&& x)
       : BaseT{parents, std::move(x)} { }
+  GeneIntrons FilterPassed(bool keep_annotated, bool discard_denovo) const {
+    std::vector<GeneIntron> result_vec;
+    std::copy_if(begin(), end(), std::back_inserter(result_vec),
+        [keep_annotated, discard_denovo](const GeneIntron& x) {
+        return (
+            x.denovo()
+            ? !discard_denovo && x.passed_build()
+            : keep_annotated || x.passed_build());
+        });
+    return GeneIntrons{parents(), std::move(result_vec)};
+  }
   // get all potential introns (i.e. denovo as well) compared to exons
-  GeneIntrons PotentialIntrons(const Exons& exons) {
+  GeneIntrons PotentialIntrons(const Exons& exons) const {
     std::vector<GeneIntron> result_vec;
 
     if (parents() != exons.parents()) {

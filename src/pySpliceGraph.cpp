@@ -660,10 +660,23 @@ void init_GeneIntrons(pyGeneIntrons_t& pyGeneIntrons) {
         },
         "Load introns from netcdf file",
         py::arg("netcdf_path"), py::arg("genes"))
-    .def("create_build_group", [](std::shared_ptr<GeneIntrons>& gene_introns) {
+    .def("build_group", [](std::shared_ptr<GeneIntrons>& gene_introns) {
         return majiq::GroupIntronsGenerator(gene_introns);
         },
         "Create build group to update passed introns in place")
+    .def("filter_passed", &GeneIntrons::FilterPassed,
+        R"pbdoc(
+        Get subset of introns that passed build filters
+
+        Parameters
+        ----------
+        keep_annotated: bool
+            Keep all annotated introns regardless of whether they passed
+        discard_denovo: bool
+            Discard all denovo introns regardless of whether they passed
+        )pbdoc",
+        py::arg("keep_annotated") = DEFAULT_BUILD_KEEP_ANNOTATED_IR,
+        py::arg("discard_denovo") = !DEFAULT_BUILD_DENOVO_IR)
     .def("potential_introns", &GeneIntrons::PotentialIntrons,
         "Get potential gene introns from exons keeping annotations from self",
         py::arg("exons"))
