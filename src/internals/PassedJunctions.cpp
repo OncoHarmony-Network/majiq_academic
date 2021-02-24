@@ -112,16 +112,19 @@ void GroupJunctionsGenerator::AddExperiment(const SJJunctions& sj,
       bool known_found = false;
       std::for_each(og.first(), og.last(),
           [&known_found, this, &junction, &status](const KnownGene& gene) {
-          auto key = GeneJunction{gene, junction.coordinates};
-          auto match = known_->find(
-              GeneJunction{gene, junction.coordinates});
-          if (match != known_->end()
-              // it's conceivable that we know denovo junctions, so if denovo,
-              // we have to check that it passed denovo filters
-              && (!match->denovo()
-                || status == JunctionPassedStatus::DENOVO_PASSED)) {
-            ++known_num_passed_[match - known_->begin()];
-            known_found = true;
+          if (junction.strand == GeneStrandness::AMBIGUOUS
+              || junction.strand == gene.strand()) {
+            auto key = GeneJunction{gene, junction.coordinates};
+            auto match = known_->find(
+                GeneJunction{gene, junction.coordinates});
+            if (match != known_->end()
+                // it's conceivable that we know denovo junctions, so if denovo,
+                // we have to check that it passed denovo filters
+                && (!match->denovo()
+                  || status == JunctionPassedStatus::DENOVO_PASSED)) {
+              ++known_num_passed_[match - known_->begin()];
+              known_found = true;
+            }
           }
           });
       // add if we are processing denovo junctions, is denovo, and passed denovo
