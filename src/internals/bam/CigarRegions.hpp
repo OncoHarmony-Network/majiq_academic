@@ -36,7 +36,7 @@ class CigarRegions {
   static constexpr char CIGAR_CONSUMES_QUERY = 1;
   static constexpr char CIGAR_CONSUMES_REFERENCE = 2;
   static std::pair<int32_t, int32_t> adjust_cigar_soft_clipping(
-      uint32_t* cigar, uint32_t& n_cigar) {
+      uint32_t*& cigar, uint32_t& n_cigar) {
     // initialize lengths of soft clipping on left/right to return
     int32_t left_length = 0;
     int32_t right_length = 0;
