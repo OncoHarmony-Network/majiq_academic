@@ -25,20 +25,22 @@
 
 namespace majiq {
 // identity/read count for nonzero intron/junction bins
+template <typename CountT>
 struct BinReads {
   junction_pos_t bin_idx;
-  junction_ct_t bin_reads;
+  CountT bin_reads;
 };
-inline bool operator<(const BinReads& x, const BinReads& y) noexcept {
+template <typename T>
+inline bool operator<(const BinReads<T>& x, const BinReads<T>& y) noexcept {
   return std::tie(x.bin_reads, x.bin_idx) < std::tie(y.bin_reads, y.bin_idx);
 }
 
 namespace detail {
-template <typename RegionsT>
+template <typename RegionsT, typename CountT>
 class SJRegionBinReads {
  protected:
   const std::shared_ptr<RegionsT> regions_;
-  const std::vector<BinReads> reads_;
+  const std::vector<BinReads<CountT>> reads_;
   const std::vector<size_t> offsets_;
   const junction_pos_t total_bins_;
 
@@ -47,34 +49,36 @@ class SJRegionBinReads {
   size_t size() const noexcept { return reads_.size(); }
   junction_pos_t total_bins() const noexcept { return total_bins_; }
   const std::shared_ptr<RegionsT>& regions() { return regions_; }
-  const std::vector<BinReads>& reads() { return reads_; }
+  const std::vector<BinReads<CountT>>& reads() { return reads_; }
   const std::vector<size_t>& offsets() { return offsets_; }
 
   // per region summaries
   junction_pos_t numbins_nonzero(size_t i) const {
     return offsets_[1 + i] - offsets_[i];
   }
-  junction_pos_t numbins_minreads(size_t i, junction_ct_t minreads) const {
+  junction_pos_t numbins_minreads(size_t i, CountT minreads) const {
     if (minreads == 0) {
       return numbins_nonzero(i);
     } else {
-      // TODO(jaicher): only need to find first >= minreads since sorted
-      return std::count_if(
-          reads_.begin() + offsets_[i], reads_.begin() + offsets_[1 + i],
-          [minreads](const BinReads& x) { return x.bin_reads >= minreads; });
+      auto end = reads_.begin() + offsets_[1 + i];
+      return end - std::find_if(reads_.begin() + offsets_[i], end,
+          [minreads](const BinReads<CountT>& x) {
+          return x.bin_reads >= minreads;
+          });
     }
   }
-  junction_ct_t numreads(size_t i, junction_pos_t num_stacks) const {
+  CountT numreads(size_t i, junction_pos_t num_stacks) const {
     const size_t nonstack_end
       = num_stacks == 0 ? offsets_[1 + i] : (
           num_stacks < numbins_nonzero(i)
           ? offsets_[1 + i] - num_stacks : offsets_[i]);
     return std::accumulate(
         reads_.begin() + offsets_[i], reads_.begin() + nonstack_end,
-        junction_ct_t{},
-        [](junction_ct_t s, const BinReads& x) { return s + x.bin_reads; });
+        CountT{},
+        [](CountT s, const BinReads<CountT>& x) { return s + x.bin_reads; });
   }
-  const BinReads& reads_elem(size_t i, junction_pos_t nonzero_idx) const {
+  const BinReads<CountT>& reads_elem(
+      size_t i, junction_pos_t nonzero_idx) const {
     return reads_[offsets_[i] + nonzero_idx];
   }
 
@@ -99,7 +103,7 @@ class SJRegionBinReads {
         } else if (
             !std::all_of(
               reads_.begin() + offsets_[i], reads_.begin() + offsets_[1 + i],
-              [total_bins = total_bins_](const BinReads& x) {
+              [total_bins = total_bins_](const BinReads<CountT>& x) {
               return x.bin_idx < total_bins; })) {
           throw std::runtime_error(
               "SJRegionBinReads has reported bin_idx outside valid range");
@@ -115,7 +119,7 @@ class SJRegionBinReads {
  public:
   SJRegionBinReads(
       const std::shared_ptr<RegionsT>& regions,
-      std::vector<BinReads>&& reads,
+      std::vector<BinReads<CountT>>&& reads,
       std::vector<size_t>&& offsets,
       junction_pos_t total_bins)
       : regions_{regions},
@@ -130,8 +134,9 @@ class SJRegionBinReads {
 
 }  // namespace detail
 
-class SJJunctionsPositions : public detail::SJRegionBinReads<SJJunctions> {
-  using BaseT = detail::SJRegionBinReads<SJJunctions>;
+class SJJunctionsPositions
+    : public detail::SJRegionBinReads<SJJunctions, junction_ct_t> {
+  using BaseT = detail::SJRegionBinReads<SJJunctions, junction_ct_t>;
 
  private:
   // already have check_valid from parent class, but check SJJunctions data
@@ -152,7 +157,7 @@ class SJJunctionsPositions : public detail::SJRegionBinReads<SJJunctions> {
 
   SJJunctionsPositions(
       const std::shared_ptr<SJJunctions>& junctions,
-      std::vector<BinReads>&& reads,
+      std::vector<BinReads<junction_ct_t>>&& reads,
       std::vector<size_t>&& offsets,
       junction_pos_t num_positions)
       : BaseT{junctions, std::move(reads), std::move(offsets), num_positions} {
@@ -201,8 +206,9 @@ struct IntronCoarseBins {
 };
 }  // namespace detail
 
-class SJIntronsBins : public detail::SJRegionBinReads<ContigIntrons> {
-  using BaseT = detail::SJRegionBinReads<ContigIntrons>;
+class SJIntronsBins
+    : public detail::SJRegionBinReads<ContigIntrons, intron_ct_t> {
+  using BaseT = detail::SJRegionBinReads<ContigIntrons, intron_ct_t>;
 
  public:
   static SJIntronsBins FromBam(
@@ -216,41 +222,33 @@ class SJIntronsBins : public detail::SJRegionBinReads<ContigIntrons> {
     return static_cast<real_t>(numreads(i, num_stacks) * intron_length)
       / IntronCoarseBins::num_raw_positions(intron_length, total_bins_);
   }
-  real_t scaled_bin_reads_elem(size_t i, junction_pos_t nonzero_idx) const {
-    using detail::IntronCoarseBins;
-    // get average number of positions per bin
-    const auto total_positions = IntronCoarseBins::num_raw_positions(
-        (*regions_)[i].coordinates.length(), total_bins_);
-    const real_t avg_num_positions
-      = static_cast<real_t>(total_positions) / total_bins_;
-    // compare to actual element
-    const auto& raw_elem = reads_elem(i, nonzero_idx);
-    const auto bin_num_positions = (
-        IntronCoarseBins(total_positions, total_bins_)
-        .bin_num_positions(raw_elem.bin_idx));
-    // rescale
-    return raw_elem.bin_reads * avg_num_positions / bin_num_positions;
-  }
-  junction_pos_t scaled_numbins_minreads(
-      size_t i, junction_ct_t minreads) const {
-    const junction_pos_t numbins = numbins_nonzero(i);
-    junction_pos_t count = 0;
-    for (junction_pos_t nonzero_idx = 0; nonzero_idx < numbins; ++nonzero_idx) {
-      if (scaled_bin_reads_elem(i, nonzero_idx) >= minreads) { ++count; }
-    }
-    return count;
-  }
+  // real_t scaled_bin_reads_elem(size_t i, junction_pos_t nonzero_idx) const {
+  //   using detail::IntronCoarseBins;
+  //   // get average number of positions per bin
+  //   const auto total_positions = IntronCoarseBins::num_raw_positions(
+  //       (*regions_)[i].coordinates.length(), total_bins_);
+  //   const real_t avg_num_positions
+  //     = static_cast<real_t>(total_positions) / total_bins_;
+  //   // compare to actual element
+  //   const auto& raw_elem = reads_elem(i, nonzero_idx);
+  //   const auto bin_num_positions = (
+  //       IntronCoarseBins(total_positions, total_bins_)
+  //       .bin_num_positions(raw_elem.bin_idx));
+  //   // rescale
+  //   return raw_elem.bin_reads * avg_num_positions / bin_num_positions;
+  // }
   bool passed(size_t i, const IntronThresholdsGenerator& it_gen,
       junction_pos_t num_stacks) const {
     // get thresholds for this intron
     IntronThresholds thresholds = it_gen((*regions_)[i].coordinates.length());
     return scaled_numreads(i, num_stacks) >= thresholds.minreads_
-      && scaled_numbins_minreads(i, thresholds.mincov_) >= thresholds.minbins_;
+      && (numbins_minreads(i, thresholds.mincov_)
+          >= num_stacks + thresholds.minbins_);
   }
 
   SJIntronsBins(
       const std::shared_ptr<ContigIntrons>& introns,
-      std::vector<BinReads>&& reads,
+      std::vector<BinReads<intron_ct_t>>&& reads,
       std::vector<size_t>&& offsets,
       junction_pos_t total_bins)
       : BaseT{introns, std::move(reads), std::move(offsets), total_bins} { }

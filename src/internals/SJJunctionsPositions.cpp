@@ -100,7 +100,7 @@ SJJunctionsPositions SJJunctionsPositions::FromBam(
     ? max_read_length + 1 - 2 * USE_MIN_OVERHANG : 0;
   // initialize vectors for outputs
   std::vector<SJJunction> junctions(num_junctions);
-  std::vector<BinReads> reads(num_junction_positions);
+  std::vector<BinReads<junction_ct_t>> reads(num_junction_positions);
   std::vector<size_t> reads_offsets(num_junctions + 1);
   size_t jidx = 0;
   size_t jpidx = 0;
@@ -113,14 +113,14 @@ SJJunctionsPositions SJJunctionsPositions::FromBam(
       std::transform(position_reads.begin(), position_reads.end(),
           reads.begin() + jpidx,
           [](const std::pair<junction_pos_t, junction_ct_t>& x) {
-          return BinReads{x.first, x.second};
+          return BinReads<junction_ct_t>{x.first, x.second};
           });
       std::sort(reads.begin() + jpidx, reads.begin() + jpidx + num_positions);
       // summarize total reads
       const junction_ct_t num_reads = std::accumulate(
           reads.begin() + jpidx, reads.begin() + jpidx + num_positions,
           junction_ct_t{},
-          [](junction_ct_t acc, const BinReads& x) {
+          [](junction_ct_t acc, const BinReads<junction_ct_t>& x) {
           return acc + x.bin_reads;
           });
       // update junctions, offsets
@@ -296,16 +296,26 @@ SJIntronsBins SJIntronsBins::FromBam(const char* infile,
   }  // done processing BAM file
   // get offsets vector
   std::vector<size_t> offsets(1 + introns.size());
-  std::vector<BinReads> reads(ct_nonzero);
+  std::vector<BinReads<intron_ct_t>> reads(ct_nonzero);
   size_t read_idx = 0;
   for (size_t intron_idx = 0; intron_idx < introns.size(); ++intron_idx) {
     const size_t start_idx = read_idx;
+    // get scaling to scale raw counts to average number of positions per bin
+    using detail::IntronCoarseBins;
+    const auto total_positions = IntronCoarseBins::num_raw_positions(
+        introns[intron_idx].coordinates.length(), num_bins);
+    const real_t avg_num_positions
+      = static_cast<real_t>(total_positions) / num_bins;
+    const auto binning = IntronCoarseBins(total_positions, num_bins);
     for (junction_pos_t bin_idx = 0; bin_idx < num_bins; ++bin_idx) {
       // get count for intron/bin
       const junction_ct_t& bin_ct = counts_mut(intron_idx, bin_idx);
       if (bin_ct > 0) {
         // nonzero counts get added to reads
-        reads[read_idx++] = BinReads{bin_idx, bin_ct};
+        reads[read_idx++] = BinReads<intron_ct_t>{
+            bin_idx,
+            // scale counts to average number of positions
+            bin_ct * avg_num_positions / binning.bin_num_positions(bin_idx)};
       }
     }
     // get reads in sorted order per intron

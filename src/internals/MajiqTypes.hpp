@@ -22,6 +22,7 @@ using real_t = float;  // for numerics
 using position_t = int64_t;  // for coordinates, difference in coordinates
 using junction_pos_t = int32_t;  // position for junctions
 using junction_ct_t = int32_t;  // counts of reads with splits
+using intron_ct_t = real_t;  // count for introns
 
 using seqid_t = std::string;  // type for contig ids
 using geneid_t = std::string;
