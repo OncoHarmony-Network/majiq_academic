@@ -31,9 +31,9 @@ struct GeneIntron : public detail::GeneRegion<ClosedInterval, detail::Connection
   // access data nicely
   const bool& denovo() const noexcept { return data.denovo; }
   bool& denovo() noexcept { return data.denovo; }
-  const bool& passed_build() const noexcept { return data.passed_build; }
+  bool& passed_build() const noexcept { return data.passed_build; }
   bool& passed_build() noexcept { return data.passed_build; }
-  const bool& simplified() const noexcept { return data.simplified; }
+  bool& simplified() const noexcept { return data.simplified; }
   bool& simplified() noexcept { return data.simplified; }
 
   // constructors
