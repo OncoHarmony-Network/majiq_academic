@@ -1207,7 +1207,7 @@ void init_pyIntronThresholdsGenerator(
   using majiq::IntronThresholds;
   using majiq::junction_ct_t;
   using majiq::junction_pos_t;
-  PYBIND11_NUMPY_DTYPE(IntronThresholds, minbins_, mincov_);
+  PYBIND11_NUMPY_DTYPE(IntronThresholds, minreads_, minbins_, mincov_);
   pyIntronThresholdsGenerator
     .def("__call__",
         [](const IntronThresholdsGenerator& gen,

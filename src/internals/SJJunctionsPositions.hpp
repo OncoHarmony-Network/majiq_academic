@@ -20,6 +20,7 @@
 #include "GeneIntrons.hpp"
 #include "ContigIntrons.hpp"
 #include "MajiqConstants.hpp"
+#include "ExperimentThresholds.hpp"
 
 
 namespace majiq {
@@ -57,6 +58,7 @@ class SJRegionBinReads {
     if (minreads == 0) {
       return numbins_nonzero(i);
     } else {
+      // TODO(jaicher): only need to find first >= minreads since sorted
       return std::count_if(
           reads_.begin() + offsets_[i], reads_.begin() + offsets_[1 + i],
           [minreads](const BinReads& x) { return x.bin_reads >= minreads; });
@@ -228,6 +230,22 @@ class SJIntronsBins : public detail::SJRegionBinReads<ContigIntrons> {
         .bin_num_positions(raw_elem.bin_idx));
     // rescale
     return raw_elem.bin_reads * avg_num_positions / bin_num_positions;
+  }
+  junction_pos_t scaled_numbins_minreads(
+      size_t i, junction_ct_t minreads) const {
+    const junction_pos_t numbins = numbins_nonzero(i);
+    junction_pos_t count = 0;
+    for (junction_pos_t nonzero_idx = 0; nonzero_idx < numbins; ++nonzero_idx) {
+      if (scaled_bin_reads_elem(i, nonzero_idx) >= minreads) { ++count; }
+    }
+    return count;
+  }
+  bool passed(size_t i, const IntronThresholdsGenerator& it_gen,
+      junction_pos_t num_stacks) const {
+    // get thresholds for this intron
+    IntronThresholds thresholds = it_gen((*regions_)[i].coordinates.length());
+    return scaled_numreads(i, num_stacks) >= thresholds.minreads_
+      && scaled_numbins_minreads(i, thresholds.mincov_) >= thresholds.minbins_;
   }
 
   SJIntronsBins(

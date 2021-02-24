@@ -321,6 +321,7 @@ inline real_t JunctionMinposAcceptanceProbability(
 }  // namespace detail
 
 struct IntronThresholds {
+  junction_ct_t minreads_;
   junction_pos_t minbins_;  // minimum bins with at least
   junction_ct_t mincov_;  // mincov reads for intron to pass
 };
@@ -339,6 +340,8 @@ class IntronThresholdsGenerator {
   const real_t prob_bin_mincov_;
   // maximum length where mincov = 1 (use different algorithm afterwards)
   const junction_pos_t max_length_nonzerocov_;
+  // remember minreads because we also use as intron threshold
+  const junction_ct_t minreads_;
 
  public:
   /**
@@ -370,7 +373,8 @@ class IntronThresholdsGenerator {
         prob_bin_mincov_{detail::ProbBinMincovFromBinomial(
             max_minbins_, total_bins_, acceptance_probability_)},
         max_length_nonzerocov_{detail::MaxLengthNonzeroCoverage(
-            readrate_, total_bins_, prob_bin_mincov_)} { }
+            readrate_, total_bins_, prob_bin_mincov_)},
+        minreads_{minreads} { }
 
   /**
    * intron thresholds that match junction threshold acceptance_probability for
@@ -379,14 +383,16 @@ class IntronThresholdsGenerator {
   IntronThresholds operator()(junction_pos_t intron_length) const {
     if (intron_length <= max_length_nonzerocov_) {
       return {
+        minreads_,
         detail::MinbinsFromAcceptance(
-              readrate_, total_bins_, acceptance_probability_, intron_length),
-          1};
+            readrate_, total_bins_, acceptance_probability_, intron_length),
+        1};
     } else {
       return {
-          max_minbins_,
-          detail::MincovFromAcceptance(
-              readrate_, total_bins_, intron_length, prob_bin_mincov_)};
+        minreads_,
+        max_minbins_,
+        detail::MincovFromAcceptance(
+            readrate_, total_bins_, intron_length, prob_bin_mincov_)};
     }
   }
 };
