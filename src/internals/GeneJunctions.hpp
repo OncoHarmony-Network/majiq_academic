@@ -38,6 +38,7 @@ struct GeneJunction
   bool& simplified() const noexcept { return data.simplified; }
   size_t& start_exon_idx() const noexcept { return data.start_exon_idx; }
   size_t& end_exon_idx() const noexcept { return data.end_exon_idx; }
+  const bool is_exitron() const noexcept { return data.is_exitronic(); }
 
   // constructors
   GeneJunction(KnownGene gene, OpenInterval coordinates,

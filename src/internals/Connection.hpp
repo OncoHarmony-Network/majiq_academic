@@ -26,6 +26,11 @@ struct Connection {
   mutable size_t start_exon_idx;
   mutable size_t end_exon_idx;
 
+  // true if start/end exon idx match. (for use when connections made)
+  const bool is_exitronic() const noexcept {
+    return start_exon_idx == end_exon_idx;
+  }
+
   // constructors
   Connection(bool _denovo, bool _passed_build, bool _simplified,
       size_t _start_exon_idx, size_t _end_exon_idx)
