@@ -159,6 +159,11 @@ class GeneJunctions : public detail::Regions<GeneJunction, true> {
     return;
   }
 
+  bool is_connected() const { return connected_exons_ != nullptr; }
+  const std::shared_ptr<Exons>& connected_exons() const {
+    return connected_exons_;
+  }
+
   GeneJunctions(
       const std::shared_ptr<Genes>& genes, std::vector<GeneJunction>&& x,
       const std::shared_ptr<Exons>& connected_exons)

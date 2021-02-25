@@ -94,6 +94,11 @@ class GeneIntrons : public detail::Regions<GeneIntron, false> {
       const std::shared_ptr<Genes>& genes, std::vector<GeneIntron>&& x)
       : GeneIntrons{genes, std::move(x), nullptr} { }
 
+  bool is_connected() const { return connected_exons_ != nullptr; }
+  const std::shared_ptr<Exons>& connected_exons() const {
+    return connected_exons_;
+  }
+
   void connect_exons(const std::shared_ptr<Exons>& exons_ptr) {
     if (exons_ptr == nullptr || exons_ptr == connected_exons_) {
       return;  // don't do anything
