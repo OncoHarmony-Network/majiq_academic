@@ -35,9 +35,9 @@ using evidence_t = std::pair<position_t, ContigIntronEvidenceType>;
 
 std::map<GeneStrandness, std::vector<evidence_t>> OverGeneEvidence(
     const Exons& exons, const GeneIntrons& gene_introns,
-    const OverGene& overgene, bool stranded) {
+    const KnownGene& first, const KnownGene& last, bool stranded) {
   std::map<GeneStrandness, std::vector<evidence_t>> result;
-  for (KnownGene gene = overgene.first(); gene < overgene.last(); ++gene) {
+  for (KnownGene gene = first; gene < last; ++gene) {
     // evidence from gene's exons
     for (auto it = exons.begin_parent(gene);
         it != exons.end_parent(gene); ++it) {
@@ -129,13 +129,17 @@ ContigIntrons ContigIntrons::FromGeneExonsAndIntrons(
   if (exons.empty()) { return ContigIntrons{}; }
 
   std::vector<ContigIntron> result_vec;
+
   // otherwise, operate on sets of genes at a time that overlap
   const auto& genes_ptr = exons.parents_;
-  for (OverGene overgene = genes_ptr->overgene_begin();
-      overgene != genes_ptr->overgene_end(); ++overgene) {
+  KnownGene gene_it = genes_ptr->begin();
+  for (KnownGene gene_it = genes_ptr->begin(),
+      next_it = gene_it.NextOverGeneStart();
+      gene_it != genes_ptr->end();
+      gene_it = next_it, next_it = next_it.NextOverGeneStart()) {
     // get evidence from current set of overlapping genes
-    auto stranded_evidence
-      = OverGeneEvidence(exons, gene_introns, overgene, stranded);
+    auto stranded_evidence = OverGeneEvidence(
+        exons, gene_introns, gene_it, next_it, stranded);
     // update result_vec using evidence
     // each strand gets put in in sorted order, so we can set up merges between
     // them if necessary.
@@ -146,7 +150,7 @@ ContigIntrons ContigIntrons::FromGeneExonsAndIntrons(
     prev_sizes.reserve(1 + stranded_evidence.size());
     prev_sizes.push_back(result_vec.size());
     for (const auto& [strand, evidence] : stranded_evidence) {
-      AddIntronsFromEvidence(overgene.contig, strand, evidence, result_vec);
+      AddIntronsFromEvidence(gene_it.contig(), strand, evidence, result_vec);
       prev_sizes.push_back(result_vec.size());
     }
     for (size_t merge_idx = 2; merge_idx < prev_sizes.size(); ++merge_idx) {
