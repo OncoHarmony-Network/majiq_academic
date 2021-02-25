@@ -34,6 +34,9 @@ struct Connection {
         simplified{_simplified},
         start_exon_idx{_start_exon_idx},
         end_exon_idx{_end_exon_idx} { }
+  Connection(const Connection& x, size_t _start_exon_idx, size_t _end_exon_idx)
+      : Connection{x.denovo, x.passed_build, x.simplified,
+          _start_exon_idx, _end_exon_idx} { }
   Connection(bool _denovo, bool _passed_build, bool _simplified)
       : Connection{_denovo, _passed_build, _simplified, 0, 0} { }
   Connection() : Connection{false, false, false} { }

@@ -165,6 +165,9 @@ void define_coordinates_properties(pyClassShared_t<RegionsT>& pyRegions) {
       std::is_same_v<decltype(std::declval<RegionT>().data),
                      majiq::detail::Connection>) {
     pyRegions
+      .def("connect_exons", &RegionsT::connect_exons,
+          "Connect regions to specified exons, updataing {start,end}_exon_idx",
+          py::arg("exons"))
       .def_property_readonly("denovo",
           [](py::object& regions_obj) -> py::array_t<bool> {
           RegionsT& regions = regions_obj.cast<RegionsT&>();

@@ -13,6 +13,7 @@
 #include <functional>
 #include <algorithm>
 #include <vector>
+#include <sstream>
 #include <boost/functional/hash.hpp>
 
 #include "GeneRegion.hpp"
@@ -80,6 +81,61 @@ class GeneIntrons : public detail::Regions<GeneIntron, false> {
       const typename BaseT::ParentsPtrT& parents, typename BaseT::vecT&& x)
       : BaseT{parents, std::move(x)} { }
 
+  void connect_exons(const Exons& exons) const {
+    if (parents() != exons.parents()) {
+      throw std::invalid_argument(
+          "junction/exon genes do not match in connect_exons()");
+    }
+    struct _ExonIndexes {
+      size_t start;
+      size_t end;
+    };
+    std::vector<_ExonIndexes> result(size());
+    for (const auto& gene : *parents()) {
+      auto exon_it = exons.begin_parent(gene);
+      const auto exon_it_end = exons.end_parent(gene);
+      for (auto intron_it = begin_parent(gene);
+          intron_it != end_parent(gene);
+          ++intron_it) {
+        _ExonIndexes intron_exons{};  // get exons for this intron
+        exon_it = std::find_if(exon_it, exon_it_end,
+            [&intron = *intron_it](const Exon& x) {
+            return 1 + x.coordinates.end >= intron.coordinates.start; });
+        if (exon_it == exon_it_end
+            || !exon_it->is_full_exon()
+            || 1 + exon_it->coordinates.end != intron_it->coordinates.start) {
+          std::ostringstream oss;
+          oss << "Cannot match intron (idx=" << (intron_it - begin())
+            << ") to appropriate start exon (expected idx="
+            << (exon_it - exons.begin()) << ")";
+          throw std::runtime_error(oss.str());
+        } else {
+          intron_exons.start = exon_it - exons.begin();
+        }
+        // should be connected to next full exon
+        exon_it = std::find_if(1 + exon_it, exon_it_end,
+            [](const Exon& x) { return x.is_full_exon(); });
+        if (exon_it == exon_it_end
+            || 1 + intron_it->coordinates.end != exon_it->coordinates.start) {
+          std::ostringstream oss;
+          oss << "Cannot match intron (idx=" << (intron_it - begin())
+            << ") to appropriate end exon (expected idx="
+            << (exon_it - exons.begin()) << ")";
+          throw std::runtime_error(oss.str());
+        } else {
+          intron_exons.end = exon_it - exons.begin();
+        }
+        result[intron_it - begin()] = intron_exons;
+      }  // done looping over introns for gene
+    }  // done looping over genes
+    // no exceptions -> exons are compatible with introns, update in place now
+    for (size_t i = 0; i < size(); ++i) {
+      (*this)[i].start_exon_idx() = result[i].start;
+      (*this)[i].end_exon_idx() = result[i].end;
+    }
+    return;
+  }
+
   GeneIntrons FilterPassed(bool keep_annotated, bool discard_denovo) const {
     std::vector<GeneIntron> result_vec;
     std::copy_if(begin(), end(), std::back_inserter(result_vec),
@@ -91,7 +147,11 @@ class GeneIntrons : public detail::Regions<GeneIntron, false> {
         });
     return GeneIntrons{parents(), std::move(result_vec)};
   }
-  // get all potential introns (i.e. denovo as well) compared to exons
+  /**
+   * get all potential introns (i.e. denovo as well) compared to exons
+   *
+   * Note that automatically connects introns to the exons
+   */
   GeneIntrons PotentialIntrons(const Exons& exons) const {
     std::vector<GeneIntron> result_vec;
 
@@ -99,34 +159,40 @@ class GeneIntrons : public detail::Regions<GeneIntron, false> {
       throw std::invalid_argument(
           "PotentialIntrons exons/introns do not share same Genes");
     } else if (parents() != nullptr) {
-      constexpr position_t EMPTY = -2;
       for (const auto& gene : *parents()) {
         auto exon_it = exons.begin_parent(gene);
         const auto exon_it_end = exons.end_parent(gene);
         auto intron_it = begin_parent(gene);
         const auto intron_it_end = end_parent(gene);
-        position_t last_end = EMPTY;  // end from last exon
+        auto prev_exon_it = exon_it_end;  // track previous exon
         for (; exon_it != exon_it_end; ++exon_it) {
           if (exon_it->is_full_exon()) {
-            if (last_end != EMPTY) {
+            if (prev_exon_it != exon_it_end) {
               // coordinates for new intron
               ClosedInterval coordinates = ClosedInterval{
-                  last_end + 1, exon_it->coordinates.start - 1};
+                  prev_exon_it->coordinates.end + 1,
+                  exon_it->coordinates.start - 1};
               // get intron that overlaps, if any
               intron_it = std::find_if(
                   intron_it, intron_it_end,
                   [&coordinates](const GeneIntron& x) {
                   return !IntervalPrecedes(x.coordinates, coordinates);
                   });
+              // indexes of exons connected to
+              size_t start_idx = prev_exon_it - exons.begin();
+              size_t end_idx = exon_it - exons.begin();
               result_vec.emplace_back(
                   gene,
-                  ClosedInterval{last_end + 1, exon_it->coordinates.start - 1},
+                  ClosedInterval{
+                    prev_exon_it->coordinates.end + 1,
+                    exon_it->coordinates.start - 1},
                   // if overlapping intron from self, copy data otherwise denovo
                   (intron_it != intron_it_end
                    && IntervalIntersects(coordinates, intron_it->coordinates))
-                  ? intron_it->data : detail::Connection{true, false, false});
+                  ? detail::Connection{intron_it->data, start_idx, end_idx}
+                  : detail::Connection{true, false, false, start_idx, end_idx});
             }
-            last_end = exon_it->coordinates.end;
+            prev_exon_it = exon_it;
           }
         }  // loop over exons for a gene
       }  // loop over genes

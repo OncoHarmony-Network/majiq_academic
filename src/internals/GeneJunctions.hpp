@@ -13,6 +13,7 @@
 #include <memory>
 #include <functional>
 #include <utility>
+#include <sstream>
 #include <boost/functional/hash.hpp>
 
 #include "GeneRegion.hpp"
@@ -73,7 +74,84 @@ template <> struct hash<majiq::GeneJunction> {
 namespace majiq {
 class GeneJunctions : public detail::Regions<GeneJunction, true> {
   using BaseT = detail::Regions<GeneJunction, true>;
+
+ private:
+  /**
+   * vector of indexes to exons that match junction starts.
+   * Throws exception if unable to find all matches
+   */
+  std::vector<size_t> start_exon_idx(const Exons& exons) const {
+    // initialize temporary container for result
+    // (don't do the update in place in case there are disconnected junctions)
+    std::vector<size_t> result(size());
+    size_t eidx = 0;
+    for (size_t jidx = 0; jidx < size(); ++jidx) {
+      const GeneJunction& j = (*this)[jidx];
+      // skip exons that cannot intersect
+      for (;
+          eidx < exons.size()
+          && (exons[eidx].gene < j.gene
+            || (exons[eidx].gene == j.gene
+              && IntervalPrecedes(exons[eidx].coordinates, j.coordinates)));
+          ++eidx) {
+      }  // done skipping exons that precede junction
+      if (eidx == exons.size()) {
+        std::ostringstream oss;
+        oss << "Ran out of exons for junction starts (at idx=" << jidx << ")";
+        throw std::runtime_error(oss.str());
+      } else if (
+          // matches gene
+          exons[eidx].gene == j.gene
+          // matches coordinates
+          && (exons[eidx].coordinates.end == j.coordinates.start
+            || exons[eidx].coordinates.contains(j.coordinates.start))) {
+        result[jidx] = eidx;
+      } else {
+        std::ostringstream oss;
+        oss << "Unable to match junction start (idx=" << jidx
+          << ") to exon (expected at idx=" << eidx << ")";
+        throw std::runtime_error(oss.str());
+      }
+    }
+    return result;
+  }
+  std::vector<size_t> end_exon_idx(const Exons& exons) const {
+    std::vector<size_t> result(size());
+    for (size_t jidx = 0; jidx < size(); ++jidx) {
+      const GeneJunction& j = (*this)[jidx];
+      const size_t eidx
+        = exons.overlap_lower_bound(j.gene, j.coordinates.end) - exons.begin();
+      if (eidx < exons.size() && exons[eidx].gene == j.gene
+          && (exons[eidx].coordinates.start == j.coordinates.end
+            || exons[eidx].coordinates.contains(j.coordinates.end))) {
+        result[jidx] = eidx;
+      } else {
+        std::ostringstream oss;
+        oss << "Unable to match junction end (idx=" << jidx
+          << ") to exon (expected at idx=" << eidx << ")";
+        throw std::runtime_error(oss.str());
+      }
+    }
+    return result;
+  }
+
  public:
+  void connect_exons(const Exons& exons) const {
+    if (parents() != exons.parents()) {
+      throw std::invalid_argument(
+          "junction/exon genes do not match in connect_exons()");
+    }
+    // TODO(jaicher): consider keeping shared_ptr to connected exons
+    const auto start_exons = start_exon_idx(exons);
+    const auto end_exons = end_exon_idx(exons);
+    // no exception --> valid to connect them now in place
+    for (size_t i = 0; i < size(); ++i) {
+      (*this)[i].start_exon_idx() = start_exons[i];
+      (*this)[i].end_exon_idx() = end_exons[i];
+    }
+    return;
+  }
+
   explicit GeneJunctions(
       const std::shared_ptr<Genes>& genes, std::vector<GeneJunction>&& x)
       : BaseT{genes, std::move(x)} { }
