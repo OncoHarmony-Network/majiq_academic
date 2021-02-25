@@ -32,7 +32,6 @@
 
 namespace majiq {
 class KnownGene;
-struct OverGene;
 
 class Genes
     : public detail::KnownFeatures<detail::Regions<Gene, true>>,
@@ -46,8 +45,6 @@ class Genes
   KnownGene end_contig(size_t idx);
   KnownGene begin_contig(const KnownContig& contig);
   KnownGene end_contig(const KnownContig& contig);
-  OverGene overgene_begin();
-  OverGene overgene_end();
   // access contigs that are parent to this
   std::shared_ptr<Contigs> contigs() const { return features_.parents(); }
   std::shared_ptr<Contigs> parents() const { return contigs(); }
@@ -166,90 +163,6 @@ inline KnownGene Genes::begin_contig(const KnownContig& contig) {
 }
 inline KnownGene Genes::end_contig(const KnownContig& contig) {
   return end_contig(contig.idx_);
-}
-
-// define overgenes
-struct OverGeneData {
-  KnownGene first_;
-  KnownGene last_;
-
-  const std::shared_ptr<Genes>& genes_ptr() const { return first_.ptr_; }
-  bool valid() const noexcept {
-    return genes_ptr() != nullptr && first_.idx_ < genes_ptr()->size();
-  }
-  const KnownContig contig() const {
-    return valid() ? first_.contig() : KnownContig{};
-  }
-  const ClosedInterval coordinates() const {
-    return valid()
-      ? ClosedInterval{
-          first_.coordinates().start,
-          (last_ - 1).position_cummax()}
-      : ClosedInterval{};
-  }
-
-  // get last known gene (default constructed if no pointer)
-  explicit OverGeneData(std::shared_ptr<Genes> genes_ptr)
-      : first_{genes_ptr == nullptr ? KnownGene{} : genes_ptr->end()},
-        last_{genes_ptr == nullptr ? KnownGene{} : genes_ptr->end()} { }
-  OverGeneData() : OverGeneData{std::shared_ptr<Genes>{}} { }
-  // overgene that contains given gene
-  explicit OverGeneData(KnownGene gene)
-      : first_{gene.IsOverGeneStart() ? gene : gene.PrevOverGeneStart()},
-        last_{gene.NextOverGeneStart()} { }
-
-  OverGeneData& operator++() {
-    std::swap(first_, last_);  // first is previous last
-    last_ = first_.NextOverGeneStart();  // last updated to next overgene start
-    return *this;
-  }
-  OverGeneData& operator--() {
-    std::swap(first_, last_);  // last is previous first
-    first_ = last_.PrevOverGeneStart();
-    return *this;
-  }
-};
-class OverGene : public detail::ContigRegion<ClosedInterval, OverGeneData> {
- private:
-  void UpdateLocation() {
-    contig = data.contig();
-    coordinates = data.coordinates();
-    return;
-  }
-
- public:
-  using BaseT = detail::ContigRegion<ClosedInterval, OverGeneData>;
-  const KnownGene& first() const { return data.first_; }
-  const KnownGene& last() const { return data.last_; }
-  OverGene& operator++() { ++data; UpdateLocation(); return *this; }
-  OverGene& operator--() { --data; UpdateLocation(); return *this; }
-
-  /**
-   * Overgene containing input gene
-   */
-  explicit OverGene(OverGeneData x)
-      : BaseT{x.contig(), x.coordinates(), GeneStrandness::AMBIGUOUS, x} { }
-  explicit OverGene(const KnownGene& x)
-      : OverGene{OverGeneData{x}} { }
-  OverGene(std::shared_ptr<Genes> genes_ptr, bool make_begin)
-      : OverGene{
-          make_begin
-          ? OverGeneData{KnownGene{0, genes_ptr}}
-          : OverGeneData{genes_ptr}} { }
-
-  friend inline bool operator==(const OverGene& x, const OverGene& y) noexcept {
-    return x.first().idx_ == y.first().idx_;
-  }
-  friend inline bool operator!=(const OverGene& x, const OverGene& y) noexcept {
-    return !(x == y);
-  }
-};
-
-inline OverGene Genes::overgene_begin() {
-  return OverGene{shared_from_this(), true};
-}
-inline OverGene Genes::overgene_end() {
-  return OverGene{shared_from_this(), false};
 }
 
 
