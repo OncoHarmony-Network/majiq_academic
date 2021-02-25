@@ -9,7 +9,10 @@
 #define MAJIQ_GENEJUNCTIONS_HPP
 
 #include <tuple>
+#include <vector>
+#include <memory>
 #include <functional>
+#include <utility>
 #include <boost/functional/hash.hpp>
 
 #include "GeneRegion.hpp"
@@ -18,21 +21,22 @@
 #include "Contigs.hpp"
 #include "Genes.hpp"
 #include "Connection.hpp"
+#include "Exons.hpp"
 
 
 namespace majiq {
 
 struct GeneJunction
-  : public detail::GeneRegion<OpenInterval, detail::Connection> {
+    : public detail::GeneRegion<OpenInterval, detail::Connection> {
  public:
   using BaseT = detail::GeneRegion<OpenInterval, detail::Connection>;
   // access data nicely
   const bool& denovo() const noexcept { return data.denovo; }
   bool& denovo() noexcept { return data.denovo; }
   bool& passed_build() const noexcept { return data.passed_build; }
-  bool& passed_build() noexcept { return data.passed_build; }
   bool& simplified() const noexcept { return data.simplified; }
-  bool& simplified() noexcept { return data.simplified; }
+  size_t& start_exon_idx() const noexcept { return data.start_exon_idx; }
+  size_t& end_exon_idx() const noexcept { return data.end_exon_idx; }
 
   // constructors
   GeneJunction(KnownGene gene, OpenInterval coordinates,

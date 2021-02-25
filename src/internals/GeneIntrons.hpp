@@ -25,16 +25,17 @@
 
 
 namespace majiq {
-struct GeneIntron : public detail::GeneRegion<ClosedInterval, detail::Connection> {
+struct GeneIntron
+    : public detail::GeneRegion<ClosedInterval, detail::Connection> {
  public:
   using BaseT = detail::GeneRegion<ClosedInterval, detail::Connection>;
   // access data nicely
   const bool& denovo() const noexcept { return data.denovo; }
   bool& denovo() noexcept { return data.denovo; }
   bool& passed_build() const noexcept { return data.passed_build; }
-  bool& passed_build() noexcept { return data.passed_build; }
   bool& simplified() const noexcept { return data.simplified; }
-  bool& simplified() noexcept { return data.simplified; }
+  size_t& start_exon_idx() const noexcept { return data.start_exon_idx; }
+  size_t& end_exon_idx() const noexcept { return data.end_exon_idx; }
 
   // constructors
   GeneIntron(
@@ -78,6 +79,7 @@ class GeneIntrons : public detail::Regions<GeneIntron, false> {
   GeneIntrons(
       const typename BaseT::ParentsPtrT& parents, typename BaseT::vecT&& x)
       : BaseT{parents, std::move(x)} { }
+
   GeneIntrons FilterPassed(bool keep_annotated, bool discard_denovo) const {
     std::vector<GeneIntron> result_vec;
     std::copy_if(begin(), end(), std::back_inserter(result_vec),

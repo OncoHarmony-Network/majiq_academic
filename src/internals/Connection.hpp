@@ -23,11 +23,19 @@ struct Connection {
   bool denovo;
   mutable bool passed_build;
   mutable bool simplified;
+  mutable size_t start_exon_idx;
+  mutable size_t end_exon_idx;
 
   // constructors
+  Connection(bool _denovo, bool _passed_build, bool _simplified,
+      size_t _start_exon_idx, size_t _end_exon_idx)
+      : denovo{_denovo},
+        passed_build{_passed_build},
+        simplified{_simplified},
+        start_exon_idx{_start_exon_idx},
+        end_exon_idx{_end_exon_idx} { }
   Connection(bool _denovo, bool _passed_build, bool _simplified)
-      : denovo{_denovo}, passed_build{_passed_build}, simplified{_simplified} {
-  }
+      : Connection{_denovo, _passed_build, _simplified, 0, 0} { }
   Connection() : Connection{false, false, false} { }
   Connection(const Connection& x) = default;
   Connection(Connection&& x) = default;

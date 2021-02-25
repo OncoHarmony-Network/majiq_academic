@@ -188,7 +188,31 @@ void define_coordinates_properties(pyClassShared_t<RegionsT>& pyRegions) {
           return ArrayFromVectorAndOffset<bool, RegionT>(
               regions.data(), offset, regions_obj);
           },
-          "array[bool] indicating if the connection is simplified");
+          "array[bool] indicating if the connection is simplified")
+      .def_property_readonly("start_exon_idx",
+          [](py::object& regions_obj) -> py::array_t<size_t> {
+          RegionsT& regions = regions_obj.cast<RegionsT&>();
+          const size_t offset = offsetof(RegionT, data.start_exon_idx);
+          return ArrayFromVectorAndOffset<size_t, RegionT>(
+              regions.data(), offset, regions_obj);
+          },
+          R"pbdoc(
+          array[int] indicating exon_idx for connection start
+
+          Note: Uninitialized values default to all 0.
+          )pbdoc")
+      .def_property_readonly("end_exon_idx",
+          [](py::object& regions_obj) -> py::array_t<size_t> {
+          RegionsT& regions = regions_obj.cast<RegionsT&>();
+          const size_t offset = offsetof(RegionT, data.end_exon_idx);
+          return ArrayFromVectorAndOffset<size_t, RegionT>(
+              regions.data(), offset, regions_obj);
+          },
+          R"pbdoc(
+          array[int] indicating exon_idx for connection end
+
+          Note: Uninitialized values default to all 0.
+          )pbdoc");
   }
   return;
 }
@@ -497,7 +521,8 @@ void init_GeneJunctions(pyGeneJunctions_t& pyGeneJunctions) {
         [](py::object& junctions) -> py::object {
         return majiq_pybind::XarrayDatasetFromObject(junctions, "junction_idx",
             {"gene_idx", "start", "end",
-            "denovo", "passed_build", "simplified"});
+            "denovo", "passed_build", "simplified",
+            "start_exon_idx", "end_exon_idx"});
         },
         "View on junction information as xarray Dataset")
     .def("__repr__", [](const GeneJunctions& self) -> std::string {
@@ -684,7 +709,8 @@ void init_GeneIntrons(pyGeneIntrons_t& pyGeneIntrons) {
         [](py::object& introns) -> py::object {
         return majiq_pybind::XarrayDatasetFromObject(introns, "intron_idx",
             {"gene_idx", "start", "end",
-            "denovo", "passed_build", "simplified"});
+            "denovo", "passed_build", "simplified",
+            "start_exon_idx", "end_exon_idx"});
         },
         "View on intron information as xarray Dataset")
     .def("__repr__", [](const GeneIntrons& self) -> std::string {
