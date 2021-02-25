@@ -76,6 +76,8 @@ class GeneJunctions : public detail::Regions<GeneJunction, true> {
   using BaseT = detail::Regions<GeneJunction, true>;
 
  private:
+  std::shared_ptr<Exons> connected_exons_;
+
   /**
    * vector of indexes to exons that match junction starts.
    * Throws exception if unable to find all matches
@@ -136,12 +138,15 @@ class GeneJunctions : public detail::Regions<GeneJunction, true> {
   }
 
  public:
-  void connect_exons(const Exons& exons) const {
+  void connect_exons(const std::shared_ptr<Exons>& exons_ptr) {
+    if (exons_ptr == nullptr || exons_ptr == connected_exons_) {
+      return;  // don't do anything
+    }
+    const Exons& exons = *exons_ptr;
     if (parents() != exons.parents()) {
       throw std::invalid_argument(
           "junction/exon genes do not match in connect_exons()");
     }
-    // TODO(jaicher): consider keeping shared_ptr to connected exons
     const auto start_exons = start_exon_idx(exons);
     const auto end_exons = end_exon_idx(exons);
     // no exception --> valid to connect them now in place
@@ -149,16 +154,22 @@ class GeneJunctions : public detail::Regions<GeneJunction, true> {
       (*this)[i].start_exon_idx() = start_exons[i];
       (*this)[i].end_exon_idx() = end_exons[i];
     }
+    connected_exons_ = exons_ptr;  // update pointer to connected exons
     return;
   }
 
   GeneJunctions(
-      const std::shared_ptr<Genes>& genes, std::vector<GeneJunction>&& x)
-      : BaseT{genes, std::move(x)} {
+      const std::shared_ptr<Genes>& genes, std::vector<GeneJunction>&& x,
+      const std::shared_ptr<Exons>& connected_exons)
+      : BaseT{genes, std::move(x)}, connected_exons_{connected_exons} {
+    // NOTE: assumes that connections to connected_exons already defined in x
     if (parents() == nullptr) {
       throw std::invalid_argument("GeneJunctions cannot have null genes");
     }
   }
+  GeneJunctions(
+      const std::shared_ptr<Genes>& genes, std::vector<GeneJunction>&& x)
+      : GeneJunctions{genes, std::move(x), nullptr} { }
 };
 }  // namespace majiq
 

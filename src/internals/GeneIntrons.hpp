@@ -77,16 +77,28 @@ namespace majiq {
 class GeneIntrons : public detail::Regions<GeneIntron, false> {
   using BaseT = detail::Regions<GeneIntron, false>;
 
+ private:
+  std::shared_ptr<Exons> connected_exons_;
+
  public:
   GeneIntrons(
-      const std::shared_ptr<Genes>& genes, std::vector<GeneIntron>&& x)
-      : BaseT{genes, std::move(x)} {
+      const std::shared_ptr<Genes>& genes, std::vector<GeneIntron>&& x,
+      const std::shared_ptr<Exons>& connected_exons)
+      : BaseT{genes, std::move(x)}, connected_exons_{connected_exons} {
+    // NOTE: assumes that connections to connected_exons already defined in x
     if (parents() == nullptr) {
       throw std::invalid_argument("GeneIntrons cannot have null genes");
     }
   }
+  GeneIntrons(
+      const std::shared_ptr<Genes>& genes, std::vector<GeneIntron>&& x)
+      : GeneIntrons{genes, std::move(x), nullptr} { }
 
-  void connect_exons(const Exons& exons) const {
+  void connect_exons(const std::shared_ptr<Exons>& exons_ptr) {
+    if (exons_ptr == nullptr || exons_ptr == connected_exons_) {
+      return;  // don't do anything
+    }
+    const Exons& exons = *exons_ptr;
     if (parents() != exons.parents()) {
       throw std::invalid_argument(
           "junction/exon genes do not match in connect_exons()");
@@ -138,6 +150,7 @@ class GeneIntrons : public detail::Regions<GeneIntron, false> {
       (*this)[i].start_exon_idx() = result[i].start;
       (*this)[i].end_exon_idx() = result[i].end;
     }
+    connected_exons_ = exons_ptr;  // update pointer to connected exons
     return;
   }
 
@@ -150,14 +163,18 @@ class GeneIntrons : public detail::Regions<GeneIntron, false> {
             ? !discard_denovo && x.passed_build()
             : keep_annotated || x.passed_build());
         });
-    return GeneIntrons{parents(), std::move(result_vec)};
+    return GeneIntrons{parents(), std::move(result_vec), connected_exons_};
   }
   /**
    * get all potential introns (i.e. denovo as well) compared to exons
    *
    * Note that automatically connects introns to the exons
    */
-  GeneIntrons PotentialIntrons(const Exons& exons) const {
+  GeneIntrons PotentialIntrons(const std::shared_ptr<Exons>& exons_ptr) const {
+    if (exons_ptr == nullptr) {
+      throw std::runtime_error("PotentialIntrons requires non-null exons");
+    }
+    const Exons& exons = *exons_ptr;
     std::vector<GeneIntron> result_vec;
 
     if (parents() != exons.parents()) {
@@ -203,7 +220,7 @@ class GeneIntrons : public detail::Regions<GeneIntron, false> {
       }  // loop over genes
     }  // when the containers aren't empty
 
-    return GeneIntrons{parents(), std::move(result_vec)};
+    return GeneIntrons{parents(), std::move(result_vec), exons_ptr};
   }
 };
 
