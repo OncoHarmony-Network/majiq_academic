@@ -125,11 +125,11 @@ class SJRegionBinReads {
       : regions_{regions},
         reads_{std::move(reads)},
         offsets_{std::move(offsets)},
-        total_bins_{total_bins} { }
-  SJRegionBinReads(const SJRegionBinReads&) = default;
-  SJRegionBinReads(SJRegionBinReads&&) = default;
-  SJRegionBinReads& operator=(const SJRegionBinReads&) = delete;
-  SJRegionBinReads& operator=(SJRegionBinReads&&) = delete;
+        total_bins_{total_bins} {
+    if (regions_ == nullptr) {
+      throw std::invalid_argument("SJRegionBinReads requires non-null regions");
+    }
+  }
 };  // class SJRegionPositions
 
 }  // namespace detail

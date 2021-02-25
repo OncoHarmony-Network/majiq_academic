@@ -13,6 +13,7 @@
 #include <vector>
 #include <algorithm>
 #include <utility>
+#include <memory>
 #include <boost/functional/hash.hpp>
 
 #include "GeneRegion.hpp"
@@ -102,7 +103,18 @@ template <> struct hash<majiq::Exon> {
 
 namespace majiq {
 
-using Exons = detail::Regions<Exon, false>;
+class Exons : public detail::Regions<Exon, false> {
+  using BaseT = detail::Regions<Exon, false>;
+
+ public:
+  Exons(
+      const std::shared_ptr<Genes>& genes, std::vector<Exon>&& x)
+      : BaseT{genes, std::move(x)} {
+    if (parents() == nullptr) {
+      throw std::invalid_argument("Exons cannot have null genes");
+    }
+  }
+};
 
 }  // namespace majiq
 

@@ -92,9 +92,15 @@ class GroupJunctionsGenerator {
       : num_experiments_{0},
         known_{known},
         exons_{exons},
-        known_num_passed_(known->size(), 0),
+        known_num_passed_(known_ == nullptr ? 0 : known_->size(), 0),
         denovos_num_passed_{} {
-    if (known_->parents() != exons_->parents()) {
+    if (known_ == nullptr) {
+      throw std::invalid_argument(
+          "GroupJunctionsGenerator requires non-null known GeneJunctions");
+    } else if (exons == nullptr) {
+      throw std::invalid_argument(
+          "GroupJunctionsGenerator requires non-null Exons");
+    } else if (known_->parents() != exons_->parents()) {
       throw std::invalid_argument(
           "GroupJunctionsGenerator exons/junctions do not share genes");
     }
@@ -135,10 +141,16 @@ class PassedJunctionsGenerator {
   size_t size() const noexcept { return num_annotated() + num_denovo(); }
   explicit PassedJunctionsGenerator(const std::shared_ptr<GeneJunctions>& known)
       : known_{known},
-        known_passed_build_(known->size(), false),
-        denovos_passed_build_{} { }
+        known_passed_build_(known_ == nullptr ? 0 : known_->size(), false),
+        denovos_passed_build_{} {
+     if (known_ == nullptr) {
+      throw std::invalid_argument(
+          "PassedJunctionsGenerator requires non-null known GeneJunctions");
+     }
+  }
 
-  void AddGroup(const GroupJunctionsGenerator& group, real_t min_experiments_f) {
+  void AddGroup(
+      const GroupJunctionsGenerator& group, real_t min_experiments_f) {
     if (known_ != group.known_) {
       throw std::invalid_argument(
           "Added group junctions have different set of known gene junctions");

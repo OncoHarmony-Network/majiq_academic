@@ -125,10 +125,12 @@ ContigIntrons ContigIntrons::FromGeneExonsAndIntrons(
     throw std::invalid_argument(
         "ContigIntrons gene exons and introns do not share same genes");
   }
-  // if there are no exons, there can be no introns
-  if (exons.empty()) { return ContigIntrons{}; }
 
   std::vector<ContigIntron> result_vec;
+  // if there are no exons, there can be no introns
+  if (exons.empty()) {
+    return ContigIntrons{exons.parents()->parents(), std::move(result_vec)};
+  }
 
   // otherwise, operate on sets of genes at a time that overlap
   const auto& genes_ptr = exons.parents_;

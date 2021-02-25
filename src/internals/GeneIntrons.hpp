@@ -13,6 +13,7 @@
 #include <functional>
 #include <algorithm>
 #include <vector>
+#include <memory>
 #include <sstream>
 #include <boost/functional/hash.hpp>
 
@@ -78,8 +79,12 @@ class GeneIntrons : public detail::Regions<GeneIntron, false> {
 
  public:
   GeneIntrons(
-      const typename BaseT::ParentsPtrT& parents, typename BaseT::vecT&& x)
-      : BaseT{parents, std::move(x)} { }
+      const std::shared_ptr<Genes>& genes, std::vector<GeneIntron>&& x)
+      : BaseT{genes, std::move(x)} {
+    if (parents() == nullptr) {
+      throw std::invalid_argument("GeneIntrons cannot have null genes");
+    }
+  }
 
   void connect_exons(const Exons& exons) const {
     if (parents() != exons.parents()) {

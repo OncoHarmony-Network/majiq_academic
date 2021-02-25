@@ -81,7 +81,19 @@ class SJJunction : public detail::ContigRegion<OpenInterval, ExperimentCounts> {
   SJJunction& operator=(const SJJunction&) = default;
   SJJunction& operator=(SJJunction&&) = default;
 };
-using SJJunctions = detail::Regions<SJJunction, true>;
+
+class SJJunctions : public detail::Regions<SJJunction, true> {
+  using BaseT = detail::Regions<SJJunction, true>;
+
+ public:
+  SJJunctions(
+      const std::shared_ptr<Contigs>& contigs, std::vector<SJJunction>&& x)
+      : BaseT{contigs, std::move(x)} {
+    if (parents() == nullptr) {
+      throw std::invalid_argument("SJJunctions cannot have null genes");
+    }
+  }
+};
 
 }  // namespace majiq
 

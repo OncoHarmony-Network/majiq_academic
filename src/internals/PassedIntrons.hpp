@@ -31,7 +31,12 @@ class GroupIntronsGenerator {
       const std::shared_ptr<GeneIntrons>& gene_introns)
       : num_experiments_{},
         gene_introns_{gene_introns},
-        num_passed_(gene_introns_->size(), 0) { }
+        num_passed_(gene_introns_ == nullptr ? 0 : gene_introns_->size(), 0) {
+    if (gene_introns_ == nullptr) {
+      throw std::invalid_argument(
+          "GroupIntronsGenerator requires non-null GeneIntrons");
+    }
+  }
 
   const std::shared_ptr<GeneIntrons>& introns() { return gene_introns_; }
   const std::vector<size_t>& num_passed() { return num_passed_; }

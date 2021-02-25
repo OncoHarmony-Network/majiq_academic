@@ -152,14 +152,13 @@ class GeneJunctions : public detail::Regions<GeneJunction, true> {
     return;
   }
 
-  explicit GeneJunctions(
+  GeneJunctions(
       const std::shared_ptr<Genes>& genes, std::vector<GeneJunction>&& x)
-      : BaseT{genes, std::move(x)} { }
-  GeneJunctions() : BaseT{} { }
-  GeneJunctions(const GeneJunctions&) = default;
-  GeneJunctions(GeneJunctions&&) = default;
-  GeneJunctions& operator=(const GeneJunctions&) = default;
-  GeneJunctions& operator=(GeneJunctions&&) = default;
+      : BaseT{genes, std::move(x)} {
+    if (parents() == nullptr) {
+      throw std::invalid_argument("GeneJunctions cannot have null genes");
+    }
+  }
 };
 }  // namespace majiq
 
