@@ -91,7 +91,7 @@ struct ClosedInterval : public detail::Interval {
   position_t length() const {
     return is_full_interval() ? 1 + end - start : 0;
   }
-  bool contains(position_t x) {
+  bool contains(position_t x) const {
     return is_full_interval() && start <= x && x <= end;
   }
 
@@ -121,7 +121,7 @@ struct OpenInterval : public detail::Interval {
   position_t length() const {
     return is_full_interval() ? -1 + end - start : 0;
   }
-  bool contains(position_t x) {
+  bool contains(position_t x) const {
     return is_full_interval() && start < x && x < end;
   }
 
