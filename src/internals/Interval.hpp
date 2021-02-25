@@ -167,8 +167,7 @@ inline bool IntervalIntersects(
 
 template <typename T, typename U>
 inline bool IntervalPrecedes(const T& before, const U& after) {
-  return before.is_full_interval() && after.is_full_interval()
-    && std::max(before.start, before.end) < after.start;
+  return std::max(before.start, before.end) < after.start;
 }
 
 // subset/superset of intervals when they are the same type
