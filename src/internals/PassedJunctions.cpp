@@ -11,6 +11,7 @@
 #include <vector>
 #include <set>
 #include <algorithm>
+#include <numeric>
 
 
 namespace majiq {
@@ -75,67 +76,88 @@ void AssignDenovoJunction(const SJJunction& junction, const KnownGene& first,
 void GroupJunctionsGenerator::AddExperiment(const SJJunctions& sj,
     const ExperimentThresholds& thresholds, bool process_denovo) {
   ++num_experiments_;  // increment number of experiments
-  if (sj.empty()) { return; }  // no junctions to add, terminate early
+  if (sj.empty()) { return; }  // no junctions to add
 
   const std::shared_ptr<Genes>& genes = exons_->parents();
 
   // for each contig we have genes for
-  for (size_t dst_contig_idx = 0; dst_contig_idx < genes->contigs()->size();
+  for (size_t dst_contig_idx = 0;
+      dst_contig_idx < genes->contigs()->size();
       ++dst_contig_idx) {
-    const auto opt_sj_contig_idx
-      = sj.parents()->safe_idx(genes->contigs()->get(dst_contig_idx));
-    // if sj doesn't share dst contig, just skip it
+    // try to get matching contigs in sj (since often does not share contigs)
+    const auto opt_sj_contig_idx = sj.parents()->safe_idx(
+        genes->contigs()->get(dst_contig_idx));
     if (!opt_sj_contig_idx.has_value()) { continue; }
     const size_t& sj_contig_idx = *opt_sj_contig_idx;
-    // first overgene for the contig
-    auto og = OverGene{genes->begin_contig(dst_contig_idx)};
-    const auto og_end = OverGene{genes->end_contig(dst_contig_idx)};
 
-    // process each sj junction in order on this contig.
-    for (auto sj_it = sj.begin_parent(sj_contig_idx);
-        sj_it != sj.end_parent(sj_contig_idx);
-        ++sj_it) {
+    // get gene junctions (or indexes to them) in contig sorted order
+    // so we iterate over sj, gene junctions (known) and genes (for denovo)
+    auto sj_it = sj.begin_parent(sj_contig_idx);
+    const auto sj_it_end = sj.end_parent(sj_contig_idx);
+    if (sj_it == sj_it_end) { continue; }  // no sj junctions for contig
+    KnownGene g_it_start = genes->begin_contig(dst_contig_idx);
+    const KnownGene g_it_end = genes->end_contig(dst_contig_idx);
+    if (g_it_start == g_it_end) { continue; }  // no genes for contig
+    // (indexes to) known genejunctions for this contig sorted by coordinates
+    std::vector<size_t> known_idx(
+        // number of known junctions for the contig
+        known_->parent_idx_offsets_[g_it_end.idx_]
+        - known_->parent_idx_offsets_[g_it_start.idx_]);
+    std::iota(known_idx.begin(), known_idx.end(),
+        known_->parent_idx_offsets_[g_it_start.idx_]);
+    std::sort(known_idx.begin(), known_idx.end(),
+        [&x = *known_](size_t i, size_t j) {
+        // ignore gene, strand information, just coordinates within a contig
+        return x[i].coordinates < x[j].coordinates; });
+    auto k_it_start = known_idx.begin();
+
+    for (; sj_it != sj_it_end; ++sj_it) {
       const SJJunction& junction = *sj_it;
-      JunctionPassedStatus status
-        = junction.passed(thresholds);
+      JunctionPassedStatus status = junction.passed(thresholds);
       if (status == JunctionPassedStatus::NOT_PASSED) { continue; }
-      // update og until could overlap with junction
-      for (; og != og_end
-          && IntervalPrecedes(og.coordinates, junction.coordinates);
-          ++og) { }
-      // if we have run out of overgenes in contig, futile to look at any more
-      // junctions on the contigs
-      if (og == og_end) { break; }
-      // junction can only be added if it's part of the overgene
-      if (!IntervalSubsets(junction.coordinates, og.coordinates)) { continue; }
-      // handle annotated junctions for each gene in overgene
-      bool known_found = false;
-      std::for_each(og.first(), og.last(),
-          [&known_found, this, &junction, &status](const KnownGene& gene) {
-          if (junction.strand == GeneStrandness::AMBIGUOUS
-              || junction.strand == gene.strand()) {
-            auto key = GeneJunction{gene, junction.coordinates};
-            auto match = known_->find(
-                GeneJunction{gene, junction.coordinates});
-            if (match != known_->end()
-                // it's conceivable that we know denovo junctions, so if denovo,
-                // we have to check that it passed denovo filters
-                && (!match->denovo()
-                  || status == JunctionPassedStatus::DENOVO_PASSED)) {
-              ++known_num_passed_[match - known_->begin()];
-              known_found = true;
-            }
-          }
-          });
-      // add if we are processing denovo junctions, is denovo, and passed denovo
-      if (process_denovo
-          && status == JunctionPassedStatus::DENOVO_PASSED
-          && !known_found) {
-        AssignDenovoJunction(
-            junction, og.first(), og.last(), *exons_, denovos_num_passed_);
+      // advance to first known junction that could overlap with sj_it
+      k_it_start = std::find_if(k_it_start, known_idx.end(),
+          [&x = *known_, &junction](size_t i) {
+          return !(x[i].coordinates < junction.coordinates); });
+      bool found = false;  // was junction found in known?
+      // try to find matching known junction
+      for (auto k_it = k_it_start;
+          // still have known junctions
+          k_it != known_idx.end()
+          // that have matching coordinates to junction
+          && (*known_)[*k_it].coordinates == junction.coordinates;
+          ++k_it) {
+        const GeneJunction& kj = (*known_)[*k_it];  // gene junction for k_it
+        // if strand matches and junction passed status ~ denovo status
+        if ((junction.strand == GeneStrandness::AMBIGUOUS
+             || junction.strand == kj.gene.strand())
+            && (!kj.denovo() || status == JunctionPassedStatus::DENOVO_PASSED)
+            ) {
+          ++known_num_passed_[*k_it];
+          found = true;
+        }
+      }  // loop over potentially matching known junctions
+      if (!process_denovo) {
+        // if no denovos, end of known junctions in contig is stopping condition
+        if (k_it_start == known_idx.end()) { break; }
+        // otherwise, we are processing junctions not previously known to us
+      } else if (!found && status == JunctionPassedStatus::DENOVO_PASSED) {
+        // advance to first gene that could overlap with junction
+        g_it_start = std::find_if(g_it_start, g_it_end,
+            [&junction](const KnownGene& x) {
+            return !IntervalPrecedes(x.coordinates(), junction.coordinates); });
+        if (g_it_start == g_it_end) { break; }  // no more genes for contig
+        // gene can be from there until first gene that starts after junction
+        auto g_it_after = std::find_if(g_it_start, g_it_end,
+            [&junction](const KnownGene& x) {
+            return IntervalPrecedes(junction.coordinates, x.coordinates()); });
+        if (g_it_start != g_it_after) {
+          AssignDenovoJunction(
+              junction, g_it_start, g_it_after, *exons_, denovos_num_passed_);
+        }
       }
-    }  // loop over sj junctions for the contig
-  }  // end loop over contigs for which we have genes
+    }  // end loop over sj junctions on contig
+  }  // end loop over contig
 }
 
 }  // namespace majiq

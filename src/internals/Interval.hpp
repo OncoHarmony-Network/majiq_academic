@@ -165,8 +165,8 @@ inline bool IntervalIntersects(
     && y.first_pos() <= std::max(x.start, x.end);
 }
 
-template <typename T>
-inline bool IntervalPrecedes(const ClosedInterval& before, const T& after) {
+template <typename T, typename U>
+inline bool IntervalPrecedes(const T& before, const U& after) {
   return before.is_full_interval() && after.is_full_interval()
     && std::max(before.start, before.end) < after.start;
 }
