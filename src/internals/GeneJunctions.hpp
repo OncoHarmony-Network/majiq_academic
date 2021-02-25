@@ -67,7 +67,18 @@ template <> struct hash<majiq::GeneJunction> {
 }  // namespace std
 
 namespace majiq {
-using GeneJunctions = detail::Regions<GeneJunction, true>;
+class GeneJunctions : public detail::Regions<GeneJunction, true> {
+  using BaseT = detail::Regions<GeneJunction, true>;
+ public:
+  explicit GeneJunctions(
+      const std::shared_ptr<Genes>& genes, std::vector<GeneJunction>&& x)
+      : BaseT{genes, std::move(x)} { }
+  GeneJunctions() : BaseT{} { }
+  GeneJunctions(const GeneJunctions&) = default;
+  GeneJunctions(GeneJunctions&&) = default;
+  GeneJunctions& operator=(const GeneJunctions&) = default;
+  GeneJunctions& operator=(GeneJunctions&&) = default;
+};
 }  // namespace majiq
 
 #endif  // MAJIQ_GENEJUNCTIONS_HPP
