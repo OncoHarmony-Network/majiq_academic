@@ -38,6 +38,14 @@ struct GeneJunction
   bool& simplified() const noexcept { return data.simplified; }
   size_t& start_exon_idx() const noexcept { return data.start_exon_idx; }
   size_t& end_exon_idx() const noexcept { return data.end_exon_idx; }
+  const size_t& src_exon_idx() const noexcept {
+    return gene.strand() == GeneStrandness::FORWARD
+      ? start_exon_idx() : end_exon_idx();
+  }
+  const size_t& dst_exon_idx() const noexcept {
+    return gene.strand() == GeneStrandness::FORWARD
+      ? end_exon_idx() : start_exon_idx();
+  }
   const bool is_exitron() const noexcept { return data.is_exitronic(); }
 
   // constructors
