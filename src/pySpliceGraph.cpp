@@ -57,6 +57,7 @@ using pyPassedJunctionsGen_t = pyClassShared_t<majiq::PassedJunctionsGenerator>;
 using pyGroupIntronsGen_t = pyClassShared_t<majiq::GroupIntronsGenerator>;
 using pySJIntronsBins_t = pyClassShared_t<majiq::SJIntronsBins>;
 using pyEventConnections_t = pyClassShared_t<majiq::EventConnections>;
+using pyEvents_t = pyClassShared_t<majiq::Events>;
 
 using pyExperimentThresholds_t = pyClassShared_t<majiq::ExperimentThresholds>;
 using pyIntronThresholdsGenerator_t
@@ -566,21 +567,165 @@ void init_ContigIntrons(pyContigIntrons_t& pyContigIntrons) {
         });
 }
 
+void init_pyEvents(pyEvents_t& pyEvents) {
+  using majiq::Events;
+  using majiq::EventIndex;
+  using majiq::GeneJunctions;
+  using majiq::GeneIntrons;
+  using majiq_pybind::ArrayFromVectorAndOffset;
+  using majiq_pybind::ArrayFromOffsetsVector;
+  pyEvents
+    .def(
+        py::init<const std::shared_ptr<GeneJunctions>&,
+        const std::shared_ptr<GeneIntrons>&>(),
+        "Enumerate events connections with connected junctions/introns",
+        py::arg("junctions"),
+        py::arg("introns"))
+    .def_property_readonly("_event_connections", &Events::event_connections,
+        "Underlying associated event connections object")
+    .def_property_readonly("event_connections",
+        [](py::object& self) -> py::object {
+        return self.attr("_event_connections").attr("df")();
+        },
+        "View of event connections as xarray Dataset")
+    .def_property_readonly("ec_idx_start",
+        [](py::object& self_obj) {
+        Events& self = self_obj.cast<Events&>();
+        return ArrayFromOffsetsVector<size_t>(self.offsets(), true, self_obj);
+        },
+        "First index into event connections for each event")
+    .def_property_readonly("ec_idx_end",
+        [](py::object& self_obj) {
+        Events& self = self_obj.cast<Events&>();
+        return ArrayFromOffsetsVector<size_t>(self.offsets(), false, self_obj);
+        },
+        "One after last index into event connections for each event")
+    .def_property_readonly("ref_exon_idx",
+        [](py::object self_obj) -> py::array_t<size_t> {
+        Events& self = self_obj.cast<Events&>();
+        const size_t offset = offsetof(EventIndex, ref_exon_idx_);
+        return ArrayFromVectorAndOffset<size_t, EventIndex>(
+            self.events(), offset, self_obj);
+        },
+        "array[int] exon indexes for reference exon for a given event")
+    .def_property_readonly("event_type",
+        [](py::object self_obj) -> py::array_t<std::array<char, 1>> {
+        Events& self = self_obj.cast<Events&>();
+        const size_t offset = offsetof(EventIndex, event_type_);
+        return ArrayFromVectorAndOffset<std::array<char, 1>, EventIndex>(
+            self.events(), offset, self_obj);
+        },
+        "array[char] indicator of event type (source 's' vs target 't')")
+    .def("df",
+        [](py::object& self) -> py::object {
+        using majiq_pybind::XarrayDatasetFromObject;
+        return XarrayDatasetFromObject(self, "event_idx",
+            {"ref_exon_idx", "event_type", "ec_idx_start", "ec_idx_end"});
+        },
+        "View on event arrays as xarray Dataset")
+    .def("has_intron",
+        [](const Events& self,
+          const py::array_t<size_t>& event_idx) -> py::array_t<bool> {
+        auto f = [&self](size_t x) -> bool { return self.has_intron(x); };
+        return py::vectorize(f)(event_idx);
+        },
+        "Indicate whether event has a valid intron",
+        py::arg("event_idx"))
+    .def("passed",
+        [](const Events& self,
+          const py::array_t<size_t>& event_idx) -> py::array_t<bool> {
+        auto f = [&self](size_t x) -> bool { return self.passed(x); };
+        return py::vectorize(f)(event_idx);
+        },
+        "Indicate whether event has any valid connections that passed",
+        py::arg("event_idx"))
+    .def("redundant",
+        [](const Events& self,
+          const py::array_t<size_t>& event_idx) -> py::array_t<bool> {
+        auto f = [&self](size_t x) -> bool { return self.redundant(x); };
+        return py::vectorize(f)(event_idx);
+        },
+        "Indicate whether event is redundant to another one",
+        py::arg("event_idx"))
+    .def("event_size",
+        [](const Events& self,
+          const py::array_t<size_t>& event_idx) -> py::array_t<size_t> {
+        auto f = [&self](size_t x) -> size_t { return self.event_size(x); };
+        return py::vectorize(f)(event_idx);
+        },
+        "Count the number of valid connections for the event",
+        py::arg("event_idx"))
+    .def("__len__", &Events::size,
+        "Number of potential events being tracked");
+}
+
 void init_pyEventConnections(pyEventConnections_t& pyEventConnections) {
   using majiq::EventConnections;
   using majiq::EventConnection;
   using majiq::EventIndex;
   using majiq::GeneJunctions;
   using majiq::GeneIntrons;
-  using majiq_pybind::ArrayFromOffsetsVector;
+  using majiq::position_t;
   using majiq_pybind::ArrayFromVectorAndOffset;
   pyEventConnections
     .def(
         py::init<const std::shared_ptr<GeneJunctions>&,
         const std::shared_ptr<GeneIntrons>&>(),
-        "total number of connections of any kind for each event",
+        "Enumerate events connections with connected junctions/introns",
         py::arg("junctions"),
         py::arg("introns"))
+    .def("start",
+        [](const EventConnections& self,
+          const py::array_t<size_t>& ec_idx) -> py::array_t<position_t> {
+        auto f = [&self](size_t x) -> position_t {
+          return self.coordinates_start(x);
+        };
+        return py::vectorize(f)(ec_idx);
+        },
+        "Obtain starts for specified event connections",
+        py::arg("ec_idx"))
+    .def("end",
+        [](const EventConnections& self,
+          const py::array_t<size_t>& ec_idx) -> py::array_t<position_t> {
+        auto f = [&self](size_t x) -> position_t {
+          return self.coordinates_end(x);
+        };
+        return py::vectorize(f)(ec_idx);
+        },
+        "Obtain ends for specified event connections",
+        py::arg("ec_idx"))
+    .def("other_exon_idx",
+        [](const EventConnections& self,
+          const py::array_t<size_t>& ec_idx) -> py::array_t<size_t> {
+        auto f = [&self](size_t x) -> size_t { return self.other_exon_idx(x); };
+        return py::vectorize(f)(ec_idx);
+        },
+        "Obtain indexes for non-reference exon for specified event connections",
+        py::arg("ec_idx"))
+    .def("is_exitron",
+        [](const EventConnections& self,
+          const py::array_t<size_t>& ec_idx) -> py::array_t<bool> {
+        auto f = [&self](size_t x) -> bool { return self.is_exitron(x); };
+        return py::vectorize(f)(ec_idx);
+        },
+        "Indicate whether the specified connections start/end on same exon",
+        py::arg("ec_idx"))
+    .def("simplified",
+        [](const EventConnections& self,
+          const py::array_t<size_t>& ec_idx) -> py::array_t<bool> {
+        auto f = [&self](size_t x) -> bool { return self.simplified(x); };
+        return py::vectorize(f)(ec_idx);
+        },
+        "Indicate whether the specified connections are simplified or not",
+        py::arg("ec_idx"))
+    .def("passed_build",
+        [](const EventConnections& self,
+          const py::array_t<size_t>& ec_idx) -> py::array_t<bool> {
+        auto f = [&self](size_t x) -> bool { return self.passed_build(x); };
+        return py::vectorize(f)(ec_idx);
+        },
+        "Indicate whether the specified connections are passed or not",
+        py::arg("ec_idx"))
     .def_property_readonly("ref_exon_idx",
         [](py::object self_obj) -> py::array_t<size_t> {
         EventConnections& self = self_obj.cast<EventConnections&>();
@@ -624,9 +769,6 @@ void init_pyEventConnections(pyEventConnections_t& pyEventConnections) {
             {"ref_exon_idx", "event_type", "is_intron", "connection_idx"});
         },
         "View on event connections arrays as xarray Dataset")
-    .def_property_readonly("num_potential_events",
-        &EventConnections::num_potential_events,
-        "Total number of potential events including redundant and constitutive")
     .def("__len__", &EventConnections::size,
         "Number of potential event/connections being tracked");
 }
@@ -1379,7 +1521,7 @@ void init_pyIntronThresholdsGenerator(
   pyIntronThresholdsGenerator
     .def("__call__",
         [](const IntronThresholdsGenerator& gen,
-          py::array_t<junction_pos_t> intron_lengths) {
+          const py::array_t<junction_pos_t>& intron_lengths) {
         // function per-element of intron_lengths
         auto f = [&gen](junction_pos_t x) { return gen(x); };
         return py::vectorize(f)(intron_lengths);
@@ -1409,6 +1551,8 @@ void init_SpliceGraphAll(py::module_& m) {
       "Splicegraph introns");
   auto pyGeneJunctions = pyGeneJunctions_t(
       m, "GeneJunctions", "Splicegraph junctions");
+  auto pyEvents = pyEvents_t(
+      m, "Events", "Groups of connections between junctions, introns, exons");
   auto pyEventConnections = pyEventConnections_t(
       m, "EventConnections", "Connections between junctions, introns, exons");
   auto pyContigIntrons = pyContigIntrons_t(m, "ContigIntrons");
@@ -1514,4 +1658,5 @@ void init_SpliceGraphAll(py::module_& m) {
   init_pyPassedJunctionsGen(pyPassedJunctionsGen);
   init_pyGroupIntronsGen(pyGroupIntronsGen);
   init_pyEventConnections(pyEventConnections);
+  init_pyEvents(pyEvents);
 }

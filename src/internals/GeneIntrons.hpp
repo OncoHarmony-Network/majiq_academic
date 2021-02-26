@@ -46,6 +46,7 @@ struct GeneIntron
     return gene.strand() == GeneStrandness::FORWARD
       ? end_exon_idx() : start_exon_idx();
   }
+  const bool is_exitron() const noexcept { return data.is_exitronic(); }
 
   // constructors
   GeneIntron(
