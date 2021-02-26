@@ -30,6 +30,7 @@
 #include "internals/ContigIntrons.hpp"
 #include "internals/PassedJunctions.hpp"
 #include "internals/PassedIntrons.hpp"
+#include "internals/EventConnections.hpp"
 #include "internals/Meta.hpp"
 
 #include "internals/ExperimentThresholds.hpp"
@@ -55,6 +56,7 @@ using pyGroupJunctionsGen_t = pyClassShared_t<majiq::GroupJunctionsGenerator>;
 using pyPassedJunctionsGen_t = pyClassShared_t<majiq::PassedJunctionsGenerator>;
 using pyGroupIntronsGen_t = pyClassShared_t<majiq::GroupIntronsGenerator>;
 using pySJIntronsBins_t = pyClassShared_t<majiq::SJIntronsBins>;
+using pyEventConnections_t = pyClassShared_t<majiq::EventConnections>;
 
 using pyExperimentThresholds_t = pyClassShared_t<majiq::ExperimentThresholds>;
 using pyIntronThresholdsGenerator_t
@@ -562,6 +564,71 @@ void init_ContigIntrons(pyContigIntrons_t& pyContigIntrons) {
         oss << "ContigIntrons<" << self.size() << " total>";
         return oss.str();
         });
+}
+
+void init_pyEventConnections(pyEventConnections_t& pyEventConnections) {
+  using majiq::EventConnections;
+  using majiq::EventConnection;
+  using majiq::EventIndex;
+  using majiq::GeneJunctions;
+  using majiq::GeneIntrons;
+  using majiq_pybind::ArrayFromOffsetsVector;
+  using majiq_pybind::ArrayFromVectorAndOffset;
+  pyEventConnections
+    .def(
+        py::init<const std::shared_ptr<GeneJunctions>&,
+        const std::shared_ptr<GeneIntrons>&>(),
+        "total number of connections of any kind for each event",
+        py::arg("junctions"),
+        py::arg("introns"))
+    .def_property_readonly("ref_exon_idx",
+        [](py::object self_obj) -> py::array_t<size_t> {
+        EventConnections& self = self_obj.cast<EventConnections&>();
+        const size_t offset
+          = offsetof(EventConnection, event_idx_.ref_exon_idx_);
+        return ArrayFromVectorAndOffset<size_t, EventConnection>(
+            self.event_connections(), offset, self_obj);
+        },
+        "array[int] exon indexes for reference exon for a given event")
+    .def_property_readonly("event_type",
+        [](py::object self_obj) -> py::array_t<std::array<char, 1>> {
+        EventConnections& self = self_obj.cast<EventConnections&>();
+        const size_t offset
+          = offsetof(EventConnection, event_idx_.event_type_);
+        return ArrayFromVectorAndOffset<std::array<char, 1>, EventConnection>(
+            self.event_connections(), offset, self_obj);
+        },
+        "array[char] indicator of event type (source 's' vs target 't')")
+    .def_property_readonly("is_intron",
+        [](py::object self_obj) -> py::array_t<bool> {
+        EventConnections& self = self_obj.cast<EventConnections&>();
+        const size_t offset
+          = offsetof(EventConnection, is_intron_);
+        return ArrayFromVectorAndOffset<bool, EventConnection>(
+            self.event_connections(), offset, self_obj);
+        },
+        "array[bool] indicating if connection is an intron")
+    .def_property_readonly("connection_idx",
+        [](py::object self_obj) -> py::array_t<size_t> {
+        EventConnections& self = self_obj.cast<EventConnections&>();
+        const size_t offset
+          = offsetof(EventConnection, connection_idx_);
+        return ArrayFromVectorAndOffset<size_t, EventConnection>(
+            self.event_connections(), offset, self_obj);
+        },
+        "array[int] indicating index of connection in junctions or introns")
+    .def("df",
+        [](py::object& self) -> py::object {
+        using majiq_pybind::XarrayDatasetFromObject;
+        return XarrayDatasetFromObject(self, "ec_idx",
+            {"ref_exon_idx", "event_type", "is_intron", "connection_idx"});
+        },
+        "View on event connections arrays as xarray Dataset")
+    .def_property_readonly("num_potential_events",
+        &EventConnections::num_potential_events,
+        "Total number of potential events including redundant and constitutive")
+    .def("__len__", &EventConnections::size,
+        "Number of potential event/connections being tracked");
 }
 
 void init_SJIntronsBins(pySJIntronsBins_t& pySJIntronsBins) {
@@ -1342,6 +1409,8 @@ void init_SpliceGraphAll(py::module_& m) {
       "Splicegraph introns");
   auto pyGeneJunctions = pyGeneJunctions_t(
       m, "GeneJunctions", "Splicegraph junctions");
+  auto pyEventConnections = pyEventConnections_t(
+      m, "EventConnections", "Connections between junctions, introns, exons");
   auto pyContigIntrons = pyContigIntrons_t(m, "ContigIntrons");
   auto pySJIntronsBins = pySJIntronsBins_t(m, "SJIntronsBins",
       "Summarized and per-bin counts for introns from an experiment");
@@ -1444,4 +1513,5 @@ void init_SpliceGraphAll(py::module_& m) {
   init_pyGroupJunctionsGen(pyGroupJunctionsGen);
   init_pyPassedJunctionsGen(pyPassedJunctionsGen);
   init_pyGroupIntronsGen(pyGroupIntronsGen);
+  init_pyEventConnections(pyEventConnections);
 }
