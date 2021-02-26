@@ -178,12 +178,10 @@ inline bool IntervalSubsets(const T1& sub, const T2& sup) {
 }
 
 // how to print intervals
-inline std::ostream& operator<<(std::ostream& os, const ClosedInterval& x) {
-  os << "[" << x.start << ", " << x.end << "]";
-  return os;
-}
-inline std::ostream& operator<<(std::ostream& os, const OpenInterval& x) {
-  os << "(" << x.start << ", " << x.end << ")";
+inline std::ostream& operator<<(std::ostream& os, const detail::Interval& x) {
+  if (x.has_start()) { os << x.start; } else { os << "na"; }
+  os << "-";
+  if (x.has_end()) { os << x.end; } else { os << "na"; }
   return os;
 }
 

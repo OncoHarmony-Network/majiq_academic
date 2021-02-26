@@ -647,6 +647,30 @@ void init_pyEvents(pyEvents_t& pyEvents) {
         },
         "Indicate whether event is redundant to another one",
         py::arg("event_idx"))
+    .def("valid_event",
+        [](const Events& self,
+          const py::array_t<size_t>& event_idx) -> py::array_t<bool> {
+        auto f = [&self](size_t x) -> bool { return self.valid_event(x); };
+        return py::vectorize(f)(event_idx);
+        },
+        "Indicate whether event is valid (passed and non-redundant)",
+        py::arg("event_idx"))
+    .def("is_LSV",
+        [](const Events& self,
+          const py::array_t<size_t>& event_idx) -> py::array_t<bool> {
+        auto f = [&self](size_t x) -> bool { return self.is_LSV(x); };
+        return py::vectorize(f)(event_idx);
+        },
+        "Indicate whether event is LSV (valid and event size >= 2)",
+        py::arg("event_idx"))
+    .def("is_constitutive",
+        [](const Events& self,
+          const py::array_t<size_t>& event_idx) -> py::array_t<bool> {
+        auto f = [&self](size_t x) -> bool { return self.is_constitutive(x); };
+        return py::vectorize(f)(event_idx);
+        },
+        "Indicate whether event is constitutive (valid and event size == 1)",
+        py::arg("event_idx"))
     .def("event_size",
         [](const Events& self,
           const py::array_t<size_t>& event_idx) -> py::array_t<size_t> {
@@ -654,6 +678,23 @@ void init_pyEvents(pyEvents_t& pyEvents) {
         return py::vectorize(f)(event_idx);
         },
         "Count the number of valid connections for the event",
+        py::arg("event_idx"))
+    .def("event_id", &Events::event_id, "Get event ID for requested event",
+        py::arg("event_idx"))
+    .def("event_id",
+        [](const Events& self,
+          const py::array_t<size_t>& event_idx) {
+        if (event_idx.ndim() != 1) {
+          throw std::invalid_argument("event_idx must be scalar or 1D");
+        }
+        std::vector<std::string> result(event_idx.shape(0));
+        auto _event_idx = event_idx.unchecked<1>();
+        for (py::ssize_t i = 0; i < _event_idx.shape(0); ++i) {
+          result[i] = self.event_id(_event_idx(i));
+        }
+        return result;
+        },
+        "Get event ID for each event requested",
         py::arg("event_idx"))
     .def("__len__", &Events::size,
         "Number of potential events being tracked");

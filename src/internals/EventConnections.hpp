@@ -20,6 +20,8 @@
 #include <algorithm>
 #include <variant>
 #include <set>
+#include <string>
+#include <sstream>
 
 #include "Exons.hpp"
 #include "GeneJunctions.hpp"
@@ -45,6 +47,15 @@ inline EventType OtherEventType(EventType x) {
 struct EventIndex {
   size_t ref_exon_idx_;
   EventType event_type_;
+
+  std::string id(const Exons& exons) const {
+    const Exon& ref_exon = exons[ref_exon_idx_];
+    std::ostringstream oss;
+    oss << ref_exon.gene.get() << ':'
+      << static_cast<char>(event_type_)
+      << ':' << ref_exon.coordinates;
+    return oss.str();
+  }
 };
 inline bool operator<(const EventIndex& x, const EventIndex& y) noexcept {
   return std::tie(x.ref_exon_idx_, x.event_type_)
@@ -99,6 +110,8 @@ class EventConnections {
         exons_{InferredExons(junctions_, introns_)},
         event_connections_{
           MakeSortedEventConnections(*junctions_, *introns_)} { }
+
+  const std::shared_ptr<Exons>& exons() const { return exons_; }
 
   const std::vector<EventConnection>& event_connections() const {
     return event_connections_;
@@ -181,6 +194,10 @@ class Events {
   const std::vector<size_t> offsets_;
   const std::vector<EventIndex> events_;
 
+  const std::shared_ptr<Exons>& exons() const {
+    return event_connections_->exons();
+  }
+
   static std::vector<size_t> CalculateOffsets(
       const std::vector<EventConnection>& event_connections) {
     std::vector<size_t> result = {0};
@@ -224,8 +241,12 @@ class Events {
     return events_[event_idx];
   }
   size_t size() const noexcept { return events_.size(); }
-  KnownGene gene(size_t event_idx) const {
-    return event_connections_->gene(offsets_[event_idx]);
+  const Exon& ref_exon(size_t event_idx) const {
+    const size_t exon_idx = events_[event_idx].ref_exon_idx_;
+    return (*exons())[exon_idx];
+  }
+  const KnownGene& gene(size_t event_idx) const {
+    return ref_exon(event_idx).gene;
   }
   bool has_intron(size_t event_idx) const {
     const auto v_connection
@@ -242,6 +263,7 @@ class Events {
     }
     return ct;
   }
+  // does the event have any passed connections, regardless of redundancy
   bool passed(size_t event_idx) const {
     for (size_t ec_idx = offsets_[event_idx];
         ec_idx < offsets_[1 + event_idx];
@@ -261,6 +283,7 @@ class Events {
     }
     return result;
   }
+  // is the event redundant?
   bool redundant(size_t event_idx) const {
     std::set<size_t> other = other_exon_idx_set(event_idx);
     if (other.size() > 1) {
@@ -291,11 +314,21 @@ class Events {
           || redundant(other_it - events_.begin()));
     }
   }
+  bool valid_event(size_t event_idx) const {
+    return passed(event_idx) && !redundant(event_idx);
+  }
+  bool is_LSV(size_t event_idx) const {
+    return (event_size(event_idx) > 1) && valid_event(event_idx);
+  }
+  bool is_constitutive(size_t event_idx) const {
+    return (event_size(event_idx) == 1) && valid_event(event_idx);
+  }
+  std::string event_id(size_t event_idx) const {
+    return events_[event_idx].id(*exons());
+  }
 
-  // TODO(jaicher): lsv_id (need to retrieve reference exon)
   // TODO(jaicher): lsv_description
   // TODO(jaicher): simplifier
-  // TODO(jaicher): identify true events, LSVs, constitutive
   // TODO(jaicher): filter to LSVs, etc.
   // TODO(jaicher): assign coverage to events
 };
