@@ -19,6 +19,12 @@ static_assert(
 // how many bases does alignment have to overlap exons?
 constexpr junction_pos_t USE_MIN_OVERHANG = 8;
 static_assert(USE_MIN_OVERHANG > 0, "USE_MIN_OVERHANG must be positive");
+// for historical reaasons, we store event descriptions in fixed-width
+// character array of this size
+// TODO (jaicher) maybe use variablle-length serialization?
+constexpr int64_t EVENT_DESCRIPTION_WIDTH = 250;
+static_assert(EVENT_DESCRIPTION_WIDTH > 6,
+    "EVENT_DESCRIPTION_WIDTH must be long enough to hold s|na|i");
 
 }  // namespace majiq
 

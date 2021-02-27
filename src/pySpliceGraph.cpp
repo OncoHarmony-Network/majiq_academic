@@ -679,6 +679,24 @@ void init_pyEvents(pyEvents_t& pyEvents) {
         },
         "Count the number of valid connections for the event",
         py::arg("event_idx"))
+    .def("event_description", &Events::event_description,
+        "Get event description string parseable by VOILA for requested event",
+        py::arg("event_idx"))
+    .def("event_description",
+        [](const Events& self,
+          const py::array_t<size_t>& event_idx) {
+        if (event_idx.ndim() != 1) {
+          throw std::invalid_argument("event_idx must be scalar or 1D");
+        }
+        std::vector<std::string> result(event_idx.shape(0));
+        auto _event_idx = event_idx.unchecked<1>();
+        for (py::ssize_t i = 0; i < _event_idx.shape(0); ++i) {
+          result[i] = self.event_description(_event_idx(i));
+        }
+        return result;
+        },
+        "Get event description string (for VOILA) for each event requested",
+        py::arg("event_idx"))
     .def("event_id", &Events::event_id, "Get event ID for requested event",
         py::arg("event_idx"))
     .def("event_id",
