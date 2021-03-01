@@ -31,6 +31,7 @@
 #include "internals/PassedJunctions.hpp"
 #include "internals/PassedIntrons.hpp"
 #include "internals/EventConnections.hpp"
+#include "internals/Events.hpp"
 #include "internals/Meta.hpp"
 
 #include "internals/ExperimentThresholds.hpp"
@@ -569,7 +570,7 @@ void init_ContigIntrons(pyContigIntrons_t& pyContigIntrons) {
 
 void init_pyEvents(pyEvents_t& pyEvents) {
   using majiq::Events;
-  using majiq::EventIndex;
+  using majiq::Event;
   using majiq::GeneJunctions;
   using majiq::GeneIntrons;
   using majiq_pybind::ArrayFromVectorAndOffset;
@@ -603,16 +604,16 @@ void init_pyEvents(pyEvents_t& pyEvents) {
     .def_property_readonly("ref_exon_idx",
         [](py::object self_obj) -> py::array_t<size_t> {
         Events& self = self_obj.cast<Events&>();
-        const size_t offset = offsetof(EventIndex, ref_exon_idx_);
-        return ArrayFromVectorAndOffset<size_t, EventIndex>(
+        const size_t offset = offsetof(Event, ref_exon_idx_);
+        return ArrayFromVectorAndOffset<size_t, Event>(
             self.events(), offset, self_obj);
         },
         "array[int] exon indexes for reference exon for a given event")
     .def_property_readonly("event_type",
         [](py::object self_obj) -> py::array_t<std::array<char, 1>> {
         Events& self = self_obj.cast<Events&>();
-        const size_t offset = offsetof(EventIndex, event_type_);
-        return ArrayFromVectorAndOffset<std::array<char, 1>, EventIndex>(
+        const size_t offset = offsetof(Event, event_type_);
+        return ArrayFromVectorAndOffset<std::array<char, 1>, Event>(
             self.events(), offset, self_obj);
         },
         "array[char] indicator of event type (source 's' vs target 't')")
@@ -626,7 +627,7 @@ void init_pyEvents(pyEvents_t& pyEvents) {
     .def("has_intron",
         [](const Events& self,
           const py::array_t<size_t>& event_idx) -> py::array_t<bool> {
-        auto f = [&self](size_t x) -> bool { return self.has_intron(x); };
+        auto f = [&self](size_t x) -> bool { return self[x].has_intron(); };
         return py::vectorize(f)(event_idx);
         },
         "Indicate whether event has a valid intron",
@@ -634,7 +635,7 @@ void init_pyEvents(pyEvents_t& pyEvents) {
     .def("passed",
         [](const Events& self,
           const py::array_t<size_t>& event_idx) -> py::array_t<bool> {
-        auto f = [&self](size_t x) -> bool { return self.passed(x); };
+        auto f = [&self](size_t x) -> bool { return self[x].passed(); };
         return py::vectorize(f)(event_idx);
         },
         "Indicate whether event has any valid connections that passed",
@@ -642,7 +643,7 @@ void init_pyEvents(pyEvents_t& pyEvents) {
     .def("redundant",
         [](const Events& self,
           const py::array_t<size_t>& event_idx) -> py::array_t<bool> {
-        auto f = [&self](size_t x) -> bool { return self.redundant(x); };
+        auto f = [&self](size_t x) -> bool { return self[x].redundant(); };
         return py::vectorize(f)(event_idx);
         },
         "Indicate whether event is redundant to another one",
@@ -650,7 +651,7 @@ void init_pyEvents(pyEvents_t& pyEvents) {
     .def("valid_event",
         [](const Events& self,
           const py::array_t<size_t>& event_idx) -> py::array_t<bool> {
-        auto f = [&self](size_t x) -> bool { return self.valid_event(x); };
+        auto f = [&self](size_t x) -> bool { return self[x].valid_event(); };
         return py::vectorize(f)(event_idx);
         },
         "Indicate whether event is valid (passed and non-redundant)",
@@ -658,7 +659,7 @@ void init_pyEvents(pyEvents_t& pyEvents) {
     .def("is_LSV",
         [](const Events& self,
           const py::array_t<size_t>& event_idx) -> py::array_t<bool> {
-        auto f = [&self](size_t x) -> bool { return self.is_LSV(x); };
+        auto f = [&self](size_t x) -> bool { return self[x].is_LSV(); };
         return py::vectorize(f)(event_idx);
         },
         "Indicate whether event is LSV (valid and event size >= 2)",
@@ -666,7 +667,9 @@ void init_pyEvents(pyEvents_t& pyEvents) {
     .def("is_constitutive",
         [](const Events& self,
           const py::array_t<size_t>& event_idx) -> py::array_t<bool> {
-        auto f = [&self](size_t x) -> bool { return self.is_constitutive(x); };
+        auto f = [&self](size_t x) -> bool {
+          return self[x].is_constitutive();
+        };
         return py::vectorize(f)(event_idx);
         },
         "Indicate whether event is constitutive (valid and event size == 1)",
@@ -674,12 +677,14 @@ void init_pyEvents(pyEvents_t& pyEvents) {
     .def("event_size",
         [](const Events& self,
           const py::array_t<size_t>& event_idx) -> py::array_t<size_t> {
-        auto f = [&self](size_t x) -> size_t { return self.event_size(x); };
+        auto f = [&self](size_t x) -> size_t { return self[x].event_size(); };
         return py::vectorize(f)(event_idx);
         },
         "Count the number of valid connections for the event",
         py::arg("event_idx"))
-    .def("event_description", &Events::event_description,
+    .def("event_description",
+        [](const Events& self, size_t x) -> std::string {
+        return self[x].description(); },
         "Get event description string parseable by VOILA for requested event",
         py::arg("event_idx"))
     .def("event_description",
@@ -691,13 +696,16 @@ void init_pyEvents(pyEvents_t& pyEvents) {
         std::vector<std::string> result(event_idx.shape(0));
         auto _event_idx = event_idx.unchecked<1>();
         for (py::ssize_t i = 0; i < _event_idx.shape(0); ++i) {
-          result[i] = self.event_description(_event_idx(i));
+          result[i] = self[_event_idx(i)].description();
         }
         return result;
         },
         "Get event description string (for VOILA) for each event requested",
         py::arg("event_idx"))
-    .def("event_id", &Events::event_id, "Get event ID for requested event",
+    .def("event_id",
+        [](const Events& self, size_t x) -> std::string {
+        return self[x].id(); },
+        "Get event ID for requested event",
         py::arg("event_idx"))
     .def("event_id",
         [](const Events& self,
@@ -708,7 +716,7 @@ void init_pyEvents(pyEvents_t& pyEvents) {
         std::vector<std::string> result(event_idx.shape(0));
         auto _event_idx = event_idx.unchecked<1>();
         for (py::ssize_t i = 0; i < _event_idx.shape(0); ++i) {
-          result[i] = self.event_id(_event_idx(i));
+          result[i] = self[_event_idx(i)].id();
         }
         return result;
         },
@@ -721,7 +729,7 @@ void init_pyEvents(pyEvents_t& pyEvents) {
 void init_pyEventConnections(pyEventConnections_t& pyEventConnections) {
   using majiq::EventConnections;
   using majiq::EventConnection;
-  using majiq::EventIndex;
+  using majiq::Event;
   using majiq::GeneJunctions;
   using majiq::GeneIntrons;
   using majiq::position_t;
@@ -736,9 +744,7 @@ void init_pyEventConnections(pyEventConnections_t& pyEventConnections) {
     .def("start",
         [](const EventConnections& self,
           const py::array_t<size_t>& ec_idx) -> py::array_t<position_t> {
-        auto f = [&self](size_t x) -> position_t {
-          return self.coordinates_start(x);
-        };
+        auto f = [&self](size_t x) -> position_t { return self[x].start(); };
         return py::vectorize(f)(ec_idx);
         },
         "Obtain starts for specified event connections",
@@ -746,9 +752,7 @@ void init_pyEventConnections(pyEventConnections_t& pyEventConnections) {
     .def("end",
         [](const EventConnections& self,
           const py::array_t<size_t>& ec_idx) -> py::array_t<position_t> {
-        auto f = [&self](size_t x) -> position_t {
-          return self.coordinates_end(x);
-        };
+        auto f = [&self](size_t x) -> position_t { return self[x].end(); };
         return py::vectorize(f)(ec_idx);
         },
         "Obtain ends for specified event connections",
@@ -756,7 +760,9 @@ void init_pyEventConnections(pyEventConnections_t& pyEventConnections) {
     .def("other_exon_idx",
         [](const EventConnections& self,
           const py::array_t<size_t>& ec_idx) -> py::array_t<size_t> {
-        auto f = [&self](size_t x) -> size_t { return self.other_exon_idx(x); };
+        auto f = [&self](size_t x) -> size_t {
+          return self[x].other_exon_idx();
+        };
         return py::vectorize(f)(ec_idx);
         },
         "Obtain indexes for non-reference exon for specified event connections",
@@ -764,7 +770,7 @@ void init_pyEventConnections(pyEventConnections_t& pyEventConnections) {
     .def("is_exitron",
         [](const EventConnections& self,
           const py::array_t<size_t>& ec_idx) -> py::array_t<bool> {
-        auto f = [&self](size_t x) -> bool { return self.is_exitron(x); };
+        auto f = [&self](size_t x) -> bool { return self[x].is_exitron(); };
         return py::vectorize(f)(ec_idx);
         },
         "Indicate whether the specified connections start/end on same exon",
@@ -772,7 +778,7 @@ void init_pyEventConnections(pyEventConnections_t& pyEventConnections) {
     .def("simplified",
         [](const EventConnections& self,
           const py::array_t<size_t>& ec_idx) -> py::array_t<bool> {
-        auto f = [&self](size_t x) -> bool { return self.simplified(x); };
+        auto f = [&self](size_t x) -> bool { return self[x].simplified(); };
         return py::vectorize(f)(ec_idx);
         },
         "Indicate whether the specified connections are simplified or not",
@@ -780,7 +786,7 @@ void init_pyEventConnections(pyEventConnections_t& pyEventConnections) {
     .def("passed_build",
         [](const EventConnections& self,
           const py::array_t<size_t>& ec_idx) -> py::array_t<bool> {
-        auto f = [&self](size_t x) -> bool { return self.passed_build(x); };
+        auto f = [&self](size_t x) -> bool { return self[x].passed_build(); };
         return py::vectorize(f)(ec_idx);
         },
         "Indicate whether the specified connections are passed or not",
@@ -789,7 +795,7 @@ void init_pyEventConnections(pyEventConnections_t& pyEventConnections) {
         [](py::object self_obj) -> py::array_t<size_t> {
         EventConnections& self = self_obj.cast<EventConnections&>();
         const size_t offset
-          = offsetof(EventConnection, event_idx_.ref_exon_idx_);
+          = offsetof(EventConnection, event_.ref_exon_idx_);
         return ArrayFromVectorAndOffset<size_t, EventConnection>(
             self.event_connections(), offset, self_obj);
         },
@@ -798,7 +804,7 @@ void init_pyEventConnections(pyEventConnections_t& pyEventConnections) {
         [](py::object self_obj) -> py::array_t<std::array<char, 1>> {
         EventConnections& self = self_obj.cast<EventConnections&>();
         const size_t offset
-          = offsetof(EventConnection, event_idx_.event_type_);
+          = offsetof(EventConnection, event_.event_type_);
         return ArrayFromVectorAndOffset<std::array<char, 1>, EventConnection>(
             self.event_connections(), offset, self_obj);
         },
