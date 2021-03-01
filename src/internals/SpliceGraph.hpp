@@ -20,6 +20,7 @@
 #include "Exons.hpp"
 #include "GeneIntrons.hpp"
 #include "PassedJunctions.hpp"
+#include "Events.hpp"
 
 
 namespace majiq {
@@ -30,6 +31,7 @@ class SpliceGraph {
   std::shared_ptr<Exons> exons_;
   std::shared_ptr<GeneJunctions> junctions_;
   std::shared_ptr<GeneIntrons> introns_;
+  std::shared_ptr<Events> events_;
 
  public:
   // access non const pointers for use by pybind11 interface...
@@ -42,6 +44,18 @@ class SpliceGraph {
 
   std::shared_ptr<GeneIntrons> introns() { return introns_; }
 
+  std::shared_ptr<Events> events() { return events_; }
+
+ private:
+  template <typename ConnectionsT>
+  static std::shared_ptr<ConnectionsT> ConnectedToExons(
+      const std::shared_ptr<ConnectionsT>& connections,
+      const std::shared_ptr<Exons>& exons) {
+    connections->connect_exons(exons);
+    return connections;
+  }
+
+ public:
   // constructors
   SpliceGraph(
       const std::shared_ptr<Contigs>& contigs,
@@ -52,19 +66,9 @@ class SpliceGraph {
       : contigs_{contigs},
         genes_{genes},
         exons_{exons},
-        junctions_{junctions},
-        introns_{introns} { }
-  SpliceGraph(
-      std::shared_ptr<Contigs>&& contigs,
-      std::shared_ptr<Genes>&& genes,
-      std::shared_ptr<Exons>&& exons,
-      std::shared_ptr<GeneJunctions>&& junctions,
-      std::shared_ptr<GeneIntrons>&& introns)
-      : contigs_{contigs},
-        genes_{genes},
-        exons_{exons},
-        junctions_{junctions},
-        introns_{introns} { }
+        junctions_{ConnectedToExons(junctions, exons)},
+        introns_{ConnectedToExons(introns, exons)},
+        events_{std::make_shared<Events>(junctions_, introns_)} { }
   SpliceGraph(const SpliceGraph& sg) = default;
   SpliceGraph(SpliceGraph&& sg) = default;
   SpliceGraph& operator=(const SpliceGraph& sg) = default;
@@ -80,12 +84,28 @@ class SpliceGraph {
   }
 
   SpliceGraph BuildJunctionExons(const PassedJunctionsGenerator& passed) {
-    auto updated_junctions
-      = std::make_shared<GeneJunctions>(passed.PassedJunctions());
-    auto updated_exons
-      = std::make_shared<Exons>(InferExons(*exons_, *updated_junctions));
+    auto updated_junctions = std::make_shared<GeneJunctions>(
+        passed.PassedJunctions());
+    auto updated_exons = std::make_shared<Exons>(
+        InferExons(*exons_, *updated_junctions));
+    auto potential_introns = std::make_shared<GeneIntrons>(
+        introns_->PotentialIntrons(updated_exons));
     return SpliceGraph{
-      contigs_, genes_, updated_exons, updated_junctions, introns_};
+      contigs_, genes_, updated_exons, updated_junctions, potential_introns};
+  }
+  SpliceGraph FilterIntrons(bool keep_annotated, bool discard_denovo) {
+    auto filtered_introns = std::make_shared<GeneIntrons>(
+        introns_->FilterPassed(keep_annotated, discard_denovo));
+    return SpliceGraph{
+      contigs_, genes_, exons_, junctions_, filtered_introns};
+  }
+  SpliceGraph Copy() {
+    auto copy_junctions = std::make_shared<GeneJunctions>(*junctions_);
+    auto copy_introns = std::make_shared<GeneIntrons>(*introns_);
+    // NOTE: we don't have to copy contigs, genes, exons, which are effectively
+    // immutable (can add to contigs, but will not affect what matters to copy)
+    return SpliceGraph{
+      contigs_, genes_, exons_, copy_junctions, copy_introns};
   }
 
   // to be declared later

@@ -1498,6 +1498,8 @@ void init_SpliceGraph(py::class_<majiq::SpliceGraph>& pySpliceGraph) {
         "Access the splicegraph's genes")
     .def_property_readonly("_contigs", &SpliceGraph::contigs,
         "Access the splicegraph's contigs")
+    .def_property_readonly("_events", &SpliceGraph::events,
+        "Access the splicegraph's events")
     // access underlying data as xarray datasets
     .def_property_readonly("exons",
         [](py::object& sg) { return sg.attr("_exons").attr("df")(); },
@@ -1514,12 +1516,43 @@ void init_SpliceGraph(py::class_<majiq::SpliceGraph>& pySpliceGraph) {
     .def_property_readonly("contigs",
         [](py::object& sg) { return sg.attr("_contigs").attr("df")(); },
         "xr.Dataset view of splicegraph's contigs")
+    .def_property_readonly("events",
+        [](py::object& sg) { return sg.attr("_events").attr("df")(); },
+        "xr.Dataset view of splicegraph's events")
+    // get contig introns
     .def("contig_introns", [](SpliceGraph& sg, bool stranded) {
         return majiq::ContigIntrons::FromGeneExonsAndIntrons(
             *sg.exons(), *sg.introns(), stranded);
         },
         "Get contig introns (by strand or not) for splicegraph",
         py::arg("stranded"))
+    // that's really for debugging because it depends on experiment. Instead,
+    // just create them while loading BAM
+    .def("sj_introns_from_bam",
+        [](SpliceGraph& sg, const char* infile, majiq::junction_pos_t num_bins,
+          majiq::ExperimentStrandness exp_strandness, int nthreads) {
+        return majiq::SJIntronsBins::FromBam(infile, num_bins, *sg.exons(),
+            *sg.introns(), exp_strandness, nthreads);
+        },
+        R"pbdoc(
+        Load introns and per-bin counts for an aligned BAM file
+
+        Parameters
+        ----------
+        bam_path: str
+            Path for input BAM fille
+        num_bins: int
+            Number of bins to split coverage. Typically set to num_positions
+            from junctions
+        experiment_strandness: ExperimentStrandness
+            Strandness of RNA-seq library
+        nthreads: int
+            Number of threads to use when reading in BAM file
+        )pbdoc",
+        py::arg("bam_path"),
+        py::arg("num_bins"),
+        py::arg("experiment_strandness") = DEFAULT_BAM_STRANDNESS,
+        py::arg("nthreads") = DEFAULT_BAM_NTHREADS)
     // string representation of splicegraph
     .def("__repr__", [](const SpliceGraph& sg) -> std::string {
         std::ostringstream oss;
