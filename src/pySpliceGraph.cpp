@@ -582,6 +582,22 @@ void init_pyEvents(pyEvents_t& pyEvents) {
         "Enumerate events connections with connected junctions/introns",
         py::arg("junctions"),
         py::arg("introns"))
+    .def_property_readonly("_parent_idx_start",
+        [](py::object& self_obj) {
+        Events& self = self_obj.cast<Events&>();
+        return ArrayFromOffsetsVector<size_t>(
+            self.parent_idx_offsets(), true, self_obj);
+        },
+        "First index into self corresponding to associated parent")
+    .def_property_readonly("_parent_idx_end",
+        [](py::object& self_obj) {
+        Events& self = self_obj.cast<Events&>();
+        return ArrayFromOffsetsVector<size_t>(
+            self.parent_idx_offsets(), false, self_obj);
+        },
+        "One after last index into self corresponding to associated parent")
+    .def_property_readonly("_parents", &Events::parents,
+        "Get parents (i.e. genes) on which events are defined")
     .def_property_readonly("_event_connections", &Events::event_connections,
         "Underlying associated event connections object")
     .def_property_readonly("event_connections",

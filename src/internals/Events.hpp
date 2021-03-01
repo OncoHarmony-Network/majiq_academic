@@ -28,8 +28,9 @@ class EventReference;  // defined after Events
 class Events {
  private:
   const std::shared_ptr<EventConnections> event_connections_;
-  const std::vector<size_t> offsets_;
+  const std::vector<size_t> offsets_;  // into event connections
   const std::vector<Event> events_;
+  const std::vector<size_t> parent_idx_offsets_;  // genes into this
 
  public:
   const std::shared_ptr<EventConnections>& event_connections() const {
@@ -37,6 +38,16 @@ class Events {
   }
   const std::vector<size_t>& offsets() const { return offsets_; }
   const std::vector<Event>& events() const { return events_; }
+  const std::shared_ptr<Genes>& genes() const {
+    return event_connections_->exons()->parents();
+  }
+  const std::shared_ptr<Genes>& parents() const { return genes(); }
+  const std::vector<size_t>& parent_idx_offsets() const {
+    return parent_idx_offsets_;
+  }
+  const std::vector<size_t>& gene_idx_offsets() const {
+    return parent_idx_offsets();
+  }
 
   size_t size() const { return events_.size(); }
 
@@ -44,8 +55,21 @@ class Events {
   EventReference operator[](size_t idx) const;
   EventReference operator[](const_iterator event_it) const;
 
-  const_iterator begin() const { return events_.begin(); }
-  const_iterator end() const { return events_.end(); }
+  const_iterator begin() const { return events_.cbegin(); }
+  const_iterator end() const { return events_.cend(); }
+  const_iterator begin_parent(size_t gene_idx) const {
+    return begin() + parent_idx_offsets_[gene_idx];
+  }
+  const_iterator end_parent(size_t gene_idx) const {
+    return begin_parent(1 + gene_idx);
+  }
+  const_iterator begin_parent(const KnownGene& gene) const {
+    return begin_parent(gene.idx_);
+  }
+  const_iterator end_parent(const KnownGene& gene) const {
+    return end_parent(gene.idx_);
+  }
+
   const_iterator find(
       const Event& x, const_iterator lb, const_iterator ub) const {
     // find within known range
@@ -110,6 +134,24 @@ class Events {
         return event_connections[i].event_; });
     return result;
   }
+  static std::vector<size_t> GetGeneOffsets(
+      const Exons& exons, const std::vector<Event>& events) {
+    std::vector<size_t> result(1 + exons.parents()->size(), 0);
+    size_t gene_idx = 0;
+    for (auto ev_it = events.begin(); ev_it != events.end(); ++ev_it) {
+      const size_t ev_gene_idx = exons[ev_it->ref_exon_idx_].gene.idx_;
+      if (ev_gene_idx < gene_idx) {
+        throw std::logic_error("Events are not sorted with respect to genes");
+      }
+      for (; gene_idx < ev_gene_idx; ++gene_idx) {
+        result[1 + gene_idx] = ev_it - events.begin();
+      }
+    }
+    for (; gene_idx < exons.parents()->size(); ++gene_idx) {
+      result[1 + gene_idx] = events.size();
+    }
+    return result;
+  }
 
  public:
   Events(const std::shared_ptr<GeneJunctions>& junctions,
@@ -117,7 +159,9 @@ class Events {
       : event_connections_{
           std::make_shared<EventConnections>(junctions, introns)},
         offsets_{CalculateOffsets(event_connections_->event_connections())},
-        events_{GetIndex(event_connections_->event_connections(), offsets_)} { }
+        events_{GetIndex(event_connections_->event_connections(), offsets_)},
+        parent_idx_offsets_{
+          GetGeneOffsets(*event_connections_->exons(), events_)} { }
 
   // TODO(jaicher): simplifier
   // TODO(jaicher): assign coverage to events
