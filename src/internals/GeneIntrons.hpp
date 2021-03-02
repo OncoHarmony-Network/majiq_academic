@@ -22,15 +22,15 @@
 #include "Interval.hpp"
 #include "Contigs.hpp"
 #include "Genes.hpp"
-#include "Connection.hpp"
+#include "ConnectionData.hpp"
 #include "Exons.hpp"
 
 
 namespace majiq {
 struct GeneIntron
-    : public detail::GeneRegion<ClosedInterval, detail::Connection> {
+    : public detail::GeneRegion<ClosedInterval, detail::ConnectionData> {
  public:
-  using BaseT = detail::GeneRegion<ClosedInterval, detail::Connection>;
+  using BaseT = detail::GeneRegion<ClosedInterval, detail::ConnectionData>;
   // access data nicely
   const bool& denovo() const noexcept { return data.denovo; }
   bool& denovo() noexcept { return data.denovo; }
@@ -50,12 +50,12 @@ struct GeneIntron
 
   // constructors
   GeneIntron(
-      KnownGene gene, ClosedInterval coordinates, detail::Connection data)
+      KnownGene gene, ClosedInterval coordinates, detail::ConnectionData data)
       : BaseT{gene, coordinates, data} { }
   GeneIntron(KnownGene gene, ClosedInterval coordinates,
       bool denovo, bool passed_build, bool simplified)
       : GeneIntron{gene, coordinates,
-          detail::Connection{denovo, passed_build, simplified}} { }
+          detail::ConnectionData{denovo, passed_build, simplified}} { }
   GeneIntron(KnownGene gene, ClosedInterval coordinates)
       : GeneIntron{gene, coordinates, false, false, false} { }
   GeneIntron() : GeneIntron{KnownGene{}, ClosedInterval{}} { }
@@ -225,8 +225,10 @@ class GeneIntrons : public detail::Regions<GeneIntron, false> {
                   // if overlapping intron from self, copy data otherwise denovo
                   (intron_it != intron_it_end
                    && IntervalIntersects(coordinates, intron_it->coordinates))
-                  ? detail::Connection{intron_it->data, start_idx, end_idx}
-                  : detail::Connection{true, false, false, start_idx, end_idx});
+                  ? detail::ConnectionData{
+                      intron_it->data, start_idx, end_idx}
+                  : detail::ConnectionData{
+                      true, false, false, start_idx, end_idx});
             }
             prev_exon_it = exon_it;
           }

@@ -21,16 +21,16 @@
 #include "Interval.hpp"
 #include "Contigs.hpp"
 #include "Genes.hpp"
-#include "Connection.hpp"
+#include "ConnectionData.hpp"
 #include "Exons.hpp"
 
 
 namespace majiq {
 
 struct GeneJunction
-    : public detail::GeneRegion<OpenInterval, detail::Connection> {
+    : public detail::GeneRegion<OpenInterval, detail::ConnectionData> {
  public:
-  using BaseT = detail::GeneRegion<OpenInterval, detail::Connection>;
+  using BaseT = detail::GeneRegion<OpenInterval, detail::ConnectionData>;
   // access data nicely
   const bool& denovo() const noexcept { return data.denovo; }
   bool& denovo() noexcept { return data.denovo; }
@@ -52,7 +52,7 @@ struct GeneJunction
   GeneJunction(KnownGene gene, OpenInterval coordinates,
       bool denovo, bool passed_build, bool simplified)
       : BaseT{gene, coordinates,
-        detail::Connection{denovo, passed_build, simplified}} {
+        detail::ConnectionData{denovo, passed_build, simplified}} {
   }
   GeneJunction(KnownGene gene, OpenInterval coordinates)
       : GeneJunction{gene, coordinates, false, false, false} {

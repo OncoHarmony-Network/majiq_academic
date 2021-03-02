@@ -167,7 +167,7 @@ void define_coordinates_properties(pyClassShared_t<RegionsT>& pyRegions) {
   }
   if constexpr(
       std::is_same_v<decltype(std::declval<RegionT>().data),
-                     majiq::detail::Connection>) {
+                     majiq::detail::ConnectionData>) {
     pyRegions
       .def("connect_exons", &RegionsT::connect_exons,
           "Connect regions to specified exons, updataing {start,end}_exon_idx",
