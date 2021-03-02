@@ -65,7 +65,7 @@ struct KnownFeature {
     ++idx_;
     return *static_cast<DerivedKnownT*>(this);
   }
-  DerivedKnownT& operator++(int) noexcept {
+  DerivedKnownT operator++(int) noexcept {
     DerivedKnownT old = *static_cast<DerivedKnownT*>(this);
     operator++();
     return old;
@@ -74,7 +74,7 @@ struct KnownFeature {
     --idx_;
     return *static_cast<DerivedKnownT*>(this);
   }
-  DerivedKnownT& operator--(int) noexcept {
+  DerivedKnownT operator--(int) noexcept {
     DerivedKnownT old = *static_cast<DerivedKnownT*>(this);
     operator--();
     return old;
