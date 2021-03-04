@@ -23,6 +23,7 @@ struct GeneRegion {
   using DataT = DT;
   static_assert(std::is_base_of<Interval, IntervalT>::value,
       "IntervalT must be derived from Interval (Open or Closed)");
+
  public:
   // location
   KnownGene gene;
