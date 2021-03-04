@@ -20,7 +20,7 @@
 #include "Exons.hpp"
 #include "GeneIntrons.hpp"
 #include "PassedJunctions.hpp"
-#include "Events.hpp"
+#include "ExonConnections.hpp"
 
 
 namespace majiq {
@@ -31,7 +31,7 @@ class SpliceGraph {
   std::shared_ptr<Exons> exons_;
   std::shared_ptr<GeneJunctions> junctions_;
   std::shared_ptr<GeneIntrons> introns_;
-  std::shared_ptr<Events> events_;
+  std::shared_ptr<ExonConnections> exon_connections_;
 
  public:
   // access non const pointers for use by pybind11 interface...
@@ -44,7 +44,9 @@ class SpliceGraph {
 
   std::shared_ptr<GeneIntrons> introns() { return introns_; }
 
-  std::shared_ptr<Events> events() { return events_; }
+  std::shared_ptr<ExonConnections> exon_connections() {
+    return exon_connections_;
+  }
 
  private:
   template <typename ConnectionsT>
@@ -68,7 +70,8 @@ class SpliceGraph {
         exons_{exons},
         junctions_{ConnectedToExons(junctions, exons)},
         introns_{ConnectedToExons(introns, exons)},
-        events_{std::make_shared<Events>(junctions_, introns_)} { }
+        exon_connections_{
+          std::make_shared<ExonConnections>(exons_, introns_, junctions_)} { }
   SpliceGraph(const SpliceGraph& sg) = default;
   SpliceGraph(SpliceGraph&& sg) = default;
   SpliceGraph& operator=(const SpliceGraph& sg) = default;
