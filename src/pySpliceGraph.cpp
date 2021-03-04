@@ -628,7 +628,7 @@ void init_pyEvents(pyEvents_t& pyEvents) {
     .def_property_readonly("event_type",
         [](py::object self_obj) -> py::array_t<std::array<char, 1>> {
         Events& self = self_obj.cast<Events&>();
-        const size_t offset = offsetof(Event, event_type_);
+        const size_t offset = offsetof(Event, type_);
         return ArrayFromVectorAndOffset<std::array<char, 1>, Event>(
             self.events(), offset, self_obj);
         },
@@ -820,7 +820,7 @@ void init_pyEventConnections(pyEventConnections_t& pyEventConnections) {
         [](py::object self_obj) -> py::array_t<std::array<char, 1>> {
         EventConnections& self = self_obj.cast<EventConnections&>();
         const size_t offset
-          = offsetof(EventConnection, event_.event_type_);
+          = offsetof(EventConnection, event_.type_);
         return ArrayFromVectorAndOffset<std::array<char, 1>, EventConnection>(
             self.event_connections(), offset, self_obj);
         },

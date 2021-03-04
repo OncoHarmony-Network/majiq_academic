@@ -67,6 +67,31 @@ inline std::ostream& operator<<(
   os << static_cast<char>(x);
   return os;
 }
+
+struct Event {
+  size_t ref_exon_idx_;
+  EventType type_;
+};
+inline bool operator<(const Event& x, const Event& y) noexcept {
+  return std::tie(x.ref_exon_idx_, x.type_)
+    < std::tie(y.ref_exon_idx_, y.type_);
+}
+inline bool operator>(const Event& x, const Event& y) noexcept {
+  return y < x;
+}
+inline bool operator>=(const Event& x, const Event& y) noexcept {
+  return !(x < y);
+}
+inline bool operator<=(const Event& x, const Event& y) noexcept {
+  return !(y < x);
+}
+inline bool operator==(const Event& x, const Event& y) noexcept {
+  return std::tie(x.ref_exon_idx_, x.type_)
+    == std::tie(y.ref_exon_idx_, y.type_);
+}
+inline bool operator!=(const Event& x, const Event& y) noexcept {
+  return !(x == y);
+}
 }  // namespace majiq
 
 namespace std {

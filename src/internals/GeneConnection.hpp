@@ -64,6 +64,12 @@ struct GeneConnection
     return this->strand() == (type == EventType::SRC_EVENT)
       ? this->coordinates.as_tuple() : this->coordinates.rev_tuple();
   }
+  const position_t& ref_coordinate(const EventType& type) const noexcept {
+    return std::get<0>(coordinates_ref_other(type));
+  }
+  const position_t& other_coordinate(const EventType& type) const noexcept {
+    return std::get<1>(coordinates_ref_other(type));
+  }
 
   // helpers
   bool is_exitron() const noexcept { return this->data.is_exitronic(); }

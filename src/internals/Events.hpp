@@ -190,7 +190,7 @@ class EventReference {
 
   const Event& event() const { return parent_.events_[idx_]; }
   size_t ref_exon_idx() const { return event().ref_exon_idx_; }
-  EventType type() const { return event().event_type_; }
+  EventType type() const { return event().type_; }
   bool is_source() const { return type() == EventType::SRC_EVENT; }
   const Exon& ref_exon() const {
     return (*connections().exons())[ref_exon_idx()];
@@ -295,10 +295,10 @@ inline bool EventReference::valid_event() const {
   return passed() && !redundant();
 }
 inline bool EventReference::is_LSV() const {
-  return (event_size() > 1) &&  valid_event();
+  return (event_size() > 1) && valid_event();
 }
 inline bool EventReference::is_constitutive() const {
-  return (event_size() == 1) &&  valid_event();
+  return (event_size() == 1) && valid_event();
 }
 inline std::string EventReference::description() const {
   // description =

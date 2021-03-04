@@ -20,25 +20,6 @@
 
 namespace majiq {
 
-struct Event {
-  size_t ref_exon_idx_;
-  EventType event_type_;
-};
-inline bool operator<(const Event& x, const Event& y) noexcept {
-  return std::tie(x.ref_exon_idx_, x.event_type_)
-    < std::tie(y.ref_exon_idx_, y.event_type_);
-}
-inline bool operator>(const Event& x, const Event& y) noexcept {
-  return y < x;
-}
-inline bool operator==(const Event& x, const Event& y) noexcept {
-  return std::tie(x.ref_exon_idx_, x.event_type_)
-    == std::tie(y.ref_exon_idx_, y.event_type_);
-}
-inline bool operator!=(const Event& x, const Event& y) noexcept {
-  return !(x == y);
-}
-
 struct EventConnection {
   Event event_;
   bool is_intron_;
@@ -70,7 +51,7 @@ class EventConnectionReference {
   const size_t& connection_idx() const { return raw().connection_idx_; }
 
   const size_t& ref_exon_idx() const { return event().ref_exon_idx_; }
-  const EventType& type() const { return event().event_type_; }
+  const EventType& type() const { return event().type_; }
   bool is_source() const { return type() == EventType::SRC_EVENT; }
   const Exon& ref_exon() const { return exons_[ref_exon_idx()]; }
   const KnownGene& gene() const { return ref_exon().gene; }
