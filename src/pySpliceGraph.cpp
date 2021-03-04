@@ -517,6 +517,7 @@ void init_GeneJunctions(pyGeneJunctions_t& pyGeneJunctions) {
         py::arg("genes"),
         py::arg("gene_idx"), py::arg("start"), py::arg("end"),
         py::arg("denovo"), py::arg("passed_build"), py::arg("simplified"))
+    .def("_pass_all", &GeneJunctions::pass_all, "DEBUG: pass all junctions")
     .def_static("from_netcdf",
         [](py::str x, std::shared_ptr<majiq::Genes> genes) {
         return MakeConnections<GeneJunctions>(
@@ -876,6 +877,7 @@ void init_GeneIntrons(pyGeneIntrons_t& pyGeneIntrons) {
         },
         "Load introns from netcdf file",
         py::arg("netcdf_path"), py::arg("genes"))
+    .def("_pass_all", &GeneIntrons::pass_all, "DEBUG: pass all introns")
     .def("build_group", [](std::shared_ptr<GeneIntrons>& gene_introns) {
         return majiq::GroupIntronsGenerator(gene_introns);
         },
@@ -1373,6 +1375,11 @@ void init_SpliceGraph(py::class_<majiq::SpliceGraph>& pySpliceGraph) {
     .def("build_junctions", &SpliceGraph::BuildJunctionExons,
         "New splicegraph with updated junctions/exons using build junctions",
         py::arg("build_junctions"))
+    .def("_pass_all",
+        [](py::object& sg) {
+        sg.attr("_junctions").attr("_pass_all")();
+        sg.attr("_introns").attr("_pass_all")(); },
+        "Pass all junctions and introns in the splicegraph")
     .def("close_to_annotated_exon",
         [](SpliceGraph& sg, size_t gene_idx, position_t x, bool to_following) {
         majiq::KnownGene g = (*sg.genes())[gene_idx];

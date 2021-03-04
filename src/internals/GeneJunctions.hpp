@@ -155,6 +155,12 @@ class GeneJunctions : public detail::Regions<GeneJunction, true> {
     return connected_exons_;
   }
 
+  // for debugging
+  void pass_all() const {
+    std::for_each(begin(), end(),
+        [](const GeneJunction& x) { x.passed_build() = true; });
+  }
+
   GeneJunctions(
       const std::shared_ptr<Genes>& genes, std::vector<GeneJunction>&& x,
       const std::shared_ptr<Exons>& connected_exons)

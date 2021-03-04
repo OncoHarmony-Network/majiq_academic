@@ -86,6 +86,11 @@ class GeneIntrons : public detail::Regions<GeneIntron, false> {
       const std::shared_ptr<Genes>& genes, std::vector<GeneIntron>&& x)
       : GeneIntrons{genes, std::move(x), nullptr} { }
 
+  void pass_all() const {
+    std::for_each(begin(), end(),
+        [](const GeneIntron& x) { x.passed_build() = true; });
+  }
+
   bool is_connected() const { return connected_exons_ != nullptr; }
   const std::shared_ptr<Exons>& connected_exons() const {
     return connected_exons_;
