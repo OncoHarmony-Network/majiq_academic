@@ -47,11 +47,18 @@ struct Interval {
   const position_t& last_pos() const noexcept {
     return has_end() ? end : start;
   }
+
+  // tuple representation
+  std::tuple<const position_t&, const position_t&> as_tuple() const noexcept {
+    return std::tie(first_pos(), last_pos());
+  }
+  std::tuple<const position_t&, const position_t&> rev_tuple() const noexcept {
+    return std::tie(last_pos(), first_pos());
+  }
 };
 // ordering
 inline bool operator<(const Interval& x, const Interval& y) noexcept {
-  return std::tie(x.first_pos(), x.last_pos())
-    < std::tie(y.first_pos(), y.last_pos());
+  return x.as_tuple() < y.as_tuple();
 }
 // ordering vs coordinate is against first position
 inline bool operator<(const Interval& x, const position_t& y) noexcept {
