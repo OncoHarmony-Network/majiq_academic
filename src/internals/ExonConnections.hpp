@@ -138,37 +138,51 @@ class ExonConnections {
   }
 
  public:
+  size_t num_exons() const { return exons_->size(); }
+
+  typename std::vector<size_t>::const_iterator
+  begin_introns_for(const Event& event) const {
+    return introns_for(event).begin_exon(event.ref_exon_idx_);
+  }
+  typename std::vector<size_t>::const_iterator
+  end_introns_for(const Event& event) const {
+    return introns_for(event).end_exon(event.ref_exon_idx_);
+  }
+  typename std::vector<size_t>::const_iterator
+  begin_junctions_for(const Event& event) const {
+    return junctions_for(event).begin_exon(event.ref_exon_idx_);
+  }
+  typename std::vector<size_t>::const_iterator
+  end_junctions_for(const Event& event) const {
+    return junctions_for(event).end_exon(event.ref_exon_idx_);
+  }
+
   bool has_intron(const Event& event) const {
-    const auto& idx_introns = introns_for(event);
-    for (auto it = idx_introns.begin_exon(event.ref_exon_idx_);
-        it != idx_introns.end_exon(event.ref_exon_idx_); ++it) {
+    for (auto it = begin_introns_for(event);
+        it != end_introns_for(event); ++it) {
       if ((*introns_)[*it].for_event()) { return true; }
     }
     return false;
   }
   size_t event_size(const Event& event) const {
     size_t ct = 0;
-    const auto& idx_junctions = junctions_for(event);
-    const auto& idx_introns = introns_for(event);
-    for (auto it = idx_junctions.begin_exon(event.ref_exon_idx_);
-        it != idx_junctions.end_exon(event.ref_exon_idx_); ++it) {
+    for (auto it = begin_junctions_for(event);
+        it != end_junctions_for(event); ++it) {
       if ((*junctions_)[*it].for_event()) { ++ct; }
     }
-    for (auto it = idx_introns.begin_exon(event.ref_exon_idx_);
-        it != idx_introns.end_exon(event.ref_exon_idx_); ++it) {
+    for (auto it = begin_introns_for(event);
+        it != end_introns_for(event); ++it) {
       if ((*introns_)[*it].for_event()) { ++ct; }
     }
     return ct;
   }
   bool passed(const Event& event) const {
-    const auto& idx_junctions = junctions_for(event);
-    const auto& idx_introns = introns_for(event);
-    for (auto it = idx_junctions.begin_exon(event.ref_exon_idx_);
-        it != idx_junctions.end_exon(event.ref_exon_idx_); ++it) {
+    for (auto it = begin_junctions_for(event);
+        it != end_junctions_for(event); ++it) {
       if ((*junctions_)[*it].for_passed()) { return true; }
     }
-    for (auto it = idx_introns.begin_exon(event.ref_exon_idx_);
-        it != idx_introns.end_exon(event.ref_exon_idx_); ++it) {
+    for (auto it = begin_introns_for(event);
+        it != end_introns_for(event); ++it) {
       if ((*introns_)[*it].for_passed()) { return true; }
     }
     return false;
@@ -176,16 +190,14 @@ class ExonConnections {
   std::set<size_t> other_exon_idx_set(
       const Event& event, bool include_intron) const {
     std::set<size_t> result;
-    const auto& idx_junctions = junctions_for(event);
-    for (auto it = idx_junctions.begin_exon(event.ref_exon_idx_);
-        it != idx_junctions.end_exon(event.ref_exon_idx_); ++it) {
+    for (auto it = begin_junctions_for(event);
+        it != end_junctions_for(event); ++it) {
       const auto& x = (*junctions_)[*it];
       if (x.for_event()) { result.insert(x.other_exon_idx(event.type_)); }
     }
     if (include_intron) {
-      const auto& idx_introns = introns_for(event);
-      for (auto it = idx_introns.begin_exon(event.ref_exon_idx_);
-          it != idx_introns.end_exon(event.ref_exon_idx_); ++it) {
+      for (auto it = begin_introns_for(event);
+          it != end_introns_for(event); ++it) {
         const auto& x = (*introns_)[*it];
         if (x.for_event()) { result.insert(x.other_exon_idx(event.type_)); }
       }
@@ -224,9 +236,8 @@ class ExonConnections {
   // non-simplified junction coordinates from event reference exon in direction
   std::vector<position_t> ref_splicesites(const Event& event) const {
     std::vector<position_t> result;
-    const auto& idx_junctions = junctions_for(event);
-    for (auto it = idx_junctions.begin_exon(event.ref_exon_idx_);
-        it != idx_junctions.end_exon(event.ref_exon_idx_); ++it) {
+    for (auto it = begin_junctions_for(event);
+        it != end_junctions_for(event); ++it) {
       const auto& x = (*junctions_)[*it];
       if (x.simplified()) { continue; }
       const position_t& ss = x.ref_coordinate(event.type_);
@@ -297,9 +308,8 @@ class ExonConnections {
     // create id over junctions/introns that are part of event
     std::ostringstream oss;
     oss << event.type_;
-    const auto& idx_junctions = junctions_for(event);
-    for (auto it = idx_junctions.begin_exon(event.ref_exon_idx_);
-        it != idx_junctions.end_exon(event.ref_exon_idx_); ++it) {
+    for (auto it = begin_junctions_for(event);
+        it != end_junctions_for(event); ++it) {
       const auto& x = (*junctions_)[*it];
       if (x.for_event()) {
         const auto& [ref_position, other_position]
