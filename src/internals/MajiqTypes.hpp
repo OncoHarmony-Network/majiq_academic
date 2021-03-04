@@ -47,6 +47,26 @@ enum class ExperimentStrandness : unsigned char {
   REVERSE = 'R',  // read 2 is in forward direction, Salmon ISR
   NONE = 'N',  // could be either way, Salmon IU
 };
+
+enum class EventType : unsigned char {
+  SRC_EVENT = 's',
+  DST_EVENT = 't'
+};
+inline EventType OtherEventType(EventType x) {
+  switch (x) {
+    case EventType::SRC_EVENT:
+      return EventType::DST_EVENT;
+    case EventType::DST_EVENT:
+      return EventType::SRC_EVENT;
+    default:
+      return x;
+  }
+}
+inline std::ostream& operator<<(
+    std::ostream& os, const EventType& x) noexcept {
+  os << static_cast<char>(x);
+  return os;
+}
 }  // namespace majiq
 
 namespace std {

@@ -12,28 +12,13 @@
 #include <tuple>
 #include <variant>
 
+#include "MajiqTypes.hpp"
 #include "Exons.hpp"
 #include "GeneIntrons.hpp"
 #include "GeneJunctions.hpp"
 
 
 namespace majiq {
-
-// carry index to either intron or junction
-enum class EventType : unsigned char {
-  SRC_EVENT = 's',
-  DST_EVENT = 't'
-};
-inline EventType OtherEventType(EventType x) {
-  switch (x) {
-    case EventType::SRC_EVENT:
-      return EventType::DST_EVENT;
-    case EventType::DST_EVENT:
-      return EventType::SRC_EVENT;
-    default:
-      return x;
-  }
-}
 
 struct Event {
   size_t ref_exon_idx_;
