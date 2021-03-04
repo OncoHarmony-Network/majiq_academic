@@ -10,6 +10,7 @@
 #define MAJIQ_EXONCONNECTIONS_HPP
 
 #include <algorithm>
+#include <array>
 #include <memory>
 #include <numeric>
 #include <set>
@@ -25,6 +26,7 @@
 #include "Exons.hpp"
 #include "GeneJunctions.hpp"
 #include "GeneIntrons.hpp"
+#include "Events.hpp"
 
 namespace majiq {
 
@@ -333,6 +335,55 @@ class ExonConnections {
       return aborted_description(event);
     }
     return oss.str();
+  }
+
+
+  // how do we create Events?
+  Events CreateEvents(std::vector<Event>&& events) const {
+    std::vector<size_t> connection_offsets{0};
+    std::vector<ConnectionIndex> connections;
+    for (const Event& event : events) {
+      for (auto it = begin_junctions_for(event);
+          it != end_junctions_for(event); ++it) {
+        constexpr bool IS_INTRON = false;
+        connections.push_back(ConnectionIndex{IS_INTRON, *it});
+      }
+      for (auto it = begin_introns_for(event);
+          it != end_introns_for(event); ++it) {
+        constexpr bool IS_INTRON = true;
+        connections.push_back(ConnectionIndex{IS_INTRON, *it});
+      }
+      connection_offsets.push_back(connections.size());
+    }
+    return Events{introns_, junctions_, std::move(events),
+        std::move(connection_offsets), std::move(connections)};
+  }
+  Events CreateEvents(std::vector<Event> events) {
+    return CreateEvents(std::move(events));
+  }
+  Events LSVEvents() const {
+    std::vector<Event> events;
+    constexpr std::array<EventType, 2> TYPES
+      = {EventType::SRC_EVENT, EventType::DST_EVENT};
+    for (size_t exon_idx = 0; exon_idx < num_exons(); ++exon_idx) {
+      for (const auto& type : TYPES) {
+        Event event{exon_idx, type};
+        if (is_LSV(event)) { events.push_back(event); }
+      }  // loop over event types for a reference exon
+    }  // loop over reference exons
+    return CreateEvents(std::move(events));
+  }
+  Events ConstitutiveEvents() const {
+    std::vector<Event> events;
+    constexpr std::array<EventType, 2> TYPES
+      = {EventType::SRC_EVENT, EventType::DST_EVENT};
+    for (size_t exon_idx = 0; exon_idx < num_exons(); ++exon_idx) {
+      for (const auto& type : TYPES) {
+        Event event{exon_idx, type};
+        if (is_constitutive(event)) { events.push_back(event); }
+      }  // loop over event types for a reference exon
+    }  // loop over reference exons
+    return CreateEvents(std::move(events));
   }
 
  public:
