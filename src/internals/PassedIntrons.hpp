@@ -50,24 +50,25 @@ class GroupIntronsGenerator {
       const SJIntronsBins& sj, const ExperimentThresholds& exp_thresholds) {
     ++num_experiments_;  // update number of experiments
     const std::shared_ptr<Genes>& genes = gene_introns_->parents();
-    if (sj.regions()->parents() != genes->parents()) {
-      throw std::invalid_argument(
-          "GroupIntronsGenerator gene/added sj introns do not share contigs");
-    }
     // generator of intron thresholds
     IntronThresholdsGenerator thresholds_gen
       = exp_thresholds.intron_thresholds_generator(sj.total_bins());
     // boolean flags of if each gene intron passed, update by iterating over sj
     std::vector<bool> gi_passed(num_passed_.size(), false);
     const ContigIntrons& contig_introns = *(sj.regions());
-    for (size_t contig_idx = 0;
-        contig_idx < genes->contigs()->size(); ++contig_idx) {
+    for (size_t dst_contig_idx = 0;
+        dst_contig_idx < genes->contigs()->size(); ++dst_contig_idx) {
+      // try to get matching contigs in sj (since may not share)
+      const auto opt_sj_contig_idx = sj.regions()->parents()->safe_idx(
+          genes->contigs()->get(dst_contig_idx));
+      if (!opt_sj_contig_idx.has_value()) { continue; }
+      const size_t& sj_contig_idx = *opt_sj_contig_idx;
       // get iterator to first gene for contig
-      KnownGene g_it_start = genes->begin_contig(contig_idx);
-      const KnownGene g_it_end = genes->end_contig(contig_idx);
+      KnownGene g_it_start = genes->begin_contig(dst_contig_idx);
+      const KnownGene g_it_end = genes->end_contig(dst_contig_idx);
       // for each sj intron on this contig
-      for (auto sj_it = contig_introns.begin_parent(contig_idx);
-          sj_it != contig_introns.end_parent(contig_idx);
+      for (auto sj_it = contig_introns.begin_parent(sj_contig_idx);
+          sj_it != contig_introns.end_parent(sj_contig_idx);
           ++sj_it) {
         // determine if passed
         constexpr junction_pos_t NO_STACKS = 0;  // TODO(jaicher) check stacks?
