@@ -30,6 +30,7 @@
 #include "internals/ContigIntrons.hpp"
 #include "internals/PassedJunctions.hpp"
 #include "internals/PassedIntrons.hpp"
+#include "internals/ExonConnections.hpp"
 #include "internals/EventConnections.hpp"
 #include "internals/Events.hpp"
 #include "internals/Meta.hpp"
@@ -59,6 +60,7 @@ using pyGroupIntronsGen_t = pyClassShared_t<majiq::GroupIntronsGenerator>;
 using pySJIntronsBins_t = pyClassShared_t<majiq::SJIntronsBins>;
 using pyEventConnections_t = pyClassShared_t<majiq::EventConnections>;
 using pyEvents_t = pyClassShared_t<majiq::Events>;
+using pyExonConnections_t = pyClassShared_t<majiq::ExonConnections>;
 
 using pyExperimentThresholds_t = pyClassShared_t<majiq::ExperimentThresholds>;
 using pyIntronThresholdsGenerator_t
@@ -740,6 +742,120 @@ void init_pyEvents(pyEvents_t& pyEvents) {
         py::arg("event_idx"))
     .def("__len__", &Events::size,
         "Number of potential events being tracked");
+}
+
+void init_pyExonConnections(pyExonConnections_t& pyExonConnections) {
+  using majiq::Event;
+  using majiq::EventType;
+  using majiq::ExonConnections;
+  using ExonsPtrT = std::shared_ptr<majiq::Exons>;
+  using IntronsPtrT = std::shared_ptr<majiq::GeneIntrons>;
+  using JunctionsPtrT = std::shared_ptr<majiq::GeneJunctions>;
+  pyExonConnections
+    .def(
+        py::init<const ExonsPtrT&, const IntronsPtrT&, const JunctionsPtrT&>(),
+        "Track junctions/introns by exons/events assocciated with them",
+        py::arg("exons"),
+        py::arg("introns"),
+        py::arg("junctions"))
+    .def("has_intron",
+        [](const ExonConnections& self,
+          py::array_t<size_t> exon_idx,
+          py::array_t<bool> is_source) -> py::array_t<bool> {
+        auto f = [&self](size_t idx, bool is_src) {
+          return self.has_intron(Event{
+              idx, is_src ? EventType::SRC_EVENT : EventType::DST_EVENT});
+        };
+        return py::vectorize(f)(exon_idx, is_source);
+        },
+        "Indicate if events have introns or not",
+        py::arg("exon_idx"), py::arg("is_source"))
+    .def("has_intron",
+        [](const ExonConnections& self,
+          py::array_t<size_t> exon_idx,
+          py::array_t<bool> is_source) -> py::array_t<bool> {
+        auto f = [&self](size_t idx, bool is_src) -> bool {
+          return self.has_intron(Event{
+              idx, is_src ? EventType::SRC_EVENT : EventType::DST_EVENT});
+        };
+        return py::vectorize(f)(exon_idx, is_source);
+        },
+        "Indicate if events have introns or not",
+        py::arg("exon_idx"), py::arg("is_source"))
+    .def("event_size",
+        [](const ExonConnections& self,
+          py::array_t<size_t> exon_idx,
+          py::array_t<bool> is_source) -> py::array_t<size_t> {
+        auto f = [&self](size_t idx, bool is_src) -> size_t {
+          return self.event_size(Event{
+              idx, is_src ? EventType::SRC_EVENT : EventType::DST_EVENT});
+        };
+        return py::vectorize(f)(exon_idx, is_source);
+        },
+        "Indicate size of event",
+        py::arg("exon_idx"), py::arg("is_source"))
+    .def("passed",
+        [](const ExonConnections& self,
+          py::array_t<size_t> exon_idx,
+          py::array_t<bool> is_source) -> py::array_t<bool> {
+        auto f = [&self](size_t idx, bool is_src) -> bool {
+          return self.passed(Event{
+              idx, is_src ? EventType::SRC_EVENT : EventType::DST_EVENT});
+        };
+        return py::vectorize(f)(exon_idx, is_source);
+        },
+        "Indicate if event was passed",
+        py::arg("exon_idx"), py::arg("is_source"))
+    .def("redundant",
+        [](const ExonConnections& self,
+          py::array_t<size_t> exon_idx,
+          py::array_t<bool> is_source) -> py::array_t<bool> {
+        auto f = [&self](size_t idx, bool is_src) -> bool {
+          return self.redundant(Event{
+              idx, is_src ? EventType::SRC_EVENT : EventType::DST_EVENT});
+        };
+        return py::vectorize(f)(exon_idx, is_source);
+        },
+        "Indicate if event was redundant",
+        py::arg("exon_idx"), py::arg("is_source"))
+    .def("is_LSV",
+        [](const ExonConnections& self,
+          py::array_t<size_t> exon_idx,
+          py::array_t<bool> is_source) -> py::array_t<bool> {
+        auto f = [&self](size_t idx, bool is_src) -> bool {
+          return self.is_LSV(Event{
+              idx, is_src ? EventType::SRC_EVENT : EventType::DST_EVENT});
+        };
+        return py::vectorize(f)(exon_idx, is_source);
+        },
+        "Indicate if event is LSV",
+        py::arg("exon_idx"), py::arg("is_source"))
+    .def("is_constitutive",
+        [](const ExonConnections& self,
+          py::array_t<size_t> exon_idx,
+          py::array_t<bool> is_source) -> py::array_t<bool> {
+        auto f = [&self](size_t idx, bool is_src) -> bool {
+          return self.is_constitutive(Event{
+              idx, is_src ? EventType::SRC_EVENT : EventType::DST_EVENT});
+        };
+        return py::vectorize(f)(exon_idx, is_source);
+        },
+        "Indicate if event is constitutive",
+        py::arg("exon_idx"), py::arg("is_source"))
+    .def("event_id",
+        [](const ExonConnections& self, size_t exon_idx, bool is_source) {
+        return self.id(Event{
+            exon_idx, is_source ? EventType::SRC_EVENT : EventType::DST_EVENT});
+        },
+        "Return identifier for event",
+        py::arg("exon_idx"), py::arg("is_source"))
+    .def("event_description",
+        [](const ExonConnections& self, size_t exon_idx, bool is_source) {
+        return self.description(Event{
+            exon_idx, is_source ? EventType::SRC_EVENT : EventType::DST_EVENT});
+        },
+        "Return description for event",
+        py::arg("exon_idx"), py::arg("is_source"));
 }
 
 void init_pyEventConnections(pyEventConnections_t& pyEventConnections) {
@@ -1669,6 +1785,8 @@ void init_SpliceGraphAll(py::module_& m) {
       m, "Events", "Groups of connections between junctions, introns, exons");
   auto pyEventConnections = pyEventConnections_t(
       m, "EventConnections", "Connections between junctions, introns, exons");
+  auto pyExonConnections = pyExonConnections_t(
+      m, "ExonConnections", "Connections from exons to junctions, introns");
   auto pyContigIntrons = pyContigIntrons_t(m, "ContigIntrons");
   auto pySJIntronsBins = pySJIntronsBins_t(m, "SJIntronsBins",
       "Summarized and per-bin counts for introns from an experiment");
@@ -1773,4 +1891,5 @@ void init_SpliceGraphAll(py::module_& m) {
   init_pyGroupIntronsGen(pyGroupIntronsGen);
   init_pyEventConnections(pyEventConnections);
   init_pyEvents(pyEvents);
+  init_pyExonConnections(pyExonConnections);
 }

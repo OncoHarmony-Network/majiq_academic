@@ -36,6 +36,7 @@ struct GeneRegion {
   // expose contig/strand
   const KnownContig& contig() const { return gene.contig(); }
   const GeneStrandness& strand() const { return gene.strand(); }
+  bool strand_forward() const { return strand() == GeneStrandness::FORWARD; }
 
   // constructors
   GeneRegion(KnownGene _gene, IntervalT _coordinates, DataT _data)

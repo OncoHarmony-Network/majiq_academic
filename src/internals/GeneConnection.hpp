@@ -61,7 +61,7 @@ struct GeneConnection
   // first element is reference coordinate, second is other coordinate
   std::tuple<const position_t&, const position_t&>
   coordinates_ref_other(const EventType& type) const noexcept {
-    return this->strand() == (type == EventType::SRC_EVENT)
+    return this->strand_forward() == (type == EventType::SRC_EVENT)
       ? this->coordinates.as_tuple() : this->coordinates.rev_tuple();
   }
   const position_t& ref_coordinate(const EventType& type) const noexcept {
