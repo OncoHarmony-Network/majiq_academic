@@ -40,6 +40,7 @@ constexpr majiq::real_t DEFAULT_BUILD_MINEXPERIMENTS = 0.5;
 constexpr bool DEFAULT_BUILD_DENOVO_JUNCTIONS = true;
 constexpr bool DEFAULT_BUILD_DENOVO_IR = true;
 constexpr bool DEFAULT_BUILD_KEEP_ANNOTATED_IR = false;
+constexpr majiq::real_t DEFAULT_BUILD_STACK_PVALUE = 1e-7;
 constexpr majiq::ExperimentStrandness DEFAULT_BAM_STRANDNESS
   = majiq::ExperimentStrandness::NONE;
 constexpr int DEFAULT_BAM_NTHREADS = 1;

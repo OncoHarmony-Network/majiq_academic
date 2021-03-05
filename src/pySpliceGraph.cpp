@@ -846,6 +846,16 @@ void init_SJIntronsBins(pySJIntronsBins_t& pySJIntronsBins) {
         "Number of positional bins intron coverage was split into")
     .def_property_readonly("num_introns", &SJIntronsBins::num_regions,
         "Number of introns being quantified")
+    .def("numstacks",
+        [](const SJIntronsBins& self,
+          py::array_t<size_t> jidx, py::array_t<majiq::real_t> pvalue) {
+        auto f = [&self](size_t i, majiq::real_t p) {
+          return self.numstacks(i, p); };
+        return py::vectorize(f)(jidx, pvalue);
+        },
+        "Get number of stacks for the specified intron given threshold",
+        py::arg("intron_idx"),
+        py::arg("pvalue_threshold") = DEFAULT_BUILD_STACK_PVALUE)
     .def("__len__", &SJIntronsBins::size);
 }
 
@@ -1137,6 +1147,16 @@ void init_SJJunctionsPositions(pySJJunctionsPositions_t& pySJJunctionsPositions)
             py::arg("jpidx_end") = get_xr("jpidx_end"));
         },
         "View on junction information as xarray Dataset")
+    .def("numstacks",
+        [](const SJJunctionsPositions& self,
+          py::array_t<size_t> jidx, py::array_t<majiq::real_t> pvalue) {
+        auto f = [&self](size_t i, majiq::real_t p) {
+          return self.numstacks(i, p); };
+        return py::vectorize(f)(jidx, pvalue);
+        },
+        "Get number of stacks for the specified junction given threshold",
+        py::arg("jidx"),
+        py::arg("pvalue_threshold") = DEFAULT_BUILD_STACK_PVALUE)
     .def("to_netcdf",
         [](py::object& sj, py::str output_path) {
         // don't write to existing file

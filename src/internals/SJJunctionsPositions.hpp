@@ -15,6 +15,9 @@
 #include <algorithm>
 #include <numeric>
 #include <utility>
+
+#include <boost/math/distributions/poisson.hpp>
+
 #include "SJJunctions.hpp"
 #include "Exons.hpp"
 #include "GeneIntrons.hpp"
@@ -60,7 +63,7 @@ class SJRegionBinReads {
   typename std::vector<BinReads<CountT>>::const_iterator
   begin_region(size_t i) const { return reads_.cbegin() + offsets_[i]; }
   typename std::vector<BinReads<CountT>>::const_iterator
-  end_region(size_t i) const { begin_region(1 + i); }
+  end_region(size_t i) const { return begin_region(1 + i); }
   typename std::vector<BinReads<CountT>>::const_iterator
   end_region(size_t i, junction_pos_t num_stacks) const {
     return num_stacks == 0
@@ -89,6 +92,40 @@ class SJRegionBinReads {
   const BinReads<CountT>& reads_elem(
       size_t i, junction_pos_t nonzero_idx) const {
     return *(begin_region(i) + nonzero_idx);
+  }
+
+  junction_pos_t numstacks(size_t i, real_t pvalue_threshold) const {
+    using dist_t = boost::math::poisson_distribution<real_t>;
+    using boost::math::cdf;
+    using boost::math::complement;
+    const junction_pos_t numbins = numbins_nonzero(i);
+    if (numbins == 0) {
+      return 0;
+    } else if (numbins == 1) {
+      // test against Poisson rate 0.5
+      constexpr real_t SINGLETON_RATE_H0 = 0.5;
+      const dist_t stack_dist(SINGLETON_RATE_H0);
+      return (
+          cdf(complement(stack_dist, reads_elem(i, 0).bin_reads))
+          < pvalue_threshold)
+        ? 1 : 0;
+    } else {  // numbins > 1
+      // calculate by comparing to leave-one-out mean
+      // TODO(jaicher): consider replacing with median (or variants of median)
+      CountT sum = numreads(i, 0);
+      auto it = end_region(i);  // iterate backwards from here
+      do {
+        --it;
+        real_t loo_mean
+          = static_cast<real_t>(sum - it->bin_reads) / (numbins - 1);
+        const dist_t stack_dist(loo_mean);
+        if (cdf(complement(stack_dist, it->bin_reads)) >= pvalue_threshold) {
+          // it is not a stack, and so are any of the bins before it
+          break;
+        }
+      } while (it != begin_region(i));
+      return (end_region(i) - it) - 1;
+    }
   }
 
  private:
