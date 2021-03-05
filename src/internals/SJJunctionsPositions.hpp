@@ -56,30 +56,39 @@ class SJRegionBinReads {
   junction_pos_t numbins_nonzero(size_t i) const {
     return offsets_[1 + i] - offsets_[i];
   }
+
+  typename std::vector<BinReads<CountT>>::const_iterator
+  begin_region(size_t i) const { return reads_.cbegin() + offsets_[i]; }
+  typename std::vector<BinReads<CountT>>::const_iterator
+  end_region(size_t i) const { begin_region(1 + i); }
+  typename std::vector<BinReads<CountT>>::const_iterator
+  end_region(size_t i, junction_pos_t num_stacks) const {
+    return num_stacks == 0
+      ? end_region(i)
+      : (num_stacks < numbins_nonzero(i)
+          ? end_region(i) - num_stacks : begin_region(i));
+  }
+
   junction_pos_t numbins_minreads(size_t i, CountT minreads) const {
     if (minreads == 0) {
       return numbins_nonzero(i);
     } else {
-      auto end = reads_.begin() + offsets_[1 + i];
-      return end - std::find_if(reads_.begin() + offsets_[i], end,
+      auto end = end_region(i);
+      return end - std::find_if(begin_region(i), end,
           [minreads](const BinReads<CountT>& x) {
           return x.bin_reads >= minreads;
           });
     }
   }
   CountT numreads(size_t i, junction_pos_t num_stacks) const {
-    const size_t nonstack_end
-      = num_stacks == 0 ? offsets_[1 + i] : (
-          num_stacks < numbins_nonzero(i)
-          ? offsets_[1 + i] - num_stacks : offsets_[i]);
     return std::accumulate(
-        reads_.begin() + offsets_[i], reads_.begin() + nonstack_end,
+        begin_region(i), end_region(i, num_stacks),
         CountT{},
         [](CountT s, const BinReads<CountT>& x) { return s + x.bin_reads; });
   }
   const BinReads<CountT>& reads_elem(
       size_t i, junction_pos_t nonzero_idx) const {
-    return reads_[offsets_[i] + nonzero_idx];
+    return *(begin_region(i) + nonzero_idx);
   }
 
  private:
@@ -222,21 +231,6 @@ class SJIntronsBins
     return static_cast<real_t>(numreads(i, num_stacks) * intron_length)
       / IntronCoarseBins::num_raw_positions(intron_length, total_bins_);
   }
-  // real_t scaled_bin_reads_elem(size_t i, junction_pos_t nonzero_idx) const {
-  //   using detail::IntronCoarseBins;
-  //   // get average number of positions per bin
-  //   const auto total_positions = IntronCoarseBins::num_raw_positions(
-  //       (*regions_)[i].coordinates.length(), total_bins_);
-  //   const real_t avg_num_positions
-  //     = static_cast<real_t>(total_positions) / total_bins_;
-  //   // compare to actual element
-  //   const auto& raw_elem = reads_elem(i, nonzero_idx);
-  //   const auto bin_num_positions = (
-  //       IntronCoarseBins(total_positions, total_bins_)
-  //       .bin_num_positions(raw_elem.bin_idx));
-  //   // rescale
-  //   return raw_elem.bin_reads * avg_num_positions / bin_num_positions;
-  // }
   bool passed(size_t i, const IntronThresholdsGenerator& it_gen,
       junction_pos_t num_stacks) const {
     // get thresholds for this intron
