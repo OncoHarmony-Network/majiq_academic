@@ -15,6 +15,7 @@
 #include <algorithm>
 #include <numeric>
 #include <utility>
+#include <random>
 
 #include <boost/math/distributions/poisson.hpp>
 
@@ -92,6 +93,63 @@ class SJRegionBinReads {
   const BinReads<CountT>& reads_elem(
       size_t i, junction_pos_t nonzero_idx) const {
     return *(begin_region(i) + nonzero_idx);
+  }
+
+  template <typename OutputIt>
+  void bootstrap_coverage(
+      size_t i, junction_pos_t num_stacks,
+      rng_t& generator,
+      OutputIt first, OutputIt last) const {
+    using OutputT = decltype(*first);
+    const auto pos_begin = begin_region(i);
+    const auto pos_end = end_region(i, num_stacks);
+    if (pos_begin == pos_end) {
+      std::fill(first, last, OutputT{0});
+      return;
+    }
+    // do we resort to parametric sampling? We know if all values are same, yes
+    bool parametric_bootstrap
+      = pos_begin->bin_reads == (pos_end - 1)->bin_reads;
+    const junction_pos_t num_nonzero = pos_end - pos_begin;
+    OutputT bootstrap_mean;
+    // otherwise, we have to check empirical mean/variance of nonzero positions
+    if (parametric_bootstrap) {
+      bootstrap_mean = static_cast<OutputT>(pos_begin->bin_reads);
+    } else {
+      bootstrap_mean = std::accumulate(
+          pos_begin, pos_end, OutputT{0},
+          [](OutputT s, const BinReads<CountT>& x) {
+          return s + static_cast<OutputT>(x.bin_reads); })
+        / num_nonzero;
+      OutputT bootstrap_variance = std::accumulate(
+          pos_begin, pos_end, OutputT{0},
+          [bootstrap_mean](OutputT s, const BinReads<CountT>& x) {
+          OutputT residual = static_cast<OutputT>(x.bin_reads - bootstrap_mean);
+          return s + residual * residual; })
+        / num_nonzero;  // population variance, no correction or sample variance
+      parametric_bootstrap = bootstrap_variance < bootstrap_mean;
+    }
+    // perform the bootstrapping
+    if (parametric_bootstrap) {
+      // bootstrap distribution is Poisson in parametric case
+      std::poisson_distribution<int> dist{bootstrap_mean * num_nonzero};
+      std::generate(first, last,
+          [&dist, &generator]() -> OutputT {
+          return static_cast<OutputT>(dist(generator)); });
+    } else {
+      // sample one less than nonzero positions with replacement, rescale
+      const junction_pos_t num_samples = num_nonzero - 1;
+      std::uniform_int_distribution<junction_pos_t> dist{0, num_nonzero - 1};
+      auto random_bin_reads = [&dist, &generator, &pos_begin]() {
+        return pos_begin[dist(generator)].bin_reads; };
+      auto sample = [&num_nonzero, &num_samples, &random_bin_reads]() {
+        OutputT result = 0;
+        for (junction_pos_t i = 0; i < num_samples; ++i) {
+          result += random_bin_reads();
+        }
+        return static_cast<OutputT>(result * num_nonzero) / num_samples; };
+      std::generate(first, last, sample);
+    }
   }
 
   junction_pos_t numstacks(size_t i, real_t pvalue_threshold) const {
@@ -198,6 +256,7 @@ class SJJunctionsPositions
   }
 
  public:
+  junction_pos_t weight(size_t i) const { return total_bins(); }
   static SJJunctionsPositions FromBam(
       const char* infile, ExperimentStrandness exp_strandness, int nthreads);
 
@@ -262,11 +321,17 @@ class SJIntronsBins
       const GeneIntrons& gene_introns, ExperimentStrandness exp_strandness,
       int nthreads);
 
-  real_t scaled_numreads(size_t i, junction_pos_t num_stacks) const {
+  junction_pos_t num_raw_positions(size_t i) const {
     using detail::IntronCoarseBins;
     const auto intron_length = (*regions_)[i].coordinates.length();
+    return IntronCoarseBins::num_raw_positions(intron_length, total_bins());
+  }
+  junction_pos_t weight(size_t i) const { return num_raw_positions(i); }
+
+  real_t scaled_numreads(size_t i, junction_pos_t num_stacks) const {
+    const auto intron_length = (*regions_)[i].coordinates.length();
     return static_cast<real_t>(numreads(i, num_stacks) * intron_length)
-      / IntronCoarseBins::num_raw_positions(intron_length, total_bins_);
+      / num_raw_positions(i);
   }
   bool passed(size_t i, const IntronThresholdsGenerator& it_gen,
       junction_pos_t num_stacks) const {
