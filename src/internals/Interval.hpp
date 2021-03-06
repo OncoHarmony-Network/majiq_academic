@@ -177,6 +177,13 @@ inline bool IntervalPrecedes(const T& before, const U& after) {
   return std::max(before.start, before.end) < after.start;
 }
 
+struct IntervalPrecedesT {
+  template <typename T, typename U>
+  inline bool operator()(const T& before, const U& after) const noexcept {
+    return IntervalPrecedes<T, U>(before, after);
+  }
+};
+
 // subset/superset of intervals when they are the same type
 template <class T1, class T2>
 inline bool IntervalSubsets(const T1& sub, const T2& sup) {
