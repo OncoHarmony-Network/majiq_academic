@@ -52,11 +52,21 @@ class Events {
   size_t size() const { return num_connections(); }
 
   // index into connections for contig-sorted junctins
-  const size_t& sorted_junction_connection_idx(size_t sorted_idx) const {
-    return junction_connection_idx_[sorted_idx];
+  typename std::vector<size_t>::const_iterator
+  connection_idx_junctions_begin() const {
+    return junction_connection_idx_.cbegin();
   }
-  const size_t& sorted_intron_connection_idx(size_t sorted_idx) const {
-    return intron_connection_idx_[sorted_idx];
+  typename std::vector<size_t>::const_iterator
+  connection_idx_junctions_end() const {
+    return junction_connection_idx_.cend();
+  }
+  typename std::vector<size_t>::const_iterator
+  connection_idx_introns_begin() const {
+    return intron_connection_idx_.cbegin();
+  }
+  typename std::vector<size_t>::const_iterator
+  connection_idx_introns_end() const {
+    return intron_connection_idx_.cend();
   }
 
   // get underlying junction or intron from connection_idx
@@ -67,6 +77,36 @@ class Events {
   const GeneIntron& connection_intron(size_t connection_idx) const {
     return (*introns_)[connections_[connection_idx].idx_];
   }
+
+  // provide templated access into junctions or introns
+  template <bool IS_INTRON>
+  const std::conditional_t<IS_INTRON, GeneIntron, GeneJunction>&
+  connection_at(size_t connection_idx) const {
+    if constexpr(IS_INTRON) {
+      return connection_intron(connection_idx);
+    } else {
+      return connection_junction(connection_idx);
+    }
+  }
+  template <bool IS_INTRON>
+  typename std::vector<size_t>::const_iterator
+  connection_idx_begin() const {
+    if constexpr(IS_INTRON) {
+      return connection_idx_introns_begin();
+    } else {
+      return connection_idx_junctions_begin();
+    }
+  }
+  template <bool IS_INTRON>
+  typename std::vector<size_t>::const_iterator
+  connection_idx_end() const {
+    if constexpr(IS_INTRON) {
+      return connection_idx_introns_end();
+    } else {
+      return connection_idx_junctions_end();
+    }
+  }
+
   // check if intron or not
   const bool& is_intron(size_t connection_idx) const {
     return connections_[connection_idx].is_intron_;
