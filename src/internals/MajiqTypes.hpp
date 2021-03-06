@@ -12,6 +12,7 @@
 #include <string>
 #include <iostream>
 #include <functional>
+#include <random>
 #include <boost/functional/hash.hpp>
 
 namespace majiq {
@@ -27,6 +28,8 @@ using intron_ct_t = real_t;  // count for introns
 using seqid_t = std::string;  // type for contig ids
 using geneid_t = std::string;
 using genename_t = std::string;
+
+using rng_t = std::mt19937;
 
 enum class GeneStrandness : unsigned char {
   FORWARD = '+',
