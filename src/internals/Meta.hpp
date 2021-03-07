@@ -11,6 +11,10 @@
 #include <type_traits>
 
 namespace majiq {
+// convenience feature backported from c++-20
+template <typename T>
+using remove_cvref_t = std::remove_cv_t<std::remove_reference_t<T>>;
+
 namespace detail {
 
 // does passed type have contig as a field?

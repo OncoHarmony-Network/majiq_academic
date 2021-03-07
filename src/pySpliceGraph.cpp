@@ -32,9 +32,14 @@
 #include "internals/PassedIntrons.hpp"
 #include "internals/ExonConnections.hpp"
 #include "internals/Events.hpp"
+#include "internals/EventsCoverage.hpp"
 #include "internals/Meta.hpp"
 
 #include "internals/ExperimentThresholds.hpp"
+
+// NOTE: right now we have a global PRNG, which is not threadsafe, but
+// multithreading is really only used by htslib internally at this time
+static majiq::rng_t rng;  // PRNG for new_majiq
 
 // default value of ExperimentThresholds
 static const auto DEFAULT_THRESHOLDS = majiq::ExperimentThresholds(
@@ -59,6 +64,7 @@ using pyGroupIntronsGen_t = pyClassShared_t<majiq::GroupIntronsGenerator>;
 using pySJIntronsBins_t = pyClassShared_t<majiq::SJIntronsBins>;
 using pyExonConnections_t = pyClassShared_t<majiq::ExonConnections>;
 using pyEvents_t = pyClassShared_t<majiq::Events>;
+using pyEventsCoverage_t = pyClassShared_t<majiq::EventsCoverage>;
 
 using pyExperimentThresholds_t = pyClassShared_t<majiq::ExperimentThresholds>;
 using pyIntronThresholdsGenerator_t
@@ -569,6 +575,66 @@ void init_ContigIntrons(pyContigIntrons_t& pyContigIntrons) {
         });
 }
 
+void init_PyEventsCoverage(pyEventsCoverage_t& pyEventsCoverage) {
+  using majiq::Events;
+  using majiq::EventsCoverage;
+  using majiq::CoverageSummary;
+  using majiq::CoverageBootstraps;
+  using majiq_pybind::ArrayFromVectorAndOffset;
+  pyEventsCoverage
+    .def_static("from_sj",
+        [](
+          const std::shared_ptr<Events>& events,
+          const majiq::SJJunctionsPositions& sj_junctions,
+          const majiq::SJIntronsBins& sj_introns,
+          size_t num_bootstraps,
+          majiq::real_t pvalue_threshold) {
+        return EventsCoverage::FromSJ(events, sj_junctions, sj_introns,
+            num_bootstraps, rng, pvalue_threshold);
+        },
+        "Obtain coverage for events from SJ junctions and introns",
+        py::arg("events"),
+        py::arg("sj_junctions"),
+        py::arg("sj_introns"),
+        py::arg("num_bootstraps") = DEFAULT_BUILD_NUM_BOOTSTRAPS,
+        py::arg("pvalue_threshold") = DEFAULT_BUILD_STACK_PVALUE)
+    .def_property_readonly("numreads",
+        [](py::object& self_obj) -> py::array_t<majiq::real_t> {
+        EventsCoverage& self = self_obj.cast<EventsCoverage&>();
+        const size_t offset = offsetof(CoverageSummary, numreads);
+        return ArrayFromVectorAndOffset<majiq::real_t, CoverageSummary>(
+            self.summaries(), offset, self_obj);
+        },
+        "Readrate of each event connection after stacks removed")
+    .def_property_readonly("numbins",
+        [](py::object& self_obj) -> py::array_t<majiq::real_t> {
+        EventsCoverage& self = self_obj.cast<EventsCoverage&>();
+        const size_t offset = offsetof(CoverageSummary, numbins);
+        return ArrayFromVectorAndOffset<majiq::real_t, CoverageSummary>(
+            self.summaries(), offset, self_obj);
+        },
+        "Number of nonzero bins for each connection after stacks removed")
+    .def_property_readonly("bootstraps",
+        [](py::object& self_obj) -> py::array_t<majiq::real_t> {
+        EventsCoverage& self = self_obj.cast<EventsCoverage&>();
+        const CoverageBootstraps& x = self.bootstraps();
+        py::array_t<majiq::real_t> result = py::array_t(
+            // shape
+            {x.num_connections(), x.num_bootstraps()},
+            // strides
+            {sizeof(majiq::real_t) * x.num_bootstraps(), sizeof(majiq::real_t)},
+            // pointer to first element
+            x.data().data(),
+            // handle for object
+            self_obj);
+        return result;
+        },
+        "Bootstrapped read coverage or each connection after stacks removed")
+    .def_property_readonly("_events", &EventsCoverage::events,
+        "Events for which the coverage information is defined")
+    .def("__len__", &EventsCoverage::num_connections);
+}
+
 void init_PyEvents(pyEvents_t& pyEvents) {
   using majiq::Event;
   using majiq::Events;
@@ -653,6 +719,30 @@ void init_pyExonConnections(pyExonConnections_t& pyExonConnections) {
     .def("lsvs", &ExonConnections::LSVEvents, "Construct LSV Events")
     .def("constitutive", &ExonConnections::ConstitutiveEvents,
         "Construct Constitutive Events")
+    .def("events_for",
+        [](const ExonConnections& self,
+          py::array_t<size_t> exon_idx,
+          py::array_t<bool> is_source) {
+        if (exon_idx.ndim() != 1) {
+          throw std::invalid_argument("exon_idx must be one-dimensional");
+        } else if (is_source.ndim() != 1) {
+          throw std::invalid_argument("is_source must be one-dimensional");
+        } else if (is_source.shape(0) != exon_idx.shape(0)) {
+          throw std::invalid_argument(
+              "exon_idx and is_source must have same size");
+        }
+        auto _exon_idx = exon_idx.unchecked<1>();
+        auto _is_source = is_source.unchecked<1>();
+        std::vector<Event> events(_exon_idx.shape(0));
+        for (py::ssize_t i = 0; i < _exon_idx.shape(0); ++i) {
+          events.emplace_back(
+              _exon_idx(i),
+              _is_source(i) ? EventType::SRC_EVENT : EventType::DST_EVENT);
+        }
+        return self.CreateEvents(std::move(events));
+        },
+        "Construct events for specified exons/directions",
+        py::arg("exon_idx"), py::arg("is_source"))
     .def("has_intron",
         [](const ExonConnections& self,
           py::array_t<size_t> exon_idx,
@@ -1567,6 +1657,12 @@ void init_pyIntronThresholdsGenerator(
 }
 
 void init_SpliceGraphAll(py::module_& m) {
+  rng = majiq::rng_t{};  // initialize PRNG
+  m.def("set_seed",
+      [](size_t x) { rng.seed(x); },
+      "set random seed for new_majiq random number generation",
+      py::arg("seed"));
+
   using majiq::Contigs;
   using majiq::Genes;
   using majiq::Exons;
@@ -1589,6 +1685,8 @@ void init_SpliceGraphAll(py::module_& m) {
       m, "GeneJunctions", "Splicegraph junctions");
   auto pyEvents = pyEvents_t(
       m, "Events", "Events from reference exon with junctions/introns");
+  auto pyEventsCoverage = pyEventsCoverage_t(
+      m, "EventsCoverage", "Coverage over events for a single experiment");
   auto pyExonConnections = pyExonConnections_t(
       m, "ExonConnections", "Connections from exons to junctions, introns");
   auto pyContigIntrons = pyContigIntrons_t(m, "ContigIntrons");
@@ -1694,5 +1792,6 @@ void init_SpliceGraphAll(py::module_& m) {
   init_pyPassedJunctionsGen(pyPassedJunctionsGen);
   init_pyGroupIntronsGen(pyGroupIntronsGen);
   init_PyEvents(pyEvents);
+  init_PyEventsCoverage(pyEventsCoverage);
   init_pyExonConnections(pyExonConnections);
 }

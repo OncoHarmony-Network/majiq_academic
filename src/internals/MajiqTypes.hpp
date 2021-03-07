@@ -74,6 +74,9 @@ inline std::ostream& operator<<(
 struct Event {
   size_t ref_exon_idx_;
   EventType type_;
+  Event() = default;
+  Event(size_t ref_exon_idx, EventType type)
+      : ref_exon_idx_{ref_exon_idx}, type_{type} { }
 };
 inline bool operator<(const Event& x, const Event& y) noexcept {
   return std::tie(x.ref_exon_idx_, x.type_)
