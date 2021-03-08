@@ -41,12 +41,8 @@ ext_modules = [
 
 
 setup(
-    name="new_majiq",
     version=__version__,
-    author="Joseph K Aicher",
-    description="Python bindings into new_majiq c++ code",
     packages=[],
     package_dir={"": "src"},
     ext_modules=ext_modules,
-    zip_safe=False,
 )
