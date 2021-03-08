@@ -33,6 +33,7 @@
 #include "internals/ExonConnections.hpp"
 #include "internals/Events.hpp"
 #include "internals/EventsCoverage.hpp"
+#include "internals/SpliceGraphReads.hpp"
 #include "internals/Meta.hpp"
 
 #include "internals/ExperimentThresholds.hpp"
@@ -65,6 +66,7 @@ using pySJIntronsBins_t = pyClassShared_t<majiq::SJIntronsBins>;
 using pyExonConnections_t = pyClassShared_t<majiq::ExonConnections>;
 using pyEvents_t = pyClassShared_t<majiq::Events>;
 using pyEventsCoverage_t = pyClassShared_t<majiq::EventsCoverage>;
+using pySpliceGraphReads_t = pyClassShared_t<majiq::SpliceGraphReads>;
 
 using pyExperimentThresholds_t = pyClassShared_t<majiq::ExperimentThresholds>;
 using pyIntronThresholdsGenerator_t
@@ -573,6 +575,42 @@ void init_ContigIntrons(pyContigIntrons_t& pyContigIntrons) {
         oss << "ContigIntrons<" << self.size() << " total>";
         return oss.str();
         });
+}
+
+void init_PySpliceGraphReads(pySpliceGraphReads_t& pySpliceGraphReads) {
+  using majiq::SpliceGraphReads;
+  using majiq::GeneIntrons;
+  using majiq::GeneJunctions;
+  using majiq::SJIntronsBins;
+  using majiq::SJJunctionsPositions;
+  using majiq_pybind::ArrayFromVectorAndOffset;
+  pySpliceGraphReads
+    .def_property_readonly("_introns",
+        &SpliceGraphReads::introns,
+        "Underlying introns")
+    .def_property_readonly("_junctions",
+        &SpliceGraphReads::junctions,
+        "Underlying junctions")
+    .def_property_readonly("introns_reads",
+        [](py::object& self_obj) {
+        SpliceGraphReads& self = self_obj.cast<SpliceGraphReads&>();
+        return ArrayFromVectorAndOffset<majiq::real_t, majiq::real_t>(
+            self.introns_reads(), 0, self_obj);
+        },
+        "Raw readrates for each intron")
+    .def_property_readonly("junctions_reads",
+        [](py::object& self_obj) {
+        SpliceGraphReads& self = self_obj.cast<SpliceGraphReads&>();
+        return ArrayFromVectorAndOffset<majiq::real_t, majiq::real_t>(
+            self.junctions_reads(), 0, self_obj);
+        },
+        "Raw readrates for each junction")
+    .def_static("from_sj", &SpliceGraphReads::FromSJ,
+        "Obtain raw readrates for introns/junctions from experiment SJ",
+        py::arg("introns"),
+        py::arg("junctions"),
+        py::arg("sj_introns"),
+        py::arg("sj_junctions"));
 }
 
 void init_PyEventsCoverage(pyEventsCoverage_t& pyEventsCoverage) {
@@ -1692,6 +1730,8 @@ void init_SpliceGraphAll(py::module_& m) {
   auto pyContigIntrons = pyContigIntrons_t(m, "ContigIntrons");
   auto pySJIntronsBins = pySJIntronsBins_t(m, "SJIntronsBins",
       "Summarized and per-bin counts for introns from an experiment");
+  auto pySpliceGraphReads = pySpliceGraphReads_t(
+      m, "SpliceGraphReads", "Raw readrates for each intron and junction");
   auto pySJJunctions = pySJJunctions_t(
       m, "SJJunctions", "Summarized junction counts for an experiment");
   auto pySJJunctionsPositions = pySJJunctionsPositions_t(
@@ -1793,5 +1833,6 @@ void init_SpliceGraphAll(py::module_& m) {
   init_pyGroupIntronsGen(pyGroupIntronsGen);
   init_PyEvents(pyEvents);
   init_PyEventsCoverage(pyEventsCoverage);
+  init_PySpliceGraphReads(pySpliceGraphReads);
   init_pyExonConnections(pyExonConnections);
 }

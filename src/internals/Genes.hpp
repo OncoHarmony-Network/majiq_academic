@@ -45,6 +45,10 @@ class Genes
   KnownGene end_contig(size_t idx);
   KnownGene begin_contig(const KnownContig& contig);
   KnownGene end_contig(const KnownContig& contig);
+  KnownGene begin_parent(size_t idx);
+  KnownGene end_parent(size_t idx);
+  KnownGene begin_parent(const KnownContig& contig);
+  KnownGene end_parent(const KnownContig& contig);
   // access contigs that are parent to this
   std::shared_ptr<Contigs> contigs() const { return features_.parents(); }
   std::shared_ptr<Contigs> parents() const { return contigs(); }
@@ -167,6 +171,14 @@ inline KnownGene Genes::begin_contig(const KnownContig& contig) {
 }
 inline KnownGene Genes::end_contig(const KnownContig& contig) {
   return end_contig(contig.idx_);
+}
+inline KnownGene Genes::begin_parent(size_t idx) { return begin_contig(idx); }
+inline KnownGene Genes::end_parent(size_t idx) { return end_contig(idx); }
+inline KnownGene Genes::begin_parent(const KnownContig& contig) {
+  return begin_contig(contig);
+}
+inline KnownGene Genes::end_parent(const KnownContig& contig) {
+  return end_contig(contig);
 }
 
 
