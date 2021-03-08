@@ -144,12 +144,12 @@ class EventsCoverage {
     auto connection_at = [&events](size_t connection_idx) -> const auto& {
       return events.connection_at<IS_INTRON>(connection_idx); };
     // get regions from SJ we will be comparing to
-    const auto sj_regions = *(sj.regions());
+    const auto& sj_regions = *(sj.regions());
     // how we determine if we no longer have match in coordinates
     using RegionIntervalBeforeT = std::conditional_t<
       IS_INTRON,
       IntervalPrecedesT,
-      std::less<decltype(sj_regions[0].coordinates)>>;
+      std::less<std::conditional_t<IS_INTRON, ClosedInterval, OpenInterval>>>;
 
     // we will temporarily accumulate the total number of positions
     // contributing to each event connection. Afterwards, we will normalize to
