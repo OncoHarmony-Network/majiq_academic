@@ -34,6 +34,7 @@
 #include "internals/Events.hpp"
 #include "internals/EventsCoverage.hpp"
 #include "internals/SpliceGraphReads.hpp"
+#include "internals/SimplifierGroup.hpp"
 #include "internals/Meta.hpp"
 
 #include "internals/ExperimentThresholds.hpp"
@@ -64,6 +65,7 @@ using pyPassedJunctionsGen_t = pyClassShared_t<majiq::PassedJunctionsGenerator>;
 using pyGroupIntronsGen_t = pyClassShared_t<majiq::GroupIntronsGenerator>;
 using pySJIntronsBins_t = pyClassShared_t<majiq::SJIntronsBins>;
 using pyExonConnections_t = pyClassShared_t<majiq::ExonConnections>;
+using pySimplifierGroup_t = pyClassShared_t<majiq::SimplifierGroup>;
 using pyEvents_t = pyClassShared_t<majiq::Events>;
 using pyEventsCoverage_t = pyClassShared_t<majiq::EventsCoverage>;
 using pySpliceGraphReads_t = pyClassShared_t<majiq::SpliceGraphReads>;
@@ -526,6 +528,10 @@ void init_GeneJunctions(pyGeneJunctions_t& pyGeneJunctions) {
         py::arg("gene_idx"), py::arg("start"), py::arg("end"),
         py::arg("denovo"), py::arg("passed_build"), py::arg("simplified"))
     .def("_pass_all", &GeneJunctions::pass_all, "DEBUG: pass all junctions")
+    .def("_simplify_all",
+        &GeneJunctions::simplify_all, "simplify all junctions")
+    .def("_unsimplify_all",
+        &GeneJunctions::unsimplify_all, "unsimplify all junctions")
     .def_static("from_netcdf",
         [](py::str x, std::shared_ptr<majiq::Genes> genes) {
         return MakeConnections<GeneJunctions>(
@@ -611,6 +617,69 @@ void init_PySpliceGraphReads(pySpliceGraphReads_t& pySpliceGraphReads) {
         py::arg("junctions"),
         py::arg("sj_introns"),
         py::arg("sj_junctions"));
+}
+
+void init_PySimplifierGroup(pySimplifierGroup_t& pySimplifierGroup) {
+  using majiq::SimplifierCount;
+  using majiq::SimplifierGroup;
+  using majiq::ExonConnections;
+  using majiq::SpliceGraphReads;
+  using majiq_pybind::ArrayFromVectorAndOffset;
+  pySimplifierGroup
+    .def_property_readonly("_exon_connections",
+        &SimplifierGroup::exon_connections,
+        "Underlying exon connections being unsimplified")
+    .def_property_readonly("introns_passed_src",
+        [](py::object& self_obj) {
+        SimplifierGroup& self = self_obj.cast<SimplifierGroup&>();
+        size_t offset = offsetof(SimplifierCount, src_ct_unsimplify);
+        return ArrayFromVectorAndOffset<size_t, SimplifierCount>(
+            self.introns_passed(), offset, self_obj);
+        },
+        "Number of experiments with evidence for unsimplification as source for introns")
+    .def_property_readonly("introns_passed_dst",
+        [](py::object& self_obj) {
+        SimplifierGroup& self = self_obj.cast<SimplifierGroup&>();
+        size_t offset = offsetof(SimplifierCount, dst_ct_unsimplify);
+        return ArrayFromVectorAndOffset<size_t, SimplifierCount>(
+            self.introns_passed(), offset, self_obj);
+        },
+        "Number of experiments with evidence for unsimplification as target for introns")
+    .def_property_readonly("junctions_passed_src",
+        [](py::object& self_obj) {
+        SimplifierGroup& self = self_obj.cast<SimplifierGroup&>();
+        size_t offset = offsetof(SimplifierCount, src_ct_unsimplify);
+        return ArrayFromVectorAndOffset<size_t, SimplifierCount>(
+            self.junctions_passed(), offset, self_obj);
+        },
+        "Number of experiments with evidence for unsimplification as source for junctions")
+    .def_property_readonly("junctions_passed_dst",
+        [](py::object& self_obj) {
+        SimplifierGroup& self = self_obj.cast<SimplifierGroup&>();
+        size_t offset = offsetof(SimplifierCount, dst_ct_unsimplify);
+        return ArrayFromVectorAndOffset<size_t, SimplifierCount>(
+            self.junctions_passed(), offset, self_obj);
+        },
+        "Number of experiments with evidence for unsimplification as target for junctions")
+    .def_property_readonly("num_experiments",
+        &SimplifierGroup::num_experiments,
+        "Number of experiments in current simplifier group")
+    .def("add_experiment", &SimplifierGroup::AddExperiment,
+        "Increment evidence to unsimplify connections from SpliceGraphReads",
+        py::arg("sg_reads"),
+        py::arg("simplify_min_psi") = DEFAULT_BUILD_SIMPL_MINPSI,
+        py::arg("simplify_minreads_annotated_junctions")
+          = DEFAULT_BUILD_SIMPL_MINREADS_ANNOTATED_JUNCTION,
+        py::arg("simplify_minreads_denovo_junctions")
+          = DEFAULT_BUILD_SIMPL_MINREADS_DENOVO_JUNCTION,
+        py::arg("simplify_minreads_introns")
+          = DEFAULT_BUILD_SIMPL_MINREADS_INTRON)
+    .def("update_connections", &SimplifierGroup::UpdateInplace,
+        "Unsimplify introns/junctions with evidence, reset for next group",
+        py::arg("simplifier_min_experiments") = DEFAULT_BUILD_MINEXPERIMENTS)
+    .def(py::init<const std::shared_ptr<ExonConnections>&>(),
+        "Start simplification group for the specified exon connections",
+        py::arg("exon_connections"));
 }
 
 void init_PyEventsCoverage(pyEventsCoverage_t& pyEventsCoverage) {
@@ -1016,6 +1085,10 @@ void init_GeneIntrons(pyGeneIntrons_t& pyGeneIntrons) {
         "Load introns from netcdf file",
         py::arg("netcdf_path"), py::arg("genes"))
     .def("_pass_all", &GeneIntrons::pass_all, "DEBUG: pass all introns")
+    .def("_simplify_all",
+        &GeneIntrons::simplify_all, "simplify all introns")
+    .def("_unsimplify_all",
+        &GeneIntrons::unsimplify_all, "unsimplify all introns")
     .def("build_group", [](std::shared_ptr<GeneIntrons>& gene_introns) {
         return majiq::GroupIntronsGenerator(gene_introns);
         },
@@ -1528,6 +1601,16 @@ void init_SpliceGraph(py::class_<majiq::SpliceGraph>& pySpliceGraph) {
         sg.attr("_junctions").attr("_pass_all")();
         sg.attr("_introns").attr("_pass_all")(); },
         "Pass all junctions and introns in the splicegraph")
+    .def("_simplify_all",
+        [](py::object& sg) {
+        sg.attr("_junctions").attr("_simplify_all")();
+        sg.attr("_introns").attr("_simplify_all")(); },
+        "Simplify all junctions and introns in the splicegraph")
+    .def("_unsimplify_all",
+        [](py::object& sg) {
+        sg.attr("_junctions").attr("_unsimplify_all")();
+        sg.attr("_introns").attr("_unsimplify_all")(); },
+        "Unsimplify all junctions and introns in the splicegraph")
     .def("close_to_annotated_exon",
         [](SpliceGraph& sg, size_t gene_idx, position_t x, bool to_following) {
         majiq::KnownGene g = (*sg.genes())[gene_idx];
@@ -1746,6 +1829,9 @@ void init_SpliceGraphAll(py::module_& m) {
   auto pyGroupIntronsGen = pyGroupIntronsGen_t(
       m, "GroupIntronsGenerator",
       "Accumulator of SJIntronsBins in the same build group");
+  auto pySimplifierGroup = pySimplifierGroup_t(
+      m, "SimplifierGroup",
+      "Accumulator of SpliceGraphReads to unsimplify introns and junctions");
   auto pyGeneStrandness = py::enum_<GeneStrandness>(
       m, "GeneStrandness")
     .value("forward", GeneStrandness::FORWARD)
@@ -1823,7 +1909,6 @@ void init_SpliceGraphAll(py::module_& m) {
   init_Exons(pyExons);
   init_GeneJunctions(pyGeneJunctions);
   init_GeneIntrons(pyGeneIntrons);
-  init_SpliceGraph(pySpliceGraph);
   init_SJJunctions(pySJJunctions);
   init_SJJunctionsPositions(pySJJunctionsPositions);
   init_ContigIntrons(pyContigIntrons);
@@ -1835,4 +1920,6 @@ void init_SpliceGraphAll(py::module_& m) {
   init_PyEventsCoverage(pyEventsCoverage);
   init_PySpliceGraphReads(pySpliceGraphReads);
   init_pyExonConnections(pyExonConnections);
+  init_PySimplifierGroup(pySimplifierGroup);
+  init_SpliceGraph(pySpliceGraph);
 }

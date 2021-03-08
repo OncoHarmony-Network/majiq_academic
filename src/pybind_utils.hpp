@@ -45,6 +45,10 @@ constexpr majiq::real_t DEFAULT_BUILD_STACK_PVALUE = 1e-7;
 constexpr majiq::ExperimentStrandness DEFAULT_BAM_STRANDNESS
   = majiq::ExperimentStrandness::NONE;
 constexpr int DEFAULT_BAM_NTHREADS = 1;
+constexpr majiq::real_t DEFAULT_BUILD_SIMPL_MINPSI = 0.01;
+constexpr majiq::real_t DEFAULT_BUILD_SIMPL_MINREADS_ANNOTATED_JUNCTION = 0;
+constexpr majiq::real_t DEFAULT_BUILD_SIMPL_MINREADS_DENOVO_JUNCTION = 0;
+constexpr majiq::real_t DEFAULT_BUILD_SIMPL_MINREADS_INTRON = 0;
 
 
 

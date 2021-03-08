@@ -90,6 +90,14 @@ class GeneIntrons : public detail::Regions<GeneIntron, false> {
     std::for_each(begin(), end(),
         [](const GeneIntron& x) { x.passed_build() = true; });
   }
+  void simplify_all() const {
+    std::for_each(begin(), end(),
+        [](const GeneIntron& x) { x.simplified() = true; });
+  }
+  void unsimplify_all() const {
+    std::for_each(begin(), end(),
+        [](const GeneIntron& x) { x.simplified() = false; });
+  }
 
   bool is_connected() const { return connected_exons_ != nullptr; }
   const std::shared_ptr<Exons>& connected_exons() const {

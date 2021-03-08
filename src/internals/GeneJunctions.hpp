@@ -160,6 +160,14 @@ class GeneJunctions : public detail::Regions<GeneJunction, true> {
     std::for_each(begin(), end(),
         [](const GeneJunction& x) { x.passed_build() = true; });
   }
+  void simplify_all() const {
+    std::for_each(begin(), end(),
+        [](const GeneJunction& x) { x.simplified() = true; });
+  }
+  void unsimplify_all() const {
+    std::for_each(begin(), end(),
+        [](const GeneJunction& x) { x.simplified() = false; });
+  }
 
   GeneJunctions(
       const std::shared_ptr<Genes>& genes, std::vector<GeneJunction>&& x,
