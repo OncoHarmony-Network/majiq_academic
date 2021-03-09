@@ -19,6 +19,7 @@
 
 #include <boost/math/distributions/poisson.hpp>
 
+#include "MajiqTypes.hpp"
 #include "SJJunctions.hpp"
 #include "Exons.hpp"
 #include "GeneIntrons.hpp"
@@ -242,23 +243,28 @@ class SJJunctionsPositions
     : public detail::SJRegionBinReads<SJJunctions, junction_ct_t> {
   using BaseT = detail::SJRegionBinReads<SJJunctions, junction_ct_t>;
 
- private:
-  // already have check_valid from parent class, but check SJJunctions data
-  void check_junctions() const {
-    for (size_t i = 0; i < regions_->size(); ++i) {
-      const SJJunction& curj = (*regions_)[i];
-      if (curj.numpos() != numbins_nonzero(i)) {
-        throw std::runtime_error("SJJunctions/Positions mismatch on numpos");
-      } else if (curj.numreads() != numreads(i, 0)) {
-        throw std::runtime_error("SJJunctions/Positions mismatch on numreads");
-      }
-    }
-  }
-
  public:
   junction_pos_t weight(size_t i) const { return total_bins(); }
   static SJJunctionsPositions FromBam(
       const char* infile, ExperimentStrandness exp_strandness, int nthreads);
+
+  JunctionPassedStatus passed(
+      size_t i, const ExperimentThresholds& thresholds) const {
+    junction_pos_t numpos = numbins_nonzero(i);
+    if (numpos < thresholds.minpos_) {
+      return JunctionPassedStatus::NOT_PASSED;
+    } else {
+      constexpr junction_pos_t NOSTACKS = 0;  // raw reads
+      junction_ct_t numreads = this->numreads(i, NOSTACKS);
+      if (numreads < thresholds.minreads_) {
+        return JunctionPassedStatus::NOT_PASSED;
+      } else if (numreads < thresholds.mindenovo_) {
+        return JunctionPassedStatus::ANNOTATED_PASSED;
+      } else {
+        return JunctionPassedStatus::DENOVO_PASSED;
+      }
+    }
+  }
 
   SJJunctionsPositions(
       const std::shared_ptr<SJJunctions>& junctions,
@@ -266,7 +272,6 @@ class SJJunctionsPositions
       std::vector<size_t>&& offsets,
       junction_pos_t num_positions)
       : BaseT{junctions, std::move(reads), std::move(offsets), num_positions} {
-    check_junctions();
   }
   SJJunctionsPositions(const SJJunctionsPositions& x) = default;
   SJJunctionsPositions(SJJunctionsPositions&& x) = default;

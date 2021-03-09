@@ -25,56 +25,13 @@
 
 namespace majiq {
 
-// did a junction pass different thresholds?
-enum class JunctionPassedStatus : unsigned char {
-  NOT_PASSED,
-  ANNOTATED_PASSED,
-  DENOVO_PASSED
-};
-
-// total reads and nonzero positions for a junction
-struct ExperimentCounts {
-  junction_ct_t numreads;
-  junction_pos_t numpos;
-  ExperimentCounts() : numreads{}, numpos{} { }
-  ExperimentCounts(junction_ct_t _numreads, junction_pos_t _numpos)
-      : numreads{_numreads}, numpos{_numpos} { }
-  ExperimentCounts(const ExperimentCounts&) = default;
-  ExperimentCounts(ExperimentCounts&&) = default;
-  ExperimentCounts& operator=(const ExperimentCounts&) = default;
-  ExperimentCounts& operator=(ExperimentCounts&&) = default;
-  JunctionPassedStatus passed(
-      const ExperimentThresholds& thresholds) const noexcept {
-    if (numpos < thresholds.minpos_ || numreads < thresholds.minreads_) {
-      return JunctionPassedStatus::NOT_PASSED;
-    } else if (numreads >= thresholds.mindenovo_) {
-      return JunctionPassedStatus::DENOVO_PASSED;
-    } else {  // minreads <= numreads < mindenovo
-      return JunctionPassedStatus::ANNOTATED_PASSED;
-    }
-  }
-};
-
-
-class SJJunction : public detail::ContigRegion<OpenInterval, ExperimentCounts> {
-  using BaseT = detail::ContigRegion<OpenInterval, ExperimentCounts>;
+class SJJunction : public detail::ContigRegion<OpenInterval, EmptyDataT> {
+  using BaseT = detail::ContigRegion<OpenInterval, EmptyDataT>;
 
  public:
-  const junction_ct_t& numreads() const noexcept { return data.numreads; }
-  junction_ct_t& numreads() noexcept { return data.numreads; }
-  const junction_pos_t& numpos() const noexcept { return data.numpos; }
-  junction_pos_t& numpos() noexcept { return data.numpos; }
-  JunctionPassedStatus passed(
-      const ExperimentThresholds& thresholds) const noexcept {
-    return data.passed(thresholds);
-  }
-
-  SJJunction(KnownContig contig, OpenInterval coordinates,
-      GeneStrandness strand, ExperimentCounts counts)
-      : BaseT{contig, coordinates, strand, counts} { }
   SJJunction(KnownContig contig, OpenInterval coordinates,
       GeneStrandness strand)
-      : SJJunction{contig, coordinates, strand, ExperimentCounts{}} { }
+      : BaseT{contig, coordinates, strand} { }
   SJJunction() : SJJunction{KnownContig{}, OpenInterval{}, GeneStrandness{}} { }
   SJJunction(const SJJunction&) = default;
   SJJunction(SJJunction&&) = default;

@@ -73,9 +73,10 @@ void AssignDenovoJunction(const SJJunction& junction, const KnownGene& first,
   return;
 }
 
-void GroupJunctionsGenerator::AddExperiment(const SJJunctions& sj,
+void GroupJunctionsGenerator::AddExperiment(const SJJunctionsPositions& sjp,
     const ExperimentThresholds& thresholds, bool process_denovo) {
   ++num_experiments_;  // increment number of experiments
+  const SJJunctions& sj = *(sjp.regions());
   if (sj.empty()) { return; }  // no junctions to add
 
   const std::shared_ptr<Genes>& genes = exons_->parents();
@@ -113,7 +114,7 @@ void GroupJunctionsGenerator::AddExperiment(const SJJunctions& sj,
 
     for (; sj_it != sj_it_end; ++sj_it) {
       const SJJunction& junction = *sj_it;
-      JunctionPassedStatus status = junction.passed(thresholds);
+      JunctionPassedStatus status = sjp.passed(sj_it - sj.begin(), thresholds);
       if (status == JunctionPassedStatus::NOT_PASSED) { continue; }
       // advance to first known junction that could overlap with sj_it
       k_it_start = std::find_if(k_it_start, known_idx.end(),
