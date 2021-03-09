@@ -22,7 +22,7 @@ from new_majiq.internals import Contigs as _Contigs
 from pathlib import Path
 
 
-class Contigs(_Contigs):
+class Contigs(object):
     """ Contigs/chromosomes used by a splicegraph
     """
 
@@ -30,22 +30,25 @@ class Contigs(_Contigs):
         self._contigs: Final[_Contigs] = contigs
         return
 
-    @classmethod
-    def FromSeqids(self, seqids: List[str]) -> "Contigs":
-        return Contigs(_Contigs(seqids))
-
-    @property
-    def seqid(self) -> List[str]:
-        return self._contigs.seqid
-
     def __len__(self) -> int:
         """ Number of contigs
         """
         return len(self._contigs)
 
     @property
-    def contig_idx(self):
+    def contig_idx(self) -> np.ndarray:
         return np.arange(len(self))
+
+    @property
+    def seqid(self) -> List[str]:
+        return self._contigs.seqid
+
+    def annotate_contig_idx(self, df: xr.Dataset) -> xr.Dataset:
+        """ For now, just add seqid to df using df.contig_idx
+        """
+        return df.assign_coords(
+            seqid=(df.contig_idx.dims, np.array(self.seqid)[df.contig_idx]),
+        )
 
     @property
     def df(self) -> xr.Dataset:
