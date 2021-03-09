@@ -51,6 +51,13 @@ enum class ExperimentStrandness : unsigned char {
   NONE = 'N',  // could be either way, Salmon IU
 };
 
+// did a junction pass different thresholds?
+enum class JunctionPassedStatus : unsigned char {
+  NOT_PASSED,
+  ANNOTATED_PASSED,
+  DENOVO_PASSED
+};
+
 enum class EventType : unsigned char {
   SRC_EVENT = 's',
   DST_EVENT = 't'

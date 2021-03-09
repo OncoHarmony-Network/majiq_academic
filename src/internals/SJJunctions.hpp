@@ -25,13 +25,6 @@
 
 namespace majiq {
 
-// did a junction pass different thresholds?
-enum class JunctionPassedStatus : unsigned char {
-  NOT_PASSED,
-  ANNOTATED_PASSED,
-  DENOVO_PASSED
-};
-
 // total reads and nonzero positions for a junction
 struct ExperimentCounts {
   junction_ct_t numreads;
