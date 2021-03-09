@@ -110,8 +110,8 @@ class Regions {
   }
 
  public:
-  const size_t size() const noexcept { return elements_.size(); }
-  bool empty() const noexcept { return elements_.empty(); }
+  const size_t size() const { return elements_.size(); }
+  bool empty() const { return elements_.empty(); }
   const value_type& operator[](size_t idx) const { return elements_[idx]; }
   const_iterator begin() const { return elements_.cbegin(); }
   const_iterator end() const { return elements_.cend(); }
