@@ -1,12 +1,12 @@
 /**
- * SJJunctionsPositions.cpp
+ * SJBinsReads.cpp
  *
- * Implementation of non-inline functions in SJJunctionsPositions
+ * Implementation of non-inline functions in SJBinsReads
  *
  * Copyright 2020 <University of Pennsylvania>
  */
 
-#include "SJJunctionsPositions.hpp"
+#include "SJBinsReads.hpp"
 
 #include <stdexcept>
 #include <optional>
@@ -26,7 +26,7 @@
 
 namespace majiq {
 
-SJJunctionsPositions SJJunctionsPositions::FromBam(
+SJJunctionsBins SJJunctionsBins::FromBam(
     const char* infile, ExperimentStrandness exp_strandness, int nthreads) {
   auto contigs = Contigs::create();
   junction_pos_t max_read_length = 0;
@@ -125,7 +125,7 @@ SJJunctionsPositions SJJunctionsPositions::FromBam(
     }
   }
   // finally, create desired result
-  return SJJunctionsPositions{
+  return SJJunctionsBins{
       std::make_shared<SJJunctions>(contigs, std::move(junctions)),
       std::move(reads), std::move(reads_offsets), eff_len};
 }

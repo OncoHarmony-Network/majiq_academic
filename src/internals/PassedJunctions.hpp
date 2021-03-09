@@ -20,7 +20,7 @@
 #include "MajiqTypes.hpp"
 #include "MajiqConstants.hpp"
 #include "GeneJunctions.hpp"
-#include "SJJunctionsPositions.hpp"
+#include "SJBinsReads.hpp"
 #include "Exons.hpp"
 #include "MinExperiments.hpp"
 
@@ -110,7 +110,7 @@ class GroupJunctionsGenerator {
   size_t num_denovo() const noexcept { return denovos_num_passed_.size(); }
   size_t size() const noexcept { return num_annotated() + num_denovo(); }
 
-  void AddExperiment(const SJJunctionsPositions& sjp,
+  void AddExperiment(const SJJunctionsBins& sjp,
       const ExperimentThresholds& thresholds, bool process_denovo);
   /**
    * Update known junctions in place for passing

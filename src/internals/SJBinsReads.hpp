@@ -1,12 +1,12 @@
 /**
- * SJJunctionsPositions.hpp
+ * SJBinsReads.hpp
  *
- * Underlying raw per-position coverage for SJJunctions
+ * Underlying raw per-bin coverage for SJJunctions and SJIntrons
  *
  * Copyright 2020 <University of Pennsylvania>
  */
-#ifndef MAJIQ_SJJUNCTIONSPOSITIONS_HPP
-#define MAJIQ_SJJUNCTIONSPOSITIONS_HPP
+#ifndef MAJIQ_SJBINSREADS_HPP
+#define MAJIQ_SJBINSREADS_HPP
 
 #include <vector>
 #include <memory>
@@ -50,9 +50,9 @@ class SJRegionBinReads {
   const junction_pos_t total_bins_;
 
  public:
-  size_t num_regions() const noexcept { return regions_->size(); }
-  size_t size() const noexcept { return reads_.size(); }
-  junction_pos_t total_bins() const noexcept { return total_bins_; }
+  size_t num_regions() const { return regions_->size(); }
+  size_t size() const { return reads_.size(); }
+  junction_pos_t total_bins() const { return total_bins_; }
   const std::shared_ptr<RegionsT>& regions() const { return regions_; }
   const std::vector<BinReads<CountT>>& reads() { return reads_; }
   const std::vector<size_t>& offsets() { return offsets_; }
@@ -239,13 +239,13 @@ class SJRegionBinReads {
 
 }  // namespace detail
 
-class SJJunctionsPositions
+class SJJunctionsBins
     : public detail::SJRegionBinReads<SJJunctions, junction_ct_t> {
   using BaseT = detail::SJRegionBinReads<SJJunctions, junction_ct_t>;
 
  public:
   junction_pos_t weight(size_t i) const { return total_bins(); }
-  static SJJunctionsPositions FromBam(
+  static SJJunctionsBins FromBam(
       const char* infile, ExperimentStrandness exp_strandness, int nthreads);
 
   JunctionPassedStatus passed(
@@ -266,17 +266,17 @@ class SJJunctionsPositions
     }
   }
 
-  SJJunctionsPositions(
+  SJJunctionsBins(
       const std::shared_ptr<SJJunctions>& junctions,
       std::vector<BinReads<junction_ct_t>>&& reads,
       std::vector<size_t>&& offsets,
       junction_pos_t num_positions)
       : BaseT{junctions, std::move(reads), std::move(offsets), num_positions} {
   }
-  SJJunctionsPositions(const SJJunctionsPositions& x) = default;
-  SJJunctionsPositions(SJJunctionsPositions&& x) = default;
-  SJJunctionsPositions& operator=(const SJJunctionsPositions& x) = delete;
-  SJJunctionsPositions& operator=(SJJunctionsPositions&& x) = delete;
+  SJJunctionsBins(const SJJunctionsBins& x) = default;
+  SJJunctionsBins(SJJunctionsBins&& x) = default;
+  SJJunctionsBins& operator=(const SJJunctionsBins& x) = delete;
+  SJJunctionsBins& operator=(SJJunctionsBins&& x) = delete;
 };
 
 namespace detail {
@@ -361,4 +361,4 @@ class SJIntronsBins
 
 }  // namespace majiq
 
-#endif  // MAJIQ_SJJUNCTIONSPOSITIONS_HPP
+#endif  // MAJIQ_SJBINSREADS_HPP

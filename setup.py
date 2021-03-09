@@ -24,7 +24,7 @@ ext_modules = [
             "src/internals/PassedJunctions.cpp",
             "src/internals/SpliceGraph.cpp",
             "src/internals/SJIntrons.cpp",
-            "src/internals/SJJunctionsPositions.cpp",
+            "src/internals/SJBinsReads.cpp",
             "src/internals/GFF3.cpp",
             "src/internals/TranscriptModels.cpp",
             "src/pySpliceGraph.cpp",

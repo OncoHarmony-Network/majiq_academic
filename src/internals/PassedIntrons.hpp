@@ -14,7 +14,7 @@
 #include <stdexcept>
 
 #include "GeneIntrons.hpp"
-#include "SJJunctionsPositions.hpp"
+#include "SJBinsReads.hpp"
 #include "MinExperiments.hpp"
 #include "ExperimentThresholds.hpp"
 

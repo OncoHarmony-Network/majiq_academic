@@ -18,7 +18,7 @@
 
 #include "GeneIntrons.hpp"
 #include "GeneJunctions.hpp"
-#include "SJJunctionsPositions.hpp"
+#include "SJBinsReads.hpp"
 
 
 namespace majiq {
@@ -73,7 +73,7 @@ class SpliceGraphReads {
         (std::is_same_v<GeneRegionsT, GeneIntrons>
          && std::is_same_v<SJBinsT, SJIntronsBins>)
         || (std::is_same_v<GeneRegionsT, GeneJunctions>
-          && std::is_same_v<SJBinsT, SJJunctionsPositions>),
+          && std::is_same_v<SJBinsT, SJJunctionsBins>),
         "annotate_numreads needs matching gene regions and SJ bins");
     constexpr bool IS_INTRON = std::is_same_v<SJIntronsBins, SJBinsT>;
     using RegionIntervalBeforeT = std::conditional_t<
@@ -174,7 +174,7 @@ class SpliceGraphReads {
       const std::shared_ptr<GeneIntrons>& introns,
       const std::shared_ptr<GeneJunctions>& junctions,
       const SJIntronsBins& sj_introns,
-      const SJJunctionsPositions& sj_junctions) {
+      const SJJunctionsBins& sj_junctions) {
     std::vector<real_t> introns_reads
       = annotate_numreads(*introns, sj_introns);
     std::vector<real_t> junctions_reads

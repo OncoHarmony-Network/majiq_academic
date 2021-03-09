@@ -17,7 +17,7 @@
 #include <vector>
 
 #include "Events.hpp"
-#include "SJJunctionsPositions.hpp"
+#include "SJBinsReads.hpp"
 
 
 namespace majiq {
@@ -133,9 +133,9 @@ class EventsCoverage {
       rng_t& generator, real_t pvalue_threshold,
       std::vector<CoverageSummary>& summaries, CoverageBootstraps& bootstraps) {
     static_assert(
-        std::is_same_v<SJJunctionsPositions, SJBinsT>
+        std::is_same_v<SJJunctionsBins, SJBinsT>
         || std::is_same_v<SJIntronsBins, SJBinsT>,
-        "SJBinsT must be SJJunctionsPositions or SJIntronsBins");
+        "SJBinsT must be SJJunctionsBins or SJIntronsBins");
     constexpr bool IS_INTRON = std::is_same_v<SJIntronsBins, SJBinsT>;
     // get indexes of event connections to iterate over in contig order
     const auto connection_idx_begin = events.connection_idx_begin<IS_INTRON>();
@@ -254,7 +254,7 @@ class EventsCoverage {
  public:
   static EventsCoverage FromSJ(
       const std::shared_ptr<Events>& events,
-      const SJJunctionsPositions& sj_junctions,
+      const SJJunctionsBins& sj_junctions,
       const SJIntronsBins& sj_introns,
       size_t num_bootstraps,
       rng_t& generator,

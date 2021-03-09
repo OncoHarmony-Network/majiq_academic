@@ -73,7 +73,7 @@ void AssignDenovoJunction(const SJJunction& junction, const KnownGene& first,
   return;
 }
 
-void GroupJunctionsGenerator::AddExperiment(const SJJunctionsPositions& sjp,
+void GroupJunctionsGenerator::AddExperiment(const SJJunctionsBins& sjp,
     const ExperimentThresholds& thresholds, bool process_denovo) {
   ++num_experiments_;  // increment number of experiments
   const SJJunctions& sj = *(sjp.regions());

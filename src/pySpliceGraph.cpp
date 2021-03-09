@@ -26,8 +26,8 @@
 #include "internals/SpliceGraph.hpp"
 #include "internals/GFF3.hpp"
 #include "internals/SJJunctions.hpp"
-#include "internals/SJJunctionsPositions.hpp"
 #include "internals/SJIntrons.hpp"
+#include "internals/SJBinsReads.hpp"
 #include "internals/PassedJunctions.hpp"
 #include "internals/PassedIntrons.hpp"
 #include "internals/ExonConnections.hpp"
@@ -59,7 +59,7 @@ using pyGeneIntrons_t = pyClassShared_t<majiq::GeneIntrons>;
 using pyGeneJunctions_t = pyClassShared_t<majiq::GeneJunctions>;
 using pySJIntrons_t = pyClassShared_t<majiq::SJIntrons>;
 using pySJJunctions_t = pyClassShared_t<majiq::SJJunctions>;
-using pySJJunctionsPositions_t = pyClassShared_t<majiq::SJJunctionsPositions>;
+using pySJJunctionsBins_t = pyClassShared_t<majiq::SJJunctionsBins>;
 using pyGroupJunctionsGen_t = pyClassShared_t<majiq::GroupJunctionsGenerator>;
 using pyPassedJunctionsGen_t = pyClassShared_t<majiq::PassedJunctionsGenerator>;
 using pyGroupIntronsGen_t = pyClassShared_t<majiq::GroupIntronsGenerator>;
@@ -621,7 +621,7 @@ void init_PySpliceGraphReads(pySpliceGraphReads_t& pySpliceGraphReads) {
   using majiq::GeneIntrons;
   using majiq::GeneJunctions;
   using majiq::SJIntronsBins;
-  using majiq::SJJunctionsPositions;
+  using majiq::SJJunctionsBins;
   using majiq_pybind::ArrayFromVectorAndOffset;
   pySpliceGraphReads
     .def_property_readonly("_introns",
@@ -725,7 +725,7 @@ void init_PyEventsCoverage(pyEventsCoverage_t& pyEventsCoverage) {
     .def_static("from_sj",
         [](
           const std::shared_ptr<Events>& events,
-          const majiq::SJJunctionsPositions& sj_junctions,
+          const majiq::SJJunctionsBins& sj_junctions,
           const majiq::SJIntronsBins& sj_introns,
           size_t num_bootstraps,
           majiq::real_t pvalue_threshold) {
@@ -1223,13 +1223,13 @@ void init_SJJunctions(pySJJunctions_t& pySJJunctions) {
         },
         "View on junction information as xarray Dataset");
 }
-void init_SJJunctionsPositions(pySJJunctionsPositions_t& pySJJunctionsPositions) {
+void init_SJJunctionsBins(pySJJunctionsBins_t& pySJJunctionsBins) {
   using BinReads = majiq::BinReads<majiq::junction_ct_t>;
-  using majiq::SJJunctionsPositions;
+  using majiq::SJJunctionsBins;
   using majiq_pybind::ArrayFromOffsetsVector;
   using majiq_pybind::ArrayFromVectorAndOffset;
 
-  pySJJunctionsPositions
+  pySJJunctionsBins
     .def(py::init([](
             std::shared_ptr<majiq::SJJunctions> junctions,
             py::array_t<majiq::junction_ct_t> _position_reads,
@@ -1247,15 +1247,15 @@ void init_SJJunctionsPositions(pySJJunctionsPositions_t& pySJJunctionsPositions)
           for (size_t i = 0; i < pr_vec.size(); ++i) {
             pr_vec[i] = BinReads{position(i), position_reads(i)};
           }
-          return majiq::SJJunctionsPositions{
+          return majiq::SJJunctionsBins{
             junctions,
             std::move(pr_vec), std::move(offsets_vec), num_positions};
         }),
-        "Create SJJunctionsPositions for junctions with per-position coverage",
+        "Create SJJunctionsBins for junctions with per-position coverage",
         py::arg("sj_junctions"),
         py::arg("position_reads"), py::arg("position"), py::arg("_offsets"),
         py::arg("num_positions"))
-    .def_static("from_bam", &SJJunctionsPositions::FromBam,
+    .def_static("from_bam", &SJJunctionsBins::FromBam,
         R"pbdoc(
         Load junctions and per-position counts for an aligned BAM file
 
@@ -1290,21 +1290,21 @@ void init_SJJunctionsPositions(pySJJunctionsPositions_t& pySJJunctionsPositions)
         // load information about junctions, then call Python constructor
         auto new_majiq = py::module_::import("new_majiq");
         auto junctions = new_majiq.attr("SJJunctions").attr("from_netcdf")(x);
-        return new_majiq.attr("SJJunctionsPositions")(
+        return new_majiq.attr("SJJunctionsBins")(
             junctions, position_reads, position, offsets, num_positions);
         },
         "Load junctions and per-position counts from netcdf",
         py::arg("netcdf_path"))
-    .def_property_readonly("_junctions", &SJJunctionsPositions::regions,
+    .def_property_readonly("_junctions", &SJJunctionsBins::regions,
         "Underlying junctions")
     .def_property_readonly("num_positions",
-        &SJJunctionsPositions::total_bins,
+        &SJJunctionsBins::total_bins,
         "Number of valid positions possible (function of max read length)")
-    .def("__len__", &SJJunctionsPositions::size,
+    .def("__len__", &SJJunctionsBins::size,
         "Number of junction positions")
     .def_property_readonly("position_reads",
         [](py::object& sj_obj) {
-        SJJunctionsPositions& sj = sj_obj.cast<SJJunctionsPositions&>();
+        SJJunctionsBins& sj = sj_obj.cast<SJJunctionsBins&>();
         const size_t offset = offsetof(BinReads, bin_reads);
         return ArrayFromVectorAndOffset<majiq::junction_ct_t, BinReads>(
             sj.reads(), offset, sj_obj);
@@ -1312,7 +1312,7 @@ void init_SJJunctionsPositions(pySJJunctionsPositions_t& pySJJunctionsPositions)
         "Number of reads for a junction/position")
     .def_property_readonly("position",
         [](py::object& sj_obj) {
-        SJJunctionsPositions& sj = sj_obj.cast<SJJunctionsPositions&>();
+        SJJunctionsBins& sj = sj_obj.cast<SJJunctionsBins&>();
         const size_t offset = offsetof(BinReads, bin_idx);
         return ArrayFromVectorAndOffset<majiq::junction_pos_t, BinReads>(
             sj.reads(), offset, sj_obj);
@@ -1320,20 +1320,20 @@ void init_SJJunctionsPositions(pySJJunctionsPositions_t& pySJJunctionsPositions)
         "Position index for junction/position")
     .def_property_readonly("_offsets",
         [](py::object& sj_obj) {
-        SJJunctionsPositions& sj = sj_obj.cast<SJJunctionsPositions&>();
+        SJJunctionsBins& sj = sj_obj.cast<SJJunctionsBins&>();
         return ArrayFromVectorAndOffset<size_t, size_t>(
             sj.offsets(), 0, sj_obj);
         },
         "Raw offsets for jpidx_start and jpidx_end")
     .def_property_readonly("jpidx_start",
         [](py::object& sj_obj) {
-        SJJunctionsPositions& sj = sj_obj.cast<SJJunctionsPositions&>();
+        SJJunctionsBins& sj = sj_obj.cast<SJJunctionsBins&>();
         return ArrayFromOffsetsVector<size_t>(sj.offsets(), true, sj_obj);
         },
         "First index into junctions/positions for each junction")
     .def_property_readonly("jpidx_end",
         [](py::object& sj_obj) {
-        SJJunctionsPositions& sj = sj_obj.cast<SJJunctionsPositions&>();
+        SJJunctionsBins& sj = sj_obj.cast<SJJunctionsBins&>();
         return ArrayFromOffsetsVector<size_t>(sj.offsets(), false, sj_obj);
         },
         "One after last index into junctions/positions for each junction")
@@ -1357,7 +1357,7 @@ void init_SJJunctionsPositions(pySJJunctionsPositions_t& pySJJunctionsPositions)
         },
         "View on junction information as xarray Dataset")
     .def("numstacks",
-        [](const SJJunctionsPositions& self,
+        [](const SJJunctionsBins& self,
           py::array_t<size_t> jidx, py::array_t<majiq::real_t> pvalue) {
         auto f = [&self](size_t i, majiq::real_t p) {
           return self.numstacks(i, p); };
@@ -1799,7 +1799,7 @@ void init_SpliceGraphAll(py::module_& m) {
   using majiq::GeneJunctions;
   using majiq::SpliceGraph;
   using majiq::SJJunctions;
-  using majiq::SJJunctionsPositions;
+  using majiq::SJJunctionsBins;
   using majiq::ExperimentStrandness;
   using majiq::GeneStrandness;
   using majiq::SJIntrons;
@@ -1825,8 +1825,8 @@ void init_SpliceGraphAll(py::module_& m) {
       m, "SpliceGraphReads", "Raw readrates for each intron and junction");
   auto pySJJunctions = pySJJunctions_t(
       m, "SJJunctions", "Summarized junction counts for an experiment");
-  auto pySJJunctionsPositions = pySJJunctionsPositions_t(
-      m, "SJJunctionsPositions",
+  auto pySJJunctionsBins = pySJJunctionsBins_t(
+      m, "SJJunctionsBins",
       "Summarized and per-position counts for an experiment");
   auto pyGroupJunctionsGen = pyGroupJunctionsGen_t(
       m, "GroupJunctionsGenerator",
@@ -1918,7 +1918,7 @@ void init_SpliceGraphAll(py::module_& m) {
   init_GeneJunctions(pyGeneJunctions);
   init_GeneIntrons(pyGeneIntrons);
   init_SJJunctions(pySJJunctions);
-  init_SJJunctionsPositions(pySJJunctionsPositions);
+  init_SJJunctionsBins(pySJJunctionsBins);
   init_SJIntrons(pySJIntrons);
   init_SJIntronsBins(pySJIntronsBins);
   init_pyGroupJunctionsGen(pyGroupJunctionsGen);
