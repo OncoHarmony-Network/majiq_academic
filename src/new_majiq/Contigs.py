@@ -23,16 +23,14 @@ from pathlib import Path
 
 
 class Contigs(object):
-    """ Contigs/chromosomes used by a splicegraph
-    """
+    """Contigs/chromosomes used by a splicegraph"""
 
     def __init__(self, contigs: _Contigs):
         self._contigs: Final[_Contigs] = contigs
         return
 
     def __len__(self) -> int:
-        """ Number of contigs
-        """
+        """Number of contigs"""
         return len(self._contigs)
 
     @property
@@ -44,8 +42,7 @@ class Contigs(object):
         return self._contigs.seqid
 
     def annotate_contig_idx(self, df: xr.Dataset) -> xr.Dataset:
-        """ For now, just add seqid to df using df.contig_idx
-        """
+        """For now, just add seqid to df using df.contig_idx"""
         return df.assign_coords(
             seqid=(df.contig_idx.dims, np.array(self.seqid)[df.contig_idx]),
         )
@@ -57,12 +54,11 @@ class Contigs(object):
             {
                 "contig_idx": self.contig_idx,
                 "seqid": ("contig_idx", self.seqid),
-            }
+            },
         )
 
     def __getitem__(self, seqid: str) -> Optional[int]:
-        """ Get contig_idx for a given seqid. None if no such seqid.
-        """
+        """Get contig_idx for a given seqid. None if no such seqid."""
         raise NotImplementedError("Need to expose safe_idx in internals")
 
     def to_netcdf(self, path: Union[str, Path], mode: str) -> None:

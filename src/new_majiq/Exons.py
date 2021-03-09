@@ -22,15 +22,13 @@ from pathlib import Path
 
 
 class Exons(GeneRegions):
-
     def __init__(self, exons: _Exons):
         super().__init__(exons)
         return
 
     @property
     def _exons(self) -> _Exons:
-        """ expose underlying internals representation of Exons
-        """
+        """expose underlying internals representation of Exons"""
         return self._gene_regions
 
     @property
@@ -39,7 +37,7 @@ class Exons(GeneRegions):
 
     @property
     def annotated_start(self) -> np.ndarray:
-        """ Annotated coordinates start. If denovo, -1
+        """Annotated coordinates start. If denovo, -1
 
         Note that denovo behavior is different than previous versions of MAJIQ
         """
@@ -47,15 +45,14 @@ class Exons(GeneRegions):
 
     @property
     def annotated_end(self) -> np.ndarray:
-        """ Annotated coordinates end. If denovo, -1
+        """Annotated coordinates end. If denovo, -1
 
         Note that denovo behavior is different than previous versions of MAJIQ
         """
         return self._exons.annotated_end
 
     def is_annotated(self, exon_idx: Optional[np.ndarray] = None) -> np.ndarray:
-        """ Return denovo status of exon
-        """
+        """Return denovo status of exon"""
         if exon_idx is None:
             exon_idx = self.exon_idx
         raise NotImplementedError(
@@ -65,8 +62,7 @@ class Exons(GeneRegions):
 
     @property
     def df(self) -> xr.Dataset:
-        """ view on underlying exons as xarray Dataset
-        """
+        """view on underlying exons as xarray Dataset"""
         return xr.Dataset(
             {},
             {
@@ -80,8 +76,7 @@ class Exons(GeneRegions):
         )
 
     def to_netcdf(self, path: Union[str, Path], mode: str) -> None:
-        """ Serialize to netcdf format. Note genes need to be saved separately
-        """
+        """Serialize to netcdf format. Note genes need to be saved separately"""
         self.df.to_netcdf(path, mode, constants.NC_EXONS)
         return
 
@@ -91,7 +86,7 @@ class Exons(GeneRegions):
         path: Union[str, Path],
         genes: Optional[Genes] = None,
     ) -> "Exons":
-        """ Read exons from netcdf file
+        """Read exons from netcdf file
 
         Parameters
         ----------
@@ -106,11 +101,13 @@ class Exons(GeneRegions):
         df = xr.open_dataset(path, group=constants.NC_EXONS)
         if genes is None:
             genes = Genes.from_netcdf(path)
-        return Exons(_Exons(
-            genes._genes,
-            df.gene_idx,
-            df.start,
-            df.end,
-            df.annotated_start,
-            df.annotated_end,
-        ))
+        return Exons(
+            _Exons(
+                genes._genes,
+                df.gene_idx,
+                df.start,
+                df.end,
+                df.annotated_start,
+                df.annotated_end,
+            )
+        )

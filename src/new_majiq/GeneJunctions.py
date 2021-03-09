@@ -22,15 +22,13 @@ from pathlib import Path
 
 
 class GeneJunctions(GeneConnections):
-
     def __init__(self, gene_junctions: _GeneJunctions):
         super().__init__(gene_junctions)
         return
 
     @property
     def _gene_junctions(self) -> _GeneJunctions:
-        """ Underlying internals representation
-        """
+        """Underlying internals representation"""
         return self._gene_connections
 
     @property
@@ -39,8 +37,7 @@ class GeneJunctions(GeneConnections):
 
     @property
     def df(self) -> xr.Dataset:
-        """ xr.Dataset view of gene junctions data
-        """
+        """xr.Dataset view of gene junctions data"""
         return xr.Dataset(
             {},
             {
@@ -57,8 +54,7 @@ class GeneJunctions(GeneConnections):
         )
 
     def to_netcdf(self, path: Union[str, Path], mode: str) -> None:
-        """ Serialize to netcdf format. Note genes need to be saved separately
-        """
+        """Serialize to netcdf format. Note genes need to be saved separately"""
         self.df.to_netcdf(path, mode, constants.NC_GENEJUNCTIONS)
         return
 
@@ -68,7 +64,7 @@ class GeneJunctions(GeneConnections):
         path: Union[str, Path],
         genes: Optional[Genes] = None,
     ) -> "GeneJunctions":
-        """ Read exons from netcdf file
+        """Read exons from netcdf file
 
         Parameters
         ----------
@@ -83,12 +79,14 @@ class GeneJunctions(GeneConnections):
         df = xr.open_dataset(path, group=constants.NC_GENEJUNCTIONS)
         if genes is None:
             genes = Genes.from_netcdf(path)
-        return GeneJunctions(_GeneJunctions(
-            genes._genes,
-            df.gene_idx,
-            df.start,
-            df.end,
-            df.denovo,
-            df.passed_build,
-            df.simplified,
-        ))
+        return GeneJunctions(
+            _GeneJunctions(
+                genes._genes,
+                df.gene_idx,
+                df.start,
+                df.end,
+                df.denovo,
+                df.passed_build,
+                df.simplified,
+            )
+        )

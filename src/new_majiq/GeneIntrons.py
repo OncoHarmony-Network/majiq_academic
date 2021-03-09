@@ -22,15 +22,13 @@ from pathlib import Path
 
 
 class GeneIntrons(GeneConnections):
-
     def __init__(self, gene_introns: _GeneIntrons):
         super().__init__(gene_introns)
         return
 
     @property
     def _gene_introns(self) -> _GeneIntrons:
-        """ Underlying internals representation
-        """
+        """Underlying internals representation"""
         return self._gene_connections
 
     @property
@@ -39,8 +37,7 @@ class GeneIntrons(GeneConnections):
 
     @property
     def df(self) -> xr.Dataset:
-        """ xr.Dataset view of gene introns data
-        """
+        """xr.Dataset view of gene introns data"""
         return xr.Dataset(
             {},
             {
@@ -57,8 +54,7 @@ class GeneIntrons(GeneConnections):
         )
 
     def to_netcdf(self, path: Union[str, Path], mode: str) -> None:
-        """ Serialize to netcdf format. Note genes need to be saved separately
-        """
+        """Serialize to netcdf format. Note genes need to be saved separately"""
         self.df.to_netcdf(path, mode, constants.NC_GENEINTRONS)
         return
 
@@ -68,7 +64,7 @@ class GeneIntrons(GeneConnections):
         path: Union[str, Path],
         genes: Optional[Genes] = None,
     ) -> "GeneIntrons":
-        """ Read exons from netcdf file
+        """Read exons from netcdf file
 
         Parameters
         ----------
@@ -83,12 +79,14 @@ class GeneIntrons(GeneConnections):
         df = xr.open_dataset(path, group=constants.NC_GENEINTRONS)
         if genes is None:
             genes = Genes.from_netcdf(path)
-        return GeneIntrons(_GeneIntrons(
-            genes._genes,
-            df.gene_idx,
-            df.start,
-            df.end,
-            df.denovo,
-            df.passed_build,
-            df.simplified,
-        ))
+        return GeneIntrons(
+            _GeneIntrons(
+                genes._genes,
+                df.gene_idx,
+                df.start,
+                df.end,
+                df.denovo,
+                df.passed_build,
+                df.simplified,
+            )
+        )

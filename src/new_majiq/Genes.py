@@ -23,8 +23,7 @@ from pathlib import Path
 
 
 class Genes(ContigRegions):
-    """ Genes defined on contigs used by a splicegraph
-    """
+    """Genes defined on contigs used by a splicegraph"""
 
     def __init__(self, genes: _Genes):
         super().__init__(genes)
@@ -32,8 +31,7 @@ class Genes(ContigRegions):
 
     @property
     def _genes(self) -> _Genes:
-        """ expose underlying internals representation of Genes
-        """
+        """expose underlying internals representation of Genes"""
         return self._contig_regions
 
     @property
@@ -41,8 +39,7 @@ class Genes(ContigRegions):
         return self._region_idx
 
     def __getitem__(self, gene_id: str) -> Optional[int]:
-        """ Get gene_idx for specified gene_id
-        """
+        """Get gene_idx for specified gene_id"""
         raise NotImplementedError("Need to expose safe_idx")
 
     @property
@@ -54,16 +51,14 @@ class Genes(ContigRegions):
         return self._genes.gene_name
 
     def annotate_gene_idx(self, df: xr.Dataset) -> xr.Dataset:
-        """ For now, just add gene_id to df using df.gene_idx
-        """
+        """For now, just add gene_id to df using df.gene_idx"""
         return df.assign_coords(
             gene_id=(df.gene_idx.dims, np.array(self.gene_id)[df.gene_idx]),
         )
 
     @property
     def df(self) -> xr.Dataset:
-        """ view of underlying genes object as xarray Dataset
-        """
+        """view of underlying genes object as xarray Dataset"""
         return xr.Dataset(
             {},
             {
@@ -78,8 +73,7 @@ class Genes(ContigRegions):
         )
 
     def to_netcdf(self, path: Union[str, Path], mode: str) -> None:
-        """ Serialize to netcdf format. Note contigs need to be saved separately
-        """
+        """Serialize to netcdf format. Note contigs need to be saved separately"""
         self.df.to_netcdf(path, mode, constants.NC_GENES)
         return
 
@@ -89,7 +83,7 @@ class Genes(ContigRegions):
         path: Union[str, Path],
         contigs: Optional[Contigs] = None,
     ) -> "Genes":
-        """ Read genes from netcdf file.
+        """Read genes from netcdf file.
 
         Parameters
         ----------
@@ -104,12 +98,14 @@ class Genes(ContigRegions):
         df = xr.open_dataset(path, group=constants.NC_GENES)
         if contigs is None:
             contigs = Contigs.from_netcdf(path)
-        return Genes(_Genes(
-            contigs._contigs,
-            df.contig_idx,
-            df.start,
-            df.end,
-            df.strand,
-            df.gene_id.values.tolist(),
-            df.gene_name.values.tolist(),
-        ))
+        return Genes(
+            _Genes(
+                contigs._contigs,
+                df.contig_idx,
+                df.start,
+                df.end,
+                df.strand,
+                df.gene_id.values.tolist(),
+                df.gene_name.values.tolist(),
+            )
+        )

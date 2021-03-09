@@ -28,7 +28,6 @@ from pathlib import Path
 
 
 class SpliceGraph(object):
-
     def __init__(self, sg: _SpliceGraph):
         self._sg: Final[_SpliceGraph] = sg
         return
@@ -38,11 +37,9 @@ class SpliceGraph(object):
         cls,
         path: Union[str, Path],
         process_ir: bool = constants.DEFAULT_BUILD_PROCESS_IR,
-        gff3_types: GFF3Types = constants.DEFAULT_BUILD_GFF3TYPES
+        gff3_types: GFF3Types = constants.DEFAULT_BUILD_GFF3TYPES,
     ) -> "SpliceGraph":
-        return SpliceGraph(_SpliceGraph.from_gff3(
-            str(path), process_ir, gff3_types
-        ))
+        return SpliceGraph(_SpliceGraph.from_gff3(str(path), process_ir, gff3_types))
 
     @property
     def _contigs(self) -> Contigs:
@@ -65,8 +62,7 @@ class SpliceGraph(object):
         return GeneJunctions(self._sg._junctions)
 
     def to_netcdf(self, path: Union[str, Path]) -> None:
-        """ Serialize splicegraph to netcdf format
-        """
+        """Serialize splicegraph to netcdf format"""
         if Path(path).exists():
             raise ValueError(
                 f"Will not save splicegraph to already existing file {path}."
@@ -82,17 +78,18 @@ class SpliceGraph(object):
 
     @classmethod
     def from_netcdf(cls, path: Union[str, Path]) -> "SpliceGraph":
-        """ Load SpliceGraph from specified path
-        """
+        """Load SpliceGraph from specified path"""
         contigs = Contigs.from_netcdf(path)
         genes = Genes.from_netcdf(path, contigs)
         exons = Exons.from_netcdf(path, genes)
         introns = GeneIntrons.from_netcdf(path, genes)
         junctions = GeneJunctions.from_netcdf(path, genes)
-        return SpliceGraph(_SpliceGraph(
-            contigs._contigs,
-            genes._genes,
-            exons._exons,
-            junctions._gene_junctions,
-            introns._gene_introns,
-        ))
+        return SpliceGraph(
+            _SpliceGraph(
+                contigs._contigs,
+                genes._genes,
+                exons._exons,
+                junctions._gene_junctions,
+                introns._gene_introns,
+            )
+        )

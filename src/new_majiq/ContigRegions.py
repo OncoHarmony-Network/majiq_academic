@@ -13,33 +13,28 @@ from new_majiq.Contigs import Contigs
 
 
 class ContigRegions(Regions):
-
     def __init__(self, contig_regions):
         super().__init__(contig_regions)
         return
 
     @property
     def _contig_regions(self):
-        """ Underlying internals class for contig regions
-        """
+        """Underlying internals class for contig regions"""
         return self._regions
 
     @property
     def contigs(self) -> Contigs:
-        """ Contigs for which these regions are defined
-        """
+        """Contigs for which these regions are defined"""
         return Contigs(self._parents)
 
     @property
     def contig_idx(self) -> np.ndarray:
-        """ Index of contig on which each region is defined
-        """
+        """Index of contig on which each region is defined"""
         return self._contig_regions.contig_idx
 
     @property
     def strand(self) -> np.ndarray:
-        """ Strand direction for each region
-        """
+        """Strand direction for each region"""
         return self._contig_regions.strand
 
     def slice_for_contig(self, contig_idx: int) -> slice:
