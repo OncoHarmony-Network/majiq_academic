@@ -1,1 +1,1 @@
-import new_majiq.internals as internals
+from .Contigs import Contigs
