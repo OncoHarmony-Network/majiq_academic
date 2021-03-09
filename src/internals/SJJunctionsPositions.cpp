@@ -116,16 +116,8 @@ SJJunctionsPositions SJJunctionsPositions::FromBam(
           return BinReads<junction_ct_t>{x.first, x.second};
           });
       std::sort(reads.begin() + jpidx, reads.begin() + jpidx + num_positions);
-      // summarize total reads
-      const junction_ct_t num_reads = std::accumulate(
-          reads.begin() + jpidx, reads.begin() + jpidx + num_positions,
-          junction_ct_t{},
-          [](junction_ct_t acc, const BinReads<junction_ct_t>& x) {
-          return acc + x.bin_reads;
-          });
       // update junctions, offsets
-      junctions[jidx] = SJJunction{contig, pos_strand.first, pos_strand.second,
-                                   ExperimentCounts{num_reads, num_positions}};
+      junctions[jidx] = SJJunction{contig, pos_strand.first, pos_strand.second};
       reads_offsets[jidx + 1] = reads_offsets[jidx] + num_positions;
       // increment jidx, jpidx
       ++jidx;

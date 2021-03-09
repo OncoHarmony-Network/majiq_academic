@@ -1135,24 +1135,18 @@ void init_SJJunctions(pySJJunctions_t& pySJJunctions) {
             py::array_t<size_t> _contig_idx,
             py::array_t<position_t> _start,
             py::array_t<position_t> _end,
-            py::array_t<std::array<char, 1>> _strand,
-            py::array_t<majiq::junction_pos_t> _numpos,
-            py::array_t<majiq::junction_ct_t> _numreads) {
+            py::array_t<std::array<char, 1>> _strand) {
           auto contig_idx = _contig_idx.unchecked<1>();
           auto start = _start.unchecked<1>();
           auto end = _end.unchecked<1>();
           auto strand = _strand.unchecked<1>();
-          auto numpos = _numpos.unchecked<1>();
-          auto numreads = _numreads.unchecked<1>();
           // fill in junctions
-          std::vector<majiq::SJJunction> sj_vec(numpos.shape(0));
+          std::vector<majiq::SJJunction> sj_vec(start.shape(0));
           for (size_t i = 0; i < sj_vec.size(); ++i) {
             sj_vec[i] = majiq::SJJunction{
               majiq::KnownContig{contig_idx(i), contigs},
               majiq::OpenInterval{start(i), end(i)},
-              static_cast<majiq::GeneStrandness>(strand(i)[0]),
-              majiq::ExperimentCounts{numreads(i), numpos(i)}
-            };
+              static_cast<majiq::GeneStrandness>(strand(i)[0])};
           }
           return std::make_shared<majiq::SJJunctions>(
               contigs, std::move(sj_vec));
@@ -1160,7 +1154,7 @@ void init_SJJunctions(pySJJunctions_t& pySJJunctions) {
         "Create SJJunctions object from contigs and arrays",
         py::arg("contigs"),
         py::arg("contig_idx"), py::arg("start"), py::arg("end"),
-        py::arg("strand"), py::arg("numpos"), py::arg("numreads"))
+        py::arg("strand"))
     .def_static("from_netcdf",
         [](py::str x) {
         // load contigs
@@ -1177,11 +1171,9 @@ void init_SJJunctions(pySJJunctions_t& pySJJunctions) {
         py::array_t<position_t> start = get_array("start");
         py::array_t<position_t> end = get_array("end");
         py::array_t<std::array<char, 1>> strand = get_array("strand");
-        py::array_t<majiq::junction_pos_t> numpos = get_array("numpos");
-        py::array_t<majiq::junction_ct_t> numreads = get_array("numreads");
         // use Python constructor
         return new_majiq.attr("SJJunctions")(
-            contigs, contig_idx, start, end, strand, numpos, numreads);
+            contigs, contig_idx, start, end, strand);
         },
         "Load junctions from netcdf",
         py::arg("netcdf_path"))
@@ -1190,28 +1182,11 @@ void init_SJJunctions(pySJJunctions_t& pySJJunctions) {
     .def_property_readonly("contigs",
         [](py::object& self) { return self.attr("_contigs").attr("df")(); },
         "View underlying contigs as xarray Dataset")
-    .def_property_readonly("numreads",
-        [](py::object& sj_obj) -> py::array_t<majiq::junction_ct_t> {
-        SJJunctions& sj = sj_obj.cast<SJJunctions&>();
-        const size_t offset = offsetof(majiq::SJJunction, data.numreads);
-        return ArrayFromVectorAndOffset<majiq::junction_ct_t, majiq::SJJunction>(
-            sj.data(), offset, sj_obj);
-        },
-        "array[int] for total number of reads")
-    .def_property_readonly("numpos",
-        [](py::object& sj_obj) -> py::array_t<majiq::junction_pos_t> {
-        SJJunctions& sj = sj_obj.cast<SJJunctions&>();
-        const size_t offset = offsetof(majiq::SJJunction, data.numpos);
-        return ArrayFromVectorAndOffset<majiq::junction_pos_t, majiq::SJJunction>(
-            sj.data(), offset, sj_obj);
-        },
-        "array[int] for total number of nonzero positions")
     .def("df",
         [](py::object& sj) -> py::object {
         using majiq_pybind::XarrayDatasetFromObject;
         return XarrayDatasetFromObject(sj, "jidx",
-            {"contig_idx", "start", "end", "strand"},
-            {"numreads", "numpos"});
+            {"contig_idx", "start", "end", "strand"});
         },
         "View on junction information as xarray Dataset");
 }
@@ -1288,7 +1263,7 @@ void init_SJJunctionsPositions(pySJJunctionsPositions_t& pySJJunctionsPositions)
         "Load junctions and per-position counts from netcdf",
         py::arg("netcdf_path"))
     .def_property_readonly("_junctions", &SJJunctionsPositions::regions,
-        "Underlying junctions and summarized counts")
+        "Underlying junctions")
     .def_property_readonly("num_positions",
         &SJJunctionsPositions::total_bins,
         "Number of valid positions possible (function of max read length)")
@@ -1403,7 +1378,7 @@ void init_pyGroupJunctionsGen(pyGroupJunctionsGen_t& pyGroupJunctionsGen) {
       py::arg("exons"))
     .def("add_experiment", &majiq::GroupJunctionsGenerator::AddExperiment,
         "Increment count of passed junctions from input experiment",
-        py::arg("sj"),
+        py::arg("sjp"),
         py::arg("thresholds") = DEFAULT_THRESHOLDS,
         py::arg("add_denovo") = DEFAULT_BUILD_DENOVO_JUNCTIONS)
     .def("pass_known_inplace",
