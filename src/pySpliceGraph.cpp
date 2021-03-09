@@ -557,10 +557,43 @@ void init_GeneJunctions(pyGeneJunctions_t& pyGeneJunctions) {
 void init_SJIntrons(pySJIntrons_t& pySJIntrons) {
   using majiq::position_t;
   using majiq::Contigs;
+  using majiq::SJIntron;
   using majiq::SJIntrons;
   using majiq_pybind::ArrayFromVectorAndOffset;
   define_coordinates_properties<SJ_INTRONS_NC_GROUP>(pySJIntrons);
   pySJIntrons
+    .def(py::init([](
+            std::shared_ptr<Contigs> contigs,
+            py::array_t<size_t> _contig_idx,
+            py::array_t<position_t> _start,
+            py::array_t<position_t> _end,
+            py::array_t<std::array<char, 1>> _strand,
+            py::array_t<bool> _annotated) {
+          auto contig_idx = _contig_idx.unchecked<1>();
+          auto start = _start.unchecked<1>();
+          auto end = _end.unchecked<1>();
+          auto strand = _strand.unchecked<1>();
+          auto annotated = _annotated.unchecked<1>();
+          std::vector<SJIntron> result(start.shape(0));
+          for (size_t i = 0; i < result.size(); ++i) {
+            result[i] = SJIntron{
+              majiq::KnownContig{contig_idx(i), contigs},
+              majiq::ClosedInterval{start(i), end(i)},
+              static_cast<majiq::GeneStrandness>(strand(i)[0]),
+              annotated(i)};
+          }
+          return std::make_shared<SJIntrons>(contigs, std::move(result));
+          }),
+        "Initialize SJIntrons from contigs and numpy arrays",
+        py::arg("contigs"),
+        py::arg("contig_idx"),
+        py::arg("start"),
+        py::arg("end"),
+        py::arg("strand"),
+        py::arg("annotated"))
+    .def_static("from_exons_and_introns", &SJIntrons::FromGeneExonsAndIntrons,
+        "Construct sj introns for input exons/introns",
+        py::arg("exons"), py::arg("introns"), py::arg("stranded"))
     .def_property_readonly("annotated",
         [](py::object& introns_obj) -> py::array_t<bool> {
         SJIntrons& introns = introns_obj.cast<SJIntrons&>();
