@@ -1,2 +1,3 @@
 /build/
 *.egg-info
+/src/new_majiq.cpython*.so
