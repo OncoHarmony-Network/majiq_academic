@@ -27,7 +27,7 @@
 #include "internals/GFF3.hpp"
 #include "internals/SJJunctions.hpp"
 #include "internals/SJJunctionsPositions.hpp"
-#include "internals/ContigIntrons.hpp"
+#include "internals/SJIntrons.hpp"
 #include "internals/PassedJunctions.hpp"
 #include "internals/PassedIntrons.hpp"
 #include "internals/ExonConnections.hpp"
@@ -57,7 +57,7 @@ using pyGenes_t = pyClassShared_t<majiq::Genes>;
 using pyExons_t = pyClassShared_t<majiq::Exons>;
 using pyGeneIntrons_t = pyClassShared_t<majiq::GeneIntrons>;
 using pyGeneJunctions_t = pyClassShared_t<majiq::GeneJunctions>;
-using pyContigIntrons_t = pyClassShared_t<majiq::ContigIntrons>;
+using pySJIntrons_t = pyClassShared_t<majiq::SJIntrons>;
 using pySJJunctions_t = pyClassShared_t<majiq::SJJunctions>;
 using pySJJunctionsPositions_t = pyClassShared_t<majiq::SJJunctionsPositions>;
 using pyGroupJunctionsGen_t = pyClassShared_t<majiq::GroupJunctionsGenerator>;
@@ -554,18 +554,18 @@ void init_GeneJunctions(pyGeneJunctions_t& pyGeneJunctions) {
         });
 }
 
-void init_ContigIntrons(pyContigIntrons_t& pyContigIntrons) {
+void init_SJIntrons(pySJIntrons_t& pySJIntrons) {
   using majiq::position_t;
   using majiq::Contigs;
-  using majiq::ContigIntrons;
+  using majiq::SJIntrons;
   using majiq_pybind::ArrayFromVectorAndOffset;
-  define_coordinates_properties<CONTIG_INTRONS_NC_GROUP>(pyContigIntrons);
-  pyContigIntrons
+  define_coordinates_properties<SJ_INTRONS_NC_GROUP>(pySJIntrons);
+  pySJIntrons
     .def_property_readonly("annotated",
         [](py::object& introns_obj) -> py::array_t<bool> {
-        ContigIntrons& introns = introns_obj.cast<ContigIntrons&>();
-        const size_t offset = offsetof(majiq::ContigIntron, data.annotated_);
-        return ArrayFromVectorAndOffset<bool, majiq::ContigIntron>(
+        SJIntrons& introns = introns_obj.cast<SJIntrons&>();
+        const size_t offset = offsetof(majiq::SJIntron, data.annotated_);
+        return ArrayFromVectorAndOffset<bool, majiq::SJIntron>(
             introns.data(), offset, introns_obj);
         },
         "array[bool] indicating if intron is annotated (exon in annotation)")
@@ -576,9 +576,9 @@ void init_ContigIntrons(pyContigIntrons_t& pyContigIntrons) {
             {"contig_idx", "start", "end", "strand", "annotated"});
         },
         "View on intron information as xarray Dataset")
-    .def("__repr__", [](const majiq::ContigIntrons& self) -> std::string {
+    .def("__repr__", [](const majiq::SJIntrons& self) -> std::string {
         std::ostringstream oss;
-        oss << "ContigIntrons<" << self.size() << " total>";
+        oss << "SJIntrons<" << self.size() << " total>";
         return oss.str();
         });
 }
@@ -984,7 +984,7 @@ void init_SJIntronsBins(pySJIntronsBins_t& pySJIntronsBins) {
         py::arg("nthreads") = DEFAULT_BAM_NTHREADS)
     .def_property_readonly("_introns",
         [](SJIntronsBins& self) { return self.regions(); },
-        "Underlying ContigIntrons for which coverage was quantified")
+        "Underlying SJIntrons for which coverage was quantified")
     .def_property_readonly("position_reads",
         [](py::object& sj_obj) {
         SJIntronsBins& sj = sj_obj.cast<SJIntronsBins&>();
@@ -1627,9 +1627,9 @@ void init_SpliceGraph(py::class_<majiq::SpliceGraph>& pySpliceGraph) {
     .def_property_readonly("contigs",
         [](py::object& sg) { return sg.attr("_contigs").attr("df")(); },
         "xr.Dataset view of splicegraph's contigs")
-    // get contig introns
-    .def("contig_introns", [](SpliceGraph& sg, bool stranded) {
-        return majiq::ContigIntrons::FromGeneExonsAndIntrons(
+    // get sj introns on which coverage may be read
+    .def("sj_introns", [](SpliceGraph& sg, bool stranded) {
+        return majiq::SJIntrons::FromGeneExonsAndIntrons(
             *sg.exons(), *sg.introns(), stranded);
         },
         "Get contig introns (by strand or not) for splicegraph",
@@ -1769,7 +1769,7 @@ void init_SpliceGraphAll(py::module_& m) {
   using majiq::SJJunctionsPositions;
   using majiq::ExperimentStrandness;
   using majiq::GeneStrandness;
-  using majiq::ContigIntrons;
+  using majiq::SJIntrons;
   auto pyContigs = pyContigs_t(m, "Contigs", "Splicegraph contigs");
   auto pyGenes = pyGenes_t(m, "Genes",
       "Splicegraph genes");
@@ -1785,7 +1785,7 @@ void init_SpliceGraphAll(py::module_& m) {
       m, "EventsCoverage", "Coverage over events for a single experiment");
   auto pyExonConnections = pyExonConnections_t(
       m, "ExonConnections", "Connections from exons to junctions, introns");
-  auto pyContigIntrons = pyContigIntrons_t(m, "ContigIntrons");
+  auto pySJIntrons = pySJIntrons_t(m, "SJIntrons");
   auto pySJIntronsBins = pySJIntronsBins_t(m, "SJIntronsBins",
       "Summarized and per-bin counts for introns from an experiment");
   auto pySpliceGraphReads = pySpliceGraphReads_t(
@@ -1886,7 +1886,7 @@ void init_SpliceGraphAll(py::module_& m) {
   init_GeneIntrons(pyGeneIntrons);
   init_SJJunctions(pySJJunctions);
   init_SJJunctionsPositions(pySJJunctionsPositions);
-  init_ContigIntrons(pyContigIntrons);
+  init_SJIntrons(pySJIntrons);
   init_SJIntronsBins(pySJIntronsBins);
   init_pyGroupJunctionsGen(pyGroupJunctionsGen);
   init_pyPassedJunctionsGen(pyPassedJunctionsGen);

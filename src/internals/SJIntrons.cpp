@@ -1,12 +1,12 @@
 /**
- * ContigIntrons.cpp
+ * SJIntrons.cpp
  *
- * Implementation of ContigIntrons
+ * Implementation of SJIntrons
  *
  * Copyright 2020 <University of Pennsylvania>
  */
 
-#include "ContigIntrons.hpp"
+#include "SJIntrons.hpp"
 
 #include <vector>
 #include <map>
@@ -22,7 +22,7 @@
 namespace majiq {
 
 // types over gene intron/exon coordinates for desired ordering
-enum class ContigIntronEvidenceType : unsigned char {
+enum class SJIntronEvidenceType : unsigned char {
   FIRST_EXON_START,
   EXON_START,
   ANNOTATED_INTRON_END,
@@ -31,7 +31,7 @@ enum class ContigIntronEvidenceType : unsigned char {
   LAST_EXON_END
 };
 
-using evidence_t = std::pair<position_t, ContigIntronEvidenceType>;
+using evidence_t = std::pair<position_t, SJIntronEvidenceType>;
 
 std::map<GeneStrandness, std::vector<evidence_t>> OverGeneEvidence(
     const Exons& exons, const GeneIntrons& gene_introns,
@@ -46,12 +46,12 @@ std::map<GeneStrandness, std::vector<evidence_t>> OverGeneEvidence(
           = stranded ? it->gene.strand() : GeneStrandness::AMBIGUOUS;
         result[strand].emplace_back(it->coordinates.start,
             it == exons.begin_parent(gene)
-            ? ContigIntronEvidenceType::FIRST_EXON_START
-            : ContigIntronEvidenceType::EXON_START);
+            ? SJIntronEvidenceType::FIRST_EXON_START
+            : SJIntronEvidenceType::EXON_START);
         result[strand].emplace_back(it->coordinates.end,
             it == std::prev(exons.end_parent(gene))
-            ? ContigIntronEvidenceType::LAST_EXON_END
-            : ContigIntronEvidenceType::EXON_END);
+            ? SJIntronEvidenceType::LAST_EXON_END
+            : SJIntronEvidenceType::EXON_END);
       }
     }
     // evidence from gene's introns
@@ -62,9 +62,9 @@ std::map<GeneStrandness, std::vector<evidence_t>> OverGeneEvidence(
           = stranded ? it->gene.strand() : GeneStrandness::AMBIGUOUS;
         // NOTE: we adjust intron coordinates +/- 1 back to exon boundaries
         result[strand].emplace_back(it->coordinates.start - 1,
-            ContigIntronEvidenceType::ANNOTATED_INTRON_START);
+            SJIntronEvidenceType::ANNOTATED_INTRON_START);
         result[strand].emplace_back(it->coordinates.end + 1,
-            ContigIntronEvidenceType::ANNOTATED_INTRON_END);
+            SJIntronEvidenceType::ANNOTATED_INTRON_END);
       }
     }
   }
@@ -78,7 +78,7 @@ std::map<GeneStrandness, std::vector<evidence_t>> OverGeneEvidence(
 // add introns inferred from evidence into result
 void AddIntronsFromEvidence(KnownContig contig, GeneStrandness strand,
     const std::vector<evidence_t>& evidence,
-    std::vector<ContigIntron>& result) {
+    std::vector<SJIntron>& result) {
   int exon_ct = 0;
   int annotated_ct = 0;
   int intron_ct = 0;
@@ -86,11 +86,11 @@ void AddIntronsFromEvidence(KnownContig contig, GeneStrandness strand,
   position_t intron_start = EMPTY;
   for (const auto& [position, from] : evidence) {
     switch (from) {
-      case ContigIntronEvidenceType::EXON_START:
+      case SJIntronEvidenceType::EXON_START:
         --intron_ct;
         // no break, do everything in FIRST_EXON_START too
         // (i.e. FIRST_EXON_START just doesn't end an intron)
-      case ContigIntronEvidenceType::FIRST_EXON_START:
+      case SJIntronEvidenceType::FIRST_EXON_START:
         ++exon_ct;
         if (intron_start != EMPTY) {
           result.emplace_back(
@@ -99,37 +99,37 @@ void AddIntronsFromEvidence(KnownContig contig, GeneStrandness strand,
           intron_start = EMPTY;
         }
         break;
-      case ContigIntronEvidenceType::EXON_END:
+      case SJIntronEvidenceType::EXON_END:
         ++intron_ct;
         // no break, do everything in LAST_EXON_END too
         // (i.e. LAST_EXON_END just doesn't start an intron)
-      case ContigIntronEvidenceType::LAST_EXON_END:
+      case SJIntronEvidenceType::LAST_EXON_END:
         --exon_ct;
         if (intron_ct > 0 && exon_ct == 0) {
           intron_start = position + 1;
         }
         break;
-      case ContigIntronEvidenceType::ANNOTATED_INTRON_END:
+      case SJIntronEvidenceType::ANNOTATED_INTRON_END:
         --annotated_ct;
         break;
-      case ContigIntronEvidenceType::ANNOTATED_INTRON_START:
+      case SJIntronEvidenceType::ANNOTATED_INTRON_START:
         ++annotated_ct;
         break;
     }
   }
 }
 
-ContigIntrons ContigIntrons::FromGeneExonsAndIntrons(
+SJIntrons SJIntrons::FromGeneExonsAndIntrons(
     const Exons& exons, const GeneIntrons& gene_introns, const bool stranded) {
   if (exons.parents_ != gene_introns.parents_) {
     throw std::invalid_argument(
-        "ContigIntrons gene exons and introns do not share same genes");
+        "SJIntrons gene exons and introns do not share same genes");
   }
 
-  std::vector<ContigIntron> result_vec;
+  std::vector<SJIntron> result_vec;
   // if there are no exons, there can be no introns
   if (exons.empty()) {
-    return ContigIntrons{exons.parents()->parents(), std::move(result_vec)};
+    return SJIntrons{exons.parents()->parents(), std::move(result_vec)};
   }
 
   // otherwise, operate on sets of genes at a time that overlap
@@ -163,7 +163,7 @@ ContigIntrons ContigIntrons::FromGeneExonsAndIntrons(
     }
   }
   // get final result
-  return ContigIntrons{exons.parents()->parents(), std::move(result_vec)};
+  return SJIntrons{exons.parents()->parents(), std::move(result_vec)};
 }
 
 }  // namespace majiq

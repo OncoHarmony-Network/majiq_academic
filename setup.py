@@ -23,7 +23,7 @@ ext_modules = [
         sorted([
             "src/internals/PassedJunctions.cpp",
             "src/internals/SpliceGraph.cpp",
-            "src/internals/ContigIntrons.cpp",
+            "src/internals/SJIntrons.cpp",
             "src/internals/SJJunctionsPositions.cpp",
             "src/internals/GFF3.cpp",
             "src/internals/TranscriptModels.cpp",

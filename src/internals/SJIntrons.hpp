@@ -1,12 +1,12 @@
 /**
- * ContigIntrons.hpp
+ * SJIntrons.hpp
  *
  * Introns on contigs for quantification
  *
  * Copyright 2020 <University of Pennsylvania>
  */
-#ifndef MAJIQ_CONTIGINTRONS_HPP
-#define MAJIQ_CONTIGINTRONS_HPP
+#ifndef MAJIQ_SJINTRONS_HPP
+#define MAJIQ_SJINTRONS_HPP
 
 #include <vector>
 #include <memory>
@@ -31,7 +31,7 @@ struct AnnotatedIntronStatus {
 };
 }  // namespace detail
 
-struct ContigIntron
+struct SJIntron
     : public detail::ContigRegion<
         ClosedInterval, detail::AnnotatedIntronStatus> {
  public:
@@ -40,33 +40,33 @@ struct ContigIntron
   const bool& annotated() const noexcept { return data.annotated_; }
   bool& annotated() noexcept { return data.annotated_; }
 
-  ContigIntron(KnownContig contig, ClosedInterval coordinates,
+  SJIntron(KnownContig contig, ClosedInterval coordinates,
       GeneStrandness strand, AnnotatedIntronStatus annotated)
       : BaseT{contig, coordinates, strand, annotated} { }
-  ContigIntron(KnownContig contig, ClosedInterval coordinates,
+  SJIntron(KnownContig contig, ClosedInterval coordinates,
       GeneStrandness strand, bool annotated)
-      : ContigIntron{contig, coordinates, strand,
+      : SJIntron{contig, coordinates, strand,
         AnnotatedIntronStatus{annotated}} { }
-  ContigIntron(KnownContig contig, ClosedInterval coordinates,
+  SJIntron(KnownContig contig, ClosedInterval coordinates,
       GeneStrandness strand)
-      : ContigIntron{contig, coordinates, strand, AnnotatedIntronStatus{}} { }
-  ContigIntron()
-      : ContigIntron{KnownContig{}, ClosedInterval{},
+      : SJIntron{contig, coordinates, strand, AnnotatedIntronStatus{}} { }
+  SJIntron()
+      : SJIntron{KnownContig{}, ClosedInterval{},
         GeneStrandness::AMBIGUOUS} { }
-  ContigIntron(const ContigIntron&) = default;
-  ContigIntron(ContigIntron&&) = default;
-  ContigIntron& operator=(const ContigIntron&) = default;
-  ContigIntron& operator=(ContigIntron&&) = default;
+  SJIntron(const SJIntron&) = default;
+  SJIntron(SJIntron&&) = default;
+  SJIntron& operator=(const SJIntron&) = default;
+  SJIntron& operator=(SJIntron&&) = default;
 };
 
-class ContigIntrons : public detail::Regions<ContigIntron, true> {
-  using BaseT = detail::Regions<ContigIntron, true>;
+class SJIntrons : public detail::Regions<SJIntron, true> {
+  using BaseT = detail::Regions<SJIntron, true>;
  public:
-  static ContigIntrons FromGeneExonsAndIntrons(
+  static SJIntrons FromGeneExonsAndIntrons(
       const Exons& exons, const GeneIntrons& gene_introns, const bool stranded);
 
-  ContigIntrons(
-      const std::shared_ptr<Contigs>& contigs, std::vector<ContigIntron>&& x)
+  SJIntrons(
+      const std::shared_ptr<Contigs>& contigs, std::vector<SJIntron>&& x)
       : BaseT{contigs, std::move(x)} { }
 };
 

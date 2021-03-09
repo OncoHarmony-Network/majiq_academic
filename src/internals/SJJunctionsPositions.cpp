@@ -135,10 +135,10 @@ SJIntronsBins SJIntronsBins::FromBam(const char* infile,
     const GeneIntrons& gene_introns, ExperimentStrandness exp_strandness,
     int nthreads) {
   // get introns we will be quantifying against
-  const auto introns_ptr = std::make_shared<ContigIntrons>(
-      ContigIntrons::FromGeneExonsAndIntrons(exons, gene_introns,
+  const auto introns_ptr = std::make_shared<SJIntrons>(
+      SJIntrons::FromGeneExonsAndIntrons(exons, gene_introns,
         exp_strandness != ExperimentStrandness::NONE));
-  const ContigIntrons& introns = *introns_ptr;
+  const SJIntrons& introns = *introns_ptr;
   // get contigs for these introns
   auto contigs = introns.parents();
   // count number of reads per intron bin
@@ -184,7 +184,7 @@ SJIntronsBins SJIntronsBins::FromBam(const char* infile,
       auto AddIntron = [&counts_mut, &ct_nonzero, &aln_regions, &num_bins](
           size_t intron_idx,
           const bam::CigarRegions::Region& cigar_region,
-          const ContigIntron& intron) {
+          const SJIntron& intron) {
         // assumes checked other conditions for validity besides overhang
         // (i.e. no junctions, correct strand, etc.)
         const junction_pos_t raw_alignment_position

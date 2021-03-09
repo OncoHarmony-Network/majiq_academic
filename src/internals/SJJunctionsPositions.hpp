@@ -23,7 +23,7 @@
 #include "SJJunctions.hpp"
 #include "Exons.hpp"
 #include "GeneIntrons.hpp"
-#include "ContigIntrons.hpp"
+#include "SJIntrons.hpp"
 #include "MajiqConstants.hpp"
 #include "ExperimentThresholds.hpp"
 
@@ -317,8 +317,8 @@ struct IntronCoarseBins {
 }  // namespace detail
 
 class SJIntronsBins
-    : public detail::SJRegionBinReads<ContigIntrons, intron_ct_t> {
-  using BaseT = detail::SJRegionBinReads<ContigIntrons, intron_ct_t>;
+    : public detail::SJRegionBinReads<SJIntrons, intron_ct_t> {
+  using BaseT = detail::SJRegionBinReads<SJIntrons, intron_ct_t>;
 
  public:
   static SJIntronsBins FromBam(
@@ -348,7 +348,7 @@ class SJIntronsBins
   }
 
   SJIntronsBins(
-      const std::shared_ptr<ContigIntrons>& introns,
+      const std::shared_ptr<SJIntrons>& introns,
       std::vector<BinReads<intron_ct_t>>&& reads,
       std::vector<size_t>&& offsets,
       junction_pos_t total_bins)

@@ -27,7 +27,7 @@ constexpr char JUNCTIONS_NC_GROUP[] = "junctions";
 constexpr char INTRONS_NC_GROUP[] = "introns";
 constexpr char SJ_JUNCTIONS_NC_GROUP[] = "sj_junctions";
 constexpr char SJ_JUNCTIONS_RAW_NC_GROUP[] = "sj_junctions_raw";
-constexpr char CONTIG_INTRONS_NC_GROUP[] = "contig_introns";
+constexpr char SJ_INTRONS_NC_GROUP[] = "sj_introns";
 
 constexpr bool DEFAULT_BUILD_PROCESS_IR = true;
 constexpr majiq::junction_ct_t DEFAULT_BUILD_MINREADS = 3;

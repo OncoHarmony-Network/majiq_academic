@@ -55,7 +55,7 @@ class GroupIntronsGenerator {
       = exp_thresholds.intron_thresholds_generator(sj.total_bins());
     // boolean flags of if each gene intron passed, update by iterating over sj
     std::vector<bool> gi_passed(num_passed_.size(), false);
-    const ContigIntrons& contig_introns = *(sj.regions());
+    const SJIntrons& sj_introns = *(sj.regions());
     for (size_t dst_contig_idx = 0;
         dst_contig_idx < genes->contigs()->size(); ++dst_contig_idx) {
       // try to get matching contigs in sj (since may not share)
@@ -67,13 +67,13 @@ class GroupIntronsGenerator {
       KnownGene g_it_start = genes->begin_contig(dst_contig_idx);
       const KnownGene g_it_end = genes->end_contig(dst_contig_idx);
       // for each sj intron on this contig
-      for (auto sj_it = contig_introns.begin_parent(sj_contig_idx);
-          sj_it != contig_introns.end_parent(sj_contig_idx);
+      for (auto sj_it = sj_introns.begin_parent(sj_contig_idx);
+          sj_it != sj_introns.end_parent(sj_contig_idx);
           ++sj_it) {
         // determine if passed
         constexpr junction_pos_t NO_STACKS = 0;  // TODO(jaicher) check stacks?
         if (!sj.passed(
-              sj_it - contig_introns.begin(), thresholds_gen, NO_STACKS)) {
+              sj_it - sj_introns.begin(), thresholds_gen, NO_STACKS)) {
           continue;
         }
         // get first gene that doesn't precede current intron
