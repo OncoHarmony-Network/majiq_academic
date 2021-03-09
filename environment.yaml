@@ -1,0 +1,22 @@
+channels:
+  - conda-forge
+  - bioconda
+  - defaults
+dependencies:
+  - python=3.8
+  - pandas>=1
+  - numpy>=1.9.3
+  - scipy>=1.4.1
+  - xarray>=0.15.1
+  - numexpr>=2.6.2
+  - netcdf4>=1.5
+  - matplotlib
+  - ipython
+  - mypy
+  - flake8
+  - black
+  - pip
+  - setuptools
+  - wheel
+  - pip:
+    - "-e ."
