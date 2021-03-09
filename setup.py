@@ -19,7 +19,7 @@ HTSLIB_LIB_DIRS = [os.environ.get("HTSLIB_LIBRARY_DIR", "/usr/local/lib")]
 
 ext_modules = [
     Pybind11Extension(
-        "new_majiq",
+        "new_majiq.internals",
         sorted([
             "src/internals/PassedJunctions.cpp",
             "src/internals/SpliceGraph.cpp",
@@ -42,7 +42,7 @@ ext_modules = [
 
 setup(
     version=__version__,
-    packages=[],
+    packages=["new_majiq"],
     package_dir={"": "src"},
     ext_modules=ext_modules,
 )

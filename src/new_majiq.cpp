@@ -16,7 +16,8 @@ namespace py = pybind11;
 
 void init_SpliceGraphAll(py::module_&);
 
-PYBIND11_MODULE(new_majiq, m) {
+PYBIND11_MODULE(internals, m) {
+  m.attr("__name__") = "new_majiq.internals";
   // documentation of module
   m.doc() = R"pbdoc(
   MAJIQ classes for splicegraph
