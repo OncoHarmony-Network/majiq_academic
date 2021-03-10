@@ -13,4 +13,5 @@ from .SpliceGraph import SpliceGraph
 
 from .SJIntrons import SJIntrons
 from .SJJunctions import SJJunctions
+from .SJIntronsBins import SJIntronsBins
 from .SJJunctionsBins import SJJunctionsBins
