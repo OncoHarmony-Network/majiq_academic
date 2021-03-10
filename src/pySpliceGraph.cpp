@@ -390,7 +390,10 @@ void init_Contigs(pyContigs_t& pyContigs) {
         })
     .def("__len__", &Contigs::size)
     .def("__contains__",
-        [](const Contigs& s, seqid_t x) -> bool { return s.count(x) > 0; });
+        [](const Contigs& s, seqid_t x) -> bool { return s.count(x) > 0; })
+    .def("__getitem__",
+        [](const Contigs& self, seqid_t x) { return self.get_idx(x); },
+        "contig_idx for specified seqid", py::arg("seqid"));
 }
 
 void init_Genes(pyGenes_t& pyGenes) {

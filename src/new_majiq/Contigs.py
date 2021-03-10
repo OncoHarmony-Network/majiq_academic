@@ -57,9 +57,12 @@ class Contigs(object):
             },
         )
 
-    def __getitem__(self, seqid: str) -> Optional[int]:
-        """Get contig_idx for a given seqid. None if no such seqid."""
-        raise NotImplementedError("Need to expose safe_idx in internals")
+    def __getitem__(self, seqid: str) -> int:
+        """Get contig_idx for a given seqid"""
+        try:
+            return self._contigs[seqid]
+        except IndexError:
+            raise KeyError(f"{seqid = } not found in Contigs instance")
 
     def to_netcdf(self, path: Union[str, Path], mode: str) -> None:
         self.df.to_netcdf(path, mode, group=constants.NC_CONTIGS)

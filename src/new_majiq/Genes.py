@@ -38,9 +38,12 @@ class Genes(ContigRegions):
     def gene_idx(self) -> np.ndarray:
         return self._region_idx
 
-    def __getitem__(self, gene_id: str) -> Optional[int]:
+    def __getitem__(self, gene_id: str) -> int:
         """Get gene_idx for specified gene_id"""
-        raise NotImplementedError("Need to expose safe_idx")
+        try:
+            return self._genes[gene_id]
+        except IndexError:
+            raise KeyError(f"{gene_id = } not found in Genes instance")
 
     @property
     def gene_id(self) -> List[str]:
