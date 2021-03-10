@@ -22,7 +22,7 @@
 #include "Interval.hpp"
 #include "Contigs.hpp"
 #include "Genes.hpp"
-#include "GeneConnection.hpp"
+#include "GeneConnections.hpp"
 #include "Exons.hpp"
 
 
@@ -66,45 +66,20 @@ template <> struct hash<majiq::GeneIntron> {
 
 namespace majiq {
 
-class GeneIntrons : public detail::Regions<GeneIntron, false> {
-  using BaseT = detail::Regions<GeneIntron, false>;
-
- private:
-  std::shared_ptr<Exons> connected_exons_;
+class GeneIntrons : public detail::GeneConnections<GeneIntron, false> {
+  using BaseT = detail::GeneConnections<GeneIntron, false>;
 
  public:
+  // NOTE: assumes that connections to connected_exons already defined in x
   GeneIntrons(
       const std::shared_ptr<Genes>& genes, std::vector<GeneIntron>&& x,
       const std::shared_ptr<Exons>& connected_exons)
-      : BaseT{genes, std::move(x)}, connected_exons_{connected_exons} {
-    // NOTE: assumes that connections to connected_exons already defined in x
-    if (parents() == nullptr) {
-      throw std::invalid_argument("GeneIntrons cannot have null genes");
-    }
-  }
+      : BaseT{genes, std::move(x), connected_exons} { }
   GeneIntrons(
       const std::shared_ptr<Genes>& genes, std::vector<GeneIntron>&& x)
       : GeneIntrons{genes, std::move(x), nullptr} { }
 
-  void pass_all() const {
-    std::for_each(begin(), end(),
-        [](const GeneIntron& x) { x.passed_build() = true; });
-  }
-  void simplify_all() const {
-    std::for_each(begin(), end(),
-        [](const GeneIntron& x) { x.simplified() = true; });
-  }
-  void unsimplify_all() const {
-    std::for_each(begin(), end(),
-        [](const GeneIntron& x) { x.simplified() = false; });
-  }
-
-  bool is_connected() const { return connected_exons_ != nullptr; }
-  const std::shared_ptr<Exons>& connected_exons() const {
-    return connected_exons_;
-  }
-
-  void connect_exons(const std::shared_ptr<Exons>& exons_ptr) {
+  void connect_exons(const std::shared_ptr<Exons>& exons_ptr) override {
     if (exons_ptr == nullptr || exons_ptr == connected_exons_) {
       return;  // don't do anything
     }

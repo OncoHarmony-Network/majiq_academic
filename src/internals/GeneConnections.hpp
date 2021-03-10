@@ -1,19 +1,20 @@
 /**
- * GeneConnection.hpp
+ * GeneConnections.hpp
  *
- * GeneRegion specialization using ConnectionData
+ * GeneRegion specialization using ConnectionData, container over them
  *
  * Copyright 2020 <University of Pennsylvania>
  */
 
-#ifndef MAJIQ_GENECONNECTION_HPP
-#define MAJIQ_GENECONNECTION_HPP
+#ifndef MAJIQ_GENECONNECTIONS_HPP
+#define MAJIQ_GENECONNECTIONS_HPP
 
 #include <tuple>
 
 #include "ConnectionData.hpp"
 #include "GeneRegion.hpp"
 #include "MajiqTypes.hpp"
+#include "Exons.hpp"
 
 
 namespace majiq {
@@ -77,7 +78,45 @@ struct GeneConnection
   bool for_passed() const noexcept { return passed_build() && for_event(); }
 };
 
+template <typename GeneConnectionT, bool HAS_OVERLAPS>
+class GeneConnections : public Regions<GeneConnectionT, HAS_OVERLAPS> {
+  using BaseT = detail::Regions<GeneConnectionT, HAS_OVERLAPS>;
+
+ protected:
+  std::shared_ptr<Exons> connected_exons_;
+
+ public:
+  GeneConnections(
+      const std::shared_ptr<Genes>& genes, std::vector<GeneConnectionT>&& x,
+      const std::shared_ptr<Exons>& connected_exons)
+      : BaseT{genes, std::move(x)}, connected_exons_{connected_exons} {
+    if (this->parents() == nullptr) {
+      throw std::invalid_argument("GeneConnections cannot have null genes");
+    }
+  }
+
+  bool is_connected() const { return connected_exons_ != nullptr; }
+  const std::shared_ptr<Exons>& connected_exons() const {
+    return connected_exons_;
+  }
+  // connect exons to held GeneConnectionT values. Sets connected_exons_
+  virtual void connect_exons(const std::shared_ptr<Exons>& exons_ptr) = 0;
+
+  void pass_all() const {
+    std::for_each(this->begin(), this->end(),
+        [](const GeneConnectionT& x) { x.passed_build() = true; });
+  }
+  void simplify_all() const {
+    std::for_each(this->begin(), this->end(),
+        [](const GeneConnectionT& x) { x.simplified() = true; });
+  }
+  void unsimplify_all() const {
+    std::for_each(this->begin(), this->end(),
+        [](const GeneConnectionT& x) { x.simplified() = false; });
+  }
+};
+
 }  // namespace detail
 }  // namespace majiq
 
-#endif  // MAJIQ_GENECONNECTION_HPP
+#endif  // MAJIQ_GENECONNECTIONS_HPP

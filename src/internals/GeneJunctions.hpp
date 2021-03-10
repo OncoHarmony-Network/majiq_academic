@@ -21,7 +21,7 @@
 #include "Interval.hpp"
 #include "Contigs.hpp"
 #include "Genes.hpp"
-#include "GeneConnection.hpp"
+#include "GeneConnections.hpp"
 #include "Exons.hpp"
 
 
@@ -64,12 +64,20 @@ template <> struct hash<majiq::GeneJunction> {
 }  // namespace std
 
 namespace majiq {
-class GeneJunctions : public detail::Regions<GeneJunction, true> {
-  using BaseT = detail::Regions<GeneJunction, true>;
+class GeneJunctions : public detail::GeneConnections<GeneJunction, true> {
+  using BaseT = detail::GeneConnections<GeneJunction, true>;
+
+ public:
+  // NOTE: assumes that connections to connected_exons already defined in x
+  GeneJunctions(
+      const std::shared_ptr<Genes>& genes, std::vector<GeneJunction>&& x,
+      const std::shared_ptr<Exons>& connected_exons)
+      : BaseT{genes, std::move(x), connected_exons} { }
+  GeneJunctions(
+      const std::shared_ptr<Genes>& genes, std::vector<GeneJunction>&& x)
+      : GeneJunctions{genes, std::move(x), nullptr} { }
 
  private:
-  std::shared_ptr<Exons> connected_exons_;
-
   /**
    * vector of indexes to exons that match junction starts.
    * Throws exception if unable to find all matches
@@ -130,7 +138,7 @@ class GeneJunctions : public detail::Regions<GeneJunction, true> {
   }
 
  public:
-  void connect_exons(const std::shared_ptr<Exons>& exons_ptr) {
+  void connect_exons(const std::shared_ptr<Exons>& exons_ptr) override {
     if (exons_ptr == nullptr || exons_ptr == connected_exons_) {
       return;  // don't do anything
     }
@@ -149,38 +157,6 @@ class GeneJunctions : public detail::Regions<GeneJunction, true> {
     connected_exons_ = exons_ptr;  // update pointer to connected exons
     return;
   }
-
-  bool is_connected() const { return connected_exons_ != nullptr; }
-  const std::shared_ptr<Exons>& connected_exons() const {
-    return connected_exons_;
-  }
-
-  // for debugging
-  void pass_all() const {
-    std::for_each(begin(), end(),
-        [](const GeneJunction& x) { x.passed_build() = true; });
-  }
-  void simplify_all() const {
-    std::for_each(begin(), end(),
-        [](const GeneJunction& x) { x.simplified() = true; });
-  }
-  void unsimplify_all() const {
-    std::for_each(begin(), end(),
-        [](const GeneJunction& x) { x.simplified() = false; });
-  }
-
-  GeneJunctions(
-      const std::shared_ptr<Genes>& genes, std::vector<GeneJunction>&& x,
-      const std::shared_ptr<Exons>& connected_exons)
-      : BaseT{genes, std::move(x)}, connected_exons_{connected_exons} {
-    // NOTE: assumes that connections to connected_exons already defined in x
-    if (parents() == nullptr) {
-      throw std::invalid_argument("GeneJunctions cannot have null genes");
-    }
-  }
-  GeneJunctions(
-      const std::shared_ptr<Genes>& genes, std::vector<GeneJunction>&& x)
-      : GeneJunctions{genes, std::move(x), nullptr} { }
 };
 }  // namespace majiq
 
