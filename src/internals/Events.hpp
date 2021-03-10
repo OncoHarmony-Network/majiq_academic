@@ -112,6 +112,23 @@ class Events {
     return connections_[connection_idx].is_intron_;
   }
 
+  // get region information from connection_idx
+  const KnownGene& connection_gene(size_t connection_idx) const {
+    return is_intron(connection_idx)
+      ? connection_intron(connection_idx).gene
+      : connection_junction(connection_idx).gene;
+  }
+  const position_t& connection_start(size_t connection_idx) const {
+    return is_intron(connection_idx)
+      ? connection_intron(connection_idx).coordinates.start
+      : connection_junction(connection_idx).coordinates.start;
+  }
+  const position_t& connection_end(size_t connection_idx) const {
+    return is_intron(connection_idx)
+      ? connection_intron(connection_idx).coordinates.end
+      : connection_junction(connection_idx).coordinates.end;
+  }
+
   const std::vector<Event>& events() const { return events_; }
   const std::vector<size_t>& connection_offsets() const {
     return connection_offsets_;
@@ -157,7 +174,15 @@ class Events {
         connection_offsets_{std::move(connection_offsets)},
         connections_{std::move(connections)},
         junction_connection_idx_{ContigSortedConnectionIndexes<false>()},
-        intron_connection_idx_{ContigSortedConnectionIndexes<true>()} { }
+        intron_connection_idx_{ContigSortedConnectionIndexes<true>()} {
+    if (introns == nullptr) {
+      throw std::runtime_error("Events given null introns");
+    } else if (junctions == nullptr) {
+      throw std::runtime_error("Events given null introns");
+    } else if (introns->parents() != junctions->parents()) {
+      throw std::runtime_error("Event junctions/introns do not share genes");
+    }
+  }
 };
 
 

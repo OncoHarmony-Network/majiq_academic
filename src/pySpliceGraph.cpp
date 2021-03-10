@@ -812,6 +812,30 @@ void init_PyEvents(pyEvents_t& pyEvents) {
     .def_property_readonly("num_connections", &Events::num_connections)
     .def_property_readonly("num_junctions", &Events::num_junctions)
     .def_property_readonly("num_introns", &Events::num_introns)
+    .def("connection_gene_idx",
+        [](const Events& self, py::array_t<size_t> connection_idx) {
+        auto f = [&self](size_t idx) {
+        return self.connection_gene(idx).idx_; };
+        return py::vectorize(f)(connection_idx);
+        },
+        "gene_idx for specified connection indexes",
+        py::arg("connection_idx"))
+    .def("connection_start",
+        [](const Events& self, py::array_t<size_t> connection_idx) {
+        auto f = [&self](size_t idx) {
+        return self.connection_start(idx); };
+        return py::vectorize(f)(connection_idx);
+        },
+        "start for specified connection indexes",
+        py::arg("connection_idx"))
+    .def("connection_end",
+        [](const Events& self, py::array_t<size_t> connection_idx) {
+        auto f = [&self](size_t idx) {
+        return self.connection_end(idx); };
+        return py::vectorize(f)(connection_idx);
+        },
+        "end for specified connection indexes",
+        py::arg("connection_idx"))
     .def("__len__", &Events::size);
 }
 
