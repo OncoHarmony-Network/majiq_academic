@@ -197,16 +197,6 @@ void define_coordinates_properties(pyClassShared_t<RegionsT>& pyRegions) {
           py::arg("end"));
   }
   pyRegions
-    .def("to_netcdf",
-        [](py::object& self, py::str out, py::str mode) {
-        self.attr("df")().attr("to_netcdf")(
-            out,
-            py::arg("mode") = mode,
-            py::arg("group") = py::str(REGIONS_NC_GROUP));
-        return;
-        },
-        "Save to netcdf file",
-        py::arg("netcdf_path"), py::arg("mode"))
     .def("__len__", &RegionsT::size)
     .def_property_readonly("_parents", &RegionsT::parents,
         "Get parents object on which regions are defined (e.g. contigs, genes)")
@@ -350,27 +340,6 @@ struct ConnectionsArrays {
   py::array_t<bool> simplified;
 };
 
-template <const char group_str[]>
-ConnectionsArrays ConnectionsArraysFromNetcdf(py::str netcdf_path) {
-  auto xr_connections = majiq_pybind::OpenXarrayDataset(
-      netcdf_path, py::str(group_str));
-  auto get_array = [&xr_connections](py::str key) {
-    py::function np_array = py::module_::import("numpy").attr("array");
-    return np_array(xr_connections.attr("__getitem__")(key));
-  };
-  // extract usable values from dataset
-  using majiq::position_t;
-  py::array_t<size_t> gene_idx = get_array("gene_idx");
-  py::array_t<position_t> start = get_array("start");
-  py::array_t<position_t> end = get_array("end");
-  py::array_t<bool> denovo = get_array("denovo");
-  py::array_t<bool> passed_build = get_array("passed_build");
-  py::array_t<bool> simplified = get_array("simplified");
-  // return result
-  return ConnectionsArrays{gene_idx, start, end,
-                           denovo, passed_build, simplified};
-}
-
 template <class Connections>
 std::shared_ptr<Connections> MakeConnections(
     std::shared_ptr<majiq::Genes> genes, const ConnectionsArrays& values) {
@@ -410,35 +379,10 @@ void init_Contigs(pyContigs_t& pyContigs) {
         }),
         "Set up Contigs object using specified identifiers",
         py::arg("seqids"))
-    .def_static("from_netcdf",
-        [](py::str netcdf_path) {
-          auto xr_contigs = majiq_pybind::OpenXarrayDataset(
-              netcdf_path, py::str(CONTIGS_NC_GROUP));
-          py::list seqids = xr_contigs
-            .attr("__getitem__")("seqid").attr("values").attr("tolist")();
-          return py::module_::import("new_majiq").attr("Contigs")(seqids);
-        },
-        "Load contigs from netcdf file", py::arg("netcdf_path"))
-    .def("to_netcdf",
-        [](py::object& self, py::str out, py::str mode) {
-        self.attr("df")().attr("to_netcdf")(
-            out,
-            py::arg("mode") = mode,
-            py::arg("group") = py::str(CONTIGS_NC_GROUP));
-        return;
-        },
-        "Save contigs to netcdf file",
-        py::arg("netcdf_path"), py::arg("mode"))
     .def_property_readonly("seqid", &Contigs::seqids,
         R"pbdoc(
         Sequence[str] of contig ids in order matching contig_idx
         )pbdoc")
-    .def("df",
-        [](py::object& contigs) -> py::object {
-        using majiq_pybind::XarrayDatasetFromObject;
-        return XarrayDatasetFromObject(contigs, "contig_idx", {"seqid"});
-        },
-        "View on contig information as xarray Dataset")
     .def("__repr__", [](const Contigs& self) -> std::string {
         std::ostringstream oss;
         oss << self;
@@ -486,38 +430,10 @@ void init_Genes(pyGenes_t& pyGenes) {
         py::arg("contigs"), py::arg("contig_idx"),
         py::arg("start"), py::arg("end"), py::arg("strand"),
         py::arg("gene_id"), py::arg("gene_name"))
-    .def_static("from_netcdf",
-        [](py::str netcdf_path, std::shared_ptr<Contigs> contigs) {
-        auto xr_genes = majiq_pybind::OpenXarrayDataset(
-            netcdf_path, py::str(GENES_NC_GROUP));
-        auto get_array = [&xr_genes](py::str key) {
-          py::function np_array = py::module_::import("numpy").attr("array");
-          return np_array(xr_genes.attr("__getitem__")(key));
-        };
-        py::array_t<size_t> contig_idx = get_array("contig_idx");
-        py::array_t<position_t> start = get_array("start");
-        py::array_t<position_t> end = get_array("end");
-        py::array_t<std::array<char, 1>> strand = get_array("strand");
-        py::list geneid = xr_genes.attr("__getitem__")("gene_id")
-          .attr("values").attr("tolist")();
-        py::list genename = xr_genes.attr("__getitem__")("gene_name")
-          .attr("values").attr("tolist")();
-        return py::module_::import("new_majiq").attr("Genes")(
-            contigs, contig_idx, start, end, strand, geneid, genename);
-        },
-        "Load genes from netcdf file",
-        py::arg("netcdf_path"), py::arg("contigs"))
     .def_property_readonly("gene_id", &majiq::Genes::geneids,
         "Sequence[str] of gene ids in order matching gene_idx")
     .def_property_readonly("gene_name", &majiq::Genes::genenames,
         "Sequence[str] of gene names in order matching gene_idx")
-    .def("df",
-        [](py::object& genes) -> py::object {
-        using majiq_pybind::XarrayDatasetFromObject;
-        return XarrayDatasetFromObject(genes, "gene_idx",
-            {"contig_idx", "start", "end", "strand", "gene_id", "gene_name"});
-        },
-        "View on gene information as xarray Dataset")
     .def("__repr__", [](const majiq::Genes& self) -> std::string {
         std::ostringstream oss;
         oss << "Genes<" << self.size() << " total>";
@@ -564,26 +480,6 @@ void init_Exons(pyExons_t& pyExons) {
         py::arg("genes"), py::arg("gene_idx"),
         py::arg("start"), py::arg("end"),
         py::arg("annotated_start"), py::arg("annotated_end"))
-    .def_static("from_netcdf",
-        [](py::str netcdf_path, std::shared_ptr<majiq::Genes> genes) {
-        using majiq::position_t;
-        auto xr_exons = majiq_pybind::OpenXarrayDataset(
-            netcdf_path, py::str(EXONS_NC_GROUP));
-        auto get_array = [&xr_exons](py::str key) {
-          py::function np_array = py::module_::import("numpy").attr("array");
-          return np_array(xr_exons.attr("__getitem__")(key));
-        };
-        // extract usable values from dataset
-        py::array_t<size_t> gene_idx = get_array("gene_idx");
-        py::array_t<position_t> start = get_array("start");
-        py::array_t<position_t> end = get_array("end");
-        py::array_t<position_t> ann_start = get_array("annotated_start");
-        py::array_t<position_t> ann_end = get_array("annotated_end");
-        return py::module_::import("new_majiq").attr("Exons")(
-            genes, gene_idx, start, end, ann_start, ann_end);
-        },
-        "Load exons from netcdf file",
-        py::arg("netcdf_path"), py::arg("genes"))
     .def_property_readonly("annotated_start",
         [](py::object& exons_obj) -> py::array_t<position_t> {
         Exons& exons = exons_obj.cast<Exons&>();
@@ -600,12 +496,6 @@ void init_Exons(pyExons_t& pyExons) {
             exons.data(), offset, exons_obj);
         },
         "array[int] of annotated exon ends")
-    .def("df",
-        [](py::object& exons) -> py::object {
-        return majiq_pybind::XarrayDatasetFromObject(exons, "exon_idx",
-            {"gene_idx", "start", "end", "annotated_start", "annotated_end"});
-        },
-        "View on exon information as xarray Dataset")
     .def("__repr__", [](const Exons& self) -> std::string {
         std::ostringstream oss;
         oss << "Exons<" << self.size() << " total>";
@@ -634,21 +524,6 @@ void init_GeneJunctions(pyGeneJunctions_t& pyGeneJunctions) {
         py::arg("genes"),
         py::arg("gene_idx"), py::arg("start"), py::arg("end"),
         py::arg("denovo"), py::arg("passed_build"), py::arg("simplified"))
-    .def_static("from_netcdf",
-        [](py::str x, std::shared_ptr<majiq::Genes> genes) {
-        return MakeConnections<GeneJunctions>(
-            genes, ConnectionsArraysFromNetcdf<JUNCTIONS_NC_GROUP>(x));
-        },
-        "Load junctions from netcdf file",
-        py::arg("netcdf_path"), py::arg("genes"))
-    .def("df",
-        [](py::object& junctions) -> py::object {
-        return majiq_pybind::XarrayDatasetFromObject(junctions, "junction_idx",
-            {"gene_idx", "start", "end",
-            "denovo", "passed_build", "simplified",
-            "start_exon_idx", "end_exon_idx"});
-        },
-        "View on junction information as xarray Dataset")
     .def("__repr__", [](const GeneJunctions& self) -> std::string {
         std::ostringstream oss;
         oss << "GeneJunctions<" << self.size() << " total>";
@@ -704,13 +579,6 @@ void init_SJIntrons(pySJIntrons_t& pySJIntrons) {
             introns.data(), offset, introns_obj);
         },
         "array[bool] indicating if intron is annotated (exon in annotation)")
-    .def("df",
-        [](py::object& introns) -> py::object {
-        using majiq_pybind::XarrayDatasetFromObject;
-        return XarrayDatasetFromObject(introns, "intron_idx",
-            {"contig_idx", "start", "end", "strand", "annotated"});
-        },
-        "View on intron information as xarray Dataset")
     .def("__repr__", [](const majiq::SJIntrons& self) -> std::string {
         std::ostringstream oss;
         oss << "SJIntrons<" << self.size() << " total>";
@@ -1114,14 +982,7 @@ void init_SJIntronsBins(pySJIntronsBins_t& pySJIntronsBins) {
         py::arg("exons"),
         py::arg("gene_introns"),
         py::arg("experiment_strandness") = DEFAULT_BAM_STRANDNESS,
-        py::arg("nthreads") = DEFAULT_BAM_NTHREADS)
-    .def("df",
-        [](py::object& sj) -> py::object {
-        using majiq_pybind::XarrayDatasetFromObject;
-        return XarrayDatasetFromObject(sj, "jpidx", {},
-            {"bin_reads", "bin_idx"});
-        },
-        "View on intron-bin information as xarray Dataset");
+        py::arg("nthreads") = DEFAULT_BAM_NTHREADS);
 }
 
 void init_GeneIntrons(pyGeneIntrons_t& pyGeneIntrons) {
@@ -1145,13 +1006,6 @@ void init_GeneIntrons(pyGeneIntrons_t& pyGeneIntrons) {
         py::arg("genes"),
         py::arg("gene_idx"), py::arg("start"), py::arg("end"),
         py::arg("denovo"), py::arg("passed_build"), py::arg("simplified"))
-    .def_static("from_netcdf",
-        [](py::str x, std::shared_ptr<majiq::Genes> genes) {
-        return MakeConnections<GeneIntrons>(
-            genes, ConnectionsArraysFromNetcdf<INTRONS_NC_GROUP>(x));
-        },
-        "Load introns from netcdf file",
-        py::arg("netcdf_path"), py::arg("genes"))
     .def("build_group", [](std::shared_ptr<GeneIntrons>& gene_introns) {
         return majiq::GroupIntronsGenerator(gene_introns);
         },
@@ -1172,14 +1026,6 @@ void init_GeneIntrons(pyGeneIntrons_t& pyGeneIntrons) {
     .def("potential_introns", &GeneIntrons::PotentialIntrons,
         "Get potential gene introns from exons keeping annotations from self",
         py::arg("exons"))
-    .def("df",
-        [](py::object& introns) -> py::object {
-        return majiq_pybind::XarrayDatasetFromObject(introns, "intron_idx",
-            {"gene_idx", "start", "end",
-            "denovo", "passed_build", "simplified",
-            "start_exon_idx", "end_exon_idx"});
-        },
-        "View on intron information as xarray Dataset")
     .def("__repr__", [](const GeneIntrons& self) -> std::string {
         std::ostringstream oss;
         oss << "GeneIntrons<" << self.size() << " total>";
@@ -1218,40 +1064,8 @@ void init_SJJunctions(pySJJunctions_t& pySJJunctions) {
         py::arg("contigs"),
         py::arg("contig_idx"), py::arg("start"), py::arg("end"),
         py::arg("strand"))
-    .def_static("from_netcdf",
-        [](py::str x) {
-        // load contigs
-        auto new_majiq = py::module_::import("new_majiq");
-        auto contigs = new_majiq.attr("Contigs").attr("from_netcdf")(x);
-        // load sj arrays
-        auto xr_junctions = majiq_pybind::OpenXarrayDataset(
-            x, py::str(SJ_JUNCTIONS_NC_GROUP));
-        auto get_array = [&xr_junctions](py::str key) {
-          py::function np_array = py::module_::import("numpy").attr("array");
-          return np_array(xr_junctions.attr("__getitem__")(key));
-        };
-        py::array_t<size_t> contig_idx = get_array("contig_idx");
-        py::array_t<position_t> start = get_array("start");
-        py::array_t<position_t> end = get_array("end");
-        py::array_t<std::array<char, 1>> strand = get_array("strand");
-        // use Python constructor
-        return new_majiq.attr("SJJunctions")(
-            contigs, contig_idx, start, end, strand);
-        },
-        "Load junctions from netcdf",
-        py::arg("netcdf_path"))
     .def_property_readonly("_contigs", &SJJunctions::parents,
-        "Underlying contigs corresponding to contig_idx")
-    .def_property_readonly("contigs",
-        [](py::object& self) { return self.attr("_contigs").attr("df")(); },
-        "View underlying contigs as xarray Dataset")
-    .def("df",
-        [](py::object& sj) -> py::object {
-        using majiq_pybind::XarrayDatasetFromObject;
-        return XarrayDatasetFromObject(sj, "jidx",
-            {"contig_idx", "start", "end", "strand"});
-        },
-        "View on junction information as xarray Dataset");
+        "Underlying contigs corresponding to contig_idx");
 }
 void init_SJJunctionsBins(pySJJunctionsBins_t& pySJJunctionsBins) {
   using majiq::SJJunctionsBins;
@@ -1272,14 +1086,7 @@ void init_SJJunctionsBins(pySJJunctionsBins_t& pySJJunctionsBins) {
         )pbdoc",
         py::arg("bam_path"),
         py::arg("experiment_strandness") = DEFAULT_BAM_STRANDNESS,
-        py::arg("nthreads") = DEFAULT_BAM_NTHREADS)
-    .def("df",
-        [](py::object& sj) -> py::object {
-        using majiq_pybind::XarrayDatasetFromObject;
-        return XarrayDatasetFromObject(sj, "jpidx", {},
-            {"bin_reads", "bin_idx"});
-        },
-        "View on junction-position information as xarray Dataset");
+        py::arg("nthreads") = DEFAULT_BAM_NTHREADS);
 }
 
 void init_pyGroupJunctionsGen(pyGroupJunctionsGen_t& pyGroupJunctionsGen) {
@@ -1388,33 +1195,11 @@ void init_SpliceGraph(py::class_<majiq::SpliceGraph>& pySpliceGraph) {
         Initialize splicegraph from components
 
         Initialize splicegraph from components. Typically will want to use the
-        factory methods `from_netcdf` and `from_gff3` to create all components
+        factory methods `from_gff3` to create all components
         )pbdoc",
         py::arg("contigs"), py::arg("genes"), py::arg("exons"),
         py::arg("junctions"), py::arg("introns"))
-    // constructors from netcdf, gff3
-    .def_static("from_netcdf",
-        [](py::str netcdf_path) {
-        py::function load_dataset
-          = py::module_::import("xarray").attr("load_dataset");
-        auto new_majiq = py::module_::import("new_majiq");
-        auto contigs
-          = new_majiq.attr("Contigs").attr("from_netcdf")(netcdf_path);
-        auto genes
-          = new_majiq.attr("Genes").attr("from_netcdf")(netcdf_path, contigs);
-        auto exons
-          = new_majiq.attr("Exons").attr("from_netcdf")(netcdf_path, genes);
-        auto junctions
-          = new_majiq.attr("GeneJunctions")
-            .attr("from_netcdf")(netcdf_path, genes);
-        auto introns
-          = new_majiq.attr("GeneIntrons").attr("from_netcdf")(
-              netcdf_path, genes);
-        return new_majiq
-          .attr("SpliceGraph")(contigs, genes, exons, junctions, introns);
-        },
-        "Load splicegraph from netCDF file",
-        py::arg("netcdf_path"))
+    // constructors from gff3
     .def_static("from_gff3",
         [](std::string gff3_path, bool process_ir,
             majiq::gff3::featuretype_map_t gff3_types) {
@@ -1447,33 +1232,6 @@ void init_SpliceGraph(py::class_<majiq::SpliceGraph>& pySpliceGraph) {
         py::arg("process_ir") = DEFAULT_BUILD_PROCESS_IR,
         py::arg_v("gff3_types", majiq::gff3::default_gff3_types,
             "new_majiq._default_gff3_types()"))
-    // save to file
-    .def("to_netcdf",
-        [](py::object& sg, py::str output_path) {
-        // don't write to existing file
-        py::object Path = py::module_::import("pathlib").attr("Path");
-        if (Path(output_path).attr("exists")().cast<bool>()) {
-          std::ostringstream oss;
-          oss << "Cannot save result to already existing file "
-              << output_path.cast<std::string>();
-          throw std::invalid_argument(oss.str());
-        }
-        sg.attr("_exons").attr("to_netcdf")(output_path, "w");
-        sg.attr("_introns").attr("to_netcdf")(output_path, "a");
-        sg.attr("_junctions").attr("to_netcdf")(output_path, "a");
-        sg.attr("_genes").attr("to_netcdf")(output_path, "a");
-        sg.attr("_contigs").attr("to_netcdf")(output_path, "a");
-        return;
-        },
-        R"pbdoc(
-        Serialize splicegraph to netCDF file
-
-        Parameters
-        ----------
-        output_path: str
-            Path for resulting file. Raises error if file already exists.
-        )pbdoc",
-        py::arg("output_path"))
     // XXX debug
     .def_static("infer_exons", &SpliceGraph::InferExons,
         "Infer exons from base annotated exons and junctions",
@@ -1525,22 +1283,6 @@ void init_SpliceGraph(py::class_<majiq::SpliceGraph>& pySpliceGraph) {
         "Access the splicegraph's contigs")
     .def_property_readonly("_exon_connections", &SpliceGraph::exon_connections,
         "Access the splicegraph's exon connections")
-    // access underlying data as xarray datasets
-    .def_property_readonly("exons",
-        [](py::object& sg) { return sg.attr("_exons").attr("df")(); },
-        "xr.Dataset view of splicegraph's exons")
-    .def_property_readonly("introns",
-        [](py::object& sg) { return sg.attr("_introns").attr("df")(); },
-        "xr.Dataset view of splicegraph's introns")
-    .def_property_readonly("junctions",
-        [](py::object& sg) { return sg.attr("_junctions").attr("df")(); },
-        "xr.Dataset view of splicegraph's junctions")
-    .def_property_readonly("genes",
-        [](py::object& sg) { return sg.attr("_genes").attr("df")(); },
-        "xr.Dataset view of splicegraph's genes")
-    .def_property_readonly("contigs",
-        [](py::object& sg) { return sg.attr("_contigs").attr("df")(); },
-        "xr.Dataset view of splicegraph's contigs")
     // get sj introns on which coverage may be read
     .def("sj_introns", [](SpliceGraph& sg, bool stranded) {
         return majiq::SJIntrons::FromGeneExonsAndIntrons(
