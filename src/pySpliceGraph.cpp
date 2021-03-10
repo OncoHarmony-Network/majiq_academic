@@ -8,12 +8,14 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/numpy.h>
 #include <pybind11/stl_bind.h>
+#include <pybind11/stl.h>
 
 #include <string>
 #include <sstream>
 #include <array>
 #include <vector>
 #include <memory>
+#include <optional>
 #include <cstddef>
 #include <stdexcept>
 
@@ -272,9 +274,11 @@ void define_coordinates_properties(pyClassShared_t<RegionsT>& pyRegions) {
       std::is_same_v<decltype(std::declval<RegionT>().data),
                      majiq::detail::ConnectionData>) {
     pyRegions
-      .def("connect_exons", &RegionsT::connect_exons,
-          "Connect regions to specified exons, updataing {start,end}_exon_idx",
-          py::arg("exons"))
+      .def("_pass_all", &RegionsT::pass_all, "pass all connections")
+      .def("_simplify_all",
+          &RegionsT::simplify_all, "simplify all connections")
+      .def("_unsimplify_all",
+          &RegionsT::unsimplify_all, "unsimplify all connections")
       .def_property_readonly("denovo",
           [](py::object& regions_obj) -> py::array_t<bool> {
           RegionsT& regions = regions_obj.cast<RegionsT&>();
@@ -299,11 +303,16 @@ void define_coordinates_properties(pyClassShared_t<RegionsT>& pyRegions) {
               regions.data(), offset, regions_obj);
           },
           "array[bool] indicating if the connection is simplified")
-      .def("_pass_all", &RegionsT::pass_all, "pass all connections")
-      .def("_simplify_all",
-          &RegionsT::simplify_all, "simplify all connections")
-      .def("_unsimplify_all",
-          &RegionsT::unsimplify_all, "unsimplify all connections")
+      .def("connect_exons", &RegionsT::connect_exons,
+          "Connect regions to specified exons, updataing {start,end}_exon_idx",
+          py::arg("exons"))
+      .def_property_readonly("connected_exons",
+          [](RegionsT& self) -> std::optional<std::shared_ptr<majiq::Exons>> {
+          using return_t = std::optional<std::shared_ptr<majiq::Exons>>;
+          return self.is_connected()
+            ? return_t{self.connected_exons()} : return_t{};
+          },
+          "Exons connected to (or None if not connected to any exons)")
       .def_property_readonly("start_exon_idx",
           [](py::object& regions_obj) -> py::array_t<size_t> {
           RegionsT& regions = regions_obj.cast<RegionsT&>();
