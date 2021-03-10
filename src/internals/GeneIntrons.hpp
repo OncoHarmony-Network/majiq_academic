@@ -219,6 +219,8 @@ inline std::size_t hash_value(const GeneIntrons& x) noexcept {
     boost::hash_combine(result, i.denovo());
     boost::hash_combine(result, i.passed_build());
     boost::hash_combine(result, i.simplified());
+    boost::hash_combine(result, i.start_exon_idx());
+    boost::hash_combine(result, i.end_exon_idx());
   }
   return result;
 }

@@ -149,22 +149,37 @@ void define_sjbins_properties(pyClassShared_t<SJBinsT>& pySJBins) {
     .def("__len__", &SJBinsT::size, "Total number of bin reads")
     .def(py::init([](
             std::shared_ptr<RegionsT> regions,
-            py::array_t<majiq::junction_ct_t> _position_reads,
-            py::array_t<majiq::junction_pos_t> _position,
+            py::array_t<CountT> _bin_reads,
+            py::array_t<majiq::junction_pos_t> _bin_idx,
             py::array_t<size_t> _offsets,
-            majiq::junction_pos_t num_bins) {
-          auto position_reads = _position_reads.unchecked<1>();
-          auto position = _position.unchecked<1>();
-          auto offsets = _offsets.unchecked<1>();
-          std::vector<size_t> offsets_vec(offsets.shape(0));
-          for (size_t i = 0; i < offsets_vec.size(); ++i) {
-            offsets_vec[i] = offsets(i);
+            majiq::junction_pos_t total_bins) {
+          auto check_1d = [](const auto& x) {
+            if (x.ndim() != 1)
+            throw std::runtime_error("Bins arrays must be 1D"); };
+          check_1d(_bin_reads);
+          check_1d(_bin_idx);
+          check_1d(_offsets);
+          std::vector<size_t> offsets_vec(_offsets.shape(0));
+          {
+            auto offsets = _offsets.unchecked<1>();
+            for (size_t i = 0; i < offsets_vec.size(); ++i) {
+              offsets_vec[i] = offsets(i);
+            }
           }
-          std::vector<BinReads> pr_vec(position_reads.shape(0));
-          for (size_t i = 0; i < pr_vec.size(); ++i) {
-            pr_vec[i] = BinReads{position(i), position_reads(i)};
+          if (_bin_reads.shape(0) != _bin_idx.shape(0)) {
+            throw std::runtime_error(
+                "bin_reads and bin_idx should be same length");
           }
-          return SJBinsT{regions, std::move(pr_vec), std::move(offsets_vec), num_bins};
+          std::vector<BinReads> br_vec(_bin_reads.shape(0));
+          {
+            auto bin_reads = _bin_reads.template unchecked<1>();
+            auto bin_idx = _bin_idx.unchecked<1>();
+            for (size_t i = 0; i < br_vec.size(); ++i) {
+              br_vec[i] = BinReads{bin_idx(i), bin_reads(i)};
+            }
+          }
+          return SJBinsT{regions,
+            std::move(br_vec), std::move(offsets_vec), total_bins};
           }),
         "Initialize bins over specified regions with per-bin coverage",
         py::arg("sj"),
@@ -767,6 +782,74 @@ void init_PyEvents(pyEvents_t& pyEvents) {
   using majiq_pybind::ArrayFromOffsetsVector;
   using majiq_pybind::ArrayFromVectorAndOffset;
   pyEvents
+    .def(py::init([](
+            const std::shared_ptr<majiq::GeneIntrons>& introns,
+            const std::shared_ptr<majiq::GeneJunctions>& junctions,
+            // make events vector (ref_exon_idx, event_type)
+            py::array_t<size_t> _ref_exon_idx,
+            py::array_t<std::array<char, 1>> _event_type,
+            // connection offsets (1 longer than events)
+            py::array_t<size_t> _offsets,
+            // connections (is_intron, connection_idx)
+            py::array_t<bool> _is_intron,
+            py::array_t<size_t> _connection_idx) {
+          using majiq::EventType;
+          using majiq::ConnectionIndex;
+          auto check_1d = [](const auto& x) {
+            if (x.ndim() != 1)
+            throw std::runtime_error("Events arrays must be 1D"); };
+          check_1d(_ref_exon_idx);
+          check_1d(_event_type);
+          check_1d(_offsets);
+          check_1d(_is_intron);
+          check_1d(_connection_idx);
+          if (_ref_exon_idx.shape(0) != _event_type.shape(0)) {
+            throw std::runtime_error(
+                "ref_exon_idx and event_type must have same length");
+          }
+          std::vector<Event> event_vec(_ref_exon_idx.shape(0));
+          {
+            auto ref_exon_idx = _ref_exon_idx.unchecked<1>();
+            auto event_type = _event_type.unchecked<1>();
+            for (size_t i = 0; i < event_vec.size(); ++i) {
+              event_vec[i] = Event{
+                ref_exon_idx(i), static_cast<EventType>(event_type(i)[0])};
+            }
+          }
+          std::vector<size_t> offsets_vec(_offsets.shape(0));
+          {
+            auto offsets = _offsets.unchecked<1>();
+            for (size_t i = 0; i < offsets_vec.size(); ++i) {
+              offsets_vec[i] = offsets(i);
+            }
+          }
+          if (_is_intron.shape(0) != _connection_idx.shape(0)) {
+            throw std::runtime_error(
+                "is_intron and connection_idx must have same length");
+          }
+          std::vector<ConnectionIndex> connections_vec(_is_intron.shape(0));
+          {
+            auto is_intron = _is_intron.unchecked<1>();
+            auto connection_idx = _connection_idx.unchecked<1>();
+            for (size_t i = 0; i < connections_vec.size(); ++i) {
+              connections_vec[i] = ConnectionIndex{
+                is_intron(i), connection_idx(i)};
+            }
+          }
+          return Events{introns, junctions, std::move(event_vec),
+            std::move(offsets_vec), std::move(connections_vec)};
+          }),
+        "Initialize events object from numpy arrays",
+        py::arg("introns"),
+        py::arg("junctions"),
+        py::arg("ref_exon_idx"),
+        py::arg("event_type"),
+        py::arg("offsets"),
+        py::arg("is_intron"),
+        py::arg("connection_idx"))
+    .def_property_readonly("introns", &Events::introns, "underlying introns")
+    .def_property_readonly("junctions", &Events::junctions,
+        "underlying junctions")
     .def_property_readonly("ref_exon_idx",
         [](py::object& self_obj) {
         Events& self = self_obj.cast<Events&>();
@@ -781,6 +864,13 @@ void init_PyEvents(pyEvents_t& pyEvents) {
         return ArrayFromVectorAndOffset<std::array<char, 1>, Event>(
             self.events(), offset, self_obj); },
         "Event type")
+    .def_property_readonly("_offsets",
+        [](py::object& self_obj) {
+        Events& self = self_obj.cast<Events&>();
+        return ArrayFromVectorAndOffset<size_t, size_t>(
+            self.connection_offsets(), 0, self_obj);
+        },
+        "Raw offsets for events into connections")
     .def_property_readonly("connection_idx_start",
         [](py::object& self_obj) {
         Events& self = self_obj.cast<Events&>();

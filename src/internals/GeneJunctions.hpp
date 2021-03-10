@@ -167,6 +167,8 @@ inline std::size_t hash_value(const GeneJunctions& x) noexcept {
     boost::hash_combine(result, j.denovo());
     boost::hash_combine(result, j.passed_build());
     boost::hash_combine(result, j.simplified());
+    boost::hash_combine(result, j.start_exon_idx());
+    boost::hash_combine(result, j.end_exon_idx());
   }
   return result;
 }

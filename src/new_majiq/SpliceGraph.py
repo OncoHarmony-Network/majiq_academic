@@ -15,6 +15,7 @@ import new_majiq.constants as constants
 from new_majiq.Contigs import Contigs
 from new_majiq.Genes import Genes
 from new_majiq.Exons import Exons
+from new_majiq.Events import Events
 from new_majiq.GeneIntrons import GeneIntrons
 from new_majiq.GeneJunctions import GeneJunctions
 from new_majiq.internals import SpliceGraph as _SpliceGraph
@@ -60,6 +61,14 @@ class SpliceGraph(object):
     @property
     def junctions(self) -> GeneJunctions:
         return GeneJunctions(self._sg._junctions)
+
+    def lsvs(self) -> Events:
+        """Construct current LSVs"""
+        return Events(self._sg._exon_connections.lsvs())
+
+    def constitutive(self) -> Events:
+        """Construct current constitutive events"""
+        return Events(self._sg._exon_connections.constitutive())
 
     def to_netcdf(self, path: Union[str, Path]) -> None:
         """Serialize splicegraph to netcdf format"""

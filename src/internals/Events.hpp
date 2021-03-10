@@ -51,6 +51,9 @@ class Events {
   size_t num_introns() const { return intron_connection_idx_.size(); }
   size_t size() const { return num_connections(); }
 
+  const std::shared_ptr<GeneIntrons>& introns() const { return introns_; }
+  const std::shared_ptr<GeneJunctions>& junctions() const { return junctions_; }
+
   // index into connections for contig-sorted junctins
   typename std::vector<size_t>::const_iterator
   connection_idx_junctions_begin() const {

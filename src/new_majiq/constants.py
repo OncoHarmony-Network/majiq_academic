@@ -17,10 +17,13 @@ NC_GENES: Final[str] = "genes"
 NC_EXONS: Final[str] = "exons"
 NC_GENEJUNCTIONS: Final[str] = "junctions"
 NC_GENEINTRONS: Final[str] = "introns"
+
 NC_SJINTRONS: Final[str] = "sj_introns"
 NC_SJINTRONSBINS: Final[str] = "sj_introns_bins"
 NC_SJJUNCTIONS: Final[str] = "sj_junctions"
 NC_SJJUNCTIONSBINS: Final[str] = "sj_junctions_bins"
+
+NC_EVENTS: Final[str] = "events"
 
 
 DEFAULT_BUILD_PROCESS_IR: Final[bool] = True
