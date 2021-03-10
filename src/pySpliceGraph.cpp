@@ -77,6 +77,99 @@ using pyIntronThresholdsGenerator_t
 template <typename T>
 using base_t = std::remove_cv_t<std::remove_reference_t<T>>;
 
+template <typename SJBinsT,
+         typename RegionsT
+           = base_t<decltype(*(std::declval<SJBinsT>().regions()))>,
+         typename BinReads
+           = base_t<decltype(std::declval<SJBinsT>().reads()[0])>,
+         typename CountT = decltype(std::declval<BinReads>().bin_reads)>
+void define_sjbins_properties(pyClassShared_t<SJBinsT>& pySJBins) {
+  using majiq_pybind::ArrayFromVectorAndOffset;
+  using majiq_pybind::ArrayFromOffsetsVector;
+  pySJBins
+    .def_property_readonly("_regions", &SJBinsT::regions,
+        "Underlying regions bin reads are definedd over")
+    .def_property_readonly("total_bins", &SJBinsT::total_bins,
+        "the total number of bins possible (positions for junctions, too)")
+    .def_property_readonly("bin_reads",
+        [](py::object& sj_obj) {
+        SJBinsT& sj = sj_obj.cast<SJBinsT&>();
+        const size_t offset = offsetof(BinReads, bin_reads);
+        return ArrayFromVectorAndOffset<CountT, BinReads>(
+            sj.reads(), offset, sj_obj);
+        },
+        "Number of reads for each bin")
+    .def_property_readonly("bin_idx",
+        [](py::object& sj_obj) {
+        SJBinsT& sj = sj_obj.cast<SJBinsT&>();
+        const size_t offset = offsetof(BinReads, bin_idx);
+        return ArrayFromVectorAndOffset<majiq::junction_pos_t, BinReads>(
+            sj.reads(), offset, sj_obj);
+        },
+        "Bin index for the each bin reads")
+    .def_property_readonly("_offsets",
+        [](py::object& sj_obj) {
+        SJBinsT& sj = sj_obj.cast<SJBinsT&>();
+        return ArrayFromVectorAndOffset<size_t, size_t>(
+            sj.offsets(), 0, sj_obj);
+        },
+        "Raw offsets for regions into bin reads")
+    .def("numstacks",
+        [](const SJBinsT& self,
+          py::array_t<size_t> idx, py::array_t<majiq::real_t> pvalue) {
+        auto f = [&self](size_t i, majiq::real_t p) {
+          return self.numstacks(i, p); };
+        return py::vectorize(f)(idx, pvalue);
+        },
+        "Get number of stacks for the specified regions given threshold",
+        py::arg("region_idx"),
+        py::arg("pvalue_threshold") = DEFAULT_BUILD_STACK_PVALUE)
+    .def("numbins",
+        [](const SJBinsT& self,
+          py::array_t<size_t> idx,
+          py::array_t<CountT> minreads) {
+        auto f = [&self](size_t i, CountT r) {
+          return self.numbins_minreads(i, r); };
+        return py::vectorize(f)(idx, minreads);
+        },
+        "Number of bins for regions with more than specified number of reads",
+        py::arg("region_idx"), py::arg("minreads"))
+    .def("numreads",
+        [](const SJBinsT& self,
+          py::array_t<size_t> idx,
+          py::array_t<majiq::junction_pos_t> num_stacks) {
+        auto f = [&self](size_t i, majiq::junction_pos_t n) {
+          return self.numreads(i, n); };
+        return py::vectorize(f)(idx, num_stacks);
+        },
+        "Number of reads for regions given known number of stacks",
+        py::arg("region_idx"), py::arg("num_stacks"))
+    .def("__len__", &SJBinsT::size, "Total number of bin reads")
+    .def(py::init([](
+            std::shared_ptr<RegionsT> regions,
+            py::array_t<majiq::junction_ct_t> _position_reads,
+            py::array_t<majiq::junction_pos_t> _position,
+            py::array_t<size_t> _offsets,
+            majiq::junction_pos_t num_bins) {
+          auto position_reads = _position_reads.unchecked<1>();
+          auto position = _position.unchecked<1>();
+          auto offsets = _offsets.unchecked<1>();
+          std::vector<size_t> offsets_vec(offsets.shape(0));
+          for (size_t i = 0; i < offsets_vec.size(); ++i) {
+            offsets_vec[i] = offsets(i);
+          }
+          std::vector<BinReads> pr_vec(position_reads.shape(0));
+          for (size_t i = 0; i < pr_vec.size(); ++i) {
+            pr_vec[i] = BinReads{position(i), position_reads(i)};
+          }
+          return SJBinsT{regions, std::move(pr_vec), std::move(offsets_vec), num_bins};
+          }),
+        "Initialize bins over specified regions with per-bin coverage",
+        py::arg("sj"),
+        py::arg("bin_reads"), py::arg("bin_idx"), py::arg("_offsets"),
+        py::arg("total_bins"));
+}
+
 template <const char* REGIONS_NC_GROUP,
          typename RegionsT,
          typename RegionT
@@ -984,10 +1077,8 @@ void init_pyExonConnections(pyExonConnections_t& pyExonConnections) {
 }
 
 void init_SJIntronsBins(pySJIntronsBins_t& pySJIntronsBins) {
-  using BinReads = majiq::BinReads<majiq::intron_ct_t>;
   using majiq::SJIntronsBins;
-  using majiq_pybind::ArrayFromOffsetsVector;
-  using majiq_pybind::ArrayFromVectorAndOffset;
+  define_sjbins_properties(pySJIntronsBins);
   pySJIntronsBins
     .def_static("from_bam", &SJIntronsBins::FromBam,
         R"pbdoc(
@@ -1015,78 +1106,13 @@ void init_SJIntronsBins(pySJIntronsBins_t& pySJIntronsBins) {
         py::arg("gene_introns"),
         py::arg("experiment_strandness") = DEFAULT_BAM_STRANDNESS,
         py::arg("nthreads") = DEFAULT_BAM_NTHREADS)
-    .def_property_readonly("_introns",
-        [](SJIntronsBins& self) { return self.regions(); },
-        "Underlying SJIntrons for which coverage was quantified")
-    .def_property_readonly("position_reads",
-        [](py::object& sj_obj) {
-        SJIntronsBins& sj = sj_obj.cast<SJIntronsBins&>();
-        const size_t offset = offsetof(BinReads, bin_reads);
-        return ArrayFromVectorAndOffset<majiq::intron_ct_t, BinReads>(
-            sj.reads(), offset, sj_obj);
-        },
-        "Number of reads for intron/bin")
-    .def_property_readonly("position",
-        [](py::object& sj_obj) {
-        SJIntronsBins& sj = sj_obj.cast<SJIntronsBins&>();
-        const size_t offset = offsetof(BinReads, bin_idx);
-        return ArrayFromVectorAndOffset<majiq::junction_pos_t, BinReads>(
-            sj.reads(), offset, sj_obj);
-        },
-        "Position index for intron bin")
-    .def_property_readonly("jpidx_start",
-        [](py::object& sj_obj) {
-        SJIntronsBins& sj = sj_obj.cast<SJIntronsBins&>();
-        return ArrayFromOffsetsVector<size_t>(sj.offsets(), true, sj_obj);
-        },
-        "First index into junctions/positions for each junction")
-    .def_property_readonly("jpidx_end",
-        [](py::object& sj_obj) {
-        SJIntronsBins& sj = sj_obj.cast<SJIntronsBins&>();
-        return ArrayFromOffsetsVector<size_t>(sj.offsets(), false, sj_obj);
-        },
-        "One after last index into junctions/positions for each junction")
     .def("df",
         [](py::object& sj) -> py::object {
         using majiq_pybind::XarrayDatasetFromObject;
         return XarrayDatasetFromObject(sj, "jpidx", {},
-            {"position_reads", "position"});
+            {"bin_reads", "bin_idx"});
         },
-        "View on junction-position information as xarray Dataset")
-    .def_property_readonly("introns",
-        [](py::object& sj) -> py::object {
-        auto base = sj.attr("_introns").attr("df")();
-        auto get_xr = [&sj](py::str key) {
-          return py::module_::import("xarray").attr("DataArray")(
-              sj.attr(key), py::arg("dims") = "intron_idx");
-        };
-        return base.attr("assign_coords")(
-            py::arg("jpidx_start") = get_xr("jpidx_start"),
-            py::arg("jpidx_end") = get_xr("jpidx_end"));
-        },
-        "View on intron information as xarray Dataset")
-    .def_property_readonly("_offsets",
-        [](py::object& sj_obj) {
-        SJIntronsBins& sj = sj_obj.cast<SJIntronsBins&>();
-        return ArrayFromVectorAndOffset<size_t, size_t>(
-            sj.offsets(), 0, sj_obj);
-        },
-        "Raw offsets for jpidx_start and jpidx_end")
-    .def_property_readonly("num_bins", &SJIntronsBins::total_bins,
-        "Number of positional bins intron coverage was split into")
-    .def_property_readonly("num_introns", &SJIntronsBins::num_regions,
-        "Number of introns being quantified")
-    .def("numstacks",
-        [](const SJIntronsBins& self,
-          py::array_t<size_t> jidx, py::array_t<majiq::real_t> pvalue) {
-        auto f = [&self](size_t i, majiq::real_t p) {
-          return self.numstacks(i, p); };
-        return py::vectorize(f)(jidx, pvalue);
-        },
-        "Get number of stacks for the specified intron given threshold",
-        py::arg("intron_idx"),
-        py::arg("pvalue_threshold") = DEFAULT_BUILD_STACK_PVALUE)
-    .def("__len__", &SJIntronsBins::size);
+        "View on intron-bin information as xarray Dataset");
 }
 
 void init_GeneIntrons(pyGeneIntrons_t& pyGeneIntrons) {
@@ -1224,37 +1250,9 @@ void init_SJJunctions(pySJJunctions_t& pySJJunctions) {
         "View on junction information as xarray Dataset");
 }
 void init_SJJunctionsBins(pySJJunctionsBins_t& pySJJunctionsBins) {
-  using BinReads = majiq::BinReads<majiq::junction_ct_t>;
   using majiq::SJJunctionsBins;
-  using majiq_pybind::ArrayFromOffsetsVector;
-  using majiq_pybind::ArrayFromVectorAndOffset;
-
+  define_sjbins_properties(pySJJunctionsBins);
   pySJJunctionsBins
-    .def(py::init([](
-            std::shared_ptr<majiq::SJJunctions> junctions,
-            py::array_t<majiq::junction_ct_t> _position_reads,
-            py::array_t<majiq::junction_pos_t> _position,
-            py::array_t<size_t> _offsets,
-            majiq::junction_pos_t num_positions) {
-          auto position_reads = _position_reads.unchecked<1>();
-          auto position = _position.unchecked<1>();
-          auto offsets = _offsets.unchecked<1>();
-          std::vector<size_t> offsets_vec(offsets.shape(0));
-          for (size_t i = 0; i < offsets_vec.size(); ++i) {
-            offsets_vec[i] = offsets(i);
-          }
-          std::vector<BinReads> pr_vec(position_reads.shape(0));
-          for (size_t i = 0; i < pr_vec.size(); ++i) {
-            pr_vec[i] = BinReads{position(i), position_reads(i)};
-          }
-          return majiq::SJJunctionsBins{
-            junctions,
-            std::move(pr_vec), std::move(offsets_vec), num_positions};
-        }),
-        "Create SJJunctionsBins for junctions with per-position coverage",
-        py::arg("sj_junctions"),
-        py::arg("position_reads"), py::arg("position"), py::arg("_offsets"),
-        py::arg("num_positions"))
     .def_static("from_bam", &SJJunctionsBins::FromBam,
         R"pbdoc(
         Load junctions and per-position counts for an aligned BAM file
@@ -1271,134 +1269,13 @@ void init_SJJunctionsBins(pySJJunctionsBins_t& pySJJunctionsBins) {
         py::arg("bam_path"),
         py::arg("experiment_strandness") = DEFAULT_BAM_STRANDNESS,
         py::arg("nthreads") = DEFAULT_BAM_NTHREADS)
-    .def_static("from_netcdf",
-        [](py::str x) {
-        auto xr_raw = majiq_pybind::OpenXarrayDataset(
-            x, py::str(SJ_JUNCTIONS_RAW_NC_GROUP));
-        auto get_array = [&xr_raw](py::str key) {
-          py::function np_array = py::module_::import("numpy").attr("array");
-          return np_array(xr_raw.attr("__getitem__")(key));
-        };
-        using majiq::junction_ct_t;
-        using majiq::junction_pos_t;
-        py::array_t<junction_ct_t> position_reads = get_array("position_reads");
-        py::array_t<junction_pos_t> position = get_array("position");
-        py::array_t<size_t> offsets = get_array("_offsets");
-        py::dict xr_raw_attrs = xr_raw.attr("attrs");
-        auto num_positions = xr_raw_attrs["num_positions"]
-          .cast<junction_pos_t>();
-        // load information about junctions, then call Python constructor
-        auto new_majiq = py::module_::import("new_majiq");
-        auto junctions = new_majiq.attr("SJJunctions").attr("from_netcdf")(x);
-        return new_majiq.attr("SJJunctionsBins")(
-            junctions, position_reads, position, offsets, num_positions);
-        },
-        "Load junctions and per-position counts from netcdf",
-        py::arg("netcdf_path"))
-    .def_property_readonly("_junctions", &SJJunctionsBins::regions,
-        "Underlying junctions")
-    .def_property_readonly("num_positions",
-        &SJJunctionsBins::total_bins,
-        "Number of valid positions possible (function of max read length)")
-    .def("__len__", &SJJunctionsBins::size,
-        "Number of junction positions")
-    .def_property_readonly("position_reads",
-        [](py::object& sj_obj) {
-        SJJunctionsBins& sj = sj_obj.cast<SJJunctionsBins&>();
-        const size_t offset = offsetof(BinReads, bin_reads);
-        return ArrayFromVectorAndOffset<majiq::junction_ct_t, BinReads>(
-            sj.reads(), offset, sj_obj);
-        },
-        "Number of reads for a junction/position")
-    .def_property_readonly("position",
-        [](py::object& sj_obj) {
-        SJJunctionsBins& sj = sj_obj.cast<SJJunctionsBins&>();
-        const size_t offset = offsetof(BinReads, bin_idx);
-        return ArrayFromVectorAndOffset<majiq::junction_pos_t, BinReads>(
-            sj.reads(), offset, sj_obj);
-        },
-        "Position index for junction/position")
-    .def_property_readonly("_offsets",
-        [](py::object& sj_obj) {
-        SJJunctionsBins& sj = sj_obj.cast<SJJunctionsBins&>();
-        return ArrayFromVectorAndOffset<size_t, size_t>(
-            sj.offsets(), 0, sj_obj);
-        },
-        "Raw offsets for jpidx_start and jpidx_end")
-    .def_property_readonly("jpidx_start",
-        [](py::object& sj_obj) {
-        SJJunctionsBins& sj = sj_obj.cast<SJJunctionsBins&>();
-        return ArrayFromOffsetsVector<size_t>(sj.offsets(), true, sj_obj);
-        },
-        "First index into junctions/positions for each junction")
-    .def_property_readonly("jpidx_end",
-        [](py::object& sj_obj) {
-        SJJunctionsBins& sj = sj_obj.cast<SJJunctionsBins&>();
-        return ArrayFromOffsetsVector<size_t>(sj.offsets(), false, sj_obj);
-        },
-        "One after last index into junctions/positions for each junction")
     .def("df",
         [](py::object& sj) -> py::object {
         using majiq_pybind::XarrayDatasetFromObject;
         return XarrayDatasetFromObject(sj, "jpidx", {},
-            {"position_reads", "position"});
+            {"bin_reads", "bin_idx"});
         },
-        "View on junction-position information as xarray Dataset")
-    .def_property_readonly("junctions",
-        [](py::object& sj) -> py::object {
-        auto base = sj.attr("_junctions").attr("df")();
-        auto get_xr = [&sj](py::str key) {
-          return py::module_::import("xarray").attr("DataArray")(
-              sj.attr(key), py::arg("dims") = "jidx");
-        };
-        return base.attr("assign_coords")(
-            py::arg("jpidx_start") = get_xr("jpidx_start"),
-            py::arg("jpidx_end") = get_xr("jpidx_end"));
-        },
-        "View on junction information as xarray Dataset")
-    .def("numstacks",
-        [](const SJJunctionsBins& self,
-          py::array_t<size_t> jidx, py::array_t<majiq::real_t> pvalue) {
-        auto f = [&self](size_t i, majiq::real_t p) {
-          return self.numstacks(i, p); };
-        return py::vectorize(f)(jidx, pvalue);
-        },
-        "Get number of stacks for the specified junction given threshold",
-        py::arg("jidx"),
-        py::arg("pvalue_threshold") = DEFAULT_BUILD_STACK_PVALUE)
-    .def("to_netcdf",
-        [](py::object& sj, py::str output_path) {
-        // don't write to existing file
-        py::object Path = py::module_::import("pathlib").attr("Path");
-        if (Path(output_path).attr("exists")().cast<bool>()) {
-          std::ostringstream oss;
-          oss << "Cannot save result to already existing file "
-              << output_path.cast<std::string>();
-          throw std::invalid_argument(oss.str());
-        }
-        // save contigs
-        sj.attr("_junctions").attr("_contigs").attr("to_netcdf")(
-            output_path, py::arg("mode") = "w");
-        // save junctions
-        sj.attr("_junctions").attr("df")().attr("to_netcdf")(
-            output_path,
-            py::arg("group") = py::str(SJ_JUNCTIONS_NC_GROUP),
-            py::arg("mode") = "a");
-        // save junction positions
-        auto xr_jp
-          = sj.attr("df")()
-          .attr("assign_coords")(
-              py::arg("_offsets") = py::module_::import("xarray").attr("DataArray")(
-                sj.attr("_offsets"), py::arg("dims") = "offset_idx"))
-          .attr("assign_attrs")(py::arg("num_positions") = sj.attr("num_positions"));
-        xr_jp.attr("to_netcdf")(
-            output_path,
-            py::arg("group") = py::str(SJ_JUNCTIONS_RAW_NC_GROUP),
-            py::arg("mode") = "a");
-        return;
-        },
-        "Serialize junction counts to specified file",
-        py::arg("output_path"));
+        "View on junction-position information as xarray Dataset");
 }
 
 void init_pyGroupJunctionsGen(pyGroupJunctionsGen_t& pyGroupJunctionsGen) {
