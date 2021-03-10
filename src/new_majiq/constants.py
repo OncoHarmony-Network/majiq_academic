@@ -20,7 +20,7 @@ NC_GENEINTRONS: Final[str] = "introns"
 NC_SJINTRONS: Final[str] = "sj_introns"
 NC_SJINTRONSBINS: Final[str] = "sj_introns_bins"
 NC_SJJUNCTIONS: Final[str] = "sj_junctions"
-NC_SJJUNCTIONSPOSITIONS: Final[str] = "sj_junctions_positions"
+NC_SJJUNCTIONSBINS: Final[str] = "sj_junctions_bins"
 
 
 DEFAULT_BUILD_PROCESS_IR: Final[bool] = True

@@ -90,7 +90,7 @@ void define_sjbins_properties(pyClassShared_t<SJBinsT>& pySJBins) {
   using majiq_pybind::ArrayFromOffsetsVector;
   pySJBins
     .def_property_readonly("_regions", &SJBinsT::regions,
-        "Underlying regions bin reads are definedd over")
+        "Underlying regions bin reads are defined over")
     .def_property_readonly("total_bins", &SJBinsT::total_bins,
         "the total number of bins possible (positions for junctions, too)")
     .def_property_readonly("bin_reads",
