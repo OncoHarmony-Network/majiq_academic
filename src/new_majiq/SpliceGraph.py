@@ -42,23 +42,23 @@ class SpliceGraph(object):
         return SpliceGraph(_SpliceGraph.from_gff3(str(path), process_ir, gff3_types))
 
     @property
-    def _contigs(self) -> Contigs:
+    def contigs(self) -> Contigs:
         return Contigs(self._sg._contigs)
 
     @property
-    def _genes(self) -> Genes:
+    def genes(self) -> Genes:
         return Genes(self._sg._genes)
 
     @property
-    def _exons(self) -> Exons:
+    def exons(self) -> Exons:
         return Exons(self._sg._exons)
 
     @property
-    def _introns(self) -> GeneIntrons:
+    def introns(self) -> GeneIntrons:
         return GeneIntrons(self._sg._introns)
 
     @property
-    def _junctions(self) -> GeneJunctions:
+    def junctions(self) -> GeneJunctions:
         return GeneJunctions(self._sg._junctions)
 
     def to_netcdf(self, path: Union[str, Path]) -> None:
@@ -69,11 +69,11 @@ class SpliceGraph(object):
                 " Please delete and try again if you want it there, otherwise"
                 " pick a different output path"
             )
-        self._contigs.to_netcdf(path, "w")
-        self._genes.to_netcdf(path, "a")
-        self._exons.to_netcdf(path, "a")
-        self._introns.to_netcdf(path, "a")
-        self._junctions.to_netcdf(path, "a")
+        self.contigs.to_netcdf(path, "w")
+        self.genes.to_netcdf(path, "a")
+        self.exons.to_netcdf(path, "a")
+        self.introns.to_netcdf(path, "a")
+        self.junctions.to_netcdf(path, "a")
         return
 
     @classmethod
