@@ -429,7 +429,7 @@ class ClassifyConfig:
                             'training_junctions' in settings['enabled_outputs'] or
                             'training_paths' in settings['enabled_outputs']) and not \
                             'events' in settings['enabled_outputs']:
-                            settings['enabled_outputs'].append('events')
+                            settings['enabled_outputs'].append('summary')
                 else:
                     settings['enabled_outputs'] = ['summary']
 
