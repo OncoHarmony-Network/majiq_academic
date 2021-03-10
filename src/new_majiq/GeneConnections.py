@@ -11,7 +11,7 @@ import numpy as np
 import xarray as xr
 
 from new_majiq.GeneRegions import GeneRegions
-from new_majiq.Exons import Exons
+from new_majiq.Exons import Exons, _Exons
 from typing import (
     Optional,
     Union,
@@ -29,10 +29,17 @@ class GeneConnections(GeneRegions):
         """Underlying internals class for gene connections"""
         return self._gene_regions
 
+    def connect_exons(self, exons: Exons) -> None:
+        """ Connect regions to specified exons
+        """
+        self._gene_connections.connect_exons(exons._exons)
+        return
+
     @property
     def connected_exons(self) -> Optional[Exons]:
         """exons the connections are associated with (or None otherwise)"""
-        raise NotImplementedError("Need to expose the connected_exons internals")
+        raw: Optional[_Exons] = self._gene_connections.connected_exons
+        return None if raw is None else Exons(raw)
 
     @property
     def denovo(self) -> np.ndarray:
