@@ -883,13 +883,6 @@ void init_PyEvents(pyEvents_t& pyEvents) {
         return ArrayFromOffsetsVector<size_t>(
             self.connection_offsets(), false, self_obj); },
         "One after last index into event connections for each event")
-    .def("df",
-        [](py::object& self) -> py::object {
-        using majiq_pybind::XarrayDatasetFromObject;
-        return XarrayDatasetFromObject(self, "event_idx",
-            {"ref_exon_idx", "event_type", "connection_idx_start",
-            "connection_idx_end"}); },
-        "View on event information as xarray Dataset")
     .def_property_readonly("is_intron",
         [](py::object& self_obj) {
         Events& self = self_obj.cast<Events&>();
@@ -904,12 +897,6 @@ void init_PyEvents(pyEvents_t& pyEvents) {
         return ArrayFromVectorAndOffset<size_t, ConnectionIndex>(
             self.connections(), offset, self_obj); },
         "Event connection index into corresponding Introns or Junctions")
-    .def("connections_df",
-        [](py::object& self) -> py::object {
-        using majiq_pybind::XarrayDatasetFromObject;
-        return XarrayDatasetFromObject(self, "connection_idx",
-            {"is_intron", "idx"}); },
-        "View on event connection information as xarray Dataset")
     .def_property_readonly("num_events", &Events::num_events)
     .def_property_readonly("num_connections", &Events::num_connections)
     .def_property_readonly("num_junctions", &Events::num_junctions)
