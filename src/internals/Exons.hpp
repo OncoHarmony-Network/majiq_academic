@@ -116,6 +116,15 @@ class Exons : public detail::Regions<Exon, false> {
   }
 };
 
+inline std::size_t hash_value(const Exons& x) noexcept {
+  std::size_t result = std::hash<size_t>{}(x.size());
+  for (const auto& e : x) {
+    boost::hash_combine(result, e.gene);
+    boost::hash_combine(result, e.coordinates);
+    boost::hash_combine(result, e.data);
+  }
+  return result;
+}
 }  // namespace majiq
 
 #endif  // MAJIQ_EXONS_HPP

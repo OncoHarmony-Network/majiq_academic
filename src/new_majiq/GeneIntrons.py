@@ -26,6 +26,9 @@ class GeneIntrons(GeneConnections):
         super().__init__(gene_introns)
         return
 
+    def hash_value(self):
+        return self._gene_introns.hash_value()
+
     @property
     def _gene_introns(self) -> _GeneIntrons:
         """Underlying internals representation"""

@@ -26,6 +26,9 @@ class Exons(GeneRegions):
         super().__init__(exons)
         return
 
+    def hash_value(self):
+        return self._exons.hash_value()
+
     @property
     def _exons(self) -> _Exons:
         """expose underlying internals representation of Exons"""

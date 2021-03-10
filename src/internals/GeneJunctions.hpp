@@ -158,6 +158,18 @@ class GeneJunctions : public detail::GeneConnections<GeneJunction, true> {
     return;
   }
 };
+
+inline std::size_t hash_value(const GeneJunctions& x) noexcept {
+  std::size_t result = std::hash<size_t>{}(x.size());
+  for (const auto& j : x) {
+    boost::hash_combine(result, j.gene);
+    boost::hash_combine(result, j.coordinates);
+    boost::hash_combine(result, j.denovo());
+    boost::hash_combine(result, j.passed_build());
+    boost::hash_combine(result, j.simplified());
+  }
+  return result;
+}
 }  // namespace majiq
 
 #endif  // MAJIQ_GENEJUNCTIONS_HPP

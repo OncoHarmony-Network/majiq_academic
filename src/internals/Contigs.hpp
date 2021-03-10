@@ -120,6 +120,14 @@ inline std::ostream& operator<<(std::ostream& os, const Contigs& x) noexcept {
   }
   return os;
 }
+
+inline std::size_t hash_value(const Contigs& x) {
+  std::size_t result = std::hash<size_t>{}(x.size());
+  for (const auto& c : x.seqids()) {
+    boost::hash_combine(result, c);
+  }
+  return result;
+}
 }  // namespace majiq
 
 #endif  // MAJIQ_CONTIGS_HPP

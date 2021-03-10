@@ -369,6 +369,9 @@ void init_Contigs(pyContigs_t& pyContigs) {
   using majiq::Contigs;
   using majiq::Contig;
   pyContigs
+    .def("hash_value",
+        [](const Contigs& self) { return majiq::hash_value(self); },
+        "hashed representation of contigs")
     .def(
         py::init([](py::list seqids) {
           auto result = Contigs::create();
@@ -404,6 +407,9 @@ void init_Genes(pyGenes_t& pyGenes) {
   using majiq::geneid_t;
   define_coordinates_properties<GENES_NC_GROUP>(pyGenes);
   pyGenes
+    .def("hash_value",
+        [](const Genes& self) { return majiq::hash_value(self); },
+        "hashed representation of genes")
     .def(
         py::init([](
             std::shared_ptr<Contigs> contigs,
@@ -483,6 +489,9 @@ void init_Exons(pyExons_t& pyExons) {
         py::arg("genes"), py::arg("gene_idx"),
         py::arg("start"), py::arg("end"),
         py::arg("annotated_start"), py::arg("annotated_end"))
+    .def("hash_value",
+        [](const Exons& self) { return majiq::hash_value(self); },
+        "hashed representation of exons")
     .def_property_readonly("annotated_start",
         [](py::object& exons_obj) -> py::array_t<position_t> {
         Exons& exons = exons_obj.cast<Exons&>();
@@ -527,6 +536,9 @@ void init_GeneJunctions(pyGeneJunctions_t& pyGeneJunctions) {
         py::arg("genes"),
         py::arg("gene_idx"), py::arg("start"), py::arg("end"),
         py::arg("denovo"), py::arg("passed_build"), py::arg("simplified"))
+    .def("hash_value",
+        [](const GeneJunctions& self) { return majiq::hash_value(self); },
+        "hashed representation of gene junctions")
     .def("__repr__", [](const GeneJunctions& self) -> std::string {
         std::ostringstream oss;
         oss << "GeneJunctions<" << self.size() << " total>";
@@ -1033,6 +1045,9 @@ void init_GeneIntrons(pyGeneIntrons_t& pyGeneIntrons) {
         py::arg("genes"),
         py::arg("gene_idx"), py::arg("start"), py::arg("end"),
         py::arg("denovo"), py::arg("passed_build"), py::arg("simplified"))
+    .def("hash_value",
+        [](const GeneIntrons& self) { return majiq::hash_value(self); },
+        "hashed representation of gene introns")
     .def("build_group", [](std::shared_ptr<GeneIntrons>& gene_introns) {
         return majiq::GroupIntronsGenerator(gene_introns);
         },

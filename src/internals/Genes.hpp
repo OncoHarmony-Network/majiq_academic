@@ -210,6 +210,18 @@ inline std::size_t hash_value(const KnownGene& x) {
   boost::hash_combine(result, x.ptr_);
   return result;
 }
+
+inline std::size_t hash_value(const Genes& x) {
+  std::size_t result = std::hash<size_t>{}(x.size());
+  for (size_t idx = 0; idx < x.size(); ++idx) {
+    const auto& g = x.get(idx);
+    boost::hash_combine(result, g.contig);
+    boost::hash_combine(result, g.coordinates);
+    boost::hash_combine(result, g.strand);
+    boost::hash_combine(result, g.gene_id());
+  }
+  return result;
+}
 }  // namespace majiq
 // specialize std::hash for KnownGene
 namespace std {

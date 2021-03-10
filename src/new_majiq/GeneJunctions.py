@@ -26,6 +26,9 @@ class GeneJunctions(GeneConnections):
         super().__init__(gene_junctions)
         return
 
+    def hash_value(self):
+        return self._gene_junctions.hash_value()
+
     @property
     def _gene_junctions(self) -> _GeneJunctions:
         """Underlying internals representation"""

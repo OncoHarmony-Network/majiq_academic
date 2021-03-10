@@ -29,6 +29,9 @@ class Genes(ContigRegions):
         super().__init__(genes)
         return
 
+    def hash_value(self):
+        return self._genes.hash_value()
+
     @property
     def _genes(self) -> _Genes:
         """expose underlying internals representation of Genes"""
