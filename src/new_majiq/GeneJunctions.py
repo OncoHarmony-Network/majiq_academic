@@ -55,7 +55,7 @@ class GeneJunctions(GeneConnections):
 
     def to_netcdf(self, path: Union[str, Path], mode: str) -> None:
         """Serialize to netcdf format. Note genes need to be saved separately"""
-        self.df.to_netcdf(path, mode, group=constants.NC_GENEJUNCTIONS)
+        self.df.drop_vars("gj_idx").to_netcdf(path, mode, group=constants.NC_GENEJUNCTIONS)
         return
 
     @classmethod

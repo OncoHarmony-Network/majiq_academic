@@ -77,7 +77,7 @@ class Genes(ContigRegions):
 
     def to_netcdf(self, path: Union[str, Path], mode: str) -> None:
         """Serialize to netcdf format. Note contigs need to be saved separately"""
-        self.df.to_netcdf(path, mode, group=constants.NC_GENES)
+        self.df.drop_vars("gene_idx").to_netcdf(path, mode, group=constants.NC_GENES)
         return
 
     @classmethod

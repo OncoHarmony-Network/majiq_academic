@@ -77,7 +77,7 @@ class Exons(GeneRegions):
 
     def to_netcdf(self, path: Union[str, Path], mode: str) -> None:
         """Serialize to netcdf format. Note genes need to be saved separately"""
-        self.df.to_netcdf(path, mode, group=constants.NC_EXONS)
+        self.df.drop_vars("exon_idx").to_netcdf(path, mode, group=constants.NC_EXONS)
         return
 
     @classmethod

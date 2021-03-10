@@ -112,7 +112,7 @@ class SJJunctionsBins(SJBinsReads):
             {
                 "sjb_idx": self.sjb_idx,
                 "bin_idx": ("sjb_idx", self.bin_idx),
-                "_offsets": self._offsets,
+                "_offsets": ("sj_offsets_idx", self._offsets),
             },
             {
                 "total_bins": self.total_bins,
@@ -132,7 +132,7 @@ class SJJunctionsBins(SJBinsReads):
             )
         self.regions.contigs.to_netcdf(path, "w")
         self.regions.to_netcdf(path, "a")
-        self.df.to_netcdf(path, "a", group=constants.NC_SJJUNCTIONSBINS)
+        self.df.drop_vars("sjb_idx").to_netcdf(path, "a", group=constants.NC_SJJUNCTIONSBINS)
         return
 
     @classmethod

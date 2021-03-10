@@ -132,7 +132,7 @@ class SJIntronsBins(SJBinsReads):
             {
                 "sib_idx": self.sib_idx,
                 "bin_idx": ("sib_idx", self.bin_idx),
-                "_offsets": self._offsets,
+                "_offsets": ("si_offsets_idx", self._offsets),
             },
             {
                 "total_bins": self.total_bins,
@@ -176,7 +176,7 @@ class SJIntronsBins(SJBinsReads):
             # save contigs to start the file
             self.regions.contigs.to_netcdf(path, "w")
         self.regions.to_netcdf(path, "a")
-        self.df.to_netcdf(path, "a", group=constants.NC_SJINTRONSBINS)
+        self.df.drop_vars("sib_idx").to_netcdf(path, "a", group=constants.NC_SJINTRONSBINS)
         return
 
     @classmethod
