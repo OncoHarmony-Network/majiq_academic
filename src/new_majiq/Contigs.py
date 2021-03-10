@@ -62,7 +62,7 @@ class Contigs(object):
         raise NotImplementedError("Need to expose safe_idx in internals")
 
     def to_netcdf(self, path: Union[str, Path], mode: str) -> None:
-        self.df.to_netcdf(path, mode, constants.NC_CONTIGS)
+        self.df.to_netcdf(path, mode, group=constants.NC_CONTIGS)
         return
 
     @classmethod

@@ -60,7 +60,7 @@ class SJIntrons(ContigRegions):
 
     def to_netcdf(self, path: Union[str, Path], mode: str) -> None:
         """Serialize to netcdf format. Note contigs need to be saved separately"""
-        self.df.to_netcdf(path, mode, constants.NC_SJINTRONS)
+        self.df.to_netcdf(path, mode, group=constants.NC_SJINTRONS)
         return
 
     @classmethod
