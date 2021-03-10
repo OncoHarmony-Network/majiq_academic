@@ -299,6 +299,11 @@ void define_coordinates_properties(pyClassShared_t<RegionsT>& pyRegions) {
               regions.data(), offset, regions_obj);
           },
           "array[bool] indicating if the connection is simplified")
+      .def("_pass_all", &RegionsT::pass_all, "pass all connections")
+      .def("_simplify_all",
+          &RegionsT::simplify_all, "simplify all connections")
+      .def("_unsimplify_all",
+          &RegionsT::unsimplify_all, "unsimplify all connections")
       .def_property_readonly("start_exon_idx",
           [](py::object& regions_obj) -> py::array_t<size_t> {
           RegionsT& regions = regions_obj.cast<RegionsT&>();
@@ -620,11 +625,6 @@ void init_GeneJunctions(pyGeneJunctions_t& pyGeneJunctions) {
         py::arg("genes"),
         py::arg("gene_idx"), py::arg("start"), py::arg("end"),
         py::arg("denovo"), py::arg("passed_build"), py::arg("simplified"))
-    .def("_pass_all", &GeneJunctions::pass_all, "DEBUG: pass all junctions")
-    .def("_simplify_all",
-        &GeneJunctions::simplify_all, "simplify all junctions")
-    .def("_unsimplify_all",
-        &GeneJunctions::unsimplify_all, "unsimplify all junctions")
     .def_static("from_netcdf",
         [](py::str x, std::shared_ptr<majiq::Genes> genes) {
         return MakeConnections<GeneJunctions>(
@@ -1143,11 +1143,6 @@ void init_GeneIntrons(pyGeneIntrons_t& pyGeneIntrons) {
         },
         "Load introns from netcdf file",
         py::arg("netcdf_path"), py::arg("genes"))
-    .def("_pass_all", &GeneIntrons::pass_all, "DEBUG: pass all introns")
-    .def("_simplify_all",
-        &GeneIntrons::simplify_all, "simplify all introns")
-    .def("_unsimplify_all",
-        &GeneIntrons::unsimplify_all, "unsimplify all introns")
     .def("build_group", [](std::shared_ptr<GeneIntrons>& gene_introns) {
         return majiq::GroupIntronsGenerator(gene_introns);
         },
