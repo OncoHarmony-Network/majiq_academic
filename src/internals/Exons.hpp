@@ -21,6 +21,7 @@
 #include "Interval.hpp"
 #include "Contigs.hpp"
 #include "Genes.hpp"
+#include "checksum.hpp"
 
 
 namespace majiq {
@@ -116,14 +117,16 @@ class Exons : public detail::Regions<Exon, false> {
   }
 };
 
-inline std::size_t hash_value(const Exons& x) noexcept {
-  std::size_t result = std::hash<size_t>{}(x.size());
+inline detail::checksum_t checksum(const Exons& x) noexcept {
+  detail::checksum_gen_t gen;
   for (const auto& e : x) {
-    boost::hash_combine(result, e.gene);
-    boost::hash_combine(result, e.coordinates);
-    boost::hash_combine(result, e.data);
+    gen.process_bytes(&e.gene.idx_, sizeof(e.gene.idx_));
+    gen.process_bytes(&e.coordinates.start, sizeof(e.coordinates.start));
+    gen.process_bytes(&e.coordinates.end, sizeof(e.coordinates.end));
+    gen.process_bytes(&e.data.start, sizeof(e.data.start));
+    gen.process_bytes(&e.data.end, sizeof(e.data.end));
   }
-  return result;
+  return detail::checksum_t{gen.checksum()};
 }
 }  // namespace majiq
 

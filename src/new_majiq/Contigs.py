@@ -29,8 +29,8 @@ class Contigs(object):
         self._contigs: Final[_Contigs] = contigs
         return
 
-    def hash_value(self):
-        return self._contigs.hash_value()
+    def checksum(self):
+        return self._contigs.checksum()
 
     def __len__(self) -> int:
         """Number of contigs"""

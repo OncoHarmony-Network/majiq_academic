@@ -15,6 +15,7 @@
 #include "GeneRegion.hpp"
 #include "MajiqTypes.hpp"
 #include "Exons.hpp"
+#include "checksum.hpp"
 
 
 namespace majiq {
@@ -113,6 +114,21 @@ class GeneConnections : public Regions<GeneConnectionT, HAS_OVERLAPS> {
   void unsimplify_all() const {
     std::for_each(this->begin(), this->end(),
         [](const GeneConnectionT& x) { x.simplified() = false; });
+  }
+
+  checksum_t checksum() const {
+    checksum_gen_t gen;
+    for (const auto& x : *this) {
+      gen.process_bytes(&x.gene.idx_, sizeof(x.gene.idx_));
+      gen.process_bytes(&x.coordinates.start, sizeof(x.coordinates.start));
+      gen.process_bytes(&x.coordinates.end, sizeof(x.coordinates.end));
+      gen.process_bytes(&x.data.denovo, sizeof(x.data.denovo));
+      gen.process_bytes(&x.data.passed_build, sizeof(x.data.passed_build));
+      gen.process_bytes(&x.data.simplified, sizeof(x.data.simplified));
+      gen.process_bytes(&x.data.start_exon_idx, sizeof(x.data.start_exon_idx));
+      gen.process_bytes(&x.data.end_exon_idx, sizeof(x.data.end_exon_idx));
+    }
+    return checksum_t{gen.checksum()};
   }
 };
 

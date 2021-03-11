@@ -147,8 +147,8 @@ class Events(object):
             .assign_coords(_offsets=("e_offsets_idx", self._offsets))
             # add hash for introns/junctions
             .assign_attrs(
-                intron_hash=self.introns.hash_value(),
-                junction_hash=self.junctions.hash_value(),
+                intron_hash=self.introns.checksum(),
+                junction_hash=self.junctions.checksum(),
             )
             .to_netcdf(path, mode, group=constants.NC_EVENTS)
         )
@@ -162,9 +162,9 @@ class Events(object):
         junctions: GeneJunctions,
     ) -> "Events":
         df = xr.open_dataset(path, group=constants.NC_EVENTS)
-        if df.intron_hash != introns.hash_value():
+        if df.intron_hash != introns.checksum():
             raise ValueError("Saved hash for introns does not match")
-        if df.junction_hash != junctions.hash_value():
+        if df.junction_hash != junctions.checksum():
             raise ValueError("Saved hash for junctions does not match")
         return Events(_Events(
             introns._gene_introns,

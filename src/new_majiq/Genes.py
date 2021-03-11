@@ -29,8 +29,8 @@ class Genes(ContigRegions):
         super().__init__(genes)
         return
 
-    def hash_value(self):
-        return self._genes.hash_value()
+    def checksum(self):
+        return self._genes.checksum()
 
     @property
     def _genes(self) -> _Genes:

@@ -26,8 +26,8 @@ class Exons(GeneRegions):
         super().__init__(exons)
         return
 
-    def hash_value(self):
-        return self._exons.hash_value()
+    def checksum(self):
+        return self._exons.checksum()
 
     @property
     def _exons(self) -> _Exons:

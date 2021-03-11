@@ -210,20 +210,6 @@ class GeneIntrons : public detail::GeneConnections<GeneIntron, false> {
     return GeneIntrons{parents(), std::move(result_vec), exons_ptr};
   }
 };
-
-inline std::size_t hash_value(const GeneIntrons& x) noexcept {
-  std::size_t result = std::hash<size_t>{}(x.size());
-  for (const auto& i : x) {
-    boost::hash_combine(result, i.gene);
-    boost::hash_combine(result, i.coordinates);
-    boost::hash_combine(result, i.denovo());
-    boost::hash_combine(result, i.passed_build());
-    boost::hash_combine(result, i.simplified());
-    boost::hash_combine(result, i.start_exon_idx());
-    boost::hash_combine(result, i.end_exon_idx());
-  }
-  return result;
-}
 }  // namespace majiq
 
 #endif  // MAJIQ_GENEINTRONS_HPP

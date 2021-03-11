@@ -27,7 +27,7 @@
 #include "KnownFeatures.hpp"
 #include "Gene.hpp"
 #include "MajiqTypes.hpp"
-
+#include "checksum.hpp"
 
 
 namespace majiq {
@@ -211,16 +211,19 @@ inline std::size_t hash_value(const KnownGene& x) {
   return result;
 }
 
-inline std::size_t hash_value(const Genes& x) {
-  std::size_t result = std::hash<size_t>{}(x.size());
+inline detail::checksum_t checksum(const Genes& x) {
+  detail::checksum_gen_t gen;
   for (size_t idx = 0; idx < x.size(); ++idx) {
     const auto& g = x.get(idx);
-    boost::hash_combine(result, g.contig);
-    boost::hash_combine(result, g.coordinates);
-    boost::hash_combine(result, g.strand);
-    boost::hash_combine(result, g.gene_id());
+    gen.process_bytes(&g.contig.idx_, sizeof(g.contig.idx_));
+    gen.process_bytes(&g.coordinates.start, sizeof(g.coordinates.start));
+    gen.process_bytes(&g.coordinates.end, sizeof(g.coordinates.end));
+    gen.process_bytes(&g.strand, sizeof(g.strand));
+    gen.process_block(
+        g.gene_id().data(),
+        g.gene_id().data() + g.gene_id().size());
   }
-  return result;
+  return detail::checksum_t{gen.checksum()};
 }
 }  // namespace majiq
 // specialize std::hash for KnownGene

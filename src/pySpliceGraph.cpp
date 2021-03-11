@@ -279,6 +279,7 @@ void define_coordinates_properties(pyClassShared_t<RegionsT>& pyRegions) {
       std::is_same_v<decltype(std::declval<RegionT>().data),
                      majiq::detail::ConnectionData>) {
     pyRegions
+      .def("checksum", &RegionsT::checksum, "checksum of connections")
       .def("_pass_all", &RegionsT::pass_all, "pass all connections")
       .def("_simplify_all",
           &RegionsT::simplify_all, "simplify all connections")
@@ -384,8 +385,8 @@ void init_Contigs(pyContigs_t& pyContigs) {
   using majiq::Contigs;
   using majiq::Contig;
   pyContigs
-    .def("hash_value",
-        [](const Contigs& self) { return majiq::hash_value(self); },
+    .def("checksum",
+        [](const Contigs& self) { return majiq::checksum(self); },
         "hashed representation of contigs")
     .def(
         py::init([](py::list seqids) {
@@ -422,8 +423,8 @@ void init_Genes(pyGenes_t& pyGenes) {
   using majiq::geneid_t;
   define_coordinates_properties<GENES_NC_GROUP>(pyGenes);
   pyGenes
-    .def("hash_value",
-        [](const Genes& self) { return majiq::hash_value(self); },
+    .def("checksum",
+        [](const Genes& self) { return majiq::checksum(self); },
         "hashed representation of genes")
     .def(
         py::init([](
@@ -504,8 +505,8 @@ void init_Exons(pyExons_t& pyExons) {
         py::arg("genes"), py::arg("gene_idx"),
         py::arg("start"), py::arg("end"),
         py::arg("annotated_start"), py::arg("annotated_end"))
-    .def("hash_value",
-        [](const Exons& self) { return majiq::hash_value(self); },
+    .def("checksum",
+        [](const Exons& self) { return majiq::checksum(self); },
         "hashed representation of exons")
     .def_property_readonly("annotated_start",
         [](py::object& exons_obj) -> py::array_t<position_t> {
@@ -551,9 +552,6 @@ void init_GeneJunctions(pyGeneJunctions_t& pyGeneJunctions) {
         py::arg("genes"),
         py::arg("gene_idx"), py::arg("start"), py::arg("end"),
         py::arg("denovo"), py::arg("passed_build"), py::arg("simplified"))
-    .def("hash_value",
-        [](const GeneJunctions& self) { return majiq::hash_value(self); },
-        "hashed representation of gene junctions")
     .def("__repr__", [](const GeneJunctions& self) -> std::string {
         std::ostringstream oss;
         oss << "GeneJunctions<" << self.size() << " total>";
@@ -748,7 +746,8 @@ void init_PyEventsCoverage(pyEventsCoverage_t& pyEventsCoverage) {
             }
           }
           CoverageBootstraps coverage{
-              _bootstraps.shape(0), _bootstraps.shape(1)};
+              static_cast<size_t>(_bootstraps.shape(0)),
+              static_cast<size_t>(_bootstraps.shape(1))};
           {
             auto bootstraps = _bootstraps.unchecked<2>();
             for (size_t i = 0; i < coverage.num_connections(); ++i) {
@@ -1165,9 +1164,6 @@ void init_GeneIntrons(pyGeneIntrons_t& pyGeneIntrons) {
         py::arg("genes"),
         py::arg("gene_idx"), py::arg("start"), py::arg("end"),
         py::arg("denovo"), py::arg("passed_build"), py::arg("simplified"))
-    .def("hash_value",
-        [](const GeneIntrons& self) { return majiq::hash_value(self); },
-        "hashed representation of gene introns")
     .def("build_group", [](std::shared_ptr<GeneIntrons>& gene_introns) {
         return majiq::GroupIntronsGenerator(gene_introns);
         },

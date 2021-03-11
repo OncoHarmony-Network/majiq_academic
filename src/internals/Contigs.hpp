@@ -16,6 +16,7 @@
 #include "Contig.hpp"
 #include "KnownFeatures.hpp"
 #include "Meta.hpp"
+#include "checksum.hpp"
 
 namespace majiq {
 class KnownContig;
@@ -121,12 +122,13 @@ inline std::ostream& operator<<(std::ostream& os, const Contigs& x) noexcept {
   return os;
 }
 
-inline std::size_t hash_value(const Contigs& x) {
-  std::size_t result = std::hash<size_t>{}(x.size());
+inline detail::checksum_t checksum(const Contigs& x) {
+  detail::checksum_gen_t gen;
   for (const auto& c : x.seqids()) {
-    boost::hash_combine(result, c);
+    const char* c_ptr = c.data();
+    gen.process_block(c_ptr, c_ptr + c.size());
   }
-  return result;
+  return detail::checksum_t{gen.checksum()};
 }
 }  // namespace majiq
 
