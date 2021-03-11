@@ -55,10 +55,10 @@ class GroupIntronsGenerator(object):
         self,
         sj_introns: SJIntronsBins,
         thresholds: ExperimentThresholds = constants.DEFAULT_BUILD_EXP_THRESHOLDS,
-    ) -> None:
+    ) -> "GroupIntronsGenerator":
         """Add input experiment to build group"""
         self._group.add_experiment(sj_introns._sj_intronsbins, thresholds)
-        return
+        return self
 
     def update_introns(
         self, min_experiments: float = constants.DEFAULT_BUILD_MINEXPERIMENTS

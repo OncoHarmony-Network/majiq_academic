@@ -85,7 +85,7 @@ class SimplifierGroup(object):
         simplify_minreads_annotated_junctions = constants.DEFAULT_BUILD_SIMPL_MINREADS_ANNOTATED_JUNCTION,
         simplify_minreads_denovo_junctions = constants.DEFAULT_BUILD_SIMPL_MINREADS_DENOVO_JUNCTION,
         simplify_minreads_introns = constants.DEFAULT_BUILD_SIMPL_MINREADS_INTRON,
-    ) -> None:
+    ) -> "SimplifierGroup":
         """Add reads from experiment to group for simplification"""
         self._group.add_experiment(
             sg_reads._sg_reads,
@@ -94,7 +94,7 @@ class SimplifierGroup(object):
             simplify_minreads_denovo_junctions,
             simplify_minreads_introns,
         )
-        return
+        return self
 
     def update_connections(
         self, min_experiments: float = constants.DEFAULT_BUILD_MINEXPERIMENTS

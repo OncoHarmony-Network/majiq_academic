@@ -48,11 +48,12 @@ class GroupJunctionsGenerator(object):
         sj_junctions: SJJunctionsBins,
         thresholds: ExperimentThresholds = constants.DEFAULT_BUILD_EXP_THRESHOLDS,
         add_denovo: bool = constants.DEFAULT_BUILD_DENOVO_JUNCTIONS,
-    ) -> None:
+    ) -> "GroupJunctionsGenerator":
         """Add experiment to build group"""
         self._group.add_experiment(
             sj_junctions._sj_junctionsbins, thresholds, add_denovo
         )
+        return self
 
 
 class PassedJunctionsGenerator(object):
@@ -76,9 +77,10 @@ class PassedJunctionsGenerator(object):
         self,
         group: GroupJunctionsGenerator,
         min_experiments: float = constants.DEFAULT_BUILD_MINEXPERIMENTS
-    ) -> None:
+    ) -> "PassedJunctionsGenerator":
         """Add group towards passing junctions with enough evidence"""
-        return self._passed.add_group(group._group, min_experiments)
+        self._passed.add_group(group._group, min_experiments)
+        return self
 
     def get_passed(self) -> GeneJunctions:
         """Get new GeneJunctions taking into account the groups that were added"""
