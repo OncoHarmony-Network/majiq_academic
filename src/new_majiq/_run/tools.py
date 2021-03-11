@@ -12,19 +12,11 @@ import sys
 from typing import Optional, List, Dict
 from new_majiq._run._run import GenericSubcommand
 from new_majiq._run.cite import subcommand as cite
-# from majiq_tools._run.constitutive import subcommand as constitutive
-# from majiq_tools._run.junction import subcommand as junction
-# from majiq_tools._run.sg_hdf import subcommand as sg_hdf
-# from majiq_tools._run.sg_sqlite import subcommand as sg_sqlite
-# from majiq_tools._run.sg_combine import subcommand as sg_combine
-# from majiq_tools._run.sjsg2majiq import subcommand as sjsg2majiq
-# from majiq_tools._run.sj_frequencies import subcommand as sj_frequencies
-# from majiq_tools._run.psi_frequencies import subcommand as psi_frequencies
-# from majiq_tools._run.quantify import subcommand as quantify
-# from majiq_tools._run.compare_frequencies import subcommand as compare_frequencies
+from new_majiq._run.gff3 import subcommand as gff3
 
 
 SUBPARSER_SOURCES: Dict[str, GenericSubcommand] = {
+    "gff3": gff3,
     "cite": cite,
 }
 
