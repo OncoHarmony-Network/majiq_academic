@@ -15,7 +15,6 @@
 #include <vector>
 #include <memory>
 #include <sstream>
-#include <boost/functional/hash.hpp>
 
 #include "GeneRegion.hpp"
 #include "Regions.hpp"
@@ -48,23 +47,6 @@ struct GeneIntron : public detail::GeneConnection<ClosedInterval> {
   GeneIntron& operator=(GeneIntron&& x) = default;
 };
 
-// override boost hashing
-inline std::size_t hash_value(const GeneIntron& x) noexcept {
-  std::size_t result = hash_value(x.gene);
-  boost::hash_combine(result, x.coordinates);
-  return result;
-}
-}  // namespace majiq
-// specialize std::hash for GeneIntron
-namespace std {
-template <> struct hash<majiq::GeneIntron> {
-  std::size_t operator()(const majiq::GeneIntron& x) const noexcept {
-    return majiq::hash_value(x);
-  }
-};
-}  // namespace std
-
-namespace majiq {
 
 class GeneIntrons : public detail::GeneConnections<GeneIntron, false> {
   using BaseT = detail::GeneConnections<GeneIntron, false>;

@@ -387,7 +387,7 @@ void init_Contigs(pyContigs_t& pyContigs) {
   pyContigs
     .def("checksum",
         [](const Contigs& self) { return majiq::checksum(self); },
-        "hashed representation of contigs")
+        "checksum of contigs")
     .def(
         py::init([](py::list seqids) {
           auto result = Contigs::create();
@@ -425,7 +425,7 @@ void init_Genes(pyGenes_t& pyGenes) {
   pyGenes
     .def("checksum",
         [](const Genes& self) { return majiq::checksum(self); },
-        "hashed representation of genes")
+        "checksum of genes")
     .def(
         py::init([](
             std::shared_ptr<Contigs> contigs,
@@ -507,7 +507,7 @@ void init_Exons(pyExons_t& pyExons) {
         py::arg("annotated_start"), py::arg("annotated_end"))
     .def("checksum",
         [](const Exons& self) { return majiq::checksum(self); },
-        "hashed representation of exons")
+        "checksum of exons")
     .def_property_readonly("annotated_start",
         [](py::object& exons_obj) -> py::array_t<position_t> {
         Exons& exons = exons_obj.cast<Exons&>();

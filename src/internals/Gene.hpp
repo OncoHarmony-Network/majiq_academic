@@ -12,7 +12,6 @@
 #include <string>
 #include <tuple>
 #include <functional>
-#include <boost/functional/hash.hpp>
 
 #include "ContigRegion.hpp"
 #include "Contigs.hpp"
@@ -98,18 +97,6 @@ inline bool operator>=(const Gene& x, const KnownContig y) noexcept {
   return !(x < y);
 }
 
-// override boost::hash
-inline std::size_t hash_value(const Gene& x) noexcept {
-  return std::hash<geneid_t>{}(x.gene_id());
-}
 }  // namespace majiq
-
-namespace std {
-template <> struct hash<majiq::Gene> {
-  std::size_t operator()(const majiq::Gene& x) const noexcept {
-    return majiq::hash_value(x);
-  }
-};
-}  // namespace std
 
 #endif  // MAJIQ_GENE_HPP

@@ -19,7 +19,6 @@
 #include <vector>
 #include <map>
 #include <optional>
-#include <boost/functional/hash.hpp>
 
 #include "ContigRegion.hpp"
 #include "Regions.hpp"
@@ -204,13 +203,6 @@ inline bool operator<(const KnownGene& x, const T& y) noexcept {
   return x < y.gene();
 }
 
-// specialize boost::hash_value for KnownGene
-inline std::size_t hash_value(const KnownGene& x) {
-  std::size_t result = std::hash<size_t>{}(x.idx_);
-  boost::hash_combine(result, x.ptr_);
-  return result;
-}
-
 inline detail::checksum_t checksum(const Genes& x) {
   detail::checksum_gen_t gen;
   for (size_t idx = 0; idx < x.size(); ++idx) {
@@ -226,13 +218,5 @@ inline detail::checksum_t checksum(const Genes& x) {
   return detail::checksum_t{gen.checksum()};
 }
 }  // namespace majiq
-// specialize std::hash for KnownGene
-namespace std {
-template <> struct hash<majiq::KnownGene> {
-  std::size_t operator()(const majiq::KnownGene& x) const noexcept {
-    return majiq::hash_value(x);
-  }
-};
-}  // namespace std
 
 #endif  // MAJIQ_GENES_HPP

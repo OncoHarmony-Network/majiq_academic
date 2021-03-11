@@ -17,7 +17,6 @@
 #include <optional>
 #include <functional>
 #include <vector>
-#include <boost/functional/hash.hpp>
 
 
 namespace majiq {
@@ -173,23 +172,7 @@ class KnownFeatures {
     return x.features_ == y.features_;
   }
 };
-template <typename T, typename U>
-inline std::size_t hash_value(const KnownFeature<T, U>& x) noexcept {
-  std::size_t result = std::hash<size_t>{}(x.idx_);
-  boost::hash_combine(result, x.ptr_);
-  return result;
-}
 }  // namespace detail
 }  // namespace majiq
-
-namespace std {
-template <typename T, typename U>
-struct hash<majiq::detail::KnownFeature<T, U>> {
-  std::size_t operator()(
-      const majiq::detail::KnownFeature<T, U>& x) const noexcept {
-    return majiq::detail::hash_value(x);
-  }
-};
-}  // namespace std
 
 #endif  // MAJIQ_KNOWNFEATURES_HPP

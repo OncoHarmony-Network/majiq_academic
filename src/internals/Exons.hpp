@@ -14,7 +14,6 @@
 #include <algorithm>
 #include <utility>
 #include <memory>
-#include <boost/functional/hash.hpp>
 
 #include "GeneRegion.hpp"
 #include "Regions.hpp"
@@ -86,23 +85,6 @@ struct Exon : detail::GeneRegion<ClosedInterval, ClosedInterval> {
   }
 };
 
-// override boost hashing
-inline std::size_t hash_value(const Exon& x) noexcept {
-  std::size_t result = hash_value(x.gene);
-  boost::hash_combine(result, x.coordinates);
-  return result;
-}
-}  // namespace majiq
-// specialize std::hash for Exon
-namespace std {
-template <> struct hash<majiq::Exon> {
-  std::size_t operator()(const majiq::Exon& x) const noexcept {
-    return majiq::hash_value(x);
-  }
-};
-}  // namespace std
-
-namespace majiq {
 
 class Exons : public detail::Regions<Exon, false> {
   using BaseT = detail::Regions<Exon, false>;
