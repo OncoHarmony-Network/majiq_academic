@@ -13,18 +13,36 @@ import new_majiq.constants as constants
 
 from typing import (
     Optional,
+    TYPE_CHECKING,
     Union,
 )
 from new_majiq.internals import GeneJunctions as _GeneJunctions
 from new_majiq.GeneConnections import GeneConnections
 from new_majiq.Genes import Genes
+from new_majiq.Exons import Exons
 from pathlib import Path
+
+if TYPE_CHECKING:
+    from new_majiq.PassedJunctions import (
+        GroupJunctionsGenerator,
+        PassedJunctionsGenerator,
+    )
 
 
 class GeneJunctions(GeneConnections):
     def __init__(self, gene_junctions: _GeneJunctions):
         super().__init__(gene_junctions)
         return
+
+    def build_group(self, exons: Exons) -> "GroupJunctionsGenerator":
+        """Create accumulator of per-experiment passed junctions for build group"""
+        from new_majiq.PassedJunctions import GroupJunctionsGenerator
+        return GroupJunctionsGenerator(self, exons)
+
+    def builder(self) -> "PassedJunctionsGenerator":
+        """Create accumulator of passed junctions from build groups"""
+        from new_majiq.PassedJunctions import PassedJunctionsGenerator
+        return PassedJunctionsGenerator(self)
 
     @property
     def _gene_junctions(self) -> _GeneJunctions:

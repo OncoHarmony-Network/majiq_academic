@@ -16,15 +16,24 @@ from new_majiq.GeneRegions import GeneRegions
 from new_majiq.internals import Exons as _Exons
 from typing import (
     Optional,
+    TYPE_CHECKING,
     Union,
 )
 from pathlib import Path
+
+if TYPE_CHECKING:
+    from new_majiq.GeneJunctions import GeneJunctions
 
 
 class Exons(GeneRegions):
     def __init__(self, exons: _Exons):
         super().__init__(exons)
         return
+
+    def infer_with_junctions(self, junctions: "GeneJunctions") -> "Exons":
+        """Infer denovo exons/extended exon boundaries given denovo junctions"""
+        from new_majiq.internals import SpliceGraph as _SpliceGraph
+        return Exons(_SpliceGraph.infer_exons(self._exons, self._gene_junctions))
 
     def checksum(self):
         return self._exons.checksum()

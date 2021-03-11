@@ -13,18 +13,50 @@ import new_majiq.constants as constants
 
 from typing import (
     Optional,
+    TYPE_CHECKING,
     Union,
 )
 from new_majiq.internals import GeneIntrons as _GeneIntrons
 from new_majiq.GeneConnections import GeneConnections
 from new_majiq.Genes import Genes
+from new_majiq.Exons import Exons
 from pathlib import Path
+
+if TYPE_CHECKING:
+    from new_majiq.GroupIntronsGenerator import GroupIntronsGenerator
 
 
 class GeneIntrons(GeneConnections):
     def __init__(self, gene_introns: _GeneIntrons):
         super().__init__(gene_introns)
         return
+
+    def build_group(self) -> "GroupIntronsGenerator":
+        """Create build group to update these introns to be passed or not"""
+        from new_majiq.GroupIntronsGenerator import GroupIntronsGenerator
+        return GroupIntronsGenerator(self)
+
+    def filter_passed(
+        self,
+        keep_annotated: bool = constants.DEFAULT_BUILD_KEEP_ANNOTATED_IR,
+        discard_denovo: bool = constants.DEFAULT_BUILD_DENOVO_IR,
+    ) -> "GeneIntrons":
+        """ Get subset of introns that passed build filters
+
+        Parameters
+        ----------
+        keep_annotated: bool
+            Keep all annotated introns regardless of whether they passed
+        discard_denovo: bool
+            Discard all denovo introns regardless of whether they passed
+        """
+        return GeneIntrons(
+            self._gene_introns.filter_passed(keep_annotated, discard_denovo)
+        )
+
+    def potential_introns(self, exons: Exons) -> "GeneIntrons":
+        """Get potential gene introns from exons, noting annotated introns"""
+        return GeneIntrons(self._gene_introns.potential_introns(exons._exons))
 
     @property
     def _gene_introns(self) -> _GeneIntrons:
