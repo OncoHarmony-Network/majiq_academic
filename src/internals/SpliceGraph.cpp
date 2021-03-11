@@ -63,8 +63,8 @@ void GeneInferExons(
   for (auto eit = exons_begin; eit != exons_end; ++eit) {
     // only use full annotated exons
     if (eit->is_denovo() || !eit->is_full_exon()) { continue; }
-    sites.emplace(eit->coordinates.start, SpliceT::ANN_EXON_START);
-    sites.emplace(eit->coordinates.end, SpliceT::ANN_EXON_END);
+    sites.emplace(eit->annotated_coordinates().start, SpliceT::ANN_EXON_START);
+    sites.emplace(eit->annotated_coordinates().end, SpliceT::ANN_EXON_END);
   }
 
   // iterate over sites to build our result
