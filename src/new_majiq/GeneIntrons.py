@@ -51,8 +51,8 @@ class GeneIntrons(GeneConnections):
                 "denovo": ("gi_idx", self.denovo),
                 "passed_build": ("gi_idx", self.passed_build),
                 "simplified": ("gi_idx", self.simplified),
-                "start_gi_idx": ("gi_idx", self.start_exon_idx),
-                "end_gi_idx": ("gi_idx", self.end_exon_idx),
+                "start_exon_idx": ("gi_idx", self.start_exon_idx),
+                "end_exon_idx": ("gi_idx", self.end_exon_idx),
             },
         )
 

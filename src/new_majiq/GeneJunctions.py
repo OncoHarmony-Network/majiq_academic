@@ -51,8 +51,8 @@ class GeneJunctions(GeneConnections):
                 "denovo": ("gj_idx", self.denovo),
                 "passed_build": ("gj_idx", self.passed_build),
                 "simplified": ("gj_idx", self.simplified),
-                "start_gj_idx": ("gj_idx", self.start_exon_idx),
-                "end_gj_idx": ("gj_idx", self.end_exon_idx),
+                "start_exon_idx": ("gj_idx", self.start_exon_idx),
+                "end_exon_idx": ("gj_idx", self.end_exon_idx),
             },
         )
 
