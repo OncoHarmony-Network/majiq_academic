@@ -1679,20 +1679,17 @@ class Graph:
 
                     skipA1s = a2.connects(c1, ir=True) + c1.connects(a2, ir=True)
                     skipA2s = c1.connects(node, ir=True) + node.connects(c1, ir=True)
-                    # update seen junctions in Module
-                    for sk1, sk2 in zip(skipA1s, skipA2s):
-                        shared_lsv = set(sk1.lsvs) & set(sk2.lsvs)
-                        if len(shared_lsv) == 1:
-                            self.classified_lsvs.append(shared_lsv.pop())
-
-                    self.classified_junctions.extend(skipA1s)
-                    self.classified_junctions.extend(skipA2s)
                     for skipA1 in skipA1s:
                         for skipA2 in skipA2s:
+                            shared_lsv = set(skipA1.lsvs) & set(skipA2.lsvs)
+                            if len(shared_lsv) == 1:
+                                self.classified_lsvs.append(shared_lsv.pop())
                             found.append({'event': 'p_ale', 'Proximal': node,
                                           'Distal': a2, 'Reference': c1,
                                           'SkipA2': skipA2,
                                           'SkipA1': skipA1})
+                            self.classified_junctions.extend(skipA1s)
+                            self.classified_junctions.extend(skipA2s)
 
             return found
 
@@ -1733,19 +1730,18 @@ class Graph:
                     skipA1s = node.connects(c1, ir=True) + c1.connects(node, ir=True)
                     skipA2s = a1.connects(c1, ir=True) + c1.connects(a1, ir=True)
                     # update seen junctions in Module
-                    for sk1, sk2 in zip(skipA1s, skipA2s):
-                        shared_lsv = set(sk1.lsvs) & set(sk2.lsvs)
-                        if len(shared_lsv) == 1:
-                            self.classified_lsvs.append(shared_lsv.pop())
-                    self.classified_junctions.extend(skipA1s)
-                    self.classified_junctions.extend(skipA2s)
 
                     for skipA1 in skipA1s:
                         for skipA2 in skipA2s:
+                            shared_lsv = set(skipA1.lsvs) & set(skipA2.lsvs)
+                            if len(shared_lsv) == 1:
+                                self.classified_lsvs.append(shared_lsv.pop())
                             found.append({'event': 'p_afe', 'Proximal': node,
                                   'Distal': a1, 'Reference': c1,
                                   'SkipA2': skipA2,
                                   'SkipA1': skipA1})
+                            self.classified_junctions.extend(skipA1s)
+                            self.classified_junctions.extend(skipA2s)
             return found
 
 
@@ -1782,19 +1778,17 @@ class Graph:
 
                     skipA1s = node.connects(c1, ir=True) + c1.connects(node, ir=True)
                     skipA2s = a1.connects(c1, ir=True) + c1.connects(a1, ir=True)
-                    # update seen junctions in Module
-                    for sk1, sk2 in zip(skipA1s, skipA2s):
-                        shared_lsv = set(sk1.lsvs) & set(sk2.lsvs)
-                        if len(shared_lsv) == 1:
-                            self.classified_lsvs.append(shared_lsv.pop())
-                    self.classified_junctions.extend(skipA1s)
-                    self.classified_junctions.extend(skipA2s)
                     for skipA1 in skipA1s:
                         for skipA2 in skipA2s:
+                            shared_lsv = set(skipA1.lsvs) & set(skipA2.lsvs)
+                            if len(shared_lsv) == 1:
+                                self.classified_lsvs.append(shared_lsv.pop())
                             found.append({'event': 'afe', 'Proximal': node,
                                   'Distal': a1, 'Reference': c1,
                                   'SkipA2': skipA2,
                                   'SkipA1': skipA1})
+                            self.classified_junctions.extend(skipA1s)
+                            self.classified_junctions.extend(skipA2s)
 
             return found
 
@@ -1831,18 +1825,17 @@ class Graph:
                     skipA1s = a2.connects(c1, ir=True) + c1.connects(a2, ir=True)
                     skipA2s = c1.connects(node, ir=True) + node.connects(c1, ir=True)
                     # update seen junctions in Module
-                    for sk1, sk2 in zip(skipA1s, skipA2s):
-                        shared_lsv = set(sk1.lsvs) & set(sk2.lsvs)
-                        if len(shared_lsv) == 1:
-                            self.classified_lsvs.append(shared_lsv.pop())
-                    self.classified_junctions.extend(skipA1s)
-                    self.classified_junctions.extend(skipA2s)
                     for skipA1 in skipA1s:
                         for skipA2 in skipA2s:
+                            shared_lsv = set(sk1.lsvs) & set(sk2.lsvs)
+                            if len(shared_lsv) == 1:
+                                self.classified_lsvs.append(shared_lsv.pop())
                             found.append({'event': 'ale', 'Proximal': node,
                                   'Distal': a2, 'Reference': c1,
                                   'SkipA2': skipA2,
                                   'SkipA1': skipA1})
+                            self.classified_junctions.extend(skipA1s)
+                            self.classified_junctions.extend(skipA2s)
 
             return found
 
