@@ -26,9 +26,6 @@ class GeneJunctions(GeneConnections):
         super().__init__(gene_junctions)
         return
 
-    def checksum(self):
-        return self._gene_junctions.checksum()
-
     @property
     def _gene_junctions(self) -> _GeneJunctions:
         """Underlying internals representation"""

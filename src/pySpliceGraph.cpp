@@ -279,7 +279,16 @@ void define_coordinates_properties(pyClassShared_t<RegionsT>& pyRegions) {
       std::is_same_v<decltype(std::declval<RegionT>().data),
                      majiq::detail::ConnectionData>) {
     pyRegions
-      .def("checksum", &RegionsT::checksum, "checksum of connections")
+      .def("checksum",
+          [](const RegionsT& self) {
+          return self.template checksum<true>();
+          },
+          "checksum of connections including data (connections, passed, etc)")
+      .def("checksum_nodata",
+          [](const RegionsT& self) {
+          return self.template checksum<false>();
+          },
+          "checksum of connections gene/coordinates")
       .def("_pass_all", &RegionsT::pass_all, "pass all connections")
       .def("_simplify_all",
           &RegionsT::simplify_all, "simplify all connections")
