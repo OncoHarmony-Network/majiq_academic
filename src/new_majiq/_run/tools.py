@@ -22,10 +22,10 @@ from new_majiq._run.sg_coverage import subcommand as sg_coverage
 SUBPARSER_SOURCES: Dict[str, GenericSubcommand] = {
     "gff3": gff3,
     "sj": sj,
-    "cite": cite,
     "build": build,
     "lsv-coverage": lsv_coverage,
     "sg-coverage": sg_coverage,
+    "cite": cite,
 }
 
 
