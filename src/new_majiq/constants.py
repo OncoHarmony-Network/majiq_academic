@@ -26,6 +26,8 @@ NC_SJJUNCTIONSBINS: Final[str] = "sj_junctions_bins"
 NC_EVENTS: Final[str] = "events"
 NC_EVENTSCOVERAGE: Final[str] = "events_coverage"
 
+NC_SGREADS: Final[str] = "sg_reads"
+
 
 DEFAULT_BUILD_PROCESS_IR: Final[bool] = True
 DEFAULT_BUILD_GFF3TYPES: Final[GFF3Types] = _default_gff3_types()

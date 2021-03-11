@@ -642,6 +642,38 @@ void init_PySpliceGraphReads(pySpliceGraphReads_t& pySpliceGraphReads) {
             self.junctions_reads(), 0, self_obj);
         },
         "Raw readrates for each junction")
+    .def(py::init([](
+            const std::shared_ptr<GeneIntrons>& introns,
+            const std::shared_ptr<GeneJunctions>& junctions,
+            py::array_t<majiq::real_t> _introns_reads,
+            py::array_t<majiq::real_t> _junctions_reads) {
+          if (_introns_reads.ndim() != 1) {
+            throw std::runtime_error("introns_reads must be 1D");
+          } else if (_junctions_reads.ndim() != 1) {
+            throw std::runtime_error("junctions_reads must be 1D");
+          }
+          std::vector<majiq::real_t> ireads_vec(_introns_reads.shape(0));
+          {
+            auto introns_reads = _introns_reads.unchecked<1>();
+            for (size_t i = 0; i < ireads_vec.size(); ++i) {
+            ireads_vec[i] = introns_reads(i);
+            }
+          }
+          std::vector<majiq::real_t> jreads_vec(_junctions_reads.shape(0));
+          {
+            auto junctions_reads = _junctions_reads.unchecked<1>();
+            for (size_t j = 0; j < jreads_vec.size(); ++j) {
+            jreads_vec[j] = junctions_reads(j);
+            }
+          }
+          return SpliceGraphReads{introns, junctions,
+              std::move(ireads_vec), std::move(jreads_vec)};
+          }),
+        "Initialize SpliceGraphReads from numpy arrays",
+        py::arg("introns"),
+        py::arg("junctions"),
+        py::arg("introns_reads"),
+        py::arg("junctions_reads"))
     .def_static("from_sj", &SpliceGraphReads::FromSJ,
         "Obtain raw readrates for introns/junctions from experiment SJ",
         py::arg("introns"),
