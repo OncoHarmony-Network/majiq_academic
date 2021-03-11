@@ -71,11 +71,38 @@ class SJJunctionsBins(SJBinsReads):
         return self._region_idx_end
 
     @property
-    def regions_df(self) -> xr.Dataset:
-        """regions.df with offsets into sjb_idx added"""
-        return self.regions.df.assign_coords(
-            sjb_idx_start=("sj_idx", self.sjb_idx_start),
-            sjb_idx_end=("sj_idx", self.sjb_idx_end),
+    def _df(self) -> xr.Dataset:
+        """xr.Dataset view of SJJunctionsBins read counts"""
+        return xr.Dataset(
+            {
+                "bin_reads": ("sjb_idx", self.bin_reads),
+            },
+            {
+                "sjb_idx": self.sjb_idx,
+                "bin_idx": ("sjb_idx", self.bin_idx),
+                "_offsets": ("sj_offsets_idx", self._offsets),
+            },
+            {
+                "total_bins": self.total_bins,
+                "original_path": self.original_path,
+                "original_version": self.original_version,
+                "original_time": self.original_time,
+            }
+        )
+
+    @property
+    def df(self) -> xr.Dataset:
+        """View of SJJunctionsBins (combined with underlying regions)"""
+        return xr.merge(
+            (
+                self._df.drop_vars("_offsets"),
+                self.regions.df.assign_coords(
+                    sjb_idx_start=("sj_idx", self.sjb_idx_start),
+                    sjb_idx_end=("sj_idx", self.sjb_idx_end),
+                ),
+            ),
+            join="exact",
+            combine_attrs="no_conflicts",
         )
 
     @classmethod
@@ -106,26 +133,6 @@ class SJJunctionsBins(SJBinsReads):
             original_time,
         )
 
-    @property
-    def df(self) -> xr.Dataset:
-        """xr.Dataset view of SJJunctionsBins read counts"""
-        return xr.Dataset(
-            {
-                "bin_reads": ("sjb_idx", self.bin_reads),
-            },
-            {
-                "sjb_idx": self.sjb_idx,
-                "bin_idx": ("sjb_idx", self.bin_idx),
-                "_offsets": ("sj_offsets_idx", self._offsets),
-            },
-            {
-                "total_bins": self.total_bins,
-                "original_path": self.original_path,
-                "original_version": self.original_version,
-                "original_time": self.original_time,
-            }
-        )
-
     def to_netcdf(self, path: Union[str, Path]) -> None:
         """Serialize to netcdf format"""
         if Path(path).exists():
@@ -136,7 +143,7 @@ class SJJunctionsBins(SJBinsReads):
             )
         self.regions.contigs.to_netcdf(path, "w")
         self.regions.to_netcdf(path, "a")
-        self.df.drop_vars("sjb_idx").to_netcdf(path, "a", group=constants.NC_SJJUNCTIONSBINS)
+        self._df.drop_vars("sjb_idx").to_netcdf(path, "a", group=constants.NC_SJJUNCTIONSBINS)
         return
 
     @classmethod

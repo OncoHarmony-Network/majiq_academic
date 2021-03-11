@@ -3,17 +3,12 @@ from new_majiq.internals import (
     set_seed,
 )
 
-from .Contigs import Contigs
-
-from .Genes import Genes
-from .Exons import Exons
-from .GeneJunctions import GeneJunctions
-from .GeneIntrons import GeneIntrons
+# model of genes, exons connected by introns/junctions
 from .SpliceGraph import SpliceGraph
 
-from .SJIntrons import SJIntrons
-from .SJJunctions import SJJunctions
+# how we measure junctions and introns from BAM files
 from .SJIntronsBins import SJIntronsBins
 from .SJJunctionsBins import SJJunctionsBins
 
+# coverage from these events
 from .EventsCoverage import EventsCoverage

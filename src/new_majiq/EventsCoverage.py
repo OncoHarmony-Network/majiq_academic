@@ -74,7 +74,9 @@ class EventsCoverage(object):
                 "numbins": ("ec_idx", self.numbins),
                 "bootstraps": (("ec_idx", "bootstrap_replicate"), self.bootstraps),
             },
-            {},
+            {
+                "ec_idx": self.events.ec_idx,
+            },
             {
                 "bam_path": self.bam_path,
                 "bam_version": self.bam_version,
@@ -84,7 +86,7 @@ class EventsCoverage(object):
     @property
     def df(self) -> xr.Dataset:
         return xr.merge(
-            (self.df, self.events.df), join="exact", combine_attrs="no_conflicts"
+            (self._df, self.events.df), join="exact", combine_attrs="no_conflicts"
         )
 
     def to_netcdf(self, path: Union[str, Path]) -> None:
@@ -97,7 +99,7 @@ class EventsCoverage(object):
             )
         # save events, events coverage
         self.events.to_netcdf(path, "w")
-        self._df.to_netcdf(path, "a", group=constants.NC_EVENTSCOVERAGE)
+        self._df.drop_vars("ec_idx").to_netcdf(path, "a", group=constants.NC_EVENTSCOVERAGE)
         return
 
     @classmethod

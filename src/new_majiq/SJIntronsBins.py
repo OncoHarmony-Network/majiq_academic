@@ -73,11 +73,38 @@ class SJIntronsBins(SJBinsReads):
         return self._region_idx_end
 
     @property
-    def regions_df(self) -> xr.Dataset:
-        """regions.df with offsets into sib_idx added"""
-        return self.regions.df.assign_coords(
-            sjb_idx_start=("si_idx", self.sib_idx_start),
-            sjb_idx_end=("si_idx", self.sib_idx_end),
+    def _df(self) -> xr.Dataset:
+        """xr.Dataset view of SJIntronsBins read counts"""
+        return xr.Dataset(
+            {
+                "bin_reads": ("sib_idx", self.bin_reads),
+            },
+            {
+                "sib_idx": self.sib_idx,
+                "bin_idx": ("sib_idx", self.bin_idx),
+                "_offsets": ("si_offsets_idx", self._offsets),
+            },
+            {
+                "total_bins": self.total_bins,
+                "original_path": self.original_path,
+                "original_version": self.original_version,
+                "original_time": self.original_time,
+            }
+        )
+
+    @property
+    def df(self) -> xr.Dataset:
+        """View of SJIntronsBins (combined with underlying regions)"""
+        return xr.merge(
+            (
+                self._df.drop_vars("_offsets"),
+                self.regions.df.assign_coords(
+                    sib_idx_start=("si_idx", self.sib_idx_start),
+                    sib_idx_end=("si_idx", self.sib_idx_end),
+                ),
+            ),
+            join="exact",
+            combine_attrs="no_conflicts",
         )
 
     @classmethod
@@ -126,26 +153,6 @@ class SJIntronsBins(SJBinsReads):
             original_time,
         )
 
-    @property
-    def df(self) -> xr.Dataset:
-        """xr.Dataset view of SJIntronsBins read counts"""
-        return xr.Dataset(
-            {
-                "bin_reads": ("sib_idx", self.bin_reads),
-            },
-            {
-                "sib_idx": self.sib_idx,
-                "bin_idx": ("sib_idx", self.bin_idx),
-                "_offsets": ("si_offsets_idx", self._offsets),
-            },
-            {
-                "total_bins": self.total_bins,
-                "original_path": self.original_path,
-                "original_version": self.original_version,
-                "original_time": self.original_time,
-            }
-        )
-
     def to_netcdf(self, path: Union[str, Path]) -> None:
         """ Serialize to netcdf format
 
@@ -180,7 +187,7 @@ class SJIntronsBins(SJBinsReads):
             # save contigs to start the file
             self.regions.contigs.to_netcdf(path, "w")
         self.regions.to_netcdf(path, "a")
-        self.df.drop_vars("sib_idx").to_netcdf(path, "a", group=constants.NC_SJINTRONSBINS)
+        self._df.drop_vars("sib_idx").to_netcdf(path, "a", group=constants.NC_SJINTRONSBINS)
         return
 
     @classmethod
