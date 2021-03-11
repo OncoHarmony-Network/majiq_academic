@@ -39,6 +39,10 @@ class SJJunctionsBins(SJBinsReads):
         return
 
     @property
+    def _sj_junctionsbins(self) -> _SJJunctionsBins:
+        return self._sj_binsreads
+
+    @property
     def original_path(self) -> str:
         return self._original_path
 

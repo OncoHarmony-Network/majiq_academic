@@ -722,6 +722,49 @@ void init_PyEventsCoverage(pyEventsCoverage_t& pyEventsCoverage) {
   using majiq::CoverageBootstraps;
   using majiq_pybind::ArrayFromVectorAndOffset;
   pyEventsCoverage
+    .def(py::init([](
+            const std::shared_ptr<Events>& events,
+            py::array_t<majiq::real_t> _numreads,
+            py::array_t<majiq::real_t> _numbins,
+            py::array_t<majiq::real_t> _bootstraps) {
+          if (_numreads.ndim() != 1) {
+            throw std::runtime_error("numreads must be 1D");
+          } else if (_numbins.ndim() != 1) {
+            throw std::runtime_error("numbins must be 1D");
+          } else if (_bootstraps.ndim() != 2) {
+            throw std::runtime_error("bootstraps must be 2D");
+          }
+          if (_numreads.shape(0) != _numbins.shape(0)
+              || _numbins.shape(0) != _bootstraps.shape(0)) {
+            throw std::runtime_error(
+                "EventsCoverage arrays do not agree on first dimension");
+          }
+          std::vector<CoverageSummary> summaries_vec(_numreads.shape(0));
+          {
+            auto numreads = _numreads.unchecked<1>();
+            auto numbins = _numbins.unchecked<1>();
+            for (size_t i = 0; i < summaries_vec.size(); ++i) {
+              summaries_vec[i] = CoverageSummary{numreads(i), numbins(i)};
+            }
+          }
+          CoverageBootstraps coverage{
+              _bootstraps.shape(0), _bootstraps.shape(1)};
+          {
+            auto bootstraps = _bootstraps.unchecked<2>();
+            for (size_t i = 0; i < coverage.num_connections(); ++i) {
+              for (size_t j = 0; j < coverage.num_bootstraps(); ++j) {
+                coverage(i, j) = bootstraps(i, j);
+              }
+            }
+          }
+          return EventsCoverage{events,
+              std::move(summaries_vec), std::move(coverage)};
+          }),
+        "construct events coverage from numpy arrays",
+        py::arg("events"),
+        py::arg("numreads"),
+        py::arg("numbins"),
+        py::arg("bootstraps"))
     .def_static("from_sj",
         [](
           const std::shared_ptr<Events>& events,

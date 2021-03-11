@@ -53,6 +53,10 @@ class SJIntronsBins(SJBinsReads):
         return self._original_time
 
     @property
+    def _sj_intronsbins(self) -> _SJIntronsBins:
+        return self._sj_binsreads
+
+    @property
     def sib_idx(self):
         return self._sjbin_idx
 
