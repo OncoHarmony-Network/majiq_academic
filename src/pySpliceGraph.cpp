@@ -187,8 +187,7 @@ void define_sjbins_properties(pyClassShared_t<SJBinsT>& pySJBins) {
         py::arg("total_bins"));
 }
 
-template <const char* REGIONS_NC_GROUP,
-         typename RegionsT,
+template <typename RegionsT,
          typename RegionT
            = base_t<decltype(std::declval<RegionsT>().data()[0])>,
          typename ParentT = base_t<decltype(std::declval<RegionT>().parent())>,
@@ -430,7 +429,7 @@ void init_Genes(pyGenes_t& pyGenes) {
   using majiq::Genes;
   using majiq::position_t;
   using majiq::geneid_t;
-  define_coordinates_properties<GENES_NC_GROUP>(pyGenes);
+  define_coordinates_properties(pyGenes);
   pyGenes
     .def("checksum",
         [](const Genes& self) { return majiq::checksum(self); },
@@ -484,7 +483,7 @@ void init_Exons(pyExons_t& pyExons) {
   using majiq::Exons;
   using majiq::position_t;
   using majiq_pybind::ArrayFromVectorAndOffset;
-  define_coordinates_properties<EXONS_NC_GROUP>(pyExons);
+  define_coordinates_properties(pyExons);
   pyExons
     .def(py::init([](
             std::shared_ptr<majiq::Genes> genes,
@@ -544,7 +543,7 @@ void init_GeneJunctions(pyGeneJunctions_t& pyGeneJunctions) {
   using majiq::GeneJunctions;
   using majiq::position_t;
   using majiq_pybind::ArrayFromVectorAndOffset;
-  define_coordinates_properties<JUNCTIONS_NC_GROUP>(pyGeneJunctions);
+  define_coordinates_properties(pyGeneJunctions);
   pyGeneJunctions
     .def(py::init([](
             std::shared_ptr<majiq::Genes> genes,
@@ -574,7 +573,7 @@ void init_SJIntrons(pySJIntrons_t& pySJIntrons) {
   using majiq::SJIntron;
   using majiq::SJIntrons;
   using majiq_pybind::ArrayFromVectorAndOffset;
-  define_coordinates_properties<SJ_INTRONS_NC_GROUP>(pySJIntrons);
+  define_coordinates_properties(pySJIntrons);
   pySJIntrons
     .def(py::init([](
             std::shared_ptr<Contigs> contigs,
@@ -1191,7 +1190,7 @@ void init_GeneIntrons(pyGeneIntrons_t& pyGeneIntrons) {
   using majiq::GeneIntrons;
   using majiq::position_t;
   using majiq_pybind::ArrayFromVectorAndOffset;
-  define_coordinates_properties<INTRONS_NC_GROUP>(pyGeneIntrons);
+  define_coordinates_properties(pyGeneIntrons);
   pyGeneIntrons
     .def(py::init([](
             std::shared_ptr<majiq::Genes> genes,
@@ -1239,7 +1238,7 @@ void init_SJJunctions(pySJJunctions_t& pySJJunctions) {
   using majiq::position_t;
   using majiq::SJJunctions;
   using majiq_pybind::ArrayFromVectorAndOffset;
-  define_coordinates_properties<SJ_JUNCTIONS_NC_GROUP>(pySJJunctions);
+  define_coordinates_properties(pySJJunctions);
   pySJJunctions
     .def(py::init([](
             std::shared_ptr<majiq::Contigs> contigs,

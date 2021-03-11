@@ -19,16 +19,6 @@
 #include "internals/MajiqTypes.hpp"
 
 
-// groups for netcdf
-constexpr char CONTIGS_NC_GROUP[] = "contigs";
-constexpr char GENES_NC_GROUP[] = "genes";
-constexpr char EXONS_NC_GROUP[] = "exons";
-constexpr char JUNCTIONS_NC_GROUP[] = "junctions";
-constexpr char INTRONS_NC_GROUP[] = "introns";
-constexpr char SJ_JUNCTIONS_NC_GROUP[] = "sj_junctions";
-constexpr char SJ_JUNCTIONS_RAW_NC_GROUP[] = "sj_junctions_raw";
-constexpr char SJ_INTRONS_NC_GROUP[] = "sj_introns";
-
 constexpr bool DEFAULT_BUILD_PROCESS_IR = true;
 constexpr majiq::junction_ct_t DEFAULT_BUILD_MINREADS = 3;
 constexpr majiq::junction_ct_t DEFAULT_BUILD_MINDENOVO = 5;
@@ -108,66 +98,6 @@ inline py::array_t<OutputT> ArrayFromOffsetsVector(
     &= ~py::detail::npy_api::NPY_ARRAY_WRITEABLE_;
   // return resulting array
   return result;
-}
-
-/**
- * Extract attrs from features to build xarray Dataset
- */
-inline py::object XarrayDatasetFromObject(
-    py::object features,
-    py::str idx_name,
-    std::initializer_list<py::str> attrs,
-    std::initializer_list<py::str> data_attrs = {}) {
-  py::function np_arange = py::module_::import("numpy").attr("arange");
-  py::module_ xr = py::module_::import("xarray");
-  py::function xr_Dataset = xr.attr("Dataset");
-  py::function xr_DataArray = xr.attr("DataArray");
-  // define index with appropriate length
-  size_t inferred_length = 0;
-  for (auto x : attrs) {
-    size_t x_len = features.attr(x).attr("__len__")().cast<size_t>();
-    if (inferred_length > 0 && x_len != inferred_length) {
-      std::ostringstream oss;
-      oss << "Dataset has arrays with mismatched lengths, including "
-        << inferred_length << " and " << x_len;
-      throw std::runtime_error(oss.str());
-    }
-    inferred_length = x_len;
-  }
-  for (auto x : data_attrs) {
-    size_t x_len = features.attr(x).attr("__len__")().cast<size_t>();
-    if (inferred_length > 0 && x_len != inferred_length) {
-      std::ostringstream oss;
-      oss << "Dataset has arrays with mismatched lengths, including "
-        << inferred_length << " and " << x_len;
-      throw std::runtime_error(oss.str());
-    }
-    inferred_length = x_len;
-  }
-  inferred_length
-    = inferred_length > 0
-    ? inferred_length : features.attr("__len__")().cast<size_t>();
-  // coordinates for dataset in dictionary
-  py::dict coordinates;
-  coordinates[idx_name] = xr_DataArray(
-      np_arange(inferred_length), py::arg("dims") = idx_name);
-  // extract attributes
-  for (auto x : attrs) {
-    coordinates[x] = xr_DataArray(features.attr(x), py::arg("dims") = idx_name);
-  }
-  py::dict data_vars;
-  for (auto x : data_attrs) {
-    data_vars[x] = xr_DataArray(features.attr(x), py::arg("dims") = idx_name);
-  }
-  // define the index dimension
-  return xr_Dataset(
-      py::arg("data_vars") = data_vars,
-      py::arg("coords") = coordinates);
-}
-
-inline py::object OpenXarrayDataset(py::str netcdf_path, py::str group) {
-  return py::module_::import("xarray").attr("open_dataset")(
-      netcdf_path, py::arg("group") = group);
 }
 
 }  // namespace majiq_pybind
