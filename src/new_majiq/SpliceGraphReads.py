@@ -107,11 +107,11 @@ class SpliceGraphReads(object):
             self._df
             # drop indexes and nice offsets
             .drop_vars(["gi_idx", "gj_idx"])
-            # # add hash for introns/junctions
-            # .assign(
-            #     intron_hash=self.introns.checksum(),
-            #     junction_hash=self.junctions.checksum(),
-            # )
+            # add hash for introns/junctions
+            .assign(
+                intron_hash=self.introns.checksum_nodata(),
+                junction_hash=self.junctions.checksum_nodata(),
+            )
             .to_netcdf(path, mode, group=constants.NC_SGREADS)
         )
         return
@@ -125,10 +125,10 @@ class SpliceGraphReads(object):
     ) -> "SpliceGraphReads":
         """Load from netcdf file"""
         df = xr.open_dataset(path, group=constants.NC_SGREADS)
-        # if df.intron_hash != introns.checksum():
-        #     raise ValueError("Saved hash for introns does not match")
-        # if df.junction_hash != junctions.checksum():
-        #     raise ValueError("Saved hash for junctions does not match")
+        if df.intron_hash != introns.checksum_nodata():
+            raise ValueError("Saved hash for introns does not match")
+        if df.junction_hash != junctions.checksum_nodata():
+            raise ValueError("Saved hash for junctions does not match")
         return SpliceGraphReads(
             _SpliceGraphReads(
                 introns._gene_introns,
