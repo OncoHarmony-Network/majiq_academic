@@ -59,6 +59,11 @@ class GenericSubcommand(object):
         # set up logging
         setup_logger(logfile=args.logger, silent=args.silent, debug=args.debug)
         log = get_logger()
+        # print information about the run
+        from new_majiq.version import version
+        log.info(f"new-majiq v{version}")
+        log.info(f"Command: {' '.join(sys.argv)}")
+        log.info(f"Arguments:\n{args}")
         # run subcommand
         try:
             self._run(args)

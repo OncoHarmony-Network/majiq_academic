@@ -9,7 +9,7 @@ Author: Joseph K Aicher
 
 import argparse
 import sys
-from typing import Optional, List, Dict
+from typing import Dict
 from new_majiq._run._run import GenericSubcommand
 from new_majiq._run.cite import subcommand as cite
 from new_majiq._run.gff3 import subcommand as gff3
@@ -29,7 +29,7 @@ SUBPARSER_SOURCES: Dict[str, GenericSubcommand] = {
 }
 
 
-def main(sys_args: Optional[List[str]] = None) -> None:
+def main() -> None:
     """ Entry-point into multiple tools using subcommands
     """
     # build parser
@@ -50,7 +50,7 @@ def main(sys_args: Optional[List[str]] = None) -> None:
         parser.print_help()
         sys.exit(1)
     # parse arguments now
-    args = parser.parse_args(sys_args)
+    args = parser.parse_args()
     args.func(args)
 
 
