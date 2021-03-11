@@ -39,7 +39,7 @@ class GeneIntrons(GeneConnections):
     def filter_passed(
         self,
         keep_annotated: bool = constants.DEFAULT_BUILD_KEEP_ANNOTATED_IR,
-        discard_denovo: bool = constants.DEFAULT_BUILD_DENOVO_IR,
+        discard_denovo: bool = not constants.DEFAULT_BUILD_DENOVO_IR,
     ) -> "GeneIntrons":
         """ Get subset of introns that passed build filters
 
