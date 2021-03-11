@@ -24,18 +24,18 @@ class GeneConnections(GeneRegions):
         super().__init__(gene_connections)
         return
 
-    def checksum(self):
-        """Checksum including passed/simplified/connections status"""
-        return self._gene_introns.checksum()
-
-    def checksum_nodata(self):
-        """Checksum only considering gene_idx, start, and end"""
-        return self._gene_introns.checksum_nodata()
-
     @property
     def _gene_connections(self):
         """Underlying internals class for gene connections"""
         return self._gene_regions
+
+    def checksum(self):
+        """Checksum including passed/simplified/connections status"""
+        return self._gene_connections.checksum()
+
+    def checksum_nodata(self):
+        """Checksum only considering gene_idx, start, and end"""
+        return self._gene_connections.checksum_nodata()
 
     def connect_exons(self, exons: Exons) -> None:
         """ Connect regions to specified exons
