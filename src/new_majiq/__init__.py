@@ -1,5 +1,6 @@
 from new_majiq.internals import (
     ExperimentStrandness,
+    ExperimentThresholds,
     set_seed,
 )
 
@@ -10,5 +11,6 @@ from .SpliceGraph import SpliceGraph
 from .SJIntronsBins import SJIntronsBins
 from .SJJunctionsBins import SJJunctionsBins
 
-# coverage from these events
+# coverage on splicegraph or events
+from .SpliceGraphReads import SpliceGraphReads
 from .EventsCoverage import EventsCoverage

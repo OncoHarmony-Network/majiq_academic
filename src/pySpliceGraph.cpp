@@ -1025,6 +1025,9 @@ void init_pyExonConnections(pyExonConnections_t& pyExonConnections) {
         py::arg("exons"),
         py::arg("introns"),
         py::arg("junctions"))
+    .def("_exons", &ExonConnections::exons, "underlying exons")
+    .def("_introns", &ExonConnections::introns, "underlying introns")
+    .def("_junctions", &ExonConnections::junctions, "underlying junctions")
     .def("lsvs", &ExonConnections::LSVEvents, "Construct LSV Events")
     .def("constitutive", &ExonConnections::ConstitutiveEvents,
         "Construct Constitutive Events")
@@ -1336,17 +1339,6 @@ void init_pyGroupIntronsGen(pyGroupIntronsGen_t& pyGroupIntronsGen) {
             self.num_passed(), 0, self_obj);
         },
         "Number of experiments or which each intron has passed")
-    .def("df",
-        [](py::object& self) -> py::object {
-        auto base = self.attr("_introns").attr("df")();
-        auto get_xr = [&self](py::str key) {
-          return py::module_::import("xarray").attr("DataArray")(
-              self.attr(key), py::arg("dims") = "intron_idx");
-        };
-        return base.attr("assign_coords")(
-            py::arg("num_passed") = get_xr("num_passed"));
-        },
-        "View of gene introns and how many times they have passed")
     .def("__len__", &GroupIntronsGenerator::size)
     .def("add_experiment", &GroupIntronsGenerator::AddExperiment,
         "Add SJIntronsBins to build group",

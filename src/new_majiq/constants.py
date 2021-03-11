@@ -9,7 +9,12 @@ Author: Joseph K Aicher
 from typing import (
     Final,
 )
-from new_majiq.internals import ExperimentStrandness, GFF3Types, _default_gff3_types
+from new_majiq.internals import (
+    ExperimentStrandness,
+    ExperimentThresholds,
+    GFF3Types,
+    _default_gff3_types,
+)
 
 
 NC_CONTIGS: Final[str] = "contigs"
@@ -49,3 +54,12 @@ DEFAULT_BUILD_SIMPL_MINPSI: Final[float] = 0.01
 DEFAULT_BUILD_SIMPL_MINREADS_ANNOTATED_JUNCTION: Final[float] = 0
 DEFAULT_BUILD_SIMPL_MINREADS_DENOVO_JUNCTION: Final[float] = 0
 DEFAULT_BUILD_SIMPL_MINREADS_INTRON: Final[float] = 0
+
+DEFAULT_BUILD_EXP_THRESHOLDS: Final[ExperimentThresholds] = ExperimentThresholds(
+    minreads=DEFAULT_BUILD_MINREADS,
+    mindenovo=DEFAULT_BUILD_MINDENOVO,
+    minpos=DEFAULT_BUILD_MINPOS,
+    max_pctbins=DEFAULT_BUILD_MAX_PCTBINS,
+    junction_acceptance_probability=DEFAULT_BUILD_MATCH_JUNCTION_PROBABILITY,
+    intron_acceptance_probability=DEFAULT_BUILD_MATCH_INTRON_PROBABILITY,
+)
