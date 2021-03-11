@@ -13,10 +13,12 @@ from typing import Optional, List, Dict
 from new_majiq._run._run import GenericSubcommand
 from new_majiq._run.cite import subcommand as cite
 from new_majiq._run.gff3 import subcommand as gff3
+from new_majiq._run.sj import subcommand as sj
 
 
 SUBPARSER_SOURCES: Dict[str, GenericSubcommand] = {
     "gff3": gff3,
+    "sj": sj,
     "cite": cite,
 }
 
