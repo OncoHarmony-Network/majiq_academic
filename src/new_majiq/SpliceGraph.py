@@ -34,6 +34,38 @@ class SpliceGraph(object):
         return
 
     @classmethod
+    def from_components(
+        cls,
+        contigs: Contigs,
+        genes: Genes,
+        exons: Exons,
+        junctions: GeneJunctions,
+        introns: GeneIntrons,
+    ) -> "SpliceGraph":
+        return SpliceGraph(_SpliceGraph(
+            contigs._contigs,
+            genes._genes,
+            exons._exons,
+            junctions._gene_junctions,
+            introns._gene_introns,
+        ))
+
+    def with_updated_exon_connections(
+        self,
+        exons: Exons,
+        junctions: GeneJunctions,
+        introns: GeneIntrons,
+    ) -> "SpliceGraph":
+        """convenience function to build splicegraph with same contigs/genes"""
+        return SpliceGraph.from_components(
+            self.contigs,
+            self.genes,
+            exons,
+            junctions,
+            introns,
+        )
+
+    @classmethod
     def from_gff3(
         cls,
         path: Union[str, Path],
