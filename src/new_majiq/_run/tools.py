@@ -16,6 +16,7 @@ from new_majiq._run.gff3 import subcommand as gff3
 from new_majiq._run.sj import subcommand as sj
 from new_majiq._run.build import subcommand as build
 from new_majiq._run.lsv_coverage import subcommand as lsv_coverage
+from new_majiq._run.sg_coverage import subcommand as sg_coverage
 
 
 SUBPARSER_SOURCES: Dict[str, GenericSubcommand] = {
@@ -24,6 +25,7 @@ SUBPARSER_SOURCES: Dict[str, GenericSubcommand] = {
     "cite": cite,
     "build": build,
     "lsv-coverage": lsv_coverage,
+    "sg-coverage": sg_coverage,
 }
 
 
