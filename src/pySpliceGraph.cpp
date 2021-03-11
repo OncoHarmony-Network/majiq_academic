@@ -532,6 +532,14 @@ void init_Exons(pyExons_t& pyExons) {
             exons.data(), offset, exons_obj);
         },
         "array[int] of annotated exon ends")
+    .def("is_denovo",
+        [](const Exons& self,
+          py::array_t<size_t> exon_idx) -> py::array_t<bool> {
+        auto f = [&self](size_t i) { return self[i].is_denovo(); };
+        return py::vectorize(f)(exon_idx);
+        },
+        "Indicate if selected exons are denovo",
+        py::arg("exon_idx"))
     .def("__repr__", [](const Exons& self) -> std::string {
         std::ostringstream oss;
         oss << "Exons<" << self.size() << " total>";

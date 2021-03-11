@@ -65,14 +65,11 @@ class Exons(GeneRegions):
         """
         return self._exons.annotated_end
 
-    def is_annotated(self, exon_idx: Optional[np.ndarray] = None) -> np.ndarray:
+    def is_denovo(self, exon_idx: Optional[np.ndarray] = None) -> np.ndarray:
         """Return denovo status of exon"""
         if exon_idx is None:
             exon_idx = self.exon_idx
-        raise NotImplementedError(
-            "Should expose this in vectorized fashion in internals."
-            "If needed in meantime, use self.annotated_start >= 0"
-        )
+        return self._exons.is_denovo(exon_idx)
 
     @property
     def df(self) -> xr.Dataset:
