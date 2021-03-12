@@ -8,6 +8,7 @@ import numpy as np
 import xarray as xr
 
 import new_majiq.constants as constants
+import new_majiq.beta_mixture as bm
 
 from functools import cached_property
 from typing import (
@@ -252,8 +253,12 @@ class QuantifiableCoverage(object):
         return self._beta_mean(self.alpha, self.beta)
 
     @cached_property
+    def _bootstrap_moments(self) -> Tuple[np.ndarray, np.ndarray]:
+        return bm.moments(self.bootstrap_alpha, self.bootstrap_beta)
+
+    @cached_property
     def bootstrap_posterior_mean(self) -> np.ndarray:
-        return self._beta_mean(self.bootstrap_alpha, self.bootstrap_beta)
+        return self._bootstrap_moments[0]
 
     @cached_property
     def posterior_variance(self) -> np.ndarray:
@@ -261,23 +266,37 @@ class QuantifiableCoverage(object):
 
     @cached_property
     def bootstrap_posterior_variance(self) -> np.ndarray:
-        return self._beta_var(
-            self.bootstrap_posterior_mean,
-            self.bootstrap_alpha,
-            self.bootstrap_beta,
-        )
+        return self._bootstrap_moments[1]
 
-    @cached_property
-    def bootstrap_mean(self) -> np.ndarray:
-        return np.array(self.bootstrap_posterior_mean.mean(axis=1))
+    def bootstrap_discretized_pmf(self, nbins: int = 40, nthreads: int = 1):
+        if nbins < 2:
+            raise ValueError(f"{nbins = } is invalid/trivial for discrete pmf")
+        alpha = self.bootstrap_alpha
+        beta = self.bootstrap_beta
+        innerpoints = np.linspace(0, 1, 1 + nbins, dtype=alpha.dtype)[1:-1]
+        result_cdf = np.empty((alpha.shape[0], 1 + nbins), dtype=alpha.dtype)
+        result_cdf[:, 0] = 0
+        result_cdf[:, -1] = 1
+        result_cdf_inner = result_cdf[:, 1:-1]
 
-    @cached_property
-    def bootstrap_variance(self) -> np.ndarray:
-        return np.array(
-            # law of total variance
-            self.bootstrap_posterior_mean.var(axis=1)
-            + self.bootstrap_posterior_variance.mean(axis=1)
+        def compute_slice(idx: slice) -> None:
+            with np.errstate(divide="ignore"):
+                bm.cdf(
+                    innerpoints[np.newaxis, :],
+                    alpha[idx, np.newaxis, :],
+                    beta[idx, np.newaxis, :],
+                    out=result_cdf_inner[idx, :],
+                )
+            return
+
+        from multiprocessing.dummy import Pool  # dummy is multithreading
+        p = Pool(nthreads)
+        WORKSIZE = 200000 // nbins
+        p.map(
+            compute_slice,
+            [slice(x, x + WORKSIZE) for x in range(0, len(alpha), WORKSIZE)],
         )
+        return np.diff(result_cdf, axis=1)
 
     @classmethod
     def from_quantifier_group(
