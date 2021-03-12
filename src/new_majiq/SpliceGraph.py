@@ -23,6 +23,7 @@ from new_majiq.internals import GFF3Types
 
 from typing import (
     Final,
+    List,
     Union,
 )
 from pathlib import Path
@@ -103,6 +104,22 @@ class SpliceGraph(object):
     def constitutive(self) -> Events:
         """Construct current constitutive events"""
         return Events(self._sg._exon_connections.constitutive())
+
+    def event_id(
+        self,
+        ref_exon_idx: np.ndarray,
+        event_type: np.ndarray,
+    ) -> List[str]:
+        """identifier for specified events as used by voila"""
+        return self._sg._exon_connections.event_id(ref_exon_idx, event_type)
+
+    def event_description(
+        self,
+        ref_exon_idx: np.ndarray,
+        event_type: np.ndarray,
+    ) -> List[str]:
+        """description of specified events as used by voila"""
+        return self._sg._exon_connections.event_description(ref_exon_idx, event_type)
 
     def to_netcdf(self, path: Union[str, Path]) -> None:
         """Serialize splicegraph to netcdf format"""

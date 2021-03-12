@@ -90,6 +90,21 @@ class Events(object):
     def connection_idx(self) -> np.ndarray:
         return self._events.idx
 
+    def connection_gene_idx(self, ec_idx: Optional[np.ndarray] = None) -> np.ndarray:
+        if ec_idx is None:
+            ec_idx = self.ec_idx
+        return self._events.connection_gene_idx(ec_idx)
+
+    def connection_start(self, ec_idx: Optional[np.ndarray] = None) -> np.ndarray:
+        if ec_idx is None:
+            ec_idx = self.ec_idx
+        return self._events.connection_start(ec_idx)
+
+    def connection_end(self, ec_idx: Optional[np.ndarray] = None) -> np.ndarray:
+        if ec_idx is None:
+            ec_idx = self.ec_idx
+        return self._events.connection_end(ec_idx)
+
     @property
     def df(self) -> xr.Dataset:
         return xr.Dataset(
