@@ -1,6 +1,9 @@
 """
 Quantifier.py
 
+TODO: make this able to accept EventsCoverage from memory, not just saved to
+disk?
+
 Author: Joseph K Aicher
 """
 
@@ -14,6 +17,7 @@ from functools import cached_property
 from typing import (
     Final,
     NamedTuple,
+    Optional,
     Sequence,
     Tuple,
     Union,
@@ -326,6 +330,47 @@ class QuantifiableCoverage(object):
             [slice(x, x + WORKSIZE) for x in range(0, len(alpha), WORKSIZE)],
         )
         return np.diff(result_cdf, axis=1)
+
+    def to_netcdf(
+        self,
+        path: Union[str, Path],
+        pmf_bins: Optional[int] = 40,
+        quantiles: Optional[Sequence[float]] = None,
+        nthreads: int = 1,
+    ) -> None:
+        """Save to file with information so could be reopened as Events object"""
+        if Path(path).exists():
+            raise ValueError(f"Output {path} already exists")
+        # save events
+        (
+            self.events
+            .assign_coords(_offsets=("e_offsets_idx", self.offsets))
+            .to_netcdf(path, "w", group=constants.NC_EVENTS)
+        )
+        # save quantifications
+        df = xr.Dataset(
+            {
+                "psi_mean": ("ec_idx", self.posterior_mean),
+                "bootstrap_psi_mean": ("ec_idx", self.bootstrap_posterior_mean),
+                "bootstrap_psi_variance": ("ec_idx", self.bootstrap_posterior_variance),
+            },
+        )
+        if pmf_bins:
+            df = df.assign(
+                psi_pmf=(
+                    ("ec_idx", "psi_pmf_bin"),
+                    self.bootstrap_discretized_pmf(pmf_bins, nthreads=nthreads),
+                ),
+            )
+        if quantiles:
+            df = df.assign(
+                psi_quantiles=(
+                    ("ec_idx", "quantile"),
+                    self.bootstrap_quantile(quantiles, nthreads=nthreads),
+                ),
+            ).assign_coords(quantile=quantiles)
+        df.to_netcdf(path, mode="a", group=constants.NC_EVENTSQUANTIFIED)
+        return
 
     @classmethod
     def from_quantifier_group(

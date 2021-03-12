@@ -31,6 +31,8 @@ NC_SJJUNCTIONSBINS: Final[str] = "sj_junctions_bins"
 NC_EVENTS: Final[str] = "events"
 NC_EVENTSCOVERAGE: Final[str] = "events_coverage"
 
+NC_EVENTSQUANTIFIED: Final[str] = "events_quantified"
+
 NC_SGREADS: Final[str] = "sg_reads"
 
 
