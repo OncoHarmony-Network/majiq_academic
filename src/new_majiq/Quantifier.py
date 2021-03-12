@@ -185,7 +185,7 @@ class QuantifiableCoverage(object):
 
     @cached_property
     def alpha_prior(self) -> np.ndarray:
-        return 1 / self.connection_event_size
+        return np.reciprocal(self.connection_event_size, dtype=np.float32)
 
     @cached_property
     def beta_prior(self) -> np.ndarray:
