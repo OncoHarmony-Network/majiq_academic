@@ -9,10 +9,12 @@ Author: Joseph K Aicher
 
 import numpy as np
 import xarray as xr
+import pandas as pd
 
 import new_majiq.constants as constants
 import new_majiq.beta_mixture as bm
 
+from new_majiq.SpliceGraph import SpliceGraph
 from new_majiq.GeneIntrons import GeneIntrons
 from new_majiq.GeneJunctions import GeneJunctions
 from new_majiq.Events import Events, _Events
@@ -20,6 +22,7 @@ from new_majiq.Events import Events, _Events
 from functools import cached_property
 from typing import (
     Final,
+    List,
     NamedTuple,
     Optional,
     Sequence,
@@ -355,6 +358,64 @@ class QuantifiableCoverage(object):
                 self.events.connection_idx,
             )
         )
+
+    @staticmethod
+    def _exons_formatted(
+        exon_start: Sequence[int],
+        exon_end: Sequence[int]
+    ) -> List[str]:
+        def format_coord(x):
+            return x if x >= 0 else "na"
+
+        return [
+            f"{format_coord(a)}-{format_coord(b)}"
+            for a, b in zip(exon_start, exon_end)
+        ]
+
+    def as_dataframe(self, sg: SpliceGraph) -> pd.DataFrame:
+        # event information
+        q_events = self.get_events(sg.introns, sg.junctions)
+        event_id = sg.event_id(q_events.ref_exon_idx, q_events.event_type)
+        event_description = sg.event_description(q_events.ref_exon_idx, q_events.event_type)
+        ref_exon_start = sg.exons.start[q_events.ref_exon_idx]
+        ref_exon_end = sg.exons.end[q_events.ref_exon_idx]
+        # connection information
+        gene_idx = q_events.connection_gene_idx()
+        gene_id = np.array(sg.genes.gene_id)[gene_idx]
+        gene_name = np.array(sg.genes.gene_name)[gene_idx]
+        strand = np.array([x.decode() for x in sg.genes.strand])[gene_idx]
+        contig_idx = sg.genes.contig_idx[gene_idx]
+        seqid = np.array(sg.contigs.seqid)[contig_idx]
+        other_exon_idx = q_events.connection_other_exon_idx()
+        other_exon_start = sg.exons.start[other_exon_idx]
+        other_exon_end = sg.exons.end[other_exon_idx]
+        return pd.DataFrame(
+            {
+                "seqid": seqid,
+                "gene_id": gene_id,
+                "ref_exon": np.repeat(
+                    self._exons_formatted(ref_exon_start, ref_exon_end),
+                    self.event_size
+                ),
+                "event_type": np.repeat([x.decode() for x in q_events.event_type], self.event_size),
+                "is_intron": q_events.is_intron,
+                "start": q_events.connection_start(),
+                "end": q_events.connection_end(),
+                "denovo": q_events.connection_denovo(),
+                "psi_mean": self.posterior_mean,
+                "bootstrap_psi_mean": self.bootstrap_posterior_mean,
+                "bootstrap_psi_std": np.sqrt(self.bootstrap_posterior_variance),
+                "total_reads": self.total,
+                "gene_name": gene_name,
+                "strand": strand,
+                "other_exon": self._exons_formatted(
+                    other_exon_start,
+                    other_exon_end
+                ),
+                "event_id": np.repeat(event_id, self.event_size),
+                "event_description": np.repeat(event_description, self.event_size),
+            },
+        ).set_index(["seqid", "gene_id", "ref_exon", "event_type", "is_intron", "start", "end"])
 
     def to_netcdf(
         self,

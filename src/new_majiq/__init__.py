@@ -14,3 +14,10 @@ from .SJJunctionsBins import SJJunctionsBins
 # coverage on splicegraph or events
 from .SpliceGraphReads import SpliceGraphReads
 from .EventsCoverage import EventsCoverage
+
+# simple quantifier
+from .Quantifier import (
+    QuantifierThresholds,
+    QuantifiableEvents,
+    QuantifiableCoverage,
+)
