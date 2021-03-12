@@ -113,7 +113,7 @@ class QuantifiableEvents(object):
             thresholds.min_experiments_f, len(experiments)
         )
         # event passes if any of its connections passed
-        event_passed: np.ndarray = np.add.reduceat(connection_passed, offsets[:-1]) > 0
+        event_passed: np.ndarray = np.logical_or.reduceat(connection_passed, offsets[:-1])
         return QuantifiableEvents(checksums, offsets, event_passed)
 
     @property
