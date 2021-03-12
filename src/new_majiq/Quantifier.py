@@ -13,6 +13,10 @@ import xarray as xr
 import new_majiq.constants as constants
 import new_majiq.beta_mixture as bm
 
+from new_majiq.GeneIntrons import GeneIntrons
+from new_majiq.GeneJunctions import GeneJunctions
+from new_majiq.Events import Events, _Events
+
 from functools import cached_property
 from typing import (
     Final,
@@ -330,6 +334,27 @@ class QuantifiableCoverage(object):
             [slice(x, x + WORKSIZE) for x in range(0, len(alpha), WORKSIZE)],
         )
         return np.diff(result_cdf, axis=1)
+
+    def get_events(
+        self,
+        introns: GeneIntrons,
+        junctions: GeneJunctions,
+    ) -> Events:
+        if self.events.intron_hash != introns.checksum():
+            raise ValueError("GeneIntrons checksums do not match")
+        if self.events.junction_hash != junctions.checksum():
+            raise ValueError("GeneJunctions checksums do not match")
+        return Events(
+            _Events(
+                introns._gene_introns,
+                junctions._gene_junctions,
+                self.events.ref_exon_idx,
+                self.events.event_type,
+                self.offsets,
+                self.events.is_intron,
+                self.events.connection_idx,
+            )
+        )
 
     def to_netcdf(
         self,
