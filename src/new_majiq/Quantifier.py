@@ -268,7 +268,36 @@ class QuantifiableCoverage(object):
     def bootstrap_posterior_variance(self) -> np.ndarray:
         return self._bootstrap_moments[1]
 
-    def bootstrap_discretized_pmf(self, nbins: int = 40, nthreads: int = 1):
+    def bootstrap_quantile(
+        self,
+        quantiles: Sequence[float] = [0.1, 0.9],
+        nthreads: int = 1,
+    ) -> np.ndarray:
+        quantiles_arr = np.array(quantiles, dtype=np.float32)
+        alpha = self.bootstrap_alpha
+        beta = self.bootstrap_beta
+        result = np.empty((alpha.shape[0], len(quantiles)), dtype=np.float32)
+
+        def compute_slice(idx: slice) -> None:
+            with np.errstate(divide="ignore"):
+                bm.quantile(
+                    quantiles_arr[np.newaxis],
+                    alpha[idx, np.newaxis],
+                    beta[idx, np.newaxis],
+                    out=result[idx],
+                )
+            return
+
+        from multiprocessing.dummy import Pool  # dummy is multithreading
+        p = Pool(nthreads)
+        WORKSIZE = 20000 // len(quantiles)
+        p.map(
+            compute_slice,
+            [slice(x, x + WORKSIZE) for x in range(0, len(alpha), WORKSIZE)],
+        )
+        return result
+
+    def bootstrap_discretized_pmf(self, nbins: int = 40, nthreads: int = 1) -> np.ndarray:
         if nbins < 2:
             raise ValueError(f"{nbins = } is invalid/trivial for discrete pmf")
         alpha = self.bootstrap_alpha
@@ -282,10 +311,10 @@ class QuantifiableCoverage(object):
         def compute_slice(idx: slice) -> None:
             with np.errstate(divide="ignore"):
                 bm.cdf(
-                    innerpoints[np.newaxis, :],
-                    alpha[idx, np.newaxis, :],
-                    beta[idx, np.newaxis, :],
-                    out=result_cdf_inner[idx, :],
+                    innerpoints[np.newaxis],
+                    alpha[idx, np.newaxis],
+                    beta[idx, np.newaxis],
+                    out=result_cdf_inner[idx],
                 )
             return
 
