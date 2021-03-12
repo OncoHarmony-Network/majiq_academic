@@ -10,9 +10,7 @@ from typing import (
     Optional,
 )
 
-DESCRIPTION = (
-    "Information about how to cite MAJIQ"
-)
+DESCRIPTION = "Information about how to cite MAJIQ"
 MESSAGE = r"""
  /$$      /$$  /$$$$$$     /$$$$$ /$$$$$$  /$$$$$$
 | $$$    /$$$ /$$__  $$   |__  $$|_  $$_/ /$$__  $$

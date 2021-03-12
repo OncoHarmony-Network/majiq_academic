@@ -30,8 +30,7 @@ SUBPARSER_SOURCES: Dict[str, GenericSubcommand] = {
 
 
 def main() -> None:
-    """ Entry-point into multiple tools using subcommands
-    """
+    """Entry-point into multiple tools using subcommands"""
     # build parser
     parser = argparse.ArgumentParser(
         description="Tools to detect, quantify, and analyze RNA splicing"
@@ -40,7 +39,9 @@ def main() -> None:
     subparsers = parser.add_subparsers(required=True, help="")
     for src_name, src_module in SUBPARSER_SOURCES.items():
         src_parser = subparsers.add_parser(
-            src_name, help=src_module.DESCRIPTION, description=src_module.DESCRIPTION,
+            src_name,
+            help=src_module.DESCRIPTION,
+            description=src_module.DESCRIPTION,
         )
         src_parser.set_defaults(func=src_module.run)
         src_module.add_args(src_parser)

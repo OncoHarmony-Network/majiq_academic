@@ -89,7 +89,7 @@ class SJIntronsBins(SJBinsReads):
                 "original_path": self.original_path,
                 "original_version": self.original_version,
                 "original_time": self.original_time,
-            }
+            },
         )
 
     @property
@@ -117,7 +117,7 @@ class SJIntronsBins(SJBinsReads):
         strandness: ExperimentStrandness = constants.DEFAULT_BAM_STRANDNESS,
         nthreads: int = constants.DEFAULT_BAM_NTHREADS,
     ) -> "SJIntronsBins":
-        """ Load SJIntronsBins from BAM file
+        """Load SJIntronsBins from BAM file
 
         Parameters
         ----------
@@ -156,7 +156,7 @@ class SJIntronsBins(SJBinsReads):
         )
 
     def to_netcdf(self, path: Union[str, Path]) -> None:
-        """ Serialize to netcdf format
+        """Serialize to netcdf format
 
         Will only write to existing file if has SJJunctionsBins with same
         original path and version
@@ -189,7 +189,9 @@ class SJIntronsBins(SJBinsReads):
             # save contigs to start the file
             self.regions.contigs.to_netcdf(path, "w")
         self.regions.to_netcdf(path, "a")
-        self._df.drop_vars("sib_idx").to_netcdf(path, "a", group=constants.NC_SJINTRONSBINS)
+        self._df.drop_vars("sib_idx").to_netcdf(
+            path, "a", group=constants.NC_SJINTRONSBINS
+        )
         return
 
     @classmethod

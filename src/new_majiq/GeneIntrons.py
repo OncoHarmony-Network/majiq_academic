@@ -34,6 +34,7 @@ class GeneIntrons(GeneConnections):
     def build_group(self) -> "GroupIntronsGenerator":
         """Create build group to update these introns to be passed or not"""
         from new_majiq.GroupIntronsGenerator import GroupIntronsGenerator
+
         return GroupIntronsGenerator(self)
 
     def filter_passed(
@@ -41,7 +42,7 @@ class GeneIntrons(GeneConnections):
         keep_annotated: bool = constants.DEFAULT_BUILD_KEEP_ANNOTATED_IR,
         discard_denovo: bool = not constants.DEFAULT_BUILD_DENOVO_IR,
     ) -> "GeneIntrons":
-        """ Get subset of introns that passed build filters
+        """Get subset of introns that passed build filters
 
         Parameters
         ----------
@@ -87,7 +88,9 @@ class GeneIntrons(GeneConnections):
 
     def to_netcdf(self, path: Union[str, Path], mode: str) -> None:
         """Serialize to netcdf format. Note genes need to be saved separately"""
-        self.df.drop_vars("gi_idx").to_netcdf(path, mode, group=constants.NC_GENEINTRONS)
+        self.df.drop_vars("gi_idx").to_netcdf(
+            path, mode, group=constants.NC_GENEINTRONS
+        )
         return
 
     @classmethod

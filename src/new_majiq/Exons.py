@@ -33,9 +33,8 @@ class Exons(GeneRegions):
     def infer_with_junctions(self, junctions: "GeneJunctions") -> "Exons":
         """Infer denovo exons/extended exon boundaries given denovo junctions"""
         from new_majiq.internals import SpliceGraph as _SpliceGraph
-        return Exons(
-            _SpliceGraph.infer_exons(self._exons, junctions._gene_junctions)
-        )
+
+        return Exons(_SpliceGraph.infer_exons(self._exons, junctions._gene_junctions))
 
     def checksum(self):
         return self._exons.checksum()

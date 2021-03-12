@@ -38,8 +38,7 @@ class GeneConnections(GeneRegions):
         return self._gene_connections.checksum_nodata()
 
     def connect_exons(self, exons: Exons) -> None:
-        """ Connect regions to specified exons
-        """
+        """Connect regions to specified exons"""
         self._gene_connections.connect_exons(exons._exons)
         return
 

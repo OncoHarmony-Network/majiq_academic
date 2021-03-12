@@ -42,13 +42,15 @@ class SpliceGraph(object):
         junctions: GeneJunctions,
         introns: GeneIntrons,
     ) -> "SpliceGraph":
-        return SpliceGraph(_SpliceGraph(
-            contigs._contigs,
-            genes._genes,
-            exons._exons,
-            junctions._gene_junctions,
-            introns._gene_introns,
-        ))
+        return SpliceGraph(
+            _SpliceGraph(
+                contigs._contigs,
+                genes._genes,
+                exons._exons,
+                junctions._gene_junctions,
+                introns._gene_introns,
+            )
+        )
 
     def with_updated_exon_connections(
         self,

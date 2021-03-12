@@ -38,8 +38,7 @@ def min_experiments(min_experiments_f: float, num_experiments: int) -> float:
 
 
 class QuantifiableEvents(object):
-    """ Process group of EventsCoverage for events that can be quantified
-    """
+    """Process group of EventsCoverage for events that can be quantified"""
 
     def __init__(
         self,
@@ -47,7 +46,7 @@ class QuantifiableEvents(object):
         offsets: np.ndarray,
         event_passed: np.ndarray,
     ):
-        """ Indicate events quantifiable
+        """Indicate events quantifiable
 
         Parameters
         ----------
@@ -77,8 +76,7 @@ class QuantifiableEvents(object):
         experiments: Sequence[Union[Path, str]],
         thresholds: QuantifierThresholds = QuantifierThresholds(),
     ) -> "QuantifiableEvents":
-        """ Determine quantifiable events from input EventsCoverage paths
-        """
+        """Determine quantifiable events from input EventsCoverage paths"""
         if len(experiments) == 0:
             raise ValueError("No experiments passed into quantifiable events")
         checksums: ConnectionsChecksum
@@ -103,22 +101,19 @@ class QuantifiableEvents(object):
             with xr.open_dataset(path, group=constants.NC_EVENTSCOVERAGE) as df:
                 cur_summaries = df[["numreads", "numbins"]].load()
             # determine if each event connection passed experiment thresholds
-            passed = (
-                (cur_summaries.numreads.values >= thresholds.minreads)
-                & (cur_summaries.numbins.values >= thresholds.minbins)
+            passed = (cur_summaries.numreads.values >= thresholds.minreads) & (
+                cur_summaries.numbins.values >= thresholds.minbins
             )
             try:
                 passed_ct += passed
             except NameError:  # this is the first experiment
                 passed_ct = passed.astype(int)
         # which connections passed?
-        connection_passed = (
-            passed_ct >= min_experiments(thresholds.min_experiments_f, len(experiments))
+        connection_passed = passed_ct >= min_experiments(
+            thresholds.min_experiments_f, len(experiments)
         )
         # event passes if any of its connections passed
-        event_passed: np.ndarray = (
-            np.add.reduceat(connection_passed, offsets[:-1]) > 0
-        )
+        event_passed: np.ndarray = np.add.reduceat(connection_passed, offsets[:-1]) > 0
         return QuantifiableEvents(checksums, offsets, event_passed)
 
     @property
@@ -131,11 +126,9 @@ class QuantifiableEvents(object):
 
     @property
     def quantifiable_offsets(self) -> np.ndarray:
-        """ If we subset the quantifiable events, these are the new offsets
-        """
+        """If we subset the quantifiable events, these are the new offsets"""
         quantifiable_event_sizes = (
-            self.offsets[1:][self.event_passed]
-            - self.offsets[:-1][self.event_passed]
+            self.offsets[1:][self.event_passed] - self.offsets[:-1][self.event_passed]
         )
         # offsets are 1 longer than this
         quantifiable_offsets = np.empty(1 + len(quantifiable_event_sizes), dtype=int)
@@ -149,13 +142,11 @@ class QuantifiableEvents(object):
 
     @cached_property
     def event_connection_passed_mask(self) -> np.ndarray:
-        """ Propagate passed events back to mask over event connections
-        """
+        """Propagate passed events back to mask over event connections"""
         return np.repeat(self.event_passed, np.diff(self.offsets))
 
     def __and__(self, other: "QuantifiableEvents") -> "QuantifiableEvents":
-        """ Get events that are quantifiable in both
-        """
+        """Get events that are quantifiable in both"""
         if self.checksums != other.checksums:
             raise ValueError("Cannot AND quantifiable events that are not shared")
         return QuantifiableEvents(
@@ -164,8 +155,7 @@ class QuantifiableEvents(object):
 
 
 class QuantifiableCoverage(object):
-    """ Coverage for a group of experiments at quantifiable events
-    """
+    """Coverage for a group of experiments at quantifiable events"""
 
     def __init__(
         self,
@@ -295,8 +285,7 @@ class QuantifiableCoverage(object):
         experiments: Sequence[Union[Path, str]],
         quantifiable: QuantifiableEvents,
     ) -> "QuantifiableCoverage":
-        """ Aggregate coverage over input experiments for quantifiable events
-        """
+        """Aggregate coverage over input experiments for quantifiable events"""
         if len(experiments) == 0:
             raise ValueError("No experiments passed into QuantifiableCoverage")
         checksums: Final[ConnectionsChecksum] = quantifiable.checksums
@@ -305,14 +294,17 @@ class QuantifiableCoverage(object):
         # get coverage first, checking checksums each time
         for x in experiments:
             with xr.open_dataset(x, group=constants.NC_EVENTS) as df:
-                if checksums != ConnectionsChecksum(introns=df.intron_hash, junctions=df.junction_hash):
+                if checksums != ConnectionsChecksum(
+                    introns=df.intron_hash, junctions=df.junction_hash
+                ):
                     raise ValueError(
                         f"{x} has different intron/junction checksums"
                         f" than provided quantiable events"
                     )
             with xr.open_dataset(x, group=constants.NC_EVENTSCOVERAGE) as df:
                 x_coverage = (
-                    df[["numreads", "bootstraps"]].load()
+                    df[["numreads", "bootstraps"]]
+                    .load()
                     .isel(ec_idx=quantifiable.event_connection_passed_mask)
                 )
                 try:
@@ -324,9 +316,13 @@ class QuantifiableCoverage(object):
         # get events
         events: xr.Dataset
         with xr.open_dataset(experiments[0], group=constants.NC_EVENTS) as df:
-            events = df.drop_dims("e_offsets_idx").load().isel(
-                e_idx=quantifiable.event_passed,
-                ec_idx=quantifiable.event_connection_passed_mask,
+            events = (
+                df.drop_dims("e_offsets_idx")
+                .load()
+                .isel(
+                    e_idx=quantifiable.event_passed,
+                    ec_idx=quantifiable.event_connection_passed_mask,
+                )
             )
         return QuantifiableCoverage(
             quantifiable_offsets,

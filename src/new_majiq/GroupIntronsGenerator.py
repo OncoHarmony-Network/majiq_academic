@@ -25,8 +25,8 @@ class GroupIntronsGenerator(object):
     """Count number of experiments that have passed each input intron"""
 
     def __init__(self, introns: GeneIntrons):
-        self._group: Final[_GroupIntronsGenerator] = (
-            _GroupIntronsGenerator(introns._gene_introns)
+        self._group: Final[_GroupIntronsGenerator] = _GroupIntronsGenerator(
+            introns._gene_introns
         )
         return
 
@@ -45,11 +45,9 @@ class GroupIntronsGenerator(object):
 
     @property
     def df(self) -> xr.Dataset:
-        return (
-            self.introns.df
-            .assign(num_passed=("gi_idx", self.num_passed))
-            .assign_attrs(num_experiments=self.num_experiments)
-        )
+        return self.introns.df.assign(
+            num_passed=("gi_idx", self.num_passed)
+        ).assign_attrs(num_experiments=self.num_experiments)
 
     def add_experiment(
         self,

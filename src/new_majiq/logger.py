@@ -12,7 +12,7 @@ from typing import Optional, Union
 
 
 def get_logger(allow_setup: bool = True) -> logging.Logger:
-    """ Get new-majiq logger
+    """Get new-majiq logger
 
     allow_setup: bool
         Set up logger if it hasn't already been when True
@@ -27,8 +27,7 @@ def get_logger(allow_setup: bool = True) -> logging.Logger:
 
 
 def _default_formatter() -> logging.Formatter:
-    """ How we want log messsages to look
-    """
+    """How we want log messsages to look"""
     # set up formatting
     log_format = "%(asctime)s (PID:%(process)s) - %(levelname)s - %(message)s"
     formatter = logging.Formatter(log_format)
@@ -40,8 +39,7 @@ def setup_logger(
     silent: bool = False,
     debug: bool = False,
 ) -> None:
-    """ Setup logger to print output to logfile (if None, stderr, as default)
-    """
+    """Setup logger to print output to logfile (if None, stderr, as default)"""
     # set up handler
     if logfile is None:
         # use stderr

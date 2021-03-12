@@ -26,33 +26,38 @@ DESCRIPTION = (
 
 def add_args(parser: argparse.ArgumentParser) -> None:
     """add arguments to parser"""
+    parser.add_argument("bam", type=Path, help="Path to RNA-seq alignments as BAM")
     parser.add_argument(
-        "bam", type=Path, help="Path to RNA-seq alignments as BAM"
-    )
-    parser.add_argument(
-        "splicegraph", type=Path,
+        "splicegraph",
+        type=Path,
         help="Path to splicegraph file to determine intronic regions that do"
-        " not overlap exons"
+        " not overlap exons",
     )
     parser.add_argument(
-        "sj", type=Path,
-        help="Path for SJ file with raw bin reads for junctions and introns"
+        "sj",
+        type=Path,
+        help="Path for SJ file with raw bin reads for junctions and introns",
     )
     parser.add_argument(
-        "--strandness", type=str, default="NONE",
+        "--strandness",
+        type=str,
+        default="NONE",
         choices=("NONE", "FORWARD", "REVERSE"),
         help="Strandness of input BAM (default: %(default)s)",
     )
     # TODO (enable skipping of parsing introns)
     parser.add_argument(
-        "--nthreads", type=check_nonnegative_factory(int, True),
+        "--nthreads",
+        type=check_nonnegative_factory(int, True),
         default=constants.DEFAULT_BAM_NTHREADS,
         help="Number of threads used for parsing input alignments",
     )
     parser.add_argument(
-        "--update-exons", action="store_true", default=False,
+        "--update-exons",
+        action="store_true",
+        default=False,
         help="Experimental: Use junction coverage to definitively ignore"
-        " intronic coverage in potential denovo exons (or exon extension)"
+        " intronic coverage in potential denovo exons (or exon extension)",
     )
     return
 
@@ -66,6 +71,7 @@ def run(args: argparse.Namespace) -> None:
         raise ValueError(f"Output path {args.sj} already exists")
     import new_majiq as nm
     from new_majiq.logger import get_logger
+
     log = get_logger()
 
     strandness = nm.ExperimentStrandness(ord(args.strandness[0]))
@@ -85,10 +91,7 @@ def run(args: argparse.Namespace) -> None:
         # TODO (change parameters used for reliable updated junctions?)
         updated_junctions = (
             sg.junctions.builder()
-            .add_group(
-                sg.junctions.build_group(sg.exons)
-                .add_experiment(sj_junctions)
-            )
+            .add_group(sg.junctions.build_group(sg.exons).add_experiment(sj_junctions))
             .get_passed()
         )
         exons = sg.exons.infer_with_junctions(updated_junctions)

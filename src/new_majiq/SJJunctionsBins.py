@@ -87,7 +87,7 @@ class SJJunctionsBins(SJBinsReads):
                 "original_path": self.original_path,
                 "original_version": self.original_version,
                 "original_time": self.original_time,
-            }
+            },
         )
 
     @property
@@ -112,7 +112,7 @@ class SJJunctionsBins(SJBinsReads):
         strandness: ExperimentStrandness = constants.DEFAULT_BAM_STRANDNESS,
         nthreads: int = constants.DEFAULT_BAM_NTHREADS,
     ) -> "SJJunctionsBins":
-        """ Load SJJunctionsBins from BAM file
+        """Load SJJunctionsBins from BAM file
 
         Parameters
         ----------
@@ -144,7 +144,9 @@ class SJJunctionsBins(SJBinsReads):
             )
         self.regions.contigs.to_netcdf(path, "w")
         self.regions.to_netcdf(path, "a")
-        self._df.drop_vars("sjb_idx").to_netcdf(path, "a", group=constants.NC_SJJUNCTIONSBINS)
+        self._df.drop_vars("sjb_idx").to_netcdf(
+            path, "a", group=constants.NC_SJJUNCTIONSBINS
+        )
         return
 
     @classmethod

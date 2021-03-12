@@ -18,9 +18,7 @@ from typing import (
 )
 
 
-DESCRIPTION = (
-    "Translate input GFF3 file to base splicegraph file"
-)
+DESCRIPTION = "Translate input GFF3 file to base splicegraph file"
 
 
 def add_args(parser: argparse.ArgumentParser) -> None:
@@ -29,19 +27,24 @@ def add_args(parser: argparse.ArgumentParser) -> None:
         "gff3", type=Path, help="Path to GFF3 file (uncompressed or gzipped) to convert"
     )
     parser.add_argument(
-        "splicegraph", type=Path,
-        help="Path to save resulting splicegraph. Fails if path already exists."
+        "splicegraph",
+        type=Path,
+        help="Path to save resulting splicegraph. Fails if path already exists.",
     )
     # annotate ir options
     introns_ex = parser.add_mutually_exclusive_group()
     introns_ex.add_argument(
-        "--ignore_ir", action="store_false", dest="process_ir",
+        "--ignore_ir",
+        action="store_false",
+        dest="process_ir",
         default=constants.DEFAULT_BUILD_PROCESS_IR,
         help="Ignore annotated introns when processing annotations"
         " (default process_ir=%(default)s)",
     )
     introns_ex.add_argument(
-        "--process_ir", action="store_true", dest="process_ir",
+        "--process_ir",
+        action="store_true",
+        dest="process_ir",
         default=constants.DEFAULT_BUILD_PROCESS_IR,
         help="Ensure annotated introns are processed (default process_ir=%(default)s)",
     )
@@ -58,6 +61,7 @@ def run(args: argparse.Namespace) -> None:
         )
     from new_majiq import SpliceGraph
     from new_majiq.logger import get_logger
+
     log = get_logger()
     log.info(f"Processing GFF3 {args.gff3.resolve()} to create annotated splicegraph")
     sg = SpliceGraph.from_gff3(

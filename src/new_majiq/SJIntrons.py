@@ -65,15 +65,14 @@ class SJIntrons(ContigRegions):
 
     @classmethod
     def from_exons_and_introns(
-        cls,
-        exons: Exons,
-        gene_introns: GeneIntrons,
-        stranded: bool
+        cls, exons: Exons, gene_introns: GeneIntrons, stranded: bool
     ) -> "SJIntrons":
         """Construct SJIntrons from exons and gene introns"""
-        return SJIntrons(_SJIntrons.from_exons_and_introns(
-            exons._exons, gene_introns._gene_introns, stranded
-        ))
+        return SJIntrons(
+            _SJIntrons.from_exons_and_introns(
+                exons._exons, gene_introns._gene_introns, stranded
+            )
+        )
 
     @classmethod
     def from_netcdf(

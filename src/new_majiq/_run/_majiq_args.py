@@ -15,9 +15,10 @@ from typing import (
 
 
 def check_characters_factory(
-    valid_characters: Set[str], valid_description: Optional[str] = None,
+    valid_characters: Set[str],
+    valid_description: Optional[str] = None,
 ) -> Callable[[Any], str]:
-    """ Create function to raise argparse type error or return string
+    """Create function to raise argparse type error or return string
 
     Create function to raise argparse.ArgumentTypeError if input contains
     invalid characters, otherwise, return str(x)
@@ -49,8 +50,7 @@ def check_characters_factory(
 def check_nonnegative_factory(
     cast_fn: Callable[[Any], Union[int, float]], reject_zero: bool
 ):
-    """ Returns argparse type function to casted type, rejecting negative values
-    """
+    """Returns argparse type function to casted type, rejecting negative values"""
     invalid_predicate = (lambda x: x <= 0) if reject_zero else (lambda x: x < 0)
     invalid_message = "parameter must be {}, {{}} is not".format(
         "positive" if reject_zero else "nonnegative"
@@ -66,8 +66,7 @@ def check_nonnegative_factory(
 
 
 def StoreRequiredUniqueActionFactory():
-    """ Return class that pools shared values (do not allow overlap)
-    """
+    """Return class that pools shared values (do not allow overlap)"""
 
     class StoreRequiredUniqueAction(argparse.Action):
 
@@ -76,7 +75,7 @@ def StoreRequiredUniqueActionFactory():
 
         @staticmethod
         def repeated_values(values):
-            """ Returns repeated values (that occur more than twice)
+            """Returns repeated values (that occur more than twice)
 
             Returns
             -------
@@ -97,7 +96,7 @@ def StoreRequiredUniqueActionFactory():
 
         @classmethod
         def overlapping_values(cls, dest, values):
-            """ Updates shared_values and returns overlapping values with other
+            """Updates shared_values and returns overlapping values with other
             parameters
 
             Parameters
@@ -125,8 +124,7 @@ def StoreRequiredUniqueActionFactory():
             return {k: v for k, v in overlapping_values.items() if v}
 
         def __call__(self, parser, namespace, values, option_string=None):
-            """ Check that values are unique if list, not in shared_values
-            """
+            """Check that values are unique if list, not in shared_values"""
             # no repeated or overlapping values
             repeated_values = self.repeated_values(values)
             if repeated_values:

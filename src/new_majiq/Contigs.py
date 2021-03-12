@@ -68,7 +68,9 @@ class Contigs(object):
             raise KeyError(f"{seqid = } not found in Contigs instance")
 
     def to_netcdf(self, path: Union[str, Path], mode: str) -> None:
-        self.df.drop_vars("contig_idx").to_netcdf(path, mode, group=constants.NC_CONTIGS)
+        self.df.drop_vars("contig_idx").to_netcdf(
+            path, mode, group=constants.NC_CONTIGS
+        )
         return
 
     @classmethod

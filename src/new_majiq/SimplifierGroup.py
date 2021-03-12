@@ -58,33 +58,25 @@ class SimplifierGroup(object):
 
     @property
     def df_introns(self) -> xr.Dataset:
-        return (
-            self.introns.df
-            .assign(
-                passed_src=("gi_idx", self.introns_passed_src),
-                passed_dst=("gi_idx", self.introns_passed_dst),
-            )
-            .assign_attrs(num_experiments=self.num_experiments)
-        )
+        return self.introns.df.assign(
+            passed_src=("gi_idx", self.introns_passed_src),
+            passed_dst=("gi_idx", self.introns_passed_dst),
+        ).assign_attrs(num_experiments=self.num_experiments)
 
     @property
     def df_junctions(self) -> xr.Dataset:
-        return (
-            self.junctions.df
-            .assign(
-                passed_src=("gj_idx", self.junctions_passed_src),
-                passed_dst=("gj_idx", self.junctions_passed_dst),
-            )
-            .assign_attrs(num_experiments=self.num_experiments)
-        )
+        return self.junctions.df.assign(
+            passed_src=("gj_idx", self.junctions_passed_src),
+            passed_dst=("gj_idx", self.junctions_passed_dst),
+        ).assign_attrs(num_experiments=self.num_experiments)
 
     def add_experiment(
         self,
         sg_reads: SpliceGraphReads,
         simplify_min_psi: float = constants.DEFAULT_BUILD_SIMPL_MINPSI,
-        simplify_minreads_annotated_junctions = constants.DEFAULT_BUILD_SIMPL_MINREADS_ANNOTATED_JUNCTION,
-        simplify_minreads_denovo_junctions = constants.DEFAULT_BUILD_SIMPL_MINREADS_DENOVO_JUNCTION,
-        simplify_minreads_introns = constants.DEFAULT_BUILD_SIMPL_MINREADS_INTRON,
+        simplify_minreads_annotated_junctions: float = constants.DEFAULT_BUILD_SIMPL_MINREADS_ANNOTATED_JUNCTION,
+        simplify_minreads_denovo_junctions: float = constants.DEFAULT_BUILD_SIMPL_MINREADS_DENOVO_JUNCTION,
+        simplify_minreads_introns: float = constants.DEFAULT_BUILD_SIMPL_MINREADS_INTRON,
     ) -> "SimplifierGroup":
         """Add reads from experiment to group for simplification"""
         self._group.add_experiment(

@@ -52,7 +52,9 @@ class SJJunctions(ContigRegions):
 
     def to_netcdf(self, path: Union[str, Path], mode: str) -> None:
         """Serialize to netcdf format. Note contigs need to be saved separately"""
-        self.df.drop_vars("sj_idx").to_netcdf(path, mode, group=constants.NC_SJJUNCTIONS)
+        self.df.drop_vars("sj_idx").to_netcdf(
+            path, mode, group=constants.NC_SJJUNCTIONS
+        )
         return
 
     @classmethod

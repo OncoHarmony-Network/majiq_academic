@@ -24,13 +24,17 @@ DESCRIPTION = (
 def add_args(parser: argparse.ArgumentParser) -> None:
     """add arguments for parser"""
     parser.add_argument(
-        "sj", type=Path, help="Path to SJ coverage for experiment",
+        "sj",
+        type=Path,
+        help="Path to SJ coverage for experiment",
     )
     parser.add_argument(
         "splicegraph", type=Path, help="Path to splicegraph with introns/junctions"
     )
     parser.add_argument(
-        "sg_coverage", type=Path, help="Path for output coverage over introns/junctions",
+        "sg_coverage",
+        type=Path,
+        help="Path for output coverage over introns/junctions",
     )
     return
 
@@ -44,6 +48,7 @@ def run(args: argparse.Namespace) -> None:
         raise ValueError(f"Output path {args.sg_coverage} already exists")
     import new_majiq as nm
     from new_majiq.logger import get_logger
+
     log = get_logger()
     log.info(f"Loading input splicegraph from {args.splicegraph.resolve()}")
     sg = nm.SpliceGraph.from_netcdf(args.splicegraph)

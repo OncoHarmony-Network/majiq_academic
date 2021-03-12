@@ -13,8 +13,7 @@ from new_majiq.logger import setup_logger, get_logger
 
 
 class GenericSubcommand(object):
-    """ Wrap add_args, run with shared setup (especially for logging)
-    """
+    """Wrap add_args, run with shared setup (especially for logging)"""
 
     def __init__(
         self,
@@ -32,8 +31,7 @@ class GenericSubcommand(object):
         return self._description
 
     def add_args(self, parser: argparse.ArgumentParser) -> None:
-        """ Add arguments to provided argument parser
-        """
+        """Add arguments to provided argument parser"""
         self._add_args(parser)
         # add parameters for logging
         parser.add_argument(
@@ -54,13 +52,13 @@ class GenericSubcommand(object):
         return
 
     def run(self, args: argparse.Namespace) -> None:
-        """ Run subcommand with parsed arguments
-        """
+        """Run subcommand with parsed arguments"""
         # set up logging
         setup_logger(logfile=args.logger, silent=args.silent, debug=args.debug)
         log = get_logger()
         # print information about the run
         from new_majiq.version import version
+
         log.info(f"new-majiq v{version}")
         log.info(f"Command: {' '.join(sys.argv)}")
         log.info(f"Arguments:\n{args}")

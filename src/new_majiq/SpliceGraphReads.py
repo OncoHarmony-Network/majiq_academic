@@ -81,24 +81,20 @@ class SpliceGraphReads(object):
 
     @property
     def df_introns(self) -> xr.Dataset:
-        return (
-            self.introns.df
-            .assign(introns_reads=("gi_idx", self.introns_reads))
-            .assign_attrs(
-                bam_path=self.bam_path,
-                bam_version=self.bam_version,
-            )
+        return self.introns.df.assign(
+            introns_reads=("gi_idx", self.introns_reads)
+        ).assign_attrs(
+            bam_path=self.bam_path,
+            bam_version=self.bam_version,
         )
 
     @property
     def df_junctions(self) -> xr.Dataset:
-        return (
-            self.junctions.df
-            .assign(junctions_reads=("gj_idx", self.junctions_reads))
-            .assign_attrs(
-                bam_path=self.bam_path,
-                bam_version=self.bam_version,
-            )
+        return self.junctions.df.assign(
+            junctions_reads=("gj_idx", self.junctions_reads)
+        ).assign_attrs(
+            bam_path=self.bam_path,
+            bam_version=self.bam_version,
         )
 
     def to_netcdf(self, path: Union[str, Path], mode: str) -> None:
@@ -111,8 +107,7 @@ class SpliceGraphReads(object):
             .assign(
                 intron_hash=self.introns.checksum_nodata(),
                 junction_hash=self.junctions.checksum_nodata(),
-            )
-            .to_netcdf(path, mode, group=constants.NC_SGREADS)
+            ).to_netcdf(path, mode, group=constants.NC_SGREADS)
         )
         return
 
@@ -154,9 +149,7 @@ class SpliceGraphReads(object):
                 "sj_junctions and sj_introns do not share original bam path"
             )
         if sj_junctions.original_version != sj_introns.original_version:
-            raise ValueError(
-                "sj_junctions and sj_introns not from same majiq version"
-            )
+            raise ValueError("sj_junctions and sj_introns not from same majiq version")
         return SpliceGraphReads(
             _SpliceGraphReads.from_sj(
                 introns._gene_introns,

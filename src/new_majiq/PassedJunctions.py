@@ -58,8 +58,8 @@ class GroupJunctionsGenerator(object):
 
 class PassedJunctionsGenerator(object):
     def __init__(self, junctions: GeneJunctions):
-        self._passed: Final[_PassedJunctionsGenerator] = (
-            _PassedJunctionsGenerator(junctions._gene_junctions)
+        self._passed: Final[_PassedJunctionsGenerator] = _PassedJunctionsGenerator(
+            junctions._gene_junctions
         )
         return
 
@@ -76,7 +76,7 @@ class PassedJunctionsGenerator(object):
     def add_group(
         self,
         group: GroupJunctionsGenerator,
-        min_experiments: float = constants.DEFAULT_BUILD_MINEXPERIMENTS
+        min_experiments: float = constants.DEFAULT_BUILD_MINEXPERIMENTS,
     ) -> "PassedJunctionsGenerator":
         """Add group towards passing junctions with enough evidence"""
         self._passed.add_group(group._group, min_experiments)

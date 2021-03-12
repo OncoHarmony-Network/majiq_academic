@@ -99,7 +99,9 @@ class EventsCoverage(object):
             )
         # save events, events coverage
         self.events.to_netcdf(path, "w")
-        self._df.drop_vars("ec_idx").to_netcdf(path, "a", group=constants.NC_EVENTSCOVERAGE)
+        self._df.drop_vars("ec_idx").to_netcdf(
+            path, "a", group=constants.NC_EVENTSCOVERAGE
+        )
         return
 
     @classmethod
@@ -137,9 +139,7 @@ class EventsCoverage(object):
                 "sj_junctions and sj_introns do not share original bam path"
             )
         if sj_junctions.original_version != sj_introns.original_version:
-            raise ValueError(
-                "sj_junctions and sj_introns not from same majiq version"
-            )
+            raise ValueError("sj_junctions and sj_introns not from same majiq version")
         return EventsCoverage(
             _EventsCoverage.from_sj(
                 events._events,

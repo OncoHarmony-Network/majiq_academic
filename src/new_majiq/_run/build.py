@@ -23,25 +23,19 @@ if TYPE_CHECKING:
     import pandas as pd
 
 
-DESCRIPTION = (
-    "Update splicegraph with specified experiment groups"
-)
+DESCRIPTION = "Update splicegraph with specified experiment groups"
 
 
 def add_args(parser: argparse.ArgumentParser) -> None:
     """add arguments to parser"""
-    parser.add_argument(
-        "base_sg", type=Path, help="Path to base splicegraph"
-    )
+    parser.add_argument("base_sg", type=Path, help="Path to base splicegraph")
     parser.add_argument(
         "grouped_experiments",
         type=Path,
         help="Path to TSV with required columns 'group' and 'sj' defining"
         " groups of experiments and the paths to their sj files",
     )
-    parser.add_argument(
-        "out_sg", type=Path, help="Path for output splicegraph"
-    )
+    parser.add_argument("out_sg", type=Path, help="Path for output splicegraph")
 
     # per-experiment thresholds
     parser.add_argument(
@@ -63,7 +57,7 @@ def add_args(parser: argparse.ArgumentParser) -> None:
         help="Minimum number of nonzero positions to pass a junction."
         " This is scaled for introns with some minimum coverage per bin to"
         " account for length dependence."
-        " (default: %(default)s)."
+        " (default: %(default)s).",
     )
     parser.add_argument(
         "--max-pctbins",
@@ -108,7 +102,7 @@ def add_args(parser: argparse.ArgumentParser) -> None:
         dest="process_denovo_junctions",
         default=constants.DEFAULT_BUILD_DENOVO_JUNCTIONS,
         help="Only process junctions already in base splicegraph"
-        " (default: process_denovo_junctions=%(default)s)"
+        " (default: process_denovo_junctions=%(default)s)",
     )
     denovo_junctions_ex.add_argument(
         "--process-denovo-junctions",
@@ -116,7 +110,7 @@ def add_args(parser: argparse.ArgumentParser) -> None:
         dest="process_denovo_junctions",
         default=constants.DEFAULT_BUILD_DENOVO_JUNCTIONS,
         help="Process all junctions, known and denovo."
-        " (default: process_denovo_junctions=%(default)s)"
+        " (default: process_denovo_junctions=%(default)s)",
     )
 
     # denovo introns/annotated introns
@@ -127,7 +121,7 @@ def add_args(parser: argparse.ArgumentParser) -> None:
         dest="keep_annotated_ir",
         default=constants.DEFAULT_BUILD_KEEP_ANNOTATED_IR,
         help="Keep annotated introns even if they did not have read support"
-        " (default keep_annotated_ir = %(default)s)"
+        " (default keep_annotated_ir = %(default)s)",
     )
     annotated_ir_ex.add_argument(
         "--only-passed-ir",
@@ -135,7 +129,7 @@ def add_args(parser: argparse.ArgumentParser) -> None:
         dest="keep_annotated_ir",
         default=constants.DEFAULT_BUILD_KEEP_ANNOTATED_IR,
         help="Only keep annotated introns if they pass build filters"
-        " (default keep_annotated_ir = %(default)s)"
+        " (default keep_annotated_ir = %(default)s)",
     )
     denovo_ir_ex = parser.add_mutually_exclusive_group()
     denovo_ir_ex.add_argument(
@@ -165,14 +159,13 @@ def get_grouped_experiments(path: Path) -> "pd.DataFrame":
     experiments (insofar as their paths) and that the paths exist.
     """
     import pandas as pd
+
     df = pd.read_csv(path, sep="\t", usecols=["group", "sj"])
     # determine if any duplicated experiments
     duplicated_mask = df.sj.duplicated()
     if duplicated_mask.any():
         duplicated_sj = set(df.sj[duplicated_mask])
-        raise ValueError(
-            f"Requested build with repeated experiments {duplicated_sj}"
-        )
+        raise ValueError(f"Requested build with repeated experiments {duplicated_sj}")
     # verify that all paths exist
     for sj_path in df.sj:
         if not Path(sj_path).exists():
@@ -185,7 +178,9 @@ def run(args: argparse.Namespace) -> None:
     if not args.base_sg.exists():
         raise ValueError(f"Unable to find base splicegraph at {args.base_sg}")
     if not args.grouped_experiments.exists():
-        raise ValueError(f"Unable to find group definitions at {args.grouped_experiments}")
+        raise ValueError(
+            f"Unable to find group definitions at {args.grouped_experiments}"
+        )
     if args.out_sg.exists():
         raise ValueError(f"Output path {args.out_sg} already exists")
     # load experiments table (and verify correctness/paths exist)
@@ -195,6 +190,7 @@ def run(args: argparse.Namespace) -> None:
     # begin processing
     import new_majiq as nm
     from new_majiq.logger import get_logger
+
     log = get_logger()
     experiment_thresholds = nm.ExperimentThresholds(
         minreads=args.minreads,
@@ -213,9 +209,7 @@ def run(args: argparse.Namespace) -> None:
     log.info("Updating known and identifying denovo junctions")
     junction_builder = sg.junctions.builder()
     for group_ndx, (group, group_sjs) in enumerate(experiments.groupby("group")["sj"]):
-        log.info(
-            f"Processing junctions from group {group} ({group_ndx} / {ngroups})"
-        )
+        log.info(f"Processing junctions from group {group} ({group_ndx} / {ngroups})")
         build_group = sg.junctions.build_group(sg.exons)
         for sj_ndx, sj in enumerate(group_sjs):
             log.info(
@@ -241,9 +235,7 @@ def run(args: argparse.Namespace) -> None:
     log.info("Identifying new passed introns")
     intron_group = potential_introns.build_group()  # intron groups done in place
     for group_ndx, (group, group_sjs) in enumerate(experiments.groupby("group")["sj"]):
-        log.info(
-            f"Processing introns from group {group} ({group_ndx} / {ngroups})"
-        )
+        log.info(f"Processing introns from group {group} ({group_ndx} / {ngroups})")
         for sj_ndx, sj in enumerate(group_sjs):
             log.info(
                 f"Processing introns from {Path(sj).resolve()}"

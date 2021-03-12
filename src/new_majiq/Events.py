@@ -24,8 +24,7 @@ from typing import (
 
 
 class Events(object):
-    """ events and event connections
-    """
+    """events and event connections"""
 
     def __init__(self, events: _Events):
         self._events: Final[_Events] = events
@@ -33,14 +32,12 @@ class Events(object):
 
     @property
     def introns(self) -> GeneIntrons:
-        """ Introns referenced by event connections
-        """
+        """Introns referenced by event connections"""
         return GeneIntrons(self._events.introns)
 
     @property
     def junctions(self) -> GeneJunctions:
-        """ Junctions referenced by event connections
-        """
+        """Junctions referenced by event connections"""
         return GeneJunctions(self._events.junctions)
 
     @property
@@ -149,8 +146,7 @@ class Events(object):
             .assign_attrs(
                 intron_hash=self.introns.checksum(),
                 junction_hash=self.junctions.checksum(),
-            )
-            .to_netcdf(path, mode, group=constants.NC_EVENTS)
+            ).to_netcdf(path, mode, group=constants.NC_EVENTS)
         )
         return
 
@@ -166,12 +162,14 @@ class Events(object):
             raise ValueError("Saved hash for introns does not match")
         if df.junction_hash != junctions.checksum():
             raise ValueError("Saved hash for junctions does not match")
-        return Events(_Events(
-            introns._gene_introns,
-            junctions._gene_junctions,
-            df.ref_exon_idx,
-            df.event_type,
-            df._offsets,
-            df.is_intron,
-            df.connection_idx,
-        ))
+        return Events(
+            _Events(
+                introns._gene_introns,
+                junctions._gene_junctions,
+                df.ref_exon_idx,
+                df.event_type,
+                df._offsets,
+                df.is_intron,
+                df.connection_idx,
+            )
+        )

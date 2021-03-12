@@ -37,11 +37,13 @@ class GeneJunctions(GeneConnections):
     def build_group(self, exons: Exons) -> "GroupJunctionsGenerator":
         """Create accumulator of per-experiment passed junctions for build group"""
         from new_majiq.PassedJunctions import GroupJunctionsGenerator
+
         return GroupJunctionsGenerator(self, exons)
 
     def builder(self) -> "PassedJunctionsGenerator":
         """Create accumulator of passed junctions from build groups"""
         from new_majiq.PassedJunctions import PassedJunctionsGenerator
+
         return PassedJunctionsGenerator(self)
 
     @property
@@ -73,7 +75,9 @@ class GeneJunctions(GeneConnections):
 
     def to_netcdf(self, path: Union[str, Path], mode: str) -> None:
         """Serialize to netcdf format. Note genes need to be saved separately"""
-        self.df.drop_vars("gj_idx").to_netcdf(path, mode, group=constants.NC_GENEJUNCTIONS)
+        self.df.drop_vars("gj_idx").to_netcdf(
+            path, mode, group=constants.NC_GENEJUNCTIONS
+        )
         return
 
     @classmethod

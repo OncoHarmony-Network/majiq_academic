@@ -10,10 +10,7 @@ import numpy as np
 
 import new_majiq.constants as constants
 
-from typing import (
-    Final,
-    Optional
-)
+from typing import Final, Optional
 from numpy.typing import ArrayLike
 
 
@@ -34,8 +31,7 @@ class SJBinsReads(object):
 
     @property
     def _sjbin_idx(self) -> np.ndarray:
-        """ Index over bins/regions
-        """
+        """Index over bins/regions"""
         return np.arange(len(self))
 
     @property
