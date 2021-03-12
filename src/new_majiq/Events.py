@@ -105,6 +105,16 @@ class Events(object):
             ec_idx = self.ec_idx
         return self._events.connection_end(ec_idx)
 
+    def connection_denovo(self, ec_idx: Optional[np.ndarray] = None) -> np.ndarray:
+        if ec_idx is None:
+            ec_idx = self.ec_idx
+        return self._events.connection_denovo(ec_idx)
+
+    def connection_other_exon_idx(self, ec_idx: Optional[np.ndarray] = None) -> np.ndarray:
+        if ec_idx is None:
+            ec_idx = self.ec_idx
+        return self._events.connection_other_exon_idx(ec_idx)
+
     @property
     def df(self) -> xr.Dataset:
         return xr.Dataset(

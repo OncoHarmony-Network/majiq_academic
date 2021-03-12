@@ -987,6 +987,12 @@ void init_PyEvents(pyEvents_t& pyEvents) {
         return ArrayFromVectorAndOffset<size_t, ConnectionIndex>(
             self.connections(), offset, self_obj); },
         "Event connection index into corresponding Introns or Junctions")
+    .def_property_readonly("connection_event_idx",
+        [](py::object& self_obj) {
+        Events& self = self_obj.cast<Events&>();
+        return ArrayFromVectorAndOffset<size_t, size_t>(
+            self.connection_event_idx(), 0, self_obj); },
+        "Event connection index back into events")
     .def_property_readonly("num_events", &Events::num_events)
     .def_property_readonly("num_connections", &Events::num_connections)
     .def_property_readonly("num_junctions", &Events::num_junctions)
@@ -1014,6 +1020,22 @@ void init_PyEvents(pyEvents_t& pyEvents) {
         return py::vectorize(f)(connection_idx);
         },
         "end for specified connection indexes",
+        py::arg("connection_idx"))
+    .def("connection_denovo",
+        [](const Events& self, py::array_t<size_t> connection_idx) {
+        auto f = [&self](size_t idx) {
+        return self.connection_denovo(idx); };
+        return py::vectorize(f)(connection_idx);
+        },
+        "denovo status for specified connection indexes",
+        py::arg("connection_idx"))
+    .def("connection_other_exon_idx",
+        [](const Events& self, py::array_t<size_t> connection_idx) {
+        auto f = [&self](size_t idx) {
+        return self.connection_other_exon_idx(idx); };
+        return py::vectorize(f)(connection_idx);
+        },
+        "index for other exon for specified connection indexes",
         py::arg("connection_idx"))
     .def("__len__", &Events::size);
 }
