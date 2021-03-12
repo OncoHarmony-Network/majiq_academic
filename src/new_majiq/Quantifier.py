@@ -186,7 +186,7 @@ class QuantifiableCoverage(object):
 
     @cached_property
     def alpha_prior(self) -> np.ndarray:
-        return np.reciprocal(self.connection_event_size, dtype=np.float32)
+        return np.reciprocal(self.connection_event_size, dtype=self.numreads.dtype)
 
     @cached_property
     def beta_prior(self) -> np.ndarray:
@@ -273,10 +273,10 @@ class QuantifiableCoverage(object):
         quantiles: Sequence[float] = [0.1, 0.9],
         nthreads: int = 1,
     ) -> np.ndarray:
-        quantiles_arr = np.array(quantiles, dtype=np.float32)
         alpha = self.bootstrap_alpha
         beta = self.bootstrap_beta
-        result = np.empty((alpha.shape[0], len(quantiles)), dtype=np.float32)
+        quantiles_arr = np.array(quantiles, dtype=alpha.dtype)
+        result = np.empty((alpha.shape[0], len(quantiles)), dtype=alpha.dtype)
 
         def compute_slice(idx: slice) -> None:
             with np.errstate(divide="ignore"):
