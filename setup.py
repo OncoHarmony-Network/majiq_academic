@@ -61,7 +61,7 @@ ext_modules = [
 
 setup(
     version=__version__,
-    packages=["new_majiq"],
+    packages=["new_majiq", "new_majiq._run"],
     package_dir={"": "src"},
     ext_modules=ext_modules,
 )
