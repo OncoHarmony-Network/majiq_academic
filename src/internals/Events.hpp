@@ -38,6 +38,8 @@ class Events {
   // indexes for events, for connections that are part of each event
   const std::vector<Event> events_;
   const std::vector<size_t> connection_offsets_;
+  // for event connections
+  const std::vector<size_t> connection_event_idx_;  // give connections knowledge of parent event
   const std::vector<ConnectionIndex> connections_;
 
   // get indexes of connections_ into junctions/introns, sorted by contig/region
@@ -131,10 +133,28 @@ class Events {
       ? connection_intron(connection_idx).coordinates.end
       : connection_junction(connection_idx).coordinates.end;
   }
+  const bool& connection_denovo(size_t connection_idx) const {
+    return is_intron(connection_idx)
+      ? connection_intron(connection_idx).denovo()
+      : connection_junction(connection_idx).denovo();
+  }
+
+  const Event& connection_event(size_t connection_idx) const {
+    return events_[connection_event_idx_[connection_idx]];
+  }
+  const size_t& connection_other_exon_idx(size_t connection_idx) const {
+    const EventType& type = connection_event(connection_idx).type_;
+    return is_intron(connection_idx)
+      ? connection_intron(connection_idx).other_exon_idx(type)
+      : connection_junction(connection_idx).other_exon_idx(type);
+  }
 
   const std::vector<Event>& events() const { return events_; }
   const std::vector<size_t>& connection_offsets() const {
     return connection_offsets_;
+  }
+  const std::vector<size_t>& connection_event_idx() const {
+    return connection_event_idx_;
   }
   const std::vector<ConnectionIndex>& connections() const {
     return connections_;
@@ -165,6 +185,19 @@ class Events {
     return result;
   }
 
+  std::vector<size_t> ConnectionEventIndexFromOffsets(
+      const std::vector<size_t>& offsets) {
+    if (offsets.empty()) {
+      throw std::runtime_error("Events cannot have empty connection offsets");
+    }
+    std::vector<size_t> result(offsets.back());
+    for (auto it = offsets.begin(); it != offsets.end() - 1; ++it) {
+      std::fill(result.begin() + *it, result.begin() + *(it + 1),
+          it - offsets.begin());
+    }
+    return result;
+  }
+
  public:
   Events(const std::shared_ptr<GeneIntrons>& introns,
       const std::shared_ptr<GeneJunctions>& junctions,
@@ -175,6 +208,8 @@ class Events {
         junctions_{junctions},
         events_{std::move(events)},
         connection_offsets_{std::move(connection_offsets)},
+        connection_event_idx_{
+          ConnectionEventIndexFromOffsets(connection_offsets_)},
         connections_{std::move(connections)},
         junction_connection_idx_{ContigSortedConnectionIndexes<false>()},
         intron_connection_idx_{ContigSortedConnectionIndexes<true>()} {
