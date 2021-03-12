@@ -1,9 +1,16 @@
 import os
-from setuptools import setup
+from setuptools import (
+    setup,
+    Extension,
+)
 
 # Available at setup time due to pyproject.toml
 from pybind11.setup_helpers import Pybind11Extension
 import pybind11.setup_helpers as sh
+
+# get include path for python distribution
+from sysconfig import get_paths
+import numpy as np  # and for numpy
 
 
 __version__ = "0.0.1"
@@ -36,6 +43,18 @@ ext_modules = [
         libraries=[*HTSLIB_LIBRARY],
         cxx_std=17,
         # extra_compile_args=["-O0", "-g"],
+    ),
+    Extension(
+        "new_majiq.beta_mixture",
+        sources=["src/beta_mixture/beta_mixture_module.cpp"],
+        language="c++",
+        include_dirs=[
+            "src/",
+            get_paths()["include"],
+            np.get_include(),
+        ],
+        extra_compile_args=["-std=c++11"],
+        extra_link_args=["-std=c++11"],
     ),
 ]
 
