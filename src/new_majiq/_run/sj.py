@@ -50,7 +50,8 @@ def add_args(parser: argparse.ArgumentParser) -> None:
         "--nthreads",
         type=check_nonnegative_factory(int, True),
         default=constants.DEFAULT_BAM_NTHREADS,
-        help="Number of threads used for parsing input alignments",
+        help="Number of threads used for parsing input alignments. It is "
+        " highly recommended to use multiple threads (default: %(default)s)",
     )
     parser.add_argument(
         "--update-exons",
