@@ -33,9 +33,9 @@ from pathlib import Path
 
 
 class QuantifierThresholds(NamedTuple):
-    minreads: float = 10
-    minbins: float = 3
-    min_experiments_f: float = 0.5
+    minreads: float = constants.DEFAULT_QUANTIFY_MINREADS
+    minbins: float = constants.DEFAULT_QUANTIFY_MINBINS
+    min_experiments_f: float = constants.DEFAULT_QUANTIFY_MINEXPERIMENTS
 
 
 class ConnectionsChecksum(NamedTuple):
@@ -282,7 +282,7 @@ class QuantifiableCoverage(object):
     def bootstrap_quantile(
         self,
         quantiles: Sequence[float] = [0.1, 0.9],
-        nthreads: int = 1,
+        nthreads: int = constants.DEFAULT_QUANTIFY_NTHREADS,
     ) -> np.ndarray:
         alpha = self.bootstrap_alpha
         beta = self.bootstrap_beta
@@ -308,7 +308,11 @@ class QuantifiableCoverage(object):
         )
         return result
 
-    def bootstrap_discretized_pmf(self, nbins: int = 40, nthreads: int = 1) -> np.ndarray:
+    def bootstrap_discretized_pmf(
+        self,
+        nbins: int = 40,
+        nthreads: int = constants.DEFAULT_QUANTIFY_NTHREADS,
+    ) -> np.ndarray:
         if nbins < 2:
             raise ValueError(f"{nbins = } is invalid/trivial for discrete pmf")
         alpha = self.bootstrap_alpha

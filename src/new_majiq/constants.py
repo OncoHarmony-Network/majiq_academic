@@ -65,3 +65,8 @@ DEFAULT_BUILD_EXP_THRESHOLDS: Final[ExperimentThresholds] = ExperimentThresholds
     junction_acceptance_probability=DEFAULT_BUILD_MATCH_JUNCTION_PROBABILITY,
     intron_acceptance_probability=DEFAULT_BUILD_MATCH_INTRON_PROBABILITY,
 )
+
+DEFAULT_QUANTIFY_NTHREADS: Final[int] = 1
+DEFAULT_QUANTIFY_MINREADS: Final[float] = 10
+DEFAULT_QUANTIFY_MINBINS: Final[float] = 3
+DEFAULT_QUANTIFY_MINEXPERIMENTS: Final[float] = 0.5
