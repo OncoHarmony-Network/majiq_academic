@@ -127,12 +127,15 @@ def run(args: argparse.Namespace) -> None:
     log.info("Performing quantifications")
     means = q.bootstrap_posterior_mean
     bins = q.bootstrap_discretized_pmf(nthreads=args.nthreads)
-    # TODO get experiment names
     log.info(f"Saving quantifications to {args.out_voila}")
     with Matrix(args.out_voila, "w", voila_file=True, voila_tsv=False) as out_h5p:
         out_h5p.file_version = VOILA_FILE_VERSION
         out_h5p.analysis_type = ANALYSIS_PSI
-        out_h5p.experiment_names = [[b"TODO"]]
+        out_h5p.experiment_names = [[
+            # original paths -- get name, remove extension, convert to bytes
+            Path(x).name.rsplit(".", 1)[0].encode("utf-8")
+            for x in q.original_bams
+        ]]
         out_h5p.group_names = [args.name]
         # each event
         for event_idx in range(q_events.num_events):

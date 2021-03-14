@@ -175,13 +175,19 @@ class QuantifiableCoverage(object):
         numreads: np.ndarray,
         bootstraps: np.ndarray,
         events: xr.Dataset,
+        original_bams: List[str],
     ):
         self._offsets: Final[np.ndarray] = offsets
         self._numreads: Final[np.ndarray] = numreads
         self._bootstraps: Final[np.ndarray] = bootstraps
         self._events: Final[xr.Dataset] = events
+        self._original_bams: Final[List[str]] = original_bams
         # TODO check inputs
         return
+
+    @property
+    def original_bams(self) -> Final[List[str]]:
+        return self._original_bams
 
     @property
     def offsets(self) -> np.ndarray:
@@ -444,6 +450,10 @@ class QuantifiableCoverage(object):
                 "bootstrap_psi_mean": ("ec_idx", self.bootstrap_posterior_mean),
                 "bootstrap_psi_variance": ("ec_idx", self.bootstrap_posterior_variance),
             },
+            {},
+            {
+                "original_bams": self.original_bams,
+            },
         )
         if pmf_bins:
             df = df.assign(
@@ -474,6 +484,7 @@ class QuantifiableCoverage(object):
         checksums: Final[ConnectionsChecksum] = quantifiable.checksums
         quantifiable_offsets: Final[np.ndarray] = quantifiable.quantifiable_offsets
         coverage: xr.Dataset
+        original_bams: List[str] = []
         # get coverage first, checking checksums each time
         for x in experiments:
             with xr.open_dataset(x, group=constants.NC_EVENTS) as df:
@@ -485,6 +496,7 @@ class QuantifiableCoverage(object):
                         f" than provided quantiable events"
                     )
             with xr.open_dataset(x, group=constants.NC_EVENTSCOVERAGE) as df:
+                original_bams.append(df.bam_path)
                 x_coverage = (
                     df[["numreads", "bootstraps"]]
                     .load()
@@ -512,4 +524,5 @@ class QuantifiableCoverage(object):
             coverage.numreads.values,
             coverage.bootstraps.values,
             events,
+            original_bams
         )
