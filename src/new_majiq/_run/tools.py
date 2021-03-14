@@ -18,6 +18,7 @@ from new_majiq._run.build import subcommand as build
 from new_majiq._run.lsv_coverage import subcommand as lsv_coverage
 from new_majiq._run.sg_coverage import subcommand as sg_coverage
 from new_majiq._run.quantify import subcommand as quantify
+from new_majiq._run.legacy_psi import subcommand as legacy_psi
 
 
 SUBPARSER_SOURCES: Dict[str, GenericSubcommand] = {
@@ -27,6 +28,7 @@ SUBPARSER_SOURCES: Dict[str, GenericSubcommand] = {
     "lsv-coverage": lsv_coverage,
     "sg-coverage": sg_coverage,
     "quantify": quantify,
+    "legacy-psi": legacy_psi,
     "cite": cite,
 }
 
