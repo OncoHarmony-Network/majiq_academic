@@ -70,8 +70,8 @@ class Events(object):
 
     def connections_slice_for_event(self, event_idx: int) -> slice:
         return slice(
-            self.connection_idx_start[event_idx],
-            self.connection_idx_end[event_idx],
+            self.ec_idx_start[event_idx],
+            self.ec_idx_end[event_idx],
         )
 
     @property
