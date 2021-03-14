@@ -59,7 +59,7 @@ class GenericSubcommand(object):
         # print information about the run
         from new_majiq.version import version
 
-        log.info(f"new-majiq v{version}")
+        log.info(f"new-majiq v{version()}")
         log.info(f"Command: {' '.join(sys.argv)}")
         log.info(f"Arguments:\n{args}")
         # run subcommand
