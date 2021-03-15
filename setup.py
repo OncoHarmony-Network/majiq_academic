@@ -40,6 +40,7 @@ ext_modules = [
         define_macros=[('VERSION_INFO', __version__), ("DEBUG", )],
         include_dirs=["src/", *HTSLIB_INC_DIRS],
         library_dirs=[*HTSLIB_LIB_DIRS],
+        runtime_library_dirs=[*HTSLIB_LIB_DIRS],
         libraries=[*HTSLIB_LIBRARY],
         cxx_std=17,
         # extra_compile_args=["-O0", "-g"],
