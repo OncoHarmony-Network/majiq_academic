@@ -161,8 +161,8 @@ class Events(object):
             },
         )
 
-    def to_netcdf(self, path: Union[str, Path], mode: str) -> None:
-        """Save to specified netcdf file"""
+    def to_zarr(self, path: Union[str, Path], mode: str) -> None:
+        """Save to specified zarr file"""
         (
             self.df
             # drop indexes and nice offsets
@@ -173,18 +173,18 @@ class Events(object):
             .assign_attrs(
                 intron_hash=self.introns.checksum(),
                 junction_hash=self.junctions.checksum(),
-            ).to_netcdf(path, mode, group=constants.NC_EVENTS)
+            ).to_zarr(path, mode=mode, group=constants.NC_EVENTS)
         )
         return
 
     @classmethod
-    def from_netcdf(
+    def from_zarr(
         cls,
         path: Union[str, Path],
         introns: GeneIntrons,
         junctions: GeneJunctions,
     ) -> "Events":
-        with xr.open_dataset(path, group=constants.NC_EVENTS) as df:
+        with xr.open_zarr(path, group=constants.NC_EVENTS) as df:
             if df.intron_hash != introns.checksum():
                 raise ValueError("Saved hash for introns does not match")
             if df.junction_hash != junctions.checksum():

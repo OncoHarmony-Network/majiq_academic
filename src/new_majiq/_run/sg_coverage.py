@@ -51,10 +51,10 @@ def run(args: argparse.Namespace) -> None:
 
     log = get_logger()
     log.info(f"Loading input splicegraph from {args.splicegraph.resolve()}")
-    sg = nm.SpliceGraph.from_netcdf(args.splicegraph)
+    sg = nm.SpliceGraph.from_zarr(args.splicegraph)
     log.info(f"Loading input experiment from {args.sj.resolve()}")
-    sj_junctions = nm.SJJunctionsBins.from_netcdf(args.sj)
-    sj_introns = nm.SJIntronsBins.from_netcdf(args.sj)
+    sj_junctions = nm.SJJunctionsBins.from_zarr(args.sj)
+    sj_introns = nm.SJIntronsBins.from_zarr(args.sj)
     log.info("Obtaining coverage over introns and junctions")
     sg_coverage = nm.SpliceGraphReads.from_connections_and_sj(
         sg.introns,
@@ -63,7 +63,7 @@ def run(args: argparse.Namespace) -> None:
         sj_junctions,
     )
     log.info(f"Saving coverage to {args.sg_coverage.resolve()}")
-    sg_coverage.to_netcdf(args.sg_coverage, "w")
+    sg_coverage.to_zarr(args.sg_coverage, "w")
     return
 
 

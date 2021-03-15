@@ -134,26 +134,26 @@ class SJJunctionsBins(SJBinsReads):
             original_time,
         )
 
-    def to_netcdf(self, path: Union[str, Path]) -> None:
-        """Serialize to netcdf format"""
+    def to_zarr(self, path: Union[str, Path]) -> None:
+        """Serialize to zarr format"""
         if Path(path).exists():
             raise ValueError(
                 f"Will not save SJJunctionsBins to existing file {path}."
                 " Please delete and try again if desired, or please pick a"
                 " different output path."
             )
-        self.regions.contigs.to_netcdf(path, "w")
-        self.regions.to_netcdf(path, "a")
-        self._df.drop_vars("sjb_idx").to_netcdf(
-            path, "a", group=constants.NC_SJJUNCTIONSBINS
+        self.regions.contigs.to_zarr(path, "w")
+        self.regions.to_zarr(path, "a")
+        self._df.drop_vars("sjb_idx").to_zarr(
+            path, mode="a", group=constants.NC_SJJUNCTIONSBINS
         )
         return
 
     @classmethod
-    def from_netcdf(cls, path: Union[str, Path]) -> "SJJunctionsBins":
-        """Load SJJunctionsBins from netcdf format"""
-        regions = SJJunctions.from_netcdf(path)
-        with xr.open_dataset(path, group=constants.NC_SJJUNCTIONSBINS) as df:
+    def from_zarr(cls, path: Union[str, Path]) -> "SJJunctionsBins":
+        """Load SJJunctionsBins from zarr format"""
+        regions = SJJunctions.from_zarr(path)
+        with xr.open_zarr(path, group=constants.NC_SJJUNCTIONSBINS) as df:
             return SJJunctionsBins(
                 _SJJunctionsBins(
                     regions._sj_junctions,

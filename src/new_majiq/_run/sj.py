@@ -77,7 +77,7 @@ def run(args: argparse.Namespace) -> None:
 
     strandness = nm.ExperimentStrandness(ord(args.strandness[0]))
     log.info(f"Loading splicegraph ({args.splicegraph.resolve()})")
-    sg = nm.SpliceGraph.from_netcdf(args.splicegraph)
+    sg = nm.SpliceGraph.from_zarr(args.splicegraph)
     log.info(f"Parsing alignments from {args.bam.resolve()} for junctions")
     sj_junctions = nm.SJJunctionsBins.from_bam(
         args.bam,
@@ -108,8 +108,8 @@ def run(args: argparse.Namespace) -> None:
         nthreads=args.nthreads,
     )
     log.info(f"Saving junction and intron coverage to {args.sj.resolve()}")
-    sj_junctions.to_netcdf(args.sj)
-    sj_introns.to_netcdf(args.sj)
+    sj_junctions.to_zarr(args.sj)
+    sj_introns.to_zarr(args.sj)
     return
 
 

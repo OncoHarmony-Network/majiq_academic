@@ -58,9 +58,11 @@ class SJIntrons(ContigRegions):
             },
         )
 
-    def to_netcdf(self, path: Union[str, Path], mode: str) -> None:
-        """Serialize to netcdf format. Note contigs need to be saved separately"""
-        self.df.drop_vars("si_idx").to_netcdf(path, mode, group=constants.NC_SJINTRONS)
+    def to_zarr(self, path: Union[str, Path], mode: str) -> None:
+        """Serialize to zarr format. Note contigs need to be saved separately"""
+        self.df.drop_vars("si_idx").to_zarr(
+            path, mode=mode, group=constants.NC_SJINTRONS
+        )
         return
 
     @classmethod
@@ -75,24 +77,24 @@ class SJIntrons(ContigRegions):
         )
 
     @classmethod
-    def from_netcdf(
+    def from_zarr(
         cls,
         path: Union[str, Path],
         contigs: Optional[Contigs] = None,
     ) -> "SJIntrons":
-        """Read SJIntrons from netcdf file
+        """Read SJIntrons from zarr file
 
         Parameters
         ----------
         path: Union[str, Path]
-            path to netcdf file
+            path to zarr file
         contigs: Optional[Contigs]
             contigs on which the introns are defined. If None, try loading from
-            netcdf file.
+            zarr file.
         """
         if contigs is None:
-            contigs = Contigs.from_netcdf(path)
-        with xr.open_dataset(path, group=constants.NC_SJINTRONS) as df:
+            contigs = Contigs.from_zarr(path)
+        with xr.open_zarr(path, group=constants.NC_SJINTRONS) as df:
             return SJIntrons(
                 _SJIntrons(
                     contigs._contigs,

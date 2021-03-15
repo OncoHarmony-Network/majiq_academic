@@ -72,7 +72,7 @@ def run(args: argparse.Namespace) -> None:
     )
     # TODO(jaicher): enable capture of skipped features to print to logger
     log.info(f"Saving annotated splicegraph to {args.splicegraph.resolve()}")
-    sg.to_netcdf(args.splicegraph)
+    sg.to_zarr(args.splicegraph)
     return
 
 

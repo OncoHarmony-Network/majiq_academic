@@ -96,7 +96,7 @@ class QuantifiableEvents(object):
         passed_ct: np.ndarray
         for path in experiments:
             # load events to get offsets and checksums
-            with xr.open_dataset(path, group=constants.NC_EVENTS) as df:
+            with xr.open_zarr(path, group=constants.NC_EVENTS) as df:
                 cur_checksums: ConnectionsChecksum = ConnectionsChecksum(
                     introns=df.intron_hash, junctions=df.junction_hash
                 )
@@ -110,7 +110,7 @@ class QuantifiableEvents(object):
                     checksums = cur_checksums
                     offsets = df._offsets.values.astype(int)
                 # so checksums are good, and we have now defined offsets
-            with xr.open_dataset(path, group=constants.NC_EVENTSCOVERAGE) as df:
+            with xr.open_zarr(path, group=constants.NC_EVENTSCOVERAGE) as df:
                 # determine if each event connection passed experiment thresholds
                 passed = (df.numreads.values >= thresholds.minreads) & (
                     df.numbins.values >= thresholds.minbins
@@ -430,7 +430,7 @@ class QuantifiableCoverage(object):
             ["seqid", "gene_id", "ref_exon", "event_type", "is_intron", "start", "end"]
         )
 
-    def to_netcdf(
+    def to_zarr(
         self,
         path: Union[str, Path],
         pmf_bins: Optional[int] = 40,
@@ -442,9 +442,9 @@ class QuantifiableCoverage(object):
             raise ValueError(f"Output {path} already exists")
         # save events
         (
-            self.events.assign_coords(
-                _offsets=("e_offsets_idx", self.offsets)
-            ).to_netcdf(path, "w", group=constants.NC_EVENTS)
+            self.events.assign_coords(_offsets=("e_offsets_idx", self.offsets)).to_zarr(
+                path, mode="w", group=constants.NC_EVENTS
+            )
         )
         # save quantifications
         df = xr.Dataset(
@@ -472,7 +472,7 @@ class QuantifiableCoverage(object):
                     self.bootstrap_quantile(quantiles, nthreads=nthreads),
                 ),
             ).assign_coords(quantile=quantiles)
-        df.to_netcdf(path, mode="a", group=constants.NC_EVENTSQUANTIFIED)
+        df.to_zarr(path, mode="a", group=constants.NC_EVENTSQUANTIFIED)
         return
 
     @classmethod
@@ -490,7 +490,7 @@ class QuantifiableCoverage(object):
         original_bams: List[str] = []
         # get coverage first, checking checksums each time
         for x in experiments:
-            with xr.open_dataset(x, group=constants.NC_EVENTS) as df:
+            with xr.open_zarr(x, group=constants.NC_EVENTS) as df:
                 if checksums != ConnectionsChecksum(
                     introns=df.intron_hash, junctions=df.junction_hash
                 ):
@@ -498,7 +498,7 @@ class QuantifiableCoverage(object):
                         f"{x} has different intron/junction checksums"
                         f" than provided quantiable events"
                     )
-            with xr.open_dataset(x, group=constants.NC_EVENTSCOVERAGE) as df:
+            with xr.open_zarr(x, group=constants.NC_EVENTSCOVERAGE) as df:
                 original_bams.append(df.bam_path)
                 x_coverage = (
                     df[["numreads", "bootstraps"]]
@@ -513,7 +513,7 @@ class QuantifiableCoverage(object):
                     coverage = x_coverage
         # get events
         events: xr.Dataset
-        with xr.open_dataset(experiments[0], group=constants.NC_EVENTS) as df:
+        with xr.open_zarr(experiments[0], group=constants.NC_EVENTS) as df:
             events = (
                 df.drop_dims("e_offsets_idx")
                 .load()

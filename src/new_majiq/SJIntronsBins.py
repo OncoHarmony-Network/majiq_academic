@@ -155,15 +155,15 @@ class SJIntronsBins(SJBinsReads):
             original_time,
         )
 
-    def to_netcdf(self, path: Union[str, Path]) -> None:
-        """Serialize to netcdf format
+    def to_zarr(self, path: Union[str, Path]) -> None:
+        """Serialize to zarr format
 
         Will only write to existing file if has SJJunctionsBins with same
         original path and version
         """
         if Path(path).exists():
             try:
-                with xr.open_dataset(path, group=constants.NC_SJJUNCTIONSBINS) as x:
+                with xr.open_zarr(path, group=constants.NC_SJJUNCTIONSBINS) as x:
                     if x.original_path != self.original_path:
                         raise ValueError(
                             f"Will not save SJIntronsBins to existing file {path}"
@@ -187,18 +187,18 @@ class SJIntronsBins(SJBinsReads):
             # implies that they have matching contigs
         else:
             # save contigs to start the file
-            self.regions.contigs.to_netcdf(path, "w")
-        self.regions.to_netcdf(path, "a")
-        self._df.drop_vars("sib_idx").to_netcdf(
-            path, "a", group=constants.NC_SJINTRONSBINS
+            self.regions.contigs.to_zarr(path, "w")
+        self.regions.to_zarr(path, "a")
+        self._df.drop_vars("sib_idx").to_zarr(
+            path, mode="a", group=constants.NC_SJINTRONSBINS
         )
         return
 
     @classmethod
-    def from_netcdf(cls, path: Union[str, Path]) -> "SJIntronsBins":
-        """Load SJIntronsBins from netcdf format"""
-        regions = SJIntrons.from_netcdf(path)
-        with xr.open_dataset(path, group=constants.NC_SJINTRONSBINS) as df:
+    def from_zarr(cls, path: Union[str, Path]) -> "SJIntronsBins":
+        """Load SJIntronsBins from zarr format"""
+        regions = SJIntrons.from_zarr(path)
+        with xr.open_zarr(path, group=constants.NC_SJINTRONSBINS) as df:
             return SJIntronsBins(
                 _SJIntronsBins(
                     regions._sj_introns,

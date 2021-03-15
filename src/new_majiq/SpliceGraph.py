@@ -121,29 +121,29 @@ class SpliceGraph(object):
         """description of specified events as used by voila"""
         return self._sg._exon_connections.event_description(ref_exon_idx, event_type)
 
-    def to_netcdf(self, path: Union[str, Path]) -> None:
-        """Serialize splicegraph to netcdf format"""
+    def to_zarr(self, path: Union[str, Path]) -> None:
+        """Serialize splicegraph to zarr format"""
         if Path(path).exists():
             raise ValueError(
                 f"Will not save splicegraph to already existing file {path}."
                 " Please delete and try again if you want it there, otherwise"
                 " pick a different output path"
             )
-        self.contigs.to_netcdf(path, "w")
-        self.genes.to_netcdf(path, "a")
-        self.exons.to_netcdf(path, "a")
-        self.introns.to_netcdf(path, "a")
-        self.junctions.to_netcdf(path, "a")
+        self.contigs.to_zarr(path, "w")
+        self.genes.to_zarr(path, "a")
+        self.exons.to_zarr(path, "a")
+        self.introns.to_zarr(path, "a")
+        self.junctions.to_zarr(path, "a")
         return
 
     @classmethod
-    def from_netcdf(cls, path: Union[str, Path]) -> "SpliceGraph":
+    def from_zarr(cls, path: Union[str, Path]) -> "SpliceGraph":
         """Load SpliceGraph from specified path"""
-        contigs = Contigs.from_netcdf(path)
-        genes = Genes.from_netcdf(path, contigs)
-        exons = Exons.from_netcdf(path, genes)
-        introns = GeneIntrons.from_netcdf(path, genes)
-        junctions = GeneJunctions.from_netcdf(path, genes)
+        contigs = Contigs.from_zarr(path)
+        genes = Genes.from_zarr(path, contigs)
+        exons = Exons.from_zarr(path, genes)
+        introns = GeneIntrons.from_zarr(path, genes)
+        junctions = GeneJunctions.from_zarr(path, genes)
         return SpliceGraph(
             _SpliceGraph(
                 contigs._contigs,

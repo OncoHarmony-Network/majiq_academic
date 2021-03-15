@@ -89,8 +89,8 @@ class EventsCoverage(object):
             (self._df, self.events.df), join="exact", combine_attrs="no_conflicts"
         )
 
-    def to_netcdf(self, path: Union[str, Path]) -> None:
-        """Serialize to netcdf format"""
+    def to_zarr(self, path: Union[str, Path]) -> None:
+        """Serialize to zarr format"""
         if Path(path).exists():
             raise ValueError(
                 f"Will not save EventsCoverage to existing file {path}."
@@ -98,21 +98,21 @@ class EventsCoverage(object):
                 " output path."
             )
         # save events, events coverage
-        self.events.to_netcdf(path, "w")
-        self._df.drop_vars("ec_idx").to_netcdf(
-            path, "a", group=constants.NC_EVENTSCOVERAGE
+        self.events.to_zarr(path, "w")
+        self._df.drop_vars("ec_idx").to_zarr(
+            path, mode="a", group=constants.NC_EVENTSCOVERAGE
         )
         return
 
     @classmethod
-    def from_netcdf(
+    def from_zarr(
         cls,
         path: Union[str, Path],
         introns: GeneIntrons,
         junctions: GeneJunctions,
     ) -> "EventsCoverage":
-        events = Events.from_netcdf(path, introns, junctions)
-        with xr.open_dataset(path, group=constants.NC_EVENTSCOVERAGE) as df:
+        events = Events.from_zarr(path, introns, junctions)
+        with xr.open_zarr(path, group=constants.NC_EVENTSCOVERAGE) as df:
             return EventsCoverage(
                 _EventsCoverage(
                     events._events,

@@ -119,7 +119,7 @@ def run(args: argparse.Namespace) -> None:
         args.coverage, quantifiable=quantifiable
     )
     log.info("Quantifying using input coverage and saving to file")
-    q.to_netcdf(
+    q.to_zarr(
         args.output,
         pmf_bins=args.pmf_bins,
         quantiles=args.quantiles,
@@ -127,7 +127,7 @@ def run(args: argparse.Namespace) -> None:
     )
     if args.tsv:
         log.info("Loading splicegraph for annotated TSV file")
-        sg = nm.SpliceGraph.from_netcdf(args.tsv[0])
+        sg = nm.SpliceGraph.from_zarr(args.tsv[0])
         log.info("Saving annotated quantifications to TSV")
         q.as_dataframe(sg).to_csv(args.tsv[1], sep="\t")
     return

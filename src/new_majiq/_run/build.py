@@ -205,7 +205,7 @@ def run(args: argparse.Namespace) -> None:
         f" {len(experiments)} experiments in {ngroups} groups"
     )
     log.info("Loading base splicegraph")
-    sg = nm.SpliceGraph.from_netcdf(args.base_sg)
+    sg = nm.SpliceGraph.from_zarr(args.base_sg)
     log.info("Updating known and identifying denovo junctions")
     junction_builder = sg.junctions.builder()
     for group_ndx, (group, group_sjs) in enumerate(experiments.groupby("group")["sj"]):
@@ -217,7 +217,7 @@ def run(args: argparse.Namespace) -> None:
                 f" (experiment {1 + sj_ndx} / {len(group_sjs)} in group {group})"
             )
             build_group.add_experiment(
-                nm.SJJunctionsBins.from_netcdf(sj),
+                nm.SJJunctionsBins.from_zarr(sj),
                 thresholds=experiment_thresholds,
                 add_denovo=args.process_denovo_junctions,
             )
@@ -242,7 +242,7 @@ def run(args: argparse.Namespace) -> None:
                 f" (experiment {1 + sj_ndx} / {len(group_sjs)} in group {group})"
             )
             intron_group.add_experiment(
-                nm.SJIntronsBins.from_netcdf(sj),
+                nm.SJIntronsBins.from_zarr(sj),
                 thresholds=experiment_thresholds,
             )
         intron_group.update_introns(args.min_experiments)  # resets group too
@@ -259,7 +259,7 @@ def run(args: argparse.Namespace) -> None:
     )
 
     log.info(f"Saving updated splicegraph to {args.out_sg.resolve()}")
-    sg.to_netcdf(args.out_sg)
+    sg.to_zarr(args.out_sg)
     return
 
 

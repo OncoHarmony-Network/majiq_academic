@@ -86,34 +86,34 @@ class GeneIntrons(GeneConnections):
             },
         )
 
-    def to_netcdf(self, path: Union[str, Path], mode: str) -> None:
-        """Serialize to netcdf format. Note genes need to be saved separately"""
-        self.df.drop_vars("gi_idx").to_netcdf(
-            path, mode, group=constants.NC_GENEINTRONS
+    def to_zarr(self, path: Union[str, Path], mode: str) -> None:
+        """Serialize to zarr format. Note genes need to be saved separately"""
+        self.df.drop_vars("gi_idx").to_zarr(
+            path, mode=mode, group=constants.NC_GENEINTRONS
         )
         return
 
     @classmethod
-    def from_netcdf(
+    def from_zarr(
         self,
         path: Union[str, Path],
         genes: Optional[Genes] = None,
     ) -> "GeneIntrons":
-        """Read exons from netcdf file
+        """Read exons from zarr file
 
         Parameters
         ----------
         path: Union[str, Path]
-            path to netcdf file
+            path to zarr file
         genes: Optional[Genes]
             genes on which the introns are defined. If None, try loading from
-            netcdf file. Note that new_majiq checks if objects refer to the
+            zarr file. Note that new_majiq checks if objects refer to the
             same genes (not that they are identical), so it is usually
             desired to provide the variable than using the default behavior
         """
         if genes is None:
-            genes = Genes.from_netcdf(path)
-        with xr.open_dataset(path, group=constants.NC_GENEINTRONS) as df:
+            genes = Genes.from_zarr(path)
+        with xr.open_zarr(path, group=constants.NC_GENEINTRONS) as df:
             return GeneIntrons(
                 _GeneIntrons(
                     genes._genes,

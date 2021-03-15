@@ -123,7 +123,7 @@ def run(args: argparse.Namespace) -> None:
         args.coverage, quantifiable=quantifiable
     )
     log.info("Loading splicegraph to annotate quantified events")
-    sg = nm.SpliceGraph.from_netcdf(args.splicegraph)
+    sg = nm.SpliceGraph.from_zarr(args.splicegraph)
     q_events = q.get_events(sg.introns, sg.junctions)
     # get lsv id/description (legacy: lsv_type)
     event_id = sg.event_id(q_events.ref_exon_idx, q_events.event_type)

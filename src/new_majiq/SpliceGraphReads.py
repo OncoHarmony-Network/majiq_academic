@@ -97,8 +97,8 @@ class SpliceGraphReads(object):
             bam_version=self.bam_version,
         )
 
-    def to_netcdf(self, path: Union[str, Path], mode: str) -> None:
-        """Save to specified netcdf file"""
+    def to_zarr(self, path: Union[str, Path], mode: str) -> None:
+        """Save to specified zarr file"""
         (
             self._df
             # drop indexes and nice offsets
@@ -107,19 +107,19 @@ class SpliceGraphReads(object):
             .assign(
                 intron_hash=self.introns.checksum_nodata(),
                 junction_hash=self.junctions.checksum_nodata(),
-            ).to_netcdf(path, mode, group=constants.NC_SGREADS)
+            ).to_zarr(path, mode=mode, group=constants.NC_SGREADS)
         )
         return
 
     @classmethod
-    def from_netcdf(
+    def from_zarr(
         cls,
         path: Union[str, Path],
         introns: GeneIntrons,
         junctions: GeneJunctions,
     ) -> "SpliceGraphReads":
-        """Load from netcdf file"""
-        df = xr.open_dataset(path, group=constants.NC_SGREADS)
+        """Load from zarr file"""
+        df = xr.open_zarr(path, group=constants.NC_SGREADS)
         if df.intron_hash != introns.checksum_nodata():
             raise ValueError("Saved hash for introns does not match")
         if df.junction_hash != junctions.checksum_nodata():

@@ -78,32 +78,32 @@ class Genes(ContigRegions):
             },
         )
 
-    def to_netcdf(self, path: Union[str, Path], mode: str) -> None:
-        """Serialize to netcdf format. Note contigs need to be saved separately"""
-        self.df.drop_vars("gene_idx").to_netcdf(path, mode, group=constants.NC_GENES)
+    def to_zarr(self, path: Union[str, Path], mode: str) -> None:
+        """Serialize to zarr format. Note contigs need to be saved separately"""
+        self.df.drop_vars("gene_idx").to_zarr(path, mode=mode, group=constants.NC_GENES)
         return
 
     @classmethod
-    def from_netcdf(
+    def from_zarr(
         self,
         path: Union[str, Path],
         contigs: Optional[Contigs] = None,
     ) -> "Genes":
-        """Read genes from netcdf file.
+        """Read genes from zarr file.
 
         Parameters
         ----------
         path: Union[str, Path]
-            path to netcdf file
+            path to zarr file
         contigs: Optional[Contigs]
             contigs on which the genes are defined. If None, try loading from
-            netcdf file. Note that new_majiq checks if objects refer to the
+            zarr file. Note that new_majiq checks if objects refer to the
             same contigs (not that they are identical), so it is usually
             desired to provide the variable than using the default behavior
         """
         if contigs is None:
-            contigs = Contigs.from_netcdf(path)
-        with xr.open_dataset(path, group=constants.NC_GENES) as df:
+            contigs = Contigs.from_zarr(path)
+        with xr.open_zarr(path, group=constants.NC_GENES) as df:
             return Genes(
                 _Genes(
                     contigs._contigs,

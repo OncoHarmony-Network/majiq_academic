@@ -50,32 +50,32 @@ class SJJunctions(ContigRegions):
             },
         )
 
-    def to_netcdf(self, path: Union[str, Path], mode: str) -> None:
-        """Serialize to netcdf format. Note contigs need to be saved separately"""
-        self.df.drop_vars("sj_idx").to_netcdf(
-            path, mode, group=constants.NC_SJJUNCTIONS
+    def to_zarr(self, path: Union[str, Path], mode: str) -> None:
+        """Serialize to zarr format. Note contigs need to be saved separately"""
+        self.df.drop_vars("sj_idx").to_zarr(
+            path, mode=mode, group=constants.NC_SJJUNCTIONS
         )
         return
 
     @classmethod
-    def from_netcdf(
+    def from_zarr(
         cls,
         path: Union[str, Path],
         contigs: Optional[Contigs] = None,
     ) -> "SJJunctions":
-        """Read SJJunctions from netcdf file
+        """Read SJJunctions from zarr file
 
         Parameters
         ----------
         path: Union[str, Path]
-            path to netcdf file
+            path to zarr file
         contigs: Optional[Contigs]
             contigs on which the junctions are defined. If None, try loading
-            from netcdf file.
+            from zarr file.
         """
         if contigs is None:
-            contigs = Contigs.from_netcdf(path)
-        with xr.open_dataset(path, group=constants.NC_SJJUNCTIONS) as df:
+            contigs = Contigs.from_zarr(path)
+        with xr.open_zarr(path, group=constants.NC_SJJUNCTIONS) as df:
             return SJJunctions(
                 _SJJunctions(
                     contigs._contigs,

@@ -71,10 +71,10 @@ def run(args: argparse.Namespace) -> None:
 
     log = get_logger()
     log.info(f"Loading input splicegraph from {args.splicegraph.resolve()}")
-    sg = nm.SpliceGraph.from_netcdf(args.splicegraph)
+    sg = nm.SpliceGraph.from_zarr(args.splicegraph)
     log.info(f"Loading input experiment from {args.sj.resolve()}")
-    sj_junctions = nm.SJJunctionsBins.from_netcdf(args.sj)
-    sj_introns = nm.SJIntronsBins.from_netcdf(args.sj)
+    sj_junctions = nm.SJJunctionsBins.from_zarr(args.sj)
+    sj_introns = nm.SJIntronsBins.from_zarr(args.sj)
     log.info("Obtaining coverage over LSVs")
     lsv_coverage = nm.EventsCoverage.from_events_and_sj(
         sg.lsvs(),
@@ -84,7 +84,7 @@ def run(args: argparse.Namespace) -> None:
         pvalue_threshold=args.stack_pvalue_threshold,
     )
     log.info(f"Saving coverage to {args.lsv_coverage.resolve()}")
-    lsv_coverage.to_netcdf(args.lsv_coverage)
+    lsv_coverage.to_zarr(args.lsv_coverage)
     return
 
 
