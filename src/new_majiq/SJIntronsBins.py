@@ -198,16 +198,16 @@ class SJIntronsBins(SJBinsReads):
     def from_netcdf(cls, path: Union[str, Path]) -> "SJIntronsBins":
         """Load SJIntronsBins from netcdf format"""
         regions = SJIntrons.from_netcdf(path)
-        df = xr.open_dataset(path, group=constants.NC_SJINTRONSBINS)
-        return SJIntronsBins(
-            _SJIntronsBins(
-                regions._sj_introns,
-                df.bin_reads,
-                df.bin_idx,
-                df._offsets,
-                df.total_bins,
-            ),
-            df.original_path,
-            df.original_version,
-            df.original_time,
-        )
+        with xr.open_dataset(path, group=constants.NC_SJINTRONSBINS) as df:
+            return SJIntronsBins(
+                _SJIntronsBins(
+                    regions._sj_introns,
+                    df.bin_reads.values,
+                    df.bin_idx.values,
+                    df._offsets.values,
+                    df.total_bins,
+                ),
+                df.original_path,
+                df.original_version,
+                df.original_time,
+            )

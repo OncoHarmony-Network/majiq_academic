@@ -73,15 +73,15 @@ class SJJunctions(ContigRegions):
             contigs on which the junctions are defined. If None, try loading
             from netcdf file.
         """
-        df = xr.open_dataset(path, group=constants.NC_SJJUNCTIONS)
         if contigs is None:
             contigs = Contigs.from_netcdf(path)
-        return SJJunctions(
-            _SJJunctions(
-                contigs._contigs,
-                df.contig_idx,
-                df.start,
-                df.end,
-                df.strand,
+        with xr.open_dataset(path, group=constants.NC_SJJUNCTIONS) as df:
+            return SJJunctions(
+                _SJJunctions(
+                    contigs._contigs,
+                    df.contig_idx.values,
+                    df.start.values,
+                    df.end.values,
+                    df.strand.values,
+                )
             )
-        )

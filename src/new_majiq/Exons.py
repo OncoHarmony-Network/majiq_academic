@@ -108,16 +108,16 @@ class Exons(GeneRegions):
             same genes (not that they are identical), so it is usually
             desired to provide the variable than using the default behavior
         """
-        df = xr.open_dataset(path, group=constants.NC_EXONS)
         if genes is None:
             genes = Genes.from_netcdf(path)
-        return Exons(
-            _Exons(
-                genes._genes,
-                df.gene_idx,
-                df.start,
-                df.end,
-                df.annotated_start,
-                df.annotated_end,
+        with xr.open_dataset(path, group=constants.NC_EXONS) as df:
+            return Exons(
+                _Exons(
+                    genes._genes,
+                    df.gene_idx.values,
+                    df.start.values,
+                    df.end.values,
+                    df.annotated_start.values,
+                    df.annotated_end.values,
+                )
             )
-        )

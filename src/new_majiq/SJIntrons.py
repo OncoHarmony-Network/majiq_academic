@@ -90,16 +90,16 @@ class SJIntrons(ContigRegions):
             contigs on which the introns are defined. If None, try loading from
             netcdf file.
         """
-        df = xr.open_dataset(path, group=constants.NC_SJINTRONS)
         if contigs is None:
             contigs = Contigs.from_netcdf(path)
-        return SJIntrons(
-            _SJIntrons(
-                contigs._contigs,
-                df.contig_idx,
-                df.start,
-                df.end,
-                df.strand,
-                df.annotated,
+        with xr.open_dataset(path, group=constants.NC_SJINTRONS) as df:
+            return SJIntrons(
+                _SJIntrons(
+                    contigs._contigs,
+                    df.contig_idx.values,
+                    df.start.values,
+                    df.end.values,
+                    df.strand.values,
+                    df.annotated.values,
+                )
             )
-        )

@@ -111,17 +111,17 @@ class GeneIntrons(GeneConnections):
             same genes (not that they are identical), so it is usually
             desired to provide the variable than using the default behavior
         """
-        df = xr.open_dataset(path, group=constants.NC_GENEINTRONS)
         if genes is None:
             genes = Genes.from_netcdf(path)
-        return GeneIntrons(
-            _GeneIntrons(
-                genes._genes,
-                df.gene_idx,
-                df.start,
-                df.end,
-                df.denovo,
-                df.passed_build,
-                df.simplified,
+        with xr.open_dataset(path, group=constants.NC_GENEINTRONS) as df:
+            return GeneIntrons(
+                _GeneIntrons(
+                    genes._genes,
+                    df.gene_idx.values,
+                    df.start.values,
+                    df.end.values,
+                    df.denovo.values,
+                    df.passed_build.values,
+                    df.simplified.values,
+                )
             )
-        )

@@ -111,11 +111,10 @@ class QuantifiableEvents(object):
                     offsets = df._offsets.values.astype(int)
                 # so checksums are good, and we have now defined offsets
             with xr.open_dataset(path, group=constants.NC_EVENTSCOVERAGE) as df:
-                cur_summaries = df[["numreads", "numbins"]].load()
-            # determine if each event connection passed experiment thresholds
-            passed = (cur_summaries.numreads.values >= thresholds.minreads) & (
-                cur_summaries.numbins.values >= thresholds.minbins
-            )
+                # determine if each event connection passed experiment thresholds
+                passed = (df.numreads.values >= thresholds.minreads) & (
+                    df.numbins.values >= thresholds.minbins
+                )
             try:
                 passed_ct += passed
             except NameError:  # this is the first experiment

@@ -101,17 +101,17 @@ class Genes(ContigRegions):
             same contigs (not that they are identical), so it is usually
             desired to provide the variable than using the default behavior
         """
-        df = xr.open_dataset(path, group=constants.NC_GENES)
         if contigs is None:
             contigs = Contigs.from_netcdf(path)
-        return Genes(
-            _Genes(
-                contigs._contigs,
-                df.contig_idx,
-                df.start,
-                df.end,
-                df.strand,
-                df.gene_id.values.tolist(),
-                df.gene_name.values.tolist(),
+        with xr.open_dataset(path, group=constants.NC_GENES) as df:
+            return Genes(
+                _Genes(
+                    contigs._contigs,
+                    df.contig_idx.values,
+                    df.start.values,
+                    df.end.values,
+                    df.strand.values,
+                    df.gene_id.values.tolist(),
+                    df.gene_name.values.tolist(),
+                )
             )
-        )

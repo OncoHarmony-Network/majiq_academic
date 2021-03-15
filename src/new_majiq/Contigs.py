@@ -75,5 +75,5 @@ class Contigs(object):
 
     @classmethod
     def from_netcdf(cls, path: Union[str, Path]) -> "Contigs":
-        df = xr.open_dataset(path, group=constants.NC_CONTIGS)
-        return Contigs(_Contigs(df.seqid.values.tolist()))
+        with xr.open_dataset(path, group=constants.NC_CONTIGS) as df:
+            return Contigs(_Contigs(df.seqid.values.tolist()))

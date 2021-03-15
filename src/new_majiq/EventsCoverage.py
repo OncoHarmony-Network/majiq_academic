@@ -112,17 +112,17 @@ class EventsCoverage(object):
         junctions: GeneJunctions,
     ) -> "EventsCoverage":
         events = Events.from_netcdf(path, introns, junctions)
-        df = xr.open_dataset(path, group=constants.NC_EVENTSCOVERAGE)
-        return EventsCoverage(
-            _EventsCoverage(
-                events._events,
-                df.numreads,
-                df.numbins,
-                df.bootstraps,
-            ),
-            df.bam_path,
-            df.bam_version,
-        )
+        with xr.open_dataset(path, group=constants.NC_EVENTSCOVERAGE) as df:
+            return EventsCoverage(
+                _EventsCoverage(
+                    events._events,
+                    df.numreads.values,
+                    df.numbins.values,
+                    df.bootstraps.values,
+                ),
+                df.bam_path,
+                df.bam_version,
+            )
 
     @classmethod
     def from_events_and_sj(

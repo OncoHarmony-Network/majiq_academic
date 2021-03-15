@@ -182,19 +182,19 @@ class Events(object):
         introns: GeneIntrons,
         junctions: GeneJunctions,
     ) -> "Events":
-        df = xr.open_dataset(path, group=constants.NC_EVENTS)
-        if df.intron_hash != introns.checksum():
-            raise ValueError("Saved hash for introns does not match")
-        if df.junction_hash != junctions.checksum():
-            raise ValueError("Saved hash for junctions does not match")
-        return Events(
-            _Events(
-                introns._gene_introns,
-                junctions._gene_junctions,
-                df.ref_exon_idx,
-                df.event_type,
-                df._offsets,
-                df.is_intron,
-                df.connection_idx,
+        with xr.open_dataset(path, group=constants.NC_EVENTS) as df:
+            if df.intron_hash != introns.checksum():
+                raise ValueError("Saved hash for introns does not match")
+            if df.junction_hash != junctions.checksum():
+                raise ValueError("Saved hash for junctions does not match")
+            return Events(
+                _Events(
+                    introns._gene_introns,
+                    junctions._gene_junctions,
+                    df.ref_exon_idx.values,
+                    df.event_type.values,
+                    df._offsets.values,
+                    df.is_intron.values,
+                    df.connection_idx.values,
+                )
             )
-        )

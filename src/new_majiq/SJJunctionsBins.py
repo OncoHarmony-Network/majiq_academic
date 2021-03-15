@@ -153,16 +153,16 @@ class SJJunctionsBins(SJBinsReads):
     def from_netcdf(cls, path: Union[str, Path]) -> "SJJunctionsBins":
         """Load SJJunctionsBins from netcdf format"""
         regions = SJJunctions.from_netcdf(path)
-        df = xr.open_dataset(path, group=constants.NC_SJJUNCTIONSBINS)
-        return SJJunctionsBins(
-            _SJJunctionsBins(
-                regions._sj_junctions,
-                df.bin_reads,
-                df.bin_idx,
-                df._offsets,
-                df.total_bins,
-            ),
-            df.original_path,
-            df.original_version,
-            df.original_time,
-        )
+        with xr.open_dataset(path, group=constants.NC_SJJUNCTIONSBINS) as df:
+            return SJJunctionsBins(
+                _SJJunctionsBins(
+                    regions._sj_junctions,
+                    df.bin_reads.values,
+                    df.bin_idx.values,
+                    df._offsets.values,
+                    df.total_bins,
+                ),
+                df.original_path,
+                df.original_version,
+                df.original_time,
+            )
