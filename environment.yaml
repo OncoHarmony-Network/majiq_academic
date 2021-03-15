@@ -10,6 +10,7 @@ dependencies:
   - xarray>=0.15.1
   - numexpr>=2.6.2
   - netcdf4>=1.5
+  - zarr>=2.3
   - matplotlib
   - ipython
   - mypy
