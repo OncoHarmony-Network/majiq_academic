@@ -61,6 +61,10 @@ class Regions {
     for (size_t i = 0; i < elements.size(); ++i) {
       // update result tracking offsets
       const size_t new_parent_idx = elements[i].parent().idx_;
+      if (new_parent_idx >= parents->size()) {
+        throw std::invalid_argument(
+            "Regions parent indexes cannot correspond to parent itself");
+      }
       for (; cur_parent_idx < new_parent_idx; ++cur_parent_idx) {
         result[1 + cur_parent_idx] = i;
       }
