@@ -60,6 +60,24 @@ def add_args(parser: argparse.ArgumentParser) -> None:
         help="Experimental: Use junction coverage to definitively ignore"
         " intronic coverage in potential denovo exons (or exon extension)",
     )
+    # fail if no overlapping contigs?
+    disjoint_contigs_ex = parser.add_mutually_exclusive_group()
+    disjoint_contigs_ex.add_argument(
+        "--allow-disjoint-contigs",
+        action="store_true",
+        dest="allow_disjoint_contigs",
+        default=constants.DEFAULT_BAM_ALLOW_DISJOINT_CONTIGS,
+        help="Warn, but do not fail, when BAM has different contigs than"
+        " splicegraph (default allow_disjoint_contigs = %(default)s)"
+    )
+    disjoint_contigs_ex.add_argument(
+        "--reject-disjoint-contigs",
+        action="store_false",
+        dest="allow_disjoint_contigs",
+        default=constants.DEFAULT_BAM_ALLOW_DISJOINT_CONTIGS,
+        help="Fail when BAM has different contigs than splicegraph"
+        " (default allow_disjoint_contigs = %(default)s)"
+    )
     return
 
 
@@ -84,6 +102,19 @@ def run(args: argparse.Namespace) -> None:
         strandness=strandness,
         nthreads=args.nthreads,
     )
+    if not (set(sg.contigs.seqid) & set(sj_junctions.regions.contigs.seqid)):
+        # disjoint sets of contigs from bam vs contigs
+        if args.allow_disjoint_contigs:
+            log.warning("Contigs from splicegraph and BAM are disjoint!")
+        else:
+            log.error(
+                "Contigs from splicegraph and BAM are disjoint!"
+                f"\n\tSplicegraph contigs = {sg.contigs.seqid}"
+                f"\n\tBAM contigs = {sj_junctions.regions.contigs.seqid}"
+                "\nAAdd flag `--allow-disjoint-contigs` if this is what you"
+                " really want"
+            )
+            raise RuntimeError("Contigs from splicegraph and BAM are disjoint")
     log.info("Using gene introns/exons to define regions for intronic coverage")
     gene_introns: nm.GeneIntrons = sg.introns
     exons: nm.Exons
