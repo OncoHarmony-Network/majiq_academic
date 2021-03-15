@@ -124,7 +124,9 @@ class QuantifiableEvents(object):
             thresholds.min_experiments_f, len(experiments)
         )
         # event passes if any of its connections passed
-        event_passed: np.ndarray = np.logical_or.reduceat(connection_passed, offsets[:-1])
+        event_passed: np.ndarray = np.logical_or.reduceat(
+            connection_passed, offsets[:-1]
+        )
         return QuantifiableEvents(checksums, offsets, event_passed)
 
     @property
@@ -305,6 +307,7 @@ class QuantifiableCoverage(object):
             return
 
         from multiprocessing.dummy import Pool  # dummy is multithreading
+
         p = Pool(nthreads)
         WORKSIZE = 20000 // len(quantiles)
         p.map(
@@ -339,6 +342,7 @@ class QuantifiableCoverage(object):
             return
 
         from multiprocessing.dummy import Pool  # dummy is multithreading
+
         p = Pool(nthreads)
         WORKSIZE = 200000 // nbins
         p.map(
@@ -370,22 +374,22 @@ class QuantifiableCoverage(object):
 
     @staticmethod
     def _exons_formatted(
-        exon_start: Sequence[int],
-        exon_end: Sequence[int]
+        exon_start: Sequence[int], exon_end: Sequence[int]
     ) -> List[str]:
         def format_coord(x):
             return x if x >= 0 else "na"
 
         return [
-            f"{format_coord(a)}-{format_coord(b)}"
-            for a, b in zip(exon_start, exon_end)
+            f"{format_coord(a)}-{format_coord(b)}" for a, b in zip(exon_start, exon_end)
         ]
 
     def as_dataframe(self, sg: SpliceGraph) -> pd.DataFrame:
         # event information
         q_events = self.get_events(sg.introns, sg.junctions)
         event_id = sg.event_id(q_events.ref_exon_idx, q_events.event_type)
-        event_description = sg.event_description(q_events.ref_exon_idx, q_events.event_type)
+        event_description = sg.event_description(
+            q_events.ref_exon_idx, q_events.event_type
+        )
         ref_exon_start = sg.exons.start[q_events.ref_exon_idx]
         ref_exon_end = sg.exons.end[q_events.ref_exon_idx]
         # connection information
@@ -403,10 +407,11 @@ class QuantifiableCoverage(object):
                 "seqid": seqid,
                 "gene_id": gene_id,
                 "ref_exon": np.repeat(
-                    self._exons_formatted(ref_exon_start, ref_exon_end),
-                    self.event_size
+                    self._exons_formatted(ref_exon_start, ref_exon_end), self.event_size
                 ),
-                "event_type": np.repeat([x.decode() for x in q_events.event_type], self.event_size),
+                "event_type": np.repeat(
+                    [x.decode() for x in q_events.event_type], self.event_size
+                ),
                 "is_intron": q_events.is_intron,
                 "start": q_events.connection_start(),
                 "end": q_events.connection_end(),
@@ -417,14 +422,13 @@ class QuantifiableCoverage(object):
                 "total_reads": self.total,
                 "gene_name": gene_name,
                 "strand": strand,
-                "other_exon": self._exons_formatted(
-                    other_exon_start,
-                    other_exon_end
-                ),
+                "other_exon": self._exons_formatted(other_exon_start, other_exon_end),
                 "event_id": np.repeat(event_id, self.event_size),
                 "event_description": np.repeat(event_description, self.event_size),
             },
-        ).set_index(["seqid", "gene_id", "ref_exon", "event_type", "is_intron", "start", "end"])
+        ).set_index(
+            ["seqid", "gene_id", "ref_exon", "event_type", "is_intron", "start", "end"]
+        )
 
     def to_netcdf(
         self,
@@ -438,9 +442,9 @@ class QuantifiableCoverage(object):
             raise ValueError(f"Output {path} already exists")
         # save events
         (
-            self.events
-            .assign_coords(_offsets=("e_offsets_idx", self.offsets))
-            .to_netcdf(path, "w", group=constants.NC_EVENTS)
+            self.events.assign_coords(
+                _offsets=("e_offsets_idx", self.offsets)
+            ).to_netcdf(path, "w", group=constants.NC_EVENTS)
         )
         # save quantifications
         df = xr.Dataset(
@@ -523,5 +527,5 @@ class QuantifiableCoverage(object):
             coverage.numreads.values,
             coverage.bootstraps.values,
             events,
-            original_bams
+            original_bams,
         )

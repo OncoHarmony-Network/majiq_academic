@@ -23,33 +23,42 @@ DESCRIPTION = "Quantify events coverage files"
 
 def add_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
-        "output", type=Path,
+        "output",
+        type=Path,
         help="Path for new-majiq quantification format",
     )
     parser.add_argument(
-        "coverage", type=Path, nargs="+",
+        "coverage",
+        type=Path,
+        nargs="+",
         help="Paths to events coverage files. All must have been generated"
         " using the same splicegraph",
     )
     parser.add_argument(
-        "--nthreads", type=check_nonnegative_factory(int, True),
+        "--nthreads",
+        type=check_nonnegative_factory(int, True),
         default=constants.DEFAULT_QUANTIFY_NTHREADS,
         help="Number of threads used for pmf bins and quantiles,"
         " which require more computation (default: %(default)s)",
     )
     parser.add_argument(
-        "--pmf-bins", type=check_nonnegative_factory(int, True),
+        "--pmf-bins",
+        type=check_nonnegative_factory(int, True),
         default=None,
         help="If specified, number of discretized probability bins to save"
         " posterior distribution to (default: %(default)s)",
     )
     parser.add_argument(
-        "--quantiles", type=float,
+        "--quantiles",
+        type=float,
         default=[],
         help="Posterior quantiles to calculate (default: %(default)s)",
     )
     parser.add_argument(
-        "--tsv", type=Path, default=None, nargs=2,
+        "--tsv",
+        type=Path,
+        default=None,
+        nargs=2,
         metavar=("splicegraph", "tsv"),
         help="If specified, save quantifications to TSV annotated by input"
         " splicegraph",
@@ -87,14 +96,13 @@ def run(args: argparse.Namespace) -> None:
         raise ValueError(f"Output coverage file {args.output} already exists")
     if args.tsv:
         if not args.tsv[0].exists():  # splicegraph
-            raise ValueError(
-                f"Unable to find splicegraph {args.tsv[0]} for TSV output"
-            )
+            raise ValueError(f"Unable to find splicegraph {args.tsv[0]} for TSV output")
         if args.tsv[1].exists():
             raise ValueError(f"Output TSV file {args.tsv[1]} already exists")
 
     import new_majiq as nm
     from new_majiq.logger import get_logger
+
     log = get_logger()
 
     thresholds = nm.QuantifierThresholds(

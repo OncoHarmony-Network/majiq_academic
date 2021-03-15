@@ -110,7 +110,9 @@ class Events(object):
             ec_idx = self.ec_idx
         return self._events.connection_denovo(ec_idx)
 
-    def connection_other_exon_idx(self, ec_idx: Optional[np.ndarray] = None) -> np.ndarray:
+    def connection_other_exon_idx(
+        self, ec_idx: Optional[np.ndarray] = None
+    ) -> np.ndarray:
         if ec_idx is None:
             ec_idx = self.ec_idx
         return self._events.connection_other_exon_idx(ec_idx)

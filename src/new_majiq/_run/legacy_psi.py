@@ -26,7 +26,8 @@ DESCRIPTION = (
 
 def add_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
-        "--nthreads", type=check_nonnegative_factory(int, True),
+        "--nthreads",
+        type=check_nonnegative_factory(int, True),
         default=constants.DEFAULT_QUANTIFY_NTHREADS,
         help="Number of threads to use (default: %(default)s)",
     )
@@ -53,21 +54,26 @@ def add_args(parser: argparse.ArgumentParser) -> None:
         " (default: %(default)s).",
     )
     parser.add_argument(
-        "out_voila", type=Path,
+        "out_voila",
+        type=Path,
         help="Path for output voila file",
     )
     parser.add_argument(
-        "name", type=str,
+        "name",
+        type=str,
         help="Name used to identify the single group of experiments being"
-        " quantified for visualization with VOILA"
+        " quantified for visualization with VOILA",
     )
     parser.add_argument(
-        "splicegraph", type=Path,
+        "splicegraph",
+        type=Path,
         help="Path to splicegraph used to define events with coverage for"
         " annotating information required in the VOILA file",
     )
     parser.add_argument(
-        "coverage", type=Path, nargs="+",
+        "coverage",
+        type=Path,
+        nargs="+",
         help="Paths to events coverage files being quantified as a group",
     )
     return
@@ -77,6 +83,7 @@ def run(args: argparse.Namespace) -> None:
     import numpy as np
     import new_majiq as nm
     from new_majiq.logger import get_logger
+
     log = get_logger()
 
     try:
@@ -131,11 +138,13 @@ def run(args: argparse.Namespace) -> None:
     with Matrix(args.out_voila, "w", voila_file=True, voila_tsv=False) as out_h5p:
         out_h5p.file_version = VOILA_FILE_VERSION
         out_h5p.analysis_type = ANALYSIS_PSI
-        out_h5p.experiment_names = [[
-            # original paths -- get name, remove extension, convert to bytes
-            Path(x).name.rsplit(".", 1)[0].encode("utf-8")
-            for x in q.original_bams
-        ]]
+        out_h5p.experiment_names = [
+            [
+                # original paths -- get name, remove extension, convert to bytes
+                Path(x).name.rsplit(".", 1)[0].encode("utf-8")
+                for x in q.original_bams
+            ]
+        ]
         out_h5p.group_names = [args.name]
         # each event
         for event_idx in range(q_events.num_events):
