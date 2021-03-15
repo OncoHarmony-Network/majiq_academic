@@ -185,9 +185,8 @@ class SJIntronsBins(SJBinsReads):
                 )
             # otherwise, appears to have compatible SJJunctionsBins which
             # implies that they have matching contigs
-        else:
-            # save contigs to start the file
-            self.regions.contigs.to_zarr(path, "w")
+        # otherwise
+        self.regions.contigs.to_zarr(path, "w")
         self.regions.to_zarr(path, "a")
         self._df.drop_vars("sib_idx").to_zarr(
             path, mode="a", group=constants.NC_SJINTRONSBINS

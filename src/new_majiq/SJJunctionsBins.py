@@ -142,7 +142,7 @@ class SJJunctionsBins(SJBinsReads):
                 " Please delete and try again if desired, or please pick a"
                 " different output path."
             )
-        self.regions.contigs.to_zarr(path, "w")
+        self.regions.contigs.to_zarr(path, "w", group=constants.NC_SJJUNCTIONSCONTIGS)
         self.regions.to_zarr(path, "a")
         self._df.drop_vars("sjb_idx").to_zarr(
             path, mode="a", group=constants.NC_SJJUNCTIONSBINS

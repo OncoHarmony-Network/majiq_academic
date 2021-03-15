@@ -67,13 +67,17 @@ class Contigs(object):
         except IndexError:
             raise KeyError(f"{seqid = } not found in Contigs instance")
 
-    def to_zarr(self, path: Union[str, Path], mode: str) -> None:
+    def to_zarr(
+        self, path: Union[str, Path], mode: str, group: str = constants.NC_CONTIGS
+    ) -> None:
         self.df.drop_vars("contig_idx").to_zarr(
-            path, mode=mode, group=constants.NC_CONTIGS
+            path, mode=mode, group=group
         )
         return
 
     @classmethod
-    def from_zarr(cls, path: Union[str, Path]) -> "Contigs":
-        with xr.open_zarr(path, group=constants.NC_CONTIGS) as df:
+    def from_zarr(
+        cls, path: Union[str, Path], group: str = constants.NC_CONTIGS
+    ) -> "Contigs":
+        with xr.open_zarr(path, group=group) as df:
             return Contigs(_Contigs(df.seqid.values.tolist()))

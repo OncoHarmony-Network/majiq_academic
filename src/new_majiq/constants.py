@@ -23,10 +23,12 @@ NC_EXONS: Final[str] = "exons"
 NC_GENEJUNCTIONS: Final[str] = "junctions"
 NC_GENEINTRONS: Final[str] = "introns"
 
+NC_SJINTRONSCONTIGS: Final[str] = "sj_introns_contigs"
 NC_SJINTRONS: Final[str] = "sj_introns"
 NC_SJINTRONSBINS: Final[str] = "sj_introns_bins"
 NC_SJJUNCTIONS: Final[str] = "sj_junctions"
 NC_SJJUNCTIONSBINS: Final[str] = "sj_junctions_bins"
+NC_SJJUNCTIONSCONTIGS: Final[str] = "sj_junctions_contigs"
 
 NC_EVENTS: Final[str] = "events"
 NC_EVENTSCOVERAGE: Final[str] = "events_coverage"

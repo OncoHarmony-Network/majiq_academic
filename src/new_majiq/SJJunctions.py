@@ -74,7 +74,7 @@ class SJJunctions(ContigRegions):
             from zarr file.
         """
         if contigs is None:
-            contigs = Contigs.from_zarr(path)
+            contigs = Contigs.from_zarr(path, group=constants.NC_SJJUNCTIONSCONTIGS)
         with xr.open_zarr(path, group=constants.NC_SJJUNCTIONS) as df:
             return SJJunctions(
                 _SJJunctions(
