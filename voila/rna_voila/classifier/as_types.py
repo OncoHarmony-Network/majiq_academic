@@ -1827,7 +1827,7 @@ class Graph:
                     # update seen junctions in Module
                     for skipA1 in skipA1s:
                         for skipA2 in skipA2s:
-                            shared_lsv = set(sk1.lsvs) & set(sk2.lsvs)
+                            shared_lsv = set(skipA1.lsvs) & set(skipA2.lsvs)
                             if len(shared_lsv) == 1:
                                 self.classified_lsvs.append(shared_lsv.pop())
                             found.append({'event': 'ale', 'Proximal': node,
