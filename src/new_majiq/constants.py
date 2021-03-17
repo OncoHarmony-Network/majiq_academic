@@ -36,6 +36,7 @@ NC_EVENTSCOVERAGE: Final[str] = "events_coverage"
 NC_EVENTSQUANTIFIED: Final[str] = "events_quantified"
 
 NC_SGREADS: Final[str] = "sg_reads"
+NC_SGREADS_CHUNKS: Final[int] = 1024  # how many per chunk
 
 
 DEFAULT_BUILD_PROCESS_IR: Final[bool] = True

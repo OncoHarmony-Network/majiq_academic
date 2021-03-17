@@ -82,8 +82,6 @@ class SpliceGraphReads(object):
             },
             {
                 "experiment": [self.experiment_name],
-                "gi_idx": self.introns.gi_idx,
-                "gj_idx": self.junctions.gj_idx,
             },
             {
                 "bam_path": self.bam_path,
@@ -113,8 +111,7 @@ class SpliceGraphReads(object):
         """Save to specified zarr file"""
         (
             self._df
-            # drop indexes and nice offsets
-            .drop_vars(["gi_idx", "gj_idx"])
+            .chunk(constants.NC_SGREADS_CHUNKS)  # type: ignore
             # add hash for introns/junctions
             .assign_coords(
                 intron_hash=("experiment", [self.introns.checksum_nodata()]),
@@ -140,8 +137,8 @@ class SpliceGraphReads(object):
             _SpliceGraphReads(
                 introns._gene_introns,
                 junctions._gene_junctions,
-                df.introns_reads,
-                df.junctions_reads,
+                df.introns_reads.values,
+                df.junctions_reads.values,
             ),
             df.bam_path,
             df.bam_version,
