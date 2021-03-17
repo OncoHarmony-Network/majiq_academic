@@ -1619,7 +1619,7 @@ class TsvWriter(BaseTsvWriter):
                             # C2_A_Last
                             # how do you trim?
                             # did I use strand case correctly here?
-                            if event['Include1']:
+                            if event['Include2']:
                                 c2_alast_range_str = module.strand_case(event['As'][-1], event['As'][0])
                             else:
                                 c2_alast_range_str = ""
