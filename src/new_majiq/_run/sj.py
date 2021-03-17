@@ -68,7 +68,7 @@ def add_args(parser: argparse.ArgumentParser) -> None:
         dest="allow_disjoint_contigs",
         default=constants.DEFAULT_BAM_ALLOW_DISJOINT_CONTIGS,
         help="Warn, but do not fail, when BAM has different contigs than"
-        " splicegraph (default allow_disjoint_contigs = %(default)s)"
+        " splicegraph (default allow_disjoint_contigs = %(default)s)",
     )
     disjoint_contigs_ex.add_argument(
         "--reject-disjoint-contigs",
@@ -76,7 +76,7 @@ def add_args(parser: argparse.ArgumentParser) -> None:
         dest="allow_disjoint_contigs",
         default=constants.DEFAULT_BAM_ALLOW_DISJOINT_CONTIGS,
         help="Fail when BAM has different contigs than splicegraph"
-        " (default allow_disjoint_contigs = %(default)s)"
+        " (default allow_disjoint_contigs = %(default)s)",
     )
     return
 
