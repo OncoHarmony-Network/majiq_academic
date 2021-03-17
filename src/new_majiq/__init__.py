@@ -4,6 +4,8 @@ from new_majiq.internals import (
     set_seed,
 )
 
+import new_majiq.constants as constants
+
 # model of genes, exons connected by introns/junctions
 from .SpliceGraph import SpliceGraph
 
