@@ -1613,14 +1613,14 @@ class TsvWriter(BaseTsvWriter):
                             # how do you trim?
                             # did I use strand case correctly here?
                             if event['Include1']:
-                                c1_a_range_str = module.strand_case(event['As'][0], event['As'][-1])
+                                c1_a_range_str = module.strand_case(event['As'][0], event['As'][-1]).range_str()
                             else:
                                 c1_a_range_str = ""
                             # C2_A_Last
                             # how do you trim?
                             # did I use strand case correctly here?
                             if event['Include2']:
-                                c2_alast_range_str = module.strand_case(event['As'][-1], event['As'][0])
+                                c2_alast_range_str = module.strand_case(event['As'][-1], event['As'][0]).range_str()
                             else:
                                 c2_alast_range_str = ""
 
