@@ -8,6 +8,7 @@ Author: Joseph K Aicher
 
 import numpy as np
 import xarray as xr
+import dask.array as da
 
 import new_majiq.constants as constants
 
@@ -18,11 +19,80 @@ from new_majiq.SJIntronsBins import SJIntronsBins
 from new_majiq.SJJunctionsBins import SJJunctionsBins
 from new_majiq.internals import SpliceGraphReads as _SpliceGraphReads
 
+from functools import cached_property
 from pathlib import Path
 from typing import (
     Final,
+    List,
     Union,
 )
+
+
+class MultiSpliceGraphReads(object):
+    """Open up multiple SpliceGraphReads objects all at once"""
+
+    def __init__(self, sg_reads_paths: Union[str, List[Union[str, Path]]]):
+        """ wraps xr.open_mfdataset to open up multiple SpliceGraphReads
+
+        Parameters
+        ----------
+        sg_reads_paths: Union[str, List[Union[str, Path]]]
+            string glob of paths to open or explicit list of files to open
+        """
+        self._df: Final[xr.Dataset] = xr.open_mfdataset(
+            sg_reads_paths,
+            concat_dim="experiment",
+            compat="equals",
+            engine="zarr",
+            join="exact",
+            group=constants.NC_SGREADS,
+        )
+        return
+
+    @property
+    def experiments(self) -> np.ndarray:
+        """strings array of experiments"""
+        return self._df.experiment.values
+
+    @property
+    def num_introns(self) -> int:
+        return self._df.dims["gi_idx"]
+
+    @property
+    def num_junctions(self) -> int:
+        return self._df.dims["gj_idx"]
+
+    def select_experiment(
+        self,
+        experiment: str,
+        gi_idx: Union[int, slice] = slice(None),
+        gj_idx: Union[int, slice] = slice(None),
+    ) -> xr.Dataset:
+        """Load subset of specified experiment into memory"""
+        return self._df.sel(experiment=experiment).isel(gi_idx=gi_idx, gj_idx=gj_idx).compute()
+
+    def summarize_experiments(
+        self,
+        reduction: str = "median",
+        gi_idx: Union[int, slice] = slice(None),
+        gj_idx: Union[int, slice] = slice(None),
+    ) -> xr.Dataset:
+        """Perform xarray reduction over experiments for specified subset"""
+        return getattr(self._df.isel(gi_idx=gi_idx, gj_idx=gj_idx), reduction)("experiment").compute()
+
+    @cached_property
+    def intron_checksum(self) -> int:
+        """summarize intron hash: shared unique value or -1"""
+        self._df.intron_hash.load()
+        hashes = set(self._df.intron_hash.values)
+        return hashes.pop() if len(hashes) == 1 else -1
+
+    @cached_property
+    def junction_checksum(self) -> int:
+        """summarize junction hash: shared unique value or -1"""
+        self._df.junction_hash.load()
+        hashes = set(self._df.junction_hash.values)
+        return hashes.pop() if len(hashes) == 1 else -1
 
 
 class SpliceGraphReads(object):
