@@ -11,6 +11,7 @@ import xarray as xr
 
 import new_majiq.constants as constants
 
+from new_majiq.experiments import bam_experiment_name
 from new_majiq.GeneIntrons import GeneIntrons
 from new_majiq.GeneJunctions import GeneJunctions
 from new_majiq.SJIntronsBins import SJIntronsBins
@@ -43,6 +44,10 @@ class SpliceGraphReads(object):
         return self._bam_path
 
     @property
+    def experiment_name(self) -> str:
+        return bam_experiment_name(self.bam_path)
+
+    @property
     def bam_version(self) -> str:
         return self._bam_version
 
@@ -66,10 +71,17 @@ class SpliceGraphReads(object):
     def _df(self) -> xr.Dataset:
         return xr.Dataset(
             {
-                "introns_reads": ("gi_idx", self.introns_reads),
-                "junctions_reads": ("gj_idx", self.junctions_reads),
+                "introns_reads": (
+                    ("experiment", "gi_idx"),
+                    self.introns_reads[np.newaxis],
+                ),
+                "junctions_reads": (
+                    ("experiment", "gj_idx"),
+                    self.junctions_reads[np.newaxis],
+                ),
             },
             {
+                "experiment": [self.experiment_name],
                 "gi_idx": self.introns.gi_idx,
                 "gj_idx": self.junctions.gj_idx,
             },
@@ -104,9 +116,9 @@ class SpliceGraphReads(object):
             # drop indexes and nice offsets
             .drop_vars(["gi_idx", "gj_idx"])
             # add hash for introns/junctions
-            .assign(
-                intron_hash=self.introns.checksum_nodata(),
-                junction_hash=self.junctions.checksum_nodata(),
+            .assign_coords(
+                intron_hash=("experiment", [self.introns.checksum_nodata()]),
+                junction_hash=("experiment", [self.junctions.checksum_nodata()]),
             ).to_zarr(path, mode=mode, group=constants.NC_SGREADS)
         )
         return
@@ -119,7 +131,7 @@ class SpliceGraphReads(object):
         junctions: GeneJunctions,
     ) -> "SpliceGraphReads":
         """Load from zarr file"""
-        df = xr.open_zarr(path, group=constants.NC_SGREADS)
+        df = xr.open_zarr(path, group=constants.NC_SGREADS).squeeze("experiment")
         if df.intron_hash != introns.checksum_nodata():
             raise ValueError("Saved hash for introns does not match")
         if df.junction_hash != junctions.checksum_nodata():

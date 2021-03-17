@@ -83,6 +83,7 @@ def run(args: argparse.Namespace) -> None:
     import numpy as np
     import new_majiq as nm
     from new_majiq.logger import get_logger
+    from new_majiq.experiments import bam_experiment_name
 
     log = get_logger()
 
@@ -139,11 +140,7 @@ def run(args: argparse.Namespace) -> None:
         out_h5p.file_version = VOILA_FILE_VERSION
         out_h5p.analysis_type = ANALYSIS_PSI
         out_h5p.experiment_names = [
-            [
-                # original paths -- get name, remove extension, convert to bytes
-                Path(x).name.rsplit(".", 1)[0].encode("utf-8")
-                for x in q.original_bams
-            ]
+            [bam_experiment_name(x).encode("utf-8") for x in q.original_bams]
         ]
         out_h5p.group_names = [args.name]
         # each event
