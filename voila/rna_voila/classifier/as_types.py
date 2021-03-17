@@ -1314,12 +1314,11 @@ class Graph:
                         skip = n1.connects(n2)
                         if skip:
                             include1s = n1.connects(self.nodes[i + 1], ir=True)
+                            if len(include1s) == 0:
+                                include1s.append(None)
                             include2s = self.nodes[j - 1].connects(n2, ir=True)
-                            # update Module's seen junctions
-                            for edge in skip:
-                                if len(edge.lsvs) > 0:
-                                    self.classified_lsvs.extend(edge.lsvs)
-                                self.classified_junctions.append(edge)
+                            if len(include2s) == 0:
+                                include2s.append(None)
                             for sk in skip:
                                 for include1 in include1s:
                                     for include2 in include2s:
@@ -1328,6 +1327,10 @@ class Graph:
                                                       'Skip': sk, 'Include1': self.strand_case(include1, include2),
                                                       'Include2': self.strand_case(include2, include1),
                                                       })
+                                        # update Module's seen junctions/lsvs iff we've appended to found
+                                        if len(sk.lsvs) > 0:
+                                            self.classified_lsvs.extend(sk.lsvs)
+                                        self.classified_junctions.append(sk)
             return found
 
         def mutually_exclusive(self):
@@ -2094,7 +2097,6 @@ class Graph:
             # print(self.nodes)
             # print(self.get_all_edges())
             # print([e.de_novo for e in self.get_all_edges()])
-
             as_type_dict = {
                 # 'alt_downstream': self.alternate_downstream,
                 # 'alt_upstream': self.alternate_upstream,
@@ -2115,6 +2117,7 @@ class Graph:
                 'orphan_junction': self.orphan_junction,
                 'exitron': self.exitron,
             }
+
             if ClassifyConfig().keep_constitutive:
                 as_type_dict['constitutive'] = self.constitutive
                 as_type_dict['constitutive_intron'] = self.constitutive_intron
@@ -2149,6 +2152,8 @@ class Graph:
                 # call function to check if each event exists
                 res = v()
                 ret += res
+                # print(k)
+                # print(self.classified_lsvs)
 
             for e in ret:
                 event_counts[e['event']] += 1
