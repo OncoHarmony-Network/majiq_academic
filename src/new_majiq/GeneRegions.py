@@ -32,5 +32,15 @@ class GeneRegions(Regions):
         """Index of gene on which region is defined"""
         return self._gene_regions.gene_idx
 
+    def index(self, gene_idx: int, start: int, end: int) -> int:
+        """Get index of gene region in object (ValueError if not present)"""
+        try:
+            index = self._gene_regions.find(gene_idx, start, end)
+        except (TypeError, ValueError):
+            index = -1
+        if index < 0:
+            raise ValueError(f"({gene_idx=}, {start=}, {end=}) is not in container")
+        return index
+
     def slice_for_gene(self, gene_idx: int) -> slice:
         return self._slice_for_parent(gene_idx)
