@@ -32,7 +32,7 @@ class MultiSpliceGraphReads(object):
     """Open up multiple SpliceGraphReads objects all at once"""
 
     def __init__(self, sg_reads_paths: Union[str, List[Union[str, Path]]]):
-        """ wraps xr.open_mfdataset to open up multiple SpliceGraphReads
+        """wraps xr.open_mfdataset to open up multiple SpliceGraphReads
 
         Parameters
         ----------
@@ -85,7 +85,9 @@ class MultiSpliceGraphReads(object):
         compute: bool = True,
     ) -> xr.Dataset:
         """Perform xarray reduction over experiments for specified subset"""
-        df = getattr(self._df.isel(gi_idx=gi_idx, gj_idx=gj_idx), reduction)("experiment")
+        df = getattr(self._df.isel(gi_idx=gi_idx, gj_idx=gj_idx), reduction)(
+            "experiment"
+        )
         if compute:
             df = df.compute()
         return df
@@ -191,12 +193,11 @@ class SpliceGraphReads(object):
         self,
         path: Union[str, Path],
         mode: str,
-        chunksize: int = constants.NC_SGREADS_CHUNKS
+        chunksize: int = constants.NC_SGREADS_CHUNKS,
     ) -> None:
         """Save to specified zarr file"""
         (
-            self._df
-            .chunk(chunksize)  # type: ignore
+            self._df.chunk(chunksize)  # type: ignore
             # add hash for introns/junctions
             .assign_coords(
                 intron_hash=("experiment", [self.introns.checksum_nodata()]),

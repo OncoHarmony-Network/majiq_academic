@@ -19,9 +19,7 @@ from typing import (
 )
 
 
-DESCRIPTION = (
-    "Summarize splicegraph coverage from multiple experiments"
-)
+DESCRIPTION = "Summarize splicegraph coverage from multiple experiments"
 
 
 def add_args(parser: argparse.ArgumentParser) -> None:
@@ -55,7 +53,7 @@ def add_args(parser: argparse.ArgumentParser) -> None:
 
 
 def run(args: argparse.Namespace) -> None:
-    if (missing := sorted(x for x in args.sg_coverage if not x.exists())):
+    if (missing := sorted(x for x in args.sg_coverage if not x.exists())) :
         raise ValueError(
             f"Was unable to find all input sg_coverage files ({missing = })"
         )
@@ -75,8 +73,7 @@ def run(args: argparse.Namespace) -> None:
     )
     summary = coverage.summarize_experiments(args.reduction, compute=False)
     (
-        summary
-        .expand_dims(experiment=[bam_experiment_name(args.summary)])
+        summary.expand_dims(experiment=[bam_experiment_name(args.summary)])
         .assign_attrs(
             bam_path=str(args.summary.resolve()),
             bam_version=nm.__version__,

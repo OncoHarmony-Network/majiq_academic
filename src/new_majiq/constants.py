@@ -39,7 +39,7 @@ NC_SGREADS: Final[str] = "sg_reads"
 # number of junctions/introns per chunk in sg_reads
 # size of computation across N experiments for a chunk is
 # N * 8 * chunksize bytes. So N=20000, chunksize = 1<<15 is under 5GB
-NC_SGREADS_CHUNKS: Final[int] = (1 << 15)
+NC_SGREADS_CHUNKS: Final[int] = 1 << 15
 
 
 DEFAULT_BUILD_PROCESS_IR: Final[bool] = True
