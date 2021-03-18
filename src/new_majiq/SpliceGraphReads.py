@@ -69,7 +69,8 @@ class MultiSpliceGraphReads(object):
         gj_idx: Union[int, slice] = slice(None),
     ) -> xr.Dataset:
         """Load subset of specified experiment into memory"""
-        return self._df.sel(experiment=experiment).isel(gi_idx=gi_idx, gj_idx=gj_idx).compute()
+        experiment_iloc = self._df.indexes["experiment"].get_loc(experiment)
+        return self._df.isel(gi_idx=gi_idx, gj_idx=gj_idx, experiment=experiment_iloc).compute()
 
     def summarize_experiments(
         self,
