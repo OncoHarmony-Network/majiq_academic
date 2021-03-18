@@ -208,6 +208,27 @@ void define_coordinates_properties(pyClassShared_t<RegionsT>& pyRegions) {
           "Get index for specified region (or -1 if it doesn't exist)",
           py::arg("gene_idx"),
           py::arg("start"),
+          py::arg("end"))
+      .def("index",
+          [](const RegionsT& self,
+            py::array_t<size_t> gene_idx,
+            py::array_t<position_t> start,
+            py::array_t<position_t> end) {
+          auto f = [&self](size_t g, position_t s, position_t e) -> std::ptrdiff_t {
+            if (g >= self.parents_->size()) { return -1; }
+            IntervalT iv;
+            try {
+              iv = IntervalT{s, e};
+            } catch (std::invalid_argument& e) {
+              return -1;
+            }
+            auto it = self.find(RegionT{(*self.parents_)[g], iv});
+            return it == self.end() ? -1 : it - self.begin(); };
+          return py::vectorize(f)(gene_idx, start, end);
+          },
+          "Get indexes for specified regions (or -1 if it doesn't exist)",
+          py::arg("gene_idx"),
+          py::arg("start"),
           py::arg("end"));
   }
   pyRegions
