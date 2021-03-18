@@ -3,6 +3,9 @@ from new_majiq.internals import (
     ExperimentThresholds,
     set_seed,
 )
+from .version import version
+
+__version__ = version()
 
 import new_majiq.constants as constants
 
@@ -14,7 +17,7 @@ from .SJIntronsBins import SJIntronsBins
 from .SJJunctionsBins import SJJunctionsBins
 
 # coverage on splicegraph or events
-from .SpliceGraphReads import SpliceGraphReads
+from .SpliceGraphReads import SpliceGraphReads, MultiSpliceGraphReads
 from .EventsCoverage import EventsCoverage
 
 # simple quantifier

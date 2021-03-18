@@ -47,6 +47,7 @@ class MultiSpliceGraphReads(object):
             join="exact",
             group=constants.NC_SGREADS,
         )
+        self._df.attrs.clear()  # clear out attributes
         return
 
     @property
@@ -67,19 +68,27 @@ class MultiSpliceGraphReads(object):
         experiment: str,
         gi_idx: Union[int, slice] = slice(None),
         gj_idx: Union[int, slice] = slice(None),
+        compute: bool = True,
     ) -> xr.Dataset:
         """Load subset of specified experiment into memory"""
         experiment_iloc = self._df.indexes["experiment"].get_loc(experiment)
-        return self._df.isel(gi_idx=gi_idx, gj_idx=gj_idx, experiment=experiment_iloc).compute()
+        df = self._df.isel(gi_idx=gi_idx, gj_idx=gj_idx, experiment=experiment_iloc)
+        if compute:
+            df = df.compute()
+        return df
 
     def summarize_experiments(
         self,
         reduction: str = "median",
         gi_idx: Union[int, slice] = slice(None),
         gj_idx: Union[int, slice] = slice(None),
+        compute: bool = True,
     ) -> xr.Dataset:
         """Perform xarray reduction over experiments for specified subset"""
-        return getattr(self._df.isel(gi_idx=gi_idx, gj_idx=gj_idx), reduction)("experiment").compute()
+        df = getattr(self._df.isel(gi_idx=gi_idx, gj_idx=gj_idx), reduction)("experiment")
+        if compute:
+            df = df.compute()
+        return df
 
     @cached_property
     def intron_checksum(self) -> int:
