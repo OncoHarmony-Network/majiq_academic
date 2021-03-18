@@ -230,7 +230,7 @@
                     searching: false,
                     info: false,
                     ajax: {
-                        url: '{{ url_for('violin_data') }}' + '/' + encodeURIComponent(lsv_table.dataset.lsvId),
+                        url: '{{ url_for('main.violin_data') }}' + '/' + encodeURIComponent(lsv_table.dataset.lsvId),
                         data: d => {
                             d['lsv_id'] = lsv_table.dataset.lsvId;
                             d['hidden_idx'] = hidden_idx.length > 0 ? hidden_idx.join(',') : undefined;
