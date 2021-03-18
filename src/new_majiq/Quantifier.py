@@ -386,8 +386,10 @@ class QuantifiableCoverage(object):
     def as_dataframe(self, sg: SpliceGraph) -> pd.DataFrame:
         # event information
         q_events = self.get_events(sg.introns, sg.junctions)
-        event_id = sg.event_id(q_events.ref_exon_idx, q_events.event_type)
-        event_description = sg.event_description(
+        event_id = sg.exon_connections.event_id(
+            q_events.ref_exon_idx, q_events.event_type
+        )
+        event_description = sg.exon_connections.event_description(
             q_events.ref_exon_idx, q_events.event_type
         )
         ref_exon_start = sg.exons.start[q_events.ref_exon_idx]

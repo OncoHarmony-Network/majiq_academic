@@ -18,6 +18,7 @@ from new_majiq.Exons import Exons
 from new_majiq.Events import Events
 from new_majiq.GeneIntrons import GeneIntrons
 from new_majiq.GeneJunctions import GeneJunctions
+from new_majiq.ExonConnections import ExonConnections
 from new_majiq.internals import SpliceGraph as _SpliceGraph
 from new_majiq.internals import GFF3Types
 
@@ -97,29 +98,9 @@ class SpliceGraph(object):
     def junctions(self) -> GeneJunctions:
         return GeneJunctions(self._sg._junctions)
 
-    def lsvs(self) -> Events:
-        """Construct current LSVs"""
-        return Events(self._sg._exon_connections.lsvs())
-
-    def constitutive(self) -> Events:
-        """Construct current constitutive events"""
-        return Events(self._sg._exon_connections.constitutive())
-
-    def event_id(
-        self,
-        ref_exon_idx: np.ndarray,
-        event_type: np.ndarray,
-    ) -> List[str]:
-        """identifier for specified events as used by voila"""
-        return self._sg._exon_connections.event_id(ref_exon_idx, event_type)
-
-    def event_description(
-        self,
-        ref_exon_idx: np.ndarray,
-        event_type: np.ndarray,
-    ) -> List[str]:
-        """description of specified events as used by voila"""
-        return self._sg._exon_connections.event_description(ref_exon_idx, event_type)
+    @property
+    def exon_connections(self) -> ExonConnections:
+        return ExonConnections(self._sg._exon_connections)
 
     def to_zarr(self, path: Union[str, Path]) -> None:
         """Serialize splicegraph to zarr format"""

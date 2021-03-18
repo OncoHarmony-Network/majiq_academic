@@ -1093,9 +1093,9 @@ void init_pyExonConnections(pyExonConnections_t& pyExonConnections) {
         py::arg("exons"),
         py::arg("introns"),
         py::arg("junctions"))
-    .def("_exons", &ExonConnections::exons, "underlying exons")
-    .def("_introns", &ExonConnections::introns, "underlying introns")
-    .def("_junctions", &ExonConnections::junctions, "underlying junctions")
+    .def_property_readonly("_exons", &ExonConnections::exons, "underlying exons")
+    .def_property_readonly("_introns", &ExonConnections::introns, "underlying introns")
+    .def_property_readonly("_junctions", &ExonConnections::junctions, "underlying junctions")
     .def("lsvs", &ExonConnections::LSVEvents, "Construct LSV Events")
     .def("constitutive", &ExonConnections::ConstitutiveEvents,
         "Construct Constitutive Events")
@@ -1219,28 +1219,28 @@ void init_pyExonConnections(pyExonConnections_t& pyExonConnections) {
     .def("event_id",
         [](const ExonConnections& self,
           py::array_t<size_t> _exon_idx,
-          py::array_t<std::array<char, 1>> _strand) {
-        if (_exon_idx.ndim() != 1 || _strand.ndim() != 1) {
-        throw std::runtime_error("exon_idx and strand must be 1D");
-        } else if (_exon_idx.shape(0) != _strand.shape(0)) {
-        throw std::runtime_error("exon_idx and strand must have same shape");
+          py::array_t<std::array<char, 1>> _event_type) {
+        if (_exon_idx.ndim() != 1 || _event_type.ndim() != 1) {
+        throw std::runtime_error("exon_idx and event_type must be 1D");
+        } else if (_exon_idx.shape(0) != _event_type.shape(0)) {
+        throw std::runtime_error("exon_idx and event_type must have same shape");
         }
         std::vector<std::string> result(_exon_idx.shape(0));
         {
           auto exon_idx = _exon_idx.unchecked<1>();
-          auto strand = _strand.unchecked<1>();
+          auto event_type = _event_type.unchecked<1>();
           for (size_t i = 0; i < result.size(); ++i) {
           if (exon_idx(i) >= self.num_exons()) {
             throw std::invalid_argument("exon_idx has values out of range");
           }
           result[i] = self.id(Event{
-              exon_idx(i), static_cast<EventType>(strand(i)[0])});
+              exon_idx(i), static_cast<EventType>(event_type(i)[0])});
           }
         }
         return result;
         },
         "List of event_id for specified events",
-        py::arg("exon_idx"), py::arg("strand"))
+        py::arg("exon_idx"), py::arg("event_type"))
     .def("event_id",
         [](const ExonConnections& self, size_t exon_idx, bool is_source) {
         if (exon_idx >= self.num_exons()) {
@@ -1254,28 +1254,28 @@ void init_pyExonConnections(pyExonConnections_t& pyExonConnections) {
     .def("event_description",
         [](const ExonConnections& self,
           py::array_t<size_t> _exon_idx,
-          py::array_t<std::array<char, 1>> _strand) {
-        if (_exon_idx.ndim() != 1 || _strand.ndim() != 1) {
-        throw std::runtime_error("exon_idx and strand must be 1D");
-        } else if (_exon_idx.shape(0) != _strand.shape(0)) {
-        throw std::runtime_error("exon_idx and strand must have same shape");
+          py::array_t<std::array<char, 1>> _event_type) {
+        if (_exon_idx.ndim() != 1 || _event_type.ndim() != 1) {
+        throw std::runtime_error("exon_idx and event_type must be 1D");
+        } else if (_exon_idx.shape(0) != _event_type.shape(0)) {
+        throw std::runtime_error("exon_idx and event_type must have same shape");
         }
         std::vector<std::string> result(_exon_idx.shape(0));
         {
           auto exon_idx = _exon_idx.unchecked<1>();
-          auto strand = _strand.unchecked<1>();
+          auto event_type = _event_type.unchecked<1>();
           for (size_t i = 0; i < result.size(); ++i) {
           if (exon_idx(i) >= self.num_exons()) {
             throw std::invalid_argument("exon_idx has values out of range");
           }
           result[i] = self.description(Event{
-              exon_idx(i), static_cast<EventType>(strand(i)[0])});
+              exon_idx(i), static_cast<EventType>(event_type(i)[0])});
           }
         }
         return result;
         },
         "List of description for specified events",
-        py::arg("exon_idx"), py::arg("strand"))
+        py::arg("exon_idx"), py::arg("event_type"))
     .def("event_description",
         [](const ExonConnections& self, size_t exon_idx, bool is_source) {
         if (exon_idx >= self.num_exons()) {

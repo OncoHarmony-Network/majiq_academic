@@ -127,8 +127,10 @@ def run(args: argparse.Namespace) -> None:
     sg = nm.SpliceGraph.from_zarr(args.splicegraph)
     q_events = q.get_events(sg.introns, sg.junctions)
     # get lsv id/description (legacy: lsv_type)
-    event_id = sg.event_id(q_events.ref_exon_idx, q_events.event_type)
-    event_description = sg.event_description(q_events.ref_exon_idx, q_events.event_type)
+    event_id = sg.exon_connections.event_id(q_events.ref_exon_idx, q_events.event_type)
+    event_description = sg.exon_connections.event_description(
+        q_events.ref_exon_idx, q_events.event_type
+    )
     # get start/end of each connection
     start = q_events.connection_start()
     end = q_events.connection_end()

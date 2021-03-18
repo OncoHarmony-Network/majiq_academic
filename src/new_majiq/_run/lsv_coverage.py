@@ -77,7 +77,7 @@ def run(args: argparse.Namespace) -> None:
     sj_introns = nm.SJIntronsBins.from_zarr(args.sj)
     log.info("Obtaining coverage over LSVs")
     lsv_coverage = nm.EventsCoverage.from_events_and_sj(
-        sg.lsvs(),
+        sg.exon_connections.lsvs(),
         sj_junctions,
         sj_introns,
         num_bootstraps=args.num_bootstraps,
