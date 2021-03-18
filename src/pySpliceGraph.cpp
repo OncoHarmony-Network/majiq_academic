@@ -120,6 +120,9 @@ void define_sjbins_properties(pyClassShared_t<SJBinsT>& pySJBins) {
         [](const SJBinsT& self,
           py::array_t<size_t> idx, py::array_t<majiq::real_t> pvalue) {
         auto f = [&self](size_t i, majiq::real_t p) {
+          if (i >= self.num_regions()) {
+            throw std::invalid_argument("idx has out of range values");
+          }
           return self.numstacks(i, p); };
         return py::vectorize(f)(idx, pvalue);
         },
@@ -131,6 +134,9 @@ void define_sjbins_properties(pyClassShared_t<SJBinsT>& pySJBins) {
           py::array_t<size_t> idx,
           py::array_t<CountT> minreads) {
         auto f = [&self](size_t i, CountT r) {
+          if (i >= self.num_regions()) {
+            throw std::invalid_argument("idx has out of range values");
+          }
           return self.numbins_minreads(i, r); };
         return py::vectorize(f)(idx, minreads);
         },
@@ -141,6 +147,9 @@ void define_sjbins_properties(pyClassShared_t<SJBinsT>& pySJBins) {
           py::array_t<size_t> idx,
           py::array_t<majiq::junction_pos_t> num_stacks) {
         auto f = [&self](size_t i, majiq::junction_pos_t n) {
+          if (i >= self.num_regions()) {
+            throw std::invalid_argument("idx has out of range values");
+          }
           return self.numreads(i, n); };
         return py::vectorize(f)(idx, num_stacks);
         },
@@ -198,14 +207,24 @@ void define_coordinates_properties(pyClassShared_t<RegionsT>& pyRegions) {
   using majiq_pybind::ArrayFromOffsetsVector;
   if constexpr(std::is_same_v<ParentT, majiq::KnownGene>) {
     pyRegions
-      .def("find",
+      .def("index",
           [](const RegionsT& self,
-            size_t gene_idx, position_t start, position_t end) {
-          auto it = self.find(
-              RegionT{(*self.parents_)[gene_idx], IntervalT{start, end}});
-          return it == self.end() ? -1 : it - self.begin();
+            py::array_t<size_t> gene_idx,
+            py::array_t<position_t> start,
+            py::array_t<position_t> end) {
+          auto f = [&self](size_t g, position_t s, position_t e) -> std::ptrdiff_t {
+            if (g >= self.parents_->size()) { return -1; }
+            IntervalT iv;
+            try {
+              iv = IntervalT{s, e};
+            } catch (std::invalid_argument& e) {
+              return -1;
+            }
+            auto it = self.find(RegionT{(*self.parents_)[g], iv});
+            return it == self.end() ? -1 : it - self.begin(); };
+          return py::vectorize(f)(gene_idx, start, end);
           },
-          "Get index for specified region (or -1 if it doesn't exist)",
+          "Get indexes for specified regions (or -1 if it doesn't exist)",
           py::arg("gene_idx"),
           py::arg("start"),
           py::arg("end"));
@@ -380,6 +399,9 @@ std::shared_ptr<Connections> MakeConnections(
   std::vector<RegionT> connection_vec{};
   connection_vec.reserve(gene_idx.shape(0));
   for (py::ssize_t i = 0; i < gene_idx.shape(0); ++i) {
+    if (gene_idx(i) >= genes->size()) {
+      throw std::invalid_argument("gene_idx has values out of range");
+    }
     connection_vec.push_back(RegionT{
         majiq::KnownGene{gene_idx(i), genes}, IntervalT{start(i), end(i)},
         denovo(i), passed_build(i), simplified(i)});
@@ -450,6 +472,9 @@ void init_Genes(pyGenes_t& pyGenes) {
           std::vector<majiq::Gene> gene_vec{};
           gene_vec.reserve(geneid.size());
           for (size_t i = 0; i < geneid.size(); ++i) {
+            if (contig_idx(i) >= contigs->size()) {
+              throw std::invalid_argument("contig_idx has values out of range");
+            }
             gene_vec.push_back(majiq::Gene{
                 majiq::KnownContig{contig_idx(i), contigs},
                 majiq::ClosedInterval{start(i), end(i)},
@@ -502,6 +527,9 @@ void init_Exons(pyExons_t& pyExons) {
           std::vector<majiq::Exon> exon_vec{};
           exon_vec.reserve(gene_idx.shape(0));
           for (py::ssize_t i = 0; i < gene_idx.shape(0); ++i) {
+            if (gene_idx(i) >= genes->size()) {
+              throw std::invalid_argument("gene_idx has values out of range");
+            }
             exon_vec.push_back(majiq::Exon{
                 majiq::KnownGene{gene_idx(i), genes},
                 majiq::ClosedInterval{start(i), end(i)},
@@ -535,7 +563,11 @@ void init_Exons(pyExons_t& pyExons) {
     .def("is_denovo",
         [](const Exons& self,
           py::array_t<size_t> exon_idx) -> py::array_t<bool> {
-        auto f = [&self](size_t i) { return self[i].is_denovo(); };
+        auto f = [&self](size_t i) {
+          if (i >= self.size()) {
+            throw std::invalid_argument("exon_idx has values out of range");
+          }
+          return self[i].is_denovo(); };
         return py::vectorize(f)(exon_idx);
         },
         "Indicate if selected exons are denovo",
@@ -597,6 +629,9 @@ void init_SJIntrons(pySJIntrons_t& pySJIntrons) {
           auto annotated = _annotated.unchecked<1>();
           std::vector<SJIntron> result(start.shape(0));
           for (size_t i = 0; i < result.size(); ++i) {
+            if (contig_idx(i) >= contigs->size()) {
+              throw std::invalid_argument("contig_idx has values out of range");
+            }
             result[i] = SJIntron{
               majiq::KnownContig{contig_idx(i), contigs},
               majiq::ClosedInterval{start(i), end(i)},
@@ -922,6 +957,10 @@ void init_PyEvents(pyEvents_t& pyEvents) {
             auto is_intron = _is_intron.unchecked<1>();
             auto connection_idx = _connection_idx.unchecked<1>();
             for (size_t i = 0; i < connections_vec.size(); ++i) {
+              if (connection_idx(i)
+                  >= (is_intron(i) ? introns->size() : junctions->size())) {
+                throw std::invalid_argument("connection_idx has out of range values");
+              }
               connections_vec[i] = ConnectionIndex{
                 is_intron(i), connection_idx(i)};
             }
@@ -1076,6 +1115,9 @@ void init_pyExonConnections(pyExonConnections_t& pyExonConnections) {
         auto _is_source = is_source.unchecked<1>();
         std::vector<Event> events(_exon_idx.shape(0));
         for (py::ssize_t i = 0; i < _exon_idx.shape(0); ++i) {
+          if (_exon_idx(i) >= self.num_exons()) {
+            throw std::invalid_argument("exon_idx has out of range values");
+          }
           events.emplace_back(
               _exon_idx(i),
               _is_source(i) ? EventType::SRC_EVENT : EventType::DST_EVENT);
@@ -1089,6 +1131,9 @@ void init_pyExonConnections(pyExonConnections_t& pyExonConnections) {
           py::array_t<size_t> exon_idx,
           py::array_t<bool> is_source) -> py::array_t<bool> {
         auto f = [&self](size_t idx, bool is_src) {
+          if (idx >= self.num_exons()) {
+            throw std::invalid_argument("exon_idx has values out of range");
+          }
           return self.has_intron(Event{
               idx, is_src ? EventType::SRC_EVENT : EventType::DST_EVENT});
         };
@@ -1101,6 +1146,9 @@ void init_pyExonConnections(pyExonConnections_t& pyExonConnections) {
           py::array_t<size_t> exon_idx,
           py::array_t<bool> is_source) -> py::array_t<size_t> {
         auto f = [&self](size_t idx, bool is_src) -> size_t {
+          if (idx >= self.num_exons()) {
+            throw std::invalid_argument("exon_idx has values out of range");
+          }
           return self.event_size(Event{
               idx, is_src ? EventType::SRC_EVENT : EventType::DST_EVENT});
         };
@@ -1113,6 +1161,9 @@ void init_pyExonConnections(pyExonConnections_t& pyExonConnections) {
           py::array_t<size_t> exon_idx,
           py::array_t<bool> is_source) -> py::array_t<bool> {
         auto f = [&self](size_t idx, bool is_src) -> bool {
+          if (idx >= self.num_exons()) {
+            throw std::invalid_argument("exon_idx has values out of range");
+          }
           return self.passed(Event{
               idx, is_src ? EventType::SRC_EVENT : EventType::DST_EVENT});
         };
@@ -1125,6 +1176,9 @@ void init_pyExonConnections(pyExonConnections_t& pyExonConnections) {
           py::array_t<size_t> exon_idx,
           py::array_t<bool> is_source) -> py::array_t<bool> {
         auto f = [&self](size_t idx, bool is_src) -> bool {
+          if (idx >= self.num_exons()) {
+            throw std::invalid_argument("exon_idx has values out of range");
+          }
           return self.redundant(Event{
               idx, is_src ? EventType::SRC_EVENT : EventType::DST_EVENT});
         };
@@ -1137,6 +1191,9 @@ void init_pyExonConnections(pyExonConnections_t& pyExonConnections) {
           py::array_t<size_t> exon_idx,
           py::array_t<bool> is_source) -> py::array_t<bool> {
         auto f = [&self](size_t idx, bool is_src) -> bool {
+          if (idx >= self.num_exons()) {
+            throw std::invalid_argument("exon_idx has values out of range");
+          }
           return self.is_LSV(Event{
               idx, is_src ? EventType::SRC_EVENT : EventType::DST_EVENT});
         };
@@ -1149,6 +1206,9 @@ void init_pyExonConnections(pyExonConnections_t& pyExonConnections) {
           py::array_t<size_t> exon_idx,
           py::array_t<bool> is_source) -> py::array_t<bool> {
         auto f = [&self](size_t idx, bool is_src) -> bool {
+          if (idx >= self.num_exons()) {
+            throw std::invalid_argument("exon_idx has values out of range");
+          }
           return self.is_constitutive(Event{
               idx, is_src ? EventType::SRC_EVENT : EventType::DST_EVENT});
         };
@@ -1170,6 +1230,9 @@ void init_pyExonConnections(pyExonConnections_t& pyExonConnections) {
           auto exon_idx = _exon_idx.unchecked<1>();
           auto strand = _strand.unchecked<1>();
           for (size_t i = 0; i < result.size(); ++i) {
+          if (exon_idx(i) >= self.num_exons()) {
+            throw std::invalid_argument("exon_idx has values out of range");
+          }
           result[i] = self.id(Event{
               exon_idx(i), static_cast<EventType>(strand(i)[0])});
           }
@@ -1180,6 +1243,9 @@ void init_pyExonConnections(pyExonConnections_t& pyExonConnections) {
         py::arg("exon_idx"), py::arg("strand"))
     .def("event_id",
         [](const ExonConnections& self, size_t exon_idx, bool is_source) {
+        if (exon_idx >= self.num_exons()) {
+          throw std::runtime_error("exon_idx is out of range");
+        }
         return self.id(Event{
             exon_idx, is_source ? EventType::SRC_EVENT : EventType::DST_EVENT});
         },
@@ -1199,6 +1265,9 @@ void init_pyExonConnections(pyExonConnections_t& pyExonConnections) {
           auto exon_idx = _exon_idx.unchecked<1>();
           auto strand = _strand.unchecked<1>();
           for (size_t i = 0; i < result.size(); ++i) {
+          if (exon_idx(i) >= self.num_exons()) {
+            throw std::invalid_argument("exon_idx has values out of range");
+          }
           result[i] = self.description(Event{
               exon_idx(i), static_cast<EventType>(strand(i)[0])});
           }
@@ -1209,6 +1278,9 @@ void init_pyExonConnections(pyExonConnections_t& pyExonConnections) {
         py::arg("exon_idx"), py::arg("strand"))
     .def("event_description",
         [](const ExonConnections& self, size_t exon_idx, bool is_source) {
+        if (exon_idx >= self.num_exons()) {
+          throw std::runtime_error("exon_idx is out of range");
+        }
         return self.description(Event{
             exon_idx, is_source ? EventType::SRC_EVENT : EventType::DST_EVENT});
         },
@@ -1315,6 +1387,9 @@ void init_SJJunctions(pySJJunctions_t& pySJJunctions) {
           // fill in junctions
           std::vector<majiq::SJJunction> sj_vec(start.shape(0));
           for (size_t i = 0; i < sj_vec.size(); ++i) {
+            if (contig_idx(i) >= contigs->size()) {
+              throw std::invalid_argument("contig_idx has values out of range");
+            }
             sj_vec[i] = majiq::SJJunction{
               majiq::KnownContig{contig_idx(i), contigs},
               majiq::OpenInterval{start(i), end(i)},
@@ -1512,6 +1587,9 @@ void init_SpliceGraph(py::class_<majiq::SpliceGraph>& pySpliceGraph) {
         "Unsimplify all junctions and introns in the splicegraph")
     .def("close_to_annotated_exon",
         [](SpliceGraph& sg, size_t gene_idx, position_t x, bool to_following) {
+        if (gene_idx >= sg.genes()->size()) {
+          throw std::invalid_argument("gene_idx is out of range");
+        }
         majiq::KnownGene g = (*sg.genes())[gene_idx];
         const majiq::Exons& exons = *sg.exons();
         return to_following

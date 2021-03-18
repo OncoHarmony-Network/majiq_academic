@@ -32,5 +32,9 @@ class GeneRegions(Regions):
         """Index of gene on which region is defined"""
         return self._gene_regions.gene_idx
 
+    def index(self, gene_idx: np.ndarray, start: np.ndarray, end: np.ndarray) -> np.ndarray:
+        """Get indexes of gene regions (-1 if not present)"""
+        return self._gene_regions.index(gene_idx, start, end)
+
     def slice_for_gene(self, gene_idx: int) -> slice:
         return self._slice_for_parent(gene_idx)
