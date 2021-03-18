@@ -8,7 +8,10 @@ Author: Joseph K Aicher
 
 import argparse
 
+import new_majiq.constants as constants
+
 from pathlib import Path
+from new_majiq._run._majiq_args import check_nonnegative_factory
 from new_majiq._run._run import GenericSubcommand
 from typing import (
     List,
@@ -35,6 +38,12 @@ def add_args(parser: argparse.ArgumentParser) -> None:
         "sg_coverage",
         type=Path,
         help="Path for output coverage over introns/junctions",
+    )
+    parser.add_argument(
+        "--chunksize",
+        type=check_nonnegative_factory(int, True),
+        default=constants.NC_SGREADS_CHUNKS,
+        help="Chunksize for per-experiment counts",
     )
     return
 
@@ -63,7 +72,7 @@ def run(args: argparse.Namespace) -> None:
         sj_junctions,
     )
     log.info(f"Saving coverage to {args.sg_coverage.resolve()}")
-    sg_coverage.to_zarr(args.sg_coverage, "w")
+    sg_coverage.to_zarr(args.sg_coverage, "w", args.chunksize)
     return
 
 

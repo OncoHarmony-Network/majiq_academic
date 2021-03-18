@@ -178,11 +178,16 @@ class SpliceGraphReads(object):
             bam_version=self.bam_version,
         )
 
-    def to_zarr(self, path: Union[str, Path], mode: str) -> None:
+    def to_zarr(
+        self,
+        path: Union[str, Path],
+        mode: str,
+        chunksize: int = constants.NC_SGREADS_CHUNKS
+    ) -> None:
         """Save to specified zarr file"""
         (
             self._df
-            .chunk(constants.NC_SGREADS_CHUNKS)  # type: ignore
+            .chunk(chunksize)  # type: ignore
             # add hash for introns/junctions
             .assign_coords(
                 intron_hash=("experiment", [self.introns.checksum_nodata()]),
