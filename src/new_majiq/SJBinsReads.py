@@ -76,7 +76,7 @@ class SJBinsReads(object):
     def numstacks(
         self,
         region_idx: Optional[ArrayLike] = None,
-        pvalue_threshold: ArrayLike = constants.DEFAULT_BUILD_STACK_PVALUE,
+        pvalue_threshold: ArrayLike = constants.DEFAULT_COVERAGE_STACK_PVALUE,
     ) -> ArrayLike:
         """Calculate number of stacks at specified regions/pvalues"""
         if region_idx is None:

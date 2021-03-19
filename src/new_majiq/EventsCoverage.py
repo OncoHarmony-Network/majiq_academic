@@ -130,8 +130,8 @@ class EventsCoverage(object):
         events: Events,
         sj_junctions: SJJunctionsBins,
         sj_introns: SJIntronsBins,
-        num_bootstraps: int = constants.DEFAULT_BUILD_NUM_BOOTSTRAPS,
-        pvalue_threshold: float = constants.DEFAULT_BUILD_STACK_PVALUE,
+        num_bootstraps: int = constants.DEFAULT_COVERAGE_NUM_BOOTSTRAPS,
+        pvalue_threshold: float = constants.DEFAULT_COVERAGE_STACK_PVALUE,
     ) -> "EventsCoverage":
         # only accept if bam_path/version are same in sj_junctions/introns
         if sj_junctions.original_path != sj_introns.original_path:

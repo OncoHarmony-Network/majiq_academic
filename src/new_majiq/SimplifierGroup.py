@@ -72,10 +72,10 @@ class SimplifierGroup(object):
     def add_experiment(
         self,
         sg_reads: SpliceGraphReads,
-        simplify_min_psi: float = constants.DEFAULT_BUILD_SIMPL_MINPSI,
-        simplify_minreads_annotated_junctions: float = constants.DEFAULT_BUILD_SIMPL_MINREADS_ANNOTATED_JUNCTION,
-        simplify_minreads_denovo_junctions: float = constants.DEFAULT_BUILD_SIMPL_MINREADS_DENOVO_JUNCTION,
-        simplify_minreads_introns: float = constants.DEFAULT_BUILD_SIMPL_MINREADS_INTRON,
+        simplify_min_psi: float = constants.DEFAULT_SIMPLIFIER_MINPSI,
+        simplify_minreads_annotated_junctions: float = constants.DEFAULT_SIMPLIFIER_MINREADS_ANNOTATED_JUNCTION,
+        simplify_minreads_denovo_junctions: float = constants.DEFAULT_SIMPLIFIER_MINREADS_DENOVO_JUNCTION,
+        simplify_minreads_introns: float = constants.DEFAULT_SIMPLIFIER_MINREADS_INTRON,
     ) -> "SimplifierGroup":
         """Add reads from experiment to group for simplification"""
         self._group.add_experiment(
@@ -88,7 +88,7 @@ class SimplifierGroup(object):
         return self
 
     def update_connections(
-        self, min_experiments: float = constants.DEFAULT_BUILD_MINEXPERIMENTS
+        self, min_experiments: float = constants.DEFAULT_SIMPLIFIER_MINEXPERIMENTS
     ) -> None:
         """Unsimplify introns/junctions with enough evidence, reset counts"""
         self._group.update_connections(min_experiments)

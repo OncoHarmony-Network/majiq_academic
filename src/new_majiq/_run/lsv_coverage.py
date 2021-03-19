@@ -45,13 +45,13 @@ def add_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
         "--num-bootstraps",
         type=check_nonnegative_factory(int, False),
-        default=constants.DEFAULT_BUILD_NUM_BOOTSTRAPS,
+        default=constants.DEFAULT_COVERAGE_NUM_BOOTSTRAPS,
         help="Number of bootstrap replicates to sample (default: %(default)s)",
     )
     parser.add_argument(
         "--stack-pvalue-threshold",
         type=check_nonnegative_factory(float, False),
-        default=constants.DEFAULT_BUILD_STACK_PVALUE,
+        default=constants.DEFAULT_COVERAGE_STACK_PVALUE,
         help="Bins with readrate having right-tailed probability less than this"
         " threshold vs Poisson from other nonzero bins will be ignored as"
         " outlier 'read stacks' (default: %(default).2e)",
