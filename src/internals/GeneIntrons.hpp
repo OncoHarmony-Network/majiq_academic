@@ -132,6 +132,46 @@ class GeneIntrons : public detail::GeneConnections<GeneIntron, false> {
         });
     return GeneIntrons{parents(), std::move(result_vec), connected_exons_};
   }
+
+  /**
+   * update connection data using overlapping introns from another source
+   */
+  void UpdateFlagsFrom(const GeneIntrons& donor) const {
+    if (parents() != donor.parents()) {
+      throw std::invalid_argument(
+          "UpdateFlagsFrom requires introns objects to share genes object");
+    }
+    // otherwise, do per gene
+    for (const auto& gene : *parents()) {
+      auto it = begin_parent(gene);
+      const auto it_end = end_parent(gene);
+      for (auto donor_it = donor.begin_parent(gene);
+          donor_it != donor.end_parent(gene); ++donor_it) {
+        // get first intron that could overlap
+        it = std::find_if(it, it_end,
+            [&donor_coords = donor_it->coordinates](const GeneIntron& x) {
+            return !IntervalPrecedes(x.coordinates, donor_coords); });
+        if (it == it_end) { break; }
+        for (auto update_it = it;
+            (update_it != it_end
+             && !IntervalPrecedes(
+               donor_it->coordinates, update_it->coordinates));
+            ++update_it) {
+          // update_it overlaps with donor
+          if (!donor_it->denovo()) {
+            update_it->denovo() = false;
+          }
+          if (!donor_it->simplified()) {
+            update_it->simplified() = false;
+          }
+          if (donor_it->passed_build()) {
+            update_it->passed_build() = true;
+          }
+        }  // loop over our introns that overlap with current donor
+      }  // loop over donors
+    }  // loop over genes
+    return;
+  }
   /**
    * get all potential introns (i.e. denovo as well) compared to exons
    *

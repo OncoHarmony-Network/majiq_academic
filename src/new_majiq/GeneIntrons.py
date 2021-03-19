@@ -59,6 +59,11 @@ class GeneIntrons(GeneConnections):
         """Get potential gene introns from exons, noting annotated introns"""
         return GeneIntrons(self._gene_introns.potential_introns(exons._exons))
 
+    def update_flags_from(self, donor_introns: "GeneIntrons") -> None:
+        """Update denovo, passed_build, and simplified using introns from donor"""
+        self._gene_introns.update_flags_from(donor_introns._gene_introns)
+        return
+
     @property
     def _gene_introns(self) -> _GeneIntrons:
         """Underlying internals representation"""

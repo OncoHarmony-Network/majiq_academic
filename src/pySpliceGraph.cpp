@@ -1378,6 +1378,9 @@ void init_GeneIntrons(pyGeneIntrons_t& pyGeneIntrons) {
         py::arg("genes"),
         py::arg("gene_idx"), py::arg("start"), py::arg("end"),
         py::arg("denovo"), py::arg("passed_build"), py::arg("simplified"))
+    .def("update_flags_from", &GeneIntrons::UpdateFlagsFrom,
+        "Update intron flags using introns that overlap from input",
+        py::arg("donor_introns"))
     .def("build_group", [](std::shared_ptr<GeneIntrons>& gene_introns) {
         return majiq::GroupIntronsGenerator(gene_introns);
         },

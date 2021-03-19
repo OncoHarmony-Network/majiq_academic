@@ -40,8 +40,7 @@ struct GeneConnection
   GeneConnection& operator=(GeneConnection&&) = default;
 
   // access data nicely
-  const bool& denovo() const noexcept { return this->data.denovo; }
-  bool& denovo() noexcept { return this->data.denovo; }
+  bool& denovo() const noexcept { return this->data.denovo; }
   bool& passed_build() const noexcept { return this->data.passed_build; }
   bool& simplified() const noexcept { return this->data.simplified; }
   size_t& start_exon_idx() const noexcept { return this->data.start_exon_idx; }

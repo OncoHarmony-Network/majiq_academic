@@ -20,7 +20,7 @@ namespace majiq {
 namespace detail {
 struct ConnectionData {
  public:
-  bool denovo;
+  mutable bool denovo;
   mutable bool passed_build;
   mutable bool simplified;
   mutable size_t start_exon_idx;
