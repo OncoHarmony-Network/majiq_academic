@@ -13,6 +13,7 @@ import new_majiq.constants as constants
 
 from typing import (
     Optional,
+    Sequence,
     TYPE_CHECKING,
     Union,
 )
@@ -82,9 +83,65 @@ class GeneJunctions(GeneConnections):
         )
         return
 
-    @classmethod
+    @staticmethod
+    def load_dataset(path: Union[str, Path]) -> xr.Dataset:
+        """load junctions table from file"""
+        with xr.open_zarr(path, group=constants.NC_GENEJUNCTIONS) as df:
+            return df.load()
+
+    @staticmethod
+    def _combine_datasets(dfs: Sequence[xr.Dataset]) -> xr.Dataset:
+        """combine junctions found in multiple splicegraphs
+
+        Assumes that they all share the same genes
+        """
+        return (
+            xr.concat(
+                [
+                    df
+                    # work with not_passed so that can combine using ALL
+                    .assign_coords(not_passed=~df.passed_build)
+                    # set index so can see matches
+                    .set_index(gj_idx=["gene_idx", "start", "end"])
+                    # select variables we want to use
+                    .reset_coords()
+                    [["denovo", "not_passed", "simplified"]]
+                    for df in dfs
+                ],
+                # concatenate over new dimension inputs
+                dim="inputs",
+                # take all unique indexes (gene_idx, start, end)
+                join="outer",
+                # missing values ~ is denovo, not passed, and simplified
+                fill_value=True,
+                # don't retain any attributes here
+                combine_attrs="drop",
+            )
+            # aggregate over inputs using ALL rule
+            .all("inputs")
+            # get coordinates we want back ~ from load_dataset
+            .assign_coords(passed_build=lambda df: ~df.not_passed)
+            .drop_vars(["not_passed"])
+            .set_coords(["denovo", "simplified"])
+            .reset_index("gj_idx")
+        )
+
+    @staticmethod
+    def from_dataset_and_genes(df: xr.Dataset, genes: Genes) -> "GeneJunctions":
+        return GeneJunctions(
+            _GeneJunctions(
+                genes._genes,
+                df.gene_idx.values,
+                df.start.values,
+                df.end.values,
+                df.denovo.values,
+                df.passed_build.values,
+                df.simplified.values,
+            )
+        )
+
+    @staticmethod
     def from_zarr(
-        self,
         path: Union[str, Path],
         genes: Optional[Genes] = None,
     ) -> "GeneJunctions":
@@ -102,15 +159,6 @@ class GeneJunctions(GeneConnections):
         """
         if genes is None:
             genes = Genes.from_zarr(path)
-        with xr.open_zarr(path, group=constants.NC_GENEJUNCTIONS) as df:
-            return GeneJunctions(
-                _GeneJunctions(
-                    genes._genes,
-                    df.gene_idx.values,
-                    df.start.values,
-                    df.end.values,
-                    df.denovo.values,
-                    df.passed_build.values,
-                    df.simplified.values,
-                )
-            )
+        return GeneJunctions.from_dataset_and_genes(
+            GeneJunctions.load_dataset(path), genes
+        )
