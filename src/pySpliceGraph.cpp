@@ -1086,6 +1086,7 @@ void init_pyExonConnections(pyExonConnections_t& pyExonConnections) {
   using ExonsPtrT = std::shared_ptr<majiq::Exons>;
   using IntronsPtrT = std::shared_ptr<majiq::GeneIntrons>;
   using JunctionsPtrT = std::shared_ptr<majiq::GeneJunctions>;
+  using majiq_pybind::ArrayFromVectorAndOffset;
   pyExonConnections
     .def(
         py::init<const ExonsPtrT&, const IntronsPtrT&, const JunctionsPtrT&>(),
@@ -1093,6 +1094,62 @@ void init_pyExonConnections(pyExonConnections_t& pyExonConnections) {
         py::arg("exons"),
         py::arg("introns"),
         py::arg("junctions"))
+    .def_property_readonly("src_intron_idx",
+        [](py::object& self_obj) {
+        ExonConnections& self = self_obj.cast<ExonConnections&>();
+        const auto& indexes = self.src_introns();
+        return ArrayFromVectorAndOffset<size_t, size_t>(indexes.idx_, 0, self_obj);
+        },
+        "intron_idx for exon_connections in src_exon sorted order")
+    .def_property_readonly("src_intron_exon_offsets",
+        [](py::object& self_obj) {
+        ExonConnections& self = self_obj.cast<ExonConnections&>();
+        const auto& indexes = self.src_introns();
+        return ArrayFromVectorAndOffset<size_t, size_t>(indexes.exon_offsets_, 0, self_obj);
+        },
+        "offsets into src_intron_idx for each exon")
+    .def_property_readonly("dst_intron_idx",
+        [](py::object& self_obj) {
+        ExonConnections& self = self_obj.cast<ExonConnections&>();
+        const auto& indexes = self.dst_introns();
+        return ArrayFromVectorAndOffset<size_t, size_t>(indexes.idx_, 0, self_obj);
+        },
+        "intron_idx for exon_connections in dst_exon sorted order")
+    .def_property_readonly("dst_intron_exon_offsets",
+        [](py::object& self_obj) {
+        ExonConnections& self = self_obj.cast<ExonConnections&>();
+        const auto& indexes = self.dst_introns();
+        return ArrayFromVectorAndOffset<size_t, size_t>(indexes.exon_offsets_, 0, self_obj);
+        },
+        "offsets into dst_intron_idx for each exon")
+    .def_property_readonly("src_junction_idx",
+        [](py::object& self_obj) {
+        ExonConnections& self = self_obj.cast<ExonConnections&>();
+        const auto& indexes = self.src_junctions();
+        return ArrayFromVectorAndOffset<size_t, size_t>(indexes.idx_, 0, self_obj);
+        },
+        "junction_idx for exon_connections in src_exon sorted order")
+    .def_property_readonly("src_junction_exon_offsets",
+        [](py::object& self_obj) {
+        ExonConnections& self = self_obj.cast<ExonConnections&>();
+        const auto& indexes = self.src_junctions();
+        return ArrayFromVectorAndOffset<size_t, size_t>(indexes.exon_offsets_, 0, self_obj);
+        },
+        "offsets into src_junction_idx for each exon")
+    .def_property_readonly("dst_junction_idx",
+        [](py::object& self_obj) {
+        ExonConnections& self = self_obj.cast<ExonConnections&>();
+        const auto& indexes = self.dst_junctions();
+        return ArrayFromVectorAndOffset<size_t, size_t>(indexes.idx_, 0, self_obj);
+        },
+        "junction_idx for exon_connections in dst_exon sorted order")
+    .def_property_readonly("dst_junction_exon_offsets",
+        [](py::object& self_obj) {
+        ExonConnections& self = self_obj.cast<ExonConnections&>();
+        const auto& indexes = self.dst_junctions();
+        return ArrayFromVectorAndOffset<size_t, size_t>(indexes.exon_offsets_, 0, self_obj);
+        },
+        "offsets into dst_junction_idx for each exon")
     .def_property_readonly("_exons", &ExonConnections::exons, "underlying exons")
     .def_property_readonly("_introns", &ExonConnections::introns, "underlying introns")
     .def_property_readonly("_junctions", &ExonConnections::junctions, "underlying junctions")

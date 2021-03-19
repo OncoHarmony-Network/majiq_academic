@@ -391,6 +391,11 @@ class ExonConnections {
   const std::shared_ptr<GeneIntrons>& introns() const { return introns_; }
   const std::shared_ptr<GeneJunctions>& junctions() const { return junctions_; }
 
+  const detail::ExonConnectionsIndexes& src_introns() const { return src_introns_; }
+  const detail::ExonConnectionsIndexes& dst_introns() const { return dst_introns_; }
+  const detail::ExonConnectionsIndexes& src_junctions() const { return src_junctions_; }
+  const detail::ExonConnectionsIndexes& dst_junctions() const { return dst_junctions_; }
+
   ExonConnections(
       const std::shared_ptr<Exons>& exons,
       const std::shared_ptr<GeneIntrons>& introns,
