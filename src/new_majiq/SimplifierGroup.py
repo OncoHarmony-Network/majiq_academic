@@ -72,18 +72,18 @@ class SimplifierGroup(object):
     def add_experiment(
         self,
         sg_reads: SpliceGraphReads,
-        simplify_min_psi: float = constants.DEFAULT_SIMPLIFIER_MINPSI,
-        simplify_minreads_annotated_junctions: float = constants.DEFAULT_SIMPLIFIER_MINREADS_ANNOTATED_JUNCTION,
-        simplify_minreads_denovo_junctions: float = constants.DEFAULT_SIMPLIFIER_MINREADS_DENOVO_JUNCTION,
-        simplify_minreads_introns: float = constants.DEFAULT_SIMPLIFIER_MINREADS_INTRON,
+        min_psi: float = constants.DEFAULT_SIMPLIFIER_MINPSI,
+        minreads_annotated: float = constants.DEFAULT_SIMPLIFIER_MINREADS_ANNOTATED,
+        minreads_denovo: float = constants.DEFAULT_SIMPLIFIER_MINREADS_DENOVO,
+        minreads_introns: float = constants.DEFAULT_SIMPLIFIER_MINREADS_INTRON,
     ) -> "SimplifierGroup":
         """Add reads from experiment to group for simplification"""
         self._group.add_experiment(
             sg_reads._sg_reads,
-            simplify_min_psi,
-            simplify_minreads_annotated_junctions,
-            simplify_minreads_denovo_junctions,
-            simplify_minreads_introns,
+            min_psi,
+            minreads_annotated,
+            minreads_denovo,
+            minreads_introns,
         )
         return self
 
