@@ -1241,16 +1241,6 @@ void init_pyExonConnections(pyExonConnections_t& pyExonConnections) {
         },
         "List of event_id for specified events",
         py::arg("exon_idx"), py::arg("event_type"))
-    .def("event_id",
-        [](const ExonConnections& self, size_t exon_idx, bool is_source) {
-        if (exon_idx >= self.num_exons()) {
-          throw std::runtime_error("exon_idx is out of range");
-        }
-        return self.id(Event{
-            exon_idx, is_source ? EventType::SRC_EVENT : EventType::DST_EVENT});
-        },
-        "Return identifier for event",
-        py::arg("exon_idx"), py::arg("is_source"))
     .def("event_description",
         [](const ExonConnections& self,
           py::array_t<size_t> _exon_idx,
@@ -1275,17 +1265,7 @@ void init_pyExonConnections(pyExonConnections_t& pyExonConnections) {
         return result;
         },
         "List of description for specified events",
-        py::arg("exon_idx"), py::arg("event_type"))
-    .def("event_description",
-        [](const ExonConnections& self, size_t exon_idx, bool is_source) {
-        if (exon_idx >= self.num_exons()) {
-          throw std::runtime_error("exon_idx is out of range");
-        }
-        return self.description(Event{
-            exon_idx, is_source ? EventType::SRC_EVENT : EventType::DST_EVENT});
-        },
-        "Return description for event",
-        py::arg("exon_idx"), py::arg("is_source"));
+        py::arg("exon_idx"), py::arg("event_type"));
 }
 
 void init_SJIntronsBins(pySJIntronsBins_t& pySJIntronsBins) {
