@@ -12,7 +12,6 @@ import new_majiq.constants as constants
 from new_majiq.GeneIntrons import GeneIntrons
 from new_majiq.GeneJunctions import GeneJunctions
 from new_majiq.SpliceGraphReads import SpliceGraphReads
-from new_majiq.internals import ExonConnections as _ExonConnections
 from new_majiq.internals import SimplifierGroup as _SimplifierGroup
 
 from typing import (
@@ -23,8 +22,8 @@ from typing import (
 class SimplifierGroup(object):
     """Accumulate groups of experiments to determine connections for simplification"""
 
-    def __init__(self, exon_connections: _ExonConnections):
-        self._group: Final[_SimplifierGroup] = _SimplifierGroup(exon_connections)
+    def __init__(self, group: _SimplifierGroup):
+        self._group: Final[_SimplifierGroup] = group
         return
 
     @property

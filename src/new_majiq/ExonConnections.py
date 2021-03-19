@@ -12,6 +12,7 @@ from new_majiq.Exons import Exons
 from new_majiq.GeneIntrons import GeneIntrons
 from new_majiq.GeneJunctions import GeneJunctions
 from new_majiq.Events import Events
+from new_majiq.SimplifierGroup import SimplifierGroup, _SimplifierGroup
 from new_majiq.internals import ExonConnections as _ExonConnections
 
 from typing import (
@@ -26,6 +27,10 @@ class ExonConnections(object):
     def __init__(self, exon_connections: _ExonConnections):
         self._exon_connections: Final[_ExonConnections] = exon_connections
         return
+
+    def simplifier(self) -> SimplifierGroup:
+        """Create simplifier group to unsimplify introns and junctions"""
+        return SimplifierGroup(_SimplifierGroup(self._exon_connections))
 
     @property
     def exons(self) -> Exons:
