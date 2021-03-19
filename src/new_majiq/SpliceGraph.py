@@ -55,18 +55,15 @@ class SpliceGraph(object):
         )
 
     def with_updated_exon_connections(
-        self,
-        exons: Exons,
-        junctions: GeneJunctions,
-        introns: GeneIntrons,
+        self, exon_connections: ExonConnections
     ) -> "SpliceGraph":
         """convenience function to build splicegraph with same contigs/genes"""
         return SpliceGraph.from_components(
             self.contigs,
             self.genes,
-            exons,
-            junctions,
-            introns,
+            exon_connections.exons,
+            exon_connections.junctions,
+            exon_connections.introns,
         )
 
     @classmethod

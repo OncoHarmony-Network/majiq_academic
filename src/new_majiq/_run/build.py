@@ -189,6 +189,7 @@ def run(args: argparse.Namespace) -> None:
 
     # begin processing
     import new_majiq as nm
+    from new_majiq.ExonConnections import ExonConnections
     from new_majiq.logger import get_logger
 
     log = get_logger()
@@ -255,7 +256,7 @@ def run(args: argparse.Namespace) -> None:
 
     log.info("Updating splicegraph with updated junctions, exons, and introns")
     sg = sg.with_updated_exon_connections(
-        updated_exons, updated_junctions, updated_introns
+        ExonConnections.create_connecting(updated_exons, updated_introns, updated_junctions)
     )
 
     log.info(f"Saving updated splicegraph to {args.out_sg.resolve()}")
