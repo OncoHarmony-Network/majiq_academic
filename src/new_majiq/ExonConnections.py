@@ -111,3 +111,59 @@ class ExonConnections(object):
     ) -> List[str]:
         """List of event descriptions for VOILA for specified events"""
         return self._exon_connections.event_description(ref_exon_idx, event_type)
+
+    def src_introns_for(self, exon_idx: int) -> np.ndarray:
+        """array of intron_idx that have exon_idx as src_exon
+
+        Note
+        ----
+        This includes exitrons and simplified introns.
+        """
+        if exon_idx < 0 or exon_idx >= len(self.exons):
+            raise ValueError("invalid exon_idx")
+        idx_slice = slice(
+            *self._exon_connections.src_intron_exon_offsets[exon_idx:(2 + exon_idx)]
+        )
+        return self._exon_connections.src_intron_idx[idx_slice]
+
+    def dst_introns_for(self, exon_idx: int) -> np.ndarray:
+        """array of intron_idx that have exon_idx as dst_exon
+
+        Note
+        ----
+        This includes exitrons and simplified introns.
+        """
+        if exon_idx < 0 or exon_idx >= len(self.exons):
+            raise ValueError("invalid exon_idx")
+        idx_slice = slice(
+            *self._exon_connections.dst_intron_exon_offsets[exon_idx:(2 + exon_idx)]
+        )
+        return self._exon_connections.dst_intron_idx[idx_slice]
+
+    def src_junctions_for(self, exon_idx: int) -> np.ndarray:
+        """array of junction_idx that have exon_idx as src_exon
+
+        Note
+        ----
+        This includes exitrons and simplified junctions.
+        """
+        if exon_idx < 0 or exon_idx >= len(self.exons):
+            raise ValueError("invalid exon_idx")
+        idx_slice = slice(
+            *self._exon_connections.src_junction_exon_offsets[exon_idx:(2 + exon_idx)]
+        )
+        return self._exon_connections.src_junction_idx[idx_slice]
+
+    def dst_junctions_for(self, exon_idx: int) -> np.ndarray:
+        """array of junction_idx that have exon_idx as dst_exon
+
+        Note
+        ----
+        This includes exitrons and simplified junctions.
+        """
+        if exon_idx < 0 or exon_idx >= len(self.exons):
+            raise ValueError("invalid exon_idx")
+        idx_slice = slice(
+            *self._exon_connections.dst_junction_exon_offsets[exon_idx:(2 + exon_idx)]
+        )
+        return self._exon_connections.dst_junction_idx[idx_slice]
