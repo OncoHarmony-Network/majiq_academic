@@ -50,6 +50,58 @@ class ExonConnections(object):
         """construct Events for all constitutive events defined by ExonConnections"""
         return Events(self._exon_connections.constitutive())
 
+    @staticmethod
+    def _event_type_is_source(event_type: np.ndarray) -> np.ndarray:
+        """convert array(dtype="S1") to array(dtype=bool) for vectorized internals"""
+        event_type = np.array(event_type, copy=False)
+        is_source = event_type == b's'
+        is_target = event_type == b't'
+        if not (is_source | is_target).all():
+            raise ValueError("event_type has invalid values (must be b's' or b't')")
+        return is_source
+
+    def _events_for(self, ref_exon_idx: np.ndarray, event_type: np.ndarray) -> Events:
+        """construct events for specified exons/event types"""
+        return Events(self._exon_connections.events_for(
+            ref_exon_idx, self._event_type_is_source(event_type)
+        ))
+
+    def has_intron(self, ref_exon_idx: np.ndarray, event_type: np.ndarray) -> np.ndarray:
+        """Indicate if selected events have a non-simplified intron"""
+        return self._exon_connections.has_intron(
+            ref_exon_idx, self._event_type_is_source(event_type)
+        )
+
+    def event_size(self, ref_exon_idx: np.ndarray, event_type: np.ndarray) -> np.ndarray:
+        """Indicate number of connections in the event"""
+        return self._exon_connections.event_size(
+            ref_exon_idx, self._event_type_is_source(event_type)
+        )
+
+    def passed(self, ref_exon_idx: np.ndarray, event_type: np.ndarray) -> np.ndarray:
+        """Indicate if any of the connections in the event are passed"""
+        return self._exon_connections.passed(
+            ref_exon_idx, self._event_type_is_source(event_type)
+        )
+
+    def redundant(self, ref_exon_idx: np.ndarray, event_type: np.ndarray) -> np.ndarray:
+        """Indicate if the event is redundant (subset by a different event)"""
+        return self._exon_connections.redundant(
+            ref_exon_idx, self._event_type_is_source(event_type)
+        )
+
+    def is_LSV(self, ref_exon_idx: np.ndarray, event_type: np.ndarray) -> np.ndarray:
+        """Indicate if the event is an LSV (nonredundant with event_size > 1)"""
+        return self._exon_connections.is_LSV(
+            ref_exon_idx, self._event_type_is_source(event_type)
+        )
+
+    def is_constitutive(self, ref_exon_idx: np.ndarray, event_type: np.ndarray) -> np.ndarray:
+        """Indicate if the event is constitutive (nonredundant with event_size == 1)"""
+        return self._exon_connections.is_constitutive(
+            ref_exon_idx, self._event_type_is_source(event_type)
+        )
+
     def event_id(self, ref_exon_idx: np.ndarray, event_type: np.ndarray) -> List[str]:
         """List of event identifiers for VOILA for specified events"""
         return self._exon_connections.event_id(ref_exon_idx, event_type)
