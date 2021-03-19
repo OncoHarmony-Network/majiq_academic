@@ -8,6 +8,8 @@ Author: Joseph K Aicher
 
 import argparse
 import sys
+import os
+from pathlib import Path
 from typing import Callable
 from new_majiq.logger import setup_logger, get_logger
 
@@ -61,7 +63,21 @@ class GenericSubcommand(object):
 
         log.info(f"new-majiq v{version()}")
         log.info(f"Command: {' '.join(sys.argv)}")
-        log.info(f"Arguments:\n{args}")
+        log.info(f"From: {Path(os.getcwd()).resolve()}")
+        log.info(
+            "\n".join(
+                [
+                    "Arguments:",
+                    "{",
+                    *(
+                        f" {key} = {value},"
+                        for key, value in vars(args).items()
+                        if key != "func"
+                    ),
+                    "}",
+                ]
+            )
+        )
         # run subcommand
         try:
             self._run(args)
