@@ -210,7 +210,7 @@ def run(args: argparse.Namespace) -> None:
     log.info("Updating known and identifying denovo junctions")
     junction_builder = sg.junctions.builder()
     for group_ndx, (group, group_sjs) in enumerate(experiments.groupby("group")["sj"]):
-        log.info(f"Processing junctions from group {group} ({group_ndx} / {ngroups})")
+        log.info(f"Processing junctions from group {group} ({1 + group_ndx} / {ngroups})")
         build_group = sg.junctions.build_group(sg.exons)
         for sj_ndx, sj in enumerate(group_sjs):
             log.info(
@@ -236,7 +236,7 @@ def run(args: argparse.Namespace) -> None:
     log.info("Identifying new passed introns")
     intron_group = potential_introns.build_group()  # intron groups done in place
     for group_ndx, (group, group_sjs) in enumerate(experiments.groupby("group")["sj"]):
-        log.info(f"Processing introns from group {group} ({group_ndx} / {ngroups})")
+        log.info(f"Processing introns from group {group} ({1 + group_ndx} / {ngroups})")
         for sj_ndx, sj in enumerate(group_sjs):
             log.info(
                 f"Processing introns from {Path(sj).resolve()}"
