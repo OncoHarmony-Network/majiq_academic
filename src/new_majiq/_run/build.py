@@ -26,17 +26,8 @@ if TYPE_CHECKING:
 DESCRIPTION = "Update splicegraph with specified experiment groups"
 
 
-def add_args(parser: argparse.ArgumentParser) -> None:
-    """add arguments to parser"""
-    parser.add_argument("base_sg", type=Path, help="Path to base splicegraph")
-    parser.add_argument(
-        "grouped_experiments",
-        type=Path,
-        help="Path to TSV with required columns 'group' and 'sj' defining"
-        " groups of experiments and the paths to their sj files",
-    )
-    parser.add_argument("out_sg", type=Path, help="Path for output splicegraph")
-
+def build_threshold_args(parser: argparse.ArgumentParser) -> None:
+    """arguments for build threshold parameters"""
     # per-experiment thresholds
     parser.add_argument(
         "--minreads",
@@ -93,26 +84,11 @@ def add_args(parser: argparse.ArgumentParser) -> None:
         " in a group that must pass individual filters for a feature to be"
         " accepted. If greater, an absolute number. (default: %(default)s)",
     )
+    return
 
-    # denovo junctions
-    denovo_junctions_ex = parser.add_mutually_exclusive_group()
-    denovo_junctions_ex.add_argument(
-        "--known-junctions-only",
-        action="store_false",
-        dest="process_denovo_junctions",
-        default=constants.DEFAULT_BUILD_DENOVO_JUNCTIONS,
-        help="Only process junctions already in base splicegraph"
-        " (default: process_denovo_junctions=%(default)s)",
-    )
-    denovo_junctions_ex.add_argument(
-        "--process-denovo-junctions",
-        action="store_true",
-        dest="process_denovo_junctions",
-        default=constants.DEFAULT_BUILD_DENOVO_JUNCTIONS,
-        help="Process all junctions, known and denovo."
-        " (default: process_denovo_junctions=%(default)s)",
-    )
 
+def ir_filtering_args(parser: argparse.ArgumentParser) -> None:
+    """add arguments to parser for filtering annotated/denovo introns"""
     # denovo introns/annotated introns
     annotated_ir_ex = parser.add_mutually_exclusive_group()
     annotated_ir_ex.add_argument(
@@ -148,7 +124,68 @@ def add_args(parser: argparse.ArgumentParser) -> None:
         help="Ignore denovo introns regardless of evidence"
         " (default process_denovo_introns = %(default)s)",
     )
+    return
 
+
+def denovo_junctions_args(parser: argparse.ArgumentParser) -> None:
+    """add arguments for processing of denovo junctions"""
+    # denovo junctions
+    denovo_junctions_ex = parser.add_mutually_exclusive_group()
+    denovo_junctions_ex.add_argument(
+        "--known-junctions-only",
+        action="store_false",
+        dest="process_denovo_junctions",
+        default=constants.DEFAULT_BUILD_DENOVO_JUNCTIONS,
+        help="Only process junctions already in base splicegraph"
+        " (default: process_denovo_junctions=%(default)s)",
+    )
+    denovo_junctions_ex.add_argument(
+        "--process-denovo-junctions",
+        action="store_true",
+        dest="process_denovo_junctions",
+        default=constants.DEFAULT_BUILD_DENOVO_JUNCTIONS,
+        help="Process all junctions, known and denovo."
+        " (default: process_denovo_junctions=%(default)s)",
+    )
+    return
+
+
+def denovo_simplified_args(parser: argparse.ArgumentParser) -> None:
+    """arguments for if denovos added simplified or not"""
+    denovo_simplified_ex = parser.add_mutually_exclusive_group()
+    denovo_simplified_ex.add_argument(
+        "--denovo-simplified",
+        action="store_true",
+        dest="denovo_simplified",
+        default=constants.DEFAULT_BUILD_DENOVO_SIMPLIFIED,
+        help="Denovo introns/junctions will be initially added marked as"
+        " simplified (default: denovo_simplified=%(default)s)",
+    )
+    denovo_simplified_ex.add_argument(
+        "--denovo-unsimplified",
+        action="store_true",
+        dest="denovo_simplified",
+        default=constants.DEFAULT_BUILD_DENOVO_SIMPLIFIED,
+        help="Denovo introns/junctions will be initially added as unsimplified"
+        " (default: denovo_simplified=%(default)s)",
+    )
+    return
+
+
+def add_args(parser: argparse.ArgumentParser) -> None:
+    """add arguments to parser"""
+    parser.add_argument("base_sg", type=Path, help="Path to base splicegraph")
+    parser.add_argument(
+        "grouped_experiments",
+        type=Path,
+        help="Path to TSV with required columns 'group' and 'sj' defining"
+        " groups of experiments and the paths to their sj files",
+    )
+    parser.add_argument("out_sg", type=Path, help="Path for output splicegraph")
+    build_threshold_args(parser)
+    denovo_junctions_args(parser)
+    ir_filtering_args(parser)
+    denovo_simplified_args(parser)
     return
 
 
@@ -227,14 +264,14 @@ def run(args: argparse.Namespace) -> None:
         junction_builder.add_group(build_group, args.min_experiments)
     # get updated junctions
     log.info("Finalizing junctions accumulated across build groups")
-    updated_junctions = junction_builder.get_passed()
+    updated_junctions = junction_builder.get_passed(args.denovo_simplified)
     del build_group, junction_builder  # explicitly release these resources
 
     log.info("Inferring denovo exons and updated exon boundaries")
     updated_exons = sg.exons.infer_with_junctions(updated_junctions)
 
     log.info("Determining potential gene introns using updated exons")
-    potential_introns = updated_exons.potential_introns()
+    potential_introns = updated_exons.potential_introns(args.denovo_simplified)
     potential_introns.update_flags_from(sg.introns)  # get flags from sg
     log.info("Identifying new passed introns")
     intron_group = potential_introns.build_group()  # intron groups done in place
