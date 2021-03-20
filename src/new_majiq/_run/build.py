@@ -28,20 +28,31 @@ DESCRIPTION = "Update splicegraph with specified experiment groups"
 
 def build_threshold_args(parser: argparse.ArgumentParser) -> None:
     """arguments for build threshold parameters"""
+    thresholds = parser.add_argument_group("Build filters")
+    # min-experiments
+    thresholds.add_argument(
+        "--min-experiments",
+        type=check_nonnegative_factory(float, True),
+        default=constants.DEFAULT_BUILD_MINEXPERIMENTS,
+        help="Threshold per experiments group. If < 1, the fraction of"
+        " experiments in a group that must pass individual filters for a"
+        " feature to be accepted. If greater, an absolute number."
+        " (default: %(default)s)",
+    )
     # per-experiment thresholds
-    parser.add_argument(
+    thresholds.add_argument(
         "--minreads",
         type=check_nonnegative_factory(int, True),
         default=constants.DEFAULT_BUILD_MINREADS,
         help="Minimum readrate to pass an annotated junction (default: %(default)s)",
     )
-    parser.add_argument(
+    thresholds.add_argument(
         "--mindenovo",
         type=check_nonnegative_factory(int, True),
         default=constants.DEFAULT_BUILD_MINDENOVO,
         help="Minimum readrate to pass a denovo junction or intron (default: %(default)s)",
     )
-    parser.add_argument(
+    thresholds.add_argument(
         "--minpos",
         type=check_nonnegative_factory(int, True),
         default=constants.DEFAULT_BUILD_MINPOS,
@@ -50,14 +61,14 @@ def build_threshold_args(parser: argparse.ArgumentParser) -> None:
         " account for length dependence."
         " (default: %(default)s).",
     )
-    parser.add_argument(
+    thresholds.add_argument(
         "--max-pctbins",
         type=check_nonnegative_factory(float, True),
         default=constants.DEFAULT_BUILD_MAX_PCTBINS,
         help="Maximum fraction of intron bins on which to require coverage"
         " (default: %(default)s)",
     )
-    parser.add_argument(
+    thresholds.add_argument(
         "--junction-acceptance-probability",
         type=check_nonnegative_factory(float, True),
         default=constants.DEFAULT_BUILD_MATCH_JUNCTION_PROBABILITY,
@@ -65,7 +76,7 @@ def build_threshold_args(parser: argparse.ArgumentParser) -> None:
         " per-position Poisson readrate for which junctions are accepted with"
         " this probability (default: %(default)s)",
     )
-    parser.add_argument(
+    thresholds.add_argument(
         "--intron-acceptance-probability",
         type=check_nonnegative_factory(float, True),
         default=constants.DEFAULT_BUILD_MATCH_INTRON_PROBABILITY,
@@ -74,23 +85,14 @@ def build_threshold_args(parser: argparse.ArgumentParser) -> None:
         " --junction-acceptance-probability gives has acceptance probability"
         " less than this probability (default: %(default)s)",
     )
-
-    # min-experiments
-    parser.add_argument(
-        "--min-experiments",
-        type=check_nonnegative_factory(float, True),
-        default=constants.DEFAULT_BUILD_MINEXPERIMENTS,
-        help="Threshold for group filters. If < 1, the fraction of experiments"
-        " in a group that must pass individual filters for a feature to be"
-        " accepted. If greater, an absolute number. (default: %(default)s)",
-    )
     return
 
 
 def ir_filtering_args(parser: argparse.ArgumentParser) -> None:
     """add arguments to parser for filtering annotated/denovo introns"""
+    ir_filtering = parser.add_argument_group("Intron retention filtering")
     # denovo introns/annotated introns
-    annotated_ir_ex = parser.add_mutually_exclusive_group()
+    annotated_ir_ex = ir_filtering.add_mutually_exclusive_group()
     annotated_ir_ex.add_argument(
         "--keep-annotated-ir",
         action="store_true",
@@ -107,7 +109,7 @@ def ir_filtering_args(parser: argparse.ArgumentParser) -> None:
         help="Only keep annotated introns if they pass build filters"
         " (default keep_annotated_ir = %(default)s)",
     )
-    denovo_ir_ex = parser.add_mutually_exclusive_group()
+    denovo_ir_ex = ir_filtering.add_mutually_exclusive_group()
     denovo_ir_ex.add_argument(
         "--process-denovo-introns",
         action="store_true",
@@ -129,8 +131,9 @@ def ir_filtering_args(parser: argparse.ArgumentParser) -> None:
 
 def denovo_junctions_args(parser: argparse.ArgumentParser) -> None:
     """add arguments for processing of denovo junctions"""
+    denovo_junctions = parser.add_argument_group("Denovo junction filtering")
     # denovo junctions
-    denovo_junctions_ex = parser.add_mutually_exclusive_group()
+    denovo_junctions_ex = denovo_junctions.add_mutually_exclusive_group()
     denovo_junctions_ex.add_argument(
         "--known-junctions-only",
         action="store_false",
@@ -152,7 +155,8 @@ def denovo_junctions_args(parser: argparse.ArgumentParser) -> None:
 
 def denovo_simplified_args(parser: argparse.ArgumentParser) -> None:
     """arguments for if denovos added simplified or not"""
-    denovo_simplified_ex = parser.add_mutually_exclusive_group()
+    denovo_simplified = parser.add_argument_group("Simplification of new denovos")
+    denovo_simplified_ex = denovo_simplified.add_mutually_exclusive_group()
     denovo_simplified_ex.add_argument(
         "--denovo-simplified",
         action="store_true",

@@ -36,16 +36,17 @@ class GenericSubcommand(object):
         """Add arguments to provided argument parser"""
         self._add_args(parser)
         # add parameters for logging
-        parser.add_argument(
+        log_args = parser.add_argument_group("Logging options")
+        log_args.add_argument(
             "--logger",
             type=str,
             default=None,
             help="Redirect logging to specified file (default: stderr)",
         )
-        parser.add_argument(
+        log_args.add_argument(
             "--silent", action="store_true", default=False, help="Silence the logger"
         )
-        parser.add_argument(
+        log_args.add_argument(
             "--debug",
             action="store_true",
             default=False,
