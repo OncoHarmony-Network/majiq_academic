@@ -92,7 +92,7 @@ def build(
     intron_group = potential_introns.build_group()  # intron groups done in place
     for group_ndx, (group, group_sjs) in enumerate(experiments.items()):
         log.info(
-            f"Processing junctions from group {group} ({1 + group_ndx} / {len(experiments)})"
+            f"Processing introns from group {group} ({1 + group_ndx} / {len(experiments)})"
         )
         for sj_ndx, sj in enumerate(group_sjs):
             log.info(
@@ -118,3 +118,52 @@ def build(
             updated_exons, updated_introns, updated_junctions
         )
     )
+
+
+def simplify(
+    sg: Union[Path, nm.SpliceGraph],
+    experiments: SJGroupsT,
+    reset_simplify: bool,
+    simplify_minpsi: float,
+    simplify_minreads_annotated: float,
+    simplify_minreads_denovo: float,
+    simplify_minreads_ir: float,
+    simplify_min_experiments: float
+) -> nm.SpliceGraph:
+    log = get_logger()
+    if not isinstance(sg, nm.SpliceGraph):
+        log.info(f"Loading base splicegraph from {sg.resolve()}")
+        sg = nm.SpliceGraph.from_zarr(sg)
+
+    if reset_simplify:
+        log.info("Setting all introns and junctions to simplified")
+        sg.introns._simplify_all()
+        sg.junctions._simplify_all()
+
+    log.info("Identifying introns and junctions to unsimplify")
+    simplifier_group = sg.exon_connections.simplifier()
+    for group_ndx, (group, group_sjs) in enumerate(experiments.items()):
+        log.info(
+            f"Processing coverage from group {group} ({1 + group_ndx} / {len(experiments)})"
+        )
+        for sj_ndx, sj in enumerate(group_sjs):
+            log.info(
+                f"Processing coverage from {Path(sj).resolve()}"
+                f" (experiment {1 + sj_ndx} / {len(group_sjs)} in group"
+            )
+            simplifier_group.add_experiment(
+                nm.SpliceGraphReads.from_connections_and_sj(
+                    sg.introns,
+                    sg.junctions,
+                    nm.SJIntronsBins.from_zarr(sj),
+                    nm.SJJunctionsBins.from_zarr(sj),
+                ),
+                min_psi=simplify_minpsi,
+                minreads_annotated=simplify_minreads_annotated,
+                minreads_denovo=simplify_minreads_denovo,
+                minreads_introns=simplify_minreads_ir,
+            )
+        simplifier_group.update_connections(simplify_min_experiments)
+    del simplifier_group
+
+    return sg

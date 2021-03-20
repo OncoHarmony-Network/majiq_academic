@@ -15,12 +15,8 @@ from pathlib import Path
 from new_majiq._run._run import GenericSubcommand
 from typing import (
     List,
-    TYPE_CHECKING,
     Optional,
 )
-
-if TYPE_CHECKING:
-    import pandas as pd
 
 
 DESCRIPTION = "Update splicegraph with specified experiment groups"

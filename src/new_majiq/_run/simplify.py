@@ -15,12 +15,8 @@ from pathlib import Path
 from new_majiq._run._run import GenericSubcommand
 from typing import (
     List,
-    TYPE_CHECKING,
     Optional,
 )
-
-if TYPE_CHECKING:
-    import pandas as pd
 
 
 DESCRIPTION = "Update splicegraph with specified experiment groups"
@@ -115,14 +111,21 @@ def reset_simplified_args(parser: argparse.ArgumentParser) -> None:
 def add_args(parser: argparse.ArgumentParser) -> None:
     """add arguments to parser"""
     parser.add_argument("base_sg", type=Path, help="Path to base splicegraph")
-    parser.add_argument(
-        "grouped_experiments",
+    parser.add_argument("out_sg", type=Path, help="Path for output splicegraph")
+    experiments_ex = parser.add_mutually_exclusive_group(required=True)
+    experiments_ex.add_argument(
+        "--groups-tsv",
         type=Path,
         help="Path to TSV with required columns 'group' and 'sj' defining"
-        " groups of experiments and the paths to their sj files. This does"
-        " not have to be the same as what was used for building",
+        " groups of experiments and the paths to their sj files, allowing"
+        " specification of multiple build groups simultaneously",
     )
-    parser.add_argument("out_sg", type=Path, help="Path for output splicegraph")
+    experiments_ex.add_argument(
+        "--sjs",
+        type=Path,
+        nargs="+",
+        help="Paths to input experiments as SJ files for a single build group",
+    )
 
     reset_simplified_args(parser)
     simplifier_threshold_args(parser)
@@ -130,86 +133,38 @@ def add_args(parser: argparse.ArgumentParser) -> None:
     return
 
 
-def get_grouped_experiments(path: Path) -> "pd.DataFrame":
-    """Get grouped experiments from table
-
-    Get grouped experiments from table. Verify that there are no duplicate
-    experiments (insofar as their paths) and that the paths exist.
-    """
-    import pandas as pd
-
-    df = pd.read_csv(path, sep="\t", usecols=["group", "sj"])
-    # determine if any duplicated experiments
-    duplicated_mask = df.sj.duplicated()
-    if duplicated_mask.any():
-        duplicated_sj = set(df.sj[duplicated_mask])
-        raise ValueError(
-            f"Requested simplification with repeated experiments {duplicated_sj}"
-        )
-    # verify that all paths exist
-    for sj_path in df.sj:
-        if not Path(sj_path).exists():
-            raise ValueError(f"Unable to find input experiment {sj_path}")
-    # return table of experiments/groups
-    return df
-
-
 def run(args: argparse.Namespace) -> None:
     if not args.base_sg.exists():
         raise ValueError(f"Unable to find base splicegraph at {args.base_sg}")
-    if not args.grouped_experiments.exists():
-        raise ValueError(
-            f"Unable to find group definitions at {args.grouped_experiments}"
-        )
     if args.out_sg.exists():
         raise ValueError(f"Output path {args.out_sg} already exists")
-    # load experiments table (and verify correctness/paths exist)
-    experiments = get_grouped_experiments(args.grouped_experiments)
-    ngroups = experiments.group.nunique()
 
-    # begin processing
-    import new_majiq as nm
+    import new_majiq._run._build_pipeline as nm_build
     from new_majiq.logger import get_logger
 
     log = get_logger()
-    log.info(
-        f"Updating {args.base_sg.resolve()} using"
-        f" {len(experiments)} experiments in {ngroups} groups"
+    if args.groups_tsv:
+        if not args.groups_tsv.exists():
+            raise ValueError(
+                f"Unable to find group definitions at {args.groups_tsv.resolve()}"
+            )
+        log.info("Loading experiment groups")
+        experiments = nm_build.get_grouped_experiments(args.groups_tsv)
+    else:
+        if (missing := sorted(set(x for x in args.sjs if not x.exists()))):
+            raise ValueError(f"Unable to find all input SJ files ({missing =})")
+        experiments = {"": args.sjs}
+
+    sg = nm_build.simplify(
+        sg=args.base_sg,
+        experiments=experiments,
+        reset_simplify=args.reset_simplify,
+        simplify_minpsi=args.simplify_minpsi,
+        simplify_minreads_annotated=args.simplify_minreads_annotated,
+        simplify_minreads_denovo=args.simplify_minreads_denovo,
+        simplify_minreads_ir=args.simplify_minreads_ir,
+        simplify_min_experiments=args.simplify_min_experiments,
     )
-    log.info("Loading base splicegraph")
-    sg = nm.SpliceGraph.from_zarr(args.base_sg)
-
-    if args.reset_simplify:
-        log.info("Setting all introns and junctions to simplified")
-        sg.introns._simplify_all()
-        sg.junctions._simplify_all()
-
-    log.info("Identifying introns and junctions to unsimplify")
-    simplifier_group = sg.exon_connections.simplifier()
-    for group_ndx, (group, group_sjs) in enumerate(experiments.groupby("group")["sj"]):
-        log.info(
-            f"Processing experiments from group {group} ({1 + group_ndx} / {ngroups})"
-        )
-        for sj_ndx, sj in enumerate(group_sjs):
-            log.info(
-                f"Processing coverage from {Path(sj).resolve()}"
-                f" (experiment {1 + sj_ndx} / {len(group_sjs)} in group {group})"
-            )
-            simplifier_group.add_experiment(
-                nm.SpliceGraphReads.from_connections_and_sj(
-                    sg.introns,
-                    sg.junctions,
-                    nm.SJIntronsBins.from_zarr(sj),
-                    nm.SJJunctionsBins.from_zarr(sj),
-                ),
-                min_psi=args.simplify_minpsi,
-                minreads_annotated=args.simplify_minreads_annotated,
-                minreads_denovo=args.simplify_minreads_denovo,
-                minreads_introns=args.simplify_minreads_ir,
-            )
-        simplifier_group.update_connections(args.simplify_min_experiments)
-    del simplifier_group
-
     log.info(f"Saving updated splicegraph to {args.out_sg.resolve()}")
     sg.to_zarr(args.out_sg)
     return
