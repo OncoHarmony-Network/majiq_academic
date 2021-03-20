@@ -82,6 +82,8 @@ class PassedJunctionsGenerator(object):
         self._passed.add_group(group._group, min_experiments)
         return self
 
-    def get_passed(self, denovo_simplified: bool = False) -> GeneJunctions:
+    def get_passed(
+        self, denovo_simplified: bool = constants.DEFAULT_BUILD_DENOVO_SIMPLIFIED
+    ) -> GeneJunctions:
         """Get new GeneJunctions taking into account the groups that were added"""
         return GeneJunctions(self._passed.get_passed(denovo_simplified))

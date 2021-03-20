@@ -49,7 +49,9 @@ class Exons(GeneRegions):
     def exon_idx(self) -> np.ndarray:
         return self._region_idx
 
-    def potential_introns(self, make_simplified: bool = False) -> "GeneIntrons":
+    def potential_introns(
+        self, make_simplified: bool = constants.DEFAULT_BUILD_DENOVO_SIMPLIFIED
+    ) -> "GeneIntrons":
         """denovo, nonpassed introns corresponding to these exons
 
         Parameters
