@@ -151,7 +151,7 @@ def run(args: argparse.Namespace) -> None:
         log.info("Loading experiment groups")
         experiments = nm_build.get_grouped_experiments(args.groups_tsv)
     else:
-        if (missing := sorted(set(x for x in args.sjs if not x.exists()))):
+        if (missing := sorted(set(x for x in args.sjs if not x.exists()))) :
             raise ValueError(f"Unable to find all input SJ files ({missing =})")
         experiments = {"": args.sjs}
 

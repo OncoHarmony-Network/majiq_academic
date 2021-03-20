@@ -41,7 +41,10 @@ def get_grouped_experiments(groups_tsv: Path) -> SJGroupsT:
     for sj_path in df.sj:
         if not Path(sj_path).exists():
             raise ValueError(f"Unable to find input experiment {sj_path}")
-    return {group: sorted(Path(x) for x in group_sjs) for group, group_sjs in df.groupby("group")["sj"]}
+    return {
+        group: sorted(Path(x) for x in group_sjs)
+        for group, group_sjs in df.groupby("group")["sj"]
+    }
 
 
 def build(
@@ -128,7 +131,7 @@ def simplify(
     simplify_minreads_annotated: float,
     simplify_minreads_denovo: float,
     simplify_minreads_ir: float,
-    simplify_min_experiments: float
+    simplify_min_experiments: float,
 ) -> nm.SpliceGraph:
     log = get_logger()
     if not isinstance(sg, nm.SpliceGraph):

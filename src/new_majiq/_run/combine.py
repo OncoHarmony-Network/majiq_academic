@@ -77,10 +77,7 @@ def run(args: argparse.Namespace) -> None:
             GeneJunctions.load_dataset(p).assign_coords(denovo=False)
             for p in args.make_annotated
         ]
-        + [
-            GeneJunctions.load_dataset(p)
-            for p in args.keep_denovo
-        ]
+        + [GeneJunctions.load_dataset(p) for p in args.keep_denovo]
     )
     log.info("Constructing GeneJunctions object for combined set of junctions")
     genes = Genes.from_zarr(all_inputs[0])
