@@ -544,6 +544,12 @@ void init_Exons(pyExons_t& pyExons) {
     .def("checksum",
         [](const Exons& self) { return majiq::checksum(self); },
         "checksum of exons")
+    .def("potential_introns",
+        [](const std::shared_ptr<Exons>& exons_ptr, bool make_simplified) {
+        return majiq::GeneIntrons::PotentialIntrons(exons_ptr, make_simplified);
+        },
+        "Return denovo, nonpassed introns corresponding to these exons",
+        py::arg("make_simplified"))
     .def_property_readonly("annotated_start",
         [](py::object& exons_obj) -> py::array_t<position_t> {
         Exons& exons = exons_obj.cast<Exons&>();
@@ -1398,9 +1404,6 @@ void init_GeneIntrons(pyGeneIntrons_t& pyGeneIntrons) {
         )pbdoc",
         py::arg("keep_annotated") = DEFAULT_BUILD_KEEP_ANNOTATED_IR,
         py::arg("discard_denovo") = !DEFAULT_BUILD_DENOVO_IR)
-    .def("potential_introns", &GeneIntrons::PotentialIntrons,
-        "Get potential gene introns from exons keeping annotations from self",
-        py::arg("exons"))
     .def("__repr__", [](const GeneIntrons& self) -> std::string {
         std::ostringstream oss;
         oss << "GeneIntrons<" << self.size() << " total>";
@@ -1607,24 +1610,6 @@ void init_SpliceGraph(py::class_<majiq::SpliceGraph>& pySpliceGraph) {
         "Create GroupJunctionsGenerator for the splicegraph junctions/exons")
     .def("make_build_junctions", &SpliceGraph::MakePassedGenerator,
         "Create PassedJunctionsGenerator for splicegraph junctions")
-    .def("build_junctions", &SpliceGraph::BuildJunctionExons,
-        "New splicegraph with updated junctions/exons using build junctions",
-        py::arg("build_junctions"))
-    .def("_pass_all",
-        [](py::object& sg) {
-        sg.attr("_junctions").attr("_pass_all")();
-        sg.attr("_introns").attr("_pass_all")(); },
-        "Pass all junctions and introns in the splicegraph")
-    .def("_simplify_all",
-        [](py::object& sg) {
-        sg.attr("_junctions").attr("_simplify_all")();
-        sg.attr("_introns").attr("_simplify_all")(); },
-        "Simplify all junctions and introns in the splicegraph")
-    .def("_unsimplify_all",
-        [](py::object& sg) {
-        sg.attr("_junctions").attr("_unsimplify_all")();
-        sg.attr("_introns").attr("_unsimplify_all")(); },
-        "Unsimplify all junctions and introns in the splicegraph")
     .def("close_to_annotated_exon",
         [](SpliceGraph& sg, size_t gene_idx, position_t x, bool to_following) {
         if (gene_idx >= sg.genes()->size()) {

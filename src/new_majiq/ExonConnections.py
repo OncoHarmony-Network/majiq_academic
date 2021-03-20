@@ -32,9 +32,11 @@ class ExonConnections(object):
         junctions: GeneJunctions,
     ) -> "ExonConnections":
         """connect input exons, introns, and gene junctions"""
-        return ExonConnections(_ExonConnections(
-            exons._exons, introns._gene_introns, junctions._gene_junctions
-        ))
+        return ExonConnections(
+            _ExonConnections(
+                exons._exons, introns._gene_introns, junctions._gene_junctions
+            )
+        )
 
     def __init__(self, exon_connections: _ExonConnections):
         self._exon_connections: Final[_ExonConnections] = exon_connections

@@ -23,6 +23,7 @@ from pathlib import Path
 
 if TYPE_CHECKING:
     from new_majiq.GeneJunctions import GeneJunctions
+    from new_majiq.GeneIntrons import GeneIntrons
 
 
 class Exons(GeneRegions):
@@ -47,6 +48,18 @@ class Exons(GeneRegions):
     @property
     def exon_idx(self) -> np.ndarray:
         return self._region_idx
+
+    def potential_introns(self, make_simplified: bool = False) -> "GeneIntrons":
+        """denovo, nonpassed introns corresponding to these exons
+
+        Parameters
+        ----------
+        make_simplified: bool
+            Simplified status of resulting introns
+        """
+        from new_majiq.GeneIntrons import GeneIntrons
+
+        return GeneIntrons(self._exons.potential_introns(make_simplified))
 
     @property
     def annotated_start(self) -> np.ndarray:

@@ -173,63 +173,50 @@ class GeneIntrons : public detail::GeneConnections<GeneIntron, false> {
     return;
   }
   /**
-   * get all potential introns (i.e. denovo as well) compared to exons
+   * get all potential introns from given exons
    *
    * Note that automatically connects introns to the exons
    */
-  GeneIntrons PotentialIntrons(const std::shared_ptr<Exons>& exons_ptr) const {
+  static GeneIntrons PotentialIntrons(
+      const std::shared_ptr<Exons>& exons_ptr,
+      bool make_simplified) {
     if (exons_ptr == nullptr) {
       throw std::runtime_error("PotentialIntrons requires non-null exons");
     }
     const Exons& exons = *exons_ptr;
+    if (exons.parents() == nullptr) {
+      throw std::runtime_error("Exons must have non-null genes as parents");
+    }
+
     std::vector<GeneIntron> result_vec;
 
-    if (parents() != exons.parents()) {
-      throw std::invalid_argument(
-          "PotentialIntrons exons/introns do not share same Genes");
-    } else if (parents() != nullptr) {
-      for (const auto& gene : *parents()) {
-        auto exon_it = exons.begin_parent(gene);
-        const auto exon_it_end = exons.end_parent(gene);
-        auto intron_it = begin_parent(gene);
-        const auto intron_it_end = end_parent(gene);
-        auto prev_exon_it = exon_it_end;  // track previous exon
-        for (; exon_it != exon_it_end; ++exon_it) {
-          if (exon_it->is_full_exon()) {
-            if (prev_exon_it != exon_it_end) {
-              // coordinates for new intron
-              ClosedInterval coordinates = ClosedInterval{
+    for (const auto& gene : *(exons.parents())) {
+      const auto exon_it_end = exons.end_parent(gene);
+      auto prev_exon_it = exon_it_end;  // haven't gotten to first full exon
+      for (auto exon_it = exons.begin_parent(gene);
+          exon_it != exon_it_end; ++exon_it) {
+        if (exon_it->is_full_exon()) {
+          if (prev_exon_it != exon_it_end) {
+            size_t start_exon_idx = prev_exon_it - exons.begin();
+            size_t end_exon_idx = exon_it - exons.begin();
+            result_vec.emplace_back(
+                gene,
+                ClosedInterval{
                   prev_exon_it->coordinates.end + 1,
-                  exon_it->coordinates.start - 1};
-              // get intron that overlaps, if any
-              intron_it = std::find_if(
-                  intron_it, intron_it_end,
-                  [&coordinates](const GeneIntron& x) {
-                  return !IntervalPrecedes(x.coordinates, coordinates);
-                  });
-              // indexes of exons connected to
-              size_t start_idx = prev_exon_it - exons.begin();
-              size_t end_idx = exon_it - exons.begin();
-              result_vec.emplace_back(
-                  gene,
-                  ClosedInterval{
-                    prev_exon_it->coordinates.end + 1,
-                    exon_it->coordinates.start - 1},
-                  // if overlapping intron from self, copy data otherwise denovo
-                  (intron_it != intron_it_end
-                   && IntervalIntersects(coordinates, intron_it->coordinates))
-                  ? detail::ConnectionData{
-                      intron_it->data, start_idx, end_idx}
-                  : detail::ConnectionData{
-                      true, false, false, start_idx, end_idx});
-            }
-            prev_exon_it = exon_it;
-          }
-        }  // loop over exons for a gene
-      }  // loop over genes
-    }  // when the containers aren't empty
+                  exon_it->coordinates.start - 1},
+                detail::ConnectionData{
+                  true,  // consider denovo for now
+                  false,  // hasn't passed build
+                  make_simplified,
+                  start_exon_idx,
+                  end_exon_idx});
+          }  // handle intron between prev_exon_it and exon_it
+          prev_exon_it = exon_it;  // update prev_exon, wait for next full exon
+        }  // conditional -- if new full exon
+      }  // loop over exons
+    }  // loop over genes
 
-    return GeneIntrons{parents(), std::move(result_vec), exons_ptr};
+    return GeneIntrons{exons.parents(), std::move(result_vec), exons_ptr};
   }
 };
 }  // namespace majiq

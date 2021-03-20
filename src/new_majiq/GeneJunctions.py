@@ -104,8 +104,7 @@ class GeneJunctions(GeneConnections):
                     # set index so can see matches
                     .set_index(gj_idx=["gene_idx", "start", "end"])
                     # select variables we want to use
-                    .reset_coords()
-                    [["denovo", "not_passed", "simplified"]]
+                    .reset_coords()[["denovo", "not_passed", "simplified"]]
                     for df in dfs
                 ],
                 # concatenate over new dimension inputs

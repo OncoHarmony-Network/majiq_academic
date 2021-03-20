@@ -113,7 +113,9 @@ def get_grouped_experiments(path: Path) -> "pd.DataFrame":
     duplicated_mask = df.sj.duplicated()
     if duplicated_mask.any():
         duplicated_sj = set(df.sj[duplicated_mask])
-        raise ValueError(f"Requested simplification with repeated experiments {duplicated_sj}")
+        raise ValueError(
+            f"Requested simplification with repeated experiments {duplicated_sj}"
+        )
     # verify that all paths exist
     for sj_path in df.sj:
         if not Path(sj_path).exists():

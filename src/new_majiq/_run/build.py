@@ -210,7 +210,9 @@ def run(args: argparse.Namespace) -> None:
     log.info("Updating known and identifying denovo junctions")
     junction_builder = sg.junctions.builder()
     for group_ndx, (group, group_sjs) in enumerate(experiments.groupby("group")["sj"]):
-        log.info(f"Processing junctions from group {group} ({1 + group_ndx} / {ngroups})")
+        log.info(
+            f"Processing junctions from group {group} ({1 + group_ndx} / {ngroups})"
+        )
         build_group = sg.junctions.build_group(sg.exons)
         for sj_ndx, sj in enumerate(group_sjs):
             log.info(
@@ -232,7 +234,8 @@ def run(args: argparse.Namespace) -> None:
     updated_exons = sg.exons.infer_with_junctions(updated_junctions)
 
     log.info("Determining potential gene introns using updated exons")
-    potential_introns = sg.introns.potential_introns(updated_exons)
+    potential_introns = updated_exons.potential_introns()
+    potential_introns.update_flags_from(sg.introns)  # get flags from sg
     log.info("Identifying new passed introns")
     intron_group = potential_introns.build_group()  # intron groups done in place
     for group_ndx, (group, group_sjs) in enumerate(experiments.groupby("group")["sj"]):
@@ -256,7 +259,9 @@ def run(args: argparse.Namespace) -> None:
 
     log.info("Updating splicegraph with updated junctions, exons, and introns")
     sg = sg.with_updated_exon_connections(
-        ExonConnections.create_connecting(updated_exons, updated_introns, updated_junctions)
+        ExonConnections.create_connecting(
+            updated_exons, updated_introns, updated_junctions
+        )
     )
 
     log.info(f"Saving updated splicegraph to {args.out_sg.resolve()}")

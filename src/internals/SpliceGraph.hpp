@@ -86,22 +86,6 @@ class SpliceGraph {
     return PassedJunctionsGenerator(junctions_);
   }
 
-  SpliceGraph BuildJunctionExons(const PassedJunctionsGenerator& passed) {
-    auto updated_junctions = std::make_shared<GeneJunctions>(
-        passed.PassedJunctions());
-    auto updated_exons = std::make_shared<Exons>(
-        InferExons(*exons_, *updated_junctions));
-    auto potential_introns = std::make_shared<GeneIntrons>(
-        introns_->PotentialIntrons(updated_exons));
-    return SpliceGraph{
-      contigs_, genes_, updated_exons, updated_junctions, potential_introns};
-  }
-  SpliceGraph FilterIntrons(bool keep_annotated, bool discard_denovo) {
-    auto filtered_introns = std::make_shared<GeneIntrons>(
-        introns_->FilterPassed(keep_annotated, discard_denovo));
-    return SpliceGraph{
-      contigs_, genes_, exons_, junctions_, filtered_introns};
-  }
   SpliceGraph Copy() {
     auto copy_junctions = std::make_shared<GeneJunctions>(*junctions_);
     auto copy_introns = std::make_shared<GeneIntrons>(*introns_);
