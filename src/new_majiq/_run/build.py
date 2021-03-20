@@ -179,13 +179,22 @@ def denovo_simplified_args(parser: argparse.ArgumentParser) -> None:
 def add_args(parser: argparse.ArgumentParser) -> None:
     """add arguments to parser"""
     parser.add_argument("base_sg", type=Path, help="Path to base splicegraph")
-    parser.add_argument(
-        "grouped_experiments",
+    parser.add_argument("out_sg", type=Path, help="Path for output splicegraph")
+    experiments_ex = parser.add_mutually_exclusive_group(required=True)
+    experiments_ex.add_argument(
+        "--groups-tsv",
         type=Path,
         help="Path to TSV with required columns 'group' and 'sj' defining"
-        " groups of experiments and the paths to their sj files",
+        " groups of experiments and the paths to their sj files, allowing"
+        " specification of multiple build groups simultaneously",
     )
-    parser.add_argument("out_sg", type=Path, help="Path for output splicegraph")
+    experiments_ex.add_argument(
+        "--sjs",
+        type=Path,
+        nargs="+",
+        help="Paths to input experiments as SJ files for a single build group",
+    )
+
     build_threshold_args(parser)
     denovo_junctions_args(parser)
     ir_filtering_args(parser)
@@ -193,44 +202,14 @@ def add_args(parser: argparse.ArgumentParser) -> None:
     return
 
 
-def get_grouped_experiments(path: Path) -> "pd.DataFrame":
-    """Get grouped experiments from table
-
-    Get grouped experiments from table. Verify that there are no duplicate
-    experiments (insofar as their paths) and that the paths exist.
-    """
-    import pandas as pd
-
-    df = pd.read_csv(path, sep="\t", usecols=["group", "sj"])
-    # determine if any duplicated experiments
-    duplicated_mask = df.sj.duplicated()
-    if duplicated_mask.any():
-        duplicated_sj = set(df.sj[duplicated_mask])
-        raise ValueError(f"Requested build with repeated experiments {duplicated_sj}")
-    # verify that all paths exist
-    for sj_path in df.sj:
-        if not Path(sj_path).exists():
-            raise ValueError(f"Unable to find input experiment {sj_path}")
-    # return table of experiments/groups
-    return df
-
-
 def run(args: argparse.Namespace) -> None:
     if not args.base_sg.exists():
         raise ValueError(f"Unable to find base splicegraph at {args.base_sg}")
-    if not args.grouped_experiments.exists():
-        raise ValueError(
-            f"Unable to find group definitions at {args.grouped_experiments}"
-        )
     if args.out_sg.exists():
         raise ValueError(f"Output path {args.out_sg} already exists")
-    # load experiments table (and verify correctness/paths exist)
-    experiments = get_grouped_experiments(args.grouped_experiments)
-    ngroups = experiments.group.nunique()
 
-    # begin processing
     import new_majiq as nm
-    from new_majiq.ExonConnections import ExonConnections
+    import new_majiq._run._build_pipeline as nm_build
     from new_majiq.logger import get_logger
 
     log = get_logger()
@@ -242,67 +221,27 @@ def run(args: argparse.Namespace) -> None:
         junction_acceptance_probability=args.junction_acceptance_probability,
         intron_acceptance_probability=args.intron_acceptance_probability,
     )
-    log.info(
-        f"Updating {args.base_sg.resolve()} using"
-        f" {len(experiments)} experiments in {ngroups} groups"
-    )
-    log.info("Loading base splicegraph")
-    sg = nm.SpliceGraph.from_zarr(args.base_sg)
-    log.info("Updating known and identifying denovo junctions")
-    junction_builder = sg.junctions.builder()
-    for group_ndx, (group, group_sjs) in enumerate(experiments.groupby("group")["sj"]):
-        log.info(
-            f"Processing junctions from group {group} ({1 + group_ndx} / {ngroups})"
-        )
-        build_group = sg.junctions.build_group(sg.exons)
-        for sj_ndx, sj in enumerate(group_sjs):
-            log.info(
-                f"Processing junctions from {Path(sj).resolve()}"
-                f" (experiment {1 + sj_ndx} / {len(group_sjs)} in group {group})"
+    if args.groups_tsv:
+        if not args.groups_tsv.exists():
+            raise ValueError(
+                f"Unable to find group definitions at {args.groups_tsv.resolve()}"
             )
-            build_group.add_experiment(
-                nm.SJJunctionsBins.from_zarr(sj),
-                thresholds=experiment_thresholds,
-                add_denovo=args.process_denovo_junctions,
-            )
-        junction_builder.add_group(build_group, args.min_experiments)
-    # get updated junctions
-    log.info("Finalizing junctions accumulated across build groups")
-    updated_junctions = junction_builder.get_passed(args.denovo_simplified)
-    del build_group, junction_builder  # explicitly release these resources
+        log.info("Loading experiment groups")
+        experiments = nm_build.get_grouped_experiments(args.groups_tsv)
+    else:
+        if (missing := sorted(set(x for x in args.sjs if not x.exists()))):
+            raise ValueError(f"Unable to find all input SJ files ({missing =})")
+        experiments = {"": args.sjs}
 
-    log.info("Inferring denovo exons and updated exon boundaries")
-    updated_exons = sg.exons.infer_with_junctions(updated_junctions)
-
-    log.info("Determining potential gene introns using updated exons")
-    potential_introns = updated_exons.potential_introns(args.denovo_simplified)
-    potential_introns.update_flags_from(sg.introns)  # get flags from sg
-    log.info("Identifying new passed introns")
-    intron_group = potential_introns.build_group()  # intron groups done in place
-    for group_ndx, (group, group_sjs) in enumerate(experiments.groupby("group")["sj"]):
-        log.info(f"Processing introns from group {group} ({1 + group_ndx} / {ngroups})")
-        for sj_ndx, sj in enumerate(group_sjs):
-            log.info(
-                f"Processing introns from {Path(sj).resolve()}"
-                f" (experiment {1 + sj_ndx} / {len(group_sjs)} in group {group})"
-            )
-            intron_group.add_experiment(
-                nm.SJIntronsBins.from_zarr(sj),
-                thresholds=experiment_thresholds,
-            )
-        intron_group.update_introns(args.min_experiments)  # resets group too
-    log.info("Filtering potential introns to those passing thresholds")
-    updated_introns = potential_introns.filter_passed(
-        keep_annotated=args.keep_annotated_ir,
-        discard_denovo=not args.process_denovo_introns,
-    )
-    del intron_group, potential_introns  # explicitly release these resources
-
-    log.info("Updating splicegraph with updated junctions, exons, and introns")
-    sg = sg.with_updated_exon_connections(
-        ExonConnections.create_connecting(
-            updated_exons, updated_introns, updated_junctions
-        )
+    sg = nm_build.build(
+        sg=args.base_sg,
+        experiments=experiments,
+        experiment_thresholds=experiment_thresholds,
+        min_experiments=args.min_experiments,
+        process_denovo_junctions=args.process_denovo_junctions,
+        process_denovo_introns=args.process_denovo_introns,
+        keep_annotated_ir=args.keep_annotated_ir,
+        denovo_simplified=args.denovo_simplified,
     )
 
     log.info(f"Saving updated splicegraph to {args.out_sg.resolve()}")
