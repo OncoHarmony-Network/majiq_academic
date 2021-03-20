@@ -90,7 +90,7 @@ class GeneJunctions(GeneConnections):
             return df.load()
 
     @staticmethod
-    def _combine_datasets(dfs: Sequence[xr.Dataset]) -> xr.Dataset:
+    def combine_datasets(dfs: Sequence[xr.Dataset]) -> xr.Dataset:
         """combine junctions found in multiple splicegraphs
 
         Assumes that they all share the same genes
