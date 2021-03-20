@@ -1541,7 +1541,8 @@ void init_pyPassedJunctionsGen(pyPassedJunctionsGen_t& pyPassedJunctionsGen) {
         py::arg("group"),
         py::arg("min_experiments") = DEFAULT_BUILD_MINEXPERIMENTS)
     .def("get_passed", &majiq::PassedJunctionsGenerator::PassedJunctions,
-        "Get static, array-based representation of passed junctions")
+        "Get static, array-based representation of passed junctions",
+        py::arg("denovo_simplified"))
     .def_property_readonly("num_known",
         &majiq::PassedJunctionsGenerator::num_annotated,
         "Number of junctions known when constructed")

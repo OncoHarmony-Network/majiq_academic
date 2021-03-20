@@ -178,7 +178,7 @@ class PassedJunctionsGenerator {
     return;
   }
 
-  GeneJunctions PassedJunctions() const {
+  GeneJunctions PassedJunctions(bool denovo_simplified) const {
     std::vector<GeneJunction> result_vec(
         known_passed_build_.size() + denovos_passed_build_.size());
     auto r_it = result_vec.begin();
@@ -197,7 +197,10 @@ class PassedJunctionsGenerator {
       for (; d_it != denovos_passed_build_.end()
           && (kidx == known_passed_build_.size() || *d_it < (*known_)[kidx]);
           ++d_it, ++r_it) {
-        *r_it = *d_it;
+        // set simplified for junction at d_it
+        GeneJunction j = *d_it;
+        j.simplified() = denovo_simplified;
+        *r_it = std::move(j);
       }
     }  // done filling result_vec
     return GeneJunctions{known_->parents(), std::move(result_vec)};
