@@ -26,20 +26,73 @@ if TYPE_CHECKING:
 DESCRIPTION = "Update splicegraph with specified experiment groups"
 
 
-def add_args(parser: argparse.ArgumentParser) -> None:
-    """add arguments to parser"""
-    parser.add_argument("base_sg", type=Path, help="Path to base splicegraph")
-    parser.add_argument(
-        "grouped_experiments",
-        type=Path,
-        help="Path to TSV with required columns 'group' and 'sj' defining"
-        " groups of experiments and the paths to their sj files. This does"
-        " not have to be the same as what was used for building",
-    )
-    parser.add_argument("out_sg", type=Path, help="Path for output splicegraph")
+def simplifier_threshold_args(
+    parser: argparse.ArgumentParser,
+    prefix: str = "",
+) -> None:
+    """arguments for simplifier thresholds
 
+    Parameters
+    ----------
+    parser: argparse.ArgumentParser
+        parser to add arguments to
+    prefix: str
+        add prefix to threshold command line arguments to avoid collisions
+        (does not change destination variable)
+    """
+    thresholds = parser.add_argument_group("Simplifier filters")
+    # min-experiments
+    thresholds.add_argument(
+        f"--{prefix}min-experiments",
+        dest="simplify_min_experiments",
+        type=check_nonnegative_factory(float, True),
+        default=constants.DEFAULT_SIMPLIFIER_MINEXPERIMENTS,
+        help="Threshold for group filters. If < 1, the fraction of experiments"
+        " in a group that must pass individual filters for a feature to be"
+        " unsimplified. If greater, an absolute number. (default: %(default)s)",
+    )
+    # per-experiment thresholds
+    thresholds.add_argument(
+        f"--{prefix}minpsi",
+        dest="simplify_minpsi",
+        type=check_nonnegative_factory(float, False),
+        default=constants.DEFAULT_SIMPLIFIER_MINPSI,
+        help="Minimum fraction of intron/junction readrates leaving or entering"
+        " an exon in a single connection to count as evidence to unsimplify"
+        " (default: %(default)s)",
+    )
+    thresholds.add_argument(
+        f"--{prefix}minreads-annotated",
+        dest="simplify_minreads_annotated",
+        type=check_nonnegative_factory(float, False),
+        default=constants.DEFAULT_SIMPLIFIER_MINREADS_ANNOTATED,
+        help="Minimum readrate for annotated junctions to count as evidence"
+        " to unsimplify (default: %(default)s)",
+    )
+    thresholds.add_argument(
+        f"--{prefix}minreads-denovo",
+        dest="simplify_minreads_denovo",
+        type=check_nonnegative_factory(float, False),
+        default=constants.DEFAULT_SIMPLIFIER_MINREADS_DENOVO,
+        help="Minimum readrate for denovo junctions to count as evidence"
+        " to unsimplify (default: %(default)s)",
+    )
+    thresholds.add_argument(
+        f"--{prefix}minreads-ir",
+        dest="simplify_minreads_ir",
+        type=check_nonnegative_factory(float, False),
+        default=constants.DEFAULT_SIMPLIFIER_MINREADS_INTRON,
+        help="Minimum readrate for intron retention to count as evidence"
+        " to unsimplify (default: %(default)s)",
+    )
+    return
+
+
+def reset_simplified_args(parser: argparse.ArgumentParser) -> None:
+    """do we reset simplified status in splicegraph?"""
     # do we reset simplified status?
-    reset_ex = parser.add_mutually_exclusive_group()
+    reset = parser.add_argument_group("Resetting connections to simplified")
+    reset_ex = reset.add_mutually_exclusive_group()
     reset_ex.add_argument(
         "--reset-simplify",
         action="store_true",
@@ -56,47 +109,24 @@ def add_args(parser: argparse.ArgumentParser) -> None:
         help="Continue unsimplifying from input splicegraph, do not reset"
         " simplification information (default: reset_simplify=%(default)s)",
     )
+    return
 
-    # per-experiment thresholds
-    parser.add_argument(
-        "--minpsi",
-        type=check_nonnegative_factory(float, False),
-        default=constants.DEFAULT_SIMPLIFIER_MINPSI,
-        help="Minimum fraction of intron/junction readrates leaving or entering"
-        " an exon in a single connection to count as evidence to unsimplify"
-        " (default: %(default)s)",
-    )
-    parser.add_argument(
-        "--minreads-annotated",
-        type=check_nonnegative_factory(float, False),
-        default=constants.DEFAULT_SIMPLIFIER_MINREADS_ANNOTATED,
-        help="Minimum readrate for annotated junctions to count as evidence"
-        " to unsimplify (default: %(default)s)",
-    )
-    parser.add_argument(
-        "--minreads-denovo",
-        type=check_nonnegative_factory(float, False),
-        default=constants.DEFAULT_SIMPLIFIER_MINREADS_DENOVO,
-        help="Minimum readrate for denovo junctions to count as evidence"
-        " to unsimplify (default: %(default)s)",
-    )
-    parser.add_argument(
-        "--minreads-ir",
-        type=check_nonnegative_factory(float, False),
-        default=constants.DEFAULT_SIMPLIFIER_MINREADS_INTRON,
-        help="Minimum readrate for intron retention to count as evidence"
-        " to unsimplify (default: %(default)s)",
-    )
 
-    # min-experiments
+def add_args(parser: argparse.ArgumentParser) -> None:
+    """add arguments to parser"""
+    parser.add_argument("base_sg", type=Path, help="Path to base splicegraph")
     parser.add_argument(
-        "--min-experiments",
-        type=check_nonnegative_factory(float, True),
-        default=constants.DEFAULT_SIMPLIFIER_MINEXPERIMENTS,
-        help="Threshold for group filters. If < 1, the fraction of experiments"
-        " in a group that must pass individual filters for a feature to be"
-        " unsimplified. If greater, an absolute number. (default: %(default)s)",
+        "grouped_experiments",
+        type=Path,
+        help="Path to TSV with required columns 'group' and 'sj' defining"
+        " groups of experiments and the paths to their sj files. This does"
+        " not have to be the same as what was used for building",
     )
+    parser.add_argument("out_sg", type=Path, help="Path for output splicegraph")
+
+    reset_simplified_args(parser)
+    simplifier_threshold_args(parser)
+
     return
 
 
@@ -172,12 +202,12 @@ def run(args: argparse.Namespace) -> None:
                     nm.SJIntronsBins.from_zarr(sj),
                     nm.SJJunctionsBins.from_zarr(sj),
                 ),
-                min_psi=args.minpsi,
-                minreads_annotated=args.minreads_annotated,
-                minreads_denovo=args.minreads_denovo,
-                minreads_introns=args.minreads_ir,
+                min_psi=args.simplify_minpsi,
+                minreads_annotated=args.simplify_minreads_annotated,
+                minreads_denovo=args.simplify_minreads_denovo,
+                minreads_introns=args.simplify_minreads_ir,
             )
-        simplifier_group.update_connections(args.min_experiments)
+        simplifier_group.update_connections(args.simplify_min_experiments)
     del simplifier_group
 
     log.info(f"Saving updated splicegraph to {args.out_sg.resolve()}")
