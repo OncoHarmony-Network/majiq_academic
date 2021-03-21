@@ -1685,8 +1685,13 @@ class Graph:
                     for skipA1 in skipA1s:
                         for skipA2 in skipA2s:
                             shared_lsv = set(skipA1.lsvs) & set(skipA2.lsvs)
+                            # NOTE: we only classify p_ale if this is a source LSV right now.
+                            # skip classifying if LSV is target !
+                            this_lsv = shared_lsv.pop()
+                            if not ":s:" in this_lsv:
+                                continue
                             if len(shared_lsv) == 1:
-                                self.classified_lsvs.append(shared_lsv.pop())
+                                self.classified_lsvs.append(this_lsv)
                             found.append({'event': 'p_ale', 'Proximal': node,
                                           'Distal': a2, 'Reference': c1,
                                           'SkipA2': skipA2,
@@ -1738,7 +1743,12 @@ class Graph:
                         for skipA2 in skipA2s:
                             shared_lsv = set(skipA1.lsvs) & set(skipA2.lsvs)
                             if len(shared_lsv) == 1:
-                                self.classified_lsvs.append(shared_lsv.pop())
+                                # NOTE: we only classify p_afe if this is a target LSV right now.
+                                # skip classifying if LSV is source !
+                                this_lsv = shared_lsv.pop()
+                                if not ":t:" in this_lsv:
+                                    continue
+                                self.classified_lsvs.append(this_lsv)
                             found.append({'event': 'p_afe', 'Proximal': node,
                                   'Distal': a1, 'Reference': c1,
                                   'SkipA2': skipA2,
