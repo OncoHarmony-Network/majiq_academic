@@ -101,6 +101,7 @@ class SJRegionBinReads {
       size_t i, junction_pos_t num_stacks,
       rng_t& generator,
       OutputIt first, OutputIt last) const {
+    if (first == last) { return; }
     using OutputT = remove_cvref_t<decltype(*first)>;
     const auto pos_begin = begin_region(i);
     const auto pos_end = end_region(i, num_stacks);

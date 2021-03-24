@@ -36,12 +36,13 @@ struct CoverageSummary {
 
 class CoverageBootstraps {
  private:
+  size_t num_connections_;
   size_t num_bootstraps_;
   std::vector<real_t> coverage_;
 
  public:
   size_t num_bootstraps() const { return num_bootstraps_; }
-  size_t num_connections() const { return coverage_.size() / num_bootstraps(); }
+  size_t num_connections() const { return num_connections_; }
 
   const std::vector<real_t>& data() const { return coverage_; }
   const std::vector<real_t>& data() { return coverage_; }
@@ -73,7 +74,8 @@ class CoverageBootstraps {
   }
 
   CoverageBootstraps(size_t num_connections, size_t num_bootstraps)
-      : num_bootstraps_{num_bootstraps},
+      : num_connections_{num_connections},
+        num_bootstraps_{num_bootstraps},
         coverage_(num_connections * num_bootstraps) { }
   CoverageBootstraps() : CoverageBootstraps{0, 0} { }
   CoverageBootstraps(const CoverageBootstraps&) = default;
