@@ -51,6 +51,7 @@ def add_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
         "--quantiles",
         type=float,
+        nargs="+",
         default=[],
         help="Posterior quantiles to calculate (default: %(default)s)",
     )
