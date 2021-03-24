@@ -187,7 +187,7 @@ class QuantifiableCoverage(object):
         return
 
     @property
-    def original_bams(self) -> Final[List[str]]:
+    def original_bams(self) -> List[str]:
         return self._original_bams
 
     @property
