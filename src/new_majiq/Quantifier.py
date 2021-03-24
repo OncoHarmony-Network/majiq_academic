@@ -482,12 +482,17 @@ class QuantifiableCoverage(object):
         cls,
         experiments: Sequence[Union[Path, str]],
         quantifiable: QuantifiableEvents,
+        drop_unquantifiable: bool = True,
     ) -> "QuantifiableCoverage":
         """Aggregate coverage over input experiments for quantifiable events"""
         if len(experiments) == 0:
             raise ValueError("No experiments passed into QuantifiableCoverage")
         checksums: Final[ConnectionsChecksum] = quantifiable.checksums
-        quantifiable_offsets: Final[np.ndarray] = quantifiable.quantifiable_offsets
+        offsets: Final[np.ndarray] = (
+            quantifiable.quantifiable_offsets
+            if drop_unquantifiable else
+            quantifiable.offsets
+        )
         coverage: xr.Dataset
         original_bams: List[str] = []
         # get coverage first, checking checksums each time
@@ -505,8 +510,18 @@ class QuantifiableCoverage(object):
                 x_coverage = (
                     df[["numreads", "bootstraps"]]
                     .load()
-                    .isel(ec_idx=quantifiable.event_connection_passed_mask)
                 )
+                if drop_unquantifiable:
+                    x_coverage = x_coverage.isel(
+                        ec_idx=quantifiable.event_connection_passed_mask
+                    )
+                else:
+                    x_coverage = x_coverage.where(
+                        xr.DataArray(
+                            quantifiable.event_connection_passed_mask,
+                            dims=["ec_idx"],
+                        )
+                    )
                 try:
                     # this will fail if num-bootstraps is variable
                     # could handle but not for now
@@ -519,13 +534,14 @@ class QuantifiableCoverage(object):
             events = (
                 df.drop_dims("e_offsets_idx")
                 .load()
-                .isel(
-                    e_idx=quantifiable.event_passed,
-                    ec_idx=quantifiable.event_connection_passed_mask,
-                )
+            )
+        if drop_unquantifiable:
+            events = events.isel(
+                e_idx=quantifiable.event_passed,
+                ec_idx=quantifiable.event_connection_passed_mask,
             )
         return QuantifiableCoverage(
-            quantifiable_offsets,
+            offsets,
             coverage.numreads.values,
             coverage.bootstraps.values,
             events,
