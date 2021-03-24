@@ -93,12 +93,15 @@ namespace BetaMixture {
                 }
 
             private:
+                static bool _invalid_pair(_npy_type a, _npy_type b) {
+                    return std::isnan(a) || std::isnan(b) || a < 0 || b < 0;
+                }
                 /**
                  * quick check if all alpha/beta values are valid
                  */
                 bool is_invalid() const {
                     for (npy_intp idx = 0; idx < size(); ++idx) {
-                        if (alpha(idx) < 0 || beta(idx) < 0) {
+                        if (_invalid_pair(alpha(idx), beta(idx))) {
                             return true;
                         }
                     }
@@ -120,7 +123,7 @@ namespace BetaMixture {
                     for (npy_intp idx = 0; idx < size(); ++idx) {
                         const auto a = alpha(idx);
                         const auto b = beta(idx);
-                        if (a < 0 || b < 0) {
+                        if (_invalid_pair(a, b)) {
                             _npy_type invalid = std::numeric_limits<_npy_type>::quiet_NaN();
                             return Moments<_npy_type>(invalid, invalid);
                         }
