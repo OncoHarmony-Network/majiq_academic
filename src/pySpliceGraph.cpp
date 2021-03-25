@@ -1181,9 +1181,7 @@ void init_pyExonConnections(pyExonConnections_t& pyExonConnections) {
           if (_exon_idx(i) >= self.num_exons()) {
             throw std::invalid_argument("exon_idx has out of range values");
           }
-          events.emplace_back(
-              _exon_idx(i),
-              _is_source(i) ? EventType::SRC_EVENT : EventType::DST_EVENT);
+          events[i] = Event{_exon_idx(i), _is_source(i) ? EventType::SRC_EVENT : EventType::DST_EVENT};
         }
         return self.CreateEvents(std::move(events));
         },
