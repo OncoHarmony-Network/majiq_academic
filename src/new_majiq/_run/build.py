@@ -464,6 +464,12 @@ def run(args: argparse.Namespace) -> None:
     else:
         if (missing := sorted(set(x for x in args.sjs if not x.exists()))) :
             raise ValueError(f"Unable to find all input SJ files ({missing =})")
+        if len(unique := set(args.sjs)) != len(args.sjs):
+            # get non-unique sjs to report error
+            non_unique = sorted(args.sjs)
+            for x in unique:
+                non_unique.remove(x)  # removes first occurence
+            raise ValueError(f"Non-unique input SJ files ({non_unique = })")
         experiments = {"": args.sjs}
     log.info(f"Loading base splicegraph from {args.base_sg.resolve()}")
     sg = nm.SpliceGraph.from_zarr(args.base_sg)
