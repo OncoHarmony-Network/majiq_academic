@@ -202,7 +202,8 @@ def build_threshold_args(parser: argparse.ArgumentParser) -> None:
 
 def ir_filtering_args(parser: argparse.ArgumentParser) -> None:
     """arguments for intron filtering"""
-    introns_ex = parser.add_mutually_exclusive_group()
+    introns = parser.add_argument_group("Intron filtering")
+    introns_ex = introns.add_mutually_exclusive_group()
     introns_ex.add_argument(
         "--all-introns",
         dest="introns",
@@ -226,7 +227,64 @@ def ir_filtering_args(parser: argparse.ArgumentParser) -> None:
         default=IntronsType.ALL_INTRONS,
         action="store_const",
         const=IntronsType.NO_INTRONS,
-        help="Drop/do not process all introns (default: %(default)s)",
+        help="Drop/ignore all introns (default: %(default)s)",
+    )
+    return
+
+
+def build_type_args(parser: argparse.ArgumentParser) -> None:
+    """arguments for build type"""
+    build = parser.add_argument_group("Build type")
+    build_ex = build.add_mutually_exclusive_group()
+    build_ex.add_argument(
+        "--build-all",
+        dest="build",
+        default=BuildType.BUILD_ALL,
+        action="store_const",
+        const=BuildType.BUILD_ALL,
+        help="Process experiments to find new junctions and update existing junctions"
+        " (default: %(default)s)",
+    )
+    build_ex.add_argument(
+        "--build-known",
+        dest="build",
+        default=BuildType.BUILD_ALL,
+        action="store_const",
+        const=BuildType.BUILD_KNOWN,
+        help="Process experiments to update known junctions"
+        " (note that denovo/annotated intron processing specified separately)"
+        " (default: %(default)s)",
+    )
+    build_ex.add_argument(
+        "--simplify-only",
+        dest="build",
+        default=BuildType.BUILD_ALL,
+        action="store_const",
+        const=BuildType.SIMPLIFY_ONLY,
+        help="Only perform simplification (default: %(default)s)",
+    )
+    return
+
+
+def enable_simplify_args(parser: argparse.ArgumentParser) -> None:
+    simplify = parser.add_argument_group("Simplification")
+    simplify_ex = simplify.add_mutually_exclusive_group()
+    simplify_ex.add_argument(
+        "--simplify",
+        dest="simplify",
+        action="store_true",
+        default=None,
+        help="(Un)simplify splicegraph using evidence from input experiments"
+        " (default: do not simplify unless build type set to --simplify-only)",
+    )
+    simplify_ex.add_argument(
+        "--no-simplify",
+        dest="simplify",
+        action="store_false",
+        default=None,
+        help="Explicitly request to not perform simplification."
+        " Will raise error if --simplify-only is set."
+        " (default: do not simplify unless build type set to --simplify-only)",
     )
     return
 
@@ -256,42 +314,9 @@ def add_args(parser: argparse.ArgumentParser) -> None:
         " (use `new-majiq combine` to merge independent build groups)",
     )
 
-    build_ex = parser.add_mutually_exclusive_group()
-    build_ex.add_argument(
-        "--build-all",
-        dest="build",
-        default=BuildType.BUILD_ALL,
-        action="store_const",
-        const=BuildType.BUILD_ALL,
-        help="Process experiments to find new junctions and update existing junctions"
-        " (default: build=%(default)s)",
-    )
-    build_ex.add_argument(
-        "--build-known",
-        dest="build",
-        default=BuildType.BUILD_ALL,
-        action="store_const",
-        const=BuildType.BUILD_KNOWN,
-        help="Process experiments to update known junctions"
-        " (note that denovo/annotated intron processing specified separately)"
-        " (default: build=%(default)s)",
-    )
-    build_ex.add_argument(
-        "--simplify-only",
-        dest="build",
-        default=BuildType.BUILD_ALL,
-        action="store_const",
-        const=BuildType.BUILD_KNOWN,
-        help="Only perform simplification (default: build=%(default)s)",
-    )
+    build_type_args(parser)
     ir_filtering_args(parser)
-    parser.add_argument(
-        "--simplify",
-        action="store_true",
-        default=False,
-        help="(Un)simplify splicegraph using evidence from input experiments"
-        " (default: %(default)s)",
-    )
+    enable_simplify_args(parser)
 
     reset_simplified_args(parser)
     build_threshold_args(parser)
@@ -450,6 +475,16 @@ def do_simplify(
 
 
 def run(args: argparse.Namespace) -> None:
+    simplify: bool  # will we be simplifying in the end?
+    if args.simplify is None:
+        simplify = args.build == BuildType.SIMPLIFY_ONLY
+    else:
+        if not args.simplify and args.build == BuildType.SIMPLIFY_ONLY:
+            raise argparse.ArgumentError(
+                None, "--no-simplify and --simplify-only are incompatible"
+            )
+        simplify = args.simplify
+
     if not args.base_sg.exists():
         raise ValueError(f"Unable to find base splicegraph at {args.base_sg}")
     if args.out_sg.exists():
@@ -483,9 +518,6 @@ def run(args: argparse.Namespace) -> None:
         experiments = {"": args.sjs}
     log.info(f"Loading base splicegraph from {args.base_sg.resolve()}")
     sg = nm.SpliceGraph.from_zarr(args.base_sg)
-
-    # determine if we are simplifying in the end
-    simplify = args.simplify or args.build == BuildType.SIMPLIFY_ONLY
 
     # perform build?
     if args.build != BuildType.SIMPLIFY_ONLY:
