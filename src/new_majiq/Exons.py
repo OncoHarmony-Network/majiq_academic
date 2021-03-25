@@ -63,6 +63,17 @@ class Exons(GeneRegions):
 
         return GeneIntrons(self._exons.potential_introns(make_simplified))
 
+    def empty_introns(self) -> "GeneIntrons":
+        """Get empty introns to go with exons
+
+        Note
+        ----
+        Currently doing unncessary work by inferring all introns.
+        But, it gets the job done since potential_introns starts off denovo and
+        not passed
+        """
+        return self.potential_introns().filter_passed()
+
     @property
     def annotated_start(self) -> np.ndarray:
         """Annotated coordinates start. If denovo, -1
