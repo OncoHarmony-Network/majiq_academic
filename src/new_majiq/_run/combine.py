@@ -10,10 +10,9 @@ import argparse
 
 import new_majiq as nm
 
-from new_majiq._run._build_pipeline import IntronsType
 from new_majiq.logger import get_logger
 
-from new_majiq._run.build import ir_filtering_args
+from new_majiq._run.build import ir_filtering_args, IntronsType
 from pathlib import Path
 from new_majiq._run._run import GenericSubcommand
 from typing import (
