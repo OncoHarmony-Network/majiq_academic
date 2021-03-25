@@ -64,27 +64,23 @@ def run(args: argparse.Namespace) -> None:
 
     import new_majiq as nm
     from new_majiq._run._build_pipeline import IntronsType
-    from new_majiq.Genes import Genes
-    from new_majiq.GeneJunctions import GeneJunctions
-    from new_majiq.Exons import Exons
-    from new_majiq.GeneIntrons import GeneIntrons
     from new_majiq.logger import get_logger
 
     log = get_logger()
 
     log.info("Combining input junctions")
-    df_junctions = GeneJunctions.combine_datasets(
+    df_junctions = nm.GeneJunctions.combine_datasets(
         [
-            GeneJunctions.load_dataset(p).assign_coords(denovo=False)
+            nm.GeneJunctions.load_dataset(p).assign_coords(denovo=False)
             for p in args.make_annotated
         ]
-        + [GeneJunctions.load_dataset(p) for p in args.keep_denovo]
+        + [nm.GeneJunctions.load_dataset(p) for p in args.keep_denovo]
     )
     log.info("Constructing GeneJunctions object for combined set of junctions")
-    genes = Genes.from_zarr(all_inputs[0])
-    junctions = GeneJunctions.from_dataset_and_genes(df_junctions, genes)
+    genes = nm.Genes.from_zarr(all_inputs[0])
+    junctions = nm.GeneJunctions.from_dataset_and_genes(df_junctions, genes)
     log.info("Creating updated combined exon definitions")
-    exons = Exons.from_zarr(all_inputs[0], genes).infer_with_junctions(junctions)
+    exons = nm.Exons.from_zarr(all_inputs[0], genes).infer_with_junctions(junctions)
     introns: nm.GeneIntrons
     if args.introns == IntronsType.NO_INTRONS:
         log.info("Creating matching empty introns")
@@ -94,7 +90,7 @@ def run(args: argparse.Namespace) -> None:
         potential_introns = exons.potential_introns(True)  # all start simplified
         log.info("Updating intron flags using input splicegraphs")
         for p in all_inputs:
-            potential_introns.update_flags_from(GeneIntrons.from_zarr(p, genes))
+            potential_introns.update_flags_from(nm.GeneIntrons.from_zarr(p, genes))
         log.info("Filtering introns to those passing thresholds")
         introns = potential_introns.filter_passed(
             keep_annotated=True,

@@ -9,7 +9,6 @@ Author: Joseph K Aicher
 import new_majiq as nm
 
 from pathlib import Path
-from new_majiq.ExonConnections import ExonConnections
 from new_majiq.logger import get_logger
 from typing import (
     Dict,
@@ -135,7 +134,7 @@ def build(
 
     log.info("constructing splicegraph with updated exons and connections")
     return sg.with_updated_exon_connections(
-        ExonConnections.create_connecting(
+        nm.ExonConnections.create_connecting(
             updated_exons, updated_introns, updated_junctions
         )
     )

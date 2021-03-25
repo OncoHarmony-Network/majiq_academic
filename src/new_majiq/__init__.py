@@ -14,6 +14,8 @@ from .SpliceGraph import SpliceGraph
 from .GeneIntrons import GeneIntrons
 from .GeneJunctions import GeneJunctions
 from .Exons import Exons
+from .Genes import Genes
+from .ExonConnections import ExonConnections
 
 # how we measure junctions and introns from BAM files
 from .SJIntronsBins import SJIntronsBins
