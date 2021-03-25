@@ -16,11 +16,24 @@ from typing import (
     Sequence,
     Union,
 )
+from enum import Enum
 
 
 # type aliases
 SJGroupT = Sequence[Path]
 SJGroupsT = Dict[str, SJGroupT]
+
+
+class BuildType(Enum):
+    BUILD_ALL = "build_all"
+    BUILD_KNOWN = "build_known"
+    SIMPLIFY_ONLY = "simplify_only"
+
+
+class IntronsType(Enum):
+    NO_INTRONS = "no_introns"
+    ANNOTATED_INTRONS = "annotated_introns"
+    ALL_INTRONS = "all_introns"
 
 
 def get_grouped_experiments(groups_tsv: Path) -> SJGroupsT:
@@ -53,8 +66,7 @@ def build(
     experiment_thresholds: nm.ExperimentThresholds,
     min_experiments: float,
     process_denovo_junctions: bool,
-    process_denovo_introns: bool,
-    keep_annotated_ir: bool,
+    introns_type: IntronsType,
     denovo_simplified: bool,
 ) -> nm.SpliceGraph:
     log = get_logger()
@@ -88,32 +100,38 @@ def build(
     log.info("Inferring denovo exons and updated exon boundaries")
     updated_exons = sg.exons.infer_with_junctions(updated_junctions)
 
-    log.info("Determining potential gene introns using updated exons")
-    potential_introns = updated_exons.potential_introns(denovo_simplified)
-    potential_introns.update_flags_from(sg.introns)
-    log.info("Identiying new passed introns")
-    intron_group = potential_introns.build_group()  # intron groups done in place
-    for group_ndx, (group, group_sjs) in enumerate(experiments.items()):
-        log.info(
-            f"Processing introns from group {group} ({1 + group_ndx} / {len(experiments)})"
-        )
-        for sj_ndx, sj in enumerate(group_sjs):
+    updated_introns: nm.GeneIntrons
+    if introns_type == IntronsType.NO_INTRONS:
+        log.info("Dropping all introns")
+        updated_introns = updated_exons.empty_introns()
+    else:
+        log.info("Determining potential gene introns using updated exons")
+        potential_introns = updated_exons.potential_introns(denovo_simplified)
+        potential_introns.update_flags_from(sg.introns)
+        log.info("Identiying new passed introns")
+        intron_group = potential_introns.build_group()  # intron groups done in place
+        for group_ndx, (group, group_sjs) in enumerate(experiments.items()):
             log.info(
-                f"Processing introns from {Path(sj).resolve()}"
-                f" (experiment {1 + sj_ndx} / {len(group_sjs)} in group)"
+                f"Processing introns from group {group}"
+                f" ({1 + group_ndx} / {len(experiments)})"
             )
-            intron_group.add_experiment(
-                nm.SJIntronsBins.from_zarr(sj),
-                thresholds=experiment_thresholds,
-            )
-        intron_group.update_introns(min_experiments)
-    del intron_group
-    log.info("Filtering potential introns to those passing thresholds")
-    updated_introns = potential_introns.filter_passed(
-        keep_annotated=keep_annotated_ir,
-        discard_denovo=not process_denovo_introns,
-    )
-    del potential_introns
+            for sj_ndx, sj in enumerate(group_sjs):
+                log.info(
+                    f"Processing introns from {Path(sj).resolve()}"
+                    f" (experiment {1 + sj_ndx} / {len(group_sjs)} in group)"
+                )
+                intron_group.add_experiment(
+                    nm.SJIntronsBins.from_zarr(sj),
+                    thresholds=experiment_thresholds,
+                )
+            intron_group.update_introns(min_experiments)
+        del intron_group
+        log.info("Filtering potential introns to those passing thresholds")
+        updated_introns = potential_introns.filter_passed(
+            keep_annotated=True,
+            discard_denovo=introns_type != IntronsType.ALL_INTRONS,
+        )
+        del potential_introns
 
     log.info("constructing splicegraph with updated exons and connections")
     return sg.with_updated_exon_connections(

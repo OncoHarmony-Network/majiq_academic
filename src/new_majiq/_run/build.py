@@ -9,7 +9,9 @@ Author: Joseph K Aicher
 import argparse
 
 import new_majiq.constants as constants
+import new_majiq._run._build_pipeline as nm_build
 
+from new_majiq._run.simplify import simplifier_threshold_args, reset_simplified_args
 from new_majiq._run._majiq_args import check_nonnegative_factory
 from pathlib import Path
 from new_majiq._run._run import GenericSubcommand
@@ -85,89 +87,32 @@ def build_threshold_args(parser: argparse.ArgumentParser) -> None:
 
 
 def ir_filtering_args(parser: argparse.ArgumentParser) -> None:
-    """add arguments to parser for filtering annotated/denovo introns"""
-    ir_filtering = parser.add_argument_group("Intron retention filtering")
-    # denovo introns/annotated introns
-    annotated_ir_ex = ir_filtering.add_mutually_exclusive_group()
-    annotated_ir_ex.add_argument(
-        "--keep-annotated-ir",
-        action="store_true",
-        dest="keep_annotated_ir",
-        default=constants.DEFAULT_BUILD_KEEP_ANNOTATED_IR,
-        help="Keep annotated introns even if they did not have read support"
-        " (default keep_annotated_ir = %(default)s)",
+    """arguments for intron filtering"""
+    introns_ex = parser.add_mutually_exclusive_group()
+    introns_ex.add_argument(
+        "--all-introns",
+        dest="introns",
+        default=nm_build.IntronsType.ALL_INTRONS,
+        action="store_const",
+        const=nm_build.IntronsType.ALL_INTRONS,
+        help="Keep all annotated introns and denovo introns passing build filters"
+        " (default: %(default)s)",
     )
-    annotated_ir_ex.add_argument(
-        "--only-passed-ir",
-        action="store_false",
-        dest="keep_annotated_ir",
-        default=constants.DEFAULT_BUILD_KEEP_ANNOTATED_IR,
-        help="Only keep annotated introns if they pass build filters"
-        " (default keep_annotated_ir = %(default)s)",
+    introns_ex.add_argument(
+        "--annotated-introns",
+        dest="introns",
+        default=nm_build.IntronsType.ALL_INTRONS,
+        action="store_const",
+        const=nm_build.IntronsType.ANNOTATED_INTRONS,
+        help="Keep all annotated introns only (default: %(default)s)",
     )
-    denovo_ir_ex = ir_filtering.add_mutually_exclusive_group()
-    denovo_ir_ex.add_argument(
-        "--process-denovo-introns",
-        action="store_true",
-        dest="process_denovo_introns",
-        default=constants.DEFAULT_BUILD_DENOVO_IR,
-        help="Process denovo introns that pass build filters"
-        " (default process_denovo_introns = %(default)s)",
-    )
-    denovo_ir_ex.add_argument(
-        "--ignore-denovo-introns",
-        action="store_false",
-        dest="process_denovo_introns",
-        default=constants.DEFAULT_BUILD_DENOVO_IR,
-        help="Ignore denovo introns regardless of evidence"
-        " (default process_denovo_introns = %(default)s)",
-    )
-    return
-
-
-def denovo_junctions_args(parser: argparse.ArgumentParser) -> None:
-    """add arguments for processing of denovo junctions"""
-    denovo_junctions = parser.add_argument_group("Denovo junction filtering")
-    # denovo junctions
-    denovo_junctions_ex = denovo_junctions.add_mutually_exclusive_group()
-    denovo_junctions_ex.add_argument(
-        "--known-junctions-only",
-        action="store_false",
-        dest="process_denovo_junctions",
-        default=constants.DEFAULT_BUILD_DENOVO_JUNCTIONS,
-        help="Only process junctions already in base splicegraph"
-        " (default: process_denovo_junctions=%(default)s)",
-    )
-    denovo_junctions_ex.add_argument(
-        "--process-denovo-junctions",
-        action="store_true",
-        dest="process_denovo_junctions",
-        default=constants.DEFAULT_BUILD_DENOVO_JUNCTIONS,
-        help="Process all junctions, known and denovo."
-        " (default: process_denovo_junctions=%(default)s)",
-    )
-    return
-
-
-def denovo_simplified_args(parser: argparse.ArgumentParser) -> None:
-    """arguments for if denovos added simplified or not"""
-    denovo_simplified = parser.add_argument_group("Simplification of new denovos")
-    denovo_simplified_ex = denovo_simplified.add_mutually_exclusive_group()
-    denovo_simplified_ex.add_argument(
-        "--denovo-simplified",
-        action="store_true",
-        dest="denovo_simplified",
-        default=constants.DEFAULT_BUILD_DENOVO_SIMPLIFIED,
-        help="Denovo introns/junctions will be initially added marked as"
-        " simplified (default: denovo_simplified=%(default)s)",
-    )
-    denovo_simplified_ex.add_argument(
-        "--denovo-unsimplified",
-        action="store_true",
-        dest="denovo_simplified",
-        default=constants.DEFAULT_BUILD_DENOVO_SIMPLIFIED,
-        help="Denovo introns/junctions will be initially added as unsimplified"
-        " (default: denovo_simplified=%(default)s)",
+    introns_ex.add_argument(
+        "--no-introns",
+        dest="introns",
+        default=nm_build.IntronsType.ALL_INTRONS,
+        action="store_const",
+        const=nm_build.IntronsType.NO_INTRONS,
+        help="Drop/do not process all introns (default: %(default)s)",
     )
     return
 
@@ -191,10 +136,46 @@ def add_args(parser: argparse.ArgumentParser) -> None:
         help="Paths to input experiments as SJ files for a single build group",
     )
 
-    build_threshold_args(parser)
-    denovo_junctions_args(parser)
+    build_ex = parser.add_mutually_exclusive_group()
+    build_ex.add_argument(
+        "--build-all",
+        dest="build",
+        default=nm_build.BuildType.BUILD_ALL,
+        action="store_const",
+        const=nm_build.BuildType.BUILD_ALL,
+        help="Process experiments to find new junctions and update existing junctions"
+        " (default: build=%(default)s)",
+    )
+    build_ex.add_argument(
+        "--build-known",
+        dest="build",
+        default=nm_build.BuildType.BUILD_ALL,
+        action="store_const",
+        const=nm_build.BuildType.BUILD_KNOWN,
+        help="Process experiments to update known junctions"
+        " (note that denovo/annotated intron processing specified separately)"
+        " (default: build=%(default)s)",
+    )
+    build_ex.add_argument(
+        "--simplify-only",
+        dest="build",
+        default=nm_build.BuildType.BUILD_ALL,
+        action="store_const",
+        const=nm_build.BuildType.BUILD_KNOWN,
+        help="Only perform simplification (default: build=%(default)s)",
+    )
     ir_filtering_args(parser)
-    denovo_simplified_args(parser)
+    parser.add_argument(
+        "--simplify",
+        action="store_true",
+        default=False,
+        help="(Un)simplify splicegraph using evidence from input experiments"
+        " (default: %(default)s)",
+    )
+
+    reset_simplified_args(parser)
+    build_threshold_args(parser)
+    simplifier_threshold_args(parser, prefix="simplify-")
     return
 
 
@@ -228,17 +209,52 @@ def run(args: argparse.Namespace) -> None:
         if (missing := sorted(set(x for x in args.sjs if not x.exists()))) :
             raise ValueError(f"Unable to find all input SJ files ({missing =})")
         experiments = {"": args.sjs}
+    log.info(f"Loading base splicegraph from {args.base_sg.resolve()}")
+    sg = nm.SpliceGraph.from_zarr(args.base_sg)
 
-    sg = nm_build.build(
-        sg=args.base_sg,
-        experiments=experiments,
-        experiment_thresholds=experiment_thresholds,
-        min_experiments=args.min_experiments,
-        process_denovo_junctions=args.process_denovo_junctions,
-        process_denovo_introns=args.process_denovo_introns,
-        keep_annotated_ir=args.keep_annotated_ir,
-        denovo_simplified=args.denovo_simplified,
-    )
+    # determine if we are simplifying in the end
+    simplify = args.simplify or args.build == nm_build.BuildType.SIMPLIFY_ONLY
+
+    # perform build?
+    if args.build != nm_build.BuildType.SIMPLIFY_ONLY:
+        sg = nm_build.build(
+            sg=sg,
+            experiments=experiments,
+            experiment_thresholds=experiment_thresholds,
+            min_experiments=args.min_experiments,
+            process_denovo_junctions=args.build == nm_build.BuildType.BUILD_ALL,
+            introns_type=args.introns,
+            # if simplifying or if --update-simplified (i.e. not --reset-simplified)
+            denovo_simplified=simplify or not args.reset_simplify,
+        )
+    else:
+        log.info(f"Filtering introns {args.introns = }")
+        sg = nm.SpliceGraph.from_components(
+            contigs=sg.contigs,
+            genes=sg.genes,
+            exons=sg.exons,
+            junctions=sg.junctions,
+            introns=(
+                sg.introns.filter_passed(keep_annotated=True, discard_denovo=False)
+                if args.introns == nm_build.IntronsType.ALL_INTRONS else
+                sg.introns.filter_passed(keep_annotated=True, discard_denovo=True)
+                if args.introns == nm_build.IntronsType.ANNOTATED_INTRONS else
+                sg.exons.empty_introns()
+            )
+        )
+
+    # perform simplification?
+    if simplify:
+        sg = nm_build.simplify(
+            sg=sg,
+            experiments=experiments,
+            reset_simplify=args.reset_simplify,
+            simplify_minpsi=args.simplify_minpsi,
+            simplify_minreads_annotated=args.simplify_minreads_annotated,
+            simplify_minreads_denovo=args.simplify_minreads_denovo,
+            simplify_minreads_ir=args.simplify_minreads_ir,
+            simplify_min_experiments=args.simplify_min_experiments,
+        )
 
     log.info(f"Saving updated splicegraph to {args.out_sg.resolve()}")
     sg.to_zarr(args.out_sg)

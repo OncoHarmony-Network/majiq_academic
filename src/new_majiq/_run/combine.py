@@ -63,6 +63,7 @@ def run(args: argparse.Namespace) -> None:
         raise ValueError(f"Unable to find all input splicegraphs ({missing = })")
 
     import new_majiq as nm
+    from new_majiq._run._build_pipeline import IntronsType
     from new_majiq.Genes import Genes
     from new_majiq.GeneJunctions import GeneJunctions
     from new_majiq.Exons import Exons
@@ -84,17 +85,22 @@ def run(args: argparse.Namespace) -> None:
     junctions = GeneJunctions.from_dataset_and_genes(df_junctions, genes)
     log.info("Creating updated combined exon definitions")
     exons = Exons.from_zarr(all_inputs[0], genes).infer_with_junctions(junctions)
-    log.info("Defining new potential introns between exons")
-    potential_introns = exons.potential_introns(True)  # all start simplified
-    log.info("Updating intron flags using input splicegraphs")
-    for p in all_inputs:
-        potential_introns.update_flags_from(GeneIntrons.from_zarr(p, genes))
-    log.info("Filtering introns to those passing thresholds")
-    introns = potential_introns.filter_passed(
-        keep_annotated=args.keep_annotated_ir,
-        discard_denovo=not args.process_denovo_introns,
-    )
-    del potential_introns
+    introns: nm.GeneIntrons
+    if args.introns == IntronsType.NO_INTRONS:
+        log.info("Creating matching empty introns")
+        introns = exons.empty_introns()
+    else:
+        log.info("Defining new potential introns between exons")
+        potential_introns = exons.potential_introns(True)  # all start simplified
+        log.info("Updating intron flags using input splicegraphs")
+        for p in all_inputs:
+            potential_introns.update_flags_from(GeneIntrons.from_zarr(p, genes))
+        log.info("Filtering introns to those passing thresholds")
+        introns = potential_introns.filter_passed(
+            keep_annotated=True,
+            discard_denovo=args.introns == IntronsType.ANNOTATED_INTRONS,
+        )
+        del potential_introns
     log.info("Creating final combined splicegraph")
     sg = nm.SpliceGraph.from_components(genes.contigs, genes, exons, junctions, introns)
     log.info(f"Saving updated splicegraph to {args.out_sg.resolve()}")

@@ -90,20 +90,22 @@ def reset_simplified_args(parser: argparse.ArgumentParser) -> None:
     reset = parser.add_argument_group("Resetting connections to simplified")
     reset_ex = reset.add_mutually_exclusive_group()
     reset_ex.add_argument(
-        "--reset-simplify",
+        "--reset-simplified",
         action="store_true",
         dest="reset_simplify",
         default=True,
-        help="Reset all introns/junctions to simplified before processing input"
-        " experiments (default: reset_simplify=%(default)s)",
+        help="If simplifying, reset all introns/junctions to simplified,"
+        " i.e. start simplification from scratch"
+        " (default: reset_simplify=%(default)s)",
     )
     reset_ex.add_argument(
-        "--update-simplify",
+        "--update-simplified",
         action="store_false",
         dest="reset_simplify",
         default=True,
-        help="Continue unsimplifying from input splicegraph, do not reset"
-        " simplification information (default: reset_simplify=%(default)s)",
+        help="Continue from existing simplified splicegraph,"
+        " i.e. new denovo connections are simplified, existing connections will"
+        " not be reset to simplified (default: reset_simplify=%(default)s)",
     )
     return
 
