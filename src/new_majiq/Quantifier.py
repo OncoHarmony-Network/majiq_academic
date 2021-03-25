@@ -297,7 +297,7 @@ class QuantifiableCoverage(object):
         result = np.empty((alpha.shape[0], len(quantiles)), dtype=alpha.dtype)
 
         def compute_slice(idx: slice) -> None:
-            with np.errstate(divide="ignore"):
+            with np.errstate(divide="ignore", invalid="ignore", over="ignore"):
                 bm.quantile(
                     quantiles_arr[np.newaxis],
                     alpha[idx, np.newaxis],
