@@ -152,7 +152,7 @@ def simplify(
         for sj_ndx, sj in enumerate(group_sjs):
             log.info(
                 f"Processing coverage from {Path(sj).resolve()}"
-                f" (experiment {1 + sj_ndx} / {len(group_sjs)} in group"
+                f" (experiment {1 + sj_ndx} / {len(group_sjs)} in group)"
             )
             simplifier_group.add_experiment(
                 nm.SpliceGraphReads.from_connections_and_sj(
