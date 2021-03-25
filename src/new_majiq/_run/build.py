@@ -141,6 +141,7 @@ def build_threshold_args(parser: argparse.ArgumentParser) -> None:
         "--min-experiments",
         type=check_nonnegative_factory(float, True),
         default=constants.DEFAULT_BUILD_MINEXPERIMENTS,
+        metavar="x",
         help="Threshold per experiments group. If < 1, the fraction of"
         " experiments in a group that must pass individual filters for a"
         " feature to be accepted. If greater, an absolute number."
@@ -151,18 +152,21 @@ def build_threshold_args(parser: argparse.ArgumentParser) -> None:
         "--minreads",
         type=check_nonnegative_factory(int, True),
         default=constants.DEFAULT_BUILD_MINREADS,
+        metavar="x",
         help="Minimum readrate to pass an annotated junction (default: %(default)s)",
     )
     thresholds.add_argument(
         "--mindenovo",
         type=check_nonnegative_factory(int, True),
         default=constants.DEFAULT_BUILD_MINDENOVO,
+        metavar="x",
         help="Minimum readrate to pass a denovo junction or intron (default: %(default)s)",
     )
     thresholds.add_argument(
         "--minpos",
         type=check_nonnegative_factory(int, True),
         default=constants.DEFAULT_BUILD_MINPOS,
+        metavar="x",
         help="Minimum number of nonzero positions to pass a junction."
         " This is scaled for introns with some minimum coverage per bin to"
         " account for length dependence."
@@ -172,6 +176,7 @@ def build_threshold_args(parser: argparse.ArgumentParser) -> None:
         "--max-pctbins",
         type=check_nonnegative_factory(float, True),
         default=constants.DEFAULT_BUILD_MAX_PCTBINS,
+        metavar="x",
         help="Maximum fraction of intron bins on which to require coverage"
         " (default: %(default)s)",
     )
