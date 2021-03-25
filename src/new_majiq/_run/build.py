@@ -9,7 +9,10 @@ Author: Joseph K Aicher
 import argparse
 
 import new_majiq.constants as constants
+import new_majiq as nm
 import new_majiq._run._build_pipeline as nm_build
+
+from new_majiq.logger import get_logger
 
 from new_majiq._run._majiq_args import check_nonnegative_factory
 from pathlib import Path
@@ -271,10 +274,6 @@ def run(args: argparse.Namespace) -> None:
         raise ValueError(f"Unable to find base splicegraph at {args.base_sg}")
     if args.out_sg.exists():
         raise ValueError(f"Output path {args.out_sg} already exists")
-
-    import new_majiq as nm
-    import new_majiq._run._build_pipeline as nm_build
-    from new_majiq.logger import get_logger
 
     log = get_logger()
     experiment_thresholds = nm.ExperimentThresholds(

@@ -10,6 +10,9 @@ import argparse
 
 import new_majiq.constants as constants
 
+import new_majiq as nm
+from new_majiq.logger import get_logger
+
 from pathlib import Path
 from new_majiq._run._run import GenericSubcommand
 from typing import (
@@ -59,12 +62,10 @@ def run(args: argparse.Namespace) -> None:
         raise ValueError(
             f"Path for output splicegraph ({args.splicegraph}) already exists"
         )
-    from new_majiq import SpliceGraph
-    from new_majiq.logger import get_logger
 
     log = get_logger()
     log.info(f"Processing GFF3 {args.gff3.resolve()} to create annotated splicegraph")
-    sg = SpliceGraph.from_gff3(
+    sg = nm.SpliceGraph.from_gff3(
         args.gff3,
         process_ir=args.process_ir,
         # TODO(jaicher): enable configuration of GFF3 parsing

@@ -7,6 +7,11 @@ Author: Joseph K Aicher
 """
 
 import argparse
+import numpy as np
+import new_majiq as nm
+
+from new_majiq.logger import get_logger
+from new_majiq.experiments import bam_experiment_name
 
 import new_majiq.constants as constants
 
@@ -80,11 +85,6 @@ def add_args(parser: argparse.ArgumentParser) -> None:
 
 
 def run(args: argparse.Namespace) -> None:
-    import numpy as np
-    import new_majiq as nm
-    from new_majiq.logger import get_logger
-    from new_majiq.experiments import bam_experiment_name
-
     log = get_logger()
 
     try:

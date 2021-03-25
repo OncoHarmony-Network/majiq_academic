@@ -7,9 +7,10 @@ Author: Joseph K Aicher
 """
 
 import argparse
-
+import new_majiq as nm
 import new_majiq.constants as constants
 
+from new_majiq.logger import get_logger
 from pathlib import Path
 from new_majiq._run._majiq_args import check_nonnegative_factory
 from new_majiq._run._run import GenericSubcommand
@@ -55,8 +56,6 @@ def run(args: argparse.Namespace) -> None:
         raise ValueError(f"Was unable to find splicegraph at {args.splicegraph}")
     if args.sg_coverage.exists():
         raise ValueError(f"Output path {args.sg_coverage} already exists")
-    import new_majiq as nm
-    from new_majiq.logger import get_logger
 
     log = get_logger()
     log.info(f"Loading input splicegraph from {args.splicegraph.resolve()}")

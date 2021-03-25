@@ -8,6 +8,11 @@ Author: Joseph K Aicher
 
 import argparse
 
+import new_majiq as nm
+
+from new_majiq._run._build_pipeline import IntronsType
+from new_majiq.logger import get_logger
+
 from new_majiq._run.build import ir_filtering_args
 from pathlib import Path
 from new_majiq._run._run import GenericSubcommand
@@ -61,10 +66,6 @@ def run(args: argparse.Namespace) -> None:
         raise ValueError("No input splicegraphs were provided to combine")
     if (missing := sorted(set(x for x in all_inputs if not x.exists()))) :
         raise ValueError(f"Unable to find all input splicegraphs ({missing = })")
-
-    import new_majiq as nm
-    from new_majiq._run._build_pipeline import IntronsType
-    from new_majiq.logger import get_logger
 
     log = get_logger()
 
