@@ -18,6 +18,9 @@ from new_majiq.SpliceGraph import SpliceGraph
 from new_majiq.GeneIntrons import GeneIntrons
 from new_majiq.GeneJunctions import GeneJunctions
 from new_majiq.Events import Events, _Events
+from new_majiq.EventsCoverage import EventsCoverage
+from new_majiq.SJJunctionsBins import SJJunctionsBins
+from new_majiq.SJIntronsBins import SJIntronsBins
 
 from functools import cached_property
 from typing import (
@@ -81,6 +84,50 @@ class QuantifiableEvents(object):
         self._offsets: Final[np.ndarray] = offsets
         self._event_passed: Final[np.ndarray] = event_passed
         return
+
+    @classmethod
+    def from_events_and_sj(
+        cls,
+        events: Events,
+        experiments: Sequence[Union[Path, str]],
+        thresholds: QuantifierThresholds = QuantifierThresholds(),
+        pvalue_threshold: float = constants.DEFAULT_COVERAGE_STACK_PVALUE,
+    ) -> "QuantifiableEvents":
+        if len(experiments) == 0:
+            raise ValueError("No experiments passed into quantifiable events")
+        passed_ct: np.ndarray  # passed per event connection in events
+        for path in experiments:
+            coverage = EventsCoverage.from_events_and_sj(
+                events,
+                SJJunctionsBins.from_zarr(path),
+                SJIntronsBins.from_zarr(path),
+                num_bootstraps=0,  # bootstraps are not used
+                pvalue_threshold=pvalue_threshold,
+            )
+            passed = (
+                (coverage.numreads >= thresholds.minreads)
+                & (coverage.numbins >= thresholds.minbins)
+            )
+            try:
+                passed_ct += passed
+            except NameError:  # this is the first experiment
+                passed_ct = passed.astype(int)
+        # which connections passed?
+        connection_passed = passed_ct >= min_experiments(
+            thresholds.min_experiments_f, len(experiments)
+        )
+        # event passes if any of its connections passed
+        event_passed: np.ndarray = np.logical_or.reduceat(
+            connection_passed, events._offsets[:-1].astype(int)
+        )
+        return QuantifiableEvents(
+            ConnectionsChecksum(
+                introns=events.introns.checksum(),
+                junctions=events.junctions.checksum()
+            ),
+            events._offsets.astype(int),
+            event_passed
+        )
 
     @classmethod
     def from_quantifier_group(
@@ -476,6 +523,71 @@ class QuantifiableCoverage(object):
             ).assign_coords(quantile=quantiles)
         df.to_zarr(path, mode="a", group=constants.NC_EVENTSQUANTIFIED)
         return
+
+    @classmethod
+    def from_events_and_sj(
+        cls,
+        events: Events,
+        experiments: Sequence[Union[Path, str]],
+        quantifiable: QuantifiableEvents,
+        drop_unquantifiable: bool = True,
+        num_bootstraps: int = constants.DEFAULT_COVERAGE_NUM_BOOTSTRAPS,
+        pvalue_threshold: float = constants.DEFAULT_COVERAGE_STACK_PVALUE,
+    ) -> "QuantifiableCoverage":
+        if len(experiments) == 0:
+            raise ValueError("No experiments passed into QuantifiableCoverage")
+        if quantifiable.checksums != ConnectionsChecksum(
+            introns=events.introns.checksum(), junctions=events.junctions.checksum()
+        ):
+            raise ValueError("Events checksums do not match quantifiable")
+        elif len(quantifiable.offsets) != len(events._offsets):
+            raise ValueError("Events offsets do not match quantifiable")
+        checksums: Final[ConnectionsChecksum] = quantifiable.checksums
+        # we only have to get coverage for a subset of events
+        load_events = events[quantifiable.event_passed]
+        if drop_unquantifiable:
+            events = load_events
+        # aggregate reads/bootstraps
+        numreads: np.ndarray
+        bootstraps: np.ndarray
+        original_bams: List[str] = list()
+        for path in experiments:
+            coverage = EventsCoverage.from_events_and_sj(
+                load_events,
+                SJJunctionsBins.from_zarr(path),
+                SJIntronsBins.from_zarr(path),
+                num_bootstraps=num_bootstraps,
+                pvalue_threshold=pvalue_threshold,
+            )
+            original_bams.append(coverage.bam_path)
+            try:
+                numreads += coverage.numreads
+            except NameError:
+                numreads = np.array(coverage.numreads)
+            try:
+                bootstraps += coverage.bootstraps
+            except NameError:
+                bootstraps = np.array(coverage.bootstraps)
+        events_df = (
+            events.df
+            .drop_vars(["e_idx", "ec_idx_start", "ec_idx_end", "ec_idx"])
+            .assign_attrs(
+                intron_hash=checksums.introns,
+                junction_hash=checksums.junctions,
+            )
+        )
+        if not drop_unquantifiable:
+            def map_to_original_events(x: np.ndarray) -> np.ndarray:
+                result = np.empty((events.num_connections, *x.shape[1:]), dtype=x.dtype)
+                result[quantifiable.event_connection_passed_mask] = x
+                result[~quantifiable.event_connection_passed_mask] = np.nan
+                return result
+
+            numreads = map_to_original_events(numreads)
+            bootstraps = map_to_original_events(bootstraps)
+        return QuantifiableCoverage(
+            events._offsets.astype(int), numreads, bootstraps, events_df, original_bams
+        )
 
     @classmethod
     def from_quantifier_group(
