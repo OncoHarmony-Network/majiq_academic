@@ -235,15 +235,20 @@ def add_args(parser: argparse.ArgumentParser) -> None:
     experiments_ex.add_argument(
         "--groups-tsv",
         type=Path,
-        help="Path to TSV with required columns 'group' and 'sj' defining"
-        " groups of experiments and the paths to their sj files, allowing"
-        " specification of multiple build groups simultaneously",
+        metavar="TSV",
+        help="Specify experiments from multiple build groups using TSV file."
+        " Required columns 'group' and 'sj'."
+        " One row per unique experiment."
+        " `group` indicates group experiment belongs to, `sj`"
+        " the path to the experiment's SJ file (from `new-majiq sj`)",
     )
     experiments_ex.add_argument(
         "--sjs",
         type=Path,
         nargs="+",
-        help="Paths to input experiments as SJ files for a single build group",
+        help="Specify experiments from a single build group directly as"
+        " the unique paths to the group experiments' SJ files"
+        " (use `new-majiq combine` to merge independent build groups)",
     )
 
     build_ex = parser.add_mutually_exclusive_group()
