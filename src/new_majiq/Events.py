@@ -200,3 +200,28 @@ class Events(object):
                     df.connection_idx.values,
                 )
             )
+
+    def __getitem__(self, event_mask) -> "Events":
+        """Subset of events corresponding to boolean event mask"""
+        event_mask = np.array(event_mask, copy=False, dtype=bool)  # make sure array
+        if event_mask.ndim != 1:
+            raise ValueError("event_mask must be 1-dimensional")
+        elif len(event_mask) != self.num_events:
+            raise ValueError("event_mask must match events")
+        event_size = (self.ec_idx_end - self.ec_idx_start).astype(int)
+        subset_size = event_size[event_mask]
+        subset_offsets = np.empty(1 + len(subset_size), dtype=np.uint64)
+        subset_offsets[0] = 0
+        subset_offsets[1:] = np.cumsum(subset_size)
+        ec_mask = np.repeat(event_mask, event_size)
+        return Events(
+            _Events(
+                self.introns._gene_introns,
+                self.junctions._gene_junctions,
+                self.ref_exon_idx[event_mask],
+                self.event_type[event_mask],
+                subset_offsets,
+                self.is_intron[ec_mask],
+                self.connection_idx[ec_mask],
+            )
+        )
