@@ -230,7 +230,8 @@ def add_args(parser: argparse.ArgumentParser) -> None:
     """add arguments to parser"""
     parser.add_argument("base_sg", type=Path, help="Path to base splicegraph")
     parser.add_argument("out_sg", type=Path, help="Path for output splicegraph")
-    experiments_ex = parser.add_mutually_exclusive_group(required=True)
+    experiments = parser.add_argument_group("Input experiments (one required)")
+    experiments_ex = experiments.add_mutually_exclusive_group(required=True)
     experiments_ex.add_argument(
         "--groups-tsv",
         type=Path,
