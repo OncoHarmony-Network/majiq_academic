@@ -297,6 +297,8 @@ def get_grouped_experiments(groups_tsv: Path) -> SJGroupsT:
     import pandas as pd
 
     df = pd.read_csv(groups_tsv, sep="\t", usecols=["group", "sj"])
+    if len(df.sj) == 0:
+        raise ValueError(f"No input experiments specified in {groups_tsv}")
     # determine if any duplicated experiments
     duplicated_mask = df.sj.duplicated()
     if duplicated_mask.any():
