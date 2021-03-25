@@ -11,7 +11,6 @@ import argparse
 import new_majiq.constants as constants
 import new_majiq._run._build_pipeline as nm_build
 
-from new_majiq._run.simplify import simplifier_threshold_args, reset_simplified_args
 from new_majiq._run._majiq_args import check_nonnegative_factory
 from pathlib import Path
 from new_majiq._run._run import GenericSubcommand
@@ -22,6 +21,94 @@ from typing import (
 
 
 DESCRIPTION = "Update splicegraph with specified experiment groups"
+
+
+def simplifier_threshold_args(
+    parser: argparse.ArgumentParser,
+    prefix: str = "",
+) -> None:
+    """arguments for simplifier thresholds
+
+    Parameters
+    ----------
+    parser: argparse.ArgumentParser
+        parser to add arguments to
+    prefix: str
+        add prefix to threshold command line arguments to avoid collisions
+        (does not change destination variable)
+    """
+    thresholds = parser.add_argument_group("Simplifier filters")
+    # min-experiments
+    thresholds.add_argument(
+        f"--{prefix}min-experiments",
+        dest="simplify_min_experiments",
+        type=check_nonnegative_factory(float, True),
+        default=constants.DEFAULT_SIMPLIFIER_MINEXPERIMENTS,
+        help="Threshold for group filters. If < 1, the fraction of experiments"
+        " in a group that must pass individual filters for a feature to be"
+        " unsimplified. If greater, an absolute number. (default: %(default)s)",
+    )
+    # per-experiment thresholds
+    thresholds.add_argument(
+        f"--{prefix}minpsi",
+        dest="simplify_minpsi",
+        type=check_nonnegative_factory(float, False),
+        default=constants.DEFAULT_SIMPLIFIER_MINPSI,
+        help="Minimum fraction of intron/junction readrates leaving or entering"
+        " an exon in a single connection to count as evidence to unsimplify"
+        " (default: %(default)s)",
+    )
+    thresholds.add_argument(
+        f"--{prefix}minreads-annotated",
+        dest="simplify_minreads_annotated",
+        type=check_nonnegative_factory(float, False),
+        default=constants.DEFAULT_SIMPLIFIER_MINREADS_ANNOTATED,
+        help="Minimum readrate for annotated junctions to count as evidence"
+        " to unsimplify (default: %(default)s)",
+    )
+    thresholds.add_argument(
+        f"--{prefix}minreads-denovo",
+        dest="simplify_minreads_denovo",
+        type=check_nonnegative_factory(float, False),
+        default=constants.DEFAULT_SIMPLIFIER_MINREADS_DENOVO,
+        help="Minimum readrate for denovo junctions to count as evidence"
+        " to unsimplify (default: %(default)s)",
+    )
+    thresholds.add_argument(
+        f"--{prefix}minreads-ir",
+        dest="simplify_minreads_ir",
+        type=check_nonnegative_factory(float, False),
+        default=constants.DEFAULT_SIMPLIFIER_MINREADS_INTRON,
+        help="Minimum readrate for intron retention to count as evidence"
+        " to unsimplify (default: %(default)s)",
+    )
+    return
+
+
+def reset_simplified_args(parser: argparse.ArgumentParser) -> None:
+    """do we reset simplified status in splicegraph?"""
+    # do we reset simplified status?
+    reset = parser.add_argument_group("Resetting connections to simplified")
+    reset_ex = reset.add_mutually_exclusive_group()
+    reset_ex.add_argument(
+        "--reset-simplified",
+        action="store_true",
+        dest="reset_simplify",
+        default=True,
+        help="If simplifying, reset all introns/junctions to simplified,"
+        " i.e. start simplification from scratch"
+        " (default: reset_simplify=%(default)s)",
+    )
+    reset_ex.add_argument(
+        "--update-simplified",
+        action="store_false",
+        dest="reset_simplify",
+        default=True,
+        help="Continue from existing simplified splicegraph,"
+        " i.e. new denovo connections are simplified, existing connections will"
+        " not be reset to simplified (default: reset_simplify=%(default)s)",
+    )
+    return
 
 
 def build_threshold_args(parser: argparse.ArgumentParser) -> None:
