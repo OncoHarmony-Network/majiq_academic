@@ -14,13 +14,20 @@ import new_majiq.constants as constants
 from new_majiq.GeneIntrons import GeneIntrons
 from new_majiq.GeneJunctions import GeneJunctions
 from new_majiq.internals import Events as _Events
+from new_majiq.internals import EventsAlign
 
 from pathlib import Path
 from typing import (
     Final,
+    NamedTuple,
     Optional,
     Union,
 )
+
+
+class UniqueEventsMasks(NamedTuple):
+    unique_events_mask: np.ndarray  # boolean mask into events that are unique
+    shared_events_idx: np.ndarray  # index from nonunique to matching in other
 
 
 class Events(object):
@@ -224,4 +231,13 @@ class Events(object):
                 self.is_intron[ec_mask],
                 self.connection_idx[ec_mask],
             )
+        )
+
+    def unique_events_mask(self, other: "Events") -> UniqueEventsMasks:
+        aligned = EventsAlign(self._events, other._events)
+        unique_mask = np.ones(self.num_events, dtype=bool)
+        unique_mask[aligned.left_event_idx] = False  # if aligned, not unique
+        return UniqueEventsMasks(
+            unique_events_mask=unique_mask,
+            shared_events_idx=np.array(aligned.right_event_idx, copy=True),
         )
