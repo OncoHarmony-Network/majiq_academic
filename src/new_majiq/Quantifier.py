@@ -104,9 +104,8 @@ class QuantifiableEvents(object):
                 num_bootstraps=0,  # bootstraps are not used
                 pvalue_threshold=pvalue_threshold,
             )
-            passed = (
-                (coverage.numreads >= thresholds.minreads)
-                & (coverage.numbins >= thresholds.minbins)
+            passed = (coverage.numreads >= thresholds.minreads) & (
+                coverage.numbins >= thresholds.minbins
             )
             try:
                 passed_ct += passed
@@ -122,11 +121,10 @@ class QuantifiableEvents(object):
         )
         return QuantifiableEvents(
             ConnectionsChecksum(
-                introns=events.introns.checksum(),
-                junctions=events.junctions.checksum()
+                introns=events.introns.checksum(), junctions=events.junctions.checksum()
             ),
             events._offsets.astype(int),
-            event_passed
+            event_passed,
         )
 
     @classmethod
@@ -568,15 +566,14 @@ class QuantifiableCoverage(object):
                 bootstraps += coverage.bootstraps
             except NameError:
                 bootstraps = np.array(coverage.bootstraps)
-        events_df = (
-            events.df
-            .drop_vars(["e_idx", "ec_idx_start", "ec_idx_end", "ec_idx"])
-            .assign_attrs(
-                intron_hash=checksums.introns,
-                junction_hash=checksums.junctions,
-            )
+        events_df = events.df.drop_vars(
+            ["e_idx", "ec_idx_start", "ec_idx_end", "ec_idx"]
+        ).assign_attrs(
+            intron_hash=checksums.introns,
+            junction_hash=checksums.junctions,
         )
         if not drop_unquantifiable:
+
             def map_to_original_events(x: np.ndarray) -> np.ndarray:
                 result = np.empty((events.num_connections, *x.shape[1:]), dtype=x.dtype)
                 result[quantifiable.event_connection_passed_mask] = x
@@ -602,8 +599,8 @@ class QuantifiableCoverage(object):
         checksums: Final[ConnectionsChecksum] = quantifiable.checksums
         offsets: Final[np.ndarray] = (
             quantifiable.quantifiable_offsets
-            if drop_unquantifiable else
-            quantifiable.offsets
+            if drop_unquantifiable
+            else quantifiable.offsets
         )
         coverage: xr.Dataset
         original_bams: List[str] = []
@@ -619,10 +616,7 @@ class QuantifiableCoverage(object):
                     )
             with xr.open_zarr(x, group=constants.NC_EVENTSCOVERAGE) as df:
                 original_bams.append(df.bam_path)
-                x_coverage = (
-                    df[["numreads", "bootstraps"]]
-                    .load()
-                )
+                x_coverage = df[["numreads", "bootstraps"]].load()
                 if drop_unquantifiable:
                     x_coverage = x_coverage.isel(
                         ec_idx=quantifiable.event_connection_passed_mask
@@ -643,10 +637,7 @@ class QuantifiableCoverage(object):
         # get events
         events: xr.Dataset
         with xr.open_zarr(experiments[0], group=constants.NC_EVENTS) as df:
-            events = (
-                df.drop_dims("e_offsets_idx")
-                .load()
-            )
+            events = df.drop_dims("e_offsets_idx").load()
         if drop_unquantifiable:
             events = events.isel(
                 e_idx=quantifiable.event_passed,

@@ -541,11 +541,11 @@ def run(args: argparse.Namespace) -> None:
             junctions=sg.junctions,
             introns=(
                 sg.introns.filter_passed(keep_annotated=True, discard_denovo=False)
-                if args.introns == IntronsType.ALL_INTRONS else
-                sg.introns.filter_passed(keep_annotated=True, discard_denovo=True)
-                if args.introns == IntronsType.ANNOTATED_INTRONS else
-                sg.exons.empty_introns()
-            )
+                if args.introns == IntronsType.ALL_INTRONS
+                else sg.introns.filter_passed(keep_annotated=True, discard_denovo=True)
+                if args.introns == IntronsType.ANNOTATED_INTRONS
+                else sg.exons.empty_introns()
+            ),
         )
 
     # perform simplification?
