@@ -25,6 +25,7 @@ from new_majiq.internals import GFF3Types
 from typing import (
     Final,
     List,
+    Optional,
     Union,
 )
 from pathlib import Path
@@ -115,10 +116,21 @@ class SpliceGraph(object):
         return
 
     @classmethod
-    def from_zarr(cls, path: Union[str, Path]) -> "SpliceGraph":
-        """Load SpliceGraph from specified path"""
-        contigs = Contigs.from_zarr(path)
-        genes = Genes.from_zarr(path, contigs)
+    def from_zarr(cls, path: Union[str, Path], genes: Optional[Genes] = None) -> "SpliceGraph":
+        """Load SpliceGraph from specified path
+
+        Notes
+        -----
+        No check is done to validate optionally provided genes matches what's
+        found in path (except if gene regions have out of range gene_idx). So
+        long as they share the same original base splicegraph from gff3, they
+        should be fine, though.
+        """
+        if genes is None:
+            contigs = Contigs.from_zarr(path)
+            genes = Genes.from_zarr(path, contigs)
+        else:
+            contigs = genes.contigs
         exons = Exons.from_zarr(path, genes)
         introns = GeneIntrons.from_zarr(path, genes)
         junctions = GeneJunctions.from_zarr(path, genes)
