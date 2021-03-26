@@ -117,19 +117,16 @@ class SpliceGraph(object):
 
     @classmethod
     def from_zarr(cls, path: Union[str, Path], genes: Optional[Genes] = None) -> "SpliceGraph":
-        """Load SpliceGraph from specified path
-
-        Notes
-        -----
-        No check is done to validate optionally provided genes matches what's
-        found in path (except if gene regions have out of range gene_idx). So
-        long as they share the same original base splicegraph from gff3, they
-        should be fine, though.
-        """
+        """Load SpliceGraph from specified path"""
         if genes is None:
             contigs = Contigs.from_zarr(path)
             genes = Genes.from_zarr(path, contigs)
         else:
+            # make sure that genes match what are in file
+            if genes != Genes.from_zarr(path):
+                raise ValueError(
+                    "Optionally provied genes do not match those from path"
+                )
             contigs = genes.contigs
         exons = Exons.from_zarr(path, genes)
         introns = GeneIntrons.from_zarr(path, genes)
