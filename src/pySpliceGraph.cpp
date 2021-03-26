@@ -233,6 +233,8 @@ void define_coordinates_properties(pyClassShared_t<RegionsT>& pyRegions) {
   }
   pyRegions
     .def("__len__", &RegionsT::size)
+    .def("__eq__", [](const RegionsT& x, const RegionsT& y) { return x == y; },
+        py::is_operator())
     .def_property_readonly("_parents", &RegionsT::parents,
         "Get parents object on which regions are defined (e.g. contigs, genes)")
     .def_property_readonly("_parent_idx_start",
