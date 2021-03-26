@@ -9,6 +9,7 @@
 #ifndef MAJIQ_EVENTSALIGN_HPP
 #define MAJIQ_EVENTSALIGN_HPP
 
+#include <algorithm>
 #include <optional>
 #include <stdexcept>
 #include <utility>
@@ -26,7 +27,7 @@ class EventsAlign {
     size_t right_idx_;
   };
   // events that match from left and right arguments to constructor
-  // NOTE: no guarantee of sorting
+  // NOTE: sorted by left_idx_
   std::vector<EventAligned> matched_;
 
  private:
@@ -114,6 +115,10 @@ class EventsAlign {
       for (auto&& x : matched_) {
         std::swap(x.left_idx_, x.right_idx_);
       }
+      // make sure sorted by left_idx_
+      std::sort(matched_.begin(), matched_.end(),
+          [](const EventAligned& x, const EventAligned& y) {
+          return x.left_idx_ < y.left_idx_; });
       return;
     }
     // otherwise
