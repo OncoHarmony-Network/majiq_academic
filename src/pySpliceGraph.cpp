@@ -35,6 +35,7 @@
 #include "internals/ExonConnections.hpp"
 #include "internals/Events.hpp"
 #include "internals/EventsCoverage.hpp"
+#include "internals/EventsAlign.hpp"
 #include "internals/SpliceGraphReads.hpp"
 #include "internals/SimplifierGroup.hpp"
 #include "internals/Meta.hpp"
@@ -70,6 +71,7 @@ using pyExonConnections_t = pyClassShared_t<majiq::ExonConnections>;
 using pySimplifierGroup_t = pyClassShared_t<majiq::SimplifierGroup>;
 using pyEvents_t = pyClassShared_t<majiq::Events>;
 using pyEventsCoverage_t = pyClassShared_t<majiq::EventsCoverage>;
+using pyEventsAlign_t = pyClassShared_t<majiq::EventsAlign>;
 using pySpliceGraphReads_t = pyClassShared_t<majiq::SpliceGraphReads>;
 
 using pyExperimentThresholds_t = pyClassShared_t<majiq::ExperimentThresholds>;
@@ -904,6 +906,33 @@ void init_PyEventsCoverage(pyEventsCoverage_t& pyEventsCoverage) {
     .def_property_readonly("_events", &EventsCoverage::events,
         "Events for which the coverage information is defined")
     .def("__len__", &EventsCoverage::num_connections);
+}
+
+void init_pyEventsAlign(pyEventsAlign_t& pyEventsAlign) {
+  using majiq::EventsAlign;
+  using majiq::Events;
+  using majiq_pybind::ArrayFromVectorAndOffset;
+  pyEventsAlign
+    .def(py::init<const Events&, const Events&>(),
+        "Obtain indexes of matching events in the two input Events containers",
+        py::arg("left_events"), py::arg("right_events"))
+    .def_property_readonly("left_event_idx",
+        [](py::object& self_obj) {
+        EventsAlign& self = self_obj.cast<EventsAlign&>();
+        const size_t offset = offsetof(EventsAlign::EventAligned, left_idx_);
+        return ArrayFromVectorAndOffset<size_t, EventsAlign::EventAligned>(
+            self.matched_, offset, self_obj);
+        },
+        "Indexes for events in left_events used in constructor")
+    .def_property_readonly("right_event_idx",
+        [](py::object& self_obj) {
+        EventsAlign& self = self_obj.cast<EventsAlign&>();
+        const size_t offset = offsetof(EventsAlign::EventAligned, right_idx_);
+        return ArrayFromVectorAndOffset<size_t, EventsAlign::EventAligned>(
+            self.matched_, offset, self_obj);
+        },
+        "Indexes for events in right_events used in constructor");
+  return;
 }
 
 void init_PyEvents(pyEvents_t& pyEvents) {
@@ -1791,6 +1820,8 @@ void init_SpliceGraphAll(py::module_& m) {
       m, "GeneJunctions", "Splicegraph junctions");
   auto pyEvents = pyEvents_t(
       m, "Events", "Events from reference exon with junctions/introns");
+  auto pyEventsAlign = pyEventsAlign_t(
+      m, "EventsAlign", "Indexes to shared events between two Events containers");
   auto pyEventsCoverage = pyEventsCoverage_t(
       m, "EventsCoverage", "Coverage over events for a single experiment");
   auto pyExonConnections = pyExonConnections_t(
@@ -1902,6 +1933,7 @@ void init_SpliceGraphAll(py::module_& m) {
   init_pyPassedJunctionsGen(pyPassedJunctionsGen);
   init_pyGroupIntronsGen(pyGroupIntronsGen);
   init_PyEvents(pyEvents);
+  init_pyEventsAlign(pyEventsAlign);
   init_PyEventsCoverage(pyEventsCoverage);
   init_PySpliceGraphReads(pySpliceGraphReads);
   init_pyExonConnections(pyExonConnections);
