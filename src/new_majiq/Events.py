@@ -26,6 +26,14 @@ from typing import (
 
 
 class UniqueEventsMasks(NamedTuple):
+    """
+    unique_events_mask: np.ndarray
+        boolean mask into events that are unique (i.e. not found in other)
+    shared_events_idx: np.ndarray
+        index into events in other for shared events (corresponding to False
+        values in unique_events_mask)
+    """
+
     unique_events_mask: np.ndarray  # boolean mask into events that are unique
     shared_events_idx: np.ndarray  # index from nonunique to matching in other
 
@@ -234,6 +242,7 @@ class Events(object):
         )
 
     def unique_events_mask(self, other: "Events") -> UniqueEventsMasks:
+        """Get events unique to self vs other, and indexes to shared events"""
         aligned = EventsAlign(self._events, other._events)
         unique_mask = np.ones(self.num_events, dtype=bool)
         unique_mask[aligned.left_event_idx] = False  # if aligned, not unique

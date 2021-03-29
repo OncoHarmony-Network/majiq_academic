@@ -116,7 +116,9 @@ class SpliceGraph(object):
         return
 
     @classmethod
-    def from_zarr(cls, path: Union[str, Path], genes: Optional[Genes] = None) -> "SpliceGraph":
+    def from_zarr(
+        cls, path: Union[str, Path], genes: Optional[Genes] = None
+    ) -> "SpliceGraph":
         """Load SpliceGraph from specified path"""
         if genes is None:
             contigs = Contigs.from_zarr(path)
