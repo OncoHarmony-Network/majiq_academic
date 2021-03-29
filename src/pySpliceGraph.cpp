@@ -918,6 +918,21 @@ void init_pyEventsAlign(pyEventsAlign_t& pyEventsAlign) {
     .def(py::init<const Events&, const Events&>(),
         "Obtain indexes of matching events in the two input Events containers",
         py::arg("left_events"), py::arg("right_events"))
+    .def_static(
+        "events_match",
+        [](const Events& left_events, const Events& right_events,
+          size_t left_idx, size_t right_idx) {
+        if (left_idx >= left_events.num_events()) {
+        throw std::runtime_error("left_idx is out of range for left_events");
+        } else if (right_idx >= right_events.num_events()) {
+        throw std::runtime_error("right_idx is out of range for right_events");
+        }
+        return EventsAlign::EventsMatch(
+            left_events, right_events, left_idx, right_idx);
+        },
+        "Indicate if selected event indexes share the exact same connections",
+        py::arg("left_events"), py::arg("right_events"),
+        py::arg("left_idx"), py::arg("right_idx"))
     .def_property_readonly("left_event_idx",
         [](py::object& self_obj) {
         EventsAlign& self = self_obj.cast<EventsAlign&>();

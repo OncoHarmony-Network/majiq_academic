@@ -30,7 +30,7 @@ class EventsAlign {
   // NOTE: sorted by left_idx_
   std::vector<EventAligned> matched_;
 
- private:
+ public:
   /**
    * Check that events match, assuming that known that genes/event type match
    */
@@ -59,6 +59,7 @@ class EventsAlign {
     return true;  // all connections matched, so events match
   }
 
+ private:
   template <
     bool IS_INTRON,
     typename ConnectionT
@@ -68,27 +69,36 @@ class EventsAlign {
       std::vector<std::optional<size_t>>& opt_right_idx,
       std::vector<bool>& left_visited,
       std::vector<bool>& right_visited) {
+    // iterate over right event connection indexes in contig sorted order
     auto right_idx_it = right.connection_idx_begin<IS_INTRON>();
+    // end of left and right event connections
     const auto right_idx_end = right.connection_idx_end<IS_INTRON>();
     const auto left_idx_end = left.connection_idx_end<IS_INTRON>();
+    // iterate over left event connection indexes in contig sorted order
     for (auto left_idx_it = left.connection_idx_begin<IS_INTRON>();
         left_idx_it != left_idx_end; ++left_idx_it) {
-      size_t left_eidx = left.connection_event_idx()[*left_idx_it];
+      // the index of the event corresponding to thee left coordinate
+      const size_t left_eidx = left.connection_event_idx()[*left_idx_it];
+      // skip if already evaluated match for event with this event connection
       if (left_visited[left_eidx]) {
         continue;  // already has answer
       }
-      const auto left_c = left.connection_at<IS_INTRON>(*left_idx_it);
+      // get left event connection
+      const ConnectionT& left_c = left.connection_at<IS_INTRON>(*left_idx_it);
       // get first connection on right that is not less than current on left
       right_idx_it = std::find_if(right_idx_it, right_idx_end,
           [&right, &left_c](const size_t& right_idx) {
           return !Compare{}(
               right.connection_at<IS_INTRON>(right_idx), left_c); });
+      // Now: left_c <= right_c (unstranded contig order)
+      // So while right_c <= left_c (unstranded contig order)
       for (auto right_idx_eq = right_idx_it;
           (right_idx_eq != right_idx_end
            // while left is also not less than right
            && !Compare{}(
              left_c, right.connection_at<IS_INTRON>(*right_idx_eq)));
           ++right_idx_eq) {
+        // if same gene and type (source/target), potential match (or not)
         if (left_c.gene == right.connection_at<IS_INTRON>(*right_idx_eq).gene
             && (left.connection_event(*left_idx_it).type_
               == right.connection_event(*right_idx_eq).type_)) {
