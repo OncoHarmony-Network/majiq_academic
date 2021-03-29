@@ -104,7 +104,7 @@ class EventsAlign {
               == right.connection_event(*right_idx_eq).type_)) {
           // same event-connection! check...
           left_visited[left_eidx] = true;
-          size_t right_eidx = right.connection_event_idx()[*right_idx_it];
+          size_t right_eidx = right.connection_event_idx()[*right_idx_eq];
           if (!right_visited[right_eidx]) {
             right_visited[right_eidx] = true;
             if (EventsMatch(left, right, left_eidx, right_eidx)) {
@@ -113,7 +113,7 @@ class EventsAlign {
           }  // only can match if right event hasn't been visited before
           break;  // found unique potential match for event connection
         }
-      }  // loop over right indexes that maatch contig and coordinates
+      }  // loop over right indexes that match contig and coordinates
     }  // loop over left indexes in contig region sorted order
   }
 
