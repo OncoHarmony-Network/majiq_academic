@@ -54,7 +54,7 @@ def main():
     parser.add_argument(
         "-v",
         action="version",
-        version=f"{constants.VERSION}-{constants.get_git_version()}",
+        version=f"{constants.VERSION}",
     )
 
     common = new_subparser()

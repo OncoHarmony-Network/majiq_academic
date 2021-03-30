@@ -1,8 +1,0 @@
-Cython==0.29.14
-gitdb2==2.0.6
-GitPython==3.0.5
-h5py==2.10.0
-numpy==1.18.1
-scipy==1.4.1
-smmap2==2.0.5
-rna_voila>=2.2.0
