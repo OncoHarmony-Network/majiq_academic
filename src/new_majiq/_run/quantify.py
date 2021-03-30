@@ -87,6 +87,24 @@ def add_args(parser: argparse.ArgumentParser) -> None:
         " in a group that must pass individual filters for a connection to be"
         " passed. If greater, an absolute number. (default: %(default)s)",
     )
+    drop_ex = parser.add_mutually_exclusive_group()
+    drop_ex.add_argument(
+        "--drop-unquantifiable",
+        action="store_true",
+        dest="drop_unquantifiable",
+        default=True,
+        help="Drop records for unquantifiable events, saving storage space"
+        " (default: drop_unquantifiable=%(default)s)",
+    )
+    drop_ex.add_argument(
+        "--keep-unquantifiable",
+        action="store_false",
+        dest="drop_unquantifiable",
+        default=True,
+        help="Keep records for unquantifiable events, ensuring that files"
+        " from different samples but sharing the same events are aligned"
+        " (default: drop_unquantifiable=%(default)s)",
+    )
     return
 
 
@@ -115,7 +133,9 @@ def run(args: argparse.Namespace) -> None:
     )
     log.info("Aggregating coverage at these events for quantification")
     q = nm.QuantifiableCoverage.from_quantifier_group(
-        args.coverage, quantifiable=quantifiable
+        args.coverage,
+        quantifiable=quantifiable,
+        drop_unquantifiable=args.drop_unquantifiable,
     )
     log.info("Quantifying using input coverage and saving to file")
     q.to_zarr(
