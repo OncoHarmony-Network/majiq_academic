@@ -21,34 +21,34 @@ namespace detail {
 template <class, class = void>
 struct has_contig_field : std::false_type { };
 template <class T>
-struct has_contig_field<T, std::void_t<decltype(T::contig)>> : std::true_type { };
+struct has_contig_field<T, std::enable_if_t<std::is_member_object_pointer_v<decltype(&T::contig)>>> : std::true_type { };
 // does passed type have contig as a function?
 template <class, class = void>
 struct has_contig_function : std::false_type { };
 template <class T>
-struct has_contig_function<T, std::void_t<decltype(std::declval<T>().contig())>> : std::true_type { };
+struct has_contig_function<T, std::enable_if_t<std::is_member_function_pointer_v<decltype(&T::contig)>>> : std::true_type { };
 
 // does passed type have strand as a field?
 template <class, class = void>
 struct has_strand_field : std::false_type { };
 template <class T>
-struct has_strand_field<T, std::void_t<decltype(T::strand)>> : std::true_type { };
+struct has_strand_field<T, std::enable_if_t<std::is_member_object_pointer_v<decltype(&T::strand)>>> : std::true_type { };
 // does passed type have strand as a function?
 template <class, class = void>
 struct has_strand_function : std::false_type { };
 template <class T>
-struct has_strand_function<T, std::void_t<decltype(std::declval<T>().strand())>> : std::true_type { };
+struct has_strand_function<T, std::enable_if_t<std::is_member_function_pointer_v<decltype(&T::strand)>>> : std::true_type { };
 
 // does passed type have gene as a field?
 template <class, class = void>
 struct has_gene_field : std::false_type { };
 template <class T>
-struct has_gene_field<T, std::void_t<decltype(T::gene)>> : std::true_type { };
+struct has_gene_field<T, std::enable_if_t<std::is_member_object_pointer_v<decltype(&T::gene)>>> : std::true_type { };
 // does passed type have gene as a function?
 template <class, class = void>
 struct has_gene_function : std::false_type { };
 template <class T>
-struct has_gene_function<T, std::void_t<decltype(std::declval<T>().gene())>> : std::true_type { };
+struct has_gene_function<T, std::enable_if_t<std::is_member_function_pointer_v<decltype(&T::gene)>>> : std::true_type { };
 
 }  // namespace detail
 }  // namespace majiq
