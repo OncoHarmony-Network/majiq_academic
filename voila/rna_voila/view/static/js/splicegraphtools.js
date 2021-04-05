@@ -177,16 +177,8 @@ class SpliceGraphTools {
                 const grp = sg.dataset.group;
                 const svg = sg.querySelector('svg').outerHTML;
 
-                const element = document.createElement('a');
-                element.setAttribute('href', 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg));
-                element.setAttribute('download', `${grp}_${exp}_sg.svg`);
+                download_svg_elem(svg, `${grp}_${exp}_sg.svg`);
 
-                element.style.display = 'none';
-                document.body.appendChild(element);
-
-                element.click();
-
-                document.body.removeChild(element);
             }
         })
     }

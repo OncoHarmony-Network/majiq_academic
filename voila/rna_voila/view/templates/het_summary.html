@@ -243,6 +243,22 @@
                     if(n.nodeType === 3){
                         return;
                     }
+                    n.querySelectorAll('.violin-download')
+                        .forEach(h => {
+                            h.onclick = (e) => {
+                                const main_svg = $(h).siblings('.psi-violin-plot')[0].outerHTML;
+                                const lsv_table = $(h).closest('.lsv-table').eq(0).data('lsv-id');
+                                download_svg_elem(main_svg, `violin-${lsv_table}.svg`);
+                            }
+                        })
+                    n.querySelectorAll('.heatmap-download')
+                        .forEach(h => {
+                            h.onclick = (e) => {
+                                const main_svg = $(h).siblings('.heat-map-outer')[0].outerHTML;
+                                const lsv_table = $(h).closest('.lsv-table').eq(0).data('lsv-id');
+                                download_svg_elem(main_svg, `heatmap-${lsv_table}.svg`);
+                            }
+                        })
                     n.querySelectorAll('.pairwise-check')
                         .forEach(h => {
                             h.onclick = (e) => {
@@ -415,8 +431,17 @@
                                 violin.heterogen(element);
 
 
+                                const dlBtn = document.createElement('img');
+                                dlBtn.classList.add('violin-download');
+                                dlBtn.src = '/static/img/download.svg';
+                                dlBtn.height = 16;
 
-                                return element.outerHTML
+                                const container = document.createElement('div');
+                                container.appendChild(element);
+                                container.appendChild(dlBtn);
+
+
+                                return container.outerHTML
                             }
                         },
                         {
@@ -432,7 +457,17 @@
                                 if($('#dPSI-cutoff').val() !== DEFAULT_DPSI_MAXVAL){
                                     update_heatmap_scale();
                                 }
-                                return element.outerHTML;
+
+                                const dlBtn = document.createElement('img');
+                                dlBtn.classList.add('heatmap-download');
+                                dlBtn.src = '/static/img/download.svg';
+                                dlBtn.height = 16;
+
+                                const container = document.createElement('div');
+                                container.appendChild(element);
+                                container.appendChild(dlBtn);
+
+                                return container.outerHTML;
 
                             }
                         }

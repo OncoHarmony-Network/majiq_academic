@@ -225,11 +225,11 @@ form.het-highlight-form label {
     pointer-events: none;
 }
 
-.toggle-scale, .zoom-in, .zoom-out, .zoom-reset, .splice-graph-header img{
+.toggle-scale, .zoom-in, .zoom-out, .zoom-reset, .splice-graph-header img, .violin-download, .heatmap-download{
     cursor: pointer;
 }
 
-.toggle-scale:hover, .zoom-in:hover, .zoom-out:hover, .zoom-reset:hover, .splice-graph-header img:hover{
+.toggle-scale:hover, .zoom-in:hover, .zoom-out:hover, .zoom-reset:hover, .splice-graph-header img:hover, .violin-download:hover, .heatmap-download:hover{
     box-shadow: 0 0 12px #ffd400;
 }
 
@@ -239,6 +239,10 @@ form.het-highlight-form label {
 
 .lsv-single-compact-percentiles:hover, .psi-violin-plot:hover, .dpsi-violin:hover, .excl-incl-rect:hover{
     box-shadow: 0 0 12px #ffd400;
+}
+
+.violin-download, .heatmap-download{
+    float:left;
 }
 
 .tmp-alert{

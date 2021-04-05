@@ -38,3 +38,16 @@ function measureText(string, fontSize = 10) {
     .map(c => c.charCodeAt(0) < widths.length ? widths[c.charCodeAt(0)] : avg)
     .reduce((cur, acc) => acc + cur) * fontSize
 }
+
+function download_svg_elem(svg, filename){
+    const element = document.createElement('a');
+    element.setAttribute('href', 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg));
+    element.setAttribute('download', filename);
+
+    element.style.display = 'none';
+    document.body.appendChild(element);
+
+    element.click();
+
+    document.body.removeChild(element);
+}
