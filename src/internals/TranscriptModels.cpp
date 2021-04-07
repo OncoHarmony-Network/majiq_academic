@@ -86,6 +86,17 @@ SpliceGraph TranscriptModels::ToSpliceGraph(bool process_ir) const {
       } else {
         if (cur_start == EMPTY) {
           // this the first start in the gene
+          if (pos < gene.coordinates().start) {
+            // exon is outside of gene interval, which defies assumptions
+            std::ostringstream oss;
+            oss << "Exons for gene "
+              << gene.get().gene_id()
+              << " start before gene coordinates in annotations"
+              << " (" << pos << " < " << gene.coordinates().start << ")."
+              << " Please ensure that hierarchy of input annotations"
+              << " coordinates are valid";
+            throw std::logic_error(oss.str());
+          }
           cur_start = pos;
         } else if (cur_end != EMPTY) {
           // this is a start that follows an end, creating an exon
@@ -105,6 +116,17 @@ SpliceGraph TranscriptModels::ToSpliceGraph(bool process_ir) const {
     }  // end iteration over all splice sites
 
     // add final exon
+    if (cur_end > gene.coordinates().end) {
+      // exon is outside of gene interval, which defies assumptions
+      std::ostringstream oss;
+      oss << "Exons for gene "
+        << gene.get().gene_id()
+        << " end after gene coordinates in annotations"
+        << " (" << cur_end << " > " << gene.coordinates().end << ")."
+        << " Please ensure that hierarchy of input annotations"
+        << " coordinates are valid";
+      throw std::logic_error(oss.str());
+    }
     exons.emplace_back(
         gene, ClosedInterval{cur_start, cur_end}, Exon::DefaultAnnotated{});
 

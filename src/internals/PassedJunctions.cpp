@@ -43,8 +43,15 @@ void AssignDenovoJunction(const SJJunction& junction, const KnownGene& first,
       continue;
     }
     // if junction cannot be placed inside of gene, ignore
-    if (!IntervalSubsets(junction.coordinates, gene.coordinates())) {
-      continue;
+    {
+      const auto exon_first = exons.begin_parent(gene);
+      const auto exon_last = exons.end_parent(gene);
+      if (exon_first == exon_last
+          || !IntervalSubsets(junction.coordinates,
+            ClosedInterval{exon_first->coordinates.first_pos(),
+              std::prev(exon_last)->coordinates.last_pos()})) {
+        continue;
+      }
     }
     // count how many of start/end are close to exon
     int n_close = 0;  // how many of start/end close to an exon?
