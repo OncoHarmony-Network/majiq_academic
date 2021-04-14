@@ -1358,8 +1358,8 @@ class Graph:
                                     if i1.node == i2.node and not (i1.ir or i2.ir):
                                         skipA1 = self.strand_case(e2, i1)
                                         include1 = self.strand_case(e1, i2)
-                                        skipA2 = self.strand_case(i2, e1)
-                                        include2 = self.strand_case(i1, e2)
+                                        skipA2 = self.strand_case(i1, e2)
+                                        include2 = self.strand_case(i2, e1)
                                         # update Module's seen junctions
                                         for edge1, edge2 in zip([skipA1, skipA2], [include1, include2]):
                                             # the C1 source or C2 target LSVs only!

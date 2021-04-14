@@ -1114,7 +1114,7 @@ class TsvWriter(BaseTsvWriter):
 
                             strand = event['C1'].start < event['C2'].end
                             c1_range_str = self._trim_strand_case_range_str(event['C1'], 'start', event['Include1'], 'start', strand)
-                            a1_range_str = self._trim_strand_case_range_str(event['Include2'], 'end', event['SkipA2'], 'start', strand)
+                            a1_range_str = self._trim_strand_case_range_str(event['Include1'], 'end', event['SkipA2'], 'start', strand)
                             a2_range_str = self._trim_strand_case_range_str(event['SkipA1'], 'end', event['Include2'], 'start', strand)
                             c2_range_str = self._trim_strand_case_range_str(event['Include2'], 'end', event['C2'], 'end', strand)
 
