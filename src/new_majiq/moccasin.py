@@ -59,19 +59,19 @@ def tmp_psi_for_moccasin(
         lsv_coverage_file, group="events_coverage"
     ) as df_ec, xr.open_zarr(lsv_coverage_file, group="events") as df_e:
         offsets = df_e._offsets.values.astype(np.int64)
-        bootstraps = df_ec.bootstraps.transpose("bootstrap_replicate", "ec_idx").values
+        bootstraps = df_ec.bootstraps.transpose("ec_idx", "bootstrap_replicate").values
     # get coverage over ec_idx for events defined by offsets
     total_coverage = np.repeat(
-        np.add.reduceat(bootstraps, offsets[:-1], axis=-1), np.diff(offsets), axis=-1
+        np.add.reduceat(bootstraps, offsets[:-1], axis=0), np.diff(offsets), axis=0
     )
     with np.errstate(invalid="ignore"):  # ignore invalid when total_coverage = 0
         psi = bootstraps / total_coverage
     # mask events with no coverage or that didn't pass quantifiability thresholds
-    psi = np.where(qe.event_connection_passed_mask & (total_coverage > 0), psi, np.nan)
+    psi = np.where(qe.event_connection_passed_mask[:, np.newaxis] & (total_coverage > 0), psi, np.nan)
     return xr.Dataset(
         {
-            "psi": (("bootstrap_replicate", "ec_idx"), psi),
-            "total_coverage": (("bootstrap_replicate", "ec_idx"), total_coverage),
+            "psi": (("ec_idx", "bootstrap_replicate"), psi),
+            "total_coverage": (("ec_idx", "bootstrap_replicate"), total_coverage),
         },
         {
             "_offsets": ("_eidx_offset", offsets),
