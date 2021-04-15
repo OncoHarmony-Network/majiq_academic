@@ -21,6 +21,13 @@ from new_majiq._run.sg_coverage import subcommand as sg_coverage
 from new_majiq._run.sg_coverage_summarize import subcommand as sg_coverage_summarize
 from new_majiq._run.quantify import subcommand as quantify
 from new_majiq._run.legacy_psi import subcommand as legacy_psi
+from new_majiq._run.moccasin import (
+    subcommand_tmpfile as moccasin_tmpfile,
+    subcommand_factors_model as moccasin_factors_model,
+    subcommand_factors_infer as moccasin_factors_infer,
+    subcommand_coverage_model as moccasin_coverage_model,
+    subcommand_coverage_infer as moccasin_coverage_infer,
+)
 
 
 SUBPARSER_SOURCES: Dict[str, GenericSubcommand] = {
@@ -33,6 +40,11 @@ SUBPARSER_SOURCES: Dict[str, GenericSubcommand] = {
     "sg-coverage-summary": sg_coverage_summarize,
     "quantify": quantify,
     "legacy-psi": legacy_psi,
+    "moccasin-tmpfile": moccasin_tmpfile,
+    "moccasin-factors-model": moccasin_factors_model,
+    "moccasin-factors-infer": moccasin_factors_infer,
+    "moccasin-coverage-model": moccasin_coverage_model,
+    "moccasin-coverage-infer": moccasin_coverage_infer,
     "cite": cite,
 }
 
