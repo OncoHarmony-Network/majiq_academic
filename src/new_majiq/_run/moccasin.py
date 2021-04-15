@@ -353,7 +353,9 @@ def run_coverage_model(args: argparse.Namespace) -> None:
     log.info(f"Opening coverage from {len(args.tmpfiles)} tmpfiles")
     coverage = _open_mf_with_prefix(args.tmpfiles)
     log.info("Solving for model parameters")
-    coverage_model = mc.infer_model_params(coverage.psi, factors)
+    coverage_model = mc.infer_model_params(
+        coverage.psi, factors, extra_core_dims=["bootstrap_replicate"]
+    )
     log.info(f"Saving model parameters to {args.coverage_model.resolve()}")
     (
         coverage_model.rename("coverage_model")

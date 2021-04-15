@@ -20,6 +20,8 @@ from new_majiq.Quantifier import (
 from pathlib import Path
 from typing import (
     Final,
+    Hashable,
+    List,
     Union,
 )
 
@@ -147,7 +149,7 @@ def bootstraps_from_tmp_psi(
     )
 
 
-def _silent_linalg_solve(*args, **kwargs) -> np.ndarray:
+def _silent_linalg_solve1(*args, **kwargs) -> np.ndarray:
     """wraps internals of np.linalg.solve
 
     np.linalg.solve solves Ax = b in vectorized manner, but throws
@@ -163,8 +165,27 @@ def _silent_linalg_solve(*args, **kwargs) -> np.ndarray:
         return np.linalg._umath_linalg.solve1(*args, **kwargs)
 
 
+def _silent_linalg_solve2(*args, **kwargs) -> np.ndarray:
+    """wraps internals of np.linalg.solve
+
+    np.linalg.solve solves Ax = b in vectorized manner, but throws
+    exception if it is able to detect any of the matrices as singular
+    (doesn't always work due to floating point rounding)
+    It uses np.linalg._umath_linalg.solve1 (or 2) to do the underlying
+    calculation, which returns nan when it detects singular matrices.
+    But it raises warnings in these cases, so we wrap it with appropriate
+    context manager to silence the warning (which we expect and are
+    depending on).
+    """
+    with np.errstate(invalid="ignore"):
+        return np.linalg._umath_linalg.solve(*args, **kwargs)
+
+
 def infer_model_params(
-    uncorrected: xr.DataArray, factors: xr.DataArray, complete: bool = False
+    uncorrected: xr.DataArray,
+    factors: xr.DataArray,
+    complete: bool = False,
+    extra_core_dims: List[Hashable] = ["bootstrap_replicate"],
 ) -> xr.DataArray:
     """get coefficients for OLS on uncorrected data given factors
 
@@ -180,6 +201,16 @@ def infer_model_params(
     complete: bool
         Indicates if we should handle missing data in uncorrected. If the data
         are complete, can be much faster doing this
+    extra_core_dims: List[Hashable]
+        Dimensions that are irrelevant to 'missingness' for with incomplete data
+        This allows for solving for OLS simultaneously once over these extra
+        dimension (as core_dim to appropriate gufunc).
+        If not complete, missing values will be propagated along these
+        dimensions, solve will share work inverting gramian over these
+        dimensions (e.g. bootstrap_replicate). This yields a speed-up
+        proportional to the size of the extra_core_dims. This is ignored when
+        complete (all non-prefix dimensions in uncorrected are extra in this
+        case)
 
     Returns
     -------
@@ -193,9 +224,12 @@ def infer_model_params(
     gramian: xr.DataArray  # X^T X for factors (potentially given missing data)
     projection: xr.DataArray  # X^T Y (observed uncorrected data onto factors)
     if not complete:
-        missing = uncorrected.notnull()
+        extra_core_dims = [
+            x for x in uncorrected.dims if x in extra_core_dims and x != "prefix"
+        ]
+        not_missing = uncorrected.notnull().all(extra_core_dims)
         gramian = xr.dot(
-            missing, factors.rename(factor="fsolve"), factors, dims="prefix"
+            not_missing, factors.rename(factor="fsolve"), factors, dims="prefix"
         )
         gramian = gramian.where(
             # mask singular gramians as nan
@@ -207,21 +241,41 @@ def infer_model_params(
             )
         )
         projection = xr.dot(
-            missing, uncorrected, factors.rename(factor="fsolve"), dims="prefix"
+            not_missing, uncorrected, factors.rename(factor="fsolve"), dims="prefix"
         )
     else:
         gramian = xr.dot(factors.rename(factor="fsolve"), factors, dims="prefix")
-        projection = xr.dot(uncorrected, factors.rename(factor="fsolve"), dims="prefix")
+        projection = xr.dot(factors.rename(factor="fsolve"), uncorrected, dims="prefix")
+        extra_core_dims = [x for x in projection.dims if x != "fsolve"]
     # solve for OLS parameters
-    return xr.apply_ufunc(
-        _silent_linalg_solve,
-        gramian,
-        projection,
-        input_core_dims=[["fsolve", "factor"], ["fsolve"]],
-        output_core_dims=[["factor"]],
-        dask="parallelized",
-        output_dtypes=[gramian.dtype],
-    )
+    params: xr.DataArray
+    if extra_core_dims:
+        params = xr.apply_ufunc(
+            _silent_linalg_solve2,
+            gramian,
+            projection.stack({"_extra_core_dims": extra_core_dims}),
+            input_core_dims=[["fsolve", "factor"], ["fsolve", "_extra_core_dims"]],
+            output_core_dims=[["factor", "_extra_core_dims"]],
+            dask="parallelized",
+            output_dtypes=[gramian.dtype],
+        )
+        params = params.unstack("_extra_core_dims")
+        # unstack adds coordinates to dimensions if they weren't unlabeled, so
+        # we have to reverse that
+        params = params.drop_vars(
+            [x for x in params.coords if x not in uncorrected.coords]
+        )
+    else:
+        params = xr.apply_ufunc(
+            _silent_linalg_solve1,
+            gramian,
+            projection,
+            input_core_dims=[["fsolve", "factor"], ["fsolve"]],
+            output_core_dims=[["factor"]],
+            dask="parallelized",
+            output_dtypes=[gramian.dtype],
+        )
+    return params
 
 
 def correct_with_model(
