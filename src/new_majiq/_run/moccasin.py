@@ -21,11 +21,12 @@ from new_majiq.logger import get_logger
 from pathlib import Path
 from typing import (
     List,
+    Optional,
     Union,
 )
 
 
-def _open_mf_with_prefix(paths: List[Path]) -> xr.DataArray:
+def _open_mf_with_prefix(paths: List[Path], group: Optional[str] = None) -> xr.DataArray:
     """wrap xr.open_mfdataset to load zarr, add prefix from filenames"""
     if len(set(bam_experiment_name(x) for x in paths)) < len(paths):
         raise ValueError("paths have non-unique prefixes")
@@ -34,6 +35,7 @@ def _open_mf_with_prefix(paths: List[Path]) -> xr.DataArray:
         concat_dim="prefix",
         engine="zarr",
         join="exact",
+        group=group,
         preprocess=lambda x: x.expand_dims(
             prefix=[bam_experiment_name(x.encoding["source"])]
         ),
