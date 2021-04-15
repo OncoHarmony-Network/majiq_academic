@@ -253,7 +253,7 @@ def infer_model_params(
         params = xr.apply_ufunc(
             _silent_linalg_solve2,
             gramian,
-            projection.stack({"_extra_core_dims": extra_core_dims}),
+            projection.stack({"_extra_core_dims": extra_core_dims}).chunk({"_extra_core_dims": None}),
             input_core_dims=[["fsolve", "factor"], ["fsolve", "_extra_core_dims"]],
             output_core_dims=[["factor", "_extra_core_dims"]],
             dask="parallelized",
