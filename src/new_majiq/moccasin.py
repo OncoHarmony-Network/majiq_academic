@@ -24,6 +24,25 @@ from typing import (
 )
 
 
+def _get_total_coverage_function(offsets: np.ndarray):
+    """get function that summarizes totals defined by offsets"""
+    offsets = offsets.astype(np.int64)
+    event_size = np.diff(offsets)
+
+    def result(x: np.ndarray) -> np.ndarray:
+        """get total coverage within each event defined by offsets"""
+        if x.shape[-1] != offsets[-1]:
+            raise ValueError(
+                "input array core dim size does not match offsets"
+                f" ({x.shape = }, {offsets[-1] = })"
+            )
+        return np.repeat(
+            np.add.reduceat(x, offsets[:-1], axis=-1), event_size, axis=-1
+        )
+
+    return result
+
+
 def tmp_psi_for_moccasin(
     lsv_coverage_file: Union[str, Path],
     thresholds: QuantifierThresholds = QuantifierThresholds(),
@@ -58,23 +77,26 @@ def tmp_psi_for_moccasin(
     with xr.open_zarr(
         lsv_coverage_file, group="events_coverage"
     ) as df_ec, xr.open_zarr(lsv_coverage_file, group="events") as df_e:
-        offsets = df_e._offsets.values.astype(np.int64)
-        bootstraps = df_ec.bootstraps.transpose("ec_idx", "bootstrap_replicate").values
+        offsets = df_e._offsets.astype(np.int64).load()
+        total_coverage_fn = _get_total_coverage_function(offsets.values)
+        bootstraps = df_ec.bootstraps.load()
     # get coverage over ec_idx for events defined by offsets
-    total_coverage = np.repeat(
-        np.add.reduceat(bootstraps, offsets[:-1], axis=0), np.diff(offsets), axis=0
+    total_coverage = xr.apply_ufunc(
+        total_coverage_fn,
+        bootstraps,
+        input_core_dims=[["ec_idx"]],
+        output_core_dims=[["ec_idx"]],
+        output_dtypes=(bootstraps.dtype,),
+        dask="parallelized",
     )
-    with np.errstate(invalid="ignore"):  # ignore invalid when total_coverage = 0
-        psi = bootstraps / total_coverage
-    # mask events with no coverage or that didn't pass quantifiability thresholds
-    psi = np.where(qe.event_connection_passed_mask[:, np.newaxis] & (total_coverage > 0), psi, np.nan)
+    quantified_mask = xr.DataArray(qe.event_connection_passed_mask, dims=["ec_idx"])
     return xr.Dataset(
         {
-            "psi": (("ec_idx", "bootstrap_replicate"), psi),
-            "total_coverage": (("ec_idx", "bootstrap_replicate"), total_coverage),
+            "psi": bootstraps / total_coverage.where(quantified_mask & total_coverage.notnull()),
+            "total_coverage": total_coverage,
         },
         {
-            "_offsets": ("_eidx_offset", offsets),
+            "_offsets": offsets,
         },
     )
 
@@ -103,27 +125,17 @@ def bootstraps_from_tmp_psi(
     Clips psi to non-negative values, renormalizes each event to total_coverage
     and maps back to original_bootstraps
     """
-    psi_arr = psi.clip(min=0).transpose("bootstrap_replicate", "ec_idx").values
-    total_coverage_arr = total_coverage.transpose(
-        "bootstrap_replicate", "ec_idx"
-    ).values
-    offsets_arr = offsets.values
-    new_total_coverage_arr = np.repeat(
-        np.add.reduceat(psi_arr, offsets_arr[:-1], axis=-1),
-        np.diff(offsets_arr),
-        axis=-1,
+    total_coverage_fn = _get_total_coverage_function(offsets.values)
+    psi = psi.clip(min=0).chunk({"ec_idx": None})
+    new_total_coverage = xr.apply_ufunc(
+        total_coverage_fn,
+        psi,
+        input_core_dims=[["ec_idx"]],
+        output_core_dims=[["ec_idx"]],
+        output_dtypes=(psi.dtype,),
+        dask="parallelized",
     )
-    # corrected values
-    # TODO probably need to add with np.errstate(invalid="ignore") here
-    bootstraps = xr.DataArray(
-        np.where(
-            new_total_coverage_arr > 0,
-            # sum over event will now add up to total_coverage_arr
-            psi_arr * total_coverage_arr / new_total_coverage_arr,
-            np.nan,
-        ),
-        dims=["bootstrap_replicate", "ec_idx"],
-    )
+    bootstraps = psi * total_coverage / new_total_coverage.where(new_total_coverage > 0)
     # we don't allow one bootstrap replicate to be corrected but not others
     corrected = bootstraps.notnull().all("bootstrap_replicate")
     return (
