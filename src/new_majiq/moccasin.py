@@ -300,13 +300,42 @@ class ModelUnknownConfounders(object):
         self.total_variance: Final[float] = total_variance
         return
 
+    def to_zarr(self, output: Union[str, Path]) -> None:
+        """Save model parameters fo file"""
+        xr.Dataset(
+            {
+                "original_ecidx": self.original_ecidx,
+                "model_params": self.model_params,
+                "singular_values": self.singular_values,
+                "ec_vectors": self.ec_vectors,
+            },
+            {},
+            {
+                "total_variance": self.total_variance,
+            },
+        ).to_zarr(output, mode="w")
+        return
+
+    @classmethod
+    def from_zarr(cls, path: Union[str, Path]) -> "ModelUnknownConfounders":
+        """Load model parameters from file"""
+        with xr.open_zarr(path) as df:
+            df.load()
+            return ModelUnknownConfounders(
+                original_ecidx=df.original_ecidx,
+                model_params=df.model_params,
+                singular_values=df.singular_values,
+                ec_vectors=df.ec_vectors,
+                total_variance=df.attrs["total_variance"],
+            )
+
     @classmethod
     def train(
         cls,
         uncorrected: xr.DataArray,
         offsets: np.ndarray,
         factors: xr.DataArray,
-        max_new_factors: int,
+        max_new_factors: int = constants.DEFAULT_MOCCASIN_RUV_MAX_FACTORS,
         max_events: int = constants.DEFAULT_MOCCASIN_RUV_MAX_EVENTS,
     ) -> "ModelUnknownConfounders":
         """Learn model for unknown confounders using residuals from OLS model
@@ -434,6 +463,11 @@ class ModelUnknownConfounders(object):
             ec_vectors=local.ec_vectors.isel(new_factor=keep_new_factors),
             total_variance=local.total_variance.values[()],
         )
+
+    @property
+    def num_factors(self) -> int:
+        """Number of new unknown factors from the model"""
+        return self.singular_values.sizes["new_factor"]
 
     @property
     def explained_variance(self) -> xr.DataArray:
