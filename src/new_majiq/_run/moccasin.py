@@ -26,7 +26,9 @@ from typing import (
 )
 
 
-def _open_mf_with_prefix(paths: List[Path], group: Optional[str] = None) -> xr.DataArray:
+def _open_mf_with_prefix(
+    paths: List[Path], group: Optional[str] = None
+) -> xr.DataArray:
     """wrap xr.open_mfdataset to load zarr, add prefix from filenames"""
     if len(set(bam_experiment_name(x) for x in paths)) < len(paths):
         raise ValueError("paths have non-unique prefixes")

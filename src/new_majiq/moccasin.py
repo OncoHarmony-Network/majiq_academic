@@ -38,9 +38,7 @@ def _get_total_coverage_function(offsets: np.ndarray):
                 "input array core dim size does not match offsets"
                 f" ({x.shape = }, {offsets[-1] = })"
             )
-        return np.repeat(
-            np.add.reduceat(x, offsets[:-1], axis=-1), event_size, axis=-1
-        )
+        return np.repeat(np.add.reduceat(x, offsets[:-1], axis=-1), event_size, axis=-1)
 
     return result
 
@@ -94,7 +92,8 @@ def tmp_psi_for_moccasin(
     quantified_mask = xr.DataArray(qe.event_connection_passed_mask, dims=["ec_idx"])
     return xr.Dataset(
         {
-            "psi": bootstraps / total_coverage.where(quantified_mask & total_coverage.notnull()),
+            "psi": bootstraps
+            / total_coverage.where(quantified_mask & total_coverage.notnull()),
             "total_coverage": total_coverage,
         },
         {
@@ -253,7 +252,9 @@ def infer_model_params(
         params = xr.apply_ufunc(
             _silent_linalg_solve2,
             gramian,
-            projection.stack({"_extra_core_dims": extra_core_dims}).chunk({"_extra_core_dims": None}),
+            projection.stack({"_extra_core_dims": extra_core_dims}).chunk(
+                {"_extra_core_dims": None}
+            ),
             input_core_dims=[["fsolve", "factor"], ["fsolve", "_extra_core_dims"]],
             output_core_dims=[["factor", "_extra_core_dims"]],
             dask="parallelized",
