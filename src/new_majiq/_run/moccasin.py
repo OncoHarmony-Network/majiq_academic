@@ -289,7 +289,8 @@ def run_tmpfile(args: argparse.Namespace) -> None:
     log.info(f"Loading and reparameterizing coverage in {args.coverage.resolve()}")
     df_tmp = mc.tmp_psi_for_moccasin(args.coverage, _get_quantifiable_thresholds(args))
     log.info(f"Saving reparameterization to {args.tmpfile.resolve()}")
-    df_tmp.to_zarr(args.tmpfile, mode="w")
+    USE_CHUNKS = {"ec_idx": 8192, "bootstrap_replicate": None}
+    df_tmp.chunk(USE_CHUNKS).to_zarr(args.tmpfile, mode="w")
     return
 
 
@@ -355,18 +356,6 @@ def run_coverage_model(args: argparse.Namespace) -> None:
     log.info(f"Opening coverage from {len(args.tmpfiles)} tmpfiles")
     coverage = _open_mf_with_prefix(args.tmpfiles)
     log.info("Solving for model parameters")
-    # how to chunk ec_idx to maintain low memory profile?
-    gramian_core_size = (
-        coverage.sizes["bootstrap_replicate"]
-        * factors.sizes["factor"]
-        * factors.sizes["factor"]
-    )
-    CHUNK_MEMORY = 1 << 26  # 512MB at double precision has his many entries
-    num_chunks = int(
-        np.ceil(coverage.sizes["ec_idx"] * gramian_core_size / CHUNK_MEMORY)
-    )
-    chunksize = max(1, coverage.sizes["ec_idx"] // num_chunks)
-    coverage = coverage.chunk({"ec_idx": chunksize})
     coverage_model = mc.infer_model_params(
         coverage.psi, factors, extra_core_dims=["bootstrap_replicate"]
     )
