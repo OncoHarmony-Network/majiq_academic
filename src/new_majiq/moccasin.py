@@ -238,6 +238,7 @@ def infer_model_params(
                 input_core_dims=[["fsolve", "factor"]],
                 dask="parallelized",
             )
+            == gramian.sizes["factor"]
         )
         projection = xr.dot(
             not_missing, uncorrected, factors.rename(factor="fsolve"), dims="prefix"
