@@ -14,6 +14,7 @@ import new_majiq as nm
 import new_majiq.constants as constants
 import new_majiq.moccasin as mc
 
+from dask.distributed import Client
 from new_majiq.experiments import bam_experiment_name
 from new_majiq._run._majiq_args import check_nonnegative_factory
 from new_majiq._run._run import GenericSubcommand
@@ -42,6 +43,20 @@ def _open_mf_with_prefix(
             prefix=[bam_experiment_name(x.encoding["source"])]
         ),
     )
+
+
+def _args_dask(parser: argparse.ArgumentParser) -> None:
+    """arguments to pass to Dask scheduler"""
+    parser.add_argument(
+        "--nthreads",
+        type=check_nonnegative_factory(int, True),
+        default=constants.DEFAULT_QUANTIFY_NTHREADS,
+        help="Number of threads used by Dask scheduler to fit models in chunks"
+        " (default: %(default)s)",
+    )
+    # doesn't appear we need to manually limit memory at this time, can do so
+    # in the future if necessary
+    return
 
 
 def _args_quantifiable_thresholds(parser: argparse.ArgumentParser) -> None:
@@ -212,6 +227,7 @@ def args_factors_model(parser: argparse.ArgumentParser) -> None:
         help="Paths for input tmpfiles with coverage for unknown confounders model",
     )
     _args_ruv_parameters(parser)
+    _args_dask(parser)
     return
 
 
@@ -251,6 +267,7 @@ def args_coverage_model(parser: argparse.ArgumentParser) -> None:
         type=Path,
         help="Paths for input tmpfiles with coverage for coverage model",
     )
+    _args_dask(parser)
     return
 
 
@@ -300,6 +317,10 @@ def run_factors_model(args: argparse.Namespace) -> None:
     if len(prefix) > len(set(prefix)):
         raise ValueError("Passed tmpfiles have duplicate prefixes")
     log = get_logger()
+    client = Client(
+        n_workers=1, threads_per_worker=args.nthreads, dashboard_address=None
+    )
+    log.info(client)
     log.info("Setting up model matrix of known factors")
     factors = _get_factors(prefix, args)
     log.info(f"Opening coverage from {len(args.tmpfiles)} tmpfiles")
@@ -351,6 +372,10 @@ def run_coverage_model(args: argparse.Namespace) -> None:
     if len(prefix) > len(set(prefix)):
         raise ValueError("Passed tmpfiles have duplicate prefixes")
     log = get_logger()
+    client = Client(
+        n_workers=1, threads_per_worker=args.nthreads, dashboard_address=None
+    )
+    log.info(client)
     log.info("Setting up model matrix of all factors")
     factors = _get_factors(prefix, args)
     log.info(f"Opening coverage from {len(args.tmpfiles)} tmpfiles")
