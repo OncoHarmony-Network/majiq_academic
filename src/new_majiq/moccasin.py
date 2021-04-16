@@ -510,24 +510,34 @@ class ModelUnknownConfounders(object):
                 "confounding": ("new_factor", [True for _ in range(max_new_factors)]),
             },
         ).compute()
-        # determine if new factors from training data (prefix_vectors) are
-        # linearly independent from existing factors (we only want the linearly
-        # independent ones). We can do this by looking at residuals from trying
-        # to reconstruct prefix_vectors using factors
-        _, old_new_residuals, _, _ = np.linalg.lstsq(
-            factors.transpose("prefix", "factor").values,
-            local.prefix_vectors.transpose("prefix", "new_factor").values,
-            rcond=None,
+        # only keep as many new factors that keep model matrix having full
+        # column rank
+        combined_factors = np.empty(
+            (factors.sizes["prefix"], factors.sizes["factor"] + max_new_factors),
+            dtype=factors.dtype,
         )
-        # residuals > 0, accounting for potential accumulation of error
-        keep_new_factors = old_new_residuals > (
-            factors.sizes["prefix"] * np.finfo(old_new_residuals.dtype).eps
-        )
+        combined_factors[:, : factors.sizes["factor"]] = factors.transpose(
+            "prefix", "factor"
+        ).values
+        combined_factors[:, factors.sizes["factor"] :] = local.prefix_vectors.transpose(
+            "prefix", "new_factor"
+        ).values
+        keep_n: int  # we know we can keep at least this many new factors (starting at 0)
+        for keep_n in range(max_new_factors):
+            # try adding 1 more after the keep_n we know works, still full rank?
+            total = factors.sizes["factor"] + keep_n + 1
+            if np.linalg.matrix_rank(combined_factors[:, :total]) < total:
+                # combined factors now singular so keep_n is maximum new factors
+                break
+        else:
+            # all of combined_factors was still full rank
+            keep_n = max_new_factors
+
         return ModelUnknownConfounders(
             original_ecidx=original_ecidx,
             model_params=local.model_params,
-            singular_values=local.singular_values.isel(new_factor=keep_new_factors),
-            ec_vectors=local.ec_vectors.isel(new_factor=keep_new_factors),
+            singular_values=local.singular_values.isel(new_factor=slice(keep_n)),
+            ec_vectors=local.ec_vectors.isel(new_factor=slice(keep_n)),
             total_variance=local.total_variance.values[()],
         )
 
