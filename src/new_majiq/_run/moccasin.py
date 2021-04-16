@@ -173,6 +173,8 @@ def _get_factors(
         if (missing := prefix_set - {bam_experiment_name(x) for x in matched_zarr}) :
             raise ValueError(f"Factors for some prefixes missing ({missing = })")
         factors = _open_mf_with_prefix(matched_zarr).factors
+        # load factors into memory (as other methods do)
+        factors = factors.load()
     # do the squeeze, if desired
     if do_squeeze:
         factors = factors.squeeze("prefix")
