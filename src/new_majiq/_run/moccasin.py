@@ -417,7 +417,7 @@ def run_coverage_infer(args: argparse.Namespace) -> None:
         df_ec.bootstraps,
     )
     df_e.to_zarr(args.corrected_coverage, mode="w", group="events")
-    df_ec.assign(bootstraps=corrected_bootstraps).to_zarr(
+    df_ec.assign(bootstraps=corrected_bootstraps).load().to_zarr(
         args.corrected_coverage, mode="a", group="events_coverage"
     )
     return
