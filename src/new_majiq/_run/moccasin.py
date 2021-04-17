@@ -407,8 +407,8 @@ def run_coverage_infer(args: argparse.Namespace) -> None:
     factors = _get_factors(prefix, args)
     log.info(f"Opening up model parameters from {args.coverage_model.resolve()}")
     coverage_model = xr.open_zarr(args.coverage_model).coverage_model
-    df_ec = xr.open_zarr(args.original_coverage, group="events_coverage")
-    df_e = xr.open_zarr(args.original_coverage, group="events")
+    df_ec = xr.open_zarr(args.original_coverage, group=constants.NC_EVENTSCOVERAGE)
+    df_e = xr.open_zarr(args.original_coverage, group=constants.NC_EVENTS)
     df_tmp = xr.open_zarr(args.tmpfile)
     corrected_bootstraps = mc.bootstraps_from_tmp_psi(
         mc.correct_with_model(df_tmp.psi, coverage_model, factors),
@@ -416,9 +416,9 @@ def run_coverage_infer(args: argparse.Namespace) -> None:
         df_tmp._offsets,
         df_ec.bootstraps,
     )
-    df_e.to_zarr(args.corrected_coverage, mode="w", group="events")
+    df_e.to_zarr(args.corrected_coverage, mode="w", group=constants.NC_EVENTS)
     df_ec.assign(bootstraps=corrected_bootstraps).load().to_zarr(
-        args.corrected_coverage, mode="a", group="events_coverage"
+        args.corrected_coverage, mode="a", group=constants.NC_EVENTSCOVERAGE
     )
     return
 

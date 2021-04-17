@@ -75,8 +75,8 @@ def tmp_psi_for_moccasin(
     """
     qe = QuantifiableEvents.from_quantifier_group([lsv_coverage_file], thresholds)
     with xr.open_zarr(
-        lsv_coverage_file, group="events_coverage"
-    ) as df_ec, xr.open_zarr(lsv_coverage_file, group="events") as df_e:
+        lsv_coverage_file, group=constants.NC_EVENTSCOVERAGE
+    ) as df_ec, xr.open_zarr(lsv_coverage_file, group=constants.NC_EVENTS) as df_e:
         offsets = df_e._offsets.astype(np.int64).load()
         total_coverage_fn = _get_total_coverage_function(offsets.values)
         bootstraps = df_ec.bootstraps.load()
