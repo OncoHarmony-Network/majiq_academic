@@ -44,6 +44,13 @@ def add_args(parser: argparse.ArgumentParser) -> None:
         help="Path for output LSV coverage files",
     )
     parser.add_argument(
+        "--ignore-from",
+        metavar="sg",
+        type=Path,
+        default=None,
+        help="Path to other splicegraph, ignore LSVs shared with this splicegraph",
+    )
+    parser.add_argument(
         "--num-bootstraps",
         type=check_nonnegative_factory(int, False),
         default=constants.DEFAULT_COVERAGE_NUM_BOOTSTRAPS,
@@ -75,8 +82,18 @@ def run(args: argparse.Namespace) -> None:
     sj_junctions = nm.SJJunctionsBins.from_zarr(args.sj)
     sj_introns = nm.SJIntronsBins.from_zarr(args.sj)
     log.info("Obtaining coverage over LSVs")
+    lsvs = sg.exon_connections.lsvs()
+    if args.ignore_from is not None:
+        log.info(f"Ignoring LSVs also found in {args.ignore_from.resolve()}")
+        lsvs = lsvs[
+            lsvs.unique_events_mask(
+                nm.SpliceGraph.from_zarr(
+                    args.ignore_from, genes=sg.genes
+                ).exon_connections.lsvs()
+            ).unique_events_mask
+        ]
     lsv_coverage = nm.EventsCoverage.from_events_and_sj(
-        sg.exon_connections.lsvs(),
+        lsvs,
         sj_junctions,
         sj_introns,
         num_bootstraps=args.num_bootstraps,
