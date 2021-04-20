@@ -8,6 +8,7 @@ Author: Joseph K Aicher
 
 import argparse
 
+import xarray as xr
 import new_majiq as nm
 
 from new_majiq.logger import get_logger
@@ -71,7 +72,11 @@ def run(args: argparse.Namespace) -> None:
     log.info("Combining input junctions")
     df_junctions = nm.GeneJunctions.combine_datasets(
         [
-            nm.GeneJunctions.load_dataset(p).assign_coords(denovo=False)
+            nm.GeneJunctions.load_dataset(p).assign_coords(
+                denovo=lambda df: xr.DataArray(False).expand_dims(
+                    {"gj_idx": df.sizes["gj_idx"]}
+                )
+            )
             for p in args.make_annotated
         ]
         + [nm.GeneJunctions.load_dataset(p) for p in args.keep_denovo]
