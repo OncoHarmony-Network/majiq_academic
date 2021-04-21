@@ -35,13 +35,16 @@ def _open_mf_with_prefix(
         raise ValueError("paths have non-unique prefixes")
     return xr.open_mfdataset(
         paths,
-        concat_dim="prefix",
         engine="zarr",
-        join="exact",
         group=group,
+        concat_dim="prefix",
         preprocess=lambda x: x.expand_dims(
             prefix=[bam_experiment_name(x.encoding["source"])]
         ),
+        join="override",
+        compat="override",
+        coords="minimal",
+        data_vars="minimal",
     )
 
 
