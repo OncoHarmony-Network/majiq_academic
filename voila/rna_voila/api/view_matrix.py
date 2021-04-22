@@ -638,7 +638,7 @@ class ViewHeterogens(ViewMulti):
                         stat_value = stat_value.T
                         stat_value = stat_value[stat_idx][junc_idx]
 
-                        dpsi_value = het.dpsi_signed
+                        dpsi_value = het.dpsi_median_signed
                         dpsi_value = dpsi_value[junc_idx]
 
                         grp_names = m.group_names
@@ -1107,6 +1107,14 @@ class ViewHeterogen(Heterogen, ViewMatrix):
             :return: list
             """
             return [reduce(operator.__sub__, (get_expected_psi(b) for b in bs)) for bs in self.mean_psi]
+
+        @property
+        def dpsi_median_signed(self):
+            """
+            Calculated the difference in median psi for heat map. (with negative values possible)
+            :return: list
+            """
+            return [reduce(operator.__sub__, bs) for bs in self.median_psi()]
 
         @property
         def mean_psi(self):
