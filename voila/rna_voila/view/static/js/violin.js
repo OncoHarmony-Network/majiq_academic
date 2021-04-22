@@ -360,6 +360,8 @@ class Violin {
         const junc_idx = data.junction_idx;
         const color = new Colors().brewer(junc_idx);
         const bins = data.mean_psi;
+        const medians = data.median_psi;
+
 
         const g = d3.select(svg)
             .append('g')
@@ -370,7 +372,7 @@ class Violin {
             .append('g')
             .attr('class', 'histograms');
 
-        this.draw_histograms(hist, bins);
+        this.draw_histograms(hist, bins, medians);
 
         hist
             .attr('stroke', color)
@@ -405,7 +407,7 @@ class Violin {
         return parent;
     };
 
-    draw_histograms(g, bins) {
+    draw_histograms(g, bins, medians) {
 
         // removing data from bins...with no data!
         // (setting to an empty array makes it so nothing is shown on the violin plot)
@@ -531,7 +533,7 @@ class Violin {
                 return area(d)
             })
             .attr('data-group-idx', (d, i) => i)
-            .attr('data-expected', (d) => expectation_value(d));
+            .attr('data-expected', (d, i) => medians[i]);
 
         // console.log(g.selectAll('.violin'))
         // dragHandler(g.selectAll('.violin'))

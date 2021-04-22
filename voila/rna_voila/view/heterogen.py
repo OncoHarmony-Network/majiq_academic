@@ -267,11 +267,12 @@ def summary_table():
         juncs = het.junctions
         mu_psis = het.mu_psi
         mean_psis = het.mean_psi
+        median_psis = het.median_psi.T
 
         table_data = []
 
         skipped_idx = 0
-        for idx, (junc, mean_psi, mu_psi) in enumerate(zip(juncs, mean_psis, mu_psis)):
+        for idx, (junc, mean_psi, mu_psi, median_psi) in enumerate(zip(juncs, mean_psis, mu_psis, median_psis)):
             if idx in hidden_idx:
                 skipped_idx += 1
                 continue
@@ -279,11 +280,17 @@ def summary_table():
             junc = '-'.join(junc)
             heatmap = het.junction_heat_map(stat_name, idx)
 
+            # print('y', median_psis)
+            # print(median_psi.shape, median_psi)
+            # print('m', len(mean_psi), mean_psi)
+            # assert False
+
             table_data.append({
                 'junc': junc,
                 'junc_idx': idx - skipped_idx,
                 'mean_psi': mean_psi,
                 'mu_psi': mu_psi,
+                'median_psi': list(median_psi),
                 'heatmap': heatmap,
             })
 
@@ -291,7 +298,7 @@ def summary_table():
 
         for idx, row_data, records in dt.callback():
             junc, junc_idx, mean_psi = itemgetter('junc', 'junc_idx', 'mean_psi')(row_data)
-            mu_psi, heatmap = itemgetter('mu_psi', 'heatmap')(row_data)
+            mu_psi, heatmap, median_psi = itemgetter('mu_psi', 'heatmap', 'median_psi')(row_data)
             for _idx in hidden_idx:
                 heatmap = np.delete(heatmap, _idx, axis=0)
                 heatmap = np.delete(heatmap, _idx, axis=1).tolist()
@@ -306,6 +313,7 @@ def summary_table():
                     'junction_idx': junc_idx,
                     'mean_psi': mean_psi,
                     'mu_psi': mu_psi,
+                    'median_psi': median_psi
                 },
                 {
                     'heatmap': heatmap,
