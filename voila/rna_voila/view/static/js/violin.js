@@ -533,7 +533,7 @@ class Violin {
                 return area(d)
             })
             .attr('data-group-idx', (d, i) => i)
-            .attr('data-expected', (d, i) => medians[i]);
+            .attr('data-expected', (d, i) => medians ? medians[i] : expectation_value(d));
 
         // console.log(g.selectAll('.violin'))
         // dragHandler(g.selectAll('.violin'))
