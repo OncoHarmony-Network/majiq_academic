@@ -374,8 +374,8 @@ class PsiTsv(AnalysisTypeTsv):
                                 '{0}-{1}'.format(start, end) for start, end in exon_str(lsv_exons)
                             ),
                             'ir_coords': ir_coords,
-                            'mean_psi_per_lsv_junction': semicolon(psi.means),
-                            'stdev_psi_per_lsv_junction': semicolon(psi.standard_deviations),
+                            'mean_psi_per_lsv_junction': semicolon(f'{x:0.4f}' for x in psi.means),
+                            'stdev_psi_per_lsv_junction': semicolon(f'{x:0.4f}' for x in psi.standard_deviations),
                             'ucsc_lsv_link': views.ucsc_href(genome, chromosome, start, end)
                         }
 
@@ -495,23 +495,23 @@ class HeterogenTsv(AnalysisTypeTsv):
                             if (medians < 0).all():
                                 row[f'{grp}_median_psi'] = 'NA'
                             else:
-                                row[f'{grp}_median_psi'] = semicolon(x for x in medians)
+                                row[f'{grp}_median_psi'] = semicolon(f'{x:0.4f}' for x in medians)
 
                         for quant in self._quantiles:
                             for grp, medians in zip(group_names, het.quantile_psi(quant)):
                                 if (medians < 0).all():
                                     row[f'{grp}_percentile{quant * 100:02.0f}_psi'] = 'NA'
                                 else:
-                                    row[f'{grp}_percentile{quant * 100:02.0f}_psi'] = semicolon(x for x in medians)
+                                    row[f'{grp}_percentile{quant * 100:02.0f}_psi'] = semicolon(f'{x:0.3e}' for x in medians)
 
-                        for key, value in het.junction_stats:
-                            row[key] = semicolon(value)
+                        for key, values in het.junction_stats:
+                            row[key] = semicolon(f'{x:0.3e}' for x in values)
 
-                        for key, value in het.junction_psisamples_stats:
-                            row[key] = semicolon(value)
+                        for key, values in het.junction_psisamples_stats:
+                            row[key] = semicolon(f'{x:0.3e}' for x in values)
 
-                        for key, value in het.junction_scores:
-                            row[key] = semicolon(value)
+                        for key, values in het.junction_scores:
+                            row[key] = semicolon(f'{x:0.3e}' for x in values)
 
                         if lock:
                             lock.acquire()
@@ -584,20 +584,20 @@ class DeltaPsiTsv(AnalysisTypeTsv):
                             ),
                             'ir_coords': ir_coords,
                             'mean_dpsi_per_lsv_junction': semicolon(
-                                excl_incl[i][1] - excl_incl[i][0] for i in
+                                f'{excl_incl[i][1] - excl_incl[i][0]:0.4f}' for i in
                                 range(np.size(bins, 0))
                             ),
                             'probability_changing': semicolon(
-                                matrix_area(b, config.threshold) for b in bins
+                                f'{matrix_area(b, config.threshold):0.3e}' for b in bins
                             ),
                             'probability_non_changing': semicolon(
-                                dpsi.high_probability_non_changing()
+                                f'{x:0.3e}' for x in dpsi.high_probability_non_changing()
                             ),
                             '%s_mean_psi' % group1: semicolon(
-                                '%.3f' % i for i in group_means[group1]
+                                f'{x:0.4f}' for x in group_means[group1]
                             ),
                             '%s_mean_psi' % group2: semicolon(
-                                '%.3f' % i for i in group_means[group2]
+                                f'{x:0.4f}' for x in group_means[group2]
                             ),
                             'ucsc_lsv_link': views.ucsc_href(genome, chromosome, start, end)
                         }
