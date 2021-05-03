@@ -23,8 +23,14 @@ class AlignmentRecord {
  private:
   bam1_t *b_;  // holds current alignment information
 
+  inline uint32_t n_cigar() const { return b_->core.n_cigar; }
+  inline uint32_t* get_cigar() const { return bam_get_cigar(b_); }
+
  public:
-  inline int32_t read_length() const { return b_->core.l_qseq; }
+  inline int32_t read_length() const {
+    return b_->core.l_qseq > 0
+      ? b_->core.l_qseq : bam_cigar2qlen(n_cigar(), get_cigar());
+  }
   /**
    * 0-based leftmost coordinate
    */
@@ -69,7 +75,7 @@ class AlignmentRecord {
    */
   CigarRegions cigar_regions() const {
     return CigarRegions(
-        pos(), read_length(), bam_get_cigar(b_), b_->core.n_cigar);
+        pos(), read_length(), get_cigar(), n_cigar());
   }
 
   /**
