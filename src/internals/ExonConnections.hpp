@@ -345,13 +345,17 @@ class ExonConnections {
     for (const Event& event : events) {
       for (auto it = begin_junctions_for(event);
           it != end_junctions_for(event); ++it) {
-        constexpr bool IS_INTRON = false;
-        connections.push_back(ConnectionIndex{IS_INTRON, *it});
+        if ((*junctions_)[*it].for_event()) {
+          constexpr bool IS_INTRON = false;
+          connections.push_back(ConnectionIndex{IS_INTRON, *it});
+        }
       }
       for (auto it = begin_introns_for(event);
           it != end_introns_for(event); ++it) {
-        constexpr bool IS_INTRON = true;
-        connections.push_back(ConnectionIndex{IS_INTRON, *it});
+        if ((*introns_)[*it].for_event()) {
+          constexpr bool IS_INTRON = true;
+          connections.push_back(ConnectionIndex{IS_INTRON, *it});
+        }
       }
       connection_offsets.push_back(connections.size());
     }
