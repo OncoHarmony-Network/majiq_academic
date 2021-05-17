@@ -1108,7 +1108,7 @@ class TsvWriter(BaseTsvWriter):
                             event_changing = self.event_changing(module, quant_identifiers)
 
                             c1_range_str = self._trim_strand_case_range_str(event['C1'], 'start', event['Include1'], 'start')
-                            a1_range_str = self._trim_strand_case_range_str(event['Include2'], 'end', event['SkipA2'], 'start')
+                            a1_range_str = self._trim_strand_case_range_str(event['Include1'], 'end', event['SkipA2'], 'start')
                             a2_range_str = self._trim_strand_case_range_str(event['SkipA1'], 'end', event['Include2'], 'start')
                             c2_range_str = self._trim_strand_case_range_str(event['Include2'], 'end', event['C2'], 'end')
 
