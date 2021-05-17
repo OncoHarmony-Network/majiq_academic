@@ -60,6 +60,7 @@ class BaseTsvWriter(MultiQuantWriter):
 
         self.graph = graph
         self.gene_id = gene_id
+        self.strand = self.graph.strand if self.graph else None
 
 
         self.pid = multiprocessing.current_process().pid
@@ -363,7 +364,7 @@ class TsvWriter(BaseTsvWriter):
             return 'True'
         return ''
 
-    def _trim_strand_case_range_str(self, e1, pos1, e2, pos2, plus_strand):
+    def _trim_strand_case_range_str(self, e1, pos1, e2, pos2):
         """
         produce a range_str based on two nodes start or ends, and a strand
         :param e1: exon / junction to use for begin
@@ -373,17 +374,17 @@ class TsvWriter(BaseTsvWriter):
         :param plus_strand: true is plus strand, false if minus strand
         :return:
         """
-        if plus_strand:
+        if self.strand == '+':
             return f"{getattr(e1, pos1)}-{getattr(e2, pos2)}"
         return f"{getattr(e2,  reverse_strand_map[pos2])}-{getattr(e1, reverse_strand_map[pos1])}"
 
-    def _trim_strand_case_event_size(self, e1, pos1, e2, pos2, plus_strand):
+    def _trim_strand_case_event_size(self, e1, pos1, e2, pos2):
         """
         Same as _trim_strand_case_range_str, but produce a numeric result of the resulting absolute difference
         Between the start and end of the specified nodes / positions
         """
 
-        if plus_strand:
+        if self.strand == '+':
             return abs(getattr(e1, pos1)-getattr(e2, pos2))
         return abs(getattr(e2, reverse_strand_map[pos2])-getattr(e1, reverse_strand_map[pos1]))
 
@@ -522,11 +523,10 @@ class TsvWriter(BaseTsvWriter):
                             # (if this needs to be redesigned, then, only design with the + strand in mind, and
                             # follow these rules to make the reverse for the minus strand
 
-                            strand = event['C1'].start < event['C2'].end
-                            c1_range_str = self._trim_strand_case_range_str(event['C1'], 'start', event['Include1'], 'start', strand)
-                            a_range_str = self._trim_strand_case_range_str(event['Include1'], 'end', event['Include2'], 'start', strand)
-                            c2_range_str = self._trim_strand_case_range_str(event['Include2'], 'end', event['C2'], 'end', strand)
-                            event_size = self._trim_strand_case_event_size(event['Include1'], 'end', event['Include2'], 'start', strand) + 1
+                            c1_range_str = self._trim_strand_case_range_str(event['C1'], 'start', event['Include1'], 'start')
+                            a_range_str = self._trim_strand_case_range_str(event['Include1'], 'end', event['Include2'], 'start')
+                            c2_range_str = self._trim_strand_case_range_str(event['Include2'], 'end', event['C2'], 'end')
+                            event_size = self._trim_strand_case_event_size(event['Include1'], 'end', event['Include2'], 'start') + 1
 
                             row = [event['Skip'].de_novo,
                                    c1_range_str,
@@ -631,9 +631,7 @@ class TsvWriter(BaseTsvWriter):
                                                           event_name="A3",
                                                           event_ii=event_i)
 
-                            strand = event['E1'].start < event['E2'].end
-
-                            event_size = self._trim_strand_case_event_size(event['Proximal'], 'end', event['Distal'], 'end', strand)
+                            event_size = self._trim_strand_case_event_size(event['Proximal'], 'end', event['Distal'], 'end')
 
                             # preferentially use source LSV
                             if src_common[5]:
@@ -645,8 +643,8 @@ class TsvWriter(BaseTsvWriter):
                                 event_non_changing = self.event_non_changing(module, quant_identifiers)
                                 event_changing = self.event_changing(module, quant_identifiers)
 
-                                e1_range_str = self._trim_strand_case_range_str(event['E1'], 'start', event['Proximal'], 'start', strand)
-                                e2_range_str = self._trim_strand_case_range_str(event['Proximal'], 'end', event['E2'], 'end', strand)
+                                e1_range_str = self._trim_strand_case_range_str(event['E1'], 'start', event['Proximal'], 'start')
+                                e2_range_str = self._trim_strand_case_range_str(event['Proximal'], 'end', event['E2'], 'end')
 
                                 row = [event['Proximal'].de_novo,
                                        e1_range_str,
@@ -734,9 +732,7 @@ class TsvWriter(BaseTsvWriter):
                                                           event_name="A5",
                                                           event_ii=event_i)
 
-                            strand = event['E1'].start < event['E2'].end
-
-                            event_size = self._trim_strand_case_event_size(event['Proximal'], 'start', event['Distal'], 'start', strand)
+                            event_size = self._trim_strand_case_event_size(event['Proximal'], 'start', event['Distal'], 'start')
 
                             # preferentially use target LSV
                             if trg_common[5]:
@@ -748,8 +744,8 @@ class TsvWriter(BaseTsvWriter):
                                 event_non_changing = self.event_non_changing(module, quant_identifiers)
                                 event_changing = self.event_changing(module, quant_identifiers)
 
-                                e1_range_str = self._trim_strand_case_range_str(event['E1'], 'start', event['Proximal'], 'start', strand)
-                                e2_range_str = self._trim_strand_case_range_str(event['Proximal'], 'end', event['E2'], 'end', strand)
+                                e1_range_str = self._trim_strand_case_range_str(event['E1'], 'start', event['Proximal'], 'start')
+                                e2_range_str = self._trim_strand_case_range_str(event['Proximal'], 'end', event['E2'], 'end')
 
                                 row = [event['Proximal'].de_novo,
                                        e2_range_str,
@@ -786,10 +782,10 @@ class TsvWriter(BaseTsvWriter):
                                 event_changing = self.event_changing(module, quant_identifiers)
 
                                 e1_range_str = self._trim_strand_case_range_str(event['E1'], 'start', event['Proximal'],
-                                                                                'start', strand)
+                                                                                'start')
 
                                 e2_range_str = self._trim_strand_case_range_str(event['Proximal'], 'end', event['E2'],
-                                                                                'end', strand)
+                                                                                'end')
 
                                 row = [event['Proximal'].de_novo,
                                        e1_range_str,
@@ -839,9 +835,9 @@ class TsvWriter(BaseTsvWriter):
                                                           event_name="pA5",
                                                           event_ii=event_i)
 
-                            strand = event['C1'].start < event['C2'].end
-                            event_size = self._trim_strand_case_event_size(event['Include1'], 'absolute_end', event['Include1'], 'absolute_start', strand) + 1 + \
-                                         self._trim_strand_case_event_size(event['A'], 'end', event['A'], 'start', strand) + 1
+                            event_size = self._trim_strand_case_event_size(event['Include1'], 'absolute_end',
+                                                                           event['Include1'], 'absolute_start') + 1 + \
+                                         self._trim_strand_case_event_size(event['A'], 'end', event['A'], 'start') + 1
 
                             quant_identifiers = (
                                 ('s', event['Skip']),
@@ -853,8 +849,8 @@ class TsvWriter(BaseTsvWriter):
                             event_changing = self.event_changing(module, quant_identifiers)
 
                             c1_range_str = event['C1'].range_str()
-                            a_range_str = self._trim_strand_case_range_str(event['A'], 'start', event['Include2'], 'start', strand)
-                            c2_range_str = self._trim_strand_case_range_str(event['Include2'], 'end', event['C2'], 'end', strand)
+                            a_range_str = self._trim_strand_case_range_str(event['A'], 'start', event['Include2'], 'start')
+                            c2_range_str = self._trim_strand_case_range_str(event['Include2'], 'end', event['C2'], 'end')
 
                             row = [event['Skip'].de_novo,
                                    c1_range_str,
@@ -934,9 +930,9 @@ class TsvWriter(BaseTsvWriter):
                                                           event_name="pA3",
                                                           event_ii=event_i)
 
-                            strand = event['C1'].start < event['C2'].end
-                            event_size = self._trim_strand_case_event_size(event['Include2'], 'absolute_end', event['Include2'], 'absolute_start', strand) + 1 + \
-                                         self._trim_strand_case_event_size(event['A'], 'end', event['A'], 'start', strand) + 1
+                            event_size = self._trim_strand_case_event_size(event['Include2'], 'absolute_end',
+                                                                           event['Include2'], 'absolute_start') + 1 + \
+                                         self._trim_strand_case_event_size(event['A'], 'end', event['A'], 'start') + 1
 
                             quant_identifiers = (
                                 ('s', event['Skip']),
@@ -947,8 +943,8 @@ class TsvWriter(BaseTsvWriter):
                             event_non_changing = self.event_non_changing(module, quant_identifiers)
                             event_changing = self.event_changing(module, quant_identifiers)
 
-                            c1_range_str = self._trim_strand_case_range_str(event['C1'], 'start', event['Include1'], 'start', strand)
-                            a_range_str = self._trim_strand_case_range_str(event['Include1'], 'end', event['A'], 'end', strand)
+                            c1_range_str = self._trim_strand_case_range_str(event['C1'], 'start', event['Include1'], 'start')
+                            a_range_str = self._trim_strand_case_range_str(event['Include1'], 'end', event['A'], 'end')
                             c2_range_str = event['C2'].range_str()
 
                             row = [event['Skip'].de_novo,
@@ -1034,9 +1030,8 @@ class TsvWriter(BaseTsvWriter):
                             event_non_changing = self.event_non_changing(module, quant_identifiers)
                             event_changing = self.event_changing(module, quant_identifiers)
 
-                            strand = event['E1'].start < event['E2'].end
-                            e1_range_str = self._trim_strand_case_range_str(event['E1'], 'start', event['J2'], 'start', strand)
-                            e2_range_str = self._trim_strand_case_range_str(event['J2'], 'end', event['E2'], 'end', strand)
+                            e1_range_str = self._trim_strand_case_range_str(event['E1'], 'start', event['J2'], 'start')
+                            e2_range_str = self._trim_strand_case_range_str(event['J2'], 'end', event['E2'], 'end')
 
                             row = [event['J1'].de_novo,
                                    e1_range_str,
@@ -1112,11 +1107,10 @@ class TsvWriter(BaseTsvWriter):
                             event_non_changing = self.event_non_changing(module, quant_identifiers)
                             event_changing = self.event_changing(module, quant_identifiers)
 
-                            strand = event['C1'].start < event['C2'].end
-                            c1_range_str = self._trim_strand_case_range_str(event['C1'], 'start', event['Include1'], 'start', strand)
-                            a1_range_str = self._trim_strand_case_range_str(event['Include2'], 'end', event['SkipA2'], 'start', strand)
-                            a2_range_str = self._trim_strand_case_range_str(event['SkipA1'], 'end', event['Include2'], 'start', strand)
-                            c2_range_str = self._trim_strand_case_range_str(event['Include2'], 'end', event['C2'], 'end', strand)
+                            c1_range_str = self._trim_strand_case_range_str(event['C1'], 'start', event['Include1'], 'start')
+                            a1_range_str = self._trim_strand_case_range_str(event['Include2'], 'end', event['SkipA2'], 'start')
+                            a2_range_str = self._trim_strand_case_range_str(event['SkipA1'], 'end', event['Include2'], 'start')
+                            c2_range_str = self._trim_strand_case_range_str(event['Include2'], 'end', event['C2'], 'end')
 
                             row = [event['Include1'].de_novo,
                                    c1_range_str,
@@ -1130,7 +1124,8 @@ class TsvWriter(BaseTsvWriter):
                                                           edge=event['Include1'],
                                                           event_name='mxe',
                                                           event_ii=event_i)
-                            quants = [event_non_changing, event_changing] + self.quantifications(module, 's', edge=event['Include1'],node=event['C1'])
+                            quants = [event_non_changing, event_changing] + \
+                                     self.quantifications(module, 's', edge=event['Include1'],node=event['C1'])
                             writer.writerow(src_common + row + quants)
                             self.junction_cache.append((module, src_common, quants, row[0], row[4], row[5]))
                             self.heatmap_add(module, src_common, quants,
@@ -1149,7 +1144,8 @@ class TsvWriter(BaseTsvWriter):
                                                           edge=event['SkipA1'],
                                                           event_name='mxe',
                                                           event_ii=event_i)
-                            quants = [event_non_changing, event_changing] + self.quantifications(module, 's', edge=event['SkipA1'],node=event['C1'])
+                            quants = [event_non_changing, event_changing] + \
+                                     self.quantifications(module, 's', edge=event['SkipA1'],node=event['C1'])
                             writer.writerow(src_common + row + quants)
                             self.junction_cache.append((module, src_common, quants, row[0], row[4], row[5]))
                             self.heatmap_add(module, src_common, quants,
@@ -1168,7 +1164,8 @@ class TsvWriter(BaseTsvWriter):
                                                           edge=event['Include2'],
                                                           event_name='mxe',
                                                           event_ii=event_i)
-                            quants = [event_non_changing, event_changing] + self.quantifications(module, 't', edge=event['Include2'], node=event['C2'])
+                            quants = [event_non_changing, event_changing] + \
+                                     self.quantifications(module, 't', edge=event['Include2'], node=event['C2'])
                             writer.writerow(trg_common + row + quants)
                             self.junction_cache.append((module, trg_common, quants, row[0], row[4], row[5]))
                             self.heatmap_add(module, trg_common, quants,
@@ -1187,7 +1184,8 @@ class TsvWriter(BaseTsvWriter):
                                                           edge=event['SkipA2'],
                                                           event_name='mxe',
                                                           event_ii=event_i)
-                            quants = [event_non_changing, event_changing] + self.quantifications(module, 't', edge=event['SkipA2'], node=event['C2'])
+                            quants = [event_non_changing, event_changing] + \
+                                     self.quantifications(module, 't', edge=event['SkipA2'], node=event['C2'])
                             writer.writerow(trg_common + row + quants)
                             self.junction_cache.append((module, trg_common, quants, row[0], row[4], row[5]))
                             self.heatmap_add(module, trg_common, quants,
@@ -1212,7 +1210,6 @@ class TsvWriter(BaseTsvWriter):
                                                           event_name='ale',
                                                           event_ii=event_i)
                             # only ever write ALEs that are quantified by LSV
-                            strand = event['Reference'].start < event['Distal'].end
 
                             if src_common[5]:
 
@@ -1223,8 +1220,10 @@ class TsvWriter(BaseTsvWriter):
                                 event_non_changing = self.event_non_changing(module, quant_identifiers)
                                 event_changing = self.event_changing(module, quant_identifiers)
 
-                                reference_range_str = self._trim_strand_case_range_str(event['Reference'], 'start', event['SkipA2'], 'start', strand)
-                                proximal_range_str = self._trim_strand_case_range_str(event['SkipA2'], 'end', event['Proximal'], 'end', strand)
+                                reference_range_str = self._trim_strand_case_range_str(event['Reference'],
+                                                                                       'start', event['SkipA2'], 'start')
+                                proximal_range_str = self._trim_strand_case_range_str(event['SkipA2'],
+                                                                                      'end', event['Proximal'], 'end')
 
                                 row = [event['SkipA2'].de_novo,
                                        reference_range_str,
@@ -1242,8 +1241,10 @@ class TsvWriter(BaseTsvWriter):
                                                  event['SkipA2'].absolute_end - event['SkipA2'].absolute_start,
                                                  row[0], row[4], row[5])
 
-                                reference_range_str = self._trim_strand_case_range_str(event['Reference'], 'start', event['SkipA1'], 'start', strand)
-                                distal_range_str = self._trim_strand_case_range_str(event['SkipA1'], 'end', event['Distal'], 'end', strand)
+                                reference_range_str = self._trim_strand_case_range_str(event['Reference'],
+                                                                                       'start', event['SkipA1'], 'start')
+                                distal_range_str = self._trim_strand_case_range_str(event['SkipA1'],
+                                                                                    'end', event['Distal'], 'end')
 
                                 row = [event['SkipA1'].de_novo,
                                        reference_range_str,
@@ -1251,7 +1252,8 @@ class TsvWriter(BaseTsvWriter):
                                        distal_range_str,
                                        'Distal',
                                        event['SkipA1'].range_str()]
-                                quants = [event_non_changing, event_changing] + self.quantifications(module, 's', event['SkipA1'], event['Reference'])
+                                quants = [event_non_changing, event_changing] +\
+                                         self.quantifications(module, 's', event['SkipA1'], event['Reference'])
                                 writer.writerow(src_common + row + quants)
                                 self.junction_cache.append((module, src_common, quants, row[0], row[4], row[5]))
                                 self.heatmap_add(module, src_common, quants,
@@ -1277,8 +1279,6 @@ class TsvWriter(BaseTsvWriter):
                                                           event_ii=event_i,
                                                           event_name='afe')
 
-                            strand = event['Distal'].start < event['Reference'].end
-
                             # only ever write AFEs that are quantified by LSV
                             if trg_common[5]:
 
@@ -1289,8 +1289,10 @@ class TsvWriter(BaseTsvWriter):
                                 event_non_changing = self.event_non_changing(module, quant_identifiers)
                                 event_changing = self.event_changing(module, quant_identifiers)
 
-                                reference_range_str = self._trim_strand_case_range_str(event['SkipA1'], 'end', event['Reference'], 'end', strand)
-                                proximal_range_str = self._trim_strand_case_range_str(event['Proximal'], 'start', event['SkipA1'], 'start', strand)
+                                reference_range_str = self._trim_strand_case_range_str(event['SkipA1'],
+                                                                                       'end', event['Reference'], 'end')
+                                proximal_range_str = self._trim_strand_case_range_str(event['Proximal'],
+                                                                                      'start', event['SkipA1'], 'start')
 
                                 row = [event['SkipA1'].de_novo,
                                        reference_range_str,
@@ -1308,8 +1310,10 @@ class TsvWriter(BaseTsvWriter):
                                                  event['SkipA1'].absolute_end - event['SkipA1'].absolute_start,
                                                  row[0], row[4], row[5])
 
-                                reference_range_str = self._trim_strand_case_range_str(event['SkipA2'], 'end', event['Reference'], 'end', strand)
-                                distal_range_str = self._trim_strand_case_range_str(event['Distal'], 'start', event['SkipA2'], 'start', strand)
+                                reference_range_str = self._trim_strand_case_range_str(event['SkipA2'],
+                                                                                       'end', event['Reference'], 'end')
+                                distal_range_str = self._trim_strand_case_range_str(event['Distal'],
+                                                                                    'start', event['SkipA2'], 'start')
 
                                 row = [event['SkipA2'].de_novo,
                                        reference_range_str,
@@ -1317,7 +1321,8 @@ class TsvWriter(BaseTsvWriter):
                                        distal_range_str,
                                        'Distal',
                                        event['SkipA2'].range_str()]
-                                quants = [event_non_changing, event_changing] + self.quantifications(module, 't', event['SkipA2'], event['Reference'])
+                                quants = [event_non_changing, event_changing] + \
+                                         self.quantifications(module, 't', event['SkipA2'], event['Reference'])
                                 writer.writerow(trg_common + row + quants)
                                 self.junction_cache.append((module, trg_common, quants, row[0], row[4], row[5]))
                                 self.heatmap_add(module, trg_common, quants,
@@ -1342,8 +1347,6 @@ class TsvWriter(BaseTsvWriter):
                                                           event_ii=event_i,
                                                           event_name="pALE")
 
-                            strand = event['Reference'].start < event['Distal'].end
-
                             # print(event)
                             # print(src_common)
                             # print(self.heatmap_cache[module.idx])
@@ -1360,7 +1363,8 @@ class TsvWriter(BaseTsvWriter):
                                 event_non_changing = self.event_non_changing(module, quant_identifiers)
                                 event_changing = self.event_changing(module, quant_identifiers)
 
-                                reference_range_str = self._trim_strand_case_range_str(event['Reference'], 'start', event['SkipA2'], 'start', strand)
+                                reference_range_str = self._trim_strand_case_range_str(event['Reference'],
+                                                                                       'start', event['SkipA2'], 'start')
 
                                 row = [event['SkipA2'].de_novo,
                                        reference_range_str,
@@ -1374,8 +1378,10 @@ class TsvWriter(BaseTsvWriter):
                                                  event['SkipA2'].absolute_end - event['SkipA2'].absolute_start,
                                                  row[0], row[4], row[5])
 
-                                reference_range_str = self._trim_strand_case_range_str(event['Reference'], 'start', event['SkipA1'], 'start', strand)
-                                distal_range_str = self._trim_strand_case_range_str(event['SkipA1'], 'end', event['Distal'], 'end', strand)
+                                reference_range_str = self._trim_strand_case_range_str(event['Reference'],
+                                                                                       'start', event['SkipA1'], 'start')
+                                distal_range_str = self._trim_strand_case_range_str(event['SkipA1'],
+                                                                                    'end', event['Distal'], 'end')
 
                                 row = [event['SkipA1'].de_novo,
                                        reference_range_str,
@@ -1412,8 +1418,6 @@ class TsvWriter(BaseTsvWriter):
                                                           event_ii=event_i,
                                                           event_name="pAFE")
 
-                            strand = event['Distal'].start < event['Reference'].end
-
                             if trg_common[5]:
 
                                 quant_identifiers = (
@@ -1423,7 +1427,8 @@ class TsvWriter(BaseTsvWriter):
                                 event_non_changing = self.event_non_changing(module, quant_identifiers)
                                 event_changing = self.event_changing(module, quant_identifiers)
 
-                                reference_range_str = self._trim_strand_case_range_str(event['SkipA1'], 'end', event['Reference'], 'end', strand)
+                                reference_range_str = self._trim_strand_case_range_str(event['SkipA1'], 'end',
+                                                                                       event['Reference'], 'end')
 
                                 row = [event['SkipA1'].de_novo,
                                        reference_range_str,
@@ -1437,8 +1442,10 @@ class TsvWriter(BaseTsvWriter):
                                                  event['SkipA1'].absolute_end - event['SkipA1'].absolute_start,
                                                  row[0], row[4], row[5])
 
-                                reference_range_str = self._trim_strand_case_range_str(event['SkipA2'], 'end', event['Reference'], 'end', strand)
-                                distal_range_str = self._trim_strand_case_range_str(event['Distal'], 'start', event['SkipA2'], 'start', strand)
+                                reference_range_str = self._trim_strand_case_range_str(event['SkipA2'],
+                                                                                       'end', event['Reference'], 'end')
+                                distal_range_str = self._trim_strand_case_range_str(event['Distal'],
+                                                                                    'start', event['SkipA2'], 'start')
 
                                 row = [event['SkipA2'].de_novo,
                                        reference_range_str,
@@ -1605,10 +1612,8 @@ class TsvWriter(BaseTsvWriter):
                             event_non_changing = self.event_non_changing(module, quant_identifiers)
                             event_changing = self.event_changing(module, quant_identifiers)
 
-                            strand = event['C1'].start < event['C2'].end
-
-                            c1_range_str = self._trim_strand_case_range_str(event['C1'], 'start', event['Skip'], 'start', strand)
-                            c2_range_str = self._trim_strand_case_range_str(event['Skip'], 'end', event['C2'], 'end', strand)
+                            c1_range_str = self._trim_strand_case_range_str(event['C1'], 'start', event['Skip'], 'start')
+                            c2_range_str = self._trim_strand_case_range_str(event['Skip'], 'end', event['C2'], 'end')
 
 
                             # Source LSV side
@@ -1620,7 +1625,8 @@ class TsvWriter(BaseTsvWriter):
                                    c2_range_str, # exon spliced with
                                    self.semicolon((x.range_str() for x in event['As'])), # exons spanned
                                    len(event['As'])] # num exons spanned
-                            quants = [event_non_changing, event_changing] + self.quantifications(module, 's', event['Skip'], event['C1'])
+                            quants = [event_non_changing, event_changing] + \
+                                     self.quantifications(module, 's', event['Skip'], event['C1'])
 
                             common = self.common_data(module,
                                                       's',
@@ -1700,19 +1706,18 @@ class TsvWriter(BaseTsvWriter):
                             event_non_changing = self.event_non_changing(module, quant_identifiers)
                             event_changing = self.event_changing(module, quant_identifiers)
 
-                            strand = event['C1'].start < event['C2'].end
-                            c1_range_str = self._trim_strand_case_range_str(event['C1'], 'start', event['Skip'], 'start', strand)
-                            c2_range_str = self._trim_strand_case_range_str(event['Skip'], 'end', event['C2'], 'end', strand)
+                            c1_range_str = self._trim_strand_case_range_str(event['C1'], 'start', event['Skip'], 'start')
+                            c2_range_str = self._trim_strand_case_range_str(event['Skip'], 'end', event['C2'], 'end')
 
                             event_sizes = []
                             tandem_exons_range_strs = []
-                            tandem_exons_range_strs.append(self._trim_strand_case_range_str(event['Include1'], 'end', event['Includes'][0], 'start', strand))
-                            event_sizes.append(self._trim_strand_case_event_size(event['Include1'], 'end', event['Includes'][0], 'start', strand) + 1)
+                            tandem_exons_range_strs.append(self._trim_strand_case_range_str(event['Include1'], 'end', event['Includes'][0], 'start'))
+                            event_sizes.append(self._trim_strand_case_event_size(event['Include1'], 'end', event['Includes'][0], 'start') + 1)
                             for include_junc_i in range(len(event['Includes'])-1):
-                                tandem_exons_range_strs.append(self._trim_strand_case_range_str(event['Includes'][include_junc_i], 'end', event['Includes'][include_junc_i+1], 'start', strand))
-                                event_sizes.append(self._trim_strand_case_event_size(event['Includes'][include_junc_i], 'end', event['Includes'][include_junc_i+1], 'start', strand) + 1)
-                            tandem_exons_range_strs.append(self._trim_strand_case_range_str(event['Includes'][-1], 'end', event['Include2'], 'start', strand))
-                            event_sizes.append(self._trim_strand_case_event_size(event['Includes'][-1], 'end', event['Include2'], 'start', strand) + 1)
+                                tandem_exons_range_strs.append(self._trim_strand_case_range_str(event['Includes'][include_junc_i], 'end', event['Includes'][include_junc_i+1], 'start'))
+                                event_sizes.append(self._trim_strand_case_event_size(event['Includes'][include_junc_i], 'end', event['Includes'][include_junc_i+1], 'start') + 1)
+                            tandem_exons_range_strs.append(self._trim_strand_case_range_str(event['Includes'][-1], 'end', event['Include2'], 'start'))
+                            event_sizes.append(self._trim_strand_case_event_size(event['Includes'][-1], 'end', event['Include2'], 'start') + 1)
                             tandem_exons_range_strs = self.semicolon(tandem_exons_range_strs)
                             event_size = sum(event_sizes)
 
@@ -1922,9 +1927,8 @@ class TsvWriter(BaseTsvWriter):
                             event_non_changing = self.event_non_changing(module, quant_identifiers)
                             event_changing = self.event_changing(module, quant_identifiers)
 
-                            strand = event['C1'].start < event['C2'].end
-                            c1_range_str = self._trim_strand_case_range_str(event['C1'], 'start', event['Junc'], 'start', strand)
-                            c2_range_str = self._trim_strand_case_range_str(event['Junc'], 'end', event['C2'], 'end', strand)
+                            c1_range_str = self._trim_strand_case_range_str(event['C1'], 'start', event['Junc'], 'start')
+                            c2_range_str = self._trim_strand_case_range_str(event['Junc'], 'end', event['C2'], 'end')
 
                             row = [event['Junc'].de_novo,
                                    c2_range_str,
