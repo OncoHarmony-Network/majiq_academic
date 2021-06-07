@@ -8,17 +8,21 @@ import os
 script_path = os.path.dirname(__file__)
 os.chdir(script_path)
 
-try:
-    from git import Repo
 
-    repo = Repo('./')
-    assert not repo.bare
-    sha = repo.head.object.hexsha
-    short_sha = repo.git.rev_parse(sha, short=7)
-    store_git_version(short_sha)
+def store_git_version_installed():
+    try:
+        from git import Repo
 
-except Exception as e:
-    print ("Problem was encounted during it hash extraction. Hash value disabled: %s" % e)
+        repo = Repo(os.path.join(script_path, '..', '..'))
+        assert not repo.bare
+        sha = repo.head.object.hexsha
+        short_sha = repo.git.rev_parse(sha, short=7)
+        store_git_version(short_sha)
+
+    except Exception as e:
+        print ("Problem was encounted during it hash extraction. Hash value disabled: %s" % e)
+        import traceback
+        print(traceback.format_exc())
 
 
 def requirements():
@@ -151,6 +155,8 @@ class InstallCommand(install):
 
 
 
+
+
 setup(
     name = 'rna_majiq',
     version = VERSION,
@@ -174,6 +180,11 @@ setup(
         'Operating System :: MacOS',
         'Operating System :: Microsoft :: Windows',
         'Operating System :: POSIX',
-        'Programming Language :: Python :: 3.8']
+        'Programming Language :: Python :: 3.8'],
+    package_data={
+        "rna_majiq": ["data/*"],
+    }
 )
+
+store_git_version_installed()
 
