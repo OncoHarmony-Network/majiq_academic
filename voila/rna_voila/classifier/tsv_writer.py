@@ -1031,7 +1031,7 @@ class TsvWriter(BaseTsvWriter):
                             event_changing = self.event_changing(module, quant_identifiers)
 
                             e1_range_str = self._trim_strand_case_range_str(event['E1'], 'start', event['J2'], 'start')
-                            e2_range_str = self._trim_strand_case_range_str(event['J2'], 'end', event['E2'], 'end')
+                            e2_range_str = self._trim_strand_case_range_str(event['J1'], 'end', event['E2'], 'end')
 
                             row = [event['J1'].de_novo,
                                    e1_range_str,
