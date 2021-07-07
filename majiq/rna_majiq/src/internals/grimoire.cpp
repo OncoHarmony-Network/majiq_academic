@@ -70,9 +70,10 @@ namespace grimoire {
 
 
     string  Junction::get_key(Gene * gObj, int strandness) {
-
-        string strand = (UNSTRANDED == strandness) ? "." : to_string(gObj->get_strand()) ;
-        return(gObj->get_chromosome() + ":" + strand + ":" + to_string(start_) + "-" + to_string(end_)) ;
+        std::ostringstream oss;
+        char strand = (UNSTRANDED == strandness) ? '.' : gObj->get_strand();
+        oss << gObj->get_chromosome() << ':' << strand << ':' << start_ << '-' << end_;
+        return oss.str();
     }
 
     string  Junction::get_key(Gene * gObj) {
