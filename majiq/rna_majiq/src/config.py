@@ -43,16 +43,22 @@ class Config(object):
 
     class __Config(object):
         def _set_strandness(self, experiment_name, val):
-            self.strand_specific[experiment_name] = val
+            self.strand_specific[experiment_name] = self.strandness_map[val]
 
         def __init__(self, filename, params):
 
             self.__dict__.update(params.__dict__)
+            self.strandness_map = {
+                "forward": constants.FWD_STRANDED,
+                "reverse": constants.REV_STRANDED,
+                "none": constants.UNSTRANDED,
+            }
 
             if not os.path.exists(self.outDir):
                 os.makedirs(self.outDir)
 
             config = configparser.ConfigParser()
+            config.optionxform=str
             config.read(filename)
 
             general = Config.config_section_map(config, "info")
@@ -168,23 +174,19 @@ class Config(object):
                             )
 
             opt_dict = {"strandness": self._set_strandness}
-            strandness = {
-                "forward": constants.FWD_STRANDED,
-                "reverse": constants.REV_STRANDED,
-                "none": constants.UNSTRANDED,
-            }
+
             if "strandness" in general:
                 try:
-                    global_strand = strandness[general["strandness"].lower()]
+                    global_strand = self.strandness_map[general["strandness"].lower()]
                 except Exception:
                     raise RuntimeError(
                         "Incorrect Strand-specific option [forward, reverse, none]"
                     )
             else:
-                global_strand = strandness["none"]
+                global_strand = self.strandness_map["none"]
             self.strand_specific = {xx: global_strand for xx in self.exp_list}
 
-            opt = Config.config_section_map(config, "opts")
+            opt = Config.config_section_map(config, "optional")
             for exp_id, opts_list in opt.items():
                 elist = opts_list.split(",")
                 for opt in elist:
