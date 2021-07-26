@@ -45,6 +45,9 @@ class Config(object):
         def _set_strandness(self, experiment_name, val):
             self.strand_specific[experiment_name] = self.strandness_map[val]
 
+        def _strandness_from_junc_file(self, junc_file_path):
+
+
         def __init__(self, filename, params):
 
             self.__dict__.update(params.__dict__)
@@ -106,7 +109,7 @@ class Config(object):
                 )
 
             exps = Config.config_section_map(config, "experiments")
-            self.juncfile_list = []
+
             for exp_idx, lstnames in exps.items():
                 self.tissue_repl[exp_idx] = []
                 elist = lstnames.split(",")
@@ -121,6 +124,9 @@ class Config(object):
 
             self.min_experiments = {}
             self.simplifier_min_experiments = {}  # for simplifier
+
+            j_file_strandness = {}
+
             for name, ind_list in self.tissue_repl.items():
                 self.min_experiments[name] = self._group_min_experiments(
                     self.min_exp, len(ind_list)
@@ -186,6 +192,12 @@ class Config(object):
                 global_strand = self.strandness_map["none"]
             self.strand_specific = {xx: global_strand for xx in self.exp_list}
 
+            # call function to overwrite each experiment strandness with SJ file strandness if applicable
+            if self.incremental:
+
+
+            # overwrite individual experiments with the 'optional' section in the config file
+            # this should count for the highest precedence.
             opt = Config.config_section_map(config, "optional")
             for exp_id, opts_list in opt.items():
                 elist = opts_list.split(",")
@@ -198,6 +210,8 @@ class Config(object):
                             "Option %s do not exist. The options available "
                             "are %s" % (op_id, ",".join(opt_dict.keys()))
                         )
+
+            print(self.strand_specific)
 
             return
 
