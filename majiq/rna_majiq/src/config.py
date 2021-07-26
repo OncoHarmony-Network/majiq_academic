@@ -46,7 +46,8 @@ class Config(object):
             self.strand_specific[experiment_name] = self.strandness_map[val]
 
         def _strandness_from_junc_file(self, junc_file_path):
-
+            with np.load(junc_file_path) as fp:
+                return fp['meta'][0][3]
 
         def __init__(self, filename, params):
 
@@ -147,6 +148,12 @@ class Config(object):
                                 self.sam_list.append(
                                     (self.exp_list[exp_idx], juncfile, True)
                                 )
+                                try:
+                                    j_file_strandness[prefix] = self._strandness_from_junc_file(juncfile)
+                                except:
+                                    warnings.warn(
+                                        f"Unable to read strand information from {juncfile}, global config will be used"
+                                    )
                                 break
                     if found:
                         continue
@@ -192,12 +199,7 @@ class Config(object):
                 global_strand = self.strandness_map["none"]
             self.strand_specific = {xx: global_strand for xx in self.exp_list}
 
-            # call function to overwrite each experiment strandness with SJ file strandness if applicable
-            if self.incremental:
-
-
             # overwrite individual experiments with the 'optional' section in the config file
-            # this should count for the highest precedence.
             opt = Config.config_section_map(config, "optional")
             for exp_id, opts_list in opt.items():
                 elist = opts_list.split(",")
@@ -211,7 +213,9 @@ class Config(object):
                             "are %s" % (op_id, ",".join(opt_dict.keys()))
                         )
 
-            print(self.strand_specific)
+            # overwrite strands for experiments with prior SJ files.
+            for exp_idx, strandness in j_file_strandness.items():
+                self.strand_specific[exp_idx] = strandness
 
             return
 
