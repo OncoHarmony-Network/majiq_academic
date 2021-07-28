@@ -307,6 +307,46 @@ class ViewSpliceGraph(SpliceGraph):
                 if intron_res:
                     yield intron_res[0]
 
+    def lsv_reads(self, gene_id, lsv_junctions):
+        """
+        List of junction which are annotated in the db.
+        :param gene_id: gene id
+        :param lsv_junctions: list of juctions for an LSV.
+        :return: generator
+        """
+
+        exps = {}
+
+        for junc in lsv_junctions:
+            junc = tuple(map(int, junc))
+            junc_query = self.conn.execute('''
+                                SELECT reads, experiment_name FROM junction_reads
+                                WHERE junction_gene_id=?
+                                AND junction_start=? 
+                                AND junction_end=?
+                                ''', (gene_id, junc[0], junc[1]))
+            junc_res = junc_query.fetchone()
+            if junc_res:
+                reads, exp = junc_res
+                if exp not in exps:
+                    exps[exp] = [[], []]
+                exps[exp][0].append(reads)
+            else:
+                intron_query = self.conn.execute('''
+                                                SELECT reads, experiment_name FROM intron_retention_reads
+                                                WHERE intron_retention_gene_id=?
+                                                AND intron_retention_start=? 
+                                                AND intron_retention_end=?
+                                                ''', (gene_id, junc[0], junc[1]))
+                intron_res = intron_query.fetchone()
+                if intron_res:
+                    reads, exp = intron_res
+                    if exp not in exps:
+                        exps[exp] = [[], []]
+                    exps[exp][1].append(reads)
+
+        return exps
+
 
     def lsv_exons(self, gene_id, lsv_junctions):
         """
