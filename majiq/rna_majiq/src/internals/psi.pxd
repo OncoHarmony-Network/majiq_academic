@@ -66,7 +66,7 @@ cdef inline int gen_prior_matrix(vector[vector[psi_distr_t]]& prior_matrix, dict
                             dict lsv_empirical_psi2, str output, list names, int iter, float binsize,
                             int numbins, bint defaultprior, int minpercent, object logger) except -1:
 
-    import pickle
+    import pickle, os
 
     cdef psi_distr_t mixture_pdf = psi_distr_t(numbins*2)
     cdef list list_of_lsv, njun_prior
