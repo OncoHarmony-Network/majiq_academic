@@ -350,10 +350,16 @@ class PsiTsv(AnalysisTypeTsv):
             with tsv_file.open('a') as tsv:
                 writer = csv.DictWriter(tsv, fieldnames=fieldnames, delimiter='\t')
 
-                for gene_id in self.gene_ids(q, e) if q else gene_ids:
+                _gene_ids = list(self.gene_ids(q, e) if q else gene_ids)
+                work_size = len(_gene_ids)
+
+                for i, gene_id in enumerate(_gene_ids):
 
                     gene = sg.gene(gene_id)
                     chromosome = gene['chromosome']
+
+                    if i % 10 == 0:
+                        print('Processing rows [%d/%d]\r' % (i, work_size), end="")
 
                     for psi in self.lsvs(gene_id):
                         lsv_id = psi.lsv_id
@@ -404,6 +410,8 @@ class PsiTsv(AnalysisTypeTsv):
                             lock.release()
                     if q:
                         q.task_done()
+
+        print('                                                  \r', end="")
 
     def tab_output(self):
         fieldnames = ['gene_name', 'gene_id', 'lsv_id', 'mean_psi_per_lsv_junction', 'stdev_psi_per_lsv_junction',
@@ -481,9 +489,16 @@ class HeterogenTsv(AnalysisTypeTsv):
             with tsv_file.open('a') as tsv:
                 writer = csv.DictWriter(tsv, fieldnames=fieldnames, delimiter='\t')
 
-                for gene_id in self.gene_ids(q, e) if q else gene_ids:
+                _gene_ids = list(self.gene_ids(q, e) if q else gene_ids)
+                work_size = len(_gene_ids)
+
+                for i, gene_id in enumerate(_gene_ids):
+
                     gene = sg.gene(gene_id)
                     chromosome = gene['chromosome']
+
+                    if i % 10 == 0:
+                        print('Processing rows [%d/%d]\r' % (i, work_size), end="")
 
                     for het in self.lsvs(gene_id):
                         lsv_id = het.lsv_id
@@ -546,6 +561,7 @@ class HeterogenTsv(AnalysisTypeTsv):
                     if q:
                         q.task_done()
 
+        print('                                                  \r', end="")
 
 class DeltaPsiTsv(AnalysisTypeTsv):
     def __init__(self):
@@ -573,10 +589,16 @@ class DeltaPsiTsv(AnalysisTypeTsv):
             with tsv_file.open('a') as tsv:
                 writer = csv.DictWriter(tsv, fieldnames=fieldnames, delimiter='\t')
 
-                for gene_id in self.gene_ids(q, e) if q else gene_ids:
+                _gene_ids = list(self.gene_ids(q, e) if q else gene_ids)
+                work_size = len(_gene_ids)
+
+                for i, gene_id in enumerate(_gene_ids):
 
                     gene = sg.gene(gene_id)
                     chromosome = gene['chromosome']
+
+                    if i % 10 == 0:
+                        print('Processing rows [%d/%d]\r' % (i, work_size), end="")
 
                     for dpsi in self.lsvs(gene_id):
                         lsv_id = dpsi.lsv_id
@@ -643,6 +665,8 @@ class DeltaPsiTsv(AnalysisTypeTsv):
                             lock.release()
                     if q:
                         q.task_done()
+
+        print('                                                  \r', end="")
 
     def tab_output(self):
 
