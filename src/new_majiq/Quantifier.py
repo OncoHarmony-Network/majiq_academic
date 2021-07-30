@@ -309,7 +309,7 @@ class QuantifiableCoverage(object):
 
     @staticmethod
     def _beta_var(mean, alpha, beta):
-        return mean * mean / (1 + alpha + beta)
+        return mean * (1 - mean) / (1 + alpha + beta)
 
     @cached_property
     def posterior_mean(self) -> np.ndarray:
