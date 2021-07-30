@@ -325,9 +325,9 @@ class ViewSpliceGraph(SpliceGraph):
                                 AND junction_start=? 
                                 AND junction_end=?
                                 ''', (gene_id, junc[0], junc[1]))
-            junc_res = junc_query.fetchone()
-            if junc_res:
-                reads, exp = junc_res
+            junc_res = junc_query.fetchall()
+            for junc in junc_res:
+                reads, exp = junc
                 if exp not in exps:
                     exps[exp] = [[], []]
                 exps[exp][0].append(reads)
@@ -338,9 +338,9 @@ class ViewSpliceGraph(SpliceGraph):
                                                 AND intron_retention_start=? 
                                                 AND intron_retention_end=?
                                                 ''', (gene_id, junc[0], junc[1]))
-                intron_res = intron_query.fetchone()
-                if intron_res:
-                    reads, exp = intron_res
+                intron_res = intron_query.fetchall()
+                for intron in intron_res:
+                    reads, exp = intron
                     if exp not in exps:
                         exps[exp] = [[], []]
                     exps[exp][1].append(reads)
