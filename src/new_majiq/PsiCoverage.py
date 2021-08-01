@@ -54,9 +54,21 @@ class AbstractPsiCoverage(object):
                 bootstrap_total[ec_idx, bootstrap_replicate]
                 bootstrap_psi[ec_idx, bootstrap_replicate]
             Coordinates:
+                lsv_offsets[offset_idx]
+            Derived (from _offsets):
                 event_size[ec_idx]
+                lsv_idx[ec_idx]
         """
-        self.df: Final[xr.Dataset] = df
+        offsets = df["lsv_offsets"].load().values
+        if offsets[0] != 0:
+            raise ValueError("offsets[0] must be zero")
+        if offsets[-1] != df.sizes["ec_idx"]:
+            raise ValueError("offsets[-1] must equal number of event connections")
+        event_size = np.diff(offsets)
+        self.df: Final[xr.Dataset] = df.assign_coords(
+            event_size=("ec_idx", np.repeat(event_size, event_size)),
+            lsv_idx=("ec_idx", np.repeat(np.arange(len(event_size)), event_size)),
+        )
         return
 
     @property
@@ -68,6 +80,16 @@ class AbstractPsiCoverage(object):
     def event_size(self) -> xr.DataArray:
         """Size of event each event connection belongs to"""
         return self.df["event_size"]
+
+    @property
+    def lsv_offsets(self) -> xr.DataArray:
+        """Offsets into ec_idx for LSVs (start/end)"""
+        return self.df["lsv_offsets"]
+
+    @property
+    def lsv_idx(self) -> xr.DataArray:
+        """Index identifier of the LSV to which each event connection belongs"""
+        return self.df["lsv_idx"]
 
     @property
     def raw_total(self) -> xr.DataArray:
@@ -160,8 +182,7 @@ class AbstractPsiCoverage(object):
 
     def bootstrap_discretized_pmf(self, nbins: int = 40):
         endpoints = xr.DataArray(
-            np.linspace(0, 1, 1 + nbins, dtype=self.bootstrap_psi.dtype),
-            dims="pmf_bin"
+            np.linspace(0, 1, 1 + nbins, dtype=self.bootstrap_psi.dtype), dims="pmf_bin"
         )
         cdf = xr.apply_ufunc(
             _silent_cdf,
@@ -179,8 +200,7 @@ class AbstractPsiCoverage(object):
 
 
 class PsiCoverage(AbstractPsiCoverage):
-    """PSI coverage for a single experiment at a time
-    """
+    """PSI coverage for a single experiment at a time"""
 
     @classmethod
     def from_events_coverage(
@@ -202,13 +222,17 @@ class PsiCoverage(AbstractPsiCoverage):
             events_coverage.numbins >= minbins
         )
         # get whether any connection in event passed, per connection
-        event_passed = np.repeat(np.logical_or.reduceat(passed, offsets[:-1]), event_size)
+        event_passed = np.repeat(
+            np.logical_or.reduceat(passed, offsets[:-1]), event_size
+        )
         # get total coverage per event, per connection
         raw_total = np.repeat(
             np.add.reduceat(events_coverage.numreads, offsets[:-1]), event_size
         )
         bootstrap_total = np.repeat(
-            np.add.reduceat(events_coverage.bootstraps, offsets[:-1]), event_size, axis=0
+            np.add.reduceat(events_coverage.bootstraps, offsets[:-1]),
+            event_size,
+            axis=0,
         )
         # get psi per connection
         with np.errstate(divide="ignore", invalid="ignore"):
@@ -217,22 +241,29 @@ class PsiCoverage(AbstractPsiCoverage):
                 bootstrap_total > 0, events_coverage.bootstraps / bootstrap_total, 0
             )
         # return dataset with matched values
-        return cls(xr.Dataset(
-            data_vars=dict(
-                event_passed=("ec_idx", event_passed),
-                raw_total=("ec_idx", raw_total),
-                raw_psi=("ec_idx", raw_psi),
-                bootstrap_total=(("ec_idx", "bootstrap_replicate"), bootstrap_total),
-                bootstrap_psi=(("ec_idx", "bootstrap_replicate"), bootstrap_psi),
-            ),
-            coords=dict(event_size=("ec_idx", np.repeat(event_size, event_size))),
-            attrs=dict(
-                minreads=minreads,
-                minbins=minbins,
-                bam_path=events_coverage.bam_path,
-                bam_version=events_coverage.bam_version,
-            ),
-        ))
+        return cls(
+            xr.Dataset(
+                data_vars=dict(
+                    event_passed=("ec_idx", event_passed),
+                    raw_total=("ec_idx", raw_total),
+                    raw_psi=("ec_idx", raw_psi),
+                    bootstrap_total=(
+                        ("ec_idx", "bootstrap_replicate"),
+                        bootstrap_total,
+                    ),
+                    bootstrap_psi=(("ec_idx", "bootstrap_replicate"), bootstrap_psi),
+                ),
+                coords=dict(
+                    lsv_offsets=("offset_idx", offsets),
+                ),
+                attrs=dict(
+                    minreads=minreads,
+                    minbins=minbins,
+                    bam_path=events_coverage.bam_path,
+                    bam_version=events_coverage.bam_version,
+                ),
+            )
+        )
 
     @classmethod
     def from_zarr(cls, path: Union[str, Path]) -> "PsiCoverage":
@@ -258,31 +289,38 @@ class PsiCoverage(AbstractPsiCoverage):
         If we know we are processing at most a few samples at a time, this
         should be made higher.
         """
-        USE_CHUNKS = dict(ec_idx=ec_chunksize, bootstrap_replicate=None)
-        self.df.chunk(USE_CHUNKS).to_zarr(path, mode="w")  # type: ignore
+        USE_CHUNKS = dict(
+            ec_idx=ec_chunksize, bootstrap_replicate=None, offset_idx=None
+        )
+        (
+            self.df.drop_vars(["event_size", "lsv_idx"])
+            .chunk(USE_CHUNKS)  # type: ignore
+            .to_zarr(path, mode="w")
+        )
         return
 
 
 class MultiPsiCoverage(AbstractPsiCoverage):
-
     @classmethod
     def from_mf_zarr(cls, paths: List[Path]) -> "MultiPsiCoverage":
         """Load multiple psi coverage files together at once"""
         if len(set(bam_experiment_name(x) for x in paths)) < len(paths):
             raise ValueError("paths have non-unique prefixes")
-        return cls(xr.open_mfdataset(
-            paths,
-            engine="zarr",
-            group=None,
-            concat_dim="prefix",
-            preprocess=lambda x: x.expand_dims(
-                prefix=[bam_experiment_name(x.encoding["source"])]
-            ),
-            join="override",
-            compat="override",
-            coords="minimal",
-            data_vars="minimal",
-        ))
+        return cls(
+            xr.open_mfdataset(
+                paths,
+                engine="zarr",
+                group=None,
+                concat_dim="prefix",
+                preprocess=lambda x: x.expand_dims(
+                    prefix=[bam_experiment_name(x.encoding["source"])]
+                ),
+                join="override",
+                compat="override",
+                coords="minimal",
+                data_vars="minimal",
+            )
+        )
 
     def sum(
         self, min_experiments_f: float = constants.DEFAULT_QUANTIFY_MINEXPERIMENTS
@@ -296,14 +334,21 @@ class MultiPsiCoverage(AbstractPsiCoverage):
         raw_psi = (raw_coverage / raw_total).where(raw_total > 0, 0)
         bootstrap_total = self.bootstrap_total.sum("prefix")
         bootstrap_coverage = (self.bootstrap_total * self.bootstrap_psi).sum("prefix")
-        bootstrap_psi = (bootstrap_coverage / bootstrap_total).where(bootstrap_total > 0, 0)
-        return PsiCoverage(xr.Dataset(
-            data_vars=dict(
-                event_passed=event_passed,
-                raw_total=raw_total,
-                raw_psi=raw_psi,
-                bootstrap_total=bootstrap_total,
-                bootstrap_psi=bootstrap_psi,
-            ),
-            attrs=dict(original_prefix=self.df["prefix"].values.tolist()),
-        ))
+        bootstrap_psi = (bootstrap_coverage / bootstrap_total).where(
+            bootstrap_total > 0, 0
+        )
+        return PsiCoverage(
+            xr.Dataset(
+                data_vars=dict(
+                    event_passed=event_passed,
+                    raw_total=raw_total,
+                    raw_psi=raw_psi,
+                    bootstrap_total=bootstrap_total,
+                    bootstrap_psi=bootstrap_psi,
+                ),
+                coords=dict(
+                    lsv_offsets=("offset_idx", self.lsv_offsets),
+                ),
+                attrs=dict(original_prefix=self.df["prefix"].values.tolist()),
+            )
+        )
