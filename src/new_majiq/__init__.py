@@ -25,6 +25,9 @@ from .SJJunctionsBins import SJJunctionsBins
 from .SpliceGraphReads import SpliceGraphReads, MultiSpliceGraphReads
 from .EventsCoverage import EventsCoverage
 
+# coverage in terms of PSI/total coverage on event connections
+from .PsiCoverage import PsiCoverage, MultiPsiCoverage
+
 # simple quantifier
 from .Quantifier import (
     QuantifierThresholds,
