@@ -285,7 +285,7 @@ class PsiCoverage(object):
         df = xr.open_mfdataset(
             path,
             engine="zarr",
-            group=None,
+            group=constants.NC_PSICOVERAGE,
             concat_dim="prefix",
             join="override",
             compat="override",
@@ -340,7 +340,7 @@ class PsiCoverage(object):
         (
             self.df.drop_vars(["event_size", "lsv_idx"])
             .chunk(USE_CHUNKS)  # type: ignore
-            .to_zarr(path, mode="w")
+            .to_zarr(path, mode="w", group=constants.NC_PSICOVERAGE)
         )
         return
 

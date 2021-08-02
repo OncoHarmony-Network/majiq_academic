@@ -32,6 +32,7 @@ NC_SJJUNCTIONSCONTIGS: Final[str] = "sj_junctions_contigs"
 
 NC_EVENTS: Final[str] = "events"
 NC_EVENTSCOVERAGE: Final[str] = "events_coverage"
+NC_PSICOVERAGE: Final[str] = "psi_coverage"
 
 NC_EVENTSQUANTIFIED: Final[str] = "events_quantified"
 
