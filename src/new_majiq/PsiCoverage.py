@@ -322,6 +322,10 @@ class MultiPsiCoverage(AbstractPsiCoverage):
             )
         )
 
+    @property
+    def prefixes(self) -> List[str]:
+        return self.df["prefix"].values.tolist()
+
     def sum(
         self, min_experiments_f: float = constants.DEFAULT_QUANTIFY_MINEXPERIMENTS
     ) -> PsiCoverage:
@@ -349,6 +353,6 @@ class MultiPsiCoverage(AbstractPsiCoverage):
                 coords=dict(
                     lsv_offsets=("offset_idx", self.lsv_offsets),
                 ),
-                attrs=dict(original_prefix=self.df["prefix"].values.tolist()),
+                attrs=dict(original_prefix=self.prefixes),
             )
         )
