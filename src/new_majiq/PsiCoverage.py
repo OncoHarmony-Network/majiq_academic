@@ -17,7 +17,6 @@ import new_majiq.constants as constants
 import new_majiq.beta_mixture as bm
 
 from new_majiq.experiments import bam_experiment_name
-from new_majiq.Quantifier import min_experiments
 from new_majiq.EventsCoverage import EventsCoverage
 from new_majiq.Events import Events, _Events
 from new_majiq.SpliceGraph import SpliceGraph
@@ -34,6 +33,12 @@ from typing import (
     Union,
 )
 from pathlib import Path
+
+
+def min_experiments(min_experiments_f: float, num_experiments: int) -> float:
+    if min_experiments_f < 1:
+        min_experiments_f *= num_experiments
+    return max(1, min(min_experiments_f, num_experiments))
 
 
 def _silent_quantile(*args, **kwargs):

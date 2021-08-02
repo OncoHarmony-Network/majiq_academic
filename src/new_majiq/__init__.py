@@ -27,10 +27,3 @@ from .EventsCoverage import EventsCoverage
 
 # coverage in terms of PSI/total coverage on event connections
 from .PsiCoverage import PsiCoverage
-
-# simple quantifier
-from .Quantifier import (
-    QuantifierThresholds,
-    QuantifiableEvents,
-    QuantifiableCoverage,
-)
