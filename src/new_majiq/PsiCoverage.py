@@ -23,6 +23,7 @@ from functools import cached_property
 from typing import (
     Final,
     List,
+    Optional,
     Sequence,
     Tuple,
     Union,
@@ -65,10 +66,15 @@ class AbstractPsiCoverage(object):
         if offsets[-1] != df.sizes["ec_idx"]:
             raise ValueError("offsets[-1] must equal number of event connections")
         event_size = np.diff(offsets)
-        self.df: Final[xr.Dataset] = df.assign_coords(
-            event_size=("ec_idx", np.repeat(event_size, event_size)),
-            lsv_idx=("ec_idx", np.repeat(np.arange(len(event_size)), event_size)),
-        )
+        if "event_size" not in df.variables:
+            df = df.assign_coords(
+                event_size=("ec_idx", np.repeat(event_size, event_size))
+            )
+        if "lsv_idx" not in df.variables:
+            df = df.assign_coords(
+                lsv_idx=("ec_idx", np.repeat(np.arange(len(event_size)), event_size)),
+            )
+        self.df: Final[xr.Dataset] = df
         return
 
     @property
@@ -271,6 +277,28 @@ class PsiCoverage(AbstractPsiCoverage):
         # TODO verify correctness of file?
         return cls(xr.open_zarr(path))
 
+    def updated(
+        self,
+        bootstrap_psi: Optional[xr.DataArray],
+        raw_psi: Optional[xr.DataArray],
+        **update_attrs,
+    ) -> "PsiCoverage":
+        """Updated PsiCoverage, replacing bootstrap_psi, raw_psi"""
+        df = self.df
+        # update psi arrays
+        if bootstrap_psi is not None:
+            if set(self.bootstrap_psi.dims) != set(bootstrap_psi.dims):
+                raise ValueError("bootstrap_psi doesn't have same named axes")
+            df = df.assign(bootstrap_psi=bootstrap_psi)
+        if raw_psi is not None:
+            if set(self.raw_psi.dims) != set(raw_psi.dims):
+                raise ValueError("raw_psi doesn't have same named axes")
+            df = df.assign(raw_psi=raw_psi)
+        # update/add attributes
+        df = df.assign_attrs(**update_attrs)
+        # return resulting PsiCoverage object
+        return PsiCoverage(df)
+
     def to_zarr(self, path: Union[str, Path], ec_chunksize: int = 8192) -> None:
         """Save PSI coverage dataset as zarr
 
@@ -326,6 +354,13 @@ class MultiPsiCoverage(AbstractPsiCoverage):
     def prefixes(self) -> List[str]:
         return self.df["prefix"].values.tolist()
 
+    def __getitem__(self, prefix) -> PsiCoverage:
+        """Get PsiCoverage for selected prefix"""
+        df = self.df.sel(prefix=prefix, drop=True)
+        df.attrs.clear()
+        df = df.assign_attrs(prefix=prefix)
+        return PsiCoverage(df)
+
     def sum(
         self, min_experiments_f: float = constants.DEFAULT_QUANTIFY_MINEXPERIMENTS
     ) -> PsiCoverage:
@@ -351,7 +386,9 @@ class MultiPsiCoverage(AbstractPsiCoverage):
                     bootstrap_psi=bootstrap_psi,
                 ),
                 coords=dict(
-                    lsv_offsets=("offset_idx", self.lsv_offsets),
+                    lsv_offsets=self.lsv_offsets,
+                    event_size=self.event_size,
+                    lsv_idx=self.lsv_idx,
                 ),
                 attrs=dict(original_prefix=self.prefixes),
             )
