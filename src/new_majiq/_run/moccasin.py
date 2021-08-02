@@ -62,33 +62,6 @@ def _args_dask(parser: argparse.ArgumentParser) -> None:
     return
 
 
-def _args_quantifiable_thresholds(parser: argparse.ArgumentParser) -> None:
-    """add argument group for quantifier thresholds"""
-    thresholds = parser.add_argument_group("Quantifiability thresholds")
-    thresholds.add_argument(
-        "--minreads",
-        type=check_nonnegative_factory(float, True),
-        default=constants.DEFAULT_QUANTIFY_MINREADS,
-        help="Minimum readrate per experiment to pass a connection"
-        " (default: %(default)s)",
-    )
-    thresholds.add_argument(
-        "--minbins",
-        type=check_nonnegative_factory(float, True),
-        default=constants.DEFAULT_QUANTIFY_MINBINS,
-        help="Minimum number of nonzero bins to pass a connection"
-        " (default: %(default)s).",
-    )
-    return
-
-
-def _get_quantifiable_thresholds(args: argparse.Namespace) -> nm.QuantifierThresholds:
-    """get QuantifierThresholds from parsed arguments"""
-    return nm.QuantifierThresholds(
-        minreads=args.minreads, minbins=args.minbins, min_experiments_f=1
-    )
-
-
 def _args_factors(parser: argparse.ArgumentParser) -> None:
     """add arguments to specify factors to load"""
     factors_ex = parser.add_mutually_exclusive_group(required=True)
@@ -201,23 +174,6 @@ def _args_ruv_parameters(parser: argparse.ArgumentParser) -> None:
     return
 
 
-def args_tmpfile(parser: argparse.ArgumentParser) -> None:
-    """arguments for creating tmpfile for individual majiq file"""
-    parser.add_argument(
-        "coverage",
-        type=Path,
-        help="Path to LSV coverage (i.e. majiq file) to temporarily"
-        " reparameterize for moccasin computation",
-    )
-    parser.add_argument(
-        "tmpfile",
-        type=Path,
-        help="Path for temporary reparameterization of the majiq file",
-    )
-    _args_quantifiable_thresholds(parser)
-    return
-
-
 def args_factors_model(parser: argparse.ArgumentParser) -> None:
     """arguments for creating model of unknown factors"""
     _args_factors(parser)  # get factors information
@@ -225,11 +181,10 @@ def args_factors_model(parser: argparse.ArgumentParser) -> None:
         "factors_model", type=Path, help="Path for output model for unknown confounders"
     )
     parser.add_argument(
-        "tmpfiles",
-        metavar="tmpfile",
+        "psicov",
         type=Path,
         nargs="+",
-        help="Paths for input tmpfiles with coverage for unknown confounders model",
+        help="Paths for input psi coverage files for unknown confounders model",
     )
     _args_ruv_parameters(parser)
     _args_dask(parser)
@@ -245,9 +200,9 @@ def args_factors_infer(parser: argparse.ArgumentParser) -> None:
         help="Path for input model of unknown confounders",
     )
     parser.add_argument(
-        "tmpfile",
+        "psicov",
         type=Path,
-        help="Path to tmpfile for which known/unknown factors will be saved",
+        help="Path to psi coverage file for which known/unknown factors will be saved",
     )
     parser.add_argument(
         "output",
@@ -266,11 +221,10 @@ def args_coverage_model(parser: argparse.ArgumentParser) -> None:
     )
     _args_factors(parser)
     parser.add_argument(
-        "tmpfiles",
-        metavar="tmpfile",
+        "psicov",
         nargs="+",
         type=Path,
-        help="Paths for input tmpfiles with coverage for coverage model",
+        help="Paths for input psi coverage files for coverage model",
     )
     _args_dask(parser)
     return
@@ -284,9 +238,9 @@ def args_coverage_infer(parser: argparse.ArgumentParser) -> None:
         help="Path to original, uncorrected LSV coverage",
     )
     parser.add_argument(
-        "tmpfile",
+        "psicov",
         type=Path,
-        help="Path to tmpfile corresponding to original_coverage",
+        help="Path to input psi coverage corresponding to original_coverage",
     )
     _args_factors(parser)
     parser.add_argument(
@@ -297,50 +251,34 @@ def args_coverage_infer(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
         "corrected_coverage",
         type=Path,
-        help="Path for corrected LSV coverage",
+        help="Path for corrected psi coverage",
     )
-    return
-
-
-def run_tmpfile(args: argparse.Namespace) -> None:
-    log = get_logger()
-    if bam_experiment_name(args.coverage) != bam_experiment_name(args.tmpfile):
-        raise ValueError(
-            "Coverage file and temporary reparameterization have different prefixes"
-        )
-    log.info(f"Loading and reparameterizing coverage in {args.coverage.resolve()}")
-    df_tmp = mc.tmp_psi_for_moccasin(args.coverage, _get_quantifiable_thresholds(args))
-    log.info(f"Saving reparameterization to {args.tmpfile.resolve()}")
-    USE_CHUNKS = {"ec_idx": 8192, "bootstrap_replicate": None}
-    df_tmp.chunk(USE_CHUNKS).to_zarr(args.tmpfile, mode="w")
     return
 
 
 def run_factors_model(args: argparse.Namespace) -> None:
     """model unknown factors using input coverage"""
-    prefix = [bam_experiment_name(x) for x in args.tmpfiles]
-    if len(prefix) > len(set(prefix)):
-        raise ValueError("Passed tmpfiles have duplicate prefixes")
     log = get_logger()
     client = Client(
         n_workers=1, threads_per_worker=args.nthreads, dashboard_address=None
     )
     log.info(client)
+    log.info(f"Opening coverage from {len(args.psicov)} PSI coverage files")
+    psicov = nm.MultiPsiCoverage.from_mf_zarr(args.psicov)
     log.info("Setting up model matrix of known factors")
-    factors = _get_factors(prefix, args)
-    log.info(f"Opening coverage from {len(args.tmpfiles)} tmpfiles")
-    coverage = _open_mf_with_prefix(args.tmpfiles)
+    factors = _get_factors(psicov.prefixes, args)
     log.info("Learning model for unknown confounding factors")
     model = mc.ModelUnknownConfounders.train(
-        coverage.psi,
-        coverage._offsets.values,
+        psicov.bootstrap_psi,
+        psicov.event_passed,
+        psicov.lsv_offsets.values,
         factors,
         max_new_factors=args.ruv_max_new_factors,
         max_events=args.ruv_max_events,
     )
     log.info(
         f"Learned {model.num_factors} factors explaining"
-        f" {model.explained_variance.sum().values[()]} of residual variance"
+        f" {model.explained_variance.sum().values[()]:.3%} of residual variance"
     )
     log.info(f"Saving model to {args.factors_model.resolve()}")
     model.to_zarr(args.factors_model)
@@ -426,11 +364,6 @@ def run_coverage_infer(args: argparse.Namespace) -> None:
     return
 
 
-subcommand_tmpfile = GenericSubcommand(
-    "(Advanced) Create temporary reparameterization of coverage for batch correction",
-    args_tmpfile,
-    run_tmpfile,
-)
 subcommand_factors_model = GenericSubcommand(
     "(Advanced) Create model of unknown confounding factors using tmpfiles and known factors",
     args_factors_model,
@@ -447,7 +380,7 @@ subcommand_coverage_model = GenericSubcommand(
     run_coverage_model,
 )
 subcommand_coverage_infer = GenericSubcommand(
-    "(Advanced) Save corrected lsv coverage for input experiment",
+    "(Advanced) Save corrected psi coverage for input experiment",
     args_coverage_infer,
     run_coverage_infer,
 )

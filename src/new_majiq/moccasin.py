@@ -12,11 +12,7 @@ import xarray as xr
 import dask.array as da
 import new_majiq.constants as constants
 
-from new_majiq.Quantifier import (
-    QuantifiableEvents,
-    QuantifierThresholds,
-)
-
+from new_majiq.logger import get_logger
 from pathlib import Path
 from typing import (
     Final,
@@ -26,82 +22,8 @@ from typing import (
 )
 
 
-def _get_total_coverage_function(offsets: np.ndarray):
-    """get function that summarizes totals defined by offsets"""
-    offsets = offsets.astype(np.int64)
-    event_size = np.diff(offsets)
-
-    def result(x: np.ndarray) -> np.ndarray:
-        """get total coverage within each event defined by offsets"""
-        if x.shape[-1] != offsets[-1]:
-            raise ValueError(
-                "input array core dim size does not match offsets"
-                f" ({x.shape = }, {offsets[-1] = })"
-            )
-        return np.repeat(np.add.reduceat(x, offsets[:-1], axis=-1), event_size, axis=-1)
-
-    return result
-
-
-def tmp_psi_for_moccasin(
-    lsv_coverage_file: Union[str, Path],
-    thresholds: QuantifierThresholds = QuantifierThresholds(),
-) -> xr.Dataset:
-    """reparameterize bootstrap coverage to psi and total_coverage
-
-    Batch correction is performed on scaled psi (by MLE) per bootstrap
-    replicate over many samples. Except for trivial cases, this is too large to
-    fit and memory. To ease chunking automatically with dask, we precompute
-    these values once and keep them as temporary files that can easily be read
-    in. (otherwise computing psi directly from majiq files in chunks requires
-    operating over entire ec_idx dimension unless doing custom chunking that
-    standard libraries have difficulty with)
-
-    Parameters
-    ----------
-    lsv_coverage_file: Union[str, Path]
-        Path to LSVCoverage dataset (i.e. majiq file)
-    thresholds: QuantifierThresholds
-        thresholds used to determine quantifiability
-
-    Returns
-    -------
-    xr.Dataset
-        Variables:
-            psi (ec_idx, bootstrap_replicate)
-            total_coverage (ec_idx, bootstrap_replicate)
-        Coordinates:
-            _offsets (_eidx_offset)
-    """
-    qe = QuantifiableEvents.from_quantifier_group([lsv_coverage_file], thresholds)
-    with xr.open_zarr(
-        lsv_coverage_file, group=constants.NC_EVENTSCOVERAGE
-    ) as df_ec, xr.open_zarr(lsv_coverage_file, group=constants.NC_EVENTS) as df_e:
-        offsets = df_e._offsets.astype(np.int64).load()
-        total_coverage_fn = _get_total_coverage_function(offsets.values)
-        bootstraps = df_ec.bootstraps.load()
-    # get coverage over ec_idx for events defined by offsets
-    total_coverage = xr.apply_ufunc(
-        total_coverage_fn,
-        bootstraps,
-        input_core_dims=[["ec_idx"]],
-        output_core_dims=[["ec_idx"]],
-        output_dtypes=(bootstraps.dtype,),
-        dask="parallelized",
-    )
-    quantified_mask = xr.DataArray(qe.event_connection_passed_mask, dims=["ec_idx"])
-    return xr.Dataset(
-        {
-            "psi": bootstraps
-            / total_coverage.where(quantified_mask & total_coverage.notnull()),
-            "total_coverage": total_coverage,
-        },
-        {
-            "_offsets": offsets,
-        },
-    )
-
-
+# TODO we want to have new PSICoverage from old PSICoverage. Will be removed,
+# but note how to renormalize PSI by clipping/dividing by new total coverage
 def bootstraps_from_tmp_psi(
     psi: xr.DataArray,
     total_coverage: xr.DataArray,
@@ -148,40 +70,9 @@ def bootstraps_from_tmp_psi(
     )
 
 
-def _silent_linalg_solve1(*args, **kwargs) -> np.ndarray:
-    """wraps internals of np.linalg.solve
-
-    np.linalg.solve solves Ax = b in vectorized manner, but throws
-    exception if it is able to detect any of the matrices as singular
-    (doesn't always work due to floating point rounding)
-    It uses np.linalg._umath_linalg.solve1 (or 2) to do the underlying
-    calculation, which returns nan when it detects singular matrices.
-    But it raises warnings in these cases, so we wrap it with appropriate
-    context manager to silence the warning (which we expect and are
-    depending on).
-    """
-    with np.errstate(invalid="ignore"):
-        return np.linalg._umath_linalg.solve1(*args, **kwargs)
-
-
-def _silent_linalg_solve2(*args, **kwargs) -> np.ndarray:
-    """wraps internals of np.linalg.solve
-
-    np.linalg.solve solves Ax = b in vectorized manner, but throws
-    exception if it is able to detect any of the matrices as singular
-    (doesn't always work due to floating point rounding)
-    It uses np.linalg._umath_linalg.solve1 (or 2) to do the underlying
-    calculation, which returns nan when it detects singular matrices.
-    But it raises warnings in these cases, so we wrap it with appropriate
-    context manager to silence the warning (which we expect and are
-    depending on).
-    """
-    with np.errstate(invalid="ignore"):
-        return np.linalg._umath_linalg.solve(*args, **kwargs)
-
-
 def infer_model_params(
     uncorrected: xr.DataArray,
+    passed: xr.DataArray,
     factors: xr.DataArray,
     complete: bool = False,
     extra_core_dims: List[Hashable] = ["bootstrap_replicate"],
@@ -191,8 +82,12 @@ def infer_model_params(
     Parameters
     ----------
     uncorrected: xr.DataArray
-        Observed values per prefix. NaN values indicate missing data.
+        Observed values per prefix. NaN values are propagated regardless of
+        passed vs not.
         Dimensions: (prefix, ...)
+    passed: xr.DataArray
+        Boolean indicator if observation passed and used for modeling or
+        ignored in modeling.
     factors: xr.DataArray
         Confounding and non-confounding factors which are used to predict the
         values in uncorrected. Must have all prefixes found in uncorrected
@@ -224,9 +119,9 @@ def infer_model_params(
     projection: xr.DataArray  # X^T Y (observed uncorrected data onto factors)
     if not complete:
         extra_core_dims = [
-            x for x in uncorrected.dims if x in extra_core_dims and x != "prefix"
+            x for x in passed.dims if x in extra_core_dims and x != "prefix"
         ]
-        not_missing = uncorrected.notnull().all(extra_core_dims)
+        not_missing = passed.all(extra_core_dims)
         gramian = xr.dot(
             not_missing, factors.rename(factor="fsolve"), factors, dims="prefix"
         )
@@ -401,6 +296,7 @@ class ModelUnknownConfounders(object):
     def train(
         cls,
         uncorrected: xr.DataArray,
+        passed: xr.DataArray,
         offsets: np.ndarray,
         factors: xr.DataArray,
         max_new_factors: int = constants.DEFAULT_MOCCASIN_RUV_MAX_FACTORS,
@@ -412,6 +308,9 @@ class ModelUnknownConfounders(object):
         ----------
         uncorrected: xr.DataArray (dims: prefix, ..., ec_idx)
             data from which variations are used to identify confounding factors
+        passed: xr.DataArray (dims: prefix, ..., ec_idx)
+            indicator as to whether values in uncorrected passed and should be
+            included in modeling
         offsets: np.ndarray
             offsets into ec_idx describing different events (only use 0 or 1
             connection per event in model)
@@ -443,7 +342,13 @@ class ModelUnknownConfounders(object):
                 f"factors is not full rank ({factors_rank} < {factors.sizes['factor']}"
             )
         # get indexes for connections for top LSVs
-        uncorrected_medians = cls._median_extra_dims(uncorrected)
+        uncorrected_medians = cls._median_extra_dims(uncorrected.where(passed))
+        log = get_logger()
+        log.info(
+            "We expect likely NaN slice, invalid value in true_divide warnings"
+            " in this next step (https://github.com/dask/dask/issues/3245)."
+            " They can be safely ignored"
+        )
         original_ecidx = (
             # get variance across samples of psi (median over bootstraps, etc.)
             xr.Dataset(
@@ -469,12 +374,13 @@ class ModelUnknownConfounders(object):
                 )
             )
         )
+        log.info("We do not expect warnings after this point")
         # get data with which we will train the model
         # TODO maybe want to persist this in memory if it isn't too big
         x = cls._median_extra_dims(
             uncorrected.isel(ec_idx=original_ecidx), ec_idx="top_ec_idx"
         )
-        model_params = infer_model_params(x, factors, complete=True)
+        model_params = infer_model_params(x, passed, factors, complete=True)
         x_residuals = x - xr.dot(factors, model_params, dims="factor")
         # perform sparse SVD on x_residuals
         prefix_vectors, singular_values, ec_vectors = da.linalg.svd_compressed(
@@ -584,7 +490,56 @@ class ModelUnknownConfounders(object):
         # project residuals to new factors
         return xr.dot(
             residuals,
-            1 / self.singular_values,  # type: ignore
+            np.reciprocal(self.singular_values),
             self.ec_vectors,
             dims="top_ec_idx",
         )
+
+
+def _silent_linalg_solve1(*args, **kwargs) -> np.ndarray:
+    """wraps internals of np.linalg.solve
+
+    np.linalg.solve solves Ax = b in vectorized manner, but throws
+    exception if it is able to detect any of the matrices as singular
+    (doesn't always work due to floating point rounding)
+    It uses np.linalg._umath_linalg.solve1 (or 2) to do the underlying
+    calculation, which returns nan when it detects singular matrices.
+    But it raises warnings in these cases, so we wrap it with appropriate
+    context manager to silence the warning (which we expect and are
+    depending on).
+    """
+    with np.errstate(invalid="ignore"):
+        return np.linalg._umath_linalg.solve1(*args, **kwargs)
+
+
+def _silent_linalg_solve2(*args, **kwargs) -> np.ndarray:
+    """wraps internals of np.linalg.solve
+
+    np.linalg.solve solves Ax = b in vectorized manner, but throws
+    exception if it is able to detect any of the matrices as singular
+    (doesn't always work due to floating point rounding)
+    It uses np.linalg._umath_linalg.solve1 (or 2) to do the underlying
+    calculation, which returns nan when it detects singular matrices.
+    But it raises warnings in these cases, so we wrap it with appropriate
+    context manager to silence the warning (which we expect and are
+    depending on).
+    """
+    with np.errstate(invalid="ignore"):
+        return np.linalg._umath_linalg.solve(*args, **kwargs)
+
+
+def _get_total_coverage_function(offsets: np.ndarray):
+    """get function that summarizes totals defined by offsets"""
+    offsets = offsets.astype(np.int64)
+    event_size = np.diff(offsets)
+
+    def result(x: np.ndarray) -> np.ndarray:
+        """get total coverage within each event defined by offsets"""
+        if x.shape[-1] != offsets[-1]:
+            raise ValueError(
+                "input array core dim size does not match offsets"
+                f" ({x.shape = }, {offsets[-1] = })"
+            )
+        return np.repeat(np.add.reduceat(x, offsets[:-1], axis=-1), event_size, axis=-1)
+
+    return result
