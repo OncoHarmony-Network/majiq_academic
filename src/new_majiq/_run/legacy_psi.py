@@ -110,7 +110,13 @@ def run(args: argparse.Namespace) -> None:
     end = q_events.connection_end()
     log.info("Performing quantifications")
     means = psicov.bootstrap_posterior_mean.load().squeeze("prefix").values
-    bins = psicov.bootstrap_discretized_pmf().load().squeeze("prefix").transpose("ec_idx", ...).values
+    bins = (
+        psicov.bootstrap_discretized_pmf()
+        .load()
+        .squeeze("prefix")
+        .transpose("ec_idx", ...)
+        .values
+    )
 
     log.info(f"Saving quantifications to {args.out_voila}")
     with Matrix(args.out_voila, "w", voila_file=True, voila_tsv=False) as out_h5p:

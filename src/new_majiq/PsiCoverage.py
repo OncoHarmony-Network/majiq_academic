@@ -398,19 +398,34 @@ class PsiCoverage(object):
         """Drop all events that are not (passed in all prefixes)"""
         # what passed?
         ec_idx_passed = self.event_passed.all("prefix").load().reset_coords(drop=True)
-        e_idx_passed = ec_idx_passed.isel(ec_idx=self.lsv_offsets.values[:-1]).rename(ec_idx="e_idx").reset_coords(drop=True)
+        e_idx_passed = (
+            ec_idx_passed.isel(ec_idx=self.lsv_offsets.values[:-1])
+            .rename(ec_idx="e_idx")
+            .reset_coords(drop=True)
+        )
         # get subset of df, events corresponding to these, dropping variables
         # that require recalculation
-        df_subset = self.df.drop_vars(["lsv_offsets", "lsv_idx"]).sel(ec_idx=ec_idx_passed)
-        events_subset = self.events.drop_vars(["_offsets"]).sel(ec_idx=ec_idx_passed, e_idx=e_idx_passed)
+        df_subset = self.df.drop_vars(["lsv_offsets", "lsv_idx"]).sel(
+            ec_idx=ec_idx_passed
+        )
+        events_subset = self.events.drop_vars(["_offsets"]).sel(
+            ec_idx=ec_idx_passed, e_idx=e_idx_passed
+        )
         # recalculate offsets
-        passed_sizes = self.event_size.isel(ec_idx=self.lsv_offsets.values[:-1]).rename(ec_idx="e_idx").sel(e_idx=e_idx_passed).values
+        passed_sizes = (
+            self.event_size.isel(ec_idx=self.lsv_offsets.values[:-1])
+            .rename(ec_idx="e_idx")
+            .sel(e_idx=e_idx_passed)
+            .values
+        )
         offsets = np.empty(len(passed_sizes) + 1, dtype=passed_sizes.dtype)
         offsets[0] = 0
         offsets[1:] = np.cumsum(passed_sizes)
         # add offsets back in
         df_subset = df_subset.assign_coords(lsv_offsets=("offset_idx", offsets))
-        events_subset = events_subset.assign_coords(_offsets=("e_offsets_idx", offsets.astype(np.uint64)))
+        events_subset = events_subset.assign_coords(
+            _offsets=("e_offsets_idx", offsets.astype(np.uint64))
+        )
         # return subsetted PsiCoverage
         return PsiCoverage(df_subset, events_subset)
 
@@ -480,21 +495,31 @@ class PsiCoverage(object):
                 "bootstrap_psi_std": np.sqrt(self.bootstrap_posterior_variance),
                 "seqid": ("ec_idx", seqid),
                 "gene_id": ("ec_idx", gene_id),
-                "ref_exon": ("ec_idx", np.repeat(
-                    self._exons_formatted(ref_exon_start, ref_exon_end), event_size
-                )),
-                "event_type": ("ec_idx", np.repeat(
-                    [x.decode() for x in q_events.event_type], event_size
-                )),
+                "ref_exon": (
+                    "ec_idx",
+                    np.repeat(
+                        self._exons_formatted(ref_exon_start, ref_exon_end), event_size
+                    ),
+                ),
+                "event_type": (
+                    "ec_idx",
+                    np.repeat([x.decode() for x in q_events.event_type], event_size),
+                ),
                 "is_intron": ("ec_idx", q_events.is_intron),
                 "start": ("ec_idx", q_events.connection_start()),
                 "end": ("ec_idx", q_events.connection_end()),
                 "denovo": ("ec_idx", q_events.connection_denovo()),
                 "gene_name": ("ec_idx", gene_name),
                 "strand": ("ec_idx", strand),
-                "other_exon": ("ec_idx", self._exons_formatted(other_exon_start, other_exon_end)),
+                "other_exon": (
+                    "ec_idx",
+                    self._exons_formatted(other_exon_start, other_exon_end),
+                ),
                 "event_id": ("ec_idx", np.repeat(event_id, event_size)),
-                "event_description": ("ec_idx", np.repeat(event_description, event_size)),
+                "event_description": (
+                    "ec_idx",
+                    np.repeat(event_description, event_size),
+                ),
             }
         ).reset_coords(drop=True)
         # if only one prefix, drop it
