@@ -176,9 +176,10 @@ class Events(object):
             },
         )
 
-    def to_zarr(self, path: Union[str, Path], mode: str) -> None:
-        """Save to specified zarr file"""
-        (
+    @property
+    def save_df(self) -> xr.Dataset:
+        """Dataset that is directly saved for Events"""
+        return (
             self.df
             # drop indexes and nice offsets
             .drop_vars(["e_idx", "ec_idx_start", "ec_idx_end", "ec_idx"])
@@ -188,8 +189,12 @@ class Events(object):
             .assign_attrs(
                 intron_hash=self.introns.checksum(),
                 junction_hash=self.junctions.checksum(),
-            ).to_zarr(path, mode=mode, group=constants.NC_EVENTS)
+            )
         )
+
+    def to_zarr(self, path: Union[str, Path], mode: str) -> None:
+        """Save to specified zarr file"""
+        self.save_df.to_zarr(path, mode=mode, group=constants.NC_EVENTS)
         return
 
     @classmethod

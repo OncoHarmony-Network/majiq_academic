@@ -44,7 +44,7 @@ def _silent_cdf(*args, **kwargs):
 class PsiCoverage(object):
     """PSI and total coverage (raw and bootstrapped) for arbitrary number of samples"""
 
-    def __init__(self, df: xr.Dataset):
+    def __init__(self, df: xr.Dataset, events: xr.Dataset):
         """Compute posterior quantities using information about event total/psi
 
         Parameters
@@ -61,6 +61,9 @@ class PsiCoverage(object):
             Derived (from _offsets):
                 event_size[ec_idx]
                 lsv_idx[ec_idx]
+        events: xr.Dataset
+            dataset that can be loaded along with matching introns/junctions as
+            Events
         """
         offsets = df["lsv_offsets"].load().values
         if offsets[0] != 0:
@@ -80,6 +83,7 @@ class PsiCoverage(object):
             # for some reason, this is sometimes saved as int8, ensure consistent type
             df["event_passed"] = df["event_passed"].astype(bool)
         self.df: Final[xr.Dataset] = df
+        self.events: Final[xr.Dataset] = events
         return
 
     @property
@@ -269,7 +273,8 @@ class PsiCoverage(object):
                     bam_path=events_coverage.bam_path,
                     bam_version=events_coverage.bam_version,
                 ),
-            ).expand_dims(prefix=[bam_experiment_name(events_coverage.bam_path)])
+            ).expand_dims(prefix=[bam_experiment_name(events_coverage.bam_path)]),
+            events_coverage.events.save_df,
         )
 
     @classmethod
@@ -292,7 +297,8 @@ class PsiCoverage(object):
             coords="minimal",
             data_vars="minimal",
         )
-        return cls(df)
+        events_df = xr.open_zarr(path[0], group=constants.NC_EVENTS)
+        return cls(df, events_df)
 
     def updated(
         self,
@@ -314,7 +320,7 @@ class PsiCoverage(object):
         # update/add attributes
         df = df.assign_attrs(**update_attrs)
         # return resulting PsiCoverage object
-        return PsiCoverage(df)
+        return PsiCoverage(df, self.events)
 
     def to_zarr(self, path: Union[str, Path], ec_chunksize: int = 8192) -> None:
         """Save PSI coverage dataset as zarr
@@ -342,6 +348,7 @@ class PsiCoverage(object):
             .chunk(USE_CHUNKS)  # type: ignore
             .to_zarr(path, mode="w", group=constants.NC_PSICOVERAGE)
         )
+        self.events.to_zarr(path, mode="a", group=constants.NC_EVENTS)
         return
 
     @property
@@ -380,4 +387,4 @@ class PsiCoverage(object):
             ),
             attrs=dict(original_prefix=self.prefixes),
         ).expand_dims(prefix=[new_prefix])
-        return PsiCoverage(df)
+        return PsiCoverage(df, self.events)
