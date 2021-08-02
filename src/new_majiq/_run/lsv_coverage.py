@@ -10,7 +10,6 @@ import argparse
 import new_majiq as nm
 import new_majiq.constants as constants
 
-import new_majiq.PsiCoverage as nm_pc
 from new_majiq.logger import get_logger
 from new_majiq._run._majiq_args import check_nonnegative_factory
 from pathlib import Path
@@ -115,7 +114,7 @@ def run(args: argparse.Namespace) -> None:
         pvalue_threshold=args.stack_pvalue_threshold,
     )
     log.info("Converting to PSI coverage")
-    psi_coverage = nm_pc.PsiCoverage.from_events_coverage(
+    psi_coverage = nm.PsiCoverage.from_events_coverage(
         lsv_coverage, args.minreads, args.minbins
     )
     log.info(f"Saving coverage to {args.lsv_coverage.resolve()}")

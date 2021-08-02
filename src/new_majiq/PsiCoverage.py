@@ -41,7 +41,9 @@ def _silent_cdf(*args, **kwargs):
         return bm.cdf(*args, **kwargs)
 
 
-class AbstractPsiCoverage(object):
+class PsiCoverage(object):
+    """PSI and total coverage (raw and bootstrapped) for arbitrary number of samples"""
+
     def __init__(self, df: xr.Dataset):
         """Compute posterior quantities using information about event total/psi
 
@@ -204,10 +206,6 @@ class AbstractPsiCoverage(object):
             pmf_bin_end=("pmf_bin", endpoints[1:]),
         )
 
-
-class PsiCoverage(AbstractPsiCoverage):
-    """PSI coverage for a single experiment at a time"""
-
     @classmethod
     def from_events_coverage(
         cls,
@@ -268,14 +266,30 @@ class PsiCoverage(AbstractPsiCoverage):
                     bam_path=events_coverage.bam_path,
                     bam_version=events_coverage.bam_version,
                 ),
-            )
+            ).expand_dims(prefix=[bam_experiment_name(events_coverage.bam_path)])
         )
 
     @classmethod
-    def from_zarr(cls, path: Union[str, Path]) -> "PsiCoverage":
-        """Load a single psi coverage file"""
-        # TODO verify correctness of file?
-        return cls(xr.open_zarr(path))
+    def from_zarr(cls, path: Union[str, Path, List[Union[str, Path]]]) -> "PsiCoverage":
+        """Load one or more PsiCoverage files together at once
+
+        Load one or more PsiCoverage files together at once. If they have
+        overlapping prefixes, data will be loaded from the first file with the
+        given prefix.
+        """
+        if not isinstance(path, list):
+            path = [path]
+        df = xr.open_mfdataset(
+            path,
+            engine="zarr",
+            group=None,
+            concat_dim="prefix",
+            join="override",
+            compat="override",
+            coords="minimal",
+            data_vars="minimal",
+        )
+        return cls(df)
 
     def updated(
         self,
@@ -327,43 +341,15 @@ class PsiCoverage(AbstractPsiCoverage):
         )
         return
 
-
-class MultiPsiCoverage(AbstractPsiCoverage):
-    @classmethod
-    def from_mf_zarr(cls, paths: List[Path]) -> "MultiPsiCoverage":
-        """Load multiple psi coverage files together at once"""
-        if len(set(bam_experiment_name(x) for x in paths)) < len(paths):
-            raise ValueError("paths have non-unique prefixes")
-        return cls(
-            xr.open_mfdataset(
-                paths,
-                engine="zarr",
-                group=None,
-                concat_dim="prefix",
-                preprocess=lambda x: x.expand_dims(
-                    prefix=[bam_experiment_name(x.encoding["source"])]
-                ),
-                join="override",
-                compat="override",
-                coords="minimal",
-                data_vars="minimal",
-            )
-        )
-
     @property
     def prefixes(self) -> List[str]:
         return self.df["prefix"].values.tolist()
 
-    def __getitem__(self, prefix) -> PsiCoverage:
-        """Get PsiCoverage for selected prefix"""
-        df = self.df.sel(prefix=prefix, drop=True)
-        df.attrs.clear()
-        df = df.assign_attrs(prefix=prefix)
-        return PsiCoverage(df)
-
     def sum(
-        self, min_experiments_f: float = constants.DEFAULT_QUANTIFY_MINEXPERIMENTS
-    ) -> PsiCoverage:
+        self,
+        new_prefix: str,
+        min_experiments_f: float = constants.DEFAULT_QUANTIFY_MINEXPERIMENTS,
+    ) -> "PsiCoverage":
         """Aggregate coverage/psi values over all prefixes"""
         event_passed = self.event_passed.sum("prefix") >= min_experiments(
             min_experiments_f, self.df.sizes["prefix"]
@@ -376,20 +362,19 @@ class MultiPsiCoverage(AbstractPsiCoverage):
         bootstrap_psi = (bootstrap_coverage / bootstrap_total).where(
             bootstrap_total > 0, 0
         )
-        return PsiCoverage(
-            xr.Dataset(
-                data_vars=dict(
-                    event_passed=event_passed,
-                    raw_total=raw_total,
-                    raw_psi=raw_psi,
-                    bootstrap_total=bootstrap_total,
-                    bootstrap_psi=bootstrap_psi,
-                ),
-                coords=dict(
-                    lsv_offsets=self.lsv_offsets,
-                    event_size=self.event_size,
-                    lsv_idx=self.lsv_idx,
-                ),
-                attrs=dict(original_prefix=self.prefixes),
-            )
-        )
+        df = xr.Dataset(
+            data_vars=dict(
+                event_passed=event_passed,
+                raw_total=raw_total,
+                raw_psi=raw_psi,
+                bootstrap_total=bootstrap_total,
+                bootstrap_psi=bootstrap_psi,
+            ),
+            coords=dict(
+                lsv_offsets=self.lsv_offsets,
+                event_size=self.event_size,
+                lsv_idx=self.lsv_idx,
+            ),
+            attrs=dict(original_prefix=self.prefixes),
+        ).expand_dims(prefix=[new_prefix])
+        return PsiCoverage(df)

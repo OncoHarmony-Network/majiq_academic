@@ -238,11 +238,6 @@ def args_coverage_model(parser: argparse.ArgumentParser) -> None:
 
 def args_coverage_infer(parser: argparse.ArgumentParser) -> None:
     """arguments for getting corrected lsv coverage"""
-    parser.add_argument(
-        "original_psicov",
-        type=Path,
-        help="Path to original, uncorrected psi coverage",
-    )
     _args_factors(parser)
     parser.add_argument(
         "coverage_model",
@@ -252,7 +247,13 @@ def args_coverage_infer(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
         "corrected_psicov",
         type=Path,
-        help="Path for corrected psi coverage",
+        help="Path for output corrected psi coverage",
+    )
+    parser.add_argument(
+        "original_psicov",
+        type=Path,
+        nargs="+",
+        help="Paths to original, uncorrected psi coverage",
     )
     return
 
@@ -265,7 +266,7 @@ def run_factors_model(args: argparse.Namespace) -> None:
     )
     log.info(client)
     log.info(f"Opening coverage from {len(args.psicov)} PSI coverage files")
-    psicov = nm.MultiPsiCoverage.from_mf_zarr(args.psicov)
+    psicov = nm.PsiCoverage.from_zarr(args.psicov)
     log.info("Setting up model matrix of known factors")
     factors = _get_factors(psicov.prefixes, args)
     log.info("Learning model for unknown confounding factors")
@@ -294,7 +295,7 @@ def run_factors_infer(args: argparse.Namespace):
     )
     log.info(client)
     log.info(f"Opening coverage from {len(args.psicov)} PSI coverage files")
-    psicov = nm.MultiPsiCoverage.from_mf_zarr(args.psicov)
+    psicov = nm.PsiCoverage.from_zarr(args.psicov)
     log.info("Setting up model matrix of known factors")
     factors = _get_factors(psicov.prefixes, args).load()
     log.info(f"Loading model for unknown factors from {args.factors_model.resolve()}")
@@ -321,7 +322,7 @@ def run_coverage_model(args: argparse.Namespace) -> None:
     )
     log.info(client)
     log.info(f"Opening coverage from {len(args.psicov)} PSI coverage files")
-    psicov = nm.MultiPsiCoverage.from_mf_zarr(args.psicov)
+    psicov = nm.PsiCoverage.from_zarr(args.psicov)
     log.info("Setting up model matrix of all factors")
     factors = _get_factors(psicov.prefixes, args).load()
     log.info("Solving for bootstrap model parameters")
@@ -352,14 +353,11 @@ def run_coverage_model(args: argparse.Namespace) -> None:
 
 def run_coverage_infer(args: argparse.Namespace) -> None:
     """Create corrected LSV coverage file"""
-    prefix = bam_experiment_name(args.original_psicov)
-    if prefix != bam_experiment_name(args.corrected_psicov):
-        raise ValueError("Original and corrected coverage prefixes disagree")
     log = get_logger()
-    log.info(f"Opening coverage from {args.original_psicov.resolve()}")
+    log.info(f"Opening coverage from {len(args.original_psicov)} PSI coverage files")
     psicov = nm.PsiCoverage.from_zarr(args.original_psicov)
     log.info("Setting up model matrix of all factors")
-    factors = _get_factors(prefix, args).load()
+    factors = _get_factors(psicov.prefixes, args).load()
     log.info(f"Opening up model parameters from {args.coverage_model.resolve()}")
     models = xr.open_zarr(args.coverage_model)
     log.info("Correcting bootstrap_psi")
