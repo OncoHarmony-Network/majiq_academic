@@ -31,32 +31,12 @@ DESCRIPTION = (
 
 def add_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
-        "--nthreads",
-        type=check_nonnegative_factory(int, True),
-        default=constants.DEFAULT_QUANTIFY_NTHREADS,
-        help="Number of threads to use (default: %(default)s)",
-    )
-    parser.add_argument(
         "--min-experiments",
         type=check_nonnegative_factory(float, True),
         default=constants.DEFAULT_QUANTIFY_MINEXPERIMENTS,
         help="Threshold for group filters. If < 1, the fraction of experiments"
         " in a group that must pass individual filters for a connection to be"
         " passed. If greater, an absolute number. (default: %(default)s)",
-    )
-    parser.add_argument(
-        "--minreads",
-        type=check_nonnegative_factory(float, True),
-        default=constants.DEFAULT_QUANTIFY_MINREADS,
-        help="Minimum readrate per experiment to pass a connection"
-        " (default: %(default)s)",
-    )
-    parser.add_argument(
-        "--minbins",
-        type=check_nonnegative_factory(float, True),
-        default=constants.DEFAULT_QUANTIFY_MINBINS,
-        help="Minimum number of nonzero bins to pass a connection"
-        " (default: %(default)s).",
     )
     parser.add_argument(
         "out_voila",
@@ -110,22 +90,16 @@ def run(args: argparse.Namespace) -> None:
         f"Quantifying group {args.name} to {args.out_voila} using splicegraph"
         f" {args.splicegraph} and {len(args.coverage)} coverage files"
     )
-    thresholds = nm.QuantifierThresholds(
-        minreads=args.minreads,
-        minbins=args.minbins,
-        min_experiments_f=args.min_experiments,
-    )
-    log.info("Determining quantifiable events")
-    quantifiable = nm.QuantifiableEvents.from_quantifier_group(
-        args.coverage, thresholds=thresholds
-    )
-    log.info("Aggregating coverage at these events for quantification")
-    q = nm.QuantifiableCoverage.from_quantifier_group(
-        args.coverage, quantifiable=quantifiable
-    )
+    log.info(f"Opening coverage from {len(args.coverage)} PSI coverage files")
+    psicov = nm.PsiCoverage.from_zarr(args.coverage)
+    log.info(f"Aggregating coverage from {len(psicov.prefixes)} samples")
+    psicov = psicov.sum(args.name, min_experiments_f=args.min_experiments)
+    log.info("Dropping events that do not pass quantifier thresholds")
+    psicov = psicov.drop_unquantifiable()
     log.info("Loading splicegraph to annotate quantified events")
     sg = nm.SpliceGraph.from_zarr(args.splicegraph)
-    q_events = q.get_events(sg.introns, sg.junctions)
+    psicov.events.load()
+    q_events = psicov.get_events(sg.introns, sg.junctions)
     # get lsv id/description (legacy: lsv_type)
     event_id = sg.exon_connections.event_id(q_events.ref_exon_idx, q_events.event_type)
     event_description = sg.exon_connections.event_description(
@@ -135,14 +109,15 @@ def run(args: argparse.Namespace) -> None:
     start = q_events.connection_start()
     end = q_events.connection_end()
     log.info("Performing quantifications")
-    means = q.bootstrap_posterior_mean
-    bins = q.bootstrap_discretized_pmf(nthreads=args.nthreads)
+    means = psicov.bootstrap_posterior_mean.load().squeeze("prefix").values
+    bins = psicov.bootstrap_discretized_pmf().load().squeeze("prefix").transpose("ec_idx", ...).values
+
     log.info(f"Saving quantifications to {args.out_voila}")
     with Matrix(args.out_voila, "w", voila_file=True, voila_tsv=False) as out_h5p:
         out_h5p.file_version = VOILA_FILE_VERSION
         out_h5p.analysis_type = ANALYSIS_PSI
         out_h5p.experiment_names = [
-            [bam_experiment_name(x).encode("utf-8") for x in q.original_bams]
+            [x.encode("utf-8") for x in psicov.df.attrs["original_prefix"]]
         ]
         out_h5p.group_names = [args.name]
         # each event
