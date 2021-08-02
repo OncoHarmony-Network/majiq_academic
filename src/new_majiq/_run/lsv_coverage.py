@@ -10,6 +10,7 @@ import argparse
 import new_majiq as nm
 import new_majiq.constants as constants
 
+import new_majiq.PsiCoverage as nm_pc
 from new_majiq.logger import get_logger
 from new_majiq._run._majiq_args import check_nonnegative_factory
 from pathlib import Path
@@ -42,6 +43,20 @@ def add_args(parser: argparse.ArgumentParser) -> None:
         "lsv_coverage",
         type=Path,
         help="Path for output LSV coverage files",
+    )
+    parser.add_argument(
+        "--minreads",
+        type=check_nonnegative_factory(float, True),
+        default=constants.DEFAULT_QUANTIFY_MINREADS,
+        help="Minimum readrate per experiment to pass a connection"
+        " (default: %(default)s)",
+    )
+    parser.add_argument(
+        "--minbins",
+        type=check_nonnegative_factory(float, True),
+        default=constants.DEFAULT_QUANTIFY_MINBINS,
+        help="Minimum number of nonzero bins to pass a connection"
+        " (default: %(default)s).",
     )
     parser.add_argument(
         "--ignore-from",
@@ -99,8 +114,12 @@ def run(args: argparse.Namespace) -> None:
         num_bootstraps=args.num_bootstraps,
         pvalue_threshold=args.stack_pvalue_threshold,
     )
+    log.info("Converting to PSI coverage")
+    psi_coverage = nm_pc.PsiCoverage.from_events_coverage(
+        lsv_coverage, args.minreads, args.minbins
+    )
     log.info(f"Saving coverage to {args.lsv_coverage.resolve()}")
-    lsv_coverage.to_zarr(args.lsv_coverage)
+    psi_coverage.to_zarr(args.lsv_coverage)
     return
 
 
