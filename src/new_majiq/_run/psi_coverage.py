@@ -1,5 +1,5 @@
 """
-lsv_coverage.py
+psi_coverage.py
 
 Get coverage over LSVs for a specific experiment
 

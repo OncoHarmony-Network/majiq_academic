@@ -16,7 +16,7 @@ from new_majiq._run.gff3 import subcommand as gff3
 from new_majiq._run.sj import subcommand as sj
 from new_majiq._run.build import subcommand as build
 from new_majiq._run.combine import subcommand as combine
-from new_majiq._run.lsv_coverage import subcommand as lsv_coverage
+from new_majiq._run.psi_coverage import subcommand as psi_coverage
 from new_majiq._run.sg_coverage import subcommand as sg_coverage
 from new_majiq._run.sg_coverage_summarize import subcommand as sg_coverage_summarize
 from new_majiq._run.quantify import subcommand as quantify
@@ -34,7 +34,7 @@ SUBPARSER_SOURCES: Dict[str, GenericSubcommand] = {
     "sj": sj,
     "build": build,
     "combine": combine,
-    "lsv-coverage": lsv_coverage,
+    "psi-coverage": psi_coverage,
     "sg-coverage": sg_coverage,
     "sg-coverage-summary": sg_coverage_summarize,
     "quantify": quantify,
