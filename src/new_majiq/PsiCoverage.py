@@ -76,6 +76,9 @@ class PsiCoverage(object):
             df = df.assign_coords(
                 lsv_idx=("ec_idx", np.repeat(np.arange(len(event_size)), event_size)),
             )
+        if df["event_passed"].dtype != bool:
+            # for some reason, this is sometimes saved as int8, ensure consistent type
+            df["event_passed"] = df["event_passed"].astype(bool)
         self.df: Final[xr.Dataset] = df
         return
 
