@@ -466,10 +466,12 @@ class ModelUnknownConfounders(object):
         extra_dims = [x for x in x.dims if x not in (prefix, ec_idx)]
         return x.median(extra_dims)
 
-    def predict(self, uncorrected: xr.DataArray, factors: xr.DataArray) -> xr.DataArray:
+    def predict(
+        self, uncorrected: xr.DataArray, passed: xr.DataArray, factors: xr.DataArray
+    ) -> xr.DataArray:
         """get unknown confounders using observed data/factors
 
-        Missing values in uncorrected have their residuals imputed to 0 (by
+        Unpassed values have their residuals imputed to 0 (by
         definition experiments used in training must be present, but not true
         for held out data)
         """
@@ -482,7 +484,8 @@ class ModelUnknownConfounders(object):
                 )
         factors = factors.astype(uncorrected.dtype)
         # get subset of uncorrected to use
-        x = uncorrected.isel(ec_idx=self.original_ecidx)  # select subset
+        x = uncorrected.where(passed)  # mask unpassed values
+        x = x.isel(ec_idx=self.original_ecidx)  # select subset
         x = self._median_extra_dims(x, ec_idx="top_ec_idx")  # summarize over extra dims
         # get residuals, imputing 0 for missing values possible in held-out data
         residuals = x - xr.dot(factors, self.model_params, dims="factor")

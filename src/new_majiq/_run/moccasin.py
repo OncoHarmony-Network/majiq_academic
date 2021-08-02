@@ -87,7 +87,9 @@ def _args_factors(parser: argparse.ArgumentParser) -> None:
         type=Path,
         nargs="+",
         default=None,
-        help="Paths to factors per experiment (output by infer-factors)",
+        help="Paths to factors matrices including desired prefixes. If a prefix"
+        " is in multiple files, the first listed factors file with that prefix"
+        " is used"
     )
     parser.add_argument(
         "--confounding",
@@ -142,15 +144,17 @@ def _get_factors(
             dims=["prefix", "factor"],
         )
     else:  # args.factors_zarr
-        prefix_set = set(prefix)
-        matched_zarr = [
-            x for x in set(args.factors_zarr) if bam_experiment_name(x) in prefix_set
-        ]
-        if (missing := prefix_set - {bam_experiment_name(x) for x in matched_zarr}) :
-            raise ValueError(f"Factors for some prefixes missing ({missing = })")
-        factors = _open_mf_with_prefix(matched_zarr).factors
-        # load factors into memory (as other methods do)
-        factors = factors.load()
+        factors = xr.open_mfdataset(
+            args.factors_zarr,
+            engine="zarr",
+            concat_dim="prefix",
+            join="override",
+            compat="override",  # use first file if overlapping prefixes
+            coords="minimal",
+            data_vars="minimal",
+        )["factors"]
+        # load factors for desired prefixes into memory (as other methods do)
+        factors = factors.sel(prefix=prefix).load()
     # do the squeeze, if desired
     if do_squeeze:
         factors = factors.squeeze("prefix")
@@ -200,15 +204,17 @@ def args_factors_infer(parser: argparse.ArgumentParser) -> None:
         help="Path for input model of unknown confounders",
     )
     parser.add_argument(
-        "psicov",
-        type=Path,
-        help="Path to psi coverage file for which known/unknown factors will be saved",
-    )
-    parser.add_argument(
         "output",
         type=Path,
         help="Path for output factors (known and unknown)",
     )
+    parser.add_argument(
+        "psicov",
+        type=Path,
+        nargs="+",
+        help="Path to psi coverage files for which known/unknown factors will be saved",
+    )
+    _args_dask(parser)
     return
 
 
@@ -287,18 +293,19 @@ def run_factors_model(args: argparse.Namespace) -> None:
 
 def run_factors_infer(args: argparse.Namespace):
     """compute unknown factors using input coverage"""
-    prefix = bam_experiment_name(args.tmpfile)
-    if prefix != bam_experiment_name(args.output):
-        raise ValueError("tmpfile and output factors file have different prefixes")
     log = get_logger()
-    log.info("Setting up known factors")
-    factors = _get_factors(prefix, args).load()
-    log.info(f"Opening coverage from {args.tmpfile.resolve()}")
-    coverage = xr.open_zarr(args.tmpfile)
+    client = Client(
+        n_workers=1, threads_per_worker=args.nthreads, dashboard_address=None
+    )
+    log.info(client)
+    log.info(f"Opening coverage from {len(args.psicov)} PSI coverage files")
+    psicov = nm.MultiPsiCoverage.from_mf_zarr(args.psicov)
+    log.info("Setting up model matrix of known factors")
+    factors = _get_factors(psicov.prefixes, args).load()
     log.info(f"Loading model for unknown factors from {args.factors_model.resolve()}")
     model = mc.ModelUnknownConfounders.from_zarr(args.factors_model)
     log.info("Solving for unknown confounders")
-    unknown_factors = model.predict(coverage.psi, factors).load()
+    unknown_factors = model.predict(psicov.bootstrap_psi, psicov.event_passed, factors).load()
     log.info(f"Saving combined factors to {args.output.resolve()}")
     (
         xr.concat([factors, unknown_factors.rename(new_factor="factor")], dim="factor")
