@@ -15,7 +15,6 @@ import new_majiq.constants as constants
 from typing import (
     Final,
     List,
-    Optional,
     Union,
 )
 from new_majiq.internals import Contigs as _Contigs

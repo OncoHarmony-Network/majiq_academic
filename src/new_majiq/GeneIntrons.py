@@ -19,7 +19,6 @@ from typing import (
 from new_majiq.internals import GeneIntrons as _GeneIntrons
 from new_majiq.GeneConnections import GeneConnections
 from new_majiq.Genes import Genes
-from new_majiq.Exons import Exons
 from pathlib import Path
 
 if TYPE_CHECKING:

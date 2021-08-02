@@ -11,7 +11,6 @@ import numpy as np
 import new_majiq as nm
 
 from new_majiq.logger import get_logger
-from new_majiq.experiments import bam_experiment_name
 
 import new_majiq.constants as constants
 

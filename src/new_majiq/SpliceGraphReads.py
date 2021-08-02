@@ -8,7 +8,6 @@ Author: Joseph K Aicher
 
 import numpy as np
 import xarray as xr
-import dask.array as da
 
 import new_majiq.constants as constants
 

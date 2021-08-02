@@ -7,15 +7,11 @@ introns and junctions
 Author: Joseph K Aicher
 """
 
-import numpy as np
-import xarray as xr
-
 import new_majiq.constants as constants
 
 from new_majiq.Contigs import Contigs
 from new_majiq.Genes import Genes
 from new_majiq.Exons import Exons
-from new_majiq.Events import Events
 from new_majiq.GeneIntrons import GeneIntrons
 from new_majiq.GeneJunctions import GeneJunctions
 from new_majiq.ExonConnections import ExonConnections
@@ -24,7 +20,6 @@ from new_majiq.internals import GFF3Types
 
 from typing import (
     Final,
-    List,
     Optional,
     Union,
 )

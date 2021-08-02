@@ -8,15 +8,12 @@ Author: Joseph K Aicher
 """
 
 import numpy as np
-import xarray as xr
 
 from new_majiq.GeneRegions import GeneRegions
 from new_majiq.Exons import Exons, _Exons
 from typing import (
     Optional,
-    Union,
 )
-from pathlib import Path
 
 
 class GeneConnections(GeneRegions):
