@@ -318,28 +318,38 @@ def run_factors_infer(args: argparse.Namespace):
 
 def run_coverage_model(args: argparse.Namespace) -> None:
     """Determine parameters for coverage model given factors"""
-    prefix = [bam_experiment_name(x) for x in args.tmpfiles]
-    if len(prefix) > len(set(prefix)):
-        raise ValueError("Passed tmpfiles have duplicate prefixes")
     log = get_logger()
     client = Client(
         n_workers=1, threads_per_worker=args.nthreads, dashboard_address=None
     )
     log.info(client)
+    log.info(f"Opening coverage from {len(args.psicov)} PSI coverage files")
+    psicov = nm.MultiPsiCoverage.from_mf_zarr(args.psicov)
     log.info("Setting up model matrix of all factors")
-    factors = _get_factors(prefix, args)
-    log.info(f"Opening coverage from {len(args.tmpfiles)} tmpfiles")
-    coverage = _open_mf_with_prefix(args.tmpfiles)
-    log.info("Solving for model parameters")
-    coverage_model = mc.infer_model_params(
-        coverage.psi, factors, extra_core_dims=["bootstrap_replicate"]
+    factors = _get_factors(psicov.prefixes, args).load()
+    log.info("Solving for bootstrap model parameters")
+    bootstrap_model = mc.infer_model_params(
+        psicov.bootstrap_psi,
+        psicov.event_passed,
+        factors,
+        complete=False,
+    )
+    log.info("Solving for raw model parameters")
+    # TODO could potentially share work if combined bootstrap_psi, raw_psi to
+    # solve for parameters together
+    raw_model = mc.infer_model_params(
+        psicov.raw_psi,
+        psicov.event_passed,
+        factors,
+        complete=False,
     )
     log.info(f"Saving model parameters to {args.coverage_model.resolve()}")
-    (
-        coverage_model.rename("coverage_model")
-        .to_dataset()
-        .to_zarr(args.coverage_model, mode="w")
-    )
+    xr.Dataset(
+        {
+            "bootstrap_model": bootstrap_model,
+            "raw_model": raw_model,
+        }
+    ).to_zarr(args.coverage_model, mode="w")
     return
 
 

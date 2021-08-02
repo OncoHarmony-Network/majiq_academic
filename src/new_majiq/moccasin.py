@@ -75,7 +75,6 @@ def infer_model_params(
     passed: xr.DataArray,
     factors: xr.DataArray,
     complete: bool = False,
-    extra_core_dims: List[Hashable] = ["bootstrap_replicate"],
 ) -> xr.DataArray:
     """get coefficients for OLS on uncorrected data given factors
 
@@ -95,16 +94,6 @@ def infer_model_params(
     complete: bool
         Indicates if we should handle missing data in uncorrected. If the data
         are complete, can be much faster doing this
-    extra_core_dims: List[Hashable]
-        Dimensions that are irrelevant to 'missingness' for with incomplete data
-        This allows for solving for OLS simultaneously once over these extra
-        dimension (as core_dim to appropriate gufunc).
-        If not complete, missing values will be propagated along these
-        dimensions, solve will share work inverting gramian over these
-        dimensions (e.g. bootstrap_replicate). This yields a speed-up
-        proportional to the size of the extra_core_dims. This is ignored when
-        complete (all non-prefix dimensions in uncorrected are extra in this
-        case)
 
     Returns
     -------
@@ -118,12 +107,8 @@ def infer_model_params(
     gramian: xr.DataArray  # X^T X for factors (potentially given missing data)
     projection: xr.DataArray  # X^T Y (observed uncorrected data onto factors)
     if not complete:
-        extra_core_dims = [
-            x for x in passed.dims if x in extra_core_dims and x != "prefix"
-        ]
-        not_missing = passed.all(extra_core_dims)
         gramian = xr.dot(
-            not_missing, factors.rename(factor="fsolve"), factors, dims="prefix"
+            passed, factors.rename(factor="fsolve"), factors, dims="prefix"
         )
         gramian = gramian.where(
             # mask singular gramians as nan
@@ -136,12 +121,13 @@ def infer_model_params(
             == gramian.sizes["factor"]
         )
         projection = xr.dot(
-            not_missing, uncorrected, factors.rename(factor="fsolve"), dims="prefix"
+            passed, uncorrected, factors.rename(factor="fsolve"), dims="prefix"
         )
     else:
         gramian = xr.dot(factors.rename(factor="fsolve"), factors, dims="prefix")
         projection = xr.dot(factors.rename(factor="fsolve"), uncorrected, dims="prefix")
-        extra_core_dims = [x for x in projection.dims if x != "fsolve"]
+    # we can stack extra core dimensions for efficient linear solve (solve2)
+    extra_core_dims = list(set(projection.dims) - (set(gramian.dims) | set(passed.dims)))
     # solve for OLS parameters
     params: xr.DataArray
     if extra_core_dims:
