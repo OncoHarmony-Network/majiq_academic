@@ -32,15 +32,8 @@ def add_args(parser: argparse.ArgumentParser) -> None:
         "coverage",
         type=Path,
         nargs="+",
-        help="Paths to events coverage files. All must have been generated"
+        help="Paths to psi coverage files. All must have been generated"
         " using the same splicegraph",
-    )
-    parser.add_argument(
-        "--nthreads",
-        type=check_nonnegative_factory(int, True),
-        default=constants.DEFAULT_QUANTIFY_NTHREADS,
-        help="Number of threads used for pmf bins and quantiles,"
-        " which require more computation (default: %(default)s)",
     )
     parser.add_argument(
         "--pmf-bins",
@@ -64,20 +57,6 @@ def add_args(parser: argparse.ArgumentParser) -> None:
         metavar=("splicegraph", "tsv"),
         help="If specified, save quantifications to TSV annotated by input"
         " splicegraph",
-    )
-    parser.add_argument(
-        "--minreads",
-        type=check_nonnegative_factory(float, True),
-        default=constants.DEFAULT_QUANTIFY_MINREADS,
-        help="Minimum readrate per experiment to pass a connection"
-        " (default: %(default)s)",
-    )
-    parser.add_argument(
-        "--minbins",
-        type=check_nonnegative_factory(float, True),
-        default=constants.DEFAULT_QUANTIFY_MINBINS,
-        help="Minimum number of nonzero bins to pass a connection"
-        " (default: %(default)s).",
     )
     parser.add_argument(
         "--min-experiments",
@@ -122,33 +101,23 @@ def run(args: argparse.Namespace) -> None:
 
     log = get_logger()
 
-    thresholds = nm.QuantifierThresholds(
-        minreads=args.minreads,
-        minbins=args.minbins,
-        min_experiments_f=args.min_experiments,
-    )
-    log.info("Determining quantifiable events")
-    quantifiable = nm.QuantifiableEvents.from_quantifier_group(
-        args.coverage, thresholds=thresholds
-    )
-    log.info("Aggregating coverage at these events for quantification")
-    q = nm.QuantifiableCoverage.from_quantifier_group(
-        args.coverage,
-        quantifiable=quantifiable,
-        drop_unquantifiable=args.drop_unquantifiable,
-    )
-    log.info("Quantifying using input coverage and saving to file")
-    q.to_zarr(
-        args.output,
-        pmf_bins=args.pmf_bins,
-        quantiles=args.quantiles,
-        nthreads=args.nthreads,
-    )
+    log.info(f"Opening coverage from {len(args.coverage)} PSI coverage files")
+    psicov = nm.PsiCoverage.from_zarr(args.coverage)
+    log.info(f"Aggregating coverage from {len(psicov.prefixes)} samples")
+    psicov = psicov.sum("aggregate", min_experiments_f=args.min_experiments)
+    if args.drop_unquantifiable:
+        psicov = psicov.drop_unquantifiable()
+
+    log.info("Quantifying coverage")
+    q = psicov.quantifier_dataset(pmf_bins=args.pmf_bins, quantiles=args.quantiles)
+    q.to_zarr(args.output, mode="w", group=constants.NC_EVENTSQUANTIFIED)
+    psicov.events.to_zarr(args.output, mode="a", group=constants.NC_EVENTS)
+
     if args.tsv:
         log.info("Loading splicegraph for annotated TSV file")
         sg = nm.SpliceGraph.from_zarr(args.tsv[0])
         log.info("Saving annotated quantifications to TSV")
-        q.as_dataframe(sg).to_csv(args.tsv[1], sep="\t")
+        psicov.as_dataframe(sg).to_csv(args.tsv[1], sep="\t")
     return
 
 

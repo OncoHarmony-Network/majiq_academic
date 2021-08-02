@@ -505,3 +505,25 @@ class PsiCoverage(object):
         except ValueError:
             pass
         return df.to_dataframe(idx_order)  # type: ignore
+
+    def quantifier_dataset(
+        self,
+        pmf_bins: Optional[int] = 40,
+        quantiles: Optional[Sequence[float]] = None,
+    ) -> xr.Dataset:
+        """Default dataset for quantifications"""
+        df = xr.Dataset(
+            {
+                "raw_psi_mean": self.raw_posterior_mean.load(),
+                "raw_psi_std": np.sqrt(self.raw_posterior_variance.load()),
+                "bootstrap_psi_mean": self.bootstrap_posterior_mean.load(),
+                "bootstrap_psi_std": np.sqrt(self.bootstrap_posterior_variance.load()),
+            },
+            {},
+            self.df.attrs,
+        )
+        if pmf_bins:
+            df = df.assign(psi_pmf=self.bootstrap_discretized_pmf(pmf_bins))
+        if quantiles:
+            df = df.assign(psi_quantiles=self.bootstrap_quantile(quantiles))
+        return df
