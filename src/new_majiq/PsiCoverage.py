@@ -11,6 +11,7 @@ Author: Joseph K Aicher
 
 import numpy as np
 import xarray as xr
+import pandas as pd
 
 import new_majiq.constants as constants
 import new_majiq.beta_mixture as bm
@@ -18,6 +19,10 @@ import new_majiq.beta_mixture as bm
 from new_majiq.experiments import bam_experiment_name
 from new_majiq.Quantifier import min_experiments
 from new_majiq.EventsCoverage import EventsCoverage
+from new_majiq.Events import Events, _Events
+from new_majiq.SpliceGraph import SpliceGraph
+from new_majiq.GeneIntrons import GeneIntrons
+from new_majiq.GeneJunctions import GeneJunctions
 
 from functools import cached_property
 from typing import (
@@ -388,3 +393,115 @@ class PsiCoverage(object):
             attrs=dict(original_prefix=self.prefixes),
         ).expand_dims(prefix=[new_prefix])
         return PsiCoverage(df, self.events)
+
+    def drop_unquantifiable(self) -> "PsiCoverage":
+        """Drop all events that are not (passed in all prefixes)"""
+        # what passed?
+        ec_idx_passed = self.event_passed.all("prefix").load().reset_coords(drop=True)
+        e_idx_passed = ec_idx_passed.isel(ec_idx=self.lsv_offsets.values[:-1]).rename(ec_idx="e_idx").reset_coords(drop=True)
+        # get subset of df, events corresponding to these, dropping variables
+        # that require recalculation
+        df_subset = self.df.drop_vars(["lsv_offsets", "lsv_idx"]).sel(ec_idx=ec_idx_passed)
+        events_subset = self.events.drop_vars(["_offsets"]).sel(ec_idx=ec_idx_passed, e_idx=e_idx_passed)
+        # recalculate offsets
+        passed_sizes = self.event_size.isel(ec_idx=self.lsv_offsets.values[:-1]).rename(ec_idx="e_idx").sel(e_idx=e_idx_passed).values
+        offsets = np.empty(len(passed_sizes) + 1, dtype=passed_sizes.dtype)
+        offsets[0] = 0
+        offsets[1:] = np.cumsum(passed_sizes)
+        # add offsets back in
+        df_subset = df_subset.assign_coords(lsv_offsets=("offset_idx", offsets))
+        events_subset = events_subset.assign_coords(_offsets=("e_offsets_idx", offsets.astype(np.uint64)))
+        # return subsetted PsiCoverage
+        return PsiCoverage(df_subset, events_subset)
+
+    def get_events(
+        self,
+        introns: GeneIntrons,
+        junctions: GeneJunctions,
+    ) -> Events:
+        if self.events.intron_hash != introns.checksum():
+            raise ValueError("GeneIntrons checksums do not match")
+        if self.events.junction_hash != junctions.checksum():
+            raise ValueError("GeneJunctions checksums do not match")
+        return Events(
+            _Events(
+                introns._gene_introns,
+                junctions._gene_junctions,
+                self.events.ref_exon_idx,
+                self.events.event_type,
+                self.events._offsets,
+                self.events.is_intron,
+                self.events.connection_idx,
+            )
+        )
+
+    @staticmethod
+    def _exons_formatted(
+        exon_start: Sequence[int], exon_end: Sequence[int]
+    ) -> List[str]:
+        def format_coord(x):
+            return x if x >= 0 else "na"
+
+        return [
+            f"{format_coord(a)}-{format_coord(b)}" for a, b in zip(exon_start, exon_end)
+        ]
+
+    def as_dataframe(self, sg: SpliceGraph) -> pd.DataFrame:
+        """Basic quantifications annotated with splicegraph information"""
+        # set up events object
+        self.events.load()
+        q_events = self.get_events(sg.introns, sg.junctions)
+        # get event-level information
+        event_size = np.diff(self.lsv_offsets.values)
+        event_id = sg.exon_connections.event_id(
+            q_events.ref_exon_idx, q_events.event_type
+        )
+        event_description = sg.exon_connections.event_description(
+            q_events.ref_exon_idx, q_events.event_type
+        )
+        ref_exon_start = sg.exons.start[q_events.ref_exon_idx]
+        ref_exon_end = sg.exons.end[q_events.ref_exon_idx]
+        # connection information
+        gene_idx = q_events.connection_gene_idx()
+        gene_id = np.array(sg.genes.gene_id)[gene_idx]
+        gene_name = np.array(sg.genes.gene_name)[gene_idx]
+        strand = np.array([x.decode() for x in sg.genes.strand])[gene_idx]
+        contig_idx = sg.genes.contig_idx[gene_idx]
+        seqid = np.array(sg.contigs.seqid)[contig_idx]
+        other_exon_idx = q_events.connection_other_exon_idx()
+        other_exon_start = sg.exons.start[other_exon_idx]
+        other_exon_end = sg.exons.end[other_exon_idx]
+        # as Dataset
+        df = xr.Dataset(
+            {
+                "raw_psi_mean": self.raw_posterior_mean,
+                "raw_psi_std": np.sqrt(self.raw_posterior_variance),
+                "bootstrap_psi_mean": self.bootstrap_posterior_mean,
+                "bootstrap_psi_std": np.sqrt(self.bootstrap_posterior_variance),
+                "seqid": ("ec_idx", seqid),
+                "gene_id": ("ec_idx", gene_id),
+                "ref_exon": ("ec_idx", np.repeat(
+                    self._exons_formatted(ref_exon_start, ref_exon_end), event_size
+                )),
+                "event_type": ("ec_idx", np.repeat(
+                    [x.decode() for x in q_events.event_type], event_size
+                )),
+                "is_intron": ("ec_idx", q_events.is_intron),
+                "start": ("ec_idx", q_events.connection_start()),
+                "end": ("ec_idx", q_events.connection_end()),
+                "denovo": ("ec_idx", q_events.connection_denovo()),
+                "gene_name": ("ec_idx", gene_name),
+                "strand": ("ec_idx", strand),
+                "other_exon": ("ec_idx", self._exons_formatted(other_exon_start, other_exon_end)),
+                "event_id": ("ec_idx", np.repeat(event_id, event_size)),
+                "event_description": ("ec_idx", np.repeat(event_description, event_size)),
+            }
+        ).reset_coords(drop=True)
+        # if only one prefix, drop it
+        idx_order = ["prefix", "ec_idx"]
+        try:
+            df = df.squeeze("prefix", drop=True)
+            idx_order.remove("prefix")
+        except ValueError:
+            pass
+        return df.to_dataframe(idx_order)  # type: ignore
