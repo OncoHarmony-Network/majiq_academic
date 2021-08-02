@@ -17,40 +17,20 @@ from pathlib import Path
 from typing import (
     Final,
     Hashable,
-    List,
     Union,
 )
 
 
-# TODO we want to have new PSICoverage from old PSICoverage. Will be removed,
-# but note how to renormalize PSI by clipping/dividing by new total coverage
-def bootstraps_from_tmp_psi(
+def clip_and_renormalize_psi(
     psi: xr.DataArray,
-    total_coverage: xr.DataArray,
     offsets: xr.DataArray,
-    original_bootstraps: xr.DataArray,
 ) -> xr.DataArray:
-    """invert (potentially corrected) psi values back to lsv_coverage bootstraps
-
-    Parameters
-    ----------
-    psi: xr.DataArray
-        values of psi, potentially shifted by correction
-    total_coverage: xr.DataArray
-        total coverage per event (over ec_idx) expected after correction
-    offsets: xr.DataArray
-        offsets for events
-    original_bootstraps: xr.DataArray
-        retain old values if unable to perform correction
-
-    Notes
-    -----
-    Clips psi to non-negative values, renormalizes each event to total_coverage
-    and maps back to original_bootstraps
-    """
-    total_coverage_fn = _get_total_coverage_function(offsets.values)
+    """Clip values of PSI, renormalize each event to add up to 1 (nan if all 0)"""
+    offsets_arr = offsets.values
+    total_coverage_fn = _get_total_coverage_function(offsets_arr)
     psi = psi.clip(min=0).chunk({"ec_idx": None})
-    new_total_coverage = xr.apply_ufunc(
+    # normalization constant for psi
+    psi_Z = xr.apply_ufunc(
         total_coverage_fn,
         psi,
         input_core_dims=[["ec_idx"]],
@@ -58,16 +38,8 @@ def bootstraps_from_tmp_psi(
         output_dtypes=(psi.dtype,),
         dask="parallelized",
     )
-    bootstraps = psi * total_coverage / new_total_coverage.where(new_total_coverage > 0)
-    # we don't allow one bootstrap replicate to be corrected but not others
-    corrected = bootstraps.notnull().all("bootstrap_replicate")
-    return (
-        original_bootstraps
-        # replace with corrected values if was able to do correction
-        .where(~corrected, bootstraps)
-        # add boolean mask indicating if correction was performed
-        .assign_coords(corrected=corrected)
-    )
+    # renormalize (nan mask if zero)
+    return psi / psi_Z.where(psi_Z > 0)
 
 
 def infer_model_params(

@@ -239,14 +239,9 @@ def args_coverage_model(parser: argparse.ArgumentParser) -> None:
 def args_coverage_infer(parser: argparse.ArgumentParser) -> None:
     """arguments for getting corrected lsv coverage"""
     parser.add_argument(
-        "original_coverage",
+        "original_psicov",
         type=Path,
-        help="Path to original, uncorrected LSV coverage",
-    )
-    parser.add_argument(
-        "psicov",
-        type=Path,
-        help="Path to input psi coverage corresponding to original_coverage",
+        help="Path to original, uncorrected psi coverage",
     )
     _args_factors(parser)
     parser.add_argument(
@@ -255,7 +250,7 @@ def args_coverage_infer(parser: argparse.ArgumentParser) -> None:
         help="Input path for coverage model",
     )
     parser.add_argument(
-        "corrected_coverage",
+        "corrected_psicov",
         type=Path,
         help="Path for corrected psi coverage",
     )
@@ -355,29 +350,42 @@ def run_coverage_model(args: argparse.Namespace) -> None:
 
 def run_coverage_infer(args: argparse.Namespace) -> None:
     """Create corrected LSV coverage file"""
-    prefix = bam_experiment_name(args.original_coverage)
-    if prefix != bam_experiment_name(args.tmpfile):
-        raise ValueError("Original coverage and tmpfile prefixes disagree")
-    elif prefix != bam_experiment_name(args.corrected_coverage):
+    prefix = bam_experiment_name(args.original_psicov)
+    if prefix != bam_experiment_name(args.corrected_psicov):
         raise ValueError("Original and corrected coverage prefixes disagree")
     log = get_logger()
-    log.info(f"Setting up factors for {prefix = }")
-    factors = _get_factors(prefix, args)
+    log.info(f"Opening coverage from {args.original_psicov.resolve()}")
+    psicov = nm.PsiCoverage.from_zarr(args.original_psicov)
+    log.info("Setting up model matrix of all factors")
+    factors = _get_factors(prefix, args).load()
     log.info(f"Opening up model parameters from {args.coverage_model.resolve()}")
-    coverage_model = xr.open_zarr(args.coverage_model).coverage_model
-    df_ec = xr.open_zarr(args.original_coverage, group=constants.NC_EVENTSCOVERAGE)
-    df_e = xr.open_zarr(args.original_coverage, group=constants.NC_EVENTS)
-    df_tmp = xr.open_zarr(args.tmpfile)
-    corrected_bootstraps = mc.bootstraps_from_tmp_psi(
-        mc.correct_with_model(df_tmp.psi, coverage_model, factors),
-        df_tmp.total_coverage,
-        df_tmp._offsets,
-        df_ec.bootstraps,
+    models = xr.open_zarr(args.coverage_model)
+    log.info("Correcting bootstrap_psi")
+    adj_bootstrap_psi = (
+        # get linear adjustment of bootstrap_psi
+        mc.correct_with_model(psicov.bootstrap_psi, models.bootstrap_model, factors)
+        # clip and renormalize
+        .pipe(mc.clip_and_renormalize_psi, psicov.lsv_offsets)
+        # but must be passed and not null
+        .pipe(lambda x: x.where(x.notnull() & psicov.event_passed, psicov.bootstrap_psi))
     )
-    df_e.to_zarr(args.corrected_coverage, mode="w", group=constants.NC_EVENTS)
-    df_ec.assign(bootstraps=corrected_bootstraps).load().to_zarr(
-        args.corrected_coverage, mode="a", group=constants.NC_EVENTSCOVERAGE
+    log.info("Correcting raw_psi")
+    adj_raw_psi = (
+        # get linear adjustment of raw_psi
+        mc.correct_with_model(psicov.raw_psi, models.raw_model, factors)
+        # clip and renormalize
+        .pipe(mc.clip_and_renormalize_psi, psicov.lsv_offsets)
+        # but must be passed and not null
+        .pipe(lambda x: x.where(x.notnull() & psicov.event_passed, psicov.raw_psi))
     )
+    log.info("Updating PsiCoverage")
+    psicov = psicov.updated(
+        adj_bootstrap_psi,
+        adj_raw_psi,
+        model_path=f"{args.coverage_model.resolve()}",
+    )
+    log.info(f"Saving corrected coverage to {args.corrected_psicov.resolve()}")
+    psicov.to_zarr(args.corrected_psicov)
     return
 
 
