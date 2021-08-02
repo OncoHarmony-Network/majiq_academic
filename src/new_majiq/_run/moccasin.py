@@ -89,7 +89,7 @@ def _args_factors(parser: argparse.ArgumentParser) -> None:
         default=None,
         help="Paths to factors matrices including desired prefixes. If a prefix"
         " is in multiple files, the first listed factors file with that prefix"
-        " is used"
+        " is used",
     )
     parser.add_argument(
         "--confounding",
@@ -300,7 +300,9 @@ def run_factors_infer(args: argparse.Namespace):
     log.info(f"Loading model for unknown factors from {args.factors_model.resolve()}")
     model = mc.ModelUnknownConfounders.from_zarr(args.factors_model)
     log.info("Solving for unknown confounders")
-    unknown_factors = model.predict(psicov.bootstrap_psi, psicov.event_passed, factors).load()
+    unknown_factors = model.predict(
+        psicov.bootstrap_psi, psicov.event_passed, factors
+    ).load()
     log.info(f"Saving combined factors to {args.output.resolve()}")
     (
         xr.concat([factors, unknown_factors.rename(new_factor="factor")], dim="factor")
@@ -367,7 +369,9 @@ def run_coverage_infer(args: argparse.Namespace) -> None:
         # clip and renormalize
         .pipe(mc.clip_and_renormalize_psi, psicov.lsv_offsets)
         # but must be passed and not null
-        .pipe(lambda x: x.where(x.notnull() & psicov.event_passed, psicov.bootstrap_psi))
+        .pipe(
+            lambda x: x.where(x.notnull() & psicov.event_passed, psicov.bootstrap_psi)
+        )
     )
     log.info("Correcting raw_psi")
     adj_raw_psi = (

@@ -99,7 +99,9 @@ def infer_model_params(
         gramian = xr.dot(factors.rename(factor="fsolve"), factors, dims="prefix")
         projection = xr.dot(factors.rename(factor="fsolve"), uncorrected, dims="prefix")
     # we can stack extra core dimensions for efficient linear solve (solve2)
-    extra_core_dims = list(set(projection.dims) - (set(gramian.dims) | set(passed.dims)))
+    extra_core_dims = list(
+        set(projection.dims) - (set(gramian.dims) | set(passed.dims))
+    )
     # solve for OLS parameters
     params: xr.DataArray
     if extra_core_dims:
