@@ -232,6 +232,7 @@ def args_coverage_infer(parser: argparse.ArgumentParser) -> None:
         nargs="+",
         help="Paths to original, uncorrected psi coverage",
     )
+    _args_dask(parser)
     return
 
 
@@ -331,6 +332,10 @@ def run_coverage_model(args: argparse.Namespace) -> None:
 def run_coverage_infer(args: argparse.Namespace) -> None:
     """Create corrected LSV coverage file"""
     log = get_logger()
+    client = Client(
+        n_workers=1, threads_per_worker=args.nthreads, dashboard_address=None
+    )
+    log.info(client)
     log.info(f"Opening coverage from {len(args.original_psicov)} PSI coverage files")
     psicov = nm.PsiCoverage.from_zarr(args.original_psicov)
     log.info("Setting up model matrix of all factors")
