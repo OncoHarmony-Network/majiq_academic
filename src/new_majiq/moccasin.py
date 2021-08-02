@@ -16,7 +16,6 @@ from new_majiq.logger import get_logger
 from pathlib import Path
 from typing import (
     Final,
-    Hashable,
     Union,
 )
 

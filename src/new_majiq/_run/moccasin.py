@@ -15,37 +15,14 @@ import new_majiq.constants as constants
 import new_majiq.moccasin as mc
 
 from dask.distributed import Client
-from new_majiq.experiments import bam_experiment_name
 from new_majiq._run._majiq_args import check_nonnegative_factory
 from new_majiq._run._run import GenericSubcommand
 from new_majiq.logger import get_logger
 from pathlib import Path
 from typing import (
     List,
-    Optional,
     Union,
 )
-
-
-def _open_mf_with_prefix(
-    paths: List[Path], group: Optional[str] = None
-) -> xr.DataArray:
-    """wrap xr.open_mfdataset to load zarr, add prefix from filenames"""
-    if len(set(bam_experiment_name(x) for x in paths)) < len(paths):
-        raise ValueError("paths have non-unique prefixes")
-    return xr.open_mfdataset(
-        paths,
-        engine="zarr",
-        group=group,
-        concat_dim="prefix",
-        preprocess=lambda x: x.expand_dims(
-            prefix=[bam_experiment_name(x.encoding["source"])]
-        ),
-        join="override",
-        compat="override",
-        coords="minimal",
-        data_vars="minimal",
-    )
 
 
 def _args_dask(parser: argparse.ArgumentParser) -> None:
