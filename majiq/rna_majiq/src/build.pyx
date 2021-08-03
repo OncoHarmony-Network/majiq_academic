@@ -400,8 +400,8 @@ cdef _find_junctions(list file_list, map[string, Gene*]& gene_map, vector[string
                                            int(it.second>= jlimit))
 
                 logger.info('Done Reading file %s' %(file_list[j][0]))
-                dt = np.dtype('|S250, |S25, u4')
-                meta = np.array([(file_list[j][0], constants.VERSION, jlimit)], dtype=dt)
+                dt = np.dtype('|S250, |S25, u4, u2')
+                meta = np.array([(file_list[j][0], constants.VERSION, jlimit, strandness)], dtype=dt)
                 _store_junc_file(
                     boots, ir_raw_cov, junc_raw_cov,
                     junc_ids, file_list[j][0], meta, conf.outDir
