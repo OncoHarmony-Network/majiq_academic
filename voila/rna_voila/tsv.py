@@ -382,7 +382,7 @@ class PsiTsv(AnalysisTypeTsv):
                             'strand': gene['strand'],
                             'de_novo_junctions': semicolon((1 if x == 0 else 0 for x in annot_juncs)),  # reverse flags
                             'junctions_coords': semicolon(
-                                '{0}-{1}'.format(start, end) for start, end, _ in lsv_junctions
+                                '{0}-{1}'.format(start, end) for start, end in lsv_junctions
                             ),
                             'exons_coords': semicolon(
                                 '{0}-{1}'.format(start, end) for start, end in exon_str(lsv_exons)
@@ -520,7 +520,7 @@ class HeterogenTsv(AnalysisTypeTsv):
                             'strand': gene['strand'],
                             'de_novo_junctions': semicolon((1 if x == 0 else 0 for x in annot_juncs)),  # reverse flags
                             'junctions_coords': semicolon(
-                                '{0}-{1}'.format(start, end) for start, end, _ in lsv_junctions
+                                '{0}-{1}'.format(start, end) for start, end in lsv_junctions
                             ),
                             'exons_coords': semicolon(
                                 '{0}-{1}'.format(start, end) for start, end in exon_str(lsv_exons)
@@ -623,7 +623,7 @@ class DeltaPsiTsv(AnalysisTypeTsv):
                             'strand': gene['strand'],
                             'de_novo_junctions': semicolon((1 if x == 0 else 0 for x in annot_juncs)),  # reverse flags
                             'junctions_coords': semicolon(
-                                '{0}-{1}'.format(start, end) for start, end, _ in lsv_junctions
+                                '{0}-{1}'.format(start, end) for start, end in lsv_junctions
                             ),
                             'exons_coords': semicolon(
                                 '{0}-{1}'.format(start, end) for start, end in exon_str(lsv_exons)
