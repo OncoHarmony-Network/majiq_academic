@@ -137,6 +137,16 @@ class PsiCoverage(object):
         return self.df["bootstrap_psi"]
 
     @cached_property
+    def raw_coverage(self) -> xr.DataArray:
+        """Infer LSV coverage at specific event connection from psi/total"""
+        return self.raw_psi * self.raw_total
+
+    @cached_property
+    def bootstrap_coverage(self) -> xr.DataArray:
+        """Infer LSV coverage at specific event connection from psi/total"""
+        return self.bootstrap_psi * self.bootstrap_total
+
+    @cached_property
     def alpha_prior(self) -> xr.DataArray:
         return np.reciprocal(self.event_size.astype(self.raw_psi.dtype))
 
@@ -146,11 +156,11 @@ class PsiCoverage(object):
 
     @cached_property
     def raw_alpha(self) -> xr.DataArray:
-        return self.alpha_prior + self.raw_psi * self.raw_total
+        return self.alpha_prior + self.raw_coverage
 
     @cached_property
     def bootstrap_alpha(self) -> xr.DataArray:
-        return self.alpha_prior + self.bootstrap_psi * self.bootstrap_total
+        return self.alpha_prior + self.bootstrap_coverage
 
     @cached_property
     def raw_beta(self) -> xr.DataArray:
