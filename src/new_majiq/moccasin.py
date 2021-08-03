@@ -339,7 +339,11 @@ class ModelUnknownConfounders(object):
         x = cls._median_extra_dims(
             uncorrected.isel(ec_idx=original_ecidx), ec_idx="top_ec_idx"
         )
-        model_params = infer_model_params(x, passed, factors, complete=True)
+        # by definition of x, we know that all are passed
+        x_passed = xr.DataArray(True).expand_dims(
+            prefix=x.prefix, top_ec_idx=x.top_ec_idx
+        )
+        model_params = infer_model_params(x, x_passed, factors, complete=True)
         x_residuals = x - xr.dot(factors, model_params, dims="factor")
         # perform sparse SVD on x_residuals
         prefix_vectors, singular_values, ec_vectors = da.linalg.svd_compressed(
