@@ -130,8 +130,8 @@ class MatrixHdf5:
             'ES': matrix_type.exon_skipping,
             'Num. Junctions': len(junctions) - intron_ret,
             'Num. Exons': matrix_type.exon_count,
-            'Junctions coords': ';'.join('{0}-{1}'.format(start, end) for start, end in junc_coords),
-            'IR coords': ';'.join('{0}-{1}'.format(start, end) for start, end in ir_coords)
+            'Junctions coords': ';'.join('{0}-{1}'.format(start, end) for start, end, _ in junc_coords),
+            'IR coords': ';'.join('{0}-{1}'.format(start, end) for start, end, _ in ir_coords)
         })
 
         self._tsv_writer.writerow(row)
