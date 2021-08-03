@@ -19,7 +19,7 @@ _ViewConfig.__new__.__defaults__ = (None,) * len(_ViewConfig._fields)
 _TsvConfig = namedtuple('TsvConfig', ['file_name', 'voila_files', 'voila_file', 'splice_graph_file',
                                       'non_changing_threshold', 'nproc', 'threshold', 'analysis_type', 'show_all',
                                       'debug', 'probability_threshold', 'silent', 'gene_ids', 'gene_names', 'lsv_ids',
-                                      'lsv_types', 'strict_indexing'])
+                                      'lsv_types', 'strict_indexing', 'show_read_counts'])
 _TsvConfig.__new__.__defaults__ = (None,) * len(_TsvConfig._fields)
 
 # global config variable to act as the singleton instance of the config.
@@ -266,7 +266,7 @@ class TsvConfig:
                 settings[int_key] = config_parser['SETTINGS'].getint(int_key)
             for float_key in ['non_changing_threshold', 'threshold', 'probability_threshold']:
                 settings[float_key] = config_parser['SETTINGS'].getfloat(float_key)
-            for bool_key in ['show_all', 'silent', 'debug', 'strict_indexing']:
+            for bool_key in ['show_all', 'silent', 'debug', 'strict_indexing', 'show_read_counts']:
                 settings[bool_key] = config_parser['SETTINGS'].getboolean(bool_key)
 
             filters = {}

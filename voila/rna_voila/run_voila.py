@@ -114,6 +114,7 @@ tsv_parser.add_argument('--gene-ids-file', dest='gene_ids', type=check_list_file
 tsv_parser.add_argument('--gene-ids', nargs='*', default=[],
                         help='Gene IDs, separated by spaces, which should remain in the results. e.g. GENE_ID1 '
                              'GENE_ID2 ...')
+tsv_parser.add_argument('--show-read-counts', action='store_true', help=argparse.SUPPRESS)
 
 # view parser
 view_parser = argparse.ArgumentParser(add_help=False)

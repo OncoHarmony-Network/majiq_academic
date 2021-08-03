@@ -102,6 +102,12 @@ class AnalysisTypeTsv:
 
         with view_matrix() as m:
             self.group_names = m.group_names
+            _experiment_names = m.experiment_names
+            self.experiment_names = []
+            for group in _experiment_names:
+                for expname in group:
+                    if expname:
+                        self.experiment_names.append(expname)
 
         self.tab_output()
 
@@ -344,10 +350,16 @@ class PsiTsv(AnalysisTypeTsv):
             with tsv_file.open('a') as tsv:
                 writer = csv.DictWriter(tsv, fieldnames=fieldnames, delimiter='\t')
 
-                for gene_id in self.gene_ids(q, e) if q else gene_ids:
+                _gene_ids = list(self.gene_ids(q, e) if q else gene_ids)
+                work_size = len(_gene_ids)
+
+                for i, gene_id in enumerate(_gene_ids):
 
                     gene = sg.gene(gene_id)
                     chromosome = gene['chromosome']
+
+                    if i % 10 == 0:
+                        print('Processing rows [%d/%d]\r' % (i, work_size), end="")
 
                     for psi in self.lsvs(gene_id):
                         lsv_id = psi.lsv_id
@@ -356,6 +368,8 @@ class PsiTsv(AnalysisTypeTsv):
                         lsv_exons = sg.lsv_exons(gene_id, lsv_junctions)
                         ir_coords = intron_retention_coords(psi, lsv_junctions)
                         start, end = views.lsv_boundries(lsv_exons)
+
+
 
                         row = {
                             'gene_name': gene['name'],
@@ -379,6 +393,15 @@ class PsiTsv(AnalysisTypeTsv):
                             'ucsc_lsv_link': views.ucsc_href(genome, chromosome, start, end)
                         }
 
+                        config = TsvConfig()
+                        if config.show_read_counts:
+                            experiment_reads = sg.lsv_reads(gene_id, lsv_junctions)
+                            for exp in experiment_reads:
+                                if exp in self.experiment_names:
+                                    junc_reads, int_reads = experiment_reads[exp]
+                                    row[f"{exp}_junction_reads"] = semicolon(junc_reads)
+                                    row[f"{exp}_intron_retention_reads"] = semicolon(int_reads)
+
                         if lock:
                             lock.acquire()
                         log.debug('Write TSV row for {0}'.format(lsv_id))
@@ -388,10 +411,19 @@ class PsiTsv(AnalysisTypeTsv):
                     if q:
                         q.task_done()
 
+        print('                                                  \r', end="")
+
     def tab_output(self):
         fieldnames = ['gene_name', 'gene_id', 'lsv_id', 'mean_psi_per_lsv_junction', 'stdev_psi_per_lsv_junction',
                       'lsv_type', 'num_junctions', 'num_exons', 'de_novo_junctions', 'seqid',
                       'strand', 'junctions_coords', 'exons_coords', 'ir_coords', 'ucsc_lsv_link']
+
+        config = TsvConfig()
+        if config.show_read_counts:
+            for exp in self.experiment_names:
+                fieldnames.append(f"{exp}_junction_reads")
+                fieldnames.append(f"{exp}_intron_retention_reads")
+
 
         self.write_tsv(fieldnames)
 
@@ -457,9 +489,16 @@ class HeterogenTsv(AnalysisTypeTsv):
             with tsv_file.open('a') as tsv:
                 writer = csv.DictWriter(tsv, fieldnames=fieldnames, delimiter='\t')
 
-                for gene_id in self.gene_ids(q, e) if q else gene_ids:
+                _gene_ids = list(self.gene_ids(q, e) if q else gene_ids)
+                work_size = len(_gene_ids)
+
+                for i, gene_id in enumerate(_gene_ids):
+
                     gene = sg.gene(gene_id)
                     chromosome = gene['chromosome']
+
+                    if i % 10 == 0:
+                        print('Processing rows [%d/%d]\r' % (i, work_size), end="")
 
                     for het in self.lsvs(gene_id):
                         lsv_id = het.lsv_id
@@ -522,6 +561,7 @@ class HeterogenTsv(AnalysisTypeTsv):
                     if q:
                         q.task_done()
 
+        print('                                                  \r', end="")
 
 class DeltaPsiTsv(AnalysisTypeTsv):
     def __init__(self):
@@ -549,10 +589,16 @@ class DeltaPsiTsv(AnalysisTypeTsv):
             with tsv_file.open('a') as tsv:
                 writer = csv.DictWriter(tsv, fieldnames=fieldnames, delimiter='\t')
 
-                for gene_id in self.gene_ids(q, e) if q else gene_ids:
+                _gene_ids = list(self.gene_ids(q, e) if q else gene_ids)
+                work_size = len(_gene_ids)
+
+                for i, gene_id in enumerate(_gene_ids):
 
                     gene = sg.gene(gene_id)
                     chromosome = gene['chromosome']
+
+                    if i % 10 == 0:
+                        print('Processing rows [%d/%d]\r' % (i, work_size), end="")
 
                     for dpsi in self.lsvs(gene_id):
                         lsv_id = dpsi.lsv_id
@@ -602,6 +648,15 @@ class DeltaPsiTsv(AnalysisTypeTsv):
                             'ucsc_lsv_link': views.ucsc_href(genome, chromosome, start, end)
                         }
 
+                        config = TsvConfig()
+                        if config.show_read_counts:
+                            experiment_reads = sg.lsv_reads(gene_id, lsv_junctions)
+                            for exp in experiment_reads:
+                                if exp in self.experiment_names:
+                                    junc_reads, int_reads = experiment_reads[exp]
+                                    row[f"{exp}_junction_reads"] = semicolon(junc_reads)
+                                    row[f"{exp}_intron_retention_reads"] = semicolon(int_reads)
+
                         if lock:
                             lock.acquire()
                         log.debug('Write TSV row for {0}'.format(lsv_id))
@@ -610,6 +665,8 @@ class DeltaPsiTsv(AnalysisTypeTsv):
                             lock.release()
                     if q:
                         q.task_done()
+
+        print('                                                  \r', end="")
 
     def tab_output(self):
 
@@ -622,5 +679,11 @@ class DeltaPsiTsv(AnalysisTypeTsv):
                           '%s_mean_psi' % grp_names[0], '%s_mean_psi' % grp_names[1], 'lsv_type',
                           'num_junctions', 'num_exons', 'de_novo_junctions', 'seqid', 'strand', 'junctions_coords',
                           'exons_coords', 'ir_coords', 'ucsc_lsv_link']
+
+        config = TsvConfig()
+        if config.show_read_counts:
+            for exp in self.experiment_names:
+                fieldnames.append(f"{exp}_junction_reads")
+                fieldnames.append(f"{exp}_intron_retention_reads")
 
         self.write_tsv(fieldnames)
