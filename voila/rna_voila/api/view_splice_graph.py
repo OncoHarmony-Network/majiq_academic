@@ -307,7 +307,7 @@ class ViewSpliceGraph(SpliceGraph):
                 if intron_res:
                     yield intron_res[0]
 
-    def lsv_reads(self, gene_id, lsv_junctions):
+    def lsv_reads(self, gene_id, lsv_junctions, experiment_names, has_ir):
         """
         List of junction which are annotated in the db.
         :param gene_id: gene id
@@ -315,35 +315,49 @@ class ViewSpliceGraph(SpliceGraph):
         :return: generator
         """
 
-        exps = {}
+        exps = {exp: [[], []] for exp in experiment_names}
+        if has_ir:
+            ir_junction = lsv_junctions[-1]
+            lsv_junctions = lsv_junctions[:-1]
+        else:
+            ir_junction = None
+
+
 
         for junc in lsv_junctions:
             junc = tuple(map(int, junc))
-            junc_query = self.conn.execute('''
+            found_in_exps = set(exps.keys())
+            junc_query = self.conn.execute(f'''
                                 SELECT reads, experiment_name FROM junction_reads
                                 WHERE junction_gene_id=?
                                 AND junction_start=? 
                                 AND junction_end=?
-                                ''', (gene_id, junc[0], junc[1]))
+                                AND experiment_name in ({','.join(['?']*len(found_in_exps))})
+                                ''', (gene_id, junc[0], junc[1], *found_in_exps))
             junc_res = junc_query.fetchall()
             for junc in junc_res:
                 reads, exp = junc
-                if exp not in exps:
-                    exps[exp] = [[], []]
+                found_in_exps.remove(exp)
                 exps[exp][0].append(reads)
-            else:
-                intron_query = self.conn.execute('''
-                                                SELECT reads, experiment_name FROM intron_retention_reads
-                                                WHERE intron_retention_gene_id=?
-                                                AND intron_retention_start=? 
-                                                AND intron_retention_end=?
-                                                ''', (gene_id, junc[0], junc[1]))
-                intron_res = intron_query.fetchall()
-                for intron in intron_res:
-                    reads, exp = intron
-                    if exp not in exps:
-                        exps[exp] = [[], []]
-                    exps[exp][1].append(reads)
+            for exp in found_in_exps:
+                exps[exp][0].append(0)
+
+        if has_ir:
+            found_in_exps = set(exps.keys())
+            intron_query = self.conn.execute(f'''
+                                            SELECT reads, experiment_name FROM intron_retention_reads
+                                            WHERE intron_retention_gene_id=?
+                                            AND intron_retention_start=? 
+                                            AND intron_retention_end=?
+                                            AND experiment_name in ({','.join(['?']*len(found_in_exps))})
+                                            ''', (gene_id, ir_junction[0], ir_junction[1], *found_in_exps))
+            intron_res = intron_query.fetchall()
+            for intron in intron_res:
+                reads, exp = intron
+                found_in_exps.remove(exp)
+                exps[exp][1].append(reads)
+            for exp in found_in_exps:
+                exps[exp][1].append(0)
 
         return exps
 

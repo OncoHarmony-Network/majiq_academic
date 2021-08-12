@@ -395,7 +395,8 @@ class PsiTsv(AnalysisTypeTsv):
 
                         config = TsvConfig()
                         if config.show_read_counts:
-                            experiment_reads = sg.lsv_reads(gene_id, lsv_junctions)
+                            experiment_reads = sg.lsv_reads(gene_id, lsv_junctions, self.experiment_names,
+                                                            bool(ir_coords))
                             for exp in experiment_reads:
                                 if exp in self.experiment_names:
                                     junc_reads, int_reads = experiment_reads[exp]
@@ -650,7 +651,8 @@ class DeltaPsiTsv(AnalysisTypeTsv):
 
                         config = TsvConfig()
                         if config.show_read_counts:
-                            experiment_reads = sg.lsv_reads(gene_id, lsv_junctions)
+                            experiment_reads = sg.lsv_reads(gene_id, lsv_junctions, self.experiment_names,
+                                                            bool(ir_coords))
                             for exp in experiment_reads:
                                 if exp in self.experiment_names:
                                     junc_reads, int_reads = experiment_reads[exp]
