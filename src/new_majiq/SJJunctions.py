@@ -32,6 +32,10 @@ class SJJunctions(ContigRegions):
         """expose underlying internals representation of SJJunctions"""
         return self._contig_regions
 
+    def to_unstranded(self) -> "SJJunctions":
+        """Get unique junctions ignoring strand (mark all unstranded)"""
+        return SJJunctions(self._sj_junctions.to_unstranded())
+
     @property
     def sj_idx(self) -> np.ndarray:
         return self._region_idx

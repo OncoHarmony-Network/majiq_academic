@@ -1489,6 +1489,8 @@ void init_SJJunctions(pySJJunctions_t& pySJJunctions) {
         py::arg("contigs"),
         py::arg("contig_idx"), py::arg("start"), py::arg("end"),
         py::arg("strand"))
+    .def("to_unstranded", &SJJunctions::ToUnstranded,
+        "Create unstranded SJJunctions from self")
     .def_property_readonly("_contigs", &SJJunctions::parents,
         "Underlying contigs corresponding to contig_idx");
 }
