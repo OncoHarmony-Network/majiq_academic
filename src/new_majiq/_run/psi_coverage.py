@@ -39,9 +39,9 @@ def add_args(parser: argparse.ArgumentParser) -> None:
         help="Path to splicegraph to define LSVs",
     )
     parser.add_argument(
-        "lsv_coverage",
+        "psi_coverage",
         type=Path,
-        help="Path for output LSV coverage files",
+        help="Path for output psi-coverage files",
     )
     parser.add_argument(
         "--minreads",
@@ -86,8 +86,8 @@ def run(args: argparse.Namespace) -> None:
         raise ValueError(f"Was unable to find input experiment at {args.sj}")
     if not args.splicegraph.exists():
         raise ValueError(f"Was unable to find splicegraph at {args.splicegraph}")
-    if args.lsv_coverage.exists():
-        raise ValueError(f"Output path {args.lsv_coverage} already exists")
+    if args.psi_coverage.exists():
+        raise ValueError(f"Output path {args.psi_coverage} already exists")
 
     log = get_logger()
     log.info(f"Loading input splicegraph from {args.splicegraph.resolve()}")
@@ -117,8 +117,8 @@ def run(args: argparse.Namespace) -> None:
     psi_coverage = nm.PsiCoverage.from_events_coverage(
         lsv_coverage, args.minreads, args.minbins
     )
-    log.info(f"Saving coverage to {args.lsv_coverage.resolve()}")
-    psi_coverage.to_zarr(args.lsv_coverage)
+    log.info(f"Saving coverage to {args.psi_coverage.resolve()}")
+    psi_coverage.to_zarr(args.psi_coverage)
     return
 
 
