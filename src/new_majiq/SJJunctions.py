@@ -36,6 +36,10 @@ class SJJunctions(ContigRegions):
         """Get unique junctions ignoring strand (mark all unstranded)"""
         return SJJunctions(self._sj_junctions.to_unstranded())
 
+    def flip_strand(self) -> "SJJunctions":
+        """Get junctions with strands flipped in sorted order"""
+        return SJJunctions(self._sj_junctions.flip_strand())
+
     @property
     def sj_idx(self) -> np.ndarray:
         return self._region_idx

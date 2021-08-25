@@ -1491,6 +1491,8 @@ void init_SJJunctions(pySJJunctions_t& pySJJunctions) {
         py::arg("strand"))
     .def("to_unstranded", &SJJunctions::ToUnstranded,
         "Create unstranded SJJunctions from self")
+    .def("flip_strand", &SJJunctions::FlipStrand,
+        "Create SJJunctions with strands flipped in sorted order")
     .def_property_readonly("_contigs", &SJJunctions::parents,
         "Underlying contigs corresponding to contig_idx");
 }

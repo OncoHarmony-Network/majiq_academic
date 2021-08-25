@@ -70,6 +70,37 @@ class SJJunctions : public detail::Regions<SJJunction, true> {
     // construct new SJJunctions using unstranded junctions we have accumulated
     return SJJunctions(parents(), std::move(unstranded));
   }
+
+  SJJunctions FlipStrand() const {
+    // copy junctions from self
+    std::vector<SJJunction> sj_vec{begin(), end()};
+    // loop through junctions in contig stranded order
+    // operate on equivalent junctions when ignoring strand
+    for (auto base_it = sj_vec.begin(); base_it != sj_vec.end();) {
+      // flip strand while finding next junction with different coordinates (or end)
+      auto next_it = base_it;
+      for (;
+          next_it != sj_vec.end()
+          && !detail::CompareContigUnstranded<SJJunction>()(*base_it, *next_it);
+          ++next_it) {
+        // flip strand
+        switch (next_it->strand) {
+          case GeneStrandness::FORWARD:
+            next_it->strand = GeneStrandness::REVERSE;
+            break;
+          case GeneStrandness::REVERSE:
+            next_it->strand = GeneStrandness::FORWARD;
+            break;
+        }
+      }
+      // put strands in correct order
+      std::sort(base_it, next_it);
+      // update base_it to next_it
+      base_it = next_it;
+    }
+    // construct new SJJunctions using unstranded junctions we have accumulated
+    return SJJunctions(parents(), std::move(sj_vec));
+  }
 };
 
 }  // namespace majiq
