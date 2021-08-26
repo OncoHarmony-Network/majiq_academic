@@ -20,6 +20,8 @@ from .ExonConnections import ExonConnections
 # how we measure junctions and introns from BAM files
 from .SJIntronsBins import SJIntronsBins
 from .SJJunctionsBins import SJJunctionsBins
+from .SJIntrons import SJIntrons
+from .SJJunctions import SJJunctions
 
 # coverage on splicegraph or events
 from .SpliceGraphReads import SpliceGraphReads, MultiSpliceGraphReads

@@ -9,6 +9,7 @@ Author: Joseph K Aicher
 import argparse
 import new_majiq as nm
 import new_majiq.constants as constants
+import scipy.stats
 
 from new_majiq.logger import get_logger
 from new_majiq._run._majiq_args import check_nonnegative_factory
@@ -42,10 +43,11 @@ def add_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
         "--strandness",
         type=str,
-        default="NONE",
-        choices=("NONE", "FORWARD", "REVERSE"),
+        default="AUTO",
+        choices=("AUTO", "NONE", "FORWARD", "REVERSE"),
         help="Strandness of input BAM (default: %(default)s)",
     )
+    # TODO configure automatic strand features
     # TODO (enable skipping of parsing introns)
     parser.add_argument(
         "--nthreads",
@@ -91,7 +93,11 @@ def run(args: argparse.Namespace) -> None:
         raise ValueError(f"Output path {args.sj} already exists")
     log = get_logger()
 
-    strandness = nm.ExperimentStrandness(ord(args.strandness[0]))
+    if args.strandness == "AUTO":
+        # we run as forward strand, but we will correct later
+        strandness = nm.ExperimentStrandness.FORWARD
+    else:
+        strandness = nm.ExperimentStrandness(ord(args.strandness[0]))
     log.info(f"Loading splicegraph ({args.splicegraph.resolve()})")
     sg = nm.SpliceGraph.from_zarr(args.splicegraph)
     log.info(f"Parsing alignments from {args.bam.resolve()} for junctions")
@@ -113,6 +119,40 @@ def run(args: argparse.Namespace) -> None:
                 " really want"
             )
             raise RuntimeError("Contigs from splicegraph and BAM are disjoint")
+    if args.strandness == "AUTO":
+        # TODO put into its own function, handle memory better
+        log.info("Automatically detecting strandedness")
+        empty_gene_introns = nm.GeneIntrons.from_genes(sg.genes)
+        empty_sj_introns = nm.SJIntronsBins.from_regions(
+            nm.SJIntrons.from_contigs(sj_junctions.regions.contigs),
+            sj_junctions.total_bins,
+            sj_junctions.original_path,
+            sj_junctions.original_version,
+            sj_junctions.original_time,
+        )
+        forward_reads = nm.SpliceGraphReads.from_connections_and_sj(
+            empty_gene_introns, sg.junctions, empty_sj_introns, sj_junctions
+        ).junctions_reads.sum()
+        sj_reversed = sj_junctions.flip_strand()
+        reverse_reads = nm.SpliceGraphReads.from_connections_and_sj(
+            empty_gene_introns, sg.junctions, empty_sj_introns, sj_reversed
+        ).junctions_reads.sum()
+        log.info(f"If strand specific, {forward_reads = } vs {reverse_reads = }")
+        stranded_pvalue = 2 * scipy.stats.binom.cdf(
+            min(forward_reads, reverse_reads), forward_reads + reverse_reads, 0.5
+        )
+        log.info(f"Under naive model for unstranded data, this has p-value {stranded_pvalue:.3e}")
+        if stranded_pvalue > 1e-8:  # XXX hardcoded pvalue cutoff
+            # not stranded
+            log.info("Inferred strand: NONE (unstranded)")
+            sj_junctions = sj_junctions.to_unstranded()
+        elif reverse_reads > forward_reads:
+            # more in reverse, so should be reverse strand
+            log.info("Inferred strand: REVERSE")
+            sj_junctions = sj_reversed
+        else:
+            log.info("Inferred strand: FORWARD")
+        del sj_reversed
     log.info("Using gene introns/exons to define regions for intronic coverage")
     gene_introns: nm.GeneIntrons = sg.introns
     exons: nm.Exons

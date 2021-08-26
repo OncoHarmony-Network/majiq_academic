@@ -182,7 +182,7 @@ class SJIntronsBins(SJBinsReads):
         return
 
     @classmethod
-    def from_sjintrons(
+    def from_regions(
         cls,
         introns: SJIntrons,
         total_bins: int,
