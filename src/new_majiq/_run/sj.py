@@ -9,7 +9,7 @@ Author: Joseph K Aicher
 import argparse
 import new_majiq as nm
 import new_majiq.constants as constants
-import scipy.stats
+import numpy as np
 
 from new_majiq.logger import get_logger
 from new_majiq._run._majiq_args import check_nonnegative_factory
@@ -46,6 +46,30 @@ def add_args(parser: argparse.ArgumentParser) -> None:
         default="AUTO",
         choices=("AUTO", "NONE", "FORWARD", "REVERSE"),
         help="Strandness of input BAM (default: %(default)s)",
+    )
+    parser.add_argument(
+        "--auto-minreads",
+        type=check_nonnegative_factory(int, reject_zero=True),
+        default=10,
+        help="For automatic detection of strand. Only consider evidence from"
+        " splicegraph junctions with at least this many total (unstranded) reads"
+        " (default: %(default)s)",
+    )
+    parser.add_argument(
+        "--auto-minjunctions",
+        type=check_nonnegative_factory(int, reject_zero=True),
+        default=100,
+        help="For automatic detection of strand. Infer unstranded if the number"
+        " of splicegraph junctions with sufficient reads is less than this argument"
+        " (default: %(default)s)",
+    )
+    parser.add_argument(
+        "--auto-mediantolerance",
+        type=check_nonnegative_factory(float, reject_zero=True),
+        default=0.2,
+        help="For automatic detection of strand. Infer unstranded if the median"
+        " proportion over junctions of forward strand reads vs all reads"
+        " deviates from 0.5 by only this amount (default: %(default)s)",
     )
     # TODO configure automatic strand features
     # TODO (enable skipping of parsing introns)
@@ -132,26 +156,34 @@ def run(args: argparse.Namespace) -> None:
         )
         forward_reads = nm.SpliceGraphReads.from_connections_and_sj(
             empty_gene_introns, sg.junctions, empty_sj_introns, sj_junctions
-        ).junctions_reads.sum()
+        ).junctions_reads
         sj_reversed = sj_junctions.flip_strand()
         reverse_reads = nm.SpliceGraphReads.from_connections_and_sj(
             empty_gene_introns, sg.junctions, empty_sj_introns, sj_reversed
-        ).junctions_reads.sum()
-        log.info(f"If strand specific, {forward_reads = } vs {reverse_reads = }")
-        stranded_pvalue = 2 * scipy.stats.binom.cdf(
-            min(forward_reads, reverse_reads), forward_reads + reverse_reads, 0.5
+        ).junctions_reads
+        total_reads = forward_reads + reverse_reads
+        with np.errstate(invalid="ignore", divide="ignore"):
+            strand_ratio = (forward_reads / total_reads)[total_reads >= args.auto_minreads]
+        median_ratio = np.median(strand_ratio)
+        log.info(
+            "Median proportion of forward strand reads vs total is"
+            f" {median_ratio:.1%} from {len(strand_ratio)} junctions"
+            f" (minjunctions = {args.auto_minjunctions},"
+            f" tolerance from 50% = {args.auto_mediantolerance})"
         )
-        log.info(f"Under naive model for unstranded data, this has p-value {stranded_pvalue:.3e}")
-        if stranded_pvalue > 1e-8:  # XXX hardcoded pvalue cutoff
-            # not stranded
+        if (
+            len(strand_ratio) < args.auto_minjunctions
+            or np.abs(median_ratio - 0.5) < args.auto_mediantolerance
+        ):
             log.info("Inferred strand: NONE (unstranded)")
             sj_junctions = sj_junctions.to_unstranded()
-        elif reverse_reads > forward_reads:
+        elif median_ratio < 0.5:
             # more in reverse, so should be reverse strand
             log.info("Inferred strand: REVERSE")
             sj_junctions = sj_reversed
         else:
             log.info("Inferred strand: FORWARD")
+        # XXX update strandness
         del sj_reversed
     log.info("Using gene introns/exons to define regions for intronic coverage")
     gene_introns: nm.GeneIntrons = sg.introns
