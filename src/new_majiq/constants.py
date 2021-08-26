@@ -49,6 +49,10 @@ DEFAULT_BUILD_GFF3TYPES: Final[GFF3Types] = _default_gff3_types()
 DEFAULT_BAM_STRANDNESS: Final[ExperimentStrandness] = ExperimentStrandness.NONE
 DEFAULT_BAM_NTHREADS: Final[int] = 1
 DEFAULT_BAM_ALLOW_DISJOINT_CONTIGS: Final[bool] = False
+# how we detect strandness
+DEFAULT_BAM_STRAND_MINREADS: Final[int] = 10
+DEFAULT_BAM_STRAND_MINJUNCTIONS: Final[int] = 100
+DEFAULT_BAM_STRAND_MINDEVIATION: Final[float] = 0.2
 
 DEFAULT_BUILD_MINREADS: Final[int] = 3
 DEFAULT_BUILD_MINDENOVO: Final[int] = 5

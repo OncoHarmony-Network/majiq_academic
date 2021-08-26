@@ -9,8 +9,8 @@ Author: Joseph K Aicher
 import argparse
 import new_majiq as nm
 import new_majiq.constants as constants
-import numpy as np
 
+from new_majiq.StrandDetection import detect_strand
 from new_majiq.logger import get_logger
 from new_majiq._run._majiq_args import check_nonnegative_factory
 from pathlib import Path
@@ -50,7 +50,7 @@ def add_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
         "--auto-minreads",
         type=check_nonnegative_factory(int, reject_zero=True),
-        default=10,
+        default=constants.DEFAULT_BAM_STRAND_MINREADS,
         help="For automatic detection of strand. Only consider evidence from"
         " splicegraph junctions with at least this many total (unstranded) reads"
         " (default: %(default)s)",
@@ -58,7 +58,7 @@ def add_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
         "--auto-minjunctions",
         type=check_nonnegative_factory(int, reject_zero=True),
-        default=100,
+        default=constants.DEFAULT_BAM_STRAND_MINJUNCTIONS,
         help="For automatic detection of strand. Infer unstranded if the number"
         " of splicegraph junctions with sufficient reads is less than this argument"
         " (default: %(default)s)",
@@ -66,7 +66,7 @@ def add_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
         "--auto-mediantolerance",
         type=check_nonnegative_factory(float, reject_zero=True),
-        default=0.2,
+        default=constants.DEFAULT_BAM_STRAND_MINDEVIATION,
         help="For automatic detection of strand. Infer unstranded if the median"
         " proportion over junctions of forward strand reads vs all reads"
         " deviates from 0.5 by only this amount (default: %(default)s)",
@@ -144,47 +144,15 @@ def run(args: argparse.Namespace) -> None:
             )
             raise RuntimeError("Contigs from splicegraph and BAM are disjoint")
     if args.strandness == "AUTO":
-        # TODO put into its own function, handle memory better
-        log.info("Automatically detecting strandedness")
-        empty_gene_introns = nm.GeneIntrons.from_genes(sg.genes)
-        empty_sj_introns = nm.SJIntronsBins.from_regions(
-            nm.SJIntrons.from_contigs(sj_junctions.regions.contigs),
-            sj_junctions.total_bins,
-            sj_junctions.original_path,
-            sj_junctions.original_version,
-            sj_junctions.original_time,
+        sj_junctions, strandness = detect_strand(
+            sj_junctions,
+            strandness,
+            sg,
+            args.auto_minreads,
+            args.auto_minjunctions,
+            args.auto_mediantolerance,
         )
-        forward_reads = nm.SpliceGraphReads.from_connections_and_sj(
-            empty_gene_introns, sg.junctions, empty_sj_introns, sj_junctions
-        ).junctions_reads
-        sj_reversed = sj_junctions.flip_strand()
-        reverse_reads = nm.SpliceGraphReads.from_connections_and_sj(
-            empty_gene_introns, sg.junctions, empty_sj_introns, sj_reversed
-        ).junctions_reads
-        total_reads = forward_reads + reverse_reads
-        with np.errstate(invalid="ignore", divide="ignore"):
-            strand_ratio = (forward_reads / total_reads)[total_reads >= args.auto_minreads]
-        median_ratio = np.median(strand_ratio)
-        log.info(
-            "Median proportion of forward strand reads vs total is"
-            f" {median_ratio:.1%} from {len(strand_ratio)} junctions"
-            f" (minjunctions = {args.auto_minjunctions},"
-            f" tolerance from 50% = {args.auto_mediantolerance})"
-        )
-        if (
-            len(strand_ratio) < args.auto_minjunctions
-            or np.abs(median_ratio - 0.5) < args.auto_mediantolerance
-        ):
-            log.info("Inferred strand: NONE (unstranded)")
-            sj_junctions = sj_junctions.to_unstranded()
-        elif median_ratio < 0.5:
-            # more in reverse, so should be reverse strand
-            log.info("Inferred strand: REVERSE")
-            sj_junctions = sj_reversed
-        else:
-            log.info("Inferred strand: FORWARD")
-        # XXX update strandness
-        del sj_reversed
+        log.info(f"Inferred strandness: {strandness.name}")
     log.info("Using gene introns/exons to define regions for intronic coverage")
     gene_introns: nm.GeneIntrons = sg.introns
     exons: nm.Exons
