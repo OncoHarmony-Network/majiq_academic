@@ -62,8 +62,8 @@ class SJJunctions : public detail::Regions<SJJunction, true> {
           // first junction where base < x (since ignoring strand)
           return detail::CompareContigUnstranded<SJJunction>()(base, x); });
       // push current base junction into unstranded, set strand to ambiguous
-      unstranded.push_back(*base_it);
-      unstranded.back().strand = GeneStrandness::AMBIGUOUS;
+      unstranded.emplace_back(
+          base_it->contig, base_it->coordinates, GeneStrandness::AMBIGUOUS);
       // update base_it to next_it
       base_it = next_it;
     }
@@ -72,29 +72,25 @@ class SJJunctions : public detail::Regions<SJJunction, true> {
   }
 
   SJJunctions FlipStrand() const {
-    // copy junctions from self
-    std::vector<SJJunction> sj_vec{begin(), end()};
-    // loop through junctions in contig stranded order
-    // operate on equivalent junctions when ignoring strand
+    // copy junctions from self, flipping strand
+    std::vector<SJJunction> sj_vec;
+    sj_vec.reserve(size());
+    std::transform(begin(), end(), std::back_inserter(sj_vec),
+        [](const SJJunction& x) {
+        return SJJunction{x.contig, x.coordinates, FlipGeneStrand(x.strand)}; });
+    // this may not be in contig stranded order (because strands are flipped)
+    // we know that it's in contig unstranded order, so we iterate to find
+    // intervals [base_it, next_it) that are equivalent other than strand, then
+    // sort by strand
     for (auto base_it = sj_vec.begin(); base_it != sj_vec.end();) {
-      // flip strand while finding next junction with different coordinates (or end)
-      auto next_it = base_it;
-      for (;
-          next_it != sj_vec.end()
-          && !detail::CompareContigUnstranded<SJJunction>()(*base_it, *next_it);
-          ++next_it) {
-        // flip strand
-        switch (next_it->strand) {
-          case GeneStrandness::FORWARD:
-            next_it->strand = GeneStrandness::REVERSE;
-            break;
-          case GeneStrandness::REVERSE:
-            next_it->strand = GeneStrandness::FORWARD;
-            break;
-        }
-      }
-      // put strands in correct order
-      std::sort(base_it, next_it);
+      // get next junction that's different when ignoring strand
+      auto next_it = std::find_if(std::next(base_it), sj_vec.end(),
+          [&base = *base_it](const SJJunction& x) {
+          // first junction where base < x (since ignoring strand)
+          return detail::CompareContigUnstranded<SJJunction>()(base, x); });
+      // sort [base_it, next_it) by strand
+      std::sort(base_it, next_it, [](const SJJunction& x, const SJJunction& y) {
+          return x.strand < y.strand; });
       // update base_it to next_it
       base_it = next_it;
     }
