@@ -55,6 +55,15 @@ class SJJunctionsBins(SJBinsReads):
             self.original_time,
         )
 
+    def to_unstranded(self) -> "SJJunctionsBins":
+        """Convert stranded junction reads to unstranded junctions
+        """
+        return self.project_reads(self.regions.to_unstranded())
+
+    def flip_strand(self) -> "SJJunctionsBins":
+        """Flip +/- strand reads to -/+ strand reads"""
+        return self.project_reads(self.regions.flip_strand(), flip_strand = True)
+
     @property
     def original_path(self) -> str:
         return self._original_path
