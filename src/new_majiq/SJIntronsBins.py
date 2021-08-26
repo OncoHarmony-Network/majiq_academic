@@ -35,9 +35,7 @@ class SJIntronsBins(SJBinsReads):
         original_version: str,
         original_time: str,
     ):
-        super().__init__(
-            sj_intronsbins, original_path, original_version, original_time
-        )
+        super().__init__(sj_intronsbins, original_path, original_version, original_time)
         return
 
     @property

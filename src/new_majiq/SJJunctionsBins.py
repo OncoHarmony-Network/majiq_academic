@@ -18,7 +18,6 @@ from new_majiq.internals import ExperimentStrandness
 from new_majiq.version import version
 
 from typing import (
-    Final,
     Union,
 )
 from pathlib import Path
@@ -55,13 +54,12 @@ class SJJunctionsBins(SJBinsReads):
         )
 
     def to_unstranded(self) -> "SJJunctionsBins":
-        """Convert stranded junction reads to unstranded junctions
-        """
+        """Convert stranded junction reads to unstranded junctions"""
         return self.project_reads(self.regions.to_unstranded())
 
     def flip_strand(self) -> "SJJunctionsBins":
         """Flip +/- strand reads to -/+ strand reads"""
-        return self.project_reads(self.regions.flip_strand(), flip_strand = True)
+        return self.project_reads(self.regions.flip_strand(), flip_strand=True)
 
     @property
     def sjb_idx(self):
