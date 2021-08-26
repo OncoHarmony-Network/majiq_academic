@@ -15,9 +15,30 @@ from numpy.typing import ArrayLike
 
 
 class SJBinsReads(object):
-    def __init__(self, sj_binsreads):
+    def __init__(
+        self,
+        sj_binsreads,
+        original_path: str,
+        original_version: str,
+        original_time: str,
+    ):
         self._sj_binsreads: Final = sj_binsreads
+        self._original_path: Final[str] = original_path
+        self._original_version: Final[str] = original_version
+        self._original_time: Final[str] = original_time
         return
+
+    @property
+    def original_path(self) -> str:
+        return self._original_path
+
+    @property
+    def original_version(self) -> str:
+        return self._original_version
+
+    @property
+    def original_time(self) -> str:
+        return self._original_time
 
     def __eq__(self, other) -> bool:
         try:

@@ -21,6 +21,7 @@ from new_majiq.version import version
 
 from typing import (
     Final,
+    Optional,
     Union,
 )
 from pathlib import Path
@@ -34,23 +35,10 @@ class SJIntronsBins(SJBinsReads):
         original_version: str,
         original_time: str,
     ):
-        super().__init__(sj_intronsbins)
-        self._original_path: Final[str] = original_path
-        self._original_version: Final[str] = original_version
-        self._original_time: Final[str] = original_time
+        super().__init__(
+            sj_intronsbins, original_path, original_version, original_time
+        )
         return
-
-    @property
-    def original_path(self) -> str:
-        return self._original_path
-
-    @property
-    def original_version(self) -> str:
-        return self._original_version
-
-    @property
-    def original_time(self) -> str:
-        return self._original_time
 
     @property
     def _sj_intronsbins(self) -> _SJIntronsBins:
@@ -192,6 +180,31 @@ class SJIntronsBins(SJBinsReads):
             path, mode="a", group=constants.NC_SJINTRONSBINS
         )
         return
+
+    @classmethod
+    def from_sjintrons(
+        cls,
+        introns: SJIntrons,
+        total_bins: int,
+        original_path: str = "<none>",
+        original_version: str = version(),
+        original_time: Optional[str] = None,
+    ) -> "SJIntronsBins":
+        """Empty SJIntronsBins matched to input introns"""
+        if original_time is None:
+            original_time = str(np.datetime64("now"))
+        return SJIntronsBins(
+            _SJIntronsBins(
+                introns._sj_introns,
+                [],
+                [],
+                np.zeros(1 + len(introns), dtype=np.uint64),
+                total_bins,
+            ),
+            original_path=original_path,
+            original_version=original_version,
+            original_time=original_time,
+        )
 
     @classmethod
     def from_zarr(cls, path: Union[str, Path]) -> "SJIntronsBins":

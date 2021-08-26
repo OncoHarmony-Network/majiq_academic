@@ -94,6 +94,11 @@ class GeneIntrons(GeneConnections):
         return
 
     @classmethod
+    def from_genes(cls, genes: Genes) -> "GeneIntrons":
+        """Empty introns matched to specified genes"""
+        return GeneIntrons(_GeneIntrons(genes._genes, [], [], [], [], [], []))
+
+    @classmethod
     def from_zarr(
         self,
         path: Union[str, Path],

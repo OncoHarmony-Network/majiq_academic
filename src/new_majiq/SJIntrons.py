@@ -77,6 +77,11 @@ class SJIntrons(ContigRegions):
         )
 
     @classmethod
+    def from_contigs(cls, contigs: Contigs) -> "SJIntrons":
+        """Empty SJIntrons linked to specified contigs"""
+        return SJIntrons(_SJIntrons(contigs._contigs, [], [], [], [], []))
+
+    @classmethod
     def from_zarr(
         cls,
         path: Union[str, Path],

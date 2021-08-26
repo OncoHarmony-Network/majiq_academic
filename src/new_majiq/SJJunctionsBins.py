@@ -32,10 +32,9 @@ class SJJunctionsBins(SJBinsReads):
         original_version: str,
         original_time: str,
     ):
-        super().__init__(sj_junctionsbins)
-        self._original_path: Final[str] = original_path
-        self._original_version: Final[str] = original_version
-        self._original_time: Final[str] = original_time
+        super().__init__(
+            sj_junctionsbins, original_path, original_version, original_time
+        )
         return
 
     @property
@@ -63,18 +62,6 @@ class SJJunctionsBins(SJBinsReads):
     def flip_strand(self) -> "SJJunctionsBins":
         """Flip +/- strand reads to -/+ strand reads"""
         return self.project_reads(self.regions.flip_strand(), flip_strand = True)
-
-    @property
-    def original_path(self) -> str:
-        return self._original_path
-
-    @property
-    def original_version(self) -> str:
-        return self._original_version
-
-    @property
-    def original_time(self) -> str:
-        return self._original_time
 
     @property
     def sjb_idx(self):
