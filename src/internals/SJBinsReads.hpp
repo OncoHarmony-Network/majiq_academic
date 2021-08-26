@@ -243,6 +243,8 @@ class SJRegionBinReads {
 class SJJunctionsBins
     : public detail::SJRegionBinReads<SJJunctions, junction_ct_t> {
   using BaseT = detail::SJRegionBinReads<SJJunctions, junction_ct_t>;
+  using BinReadsT = BinReads<junction_ct_t>;
+  using ReadsT = std::vector<BinReadsT>;
 
  public:
   junction_pos_t weight(size_t i) const { return total_bins(); }
@@ -269,7 +271,7 @@ class SJJunctionsBins
 
   SJJunctionsBins(
       const std::shared_ptr<SJJunctions>& junctions,
-      std::vector<BinReads<junction_ct_t>>&& reads,
+      ReadsT&& reads,
       std::vector<size_t>&& offsets,
       junction_pos_t num_positions)
       : BaseT{junctions, std::move(reads), std::move(offsets), num_positions} {
@@ -278,6 +280,119 @@ class SJJunctionsBins
   SJJunctionsBins(SJJunctionsBins&& x) = default;
   SJJunctionsBins& operator=(const SJJunctionsBins& x) = delete;
   SJJunctionsBins& operator=(SJJunctionsBins&& x) = delete;
+
+  /**
+   * Project reads from self to different SJJunctions regions
+   */
+  SJJunctionsBins ProjectReads(
+      const std::shared_ptr<SJJunctions>& dst_junctions_ptr) const {
+    // junctions we come from and are projecting to
+    const SJJunctions& src_junctions = *regions();
+    const SJJunctions& dst_junctions = *dst_junctions_ptr;
+
+    // handle non-matching contigs
+    const Contigs& src_contigs = *(src_junctions.parents());
+    const Contigs& dst_contigs = *(dst_junctions.parents());
+
+    // initialize new reads
+    ReadsT new_reads;
+
+    // initialize new offsets for junction reads
+    std::vector<size_t> new_offsets;
+    new_offsets.reserve(1 + dst_junctions.size());
+    new_offsets.push_back(0);  // offsets always start at 0
+
+    // loop over contigs with same id
+    for (size_t dst_contig_idx = 0;
+        dst_contig_idx < dst_contigs.size(); ++dst_contig_idx) {
+      // get iterators to dst junctions
+      auto dst_it = dst_junctions.begin_parent(dst_contig_idx);
+      const auto dst_it_end = dst_junctions.end_parent(dst_contig_idx);
+      if (dst_it == dst_it_end) { continue; }  // nothing for this contig
+
+      // get matching contig from src
+      const auto opt_src_contig_idx = src_contigs.safe_idx(
+          dst_contigs.get(dst_contig_idx));
+      if (!opt_src_contig_idx.has_value()) {
+        // remaining offsets match current offset
+        new_offsets.resize(new_offsets.size() + (dst_it_end - dst_it), new_reads.size());
+        continue;
+      }
+      const size_t& src_contig_idx = *opt_src_contig_idx;
+
+      // get iterator over src junctions for this contig
+      auto src_it = src_junctions.begin_parent(src_contig_idx);
+      const auto src_it_end = src_junctions.end_parent(dst_contig_idx);
+      if (src_it == src_it_end) {
+        // remaining offsets match current offset
+        new_offsets.resize(new_offsets.size() + (dst_it_end - dst_it), new_reads.size());
+        continue;
+      }
+
+      // iterate over dst junctions, accumulate matching src junctions
+      for (; dst_it != dst_it_end; ++dst_it) {
+        // update src_it to first with coordinates no less than dst_it
+        src_it = std::find_if(src_it, src_it_end,
+            [&dst_coordinates = dst_it->coordinates](const SJJunction& src) {
+            return !(src.coordinates < dst_coordinates); });
+        if (src_it == src_it_end) {
+          // there will be no more matches
+          new_offsets.resize(new_offsets.size() + (dst_it_end - dst_it), new_reads.size());
+          break;
+        }
+        // get end of potential matches in src
+        const auto src_it_match_end = std::find_if(src_it, src_it_end,
+            [&dst_coordinates = dst_it->coordinates](const SJJunction& src) {
+            return dst_coordinates < src.coordinates; });
+        // they only match if they match strand appropriately...
+        // get indexes of matching junctions
+        std::vector<std::size_t> src_idx_matches;
+        for (auto src_it_match = src_it; src_it_match != src_it_match_end; ++src_it_match) {
+          // match if dst junction has ambiguous strand or if strands match
+          if (dst_it->strand == GeneStrandness::AMBIGUOUS
+              || dst_it->strand == src_it_match->strand) {
+            src_idx_matches.push_back(src_it_match - src_junctions.begin());
+          }
+        }
+        // copy over bin reads, aggregating reads with matching bins
+        if (src_idx_matches.size() == 1) {
+          // since there's only one match, we can directly copy over reads
+          std::copy(
+              begin_region(src_idx_matches[0]), end_region(src_idx_matches[0]),
+              std::back_inserter(new_reads));
+        } else if (src_idx_matches.size() > 1) {
+          // since we have multiple matches, we have to aggregate matching bins
+          ReadsT matched_reads;
+          for (auto i : src_idx_matches) {
+            std::copy(begin_region(i), end_region(i),
+                std::back_inserter(matched_reads));
+          }
+          // to facilitate matching bins, sort by bin_idx
+          std::sort(matched_reads.begin(), matched_reads.end(),
+              [](const BinReadsT& x, const BinReadsT& y) { return x.bin_idx < y.bin_idx; });
+          // combine duplicates, add to new_reads
+          size_t added_bins = 0;  // keep track of how many bins we added
+          for (auto matched_reads_it = matched_reads.begin();
+              matched_reads_it != matched_reads.end(); ++matched_reads_it) {
+            if (matched_reads_it == matched_reads.begin()
+                || matched_reads_it->bin_idx != new_reads.back().bin_idx) {
+              // we haven't seen this bin idx before
+              new_reads.push_back(*matched_reads_it);
+              ++added_bins;
+            } else {
+              // we have seen this bin_idx, so add it to the last one we added
+              new_reads.back().bin_reads += matched_reads_it->bin_reads;
+            }
+          }
+          // added bins are in bin_idx order, but we want bin_reads order
+          std::sort(new_reads.end() - added_bins, new_reads.end());
+        }
+        new_offsets.push_back(new_reads.size());
+      }  // loop over dst junctions for current dst contig
+    }  // loop over dst contigs
+    return SJJunctionsBins(dst_junctions_ptr, std::move(new_reads),
+        std::move(new_offsets), total_bins());
+  }
 };
 
 namespace detail {

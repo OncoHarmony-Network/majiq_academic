@@ -42,6 +42,15 @@ class SJJunctionsBins(SJBinsReads):
     def _sj_junctionsbins(self) -> _SJJunctionsBins:
         return self._sj_binsreads
 
+    def project_reads(self, new_junctions: SJJunctions) -> "SJJunctionsBins":
+        """Project reads from self onto matching junctions in new_junctions"""
+        return SJJunctionsBins(
+            self._sj_junctionsbins.project_reads(new_junctions._sj_junctions),
+            self.original_path,
+            self.original_version,
+            self.original_time,
+        )
+
     @property
     def original_path(self) -> str:
         return self._original_path

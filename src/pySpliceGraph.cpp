@@ -1500,6 +1500,8 @@ void init_SJJunctionsBins(pySJJunctionsBins_t& pySJJunctionsBins) {
   using majiq::SJJunctionsBins;
   define_sjbins_properties(pySJJunctionsBins);
   pySJJunctionsBins
+    .def("project_reads", &SJJunctionsBins::ProjectReads,
+        "Project reads to a different set of SJJunctions")
     .def_static("from_bam", &SJJunctionsBins::FromBam,
         R"pbdoc(
         Load junctions and per-position counts for an aligned BAM file
