@@ -77,19 +77,16 @@ def detect_strand(
         return DetectedSJStrand(sjbins.to_unstranded(), ExperimentStrandness.NONE)
     # compute ratio
     median_ratio = np.median(ratios)
-    if np.abs(median_ratio - 0.5) < mindeviation:
-        log.info(
-            f"Median ratio of original stranded reads vs total is {median_ratio},"
-            f" which is within {mindeviation} of 0.5"
-        )
+    deviation = np.abs(median_ratio - 0.5)
+    log.info(
+        f"Median ratio of original stranded reads vs total is {median_ratio:.1%}"
+        f" (deviates by {deviation:.1%} from unstranded expectation)"
+        f" from {len(ratios)} junctions with at least {minreads} reads"
+    )
+    if deviation < mindeviation:
+        # not far enough from 0.5 to justify strandedness
         return DetectedSJStrand(sjbins.to_unstranded(), ExperimentStrandness.NONE)
-    else:
-        log.info(
-            f"Median ratio of original stranded reads vs total is {median_ratio},"
-            f" which is more than {mindeviation} from 0.5"
-        )
-    # at this point, we know it's stranded, so we flip if median_ratio < 0.5
-    if median_ratio < 0.5:
+    elif median_ratio < 0.5:
         # we need to flip it
         return DetectedSJStrand(
             updated_sjbins=sjbins_flipped,
@@ -100,5 +97,5 @@ def detect_strand(
             ),
         )
     else:
-        # no flipping it
+        # current strandedness is appropriate
         return DetectedSJStrand(sjbins, strandness)
