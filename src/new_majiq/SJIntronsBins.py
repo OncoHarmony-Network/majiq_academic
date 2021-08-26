@@ -18,9 +18,9 @@ from new_majiq.GeneIntrons import GeneIntrons
 from new_majiq.internals import SJIntronsBins as _SJIntronsBins
 from new_majiq.internals import ExperimentStrandness
 from new_majiq.version import version
+from new_majiq.logger import get_logger
 
 from typing import (
-    Final,
     Optional,
     Union,
 )
@@ -31,11 +31,14 @@ class SJIntronsBins(SJBinsReads):
     def __init__(
         self,
         sj_intronsbins: _SJIntronsBins,
+        strandness: ExperimentStrandness,
         original_path: str,
         original_version: str,
         original_time: str,
     ):
-        super().__init__(sj_intronsbins, original_path, original_version, original_time)
+        super().__init__(
+            sj_intronsbins, strandness, original_path, original_version, original_time
+        )
         return
 
     @property
@@ -72,6 +75,7 @@ class SJIntronsBins(SJBinsReads):
             },
             {
                 "total_bins": self.total_bins,
+                "strandness": self.strandness.name,
                 "original_path": self.original_path,
                 "original_version": self.original_version,
                 "original_time": self.original_time,
@@ -122,7 +126,6 @@ class SJIntronsBins(SJBinsReads):
         nthreads: int
             Number of threads to use to read in BAM file
         """
-        # TODO: save/serialize strandness
         # TODO: save information about splicegraph used
         path = str(Path(path).resolve())
         original_version = version()
@@ -136,6 +139,7 @@ class SJIntronsBins(SJBinsReads):
                 strandness,
                 nthreads,
             ),
+            strandness,
             path,
             original_version,
             original_time,
@@ -184,6 +188,7 @@ class SJIntronsBins(SJBinsReads):
         cls,
         introns: SJIntrons,
         total_bins: int,
+        strandness: ExperimentStrandness = ExperimentStrandness.NONE,
         original_path: str = "<none>",
         original_version: str = version(),
         original_time: Optional[str] = None,
@@ -199,9 +204,10 @@ class SJIntronsBins(SJBinsReads):
                 np.zeros(1 + len(introns), dtype=np.uint64),
                 total_bins,
             ),
-            original_path=original_path,
-            original_version=original_version,
-            original_time=original_time,
+            strandness,
+            original_path,
+            original_version,
+            original_time,
         )
 
     @classmethod
@@ -209,6 +215,14 @@ class SJIntronsBins(SJBinsReads):
         """Load SJIntronsBins from zarr format"""
         regions = SJIntrons.from_zarr(path)
         with xr.open_zarr(path, group=constants.NC_SJINTRONSBINS) as df:
+            try:
+                strandness = ExperimentStrandness(ord(df.strandness[0]))
+            except AttributeError:
+                get_logger().warning(
+                    f"SJJunctionsBins in {path} did not save strandness"
+                    " -> defaulting to NONE"
+                )
+                strandness = ExperimentStrandness.NONE
             return SJIntronsBins(
                 _SJIntronsBins(
                     regions._sj_introns,
@@ -217,6 +231,7 @@ class SJIntronsBins(SJBinsReads):
                     df._offsets.values,
                     df.total_bins,
                 ),
+                strandness,
                 df.original_path,
                 df.original_version,
                 df.original_time,

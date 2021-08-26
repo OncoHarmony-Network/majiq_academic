@@ -44,7 +44,12 @@ def add_args(parser: argparse.ArgumentParser) -> None:
         "--strandness",
         type=str,
         default="AUTO",
-        choices=("AUTO", "NONE", "FORWARD", "REVERSE"),
+        choices=(
+            "AUTO",
+            nm.ExperimentStrandness.NONE.name,
+            nm.ExperimentStrandness.FORWARD.name,
+            nm.ExperimentStrandness.REVERSE.name,
+        ),
         help="Strandness of input BAM (default: %(default)s)",
     )
     parser.add_argument(
@@ -144,15 +149,15 @@ def run(args: argparse.Namespace) -> None:
             )
             raise RuntimeError("Contigs from splicegraph and BAM are disjoint")
     if args.strandness == "AUTO":
-        sj_junctions, strandness = detect_strand(
+        log.info("Inferring strandness comparing counts on splicegraph junctions")
+        sj_junctions = detect_strand(
             sj_junctions,
-            strandness,
             sg,
             args.auto_minreads,
             args.auto_minjunctions,
             args.auto_mediantolerance,
         )
-        log.info(f"Inferred strandness: {strandness.name}")
+        log.info(f"Inferred strandness: {sj_junctions.strandness.name}")
     log.info("Using gene introns/exons to define regions for intronic coverage")
     gene_introns: nm.GeneIntrons = sg.introns
     exons: nm.Exons

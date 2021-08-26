@@ -20,33 +20,18 @@ from new_majiq.GeneIntrons import GeneIntrons
 from new_majiq.internals import ExperimentStrandness
 
 
-from typing import (
-    NamedTuple,
-)
-
-
-class DetectedSJStrand(NamedTuple):
-    updated_sjbins: SJJunctionsBins
-    updated_strandness: ExperimentStrandness
-
-
 def detect_strand(
     sjbins: SJJunctionsBins,
-    strandness: ExperimentStrandness,
     sg: SpliceGraph,
     minreads: int = constants.DEFAULT_BAM_STRAND_MINREADS,
     minjunctions: int = constants.DEFAULT_BAM_STRAND_MINJUNCTIONS,
     mindeviation: float = constants.DEFAULT_BAM_STRAND_MINDEVIATION,
-) -> DetectedSJStrand:
+) -> SJJunctionsBins:
     """Use splicegraph to get updated sjbins, strandness"""
     log = get_logger()
-    if strandness == ExperimentStrandness.NONE:
+    if sjbins.strandness == ExperimentStrandness.NONE:
         # there's nothing to do
-        return DetectedSJStrand(
-            updated_sjbins=sjbins,
-            updated_strandness=strandness,
-        )
-    log.info("Detecting strandedness of SJJunctionsBins with SpliceGraph")
+        return sjbins
     # otherwise, we are going to detect strand by matching to splicegraph
     empty_sg_introns = GeneIntrons.from_genes(sg.genes)
     empty_sibins = SJIntronsBins.from_regions(
@@ -74,7 +59,7 @@ def detect_strand(
             f"Only {len(ratios)} junctions with at least {minreads} reads"
             f" vs minimum {minjunctions} junctions for inferring strandedness"
         )
-        return DetectedSJStrand(sjbins.to_unstranded(), ExperimentStrandness.NONE)
+        return sjbins.to_unstranded()
     # compute ratio
     median_ratio = np.median(ratios)
     deviation = np.abs(median_ratio - 0.5)
@@ -85,17 +70,10 @@ def detect_strand(
     )
     if deviation < mindeviation:
         # not far enough from 0.5 to justify strandedness
-        return DetectedSJStrand(sjbins.to_unstranded(), ExperimentStrandness.NONE)
+        return sjbins.to_unstranded()
     elif median_ratio < 0.5:
         # we need to flip it
-        return DetectedSJStrand(
-            updated_sjbins=sjbins_flipped,
-            updated_strandness=(
-                ExperimentStrandness.REVERSE
-                if strandness == ExperimentStrandness.FORWARD
-                else ExperimentStrandness.FORWARD
-            ),
-        )
+        return sjbins_flipped
     else:
         # current strandedness is appropriate
-        return DetectedSJStrand(sjbins, strandness)
+        return sjbins

@@ -10,6 +10,8 @@ import numpy as np
 
 import new_majiq.constants as constants
 
+from new_majiq.internals import ExperimentStrandness
+
 from typing import Final, Optional
 from numpy.typing import ArrayLike
 
@@ -18,15 +20,21 @@ class SJBinsReads(object):
     def __init__(
         self,
         sj_binsreads,
+        strandness: ExperimentStrandness,
         original_path: str,
         original_version: str,
         original_time: str,
     ):
         self._sj_binsreads: Final = sj_binsreads
+        self._strandness: Final[ExperimentStrandness] = strandness
         self._original_path: Final[str] = original_path
         self._original_version: Final[str] = original_version
         self._original_time: Final[str] = original_time
         return
+
+    @property
+    def strandness(self) -> ExperimentStrandness:
+        return self._strandness
 
     @property
     def original_path(self) -> str:

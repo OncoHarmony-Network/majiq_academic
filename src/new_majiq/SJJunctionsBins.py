@@ -16,6 +16,7 @@ from new_majiq.SJJunctions import SJJunctions
 from new_majiq.internals import SJJunctionsBins as _SJJunctionsBins
 from new_majiq.internals import ExperimentStrandness
 from new_majiq.version import version
+from new_majiq.logger import get_logger
 
 from typing import (
     Union,
@@ -27,12 +28,13 @@ class SJJunctionsBins(SJBinsReads):
     def __init__(
         self,
         sj_junctionsbins: _SJJunctionsBins,
+        strandness: ExperimentStrandness,
         original_path: str,
         original_version: str,
         original_time: str,
     ):
         super().__init__(
-            sj_junctionsbins, original_path, original_version, original_time
+            sj_junctionsbins, strandness, original_path, original_version, original_time
         )
         return
 
@@ -41,13 +43,27 @@ class SJJunctionsBins(SJBinsReads):
         return self._sj_binsreads
 
     def project_reads(
-        self, new_junctions: SJJunctions, flip_strand: bool = False
+        self,
+        new_junctions: SJJunctions,
+        new_strandness: ExperimentStrandness,
+        flip_strand: bool = False,
     ) -> "SJJunctionsBins":
-        """Project reads from self onto matching junctions in new_junctions"""
+        """Project reads from self onto matching junctions in new_junctions
+
+        Parameters
+        ----------
+        new_junctions: SJJunctions
+            Junctions bins should be defined against
+        new_strandness: ExperimentStrandness
+            What strandness the resulting SJJunctionsBins should say they are. Needed since we might be converting from stranded to unstranded
+        flip_strand: bool
+            map junctions from self to opposite strand rather than matching strands
+        """
         return SJJunctionsBins(
             self._sj_junctionsbins.project_reads(
                 new_junctions._sj_junctions, flip_strand
             ),
+            new_strandness,
             self.original_path,
             self.original_version,
             self.original_time,
@@ -55,11 +71,21 @@ class SJJunctionsBins(SJBinsReads):
 
     def to_unstranded(self) -> "SJJunctionsBins":
         """Convert stranded junction reads to unstranded junctions"""
-        return self.project_reads(self.regions.to_unstranded())
+        return self.project_reads(
+            self.regions.to_unstranded(), ExperimentStrandness.NONE
+        )
 
     def flip_strand(self) -> "SJJunctionsBins":
         """Flip +/- strand reads to -/+ strand reads"""
-        return self.project_reads(self.regions.flip_strand(), flip_strand=True)
+        if self.strandness == ExperimentStrandness.FORWARD:
+            new_strandness = ExperimentStrandness.REVERSE
+        elif self.strandness == ExperimentStrandness.REVERSE:
+            new_strandness = ExperimentStrandness.FORWARD
+        else:
+            new_strandness = ExperimentStrandness.NONE
+        return self.project_reads(
+            self.regions.flip_strand(), new_strandness, flip_strand=True
+        )
 
     @property
     def sjb_idx(self):
@@ -91,6 +117,7 @@ class SJJunctionsBins(SJBinsReads):
             },
             {
                 "total_bins": self.total_bins,
+                "strandness": self.strandness.name,
                 "original_path": self.original_path,
                 "original_version": self.original_version,
                 "original_time": self.original_time,
@@ -136,6 +163,7 @@ class SJJunctionsBins(SJBinsReads):
         original_time = str(np.datetime64("now"))
         return SJJunctionsBins(
             _SJJunctionsBins.from_bam(path, strandness, nthreads),
+            strandness,
             path,
             original_version,
             original_time,
@@ -161,6 +189,14 @@ class SJJunctionsBins(SJBinsReads):
         """Load SJJunctionsBins from zarr format"""
         regions = SJJunctions.from_zarr(path)
         with xr.open_zarr(path, group=constants.NC_SJJUNCTIONSBINS) as df:
+            try:
+                strandness = ExperimentStrandness(ord(df.strandness[0]))
+            except AttributeError:
+                get_logger().warning(
+                    f"SJJunctionsBins in {path} did not save strandness"
+                    " -> defaulting to NONE"
+                )
+                strandness = ExperimentStrandness.NONE
             return SJJunctionsBins(
                 _SJJunctionsBins(
                     regions._sj_junctions,
@@ -169,6 +205,7 @@ class SJJunctionsBins(SJBinsReads):
                     df._offsets.values,
                     df.total_bins,
                 ),
+                strandness,
                 df.original_path,
                 df.original_version,
                 df.original_time,
