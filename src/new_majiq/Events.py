@@ -194,7 +194,9 @@ class Events(object):
 
     def to_zarr(self, path: Union[str, Path], mode: str) -> None:
         """Save to specified zarr file"""
-        self.save_df.to_zarr(path, mode=mode, group=constants.NC_EVENTS)
+        self.save_df.pipe(lambda x: x.chunk(x.sizes)).to_zarr(
+            path, mode=mode, group=constants.NC_EVENTS
+        )
         return
 
     @classmethod

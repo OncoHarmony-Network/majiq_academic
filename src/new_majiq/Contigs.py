@@ -69,7 +69,9 @@ class Contigs(object):
     def to_zarr(
         self, path: Union[str, Path], mode: str, group: str = constants.NC_CONTIGS
     ) -> None:
-        self.df.drop_vars("contig_idx").to_zarr(path, mode=mode, group=group)
+        self.df.drop_vars("contig_idx").pipe(lambda x: x.chunk(x.sizes)).to_zarr(
+            path, mode=mode, group=group
+        )
         return
 
     @classmethod
