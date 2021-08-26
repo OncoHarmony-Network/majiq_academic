@@ -40,6 +40,16 @@ inline std::ostream& operator<<(
   os << static_cast<char>(x);
   return os;
 }
+inline GeneStrandness FlipGeneStrand(GeneStrandness x) {
+  switch (x) {
+    case GeneStrandness::FORWARD:
+      return GeneStrandness::REVERSE;
+    case GeneStrandness::REVERSE:
+      return GeneStrandness::FORWARD;
+    default:
+      return x;
+  }
+}
 
 enum class ExperimentStrandness : unsigned char {
   FORWARD = 'F',  // read 1 is in forward direction, Salmon ISF

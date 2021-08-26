@@ -283,9 +283,12 @@ class SJJunctionsBins
 
   /**
    * Project reads from self to different SJJunctions regions
+   *
+   * If flip_strand, map + to - and - to +
    */
   SJJunctionsBins ProjectReads(
-      const std::shared_ptr<SJJunctions>& dst_junctions_ptr) const {
+      const std::shared_ptr<SJJunctions>& dst_junctions_ptr,
+      bool flip_strand) const {
     // junctions we come from and are projecting to
     const SJJunctions& src_junctions = *regions();
     const SJJunctions& dst_junctions = *dst_junctions_ptr;
@@ -315,7 +318,7 @@ class SJJunctionsBins
           dst_contigs.get(dst_contig_idx));
       if (!opt_src_contig_idx.has_value()) {
         // remaining offsets match current offset
-        new_offsets.resize(new_offsets.size() + (dst_it_end - dst_it), new_reads.size());
+        new_offsets.insert(new_offsets.end(), dst_it_end - dst_it, new_reads.size());
         continue;
       }
       const size_t& src_contig_idx = *opt_src_contig_idx;
@@ -325,7 +328,7 @@ class SJJunctionsBins
       const auto src_it_end = src_junctions.end_parent(dst_contig_idx);
       if (src_it == src_it_end) {
         // remaining offsets match current offset
-        new_offsets.resize(new_offsets.size() + (dst_it_end - dst_it), new_reads.size());
+        new_offsets.insert(new_offsets.end(), dst_it_end - dst_it, new_reads.size());
         continue;
       }
 
@@ -337,7 +340,7 @@ class SJJunctionsBins
             return !(src.coordinates < dst_coordinates); });
         if (src_it == src_it_end) {
           // there will be no more matches
-          new_offsets.resize(new_offsets.size() + (dst_it_end - dst_it), new_reads.size());
+          new_offsets.insert(new_offsets.end(), dst_it_end - dst_it, new_reads.size());
           break;
         }
         // get end of potential matches in src
@@ -347,11 +350,20 @@ class SJJunctionsBins
         // they only match if they match strand appropriately...
         // get indexes of matching junctions
         std::vector<std::size_t> src_idx_matches;
-        for (auto src_it_match = src_it; src_it_match != src_it_match_end; ++src_it_match) {
-          // match if dst junction has ambiguous strand or if strands match
-          if (dst_it->strand == GeneStrandness::AMBIGUOUS
-              || dst_it->strand == src_it_match->strand) {
-            src_idx_matches.push_back(src_it_match - src_junctions.begin());
+        if (dst_it->strand == GeneStrandness::AMBIGUOUS) {
+          // all potential matches are matches when dst junction is unstranded
+          src_idx_matches.resize(src_it_match_end - src_it);
+          std::iota(src_idx_matches.begin(), src_idx_matches.end(),
+              src_it - src_junctions.begin());
+        } else {
+          const GeneStrandness src_strand_match = flip_strand ?
+            FlipGeneStrand(dst_it->strand) : dst_it->strand;
+          for (auto src_it_match = src_it; src_it_match != src_it_match_end;
+              ++src_it_match) {
+            if (src_it_match->strand == src_strand_match) {
+              src_idx_matches.push_back(src_it_match - src_junctions.begin());
+              break;  // there can only be one match when dst junction stranded
+            }
           }
         }
         // copy over bin reads, aggregating reads with matching bins
