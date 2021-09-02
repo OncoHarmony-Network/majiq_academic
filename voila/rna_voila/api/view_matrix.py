@@ -781,7 +781,7 @@ class ViewHeterogens(ViewMulti):
             for f in voila_files:
                 with ViewHeterogen(f) as m:
                     het = m.lsv(self.lsv_id)
-                    groups = '_'.join(m.group_names)
+                    groups = '-'.join(m.group_names)
                     stat_names = m.stat_names
                     try:
                         for name, stat in zip(stat_names, het.junction_psisamples_stats.T):
@@ -803,7 +803,7 @@ class ViewHeterogens(ViewMulti):
             for f in voila_files:
                 with ViewHeterogen(f) as m:
                     het = m.lsv(self.lsv_id)
-                    groups = '_'.join(m.group_names)
+                    groups = '-'.join(m.group_names)
                     stat_names = m.stat_names
                     try:
                         for name, stat in zip(stat_names, het.junction_stats.T):
@@ -850,7 +850,7 @@ class ViewHeterogens(ViewMulti):
             for f in voila_files:
                 with ViewHeterogen(f) as m:
                     het = m.lsv(self.lsv_id)
-                    groups = '_'.join(m.group_names)
+                    groups = '-'.join(m.group_names)
                     try:
                         nonchanging = het.nonchanging(
                             pvalue_threshold=pvalue_threshold,
@@ -874,7 +874,7 @@ class ViewHeterogens(ViewMulti):
             voila_files = config.voila_files
             for f in voila_files:
                 with ViewHeterogen(f) as m:
-                    groups = '_'.join(m.group_names)
+                    groups = '-'.join(m.group_names)
                     score_names = ('tnom_score',)
                     try:
                         try:
@@ -922,7 +922,7 @@ class ViewHeterogens(ViewMulti):
 
         for f in voila_files:
             with ViewHeterogen(f) as m:
-                groups = '_'.join(m.group_names)
+                groups = '-'.join(m.group_names)
                 for name in m.stat_names:
                     if len(voila_files) == 1:
                         yield name
@@ -940,7 +940,7 @@ class ViewHeterogens(ViewMulti):
         else:
             for f in voila_files:
                 with ViewHeterogen(f) as m:
-                    groups = '_'.join(m.group_names)
+                    groups = '-'.join(m.group_names)
                     yield f"{groups} nonchanging"
 
 
@@ -954,7 +954,7 @@ class ViewHeterogens(ViewMulti):
 
         for f in voila_files:
             with ViewHeterogen(f) as m:
-                groups = '_'.join(m.group_names)
+                groups = '-'.join(m.group_names)
                 for name in ('tnom_score',):
                     if len(voila_files) == 1:
                         yield name
