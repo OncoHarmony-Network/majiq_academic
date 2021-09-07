@@ -250,17 +250,17 @@ filter_parser.add_argument('--lsv-ids', nargs='*', default=[],
 filter_parser.add_argument('--lsv-ids-file', type=check_file,
                         help='Specify LSV IDs to retain in a file instead of on the command line. One LSV ID per line')
 filter_parser.add_argument('--changing-threshold', type=float, default=0.2,
-                        help='Threshold in delta-PSI quantification column. The default is "0.2".')
+                        help=argparse.SUPPRESS)
 filter_parser.add_argument('--non-changing-threshold', type=float, default=0.05,
-                        help='Threshold in delta-PSI quantification column. The default is "0.05".')
+                        help=argparse.SUPPRESS)
 filter_parser.add_argument('--probability-changing-threshold', type=float, default=0.95,
-                        help='The default is "0.95"')
+                        help=argparse.SUPPRESS)
 filter_parser.add_argument('--probability-non-changing-threshold', type=float, default=0.95,
-                        help='The default is "0.95"')
+                        help=argparse.SUPPRESS)
 filter_parser.add_argument('--changing', action='store_true',
-                         help='In general, find classifications for events which are changing (between multiple analysis). Requires at least one deltapsi or het voila file')
+                        help=argparse.SUPPRESS)
 filter_parser.add_argument('--non-changing', action='store_true',
-                         help='In general, find classifications for events which are not changing (between multiple analysis). Requires at least one deltapsi or het voila file')
+                        help=argparse.SUPPRESS)
 required_filter_parser = filter_parser.add_argument_group('required named arguments')
 required_filter_parser.add_argument('-d', '--directory', required=True, help="All filtered files will be dumped in"
                                                                           " this directory")
