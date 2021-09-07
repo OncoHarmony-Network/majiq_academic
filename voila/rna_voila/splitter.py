@@ -86,7 +86,7 @@ def splitter():
                 shutil.rmtree(os.path.join(config.directory, _file))
         else:
             voila_log().critical(
-                "Files already present in %s; not running classifier "
+                "Files already present in %s; not running modularizer "
                 "(--overwrite to delete files in this directory and run anyway)" % config.directory)
             sys.exit(1)
 

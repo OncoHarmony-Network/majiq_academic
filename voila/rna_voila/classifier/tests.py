@@ -84,7 +84,7 @@ def run_voila_classify(gene_ids, enabled_outputs='all', additional_args=[]):
     else:
         os.environ['PYTHONPATH'] = majiq_dir
         cmd = ['python3', os.path.join(majiq_dir, 'rna_voila', 'run_voila.py')]
-    cmd += ['classify', psi_file, sg_file, '-d', out_dir,
+    cmd += ['modulize', psi_file, sg_file, '-d', out_dir,
            '--enabled-outputs', enabled_outputs, '--overwrite',
            '--decomplexify-psi-threshold', '0.0']
     for arg in additional_args:

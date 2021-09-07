@@ -23,7 +23,7 @@ class Classify:
         config = ClassifyConfig()
         analysis_type = config.analysis_type
 
-        voila_log().info(analysis_type + ' CLASSIFY')
+        voila_log().info(analysis_type + ' MODULIZE')
 
         run_classifier()
 
@@ -35,7 +35,7 @@ def print_filter_summary():
     voila_log().info("╔═══════════════════════════════════════════════════════════════╗")
 
     if config.decomplexify_reads_threshold or config.decomplexify_deltapsi_threshold or config.decomplexify_psi_threshold:
-        voila_log().info(("╠╡ Before Classification:").ljust(jst)[:jst] + "║")
+        voila_log().info(("╠╡ Before Modulization:").ljust(jst)[:jst] + "║")
         if config.decomplexify_psi_threshold:
             voila_log().info(("║     Dropping junctions with max(PSI) < %0.3f" % config.decomplexify_psi_threshold).ljust(jst)[:jst] + "║")
         if config.decomplexify_deltapsi_threshold:
@@ -46,7 +46,7 @@ def print_filter_summary():
         voila_log().info(("╠╡ Not dropping any junctions").ljust(jst)[:jst] + "║")
 
     if config.changing:
-        voila_log().info(("╠╡ After Classification:").ljust(jst)[:jst] + "║")
+        voila_log().info(("╠╡ After Modulization:").ljust(jst)[:jst] + "║")
         if config.changing:
             voila_log().info(("║     Dropping modules if none(max(E(|dPSI|)) >= %.3f)" % config.changing_between_group_dpsi).ljust(jst)[
                              :jst] + "║")
@@ -166,11 +166,11 @@ def run_classifier():
                     os.remove(os.path.join(config.directory, _file))
         else:
             voila_log().critical(
-                "Files already present in %s; not running classifier "
+                "Files already present in %s; not running modulizer "
                 "(--overwrite to delete files in this directory and run anyway)" % config.directory)
             sys.exit(1)
 
-    voila_log().info("Classifying %d gene(s)" % len(gene_ids))
+    voila_log().info("Modulizing %d gene(s)" % len(gene_ids))
     voila_log().info("Quantifications based on %d input file(s)" % len(config.voila_files))
 
     print_filter_summary()
@@ -246,7 +246,7 @@ def run_classifier():
 
 
 
-    voila_log().info("Classification Complete")
+    voila_log().info("Modulization Complete")
 
 
 # import multiprocessing
