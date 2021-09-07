@@ -31,8 +31,8 @@ _ClassifyConfig = namedtuple('ClassifyConfig', ['directory', 'voila_files', 'voi
                                                 'non_changing_pvalue_threshold', 'non_changing_within_group_iqr',
                                                 'non_changing_between_group_dpsi', 'changing_pvalue_threshold',
                                                 'changing_between_group_dpsi', 'changing_between_group_dpsi_secondary',
-                                                'keep_no_lsvs', 'debug_num_genes', 'overwrite', 'enabled_outputs',
-                                                'heatmap_selection', 'logger'])
+                                                'keep_no_lsvs', 'debug_num_genes', 'overwrite', 'output_mpe',
+                                                'heatmap_selection', 'logger', 'enabled_outputs'])
 _ClassifyConfig.__new__.__defaults__ = (None,) * len(_ClassifyConfig._fields)
 _FilterConfig = namedtuple('FilterConfig', ['directory', 'voila_files', 'voila_file', 'splice_graph_file',
                                             'nproc', 'gene_ids', 'debug', 'silent', 'analysis_type', 'overwrite',
@@ -392,7 +392,7 @@ class ClassifyConfig:
                               'changing_between_group_dpsi_secondary']:
                 settings[float_key] = config_parser['SETTINGS'].getfloat(float_key)
             for bool_key in ['debug', 'show_all_modules', 'output_complex', 'untrimmed_exons', 'overwrite',
-                             'putative_multi_gene_regions', 'changing', 'keep_no_lsvs',
+                             'putative_multi_gene_regions', 'changing', 'keep_no_lsvs', 'output_mpe'
                              ]:
                 settings[bool_key] = config_parser['SETTINGS'].getboolean(bool_key)
 
@@ -406,42 +406,15 @@ class ClassifyConfig:
                 settings['show_all_modules'] = True
                 settings['keep_no_lsvs'] = True
 
-            # some settings combinations don't make sense
-            if 'enabled_outputs' in settings and settings['putative_multi_gene_regions']:
-                voila_log().critical("You may not specify both --putative_multi_gene_regions and --enabled_outputs")
-                sys.exit(1)
 
 
             if not settings['putative_multi_gene_regions']:
-
-                if 'enabled_outputs' in settings:
-                    if settings['enabled_outputs'] == 'all':
-                        settings['enabled_outputs'] = ['summary', 'events', 'junctions', 'heatmap']
-                    else:
-                        settings['enabled_outputs'] = settings['enabled_outputs'].split(',')
-                        for enabled_output in settings['enabled_outputs']:
-                            if not enabled_output in ('summary', 'events', 'junctions', 'heatmap', 'mpe',
-                                                      'training_junctions', 'training_paths'):
-                                voila_log().critical("Unrecognized enabled output: %s" % enabled_output)
-                                sys.exit(1)
-                        if ('junctions' in settings['enabled_outputs'] or
-                            'heatmap' in settings['enabled_outputs'] or
-                            'training_junctions' in settings['enabled_outputs'] or
-                            'training_paths' in settings['enabled_outputs']) and not \
-                            'events' in settings['enabled_outputs']:
-                            settings['enabled_outputs'].append('summary')
-                            settings['enabled_outputs'].append('events')
-                else:
-                    settings['enabled_outputs'] = ['summary']
-
-                if settings['keep_constitutive'] and not 'summary' in settings['enabled_outputs']:
-                    settings['enabled_outputs'].append('summary')
-
-                if 'mpe' in settings['enabled_outputs']:
+                settings['enabled_outputs'] = ['summary', 'events', 'junctions', 'heatmap']
+                if settings['output_mpe']:
+                    settings['enabled_outputs'].append('mpe')
                     settings['keep_constitutive'] = True
                     settings['show_all_modules'] = True
                     settings['keep_no_lsvs'] = True
-
 
             if settings['changing']:
                 if 'HET' not in settings['analysis_type'] and 'dPSI' not in settings['analysis_type']:

@@ -220,11 +220,10 @@ classify_parser.add_argument('--debug-num-genes', type=int,
                          help='Modulize only n many genes, mainly used for debugging')
 classify_parser.add_argument('--overwrite', action='store_true',
                          help='If there are files inside of specified --directory, delete them and run classifier anyway')
-classify_parser.add_argument('--enabled-outputs', type=str,
-                         help='By default, classifier makes summary output only. However, additional outputs may be enabled. Please check the '
-                              'documentation for more information on them. Specify a comma separated list with one or more of the following options: '
-                              'summary,events,junctions,heatmap. You may also specify "all" to enable all outputs. If ran with --output-training-data,'
-                              'accepted outputs are instead "junctions", "exons" and/or "matrices" (and "all" still works too). In this case default is "all".')
+classify_parser.add_argument('--output-mpe', action='store_true',
+                         help='Outputs tsv with primer targetable regions upstream and downstream of every module: '
+                              'takes into account trimmed exons, constitutive upstream/downstream exons, and in a '
+                              'format where it is easy to programmatically design primers. ')
 required_classify_parser = classify_parser.add_argument_group('required named arguments')
 required_classify_parser.add_argument('-d', '--directory', required=True, help="All generated TSV files will be dumped in"
                                                                           " this directory")
