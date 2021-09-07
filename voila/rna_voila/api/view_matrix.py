@@ -863,7 +863,7 @@ class ViewHeterogens(ViewMulti):
             for f in voila_files:
                 with ViewHeterogen(f) as m:
                     het = m.lsv(self.lsv_id)
-                    groups = '_'.join(m.group_names)
+                    groups = '-'.join(m.group_names)
                     try:
                         changing = het.changing(
                             pvalue_threshold=pvalue_threshold,
