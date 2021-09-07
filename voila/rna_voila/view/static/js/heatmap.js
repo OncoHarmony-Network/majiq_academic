@@ -248,15 +248,14 @@ class HeatMap {
         // So we are expecting the LSV ID (which should be unique) to be set on each of these instances to use
         const uniq = this.lsv_id;
 
-        const max_label_len = Math.cos(45) * Math.max(...(grp_names.map(el => el.length))) * 6.5;
-        const general_offset = (cell_size * hm.length) + max_label_len + 10;
+        let max_label_len = 1; //Math.cos(45) * Math.max(...(grp_names.map(el => el.length))) * 6.5;
+
+
 
         d3.select(el)
 
             .attr('class', 'heat-map-outer')
-            .attr('height', general_offset + 20).attr('width', general_offset + 20)
-            .style('padding-top', `${max_label_len}px`)
-            .style('padding-left', `${max_label_len}px`)
+
             //.style('transform', `translateX(${max_label_len * 6}px) translateY(${max_label_len * 6}px)`)
             // this section generates the (repetitive) pattern element for the hatch style
             .append("defs")
@@ -371,11 +370,20 @@ class HeatMap {
             .enter()
             .append('text').style('font-size', '10px').style('font-family', 'helvetica').text(function(d){return d}).attr('text-anchor', 'middle').attr('fill', 'black').attr('x', 0).attr('y', 0)
             .attr('transform', function(d, i){
-                const offset = measureText(d, 7.5) / 4;
+                const textwidth = (getTextWidth(d, getCanvasFontSize(this))  * Math.cos(45))
+                max_label_len = Math.max(max_label_len, textwidth)
+                const offset = textwidth/2;
                 return `translate(${-offset}, ${(i*cell_size) + offset})rotate(-45)`;
             })
             .select(d3_parent)
             .select(d3_parent)
+
+
+        const general_offset = (cell_size * hm.length) + max_label_len + 10;
+        d3.select(el)
+            .attr('height', general_offset + 20).attr('width', general_offset + 20)
+            .style('padding-top', `${max_label_len+12}px`)
+            .style('padding-left', `${max_label_len}px`)
 
         d3.select(el)
             // top side titles
@@ -388,7 +396,9 @@ class HeatMap {
             .enter()
             .append('text').style('font-size', '10px').style('font-family', 'helvetica').text(function(d){return d}).attr('text-anchor', 'middle').attr('fill', 'black').attr('x', 0).attr('y', 0)
             .attr('transform', function(d, i){
-                const offset = measureText(d, 7.5) / 4;
+                const textwidth = (getTextWidth(d, getCanvasFontSize(this))  * Math.cos(45))
+                max_label_len = Math.max(max_label_len, textwidth)
+                const offset = textwidth/2;
                 return `translate(${i*cell_size + offset}, ${-offset})rotate(-45)`;
             })
             .select(d3_parent)
