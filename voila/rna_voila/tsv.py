@@ -467,6 +467,7 @@ class HeterogenTsv(AnalysisTypeTsv):
                     f'{group}_percentile{quant * 100:02.0f}_psi' for group in group_names for quant in self._quantiles
                 ),
                 *stats_column_names,
+                *m.changing_column_names,
                 *m.nonchanging_column_names,
                 'num_junctions',
                 'num_exons',
@@ -528,6 +529,7 @@ class HeterogenTsv(AnalysisTypeTsv):
                             ),
                             'ir_coords': ir_coords,
                             'ucsc_lsv_link': views.ucsc_href(genome, chromosome, start, end),
+                            **{key: semicolon(values) for key, values in het.changing()},
                             **{key: semicolon(values) for key, values in het.nonchanging()},
                         }
 

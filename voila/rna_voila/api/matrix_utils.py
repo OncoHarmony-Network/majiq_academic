@@ -55,7 +55,18 @@ def generate_means(bins):
     return m
 
 
-def generate_high_probability_non_changing(ir, prior, non_changing_threshold, bins):
+def generate_prior_removed_expected_dpsi(ir, prior, bins=None, pr_removed_bins=None):
+    """
+    Similar input / output use case to the function below, but gets expected dpsi instead of matrix area (prob)
+    """
+    x = []
+
+    for pr_removed_bin in generate_bins_prior_removed(ir, prior, bins) if bins is not None else pr_removed_bins:
+        x.append(abs(get_expected_dpsi(pr_removed_bin)))
+
+    return x
+
+def generate_high_probability_non_changing(ir, prior, non_changing_threshold, bins=None, pr_removed_bins=None):
     """
     Calculate the probability of non changing lsv junctions.
     :param ir: Does this lsv have intron retention.
@@ -65,6 +76,14 @@ def generate_high_probability_non_changing(ir, prior, non_changing_threshold, bi
     :return: list
     """
     x = []
+
+    for pr_removed_bin in generate_bins_prior_removed(ir, prior, bins) if bins is not None else pr_removed_bins:
+        x.append(matrix_area(pr_removed_bin, non_changing_threshold, non_changing=True))
+
+    return x
+
+def generate_bins_prior_removed(ir, prior, bins):
+    new_bins = []
     prior = prior[1 if ir else 0]
 
     for bin in bins:
@@ -73,9 +92,10 @@ def generate_high_probability_non_changing(ir, prior, non_changing_threshold, bi
         bin /= bin.sum()
         A = np.log(bin) - prior
         R = np.exp(A - special.logsumexp(A))
-        x.append(matrix_area(R, non_changing_threshold, non_changing=True))
+        new_bins.append(R)
 
-    return x
+    return new_bins
+
 
 def generate_standard_deviations(bins):
     """

@@ -48,6 +48,7 @@ setup(
         'rna_voila.view',
         'rna_voila.utils',
         'rna_voila.view',
+        'rna_voila.classifier'
     ],
     install_requires=requirements(),
     include_package_data=True,

@@ -9,6 +9,7 @@ h5py==2.10.0
 itsdangerous==1.1.0
 Jinja2==2.11.1
 MarkupSafe==1.1.1
+networkx==2.5
 numpy==1.18.1
 psutil==5.6.7
 scipy==1.4.1
@@ -17,3 +18,4 @@ smmap2==2.0.5
 waitress==1.1.0
 Werkzeug==0.16.0
 WTForms==2.2.1
+

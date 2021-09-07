@@ -109,7 +109,7 @@ class FoundMoreThanOneVoilaFile(VoilaException):
         """
         Found more then one voila file when there should only be one voila file.
         """
-        super().__init__('In the files or directories supplied, there was more than on Voila file found.')
+        super().__init__('In the files or directories supplied, there was more than one Voila file found.')
 
 
 class AnalysisTypeNotFound(VoilaException):
@@ -123,3 +123,9 @@ class AnalysisTypeNotFound(VoilaException):
 class UnknownIndexFieldType(VoilaException):
     def __init__(self, value):
         super().__init__('Unkown field type found while generating index: {}, {}'.format(value, type(value)))
+
+
+class UnsupportedAnalysisType(VoilaException):
+    def __init__(self, analysis_type):
+        super().__init__('The analysis type of the provided voila file(s) is not supported by this operation: %s' % str(
+            analysis_type))
