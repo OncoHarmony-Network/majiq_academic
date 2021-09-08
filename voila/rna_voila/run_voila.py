@@ -175,7 +175,7 @@ classify_parser.add_argument('--decomplexify-psi-threshold', type=float, default
                          help='Filter out junctions where PSI is below a certain value (between 0.0 and 1.0). If multiple '
                               'input files are used, only the highest PSI value is used. If 0 (or 0.0) is specified, '
                               'no filtering fill be done. The default is "0.01". (1%%)')
-classify_parser.add_argument('--decomplexify-deltapsi-threshold', type=float, default=None,
+classify_parser.add_argument('--decomplexify-deltapsi-threshold', type=float, default=0.0,
                          help='Filter out junctions where abs(E(dPSI)) is below a certain value (between 0.0 and 1.0). If multiple '
                               'input files are used, only the biggest difference (dPSI) value is used. If 0 (or 0.0) is specified, '
                               'no filtering fill be done. The default is "0.0". ')
