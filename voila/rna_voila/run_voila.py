@@ -167,8 +167,8 @@ classify_parser.add_argument('--keep-no-lsvs', action='store_true',
 classify_parser.add_argument('--putative-multi-gene-regions', action='store_true',
                          help='Only output a single TSV file describing regions found in inputs with complete breaks '
                               'in the gene (no junctions connecting at all). Implies "--keep-constitutive"')
-classify_parser.add_argument('--output-complex', action='store_true',
-                         help='Complex module data is dumped to all output TSVs, not only summary')
+classify_parser.add_argument('--only-binary', action='store_true',
+                         help='Do not show "complex" modules in the output -- that is, modules with more than one splicing event.')
 classify_parser.add_argument('--untrimmed-exons', action='store_true',
                          help='Display original Exon coordinates instead of Trimmed coordinates in output TSVs')
 classify_parser.add_argument('--decomplexify-psi-threshold', type=float, default=0.05,

@@ -110,9 +110,8 @@ class BaseTsvWriter(MultiQuantWriter):
                self.graph.strand]
 
         out.append(self.semicolon(lsvs))
-        if self.config.output_complex:
-            out.append(event_id)
-            out.append(str(module.is_complex))
+        out.append(event_id)
+        out.append(str(module.is_complex))
         return out
 
     def start_headers(self, headers, filename):
@@ -178,9 +177,8 @@ class TsvWriter(BaseTsvWriter):
         super().__init__(graph, gene_id)
 
         self.common_headers.append('lsv_id')
-        if self.config.output_complex:
-            self.common_headers.append('event_id')
-            self.common_headers.append('complex')
+        self.common_headers.append('event_id')
+        self.common_headers.append('complex')
 
         # we could do some crazy thing to yield to all of the different output types at once (across each method)
         # (in order to save memory) But for now we just save modules in a list. Will ammend later if memory use
@@ -289,19 +287,17 @@ class TsvWriter(BaseTsvWriter):
                     headers.append('constitutive_junc')
                     headers.append('persistent_ir')
 
-                if self.config.output_complex:
-                    headers.remove('complex')
-                    # not wanted in summary
-                    event_id_ii = headers.index("event_id")
-                    headers.pop(event_id_ii)
+                headers.remove('complex')
+                event_id_ii = headers.index("event_id")
+                headers.pop(event_id_ii)
 
                 headers += ['multi_exon_spanning', 'exitron', 'complex', 'denovo_juncs', 'denovo_introns',
                             'num_events', 'module_event_combination'
                             ]
+
                 self.start_headers(headers, 'summary.tsv')
-                if self.config.output_complex:
-                    # add back in the event id for the other TSVs, in same index
-                    headers.insert(event_id_ii, "event_id")
+
+                headers.insert(event_id_ii, "event_id")
 
             if 'heatmap' in self.config.enabled_outputs:
                 headers = self.common_headers + ['module_event_combination', 'denovo', 'junction_name',
@@ -466,148 +462,121 @@ class TsvWriter(BaseTsvWriter):
                                      '', exon2.absolute_start, exon2.absolute_end,
                                      edge.ir] + quants)
 
-            # for module in self.modules:
-            #     events, _complex, _total_events = self.as_types[module.idx]
-            #     if not _complex or self.config.output_complex:
-            #         for event in events:
-            #             if event['event'] == 'cassette_exon':
-            #                 for item in event.values():
-            #                     if type(item) is self.graph.Edge:
-            #                         # ['Junc ID', 'Junc ID Start Coordinate', 'Junc ID End Coordinate',
-            #                         #              'Exon 1 ID', 'Exon 1 ID Start Coordinate', 'Exon 1 ID End Coordinate',
-            #                         #              'Exon 2 ID', 'Exon 2 ID Start Coordinate', 'Exon 2 ID End Coordinate',
-            #                         #              'Is Intron']
-            #                         quants_t = self.quantifications(module, 't', item)
-            #                         quants_s = self.quantifications(module, 's', item)
-            #                         if all(not x for x in quants_s):
-            #                             quants = quants_t
-            #                         else:
-            #                             quants = quants_s
-            #
-            #                         exon1 = self.graph.start_node(item)
-            #                         exon2 = self.graph.end_node(item)
-            #                         junc_id = f"{self.gene_id}_{self.graph.chromosome}_{self.graph.strand}_{item.absolute_start}_{item.absolute_end}_{'I' if item.ir else 'J'}"
-            #                         writer.writerow([junc_id, item.absolute_start, item.absolute_end,
-            #                                          '', exon1.absolute_start, exon1.absolute_end,
-            #                                          '', exon2.absolute_start, exon2.absolute_end,
-            #                                          item.ir] + quants)
-
-
-
     def cassette(self):
         with open(os.path.join(self.config.directory, 'cassette.tsv.%s' % self.pid), 'a', newline='') as csvfile:
             writer = csv.writer(csvfile, dialect='excel-tab', delimiter='\t')
             for module in self.modules:
                 events, _complex, _total_events = self.as_types[module.idx]
-                if not _complex or self.config.output_complex:
-                    event_i = 1
-                    for event in events:
-                        if event['event'] == 'cassette_exon':
+                if _complex and self.config.only_binary:
+                    continue
+                event_i = 1
+                for event in events:
+                    if event['event'] == 'cassette_exon':
 
-                            src_common = self.common_data(module,
-                                                          's',
-                                                          node=event['C1'],
-                                                          event_name="CE",
-                                                          event_ii=event_i)
-                            trg_common = self.common_data(module,
-                                                          't',
-                                                          node=event['C2'],
-                                                          event_name="CE",
-                                                          event_ii=event_i)
+                        src_common = self.common_data(module,
+                                                      's',
+                                                      node=event['C1'],
+                                                      event_name="CE",
+                                                      event_ii=event_i)
+                        trg_common = self.common_data(module,
+                                                      't',
+                                                      node=event['C2'],
+                                                      event_name="CE",
+                                                      event_ii=event_i)
 
-                            # strand case per-event trimming of exons
-                            # we dont have access to the strand case / graph here.
-                            # instead we check strand by checking if the first exon has coordinates before the last exon
-                            # if not, we take the forward trimming definition, set all start -> end and end -> start
-                            # the then for each range, reverse the order of the first and second coordinate
-                            # (if this needs to be redesigned, then, only design with the + strand in mind, and
-                            # follow these rules to make the reverse for the minus strand
+                        # strand case per-event trimming of exons
+                        # we dont have access to the strand case / graph here.
+                        # instead we check strand by checking if the first exon has coordinates before the last exon
+                        # if not, we take the forward trimming definition, set all start -> end and end -> start
+                        # the then for each range, reverse the order of the first and second coordinate
+                        # (if this needs to be redesigned, then, only design with the + strand in mind, and
+                        # follow these rules to make the reverse for the minus strand
 
-                            c1_range_str = self._trim_strand_case_range_str(event['C1'], 'start', event['Include1'], 'start')
-                            a_range_str = self._trim_strand_case_range_str(event['Include1'], 'end', event['Include2'], 'start')
-                            c2_range_str = self._trim_strand_case_range_str(event['Include2'], 'end', event['C2'], 'end')
-                            event_size = self._trim_strand_case_event_size(event['Include1'], 'end', event['Include2'], 'start') + 1
+                        c1_range_str = self._trim_strand_case_range_str(event['C1'], 'start', event['Include1'], 'start')
+                        a_range_str = self._trim_strand_case_range_str(event['Include1'], 'end', event['Include2'], 'start')
+                        c2_range_str = self._trim_strand_case_range_str(event['Include2'], 'end', event['C2'], 'end')
+                        event_size = self._trim_strand_case_event_size(event['Include1'], 'end', event['Include2'], 'start') + 1
 
-                            row = [event['Skip'].de_novo,
-                                   c1_range_str,
-                                   'C2',
-                                   c2_range_str,
-                                   'C1_C2',
-                                   event['Skip'].range_str()]
+                        row = [event['Skip'].de_novo,
+                               c1_range_str,
+                               'C2',
+                               c2_range_str,
+                               'C1_C2',
+                               event['Skip'].range_str()]
 
-                            # quantifications consist of a number of fixed columns that don't depend on each other
-                            # plus three special columns junction_changing, event_changing, event_non_changing
-                            # ONE CALL TO QUANTIFICATIONS GETS RESULTS FOR ALL VOILA FILES IN ONE JUNCTION BY DEFAULT
-                            # junction_changing: this works well for quantifications() as is, because it works
-                            # off a single junction, and all voila files. We add this case to the main quantification
-                            # writer class
+                        # quantifications consist of a number of fixed columns that don't depend on each other
+                        # plus three special columns junction_changing, event_changing, event_non_changing
+                        # ONE CALL TO QUANTIFICATIONS GETS RESULTS FOR ALL VOILA FILES IN ONE JUNCTION BY DEFAULT
+                        # junction_changing: this works well for quantifications() as is, because it works
+                        # off a single junction, and all voila files. We add this case to the main quantification
+                        # writer class
 
-                            # event_non_changing and event_changing: to know this information, we need to have had
-                            # calculated non_changing
-                            # for all junctions in the event, first. This should only be done once, so we break out
-                            # this calculation into a separate class which can take in a list of junctions at once
-                            quant_identifiers = (
-                                ('s', event['Skip']),
-                                ('s', event['Include1']),
-                                ('t', event['Skip']),
-                                ('t', event['Include2']),
-                            )
-                            event_non_changing = self.event_non_changing(module, quant_identifiers)
-                            event_changing = self.event_changing(module, quant_identifiers)
+                        # event_non_changing and event_changing: to know this information, we need to have had
+                        # calculated non_changing
+                        # for all junctions in the event, first. This should only be done once, so we break out
+                        # this calculation into a separate class which can take in a list of junctions at once
+                        quant_identifiers = (
+                            ('s', event['Skip']),
+                            ('s', event['Include1']),
+                            ('t', event['Skip']),
+                            ('t', event['Include2']),
+                        )
+                        event_non_changing = self.event_non_changing(module, quant_identifiers)
+                        event_changing = self.event_changing(module, quant_identifiers)
 
-                            quants = [event_non_changing, event_changing] + self.quantifications(module, 's', event['Skip'], event['C1'])
-                            writer.writerow(src_common + row + [event_size] + quants)
-                            self.junction_cache.append((module, src_common, quants, row[0], row[4], row[5]))
-                            self._add_training_junction(src_common, event['Skip'], quants, module.idx)
-                            self.heatmap_add(module, src_common, quants,
-                                             event['Skip'].absolute_end - event['Skip'].absolute_start,
-                                             row[0], row[4], row[5])
+                        quants = [event_non_changing, event_changing] + self.quantifications(module, 's', event['Skip'], event['C1'])
+                        writer.writerow(src_common + row + [event_size] + quants)
+                        self.junction_cache.append((module, src_common, quants, row[0], row[4], row[5]))
+                        self._add_training_junction(src_common, event['Skip'], quants, module.idx)
+                        self.heatmap_add(module, src_common, quants,
+                                         event['Skip'].absolute_end - event['Skip'].absolute_start,
+                                         row[0], row[4], row[5])
 
-                            row = [event['Include1'].de_novo,
-                                   c1_range_str,
-                                   'A',
-                                   a_range_str,
-                                   'C1_A',
-                                   event['Include1'].range_str()]
+                        row = [event['Include1'].de_novo,
+                               c1_range_str,
+                               'A',
+                               a_range_str,
+                               'C1_A',
+                               event['Include1'].range_str()]
 
-                            quants = [event_non_changing, event_changing] + self.quantifications(module, 's', event['Include1'], event['C1'])
-                            writer.writerow(src_common + row + [event_size] + quants)
-                            self.junction_cache.append((module, src_common, quants, row[0], row[4], row[5]))
-                            self._add_training_junction(src_common, event['Include1'], quants, module.idx)
-                            self.heatmap_add(module, src_common, quants,
-                                             event['Include1'].absolute_end - event['Include1'].absolute_start,
-                                             row[0], row[4], row[5])
+                        quants = [event_non_changing, event_changing] + self.quantifications(module, 's', event['Include1'], event['C1'])
+                        writer.writerow(src_common + row + [event_size] + quants)
+                        self.junction_cache.append((module, src_common, quants, row[0], row[4], row[5]))
+                        self._add_training_junction(src_common, event['Include1'], quants, module.idx)
+                        self.heatmap_add(module, src_common, quants,
+                                         event['Include1'].absolute_end - event['Include1'].absolute_start,
+                                         row[0], row[4], row[5])
 
-                            row = [event['Skip'].de_novo,
-                                   c2_range_str,
-                                   'C1',
-                                   c1_range_str,
-                                   'C2_C1',
-                                   event['Skip'].range_str()]
+                        row = [event['Skip'].de_novo,
+                               c2_range_str,
+                               'C1',
+                               c1_range_str,
+                               'C2_C1',
+                               event['Skip'].range_str()]
 
-                            quants = [event_non_changing, event_changing] + self.quantifications(module, 't', event['Skip'], event['C2'])
-                            writer.writerow(trg_common + row + [event_size] + quants)
-                            self.junction_cache.append((module, trg_common, quants, row[0], row[4], row[5]))
-                            self._add_training_junction(trg_common, event['Skip'], quants, module.idx)
-                            self.heatmap_add(module, trg_common, quants,
-                                             event['Skip'].absolute_end - event['Skip'].absolute_start,
-                                             row[0], row[4], row[5])
+                        quants = [event_non_changing, event_changing] + self.quantifications(module, 't', event['Skip'], event['C2'])
+                        writer.writerow(trg_common + row + [event_size] + quants)
+                        self.junction_cache.append((module, trg_common, quants, row[0], row[4], row[5]))
+                        self._add_training_junction(trg_common, event['Skip'], quants, module.idx)
+                        self.heatmap_add(module, trg_common, quants,
+                                         event['Skip'].absolute_end - event['Skip'].absolute_start,
+                                         row[0], row[4], row[5])
 
-                            row = [event['Include2'].de_novo,
-                                   c2_range_str,
-                                   'A',
-                                   a_range_str,
-                                   'C2_A',
-                                   event['Include2'].range_str()]
+                        row = [event['Include2'].de_novo,
+                               c2_range_str,
+                               'A',
+                               a_range_str,
+                               'C2_A',
+                               event['Include2'].range_str()]
 
-                            quants = [event_non_changing, event_changing] + self.quantifications(module, 't', event['Include2'], event['C2'])
-                            writer.writerow(trg_common + row + [event_size] + quants)
-                            self.junction_cache.append((module, trg_common, quants, row[0], row[4], row[5]))
-                            self._add_training_junction(trg_common, event['Include2'], quants, module.idx)
-                            self.heatmap_add(module, trg_common, quants,
-                                             event['Include2'].absolute_end - event['Include2'].absolute_start,
-                                             row[0], row[4], row[5])
-                            event_i += 1
+                        quants = [event_non_changing, event_changing] + self.quantifications(module, 't', event['Include2'], event['C2'])
+                        writer.writerow(trg_common + row + [event_size] + quants)
+                        self.junction_cache.append((module, trg_common, quants, row[0], row[4], row[5]))
+                        self._add_training_junction(trg_common, event['Include2'], quants, module.idx)
+                        self.heatmap_add(module, trg_common, quants,
+                                         event['Include2'].absolute_end - event['Include2'].absolute_start,
+                                         row[0], row[4], row[5])
+                        event_i += 1
 
 
     def alt3prime(self):
@@ -616,99 +585,100 @@ class TsvWriter(BaseTsvWriter):
 
             for module in self.modules:
                 events, _complex, _total_events = self.as_types[module.idx]
-                if not _complex or self.config.output_complex:
-                    event_i = 1
-                    for event in events:
-                        if event['event'] == 'alt3ss':
-                            src_common = self.common_data(module,
-                                                          's',
-                                                          node=event['E1'],
-                                                          event_name="A3",
-                                                          event_ii=event_i)
-                            trg_common = self.common_data(module,
-                                                          't',
-                                                          node=event['E2'],
-                                                          event_name="A3",
-                                                          event_ii=event_i)
+                if _complex and self.config.only_binary:
+                    continue
+                event_i = 1
+                for event in events:
+                    if event['event'] == 'alt3ss':
+                        src_common = self.common_data(module,
+                                                      's',
+                                                      node=event['E1'],
+                                                      event_name="A3",
+                                                      event_ii=event_i)
+                        trg_common = self.common_data(module,
+                                                      't',
+                                                      node=event['E2'],
+                                                      event_name="A3",
+                                                      event_ii=event_i)
 
-                            event_size = self._trim_strand_case_event_size(event['Proximal'], 'end', event['Distal'], 'end')
+                        event_size = self._trim_strand_case_event_size(event['Proximal'], 'end', event['Distal'], 'end')
 
-                            # preferentially use source LSV
-                            if src_common[5]:
+                        # preferentially use source LSV
+                        if src_common[5]:
 
-                                quant_identifiers = (
-                                    ('s', event['Proximal']),
-                                    ('s', event['Distal']),
-                                )
-                                event_non_changing = self.event_non_changing(module, quant_identifiers)
-                                event_changing = self.event_changing(module, quant_identifiers)
+                            quant_identifiers = (
+                                ('s', event['Proximal']),
+                                ('s', event['Distal']),
+                            )
+                            event_non_changing = self.event_non_changing(module, quant_identifiers)
+                            event_changing = self.event_changing(module, quant_identifiers)
 
-                                e1_range_str = self._trim_strand_case_range_str(event['E1'], 'start', event['Proximal'], 'start')
-                                e2_range_str = self._trim_strand_case_range_str(event['Proximal'], 'end', event['E2'], 'end')
+                            e1_range_str = self._trim_strand_case_range_str(event['E1'], 'start', event['Proximal'], 'start')
+                            e2_range_str = self._trim_strand_case_range_str(event['Proximal'], 'end', event['E2'], 'end')
 
-                                row = [event['Proximal'].de_novo,
-                                       e1_range_str,
-                                       'E2',
-                                       e2_range_str,
-                                       'Proximal',
-                                       event['Proximal'].range_str()]
-                                quants = [event_non_changing, event_changing] + self.quantifications(module, 's', edge=event['Proximal'], node=event['E1'])
-                                writer.writerow(src_common + row + [event_size] + quants)
-                                self.junction_cache.append((module, src_common, quants, row[0], row[4], row[5]))
-                                self.heatmap_add(module, src_common, quants,
-                                                 event['Proximal'].absolute_end - event['Proximal'].absolute_start,
-                                                 row[0], row[4], row[5])
+                            row = [event['Proximal'].de_novo,
+                                   e1_range_str,
+                                   'E2',
+                                   e2_range_str,
+                                   'Proximal',
+                                   event['Proximal'].range_str()]
+                            quants = [event_non_changing, event_changing] + self.quantifications(module, 's', edge=event['Proximal'], node=event['E1'])
+                            writer.writerow(src_common + row + [event_size] + quants)
+                            self.junction_cache.append((module, src_common, quants, row[0], row[4], row[5]))
+                            self.heatmap_add(module, src_common, quants,
+                                             event['Proximal'].absolute_end - event['Proximal'].absolute_start,
+                                             row[0], row[4], row[5])
 
-                                row = [event['Distal'].de_novo,
-                                       e1_range_str,
-                                       'E2',
-                                       e2_range_str,
-                                       'Distal',
-                                       event['Distal'].range_str()]
-                                quants = [event_non_changing, event_changing] + self.quantifications(module, 's', edge=event['Distal'], node=event['E1'])
-                                writer.writerow(src_common + row + [event_size] + quants)
-                                self.junction_cache.append((module, src_common, quants, row[0], row[4], row[5]))
-                                self.heatmap_add(module, src_common, quants,
-                                                 event['Distal'].absolute_end - event['Distal'].absolute_start,
-                                                 row[0], row[4], row[5])
-                            elif trg_common[5]:
+                            row = [event['Distal'].de_novo,
+                                   e1_range_str,
+                                   'E2',
+                                   e2_range_str,
+                                   'Distal',
+                                   event['Distal'].range_str()]
+                            quants = [event_non_changing, event_changing] + self.quantifications(module, 's', edge=event['Distal'], node=event['E1'])
+                            writer.writerow(src_common + row + [event_size] + quants)
+                            self.junction_cache.append((module, src_common, quants, row[0], row[4], row[5]))
+                            self.heatmap_add(module, src_common, quants,
+                                             event['Distal'].absolute_end - event['Distal'].absolute_start,
+                                             row[0], row[4], row[5])
+                        elif trg_common[5]:
 
-                                quant_identifiers = (
-                                    ('t', event['Proximal']),
-                                    ('t', event['Distal']),
-                                )
-                                event_non_changing = self.event_non_changing(module, quant_identifiers)
-                                event_changing = self.event_changing(module, quant_identifiers)
+                            quant_identifiers = (
+                                ('t', event['Proximal']),
+                                ('t', event['Distal']),
+                            )
+                            event_non_changing = self.event_non_changing(module, quant_identifiers)
+                            event_changing = self.event_changing(module, quant_identifiers)
 
-                                e1_range_str = f"{event['E1'].start}-{event['Proximal'].start}"
-                                e2_range_str = f"{event['Proximal'].end}-{event['E2'].end}"
+                            e1_range_str = f"{event['E1'].start}-{event['Proximal'].start}"
+                            e2_range_str = f"{event['Proximal'].end}-{event['E2'].end}"
 
-                                row = [event['Proximal'].de_novo,
-                                       e2_range_str,
-                                       'E1',
-                                       e1_range_str,
-                                       'Proximal',
-                                       event['Proximal'].range_str()]
-                                quants = [event_non_changing, event_changing] + self.quantifications(module, 't', edge=event['Proximal'], node=event['E2'])
-                                writer.writerow(trg_common + row + [event_size] + quants)
-                                self.junction_cache.append((module, trg_common, quants, row[0], row[4], row[5]))
-                                self.heatmap_add(module, trg_common, quants,
-                                                 event['Proximal'].absolute_end - event['Proximal'].absolute_start,
-                                                 row[0], row[4], row[5])
+                            row = [event['Proximal'].de_novo,
+                                   e2_range_str,
+                                   'E1',
+                                   e1_range_str,
+                                   'Proximal',
+                                   event['Proximal'].range_str()]
+                            quants = [event_non_changing, event_changing] + self.quantifications(module, 't', edge=event['Proximal'], node=event['E2'])
+                            writer.writerow(trg_common + row + [event_size] + quants)
+                            self.junction_cache.append((module, trg_common, quants, row[0], row[4], row[5]))
+                            self.heatmap_add(module, trg_common, quants,
+                                             event['Proximal'].absolute_end - event['Proximal'].absolute_start,
+                                             row[0], row[4], row[5])
 
-                                row = [event['Distal'].de_novo,
-                                       e2_range_str,
-                                       'E1',
-                                       e1_range_str,
-                                       'Distal',
-                                       event['Distal'].range_str()]
-                                quants = [event_non_changing, event_changing] + self.quantifications(module, 't', edge=event['Distal'], node=event['E2'])
-                                writer.writerow(trg_common + row + [event_size] + quants)
-                                self.junction_cache.append((module, trg_common, quants, row[0], row[4], row[5]))
-                                self.heatmap_add(module, trg_common, quants,
-                                                 event['Distal'].absolute_end - event['Distal'].absolute_start,
-                                                 row[0], row[4], row[5])
-                            event_i += 1
+                            row = [event['Distal'].de_novo,
+                                   e2_range_str,
+                                   'E1',
+                                   e1_range_str,
+                                   'Distal',
+                                   event['Distal'].range_str()]
+                            quants = [event_non_changing, event_changing] + self.quantifications(module, 't', edge=event['Distal'], node=event['E2'])
+                            writer.writerow(trg_common + row + [event_size] + quants)
+                            self.junction_cache.append((module, trg_common, quants, row[0], row[4], row[5]))
+                            self.heatmap_add(module, trg_common, quants,
+                                             event['Distal'].absolute_end - event['Distal'].absolute_start,
+                                             row[0], row[4], row[5])
+                        event_i += 1
 
 
     def alt5prime(self):
@@ -716,103 +686,104 @@ class TsvWriter(BaseTsvWriter):
             writer = csv.writer(csvfile, dialect='excel-tab', delimiter='\t')
             for module in self.modules:
                 events, _complex, _total_events = self.as_types[module.idx]
-                if not _complex or self.config.output_complex:
-                    event_i = 1
-                    for event in events:
-                        if event['event'] == 'alt5ss':
+                if _complex and self.config.only_binary:
+                    continue
+                event_i = 1
+                for event in events:
+                    if event['event'] == 'alt5ss':
 
-                            src_common = self.common_data(module,
-                                                          's',
-                                                          node=event['E1'],
-                                                          event_name="A5",
-                                                          event_ii=event_i)
-                            trg_common = self.common_data(module,
-                                                          't',
-                                                          node=event['E2'],
-                                                          event_name="A5",
-                                                          event_ii=event_i)
+                        src_common = self.common_data(module,
+                                                      's',
+                                                      node=event['E1'],
+                                                      event_name="A5",
+                                                      event_ii=event_i)
+                        trg_common = self.common_data(module,
+                                                      't',
+                                                      node=event['E2'],
+                                                      event_name="A5",
+                                                      event_ii=event_i)
 
-                            event_size = self._trim_strand_case_event_size(event['Proximal'], 'start', event['Distal'], 'start')
+                        event_size = self._trim_strand_case_event_size(event['Proximal'], 'start', event['Distal'], 'start')
 
-                            # preferentially use target LSV
-                            if trg_common[5]:
+                        # preferentially use target LSV
+                        if trg_common[5]:
 
-                                quant_identifiers = (
-                                    ('t', event['Proximal']),
-                                    ('t', event['Distal']),
-                                )
-                                event_non_changing = self.event_non_changing(module, quant_identifiers)
-                                event_changing = self.event_changing(module, quant_identifiers)
+                            quant_identifiers = (
+                                ('t', event['Proximal']),
+                                ('t', event['Distal']),
+                            )
+                            event_non_changing = self.event_non_changing(module, quant_identifiers)
+                            event_changing = self.event_changing(module, quant_identifiers)
 
-                                e1_range_str = self._trim_strand_case_range_str(event['E1'], 'start', event['Proximal'], 'start')
-                                e2_range_str = self._trim_strand_case_range_str(event['Proximal'], 'end', event['E2'], 'end')
+                            e1_range_str = self._trim_strand_case_range_str(event['E1'], 'start', event['Proximal'], 'start')
+                            e2_range_str = self._trim_strand_case_range_str(event['Proximal'], 'end', event['E2'], 'end')
 
-                                row = [event['Proximal'].de_novo,
-                                       e2_range_str,
-                                       'E1',
-                                       e1_range_str,
-                                       'Proximal',
-                                       event['Proximal'].range_str()]
-                                quants = [event_non_changing, event_changing] + self.quantifications(module, 't', edge=event['Proximal'], node=event['E2'])
-                                writer.writerow(trg_common + row + [event_size] + quants)
-                                self.junction_cache.append((module, trg_common, quants, row[0], row[4], row[5]))
-                                self.heatmap_add(module, trg_common, quants,
-                                                 event['Proximal'].absolute_end - event['Proximal'].absolute_start,
-                                                 row[0], row[4], row[5])
+                            row = [event['Proximal'].de_novo,
+                                   e2_range_str,
+                                   'E1',
+                                   e1_range_str,
+                                   'Proximal',
+                                   event['Proximal'].range_str()]
+                            quants = [event_non_changing, event_changing] + self.quantifications(module, 't', edge=event['Proximal'], node=event['E2'])
+                            writer.writerow(trg_common + row + [event_size] + quants)
+                            self.junction_cache.append((module, trg_common, quants, row[0], row[4], row[5]))
+                            self.heatmap_add(module, trg_common, quants,
+                                             event['Proximal'].absolute_end - event['Proximal'].absolute_start,
+                                             row[0], row[4], row[5])
 
-                                row = [event['Distal'].de_novo,
-                                       e2_range_str,
-                                       'E1',
-                                       e1_range_str,
-                                       'Distal',
-                                       event['Distal'].range_str()]
-                                quants = [event_non_changing, event_changing] + self.quantifications(module, 't', edge=event['Distal'], node=event['E2'])
-                                writer.writerow(trg_common + row + [event_size] + quants)
-                                self.junction_cache.append((module, trg_common, quants, row[0], row[4], row[5]))
-                                self.heatmap_add(module, trg_common, quants,
-                                                 event['Distal'].absolute_end - event['Distal'].absolute_start,
-                                                 row[0], row[4], row[5])
-                            elif src_common[5]:
+                            row = [event['Distal'].de_novo,
+                                   e2_range_str,
+                                   'E1',
+                                   e1_range_str,
+                                   'Distal',
+                                   event['Distal'].range_str()]
+                            quants = [event_non_changing, event_changing] + self.quantifications(module, 't', edge=event['Distal'], node=event['E2'])
+                            writer.writerow(trg_common + row + [event_size] + quants)
+                            self.junction_cache.append((module, trg_common, quants, row[0], row[4], row[5]))
+                            self.heatmap_add(module, trg_common, quants,
+                                             event['Distal'].absolute_end - event['Distal'].absolute_start,
+                                             row[0], row[4], row[5])
+                        elif src_common[5]:
 
-                                quant_identifiers = (
-                                    ('s', event['Proximal']),
-                                    ('s', event['Distal']),
-                                )
-                                event_non_changing = self.event_non_changing(module, quant_identifiers)
-                                event_changing = self.event_changing(module, quant_identifiers)
+                            quant_identifiers = (
+                                ('s', event['Proximal']),
+                                ('s', event['Distal']),
+                            )
+                            event_non_changing = self.event_non_changing(module, quant_identifiers)
+                            event_changing = self.event_changing(module, quant_identifiers)
 
-                                e1_range_str = self._trim_strand_case_range_str(event['E1'], 'start', event['Proximal'],
-                                                                                'start')
+                            e1_range_str = self._trim_strand_case_range_str(event['E1'], 'start', event['Proximal'],
+                                                                            'start')
 
-                                e2_range_str = self._trim_strand_case_range_str(event['Proximal'], 'end', event['E2'],
-                                                                                'end')
+                            e2_range_str = self._trim_strand_case_range_str(event['Proximal'], 'end', event['E2'],
+                                                                            'end')
 
-                                row = [event['Proximal'].de_novo,
-                                       e1_range_str,
-                                       'E2',
-                                       e2_range_str,
-                                       'Proximal',
-                                       event['Proximal'].range_str()]
-                                quants = [event_non_changing, event_changing] + self.quantifications(module, 's', edge=event['Proximal'], node=event['E1'])
-                                writer.writerow(src_common + row + [event_size] + quants)
-                                self.junction_cache.append((module, src_common, quants, row[0], row[4], row[5]))
-                                self.heatmap_add(module, src_common, quants,
-                                                 event['Proximal'].absolute_end - event['Proximal'].absolute_start,
-                                                 row[0], row[4], row[5])
+                            row = [event['Proximal'].de_novo,
+                                   e1_range_str,
+                                   'E2',
+                                   e2_range_str,
+                                   'Proximal',
+                                   event['Proximal'].range_str()]
+                            quants = [event_non_changing, event_changing] + self.quantifications(module, 's', edge=event['Proximal'], node=event['E1'])
+                            writer.writerow(src_common + row + [event_size] + quants)
+                            self.junction_cache.append((module, src_common, quants, row[0], row[4], row[5]))
+                            self.heatmap_add(module, src_common, quants,
+                                             event['Proximal'].absolute_end - event['Proximal'].absolute_start,
+                                             row[0], row[4], row[5])
 
-                                row = [event['Distal'].de_novo,
-                                       e1_range_str,
-                                       'E2',
-                                       e2_range_str,
-                                       'Distal',
-                                       event['Distal'].range_str()]
-                                quants = [event_non_changing, event_changing] + self.quantifications(module, 's', edge=event['Distal'], node=event['E1'])
-                                writer.writerow(src_common + row + [event_size] + quants)
-                                self.junction_cache.append((module, src_common, quants, row[0], row[4], row[5]))
-                                self.heatmap_add(module, src_common, quants,
-                                                 event['Distal'].absolute_end - event['Distal'].absolute_start,
-                                                 row[0], row[4], row[5])
-                            event_i += 1
+                            row = [event['Distal'].de_novo,
+                                   e1_range_str,
+                                   'E2',
+                                   e2_range_str,
+                                   'Distal',
+                                   event['Distal'].range_str()]
+                            quants = [event_non_changing, event_changing] + self.quantifications(module, 's', edge=event['Distal'], node=event['E1'])
+                            writer.writerow(src_common + row + [event_size] + quants)
+                            self.junction_cache.append((module, src_common, quants, row[0], row[4], row[5]))
+                            self.heatmap_add(module, src_common, quants,
+                                             event['Distal'].absolute_end - event['Distal'].absolute_start,
+                                             row[0], row[4], row[5])
+                        event_i += 1
 
 
     def p_alt5prime(self):
@@ -820,91 +791,92 @@ class TsvWriter(BaseTsvWriter):
             writer = csv.writer(csvfile, dialect='excel-tab', delimiter='\t')
             for module in self.modules:
                 events, _complex, _total_events = self.as_types[module.idx]
-                if not _complex or self.config.output_complex:
-                    event_i = 1
-                    for event in events:
-                        if event['event'] == 'p_alt5ss':
-                            src_common = self.common_data(module,
-                                                          's',
-                                                          node=event['C1'],
-                                                          event_name="pA5",
-                                                          event_ii=event_i)
-                            trg_common = self.common_data(module,
-                                                          't',
-                                                          node=event['C2'],
-                                                          event_name="pA5",
-                                                          event_ii=event_i)
+                if _complex and self.config.only_binary:
+                    continue
+                event_i = 1
+                for event in events:
+                    if event['event'] == 'p_alt5ss':
+                        src_common = self.common_data(module,
+                                                      's',
+                                                      node=event['C1'],
+                                                      event_name="pA5",
+                                                      event_ii=event_i)
+                        trg_common = self.common_data(module,
+                                                      't',
+                                                      node=event['C2'],
+                                                      event_name="pA5",
+                                                      event_ii=event_i)
 
-                            event_size = self._trim_strand_case_event_size(event['Include1'], 'absolute_end',
-                                                                           event['Include1'], 'absolute_start') + 1 + \
-                                         self._trim_strand_case_event_size(event['A'], 'end', event['A'], 'start') + 1
+                        event_size = self._trim_strand_case_event_size(event['Include1'], 'absolute_end',
+                                                                       event['Include1'], 'absolute_start') + 1 + \
+                                     self._trim_strand_case_event_size(event['A'], 'end', event['A'], 'start') + 1
 
-                            quant_identifiers = (
-                                ('s', event['Skip']),
-                                ('s', event['Include1']),
-                                ('t', event['Skip']),
-                                ('t', event['Include2']),
-                            )
-                            event_non_changing = self.event_non_changing(module, quant_identifiers)
-                            event_changing = self.event_changing(module, quant_identifiers)
+                        quant_identifiers = (
+                            ('s', event['Skip']),
+                            ('s', event['Include1']),
+                            ('t', event['Skip']),
+                            ('t', event['Include2']),
+                        )
+                        event_non_changing = self.event_non_changing(module, quant_identifiers)
+                        event_changing = self.event_changing(module, quant_identifiers)
 
-                            c1_range_str = event['C1'].range_str()
-                            a_range_str = self._trim_strand_case_range_str(event['A'], 'start', event['Include2'], 'start')
-                            c2_range_str = self._trim_strand_case_range_str(event['Include2'], 'end', event['C2'], 'end')
+                        c1_range_str = event['C1'].range_str()
+                        a_range_str = self._trim_strand_case_range_str(event['A'], 'start', event['Include2'], 'start')
+                        c2_range_str = self._trim_strand_case_range_str(event['Include2'], 'end', event['C2'], 'end')
 
-                            row = [event['Skip'].de_novo,
-                                   c1_range_str,
-                                   'E3',
-                                   c2_range_str,
-                                   'Distal',
-                                   event['Skip'].range_str()]
-                            quants = [event_non_changing, event_changing] + self.quantifications(module, 's', event['Skip'])
-                            writer.writerow(src_common + row + [event_size] + quants)
-                            self.junction_cache.append((module, src_common, quants, row[0], row[4], row[5]))
-                            self.heatmap_add(module, src_common, quants,
-                                             event['Skip'].absolute_end - event['Skip'].absolute_start,
-                                             row[0], row[4], row[5])
+                        row = [event['Skip'].de_novo,
+                               c1_range_str,
+                               'E3',
+                               c2_range_str,
+                               'Distal',
+                               event['Skip'].range_str()]
+                        quants = [event_non_changing, event_changing] + self.quantifications(module, 's', event['Skip'])
+                        writer.writerow(src_common + row + [event_size] + quants)
+                        self.junction_cache.append((module, src_common, quants, row[0], row[4], row[5]))
+                        self.heatmap_add(module, src_common, quants,
+                                         event['Skip'].absolute_end - event['Skip'].absolute_start,
+                                         row[0], row[4], row[5])
 
-                            row = [event['Include1'].de_novo,
-                                   c1_range_str,
-                                   'E2',
-                                   a_range_str,
-                                   'Intron',
-                                   event['Include1'].range_str()]
-                            quants = [event_non_changing, event_changing] + self.quantifications(module, 's', event['Include1'])
-                            writer.writerow(src_common + row + [event_size] + quants)
-                            self.junction_cache.append((module, src_common, quants, row[0], row[4], row[5]))
-                            self.heatmap_add(module, src_common, quants,
-                                             event['Include1'].absolute_end - event['Include1'].absolute_start,
-                                             row[0], row[4], row[5])
+                        row = [event['Include1'].de_novo,
+                               c1_range_str,
+                               'E2',
+                               a_range_str,
+                               'Intron',
+                               event['Include1'].range_str()]
+                        quants = [event_non_changing, event_changing] + self.quantifications(module, 's', event['Include1'])
+                        writer.writerow(src_common + row + [event_size] + quants)
+                        self.junction_cache.append((module, src_common, quants, row[0], row[4], row[5]))
+                        self.heatmap_add(module, src_common, quants,
+                                         event['Include1'].absolute_end - event['Include1'].absolute_start,
+                                         row[0], row[4], row[5])
 
-                            row = [event['Skip'].de_novo,
-                                   c2_range_str,
-                                   'E1',
-                                   c1_range_str,
-                                   'Distal',
-                                   event['Skip'].range_str()]
-                            quants = [event_non_changing, event_changing] + self.quantifications(module, 't', event['Skip'])
-                            writer.writerow(trg_common + row + [event_size] + quants)
-                            self.junction_cache.append((module, trg_common, quants, row[0], row[4], row[5]))
-                            self.heatmap_add(module, trg_common, quants,
-                                             event['Skip'].absolute_end - event['Skip'].absolute_start,
-                                             row[0], row[4], row[5])
+                        row = [event['Skip'].de_novo,
+                               c2_range_str,
+                               'E1',
+                               c1_range_str,
+                               'Distal',
+                               event['Skip'].range_str()]
+                        quants = [event_non_changing, event_changing] + self.quantifications(module, 't', event['Skip'])
+                        writer.writerow(trg_common + row + [event_size] + quants)
+                        self.junction_cache.append((module, trg_common, quants, row[0], row[4], row[5]))
+                        self.heatmap_add(module, trg_common, quants,
+                                         event['Skip'].absolute_end - event['Skip'].absolute_start,
+                                         row[0], row[4], row[5])
 
-                            row = [event['Include2'].de_novo,
-                                   c2_range_str,
-                                   'E2',
-                                   a_range_str,
-                                   'Proximal',
-                                   event['Include2'].range_str()]
-                            quants = [event_non_changing, event_changing] + self.quantifications(module, 't', event['Include2'])
-                            writer.writerow(trg_common + row + [event_size] + quants)
-                            self.junction_cache.append((module, trg_common, quants, row[0], row[4], row[5]))
-                            self.heatmap_add(module, trg_common, quants,
-                                             event['Include2'].absolute_end - event['Include2'].absolute_start,
-                                             row[0], row[4], row[5])
+                        row = [event['Include2'].de_novo,
+                               c2_range_str,
+                               'E2',
+                               a_range_str,
+                               'Proximal',
+                               event['Include2'].range_str()]
+                        quants = [event_non_changing, event_changing] + self.quantifications(module, 't', event['Include2'])
+                        writer.writerow(trg_common + row + [event_size] + quants)
+                        self.junction_cache.append((module, trg_common, quants, row[0], row[4], row[5]))
+                        self.heatmap_add(module, trg_common, quants,
+                                         event['Include2'].absolute_end - event['Include2'].absolute_start,
+                                         row[0], row[4], row[5])
 
-                            event_i += 1
+                        event_i += 1
 
 
     def p_alt3prime(self):
@@ -912,179 +884,181 @@ class TsvWriter(BaseTsvWriter):
             writer = csv.writer(csvfile, dialect='excel-tab', delimiter='\t')
             for module in self.modules:
                 events, _complex, _total_events = self.as_types[module.idx]
-                if not _complex or self.config.output_complex:
-                    event_i = 1
-                    for event in events:
-                        if event['event'] == 'p_alt3ss':
-                            # TODO: why am I using strand_case for putative alt3, but not putative alt 5?
-                            src_common = self.common_data(module,
-                                                          's',
-                                                          node=module.strand_case(case_plus=event['C1'],
-                                                                                  case_minus=event['C2']),
-                                                          event_name="pA3",
-                                                          event_ii=event_i)
-                            trg_common = self.common_data(module,
-                                                          't',
-                                                          node=module.strand_case(case_plus=event['C2'],
-                                                                                  case_minus=event['C1']),
-                                                          event_name="pA3",
-                                                          event_ii=event_i)
+                if _complex and self.config.only_binary:
+                    continue
+                event_i = 1
+                for event in events:
+                    if event['event'] == 'p_alt3ss':
+                        # TODO: why am I using strand_case for putative alt3, but not putative alt 5?
+                        src_common = self.common_data(module,
+                                                      's',
+                                                      node=module.strand_case(case_plus=event['C1'],
+                                                                              case_minus=event['C2']),
+                                                      event_name="pA3",
+                                                      event_ii=event_i)
+                        trg_common = self.common_data(module,
+                                                      't',
+                                                      node=module.strand_case(case_plus=event['C2'],
+                                                                              case_minus=event['C1']),
+                                                      event_name="pA3",
+                                                      event_ii=event_i)
 
-                            event_size = self._trim_strand_case_event_size(event['Include2'], 'absolute_end',
-                                                                           event['Include2'], 'absolute_start') + 1 + \
-                                         self._trim_strand_case_event_size(event['A'], 'end', event['A'], 'start') + 1
+                        event_size = self._trim_strand_case_event_size(event['Include2'], 'absolute_end',
+                                                                       event['Include2'], 'absolute_start') + 1 + \
+                                     self._trim_strand_case_event_size(event['A'], 'end', event['A'], 'start') + 1
 
-                            quant_identifiers = (
-                                ('s', event['Skip']),
-                                ('s', event['Include1']),
-                                ('t', event['Include2']),
-                                ('t', event['Skip']),
-                            )
-                            event_non_changing = self.event_non_changing(module, quant_identifiers)
-                            event_changing = self.event_changing(module, quant_identifiers)
+                        quant_identifiers = (
+                            ('s', event['Skip']),
+                            ('s', event['Include1']),
+                            ('t', event['Include2']),
+                            ('t', event['Skip']),
+                        )
+                        event_non_changing = self.event_non_changing(module, quant_identifiers)
+                        event_changing = self.event_changing(module, quant_identifiers)
 
-                            c1_range_str = self._trim_strand_case_range_str(event['C1'], 'start', event['Include1'], 'start')
-                            a_range_str = self._trim_strand_case_range_str(event['Include1'], 'end', event['A'], 'end')
-                            c2_range_str = event['C2'].range_str()
+                        c1_range_str = self._trim_strand_case_range_str(event['C1'], 'start', event['Include1'], 'start')
+                        a_range_str = self._trim_strand_case_range_str(event['Include1'], 'end', event['A'], 'end')
+                        c2_range_str = event['C2'].range_str()
 
-                            row = [event['Skip'].de_novo,
-                                   c2_range_str,
-                                   'E3',
-                                   c1_range_str,
-                                   'Distal',
-                                   event['Skip'].range_str()]
-                            quants = [event_non_changing, event_changing] + self.quantifications(module, 's', event['Skip'])
-                            writer.writerow(src_common + row + [event_size] + quants)
-                            self.junction_cache.append((module, src_common, quants, row[0], row[4], row[5]))
-                            self.heatmap_add(module, src_common, quants,
-                                             event['Skip'].absolute_end - event['Skip'].absolute_start,
-                                             row[0], row[4], row[5])
+                        row = [event['Skip'].de_novo,
+                               c2_range_str,
+                               'E3',
+                               c1_range_str,
+                               'Distal',
+                               event['Skip'].range_str()]
+                        quants = [event_non_changing, event_changing] + self.quantifications(module, 's', event['Skip'])
+                        writer.writerow(src_common + row + [event_size] + quants)
+                        self.junction_cache.append((module, src_common, quants, row[0], row[4], row[5]))
+                        self.heatmap_add(module, src_common, quants,
+                                         event['Skip'].absolute_end - event['Skip'].absolute_start,
+                                         row[0], row[4], row[5])
 
-                            row = [event['Include1'].de_novo,
-                                   c2_range_str,
-                                   'E2',
-                                   a_range_str,
-                                   'Proximal',
-                                   event['Include1'].range_str()]
-                            quants = [event_non_changing, event_changing] + self.quantifications(module, 's', event['Include1'])
-                            writer.writerow(src_common + row + [event_size] + quants)
-                            self.junction_cache.append((module, src_common, quants, row[0], row[4], row[5]))
-                            self.heatmap_add(module, src_common, quants,
-                                             event['Include1'].absolute_end - event['Include1'].absolute_start,
-                                             row[0], row[4], row[5])
+                        row = [event['Include1'].de_novo,
+                               c2_range_str,
+                               'E2',
+                               a_range_str,
+                               'Proximal',
+                               event['Include1'].range_str()]
+                        quants = [event_non_changing, event_changing] + self.quantifications(module, 's', event['Include1'])
+                        writer.writerow(src_common + row + [event_size] + quants)
+                        self.junction_cache.append((module, src_common, quants, row[0], row[4], row[5]))
+                        self.heatmap_add(module, src_common, quants,
+                                         event['Include1'].absolute_end - event['Include1'].absolute_start,
+                                         row[0], row[4], row[5])
 
-                            row = [event['Include2'].de_novo,
-                                   c1_range_str,
-                                   'E2',
-                                   a_range_str,
-                                   'Intron',
-                                   event['Include2'].range_str()]
-                            quants = [event_non_changing, event_changing] + self.quantifications(module, 't', event['Include2'])
-                            writer.writerow(trg_common + row + [event_size] + quants)
-                            self.junction_cache.append((module, trg_common, quants, row[0], row[4], row[5]))
-                            self.heatmap_add(module, trg_common, quants,
-                                             event['Include2'].absolute_end - event['Include2'].absolute_start,
-                                             row[0], row[4], row[5])
+                        row = [event['Include2'].de_novo,
+                               c1_range_str,
+                               'E2',
+                               a_range_str,
+                               'Intron',
+                               event['Include2'].range_str()]
+                        quants = [event_non_changing, event_changing] + self.quantifications(module, 't', event['Include2'])
+                        writer.writerow(trg_common + row + [event_size] + quants)
+                        self.junction_cache.append((module, trg_common, quants, row[0], row[4], row[5]))
+                        self.heatmap_add(module, trg_common, quants,
+                                         event['Include2'].absolute_end - event['Include2'].absolute_start,
+                                         row[0], row[4], row[5])
 
-                            row = [event['Skip'].de_novo,
-                                   c1_range_str,
-                                   'E1',
-                                   c2_range_str,
-                                   'Distal',
-                                   event['Skip'].range_str()]
-                            quants = [event_non_changing, event_changing] + self.quantifications(module, 't', event['Skip'])
-                            writer.writerow(trg_common + row + [event_size] + quants)
-                            self.junction_cache.append((module, trg_common, quants, row[0], row[4], row[5]))
-                            self.heatmap_add(module, trg_common, quants,
-                                             event['Skip'].absolute_end - event['Skip'].absolute_start,
-                                             row[0], row[4], row[5])
+                        row = [event['Skip'].de_novo,
+                               c1_range_str,
+                               'E1',
+                               c2_range_str,
+                               'Distal',
+                               event['Skip'].range_str()]
+                        quants = [event_non_changing, event_changing] + self.quantifications(module, 't', event['Skip'])
+                        writer.writerow(trg_common + row + [event_size] + quants)
+                        self.junction_cache.append((module, trg_common, quants, row[0], row[4], row[5]))
+                        self.heatmap_add(module, trg_common, quants,
+                                         event['Skip'].absolute_end - event['Skip'].absolute_start,
+                                         row[0], row[4], row[5])
 
-                            event_i += 1
+                        event_i += 1
 
     def alt3and5prime(self):
         with open(os.path.join(self.config.directory, 'alt3and5prime.tsv.%s' % self.pid), 'a', newline='') as csvfile:
             writer = csv.writer(csvfile, dialect='excel-tab', delimiter='\t')
             for module in self.modules:
                 events, _complex, _total_events = self.as_types[module.idx]
-                if not _complex or self.config.output_complex:
-                    event_i = 1
-                    for event in events:
-                        if event['event'] == 'alt3and5ss':
-                            src_common = self.common_data(module, 's',
-                                                          edge=event["J1"],
-                                                          node=event["E1"],
-                                                          event_name="A3A5",
-                                                          event_ii=event_i)
-                            trg_common = self.common_data(module, 't',
-                                                          edge=event["J1"],
-                                                          node=event["E2"],
-                                                          event_name="A3A5",
-                                                          event_ii=event_i)
+                if _complex and self.config.only_binary:
+                    continue
+                event_i = 1
+                for event in events:
+                    if event['event'] == 'alt3and5ss':
+                        src_common = self.common_data(module, 's',
+                                                      edge=event["J1"],
+                                                      node=event["E1"],
+                                                      event_name="A3A5",
+                                                      event_ii=event_i)
+                        trg_common = self.common_data(module, 't',
+                                                      edge=event["J1"],
+                                                      node=event["E2"],
+                                                      event_name="A3A5",
+                                                      event_ii=event_i)
 
-                            quant_identifiers = (
-                                ('s', event['J1']),
-                                ('s', event['J2']),
-                                ('t', event['J1']),
-                                ('t', event['J2']),
-                            )
-                            event_non_changing = self.event_non_changing(module, quant_identifiers)
-                            event_changing = self.event_changing(module, quant_identifiers)
+                        quant_identifiers = (
+                            ('s', event['J1']),
+                            ('s', event['J2']),
+                            ('t', event['J1']),
+                            ('t', event['J2']),
+                        )
+                        event_non_changing = self.event_non_changing(module, quant_identifiers)
+                        event_changing = self.event_changing(module, quant_identifiers)
 
-                            e1_range_str = self._trim_strand_case_range_str(event['E1'], 'start', event['J2'], 'start')
-                            e2_range_str = self._trim_strand_case_range_str(event['J1'], 'end', event['E2'], 'end')
+                        e1_range_str = self._trim_strand_case_range_str(event['E1'], 'start', event['J2'], 'start')
+                        e2_range_str = self._trim_strand_case_range_str(event['J1'], 'end', event['E2'], 'end')
 
-                            row = [event['J1'].de_novo,
-                                   e1_range_str,
-                                   'E2',
-                                   e2_range_str,
-                                   'E1_E2_J1',
-                                   event['J1'].range_str()]
-                            quants = [event_non_changing, event_changing] + self.quantifications(module, 's', event['J1'])
-                            writer.writerow(src_common + row + quants)
-                            self.junction_cache.append((module, src_common, quants, row[0], row[4], row[5]))
-                            self.heatmap_add(module, src_common, quants,
-                                             event['J1'].absolute_end - event['J1'].absolute_start,
-                                             row[0], row[4], row[5])
+                        row = [event['J1'].de_novo,
+                               e1_range_str,
+                               'E2',
+                               e2_range_str,
+                               'E1_E2_J1',
+                               event['J1'].range_str()]
+                        quants = [event_non_changing, event_changing] + self.quantifications(module, 's', event['J1'])
+                        writer.writerow(src_common + row + quants)
+                        self.junction_cache.append((module, src_common, quants, row[0], row[4], row[5]))
+                        self.heatmap_add(module, src_common, quants,
+                                         event['J1'].absolute_end - event['J1'].absolute_start,
+                                         row[0], row[4], row[5])
 
-                            row = [event['J2'].de_novo,
-                                   e1_range_str,
-                                   'E2',
-                                   e2_range_str,
-                                   'E1_E2_J2',
-                                   event['J2'].range_str()]
-                            quants = [event_non_changing, event_changing] + self.quantifications(module, 's', event['J2'])
-                            writer.writerow(src_common + row + quants)
-                            self.junction_cache.append((module, src_common, quants, row[0], row[4], row[5]))
-                            self.heatmap_add(module, src_common, quants,
-                                             event['J2'].absolute_end - event['J2'].absolute_start,
-                                             row[0], row[4], row[5])
+                        row = [event['J2'].de_novo,
+                               e1_range_str,
+                               'E2',
+                               e2_range_str,
+                               'E1_E2_J2',
+                               event['J2'].range_str()]
+                        quants = [event_non_changing, event_changing] + self.quantifications(module, 's', event['J2'])
+                        writer.writerow(src_common + row + quants)
+                        self.junction_cache.append((module, src_common, quants, row[0], row[4], row[5]))
+                        self.heatmap_add(module, src_common, quants,
+                                         event['J2'].absolute_end - event['J2'].absolute_start,
+                                         row[0], row[4], row[5])
 
-                            row = [event['J1'].de_novo,
-                                   e2_range_str,
-                                   'E1',
-                                   e1_range_str,
-                                   'E2_E1_J1',
-                                   event['J1'].range_str()]
-                            quants = [event_non_changing, event_changing] + self.quantifications(module, 't', event['J1'])
-                            writer.writerow(trg_common + row + quants)
-                            self.junction_cache.append((module, trg_common, quants, row[0], row[4], row[5]))
-                            self.heatmap_add(module, trg_common, quants,
-                                             event['J1'].absolute_end - event['J1'].absolute_start,
-                                             row[0], row[4], row[5])
+                        row = [event['J1'].de_novo,
+                               e2_range_str,
+                               'E1',
+                               e1_range_str,
+                               'E2_E1_J1',
+                               event['J1'].range_str()]
+                        quants = [event_non_changing, event_changing] + self.quantifications(module, 't', event['J1'])
+                        writer.writerow(trg_common + row + quants)
+                        self.junction_cache.append((module, trg_common, quants, row[0], row[4], row[5]))
+                        self.heatmap_add(module, trg_common, quants,
+                                         event['J1'].absolute_end - event['J1'].absolute_start,
+                                         row[0], row[4], row[5])
 
-                            row = [event['J2'].de_novo,
-                                   e2_range_str,
-                                   'E1',
-                                   e1_range_str,
-                                   'E2_E1_J2',
-                                   event['J2'].range_str()]
-                            quants = [event_non_changing, event_changing] + self.quantifications(module, 't', event['J2'])
-                            writer.writerow(trg_common + row + quants)
-                            self.junction_cache.append((module, trg_common, quants, row[0], row[4], row[5]))
-                            self.heatmap_add(module, trg_common, quants,
-                                             event['J2'].absolute_end - event['J2'].absolute_start,
-                                             row[0], row[4], row[5])
-                            event_i += 1
+                        row = [event['J2'].de_novo,
+                               e2_range_str,
+                               'E1',
+                               e1_range_str,
+                               'E2_E1_J2',
+                               event['J2'].range_str()]
+                        quants = [event_non_changing, event_changing] + self.quantifications(module, 't', event['J2'])
+                        writer.writerow(trg_common + row + quants)
+                        self.junction_cache.append((module, trg_common, quants, row[0], row[4], row[5]))
+                        self.heatmap_add(module, trg_common, quants,
+                                         event['J2'].absolute_end - event['J2'].absolute_start,
+                                         row[0], row[4], row[5])
+                        event_i += 1
 
 
     def mutually_exclusive(self):
@@ -1093,105 +1067,106 @@ class TsvWriter(BaseTsvWriter):
             writer = csv.writer(csvfile, dialect='excel-tab', delimiter='\t')
             for module in self.modules:
                 events, _complex, _total_events = self.as_types[module.idx]
-                if not _complex or self.config.output_complex:
-                    event_i = 1
-                    for event in events:
-                        if event['event'] == 'mutually_exclusive':
+                if _complex and self.config.only_binary:
+                    continue
+                event_i = 1
+                for event in events:
+                    if event['event'] == 'mutually_exclusive':
 
-                            quant_identifiers = (
-                                ('s', event['Include1']),
-                                ('s', event['SkipA1']),
-                                ('t', event['Include2']),
-                                ('t', event['SkipA2']),
-                            )
-                            event_non_changing = self.event_non_changing(module, quant_identifiers)
-                            event_changing = self.event_changing(module, quant_identifiers)
+                        quant_identifiers = (
+                            ('s', event['Include1']),
+                            ('s', event['SkipA1']),
+                            ('t', event['Include2']),
+                            ('t', event['SkipA2']),
+                        )
+                        event_non_changing = self.event_non_changing(module, quant_identifiers)
+                        event_changing = self.event_changing(module, quant_identifiers)
 
-                            c1_range_str = self._trim_strand_case_range_str(event['C1'], 'start', event['Include1'], 'start')
-                            a1_range_str = self._trim_strand_case_range_str(event['Include1'], 'end', event['SkipA2'], 'start')
-                            a2_range_str = self._trim_strand_case_range_str(event['SkipA1'], 'end', event['Include2'], 'start')
-                            c2_range_str = self._trim_strand_case_range_str(event['Include2'], 'end', event['C2'], 'end')
+                        c1_range_str = self._trim_strand_case_range_str(event['C1'], 'start', event['Include1'], 'start')
+                        a1_range_str = self._trim_strand_case_range_str(event['Include1'], 'end', event['SkipA2'], 'start')
+                        a2_range_str = self._trim_strand_case_range_str(event['SkipA1'], 'end', event['Include2'], 'start')
+                        c2_range_str = self._trim_strand_case_range_str(event['Include2'], 'end', event['C2'], 'end')
 
-                            row = [event['Include1'].de_novo,
-                                   c1_range_str,
-                                   'A1',
-                                   a1_range_str,
-                                   'C1_A1',
-                                   event['Include1'].range_str()]
-                            src_common = self.common_data(module,
-                                                          's',
-                                                          node=event['C1'],
-                                                          edge=event['Include1'],
-                                                          event_name='mxe',
-                                                          event_ii=event_i)
-                            quants = [event_non_changing, event_changing] + \
-                                     self.quantifications(module, 's', edge=event['Include1'],node=event['C1'])
-                            writer.writerow(src_common + row + quants)
-                            self.junction_cache.append((module, src_common, quants, row[0], row[4], row[5]))
-                            self.heatmap_add(module, src_common, quants,
-                                             event['Include1'].absolute_end - event['Include1'].absolute_start,
-                                             row[0], row[4], row[5])
+                        row = [event['Include1'].de_novo,
+                               c1_range_str,
+                               'A1',
+                               a1_range_str,
+                               'C1_A1',
+                               event['Include1'].range_str()]
+                        src_common = self.common_data(module,
+                                                      's',
+                                                      node=event['C1'],
+                                                      edge=event['Include1'],
+                                                      event_name='mxe',
+                                                      event_ii=event_i)
+                        quants = [event_non_changing, event_changing] + \
+                                 self.quantifications(module, 's', edge=event['Include1'],node=event['C1'])
+                        writer.writerow(src_common + row + quants)
+                        self.junction_cache.append((module, src_common, quants, row[0], row[4], row[5]))
+                        self.heatmap_add(module, src_common, quants,
+                                         event['Include1'].absolute_end - event['Include1'].absolute_start,
+                                         row[0], row[4], row[5])
 
-                            row = [event['SkipA1'].de_novo,
-                                   c1_range_str,
-                                   'A2',
-                                   a2_range_str,
-                                   'C1_A2',
-                                   event['SkipA1'].range_str()]
-                            src_common = self.common_data(module,
-                                                          's',
-                                                          node=event['C1'],
-                                                          edge=event['SkipA1'],
-                                                          event_name='mxe',
-                                                          event_ii=event_i)
-                            quants = [event_non_changing, event_changing] + \
-                                     self.quantifications(module, 's', edge=event['SkipA1'],node=event['C1'])
-                            writer.writerow(src_common + row + quants)
-                            self.junction_cache.append((module, src_common, quants, row[0], row[4], row[5]))
-                            self.heatmap_add(module, src_common, quants,
-                                             event['SkipA1'].absolute_end - event['SkipA1'].absolute_start,
-                                             row[0], row[4], row[5])
+                        row = [event['SkipA1'].de_novo,
+                               c1_range_str,
+                               'A2',
+                               a2_range_str,
+                               'C1_A2',
+                               event['SkipA1'].range_str()]
+                        src_common = self.common_data(module,
+                                                      's',
+                                                      node=event['C1'],
+                                                      edge=event['SkipA1'],
+                                                      event_name='mxe',
+                                                      event_ii=event_i)
+                        quants = [event_non_changing, event_changing] + \
+                                 self.quantifications(module, 's', edge=event['SkipA1'],node=event['C1'])
+                        writer.writerow(src_common + row + quants)
+                        self.junction_cache.append((module, src_common, quants, row[0], row[4], row[5]))
+                        self.heatmap_add(module, src_common, quants,
+                                         event['SkipA1'].absolute_end - event['SkipA1'].absolute_start,
+                                         row[0], row[4], row[5])
 
-                            row = [event['Include2'].de_novo,
-                                   c2_range_str,
-                                   'A1',
-                                   a1_range_str,
-                                   'C2_A1',
-                                   event['Include2'].range_str()]
-                            trg_common = self.common_data(module,
-                                                          't',
-                                                          node=event['C2'],
-                                                          edge=event['Include2'],
-                                                          event_name='mxe',
-                                                          event_ii=event_i)
-                            quants = [event_non_changing, event_changing] + \
-                                     self.quantifications(module, 't', edge=event['Include2'], node=event['C2'])
-                            writer.writerow(trg_common + row + quants)
-                            self.junction_cache.append((module, trg_common, quants, row[0], row[4], row[5]))
-                            self.heatmap_add(module, trg_common, quants,
-                                            event['Include2'].absolute_end - event['Include2'].absolute_start,
-                                            row[0], row[4], row[5])
+                        row = [event['Include2'].de_novo,
+                               c2_range_str,
+                               'A1',
+                               a1_range_str,
+                               'C2_A1',
+                               event['Include2'].range_str()]
+                        trg_common = self.common_data(module,
+                                                      't',
+                                                      node=event['C2'],
+                                                      edge=event['Include2'],
+                                                      event_name='mxe',
+                                                      event_ii=event_i)
+                        quants = [event_non_changing, event_changing] + \
+                                 self.quantifications(module, 't', edge=event['Include2'], node=event['C2'])
+                        writer.writerow(trg_common + row + quants)
+                        self.junction_cache.append((module, trg_common, quants, row[0], row[4], row[5]))
+                        self.heatmap_add(module, trg_common, quants,
+                                        event['Include2'].absolute_end - event['Include2'].absolute_start,
+                                        row[0], row[4], row[5])
 
-                            row = [event['SkipA2'].de_novo,
-                                   c2_range_str,
-                                   'A2',
-                                   a2_range_str,
-                                   'C2_A2',
-                                   event['SkipA2'].range_str()]
-                            trg_common = self.common_data(module,
-                                                          't',
-                                                          node=event['C2'],
-                                                          edge=event['SkipA2'],
-                                                          event_name='mxe',
-                                                          event_ii=event_i)
-                            quants = [event_non_changing, event_changing] + \
-                                     self.quantifications(module, 't', edge=event['SkipA2'], node=event['C2'])
-                            writer.writerow(trg_common + row + quants)
-                            self.junction_cache.append((module, trg_common, quants, row[0], row[4], row[5]))
-                            self.heatmap_add(module, trg_common, quants,
-                                             event['SkipA2'].absolute_end - event['SkipA2'].absolute_start,
-                                             row[0], row[4], row[5])
-                            event_i += 1
+                        row = [event['SkipA2'].de_novo,
+                               c2_range_str,
+                               'A2',
+                               a2_range_str,
+                               'C2_A2',
+                               event['SkipA2'].range_str()]
+                        trg_common = self.common_data(module,
+                                                      't',
+                                                      node=event['C2'],
+                                                      edge=event['SkipA2'],
+                                                      event_name='mxe',
+                                                      event_ii=event_i)
+                        quants = [event_non_changing, event_changing] + \
+                                 self.quantifications(module, 't', edge=event['SkipA2'], node=event['C2'])
+                        writer.writerow(trg_common + row + quants)
+                        self.junction_cache.append((module, trg_common, quants, row[0], row[4], row[5]))
+                        self.heatmap_add(module, trg_common, quants,
+                                         event['SkipA2'].absolute_end - event['SkipA2'].absolute_start,
+                                         row[0], row[4], row[5])
+                        event_i += 1
 
 
     def alternate_last_exon(self):
@@ -1200,66 +1175,67 @@ class TsvWriter(BaseTsvWriter):
             writer = csv.writer(csvfile, dialect='excel-tab', delimiter='\t')
             for module in self.modules:
                 events, _complex, _total_events = self.as_types[module.idx]
-                if not _complex or self.config.output_complex:
-                    event_i = 1
-                    for event in events:
-                        if event['event'] == 'ale':
-                            src_common = self.common_data(module,
-                                                          's',
-                                                          node=event['Reference'],
-                                                          event_name='ale',
-                                                          event_ii=event_i)
-                            # only ever write ALEs that are quantified by LSV
+                if _complex and self.config.only_binary:
+                    continue
+                event_i = 1
+                for event in events:
+                    if event['event'] == 'ale':
+                        src_common = self.common_data(module,
+                                                      's',
+                                                      node=event['Reference'],
+                                                      event_name='ale',
+                                                      event_ii=event_i)
+                        # only ever write ALEs that are quantified by LSV
 
-                            if src_common[5]:
+                        if src_common[5]:
 
-                                quant_identifiers = (
-                                    ('s', event['SkipA2']),
-                                    ('s', event['SkipA1']),
-                                )
-                                event_non_changing = self.event_non_changing(module, quant_identifiers)
-                                event_changing = self.event_changing(module, quant_identifiers)
+                            quant_identifiers = (
+                                ('s', event['SkipA2']),
+                                ('s', event['SkipA1']),
+                            )
+                            event_non_changing = self.event_non_changing(module, quant_identifiers)
+                            event_changing = self.event_changing(module, quant_identifiers)
 
-                                reference_range_str = self._trim_strand_case_range_str(event['Reference'],
-                                                                                       'start', event['SkipA2'], 'start')
-                                proximal_range_str = self._trim_strand_case_range_str(event['SkipA2'],
-                                                                                      'end', event['Proximal'], 'end')
+                            reference_range_str = self._trim_strand_case_range_str(event['Reference'],
+                                                                                   'start', event['SkipA2'], 'start')
+                            proximal_range_str = self._trim_strand_case_range_str(event['SkipA2'],
+                                                                                  'end', event['Proximal'], 'end')
 
-                                row = [event['SkipA2'].de_novo,
-                                       reference_range_str,
-                                       'A',
-                                       proximal_range_str,
-                                       'Proximal']
-                                if event['SkipA2'].ir:
-                                    row.append('{}-{}'.format(event['SkipA2'].absolute_start, event['SkipA2'].absolute_end))
-                                else:
-                                    row.append(event['SkipA2'].range_str())
-                                quants = [event_non_changing, event_changing] + self.quantifications(module, 's', event['SkipA2'], event['Reference'])
-                                writer.writerow(src_common + row + quants)
-                                self.junction_cache.append((module, src_common, quants, row[0], row[4], row[5]))
-                                self.heatmap_add(module, src_common, quants,
-                                                 event['SkipA2'].absolute_end - event['SkipA2'].absolute_start,
-                                                 row[0], row[4], row[5])
+                            row = [event['SkipA2'].de_novo,
+                                   reference_range_str,
+                                   'A',
+                                   proximal_range_str,
+                                   'Proximal']
+                            if event['SkipA2'].ir:
+                                row.append('{}-{}'.format(event['SkipA2'].absolute_start, event['SkipA2'].absolute_end))
+                            else:
+                                row.append(event['SkipA2'].range_str())
+                            quants = [event_non_changing, event_changing] + self.quantifications(module, 's', event['SkipA2'], event['Reference'])
+                            writer.writerow(src_common + row + quants)
+                            self.junction_cache.append((module, src_common, quants, row[0], row[4], row[5]))
+                            self.heatmap_add(module, src_common, quants,
+                                             event['SkipA2'].absolute_end - event['SkipA2'].absolute_start,
+                                             row[0], row[4], row[5])
 
-                                reference_range_str = self._trim_strand_case_range_str(event['Reference'],
-                                                                                       'start', event['SkipA1'], 'start')
-                                distal_range_str = self._trim_strand_case_range_str(event['SkipA1'],
-                                                                                    'end', event['Distal'], 'end')
+                            reference_range_str = self._trim_strand_case_range_str(event['Reference'],
+                                                                                   'start', event['SkipA1'], 'start')
+                            distal_range_str = self._trim_strand_case_range_str(event['SkipA1'],
+                                                                                'end', event['Distal'], 'end')
 
-                                row = [event['SkipA1'].de_novo,
-                                       reference_range_str,
-                                       'A',
-                                       distal_range_str,
-                                       'Distal',
-                                       event['SkipA1'].range_str()]
-                                quants = [event_non_changing, event_changing] +\
-                                         self.quantifications(module, 's', event['SkipA1'], event['Reference'])
-                                writer.writerow(src_common + row + quants)
-                                self.junction_cache.append((module, src_common, quants, row[0], row[4], row[5]))
-                                self.heatmap_add(module, src_common, quants,
-                                                 event['SkipA1'].absolute_end - event['SkipA1'].absolute_start,
-                                                 row[0], row[4], row[5])
-                                event_i += 1
+                            row = [event['SkipA1'].de_novo,
+                                   reference_range_str,
+                                   'A',
+                                   distal_range_str,
+                                   'Distal',
+                                   event['SkipA1'].range_str()]
+                            quants = [event_non_changing, event_changing] +\
+                                     self.quantifications(module, 's', event['SkipA1'], event['Reference'])
+                            writer.writerow(src_common + row + quants)
+                            self.junction_cache.append((module, src_common, quants, row[0], row[4], row[5]))
+                            self.heatmap_add(module, src_common, quants,
+                                             event['SkipA1'].absolute_end - event['SkipA1'].absolute_start,
+                                             row[0], row[4], row[5])
+                            event_i += 1
 
 
     def alternate_first_exon(self):
@@ -1268,67 +1244,68 @@ class TsvWriter(BaseTsvWriter):
             writer = csv.writer(csvfile, dialect='excel-tab', delimiter='\t')
             for module in self.modules:
                 events, _complex, _total_events = self.as_types[module.idx]
-                if not _complex or self.config.output_complex:
-                    event_i = 1
-                    for event in events:
-                        if event['event'] == 'afe':
-                            all_event_quants = []
-                            trg_common = self.common_data(module,
-                                                          't',
-                                                          node=event['Reference'],
-                                                          event_ii=event_i,
-                                                          event_name='afe')
+                if _complex and self.config.only_binary:
+                    continue
+                event_i = 1
+                for event in events:
+                    if event['event'] == 'afe':
+                        all_event_quants = []
+                        trg_common = self.common_data(module,
+                                                      't',
+                                                      node=event['Reference'],
+                                                      event_ii=event_i,
+                                                      event_name='afe')
 
-                            # only ever write AFEs that are quantified by LSV
-                            if trg_common[5]:
+                        # only ever write AFEs that are quantified by LSV
+                        if trg_common[5]:
 
-                                quant_identifiers = (
-                                    ('t', event['SkipA1']),
-                                    ('t', event['SkipA2']),
-                                )
-                                event_non_changing = self.event_non_changing(module, quant_identifiers)
-                                event_changing = self.event_changing(module, quant_identifiers)
+                            quant_identifiers = (
+                                ('t', event['SkipA1']),
+                                ('t', event['SkipA2']),
+                            )
+                            event_non_changing = self.event_non_changing(module, quant_identifiers)
+                            event_changing = self.event_changing(module, quant_identifiers)
 
-                                reference_range_str = self._trim_strand_case_range_str(event['SkipA1'],
-                                                                                       'end', event['Reference'], 'end')
-                                proximal_range_str = self._trim_strand_case_range_str(event['Proximal'],
-                                                                                      'start', event['SkipA1'], 'start')
+                            reference_range_str = self._trim_strand_case_range_str(event['SkipA1'],
+                                                                                   'end', event['Reference'], 'end')
+                            proximal_range_str = self._trim_strand_case_range_str(event['Proximal'],
+                                                                                  'start', event['SkipA1'], 'start')
 
-                                row = [event['SkipA1'].de_novo,
-                                       reference_range_str,
-                                       'A',
-                                       proximal_range_str,
-                                       'Proximal']
-                                if event['SkipA1'].ir:
-                                    row.append('{}-{}'.format(event['SkipA1'].absolute_start, event['SkipA1'].absolute_end))
-                                else:
-                                    row.append(event['SkipA1'].range_str())
-                                quants = [event_non_changing, event_changing] + self.quantifications(module, 't', event['SkipA1'], event['Reference'])
-                                writer.writerow(trg_common + row + quants)
-                                self.junction_cache.append((module, trg_common, quants, row[0], row[4], row[5]))
-                                self.heatmap_add(module, trg_common, quants,
-                                                 event['SkipA1'].absolute_end - event['SkipA1'].absolute_start,
-                                                 row[0], row[4], row[5])
+                            row = [event['SkipA1'].de_novo,
+                                   reference_range_str,
+                                   'A',
+                                   proximal_range_str,
+                                   'Proximal']
+                            if event['SkipA1'].ir:
+                                row.append('{}-{}'.format(event['SkipA1'].absolute_start, event['SkipA1'].absolute_end))
+                            else:
+                                row.append(event['SkipA1'].range_str())
+                            quants = [event_non_changing, event_changing] + self.quantifications(module, 't', event['SkipA1'], event['Reference'])
+                            writer.writerow(trg_common + row + quants)
+                            self.junction_cache.append((module, trg_common, quants, row[0], row[4], row[5]))
+                            self.heatmap_add(module, trg_common, quants,
+                                             event['SkipA1'].absolute_end - event['SkipA1'].absolute_start,
+                                             row[0], row[4], row[5])
 
-                                reference_range_str = self._trim_strand_case_range_str(event['SkipA2'],
-                                                                                       'end', event['Reference'], 'end')
-                                distal_range_str = self._trim_strand_case_range_str(event['Distal'],
-                                                                                    'start', event['SkipA2'], 'start')
+                            reference_range_str = self._trim_strand_case_range_str(event['SkipA2'],
+                                                                                   'end', event['Reference'], 'end')
+                            distal_range_str = self._trim_strand_case_range_str(event['Distal'],
+                                                                                'start', event['SkipA2'], 'start')
 
-                                row = [event['SkipA2'].de_novo,
-                                       reference_range_str,
-                                       'A',
-                                       distal_range_str,
-                                       'Distal',
-                                       event['SkipA2'].range_str()]
-                                quants = [event_non_changing, event_changing] + \
-                                         self.quantifications(module, 't', event['SkipA2'], event['Reference'])
-                                writer.writerow(trg_common + row + quants)
-                                self.junction_cache.append((module, trg_common, quants, row[0], row[4], row[5]))
-                                self.heatmap_add(module, trg_common, quants,
-                                                 event['SkipA2'].absolute_end - event['SkipA2'].absolute_start,
-                                                 row[0], row[4], row[5])
-                                event_i += 1
+                            row = [event['SkipA2'].de_novo,
+                                   reference_range_str,
+                                   'A',
+                                   distal_range_str,
+                                   'Distal',
+                                   event['SkipA2'].range_str()]
+                            quants = [event_non_changing, event_changing] + \
+                                     self.quantifications(module, 't', event['SkipA2'], event['Reference'])
+                            writer.writerow(trg_common + row + quants)
+                            self.junction_cache.append((module, trg_common, quants, row[0], row[4], row[5]))
+                            self.heatmap_add(module, trg_common, quants,
+                                             event['SkipA2'].absolute_end - event['SkipA2'].absolute_start,
+                                             row[0], row[4], row[5])
+                            event_i += 1
 
 
     def p_alternate_last_exon(self):
@@ -1337,65 +1314,66 @@ class TsvWriter(BaseTsvWriter):
             writer = csv.writer(csvfile, dialect='excel-tab', delimiter='\t')
             for module in self.modules:
                 events, _complex, _total_events = self.as_types[module.idx]
-                if not _complex or self.config.output_complex:
-                    event_i = 1
-                    for event in events:
-                        if event['event'] == 'p_ale':
-                            src_common = self.common_data(module,
-                                                          's',
-                                                          node=event['Reference'],
-                                                          event_ii=event_i,
-                                                          event_name="pALE")
+                if _complex and self.config.only_binary:
+                    continue
+                event_i = 1
+                for event in events:
+                    if event['event'] == 'p_ale':
+                        src_common = self.common_data(module,
+                                                      's',
+                                                      node=event['Reference'],
+                                                      event_ii=event_i,
+                                                      event_name="pALE")
 
-                            # print(event)
-                            # print(src_common)
-                            # print(self.heatmap_cache[module.idx])
-                            if event['Proximal'].start == -1:
-                                proxStr = "nan-{}".format(event['Proximal'].end)
-                            else:
-                                proxStr = "{}-nan".format(event['Proximal'].start)
-                            if src_common[5]:
+                        # print(event)
+                        # print(src_common)
+                        # print(self.heatmap_cache[module.idx])
+                        if event['Proximal'].start == -1:
+                            proxStr = "nan-{}".format(event['Proximal'].end)
+                        else:
+                            proxStr = "{}-nan".format(event['Proximal'].start)
+                        if src_common[5]:
 
-                                quant_identifiers = (
-                                    ('s', event['SkipA2']),
-                                    ('s', event['SkipA1']),
-                                )
-                                event_non_changing = self.event_non_changing(module, quant_identifiers)
-                                event_changing = self.event_changing(module, quant_identifiers)
+                            quant_identifiers = (
+                                ('s', event['SkipA2']),
+                                ('s', event['SkipA1']),
+                            )
+                            event_non_changing = self.event_non_changing(module, quant_identifiers)
+                            event_changing = self.event_changing(module, quant_identifiers)
 
-                                reference_range_str = self._trim_strand_case_range_str(event['Reference'],
-                                                                                       'start', event['SkipA2'], 'start')
+                            reference_range_str = self._trim_strand_case_range_str(event['Reference'],
+                                                                                   'start', event['SkipA2'], 'start')
 
-                                row = [event['SkipA2'].de_novo,
-                                       reference_range_str,
-                                       'A', proxStr,
-                                       'Proximal',
-                                       event['SkipA2'].range_str()]
-                                quants = [event_non_changing, event_changing] + self.quantifications(module, 's', event['SkipA2'])
-                                writer.writerow(src_common + row + quants)
-                                self.junction_cache.append((module, src_common, quants, row[0], row[4], row[5]))
-                                self.heatmap_add(module, src_common, quants,
-                                                 event['SkipA2'].absolute_end - event['SkipA2'].absolute_start,
-                                                 row[0], row[4], row[5])
+                            row = [event['SkipA2'].de_novo,
+                                   reference_range_str,
+                                   'A', proxStr,
+                                   'Proximal',
+                                   event['SkipA2'].range_str()]
+                            quants = [event_non_changing, event_changing] + self.quantifications(module, 's', event['SkipA2'])
+                            writer.writerow(src_common + row + quants)
+                            self.junction_cache.append((module, src_common, quants, row[0], row[4], row[5]))
+                            self.heatmap_add(module, src_common, quants,
+                                             event['SkipA2'].absolute_end - event['SkipA2'].absolute_start,
+                                             row[0], row[4], row[5])
 
-                                reference_range_str = self._trim_strand_case_range_str(event['Reference'],
-                                                                                       'start', event['SkipA1'], 'start')
-                                distal_range_str = self._trim_strand_case_range_str(event['SkipA1'],
-                                                                                    'end', event['Distal'], 'end')
+                            reference_range_str = self._trim_strand_case_range_str(event['Reference'],
+                                                                                   'start', event['SkipA1'], 'start')
+                            distal_range_str = self._trim_strand_case_range_str(event['SkipA1'],
+                                                                                'end', event['Distal'], 'end')
 
-                                row = [event['SkipA1'].de_novo,
-                                       reference_range_str,
-                                       'A',
-                                       distal_range_str,
-                                       'Distal',
-                                       event['SkipA1'].range_str()]
-                                quants = [event_non_changing, event_changing] + self.quantifications(module, 's', event['SkipA1'])
-                                writer.writerow(src_common + row + quants)
-                                self.junction_cache.append((module, src_common, quants, row[0], row[4], row[5]))
-                                self.heatmap_add(module, src_common, quants,
-                                                 event['SkipA1'].absolute_end - event['SkipA1'].absolute_start,
-                                                 row[0], row[4], row[5])
-                                event_i += 1
+                            row = [event['SkipA1'].de_novo,
+                                   reference_range_str,
+                                   'A',
+                                   distal_range_str,
+                                   'Distal',
+                                   event['SkipA1'].range_str()]
+                            quants = [event_non_changing, event_changing] + self.quantifications(module, 's', event['SkipA1'])
+                            writer.writerow(src_common + row + quants)
+                            self.junction_cache.append((module, src_common, quants, row[0], row[4], row[5]))
+                            self.heatmap_add(module, src_common, quants,
+                                             event['SkipA1'].absolute_end - event['SkipA1'].absolute_start,
+                                             row[0], row[4], row[5])
+                            event_i += 1
 
 
     def p_alternate_first_exon(self):
@@ -1404,62 +1382,63 @@ class TsvWriter(BaseTsvWriter):
             writer = csv.writer(csvfile, dialect='excel-tab', delimiter='\t')
             for module in self.modules:
                 events, _complex, _total_events = self.as_types[module.idx]
-                if not _complex or self.config.output_complex:
-                    event_i = 1
-                    for event in events:
-                        if event['event'] == 'p_afe':
-                            if event['Proximal'].start == -1:
-                                proxStr = "nan-{}".format(event['Proximal'].end)
-                            else:
-                                proxStr = "{}-nan".format(event['Proximal'].start)
-                            trg_common = self.common_data(module,
-                                                          't',
-                                                          node=event['Reference'],
-                                                          event_ii=event_i,
-                                                          event_name="pAFE")
+                if _complex and self.config.only_binary:
+                    continue
+                event_i = 1
+                for event in events:
+                    if event['event'] == 'p_afe':
+                        if event['Proximal'].start == -1:
+                            proxStr = "nan-{}".format(event['Proximal'].end)
+                        else:
+                            proxStr = "{}-nan".format(event['Proximal'].start)
+                        trg_common = self.common_data(module,
+                                                      't',
+                                                      node=event['Reference'],
+                                                      event_ii=event_i,
+                                                      event_name="pAFE")
 
-                            if trg_common[5]:
+                        if trg_common[5]:
 
-                                quant_identifiers = (
-                                    ('t', event['SkipA1']),
-                                    ('t', event['SkipA2']),
-                                )
-                                event_non_changing = self.event_non_changing(module, quant_identifiers)
-                                event_changing = self.event_changing(module, quant_identifiers)
+                            quant_identifiers = (
+                                ('t', event['SkipA1']),
+                                ('t', event['SkipA2']),
+                            )
+                            event_non_changing = self.event_non_changing(module, quant_identifiers)
+                            event_changing = self.event_changing(module, quant_identifiers)
 
-                                reference_range_str = self._trim_strand_case_range_str(event['SkipA1'], 'end',
-                                                                                       event['Reference'], 'end')
+                            reference_range_str = self._trim_strand_case_range_str(event['SkipA1'], 'end',
+                                                                                   event['Reference'], 'end')
 
-                                row = [event['SkipA1'].de_novo,
-                                       reference_range_str,
-                                       'A', proxStr,
-                                       'Proximal',
-                                       event['SkipA1'].range_str()]
-                                quants = [event_non_changing, event_changing] + self.quantifications(module, 't', event['SkipA1'])
-                                writer.writerow(trg_common + row + quants)
-                                self.junction_cache.append((module, trg_common, quants, row[0], row[4], row[5]))
-                                self.heatmap_add(module, trg_common, quants,
-                                                 event['SkipA1'].absolute_end - event['SkipA1'].absolute_start,
-                                                 row[0], row[4], row[5])
+                            row = [event['SkipA1'].de_novo,
+                                   reference_range_str,
+                                   'A', proxStr,
+                                   'Proximal',
+                                   event['SkipA1'].range_str()]
+                            quants = [event_non_changing, event_changing] + self.quantifications(module, 't', event['SkipA1'])
+                            writer.writerow(trg_common + row + quants)
+                            self.junction_cache.append((module, trg_common, quants, row[0], row[4], row[5]))
+                            self.heatmap_add(module, trg_common, quants,
+                                             event['SkipA1'].absolute_end - event['SkipA1'].absolute_start,
+                                             row[0], row[4], row[5])
 
-                                reference_range_str = self._trim_strand_case_range_str(event['SkipA2'],
-                                                                                       'end', event['Reference'], 'end')
-                                distal_range_str = self._trim_strand_case_range_str(event['Distal'],
-                                                                                    'start', event['SkipA2'], 'start')
+                            reference_range_str = self._trim_strand_case_range_str(event['SkipA2'],
+                                                                                   'end', event['Reference'], 'end')
+                            distal_range_str = self._trim_strand_case_range_str(event['Distal'],
+                                                                                'start', event['SkipA2'], 'start')
 
-                                row = [event['SkipA2'].de_novo,
-                                       reference_range_str,
-                                       'A',
-                                       distal_range_str,
-                                       'Distal',
-                                       event['SkipA2'].range_str()]
-                                quants = [event_non_changing, event_changing] + self.quantifications(module, 't', event['SkipA2'])
-                                writer.writerow(trg_common + row + quants)
-                                self.junction_cache.append((module, trg_common, quants, row[0], row[4], row[5]))
-                                self.heatmap_add(module, trg_common, quants,
-                                                 event['SkipA2'].absolute_end - event['SkipA2'].absolute_start,
-                                                 row[0], row[4], row[5])
-                                event_i += 1
+                            row = [event['SkipA2'].de_novo,
+                                   reference_range_str,
+                                   'A',
+                                   distal_range_str,
+                                   'Distal',
+                                   event['SkipA2'].range_str()]
+                            quants = [event_non_changing, event_changing] + self.quantifications(module, 't', event['SkipA2'])
+                            writer.writerow(trg_common + row + quants)
+                            self.junction_cache.append((module, trg_common, quants, row[0], row[4], row[5]))
+                            self.heatmap_add(module, trg_common, quants,
+                                             event['SkipA2'].absolute_end - event['SkipA2'].absolute_start,
+                                             row[0], row[4], row[5])
+                            event_i += 1
 
 
     def alternative_intron(self):
@@ -1468,128 +1447,129 @@ class TsvWriter(BaseTsvWriter):
             writer = csv.writer(csvfile, dialect='excel-tab', delimiter='\t')
             for module in self.modules:
                 events, _complex, _total_events = self.as_types[module.idx]
-                if not _complex or self.config.output_complex:
-                    event_i = 1
-                    for event in events:
-                        if event['event'] == 'alternative_intron':
+                if _complex and self.config.only_binary:
+                    continue
+                event_i = 1
+                for event in events:
+                    if event['event'] == 'alternative_intron':
 
-                            # put coordinates back to Jordi's offset numbers
+                        # put coordinates back to Jordi's offset numbers
 
-                            c1_node = module.strand_case(case_plus=event['C1'],
-                                                         case_minus=event['C2'])
-                            c2_node = module.strand_case(case_plus=event['C2'],
-                                                         case_minus=event['C1'])
-                            src_common = self.common_data(module,
-                                                          's',
-                                                          event['Intron'],
-                                                          node=c1_node,
-                                                          event_ii=event_i,
-                                                          event_name="AI")
-                            trg_common = self.common_data(module,
+                        c1_node = module.strand_case(case_plus=event['C1'],
+                                                     case_minus=event['C2'])
+                        c2_node = module.strand_case(case_plus=event['C2'],
+                                                     case_minus=event['C1'])
+                        src_common = self.common_data(module,
+                                                      's',
+                                                      event['Intron'],
+                                                      node=c1_node,
+                                                      event_ii=event_i,
+                                                      event_name="AI")
+                        trg_common = self.common_data(module,
+                                                      't',
+                                                      event['Intron'],
+                                                      node=c2_node,
+                                                      event_ii=event_i,
+                                                      event_name="AI")
+
+                        event_size = abs(event['Intron'].absolute_end - event['Intron'].absolute_start) + 1
+
+                        # I think this fails when there is a source LSV in the middle exon
+                        # if any(':t:' in _l for _l in event['Intron'].lsvs) and not \
+                        #    any(':s:' in _l for _l in event['Intron'].lsvs):
+                        # The quantifications for the alternative intron must be from EITHER Target or Source point of view
+                        #   To check if we should use the target point of view:
+                        junc_in_trg_lsv_count = 0
+
+                        # ensure the junction and intron are both quantified by the same target LSV
+                        if len(set(trg_common[5].split(";")) & set(event['Spliced'].lsvs.keys())) == 1:
+                            # if yes, add one to the junc count
+                            junc_in_trg_lsv_count += 1
+                        # if every junction passed above test, we know the Target point of view quantified the intron
+                        # as well as all possible 'spliced' junctions
+                        if junc_in_trg_lsv_count:
+
+                            quant_identifiers = (
+                                ('t', event['Intron']),
+                                ('t', event['Spliced']),
+                            )
+                            event_non_changing = self.event_non_changing(module, quant_identifiers)
+                            event_changing = self.event_changing(module, quant_identifiers)
+
+                            row = [event['Intron'].de_novo,
+                                   c2_node.range_str(),
+                                   'C1',
+                                   c1_node.range_str(),
+                                   'C2_C1_intron',
+                                   event['Intron'].range_str()]
+                            quants = [event_non_changing, event_changing] + self.quantifications(module,
                                                           't',
-                                                          event['Intron'],
-                                                          node=c2_node,
-                                                          event_ii=event_i,
-                                                          event_name="AI")
+                                                          edge=event['Intron'],
+                                                          node=c2_node)
+                            writer.writerow(trg_common + row + [event_size] + quants)
+                            self.junction_cache.append((module, trg_common, quants, row[0], row[4], row[5]))
+                            self.heatmap_add(module, trg_common, quants,
+                                             event['Intron'].absolute_end - event['Intron'].absolute_start,
+                                             row[0], row[4], row[5])
 
-                            event_size = abs(event['Intron'].absolute_end - event['Intron'].absolute_start) + 1
+                            row = [event['Spliced'].de_novo,
+                                   c1_node.range_str(),
+                                   'C1',
+                                   c1_node.range_str(),
+                                   'C2_C1_spliced',
+                                   event['Spliced'].range_str()]
+                            quants = [event_non_changing, event_changing] + self.quantifications(module,
+                                                          't',
+                                                          edge=event['Spliced'],
+                                                          node=c2_node)
+                            writer.writerow(trg_common + row + [event_size] + quants)
+                            self.junction_cache.append((module, trg_common, quants,
+                                                        event['Spliced'].de_novo, row[4], event['Spliced'].range_str()))
+                            self.heatmap_add(module, trg_common, quants,
+                                             event['Spliced'].absolute_end - event['Spliced'].absolute_start,
+                                             event['Spliced'].de_novo, row[4], event['Spliced'].range_str())
 
-                            # I think this fails when there is a source LSV in the middle exon
-                            # if any(':t:' in _l for _l in event['Intron'].lsvs) and not \
-                            #    any(':s:' in _l for _l in event['Intron'].lsvs):
-                            # The quantifications for the alternative intron must be from EITHER Target or Source point of view
-                            #   To check if we should use the target point of view:
-                            junc_in_trg_lsv_count = 0
+                        # Else the intron and 'spliced' junctions are quantified from source point of view...
+                        else:
 
-                            # ensure the junction and intron are both quantified by the same target LSV
-                            if len(set(trg_common[5].split(";")) & set(event['Spliced'].lsvs.keys())) == 1:
-                                # if yes, add one to the junc count
-                                junc_in_trg_lsv_count += 1
-                            # if every junction passed above test, we know the Target point of view quantified the intron
-                            # as well as all possible 'spliced' junctions
-                            if junc_in_trg_lsv_count:
+                            quant_identifiers = (
+                                ('s', event['Intron']),
+                                ('s', event['Spliced']),
+                            )
+                            event_non_changing = self.event_non_changing(module, quant_identifiers)
+                            event_changing = self.event_changing(module, quant_identifiers)
 
-                                quant_identifiers = (
-                                    ('t', event['Intron']),
-                                    ('t', event['Spliced']),
-                                )
-                                event_non_changing = self.event_non_changing(module, quant_identifiers)
-                                event_changing = self.event_changing(module, quant_identifiers)
+                            row = [event['Intron'].de_novo,
+                                   c1_node.range_str(),
+                                   'C2',
+                                   c2_node.range_str(),
+                                   'C1_C2_intron',
+                                   event['Intron'].range_str()]
+                            quants = [event_non_changing, event_changing] + self.quantifications(module, 's', edge=event['Intron'], node=c1_node)
+                            writer.writerow(src_common + row + [event_size] + quants)
+                            self.junction_cache.append((module, src_common, quants, row[0], row[4], row[5]))
+                            self.heatmap_add(module, src_common, quants,
+                                             event['Intron'].absolute_end - event['Intron'].absolute_start,
+                                             row[0], row[4], row[5])
 
-                                row = [event['Intron'].de_novo,
-                                       c2_node.range_str(),
-                                       'C1',
-                                       c1_node.range_str(),
-                                       'C2_C1_intron',
-                                       event['Intron'].range_str()]
-                                quants = [event_non_changing, event_changing] + self.quantifications(module,
-                                                              't',
-                                                              edge=event['Intron'],
-                                                              node=c2_node)
-                                writer.writerow(trg_common + row + [event_size] + quants)
-                                self.junction_cache.append((module, trg_common, quants, row[0], row[4], row[5]))
-                                self.heatmap_add(module, trg_common, quants,
-                                                 event['Intron'].absolute_end - event['Intron'].absolute_start,
-                                                 row[0], row[4], row[5])
+                            row = [event['Spliced'].de_novo,
+                                   c1_node.range_str(),
+                                   'C2',
+                                   c2_node.range_str(),
+                                   'C1_C2_spliced',
+                                   event['Spliced'].range_str()]
+                            quants = [event_non_changing, event_changing] + self.quantifications(module,
+                                                          's',
+                                                          edge=event['Spliced'],
+                                                          node=c1_node)
+                            writer.writerow(src_common + row + [event_size] + quants)
+                            self.junction_cache.append((module, src_common, quants,
+                                                        event['Spliced'].de_novo, row[4], event['Spliced'].range_str()))
+                            self.heatmap_add(module, src_common, quants,
+                                             event['Spliced'].absolute_end - event['Spliced'].absolute_start,
+                                             event['Spliced'].de_novo, row[4], event['Spliced'].range_str())
 
-                                row = [event['Spliced'].de_novo,
-                                       c1_node.range_str(),
-                                       'C1',
-                                       c1_node.range_str(),
-                                       'C2_C1_spliced',
-                                       event['Spliced'].range_str()]
-                                quants = [event_non_changing, event_changing] + self.quantifications(module,
-                                                              't',
-                                                              edge=event['Spliced'],
-                                                              node=c2_node)
-                                writer.writerow(trg_common + row + [event_size] + quants)
-                                self.junction_cache.append((module, trg_common, quants,
-                                                            event['Spliced'].de_novo, row[4], event['Spliced'].range_str()))
-                                self.heatmap_add(module, trg_common, quants,
-                                                 event['Spliced'].absolute_end - event['Spliced'].absolute_start,
-                                                 event['Spliced'].de_novo, row[4], event['Spliced'].range_str())
-
-                            # Else the intron and 'spliced' junctions are quantified from source point of view...
-                            else:
-
-                                quant_identifiers = (
-                                    ('s', event['Intron']),
-                                    ('s', event['Spliced']),
-                                )
-                                event_non_changing = self.event_non_changing(module, quant_identifiers)
-                                event_changing = self.event_changing(module, quant_identifiers)
-
-                                row = [event['Intron'].de_novo,
-                                       c1_node.range_str(),
-                                       'C2',
-                                       c2_node.range_str(),
-                                       'C1_C2_intron',
-                                       event['Intron'].range_str()]
-                                quants = [event_non_changing, event_changing] + self.quantifications(module, 's', edge=event['Intron'], node=c1_node)
-                                writer.writerow(src_common + row + [event_size] + quants)
-                                self.junction_cache.append((module, src_common, quants, row[0], row[4], row[5]))
-                                self.heatmap_add(module, src_common, quants,
-                                                 event['Intron'].absolute_end - event['Intron'].absolute_start,
-                                                 row[0], row[4], row[5])
-
-                                row = [event['Spliced'].de_novo,
-                                       c1_node.range_str(),
-                                       'C2',
-                                       c2_node.range_str(),
-                                       'C1_C2_spliced',
-                                       event['Spliced'].range_str()]
-                                quants = [event_non_changing, event_changing] + self.quantifications(module,
-                                                              's',
-                                                              edge=event['Spliced'],
-                                                              node=c1_node)
-                                writer.writerow(src_common + row + [event_size] + quants)
-                                self.junction_cache.append((module, src_common, quants,
-                                                            event['Spliced'].de_novo, row[4], event['Spliced'].range_str()))
-                                self.heatmap_add(module, src_common, quants,
-                                                 event['Spliced'].absolute_end - event['Spliced'].absolute_start,
-                                                 event['Spliced'].de_novo, row[4], event['Spliced'].range_str())
-
-                            event_i += 1
+                        event_i += 1
 
 
     def multi_exon_spanning(self):
@@ -1598,93 +1578,94 @@ class TsvWriter(BaseTsvWriter):
             writer = csv.writer(csvfile, dialect='excel-tab', delimiter='\t')
             for module in self.modules:
                 events, _complex, _total_events = self.as_types[module.idx]
-                if not _complex or self.config.output_complex:
-                    event_i = 1
-                    for event in events:
-                        if event['event'] == 'multi_exon_spanning':
+                if _complex and self.config.only_binary:
+                    continue
+                event_i = 1
+                for event in events:
+                    if event['event'] == 'multi_exon_spanning':
 
-                            quant_identifiers = (
-                                ('s', event['Skip']),
-                                ('s', event['Include1']),
-                                ('t', event['Skip']),
-                                ('t', event['Include2'])
-                            )
-                            event_non_changing = self.event_non_changing(module, quant_identifiers)
-                            event_changing = self.event_changing(module, quant_identifiers)
+                        quant_identifiers = (
+                            ('s', event['Skip']),
+                            ('s', event['Include1']),
+                            ('t', event['Skip']),
+                            ('t', event['Include2'])
+                        )
+                        event_non_changing = self.event_non_changing(module, quant_identifiers)
+                        event_changing = self.event_changing(module, quant_identifiers)
 
-                            c1_range_str = self._trim_strand_case_range_str(event['C1'], 'start', event['Skip'], 'start')
-                            c2_range_str = self._trim_strand_case_range_str(event['Skip'], 'end', event['C2'], 'end')
-
-
-                            # Source LSV side
-                            row = ['Distal',
-                                   event['Skip'].range_str(),  # junction coord
-                                   event['Skip'].de_novo, # de novo?
-                                   event['Skip'].ir,
-                                   c1_range_str, # reference exon
-                                   c2_range_str, # exon spliced with
-                                   self.semicolon((x.range_str() for x in event['As'])), # exons spanned
-                                   len(event['As'])] # num exons spanned
-                            quants = [event_non_changing, event_changing] + \
-                                     self.quantifications(module, 's', event['Skip'], event['C1'])
-
-                            common = self.common_data(module,
-                                                      's',
-                                                      node=event['C1'],
-                                                      edge=event['Skip'],
-                                                      event_ii=event_i,
-                                                      event_name="MES")
-
-                            writer.writerow(common + row + quants)
-                            self.junction_cache.append((module, common, quants, row[2], 'C1_C2', row[1]))
-
-                            row = ['Proximal',
-                                   event['Include1'].range_str(),  # junction coord
-                                   event['Include1'].de_novo,  # de novo?
-                                   event['Include1'].ir,
-                                   c1_range_str,  # reference exon
-                                   c2_range_str,  # exon spliced with
-                                   self.semicolon((x.range_str() for x in event['As'])),  # exons spanned
-                                   len(event['As'])]  # num exons spanned
-                            quants = [event_non_changing, event_changing] + self.quantifications(module, 's',
-                                                                                                 event['Include1'])
-                            writer.writerow(common + row + quants)
-                            self.junction_cache.append((module, common, quants, row[2], 'C1_A', row[1]))
-
-                            # Target LSV side
-                            row = ['Distal',
-                                   event['Skip'].range_str(),  # junction coord
-                                   event['Skip'].de_novo,  # de novo?
-                                   event['Skip'].ir,
-                                   c2_range_str,  # reference exon
-                                   c1_range_str,  # exon spliced with
-                                   self.semicolon((x.range_str() for x in event['As'])),  # exons spanned
-                                   len(event['As'])]  # num exons spanned
-                            quants = [event_non_changing, event_changing] + self.quantifications(module, 't', event['Skip'], event['C2'])
-                            common = self.common_data(module,
-                                                      't',
-                                                      node=event['C2'],
-                                                      edge=event['Skip'],
-                                                      event_ii=event_i,
-                                                      event_name="MES")
-                            writer.writerow(common + row + quants)
-                            self.junction_cache.append((module, common, quants, row[2], 'C2_C1', row[1]))
-
-                            row = ['Proximal',
-                                   event['Include2'].range_str(),  # junction coord
-                                   event['Include2'].de_novo,  # de novo?
-                                   event['Include2'].ir,
-                                   c1_range_str,  # reference exon
-                                   c2_range_str,  # exon spliced with
-                                   self.semicolon((x.range_str() for x in event['As'])),  # exons spanned
-                                   len(event['As'])]  # num exons spanned
-                            quants = [event_non_changing, event_changing] + self.quantifications(module, 't',
-                                                                                                 event['Include2'])
-                            writer.writerow(common + row + quants)
-                            self.junction_cache.append((module, common, quants, row[2], 'A_C2', row[1]))
+                        c1_range_str = self._trim_strand_case_range_str(event['C1'], 'start', event['Skip'], 'start')
+                        c2_range_str = self._trim_strand_case_range_str(event['Skip'], 'end', event['C2'], 'end')
 
 
-                            event_i += 1
+                        # Source LSV side
+                        row = ['Distal',
+                               event['Skip'].range_str(),  # junction coord
+                               event['Skip'].de_novo, # de novo?
+                               event['Skip'].ir,
+                               c1_range_str, # reference exon
+                               c2_range_str, # exon spliced with
+                               self.semicolon((x.range_str() for x in event['As'])), # exons spanned
+                               len(event['As'])] # num exons spanned
+                        quants = [event_non_changing, event_changing] + \
+                                 self.quantifications(module, 's', event['Skip'], event['C1'])
+
+                        common = self.common_data(module,
+                                                  's',
+                                                  node=event['C1'],
+                                                  edge=event['Skip'],
+                                                  event_ii=event_i,
+                                                  event_name="MES")
+
+                        writer.writerow(common + row + quants)
+                        self.junction_cache.append((module, common, quants, row[2], 'C1_C2', row[1]))
+
+                        row = ['Proximal',
+                               event['Include1'].range_str(),  # junction coord
+                               event['Include1'].de_novo,  # de novo?
+                               event['Include1'].ir,
+                               c1_range_str,  # reference exon
+                               c2_range_str,  # exon spliced with
+                               self.semicolon((x.range_str() for x in event['As'])),  # exons spanned
+                               len(event['As'])]  # num exons spanned
+                        quants = [event_non_changing, event_changing] + self.quantifications(module, 's',
+                                                                                             event['Include1'])
+                        writer.writerow(common + row + quants)
+                        self.junction_cache.append((module, common, quants, row[2], 'C1_A', row[1]))
+
+                        # Target LSV side
+                        row = ['Distal',
+                               event['Skip'].range_str(),  # junction coord
+                               event['Skip'].de_novo,  # de novo?
+                               event['Skip'].ir,
+                               c2_range_str,  # reference exon
+                               c1_range_str,  # exon spliced with
+                               self.semicolon((x.range_str() for x in event['As'])),  # exons spanned
+                               len(event['As'])]  # num exons spanned
+                        quants = [event_non_changing, event_changing] + self.quantifications(module, 't', event['Skip'], event['C2'])
+                        common = self.common_data(module,
+                                                  't',
+                                                  node=event['C2'],
+                                                  edge=event['Skip'],
+                                                  event_ii=event_i,
+                                                  event_name="MES")
+                        writer.writerow(common + row + quants)
+                        self.junction_cache.append((module, common, quants, row[2], 'C2_C1', row[1]))
+
+                        row = ['Proximal',
+                               event['Include2'].range_str(),  # junction coord
+                               event['Include2'].de_novo,  # de novo?
+                               event['Include2'].ir,
+                               c1_range_str,  # reference exon
+                               c2_range_str,  # exon spliced with
+                               self.semicolon((x.range_str() for x in event['As'])),  # exons spanned
+                               len(event['As'])]  # num exons spanned
+                        quants = [event_non_changing, event_changing] + self.quantifications(module, 't',
+                                                                                             event['Include2'])
+                        writer.writerow(common + row + quants)
+                        self.junction_cache.append((module, common, quants, row[2], 'A_C2', row[1]))
+
+
+                        event_i += 1
 
 
     def tandem_cassette(self):
@@ -1692,119 +1673,120 @@ class TsvWriter(BaseTsvWriter):
             writer = csv.writer(csvfile, dialect='excel-tab', delimiter='\t')
             for module in self.modules:
                 events, _complex, _total_events = self.as_types[module.idx]
-                if not _complex or self.config.output_complex:
-                    event_i = 1
-                    for event in events:
-                        if event['event'] == 'tandem_cassette':
+                if _complex and self.config.only_binary:
+                    continue
+                event_i = 1
+                for event in events:
+                    if event['event'] == 'tandem_cassette':
 
-                            quant_identifiers = (
-                                ('s', event['Skip']),
-                                ('s', event['Include1']),
-                                ('t', event['Skip']),
-                                ('t', event['Include2']),
-                            )
-                            event_non_changing = self.event_non_changing(module, quant_identifiers)
-                            event_changing = self.event_changing(module, quant_identifiers)
+                        quant_identifiers = (
+                            ('s', event['Skip']),
+                            ('s', event['Include1']),
+                            ('t', event['Skip']),
+                            ('t', event['Include2']),
+                        )
+                        event_non_changing = self.event_non_changing(module, quant_identifiers)
+                        event_changing = self.event_changing(module, quant_identifiers)
 
-                            c1_range_str = self._trim_strand_case_range_str(event['C1'], 'start', event['Skip'], 'start')
-                            c2_range_str = self._trim_strand_case_range_str(event['Skip'], 'end', event['C2'], 'end')
+                        c1_range_str = self._trim_strand_case_range_str(event['C1'], 'start', event['Skip'], 'start')
+                        c2_range_str = self._trim_strand_case_range_str(event['Skip'], 'end', event['C2'], 'end')
 
-                            event_sizes = []
-                            tandem_exons_range_strs = []
-                            tandem_exons_range_strs.append(self._trim_strand_case_range_str(event['Include1'], 'end', event['Includes'][0], 'start'))
-                            event_sizes.append(self._trim_strand_case_event_size(event['Include1'], 'end', event['Includes'][0], 'start') + 1)
-                            for include_junc_i in range(len(event['Includes'])-1):
-                                tandem_exons_range_strs.append(self._trim_strand_case_range_str(event['Includes'][include_junc_i], 'end', event['Includes'][include_junc_i+1], 'start'))
-                                event_sizes.append(self._trim_strand_case_event_size(event['Includes'][include_junc_i], 'end', event['Includes'][include_junc_i+1], 'start') + 1)
-                            tandem_exons_range_strs.append(self._trim_strand_case_range_str(event['Includes'][-1], 'end', event['Include2'], 'start'))
-                            event_sizes.append(self._trim_strand_case_event_size(event['Includes'][-1], 'end', event['Include2'], 'start') + 1)
-                            tandem_exons_range_strs = self.semicolon(tandem_exons_range_strs)
-                            event_size = sum(event_sizes)
+                        event_sizes = []
+                        tandem_exons_range_strs = []
+                        tandem_exons_range_strs.append(self._trim_strand_case_range_str(event['Include1'], 'end', event['Includes'][0], 'start'))
+                        event_sizes.append(self._trim_strand_case_event_size(event['Include1'], 'end', event['Includes'][0], 'start') + 1)
+                        for include_junc_i in range(len(event['Includes'])-1):
+                            tandem_exons_range_strs.append(self._trim_strand_case_range_str(event['Includes'][include_junc_i], 'end', event['Includes'][include_junc_i+1], 'start'))
+                            event_sizes.append(self._trim_strand_case_event_size(event['Includes'][include_junc_i], 'end', event['Includes'][include_junc_i+1], 'start') + 1)
+                        tandem_exons_range_strs.append(self._trim_strand_case_range_str(event['Includes'][-1], 'end', event['Include2'], 'start'))
+                        event_sizes.append(self._trim_strand_case_event_size(event['Includes'][-1], 'end', event['Include2'], 'start') + 1)
+                        tandem_exons_range_strs = self.semicolon(tandem_exons_range_strs)
+                        event_size = sum(event_sizes)
 
-                            row = [event['Skip'].de_novo,
-                                   c1_range_str,
-                                   'C2',
-                                   c2_range_str,
-                                   tandem_exons_range_strs,
-                                   len(event['Tandem_Exons']),
-                                   'C1_C2',
-                                   event['Skip'].range_str()]
-                            common = self.common_data(module,
-                                                      's',
-                                                      node=event['C1'],
-                                                      edge=event['Skip'],
-                                                      event_ii=event_i,
-                                                      event_name="TCE")
-                            quants = [event_non_changing, event_changing] + self.quantifications(module, 's', event['Skip'], event['C1'])
-                            writer.writerow(common + row + [event_size] + quants)
-                            self.junction_cache.append((module, common, quants, row[0], row[6], row[7]))
-                            self.heatmap_add(module, common, quants,
-                                             event['Skip'].absolute_end - event['Skip'].absolute_start,
-                                             row[0], row[6], row[7])
+                        row = [event['Skip'].de_novo,
+                               c1_range_str,
+                               'C2',
+                               c2_range_str,
+                               tandem_exons_range_strs,
+                               len(event['Tandem_Exons']),
+                               'C1_C2',
+                               event['Skip'].range_str()]
+                        common = self.common_data(module,
+                                                  's',
+                                                  node=event['C1'],
+                                                  edge=event['Skip'],
+                                                  event_ii=event_i,
+                                                  event_name="TCE")
+                        quants = [event_non_changing, event_changing] + self.quantifications(module, 's', event['Skip'], event['C1'])
+                        writer.writerow(common + row + [event_size] + quants)
+                        self.junction_cache.append((module, common, quants, row[0], row[6], row[7]))
+                        self.heatmap_add(module, common, quants,
+                                         event['Skip'].absolute_end - event['Skip'].absolute_start,
+                                         row[0], row[6], row[7])
 
-                            row = [event['Include1'].de_novo,
-                                   c1_range_str,
-                                   'A1',
-                                   event['Tandem_Exons'][0].range_str(),
-                                   tandem_exons_range_strs,
-                                   len(event['Tandem_Exons']),
-                                   'C1_A',
-                                   event['Include1'].range_str()]
-                            common = self.common_data(module,
-                                                      's',
-                                                      node=event['C1'],
-                                                      edge=event['Include1'],
-                                                      event_ii=event_i,
-                                                      event_name="TCE")
-                            quants = [event_non_changing, event_changing] + self.quantifications(module, 's', event['Include1'], event['C1'])
-                            writer.writerow(common + row + [event_size] + quants)
-                            self.junction_cache.append((module, common, quants, row[0], row[6], row[7]))
-                            self.heatmap_add(module, common, quants,
-                                             event['Include1'].absolute_end - event['Include1'].absolute_start,
-                                             row[0], row[6], row[7])
+                        row = [event['Include1'].de_novo,
+                               c1_range_str,
+                               'A1',
+                               event['Tandem_Exons'][0].range_str(),
+                               tandem_exons_range_strs,
+                               len(event['Tandem_Exons']),
+                               'C1_A',
+                               event['Include1'].range_str()]
+                        common = self.common_data(module,
+                                                  's',
+                                                  node=event['C1'],
+                                                  edge=event['Include1'],
+                                                  event_ii=event_i,
+                                                  event_name="TCE")
+                        quants = [event_non_changing, event_changing] + self.quantifications(module, 's', event['Include1'], event['C1'])
+                        writer.writerow(common + row + [event_size] + quants)
+                        self.junction_cache.append((module, common, quants, row[0], row[6], row[7]))
+                        self.heatmap_add(module, common, quants,
+                                         event['Include1'].absolute_end - event['Include1'].absolute_start,
+                                         row[0], row[6], row[7])
 
-                            row = [event['Skip'].de_novo,
-                                   event['C2'].range_str(),
-                                   'C1',
-                                   c1_range_str,
-                                   tandem_exons_range_strs,
-                                   len(event['Tandem_Exons']),
-                                   'C2_C1',
-                                   event['Skip'].range_str()]
-                            common = self.common_data(module,
-                                                      't',
-                                                      node=event['C2'],
-                                                      edge=event['Skip'],
-                                                      event_ii=event_i,
-                                                      event_name="TCE")
-                            quants = [event_non_changing, event_changing] + self.quantifications(module, 't', event['Skip'], event['C2'])
-                            writer.writerow(common + row + [event_size] + quants)
-                            self.junction_cache.append((module, common, quants, row[0], row[6], row[7]))
-                            self.heatmap_add(module, common, quants,
-                                             event['Skip'].absolute_end - event['Skip'].absolute_start,
-                                             row[0], row[6], row[7])
+                        row = [event['Skip'].de_novo,
+                               event['C2'].range_str(),
+                               'C1',
+                               c1_range_str,
+                               tandem_exons_range_strs,
+                               len(event['Tandem_Exons']),
+                               'C2_C1',
+                               event['Skip'].range_str()]
+                        common = self.common_data(module,
+                                                  't',
+                                                  node=event['C2'],
+                                                  edge=event['Skip'],
+                                                  event_ii=event_i,
+                                                  event_name="TCE")
+                        quants = [event_non_changing, event_changing] + self.quantifications(module, 't', event['Skip'], event['C2'])
+                        writer.writerow(common + row + [event_size] + quants)
+                        self.junction_cache.append((module, common, quants, row[0], row[6], row[7]))
+                        self.heatmap_add(module, common, quants,
+                                         event['Skip'].absolute_end - event['Skip'].absolute_start,
+                                         row[0], row[6], row[7])
 
-                            row = [event['Include2'].de_novo,
-                                   c2_range_str,
-                                   'A_Last',
-                                   event['Tandem_Exons'][-1].range_str(),
-                                   tandem_exons_range_strs,
-                                   len(event['Tandem_Exons']),
-                                   'C2_A_Last',
-                                   event['Include2'].range_str()]
-                            common = self.common_data(module,
-                                                      't',
-                                                      node=event['C2'],
-                                                      edge=event['Include2'],
-                                                      event_ii=event_i,
-                                                      event_name="TCE")
-                            quants = [event_non_changing, event_changing] + self.quantifications(module, 't', event['Include2'], event['C2'])
-                            writer.writerow(common + row + [event_size] + quants)
-                            self.junction_cache.append((module, common, quants, row[0], row[6], row[7]))
-                            self.heatmap_add(module, common, quants,
-                                             event['Include2'].absolute_end - event['Include2'].absolute_start,
-                                             row[0], row[6], row[7])
-                            event_i += 1
+                        row = [event['Include2'].de_novo,
+                               c2_range_str,
+                               'A_Last',
+                               event['Tandem_Exons'][-1].range_str(),
+                               tandem_exons_range_strs,
+                               len(event['Tandem_Exons']),
+                               'C2_A_Last',
+                               event['Include2'].range_str()]
+                        common = self.common_data(module,
+                                                  't',
+                                                  node=event['C2'],
+                                                  edge=event['Include2'],
+                                                  event_ii=event_i,
+                                                  event_name="TCE")
+                        quants = [event_non_changing, event_changing] + self.quantifications(module, 't', event['Include2'], event['C2'])
+                        writer.writerow(common + row + [event_size] + quants)
+                        self.junction_cache.append((module, common, quants, row[0], row[6], row[7]))
+                        self.heatmap_add(module, common, quants,
+                                         event['Include2'].absolute_end - event['Include2'].absolute_start,
+                                         row[0], row[6], row[7])
+                        event_i += 1
 
 
     def exitron(self):
@@ -1812,185 +1794,188 @@ class TsvWriter(BaseTsvWriter):
             writer = csv.writer(csvfile, dialect='excel-tab', delimiter='\t')
             for module in self.modules:
                 events, _complex, _total_events = self.as_types[module.idx]
-                if not _complex or self.config.output_complex:
-                    event_i = 1
-                    for event in events:
-                        if event['event'] == 'exitron':
+                if _complex and self.config.only_binary:
+                    continue
+                event_i = 1
+                for event in events:
+                    if event['event'] == 'exitron':
 
-                            quant_identifiers = (
-                                ('s', event['Junc']),
-                                ('t', event['Junc']),
-                            )
-                            event_non_changing = self.event_non_changing(module, quant_identifiers)
-                            event_changing = self.event_changing(module, quant_identifiers)
+                        quant_identifiers = (
+                            ('s', event['Junc']),
+                            ('t', event['Junc']),
+                        )
+                        event_non_changing = self.event_non_changing(module, quant_identifiers)
+                        event_changing = self.event_changing(module, quant_identifiers)
 
-                            src_common = self.common_data(module,
-                                                          's',
-                                                          event_ii=event_i,
-                                                          event_name="EX")
-                            trg_common = self.common_data(module,
-                                                          't',
-                                                          event_ii=event_i,
-                                                          event_name="EX")
-                            row = [event['Junc'].de_novo,
-                                   event['Exon'].range_str(),
-                                   event['Junc'].range_str()]
-                            # just in case exitrons are ever quantified, somehow, *try* to get
-                            # the exitron's junction quantification (won't exist for now... which is desired)
-                            quants = [event_non_changing, event_changing] + self.quantifications(module, 's', edge=event['Junc'])
-                            writer.writerow(src_common + row + quants)
-                            self.junction_cache.append((module, src_common, quants, row[0], 'exitron', row[2]))
-                            row = [event['Junc'].de_novo,
-                                   event['Exon'].range_str(),
-                                   event['Junc'].range_str()]
-                            quants = [event_non_changing, event_changing] + self.quantifications(module, 't', edge=event['Junc'])
-                            writer.writerow(trg_common + row + quants)
-                            self.junction_cache.append((module, trg_common, quants, row[0], 'exitron', row[2]))
-                            event_i += 1
+                        src_common = self.common_data(module,
+                                                      's',
+                                                      event_ii=event_i,
+                                                      event_name="EX")
+                        trg_common = self.common_data(module,
+                                                      't',
+                                                      event_ii=event_i,
+                                                      event_name="EX")
+                        row = [event['Junc'].de_novo,
+                               event['Exon'].range_str(),
+                               event['Junc'].range_str()]
+                        # just in case exitrons are ever quantified, somehow, *try* to get
+                        # the exitron's junction quantification (won't exist for now... which is desired)
+                        quants = [event_non_changing, event_changing] + self.quantifications(module, 's', edge=event['Junc'])
+                        writer.writerow(src_common + row + quants)
+                        self.junction_cache.append((module, src_common, quants, row[0], 'exitron', row[2]))
+                        row = [event['Junc'].de_novo,
+                               event['Exon'].range_str(),
+                               event['Junc'].range_str()]
+                        quants = [event_non_changing, event_changing] + self.quantifications(module, 't', edge=event['Junc'])
+                        writer.writerow(trg_common + row + quants)
+                        self.junction_cache.append((module, trg_common, quants, row[0], 'exitron', row[2]))
+                        event_i += 1
 
     def orphan_junction(self):
         with open(os.path.join(self.config.directory, 'orphan_junction.tsv.%s' % self.pid), 'a', newline='') as csvfile:
             writer = csv.writer(csvfile, dialect='excel-tab', delimiter='\t')
             for module in self.modules:
                 events, _complex, _total_events = self.as_types[module.idx]
-                if not _complex or self.config.output_complex:
-                    event_i = 1
-                    for event in events:
-                        if event['event'] == 'orphan_junction':
+                if _complex and self.config.only_binary:
+                    continue
+                event_i = 1
+                for event in events:
+                    if event['event'] == 'orphan_junction':
 
-                            quant_identifiers = (
-                                ('s', event['Junc']),
-                                ('t', event['Junc']),
-                            )
-                            event_non_changing = self.event_non_changing(module, quant_identifiers)
-                            event_changing = self.event_changing(module, quant_identifiers)
+                        quant_identifiers = (
+                            ('s', event['Junc']),
+                            ('t', event['Junc']),
+                        )
+                        event_non_changing = self.event_non_changing(module, quant_identifiers)
+                        event_changing = self.event_changing(module, quant_identifiers)
 
-                            src_common = self.common_data(module,
-                                                          's',
-                                                          event_ii=event_i,
-                                                          event_name="OR")
-                            trg_common = self.common_data(module,
-                                                          't',
-                                                          event_ii=event_i,
-                                                          event_name="OR")
+                        src_common = self.common_data(module,
+                                                      's',
+                                                      event_ii=event_i,
+                                                      event_name="OR")
+                        trg_common = self.common_data(module,
+                                                      't',
+                                                      event_ii=event_i,
+                                                      event_name="OR")
 
-                            row = [event['Junc'].de_novo,
-                                  event['A1'].range_str(),
-                                  event['A2'].range_str(),
-                                  event['Junc'].range_str()]
+                        row = [event['Junc'].de_novo,
+                              event['A1'].range_str(),
+                              event['A2'].range_str(),
+                              event['Junc'].range_str()]
 
-                            if src_common[5]:
+                        if src_common[5]:
 
-                                # just in case exitrons are ever quantified, somehow, *try* to get
-                                # the exitron's junction quantification (won't exist for now... which is desired)
-                                quants = [event_non_changing, event_changing] + self.quantifications(module, 's', edge=event['Junc'])
-                                writer.writerow(src_common + row + quants)
-                                self.junction_cache.append((module, src_common, quants, row[0], 'Orphan', row[3]))
-                                self.heatmap_add(module, src_common, quants,
-                                                 event['Junc'].absolute_end - event['Junc'].absolute_start,
-                                                 row[0], 'Orphan', row[3])
+                            # just in case exitrons are ever quantified, somehow, *try* to get
+                            # the exitron's junction quantification (won't exist for now... which is desired)
+                            quants = [event_non_changing, event_changing] + self.quantifications(module, 's', edge=event['Junc'])
+                            writer.writerow(src_common + row + quants)
+                            self.junction_cache.append((module, src_common, quants, row[0], 'Orphan', row[3]))
+                            self.heatmap_add(module, src_common, quants,
+                                             event['Junc'].absolute_end - event['Junc'].absolute_start,
+                                             row[0], 'Orphan', row[3])
 
-                                event_i += 1
+                            event_i += 1
 
-                            elif trg_common[5]:
+                        elif trg_common[5]:
 
-                                # just in case exitrons are ever quantified, somehow, *try* to get
-                                # the exitron's junction quantification (won't exist for now... which is desired)
-                                quants = [event_non_changing, event_changing] + self.quantifications(module, 't',
-                                                                                                     edge=event['Junc'])
-                                writer.writerow(trg_common + row + quants)
-                                self.junction_cache.append((module, trg_common, quants, row[0], 'Orphan', row[3]))
-                                self.heatmap_add(module, trg_common, quants,
-                                                 event['Junc'].absolute_end - event['Junc'].absolute_start,
-                                                 row[0], 'Orphan', row[3])
+                            # just in case exitrons are ever quantified, somehow, *try* to get
+                            # the exitron's junction quantification (won't exist for now... which is desired)
+                            quants = [event_non_changing, event_changing] + self.quantifications(module, 't',
+                                                                                                 edge=event['Junc'])
+                            writer.writerow(trg_common + row + quants)
+                            self.junction_cache.append((module, trg_common, quants, row[0], 'Orphan', row[3]))
+                            self.heatmap_add(module, trg_common, quants,
+                                             event['Junc'].absolute_end - event['Junc'].absolute_start,
+                                             row[0], 'Orphan', row[3])
 
-                                event_i += 1
+                            event_i += 1
 
     def constitutive(self):
         with open(os.path.join(self.config.directory, 'constitutive.tsv.%s' % self.pid), 'a', newline='') as csvfile:
             writer = csv.writer(csvfile, dialect='excel-tab', delimiter='\t')
             for module in self.modules:
                 events, _complex, _total_events = self.as_types[module.idx]
-                if not _complex or self.config.output_complex:
-                    event_i = 1
-                    for event in events:
-                        if event['event'] == 'constitutive':
+                if _complex and self.config.only_binary:
+                    continue
+                event_i = 1
+                for event in events:
+                    if event['event'] == 'constitutive':
 
-                            common = self.common_data(module,
+                        common = self.common_data(module,
+                                                  event_ii=event_i,
+                                                  event_name="CJ")
+
+                        quant_identifiers = (
+                            ('s', event['Junc']),
+                            ('t', event['Junc']),
+                        )
+                        event_non_changing = self.event_non_changing(module, quant_identifiers)
+                        event_changing = self.event_changing(module, quant_identifiers)
+
+                        c1_range_str = self._trim_strand_case_range_str(event['C1'], 'start', event['Junc'], 'start')
+                        c2_range_str = self._trim_strand_case_range_str(event['Junc'], 'end', event['C2'], 'end')
+
+                        row = [event['Junc'].de_novo,
+                               c2_range_str,
+                               'C1', c1_range_str,
+                               'C2_C1',
+                               event['Junc'].range_str(),
+                               'False',
+                               module.collapsed_event_name]
+                        quants = [event_non_changing, event_changing] + self.quantifications(module, edge=event['Junc'])
+                        writer.writerow(common + row + quants)
+                        self.junction_cache.append((module, common, quants, row[0], row[4], row[5]))
+
+                    elif event['event'] == 'constitutive_intron':
+                        src_common = self.common_data(module,
+                                                      's',
                                                       event_ii=event_i,
-                                                      event_name="CJ")
+                                                      event_name="CI")
+                        trg_common = self.common_data(module,
+                                                      't',
+                                                      event_ii=event_i,
+                                                      event_name="CI")
+
+                        if any(':t:' in _l for _l in event['Intron'].lsvs) and not \
+                           any(':s:' in _l for _l in event['Intron'].lsvs):
 
                             quant_identifiers = (
-                                ('s', event['Junc']),
-                                ('t', event['Junc']),
+                                ('t', event['Intron']),
                             )
                             event_non_changing = self.event_non_changing(module, quant_identifiers)
                             event_changing = self.event_changing(module, quant_identifiers)
 
-                            c1_range_str = self._trim_strand_case_range_str(event['C1'], 'start', event['Junc'], 'start')
-                            c2_range_str = self._trim_strand_case_range_str(event['Junc'], 'end', event['C2'], 'end')
-
-                            row = [event['Junc'].de_novo,
-                                   c2_range_str,
-                                   'C1', c1_range_str,
-                                   'C2_C1',
-                                   event['Junc'].range_str(),
-                                   'False',
+                            row = [event['Intron'].de_novo,
+                                   event['C2'].range_str(),
+                                   'C1',
+                                   event['C1'].range_str(),
+                                   'C2_C1_intron',
+                                   event['Intron'].range_str(),
+                                   'True',
                                    module.collapsed_event_name]
-                            quants = [event_non_changing, event_changing] + self.quantifications(module, edge=event['Junc'])
-                            writer.writerow(common + row + quants)
-                            self.junction_cache.append((module, common, quants, row[0], row[4], row[5]))
+                            quants = [event_non_changing, event_changing] + self.quantifications(module, 't', event['Intron'])
+                            writer.writerow(trg_common + row + quants)
+                            self.junction_cache.append((module, trg_common, quants, row[0], row[4], row[5]))
+                        else:
+                            quant_identifiers = (
+                                ('s', event['Intron']),
+                            )
+                            event_non_changing = self.event_non_changing(module, quant_identifiers)
+                            event_changing = self.event_changing(module, quant_identifiers)
 
-                        elif event['event'] == 'constitutive_intron':
-                            src_common = self.common_data(module,
-                                                          's',
-                                                          event_ii=event_i,
-                                                          event_name="CI")
-                            trg_common = self.common_data(module,
-                                                          't',
-                                                          event_ii=event_i,
-                                                          event_name="CI")
+                            row = [event['Intron'].de_novo,
+                                   event['C1'].range_str(),
+                                   'C2',
+                                   event['C2'].range_str(),
+                                   'C1_C2_intron',
+                                   event['Intron'].range_str(),
+                                   'True',
+                                   module.collapsed_event_name]
+                            quants = [event_non_changing, event_changing] + self.quantifications(module, 's', event['Intron'])
+                            writer.writerow(src_common + row + quants)
+                            self.junction_cache.append((module, src_common, quants, row[0], row[4], row[5]))
 
-                            if any(':t:' in _l for _l in event['Intron'].lsvs) and not \
-                               any(':s:' in _l for _l in event['Intron'].lsvs):
-
-                                quant_identifiers = (
-                                    ('t', event['Intron']),
-                                )
-                                event_non_changing = self.event_non_changing(module, quant_identifiers)
-                                event_changing = self.event_changing(module, quant_identifiers)
-
-                                row = [event['Intron'].de_novo,
-                                       event['C2'].range_str(),
-                                       'C1',
-                                       event['C1'].range_str(),
-                                       'C2_C1_intron',
-                                       event['Intron'].range_str(),
-                                       'True',
-                                       module.collapsed_event_name]
-                                quants = [event_non_changing, event_changing] + self.quantifications(module, 't', event['Intron'])
-                                writer.writerow(trg_common + row + quants)
-                                self.junction_cache.append((module, trg_common, quants, row[0], row[4], row[5]))
-                            else:
-                                quant_identifiers = (
-                                    ('s', event['Intron']),
-                                )
-                                event_non_changing = self.event_non_changing(module, quant_identifiers)
-                                event_changing = self.event_changing(module, quant_identifiers)
-
-                                row = [event['Intron'].de_novo,
-                                       event['C1'].range_str(),
-                                       'C2',
-                                       event['C2'].range_str(),
-                                       'C1_C2_intron',
-                                       event['Intron'].range_str(),
-                                       'True',
-                                       module.collapsed_event_name]
-                                quants = [event_non_changing, event_changing] + self.quantifications(module, 's', event['Intron'])
-                                writer.writerow(src_common + row + quants)
-                                self.junction_cache.append((module, src_common, quants, row[0], row[4], row[5]))
-
-                        event_i += 1
+                    event_i += 1
 
     def other_event(self):
         with open(os.path.join(self.config.directory, 'other.tsv.%s' % self.pid), 'a',
@@ -1998,115 +1983,116 @@ class TsvWriter(BaseTsvWriter):
             writer = csv.writer(csvfile, dialect='excel-tab', delimiter='\t')
             for module in self.modules:
                 events, _complex, _total_events = self.as_types[module.idx]
-                if not _complex or self.config.output_complex:
-                    event_i = 1
-                    for event in events:
-                        if event['event'] == 'other_event':
-                            all_event_quants = []
-                            quant_identifiers = []
+                if _complex and self.config.only_binary:
+                    continue
+                event_i = 1
+                for event in events:
+                    if event['event'] == 'other_event':
+                        all_event_quants = []
+                        quant_identifiers = []
 
-                            juncs = event['edges']
-                            exons = event['nodes']
-                            lsvs = event['lsvs']
+                        juncs = event['edges']
+                        exons = event['nodes']
+                        lsvs = event['lsvs']
 
-                            # gets all LSVs
-                            row_common = self.common_data(module,
-                                                          parity=None,
-                                                          edge=None,
-                                                          node=None,
-                                                          event_ii=None,
-                                                          event_name='other')
-                            # update lsvs with relevant LSVs
-                            row_common[5]  = ";".join(lsvs)
-                            juncs_l = [j.range_str() for j in juncs]
-                            juncs_str = ";".join(juncs_l)
-                            exons_str = ";".join([e.range_str() for e in exons])
-                            row = [juncs_str, exons_str]
+                        # gets all LSVs
+                        row_common = self.common_data(module,
+                                                      parity=None,
+                                                      edge=None,
+                                                      node=None,
+                                                      event_ii=None,
+                                                      event_name='other')
+                        # update lsvs with relevant LSVs
+                        row_common[5]  = ";".join(lsvs)
+                        juncs_l = [j.range_str() for j in juncs]
+                        juncs_str = ";".join(juncs_l)
+                        exons_str = ";".join([e.range_str() for e in exons])
+                        row = [juncs_str, exons_str]
 
-                            writer.writerow(row_common + row)
-                            # still want 1 row per quantification in junctions.tsv and heatmap.tsv
-                            junc_i = 0
-                            # for n1, n2 in combinations(exons, 2):
-                            lsvs_seen = []
-                            seen_junc = {
-                                "s": None,
-                                "t": None
-                            }
+                        writer.writerow(row_common + row)
+                        # still want 1 row per quantification in junctions.tsv and heatmap.tsv
+                        junc_i = 0
+                        # for n1, n2 in combinations(exons, 2):
+                        lsvs_seen = []
+                        seen_junc = {
+                            "s": None,
+                            "t": None
+                        }
 
-                            for junc in juncs:
-                                junc_i += 1
-                                this_node = junc.node
+                        for junc in juncs:
+                            junc_i += 1
+                            this_node = junc.node
 
-                                for lsv_type in ["s", "t"]:
-                                    all_event_quants.append(self.quantifications(module,
-                                                                  lsv_type,
-                                                                  edge=junc,
-                                                                  node=this_node))
+                            for lsv_type in ["s", "t"]:
+                                all_event_quants.append(self.quantifications(module,
+                                                              lsv_type,
+                                                              edge=junc,
+                                                              node=this_node))
 
-                                    quant_identifiers.append((lsv_type, junc,))
+                                quant_identifiers.append((lsv_type, junc,))
 
-                            event_non_changing = self.event_non_changing(module, quant_identifiers)
-                            event_changing = self.event_changing(module, quant_identifiers)
+                        event_non_changing = self.event_non_changing(module, quant_identifiers)
+                        event_changing = self.event_changing(module, quant_identifiers)
 
-                            for junc in juncs:
-                                junc_i += 1
-                                this_node = junc.node
-                                # TODO: handle na type?
-                                for lsv_type in ["s", "t"]:
-                                    j_quants = [event_non_changing, event_changing] + all_event_quants.pop(0)
-                                    j_common = self.common_data(module,
-                                                  parity=lsv_type,
-                                                  edge=junc,
-                                                  node=this_node,
-                                                  event_ii=None,
-                                                  event_name='other')
-                                    # de_novo, junction_name, coordinates
-                                    both_infos = [
-                                        junc.de_novo,
-                                        "J%s" % junc_i,  # junction name
-                                        junc.range_str()
-                                    ]
-                                    # module, common_data, quantifications, de_novo, junction_name, coordinates
-                                    junction_cache_row = (module,
-                                         j_common,
-                                         j_quants,
-                                         both_infos[0],
-                                         both_infos[1],
-                                         both_infos[2]
-                                         )
-                                    # module, common, quants, junc_len, denovo, juncname, junccoord
-                                    heatmap_row = (module,
-                                        j_common,
-                                        j_quants,
-                                        junc.absolute_end - junc.absolute_start,
-                                        both_infos[0],
-                                        both_infos[1],
-                                        both_infos[2]
-                                    )
-                                    if seen_junc[lsv_type] is None:
-                                        seen_junc[lsv_type] = (junction_cache_row, heatmap_row)
-                                    # if LSV here
-                                    if len(j_common[5]) > 0:
-                                        lsvs_seen.append(lsv_type)
-                                        seen_junc[lsv_type] = (junction_cache_row, heatmap_row)
-                                # only add 1 row per junction
-                                # (or 2, if the junction was quantifable by source & target LSV...
-                                if len(lsvs_seen) == 0:
-                                    lsvs_seen = ["s"]
-                                for lsv_type in lsvs_seen:
-                                    self.junction_cache.append(
-                                        seen_junc[lsv_type][0]
-                                    )
-                                    self.heatmap_add(
-                                        seen_junc[lsv_type][1][0],
-                                        seen_junc[lsv_type][1][1],
-                                        seen_junc[lsv_type][1][2],
-                                        seen_junc[lsv_type][1][3],
-                                        seen_junc[lsv_type][1][4],
-                                        seen_junc[lsv_type][1][5],
-                                        seen_junc[lsv_type][1][6]
-                                    )
-                        event_i += 1
+                        for junc in juncs:
+                            junc_i += 1
+                            this_node = junc.node
+                            # TODO: handle na type?
+                            for lsv_type in ["s", "t"]:
+                                j_quants = [event_non_changing, event_changing] + all_event_quants.pop(0)
+                                j_common = self.common_data(module,
+                                              parity=lsv_type,
+                                              edge=junc,
+                                              node=this_node,
+                                              event_ii=None,
+                                              event_name='other')
+                                # de_novo, junction_name, coordinates
+                                both_infos = [
+                                    junc.de_novo,
+                                    "J%s" % junc_i,  # junction name
+                                    junc.range_str()
+                                ]
+                                # module, common_data, quantifications, de_novo, junction_name, coordinates
+                                junction_cache_row = (module,
+                                     j_common,
+                                     j_quants,
+                                     both_infos[0],
+                                     both_infos[1],
+                                     both_infos[2]
+                                     )
+                                # module, common, quants, junc_len, denovo, juncname, junccoord
+                                heatmap_row = (module,
+                                    j_common,
+                                    j_quants,
+                                    junc.absolute_end - junc.absolute_start,
+                                    both_infos[0],
+                                    both_infos[1],
+                                    both_infos[2]
+                                )
+                                if seen_junc[lsv_type] is None:
+                                    seen_junc[lsv_type] = (junction_cache_row, heatmap_row)
+                                # if LSV here
+                                if len(j_common[5]) > 0:
+                                    lsvs_seen.append(lsv_type)
+                                    seen_junc[lsv_type] = (junction_cache_row, heatmap_row)
+                            # only add 1 row per junction
+                            # (or 2, if the junction was quantifable by source & target LSV...
+                            if len(lsvs_seen) == 0:
+                                lsvs_seen = ["s"]
+                            for lsv_type in lsvs_seen:
+                                self.junction_cache.append(
+                                    seen_junc[lsv_type][0]
+                                )
+                                self.heatmap_add(
+                                    seen_junc[lsv_type][1][0],
+                                    seen_junc[lsv_type][1][1],
+                                    seen_junc[lsv_type][1][2],
+                                    seen_junc[lsv_type][1][3],
+                                    seen_junc[lsv_type][1][4],
+                                    seen_junc[lsv_type][1][5],
+                                    seen_junc[lsv_type][1][6]
+                                )
+                    event_i += 1
 
 
     def p_multi_gene_region(self):
@@ -2291,6 +2277,8 @@ class TsvWriter(BaseTsvWriter):
 
             for module in self.modules:
                 events, _complex, _total_events = self.as_types[module.idx]
+                if _complex and self.config.only_binary:
+                    continue
                 counts = OrderedDict()
                 counts['cassette_exon'] = 0
                 counts['tandem_cassette'] = 0

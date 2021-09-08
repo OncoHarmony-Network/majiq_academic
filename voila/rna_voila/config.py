@@ -24,7 +24,7 @@ _TsvConfig.__new__.__defaults__ = (None,) * len(_TsvConfig._fields)
 _ClassifyConfig = namedtuple('ClassifyConfig', ['directory', 'voila_files', 'voila_file', 'splice_graph_file',
                                       'nproc', 'decomplexify_psi_threshold', 'decomplexify_deltapsi_threshold',
                                       'decomplexify_reads_threshold', 'analysis_type', 'gene_ids',
-                                      'debug', 'silent', 'keep_constitutive', 'show_all_modules', 'output_complex',
+                                      'debug', 'silent', 'keep_constitutive', 'show_all_modules', 'only_binary',
                                       'untrimmed_exons', 'putative_multi_gene_regions',
                                                 'non_changing_threshold', 'probability_changing_threshold',
                                                 'probability_non_changing_threshold', 'changing',
@@ -391,7 +391,7 @@ class ClassifyConfig:
                               'changing_pvalue_threshold', 'changing_between_group_dpsi',
                               'changing_between_group_dpsi_secondary']:
                 settings[float_key] = config_parser['SETTINGS'].getfloat(float_key)
-            for bool_key in ['debug', 'show_all_modules', 'output_complex', 'untrimmed_exons', 'overwrite',
+            for bool_key in ['debug', 'show_all_modules', 'only_binary', 'untrimmed_exons', 'overwrite',
                              'putative_multi_gene_regions', 'changing', 'keep_no_lsvs', 'output_mpe'
                              ]:
                 settings[bool_key] = config_parser['SETTINGS'].getboolean(bool_key)
