@@ -171,14 +171,14 @@ classify_parser.add_argument('--output-complex', action='store_true',
                          help='Complex module data is dumped to all output TSVs, not only summary')
 classify_parser.add_argument('--untrimmed-exons', action='store_true',
                          help='Display original Exon coordinates instead of Trimmed coordinates in output TSVs')
-classify_parser.add_argument('--decomplexify-psi-threshold', type=float, default=None,
+classify_parser.add_argument('--decomplexify-psi-threshold', type=float, default=0.05,
                          help='Filter out junctions where PSI is below a certain value (between 0.0 and 1.0). If multiple '
                               'input files are used, only the highest PSI value is used. If 0 (or 0.0) is specified, '
-                              'no filtering fill be done. The default is "0.01". (1%%)')
+                              'no filtering fill be done. The default is "%(default)s". ')
 classify_parser.add_argument('--decomplexify-deltapsi-threshold', type=float, default=0.0,
                          help='Filter out junctions where abs(E(dPSI)) is below a certain value (between 0.0 and 1.0). If multiple '
                               'input files are used, only the biggest difference (dPSI) value is used. If 0 (or 0.0) is specified, '
-                              'no filtering fill be done. The default is "0.0". ')
+                              'no filtering fill be done. The default is "%(default)s". ')
 classify_parser.add_argument('--decomplexify-reads-threshold', type=int, default=1,
                          help='Filter out junctions where the number of reads is below a certain value (integer). If multiple '
                               'input files are used, only the biggest number of reads is used. The default is "%(default)s". ')
