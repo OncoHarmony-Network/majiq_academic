@@ -24,14 +24,14 @@ _TsvConfig.__new__.__defaults__ = (None,) * len(_TsvConfig._fields)
 _ClassifyConfig = namedtuple('ClassifyConfig', ['directory', 'voila_files', 'voila_file', 'splice_graph_file',
                                       'nproc', 'decomplexify_psi_threshold', 'decomplexify_deltapsi_threshold',
                                       'decomplexify_reads_threshold', 'analysis_type', 'gene_ids',
-                                      'debug', 'silent', 'keep_constitutive', 'show_all_modules', 'only_binary',
+                                      'debug', 'silent', 'keep_constitutive', 'keep_no_lsvs_modules', 'only_binary',
                                       'untrimmed_exons', 'putative_multi_gene_regions',
                                                 'non_changing_threshold', 'probability_changing_threshold',
                                                 'probability_non_changing_threshold', 'show_all',
                                                 'non_changing_pvalue_threshold', 'non_changing_within_group_iqr',
                                                 'non_changing_between_group_dpsi', 'changing_pvalue_threshold',
                                                 'changing_between_group_dpsi', 'changing_between_group_dpsi_secondary',
-                                                'keep_no_lsvs', 'debug_num_genes', 'overwrite', 'output_mpe',
+                                                'keep_no_lsvs_junctions', 'debug_num_genes', 'overwrite', 'output_mpe',
                                                 'heatmap_selection', 'logger', 'enabled_outputs'])
 _ClassifyConfig.__new__.__defaults__ = (None,) * len(_ClassifyConfig._fields)
 _FilterConfig = namedtuple('FilterConfig', ['directory', 'voila_files', 'voila_file', 'splice_graph_file',
@@ -387,8 +387,8 @@ class ClassifyConfig:
                               'changing_pvalue_threshold', 'changing_between_group_dpsi',
                               'changing_between_group_dpsi_secondary']:
                 settings[float_key] = config_parser['SETTINGS'].getfloat(float_key)
-            for bool_key in ['debug', 'show_all_modules', 'only_binary', 'untrimmed_exons', 'overwrite',
-                             'putative_multi_gene_regions', 'show_all', 'keep_no_lsvs', 'output_mpe'
+            for bool_key in ['debug', 'keep_no_lsvs_modules', 'only_binary', 'untrimmed_exons', 'overwrite',
+                             'putative_multi_gene_regions', 'show_all', 'keep_no_lsvs_junctions', 'output_mpe'
                              ]:
                 settings[bool_key] = config_parser['SETTINGS'].getboolean(bool_key)
 
@@ -399,8 +399,8 @@ class ClassifyConfig:
             if settings['putative_multi_gene_regions']:
                 settings['keep_constitutive'] = True
             if settings['keep_constitutive']:
-                settings['show_all_modules'] = True
-                settings['keep_no_lsvs'] = True
+                settings['keep_no_lsvs_modules'] = True
+                settings['keep_no_lsvs_junctions'] = True
 
 
 
@@ -409,8 +409,8 @@ class ClassifyConfig:
                 if settings['output_mpe']:
                     settings['enabled_outputs'].append('mpe')
                     settings['keep_constitutive'] = True
-                    settings['show_all_modules'] = True
-                    settings['keep_no_lsvs'] = True
+                    settings['keep_no_lsvs_modules'] = True
+                    settings['keep_no_lsvs_junctions'] = True
 
             if not settings['show_all']:
                 if 'HET' not in settings['analysis_type'] and 'dPSI' not in settings['analysis_type']:

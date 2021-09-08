@@ -157,12 +157,12 @@ classify_parser.add_argument('files', nargs='+', type=check_file,
 classify_parser.add_argument('--gene-ids', nargs='*', default=[],
                         help='Gene IDs, separated by spaces, which should remain in the results. e.g. GENE_ID1 '
                              'GENE_ID2 ...')
-classify_parser.add_argument('--show-all-modules', action='store_true',
-                         help='Do not discard modules that are unquantified my Majiq (no LSVs found)')
 classify_parser.add_argument('--keep-constitutive', type=int, nargs='?', const=1,
                          help='Do not discard modules with only one junction, implies "--show-all-modules". Turns on '
                               'output of constitutive.tsv and constitutive column in summary output')
-classify_parser.add_argument('--keep-no-lsvs', action='store_true',
+classify_parser.add_argument('--keep-no-lsvs-modules', action='store_true',
+                             help='Do not discard modules that are unquantified my Majiq (no LSVs found)')
+classify_parser.add_argument('--keep-no-lsvs-junctions', action='store_true',
                          help='If there are no LSVs attached to a specific junction, retain the junction instead of removing it')
 classify_parser.add_argument('--putative-multi-gene-regions', action='store_true',
                          help='Only output a single TSV file describing regions found in inputs with complete breaks '

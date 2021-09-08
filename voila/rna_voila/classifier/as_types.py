@@ -522,7 +522,7 @@ class Graph:
                     del self.edges[i]
 
             else:
-                if not self.config.keep_no_lsvs:
+                if not self.config.keep_no_lsvs_junctions:
                     # if there are no lsvs, and it is not flagged constitutive by Majiq, delete it
                     if not self.edges[i].is_constitutive:
                         del self.edges[i]
@@ -801,7 +801,7 @@ class Graph:
         """
 
         # removing modules with no lsv ids
-        if not self.config.show_all_modules:
+        if not self.config.keep_no_lsvs_modules:
             if not module.source_lsv_ids and not module.target_lsv_ids:
                 return False
 
