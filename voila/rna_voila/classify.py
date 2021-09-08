@@ -45,9 +45,9 @@ def print_filter_summary():
     else:
         voila_log().info(("╠╡ Not dropping any junctions").ljust(jst)[:jst] + "║")
 
-    if config.changing:
+    if not config.show_all:
         voila_log().info(("╠╡ After Modulization:").ljust(jst)[:jst] + "║")
-        if config.changing:
+        if not config.show_all:
             voila_log().info(("║     Dropping modules if none(max(E(|dPSI|)) >= %.3f)" % config.changing_between_group_dpsi).ljust(jst)[
                              :jst] + "║")
             voila_log().info(("║     Dropping modules if none(max(P(|dPSI|>=%.3f)) >= %.3f)" %

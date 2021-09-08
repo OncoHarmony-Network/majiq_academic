@@ -27,7 +27,7 @@ _ClassifyConfig = namedtuple('ClassifyConfig', ['directory', 'voila_files', 'voi
                                       'debug', 'silent', 'keep_constitutive', 'show_all_modules', 'only_binary',
                                       'untrimmed_exons', 'putative_multi_gene_regions',
                                                 'non_changing_threshold', 'probability_changing_threshold',
-                                                'probability_non_changing_threshold', 'changing',
+                                                'probability_non_changing_threshold', 'show_all',
                                                 'non_changing_pvalue_threshold', 'non_changing_within_group_iqr',
                                                 'non_changing_between_group_dpsi', 'changing_pvalue_threshold',
                                                 'changing_between_group_dpsi', 'changing_between_group_dpsi_secondary',
@@ -253,15 +253,11 @@ def write(args):
         # check if default = default for some args depending on the type of classify being run.
         # we store a default of none and apply the actual default if the user does not specify another value
         if not config_parser.has_option(settings, 'decomplexify_psi_threshold'):
-            if config_parser.getboolean(settings, 'changing'):
-                config_parser.set(settings, 'decomplexify_psi_threshold', '0.05')
-            else:
+            if config_parser.getboolean(settings, 'show_all'):
                 config_parser.set(settings, 'decomplexify_psi_threshold', '0.0')
 
         if not config_parser.has_option(settings, 'decomplexify_deltapsi_threshold'):
-            if config_parser.getboolean(settings, 'changing'):
-                config_parser.set(settings, 'decomplexify_deltapsi_threshold', '0.1')
-            else:
+            if config_parser.getboolean(settings, 'show_all'):
                 config_parser.set(settings, 'decomplexify_deltapsi_threshold', '0.0')
 
     config_parser.set(settings, 'analysis_type', analysis_type)
@@ -392,7 +388,7 @@ class ClassifyConfig:
                               'changing_between_group_dpsi_secondary']:
                 settings[float_key] = config_parser['SETTINGS'].getfloat(float_key)
             for bool_key in ['debug', 'show_all_modules', 'only_binary', 'untrimmed_exons', 'overwrite',
-                             'putative_multi_gene_regions', 'changing', 'keep_no_lsvs', 'output_mpe'
+                             'putative_multi_gene_regions', 'show_all', 'keep_no_lsvs', 'output_mpe'
                              ]:
                 settings[bool_key] = config_parser['SETTINGS'].getboolean(bool_key)
 
@@ -416,10 +412,11 @@ class ClassifyConfig:
                     settings['show_all_modules'] = True
                     settings['keep_no_lsvs'] = True
 
-            if settings['changing']:
+            if not settings['show_all']:
                 if 'HET' not in settings['analysis_type'] and 'dPSI' not in settings['analysis_type']:
-                    voila_log().critical("To use --changing, please provide at least one dPSI or HET input file")
-                    sys.exit(1)
+                    voila_log().warning("Only PSI files were provided, so unable to detect changing events. "
+                                        "Enabling --show-all automatically. ")
+                    settings['show_all'] = True
 
             filters = {}
             if config_parser.has_section('FILTERS'):

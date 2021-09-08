@@ -810,7 +810,8 @@ class Graph:
             if not module.get_num_edges(ir=True) > 1:
                 return False
 
-        if self.config.changing:
+        # make sure module is changing, unless 'show all' is enabled
+        if not self.config.show_all:
             if not self._confidence_changing(module):
                 return False
 
