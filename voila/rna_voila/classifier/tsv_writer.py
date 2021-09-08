@@ -1595,7 +1595,6 @@ class TsvWriter(BaseTsvWriter):
 
                         c1_range_str = self._trim_strand_case_range_str(event['C1'], 'start', event['Skip'], 'start')
                         c2_range_str = self._trim_strand_case_range_str(event['Skip'], 'end', event['C2'], 'end')
-
                         # C1_A
                         # how do you trim?
                         # did I use strand case correctly here?
@@ -1686,6 +1685,7 @@ class TsvWriter(BaseTsvWriter):
 
                         writer.writerow(common + row + quants)
                         self.junction_cache.append((module, common, quants, row[2], 'A_C2', row[1]))
+
 
                         event_i += 1
 
