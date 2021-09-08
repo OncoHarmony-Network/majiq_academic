@@ -552,7 +552,7 @@ class Graph:
                             if lsv.changing(self.config.changing_pvalue_threshold,
                                             self.config.changing_between_group_dpsi).any():
                                 return True
-                        except LsvIdNotFoundInVoilaFile:
+                        except (LsvIdNotFoundInVoilaFile, GeneIdNotFoundInVoilaFile):
                             continue
 
             elif analysis_type == constants.ANALYSIS_DELTAPSI:
@@ -564,7 +564,7 @@ class Graph:
                             if lsv.changing(self.config.changing_between_group_dpsi,
                                             self.config.probability_changing_threshold):
                                 return True
-                        except LsvIdNotFoundInVoilaFile:
+                        except (LsvIdNotFoundInVoilaFile, GeneIdNotFoundInVoilaFile):
                             continue
 
         return False
