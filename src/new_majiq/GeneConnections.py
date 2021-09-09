@@ -7,13 +7,12 @@ junctions)
 Author: Joseph K Aicher
 """
 
+from typing import Optional
+
 import numpy as np
 
-from new_majiq.GeneRegions import GeneRegions
 from new_majiq.Exons import Exons, _Exons
-from typing import (
-    Optional,
-)
+from new_majiq.GeneRegions import GeneRegions
 
 
 class GeneConnections(GeneRegions):

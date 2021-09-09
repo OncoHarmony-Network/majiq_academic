@@ -6,25 +6,21 @@ Bins with raw read coverage from input experiments
 Author: Joseph K Aicher
 """
 
+from pathlib import Path
+from typing import Optional, Union
+
 import numpy as np
 import xarray as xr
 
 import new_majiq.constants as constants
-
-from new_majiq.SJBinsReads import SJBinsReads
-from new_majiq.SJIntrons import SJIntrons
 from new_majiq.Exons import Exons
 from new_majiq.GeneIntrons import GeneIntrons
-from new_majiq.internals import SJIntronsBins as _SJIntronsBins
 from new_majiq.internals import ExperimentStrandness
-from new_majiq.version import version
+from new_majiq.internals import SJIntronsBins as _SJIntronsBins
 from new_majiq.logger import get_logger
-
-from typing import (
-    Optional,
-    Union,
-)
-from pathlib import Path
+from new_majiq.SJBinsReads import SJBinsReads
+from new_majiq.SJIntrons import SJIntrons
+from new_majiq.version import version
 
 
 class SJIntronsBins(SJBinsReads):

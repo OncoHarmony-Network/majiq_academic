@@ -4,19 +4,16 @@ SimplifierGroup.py
 Author: Joseph K Aicher
 """
 
+from typing import Final
+
 import numpy as np
 import xarray as xr
 
 import new_majiq.constants as constants
-
 from new_majiq.GeneIntrons import GeneIntrons
 from new_majiq.GeneJunctions import GeneJunctions
-from new_majiq.SpliceGraphReads import SpliceGraphReads
 from new_majiq.internals import SimplifierGroup as _SimplifierGroup
-
-from typing import (
-    Final,
-)
+from new_majiq.SpliceGraphReads import SpliceGraphReads
 
 
 class SimplifierGroup(object):

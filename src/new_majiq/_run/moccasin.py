@@ -7,22 +7,20 @@ Author: Joseph K Aicher
 """
 
 import argparse
+from pathlib import Path
+from typing import List, Union
+
+import moccasin.moccasin as mc
 import numpy as np
 import pandas as pd
 import xarray as xr
+from dask.distributed import Client
+
 import new_majiq as nm
 import new_majiq.constants as constants
-import moccasin.moccasin as mc
-
-from dask.distributed import Client
 from new_majiq._run._majiq_args import check_nonnegative_factory
 from new_majiq._run._run import GenericSubcommand
 from new_majiq.logger import get_logger
-from pathlib import Path
-from typing import (
-    List,
-    Union,
-)
 
 
 def _args_dask(parser: argparse.ArgumentParser) -> None:
@@ -107,7 +105,7 @@ def _get_factors(
             # convert all other values to float32
             .astype(np.float32)
         )
-        if (missing := set(x for x in args.confounding if x not in df.columns)) :
+        if missing := set(x for x in args.confounding if x not in df.columns):
             raise ValueError(
                 f"Not all specified confounders were found from TSV ({missing = })"
             )

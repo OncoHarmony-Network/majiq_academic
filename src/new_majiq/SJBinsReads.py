@@ -6,14 +6,13 @@ Wrap shared aspects of junction/intron raw SJ reads
 Author: Joseph K Aicher
 """
 
+from typing import Final, Optional
+
 import numpy as np
+from numpy.typing import ArrayLike
 
 import new_majiq.constants as constants
-
 from new_majiq.internals import ExperimentStrandness
-
-from typing import Final, Optional
-from numpy.typing import ArrayLike
 
 
 class SJBinsReads(object):

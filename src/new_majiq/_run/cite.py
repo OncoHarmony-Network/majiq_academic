@@ -4,11 +4,9 @@ cite.py
 """
 
 import argparse
+from typing import List, Optional
+
 from new_majiq._run._run import GenericSubcommand
-from typing import (
-    List,
-    Optional,
-)
 
 DESCRIPTION = "Information about how to cite MAJIQ"
 MESSAGE = r"""

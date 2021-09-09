@@ -1,17 +1,14 @@
 import os
-from setuptools import (
-    setup,
-    Extension,
-)
-
-# Available at setup time due to pyproject.toml
-from pybind11.setup_helpers import Pybind11Extension
-import pybind11.setup_helpers as sh
 
 # get include path for python distribution
 from sysconfig import get_paths
-import numpy as np  # and for numpy
 
+import numpy as np  # and for numpy
+import pybind11.setup_helpers as sh
+
+# Available at setup time due to pyproject.toml
+from pybind11.setup_helpers import Pybind11Extension
+from setuptools import Extension, setup
 
 cpp_version = "0.0.1"
 
@@ -27,17 +24,19 @@ HTSLIB_LIB_DIRS = [os.environ.get("HTSLIB_LIBRARY_DIR", "/usr/local/lib")]
 ext_modules = [
     Pybind11Extension(
         "new_majiq.internals",
-        sorted([
-            "src/internals/PassedJunctions.cpp",
-            "src/internals/SpliceGraph.cpp",
-            "src/internals/SJIntrons.cpp",
-            "src/internals/SJBinsReads.cpp",
-            "src/internals/GFF3.cpp",
-            "src/internals/TranscriptModels.cpp",
-            "src/pySpliceGraph.cpp",
-            "src/new_majiq.cpp",
-        ]),
-        define_macros=[('VERSION_INFO', cpp_version), ("DEBUG", )],
+        sorted(
+            [
+                "src/internals/PassedJunctions.cpp",
+                "src/internals/SpliceGraph.cpp",
+                "src/internals/SJIntrons.cpp",
+                "src/internals/SJBinsReads.cpp",
+                "src/internals/GFF3.cpp",
+                "src/internals/TranscriptModels.cpp",
+                "src/pySpliceGraph.cpp",
+                "src/new_majiq.cpp",
+            ]
+        ),
+        define_macros=[("VERSION_INFO", cpp_version), ("DEBUG",)],
         include_dirs=["src/", *HTSLIB_INC_DIRS],
         library_dirs=[*HTSLIB_LIB_DIRS],
         runtime_library_dirs=[*HTSLIB_LIB_DIRS],

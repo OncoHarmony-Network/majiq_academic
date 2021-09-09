@@ -6,11 +6,9 @@ Parent class that wraps new_majiq internals for regions. This is a parent class
 Author: Joseph K Aicher
 """
 
-import numpy as np
+from typing import Final
 
-from typing import (
-    Final,
-)
+import numpy as np
 
 
 class Regions(object):

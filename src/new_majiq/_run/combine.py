@@ -7,20 +7,15 @@ Author: Joseph K Aicher
 """
 
 import argparse
+from pathlib import Path
+from typing import List, Optional
 
 import xarray as xr
+
 import new_majiq as nm
-
-from new_majiq.logger import get_logger
-
-from new_majiq._run.build import ir_filtering_args, IntronsType
-from pathlib import Path
 from new_majiq._run._run import GenericSubcommand
-from typing import (
-    List,
-    Optional,
-)
-
+from new_majiq._run.build import IntronsType, ir_filtering_args
+from new_majiq.logger import get_logger
 
 DESCRIPTION = "Combine input splicegraphs into single splicegraph"
 
@@ -64,7 +59,7 @@ def run(args: argparse.Namespace) -> None:
     all_inputs = args.make_annotated + args.keep_denovo
     if not all_inputs:
         raise ValueError("No input splicegraphs were provided to combine")
-    if (missing := sorted(set(x for x in all_inputs if not x.exists()))) :
+    if missing := sorted(set(x for x in all_inputs if not x.exists())):
         raise ValueError(f"Unable to find all input splicegraphs ({missing = })")
 
     log = get_logger()

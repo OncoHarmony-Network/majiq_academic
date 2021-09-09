@@ -7,22 +7,15 @@ Author: Joseph K Aicher
 """
 
 import argparse
+from enum import Enum
+from pathlib import Path
+from typing import Dict, List, Optional, Sequence
 
 import new_majiq as nm
 import new_majiq.constants as constants
-
-from new_majiq.logger import get_logger
 from new_majiq._run._majiq_args import check_nonnegative_factory
-from pathlib import Path
 from new_majiq._run._run import GenericSubcommand
-from typing import (
-    Dict,
-    List,
-    Optional,
-    Sequence,
-)
-from enum import Enum
-
+from new_majiq.logger import get_logger
 
 # type aliases
 SJGroupT = Sequence[Path]
@@ -507,7 +500,7 @@ def run(args: argparse.Namespace) -> None:
         log.info("Loading experiment groups")
         experiments = get_grouped_experiments(args.groups_tsv)
     else:
-        if (missing := sorted(set(x for x in args.sjs if not x.exists()))) :
+        if missing := sorted(set(x for x in args.sjs if not x.exists())):
             raise ValueError(f"Unable to find all input SJ files ({missing =})")
         if len(unique := set(args.sjs)) != len(args.sjs):
             # get non-unique sjs to report error

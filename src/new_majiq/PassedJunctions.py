@@ -8,18 +8,15 @@ Accumulate groups of junctions, create new junctions that have passed
 Author: Joseph K Aicher
 """
 
-import new_majiq.constants as constants
+from typing import Final
 
-from new_majiq.SJJunctionsBins import SJJunctionsBins
-from new_majiq.GeneJunctions import GeneJunctions
+import new_majiq.constants as constants
 from new_majiq.Exons import Exons
+from new_majiq.GeneJunctions import GeneJunctions
+from new_majiq.internals import ExperimentThresholds
 from new_majiq.internals import GroupJunctionsGenerator as _GroupJunctionsGenerator
 from new_majiq.internals import PassedJunctionsGenerator as _PassedJunctionsGenerator
-from new_majiq.internals import ExperimentThresholds
-
-from typing import (
-    Final,
-)
+from new_majiq.SJJunctionsBins import SJJunctionsBins
 
 
 class GroupJunctionsGenerator(object):

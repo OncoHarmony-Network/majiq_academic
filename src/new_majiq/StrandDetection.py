@@ -7,17 +7,16 @@ Author: Joseph K Aicher
 """
 
 import numpy as np
+
 import new_majiq.constants as constants
-
-from new_majiq.logger import get_logger
-
-from new_majiq.SpliceGraph import SpliceGraph
-from new_majiq.SpliceGraphReads import SpliceGraphReads
-from new_majiq.SJJunctionsBins import SJJunctionsBins
-from new_majiq.SJIntronsBins import SJIntronsBins
-from new_majiq.SJIntrons import SJIntrons
 from new_majiq.GeneIntrons import GeneIntrons
 from new_majiq.internals import ExperimentStrandness
+from new_majiq.logger import get_logger
+from new_majiq.SJIntrons import SJIntrons
+from new_majiq.SJIntronsBins import SJIntronsBins
+from new_majiq.SJJunctionsBins import SJJunctionsBins
+from new_majiq.SpliceGraph import SpliceGraph
+from new_majiq.SpliceGraphReads import SpliceGraphReads
 
 
 def detect_strand(

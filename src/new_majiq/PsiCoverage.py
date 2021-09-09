@@ -9,30 +9,22 @@ dependences between junctions.
 Author: Joseph K Aicher
 """
 
+from functools import cached_property
+from pathlib import Path
+from typing import Final, List, Optional, Sequence, Tuple, Union
+
 import numpy as np
-import xarray as xr
 import pandas as pd
+import xarray as xr
 
-import new_majiq.constants as constants
 import new_majiq.beta_mixture as bm
-
-from new_majiq.experiments import bam_experiment_name
-from new_majiq.EventsCoverage import EventsCoverage
+import new_majiq.constants as constants
 from new_majiq.Events import Events, _Events
-from new_majiq.SpliceGraph import SpliceGraph
+from new_majiq.EventsCoverage import EventsCoverage
+from new_majiq.experiments import bam_experiment_name
 from new_majiq.GeneIntrons import GeneIntrons
 from new_majiq.GeneJunctions import GeneJunctions
-
-from functools import cached_property
-from typing import (
-    Final,
-    List,
-    Optional,
-    Sequence,
-    Tuple,
-    Union,
-)
-from pathlib import Path
+from new_majiq.SpliceGraph import SpliceGraph
 
 
 def min_experiments(min_experiments_f: float, num_experiments: int) -> float:

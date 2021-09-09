@@ -6,23 +6,19 @@ Coverage over events from SJ bins
 Author: Joseph K Aicher
 """
 
+from pathlib import Path
+from typing import Final, Union
+
 import numpy as np
 import xarray as xr
 
 import new_majiq.constants as constants
-
+from new_majiq.Events import Events
 from new_majiq.GeneIntrons import GeneIntrons
 from new_majiq.GeneJunctions import GeneJunctions
-from new_majiq.Events import Events
-from new_majiq.SJJunctionsBins import SJJunctionsBins
-from new_majiq.SJIntronsBins import SJIntronsBins
 from new_majiq.internals import EventsCoverage as _EventsCoverage
-
-from pathlib import Path
-from typing import (
-    Final,
-    Union,
-)
+from new_majiq.SJIntronsBins import SJIntronsBins
+from new_majiq.SJJunctionsBins import SJJunctionsBins
 
 
 class EventsCoverage(object):

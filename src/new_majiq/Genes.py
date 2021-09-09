@@ -6,20 +6,16 @@ Container of genes that are closed intervals over different contigs
 Author: Joseph K Aicher
 """
 
+from pathlib import Path
+from typing import List, Optional, Union
+
 import numpy as np
 import xarray as xr
 
 import new_majiq.constants as constants
-
-from typing import (
-    List,
-    Optional,
-    Union,
-)
-from new_majiq.internals import Genes as _Genes
-from new_majiq.Contigs import Contigs
 from new_majiq.ContigRegions import ContigRegions
-from pathlib import Path
+from new_majiq.Contigs import Contigs
+from new_majiq.internals import Genes as _Genes
 
 
 class Genes(ContigRegions):

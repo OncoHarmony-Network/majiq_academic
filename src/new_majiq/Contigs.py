@@ -7,18 +7,14 @@ functions
 Author: Joseph K Aicher
 """
 
+from pathlib import Path
+from typing import Final, List, Union
+
 import numpy as np
 import xarray as xr
 
 import new_majiq.constants as constants
-
-from typing import (
-    Final,
-    List,
-    Union,
-)
 from new_majiq.internals import Contigs as _Contigs
-from pathlib import Path
 
 
 class Contigs(object):

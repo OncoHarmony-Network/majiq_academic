@@ -7,17 +7,14 @@ Author: Joseph K Aicher
 """
 
 import argparse
+from pathlib import Path
+from typing import List, Optional
+
 import new_majiq as nm
 import new_majiq.constants as constants
-
-from new_majiq.logger import get_logger
 from new_majiq._run._majiq_args import check_nonnegative_factory
-from pathlib import Path
 from new_majiq._run._run import GenericSubcommand
-from typing import (
-    List,
-    Optional,
-)
+from new_majiq.logger import get_logger
 
 DESCRIPTION = "Quantify events coverage files"
 

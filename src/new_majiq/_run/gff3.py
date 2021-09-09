@@ -7,19 +7,13 @@ Author: Joseph K Aicher
 """
 
 import argparse
-
-import new_majiq.constants as constants
+from pathlib import Path
+from typing import List, Optional
 
 import new_majiq as nm
-from new_majiq.logger import get_logger
-
-from pathlib import Path
+import new_majiq.constants as constants
 from new_majiq._run._run import GenericSubcommand
-from typing import (
-    List,
-    Optional,
-)
-
+from new_majiq.logger import get_logger
 
 DESCRIPTION = "Translate input GFF3 file to base splicegraph file"
 

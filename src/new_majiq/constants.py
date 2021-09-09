@@ -6,16 +6,14 @@ Constants for new_majiq front-end
 Author: Joseph K Aicher
 """
 
-from typing import (
-    Final,
-)
+from typing import Final
+
 from new_majiq.internals import (
     ExperimentStrandness,
     ExperimentThresholds,
     GFF3Types,
     _default_gff3_types,
 )
-
 
 NC_CONTIGS: Final[str] = "contigs"
 NC_GENES: Final[str] = "genes"

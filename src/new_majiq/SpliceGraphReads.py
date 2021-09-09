@@ -6,25 +6,20 @@ Number of reads from SJ bins
 Author: Joseph K Aicher
 """
 
+from functools import cached_property
+from pathlib import Path
+from typing import Final, List, Union
+
 import numpy as np
 import xarray as xr
 
 import new_majiq.constants as constants
-
 from new_majiq.experiments import bam_experiment_name
 from new_majiq.GeneIntrons import GeneIntrons
 from new_majiq.GeneJunctions import GeneJunctions
+from new_majiq.internals import SpliceGraphReads as _SpliceGraphReads
 from new_majiq.SJIntronsBins import SJIntronsBins
 from new_majiq.SJJunctionsBins import SJJunctionsBins
-from new_majiq.internals import SpliceGraphReads as _SpliceGraphReads
-
-from functools import cached_property
-from pathlib import Path
-from typing import (
-    Final,
-    List,
-    Union,
-)
 
 
 class MultiSpliceGraphReads(object):

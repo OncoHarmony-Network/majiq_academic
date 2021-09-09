@@ -12,7 +12,7 @@ used for interactive analysis (i.e. in a Jupyter notebook).
 We expect this branch to eventually become MAJIQ v3.
 
 
-# Installation
+## Installation
 
 Requirements:
 
@@ -38,7 +38,15 @@ environment in the future that can be used with Snakemake to automatically
 create an appropriate environment if SSH keys and environment variables are set
 up appropriately.
 
+### For development
 
-# Running
+Install `pre-commit` using pip (or use `environment.yaml`), then run
+`pre-commit install`.
+New changes will automatically be formatted/checked for potential issues.
+It is occasionally worth checking all files with these checks -- this can be
+done by running `pre-commit run --all-files`.
+
+
+## Running
 
 TODO

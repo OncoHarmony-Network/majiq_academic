@@ -7,9 +7,7 @@ Author: Joseph K Aicher
 """
 
 from pathlib import Path
-from typing import (
-    Union,
-)
+from typing import Union
 
 
 def bam_experiment_name(p: Union[str, Path]) -> str:

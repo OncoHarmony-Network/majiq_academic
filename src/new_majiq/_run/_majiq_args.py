@@ -5,13 +5,7 @@ Helper classes/functions for checking valid arguments directly at command-line
 """
 
 import argparse
-from typing import (
-    Any,
-    Callable,
-    Optional,
-    Set,
-    Union,
-)
+from typing import Any, Callable, Optional, Set, Union
 
 
 def check_characters_factory(

@@ -7,11 +7,12 @@ Author: Joseph K Aicher
 """
 
 import argparse
-import sys
 import os
+import sys
 from pathlib import Path
 from typing import Callable
-from new_majiq.logger import setup_logger, get_logger
+
+from new_majiq.logger import get_logger, setup_logger
 
 
 class GenericSubcommand(object):

@@ -17,6 +17,7 @@ dependencies:
   - mypy
   - flake8
   - black
+  - pre-commit
   - pip
   - setuptools
   - wheel

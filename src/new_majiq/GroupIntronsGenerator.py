@@ -6,19 +6,16 @@ Build group for passing gene introns
 Author: Joseph K Aicher
 """
 
+from typing import Final
+
 import numpy as np
 import xarray as xr
 
 import new_majiq.constants as constants
-
 from new_majiq.GeneIntrons import GeneIntrons
-from new_majiq.SJIntronsBins import SJIntronsBins
-from new_majiq.internals import GroupIntronsGenerator as _GroupIntronsGenerator
 from new_majiq.internals import ExperimentThresholds
-
-from typing import (
-    Final,
-)
+from new_majiq.internals import GroupIntronsGenerator as _GroupIntronsGenerator
+from new_majiq.SJIntronsBins import SJIntronsBins
 
 
 class GroupIntronsGenerator(object):

@@ -8,8 +8,8 @@ Author: Joseph K Aicher
 
 import numpy as np
 
-from new_majiq.Regions import Regions
 from new_majiq.Contigs import Contigs
+from new_majiq.Regions import Regions
 
 
 class ContigRegions(Regions):

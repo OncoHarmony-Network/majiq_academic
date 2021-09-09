@@ -6,19 +6,16 @@ ExonConnections for SpliceGraph
 Author: Joseph K Aicher
 """
 
+from typing import Final, List
+
 import numpy as np
 
+from new_majiq.Events import Events
 from new_majiq.Exons import Exons
 from new_majiq.GeneIntrons import GeneIntrons
 from new_majiq.GeneJunctions import GeneJunctions
-from new_majiq.Events import Events
-from new_majiq.SimplifierGroup import SimplifierGroup, _SimplifierGroup
 from new_majiq.internals import ExonConnections as _ExonConnections
-
-from typing import (
-    Final,
-    List,
-)
+from new_majiq.SimplifierGroup import SimplifierGroup, _SimplifierGroup
 
 
 class ExonConnections(object):
