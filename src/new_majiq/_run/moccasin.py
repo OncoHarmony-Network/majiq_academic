@@ -12,7 +12,7 @@ import pandas as pd
 import xarray as xr
 import new_majiq as nm
 import new_majiq.constants as constants
-import new_majiq.moccasin as mc
+import moccasin.moccasin as mc
 
 from dask.distributed import Client
 from new_majiq._run._majiq_args import check_nonnegative_factory
@@ -255,6 +255,10 @@ def run_factors_model(args: argparse.Namespace) -> None:
         factors,
         max_new_factors=args.ruv_max_new_factors,
         max_events=args.ruv_max_events,
+        dim_prefix="prefix",
+        dim_factor="factor",
+        dim_ecidx="ec_idx",
+        log=log,
     )
     log.info(
         f"Learned {model.num_factors} factors explaining"
@@ -309,6 +313,8 @@ def run_coverage_model(args: argparse.Namespace) -> None:
         psicov.event_passed,
         factors,
         complete=False,
+        dim_prefix="prefix",
+        dim_factor="factor",
     )
     log.info("Solving for raw model parameters")
     # TODO could potentially share work if combined bootstrap_psi, raw_psi to
@@ -318,6 +324,8 @@ def run_coverage_model(args: argparse.Namespace) -> None:
         psicov.event_passed,
         factors,
         complete=False,
+        dim_prefix="prefix",
+        dim_factor="factor",
     )
     log.info(f"Saving model parameters to {args.coverage_model.resolve()}")
     xr.Dataset(
@@ -345,9 +353,15 @@ def run_coverage_infer(args: argparse.Namespace) -> None:
     log.info("Correcting bootstrap_psi")
     adj_bootstrap_psi = (
         # get linear adjustment of bootstrap_psi
-        mc.correct_with_model(psicov.bootstrap_psi, models.bootstrap_model, factors)
+        mc.correct_with_model(
+            psicov.bootstrap_psi,
+            models.bootstrap_model,
+            factors,
+            dim_prefix="prefix",
+            dim_factor="factor",
+        )
         # clip and renormalize
-        .pipe(mc.clip_and_renormalize_psi, psicov.lsv_offsets)
+        .pipe(mc.clip_and_renormalize_psi, psicov.lsv_offsets, dim_ecidx="ec_idx")
         # but must be passed and not null
         .pipe(
             lambda x: x.where(x.notnull() & psicov.event_passed, psicov.bootstrap_psi)
@@ -356,9 +370,15 @@ def run_coverage_infer(args: argparse.Namespace) -> None:
     log.info("Correcting raw_psi")
     adj_raw_psi = (
         # get linear adjustment of raw_psi
-        mc.correct_with_model(psicov.raw_psi, models.raw_model, factors)
+        mc.correct_with_model(
+            psicov.raw_psi,
+            models.raw_model,
+            factors,
+            dim_prefix="prefix",
+            dim_factor="factor",
+        )
         # clip and renormalize
-        .pipe(mc.clip_and_renormalize_psi, psicov.lsv_offsets)
+        .pipe(mc.clip_and_renormalize_psi, psicov.lsv_offsets, dim_ecidx="ec_idx")
         # but must be passed and not null
         .pipe(lambda x: x.where(x.notnull() & psicov.event_passed, psicov.raw_psi))
     )

@@ -19,12 +19,15 @@ Requirements:
 + C++ compiler with C++17 support (e.g. gcc >= 7)
 + htslib >= 1.10
 + Python 3.8 (with a recent version of pip)
++ moccasin >= 0.26 (`new_moccasin`), originally part of majiq v3.
 
 The installation process requires the htslib include/library directories to be
 available. If they are not in `/usr/local/include` and `/usr/local/lib`, please
 specify their location using the environment variables `HTSLIB_INCLUDE_DIR` and
 `HTSLIB_LIBRARY_DIR`.
 
+Install a version of moccasin since the rewrite (>= 0.26). This can currently be done
+by running `pip install git+https://bitbucket.org/biociphers/moccasin@new_moccasin`.
 Then, run `pip install .` in the base directory of this repo in your desired
 conda/virtual environment.
 

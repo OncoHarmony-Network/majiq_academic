@@ -21,4 +21,5 @@ dependencies:
   - setuptools
   - wheel
   - pip:
+    - "git+https://bitbucket.org/biociphers/moccasin@new_moccasin"
     - "-e ."
