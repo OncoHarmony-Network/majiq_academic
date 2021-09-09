@@ -13,7 +13,7 @@ from sysconfig import get_paths
 import numpy as np  # and for numpy
 
 
-__version__ = "0.0.1"
+cpp_version = "0.0.1"
 
 
 # disable pybind11 helpers for OSX -- they are not compiler independent
@@ -37,7 +37,7 @@ ext_modules = [
             "src/pySpliceGraph.cpp",
             "src/new_majiq.cpp",
         ]),
-        define_macros=[('VERSION_INFO', __version__), ("DEBUG", )],
+        define_macros=[('VERSION_INFO', cpp_version), ("DEBUG", )],
         include_dirs=["src/", *HTSLIB_INC_DIRS],
         library_dirs=[*HTSLIB_LIB_DIRS],
         runtime_library_dirs=[*HTSLIB_LIB_DIRS],
@@ -61,8 +61,5 @@ ext_modules = [
 
 
 setup(
-    version=__version__,
-    packages=["new_majiq", "new_majiq._run"],
-    package_dir={"": "src"},
     ext_modules=ext_modules,
 )

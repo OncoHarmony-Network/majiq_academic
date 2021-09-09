@@ -3,9 +3,13 @@ from new_majiq.internals import (
     ExperimentThresholds,
     set_seed,
 )
-from .version import version
 
-__version__ = version()
+try:
+    from new_majiq._version import version as __version__
+except (ModuleNotFoundError, ImportError):
+    __version__ = "3.0.0unknown"
+except Exception:
+    raise
 
 import new_majiq.constants as constants
 
