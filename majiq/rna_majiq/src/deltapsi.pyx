@@ -121,12 +121,11 @@ cdef int _core_deltapsi(object self) except -1:
     parse_dpsi_reads(lsv_map, self.files1, self.files2, nthreads, self.minreads, self.minpos)
     get_psi_border(psi_border, nbins)
 
-    print("Start Computing DeltaPSI")
+    logger.info("Start Computing DeltaPSI")
     for i in prange(nlsv, nogil=True, num_threads=nthreads):
 
         with gil:
             lsv = list_of_lsv[i]
-            logger.debug(lsv)
 
         if lsv_map[lsv].is_ir():
             prior_m = prior_matrix[1]
@@ -152,8 +151,6 @@ cdef int _core_deltapsi(object self) except -1:
                 pmatrix[x, y]    = prior_matrix[0][x][y]
                 pmatrix_ir[x, y] = prior_matrix[1][x][y]
         out_h5p.prior = [pmatrix, pmatrix_ir]
-        # print ("PRIOR1", pmatrix)
-        # print ("PRIOR1", pmatrix_ir)
 
         for lsv in list_of_lsv:
             dpsiObj_ptr = <dpsiLSV*> lsv_map[lsv]
@@ -174,7 +171,6 @@ cdef int _core_deltapsi(object self) except -1:
                 for y in range((nbins*2)-1):
                     postdpsi[x, y] = dpsiObj_ptr.post_dpsi[x][y]
             dpsiObj_ptr.clear_all()
-            # print(lsv, lsv_type_dict[lsv][0].decode('utf-8'), postdpsi, [postpsi1,postpsi2], [mupsi1, mupsi2], junc_info[lsv])
             out_h5p.delta_psi(lsv.decode('utf-8')).add(lsv_type=lsv_type_dict[lsv][0].decode('utf-8'),
                                                        bins=postdpsi, group_bins=[postpsi1,postpsi2],
                                                        group_means=[mupsi1, mupsi2], junctions=junc_info[lsv])

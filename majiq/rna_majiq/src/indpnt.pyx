@@ -59,7 +59,7 @@ cdef int _statistical_test_computation(object out_h5p, dict comparison, list lis
     cdef hetLSV* lsv_max
 
     if not StatsObj.initialize_statistics(stats_list):
-        print('ERROR stats')
+        logger.error('Unable to initialize statistics object')
         return -1
 
     statlist = []
@@ -71,7 +71,7 @@ cdef int _statistical_test_computation(object out_h5p, dict comparison, list lis
     logger.info("Using statistics: %s" % " ".join(statlist))
     nstats = StatsObj.get_number_stats()
 
-    print(comparison)
+    logger.info(f"Comparison: {comparison}")
     # XXX NOTE: chunking of LSVs assumes that `list_of_lsv` LSVs are
     # aligned/share order with junctions in psi samples files
 

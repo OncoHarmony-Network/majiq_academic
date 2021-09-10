@@ -111,7 +111,6 @@ cdef int  read_gff(str filename, map[string, Gene*] all_genes, vector[string] gi
     for parent_tx_id, (gene_id, coord_list) in trcpt_id_dict.items():
         last_ss = constants.FIRST_LAST_JUNC
         coord_list.sort(key=lambda x: (x[0], x[1]))
-        # if gene_id == 'ENSMUSG00000006498': print (coord_list)
         if len(coord_list) == 0 : continue
         for xx, yy in coord_list:
             key = coord_key_t(last_ss, xx)
@@ -241,7 +240,6 @@ cdef void get_coverage_mat_lsv(map[string, qLSV*]& result, list file_list, int n
     cdef bint bflt = not fltr
 
     for fidx, fname in enumerate(file_list):
-        # print(fname)
         with open(fname, 'rb') as fp:
             fl = np.load(fp)
             data = fl['coverage']
@@ -330,7 +328,6 @@ cdef list _extract_lsv_summary(list files, int minnonzero, int min_reads, dict t
                         lsv_list[pre_lsv] += int(lsv_t)
                         if o_epsi is not None:
                             lsv_list_prior[pre_lsv] += int(lsv_t_prior)
-                            # print(pre_lsv, epsi[pre_lsv], epsi_t)
                             epsi[pre_lsv] += np.array(epsi_t)
 
                     except KeyError:
