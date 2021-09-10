@@ -119,10 +119,14 @@ class AnalysisTypeTsv:
 
     def get_base_metadata(self):
         with self.view_matrix() as m:
-            metadata = {'voila_version': constants.VERSION,
-                        'command': ' '.join(sys.argv),
-                        'group_names': m.group_names
-                        }
+            metadata = {
+                'voila_version': constants.VERSION,
+                'command': ' '.join(sys.argv),
+                'group_sizes': {
+                    grp: len(names)
+                    for grp, names in zip(m.group_names, m.experiment_names)
+                },
+            }
 
         return metadata
 
