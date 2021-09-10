@@ -13,12 +13,12 @@ import numpy as np
 import xarray as xr
 
 import new_majiq.constants as constants
+from new_majiq._version import version as nm_version
 from new_majiq.internals import ExperimentStrandness
 from new_majiq.internals import SJJunctionsBins as _SJJunctionsBins
 from new_majiq.logger import get_logger
 from new_majiq.SJBinsReads import SJBinsReads
 from new_majiq.SJJunctions import SJJunctions
-from new_majiq.version import version
 
 
 class SJJunctionsBins(SJBinsReads):
@@ -156,7 +156,7 @@ class SJJunctionsBins(SJBinsReads):
         """
         # TODO: save/serialize strandness
         path = str(Path(path).resolve())
-        original_version = version()
+        original_version = nm_version
         original_time = str(np.datetime64("now"))
         return SJJunctionsBins(
             _SJJunctionsBins.from_bam(path, strandness, nthreads),

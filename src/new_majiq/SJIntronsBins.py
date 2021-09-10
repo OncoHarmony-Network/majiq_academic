@@ -13,6 +13,7 @@ import numpy as np
 import xarray as xr
 
 import new_majiq.constants as constants
+from new_majiq._version import version as nm_version
 from new_majiq.Exons import Exons
 from new_majiq.GeneIntrons import GeneIntrons
 from new_majiq.internals import ExperimentStrandness
@@ -20,7 +21,6 @@ from new_majiq.internals import SJIntronsBins as _SJIntronsBins
 from new_majiq.logger import get_logger
 from new_majiq.SJBinsReads import SJBinsReads
 from new_majiq.SJIntrons import SJIntrons
-from new_majiq.version import version
 
 
 class SJIntronsBins(SJBinsReads):
@@ -124,7 +124,7 @@ class SJIntronsBins(SJBinsReads):
         """
         # TODO: save information about splicegraph used
         path = str(Path(path).resolve())
-        original_version = version()
+        original_version = nm_version
         original_time = str(np.datetime64("now"))
         return SJIntronsBins(
             _SJIntronsBins.from_bam(
@@ -186,7 +186,7 @@ class SJIntronsBins(SJBinsReads):
         total_bins: int,
         strandness: ExperimentStrandness = ExperimentStrandness.NONE,
         original_path: str = "<none>",
-        original_version: str = version(),
+        original_version: str = nm_version,
         original_time: Optional[str] = None,
     ) -> "SJIntronsBins":
         """Empty SJIntronsBins matched to input introns"""
