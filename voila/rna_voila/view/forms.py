@@ -2,7 +2,7 @@ import numpy as np
 
 from flask_wtf import FlaskForm
 from wtforms import BooleanField, StringField, SelectField
-
+from wtforms.fields.html5 import DecimalRangeField
 
 class LsvFiltersForm(FlaskForm):
     a5ss = BooleanField('5 Prime')
@@ -16,4 +16,5 @@ class LsvFiltersForm(FlaskForm):
 
 class DeltaPsiFiltersForm(FlaskForm):
     dpsi_threshold = StringField('abs(E(dPSI)) Threshold', default=0.2)
-    confidence_threshold = StringField('Confidence Threshold', default=0.95)
+    confidence_threshold = DecimalRangeField('Confidence Threshold', default=0.9)
+

@@ -188,6 +188,10 @@
                 $(excl_incl).toggle();
             });
 
+        function outputUpdate(val) {
+            document.querySelector('#selected_confidence_threshold').value = val;
+        }
+
     </script>
 {% endblock %}
 
@@ -220,7 +224,8 @@
 
                 <div class="pure-u-1-4">
                     {{ dpsi_form.confidence_threshold.label }}
-                    {{ dpsi_form.confidence_threshold }}
+                    {{ dpsi_form.confidence_threshold(min=0.0, max=1.0, step=0.1, oninput="outputUpdate(value)") }}
+                    <output for="confidence_threshold" id="selected_confidence_threshold">{{ dpsi_form.confidence_threshold.data }}</output>
                 </div>
                 <div class="pure-u-1-4">
                     <button type="submit" class="download-lsvs pure-button pure-button-primary">Download LSVs
