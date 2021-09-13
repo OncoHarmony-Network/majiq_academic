@@ -123,7 +123,7 @@ class AnalysisTypeTsv:
                 'voila_version': constants.VERSION,
                 'command': ' '.join(sys.argv),
                 'group_sizes': {
-                    grp: len(names)
+                    grp: sum(bool(x) for x in names)  # skip empty names used for padding
                     for grp, names in zip(m.group_names, m.experiment_names)
                 },
             }
