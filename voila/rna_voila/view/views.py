@@ -5,6 +5,7 @@ from flask import jsonify, redirect, url_for, session, render_template, request,
 from waitress import serve
 
 from rna_voila import constants
+from rna_voila.api.view_matrix import ViewMatrix
 from rna_voila.api.view_splice_graph import ViewSpliceGraph
 from rna_voila.config import ViewConfig
 from rna_voila.exceptions import UnknownAnalysisType
@@ -78,8 +79,10 @@ def run_service():
     run_app = get_app()
     web_server = ViewConfig().web_server
 
+
     if ViewConfig().enable_passcode:
         voila_log().info(f'Passcode access: http://{host}:{port}/{ViewConfig().enable_passcode}')
+
 
     if web_server == 'waitress':
         serve(run_app, port=port, host=host)
@@ -128,6 +131,16 @@ def get_app():
                 # the correct passcode is not in session either, deny access
                 return abort(403)
 
+
+    if not ViewConfig().ignore_inconsistent_group_errors:
+        m_all = ViewMatrix()
+        warnings = m_all.check_group_consistancy()
+        @run_app.before_request
+        def group_consistancy_check():
+            if warnings and not 'warnings' in session:
+                session['warnings'] = []
+                for warning in warnings:
+                    session['warnings'].append(f'Warning: detected groups with the same name "{warning[0]}", which have different sets of experiments: {warning[1]}')
 
     return run_app
 

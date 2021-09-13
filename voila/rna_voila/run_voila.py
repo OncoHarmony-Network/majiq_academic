@@ -123,6 +123,9 @@ tsv_parser.add_argument('--gene-ids', nargs='*', default=[],
                         help='Gene IDs, separated by spaces, which should remain in the results. e.g. GENE_ID1 '
                              'GENE_ID2 ...')
 tsv_parser.add_argument('--show-read-counts', action='store_true', help=argparse.SUPPRESS)
+tsv_parser.add_argument('--ignore-inconsistent-group-errors', action='store_true',
+                         help="Don't show any warnings / errors when multiple experiments with the same name, "
+                              "but different experiments are analyzed")
 
 # view parser
 view_parser = argparse.ArgumentParser(add_help=False)
@@ -149,6 +152,9 @@ view_parser.add_argument('--splice-graph-only', action='store_true', help=argpar
 view_parser.add_argument('--enable-passcode', action='store_true',
                          help='Disallow access to the viewer unless the special link is used to start the session'
                               ' (provides some security against port scanners accessing your app')
+view_parser.add_argument('--ignore-inconsistent-group-errors', action='store_true',
+                         help="Don't show any warnings / errors when multiple experiments with the same name, "
+                              "but different experiments are analyzed")
 
 # classifier parser
 classify_parser = argparse.ArgumentParser(add_help=False)
@@ -224,6 +230,9 @@ classify_parser.add_argument('--output-mpe', action='store_true',
                          help='Outputs tsv with primer targetable regions upstream and downstream of every module: '
                               'takes into account trimmed exons, constitutive upstream/downstream exons, and in a '
                               'format where it is easy to programmatically design primers. ')
+classify_parser.add_argument('--ignore-inconsistent-group-errors', action='store_true',
+                        help="Don't show any warnings / errors when multiple experiments with the same name, "
+                             "but different experiments are analyzed")
 required_classify_parser = classify_parser.add_argument_group('required named arguments')
 required_classify_parser.add_argument('-d', '--directory', required=True, help="All generated TSV files will be dumped in"
                                                                           " this directory")

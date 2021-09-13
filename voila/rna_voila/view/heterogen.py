@@ -23,6 +23,11 @@ def index():
     form = LsvFiltersForm()
     return render_template('het_index.html', form=form)
 
+@bp.route('/dismiss-warnings', methods=('POST',))
+def dismiss_warnings():
+    session['warnings'] = []
+    return jsonify({'ok':1})
+
 @bp.route('/toggle-simplified', methods=('POST',))
 def toggle_simplified():
     session['omit_simplified'] = not session['omit_simplified']
@@ -30,6 +35,7 @@ def toggle_simplified():
 
 @bp.route('/gene/<gene_id>/')
 def gene(gene_id):
+
     with ViewHeterogens() as m, ViewSpliceGraph(omit_simplified=session.get('omit_simplified', False)) as sg:
 
 

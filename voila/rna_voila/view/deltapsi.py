@@ -23,6 +23,11 @@ def index():
     dpsi_form = DeltaPsiFiltersForm()
     return render_template('dpsi_index.html', form=form, dpsi_form=dpsi_form)
 
+@bp.route('/dismiss-warnings', methods=('POST',))
+def dismiss_warnings():
+    session['warnings'] = []
+    return jsonify({'ok':1})
+
 @bp.route('/toggle-simplified', methods=('POST',))
 def toggle_simplified():
     session['omit_simplified'] = not session['omit_simplified']

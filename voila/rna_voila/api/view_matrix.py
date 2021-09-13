@@ -20,6 +20,27 @@ class ViewMatrix(ABC):
     experiment_names = None
     gene_ids = None
 
+    def check_group_consistancy(self):
+        config = ViewConfig()
+        groups_defined = {}
+        for f in config.voila_files:
+            with ViewPsi(f) as m:
+
+                for i, group_name in enumerate(m.group_names):
+                    experiment_names = m.experiment_names[i]
+                    if group_name not in groups_defined:
+                        groups_defined[group_name] = [experiment_names]
+                    else:
+                        groups_defined[group_name].append(experiment_names)
+
+        warnings = []
+        for group_name, experiment_groups in groups_defined.items():
+            if not all(e == experiment_groups[0] for e in experiment_groups):
+                warnings.append((group_name, experiment_groups))
+
+        return warnings
+
+
     def lsv_ids(self, gene_ids=None):
         raise NotImplementedError()
 

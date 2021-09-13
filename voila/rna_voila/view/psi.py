@@ -26,6 +26,10 @@ def index():
     return render_template('psi_index.html', form=form,
                            multi_view=len(ViewConfig().voila_files) > 1)
 
+@bp.route('/dismiss-warnings', methods=('POST',))
+def dismiss_warnings():
+    session['warnings'] = []
+    return jsonify({'ok':1})
 
 @bp.route('/toggle-simplified', methods=('POST',))
 def toggle_simplified():

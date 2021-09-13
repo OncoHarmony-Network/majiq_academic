@@ -14,12 +14,13 @@ from rna_voila.voila_log import voila_log
 _ViewConfig = namedtuple('ViewConfig', ['voila_file', 'voila_files', 'splice_graph_file', 'analysis_type', 'nproc',
                                         'force_index', 'debug', 'silent', 'port', 'host', 'web_server', 'index_file',
                                         'num_web_workers', 'strict_indexing', 'skip_type_indexing', 'splice_graph_only',
-                                        'enable_passcode'])
+                                        'enable_passcode', 'ignore_inconsistent_group_errors'])
 _ViewConfig.__new__.__defaults__ = (None,) * len(_ViewConfig._fields)
 _TsvConfig = namedtuple('TsvConfig', ['file_name', 'voila_files', 'voila_file', 'splice_graph_file',
                                       'non_changing_threshold', 'nproc', 'threshold', 'analysis_type', 'show_all',
                                       'debug', 'probability_threshold', 'silent', 'gene_ids', 'gene_names', 'lsv_ids',
-                                      'lsv_types', 'strict_indexing', 'show_read_counts'])
+                                      'lsv_types', 'strict_indexing', 'show_read_counts',
+                                      'ignore_inconsistent_group_errors'])
 _TsvConfig.__new__.__defaults__ = (None,) * len(_TsvConfig._fields)
 _ClassifyConfig = namedtuple('ClassifyConfig', ['directory', 'voila_files', 'voila_file', 'splice_graph_file',
                                       'nproc', 'decomplexify_psi_threshold', 'decomplexify_deltapsi_threshold',
@@ -32,7 +33,8 @@ _ClassifyConfig = namedtuple('ClassifyConfig', ['directory', 'voila_files', 'voi
                                                 'non_changing_between_group_dpsi', 'changing_pvalue_threshold',
                                                 'changing_between_group_dpsi', 'changing_between_group_dpsi_secondary',
                                                 'keep_no_lsvs_junctions', 'debug_num_genes', 'overwrite', 'output_mpe',
-                                                'heatmap_selection', 'logger', 'enabled_outputs'])
+                                                'heatmap_selection', 'logger', 'enabled_outputs',
+                                                'ignore_inconsistent_group_errors'])
 _ClassifyConfig.__new__.__defaults__ = (None,) * len(_ClassifyConfig._fields)
 _FilterConfig = namedtuple('FilterConfig', ['directory', 'voila_files', 'voila_file', 'splice_graph_file',
                                             'nproc', 'gene_ids', 'debug', 'silent', 'analysis_type', 'overwrite',
@@ -304,7 +306,8 @@ class ViewConfig:
             settings = dict(config_parser['SETTINGS'])
             for int_key in ['nproc', 'port', 'num_web_workers']:
                 settings[int_key] = config_parser['SETTINGS'].getint(int_key)
-            for bool_key in ['force_index', 'silent', 'debug', 'strict_indexing', 'skip_type_indexing']:
+            for bool_key in ['force_index', 'silent', 'debug', 'strict_indexing', 'skip_type_indexing',
+                             'ignore_inconsistent_group_errors']:
                 settings[bool_key] = config_parser['SETTINGS'].getboolean(bool_key)
 
 
@@ -342,7 +345,8 @@ class TsvConfig:
                 settings[int_key] = config_parser['SETTINGS'].getint(int_key)
             for float_key in ['non_changing_threshold', 'threshold', 'probability_threshold']:
                 settings[float_key] = config_parser['SETTINGS'].getfloat(float_key)
-            for bool_key in ['show_all', 'silent', 'debug', 'strict_indexing', 'show_read_counts']:
+            for bool_key in ['show_all', 'silent', 'debug', 'strict_indexing', 'show_read_counts',
+                             'ignore_inconsistent_group_errors']:
                 settings[bool_key] = config_parser['SETTINGS'].getboolean(bool_key)
 
             filters = {}
@@ -388,7 +392,8 @@ class ClassifyConfig:
                               'changing_between_group_dpsi_secondary']:
                 settings[float_key] = config_parser['SETTINGS'].getfloat(float_key)
             for bool_key in ['debug', 'keep_no_lsvs_modules', 'only_binary', 'untrimmed_exons', 'overwrite',
-                             'putative_multi_gene_regions', 'show_all', 'keep_no_lsvs_junctions', 'output_mpe'
+                             'putative_multi_gene_regions', 'show_all', 'keep_no_lsvs_junctions', 'output_mpe',
+                             'ignore_inconsistent_group_errors'
                              ]:
                 settings[bool_key] = config_parser['SETTINGS'].getboolean(bool_key)
 

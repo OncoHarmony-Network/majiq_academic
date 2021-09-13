@@ -120,6 +120,10 @@
         </ul>
     </div>
 
+
+
+
+
     <div class="gene-header">
         <div>
             <div class="gene-name">Gene
@@ -255,6 +259,20 @@
         </div>
 
         <div class="bottom">
+            {% if session.get('warnings', []) %}
+            <div class="warnings-container">
+                <ul>
+                    {% for warning in session['warnings'] %}
+                    <li>
+                        {{ warning }}
+                    </li>
+                    {% endfor %}
+                </ul>
+                <button type="button" class="close-warnings">
+                    <span aria-hidden="true">×</span>
+                </button>
+            </div>
+            {% endif %}
             {% block bottom %}{% endblock %}
         </div>
 

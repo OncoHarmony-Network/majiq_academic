@@ -13,7 +13,7 @@ from multiprocessing import Manager, Pool
 import glob
 import traceback
 from itertools import islice
-
+from rna_voila.api.view_matrix import ViewMatrix
 
 class Classify:
     def __init__(self):
@@ -24,6 +24,15 @@ class Classify:
         analysis_type = config.analysis_type
 
         voila_log().info(analysis_type + ' MODULIZE')
+
+        m_all = ViewMatrix()
+        warnings = m_all.check_group_consistancy()
+        if warnings:
+            for warning in warnings:
+                voila_log().warning(f'Warning: detected groups with the same name "{warning[0]}", which have different sets of experiments: {warning[1]}')
+            if not config.ignore_inconsistent_group_errors:
+                voila_log().critical("Exiting due to previous warnings, pass --ignore-inconsistent-group-errors to run anyway")
+                sys.exit(1)
 
         run_classifier()
 

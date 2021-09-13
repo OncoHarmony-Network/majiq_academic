@@ -9,7 +9,25 @@
         <img src="{{ url_for('static', filename='img/LogoOnly.svg') }}">
         <a href="https://galaxy.biociphers.org/galaxy/root?tool_id=majiq_spel" target="_blank"
            rel="noopener noreferrer">MAJIQ-SPEL</a>
+
     </div>
+    <div class="content messages-header">
+        {% if session.get('warnings', []) %}
+        <div class="warnings-container">
+            <ul>
+                {% for warning in session['warnings'] %}
+                <li>
+                    {{ warning }}
+                </li>
+                {% endfor %}
+            </ul>
+            <button type="button" class="close-warnings">
+                <span aria-hidden="true">×</span>
+            </button>
+        </div>
+        {% endif %}
+    </div>
+
 {% endblock %}
 
 {% block content %}
