@@ -444,7 +444,7 @@ class ViewSpliceGraph(SpliceGraph):
                                 try:
                                     yield junc_reads[n][junc_start][junc_end]
                                 except KeyError:
-                                    pass
+                                    yield 0
                         try:
                             median_reads = ceil(median(get_junc_reads()))
                         except StatisticsError:
@@ -473,7 +473,7 @@ class ViewSpliceGraph(SpliceGraph):
                             try:
                                 yield ir_reads[n][ir_start][ir_end]
                             except KeyError:
-                                pass
+                                yield 0
 
                     try:
                         median_reads = ceil(median(get_ir_reads()))

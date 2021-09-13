@@ -437,20 +437,14 @@ cdef void gene_to_splicegraph(Gene * gne, sqlite3 * db) nogil:
         if jj.get_end() == C_FIRST_LAST_JUNC:
             sg_alt_end(db, gne_id, jj.get_start())
             continue
-        # with gil:
-        #     print("## ", gne_id, jj.get_start(), jj.get_end(), jj.get_annot(), jj.get_simpl_fltr())
         sg_junction(db, gne_id, jj.get_start(), jj.get_end(), jj.get_annot(), jj.get_simpl_fltr(), jj.get_constitutive(), jj.get_bld_fltr())
 
     for ex_pair in gne.exon_map_:
         ex = ex_pair.second
-        # with gil:
-        #     print(ex_pair.first, ex.get_start(), ex.get_end())
         sg_exon(db, gne_id, ex.get_start(), ex.get_end(), ex.db_start_, ex.db_end_, ex.annot_ )
         if ex.has_out_intron():
             ir = ex.ob_irptr
             if ir.get_ir_flag():
-                # with gil:
-                #     print(gne_id, ir.get_start(), ir.get_end(), ir.get_annot(), ir.is_connected())
                 sg_intron_retention(db, gne_id, ir.get_start(), ir.get_end(), ir.get_annot(), ir.get_simpl_fltr(),
                                     ir.get_constitutive(), ir.get_ir_flag())
 
