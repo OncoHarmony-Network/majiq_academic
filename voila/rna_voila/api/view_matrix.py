@@ -993,6 +993,60 @@ class ViewHeterogens(ViewMulti):
         return list(sorted(names))
 
     @property
+    def psi_samples_summary(self):
+        """
+        Summarize number of psi_samples used for posterior samples statistics
+
+        :return: str indicating:
+            + unknown: when all samples are missing this value in their metadata
+            + inconsistent: different values found (or some missing/not)
+            + value shared/consistent for all comparisons
+        """
+        values = set()  # type: Set[str]
+        voila_files = ViewConfig().voila_files
+        for f in voila_files:
+            with ViewHeterogen(f) as m:
+                try:
+                    values.add(str(m.psi_samples))
+                except KeyError:
+                    values.add(
+                        "missing metadata (older version of MAJIQ)"
+                    )
+        if len(values) > 1:
+            return f"inconsistent ({sorted(values)})"
+        elif values:  # only 1
+            return values.pop()
+        else:
+            return f"no metadata (input files: {voila_files})"
+
+    @property
+    def test_percentile_summary(self):
+        """
+        Summarize percentile taken over psi-sample statistics
+
+        :return: str indicating:
+            + unknown: when all samples are missing this value in their metadata
+            + inconsistent: different values found (or some missing/not)
+            + value shared/consistent for all comparisons
+        """
+        values = set()  # type: Set[str]
+        voila_files = ViewConfig().voila_files
+        for f in voila_files:
+            with ViewHeterogen(f) as m:
+                try:
+                    values.add(str(m.test_percentile))
+                except KeyError:
+                    values.add(
+                        "missing metadata (older version of MAJIQ)"
+                    )
+        if len(values) > 1:
+            return f"inconsistent ({sorted(values)})"
+        elif values:  # only 1
+            return values.pop()
+        else:
+            return f"no metadata (input files: {voila_files})"
+
+    @property
     def junction_psisamples_stats_column_names(self):
         return (f"{x}_quantile" for x in self.junction_stats_column_names)
 

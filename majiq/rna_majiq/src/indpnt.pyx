@@ -321,6 +321,8 @@ cdef void _core_independent(object self):
         out_h5p.analysis_type = ANALYSIS_HETEROGEN
         out_h5p.group_names = self.names
         out_h5p.experiment_names = [exps1, exps2]
+        out_h5p.psi_samples = self.psi_samples
+        out_h5p.test_percentile = self.test_percentile
 
         j_offset = 0
         for lsv in list_of_lsv:

@@ -291,9 +291,55 @@ class MatrixHdf5:
         """
         Set list of stat names.
         :param s: list of stat names
-        :return: list of strings
         """
         self.h.create_dataset('metadata/stat_names', data=np.array(s, dtype=self.dt))
+
+    @property
+    def psi_samples(self):
+        """
+        Number of psi samples used for p-value quantile computations
+
+        :return: int, number of psisamples used in MAJIQ HET computation
+        :raises: KeyError if used before set or reading old VOILA file before
+        this field was added
+        """
+        return self.h['metadata']['psi_samples'][()]
+
+    @psi_samples.setter
+    def psi_samples(self, psi_samples):
+        """
+        Record number of psi samples used for p-value quantile computations
+
+        :param psi_samples: int, parameter used in majiq het for number of psi
+        posterior samples used for calculating test statistics
+        """
+        self.h.create_dataset(
+            'metadata/psi_samples', data=np.array(psi_samples, dtype=int)
+        )
+
+    @property
+    def test_percentile(self):
+        """
+        Percentile of p-values from psi samples reported for test_quantiles
+
+        :note: it's actually the *quantile*, not the percentile, but is named
+        to match nomenclature used in MAJIQ
+        :return: float, value used in majiq het for this parameter
+        :raises: KeyError if used before set or reading old VOILA file before
+        this field was added
+        """
+        return self.h['metadata']['test_percentile'][()]
+
+    @test_percentile.setter
+    def test_percentile(self, test_percentile):
+        """
+        Record number of psi samples used for p-value quantile computations
+
+        :param psi_samples: float, parameter used in majiq het for test_percentile
+        """
+        self.h.create_dataset(
+            'metadata/test_percentile', data=np.array(test_percentile, dtype=float)
+        )
 
     @property
     def gene_ids(self):
