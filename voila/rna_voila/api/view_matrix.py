@@ -20,7 +20,7 @@ class ViewMatrix(ABC):
     experiment_names = None
     gene_ids = None
 
-    def check_group_consistancy(self):
+    def check_group_consistency(self):
         config = ViewConfig()
         groups_defined = {}
         for f in config.voila_files:

@@ -134,7 +134,7 @@ def get_app():
 
     if not ViewConfig().ignore_inconsistent_group_errors:
         m_all = ViewMatrix()
-        warnings = m_all.check_group_consistancy()
+        warnings = m_all.check_group_consistency()
         @run_app.before_request
         def group_consistancy_check():
             if warnings and not 'warnings' in session:

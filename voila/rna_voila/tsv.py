@@ -72,7 +72,7 @@ class Tsv:
         voila_log().info(analysis_type + ' TSV')
 
         m_all = ViewMatrix()
-        warnings = m_all.check_group_consistancy()
+        warnings = m_all.check_group_consistency()
         if warnings:
             for warning in warnings:
                 voila_log().warning(f'Warning: detected groups with the same name "{warning[0]}", which have different sets of experiments: {warning[1]}')
