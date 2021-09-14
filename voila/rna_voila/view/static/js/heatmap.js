@@ -384,6 +384,7 @@ class HeatMap {
             .attr('height', general_offset + 20).attr('width', general_offset + 20)
             .style('padding-top', `${max_label_len+12}px`)
             .style('padding-left', `${max_label_len}px`)
+            .style('padding-right', `30px`) // covers right legend
 
         d3.select(el)
             // top side titles
