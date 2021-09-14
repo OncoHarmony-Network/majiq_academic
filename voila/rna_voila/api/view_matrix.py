@@ -27,7 +27,8 @@ class ViewMatrix(ABC):
             with ViewPsi(f) as m:
 
                 for i, group_name in enumerate(m.group_names):
-                    experiment_names = m.experiment_names[i]
+                    experiment_names = [exp for exp in m.experiment_names[i] if exp != '']
+                    experiment_names.sort()
                     if group_name not in groups_defined:
                         groups_defined[group_name] = [experiment_names]
                     else:
