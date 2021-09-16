@@ -1,8 +1,17 @@
-Cython==0.29.14
-gitdb2==2.0.6
-GitPython==3.0.5
-h5py==2.10.0
-numpy==1.18.1
-scipy==1.4.1
-smmap2==2.0.5
-rna_voila>=2.2.0
+# This file is redundant with setup.cfg;
+# It exists to note direct dependencies for both setup and installation in case
+# users need it for debugging.
+
+# setup
+setuptools >= 45
+wheel
+Cython == 0.29.14
+setuptools_scm >= 6.2
+
+# setup and installation
+numpy >= 1.18.1
+
+# installation
+scipy >= 1.4.1
+smmap2 == 2.0.5
+rna_voila

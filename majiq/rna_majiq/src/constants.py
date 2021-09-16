@@ -6,8 +6,15 @@ Constants used by MAJIQ
 
 import os
 import string as pystring  # just importing it as string causes cython errors
+from importlib.metadata import version, PackageNotFoundError
 
-VERSION = "2.2"
+try:
+    VERSION = version("rna_majiq_meta")
+except PackageNotFoundError:
+    try:
+        VERSION = version("rna_majiq")
+    except PackageNotFoundError:
+        VERSION = "2.2.0"
 
 # file extensions
 JUNC_FILE_FORMAT = "sj"
@@ -30,9 +37,6 @@ ESTIMATE_NUM_READS = 100
 # special coordinates
 EMPTY_COORD = -1
 FIRST_LAST_JUNC = -2
-
-# file for git hash
-GIT_VERSION_FILE = "git_version"
 
 # majiq het constants
 HET_SAMPLING_SEED = 20200401
@@ -76,21 +80,3 @@ def get_weights_filename(outdir, name):
 
 def get_tmp_psisample_file(outdir, name):
     return "%s/%s.psisamples.tmp" % (outdir, name)
-
-
-def store_git_version(short_sha):
-
-    direc = os.path.dirname(__file__)
-    with open("%s/../data/%s" % (direc, GIT_VERSION_FILE), "w+") as ofp:
-        ofp.write("%s\n" % short_sha)
-
-
-def get_git_version():
-    direc = os.path.dirname(__file__)
-    try:
-        with open("%s/../data/%s" % (direc, GIT_VERSION_FILE), "r") as ofp:
-            ver = ofp.readline().strip()
-    except FileNotFoundError:
-        ver = "<hash_not_found>"
-
-    return ver
