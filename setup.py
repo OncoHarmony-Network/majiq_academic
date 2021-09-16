@@ -44,6 +44,14 @@ ext_modules = [
         cxx_std=17,
         # extra_compile_args=["-O0", "-g"],
     ),
+    Pybind11Extension(
+        "new_majiq._stats",
+        sorted(["src/stats/pyHetStats.cpp"]),
+        define_macros=[("VERSION_INFO", cpp_version), ("DEBUG",)],
+        include_dirs=["src/"],
+        cxx_std=17,
+        # extra_compile_args=["-O0", "-g"],
+    ),
     Extension(
         "new_majiq.beta_mixture",
         sources=["src/beta_mixture/beta_mixture_module.cpp"],

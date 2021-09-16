@@ -2,4 +2,5 @@
 *.egg-info
 /src/new_majiq/internals.cpython*.so
 /src/new_majiq/beta_mixture.cpython*.so
+/src/new_majiq/_stats.cpython*.so
 /src/new_majiq/_version.py
