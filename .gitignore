@@ -15,5 +15,6 @@ dist/*.egg
 majiq/rna_majiq.egg-info
 voila/rna_voila.egg-info
 */git_version
+*.so
 
 
