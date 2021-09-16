@@ -2,7 +2,6 @@
 
 {% block style %}
     {{ super() }}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/lib/sumoselect.min.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/multi_input.css') }}">
 <style>
     @media print
@@ -62,14 +61,6 @@
         </div>
 
         <div class="groups-display-form pure-control-group" >
-
-
-                <label for="groups-display">Show / Hide Groups</label>
-                <select id="groups-display" multiple>
-
-                </select>
-        </div>
-        <div class="groups-display-form pure-control-group" >
             <div id="lsv-ordering-options">
                 <label>LSV Ordering</label>
                 <label for="lsv-order-exon-num" class="pure-radio">
@@ -89,7 +80,6 @@
 {% endblock %}
 
 {% block analysis_type_script %}
-    <script src="{{ url_for('static', filename='js/lib/jquery.sumoselect.min.js') }}"></script>
     <script src="{{ url_for('static', filename='js/lib/jquery.ba-throttle-debounce.min.js') }}"></script>
     <script src="{{ url_for('static', filename='js/lib/Sortable.min.js') }}"></script>
     <script>
@@ -115,46 +105,18 @@
         {% else %}
             let group_display_name_override = null;
         {% endif %}
+        {% if session.get('group_visibility', None) %}
+        let group_visibility = {{ session['group_visibility'] | tojson }};
+        {% else %}
+        let group_visibility = null;
+        {% endif %}
 
 
-        $.each(group_names, function(i, v){
-            if(isInArr(i, hidden_idx)){
-                $('#groups-display').append(`<option value="${v}">${v}</option>`);
-            }else{
-                $('#groups-display').append(`<option value="${v}" selected>${v}</option>`);
-            }
-        });
-
-        $('#groups-display').SumoSelect({
-            'captionFormatAllSelected': 'All Groups are Visible',
-            'captionFormat': '{0} Groups are Visible',
-            'placeholder': 'No Groups are Visible',
-            'isClickAwayOk': true
-        });
-
-        $('#showAllGroupNamesButton').click(function(){
-            $('#groups-display')[0].sumo.selectAll();
-        });
-
-        $('#hideAllGroupNamesButton').click(function(){
-            $('#groups-display')[0].sumo.unSelectAll();
-        });
 
 
         document.querySelector('#heatmap-stat-choices').addEventListener('change', () => {
             $('.lsv-table').DataTable().ajax.reload();
         });
-
-        $('#groups-display').change(function(){
-            hidden_idx = [];
-            $('#groups-display option:not(:selected)').each(function(i, elem){
-                hidden_idx.push($(elem).index())
-            });
-        });
-
-        $('#groups-display').change($.debounce(1250, function(){
-            $('.lsv-table').DataTable().ajax.reload();
-        }));
 
         function update_heatmap_scale(){
             // we limit minimum to 0.1 smallest possible as discussed
@@ -430,7 +392,6 @@
                         data: d => {
                             d['lsv_id'] = lsv_table.dataset.lsvId;
                             d['stat_name'] = document.querySelector('input[name=stat-name]:checked').value;
-                            d['hidden_idx'] = hidden_idx.length > 0 ? hidden_idx.join(',') : undefined;
                         },
                         type: 'POST'
                     },

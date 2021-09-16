@@ -37,6 +37,7 @@ def toggle_simplified():
 def reset_group_settings():
     del session['group_order_override']
     del session['group_display_name_override']
+    del session['group_visibility']
     return jsonify({'ok':1})
 
 @bp.route('/update-group-order', methods=('POST',))
@@ -47,6 +48,11 @@ def update_group_list():
 @bp.route('/update-group-display-names', methods=('POST',))
 def update_group_display_names():
     session['group_display_name_override'] = request.json
+    return jsonify({'ok':1})
+
+@bp.route('/update-group-visibility', methods=('POST',))
+def update_group_visibility():
+    session['group_visibility'] = request.json
     return jsonify({'ok':1})
 
 @bp.route('/gene/<gene_id>/')
@@ -284,19 +290,18 @@ def rename_groups(group_names):
 @bp.route('/summary-table', methods=('POST',))
 def summary_table():
     lsv_id, stat_name = itemgetter('lsv_id', 'stat_name')(request.form)
-    if 'hidden_idx' in request.form:
-        # this is reversed because we are removing these indexes from lists later, and that only works
-        # consistently if we do it backwards
-        hidden_idx = sorted([int(x) for x in request.form['hidden_idx'].split(',')], reverse=True)
-    else:
-        hidden_idx = []
 
     with ViewHeterogens(group_order_override=session.get('group_order_override', None)) as v:
         exp_names = v.experiment_names
         grp_names = v.group_names
-        for _idx in hidden_idx:
-            del grp_names[_idx]
-            del exp_names[_idx]
+
+        if 'group_visibility' in session:
+            # this is reversed because we are removing these indexes from lists later, and that only works
+            # consistently if we do it backwards
+            hidden_idx_unsorted = [grp_names.index(name) for name in session['group_visibility'] if session['group_visibility'][name] is False]
+            hidden_idx = sorted([int(x) for x in hidden_idx_unsorted], reverse=True)
+        else:
+            hidden_idx = []
 
         het = v.lsv(lsv_id)
         juncs = het.junctions
@@ -308,9 +313,7 @@ def summary_table():
 
         skipped_idx = 0
         for idx, (junc, mean_psi, mu_psi, median_psi) in enumerate(zip(juncs, mean_psis, mu_psis, median_psis)):
-            if idx in hidden_idx:
-                skipped_idx += 1
-                continue
+
             junc = map(str, junc)
             junc = '-'.join(junc)
             heatmap = het.junction_heat_map(stat_name, idx)
@@ -326,6 +329,12 @@ def summary_table():
 
         dt = DataTables(table_data, ('junc', '', ''))
 
+        o_grp_names = grp_names.copy()
+        o_exp_names = exp_names.copy()
+        for _idx in hidden_idx:
+            del o_grp_names[_idx]
+            del o_exp_names[_idx]
+
         for idx, row_data, records in dt.callback():
             junc, junc_idx, mean_psi = itemgetter('junc', 'junc_idx', 'mean_psi')(row_data)
             mu_psi, heatmap, median_psi = itemgetter('mu_psi', 'heatmap', 'median_psi')(row_data)
@@ -338,8 +347,8 @@ def summary_table():
             records[idx] = [
                 junc,
                 {
-                    'group_names': rename_groups(grp_names),
-                    'experiment_names': exp_names,
+                    'group_names': rename_groups(o_grp_names),
+                    'experiment_names': o_exp_names,
                     'junction_idx': junc_idx,
                     'mean_psi': mean_psi,
                     'mu_psi': mu_psi,
@@ -347,11 +356,10 @@ def summary_table():
                 },
                 {
                     'heatmap': heatmap,
-                    'group_names': rename_groups(grp_names),
+                    'group_names': rename_groups(o_grp_names),
                     'stat_name': stat_name
                 }
             ]
-
 
         return jsonify(dict(dt))
 

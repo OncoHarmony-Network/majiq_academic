@@ -32,10 +32,9 @@
     display: inline-block;
 }
 
-#group-controls input{
+#group-controls .group-name-override{
     width:100%;
 }
-
 
 #group-controls dt{
     width:74%;

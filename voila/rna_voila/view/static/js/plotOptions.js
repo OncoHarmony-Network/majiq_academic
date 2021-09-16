@@ -16,6 +16,12 @@ class PlotOptions {
             this.group_display_name_override = {};
         }
 
+        if(group_visibility) {
+            this.group_visibility = group_visibility;
+        }else{
+            this.group_visibility = {};
+        }
+
 
         this._init();
 
@@ -65,13 +71,18 @@ class PlotOptions {
         const self = this;
         $.each(this.grp_names, function(i, v){
             let dispname = v;
+            let visible = 'checked';
             if(v in self.group_display_name_override){
                 dispname = self.group_display_name_override[v];
             }
+            if(v in self.group_visibility){
+                visible = self.group_visibility[v] ? 'checked' : '';
+            }
             const template = `
                 <div class="drag">
-                <dt><img class="handle" src="/static/img/drag_blue.png"> <span>${v}</span></dt>
-                <dd><input class="group-name-override" value="${dispname}"></dd>
+                <dt><img class="handle" src="/static/img/drag_blue.png" title="Re-order this group"> <span>${v}</span>
+                <input type="checkbox" class="group-visible" ${visible} title="Display this group?"></dt>
+                <dd><input class="group-name-override" value="${dispname}" title="Change the display name of this group"></dd>
                 </div>`;
             $('#group-controls').append(template)
 
@@ -96,16 +107,30 @@ class PlotOptions {
             },
         });
 
-        $('.group-name-override').on('input', ($.debounce(500, function(){
-            let group_names_override = {};
+        $('.group-visible').on('change', ($.debounce(700, function(){
+            group_visibility = {};
             $('#group-controls .drag').each(function(i, v){
                 const key = $(v).find('dt span').text();
-                const value = $(v).find('dd input').val();
-                group_names_override[key] = value;
+                const value = $(v).find('dt .group-visible').prop('checked');
+                group_visibility[key] = value;
 
             })
 
-            send_ajax('/update-group-display-names', group_names_override).then(ret => {
+            send_ajax('/update-group-visibility', group_visibility).then(ret => {
+                $('.lsv-table').DataTable().ajax.reload();
+            })
+        })));
+
+        $('.group-name-override').on('input', ($.debounce(700, function(){
+            group_display_name_override = {};
+            $('#group-controls .drag').each(function(i, v){
+                const key = $(v).find('dt span').text();
+                const value = $(v).find('dd input').val();
+                group_display_name_override[key] = value;
+
+            })
+
+            send_ajax('/update-group-display-names', group_display_name_override).then(ret => {
                 $('.lsv-table').DataTable().ajax.reload();
             })
             //$('.lsv-table').DataTable().ajax.reload();
@@ -113,13 +138,37 @@ class PlotOptions {
 
         // button for resetting these settings
         $('#resetGroupNamesButton').click(function(){
-            send_ajax('/reset-group-settings', group_names_override).then(ret => {
-
+            send_ajax('/reset-group-settings', {}).then(ret => {
+                location.reload();
             })
         })
 
-        // set up changing display names
+        // button for resetting visibility
+        $('#showAllGroupNamesButton').click(function(){
+            group_visibility = {};
+            $.each(group_names, function(i, v){
+                group_visibility[v] = true;
+            })
+            $('#group-controls .drag').each(function(i, v){
+                $(v).find('dt .group-visible').prop('checked', true);
+            })
+            send_ajax('/update-group-visibility', group_visibility).then(ret => {
+                $('.lsv-table').DataTable().ajax.reload();
+            })
+        });
 
+        $('#hideAllGroupNamesButton').click(function(){
+            group_visibility = {};
+            $.each(group_names, function(i, v){
+                group_visibility[v] = false;
+            })
+            $('#group-controls .drag').each(function(i, v){
+                $(v).find('dt .group-visible').prop('checked', false);
+            })
+            send_ajax('/update-group-visibility', group_visibility).then(ret => {
+                $('.lsv-table').DataTable().ajax.reload();
+            })
+        });
 
         // detect changes
 
