@@ -220,51 +220,7 @@
 
     </div>
 
-    {% if analysis_type == 'heterogen' %}
-    <div class="tools-menu hide-tools-menu pure-g" id="plot-options-box">
-        <div class="pure-u-2-3">
-            <form class="groups-control-form pure-form">
-
-                <label>Change group order and display name
-                    <button type="button" id="showAllGroupNamesButton">Show all</button>
-                    <button type="button" id="hideAllGroupNamesButton">Hide all</button>
-                    <button type="button" id="resetGroupNamesButton">Reset</button></label>
-
-                <dl id="group-controls">
-
-<!--                    <div class="drag">-->
-<!--                        <dt><img class="handle" src="/static/img/drag_blue.png"> <span>Gr3209fu392uf092u3f0mcu2fmc30umcf0293umfc0392ufmcoups</span></dt>-->
-<!--                    <dd><input class="group-name" value="ththththt"></dd>-->
-<!--                    </div>-->
-
-<!--                    <div class="drag">-->
-<!--                    <dt><img class="handle" src="/static/img/drag_blue.png"> rgrgrgrgrgrg</dt>-->
-<!--                    <dd><input class="group-name" value="Gr3209fu392uf092u3f0mcu2fmc30umcf0293umfc0392ufmcoups"></dd>-->
-<!--                    </div>-->
-
-
-                </dl>
-            </form>
-        </div>
-
-
-        <div class="pure-u-1-3">
-            {% block heatmap_form %}{% endblock %}
-        </div>
-
-<!--        <div class="pure-u-1-3">-->
-<!--            <form class="splice-graph-form pure-form pure-form-aligned">-->
-<!--                <fieldset>-->
-<!--                    <div class="pure-control-group">-->
-<!--                        <label for="sg-simplified-view">Simplified View</label>-->
-<!--                        <input id="sg-simplified-view2" type="checkbox">-->
-<!--                    </div>-->
-<!--                </fieldset>-->
-<!--            </form>-->
-<!--        </div>-->
-
-    </div>
-    {% endif %}
+    {% block het_groups_form %}{% endblock %}
 
 
     <div class="tools-menu lsv-tools hide-tools-menu pure-g">

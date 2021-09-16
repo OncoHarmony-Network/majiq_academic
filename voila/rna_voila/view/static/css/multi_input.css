@@ -22,10 +22,14 @@
 /*    margin-bottom:0;*/
 /*}*/
 
-.groups-control-form label{
+.groups-control-form label, .heatmap-form-label{
     display:inline-block;
     margin:6px;
     font-weight:600;
+}
+
+.heatmap-form-label{
+    margin-bottom: 27px;
 }
 
 #group-controls dd, #group-controls dt{
