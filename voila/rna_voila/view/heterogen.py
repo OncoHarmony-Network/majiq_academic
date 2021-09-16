@@ -33,6 +33,22 @@ def toggle_simplified():
     session['omit_simplified'] = not session['omit_simplified']
     return jsonify({'ok':1})
 
+@bp.route('/reset-group-settings', methods=('POST',))
+def reset_group_settings():
+    del session['group_order_override']
+    del session['group_display_name_override']
+    return jsonify({'ok':1})
+
+@bp.route('/update-group-order', methods=('POST',))
+def update_group_list():
+    session['group_order_override'] = request.json
+    return jsonify({'ok':1})
+
+@bp.route('/update-group-display-names', methods=('POST',))
+def update_group_display_names():
+    session['group_display_name_override'] = request.json
+    return jsonify({'ok':1})
+
 @bp.route('/gene/<gene_id>/')
 def gene(gene_id):
 
@@ -81,7 +97,8 @@ def gene(gene_id):
                                lsv_data=lsv_data,
                                group_names=m.group_names,
                                ucsc=ucsc,
-                               stat_names=m.stat_names)
+                               stat_names=m.stat_names,
+                               analysis_type='heterogen')
 
 
 @bp.route('/lsv-data', methods=('POST',))
@@ -255,6 +272,14 @@ def lsv_highlight():
 
         return jsonify(lsvs)
 
+def rename_groups(group_names):
+
+    if not session.get('group_display_name_override', None):
+        return group_names
+
+    group_names_new = [session['group_display_name_override'][n] for n in group_names]
+    return group_names_new
+
 
 @bp.route('/summary-table', methods=('POST',))
 def summary_table():
@@ -266,7 +291,7 @@ def summary_table():
     else:
         hidden_idx = []
 
-    with ViewHeterogens() as v:
+    with ViewHeterogens(group_order_override=session.get('group_order_override', None)) as v:
         exp_names = v.experiment_names
         grp_names = v.group_names
         for _idx in hidden_idx:
@@ -289,11 +314,6 @@ def summary_table():
             junc = map(str, junc)
             junc = '-'.join(junc)
             heatmap = het.junction_heat_map(stat_name, idx)
-
-            # print('y', median_psis)
-            # print(median_psi.shape, median_psi)
-            # print('m', len(mean_psi), mean_psi)
-            # assert False
 
             table_data.append({
                 'junc': junc,
@@ -318,7 +338,7 @@ def summary_table():
             records[idx] = [
                 junc,
                 {
-                    'group_names': grp_names,
+                    'group_names': rename_groups(grp_names),
                     'experiment_names': exp_names,
                     'junction_idx': junc_idx,
                     'mean_psi': mean_psi,
@@ -327,7 +347,7 @@ def summary_table():
                 },
                 {
                     'heatmap': heatmap,
-                    'group_names': grp_names,
+                    'group_names': rename_groups(grp_names),
                     'stat_name': stat_name
                 }
             ]

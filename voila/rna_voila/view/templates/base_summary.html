@@ -11,6 +11,7 @@
         new Lsv().renderFloatingLegend(legend)
         var highlightFirst = false;
 
+
         const sg_simplified_view = "{{ session.get('omit_simplified', False) }}";
         if (sg_simplified_view === 'True') $('#sg-simplified-view').prop('checked', true);
         $('#sg-simplified-view').change(function(){
@@ -100,11 +101,16 @@
                 <a href="{{ url_for('main.index') }}" class="pure-menu-link">Index</a>
             </li>
             <li class="pure-menu-item">
-                <span class="tools-menu-btn splice-graph-tools pure-menu-link" id="splice-graph-menu-btn">Splice Graph</span>
+                <span class="tools-menu-btn pure-menu-link" id="splice-graph-menu-btn">Splice Graph</span>
             </li>
             {#            <li class="pure-menu-item">#}
             {#                <span class="tools-menu-btn lsv-tools pure-menu-link">LSV</span>#}
             {#            </li>#}
+            {% if analysis_type == 'heterogen' %}
+                <li class="pure-menu-item">
+                    <span class="tools-menu-btn pure-menu-link" id="plot-options-menu-btn">Plot Options</span>
+                </li>
+            {% endif %}
         </ul>
 
         <ul class="menu-right pure-menu-list">
@@ -159,10 +165,10 @@
             </div>
             <div class="coordinates"></div>
         </div>
-        {% block heatmap_form %}{% endblock %}
+
     </div>
 
-    <div class="tools-menu splice-graph-tools hide-tools-menu pure-g">
+    <div class="tools-menu hide-tools-menu pure-g" id="splice-graph-tools-box">
         <div class="pure-u-1-3">
             <form class="splice-graph-form pure-form pure-form-aligned">
                 <fieldset>
@@ -213,6 +219,52 @@
         </div>
 
     </div>
+
+    {% if analysis_type == 'heterogen' %}
+    <div class="tools-menu hide-tools-menu pure-g" id="plot-options-box">
+        <div class="pure-u-2-3">
+            <form class="groups-control-form pure-form">
+
+                <label>Change group order and display name
+                    <button type="button" id="showAllGroupNamesButton">Show all</button>
+                    <button type="button" id="hideAllGroupNamesButton">Hide all</button>
+                    <button type="button" id="resetGroupNamesButton">Reset</button></label>
+
+                <dl id="group-controls">
+
+<!--                    <div class="drag">-->
+<!--                        <dt><img class="handle" src="/static/img/drag_blue.png"> <span>Gr3209fu392uf092u3f0mcu2fmc30umcf0293umfc0392ufmcoups</span></dt>-->
+<!--                    <dd><input class="group-name" value="ththththt"></dd>-->
+<!--                    </div>-->
+
+<!--                    <div class="drag">-->
+<!--                    <dt><img class="handle" src="/static/img/drag_blue.png"> rgrgrgrgrgrg</dt>-->
+<!--                    <dd><input class="group-name" value="Gr3209fu392uf092u3f0mcu2fmc30umcf0293umfc0392ufmcoups"></dd>-->
+<!--                    </div>-->
+
+
+                </dl>
+            </form>
+        </div>
+
+
+        <div class="pure-u-1-3">
+            {% block heatmap_form %}{% endblock %}
+        </div>
+
+<!--        <div class="pure-u-1-3">-->
+<!--            <form class="splice-graph-form pure-form pure-form-aligned">-->
+<!--                <fieldset>-->
+<!--                    <div class="pure-control-group">-->
+<!--                        <label for="sg-simplified-view">Simplified View</label>-->
+<!--                        <input id="sg-simplified-view2" type="checkbox">-->
+<!--                    </div>-->
+<!--                </fieldset>-->
+<!--            </form>-->
+<!--        </div>-->
+
+    </div>
+    {% endif %}
 
 
     <div class="tools-menu lsv-tools hide-tools-menu pure-g">

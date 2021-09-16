@@ -563,9 +563,10 @@ class ViewDeltaPsi(DeltaPsi, ViewMatrix):
 
 class ViewHeterogens(ViewMulti):
 
-    def __init__(self, voila_file=None):
+    def __init__(self, voila_file=None, group_order_override=None):
         if voila_file != None:
             print("Warning, view heterogen calling with specific voila file not supported, using all voila inputs")
+        self.group_order_override = group_order_override
         super().__init__(ViewHeterogen)
 
     class _ViewHeterogens(_ViewMulti):
@@ -1074,6 +1075,8 @@ class ViewHeterogens(ViewMulti):
         Group names for this set of het voila files.
         :return: list
         """
+        if self.group_order_override:
+            return self.group_order_override
         config = ViewConfig()
         grp_names = []
         for f in config.voila_files:
