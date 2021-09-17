@@ -10,6 +10,7 @@
 #include <pybind11/numpy.h>
 
 #include "MannWhitney.hpp"
+#include "TTest.hpp"
 
 
 #define STRINGIFY(x) #x
@@ -32,6 +33,29 @@ PYBIND11_MODULE(_stats, m) {
   )pbdoc";
 
   // define functions
+
+  // ttest
+  constexpr char pbdoc_ttest[] = R"pbdoc(
+  Compute p-values for Welch's t-test on input data
+
+  Parameters
+  ----------
+  x: 2D array[float]
+      test for each row over observations in columns
+  labels: 2D array[bool]
+      boolean class labels for each observation
+
+  Returns
+  -------
+  1D array[float]
+      p-values of test statistics for each row
+  )pbdoc";
+  m.def("ttest",
+      &MajiqStats::TTest<float>, pbdoc_ttest,
+      py::arg("x"), py::arg("labels"));
+  m.def("ttest",
+      &MajiqStats::TTest<double>, pbdoc_ttest,
+      py::arg("x"), py::arg("labels"));
 
   // mannwhitneyu
   constexpr char pbdoc_mannwhitneyu[] = R"pbdoc(
