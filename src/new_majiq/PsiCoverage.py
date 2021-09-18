@@ -309,6 +309,9 @@ class PsiCoverage(object):
             coords="minimal",
             data_vars="minimal",
         )
+        if len(path) > 1:
+            # attributes are defined by path[0]. We'd rather just have none
+            df.attrs.clear()
         events_df = xr.open_zarr(path[0], group=constants.NC_EVENTS)
         return cls(df, events_df)
 
