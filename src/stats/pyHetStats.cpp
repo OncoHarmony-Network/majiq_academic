@@ -40,6 +40,9 @@ PYBIND11_MODULE(_stats, m) {
   constexpr char pbdoc_ttest[] = R"pbdoc(
   Compute p-values for Welch's t-test on input data
 
+  Compute p-values for Welch's t-test on input data, using a two-sided
+  alternative hypothesis and omitting nan values.
+
   Parameters
   ----------
   x: 2D array[float]
@@ -112,6 +115,9 @@ PYBIND11_MODULE(_stats, m) {
   // mannwhitneyu
   constexpr char pbdoc_mannwhitneyu[] = R"pbdoc(
   Compute p-values for Mann-Whitney U test on input data
+
+  Compute p-values for Mann-Whitney U test on input data, using a two-sided
+  alternative hypothesis and omitting nan values.
 
   Parameters
   ----------
