@@ -9,6 +9,7 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/numpy.h>
 
+#include "InfoScore.hpp"
 #include "MannWhitney.hpp"
 #include "TNOM.hpp"
 #include "TTest.hpp"
@@ -57,6 +58,31 @@ PYBIND11_MODULE(_stats, m) {
   m.def("ttest",
       &MajiqStats::TTest<double>, pbdoc_ttest,
       py::arg("x"), py::arg("labels"));
+
+  // InfoScore
+  constexpr char pbdoc_infoscore[] = R"pbdoc(
+  Compute p-values for InfoScore test on input data
+
+  Parameters
+  ----------
+  x: 2D array[float]
+      test for each row over observations in columns
+  sortx: 2D array[int]
+      indexes that sort x per row (i.e. np.argsort(x, axis=-1))
+  labels: 2D array[bool]
+      boolean class labels for each observation
+
+  Returns
+  -------
+  1D array[float]
+      p-values of test statistics for each row
+  )pbdoc";
+  m.def("infoscore",
+      &MajiqStats::InfoScore<float>, pbdoc_infoscore,
+      py::arg("x"), py::arg("sortx"), py::arg("labels"));
+  m.def("infoscore",
+      &MajiqStats::InfoScore<double>, pbdoc_infoscore,
+      py::arg("x"), py::arg("sortx"), py::arg("labels"));
 
   // TNOM
   constexpr char pbdoc_tnom[] = R"pbdoc(
