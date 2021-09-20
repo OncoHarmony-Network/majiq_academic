@@ -58,7 +58,10 @@ class SJJunctions(ContigRegions):
     def to_zarr(self, path: Union[str, Path], mode: str) -> None:
         """Serialize to zarr format. Note contigs need to be saved separately"""
         self.df.drop_vars("sj_idx").pipe(lambda x: x.chunk(x.sizes)).to_zarr(
-            path, mode=mode, group=constants.NC_SJJUNCTIONS
+            path,
+            mode=mode,
+            group=constants.NC_SJJUNCTIONS,
+            consolidated=True,
         )
         return
 

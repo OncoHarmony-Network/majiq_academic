@@ -86,7 +86,7 @@ class GeneIntrons(GeneConnections):
         """Serialize to zarr format. Note genes need to be saved separately"""
         self.df.drop_vars(["gi_idx", "start_exon_idx", "end_exon_idx"]).pipe(
             lambda x: x.chunk(x.sizes)
-        ).to_zarr(path, mode=mode, group=constants.NC_GENEINTRONS)
+        ).to_zarr(path, mode=mode, group=constants.NC_GENEINTRONS, consolidated=True)
         return
 
     @classmethod

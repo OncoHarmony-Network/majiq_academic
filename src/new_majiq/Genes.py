@@ -77,7 +77,10 @@ class Genes(ContigRegions):
     def to_zarr(self, path: Union[str, Path], mode: str) -> None:
         """Serialize to zarr format. Note contigs need to be saved separately"""
         self.df.drop_vars("gene_idx").pipe(lambda x: x.chunk(x.sizes)).to_zarr(
-            path, mode=mode, group=constants.NC_GENES
+            path,
+            mode=mode,
+            group=constants.NC_GENES,
+            consolidated=True,
         )
         return
 

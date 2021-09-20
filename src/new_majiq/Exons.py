@@ -109,7 +109,9 @@ class Exons(GeneRegions):
 
     def to_zarr(self, path: Union[str, Path], mode: str) -> None:
         """Serialize to zarr format. Note genes need to be saved separately"""
-        self.df.drop_vars("exon_idx").to_zarr(path, mode=mode, group=constants.NC_EXONS)
+        self.df.drop_vars("exon_idx").to_zarr(
+            path, mode=mode, group=constants.NC_EXONS, consolidated=True
+        )
         return
 
     @classmethod

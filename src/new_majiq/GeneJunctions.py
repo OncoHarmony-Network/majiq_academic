@@ -77,6 +77,7 @@ class GeneJunctions(GeneConnections):
             path,
             mode=mode,
             group=constants.NC_GENEJUNCTIONS,
+            consolidated=True,
         )
         return
 

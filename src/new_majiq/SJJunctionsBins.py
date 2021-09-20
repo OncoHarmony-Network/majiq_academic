@@ -177,7 +177,10 @@ class SJJunctionsBins(SJBinsReads):
         self.regions.contigs.to_zarr(path, "w", group=constants.NC_SJJUNCTIONSCONTIGS)
         self.regions.to_zarr(path, "a")
         self._df.drop_vars("sjb_idx").pipe(lambda x: x.chunk(x.sizes)).to_zarr(
-            path, mode="a", group=constants.NC_SJJUNCTIONSBINS
+            path,
+            mode="a",
+            group=constants.NC_SJJUNCTIONSBINS,
+            consolidated=True,
         )
         return
 

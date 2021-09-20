@@ -196,7 +196,7 @@ class SpliceGraphReads(object):
             .assign_coords(
                 intron_hash=("experiment", [self.introns.checksum_nodata()]),
                 junction_hash=("experiment", [self.junctions.checksum_nodata()]),
-            ).to_zarr(path, mode=mode, group=constants.NC_SGREADS)
+            ).to_zarr(path, mode=mode, group=constants.NC_SGREADS, consolidated=True)
         )
         return
 

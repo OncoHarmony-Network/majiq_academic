@@ -96,7 +96,10 @@ class EventsCoverage(object):
         # save events, events coverage
         self.events.to_zarr(path, "w")
         self._df.drop_vars("ec_idx").to_zarr(
-            path, mode="a", group=constants.NC_EVENTSCOVERAGE
+            path,
+            mode="a",
+            group=constants.NC_EVENTSCOVERAGE,
+            consolidated=True,
         )
         return
 

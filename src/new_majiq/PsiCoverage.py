@@ -361,7 +361,9 @@ class PsiCoverage(object):
         save_df = self.df.drop_vars(["event_size", "lsv_idx"])
         if save_df.sizes["ec_idx"] > 0:
             save_df = save_df.chunk(USE_CHUNKS)  # type: ignore
-        save_df.to_zarr(path, mode="w", group=constants.NC_PSICOVERAGE)
+        save_df.to_zarr(
+            path, mode="w", group=constants.NC_PSICOVERAGE, consolidated=True
+        )
         self.events.to_zarr(path, mode="a", group=constants.NC_EVENTS)
         return
 
