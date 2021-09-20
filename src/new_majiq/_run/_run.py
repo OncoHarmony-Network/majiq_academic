@@ -61,9 +61,9 @@ class GenericSubcommand(object):
         setup_logger(logfile=args.logger, silent=args.silent, debug=args.debug)
         log = get_logger()
         # print information about the run
-        from new_majiq.version import version
+        from new_majiq._version import version
 
-        log.info(f"new-majiq v{version()}")
+        log.info(f"new-majiq v{version}")
         log.info(f"Command: {' '.join(sys.argv)}")
         log.info(f"From: {Path(os.getcwd()).resolve()}")
         log.info(
