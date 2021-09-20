@@ -86,15 +86,6 @@ tsv_parser.add_argument('files', nargs='+', type=check_file,
 
 required_tsv_parser.add_argument('-f', '--file-name', required=True, help="Output TSV file's name and location.")
 
-tsv_parser.add_argument('--threshold', type=float, default=0.2,
-                        help='Filter out LSVs with no junctions predicted to change over a certain value. Even when '
-                             'show-all is used this value is still used to calculate the probability in the TSV. The '
-                             'default is "0.2".')
-tsv_parser.add_argument('--non-changing-threshold', type=float, default=0.05,
-                        help='The default is "0.05".')
-
-tsv_parser.add_argument('--probability-threshold', type=float, default=None,
-                        help='This is off by default.')
 
 tsv_parser.add_argument('--show-all', action='store_true',
                         help='Show all LSVs including those with no junction with significant change predicted.')
@@ -126,6 +117,33 @@ tsv_parser.add_argument('--show-read-counts', action='store_true', help=argparse
 tsv_parser.add_argument('--ignore-inconsistent-group-errors', action='store_true',
                          help="Don't show any warnings / errors when multiple experiments with the same name, "
                               "but different experiments are analyzed")
+
+tsv_parser.add_argument('--threshold', type=float, default=0.2,
+                        help='Filter out LSVs with no junctions predicted to change over a certain value. Even when '
+                             'show-all is used this value is still used to calculate the probability in the TSV. The '
+                             'default is "%(default)s".')
+tsv_parser.add_argument('--non-changing-threshold', type=float, default=0.05,
+                        help='The default is "%(default)s".')
+tsv_parser.add_argument('--probability-threshold', type=float, default=None,
+                        help='This is off by default. If set, confidence must be above this probability threshold in'
+                             ' addition to the psi threshold.')
+
+tsv_parser.add_argument('--non-changing-pvalue-threshold', type=float, default=0.05,
+                             help='For determining non-changing with HET inputs. Minimum p-value for which an LSV/junction'
+                                  ' can return true. Uses minimum p-value from all tests provided. The default is "%(default)s".')
+tsv_parser.add_argument('--non-changing-within-group-IQR', type=float, default=0.1,
+                             help='For determining non-changing with HET inputs. Maximum IQR within a group for which an '
+                                  'LSV/junction can return true. The default is "%(default)s".')
+tsv_parser.add_argument('--non-changing-between-group-dpsi', type=float, default=0.05,
+                             help='For determining non-changing with HET inputs. Maximum absolute difference in median '
+                                  'values of PSI for which an LSV/junction can return true. The default is "%(default)s".')
+tsv_parser.add_argument('--changing-pvalue-threshold', type=float, default=0.05,
+                             help='For determining changing with HET inputs. Maximum p-value for which an LSV/junction'
+                                  ' can return true. Uses maximum p-value from all tests provided. The default is "%(default)s".')
+tsv_parser.add_argument('--changing-between-group-dpsi', type=float, default=0.2,
+                             help='For determining changing with HET or delta-PSI inputs. For HET, minimum absolute difference in median '
+                                  'values of PSI for which an LSV/junction can return true. For delta-PSI, min(E(dPSI)).'
+                                  ' The default is "%(default)s".')
 
 # view parser
 view_parser = argparse.ArgumentParser(add_help=False)

@@ -20,7 +20,10 @@ _TsvConfig = namedtuple('TsvConfig', ['file_name', 'voila_files', 'voila_file', 
                                       'non_changing_threshold', 'nproc', 'threshold', 'analysis_type', 'show_all',
                                       'debug', 'probability_threshold', 'silent', 'gene_ids', 'gene_names', 'lsv_ids',
                                       'lsv_types', 'strict_indexing', 'show_read_counts',
-                                      'ignore_inconsistent_group_errors'])
+                                      'ignore_inconsistent_group_errors', 'non_changing_pvalue_threshold',
+                                      'non_changing_within_group_iqr',
+                                      'non_changing_between_group_dpsi', 'changing_pvalue_threshold',
+                                      'changing_between_group_dpsi'])
 _TsvConfig.__new__.__defaults__ = (None,) * len(_TsvConfig._fields)
 _ClassifyConfig = namedtuple('ClassifyConfig', ['directory', 'voila_files', 'voila_file', 'splice_graph_file',
                                       'nproc', 'decomplexify_psi_threshold', 'decomplexify_deltapsi_threshold',
@@ -343,7 +346,10 @@ class TsvConfig:
             settings = dict(config_parser['SETTINGS'])
             for int_key in ['nproc']:
                 settings[int_key] = config_parser['SETTINGS'].getint(int_key)
-            for float_key in ['non_changing_threshold', 'threshold', 'probability_threshold']:
+            for float_key in ['non_changing_threshold', 'threshold', 'probability_threshold',
+                              'non_changing_pvalue_threshold',
+                              'non_changing_within_group_iqr', 'non_changing_between_group_dpsi',
+                              'changing_pvalue_threshold', 'changing_between_group_dpsi']:
                 settings[float_key] = config_parser['SETTINGS'].getfloat(float_key)
             for bool_key in ['show_all', 'silent', 'debug', 'strict_indexing', 'show_read_counts',
                              'ignore_inconsistent_group_errors']:

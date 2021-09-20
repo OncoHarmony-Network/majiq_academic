@@ -496,7 +496,7 @@ class HeterogenTsv(AnalysisTypeTsv):
 
     def tsv_row(self, q, e, tsv_file, fieldnames, gene_ids=None):
         log = voila_log()
-        # config = TsvConfig()
+        config = TsvConfig()
         group_names = self.group_names
 
         with ViewSpliceGraph() as sg:
@@ -543,8 +543,13 @@ class HeterogenTsv(AnalysisTypeTsv):
                             ),
                             'ir_coords': ir_coords,
                             'ucsc_lsv_link': views.ucsc_href(genome, chromosome, start, end),
-                            **{key: semicolon(values) for key, values in het.changing()},
-                            **{key: semicolon(values) for key, values in het.nonchanging()},
+                            **{key: semicolon(values) for key, values in
+                               het.changing(config.changing_pvalue_threshold,
+                                            config.changing_between_group_dpsi)},
+                            **{key: semicolon(values) for key, values in
+                               het.nonchanging(config.non_changing_pvalue_threshold,
+                                               config.non_changing_within_group_iqr,
+                                               config.non_changing_between_group_dpsi)},
                         }
 
                         for grp, medians in zip(group_names, het.median_psi):
