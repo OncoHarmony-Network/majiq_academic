@@ -1,4 +1,0 @@
-recursive-include voila/view/templates *
-recursive-include voila/view/static *
-recursive-include voila/api *sql
-recursive-include majiq/data *

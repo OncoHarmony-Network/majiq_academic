@@ -456,6 +456,8 @@ class HeterogenTsv(AnalysisTypeTsv):
         metadata = self.get_base_metadata()
         with ViewHeterogens() as m:
             metadata['stat_names'] = m.stat_names
+            metadata['psi_samples'] = m.psi_samples_summary
+            metadata['test_percentile'] = m.test_percentile_summary
         return metadata
 
     def tab_output(self):

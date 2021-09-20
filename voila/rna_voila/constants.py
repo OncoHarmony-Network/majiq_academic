@@ -1,19 +1,20 @@
 import os
 import tempfile
 from pathlib import Path
+from importlib.metadata import version, PackageNotFoundError
 
 import rna_voila
 
 EXEC_DIR = Path(os.path.dirname(os.path.abspath(rna_voila.__file__)))
-GIT_VERSION_FILE = "git_version"
 
-if os.path.exists(GIT_VERSION_FILE):
-    with open(GIT_VERSION_FILE, 'r') as f:
-        GIT_COMMIT_HASH = '-' + f.read().rstrip()
-else:
-    GIT_COMMIT_HASH = ''
+try:
+    VERSION = version("rna_majiq_meta")
+except PackageNotFoundError:
+    try:
+        VERSION = version("rna_voila")
+    except PackageNotFoundError:
+        VERSION = "2.2.0"
 
-VERSION = '2.2.0' + GIT_COMMIT_HASH
 FILE_VERSION = '0.1'
 ANALYSIS_PSI = 'psi'
 ANALYSIS_PSI_GENE = 'psi-gene'
@@ -79,10 +80,3 @@ else:
     CONFIG_FILE = os.environ['VOILA_CONFIG_FILE']
 
 MINVAL = 1e-300
-
-
-def store_git_version(short_sha):
-
-    direc = os.path.dirname(__file__)
-    with open(os.path.join(direc, GIT_VERSION_FILE), "w+") as ofp:
-        ofp.write("%s\n" % short_sha)

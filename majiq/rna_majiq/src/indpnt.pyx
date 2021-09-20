@@ -285,7 +285,7 @@ cdef void _core_independent(object self):
     logger = majiq_logger.get_logger("%s/het_majiq.log" % self.outDir, silent=self.silent,
                                      debug=self.debug)
 
-    logger.info("Majiq deltapsi heterogeneous v%s-%s" % (constants.VERSION, constants.get_git_version()))
+    logger.info(f"Majiq deltapsi heterogeneous v{constants.VERSION}")
     logger.info("Command: %s" % " ".join(sys.argv))
     logger.info("GROUP1: %s" % self.files1)
     logger.info("GROUP2: %s" % self.files2)
@@ -321,6 +321,8 @@ cdef void _core_independent(object self):
         out_h5p.analysis_type = ANALYSIS_HETEROGEN
         out_h5p.group_names = self.names
         out_h5p.experiment_names = [exps1, exps2]
+        out_h5p.psi_samples = self.psi_samples
+        out_h5p.test_percentile = self.test_percentile
 
         j_offset = 0
         for lsv in list_of_lsv:
