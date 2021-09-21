@@ -30,7 +30,7 @@ _ClassifyConfig = namedtuple('ClassifyConfig', ['directory', 'voila_files', 'voi
                                       'decomplexify_reads_threshold', 'analysis_type', 'gene_ids',
                                       'debug', 'silent', 'keep_constitutive', 'keep_no_lsvs_modules', 'only_binary',
                                       'untrimmed_exons', 'putative_multi_gene_regions',
-                                                'non_changing_threshold', 'probability_changing_threshold',
+                                                'probability_changing_threshold',
                                                 'probability_non_changing_threshold', 'show_all',
                                                 'non_changing_pvalue_threshold', 'non_changing_within_group_iqr',
                                                 'non_changing_between_group_dpsi', 'changing_pvalue_threshold',
@@ -391,7 +391,7 @@ class ClassifyConfig:
             for int_key in ['nproc', 'keep_constitutive', 'decomplexify_reads_threshold', 'debug_num_genes']:
                 settings[int_key] = config_parser['SETTINGS'].getint(int_key)
             for float_key in ['decomplexify_psi_threshold', 'decomplexify_deltapsi_threshold',
-                              'non_changing_threshold', 'probability_changing_threshold',
+                              'probability_changing_threshold',
                               'probability_non_changing_threshold', 'non_changing_pvalue_threshold',
                               'non_changing_within_group_iqr', 'non_changing_between_group_dpsi',
                               'changing_pvalue_threshold', 'changing_between_group_dpsi',

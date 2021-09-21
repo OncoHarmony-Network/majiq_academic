@@ -638,7 +638,7 @@ class MultiQuantWriter(QuantificationWriter):
                                 continue
                             else:
                                 non_changing_quant = lsv.high_probability_non_changing(
-                                    self.config.non_changing_threshold, edge_idx)
+                                    self.config.non_changing_between_group_dpsi, edge_idx)
 
                                 is_non_changing = non_changing_quant >= self.config.probability_non_changing_threshold
 

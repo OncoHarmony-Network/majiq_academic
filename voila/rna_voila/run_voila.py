@@ -119,14 +119,16 @@ dpsi_het_thresholds_parser.add_argument('--changing-between-group-dpsi', type=fl
                                    help='For determining changing with HET or delta-PSI inputs. For HET, minimum absolute difference in median '
                                         'values of PSI for which an LSV/junction can return true. For delta-PSI, min(E(dPSI)).'
                                         ' The default is "%(default)s".')
+dpsi_het_thresholds_parser.add_argument('--non-changing-between-group-dpsi', type=float, default=0.05,
+                                   help='For determining non-changing with HET or delta-PSI inputs. Maximum absolute difference in median '
+                                        'values of PSI for which an LSV/junction can return true. The default is "%(default)s".')
+
 
 dpsi_thresholds_parser = tsv_parser.add_argument_group("Thresholds for Deltapsi inputs")
 dpsi_thresholds_parser.add_argument('--threshold', type=float, default=0.2,
                         help='Filter out LSVs with no junctions predicted to change over a certain value. Even when '
                              'show-all is used this value is still used to calculate the probability in the TSV. The '
                              'default is "%(default)s".')
-dpsi_thresholds_parser.add_argument('--non-changing-threshold', type=float, default=0.05,
-                        help='The default is "%(default)s".')
 dpsi_thresholds_parser.add_argument('--probability-threshold', type=float, default=None,
                         help='This is off by default. If set, confidence must be above this probability threshold in'
                              ' addition to the psi threshold.')
@@ -138,9 +140,6 @@ het_thresholds_parser.add_argument('--non-changing-pvalue-threshold', type=float
 het_thresholds_parser.add_argument('--non-changing-within-group-IQR', type=float, default=0.1,
                                    help='For determining non-changing with HET inputs. Maximum IQR within a group for which an '
                                         'LSV/junction can return true. The default is "%(default)s".')
-het_thresholds_parser.add_argument('--non-changing-between-group-dpsi', type=float, default=0.05,
-                                   help='For determining non-changing with HET inputs. Maximum absolute difference in median '
-                                        'values of PSI for which an LSV/junction can return true. The default is "%(default)s".')
 het_thresholds_parser.add_argument('--changing-pvalue-threshold', type=float, default=0.05,
                                    help='For determining changing with HET inputs. Maximum p-value for which an LSV/junction'
                                         ' can return true. Uses maximum p-value from all tests provided. The default is "%(default)s".')
@@ -240,7 +239,7 @@ classify_structure_filter_parser.add_argument('--keep-constitutive', type=int, n
                          help='Do not discard modules with only one junction, implies "--show-all-modules". Turns on '
                               'output of constitutive.tsv and constitutive column in summary output')
 classify_structure_filter_parser.add_argument('--keep-no-lsvs-modules', action='store_true',
-                             help='Do not discard modules that are unquantified my Majiq (no LSVs found)')
+                         help='Do not discard modules that are unquantified my Majiq (no LSVs found)')
 classify_structure_filter_parser.add_argument('--keep-no-lsvs-junctions', action='store_true',
                          help='If there are no LSVs attached to a specific junction, retain the junction instead of removing it')
 
@@ -263,10 +262,19 @@ dpsi_het_modulize_filter_parser = classify_parser.add_argument_group(
     "Adjust the parameters used for determining whether a junction / module is changing or non-changing based on "
     "dpsi or heterogen file inputs"
 )
+dpsi_het_modulize_filter_parser.add_argument('--non-changing-between-group-dpsi', type=float, default=0.05,
+                                        help='For determining non-changing with HET or delta-PSI inputs. Maximum absolute difference in median '
+                                             'values of PSI for which an LSV/junction can return true. The default is "%(default)s".')
 dpsi_het_modulize_filter_parser.add_argument('--changing-between-group-dpsi', type=float, default=0.2,
                                         help='For determining changing with HET or delta-PSI inputs. For HET, minimum absolute difference in median '
                                              'values of PSI for which an LSV/junction can return true. For delta-PSI, min(E(dPSI)).'
                                              ' The default is "%(default)s".')
+dpsi_het_modulize_filter_parser.add_argument('--changing-between-group-dpsi-secondary', type=float, default=0.1,
+                                         help='Set the secondary changing event definition. In order to be considered "changing", any junction in an event must'
+                                              ' meet the other changing definitions, and ALL junctions in an event must meet this condition (DPSI value'
+                                              ' of the junction >= this value). Applies to HET or delta-PSI inputs'
+                                              ' The default is "%(default)s".')
+
 
 het_modulize_filter_parser = classify_parser.add_argument_group(
     "Adjust the parameters used for determining whether a junction / module is changing or non-changing based on "
@@ -278,9 +286,6 @@ het_modulize_filter_parser.add_argument('--non-changing-pvalue-threshold', type=
 het_modulize_filter_parser.add_argument('--non-changing-within-group-IQR', type=float, default=0.1,
                         help='For determining non-changing with HET inputs. Maximum IQR within a group for which an '
                              'LSV/junction can return true. The default is "%(default)s".')
-het_modulize_filter_parser.add_argument('--non-changing-between-group-dpsi', type=float, default=0.05,
-                        help='For determining non-changing with HET inputs. Maximum absolute difference in median '
-                             'values of PSI for which an LSV/junction can return true. The default is "%(default)s".')
 het_modulize_filter_parser.add_argument('--changing-pvalue-threshold', type=float, default=0.05,
                         help='For determining changing with HET inputs. Maximum p-value for which an LSV/junction'
                              ' can return true. Uses maximum p-value from all tests provided. The default is "%(default)s".')
@@ -290,8 +295,6 @@ dpsi_modulize_filter_parser = classify_parser.add_argument_group(
     "Adjust the parameters used for determining whether a junction / module is changing or non-changing based on "
     "dpsi file inputs"
 )
-dpsi_modulize_filter_parser.add_argument('--non-changing-threshold', type=float, default=0.05,
-                             help='Threshold in delta-PSI quantification column. The default is "%(default)s".')
 dpsi_modulize_filter_parser.add_argument('--probability-changing-threshold', type=float, default=0.95,
                              help='The default is "%(default)s"')
 dpsi_modulize_filter_parser.add_argument('--probability-non-changing-threshold', type=float, default=0.95,
@@ -300,11 +303,7 @@ dpsi_modulize_filter_parser.add_argument('--probability-non-changing-threshold',
 misc_modulize_filter_parser = classify_parser.add_argument_group(
     "Misc changing filter options"
 )
-misc_modulize_filter_parser.add_argument('--changing-between-group-dpsi-secondary', type=float, default=0.1,
-                        help='Set the secondary changing event definition. In order to be considered "changing", any junction in an event must'
-                             ' meet the other changing definitions, and ALL junctions in an event must meet this condition (DPSI value'
-                             ' of the junction >= this value)'
-                             ' The default is "%(default)s".')
+
 
 
 

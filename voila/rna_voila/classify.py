@@ -62,10 +62,10 @@ def print_filter_summary():
             voila_log().info(("║     Dropping modules if none(max(P(|dPSI|>=%.3f)) >= %.3f)" %
                              (config.changing_between_group_dpsi, config.probability_changing_threshold)).ljust(jst)[:jst] + "║")
         elif config.non_changing:
-            voila_log().info(("║     Dropping modules if any(max(E(|dPSI|)) <= %.3f)" % config.non_changing_threshold).ljust(jst)[
+            voila_log().info(("║     Dropping modules if any(max(E(|dPSI|)) <= %.3f)" % config.non_changing_between_group_dpsi).ljust(jst)[
                              :jst] + "║")
             voila_log().info(("║     Dropping modules if any(max(P(|dPSI|<=%.3f)) >= %.3f)" %
-                             (config.non_changing_threshold, config.probability_non_changing_threshold)).ljust(jst)[:jst] + "║")
+                             (config.non_changing_between_group_dpsi, config.probability_non_changing_threshold)).ljust(jst)[:jst] + "║")
 
     voila_log().info("╚═══════════════════════════════════════════════════════════════╝")
 

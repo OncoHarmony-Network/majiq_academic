@@ -598,7 +598,7 @@ class DeltaPsiTsv(AnalysisTypeTsv):
         metadata = self.get_base_metadata()
         config = TsvConfig()
         metadata['changing_threshold'] = config.threshold
-        metadata['non_changing_threshold'] = config.non_changing_threshold
+        metadata['non_changing_threshold'] = config.non_changing_between_group_dpsi
         return metadata
 
 

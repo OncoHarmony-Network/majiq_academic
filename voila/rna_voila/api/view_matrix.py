@@ -539,7 +539,7 @@ class ViewDeltaPsi(DeltaPsi, ViewMatrix):
             :return: list
             """
             if non_changing_threshold is None:
-                non_changing_threshold = self.config.non_changing_threshold
+                non_changing_threshold = self.config.non_changing_between_group_dpsi
 
             bins = self.bins if junc_i is None else [self.bins[junc_i]]
 
