@@ -114,7 +114,11 @@ tsv_filters_parser.add_argument('--gene-ids', nargs='*', default=[],
                         help='Gene IDs, separated by spaces, which should remain in the results. e.g. GENE_ID1 '
                              'GENE_ID2 ...')
 
-
+dpsi_het_thresholds_parser = tsv_parser.add_argument_group("Thresholds for Deltapsi or Heterogen inputs")
+dpsi_het_thresholds_parser.add_argument('--changing-between-group-dpsi', type=float, default=0.2,
+                                   help='For determining changing with HET or delta-PSI inputs. For HET, minimum absolute difference in median '
+                                        'values of PSI for which an LSV/junction can return true. For delta-PSI, min(E(dPSI)).'
+                                        ' The default is "%(default)s".')
 
 dpsi_thresholds_parser = tsv_parser.add_argument_group("Thresholds for Deltapsi inputs")
 dpsi_thresholds_parser.add_argument('--threshold', type=float, default=0.2,
@@ -140,10 +144,7 @@ het_thresholds_parser.add_argument('--non-changing-between-group-dpsi', type=flo
 het_thresholds_parser.add_argument('--changing-pvalue-threshold', type=float, default=0.05,
                                    help='For determining changing with HET inputs. Maximum p-value for which an LSV/junction'
                                         ' can return true. Uses maximum p-value from all tests provided. The default is "%(default)s".')
-het_thresholds_parser.add_argument('--changing-between-group-dpsi', type=float, default=0.2,
-                                   help='For determining changing with HET or delta-PSI inputs. For HET, minimum absolute difference in median '
-                                        'values of PSI for which an LSV/junction can return true. For delta-PSI, min(E(dPSI)).'
-                                        ' The default is "%(default)s".')
+
 
 # view parser
 view_parser = argparse.ArgumentParser(add_help=False)
@@ -258,6 +259,15 @@ decomplexifier_filter_parser.add_argument('--decomplexify-reads-threshold', type
                          help='Filter out junctions where the number of reads is below a certain value (integer). If multiple '
                               'input files are used, only the biggest number of reads is used. The default is "%(default)s". ')
 
+dpsi_het_modulize_filter_parser = classify_parser.add_argument_group(
+    "Adjust the parameters used for determining whether a junction / module is changing or non-changing based on "
+    "dpsi or heterogen file inputs"
+)
+dpsi_het_modulize_filter_parser.add_argument('--changing-between-group-dpsi', type=float, default=0.2,
+                                        help='For determining changing with HET or delta-PSI inputs. For HET, minimum absolute difference in median '
+                                             'values of PSI for which an LSV/junction can return true. For delta-PSI, min(E(dPSI)).'
+                                             ' The default is "%(default)s".')
+
 het_modulize_filter_parser = classify_parser.add_argument_group(
     "Adjust the parameters used for determining whether a junction / module is changing or non-changing based on "
     "heterogen file inputs"
@@ -274,10 +284,7 @@ het_modulize_filter_parser.add_argument('--non-changing-between-group-dpsi', typ
 het_modulize_filter_parser.add_argument('--changing-pvalue-threshold', type=float, default=0.05,
                         help='For determining changing with HET inputs. Maximum p-value for which an LSV/junction'
                              ' can return true. Uses maximum p-value from all tests provided. The default is "%(default)s".')
-het_modulize_filter_parser.add_argument('--changing-between-group-dpsi', type=float, default=0.2,
-                        help='For determining changing with HET or delta-PSI inputs. For HET, minimum absolute difference in median '
-                             'values of PSI for which an LSV/junction can return true. For delta-PSI, min(E(dPSI)).'
-                             ' The default is "%(default)s".')
+
 
 dpsi_modulize_filter_parser = classify_parser.add_argument_group(
     "Adjust the parameters used for determining whether a junction / module is changing or non-changing based on "
