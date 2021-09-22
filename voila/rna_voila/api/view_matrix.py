@@ -577,8 +577,9 @@ class ViewHeterogens(ViewMulti):
         @property
         def groups_quantified(self):
 
-            mu_psi = np.array(self.mu_psi)[:, :, 0]
-            num_quant = (mu_psi >= 0).sum(axis=0)
+            # mu_psi has shape (njunc, ngroups, max(nexperiments))
+            mu_psi = np.array(self.mu_psi)[0]
+            num_quant = (mu_psi >= 0).sum(axis=-1)
             return num_quant
 
         def get_attr(self, attr):
