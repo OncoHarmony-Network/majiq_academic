@@ -525,7 +525,7 @@ def main():
         "--stats",
         nargs="+",
         choices=["TTEST", "WILCOXON", "TNOM", "INFOSCORE", "ALL"],
-        default=["ALL"],
+        default=["TTEST", "WILCOXON", "TNOM"],
         help="Test statistics to run."
         " TTEST: unpaired two-sample t-test (Welch's t-test)."
         " WILCOXON: Mann-Whitney U two-sample test (nonparametric)."
@@ -533,7 +533,7 @@ def main():
         " INFOSCORE: TNOM but threshold maximizing mutual information with"
         " group labels (nonparametric)."
         " ALL: use all other available test statistics."
-        " [Default: ALL]",
+        " [Default: %(default)s]",
     )
     htrgen.add_argument(
         "--test_percentile",
