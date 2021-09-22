@@ -574,6 +574,13 @@ class ViewHeterogens(ViewMulti):
             self.matrix_hdf5 = matrix_hdf5
             self.lsv_id = lsv_id
 
+        @property
+        def groups_quantified(self):
+
+            mu_psi = np.array(self.mu_psi)[:, :, 0]
+            num_quant = (mu_psi >= 0).sum(axis=0)
+            return num_quant
+
         def get_attr(self, attr):
             """
             For attributes that exist is each het file, this will get all values and confirm they're all equal.

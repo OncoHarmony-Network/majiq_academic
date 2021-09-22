@@ -482,6 +482,9 @@ class HeterogenTsv(AnalysisTypeTsv):
                 *(
                     f'{group}_percentile{quant * 100:02.0f}_psi' for group in group_names for quant in self._quantiles
                 ),
+                *(
+                    f'{group}_num_quantified' for group in group_names
+                ),
                 *stats_column_names,
                 *m.changing_column_names,
                 *m.nonchanging_column_names,
@@ -559,6 +562,9 @@ class HeterogenTsv(AnalysisTypeTsv):
                                 row[f'{grp}_median_psi'] = 'NA'
                             else:
                                 row[f'{grp}_median_psi'] = semicolon(f'{x:0.4f}' for x in medians)
+
+                        for grp, num_quantified in zip(group_names, het.groups_quantified):
+                            row[f'{grp}_num_quantified'] = num_quantified
 
                         for quant in self._quantiles:
                             for grp, medians in zip(group_names, het.quantile_psi(quant)):
