@@ -142,13 +142,13 @@ def _args_ruv_parameters(parser: argparse.ArgumentParser) -> None:
         "--ruv-max-new-factors",
         type=check_nonnegative_factory(int, True),
         default=constants.DEFAULT_MOCCASIN_RUV_MAX_FACTORS,
-        help="Maximum number of new factors the model will add",
+        help="Maximum number of new factors the model will add (default: %(default)s)",
     )
     ruv.add_argument(
         "--ruv-max-events",
         type=check_nonnegative_factory(int, True),
         default=constants.DEFAULT_MOCCASIN_RUV_MAX_EVENTS,
-        help="Maximum number of events to model residuals for",
+        help="Maximum number of events to model residuals for (default: %(default)s)",
     )
     return
 
