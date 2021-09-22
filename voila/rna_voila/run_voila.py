@@ -116,12 +116,15 @@ tsv_filters_parser.add_argument('--gene-ids', nargs='*', default=[],
 
 dpsi_het_thresholds_parser = tsv_parser.add_argument_group("Thresholds for Deltapsi or Heterogen inputs")
 dpsi_het_thresholds_parser.add_argument('--changing-between-group-dpsi', type=float, default=0.2,
-                                   help='For determining changing with HET or delta-PSI inputs. For HET, minimum absolute difference in median '
-                                        'values of PSI for which an LSV/junction can return true. For delta-PSI, min(E(dPSI)).'
-                                        ' The default is "%(default)s".')
+                                   help='For determining changing with HET or dPSI inputs. This is the maximum'
+                                        ' absolute difference in median values of PSI for HET inputs (or E(dPSI) '
+                                        'for dPSI inputs) for which an LSV/junction can be marked changing.'
+                                        ' The default is "%(default)s"')
 dpsi_het_thresholds_parser.add_argument('--non-changing-between-group-dpsi', type=float, default=0.05,
-                                   help='For determining non-changing with HET or delta-PSI inputs. Maximum absolute difference in median '
-                                        'values of PSI for which an LSV/junction can return true. The default is "%(default)s".')
+                                        help='For determining non-changing with HET or dPSI inputs. This is the maximum'
+                                             ' absolute difference in median values of PSI for HET inputs (or E(dPSI) '
+                                             'for dPSI inputs) for which an LSV/junction can be marked non-changing.'
+                                             ' The default is "%(default)s"')
 
 
 dpsi_thresholds_parser = tsv_parser.add_argument_group("Thresholds for Deltapsi inputs")
@@ -262,13 +265,16 @@ dpsi_het_modulize_filter_parser = classify_parser.add_argument_group(
     "Adjust the parameters used for determining whether a junction / module is changing or non-changing based on "
     "dpsi or heterogen file inputs"
 )
-dpsi_het_modulize_filter_parser.add_argument('--non-changing-between-group-dpsi', type=float, default=0.05,
-                                        help='For determining non-changing with HET or delta-PSI inputs. Maximum absolute difference in median '
-                                             'values of PSI for which an LSV/junction can return true. The default is "%(default)s".')
 dpsi_het_modulize_filter_parser.add_argument('--changing-between-group-dpsi', type=float, default=0.2,
-                                        help='For determining changing with HET or delta-PSI inputs. For HET, minimum absolute difference in median '
-                                             'values of PSI for which an LSV/junction can return true. For delta-PSI, min(E(dPSI)).'
-                                             ' The default is "%(default)s".')
+                                             help='For determining changing with HET or dPSI inputs. This is the maximum'
+                                                  ' absolute difference in median values of PSI for HET inputs (or E(dPSI) '
+                                                  'for dPSI inputs) for which an LSV/junction can be marked changing.'
+                                                  ' The default is "%(default)s"')
+dpsi_het_modulize_filter_parser.add_argument('--non-changing-between-group-dpsi', type=float, default=0.05,
+                                             help='For determining non-changing with HET or dPSI inputs. This is the maximum'
+                                                  ' absolute difference in median values of PSI for HET inputs (or E(dPSI) '
+                                                  'for dPSI inputs) for which an LSV/junction can be marked non-changing.'
+                                                  ' The default is "%(default)s"')
 dpsi_het_modulize_filter_parser.add_argument('--changing-between-group-dpsi-secondary', type=float, default=0.1,
                                          help='Set the secondary changing event definition. In order to be considered "changing", any junction in an event must'
                                               ' meet the other changing definitions, and ALL junctions in an event must meet this condition (DPSI value'
