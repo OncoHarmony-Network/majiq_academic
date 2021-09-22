@@ -32,6 +32,12 @@ def _args_dask(parser: argparse.ArgumentParser) -> None:
         help="Number of threads used by Dask scheduler to fit models in chunks"
         " (default: %(default)s)",
     )
+    parser.add_argument(
+        "--memory-limit",
+        type=str,
+        default="auto",
+        help="Memory limit to pass to dask cluster (default: %(default)s)",
+    )
     # doesn't appear we need to manually limit memory at this time, can do so
     # in the future if necessary
     return
@@ -238,7 +244,10 @@ def run_factors_model(args: argparse.Namespace) -> None:
     """model unknown factors using input coverage"""
     log = get_logger()
     client = Client(
-        n_workers=1, threads_per_worker=args.nthreads, dashboard_address=None
+        n_workers=1,
+        threads_per_worker=args.nthreads,
+        dashboard_address=None,
+        memory_limit=args.memory_limit,
     )
     log.info(client)
     log.info(f"Opening coverage from {len(args.psicov)} PSI coverage files")
@@ -271,7 +280,10 @@ def run_factors_infer(args: argparse.Namespace):
     """compute unknown factors using input coverage"""
     log = get_logger()
     client = Client(
-        n_workers=1, threads_per_worker=args.nthreads, dashboard_address=None
+        n_workers=1,
+        threads_per_worker=args.nthreads,
+        dashboard_address=None,
+        memory_limit=args.memory_limit,
     )
     log.info(client)
     log.info(f"Opening coverage from {len(args.psicov)} PSI coverage files")
@@ -298,7 +310,10 @@ def run_coverage_model(args: argparse.Namespace) -> None:
     """Determine parameters for coverage model given factors"""
     log = get_logger()
     client = Client(
-        n_workers=1, threads_per_worker=args.nthreads, dashboard_address=None
+        n_workers=1,
+        threads_per_worker=args.nthreads,
+        dashboard_address=None,
+        memory_limit=args.memory_limit,
     )
     log.info(client)
     log.info(f"Opening coverage from {len(args.psicov)} PSI coverage files")
@@ -339,7 +354,10 @@ def run_coverage_infer(args: argparse.Namespace) -> None:
     """Create corrected LSV coverage file"""
     log = get_logger()
     client = Client(
-        n_workers=1, threads_per_worker=args.nthreads, dashboard_address=None
+        n_workers=1,
+        threads_per_worker=args.nthreads,
+        dashboard_address=None,
+        memory_limit=args.memory_limit,
     )
     log.info(client)
     log.info(f"Opening coverage from {len(args.original_psicov)} PSI coverage files")
