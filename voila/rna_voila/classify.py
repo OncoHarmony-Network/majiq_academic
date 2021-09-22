@@ -104,7 +104,6 @@ def classify_gene(args):
 
                 writer.multi_exon_spanning()
                 writer.tandem_cassette()
-                writer.exitron()
                 writer.orphan_junction()
 
                 writer.other_event()

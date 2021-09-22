@@ -34,7 +34,6 @@ summaryVars2Headers = {
     'constitutive': 'constitutive_junc',
     'constitutive_intron': 'persistent_ir',
     'multi_exon_spanning': 'multi_exon_spanning',
-    'exitron': 'exitron',
     'other_event': 'other'
 }
 
@@ -201,7 +200,7 @@ class TsvWriter(BaseTsvWriter):
             names += ['cassette.tsv', 'alt3prime.tsv', 'alt5prime.tsv', 'alt3and5prime.tsv',
                  'mutually_exclusive.tsv', 'alternate_last_exon.tsv', 'alternate_first_exon.tsv',
                  'alternative_intron.tsv', 'p_alt5prime.tsv', 'p_alt3prime.tsv', 'multi_exon_spanning.tsv',
-                 'tandem_cassette.tsv', 'exitron.tsv', 'orphan_junction.tsv',
+                 'tandem_cassette.tsv', 'orphan_junction.tsv',
                  'p_alternate_last_exon.tsv', 'p_alternate_first_exon.tsv', 'other.tsv']
             if config.keep_constitutive:
                 names.append('constitutive.tsv')
@@ -260,8 +259,6 @@ class TsvWriter(BaseTsvWriter):
                                                  'num_skipped_exons',
                                                  'junction_name', 'junction_coord'] + ['event_size'] + self.quantification_headers
                 self.start_headers(headers, 'tandem_cassette.tsv')
-                headers = self.common_headers + ['denovo', 'exon_coord', 'junction_coord'] + self.quantification_headers
-                self.start_headers(headers, 'exitron.tsv')
                 headers = self.common_headers + ['denovo', 'exon1_coord', 'Exon2 coordinate', 'junction_coord'] + self.quantification_headers
                 self.start_headers(headers, 'orphan_junction.tsv')
                 headers = self.common_headers + ["other_junctions", "other_exons"]# + self.quantification_headers
@@ -291,7 +288,7 @@ class TsvWriter(BaseTsvWriter):
                 event_id_ii = headers.index("event_id")
                 headers.pop(event_id_ii)
 
-                headers += ['multi_exon_spanning', 'exitron', 'complex', 'denovo_juncs', 'denovo_introns',
+                headers += ['multi_exon_spanning', 'complex', 'denovo_juncs', 'denovo_introns',
                             'num_events', 'module_event_combination'
                             ]
 
@@ -2321,7 +2318,6 @@ class TsvWriter(BaseTsvWriter):
                     counts['constitutive'] = 0
                     counts['constitutive_intron'] = 0
                 counts['multi_exon_spanning'] = 0
-                counts['exitron'] = 0
                 other_novel_count = 0
                 for event in events:
                     if event['event'] in counts:

@@ -2126,7 +2126,6 @@ class Graph:
                 'multi_exon_spanning': self.multi_exon_spanning,
                 'tandem_cassette': self.tandem_cassette,
                 'orphan_junction': self.orphan_junction,
-                'exitron': self.exitron,
             }
 
             if ClassifyConfig().keep_constitutive:
@@ -2148,23 +2147,16 @@ class Graph:
                 'multi_exon_spanning': 0,
                 'tandem_cassette': 0,
                 'orphan_junction': 0,
-                'exitron': 0,
                 'constitutive': 0,
                 'constitutive_intron': 0,
             }
 
             complex = False
 
-            # if 'gene:ENSG00000205744:s:6475837-6475937' in self.non_classified_lsv_ids:
-            #     print(self.classified_junctions)
-            #     print("WHAT")
-
             for k, v in as_type_dict.items():
                 # call function to check if each event exists
                 res = v()
                 ret += res
-                # print(k)
-                # print(self.classified_lsvs)
 
             for e in ret:
                 event_counts[e['event']] += 1
