@@ -377,7 +377,8 @@ def run_coverage_infer(args: argparse.Namespace) -> None:
             offsets,
             input_core_dims=[["ec_idx"], ["offset_idx"]],
             output_core_dims=[["ec_idx"]],
-            dask="allowed",
+            output_dtypes=(x.dtype,),
+            dask="parallelized",
         )
 
     log.info("Correcting bootstrap_psi")
