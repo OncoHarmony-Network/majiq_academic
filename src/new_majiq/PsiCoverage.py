@@ -176,7 +176,7 @@ class PsiCoverage(object):
     def _bootstrap_moments(self) -> Tuple[xr.DataArray, xr.DataArray]:
         # get mean, variance per bootstrap replicate
         mean = self.bootstrap_alpha / np.add(1, self.bootstrap_total)
-        variance = mean * np.subtract(1, mean) / np.add(1, self.bootstrap_total)
+        variance = mean * np.subtract(1, mean) / np.add(2, self.bootstrap_total)
         # summarize over bootstrap replicates
         agg_mean = mean.mean("bootstrap_replicate")
         agg_variance = (
