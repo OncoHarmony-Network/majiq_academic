@@ -373,7 +373,7 @@ def run_coverage_infer(args: argparse.Namespace) -> None:
     def clip_and_renormalize_psi(x: xr.DataArray) -> xr.DataArray:
         return xr.apply_ufunc(
             clip_and_normalize_strict,
-            x,
+            x.chunk({"ec_idx": -1}),
             offsets,
             input_core_dims=[["ec_idx"], ["offset_idx"]],
             output_core_dims=[["ec_idx"]],
