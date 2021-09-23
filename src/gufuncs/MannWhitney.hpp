@@ -350,12 +350,23 @@ class MannWhitneyCache {
   }
 };
 
-template <typename RealT>
-inline void Inner(
-    MannWhitneyCache& tester,
-    char* x, char* sortx, char* labels, char* out, const npy_intp d,
-    const npy_intp s_x, const npy_intp s_sortx, const npy_intp s_labels) {
-  using detail::get_value;
+// perform MannWhitney test on provided random-access iterators
+template <typename ItX, typename ItSort, typename ItLabels>
+inline double Test(
+    MannWhitneyCache& tester, ItX x, ItSort sortx, ItLabels labels, npy_intp d) {
+  static_assert(
+      std::is_same_v<std::random_access_iterator_tag,
+      typename std::iterator_traits<ItX>::iterator_category>,
+      "MannWhitney::Test requires x to be random-access iterator");
+  static_assert(
+      std::is_same_v<std::random_access_iterator_tag,
+      typename std::iterator_traits<ItSort>::iterator_category>,
+      "MannWhitney::Test requires sortx to be random-access iterator");
+  static_assert(
+      std::is_same_v<std::random_access_iterator_tag,
+      typename std::iterator_traits<ItLabels>::iterator_category>,
+      "MannWhitney::Test requires labels to be random-access iterator");
+
   // get MannWhitneySummary for the row
   MannWhitneySummary summary;
   {
@@ -369,8 +380,7 @@ inline void Inner(
     npy_intp idx = 0;
     int last_rank = 0;
     while (idx < d) {
-      const RealT& val = get_value<RealT>(
-          x, get_value<npy_intp>(sortx, idx, s_sortx), s_x);
+      const auto& val = x[sortx[idx]];
       if (npy_isnan(val)) {
         // missing values should be sorted to end, so we can break
         break;
@@ -379,12 +389,12 @@ inline void Inner(
       int_fast64_t val_n1 = 0;
       int_fast64_t val_n2 = 0;
       for (; idx < d; ++idx) {
-        const auto& j = get_value<npy_intp>(sortx, idx, s_sortx);
-        if (val != get_value<RealT>(x, j, s_x)) {
+        const auto& j = sortx[idx];
+        if (val != x[j]) {
           // no longer tied
           break;
         }
-        if (get_value<bool>(labels, j, s_labels)) {
+        if (labels[j]) {
           ++val_n1;
         } else {
           ++val_n2;
@@ -418,8 +428,7 @@ inline void Inner(
         / ((summary.n1 + summary.n2) * (summary.n1 + summary.n2 - 1));
     }
   }
-  get_value<double>(out, 0, 0) = tester.CalculatePValue(summary);
-  return;
+  return tester.CalculatePValue(summary);
 }
 
 template <typename RealT>
@@ -451,8 +460,12 @@ static void Outer(
   for (npy_intp i = 0; i < dim_broadcast; ++i,
       x_ptr += stride_x, sortx_ptr += stride_sortx,
       labels_ptr += stride_labels, out_ptr += stride_out) {
-    Inner<RealT>(tester, x_ptr, sortx_ptr, labels_ptr, out_ptr,
-        dim_core, inner_stride_x, inner_stride_sortx, inner_stride_labels);
+    detail::get_value<RealT>(out_ptr) = Test(
+        tester,
+        detail::CoreIt<RealT>::begin(x_ptr, inner_stride_x),
+        detail::CoreIt<npy_intp>::begin(sortx_ptr, inner_stride_sortx),
+        detail::CoreIt<bool>::begin(labels_ptr, inner_stride_labels),
+        dim_core);
   }
   return;
 }

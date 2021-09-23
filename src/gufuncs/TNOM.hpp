@@ -186,36 +186,43 @@ class TNOMCache {
   TNOMCache& operator=(TNOMCache&&) = default;
 };
 
-template <typename RealT>
-inline void Inner(
-    TNOMCache& tester,
-    char* x, char* sortx, char* labels, char* out, const npy_intp d,
-    const npy_intp s_x, const npy_intp s_sortx, const npy_intp s_labels) {
-  using detail::get_value;
+// perform TNOM test on provided random-access iterators
+template <typename ItX, typename ItSort, typename ItLabels>
+inline double Test(
+    TNOMCache& tester, ItX x, ItSort sortx, ItLabels labels, npy_intp d) {
+  static_assert(
+      std::is_same_v<std::random_access_iterator_tag,
+      typename std::iterator_traits<ItX>::iterator_category>,
+      "TNOM::Test requires x to be random-access iterator");
+  static_assert(
+      std::is_same_v<std::random_access_iterator_tag,
+      typename std::iterator_traits<ItSort>::iterator_category>,
+      "TNOM::Test requires sortx to be random-access iterator");
+  static_assert(
+      std::is_same_v<std::random_access_iterator_tag,
+      typename std::iterator_traits<ItLabels>::iterator_category>,
+      "TNOM::Test requires labels to be random-access iterator");
   // counts for labels on RHS
   int rhs1 = 0;
   int rhs2 = 0;
   for (npy_intp idx = 0; idx < d; ++idx) {
-    const auto& j = get_value<npy_intp>(sortx, idx, s_sortx);
-    const auto& xj = get_value<RealT>(x, j, s_x);
+    const auto& j = sortx[idx];
+    const auto& xj = x[j];
     if (npy_isnan(xj)) {
-      // missing values are sorted to end, so we are done on this pass
+      // missing values sorted to end, so done on this pass
       break;
     }
     // update counts on rhs
-    const auto& labelsj = get_value<bool>(labels, j, s_labels);
-    if (labelsj) {
+    if (labels[j]) {
       ++rhs1;
     } else {
       ++rhs2;
     }
   }  // count instances of label 1 vs label 2, set on rhs
   if (rhs1 == 0 || rhs2 == 0) {
-    // no need to do any further computation
-    get_value<double>(out, 0, 0) = std::numeric_limits<double>::quiet_NaN();
-    return;
+    return std::numeric_limits<double>::quiet_NaN();
   }
-  const npy_intp n = static_cast<npy_intp>(rhs1 + rhs2);
+  const npy_intp n = static_cast<npy_intp>(rhs1 + rhs2);  // total quantified
   // counts for labels on LHS
   int lhs1 = 0;
   int lhs2 = 0;
@@ -223,9 +230,7 @@ inline void Inner(
   int min_score = std::min(rhs1, rhs2);
   // consider all other partitions
   for (npy_intp idx = 0; idx < n; ++idx) {
-    const auto& j = get_value<npy_intp>(sortx, idx, s_sortx);
-    const auto& labelsj = get_value<bool>(labels, j, s_labels);
-    if (labelsj) {
+    if (labels[sortx[idx]]) {
       // label is 1, move from right to left
       ++lhs1;
       --rhs1;
@@ -239,8 +244,7 @@ inline void Inner(
         min_score, std::min(lhs1, lhs2) + std::min(rhs1, rhs2));
   }  // loop over partitions to calculate TNOM score
   // lhs has counts for both groups now, so:
-  get_value<double>(out, 0, 0) = tester.CalculatePValue(lhs1, lhs2, min_score);
-  return;
+  return tester.CalculatePValue(lhs1, lhs2, min_score);
 }
 
 template <typename RealT>
@@ -272,8 +276,12 @@ static void Outer(
   for (npy_intp i = 0; i < dim_broadcast; ++i,
       x_ptr += stride_x, sortx_ptr += stride_sortx,
       labels_ptr += stride_labels, out_ptr += stride_out) {
-    Inner<RealT>(tester, x_ptr, sortx_ptr, labels_ptr, out_ptr,
-        dim_core, inner_stride_x, inner_stride_sortx, inner_stride_labels);
+    detail::get_value<RealT>(out_ptr) = Test(
+        tester,
+        detail::CoreIt<RealT>::begin(x_ptr, inner_stride_x),
+        detail::CoreIt<npy_intp>::begin(sortx_ptr, inner_stride_sortx),
+        detail::CoreIt<bool>::begin(labels_ptr, inner_stride_labels),
+        dim_core);
   }
   return;
 }

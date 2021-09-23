@@ -21,100 +21,106 @@
 
 namespace MajiqGufuncs {
 namespace ClipAndNormalize {
-/**
- * Inner loop. strict indicates if 0 / 0 = NaN (True) or 0 (False)
- */
-template <typename RealT, bool strict>
+
+template <bool strict, typename ItX, typename ItOffsets, typename ItOut>
 inline void Inner(
-    char* x, char* offsets, char* out,
-    const npy_intp d_xout, const npy_intp d_offsets,
-    const npy_intp s_x, const npy_intp s_offsets, const npy_intp s_out) {
-  using detail::get_value;
+    ItX x, ItOffsets offsets, ItOut out,
+    const npy_intp d_xout, const npy_intp d_offsets) {
+  using RealT = typename std::iterator_traits<ItX>::value_type;
+  static_assert(
+      std::is_same_v<RealT, typename std::iterator_traits<ItOut>::value_type>,
+      "ClipAndOffsetSum::Inner x and out must have same type");
+  static_assert(
+      std::is_same_v<std::random_access_iterator_tag,
+      typename std::iterator_traits<ItX>::iterator_category>,
+      "ClipAndOffsetSum requires x to be random-access iterator");
+  static_assert(
+      std::is_same_v<std::random_access_iterator_tag,
+      typename std::iterator_traits<ItOffsets>::iterator_category>,
+      "ClipAndOffsetSum requires offsets to be random-access iterator");
+  static_assert(
+      std::is_same_v<std::random_access_iterator_tag,
+      typename std::iterator_traits<ItOut>::iterator_category>,
+      "ClipAndOffsetSum requires out to be random-access iterator");
+
   // indexes into x, out
   npy_intp i_x = 0;
   // get offset to start with
   npy_intp next_offset = d_xout;
   if (d_offsets > 0) {
-    next_offset = std::min(
-        next_offset, get_value<npy_intp>(offsets, 0, s_offsets));
+    next_offset = std::min(next_offset, offsets[0]);
   }
-  // before first offset, we just clip values to be non-negative
+  // before first offset, no groups
   for (; i_x < next_offset; ++i_x) {
-    const RealT& xi = get_value<RealT>(x, i_x, s_x);
-    RealT& outi = get_value<RealT>(out, i_x, s_out);
+    const auto& xi = x[i_x];
     if (npy_isnan(xi)) {
-      outi = xi;
+      out[i_x] = xi;
     } else if (xi > 0) {
-      outi = RealT{1};
+      out[i_x] = RealT{1};
     } else {
       if constexpr(strict) {
-        outi = std::numeric_limits<RealT>::quiet_NaN();
+        out[i_x] = std::numeric_limits<RealT>::quiet_NaN();
       } else {
-        outi = RealT{0};
+        out[i_x] = RealT{0};
       }
     }
   }  // loop over x, out before first offset
   // between offsets, we will get sum of values
   for (npy_intp i_offsets = 1; i_offsets < d_offsets; ++i_offsets) {
     if (i_x == d_xout) {
-      // there are no more values to be checked
-      return;
+      return;  // no more values to check/update
     }
-    next_offset = std::max(
-        next_offset, std::min(
-          d_xout, get_value<npy_intp>(offsets, i_offsets, s_offsets)));
-    // we will loop over out separately, track where it started
+    next_offset = std::max(next_offset, std::min(d_xout, offsets[i_offsets]));
+    // loop to fill out happens separately than first pass on x
     npy_intp i_out = i_x;
     // accumulate x between offsets
     RealT acc_x{0};
     for (; i_x < next_offset; ++i_x) {
-      const RealT& xi = get_value<RealT>(x, i_x, s_x);
-      RealT& outi = get_value<RealT>(out, i_x, s_out);
+      const auto& xi = x[i_x];
       if (npy_isnan(xi)) {
         acc_x = xi;
-        i_x = next_offset;  // make it as if i_x reached end of loop
+        i_x = next_offset;
         break;
       } else if (xi > 0) {
-        outi = xi;
-        acc_x += outi;
+        out[i_x] = xi;
+        acc_x += xi;
       } else {
-        outi = RealT{0};
+        out[i_x] = RealT{0};
       }
     }  // done accumulating x between offsets
     // update out
     if (npy_isnan(acc_x)) {
       for (; i_out < next_offset; ++i_out) {
-        get_value<RealT>(out, i_out, s_out) = acc_x;
+        out[i_out] = acc_x;
       }
     } else if (acc_x > 0) {
       for (; i_out < next_offset; ++i_out) {
-        get_value<RealT>(out, i_out, s_out) /= acc_x;
+        out[i_out] /= acc_x;
       }
     } else {
       if constexpr(strict) {
         for (; i_out < next_offset; ++i_out) {
-          get_value<RealT>(out, i_out, s_out)
-            = std::numeric_limits<RealT>::quiet_NaN();
+          out[i_out] = std::numeric_limits<RealT>::quiet_NaN();
         }
       } else {
         for (; i_out < next_offset; ++i_out) {
-          get_value<RealT>(out, i_out, s_out) = RealT{0};
+          out[i_out] = RealT{0};
         }
       }
     }
-  }  // loop over x, out between offsets
+  }  // done looping between offsets
+  // after last offset, no groups
   for (; i_x < d_xout; ++i_x) {
-    const RealT& xi = get_value<RealT>(x, i_x, s_x);
-    RealT& outi = get_value<RealT>(out, i_x, s_out);
+    const auto& xi = x[i_x];
     if (npy_isnan(xi)) {
-      outi = xi;
+      out[i_x] = xi;
     } else if (xi > 0) {
-      outi = RealT{1};
+      out[i_x] = RealT{1};
     } else {
       if constexpr(strict) {
-        outi = std::numeric_limits<RealT>::quiet_NaN();
+        out[i_x] = std::numeric_limits<RealT>::quiet_NaN();
       } else {
-        outi = RealT{0};
+        out[i_x] = RealT{0};
       }
     }
   }  // loop over x, out after last offset
@@ -146,10 +152,11 @@ static void Outer(
   // outer loop on broadcasted variables
   for (npy_intp i = 0; i < dim_broadcast; ++i,
       x_ptr += stride_x, offsets_ptr += stride_offsets, out_ptr += stride_out) {
-    Inner<RealT, strict>(
-        x_ptr, offsets_ptr, out_ptr,
-        dim_xout, dim_offsets,
-        inner_stride_x, inner_stride_offsets, inner_stride_out);
+    Inner<strict>(
+        detail::CoreIt<RealT>::begin(x_ptr, inner_stride_x),
+        detail::CoreIt<npy_intp>::begin(offsets_ptr, inner_stride_offsets),
+        detail::CoreIt<RealT>::begin(out_ptr, inner_stride_out),
+        dim_xout, dim_offsets);
   }
 }
 

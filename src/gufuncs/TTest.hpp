@@ -62,54 +62,60 @@ inline RealT TwoSidedPValue(RealT dof, RealT t) {
   return 2 * boost::math::cdf(t_dist, -std::fabs(t));
 }
 
-template <typename RealT>
-inline void Inner(
-    char* x, char* labels, char* out, const npy_intp d,
-    const npy_intp s_x, const npy_intp s_labels) {
-  using detail::get_value;
-  // calculate t-statistic, degrees of freedom
+// perform t-test on provided random-access iterators
+template <typename ItX, typename ItLabels>
+inline constexpr typename std::iterator_traits<ItX>::value_type
+Test(ItX x, ItLabels labels, npy_intp d) {
+  using RealT = typename std::iterator_traits<ItX>::value_type;
+  static_assert(
+      std::is_same_v<std::random_access_iterator_tag,
+      typename std::iterator_traits<ItX>::iterator_category>,
+      "TTest::Test requires x to be random-access iterator");
+  static_assert(
+      std::is_same_v<std::random_access_iterator_tag,
+      typename std::iterator_traits<ItLabels>::iterator_category>,
+      "TTest::Test requires labels to be random-access iterator");
+
+  // first pass: calculate n1, n2, sum1, sum2 (ignore nan)
   int n1{0};
   int n2{0};
   RealT sum1{0};
   RealT sum2{0};
-  // first pass: calculate n1, n2, sum1, sum2 (ignore nan)
   for (npy_intp j = 0; j < d; ++j) {
-    const RealT& xi = get_value<RealT>(x, j, s_x);
-    if (npy_isnan(xi)) {
+    const auto& xj = x[j];
+    if (npy_isnan(xj)) {
       // skip missing values
       continue;
     }
-    const bool& labelsi = get_value<bool>(labels, j, s_labels);
-    if (labelsi) {
+    if (labels[j]) {
       ++n1;
-      sum1 += xi;
+      sum1 += xj;
     } else {
       ++n2;
-      sum2 += xi;
+      sum2 += xj;
     }
   }  // first pass over core dimension for sum1/2
   if (n1 < 2 || n2 < 2) {
     // not enough degrees of freedom, return NaN
-    get_value<RealT>(out, 0, 0) = std::numeric_limits<RealT>::quiet_NaN();
-    return;
+    return std::numeric_limits<RealT>::quiet_NaN();
   }
   const RealT mean1 = sum1 / n1;
   const RealT mean2 = sum2 / n2;
+
   // second pass to estimate sample variance with Bessel's correction
   RealT rss1{0};
   RealT rss2{0};
   for (npy_intp j = 0; j < d; ++j) {
-    const RealT& xi = get_value<RealT>(x, j, s_x);
-    if (npy_isnan(xi)) {
+    const auto& xj = x[j];
+    if (npy_isnan(xj)) {
       // skip missing values
       continue;
     }
-    const bool& labelsi = get_value<bool>(labels, j, s_labels);
-    if (labelsi) {
-      const RealT residual = xi - mean1;
+    if (labels[j]) {
+      const RealT residual = xj - mean1;
       rss1 += residual * residual;
     } else {
-      const RealT residual = xi - mean2;
+      const RealT residual = xj - mean2;
       rss2 += residual * residual;
     }
   }  // second pass over core dimension for rss1/2
@@ -117,9 +123,9 @@ inline void Inner(
   const RealT var2 = rss2 / (n2 - 1);
   const auto [dof, t_denom] = DOFWelchSatterthwaite(var1, var2, n1, n2);
   const RealT t = (mean1 - mean2) / t_denom;
-  get_value<RealT>(out, 0, 0) = TwoSidedPValue(dof, t);
-  return;
+  return TwoSidedPValue(dof, t);
 }
+
 
 template <typename RealT>
 static void Outer(
@@ -143,8 +149,10 @@ static void Outer(
   // outer loop on broadcasted variables
   for (npy_intp i = 0; i < dim_broadcast; ++i,
       x_ptr += stride_x, labels_ptr += stride_labels, out_ptr += stride_out) {
-    Inner<RealT>(x_ptr, labels_ptr, out_ptr,
-        dim_core, inner_stride_x, inner_stride_labels);
+    detail::get_value<RealT>(out_ptr) = Test(
+        detail::CoreIt<RealT>::begin(x_ptr, inner_stride_x),
+        detail::CoreIt<bool>::begin(labels_ptr, inner_stride_labels),
+        dim_core);
   }
   return;
 }

@@ -21,49 +21,60 @@
 
 namespace MajiqGufuncs {
 namespace ClipAndOffsetSum {
-template <typename RealT, bool clip = true>
+
+template <bool clip, typename ItX, typename ItOffsets, typename ItOut>
 inline void Inner(
-    char* x, char* offsets, char* out,
-    const npy_intp d_xout, const npy_intp d_offsets,
-    const npy_intp s_x, const npy_intp s_offsets, const npy_intp s_out) {
-  using detail::get_value;
+    ItX x, ItOffsets offsets, ItOut out,
+    const npy_intp d_xout, const npy_intp d_offsets) {
+  using RealT = typename std::iterator_traits<ItX>::value_type;
+  static_assert(
+      std::is_same_v<RealT, typename std::iterator_traits<ItOut>::value_type>,
+      "ClipAndOffsetSum::Inner x and out must have same type");
+  static_assert(
+      std::is_same_v<std::random_access_iterator_tag,
+      typename std::iterator_traits<ItX>::iterator_category>,
+      "ClipAndOffsetSum requires x to be random-access iterator");
+  static_assert(
+      std::is_same_v<std::random_access_iterator_tag,
+      typename std::iterator_traits<ItOffsets>::iterator_category>,
+      "ClipAndOffsetSum requires offsets to be random-access iterator");
+  static_assert(
+      std::is_same_v<std::random_access_iterator_tag,
+      typename std::iterator_traits<ItOut>::iterator_category>,
+      "ClipAndOffsetSum requires out to be random-access iterator");
+
   // indexes into x, out
   npy_intp i_x = 0;
   // get offset to start with
   npy_intp next_offset = d_xout;
   if (d_offsets > 0) {
-    next_offset = std::min(
-        next_offset, get_value<npy_intp>(offsets, 0, s_offsets));
+    next_offset = std::min(next_offset, offsets[0]);
   }
-  // before first offset, we just clip values to be non-negative
+  // before first offset -- no groups
   for (; i_x < next_offset; ++i_x) {
-    const RealT& xi = get_value<RealT>(x, i_x, s_x);
-    RealT& outi = get_value<RealT>(out, i_x, s_out);
+    const auto& xi = x[i_x];
     if (npy_isnan(xi)) {
-      outi = xi;
+      out[i_x] = xi;
     } else {
       if constexpr(clip) {
-        outi = std::max(RealT{0}, xi);
+        out[i_x] = std::max(RealT{0}, xi);
       } else {
-        outi = xi;
+        out[i_x] = xi;
       }
     }
-  }  // loop over x, out before first offset
-  // between offsets, we will get sum of values
+  }  // reached first offset
+  // loop within each group defined by offsets
   for (npy_intp i_offsets = 1; i_offsets < d_offsets; ++i_offsets) {
     if (i_x == d_xout) {
-      // there are no more values to be checked
-      return;
+      return;  // no more values to check/add
     }
-    next_offset = std::max(
-        next_offset, std::min(
-          d_xout, get_value<npy_intp>(offsets, i_offsets, s_offsets)));
-    // we will loop over out separately, track where it started
+    next_offset = std::max(next_offset, std::min(d_xout, offsets[i_offsets]));
+    // loop to fill out happens separately than first pass on x
     npy_intp i_out = i_x;
     // accumulate x between offsets
     RealT acc_x{0};
     for (; i_x < next_offset; ++i_x) {
-      const RealT& xi = get_value<RealT>(x, i_x, s_x);
+      const auto& xi = x[i_x];
       if (npy_isnan(xi)) {
         acc_x = xi;
         i_x = next_offset;
@@ -77,30 +88,30 @@ inline void Inner(
           acc_x += xi;
         }
       }
-    }  // done accumulating x between offsets
+    }  // accumulated x between offsets
     // update out
     for (; i_out < next_offset; ++i_out) {
-      get_value<RealT>(out, i_out, s_out) = acc_x;
+      out[i_out] = acc_x;
     }
-  }  // loop over x, out between offsets
+  }  // done looping over offsets
+  // after last offset -- no groups
   for (; i_x < d_xout; ++i_x) {
-    const RealT& xi = get_value<RealT>(x, i_x, s_x);
-    RealT& outi = get_value<RealT>(out, i_x, s_out);
+    const auto& xi = x[i_x];
     if (npy_isnan(xi)) {
-      outi = xi;
+      out[i_x] = xi;
     } else {
       if constexpr(clip) {
-        outi = std::max(RealT{0}, xi);
+        out[i_x] = std::max(RealT{0}, xi);
       } else {
-        outi = xi;
+        out[i_x] = xi;
       }
     }
-  }  // loop over x, out after last offset
+  }  // done looping over x, out
   return;
 }
 
 // implement clip_and_normalize(x: np.ndarray, offsets: np.ndarray)
-template <typename RealT, bool clip = true>
+template <typename RealT, bool clip>
 static void Outer(
     char** args, npy_intp* dimensions, npy_intp* steps, void* data) {
   // outer loop dimensions and index
@@ -124,10 +135,11 @@ static void Outer(
   // outer loop on broadcasted variables
   for (npy_intp i = 0; i < dim_broadcast; ++i,
       x_ptr += stride_x, offsets_ptr += stride_offsets, out_ptr += stride_out) {
-    Inner<RealT, clip>(
-        x_ptr, offsets_ptr, out_ptr,
-        dim_xout, dim_offsets,
-        inner_stride_x, inner_stride_offsets, inner_stride_out);
+    Inner<clip>(
+        detail::CoreIt<RealT>::begin(x_ptr, inner_stride_x),
+        detail::CoreIt<npy_intp>::begin(offsets_ptr, inner_stride_offsets),
+        detail::CoreIt<RealT>::begin(out_ptr, inner_stride_out),
+        dim_xout, dim_offsets);
   }
 }
 
@@ -179,8 +191,8 @@ constexpr int ntypes = 2;
 constexpr int nin = 2;
 constexpr int nout = 1;
 PyUFuncGenericFunction funcs[ntypes] = {
-  reinterpret_cast<PyUFuncGenericFunction>(&Outer<npy_float>),
-  reinterpret_cast<PyUFuncGenericFunction>(&Outer<npy_double>)
+  reinterpret_cast<PyUFuncGenericFunction>(&Outer<npy_float, true>),
+  reinterpret_cast<PyUFuncGenericFunction>(&Outer<npy_double, true>)
 };
 PyUFuncGenericFunction noclipfuncs[ntypes] = {
   reinterpret_cast<PyUFuncGenericFunction>(&Outer<npy_float, false>),
