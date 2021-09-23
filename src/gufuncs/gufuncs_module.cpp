@@ -18,6 +18,10 @@
 
 #include "ClipAndOffsetSum.hpp"
 #include "ClipAndNormalize.hpp"
+#include "InfoScore.hpp"
+#include "MannWhitney.hpp"
+#include "TNOM.hpp"
+#include "TTest.hpp"
 
 
 // no extra data being passed in
@@ -87,6 +91,42 @@ PyMODINIT_FUNC PyInit_gufuncs(void) {
   PyDict_SetItemString(
       d, ClipAndNormalize::strictname, clip_and_normalize_strict);
   Py_DECREF(clip_and_normalize_strict);
+
+  namespace TTest = MajiqGufuncs::TTest;
+  PyObject *ttest = PyUFunc_FromFuncAndDataAndSignature(
+      TTest::funcs, data, TTest::types,
+      TTest::ntypes, TTest::nin, TTest::nout,
+      PyUFunc_None, TTest::name, TTest::doc, 0,
+      TTest::signature);
+  PyDict_SetItemString(d, TTest::name, ttest);
+  Py_DECREF(ttest);
+
+  namespace MannWhitney = MajiqGufuncs::MannWhitney;
+  PyObject *mannwhitneyu = PyUFunc_FromFuncAndDataAndSignature(
+      MannWhitney::funcs, data, MannWhitney::types,
+      MannWhitney::ntypes, MannWhitney::nin, MannWhitney::nout,
+      PyUFunc_None, MannWhitney::name, MannWhitney::doc, 0,
+      MannWhitney::signature);
+  PyDict_SetItemString(d, MannWhitney::name, mannwhitneyu);
+  Py_DECREF(mannwhitneyu);
+
+  namespace TNOM = MajiqGufuncs::TNOM;
+  PyObject *tnom = PyUFunc_FromFuncAndDataAndSignature(
+      TNOM::funcs, data, TNOM::types,
+      TNOM::ntypes, TNOM::nin, TNOM::nout,
+      PyUFunc_None, TNOM::name, TNOM::doc, 0,
+      TNOM::signature);
+  PyDict_SetItemString(d, TNOM::name, tnom);
+  Py_DECREF(tnom);
+
+  namespace InfoScore = MajiqGufuncs::InfoScore;
+  PyObject *infoscore = PyUFunc_FromFuncAndDataAndSignature(
+      InfoScore::funcs, data, InfoScore::types,
+      InfoScore::ntypes, InfoScore::nin, InfoScore::nout,
+      PyUFunc_None, InfoScore::name, InfoScore::doc, 0,
+      InfoScore::signature);
+  PyDict_SetItemString(d, InfoScore::name, infoscore);
+  Py_DECREF(infoscore);
 
   // return pointer to final module object
   return m;
