@@ -364,7 +364,7 @@ def run_coverage_infer(args: argparse.Namespace) -> None:
     log.info(f"Opening coverage from {len(args.original_psicov)} PSI coverage files")
     psicov = nm.PsiCoverage.from_zarr(args.original_psicov)
     log.info("Setting up model matrix of all factors")
-    factors = _get_factors(psicov.prefixes, args).load()
+    factors = _get_factors(psicov.prefixes, args).load().chunk({"prefix": 1})
     log.info(f"Opening up model parameters from {args.coverage_model.resolve()}")
     models = xr.open_zarr(args.coverage_model).load()
     log.info("Loading offsets between events")
