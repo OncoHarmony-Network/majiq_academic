@@ -24,6 +24,7 @@ from new_majiq.EventsCoverage import EventsCoverage
 from new_majiq.experiments import bam_experiment_name
 from new_majiq.GeneIntrons import GeneIntrons
 from new_majiq.GeneJunctions import GeneJunctions
+from new_majiq.gufuncs import offsetsum
 from new_majiq.SpliceGraph import SpliceGraph
 
 
@@ -249,13 +250,9 @@ class PsiCoverage(object):
             np.logical_or.reduceat(passed, offsets[:-1]), event_size
         )
         # get total coverage per event, per connection
-        raw_total = np.repeat(
-            np.add.reduceat(events_coverage.numreads, offsets[:-1]), event_size
-        )
-        bootstrap_total = np.repeat(
-            np.add.reduceat(events_coverage.bootstraps, offsets[:-1]),
-            event_size,
-            axis=0,
+        raw_total = offsetsum(events_coverage.numreads, offsets, axes=[0, -1, 0])
+        bootstrap_total = offsetsum(
+            events_coverage.bootstraps, offsets, axes=[0, -1, 0]
         )
         # get psi per connection
         with np.errstate(divide="ignore", invalid="ignore"):

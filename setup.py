@@ -64,6 +64,18 @@ ext_modules = [
         extra_compile_args=["-std=c++11"],
         extra_link_args=["-std=c++11"],
     ),
+    Extension(
+        "new_majiq.gufuncs",
+        sources=["src/gufuncs/gufuncs_module.cpp"],
+        language="c++",
+        include_dirs=[
+            "src/",
+            get_paths()["include"],
+            np.get_include(),
+        ],
+        extra_compile_args=["-std=c++17"],
+        extra_link_args=["-std=c++17"],
+    ),
 ]
 
 

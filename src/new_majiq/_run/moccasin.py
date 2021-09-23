@@ -20,6 +20,7 @@ import new_majiq as nm
 import new_majiq.constants as constants
 from new_majiq._run._majiq_args import check_nonnegative_factory
 from new_majiq._run._run import GenericSubcommand
+from new_majiq.gufuncs import clip_and_normalize_strict
 from new_majiq.logger import get_logger
 
 
@@ -365,7 +366,20 @@ def run_coverage_infer(args: argparse.Namespace) -> None:
     log.info("Setting up model matrix of all factors")
     factors = _get_factors(psicov.prefixes, args).load()
     log.info(f"Opening up model parameters from {args.coverage_model.resolve()}")
-    models = xr.open_zarr(args.coverage_model)
+    models = xr.open_zarr(args.coverage_model).load()
+    log.info("Loading offsets between events")
+    offsets = psicov.lsv_offsets.load()
+
+    def clip_and_renormalize_psi(x: xr.DataArray) -> xr.DataArray:
+        return xr.apply_ufunc(
+            clip_and_normalize_strict,
+            x,
+            offsets,
+            input_core_dims=[["ec_idx"], ["offset_idx"]],
+            output_core_dims=[["ec_idx"]],
+            dask="allowed",
+        )
+
     log.info("Correcting bootstrap_psi")
     adj_bootstrap_psi = (
         # get linear adjustment of bootstrap_psi
@@ -377,7 +391,7 @@ def run_coverage_infer(args: argparse.Namespace) -> None:
             dim_factor="factor",
         )
         # clip and renormalize
-        .pipe(mc.clip_and_renormalize_psi, psicov.lsv_offsets, dim_ecidx="ec_idx")
+        .pipe(clip_and_renormalize_psi)
         # but must be passed and not null
         .pipe(
             lambda x: x.where(x.notnull() & psicov.event_passed, psicov.bootstrap_psi)
@@ -394,7 +408,7 @@ def run_coverage_infer(args: argparse.Namespace) -> None:
             dim_factor="factor",
         )
         # clip and renormalize
-        .pipe(mc.clip_and_renormalize_psi, psicov.lsv_offsets, dim_ecidx="ec_idx")
+        .pipe(clip_and_renormalize_psi)
         # but must be passed and not null
         .pipe(lambda x: x.where(x.notnull() & psicov.event_passed, psicov.raw_psi))
     )
