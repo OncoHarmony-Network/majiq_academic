@@ -19,12 +19,12 @@ import xarray as xr
 
 import new_majiq.beta_mixture as bm
 import new_majiq.constants as constants
+import new_majiq.gufuncs as gufuncs
 from new_majiq.Events import Events, _Events
 from new_majiq.EventsCoverage import EventsCoverage
 from new_majiq.experiments import bam_experiment_name
 from new_majiq.GeneIntrons import GeneIntrons
 from new_majiq.GeneJunctions import GeneJunctions
-from new_majiq.gufuncs import offsetsum
 from new_majiq.SpliceGraph import SpliceGraph
 
 
@@ -240,18 +240,17 @@ class PsiCoverage(object):
         """
         # get offsets as int (not uint)
         offsets: np.ndarray = events_coverage.events._offsets.astype(np.int64)
-        event_size: np.ndarray = np.diff(offsets)
         # get whether individual connection passes thresholds
         passed = (events_coverage.numreads >= minreads) & (
             events_coverage.numbins >= minbins
         )
         # get whether any connection in event passed, per connection
-        event_passed = np.repeat(
-            np.logical_or.reduceat(passed, offsets[:-1]), event_size
-        )
+        event_passed = gufuncs.offset_logical_or(passed, offsets)
         # get total coverage per event, per connection
-        raw_total = offsetsum(events_coverage.numreads, offsets, axes=[0, -1, 0])
-        bootstrap_total = offsetsum(
+        raw_total = gufuncs.offsetsum(
+            events_coverage.numreads, offsets, axes=[0, -1, 0]
+        )
+        bootstrap_total = gufuncs.offsetsum(
             events_coverage.bootstraps, offsets, axes=[0, -1, 0]
         )
         # get psi per connection

@@ -18,6 +18,8 @@
 
 #include "ClipAndOffsetSum.hpp"
 #include "ClipAndNormalize.hpp"
+#include "OffsetOr.hpp"
+
 #include "InfoScore.hpp"
 #include "MannWhitney.hpp"
 #include "TNOM.hpp"
@@ -56,8 +58,16 @@ PyMODINIT_FUNC PyInit_gufuncs(void) {
   import_array();
   import_umath();
 
-  namespace ClipAndOffsetSum = MajiqGufuncs::ClipAndOffsetSum;
+  namespace OffsetOr = MajiqGufuncs::OffsetOr;
+  PyObject *offset_logical_or = PyUFunc_FromFuncAndDataAndSignature(
+      OffsetOr::funcs, data, OffsetOr::types,
+      OffsetOr::ntypes, OffsetOr::nin, OffsetOr::nout,
+      PyUFunc_None, OffsetOr::name, OffsetOr::doc, 0,
+      OffsetOr::signature);
+  PyDict_SetItemString(d, OffsetOr::name, offset_logical_or);
+  Py_DECREF(offset_logical_or);
 
+  namespace ClipAndOffsetSum = MajiqGufuncs::ClipAndOffsetSum;
   PyObject *clip_and_offsetsum = PyUFunc_FromFuncAndDataAndSignature(
       ClipAndOffsetSum::funcs, data, ClipAndOffsetSum::types,
       ClipAndOffsetSum::ntypes, ClipAndOffsetSum::nin, ClipAndOffsetSum::nout,
