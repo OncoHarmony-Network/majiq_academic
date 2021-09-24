@@ -58,6 +58,10 @@ PyMODINIT_FUNC PyInit_gufuncs(void) {
   import_array();
   import_umath();
 
+  /**
+   *Quickly work with groups defined by offsets
+   */
+
   namespace OffsetOr = MajiqGufuncs::OffsetOr;
   PyObject *offset_logical_or = PyUFunc_FromFuncAndDataAndSignature(
       OffsetOr::funcs, data, OffsetOr::types,
@@ -101,6 +105,11 @@ PyMODINIT_FUNC PyInit_gufuncs(void) {
   PyDict_SetItemString(
       d, ClipAndNormalize::strictname, clip_and_normalize_strict);
   Py_DECREF(clip_and_normalize_strict);
+
+
+  /**
+   * Perform statistical tests
+   */
 
   namespace TTest = MajiqGufuncs::TTest;
   PyObject *ttest = PyUFunc_FromFuncAndDataAndSignature(

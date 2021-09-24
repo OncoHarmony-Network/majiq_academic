@@ -42,7 +42,7 @@ class CoreIt {
 
  private:
   char* ptr_;
-  const npy_intp stride_;  // XXX: don't let this be 0.
+  npy_intp stride_;  // XXX: don't let this be 0.
 
   // private constructor because we can't allow zero stride
   CoreIt(char* ptr, npy_intp stride)
@@ -56,10 +56,16 @@ class CoreIt {
   CoreIt& operator=(const CoreIt&) = default;
   CoreIt& operator=(CoreIt&&) = default;
 
-  pointer operator->() noexcept {
+  // directly apply stride to object
+  void apply_stride(npy_intp s) noexcept {
+    ptr_ += s;
+    return;
+  }
+
+  pointer operator->() const noexcept {
     return reinterpret_cast<pointer>(ptr_);
   }
-  reference operator*() noexcept {
+  reference operator*() const noexcept {
     return *operator->();
   }
   CoreIt& operator++() noexcept {
@@ -113,8 +119,8 @@ class CoreIt {
       const CoreIt& x, const CoreIt& y) noexcept {
     return (x.ptr_ - y.ptr_) / x.stride_;
   }
-  reference operator[](difference_type n) noexcept {
-    return *((*this) + n);
+  reference operator[](difference_type n) const noexcept {
+    return get_value<value_type>(ptr_, n, stride_);
   }
 
   friend inline bool operator==(
