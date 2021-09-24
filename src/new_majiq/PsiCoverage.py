@@ -222,8 +222,8 @@ class PsiCoverage(object):
         )
         pmf = cdf.isel(pmf_bin=slice(1, None)) - cdf.isel(pmf_bin=slice(None, -1))
         return pmf.assign_coords(
-            pmf_bin_start=("pmf_bin", endpoints[:-1]),
-            pmf_bin_end=("pmf_bin", endpoints[1:]),
+            pmf_bin_start=("pmf_bin", endpoints.values[:-1]),
+            pmf_bin_end=("pmf_bin", endpoints.values[1:]),
         )
 
     @classmethod
