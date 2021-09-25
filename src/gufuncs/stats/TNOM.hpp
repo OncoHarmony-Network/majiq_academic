@@ -45,6 +45,9 @@ inline bool operator==(const TNOMRecord& x, const TNOMRecord& y) {
   return std::tie(x.n_neg, x.n_pos, x.score)
     == std::tie(y.n_neg, y.n_pos, y.score);
 }
+inline bool operator!=(const TNOMRecord& x, const TNOMRecord& y) {
+  return !(x == y);
+}
 
 class TNOMCache {
  private:
@@ -96,10 +99,14 @@ class TNOMCache {
       std::swap(n_neg, n_pos);  // n_pos >= n_neg
     }
     // use cached result if present
-    auto [result_iter, inserted]
-      = pvalue_.try_emplace({n_neg, n_pos, score}, 1);
-    if (inserted) {
-      // result was just created, so compute it
+    TNOMRecord key{n_neg, n_pos, score};
+    auto lb = pvalue_.lower_bound(key);
+    if (lb != pvalue_.end() && lb->first == key) {
+      // there was a cached result
+      return lb->second;
+    } else {
+      // no cached result, compute it now
+      double result{1};
 
       /**
        * Ben-Dor 2002 Proposition 3.1 says that a path has TNOM <= score if and
@@ -118,7 +125,7 @@ class TNOMCache {
 
       // so, if A or B are 0, this is all paths.
       if (A <= 0 || B <= 0) {
-        result_iter->second = 1.;
+        result = double{1};
       } else {
         /**
          * Lemma 3.2 tells us how to count how many paths there are as an
@@ -169,14 +176,14 @@ class TNOMCache {
         logsum_neg -= logZ;
 
         // compute result
-        double result = std::exp(logsum_pos);
+        result = std::exp(logsum_pos);
         if (logsum_neg > std::numeric_limits<double>::lowest()) {
           result -= std::exp(logsum_neg);
         }
-        result_iter->second = result;
       }  // end nontrivial case (A, B != 0)
-    }  // end computing result when not cached
-    return result_iter->second;
+      pvalue_.insert(lb, std::make_pair(key, result));
+      return result;
+    }
   }
 
   TNOMCache() = default;

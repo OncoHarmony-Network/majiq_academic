@@ -41,6 +41,9 @@ inline bool operator==(const InfoScoreRecord& x, const InfoScoreRecord& y) {
   return std::tie(x.n_neg, x.n_pos, x.score)
     == std::tie(y.n_neg, y.n_pos, y.score);
 }
+inline bool operator!=(const InfoScoreRecord& x, const InfoScoreRecord& y) {
+  return !(x == y);
+}
 
 // empirical entropy for specified counts of observations multiplied by the
 // total number of observations
@@ -95,11 +98,14 @@ class InfoScoreCache {
       // by symmetry these are identical, but only need to cache one
       std::swap(n_neg, n_pos);
     }
-    // use cached result if present
-    auto [result_iter, inserted]
-      = pvalue_.try_emplace({n_neg, n_pos, score}, 1);
-    if (inserted) {
-      // result was just created, so compute it
+    const InfoScoreRecord key{n_neg, n_pos, score};
+    // search for key in pvalue_ records
+    auto lb = pvalue_.lower_bound(key);
+    if (lb != pvalue_.end() && lb->first == key) {
+      // use cached result
+      return lb->second;
+    } else {
+      // not cached, compute it
 
       // length of path, final offset
       const int N = n_pos + n_neg;
@@ -108,8 +114,10 @@ class InfoScoreCache {
       // Dynamic programming O(N^2) compute
       // naively O(N^2) grid, but use two O(N) vectors instead
       // Note: these counts are in *logspace*
-      std::vector<double> OldCounts(1 + N, std::numeric_limits<double>::lowest());
-      std::vector<double> NewCounts(1 + N, std::numeric_limits<double>::lowest());
+      std::vector<double> OldCounts(
+          1 + N, std::numeric_limits<double>::lowest());
+      std::vector<double> NewCounts(
+          1 + N, std::numeric_limits<double>::lowest());
       // Indexes 0, ..., L map to offsets -n_neg, ..., n_pos
       // Base case (length 0 path): there is exactly one path (point) that is
       // valid, which is at (0, 0)
@@ -188,8 +196,9 @@ class InfoScoreCache {
 
         if (new_min > new_max) {
           // there are no valid paths (all paths have <= score)
-          result_iter->second = 1.;
-          return result_iter->second;
+          double result{1};
+          pvalue_.insert(lb, std::make_pair(key, result));
+          return result;
         }
 
         // update old values using new values in preparation for next offset
@@ -197,9 +206,10 @@ class InfoScoreCache {
         last_max = new_max;
         std::swap(NewCounts, OldCounts);
       }  // iterate over positions until reach end of sequence
-      result_iter->second = std::exp(bad_paths - detail::lchoose(n_neg, N));
+      auto result = std::exp(bad_paths - detail::lchoose(n_neg, N));
+      pvalue_.insert(lb, std::make_pair(key, result));
+      return result;
     }
-    return result_iter->second;
   }
 };
 

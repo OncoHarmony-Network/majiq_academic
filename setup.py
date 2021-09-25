@@ -66,8 +66,8 @@ ext_modules = [
             get_paths()["include"],
             np.get_include(),
         ],
-        extra_compile_args=["-g0", "-std=c++17"],
-        extra_link_args=["-std=c++17"],
+        extra_compile_args=["-g0", "-std=c++11"],
+        extra_link_args=["-std=c++11"],
     ),
     Extension(
         "new_majiq._stats",
@@ -78,8 +78,8 @@ ext_modules = [
             get_paths()["include"],
             np.get_include(),
         ],
-        extra_compile_args=["-g0", "-std=c++17"],
-        extra_link_args=["-std=c++17"],
+        extra_compile_args=["-g0", "-std=c++11"],
+        extra_link_args=["-std=c++11"],
     ),
 ]
 

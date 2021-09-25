@@ -109,6 +109,10 @@ inline bool operator==(
     const MannWhitneyStatRecord &x, const MannWhitneyStatRecord &y) {
   return std::tie(x.n1, x.n2, x.U1) == std::tie(y.n1, y.n2, y.U1);
 }
+inline bool operator!=(
+    const MannWhitneyStatRecord &x, const MannWhitneyStatRecord &y) {
+  return !(x == y);
+}
 
 struct MannWhitneyChooseRecord {
   int_fast64_t n;
@@ -123,6 +127,10 @@ inline bool operator<(
 inline bool operator==(
     const MannWhitneyChooseRecord &x, const MannWhitneyChooseRecord &y) {
   return std::tie(x.n, x.k) == std::tie(y.n, y.k);
+}
+inline bool operator!=(
+    const MannWhitneyChooseRecord &x, const MannWhitneyChooseRecord &y) {
+  return !(x == y);
 }
 
 
@@ -181,13 +189,16 @@ class MannWhitneyCache {
     // use cached result if present
     MannWhitneyStatRecord record{n1, n2, U};
     // get iterator to record (insert if doesn't exist)
-    auto [result_iter, inserted] = count_cache_.try_emplace(record, 0);
-    if (inserted) {
-      // result was just created, so compute it
-      result_iter->second = CountWithStatistic(n1, n2 - 1, U)
+    auto lb = count_cache_.lower_bound(record);
+    if (lb != count_cache_.end() && lb->first == record) {
+      // result cached
+      return lb->second;
+    } else {
+      auto result = CountWithStatistic(n1, n2 - 1, U)
         + CountWithStatistic(n1 - 1, n2, U - n2);
+      count_cache_.insert(lb, std::make_pair(record, result));
+      return result;
     }
-    return result_iter->second;
   }
 
   /** Cached computation of n choose k using Pascal's Triangle
@@ -219,12 +230,15 @@ class MannWhitneyCache {
     // use cached result if present
     MannWhitneyChooseRecord record{n, k};
     // get iterator to record (insert if doesn't exist)
-    auto [result_iter, inserted] = choose_cache_.try_emplace(record, 0);
-    if (inserted) {
-      // result was just created, so compute it
-      result_iter->second = Choose(n - 1, k) + Choose(n - 1, k - 1);
+    auto lb = choose_cache_.lower_bound(record);
+    if (lb != choose_cache_.end() && lb->first == record) {
+      // result cached
+      return lb->second;
+    } else {
+      auto result = Choose(n - 1, k) + Choose(n - 1, k - 1);
+      choose_cache_.insert(lb, std::make_pair(record, result));
+      return result;
     }
-    return result_iter->second;
   }
 
   /** Number of outcomes in null distribution with statistic less
@@ -261,13 +275,16 @@ class MannWhitneyCache {
     // use cached result if present
     MannWhitneyStatRecord record{n1, n2, U};
     // get iterator to record (insert if doesn't exist)
-    auto [result_iter, inserted] = cumcount_cache_.try_emplace(record, 0);
-    if (inserted) {
-      // result was just created, so compute it
-      result_iter->second = CumulativeCountFromLeft(n1, n2, U - 1)
+    auto lb = cumcount_cache_.lower_bound(record);
+    if (lb != cumcount_cache_.end() && lb->first == record) {
+      // result is cached
+      return lb->second;
+    } else {
+      auto result = CumulativeCountFromLeft(n1, n2, U - 1)
         + CountWithStatistic(n1, n2, U);
+      cumcount_cache_.insert(lb, std::make_pair(record, result));
+      return result;
     }
-    return result_iter->second;
   }
 
   /** Number of outcomes in null distribution with statistic greater

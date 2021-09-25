@@ -24,6 +24,12 @@
 namespace MajiqGufuncs {
 namespace TTest {
 
+template <typename RealT>
+struct DOF_pair {
+  RealT dof;
+  RealT t_denom;
+};
+
 /** Estimate pooled degrees of freedom for Welch t-test
  *
  * Estimate pooled degrees of freedom for Welch t-test using
@@ -39,7 +45,7 @@ namespace TTest {
  * @returns degrees of freedom, denominator for t-statistic
  */
 template <typename RealT>
-inline std::pair<RealT, RealT> DOFWelchSatterthwaite(
+inline DOF_pair<RealT> DOFWelchSatterthwaite(
     RealT var1, RealT var2, int n1, int n2) {
   // compute ratio of variance to sample size
   const RealT ratio1 = var1 / n1;
@@ -53,7 +59,7 @@ inline std::pair<RealT, RealT> DOFWelchSatterthwaite(
   // denominator for t-test is
   const RealT t_denom = std::sqrt(ratio1 + ratio2);
   // return pair of dof, t_denom
-  return std::make_pair(dof, t_denom);
+  return DOF_pair<RealT>{dof, t_denom};
 }
 
 template <typename RealT>
@@ -111,9 +117,9 @@ inline RealT Test(ItX x, ItLabels labels, npy_intp d) {
   }  // second pass over core dimension for rss1/2
   const RealT var1 = rss1 / (n1 - 1);
   const RealT var2 = rss2 / (n2 - 1);
-  const auto [dof, t_denom] = DOFWelchSatterthwaite(var1, var2, n1, n2);
-  const RealT t = (mean1 - mean2) / t_denom;
-  return TwoSidedPValue(dof, t);
+  const auto dof_pair = DOFWelchSatterthwaite(var1, var2, n1, n2);
+  const RealT t = (mean1 - mean2) / dof_pair.t_denom;
+  return TwoSidedPValue(dof_pair.dof, t);
 }
 
 

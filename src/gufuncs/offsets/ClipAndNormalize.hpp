@@ -22,7 +22,20 @@
 namespace MajiqGufuncs {
 namespace ClipAndNormalize {
 
-template <bool strict, typename ItX, typename ItOffsets, typename ItOut,
+struct NaNZeroCov {
+  template <typename RealT>
+  RealT operator()(RealT) {
+    return std::numeric_limits<RealT>::quiet_NaN();
+  }
+};
+struct ZeroZeroCov {
+  template <typename RealT>
+  RealT operator()(RealT) {
+    return RealT{0};
+  }
+};
+
+template <typename StrictT, typename ItX, typename ItOffsets, typename ItOut,
          typename RealT = typename std::iterator_traits<ItX>::value_type>
 inline void Inner(
     ItX x, ItOffsets offsets, ItOut out,
@@ -42,11 +55,7 @@ inline void Inner(
     } else if (xi > 0) {
       out[i_x] = RealT{1};
     } else {
-      if constexpr(strict) {
-        out[i_x] = std::numeric_limits<RealT>::quiet_NaN();
-      } else {
-        out[i_x] = RealT{0};
-      }
+      out[i_x] = StrictT{}(RealT{});
     }
   }  // loop over x, out before first offset
   // between offsets, we will get sum of values
@@ -82,14 +91,8 @@ inline void Inner(
         out[i_out] /= acc_x;
       }
     } else {
-      if constexpr(strict) {
-        for (; i_out < next_offset; ++i_out) {
-          out[i_out] = std::numeric_limits<RealT>::quiet_NaN();
-        }
-      } else {
-        for (; i_out < next_offset; ++i_out) {
-          out[i_out] = RealT{0};
-        }
+      for (; i_out < next_offset; ++i_out) {
+        out[i_out] = StrictT{}(RealT{});
       }
     }
   }  // done looping between offsets
@@ -101,18 +104,14 @@ inline void Inner(
     } else if (xi > 0) {
       out[i_x] = RealT{1};
     } else {
-      if constexpr(strict) {
-        out[i_x] = std::numeric_limits<RealT>::quiet_NaN();
-      } else {
-        out[i_x] = RealT{0};
-      }
+      out[i_x] = StrictT{}(RealT{});
     }
   }  // loop over x, out after last offset
   return;
 }
 
 // implement clip_and_normalize(x: np.ndarray, offsets: np.ndarray)
-template <typename RealT, bool strict>
+template <typename RealT, typename StrictT>
 static void Outer(
     char** args, npy_intp* dimensions, npy_intp* steps, void* data) {
   // outer loop dimensions and index
@@ -136,7 +135,7 @@ static void Outer(
   // outer loop on broadcasted variables
   for (npy_intp i = 0; i < dim_broadcast; ++i,
       x_ptr += stride_x, offsets_ptr += stride_offsets, out_ptr += stride_out) {
-    Inner<strict>(
+    Inner<StrictT>(
         detail::CoreIt<RealT>::begin(x_ptr, inner_stride_x),
         detail::CoreIt<npy_intp>::begin(offsets_ptr, inner_stride_offsets),
         detail::CoreIt<RealT>::begin(out_ptr, inner_stride_out),
@@ -193,12 +192,12 @@ constexpr int ntypes = 2;
 constexpr int nin = 2;
 constexpr int nout = 1;
 PyUFuncGenericFunction funcs[ntypes] = {
-  reinterpret_cast<PyUFuncGenericFunction>(&Outer<npy_float, false>),
-  reinterpret_cast<PyUFuncGenericFunction>(&Outer<npy_double, false>)
+  reinterpret_cast<PyUFuncGenericFunction>(&Outer<npy_float, ZeroZeroCov>),
+  reinterpret_cast<PyUFuncGenericFunction>(&Outer<npy_double, ZeroZeroCov>)
 };
 PyUFuncGenericFunction strictfuncs[ntypes] = {
-  reinterpret_cast<PyUFuncGenericFunction>(&Outer<npy_float, true>),
-  reinterpret_cast<PyUFuncGenericFunction>(&Outer<npy_double, true>)
+  reinterpret_cast<PyUFuncGenericFunction>(&Outer<npy_float, NaNZeroCov>),
+  reinterpret_cast<PyUFuncGenericFunction>(&Outer<npy_double, NaNZeroCov>)
 };
 static char types[
   ntypes * (nin + nout)
