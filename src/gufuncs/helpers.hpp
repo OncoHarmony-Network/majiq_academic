@@ -12,6 +12,7 @@
 #define MAJIQGUFUNCS_HELPERS_HPP
 
 #include <numpy/ndarraytypes.h>
+#include <iterator>
 
 namespace MajiqGufuncs {
 namespace detail {
@@ -42,7 +43,7 @@ class CoreIt {
 
  private:
   char* ptr_;
-  npy_intp stride_;  // XXX: don't let this be 0.
+  npy_intp stride_;
 
   // private constructor because we can't allow zero stride
   CoreIt(char* ptr, npy_intp stride)
@@ -60,6 +61,11 @@ class CoreIt {
   void apply_stride(npy_intp s) noexcept {
     ptr_ += s;
     return;
+  }
+
+  // get iterator with different stride
+  CoreIt with_stride(npy_intp s) noexcept {
+    return CoreIt{ptr_, s};
   }
 
   pointer operator->() const noexcept {
@@ -149,12 +155,10 @@ class CoreIt {
   }
 
   static CoreIt begin(char* ptr, npy_intp stride) {
-    if (stride == 0) {
-      // make it possible to reach end iterator
-      stride = sizeof(value_type);
-    }
     return CoreIt<T>{ptr, stride};
   }
+  // XXX: this pattern does not work if n == 1 because numpy will set stride to
+  // 0 for broadcasting
   static CoreIt end(const CoreIt& x, npy_intp n) {
     return x + n;
   }

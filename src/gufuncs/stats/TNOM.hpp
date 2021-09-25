@@ -22,7 +22,7 @@
 #include <map>
 #include <utility>
 
-#include "helpers.hpp"
+#include <gufuncs/helpers.hpp>
 #include "LogMath.hpp"
 
 namespace MajiqGufuncs {
@@ -190,18 +190,6 @@ class TNOMCache {
 template <typename ItX, typename ItSort, typename ItLabels>
 inline double Test(
     TNOMCache& tester, ItX x, ItSort sortx, ItLabels labels, npy_intp d) {
-  static_assert(
-      std::is_same_v<std::random_access_iterator_tag,
-      typename std::iterator_traits<ItX>::iterator_category>,
-      "TNOM::Test requires x to be random-access iterator");
-  static_assert(
-      std::is_same_v<std::random_access_iterator_tag,
-      typename std::iterator_traits<ItSort>::iterator_category>,
-      "TNOM::Test requires sortx to be random-access iterator");
-  static_assert(
-      std::is_same_v<std::random_access_iterator_tag,
-      typename std::iterator_traits<ItLabels>::iterator_category>,
-      "TNOM::Test requires labels to be random-access iterator");
   // counts for labels on RHS
   int rhs1 = 0;
   int rhs2 = 0;

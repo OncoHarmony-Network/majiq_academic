@@ -16,7 +16,7 @@
 #include <limits>
 #include <utility>
 
-#include "helpers.hpp"
+#include <gufuncs/helpers.hpp>
 
 #include <boost/math/distributions/students_t.hpp>
 
@@ -63,19 +63,9 @@ inline RealT TwoSidedPValue(RealT dof, RealT t) {
 }
 
 // perform t-test on provided random-access iterators
-template <typename ItX, typename ItLabels>
-inline constexpr typename std::iterator_traits<ItX>::value_type
-Test(ItX x, ItLabels labels, npy_intp d) {
-  using RealT = typename std::iterator_traits<ItX>::value_type;
-  static_assert(
-      std::is_same_v<std::random_access_iterator_tag,
-      typename std::iterator_traits<ItX>::iterator_category>,
-      "TTest::Test requires x to be random-access iterator");
-  static_assert(
-      std::is_same_v<std::random_access_iterator_tag,
-      typename std::iterator_traits<ItLabels>::iterator_category>,
-      "TTest::Test requires labels to be random-access iterator");
-
+template <typename ItX, typename ItLabels,
+         typename RealT = typename std::iterator_traits<ItX>::value_type>
+inline RealT Test(ItX x, ItLabels labels, npy_intp d) {
   // first pass: calculate n1, n2, sum1, sum2 (ignore nan)
   int n1{0};
   int n2{0};

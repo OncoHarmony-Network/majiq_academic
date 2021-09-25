@@ -19,7 +19,7 @@
 #include <utility>
 #include <vector>
 
-#include "helpers.hpp"
+#include <gufuncs/helpers.hpp>
 #include "LogMath.hpp"
 
 namespace MajiqGufuncs {
@@ -207,19 +207,6 @@ class InfoScoreCache {
 template <typename ItX, typename ItSort, typename ItLabels>
 inline double Test(
     InfoScoreCache& tester, ItX x, ItSort sortx, ItLabels labels, npy_intp d) {
-  static_assert(
-      std::is_same_v<std::random_access_iterator_tag,
-      typename std::iterator_traits<ItX>::iterator_category>,
-      "TNOM::Test requires x to be random-access iterator");
-  static_assert(
-      std::is_same_v<std::random_access_iterator_tag,
-      typename std::iterator_traits<ItSort>::iterator_category>,
-      "TNOM::Test requires sortx to be random-access iterator");
-  static_assert(
-      std::is_same_v<std::random_access_iterator_tag,
-      typename std::iterator_traits<ItLabels>::iterator_category>,
-      "TNOM::Test requires labels to be random-access iterator");
-
   // first pass: accumulate count of negative/positive examples
   int n_neg = 0;
   int n_pos = 0;  // label == true

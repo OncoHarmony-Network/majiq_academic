@@ -16,7 +16,7 @@
 
 #include <algorithm>
 
-#include "helpers.hpp"
+#include <gufuncs/helpers.hpp>
 
 namespace MajiqGufuncs {
 namespace OffsetOr {
@@ -25,22 +25,6 @@ template <typename ItX, typename ItOffsets, typename ItOut>
 inline void Inner(
     ItX x, ItOffsets offsets, ItOut out,
     const npy_intp d_xout, const npy_intp d_offsets) {
-  static_assert(
-      std::is_same_v<npy_bool, typename std::iterator_traits<ItOut>::value_type>,
-      "OffsetOr::Inner out must have boolean type");
-  static_assert(
-      std::is_same_v<std::random_access_iterator_tag,
-      typename std::iterator_traits<ItX>::iterator_category>,
-      "OffsetOr requires x to be random-access iterator");
-  static_assert(
-      std::is_same_v<std::random_access_iterator_tag,
-      typename std::iterator_traits<ItOffsets>::iterator_category>,
-      "OffsetOr requires offsets to be random-access iterator");
-  static_assert(
-      std::is_same_v<std::random_access_iterator_tag,
-      typename std::iterator_traits<ItOut>::iterator_category>,
-      "OffsetOr requires out to be random-access iterator");
-
   // indexes into x, out
   npy_intp i_x = 0;
   // get offset to start with

@@ -64,7 +64,7 @@
 #include <utility>
 #include <stdexcept>
 
-#include "helpers.hpp"
+#include <gufuncs/helpers.hpp>
 
 #include <boost/math/distributions/normal.hpp>
 
@@ -354,19 +354,6 @@ class MannWhitneyCache {
 template <typename ItX, typename ItSort, typename ItLabels>
 inline double Test(
     MannWhitneyCache& tester, ItX x, ItSort sortx, ItLabels labels, npy_intp d) {
-  static_assert(
-      std::is_same_v<std::random_access_iterator_tag,
-      typename std::iterator_traits<ItX>::iterator_category>,
-      "MannWhitney::Test requires x to be random-access iterator");
-  static_assert(
-      std::is_same_v<std::random_access_iterator_tag,
-      typename std::iterator_traits<ItSort>::iterator_category>,
-      "MannWhitney::Test requires sortx to be random-access iterator");
-  static_assert(
-      std::is_same_v<std::random_access_iterator_tag,
-      typename std::iterator_traits<ItLabels>::iterator_category>,
-      "MannWhitney::Test requires labels to be random-access iterator");
-
   // get MannWhitneySummary for the row
   MannWhitneySummary summary;
   {

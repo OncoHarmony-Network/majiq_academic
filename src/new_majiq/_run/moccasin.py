@@ -18,9 +18,9 @@ from dask.distributed import Client
 
 import new_majiq as nm
 import new_majiq.constants as constants
+from new_majiq._offsets import clip_and_normalize_strict
 from new_majiq._run._majiq_args import check_nonnegative_factory
 from new_majiq._run._run import GenericSubcommand
-from new_majiq.gufuncs import clip_and_normalize_strict
 from new_majiq.logger import get_logger
 
 

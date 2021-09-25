@@ -11,7 +11,7 @@ broadcasting rather than strictly requiring 2D arrays
 Author: Joseph K Aicher
 """
 
-from typing import List, Optional, Tuple
+from typing import Optional
 
 import numpy as np
 
@@ -38,9 +38,7 @@ def ttest(x: np.ndarray, labels: np.ndarray) -> np.ndarray:
     array[float]
         broadcast p-values for observations/labels. Invalid tests are nan
     """
-    broadcast_shape, (x, labels) = _broadcast_to_2d(x, labels)
-    pvalues2d = _stats.ttest(x, labels)
-    return np.reshape(pvalues2d, broadcast_shape[:-1])
+    return _stats.ttest(x, labels)
 
 
 def mannwhitneyu(
@@ -70,9 +68,7 @@ def mannwhitneyu(
     """
     if sortx is None:
         sortx = np.argsort(x, axis=-1)
-    broadcast_shape, (x, sortx, labels) = _broadcast_to_2d(x, sortx, labels)
-    pvalues2d = _stats.mannwhitneyu(x, sortx, labels)
-    return np.reshape(pvalues2d, broadcast_shape[:-1])
+    return _stats.mannwhitneyu(x, sortx, labels)
 
 
 def infoscore(
@@ -101,9 +97,7 @@ def infoscore(
     """
     if sortx is None:
         sortx = np.argsort(x, axis=-1)
-    broadcast_shape, (x, sortx, labels) = _broadcast_to_2d(x, sortx, labels)
-    pvalues2d = _stats.infoscore(x, sortx, labels)
-    return np.reshape(pvalues2d, broadcast_shape[:-1])
+    return _stats.infoscore(x, sortx, labels)
 
 
 def tnom(
@@ -132,29 +126,4 @@ def tnom(
     """
     if sortx is None:
         sortx = np.argsort(x, axis=-1)
-    broadcast_shape, (x, sortx, labels) = _broadcast_to_2d(x, sortx, labels)
-    pvalues2d = _stats.tnom(x, sortx, labels)
-    return np.reshape(pvalues2d, broadcast_shape[:-1])
-
-
-def _broadcast_to_2d(
-    *x: np.typing.ArrayLike,
-) -> Tuple[Tuple[int, ...], List[np.ndarray]]:
-    """broadcast input arrays together, then reshape to 2D
-
-    Returns
-    -------
-    (shape_original, x2d)
-        shape_original: Tuple[int]
-            shape after broadcasting, before being reshaped to 2D
-        x2d: List[np.ndarray]
-            broadcast, then reshaped 2D arrays
-    """
-    # handle case where no arrays are passed
-    if not x:
-        return (tuple(), list())
-    # broadcast the arrays together
-    bx: List[np.ndarray] = np.broadcast_arrays(*x)
-    shape_original: Tuple[int, ...] = bx[0].shape
-    dim_last = shape_original[-1] if shape_original else 1
-    return (shape_original, [y.reshape(-1, dim_last) for y in bx])
+    return _stats.tnom(x, sortx, labels)

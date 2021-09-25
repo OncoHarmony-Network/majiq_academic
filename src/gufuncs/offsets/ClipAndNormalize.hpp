@@ -1,5 +1,5 @@
 /**
- * ClipAndOffsetSum.hpp
+ * ClipAndNormalize.hpp
  *
  * Implementation to clip and normalize input vector between offsets
  *
@@ -8,41 +8,25 @@
  * Author: Joseph K Aicher
  */
 
-#ifndef MAJIQGUFUNCS_CLIPANDOFFSETSUM_HPP
-#define MAJIQGUFUNCS_CLIPANDOFFSETSUM_HPP
+#ifndef MAJIQGUFUNCS_CLIPANDNORMALIZE_HPP
+#define MAJIQGUFUNCS_CLIPANDNORMALIZE_HPP
 
 #include <numpy/ndarraytypes.h>
 
 #include <algorithm>
 #include <limits>
 
-#include "helpers.hpp"
+#include <gufuncs/helpers.hpp>
 
 
 namespace MajiqGufuncs {
-namespace ClipAndOffsetSum {
+namespace ClipAndNormalize {
 
-template <bool clip, typename ItX, typename ItOffsets, typename ItOut>
+template <bool strict, typename ItX, typename ItOffsets, typename ItOut,
+         typename RealT = typename std::iterator_traits<ItX>::value_type>
 inline void Inner(
     ItX x, ItOffsets offsets, ItOut out,
     const npy_intp d_xout, const npy_intp d_offsets) {
-  using RealT = typename std::iterator_traits<ItX>::value_type;
-  static_assert(
-      std::is_same_v<RealT, typename std::iterator_traits<ItOut>::value_type>,
-      "ClipAndOffsetSum::Inner x and out must have same type");
-  static_assert(
-      std::is_same_v<std::random_access_iterator_tag,
-      typename std::iterator_traits<ItX>::iterator_category>,
-      "ClipAndOffsetSum requires x to be random-access iterator");
-  static_assert(
-      std::is_same_v<std::random_access_iterator_tag,
-      typename std::iterator_traits<ItOffsets>::iterator_category>,
-      "ClipAndOffsetSum requires offsets to be random-access iterator");
-  static_assert(
-      std::is_same_v<std::random_access_iterator_tag,
-      typename std::iterator_traits<ItOut>::iterator_category>,
-      "ClipAndOffsetSum requires out to be random-access iterator");
-
   // indexes into x, out
   npy_intp i_x = 0;
   // get offset to start with
@@ -50,23 +34,25 @@ inline void Inner(
   if (d_offsets > 0) {
     next_offset = std::min(next_offset, offsets[0]);
   }
-  // before first offset -- no groups
+  // before first offset, no groups
   for (; i_x < next_offset; ++i_x) {
     const auto& xi = x[i_x];
     if (npy_isnan(xi)) {
       out[i_x] = xi;
+    } else if (xi > 0) {
+      out[i_x] = RealT{1};
     } else {
-      if constexpr(clip) {
-        out[i_x] = std::max(RealT{0}, xi);
+      if constexpr(strict) {
+        out[i_x] = std::numeric_limits<RealT>::quiet_NaN();
       } else {
-        out[i_x] = xi;
+        out[i_x] = RealT{0};
       }
     }
-  }  // reached first offset
-  // loop within each group defined by offsets
+  }  // loop over x, out before first offset
+  // between offsets, we will get sum of values
   for (npy_intp i_offsets = 1; i_offsets < d_offsets; ++i_offsets) {
     if (i_x == d_xout) {
-      return;  // no more values to check/add
+      return;  // no more values to check/update
     }
     next_offset = std::max(next_offset, std::min(d_xout, offsets[i_offsets]));
     // loop to fill out happens separately than first pass on x
@@ -79,39 +65,54 @@ inline void Inner(
         acc_x = xi;
         i_x = next_offset;
         break;
+      } else if (xi > 0) {
+        out[i_x] = xi;
+        acc_x += xi;
       } else {
-        if constexpr(clip) {
-          if (xi > 0) {
-            acc_x += xi;
-          }
-        } else {
-          acc_x += xi;
+        out[i_x] = RealT{0};
+      }
+    }  // done accumulating x between offsets
+    // update out
+    if (npy_isnan(acc_x)) {
+      for (; i_out < next_offset; ++i_out) {
+        out[i_out] = acc_x;
+      }
+    } else if (acc_x > 0) {
+      for (; i_out < next_offset; ++i_out) {
+        out[i_out] /= acc_x;
+      }
+    } else {
+      if constexpr(strict) {
+        for (; i_out < next_offset; ++i_out) {
+          out[i_out] = std::numeric_limits<RealT>::quiet_NaN();
+        }
+      } else {
+        for (; i_out < next_offset; ++i_out) {
+          out[i_out] = RealT{0};
         }
       }
-    }  // accumulated x between offsets
-    // update out
-    for (; i_out < next_offset; ++i_out) {
-      out[i_out] = acc_x;
     }
-  }  // done looping over offsets
-  // after last offset -- no groups
+  }  // done looping between offsets
+  // after last offset, no groups
   for (; i_x < d_xout; ++i_x) {
     const auto& xi = x[i_x];
     if (npy_isnan(xi)) {
       out[i_x] = xi;
+    } else if (xi > 0) {
+      out[i_x] = RealT{1};
     } else {
-      if constexpr(clip) {
-        out[i_x] = std::max(RealT{0}, xi);
+      if constexpr(strict) {
+        out[i_x] = std::numeric_limits<RealT>::quiet_NaN();
       } else {
-        out[i_x] = xi;
+        out[i_x] = RealT{0};
       }
     }
-  }  // done looping over x, out
+  }  // loop over x, out after last offset
   return;
 }
 
 // implement clip_and_normalize(x: np.ndarray, offsets: np.ndarray)
-template <typename RealT, bool clip>
+template <typename RealT, bool strict>
 static void Outer(
     char** args, npy_intp* dimensions, npy_intp* steps, void* data) {
   // outer loop dimensions and index
@@ -135,7 +136,7 @@ static void Outer(
   // outer loop on broadcasted variables
   for (npy_intp i = 0; i < dim_broadcast; ++i,
       x_ptr += stride_x, offsets_ptr += stride_offsets, out_ptr += stride_out) {
-    Inner<clip>(
+    Inner<strict>(
         detail::CoreIt<RealT>::begin(x_ptr, inner_stride_x),
         detail::CoreIt<npy_intp>::begin(offsets_ptr, inner_stride_offsets),
         detail::CoreIt<RealT>::begin(out_ptr, inner_stride_out),
@@ -143,17 +144,17 @@ static void Outer(
   }
 }
 
-static char name[] = "clip_and_offsetsum";
-static char noclipname[] = "offsetsum";
+static char name[] = "clip_and_normalize";
+static char strictname[] = "clip_and_normalize_strict";
 static char signature[] = "(n),(k)->(n)";
 static char doc[] = R"pbdoc(
-Sum of positive values between offsets
+Clipped (non-negative), permissive normalized values for offsets (0 total -> 0)
 
 Signature: (n),(k)->(n)
 
-Computes sum of positive values between adjacent cummax(offsets). NaN values
-are propagated. Values before and after offsets are treated as their own
-groups.
+Computes sum of positive values between adjacent cummax(offsets). Return ratios
+of clipped values to sum. NaN values are propagated within groups, and a sum
+of zero leads to a zero result.
 
 Notes
 -----
@@ -163,17 +164,18 @@ offsets.
 Parameters
 ----------
 x1: array_like
-    Values to be added
+    Values to be clipped/normalized
 x2: array_like
     Offsets to be used
 )pbdoc";
-static char noclipdoc[] = R"pbdoc(
-Sum of values between offsets
+static char strictdoc[] = R"pbdoc(
+Clipped (non-negative), strict normalized values for offsets (0 total -> NaN)
 
 Signature: (n),(k)->(n)
 
-Computes sum of values between adjacent cummax(offsets). NaN values are
-propagated. Values before and after offsets are treated as their own groups.
+Computes sum of positive values between adjacent cummax(offsets). Return ratios
+of clipped values to sum. NaN values are propagated within groups, and a sum
+of zero leads to a NaN result.
 
 Notes
 -----
@@ -183,7 +185,7 @@ offsets.
 Parameters
 ----------
 x1: array_like
-    Values to be added
+    Values to be clipped/normalized
 x2: array_like
     Offsets to be used
 )pbdoc";
@@ -191,12 +193,12 @@ constexpr int ntypes = 2;
 constexpr int nin = 2;
 constexpr int nout = 1;
 PyUFuncGenericFunction funcs[ntypes] = {
-  reinterpret_cast<PyUFuncGenericFunction>(&Outer<npy_float, true>),
-  reinterpret_cast<PyUFuncGenericFunction>(&Outer<npy_double, true>)
-};
-PyUFuncGenericFunction noclipfuncs[ntypes] = {
   reinterpret_cast<PyUFuncGenericFunction>(&Outer<npy_float, false>),
   reinterpret_cast<PyUFuncGenericFunction>(&Outer<npy_double, false>)
+};
+PyUFuncGenericFunction strictfuncs[ntypes] = {
+  reinterpret_cast<PyUFuncGenericFunction>(&Outer<npy_float, true>),
+  reinterpret_cast<PyUFuncGenericFunction>(&Outer<npy_double, true>)
 };
 static char types[
   ntypes * (nin + nout)
@@ -208,7 +210,7 @@ static char types[
 };
 
 
-}  // namespace ClipAndOffsetSum
+}  // namespace ClipAndNormalize
 }  // namespace MajiqGufuncs
 
-#endif  // MAJIQGUFUNCS_CLIPANDOFFSETSUM_HPP
+#endif  // MAJIQGUFUNCS_CLIPANDNORMALIZE_HPP

@@ -17,9 +17,9 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 
+import new_majiq._offsets as _offsets
 import new_majiq.beta_mixture as bm
 import new_majiq.constants as constants
-import new_majiq.gufuncs as gufuncs
 from new_majiq.Events import Events, _Events
 from new_majiq.EventsCoverage import EventsCoverage
 from new_majiq.experiments import bam_experiment_name
@@ -245,12 +245,12 @@ class PsiCoverage(object):
             events_coverage.numbins >= minbins
         )
         # get whether any connection in event passed, per connection
-        event_passed = gufuncs.offset_logical_or(passed, offsets)
+        event_passed = _offsets.offset_logical_or(passed, offsets)
         # get total coverage per event, per connection
-        raw_total = gufuncs.offsetsum(
+        raw_total = _offsets.offsetsum(
             events_coverage.numreads, offsets, axes=[0, -1, 0]
         )
-        bootstrap_total = gufuncs.offsetsum(
+        bootstrap_total = _offsets.offsetsum(
             events_coverage.bootstraps, offsets, axes=[0, -1, 0]
         )
         # get psi per connection
