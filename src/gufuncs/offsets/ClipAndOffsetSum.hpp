@@ -22,7 +22,17 @@
 namespace MajiqGufuncs {
 namespace ClipAndOffsetSum {
 
-template <bool clip, typename ItX, typename ItOffsets, typename ItOut,
+struct NoClip {
+  // identity function
+  template <typename RealT>
+  RealT operator()(RealT x) { return x; }
+};
+struct Clip {
+  template <typename RealT>
+  RealT operator()(RealT x) { return std::max(RealT{0}, x); }
+};
+
+template <typename ClipT, typename ItX, typename ItOffsets, typename ItOut,
          typename RealT = typename std::iterator_traits<ItX>::value_type>
 inline void Inner(
     ItX x, ItOffsets offsets, ItOut out,
@@ -40,11 +50,7 @@ inline void Inner(
     if (npy_isnan(xi)) {
       out[i_x] = xi;
     } else {
-      if constexpr(clip) {
-        out[i_x] = std::max(RealT{0}, xi);
-      } else {
-        out[i_x] = xi;
-      }
+      out[i_x] = ClipT{}(xi);
     }
   }  // reached first offset
   // loop within each group defined by offsets
@@ -64,13 +70,7 @@ inline void Inner(
         i_x = next_offset;
         break;
       } else {
-        if constexpr(clip) {
-          if (xi > 0) {
-            acc_x += xi;
-          }
-        } else {
-          acc_x += xi;
-        }
+        acc_x += ClipT{}(xi);
       }
     }  // accumulated x between offsets
     // update out
@@ -84,18 +84,14 @@ inline void Inner(
     if (npy_isnan(xi)) {
       out[i_x] = xi;
     } else {
-      if constexpr(clip) {
-        out[i_x] = std::max(RealT{0}, xi);
-      } else {
-        out[i_x] = xi;
-      }
+      out[i_x] = ClipT{}(xi);
     }
   }  // done looping over x, out
   return;
 }
 
 // implement clip_and_normalize(x: np.ndarray, offsets: np.ndarray)
-template <typename RealT, bool clip>
+template <typename RealT, typename ClipT>
 static void Outer(
     char** args, npy_intp* dimensions, npy_intp* steps, void* data) {
   // outer loop dimensions and index
@@ -119,7 +115,7 @@ static void Outer(
   // outer loop on broadcasted variables
   for (npy_intp i = 0; i < dim_broadcast; ++i,
       x_ptr += stride_x, offsets_ptr += stride_offsets, out_ptr += stride_out) {
-    Inner<clip>(
+    Inner<ClipT>(
         detail::CoreIt<RealT>::begin(x_ptr, inner_stride_x),
         detail::CoreIt<npy_intp>::begin(offsets_ptr, inner_stride_offsets),
         detail::CoreIt<RealT>::begin(out_ptr, inner_stride_out),
@@ -175,12 +171,12 @@ constexpr int ntypes = 2;
 constexpr int nin = 2;
 constexpr int nout = 1;
 PyUFuncGenericFunction funcs[ntypes] = {
-  reinterpret_cast<PyUFuncGenericFunction>(&Outer<npy_float, true>),
-  reinterpret_cast<PyUFuncGenericFunction>(&Outer<npy_double, true>)
+  reinterpret_cast<PyUFuncGenericFunction>(&Outer<npy_float, Clip>),
+  reinterpret_cast<PyUFuncGenericFunction>(&Outer<npy_double, Clip>)
 };
 PyUFuncGenericFunction noclipfuncs[ntypes] = {
-  reinterpret_cast<PyUFuncGenericFunction>(&Outer<npy_float, false>),
-  reinterpret_cast<PyUFuncGenericFunction>(&Outer<npy_double, false>)
+  reinterpret_cast<PyUFuncGenericFunction>(&Outer<npy_float, NoClip>),
+  reinterpret_cast<PyUFuncGenericFunction>(&Outer<npy_double, NoClip>)
 };
 static char types[
   ntypes * (nin + nout)
