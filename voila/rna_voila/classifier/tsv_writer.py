@@ -1322,13 +1322,7 @@ class TsvWriter(BaseTsvWriter):
                                                       event_ii=event_i,
                                                       event_name="pALE")
 
-                        # print(event)
-                        # print(src_common)
-                        # print(self.heatmap_cache[module.idx])
-                        if event['Proximal'].start == -1:
-                            proxStr = "nan-{}".format(event['Proximal'].end)
-                        else:
-                            proxStr = "{}-nan".format(event['Proximal'].start)
+
                         if src_common[5]:
 
                             quant_identifiers = (
@@ -1343,7 +1337,7 @@ class TsvWriter(BaseTsvWriter):
 
                             row = [event['SkipA2'].de_novo,
                                    reference_range_str,
-                                   'A', proxStr,
+                                   'A', event['Proximal'].range_str(),
                                    'Proximal',
                                    event['SkipA2'].range_str()]
                             quants = [event_non_changing, event_changing] + self.quantifications(module, 's', event['SkipA2'])
@@ -1355,13 +1349,11 @@ class TsvWriter(BaseTsvWriter):
 
                             reference_range_str = self._trim_strand_case_range_str(event['Reference'],
                                                                                    'start', event['SkipA1'], 'start')
-                            distal_range_str = self._trim_strand_case_range_str(event['SkipA1'],
-                                                                                'end', event['Distal'], 'end')
 
                             row = [event['SkipA1'].de_novo,
                                    reference_range_str,
                                    'A',
-                                   distal_range_str,
+                                   event['Distal'].range_str(),
                                    'Distal',
                                    event['SkipA1'].range_str()]
                             quants = [event_non_changing, event_changing] + self.quantifications(module, 's', event['SkipA1'])
@@ -1384,10 +1376,7 @@ class TsvWriter(BaseTsvWriter):
                 event_i = 1
                 for event in events:
                     if event['event'] == 'p_afe':
-                        if event['Proximal'].start == -1:
-                            proxStr = "nan-{}".format(event['Proximal'].end)
-                        else:
-                            proxStr = "{}-nan".format(event['Proximal'].start)
+
                         trg_common = self.common_data(module,
                                                       't',
                                                       node=event['Reference'],
@@ -1408,7 +1397,7 @@ class TsvWriter(BaseTsvWriter):
 
                             row = [event['SkipA1'].de_novo,
                                    reference_range_str,
-                                   'A', proxStr,
+                                   'A', event['Proximal'].range_str(),
                                    'Proximal',
                                    event['SkipA1'].range_str()]
                             quants = [event_non_changing, event_changing] + self.quantifications(module, 't', event['SkipA1'])
@@ -1420,13 +1409,11 @@ class TsvWriter(BaseTsvWriter):
 
                             reference_range_str = self._trim_strand_case_range_str(event['SkipA2'],
                                                                                    'end', event['Reference'], 'end')
-                            distal_range_str = self._trim_strand_case_range_str(event['Distal'],
-                                                                                'start', event['SkipA2'], 'start')
 
                             row = [event['SkipA2'].de_novo,
                                    reference_range_str,
                                    'A',
-                                   distal_range_str,
+                                   event['Distal'].range_str(),
                                    'Distal',
                                    event['SkipA2'].range_str()]
                             quants = [event_non_changing, event_changing] + self.quantifications(module, 't', event['SkipA2'])
