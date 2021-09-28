@@ -122,38 +122,9 @@ inline RealT Test(ItX x, ItLabels labels, npy_intp d) {
   return TwoSidedPValue(dof_pair.dof, t);
 }
 
-
-template <typename RealT>
-static void Outer(
-    char** args, npy_intp* dimensions, npy_intp* steps, void* data) {
-  // outer loop dimensions and index
-  const npy_intp dim_broadcast = *dimensions++;
-  // strides on each variable for outer loop
-  const npy_intp stride_x = *steps++;
-  const npy_intp stride_labels = *steps++;
-  const npy_intp stride_out = *steps++;
-  // core dimensions
-  const npy_intp dim_core = dimensions[0];
-  // inner strides
-  const npy_intp inner_stride_x = steps[0];
-  const npy_intp inner_stride_labels = steps[1];
-  // pointers to data
-  char* x_ptr = args[0];
-  char* labels_ptr = args[1];
-  char* out_ptr = args[2];
-
-  // outer loop on broadcasted variables
-  for (npy_intp i = 0; i < dim_broadcast; ++i,
-      x_ptr += stride_x, labels_ptr += stride_labels, out_ptr += stride_out) {
-    detail::get_value<RealT>(out_ptr) = Test(
-        detail::CoreIt<RealT>::begin(x_ptr, inner_stride_x),
-        detail::CoreIt<bool>::begin(labels_ptr, inner_stride_labels),
-        dim_core);
-  }
-  return;
-}
-
 static char name[] = "ttest";
+constexpr int nin = 2;
+constexpr int nout = 1;
 static char signature[] = "(n),(n)->()";
 static char doc[] = R"pbdoc(
 Compute p-values for Welch's t-test on input data
@@ -173,16 +144,49 @@ Returns
 array[float]
     broadcast p-values for observations/labels. Invalid tests are nan.
 )pbdoc";
+
+template <typename RealT>
+static void Outer(
+    char** args, npy_intp* dimensions, npy_intp* steps, void* data) {
+  // outer loop dimensions and index
+  const npy_intp dim_broadcast = *dimensions++;
+  // strides on each variable for outer loop
+  const npy_intp* outer_stride = steps;
+  steps += nin + nout;
+
+  // core dimensions
+  const npy_intp dim_core = dimensions[0];
+  // inner strides
+  const npy_intp inner_stride_x = steps[0];
+  const npy_intp inner_stride_labels = steps[1];
+
+  // pointers to data
+  auto x = detail::CoreIt<RealT>::begin(args[0], outer_stride[0]);
+  auto labels = detail::CoreIt<bool>::begin(args[1], outer_stride[1]);
+  auto out = detail::CoreIt<RealT>::begin(args[2], outer_stride[2]);
+
+  if (dim_core < 1) {
+    // no samples to process, so must be nan
+    out.fill(dim_broadcast, std::numeric_limits<RealT>::quiet_NaN());
+    return;
+  }
+
+  // outer loop on broadcasted variables
+  for (npy_intp i = 0; i < dim_broadcast; ++i, ++x, ++labels, ++out) {
+    *out = Test(
+        x.with_stride(inner_stride_x),
+        labels.with_stride(inner_stride_labels),
+        dim_core);
+  }
+  return;
+}
+
 constexpr int ntypes = 2;
-constexpr int nin = 2;
-constexpr int nout = 1;
 PyUFuncGenericFunction funcs[ntypes] = {
   reinterpret_cast<PyUFuncGenericFunction>(&Outer<npy_float>),
   reinterpret_cast<PyUFuncGenericFunction>(&Outer<npy_double>)
 };
-static char types[
-  ntypes * (nin + nout)
-] = {
+static char types[ntypes * (nin + nout)] = {
   // for use with npy_float func
   NPY_FLOAT, NPY_BOOL, NPY_FLOAT,
   // for use with npy_double func

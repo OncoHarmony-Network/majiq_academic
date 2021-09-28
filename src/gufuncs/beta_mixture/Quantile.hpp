@@ -64,12 +64,7 @@ static void Outer(
 
   if (dim_mixture < 1) {
     // if there are no distributions, Quantile is NaN everywhere
-    if (dim_broadcast > 1) {
-      std::fill(
-          out, out + dim_broadcast, std::numeric_limits<RealT>::quiet_NaN());
-    } else if (dim_broadcast == 1) {
-      out[0] = std::numeric_limits<RealT>::quiet_NaN();
-    }
+    out.fill(dim_broadcast, std::numeric_limits<RealT>::quiet_NaN());
     return;
   }
   // outer loop on broadcasted variables
@@ -86,9 +81,7 @@ PyUFuncGenericFunction funcs[ntypes] = {
   reinterpret_cast<PyUFuncGenericFunction>(&Outer<npy_float>),
   reinterpret_cast<PyUFuncGenericFunction>(&Outer<npy_double>),
 };
-static char types[
-  ntypes * (nin + nout)
-] = {
+static char types[ntypes * (nin + nout)] = {
   // for use with npy_float func
   NPY_FLOAT, NPY_FLOAT, NPY_FLOAT, NPY_FLOAT,
   // for use with npy_double func

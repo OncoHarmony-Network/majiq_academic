@@ -16,18 +16,6 @@
 
 namespace MajiqGufuncs {
 namespace detail {
-/**
- * Get x[idx] given type and stride of array
- */
-template <typename T>
-inline T& get_value(char* x_ptr, npy_intp idx, npy_intp stride) {
-  return *reinterpret_cast<T*>(x_ptr + stride * idx);
-}
-template <typename T>
-inline T& get_value(char* x_ptr) {
-  return *reinterpret_cast<T*>(x_ptr);
-}
-
 
 /**
  * iterator over 1d core dimensions in gufunc inner loops
@@ -126,7 +114,7 @@ class CoreIt {
     return (x.ptr_ - y.ptr_) / x.stride_;
   }
   reference operator[](difference_type n) const noexcept {
-    return get_value<value_type>(ptr_, n, stride_);
+    return *reinterpret_cast<pointer>(ptr_ + stride_ * n);
   }
 
   friend inline bool operator==(
@@ -161,6 +149,16 @@ class CoreIt {
   // 0 for broadcasting
   static CoreIt end(const CoreIt& x, npy_intp n) {
     return x + n;
+  }
+
+  // how many values to fill starting at current position?
+  void fill(npy_intp n, const T& value) {
+    if (stride_ != 0) {
+      std::fill(*this, *this + n, value);
+    } else if (n != 0) {
+      // stride is zero and we wanted some values to be set
+      operator*() = value;
+    }
   }
 };
 

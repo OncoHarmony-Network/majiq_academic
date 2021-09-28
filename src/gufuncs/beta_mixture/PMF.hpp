@@ -68,13 +68,8 @@ static void Outer(
   if (dim_mixture < 1) {
     // for each iteration of broadcasting, fill core dimension of out with nan
     for (npy_intp i = 0; i < dim_broadcast; ++i, ++out) {
-      auto out_inner = out.with_stride(inner_stride_out);
-      if (dim_bins > 1) {
-        std::fill(out_inner, out_inner + dim_bins,
-            std::numeric_limits<RealT>::quiet_NaN());
-      } else if (dim_bins == 1) {
-        out_inner[0] = std::numeric_limits<RealT>::quiet_NaN();
-      }
+      out.with_stride(inner_stride_out)
+        .fill(dim_bins, std::numeric_limits<RealT>::quiet_NaN());
     }
     return;
   }
@@ -94,9 +89,7 @@ PyUFuncGenericFunction funcs[ntypes] = {
   reinterpret_cast<PyUFuncGenericFunction>(&Outer<npy_float>),
   reinterpret_cast<PyUFuncGenericFunction>(&Outer<npy_double>),
 };
-static char types[
-  ntypes * (nin + nout)
-] = {
+static char types[ntypes * (nin + nout)] = {
   // for use with npy_float func
   NPY_FLOAT, NPY_FLOAT, NPY_FLOAT, NPY_FLOAT,
   NPY_FLOAT, NPY_FLOAT, NPY_DOUBLE, NPY_FLOAT,

@@ -90,41 +90,10 @@ inline void Inner(
   return;
 }
 
-// implement clip_and_normalize(x: np.ndarray, offsets: np.ndarray)
-template <typename RealT, typename ClipT>
-static void Outer(
-    char** args, npy_intp* dimensions, npy_intp* steps, void* data) {
-  // outer loop dimensions and index
-  const npy_intp dim_broadcast = *dimensions++;
-  // strides on each variable for outer loop
-  const npy_intp stride_x = *steps++;
-  const npy_intp stride_offsets = *steps++;
-  const npy_intp stride_out = *steps++;
-  // core dimensions
-  const npy_intp dim_xout = dimensions[0];
-  const npy_intp dim_offsets = dimensions[1];
-  // inner strides
-  const npy_intp inner_stride_x = steps[0];
-  const npy_intp inner_stride_offsets = steps[1];
-  const npy_intp inner_stride_out = steps[2];
-  // pointers to data
-  char* x_ptr = args[0];
-  char* offsets_ptr = args[1];
-  char* out_ptr = args[2];
-
-  // outer loop on broadcasted variables
-  for (npy_intp i = 0; i < dim_broadcast; ++i,
-      x_ptr += stride_x, offsets_ptr += stride_offsets, out_ptr += stride_out) {
-    Inner<ClipT>(
-        detail::CoreIt<RealT>::begin(x_ptr, inner_stride_x),
-        detail::CoreIt<npy_intp>::begin(offsets_ptr, inner_stride_offsets),
-        detail::CoreIt<RealT>::begin(out_ptr, inner_stride_out),
-        dim_xout, dim_offsets);
-  }
-}
-
 static char name[] = "clip_and_offsetsum";
 static char noclipname[] = "offsetsum";
+constexpr int nin = 2;
+constexpr int nout = 1;
 static char signature[] = "(n),(k)->(n)";
 static char doc[] = R"pbdoc(
 Sum of positive values between offsets
@@ -167,9 +136,42 @@ x1: array_like
 x2: array_like
     Offsets to be used
 )pbdoc";
+
+
+// implement clip_and_normalize(x: np.ndarray, offsets: np.ndarray)
+template <typename RealT, typename ClipT>
+static void Outer(
+    char** args, npy_intp* dimensions, npy_intp* steps, void* data) {
+  // outer loop dimensions and index
+  const npy_intp dim_broadcast = *dimensions++;
+  // strides on each variable for outer loop
+  const npy_intp* outer_stride = steps;
+  steps += nin + nout;
+
+  // core dimensions
+  const npy_intp dim_xout = dimensions[0];
+  const npy_intp dim_offsets = dimensions[1];
+  // inner strides
+  const npy_intp inner_stride_x = steps[0];
+  const npy_intp inner_stride_offsets = steps[1];
+  const npy_intp inner_stride_out = steps[2];
+
+  // pointers to data
+  auto x = detail::CoreIt<RealT>::begin(args[0], outer_stride[0]);
+  auto offsets = detail::CoreIt<npy_intp>::begin(args[1], outer_stride[1]);
+  auto out = detail::CoreIt<RealT>::begin(args[2], outer_stride[2]);
+
+  // outer loop on broadcasted variables
+  for (npy_intp i = 0; i < dim_broadcast; ++i, ++x, ++offsets, ++out) {
+    Inner<ClipT>(
+        x.with_stride(inner_stride_x),
+        offsets.with_stride(inner_stride_offsets),
+        out.with_stride(inner_stride_out),
+        dim_xout, dim_offsets);
+  }
+}
+
 constexpr int ntypes = 2;
-constexpr int nin = 2;
-constexpr int nout = 1;
 PyUFuncGenericFunction funcs[ntypes] = {
   reinterpret_cast<PyUFuncGenericFunction>(&Outer<npy_float, Clip>),
   reinterpret_cast<PyUFuncGenericFunction>(&Outer<npy_double, Clip>)
@@ -178,9 +180,7 @@ PyUFuncGenericFunction noclipfuncs[ntypes] = {
   reinterpret_cast<PyUFuncGenericFunction>(&Outer<npy_float, NoClip>),
   reinterpret_cast<PyUFuncGenericFunction>(&Outer<npy_double, NoClip>)
 };
-static char types[
-  ntypes * (nin + nout)
-] = {
+static char types[ntypes * (nin + nout)] = {
   // for use with npy_float func
   NPY_FLOAT, NPY_INTP, NPY_FLOAT,
   // for use with npy_double func
