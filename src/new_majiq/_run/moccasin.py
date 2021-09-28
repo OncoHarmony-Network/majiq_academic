@@ -140,6 +140,20 @@ def _get_factors(
     # do the squeeze, if desired
     if do_squeeze:
         factors = factors.squeeze("prefix")
+    log = get_logger()
+    log.info(
+        f"Using {factors.sizes['factor']} factors "
+        f" ({factors['confounding'].sum().values[()]} confounding):"
+        + "".join(
+            [
+                f"\nFactor {name}\t"
+                + ("confounding" if is_confounding else "noncounfounding")
+                for name, is_confounding in zip(
+                    factors["factor"].values, factors["confounding"].values
+                )
+            ]
+        )
+    )
     return factors
 
 
@@ -270,15 +284,20 @@ def run_factors_model(args: argparse.Namespace) -> None:
     )
     # report about explained variance
     explained_variance = model.explained_variance.values
-    log.info(
-        f"Learned {model.num_factors} factors explaining"
-        f" {explained_variance.sum():.3%} of residual variance"
-        " (after accounting for known factors)"
-    )
-    for i, (x, cum_x) in enumerate(
-        zip(explained_variance, explained_variance.cumsum()), 1
-    ):
-        log.info(f"factor {i}\t{x:.3%} (cumulative: {cum_x:.3%})")
+    if len(explained_variance):
+        log.info(
+            f"Learned {model.num_factors} factors explaining"
+            f" {explained_variance.sum():.3%} of residual variance"
+            " (after accounting for known factors):"
+            + "".join(
+                [
+                    f"\nfactor {i}\t{x:.3%} (cumulative: {cum_x:.3%})"
+                    for i, (x, cum_x) in enumerate(
+                        zip(explained_variance, explained_variance.cumsum()), 1
+                    )
+                ]
+            )
+        )
     # save model
     log.info(f"Saving model to {args.factors_model.resolve()}")
     model.to_zarr(args.factors_model)
