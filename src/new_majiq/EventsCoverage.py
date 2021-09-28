@@ -86,7 +86,7 @@ class EventsCoverage(object):
             (self._df, self.events.df), join="exact", combine_attrs="no_conflicts"
         )
 
-    def to_zarr(self, path: Union[str, Path]) -> None:
+    def to_zarr(self, path: Union[str, Path], consolidated: bool = True) -> None:
         """Serialize to zarr format"""
         if Path(path).exists():
             raise ValueError(
@@ -95,12 +95,12 @@ class EventsCoverage(object):
                 " output path."
             )
         # save events, events coverage
-        self.events.to_zarr(path, "w")
+        self.events.to_zarr(path, "w", consolidated=False)
         self._df.drop_vars("ec_idx").pipe(_load_zerodim_variables).to_zarr(
             path,
             mode="a",
             group=constants.NC_EVENTSCOVERAGE,
-            consolidated=True,
+            consolidated=consolidated,
         )
         return
 

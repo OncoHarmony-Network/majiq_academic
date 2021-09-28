@@ -167,7 +167,7 @@ class SJJunctionsBins(SJBinsReads):
             original_time,
         )
 
-    def to_zarr(self, path: Union[str, Path]) -> None:
+    def to_zarr(self, path: Union[str, Path], consolidated: bool = True) -> None:
         """Serialize to zarr format"""
         if Path(path).exists():
             raise ValueError(
@@ -175,15 +175,17 @@ class SJJunctionsBins(SJBinsReads):
                 " Please delete and try again if desired, or please pick a"
                 " different output path."
             )
-        self.regions.contigs.to_zarr(path, "w", group=constants.NC_SJJUNCTIONSCONTIGS)
-        self.regions.to_zarr(path, "a")
+        self.regions.contigs.to_zarr(
+            path, "w", group=constants.NC_SJJUNCTIONSCONTIGS, consolidated=False
+        )
+        self.regions.to_zarr(path, "a", consolidated=False)
         self._df.drop_vars("sjb_idx").pipe(lambda x: x.chunk(x.sizes)).pipe(
             _load_zerodim_variables
         ).to_zarr(
             path,
             mode="a",
             group=constants.NC_SJJUNCTIONSBINS,
-            consolidated=True,
+            consolidated=consolidated,
         )
         return
 

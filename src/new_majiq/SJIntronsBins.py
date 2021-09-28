@@ -142,7 +142,7 @@ class SJIntronsBins(SJBinsReads):
             original_time,
         )
 
-    def to_zarr(self, path: Union[str, Path]) -> None:
+    def to_zarr(self, path: Union[str, Path], consolidated: bool = True) -> None:
         """Serialize to zarr format
 
         Will only write to existing file if has SJJunctionsBins with same
@@ -173,15 +173,15 @@ class SJIntronsBins(SJBinsReads):
             # otherwise, appears to have compatible SJJunctionsBins which
             # implies that they have matching contigs
         # otherwise
-        self.regions.contigs.to_zarr(path, "w")
-        self.regions.to_zarr(path, "a")
+        self.regions.contigs.to_zarr(path, "w", consolidated=False)
+        self.regions.to_zarr(path, "a", consolidated=False)
         self._df.drop_vars("sib_idx").pipe(lambda x: x.chunk(x.sizes)).pipe(
             _load_zerodim_variables
         ).to_zarr(
             path,
             mode="a",
             group=constants.NC_SJINTRONSBINS,
-            consolidated=True,
+            consolidated=consolidated,
         )
         return
 

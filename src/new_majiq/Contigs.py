@@ -64,7 +64,11 @@ class Contigs(object):
             raise KeyError(f"{seqid = } not found in Contigs instance")
 
     def to_zarr(
-        self, path: Union[str, Path], mode: str, group: str = constants.NC_CONTIGS
+        self,
+        path: Union[str, Path],
+        mode: str,
+        group: str = constants.NC_CONTIGS,
+        consolidated: bool = True,
     ) -> None:
         self.df.drop_vars("contig_idx").pipe(lambda x: x.chunk(x.sizes)).pipe(
             _load_zerodim_variables
@@ -72,7 +76,7 @@ class Contigs(object):
             path,
             mode=mode,
             group=group,
-            consolidated=True,
+            consolidated=consolidated,
         )
         return
 

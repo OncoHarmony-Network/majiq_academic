@@ -70,7 +70,9 @@ class GeneJunctions(GeneConnections):
             },
         )
 
-    def to_zarr(self, path: Union[str, Path], mode: str) -> None:
+    def to_zarr(
+        self, path: Union[str, Path], mode: str, consolidated: bool = True
+    ) -> None:
         """Serialize to zarr format. Note genes need to be saved separately"""
         self.df.drop_vars(["gj_idx", "start_exon_idx", "end_exon_idx"]).pipe(
             lambda x: x.chunk(x.sizes)
@@ -78,7 +80,7 @@ class GeneJunctions(GeneConnections):
             path,
             mode=mode,
             group=constants.NC_GENEJUNCTIONS,
-            consolidated=True,
+            consolidated=consolidated,
         )
         return
 

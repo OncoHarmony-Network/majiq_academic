@@ -98,11 +98,11 @@ class SpliceGraph(object):
                 " Please delete and try again if you want it there, otherwise"
                 " pick a different output path"
             )
-        self.contigs.to_zarr(path, "w")
-        self.genes.to_zarr(path, "a")
-        self.exons.to_zarr(path, "a")
-        self.introns.to_zarr(path, "a")
-        self.junctions.to_zarr(path, "a")
+        self.contigs.to_zarr(path, "w", consolidated=False)
+        self.genes.to_zarr(path, "a", consolidated=False)
+        self.exons.to_zarr(path, "a", consolidated=False)
+        self.introns.to_zarr(path, "a", consolidated=False)
+        self.junctions.to_zarr(path, "a", consolidated=True)
         return
 
     @classmethod
