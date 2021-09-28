@@ -268,10 +268,18 @@ def run_factors_model(args: argparse.Namespace) -> None:
         dim_ecidx="ec_idx",
         log=log,
     )
+    # report about explained variance
+    explained_variance = model.explained_variance.values
     log.info(
         f"Learned {model.num_factors} factors explaining"
-        f" {model.explained_variance.sum().values[()]:.3%} of residual variance"
+        f" {explained_variance.sum():.3%} of residual variance"
+        " (after accounting for known factors)"
     )
+    for i, (x, cum_x) in enumerate(
+        zip(explained_variance, explained_variance.cumsum()), 1
+    ):
+        log.info(f"factor {i}\t{x:.3%} (cumulative: {cum_x:.3%})")
+    # save model
     log.info(f"Saving model to {args.factors_model.resolve()}")
     model.to_zarr(args.factors_model)
     return
