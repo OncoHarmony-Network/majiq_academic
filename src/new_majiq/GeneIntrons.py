@@ -13,6 +13,7 @@ import numpy as np
 import xarray as xr
 
 import new_majiq.constants as constants
+from new_majiq._workarounds import _load_zerodim_variables
 from new_majiq.GeneConnections import GeneConnections
 from new_majiq.Genes import Genes
 from new_majiq.internals import GeneIntrons as _GeneIntrons
@@ -84,9 +85,12 @@ class GeneIntrons(GeneConnections):
 
     def to_zarr(self, path: Union[str, Path], mode: str) -> None:
         """Serialize to zarr format. Note genes need to be saved separately"""
-        self.df.drop_vars(["gi_idx", "start_exon_idx", "end_exon_idx"]).pipe(
-            lambda x: x.chunk(x.sizes)
-        ).to_zarr(path, mode=mode, group=constants.NC_GENEINTRONS, consolidated=True)
+        (
+            self.df.drop_vars(["gi_idx", "start_exon_idx", "end_exon_idx"])
+            .pipe(lambda x: x.chunk(x.sizes))
+            .pipe(_load_zerodim_variables)
+            .to_zarr(path, mode=mode, group=constants.NC_GENEINTRONS, consolidated=True)
+        )
         return
 
     @classmethod

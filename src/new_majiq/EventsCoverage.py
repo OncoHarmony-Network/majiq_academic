@@ -13,6 +13,7 @@ import numpy as np
 import xarray as xr
 
 import new_majiq.constants as constants
+from new_majiq._workarounds import _load_zerodim_variables
 from new_majiq.Events import Events
 from new_majiq.GeneIntrons import GeneIntrons
 from new_majiq.GeneJunctions import GeneJunctions
@@ -95,7 +96,7 @@ class EventsCoverage(object):
             )
         # save events, events coverage
         self.events.to_zarr(path, "w")
-        self._df.drop_vars("ec_idx").to_zarr(
+        self._df.drop_vars("ec_idx").pipe(_load_zerodim_variables).to_zarr(
             path,
             mode="a",
             group=constants.NC_EVENTSCOVERAGE,

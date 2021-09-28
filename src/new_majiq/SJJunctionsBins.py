@@ -14,6 +14,7 @@ import xarray as xr
 
 import new_majiq.constants as constants
 from new_majiq._version import version as nm_version
+from new_majiq._workarounds import _load_zerodim_variables
 from new_majiq.internals import ExperimentStrandness
 from new_majiq.internals import SJJunctionsBins as _SJJunctionsBins
 from new_majiq.logger import get_logger
@@ -176,7 +177,9 @@ class SJJunctionsBins(SJBinsReads):
             )
         self.regions.contigs.to_zarr(path, "w", group=constants.NC_SJJUNCTIONSCONTIGS)
         self.regions.to_zarr(path, "a")
-        self._df.drop_vars("sjb_idx").pipe(lambda x: x.chunk(x.sizes)).to_zarr(
+        self._df.drop_vars("sjb_idx").pipe(lambda x: x.chunk(x.sizes)).pipe(
+            _load_zerodim_variables
+        ).to_zarr(
             path,
             mode="a",
             group=constants.NC_SJJUNCTIONSBINS,

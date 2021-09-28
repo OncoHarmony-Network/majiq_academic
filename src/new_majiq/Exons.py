@@ -13,6 +13,7 @@ import numpy as np
 import xarray as xr
 
 import new_majiq.constants as constants
+from new_majiq._workarounds import _load_zerodim_variables
 from new_majiq.GeneRegions import GeneRegions
 from new_majiq.Genes import Genes
 from new_majiq.internals import Exons as _Exons
@@ -109,9 +110,9 @@ class Exons(GeneRegions):
 
     def to_zarr(self, path: Union[str, Path], mode: str) -> None:
         """Serialize to zarr format. Note genes need to be saved separately"""
-        self.df.drop_vars("exon_idx").to_zarr(
-            path, mode=mode, group=constants.NC_EXONS, consolidated=True
-        )
+        self.df.drop_vars("exon_idx").pipe(lambda x: x.chunk(x.sizes)).pipe(
+            _load_zerodim_variables
+        ).to_zarr(path, mode=mode, group=constants.NC_EXONS, consolidated=True)
         return
 
     @classmethod

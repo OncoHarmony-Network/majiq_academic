@@ -14,6 +14,7 @@ import numpy as np
 import xarray as xr
 
 import new_majiq.constants as constants
+from new_majiq._workarounds import _load_zerodim_variables
 from new_majiq.ContigRegions import ContigRegions
 from new_majiq.Contigs import Contigs
 from new_majiq.Exons import Exons
@@ -57,7 +58,9 @@ class SJIntrons(ContigRegions):
 
     def to_zarr(self, path: Union[str, Path], mode: str) -> None:
         """Serialize to zarr format. Note contigs need to be saved separately"""
-        self.df.drop_vars("si_idx").pipe(lambda x: x.chunk(x.sizes)).to_zarr(
+        self.df.drop_vars("si_idx").pipe(lambda x: x.chunk(x.sizes)).pipe(
+            _load_zerodim_variables
+        ).to_zarr(
             path,
             mode=mode,
             group=constants.NC_SJINTRONS,

@@ -14,6 +14,7 @@ import numpy as np
 import xarray as xr
 
 import new_majiq.constants as constants
+from new_majiq._workarounds import _load_zerodim_variables
 from new_majiq.experiments import bam_experiment_name
 from new_majiq.GeneIntrons import GeneIntrons
 from new_majiq.GeneJunctions import GeneJunctions
@@ -196,7 +197,9 @@ class SpliceGraphReads(object):
             .assign_coords(
                 intron_hash=("experiment", [self.introns.checksum_nodata()]),
                 junction_hash=("experiment", [self.junctions.checksum_nodata()]),
-            ).to_zarr(path, mode=mode, group=constants.NC_SGREADS, consolidated=True)
+            )
+            .pipe(_load_zerodim_variables)
+            .to_zarr(path, mode=mode, group=constants.NC_SGREADS, consolidated=True)
         )
         return
 
