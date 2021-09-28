@@ -36,7 +36,10 @@ def add_args(parser: argparse.ArgumentParser) -> None:
         type=Path,
         help="Path for SJ file with raw bin reads for junctions and introns",
     )
-    parser.add_argument(
+    strandness = parser.add_argument_group(
+        "Configure detection of experiment strandness"
+    )
+    strandness.add_argument(
         "--strandness",
         type=str,
         default="AUTO",
@@ -46,9 +49,11 @@ def add_args(parser: argparse.ArgumentParser) -> None:
             nm.ExperimentStrandness.FORWARD.name,
             nm.ExperimentStrandness.REVERSE.name,
         ),
-        help="Strandness of input BAM (default: %(default)s)",
+        help="Strandness of input BAM."
+        " AUTO = automatically detect strand (use median ratio of forward vs"
+        " reverse stranded reads at annotated junctions). (default: %(default)s)",
     )
-    parser.add_argument(
+    strandness.add_argument(
         "--auto-minreads",
         type=check_nonnegative_factory(int, reject_zero=True),
         default=constants.DEFAULT_BAM_STRAND_MINREADS,
@@ -56,7 +61,7 @@ def add_args(parser: argparse.ArgumentParser) -> None:
         " splicegraph junctions with at least this many total (unstranded) reads"
         " (default: %(default)s)",
     )
-    parser.add_argument(
+    strandness.add_argument(
         "--auto-minjunctions",
         type=check_nonnegative_factory(int, reject_zero=True),
         default=constants.DEFAULT_BAM_STRAND_MINJUNCTIONS,
@@ -64,7 +69,7 @@ def add_args(parser: argparse.ArgumentParser) -> None:
         " of splicegraph junctions with sufficient reads is less than this argument"
         " (default: %(default)s)",
     )
-    parser.add_argument(
+    strandness.add_argument(
         "--auto-mediantolerance",
         type=check_nonnegative_factory(float, reject_zero=True),
         default=constants.DEFAULT_BAM_STRAND_MINDEVIATION,
@@ -72,8 +77,6 @@ def add_args(parser: argparse.ArgumentParser) -> None:
         " proportion over junctions of forward strand reads vs all reads"
         " deviates from 0.5 by only this amount (default: %(default)s)",
     )
-    # TODO configure automatic strand features
-    # TODO (enable skipping of parsing introns)
     parser.add_argument(
         "--nthreads",
         type=check_nonnegative_factory(int, True),
