@@ -25,11 +25,6 @@ DESCRIPTION = (
 def add_args(parser: argparse.ArgumentParser) -> None:
     """add arguments for parser"""
     parser.add_argument(
-        "sj",
-        type=Path,
-        help="Path to SJ coverage for experiment",
-    )
-    parser.add_argument(
         "splicegraph",
         type=Path,
         help="Path to splicegraph to define LSVs",
@@ -37,7 +32,13 @@ def add_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
         "psi_coverage",
         type=Path,
-        help="Path for output psi-coverage files",
+        help="Path for output psi-coverage file",
+    )
+    parser.add_argument(
+        "sj",
+        type=Path,
+        nargs="+",
+        help="Path to SJ coverage files for experiments",
     )
     parser.add_argument(
         "--minreads",
@@ -78,8 +79,14 @@ def add_args(parser: argparse.ArgumentParser) -> None:
 
 
 def run(args: argparse.Namespace) -> None:
-    if not args.sj.exists():
-        raise ValueError(f"Was unable to find input experiment at {args.sj}")
+    if missing := sorted(set(x for x in args.sj if not x.exists())):
+        raise ValueError(f"Unable to find all input SJ files ({missing =})")
+    if len(unique := set(args.sj)) != len(args.sj):
+        # get non-unique sj to report error
+        non_unique = sorted(args.sj)
+        for x in unique:
+            non_unique.remove(x)  # removes first occurence
+        raise ValueError(f"Non-unique input SJ files ({non_unique = })")
     if not args.splicegraph.exists():
         raise ValueError(f"Was unable to find splicegraph at {args.splicegraph}")
     if args.psi_coverage.exists():
@@ -88,10 +95,7 @@ def run(args: argparse.Namespace) -> None:
     log = get_logger()
     log.info(f"Loading input splicegraph from {args.splicegraph.resolve()}")
     sg = nm.SpliceGraph.from_zarr(args.splicegraph)
-    log.info(f"Loading input experiment from {args.sj.resolve()}")
-    sj_junctions = nm.SJJunctionsBins.from_zarr(args.sj)
-    sj_introns = nm.SJIntronsBins.from_zarr(args.sj)
-    log.info("Obtaining coverage over LSVs")
+    log.info("Defining LSVs for coverage")
     lsvs = sg.exon_connections.lsvs()
     if args.ignore_from is not None:
         log.info(f"Ignoring LSVs also found in {args.ignore_from.resolve()}")
@@ -102,19 +106,28 @@ def run(args: argparse.Namespace) -> None:
                 ).exon_connections.lsvs()
             ).unique_events_mask
         ]
-    lsv_coverage = nm.EventsCoverage.from_events_and_sj(
-        lsvs,
-        sj_junctions,
-        sj_introns,
-        num_bootstraps=args.num_bootstraps,
-        pvalue_threshold=args.stack_pvalue_threshold,
-    )
-    log.info("Converting to PSI coverage")
-    psi_coverage = nm.PsiCoverage.from_events_coverage(
-        lsv_coverage, args.minreads, args.minbins
-    )
-    log.info(f"Saving coverage to {args.psi_coverage.resolve()}")
-    psi_coverage.to_zarr(args.psi_coverage)
+    for ndx, sj_path in enumerate(args.sj, 1):
+        log.info(
+            f"Loading SJ coverage from {sj_path.resolve()} ({ndx} / {len(args.sj)})"
+        )
+        sj_junctions = nm.SJJunctionsBins.from_zarr(sj_path)
+        sj_introns = nm.SJIntronsBins.from_zarr(sj_path)
+        log.info("Converting to LSV coverage")
+        lsv_coverage = nm.EventsCoverage.from_events_and_sj(
+            lsvs,
+            sj_junctions,
+            sj_introns,
+            num_bootstraps=args.num_bootstraps,
+            pvalue_threshold=args.stack_pvalue_threshold,
+        )
+        log.info("Converting to PSI coverage")
+        psi_coverage = nm.PsiCoverage.from_events_coverage(
+            lsv_coverage, args.minreads, args.minbins
+        )
+        log.info(f"Saving PSI coverage to {args.psi_coverage.resolve()}")
+        psi_coverage.to_zarr(
+            args.psi_coverage, append=(ndx > 1), consolidated=(ndx == len(args.sj))
+        )
     return
 
 

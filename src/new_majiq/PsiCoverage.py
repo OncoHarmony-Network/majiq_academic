@@ -333,8 +333,30 @@ class PsiCoverage(object):
         # return resulting PsiCoverage object
         return PsiCoverage(df, self.events)
 
-    def to_zarr(self, path: Union[str, Path], ec_chunksize: int = 8192) -> None:
+    def to_zarr(
+        self,
+        path: Union[str, Path],
+        ec_chunksize: int = 8192,
+        append: bool = False,
+        consolidated: bool = True,
+    ) -> None:
         """Save PSI coverage dataset as zarr
+
+        Parameters
+        ----------
+        path: Union[str, Path]
+            Path for output file in zarr format
+        ec_chunksize: int
+            How to chunk event connections to prevent memory from getting to
+            large when loading many samples simultaneously
+        append: bool
+            Add to *existing* file (not checked). But if append is used on
+            non-existing file, event information will not be saved.
+        consolidated: bool
+            When saving the file make sure that it is consolidated. In general,
+            if you are appending a bunch of files together, it can make sense
+            to set consolidated=False, and consolidate on the last write (only
+            consolidate once). But, don't forget to consolidate at the end.
 
         Notes
         -----
@@ -356,14 +378,30 @@ class PsiCoverage(object):
         )
         save_df = self.df.drop_vars(["event_size", "lsv_idx"])
         if save_df.sizes["ec_idx"] > 0:
-            save_df = save_df.chunk(USE_CHUNKS)  # type: ignore
+            save_df = save_df.chunk(USE_CHUNKS)  # type: ignore[arg-type]
         # clear any previous encodings from before, before saving
         for v in save_df.variables.values():
             v.encoding.clear()
-        save_df.to_zarr(
-            path, mode="w", group=constants.NC_PSICOVERAGE, consolidated=True
-        )
-        self.events.to_zarr(path, mode="a", group=constants.NC_EVENTS)
+        if append:
+            # remove attributes referring to bam
+            for k in [x for x in save_df.attrs.keys() if str(x).startswith("bam")]:
+                save_df.attrs.pop(k, None)
+            save_df.to_zarr(
+                path,
+                append_dim="prefix",
+                group=constants.NC_PSICOVERAGE,
+                consolidated=consolidated,
+            )
+        else:
+            save_df.to_zarr(
+                path,
+                mode="w",
+                group=constants.NC_PSICOVERAGE,
+                consolidated=False,
+            )
+            self.events.to_zarr(
+                path, mode="a", group=constants.NC_EVENTS, consolidated=consolidated
+            )
         return
 
     @property

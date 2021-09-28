@@ -187,7 +187,9 @@ class Events(object):
             )
         )
 
-    def to_zarr(self, path: Union[str, Path], mode: str) -> None:
+    def to_zarr(
+        self, path: Union[str, Path], mode: str, consolidated: bool = True
+    ) -> None:
         """Save to specified zarr file"""
         self.save_df.pipe(lambda x: x.chunk(x.sizes)).pipe(
             _load_zerodim_variables
@@ -195,7 +197,7 @@ class Events(object):
             path,
             mode=mode,
             group=constants.NC_EVENTS,
-            consolidated=True,
+            consolidated=consolidated,
         )
         return
 
