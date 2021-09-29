@@ -129,6 +129,7 @@ def _get_factors(
         factors = xr.open_mfdataset(
             args.factors_zarr,
             engine="zarr",
+            combine="nested",
             concat_dim="prefix",
             join="override",
             compat="override",  # use first file if overlapping prefixes

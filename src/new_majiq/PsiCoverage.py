@@ -299,6 +299,7 @@ class PsiCoverage(object):
             path,
             engine="zarr",
             group=constants.NC_PSICOVERAGE,
+            combine="nested",
             concat_dim="prefix",
             join="override",
             compat="override",
