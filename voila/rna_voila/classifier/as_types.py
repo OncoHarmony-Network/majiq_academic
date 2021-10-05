@@ -1690,11 +1690,16 @@ class Graph:
                             if other_exon == node:
                                 continue
                             shared_lsv = set(junc_from_he.lsvs) & set(junc_to_another_exon.lsvs)
-                            # NOTE: we only classify p_ale if this is a source LSV right now.
-                            # skip classifying if LSV is target !
-                            this_lsv = shared_lsv.pop()
-                            if not ":s:" in this_lsv:
-                                continue
+                            # only classify if LSV exists
+                            # this set is empty for example if a p_ale/p_afe 
+                            # has the two required junctions but there were not 
+                            # enough reads for the quantifier to see an LSV.
+                            if len(shared_lsv) > 0:
+                                this_lsv = shared_lsv.pop()
+                                if not ":s:" in this_lsv:
+                                    continue
+                                if len(shared_lsv) == 1:
+                                    self.classified_lsvs.append(this_lsv)
 
 
                             if len(junc_from_he) > len(junc_to_another_exon):
@@ -1707,8 +1712,6 @@ class Graph:
                                 distal = other_exon
                                 skipA1 = junc_to_another_exon
                                 skipA2 = junc_from_he
-                            if len(shared_lsv) == 1:
-                                self.classified_lsvs.append(this_lsv)
                             found.append({'event': 'p_ale', 'Proximal': proximal,
                                           'Distal': distal, 'Reference': ref_exon,
                                           'SkipA2': skipA2,
@@ -1758,10 +1761,16 @@ class Graph:
                                 continue
 
                             shared_lsv = set(junc_from_he.lsvs) & set(junc_to_another_exon.lsvs)
-
-                            this_lsv = shared_lsv.pop()
-                            if not ":t:" in this_lsv:
-                                continue
+                            # only classify if LSV exists
+                            # this set is empty for example if a p_ale/p_afe 
+                            # has the two required junctions but there were not 
+                            # enough reads for the quantifier to see an LSV.
+                            if len(shared_lsv) > 0:
+                                this_lsv = shared_lsv.pop()
+                                if not ":t:" in this_lsv:
+                                    continue
+                                if len(shared_lsv) == 1:
+                                    self.classified_lsvs.append(this_lsv)
 
                             if len(junc_from_he) > len(junc_to_another_exon):
                                 proximal = other_exon
@@ -1773,8 +1782,7 @@ class Graph:
                                 distal = other_exon
                                 skipA1 = junc_from_he
                                 skipA2 = junc_to_another_exon
-                            if len(shared_lsv) == 1:
-                                self.classified_lsvs.append(this_lsv)
+                            
                             found.append({'event': 'p_afe', 'Proximal': proximal,
                                           'Distal': distal, 'Reference': ref_exon,
                                           'SkipA2': skipA2,
