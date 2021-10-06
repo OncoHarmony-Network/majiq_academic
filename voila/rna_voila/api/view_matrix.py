@@ -967,7 +967,7 @@ class ViewHeterogens(ViewMulti):
             for f in voila_files:
                 with ViewHeterogen(f) as m:
                     groups = '-'.join(m.group_names)
-                    score_names = ('tnom_score',)
+                    score_names = ('tnom_score',) if 'TNOM' in m.stat_names else ()
                     try:
                         try:
                             score_vals = m.get(self.lsv_id, 'tnom_score').T
@@ -1109,7 +1109,8 @@ class ViewHeterogens(ViewMulti):
         for f in voila_files:
             with ViewHeterogen(f) as m:
                 groups = '-'.join(m.group_names)
-                for name in ('tnom_score',):
+                score_names = ('tnom_score',) if 'TNOM' in m.stat_names else ()
+                for name in score_names:
                     if len(voila_files) == 1:
                         yield name
                     else:
