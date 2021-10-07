@@ -106,6 +106,33 @@ inline CentralMoments<RealT> _Moments(
   return CentralMoments<RealT>{mean_mean, mean_variance + variance_mean};
 }
 
+/**
+ * Get beta distribution approximation to mixture matching mean and variance
+ *
+ * Assumes that mean, variance are possible to match moments with beta:
+ * 0 < mean < 1, variance < mean * (1 - mean)
+ */
+template <typename RealT>
+inline std::pair<RealT, RealT> _BetaApproximation(
+    const CentralMoments<RealT>& moments) {
+  if (npy_isnan(moments.mean)) {
+    return std::make_pair(std::numeric_limits<RealT>::quiet_NaN(),
+        std::numeric_limits<RealT>::quiet_NaN());
+  }
+  // https://www.johndcook.com/blog/2021/04/07/beta-given-mean-variance/
+  const RealT a0 = moments.mean * (
+      moments.mean * (1 - moments.mean) / moments.variance - 1);
+  const RealT b0 = a0 * (1 - moments.mean) / moments.mean;
+  return std::make_pair(a0, b0);
+}
+template <typename ItA, typename ItB,
+         typename RealT = typename std::iterator_traits<ItA>::value_type>
+inline std::pair<RealT, RealT> _BetaApproximation(
+    ItA a, ItB b, const npy_intp n_mixture) {
+  const CentralMoments<RealT> moments = _Moments(a, b, n_mixture);
+  return _BetaApproximation(moments);
+}
+
 template <typename ItA, typename ItB,
          typename RealT = typename std::iterator_traits<ItA>::value_type>
 inline RealT _CDF_unchecked(RealT x, ItA a, ItB b, const npy_intp n_mixture) {

@@ -16,6 +16,7 @@
 #include <numpy/ufuncobject.h>
 #include <numpy/npy_3kcompat.h>
 
+#include "Approximation.hpp"
 #include "CDF.hpp"
 #include "Moments.hpp"
 #include "PDF.hpp"
@@ -63,6 +64,15 @@ PyMODINIT_FUNC PyInit_beta_mixture(void) {
       Moments::signature);
   PyDict_SetItemString(d, Moments::name, moments);
   Py_DECREF(moments);
+
+  namespace Approximation = MajiqGufuncs::BetaMixture::Approximation;
+  PyObject *approximation = PyUFunc_FromFuncAndDataAndSignature(
+      Approximation::funcs, data, Approximation::types,
+      Approximation::ntypes, Approximation::nin, Approximation::nout,
+      PyUFunc_None, Approximation::name, Approximation::doc, 0,
+      Approximation::signature);
+  PyDict_SetItemString(d, Approximation::name, approximation);
+  Py_DECREF(approximation);
 
   namespace CDF = MajiqGufuncs::BetaMixture::CDF;
   PyObject *cdf = PyUFunc_FromFuncAndDataAndSignature(
