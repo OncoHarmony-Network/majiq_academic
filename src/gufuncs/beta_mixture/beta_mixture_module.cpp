@@ -17,6 +17,7 @@
 #include <numpy/npy_3kcompat.h>
 
 #include "CDF.hpp"
+#include "Moments.hpp"
 #include "PDF.hpp"
 #include "PMF.hpp"
 #include "Quantile.hpp"
@@ -54,6 +55,14 @@ PyMODINIT_FUNC PyInit_beta_mixture(void) {
   import_array();
   import_umath();
 
+  namespace Moments = MajiqGufuncs::BetaMixture::Moments;
+  PyObject *moments = PyUFunc_FromFuncAndDataAndSignature(
+      Moments::funcs, data, Moments::types,
+      Moments::ntypes, Moments::nin, Moments::nout,
+      PyUFunc_None, Moments::name, Moments::doc, 0,
+      Moments::signature);
+  PyDict_SetItemString(d, Moments::name, moments);
+  Py_DECREF(moments);
 
   namespace CDF = MajiqGufuncs::BetaMixture::CDF;
   PyObject *cdf = PyUFunc_FromFuncAndDataAndSignature(
