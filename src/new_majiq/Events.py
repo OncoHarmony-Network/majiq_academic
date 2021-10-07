@@ -14,8 +14,11 @@ import xarray as xr
 
 import new_majiq.constants as constants
 from new_majiq._workarounds import _load_zerodim_variables
+from new_majiq.Contigs import Contigs
+from new_majiq.Exons import Exons
 from new_majiq.GeneIntrons import GeneIntrons
 from new_majiq.GeneJunctions import GeneJunctions
+from new_majiq.Genes import Genes
 from new_majiq.internals import Events as _Events
 from new_majiq.internals import EventsAlign
 
@@ -49,6 +52,23 @@ class Events(object):
     def junctions(self) -> GeneJunctions:
         """Junctions referenced by event connections"""
         return GeneJunctions(self._events.junctions)
+
+    @property
+    def exons(self) -> Exons:
+        """Exons used by these events"""
+        exons = self.junctions.connected_exons
+        assert isinstance(exons, Exons), "Events appears to not reference exons"
+        return exons
+
+    @property
+    def genes(self) -> Genes:
+        """Genes used by these events"""
+        return self.junctions.genes
+
+    @property
+    def contigs(self) -> Contigs:
+        """Contigs used by these events"""
+        return self.genes.contigs
 
     @property
     def num_events(self) -> int:
@@ -105,6 +125,9 @@ class Events(object):
             ec_idx = self.ec_idx
         return self._events.connection_gene_idx(ec_idx)
 
+    def connection_contig_idx(self, ec_idx: Optional[np.ndarray] = None) -> np.ndarray:
+        return self.genes.contig_idx[self.connection_gene_idx(ec_idx)]
+
     def connection_start(self, ec_idx: Optional[np.ndarray] = None) -> np.ndarray:
         if ec_idx is None:
             ec_idx = self.ec_idx
@@ -119,6 +142,10 @@ class Events(object):
         if ec_idx is None:
             ec_idx = self.ec_idx
         return self._events.connection_denovo(ec_idx)
+
+    @property
+    def connection_ref_exon_idx(self) -> np.ndarray:
+        return np.repeat(self.ref_exon_idx, np.diff(self._offsets.astype(int)))
 
     def connection_other_exon_idx(
         self, ec_idx: Optional[np.ndarray] = None
