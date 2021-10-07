@@ -164,6 +164,29 @@ class PsiCoverage(object):
         return np.add(1, self.bootstrap_total - self.bootstrap_alpha)
 
     @cached_property
+    def _approximate_params(self) -> xr.DataArray:
+        _params = xr.apply_ufunc(
+            bm.approximation,
+            self.bootstrap_alpha,
+            self.bootstrap_beta,
+            input_core_dims=[["bootstrap_replicate"], ["bootstrap_replicate"]],
+            output_core_dims=[["_param_idx"]],
+            dask="parallelized",
+            dask_gufunc_kwargs=dict(output_sizes={"_param_idx": 2}),
+        )
+        alpha = _params.isel(_param_idx=0)
+        beta = _params.isel(_param_idx=1)
+        return (alpha, beta)
+
+    @property
+    def approximate_alpha(self) -> xr.DataArray:
+        return self._approximate_params[0]
+
+    @property
+    def approximate_beta(self) -> xr.DataArray:
+        return self._approximate_params[1]
+
+    @cached_property
     def raw_posterior_mean(self) -> xr.DataArray:
         return self.raw_alpha / np.add(1, self.raw_total)
 
@@ -174,16 +197,17 @@ class PsiCoverage(object):
 
     @cached_property
     def _bootstrap_moments(self) -> Tuple[xr.DataArray, xr.DataArray]:
-        # get mean, variance per bootstrap replicate
-        mean = self.bootstrap_alpha / np.add(1, self.bootstrap_total)
-        variance = mean * np.subtract(1, mean) / np.add(2, self.bootstrap_total)
-        # summarize over bootstrap replicates
-        agg_mean = mean.mean("bootstrap_replicate")
-        agg_variance = (
-            # Law of total variance: V(X) = V(E[X|B]) + E[V(X|B)]
-            variance.mean("bootstrap_replicate")
-            + mean.var("bootstrap_replicate", ddof=0)
+        _moments = xr.apply_ufunc(
+            bm.moments,
+            self.bootstrap_alpha,
+            self.bootstrap_beta,
+            input_core_dims=[["bootstrap_replicate"], ["bootstrap_replicate"]],
+            output_core_dims=[["_moment_idx"]],
+            dask="parallelized",
+            dask_gufunc_kwargs=dict(output_sizes={"_moment_idx": 2}),
         )
+        agg_mean = _moments.isel(_moment_idx=0)
+        agg_variance = _moments.isel(_moment_idx=1)
         return (agg_mean, agg_variance)
 
     @property
@@ -196,34 +220,94 @@ class PsiCoverage(object):
 
     def bootstrap_quantile(
         self,
-        quantiles: Sequence[float] = [0.1, 0.9],
+        quantiles: Union[xr.DataArray, Sequence[float]] = [0.1, 0.9],
     ) -> xr.DataArray:
-        quantiles_arr = xr.DataArray(quantiles, dims="quantiles")
+        """Get quantiles of bootstrap posterior"""
+        if not isinstance(quantiles, xr.DataArray):
+            quantiles_arr = np.array(quantiles, dtype=self.bootstrap_psi.dtype)
+            if quantiles_arr.ndim > 1:
+                raise ValueError(
+                    "Unable to handle non-xarray multi-dimensional quantiles"
+                )
+            elif quantiles_arr.ndim == 0:
+                quantiles_arr = quantiles_arr[np.newaxis]
+            quantiles = xr.DataArray(quantiles_arr, [("quantiles", quantiles_arr)])
         return xr.apply_ufunc(
-            _silent_quantile,
-            quantiles_arr,
+            bm.quantile,
+            quantiles,
             self.bootstrap_alpha,
             self.bootstrap_beta,
             input_core_dims=[[], ["bootstrap_replicate"], ["bootstrap_replicate"]],
             dask="allowed",
         )
 
-    def bootstrap_discretized_pmf(self, nbins: int = 40):
-        endpoints = xr.DataArray(
-            np.linspace(0, 1, 1 + nbins, dtype=self.bootstrap_psi.dtype), dims="pmf_bin"
-        )
-        cdf = xr.apply_ufunc(
-            _silent_cdf,
-            endpoints,
-            self.bootstrap_alpha,
-            self.bootstrap_beta,
-            input_core_dims=[[], ["bootstrap_replicate"], ["bootstrap_replicate"]],
+    def approximate_quantile(
+        self,
+        quantiles: Union[xr.DataArray, Sequence[float]] = [0.1, 0.9],
+    ) -> xr.DataArray:
+        """Get quantiles of approximate bootstrap posterior"""
+        if not isinstance(quantiles, xr.DataArray):
+            quantiles_arr = np.array(quantiles, dtype=self.bootstrap_psi.dtype)
+            if quantiles_arr.ndim > 1:
+                raise ValueError(
+                    "Unable to handle non-xarray multi-dimensional quantiles"
+                )
+            elif quantiles_arr.ndim == 0:
+                quantiles_arr = quantiles_arr[np.newaxis]
+            quantiles = xr.DataArray(quantiles_arr, [("quantiles", quantiles_arr)])
+        return xr.apply_ufunc(
+            bm.quantile,
+            quantiles,
+            self.approximate_alpha.expand_dims(mix=1),
+            self.approximate_beta.expand_dims(mix=1),
+            input_core_dims=[[], ["mix"], ["mix"]],
             dask="allowed",
         )
-        pmf = cdf.isel(pmf_bin=slice(1, None)) - cdf.isel(pmf_bin=slice(None, -1))
-        return pmf.assign_coords(
-            pmf_bin_start=("pmf_bin", endpoints.values[:-1]),
-            pmf_bin_end=("pmf_bin", endpoints.values[1:]),
+
+    def bootstrap_discretized_pmf(self, nbins: int = 40):
+        """Get discretized PMF with specified number of bins"""
+        endpoints = np.linspace(0, 1, 1 + nbins, dtype=self.bootstrap_psi.dtype)
+        dummy_bins = xr.DataArray(
+            np.empty(nbins, dtype=self.bootstrap_psi.dtype),
+            {
+                "pmf_bin_start": ("pmf_bin", endpoints[:-1]),
+                "pmf_bin_end": ("pmf_bin", endpoints[1:]),
+            },
+            dims=["pmf_bin"],
+        )
+        return xr.apply_ufunc(
+            bm.pmf,
+            self.bootstrap_alpha,
+            self.bootstrap_beta,
+            dummy_bins,
+            input_core_dims=[
+                ["bootstrap_replicate"],
+                ["bootstrap_replicate"],
+                ["pmf_bin"],
+            ],
+            output_core_dims=[["pmf_bin"]],
+            dask="allowed",
+        )
+
+    def approximate_discretized_pmf(self, nbins: int = 40):
+        """Get discretized PMF with specified number of bins"""
+        endpoints = np.linspace(0, 1, 1 + nbins, dtype=self.bootstrap_psi.dtype)
+        dummy_bins = xr.DataArray(
+            np.empty(nbins, dtype=self.bootstrap_psi.dtype),
+            {
+                "pmf_bin_start": ("pmf_bin", endpoints[:-1]),
+                "pmf_bin_end": ("pmf_bin", endpoints[1:]),
+            },
+            dims=["pmf_bin"],
+        )
+        return xr.apply_ufunc(
+            bm.pmf,
+            self.approximate_alpha.expand_dims(mix=1),
+            self.approximate_beta.expand_dims(mix=1),
+            dummy_bins,
+            input_core_dims=[["mix"], ["mix"], ["pmf_bin"]],
+            output_core_dims=[["pmf_bin"]],
+            dask="allowed",
         )
 
     @classmethod
