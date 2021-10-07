@@ -67,6 +67,9 @@ struct CentralMoments {
   RealT variance;
 };
 
+/**
+ * Get mean, variance of beta mixture, assuming n_mixture > 0
+ */
 template <typename ItA, typename ItB,
          typename RealT = typename std::iterator_traits<ItA>::value_type>
 inline CentralMoments<RealT> _Moments(

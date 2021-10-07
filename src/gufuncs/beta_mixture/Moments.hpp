@@ -47,10 +47,6 @@ static void Outer(
 
   // core dimensions
   const npy_intp dim_mixture = dimensions[0];
-  // XXX(DEBUG)
-  if (dimensions[1] != 2) {
-    throw std::runtime_error("dimensions[1] must equal 2 in beta_mixture.Moments");
-  }
   // inner strides
   const npy_intp inner_stride_a = steps[0];
   const npy_intp inner_stride_b = steps[1];
