@@ -42,7 +42,7 @@
 
 
 {% block analysis_type_script %}
-    <script src="{{ url_for('static', filename='js/lib/single-file.js') }}"></script>
+
     <script src="{{ url_for('static', filename='js/lib/jquery.sumoselect.min.js') }}"></script>
     <script src="{{ url_for('static', filename='js/lib/jquery.ba-throttle-debounce.min.js') }}"></script>
     <script>
@@ -394,15 +394,7 @@
                 $(compact).toggle();
             })
 
-        $('.page-download').click(async function(){
-            const { content, title, filename } = await singlefile.getPageData({
-                removeImports: true,
-                removeScripts: true,
-                removeAudioSrc: true,
-                removeVideoSrc: true
-            });
-            save_html_file(content, filename);
-        })
+
 
 
     </script>
