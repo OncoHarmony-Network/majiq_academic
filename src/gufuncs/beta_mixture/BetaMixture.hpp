@@ -21,6 +21,8 @@
 
 #include <boost/math/distributions/beta.hpp>
 #include <boost/math/tools/roots.hpp>
+#include <boost/random/beta_distribution.hpp>
+#include <boost/random/uniform_int_distribution.hpp>
 
 namespace MajiqGufuncs {
 namespace BetaMixture {
@@ -37,11 +39,15 @@ using DistT = boost::math::beta_distribution<RealT, fast_policy>;
 
 // still assumes n_mixture > 0. If we have zero-length axis, handle at outer
 // loop
+template <typename RealT>
+inline bool IsInvalidComponent(RealT a, RealT b) {
+  return npy_isnan(a) || npy_isnan(b) || a <= 0 || b <= 0;
+}
 template <typename ItA, typename ItB,
          typename RealT = typename std::iterator_traits<ItA>::value_type>
 inline bool IsInvalid(ItA a, ItB b, const npy_intp n_mixture) {
   for (npy_intp i = 0; i < n_mixture; ++i, ++a, ++b) {
-    if (npy_isnan(*a) || npy_isnan(*b) || *a <= 0 || *b <= 0) {
+    if (IsInvalidComponent(*a, *b)) {
       return true;
     }
   }
@@ -53,7 +59,7 @@ template <typename ItA, typename ItB,
 inline RealT _Mean(ItA a, ItB b, const npy_intp n_mixture) {
   RealT sum{0};
   for (npy_intp i = 0; i < n_mixture; ++i, ++a, ++b) {
-    if (npy_isnan(*a) || npy_isnan(*b) || *a <= 0 || *b <= 0) {
+    if (IsInvalidComponent(*a, *b)) {
       return std::numeric_limits<RealT>::quiet_NaN();
     }
     sum += *a / (*a + *b);
@@ -81,7 +87,7 @@ inline CentralMoments<RealT> _Moments(
   RealT sum_mean{0};
   RealT sum_variance{0};
   for (npy_intp i = 0; i < n_mixture; ++i, ++a1, ++b1) {
-    if (npy_isnan(*a1) || npy_isnan(*b1) || *a1 <= 0 || *b1 <= 0) {
+    if (IsInvalidComponent(*a1, *b1)) {
       return CentralMoments<RealT>{
         std::numeric_limits<RealT>::quiet_NaN(),
         std::numeric_limits<RealT>::quiet_NaN()
@@ -330,6 +336,25 @@ inline RealT _Quantile(
   uintmax_t maxiter = MAX_ITER;
   x = newton_raphson_iterate(f, x, x_lb, x_ub, QUANTILE_DIGITS2, maxiter);
   return x;
+}
+
+template <typename Generator, typename RealT>
+inline RealT _Sample_unchecked(Generator& g, RealT a, RealT b) {
+  // assumes a, b finite and positive
+  using boost::random::beta_distribution;
+  beta_distribution<RealT> dist{a, b};
+  return dist(g);
+}
+template <typename Generator, typename ItA, typename ItB,
+         typename RealT = typename std::iterator_traits<ItA>::value_type>
+inline RealT _SampleMixture_unchecked(
+    Generator& g, ItA a, ItB b, const npy_intp n_mixture) {
+  // assumes a, b finite and positive
+  using boost::random::uniform_int_distribution;
+  uniform_int_distribution<npy_intp> dist_source(0, n_mixture - 1);
+  // which beta distribution to sample from?
+  const auto i = dist_source(g);
+  return _Sample_unchecked(g, a[i], b[i]);
 }
 
 

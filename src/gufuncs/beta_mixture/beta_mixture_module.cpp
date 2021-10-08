@@ -8,7 +8,6 @@
  * Author: Joseph K Aicher
  */
 
-
 #define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
 
 #include <Python.h>
@@ -16,20 +15,73 @@
 #include <numpy/ufuncobject.h>
 #include <numpy/npy_3kcompat.h>
 
+#include <gufuncs/RNGPool.hpp>
+
 #include "Approximation.hpp"
 #include "CDF.hpp"
 #include "Moments.hpp"
 #include "PDF.hpp"
 #include "PMF.hpp"
 #include "Quantile.hpp"
+#include "Sample.hpp"
 
+// for functions requiring sampling
+using boost::random::mt19937;
+static MajiqGufuncs::RNGPool<mt19937> rng_pool{};
+static void *data_sample[MajiqGufuncs::BetaMixture::Sample::ntypes] = {
+  // float
+  static_cast<void*>(&rng_pool),
+  // double
+  static_cast<void*>(&rng_pool),
+};
+static PyObject* SetSeedGlobalGen(PyObject* self, PyObject* args) {
+  int64_t seed;
+  if (!PyArg_ParseTuple(args, "L", &seed)) {
+    // failed to parse arguments, should raise exception in Python
+    return nullptr;
+  }
+  rng_pool.seed(seed);
+  Py_RETURN_NONE;
+}
+static char SetSeedGlobalGen_doc[] = R"pbdoc(
+rng_seed(seed: int) -> None
 
-// no extra data being passed in
+Set seed for pool of random number generators
+
+Parameters
+----------
+seed: int
+    seed random number generator with this value
+)pbdoc";
+static PyObject* IncreasePoolSizeGlobalGen(PyObject* self, PyObject* args) {
+  int64_t n;
+  if (!PyArg_ParseTuple(args, "L", &n)) {
+    // failed to parse arguments, should raise exception in Python
+    return nullptr;
+  }
+  rng_pool.resize(n);
+  Py_RETURN_NONE;
+}
+static char IncreasePoolSizeGlobalGen_doc[] = R"pbdoc(
+rng_resize(n: int) -> None
+
+Resize pool of random number generators to allow that many simultaneous threads
+
+Parameters
+----------
+n: int
+    minimum number of random number generators there should be available to work
+    with
+)pbdoc";
+
+// for functions with no extra data being passed in
 static void *data[1] = {NULL};
-
 
 // define module
 static PyMethodDef ModuleMethods[] = {
+  {"rng_seed", SetSeedGlobalGen, METH_VARARGS, SetSeedGlobalGen_doc},
+  {"rng_resize", IncreasePoolSizeGlobalGen, METH_VARARGS,
+    IncreasePoolSizeGlobalGen_doc},
   {NULL, NULL, 0, NULL}
 };
 static struct PyModuleDef moduledef = {
@@ -100,6 +152,15 @@ PyMODINIT_FUNC PyInit_beta_mixture(void) {
       PMF::signature);
   PyDict_SetItemString(d, PMF::name, pmf);
   Py_DECREF(pmf);
+
+  namespace Sample = MajiqGufuncs::BetaMixture::Sample;
+  PyObject *sample = PyUFunc_FromFuncAndDataAndSignature(
+      Sample::funcs, data_sample, Sample::types,
+      Sample::ntypes, Sample::nin, Sample::nout,
+      PyUFunc_None, Sample::name, Sample::doc, 0,
+      Sample::signature);
+  PyDict_SetItemString(d, Sample::name, sample);
+  Py_DECREF(sample);
 
   namespace Quantile = MajiqGufuncs::BetaMixture::Quantile;
   PyObject *quantile = PyUFunc_FromFuncAndDataAndSignature(
