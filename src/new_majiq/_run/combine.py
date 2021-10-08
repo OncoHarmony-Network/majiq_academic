@@ -69,7 +69,7 @@ def run(args: argparse.Namespace) -> None:
         [
             nm.GeneJunctions.load_dataset(p).assign_coords(
                 denovo=lambda df: xr.DataArray(False).expand_dims(
-                    {"gj_idx": df.sizes["gj_idx"]}
+                    {"gj_idx": df.sizes["gj_idx"]}  # type: ignore[arg-type]
                 )
             )
             for p in args.make_annotated

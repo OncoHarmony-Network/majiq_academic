@@ -8,7 +8,7 @@ Author: Joseph K Aicher
 """
 
 from pathlib import Path
-from typing import Final, Optional, Union
+from typing import Dict, Final, Optional, Union
 
 import new_majiq.constants as constants
 from new_majiq.Contigs import Contigs
@@ -17,7 +17,7 @@ from new_majiq.Exons import Exons
 from new_majiq.GeneIntrons import GeneIntrons
 from new_majiq.GeneJunctions import GeneJunctions
 from new_majiq.Genes import Genes
-from new_majiq.internals import GFF3Types
+from new_majiq.internals import GFF3FeatureType
 from new_majiq.internals import SpliceGraph as _SpliceGraph
 
 
@@ -62,7 +62,7 @@ class SpliceGraph(object):
         cls,
         path: Union[str, Path],
         process_ir: bool = constants.DEFAULT_BUILD_PROCESS_IR,
-        gff3_types: GFF3Types = constants.DEFAULT_BUILD_GFF3TYPES,
+        gff3_types: Dict[str, GFF3FeatureType] = constants.DEFAULT_BUILD_GFF3TYPES,
     ) -> "SpliceGraph":
         return SpliceGraph(_SpliceGraph.from_gff3(str(path), process_ir, gff3_types))
 

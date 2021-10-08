@@ -1509,7 +1509,7 @@ void init_SJJunctionsBins(pySJJunctionsBins_t& pySJJunctionsBins) {
         Parameters
         ----------
         bam_path: str
-            Path for input BAM fille
+            Path for input BAM file
         experiment_strandness: ExperimentStrandness
             Strandness of RNA-seq library
         nthreads: int

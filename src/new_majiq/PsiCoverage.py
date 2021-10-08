@@ -141,11 +141,11 @@ class PsiCoverage(object):
 
     @cached_property
     def alpha_prior(self) -> xr.DataArray:
-        return np.reciprocal(self.event_size.astype(self.raw_psi.dtype))
+        return 1 / self.event_size.astype(self.raw_psi.dtype)
 
     @cached_property
     def beta_prior(self) -> xr.DataArray:
-        return np.subtract(1, self.alpha_prior)
+        return 1 - self.alpha_prior
 
     @cached_property
     def raw_alpha(self) -> xr.DataArray:
@@ -157,14 +157,14 @@ class PsiCoverage(object):
 
     @cached_property
     def raw_beta(self) -> xr.DataArray:
-        return np.add(1, self.raw_total - self.raw_alpha)
+        return 1 + self.raw_total - self.raw_alpha
 
     @cached_property
     def bootstrap_beta(self) -> xr.DataArray:
-        return np.add(1, self.bootstrap_total - self.bootstrap_alpha)
+        return 1 + self.bootstrap_total - self.bootstrap_alpha
 
     @cached_property
-    def _approximate_params(self) -> xr.DataArray:
+    def _approximate_params(self) -> Tuple[xr.DataArray, xr.DataArray]:
         _params = xr.apply_ufunc(
             bm.approximation,
             self.bootstrap_alpha,
