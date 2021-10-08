@@ -7,8 +7,11 @@ except (ModuleNotFoundError, ImportError):
 except Exception:
     raise
 
+import new_majiq.beta_mixture as beta_mixture
 import new_majiq.constants as constants
+import new_majiq.stats as stats
 
+from .Events import Events
 from .EventsCoverage import EventsCoverage
 from .ExonConnections import ExonConnections
 from .Exons import Exons
@@ -32,11 +35,14 @@ from .SpliceGraph import SpliceGraph
 from .SpliceGraphReads import MultiSpliceGraphReads, SpliceGraphReads
 
 __all__ = [
+    "beta_mixture",
+    "stats",
     "ExperimentStrandness",
     "ExperimentThresholds",
     "set_seed",
     "__version__",
     "constants",
+    "Events",
     "EventsCoverage",
     "ExonConnections",
     "Exons",
