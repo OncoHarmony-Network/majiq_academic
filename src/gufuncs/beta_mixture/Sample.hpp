@@ -83,20 +83,12 @@ static void Outer(
   auto rng_ptr = rng_pool.acquire();
   mt19937& gen = *rng_ptr;
   // outer loop for sampling
-  if (dim_mixture == 1) {
-    for (npy_intp i = 0; i < dim_broadcast; ++i, ++a, ++b, ++out) {
-      *out = IsInvalidComponent(*a, *b)
-        ? std::numeric_limits<RealT>::quiet_NaN()
-        : _Sample_unchecked(gen, *a, *b);
-    }
-  } else {
-    for (npy_intp i = 0; i < dim_broadcast; ++i, ++a, ++b, ++out) {
-      auto inner_a = a.with_stride(inner_stride_a);
-      auto inner_b = b.with_stride(inner_stride_b);
-      *out = IsInvalid(inner_a, inner_b, dim_mixture)
-        ? std::numeric_limits<RealT>::quiet_NaN()
-        : _SampleMixture_unchecked(gen, inner_a, inner_b, dim_mixture);
-    }
+  for (npy_intp i = 0; i < dim_broadcast; ++i, ++a, ++b, ++out) {
+    auto inner_a = a.with_stride(inner_stride_a);
+    auto inner_b = b.with_stride(inner_stride_b);
+    *out = IsInvalid(inner_a, inner_b, dim_mixture)
+      ? std::numeric_limits<RealT>::quiet_NaN()
+      : _SampleMixture_unchecked(gen, inner_a, inner_b, dim_mixture);
   }
 }
 

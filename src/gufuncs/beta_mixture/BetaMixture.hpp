@@ -349,12 +349,16 @@ template <typename Generator, typename ItA, typename ItB,
          typename RealT = typename std::iterator_traits<ItA>::value_type>
 inline RealT _SampleMixture_unchecked(
     Generator& g, ItA a, ItB b, const npy_intp n_mixture) {
-  // assumes a, b finite and positive
-  using boost::random::uniform_int_distribution;
-  uniform_int_distribution<npy_intp> dist_source(0, n_mixture - 1);
-  // which beta distribution to sample from?
-  const auto i = dist_source(g);
-  return _Sample_unchecked(g, a[i], b[i]);
+  if (n_mixture > 1) {
+    // assumes a, b finite and positive
+    using boost::random::uniform_int_distribution;
+    uniform_int_distribution<npy_intp> dist_source(0, n_mixture - 1);
+    // which beta distribution to sample from?
+    const auto i = dist_source(g);
+    return _Sample_unchecked(g, a[i], b[i]);
+  } else {
+    return _Sample_unchecked(g, *a, *b);
+  }
 }
 
 

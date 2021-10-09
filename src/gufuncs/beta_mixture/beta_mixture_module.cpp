@@ -24,6 +24,7 @@
 #include "PMF.hpp"
 #include "Quantile.hpp"
 #include "Sample.hpp"
+#include "TTestSample.hpp"
 
 // for functions requiring sampling
 using boost::random::mt19937;
@@ -161,6 +162,15 @@ PyMODINIT_FUNC PyInit_beta_mixture(void) {
       Sample::signature);
   PyDict_SetItemString(d, Sample::name, sample);
   Py_DECREF(sample);
+
+  namespace TTestSample = MajiqGufuncs::BetaMixture::TTestSample;
+  PyObject *ttest_sample = PyUFunc_FromFuncAndDataAndSignature(
+      TTestSample::funcs, data_sample, TTestSample::types,
+      TTestSample::ntypes, TTestSample::nin, TTestSample::nout,
+      PyUFunc_None, TTestSample::name, TTestSample::doc, 0,
+      TTestSample::signature);
+  PyDict_SetItemString(d, TTestSample::name, ttest_sample);
+  Py_DECREF(ttest_sample);
 
   namespace Quantile = MajiqGufuncs::BetaMixture::Quantile;
   PyObject *quantile = PyUFunc_FromFuncAndDataAndSignature(
