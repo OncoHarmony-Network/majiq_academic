@@ -6,8 +6,8 @@
  * Copyright 2020 <University of Pennsylvania>
  */
 
-#ifndef MAJIQINCLUDE_STATS_LOGMATH_HPP
-#define MAJIQINCLUDE_STATS_LOGMATH_HPP
+#ifndef MAJIQINCLUDE_LOGMATH_HPP
+#define MAJIQINCLUDE_LOGMATH_HPP
 
 #include <cmath>
 #include <limits>
@@ -55,4 +55,4 @@ inline RealT logadd(RealT logx, RealT logy) {
 }  // namespace detail
 }  // namespace MajiqInclude
 
-#endif  // MAJIQINCLUDE_STATS_LOGMATH_HPP
+#endif  // MAJIQINCLUDE_LOGMATH_HPP

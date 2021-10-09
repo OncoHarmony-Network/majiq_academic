@@ -17,7 +17,7 @@
 #include <utility>
 #include <vector>
 
-#include "LogMath.hpp"
+#include <majiqinclude/LogMath.hpp>
 
 namespace MajiqInclude {
 namespace InfoScore {

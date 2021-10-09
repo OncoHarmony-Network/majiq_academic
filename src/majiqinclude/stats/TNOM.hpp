@@ -22,7 +22,7 @@
 #include <map>
 #include <utility>
 
-#include "LogMath.hpp"
+#include <majiqinclude/LogMath.hpp>
 
 namespace MajiqInclude {
 namespace TNOM {
