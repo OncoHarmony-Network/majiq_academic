@@ -31,13 +31,12 @@
 #include <limits>
 #include <vector>
 
+#include "GlobalRNGPool.hpp"
+
 #include <gufuncs/CoreIt.hpp>
-#include <majiqinclude/RNGPool.hpp>
 #include <majiqinclude/quantile.hpp>
 #include <majiqinclude/BetaMixture.hpp>
 #include <majiqinclude/stats/TTest.hpp>
-
-#include <boost/random/mersenne_twister.hpp>
 
 
 namespace MajiqGufuncs {
@@ -115,12 +114,13 @@ static void Outer(
     }
   }
   // otherwise
-  // acquire random number generator
-  using MajiqInclude::RNGPool;
-  using boost::random::mt19937;
-  RNGPool<mt19937>& rng_pool = *static_cast<RNGPool<mt19937>*>(data);
-  auto rng_ptr = rng_pool.acquire();
-  mt19937& gen = *rng_ptr;
+
+  // acquire ownership random number generator
+  // NOTE: need to keep pointer in scope to maintain ownership
+  // (i.e. don't replace with *global_rng_pool.acquire())
+  auto gen_ptr = global_rng_pool.acquire();
+  auto& gen = *gen_ptr;
+
   // buffer for dim_exp samples from distributions
   std::vector<RealT> x(dim_exp);
   // outer loop for sampling

@@ -15,7 +15,7 @@
 #include <numpy/ufuncobject.h>
 #include <numpy/npy_3kcompat.h>
 
-#include <majiqinclude/RNGPool.hpp>
+#include "GlobalRNGPool.hpp"
 
 #include "Approximation.hpp"
 #include "CDF.hpp"
@@ -27,22 +27,13 @@
 #include "TTestSample.hpp"
 
 // for functions requiring sampling
-using MajiqInclude::RNGPool;
-using boost::random::mt19937;
-static RNGPool<mt19937> rng_pool{};
-static void *data_sample[MajiqGufuncs::BetaMixture::Sample::ntypes] = {
-  // float
-  static_cast<void*>(&rng_pool),
-  // double
-  static_cast<void*>(&rng_pool),
-};
 static PyObject* SetSeedGlobalGen(PyObject* self, PyObject* args) {
   int64_t seed;
   if (!PyArg_ParseTuple(args, "L", &seed)) {
     // failed to parse arguments, should raise exception in Python
     return nullptr;
   }
-  rng_pool.seed(seed);
+  MajiqGufuncs::BetaMixture::global_rng_pool.seed(seed);
   Py_RETURN_NONE;
 }
 static char SetSeedGlobalGen_doc[] = R"pbdoc(
@@ -61,7 +52,7 @@ static PyObject* IncreasePoolSizeGlobalGen(PyObject* self, PyObject* args) {
     // failed to parse arguments, should raise exception in Python
     return nullptr;
   }
-  rng_pool.resize(n);
+  MajiqGufuncs::BetaMixture::global_rng_pool.resize(n);
   Py_RETURN_NONE;
 }
 static char IncreasePoolSizeGlobalGen_doc[] = R"pbdoc(
@@ -157,7 +148,7 @@ PyMODINIT_FUNC PyInit_beta_mixture(void) {
 
   namespace Sample = MajiqGufuncs::BetaMixture::Sample;
   PyObject *sample = PyUFunc_FromFuncAndDataAndSignature(
-      Sample::funcs, data_sample, Sample::types,
+      Sample::funcs, data, Sample::types,
       Sample::ntypes, Sample::nin, Sample::nout,
       PyUFunc_None, Sample::name, Sample::doc, 0,
       Sample::signature);
@@ -166,7 +157,7 @@ PyMODINIT_FUNC PyInit_beta_mixture(void) {
 
   namespace TTestSample = MajiqGufuncs::BetaMixture::TTestSample;
   PyObject *ttest_sample = PyUFunc_FromFuncAndDataAndSignature(
-      TTestSample::funcs, data_sample, TTestSample::types,
+      TTestSample::funcs, data, TTestSample::types,
       TTestSample::ntypes, TTestSample::nin, TTestSample::nout,
       PyUFunc_None, TTestSample::name, TTestSample::doc, 0,
       TTestSample::signature);

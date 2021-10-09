@@ -1,5 +1,5 @@
 /**
- * RNGPool.hpp
+ * ResourcePool.hpp
  *
  * Threadsafe pool of random number generators
  *
@@ -8,8 +8,8 @@
  * Author: Joseph K Aicher
  */
 
-#ifndef MAJIQINCLUDE_RNGPOOL_HPP
-#define MAJIQINCLUDE_RNGPOOL_HPP
+#ifndef MAJIQINCLUDE_RESOURCEPOOL_HPP
+#define MAJIQINCLUDE_RESOURCEPOOL_HPP
 
 #include <condition_variable>
 #include <mutex>
@@ -21,7 +21,7 @@ namespace MajiqInclude {
 
 // inspired by https://stackoverflow.com/a/27837534
 template <typename Generator>
-class RNGPool {
+class ResourcePool {
  private:
   // how many resources have we made?
   int64_t n_;
@@ -30,7 +30,7 @@ class RNGPool {
   // shared pointer, of pointer to self. weak_ptr of this held when resource
   // acquired by another thread, so when thread finished, can know if pool
   // still exists (return back), otherwise delete
-  std::shared_ptr<RNGPool<Generator>*> this_ptr_;
+  std::shared_ptr<ResourcePool<Generator>*> this_ptr_;
   std::vector<std::unique_ptr<Generator>> pool_;
   std::mutex pool_mutex_;
   std::condition_variable pool_cv_;
@@ -77,18 +77,18 @@ class RNGPool {
   /**
    * Initialize pool with specified number of generators, initial seed
    */
-  RNGPool(int64_t n, int64_t seed)
+  ResourcePool(int64_t n, int64_t seed)
     : n_{0},
       base_seed_{seed},
-      this_ptr_{new RNGPool<Generator>*{this}} {
+      this_ptr_{new ResourcePool<Generator>*{this}} {
     resize(n);
     return;
   }
-  RNGPool() : RNGPool{1, 20211008} { }
-  RNGPool(const RNGPool&) = delete;
-  RNGPool(RNGPool&&) = default;
-  RNGPool& operator=(const RNGPool&) = delete;
-  RNGPool& operator=(RNGPool&&) = default;
+  ResourcePool() : ResourcePool{1, 20211008} { }
+  ResourcePool(const ResourcePool&) = delete;
+  ResourcePool(ResourcePool&&) = default;
+  ResourcePool& operator=(const ResourcePool&) = delete;
+  ResourcePool& operator=(ResourcePool&&) = default;
 
   // To acquire/return objects back to pool, we give a unique pointer with
   // custom deleter that returns the acquired generator back to the pool (if
@@ -96,10 +96,10 @@ class RNGPool {
  private:
   class ExternalDeleter {
    private:
-    std::weak_ptr<RNGPool<Generator>*> pool_;  // where to return object
+    std::weak_ptr<ResourcePool<Generator>*> pool_;  // where to return object
 
    public:
-    explicit ExternalDeleter(std::weak_ptr<RNGPool<Generator>*> pool)
+    explicit ExternalDeleter(std::weak_ptr<ResourcePool<Generator>*> pool)
       : pool_{pool} { }
     void operator()(Generator* ptr) {
       // return it back if possible
@@ -121,7 +121,7 @@ class RNGPool {
     std::unique_lock<std::mutex> lock{pool_mutex_};
     pool_cv_.wait(lock, [this]() -> bool { return !empty(); });
     ExternalPtrT result{pool_.back().release(),
-      ExternalDeleter{std::weak_ptr<RNGPool<Generator>*>{this_ptr_}}};
+      ExternalDeleter{std::weak_ptr<ResourcePool<Generator>*>{this_ptr_}}};
     pool_.pop_back();
     lock.unlock();
     return std::move(result);
@@ -130,4 +130,4 @@ class RNGPool {
 
 }  // namespace MajiqInclude
 
-#endif  // MAJIQINCLUDE_RNGPOOL_HPP
+#endif  // MAJIQINCLUDE_RESOURCEPOOL_HPP
