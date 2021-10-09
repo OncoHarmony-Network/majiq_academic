@@ -72,6 +72,23 @@ Random number generation can be controlled by rng_seed() and rng_resize().
 Random number generation in this module is threadsafe; rng_resize() sets the
 number of random number generators that can be made available to the different
 random number generators.
+
+This can be replicated by:
+```
+def ttest_sample_emulate(a, b, labels, q, psisamples):
+    # assert psisamples is scalar, q is scalar
+    a_rep = np.broadcast_to(
+        a[..., np.newaxis, :, :], (*a.shape[:-2], psisamples, *a.shape[-2:])
+    )
+    b_rep = np.broadcast_to(
+        a[..., np.newaxis, :, :], (*a.shape[:-2], psisamples, *a.shape[-2:])
+    )
+    x = beta_mixture.sample(a_rep, b_rep)  # shape (..., psisamples, n)
+    p = stats.ttest(x, labels)  # shape (..., psisamples)
+    return np.quantile(p, q, axis=-1)  # shape (...)
+```
+The difference is that only n values of x, psisamples values of p are
+calculated at a time, which leads to memory savings
 )pbdoc";
 
 template <typename RealT>
@@ -123,12 +140,13 @@ static void Outer(
 
   // buffer for dim_exp samples from distributions
   std::vector<RealT> x(dim_exp);
+  std::vector<bool> is_invalid(dim_exp);
   // outer loop for sampling
   for (npy_intp i = 0; i < dim_broadcast;
       ++i, ++a, ++b, ++labels, ++q, ++psisamples, ++out) {
     // store repeated samples of p-values from test
     std::vector<RealT> pvalue_samples(*psisamples);
-    for (auto& pval : pvalue_samples) {
+    for (size_t s = 0; s < pvalue_samples.size(); ++s) {
       // sample from each distribution, fill x
       {
         auto a_exp = a.with_stride(str_a_exp);
@@ -136,16 +154,20 @@ static void Outer(
         for (npy_intp j = 0; j < dim_exp; ++j, ++a_exp, ++b_exp) {
           auto a_mix = a_exp.with_stride(str_a_mix);
           auto b_mix = b_exp.with_stride(str_b_mix);
-          using MajiqInclude::BetaMixture::IsInvalid;
+          if (s == 0) {
+            // first psisample, we check whether or not it's valid
+            using MajiqInclude::BetaMixture::IsInvalid;
+            is_invalid[j] = IsInvalid(a_mix, b_mix, dim_mix);
+          }
           using MajiqInclude::BetaMixture::_SampleMixture_unchecked;
-          x[j] = IsInvalid(a_mix, b_mix, dim_mix)
-            ? std::numeric_limits<RealT>::quiet_NaN()
+          x[j] = is_invalid[j] ? std::numeric_limits<RealT>::quiet_NaN()
             : _SampleMixture_unchecked(gen, a_mix, b_mix, dim_mix);
         }  // sample from each mixture distribution
       }
       // perform test on x, labels, set to pval
       using MajiqInclude::TTest::Test;
-      pval = Test(x.begin(), labels.with_stride(str_labels_exp), dim_exp);
+      pvalue_samples[s] = Test(
+          x.begin(), labels.with_stride(str_labels_exp), dim_exp);
     }  // compute psisamples pvalues
     // obtain desired quantiles from pvalue_samples, set to out
     {
