@@ -26,8 +26,8 @@
 namespace MajiqInclude {
 namespace BetaMixture {
 
-constexpr int CDF_DIGITS2 = 17;
-constexpr int QUANTILE_DIGITS2 = 14;
+constexpr int64_t CDF_DIGITS2 = 17;
+constexpr int64_t QUANTILE_DIGITS2 = 14;
 using fast_policy = boost::math::policies::policy<
   boost::math::policies::promote_double<false>,
   boost::math::policies::promote_float<true>,
@@ -167,7 +167,7 @@ inline RealT _CDF(RealT x, ItA a, ItB b, const int64_t n_mixture) {
 /**
  * Discrete approximation of PDF on n_out uniformly spaced bins
  */
-template <int digits2 = 17, typename ItA, typename ItB, typename ItOut,
+template <int64_t digits2 = 17, typename ItA, typename ItB, typename ItOut,
          typename RealT = typename std::iterator_traits<ItA>::value_type>
 inline void _PMF(ItA a, ItB b, ItOut out,
     const int64_t n_mixture, const int64_t n_out) {
@@ -186,7 +186,7 @@ inline void _PMF(ItA a, ItB b, ItOut out,
   // calculate CDF at *ends* of each bin. Start around mean and go out until
   // hitting desired tolerance
   // then, take differences (right to left) to get PMF
-  constexpr RealT TOL_MIN{RealT{1} / (1 << digits2)};
+  constexpr RealT TOL_MIN{RealT{1} / (int64_t{1} << digits2)};
   constexpr RealT TOL_MAX{1 - TOL_MIN};
   // initialize out to zeros
   std::fill(out, out + n_out, RealT{0});
@@ -224,6 +224,22 @@ inline void _PMF(ItA a, ItB b, ItOut out,
   }
   return;
 }
+
+template <int64_t digits2 = 34, typename ItA, typename ItB, typename ItOut,
+         typename RealT = typename std::iterator_traits<ItA>::value_type>
+inline void _LogPMF(ItA a, ItB b, ItOut out,
+    const int64_t n_mixture, const int64_t n_out) {
+  // digits2 = 34 -> PSEUDO ~ 3e-11
+  constexpr RealT PSEUDO{RealT{1} / (int64_t{1} << (1 + digits2))};
+  // digits2 = 34 -> PMF will go to zero once pass bin with less than 5e-11
+  _PMF<digits2>(a, b, out, n_mixture, n_out);
+  // out is in probability space, but we want log probabilities:
+  for (int64_t i = 0; i < n_out; ++i, ++out) {
+    *out = std::log(PSEUDO + *out);
+  }
+  return;
+}
+
 
 template <typename ItA, typename ItB,
          typename RealT = typename std::iterator_traits<ItA>::value_type>
@@ -278,7 +294,7 @@ inline RealT _Quantile(
     x_lb = std::max(RealT{0}, moments.mean - max_deviation);
     x_ub = std::min(RealT{1}, moments.mean + max_deviation);
     x = x_lb + q * 2 * (x_ub - x_lb);
-    if (x_ub - x_lb <= RealT{1} / (1 << QUANTILE_DIGITS2)) {
+    if (x_ub - x_lb <= RealT{1} / (int64_t{1} << QUANTILE_DIGITS2)) {
       // our bound is tight enough that we can just return it
       return x;
     }

@@ -9,8 +9,10 @@
 #ifndef MAJIQINCLUDE_LOGMATH_HPP
 #define MAJIQINCLUDE_LOGMATH_HPP
 
+#include <algorithm>
 #include <cmath>
 #include <limits>
+#include <numeric>
 
 
 namespace MajiqInclude {
@@ -50,6 +52,70 @@ inline RealT logadd(RealT logx, RealT logy) {
     logy = t - logx;  // smaller number relative to larger number
   }
   return logx + std::log1p(std::exp(logy));
+}
+
+/**
+ * logsumexp of input values
+ */
+template <typename ItX,
+         typename RealT = typename std::iterator_traits<ItX>::value_type>
+inline RealT logsumexp(ItX values, const int64_t n) {
+  if (n < 1) {
+    return std::numeric_limits<RealT>::quiet_NaN();
+  } else if (n == 1) {
+    return *values;
+  } else {
+    auto last = values + n;
+    const RealT max_val = *std::max_element(values, last);
+    const RealT sum_exp = std::accumulate(values, last, RealT{},
+        [max_val](RealT sum, RealT x) { return sum + std::exp(x - max_val); });
+    return std::log(sum_exp) + max_val;
+  }
+}
+
+/**
+ * normalize log probabilities
+ */
+template <typename ItP>
+inline void lognormalize(ItP logp, const int64_t n) {
+  const auto logZ = logsumexp(logp, n);
+  for (int64_t i = 0; i < n; ++i, ++logp) {
+    *logp -= logZ;
+  }
+  return;
+}
+
+/**
+ * Compute logsumexp on diagonal of A[i, j] = values_x[i] + values_y[j] without
+ * computing A[i, j]
+ */
+template <typename ItX, typename ItY,
+         typename RealT = typename std::iterator_traits<ItX>::value_type>
+inline RealT logsumexp_diag(ItX values_x, ItY values_y,
+    const int64_t n, const int64_t offset) {
+  if (offset < 0) {
+    values_x -= offset;
+  } else {
+    values_y += offset;
+  }
+  const int64_t diagonal_n = n - (offset > 0 ? offset : -offset);
+  if (diagonal_n < 1) {
+    return std::numeric_limits<RealT>::quiet_NaN();
+  } else if (diagonal_n == 1) {
+    return *values_x + *values_y;
+  } else {
+    RealT max_val = std::numeric_limits<RealT>::lowest();
+    {  // get maximum value on diagonal
+      for (int64_t i = 0; i < diagonal_n; ++i) {
+        max_val = std::max(max_val, values_x[i] + values_y[i]);
+      }
+    }
+    RealT sum_val{0.};
+    for (int64_t i = 0; i < diagonal_n; ++i) {
+      sum_val += std::exp(values_x[i] + values_y[i] - max_val);
+    }
+    return std::log(sum_val) + max_val;
+  }
 }
 
 }  // namespace detail

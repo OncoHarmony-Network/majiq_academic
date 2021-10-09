@@ -19,6 +19,7 @@
 
 #include "Approximation.hpp"
 #include "CDF.hpp"
+#include "DPsiDiscrete.hpp"
 #include "Moments.hpp"
 #include "PDF.hpp"
 #include "PMF.hpp"
@@ -172,6 +173,15 @@ PyMODINIT_FUNC PyInit_beta_mixture(void) {
       Quantile::signature);
   PyDict_SetItemString(d, Quantile::name, quantile);
   Py_DECREF(quantile);
+
+  namespace DPsiDiscrete = MajiqGufuncs::BetaMixture::DPsiDiscrete;
+  PyObject *dpsi_discrete = PyUFunc_FromFuncAndDataAndSignature(
+      DPsiDiscrete::funcs, data, DPsiDiscrete::types,
+      DPsiDiscrete::ntypes, DPsiDiscrete::nin, DPsiDiscrete::nout,
+      PyUFunc_None, DPsiDiscrete::name, DPsiDiscrete::doc, 0,
+      DPsiDiscrete::signature);
+  PyDict_SetItemString(d, DPsiDiscrete::name, dpsi_discrete);
+  Py_DECREF(dpsi_discrete);
 
   // return pointer to final module object
   return m;
