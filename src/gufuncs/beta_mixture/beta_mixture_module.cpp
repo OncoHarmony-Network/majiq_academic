@@ -15,7 +15,7 @@
 #include <numpy/ufuncobject.h>
 #include <numpy/npy_3kcompat.h>
 
-#include <gufuncs/RNGPool.hpp>
+#include <majiqinclude/RNGPool.hpp>
 
 #include "Approximation.hpp"
 #include "CDF.hpp"
@@ -27,8 +27,9 @@
 #include "TTestSample.hpp"
 
 // for functions requiring sampling
+using MajiqInclude::RNGPool;
 using boost::random::mt19937;
-static MajiqGufuncs::RNGPool<mt19937> rng_pool{};
+static RNGPool<mt19937> rng_pool{};
 static void *data_sample[MajiqGufuncs::BetaMixture::Sample::ntypes] = {
   // float
   static_cast<void*>(&rng_pool),

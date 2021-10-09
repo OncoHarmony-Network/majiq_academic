@@ -1,7 +1,7 @@
 /**
- * helpers.hpp
+ * CoreIt.hpp
  *
- * MajiqGufuncs::detail helper functions
+ * Wrapper over numpy buffers
  *
  * Copyright 2021 <University of Pennsylvania>
  *

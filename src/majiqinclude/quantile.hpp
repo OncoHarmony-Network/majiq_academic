@@ -8,14 +8,14 @@
  * Author: Joseph K Aicher
  */
 
-#ifndef MAJIQGUFUNCS_QUANTILE_HPP
-#define MAJIQGUFUNCS_QUANTILE_HPP
+#ifndef MAJIQINCLUDE_QUANTILE_HPP
+#define MAJIQINCLUDE_QUANTILE_HPP
 
 #include <algorithm>
 #include <cmath>
 #include <limits>
 
-namespace MajiqGufuncs {
+namespace MajiqInclude {
 
 /**
  * Compute quantiles from unsorted random-access iterator. Reorders input.
@@ -50,6 +50,6 @@ inline T quantile(It first, It last, float q) {
   }
 }
 
-}  // namespace MajiqGufuncs
+}  // namespace MajiqInclude
 
-#endif  // MAJIQGUFUNCS_QUANTILE_HPP
+#endif  // MAJIQINCLUDE_QUANTILE_HPP

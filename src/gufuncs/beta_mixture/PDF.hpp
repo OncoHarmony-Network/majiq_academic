@@ -15,8 +15,8 @@
 
 #include <limits>
 
-#include <gufuncs/helpers.hpp>
-#include "BetaMixture.hpp"
+#include <gufuncs/CoreIt.hpp>
+#include <majiqinclude/BetaMixture.hpp>
 
 
 namespace MajiqGufuncs {
@@ -57,10 +57,11 @@ static void Outer(
   const npy_intp inner_stride_b = steps[1];
 
   // pointers/iterators to data
-  auto x = detail::CoreIt<RealT>::begin(args[0], outer_stride[0]);
-  auto a = detail::CoreIt<RealT>::begin(args[1], outer_stride[1]);
-  auto b = detail::CoreIt<RealT>::begin(args[2], outer_stride[2]);
-  auto out = detail::CoreIt<RealT>::begin(args[3], outer_stride[3]);
+  using MajiqGufuncs::detail::CoreIt;
+  auto x = CoreIt<RealT>::begin(args[0], outer_stride[0]);
+  auto a = CoreIt<RealT>::begin(args[1], outer_stride[1]);
+  auto b = CoreIt<RealT>::begin(args[2], outer_stride[2]);
+  auto out = CoreIt<RealT>::begin(args[3], outer_stride[3]);
 
   if (dim_mixture < 1) {
     out.fill(dim_broadcast, std::numeric_limits<RealT>::quiet_NaN());
@@ -68,6 +69,7 @@ static void Outer(
   }
   // outer loop on broadcasted variables
   for (npy_intp i = 0; i < dim_broadcast; ++i, ++x, ++a, ++b, ++out) {
+    using MajiqInclude::BetaMixture::_PDF;
     *out = _PDF(*x, a.with_stride(inner_stride_a),
         b.with_stride(inner_stride_b), dim_mixture);
   }

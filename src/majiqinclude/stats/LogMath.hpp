@@ -6,14 +6,14 @@
  * Copyright 2020 <University of Pennsylvania>
  */
 
-#ifndef MAJIQGUFUNCS_LOGMATH_HPP
-#define MAJIQGUFUNCS_LOGMATH_HPP
+#ifndef MAJIQINCLUDE_STATS_LOGMATH_HPP
+#define MAJIQINCLUDE_STATS_LOGMATH_HPP
 
 #include <cmath>
 #include <limits>
 
 
-namespace MajiqGufuncs {
+namespace MajiqInclude {
 namespace detail {
 
 /**
@@ -53,6 +53,6 @@ inline RealT logadd(RealT logx, RealT logy) {
 }
 
 }  // namespace detail
-}  // namespace MajiqGufuncs
+}  // namespace MajiqInclude
 
-#endif  // MAJIQGUFUNCS_LOGMATH_HPP
+#endif  // MAJIQINCLUDE_STATS_LOGMATH_HPP

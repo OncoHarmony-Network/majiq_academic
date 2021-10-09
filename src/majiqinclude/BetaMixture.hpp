@@ -8,10 +8,8 @@
  * Author: Joseph K Aicher
  */
 
-#ifndef MAJIQGUFUNCS_BETAMIXTURE_HPP
-#define MAJIQGUFUNCS_BETAMIXTURE_HPP
-
-#include <numpy/ndarraytypes.h>
+#ifndef MAJIQINCLUDE_BETAMIXTURE_HPP
+#define MAJIQINCLUDE_BETAMIXTURE_HPP
 
 #include <algorithm>
 #include <cmath>
@@ -24,7 +22,8 @@
 #include <boost/random/beta_distribution.hpp>
 #include <boost/random/uniform_int_distribution.hpp>
 
-namespace MajiqGufuncs {
+
+namespace MajiqInclude {
 namespace BetaMixture {
 
 constexpr int CDF_DIGITS2 = 17;
@@ -41,12 +40,12 @@ using DistT = boost::math::beta_distribution<RealT, fast_policy>;
 // loop
 template <typename RealT>
 inline bool IsInvalidComponent(RealT a, RealT b) {
-  return npy_isnan(a) || npy_isnan(b) || a <= 0 || b <= 0;
+  return std::isnan(a) || std::isnan(b) || a <= 0 || b <= 0;
 }
 template <typename ItA, typename ItB,
          typename RealT = typename std::iterator_traits<ItA>::value_type>
-inline bool IsInvalid(ItA a, ItB b, const npy_intp n_mixture) {
-  for (npy_intp i = 0; i < n_mixture; ++i, ++a, ++b) {
+inline bool IsInvalid(ItA a, ItB b, const int64_t n_mixture) {
+  for (int64_t i = 0; i < n_mixture; ++i, ++a, ++b) {
     if (IsInvalidComponent(*a, *b)) {
       return true;
     }
@@ -56,9 +55,9 @@ inline bool IsInvalid(ItA a, ItB b, const npy_intp n_mixture) {
 
 template <typename ItA, typename ItB,
          typename RealT = typename std::iterator_traits<ItA>::value_type>
-inline RealT _Mean(ItA a, ItB b, const npy_intp n_mixture) {
+inline RealT _Mean(ItA a, ItB b, const int64_t n_mixture) {
   RealT sum{0};
-  for (npy_intp i = 0; i < n_mixture; ++i, ++a, ++b) {
+  for (int64_t i = 0; i < n_mixture; ++i, ++a, ++b) {
     if (IsInvalidComponent(*a, *b)) {
       return std::numeric_limits<RealT>::quiet_NaN();
     }
@@ -79,14 +78,14 @@ struct CentralMoments {
 template <typename ItA, typename ItB,
          typename RealT = typename std::iterator_traits<ItA>::value_type>
 inline CentralMoments<RealT> _Moments(
-    ItA a1, ItB b1, const npy_intp n_mixture) {
+    ItA a1, ItB b1, const int64_t n_mixture) {
   // iterators for second pass
   ItA a2{a1};
   ItB b2{b1};
   // mean = mean_mean. variance = mean_variance + variance_mean
   RealT sum_mean{0};
   RealT sum_variance{0};
-  for (npy_intp i = 0; i < n_mixture; ++i, ++a1, ++b1) {
+  for (int64_t i = 0; i < n_mixture; ++i, ++a1, ++b1) {
     if (IsInvalidComponent(*a1, *b1)) {
       return CentralMoments<RealT>{
         std::numeric_limits<RealT>::quiet_NaN(),
@@ -102,7 +101,7 @@ inline CentralMoments<RealT> _Moments(
   const RealT mean_variance = sum_variance / n_mixture;
   // get variance_mean in second pass
   RealT rss_mean{0};
-  for (npy_intp i = 0; i < n_mixture; ++i, ++a2, ++b2) {
+  for (int64_t i = 0; i < n_mixture; ++i, ++a2, ++b2) {
     const RealT denom = *a2 + *b2;
     const RealT mean = *a2 / denom;
     const RealT residual = mean - mean_mean;
@@ -121,7 +120,7 @@ inline CentralMoments<RealT> _Moments(
 template <typename RealT>
 inline std::pair<RealT, RealT> _BetaApproximation(
     const CentralMoments<RealT>& moments) {
-  if (npy_isnan(moments.mean)) {
+  if (std::isnan(moments.mean)) {
     return std::make_pair(std::numeric_limits<RealT>::quiet_NaN(),
         std::numeric_limits<RealT>::quiet_NaN());
   }
@@ -134,17 +133,17 @@ inline std::pair<RealT, RealT> _BetaApproximation(
 template <typename ItA, typename ItB,
          typename RealT = typename std::iterator_traits<ItA>::value_type>
 inline std::pair<RealT, RealT> _BetaApproximation(
-    ItA a, ItB b, const npy_intp n_mixture) {
+    ItA a, ItB b, const int64_t n_mixture) {
   const CentralMoments<RealT> moments = _Moments(a, b, n_mixture);
   return _BetaApproximation(moments);
 }
 
 template <typename ItA, typename ItB,
          typename RealT = typename std::iterator_traits<ItA>::value_type>
-inline RealT _CDF_unchecked(RealT x, ItA a, ItB b, const npy_intp n_mixture) {
+inline RealT _CDF_unchecked(RealT x, ItA a, ItB b, const int64_t n_mixture) {
   using boost::math::cdf;
   RealT sum{0};
-  for (npy_intp i = 0; i < n_mixture; ++i, ++a, ++b) {
+  for (int64_t i = 0; i < n_mixture; ++i, ++a, ++b) {
     DistT<RealT> dist{*a, *b};
     sum += cdf(dist, x);
   }
@@ -153,8 +152,8 @@ inline RealT _CDF_unchecked(RealT x, ItA a, ItB b, const npy_intp n_mixture) {
 
 template <typename ItA, typename ItB,
          typename RealT = typename std::iterator_traits<ItA>::value_type>
-inline RealT _CDF(RealT x, ItA a, ItB b, const npy_intp n_mixture) {
-  if (npy_isnan(x) || IsInvalid(a, b, n_mixture)) {
+inline RealT _CDF(RealT x, ItA a, ItB b, const int64_t n_mixture) {
+  if (std::isnan(x) || IsInvalid(a, b, n_mixture)) {
     return std::numeric_limits<RealT>::quiet_NaN();
   } else if (x <= 0) {
     return RealT{0};
@@ -171,9 +170,9 @@ inline RealT _CDF(RealT x, ItA a, ItB b, const npy_intp n_mixture) {
 template <int digits2 = 17, typename ItA, typename ItB, typename ItOut,
          typename RealT = typename std::iterator_traits<ItA>::value_type>
 inline void _PMF(ItA a, ItB b, ItOut out,
-    const npy_intp n_mixture, const npy_intp n_out) {
+    const int64_t n_mixture, const int64_t n_out) {
   RealT mean = _Mean(a, b, n_mixture);
-  if (npy_isnan(mean)) {
+  if (std::isnan(mean)) {
     // if mean NaN, then PMF should be NaN
     if (n_out > 1) {
       std::fill(out, out + n_out, mean);
@@ -194,11 +193,11 @@ inline void _PMF(ItA a, ItB b, ItOut out,
   // easier to think about indexing endpoints[1 + n_out] with i
   // although we only work with out relative to endpoints[1:]. So indexing
   // of out will be on i - 1
-  npy_intp i_mean = static_cast<npy_intp>(n_out * mean);
+  int64_t i_mean = static_cast<int64_t>(n_out * mean);
   // I don't check that 0 <= i_mean <= n_out because mean on [0, 1]
   {
     // carry index between loops (used to fill remaining points with 1 on rhs)
-    npy_intp i;
+    int64_t i;
     const RealT n_out_f = static_cast<RealT>(n_out);  // divide to get back x
     // go backwards from mean
     for (i = i_mean; i > 0; --i) {
@@ -220,7 +219,7 @@ inline void _PMF(ItA a, ItB b, ItOut out,
     }
   }
   // take differences to get discretized PMF
-  for (npy_intp i = n_out - 1; i > 0; --i) {
+  for (int64_t i = n_out - 1; i > 0; --i) {
     out[i] -= out[i - 1];
   }
   return;
@@ -228,10 +227,10 @@ inline void _PMF(ItA a, ItB b, ItOut out,
 
 template <typename ItA, typename ItB,
          typename RealT = typename std::iterator_traits<ItA>::value_type>
-inline RealT _PDF_unchecked(RealT x, ItA a, ItB b, const npy_intp n_mixture) {
+inline RealT _PDF_unchecked(RealT x, ItA a, ItB b, const int64_t n_mixture) {
   using boost::math::pdf;
   RealT sum{0};
-  for (npy_intp i = 0; i < n_mixture; ++i, ++a, ++b) {
+  for (int64_t i = 0; i < n_mixture; ++i, ++a, ++b) {
     DistT<RealT> dist{*a, *b};
     sum += pdf(dist, x);
   }
@@ -240,8 +239,8 @@ inline RealT _PDF_unchecked(RealT x, ItA a, ItB b, const npy_intp n_mixture) {
 
 template <typename ItA, typename ItB,
          typename RealT = typename std::iterator_traits<ItA>::value_type>
-inline RealT _PDF(RealT x, ItA a, ItB b, const npy_intp n_mixture) {
-  if (npy_isnan(x) || IsInvalid(a, b, n_mixture)) {
+inline RealT _PDF(RealT x, ItA a, ItB b, const int64_t n_mixture) {
+  if (std::isnan(x) || IsInvalid(a, b, n_mixture)) {
     return std::numeric_limits<RealT>::quiet_NaN();
   } else if (x <= 0 || x >= 1) {
     return RealT{0};
@@ -253,13 +252,13 @@ inline RealT _PDF(RealT x, ItA a, ItB b, const npy_intp n_mixture) {
 template <uintmax_t MAX_ITER = 20, typename ItA, typename ItB,
          typename RealT = typename std::iterator_traits<ItA>::value_type>
 inline RealT _Quantile(
-    const RealT q, const ItA a, const ItB b, const npy_intp n_mixture) {
+    const RealT q, const ItA a, const ItB b, const int64_t n_mixture) {
   // special cases to return early
-  if (npy_isnan(q)) {
+  if (std::isnan(q)) {
     return std::numeric_limits<RealT>::quiet_NaN();
   }
   const CentralMoments<RealT> moments = _Moments(a, b, n_mixture);
-  if (npy_isnan(moments.mean)) {
+  if (std::isnan(moments.mean)) {
     // if mean is nan, quantiles should be nan
     return std::numeric_limits<RealT>::quiet_NaN();
   } else if (q <= 0) {
@@ -296,13 +295,13 @@ inline RealT _Quantile(
   };
   // to compute pdf, we will reuse the denominator terms many times
   std::vector<RealT> logbetas(n_mixture);
-  for (npy_intp i = 0; i < n_mixture; ++i) {
+  for (int64_t i = 0; i < n_mixture; ++i) {
     logbetas[i]
       = std::lgamma(a[i]) + std::lgamma(b[i])
       - std::lgamma(a[i] + b[i]);
   }
   const auto logpdf_component = [&a, &b, &logbetas](
-      npy_intp i, RealT logx, RealT log1mx) {
+      int64_t i, RealT logx, RealT log1mx) {
     return (a[i] - 1) * logx + (b[i] - 1) * log1mx - logbetas[i];
   };
   std::vector<RealT> _logpdf_buffer(n_mixture);
@@ -314,13 +313,13 @@ inline RealT _Quantile(
     const RealT log1mx = std::log1p(-x);
     // compute logpdf of each component, get max among them
     RealT logpdf_max = std::numeric_limits<RealT>::lowest();
-    for (npy_intp i = 0; i < n_mixture; ++i) {
+    for (int64_t i = 0; i < n_mixture; ++i) {
       _logpdf_buffer[i] = logpdf_component(i, logx, log1mx);
       logpdf_max = std::max(logpdf_max, _logpdf_buffer[i]);
     }
     // logsumexp trick
     RealT sum{0};
-    for (npy_intp i = 0; i < n_mixture; ++i) {
+    for (int64_t i = 0; i < n_mixture; ++i) {
       sum += std::exp(_logpdf_buffer[i] - logpdf_max);
     }
     sum *= std::exp(logpdf_max);
@@ -348,11 +347,11 @@ inline RealT _Sample_unchecked(Generator& g, RealT a, RealT b) {
 template <typename Generator, typename ItA, typename ItB,
          typename RealT = typename std::iterator_traits<ItA>::value_type>
 inline RealT _SampleMixture_unchecked(
-    Generator& g, ItA a, ItB b, const npy_intp n_mixture) {
+    Generator& g, ItA a, ItB b, const int64_t n_mixture) {
   if (n_mixture > 1) {
     // assumes a, b finite and positive
     using boost::random::uniform_int_distribution;
-    uniform_int_distribution<npy_intp> dist_source(0, n_mixture - 1);
+    uniform_int_distribution<int64_t> dist_source(0, n_mixture - 1);
     // which beta distribution to sample from?
     const auto i = dist_source(g);
     return _Sample_unchecked(g, a[i], b[i]);
@@ -363,7 +362,7 @@ inline RealT _SampleMixture_unchecked(
 
 
 }  // namespace BetaMixture
-}  // namespace MajiqGufuncs
+}  // namespace MajiqInclude
 
 
-#endif  // MAJIQGUFUNCS_BETAMIXTURE_HPP
+#endif  // MAJIQINCLUDE_BETAMIXTURE_HPP

@@ -15,8 +15,8 @@
 
 #include <limits>
 
-#include <gufuncs/helpers.hpp>
-#include "BetaMixture.hpp"
+#include <gufuncs/CoreIt.hpp>
+#include <majiqinclude/BetaMixture.hpp>
 
 namespace MajiqGufuncs {
 namespace BetaMixture {
@@ -53,11 +53,12 @@ static void Outer(
   const npy_intp inner_stride_out = steps[2];
 
   // pointers/iterators to data
-  auto a = detail::CoreIt<RealT>::begin(args[0], outer_stride[0]);
-  auto b = detail::CoreIt<RealT>::begin(args[1], outer_stride[1]);
-  auto mean = detail::CoreIt<RealT>::begin(args[2], outer_stride[2]);
-  auto var = (
-      1 + mean.with_stride(inner_stride_out)).with_stride(outer_stride[2]);
+  using MajiqGufuncs::detail::CoreIt;
+  auto a = CoreIt<RealT>::begin(args[0], outer_stride[0]);
+  auto b = CoreIt<RealT>::begin(args[1], outer_stride[1]);
+  auto mean = CoreIt<RealT>::begin(args[2], outer_stride[2]);
+  auto var = (1 + mean.with_stride(inner_stride_out))
+    .with_stride(outer_stride[2]);
 
   if (dim_mixture < 1) {
     mean.fill(dim_broadcast, std::numeric_limits<RealT>::quiet_NaN());
@@ -66,6 +67,7 @@ static void Outer(
   }
   // otherwise, outer loop on broadcasted variables
   for (npy_intp i = 0; i < dim_broadcast; ++i, ++a, ++b, ++mean, ++var) {
+    using MajiqInclude::BetaMixture::_Moments;
     auto moments = _Moments(a.with_stride(inner_stride_a),
         b.with_stride(inner_stride_b), dim_mixture);
     *mean = moments.mean;

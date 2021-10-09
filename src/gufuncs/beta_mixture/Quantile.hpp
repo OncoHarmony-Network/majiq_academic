@@ -15,8 +15,8 @@
 
 #include <limits>
 
-#include <gufuncs/helpers.hpp>
-#include "BetaMixture.hpp"
+#include <gufuncs/CoreIt.hpp>
+#include <majiqinclude/BetaMixture.hpp>
 
 
 namespace MajiqGufuncs {
@@ -57,10 +57,11 @@ static void Outer(
   const npy_intp inner_stride_b = steps[1];
 
   // pointers/iterators to data
-  auto q = detail::CoreIt<RealT>::begin(args[0], stride_broadcast[0]);
-  auto a = detail::CoreIt<RealT>::begin(args[1], stride_broadcast[1]);
-  auto b = detail::CoreIt<RealT>::begin(args[2], stride_broadcast[2]);
-  auto out = detail::CoreIt<RealT>::begin(args[3], stride_broadcast[3]);
+  using MajiqGufuncs::detail::CoreIt;
+  auto q = CoreIt<RealT>::begin(args[0], stride_broadcast[0]);
+  auto a = CoreIt<RealT>::begin(args[1], stride_broadcast[1]);
+  auto b = CoreIt<RealT>::begin(args[2], stride_broadcast[2]);
+  auto out = CoreIt<RealT>::begin(args[3], stride_broadcast[3]);
 
   if (dim_mixture < 1) {
     // if there are no distributions, Quantile is NaN everywhere
@@ -69,6 +70,7 @@ static void Outer(
   }
   // outer loop on broadcasted variables
   for (npy_intp i = 0; i < dim_broadcast; ++i, ++q, ++a, ++b, ++out) {
+    using MajiqInclude::BetaMixture::_Quantile;
     *out = _Quantile(*q,
         a.with_stride(inner_stride_a), b.with_stride(inner_stride_b),
         dim_mixture);

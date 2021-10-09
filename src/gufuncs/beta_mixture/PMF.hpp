@@ -15,8 +15,8 @@
 
 #include <limits>
 
-#include <gufuncs/helpers.hpp>
-#include "BetaMixture.hpp"
+#include <gufuncs/CoreIt.hpp>
+#include <majiqinclude/BetaMixture.hpp>
 
 
 namespace MajiqGufuncs {
@@ -61,9 +61,10 @@ static void Outer(
   const npy_intp inner_stride_out = steps[3];
 
   // pointers/iterators to data
-  auto a = detail::CoreIt<RealT>::begin(args[0], stride_broadcast[0]);
-  auto b = detail::CoreIt<RealT>::begin(args[1], stride_broadcast[1]);
-  auto out = detail::CoreIt<RealT>::begin(args[3], stride_broadcast[3]);
+  using MajiqGufuncs::detail::CoreIt;
+  auto a = CoreIt<RealT>::begin(args[0], stride_broadcast[0]);
+  auto b = CoreIt<RealT>::begin(args[1], stride_broadcast[1]);
+  auto out = CoreIt<RealT>::begin(args[3], stride_broadcast[3]);
 
   if (dim_mixture < 1) {
     // for each iteration of broadcasting, fill core dimension of out with nan
@@ -75,6 +76,7 @@ static void Outer(
   }
   // outer loop on broadcasted variables
   for (npy_intp i = 0; i < dim_broadcast; ++i, ++a, ++b, ++out) {
+    using MajiqInclude::BetaMixture::_PMF;
     _PMF(a.with_stride(inner_stride_a),
         b.with_stride(inner_stride_b),
         out.with_stride(inner_stride_out),

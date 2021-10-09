@@ -15,8 +15,8 @@
 
 #include <limits>
 
-#include <gufuncs/helpers.hpp>
-#include "BetaMixture.hpp"
+#include <gufuncs/CoreIt.hpp>
+#include <majiqinclude/BetaMixture.hpp>
 
 namespace MajiqGufuncs {
 namespace BetaMixture {
@@ -54,9 +54,10 @@ static void Outer(
   const npy_intp inner_stride_out = steps[2];
 
   // pointers/iterators to data
-  auto a = detail::CoreIt<RealT>::begin(args[0], outer_stride[0]);
-  auto b = detail::CoreIt<RealT>::begin(args[1], outer_stride[1]);
-  auto a0 = detail::CoreIt<RealT>::begin(args[2], outer_stride[2]);
+  using MajiqGufuncs::detail::CoreIt;
+  auto a = CoreIt<RealT>::begin(args[0], outer_stride[0]);
+  auto b = CoreIt<RealT>::begin(args[1], outer_stride[1]);
+  auto a0 = CoreIt<RealT>::begin(args[2], outer_stride[2]);
   auto b0 = (
       1 + a0.with_stride(inner_stride_out)).with_stride(outer_stride[2]);
 
@@ -72,6 +73,7 @@ static void Outer(
   } else {
     // otherwise, outer loop on broadcasted variables
     for (npy_intp i = 0; i < dim_broadcast; ++i, ++a, ++b, ++a0, ++b0) {
+      using MajiqInclude::BetaMixture::_BetaApproximation;
       auto approximation = _BetaApproximation(a.with_stride(inner_stride_a),
           b.with_stride(inner_stride_b), dim_mixture);
       *a0 = approximation.first;

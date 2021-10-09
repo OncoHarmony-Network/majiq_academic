@@ -8,8 +8,8 @@
  * Author: Joseph K Aicher
  */
 
-#ifndef MAJIQGUFUNCS_RNGPOOL_HPP
-#define MAJIQGUFUNCS_RNGPOOL_HPP
+#ifndef MAJIQINCLUDE_RNGPOOL_HPP
+#define MAJIQINCLUDE_RNGPOOL_HPP
 
 #include <condition_variable>
 #include <mutex>
@@ -17,7 +17,7 @@
 #include <vector>
 #include <utility>
 
-namespace MajiqGufuncs {
+namespace MajiqInclude {
 
 // inspired by https://stackoverflow.com/a/27837534
 template <typename Generator>
@@ -128,6 +128,6 @@ class RNGPool {
   }
 };
 
-}  // namespace MajiqGufuncs
+}  // namespace MajiqInclude
 
-#endif  // MAJIQGUFUNCS_RNGPOOL_HPP
+#endif  // MAJIQINCLUDE_RNGPOOL_HPP

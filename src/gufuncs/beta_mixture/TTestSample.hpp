@@ -31,12 +31,11 @@
 #include <limits>
 #include <vector>
 
-#include <gufuncs/helpers.hpp>
-#include <gufuncs/RNGPool.hpp>
-#include <gufuncs/quantile.hpp>
-
-#include "BetaMixture.hpp"
-#include <gufuncs/stats/TTest.hpp>
+#include <gufuncs/CoreIt.hpp>
+#include <majiqinclude/RNGPool.hpp>
+#include <majiqinclude/quantile.hpp>
+#include <majiqinclude/BetaMixture.hpp>
+#include <majiqinclude/stats/TTest.hpp>
 
 #include <boost/random/mersenne_twister.hpp>
 
@@ -117,6 +116,7 @@ static void Outer(
   }
   // otherwise
   // acquire random number generator
+  using MajiqInclude::RNGPool;
   using boost::random::mt19937;
   RNGPool<mt19937>& rng_pool = *static_cast<RNGPool<mt19937>*>(data);
   auto rng_ptr = rng_pool.acquire();
@@ -136,13 +136,15 @@ static void Outer(
         for (npy_intp j = 0; j < dim_exp; ++j, ++a_exp, ++b_exp) {
           auto a_mix = a_exp.with_stride(str_a_mix);
           auto b_mix = b_exp.with_stride(str_b_mix);
+          using MajiqInclude::BetaMixture::IsInvalid;
+          using MajiqInclude::BetaMixture::_SampleMixture_unchecked;
           x[j] = IsInvalid(a_mix, b_mix, dim_mix)
             ? std::numeric_limits<RealT>::quiet_NaN()
             : _SampleMixture_unchecked(gen, a_mix, b_mix, dim_mix);
         }  // sample from each mixture distribution
       }
       // perform test on x, labels, set to pval
-      using MajiqGufuncs::TTest::Test;
+      using MajiqInclude::TTest::Test;
       pval = Test(x.begin(), labels.with_stride(str_labels_exp), dim_exp);
     }  // compute psisamples pvalues
     // obtain desired quantiles from pvalue_samples, set to out
@@ -150,6 +152,7 @@ static void Outer(
       auto q_q = q.with_stride(str_q_q);
       auto out_q = out.with_stride(str_out_q);
       for (npy_intp k = 0; k < dim_q; ++k, ++q_q, ++out_q) {
+        using MajiqInclude::quantile;
         *out_q = quantile(pvalue_samples.begin(), pvalue_samples.end(), *q_q);
       }  // loop over quantiles
     }  // done taking quantiles of p-values

@@ -15,10 +15,9 @@
 
 #include <limits>
 
-#include <gufuncs/helpers.hpp>
-#include <gufuncs/RNGPool.hpp>
-
-#include "BetaMixture.hpp"
+#include <gufuncs/CoreIt.hpp>
+#include <majiqinclude/RNGPool.hpp>
+#include <majiqinclude/BetaMixture.hpp>
 
 #include <boost/random/mersenne_twister.hpp>
 
@@ -78,6 +77,7 @@ static void Outer(
   }
   // otherwise
   // acquire random number generator
+  using MajiqInclude::RNGPool;
   using boost::random::mt19937;
   RNGPool<mt19937>& rng_pool = *static_cast<RNGPool<mt19937>*>(data);
   auto rng_ptr = rng_pool.acquire();
@@ -86,6 +86,8 @@ static void Outer(
   for (npy_intp i = 0; i < dim_broadcast; ++i, ++a, ++b, ++out) {
     auto inner_a = a.with_stride(inner_stride_a);
     auto inner_b = b.with_stride(inner_stride_b);
+    using MajiqInclude::BetaMixture::IsInvalid;
+    using MajiqInclude::BetaMixture::_SampleMixture_unchecked;
     *out = IsInvalid(inner_a, inner_b, dim_mixture)
       ? std::numeric_limits<RealT>::quiet_NaN()
       : _SampleMixture_unchecked(gen, inner_a, inner_b, dim_mixture);

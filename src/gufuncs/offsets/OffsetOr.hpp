@@ -16,7 +16,7 @@
 
 #include <algorithm>
 
-#include <gufuncs/helpers.hpp>
+#include <gufuncs/CoreIt.hpp>
 
 namespace MajiqGufuncs {
 namespace OffsetOr {
