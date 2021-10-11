@@ -193,7 +193,22 @@ class TNOMCache {
 };
 
 // perform TNOM test on provided random-access iterators
-template <typename ItX, typename ItSort, typename ItLabels>
+template <typename ItX, typename ItSort, typename ItLabels,
+         typename std::enable_if<
+          std::is_floating_point<
+            typename std::iterator_traits<ItX>::value_type
+          >::value, bool
+         >::type = true,
+         typename std::enable_if<
+          std::is_integral<
+            typename std::iterator_traits<ItSort>::value_type
+          >::value, bool
+         >::type = true,
+         typename std::enable_if<
+          std::is_same<
+            bool, typename std::iterator_traits<ItLabels>::value_type
+          >::value, bool
+         >::type = true>
 inline double Test(
     TNOMCache& tester, ItX x, ItSort sortx, ItLabels labels, int64_t d) {
   // counts for labels on RHS

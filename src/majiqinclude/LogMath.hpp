@@ -35,7 +35,10 @@ inline double lchoose(int k, int N) {
  *
  * @return log(x + y)
  */
-template <typename RealT>
+template <typename RealT,
+         typename std::enable_if<
+           std::is_floating_point<RealT>::value, bool
+         >::type = true>
 inline RealT logadd(RealT logx, RealT logy) {
   // if it is as small as it can get, return the other number
   if (logx <= std::numeric_limits<RealT>::lowest()) {
@@ -58,7 +61,10 @@ inline RealT logadd(RealT logx, RealT logy) {
  * logsumexp of input values
  */
 template <typename ItX,
-         typename RealT = typename std::iterator_traits<ItX>::value_type>
+         typename RealT = typename std::iterator_traits<ItX>::value_type,
+         typename std::enable_if<
+           std::is_floating_point<RealT>::value, bool
+         >::type = true>
 inline RealT logsumexp(ItX values, const int64_t n) {
   if (n < 1) {
     return std::numeric_limits<RealT>::quiet_NaN();
@@ -90,7 +96,15 @@ inline void lognormalize(ItP logp, const int64_t n) {
  * computing A[i, j]
  */
 template <typename ItX, typename ItY,
-         typename RealT = typename std::iterator_traits<ItX>::value_type>
+         typename RealT = typename std::iterator_traits<ItX>::value_type,
+         typename std::enable_if<
+           std::is_floating_point<RealT>::value, bool
+         >::type = true,
+         typename std::enable_if<
+          std::is_same<
+            RealT, typename std::iterator_traits<ItY>::value_type
+          >::value, bool
+         >::type = true>
 inline RealT logsumexp_diag(ItX values_x, ItY values_y,
     const int64_t n, const int64_t offset) {
   if (offset < 0) {

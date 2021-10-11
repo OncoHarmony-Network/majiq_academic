@@ -43,7 +43,14 @@ inline bool IsInvalidComponent(RealT a, RealT b) {
   return std::isnan(a) || std::isnan(b) || a <= 0 || b <= 0;
 }
 template <typename ItA, typename ItB,
-         typename RealT = typename std::iterator_traits<ItA>::value_type>
+         typename RealT = typename std::iterator_traits<ItA>::value_type,
+         typename std::enable_if<
+          std::is_floating_point<RealT>::value, bool>::type = true,
+         typename std::enable_if<
+          std::is_same<
+            RealT, typename std::iterator_traits<ItB>::value_type
+          >::value
+         , bool>::type = true>
 inline bool IsInvalid(ItA a, ItB b, const int64_t n_mixture) {
   for (int64_t i = 0; i < n_mixture; ++i, ++a, ++b) {
     if (IsInvalidComponent(*a, *b)) {
@@ -54,7 +61,14 @@ inline bool IsInvalid(ItA a, ItB b, const int64_t n_mixture) {
 }
 
 template <typename ItA, typename ItB,
-         typename RealT = typename std::iterator_traits<ItA>::value_type>
+         typename RealT = typename std::iterator_traits<ItA>::value_type,
+         typename std::enable_if<
+          std::is_floating_point<RealT>::value, bool>::type = true,
+         typename std::enable_if<
+          std::is_same<
+            RealT, typename std::iterator_traits<ItB>::value_type
+          >::value
+         , bool>::type = true>
 inline RealT _Mean(ItA a, ItB b, const int64_t n_mixture) {
   RealT sum{0};
   for (int64_t i = 0; i < n_mixture; ++i, ++a, ++b) {
@@ -76,7 +90,14 @@ struct CentralMoments {
  * Get mean, variance of beta mixture, assuming n_mixture > 0
  */
 template <typename ItA, typename ItB,
-         typename RealT = typename std::iterator_traits<ItA>::value_type>
+         typename RealT = typename std::iterator_traits<ItA>::value_type,
+         typename std::enable_if<
+          std::is_floating_point<RealT>::value, bool>::type = true,
+         typename std::enable_if<
+          std::is_same<
+            RealT, typename std::iterator_traits<ItB>::value_type
+          >::value
+         , bool>::type = true>
 inline CentralMoments<RealT> _Moments(
     ItA a1, ItB b1, const int64_t n_mixture) {
   // iterators for second pass
@@ -131,15 +152,33 @@ inline std::pair<RealT, RealT> _BetaApproximation(
   return std::make_pair(a0, b0);
 }
 template <typename ItA, typename ItB,
-         typename RealT = typename std::iterator_traits<ItA>::value_type>
+         typename RealT = typename std::iterator_traits<ItA>::value_type,
+         typename std::enable_if<
+          std::is_floating_point<RealT>::value, bool>::type = true,
+         typename std::enable_if<
+          std::is_same<
+            RealT, typename std::iterator_traits<ItB>::value_type
+          >::value
+         , bool>::type = true>
 inline std::pair<RealT, RealT> _BetaApproximation(
     ItA a, ItB b, const int64_t n_mixture) {
   const CentralMoments<RealT> moments = _Moments(a, b, n_mixture);
   return _BetaApproximation(moments);
 }
 
-template <typename ItA, typename ItB,
-         typename RealT = typename std::iterator_traits<ItA>::value_type>
+template <typename RealT, typename ItA, typename ItB,
+         typename std::enable_if<
+          std::is_floating_point<RealT>::value, bool>::type = true,
+         typename std::enable_if<
+          std::is_same<
+            RealT, typename std::iterator_traits<ItA>::value_type
+          >::value
+         , bool>::type = true,
+         typename std::enable_if<
+          std::is_same<
+            RealT, typename std::iterator_traits<ItB>::value_type
+          >::value
+         , bool>::type = true>
 inline RealT _CDF_unchecked(RealT x, ItA a, ItB b, const int64_t n_mixture) {
   using boost::math::cdf;
   RealT sum{0};
@@ -150,8 +189,19 @@ inline RealT _CDF_unchecked(RealT x, ItA a, ItB b, const int64_t n_mixture) {
   return sum / n_mixture;
 }
 
-template <typename ItA, typename ItB,
-         typename RealT = typename std::iterator_traits<ItA>::value_type>
+template <typename RealT, typename ItA, typename ItB,
+         typename std::enable_if<
+          std::is_floating_point<RealT>::value, bool>::type = true,
+         typename std::enable_if<
+          std::is_same<
+            RealT, typename std::iterator_traits<ItA>::value_type
+          >::value
+         , bool>::type = true,
+         typename std::enable_if<
+          std::is_same<
+            RealT, typename std::iterator_traits<ItB>::value_type
+          >::value
+         , bool>::type = true>
 inline RealT _CDF(RealT x, ItA a, ItB b, const int64_t n_mixture) {
   if (std::isnan(x) || IsInvalid(a, b, n_mixture)) {
     return std::numeric_limits<RealT>::quiet_NaN();
@@ -168,7 +218,19 @@ inline RealT _CDF(RealT x, ItA a, ItB b, const int64_t n_mixture) {
  * Discrete approximation of PDF on n_out uniformly spaced bins
  */
 template <int64_t digits2 = 17, typename ItA, typename ItB, typename ItOut,
-         typename RealT = typename std::iterator_traits<ItA>::value_type>
+         typename RealT = typename std::iterator_traits<ItA>::value_type,
+         typename std::enable_if<
+          std::is_floating_point<RealT>::value, bool>::type = true,
+         typename std::enable_if<
+          std::is_same<
+            RealT, typename std::iterator_traits<ItB>::value_type
+          >::value
+         , bool>::type = true,
+         typename std::enable_if<
+          std::is_same<
+            RealT, typename std::iterator_traits<ItOut>::value_type
+          >::value
+         , bool>::type = true>
 inline void _PMF(ItA a, ItB b, ItOut out,
     const int64_t n_mixture, const int64_t n_out) {
   RealT mean = _Mean(a, b, n_mixture);
@@ -226,7 +288,19 @@ inline void _PMF(ItA a, ItB b, ItOut out,
 }
 
 template <int64_t digits2 = 34, typename ItA, typename ItB, typename ItOut,
-         typename RealT = typename std::iterator_traits<ItA>::value_type>
+         typename RealT = typename std::iterator_traits<ItA>::value_type,
+         typename std::enable_if<
+          std::is_floating_point<RealT>::value, bool>::type = true,
+         typename std::enable_if<
+          std::is_same<
+            RealT, typename std::iterator_traits<ItB>::value_type
+          >::value
+         , bool>::type = true,
+         typename std::enable_if<
+          std::is_same<
+            RealT, typename std::iterator_traits<ItOut>::value_type
+          >::value
+         , bool>::type = true>
 inline void _LogPMF(ItA a, ItB b, ItOut out,
     const int64_t n_mixture, const int64_t n_out) {
   // digits2 = 34 -> PSEUDO ~ 3e-11
@@ -241,8 +315,19 @@ inline void _LogPMF(ItA a, ItB b, ItOut out,
 }
 
 
-template <typename ItA, typename ItB,
-         typename RealT = typename std::iterator_traits<ItA>::value_type>
+template <typename RealT, typename ItA, typename ItB,
+         typename std::enable_if<
+          std::is_floating_point<RealT>::value, bool>::type = true,
+         typename std::enable_if<
+          std::is_same<
+            RealT, typename std::iterator_traits<ItA>::value_type
+          >::value
+         , bool>::type = true,
+         typename std::enable_if<
+          std::is_same<
+            RealT, typename std::iterator_traits<ItB>::value_type
+          >::value
+         , bool>::type = true>
 inline RealT _PDF_unchecked(RealT x, ItA a, ItB b, const int64_t n_mixture) {
   using boost::math::pdf;
   RealT sum{0};
@@ -253,8 +338,19 @@ inline RealT _PDF_unchecked(RealT x, ItA a, ItB b, const int64_t n_mixture) {
   return sum / n_mixture;
 }
 
-template <typename ItA, typename ItB,
-         typename RealT = typename std::iterator_traits<ItA>::value_type>
+template <typename RealT, typename ItA, typename ItB,
+         typename std::enable_if<
+          std::is_floating_point<RealT>::value, bool>::type = true,
+         typename std::enable_if<
+          std::is_same<
+            RealT, typename std::iterator_traits<ItA>::value_type
+          >::value
+         , bool>::type = true,
+         typename std::enable_if<
+          std::is_same<
+            RealT, typename std::iterator_traits<ItB>::value_type
+          >::value
+         , bool>::type = true>
 inline RealT _PDF(RealT x, ItA a, ItB b, const int64_t n_mixture) {
   if (std::isnan(x) || IsInvalid(a, b, n_mixture)) {
     return std::numeric_limits<RealT>::quiet_NaN();
@@ -265,8 +361,19 @@ inline RealT _PDF(RealT x, ItA a, ItB b, const int64_t n_mixture) {
   }
 }
 
-template <uintmax_t MAX_ITER = 20, typename ItA, typename ItB,
-         typename RealT = typename std::iterator_traits<ItA>::value_type>
+template <uintmax_t MAX_ITER = 20, typename RealT, typename ItA, typename ItB,
+         typename std::enable_if<
+          std::is_floating_point<RealT>::value, bool>::type = true,
+         typename std::enable_if<
+          std::is_same<
+            RealT, typename std::iterator_traits<ItA>::value_type
+          >::value
+         , bool>::type = true,
+         typename std::enable_if<
+          std::is_same<
+            RealT, typename std::iterator_traits<ItB>::value_type
+          >::value
+         , bool>::type = true>
 inline RealT _Quantile(
     const RealT q, const ItA a, const ItB b, const int64_t n_mixture) {
   // special cases to return early
@@ -361,7 +468,14 @@ inline RealT _Sample_unchecked(Generator& g, RealT a, RealT b) {
   return dist(g);
 }
 template <typename Generator, typename ItA, typename ItB,
-         typename RealT = typename std::iterator_traits<ItA>::value_type>
+         typename RealT = typename std::iterator_traits<ItA>::value_type,
+         typename std::enable_if<
+          std::is_floating_point<RealT>::value, bool>::type = true,
+         typename std::enable_if<
+          std::is_same<
+            RealT, typename std::iterator_traits<ItB>::value_type
+          >::value
+         , bool>::type = true>
 inline RealT _SampleMixture_unchecked(
     Generator& g, ItA a, ItB b, const int64_t n_mixture) {
   if (n_mixture > 1) {

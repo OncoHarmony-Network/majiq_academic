@@ -68,7 +68,15 @@ inline RealT TwoSidedPValue(RealT dof, RealT t) {
 
 // perform t-test on provided random-access iterators
 template <typename ItX, typename ItLabels,
-         typename RealT = typename std::iterator_traits<ItX>::value_type>
+         typename RealT = typename std::iterator_traits<ItX>::value_type,
+         typename std::enable_if<
+           std::is_floating_point<RealT>::value, bool
+         >::type = true,
+         typename std::enable_if<
+          std::is_same<
+            bool, typename std::iterator_traits<ItLabels>::value_type
+          >::value, bool
+         >::type = true>
 inline RealT Test(ItX x, ItLabels labels, int64_t d) {
   // first pass: calculate n1, n2, sum1, sum2 (ignore nan)
   int n1{0};
