@@ -17,6 +17,8 @@
 #include <utility>
 #include <vector>
 
+#include "LogMath.hpp"
+
 #include <boost/math/distributions/beta.hpp>
 #include <boost/math/tools/roots.hpp>
 #include <boost/random/beta_distribution.hpp>
@@ -303,14 +305,10 @@ template <int64_t digits2 = 34, typename ItA, typename ItB, typename ItOut,
          , bool>::type = true>
 inline void _LogPMF(ItA a, ItB b, ItOut out,
     const int64_t n_mixture, const int64_t n_out) {
-  // digits2 = 34 -> PSEUDO ~ 3e-11
-  constexpr RealT PSEUDO{RealT{1} / (int64_t{1} << (1 + digits2))};
-  // digits2 = 34 -> PMF will go to zero once pass bin with less than 5e-11
   _PMF<digits2>(a, b, out, n_mixture, n_out);
-  // out is in probability space, but we want log probabilities:
-  for (int64_t i = 0; i < n_out; ++i, ++out) {
-    *out = std::log(PSEUDO + *out);
-  }
+  using MajiqInclude::detail::logtransform;
+  // pseudocount will be smaller than precision of PMF
+  logtransform<1 + digits2>(out, out, n_out);
   return;
 }
 
@@ -434,19 +432,15 @@ inline RealT _Quantile(
     }
     const RealT logx = std::log(x);
     const RealT log1mx = std::log1p(-x);
-    // compute logpdf of each component, get max among them
-    RealT logpdf_max = std::numeric_limits<RealT>::lowest();
+    // compute logpdf of each component
     for (int64_t i = 0; i < n_mixture; ++i) {
       _logpdf_buffer[i] = logpdf_component(i, logx, log1mx);
-      logpdf_max = std::max(logpdf_max, _logpdf_buffer[i]);
     }
-    // logsumexp trick
-    RealT sum{0};
-    for (int64_t i = 0; i < n_mixture; ++i) {
-      sum += std::exp(_logpdf_buffer[i] - logpdf_max);
-    }
-    sum *= std::exp(logpdf_max);
-    return sum / n_mixture;
+    using MajiqInclude::detail::logsumexp;
+    using MajiqInclude::detail::LogSumExpOutputExp;
+    return (
+        logsumexp<LogSumExpOutputExp>(_logpdf_buffer.begin(), n_mixture)
+        / n_mixture);
   };
   // newton argument
   const auto f = [&cdf, &pdf, q](RealT x) {

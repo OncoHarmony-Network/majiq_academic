@@ -57,10 +57,25 @@ inline RealT logadd(RealT logx, RealT logy) {
   return logx + std::log1p(std::exp(logy));
 }
 
+struct LogSumExpOutputLog {
+  template <typename RealT>
+  RealT operator()(RealT sum_exp, RealT max_val) {
+    return std::log(sum_exp) + max_val;
+  }
+};
+
+struct LogSumExpOutputExp {
+  template <typename RealT>
+  RealT operator()(RealT sum_exp, RealT max_val) {
+    return sum_exp * std::exp(max_val);
+  }
+};
+
 /**
  * logsumexp of input values
  */
-template <typename ItX,
+template <typename OutputTransform = LogSumExpOutputLog,
+         typename ItX,
          typename RealT = typename std::iterator_traits<ItX>::value_type,
          typename std::enable_if<
            std::is_floating_point<RealT>::value, bool
@@ -75,7 +90,7 @@ inline RealT logsumexp(ItX values, const int64_t n) {
     const RealT max_val = *std::max_element(values, last);
     const RealT sum_exp = std::accumulate(values, last, RealT{},
         [max_val](RealT sum, RealT x) { return sum + std::exp(x - max_val); });
-    return std::log(sum_exp) + max_val;
+    return OutputTransform{}(sum_exp, max_val);
   }
 }
 
@@ -87,6 +102,27 @@ inline void lognormalize(ItP logp, const int64_t n) {
   const auto logZ = logsumexp(logp, n);
   for (int64_t i = 0; i < n; ++i, ++logp) {
     *logp -= logZ;
+  }
+  return;
+}
+
+/**
+ * log-transform input iterator with pseudocount
+ */
+template <int64_t digits2 = 34, typename ItIn, typename ItOut,
+         typename RealT = typename std::iterator_traits<ItIn>::value_type,
+         typename std::enable_if<
+           std::is_floating_point<RealT>::value, bool
+         >::type = true,
+         typename std::enable_if<
+          std::is_same<
+            RealT, typename std::iterator_traits<ItOut>::value_type
+          >::value, bool
+         >::type = true>
+inline void logtransform(ItIn in, ItOut out, int64_t n) {
+  constexpr RealT PSEUDO{RealT{1} / (int64_t{1} << digits2)};
+  for (int64_t i = 0; i < n; ++i, ++in, ++out) {
+    *out = std::log(PSEUDO + std::max(RealT{0}, *in));
   }
   return;
 }
