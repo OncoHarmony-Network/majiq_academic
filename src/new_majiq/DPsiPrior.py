@@ -6,7 +6,7 @@ Define prior on deltapsi using input PsiCoverage
 Author: Joseph K Aicher
 """
 
-from typing import Optional
+from typing import List, Optional, Union
 
 import numpy as np
 import xarray as xr
@@ -14,13 +14,14 @@ from scipy.special import logsumexp
 from scipy.stats import beta as beta_dist
 
 import new_majiq.constants as constants
+from new_majiq.logger import get_logger
 from new_majiq.PsiCoverage import PsiCoverage, min_experiments
 
 
 def get_empirical_dpsi(
     psi1: PsiCoverage,
     psi2: PsiCoverage,
-    minreads: float = 3 * constants.DEFAULT_QUANTIFY_MINREADS,
+    minreads: float = constants.DEFAULT_DPSI_PRIOR_MINREADS,
     min_experiments_f: float = constants.DEFAULT_QUANTIFY_MINEXPERIMENTS,
 ) -> xr.DataArray:
     """Get high confidence empirical deltapsi from input groups of experiments
@@ -115,15 +116,18 @@ def fit_pmix(pmix_given_dpsi: xr.DataArray) -> xr.DataArray:
     return x / x.sum()  # make sure result is normalized
 
 
-def fit_a(dpsi: xr.DataArray, pmix_given_dpsi: xr.DataArray) -> xr.DataArray:
+def fit_a(
+    dpsi: xr.DataArray, pmix_given_dpsi: xr.DataArray, force_slab: bool = True
+) -> xr.DataArray:
     """Fit a using dpsi, pmix_given_dpsi (M-step) by method of moments"""
     variance = xr.dot(
         dpsi, dpsi, pmix_given_dpsi, dims="lsv_idx"
     ) / pmix_given_dpsi.sum("lsv_idx")
     # get beta parameter that has this variance (when scaled on [-1, 1])
     a = 0.5 * (1 / variance - 1)
-    # force the first value of a to always be uniform distribution
-    a.loc[dict(mixture_component=0)] = 1.0
+    if force_slab:
+        # force the first value of a to always be uniform distribution
+        a.loc[dict(mixture_component=0)] = 1.0
     # return result
     return a
 
@@ -149,18 +153,23 @@ def discrete_log_prior(
 
 def fit_discrete_dpsi_prior(
     dpsi: xr.DataArray,
-    a: xr.DataArray = xr.DataArray([1.0, 75.0, 1000.0], dims=["mixture_component"]),
-    pmix: xr.DataArray = xr.DataArray([0.2, 0.5, 0.3], dims=["mixture_component"]),
-    n_update_a: int = 1,
-    n_update_pmix: Optional[int] = None,
-    psibins: int = 40,
+    a: Union[List[float], xr.DataArray] = constants.DEFAULT_DPSI_PRIOR_A,
+    pmix: Union[List[float], xr.DataArray] = constants.DEFAULT_DPSI_PRIOR_PMIX,
+    min_lsvs: int = constants.DEFAULT_DPSI_PRIOR_MINLSV,
+    n_update_a: int = constants.DEFAULT_DPSI_PRIOR_MAXITER,
+    n_update_pmix: Optional[int] = None,  # None --> 1 + n_update_a
+    psibins: int = constants.DEFAULT_QUANTIFY_PSIBINS,
 ) -> xr.DataArray:
     """Given observed dpsi, fit mixture parameters, compute discretized bins
 
     Parameters
     ----------
     dpsi: xr.DataArray (dimension: lsv_idx)
-    a, pmix: xr.DataArray (dimension: mixture_component)
+    a, pmix: Union[List[float], xr.DataArray (dimension: mixture_component)]
+        Default parameters for prior. Must have same length.
+    min_lsvs: int
+        If less than this many LSVs in dpsi, don't fit, use default/initial
+        prior
     n_update_a: int
         Number of iterations to update a during M step
     n_update_pmix: Optional[int]
@@ -168,9 +177,30 @@ def fit_discrete_dpsi_prior(
     psibins: int
         Number of bins for PSI (2 * psibins for deltapsi)
     """
+    # normalize inputs to be usable
+    if not isinstance(a, xr.DataArray):
+        a = xr.DataArray(a, dims=["mixture_component"])
+    if not isinstance(pmix, xr.DataArray):
+        pmix = xr.DataArray(pmix, dims=["mixture_component"])
     if n_update_pmix is None:
         n_update_pmix = 1 + n_update_a
-    for i in range(max(n_update_a, n_update_pmix)):
+    # get logger
+    log = get_logger()
+    # are we doing EM iteration to update prior?
+    n_update = max(0, n_update_a, n_update_pmix)
+    if n_update and dpsi.sizes["lsv_idx"] < min_lsvs:
+        log.info(
+            f"Only {dpsi.sizes['lsv_idx']} dpsi LSVs provided to fit prior"
+            f" (min_lsvs={min_lsvs}). Using default prior"
+        )
+        n_update = 0
+    if n_update:
+        log.info(
+            "Updating initial deltapsi prior with parameters"
+            f" (a={[f'{x:.2e}' for x in a.values]},"
+            f" pmix={[f'{x:.2e}' for x in pmix.values]})"
+        )
+    for i in range(n_update):
         # E step
         pmix_given_dpsi = infer_pmix_given_dpsi(dpsi, a, pmix)
         # M step
@@ -178,4 +208,8 @@ def fit_discrete_dpsi_prior(
             pmix = fit_pmix(pmix_given_dpsi)
         if i < n_update_a:
             a = fit_a(dpsi, pmix_given_dpsi)
+    log.info(
+        f"Using deltapsi prior with parameters (a={[f'{x:.2e}' for x in a.values]},"
+        f" pmix={[f'{x:.2e}' for x in pmix.values]})"
+    )
     return discrete_log_prior(pmix, a, psibins)

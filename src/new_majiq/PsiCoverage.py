@@ -264,7 +264,9 @@ class PsiCoverage(object):
             dask="allowed",
         )
 
-    def bootstrap_discretized_pmf(self, nbins: int = 40):
+    def bootstrap_discretized_pmf(
+        self, nbins: int = constants.DEFAULT_QUANTIFY_PSIBINS
+    ) -> xr.DataArray:
         """Get discretized PMF with specified number of bins"""
         endpoints = np.linspace(0, 1, 1 + nbins, dtype=self.bootstrap_psi.dtype)
         dummy_bins = xr.DataArray(
@@ -289,7 +291,9 @@ class PsiCoverage(object):
             dask="allowed",
         )
 
-    def approximate_discretized_pmf(self, nbins: int = 40):
+    def approximate_discretized_pmf(
+        self, nbins: int = constants.DEFAULT_QUANTIFY_PSIBINS
+    ) -> xr.DataArray:
         """Get discretized PMF with specified number of bins"""
         endpoints = np.linspace(0, 1, 1 + nbins, dtype=self.bootstrap_psi.dtype)
         dummy_bins = xr.DataArray(
