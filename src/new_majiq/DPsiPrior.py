@@ -138,14 +138,14 @@ def discrete_log_prior(
     """Get discretized logprior for deltapsi with 2 * psibins deltapsi bins"""
     endpoints = xr.DataArray(
         np.linspace(-1, 1, 1 + 2 * psibins),
-        dims="dpsi_bin",
+        dims="pmf_bin",
     )
     cdf = xr.dot(xr.apply_ufunc(beta_dist.cdf, endpoints, a, a, -1, 2), pmix)
     pmf = (
-        cdf.isel(dpsi_bin=slice(1, None)) - cdf.isel(dpsi_bin=slice(None, -1))
+        cdf.isel(pmf_bin=slice(1, None)) - cdf.isel(pmf_bin=slice(None, -1))
     ).assign_coords(
-        pmf_bin_start=endpoints.isel(dpsi_bin=slice(None, -1)),
-        pmf_bin_end=endpoints.isel(dpsi_bin=slice(1, None)),
+        pmf_bin_start=endpoints.isel(pmf_bin=slice(None, -1)),
+        pmf_bin_end=endpoints.isel(pmf_bin=slice(1, None)),
     )
     PSEUDO = 1e-20
     return np.log(PSEUDO + pmf)
