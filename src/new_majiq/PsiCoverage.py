@@ -149,11 +149,11 @@ class PsiCoverage(object):
 
     @cached_property
     def raw_alpha(self) -> xr.DataArray:
-        return self.alpha_prior + self.raw_coverage
+        return (self.alpha_prior + self.raw_coverage).where(self.event_passed)
 
     @cached_property
     def bootstrap_alpha(self) -> xr.DataArray:
-        return self.alpha_prior + self.bootstrap_coverage
+        return (self.alpha_prior + self.bootstrap_coverage).where(self.event_passed)
 
     @cached_property
     def raw_beta(self) -> xr.DataArray:
