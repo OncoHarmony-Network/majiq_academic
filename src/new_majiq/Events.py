@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Final, NamedTuple, Optional, Union
 
 import numpy as np
+import pandas as pd
 import xarray as xr
 
 import new_majiq.constants as constants
@@ -285,4 +286,33 @@ class Events(object):
         return UniqueEventsMasks(
             unique_events_mask=unique_mask,
             shared_events_idx=np.array(aligned.right_event_idx, copy=True),
+        )
+
+    @property
+    def ec_dataframe(self) -> pd.DataFrame:
+        """Annotated event connections as dataframe"""
+        gene_idx = self.connection_gene_idx()
+        other_exon_idx = self.connection_other_exon_idx()
+        return pd.DataFrame(
+            dict(
+                seqid=np.array(self.contigs.seqid)[self.connection_contig_idx()],
+                strand=self.genes.strand[gene_idx],
+                gene_name=np.array(self.genes.gene_name)[gene_idx],
+                gene_id=np.array(self.genes.gene_id)[gene_idx],
+                event_type=np.repeat(
+                    self.event_type, np.diff(self._offsets.astype(int))
+                ),
+                ref_exon_start=self.exons.start[self.connection_ref_exon_idx],
+                ref_exon_end=self.exons.end[self.connection_ref_exon_idx],
+                start=self.connection_start(),
+                end=self.connection_end(),
+                is_denovo=self.connection_denovo(),
+                is_intron=self.is_intron,
+                other_exon_start=self.exons.start[other_exon_idx],
+                other_exon_end=self.exons.end[other_exon_idx],
+            ),
+            index=pd.Index(np.arange(self.num_connections), name="ec_idx"),
+        ).assign(
+            event_type=lambda df: df.event_type.str.decode("utf-8"),
+            strand=lambda df: df.strand.str.decode("utf-8"),
         )
