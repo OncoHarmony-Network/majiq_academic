@@ -2,7 +2,8 @@ import os
 from bisect import bisect
 from operator import itemgetter
 
-from flask import render_template, url_for, jsonify, request, session, Response
+from flask import render_template, url_for, jsonify, request, session, Response, redirect
+
 
 from rna_voila.api.view_matrix import ViewPsi, ViewPsis
 from rna_voila.api.view_splice_graph import ViewSpliceGraph
@@ -12,6 +13,7 @@ from rna_voila.view.datatables import DataTables
 from rna_voila.view.forms import LsvFiltersForm
 from rna_voila.config import ViewConfig
 from rna_voila.exceptions import LsvIdNotFoundInVoilaFile, LsvIdNotFoundInAnyVoilaFile, GeneIdNotFoundInVoilaFile
+from rna_voila.view.ucsc_api import make_custom_track
 
 app, bp = views.get_bp(__name__)
 
@@ -395,6 +397,30 @@ def download_genes():
 @bp.route('/copy-lsv/<lsv_id>', methods=('POST',))
 def copy_lsv(lsv_id):
     return views.copy_lsv(lsv_id, ViewPsi, voila_file=ViewConfig().voila_files[0])
+
+
+
+@bp.route('/generate_ucsc_link', methods=('GET',))
+def generate_ucsc_link():
+
+    gene_id = request.args['gene_id']
+
+    with ViewSpliceGraph(omit_simplified=session.get('omit_simplified', False)) as sg, ViewPsis() as m:
+
+
+        gene = sg.gene(gene_id)
+
+        strand = gene['strand']
+        exons = sg.exons(gene_id)
+        introns = sg.intron_retentions(gene_id)
+        junctions = sg.junctions(gene_id)
+
+
+        link = make_custom_track(sg.genome, gene['chromosome'], gene['strand'], list(exons), list(introns), list(junctions))
+
+        return redirect(link)
+
+
 
 
 app.register_blueprint(bp)
