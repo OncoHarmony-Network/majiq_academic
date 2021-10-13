@@ -29,7 +29,7 @@ def add_args(parser: argparse.ArgumentParser) -> None:
         "psicov",
         type=Path,
         nargs="+",
-        help="Paths to PsiCoverage files. All must have been generated using same splicegraph",
+        help="Paths to PsiCoverage files to quantify",
     )
     parser.add_argument(
         "--splicegraph",
