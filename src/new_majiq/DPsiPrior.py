@@ -152,7 +152,7 @@ def discrete_log_prior(
 
 
 def fit_discrete_dpsi_prior(
-    dpsi: xr.DataArray,
+    dpsi: Optional[xr.DataArray],
     a: Union[List[float], xr.DataArray] = constants.DEFAULT_DPSI_PRIOR_A,
     pmix: Union[List[float], xr.DataArray] = constants.DEFAULT_DPSI_PRIOR_PMIX,
     min_lsvs: int = constants.DEFAULT_DPSI_PRIOR_MINLSV,
@@ -164,7 +164,8 @@ def fit_discrete_dpsi_prior(
 
     Parameters
     ----------
-    dpsi: xr.DataArray (dimension: lsv_idx)
+    dpsi: Optional[xr.DataArray (dimension: lsv_idx)]
+        Observations. If None, just use a, pmix without any iteration.
     a, pmix: Union[List[float], xr.DataArray (dimension: mixture_component)]
         Default parameters for prior. Must have same length.
     min_lsvs: int
@@ -188,26 +189,29 @@ def fit_discrete_dpsi_prior(
     log = get_logger()
     # are we doing EM iteration to update prior?
     n_update = max(0, n_update_a, n_update_pmix)
-    if n_update and dpsi.sizes["lsv_idx"] < min_lsvs:
-        log.info(
-            f"Only {dpsi.sizes['lsv_idx']} dpsi LSVs provided to fit prior"
-            f" (min_lsvs={min_lsvs}). Using default prior"
-        )
-        n_update = 0
-    if n_update:
-        log.info(
-            "Updating initial deltapsi prior with parameters"
-            f" (a={[f'{x:.2e}' for x in a.values]},"
-            f" pmix={[f'{x:.2e}' for x in pmix.values]})"
-        )
-    for i in range(n_update):
-        # E step
-        pmix_given_dpsi = infer_pmix_given_dpsi(dpsi, a, pmix)
-        # M step
-        if i < n_update_pmix:
-            pmix = fit_pmix(pmix_given_dpsi)
-        if i < n_update_a:
-            a = fit_a(dpsi, pmix_given_dpsi)
+    if dpsi is not None and n_update > 0:
+        # attempt to use dpsi to update prior
+        if dpsi.sizes["lsv_idx"] < min_lsvs:
+            log.info(
+                f"Only {dpsi.sizes['lsv_idx']} dpsi LSVs provided to fit prior"
+                f" (min_lsvs={min_lsvs}). Using default prior"
+            )
+            n_update = 0
+        else:
+            log.info(
+                "Updating initial deltapsi prior with parameters"
+                f" (a={[f'{x:.2e}' for x in a.values]},"
+                f" pmix={[f'{x:.2e}' for x in pmix.values]})"
+            )
+            for i in range(n_update):
+                assert isinstance(dpsi, xr.DataArray)
+                # E step
+                pmix_given_dpsi = infer_pmix_given_dpsi(dpsi, a, pmix)
+                # M step
+                if i < n_update_pmix:
+                    pmix = fit_pmix(pmix_given_dpsi)
+                if i < n_update_a:
+                    a = fit_a(dpsi, pmix_given_dpsi)
     log.info(
         f"Using deltapsi prior with parameters (a={[f'{x:.2e}' for x in a.values]},"
         f" pmix={[f'{x:.2e}' for x in pmix.values]})"
