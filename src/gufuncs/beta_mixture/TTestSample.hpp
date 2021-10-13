@@ -165,9 +165,19 @@ static void Outer(
         }  // sample from each mixture distribution
       }
       // perform test on x, labels, set to pval
-      using MajiqInclude::TTest::Test;
-      pvalue_samples[s] = Test(
-          x.begin(), labels.with_stride(str_labels_exp), dim_exp);
+      {
+        using MajiqInclude::TTest::Test;
+        pvalue_samples[s] = Test(
+            x.begin(), labels.with_stride(str_labels_exp), dim_exp);
+        if (std::isnan(pvalue_samples[s])) {
+          // only reason for test to be nan is if not enough samples in either
+          // group. This will be the case for all psisamples, so we don't
+          // bother doing the rest (we expect to only hit this when s == 0).
+          // just in case...
+          pvalue_samples[0] = std::numeric_limits<RealT>::quiet_NaN();
+          break;
+        }
+      }
     }  // compute psisamples pvalues
     // obtain desired quantiles from pvalue_samples, set to out
     {
@@ -175,7 +185,9 @@ static void Outer(
       auto out_q = out.with_stride(str_out_q);
       for (npy_intp k = 0; k < dim_q; ++k, ++q_q, ++out_q) {
         using MajiqInclude::quantile;
-        *out_q = quantile(pvalue_samples.begin(), pvalue_samples.end(), *q_q);
+        *out_q = std::isnan(pvalue_samples[0])
+          ? std::numeric_limits<RealT>::quiet_NaN()
+          : quantile(pvalue_samples.begin(), pvalue_samples.end(), *q_q);
       }  // loop over quantiles
     }  // done taking quantiles of p-values
   }  // done loop over broadcast dimensions
