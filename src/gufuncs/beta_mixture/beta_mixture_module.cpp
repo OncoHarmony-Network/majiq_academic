@@ -26,6 +26,7 @@
 #include "Quantile.hpp"
 #include "Sample.hpp"
 #include "TTestSample.hpp"
+#include "StatsSample.hpp"
 
 // for functions requiring sampling
 static PyObject* SetSeedGlobalGen(PyObject* self, PyObject* args) {
@@ -155,6 +156,15 @@ PyMODINIT_FUNC PyInit_beta_mixture(void) {
       Sample::signature);
   PyDict_SetItemString(d, Sample::name, sample);
   Py_DECREF(sample);
+
+  namespace StatsSample = MajiqGufuncs::BetaMixture::StatsSample;
+  PyObject *stats_sample = PyUFunc_FromFuncAndDataAndSignature(
+      StatsSample::funcs, data, StatsSample::types,
+      StatsSample::ntypes, StatsSample::nin, StatsSample::nout,
+      PyUFunc_None, StatsSample::name, StatsSample::doc, 0,
+      StatsSample::signature);
+  PyDict_SetItemString(d, StatsSample::name, stats_sample);
+  Py_DECREF(stats_sample);
 
   namespace TTestSample = MajiqGufuncs::BetaMixture::TTestSample;
   PyObject *ttest_sample = PyUFunc_FromFuncAndDataAndSignature(

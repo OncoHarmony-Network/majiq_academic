@@ -122,6 +122,10 @@ static void Outer(
   auto psisamples = CoreIt<int64_t>::begin(args[4], outer_stride[4]);
   auto out = CoreIt<RealT>::begin(args[5], outer_stride[5]);
 
+  if (dim_q < 1) {
+    // output will be empty!
+    return;
+  }
   if (dim_exp < 1 || dim_mix < 1) {
     // no samples
     for (npy_intp i = 0; i < dim_broadcast; ++i, ++out) {
