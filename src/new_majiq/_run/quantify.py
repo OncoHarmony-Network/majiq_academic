@@ -7,9 +7,10 @@ Author: Joseph K Aicher
 """
 
 import argparse
+import json
 import sys
 from pathlib import Path
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 
 import numpy as np
 import pandas as pd
@@ -66,10 +67,14 @@ def run(args: argparse.Namespace) -> None:
         raise ValueError(f"Unable to find input splicegraph {args.splicegraph}")
 
     log = get_logger()
+    metadata: Dict[str, Any] = dict()
+    metadata["command"] = " ".join(sys.argv)
+    metadata["version"] = nm.__version__
 
     log.info(f"Joining {len(args.psicov)} input PSI coverage files")
     psicov = nm.PsiCoverage.from_zarr(args.psicov)
-    log.info(f"Using coverage from {psicov.df.sizes['prefix']} input experiments")
+    metadata["n_experiments"] = psicov.df.sizes["prefix"]
+    log.info(f"Using coverage from {metadata['n_experiments']} input experiments")
     if args.min_experiments is not None:
         log.info(f"Aggregating coverage using min-experiments = {args.min_experiments}")
         psicov = psicov.sum("aggregate", min_experiments_f=args.min_experiments)
@@ -129,8 +134,10 @@ def run(args: argparse.Namespace) -> None:
             for (prefix, q) in df_quantiles.columns.values
         ]
         concat_df.append(df_quantiles)
-    log.info(f"Saving resulting table to {args.output_tsv.name}")
-    # TODO(jaicher): add header of metadata
+    log.info(f"Writing metadata to {args.output_tsv.name}")
+    metadata_json = json.dumps(metadata, sort_keys=True, indent=4)
+    args.output_tsv.write("# {}\n".format(metadata_json.replace("\n", "\n# ")))
+    log.info(f"Writing table to {args.output_tsv.name}")
     (
         # concatenate columns together
         pd.concat(concat_df, axis=1, join="inner")
