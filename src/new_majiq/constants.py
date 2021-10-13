@@ -6,7 +6,8 @@ Constants for new_majiq front-end
 Author: Joseph K Aicher
 """
 
-from typing import Dict, Final, List
+import string
+from typing import Dict, Final, List, Set
 
 from new_majiq.internals import (
     ExperimentStrandness,
@@ -92,6 +93,10 @@ DEFAULT_DPSI_PRIOR_MINLSV: Final[int] = 100
 DEFAULT_DPSI_PRIOR_MAXITER: Final[int] = 1
 DEFAULT_DPSI_PRIOR_A: Final[List[float]] = [1.0, 75.0, 1000.0]
 DEFAULT_DPSI_PRIOR_PMIX: Final[List[float]] = [0.2, 0.5, 0.3]
+DEFAULT_DPSI_CHANGING_THRESHOLD: Final[float] = 0.20
+DEFAULT_DPSI_NONCHANGING_THRESHOLD: Final[float] = 0.05
+
+ALLOWED_GROUP_NAME_CHARS: Final[Set[str]] = {*string.ascii_letters, *string.digits, "_"}
 
 DEFAULT_MOCCASIN_RUV_MAX_EVENTS: Final[int] = 10000
 DEFAULT_MOCCASIN_RUV_MAX_FACTORS: Final[int] = 0
