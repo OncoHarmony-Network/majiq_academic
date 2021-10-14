@@ -11,10 +11,9 @@ Author: Joseph K Aicher
 
 from functools import cached_property
 from pathlib import Path
-from typing import Final, List, Optional, Sequence, Tuple, Union
+from typing import Dict, Final, List, Optional, Sequence, Tuple, Union, cast
 
 import numpy as np
-import pandas as pd
 import xarray as xr
 
 import new_majiq._offsets as _offsets
@@ -25,7 +24,6 @@ from new_majiq.EventsCoverage import EventsCoverage
 from new_majiq.experiments import bam_experiment_name
 from new_majiq.GeneIntrons import GeneIntrons
 from new_majiq.GeneJunctions import GeneJunctions
-from new_majiq.SpliceGraph import SpliceGraph
 
 
 def min_experiments(min_experiments_f: float, num_experiments: int) -> float:
@@ -196,6 +194,25 @@ class PsiCoverage(object):
         return mean * np.subtract(1, mean) / np.add(1, self.raw_total)
 
     @cached_property
+    def raw_posterior_std(self) -> xr.DataArray:
+        return cast(xr.DataArray, np.sqrt(self.raw_posterior_variance))
+
+    @property
+    def raw_psi_mean(self) -> xr.DataArray:
+        """alias for raw_posterior_mean"""
+        return self.raw_posterior_mean
+
+    @property
+    def raw_psi_variance(self) -> xr.DataArray:
+        """alias for raw_posterior_variance"""
+        return self.raw_posterior_variance
+
+    @property
+    def raw_psi_std(self) -> xr.DataArray:
+        """alias for raw_posterior_std"""
+        return self.raw_posterior_std
+
+    @cached_property
     def _bootstrap_moments(self) -> Tuple[xr.DataArray, xr.DataArray]:
         _moments = xr.apply_ufunc(
             bm.moments,
@@ -217,6 +234,25 @@ class PsiCoverage(object):
     @property
     def bootstrap_posterior_variance(self) -> xr.DataArray:
         return self._bootstrap_moments[1]
+
+    @cached_property
+    def bootstrap_posterior_std(self) -> xr.DataArray:
+        return cast(xr.DataArray, np.sqrt(self.bootstrap_posterior_variance))
+
+    @property
+    def bootstrap_psi_mean(self) -> xr.DataArray:
+        """alias for bootstrap_posterior_mean"""
+        return self.bootstrap_posterior_mean
+
+    @property
+    def bootstrap_psi_variance(self) -> xr.DataArray:
+        """alias for bootstrap_posterior_variance"""
+        return self.bootstrap_posterior_variance
+
+    @property
+    def bootstrap_psi_std(self) -> xr.DataArray:
+        """alias for bootstrap_posterior_std"""
+        return self.bootstrap_posterior_std
 
     def bootstrap_quantile(
         self,
@@ -587,105 +623,65 @@ class PsiCoverage(object):
             )
         )
 
-    @staticmethod
-    def _exons_formatted(
-        exon_start: Sequence[int], exon_end: Sequence[int]
-    ) -> List[str]:
-        def format_coord(x):
-            return x if x >= 0 else "na"
-
-        return [
-            f"{format_coord(a)}-{format_coord(b)}" for a, b in zip(exon_start, exon_end)
-        ]
-
-    def as_dataframe(self, sg: SpliceGraph) -> pd.DataFrame:
-        """Basic quantifications annotated with splicegraph information"""
-        # set up events object
-        self.events.load()
-        q_events = self.get_events(sg.introns, sg.junctions)
-        # get event-level information
-        event_size = np.diff(self.lsv_offsets.values)
-        event_id = sg.exon_connections.event_id(
-            q_events.ref_exon_idx, q_events.event_type
-        )
-        event_description = sg.exon_connections.event_description(
-            q_events.ref_exon_idx, q_events.event_type
-        )
-        ref_exon_start = sg.exons.start[q_events.ref_exon_idx]
-        ref_exon_end = sg.exons.end[q_events.ref_exon_idx]
-        # connection information
-        gene_idx = q_events.connection_gene_idx()
-        gene_id = np.array(sg.genes.gene_id)[gene_idx]
-        gene_name = np.array(sg.genes.gene_name)[gene_idx]
-        strand = np.array([x.decode() for x in sg.genes.strand])[gene_idx]
-        contig_idx = sg.genes.contig_idx[gene_idx]
-        seqid = np.array(sg.contigs.seqid)[contig_idx]
-        other_exon_idx = q_events.connection_other_exon_idx()
-        other_exon_start = sg.exons.start[other_exon_idx]
-        other_exon_end = sg.exons.end[other_exon_idx]
-        # as Dataset
-        df = xr.Dataset(
-            {
-                "raw_psi_mean": self.raw_posterior_mean,
-                "raw_psi_std": np.sqrt(self.raw_posterior_variance),
-                "bootstrap_psi_mean": self.bootstrap_posterior_mean,
-                "bootstrap_psi_std": np.sqrt(self.bootstrap_posterior_variance),
-                "seqid": ("ec_idx", seqid),
-                "gene_id": ("ec_idx", gene_id),
-                "ref_exon": (
-                    "ec_idx",
-                    np.repeat(
-                        self._exons_formatted(ref_exon_start, ref_exon_end), event_size
-                    ),
-                ),
-                "event_type": (
-                    "ec_idx",
-                    np.repeat([x.decode() for x in q_events.event_type], event_size),
-                ),
-                "is_intron": ("ec_idx", q_events.is_intron),
-                "start": ("ec_idx", q_events.connection_start()),
-                "end": ("ec_idx", q_events.connection_end()),
-                "denovo": ("ec_idx", q_events.connection_denovo()),
-                "gene_name": ("ec_idx", gene_name),
-                "strand": ("ec_idx", strand),
-                "other_exon": (
-                    "ec_idx",
-                    self._exons_formatted(other_exon_start, other_exon_end),
-                ),
-                "event_id": ("ec_idx", np.repeat(event_id, event_size)),
-                "event_description": (
-                    "ec_idx",
-                    np.repeat(event_description, event_size),
-                ),
-            }
-        ).reset_coords(drop=True)
-        # if only one prefix, drop it
-        idx_order = ["prefix", "ec_idx"]
-        try:
-            df = df.squeeze("prefix", drop=True)
-            idx_order.remove("prefix")
-        except ValueError:
-            pass
-        return df.to_dataframe(idx_order)  # type: ignore
-
-    def quantifier_dataset(
+    def dataset(
         self,
-        pmf_bins: Optional[int] = 40,
-        quantiles: Optional[Sequence[float]] = None,
+        properties: Sequence[str] = [
+            "raw_psi_mean",
+            "raw_psi_std",
+            "bootstrap_psi_mean",
+            "bootstrap_psi_std",
+            "raw_coverage",
+        ],
+        quantiles: Sequence[float] = list(),
+        psibins: Optional[int] = None,
+        use_posterior: str = "approximation",
     ) -> xr.Dataset:
-        """Default dataset for quantifications"""
-        df = xr.Dataset(
-            {
-                "raw_psi_mean": self.raw_posterior_mean.load(),
-                "raw_psi_std": np.sqrt(self.raw_posterior_variance.load()),
-                "bootstrap_psi_mean": self.bootstrap_posterior_mean.load(),
-                "bootstrap_psi_std": np.sqrt(self.bootstrap_posterior_variance.load()),
-            },
-            {},
-            self.df.attrs,
-        )
-        if pmf_bins:
-            df = df.assign(psi_pmf=self.bootstrap_discretized_pmf(pmf_bins))
-        if quantiles:
-            df = df.assign(psi_quantiles=self.bootstrap_quantile(quantiles))
-        return df
+        """Extract selected properties into single dataset
+
+        Parameters
+        ----------
+        properties: Sequence[str]
+            PsiCoverage properties to request.
+        quantiles: Sequence[float]
+            If non-empty, calculate quantiles of posterior distribution
+        psibins: Optional[int]
+            If specified, calculate discretized approximation to posterior
+            distribution with this many bins
+        use_posterior: str
+            Compute quantiles/pmf with "bootstrap" or "approximation" posterior
+            distribution (or "both"). Otherwise, raise error.
+        """
+        # initialize variables to return with noting if any experiment passed
+        quantify_vars: Dict[str, xr.DataArray] = {
+            "any_passed": self.event_passed.any("prefix")
+        }
+        # add properties
+        for x in properties:
+            quantify_vars[x] = getattr(self, x)
+        if len(quantiles) or psibins:
+            do_approx = use_posterior in ("approximation", "both")
+            do_bootstrap = use_posterior in ("bootstrap", "both")
+            if not (do_approx or do_bootstrap):
+                raise ValueError(
+                    "Invalid argument, use_posterior must be 'approximation',"
+                    f" 'bootstrap', or 'both' (provided {use_posterior})"
+                )
+            if len(quantiles):
+                if do_approx:
+                    quantify_vars["approx_psi_quantile"] = self.approximate_quantile(
+                        quantiles
+                    )
+                if do_bootstrap:
+                    quantify_vars["bootstrap_psi_quantile"] = self.bootstrap_quantile(
+                        quantiles
+                    )
+            if psibins:
+                if do_approx:
+                    quantify_vars["approx_psi_pmf"] = self.approximate_discretized_pmf(
+                        psibins
+                    )
+                if do_bootstrap:
+                    quantify_vars["bootstrap_psi_pmf"] = self.bootstrap_discretized_pmf(
+                        psibins
+                    )
+        return xr.Dataset(quantify_vars).reset_coords(drop=True)  # type: ignore[arg-type]

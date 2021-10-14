@@ -14,7 +14,6 @@ from typing import Any, Dict, List, Optional
 
 import numpy as np
 import pandas as pd
-import xarray as xr
 
 import new_majiq as nm
 from new_majiq._run._majiq_args import check_nonnegative_factory
@@ -41,7 +40,7 @@ def add_args(parser: argparse.ArgumentParser) -> None:
         "--quantiles",
         type=float,
         nargs="+",
-        default=None,
+        default=list(),
         help="If specified, calculate/report PSI posterior quantiles",
     )
     parser.add_argument(
@@ -89,21 +88,8 @@ def run(args: argparse.Namespace) -> None:
         events = psicov.get_events(sg.introns, sg.junctions)
         concat_df.append(events.ec_dataframe)
 
-    # get desired quantifications
-    quantify_vars = {
-        "any_passed": psicov.event_passed.any("prefix"),
-        "raw_psi_mean": psicov.raw_posterior_mean,
-        "raw_psi_std": np.sqrt(psicov.raw_posterior_variance),
-        "bootstrap_psi_mean": psicov.bootstrap_posterior_mean,
-        "bootstrap_psi_std": np.sqrt(psicov.bootstrap_posterior_variance),
-        "raw_coverage": psicov.raw_coverage,
-    }
-    if args.quantiles:
-        quantiles = sorted(set(np.round(args.quantiles, 3)))
-        log.info("Will compute the following posterior quantiles: {quantiles}")
-        quantify_vars["approx_psi_quantile"] = psicov.approximate_quantile(quantiles)
     log.info("Performing quantification")
-    ds_quant = xr.Dataset(quantify_vars).reset_coords(drop=True).load()  # type: ignore[arg-type]
+    ds_quant = psicov.dataset(quantiles=sorted(set(np.round(args.quantiles, 3)))).load()
 
     log.info("Reshaping resulting quantifications to table")
     # all quantifications but quantiles
@@ -122,16 +108,16 @@ def run(args: argparse.Namespace) -> None:
     concat_df.append(df_quant)
     if args.quantiles:
         df_quantiles = (
-            ds_quant["approx_psi_quantile"]
-            .to_series()
+            ds_quant[[name for name, v in ds_quant.items() if "quantiles" in v.dims]]
+            .to_dataframe()
             .unstack(["prefix", "quantiles"])
             .sort_index(axis=1)
         )
         df_quantiles.columns = [
-            f"{prefix} approx_psi_quantile_{q:0.3f}"
+            f"{prefix} {var}_{q:0.3f}"
             if ds_quant.sizes["prefix"] > 1
-            else f"approx_psi_quantile_{q:0.3f}"
-            for (prefix, q) in df_quantiles.columns.values
+            else f"{var}_{q:0.3f}"
+            for (var, prefix, q) in df_quantiles.columns.values
         ]
         concat_df.append(df_quantiles)
     log.info(f"Writing metadata to {args.output_tsv.name}")
