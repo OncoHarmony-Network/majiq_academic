@@ -80,7 +80,7 @@ static PyObject* AvailableStatistics(PyObject* self, PyObject* args) {
   return Py_BuildValue(
       "{s:L,s:L,s:L,s:L}",
       "ttest", static_cast<int64_t>(HetStats::TTest),
-      "mannwhitney", static_cast<int64_t>(HetStats::MannWhitney),
+      "mannwhitneyu", static_cast<int64_t>(HetStats::MannWhitney),
       "tnom", static_cast<int64_t>(HetStats::TNOM),
       "infoscore", static_cast<int64_t>(HetStats::InfoScore));
 }
