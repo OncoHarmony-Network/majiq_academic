@@ -20,8 +20,10 @@ dependencies:
   - black
   - pre-commit
   - pip
-  - setuptools
+  - setuptools>=45
   - wheel
+  - pybind>=2.6.0
+  - setuptools_scm>=6.2
   - pip:
     - "git+https://bitbucket.org/biociphers/moccasin@new_moccasin"
     - "-e ."
