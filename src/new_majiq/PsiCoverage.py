@@ -32,16 +32,6 @@ def min_experiments(min_experiments_f: float, num_experiments: int) -> float:
     return max(1, min(min_experiments_f, num_experiments))
 
 
-def _silent_quantile(*args, **kwargs):
-    with np.errstate(divide="ignore", invalid="ignore", over="ignore"):
-        return bm.quantile(*args, **kwargs)
-
-
-def _silent_cdf(*args, **kwargs):
-    with np.errstate(divide="ignore", invalid="ignore", over="ignore"):
-        return bm.cdf(*args, **kwargs)
-
-
 class PsiCoverage(object):
     """PSI and total coverage (raw and bootstrapped) for arbitrary number of samples"""
 
@@ -389,6 +379,38 @@ class PsiCoverage(object):
         return self._compute_posterior_discretized_pmf(
             self.approximate_alpha, self.approximate_beta, nbins=nbins
         )
+
+    @cached_property
+    def _raw_psi_mean_core_prefix(self) -> xr.DataArray:
+        """For computing quantiles over a population of samples"""
+        return self.raw_psi_mean.chunk({"prefix": None})
+
+    @cached_property
+    def _bootstrap_psi_mean_core_prefix(self) -> xr.DataArray:
+        """For computing quantiles over a population of samples"""
+        return self.bootstrap_psi_mean.chunk({"prefix": None})
+
+    @cached_property
+    def raw_psi_mean_population_median(self) -> xr.DataArray:
+        return self._raw_psi_mean_core_prefix.median("prefix")
+
+    @cached_property
+    def bootstrap_psi_mean_population_median(self) -> xr.DataArray:
+        return self._bootstrap_psi_mean_core_prefix.median("prefix")
+
+    def raw_psi_mean_population_quantile(
+        self,
+        quantiles: Sequence[float] = [0.25, 0.95],
+    ) -> xr.DataArray:
+        """Get quantiles of psi mean over population (adds dim quantile)"""
+        return self._raw_psi_mean_core_prefix.quantile(quantiles)
+
+    def bootstrap_psi_mean_population_quantile(
+        self,
+        quantiles: Sequence[float] = [0.25, 0.95],
+    ) -> xr.DataArray:
+        """Get quantiles of psi mean over population (adds dim quantile)"""
+        return self._bootstrap_psi_mean_core_prefix.quantile(quantiles)
 
     @classmethod
     def from_events_coverage(
