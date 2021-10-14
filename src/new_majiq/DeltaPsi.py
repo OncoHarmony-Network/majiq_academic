@@ -102,14 +102,26 @@ class DeltaPsi(object):
 
     @cached_property
     def discrete_logposterior(self) -> xr.DataArray:
-        a1 = self.psi1.approximate_alpha.squeeze("prefix", drop=True).expand_dims(
-            mix1=1
+        a1 = (
+            self.psi1.approximate_alpha.squeeze("prefix", drop=True)
+            .expand_dims(mix1=1)
+            .where(self.passed)
         )
-        b1 = self.psi1.approximate_beta.squeeze("prefix", drop=True).expand_dims(mix1=1)
-        a2 = self.psi2.approximate_alpha.squeeze("prefix", drop=True).expand_dims(
-            mix2=1
+        b1 = (
+            self.psi1.approximate_beta.squeeze("prefix", drop=True)
+            .expand_dims(mix1=1)
+            .where(self.passed)
         )
-        b2 = self.psi2.approximate_beta.squeeze("prefix", drop=True).expand_dims(mix2=1)
+        a2 = (
+            self.psi2.approximate_alpha.squeeze("prefix", drop=True)
+            .expand_dims(mix2=1)
+            .where(self.passed)
+        )
+        b2 = (
+            self.psi2.approximate_beta.squeeze("prefix", drop=True)
+            .expand_dims(mix2=1)
+            .where(self.passed)
+        )
         return xr.apply_ufunc(
             bm.dpsi_discrete,
             a1,
@@ -125,10 +137,10 @@ class DeltaPsi(object):
     @cached_property
     def discrete_bootstrap_logposterior(self) -> xr.DataArray:
         """Average bootstrap replicates after inference of deltapsi"""
-        a1 = self.psi1.bootstrap_alpha.rename(prefix="mix1")
-        b1 = self.psi1.bootstrap_beta.rename(prefix="mix1")
-        a2 = self.psi2.bootstrap_alpha.rename(prefix="mix2")
-        b2 = self.psi2.bootstrap_beta.rename(prefix="mix2")
+        a1 = self.psi1.bootstrap_alpha.rename(prefix="mix1").where(self.passed)
+        b1 = self.psi1.bootstrap_beta.rename(prefix="mix1").where(self.passed)
+        a2 = self.psi2.bootstrap_alpha.rename(prefix="mix2").where(self.passed)
+        b2 = self.psi2.bootstrap_beta.rename(prefix="mix2").where(self.passed)
         per_bootstrap = xr.apply_ufunc(
             bm.dpsi_discrete,
             a1,

@@ -566,15 +566,22 @@ class PsiCoverage(object):
             )
         return
 
+    def passed_min_experiments(
+        self,
+        min_experiments_f: float = constants.DEFAULT_QUANTIFY_MINEXPERIMENTS,
+    ) -> xr.DataArray:
+        """Get boolean mask of events that pass enough experiments"""
+        return self.event_passed.sum("prefix") >= min_experiments(
+            min_experiments_f, self.num_prefixes
+        )
+
     def sum(
         self,
         new_prefix: str,
         min_experiments_f: float = constants.DEFAULT_QUANTIFY_MINEXPERIMENTS,
     ) -> "PsiCoverage":
         """Aggregate coverage/psi values over all prefixes"""
-        event_passed = self.event_passed.sum("prefix") >= min_experiments(
-            min_experiments_f, self.num_prefixes
-        )
+        event_passed = self.passed_min_experiments(min_experiments_f)
         raw_total = self.raw_total.sum("prefix")
         raw_coverage = (self.raw_total * self.raw_psi).sum("prefix")
         raw_psi = (raw_coverage / raw_total).where(raw_total > 0, 0)
@@ -599,6 +606,16 @@ class PsiCoverage(object):
             attrs=dict(original_prefix=self.prefixes),
         ).expand_dims(prefix=[new_prefix])
         return PsiCoverage(df, self.events)
+
+    def mask_events(self, passed: xr.DataArray) -> "PsiCoverage":
+        """Return PsiCoverage passing only events that are passed in input
+
+        Return PsiCoverage passing only events that are passed in input (and in
+        the original object)
+        """
+        return PsiCoverage(
+            self.df.assign(event_passed=self.event_passed & passed), self.events
+        )
 
     def drop_unquantifiable(self) -> "PsiCoverage":
         """Drop all events that are not (passed in all prefixes)"""
