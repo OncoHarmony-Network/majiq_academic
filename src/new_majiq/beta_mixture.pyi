@@ -11,6 +11,7 @@ pmf: numpy.ufunc
 quantile: numpy.ufunc
 sample: numpy.ufunc
 ttest_sample: numpy.ufunc
+stats_sample: numpy.ufunc
 
 def rng_resize(n: int) -> None: ...
 def rng_seed(seed: int) -> None: ...
