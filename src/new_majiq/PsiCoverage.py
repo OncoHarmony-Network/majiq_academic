@@ -52,13 +52,14 @@ class PsiCoverage(object):
         ----------
         df: xr.Dataset
             Data variables:
-                event_passed[ec_idx]
-                raw_total[ec_idx]
-                raw_psi[ec_idx]
-                bootstrap_total[ec_idx, bootstrap_replicate]
-                bootstrap_psi[ec_idx, bootstrap_replicate]
+                event_passed[prefix, ec_idx]
+                raw_total[prefix, ec_idx]
+                raw_psi[prefix, ec_idx]
+                bootstrap_total[prefix, ec_idx, bootstrap_replicate]
+                bootstrap_psi[prefix, ec_idx, bootstrap_replicate]
             Coordinates:
                 lsv_offsets[offset_idx]
+                prefix[prefix]
             Derived (from _offsets):
                 event_size[ec_idx]
                 lsv_idx[ec_idx]
@@ -86,6 +87,29 @@ class PsiCoverage(object):
         self.df: Final[xr.Dataset] = df
         self.events: Final[xr.Dataset] = events
         return
+
+    @property
+    def num_connections(self) -> int:
+        return self.df.sizes["ec_idx"]
+
+    @property
+    def num_bootstraps(self) -> int:
+        return self.df.sizes["bootstrap_replicate"]
+
+    @property
+    def num_prefixes(self) -> int:
+        return self.df.sizes["prefix"]
+
+    @property
+    def prefixes(self) -> List[str]:
+        return self.df["prefix"].values.tolist()
+
+    def __getitem__(self, prefixes) -> "PsiCoverage":
+        """Get subset of PsiCoverage corresponding to selected prefixes"""
+        if isinstance(prefixes, str):
+            # make sure that prefixes is a sequence
+            prefixes = [prefixes]
+        return PsiCoverage(self.df.sel(prefix=prefixes), self.events)
 
     @property
     def event_passed(self) -> xr.DataArray:
@@ -528,10 +552,6 @@ class PsiCoverage(object):
                 path, mode="a", group=constants.NC_EVENTS, consolidated=consolidated
             )
         return
-
-    @property
-    def prefixes(self) -> List[str]:
-        return self.df["prefix"].values.tolist()
 
     def sum(
         self,
