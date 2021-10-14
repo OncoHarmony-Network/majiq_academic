@@ -13,9 +13,7 @@ import sys
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-import numpy as np
 import pandas as pd
-import xarray as xr
 
 import new_majiq as nm
 from new_majiq._run._majiq_args import (
@@ -24,9 +22,9 @@ from new_majiq._run._majiq_args import (
     check_nonnegative_factory,
 )
 from new_majiq._run._run import GenericSubcommand
+from new_majiq.DeltaPsi import DeltaPsi
 from new_majiq.DPsiPrior import DPsiPrior
 from new_majiq.logger import get_logger
-from new_majiq.PMFSummaries import PMFSummaries
 
 DESCRIPTION = "Quantify dPSI from two groups of replicate experiments"
 
@@ -207,84 +205,22 @@ def run(args: argparse.Namespace) -> None:
         log.info(f"Using deltapsi prior {prior}")
     else:
         log.info(f"Using default deltapsi prior {prior}")
-    logprior = prior.discretized_logpmf(psibins=args.psibins)
-
-    # aggregate coverage from both groups
-    log.info(f"Aggregating coverage using min-experiments = {args.min_experiments}")
-    psi1 = psi1.sum(args.names[0], min_experiments_f=args.min_experiments)
-    psi2 = psi2.sum(args.names[1], min_experiments_f=args.min_experiments)
-    passed = psi1.event_passed.squeeze("prefix", drop=True) & psi2.event_passed.squeeze(
-        "prefix", drop=True
-    )
-    # get beta distribution parameters to use
-    a1 = psi1.approximate_alpha.squeeze("prefix", drop=True).expand_dims(mix1=1)
-    b1 = psi1.approximate_beta.squeeze("prefix", drop=True).expand_dims(mix1=1)
-    a2 = psi2.approximate_alpha.squeeze("prefix", drop=True).expand_dims(mix2=1)
-    b2 = psi2.approximate_beta.squeeze("prefix", drop=True).expand_dims(mix2=1)
-    # compute logposterior
-    logposterior = xr.apply_ufunc(
-        nm.beta_mixture.dpsi_discrete,
-        a1,
-        b1,
-        a2,
-        b2,
-        logprior,
-        input_core_dims=[["mix1"], ["mix1"], ["mix2"], ["mix2"], ["pmf_bin"]],
-        output_core_dims=[["pmf_bin"]],
-        dask="parallelized",
-    )
-    posterior = PMFSummaries(np.exp(logposterior))
 
     # dataset of quantifications I want
     log.info("Performing quantification")
-    ds_quant = (
-        xr.Dataset(
-            {
-                "passed": passed,
-                "dpsi_mean": posterior.mean,
-                "dpsi_std": np.sqrt(posterior.variance),
-                "probability_changing": 1
-                - posterior.interval_probability(
-                    -args.changing_threshold, args.changing_threshold
-                ),
-                "probability_nonchanging": posterior.interval_probability(
-                    -args.nonchanging_threshold, args.nonchanging_threshold
-                ),
-                f"{args.names[0]}_raw_psi_mean": psi1.raw_posterior_mean.squeeze(
-                    "prefix", drop=True
-                ),
-                f"{args.names[0]}_raw_psi_std": np.sqrt(
-                    psi1.raw_posterior_variance.squeeze("prefix", drop=True)
-                ),
-                f"{args.names[0]}_bootstrap_psi_mean": psi1.bootstrap_posterior_mean.squeeze(
-                    "prefix", drop=True
-                ),
-                f"{args.names[0]}_bootstrap_psi_std": np.sqrt(
-                    psi1.bootstrap_posterior_variance.squeeze("prefix", drop=True)
-                ),
-                f"{args.names[0]}_raw_coverage": psi1.raw_coverage.squeeze(
-                    "prefix", drop=True
-                ),
-                f"{args.names[1]}_raw_psi_mean": psi2.raw_posterior_mean.squeeze(
-                    "prefix", drop=True
-                ),
-                f"{args.names[1]}_raw_psi_std": np.sqrt(
-                    psi2.raw_posterior_variance.squeeze("prefix", drop=True)
-                ),
-                f"{args.names[1]}_bootstrap_psi_mean": psi2.bootstrap_posterior_mean.squeeze(
-                    "prefix", drop=True
-                ),
-                f"{args.names[1]}_bootstrap_psi_std": np.sqrt(
-                    psi2.bootstrap_posterior_variance.squeeze("prefix", drop=True)
-                ),
-                f"{args.names[1]}_raw_coverage": psi2.raw_coverage.squeeze(
-                    "prefix", drop=True
-                ),
-            }
-        )
-        .reset_coords(drop=True)
-        .load()
+    deltapsi = DeltaPsi(
+        psi1,
+        psi2,
+        prior,
+        psibins=args.psibins,
+        min_experiments_f=args.min_experiments,
+        name1=args.names[0],
+        name2=args.names[1],
     )
+    ds_quant = deltapsi.dataset(
+        changing_threshold=args.changing_threshold,
+        nonchanging_threshold=args.nonchanging_threshold,
+    ).load()
 
     log.info("Reshaping resulting quantifications to table")
     concat_df.append(ds_quant.drop_vars("passed").to_dataframe())
