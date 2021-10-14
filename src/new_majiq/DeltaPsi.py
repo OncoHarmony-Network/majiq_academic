@@ -259,17 +259,15 @@ class DeltaPsi(object):
             Change parameters passed into psi1/2.dataset() to control
             PSI-specific variables returned
         """
-        USE_SMOOTH = {"smooth", "both"}
-        USE_LEGACY = {"legacy", "both"}
-        if use_posterior not in USE_SMOOTH | USE_LEGACY:
+        if use_posterior not in constants.DPSI_POSTERIORS:
             raise ValueError(
-                f"{use_posterior = } must be one of {USE_SMOOTH | USE_LEGACY}"
+                f"{use_posterior = } must be one of {constants.DPSI_POSTERIORS}"
             )
         # list of arrays/datasets to combine
         combine_ds: List[Union[xr.DataArray, xr.Dataset]] = [
             cast(xr.DataArray, self.passed.rename("passed").reset_coords(drop=True))
         ]
-        if use_posterior in USE_SMOOTH:
+        if use_posterior in constants.DPSI_SMOOTH:
             combine_ds.append(
                 xr.Dataset(
                     {
@@ -284,7 +282,7 @@ class DeltaPsi(object):
                     }
                 ).reset_coords(drop=True)
             )
-        if use_posterior in USE_LEGACY:
+        if use_posterior in constants.DPSI_LEGACY:
             combine_ds.append(
                 xr.Dataset(
                     {

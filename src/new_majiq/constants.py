@@ -9,6 +9,7 @@ Author: Joseph K Aicher
 import string
 from typing import Dict, Final, List, Set
 
+from new_majiq.beta_mixture import stats_available as _stats_available
 from new_majiq.internals import (
     ExperimentStrandness,
     ExperimentThresholds,
@@ -96,7 +97,21 @@ DEFAULT_DPSI_PRIOR_PMIX: Final[List[float]] = [0.2, 0.5, 0.3]
 DEFAULT_DPSI_CHANGING_THRESHOLD: Final[float] = 0.20
 DEFAULT_DPSI_NONCHANGING_THRESHOLD: Final[float] = 0.05
 
+STATS_AVAILABLE: Final[Dict[str, int]] = _stats_available()
+
 ALLOWED_GROUP_NAME_CHARS: Final[Set[str]] = {*string.ascii_letters, *string.digits, "_"}
 
 DEFAULT_MOCCASIN_RUV_MAX_EVENTS: Final[int] = 10000
 DEFAULT_MOCCASIN_RUV_MAX_FACTORS: Final[int] = 0
+
+PSICOV_APPROX: Final[Set[str]] = {"approximation", "both"}
+PSICOV_BOOTSTRAP: Final[Set[str]] = {"bootstrap", "both"}
+PSICOV_POSTERIORS: Final[Set[str]] = PSICOV_APPROX | PSICOV_BOOTSTRAP
+DEFAULT_PSICOV_POSTERIOR: Final[str] = "approximation"
+assert DEFAULT_PSICOV_POSTERIOR in PSICOV_POSTERIORS
+
+DPSI_SMOOTH: Final[Set[str]] = {"smooth", "both"}
+DPSI_LEGACY: Final[Set[str]] = {"legacy", "both"}
+DPSI_POSTERIORS: Final[Set[str]] = DPSI_SMOOTH | DPSI_LEGACY
+DEFAULT_DPSI_POSTERIOR: Final[str] = "smooth"
+assert DEFAULT_DPSI_POSTERIOR in DPSI_POSTERIORS

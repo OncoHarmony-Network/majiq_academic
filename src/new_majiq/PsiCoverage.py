@@ -701,11 +701,9 @@ class PsiCoverage(object):
             Compute quantiles/pmf with "bootstrap" or "approximation" posterior
             distribution (or "both"). Otherwise, raise error.
         """
-        USE_APPROX = {"approximation", "both"}
-        USE_BOOTSTRAP = {"bootstrap", "both"}
-        if use_posterior not in USE_APPROX | USE_BOOTSTRAP:
+        if use_posterior not in constants.PSICOV_POSTERIORS:
             raise ValueError(
-                f"{use_posterior = } must be one of {USE_APPROX | USE_BOOTSTRAP}"
+                f"{use_posterior = } must be one of {constants.PSICOV_POSTERIORS}"
             )
         # initialize variables to return with noting if any experiment passed
         quantify_vars: Dict[str, xr.DataArray] = {
@@ -716,20 +714,20 @@ class PsiCoverage(object):
             quantify_vars[x] = getattr(self, x)
         if len(quantiles) or psibins:
             if len(quantiles):
-                if use_posterior in USE_APPROX:
+                if use_posterior in constants.PSICOV_APPROX:
                     quantify_vars["approx_psi_quantile"] = self.approximate_quantile(
                         quantiles
                     )
-                if use_posterior in USE_BOOTSTRAP:
+                if use_posterior in constants.PSICOV_BOOTSTRAP:
                     quantify_vars["bootstrap_psi_quantile"] = self.bootstrap_quantile(
                         quantiles
                     )
             if psibins:
-                if use_posterior in USE_APPROX:
+                if use_posterior in constants.PSICOV_APPROX:
                     quantify_vars["approx_psi_pmf"] = self.approximate_discretized_pmf(
                         psibins
                     )
-                if use_posterior in USE_BOOTSTRAP:
+                if use_posterior in constants.PSICOV_BOOTSTRAP:
                     quantify_vars["bootstrap_psi_pmf"] = self.bootstrap_discretized_pmf(
                         psibins
                     )

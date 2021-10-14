@@ -109,8 +109,8 @@ def add_args(parser: argparse.ArgumentParser) -> None:
     quant_settings.add_argument(
         "--use-posterior",
         type=str,
-        default="smooth",
-        choices=["smooth", "legacy", "both"],
+        default=nm.constants.DEFAULT_DPSI_POSTERIOR,
+        choices=nm.constants.DPSI_POSTERIORS,
         help="Perform deltapsi inference with new (smooth) vs legacy approach"
         " (or both) (default: %(default)s",
     )
