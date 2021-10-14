@@ -651,6 +651,12 @@ class PsiCoverage(object):
             Compute quantiles/pmf with "bootstrap" or "approximation" posterior
             distribution (or "both"). Otherwise, raise error.
         """
+        USE_APPROX = {"approximation", "both"}
+        USE_BOOTSTRAP = {"bootstrap", "both"}
+        if use_posterior not in USE_APPROX | USE_BOOTSTRAP:
+            raise ValueError(
+                f"{use_posterior = } must be one of {USE_APPROX | USE_BOOTSTRAP}"
+            )
         # initialize variables to return with noting if any experiment passed
         quantify_vars: Dict[str, xr.DataArray] = {
             "any_passed": self.event_passed.any("prefix")
@@ -659,28 +665,21 @@ class PsiCoverage(object):
         for x in properties:
             quantify_vars[x] = getattr(self, x)
         if len(quantiles) or psibins:
-            do_approx = use_posterior in ("approximation", "both")
-            do_bootstrap = use_posterior in ("bootstrap", "both")
-            if not (do_approx or do_bootstrap):
-                raise ValueError(
-                    "Invalid argument, use_posterior must be 'approximation',"
-                    f" 'bootstrap', or 'both' (provided {use_posterior})"
-                )
             if len(quantiles):
-                if do_approx:
+                if use_posterior in USE_APPROX:
                     quantify_vars["approx_psi_quantile"] = self.approximate_quantile(
                         quantiles
                     )
-                if do_bootstrap:
+                if use_posterior in USE_BOOTSTRAP:
                     quantify_vars["bootstrap_psi_quantile"] = self.bootstrap_quantile(
                         quantiles
                     )
             if psibins:
-                if do_approx:
+                if use_posterior in USE_APPROX:
                     quantify_vars["approx_psi_pmf"] = self.approximate_discretized_pmf(
                         psibins
                     )
-                if do_bootstrap:
+                if use_posterior in USE_BOOTSTRAP:
                     quantify_vars["bootstrap_psi_pmf"] = self.bootstrap_discretized_pmf(
                         psibins
                     )

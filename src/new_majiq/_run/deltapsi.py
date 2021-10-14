@@ -106,6 +106,14 @@ def add_args(parser: argparse.ArgumentParser) -> None:
         help="Report posterior probability that abs(dPSI) less than this"
         " threshold (default: %(default)s)",
     )
+    quant_settings.add_argument(
+        "--use-posterior",
+        type=str,
+        default="smooth",
+        choices=["smooth", "legacy", "both"],
+        help="Perform deltapsi inference with new (smooth) vs legacy approach"
+        " (or both) (default: %(default)s",
+    )
 
     prior_args = parser.add_argument_group("Configure prior on deltapsi")
     default_vs_empirical = prior_args.add_mutually_exclusive_group()
@@ -220,6 +228,7 @@ def run(args: argparse.Namespace) -> None:
     ds_quant = deltapsi.dataset(
         changing_threshold=args.changing_threshold,
         nonchanging_threshold=args.nonchanging_threshold,
+        use_posterior=args.use_posterior,
     ).load()
 
     log.info("Reshaping resulting quantifications to table")
@@ -233,13 +242,14 @@ def run(args: argparse.Namespace) -> None:
         # remove rows where no input passed
         .loc[ds_quant["passed"].values]
         # manually format probability columns
-        .assign(
-            probability_changing=lambda df: df["probability_changing"].apply(
-                lambda x: f"{x:.3e}"
-            ),
-            probability_nonchanging=lambda df: df["probability_nonchanging"].apply(
-                lambda x: f"{x:.3e}"
-            ),
+        .pipe(
+            lambda df: df.assign(
+                **{
+                    col: df[col].apply(lambda x: f"{x:.3e}")
+                    for col in df.columns
+                    if "probability" in col
+                }
+            )
         )
         # other numeric columns need at most 4 digits precision
         .round(4)
