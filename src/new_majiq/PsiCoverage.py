@@ -291,13 +291,15 @@ class PsiCoverage(object):
         """alias for bootstrap_posterior_std"""
         return self.bootstrap_posterior_std
 
-    def bootstrap_quantile(
-        self,
+    @staticmethod
+    def _compute_posterior_quantile(
+        a: xr.DataArray,
+        b: xr.DataArray,
         quantiles: Union[xr.DataArray, Sequence[float]] = [0.1, 0.9],
+        mix_dim: str = "bootstrap_replicate",
     ) -> xr.DataArray:
-        """Get quantiles of bootstrap posterior"""
         if not isinstance(quantiles, xr.DataArray):
-            quantiles_arr = np.array(quantiles, dtype=self.bootstrap_psi.dtype)
+            quantiles_arr = np.array(quantiles, dtype=a.dtype)
             if quantiles_arr.ndim > 1:
                 raise ValueError(
                     "Unable to handle non-xarray multi-dimensional quantiles"
@@ -305,13 +307,27 @@ class PsiCoverage(object):
             elif quantiles_arr.ndim == 0:
                 quantiles_arr = quantiles_arr[np.newaxis]
             quantiles = xr.DataArray(quantiles_arr, [("quantiles", quantiles_arr)])
+        # if mixture dimension is not present, treat as one-component mixture
+        if mix_dim not in a.dims:
+            a = a.expand_dims(**{mix_dim: 1})
+        if mix_dim not in b.dims:
+            b = b.expand_dims(**{mix_dim: 1})
         return xr.apply_ufunc(
             bm.quantile,
             quantiles,
-            self.bootstrap_alpha,
-            self.bootstrap_beta,
-            input_core_dims=[[], ["bootstrap_replicate"], ["bootstrap_replicate"]],
+            a,
+            b,
+            input_core_dims=[[], [mix_dim], [mix_dim]],
             dask="allowed",
+        )
+
+    def bootstrap_quantile(
+        self,
+        quantiles: Union[xr.DataArray, Sequence[float]] = [0.1, 0.9],
+    ) -> xr.DataArray:
+        """Get quantiles of bootstrap posterior"""
+        return self._compute_posterior_quantile(
+            self.bootstrap_alpha, self.bootstrap_beta, quantiles=quantiles
         )
 
     def approximate_quantile(
@@ -319,21 +335,42 @@ class PsiCoverage(object):
         quantiles: Union[xr.DataArray, Sequence[float]] = [0.1, 0.9],
     ) -> xr.DataArray:
         """Get quantiles of approximate bootstrap posterior"""
-        if not isinstance(quantiles, xr.DataArray):
-            quantiles_arr = np.array(quantiles, dtype=self.bootstrap_psi.dtype)
-            if quantiles_arr.ndim > 1:
-                raise ValueError(
-                    "Unable to handle non-xarray multi-dimensional quantiles"
-                )
-            elif quantiles_arr.ndim == 0:
-                quantiles_arr = quantiles_arr[np.newaxis]
-            quantiles = xr.DataArray(quantiles_arr, [("quantiles", quantiles_arr)])
+        return self._compute_posterior_quantile(
+            self.approximate_alpha, self.approximate_beta, quantiles=quantiles
+        )
+
+    @staticmethod
+    def _compute_posterior_discretized_pmf(
+        a: xr.DataArray,
+        b: xr.DataArray,
+        nbins: int = constants.DEFAULT_QUANTIFY_PSIBINS,
+        mix_dim: str = "bootstrap_replicate",
+    ) -> xr.DataArray:
+        endpoints = np.linspace(0, 1, 1 + nbins, dtype=a.dtype)
+        dummy_bins = xr.DataArray(
+            np.empty(nbins, dtype=a.dtype),
+            {
+                "pmf_bin_start": ("pmf_bin", endpoints[:-1]),
+                "pmf_bin_end": ("pmf_bin", endpoints[1:]),
+            },
+            dims=["pmf_bin"],
+        )
+        # if mixture dimension is not present, treat as one-component mixture
+        if mix_dim not in a.dims:
+            a = a.expand_dims(**{mix_dim: 1})
+        if mix_dim not in b.dims:
+            b = b.expand_dims(**{mix_dim: 1})
         return xr.apply_ufunc(
-            bm.quantile,
-            quantiles,
-            self.approximate_alpha.expand_dims(mix=1),
-            self.approximate_beta.expand_dims(mix=1),
-            input_core_dims=[[], ["mix"], ["mix"]],
+            bm.pmf,
+            a,
+            b,
+            dummy_bins,
+            input_core_dims=[
+                [mix_dim],
+                [mix_dim],
+                ["pmf_bin"],
+            ],
+            output_core_dims=[["pmf_bin"]],
             dask="allowed",
         )
 
@@ -341,50 +378,16 @@ class PsiCoverage(object):
         self, nbins: int = constants.DEFAULT_QUANTIFY_PSIBINS
     ) -> xr.DataArray:
         """Get discretized PMF with specified number of bins"""
-        endpoints = np.linspace(0, 1, 1 + nbins, dtype=self.bootstrap_psi.dtype)
-        dummy_bins = xr.DataArray(
-            np.empty(nbins, dtype=self.bootstrap_psi.dtype),
-            {
-                "pmf_bin_start": ("pmf_bin", endpoints[:-1]),
-                "pmf_bin_end": ("pmf_bin", endpoints[1:]),
-            },
-            dims=["pmf_bin"],
-        )
-        return xr.apply_ufunc(
-            bm.pmf,
-            self.bootstrap_alpha,
-            self.bootstrap_beta,
-            dummy_bins,
-            input_core_dims=[
-                ["bootstrap_replicate"],
-                ["bootstrap_replicate"],
-                ["pmf_bin"],
-            ],
-            output_core_dims=[["pmf_bin"]],
-            dask="allowed",
+        return self._compute_posterior_discretized_pmf(
+            self.bootstrap_alpha, self.bootstrap_beta, nbins=nbins
         )
 
     def approximate_discretized_pmf(
         self, nbins: int = constants.DEFAULT_QUANTIFY_PSIBINS
     ) -> xr.DataArray:
         """Get discretized PMF with specified number of bins"""
-        endpoints = np.linspace(0, 1, 1 + nbins, dtype=self.bootstrap_psi.dtype)
-        dummy_bins = xr.DataArray(
-            np.empty(nbins, dtype=self.bootstrap_psi.dtype),
-            {
-                "pmf_bin_start": ("pmf_bin", endpoints[:-1]),
-                "pmf_bin_end": ("pmf_bin", endpoints[1:]),
-            },
-            dims=["pmf_bin"],
-        )
-        return xr.apply_ufunc(
-            bm.pmf,
-            self.approximate_alpha.expand_dims(mix=1),
-            self.approximate_beta.expand_dims(mix=1),
-            dummy_bins,
-            input_core_dims=[["mix"], ["mix"], ["pmf_bin"]],
-            output_core_dims=[["pmf_bin"]],
-            dask="allowed",
+        return self._compute_posterior_discretized_pmf(
+            self.approximate_alpha, self.approximate_beta, nbins=nbins
         )
 
     @classmethod
