@@ -24,7 +24,7 @@ from new_majiq._run._majiq_args import (
     check_nonnegative_factory,
 )
 from new_majiq._run._run import GenericSubcommand
-from new_majiq.DPsiPrior import fit_discrete_dpsi_prior, get_empirical_dpsi
+from new_majiq.DPsiPrior import DPsiPrior
 from new_majiq.logger import get_logger
 from new_majiq.PMFSummaries import PMFSummaries
 
@@ -193,21 +193,21 @@ def run(args: argparse.Namespace) -> None:
         events = psi1.get_events(sg.introns, sg.junctions)
         concat_df.append(events.ec_dataframe)
 
-    # get discretized deltapsi prior
-    edpsi: Optional[xr.DataArray]
+    prior = DPsiPrior()
     if args.empirical_prior:
-        log.info("Identifying binary events passing filters for empirical prior")
-        edpsi = get_empirical_dpsi(
-            psi1, psi2, args.prior_minreads, args.min_experiments
+        log.info(f"Starting from default deltapsi prior {prior}")
+        prior = prior.empirical_update(
+            psi1,
+            psi2,
+            minreads=args.prior_minreads,
+            min_experiments_f=args.min_experiments,
+            min_lsvs=args.prior_minevents,
+            n_update_a=args.prior_iter,
         )
+        log.info(f"Using deltapsi prior {prior}")
     else:
-        edpsi = None
-    logprior = fit_discrete_dpsi_prior(
-        edpsi,
-        min_lsvs=args.prior_minevents,
-        n_update_a=args.prior_iter,
-        psibins=args.psibins,
-    )
+        log.info(f"Using default deltapsi prior {prior}")
+    logprior = prior.discretized_logpmf(psibins=args.psibins)
 
     # aggregate coverage from both groups
     log.info(f"Aggregating coverage using min-experiments = {args.min_experiments}")
