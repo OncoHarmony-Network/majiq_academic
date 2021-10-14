@@ -183,8 +183,8 @@ def run(args: argparse.Namespace) -> None:
     if not psi1.events.equals(psi2.events):
         raise ValueError("Events from psi1 do not match events from psi2")
     group_sizes = {
-        args.names[0]: psi1.df.sizes["prefix"],
-        args.names[1]: psi2.df.sizes["prefix"],
+        args.names[0]: psi1.num_prefixes,
+        args.names[1]: psi2.num_prefixes,
     }
     metadata["group_sizes"] = group_sizes
     log.info(f"Number of experiments per group: {group_sizes}")

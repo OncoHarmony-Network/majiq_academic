@@ -104,6 +104,19 @@ class PsiCoverage(object):
     def prefixes(self) -> List[str]:
         return self.df["prefix"].values.tolist()
 
+    def __repr__(self) -> str:
+        MAX_PREFIXES_END = 1  # how many prefixes on either end to display
+        print_prefixes_list = [
+            *self.prefixes[:MAX_PREFIXES_END],
+            *([] if self.num_prefixes <= 2 * MAX_PREFIXES_END else ["..."]),
+            *self.prefixes[-MAX_PREFIXES_END:],
+        ]
+        print_prefixes = ", ".join(print_prefixes_list)
+        return (
+            f"PsiCoverage[{self.num_connections}]"
+            f" for {self.num_prefixes} experiments [{print_prefixes}]"
+        )
+
     def __getitem__(self, prefixes) -> "PsiCoverage":
         """Get subset of PsiCoverage corresponding to selected prefixes"""
         if isinstance(prefixes, str):
@@ -560,7 +573,7 @@ class PsiCoverage(object):
     ) -> "PsiCoverage":
         """Aggregate coverage/psi values over all prefixes"""
         event_passed = self.event_passed.sum("prefix") >= min_experiments(
-            min_experiments_f, self.df.sizes["prefix"]
+            min_experiments_f, self.num_prefixes
         )
         raw_total = self.raw_total.sum("prefix")
         raw_coverage = (self.raw_total * self.raw_psi).sum("prefix")

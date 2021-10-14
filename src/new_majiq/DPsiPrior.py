@@ -47,14 +47,11 @@ class DPsiPrior(object):
         self.pmix: Final[xr.DataArray] = pmix
         return
 
-    def __str__(self) -> str:
-        params_str = ", ".join(
-            [
-                f"(p={pi:.2e}, a={ai:.2e})"
-                for ai, pi in zip(self.a.values, self.pmix.values)
-            ]
+    def __repr__(self) -> str:
+        return (
+            f"DPsiPrior(a={self.a.values.tolist()},"
+            f" pmix={self.pmix.values.tolist()})"
         )
-        return f"DPsiPrior[{params_str}]"
 
     def discretized_logpmf(
         self, psibins: int = constants.DEFAULT_QUANTIFY_PSIBINS, PSEUDO: float = 1e-20
@@ -195,11 +192,11 @@ class DPsiPrior(object):
         reads1 = psi1.raw_total * psi1.raw_psi
         passed1 = (psi1.event_passed & (reads1 >= minreads)).sum(
             "prefix"
-        ) >= min_experiments(min_experiments_f, psi1.df.sizes["prefix"])
+        ) >= min_experiments(min_experiments_f, psi1.num_prefixes)
         reads2 = psi2.raw_total * psi2.raw_psi
         passed2 = (psi2.event_passed & (reads2 >= minreads)).sum(
             "prefix"
-        ) >= min_experiments(min_experiments_f, psi2.df.sizes["prefix"])
+        ) >= min_experiments(min_experiments_f, psi2.num_prefixes)
         # mask includes potentially duplicate events
         passed = passed1 & passed2 & (psi1.event_size == 2)
         # get dpsi that passed, keeping only one per lsv

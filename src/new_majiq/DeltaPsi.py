@@ -45,6 +45,11 @@ class DeltaPsi(object):
         name1: str = "psi1",
         name2: str = "psi2",
     ):
+        if psi1.num_connections != psi2.num_connections:
+            raise ValueError(
+                "psi1 and psi2 must have the same number of connections"
+                f" ({psi1.num_connections=}, {psi2.num_connections=})"
+            )
         # save aggregate psi coverage, original prior
         self.psi1: Final[PsiCoverage] = psi1.sum(
             name1, min_experiments_f=min_experiments_f
@@ -56,6 +61,24 @@ class DeltaPsi(object):
         self.psibins: Final[int] = psibins
         return
 
+    @property
+    def num_connections(self) -> int:
+        return self.psi1.num_connections
+
+    @property
+    def name1(self) -> str:
+        return self.psi1.prefixes[0]
+
+    @property
+    def name2(self) -> str:
+        return self.psi2.prefixes[0]
+
+    def __repr__(self) -> str:
+        return (
+            f"DeltaPsi[{self.num_connections}] for {self.name1} vs {self.name2}"
+            f" computed with {self.psibins} psi bins and {self.prior}"
+        )
+
     def rebin(self, psibins: int) -> "DeltaPsi":
         """Get DeltaPsi with different bins"""
         return DeltaPsi(
@@ -63,8 +86,8 @@ class DeltaPsi(object):
             self.psi2,
             self.prior,
             psibins=psibins,
-            name1=self.psi1.prefixes[0],
-            name2=self.psi2.prefixes[0],
+            name1=self.name1,
+            name2=self.name2,
         )
 
     @cached_property
@@ -271,7 +294,7 @@ class DeltaPsi(object):
             .squeeze("prefix", drop=True)
             .pipe(
                 lambda ds: ds.rename(
-                    {k: f"{self.psi1.prefixes[0]}_{k}" for k in ds.variables.keys()}
+                    {k: f"{self.name1}_{k}" for k in ds.variables.keys()}
                 )
             )
         )
@@ -281,7 +304,7 @@ class DeltaPsi(object):
             .squeeze("prefix", drop=True)
             .pipe(
                 lambda ds: ds.rename(
-                    {k: f"{self.psi2.prefixes[0]}_{k}" for k in ds.variables.keys()}
+                    {k: f"{self.name2}_{k}" for k in ds.variables.keys()}
                 )
             )
         )
