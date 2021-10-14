@@ -69,6 +69,27 @@ n: int
     with
 )pbdoc";
 
+// identify available statistics
+static PyObject* AvailableStatistics(PyObject* self, PyObject* args) {
+  // no arguments
+  if (!PyArg_ParseTuple(args, "")) {
+    return nullptr;
+  }
+  // construct dictionary to return
+  using MajiqGufuncs::BetaMixture::StatsSample::HetStats;
+  return Py_BuildValue(
+      "{s:L,s:L,s:L,s:L}",
+      "ttest", static_cast<int64_t>(HetStats::TTest),
+      "mannwhitney", static_cast<int64_t>(HetStats::MannWhitney),
+      "tnom", static_cast<int64_t>(HetStats::TNOM),
+      "infoscore", static_cast<int64_t>(HetStats::InfoScore));
+}
+static char AvailableStatistics_doc[] = R"pbdoc(
+stats_available() -> Dict[str, int]
+
+Mapping of available statistics to integer-value for use in stats_sample
+)pbdoc";
+
 // for functions with no extra data being passed in
 static void *data[1] = {NULL};
 
@@ -77,6 +98,8 @@ static PyMethodDef ModuleMethods[] = {
   {"rng_seed", SetSeedGlobalGen, METH_VARARGS, SetSeedGlobalGen_doc},
   {"rng_resize", IncreasePoolSizeGlobalGen, METH_VARARGS,
     IncreasePoolSizeGlobalGen_doc},
+  {"stats_available", AvailableStatistics, METH_VARARGS,
+    AvailableStatistics_doc},
   {NULL, NULL, 0, NULL}
 };
 static struct PyModuleDef moduledef = {

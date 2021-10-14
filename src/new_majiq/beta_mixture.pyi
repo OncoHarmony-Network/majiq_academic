@@ -1,3 +1,5 @@
+from typing import Dict
+
 import numpy
 
 approximation: numpy.ufunc
@@ -12,3 +14,4 @@ ttest_sample: numpy.ufunc
 
 def rng_resize(n: int) -> None: ...
 def rng_seed(seed: int) -> None: ...
+def stats_available() -> Dict[str, int]: ...
