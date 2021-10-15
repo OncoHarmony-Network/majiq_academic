@@ -136,7 +136,7 @@ class BaseTsvWriter(MultiQuantWriter):
                 }
                 if _has_dpsi_voila_files:
                     metadata['dpsi_changing_threshold'] = self.config.changing_between_group_dpsi
-                    metadata['dpsi_probably_changing_threshold'] = self.config.probability_changing_threshold
+                    metadata['dpsi_probability_changing_threshold'] = self.config.probability_changing_threshold
                     metadata['dpsi_nonchanging_threshold'] = self.config.probability_non_changing_threshold
 
                 if _has_het_voila_files:
