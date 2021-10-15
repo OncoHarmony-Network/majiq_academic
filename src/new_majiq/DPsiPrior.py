@@ -231,11 +231,16 @@ class DPsiPrior(object):
         ) >= min_experiments(min_experiments_f, psi2.num_prefixes)
         # mask includes potentially duplicate events
         passed = passed1 & passed2 & (psi1.event_size == 2)
+        # summarize over prefixes
+        reads1 = reads1.sum("prefix")
+        reads2 = reads2.sum("prefix")
+        raw_total1 = psi1.raw_total.sum("prefix")
+        raw_total2 = psi2.raw_total.sum("prefix")
         # get dpsi that passed, keeping only one per lsv
         dpsi = (
             (
-                (reads2.sum("prefix") / psi2.raw_total.sum("prefix"))
-                - (reads1.sum("prefix") / psi1.raw_total.sum("prefix"))
+                (reads2 / raw_total2.where(raw_total2 > 0))
+                - (reads1 / raw_total1.where(raw_total1 > 0))
             )
             .where(passed)
             .load()

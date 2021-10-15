@@ -43,7 +43,8 @@ class PMFSummaries(object):
             )
         if "pmf_bin" not in p.dims:
             raise ValueError("Input PMF does not have required dimension `pmf_bin`")
-        self.p: Final[xr.DataArray] = p / p.sum("pmf_bin")  # normalized
+        Z = p.sum("pmf_bin")
+        self.p: Final[xr.DataArray] = p / Z.where(Z > 0)
         return
 
     @property

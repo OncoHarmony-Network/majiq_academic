@@ -615,12 +615,12 @@ class PsiCoverage(object):
         event_passed = self.passed_min_experiments(min_experiments_f)
         raw_total = self.raw_total.sum("prefix")
         raw_coverage = (self.raw_total * self.raw_psi).sum("prefix")
-        raw_psi = (raw_coverage / raw_total).where(raw_total > 0, 0)
+        raw_psi = (raw_coverage / raw_total.where(raw_total > 0)).fillna(0)
         bootstrap_total = self.bootstrap_total.sum("prefix")
         bootstrap_coverage = (self.bootstrap_total * self.bootstrap_psi).sum("prefix")
-        bootstrap_psi = (bootstrap_coverage / bootstrap_total).where(
-            bootstrap_total > 0, 0
-        )
+        bootstrap_psi = (
+            bootstrap_coverage / bootstrap_total.where(bootstrap_total > 0)
+        ).fillna(0)
         df = xr.Dataset(
             data_vars=dict(
                 event_passed=event_passed,
