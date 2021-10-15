@@ -6,7 +6,7 @@ Define prior on deltapsi using input PsiCoverage
 Author: Joseph K Aicher
 """
 
-from typing import Final, List, Optional, Union
+from typing import Final, List, Optional, Union, cast
 
 import numpy as np
 import xarray as xr
@@ -49,8 +49,8 @@ class DPsiPrior(object):
 
     def __repr__(self) -> str:
         return (
-            f"DPsiPrior(a={self.a.values.tolist()},"
-            f" pmix={self.pmix.values.tolist()})"
+            f"DPsiPrior(a={[f'{x:.1e}' for x in self.a.values]},"
+            f" pmix={[f'{x:.2e}' for x in self.pmix.values]})"
         )
 
     def discretized_logpmf(
@@ -90,6 +90,7 @@ class DPsiPrior(object):
         min_lsvs: int = constants.DEFAULT_DPSI_PRIOR_MINLSV,
         n_update_a: int = constants.DEFAULT_DPSI_PRIOR_MAXITER,
         n_update_pmix: Optional[int] = None,
+        legacy: bool = False,
     ) -> "DPsiPrior":
         """Use reliable binary events from psi1,2 to return updated prior
 
@@ -119,12 +120,14 @@ class DPsiPrior(object):
         n_update_pmix: Optional[int]
             Optional number of iterations to update `pmix` during M step.
             If not specified, use 1 + n_update_a.
+        legacy: bool
+            If True, use old implementation in v2 that does hard binning of
+            observed dpsi into hard-coded bins at differences of 5% and 30%.
         """
         # how many updates do we want to make?
         if n_update_pmix is None:
             n_update_pmix = 1 + n_update_a
-        n_update = max(n_update_a, n_update_pmix)
-        if n_update < 1:
+        if max(n_update_a, n_update_pmix) < 1:
             # if we don't want to update anything, don't
             return self
         # otherwise, get empirical dpsi to make adjustment
@@ -143,16 +146,45 @@ class DPsiPrior(object):
         # otherwise
         log.info(f"Adjusting deltapsi prior using {dpsi.sizes['lsv_idx']} events")
         # update current parameters
-        a = self.a
-        pmix = self.pmix
-        for i in range(n_update):
+        if legacy:
+            log.info("Requested deprecated legacy approach for setting prior")
+            return self.legacy_empirical_replace(dpsi)
+        else:
+            return self.empirical_update_EM(
+                dpsi, self.a, self.pmix, n_update_a, n_update_pmix
+            )
+
+    @classmethod
+    def empirical_update_EM(
+        cls,
+        dpsi: xr.DataArray,
+        a: xr.DataArray,
+        pmix: xr.DataArray,
+        n_update_a: int,
+        n_update_pmix: int,
+    ) -> "DPsiPrior":
+        for i in range(max(n_update_a, n_update_pmix)):
             # E step: which mixture component given observed dpsi
-            pmix_given_dpsi = self.infer_pmix_given_dpsi(dpsi, a, pmix)
+            pmix_given_dpsi = cls.infer_pmix_given_dpsi(dpsi, a, pmix)
             # M step (method of moments for beta parameters)
             if i < n_update_pmix:
-                pmix = self.fit_pmix(pmix_given_dpsi)
+                pmix = cls.fit_pmix(pmix_given_dpsi)
             if i < n_update_a:
-                a = self.fit_a(dpsi, pmix_given_dpsi)
+                a = cls.fit_a(dpsi, pmix_given_dpsi)
+        return DPsiPrior(a, pmix)
+
+    @classmethod
+    def legacy_empirical_replace(cls, dpsi: xr.DataArray) -> "DPsiPrior":
+        """This isn't an update so much as replacement"""
+        mask_slab = cast(xr.DataArray, np.abs(dpsi) > 0.30)
+        mask_spike = cast(xr.DataArray, np.abs(dpsi) <= 0.05)
+        mask_center = cast(xr.DataArray, ~(mask_slab | mask_spike))
+        pmix_given_dpsi = xr.concat(
+            [1.0 * mask_slab, 1.0 * mask_center, 1.0 * mask_spike],
+            dim="mixture_component",
+        )
+        pmix = cls.fit_pmix(pmix_given_dpsi)
+        a = cls.fit_a(dpsi, pmix_given_dpsi)
         return DPsiPrior(a, pmix)
 
     @staticmethod
@@ -267,4 +299,4 @@ class DPsiPrior(object):
             # force the first value of a to always be uniform distribution
             a.loc[dict(mixture_component=0)] = 1.0
         # return result
-        return a
+        return a.where(a.notnull(), 1.0)  # if invalid prior, set to uniform

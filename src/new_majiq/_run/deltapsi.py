@@ -10,6 +10,7 @@ Author: Joseph K Aicher
 import argparse
 import json
 import sys
+from enum import Enum
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -25,6 +26,12 @@ from new_majiq._run._run import GenericSubcommand
 from new_majiq.logger import get_logger
 
 DESCRIPTION = "Quantify dPSI from two groups of replicate experiments"
+
+
+class DPsiPriorType(Enum):
+    DEFAULT_PRIOR = "default_prior"
+    EMPIRICAL_PRIOR = "empirical_prior"
+    LEGACY_PRIOR = "legacy_prior"
 
 
 def add_args(parser: argparse.ArgumentParser) -> None:
@@ -114,21 +121,33 @@ def add_args(parser: argparse.ArgumentParser) -> None:
     )
 
     prior_args = parser.add_argument_group("Configure prior on deltapsi")
-    default_vs_empirical = prior_args.add_mutually_exclusive_group()
-    default_vs_empirical.add_argument(
+    prior_type = prior_args.add_mutually_exclusive_group()
+    prior_type.add_argument(
         "--empirical-prior",
-        action="store_true",
-        dest="empirical_prior",
-        default=True,
-        help="Update default prior using empirical difference in PSI from"
-        " high-confidence binary events (default empirical=%(default)s)",
+        dest="prior_type",
+        default=DPsiPriorType.EMPIRICAL_PRIOR,
+        action="store_const",
+        const=DPsiPriorType.EMPIRICAL_PRIOR,
+        help="Update default prior using EM on empirical difference in PSI from"
+        " high-confidence binary events (default: %(default)s)",
     )
-    default_vs_empirical.add_argument(
+    prior_type.add_argument(
         "--default-prior",
-        action="store_false",
-        dest="empirical_prior",
-        default=True,
-        help="Use default prior on deltapsi for quantification",
+        dest="prior_type",
+        default=DPsiPriorType.EMPIRICAL_PRIOR,
+        action="store_const",
+        const=DPsiPriorType.DEFAULT_PRIOR,
+        help="Use default prior on deltapsi for quantification (default: %(default)s)",
+    )
+    prior_type.add_argument(
+        "--legacy-prior",
+        dest="prior_type",
+        default=DPsiPriorType.EMPIRICAL_PRIOR,
+        action="store_const",
+        const=DPsiPriorType.LEGACY_PRIOR,
+        help="Update default prior using hard-assignment (legacy approach from v2)"
+        " to bins at 0.05 and 0.30 on empirical difference in PSI from"
+        " high-confidence binary events (default: %(default)s)",
     )
     prior_args.add_argument(
         "--prior-minreads",
@@ -198,7 +217,9 @@ def run(args: argparse.Namespace) -> None:
         concat_df.append(events.ec_dataframe)
 
     prior = nm.DPsiPrior()
-    if args.empirical_prior:
+    if args.prior_type == DPsiPriorType.DEFAULT_PRIOR:
+        log.info(f"Using default deltapsi prior {prior}")
+    else:
         log.info(f"Starting from default deltapsi prior {prior}")
         prior = prior.empirical_update(
             psi1,
@@ -207,10 +228,9 @@ def run(args: argparse.Namespace) -> None:
             min_experiments_f=args.min_experiments,
             min_lsvs=args.prior_minevents,
             n_update_a=args.prior_iter,
+            legacy=(args.prior_type == DPsiPriorType.LEGACY_PRIOR),
         )
         log.info(f"Using deltapsi prior {prior}")
-    else:
-        log.info(f"Using default deltapsi prior {prior}")
 
     # dataset of quantifications I want
     log.info("Performing quantification")
