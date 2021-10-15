@@ -115,3 +115,9 @@ DPSI_LEGACY: Final[Set[str]] = {"legacy", "both"}
 DPSI_POSTERIORS: Final[Set[str]] = DPSI_SMOOTH | DPSI_LEGACY
 DEFAULT_DPSI_POSTERIOR: Final[str] = "smooth"
 assert DEFAULT_DPSI_POSTERIOR in DPSI_POSTERIORS
+
+DEFAULT_HET_PSISAMPLES: Final[int] = 100
+DEFAULT_HET_POPULATION_QUANTILES: Final[List[float]] = [0.25, 0.75]
+DEFAULT_HET_PVALUE_QUANTILES: Final[List[float]] = [0.95]
+DEFAULT_HET_USESTATS: Final[List[str]] = ["ttest", "mannwhitneyu"]
+assert all(x in STATS_AVAILABLE for x in DEFAULT_HET_USESTATS)

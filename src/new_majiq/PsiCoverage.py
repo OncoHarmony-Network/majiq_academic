@@ -400,17 +400,21 @@ class PsiCoverage(object):
 
     def raw_psi_mean_population_quantile(
         self,
-        quantiles: Sequence[float] = [0.25, 0.95],
+        quantiles: Sequence[float] = constants.DEFAULT_HET_POPULATION_QUANTILES,
     ) -> xr.DataArray:
         """Get quantiles of psi mean over population (adds dim quantile)"""
-        return self._raw_psi_mean_core_prefix.quantile(quantiles)
+        return self._raw_psi_mean_core_prefix.quantile(quantiles, "prefix").rename(
+            quantile="population_quantile"
+        )
 
     def bootstrap_psi_mean_population_quantile(
         self,
-        quantiles: Sequence[float] = [0.25, 0.95],
+        quantiles: Sequence[float] = constants.DEFAULT_HET_POPULATION_QUANTILES,
     ) -> xr.DataArray:
         """Get quantiles of psi mean over population (adds dim quantile)"""
-        return self._bootstrap_psi_mean_core_prefix.quantile(quantiles)
+        return self._bootstrap_psi_mean_core_prefix.quantile(
+            quantiles, "prefix"
+        ).rename(quantile="population_quantile")
 
     @classmethod
     def from_events_coverage(
