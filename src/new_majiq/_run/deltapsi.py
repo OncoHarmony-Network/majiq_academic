@@ -22,8 +22,6 @@ from new_majiq._run._majiq_args import (
     check_nonnegative_factory,
 )
 from new_majiq._run._run import GenericSubcommand
-from new_majiq.DeltaPsi import DeltaPsi
-from new_majiq.DPsiPrior import DPsiPrior
 from new_majiq.logger import get_logger
 
 DESCRIPTION = "Quantify dPSI from two groups of replicate experiments"
@@ -199,7 +197,7 @@ def run(args: argparse.Namespace) -> None:
         events = psi1.get_events(sg.introns, sg.junctions)
         concat_df.append(events.ec_dataframe)
 
-    prior = DPsiPrior()
+    prior = nm.DPsiPrior()
     if args.empirical_prior:
         log.info(f"Starting from default deltapsi prior {prior}")
         prior = prior.empirical_update(
@@ -216,7 +214,7 @@ def run(args: argparse.Namespace) -> None:
 
     # dataset of quantifications I want
     log.info("Performing quantification")
-    deltapsi = DeltaPsi(
+    deltapsi = nm.DeltaPsi(
         psi1,
         psi2,
         prior,
