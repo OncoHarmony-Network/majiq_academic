@@ -595,14 +595,16 @@ class PsiCoverage(object):
             )
         return
 
+    @cached_property
+    def num_passed(self) -> xr.DataArray:
+        return self.event_passed.sum("prefix")
+
     def passed_min_experiments(
         self,
         min_experiments_f: float = constants.DEFAULT_QUANTIFY_MINEXPERIMENTS,
     ) -> xr.DataArray:
         """Get boolean mask of events that pass enough experiments"""
-        return self.event_passed.sum("prefix") >= min_experiments(
-            min_experiments_f, self.num_prefixes
-        )
+        return self.num_passed >= min_experiments(min_experiments_f, self.num_prefixes)
 
     def sum(
         self,
