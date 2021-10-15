@@ -247,7 +247,8 @@ classify_structure_filter_parser.add_argument('--keep-no-lsvs-junctions', action
                          help='If there are no LSVs attached to a specific junction, retain the junction instead of removing it')
 
 decomplexifier_filter_parser = classify_parser.add_argument_group(
-    "Options for 'decomplexifier': removing junctions based on simple criteria prior to creating modules"
+    "Options for 'decomplexifier': removing junctions based on simple criteria prior to creating modules. "
+    "These criteria are each applied independently. "
 )
 decomplexifier_filter_parser.add_argument('--decomplexify-psi-threshold', type=float, default=0.05,
                          help='Filter out junctions where PSI is below a certain value (between 0.0 and 1.0). If multiple '
