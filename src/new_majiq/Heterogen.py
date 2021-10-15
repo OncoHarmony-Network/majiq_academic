@@ -133,9 +133,9 @@ class Heterogen(object):
             output_core_dims=[["stats"], ["stats", "pval_quantile"]],
             dask="parallelized",
         )
-        return xr.Dataset(
+        ds = xr.Dataset(
             {
-                "pvalues": result[0].assign_attrs(
+                "pvalue": result[0].assign_attrs(
                     name1=name1,
                     name2=name2,
                     grp1_prefix=a1.prefix.values.tolist(),
@@ -150,6 +150,9 @@ class Heterogen(object):
                 ),
             },
         )
+        if not (psisamples > 0 and quantiles):
+            ds = ds.drop_dims("pval_quantile")
+        return ds
 
     def raw_stats(
         self,
@@ -220,7 +223,14 @@ class Heterogen(object):
         use_stats: Union[str, Collection[str]] = constants.DEFAULT_HET_USESTATS,
     ) -> xr.Dataset:
         combine_ds: List[Union[xr.DataArray, xr.Dataset]] = [
-            self.passed.rename("passed")
+            self.passed.rename("passed"),
+            xr.concat(
+                [
+                    self.psi1.num_passed.expand_dims(grp=[self.name1]),
+                    self.psi2.num_passed.expand_dims(grp=[self.name2]),
+                ],
+                dim="grp",
+            ).rename("num_passed"),
         ]
         if raw_stats:
             combine_ds.append(
@@ -253,50 +263,61 @@ class Heterogen(object):
                 )
             )
         if raw_psi:
-            combine_ds.extend(
-                [
-                    self.psi1.raw_psi_mean_population_median.rename(
-                        f"{self.name1} raw_psi_median"
-                    ),
-                    self.psi2.raw_psi_mean_population_median.rename(
-                        f"{self.name2} raw_psi_median"
-                    ),
-                ]
+            combine_ds.append(
+                xr.concat(
+                    [
+                        self.psi1.raw_psi_mean_population_median.expand_dims(
+                            grp=[self.name1]
+                        ),
+                        self.psi2.raw_psi_mean_population_median.expand_dims(
+                            grp=[self.name2]
+                        ),
+                    ],
+                    dim="grp",
+                ).rename("raw_psi_median")
             )
             if population_quantiles:
-                combine_ds.extend(
-                    [
-                        self.psi1.raw_psi_mean_population_quantile(
-                            quantiles=population_quantiles
-                        ).rename(f"{self.name1} raw_psi_quantile"),
-                        self.psi2.raw_psi_mean_population_quantile(
-                            quantiles=population_quantiles
-                        ).rename(f"{self.name2} raw_psi_quantile"),
-                    ]
+                combine_ds.append(
+                    xr.concat(
+                        [
+                            self.psi1.raw_psi_mean_population_quantile(
+                                quantiles=population_quantiles
+                            ).expand_dims(grp=[self.name1]),
+                            self.psi2.raw_psi_mean_population_quantile(
+                                quantiles=population_quantiles
+                            ).expand_dims(grp=[self.name2]),
+                        ],
+                        dim="grp",
+                    ).rename("raw_psi_quantile")
                 )
         if bootstrap_psi:
-            combine_ds.extend(
-                [
-                    self.psi1.bootstrap_psi_mean_population_median.rename(
-                        f"{self.name1} bootstrap_psi_median"
-                    ),
-                    self.psi2.bootstrap_psi_mean_population_median.rename(
-                        f"{self.name2} bootstrap_psi_median"
-                    ),
-                ]
+            combine_ds.append(
+                xr.concat(
+                    [
+                        self.psi1.bootstrap_psi_mean_population_median.expand_dims(
+                            grp=[self.name1]
+                        ),
+                        self.psi2.bootstrap_psi_mean_population_median.expand_dims(
+                            grp=[self.name2]
+                        ),
+                    ],
+                    dim="grp",
+                ).rename("bootstrap_psi_median")
             )
             if population_quantiles:
-                combine_ds.extend(
-                    [
-                        self.psi1.bootstrap_psi_mean_population_quantile(
-                            quantiles=population_quantiles
-                        ).rename(f"{self.name1} bootstrap_psi_quantile"),
-                        self.psi2.bootstrap_psi_mean_population_quantile(
-                            quantiles=population_quantiles
-                        ).rename(f"{self.name2} bootstrap_psi_quantile"),
-                    ]
+                combine_ds.append(
+                    xr.concat(
+                        [
+                            self.psi1.bootstrap_psi_mean_population_quantile(
+                                quantiles=population_quantiles
+                            ).expand_dims(grp=[self.name1]),
+                            self.psi2.bootstrap_psi_mean_population_quantile(
+                                quantiles=population_quantiles
+                            ).expand_dims(grp=[self.name2]),
+                        ],
+                        dim="grp",
+                    ).rename("bootstrap_psi_quantile")
                 )
         return xr.merge(combine_ds, compat="override", join="exact").reset_coords(
             drop=True
         )
-        pass
