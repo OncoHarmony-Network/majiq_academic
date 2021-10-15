@@ -11,6 +11,8 @@ import new_majiq.beta_mixture as beta_mixture
 import new_majiq.constants as constants
 import new_majiq.stats as stats
 
+from .DeltaPsi import DeltaPsi
+from .DPsiPrior import DPsiPrior
 from .Events import Events
 from .EventsCoverage import EventsCoverage
 from .ExonConnections import ExonConnections
@@ -18,6 +20,7 @@ from .Exons import Exons
 from .GeneIntrons import GeneIntrons
 from .GeneJunctions import GeneJunctions
 from .Genes import Genes
+from .Heterogen import Heterogen
 
 # coverage in terms of PSI/total coverage on event connections
 from .PsiCoverage import PsiCoverage
@@ -50,6 +53,9 @@ __all__ = [
     "GeneJunctions",
     "Genes",
     "PsiCoverage",
+    "DPsiPrior",
+    "DeltaPsi",
+    "Heterogen",
     "SJIntrons",
     "SJIntronsBins",
     "SJJunctions",
