@@ -189,15 +189,16 @@ class ExonConnections {
     }
     return false;
   }
+  template <bool include_intron>
   std::set<size_t> other_exon_idx_set(
-      const Event& event, bool include_intron) const {
+      const Event& event) const {
     std::set<size_t> result;
     for (auto it = begin_junctions_for(event);
         it != end_junctions_for(event); ++it) {
       const auto& x = (*junctions_)[*it];
       if (x.for_event()) { result.insert(x.other_exon_idx(event.type_)); }
     }
-    if (include_intron) {
+    if constexpr(include_intron) {
       for (auto it = begin_introns_for(event);
           it != end_introns_for(event); ++it) {
         const auto& x = (*introns_)[*it];
@@ -208,7 +209,7 @@ class ExonConnections {
   }
   bool redundant(const Event& event) const {
     constexpr bool INCLUDE_INTRON = true;  // introns count for redundancy
-    std::set<size_t> other = other_exon_idx_set(event, INCLUDE_INTRON);
+    std::set<size_t> other = other_exon_idx_set<INCLUDE_INTRON>(event);
     if (other.size() == 0) {
       return true;
     } else if (other.size() > 1) {
@@ -269,7 +270,7 @@ class ExonConnections {
       // junctions to the subsequent exon (that the intron is connected to)
       constexpr bool INCLUDE_INTRON = false;  // this is only for junctions
       const std::set<size_t> other_exons
-        = other_exon_idx_set(event, INCLUDE_INTRON);
+        = other_exon_idx_set<INCLUDE_INTRON>(event);
       const EventType other_type = OtherEventType(event.type_);
       std::transform(other_exons.begin(), other_exons.end(),
           std::back_inserter(other_exons_ss),
