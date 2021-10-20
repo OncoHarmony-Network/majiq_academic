@@ -40,40 +40,43 @@ def add_args(parser: argparse.ArgumentParser) -> None:
         nargs="+",
         help="Path to SJ coverage files for experiments",
     )
-    parser.add_argument(
+    thresholds = parser.add_argument_group("Thresholds for quantifiability")
+    thresholds.add_argument(
         "--minreads",
         type=check_nonnegative_factory(float, True),
         default=constants.DEFAULT_QUANTIFY_MINREADS,
         help="Minimum readrate per experiment to pass a connection"
         " (default: %(default)s)",
     )
-    parser.add_argument(
+    thresholds.add_argument(
         "--minbins",
         type=check_nonnegative_factory(float, True),
         default=constants.DEFAULT_QUANTIFY_MINBINS,
         help="Minimum number of nonzero bins to pass a connection"
         " (default: %(default)s).",
     )
-    parser.add_argument(
-        "--ignore-from",
-        metavar="sg",
-        type=Path,
-        default=None,
-        help="Path to other splicegraph, ignore LSVs shared with this splicegraph",
-    )
-    parser.add_argument(
+    coverage = parser.add_argument_group("Output coverage options")
+    coverage.add_argument(
         "--num-bootstraps",
         type=check_nonnegative_factory(int, False),
         default=constants.DEFAULT_COVERAGE_NUM_BOOTSTRAPS,
         help="Number of bootstrap replicates to sample (default: %(default)s)",
     )
-    parser.add_argument(
+    coverage.add_argument(
         "--stack-pvalue-threshold",
         type=check_nonnegative_factory(float, False),
         default=constants.DEFAULT_COVERAGE_STACK_PVALUE,
         help="Bins with readrate having right-tailed probability less than this"
         " threshold vs Poisson from other nonzero bins will be ignored as"
         " outlier 'read stacks' (default: %(default).2e)",
+    )
+    events = parser.add_argument_group("Output event options")
+    events.add_argument(
+        "--ignore-from",
+        metavar="sg",
+        type=Path,
+        default=None,
+        help="Path to other splicegraph, ignore LSVs shared with this splicegraph",
     )
     return
 
