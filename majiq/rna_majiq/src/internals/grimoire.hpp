@@ -613,7 +613,7 @@ namespace grimoire{
              * Output nonredundant (strict) vs non-mutually-redundant LSVs to
              * out_lsvlist, return number of LSVS added
              */
-            int detect_lsvs(vector<LSV*> &out_lsvlist, bool lsv_strict);
+            int detect_lsvs(vector<LSV*> &out_lsvlist, bool lsv_strict, bool only_source, bool only_target);
             int     get_constitutive_junctions(vector<string>& v) ;
             void    simplify(map<string, int>& junc_tlb, float simpl_percent, int strandness, int denovo_simpl,
                              int db_simple, int ir_simpl, bool last, unsigned int min_experiments) ;

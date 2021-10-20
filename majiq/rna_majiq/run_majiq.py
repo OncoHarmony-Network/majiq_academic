@@ -376,6 +376,22 @@ def main():
         " files for experimental/debugging purposes",
     )
 
+    # flag to only output target LSVs
+    buildparser_advanced.add_argument(
+        "--target-lsvs",
+        dest="only_target_lsvs",
+        action="store_true",
+        help="Only target LSVs will be to output majiq files",
+    )
+
+    # flag to only output source LSVs
+    buildparser_advanced.add_argument(
+        "--source-lsvs",
+        dest="only_source_lsvs",
+        action="store_true",
+        help="Only source LSVs will be to output majiq files",
+    )
+
     sampling = new_subparser()
 
     sampling.add_argument(
