@@ -7,6 +7,7 @@ Author: Joseph K Aicher
 """
 
 import string
+from enum import Enum
 from typing import Dict, Final, List, Set
 
 from new_majiq.beta_mixture import stats_available as _stats_available
@@ -79,6 +80,17 @@ DEFAULT_SIMPLIFIER_MINPSI: Final[float] = 0.01
 DEFAULT_SIMPLIFIER_MINREADS_ANNOTATED: Final[float] = 0.0
 DEFAULT_SIMPLIFIER_MINREADS_DENOVO: Final[float] = 0.0
 DEFAULT_SIMPLIFIER_MINREADS_INTRON: Final[float] = 0.0
+
+
+class SelectLSVs(Enum):
+    STRICT_LSVS = "strict_lsvs"
+    PERMISSIVE_LSVS = "permissive_lsvs"
+    SOURCE_LSVS = "source_lsvs"
+    TARGET_LSVS = "target_lsvs"
+
+
+DEFAULT_SELECT_LSVS: Final[SelectLSVs] = SelectLSVs.STRICT_LSVS
+
 
 DEFAULT_COVERAGE_NUM_BOOTSTRAPS: Final[int] = 30
 DEFAULT_COVERAGE_STACK_PVALUE: Final[float] = 1e-7

@@ -207,28 +207,74 @@ class ExonConnections {
     }
     return result;
   }
+  /**
+   * An event is redundant if it only connects to a single exon
+   */
   bool redundant(const Event& event) const {
     constexpr bool INCLUDE_INTRON = true;  // introns count for redundancy
     std::set<size_t> other = other_exon_idx_set<INCLUDE_INTRON>(event);
-    if (other.size() == 0) {
-      return true;
-    } else if (other.size() > 1) {
-      return false;
-    } else if (event.type_ != EventType::SRC_EVENT) {
-      return true;  // only source events can be nonredundant with 1 other exon
-    } else {
-      // when the dst event itself is redundant (i.e. they are the same)
-      return !redundant(Event{*(other.begin()), EventType::DST_EVENT});
+    return other.size() <= 1;
+  }
+  /**
+   * For strict LSVs, when not redundant or source and mutually redundant
+   *
+   * This is actually permissive compared to !redundant, because it includes
+   * mutually redundant source events
+   */
+  bool strict_nonredundant(const Event& event) const {
+    constexpr bool INCLUDE_INTRON = true;  // introns count for redundancy
+    std::set<size_t> other = other_exon_idx_set<INCLUDE_INTRON>(event);
+    switch (other.size()) {
+      case 0:
+        return false;
+      case 1:
+        // if source event, nonredundant if mutually redundant
+        return event.type_ == EventType::SRC_EVENT
+          ? redundant(Event{*(other.begin()), EventType::DST_EVENT}) : false;
+      default:  // other.size() > 1
+        return true;
     }
   }
-  bool valid_event(const Event& event) const {
-    return passed(event) && !redundant(event);
+  /**
+   * For permissive LSVs, whenever is source or if target and not redundant
+   */
+  bool permissive_nonredundant(const Event& event) const {
+    if (event.type_ == EventType::SRC_EVENT) {
+      return true;
+    } else {
+      constexpr bool INCLUDE_INTRON = true;  // introns count for redundancy
+      std::set<size_t> other = other_exon_idx_set<INCLUDE_INTRON>(event);
+      switch (other.size()) {
+        case 0:
+          return false;
+        case 1:
+          // this event is redundant, but only false if other event is identical
+          return !redundant(Event{*(other.begin()), EventType::SRC_EVENT});
+        default:
+          return true;
+      }
+    }
   }
-  bool is_LSV(const Event& event) const {
-    return (event_size(event) > 1) && valid_event(event);
+  bool strict_event(const Event& event) const {
+    return passed(event) && strict_nonredundant(event);
   }
   bool is_constitutive(const Event& event) const {
-    return (event_size(event) == 1) && valid_event(event);
+    return (event_size(event) == 1) && strict_event(event);
+  }
+  bool is_strict_LSV(const Event& event) const {
+    return (event_size(event) > 1) && strict_event(event);
+  }
+  bool is_permissive_LSV(const Event& event) const {
+    return (event_size(event) > 1) && passed(event)
+      && permissive_nonredundant(event);
+  }
+  bool is_source_LSV(const Event& event) const {
+    return event.type_ == EventType::SRC_EVENT
+      && (event_size(event) > 1) && passed(event);
+  }
+  bool is_target_LSV(const Event& event) const {
+    return event.type_ == EventType::DST_EVENT
+      && (event_size(event) > 1) && passed(event);
   }
   std::string id(const Event& event) const {
     const Exon& x = (*exons_)[event.ref_exon_idx_];
@@ -366,14 +412,50 @@ class ExonConnections {
   Events CreateEvents(std::vector<Event> events) {
     return CreateEvents(std::move(events));
   }
-  Events LSVEvents() const {
+  Events StrictLSVs() const {
     std::vector<Event> events;
     constexpr std::array<EventType, 2> TYPES
       = {EventType::SRC_EVENT, EventType::DST_EVENT};
     for (size_t exon_idx = 0; exon_idx < num_exons(); ++exon_idx) {
       for (const auto& type : TYPES) {
         Event event{exon_idx, type};
-        if (is_LSV(event)) { events.push_back(event); }
+        if (is_strict_LSV(event)) { events.push_back(event); }
+      }  // loop over event types for a reference exon
+    }  // loop over reference exons
+    return CreateEvents(std::move(events));
+  }
+  Events PermissiveLSVs() const {
+    std::vector<Event> events;
+    constexpr std::array<EventType, 2> TYPES
+      = {EventType::SRC_EVENT, EventType::DST_EVENT};
+    for (size_t exon_idx = 0; exon_idx < num_exons(); ++exon_idx) {
+      for (const auto& type : TYPES) {
+        Event event{exon_idx, type};
+        if (is_permissive_LSV(event)) { events.push_back(event); }
+      }  // loop over event types for a reference exon
+    }  // loop over reference exons
+    return CreateEvents(std::move(events));
+  }
+  Events SourceLSVs() const {
+    std::vector<Event> events;
+    constexpr std::array<EventType, 2> TYPES
+      = {EventType::SRC_EVENT, EventType::DST_EVENT};
+    for (size_t exon_idx = 0; exon_idx < num_exons(); ++exon_idx) {
+      for (const auto& type : TYPES) {
+        Event event{exon_idx, type};
+        if (is_source_LSV(event)) { events.push_back(event); }
+      }  // loop over event types for a reference exon
+    }  // loop over reference exons
+    return CreateEvents(std::move(events));
+  }
+  Events TargetLSVs() const {
+    std::vector<Event> events;
+    constexpr std::array<EventType, 2> TYPES
+      = {EventType::SRC_EVENT, EventType::DST_EVENT};
+    for (size_t exon_idx = 0; exon_idx < num_exons(); ++exon_idx) {
+      for (const auto& type : TYPES) {
+        Event event{exon_idx, type};
+        if (is_target_LSV(event)) { events.push_back(event); }
       }  // loop over event types for a reference exon
     }  // loop over reference exons
     return CreateEvents(std::move(events));

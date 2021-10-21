@@ -10,6 +10,7 @@ from typing import Final, List
 
 import numpy as np
 
+import new_majiq.constants as constants
 from new_majiq.Events import Events
 from new_majiq.Exons import Exons
 from new_majiq.GeneIntrons import GeneIntrons
@@ -58,9 +59,22 @@ class ExonConnections(object):
         """underlying junctions the junctions are connected to"""
         return GeneJunctions(self._exon_connections._junctions)
 
-    def lsvs(self) -> Events:
+    def lsvs(
+        self, select_lsvs: constants.SelectLSVs = constants.DEFAULT_SELECT_LSVS
+    ) -> Events:
         """construct Events for all LSVs defined by these exon connections"""
-        return Events(self._exon_connections.lsvs())
+        if select_lsvs == constants.SelectLSVs.STRICT_LSVS:
+            return Events(self._exon_connections.strict_lsvs())
+        elif select_lsvs == constants.SelectLSVs.PERMISSIVE_LSVS:
+            return Events(self._exon_connections.permissive_lsvs())
+        elif select_lsvs == constants.SelectLSVs.SOURCE_LSVS:
+            return Events(self._exon_connections.source_lsvs())
+        elif select_lsvs == constants.SelectLSVs.TARGET_LSVS:
+            return Events(self._exon_connections.target_lsvs())
+        else:
+            raise ValueError(
+                f"Invalid {select_lsvs = }, must be from {list(constants.SelectLSVs)}"
+            )
 
     def constitutive(self) -> Events:
         """construct Events for all constitutive events defined by ExonConnections"""
@@ -112,9 +126,47 @@ class ExonConnections(object):
             ref_exon_idx, self._event_type_is_source(event_type)
         )
 
-    def is_LSV(self, ref_exon_idx: np.ndarray, event_type: np.ndarray) -> np.ndarray:
-        """Indicate if the event is an LSV (nonredundant with event_size > 1)"""
-        return self._exon_connections.is_LSV(
+    def is_strict_LSV(
+        self, ref_exon_idx: np.ndarray, event_type: np.ndarray
+    ) -> np.ndarray:
+        """Indicate if the event is a strict LSV
+
+        (passed, event size > 1, nonredundant or mutually redundant source)
+        """
+        return self._exon_connections.is_strict_LSV(
+            ref_exon_idx, self._event_type_is_source(event_type)
+        )
+
+    def is_permissive_LSV(
+        self, ref_exon_idx: np.ndarray, event_type: np.ndarray
+    ) -> np.ndarray:
+        """Indicate if the event is a permissive LSV
+
+        (passed, event size > 1, not mutually redundant target)
+        """
+        return self._exon_connections.is_permissive_LSV(
+            ref_exon_idx, self._event_type_is_source(event_type)
+        )
+
+    def is_source_LSV(
+        self, ref_exon_idx: np.ndarray, event_type: np.ndarray
+    ) -> np.ndarray:
+        """Indicate if the event is a source LSV
+
+        (passed, event size > 1, event_type == 's')
+        """
+        return self._exon_connections.is_source_LSV(
+            ref_exon_idx, self._event_type_is_source(event_type)
+        )
+
+    def is_target_LSV(
+        self, ref_exon_idx: np.ndarray, event_type: np.ndarray
+    ) -> np.ndarray:
+        """Indicate if the event is a target LSV
+
+        (passed, event size > 1, event_type == 't')
+        """
+        return self._exon_connections.is_target_LSV(
             ref_exon_idx, self._event_type_is_source(event_type)
         )
 

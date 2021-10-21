@@ -78,6 +78,44 @@ def add_args(parser: argparse.ArgumentParser) -> None:
         default=None,
         help="Path to other splicegraph, ignore LSVs shared with this splicegraph",
     )
+    select_lsvs = events.add_mutually_exclusive_group()
+    select_lsvs.add_argument(
+        "--nonredundant-lsvs",
+        dest="select_lsvs",
+        default=constants.DEFAULT_SELECT_LSVS,
+        action="store_const",
+        const=constants.SelectLSVs.STRICT_LSVS,
+        help="Select passed LSVs that are either not strict subsets of other"
+        " events (nonredundant) or mutually redundant source events"
+        " (i.e. strict LSVs) (default: %(default)s)",
+    )
+    select_lsvs.add_argument(
+        "--permissive-lsvs",
+        dest="select_lsvs",
+        default=constants.DEFAULT_SELECT_LSVS,
+        action="store_const",
+        const=constants.SelectLSVs.PERMISSIVE_LSVS,
+        help="Select all passed LSVs that are not mutually redundant targets"
+        " (i.e. permissive LSVs) (default: %(default)s)",
+    )
+    select_lsvs.add_argument(
+        "--source-lsvs",
+        dest="select_lsvs",
+        default=constants.DEFAULT_SELECT_LSVS,
+        action="store_const",
+        const=constants.SelectLSVs.SOURCE_LSVS,
+        help="Select all passed LSVs that are source events (i.e. source LSVs)"
+        " (default: %(default)s)",
+    )
+    select_lsvs.add_argument(
+        "--target-lsvs",
+        dest="select_lsvs",
+        default=constants.DEFAULT_SELECT_LSVS,
+        action="store_const",
+        const=constants.SelectLSVs.TARGET_LSVS,
+        help="Select all passed LSVs that are target events (i.e. target LSVs)"
+        " (default: %(default)s)",
+    )
     return
 
 
@@ -98,8 +136,8 @@ def run(args: argparse.Namespace) -> None:
     log = get_logger()
     log.info(f"Loading input splicegraph from {args.splicegraph.resolve()}")
     sg = nm.SpliceGraph.from_zarr(args.splicegraph)
-    log.info("Defining LSVs for coverage")
-    lsvs = sg.exon_connections.lsvs()
+    log.info(f"Defining LSVs for coverage ({args.select_lsvs})")
+    lsvs = sg.exon_connections.lsvs(args.select_lsvs)
     if args.ignore_from is not None:
         log.info(f"Ignoring LSVs also found in {args.ignore_from.resolve()}")
         lsvs = lsvs[

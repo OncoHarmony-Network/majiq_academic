@@ -1205,7 +1205,10 @@ void init_pyExonConnections(pyExonConnections_t& pyExonConnections) {
     .def_property_readonly("_exons", &ExonConnections::exons, "underlying exons")
     .def_property_readonly("_introns", &ExonConnections::introns, "underlying introns")
     .def_property_readonly("_junctions", &ExonConnections::junctions, "underlying junctions")
-    .def("lsvs", &ExonConnections::LSVEvents, "Construct LSV Events")
+    .def("strict_lsvs", &ExonConnections::StrictLSVs, "Construct strict LSV Events")
+    .def("permissive_lsvs", &ExonConnections::PermissiveLSVs, "Construct permissive LSV Events")
+    .def("source_lsvs", &ExonConnections::SourceLSVs, "Construct source LSV Events")
+    .def("target_lsvs", &ExonConnections::TargetLSVs, "Construct target LSV Events")
     .def("constitutive", &ExonConnections::ConstitutiveEvents,
         "Construct Constitutive Events")
     .def("events_for",
@@ -1293,7 +1296,22 @@ void init_pyExonConnections(pyExonConnections_t& pyExonConnections) {
         },
         "Indicate if event was redundant",
         py::arg("exon_idx"), py::arg("is_source"))
-    .def("is_LSV",
+    .def("is_target_LSV",
+        [](const ExonConnections& self,
+          py::array_t<size_t> exon_idx,
+          py::array_t<bool> is_target) -> py::array_t<bool> {
+        auto f = [&self](size_t idx, bool is_src) -> bool {
+          if (idx >= self.num_exons()) {
+            throw std::invalid_argument("exon_idx has values out of range");
+          }
+          return self.is_target_LSV(Event{
+              idx, is_src ? EventType::SRC_EVENT : EventType::DST_EVENT});
+        };
+        return py::vectorize(f)(exon_idx, is_target);
+        },
+        "Indicate if event is target LSV",
+        py::arg("exon_idx"), py::arg("is_target"))
+    .def("is_source_LSV",
         [](const ExonConnections& self,
           py::array_t<size_t> exon_idx,
           py::array_t<bool> is_source) -> py::array_t<bool> {
@@ -1301,12 +1319,42 @@ void init_pyExonConnections(pyExonConnections_t& pyExonConnections) {
           if (idx >= self.num_exons()) {
             throw std::invalid_argument("exon_idx has values out of range");
           }
-          return self.is_LSV(Event{
+          return self.is_source_LSV(Event{
               idx, is_src ? EventType::SRC_EVENT : EventType::DST_EVENT});
         };
         return py::vectorize(f)(exon_idx, is_source);
         },
-        "Indicate if event is LSV",
+        "Indicate if event is source LSV",
+        py::arg("exon_idx"), py::arg("is_source"))
+    .def("is_permissive_LSV",
+        [](const ExonConnections& self,
+          py::array_t<size_t> exon_idx,
+          py::array_t<bool> is_source) -> py::array_t<bool> {
+        auto f = [&self](size_t idx, bool is_src) -> bool {
+          if (idx >= self.num_exons()) {
+            throw std::invalid_argument("exon_idx has values out of range");
+          }
+          return self.is_permissive_LSV(Event{
+              idx, is_src ? EventType::SRC_EVENT : EventType::DST_EVENT});
+        };
+        return py::vectorize(f)(exon_idx, is_source);
+        },
+        "Indicate if event is permissive LSV",
+        py::arg("exon_idx"), py::arg("is_source"))
+    .def("is_strict_LSV",
+        [](const ExonConnections& self,
+          py::array_t<size_t> exon_idx,
+          py::array_t<bool> is_source) -> py::array_t<bool> {
+        auto f = [&self](size_t idx, bool is_src) -> bool {
+          if (idx >= self.num_exons()) {
+            throw std::invalid_argument("exon_idx has values out of range");
+          }
+          return self.is_strict_LSV(Event{
+              idx, is_src ? EventType::SRC_EVENT : EventType::DST_EVENT});
+        };
+        return py::vectorize(f)(exon_idx, is_source);
+        },
+        "Indicate if event is strict LSV",
         py::arg("exon_idx"), py::arg("is_source"))
     .def("is_constitutive",
         [](const ExonConnections& self,
