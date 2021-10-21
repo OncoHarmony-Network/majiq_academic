@@ -92,8 +92,10 @@ void define_sjbins_properties(pyClassShared_t<SJBinsT>& pySJBins) {
   using majiq_pybind::ArrayFromOffsetsVector;
   pySJBins
     .def_property_readonly("_regions", &SJBinsT::regions,
+        py::call_guard<py::gil_scoped_release>(),
         "Underlying regions bin reads are defined over")
     .def_property_readonly("total_bins", &SJBinsT::total_bins,
+        py::call_guard<py::gil_scoped_release>(),
         "the total number of bins possible (positions for junctions, too)")
     .def_property_readonly("bin_reads",
         [](py::object& sj_obj) {
@@ -102,6 +104,7 @@ void define_sjbins_properties(pyClassShared_t<SJBinsT>& pySJBins) {
         return ArrayFromVectorAndOffset<CountT, BinReads>(
             sj.reads(), offset, sj_obj);
         },
+        py::call_guard<py::gil_scoped_release>(),
         "Number of reads for each bin")
     .def_property_readonly("bin_idx",
         [](py::object& sj_obj) {
@@ -110,6 +113,7 @@ void define_sjbins_properties(pyClassShared_t<SJBinsT>& pySJBins) {
         return ArrayFromVectorAndOffset<majiq::junction_pos_t, BinReads>(
             sj.reads(), offset, sj_obj);
         },
+        py::call_guard<py::gil_scoped_release>(),
         "Bin index for the each bin reads")
     .def_property_readonly("_offsets",
         [](py::object& sj_obj) {
@@ -117,6 +121,7 @@ void define_sjbins_properties(pyClassShared_t<SJBinsT>& pySJBins) {
         return ArrayFromVectorAndOffset<size_t, size_t>(
             sj.offsets(), 0, sj_obj);
         },
+        py::call_guard<py::gil_scoped_release>(),
         "Raw offsets for regions into bin reads")
     .def("numstacks",
         [](const SJBinsT& self,
@@ -128,6 +133,7 @@ void define_sjbins_properties(pyClassShared_t<SJBinsT>& pySJBins) {
           return self.numstacks(i, p); };
         return py::vectorize(f)(idx, pvalue);
         },
+        py::call_guard<py::gil_scoped_release>(),
         "Get number of stacks for the specified regions given threshold",
         py::arg("region_idx"),
         py::arg("pvalue_threshold") = DEFAULT_BUILD_STACK_PVALUE)
@@ -142,6 +148,7 @@ void define_sjbins_properties(pyClassShared_t<SJBinsT>& pySJBins) {
           return self.numbins_minreads(i, r); };
         return py::vectorize(f)(idx, minreads);
         },
+        py::call_guard<py::gil_scoped_release>(),
         "Number of bins for regions with more than specified number of reads",
         py::arg("region_idx"), py::arg("minreads"))
     .def("numreads",
@@ -155,9 +162,12 @@ void define_sjbins_properties(pyClassShared_t<SJBinsT>& pySJBins) {
           return self.numreads(i, n); };
         return py::vectorize(f)(idx, num_stacks);
         },
+        py::call_guard<py::gil_scoped_release>(),
         "Number of reads for regions given known number of stacks",
         py::arg("region_idx"), py::arg("num_stacks"))
-    .def("__len__", &SJBinsT::size, "Total number of bin reads")
+    .def("__len__", &SJBinsT::size,
+        py::call_guard<py::gil_scoped_release>(),
+        "Total number of bin reads")
     .def(py::init([](
             std::shared_ptr<RegionsT> regions,
             py::array_t<CountT> _bin_reads,
@@ -192,6 +202,7 @@ void define_sjbins_properties(pyClassShared_t<SJBinsT>& pySJBins) {
           return SJBinsT{regions,
             std::move(br_vec), std::move(offsets_vec), total_bins};
           }),
+        py::call_guard<py::gil_scoped_release>(),
         "Initialize bins over specified regions with per-bin coverage",
         py::arg("sj"),
         py::arg("bin_reads"), py::arg("bin_idx"), py::arg("_offsets"),
@@ -226,16 +237,19 @@ void define_coordinates_properties(pyClassShared_t<RegionsT>& pyRegions) {
             return it == self.end() ? -1 : it - self.begin(); };
           return py::vectorize(f)(gene_idx, start, end);
           },
+          py::call_guard<py::gil_scoped_release>(),
           "Get indexes for specified regions (or -1 if it doesn't exist)",
           py::arg("gene_idx"),
           py::arg("start"),
           py::arg("end"));
   }
   pyRegions
-    .def("__len__", &RegionsT::size)
+    .def("__len__", &RegionsT::size, py::call_guard<py::gil_scoped_release>())
     .def("__eq__", [](const RegionsT& x, const RegionsT& y) { return x == y; },
+        py::call_guard<py::gil_scoped_release>(),
         py::is_operator())
     .def_property_readonly("_parents", &RegionsT::parents,
+        py::call_guard<py::gil_scoped_release>(),
         "Get parents object on which regions are defined (e.g. contigs, genes)")
     .def_property_readonly("_parent_idx_start",
         [](py::object& regions_obj) {
@@ -243,6 +257,7 @@ void define_coordinates_properties(pyClassShared_t<RegionsT>& pyRegions) {
         return ArrayFromOffsetsVector<size_t>(
             regions.parent_idx_offsets(), true, regions_obj);
         },
+        py::call_guard<py::gil_scoped_release>(),
         "First index into regions corresponding to associated parent")
     .def_property_readonly("_parent_idx_end",
         [](py::object& regions_obj) {
@@ -250,6 +265,7 @@ void define_coordinates_properties(pyClassShared_t<RegionsT>& pyRegions) {
         return ArrayFromOffsetsVector<size_t>(
             regions.parent_idx_offsets(), false, regions_obj);
         },
+        py::call_guard<py::gil_scoped_release>(),
         "One after last index into regions corresponding to associated parent")
     .def_property_readonly("start",
         [](py::object& regions_obj) -> py::array_t<position_t> {
@@ -258,6 +274,7 @@ void define_coordinates_properties(pyClassShared_t<RegionsT>& pyRegions) {
         return ArrayFromVectorAndOffset<position_t, RegionT>(
             regions.data(), offset, regions_obj);
         },
+        py::call_guard<py::gil_scoped_release>(),
         "array[int] of starts for each feature")
     .def_property_readonly("end",
         [](py::object& regions_obj) -> py::array_t<position_t> {
@@ -266,6 +283,7 @@ void define_coordinates_properties(pyClassShared_t<RegionsT>& pyRegions) {
         return ArrayFromVectorAndOffset<position_t, RegionT>(
             regions.data(), offset, regions_obj);
         },
+        py::call_guard<py::gil_scoped_release>(),
         "array[int] of ends for each feature");
   if constexpr(majiq::detail::has_contig_field<RegionT>::value) {
     pyRegions.def_property_readonly("contig_idx",
@@ -275,6 +293,7 @@ void define_coordinates_properties(pyClassShared_t<RegionsT>& pyRegions) {
         return ArrayFromVectorAndOffset<size_t, RegionT>(
             regions.data(), offset, regions_obj);
         },
+        py::call_guard<py::gil_scoped_release>(),
         "array[int] of indexes indicating contig feature belongs to");
   }
   if constexpr(majiq::detail::has_strand_field<RegionT>::value) {
@@ -285,6 +304,7 @@ void define_coordinates_properties(pyClassShared_t<RegionsT>& pyRegions) {
         return ArrayFromVectorAndOffset<std::array<char, 1>, RegionT>(
             regions.data(), offset, regions_obj);
         },
+        py::call_guard<py::gil_scoped_release>(),
         "array[char] of characters indicating strand of each feature");
   }
   if constexpr(majiq::detail::has_gene_field<RegionT>::value) {
@@ -295,6 +315,7 @@ void define_coordinates_properties(pyClassShared_t<RegionsT>& pyRegions) {
         return ArrayFromVectorAndOffset<size_t, RegionT>(
             regions.data(), offset, regions_obj);
         },
+        py::call_guard<py::gil_scoped_release>(),
         "array[int] of indexes indicating gene feature belongs to");
   }
   if constexpr(
@@ -305,17 +326,21 @@ void define_coordinates_properties(pyClassShared_t<RegionsT>& pyRegions) {
           [](const RegionsT& self) {
           return self.template checksum<true>();
           },
+          py::call_guard<py::gil_scoped_release>(),
           "checksum of connections including data (connections, passed, etc)")
       .def("checksum_nodata",
           [](const RegionsT& self) {
           return self.template checksum<false>();
           },
+          py::call_guard<py::gil_scoped_release>(),
           "checksum of connections gene/coordinates")
-      .def("_pass_all", &RegionsT::pass_all, "pass all connections")
-      .def("_simplify_all",
-          &RegionsT::simplify_all, "simplify all connections")
-      .def("_unsimplify_all",
-          &RegionsT::unsimplify_all, "unsimplify all connections")
+      .def("_pass_all", &RegionsT::pass_all,
+          py::call_guard<py::gil_scoped_release>(), "pass all connections")
+      .def("_simplify_all", &RegionsT::simplify_all,
+          py::call_guard<py::gil_scoped_release>(), "simplify all connections")
+      .def("_unsimplify_all", &RegionsT::unsimplify_all,
+          py::call_guard<py::gil_scoped_release>(),
+          "unsimplify all connections")
       .def_property_readonly("denovo",
           [](py::object& regions_obj) -> py::array_t<bool> {
           RegionsT& regions = regions_obj.cast<RegionsT&>();
@@ -323,6 +348,7 @@ void define_coordinates_properties(pyClassShared_t<RegionsT>& pyRegions) {
           return ArrayFromVectorAndOffset<bool, RegionT>(
               regions.data(), offset, regions_obj);
           },
+          py::call_guard<py::gil_scoped_release>(),
           "array[bool] indicating if connection was not found in annotations")
       .def_property_readonly("passed_build",
           [](py::object& regions_obj) -> py::array_t<bool> {
@@ -331,6 +357,7 @@ void define_coordinates_properties(pyClassShared_t<RegionsT>& pyRegions) {
           return ArrayFromVectorAndOffset<bool, RegionT>(
               regions.data(), offset, regions_obj);
           },
+          py::call_guard<py::gil_scoped_release>(),
           "array[bool] indicating if passed build criteria to be in LSV")
       .def_property_readonly("simplified",
           [](py::object& regions_obj) -> py::array_t<bool> {
@@ -339,8 +366,10 @@ void define_coordinates_properties(pyClassShared_t<RegionsT>& pyRegions) {
           return ArrayFromVectorAndOffset<bool, RegionT>(
               regions.data(), offset, regions_obj);
           },
+          py::call_guard<py::gil_scoped_release>(),
           "array[bool] indicating if the connection is simplified")
       .def("connect_exons", &RegionsT::connect_exons,
+          py::call_guard<py::gil_scoped_release>(),
           "Connect regions to specified exons, updataing {start,end}_exon_idx",
           py::arg("exons"))
       .def_property_readonly("connected_exons",
@@ -349,6 +378,7 @@ void define_coordinates_properties(pyClassShared_t<RegionsT>& pyRegions) {
           return self.is_connected()
             ? return_t{self.connected_exons()} : return_t{};
           },
+          py::call_guard<py::gil_scoped_release>(),
           "Exons connected to (or None if not connected to any exons)")
       .def_property_readonly("start_exon_idx",
           [](py::object& regions_obj) -> py::array_t<size_t> {
@@ -357,6 +387,7 @@ void define_coordinates_properties(pyClassShared_t<RegionsT>& pyRegions) {
           return ArrayFromVectorAndOffset<size_t, RegionT>(
               regions.data(), offset, regions_obj);
           },
+          py::call_guard<py::gil_scoped_release>(),
           R"pbdoc(
           array[int] indicating exon_idx for connection start
 
@@ -369,6 +400,7 @@ void define_coordinates_properties(pyClassShared_t<RegionsT>& pyRegions) {
           return ArrayFromVectorAndOffset<size_t, RegionT>(
               regions.data(), offset, regions_obj);
           },
+          py::call_guard<py::gil_scoped_release>(),
           R"pbdoc(
           array[int] indicating exon_idx for connection end
 
@@ -421,6 +453,7 @@ void init_Contigs(pyContigs_t& pyContigs) {
   pyContigs
     .def("checksum",
         [](const Contigs& self) { return majiq::checksum(self); },
+        py::call_guard<py::gil_scoped_release>(),
         "checksum of contigs")
     .def(
         py::init([](py::list seqids) {
@@ -430,9 +463,11 @@ void init_Contigs(pyContigs_t& pyContigs) {
           }
           return result;
         }),
+        py::call_guard<py::gil_scoped_release>(),
         "Set up Contigs object using specified identifiers",
         py::arg("seqids"))
     .def_property_readonly("seqid", &Contigs::seqids,
+        py::call_guard<py::gil_scoped_release>(),
         R"pbdoc(
         Sequence[str] of contig ids in order matching contig_idx
         )pbdoc")
@@ -440,12 +475,15 @@ void init_Contigs(pyContigs_t& pyContigs) {
         std::ostringstream oss;
         oss << self;
         return oss.str();
-        })
-    .def("__len__", &Contigs::size)
+        },
+        py::call_guard<py::gil_scoped_release>())
+    .def("__len__", &Contigs::size, py::call_guard<py::gil_scoped_release>())
     .def("__contains__",
-        [](const Contigs& s, seqid_t x) -> bool { return s.count(x) > 0; })
+        [](const Contigs& s, seqid_t x) -> bool { return s.count(x) > 0; },
+        py::call_guard<py::gil_scoped_release>())
     .def("__getitem__",
         [](const Contigs& self, seqid_t x) { return self.get_idx(x); },
+        py::call_guard<py::gil_scoped_release>(),
         "contig_idx for specified seqid", py::arg("seqid"));
 }
 
@@ -459,6 +497,7 @@ void init_Genes(pyGenes_t& pyGenes) {
   pyGenes
     .def("checksum",
         [](const Genes& self) { return majiq::checksum(self); },
+        py::call_guard<py::gil_scoped_release>(),
         "checksum of genes")
     .def(
         py::init([](
@@ -488,23 +527,29 @@ void init_Genes(pyGenes_t& pyGenes) {
           }
           return Genes::create(contigs, std::move(gene_vec));
         }),
+        py::call_guard<py::gil_scoped_release>(),
         "Create Genes object using Contigs object and arrays defining genes",
         py::arg("contigs"), py::arg("contig_idx"),
         py::arg("start"), py::arg("end"), py::arg("strand"),
         py::arg("gene_id"), py::arg("gene_name"))
     .def_property_readonly("gene_id", &majiq::Genes::geneids,
+        py::call_guard<py::gil_scoped_release>(),
         "Sequence[str] of gene ids in order matching gene_idx")
     .def_property_readonly("gene_name", &majiq::Genes::genenames,
+        py::call_guard<py::gil_scoped_release>(),
         "Sequence[str] of gene names in order matching gene_idx")
     .def("__repr__", [](const majiq::Genes& self) -> std::string {
         std::ostringstream oss;
         oss << "Genes<" << self.size() << " total>";
         return oss.str();
-        })
+        },
+        py::call_guard<py::gil_scoped_release>())
     .def("__contains__",
-        [](const Genes& self, geneid_t x) { return self.count(x) > 0; })
+        [](const Genes& self, geneid_t x) { return self.count(x) > 0; },
+        py::call_guard<py::gil_scoped_release>())
     .def("__getitem__",
         [](const Genes& self, geneid_t x) { return self.get_idx(x); },
+        py::call_guard<py::gil_scoped_release>(),
         "gene_idx for specified gene_id", py::arg("gene_id"));
 }
 
@@ -541,17 +586,20 @@ void init_Exons(pyExons_t& pyExons) {
           }
           return std::make_shared<Exons>(genes, std::move(exon_vec));
         }),
+        py::call_guard<py::gil_scoped_release>(),
         "Create Exons object using Genes and info about each exon",
         py::arg("genes"), py::arg("gene_idx"),
         py::arg("start"), py::arg("end"),
         py::arg("annotated_start"), py::arg("annotated_end"))
     .def("checksum",
         [](const Exons& self) { return majiq::checksum(self); },
+        py::call_guard<py::gil_scoped_release>(),
         "checksum of exons")
     .def("potential_introns",
         [](const std::shared_ptr<Exons>& exons_ptr, bool make_simplified) {
         return majiq::GeneIntrons::PotentialIntrons(exons_ptr, make_simplified);
         },
+        py::call_guard<py::gil_scoped_release>(),
         "Return denovo, nonpassed introns corresponding to these exons",
         py::arg("make_simplified"))
     .def_property_readonly("annotated_start",
@@ -561,6 +609,7 @@ void init_Exons(pyExons_t& pyExons) {
         return ArrayFromVectorAndOffset<position_t, majiq::Exon>(
             exons.data(), offset, exons_obj);
         },
+        py::call_guard<py::gil_scoped_release>(),
         "array[int] of annotated exon starts")
     .def_property_readonly("annotated_end",
         [](py::object& exons_obj) -> py::array_t<position_t> {
@@ -569,6 +618,7 @@ void init_Exons(pyExons_t& pyExons) {
         return ArrayFromVectorAndOffset<position_t, majiq::Exon>(
             exons.data(), offset, exons_obj);
         },
+        py::call_guard<py::gil_scoped_release>(),
         "array[int] of annotated exon ends")
     .def("is_denovo",
         [](const Exons& self,
@@ -580,13 +630,15 @@ void init_Exons(pyExons_t& pyExons) {
           return self[i].is_denovo(); };
         return py::vectorize(f)(exon_idx);
         },
+        py::call_guard<py::gil_scoped_release>(),
         "Indicate if selected exons are denovo",
         py::arg("exon_idx"))
     .def("__repr__", [](const Exons& self) -> std::string {
         std::ostringstream oss;
         oss << "Exons<" << self.size() << " total>";
         return oss.str();
-        });
+        },
+        py::call_guard<py::gil_scoped_release>());
 }
 
 void init_GeneJunctions(pyGeneJunctions_t& pyGeneJunctions) {
@@ -606,6 +658,7 @@ void init_GeneJunctions(pyGeneJunctions_t& pyGeneJunctions) {
           return MakeConnections<GeneJunctions>(genes, ConnectionsArrays{
               gene_idx, start, end, denovo, passed_build, simplified});
         }),
+        py::call_guard<py::gil_scoped_release>(),
         "Create GeneJunctions using Genes and arrays defining each junction",
         py::arg("genes"),
         py::arg("gene_idx"), py::arg("start"), py::arg("end"),
@@ -614,7 +667,8 @@ void init_GeneJunctions(pyGeneJunctions_t& pyGeneJunctions) {
         std::ostringstream oss;
         oss << "GeneJunctions<" << self.size() << " total>";
         return oss.str();
-        });
+        },
+        py::call_guard<py::gil_scoped_release>());
 }
 
 void init_SJIntrons(pySJIntrons_t& pySJIntrons) {
@@ -650,6 +704,7 @@ void init_SJIntrons(pySJIntrons_t& pySJIntrons) {
           }
           return std::make_shared<SJIntrons>(contigs, std::move(result));
           }),
+        py::call_guard<py::gil_scoped_release>(),
         "Initialize SJIntrons from contigs and numpy arrays",
         py::arg("contigs"),
         py::arg("contig_idx"),
@@ -658,6 +713,7 @@ void init_SJIntrons(pySJIntrons_t& pySJIntrons) {
         py::arg("strand"),
         py::arg("annotated"))
     .def_static("from_exons_and_introns", &SJIntrons::FromGeneExonsAndIntrons,
+        py::call_guard<py::gil_scoped_release>(),
         "Construct sj introns for input exons/introns",
         py::arg("exons"), py::arg("introns"), py::arg("stranded"))
     .def_property_readonly("annotated",
@@ -667,12 +723,14 @@ void init_SJIntrons(pySJIntrons_t& pySJIntrons) {
         return ArrayFromVectorAndOffset<bool, majiq::SJIntron>(
             introns.data(), offset, introns_obj);
         },
+        py::call_guard<py::gil_scoped_release>(),
         "array[bool] indicating if intron is annotated (exon in annotation)")
     .def("__repr__", [](const majiq::SJIntrons& self) -> std::string {
         std::ostringstream oss;
         oss << "SJIntrons<" << self.size() << " total>";
         return oss.str();
-        });
+        },
+        py::call_guard<py::gil_scoped_release>());
 }
 
 void init_PySpliceGraphReads(pySpliceGraphReads_t& pySpliceGraphReads) {
@@ -685,9 +743,11 @@ void init_PySpliceGraphReads(pySpliceGraphReads_t& pySpliceGraphReads) {
   pySpliceGraphReads
     .def_property_readonly("_introns",
         &SpliceGraphReads::introns,
+        py::call_guard<py::gil_scoped_release>(),
         "Underlying introns")
     .def_property_readonly("_junctions",
         &SpliceGraphReads::junctions,
+        py::call_guard<py::gil_scoped_release>(),
         "Underlying junctions")
     .def_property_readonly("introns_reads",
         [](py::object& self_obj) {
@@ -695,6 +755,7 @@ void init_PySpliceGraphReads(pySpliceGraphReads_t& pySpliceGraphReads) {
         return ArrayFromVectorAndOffset<majiq::real_t, majiq::real_t>(
             self.introns_reads(), 0, self_obj);
         },
+        py::call_guard<py::gil_scoped_release>(),
         "Raw readrates for each intron")
     .def_property_readonly("junctions_reads",
         [](py::object& self_obj) {
@@ -702,6 +763,7 @@ void init_PySpliceGraphReads(pySpliceGraphReads_t& pySpliceGraphReads) {
         return ArrayFromVectorAndOffset<majiq::real_t, majiq::real_t>(
             self.junctions_reads(), 0, self_obj);
         },
+        py::call_guard<py::gil_scoped_release>(),
         "Raw readrates for each junction")
     .def(py::init([](
             const std::shared_ptr<GeneIntrons>& introns,
@@ -730,12 +792,14 @@ void init_PySpliceGraphReads(pySpliceGraphReads_t& pySpliceGraphReads) {
           return SpliceGraphReads{introns, junctions,
               std::move(ireads_vec), std::move(jreads_vec)};
           }),
+        py::call_guard<py::gil_scoped_release>(),
         "Initialize SpliceGraphReads from numpy arrays",
         py::arg("introns"),
         py::arg("junctions"),
         py::arg("introns_reads"),
         py::arg("junctions_reads"))
     .def_static("from_sj", &SpliceGraphReads::FromSJ,
+        py::call_guard<py::gil_scoped_release>(),
         "Obtain raw readrates for introns/junctions from experiment SJ",
         py::arg("introns"),
         py::arg("junctions"),
@@ -752,6 +816,7 @@ void init_PySimplifierGroup(pySimplifierGroup_t& pySimplifierGroup) {
   pySimplifierGroup
     .def_property_readonly("_exon_connections",
         &SimplifierGroup::exon_connections,
+        py::call_guard<py::gil_scoped_release>(),
         "Underlying exon connections being unsimplified")
     .def_property_readonly("introns_passed_src",
         [](py::object& self_obj) {
@@ -760,6 +825,7 @@ void init_PySimplifierGroup(pySimplifierGroup_t& pySimplifierGroup) {
         return ArrayFromVectorAndOffset<size_t, SimplifierCount>(
             self.introns_passed(), offset, self_obj);
         },
+        py::call_guard<py::gil_scoped_release>(),
         "Number of experiments with evidence for unsimplification as source for introns")
     .def_property_readonly("introns_passed_dst",
         [](py::object& self_obj) {
@@ -768,6 +834,7 @@ void init_PySimplifierGroup(pySimplifierGroup_t& pySimplifierGroup) {
         return ArrayFromVectorAndOffset<size_t, SimplifierCount>(
             self.introns_passed(), offset, self_obj);
         },
+        py::call_guard<py::gil_scoped_release>(),
         "Number of experiments with evidence for unsimplification as target for introns")
     .def_property_readonly("junctions_passed_src",
         [](py::object& self_obj) {
@@ -776,6 +843,7 @@ void init_PySimplifierGroup(pySimplifierGroup_t& pySimplifierGroup) {
         return ArrayFromVectorAndOffset<size_t, SimplifierCount>(
             self.junctions_passed(), offset, self_obj);
         },
+        py::call_guard<py::gil_scoped_release>(),
         "Number of experiments with evidence for unsimplification as source for junctions")
     .def_property_readonly("junctions_passed_dst",
         [](py::object& self_obj) {
@@ -784,11 +852,14 @@ void init_PySimplifierGroup(pySimplifierGroup_t& pySimplifierGroup) {
         return ArrayFromVectorAndOffset<size_t, SimplifierCount>(
             self.junctions_passed(), offset, self_obj);
         },
+        py::call_guard<py::gil_scoped_release>(),
         "Number of experiments with evidence for unsimplification as target for junctions")
     .def_property_readonly("num_experiments",
         &SimplifierGroup::num_experiments,
+        py::call_guard<py::gil_scoped_release>(),
         "Number of experiments in current simplifier group")
     .def("add_experiment", &SimplifierGroup::AddExperiment,
+        py::call_guard<py::gil_scoped_release>(),
         "Increment evidence to unsimplify connections from SpliceGraphReads",
         py::arg("sg_reads"),
         py::arg("simplify_min_psi") = DEFAULT_BUILD_SIMPL_MINPSI,
@@ -799,9 +870,11 @@ void init_PySimplifierGroup(pySimplifierGroup_t& pySimplifierGroup) {
         py::arg("simplify_minreads_introns")
           = DEFAULT_BUILD_SIMPL_MINREADS_INTRON)
     .def("update_connections", &SimplifierGroup::UpdateInplace,
+        py::call_guard<py::gil_scoped_release>(),
         "Unsimplify introns/junctions with evidence, reset for next group",
         py::arg("simplifier_min_experiments") = DEFAULT_BUILD_MINEXPERIMENTS)
     .def(py::init<const std::shared_ptr<ExonConnections>&>(),
+        py::call_guard<py::gil_scoped_release>(),
         "Start simplification group for the specified exon connections",
         py::arg("exon_connections"));
 }
@@ -852,6 +925,7 @@ void init_PyEventsCoverage(pyEventsCoverage_t& pyEventsCoverage) {
           return EventsCoverage{events,
               std::move(summaries_vec), std::move(coverage)};
           }),
+        py::call_guard<py::gil_scoped_release>(),
         "construct events coverage from numpy arrays",
         py::arg("events"),
         py::arg("numreads"),
@@ -867,6 +941,8 @@ void init_PyEventsCoverage(pyEventsCoverage_t& pyEventsCoverage) {
         return EventsCoverage::FromSJ(events, sj_junctions, sj_introns,
             num_bootstraps, rng, pvalue_threshold);
         },
+        // TODO(jaicher): make rng threadsafe
+        // py::call_guard<py::gil_scoped_release>(),
         "Obtain coverage for events from SJ junctions and introns",
         py::arg("events"),
         py::arg("sj_junctions"),
@@ -880,6 +956,7 @@ void init_PyEventsCoverage(pyEventsCoverage_t& pyEventsCoverage) {
         return ArrayFromVectorAndOffset<majiq::real_t, CoverageSummary>(
             self.summaries(), offset, self_obj);
         },
+        py::call_guard<py::gil_scoped_release>(),
         "Readrate of each event connection after stacks removed")
     .def_property_readonly("numbins",
         [](py::object& self_obj) -> py::array_t<majiq::real_t> {
@@ -888,6 +965,7 @@ void init_PyEventsCoverage(pyEventsCoverage_t& pyEventsCoverage) {
         return ArrayFromVectorAndOffset<majiq::real_t, CoverageSummary>(
             self.summaries(), offset, self_obj);
         },
+        py::call_guard<py::gil_scoped_release>(),
         "Number of nonzero bins for each connection after stacks removed")
     .def_property_readonly("bootstraps",
         [](py::object& self_obj) -> py::array_t<majiq::real_t> {
@@ -904,10 +982,13 @@ void init_PyEventsCoverage(pyEventsCoverage_t& pyEventsCoverage) {
             self_obj);
         return result;
         },
+        py::call_guard<py::gil_scoped_release>(),
         "Bootstrapped read coverage or each connection after stacks removed")
     .def_property_readonly("_events", &EventsCoverage::events,
+        py::call_guard<py::gil_scoped_release>(),
         "Events for which the coverage information is defined")
-    .def("__len__", &EventsCoverage::num_connections);
+    .def("__len__", &EventsCoverage::num_connections,
+        py::call_guard<py::gil_scoped_release>());
 }
 
 void init_pyEventsAlign(pyEventsAlign_t& pyEventsAlign) {
@@ -916,6 +997,7 @@ void init_pyEventsAlign(pyEventsAlign_t& pyEventsAlign) {
   using majiq_pybind::ArrayFromVectorAndOffset;
   pyEventsAlign
     .def(py::init<const Events&, const Events&>(),
+        py::call_guard<py::gil_scoped_release>(),
         "Obtain indexes of matching events in the two input Events containers",
         py::arg("left_events"), py::arg("right_events"))
     .def_static(
@@ -930,6 +1012,7 @@ void init_pyEventsAlign(pyEventsAlign_t& pyEventsAlign) {
         return EventsAlign::EventsMatch(
             left_events, right_events, left_idx, right_idx);
         },
+        py::call_guard<py::gil_scoped_release>(),
         "Indicate if selected event indexes share the exact same connections",
         py::arg("left_events"), py::arg("right_events"),
         py::arg("left_idx"), py::arg("right_idx"))
@@ -940,6 +1023,7 @@ void init_pyEventsAlign(pyEventsAlign_t& pyEventsAlign) {
         return ArrayFromVectorAndOffset<size_t, EventsAlign::EventAligned>(
             self.matched_, offset, self_obj);
         },
+        py::call_guard<py::gil_scoped_release>(),
         "Indexes for events in left_events used in constructor")
     .def_property_readonly("right_event_idx",
         [](py::object& self_obj) {
@@ -948,6 +1032,7 @@ void init_pyEventsAlign(pyEventsAlign_t& pyEventsAlign) {
         return ArrayFromVectorAndOffset<size_t, EventsAlign::EventAligned>(
             self.matched_, offset, self_obj);
         },
+        py::call_guard<py::gil_scoped_release>(),
         "Indexes for events in right_events used in constructor");
   return;
 }
@@ -1020,6 +1105,7 @@ void init_PyEvents(pyEvents_t& pyEvents) {
           return Events{introns, junctions, std::move(event_vec),
             std::move(offsets_vec), std::move(connections_vec)};
           }),
+        py::call_guard<py::gil_scoped_release>(),
         "Initialize events object from numpy arrays",
         py::arg("introns"),
         py::arg("junctions"),
@@ -1028,8 +1114,11 @@ void init_PyEvents(pyEvents_t& pyEvents) {
         py::arg("offsets"),
         py::arg("is_intron"),
         py::arg("connection_idx"))
-    .def_property_readonly("introns", &Events::introns, "underlying introns")
+    .def_property_readonly("introns", &Events::introns,
+        py::call_guard<py::gil_scoped_release>(),
+        "underlying introns")
     .def_property_readonly("junctions", &Events::junctions,
+        py::call_guard<py::gil_scoped_release>(),
         "underlying junctions")
     .def_property_readonly("ref_exon_idx",
         [](py::object& self_obj) {
@@ -1037,6 +1126,7 @@ void init_PyEvents(pyEvents_t& pyEvents) {
         const size_t offset = offsetof(Event, ref_exon_idx_);
         return ArrayFromVectorAndOffset<size_t, Event>(
             self.events(), offset, self_obj); },
+        py::call_guard<py::gil_scoped_release>(),
         "Event reference exon")
     .def_property_readonly("event_type",
         [](py::object& self_obj) {
@@ -1044,6 +1134,7 @@ void init_PyEvents(pyEvents_t& pyEvents) {
         const size_t offset = offsetof(Event, type_);
         return ArrayFromVectorAndOffset<std::array<char, 1>, Event>(
             self.events(), offset, self_obj); },
+        py::call_guard<py::gil_scoped_release>(),
         "Event type")
     .def_property_readonly("_offsets",
         [](py::object& self_obj) {
@@ -1051,18 +1142,21 @@ void init_PyEvents(pyEvents_t& pyEvents) {
         return ArrayFromVectorAndOffset<size_t, size_t>(
             self.connection_offsets(), 0, self_obj);
         },
+        py::call_guard<py::gil_scoped_release>(),
         "Raw offsets for events into connections")
     .def_property_readonly("connection_idx_start",
         [](py::object& self_obj) {
         Events& self = self_obj.cast<Events&>();
         return ArrayFromOffsetsVector<size_t>(
             self.connection_offsets(), true, self_obj); },
+        py::call_guard<py::gil_scoped_release>(),
         "First index into event connections for each event")
     .def_property_readonly("connection_idx_end",
         [](py::object& self_obj) {
         Events& self = self_obj.cast<Events&>();
         return ArrayFromOffsetsVector<size_t>(
             self.connection_offsets(), false, self_obj); },
+        py::call_guard<py::gil_scoped_release>(),
         "One after last index into event connections for each event")
     .def_property_readonly("is_intron",
         [](py::object& self_obj) {
@@ -1070,6 +1164,7 @@ void init_PyEvents(pyEvents_t& pyEvents) {
         const size_t offset = offsetof(ConnectionIndex, is_intron_);
         return ArrayFromVectorAndOffset<bool, ConnectionIndex>(
             self.connections(), offset, self_obj); },
+        py::call_guard<py::gil_scoped_release>(),
         "Event connection is intron (false --> is junction)")
     .def_property_readonly("idx",
         [](py::object& self_obj) {
@@ -1077,23 +1172,30 @@ void init_PyEvents(pyEvents_t& pyEvents) {
         const size_t offset = offsetof(ConnectionIndex, idx_);
         return ArrayFromVectorAndOffset<size_t, ConnectionIndex>(
             self.connections(), offset, self_obj); },
+        py::call_guard<py::gil_scoped_release>(),
         "Event connection index into corresponding Introns or Junctions")
     .def_property_readonly("connection_event_idx",
         [](py::object& self_obj) {
         Events& self = self_obj.cast<Events&>();
         return ArrayFromVectorAndOffset<size_t, size_t>(
             self.connection_event_idx(), 0, self_obj); },
+        py::call_guard<py::gil_scoped_release>(),
         "Event connection index back into events")
-    .def_property_readonly("num_events", &Events::num_events)
-    .def_property_readonly("num_connections", &Events::num_connections)
-    .def_property_readonly("num_junctions", &Events::num_junctions)
-    .def_property_readonly("num_introns", &Events::num_introns)
+    .def_property_readonly("num_events", &Events::num_events,
+        py::call_guard<py::gil_scoped_release>())
+    .def_property_readonly("num_connections", &Events::num_connections,
+        py::call_guard<py::gil_scoped_release>())
+    .def_property_readonly("num_junctions", &Events::num_junctions,
+        py::call_guard<py::gil_scoped_release>())
+    .def_property_readonly("num_introns", &Events::num_introns,
+        py::call_guard<py::gil_scoped_release>())
     .def("connection_gene_idx",
         [](const Events& self, py::array_t<size_t> connection_idx) {
         auto f = [&self](size_t idx) {
         return self.connection_gene(idx).idx_; };
         return py::vectorize(f)(connection_idx);
         },
+        py::call_guard<py::gil_scoped_release>(),
         "gene_idx for specified connection indexes",
         py::arg("connection_idx"))
     .def("connection_start",
@@ -1102,6 +1204,7 @@ void init_PyEvents(pyEvents_t& pyEvents) {
         return self.connection_start(idx); };
         return py::vectorize(f)(connection_idx);
         },
+        py::call_guard<py::gil_scoped_release>(),
         "start for specified connection indexes",
         py::arg("connection_idx"))
     .def("connection_end",
@@ -1110,6 +1213,7 @@ void init_PyEvents(pyEvents_t& pyEvents) {
         return self.connection_end(idx); };
         return py::vectorize(f)(connection_idx);
         },
+        py::call_guard<py::gil_scoped_release>(),
         "end for specified connection indexes",
         py::arg("connection_idx"))
     .def("connection_denovo",
@@ -1118,6 +1222,7 @@ void init_PyEvents(pyEvents_t& pyEvents) {
         return self.connection_denovo(idx); };
         return py::vectorize(f)(connection_idx);
         },
+        py::call_guard<py::gil_scoped_release>(),
         "denovo status for specified connection indexes",
         py::arg("connection_idx"))
     .def("connection_other_exon_idx",
@@ -1126,9 +1231,10 @@ void init_PyEvents(pyEvents_t& pyEvents) {
         return self.connection_other_exon_idx(idx); };
         return py::vectorize(f)(connection_idx);
         },
+        py::call_guard<py::gil_scoped_release>(),
         "index for other exon for specified connection indexes",
         py::arg("connection_idx"))
-    .def("__len__", &Events::size);
+    .def("__len__", &Events::size, py::call_guard<py::gil_scoped_release>());
 }
 
 void init_pyExonConnections(pyExonConnections_t& pyExonConnections) {
@@ -1142,6 +1248,7 @@ void init_pyExonConnections(pyExonConnections_t& pyExonConnections) {
   pyExonConnections
     .def(
         py::init<const ExonsPtrT&, const IntronsPtrT&, const JunctionsPtrT&>(),
+        py::call_guard<py::gil_scoped_release>(),
         "Track junctions/introns by exons/events assocciated with them",
         py::arg("exons"),
         py::arg("introns"),
@@ -1152,6 +1259,7 @@ void init_pyExonConnections(pyExonConnections_t& pyExonConnections) {
         const auto& indexes = self.src_introns();
         return ArrayFromVectorAndOffset<size_t, size_t>(indexes.idx_, 0, self_obj);
         },
+        py::call_guard<py::gil_scoped_release>(),
         "intron_idx for exon_connections in src_exon sorted order")
     .def_property_readonly("src_intron_exon_offsets",
         [](py::object& self_obj) {
@@ -1159,6 +1267,7 @@ void init_pyExonConnections(pyExonConnections_t& pyExonConnections) {
         const auto& indexes = self.src_introns();
         return ArrayFromVectorAndOffset<size_t, size_t>(indexes.exon_offsets_, 0, self_obj);
         },
+        py::call_guard<py::gil_scoped_release>(),
         "offsets into src_intron_idx for each exon")
     .def_property_readonly("dst_intron_idx",
         [](py::object& self_obj) {
@@ -1166,6 +1275,7 @@ void init_pyExonConnections(pyExonConnections_t& pyExonConnections) {
         const auto& indexes = self.dst_introns();
         return ArrayFromVectorAndOffset<size_t, size_t>(indexes.idx_, 0, self_obj);
         },
+        py::call_guard<py::gil_scoped_release>(),
         "intron_idx for exon_connections in dst_exon sorted order")
     .def_property_readonly("dst_intron_exon_offsets",
         [](py::object& self_obj) {
@@ -1173,6 +1283,7 @@ void init_pyExonConnections(pyExonConnections_t& pyExonConnections) {
         const auto& indexes = self.dst_introns();
         return ArrayFromVectorAndOffset<size_t, size_t>(indexes.exon_offsets_, 0, self_obj);
         },
+        py::call_guard<py::gil_scoped_release>(),
         "offsets into dst_intron_idx for each exon")
     .def_property_readonly("src_junction_idx",
         [](py::object& self_obj) {
@@ -1180,6 +1291,7 @@ void init_pyExonConnections(pyExonConnections_t& pyExonConnections) {
         const auto& indexes = self.src_junctions();
         return ArrayFromVectorAndOffset<size_t, size_t>(indexes.idx_, 0, self_obj);
         },
+        py::call_guard<py::gil_scoped_release>(),
         "junction_idx for exon_connections in src_exon sorted order")
     .def_property_readonly("src_junction_exon_offsets",
         [](py::object& self_obj) {
@@ -1187,6 +1299,7 @@ void init_pyExonConnections(pyExonConnections_t& pyExonConnections) {
         const auto& indexes = self.src_junctions();
         return ArrayFromVectorAndOffset<size_t, size_t>(indexes.exon_offsets_, 0, self_obj);
         },
+        py::call_guard<py::gil_scoped_release>(),
         "offsets into src_junction_idx for each exon")
     .def_property_readonly("dst_junction_idx",
         [](py::object& self_obj) {
@@ -1194,6 +1307,7 @@ void init_pyExonConnections(pyExonConnections_t& pyExonConnections) {
         const auto& indexes = self.dst_junctions();
         return ArrayFromVectorAndOffset<size_t, size_t>(indexes.idx_, 0, self_obj);
         },
+        py::call_guard<py::gil_scoped_release>(),
         "junction_idx for exon_connections in dst_exon sorted order")
     .def_property_readonly("dst_junction_exon_offsets",
         [](py::object& self_obj) {
@@ -1201,16 +1315,24 @@ void init_pyExonConnections(pyExonConnections_t& pyExonConnections) {
         const auto& indexes = self.dst_junctions();
         return ArrayFromVectorAndOffset<size_t, size_t>(indexes.exon_offsets_, 0, self_obj);
         },
+        py::call_guard<py::gil_scoped_release>(),
         "offsets into dst_junction_idx for each exon")
-    .def_property_readonly("_exons", &ExonConnections::exons, "underlying exons")
-    .def_property_readonly("_introns", &ExonConnections::introns, "underlying introns")
-    .def_property_readonly("_junctions", &ExonConnections::junctions, "underlying junctions")
-    .def("strict_lsvs", &ExonConnections::StrictLSVs, "Construct strict LSV Events")
-    .def("permissive_lsvs", &ExonConnections::PermissiveLSVs, "Construct permissive LSV Events")
-    .def("source_lsvs", &ExonConnections::SourceLSVs, "Construct source LSV Events")
-    .def("target_lsvs", &ExonConnections::TargetLSVs, "Construct target LSV Events")
+    .def_property_readonly("_exons", &ExonConnections::exons,
+        py::call_guard<py::gil_scoped_release>(), "underlying exons")
+    .def_property_readonly("_introns", &ExonConnections::introns,
+        py::call_guard<py::gil_scoped_release>(), "underlying introns")
+    .def_property_readonly("_junctions", &ExonConnections::junctions,
+        py::call_guard<py::gil_scoped_release>(), "underlying junctions")
+    .def("strict_lsvs", &ExonConnections::StrictLSVs,
+        py::call_guard<py::gil_scoped_release>(), "Construct strict LSV Events")
+    .def("permissive_lsvs", &ExonConnections::PermissiveLSVs,
+        py::call_guard<py::gil_scoped_release>(), "Construct permissive LSV Events")
+    .def("source_lsvs", &ExonConnections::SourceLSVs,
+        py::call_guard<py::gil_scoped_release>(), "Construct source LSV Events")
+    .def("target_lsvs", &ExonConnections::TargetLSVs,
+        py::call_guard<py::gil_scoped_release>(), "Construct target LSV Events")
     .def("constitutive", &ExonConnections::ConstitutiveEvents,
-        "Construct Constitutive Events")
+        py::call_guard<py::gil_scoped_release>(), "Construct Constitutive Events")
     .def("events_for",
         [](const ExonConnections& self,
           py::array_t<size_t> exon_idx,
@@ -1234,6 +1356,7 @@ void init_pyExonConnections(pyExonConnections_t& pyExonConnections) {
         }
         return self.CreateEvents(std::move(events));
         },
+        py::call_guard<py::gil_scoped_release>(),
         "Construct events for specified exons/directions",
         py::arg("exon_idx"), py::arg("is_source"))
     .def("has_intron",
@@ -1249,6 +1372,7 @@ void init_pyExonConnections(pyExonConnections_t& pyExonConnections) {
         };
         return py::vectorize(f)(exon_idx, is_source);
         },
+        py::call_guard<py::gil_scoped_release>(),
         "Indicate if events have introns or not",
         py::arg("exon_idx"), py::arg("is_source"))
     .def("event_size",
@@ -1264,6 +1388,7 @@ void init_pyExonConnections(pyExonConnections_t& pyExonConnections) {
         };
         return py::vectorize(f)(exon_idx, is_source);
         },
+        py::call_guard<py::gil_scoped_release>(),
         "Indicate size of event",
         py::arg("exon_idx"), py::arg("is_source"))
     .def("passed",
@@ -1279,6 +1404,7 @@ void init_pyExonConnections(pyExonConnections_t& pyExonConnections) {
         };
         return py::vectorize(f)(exon_idx, is_source);
         },
+        py::call_guard<py::gil_scoped_release>(),
         "Indicate if event was passed",
         py::arg("exon_idx"), py::arg("is_source"))
     .def("redundant",
@@ -1294,6 +1420,7 @@ void init_pyExonConnections(pyExonConnections_t& pyExonConnections) {
         };
         return py::vectorize(f)(exon_idx, is_source);
         },
+        py::call_guard<py::gil_scoped_release>(),
         "Indicate if event was redundant",
         py::arg("exon_idx"), py::arg("is_source"))
     .def("is_target_LSV",
@@ -1309,6 +1436,7 @@ void init_pyExonConnections(pyExonConnections_t& pyExonConnections) {
         };
         return py::vectorize(f)(exon_idx, is_target);
         },
+        py::call_guard<py::gil_scoped_release>(),
         "Indicate if event is target LSV",
         py::arg("exon_idx"), py::arg("is_target"))
     .def("is_source_LSV",
@@ -1324,6 +1452,7 @@ void init_pyExonConnections(pyExonConnections_t& pyExonConnections) {
         };
         return py::vectorize(f)(exon_idx, is_source);
         },
+        py::call_guard<py::gil_scoped_release>(),
         "Indicate if event is source LSV",
         py::arg("exon_idx"), py::arg("is_source"))
     .def("is_permissive_LSV",
@@ -1339,6 +1468,7 @@ void init_pyExonConnections(pyExonConnections_t& pyExonConnections) {
         };
         return py::vectorize(f)(exon_idx, is_source);
         },
+        py::call_guard<py::gil_scoped_release>(),
         "Indicate if event is permissive LSV",
         py::arg("exon_idx"), py::arg("is_source"))
     .def("is_strict_LSV",
@@ -1354,6 +1484,7 @@ void init_pyExonConnections(pyExonConnections_t& pyExonConnections) {
         };
         return py::vectorize(f)(exon_idx, is_source);
         },
+        py::call_guard<py::gil_scoped_release>(),
         "Indicate if event is strict LSV",
         py::arg("exon_idx"), py::arg("is_source"))
     .def("is_constitutive",
@@ -1369,6 +1500,7 @@ void init_pyExonConnections(pyExonConnections_t& pyExonConnections) {
         };
         return py::vectorize(f)(exon_idx, is_source);
         },
+        py::call_guard<py::gil_scoped_release>(),
         "Indicate if event is constitutive",
         py::arg("exon_idx"), py::arg("is_source"))
     .def("event_id",
@@ -1394,6 +1526,7 @@ void init_pyExonConnections(pyExonConnections_t& pyExonConnections) {
         }
         return result;
         },
+        py::call_guard<py::gil_scoped_release>(),
         "List of event_id for specified events",
         py::arg("exon_idx"), py::arg("event_type"))
     .def("event_description",
@@ -1419,6 +1552,7 @@ void init_pyExonConnections(pyExonConnections_t& pyExonConnections) {
         }
         return result;
         },
+        py::call_guard<py::gil_scoped_release>(),
         "List of description for specified events",
         py::arg("exon_idx"), py::arg("event_type"));
 }
@@ -1428,6 +1562,7 @@ void init_SJIntronsBins(pySJIntronsBins_t& pySJIntronsBins) {
   define_sjbins_properties(pySJIntronsBins);
   pySJIntronsBins
     .def_static("from_bam", &SJIntronsBins::FromBam,
+        py::call_guard<py::gil_scoped_release>(),
         R"pbdoc(
         Load introns and per-bin counts for an aligned BAM file
 
@@ -1472,18 +1607,22 @@ void init_GeneIntrons(pyGeneIntrons_t& pyGeneIntrons) {
           return MakeConnections<GeneIntrons>(genes, ConnectionsArrays{
               gene_idx, start, end, denovo, passed_build, simplified});
         }),
+        py::call_guard<py::gil_scoped_release>(),
         "Create GeneIntrons using Genes and arrays defining each intron",
         py::arg("genes"),
         py::arg("gene_idx"), py::arg("start"), py::arg("end"),
         py::arg("denovo"), py::arg("passed_build"), py::arg("simplified"))
     .def("update_flags_from", &GeneIntrons::UpdateFlagsFrom,
+        py::call_guard<py::gil_scoped_release>(),
         "Update intron flags using introns that overlap from input",
         py::arg("donor_introns"))
     .def("build_group", [](std::shared_ptr<GeneIntrons>& gene_introns) {
         return majiq::GroupIntronsGenerator(gene_introns);
         },
+        py::call_guard<py::gil_scoped_release>(),
         "Create build group to update passed introns in place")
     .def("filter_passed", &GeneIntrons::FilterPassed,
+        py::call_guard<py::gil_scoped_release>(),
         R"pbdoc(
         Get subset of introns that passed build filters
 
@@ -1500,7 +1639,8 @@ void init_GeneIntrons(pyGeneIntrons_t& pyGeneIntrons) {
         std::ostringstream oss;
         oss << "GeneIntrons<" << self.size() << " total>";
         return oss.str();
-        });
+        },
+        py::call_guard<py::gil_scoped_release>());
 }
 
 void init_SJJunctions(pySJJunctions_t& pySJJunctions) {
@@ -1533,15 +1673,19 @@ void init_SJJunctions(pySJJunctions_t& pySJJunctions) {
           return std::make_shared<majiq::SJJunctions>(
               contigs, std::move(sj_vec));
         }),
+        py::call_guard<py::gil_scoped_release>(),
         "Create SJJunctions object from contigs and arrays",
         py::arg("contigs"),
         py::arg("contig_idx"), py::arg("start"), py::arg("end"),
         py::arg("strand"))
     .def("to_unstranded", &SJJunctions::ToUnstranded,
+        py::call_guard<py::gil_scoped_release>(),
         "Create unstranded SJJunctions from self")
     .def("flip_strand", &SJJunctions::FlipStrand,
+        py::call_guard<py::gil_scoped_release>(),
         "Create SJJunctions with strands flipped in sorted order")
     .def_property_readonly("_contigs", &SJJunctions::parents,
+        py::call_guard<py::gil_scoped_release>(),
         "Underlying contigs corresponding to contig_idx");
 }
 void init_SJJunctionsBins(pySJJunctionsBins_t& pySJJunctionsBins) {
@@ -1549,8 +1693,10 @@ void init_SJJunctionsBins(pySJJunctionsBins_t& pySJJunctionsBins) {
   define_sjbins_properties(pySJJunctionsBins);
   pySJJunctionsBins
     .def("project_reads", &SJJunctionsBins::ProjectReads,
+        py::call_guard<py::gil_scoped_release>(),
         "Project reads to a different set of SJJunctions")
     .def_static("from_bam", &SJJunctionsBins::FromBam,
+        py::call_guard<py::gil_scoped_release>(),
         R"pbdoc(
         Load junctions and per-position counts for an aligned BAM file
 
@@ -1573,28 +1719,35 @@ void init_pyGroupJunctionsGen(pyGroupJunctionsGen_t& pyGroupJunctionsGen) {
     .def(
       py::init<const std::shared_ptr<majiq::GeneJunctions>&,
       const std::shared_ptr<majiq::Exons>&>(),
+      py::call_guard<py::gil_scoped_release>(),
       "Accumulate SJJunctions for build group for input junctions/exons",
       py::arg("junctions"),
       py::arg("exons"))
     .def("add_experiment", &majiq::GroupJunctionsGenerator::AddExperiment,
+        py::call_guard<py::gil_scoped_release>(),
         "Increment count of passed junctions from input experiment",
         py::arg("sjp"),
         py::arg("thresholds") = DEFAULT_THRESHOLDS,
         py::arg("add_denovo") = DEFAULT_BUILD_DENOVO_JUNCTIONS)
     .def("pass_known_inplace",
         &majiq::GroupJunctionsGenerator::UpdateKnownInplace,
+        py::call_guard<py::gil_scoped_release>(),
         "Update known junctions with their build status (ignore denovos)",
         py::arg("min_experiments") = DEFAULT_BUILD_MINEXPERIMENTS)
     .def_property_readonly("num_experiments",
         &majiq::GroupJunctionsGenerator::num_experiments,
+        py::call_guard<py::gil_scoped_release>(),
         "Number of experiments that have been added to this group")
     .def_property_readonly("num_known",
         &majiq::GroupJunctionsGenerator::num_annotated,
+        py::call_guard<py::gil_scoped_release>(),
         "Number of junctions known when constructed")
     .def_property_readonly("num_denovo",
         &majiq::GroupJunctionsGenerator::num_denovo,
+        py::call_guard<py::gil_scoped_release>(),
         "Number of denovo junctions passing experiment-filters for 1+ inputs")
-    .def("__len__", &majiq::GroupJunctionsGenerator::size);
+    .def("__len__", &majiq::GroupJunctionsGenerator::size,
+        py::call_guard<py::gil_scoped_release>());
 }
 
 void init_pyGroupIntronsGen(pyGroupIntronsGen_t& pyGroupIntronsGen) {
@@ -1603,25 +1756,32 @@ void init_pyGroupIntronsGen(pyGroupIntronsGen_t& pyGroupIntronsGen) {
   pyGroupIntronsGen
     .def(
         py::init<const std::shared_ptr<majiq::GeneIntrons>&>(),
+        py::call_guard<py::gil_scoped_release>(),
         "Accumulate SJIntronsBins for build group of introns",
         py::arg("gene_introns"))
     .def_property_readonly("num_experiments",
         &GroupIntronsGenerator::num_experiments,
+        py::call_guard<py::gil_scoped_release>(),
         "Number of experiments in current group")
-    .def_property_readonly("_introns", &GroupIntronsGenerator::introns)
+    .def_property_readonly("_introns", &GroupIntronsGenerator::introns,
+        py::call_guard<py::gil_scoped_release>())
     .def_property_readonly("num_passed",
         [](py::object& self_obj) -> py::array_t<size_t> {
         GroupIntronsGenerator& self = self_obj.cast<GroupIntronsGenerator&>();
         return ArrayFromVectorAndOffset<size_t, size_t>(
             self.num_passed(), 0, self_obj);
         },
+        py::call_guard<py::gil_scoped_release>(),
         "Number of experiments or which each intron has passed")
-    .def("__len__", &GroupIntronsGenerator::size)
+    .def("__len__", &GroupIntronsGenerator::size,
+        py::call_guard<py::gil_scoped_release>())
     .def("add_experiment", &GroupIntronsGenerator::AddExperiment,
+        py::call_guard<py::gil_scoped_release>(),
         "Add SJIntronsBins to build group",
         py::arg("sj"),
         py::arg("thresholds") = DEFAULT_THRESHOLDS)
     .def("update_introns", &GroupIntronsGenerator::UpdateInplace,
+        py::call_guard<py::gil_scoped_release>(),
         "Pass introns that pass min-experiments in place, reset for next group",
         py::arg("min_experiments") = DEFAULT_BUILD_MINEXPERIMENTS);
 }
@@ -1630,24 +1790,30 @@ void init_pyPassedJunctionsGen(pyPassedJunctionsGen_t& pyPassedJunctionsGen) {
   pyPassedJunctionsGen
     .def(
       py::init<const std::shared_ptr<majiq::GeneJunctions>&>(),
+      py::call_guard<py::gil_scoped_release>(),
       R"pbdoc(
       Accumulator of GroupJunctionsGenerator for different build groups
       )pbdoc",
       py::arg("junctions"))
     .def("add_group", &majiq::PassedJunctionsGenerator::AddGroup,
+        py::call_guard<py::gil_scoped_release>(),
         "Combine passed junctions from build group of experiments",
         py::arg("group"),
         py::arg("min_experiments") = DEFAULT_BUILD_MINEXPERIMENTS)
     .def("get_passed", &majiq::PassedJunctionsGenerator::PassedJunctions,
+        py::call_guard<py::gil_scoped_release>(),
         "Get static, array-based representation of passed junctions",
         py::arg("denovo_simplified"))
     .def_property_readonly("num_known",
         &majiq::PassedJunctionsGenerator::num_annotated,
+        py::call_guard<py::gil_scoped_release>(),
         "Number of junctions known when constructed")
     .def_property_readonly("num_denovo",
         &majiq::PassedJunctionsGenerator::num_denovo,
+        py::call_guard<py::gil_scoped_release>(),
         "Number of denovo junctions passing filters, previously not known")
-    .def("__len__", &majiq::PassedJunctionsGenerator::size);
+    .def("__len__", &majiq::PassedJunctionsGenerator::size,
+        py::call_guard<py::gil_scoped_release>());
 }
 
 void init_SpliceGraph(py::class_<majiq::SpliceGraph>& pySpliceGraph) {
@@ -1660,6 +1826,7 @@ void init_SpliceGraph(py::class_<majiq::SpliceGraph>& pySpliceGraph) {
                   const std::shared_ptr<majiq::Exons>&,
                   const std::shared_ptr<majiq::GeneJunctions>&,
                   const std::shared_ptr<majiq::GeneIntrons>&>(),
+        py::call_guard<py::gil_scoped_release>(),
         R"pbdoc(
         Initialize splicegraph from components
 
@@ -1696,6 +1863,7 @@ void init_SpliceGraph(py::class_<majiq::SpliceGraph>& pySpliceGraph) {
           // convert to splicegraph
           return gff3_models.models_.ToSpliceGraph(process_ir);
         },
+        py::call_guard<py::gil_scoped_release>(),
         "Create splicegraph from input GFF3 file",
         py::arg("gff3_path"),
         py::arg("process_ir") = DEFAULT_BUILD_PROCESS_IR,
@@ -1703,11 +1871,14 @@ void init_SpliceGraph(py::class_<majiq::SpliceGraph>& pySpliceGraph) {
             "new_majiq._default_gff3_types()"))
     // XXX debug
     .def_static("infer_exons", &SpliceGraph::InferExons,
+        py::call_guard<py::gil_scoped_release>(),
         "Infer exons from base annotated exons and junctions",
         py::arg("base_exons"), py::arg("junctions"))
     .def("make_group_junctions", &SpliceGraph::MakeGroupGenerator,
+        py::call_guard<py::gil_scoped_release>(),
         "Create GroupJunctionsGenerator for the splicegraph junctions/exons")
     .def("make_build_junctions", &SpliceGraph::MakePassedGenerator,
+        py::call_guard<py::gil_scoped_release>(),
         "Create PassedJunctionsGenerator for splicegraph junctions")
     .def("close_to_annotated_exon",
         [](SpliceGraph& sg, size_t gene_idx, position_t x, bool to_following) {
@@ -1720,28 +1891,36 @@ void init_SpliceGraph(py::class_<majiq::SpliceGraph>& pySpliceGraph) {
           ? majiq::detail::CloseToFollowingAnnotatedExon(exons, g, x)
           : majiq::detail::CloseToPrecedingAnnotatedExon(exons, g, x);
         },
+        py::call_guard<py::gil_scoped_release>(),
         "True if position close to following/preceding annotated exon in gene",
         py::arg("gene_idx"),
         py::arg("x"),
         py::arg("to_following") = true)
     // access underlying data
     .def_property_readonly("_exons", &SpliceGraph::exons,
+        py::call_guard<py::gil_scoped_release>(),
         "Access the splicegraph's exons")
     .def_property_readonly("_introns", &SpliceGraph::introns,
+        py::call_guard<py::gil_scoped_release>(),
         "Access the splicegraph's introns")
     .def_property_readonly("_junctions", &SpliceGraph::junctions,
+        py::call_guard<py::gil_scoped_release>(),
         "Access the splicegraph's junctions")
     .def_property_readonly("_genes", &SpliceGraph::genes,
+        py::call_guard<py::gil_scoped_release>(),
         "Access the splicegraph's genes")
     .def_property_readonly("_contigs", &SpliceGraph::contigs,
+        py::call_guard<py::gil_scoped_release>(),
         "Access the splicegraph's contigs")
     .def_property_readonly("_exon_connections", &SpliceGraph::exon_connections,
+        py::call_guard<py::gil_scoped_release>(),
         "Access the splicegraph's exon connections")
     // get sj introns on which coverage may be read
     .def("sj_introns", [](SpliceGraph& sg, bool stranded) {
         return majiq::SJIntrons::FromGeneExonsAndIntrons(
             *sg.exons(), *sg.introns(), stranded);
         },
+        py::call_guard<py::gil_scoped_release>(),
         "Get contig introns (by strand or not) for splicegraph",
         py::arg("stranded"))
     // that's really for debugging because it depends on experiment. Instead,
@@ -1752,6 +1931,7 @@ void init_SpliceGraph(py::class_<majiq::SpliceGraph>& pySpliceGraph) {
         return majiq::SJIntronsBins::FromBam(infile, num_bins, *sg.exons(),
             *sg.introns(), exp_strandness, nthreads);
         },
+        py::call_guard<py::gil_scoped_release>(),
         R"pbdoc(
         Load introns and per-bin counts for an aligned BAM file
 
@@ -1776,7 +1956,8 @@ void init_SpliceGraph(py::class_<majiq::SpliceGraph>& pySpliceGraph) {
         std::ostringstream oss;
         oss << sg;
         return oss.str();
-        });
+        },
+        py::call_guard<py::gil_scoped_release>());
 }
 
 void init_pyExperimentThresholds(
@@ -1787,6 +1968,7 @@ void init_pyExperimentThresholds(
   using majiq::real_t;
   pyExperimentThresholds
     .def(py::init<junction_ct_t, junction_ct_t, junction_pos_t, real_t, real_t, real_t>(),
+        py::call_guard<py::gil_scoped_release>(),
         "per-experiment thresholds for junctions",
         py::arg("minreads") = DEFAULT_BUILD_MINREADS,
         py::arg("mindenovo") = DEFAULT_BUILD_MINDENOVO,
@@ -1798,23 +1980,29 @@ void init_pyExperimentThresholds(
           = DEFAULT_BUILD_MATCH_INTRON_PROBABILITY)
     .def_property_readonly("minreads",
         [](const ExperimentThresholds& x) { return x.minreads_; },
+        py::call_guard<py::gil_scoped_release>(),
         "Minimum number of reads for an annotated junction to pass")
     .def_property_readonly("mindenovo",
         [](const ExperimentThresholds& x) { return x.mindenovo_; },
+        py::call_guard<py::gil_scoped_release>(),
         "Minimum number of reads for a denovo junction to pass")
     .def_property_readonly("minpos",
         [](const ExperimentThresholds& x) { return x.minpos_; },
+        py::call_guard<py::gil_scoped_release>(),
         "Minimum number of nonzero positions for a junction to pass")
     .def_property_readonly("max_pctbins",
         [](const ExperimentThresholds& x) { return x.max_pctbins_; },
+        py::call_guard<py::gil_scoped_release>(),
         "Maximum percentage of bins to require coverage in for intron to pass")
     .def_property_readonly("junction_acceptance_probability",
         [](const ExperimentThresholds& x) {
         return x.junction_acceptance_probability_; },
+        py::call_guard<py::gil_scoped_release>(),
         "Set intron thresholds to match junction readrate with probability")
     .def_property_readonly("intron_acceptance_probability",
         [](const ExperimentThresholds& x) {
         return x.intron_acceptance_probability_; },
+        py::call_guard<py::gil_scoped_release>(),
         "Intron thresholds pass per-position readrate with probability")
     .def("__repr__", [](const ExperimentThresholds& x) -> std::string {
         std::ostringstream oss;
@@ -1828,9 +2016,11 @@ void init_pyExperimentThresholds(
             << x.intron_acceptance_probability_
             << ")";
         return oss.str();
-        })
+        },
+        py::call_guard<py::gil_scoped_release>())
     .def("intron_thresholds_generator",
         &ExperimentThresholds::intron_thresholds_generator,
+        py::call_guard<py::gil_scoped_release>(),
         R"pbdoc(
         Create IntronThresholdsGenerator for intron thresholds by length
 
@@ -1858,6 +2048,7 @@ void init_pyIntronThresholdsGenerator(
         auto f = [&gen](junction_pos_t x) { return gen(x); };
         return py::vectorize(f)(intron_lengths);
         },
+        py::call_guard<py::gil_scoped_release>(),
         "Get intron thresholds for specified intron lengths",
         py::arg("intron_lengths"));
 }
