@@ -1,4 +1,6 @@
-from new_majiq.internals import ExperimentStrandness, ExperimentThresholds, set_seed
+from new_majiq.internals import ExperimentStrandness, ExperimentThresholds
+from new_majiq.internals import rng_resize as _internals_rng_resize
+from new_majiq.internals import rng_seed as _internals_rng_seed
 
 try:
     from new_majiq._version import version as __version__
@@ -37,12 +39,42 @@ from .SpliceGraph import SpliceGraph
 # coverage on splicegraph or events
 from .SpliceGraphReads import MultiSpliceGraphReads, SpliceGraphReads
 
+
+def rng_seed(seed: int) -> None:
+    """Set seed for random number generator pools
+
+    Set seed for random number generator pools. There are two separate rng
+    pools in new-majiq, one for nm.beta_mixture, and another for nm.internals.
+    This is a helper function that sets the seed for both pools. Note that
+    this means that random number generators from these modules could be
+    correlated if used in the same session (we offer this convenience function
+    because we think that generating LSVCoverage and sampling from beta
+    mixtures in the same session is a rare use case).
+    """
+    _internals_rng_seed(seed)
+    beta_mixture.rng_seed(seed)
+    return
+
+
+def rng_resize(n: int) -> None:
+    """Resize rng pools to allow n simultaneous threads
+
+    Resize rng pools to allow n simultaneous threads. There are two separate
+    rng pools in new-majiq, one for nm.beta_mixture, and another for
+    nm.internals. This is a helper function that resizes both pools.
+    """
+    _internals_rng_resize(n)
+    beta_mixture.rng_resize(n)
+    return
+
+
 __all__ = [
     "beta_mixture",
     "stats",
     "ExperimentStrandness",
     "ExperimentThresholds",
-    "set_seed",
+    "rng_resize",
+    "rng_seed",
     "__version__",
     "constants",
     "Events",

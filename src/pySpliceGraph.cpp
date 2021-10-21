@@ -42,9 +42,11 @@
 
 #include "internals/ExperimentThresholds.hpp"
 
+#include <majiqinclude/ResourcePool.hpp>
+
 // NOTE: right now we have a global PRNG, which is not threadsafe, but
 // multithreading is really only used by htslib internally at this time
-static majiq::rng_t rng;  // PRNG for new_majiq
+static MajiqInclude::ResourcePool<majiq::rng_t> global_rng_pool{};
 
 // default value of ExperimentThresholds
 static const auto DEFAULT_THRESHOLDS = majiq::ExperimentThresholds(
@@ -938,11 +940,15 @@ void init_PyEventsCoverage(pyEventsCoverage_t& pyEventsCoverage) {
           const majiq::SJIntronsBins& sj_introns,
           size_t num_bootstraps,
           majiq::real_t pvalue_threshold) {
+        // acquire ownership of random number generator
+        // NOTE: need to keep pointer in scope to maintain ownership
+        // (i.e. don't replace with *global_rng_pool.acquire())
+        auto gen_ptr = global_rng_pool.acquire();
+        auto& gen = *gen_ptr;
         return EventsCoverage::FromSJ(events, sj_junctions, sj_introns,
-            num_bootstraps, rng, pvalue_threshold);
+            num_bootstraps, gen, pvalue_threshold);
         },
-        // TODO(jaicher): make rng threadsafe
-        // py::call_guard<py::gil_scoped_release>(),
+        py::call_guard<py::gil_scoped_release>(),
         "Obtain coverage for events from SJ junctions and introns",
         py::arg("events"),
         py::arg("sj_junctions"),
@@ -2054,11 +2060,14 @@ void init_pyIntronThresholdsGenerator(
 }
 
 void init_SpliceGraphAll(py::module_& m) {
-  rng = majiq::rng_t{};  // initialize PRNG
-  m.def("set_seed",
-      [](size_t x) { rng.seed(x); },
-      "set random seed for new_majiq random number generation",
+  m.def("rng_seed",
+      [](int64_t x) { global_rng_pool.seed(x); },
+      "Set seed for pool of random number generators in new_majiq.internals",
       py::arg("seed"));
+  m.def("rng_resize",
+      [](int64_t n) { global_rng_pool.resize(n); },
+      "Resize pool of random number generators for at least n simultaneous threads",
+      py::arg("n"));
 
   using majiq::Contigs;
   using majiq::Genes;
