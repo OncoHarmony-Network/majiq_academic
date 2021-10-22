@@ -190,6 +190,12 @@ class SJJunctionsBins(SJBinsReads):
         return
 
     @classmethod
+    def original_path_from_zarr(cls, path: Union[str, Path]) -> str:
+        """Extract bam path from zarr with SJJunctionsBins"""
+        with xr.open_zarr(path, group=constants.NC_SJJUNCTIONSBINS) as df:
+            return df.original_path
+
+    @classmethod
     def from_zarr(cls, path: Union[str, Path]) -> "SJJunctionsBins":
         """Load SJJunctionsBins from zarr format"""
         regions = SJJunctions.from_zarr(path)

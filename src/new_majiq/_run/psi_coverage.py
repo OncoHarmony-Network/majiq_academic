@@ -7,6 +7,7 @@ Author: Joseph K Aicher
 """
 
 import argparse
+import multiprocessing.dummy as mp
 from pathlib import Path
 from typing import List, Optional
 
@@ -14,6 +15,7 @@ import new_majiq as nm
 import new_majiq.constants as constants
 from new_majiq._run._majiq_args import check_nonnegative_factory
 from new_majiq._run._run import GenericSubcommand
+from new_majiq.experiments import bam_experiment_name
 from new_majiq.logger import get_logger
 
 DESCRIPTION = (
@@ -39,6 +41,13 @@ def add_args(parser: argparse.ArgumentParser) -> None:
         type=Path,
         nargs="+",
         help="Path to SJ coverage files for experiments",
+    )
+    parser.add_argument(
+        "--nthreads",
+        type=check_nonnegative_factory(int, True),
+        default=constants.DEFAULT_BAM_NTHREADS,
+        help="Number of threads used for simultaneous processing of multiple"
+        " input SJ files (default: %(default)s)",
     )
     thresholds = parser.add_argument_group("Thresholds for quantifiability")
     thresholds.add_argument(
@@ -147,13 +156,11 @@ def run(args: argparse.Namespace) -> None:
                 ).exon_connections.lsvs()
             ).unique_events_mask
         ]
-    for ndx, sj_path in enumerate(args.sj, 1):
-        log.info(
-            f"Loading SJ coverage from {sj_path.resolve()} ({ndx} / {len(args.sj)})"
-        )
+
+    # define how to get from sj path to psicoverage file
+    def sj_to_psicov(sj_path: Path) -> nm.PsiCoverage:
         sj_junctions = nm.SJJunctionsBins.from_zarr(sj_path)
         sj_introns = nm.SJIntronsBins.from_zarr(sj_path)
-        log.info("Converting to LSV coverage")
         lsv_coverage = nm.EventsCoverage.from_events_and_sj(
             lsvs,
             sj_junctions,
@@ -161,14 +168,50 @@ def run(args: argparse.Namespace) -> None:
             num_bootstraps=args.num_bootstraps,
             pvalue_threshold=args.stack_pvalue_threshold,
         )
-        log.info("Converting to PSI coverage")
-        psi_coverage = nm.PsiCoverage.from_events_coverage(
+        return nm.PsiCoverage.from_events_coverage(
             lsv_coverage, args.minreads, args.minbins
         )
+
+    if len(args.sj) == 1:
+        # if there is only one file, don't bother with threads
+        log.info(f"Inferring PSI coverage from {args.sj[0]}")
+        psi_coverage = sj_to_psicov(args.sj[0])
         log.info(f"Saving PSI coverage to {args.psi_coverage.resolve()}")
-        psi_coverage.to_zarr(
-            args.psi_coverage, append=(ndx > 1), consolidated=(ndx == len(args.sj))
+        psi_coverage.to_zarr(args.psi_coverage)
+    else:
+        # precompute prefixes to use
+        log.info("Precomputing prefixes corresponding to input SJ files")
+        prefixes = [
+            bam_experiment_name(nm.SJJunctionsBins.original_path_from_zarr(x))
+            for x in args.sj
+        ]
+        # we have more than one input file
+        log.info(
+            f"Saving event information and metadata to {args.psi_coverage.resolve()}"
         )
+        nm.PsiCoverage.to_zarr_slice_init(
+            args.psi_coverage,
+            lsvs.save_df,
+            prefixes,
+            args.num_bootstraps,
+            psicov_attrs=dict(
+                sj=[str(x.resolve()) for x in args.sj],
+                minreads=args.minreads,
+                minbins=args.minbins,
+            ),
+        )
+        nm.rng_resize(args.nthreads)  # allow for as many rngs as there are threads
+        with mp.Pool(args.nthreads) as p:
+            jobs = p.imap_unordered(
+                lambda x: (
+                    sj_to_psicov(x[1]).to_zarr_slice(
+                        args.psi_coverage, slice(x[0], 1 + x[0])
+                    )
+                ),
+                list(enumerate(args.sj)),
+            )
+            for ndx, _ in enumerate(jobs, 1):
+                log.info(f"Finished processing {ndx} / {len(args.sj)} SJ files")
     return
 
 

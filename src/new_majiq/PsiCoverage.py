@@ -11,8 +11,20 @@ Author: Joseph K Aicher
 
 from functools import cached_property
 from pathlib import Path
-from typing import Dict, Final, List, Optional, Sequence, Tuple, Union, cast
+from typing import (
+    Any,
+    Dict,
+    Final,
+    Hashable,
+    List,
+    Optional,
+    Sequence,
+    Tuple,
+    Union,
+    cast,
+)
 
+import dask.array as da
 import numpy as np
 import xarray as xr
 
@@ -524,6 +536,30 @@ class PsiCoverage(object):
         # return resulting PsiCoverage object
         return PsiCoverage(df, self.events)
 
+    def _save_df(
+        self, ec_chunksize: int = 8192, remove_bam_attrs: bool = False
+    ) -> xr.Dataset:
+        """Prepare dataset of psicoverage that will be saved
+
+        Prepare dataset of psicoverage that will be saved. This sets the
+        chunking, clears any encodings from before, removes attrs that have to
+        do with BAM, etc.
+        """
+        USE_CHUNKS = dict(
+            ec_idx=ec_chunksize, bootstrap_replicate=None, offset_idx=None
+        )
+        save_df = self.df.drop_vars(["event_size", "lsv_idx"])
+        if save_df.sizes["ec_idx"] > 0:
+            save_df = save_df.chunk(USE_CHUNKS)  # type: ignore[arg-type]
+        # clear any previous encodings from before, before saving
+        for v in save_df.variables.values():
+            v.encoding.clear()
+        # remove attributes referring to bam?
+        if remove_bam_attrs:
+            for k in [x for x in save_df.attrs.keys() if str(x).startswith("bam")]:
+                save_df.attrs.pop(k, None)
+        return save_df
+
     def to_zarr(
         self,
         path: Union[str, Path],
@@ -564,19 +600,8 @@ class PsiCoverage(object):
         If we know we are processing at most a few samples at a time, this
         should be made higher.
         """
-        USE_CHUNKS = dict(
-            ec_idx=ec_chunksize, bootstrap_replicate=None, offset_idx=None
-        )
-        save_df = self.df.drop_vars(["event_size", "lsv_idx"])
-        if save_df.sizes["ec_idx"] > 0:
-            save_df = save_df.chunk(USE_CHUNKS)  # type: ignore[arg-type]
-        # clear any previous encodings from before, before saving
-        for v in save_df.variables.values():
-            v.encoding.clear()
+        save_df = self._save_df(ec_chunksize=ec_chunksize, remove_bam_attrs=append)
         if append:
-            # remove attributes referring to bam
-            for k in [x for x in save_df.attrs.keys() if str(x).startswith("bam")]:
-                save_df.attrs.pop(k, None)
             save_df.to_zarr(
                 path,
                 append_dim="prefix",
@@ -590,10 +615,118 @@ class PsiCoverage(object):
                 group=constants.NC_PSICOVERAGE,
                 consolidated=False,
             )
-            self.events.to_zarr(
+            self.events.chunk(self.events.sizes).to_zarr(
                 path, mode="a", group=constants.NC_EVENTS, consolidated=consolidated
             )
         return
+
+    def to_zarr_slice(
+        self,
+        path: Union[str, Path],
+        prefix_slice: slice,
+        ec_chunksize: int = 8192,
+    ) -> None:
+        """Save PsiCoverage to specified path for specified slice on prefix
+
+        Save PsiCoverage to specified path for specified slice. Typically run
+        after PsiCoverage.to_zarr_slice_init()
+        """
+        self._save_df(ec_chunksize=ec_chunksize).drop_vars("prefix").pipe(
+            lambda x: x.drop_vars(
+                [k for k, v in x.variables.items() if "prefix" not in v.dims]
+            )
+        ).to_zarr(
+            path, group=constants.NC_PSICOVERAGE, region=dict(prefix=prefix_slice)
+        )
+        return
+
+    @classmethod
+    def to_zarr_slice_init(
+        cls,
+        path: Union[str, Path],
+        events_df: xr.Dataset,
+        prefixes: List[str],
+        num_bootstraps: int,
+        ec_chunksize: int = 8192,
+        cov_dtype: type = np.float32,
+        psicov_attrs: Dict[Hashable, Any] = dict(),
+    ) -> None:
+        """Init zarr for PsiCoverage over many prefixes for multithreaded write
+
+        Initialize zarr for PsiCoverage over many prefixes. Saves all
+        information except dimensions that are prefix-specific. This enables
+        multithreaded (or multiprocess) write with to_zarr_regions
+
+        Parameters
+        ----------
+        path: Union[str, Path]
+            Path for output Zarr for psicoverage output
+        events_df: xr.Dataset
+            Dataset encoding psicoverage events (Events.save_df,
+            PsiCoverage.events, etc.)
+        prefixes: List[str]
+            Values for the prefix dimension coordinate
+        num_prefixes: int
+            Number of prefixes that will be filled in
+        num_bootstraps: int
+            Number of bootstrap replicates that will be used
+        ec_chunksize: int
+            How to chunk event connections to prevent memory from getting to
+            large when loading many samples simultaneously
+        cov_dtype: type
+            What type to use for psi/total_coverage arrays
+        psicov_attrs: Dict[Hashable, Any]
+            Attributes to include
+        """
+        # force events to be saved as single chunk (no benefit for chunking here)
+        events_df = events_df.chunk(events_df.sizes)
+        # save events
+        events_df.to_zarr(path, mode="w", group=constants.NC_EVENTS, consolidated=False)
+        # dims for skeleton
+        raw_dims = ("prefix", "ec_idx")
+        bootstrap_dims = (*raw_dims, "bootstrap_replicate")
+        # shapes for skeleton
+        raw_shape = (len(prefixes), events_df.sizes["ec_idx"])
+        bootstrap_shape = (*raw_shape, num_bootstraps)
+        # chunksizes for skeleton
+        raw_chunks = (1, ec_chunksize)
+        bootstrap_chunks = (*raw_chunks, None)
+        # arrays for skeleton
+        raw_arr = da.empty(raw_shape, dtype=cov_dtype, chunks=raw_chunks)
+        passed_arr = da.empty(raw_shape, dtype=bool, chunks=raw_chunks)
+        bootstrap_arr = da.empty(
+            bootstrap_shape, dtype=cov_dtype, chunks=bootstrap_chunks
+        )
+        # save metadata for skeleton
+        xr.Dataset(
+            dict(
+                bootstrap_psi=(bootstrap_dims, bootstrap_arr),
+                bootstrap_total=(bootstrap_dims, bootstrap_arr),
+                event_passed=(raw_dims, passed_arr),
+                raw_psi=(raw_dims, raw_arr),
+                raw_total=(raw_dims, raw_arr),
+            ),
+        ).to_zarr(
+            path,
+            mode="a",
+            compute=False,
+            group=constants.NC_PSICOVERAGE,
+            consolidated=False,
+        )
+        # save offsets, prefixes, and attributes
+        add_offsets = (
+            events_df[["_offsets"]]
+            .reset_coords()
+            .astype(int)
+            .set_coords("_offsets")
+            .rename_dims(e_offsets_idx="offset_idx")
+            .rename_vars(_offsets="lsv_offsets")
+            .assign_coords(prefix=("prefix", prefixes))
+        )
+        add_offsets.attrs = psicov_attrs  # overwrite attrs with what we want
+        add_offsets.to_zarr(
+            path, mode="a", group=constants.NC_PSICOVERAGE, consolidated=True
+        )
 
     @cached_property
     def num_passed(self) -> xr.DataArray:
