@@ -14,6 +14,7 @@ from typing import Any, Dict, List, Optional
 
 import numpy as np
 import pandas as pd
+from dask.distributed import Client
 
 import new_majiq as nm
 from new_majiq._run._majiq_args import (
@@ -99,6 +100,19 @@ def add_args(parser: argparse.ArgumentParser) -> None:
         help="Quantiles of PSI (besides median) per group to report"
         " (default: %(default)s)",
     )
+    parser.add_argument(
+        "--nthreads",
+        type=check_nonnegative_factory(int, True),
+        default=nm.constants.DEFAULT_QUANTIFY_NTHREADS,
+        help="Number of threads used by Dask scheduler to quantify in chunks"
+        " (default: %(default)s)",
+    )
+    parser.add_argument(
+        "--memory-limit",
+        type=str,
+        default="auto",
+        help="Memory limit to pass to dask cluster (default: %(default)s)",
+    )
 
     psisample_settings = parser.add_argument_group(
         "Settings for repeated testing on posterior samples"
@@ -138,6 +152,14 @@ def run(args: argparse.Namespace) -> None:
     use_stats = sorted(set(args.stats))
 
     log = get_logger()
+    client = Client(
+        n_workers=1,
+        threads_per_worker=args.nthreads,
+        dashboard_address=None,
+        memory_limit=args.memory_limit,
+    )
+    log.info(client)
+    nm.rng_resize(args.nthreads)
     metadata: Dict[str, Any] = dict()
     metadata["command"] = " ".join(sys.argv)
     metadata["version"] = nm.__version__

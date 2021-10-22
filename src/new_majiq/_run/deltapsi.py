@@ -15,6 +15,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 import pandas as pd
+from dask.distributed import Client
 
 import new_majiq as nm
 from new_majiq._run._majiq_args import (
@@ -87,6 +88,19 @@ def add_args(parser: argparse.ArgumentParser) -> None:
         type=argparse.FileType("w"),
         default=sys.stdout,
         help="Path for output TSV file (default: stdout)",
+    )
+    parser.add_argument(
+        "--nthreads",
+        type=check_nonnegative_factory(int, True),
+        default=nm.constants.DEFAULT_QUANTIFY_NTHREADS,
+        help="Number of threads used by Dask scheduler to quantify in chunks"
+        " (default: %(default)s)",
+    )
+    parser.add_argument(
+        "--memory-limit",
+        type=str,
+        default="auto",
+        help="Memory limit to pass to dask cluster (default: %(default)s)",
     )
 
     quant_settings = parser.add_argument_group("Quantification settings")
@@ -186,6 +200,13 @@ def run(args: argparse.Namespace) -> None:
         raise ValueError(f"Unable to find input splicegraph {args.splicegraph}")
 
     log = get_logger()
+    client = Client(
+        n_workers=1,
+        threads_per_worker=args.nthreads,
+        dashboard_address=None,
+        memory_limit=args.memory_limit,
+    )
+    log.info(client)
     metadata: Dict[str, Any] = dict()
     metadata["command"] = " ".join(sys.argv)
     metadata["version"] = nm.__version__
