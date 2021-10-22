@@ -7,7 +7,7 @@ Author: Joseph K Aicher
 """
 
 from pathlib import Path
-from typing import Final, Union
+from typing import Final, List, Optional, Union
 
 import numpy as np
 import xarray as xr
@@ -15,6 +15,8 @@ import xarray as xr
 import new_majiq.constants as constants
 from new_majiq._workarounds import _load_zerodim_variables
 from new_majiq.Events import Events
+from new_majiq.ExonConnections import ExonConnections
+from new_majiq.experiments import bam_experiment_name
 from new_majiq.GeneIntrons import GeneIntrons
 from new_majiq.GeneJunctions import GeneJunctions
 from new_majiq.internals import EventsCoverage as _EventsCoverage
@@ -102,6 +104,83 @@ class EventsCoverage(object):
             group=constants.NC_EVENTSCOVERAGE,
             consolidated=consolidated,
         )
+        return
+
+    def to_legacy_majiq(
+        self, path: Union[str, Path], exon_connections: Optional[ExonConnections] = None
+    ) -> None:
+        """Save EventsCoverage to *.majiq file compatible with MAJIQ v2
+
+        Parameters
+        ----------
+        path: Union[str, Path]
+            Where to save output file
+        exon_connections: Optional[ExonConnections]
+            If specified, use exon connections to obtain full lsv descriptions
+        """
+        event_id: List[str]
+        event_description: List[str]
+        if exon_connections is None:
+            gene_id = np.array(self.events.genes.gene_id)[
+                self.events.exons.gene_idx[self.events.ref_exon_idx]
+            ]
+            ref_start = self.events.exons.start[self.events.ref_exon_idx]
+            ref_end = self.events.exons.end[self.events.ref_exon_idx]
+            event_id = [
+                f"{g}:{t.decode('utf-8')}:"
+                f"{s if s >= 0 else 'na'}-{e if e >= 0 else 'na'}"
+                for g, t, s, e in zip(
+                    gene_id, self.events.event_type, ref_start, ref_end
+                )
+            ]
+            event_description = [
+                f"{t.decode('utf-8')}|na{'|i' if has_intron else ''}"
+                for t, has_intron in zip(
+                    self.events.event_type,
+                    self.events.is_intron[self.events.ec_idx_end - 1],
+                )
+            ]
+        else:
+            event_id = exon_connections.event_id(
+                self.events.ref_exon_idx, self.events.event_type
+            )
+            event_description = exon_connections.event_description(
+                self.events.ref_exon_idx, self.events.event_type
+            )
+        # arrays in output files
+        lsv_types = np.array(
+            [
+                (eid.encode(), edesc.encode())
+                for eid, edesc in zip(event_id, event_description)
+            ],
+            dtype=np.dtype("|S250, |S250"),
+        )
+        meta = np.array(
+            [(bam_experiment_name(self.bam_path).encode(), self.bam_version.encode())],
+            dtype=np.dtype("|S250, |S25"),
+        )
+        coverage = self.bootstraps
+        junc_info = np.array(
+            [
+                (eid, start, end, reads, bins)
+                for eid, start, end, reads, bins in zip(
+                    np.repeat(event_id, np.diff(self.events._offsets.astype(int))),
+                    self.events.connection_start(),
+                    self.events.connection_end(),
+                    self.numreads,
+                    self.numbins,
+                )
+            ],
+            dtype=np.dtype("|S250, u4, u4, f4, f4"),
+        )
+        with open(path, "w+b") as handle:
+            np.savez(
+                handle,
+                lsv_types=lsv_types,
+                junc_info=junc_info,
+                coverage=coverage,
+                meta=meta,
+            )
         return
 
     @classmethod
