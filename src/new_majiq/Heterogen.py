@@ -131,6 +131,7 @@ class Heterogen(object):
                 ["stats"],
             ],
             output_core_dims=[["stats"], ["stats", "pval_quantile"]],
+            output_dtypes=[np.float64, np.float64],
             dask="parallelized",
         )
         ds = xr.Dataset(
