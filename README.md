@@ -126,8 +126,32 @@ new-majiq sj bam/example1.bam results/annotated.splicegraph results/example1.sj
 new-majiq sj bam/example2.bam results/annotated.splicegraph results/example2.sj
 
 # build to make results/combined.splicegraph
-new-majiq build results/annotated.splicegraph results/combined.splicegraph --sjs results/example1.sj results/example2.sj
+new-majiq build results/annotated.splicegraph results/combined.splicegraph \
+    --sjs results/example1.sj results/example2.sj
 
-# get psi coverage
-# TODO
+# get psi coverage (similar to majiq files in v2)
+new-majiq psi-coverage \
+    results/combined.splicegraph results/example1.psicov results/example1.sj
+new-majiq psi-coverage \
+    results/combined.splicegraph results/example2.psicov results/example2.sj
 ```
+
+
+## MAJIQ Quantifiers
+
+There are 3 quantifiers available:
+
++ `quantify` (similar to PSI): quantify as independent experiments or as
+  aggregate group (if min-experiments specified
++ `deltapsi` compare aggregate coverage between two groups
++ `heterogen` compare distribution of independent quantifications between two
+  groups
+
+They take PsiCoverage files as input. They optionally take splicegraph
+information (generally recommended). By default they write TSV output to stdout.
+Run `new-majiq {quantify,deltapsi,heterogen} --help` for more details.
+
+
+## Moccasin implementation
+
+To be explained later

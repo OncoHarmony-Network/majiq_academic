@@ -153,7 +153,7 @@ def run(args: argparse.Namespace) -> None:
         # numeric columns need at most 4 digits precision
         .round(4)
         # save result in TSV format
-        .to_csv(args.output_tsv, sep="\t", index=False)
+        .to_csv(args.output_tsv, sep="\t", index=not args.splicegraph)
     )
     return
 
