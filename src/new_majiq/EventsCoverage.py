@@ -20,8 +20,7 @@ from new_majiq.experiments import bam_experiment_name
 from new_majiq.GeneIntrons import GeneIntrons
 from new_majiq.GeneJunctions import GeneJunctions
 from new_majiq.internals import EventsCoverage as _EventsCoverage
-from new_majiq.SJIntronsBins import SJIntronsBins
-from new_majiq.SJJunctionsBins import SJJunctionsBins
+from new_majiq.SJExperiment import SJExperiment
 
 
 class EventsCoverage(object):
@@ -207,26 +206,18 @@ class EventsCoverage(object):
     def from_events_and_sj(
         cls,
         events: Events,
-        sj_junctions: SJJunctionsBins,
-        sj_introns: SJIntronsBins,
+        sj: SJExperiment,
         num_bootstraps: int = constants.DEFAULT_COVERAGE_NUM_BOOTSTRAPS,
         pvalue_threshold: float = constants.DEFAULT_COVERAGE_STACK_PVALUE,
     ) -> "EventsCoverage":
-        # only accept if bam_path/version are same in sj_junctions/introns
-        if sj_junctions.original_path != sj_introns.original_path:
-            raise ValueError(
-                "sj_junctions and sj_introns do not share original bam path"
-            )
-        if sj_junctions.original_version != sj_introns.original_version:
-            raise ValueError("sj_junctions and sj_introns not from same majiq version")
         return EventsCoverage(
             _EventsCoverage.from_sj(
                 events._events,
-                sj_junctions._sj_junctionsbins,
-                sj_introns._sj_intronsbins,
+                sj.junctions._sj_junctionsbins,
+                sj.introns._sj_intronsbins,
                 num_bootstraps,
                 pvalue_threshold,
             ),
-            sj_junctions.original_path,
-            sj_junctions.original_version,
+            sj.original_path,
+            sj.original_version,
         )

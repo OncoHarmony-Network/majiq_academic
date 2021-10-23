@@ -453,8 +453,7 @@ def do_simplify(
                 nm.SpliceGraphReads.from_connections_and_sj(
                     sg.introns,
                     sg.junctions,
-                    nm.SJIntronsBins.from_zarr(sj),
-                    nm.SJJunctionsBins.from_zarr(sj),
+                    nm.SJExperiment.from_zarr(sj),
                 ),
                 min_psi=simplify_minpsi,
                 minreads_annotated=simplify_minreads_annotated,

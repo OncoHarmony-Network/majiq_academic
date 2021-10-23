@@ -28,6 +28,7 @@ from .Heterogen import Heterogen
 from .PsiCoverage import PsiCoverage
 
 # how we measure junctions and introns from BAM files
+from .SJExperiment import SJExperiment
 from .SJIntrons import SJIntrons
 from .SJIntronsBins import SJIntronsBins
 from .SJJunctions import SJJunctions
@@ -88,6 +89,7 @@ __all__ = [
     "DPsiPrior",
     "DeltaPsi",
     "Heterogen",
+    "SJExperiment",
     "SJIntrons",
     "SJIntronsBins",
     "SJJunctions",

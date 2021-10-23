@@ -159,17 +159,13 @@ def run(args: argparse.Namespace) -> None:
 
     # define how to get from sj path to psicoverage file
     def sj_to_psicov(sj_path: Path) -> nm.PsiCoverage:
-        sj_junctions = nm.SJJunctionsBins.from_zarr(sj_path)
-        sj_introns = nm.SJIntronsBins.from_zarr(sj_path)
-        lsv_coverage = nm.EventsCoverage.from_events_and_sj(
+        return nm.PsiCoverage.from_sj_lsvs(
+            nm.SJExperiment.from_zarr(sj_path),
             lsvs,
-            sj_junctions,
-            sj_introns,
+            minreads=args.minreads,
+            minbins=args.minbins,
             num_bootstraps=args.num_bootstraps,
             pvalue_threshold=args.stack_pvalue_threshold,
-        )
-        return nm.PsiCoverage.from_events_coverage(
-            lsv_coverage, args.minreads, args.minbins
         )
 
     if len(args.sj) == 1:

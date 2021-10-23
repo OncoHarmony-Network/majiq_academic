@@ -57,14 +57,10 @@ def run(args: argparse.Namespace) -> None:
     log.info(f"Loading input splicegraph from {args.splicegraph.resolve()}")
     sg = nm.SpliceGraph.from_zarr(args.splicegraph)
     log.info(f"Loading input experiment from {args.sj.resolve()}")
-    sj_junctions = nm.SJJunctionsBins.from_zarr(args.sj)
-    sj_introns = nm.SJIntronsBins.from_zarr(args.sj)
+    sj = nm.SJExperiment.from_zarr(args.sj)
     log.info("Obtaining coverage over introns and junctions")
     sg_coverage = nm.SpliceGraphReads.from_connections_and_sj(
-        sg.introns,
-        sg.junctions,
-        sj_introns,
-        sj_junctions,
+        sg.introns, sg.junctions, sj
     )
     log.info(f"Saving coverage to {args.sg_coverage.resolve()}")
     sg_coverage.to_zarr(args.sg_coverage, "w", args.chunksize)

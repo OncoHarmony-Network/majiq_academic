@@ -142,13 +142,29 @@ class SJIntronsBins(SJBinsReads):
             original_time,
         )
 
-    def to_zarr(self, path: Union[str, Path], consolidated: bool = True) -> None:
+    def to_zarr(
+        self,
+        path: Union[str, Path],
+        consolidated: bool = True,
+        check_experiment_if_exists: bool = True,
+    ) -> None:
         """Serialize to zarr format
 
         Will only write to existing file if has SJJunctionsBins with same
         original path and version
+
+        Parameters
+        ----------
+        path: Union[str, Path]
+            Path for output zarr file
+        consolidated: bool
+            Should the zarr file be consolidated (e.g. we don't expect array
+            metadata to change) at the end of function?
+        check_experiment_if_exists: bool
+            If zarr file already exists at path, check that it has
+            SJJunctionsBins and that the original path and version match
         """
-        if Path(path).exists():
+        if check_experiment_if_exists and Path(path).exists():
             try:
                 with xr.open_zarr(path, group=constants.NC_SJJUNCTIONSBINS) as x:
                     if x.original_path != self.original_path:

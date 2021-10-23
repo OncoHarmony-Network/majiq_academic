@@ -8,7 +8,7 @@ Author: Joseph K Aicher
 
 from functools import cached_property
 from pathlib import Path
-from typing import Final, List, Union
+from typing import TYPE_CHECKING, Final, List, Union
 
 import numpy as np
 import xarray as xr
@@ -19,8 +19,9 @@ from new_majiq.experiments import bam_experiment_name
 from new_majiq.GeneIntrons import GeneIntrons
 from new_majiq.GeneJunctions import GeneJunctions
 from new_majiq.internals import SpliceGraphReads as _SpliceGraphReads
-from new_majiq.SJIntronsBins import SJIntronsBins
-from new_majiq.SJJunctionsBins import SJJunctionsBins
+
+if TYPE_CHECKING:
+    from new_majiq.SJExperiment import SJExperiment
 
 
 class MultiSpliceGraphReads(object):
@@ -232,23 +233,15 @@ class SpliceGraphReads(object):
         cls,
         introns: GeneIntrons,
         junctions: GeneJunctions,
-        sj_introns: SJIntronsBins,
-        sj_junctions: SJJunctionsBins,
+        sj: "SJExperiment",
     ) -> "SpliceGraphReads":
-        # only accept if bam_path/version are same in sj_junctions/introns
-        if sj_junctions.original_path != sj_introns.original_path:
-            raise ValueError(
-                "sj_junctions and sj_introns do not share original bam path"
-            )
-        if sj_junctions.original_version != sj_introns.original_version:
-            raise ValueError("sj_junctions and sj_introns not from same majiq version")
         return SpliceGraphReads(
             _SpliceGraphReads.from_sj(
                 introns._gene_introns,
                 junctions._gene_junctions,
-                sj_introns._sj_intronsbins,
-                sj_junctions._sj_junctionsbins,
+                sj.introns._sj_intronsbins,
+                sj.junctions._sj_junctionsbins,
             ),
-            sj_junctions.original_path,
-            sj_junctions.original_version,
+            sj.original_path,
+            sj.original_version,
         )

@@ -15,7 +15,6 @@ import new_majiq.constants as constants
 from new_majiq._run._majiq_args import check_nonnegative_factory
 from new_majiq._run._run import GenericSubcommand
 from new_majiq.logger import get_logger
-from new_majiq.StrandDetection import detect_strand
 
 DESCRIPTION = (
     "Translate RNA-seq alignments to raw bin reads for junctions and intronic regions"
@@ -121,68 +120,22 @@ def run(args: argparse.Namespace) -> None:
         raise ValueError(f"Output path {args.sj} already exists")
     log = get_logger()
 
-    if args.strandness == "AUTO":
-        # we run as forward strand, but we will correct later
-        strandness = nm.ExperimentStrandness.FORWARD
-    else:
-        strandness = nm.ExperimentStrandness(ord(args.strandness[0]))
     log.info(f"Loading splicegraph ({args.splicegraph.resolve()})")
     sg = nm.SpliceGraph.from_zarr(args.splicegraph)
-    log.info(f"Parsing alignments from {args.bam.resolve()} for junctions")
-    sj_junctions = nm.SJJunctionsBins.from_bam(
+    # load junctions, introns
+    sj = nm.SJExperiment.from_bam(
         args.bam,
-        strandness=strandness,
+        sg,
+        args.strandness,
+        update_exons=args.update_exons,
         nthreads=args.nthreads,
-    )
-    if not (set(sg.contigs.seqid) & set(sj_junctions.regions.contigs.seqid)):
-        # disjoint sets of contigs from bam vs contigs
-        if args.allow_disjoint_contigs:
-            log.warning("Contigs from splicegraph and BAM are disjoint!")
-        else:
-            log.error(
-                "Contigs from splicegraph and BAM are disjoint!"
-                f"\n\tSplicegraph contigs = {sg.contigs.seqid}"
-                f"\n\tBAM contigs = {sj_junctions.regions.contigs.seqid}"
-                "\nAAdd flag `--allow-disjoint-contigs` if this is what you"
-                " really want"
-            )
-            raise RuntimeError("Contigs from splicegraph and BAM are disjoint")
-    if args.strandness == "AUTO":
-        log.info("Inferring strandness comparing counts on splicegraph junctions")
-        sj_junctions = detect_strand(
-            sj_junctions,
-            sg,
-            args.auto_minreads,
-            args.auto_minjunctions,
-            args.auto_mediantolerance,
-        )
-        log.info(f"Inferred strandness: {sj_junctions.strandness.name}")
-    log.info("Using gene introns/exons to define regions for intronic coverage")
-    gene_introns: nm.GeneIntrons = sg.introns
-    exons: nm.Exons
-    if args.update_exons:
-        log.info("Identifying potential denovo exons from input junctions")
-        # TODO (change parameters used for reliable updated junctions?)
-        updated_junctions = (
-            sg.junctions.builder()
-            .add_group(sg.junctions.build_group(sg.exons).add_experiment(sj_junctions))
-            .get_passed()
-        )
-        exons = sg.exons.infer_with_junctions(updated_junctions)
-    else:
-        exons = sg.exons
-    log.info(f"Parsing alignments from {args.bam.resolve()} for introns")
-    sj_introns = nm.SJIntronsBins.from_bam(
-        args.bam,
-        total_bins=sj_junctions.total_bins,
-        exons=exons,
-        gene_introns=gene_introns,
-        strandness=strandness,
-        nthreads=args.nthreads,
+        allow_disjoint_contigs=args.allow_disjoint_contigs,
+        auto_minreads=args.auto_minreads,
+        auto_minjunctions=args.auto_minjunctions,
+        auto_mediantolerance=args.auto_mediantolerance,
     )
     log.info(f"Saving junction and intron coverage to {args.sj.resolve()}")
-    sj_junctions.to_zarr(args.sj)
-    sj_introns.to_zarr(args.sj)
+    sj.to_zarr(args.sj)
     return
 
 

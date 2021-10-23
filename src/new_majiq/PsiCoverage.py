@@ -36,6 +36,7 @@ from new_majiq.EventsCoverage import EventsCoverage
 from new_majiq.experiments import bam_experiment_name
 from new_majiq.GeneIntrons import GeneIntrons
 from new_majiq.GeneJunctions import GeneJunctions
+from new_majiq.SJExperiment import SJExperiment
 
 
 def min_experiments(min_experiments_f: float, num_experiments: int) -> float:
@@ -486,6 +487,22 @@ class PsiCoverage(object):
             ).expand_dims(prefix=[bam_experiment_name(events_coverage.bam_path)]),
             events_coverage.events.save_df,
         )
+
+    @classmethod
+    def from_sj_lsvs(
+        cls,
+        sj: SJExperiment,
+        lsvs: Events,
+        minreads: float = constants.DEFAULT_QUANTIFY_MINREADS,
+        minbins: float = constants.DEFAULT_QUANTIFY_MINBINS,
+        num_bootstraps: int = constants.DEFAULT_COVERAGE_NUM_BOOTSTRAPS,
+        pvalue_threshold: float = constants.DEFAULT_COVERAGE_STACK_PVALUE,
+    ) -> "PsiCoverage":
+        """Given SJ and Events information (generally LSVs), load PsiCoverage"""
+        lsv_coverage = EventsCoverage.from_events_and_sj(
+            lsvs, sj, num_bootstraps=num_bootstraps, pvalue_threshold=pvalue_threshold
+        )
+        return PsiCoverage.from_events_coverage(lsv_coverage, minreads, minbins)
 
     @classmethod
     def from_zarr(cls, path: Union[str, Path, List[Union[str, Path]]]) -> "PsiCoverage":
