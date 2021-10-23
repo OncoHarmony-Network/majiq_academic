@@ -131,9 +131,6 @@ def add_args(parser: argparse.ArgumentParser) -> None:
         default=nm.constants.DEFAULT_HET_PVALUE_QUANTILES,
         help="Report these quantiles of pvalues on psisamples (default: %(default)s)",
     )
-
-    # TODO(jaicher) configure which tests, which things to report
-
     return
 
 

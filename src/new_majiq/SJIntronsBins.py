@@ -7,7 +7,7 @@ Author: Joseph K Aicher
 """
 
 from pathlib import Path
-from typing import Optional, Union
+from typing import Final, Optional, Union
 
 import numpy as np
 import xarray as xr
@@ -32,10 +32,15 @@ class SJIntronsBins(SJBinsReads):
         original_path: str,
         original_version: str,
         original_time: str,
+        gene_introns_checksum: Optional[int] = None,
+        exons_checksum: Optional[int] = None,
     ):
         super().__init__(
             sj_intronsbins, strandness, original_path, original_version, original_time
         )
+        # if provided, checksums indicating which introns/exons used in construction
+        self.gene_introns_checksum: Final[Optional[int]] = gene_introns_checksum
+        self.exons_checksum: Final[Optional[int]] = exons_checksum
         return
 
     @property
@@ -61,6 +66,11 @@ class SJIntronsBins(SJBinsReads):
     @property
     def _df(self) -> xr.Dataset:
         """xr.Dataset view of SJIntronsBins read counts"""
+        checksums = {}
+        if self.gene_introns_checksum is not None:
+            checksums["gene_introns_checksum"] = self.gene_introns_checksum
+        if self.exons_checksum is not None:
+            checksums["exons_checksum"] = self.exons_checksum
         return xr.Dataset(
             {
                 "bin_reads": ("sib_idx", self.bin_reads),
@@ -76,6 +86,7 @@ class SJIntronsBins(SJBinsReads):
                 "original_path": self.original_path,
                 "original_version": self.original_version,
                 "original_time": self.original_time,
+                **checksums,  # type: ignore[arg-type]
             },
         )
 
@@ -123,7 +134,6 @@ class SJIntronsBins(SJBinsReads):
         nthreads: int
             Number of threads to use to read in BAM file
         """
-        # TODO: save information about splicegraph used
         path = str(Path(path).resolve())
         original_version = nm_version
         original_time = str(np.datetime64("now"))
@@ -140,6 +150,8 @@ class SJIntronsBins(SJBinsReads):
             path,
             original_version,
             original_time,
+            gene_introns_checksum=gene_introns.checksum_nodata(),
+            exons_checksum=exons.checksum(),
         )
 
     def to_zarr(
@@ -253,4 +265,6 @@ class SJIntronsBins(SJBinsReads):
                 df.original_path,
                 df.original_version,
                 df.original_time,
+                gene_introns_checksum=df.attrs.get("gene_introns_checksum"),
+                exons_checksum=df.attrs.get("exons_checksum"),
             )

@@ -155,7 +155,6 @@ class SJJunctionsBins(SJBinsReads):
         nthreads: int
             Number of threads to use to read in BAM file
         """
-        # TODO: save/serialize strandness
         path = str(Path(path).resolve())
         original_version = nm_version
         original_time = str(np.datetime64("now"))
