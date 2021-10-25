@@ -655,6 +655,10 @@ class Builder(BasicPipeline):
         logger.info(f"Majiq Build v{constants.VERSION}")
         logger.info("Command: %s" % " ".join(sys.argv))
 
+        if sum((not majiq_config.lsv_strict, majiq_config.only_target_lsvs, majiq_config.only_source_lsvs,)) > 1:
+            logger.critical("You may only specify one of --permissive-lsvs, --target-lsvs, --source-lsvs")
+            sys.exit(1)
+
         _core_build(self.transcripts, majiq_config.sam_list, majiq_config, logger)
 
         if self.mem_profile:
