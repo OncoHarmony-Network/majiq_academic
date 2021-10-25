@@ -635,6 +635,45 @@ void init_Exons(pyExons_t& pyExons) {
         py::call_guard<py::gil_scoped_release>(),
         "Indicate if selected exons are denovo",
         py::arg("exon_idx"))
+    .def("is_exon_extension",
+        [](const Exons& self,
+          py::array_t<size_t> exon_idx) -> py::array_t<bool> {
+        auto f = [&self](size_t i) {
+          if (i >= self.size()) {
+            throw std::invalid_argument("exon_idx has values out of range");
+          }
+          return self[i].is_exon_extension(); };
+        return py::vectorize(f)(exon_idx);
+        },
+        py::call_guard<py::gil_scoped_release>(),
+        "Indicate if selected exons have exon extension",
+        py::arg("exon_idx"))
+    .def("is_full_exon",
+        [](const Exons& self,
+          py::array_t<size_t> exon_idx) -> py::array_t<bool> {
+        auto f = [&self](size_t i) {
+          if (i >= self.size()) {
+            throw std::invalid_argument("exon_idx has values out of range");
+          }
+          return self[i].is_full_exon(); };
+        return py::vectorize(f)(exon_idx);
+        },
+        py::call_guard<py::gil_scoped_release>(),
+        "Indicate if selected exons are full exons",
+        py::arg("exon_idx"))
+    .def("is_half_exon",
+        [](const Exons& self,
+          py::array_t<size_t> exon_idx) -> py::array_t<bool> {
+        auto f = [&self](size_t i) {
+          if (i >= self.size()) {
+            throw std::invalid_argument("exon_idx has values out of range");
+          }
+          return self[i].is_half_exon(); };
+        return py::vectorize(f)(exon_idx);
+        },
+        py::call_guard<py::gil_scoped_release>(),
+        "Indicate if selected exons are half exons",
+        py::arg("exon_idx"))
     .def("__repr__", [](const Exons& self) -> std::string {
         std::ostringstream oss;
         oss << "Exons<" << self.size() << " total>";

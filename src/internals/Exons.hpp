@@ -68,6 +68,9 @@ struct Exon : detail::GeneRegion<ClosedInterval, ClosedInterval> {
   inline bool is_invalid() const noexcept {
     return coordinates.is_invalid();
   }
+  inline bool is_exon_extension() const noexcept {
+    return !is_denovo() && (coordinates != annotated_coordinates());
+  }
   /**
    * If denovo, return current coordinates to match previous MAJIQ
    */

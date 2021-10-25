@@ -93,6 +93,24 @@ class Exons(GeneRegions):
             exon_idx = self.exon_idx
         return self._exons.is_denovo(exon_idx)
 
+    def is_exon_extension(self, exon_idx: Optional[np.ndarray] = None) -> np.ndarray:
+        """Return if exon(s) have exon extension"""
+        if exon_idx is None:
+            exon_idx = self.exon_idx
+        return self._exons.is_exon_extension(exon_idx)
+
+    def is_full_exon(self, exon_idx: Optional[np.ndarray] = None) -> np.ndarray:
+        """Return if exon(s) are full exons"""
+        if exon_idx is None:
+            exon_idx = self.exon_idx
+        return self._exons.is_full_exon(exon_idx)
+
+    def is_half_exon(self, exon_idx: Optional[np.ndarray] = None) -> np.ndarray:
+        """Return if exon(s) are half exons"""
+        if exon_idx is None:
+            exon_idx = self.exon_idx
+        return self._exons.is_half_exon(exon_idx)
+
     @property
     def df(self) -> xr.Dataset:
         """view on underlying exons as xarray Dataset"""
