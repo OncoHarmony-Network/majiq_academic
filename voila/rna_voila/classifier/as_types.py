@@ -1819,26 +1819,42 @@ class Graph:
                             if other_node.start > node.start:
                                 break
                 else:
-                    if self.graph.strand == '+':
-                        a1 = self.nodes[0]
-                        c1 = self.nodes[-1]
-                    else:
-                        a1 = self.nodes[-1]
-                        c1 = self.nodes[0]
 
-                    skipA1s = node.connects(c1, ir=True) + c1.connects(node, ir=True)
-                    skipA2s = a1.connects(c1, ir=True) + c1.connects(a1, ir=True)
-                    for skipA1 in skipA1s:
-                        for skipA2 in skipA2s:
-                            shared_lsv = set(skipA1.lsvs) & set(skipA2.lsvs)
+                    # first get the junction(s) connecting from the afe backwards
+                    for junc_from_afe in self.strand_case(node.edges, node.back_edges):
+
+
+
+                        ref_exon = self.strand_case(self.graph.end_node(junc_from_afe), self.graph.start_node(junc_from_afe))
+
+                        # then, look for junctions coming out of the found 'reference' exon pointed in the same
+                        # direction as the afe
+                        for junc_to_another_exon in self.strand_case(ref_exon.back_edges, ref_exon.edges):
+                            other_exon = self.strand_case(self.graph.start_node(junc_to_another_exon),
+                                                          self.graph.end_node(junc_to_another_exon))
+                            if other_exon == node:
+                                continue
+
+                            if len(junc_from_afe) > len(junc_to_another_exon):
+                                proximal = other_exon
+                                distal = node
+                                skipA1 = junc_to_another_exon
+                                skipA2 = junc_from_afe
+                            else:
+                                proximal = node
+                                distal = other_exon
+                                skipA1 = junc_from_afe
+                                skipA2 = junc_to_another_exon
+
+                            shared_lsv = set(junc_from_afe.lsvs) & set(junc_to_another_exon.lsvs)
                             if len(shared_lsv) == 1:
                                 self.classified_lsvs.append(shared_lsv.pop())
-                            found.append({'event': 'afe', 'Proximal': node,
-                                  'Distal': a1, 'Reference': c1,
+                            found.append({'event': 'afe', 'Proximal': proximal,
+                                  'Distal': distal, 'Reference': ref_exon,
                                   'SkipA2': skipA2,
                                   'SkipA1': skipA1})
-                            self.classified_junctions.extend(skipA1s)
-                            self.classified_junctions.extend(skipA2s)
+                            self.classified_junctions.append(skipA2)
+                            self.classified_junctions.append(skipA1)
 
             return found
 
@@ -1865,27 +1881,42 @@ class Graph:
                             if other_node.start < node.start:
                                 break
                 else:
-                    if self.graph.strand == '+':
-                        a2 = self.nodes[-1]
-                        c1 = self.nodes[0]
-                    else:
-                        a2 = self.nodes[0]
-                        c1 = self.nodes[-1]
 
-                    skipA1s = a2.connects(c1, ir=True) + c1.connects(a2, ir=True)
-                    skipA2s = c1.connects(node, ir=True) + node.connects(c1, ir=True)
-                    # update seen junctions in Module
-                    for skipA1 in skipA1s:
-                        for skipA2 in skipA2s:
-                            shared_lsv = set(skipA1.lsvs) & set(skipA2.lsvs)
+
+                    # first get the junction(s) connecting from the half_exon backwards
+                    for junc_from_ale in self.strand_case(node.back_edges, node.edges):
+
+                        ref_exon = self.strand_case(self.graph.start_node(junc_from_ale), self.graph.end_node(junc_from_ale))
+
+                        # then, look for junctions coming out of the found 'reference' exon pointed in the same
+                        # direction as the half-exon
+                        for junc_to_another_exon in self.strand_case(ref_exon.edges, ref_exon.back_edges):
+                            other_exon = self.strand_case(self.graph.end_node(junc_to_another_exon),
+                                                          self.graph.start_node(junc_to_another_exon))
+                            if other_exon == node:
+                                continue
+
+
+                            if len(junc_from_ale) > len(junc_to_another_exon):
+                                proximal = other_exon
+                                distal = node
+                                skipA1 = junc_from_ale
+                                skipA2 = junc_to_another_exon
+                            else:
+                                proximal = node
+                                distal = other_exon
+                                skipA1 = junc_to_another_exon
+                                skipA2 = junc_from_ale
+
+                            shared_lsv = set(junc_from_ale.lsvs) & set(junc_to_another_exon.lsvs)
                             if len(shared_lsv) == 1:
                                 self.classified_lsvs.append(shared_lsv.pop())
-                            found.append({'event': 'ale', 'Proximal': node,
-                                  'Distal': a2, 'Reference': c1,
+                            found.append({'event': 'ale', 'Proximal': proximal,
+                                  'Distal': distal, 'Reference': ref_exon,
                                   'SkipA2': skipA2,
                                   'SkipA1': skipA1})
-                            self.classified_junctions.extend(skipA1s)
-                            self.classified_junctions.extend(skipA2s)
+                            self.classified_junctions.append(skipA1)
+                            self.classified_junctions.append(skipA2)
 
             return found
 
