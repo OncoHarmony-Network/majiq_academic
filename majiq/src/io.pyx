@@ -67,8 +67,14 @@ cdef int  read_gff(str filename, map[string, Gene*] all_genes, vector[string] gi
                 except KeyError:
                     continue
             else:
-                logging.info("Error, Gene doesn't contain one of the Name attribute  information values: "
-                             "%s" % gene_name_keys)
+                logging.info(
+                    "Error, gene (record.type=%s) doesn't have an attribute"
+                    "recognized for inferring gene_name (%s)."
+                    "(record.attributes=%s)",
+                    record.type,
+                    gene_name_keys,
+                    record.attributes,
+                )
             for gid_k in gene_id_keys:
                 try:
                     gene_id = record.attributes[gid_k].encode('utf-8')
@@ -76,8 +82,14 @@ cdef int  read_gff(str filename, map[string, Gene*] all_genes, vector[string] gi
                 except KeyError:
                     continue
             else:
-                logging.info("Error, Gene doesn't contain one of the ID attribute information values: "
-                             "%s" % gene_id_keys)
+                logging.info(
+                    "Error, gene (record.type=%s) doesn't have an attribute"
+                    "recognized for inferring gene_id (%s)."
+                    "(record.attributes=%s)",
+                    record.type,
+                    gene_id_keys,
+                    record.attributes,
+                )
             if all_genes.count(gene_id)>0:
                 raise RuntimeError('Two Different Genes with the same name %s' % gene_name)
 
@@ -86,13 +98,23 @@ cdef int  read_gff(str filename, map[string, Gene*] all_genes, vector[string] gi
             gid_vec.push_back(gene_id)
         elif record.type in accepted_transcripts:
             if transcript_id_keys not in record.attributes or 'Parent' not in record.attributes:
-                logging.info("Error, Transcript doesn't contain one of the ID or parent attributes"
-                             "information values: %s" % transcript_id_keys)
+                logging.info(
+                    "Error, transcript (record.type=%s) doesn't have an"
+                    " attribute recognized for inferring transcript_id (%s)"
+                    " or transcript parent (Parent). (record.attributes=%s)",
+                    record.type,
+                    transcript_id_keys,
+                    record.attributes,
+                )
                 continue
             transcript_name = record.attributes[transcript_id_keys]
             parent = record.attributes['Parent'].encode('utf-8')
             if all_genes.count(gene_id)==0:
-                logging.error("Error, incorrect gff. mRNA %s doesn't have valid gene %s" % (transcript_name, parent))
+                logging.error(
+                    "Error, incorrect gff. transcript %s doesn't have valid gene %s",
+                    transcript_name,
+                    parent,
+                )
                 continue
 
             trcpt_id_dict[record.attributes['ID'].encode('utf-8')] = [parent, []]
@@ -106,8 +128,10 @@ cdef int  read_gff(str filename, map[string, Gene*] all_genes, vector[string] gi
                 trcpt_id_dict[parent_tx_id][1].append((start, end))
 
             except KeyError:
-                logging.warning("Error, incorrect gff. exon "
-                                "doesn't have valid mRNA %s" % parent_tx_id)
+                logging.warning(
+                    "Error, incorrect gff. exon doesn't have valid transcript %s",
+                    parent_tx_id,
+                )
 
     for parent_tx_id, (gene_id, coord_list) in trcpt_id_dict.items():
         last_ss = FIRST_LAST_JUNC
