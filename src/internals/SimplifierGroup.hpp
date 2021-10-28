@@ -11,6 +11,8 @@
 #define MAJIQ_SIMPLIFIERGROUP_HPP
 
 #include <memory>
+#include <mutex>
+#include <shared_mutex>
 #include <numeric>
 #include <stdexcept>
 #include <utility>
@@ -26,16 +28,28 @@ namespace majiq {
 struct SimplifierCount {
   size_t src_ct_unsimplify;
   size_t dst_ct_unsimplify;
+  std::mutex src_mutex_;
+  std::mutex dst_mutex_;
 
-  void reset() { src_ct_unsimplify = dst_ct_unsimplify = 0; }
+  void reset() {
+    std::scoped_lock lock(src_mutex_, dst_mutex_);
+    src_ct_unsimplify = dst_ct_unsimplify = 0;
+  }
   void increment(const EventType& type) {
+    // increment appropriate value
     switch (type) {
       case EventType::SRC_EVENT:
-        ++src_ct_unsimplify;
-        break;
+        {
+          std::lock_guard lock(src_mutex_);
+          ++src_ct_unsimplify;
+          break;
+        }
       case EventType::DST_EVENT:
-        ++dst_ct_unsimplify;
-        break;
+        {
+          std::lock_guard lock(dst_mutex_);
+          ++dst_ct_unsimplify;
+          break;
+        }
     }
   }
   // we keep simplified if src, dst cts are both below min_experiments
@@ -58,6 +72,9 @@ class SimplifierGroup {
   size_t num_experiments_;
   std::vector<SimplifierCount> introns_passed_;
   std::vector<SimplifierCount> junctions_passed_;
+  // mutexes
+  std::shared_mutex passed_mutex_;  // shared/exclusive access to ...passed_
+  std::mutex num_experiments_mutex_;  // exclusive access to num_experiments_
 
  public:
   explicit SimplifierGroup(
@@ -69,7 +86,8 @@ class SimplifierGroup {
             ? 0 : exon_connections_->introns()->size()),
         junctions_passed_(
             exon_connections_ == nullptr
-            ? 0 : exon_connections_->junctions()->size()) {
+            ? 0 : exon_connections_->junctions()->size()),
+        passed_mutex_{} {
     if (exon_connections_ == nullptr) {
       throw std::runtime_error("SimplifierGroup given null exon connections");
     }
@@ -87,6 +105,7 @@ class SimplifierGroup {
   }
 
   void UpdateInplace(real_t min_experiments_f) {
+    std::scoped_lock lock(passed_mutex_, num_experiments_mutex_);
     size_t min_experiments = detail::min_experiments_from_float(
         num_experiments_, min_experiments_f);
     const GeneIntrons& introns = *(exon_connections_->introns());
@@ -129,8 +148,11 @@ class SimplifierGroup {
     }
     const GeneJunctions& junctions = *(exon_connections_->junctions());
 
-    // update number of experiments
-    ++num_experiments_;
+    std::shared_lock passed_lock{passed_mutex_};
+    {  // update number of experiments
+      std::lock_guard num_experiments_lock{num_experiments_mutex_};
+      ++num_experiments_;
+    }
 
     // get evidence to unsimplify per potential event
     constexpr std::array<EventType, 2> TYPES
