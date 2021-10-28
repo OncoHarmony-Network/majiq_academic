@@ -63,7 +63,7 @@ def run(args: argparse.Namespace) -> None:
         sg.introns, sg.junctions, sj
     )
     log.info(f"Saving coverage to {args.sg_coverage.resolve()}")
-    sg_coverage.to_zarr(args.sg_coverage, "w", args.chunksize)
+    sg_coverage.to_zarr(args.sg_coverage, mode="w", chunksize=args.chunksize)
     return
 
 

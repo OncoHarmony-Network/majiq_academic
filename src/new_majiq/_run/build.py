@@ -450,11 +450,7 @@ def do_simplify(
                 f" (experiment {1 + sj_ndx} / {len(group_sjs)} in group)"
             )
             simplifier_group.add_experiment(
-                nm.SpliceGraphReads.from_connections_and_sj(
-                    sg.introns,
-                    sg.junctions,
-                    nm.SJExperiment.from_zarr(sj),
-                ),
+                nm.SJExperiment.from_zarr(sj),
                 min_psi=simplify_minpsi,
                 minreads_annotated=simplify_minreads_annotated,
                 minreads_denovo=simplify_minreads_denovo,

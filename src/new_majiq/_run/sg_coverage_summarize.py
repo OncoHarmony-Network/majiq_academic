@@ -59,28 +59,14 @@ def run(args: argparse.Namespace) -> None:
         raise ValueError(f"Output {args.summary} already exists")
 
     log = get_logger()
-    log.info("Lazily loading input sg_coverage")
-    coverage = nm.MultiSpliceGraphReads(sorted(set(args.sg_coverage)))
-    log.info(
-        f"Taking the {args.reduction} over experiments for each"
-        f" intron/junction and saving to {args.summary}"
+    log.info("Loading input splicegraph coverage")
+    coverage = nm.SpliceGraphReads.from_zarr(sorted(set(args.sg_coverage)))
+    log.info("Summarizing input splicegraph coverage")
+    coverage = coverage.summarize(
+        bam_experiment_name(args.summary), reduction=args.reduction
     )
-    summary = coverage.summarize_experiments(args.reduction, compute=False)
-    (
-        summary.expand_dims(experiment=[bam_experiment_name(args.summary)])
-        .assign_attrs(
-            bam_path=str(args.summary.resolve()),
-            bam_version=nm.__version__,
-            summarized_inputs=sorted(set(str(x.resolve()) for x in args.sg_coverage)),
-            reduction=args.reduction,
-        )
-        .assign_coords(
-            intron_hash=("experiment", [coverage.intron_checksum]),
-            junction_hash=("experiment", [coverage.junction_checksum]),
-        )
-        .to_zarr(args.summary, mode="w", group=constants.NC_SGREADS)
-    )
-
+    log.info(f"Saving summarized splicegraph coverage to {args.summary}")
+    coverage.to_zarr(args.summary, mode="w", chunksize=args.chunksize)
     return
 
 

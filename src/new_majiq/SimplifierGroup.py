@@ -4,7 +4,7 @@ SimplifierGroup.py
 Author: Joseph K Aicher
 """
 
-from typing import Final
+from typing import TYPE_CHECKING, Final
 
 import numpy as np
 import xarray as xr
@@ -14,6 +14,9 @@ from new_majiq.GeneIntrons import GeneIntrons
 from new_majiq.GeneJunctions import GeneJunctions
 from new_majiq.internals import SimplifierGroup as _SimplifierGroup
 from new_majiq.SpliceGraphReads import SpliceGraphReads
+
+if TYPE_CHECKING:
+    from new_majiq.SJExperiment import SJExperiment
 
 
 class SimplifierGroup(object):
@@ -68,7 +71,7 @@ class SimplifierGroup(object):
 
     def add_experiment(
         self,
-        sg_reads: SpliceGraphReads,
+        sj: "SJExperiment",
         min_psi: float = constants.DEFAULT_SIMPLIFIER_MINPSI,
         minreads_annotated: float = constants.DEFAULT_SIMPLIFIER_MINREADS_ANNOTATED,
         minreads_denovo: float = constants.DEFAULT_SIMPLIFIER_MINREADS_DENOVO,
@@ -76,7 +79,9 @@ class SimplifierGroup(object):
     ) -> "SimplifierGroup":
         """Add reads from experiment to group for simplification"""
         self._group.add_experiment(
-            sg_reads._sg_reads,
+            SpliceGraphReads._internals_from_connections_and_sj(
+                self.introns, self.junctions, sj
+            ),
             min_psi,
             minreads_annotated,
             minreads_denovo,

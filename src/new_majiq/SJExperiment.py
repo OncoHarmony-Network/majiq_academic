@@ -216,20 +216,25 @@ class SJExperiment(object):
             # there's nothing to do
             return sj_junctions
         # otherwise, we are going to detect strand by matching to splicegraph
+
+        # ignore introns
         empty_sg_introns = GeneIntrons.from_genes(sg.genes)
         sj = SJExperiment.from_SJJunctionsBins(sj_junctions)
+
         # get reads in original and reversed strand directions
-        reads = SpliceGraphReads.from_connections_and_sj(
+        reads = SpliceGraphReads._internals_from_connections_and_sj(
             empty_sg_introns, sg.junctions, sj
         ).junctions_reads
         sj_flipped = SJExperiment(sj.introns, sj_junctions.flip_strand())
-        reads_flipped = SpliceGraphReads.from_connections_and_sj(
+        reads_flipped = SpliceGraphReads._internals_from_connections_and_sj(
             empty_sg_introns, sg.junctions, sj_flipped
         ).junctions_reads
+
         # compute ratios for junctions with at least minreads
         reads_total = reads + reads_flipped
         minreads_mask = reads_total >= minreads
         ratios = reads[minreads_mask] / reads_total[minreads_mask]
+
         # check that we had enough junctions
         if len(ratios) < minjunctions:
             log.info(
@@ -237,6 +242,7 @@ class SJExperiment(object):
                 f" vs minimum {minjunctions} junctions for inferring strandedness"
             )
             return sj_junctions.to_unstranded()
+
         # compute ratio
         median_ratio = np.median(ratios)
         deviation = np.abs(median_ratio - 0.5)
@@ -245,6 +251,8 @@ class SJExperiment(object):
             f" (deviates by {deviation:.1%} from unstranded expectation)"
             f" from {len(ratios)} junctions with at least {minreads} reads"
         )
+
+        # return sj junctions indicated by deviation from 50%
         if deviation < mindeviation:
             # not far enough from 0.5 to justify strandedness
             return sj_junctions.to_unstranded()

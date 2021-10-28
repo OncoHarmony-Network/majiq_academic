@@ -672,7 +672,7 @@ class PsiCoverage(object):
 
         Initialize zarr for PsiCoverage over many prefixes. Saves all
         information except dimensions that are prefix-specific. This enables
-        multithreaded (or multiprocess) write with to_zarr_regions
+        multithreaded (or multiprocess) write with to_zarr_slice
 
         Parameters
         ----------

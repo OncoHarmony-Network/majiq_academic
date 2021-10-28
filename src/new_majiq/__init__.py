@@ -38,7 +38,7 @@ from .SJJunctionsBins import SJJunctionsBins
 from .SpliceGraph import SpliceGraph
 
 # coverage on splicegraph or events
-from .SpliceGraphReads import MultiSpliceGraphReads, SpliceGraphReads
+from .SpliceGraphReads import SpliceGraphReads
 
 
 def rng_seed(seed: int) -> None:
@@ -95,6 +95,5 @@ __all__ = [
     "SJJunctions",
     "SJJunctionsBins",
     "SpliceGraph",
-    "MultiSpliceGraphReads",
     "SpliceGraphReads",
 ]
