@@ -13,6 +13,9 @@
 #include <map>
 #include <set>
 #include <memory>
+#include <mutex>
+#include <shared_mutex>
+#include <numeric>
 #include <algorithm>
 #include <utility>
 #include <stdexcept>
@@ -83,7 +86,12 @@ class GroupJunctionsGenerator {
   const std::shared_ptr<Exons> exons_;
   std::vector<size_t> known_num_passed_;
   // unknown denovo junctions per overgene
-  std::map<GeneJunction, size_t> denovos_num_passed_;
+  std::vector<std::map<GeneJunction, size_t>> contig_denovos_num_passed_;
+  // mutexes for exclusive/shared access
+  std::shared_mutex group_mutex_;  // shared vs unique access
+  std::mutex num_experiments_mutex_;  // num experiments
+  // NOTE: we generally expect group_mutex_ to be held befor holding contig_mutex_
+  std::unique_ptr<std::mutex[]> contig_mutex_;  // contigs for known/denovo
 
  public:
   GroupJunctionsGenerator(
@@ -93,7 +101,12 @@ class GroupJunctionsGenerator {
         known_{known},
         exons_{exons},
         known_num_passed_(known_ == nullptr ? 0 : known_->size(), 0),
-        denovos_num_passed_{} {
+        contig_denovos_num_passed_(
+            known_ == nullptr ? 0 : known_->num_contigs()),
+        group_mutex_{},
+        num_experiments_mutex_{},
+        contig_mutex_{known_ == nullptr ? nullptr
+            : std::make_unique<std::mutex[]>(known_->num_contigs())} {
     if (known_ == nullptr) {
       throw std::invalid_argument(
           "GroupJunctionsGenerator requires non-null known GeneJunctions");
@@ -107,7 +120,12 @@ class GroupJunctionsGenerator {
   }
   size_t num_experiments() const noexcept { return num_experiments_; }
   size_t num_annotated() const noexcept { return known_num_passed_.size(); }
-  size_t num_denovo() const noexcept { return denovos_num_passed_.size(); }
+  size_t num_denovo() const noexcept {
+    return std::accumulate(
+        contig_denovos_num_passed_.begin(), contig_denovos_num_passed_.end(),
+        size_t{0},
+        [](size_t s, const auto& x) { return s + x.size(); });
+  }
   size_t size() const noexcept { return num_annotated() + num_denovo(); }
 
   void AddExperiment(const SJJunctionsBins& sjp,
@@ -116,6 +134,10 @@ class GroupJunctionsGenerator {
    * Update known junctions in place for passing
    */
   std::shared_ptr<GeneJunctions> UpdateKnownInplace(real_t min_experiments_f) {
+    // NOTE: holding group_mutex_ should be equivalent to holding each element
+    // of contig_mutex_
+    std::scoped_lock lock(group_mutex_, num_experiments_mutex_);
+    // determine number of experiments required to pass
     size_t min_experiments = detail::min_experiments_from_float(
         num_experiments_, min_experiments_f);
     for (size_t idx = 0; idx < known_num_passed_.size(); ++idx) {
@@ -134,6 +156,7 @@ class PassedJunctionsGenerator {
   const std::shared_ptr<GeneJunctions> known_;
   std::vector<bool> known_passed_build_;
   std::set<GeneJunction> denovos_passed_build_;
+  std::mutex passed_mutex_;
 
  public:
   size_t num_annotated() const noexcept { return known_passed_build_.size(); }
@@ -142,7 +165,8 @@ class PassedJunctionsGenerator {
   explicit PassedJunctionsGenerator(const std::shared_ptr<GeneJunctions>& known)
       : known_{known},
         known_passed_build_(known_ == nullptr ? 0 : known_->size(), false),
-        denovos_passed_build_{} {
+        denovos_passed_build_{},
+        passed_mutex_{} {
      if (known_ == nullptr) {
       throw std::invalid_argument(
           "PassedJunctionsGenerator requires non-null known GeneJunctions");
@@ -150,11 +174,15 @@ class PassedJunctionsGenerator {
   }
 
   void AddGroup(
-      const GroupJunctionsGenerator& group, real_t min_experiments_f) {
+      GroupJunctionsGenerator& group, real_t min_experiments_f) {
     if (known_ != group.known_) {
       throw std::invalid_argument(
           "Added group junctions have different set of known gene junctions");
     }
+
+    // acquire appropriate locks on self and on group junctions generator
+    std::scoped_lock lock(
+        group.group_mutex_, group.num_experiments_mutex_, passed_mutex_);
 
     size_t min_experiments = detail::min_experiments_from_float(
         group.num_experiments(), min_experiments_f);
@@ -168,17 +196,21 @@ class PassedJunctionsGenerator {
 
     // update denovo junctions
     auto denovo_it = denovos_passed_build_.begin();
-    for (const auto& [j, ct] : group.denovos_num_passed_) {
-      if (ct < min_experiments) { continue; }  // didn't pass filters
-      // get hint for adding in junctions
-      denovo_it = std::find_if(denovo_it, denovos_passed_build_.end(),
-          [&j](const auto& x) { return j < x; });
-      denovos_passed_build_.insert(denovo_it, j);
+    for (const auto& denovos_num_passed : group.contig_denovos_num_passed_) {
+      for (const auto& [j, ct] : denovos_num_passed) {
+        if (ct < min_experiments) { continue; }  // didn't pass filters
+        // get hint for adding in junctions
+        denovo_it = std::find_if(denovo_it, denovos_passed_build_.end(),
+            [&j](const auto& x) { return j < x; });
+        denovos_passed_build_.insert(denovo_it, j);
+      }
     }
     return;
   }
 
-  GeneJunctions PassedJunctions(bool denovo_simplified) const {
+  GeneJunctions PassedJunctions(bool denovo_simplified) {
+    std::lock_guard lock(passed_mutex_);
+    // initialize underlying container of junctions for result
     std::vector<GeneJunction> result_vec(
         known_passed_build_.size() + denovos_passed_build_.size());
     auto r_it = result_vec.begin();

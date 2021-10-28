@@ -95,6 +95,9 @@ class GeneConnections : public Regions<GeneConnectionT, HAS_OVERLAPS> {
     }
   }
 
+  size_t num_genes() const { return BaseT::parents()->size(); }
+  size_t num_contigs() const { return BaseT::parents()->contigs()->size(); }
+
   bool is_connected() const { return connected_exons_ != nullptr; }
   const std::shared_ptr<Exons>& connected_exons() const {
     return connected_exons_;

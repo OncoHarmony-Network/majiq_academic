@@ -82,7 +82,11 @@ void AssignDenovoJunction(const SJJunction& junction, const KnownGene& first,
 
 void GroupJunctionsGenerator::AddExperiment(const SJJunctionsBins& sjp,
     const ExperimentThresholds& thresholds, bool process_denovo) {
-  ++num_experiments_;  // increment number of experiments
+  std::shared_lock group_lock{group_mutex_};
+  {  // increment number of experiments
+    std::lock_guard num_experiments_lock{num_experiments_mutex_};
+    ++num_experiments_;
+  }
   const SJJunctions& sj = *(sjp.regions());
   if (sj.empty()) { return; }  // no junctions to add
 
@@ -106,6 +110,7 @@ void GroupJunctionsGenerator::AddExperiment(const SJJunctionsBins& sjp,
     KnownGene g_it_start = genes->begin_contig(dst_contig_idx);
     const KnownGene g_it_end = genes->end_contig(dst_contig_idx);
     if (g_it_start == g_it_end) { continue; }  // no genes for contig
+
     // (indexes to) known genejunctions for this contig sorted by coordinates
     std::vector<size_t> known_idx(
         // number of known junctions for the contig
@@ -118,6 +123,12 @@ void GroupJunctionsGenerator::AddExperiment(const SJJunctionsBins& sjp,
         // ignore gene, strand information, just coordinates within a contig
         return x[i].coordinates < x[j].coordinates; });
     auto k_it_start = known_idx.begin();
+
+    // get denovos num passed for specified contig
+    auto& denovos_num_passed = contig_denovos_num_passed_[dst_contig_idx];
+
+    // lock on contig being updated
+    std::lock_guard contig_lock{contig_mutex_[dst_contig_idx]};
 
     for (; sj_it != sj_it_end; ++sj_it) {
       const SJJunction& junction = *sj_it;
@@ -161,7 +172,7 @@ void GroupJunctionsGenerator::AddExperiment(const SJJunctionsBins& sjp,
             return IntervalPrecedes(junction.coordinates, x.coordinates()); });
         if (g_it_start != g_it_after) {
           AssignDenovoJunction(
-              junction, g_it_start, g_it_after, *exons_, denovos_num_passed_);
+              junction, g_it_start, g_it_after, *exons_, denovos_num_passed);
         }
       }
     }  // end loop over sj junctions on contig

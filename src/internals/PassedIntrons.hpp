@@ -10,6 +10,8 @@
 
 #include <algorithm>
 #include <memory>
+#include <mutex>
+#include <shared_mutex>
 #include <vector>
 #include <stdexcept>
 
@@ -25,13 +27,23 @@ class GroupIntronsGenerator {
   size_t num_experiments_;
   const std::shared_ptr<GeneIntrons> gene_introns_;
   std::vector<size_t> num_passed_;  // num experiments each intron passed for
+  // mutexes for exclusive/shared access
+  // shared access for multiple AddExperiment, unique UpdateInplace
+  std::shared_mutex group_mutex_;
+  // exclusive access to num_experiments_
+  std::mutex num_experiments_mutex_;
+  // exclusive access to num_passed_
+  std::mutex num_passed_mutex_;
 
  public:
   GroupIntronsGenerator(
       const std::shared_ptr<GeneIntrons>& gene_introns)
       : num_experiments_{},
         gene_introns_{gene_introns},
-        num_passed_(gene_introns_ == nullptr ? 0 : gene_introns_->size(), 0) {
+        num_passed_(gene_introns_ == nullptr ? 0 : gene_introns_->size(), 0),
+        group_mutex_{},
+        num_experiments_mutex_{},
+        num_passed_mutex_{} {
     if (gene_introns_ == nullptr) {
       throw std::invalid_argument(
           "GroupIntronsGenerator requires non-null GeneIntrons");
@@ -48,7 +60,12 @@ class GroupIntronsGenerator {
 
   void AddExperiment(
       const SJIntronsBins& sj, const ExperimentThresholds& exp_thresholds) {
-    ++num_experiments_;  // update number of experiments
+    // do not allow unique access to group while in scope
+    std::shared_lock group_lock{group_mutex_};
+    {  // update num_experiments
+      std::lock_guard num_experiments_lock{num_experiments_mutex_};
+      ++num_experiments_;  // update number of experiments
+    }
     const std::shared_ptr<Genes>& genes = gene_introns_->parents();
     // generator of intron thresholds
     IntronThresholdsGenerator thresholds_gen
@@ -63,13 +80,18 @@ class GroupIntronsGenerator {
           genes->contigs()->get(dst_contig_idx));
       if (!opt_sj_contig_idx.has_value()) { continue; }
       const size_t& sj_contig_idx = *opt_sj_contig_idx;
+
       // get iterator to first gene for contig
       KnownGene g_it_start = genes->begin_contig(dst_contig_idx);
       const KnownGene g_it_end = genes->end_contig(dst_contig_idx);
+      if (g_it_start == g_it_end) { continue; }  // no genes for contig
+      // get iterators for sj introns for contig
+      auto sj_it = sj_introns.begin_parent(sj_contig_idx);
+      const auto sj_it_end = sj_introns.end_parent(sj_contig_idx);
+      if (sj_it == sj_it_end) { continue; }  // no sj junctions for contig
+
       // for each sj intron on this contig
-      for (auto sj_it = sj_introns.begin_parent(sj_contig_idx);
-          sj_it != sj_introns.end_parent(sj_contig_idx);
-          ++sj_it) {
+      for (; sj_it != sj_it_end; ++sj_it) {
         // determine if passed
         constexpr junction_pos_t NO_STACKS = 0;  // TODO(jaicher) check stacks?
         if (!sj.passed(
@@ -113,14 +135,20 @@ class GroupIntronsGenerator {
         }  // for all genes that don't come after intron
       }  // for each sj intron on the contig
     }  // for each contig
-    // update num_passed_
-    for (size_t i = 0; i < num_passed_.size(); ++i) {
-      if (gi_passed[i]) { ++num_passed_[i]; }
+    { // update num_passed_
+      std::lock_guard num_passed_lock{num_passed_mutex_};
+      for (size_t i = 0; i < num_passed_.size(); ++i) {
+        if (gi_passed[i]) { ++num_passed_[i]; }
+      }
     }
   }
 
   // updates GeneIntrons in place, resets num_passed and num_experiments
   const std::shared_ptr<GeneIntrons>& UpdateInplace(real_t min_experiments_f) {
+    // get unique lock on all group, num_experiments, num_passed
+    std::scoped_lock lock(
+        group_mutex_, num_experiments_mutex_, num_passed_mutex_);
+    // determine number of experiments required to pass
     size_t min_experiments = detail::min_experiments_from_float(
         num_experiments_, min_experiments_f);
     // update introns that had enough experiments to pass
