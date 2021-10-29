@@ -62,6 +62,7 @@ def simplifier_threshold_args(
     # min-experiments
     thresholds.add_argument(
         f"--{prefix}min-experiments",
+        metavar="X",
         dest="simplify_min_experiments",
         type=check_nonnegative_factory(float, True),
         default=nm.constants.DEFAULT_SIMPLIFIER_MINEXPERIMENTS,
@@ -72,6 +73,7 @@ def simplifier_threshold_args(
     # per-experiment thresholds
     thresholds.add_argument(
         f"--{prefix}minpsi",
+        metavar="P",
         dest="simplify_minpsi",
         type=check_nonnegative_factory(float, False),
         default=nm.constants.DEFAULT_SIMPLIFIER_MINPSI,
@@ -81,6 +83,7 @@ def simplifier_threshold_args(
     )
     thresholds.add_argument(
         f"--{prefix}minreads-annotated",
+        metavar="N",
         dest="simplify_minreads_annotated",
         type=check_nonnegative_factory(float, False),
         default=nm.constants.DEFAULT_SIMPLIFIER_MINREADS_ANNOTATED,
@@ -89,6 +92,7 @@ def simplifier_threshold_args(
     )
     thresholds.add_argument(
         f"--{prefix}minreads-denovo",
+        metavar="N",
         dest="simplify_minreads_denovo",
         type=check_nonnegative_factory(float, False),
         default=nm.constants.DEFAULT_SIMPLIFIER_MINREADS_DENOVO,
@@ -97,6 +101,7 @@ def simplifier_threshold_args(
     )
     thresholds.add_argument(
         f"--{prefix}minreads-ir",
+        metavar="N",
         dest="simplify_minreads_ir",
         type=check_nonnegative_factory(float, False),
         default=nm.constants.DEFAULT_SIMPLIFIER_MINREADS_INTRON,
@@ -140,7 +145,7 @@ def build_threshold_args(parser: argparse.ArgumentParser) -> None:
         "--min-experiments",
         type=check_nonnegative_factory(float, True),
         default=nm.constants.DEFAULT_BUILD_MINEXPERIMENTS,
-        metavar="x",
+        metavar="X",
         help="Threshold per experiments group. If < 1, the fraction of"
         " experiments in a group that must pass individual filters for a"
         " feature to be accepted. If greater, an absolute number."
@@ -151,21 +156,21 @@ def build_threshold_args(parser: argparse.ArgumentParser) -> None:
         "--minreads",
         type=check_nonnegative_factory(int, True),
         default=nm.constants.DEFAULT_BUILD_MINREADS,
-        metavar="x",
+        metavar="N",
         help="Minimum readrate to pass an annotated junction (default: %(default)s)",
     )
     thresholds.add_argument(
         "--mindenovo",
         type=check_nonnegative_factory(int, True),
         default=nm.constants.DEFAULT_BUILD_MINDENOVO,
-        metavar="x",
+        metavar="N",
         help="Minimum readrate to pass a denovo junction or intron (default: %(default)s)",
     )
     thresholds.add_argument(
         "--minpos",
         type=check_nonnegative_factory(int, True),
         default=nm.constants.DEFAULT_BUILD_MINPOS,
-        metavar="x",
+        metavar="N",
         help="Minimum number of nonzero positions to pass a junction."
         " This is scaled for introns with some minimum coverage per bin to"
         " account for length dependence."
@@ -175,12 +180,13 @@ def build_threshold_args(parser: argparse.ArgumentParser) -> None:
         "--max-pctbins",
         type=check_nonnegative_factory(float, True),
         default=nm.constants.DEFAULT_BUILD_MAX_PCTBINS,
-        metavar="x",
+        metavar="P",
         help="Maximum fraction of intron bins on which to require coverage"
         " (default: %(default)s)",
     )
     thresholds.add_argument(
         "--junction-acceptance-probability",
+        metavar="P",
         type=check_nonnegative_factory(float, True),
         default=nm.constants.DEFAULT_BUILD_MATCH_JUNCTION_PROBABILITY,
         help="Set length-dependent minbins intron thresholds by considering"
@@ -189,6 +195,7 @@ def build_threshold_args(parser: argparse.ArgumentParser) -> None:
     )
     thresholds.add_argument(
         "--intron-acceptance-probability",
+        metavar="P",
         type=check_nonnegative_factory(float, True),
         default=nm.constants.DEFAULT_BUILD_MATCH_INTRON_PROBABILITY,
         help="Set length-dependent minbins intron thresholds by picking least"

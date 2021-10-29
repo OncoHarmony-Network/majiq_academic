@@ -166,12 +166,14 @@ def _quantify_shared_args(parser: argparse.ArgumentParser) -> None:
     """shared arguments for quantify_?(no)comparison_args"""
     parser.add_argument(
         "--splicegraph",
+        metavar="SG",
         type=ExistingResolvedPath,
         default=None,
         help="If specified, annotate quantifications with splicegraph information",
     )
     parser.add_argument(
         "--output-tsv",
+        metavar="TSV",
         type=argparse.FileType("w"),
         default=sys.stdout,
         help="Path for output TSV file (default: stdout)",
@@ -188,6 +190,7 @@ def quantify_nocomparison_args(parser: argparse.ArgumentParser) -> None:
     )
     parser.add_argument(
         "--min-experiments",
+        metavar="X",
         type=check_nonnegative_factory(float, True),
         default=None,
         help="If specified, treat samples as replicates and quantify combined"
@@ -235,7 +238,7 @@ def quantify_comparison_args(parser: argparse.ArgumentParser) -> None:
         "--names",
         dest="names",
         nargs=2,
-        metavar=("NAME_GRP1", "NAME_GRP2"),
+        metavar=("NAME1", "NAME2"),
         required=True,
         action=StoreGroupNames,
         type=check_group_chars,
@@ -243,6 +246,7 @@ def quantify_comparison_args(parser: argparse.ArgumentParser) -> None:
     )
     parser.add_argument(
         "--min-experiments",
+        metavar="X",
         type=check_nonnegative_factory(float, True),
         default=nm.constants.DEFAULT_QUANTIFY_MINEXPERIMENTS,
         help="Threshold for group filters. This specifies the fraction"
@@ -258,6 +262,7 @@ def chunks_args(parser: argparse.ArgumentParser, chunksize: int) -> None:
     chunks = parser.add_argument_group("output chunks arguments")
     chunks.add_argument(
         "--chunksize",
+        metavar="CHUNKS",
         type=check_nonnegative_factory(int, True),
         default=chunksize,
         help="Chunk coverage per prefix and per this many introns/junctions at"
@@ -270,6 +275,8 @@ def resources_args(parser: argparse.ArgumentParser, use_dask: bool = False) -> N
     if use_dask:
         resources.add_argument(
             "--nthreads",
+            "-j",
+            metavar="N",
             type=check_nonnegative_factory(int, True),
             default=nm.constants.DEFAULT_QUANTIFY_NTHREADS,
             help="Number of threads to perform work in chunks for Dask scheduler"
@@ -277,6 +284,7 @@ def resources_args(parser: argparse.ArgumentParser, use_dask: bool = False) -> N
         )
         resources.add_argument(
             "--memory-limit",
+            metavar="MEM",
             type=str,
             default="auto",
             help="Memory limit to pass to dask cluster (default: %(default)s)",
@@ -285,6 +293,8 @@ def resources_args(parser: argparse.ArgumentParser, use_dask: bool = False) -> N
     else:
         resources.add_argument(
             "--nthreads",
+            "-j",
+            metavar="N",
             type=check_nonnegative_factory(int, True),
             default=nm.constants.DEFAULT_BAM_NTHREADS,
             help="Number of threads used for simultaneous processing of multiple"

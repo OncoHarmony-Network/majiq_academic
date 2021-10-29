@@ -41,6 +41,7 @@ def _args_factors(parser: argparse.ArgumentParser) -> None:
     )
     factors_ex.add_argument(
         "--factors-tsv",
+        metavar="TSV",
         dest="factors_tsv",
         type=ExistingResolvedPath,
         default=None,
@@ -49,6 +50,7 @@ def _args_factors(parser: argparse.ArgumentParser) -> None:
     )
     factors_ex.add_argument(
         "--factors-zarr",
+        metavar="ZARR",
         dest="factors_zarr",
         type=ExistingResolvedPath,
         action=StoreRequiredUniqueActionFactory(),
@@ -60,6 +62,7 @@ def _args_factors(parser: argparse.ArgumentParser) -> None:
     )
     parser.add_argument(
         "--confounding",
+        metavar="VAR",
         type=str,
         nargs="+",
         default=list(),
@@ -147,12 +150,14 @@ def _args_ruv_parameters(parser: argparse.ArgumentParser) -> None:
     ruv = parser.add_argument_group("unknown confounders modeling arguments")
     ruv.add_argument(
         "--ruv-max-new-factors",
+        metavar="N",
         type=check_nonnegative_factory(int, True),
         default=nm.constants.DEFAULT_MOCCASIN_RUV_MAX_FACTORS,
         help="Maximum number of new factors the model will add (default: %(default)s)",
     )
     ruv.add_argument(
         "--ruv-max-events",
+        metavar="N",
         type=check_nonnegative_factory(int, True),
         default=nm.constants.DEFAULT_MOCCASIN_RUV_MAX_EVENTS,
         help="Maximum number of events to model residuals for (default: %(default)s)",

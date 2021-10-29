@@ -39,6 +39,7 @@ def add_args(parser: argparse.ArgumentParser) -> None:
     quant_settings = parser.add_argument_group("deltapsi inference arguments")
     quant_settings.add_argument(
         "--psibins",
+        metavar="B",
         type=check_nonnegative_factory(int, True),
         default=nm.constants.DEFAULT_QUANTIFY_PSIBINS,
         help="Number of bins for discretizing PSI distribution (twice this for"
@@ -46,6 +47,7 @@ def add_args(parser: argparse.ArgumentParser) -> None:
     )
     quant_settings.add_argument(
         "--changing-threshold",
+        metavar="CT",
         type=check_nonnegative_factory(float, True),
         default=nm.constants.DEFAULT_DPSI_CHANGING_THRESHOLD,
         help="Report posterior probability that abs(dPSI) greater than this"
@@ -53,6 +55,7 @@ def add_args(parser: argparse.ArgumentParser) -> None:
     )
     quant_settings.add_argument(
         "--nonchanging-threshold",
+        metavar="NCT",
         type=check_nonnegative_factory(float, True),
         default=nm.constants.DEFAULT_DPSI_NONCHANGING_THRESHOLD,
         help="Report posterior probability that abs(dPSI) less than this"
@@ -98,6 +101,7 @@ def add_args(parser: argparse.ArgumentParser) -> None:
     )
     prior_args.add_argument(
         "--prior-minreads",
+        metavar="R",
         type=check_nonnegative_factory(float, True),
         default=nm.constants.DEFAULT_DPSI_PRIOR_MINREADS,
         help="Only use subset of connections with at least this many reads with"
@@ -106,6 +110,7 @@ def add_args(parser: argparse.ArgumentParser) -> None:
     )
     prior_args.add_argument(
         "--prior-minevents",
+        metavar="N",
         type=check_nonnegative_factory(int, True),
         default=nm.constants.DEFAULT_DPSI_PRIOR_MINLSV,
         help="Require dPSI from at least this many binary splicing events to"
@@ -113,6 +118,7 @@ def add_args(parser: argparse.ArgumentParser) -> None:
     )
     prior_args.add_argument(
         "--prior-iter",
+        metavar="N",
         type=check_nonnegative_factory(int, False),
         default=nm.constants.DEFAULT_DPSI_PRIOR_MAXITER,
         help="Number of EM updates for beta distribution parameters (will do 1"

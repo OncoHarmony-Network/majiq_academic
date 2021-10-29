@@ -29,6 +29,7 @@ DESCRIPTION = "Test differences in PSI for two groups of independent experiments
 def add_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
         "--population-quantiles",
+        metavar="Q",
         type=float,
         nargs="*",
         default=nm.constants.DEFAULT_HET_POPULATION_QUANTILES,
@@ -37,6 +38,7 @@ def add_args(parser: argparse.ArgumentParser) -> None:
     )
     parser.add_argument(
         "--stats",
+        metavar="S",
         type=str,
         nargs="+",
         choices=set(nm.constants.STATS_AVAILABLE.keys()),
@@ -52,6 +54,7 @@ def add_args(parser: argparse.ArgumentParser) -> None:
     )
     psisample_settings.add_argument(
         "--psisamples",
+        metavar="J",
         type=check_nonnegative_factory(int, False),
         default=nm.constants.DEFAULT_HET_PSISAMPLES,
         help="Number of samples/tests to run and summarize. If set to zero,"
@@ -59,6 +62,7 @@ def add_args(parser: argparse.ArgumentParser) -> None:
     )
     psisample_settings.add_argument(
         "--pvalue-quantiles",
+        metavar="Q",
         type=float,
         nargs="*",
         default=nm.constants.DEFAULT_HET_PVALUE_QUANTILES,

@@ -25,6 +25,7 @@ DESCRIPTION = "Quantify PSI from PsiCoverage files"
 def add_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
         "--quantiles",
+        metavar="Q",
         type=float,
         nargs="+",
         default=list(),

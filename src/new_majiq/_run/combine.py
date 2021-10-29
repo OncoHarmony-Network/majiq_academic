@@ -37,6 +37,7 @@ def add_args(parser: argparse.ArgumentParser) -> None:
     )
     input_args.add_argument(
         "--make-annotated",
+        metavar="SG",
         type=ExistingResolvedPath,
         action=StoreSGPaths,
         nargs="+",
@@ -48,6 +49,7 @@ def add_args(parser: argparse.ArgumentParser) -> None:
     )
     input_args.add_argument(
         "--keep-denovo",
+        metavar="SG",
         type=ExistingResolvedPath,
         action=StoreSGPaths,
         nargs="+",

@@ -67,12 +67,14 @@ def add_args(parser: argparse.ArgumentParser) -> None:
     coverage = parser.add_argument_group("coverage arguments")
     coverage.add_argument(
         "--num-bootstraps",
+        metavar="M",
         type=check_nonnegative_factory(int, False),
         default=nm.constants.DEFAULT_COVERAGE_NUM_BOOTSTRAPS,
         help="Number of bootstrap replicates to sample (default: %(default)s)",
     )
     coverage.add_argument(
         "--stack-pvalue-threshold",
+        metavar="P",
         type=check_nonnegative_factory(float, False),
         default=nm.constants.DEFAULT_COVERAGE_STACK_PVALUE,
         help="Bins with readrate having right-tailed probability less than this"

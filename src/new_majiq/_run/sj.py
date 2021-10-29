@@ -57,6 +57,7 @@ def add_args(parser: argparse.ArgumentParser) -> None:
     )
     strandness.add_argument(
         "--auto-minreads",
+        metavar="N",
         type=check_nonnegative_factory(int, reject_zero=True),
         default=nm.constants.DEFAULT_BAM_STRAND_MINREADS,
         help="For automatic detection of strand. Only consider evidence from"
@@ -65,6 +66,7 @@ def add_args(parser: argparse.ArgumentParser) -> None:
     )
     strandness.add_argument(
         "--auto-minjunctions",
+        metavar="N",
         type=check_nonnegative_factory(int, reject_zero=True),
         default=nm.constants.DEFAULT_BAM_STRAND_MINJUNCTIONS,
         help="For automatic detection of strand. Infer unstranded if the number"
@@ -73,6 +75,7 @@ def add_args(parser: argparse.ArgumentParser) -> None:
     )
     strandness.add_argument(
         "--auto-mediantolerance",
+        metavar="X",
         type=check_nonnegative_factory(float, reject_zero=True),
         default=nm.constants.DEFAULT_BAM_STRAND_MINDEVIATION,
         help="For automatic detection of strand. Infer unstranded if the median"
