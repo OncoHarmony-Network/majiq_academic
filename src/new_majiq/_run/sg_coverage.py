@@ -18,6 +18,7 @@ from new_majiq._run._majiq_args import (
     NewResolvedPath,
     StoreRequiredUniqueActionFactory,
     check_nonnegative_factory,
+    resources_args,
 )
 from new_majiq._run._run import GenericSubcommand
 from new_majiq.experiments import bam_experiment_name
@@ -53,13 +54,7 @@ def add_args(parser: argparse.ArgumentParser) -> None:
         default=constants.NC_SGREADS_CHUNKS,
         help="Chunksize for per-experiment counts",
     )
-    parser.add_argument(
-        "--nthreads",
-        type=check_nonnegative_factory(int, True),
-        default=constants.DEFAULT_BAM_NTHREADS,
-        help="Number of threads used for simultaneous processing of multiple"
-        " input SJ files (default: %(default)s)",
-    )
+    resources_args(parser, use_dask=False)
     return
 
 

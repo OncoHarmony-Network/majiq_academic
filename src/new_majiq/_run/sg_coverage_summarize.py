@@ -9,14 +9,13 @@ Author: Joseph K Aicher
 import argparse
 from typing import List, Optional
 
-from dask.distributed import Client
-
 import new_majiq as nm
 import new_majiq.constants as constants
 from new_majiq._run._majiq_args import (
     ExistingResolvedPath,
     NewResolvedPath,
     check_nonnegative_factory,
+    resources_args,
 )
 from new_majiq._run._run import GenericSubcommand
 from new_majiq.experiments import bam_experiment_name
@@ -52,31 +51,12 @@ def add_args(parser: argparse.ArgumentParser) -> None:
         default=constants.NC_SGREADS_CHUNKS,
         help="Chunksize for summarized counts",
     )
-    parser.add_argument(
-        "--nthreads",
-        type=check_nonnegative_factory(int, True),
-        default=nm.constants.DEFAULT_QUANTIFY_NTHREADS,
-        help="Number of threads used by Dask scheduler to quantify in chunks"
-        " (default: %(default)s)",
-    )
-    parser.add_argument(
-        "--memory-limit",
-        type=str,
-        default="auto",
-        help="Memory limit to pass to dask cluster (default: %(default)s)",
-    )
+    resources_args(parser, use_dask=True)
     return
 
 
 def run(args: argparse.Namespace) -> None:
     log = get_logger()
-    client = Client(
-        n_workers=1,
-        threads_per_worker=args.nthreads,
-        dashboard_address=None,
-        memory_limit=args.memory_limit,
-    )
-    log.info(client)
     log.info("Loading input splicegraph coverage")
     coverage = nm.SpliceGraphReads.from_zarr(sorted(set(args.sg_coverage)))
     log.info(f"Summary with {args.reduction} from {coverage.num_prefixes} prefixes")

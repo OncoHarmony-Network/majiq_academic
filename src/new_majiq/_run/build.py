@@ -18,6 +18,7 @@ from new_majiq._run._majiq_args import (
     NewResolvedPath,
     StoreRequiredUniqueActionFactory,
     check_nonnegative_factory,
+    resources_args,
 )
 from new_majiq._run._run import GenericSubcommand
 from new_majiq.logger import get_logger
@@ -57,7 +58,7 @@ def simplifier_threshold_args(
         add prefix to threshold command line arguments to avoid collisions
         (does not change destination variable)
     """
-    thresholds = parser.add_argument_group("Simplifier filters")
+    thresholds = parser.add_argument_group("simplifier filter arguments")
     # min-experiments
     thresholds.add_argument(
         f"--{prefix}min-experiments",
@@ -108,7 +109,7 @@ def simplifier_threshold_args(
 def reset_simplified_args(parser: argparse.ArgumentParser) -> None:
     """do we reset simplified status in splicegraph?"""
     # do we reset simplified status?
-    reset = parser.add_argument_group("Resetting connections to simplified")
+    reset = parser.add_argument_group("select if resetting simplification arguments")
     reset_ex = reset.add_mutually_exclusive_group()
     reset_ex.add_argument(
         "--reset-simplified",
@@ -133,7 +134,7 @@ def reset_simplified_args(parser: argparse.ArgumentParser) -> None:
 
 def build_threshold_args(parser: argparse.ArgumentParser) -> None:
     """arguments for build threshold parameters"""
-    thresholds = parser.add_argument_group("Build filters")
+    thresholds = parser.add_argument_group("build filters arguments")
     # min-experiments
     thresholds.add_argument(
         "--min-experiments",
@@ -200,7 +201,7 @@ def build_threshold_args(parser: argparse.ArgumentParser) -> None:
 
 def ir_filtering_args(parser: argparse.ArgumentParser) -> None:
     """arguments for intron filtering"""
-    introns = parser.add_argument_group("Intron filtering")
+    introns = parser.add_argument_group("intron filtering arguments")
     introns_ex = introns.add_mutually_exclusive_group()
     introns_ex.add_argument(
         "--all-introns",
@@ -232,7 +233,7 @@ def ir_filtering_args(parser: argparse.ArgumentParser) -> None:
 
 def build_type_args(parser: argparse.ArgumentParser) -> None:
     """arguments for build type"""
-    build = parser.add_argument_group("Build type")
+    build = parser.add_argument_group("select build type arguments")
     build_ex = build.add_mutually_exclusive_group()
     build_ex.add_argument(
         "--build-all",
@@ -265,7 +266,7 @@ def build_type_args(parser: argparse.ArgumentParser) -> None:
 
 
 def enable_simplify_args(parser: argparse.ArgumentParser) -> None:
-    simplify = parser.add_argument_group("Simplification")
+    simplify = parser.add_argument_group("enable/disable simplifier arguments")
     simplify_ex = simplify.add_mutually_exclusive_group()
     simplify_ex.add_argument(
         "--simplify",
@@ -295,7 +296,9 @@ def add_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
         "out_sg", type=NewResolvedPath, help="Path for output splicegraph"
     )
-    experiments = parser.add_argument_group("Input experiments (one required)")
+    experiments = parser.add_argument_group(
+        "required specification of input experiments arguments"
+    )
     experiments_ex = experiments.add_mutually_exclusive_group(required=True)
     experiments_ex.add_argument(
         "--groups-tsv",
@@ -325,13 +328,7 @@ def add_args(parser: argparse.ArgumentParser) -> None:
     reset_simplified_args(parser)
     build_threshold_args(parser)
     simplifier_threshold_args(parser, prefix="simplify-")
-    parser.add_argument(
-        "--nthreads",
-        type=check_nonnegative_factory(int, True),
-        default=nm.constants.DEFAULT_BAM_NTHREADS,
-        help="Number of threads used for simultaneous processing of multiple"
-        " input SJ files (default: %(default)s)",
-    )
+    resources_args(parser, use_dask=False)
     return
 
 

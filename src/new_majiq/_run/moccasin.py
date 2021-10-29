@@ -13,7 +13,6 @@ import moccasin.moccasin as mc
 import numpy as np
 import pandas as pd
 import xarray as xr
-from dask.distributed import Client
 
 import new_majiq as nm
 import new_majiq.constants as constants
@@ -23,34 +22,16 @@ from new_majiq._run._majiq_args import (
     NewResolvedPath,
     StoreRequiredUniqueActionFactory,
     check_nonnegative_factory,
+    resources_args,
 )
 from new_majiq._run._run import GenericSubcommand
 from new_majiq.logger import get_logger
 
 
-def _args_dask(parser: argparse.ArgumentParser) -> None:
-    """arguments to pass to Dask scheduler"""
-    parser.add_argument(
-        "--nthreads",
-        type=check_nonnegative_factory(int, True),
-        default=constants.DEFAULT_QUANTIFY_NTHREADS,
-        help="Number of threads used by Dask scheduler to fit models in chunks"
-        " (default: %(default)s)",
-    )
-    parser.add_argument(
-        "--memory-limit",
-        type=str,
-        default="auto",
-        help="Memory limit to pass to dask cluster (default: %(default)s)",
-    )
-    # doesn't appear we need to manually limit memory at this time, can do so
-    # in the future if necessary
-    return
-
-
 def _args_factors(parser: argparse.ArgumentParser) -> None:
     """add arguments to specify factors to load"""
-    factors_ex = parser.add_mutually_exclusive_group(required=True)
+    factors = parser.add_argument_group("required input confounders arguments")
+    factors_ex = factors.add_mutually_exclusive_group(required=True)
     factors_ex.add_argument(
         "--intercept-only",
         dest="intercept_only",
@@ -164,7 +145,7 @@ def _get_factors(
 
 
 def _args_ruv_parameters(parser: argparse.ArgumentParser) -> None:
-    ruv = parser.add_argument_group("Parameters for modeling unknown confounders")
+    ruv = parser.add_argument_group("unknown confounders modeling arguments")
     ruv.add_argument(
         "--ruv-max-new-factors",
         type=check_nonnegative_factory(int, True),
@@ -196,7 +177,7 @@ def args_factors_model(parser: argparse.ArgumentParser) -> None:
         help="Paths for input psi coverage files for unknown confounders model",
     )
     _args_ruv_parameters(parser)
-    _args_dask(parser)
+    resources_args(parser, use_dask=True)
     return
 
 
@@ -220,7 +201,7 @@ def args_factors_infer(parser: argparse.ArgumentParser) -> None:
         nargs="+",
         help="Path to psi coverage files for which known/unknown factors will be saved",
     )
-    _args_dask(parser)
+    resources_args(parser, use_dask=True)
     return
 
 
@@ -239,7 +220,7 @@ def args_coverage_model(parser: argparse.ArgumentParser) -> None:
         action=StoreRequiredUniqueActionFactory(),
         help="Paths for input psi coverage files for coverage model",
     )
-    _args_dask(parser)
+    resources_args(parser, use_dask=True)
     return
 
 
@@ -263,20 +244,13 @@ def args_coverage_infer(parser: argparse.ArgumentParser) -> None:
         nargs="+",
         help="Paths to original, uncorrected psi coverage",
     )
-    _args_dask(parser)
+    resources_args(parser, use_dask=True)
     return
 
 
 def run_factors_model(args: argparse.Namespace) -> None:
     """model unknown factors using input coverage"""
     log = get_logger()
-    client = Client(
-        n_workers=1,
-        threads_per_worker=args.nthreads,
-        dashboard_address=None,
-        memory_limit=args.memory_limit,
-    )
-    log.info(client)
     log.info(f"Opening coverage from {len(args.psicov)} PSI coverage files")
     psicov = nm.PsiCoverage.from_zarr(args.psicov)
     log.info("Setting up model matrix of known factors")
@@ -319,13 +293,6 @@ def run_factors_model(args: argparse.Namespace) -> None:
 def run_factors_infer(args: argparse.Namespace):
     """compute unknown factors using input coverage"""
     log = get_logger()
-    client = Client(
-        n_workers=1,
-        threads_per_worker=args.nthreads,
-        dashboard_address=None,
-        memory_limit=args.memory_limit,
-    )
-    log.info(client)
     log.info(f"Opening coverage from {len(args.psicov)} PSI coverage files")
     psicov = nm.PsiCoverage.from_zarr(args.psicov)
     log.info("Setting up model matrix of known factors")
@@ -349,13 +316,6 @@ def run_factors_infer(args: argparse.Namespace):
 def run_coverage_model(args: argparse.Namespace) -> None:
     """Determine parameters for coverage model given factors"""
     log = get_logger()
-    client = Client(
-        n_workers=1,
-        threads_per_worker=args.nthreads,
-        dashboard_address=None,
-        memory_limit=args.memory_limit,
-    )
-    log.info(client)
     log.info(f"Opening coverage from {len(args.psicov)} PSI coverage files")
     psicov = nm.PsiCoverage.from_zarr(args.psicov)
     log.info("Setting up model matrix of all factors")
@@ -393,13 +353,6 @@ def run_coverage_model(args: argparse.Namespace) -> None:
 def run_coverage_infer(args: argparse.Namespace) -> None:
     """Create corrected LSV coverage file"""
     log = get_logger()
-    client = Client(
-        n_workers=1,
-        threads_per_worker=args.nthreads,
-        dashboard_address=None,
-        memory_limit=args.memory_limit,
-    )
-    log.info(client)
     log.info(f"Opening coverage from {len(args.original_psicov)} PSI coverage files")
     psicov = nm.PsiCoverage.from_zarr(args.original_psicov)
     log.info("Setting up model matrix of all factors")
@@ -464,22 +417,22 @@ def run_coverage_infer(args: argparse.Namespace) -> None:
 
 
 subcommand_factors_model = GenericSubcommand(
-    "(Advanced) Create model of unknown confounding factors using tmpfiles and known factors",
+    "(Advanced) Build model of unknown confounding factors using input PsiCoverage",
     args_factors_model,
     run_factors_model,
 )
 subcommand_factors_infer = GenericSubcommand(
-    "(Advanced) Save known/unknown factors for input experiment",
+    "(Advanced) Use unknown confounding factors model on inputs to infer known/unknown factors",
     args_factors_infer,
     run_factors_infer,
 )
 subcommand_coverage_model = GenericSubcommand(
-    "(Advanced) Create model of coverage ratios using tmpfiles and factors",
+    "(Advanced) Build model of PsiCoverage using input coverage and factors",
     args_coverage_model,
     run_coverage_model,
 )
 subcommand_coverage_infer = GenericSubcommand(
-    "(Advanced) Save corrected psi coverage for input experiment",
+    "(Advanced) Use PsiCoverage model to infer corrected coverage given inputs",
     args_coverage_infer,
     run_coverage_infer,
 )

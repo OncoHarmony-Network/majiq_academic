@@ -200,7 +200,9 @@ def quantify_nocomparison_args(parser: argparse.ArgumentParser) -> None:
 
 
 def quantify_comparison_args(parser: argparse.ArgumentParser) -> None:
-    comparison_req = parser.add_argument_group("Required specification of groups")
+    comparison_req = parser.add_argument_group(
+        "required quantification group arguments"
+    )
     StorePSICovPaths = StoreRequiredUniqueActionFactory()
     comparison_req.add_argument(
         "-psi1",
@@ -250,3 +252,30 @@ def quantify_comparison_args(parser: argparse.ArgumentParser) -> None:
     )
     _quantify_shared_args(parser)
     return
+
+
+def resources_args(parser: argparse.ArgumentParser, use_dask: bool = False) -> None:
+    resources = parser.add_argument_group("threads/resources arguments")
+    if use_dask:
+        resources.add_argument(
+            "--nthreads",
+            type=check_nonnegative_factory(int, True),
+            default=nm.constants.DEFAULT_QUANTIFY_NTHREADS,
+            help="Number of threads to perform work in chunks for Dask scheduler"
+            " (default: %(default)s)",
+        )
+        resources.add_argument(
+            "--memory-limit",
+            type=str,
+            default="auto",
+            help="Memory limit to pass to dask cluster (default: %(default)s)",
+        )
+        parser.set_defaults(use_dask=True)
+    else:
+        resources.add_argument(
+            "--nthreads",
+            type=check_nonnegative_factory(int, True),
+            default=nm.constants.DEFAULT_BAM_NTHREADS,
+            help="Number of threads used for simultaneous processing of multiple"
+            " input files (default: %(default)s)",
+        )

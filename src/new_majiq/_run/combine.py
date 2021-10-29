@@ -32,7 +32,9 @@ def add_args(parser: argparse.ArgumentParser) -> None:
         help="Path for output splicegraph",
     )
     StoreSGPaths = StoreRequiredUniqueActionFactory()
-    input_args = parser.add_argument_group("Input splicegraphs (need at least one)")
+    input_args = parser.add_argument_group(
+        "required splicegraph arguments (need at least one)"
+    )
     input_args.add_argument(
         "--make-annotated",
         type=ExistingResolvedPath,

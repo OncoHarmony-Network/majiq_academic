@@ -14,12 +14,12 @@ from enum import Enum
 from typing import Any, Dict, List, Optional
 
 import pandas as pd
-from dask.distributed import Client
 
 import new_majiq as nm
 from new_majiq._run._majiq_args import (
     check_nonnegative_factory,
     quantify_comparison_args,
+    resources_args,
 )
 from new_majiq._run._run import GenericSubcommand
 from new_majiq.logger import get_logger
@@ -35,21 +35,8 @@ class DPsiPriorType(Enum):
 
 def add_args(parser: argparse.ArgumentParser) -> None:
     quantify_comparison_args(parser)
-    parser.add_argument(
-        "--nthreads",
-        type=check_nonnegative_factory(int, True),
-        default=nm.constants.DEFAULT_QUANTIFY_NTHREADS,
-        help="Number of threads used by Dask scheduler to quantify in chunks"
-        " (default: %(default)s)",
-    )
-    parser.add_argument(
-        "--memory-limit",
-        type=str,
-        default="auto",
-        help="Memory limit to pass to dask cluster (default: %(default)s)",
-    )
 
-    quant_settings = parser.add_argument_group("Quantification settings")
+    quant_settings = parser.add_argument_group("deltapsi inference arguments")
     quant_settings.add_argument(
         "--psibins",
         type=check_nonnegative_factory(int, True),
@@ -80,7 +67,7 @@ def add_args(parser: argparse.ArgumentParser) -> None:
         " (or both) (default: %(default)s",
     )
 
-    prior_args = parser.add_argument_group("Configure prior on deltapsi")
+    prior_args = parser.add_argument_group("deltapsi prior arguments")
     prior_type = prior_args.add_mutually_exclusive_group()
     prior_type.add_argument(
         "--empirical-prior",
@@ -132,18 +119,12 @@ def add_args(parser: argparse.ArgumentParser) -> None:
         " more for mixture probabilities) (default: %(default)s)",
     )
 
+    resources_args(parser, use_dask=True)
     return
 
 
 def run(args: argparse.Namespace) -> None:
     log = get_logger()
-    client = Client(
-        n_workers=1,
-        threads_per_worker=args.nthreads,
-        dashboard_address=None,
-        memory_limit=args.memory_limit,
-    )
-    log.info(client)
     metadata: Dict[str, Any] = dict()
     metadata["command"] = " ".join(sys.argv)
     metadata["version"] = nm.__version__

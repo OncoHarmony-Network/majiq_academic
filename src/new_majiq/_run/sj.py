@@ -15,6 +15,7 @@ from new_majiq._run._majiq_args import (
     ExistingResolvedPath,
     NewResolvedPath,
     check_nonnegative_factory,
+    resources_args,
 )
 from new_majiq._run._run import GenericSubcommand
 from new_majiq.logger import get_logger
@@ -40,9 +41,7 @@ def add_args(parser: argparse.ArgumentParser) -> None:
         type=NewResolvedPath,
         help="Path for SJ file with raw bin reads for junctions and introns",
     )
-    strandness = parser.add_argument_group(
-        "Configure detection of experiment strandness"
-    )
+    strandness = parser.add_argument_group("strandness arguments")
     strandness.add_argument(
         "--strandness",
         type=str,
@@ -82,13 +81,6 @@ def add_args(parser: argparse.ArgumentParser) -> None:
         " deviates from 0.5 by only this amount (default: %(default)s)",
     )
     parser.add_argument(
-        "--nthreads",
-        type=check_nonnegative_factory(int, True),
-        default=constants.DEFAULT_BAM_NTHREADS,
-        help="Number of threads used for parsing input alignments. It is "
-        " highly recommended to use multiple threads (default: %(default)s)",
-    )
-    parser.add_argument(
         "--update-exons",
         action="store_true",
         default=False,
@@ -96,7 +88,8 @@ def add_args(parser: argparse.ArgumentParser) -> None:
         " intronic coverage in potential denovo exons (or exon extension)",
     )
     # fail if no overlapping contigs?
-    disjoint_contigs_ex = parser.add_mutually_exclusive_group()
+    disjoint_contigs = parser.add_argument_group("disjoint contigs arguments")
+    disjoint_contigs_ex = disjoint_contigs.add_mutually_exclusive_group()
     disjoint_contigs_ex.add_argument(
         "--allow-disjoint-contigs",
         action="store_true",
@@ -113,6 +106,7 @@ def add_args(parser: argparse.ArgumentParser) -> None:
         help="Fail when BAM has different contigs than splicegraph"
         " (default allow_disjoint_contigs = %(default)s)",
     )
+    resources_args(parser, use_dask=False)
     return
 
 

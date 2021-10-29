@@ -18,6 +18,7 @@ from new_majiq._run._majiq_args import (
     NewResolvedPath,
     StoreRequiredUniqueActionFactory,
     check_nonnegative_factory,
+    resources_args,
 )
 from new_majiq._run._run import GenericSubcommand
 from new_majiq.experiments import bam_experiment_name
@@ -48,14 +49,7 @@ def add_args(parser: argparse.ArgumentParser) -> None:
         nargs="+",
         help="Path to SJ coverage files for experiments",
     )
-    parser.add_argument(
-        "--nthreads",
-        type=check_nonnegative_factory(int, True),
-        default=constants.DEFAULT_BAM_NTHREADS,
-        help="Number of threads used for simultaneous processing of multiple"
-        " input SJ files (default: %(default)s)",
-    )
-    thresholds = parser.add_argument_group("Thresholds for quantifiability")
+    thresholds = parser.add_argument_group("quantifiability thresholds arguments")
     thresholds.add_argument(
         "--minreads",
         type=check_nonnegative_factory(float, True),
@@ -70,7 +64,7 @@ def add_args(parser: argparse.ArgumentParser) -> None:
         help="Minimum number of nonzero bins to pass a connection"
         " (default: %(default)s).",
     )
-    coverage = parser.add_argument_group("Output coverage options")
+    coverage = parser.add_argument_group("coverage arguments")
     coverage.add_argument(
         "--num-bootstraps",
         type=check_nonnegative_factory(int, False),
@@ -85,7 +79,7 @@ def add_args(parser: argparse.ArgumentParser) -> None:
         " threshold vs Poisson from other nonzero bins will be ignored as"
         " outlier 'read stacks' (default: %(default).2e)",
     )
-    events = parser.add_argument_group("Output event options")
+    events = parser.add_argument_group("events selection arguments")
     events.add_argument(
         "--ignore-from",
         metavar="sg",
@@ -95,6 +89,7 @@ def add_args(parser: argparse.ArgumentParser) -> None:
     )
     select_lsvs = events.add_mutually_exclusive_group()
     select_lsvs.add_argument(
+        "--strict-lsvs",
         "--nonredundant-lsvs",
         dest="select_lsvs",
         default=constants.DEFAULT_SELECT_LSVS,
@@ -131,6 +126,7 @@ def add_args(parser: argparse.ArgumentParser) -> None:
         help="Select all passed LSVs that are target events (i.e. target LSVs)"
         " (default: %(default)s)",
     )
+    resources_args(parser, use_dask=False)
     return
 
 

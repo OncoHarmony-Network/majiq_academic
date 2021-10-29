@@ -12,6 +12,8 @@ import sys
 from pathlib import Path
 from typing import Callable
 
+from dask.distributed import Client
+
 from new_majiq.logger import get_logger, setup_logger
 
 
@@ -37,7 +39,7 @@ class GenericSubcommand(object):
         """Add arguments to provided argument parser"""
         self._add_args(parser)
         # add parameters for logging
-        log_args = parser.add_argument_group("Logging options")
+        log_args = parser.add_argument_group("logging arguments")
         log_args.add_argument(
             "--logger",
             type=str,
@@ -80,6 +82,15 @@ class GenericSubcommand(object):
                 ]
             )
         )
+        if getattr(args, "use_dask", False):
+            # we are using dask, so set up client here
+            client = Client(
+                n_workers=1,
+                threads_per_worker=args.nthreads,
+                dashboard_address=None,
+                memory_limit=args.memory_limit,
+            )
+            log.info(client)
         # run subcommand
         try:
             self._run(args)
