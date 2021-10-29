@@ -95,6 +95,16 @@ DEFAULT_SELECT_LSVS: Final[SelectLSVs] = SelectLSVs.STRICT_LSVS
 DEFAULT_COVERAGE_NUM_BOOTSTRAPS: Final[int] = 30
 DEFAULT_COVERAGE_STACK_PVALUE: Final[float] = 1e-7
 
+# We will typically load chunks across all experiments at once for all
+# bootstrap replicates. So file size will be dependent on:
+# + ec_chunksize (how many event connections per chunk)
+# + num_bootstraps (how many bootstraps are simultaneously there)
+# + num_samples (how many prefixes are being simultaneously processed)
+# + bytes per record (precision, how many arrays) at once.
+# at 8 (1 << 3) bytes per record, default num bootstraps (30 ~ 1 << 5), and
+# 1000 (~1 << 10) samples, chunks end up around 2G
+DEFAULT_COVERAGE_CHUNKS: Final[int] = 1 << 13  # 8192
+
 DEFAULT_QUANTIFY_NTHREADS: Final[int] = 1
 DEFAULT_QUANTIFY_MINREADS: Final[float] = 10.0
 DEFAULT_QUANTIFY_MINBINS: Final[float] = 3.0

@@ -254,6 +254,17 @@ def quantify_comparison_args(parser: argparse.ArgumentParser) -> None:
     return
 
 
+def chunks_args(parser: argparse.ArgumentParser, chunksize: int) -> None:
+    chunks = parser.add_argument_group("output chunks arguments")
+    chunks.add_argument(
+        "--chunksize",
+        type=check_nonnegative_factory(int, True),
+        default=chunksize,
+        help="Chunk coverage per prefix and per this many introns/junctions at"
+        " a time (default: %(default)s)",
+    )
+
+
 def resources_args(parser: argparse.ArgumentParser, use_dask: bool = False) -> None:
     resources = parser.add_argument_group("threads/resources arguments")
     if use_dask:

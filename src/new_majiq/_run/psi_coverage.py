@@ -12,12 +12,12 @@ from pathlib import Path
 from typing import List, Optional
 
 import new_majiq as nm
-import new_majiq.constants as constants
 from new_majiq._run._majiq_args import (
     ExistingResolvedPath,
     NewResolvedPath,
     StoreRequiredUniqueActionFactory,
     check_nonnegative_factory,
+    chunks_args,
     resources_args,
 )
 from new_majiq._run._run import GenericSubcommand
@@ -53,14 +53,14 @@ def add_args(parser: argparse.ArgumentParser) -> None:
     thresholds.add_argument(
         "--minreads",
         type=check_nonnegative_factory(float, True),
-        default=constants.DEFAULT_QUANTIFY_MINREADS,
+        default=nm.constants.DEFAULT_QUANTIFY_MINREADS,
         help="Minimum readrate per experiment to pass a connection"
         " (default: %(default)s)",
     )
     thresholds.add_argument(
         "--minbins",
         type=check_nonnegative_factory(float, True),
-        default=constants.DEFAULT_QUANTIFY_MINBINS,
+        default=nm.constants.DEFAULT_QUANTIFY_MINBINS,
         help="Minimum number of nonzero bins to pass a connection"
         " (default: %(default)s).",
     )
@@ -68,13 +68,13 @@ def add_args(parser: argparse.ArgumentParser) -> None:
     coverage.add_argument(
         "--num-bootstraps",
         type=check_nonnegative_factory(int, False),
-        default=constants.DEFAULT_COVERAGE_NUM_BOOTSTRAPS,
+        default=nm.constants.DEFAULT_COVERAGE_NUM_BOOTSTRAPS,
         help="Number of bootstrap replicates to sample (default: %(default)s)",
     )
     coverage.add_argument(
         "--stack-pvalue-threshold",
         type=check_nonnegative_factory(float, False),
-        default=constants.DEFAULT_COVERAGE_STACK_PVALUE,
+        default=nm.constants.DEFAULT_COVERAGE_STACK_PVALUE,
         help="Bins with readrate having right-tailed probability less than this"
         " threshold vs Poisson from other nonzero bins will be ignored as"
         " outlier 'read stacks' (default: %(default).2e)",
@@ -92,9 +92,9 @@ def add_args(parser: argparse.ArgumentParser) -> None:
         "--strict-lsvs",
         "--nonredundant-lsvs",
         dest="select_lsvs",
-        default=constants.DEFAULT_SELECT_LSVS,
+        default=nm.constants.DEFAULT_SELECT_LSVS,
         action="store_const",
-        const=constants.SelectLSVs.STRICT_LSVS,
+        const=nm.constants.SelectLSVs.STRICT_LSVS,
         help="Select passed LSVs that are either not strict subsets of other"
         " events (nonredundant) or mutually redundant source events"
         " (i.e. strict LSVs) (default: %(default)s)",
@@ -102,30 +102,31 @@ def add_args(parser: argparse.ArgumentParser) -> None:
     select_lsvs.add_argument(
         "--permissive-lsvs",
         dest="select_lsvs",
-        default=constants.DEFAULT_SELECT_LSVS,
+        default=nm.constants.DEFAULT_SELECT_LSVS,
         action="store_const",
-        const=constants.SelectLSVs.PERMISSIVE_LSVS,
+        const=nm.constants.SelectLSVs.PERMISSIVE_LSVS,
         help="Select all passed LSVs that are not mutually redundant targets"
         " (i.e. permissive LSVs) (default: %(default)s)",
     )
     select_lsvs.add_argument(
         "--source-lsvs",
         dest="select_lsvs",
-        default=constants.DEFAULT_SELECT_LSVS,
+        default=nm.constants.DEFAULT_SELECT_LSVS,
         action="store_const",
-        const=constants.SelectLSVs.SOURCE_LSVS,
+        const=nm.constants.SelectLSVs.SOURCE_LSVS,
         help="Select all passed LSVs that are source events (i.e. source LSVs)"
         " (default: %(default)s)",
     )
     select_lsvs.add_argument(
         "--target-lsvs",
         dest="select_lsvs",
-        default=constants.DEFAULT_SELECT_LSVS,
+        default=nm.constants.DEFAULT_SELECT_LSVS,
         action="store_const",
-        const=constants.SelectLSVs.TARGET_LSVS,
+        const=nm.constants.SelectLSVs.TARGET_LSVS,
         help="Select all passed LSVs that are target events (i.e. target LSVs)"
         " (default: %(default)s)",
     )
+    chunks_args(parser, nm.constants.DEFAULT_COVERAGE_CHUNKS)
     resources_args(parser, use_dask=False)
     return
 
@@ -162,7 +163,7 @@ def run(args: argparse.Namespace) -> None:
         log.info(f"Inferring PSI coverage from {args.sj[0]}")
         psi_coverage = sj_to_psicov(args.sj[0])
         log.info(f"Saving PSI coverage to {args.psi_coverage}")
-        psi_coverage.to_zarr(args.psi_coverage)
+        psi_coverage.to_zarr(args.psi_coverage, ec_chunksize=args.chunksize)
     else:
         # precompute prefixes to use
         log.info("Precomputing prefixes corresponding to input SJ files")
@@ -182,13 +183,16 @@ def run(args: argparse.Namespace) -> None:
                 minreads=args.minreads,
                 minbins=args.minbins,
             ),
+            ec_chunksize=args.chunksize,
         )
         nm.rng_resize(args.nthreads)  # allow for as many rngs as there are threads
         with mp.Pool(args.nthreads) as p:
             jobs = p.imap_unordered(
                 lambda x: (
                     sj_to_psicov(x[1]).to_zarr_slice(
-                        args.psi_coverage, slice(x[0], 1 + x[0])
+                        args.psi_coverage,
+                        slice(x[0], 1 + x[0]),
+                        ec_chunksize=args.chunksize,
                     )
                 ),
                 list(enumerate(args.sj)),

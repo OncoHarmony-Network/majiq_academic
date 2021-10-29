@@ -10,11 +10,10 @@ import argparse
 from typing import List, Optional
 
 import new_majiq as nm
-import new_majiq.constants as constants
 from new_majiq._run._majiq_args import (
     ExistingResolvedPath,
     NewResolvedPath,
-    check_nonnegative_factory,
+    chunks_args,
     resources_args,
 )
 from new_majiq._run._run import GenericSubcommand
@@ -45,12 +44,7 @@ def add_args(parser: argparse.ArgumentParser) -> None:
         default="median",
         help="Summary function applied to coverage from input experiments (default: %(default)s)",
     )
-    parser.add_argument(
-        "--chunksize",
-        type=check_nonnegative_factory(int, True),
-        default=constants.NC_SGREADS_CHUNKS,
-        help="Chunksize for summarized counts",
-    )
+    chunks_args(parser, nm.constants.NC_SGREADS_CHUNKS)
     resources_args(parser, use_dask=True)
     return
 

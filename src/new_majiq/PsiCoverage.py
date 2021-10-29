@@ -554,7 +554,9 @@ class PsiCoverage(object):
         return PsiCoverage(df, self.events)
 
     def _save_df(
-        self, ec_chunksize: int = 8192, remove_bam_attrs: bool = False
+        self,
+        ec_chunksize: int = constants.DEFAULT_COVERAGE_CHUNKS,
+        remove_bam_attrs: bool = False,
     ) -> xr.Dataset:
         """Prepare dataset of psicoverage that will be saved
 
@@ -580,7 +582,7 @@ class PsiCoverage(object):
     def to_zarr(
         self,
         path: Union[str, Path],
-        ec_chunksize: int = 8192,
+        ec_chunksize: int = constants.DEFAULT_COVERAGE_CHUNKS,
         append: bool = False,
         consolidated: bool = True,
     ) -> None:
@@ -641,7 +643,7 @@ class PsiCoverage(object):
         self,
         path: Union[str, Path],
         prefix_slice: slice,
-        ec_chunksize: int = 8192,
+        ec_chunksize: int = constants.DEFAULT_COVERAGE_CHUNKS,
     ) -> None:
         """Save PsiCoverage to specified path for specified slice on prefix
 
@@ -664,7 +666,7 @@ class PsiCoverage(object):
         events_df: xr.Dataset,
         prefixes: List[str],
         num_bootstraps: int,
-        ec_chunksize: int = 8192,
+        ec_chunksize: int = constants.DEFAULT_COVERAGE_CHUNKS,
         cov_dtype: type = np.float32,
         psicov_attrs: Dict[Hashable, Any] = dict(),
     ) -> None:
