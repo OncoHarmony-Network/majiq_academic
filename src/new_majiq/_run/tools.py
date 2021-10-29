@@ -18,7 +18,6 @@ from new_majiq._run.combine import subcommand as combine
 from new_majiq._run.deltapsi import subcommand as deltapsi
 from new_majiq._run.gff3 import subcommand as gff3
 from new_majiq._run.heterogen import subcommand as heterogen
-from new_majiq._run.legacy_psi import subcommand as legacy_psi
 from new_majiq._run.moccasin import subcommand_coverage_infer as moccasin_coverage_infer
 from new_majiq._run.moccasin import subcommand_coverage_model as moccasin_coverage_model
 from new_majiq._run.moccasin import subcommand_factors_infer as moccasin_factors_infer
@@ -40,7 +39,6 @@ SUBPARSER_SOURCES: Dict[str, GenericSubcommand] = {
     "quantify": quantify,
     "deltapsi": deltapsi,
     "heterogen": heterogen,
-    "legacy-psi": legacy_psi,
     "moccasin-factors-model": moccasin_factors_model,
     "moccasin-factors-infer": moccasin_factors_infer,
     "moccasin-coverage-model": moccasin_coverage_model,
