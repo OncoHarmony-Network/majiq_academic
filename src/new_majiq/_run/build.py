@@ -7,6 +7,7 @@ Author: Joseph K Aicher
 """
 
 import argparse
+import multiprocessing.dummy as mp
 from enum import Enum
 from pathlib import Path
 from typing import Dict, List, Optional, Sequence
@@ -314,6 +315,13 @@ def add_args(parser: argparse.ArgumentParser) -> None:
     reset_simplified_args(parser)
     build_threshold_args(parser)
     simplifier_threshold_args(parser, prefix="simplify-")
+    parser.add_argument(
+        "--nthreads",
+        type=check_nonnegative_factory(int, True),
+        default=constants.DEFAULT_BAM_NTHREADS,
+        help="Number of threads used for simultaneous processing of multiple"
+        " input SJ files (default: %(default)s)",
+    )
     return
 
 
@@ -343,6 +351,75 @@ def get_grouped_experiments(groups_tsv: Path) -> SJGroupsT:
     }
 
 
+def do_build_junctions(
+    sg: nm.SpliceGraph,
+    experiments: SJGroupsT,
+    experiment_thresholds: nm.ExperimentThresholds,
+    min_experiments: float,
+    process_denovo_junctions: bool,
+    denovo_simplified: bool,
+    imap_unordered_fn=map,
+) -> nm.GeneJunctions:
+    log = get_logger()
+    log.info("Updating known and identifying denovo junctions")
+    junction_builder = sg.junctions.builder()
+    for group_ndx, (group, group_sjs) in enumerate(experiments.items(), 1):
+        log.info(
+            f"Processing junctions from group {group} ({group_ndx} / {len(experiments)})"
+        )
+        build_group = sg.junctions.build_group(sg.exons)
+        jobs = imap_unordered_fn(
+            lambda sj: build_group.add_experiment(
+                nm.SJJunctionsBins.from_zarr(sj),
+                thresholds=experiment_thresholds,
+                add_denovo=process_denovo_junctions,
+            ),
+            group_sjs,
+        )
+        for sj_ndx, _ in enumerate(jobs, 1):
+            log.info(f"Finished processing {sj_ndx} / {len(group_sjs)} SJ files")
+        junction_builder.add_group(build_group, min_experiments)
+    log.info("Consolidating passed junctions from input experiments")
+    return junction_builder.get_passed(denovo_simplified)
+
+
+def do_build_introns(
+    exons: nm.Exons,
+    base_introns: nm.GeneIntrons,
+    experiments: SJGroupsT,
+    experiment_thresholds: nm.ExperimentThresholds,
+    min_experiments: float,
+    discard_denovo: bool,
+    denovo_simplified: bool,
+    imap_unordered_fn=map,
+) -> nm.GeneIntrons:
+    log = get_logger()
+    log.info("Determining potential gene introns")
+    potential_introns = exons.potential_introns(denovo_simplified)
+    potential_introns.update_flags_from(base_introns)
+    log.info("Identifying new passed introns")
+    intron_group = potential_introns.build_group()  # intron groups done in place
+    for group_ndx, (group, group_sjs) in enumerate(experiments.items(), 1):
+        log.info(
+            f"Processing introns from group {group} ({group_ndx} / {len(experiments)})"
+        )
+        jobs = imap_unordered_fn(
+            lambda sj: intron_group.add_experiment(
+                nm.SJIntronsBins.from_zarr(sj),
+                thresholds=experiment_thresholds,
+            ),
+            group_sjs,
+        )
+        for sj_ndx, _ in enumerate(jobs, 1):
+            log.info(f"Finished processing {sj_ndx} / {len(group_sjs)} SJ files")
+        intron_group.update_introns(min_experiments)
+    log.info("Filtering potential introns to those passing thresholds")
+    return potential_introns.filter_passed(
+        keep_annotated=True,
+        discard_denovo=discard_denovo,
+    )
+
+
 def do_build(
     sg: nm.SpliceGraph,
     experiments: SJGroupsT,
@@ -351,31 +428,19 @@ def do_build(
     process_denovo_junctions: bool,
     introns_type: IntronsType,
     denovo_simplified: bool,
+    imap_unordered_fn=map,
 ) -> nm.SpliceGraph:
     log = get_logger()
 
-    log.info("Updating known and identifying denovo junctions")
-    junction_builder = sg.junctions.builder()
-    for group_ndx, (group, group_sjs) in enumerate(experiments.items()):
-        log.info(
-            f"Processing junctions from group {group} ({1 + group_ndx} / {len(experiments)})"
-        )
-        build_group = sg.junctions.build_group(sg.exons)
-        for sj_ndx, sj in enumerate(group_sjs):
-            log.info(
-                f"Processing junctions from {Path(sj).resolve()}"
-                f" (experiment {1 + sj_ndx} / {len(group_sjs)} in group)"
-            )
-            build_group.add_experiment(
-                nm.SJJunctionsBins.from_zarr(sj),
-                thresholds=experiment_thresholds,
-                add_denovo=process_denovo_junctions,
-            )
-        junction_builder.add_group(build_group, min_experiments)
-    del build_group
-    log.info("Consolidating passed junctions from input experiments")
-    updated_junctions = junction_builder.get_passed(denovo_simplified)
-    del junction_builder
+    updated_junctions = do_build_junctions(
+        sg=sg,
+        experiments=experiments,
+        experiment_thresholds=experiment_thresholds,
+        min_experiments=min_experiments,
+        process_denovo_junctions=process_denovo_junctions,
+        denovo_simplified=denovo_simplified,
+        imap_unordered_fn=imap_unordered_fn,
+    )
 
     log.info("Inferring denovo exons and updated exon boundaries")
     updated_exons = sg.exons.infer_with_junctions(updated_junctions)
@@ -385,33 +450,16 @@ def do_build(
         log.info("Dropping all introns")
         updated_introns = updated_exons.empty_introns()
     else:
-        log.info("Determining potential gene introns using updated exons")
-        potential_introns = updated_exons.potential_introns(denovo_simplified)
-        potential_introns.update_flags_from(sg.introns)
-        log.info("Identiying new passed introns")
-        intron_group = potential_introns.build_group()  # intron groups done in place
-        for group_ndx, (group, group_sjs) in enumerate(experiments.items()):
-            log.info(
-                f"Processing introns from group {group}"
-                f" ({1 + group_ndx} / {len(experiments)})"
-            )
-            for sj_ndx, sj in enumerate(group_sjs):
-                log.info(
-                    f"Processing introns from {Path(sj).resolve()}"
-                    f" (experiment {1 + sj_ndx} / {len(group_sjs)} in group)"
-                )
-                intron_group.add_experiment(
-                    nm.SJIntronsBins.from_zarr(sj),
-                    thresholds=experiment_thresholds,
-                )
-            intron_group.update_introns(min_experiments)
-        del intron_group
-        log.info("Filtering potential introns to those passing thresholds")
-        updated_introns = potential_introns.filter_passed(
-            keep_annotated=True,
+        updated_introns = do_build_introns(
+            exons=updated_exons,
+            base_introns=sg.introns,
+            experiments=experiments,
+            experiment_thresholds=experiment_thresholds,
+            min_experiments=min_experiments,
             discard_denovo=introns_type != IntronsType.ALL_INTRONS,
+            denovo_simplified=denovo_simplified,
+            imap_unordered_fn=imap_unordered_fn,
         )
-        del potential_introns
 
     log.info("constructing splicegraph with updated exons and connections")
     return sg.with_updated_exon_connections(
@@ -430,6 +478,7 @@ def do_simplify(
     simplify_minreads_denovo: float,
     simplify_minreads_ir: float,
     simplify_min_experiments: float,
+    imap_unordered_fn=map,
 ) -> nm.SpliceGraph:
     log = get_logger()
 
@@ -440,24 +489,23 @@ def do_simplify(
 
     log.info("Identifying introns and junctions to unsimplify")
     simplifier_group = sg.exon_connections.simplifier()
-    for group_ndx, (group, group_sjs) in enumerate(experiments.items()):
+    for group_ndx, (group, group_sjs) in enumerate(experiments.items(), 1):
         log.info(
-            f"Processing coverage from group {group} ({1 + group_ndx} / {len(experiments)})"
+            f"Processing coverage from group {group} ({group_ndx} / {len(experiments)})"
         )
-        for sj_ndx, sj in enumerate(group_sjs):
-            log.info(
-                f"Processing coverage from {Path(sj).resolve()}"
-                f" (experiment {1 + sj_ndx} / {len(group_sjs)} in group)"
-            )
-            simplifier_group.add_experiment(
+        jobs = imap_unordered_fn(
+            lambda sj: simplifier_group.add_experiment(
                 nm.SJExperiment.from_zarr(sj),
                 min_psi=simplify_minpsi,
                 minreads_annotated=simplify_minreads_annotated,
                 minreads_denovo=simplify_minreads_denovo,
                 minreads_introns=simplify_minreads_ir,
-            )
+            ),
+            group_sjs,
+        )
+        for sj_ndx, _ in enumerate(jobs, 1):
+            log.info(f"Finished processing {sj_ndx} / {len(group_sjs)} SJ files")
         simplifier_group.update_connections(simplify_min_experiments)
-    del simplifier_group
 
     return sg
 
@@ -507,6 +555,9 @@ def run(args: argparse.Namespace) -> None:
     log.info(f"Loading base splicegraph from {args.base_sg.resolve()}")
     sg = nm.SpliceGraph.from_zarr(args.base_sg)
 
+    # pool for performing build, simplification
+    p = mp.Pool(args.nthreads)
+
     # perform build?
     if args.build != BuildType.SIMPLIFY_ONLY:
         sg = do_build(
@@ -519,6 +570,7 @@ def run(args: argparse.Namespace) -> None:
             introns_type=args.introns,
             # if simplifying or if --update-simplified (i.e. not --reset-simplified)
             denovo_simplified=simplify or not args.reset_simplify,
+            imap_unordered_fn=p.imap_unordered,
         )
     else:
         log.info(f"Filtering introns {args.introns = }")
@@ -547,7 +599,10 @@ def run(args: argparse.Namespace) -> None:
             simplify_minreads_denovo=args.simplify_minreads_denovo,
             simplify_minreads_ir=args.simplify_minreads_ir,
             simplify_min_experiments=args.simplify_min_experiments,
+            imap_unordered_fn=p.imap_unordered,
         )
+
+    p.close()
 
     log.info(f"Saving updated splicegraph to {args.out_sg.resolve()}")
     sg.to_zarr(args.out_sg)
