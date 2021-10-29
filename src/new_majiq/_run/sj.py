@@ -7,12 +7,15 @@ Author: Joseph K Aicher
 """
 
 import argparse
-from pathlib import Path
 from typing import List, Optional
 
 import new_majiq as nm
 import new_majiq.constants as constants
-from new_majiq._run._majiq_args import check_nonnegative_factory
+from new_majiq._run._majiq_args import (
+    ExistingResolvedPath,
+    NewResolvedPath,
+    check_nonnegative_factory,
+)
 from new_majiq._run._run import GenericSubcommand
 from new_majiq.logger import get_logger
 
@@ -23,16 +26,18 @@ DESCRIPTION = (
 
 def add_args(parser: argparse.ArgumentParser) -> None:
     """add arguments to parser"""
-    parser.add_argument("bam", type=Path, help="Path to RNA-seq alignments as BAM")
+    parser.add_argument(
+        "bam", type=ExistingResolvedPath, help="Path to RNA-seq alignments as BAM"
+    )
     parser.add_argument(
         "splicegraph",
-        type=Path,
+        type=ExistingResolvedPath,
         help="Path to splicegraph file to determine intronic regions that do"
         " not overlap exons",
     )
     parser.add_argument(
         "sj",
-        type=Path,
+        type=NewResolvedPath,
         help="Path for SJ file with raw bin reads for junctions and introns",
     )
     strandness = parser.add_argument_group(
@@ -112,15 +117,9 @@ def add_args(parser: argparse.ArgumentParser) -> None:
 
 
 def run(args: argparse.Namespace) -> None:
-    if not args.bam.exists():
-        raise ValueError(f"Was unable to find input alignments at {args.bam}")
-    if not args.splicegraph.exists():
-        raise ValueError(f"Was unable to find input splicegraph at {args.splicegraph}")
-    if args.sj.exists():
-        raise ValueError(f"Output path {args.sj} already exists")
     log = get_logger()
 
-    log.info(f"Loading splicegraph ({args.splicegraph.resolve()})")
+    log.info(f"Loading splicegraph ({args.splicegraph})")
     sg = nm.SpliceGraph.from_zarr(args.splicegraph)
     # load junctions, introns
     sj = nm.SJExperiment.from_bam(
@@ -134,7 +133,7 @@ def run(args: argparse.Namespace) -> None:
         auto_minjunctions=args.auto_minjunctions,
         auto_mediantolerance=args.auto_mediantolerance,
     )
-    log.info(f"Saving junction and intron coverage to {args.sj.resolve()}")
+    log.info(f"Saving junction and intron coverage to {args.sj}")
     sj.to_zarr(args.sj)
     return
 

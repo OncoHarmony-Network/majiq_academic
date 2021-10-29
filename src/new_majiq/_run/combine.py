@@ -7,12 +7,16 @@ Author: Joseph K Aicher
 """
 
 import argparse
-from pathlib import Path
 from typing import List, Optional
 
 import xarray as xr
 
 import new_majiq as nm
+from new_majiq._run._majiq_args import (
+    ExistingResolvedPath,
+    NewResolvedPath,
+    StoreRequiredUniqueActionFactory,
+)
 from new_majiq._run._run import GenericSubcommand
 from new_majiq._run.build import IntronsType, ir_filtering_args
 from new_majiq.logger import get_logger
@@ -24,15 +28,17 @@ def add_args(parser: argparse.ArgumentParser) -> None:
     """add arguments to parser"""
     parser.add_argument(
         "out_sg",
-        type=Path,
+        type=NewResolvedPath,
         help="Path for output splicegraph",
     )
+    StoreSGPaths = StoreRequiredUniqueActionFactory()
     input_args = parser.add_argument_group("Input splicegraphs (need at least one)")
     input_args.add_argument(
         "--make-annotated",
-        type=Path,
+        type=ExistingResolvedPath,
+        action=StoreSGPaths,
         nargs="+",
-        default=[],
+        default=list(),
         help="Input splicegraphs for which all junctions will be marked as"
         " annotated (i.e. not denovo). This helps highlight denovo junctions"
         " that were unique to non-base splicegraphs. Note that introns remain"
@@ -40,7 +46,8 @@ def add_args(parser: argparse.ArgumentParser) -> None:
     )
     input_args.add_argument(
         "--keep-denovo",
-        type=Path,
+        type=ExistingResolvedPath,
+        action=StoreSGPaths,
         nargs="+",
         default=list(),
         help="Input splicegraphs for which junctions will remain marked as"
@@ -52,15 +59,9 @@ def add_args(parser: argparse.ArgumentParser) -> None:
 
 
 def run(args: argparse.Namespace) -> None:
-    if args.out_sg.exists():
-        raise ValueError(
-            f"Output splicegraph {args.output_sg.resolve()} already exists"
-        )
     all_inputs = args.make_annotated + args.keep_denovo
     if not all_inputs:
         raise ValueError("No input splicegraphs were provided to combine")
-    if missing := sorted(set(x for x in all_inputs if not x.exists())):
-        raise ValueError(f"Unable to find all input splicegraphs ({missing = })")
 
     log = get_logger()
 
@@ -99,7 +100,7 @@ def run(args: argparse.Namespace) -> None:
         del potential_introns
     log.info("Creating final combined splicegraph")
     sg = nm.SpliceGraph.from_components(genes.contigs, genes, exons, junctions, introns)
-    log.info(f"Saving updated splicegraph to {args.out_sg.resolve()}")
+    log.info(f"Saving updated splicegraph to {args.out_sg}")
     sg.to_zarr(args.out_sg)
     return
 

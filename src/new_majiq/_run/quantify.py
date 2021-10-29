@@ -9,7 +9,6 @@ Author: Joseph K Aicher
 import argparse
 import json
 import sys
-from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 import numpy as np
@@ -17,7 +16,11 @@ import pandas as pd
 from dask.distributed import Client
 
 import new_majiq as nm
-from new_majiq._run._majiq_args import check_nonnegative_factory
+from new_majiq._run._majiq_args import (
+    ExistingResolvedPath,
+    StoreRequiredUniqueActionFactory,
+    check_nonnegative_factory,
+)
 from new_majiq._run._run import GenericSubcommand
 from new_majiq.logger import get_logger
 
@@ -27,13 +30,14 @@ DESCRIPTION = "Quantify PSI from PsiCoverage files"
 def add_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
         "psicov",
-        type=Path,
+        type=ExistingResolvedPath,
+        action=StoreRequiredUniqueActionFactory(),
         nargs="+",
         help="Paths to PsiCoverage files to quantify",
     )
     parser.add_argument(
         "--splicegraph",
-        type=Path,
+        type=ExistingResolvedPath,
         default=None,
         help="If specified, annotate quantifications with splicegraph information",
     )
@@ -73,12 +77,6 @@ def add_args(parser: argparse.ArgumentParser) -> None:
 
 
 def run(args: argparse.Namespace) -> None:
-    if not all(p.exists() for p in args.psicov):
-        missing = sorted(p for p in args.psicov if not p.exists())
-        raise ValueError(f"Unable to find input coverage ({missing = })")
-    if args.splicegraph and not args.splicegraph.exists():
-        raise ValueError(f"Unable to find input splicegraph {args.splicegraph}")
-
     log = get_logger()
     client = Client(
         n_workers=1,

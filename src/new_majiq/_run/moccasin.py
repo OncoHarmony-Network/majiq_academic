@@ -7,7 +7,6 @@ Author: Joseph K Aicher
 """
 
 import argparse
-from pathlib import Path
 from typing import List, Union
 
 import moccasin.moccasin as mc
@@ -19,7 +18,12 @@ from dask.distributed import Client
 import new_majiq as nm
 import new_majiq.constants as constants
 from new_majiq._offsets import clip_and_normalize_strict
-from new_majiq._run._majiq_args import check_nonnegative_factory
+from new_majiq._run._majiq_args import (
+    ExistingResolvedPath,
+    NewResolvedPath,
+    StoreRequiredUniqueActionFactory,
+    check_nonnegative_factory,
+)
 from new_majiq._run._run import GenericSubcommand
 from new_majiq.logger import get_logger
 
@@ -58,7 +62,7 @@ def _args_factors(parser: argparse.ArgumentParser) -> None:
     factors_ex.add_argument(
         "--factors-tsv",
         dest="factors_tsv",
-        type=Path,
+        type=ExistingResolvedPath,
         default=None,
         help="Path to TSV with model matrix for all prefixes being processed"
         " (required column: prefix)",
@@ -66,7 +70,8 @@ def _args_factors(parser: argparse.ArgumentParser) -> None:
     factors_ex.add_argument(
         "--factors-zarr",
         dest="factors_zarr",
-        type=Path,
+        type=ExistingResolvedPath,
+        action=StoreRequiredUniqueActionFactory(),
         nargs="+",
         default=None,
         help="Paths to factors matrices including desired prefixes. If a prefix"
@@ -179,11 +184,14 @@ def args_factors_model(parser: argparse.ArgumentParser) -> None:
     """arguments for creating model of unknown factors"""
     _args_factors(parser)  # get factors information
     parser.add_argument(
-        "factors_model", type=Path, help="Path for output model for unknown confounders"
+        "factors_model",
+        type=NewResolvedPath,
+        help="Path for output model for unknown confounders",
     )
     parser.add_argument(
         "psicov",
-        type=Path,
+        type=ExistingResolvedPath,
+        action=StoreRequiredUniqueActionFactory(),
         nargs="+",
         help="Paths for input psi coverage files for unknown confounders model",
     )
@@ -197,17 +205,18 @@ def args_factors_infer(parser: argparse.ArgumentParser) -> None:
     _args_factors(parser)
     parser.add_argument(
         "factors_model",
-        type=Path,
+        type=ExistingResolvedPath,
         help="Path for input model of unknown confounders",
     )
     parser.add_argument(
         "output",
-        type=Path,
+        type=NewResolvedPath,
         help="Path for output factors (known and unknown)",
     )
     parser.add_argument(
         "psicov",
-        type=Path,
+        type=ExistingResolvedPath,
+        action=StoreRequiredUniqueActionFactory(),
         nargs="+",
         help="Path to psi coverage files for which known/unknown factors will be saved",
     )
@@ -219,14 +228,15 @@ def args_coverage_model(parser: argparse.ArgumentParser) -> None:
     """arguments for modeling coverage"""
     parser.add_argument(
         "coverage_model",
-        type=Path,
+        type=NewResolvedPath,
         help="Output path for coverage model",
     )
     _args_factors(parser)
     parser.add_argument(
         "psicov",
         nargs="+",
-        type=Path,
+        type=ExistingResolvedPath,
+        action=StoreRequiredUniqueActionFactory(),
         help="Paths for input psi coverage files for coverage model",
     )
     _args_dask(parser)
@@ -238,17 +248,18 @@ def args_coverage_infer(parser: argparse.ArgumentParser) -> None:
     _args_factors(parser)
     parser.add_argument(
         "coverage_model",
-        type=Path,
+        type=ExistingResolvedPath,
         help="Input path for coverage model",
     )
     parser.add_argument(
         "corrected_psicov",
-        type=Path,
+        type=NewResolvedPath,
         help="Path for output corrected psi coverage",
     )
     parser.add_argument(
         "original_psicov",
-        type=Path,
+        type=ExistingResolvedPath,
+        action=StoreRequiredUniqueActionFactory(),
         nargs="+",
         help="Paths to original, uncorrected psi coverage",
     )
@@ -300,7 +311,7 @@ def run_factors_model(args: argparse.Namespace) -> None:
             )
         )
     # save model
-    log.info(f"Saving model to {args.factors_model.resolve()}")
+    log.info(f"Saving model to {args.factors_model}")
     model.to_zarr(args.factors_model)
     return
 
@@ -319,13 +330,13 @@ def run_factors_infer(args: argparse.Namespace):
     psicov = nm.PsiCoverage.from_zarr(args.psicov)
     log.info("Setting up model matrix of known factors")
     factors = _get_factors(psicov.prefixes, args).load()
-    log.info(f"Loading model for unknown factors from {args.factors_model.resolve()}")
+    log.info(f"Loading model for unknown factors from {args.factors_model}")
     model = mc.ModelUnknownConfounders.from_zarr(args.factors_model)
     log.info("Solving for unknown confounders")
     unknown_factors = model.predict(
         psicov.bootstrap_psi, psicov.event_passed, factors
     ).load()
-    log.info(f"Saving combined factors to {args.output.resolve()}")
+    log.info(f"Saving combined factors to {args.output}")
     (
         xr.concat([factors, unknown_factors.rename(new_factor="factor")], dim="factor")
         .rename("factors")
@@ -369,7 +380,7 @@ def run_coverage_model(args: argparse.Namespace) -> None:
         dim_prefix="prefix",
         dim_factor="factor",
     )
-    log.info(f"Saving model parameters to {args.coverage_model.resolve()}")
+    log.info(f"Saving model parameters to {args.coverage_model}")
     xr.Dataset(
         {
             "bootstrap_model": bootstrap_model,
@@ -393,7 +404,7 @@ def run_coverage_infer(args: argparse.Namespace) -> None:
     psicov = nm.PsiCoverage.from_zarr(args.original_psicov)
     log.info("Setting up model matrix of all factors")
     factors = _get_factors(psicov.prefixes, args).load().chunk({"prefix": 1})
-    log.info(f"Opening up model parameters from {args.coverage_model.resolve()}")
+    log.info(f"Opening up model parameters from {args.coverage_model}")
     models = xr.open_zarr(args.coverage_model).load()
     log.info("Loading offsets between events")
     offsets = psicov.lsv_offsets.load()
@@ -445,9 +456,9 @@ def run_coverage_infer(args: argparse.Namespace) -> None:
     psicov = psicov.updated(
         adj_bootstrap_psi,
         adj_raw_psi,
-        model_path=f"{args.coverage_model.resolve()}",
+        model_path=f"{args.coverage_model}",
     )
-    log.info(f"Saving corrected coverage to {args.corrected_psicov.resolve()}")
+    log.info(f"Saving corrected coverage to {args.corrected_psicov}")
     psicov.to_zarr(args.corrected_psicov)
     return
 

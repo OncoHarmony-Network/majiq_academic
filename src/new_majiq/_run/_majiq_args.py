@@ -5,7 +5,28 @@ Helper classes/functions for checking valid arguments directly at command-line
 """
 
 import argparse
+from pathlib import Path
 from typing import Any, Callable, Optional, Set, Union
+
+
+def ExistingResolvedPath(x: Any) -> Path:
+    try:
+        p = Path(x).resolve()
+    except TypeError:
+        raise argparse.ArgumentTypeError(f"Input {x} is not pathlike")
+    if not p.exists():
+        raise argparse.ArgumentTypeError(f"{p} does not exist")
+    return p
+
+
+def NewResolvedPath(x: Any) -> Path:
+    try:
+        p = Path(x).resolve()
+    except TypeError:
+        raise argparse.ArgumentTypeError(f"Input {x} is not pathlike")
+    if p.exists():
+        raise argparse.ArgumentTypeError(f"{p} already exists")
+    return p
 
 
 def check_characters_factory(

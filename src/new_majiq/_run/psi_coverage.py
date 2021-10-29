@@ -13,7 +13,12 @@ from typing import List, Optional
 
 import new_majiq as nm
 import new_majiq.constants as constants
-from new_majiq._run._majiq_args import check_nonnegative_factory
+from new_majiq._run._majiq_args import (
+    ExistingResolvedPath,
+    NewResolvedPath,
+    StoreRequiredUniqueActionFactory,
+    check_nonnegative_factory,
+)
 from new_majiq._run._run import GenericSubcommand
 from new_majiq.experiments import bam_experiment_name
 from new_majiq.logger import get_logger
@@ -28,17 +33,18 @@ def add_args(parser: argparse.ArgumentParser) -> None:
     """add arguments for parser"""
     parser.add_argument(
         "splicegraph",
-        type=Path,
+        type=ExistingResolvedPath,
         help="Path to splicegraph to define LSVs",
     )
     parser.add_argument(
         "psi_coverage",
-        type=Path,
+        type=NewResolvedPath,
         help="Path for output psi-coverage file",
     )
     parser.add_argument(
         "sj",
-        type=Path,
+        type=ExistingResolvedPath,
+        action=StoreRequiredUniqueActionFactory(),
         nargs="+",
         help="Path to SJ coverage files for experiments",
     )
@@ -83,7 +89,7 @@ def add_args(parser: argparse.ArgumentParser) -> None:
     events.add_argument(
         "--ignore-from",
         metavar="sg",
-        type=Path,
+        type=ExistingResolvedPath,
         default=None,
         help="Path to other splicegraph, ignore LSVs shared with this splicegraph",
     )
@@ -129,26 +135,13 @@ def add_args(parser: argparse.ArgumentParser) -> None:
 
 
 def run(args: argparse.Namespace) -> None:
-    if missing := sorted(set(x for x in args.sj if not x.exists())):
-        raise ValueError(f"Unable to find all input SJ files ({missing =})")
-    if len(unique := set(args.sj)) != len(args.sj):
-        # get non-unique sj to report error
-        non_unique = sorted(args.sj)
-        for x in unique:
-            non_unique.remove(x)  # removes first occurence
-        raise ValueError(f"Non-unique input SJ files ({non_unique = })")
-    if not args.splicegraph.exists():
-        raise ValueError(f"Was unable to find splicegraph at {args.splicegraph}")
-    if args.psi_coverage.exists():
-        raise ValueError(f"Output path {args.psi_coverage} already exists")
-
     log = get_logger()
-    log.info(f"Loading input splicegraph from {args.splicegraph.resolve()}")
+    log.info(f"Loading input splicegraph from {args.splicegraph}")
     sg = nm.SpliceGraph.from_zarr(args.splicegraph)
     log.info(f"Defining LSVs for coverage ({args.select_lsvs})")
     lsvs = sg.exon_connections.lsvs(args.select_lsvs)
     if args.ignore_from is not None:
-        log.info(f"Ignoring LSVs also found in {args.ignore_from.resolve()}")
+        log.info(f"Ignoring LSVs also found in {args.ignore_from}")
         lsvs = lsvs[
             lsvs.unique_events_mask(
                 nm.SpliceGraph.from_zarr(
@@ -172,7 +165,7 @@ def run(args: argparse.Namespace) -> None:
         # if there is only one file, don't bother with threads
         log.info(f"Inferring PSI coverage from {args.sj[0]}")
         psi_coverage = sj_to_psicov(args.sj[0])
-        log.info(f"Saving PSI coverage to {args.psi_coverage.resolve()}")
+        log.info(f"Saving PSI coverage to {args.psi_coverage}")
         psi_coverage.to_zarr(args.psi_coverage)
     else:
         # precompute prefixes to use
@@ -182,16 +175,14 @@ def run(args: argparse.Namespace) -> None:
             for x in args.sj
         ]
         # we have more than one input file
-        log.info(
-            f"Saving event information and metadata to {args.psi_coverage.resolve()}"
-        )
+        log.info(f"Saving event information and metadata to {args.psi_coverage}")
         nm.PsiCoverage.to_zarr_slice_init(
             args.psi_coverage,
             lsvs.save_df,
             prefixes,
             args.num_bootstraps,
             psicov_attrs=dict(
-                sj=[str(x.resolve()) for x in args.sj],
+                sj=[str(x) for x in args.sj],
                 minreads=args.minreads,
                 minbins=args.minbins,
             ),

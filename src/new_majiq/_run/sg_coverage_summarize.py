@@ -7,14 +7,17 @@ Author: Joseph K Aicher
 """
 
 import argparse
-from pathlib import Path
 from typing import List, Optional
 
 from dask.distributed import Client
 
 import new_majiq as nm
 import new_majiq.constants as constants
-from new_majiq._run._majiq_args import check_nonnegative_factory
+from new_majiq._run._majiq_args import (
+    ExistingResolvedPath,
+    NewResolvedPath,
+    check_nonnegative_factory,
+)
 from new_majiq._run._run import GenericSubcommand
 from new_majiq.experiments import bam_experiment_name
 from new_majiq.logger import get_logger
@@ -26,15 +29,15 @@ def add_args(parser: argparse.ArgumentParser) -> None:
     """add arguments for parser"""
     parser.add_argument(
         "summary",
-        type=Path,
+        type=NewResolvedPath,
         help="Path for resulting summary splicegraph reads"
         " (summary experiment name will be inferred from the path)",
     )
     parser.add_argument(
         "sg_coverage",
-        type=Path,
+        type=ExistingResolvedPath,
         nargs="+",
-        help="Path for output coverage over introns/junctions",
+        help="Path for input coverage over introns/junctions",
     )
     parser.add_argument(
         "--reduction",
@@ -66,13 +69,6 @@ def add_args(parser: argparse.ArgumentParser) -> None:
 
 
 def run(args: argparse.Namespace) -> None:
-    if missing := sorted(x for x in args.sg_coverage if not x.exists()):
-        raise ValueError(
-            f"Was unable to find all input sg_coverage files ({missing = })"
-        )
-    if args.summary.exists():
-        raise ValueError(f"Output {args.summary} already exists")
-
     log = get_logger()
     client = Client(
         n_workers=1,

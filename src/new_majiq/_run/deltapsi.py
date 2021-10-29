@@ -11,7 +11,6 @@ import argparse
 import json
 import sys
 from enum import Enum
-from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 import pandas as pd
@@ -19,6 +18,7 @@ from dask.distributed import Client
 
 import new_majiq as nm
 from new_majiq._run._majiq_args import (
+    ExistingResolvedPath,
     StoreRequiredUniqueActionFactory,
     check_characters_factory,
     check_nonnegative_factory,
@@ -37,9 +37,11 @@ class DPsiPriorType(Enum):
 
 def add_args(parser: argparse.ArgumentParser) -> None:
     comparison_req = parser.add_argument_group("Required specification of groups")
+    StorePSICovPaths = StoreRequiredUniqueActionFactory()
     comparison_req.add_argument(
         "-psi1",
-        type=Path,
+        type=ExistingResolvedPath,
+        action=StorePSICovPaths,
         nargs="+",
         dest="psi1",
         required=True,
@@ -47,7 +49,8 @@ def add_args(parser: argparse.ArgumentParser) -> None:
     )
     comparison_req.add_argument(
         "-psi2",
-        type=Path,
+        type=ExistingResolvedPath,
+        action=StorePSICovPaths,
         nargs="+",
         dest="psi2",
         required=True,
@@ -79,7 +82,7 @@ def add_args(parser: argparse.ArgumentParser) -> None:
     )
     parser.add_argument(
         "--splicegraph",
-        type=Path,
+        type=ExistingResolvedPath,
         default=None,
         help="If specified, annotate quantifications with splicegraph information",
     )
@@ -190,15 +193,6 @@ def add_args(parser: argparse.ArgumentParser) -> None:
 
 
 def run(args: argparse.Namespace) -> None:
-    if not all(p.exists() for p in args.psi1):
-        missing = sorted(p for p in args.psi1 if not p.exists())
-        raise ValueError(f"Unable to find input coverage ({missing = })")
-    if not all(p.exists() for p in args.psi2):
-        missing = sorted(p for p in args.psi2 if not p.exists())
-        raise ValueError(f"Unable to find input coverage ({missing = })")
-    if args.splicegraph and not args.splicegraph.exists():
-        raise ValueError(f"Unable to find input splicegraph {args.splicegraph}")
-
     log = get_logger()
     client = Client(
         n_workers=1,

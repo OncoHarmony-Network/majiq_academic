@@ -13,7 +13,12 @@ from typing import List, Optional
 
 import new_majiq as nm
 import new_majiq.constants as constants
-from new_majiq._run._majiq_args import check_nonnegative_factory
+from new_majiq._run._majiq_args import (
+    ExistingResolvedPath,
+    NewResolvedPath,
+    StoreRequiredUniqueActionFactory,
+    check_nonnegative_factory,
+)
 from new_majiq._run._run import GenericSubcommand
 from new_majiq.experiments import bam_experiment_name
 from new_majiq.logger import get_logger
@@ -26,16 +31,19 @@ DESCRIPTION = (
 def add_args(parser: argparse.ArgumentParser) -> None:
     """add arguments for parser"""
     parser.add_argument(
-        "splicegraph", type=Path, help="Path to splicegraph with introns/junctions"
+        "splicegraph",
+        type=ExistingResolvedPath,
+        help="Path to splicegraph with introns/junctions",
     )
     parser.add_argument(
         "sg_coverage",
-        type=Path,
+        type=NewResolvedPath,
         help="Path for output coverage over introns/junctions",
     )
     parser.add_argument(
         "sj",
-        type=Path,
+        type=ExistingResolvedPath,
+        action=StoreRequiredUniqueActionFactory(),
         nargs="+",
         help="Path to SJ coverage for experiments",
     )
@@ -56,21 +64,8 @@ def add_args(parser: argparse.ArgumentParser) -> None:
 
 
 def run(args: argparse.Namespace) -> None:
-    if missing := sorted(set(x for x in args.sj if not x.exists())):
-        raise ValueError(f"Unable to find all input SJ files ({missing =})")
-    if len(unique := set(args.sj)) != len(args.sj):
-        # get non-unique sj to report error
-        non_unique = sorted(args.sj)
-        for x in unique:
-            non_unique.remove(x)  # removes first occurence
-        raise ValueError(f"Non-unique input SJ files ({non_unique = })")
-    if not args.splicegraph.exists():
-        raise ValueError(f"Was unable to find splicegraph at {args.splicegraph}")
-    if args.sg_coverage.exists():
-        raise ValueError(f"Output path {args.sg_coverage} already exists")
-
     log = get_logger()
-    log.info(f"Loading input splicegraph from {args.splicegraph.resolve()}")
+    log.info(f"Loading input splicegraph from {args.splicegraph}")
     sg = nm.SpliceGraph.from_zarr(args.splicegraph)
 
     def sj_to_sgreads(sj_path: Path) -> nm.SpliceGraphReads:
@@ -98,8 +93,8 @@ def run(args: argparse.Namespace) -> None:
             len(sg.junctions),
             chunksize=args.chunksize,
             attrs=dict(
-                sj=[str(x.resolve()) for x in args.sj],
-                sg=str(args.splicegraph.resolve()),
+                sj=[str(x) for x in args.sj],
+                sg=str(args.splicegraph),
             ),
         )
         with mp.Pool(args.nthreads) as p:

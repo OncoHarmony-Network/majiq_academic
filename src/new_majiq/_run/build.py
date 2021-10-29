@@ -13,8 +13,12 @@ from pathlib import Path
 from typing import Dict, List, Optional, Sequence
 
 import new_majiq as nm
-import new_majiq.constants as constants
-from new_majiq._run._majiq_args import check_nonnegative_factory
+from new_majiq._run._majiq_args import (
+    ExistingResolvedPath,
+    NewResolvedPath,
+    StoreRequiredUniqueActionFactory,
+    check_nonnegative_factory,
+)
 from new_majiq._run._run import GenericSubcommand
 from new_majiq.logger import get_logger
 
@@ -59,7 +63,7 @@ def simplifier_threshold_args(
         f"--{prefix}min-experiments",
         dest="simplify_min_experiments",
         type=check_nonnegative_factory(float, True),
-        default=constants.DEFAULT_SIMPLIFIER_MINEXPERIMENTS,
+        default=nm.constants.DEFAULT_SIMPLIFIER_MINEXPERIMENTS,
         help="Threshold for group filters. If < 1, the fraction of experiments"
         " in a group that must pass individual filters for a feature to be"
         " unsimplified. If greater, an absolute number. (default: %(default)s)",
@@ -69,7 +73,7 @@ def simplifier_threshold_args(
         f"--{prefix}minpsi",
         dest="simplify_minpsi",
         type=check_nonnegative_factory(float, False),
-        default=constants.DEFAULT_SIMPLIFIER_MINPSI,
+        default=nm.constants.DEFAULT_SIMPLIFIER_MINPSI,
         help="Minimum fraction of intron/junction readrates leaving or entering"
         " an exon in a single connection to count as evidence to unsimplify"
         " (default: %(default)s)",
@@ -78,7 +82,7 @@ def simplifier_threshold_args(
         f"--{prefix}minreads-annotated",
         dest="simplify_minreads_annotated",
         type=check_nonnegative_factory(float, False),
-        default=constants.DEFAULT_SIMPLIFIER_MINREADS_ANNOTATED,
+        default=nm.constants.DEFAULT_SIMPLIFIER_MINREADS_ANNOTATED,
         help="Minimum readrate for annotated junctions to count as evidence"
         " to unsimplify (default: %(default)s)",
     )
@@ -86,7 +90,7 @@ def simplifier_threshold_args(
         f"--{prefix}minreads-denovo",
         dest="simplify_minreads_denovo",
         type=check_nonnegative_factory(float, False),
-        default=constants.DEFAULT_SIMPLIFIER_MINREADS_DENOVO,
+        default=nm.constants.DEFAULT_SIMPLIFIER_MINREADS_DENOVO,
         help="Minimum readrate for denovo junctions to count as evidence"
         " to unsimplify (default: %(default)s)",
     )
@@ -94,7 +98,7 @@ def simplifier_threshold_args(
         f"--{prefix}minreads-ir",
         dest="simplify_minreads_ir",
         type=check_nonnegative_factory(float, False),
-        default=constants.DEFAULT_SIMPLIFIER_MINREADS_INTRON,
+        default=nm.constants.DEFAULT_SIMPLIFIER_MINREADS_INTRON,
         help="Minimum readrate for intron retention to count as evidence"
         " to unsimplify (default: %(default)s)",
     )
@@ -134,7 +138,7 @@ def build_threshold_args(parser: argparse.ArgumentParser) -> None:
     thresholds.add_argument(
         "--min-experiments",
         type=check_nonnegative_factory(float, True),
-        default=constants.DEFAULT_BUILD_MINEXPERIMENTS,
+        default=nm.constants.DEFAULT_BUILD_MINEXPERIMENTS,
         metavar="x",
         help="Threshold per experiments group. If < 1, the fraction of"
         " experiments in a group that must pass individual filters for a"
@@ -145,21 +149,21 @@ def build_threshold_args(parser: argparse.ArgumentParser) -> None:
     thresholds.add_argument(
         "--minreads",
         type=check_nonnegative_factory(int, True),
-        default=constants.DEFAULT_BUILD_MINREADS,
+        default=nm.constants.DEFAULT_BUILD_MINREADS,
         metavar="x",
         help="Minimum readrate to pass an annotated junction (default: %(default)s)",
     )
     thresholds.add_argument(
         "--mindenovo",
         type=check_nonnegative_factory(int, True),
-        default=constants.DEFAULT_BUILD_MINDENOVO,
+        default=nm.constants.DEFAULT_BUILD_MINDENOVO,
         metavar="x",
         help="Minimum readrate to pass a denovo junction or intron (default: %(default)s)",
     )
     thresholds.add_argument(
         "--minpos",
         type=check_nonnegative_factory(int, True),
-        default=constants.DEFAULT_BUILD_MINPOS,
+        default=nm.constants.DEFAULT_BUILD_MINPOS,
         metavar="x",
         help="Minimum number of nonzero positions to pass a junction."
         " This is scaled for introns with some minimum coverage per bin to"
@@ -169,7 +173,7 @@ def build_threshold_args(parser: argparse.ArgumentParser) -> None:
     thresholds.add_argument(
         "--max-pctbins",
         type=check_nonnegative_factory(float, True),
-        default=constants.DEFAULT_BUILD_MAX_PCTBINS,
+        default=nm.constants.DEFAULT_BUILD_MAX_PCTBINS,
         metavar="x",
         help="Maximum fraction of intron bins on which to require coverage"
         " (default: %(default)s)",
@@ -177,7 +181,7 @@ def build_threshold_args(parser: argparse.ArgumentParser) -> None:
     thresholds.add_argument(
         "--junction-acceptance-probability",
         type=check_nonnegative_factory(float, True),
-        default=constants.DEFAULT_BUILD_MATCH_JUNCTION_PROBABILITY,
+        default=nm.constants.DEFAULT_BUILD_MATCH_JUNCTION_PROBABILITY,
         help="Set length-dependent minbins intron thresholds by considering"
         " per-position Poisson readrate for which junctions are accepted with"
         " this probability (default: %(default)s)",
@@ -185,7 +189,7 @@ def build_threshold_args(parser: argparse.ArgumentParser) -> None:
     thresholds.add_argument(
         "--intron-acceptance-probability",
         type=check_nonnegative_factory(float, True),
-        default=constants.DEFAULT_BUILD_MATCH_INTRON_PROBABILITY,
+        default=nm.constants.DEFAULT_BUILD_MATCH_INTRON_PROBABILITY,
         help="Set length-dependent minbins intron thresholds by picking least"
         " strict thresholds for which per-position readrate determined by"
         " --junction-acceptance-probability gives has acceptance probability"
@@ -285,13 +289,17 @@ def enable_simplify_args(parser: argparse.ArgumentParser) -> None:
 
 def add_args(parser: argparse.ArgumentParser) -> None:
     """add arguments to parser"""
-    parser.add_argument("base_sg", type=Path, help="Path to base splicegraph")
-    parser.add_argument("out_sg", type=Path, help="Path for output splicegraph")
+    parser.add_argument(
+        "base_sg", type=ExistingResolvedPath, help="Path to base splicegraph"
+    )
+    parser.add_argument(
+        "out_sg", type=NewResolvedPath, help="Path for output splicegraph"
+    )
     experiments = parser.add_argument_group("Input experiments (one required)")
     experiments_ex = experiments.add_mutually_exclusive_group(required=True)
     experiments_ex.add_argument(
         "--groups-tsv",
-        type=Path,
+        type=ExistingResolvedPath,
         metavar="TSV",
         help="Specify experiments from multiple build groups using TSV file."
         " Required columns 'group' and 'sj'."
@@ -299,9 +307,11 @@ def add_args(parser: argparse.ArgumentParser) -> None:
         " `group` indicates group experiment belongs to, `sj`"
         " the path to the experiment's SJ file (from `new-majiq sj`)",
     )
+    StoreSJPaths = StoreRequiredUniqueActionFactory()
     experiments_ex.add_argument(
         "--sjs",
-        type=Path,
+        type=ExistingResolvedPath,
+        action=StoreSJPaths,
         nargs="+",
         help="Specify experiments from a single build group directly as"
         " the unique paths to the group experiments' SJ files"
@@ -318,7 +328,7 @@ def add_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
         "--nthreads",
         type=check_nonnegative_factory(int, True),
-        default=constants.DEFAULT_BAM_NTHREADS,
+        default=nm.constants.DEFAULT_BAM_NTHREADS,
         help="Number of threads used for simultaneous processing of multiple"
         " input SJ files (default: %(default)s)",
     )
@@ -346,7 +356,7 @@ def get_grouped_experiments(groups_tsv: Path) -> SJGroupsT:
         if not Path(sj_path).exists():
             raise ValueError(f"Unable to find input experiment {sj_path}")
     return {
-        group: sorted(Path(x) for x in group_sjs)
+        group: sorted(Path(x).resolve() for x in group_sjs)
         for group, group_sjs in df.groupby("group")["sj"]
     }
 
@@ -521,11 +531,6 @@ def run(args: argparse.Namespace) -> None:
             )
         simplify = args.simplify
 
-    if not args.base_sg.exists():
-        raise ValueError(f"Unable to find base splicegraph at {args.base_sg}")
-    if args.out_sg.exists():
-        raise ValueError(f"Output path {args.out_sg} already exists")
-
     log = get_logger()
     experiment_thresholds = nm.ExperimentThresholds(
         minreads=args.minreads,
@@ -536,23 +541,11 @@ def run(args: argparse.Namespace) -> None:
         intron_acceptance_probability=args.intron_acceptance_probability,
     )
     if args.groups_tsv:
-        if not args.groups_tsv.exists():
-            raise ValueError(
-                f"Unable to find group definitions at {args.groups_tsv.resolve()}"
-            )
         log.info("Loading experiment groups")
         experiments = get_grouped_experiments(args.groups_tsv)
     else:
-        if missing := sorted(set(x for x in args.sjs if not x.exists())):
-            raise ValueError(f"Unable to find all input SJ files ({missing =})")
-        if len(unique := set(args.sjs)) != len(args.sjs):
-            # get non-unique sjs to report error
-            non_unique = sorted(args.sjs)
-            for x in unique:
-                non_unique.remove(x)  # removes first occurence
-            raise ValueError(f"Non-unique input SJ files ({non_unique = })")
         experiments = {"": args.sjs}
-    log.info(f"Loading base splicegraph from {args.base_sg.resolve()}")
+    log.info(f"Loading base splicegraph from {args.base_sg}")
     sg = nm.SpliceGraph.from_zarr(args.base_sg)
 
     # pool for performing build, simplification
@@ -604,7 +597,7 @@ def run(args: argparse.Namespace) -> None:
 
     p.close()
 
-    log.info(f"Saving updated splicegraph to {args.out_sg.resolve()}")
+    log.info(f"Saving updated splicegraph to {args.out_sg}")
     sg.to_zarr(args.out_sg)
     return
 
