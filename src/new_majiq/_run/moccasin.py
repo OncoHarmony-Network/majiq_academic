@@ -15,7 +15,6 @@ import pandas as pd
 import xarray as xr
 
 import new_majiq as nm
-import new_majiq.constants as constants
 from new_majiq._offsets import clip_and_normalize_strict
 from new_majiq._run._majiq_args import (
     ExistingResolvedPath,
@@ -149,13 +148,13 @@ def _args_ruv_parameters(parser: argparse.ArgumentParser) -> None:
     ruv.add_argument(
         "--ruv-max-new-factors",
         type=check_nonnegative_factory(int, True),
-        default=constants.DEFAULT_MOCCASIN_RUV_MAX_FACTORS,
+        default=nm.constants.DEFAULT_MOCCASIN_RUV_MAX_FACTORS,
         help="Maximum number of new factors the model will add (default: %(default)s)",
     )
     ruv.add_argument(
         "--ruv-max-events",
         type=check_nonnegative_factory(int, True),
-        default=constants.DEFAULT_MOCCASIN_RUV_MAX_EVENTS,
+        default=nm.constants.DEFAULT_MOCCASIN_RUV_MAX_EVENTS,
         help="Maximum number of events to model residuals for (default: %(default)s)",
     )
     return

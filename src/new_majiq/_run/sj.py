@@ -10,7 +10,6 @@ import argparse
 from typing import List, Optional
 
 import new_majiq as nm
-import new_majiq.constants as constants
 from new_majiq._run._majiq_args import (
     ExistingResolvedPath,
     NewResolvedPath,
@@ -59,7 +58,7 @@ def add_args(parser: argparse.ArgumentParser) -> None:
     strandness.add_argument(
         "--auto-minreads",
         type=check_nonnegative_factory(int, reject_zero=True),
-        default=constants.DEFAULT_BAM_STRAND_MINREADS,
+        default=nm.constants.DEFAULT_BAM_STRAND_MINREADS,
         help="For automatic detection of strand. Only consider evidence from"
         " splicegraph junctions with at least this many total (unstranded) reads"
         " (default: %(default)s)",
@@ -67,7 +66,7 @@ def add_args(parser: argparse.ArgumentParser) -> None:
     strandness.add_argument(
         "--auto-minjunctions",
         type=check_nonnegative_factory(int, reject_zero=True),
-        default=constants.DEFAULT_BAM_STRAND_MINJUNCTIONS,
+        default=nm.constants.DEFAULT_BAM_STRAND_MINJUNCTIONS,
         help="For automatic detection of strand. Infer unstranded if the number"
         " of splicegraph junctions with sufficient reads is less than this argument"
         " (default: %(default)s)",
@@ -75,7 +74,7 @@ def add_args(parser: argparse.ArgumentParser) -> None:
     strandness.add_argument(
         "--auto-mediantolerance",
         type=check_nonnegative_factory(float, reject_zero=True),
-        default=constants.DEFAULT_BAM_STRAND_MINDEVIATION,
+        default=nm.constants.DEFAULT_BAM_STRAND_MINDEVIATION,
         help="For automatic detection of strand. Infer unstranded if the median"
         " proportion over junctions of forward strand reads vs all reads"
         " deviates from 0.5 by only this amount (default: %(default)s)",
@@ -94,7 +93,7 @@ def add_args(parser: argparse.ArgumentParser) -> None:
         "--allow-disjoint-contigs",
         action="store_true",
         dest="allow_disjoint_contigs",
-        default=constants.DEFAULT_BAM_ALLOW_DISJOINT_CONTIGS,
+        default=nm.constants.DEFAULT_BAM_ALLOW_DISJOINT_CONTIGS,
         help="Warn, but do not fail, when BAM has different contigs than"
         " splicegraph (default allow_disjoint_contigs = %(default)s)",
     )
@@ -102,7 +101,7 @@ def add_args(parser: argparse.ArgumentParser) -> None:
         "--reject-disjoint-contigs",
         action="store_false",
         dest="allow_disjoint_contigs",
-        default=constants.DEFAULT_BAM_ALLOW_DISJOINT_CONTIGS,
+        default=nm.constants.DEFAULT_BAM_ALLOW_DISJOINT_CONTIGS,
         help="Fail when BAM has different contigs than splicegraph"
         " (default allow_disjoint_contigs = %(default)s)",
     )
