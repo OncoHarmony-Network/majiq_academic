@@ -5,8 +5,11 @@ Helper classes/functions for checking valid arguments directly at command-line
 """
 
 import argparse
+import sys
 from pathlib import Path
 from typing import Any, Callable, Optional, Set, Union
+
+import new_majiq as nm
 
 
 def ExistingResolvedPath(x: Any) -> Path:
@@ -157,3 +160,93 @@ def StoreRequiredUniqueActionFactory():
             setattr(namespace, self.dest, values)
 
     return StoreRequiredUniqueAction
+
+
+def _quantify_shared_args(parser: argparse.ArgumentParser) -> None:
+    """shared arguments for quantify_?(no)comparison_args"""
+    parser.add_argument(
+        "--splicegraph",
+        type=ExistingResolvedPath,
+        default=None,
+        help="If specified, annotate quantifications with splicegraph information",
+    )
+    parser.add_argument(
+        "--output-tsv",
+        type=argparse.FileType("w"),
+        default=sys.stdout,
+        help="Path for output TSV file (default: stdout)",
+    )
+
+
+def quantify_nocomparison_args(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument(
+        "psicov",
+        type=ExistingResolvedPath,
+        action=StoreRequiredUniqueActionFactory(),
+        nargs="+",
+        help="Paths to PsiCoverage files to quantify",
+    )
+    parser.add_argument(
+        "--min-experiments",
+        type=check_nonnegative_factory(float, True),
+        default=None,
+        help="If specified, treat samples as replicates and quantify combined"
+        " coverage for events that passed in at least min experiments"
+        " (proportion of experiments if < 1)."
+        " Default is to quantify each sample independently.",
+    )
+    _quantify_shared_args(parser)
+    return
+
+
+def quantify_comparison_args(parser: argparse.ArgumentParser) -> None:
+    comparison_req = parser.add_argument_group("Required specification of groups")
+    StorePSICovPaths = StoreRequiredUniqueActionFactory()
+    comparison_req.add_argument(
+        "-psi1",
+        "-grp1",
+        "-g1",
+        dest="psi1",
+        type=ExistingResolvedPath,
+        action=StorePSICovPaths,
+        nargs="+",
+        required=True,
+        help="Paths to PsiCoverage files for experiments contributing to psi1",
+    )
+    comparison_req.add_argument(
+        "-psi2",
+        "-grp2",
+        "-g2",
+        dest="psi2",
+        type=ExistingResolvedPath,
+        action=StorePSICovPaths,
+        nargs="+",
+        required=True,
+        help="Paths to PsiCoverage files for experiments contributing to psi2",
+    )
+    StoreGroupNames = StoreRequiredUniqueActionFactory()
+    check_group_chars = check_characters_factory(
+        nm.constants.ALLOWED_GROUP_NAME_CHARS, "alphanumeric or underscore characters"
+    )
+    comparison_req.add_argument(
+        "-n",
+        "--names",
+        dest="names",
+        nargs=2,
+        metavar=("NAME_GRP1", "NAME_GRP2"),
+        required=True,
+        action=StoreGroupNames,
+        type=check_group_chars,
+        help="The names that identify the groups being compared.",
+    )
+    parser.add_argument(
+        "--min-experiments",
+        type=check_nonnegative_factory(float, True),
+        default=nm.constants.DEFAULT_QUANTIFY_MINEXPERIMENTS,
+        help="Threshold for group filters. This specifies the fraction"
+        " (value < 1) or absolute number (value >= 1) of experiments that must"
+        " pass individually in each group for an LSV to be quantified"
+        " (default: %(default)s)",
+    )
+    _quantify_shared_args(parser)
+    return

@@ -17,9 +17,8 @@ from dask.distributed import Client
 
 import new_majiq as nm
 from new_majiq._run._majiq_args import (
-    ExistingResolvedPath,
-    StoreRequiredUniqueActionFactory,
     check_nonnegative_factory,
+    quantify_nocomparison_args,
 )
 from new_majiq._run._run import GenericSubcommand
 from new_majiq.logger import get_logger
@@ -28,37 +27,13 @@ DESCRIPTION = "Quantify PSI from PsiCoverage files"
 
 
 def add_args(parser: argparse.ArgumentParser) -> None:
-    parser.add_argument(
-        "psicov",
-        type=ExistingResolvedPath,
-        action=StoreRequiredUniqueActionFactory(),
-        nargs="+",
-        help="Paths to PsiCoverage files to quantify",
-    )
-    parser.add_argument(
-        "--splicegraph",
-        type=ExistingResolvedPath,
-        default=None,
-        help="If specified, annotate quantifications with splicegraph information",
-    )
+    quantify_nocomparison_args(parser)
     parser.add_argument(
         "--quantiles",
         type=float,
         nargs="+",
         default=list(),
         help="If specified, calculate/report PSI posterior quantiles",
-    )
-    parser.add_argument(
-        "--min-experiments",
-        type=check_nonnegative_factory(float, True),
-        default=None,
-        help="If specified, treat samples as replicates and quantify combined coverage for events that passed in at least min experiments (proportion of experiments if < 1)",
-    )
-    parser.add_argument(
-        "--output-tsv",
-        type=argparse.FileType("w"),
-        default=sys.stdout,
-        help="Path for output TSV file (default: stdout)",
     )
     parser.add_argument(
         "--nthreads",

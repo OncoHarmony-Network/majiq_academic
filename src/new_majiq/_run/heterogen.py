@@ -17,10 +17,8 @@ from dask.distributed import Client
 
 import new_majiq as nm
 from new_majiq._run._majiq_args import (
-    ExistingResolvedPath,
-    StoreRequiredUniqueActionFactory,
-    check_characters_factory,
     check_nonnegative_factory,
+    quantify_comparison_args,
 )
 from new_majiq._run._run import GenericSubcommand
 from new_majiq.logger import get_logger
@@ -29,50 +27,7 @@ DESCRIPTION = "Test differences in PSI for two groups of independent experiments
 
 
 def add_args(parser: argparse.ArgumentParser) -> None:
-    comparison_req = parser.add_argument_group("Required specification of groups")
-    StorePSICovPaths = StoreRequiredUniqueActionFactory()
-    comparison_req.add_argument(
-        "-grp1",
-        type=ExistingResolvedPath,
-        action=StorePSICovPaths,
-        nargs="+",
-        dest="psi1",
-        required=True,
-        help="Paths to PsiCoverage files for experiments in first group",
-    )
-    comparison_req.add_argument(
-        "-grp2",
-        type=ExistingResolvedPath,
-        action=StorePSICovPaths,
-        nargs="+",
-        dest="psi2",
-        required=True,
-        help="Paths to PsiCoverage files for experiments in second group",
-    )
-    StoreGroupNames = StoreRequiredUniqueActionFactory()
-    check_group_chars = check_characters_factory(
-        nm.constants.ALLOWED_GROUP_NAME_CHARS, "alphanumeric or underscore characters"
-    )
-    comparison_req.add_argument(
-        "-n",
-        "--names",
-        nargs=2,
-        metavar=("NAME_GRP1", "NAME_GRP2"),
-        required=True,
-        action=StoreGroupNames,
-        type=check_group_chars,
-        help="The names that identify the groups being compared.",
-    )
-
-    parser.add_argument(
-        "--min-experiments",
-        type=check_nonnegative_factory(float, True),
-        default=nm.constants.DEFAULT_QUANTIFY_MINEXPERIMENTS,
-        help="Threshold for group filters. This specifies the fraction"
-        " (value < 1) or absolute number (value >= 1) of experiments that must"
-        " pass individually in each group for an LSV to be quantified"
-        " (default: %(default)s)",
-    )
+    quantify_comparison_args(parser)
     parser.add_argument(
         "--stats",
         type=str,
@@ -82,18 +37,6 @@ def add_args(parser: argparse.ArgumentParser) -> None:
         help="Specify which stats to use for testing differences between groups"
         f" (available: {set(nm.constants.STATS_AVAILABLE.keys())})"
         " (default: %(default)s)",
-    )
-    parser.add_argument(
-        "--splicegraph",
-        type=ExistingResolvedPath,
-        default=None,
-        help="If specified, annotate quantifications with splicegraph information",
-    )
-    parser.add_argument(
-        "--output-tsv",
-        type=argparse.FileType("w"),
-        default=sys.stdout,
-        help="Path for output TSV file (default: stdout)",
     )
     parser.add_argument(
         "--population-quantiles",
