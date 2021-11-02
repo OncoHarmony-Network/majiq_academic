@@ -30,6 +30,8 @@ class Heterogen(object):
         quantification
     stats: Union[str, Collection[str]]
         Statistics to compute with (must be in constants.STATS_AVAILABLE)
+    name1, name2: str
+        Names to indicate group identity
     """
 
     def __init__(
