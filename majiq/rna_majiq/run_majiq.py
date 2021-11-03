@@ -339,9 +339,10 @@ def main():
     )
 
     buildparser_advanced = buildparser.add_argument_group("Advanced options")
+
     # flag to save all possible LSVs
     buildparser_advanced.add_argument(
-        "--permissive",
+        "--permissive-lsvs",
         dest="lsv_strict",
         default=True,
         action="store_false",
@@ -354,6 +355,23 @@ def main():
         " events (excluding the equivalent mutually-redundant events); this"
         " flag enables more permissive output of splicing events.",
     )
+
+    # flag to only output target LSVs
+    buildparser_advanced.add_argument(
+        "--target-lsvs",
+        dest="only_target_lsvs",
+        action="store_true",
+        help="Only target LSVs will be to output majiq files",
+    )
+
+    # flag to only output source LSVs
+    buildparser_advanced.add_argument(
+        "--source-lsvs",
+        dest="only_source_lsvs",
+        action="store_true",
+        help="Only source LSVs will be to output majiq files",
+    )
+
 
     # flag to provide information about constitutive junctions
     buildparser_advanced.add_argument(
