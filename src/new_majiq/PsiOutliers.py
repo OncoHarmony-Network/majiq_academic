@@ -9,6 +9,7 @@ Author: Joseph K Aicher
 from functools import cached_property
 from typing import Final, Optional, Sequence, Union
 
+import numpy as np
 import xarray as xr
 
 import new_majiq.constants as constants
@@ -100,8 +101,8 @@ class PsiOutliers(object):
             {},
             dict(
                 is_lb=[False, True],
-                cases_alpha=cases_alpha,
-                controls_alpha=controls_alpha,
+                cases_alpha=np.array(cases_alpha, dtype=cases.raw_psi.dtype),
+                controls_alpha=np.array(controls_alpha, dtype=controls.raw_psi.dtype),
             ),
         ).assign_coords(
             cases_q=lambda ds: (q := 0.5 * ds.cases_alpha).where(ds.is_lb, 1 - q),
@@ -115,21 +116,71 @@ class PsiOutliers(object):
         return self.cases.approximate_quantile(self.quantiles.cases_q)
 
     @cached_property
-    def controls_raw_psi_quantile(self) -> xr.DataArray:
+    def controls_psi_quantile(self) -> xr.DataArray:
         """Controls population quantiles using raw posterior means"""
-        return self.controls.raw_psi_mean_population_quantile(self.quantiles.controls_q)
-
-    @cached_property
-    def controls_bootstrap_psi_quantile(self) -> xr.DataArray:
-        """Controls population quantiles using bootstrap posterior means"""
-        return self.controls.bootstrap_psi_mean_population_quantile(
-            self.quantiles.controls_q
+        # PsiCoverage function requires sequence of floats and drops coordinates
+        # get quantiles to use as sequence, dimension name set to "_idx"
+        stacked_q = self.quantiles["controls_q"].stack(_idx=["controls_alpha", "is_lb"])
+        # get result without coordinates
+        return (
+            # get result without original coordinates (new dim controls_q)
+            self.controls.raw_psi_mean_population_quantile(
+                stacked_q.values.tolist(), "controls_q"
+            )
+            # make controls_q indexed by dimension _idx, and set its values
+            .swap_dims(controls_q="_idx").assign_coords(_idx=stacked_q["_idx"])
+            # unstack the multiindex we created, getting original dimensions back
+            .unstack("_idx")
         )
 
     @property
-    def controls_raw_psi_median(self) -> xr.DataArray:
-        return self.controls.raw_psi_mean_population_median
+    def cases_psi_mean(self) -> xr.DataArray:
+        """Cases raw posterior means"""
+        return self.cases.raw_psi_mean
 
     @property
-    def controls_bootstrap_psi_median(self) -> xr.DataArray:
-        return self.controls.bootstrap_psi_mean_population_median
+    def controls_psi_median(self) -> xr.DataArray:
+        """Controls population median of raw posterior means"""
+        return self.controls.raw_psi_mean_population_median
+
+    @cached_property
+    def dpsi_quantile_gap(self) -> xr.DataArray:
+        """Gap between posterior and population quantiles for each alpha"""
+        # gaps when case is higher, lower than controls
+        gap_case_high = self.cases_psi_quantile.sel(
+            is_lb=True
+        ) - self.controls_psi_quantile.sel(is_lb=False)
+        gap_case_low = self.controls_psi_quantile.sel(
+            is_lb=True
+        ) - self.cases_psi_quantile.sel(is_lb=False)
+        # if the intervals overlap, the gap is zero
+        return gap_case_high.clip(min=gap_case_low).clip(min=0)
+
+    @cached_property
+    def cases_psi_range(self) -> xr.DataArray:
+        """For each cases_alpha, range between lower/upper quantile (scale)"""
+        return self.cases_psi_quantile.sel(is_lb=False) - self.cases_psi_quantile.sel(
+            is_lb=True
+        )
+
+    @cached_property
+    def controls_psi_range(self) -> xr.DataArray:
+        """For each controls_alpha, range between lower/upper quantile (scale)"""
+        return self.controls_psi_quantile.sel(
+            is_lb=False
+        ) - self.controls_psi_quantile.sel(is_lb=True)
+
+    @cached_property
+    def combined_psi_range(self) -> xr.DataArray:
+        """sqrt(case^2 + controls^2) as length scale for dpsi_gap"""
+        return np.sqrt(
+            np.square(self.cases_psi_range) + np.square(self.controls_psi_range)
+        )
+
+    @cached_property
+    def dpsi_quantile_gap_rescaled(self) -> xr.DataArray:
+        """Rescale gap from psi quantiles to reflect scale of psi distributions
+
+        This is dpsi_quantile_gap / combined_psi_range.
+        """
+        return self.dpsi_quantile_gap / self.combined_psi_range
