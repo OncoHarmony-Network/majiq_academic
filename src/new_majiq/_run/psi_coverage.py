@@ -18,6 +18,7 @@ from new_majiq._run._majiq_args import (
     StoreRequiredUniqueActionFactory,
     check_nonnegative_factory,
     chunks_args,
+    lsv_coverage_args,
     resources_args,
 )
 from new_majiq._run._run import GenericSubcommand
@@ -64,70 +65,7 @@ def add_args(parser: argparse.ArgumentParser) -> None:
         help="Minimum number of nonzero bins to pass a connection"
         " (default: %(default)s).",
     )
-    coverage = parser.add_argument_group("coverage arguments")
-    coverage.add_argument(
-        "--num-bootstraps",
-        metavar="M",
-        type=check_nonnegative_factory(int, False),
-        default=nm.constants.DEFAULT_COVERAGE_NUM_BOOTSTRAPS,
-        help="Number of bootstrap replicates to sample (default: %(default)s)",
-    )
-    coverage.add_argument(
-        "--stack-pvalue-threshold",
-        metavar="P",
-        type=check_nonnegative_factory(float, False),
-        default=nm.constants.DEFAULT_COVERAGE_STACK_PVALUE,
-        help="Bins with readrate having right-tailed probability less than this"
-        " threshold vs Poisson from other nonzero bins will be ignored as"
-        " outlier 'read stacks' (default: %(default).2e)",
-    )
-    events = parser.add_argument_group("events selection arguments")
-    events.add_argument(
-        "--ignore-from",
-        metavar="sg",
-        type=ExistingResolvedPath,
-        default=None,
-        help="Path to other splicegraph, ignore LSVs shared with this splicegraph",
-    )
-    select_lsvs = events.add_mutually_exclusive_group()
-    select_lsvs.add_argument(
-        "--strict-lsvs",
-        "--nonredundant-lsvs",
-        dest="select_lsvs",
-        default=nm.constants.DEFAULT_SELECT_LSVS,
-        action="store_const",
-        const=nm.constants.SelectLSVs.STRICT_LSVS,
-        help="Select passed LSVs that are either not strict subsets of other"
-        " events (nonredundant) or mutually redundant source events"
-        " (i.e. strict LSVs) (default: %(default)s)",
-    )
-    select_lsvs.add_argument(
-        "--permissive-lsvs",
-        dest="select_lsvs",
-        default=nm.constants.DEFAULT_SELECT_LSVS,
-        action="store_const",
-        const=nm.constants.SelectLSVs.PERMISSIVE_LSVS,
-        help="Select all passed LSVs that are not mutually redundant targets"
-        " (i.e. permissive LSVs) (default: %(default)s)",
-    )
-    select_lsvs.add_argument(
-        "--source-lsvs",
-        dest="select_lsvs",
-        default=nm.constants.DEFAULT_SELECT_LSVS,
-        action="store_const",
-        const=nm.constants.SelectLSVs.SOURCE_LSVS,
-        help="Select all passed LSVs that are source events (i.e. source LSVs)"
-        " (default: %(default)s)",
-    )
-    select_lsvs.add_argument(
-        "--target-lsvs",
-        dest="select_lsvs",
-        default=nm.constants.DEFAULT_SELECT_LSVS,
-        action="store_const",
-        const=nm.constants.SelectLSVs.TARGET_LSVS,
-        help="Select all passed LSVs that are target events (i.e. target LSVs)"
-        " (default: %(default)s)",
-    )
+    lsv_coverage_args(parser)
     chunks_args(parser, nm.constants.DEFAULT_COVERAGE_CHUNKS)
     resources_args(parser, use_dask=False)
     return
@@ -145,7 +83,7 @@ def run(args: argparse.Namespace) -> None:
             lsvs.unique_events_mask(
                 nm.SpliceGraph.from_zarr(
                     args.ignore_from, genes=sg.genes
-                ).exon_connections.lsvs()
+                ).exon_connections.lsvs(args.select_lsvs)
             ).unique_events_mask
         ]
 
