@@ -1,5 +1,5 @@
 """
-explode_legacy_tsv.py
+legacy_explode_tsv.py
 
 Post-process MAJIQ v2 tsvs to access relevant columns for comparison to new
 quantifications
@@ -124,7 +124,6 @@ def extract_deltapsi(df: pd.DataFrame) -> pd.DataFrame:
         "mean_dpsi_per_lsv_junction": float,
         "probability_changing": float,
         "probability_non_changing": float,
-        # 'stdev_psi_per_lsv_junction': float,
         "junctions_coords": str,
     }
     DPSI_COORDINATE_COLUMNS = {"junctions_coords": ""}
@@ -152,13 +151,57 @@ def extract_deltapsi(df: pd.DataFrame) -> pd.DataFrame:
     )
 
 
-if __name__ == "__main__":
+def extract_heterogen(df: pd.DataFrame) -> pd.DataFrame:
+    STAT_MAP = {
+        "TTEST": "ttest",
+        "WILCOXON": "mannwhitneyu",
+        "TNOM": "tnom",
+        "INFOSCORE": "infoscore",
+    }
+    psi_median_columns = [x for x in df.columns if x.endswith("median_psi")]
+    stat_columns = df.columns.intersection(STAT_MAP.keys())
+    HETEROGEN_EXPLODE_COLUMNS = {
+        "junctions_coords": str,
+        **{x: float for x in psi_median_columns},
+        **{x: float for x in stat_columns},
+    }
+    HETEROGEN_COORDINATE_COLUMNS = {"junctions_coords": ""}
+    HETEROGEN_COLUMNS = [
+        "gene_id",
+        "event_type",
+        "ref_exon_start",
+        "ref_exon_end",
+        "start",
+        "end",
+        *psi_median_columns,
+        *stat_columns,
+    ]
+    HETEROGEN_RENAME = {
+        "mean_dpsi_per_lsv_junction": "legacy_dpsi_mean",
+        "probability_changing": "legacy_probability_changing",
+        "probability_non_changing": "legacy_probability_nonchanging",
+        **{
+            x: f"{x[:-len('_median_psi')]}-bootstrap_psi_median"
+            for x in psi_median_columns
+        },
+        **{x: f"{STAT_MAP[x]}-approx_pvalue" for x in stat_columns},
+    }
+    return (
+        df.pipe(_extract_lsv_id)
+        .pipe(_df_explode, HETEROGEN_EXPLODE_COLUMNS)
+        .pipe(_extract_coordinates, HETEROGEN_COORDINATE_COLUMNS)[HETEROGEN_COLUMNS]
+        .rename(columns=HETEROGEN_RENAME)
+    )
+
+
+def main():
     import argparse
     import sys
 
     ANALYSIS_FUNCTIONS = {
         "psi": extract_psi,
         "deltapsi": extract_deltapsi,
+        "heterogen": extract_heterogen,
     }
 
     parser = argparse.ArgumentParser(description="Get columns for comparison")
@@ -177,3 +220,7 @@ if __name__ == "__main__":
     # save table
     args.output_tsv.write(f"# Produced by `{sys.argv[0]} {args.legacy_tsv.name}`\n")
     df.to_csv(args.output_tsv, sep="\t", index=False)
+
+
+if __name__ == "__main__":
+    main()
