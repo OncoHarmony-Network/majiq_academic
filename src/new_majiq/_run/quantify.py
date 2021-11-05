@@ -27,7 +27,7 @@ def add_args(parser: argparse.ArgumentParser) -> None:
         "--quantiles",
         metavar="Q",
         type=float,
-        nargs="+",
+        nargs="*",
         default=list(),
         help="If specified, calculate/report PSI posterior quantiles",
     )
