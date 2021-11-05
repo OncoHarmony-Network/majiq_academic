@@ -121,7 +121,12 @@ DEFAULT_DPSI_NONCHANGING_THRESHOLD: Final[float] = 0.05
 
 STATS_AVAILABLE: Final[Dict[str, int]] = _stats_available()
 
-ALLOWED_GROUP_NAME_CHARS: Final[Set[str]] = {*string.ascii_letters, *string.digits, "_"}
+ALLOWED_GROUP_NAME_CHARS: Final[Set[str]] = {
+    *string.ascii_letters,
+    *string.digits,
+    "_",
+    ".",
+}
 
 DEFAULT_MOCCASIN_RUV_MAX_EVENTS: Final[int] = 10000
 DEFAULT_MOCCASIN_RUV_MAX_FACTORS: Final[int] = 1

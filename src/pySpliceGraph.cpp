@@ -382,6 +382,38 @@ void define_coordinates_properties(pyClassShared_t<RegionsT>& pyRegions) {
           },
           py::call_guard<py::gil_scoped_release>(),
           "Exons connected to (or None if not connected to any exons)")
+      .def("src_exon_idx",
+          [](const RegionsT& self, py::array_t<size_t> region_idx) -> py::array_t<size_t> {
+          auto f = [&self](size_t i) -> size_t {
+            if (i >= self.size()) {
+              throw std::invalid_argument("region_idx has values out of range");
+            }
+            return self[i].src_exon_idx(); };
+          return py::vectorize(f)(region_idx);
+          },
+          py::call_guard<py::gil_scoped_release>(),
+          R"pbdoc(
+          array[int] indicating exon_idx for connection source exon
+
+          Note: Uninitialized values default to all 0.
+          )pbdoc",
+          py::arg("region_idx"))
+      .def("dst_exon_idx",
+          [](const RegionsT& self, py::array_t<size_t> region_idx) -> py::array_t<size_t> {
+          auto f = [&self](size_t i) -> size_t {
+            if (i >= self.size()) {
+              throw std::invalid_argument("region_idx has values out of range");
+            }
+            return self[i].dst_exon_idx(); };
+          return py::vectorize(f)(region_idx);
+          },
+          py::call_guard<py::gil_scoped_release>(),
+          R"pbdoc(
+          array[int] indicating exon_idx for connection target exon
+
+          Note: Uninitialized values default to all 0.
+          )pbdoc",
+          py::arg("region_idx"))
       .def_property_readonly("start_exon_idx",
           [](py::object& regions_obj) -> py::array_t<size_t> {
           RegionsT& regions = regions_obj.cast<RegionsT&>();

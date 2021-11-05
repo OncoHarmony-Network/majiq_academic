@@ -69,6 +69,16 @@ class GeneConnections(GeneRegions):
         """Indicate exon_idx associated with end coordinate"""
         return self._gene_connections.end_exon_idx
 
+    def src_exon_idx(self, region_idx: Optional[np.ndarray] = None):
+        if region_idx is None:
+            region_idx = self._region_idx
+        return self._gene_connections.src_exon_idx(region_idx)
+
+    def dst_exon_idx(self, region_idx: Optional[np.ndarray] = None):
+        if region_idx is None:
+            region_idx = self._region_idx
+        return self._gene_connections.dst_exon_idx(region_idx)
+
     def _pass_all(self) -> None:
         """Set all connections to have passed build"""
         self._gene_connections._pass_all()

@@ -87,9 +87,11 @@ class GenericSubcommand(object):
             client = Client(
                 n_workers=1,
                 threads_per_worker=args.nthreads,
-                dashboard_address=None,
+                dashboard_address=":0",
                 memory_limit=args.memory_limit,
             )
+            # dashboard_address=None should disable server, but it doesn't
+            client.cluster.scheduler.http_server.stop()  # stop server
             log.info(client)
         # run subcommand
         try:
