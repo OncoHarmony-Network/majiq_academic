@@ -249,7 +249,7 @@ static void Outer(
     }  // if any statistics to try, run distribution means
 
     // if any statistics had non-nan values, do psisamples on them
-    if (ct_valid > 0) {
+    if (dim_q > 0 && ct_valid > 0) {
       const auto n_psisamples{*psisamples};
       // prepare output buffers for requested number of psisamples
       for (npy_intp z = 0; z < dim_stat; ++z) {
@@ -321,21 +321,23 @@ static void Outer(
           }  // loop over quantiles to compute
         }  // if this stat was valid
       }  // loop over requested statistics
-    }  // if any stats were valid for psisamples
+    }  // if any quantiles to compute and stats were valid for psisamples
 
     // write pvalue quantiles to output
-    auto out_stat = out.with_stride(str_out_stat);
-    for (npy_intp z = 0; z < dim_stat; ++z, ++out_stat) {
-      if (stat_valid[z]) {
-        std::copy(pvalue_quantiles[z].begin(), pvalue_quantiles[z].end(),
-            out_stat.with_stride(str_out_q));
-      } else {
-        // invalid statistics should be NaN
-        out_stat
-          .with_stride(str_out_q)
-          .fill(dim_q, std::numeric_limits<double>::quiet_NaN());
-      }  // ifelse on whether stats were computed, set output pvalue_quantiles
-    }  // loop over requested statistics
+    if (dim_q > 0) {
+      auto out_stat = out.with_stride(str_out_stat);
+      for (npy_intp z = 0; z < dim_stat; ++z, ++out_stat) {
+        if (stat_valid[z]) {
+          std::copy(pvalue_quantiles[z].begin(), pvalue_quantiles[z].end(),
+              out_stat.with_stride(str_out_q));
+        } else {
+          // invalid statistics should be NaN
+          out_stat
+            .with_stride(str_out_q)
+            .fill(dim_q, std::numeric_limits<double>::quiet_NaN());
+        }  // ifelse on whether stats were computed, set output pvalue_quantiles
+      }  // loop over requested statistics
+    }  // if any pvalue quantiles to record (whether valid/invalid)
   }  // outer loop
   return;
 }
