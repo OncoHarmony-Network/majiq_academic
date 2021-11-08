@@ -1,4 +1,5 @@
 import os
+import shutil
 import sys
 import rna_majiq.src.io as majiq_io
 cimport rna_majiq.src.io as majiq_io
@@ -345,11 +346,7 @@ cdef void _core_independent(object self):
 
 
     if not self.keep_tmpfiles:
-        for cond_name in file_cond.keys():
-            for fidx in range(len(file_cond[cond_name])):
-                fname = constants.get_tmp_psisample_file(self.outDir, "%s_%s" %(cond_name, fidx) )
-                if os.path.exists(fname):
-                    os.remove(fname)
+        shutil.rmtree(constants.get_tmp_dir(self.outDir))
 
     if self.mem_profile:
         mem_allocated = int(psutil.Process().memory_info().rss) / (1024 ** 2)
