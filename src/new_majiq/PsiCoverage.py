@@ -284,6 +284,17 @@ class PsiCoverage(object):
         """alias for bootstrap_posterior_mean"""
         return self.bootstrap_posterior_mean
 
+    @cached_property
+    def bootstrap_psi_mean_legacy(self) -> xr.DataArray:
+        """old calculation of bootstrap psi mean where summarizing by median"""
+        return xr.apply_ufunc(
+            bm.means_median,
+            self.bootstrap_alpha,
+            self.bootstrap_beta,
+            input_core_dims=[["bootstrap_replicate"], ["bootstrap_replicate"]],
+            dask="parallelized",
+        )
+
     @property
     def bootstrap_psi_variance(self) -> xr.DataArray:
         """alias for bootstrap_posterior_variance"""
@@ -865,6 +876,7 @@ class PsiCoverage(object):
             "raw_psi_std",
             "bootstrap_psi_mean",
             "bootstrap_psi_std",
+            "bootstrap_psi_mean_legacy",
             "raw_coverage",
         ],
         quantiles: Sequence[float] = list(),

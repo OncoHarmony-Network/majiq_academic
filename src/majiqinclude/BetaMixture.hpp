@@ -18,6 +18,7 @@
 #include <vector>
 
 #include "LogMath.hpp"
+#include "quantile.hpp"
 
 #include <boost/math/distributions/beta.hpp>
 #include <boost/math/tools/roots.hpp>
@@ -132,6 +133,49 @@ inline CentralMoments<RealT> _Moments(
   }
   const RealT variance_mean = rss_mean / n_mixture;
   return CentralMoments<RealT>{mean_mean, mean_variance + variance_mean};
+}
+
+/**
+ * Get median (across bootstraps) of each component mean
+ */
+template <typename ItA, typename ItB, typename ItTmp,
+         typename RealT = typename std::iterator_traits<ItA>::value_type,
+         typename std::enable_if<
+          std::is_floating_point<RealT>::value, bool>::type = true,
+         typename std::enable_if<
+          std::is_same<
+            RealT, typename std::iterator_traits<ItB>::value_type
+          >::value
+         , bool>::type = true,
+         typename std::enable_if<
+          std::is_same<
+            RealT, typename std::iterator_traits<ItTmp>::value_type
+          >::value
+         , bool>::type = true>
+inline RealT _MedianOfMeans(ItA a, ItB b, ItTmp tmp, const int64_t n_mixture) {
+  auto tmp_begin = tmp;
+  for (int64_t i = 0; i < n_mixture; ++i, ++a, ++b, ++tmp) {
+    if (IsInvalidComponent(*a, *b)) {
+      return std::numeric_limits<RealT>::quiet_NaN();
+    }
+    // save mean in buffer
+    *tmp = *a / (*a + *b);
+  }
+  // compute median (tmp is now at the end of iteration)
+  return MajiqInclude::median(tmp_begin, tmp);
+}
+template <typename ItA, typename ItB,
+         typename RealT = typename std::iterator_traits<ItA>::value_type,
+         typename std::enable_if<
+          std::is_floating_point<RealT>::value, bool>::type = true,
+         typename std::enable_if<
+          std::is_same<
+            RealT, typename std::iterator_traits<ItB>::value_type
+          >::value
+         , bool>::type = true>
+inline RealT _MedianOfMeans(ItA a, ItB b, const int64_t n_mixture) {
+  std::vector<RealT> buffer(n_mixture);
+  return _MedianOfMeans(a, b, buffer.begin(), n_mixture);
 }
 
 /**

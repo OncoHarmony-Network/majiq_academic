@@ -20,6 +20,7 @@
 #include "Approximation.hpp"
 #include "CDF.hpp"
 #include "DPsiDiscrete.hpp"
+#include "MeansMedian.hpp"
 #include "Moments.hpp"
 #include "PDF.hpp"
 #include "PMF.hpp"
@@ -134,6 +135,15 @@ PyMODINIT_FUNC PyInit_beta_mixture(void) {
       Moments::signature);
   PyDict_SetItemString(d, Moments::name, moments);
   Py_DECREF(moments);
+
+  namespace MeansMedian = MajiqGufuncs::BetaMixture::MeansMedian;
+  PyObject *means_median = PyUFunc_FromFuncAndDataAndSignature(
+      MeansMedian::funcs, data, MeansMedian::types,
+      MeansMedian::ntypes, MeansMedian::nin, MeansMedian::nout,
+      PyUFunc_None, MeansMedian::name, MeansMedian::doc, 0,
+      MeansMedian::signature);
+  PyDict_SetItemString(d, MeansMedian::name, means_median);
+  Py_DECREF(means_median);
 
   namespace Approximation = MajiqGufuncs::BetaMixture::Approximation;
   PyObject *approximation = PyUFunc_FromFuncAndDataAndSignature(

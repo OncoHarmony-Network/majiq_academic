@@ -50,6 +50,33 @@ inline T quantile(It first, It last, float q) {
   }
 }
 
+/**
+ * Median as specific case of quantile
+ */
+template <typename It,
+         typename T = typename std::iterator_traits<It>::value_type>
+inline T median(It first, It last) {
+  const auto n = std::distance(first, last);
+  if (n < 1) {
+    return std::numeric_limits<T>::quiet_NaN();
+  } else if (n == 1) {
+    return *first;
+  } else if (n == 2) {
+    return (*first + *(++first)) / T{2};
+  } else {
+    // midpoint (n odd), or one more than midpoint (n even)
+    const auto idx_midpoint = n / 2;
+    It midpoint = first + idx_midpoint;
+    std::nth_element(first, midpoint, last);
+    if (n % 2 == 1) {  // odd, this is our median
+      return *midpoint;
+    } else {
+      // actually half index past where midpoint would be
+      return (*midpoint + *std::max_element(first, midpoint)) / T{2};
+    }
+  }
+}
+
 }  // namespace MajiqInclude
 
 #endif  // MAJIQINCLUDE_QUANTILE_HPP

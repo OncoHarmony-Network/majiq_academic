@@ -110,7 +110,7 @@ def extract_psi(df: pd.DataFrame) -> pd.DataFrame:
         "end",
         "mean_psi_per_lsv_junction",
     ]
-    PSI_RENAME = {"mean_psi_per_lsv_junction": "bootstrap_psi_mean"}
+    PSI_RENAME = {"mean_psi_per_lsv_junction": "bootstrap_psi_mean_legacy"}
     return (
         df.pipe(_extract_lsv_id)
         .pipe(_df_explode, PSI_EXPLODE_COLUMNS)
