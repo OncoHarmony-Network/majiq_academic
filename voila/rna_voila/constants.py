@@ -13,7 +13,7 @@ except PackageNotFoundError:
     try:
         VERSION = version("rna_voila")
     except PackageNotFoundError:
-        VERSION = "2.2.0"
+        VERSION = "2.3.0"
 
 FILE_VERSION = '0.1'
 ANALYSIS_PSI = 'psi'
