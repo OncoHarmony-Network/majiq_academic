@@ -28,8 +28,6 @@ class Heterogen(object):
     min_experiments_f
         Number or proportion of experiments required to pass in each group for
         quantification
-    stats: Union[str, Collection[str]]
-        Statistics to compute with (must be in constants.STATS_AVAILABLE)
     name1, name2: str
         Names to indicate group identity
     """
@@ -159,11 +157,11 @@ class Heterogen(object):
 
     def raw_stats(
         self,
-        quantiles: Sequence[float] = constants.DEFAULT_HET_PVALUE_QUANTILES,
-        psisamples: int = constants.DEFAULT_HET_PSISAMPLES,
         use_stats: Union[str, Collection[str]] = constants.DEFAULT_HET_USESTATS,
     ) -> xr.Dataset:
         """Statistics on means, samples from raw posteriors"""
+        quantiles: Sequence[float] = [0.0]
+        psisamples: int = 0
         return self._compute_stats(
             self.psi1.raw_alpha,
             self.psi1.raw_beta,
@@ -182,6 +180,9 @@ class Heterogen(object):
         use_stats: Union[str, Collection[str]] = constants.DEFAULT_HET_USESTATS,
     ) -> xr.Dataset:
         """Statistics on means, samples from bootstrap posteriors"""
+        if psisamples < 1:
+            # don't ask for any quantiles back if there will be no psisamples
+            quantiles = []
         return self._compute_stats(
             self.psi1.bootstrap_alpha,
             self.psi1.bootstrap_beta,
@@ -200,6 +201,9 @@ class Heterogen(object):
         use_stats: Union[str, Collection[str]] = constants.DEFAULT_HET_USESTATS,
     ) -> xr.Dataset:
         """Statistics on means, samples from approximate posteriors"""
+        if psisamples < 1:
+            # don't ask for any quantiles back if there will be no psisamples
+            quantiles = []
         return self._compute_stats(
             self.psi1.approximate_alpha,
             self.psi1.approximate_beta,
@@ -215,9 +219,9 @@ class Heterogen(object):
         self,
         raw_psi: bool = True,
         bootstrap_psi: bool = True,
-        raw_stats: bool = False,
-        bootstrap_stats: bool = False,
-        approximate_stats: bool = True,
+        raw_stats: bool = constants.DEFAULT_HET_RAWSTATS,
+        bootstrap_stats: bool = constants.DEFAULT_HET_BOOTSTRAPSTATS,
+        approximate_stats: bool = constants.DEFAULT_HET_APPROXSTATS,
         population_quantiles: Sequence[
             float
         ] = constants.DEFAULT_HET_POPULATION_QUANTILES,
@@ -238,8 +242,6 @@ class Heterogen(object):
         if raw_stats:
             combine_ds.append(
                 self.raw_stats(
-                    quantiles=pvalue_quantiles,
-                    psisamples=psisamples,
                     use_stats=use_stats,
                 ).pipe(lambda x: x.rename_vars(**{y: f"raw_{y}" for y in x.data_vars}))
             )

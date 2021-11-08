@@ -152,18 +152,25 @@ def extract_deltapsi(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def extract_heterogen(df: pd.DataFrame) -> pd.DataFrame:
+    ASSUME_QUANTILE = "0.950"
     STAT_MAP = {
         "TTEST": "ttest",
         "WILCOXON": "mannwhitneyu",
         "TNOM": "tnom",
         "INFOSCORE": "infoscore",
     }
+    STAT_QUANTILE_MAP = {
+        f"{statk}_quantile": f"{statv}-bootstrap_pvalue_quantiles_{ASSUME_QUANTILE}"
+        for statk, statv in STAT_MAP.items()
+    }
     psi_median_columns = [x for x in df.columns if x.endswith("median_psi")]
     stat_columns = df.columns.intersection(STAT_MAP.keys())
+    statq_columns = df.columns.intersection(STAT_QUANTILE_MAP.keys())
     HETEROGEN_EXPLODE_COLUMNS = {
         "junctions_coords": str,
         **{x: float for x in psi_median_columns},
         **{x: float for x in stat_columns},
+        **{x: float for x in statq_columns},
     }
     HETEROGEN_COORDINATE_COLUMNS = {"junctions_coords": ""}
     HETEROGEN_COLUMNS = [
@@ -175,6 +182,7 @@ def extract_heterogen(df: pd.DataFrame) -> pd.DataFrame:
         "end",
         *psi_median_columns,
         *stat_columns,
+        *statq_columns,
     ]
     HETEROGEN_RENAME = {
         "mean_dpsi_per_lsv_junction": "legacy_dpsi_mean",
@@ -184,7 +192,8 @@ def extract_heterogen(df: pd.DataFrame) -> pd.DataFrame:
             x: f"{x[:-len('_median_psi')]}-bootstrap_psi_median"
             for x in psi_median_columns
         },
-        **{x: f"{STAT_MAP[x]}-approx_pvalue" for x in stat_columns},
+        **{x: f"{STAT_MAP[x]}-bootstrap_pvalue" for x in stat_columns},
+        **{x: STAT_QUANTILE_MAP[x] for x in statq_columns},
     }
     return (
         df.pipe(_extract_lsv_id)

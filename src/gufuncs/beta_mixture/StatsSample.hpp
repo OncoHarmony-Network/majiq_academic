@@ -145,13 +145,16 @@ static void Outer(
   // acquire ownership random number generator
   // NOTE: need to keep pointer in scope to maintain ownership
   // (i.e. don't replace with *global_rng_pool.acquire())
-  auto gen_ptr = global_rng_pool.acquire();
-  auto& gen = *gen_ptr;
+  // if no quantiles requested, don't bother acquiring psisamples
+  RNGPtrT gen_ptr = dim_q > 0 ? global_rng_pool.acquire() : RNGPtrT{};
 
   // caching test results for non-ttest statistics
   MajiqInclude::MannWhitney::MannWhitneyCache mannwhitney;
   MajiqInclude::TNOM::TNOMCache tnom;
   MajiqInclude::InfoScore::InfoScoreCache infoscore;
+
+  // buffer for bootstrap means for median of means calculation
+  std::vector<RealT> bootstrap_means(dim_mix);
 
   // buffer for dim_exp samples from respective distributions
   std::vector<RealT> x(dim_exp);
@@ -200,9 +203,9 @@ static void Outer(
       auto a_exp = a.with_stride(str_a_exp);
       auto b_exp = b.with_stride(str_b_exp);
       for (npy_intp j = 0; j < dim_exp; ++j, ++a_exp, ++b_exp) {
-        x[j] = MajiqInclude::BetaMixture::_Mean(
+        x[j] = MajiqInclude::BetaMixture::_MedianOfMeans(
             a_exp.with_stride(str_a_mix), b_exp.with_stride(str_b_mix),
-            dim_mix);
+            bootstrap_means.begin(), dim_mix);
         is_invalid[j] = std::isnan(x[j]);
       }  // fill x with distribution means, mark which experiments invalid
       bool not_sorted = true;
@@ -267,7 +270,7 @@ static void Outer(
             auto a_mix = a_exp.with_stride(str_a_mix);
             auto b_mix = b_exp.with_stride(str_b_mix);
             using MajiqInclude::BetaMixture::_SampleMixture_unchecked;
-            x[j] = _SampleMixture_unchecked(gen, a_mix, b_mix, dim_mix);
+            x[j] = _SampleMixture_unchecked(*gen_ptr, a_mix, b_mix, dim_mix);
           }
         }  // done sampling x
         bool not_sorted = true;

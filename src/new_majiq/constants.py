@@ -148,6 +148,9 @@ DEFAULT_HET_POPULATION_QUANTILES: Final[List[float]] = [0.25, 0.75]
 DEFAULT_HET_PVALUE_QUANTILES: Final[List[float]] = [0.95]
 DEFAULT_HET_USESTATS: Final[List[str]] = ["ttest", "mannwhitneyu"]
 assert all(x in STATS_AVAILABLE for x in DEFAULT_HET_USESTATS)
+DEFAULT_HET_RAWSTATS: Final[bool] = True
+DEFAULT_HET_APPROXSTATS: Final[bool] = True
+DEFAULT_HET_BOOTSTRAPSTATS: Final[bool] = False
 
 DEFAULT_OUTLIERS_MINEXPERIMENTS: Final[float] = 0.9
 DEFAULT_OUTLIERS_ALPHA: Final[List[float]] = [0.05]

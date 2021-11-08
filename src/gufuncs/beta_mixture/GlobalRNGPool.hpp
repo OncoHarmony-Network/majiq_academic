@@ -16,7 +16,10 @@
 namespace MajiqGufuncs {
 namespace BetaMixture {
 
-static MajiqInclude::ResourcePool<boost::random::mt19937> global_rng_pool{};
+using RNGT = boost::random::mt19937;
+using RNGPoolT = MajiqInclude::ResourcePool<RNGT>;
+using RNGPtrT = typename RNGPoolT::ExternalPtrT;
+static RNGPoolT global_rng_pool{};
 
 }  // namespace BetaMixture
 }  // namespace majiqGufuncs

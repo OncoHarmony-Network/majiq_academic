@@ -101,6 +101,7 @@ class ResourcePool {
    public:
     explicit ExternalDeleter(std::weak_ptr<ResourcePool<Generator>*> pool)
       : pool_{pool} { }
+    ExternalDeleter() : pool_{} { }
     void operator()(Generator* ptr) {
       // return it back if possible
       if (auto pool_ptr = pool_.lock()) {
