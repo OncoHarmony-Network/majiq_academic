@@ -14,7 +14,7 @@ except PackageNotFoundError:
     try:
         VERSION = version("rna_majiq")
     except PackageNotFoundError:
-        VERSION = "2.2.0"
+        VERSION = "2.3.0"
 
 # file extensions
 JUNC_FILE_FORMAT = "sj"
