@@ -29,7 +29,7 @@
 {% block heatmap_form %}
 
 
-    <div class="heatmap-form pure-form pure-form-aligned" style="float: right; margin-right: 10px;">
+    <div class="heatmap-form pure-form pure-form-aligned rm-dl" style="float: right; margin-right: 10px;">
     <div id="heatmap-stat-choices">
         {% for stat_name in stat_names %}
             <label for="{{ stat_name }}" class="pure-radio"
@@ -50,14 +50,14 @@
     </div>
     </div>
 
-    <div class="heatmap-scale-form pure-form pure-form-stacked" style="float: right; margin-right: 10px;">
+    <div class="heatmap-scale-form pure-form pure-form-stacked rm-dl" style="float: right; margin-right: 10px;">
 
         <label for="dPSI-cutoff">dPSI Scale Cutoff</label>
         <input id="dPSI-cutoff" type="number" min="0.1" step="any"  class="pure-input" style="width:110px;" value="0.5">
 
     </div>
 
-    <div class="groups-display-form pure-form pure-form-stacked" style="float: right; margin-right: 10px; width:10%;">
+    <div class="groups-display-form pure-form pure-form-stacked rm-dl" style="float: right; margin-right: 10px; width:10%;">
 
         <div>
             <label for="groups-display">Show / Hide Groups</label>
