@@ -10,6 +10,7 @@ from typing import Final, List, Optional, Union, cast
 
 import numpy as np
 import xarray as xr
+from dask.distributed import progress
 from scipy.special import logsumexp
 from scipy.stats import beta as beta_dist
 
@@ -91,6 +92,7 @@ class DPsiPrior(object):
         n_update_a: int = constants.DEFAULT_DPSI_PRIOR_MAXITER,
         n_update_pmix: Optional[int] = None,
         legacy: bool = False,
+        show_progress: bool = False,
     ) -> "DPsiPrior":
         """Use reliable binary events from psi1,2 to return updated prior
 
@@ -123,6 +125,8 @@ class DPsiPrior(object):
         legacy: bool
             If True, use old implementation in v2 that does hard binning of
             observed dpsi into hard-coded bins at differences of 5% and 30%.
+        show_progress: bool
+            Attempt to show progress on distributed cluster for Dask
         """
         # how many updates do we want to make?
         if n_update_pmix is None:
@@ -132,7 +136,11 @@ class DPsiPrior(object):
             return self
         # otherwise, get empirical dpsi to make adjustment
         dpsi = self.get_empirical_dpsi(
-            psi1, psi2, minreads=minreads, min_experiments_f=min_experiments_f
+            psi1,
+            psi2,
+            minreads=minreads,
+            min_experiments_f=min_experiments_f,
+            show_progress=show_progress,
         )
         log = get_logger()
         # do we have enough observations to do adjustment?
@@ -193,6 +201,7 @@ class DPsiPrior(object):
         psi2: PsiCoverage,
         minreads: float = constants.DEFAULT_DPSI_PRIOR_MINREADS,
         min_experiments_f: float = constants.DEFAULT_QUANTIFY_MINEXPERIMENTS,
+        show_progress: bool = False,
     ) -> xr.DataArray:
         """Get high confidence empirical deltapsi from input groups of experiments
 
@@ -214,6 +223,8 @@ class DPsiPrior(object):
         min_experiments_f: float
             Proportion (if < 1) or number of experiments that must pass all
             criteria in order to be considered
+        show_progress: bool
+            Attempt to show dask progress bar for distributed cluster
 
         Returns
         -------
@@ -238,16 +249,13 @@ class DPsiPrior(object):
         raw_total2 = psi2.raw_total.sum("prefix")
         # get dpsi that passed, keeping only one per lsv
         dpsi = (
-            (
-                (reads2 / raw_total2.where(raw_total2 > 0))
-                - (reads1 / raw_total1.where(raw_total1 > 0))
-            )
-            .where(passed)
-            .load()
-            .dropna("ec_idx")
-            .groupby("lsv_idx")
-            .first()
-        )
+            (reads2 / raw_total2.where(raw_total2 > 0))
+            - (reads1 / raw_total1.where(raw_total1 > 0))
+        ).where(passed)
+        if show_progress and dpsi.chunks:
+            dpsi = dpsi.persist()
+            progress(dpsi.data)
+        dpsi = dpsi.load().dropna("ec_idx").groupby("lsv_idx").first()
         return dpsi
 
     @staticmethod

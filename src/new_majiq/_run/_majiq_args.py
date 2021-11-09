@@ -358,6 +358,23 @@ def resources_args(parser: argparse.ArgumentParser, use_dask: bool = False) -> N
             default="auto",
             help="Memory limit to pass to dask cluster (default: %(default)s)",
         )
+        progress_bar = resources.add_mutually_exclusive_group()
+        progress_bar.add_argument(
+            "--show-progress",
+            dest="show_progress",
+            action="store_true",
+            default=True,
+            help="Show progress bar for Dask computations"
+            " (default: show_progress=%(default)s)",
+        )
+        progress_bar.add_argument(
+            "--disable-progress",
+            dest="show_progress",
+            action="store_false",
+            default=True,
+            help="Disable progress bar for Dask computations"
+            " (default: show_progress=%(default)s)",
+        )
         parser.set_defaults(use_dask=True)
     else:
         resources.add_argument(

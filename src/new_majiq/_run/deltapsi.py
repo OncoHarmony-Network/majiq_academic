@@ -14,6 +14,7 @@ from enum import Enum
 from typing import Any, Dict, List, Optional
 
 import pandas as pd
+from dask.distributed import progress
 
 import new_majiq as nm
 from new_majiq._run._majiq_args import (
@@ -174,6 +175,7 @@ def run(args: argparse.Namespace) -> None:
             min_lsvs=args.prior_minevents,
             n_update_a=args.prior_iter,
             legacy=(args.prior_type == DPsiPriorType.LEGACY_PRIOR),
+            show_progress=args.show_progress,
         )
         log.info(f"Using deltapsi prior {prior}")
 
@@ -192,7 +194,11 @@ def run(args: argparse.Namespace) -> None:
         changing_threshold=args.changing_threshold,
         nonchanging_threshold=args.nonchanging_threshold,
         use_posterior=args.use_posterior,
-    ).load()
+    )
+    if args.show_progress:
+        ds_quant = ds_quant.persist()
+        progress(*(x.data for x in ds_quant.variables.values() if x.chunks))
+    ds_quant = ds_quant.load()
 
     log.info("Reshaping resulting quantifications to table")
     concat_df.append(ds_quant.drop_vars("passed").to_dataframe())
