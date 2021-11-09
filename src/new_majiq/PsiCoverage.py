@@ -596,7 +596,6 @@ class PsiCoverage(object):
         self,
         path: Union[str, Path],
         ec_chunksize: int = constants.DEFAULT_COVERAGE_CHUNKS,
-        append: bool = False,
         consolidated: bool = True,
     ) -> None:
         """Save PSI coverage dataset as zarr
@@ -608,9 +607,6 @@ class PsiCoverage(object):
         ec_chunksize: int
             How to chunk event connections to prevent memory from getting to
             large when loading many samples simultaneously
-        append: bool
-            Add to *existing* file (not checked). But if append is used on
-            non-existing file, event information will not be saved.
         consolidated: bool
             When saving the file make sure that it is consolidated. In general,
             if you are appending a bunch of files together, it can make sense
@@ -632,24 +628,16 @@ class PsiCoverage(object):
         If we know we are processing at most a few samples at a time, this
         should be made higher.
         """
-        save_df = self._save_df(ec_chunksize=ec_chunksize, remove_bam_attrs=append)
-        if append:
-            save_df.to_zarr(
-                path,
-                append_dim="prefix",
-                group=constants.NC_PSICOVERAGE,
-                consolidated=consolidated,
-            )
-        else:
-            save_df.to_zarr(
-                path,
-                mode="w",
-                group=constants.NC_PSICOVERAGE,
-                consolidated=False,
-            )
-            self.events.chunk(self.events.sizes).to_zarr(
-                path, mode="a", group=constants.NC_EVENTS, consolidated=consolidated
-            )
+        save_df = self._save_df(ec_chunksize=ec_chunksize)
+        save_df.to_zarr(
+            path,
+            mode="w",
+            group=constants.NC_PSICOVERAGE,
+            consolidated=False,
+        )
+        self.events.chunk(self.events.sizes).to_zarr(
+            path, mode="a", group=constants.NC_EVENTS, consolidated=consolidated
+        )
         return
 
     def to_zarr_slice(
