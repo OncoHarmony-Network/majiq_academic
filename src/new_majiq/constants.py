@@ -102,8 +102,12 @@ DEFAULT_COVERAGE_STACK_PVALUE: Final[float] = 1e-7
 # + num_samples (how many prefixes are being simultaneously processed)
 # + bytes per record (precision, how many arrays) at once.
 # at 8 (1 << 3) bytes per record, default num bootstraps (30 ~ 1 << 5), and
-# 1000 (~1 << 10) samples, chunks end up around 2G
-DEFAULT_COVERAGE_CHUNKS: Final[int] = 1 << 13  # 8192
+# 1000 (~1 << 10) samples, chunks end up at 2^(3 + 5 + 10 + {val} - 30)G
+# Previously set to 1 << 13 so that it'd be around 2G with 100 samples. But
+# this is way too slow on small samples, so we will bump it up to 2^16 and
+# see how memory usage behaves with large datasets. We can see if we can
+# rechunk when the sizes end up too unwieldy.
+DEFAULT_COVERAGE_CHUNKS: Final[int] = 1 << 16  # 65536
 
 DEFAULT_QUANTIFY_NTHREADS: Final[int] = 1
 DEFAULT_QUANTIFY_MINREADS: Final[float] = 10.0
