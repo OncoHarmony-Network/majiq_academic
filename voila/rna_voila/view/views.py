@@ -131,8 +131,7 @@ def get_app():
                 # the correct passcode is not in session either, deny access
                 return abort(403)
 
-
-    if not ViewConfig().ignore_inconsistent_group_errors:
+    if not ViewConfig().ignore_inconsistent_group_errors and not ViewConfig().splice_graph_only:
         m_all = ViewMatrix()
         warnings = m_all.check_group_consistency()
         @run_app.before_request
