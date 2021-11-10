@@ -25,6 +25,7 @@ from new_majiq._run.moccasin import subcommand_coverage_model as moccasin_covera
 from new_majiq._run.moccasin import subcommand_factors_infer as moccasin_factors_infer
 from new_majiq._run.moccasin import subcommand_factors_model as moccasin_factors_model
 from new_majiq._run.psi_coverage import subcommand as psi_coverage
+from new_majiq._run.psi_outliers import subcommand as psi_outliers
 from new_majiq._run.quantify import subcommand as quantify
 from new_majiq._run.sg_coverage import subcommand as sg_coverage
 from new_majiq._run.sg_coverage_summarize import subcommand as sg_coverage_summarize
@@ -41,6 +42,7 @@ SUBPARSER_SOURCES: Dict[str, GenericSubcommand] = {
     "quantify": quantify,
     "deltapsi": deltapsi,
     "heterogen": heterogen,
+    "psi-outliers": psi_outliers,
     "moccasin-factors-model": moccasin_factors_model,
     "moccasin-factors-infer": moccasin_factors_infer,
     "moccasin-coverage-model": moccasin_coverage_model,
