@@ -13,6 +13,7 @@ import moccasin.moccasin as mc
 import numpy as np
 import pandas as pd
 import xarray as xr
+from dask.distributed import progress
 
 import new_majiq as nm
 from new_majiq._offsets import clip_and_normalize_strict
@@ -271,6 +272,7 @@ def run_factors_model(args: argparse.Namespace) -> None:
         dim_factor="factor",
         dim_ecidx="ec_idx",
         log=log,
+        show_progress=args.show_progress,
     )
     # report about explained variance
     explained_variance = model.explained_variance.values
@@ -304,9 +306,12 @@ def run_factors_infer(args: argparse.Namespace):
     log.info(f"Loading model for unknown factors from {args.factors_model}")
     model = mc.ModelUnknownConfounders.from_zarr(args.factors_model)
     log.info("Solving for unknown confounders")
-    unknown_factors = model.predict(
-        psicov.bootstrap_psi, psicov.event_passed, factors
-    ).load()
+    unknown_factors = model.predict(psicov.bootstrap_psi, psicov.event_passed, factors)
+    if args.show_progress:
+        unknown_factors = unknown_factors.persist()
+        progress(unknown_factors.data)
+    unknown_factors = unknown_factors.load()
+
     log.info(f"Saving combined factors to {args.output}")
     (
         xr.concat([factors, unknown_factors.rename(new_factor="factor")], dim="factor")
@@ -324,7 +329,7 @@ def run_coverage_model(args: argparse.Namespace) -> None:
     psicov = nm.PsiCoverage.from_zarr(args.psicov)
     log.info("Setting up model matrix of all factors")
     factors = _get_factors(psicov.prefixes, args).load()
-    log.info("Solving for bootstrap model parameters")
+    log.info("Solving for model parameters")
     bootstrap_model = mc.infer_model_params(
         psicov.bootstrap_psi,
         psicov.event_passed,
@@ -333,7 +338,6 @@ def run_coverage_model(args: argparse.Namespace) -> None:
         dim_prefix="prefix",
         dim_factor="factor",
     )
-    log.info("Solving for raw model parameters")
     # TODO could potentially share work if combined bootstrap_psi, raw_psi to
     # solve for parameters together
     raw_model = mc.infer_model_params(
@@ -344,13 +348,12 @@ def run_coverage_model(args: argparse.Namespace) -> None:
         dim_prefix="prefix",
         dim_factor="factor",
     )
+    models = xr.Dataset(dict(bootstrap_model=bootstrap_model, raw_model=raw_model))
+    if args.show_progress:
+        models = models.persist()
+        progress(*(x.data for x in models.variables.values() if x.chunks))
     log.info(f"Saving model parameters to {args.coverage_model}")
-    xr.Dataset(
-        {
-            "bootstrap_model": bootstrap_model,
-            "raw_model": raw_model,
-        }
-    ).to_zarr(args.coverage_model, mode="w")
+    models.to_zarr(args.coverage_model, mode="w")
     return
 
 
@@ -416,7 +419,7 @@ def run_coverage_infer(args: argparse.Namespace) -> None:
         model_path=f"{args.coverage_model}",
     )
     log.info(f"Saving corrected coverage to {args.corrected_psicov}")
-    psicov.to_zarr(args.corrected_psicov)
+    psicov.to_zarr(args.corrected_psicov, show_progress=args.show_progress)
     return
 
 

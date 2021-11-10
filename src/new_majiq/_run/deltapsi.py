@@ -150,7 +150,7 @@ def run(args: argparse.Namespace) -> None:
         args.names[1]: psi2.num_prefixes,
     }
     metadata["group_sizes"] = group_sizes
-    log.info(f"Number of experiments per group: {group_sizes}")
+    log.info(f"Comparing {args.names[0]}({psi1}) vs {args.names[1]}({psi2})")
 
     # initialize list of data frames that will be concatenated (on columns)
     concat_df: List[pd.DataFrame] = list()

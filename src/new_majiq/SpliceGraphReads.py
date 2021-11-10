@@ -8,11 +8,23 @@ Author: Joseph K Aicher
 
 from functools import cached_property
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Dict, Final, Hashable, List, Optional, Union
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Dict,
+    Final,
+    Hashable,
+    List,
+    Optional,
+    Union,
+    cast,
+)
 
 import dask.array as da
 import numpy as np
 import xarray as xr
+from dask.delayed import Delayed
+from dask.distributed import progress
 
 import new_majiq.constants as constants
 from new_majiq._workarounds import _load_zerodim_variables
@@ -130,13 +142,26 @@ class SpliceGraphReads(object):
         path: Union[str, Path],
         mode: str = "w",
         chunksize: int = constants.NC_SGREADS_CHUNKS,
+        show_progress: bool = False,
     ) -> None:
         """Save to specified zarr file"""
-        (
+        save_df_future = cast(
+            Delayed,
             self.df.chunk(chunksize)
             .pipe(_load_zerodim_variables)
-            .to_zarr(path, mode=mode, group=constants.NC_SGREADS, consolidated=True)
+            .to_zarr(
+                path,
+                mode=mode,
+                group=constants.NC_SGREADS,
+                consolidated=True,
+                compute=False,
+            ),
         )
+        if show_progress:
+            save_df_future = save_df_future.persist()
+            progress(save_df_future)
+        else:
+            save_df_future.compute()
         return
 
     def to_zarr_slice(

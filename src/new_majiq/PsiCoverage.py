@@ -27,6 +27,8 @@ from typing import (
 import dask.array as da
 import numpy as np
 import xarray as xr
+from dask.delayed import Delayed
+from dask.distributed import progress
 
 import new_majiq._offsets as _offsets
 import new_majiq.beta_mixture as bm
@@ -597,6 +599,7 @@ class PsiCoverage(object):
         path: Union[str, Path],
         ec_chunksize: int = constants.DEFAULT_COVERAGE_CHUNKS,
         consolidated: bool = True,
+        show_progress: bool = False,
     ) -> None:
         """Save PSI coverage dataset as zarr
 
@@ -612,6 +615,8 @@ class PsiCoverage(object):
             if you are appending a bunch of files together, it can make sense
             to set consolidated=False, and consolidate on the last write (only
             consolidate once). But, don't forget to consolidate at the end.
+        show_progress: bool
+            Attempt to show progress on distributed cluster for Dask
 
         Notes
         -----
@@ -629,12 +634,21 @@ class PsiCoverage(object):
         should be made higher.
         """
         save_df = self._save_df(ec_chunksize=ec_chunksize)
-        save_df.to_zarr(
-            path,
-            mode="w",
-            group=constants.NC_PSICOVERAGE,
-            consolidated=False,
+        save_df_future = cast(
+            Delayed,
+            save_df.to_zarr(
+                path,
+                mode="w",
+                group=constants.NC_PSICOVERAGE,
+                consolidated=False,
+                compute=False,
+            ),
         )
+        if show_progress:
+            save_df_future = save_df_future.persist()
+            progress(save_df_future)
+        else:
+            save_df_future.compute()
         self.events.chunk(self.events.sizes).to_zarr(
             path, mode="a", group=constants.NC_EVENTS, consolidated=consolidated
         )

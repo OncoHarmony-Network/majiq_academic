@@ -13,6 +13,7 @@ from typing import Any, Dict, List, Optional
 
 import numpy as np
 import pandas as pd
+from dask.distributed import progress
 
 import new_majiq as nm
 from new_majiq._run._majiq_args import (
@@ -154,7 +155,7 @@ def run(args: argparse.Namespace) -> None:
         args.names[1]: psi2.num_prefixes,
     }
     metadata["group_sizes"] = group_sizes
-    log.info(f"Analyzing {args.names[0]}({psi1}) vs {args.names[1]}({psi2})")
+    log.info(f"Comparing {args.names[0]}({psi1}) vs {args.names[1]}({psi2})")
 
     # initialize list of data frames that will be concatenated (on columns)
     concat_df: List[pd.DataFrame] = list()
@@ -184,7 +185,11 @@ def run(args: argparse.Namespace) -> None:
         pvalue_quantiles=pvalue_quantiles,
         psisamples=args.psisamples,
         use_stats=use_stats,
-    ).load()
+    )
+    if args.show_progress:
+        ds_quant = ds_quant.persist()
+        progress(*(x.data for x in ds_quant.variables.values() if x.chunks))
+    ds_quant = ds_quant.load()
 
     log.info("Reshaping resulting quantifications to table")
     # pvalue columns that have dims (ec_idx, stats)

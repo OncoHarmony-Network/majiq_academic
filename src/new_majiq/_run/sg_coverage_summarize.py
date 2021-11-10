@@ -58,7 +58,12 @@ def run(args: argparse.Namespace) -> None:
         bam_experiment_name(args.summary), reduction=args.reduction
     )
     log.info(f"Saving summarized splicegraph coverage to {args.summary}")
-    coverage.to_zarr(args.summary, mode="w", chunksize=args.chunksize)
+    coverage.to_zarr(
+        args.summary,
+        mode="w",
+        chunksize=args.chunksize,
+        show_progress=args.show_progress,
+    )
     return
 
 
