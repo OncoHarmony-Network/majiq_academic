@@ -21,6 +21,9 @@
 #include "TNOM.hpp"
 #include "TTest.hpp"
 
+#include "NanMedian.hpp"
+#include "NanQuantile.hpp"
+
 
 // no extra data being passed in
 static void *data[1] = {NULL};
@@ -93,6 +96,24 @@ PyMODINIT_FUNC PyInit__stats(void) {
       InfoScore::signature);
   PyDict_SetItemString(d, InfoScore::name, infoscore);
   Py_DECREF(infoscore);
+
+  namespace NanMedian = MajiqGufuncs::NanMedian;
+  PyObject *nanmedian = PyUFunc_FromFuncAndDataAndSignature(
+      NanMedian::funcs, data, NanMedian::types,
+      NanMedian::ntypes, NanMedian::nin, NanMedian::nout,
+      PyUFunc_None, NanMedian::name, NanMedian::doc, 0,
+      NanMedian::signature);
+  PyDict_SetItemString(d, NanMedian::name, nanmedian);
+  Py_DECREF(nanmedian);
+
+  namespace NanQuantile = MajiqGufuncs::NanQuantile;
+  PyObject *nanquantile = PyUFunc_FromFuncAndDataAndSignature(
+      NanQuantile::funcs, data, NanQuantile::types,
+      NanQuantile::ntypes, NanQuantile::nin, NanQuantile::nout,
+      PyUFunc_None, NanQuantile::name, NanQuantile::doc, 0,
+      NanQuantile::signature);
+  PyDict_SetItemString(d, NanQuantile::name, nanquantile);
+  Py_DECREF(nanquantile);
 
   // return pointer to final module object
   return m;

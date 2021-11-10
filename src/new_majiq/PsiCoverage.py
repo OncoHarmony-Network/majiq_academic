@@ -33,6 +33,7 @@ from dask.distributed import progress
 import new_majiq._offsets as _offsets
 import new_majiq.beta_mixture as bm
 import new_majiq.constants as constants
+from new_majiq._stats import nanmedian, nanquantile
 from new_majiq.Events import Events, _Events
 from new_majiq.EventsCoverage import EventsCoverage
 from new_majiq.experiments import bam_experiment_name
@@ -418,11 +419,37 @@ class PsiCoverage(object):
 
     @cached_property
     def raw_psi_mean_population_median(self) -> xr.DataArray:
-        return self._raw_psi_mean_core_prefix.median("prefix")
+        return xr.apply_ufunc(
+            nanmedian,
+            self._raw_psi_mean_core_prefix,
+            input_core_dims=[["prefix"]],
+            dask="allowed",
+        )
 
     @cached_property
     def bootstrap_psi_mean_population_median(self) -> xr.DataArray:
-        return self._bootstrap_psi_mean_core_prefix.median("prefix")
+        return xr.apply_ufunc(
+            nanmedian,
+            self._bootstrap_psi_mean_core_prefix,
+            input_core_dims=[["prefix"]],
+            dask="allowed",
+        )
+
+    @staticmethod
+    def _compute_population_quantile(
+        x: xr.DataArray,
+        quantiles: Sequence[float] = constants.DEFAULT_HET_POPULATION_QUANTILES,
+        quantile_dim_name: str = "population_quantile",
+    ) -> xr.DataArray:
+        quantiles_xr = xr.DataArray(quantiles, [(quantile_dim_name, quantiles)])
+        return xr.apply_ufunc(
+            nanquantile,
+            x,
+            quantiles_xr,
+            input_core_dims=[["prefix"], [quantile_dim_name]],
+            output_core_dims=[[quantile_dim_name]],
+            dask="allowed",
+        )
 
     def raw_psi_mean_population_quantile(
         self,
@@ -430,8 +457,10 @@ class PsiCoverage(object):
         quantile_dim_name: str = "population_quantile",
     ) -> xr.DataArray:
         """Get quantiles of psi mean over population (adds dim quantile)"""
-        return self._raw_psi_mean_core_prefix.quantile(quantiles, "prefix").rename(
-            quantile=quantile_dim_name
+        return self._compute_population_quantile(
+            self._raw_psi_mean_core_prefix,
+            quantiles,
+            quantile_dim_name=quantile_dim_name,
         )
 
     def bootstrap_psi_mean_population_quantile(
@@ -440,9 +469,11 @@ class PsiCoverage(object):
         quantile_dim_name: str = "population_quantile",
     ) -> xr.DataArray:
         """Get quantiles of psi mean over population (adds dim quantile)"""
-        return self._bootstrap_psi_mean_core_prefix.quantile(
-            quantiles, "prefix"
-        ).rename(quantile=quantile_dim_name)
+        return self._compute_population_quantile(
+            self._bootstrap_psi_mean_core_prefix,
+            quantiles,
+            quantile_dim_name=quantile_dim_name,
+        )
 
     @classmethod
     def from_events_coverage(
