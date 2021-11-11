@@ -38,8 +38,7 @@ def add_args(parser: argparse.ArgumentParser) -> None:
     )
     parser.add_argument(
         "--alpha",
-        "-a",
-        dest="alpha",
+        metavar="A",
         # floats on [0, 1]
         type=check_range_factory(float, 0, 1, True, True),
         action=StoreRequiredUniqueActionFactory(),
