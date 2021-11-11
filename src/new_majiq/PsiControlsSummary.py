@@ -7,8 +7,9 @@ for use as controls
 Author: Joseph K Aicher
 """
 
+from functools import cached_property
 from pathlib import Path
-from typing import Final, Hashable, List, Optional, Sequence, Set, Union, cast
+from typing import Final, Hashable, List, Sequence, Set, Union, cast
 
 import xarray as xr
 from dask.delayed import Delayed
@@ -22,15 +23,21 @@ from new_majiq.GeneJunctions import GeneJunctions
 from new_majiq.PsiCoverage import PsiCoverage, min_experiments
 
 
-def _q_from_alpha_lb(alpha: xr.DataArray, is_lb: xr.DataArray) -> xr.DataArray:
+def _q_from_alpha(alpha: xr.DataArray) -> xr.DataArray:
     """Two-sided quantiles from outer product of alpha, is_lb
 
     Two-sided quantiles from outer product of alpha, is_lb.
     When is_lb == True, q = 0.5 * alpha. Otherwise, q = 1 - 0.5 * alpha.
     """
+    is_lb = xr.DataArray(_ := [False, True], [("is_lb", _)], name="is_lb")
     q_lb = 0.5 * alpha  # lower bound quantiles
     q_ub = 1 - q_lb  # upper bound quantiles
     return q_lb.where(is_lb, q_ub).rename("q")
+
+
+def _psirange_from_psiquantiles(quantiles: xr.DataArray) -> xr.DataArray:
+    """Range between lower/upper quantile (quantiles[..., is_lb])"""
+    return (quantiles.sel(is_lb=False) - quantiles.sel(is_lb=True)).rename("psi_range")
 
 
 class PsiControlsSummary(object):
@@ -83,9 +90,7 @@ class PsiControlsSummary(object):
                 f"df.psi_quantile missing required dimensions ({missing = })"
             )
         if "q" not in df.variables:
-            df = df.assign_coords(
-                controls_q=_q_from_alpha_lb(df["controls_alpha"], df["is_lb"])
-            )
+            df = df.assign_coords(controls_q=_q_from_alpha(df["controls_alpha"]))
         if "prefixes" not in df.attrs or not isinstance(df.attrs["prefixes"], list):
             raise ValueError("df.attrs missing required list attribute 'prefixes'")
         if df.sizes["ec_idx"] != events.sizes["ec_idx"]:
@@ -99,12 +104,22 @@ class PsiControlsSummary(object):
         return self.df["controls_alpha"]
 
     @property
+    def alpha(self) -> xr.DataArray:
+        """alias for controls_alpha"""
+        return self.controls_alpha
+
+    @property
     def is_lb(self) -> xr.DataArray:
         return self.df["is_lb"]
 
     @property
     def controls_q(self) -> xr.DataArray:
         return self.df["controls_q"]
+
+    @property
+    def q(self) -> xr.DataArray:
+        """alias for controls_q"""
+        return self.controls_q
 
     @property
     def num_passed(self) -> xr.DataArray:
@@ -124,10 +139,19 @@ class PsiControlsSummary(object):
 
     def passed_min_experiments(
         self,
-        min_experiments_f: float = constants.DEFAULT_OUTLIERS_MINEXPERIMENTS,
+        min_experiments_f: Union[
+            float, Sequence[float]
+        ] = constants.DEFAULT_OUTLIERS_MINEXPERIMENTS,
     ) -> xr.DataArray:
         """Get boolean mask of events that pass enough experiments"""
-        return self.num_passed >= min_experiments(min_experiments_f, self.num_prefixes)
+        if isinstance(min_experiments_f, float):
+            min_experiments_f = [min_experiments_f]
+        self_min_experiments = xr.DataArray(
+            [min_experiments(x, self.num_prefixes) for x in min_experiments_f],
+            [("min_experiments_f", min_experiments_f)],
+            name="min_experiments",
+        )
+        return self.num_passed >= self_min_experiments
 
     @property
     def psi_median(self) -> xr.DataArray:
@@ -137,14 +161,10 @@ class PsiControlsSummary(object):
     def psi_quantile(self) -> xr.DataArray:
         return self.df["psi_quantile"]
 
-    def dataset(
-        self,
-        min_experiments_f: Optional[float] = constants.DEFAULT_OUTLIERS_MINEXPERIMENTS,
-    ) -> xr.Dataset:
-        df = self.df
-        if min_experiments_f:
-            df = df.where(self.passed_min_experiments(min_experiments_f))
-        return df
+    @cached_property
+    def psi_range(self) -> xr.DataArray:
+        """For each controls_alpha, range between lower/upper quantiles (scale)"""
+        return _psirange_from_psiquantiles(self.psi_quantile)
 
     def load(self, show_progress: bool = False) -> "PsiControlsSummary":
         """Ensure that all data is computed/loaded in memory"""
@@ -162,6 +182,9 @@ class PsiControlsSummary(object):
     ) -> "PsiControlsSummary":
         if isinstance(alpha, float):
             alpha = [alpha]
+        else:
+            # make sure alpha is sorted and has unique elements
+            alpha = sorted(set(alpha))
         # get everything for df but the quantiles
         df = xr.Dataset(
             dict(
@@ -169,12 +192,11 @@ class PsiControlsSummary(object):
             ),
             dict(
                 num_passed=psicov.num_passed,
-                is_lb=("is_lb", [False, True]),
                 controls_alpha=("controls_alpha", alpha),
             ),
             dict(prefixes=psicov.prefixes),
         ).assign_coords(
-            controls_q=lambda df: _q_from_alpha_lb(df["controls_alpha"], df["is_lb"]),
+            controls_q=lambda df: _q_from_alpha(df["controls_alpha"]),
         )
         stacked_q = df["controls_q"].stack(_idx=["controls_alpha", "is_lb"])
         df = df.assign(

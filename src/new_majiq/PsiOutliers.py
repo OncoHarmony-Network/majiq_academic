@@ -6,7 +6,6 @@ Identify aberrant splicing events of interests in cases vs controls
 Author: Joseph K Aicher
 """
 
-from functools import cached_property
 from typing import Final, Optional, Sequence, Union
 
 import numpy as np
@@ -14,6 +13,11 @@ import xarray as xr
 
 import new_majiq.constants as constants
 from new_majiq.logger import get_logger
+from new_majiq.PsiControlsSummary import (
+    PsiControlsSummary,
+    _psirange_from_psiquantiles,
+    _q_from_alpha,
+)
 from new_majiq.PsiCoverage import PsiCoverage
 
 
@@ -24,163 +28,169 @@ class PsiOutliers(object):
     ----------
     cases: PsiCoverage
         PsiCoverage for prefixes that will be treated as cases
-    controls: PsiCoverage
-        PsiCoverage for prefixes that will be treated as controls
-    controls_min_experiments_f: float
-        min_experiments used for masking if there are enough controls to
-        perform comparison against with cases. If less than 1, a fraction of
-        the total number of prefixes, otherwise the absolute number that must
-        be passed. Generally set to high percentage so that quantiles are
-        reasonable.
-    alpha: Union[float, Sequence[float]]
-        Threshold for case and control quantiles in both directions (two-sided
-        comparison). Quantiles are 0.5 * alpha and 1 - 0.5 * alpha.
-        Superseded by cases_alpha and controls_alpha if both specified to allow
-        for different quantiles for cases vs controls.
-    cases_alpha, controls_alpha: Optional[Union[float, Sequence[float]]]
-        If specified, separate thresholds for quantiles for cases, controls.
-        Both must be specified, otherwise will raise error.
+    controls: PsiControlsSummary
+        Summary of PsiCoverage for prefixes that are treated as controls
+
+    Notes
+    -----
+    Use PsiOutliers.from_psicov() if you haven't already summarized controls
     """
 
-    def __init__(
-        self,
-        cases: PsiCoverage,
-        controls: PsiCoverage,
-        controls_min_experiments_f: float = constants.DEFAULT_OUTLIERS_MINEXPERIMENTS,
-        alpha: Union[float, Sequence[float]] = constants.DEFAULT_OUTLIERS_ALPHA,
-        cases_alpha: Optional[Union[float, Sequence[float]]] = None,
-        controls_alpha: Optional[Union[float, Sequence[float]]] = None,
-    ):
-        # normalize inputs, check for errors
-        if cases.num_connections != controls.num_connections:
+    def __init__(self, cases: PsiCoverage, controls: PsiControlsSummary):
+        if not cases.events.equals(controls.events):
             raise ValueError(
-                "cases and controls must have the same number of connections"
-                f" ({cases.num_connections=}, {controls.num_connections=})"
+                "cases and controls are not defined with the same events"
+                f" ({cases.events=}, {controls.events=})"
             )
         if prefix_overlap := set(cases.prefixes) & set(controls.prefixes):
             # warning if there is overlap between prefixes
             get_logger().warning(
-                f"Heterogen input groups have overlapping prefixes ({prefix_overlap})"
-            )
-        # get events that passed in enough events in controls
-        controls_passed = controls.passed_min_experiments(controls_min_experiments_f)
-        # handle alpha
-        if not (cases_alpha and controls_alpha):
-            if cases_alpha or controls_alpha:
-                raise ValueError(
-                    "cases_alpha and controls_alpha must either neither be set"
-                    f" or both be set ({cases_alpha = }, {controls_alpha = })"
-                )
-            elif not alpha:
-                raise ValueError(
-                    "cases_alpha and controls_alpha are not set, so alpha must"
-                    f" have a nonzero value ({alpha = })"
-                )
-            else:  # alpha and not cases_alpha and not controls_alpha
-                cases_alpha = alpha
-                controls_alpha = alpha
-        # make sure cases_alpha, controls_alpha are Sequence[float]
-        if isinstance(cases_alpha, float):
-            cases_alpha = [cases_alpha]
-        if isinstance(controls_alpha, float):
-            controls_alpha = [controls_alpha]
-        # make sure all values are all reasonable
-        if any(x for x in cases_alpha if not (0 < x < 1)):
-            raise ValueError(f"cases_alpha must all be in (0, 1) ({cases_alpha = })")
-        if any(x for x in controls_alpha if not (0 < x < 1)):
-            raise ValueError(
-                f"controls_alpha must all be in (0, 1) ({controls_alpha = })"
+                "PsiOutliers cases and controls have overlapping prefixes"
+                f" ({prefix_overlap})"
             )
 
         # save members of PsiOutliers
         self.cases: Final[PsiCoverage] = cases
-        self.controls: Final[PsiCoverage] = controls.mask_events(controls_passed)
-        self.controls_passed: Final[xr.DataArray] = controls_passed
-        # quantiles to compute
-        self.quantiles: Final[xr.Dataset] = xr.Dataset(
-            {},
-            dict(
-                is_lb=[False, True],
-                cases_alpha=np.array(cases_alpha, dtype=cases.raw_psi.dtype),
-                controls_alpha=np.array(controls_alpha, dtype=controls.raw_psi.dtype),
-            ),
-        ).assign_coords(
-            cases_q=lambda ds: (q := 0.5 * ds.cases_alpha).where(ds.is_lb, 1 - q),
-            controls_q=lambda ds: (q := 0.5 * ds.controls_alpha).where(ds.is_lb, 1 - q),
-        )
+        self.controls: Final[PsiControlsSummary] = controls
         return
 
-    @cached_property
-    def cases_psi_quantile(self) -> xr.DataArray:
-        """Cases posterior quantiles with beta approximation of posterior mixture"""
-        return self.cases.approximate_quantile(self.quantiles.cases_q)
+    @classmethod
+    def from_psicov(
+        cls,
+        cases: PsiCoverage,
+        controls: PsiCoverage,
+        controls_alpha: Union[
+            float, Sequence[float]
+        ] = constants.DEFAULT_OUTLIERS_ALPHA,
+    ) -> "PsiOutliers":
+        """Outliers in PSI between cases and controls
 
-    @cached_property
-    def controls_psi_quantile(self) -> xr.DataArray:
-        """Controls population quantiles using raw posterior means"""
-        # PsiCoverage function requires sequence of floats and drops coordinates
-        # get quantiles to use as sequence, dimension name set to "_idx"
-        stacked_q = self.quantiles["controls_q"].stack(_idx=["controls_alpha", "is_lb"])
-        # get result without coordinates
-        return (
-            # get result without original coordinates (new dim controls_q)
-            self.controls.raw_psi_mean_population_quantile(
-                stacked_q.values.tolist(), "controls_q"
-            )
-            # make controls_q indexed by dimension _idx, and set its values
-            .swap_dims(controls_q="_idx").assign_coords(_idx=stacked_q["_idx"])
-            # unstack the multiindex we created, getting original dimensions back
-            .unstack("_idx")
+        Parameters
+        ----------
+        cases: PsiCoverage
+            PsiCoverage for prefixes that will be treated as cases
+        controls: PsiCoverage
+            PsiCoverage for prefixes that will be treated as controls
+        controls_alpha: Union[float, Sequence[float]]
+            threshold used for controls quantiles in both directions (motivated
+            by two-sided tests interpretation on CDFs for null-hypothesis
+            testing). Quantiles are 0.5 * alpha, 1 - 0.5 * alpha
+        """
+        controls_summary = PsiControlsSummary.from_psicov(
+            controls, alpha=controls_alpha
         )
+        return PsiOutliers(cases, controls_summary)
+
+    @property
+    def num_connections(self) -> int:
+        return self.cases.num_connections
 
     @property
     def cases_psi_mean(self) -> xr.DataArray:
         """Cases raw posterior means"""
         return self.cases.raw_psi_mean
 
-    @property
-    def controls_psi_median(self) -> xr.DataArray:
-        """Controls population median of raw posterior means"""
-        return self.controls.raw_psi_mean_population_median
+    def evaluate_cases_alpha(
+        self,
+        cases_alpha: Optional[Union[float, Sequence[float]]] = None,
+        min_experiments_f: Union[
+            float, Sequence[float]
+        ] = constants.DEFAULT_OUTLIERS_MINEXPERIMENTS,
+    ) -> xr.Dataset:
+        """Compare ranges from cases/controls
 
-    @cached_property
-    def dpsi_quantile_gap(self) -> xr.DataArray:
-        """Gap between posterior and population quantiles for each alpha"""
-        # gaps when case is higher, lower than controls
-        gap_case_high = self.cases_psi_quantile.sel(
-            is_lb=True
-        ) - self.controls_psi_quantile.sel(is_lb=False)
-        gap_case_low = self.controls_psi_quantile.sel(
-            is_lb=True
-        ) - self.cases_psi_quantile.sel(is_lb=False)
-        # if the intervals overlap, the gap is zero
-        return gap_case_high.clip(min=gap_case_low).clip(min=0)
-
-    @cached_property
-    def cases_psi_range(self) -> xr.DataArray:
-        """For each cases_alpha, range between lower/upper quantile (scale)"""
-        return self.cases_psi_quantile.sel(is_lb=False) - self.cases_psi_quantile.sel(
-            is_lb=True
-        )
-
-    @cached_property
-    def controls_psi_range(self) -> xr.DataArray:
-        """For each controls_alpha, range between lower/upper quantile (scale)"""
-        return self.controls_psi_quantile.sel(
-            is_lb=False
-        ) - self.controls_psi_quantile.sel(is_lb=True)
-
-    @cached_property
-    def combined_psi_range(self) -> xr.DataArray:
-        """sqrt(case^2 + controls^2) as length scale for dpsi_gap"""
-        return np.sqrt(
-            np.square(self.cases_psi_range) + np.square(self.controls_psi_range)
-        )
-
-    @cached_property
-    def dpsi_quantile_gap_rescaled(self) -> xr.DataArray:
-        """Rescale gap from psi quantiles to reflect scale of psi distributions
-
-        This is dpsi_quantile_gap / combined_psi_range.
+        Parameters
+        ----------
+        cases_alpha: Optional[Union[float, Sequence[float]]]
+            Specify values of alpha (determines two-sided quantiles for each
+            case) to use. If None, use the same values of alpha used for
+            controls.
+        min_experiments_f: Union[float, Sequence[float]]
+            Identify if controls has at least this many experiments that passed
+            quantification thresholds contributing to psi quantiles. If less
+            than 1, proportion of total number of control experiments.
         """
-        return self.dpsi_quantile_gap / self.combined_psi_range
+        if cases_alpha is None:
+            cases_alpha = self.controls.alpha.values.tolist()
+        elif isinstance(cases_alpha, float):
+            cases_alpha = [cases_alpha]
+        else:
+            # make sure sorted and has unique elements
+            cases_alpha = sorted(set(cases_alpha))
+        ds = (
+            xr.Dataset(
+                dict(
+                    # controls data_vars
+                    controls_psi_median=self.controls.psi_median,
+                    controls_psi_quantile=self.controls.psi_quantile,
+                    controls_psi_range=self.controls.psi_range,
+                    controls_passed=self.controls.passed_min_experiments(
+                        min_experiments_f
+                    ),
+                    # cases data_vars
+                    cases_psi_mean=self.cases_psi_mean,
+                ),
+                # controls coordinates implicitly passed through above data_vars
+                dict(
+                    # add cases_q, cases_alpha
+                    cases_q=_q_from_alpha(
+                        xr.DataArray(
+                            cases_alpha,
+                            [("cases_alpha", cases_alpha)],
+                            name="cases_alpha",
+                        )
+                    )
+                ),
+                dict(controls_prefixes=self.controls.prefixes),
+            )
+            .assign(
+                # compute psi quantiles
+                cases_psi_quantile=lambda ds: self.cases.approximate_quantile(
+                    ds["cases_q"]
+                )
+            )
+            .assign(
+                dpsi_quantile_gap=lambda ds: self._dpsi_quantile_gap(
+                    ds["cases_psi_quantile"], ds["controls_psi_quantile"]
+                ),
+                cases_psi_range=lambda ds: _psirange_from_psiquantiles(
+                    ds["cases_psi_quantile"]
+                ),
+            )
+            .assign(
+                combined_psi_range=lambda ds: self._combined_psi_range(
+                    ds["cases_psi_range"], ds["controls_psi_range"]
+                )
+            )
+            .assign(
+                dpsi_quantile_gap_rescaled=lambda ds: (
+                    ds["dpsi_quantile_gap"] / ds["combined_psi_range"]
+                )
+            )
+        )
+        return ds
+
+    @staticmethod
+    def _dpsi_quantile_gap(
+        cases_psi_quantile: xr.DataArray, controls_psi_quantile: xr.DataArray
+    ) -> xr.DataArray:
+        # gap in quantiles when case is higher/lower than controls
+        gap_case_higher = cases_psi_quantile.sel(
+            is_lb=True
+        ) - controls_psi_quantile.sel(is_lb=False)
+        gap_case_lower = controls_psi_quantile.sel(is_lb=True) - cases_psi_quantile.sel(
+            is_lb=False
+        )
+        # get the one value which is positive (or zero, if ranges overlap)
+        return (
+            gap_case_higher.clip(min=gap_case_lower)
+            .clip(min=0)
+            .rename("dpsi_quantile_gap")
+        )
+
+    @staticmethod
+    def _combined_psi_range(
+        cases_psi_range: xr.DataArray, controls_psi_range: xr.DataArray
+    ) -> xr.DataArray:
+        """treat ranges as independent/orthogonal length scales"""
+        return np.sqrt(np.square(cases_psi_range) + np.square(controls_psi_range))
