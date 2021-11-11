@@ -410,12 +410,18 @@ class PsiCoverage(object):
     @cached_property
     def _raw_psi_mean_core_prefix(self) -> xr.DataArray:
         """For computing quantiles over a population of samples"""
-        return self.raw_psi_mean.chunk({"prefix": None})
+        result = self.raw_psi_mean
+        if result.chunks:
+            result = result.chunk({"prefix": None})
+        return result
 
     @cached_property
     def _bootstrap_psi_mean_core_prefix(self) -> xr.DataArray:
         """For computing quantiles over a population of samples"""
-        return self.bootstrap_psi_mean.chunk({"prefix": None})
+        result = self.bootstrap_psi_mean
+        if result.chunks:
+            result = result.chunk({"prefix": None})
+        return result
 
     @cached_property
     def raw_psi_mean_population_median(self) -> xr.DataArray:
