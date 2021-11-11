@@ -112,11 +112,14 @@ class PsiCoverage(object):
 
     def __repr__(self) -> str:
         MAX_PREFIXES_END = 1  # how many prefixes on either end to display
-        print_prefixes_list = [
-            *self.prefixes[:MAX_PREFIXES_END],
-            *([] if self.num_prefixes <= 2 * MAX_PREFIXES_END else ["..."]),
-            *self.prefixes[-MAX_PREFIXES_END:],
-        ]
+        if self.num_prefixes > 2 * MAX_PREFIXES_END:
+            print_prefixes_list = [
+                *self.prefixes[:MAX_PREFIXES_END],
+                *([] if self.num_prefixes <= 2 * MAX_PREFIXES_END else ["..."]),
+                *self.prefixes[-MAX_PREFIXES_END:],
+            ]
+        else:
+            print_prefixes_list = self.prefixes
         print_prefixes = ", ".join(print_prefixes_list)
         return (
             f"PsiCoverage[{self.num_connections}]"

@@ -65,22 +65,38 @@ def check_characters_factory(
     return check_characters
 
 
-def check_nonnegative_factory(
-    cast_fn: Callable[[Any], Union[int, float]], reject_zero: bool
+def check_range_factory(
+    cast_fn: Callable[[Any], Union[int, float]],
+    minval: Union[int, float] = float("-inf"),
+    maxval: Union[int, float] = float("inf"),
+    mininclude: bool = False,
+    maxinclude: bool = False,
 ):
-    """Returns argparse type function to casted type, rejecting negative values"""
-    invalid_predicate = (lambda x: x <= 0) if reject_zero else (lambda x: x < 0)
-    invalid_message = "parameter must be {}, {{}} is not".format(
-        "positive" if reject_zero else "nonnegative"
+    """Return argparse type function to casted type in specified range"""
+    not_too_small = (lambda x: x >= minval) if mininclude else (lambda x: x > minval)
+    not_too_big = (lambda x: x <= maxval) if maxinclude else (lambda x: x < maxval)
+    invalid_message = (
+        "parameter must be in range"
+        f" {'[' if mininclude else '('}{minval}, {maxval}{']' if maxinclude else ')'}"
     )
 
     def return_function(value):
         ivalue = cast_fn(value)
-        if invalid_predicate(ivalue):
-            raise argparse.ArgumentTypeError(invalid_message.format(value))
-        return ivalue
+        if not_too_small(ivalue) and not_too_big(ivalue):
+            return ivalue
+        else:
+            raise argparse.ArgumentTypeError(
+                f"{value} outside of valid range; {invalid_message}"
+            )
 
     return return_function
+
+
+def check_nonnegative_factory(
+    cast_fn: Callable[[Any], Union[int, float]], reject_zero: bool
+):
+    """Returns argparse type function to casted type, rejecting negative values"""
+    return check_range_factory(cast_fn, minval=0, mininclude=not reject_zero)
 
 
 def StoreRequiredUniqueActionFactory():

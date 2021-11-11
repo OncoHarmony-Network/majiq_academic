@@ -24,6 +24,9 @@ from .GeneJunctions import GeneJunctions
 from .Genes import Genes
 from .Heterogen import Heterogen
 
+# summary of PsiCoverage in population
+from .PsiControlsSummary import PsiControlsSummary
+
 # coverage in terms of PSI/total coverage on event connections
 from .PsiCoverage import PsiCoverage
 
@@ -89,6 +92,7 @@ __all__ = [
     "DPsiPrior",
     "DeltaPsi",
     "Heterogen",
+    "PsiControlsSummary",
     "SJExperiment",
     "SJIntrons",
     "SJIntronsBins",
