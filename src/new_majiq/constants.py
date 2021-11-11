@@ -36,6 +36,7 @@ NC_EVENTSCOVERAGE: Final[str] = "events_coverage"
 NC_PSICOVERAGE: Final[str] = "psi_coverage"
 
 NC_PSICONTROLS: Final[str] = "psi_controls"
+NC_PSIOUTLIERS: Final[str] = "psi_outliers"
 
 NC_EVENTSQUANTIFIED: Final[str] = "events_quantified"
 

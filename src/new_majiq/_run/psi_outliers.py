@@ -50,136 +50,59 @@ We would have to be careful about how we defined things, etc.
 """
 
 import argparse
-from typing import List, Optional
+from typing import List, Optional, cast
+
+from dask.delayed import Delayed
+from dask.distributed import progress
 
 import new_majiq as nm
 from new_majiq._run._majiq_args import (
     ExistingResolvedPath,
     NewResolvedPath,
     StoreRequiredUniqueActionFactory,
-    check_nonnegative_factory,
+    check_range_factory,
     resources_args,
 )
 from new_majiq._run._run import GenericSubcommand
+from new_majiq._workarounds import _load_zerodim_variables
 
 DESCRIPTION = "Identify outliers from PSI cases (N ~ 1) vs PSI controls (N >> 1)"
 
 
 def add_args(parser: argparse.ArgumentParser) -> None:
-    comparison_req = parser.add_argument_group(
-        "required quantification group arguments"
-    )
-    StorePSICovPaths = StoreRequiredUniqueActionFactory()
-    comparison_req.add_argument(
-        "--cases",
-        type=ExistingResolvedPath,
-        action=StorePSICovPaths,
-        nargs="+",
-        required=True,
-        help="Paths to PsiCoverage files for case experiments",
-    )
-    comparison_req.add_argument(
-        "--controls",
-        type=ExistingResolvedPath,
-        action=StorePSICovPaths,
-        nargs="+",
-        required=True,
-        help="Paths to PsiCoverage files for control experiments",
-    )
-    # splicegraph information
+    # input information
     parser.add_argument(
-        "splicegraph",
-        metavar="SG",
+        "cases",
+        metavar="cases_psicov",
         type=ExistingResolvedPath,
-        help="Splicegraph on which cases, controls coverage defined",
+        help="Path to PsiCoverage file with case experiments",
+    )
+    parser.add_argument(
+        "controls",
+        metavar="controls_summary",
+        type=ExistingResolvedPath,
+        help="Path to PsiControlsSummary file for comparison to controls",
     )
     # output information
     parser.add_argument(
-        "output_zarr",
-        metavar="OUT",
+        "outliers",
+        metavar="out_outliers",
         type=NewResolvedPath,
-        help="Path for output zarr describing results",
+        help="Path for output zarr with PsiOutliers computations for specified"
+        " parameters",
     )
-
-    # compare with other splicegraphs
-    sg_comparison = parser.add_argument_group("splicegraph comparison arguments")
-    sg_comparison_ex = sg_comparison.add_mutually_exclusive_group(required=True)
-    sg_comparison_ex.add_argument(
-        "--shared-events-with",
-        metavar="SG",
-        type=ExistingResolvedPath,
-        default=None,
-        help="Only consider events which are also found in this splicegraph."
-        " Annotations from this table will override those from the positional"
-        " splicegraph argument. This is generally used to pass in second-pass"
-        " splicegraph when analyzing quantifications from the first pass.",
-    )
-    sg_comparison_ex.add_argument(
-        "--exclude-events-from",
-        metavar="SG",
-        type=ExistingResolvedPath,
-        default=None,
-        help="Only consider events found in the positional splicegraph argument"
-        " that are not also found in this splicegraph. This is generally used"
-        " to pass in the first-pass splicegraph when analyzing quantifications"
-        " from the second pass.",
-    )
-    sg_comparison_ex.add_argument(
-        "--all-events",
-        default=None,
-        action="store_true",
-        help="Consider all events from input coverage files, matching input"
-        " splicegraph. This is generally used when evaluating for outliers with"
-        " only a single pass.",
-    )
-
-    # filtering criteria
-    filtering = parser.add_argument_group("Outlier threshold arguments")
-    filtering.add_argument(
-        "--min-experiments-controls",
-        metavar="X",
-        type=check_nonnegative_factory(float, True),
-        default=nm.constants.DEFAULT_OUTLIERS_MINEXPERIMENTS,
-        help="min_experiments used for masking controls. If less than 1,"
-        " fraction of the total number of experiments, >= 1 the absolute number"
-        " that must be passed. Generally set to high percentage so that"
-        " reported quantiles are reasonable (default: %(default)s)",
-    )
-    filtering.add_argument(
+    # thresholds for case (posterior) quantiles
+    parser.add_argument(
         "--alpha",
-        "-a",
-        dest="alpha",
-        type=float,
-        nargs="+",
-        default=nm.constants.DEFAULT_OUTLIERS_ALPHA,
-        help="Threshold for case and control quantiles in both directions"
-        " (two-sided comparison)."
-        " Quantiles are 0.5 * alpha and 1.0 - 0.5 * alpha. Superseded by"
-        " --alpha-cases and --alpha-controls when both specified"
-        " (default: %(default)s)",
-    )
-    filtering.add_argument(
-        "--alpha-cases",
-        dest="alpha_cases",
-        type=float,
+        metavar="A",
+        # floats on [0, 1]
+        type=check_range_factory(float, 0, 1, True, True),
+        action=StoreRequiredUniqueActionFactory(),
         nargs="+",
         default=None,
-        help="Threshold for case quantiles in both directions"
-        " (two-sided comparison)."
-        " Quantiles are 0.5 * alpha and 1.0 - 0.5 * alpha. If specified,"
-        " --alpha-controls must also be specified"
-        " (default: %(default)s)",
-    )
-    filtering.add_argument(
-        "--alpha-controls",
-        dest="alpha_controls",
-        type=float,
-        nargs="+",
-        default=None,
-        help="Threshold for case quantiles in both directions"
-        " (two-sided comparison)."
-        " Quantiles are 0.5 * alpha and 1.0 - 0.5 * alpha. If specified,"
-        " --alpha-cases must also be specified"
+        help="Threshold for case quantiles in both directions (two-sided"
+        " comparison). Quantiles are 0.5 * alpha and 1.0 - 0.5 * alpha."
+        " If not specified, use same values as from input controls"
         " (default: %(default)s)",
     )
 
@@ -189,7 +112,34 @@ def add_args(parser: argparse.ArgumentParser) -> None:
 
 
 def run(args: argparse.Namespace) -> None:
-    pass
+    log = nm.logger.get_logger()
+    log.info(f"Loading cases from {args.cases}")
+    cases = nm.PsiCoverage.from_zarr(args.cases)
+    log.info(f"Loading controls summary from {args.controls}")
+    controls = nm.PsiControlsSummary.from_zarr(args.controls)
+    log.info(f"Comparing cases {cases} vs {controls}")
+    outliers = nm.PsiOutliers(cases, controls)
+    ds = outliers.dataset(cases_alpha=args.alpha)
+    log.info(f"Saving comparisons to {args.outliers}")
+    save_ds_future = cast(
+        Delayed,
+        ds.pipe(_load_zerodim_variables).to_zarr(
+            args.outliers,
+            mode="w",
+            group=nm.constants.NC_PSIOUTLIERS,
+            consolidated=False,
+            compute=False,
+        ),
+    )
+    if args.show_progress:
+        save_ds_future = save_ds_future.persist()
+        progress(save_ds_future)
+    else:
+        save_ds_future.compute()
+    outliers.events.chunk(outliers.events.sizes).to_zarr(
+        args.outliers, mode="a", group=nm.constants.NC_EVENTS, consolidated=True
+    )
+    return
 
 
 def main(sys_args: Optional[List[str]] = None) -> None:

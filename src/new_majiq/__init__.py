@@ -24,11 +24,10 @@ from .GeneJunctions import GeneJunctions
 from .Genes import Genes
 from .Heterogen import Heterogen
 
-# summary of PsiCoverage in population
+# PsiCoverage and summaries for case/control outliers
 from .PsiControlsSummary import PsiControlsSummary
-
-# coverage in terms of PSI/total coverage on event connections
 from .PsiCoverage import PsiCoverage
+from .PsiOutliers import PsiOutliers
 
 # how we measure junctions and introns from BAM files
 from .SJExperiment import SJExperiment
@@ -93,6 +92,7 @@ __all__ = [
     "DeltaPsi",
     "Heterogen",
     "PsiControlsSummary",
+    "PsiOutliers",
     "SJExperiment",
     "SJIntrons",
     "SJIntronsBins",

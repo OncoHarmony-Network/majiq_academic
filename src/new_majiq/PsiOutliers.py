@@ -82,6 +82,10 @@ class PsiOutliers(object):
         return PsiOutliers(cases, controls_summary)
 
     @property
+    def events(self) -> xr.Dataset:
+        return self.cases.events
+
+    @property
     def num_connections(self) -> int:
         return self.cases.num_connections
 
@@ -90,12 +94,10 @@ class PsiOutliers(object):
         """Cases raw posterior means"""
         return self.cases.raw_psi_mean
 
-    def evaluate_cases_alpha(
+    def dataset(
         self,
         cases_alpha: Optional[Union[float, Sequence[float]]] = None,
-        min_experiments_f: Union[
-            float, Sequence[float]
-        ] = constants.DEFAULT_OUTLIERS_MINEXPERIMENTS,
+        report_controls: bool = False,
     ) -> xr.Dataset:
         """Compare ranges from cases/controls
 
@@ -105,10 +107,9 @@ class PsiOutliers(object):
             Specify values of alpha (determines two-sided quantiles for each
             case) to use. If None, use the same values of alpha used for
             controls.
-        min_experiments_f: Union[float, Sequence[float]]
-            Identify if controls has at least this many experiments that passed
-            quantification thresholds contributing to psi quantiles. If less
-            than 1, proportion of total number of control experiments.
+        report_controls:
+            Keep information from controls in resulting dataset. This is
+            redundant with values from self.controls
         """
         if cases_alpha is None:
             cases_alpha = self.controls.alpha.values.tolist()
@@ -120,17 +121,9 @@ class PsiOutliers(object):
         ds = (
             xr.Dataset(
                 dict(
-                    # controls data_vars
-                    controls_psi_median=self.controls.psi_median,
-                    controls_psi_quantile=self.controls.psi_quantile,
-                    controls_psi_range=self.controls.psi_range,
-                    controls_passed=self.controls.passed_min_experiments(
-                        min_experiments_f
-                    ),
                     # cases data_vars
                     cases_psi_mean=self.cases_psi_mean,
                 ),
-                # controls coordinates implicitly passed through above data_vars
                 dict(
                     # add cases_q, cases_alpha
                     cases_q=_q_from_alpha(
@@ -151,7 +144,8 @@ class PsiOutliers(object):
             )
             .assign(
                 dpsi_quantile_gap=lambda ds: self._dpsi_quantile_gap(
-                    ds["cases_psi_quantile"], ds["controls_psi_quantile"]
+                    ds["cases_psi_quantile"],
+                    self.controls.psi_quantile,
                 ),
                 cases_psi_range=lambda ds: _psirange_from_psiquantiles(
                     ds["cases_psi_quantile"]
@@ -159,7 +153,8 @@ class PsiOutliers(object):
             )
             .assign(
                 combined_psi_range=lambda ds: self._combined_psi_range(
-                    ds["cases_psi_range"], ds["controls_psi_range"]
+                    ds["cases_psi_range"],
+                    self.controls.psi_range,
                 )
             )
             .assign(
@@ -167,7 +162,13 @@ class PsiOutliers(object):
                     ds["dpsi_quantile_gap"] / ds["combined_psi_range"]
                 )
             )
-        )
+        ).drop_vars(["event_size", "lsv_idx"], errors="ignore")
+        if report_controls:
+            ds = ds.assign(
+                controls_psi_median=self.controls.psi_median,
+                controls_psi_quantile=self.controls.psi_quantile,
+                controls_psi_range=self.controls.psi_range,
+            )
         return ds
 
     @staticmethod
