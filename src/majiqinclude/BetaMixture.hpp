@@ -31,13 +31,12 @@ namespace BetaMixture {
 
 constexpr int64_t CDF_DIGITS2 = 17;
 constexpr int64_t QUANTILE_DIGITS2 = 14;
-using fast_policy = boost::math::policies::policy<
+using full_policy = boost::math::policies::policy<
   boost::math::policies::promote_double<false>,
-  boost::math::policies::promote_float<true>,
-  boost::math::policies::digits2<CDF_DIGITS2>
+  boost::math::policies::promote_float<true>
   >;
 template <typename RealT>
-using DistT = boost::math::beta_distribution<RealT, fast_policy>;
+using DistT = boost::math::beta_distribution<RealT, full_policy>;
 
 // still assumes n_mixture > 0. If we have zero-length axis, handle at outer
 // loop
@@ -83,6 +82,51 @@ inline RealT _Mean(ItA a, ItB b, const int64_t n_mixture) {
   return sum / n_mixture;
 }
 
+template <typename ItA, typename ItB, typename RealT,
+         typename std::enable_if<
+          std::is_floating_point<RealT>::value, bool>::type = true,
+         typename std::enable_if<
+          std::is_same<
+            RealT, typename std::iterator_traits<ItA>::value_type
+          >::value
+         , bool>::type = true,
+         typename std::enable_if<
+          std::is_same<
+            RealT, typename std::iterator_traits<ItB>::value_type
+          >::value
+         , bool>::type = true>
+inline RealT _Variance(ItA a, ItB b, RealT mean, const int64_t n_mixture) {
+  // Assumes that mean is not nan
+  RealT sum_variance{0};
+  RealT rss_mean{0};
+  for (int64_t i = 0; i < n_mixture; ++i, ++a, ++b) {
+    const RealT denom = *a + *b;
+    const RealT meani = *a / denom;
+    const RealT residual = meani - mean;
+    sum_variance += meani * (1 - meani) / (1 + denom);
+    rss_mean += residual * residual;
+  }
+  const RealT mean_variance = sum_variance / n_mixture;
+  const RealT variance_mean = rss_mean / n_mixture;
+  // law of total variance
+  return mean_variance + variance_mean;
+}
+
+template <typename ItA, typename ItB,
+         typename RealT = typename std::iterator_traits<ItA>::value_type,
+         typename std::enable_if<
+          std::is_floating_point<RealT>::value, bool>::type = true,
+         typename std::enable_if<
+          std::is_same<
+            RealT, typename std::iterator_traits<ItB>::value_type
+          >::value
+         , bool>::type = true>
+inline RealT _Variance(ItA a, ItB b, const int64_t n_mixture) {
+  const RealT mean = _Mean(a, b, n_mixture);
+  return std::isnan(mean) ? mean : _Variance(a, b, mean, n_mixture);
+}
+
+
 template <typename RealT>
 struct CentralMoments {
   RealT mean;
@@ -102,37 +146,12 @@ template <typename ItA, typename ItB,
           >::value
          , bool>::type = true>
 inline CentralMoments<RealT> _Moments(
-    ItA a1, ItB b1, const int64_t n_mixture) {
-  // iterators for second pass
-  ItA a2{a1};
-  ItB b2{b1};
-  // mean = mean_mean. variance = mean_variance + variance_mean
-  RealT sum_mean{0};
-  RealT sum_variance{0};
-  for (int64_t i = 0; i < n_mixture; ++i, ++a1, ++b1) {
-    if (IsInvalidComponent(*a1, *b1)) {
-      return CentralMoments<RealT>{
-        std::numeric_limits<RealT>::quiet_NaN(),
-        std::numeric_limits<RealT>::quiet_NaN()
-      };
-    }
-    const RealT denom = *a1 + *b1;
-    const RealT mean = *a1 / denom;
-    sum_mean += mean;
-    sum_variance += mean * (1 - mean) / (1 + denom);
-  }
-  const RealT mean_mean = sum_mean / n_mixture;
-  const RealT mean_variance = sum_variance / n_mixture;
-  // get variance_mean in second pass
-  RealT rss_mean{0};
-  for (int64_t i = 0; i < n_mixture; ++i, ++a2, ++b2) {
-    const RealT denom = *a2 + *b2;
-    const RealT mean = *a2 / denom;
-    const RealT residual = mean - mean_mean;
-    rss_mean += residual * residual;
-  }
-  const RealT variance_mean = rss_mean / n_mixture;
-  return CentralMoments<RealT>{mean_mean, mean_variance + variance_mean};
+    ItA a, ItB b, const int64_t n_mixture) {
+  const RealT mean = _Mean(a, b, n_mixture);
+  return (
+      std::isnan(mean)
+      ? CentralMoments<RealT>{mean, mean}
+      : CentralMoments<RealT>{mean, _Variance(a, b, mean, n_mixture)});
 }
 
 /**
@@ -422,8 +441,8 @@ inline RealT _Quantile(
   if (std::isnan(q)) {
     return std::numeric_limits<RealT>::quiet_NaN();
   }
-  const CentralMoments<RealT> moments = _Moments(a, b, n_mixture);
-  if (std::isnan(moments.mean)) {
+  const RealT mean = _Mean(a, b, n_mixture);
+  if (std::isnan(mean)) {
     // if mean is nan, quantiles should be nan
     return std::numeric_limits<RealT>::quiet_NaN();
   } else if (q <= 0) {
@@ -439,9 +458,10 @@ inline RealT _Quantile(
   {
     // use Chebyshev's inequality to bound x
     const RealT max_tail{q < 0.5 ? q : 1 - q};
-    const RealT max_deviation = std::sqrt(moments.variance / max_tail);
-    x_lb = std::max(RealT{0}, moments.mean - max_deviation);
-    x_ub = std::min(RealT{1}, moments.mean + max_deviation);
+    const RealT max_deviation
+      = std::sqrt(_Variance(a, b, mean, n_mixture) / max_tail);
+    x_lb = std::max(RealT{0}, mean - max_deviation);
+    x_ub = std::min(RealT{1}, mean + max_deviation);
     x = x_lb + q * 2 * (x_ub - x_lb);
     if (x_ub - x_lb <= RealT{1} / (int64_t{1} << QUANTILE_DIGITS2)) {
       // our bound is tight enough that we can just return it
