@@ -260,7 +260,7 @@ def run_factors_model(args: argparse.Namespace) -> None:
     psicov = nm.PsiCoverage.from_zarr(args.psicov)
     log.info("Setting up model matrix of known factors")
     factors = _get_factors(psicov.prefixes, args)
-    log.info("Learning model for unknown confounding factors")
+    log.info(f"Learning model for unknown confounding factors from {psicov}")
     model = mc.ModelUnknownConfounders.train(
         psicov.bootstrap_psi,
         psicov.event_passed,
@@ -305,7 +305,7 @@ def run_factors_infer(args: argparse.Namespace):
     factors = _get_factors(psicov.prefixes, args).load()
     log.info(f"Loading model for unknown factors from {args.factors_model}")
     model = mc.ModelUnknownConfounders.from_zarr(args.factors_model)
-    log.info("Solving for unknown confounders")
+    log.info(f"Solving for unknown confounders for {psicov}")
     unknown_factors = model.predict(psicov.bootstrap_psi, psicov.event_passed, factors)
     if args.show_progress:
         unknown_factors = unknown_factors.persist()
@@ -329,7 +329,7 @@ def run_coverage_model(args: argparse.Namespace) -> None:
     psicov = nm.PsiCoverage.from_zarr(args.psicov)
     log.info("Setting up model matrix of all factors")
     factors = _get_factors(psicov.prefixes, args).load()
-    log.info("Solving for model parameters")
+    log.info(f"Solving for model parameters from {psicov}")
     bootstrap_model = mc.infer_model_params(
         psicov.bootstrap_psi,
         psicov.event_passed,
@@ -412,7 +412,7 @@ def run_coverage_infer(args: argparse.Namespace) -> None:
         # but must be passed and not null
         .pipe(lambda x: x.where(x.notnull() & psicov.event_passed, psicov.raw_psi))
     )
-    log.info("Updating PsiCoverage")
+    log.info(f"Updating {psicov}")
     psicov = psicov.updated(
         adj_bootstrap_psi,
         adj_raw_psi,
