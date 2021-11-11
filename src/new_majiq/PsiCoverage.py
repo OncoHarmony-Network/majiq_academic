@@ -648,21 +648,6 @@ class PsiCoverage(object):
             consolidate once). But, don't forget to consolidate at the end.
         show_progress: bool
             Attempt to show progress on distributed cluster for Dask
-
-        Notes
-        -----
-        We will typically load chunks across all experiments at once for all
-        bootstrap replicates. So file size will be dependent on:
-        + ec_chunksize (how many event connections per chunk)
-        + num_bootstraps (how many bootstraps are simultaneously there)
-        + num_samples (how many prefixes are being simultaneously processed)
-        + bytes per record (precision, how many arrays) at once.
-
-        At 8 bytes per record, default num bootstraps, and 1000 samples, this is
-        around 2GB with default chunksize of 8192.
-
-        If we know we are processing at most a few samples at a time, this
-        should be made higher.
         """
         save_df = self._save_df(ec_chunksize=ec_chunksize)
         save_df_future = cast(
