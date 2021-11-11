@@ -168,6 +168,7 @@ class PsiOutliers(object):
                 controls_psi_median=self.controls.psi_median,
                 controls_psi_quantile=self.controls.psi_quantile,
                 controls_psi_range=self.controls.psi_range,
+                controls_num_passed=self.controls.num_passed,
             )
         return ds
 
