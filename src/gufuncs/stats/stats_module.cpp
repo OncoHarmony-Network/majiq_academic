@@ -8,7 +8,6 @@
  * Author: Joseph K Aicher
  */
 
-
 #define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
 
 #include <Python.h>
@@ -23,6 +22,7 @@
 
 #include "NanMedian.hpp"
 #include "NanQuantile.hpp"
+#include "Histogram.hpp"
 
 
 // no extra data being passed in
@@ -114,6 +114,15 @@ PyMODINIT_FUNC PyInit__stats(void) {
       NanQuantile::signature);
   PyDict_SetItemString(d, NanQuantile::name, nanquantile);
   Py_DECREF(nanquantile);
+
+  namespace Histogram = MajiqGufuncs::Histogram;
+  PyObject *histogram = PyUFunc_FromFuncAndDataAndSignature(
+      Histogram::funcs, data, Histogram::types,
+      Histogram::ntypes, Histogram::nin, Histogram::nout,
+      PyUFunc_None, Histogram::name, Histogram::doc, 0,
+      Histogram::signature);
+  PyDict_SetItemString(d, Histogram::name, histogram);
+  Py_DECREF(histogram);
 
   // return pointer to final module object
   return m;
