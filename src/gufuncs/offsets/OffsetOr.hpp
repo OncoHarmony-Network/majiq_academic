@@ -21,47 +21,42 @@
 namespace MajiqGufuncs {
 namespace OffsetOr {
 
+// assumes d_xout > 1, d_offsets >= 2
 template <typename ItX, typename ItOffsets, typename ItOut>
 inline void Inner(
     ItX x, ItOffsets offsets, ItOut out,
     const npy_intp d_xout, const npy_intp d_offsets) {
-  // indexes into x, out
-  npy_intp i_x = 0;
-  // get offset to start with
-  npy_intp next_offset = d_xout;
-  if (d_offsets > 0) {
-    next_offset = std::min(next_offset, offsets[0]);
+  npy_intp i = 0;  // index over x/out
+  // before first offset, input to output
+  for (; i < std::min(*offsets, d_xout); ++i, ++x, ++out) {
+    *out = *x;
   }
-  // before first offset, no groups --> identify
-  for (; i_x < next_offset; ++i_x) {
-    out[i_x] = x[i_x];
-  }  // loop over x, out before first offset
-  // between offsets, we will get sum of values
-  for (npy_intp i_offsets = 1; i_offsets < d_offsets; ++i_offsets) {
-    if (i_x == d_xout) {
-      return;  // no more values to check/update
-    }
-    next_offset = std::max(next_offset, std::min(d_xout, offsets[i_offsets]));
-    // loop to fill out happens separately than first pass on x
-    npy_intp i_out = i_x;
-    // accumulate x between offsets
+  if (i == d_xout) { return; }
+  // iterate to next offset for each offset
+  ++offsets;
+  for (npy_intp j = 1; j < d_offsets; ++j, ++offsets) {
+    const auto& next_offset = std::min(*offsets, d_xout);
+    if (i >= next_offset) { continue; }  // offsets that come before irrelevant
+    // accumulate OR over x
     npy_bool acc_x{NPY_FALSE};
-    for (; i_x < next_offset; ++i_x) {
-      if (x[i_x]) {
+    for (npy_intp i_x = i; i_x < next_offset; ++i_x, ++x) {
+      if (*x) {
         acc_x = NPY_TRUE;
-        i_x = next_offset;
+        // get x ready for next offset, no need for next_offset - i_x iterations
+        x += next_offset - i_x;
         break;
       }
-    }  // done accumulating x between offsets
-    // update out
-    for (; i_out < next_offset; ++i_out) {
-      out[i_out] = acc_x;
     }
-  }  // done looping between offsets
-  // after last offset, no groups --> identify
-  for (; i_x < d_xout; ++i_x) {
-    out[i_x] = x[i_x];
-  }  // loop over x, out after last offset
+    // set out for these offsets to the accumulated value from x
+    for (; i < next_offset; ++i, ++out) {
+      *out = acc_x;
+    }
+    if (i >= d_xout) { return; }
+  }
+  // after last offset, input to output
+  for (; i < d_xout; ++i, ++x, ++out) {
+    *out = *x;
+  }
   return;
 }
 
@@ -100,6 +95,28 @@ static void Outer(
   auto x = detail::CoreIt<npy_bool>::begin(args[0], outer_stride[0]);
   auto offsets = detail::CoreIt<npy_intp>::begin(args[1], outer_stride[1]);
   auto out = detail::CoreIt<npy_bool>::begin(args[2], outer_stride[2]);
+
+  // trivial cases
+  if (dim_xout < 1 || dim_broadcast < 1) {
+    return;
+  } else if (dim_xout == 1) {
+    // there is only one value, so we can just directly copy
+    if (dim_broadcast > 1) {
+      std::copy(x, x + dim_broadcast, out);
+    } else {
+      *out = *x;
+    }
+    return;
+  } else if (dim_offsets < 2) {
+    // no actual offsets, so we can just directly copy
+    // note that dim_xout > 1
+    for (npy_intp i = 0; i < dim_broadcast; ++i, ++x, ++out) {
+      auto x_x = x.with_stride(inner_stride_x);
+      auto out_out = out.with_stride(inner_stride_out);
+      std::copy(x_x, x_x + dim_xout, out_out);
+    }
+    return;
+  }
 
   // outer loop on broadcasted variables
   for (npy_intp i = 0; i < dim_broadcast; ++i, ++x, ++offsets, ++out) {
