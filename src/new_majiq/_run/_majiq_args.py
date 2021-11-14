@@ -178,34 +178,11 @@ def StoreRequiredUniqueActionFactory():
     return StoreRequiredUniqueAction
 
 
-def lsv_coverage_args(parser: argparse.ArgumentParser) -> None:
-    """shared arguments for producing lsv coverage"""
-    coverage = parser.add_argument_group("coverage arguments")
-    coverage.add_argument(
-        "--num-bootstraps",
-        metavar="M",
-        type=check_nonnegative_factory(int, False),
-        default=nm.constants.DEFAULT_COVERAGE_NUM_BOOTSTRAPS,
-        help="Number of bootstrap replicates to sample (default: %(default)s)",
-    )
-    coverage.add_argument(
-        "--stack-pvalue-threshold",
-        metavar="P",
-        type=check_nonnegative_factory(float, False),
-        default=nm.constants.DEFAULT_COVERAGE_STACK_PVALUE,
-        help="Bins with readrate having right-tailed probability less than this"
-        " threshold vs Poisson from other nonzero bins will be ignored as"
-        " outlier 'read stacks' (default: %(default).2e)",
-    )
-    events = parser.add_argument_group("events selection arguments")
-    events.add_argument(
-        "--ignore-from",
-        metavar="sg",
-        type=ExistingResolvedPath,
-        default=None,
-        help="Path to other splicegraph, ignore LSVs shared with this splicegraph",
-    )
-    select_lsvs = events.add_mutually_exclusive_group()
+def _events_selection_args(
+    parser: Union[argparse.ArgumentParser, argparse._ArgumentGroup]
+) -> None:
+    """selection of lsv events to produce output for"""
+    select_lsvs = parser.add_mutually_exclusive_group()
     select_lsvs.add_argument(
         "--strict-lsvs",
         "--nonredundant-lsvs",
@@ -244,6 +221,36 @@ def lsv_coverage_args(parser: argparse.ArgumentParser) -> None:
         help="Select all passed LSVs that are target events (i.e. target LSVs)"
         " (default: %(default)s)",
     )
+
+
+def lsv_coverage_args(parser: argparse.ArgumentParser) -> None:
+    """shared arguments for producing lsv coverage"""
+    coverage = parser.add_argument_group("coverage arguments")
+    coverage.add_argument(
+        "--num-bootstraps",
+        metavar="M",
+        type=check_nonnegative_factory(int, False),
+        default=nm.constants.DEFAULT_COVERAGE_NUM_BOOTSTRAPS,
+        help="Number of bootstrap replicates to sample (default: %(default)s)",
+    )
+    coverage.add_argument(
+        "--stack-pvalue-threshold",
+        metavar="P",
+        type=check_nonnegative_factory(float, False),
+        default=nm.constants.DEFAULT_COVERAGE_STACK_PVALUE,
+        help="Bins with readrate having right-tailed probability less than this"
+        " threshold vs Poisson from other nonzero bins will be ignored as"
+        " outlier 'read stacks' (default: %(default).2e)",
+    )
+    events = parser.add_argument_group("events selection arguments")
+    events.add_argument(
+        "--ignore-from",
+        metavar="sg",
+        type=ExistingResolvedPath,
+        default=None,
+        help="Path to other splicegraph, ignore LSVs shared with this splicegraph",
+    )
+    _events_selection_args(events)
     return
 
 
