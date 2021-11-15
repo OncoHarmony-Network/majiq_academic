@@ -131,7 +131,7 @@ class PsiOutliers(object):
                             cases_alpha,
                             [("cases_alpha", cases_alpha)],
                             name="cases_alpha",
-                        )
+                        ).astype(self.controls.psi_median.dtype)
                     )
                 ),
                 dict(controls_prefixes=self.controls.prefixes),
