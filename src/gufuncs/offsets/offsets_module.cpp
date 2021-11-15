@@ -19,6 +19,7 @@
 #include "ClipAndOffsetSum.hpp"
 #include "ClipAndNormalize.hpp"
 #include "OffsetOr.hpp"
+#include "GroupSum.hpp"
 
 
 // no extra data being passed in
@@ -100,6 +101,16 @@ PyMODINIT_FUNC PyInit__offsets(void) {
   PyDict_SetItemString(
       d, ClipAndNormalize::strictname, clip_and_normalize_strict);
   Py_DECREF(clip_and_normalize_strict);
+
+  namespace GroupSum = MajiqGufuncs::GroupSum;
+  PyObject *groupsum = PyUFunc_FromFuncAndDataAndSignature(
+      GroupSum::funcs, data, GroupSum::types,
+      GroupSum::ntypes, GroupSum::nin, GroupSum::nout,
+      PyUFunc_None, GroupSum::name, GroupSum::doc,
+      0, GroupSum::signature);
+  PyDict_SetItemString(
+      d, GroupSum::name, groupsum);
+  Py_DECREF(groupsum);
 
   // return pointer to final module object
   return m;
