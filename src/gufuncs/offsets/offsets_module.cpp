@@ -19,6 +19,7 @@
 #include "ClipAndOffsetSum.hpp"
 #include "ClipAndNormalize.hpp"
 #include "OffsetOr.hpp"
+#include "GroupMax.hpp"
 #include "GroupSum.hpp"
 
 
@@ -111,6 +112,16 @@ PyMODINIT_FUNC PyInit__offsets(void) {
   PyDict_SetItemString(
       d, GroupSum::name, groupsum);
   Py_DECREF(groupsum);
+
+  namespace GroupMax = MajiqGufuncs::GroupMax;
+  PyObject *groupmax = PyUFunc_FromFuncAndDataAndSignature(
+      GroupMax::funcs, data, GroupMax::types,
+      GroupMax::ntypes, GroupMax::nin, GroupMax::nout,
+      PyUFunc_None, GroupMax::name, GroupMax::doc,
+      0, GroupMax::signature);
+  PyDict_SetItemString(
+      d, GroupMax::name, groupmax);
+  Py_DECREF(groupmax);
 
   // return pointer to final module object
   return m;

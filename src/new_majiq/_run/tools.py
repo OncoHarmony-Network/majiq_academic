@@ -27,6 +27,7 @@ from new_majiq._run.moccasin import subcommand_factors_model as moccasin_factors
 from new_majiq._run.psi_controls import subcommand as psi_controls
 from new_majiq._run.psi_coverage import subcommand as psi_coverage
 from new_majiq._run.psi_outliers import subcommand as psi_outliers
+from new_majiq._run.psi_outliers_summary import subcommand as psi_outliers_summary
 from new_majiq._run.quantify import subcommand as quantify
 from new_majiq._run.sg_coverage import subcommand as sg_coverage
 from new_majiq._run.sg_coverage_summarize import subcommand as sg_coverage_summarize
@@ -45,6 +46,7 @@ SUBPARSER_SOURCES: Dict[str, GenericSubcommand] = {
     "heterogen": heterogen,
     "psi-controls": psi_controls,
     "psi-outliers": psi_outliers,
+    "psi-outliers-summary": psi_outliers_summary,
     "moccasin-factors-model": moccasin_factors_model,
     "moccasin-factors-infer": moccasin_factors_infer,
     "moccasin-coverage-model": moccasin_coverage_model,

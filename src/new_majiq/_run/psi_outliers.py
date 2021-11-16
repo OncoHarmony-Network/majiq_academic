@@ -4,49 +4,6 @@ psi_outliers.py
 Identify aberrant splicing events of interests in cases vs controls
 
 Author: Joseph K Aicher
-
-Parameters
-----------
-splicegraph
--cases PSICOV [PSICOV ...]
--controls PSICOV [PSICOV ...]
-(if shared-events-with, use that splicegraph's annotations for output table)
-(--shared-events-with SG | --exclude-events-from SG | --all-events)
---control-min-experiments (0.9 default)
---alpha Q [Q ...] ([0.05] default). Used for quantiles, similar to two-sided...
---controls-alpha Q [Q ...] (None -> use cases-alpha, then alpha)
---cases-alpha Q [Q ...] (None -> use controls-alpha, then alpha)
-(dask resources)
-
-What do I want to get back?
-(cases_prefix) psi_mean, psi_std
-(cases_prefix, cases_quantiles) case_psi_quantile
-controls_psi_median
-(controls_quantiles) controls_psi_quantile
-(cases_prefix, cases_alpha, controls_alpha) psi_gap
-
-Note that {cases,controls}_quantiles are actually just for computation, and
-really a stacked/unstacked version of ({cases,controls}_alpha, lower[bool]).
-psi_gap is computed by taking the maximum of the lower - higher in either
-direction, and of 0 (if they overlap, both differences will be negative.
-
-Easy enough to get all of these values.
-xr.Dataset(dict(), dict(alpha=[0.05, 0.1, 0.3], is_lb=[False, True])).pipe(lambda ds: (q := 0.5 * ds.alpha).where(ds.is_lb, 1 - q)).rename("q").to_dataset().set_coords("q")
-Should check that input values for alpha are between 0 and 1
-
-We can make psi_gap unitless by scaling by the within-group difference in psi:
-psi_gap / ((case_quantiles[lb=False] - case_quantiles[lb=True]) + (control_quantiles[lb=False] - case_quantiles[lb=True])).
-This is a derived quantity that should help account/filter out junctions with
-high variability.
-
-Something which we would have to do more implementation for would be filtering
-out low coverage LSVs in the context of their splicing modules.
-We would have to set up approach for identifying the modules in new-majiq.
-We would have to define coverage in splicing module relative to LSV.
-Easiest thing to do would probably be to summarize coverage at LSVs at start/end
-of each module as reference (as the source/sink of flow of coverage through
-splicing decisions).
-We would have to be careful about how we defined things, etc.
 """
 
 import argparse
