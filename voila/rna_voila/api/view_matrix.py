@@ -1333,6 +1333,21 @@ class ViewHeterogen(Heterogen, ViewMatrix):
                 mu_psi = self.mu_psi_nanmasked
             return scipy.stats.iqr(mu_psi, axis=-1, nan_policy="omit")
 
+
+        def dpsi_median(self,
+                         junc_i: int = None):
+
+            if junc_i is None:
+                junc_i = slice(None)  # vectorize over all junctions
+
+            # get masked mean values of psi per group/experiment
+            mu_psi = self.mu_psi_nanmasked[junc_i]
+            # use to compute median psi per group
+            median_psi = self.median_psi(mu_psi)
+            # did difference in medians pass threshold?
+            dpsi_median = np.abs(median_psi[..., 1] - median_psi[..., 0])
+            return dpsi_median
+
         def changing(
             self,
             pvalue_threshold: float = 0.05,
@@ -1347,12 +1362,7 @@ class ViewHeterogen(Heterogen, ViewMatrix):
             # all statistics must be less than p-value threshold
             pvalue_passed = np.nanmax(self.junction_stats[junc_i], axis=-1) <= pvalue_threshold
 
-            # get masked mean values of psi per group/experiment
-            mu_psi = self.mu_psi_nanmasked[junc_i]
-            # use to compute median psi per group
-            median_psi = self.median_psi(mu_psi)
-            # did difference in medians pass threshold?
-            dpsi_passed = np.abs(median_psi[..., 1] - median_psi[..., 0]) >= between_group_dpsi
+            dpsi_passed = self.dpsi_median(junc_i) >= between_group_dpsi
 
             # pvalue and dpsi thresholds must all pass
 

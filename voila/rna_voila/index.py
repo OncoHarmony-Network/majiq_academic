@@ -5,10 +5,10 @@ import h5py
 import numpy as np
 
 from rna_voila import constants
-from rna_voila.api.view_matrix import ViewHeterogens, ViewDeltaPsi, ViewPsi, ViewPsis
+from rna_voila.api.view_matrix import ViewHeterogens, ViewDeltaPsi, ViewPsi, ViewPsis, ViewHeterogen
 from rna_voila.api.view_splice_graph import ViewSpliceGraph
 from rna_voila.config import ViewConfig
-from rna_voila.exceptions import UnknownAnalysisType, IndexNotFound, UnknownIndexFieldType
+from rna_voila.exceptions import UnknownAnalysisType, IndexNotFound, UnknownIndexFieldType, GeneIdNotFoundInVoilaFile, LsvIdNotFoundInVoilaFile
 from rna_voila.vlsv import matrix_area
 from rna_voila.voila_log import voila_log
 from multiprocessing import Pool, Manager
@@ -18,7 +18,7 @@ import hashlib
 lsv_filters = ['a5ss', 'a3ss', 'exon_skipping', 'target', 'source', 'binary', 'complex']
 psi_keys = ['lsv_id', 'gene_id', 'gene_name'] + lsv_filters
 dpsi_keys = ['lsv_id', 'gene_id', 'gene_name', 'excl_incl', 'dpsi_threshold', 'confidence_threshold'] + lsv_filters
-het_keys = ['lsv_id', 'gene_id', 'gene_name'] + lsv_filters
+het_keys = ['lsv_id', 'gene_id', 'gene_name', 'dpsi_threshold', 'stat_threshold'] + lsv_filters
 
 skip_strict_indexing = False
 
@@ -155,18 +155,42 @@ class Index:
         Multithread inner function for each iteration of _heterogen loop below
         """
         lsv_id, g, m, q = args
+        config = ViewConfig()
 
-        het = m.lsv(lsv_id)
-        gene_id = het.gene_id
+        g_dpsi_thresh = -1
 
-        gene_name = g[gene_id]
+        with ViewHeterogens() as m:
+            het = m.lsv(lsv_id)
+            gene_id = het.gene_id
+            gene_name = g[gene_id]
+            g_stats_thresh = np.array([2 for _ in m.stat_names])
 
-        row = (lsv_id, gene_id, gene_name)
+            if skip_strict_indexing:
+                lsv_f = [True for _ in lsv_filters]
+            else:
+                lsv_f = [getattr(het, f) for f in lsv_filters]
 
-        if skip_strict_indexing:
-            lsv_f = [True for _ in lsv_filters]
-        else:
-            lsv_f = [getattr(het, f) for f in lsv_filters]
+        for vf in config.voila_files:
+            with ViewHeterogen(vf) as m:
+                try:
+                    het = m.lsv(lsv_id)
+
+                    dpsi_thresh = het.dpsi_median()
+                    g_dpsi_thresh = np.maximum(np.max(np.abs(dpsi_thresh)), g_dpsi_thresh)
+
+                    # get min val for each stat
+                    stats_thresh = het.junction_stats
+                    g_stats_thresh = np.minimum(np.min(stats_thresh, axis=0), g_stats_thresh)
+                except (GeneIdNotFoundInVoilaFile, LsvIdNotFoundInVoilaFile):
+                    continue
+
+        g_dpsi_thresh = g_dpsi_thresh.tolist()
+        g_dpsi_thresh = json.dumps(g_dpsi_thresh)
+
+        g_stats_thresh = g_stats_thresh.tolist()
+        g_stats_thresh = json.dumps(g_stats_thresh)
+
+        row = (lsv_id, gene_id, gene_name, g_dpsi_thresh, g_stats_thresh)
 
         # For some reason, numpy needs these in tuples.
         row = tuple(chain(row, lsv_f))
@@ -201,6 +225,7 @@ class Index:
 
                 with ViewHeterogens() as m:
                     lsv_ids = [(x, g, m, q) for x in m.lsv_ids()]
+
 
                 p = Pool(config.nproc)
                 work_size = len(lsv_ids)

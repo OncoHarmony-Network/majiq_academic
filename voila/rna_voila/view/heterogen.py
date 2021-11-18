@@ -9,7 +9,7 @@ from rna_voila.api.view_splice_graph import ViewSpliceGraph
 from rna_voila.index import Index
 from rna_voila.view import views
 from rna_voila.view.datatables import DataTables
-from rna_voila.view.forms import LsvFiltersForm
+from rna_voila.view.forms import LsvFiltersForm, HeterogenFiltersForm
 
 app, bp = views.get_bp(__name__)
 
@@ -21,7 +21,9 @@ def init_session():
 @bp.route('/')
 def index():
     form = LsvFiltersForm()
-    return render_template('het_index.html', form=form)
+    with ViewHeterogens() as m:
+        het_form = HeterogenFiltersForm(m.stat_names)
+    return render_template('het_index.html', form=form, het_form=het_form)
 
 @bp.route('/dismiss-warnings', methods=('POST',))
 def dismiss_warnings():
@@ -107,7 +109,9 @@ def lsv_data(lsv_id):
 @bp.route('/index-table', methods=('POST',))
 def index_table():
     with ViewHeterogens() as p, ViewSpliceGraph(omit_simplified=session.get('omit_simplified', False)) as sg:
-        dt = DataTables(Index.heterogen(), ('gene_name', 'lsv_id'))
+        dt = DataTables(Index.heterogen(), ('gene_name', 'lsv_id'), slice=False)
+        dt.heterogen_filters()
+        dt.slice()
 
         for idx, index_row, records in dt.callback():
             values = itemgetter('lsv_id', 'gene_id', 'gene_name')(index_row)

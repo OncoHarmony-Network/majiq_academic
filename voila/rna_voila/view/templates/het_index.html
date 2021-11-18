@@ -46,6 +46,11 @@
                 .map(d => {
                     json_data[`lsv_filter[${d.name}]`] = d.value
                 });
+            $('.het-filters')
+                .serializeArray()
+                .map(d => {
+                    json_data[`het_filter[${d.name}]`] = d.value
+                });
         };
 
         const $results = $('#results').DataTable({
@@ -120,6 +125,9 @@
             }, 400);
         };
 
+        document.querySelector('.lsv-filters').onchange = reload_table;
+        document.querySelector('.het-filters').oninput = reload_table;
+
         function download(filename, text) {
             var element = document.createElement('a');
             element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(text));
@@ -168,6 +176,10 @@
                 $(excl_incl).toggle();
             });
 
+        function outputUpdate(val) {
+            document.querySelector('#selected_stat_threshold').value = val;
+        }
+
     </script>
 {% endblock %}
 
@@ -190,7 +202,34 @@
 
     <hr>
 
-    <form class="psi-filters pure-form pure-form-aligned">
+    <form class="het-filters pure-form pure-form-aligned">
+        <fieldset>
+            <div class="pure-g">
+                <div class="pure-u-1-4">
+                    {{ het_form.dpsi_threshold.label }}
+                    {{ het_form.dpsi_threshold }}
+                </div>
+
+                <div class="pure-u-1-4">
+                    {{ het_form.stat_threshold.label }}
+                    {{ het_form.stat_threshold(min=0.0, max=1.0, step=0.001, oninput="outputUpdate(value)") }}
+                    <output for="stat_threshold" id="selected_stat_threshold">{{ het_form.stat_threshold.data }}</output>
+                </div>
+
+                <div class="pure-u-1-4">
+                    {{ het_form.stat_type.label }}
+                    {{ het_form.stat_type }}
+                </div>
+
+
+
+            </div>
+        </fieldset>
+    </form>
+
+    <hr>
+
+    <div class="pure-form pure-form-aligned">
         <fieldset>
             <div class="pure-g">
                 <div class="pure-u-1-4">
@@ -202,10 +241,9 @@
                     <button type="submit" class="download-genes pure-button pure-button-primary">Download Genes
                     </button>
                 </div>
-
             </div>
         </fieldset>
-    </form>
+    </div>
 {% endblock %}
 
 {% block index_table %}
