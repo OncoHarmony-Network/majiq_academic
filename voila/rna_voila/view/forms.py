@@ -20,7 +20,7 @@ class DeltaPsiFiltersForm(FlaskForm):
 
 class HeterogenFiltersForm(FlaskForm):
     dpsi_threshold = StringField('abs(E(dPSI)) Threshold', default=0.2)
-    stat_threshold = DecimalRangeField('P-Value Threshold', default=0.9)
+    stat_threshold = DecimalRangeField('P-Value Threshold', default=0.05)
     stat_type = SelectField('P-Value stat', coerce=int, choices=[])
 
     def __init__(self, choices):
