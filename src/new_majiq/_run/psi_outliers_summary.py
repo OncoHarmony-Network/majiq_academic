@@ -142,10 +142,11 @@ def run(args: argparse.Namespace) -> None:
     sg = nm.SpliceGraph.from_zarr(args.splicegraph)
     events = cases.get_events(sg.introns, sg.junctions)
     log.info("Summarizing gaps between quantiles to event, gene levels")
+    dpsi_gap = dpsi_gap.chunk({"ec_idx": None})
     dpsi_gap_events = xr.apply_ufunc(
         groupmax,
         dpsi_gap,
-        cases.lsv_idx,
+        cases.lsv_idx.load(),
         xr.DataArray(np.empty(events.num_events), dims=["e_idx"]),
         input_core_dims=[["ec_idx"], ["ec_idx"], ["e_idx"]],
         output_core_dims=[["e_idx"]],
