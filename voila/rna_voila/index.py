@@ -15,7 +15,7 @@ from multiprocessing import Pool, Manager
 import time
 import hashlib
 
-lsv_filters = ['a5ss', 'a3ss', 'exon_skipping', 'target', 'source', 'binary', 'complex']
+lsv_filters = ['a5ss', 'a3ss', 'exon_skipping', 'target', 'source', 'binary', 'complex', 'intron_retention']
 psi_keys = ['lsv_id', 'gene_id', 'gene_name'] + lsv_filters
 dpsi_keys = ['lsv_id', 'gene_id', 'gene_name', 'excl_incl', 'dpsi_threshold', 'confidence_threshold'] + lsv_filters
 het_keys = ['lsv_id', 'gene_id', 'gene_name', 'dpsi_threshold', 'stat_threshold'] + lsv_filters

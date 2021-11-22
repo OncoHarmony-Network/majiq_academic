@@ -12,6 +12,7 @@ class LsvFiltersForm(FlaskForm):
     target = BooleanField('Target')
     binary = BooleanField('Binary')
     complex = BooleanField('Complex')
+    intron_retention = BooleanField("Intron Retention")
 
 
 class DeltaPsiFiltersForm(FlaskForm):
