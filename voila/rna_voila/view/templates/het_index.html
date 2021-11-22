@@ -180,6 +180,25 @@
             document.querySelector('#selected_stat_threshold').value = val;
         }
 
+        $('#reindex-btn').click(function(){
+            let comparisons = [];
+            $('#het_grp_comp_tbl_load').css('display', 'flex');
+            $('#het_grp_comp_tbl .reindex-comp').each(function(i, v){
+                comparisons.push([
+                    v.getAttribute('data-comp1'),
+                    v.getAttribute('data-comp2'),
+                    v.checked
+                ]);
+            })
+
+            send_ajax('{{ url_for("main.reindex") }}', {'comparisons':comparisons})
+                .then(r => {
+                    $('#het_grp_comp_tbl_load').css('display', 'none');
+                    $results.ajax.reload();
+                });
+
+        })
+
     </script>
 {% endblock %}
 
@@ -232,6 +251,8 @@
     <div class="pure-form pure-form-aligned">
         <fieldset>
             <div class="pure-g">
+
+
                 <div class="pure-u-1-4">
                     <button type="submit" class="download-lsvs pure-button pure-button-primary">Download LSVs
                     </button>
@@ -243,6 +264,59 @@
                 </div>
             </div>
         </fieldset>
+    </div>
+
+    <hr>
+
+    <div style="position: relative;">
+
+        <div id="het_grp_comp_tbl_load">Please wait...</div>
+        <table id="het_grp_comp_tbl" style="table-layout: fixed; width: 100%;">
+
+            <thead>
+            <tr>
+                <th style="width:50%;text-align: right;padding-right: 2px">&nbsp;</th>
+                {% for group_name in group_names %}
+                <th scope="col">{{ group_name }}</th>
+                {% endfor %}
+            </tr>
+            </thead>
+            <tbody>
+            {% for group_name in group_names %}
+            <tr>
+                <th scope="row">{{ group_name }}</th>
+                {% set outer_loop = loop %}
+                {% for c_group_name in group_names %}
+                <td>
+                    {% if group_name == c_group_name %}
+                        X
+                    {% elif loop.index > outer_loop.index %}
+                        {% if frozenset((group_name, c_group_name)) in session['group_map'] %}
+                            {{ session['group_map'][frozenset((group_name, c_group_name))][1] }}
+                        {% else %}
+                            -
+                        {% endif %}
+                    {% else %}
+                        {% if frozenset((group_name, c_group_name)) in session['group_map'] %}
+                            <input data-comp1="{{ group_name }}" data-comp2="{{ c_group_name }}"
+                                   type="checkbox" class="reindex-comp"
+                                {% if session['group_map'][frozenset((group_name, c_group_name))][2] %}
+                                    checked
+                                {% endif %}
+                            >
+                        {% else %}
+                            -
+                        {% endif %}
+                    {% endif %}
+                </td>
+                {% endfor %}
+            </tr>
+
+            {% endfor %}
+            </tbody>
+        </table>
+        <button type="button" id="reindex-btn" class="pure-button pure-button-primary">Apply Comparisons
+        </button>
     </div>
 {% endblock %}
 

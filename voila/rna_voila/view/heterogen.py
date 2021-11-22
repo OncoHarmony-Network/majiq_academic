@@ -4,14 +4,24 @@ from statistics import median
 import numpy as np
 from flask import render_template, jsonify, url_for, request, session, Response
 
-from rna_voila.api.view_matrix import ViewHeterogens
+from rna_voila.api.view_matrix import ViewHeterogens, ViewHeterogen
 from rna_voila.api.view_splice_graph import ViewSpliceGraph
 from rna_voila.index import Index
 from rna_voila.view import views
 from rna_voila.view.datatables import DataTables
 from rna_voila.view.forms import LsvFiltersForm, HeterogenFiltersForm
+from rna_voila.config import ViewConfig
 
 app, bp = views.get_bp(__name__)
+
+def get_group_name_voila_file_map():
+    group_map = {}
+    config = ViewConfig()
+    for voila_file in config.voila_files:
+        with ViewHeterogen(voila_file) as m:
+            group_map[frozenset(m.group_names)] = [voila_file, m.num_lsv_ids, True]
+
+    return group_map
 
 @bp.before_request
 def init_session():
@@ -23,7 +33,31 @@ def index():
     form = LsvFiltersForm()
     with ViewHeterogens() as m:
         het_form = HeterogenFiltersForm(m.stat_names)
-    return render_template('het_index.html', form=form, het_form=het_form)
+        group_names = m.group_names
+
+    if not 'group_name_voila_file_map' in session:
+        session['group_map'] = get_group_name_voila_file_map()
+
+    return render_template('het_index.html', form=form, het_form=het_form,
+                           group_names=group_names, frozenset=frozenset)
+
+@bp.route('/reindex', methods=('POST',))
+def reindex():
+
+
+    enabled_voila_files = []
+    if 'comparisons' in request.json:
+        for comp_files in request.json['comparisons']:
+            # format goes file1, file2, enable or disable
+            key = frozenset((comp_files[0], comp_files[1]))
+            if comp_files[2]:
+                enabled_voila_files.append(session['group_map'][key][0])
+            session['group_map'][key][2] = comp_files[2]
+
+
+    Index(force_create=True, voila_files=enabled_voila_files)
+
+    return jsonify({'ok':1})
 
 @bp.route('/dismiss-warnings', methods=('POST',))
 def dismiss_warnings():

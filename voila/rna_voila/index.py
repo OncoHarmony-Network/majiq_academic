@@ -23,13 +23,15 @@ het_keys = ['lsv_id', 'gene_id', 'gene_name', 'dpsi_threshold', 'stat_threshold'
 skip_strict_indexing = False
 
 class Index:
-    def __init__(self):
+    def __init__(self, force_create=False, voila_files=None):
         """
         Factory class to generate the index for the supplied analysis type.
         """
 
         self.config = ViewConfig()
         analysis_type = self.config.analysis_type
+        self.force_index = force_create or self.config.force_index
+        self.index_voila_files = voila_files
 
         global skip_strict_indexing
         skip_strict_indexing = self.config.skip_type_indexing
@@ -154,10 +156,10 @@ class Index:
         """
         Multithread inner function for each iteration of _heterogen loop below
         """
-        lsv_id, g, m, q = args
+        lsv_id, g, vfs, q = args
         config = ViewConfig()
 
-        g_dpsi_thresh = -1
+        g_dpsi_thresh = np.array([-1])
 
         with ViewHeterogens() as m:
             het = m.lsv(lsv_id)
@@ -171,6 +173,8 @@ class Index:
                 lsv_f = [getattr(het, f) for f in lsv_filters]
 
         for vf in config.voila_files:
+            if vfs and vf not in vfs:
+                continue
             with ViewHeterogen(vf) as m:
                 try:
                     het = m.lsv(lsv_id)
@@ -184,7 +188,7 @@ class Index:
                 except (GeneIdNotFoundInVoilaFile, LsvIdNotFoundInVoilaFile):
                     continue
 
-        g_dpsi_thresh = g_dpsi_thresh.tolist()
+        g_dpsi_thresh = g_dpsi_thresh.tolist()[0]
         g_dpsi_thresh = json.dumps(g_dpsi_thresh)
 
         g_stats_thresh = g_stats_thresh.tolist()
@@ -209,7 +213,7 @@ class Index:
 
         config = ViewConfig()
         log = voila_log()
-        force_index = remove_index = config.force_index
+        force_index = remove_index = self.force_index
         voila_file = self._get_voila_index_file()
 
         if not self._index_in_voila(voila_file, remove_index) or force_index:
@@ -224,7 +228,7 @@ class Index:
                 q = manager.Queue()
 
                 with ViewHeterogens() as m:
-                    lsv_ids = [(x, g, m, q) for x in m.lsv_ids()]
+                    lsv_ids = [(x, g, self.index_voila_files, q) for x in m.lsv_ids()]
 
 
                 p = Pool(config.nproc)
@@ -249,7 +253,7 @@ class Index:
                 voila_index = []
                 with ViewHeterogens() as m:
                     for x in m.lsv_ids():
-                        args = (x, g, m, None)
+                        args = (x, g, self.index_voila_files, None)
                         voila_index.append(self._heterogen_pool_add_index(args))
 
             dtype = self._create_dtype(voila_index)
@@ -306,7 +310,7 @@ class Index:
 
         config = ViewConfig()
         log = voila_log()
-        force_index = remove_index = config.force_index
+        force_index = remove_index = self.force_index
         voila_file = self._get_voila_index_file()
 
         if not self._index_in_voila(voila_file, remove_index) or force_index:
@@ -385,7 +389,7 @@ class Index:
 
         config = ViewConfig()
         log = voila_log()
-        force_index = remove_index = config.force_index
+        force_index = remove_index = self.force_index
         voila_file = self._get_voila_index_file()
 
         if not self._index_in_voila(voila_file, remove_index) or force_index:
