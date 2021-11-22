@@ -54,11 +54,13 @@
     padding:0;
 }
 
-
 #group-controls .handle{
     vertical-align: middle;
 }
 
+#group-controls{
+    padding-left: 7px;
+}
 
 .lsv-single-compact-percentiles, .psi-violin-plot, .dpsi-violin, .excl-incl-rect{
     cursor: default;
