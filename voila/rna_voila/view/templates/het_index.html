@@ -199,6 +199,14 @@
 
         })
 
+        $('#reindex-select-all').click(function(){
+            $('#het_grp_comp_tbl .reindex-comp').prop('checked', true);
+        })
+
+        $('#reindex-select-none').click(function(){
+            $('#het_grp_comp_tbl .reindex-comp').prop('checked', false);
+        })
+
     </script>
 {% endblock %}
 
@@ -315,9 +323,30 @@
             {% endfor %}
             </tbody>
         </table>
-        <button type="button" id="reindex-btn" class="pure-button pure-button-primary">Apply Comparisons
-        </button>
+
     </div>
+    <div class="pure-form pure-form-aligned">
+        <fieldset>
+            <div class="pure-g">
+                <div class="pure-u-1-4">
+                    <button type="button" id="reindex-btn" class="pure-button pure-button-primary">
+                        Apply Selected Comparisons
+                    </button>
+                </div>
+
+                <div class="pure-u-1-4">
+                    <button type="button" id="reindex-select-all" class="pure-button ">Select All
+                    </button>
+                </div>
+
+                <div class="pure-u-1-4">
+                    <button type="button" id="reindex-select-none" class="pure-button ">Select None
+                    </button>
+                </div>
+            </div>
+        </fieldset>
+    </div>
+    <hr>
 {% endblock %}
 
 {% block index_table %}
