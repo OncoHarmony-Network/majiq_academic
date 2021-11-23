@@ -54,6 +54,8 @@ class DataTables:
             self._records = list(r for r in self._records if r[f])
 
     def sort(self):
+        print(self.sort_columns)
+        print(self.column_sort)
         col_name = self.sort_columns[self.column_sort]
 
         try:
@@ -111,6 +113,8 @@ class DataTables:
 
         self.extra_filter(lambda rs: json.loads(rs['dpsi_threshold']) >= dpsi_thresh)
         self.extra_filter(lambda rs: json.loads(rs['stat_threshold'])[stat_type_i] <= stat_thresh)
+
+        return stat_type_i
 
     def delta_psi_filters(self):
         dpsi_filter_values = self.filter_values('dpsi_filter')

@@ -113,6 +113,18 @@
 
                         return copy_lsv_dd.outerHTML + ucsc_a.outerHTML
                     }
+                },{
+                    targets: 4,
+                    render: data => {
+
+                        return data;
+                    }
+                },{
+                    targets: 5,
+                    render: data => {
+
+                        return `${data} (${$('#stat_type option:selected').text()})`
+                    }
                 }
             ]
         });
@@ -413,6 +425,8 @@
                     <th>LSV ID</th>
                     <th>LSV Type</th>
                     <th>Links</th>
+                    <th>max(dpsi)</th>
+                    <th>min(pval)</th>
                 </tr>
                 </thead>
                 <tbody>

@@ -11,6 +11,7 @@ from rna_voila.view import views
 from rna_voila.view.datatables import DataTables
 from rna_voila.view.forms import LsvFiltersForm, HeterogenFiltersForm
 from rna_voila.config import ViewConfig
+import json
 
 app, bp = views.get_bp(__name__)
 
@@ -143,14 +144,19 @@ def lsv_data(lsv_id):
 @bp.route('/index-table', methods=('POST',))
 def index_table():
     with ViewHeterogens() as p, ViewSpliceGraph(omit_simplified=session.get('omit_simplified', False)) as sg:
-        dt = DataTables(Index.heterogen(), ('gene_name', 'lsv_id'), slice=False)
-        dt.heterogen_filters()
+        dt = DataTables(Index.heterogen(), ('gene_name', 'lsv_id', 'lsv_type', 'links', 'dpsi_threshold', 'stat_threshold'), sort=False, slice=False)
+        stat_i = dt.heterogen_filters()
+
+        dt.sort()
         dt.slice()
 
         for idx, index_row, records in dt.callback():
-            values = itemgetter('lsv_id', 'gene_id', 'gene_name')(index_row)
-            values = [v.decode('utf-8') for v in values]
-            lsv_id, gene_id, gene_name = values
+            _values = itemgetter('lsv_id', 'gene_id', 'gene_name', 'dpsi_threshold', 'stat_threshold')(index_row)
+            values = [v.decode('utf-8') for v in _values[:-2]]
+            values.append(round(float(_values[-2].decode('utf-8')), 3))  # dpsi_threshold
+            values.append(round(json.loads(_values[-1].decode('utf-8'))[stat_i], 3))  # stat_threshold
+            lsv_id, gene_id, gene_name, max_dpsi, min_stats = values
+
             het = p.lsv(lsv_id)
             lsv_junctions = het.junctions
             lsv_exons = sg.lsv_exons(gene_id, lsv_junctions)
@@ -165,7 +171,9 @@ def index_table():
                 {
                     'ucsc': ucsc,
                     'group_names': p.group_names
-                }
+                },
+                max_dpsi,
+                min_stats
             ]
 
         return jsonify(dict(dt))
