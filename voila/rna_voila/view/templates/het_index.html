@@ -207,12 +207,25 @@
             $('#het_grp_comp_tbl .reindex-comp').prop('checked', false);
         })
 
-        // calculats padding size needed
+        // calculate padding size needed
         let max_len = 0;
         $('#het_grp_comp_tbl tbody th span').each(function(i, v){
             max_len = Math.max(max_len, v.offsetWidth);
         })
         $('#het_grp_comp_tbl').css('margin-top', `${(Math.sin(0.785398)*max_len)+2}px`);
+
+        // hover on upper/lower triangle highlights the opposite triangles value or checkbox
+        $('#het_grp_comp_tbl td').hover(function(){
+            $(`#het_grp_comp_tbl td[data-linkcomp="${this.getAttribute('data-linkcomp')}"`).css('background-color', '#460080a6');
+        }, function(){
+            $(`#het_grp_comp_tbl td[data-linkcomp="${this.getAttribute('data-linkcomp')}"`).css('background-color', '');
+        })
+
+        // click on upper/lower triangle shell also clicks corresponding box
+        $('#het_grp_comp_tbl td').click(function(){
+            $(`#het_grp_comp_tbl td[data-linkcomp="${this.getAttribute('data-linkcomp')}"`).find('input').click();
+        })
+
 
 
     </script>
@@ -303,7 +316,13 @@
                 <th scope="row"><span>{{ group_name }}</span></th>
                 {% set outer_loop = loop %}
                 {% for c_group_name in group_names %}
-                <td>
+                {% if group_name == c_group_name %}
+                    <td>
+                {% elif loop.index > outer_loop.index %}
+                    <td data-linkcomp="{{ c_group_name }}+{{ group_name}}">
+                {% else %}
+                    <td data-linkcomp="{{ group_name }}+{{ c_group_name}}">
+                {% endif %}
                     {% if group_name == c_group_name %}
                         X
                     {% elif loop.index > outer_loop.index %}
@@ -315,7 +334,7 @@
                     {% else %}
                         {% if frozenset((group_name, c_group_name)) in session['group_map'] %}
                             <input data-comp1="{{ group_name }}" data-comp2="{{ c_group_name }}"
-                                   type="checkbox" class="reindex-comp"
+                                    type="checkbox" class="reindex-comp"
                                 {% if session['group_map'][frozenset((group_name, c_group_name))][2] %}
                                     checked
                                 {% endif %}

@@ -72,6 +72,8 @@ table {
     text-align: center;
     transform-origin: right;
     padding-left: 20px;
+    z-index:-100;
+    position:relative;
 
 }
 #het_grp_comp_tbl th{
@@ -101,4 +103,14 @@ table {
     align-items: center;
     font-size: 4em;
     display: none;
+}
+
+#het_grp_comp_tbl td:hover, het_grp_comp_tbl td *:hover{
+    background-color: #ff000057;
+    cursor: pointer;
+}
+
+#het_grp_comp_tbl td input{
+    position: relative;
+    z-index: -100;
 }
