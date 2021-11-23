@@ -207,6 +207,14 @@
             $('#het_grp_comp_tbl .reindex-comp').prop('checked', false);
         })
 
+        // calculats padding size needed
+        let max_len = 0;
+        $('#het_grp_comp_tbl tbody th span').each(function(i, v){
+            max_len = Math.max(max_len, v.offsetWidth);
+        })
+        $('#het_grp_comp_tbl').css('margin-top', `${(Math.sin(0.785398)*max_len)+2}px`);
+
+
     </script>
 {% endblock %}
 
@@ -292,7 +300,7 @@
             <tbody>
             {% for group_name in group_names %}
             <tr>
-                <th scope="row">{{ group_name }}</th>
+                <th scope="row"><span>{{ group_name }}</span></th>
                 {% set outer_loop = loop %}
                 {% for c_group_name in group_names %}
                 <td>
