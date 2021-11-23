@@ -114,3 +114,8 @@ table {
     position: relative;
     z-index: -100;
 }
+
+#het_grp_comp_tbl .het-grp-toggle:hover{
+    background-color: rgba(20, 155, 245, 0.47);
+    cursor: pointer;
+}

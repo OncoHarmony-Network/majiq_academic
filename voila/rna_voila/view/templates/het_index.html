@@ -199,12 +199,37 @@
 
         })
 
+        // buttons for selecting all/none
         $('#reindex-select-all').click(function(){
             $('#het_grp_comp_tbl .reindex-comp').prop('checked', true);
         })
 
         $('#reindex-select-none').click(function(){
             $('#het_grp_comp_tbl .reindex-comp').prop('checked', false);
+        })
+
+        // buttons for selecting all row/col
+        $('#het_grp_comp_tbl .het-grp-toggle').click(function(){
+            if(this.getAttribute('data-toggled') === '0'){
+                $(`#het_grp_comp_tbl input[data-comp1="${this.getAttribute('data-group-name')}"`).prop('checked', true);
+                $(`#het_grp_comp_tbl input[data-comp2="${this.getAttribute('data-group-name')}"`).prop('checked', true);
+                this.setAttribute('data-toggled', '1');
+            }else{
+                $(`#het_grp_comp_tbl input[data-comp1="${this.getAttribute('data-group-name')}"`).prop('checked', false);
+                $(`#het_grp_comp_tbl input[data-comp2="${this.getAttribute('data-group-name')}"`).prop('checked', false);
+                this.setAttribute('data-toggled', '0');
+            }
+        })
+
+        // hovering indicators for group rows
+        $('#het_grp_comp_tbl .het-grp-toggle').hover(function(){
+            $(`#het_grp_comp_tbl input[data-comp1="${this.getAttribute('data-group-name')}"`).parent().css('background-color', 'rgba(0,128,2,0.65)');
+            $(`#het_grp_comp_tbl input[data-comp2="${this.getAttribute('data-group-name')}"`).parent().css('background-color', 'rgba(0,128,2,0.65)');
+            //$(`#het_grp_comp_tbl thead th[data-group-name="${this.getAttribute('data-group-name')}"`).css('background-color', 'rgba(0,128,2,0.65)');
+        }, function(){
+            $(`#het_grp_comp_tbl input[data-comp1="${this.getAttribute('data-group-name')}"`).parent().css('background-color', '');
+            $(`#het_grp_comp_tbl input[data-comp2="${this.getAttribute('data-group-name')}"`).parent().css('background-color', '');
+            //$(`#het_grp_comp_tbl thead th[data-group-name="${this.getAttribute('data-group-name')}"`).css('background-color', '');
         })
 
         // calculate padding size needed
@@ -306,14 +331,14 @@
             <tr>
                 <th style="width:50%;text-align: right;padding-right: 2px">&nbsp;</th>
                 {% for group_name in group_names %}
-                <th scope="col">{{ group_name }}</th>
+                <th scope="col" data-group-name="{{ group_name }}">{{ group_name }}</th>
                 {% endfor %}
             </tr>
             </thead>
             <tbody>
             {% for group_name in group_names %}
             <tr>
-                <th scope="row"><span>{{ group_name }}</span></th>
+                <th scope="row"><span class="het-grp-toggle" data-group-name="{{ group_name }}" data-toggled="1">{{ group_name }}</span></th>
                 {% set outer_loop = loop %}
                 {% for c_group_name in group_names %}
                 {% if group_name == c_group_name %}
