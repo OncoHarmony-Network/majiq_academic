@@ -79,7 +79,8 @@ tsv_parser.add_argument('files', nargs='+', type=check_file,
 
 required_tsv_parser.add_argument('-f', '--file-name', required=True, help="Output TSV file's name and location.")
 
-tsv_parser.add_argument('--show-read-counts', action='store_true', help=argparse.SUPPRESS)
+tsv_parser.add_argument('--show-read-counts', action='store_true',
+                        help="Show the read counts per experiment in the TSV output")
 tsv_parser.add_argument('--ignore-inconsistent-group-errors', action='store_true',
                         help="Don't show any warnings / errors when multiple experiments with the same name, "
                              "but different experiments are analyzed")

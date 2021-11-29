@@ -497,6 +497,12 @@ class HeterogenTsv(AnalysisTypeTsv):
                 'ucsc_lsv_link'
             ]
 
+        config = TsvConfig()
+        if config.show_read_counts:
+            for exp in self.experiment_names:
+                fieldnames.append(f"{exp}_junction_reads")
+                fieldnames.append(f"{exp}_intron_retention_reads")
+
         self.write_tsv(fieldnames)
 
     def tsv_row(self, q, e, tsv_file, fieldnames, gene_ids=None):
@@ -581,6 +587,16 @@ class HeterogenTsv(AnalysisTypeTsv):
 
                         for key, values in het.junction_scores:
                             row[key] = semicolon(f'{x:0.3e}' for x in values)
+
+                        config = TsvConfig()
+                        if config.show_read_counts:
+                            experiment_reads = sg.lsv_reads(gene_id, lsv_junctions, self.experiment_names,
+                                                            bool(ir_coords))
+                            for exp in experiment_reads:
+                                if exp in self.experiment_names:
+                                    junc_reads, int_reads = experiment_reads[exp]
+                                    row[f"{exp}_junction_reads"] = semicolon(junc_reads)
+                                    row[f"{exp}_intron_retention_reads"] = semicolon(int_reads)
 
                         if lock:
                             lock.acquire()
