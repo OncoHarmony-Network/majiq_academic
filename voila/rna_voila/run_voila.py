@@ -212,6 +212,9 @@ classify_parser.add_argument('--show-all', action='store_true',
 classify_parser.add_argument('--heatmap-selection', choices=['shortest_junction', 'max_abs_dpsi'],
                              help='For the classifier output "heatmap", the quantification values may be derived from either the shortest junction in the module (default), '
                                   'or optionally, if a het or dpsi file is provided, from the junction with the maximum dpsi value')
+classify_parser.add_argument('--disable-metadata', action='store_true',
+                             help="By default, there will be a commented-out JSON metadata for the run at the top of all output TSV files. "
+                                  "If your pipeline doesn't work well with this format, this switch disables it.")
 
 classify_general_filter_parser = classify_parser.add_argument_group(
     "Limit the number of data processed to a specific target subset"

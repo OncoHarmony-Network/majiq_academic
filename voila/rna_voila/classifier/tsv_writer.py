@@ -129,27 +129,27 @@ class BaseTsvWriter(MultiQuantWriter):
 
         if not os.path.exists(os.path.join(self.config.directory, filename)):
             with open(os.path.join(self.config.directory, filename), 'w', newline='') as csvfile:
+                if not self.config.disable_metadata:
+                    metadata = {
+                        'voila_version': constants.VERSION,
+                        'command': ' '.join(sys.argv),
+                    }
+                    if _has_dpsi_voila_files:
+                        metadata['dpsi_changing_threshold'] = self.config.changing_between_group_dpsi
+                        metadata['dpsi_probability_changing_threshold'] = self.config.probability_changing_threshold
+                        metadata['dpsi_nonchanging_threshold'] = self.config.probability_non_changing_threshold
 
-                metadata = {
-                    'voila_version': constants.VERSION,
-                    'command': ' '.join(sys.argv),
-                }
-                if _has_dpsi_voila_files:
-                    metadata['dpsi_changing_threshold'] = self.config.changing_between_group_dpsi
-                    metadata['dpsi_probability_changing_threshold'] = self.config.probability_changing_threshold
-                    metadata['dpsi_nonchanging_threshold'] = self.config.probability_non_changing_threshold
+                    if _has_het_voila_files:
+                        metadata['het_changing_threshold'] = self.config.changing_between_group_dpsi
+                        metadata['het_pvalue_changing_threshold'] = self.config.changing_pvalue_threshold
+                        metadata['het_nonchanging_threshold'] = self.config.non_changing_between_group_dpsi
+                        metadata['het_pvalue_nonchanging_threshold'] = self.config.non_changing_pvalue_threshold
+                        metadata['het_IQR_nonchanging_threshold'] = self.config.non_changing_within_group_iqr
 
-                if _has_het_voila_files:
-                    metadata['het_changing_threshold'] = self.config.changing_between_group_dpsi
-                    metadata['het_pvalue_changing_threshold'] = self.config.changing_pvalue_threshold
-                    metadata['het_nonchanging_threshold'] = self.config.non_changing_between_group_dpsi
-                    metadata['het_pvalue_nonchanging_threshold'] = self.config.non_changing_pvalue_threshold
-                    metadata['het_IQR_nonchanging_threshold'] = self.config.non_changing_within_group_iqr
-
-                metadata_string = '\n'.join([f"# {l}" for l in json.dumps(metadata, sort_keys=True,
-                                                                          indent=4, separators=(',', ': ')).split(
-                    '\n')]) + '\n'
-                csvfile.write(metadata_string)
+                    metadata_string = '\n'.join([f"# {l}" for l in json.dumps(metadata, sort_keys=True,
+                                                                              indent=4, separators=(',', ': ')).split(
+                        '\n')]) + '\n'
+                    csvfile.write(metadata_string)
 
                 writer = csv.writer(csvfile, dialect='excel-tab', delimiter='\t')
                 writer.writerow(headers)
