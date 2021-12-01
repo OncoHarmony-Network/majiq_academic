@@ -241,7 +241,9 @@ classify_structure_filter_parser = classify_parser.add_argument_group(
 
 classify_structure_filter_parser.add_argument('--keep-constitutive', type=int, nargs='?', const=1,
                          help='Do not discard modules with only one junction. Turns on '
-                              'output of constitutive.tsv and constitutive column in summary output')
+                              'output of constitutive.tsv and constitutive column in summary output, kept junctions '
+                              'are further filtered based on reads, minimum of which can be specified in the argument. '
+                              '(default one read)')
 classify_structure_filter_parser.add_argument('--keep-no-lsvs-modules', action='store_true',
                          help='Do not discard modules that are unquantified my Majiq (no LSVs found)')
 classify_structure_filter_parser.add_argument('--keep-no-lsvs-junctions', action='store_true',
