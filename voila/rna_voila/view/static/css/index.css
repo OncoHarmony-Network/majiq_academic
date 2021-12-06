@@ -66,3 +66,59 @@ table {
     text-align: center;
     font-weight: lighter;
 }
+
+#het_grp_comp_tbl thead th{
+    transform: rotate(-45deg);
+    text-align: center;
+    padding-left: 20px;
+    z-index:-100;
+    position:relative;
+
+}
+#het_grp_comp_tbl th{
+    white-space: nowrap;
+
+
+}
+#het_grp_comp_tbl tbody th{
+    width:100%;
+    text-align: right;
+    padding-right: 2px;
+
+}
+#het_grp_comp_tbl td{
+    width: 20px;
+    height: 20px;
+    text-align: center;
+    vertical-align: middle;
+}
+
+#het_grp_comp_tbl_load{
+    position: absolute;
+    background-color: #FFFFFF77;
+    width: 100%;
+    height: 100%;
+    justify-content: center;
+    align-items: center;
+    font-size: 4em;
+    display: none;
+}
+
+#het_grp_comp_tbl td:hover, het_grp_comp_tbl td *:hover{
+    background-color: #ff000057;
+    cursor: pointer;
+}
+
+#het_grp_comp_tbl td input{
+    position: relative;
+    z-index: -100;
+}
+
+#het_grp_comp_tbl .het-grp-toggle:hover{
+    background-color: rgba(20, 155, 245, 0.47);
+    cursor: pointer;
+}
+
+#het_grp_comp_tbl .nopointer:hover{
+    cursor: not-allowed;
+}

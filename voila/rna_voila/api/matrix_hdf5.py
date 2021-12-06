@@ -346,6 +346,10 @@ class MatrixHdf5:
         """
         yield from self.h['lsvs']
 
+    @property
+    def num_lsv_ids(self):
+        return len(self.h['lsvs'])
+
     def lsv_ids(self, gene_ids=None):
         """
         A generator of lsv ids. If gene_ids is set, then only the lsvs for those gene ids will be provided.
