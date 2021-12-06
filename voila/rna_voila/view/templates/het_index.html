@@ -334,84 +334,86 @@
     </div>
 
     <hr>
+{{ enable_het_comparison_chooser }}
+    {% if enable_het_comparison_chooser and (group_names|length > 2) %}
+        <div style="position: relative;">
 
-    <div style="position: relative;">
+            <div id="het_grp_comp_tbl_load">Please wait...</div>
+            <table id="het_grp_comp_tbl" style="table-layout: fixed; width: 100%;">
 
-        <div id="het_grp_comp_tbl_load">Please wait...</div>
-        <table id="het_grp_comp_tbl" style="table-layout: fixed; width: 100%;">
-
-            <thead>
-            <tr>
-                <th style="width:50%;text-align: right;padding-right: 2px">&nbsp;</th>
+                <thead>
+                <tr>
+                    <th style="width:50%;text-align: right;padding-right: 2px">&nbsp;</th>
+                    {% for group_name in group_names %}
+                    <th scope="col" data-group-name="{{ group_name }}">{{ group_name }}</th>
+                    {% endfor %}
+                </tr>
+                </thead>
+                <tbody>
                 {% for group_name in group_names %}
-                <th scope="col" data-group-name="{{ group_name }}">{{ group_name }}</th>
-                {% endfor %}
-            </tr>
-            </thead>
-            <tbody>
-            {% for group_name in group_names %}
-            <tr>
-                <th scope="row"><span class="het-grp-toggle" data-group-name="{{ group_name }}" data-toggled="1">{{ group_name }}</span></th>
-                {% set outer_loop = loop %}
-                {% for c_group_name in group_names %}
-                {% if group_name == c_group_name %}
-                    <td>
-                {% elif loop.index > outer_loop.index %}
-                    <td data-linkcomp="{{ c_group_name }}+{{ group_name}}">
-                {% else %}
-                    <td data-linkcomp="{{ group_name }}+{{ c_group_name}}">
-                {% endif %}
+                <tr>
+                    <th scope="row"><span class="het-grp-toggle" data-group-name="{{ group_name }}" data-toggled="1">{{ group_name }}</span></th>
+                    {% set outer_loop = loop %}
+                    {% for c_group_name in group_names %}
                     {% if group_name == c_group_name %}
-                        X
+                        <td class="nopointer">
                     {% elif loop.index > outer_loop.index %}
-                        {% if frozenset((group_name, c_group_name)) in session['group_map'] %}
-                            {{ session['group_map'][frozenset((group_name, c_group_name))][1] }}
-                        {% else %}
-                            -
-                        {% endif %}
+                        <td data-linkcomp="{{ c_group_name }}+{{ group_name}}">
                     {% else %}
-                        {% if frozenset((group_name, c_group_name)) in session['group_map'] %}
-                            <input data-comp1="{{ group_name }}" data-comp2="{{ c_group_name }}"
-                                    type="checkbox" class="reindex-comp"
-                                {% if session['group_map'][frozenset((group_name, c_group_name))][2] %}
-                                    checked
-                                {% endif %}
-                            >
-                        {% else %}
-                            -
-                        {% endif %}
+                        <td data-linkcomp="{{ group_name }}+{{ c_group_name}}">
                     {% endif %}
-                </td>
+                        {% if group_name == c_group_name %}
+                            X
+                        {% elif loop.index > outer_loop.index %}
+                            {% if frozenset((group_name, c_group_name)) in session['group_map'] %}
+                                {{ session['group_map'][frozenset((group_name, c_group_name))][1] }}
+                            {% else %}
+                                -
+                            {% endif %}
+                        {% else %}
+                            {% if frozenset((group_name, c_group_name)) in session['group_map'] %}
+                                <input data-comp1="{{ group_name }}" data-comp2="{{ c_group_name }}"
+                                        type="checkbox" class="reindex-comp"
+                                    {% if session['group_map'][frozenset((group_name, c_group_name))][2] %}
+                                        checked
+                                    {% endif %}
+                                >
+                            {% else %}
+                                -
+                            {% endif %}
+                        {% endif %}
+                    </td>
+                    {% endfor %}
+                </tr>
+
                 {% endfor %}
-            </tr>
+                </tbody>
+            </table>
 
-            {% endfor %}
-            </tbody>
-        </table>
+        </div>
+        <div class="pure-form pure-form-aligned">
+            <fieldset>
+                <div class="pure-g">
+                    <div class="pure-u-1-4">
+                        <button type="button" id="reindex-btn" class="pure-button pure-button-primary">
+                            Apply Selected Comparisons
+                        </button>
+                    </div>
 
-    </div>
-    <div class="pure-form pure-form-aligned">
-        <fieldset>
-            <div class="pure-g">
-                <div class="pure-u-1-4">
-                    <button type="button" id="reindex-btn" class="pure-button pure-button-primary">
-                        Apply Selected Comparisons
-                    </button>
+                    <div class="pure-u-1-4">
+                        <button type="button" id="reindex-select-all" class="pure-button ">Select All
+                        </button>
+                    </div>
+
+                    <div class="pure-u-1-4">
+                        <button type="button" id="reindex-select-none" class="pure-button ">Select None
+                        </button>
+                    </div>
                 </div>
-
-                <div class="pure-u-1-4">
-                    <button type="button" id="reindex-select-all" class="pure-button ">Select All
-                    </button>
-                </div>
-
-                <div class="pure-u-1-4">
-                    <button type="button" id="reindex-select-none" class="pure-button ">Select None
-                    </button>
-                </div>
-            </div>
-        </fieldset>
-    </div>
-    <hr>
+            </fieldset>
+        </div>
+        <hr>
+    {% endif %}
 {% endblock %}
 
 {% block index_table %}

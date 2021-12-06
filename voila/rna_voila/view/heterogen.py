@@ -38,13 +38,12 @@ def index():
 
     if not 'group_name_voila_file_map' in session:
         session['group_map'] = get_group_name_voila_file_map()
-
     return render_template('het_index.html', form=form, het_form=het_form,
-                           group_names=group_names, frozenset=frozenset)
+                           group_names=group_names, frozenset=frozenset,
+                           enable_het_comparison_chooser=ViewConfig().enable_het_comparison_chooser)
 
 @bp.route('/reindex', methods=('POST',))
 def reindex():
-
 
     enabled_voila_files = []
     if 'comparisons' in request.json:
@@ -54,7 +53,6 @@ def reindex():
             if comp_files[2]:
                 enabled_voila_files.append(session['group_map'][key][0])
             session['group_map'][key][2] = comp_files[2]
-
 
     Index(force_create=True, voila_files=enabled_voila_files)
 

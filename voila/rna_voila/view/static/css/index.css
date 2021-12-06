@@ -70,7 +70,6 @@ table {
 #het_grp_comp_tbl thead th{
     transform: rotate(-45deg);
     text-align: center;
-    transform-origin: right;
     padding-left: 20px;
     z-index:-100;
     position:relative;
@@ -118,4 +117,8 @@ table {
 #het_grp_comp_tbl .het-grp-toggle:hover{
     background-color: rgba(20, 155, 245, 0.47);
     cursor: pointer;
+}
+
+#het_grp_comp_tbl .nopointer:hover{
+    cursor: not-allowed;
 }

@@ -54,8 +54,6 @@ class DataTables:
             self._records = list(r for r in self._records if r[f])
 
     def sort(self):
-        print(self.sort_columns)
-        print(self.column_sort)
         col_name = self.sort_columns[self.column_sort]
 
         try:
