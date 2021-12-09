@@ -27,7 +27,7 @@ from new_majiq._run._majiq_args import (
 )
 from new_majiq._run._run import GenericSubcommand
 from new_majiq._stats import histogram
-from new_majiq._workarounds import _load_zerodim_variables
+from new_majiq.core._workarounds import _load_zerodim_variables
 
 DESCRIPTION = (
     "Compute outlier summary statistics from PSI cases (N ~ 1) vs PSI controls (N >> 1)"

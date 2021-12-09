@@ -21,7 +21,7 @@ from new_majiq._run._majiq_args import (
     resources_args,
 )
 from new_majiq._run._run import GenericSubcommand
-from new_majiq._workarounds import _load_zerodim_variables
+from new_majiq.core._workarounds import _load_zerodim_variables
 
 DESCRIPTION = "Identify outliers from PSI cases (N ~ 1) vs PSI controls (N >> 1)"
 

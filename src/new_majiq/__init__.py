@@ -13,39 +13,39 @@ import new_majiq.beta_mixture as beta_mixture
 import new_majiq.constants as constants
 import new_majiq.stats as stats
 
-from .Contigs import Contigs
-from .DeltaPsi import DeltaPsi
-from .DPsiPrior import DPsiPrior
-from .Events import Events
-from .EventsCoverage import EventsCoverage
-from .ExonConnections import ExonConnections
-from .Exons import Exons
-from .GeneIntrons import GeneIntrons
-from .GeneJunctions import GeneJunctions
-from .Genes import Genes
-from .GroupIntronsGenerator import GroupIntronsGenerator
-from .Heterogen import Heterogen
-from .PassedJunctions import GroupJunctionsGenerator, PassedJunctionsGenerator
-from .PMFSummaries import PMFSummaries
+from .core.Contigs import Contigs
+from .core.DeltaPsi import DeltaPsi
+from .core.DPsiPrior import DPsiPrior
+from .core.Events import Events
+from .core.EventsCoverage import EventsCoverage
+from .core.ExonConnections import ExonConnections
+from .core.Exons import Exons
+from .core.GeneIntrons import GeneIntrons
+from .core.GeneJunctions import GeneJunctions
+from .core.Genes import Genes
+from .core.GroupIntronsGenerator import GroupIntronsGenerator
+from .core.Heterogen import Heterogen
+from .core.PassedJunctions import GroupJunctionsGenerator, PassedJunctionsGenerator
+from .core.PMFSummaries import PMFSummaries
 
 # PsiCoverage and summaries for case/control outliers
-from .PsiControlsSummary import PsiControlsSummary
-from .PsiCoverage import PsiCoverage
-from .PsiOutliers import PsiOutliers
-from .SimplifierGroup import SimplifierGroup
+from .core.PsiControlsSummary import PsiControlsSummary
+from .core.PsiCoverage import PsiCoverage
+from .core.PsiOutliers import PsiOutliers
+from .core.SimplifierGroup import SimplifierGroup
 
 # how we measure junctions and introns from BAM files
-from .SJExperiment import SJExperiment
-from .SJIntrons import SJIntrons
-from .SJIntronsBins import SJIntronsBins
-from .SJJunctions import SJJunctions
-from .SJJunctionsBins import SJJunctionsBins
+from .core.SJExperiment import SJExperiment
+from .core.SJIntrons import SJIntrons
+from .core.SJIntronsBins import SJIntronsBins
+from .core.SJJunctions import SJJunctions
+from .core.SJJunctionsBins import SJJunctionsBins
 
 # model of genes, exons connected by introns/junctions
-from .SpliceGraph import SpliceGraph
+from .core.SpliceGraph import SpliceGraph
 
 # coverage on splicegraph or events
-from .SpliceGraphReads import SpliceGraphReads
+from .core.SpliceGraphReads import SpliceGraphReads
 
 
 def rng_seed(seed: int) -> None:
