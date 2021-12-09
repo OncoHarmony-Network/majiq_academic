@@ -9,6 +9,7 @@ splicing.
    :caption: For users
 
    Getting Started <getting-started-guide/index>
+   API Reference <api>
 
 
 

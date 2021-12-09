@@ -13,6 +13,7 @@ import new_majiq.beta_mixture as beta_mixture
 import new_majiq.constants as constants
 import new_majiq.stats as stats
 
+from .Contigs import Contigs
 from .DeltaPsi import DeltaPsi
 from .DPsiPrior import DPsiPrior
 from .Events import Events
@@ -22,12 +23,16 @@ from .Exons import Exons
 from .GeneIntrons import GeneIntrons
 from .GeneJunctions import GeneJunctions
 from .Genes import Genes
+from .GroupIntronsGenerator import GroupIntronsGenerator
 from .Heterogen import Heterogen
+from .PassedJunctions import GroupJunctionsGenerator, PassedJunctionsGenerator
+from .PMFSummaries import PMFSummaries
 
 # PsiCoverage and summaries for case/control outliers
 from .PsiControlsSummary import PsiControlsSummary
 from .PsiCoverage import PsiCoverage
 from .PsiOutliers import PsiOutliers
+from .SimplifierGroup import SimplifierGroup
 
 # how we measure junctions and introns from BAM files
 from .SJExperiment import SJExperiment
@@ -80,6 +85,7 @@ __all__ = [
     "rng_seed",
     "__version__",
     "constants",
+    "Contigs",
     "Events",
     "EventsCoverage",
     "ExonConnections",
@@ -87,10 +93,16 @@ __all__ = [
     "GeneIntrons",
     "GeneJunctions",
     "Genes",
+    "GroupIntronsGenerator",
+    "GroupJunctionsGenerator",
+    "PassedJunctionsGenerator",
+    "SimplifierGroup",
     "PsiCoverage",
     "DPsiPrior",
     "DeltaPsi",
     "Heterogen",
+    "PassedJunctions",
+    "PMFSummaries",
     "PsiControlsSummary",
     "PsiOutliers",
     "SJExperiment",
