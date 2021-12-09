@@ -26,3 +26,39 @@ Primary classes/functions
    DeltaPsi
    Heterogen
    PsiControlsSummary
+   PsiOutliers.from_psicov
+
+
+SpliceGraph
+===========
+
+SpliceGraph I/O
+---------------
+
+.. autosummary::
+   :toctree: generated/
+
+   SpliceGraph.from_gff3
+   SpliceGraph.from_zarr
+   SpliceGraph.to_zarr
+   SpliceGraph.to_sqlite
+
+
+SpliceGraph components
+----------------------
+
+.. autosummary::
+   :toctree: generated/
+
+   SpliceGraph.contigs
+   SpliceGraph.genes
+   SpliceGraph.exons
+   SpliceGraph.introns
+   SpliceGraph.junctions
+   SpliceGraph.exon_connections
+   Contigs
+   Genes
+   Exons
+   GeneIntrons
+   GeneJunctions
+   ExonConnections

@@ -24,10 +24,11 @@ class DPsiPrior(object):
 
     Parameters
     ----------
-    a, pmix: Union[List[float], xr.DataArray (dimension: mixture_component)]
+    a, pmix: Union[List[float], xr.DataArray]
         Default parameters for prior. Must have same length.
-        a is the parameters for each component beta, pmix is the probability of
-        each component.
+        If xr.DataArray, must have dimension mixture_component.
+        a is the parameters for each component beta.
+        pmix is the probability of each component.
     """
 
     def __init__(

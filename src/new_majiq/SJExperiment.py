@@ -39,13 +39,6 @@ class SJExperiment(object):
     """
 
     def __init__(self, introns: SJIntronsBins, junctions: SJJunctionsBins):
-        """Per bin reads for introns and junctions for the same experiment
-
-        Parameters
-        ----------
-        introns: SJIntronsBins
-        junctions: SJJunctionsBins
-        """
         if introns.original_path != junctions.original_path:
             raise ValueError(
                 "SJExperiment introns and junctions must have same original path"

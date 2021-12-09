@@ -30,7 +30,7 @@ class Heterogen(object):
     ----------
     psi1, psi2: PsiCoverage
         PsiCoverage files to compare
-    min_experiments_f
+    min_experiments_f: float
         Number or proportion of experiments required to pass in each group for
         quantification
     name1, name2: str

@@ -39,6 +39,7 @@ extensions = [
     "sphinx.ext.napoleon",
     "IPython.sphinxext.ipython_directive",
     "IPython.sphinxext.ipython_console_highlighting",
+    "sphinx_autosummary_accessors",
     "nbsphinx",
 ]
 
@@ -52,6 +53,28 @@ exclude_patterns = ["**.ipynb_checkpoints"]
 
 
 autosummary_generate = True
+autodoc_typehints = "none"
+
+
+# Napoleon configurations
+napoleon_google_docstring = False
+napoleon_numpy_docstring = True
+napoleon_use_param = False
+napoleon_use_rtype = False
+napoleon_preprocess_types = True
+napoleon_type_aliases = {
+    # without namespace
+    "DPsiPrior": "new_majiq.DPsiPrior",
+    "PsiCoverage": "new_majiq.PsiCoverage",
+    "SJIntronsBins": "new_majiq.SJIntronsBins",
+    "SJJunctionsBins": "new_majiq.SJJunctionsBins",
+    # internals
+    "_SpliceGraph": "new_majiq.internals.SpliceGraph",
+    "_Events": "new_majiq.internals.Events",
+    # abbreviated namespace
+    "xr.DataArray": "xarray.DataArray",
+    "xr.Dataset": "xarray.Dataset",
+}
 
 
 # -- Options for HTML output -------------------------------------------------
