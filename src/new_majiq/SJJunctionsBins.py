@@ -14,12 +14,13 @@ import xarray as xr
 
 import new_majiq.constants as constants
 from new_majiq._version import version as nm_version
-from new_majiq._workarounds import _load_zerodim_variables
 from new_majiq.internals import ExperimentStrandness
 from new_majiq.internals import SJJunctionsBins as _SJJunctionsBins
 from new_majiq.logger import get_logger
-from new_majiq.SJBinsReads import SJBinsReads
-from new_majiq.SJJunctions import SJJunctions
+
+from ._workarounds import _load_zerodim_variables
+from .SJBinsReads import SJBinsReads
+from .SJJunctions import SJJunctions
 
 
 class SJJunctionsBins(SJBinsReads):

@@ -16,11 +16,12 @@ from dask.delayed import Delayed
 from dask.distributed import progress
 
 import new_majiq.constants as constants
-from new_majiq._workarounds import _load_zerodim_variables
-from new_majiq.Events import Events, _Events
-from new_majiq.GeneIntrons import GeneIntrons
-from new_majiq.GeneJunctions import GeneJunctions
-from new_majiq.PsiCoverage import PsiCoverage, min_experiments
+
+from ._workarounds import _load_zerodim_variables
+from .Events import Events, _Events
+from .GeneIntrons import GeneIntrons
+from .GeneJunctions import GeneJunctions
+from .PsiCoverage import PsiCoverage, min_experiments
 
 
 def _q_from_alpha(alpha: xr.DataArray) -> xr.DataArray:

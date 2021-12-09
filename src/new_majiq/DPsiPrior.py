@@ -16,7 +16,8 @@ from scipy.stats import beta as beta_dist
 
 import new_majiq.constants as constants
 from new_majiq.logger import get_logger
-from new_majiq.PsiCoverage import PsiCoverage, min_experiments
+
+from .PsiCoverage import PsiCoverage, min_experiments
 
 
 class DPsiPrior(object):

@@ -13,14 +13,15 @@ import numpy as np
 import xarray as xr
 
 import new_majiq.constants as constants
-from new_majiq._workarounds import _load_zerodim_variables
-from new_majiq.GeneRegions import GeneRegions
-from new_majiq.Genes import Genes
 from new_majiq.internals import Exons as _Exons
 
+from ._workarounds import _load_zerodim_variables
+from .GeneRegions import GeneRegions
+from .Genes import Genes
+
 if TYPE_CHECKING:
-    from new_majiq.GeneIntrons import GeneIntrons
-    from new_majiq.GeneJunctions import GeneJunctions
+    from .GeneIntrons import GeneIntrons
+    from .GeneJunctions import GeneJunctions
 
 
 class Exons(GeneRegions):

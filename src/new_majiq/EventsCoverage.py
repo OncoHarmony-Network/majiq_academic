@@ -13,14 +13,15 @@ import numpy as np
 import xarray as xr
 
 import new_majiq.constants as constants
-from new_majiq._workarounds import _load_zerodim_variables
-from new_majiq.Events import Events
-from new_majiq.ExonConnections import ExonConnections
 from new_majiq.experiments import bam_experiment_name
-from new_majiq.GeneIntrons import GeneIntrons
-from new_majiq.GeneJunctions import GeneJunctions
 from new_majiq.internals import EventsCoverage as _EventsCoverage
-from new_majiq.SJExperiment import SJExperiment
+
+from ._workarounds import _load_zerodim_variables
+from .Events import Events
+from .ExonConnections import ExonConnections
+from .GeneIntrons import GeneIntrons
+from .GeneJunctions import GeneJunctions
+from .SJExperiment import SJExperiment
 
 
 class EventsCoverage(object):

@@ -11,8 +11,8 @@ from typing import Optional
 
 import numpy as np
 
-from new_majiq.Exons import Exons, _Exons
-from new_majiq.GeneRegions import GeneRegions
+from .Exons import Exons, _Exons
+from .GeneRegions import GeneRegions
 
 
 class GeneConnections(GeneRegions):

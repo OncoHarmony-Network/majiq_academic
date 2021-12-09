@@ -34,12 +34,13 @@ import new_majiq._offsets as _offsets
 import new_majiq.beta_mixture as bm
 import new_majiq.constants as constants
 from new_majiq._stats import nanmedian, nanquantile
-from new_majiq.Events import Events, _Events
-from new_majiq.EventsCoverage import EventsCoverage
 from new_majiq.experiments import bam_experiment_name
-from new_majiq.GeneIntrons import GeneIntrons
-from new_majiq.GeneJunctions import GeneJunctions
-from new_majiq.SJExperiment import SJExperiment
+
+from .Events import Events, _Events
+from .EventsCoverage import EventsCoverage
+from .GeneIntrons import GeneIntrons
+from .GeneJunctions import GeneJunctions
+from .SJExperiment import SJExperiment
 
 
 def min_experiments(min_experiments_f: float, num_experiments: int) -> float:

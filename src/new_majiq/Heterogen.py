@@ -15,7 +15,8 @@ import xarray as xr
 import new_majiq.beta_mixture as bm
 import new_majiq.constants as constants
 from new_majiq.logger import get_logger
-from new_majiq.PsiCoverage import PsiCoverage
+
+from .PsiCoverage import PsiCoverage
 
 
 class Heterogen(object):

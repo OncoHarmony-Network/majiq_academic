@@ -11,12 +11,13 @@ from typing import Final, List
 import numpy as np
 
 import new_majiq.constants as constants
-from new_majiq.Events import Events
-from new_majiq.Exons import Exons
-from new_majiq.GeneIntrons import GeneIntrons
-from new_majiq.GeneJunctions import GeneJunctions
 from new_majiq.internals import ExonConnections as _ExonConnections
-from new_majiq.SimplifierGroup import SimplifierGroup, _SimplifierGroup
+
+from .Events import Events
+from .Exons import Exons
+from .GeneIntrons import GeneIntrons
+from .GeneJunctions import GeneJunctions
+from .SimplifierGroup import SimplifierGroup, _SimplifierGroup
 
 
 class ExonConnections(object):

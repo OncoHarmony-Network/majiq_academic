@@ -8,8 +8,8 @@ Author: Joseph K Aicher
 
 import numpy as np
 
-from new_majiq.Genes import Genes
-from new_majiq.Regions import Regions
+from .Genes import Genes
+from .Regions import Regions
 
 
 class GeneRegions(Regions):

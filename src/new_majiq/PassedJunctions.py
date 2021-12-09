@@ -11,12 +11,13 @@ Author: Joseph K Aicher
 from typing import Final
 
 import new_majiq.constants as constants
-from new_majiq.Exons import Exons
-from new_majiq.GeneJunctions import GeneJunctions
 from new_majiq.internals import ExperimentThresholds
 from new_majiq.internals import GroupJunctionsGenerator as _GroupJunctionsGenerator
 from new_majiq.internals import PassedJunctionsGenerator as _PassedJunctionsGenerator
-from new_majiq.SJJunctionsBins import SJJunctionsBins
+
+from .Exons import Exons
+from .GeneJunctions import GeneJunctions
+from .SJJunctionsBins import SJJunctionsBins
 
 
 class GroupJunctionsGenerator(object):

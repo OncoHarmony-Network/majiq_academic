@@ -14,14 +14,15 @@ import pandas as pd
 import xarray as xr
 
 import new_majiq.constants as constants
-from new_majiq._workarounds import _load_zerodim_variables
-from new_majiq.Contigs import Contigs
-from new_majiq.Exons import Exons
-from new_majiq.GeneIntrons import GeneIntrons
-from new_majiq.GeneJunctions import GeneJunctions
-from new_majiq.Genes import Genes
 from new_majiq.internals import Events as _Events
 from new_majiq.internals import EventsAlign
+
+from ._workarounds import _load_zerodim_variables
+from .Contigs import Contigs
+from .Exons import Exons
+from .GeneIntrons import GeneIntrons
+from .GeneJunctions import GeneJunctions
+from .Genes import Genes
 
 
 class UniqueEventsMasks(NamedTuple):

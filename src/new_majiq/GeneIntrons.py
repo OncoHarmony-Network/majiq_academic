@@ -13,13 +13,14 @@ import numpy as np
 import xarray as xr
 
 import new_majiq.constants as constants
-from new_majiq._workarounds import _load_zerodim_variables
-from new_majiq.GeneConnections import GeneConnections
-from new_majiq.Genes import Genes
 from new_majiq.internals import GeneIntrons as _GeneIntrons
 
+from ._workarounds import _load_zerodim_variables
+from .GeneConnections import GeneConnections
+from .Genes import Genes
+
 if TYPE_CHECKING:
-    from new_majiq.GroupIntronsGenerator import GroupIntronsGenerator
+    from .GroupIntronsGenerator import GroupIntronsGenerator
 
 
 class GeneIntrons(GeneConnections):

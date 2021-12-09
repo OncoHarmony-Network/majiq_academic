@@ -13,15 +13,16 @@ from typing import Final, Union
 import numpy as np
 
 import new_majiq.constants as constants
-from new_majiq.Exons import Exons
-from new_majiq.GeneIntrons import GeneIntrons
 from new_majiq.internals import ExperimentStrandness
 from new_majiq.logger import get_logger
-from new_majiq.SJIntrons import SJIntrons
-from new_majiq.SJIntronsBins import SJIntronsBins
-from new_majiq.SJJunctionsBins import SJJunctionsBins
-from new_majiq.SpliceGraph import SpliceGraph
-from new_majiq.SpliceGraphReads import SpliceGraphReads
+
+from .Exons import Exons
+from .GeneIntrons import GeneIntrons
+from .SJIntrons import SJIntrons
+from .SJIntronsBins import SJIntronsBins
+from .SJJunctionsBins import SJJunctionsBins
+from .SpliceGraph import SpliceGraph
+from .SpliceGraphReads import SpliceGraphReads
 
 
 class SJExperiment(object):

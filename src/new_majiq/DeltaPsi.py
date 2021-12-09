@@ -15,9 +15,10 @@ from scipy.special import logsumexp
 
 import new_majiq.beta_mixture as bm
 import new_majiq.constants as constants
-from new_majiq.DPsiPrior import DPsiPrior
-from new_majiq.PMFSummaries import PMFSummaries
-from new_majiq.PsiCoverage import PsiCoverage
+
+from .DPsiPrior import DPsiPrior
+from .PMFSummaries import PMFSummaries
+from .PsiCoverage import PsiCoverage
 
 
 class DeltaPsi(object):

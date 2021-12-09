@@ -13,12 +13,13 @@ import xarray as xr
 
 import new_majiq.constants as constants
 from new_majiq.logger import get_logger
-from new_majiq.PsiControlsSummary import (
+
+from .PsiControlsSummary import (
     PsiControlsSummary,
     _psirange_from_psiquantiles,
     _q_from_alpha,
 )
-from new_majiq.PsiCoverage import PsiCoverage
+from .PsiCoverage import PsiCoverage
 
 
 class PsiOutliers(object):

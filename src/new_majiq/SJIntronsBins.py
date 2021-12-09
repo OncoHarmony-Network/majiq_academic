@@ -15,13 +15,14 @@ import xarray as xr
 import new_majiq.constants as constants
 from new_majiq._version import version as nm_version
 from new_majiq._workarounds import _load_zerodim_variables
-from new_majiq.Exons import Exons
-from new_majiq.GeneIntrons import GeneIntrons
 from new_majiq.internals import ExperimentStrandness
 from new_majiq.internals import SJIntronsBins as _SJIntronsBins
 from new_majiq.logger import get_logger
-from new_majiq.SJBinsReads import SJBinsReads
-from new_majiq.SJIntrons import SJIntrons
+
+from .Exons import Exons
+from .GeneIntrons import GeneIntrons
+from .SJBinsReads import SJBinsReads
+from .SJIntrons import SJIntrons
 
 
 class SJIntronsBins(SJBinsReads):

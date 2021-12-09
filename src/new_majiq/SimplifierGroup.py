@@ -10,13 +10,14 @@ import numpy as np
 import xarray as xr
 
 import new_majiq.constants as constants
-from new_majiq.GeneIntrons import GeneIntrons
-from new_majiq.GeneJunctions import GeneJunctions
 from new_majiq.internals import SimplifierGroup as _SimplifierGroup
-from new_majiq.SpliceGraphReads import SpliceGraphReads
+
+from .GeneIntrons import GeneIntrons
+from .GeneJunctions import GeneJunctions
+from .SpliceGraphReads import SpliceGraphReads
 
 if TYPE_CHECKING:
-    from new_majiq.SJExperiment import SJExperiment
+    from .SJExperiment import SJExperiment
 
 
 class SimplifierGroup(object):

@@ -13,17 +13,15 @@ import numpy as np
 import xarray as xr
 
 import new_majiq.constants as constants
-from new_majiq._workarounds import _load_zerodim_variables
-from new_majiq.Exons import Exons
-from new_majiq.GeneConnections import GeneConnections
-from new_majiq.Genes import Genes
 from new_majiq.internals import GeneJunctions as _GeneJunctions
 
+from ._workarounds import _load_zerodim_variables
+from .Exons import Exons
+from .GeneConnections import GeneConnections
+from .Genes import Genes
+
 if TYPE_CHECKING:
-    from new_majiq.PassedJunctions import (
-        GroupJunctionsGenerator,
-        PassedJunctionsGenerator,
-    )
+    from .PassedJunctions import GroupJunctionsGenerator, PassedJunctionsGenerator
 
 
 class GeneJunctions(GeneConnections):

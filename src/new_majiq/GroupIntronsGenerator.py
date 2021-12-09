@@ -12,10 +12,11 @@ import numpy as np
 import xarray as xr
 
 import new_majiq.constants as constants
-from new_majiq.GeneIntrons import GeneIntrons
 from new_majiq.internals import ExperimentThresholds
 from new_majiq.internals import GroupIntronsGenerator as _GroupIntronsGenerator
-from new_majiq.SJIntronsBins import SJIntronsBins
+
+from .GeneIntrons import GeneIntrons
+from .SJIntronsBins import SJIntronsBins
 
 
 class GroupIntronsGenerator(object):

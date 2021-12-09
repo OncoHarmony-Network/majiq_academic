@@ -11,14 +11,15 @@ from pathlib import Path
 from typing import Dict, Final, Optional, Union
 
 import new_majiq.constants as constants
-from new_majiq.Contigs import Contigs
-from new_majiq.ExonConnections import ExonConnections
-from new_majiq.Exons import Exons
-from new_majiq.GeneIntrons import GeneIntrons
-from new_majiq.GeneJunctions import GeneJunctions
-from new_majiq.Genes import Genes
 from new_majiq.internals import GFF3FeatureType
 from new_majiq.internals import SpliceGraph as _SpliceGraph
+
+from .Contigs import Contigs
+from .ExonConnections import ExonConnections
+from .Exons import Exons
+from .GeneIntrons import GeneIntrons
+from .GeneJunctions import GeneJunctions
+from .Genes import Genes
 
 
 class SpliceGraph(object):
