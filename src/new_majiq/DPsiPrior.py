@@ -20,7 +20,7 @@ from new_majiq.PsiCoverage import PsiCoverage, min_experiments
 
 
 class DPsiPrior(object):
-    """Weighted mixture of betas (rescaled to [-1, 1]) as prior on deltapsi
+    """Prior on DeltaPsi as weighted mixture of beta distributions (over [-1, 1])
 
     Parameters
     ----------

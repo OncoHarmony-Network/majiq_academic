@@ -38,18 +38,18 @@ if TYPE_CHECKING:
 
 
 class SpliceGraphReads(object):
-    """Coverage over introns and junctions for arbitrary number of samples
+    """Coverage over splicegraph introns and junctions
 
     Parameters
     ----------
     df: xr.Dataset
         Data variables:
-            introns_reads[prefix, gi_idx]
-            junctions_reads[prefix, gj_idx]
-            intron_hash[prefix]
-            junction_hash[prefix]
+            + introns_reads[prefix, gi_idx]
+            + junctions_reads[prefix, gj_idx]
+            + intron_hash[prefix]
+            + junction_hash[prefix]
         Coordinates:
-            prefix[prefix]
+            + prefix[prefix]
     """
 
     def __init__(self, df: xr.Dataset):

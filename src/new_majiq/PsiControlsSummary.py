@@ -41,7 +41,11 @@ def _psirange_from_psiquantiles(quantiles: xr.DataArray) -> xr.DataArray:
 
 
 class PsiControlsSummary(object):
-    """Summary of quantifications over prefixes of PsiCoverage as controls
+    """Summary of PSI posterior means over large group of controls
+
+    Summary of PSI posterior means over large group of controls noting the
+    number of experiments which passed and quantiles over the experiments which
+    passed
 
     Parameters
     ----------
@@ -68,10 +72,10 @@ class PsiControlsSummary(object):
         dataset that can be loaded along with matching introns/junctions as
         Events
 
-    See also
+    See Also
     --------
-    PsiControlsSummary.from_psicov()
-    PsiControlsSummary.from_zarr()
+    PsiControlsSummary.from_psicov
+    PsiControlsSummary.from_zarr
     """
 
     def __init__(self, df: xr.Dataset, events: xr.Dataset):

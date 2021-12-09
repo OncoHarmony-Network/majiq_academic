@@ -49,30 +49,46 @@ def min_experiments(min_experiments_f: float, num_experiments: int) -> float:
 
 
 class PsiCoverage(object):
-    """PSI and total coverage (raw and bootstrapped) for arbitrary number of samples"""
+    """Coverage for Psi posterior distributions over raw or bootstrap coverage
+
+    Coverage for Psi posterior distributions over raw or bootstrap coverage.
+    Holds raw and bootstrap coverage over events per prefix (e.g. experiment,
+    summary over experiments, etc.) and whether they passed quantification
+    thresholds.
+    Functions/attributes allow computation with underlying posterior
+    distributions.
+
+    Parameters
+    ----------
+    df: xr.Dataset
+        Data variables:
+            - event_passed[prefix, ec_idx]
+            - raw_total[prefix, ec_idx]
+            - raw_psi[prefix, ec_idx]
+            - bootstrap_total[prefix, ec_idx, bootstrap_replicate]
+            - bootstrap_psi[prefix, ec_idx, bootstrap_replicate]
+        Coordinates:
+            - lsv_offsets[offset_idx]
+            - prefix[prefix]
+        Derived (from _offsets):
+            - event_size[ec_idx]
+            - lsv_idx[ec_idx]
+    events: xr.Dataset
+        dataset that can be loaded along with matching introns/junctions as
+        Events
+
+    See Also
+    --------
+    PsiCoverage.from_sj_lsvs
+    PsiCoverage.from_events_coverage
+    PsiCoverage.from_zarr
+    PsiCoverage.updated
+    PsiCoverage.sum
+    PsiCoverage.mask_events
+    PsiCoverage.__getitem__
+    """
 
     def __init__(self, df: xr.Dataset, events: xr.Dataset):
-        """Compute posterior quantities using information about event total/psi
-
-        Parameters
-        ----------
-        df: xr.Dataset
-            Data variables:
-                event_passed[prefix, ec_idx]
-                raw_total[prefix, ec_idx]
-                raw_psi[prefix, ec_idx]
-                bootstrap_total[prefix, ec_idx, bootstrap_replicate]
-                bootstrap_psi[prefix, ec_idx, bootstrap_replicate]
-            Coordinates:
-                lsv_offsets[offset_idx]
-                prefix[prefix]
-            Derived (from _offsets):
-                event_size[ec_idx]
-                lsv_idx[ec_idx]
-        events: xr.Dataset
-            dataset that can be loaded along with matching introns/junctions as
-            Events
-        """
         offsets = df["lsv_offsets"].load().values
         if offsets[0] != 0:
             raise ValueError("offsets[0] must be zero")

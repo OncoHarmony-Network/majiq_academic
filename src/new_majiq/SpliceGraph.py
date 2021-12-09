@@ -22,6 +22,20 @@ from new_majiq.internals import SpliceGraph as _SpliceGraph
 
 
 class SpliceGraph(object):
+    """Representation of all genes as exons connected by introns and junctions
+
+    Parameters
+    ----------
+    sg: _SpliceGraph
+        Underlying object binding the internal C++ API
+
+    See Also
+    --------
+    SpliceGraph.from_gff3
+    SpliceGraph.from_components
+    SpliceGraph.from_zarr
+    """
+
     def __init__(self, sg: _SpliceGraph):
         self._sg: Final[_SpliceGraph] = sg
         return

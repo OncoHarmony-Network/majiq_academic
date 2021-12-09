@@ -21,7 +21,10 @@ from new_majiq.PsiCoverage import PsiCoverage
 
 
 class DeltaPsi(object):
-    """DeltaPsi between two groups of replicate experiments
+    """Compute DeltaPsi between two groups of PsiCoverage (replicate assumption)
+
+    Compute DeltaPsi between two groups of PsiCoverage under assumption that
+    the experiments in each group are replicates with the given DPsiPrior.
 
     Parameters
     ----------

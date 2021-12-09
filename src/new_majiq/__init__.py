@@ -58,6 +58,11 @@ def rng_seed(seed: int) -> None:
     correlated if used in the same session (we offer this convenience function
     because we think that generating LSVCoverage and sampling from beta
     mixtures in the same session is a rare use case).
+
+    Parameters
+    ----------
+    seed: int
+        Integer value used to seed the random number generators
     """
     _internals_rng_seed(seed)
     beta_mixture.rng_seed(seed)
@@ -70,6 +75,13 @@ def rng_resize(n: int) -> None:
     Resize rng pools to allow n simultaneous threads. There are two separate
     rng pools in new-majiq, one for nm.beta_mixture, and another for
     nm.internals. This is a helper function that resizes both pools.
+
+    Parameters
+    ----------
+    n: int
+        The number of random number generators that can be simultaneously
+        acquired (should be equal to the number of threads performing random
+        number generation)
     """
     _internals_rng_resize(n)
     beta_mixture.rng_resize(n)

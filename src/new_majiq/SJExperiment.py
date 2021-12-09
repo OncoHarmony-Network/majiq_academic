@@ -25,7 +25,7 @@ from new_majiq.SpliceGraphReads import SpliceGraphReads
 
 
 class SJExperiment(object):
-    """Per bin reads for introns and junctions for the same experiment
+    """Per-bin read coverage over introns and junctions in the same experiment
 
     Parameters
     ----------

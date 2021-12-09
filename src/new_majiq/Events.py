@@ -38,7 +38,21 @@ class UniqueEventsMasks(NamedTuple):
 
 
 class Events(object):
-    """events and event connections"""
+    """Collections of introns/junctions all starting or ending at the same exon
+
+    Parameters
+    ----------
+    events: _Events
+        Underlying object binding the internal C++ API
+
+    See Also
+    --------
+    Events.from_zarr
+    ExonConnections.lsvs
+    ExonConnections.constitutive
+    PsiCoverage.get_events
+    PsiControlsSummary.get_events
+    """
 
     def __init__(self, events: _Events):
         self._events: Final[_Events] = events

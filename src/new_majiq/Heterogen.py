@@ -19,7 +19,12 @@ from new_majiq.PsiCoverage import PsiCoverage
 
 
 class Heterogen(object):
-    """Heterogeneous analysis between two groups of independent experiments
+    """Compare Psi between two groups of PsiCoverage (independence assumption)
+
+    Compare Psi between two groups of PsiCoverage under the assumption that
+    each experiment is independent. Perform null-hypothesis testing on
+    posterior means and/or samples under assumption that underlying values of
+    PSI per experiment are independent and identically distributed (i.i.d.).
 
     Parameters
     ----------
