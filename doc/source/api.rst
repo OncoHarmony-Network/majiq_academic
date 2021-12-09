@@ -9,56 +9,293 @@ and examples, refer to the relevant chapters in the main part of the
 documentation.
 
 
-Primary classes/functions
-=========================
+Random number generation
+========================
 
 .. autosummary::
    :toctree: generated/
 
-   rng_resize
    rng_seed
+   rng_resize
+
+
+Build API
+=========
+
+Classes
+-------
+
+.. autosummary::
+   :toctree: generated/
+   :nosignatures:
+
    SJExperiment
+   SJJunctionsBins
+   SJIntronsBins
    SpliceGraph
-   Events
-   SpliceGraphReads
-   PsiCoverage
-   DPsiPrior
-   DeltaPsi
-   Heterogen
-   PsiControlsSummary
-   PsiOutliers.from_psicov
+   Exons
+   GeneIntrons
+   GeneJunctions
+   ExonConnections
 
 
-SpliceGraph
-===========
-
-SpliceGraph I/O
----------------
+Create a splicegraph from GFF3
+------------------------------
 
 .. autosummary::
    :toctree: generated/
 
    SpliceGraph.from_gff3
-   SpliceGraph.from_zarr
-   SpliceGraph.to_zarr
-   SpliceGraph.to_sqlite
 
 
-SpliceGraph components
-----------------------
+Save/load splicegraphs to zarr
+------------------------------
 
 .. autosummary::
    :toctree: generated/
 
-   SpliceGraph.contigs
-   SpliceGraph.genes
-   SpliceGraph.exons
-   SpliceGraph.introns
-   SpliceGraph.junctions
-   SpliceGraph.exon_connections
-   Contigs
-   Genes
-   Exons
-   GeneIntrons
-   GeneJunctions
-   ExonConnections
+   SpliceGraph.to_zarr
+   SpliceGraph.from_zarr
+
+
+Process BAMs for junction/intron coverage
+-----------------------------------------
+
+.. autosummary::
+   :toctree: generated/
+
+   SJExperiment.from_bam
+   SJExperiment.to_zarr
+   SJExperiment.from_zarr
+
+
+Update SpliceGraph using intron, junction coverage
+--------------------------------------------------
+
+
+Thresholds for intron and junction coverage
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. autosummary::
+   :toctree: generated/
+
+   ExperimentThresholds
+
+
+Update junctions
+~~~~~~~~~~~~~~~~
+
+.. autosummary::
+   :toctree: generated/
+
+   PassedJunctionsGenerator
+   GeneJunctions.builder
+   GroupJunctionsGenerator
+   GeneJunctions.build_group
+   GroupJunctionsGenerator.add_experiment
+   PassedJunctionsGenerator.add_group
+   PassedJunctionsGenerator.get_passed
+
+
+Update exons
+~~~~~~~~~~~~
+
+.. autosummary::
+   :toctree: generated/
+
+   Exons.infer_with_junctions
+
+
+Update introns
+~~~~~~~~~~~~~~
+
+.. autosummary::
+   :toctree: generated/
+
+   Exons.empty_introns
+   Exons.potential_introns
+   GeneIntrons.update_flags_from
+   GroupIntronsGenerator
+   GeneIntrons.build_group
+   GroupIntronsGenerator.add_experiment
+   GroupIntronsGenerator.update_introns
+   GeneIntrons.filter_passed
+
+
+Update SpliceGraph
+~~~~~~~~~~~~~~~~~~
+
+.. autosummary::
+   :toctree: generated/
+
+   SpliceGraph.from_components
+   SpliceGraph.with_updated_exon_connections
+   ExonConnections.create_connecting
+
+
+Update simplifier flags
+-----------------------
+
+.. autosummary::
+   :toctree: generated/
+
+   GeneIntrons._simplify_all
+   GeneJunctions._simplify_all
+   SimplifierGroup
+   ExonConnections.simplifier
+   SimplifierGroup.add_experiment
+   SimplifierGroup.update_connections
+
+
+Combine multiple splicegraphs together
+--------------------------------------
+
+.. autosummary::
+   :toctree: generated/
+
+   GeneJunctions.load_dataset
+   GeneJunctions.combine_datasets
+   GeneJunctions.from_dataset_and_genes
+
+
+Events API
+==========
+
+.. autosummary::
+   :toctree: generated/
+
+   Events
+   ExonConnections.lsvs
+   Events.unique_events_mask
+
+
+PsiCoverage API
+===============
+
+.. autosummary::
+   :toctree: generated/
+
+   PsiCoverage
+   PsiCoverage.from_sj_lsvs
+   PsiCoverage.to_zarr
+   PsiCoverage.to_zarr_slice_init
+   PsiCoverage.to_zarr_slice
+   PsiCoverage.from_zarr
+   PsiCoverage.updated
+   PsiCoverage.get_events
+   PsiCoverage.num_prefixes
+   PsiCoverage.prefixes
+   PsiCoverage.event_passed
+   PsiCoverage.num_passed
+   PsiCoverage.passed_min_experiments
+   PsiCoverage.sum
+   PsiCoverage.mask_events
+
+Raw coverage/posteriors
+-----------------------
+
+.. autosummary::
+   :toctree: generated/
+
+   PsiCoverage.raw_total
+   PsiCoverage.raw_coverage
+   PsiCoverage.raw_alpha
+   PsiCoverage.raw_beta
+   PsiCoverage.raw_psi_mean
+   PsiCoverage.raw_psi_std
+   PsiCoverage.raw_psi_mean_population_median
+   PsiCoverage.raw_psi_mean_population_quantile
+
+Bootstrap coverage/posteriors
+-----------------------------
+
+.. autosummary::
+   :toctree: generated/
+
+   PsiCoverage.bootstrap_total
+   PsiCoverage.bootstrap_coverage
+   PsiCoverage.bootstrap_alpha
+   PsiCoverage.bootstrap_beta
+   PsiCoverage.bootstrap_psi_mean
+   PsiCoverage.bootstrap_psi_mean_legacy
+   PsiCoverage.bootstrap_psi_std
+   PsiCoverage.bootstrap_psi_mean_population_median
+   PsiCoverage.bootstrap_psi_mean_population_quantile
+
+Beta approximation to bootstrap mixture coverage/posteriors
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. autosummary::
+   :toctree: generated/
+
+   PsiCoverage.approximate_alpha
+   PsiCoverage.approximate_beta
+   PsiCoverage.approximate_quantile
+   PsiCoverage.approximate_discretized_pmf
+
+
+Quantifier API
+==============
+
+DeltaPsi (replicate PsiCoverage)
+--------------------------------
+
+.. autosummary::
+   :toctree: generated/
+
+   DPsiPrior
+   DPsiPrior.empirical_update
+   DeltaPsi
+   DeltaPsi.dataset
+   DeltaPsi.discrete_posterior_mean
+   DeltaPsi.discrete_posterior_std
+   DeltaPsi.probability_changing
+   DeltaPsi.probability_nonchanging
+   DeltaPsi.discrete_bootstrap_posterior_mean
+   DeltaPsi.discrete_bootstrap_posterior_std
+   DeltaPsi.bootstrap_probability_changing
+   DeltaPsi.bootstrap_probability_nonchanging
+
+
+Heterogen (independent PsiCoverage)
+-----------------------------------
+
+.. autosummary::
+   :toctree: generated/
+
+   Heterogen
+   Heterogen.dataset
+   Heterogen.raw_stats
+   Heterogen.bootstrap_stats
+   Heterogen.approximate_stats
+
+
+CLIN (in development)
+---------------------
+
+Controls
+~~~~~~~~
+
+.. autosummary::
+   :toctree: generated/
+
+   PsiControlsSummary
+   PsiControlsSummary.from_psicov
+   PsiControlsSummary.from_zarr
+   PsiControlsSummary.to_zarr
+   PsiControlsSummary.get_events
+   PsiControlsSummary.q
+   PsiControlsSummary.num_passed
+   PsiControlsSummary.prefixes
+   PsiControlsSummary.passed_min_experiments
+   PsiControlsSummary.psi_median
+   PsiControlsSummary.psi_quantile
+   PsiControlsSummary.psi_range
+
+Outliers
+~~~~~~~~
+
+.. autosummary::
+   :toctree: generated/
+
+   PsiOutliers
