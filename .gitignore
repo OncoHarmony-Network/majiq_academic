@@ -6,3 +6,4 @@
 /src/new_majiq/_offsets.cpython*.so
 /src/new_majiq/sampling.cpython*.so
 /src/new_majiq/_version.py
+/doc/build/
