@@ -38,6 +38,7 @@ class SpliceGraph(object):
     """
 
     def __init__(self, sg: _SpliceGraph):
+        """Construct :class:`SpliceGraph` using object from internal C++ API"""
         self._sg: Final[_SpliceGraph] = sg
         return
 
@@ -118,26 +119,32 @@ class SpliceGraph(object):
 
     @property
     def contigs(self) -> Contigs:
+        """:class:`Contigs` for the splicegraph"""
         return Contigs(self._sg._contigs)
 
     @property
     def genes(self) -> Genes:
+        """:class:`Genes` for the splicegraph"""
         return Genes(self._sg._genes)
 
     @property
     def exons(self) -> Exons:
+        """:class:`Exons` for the splicegraph"""
         return Exons(self._sg._exons)
 
     @property
     def introns(self) -> GeneIntrons:
+        """:class:`GeneIntrons` for the splicegraph"""
         return GeneIntrons(self._sg._introns)
 
     @property
     def junctions(self) -> GeneJunctions:
+        """:class:`GeneJunctions` for the splicegraph"""
         return GeneJunctions(self._sg._junctions)
 
     @property
     def exon_connections(self) -> ExonConnections:
+        """:class:`ExonConnections` for the splicegraph"""
         return ExonConnections(self._sg._exon_connections)
 
     def to_zarr(self, path: Union[str, Path]) -> None:
