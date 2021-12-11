@@ -24,6 +24,26 @@ from .SJJunctions import SJJunctions
 
 
 class SJJunctionsBins(SJBinsReads):
+    """Per-bin read coverage over junctions
+
+    Parameters
+    ----------
+    sj_intronsbins: _SJIntronsBins
+        Underlying object binding the internal C++ API
+    strandness: ExperimentStrandness
+        strandness that was used for the experiment
+    original_path: str
+        Original path to BAM file from which coverage was derived
+    original_version, original_time: str
+        Version of MAJIQ and time BAM file was processed
+
+    See Also
+    --------
+    SJExperiment.from_bam
+    SJJunctionsBins.from_bam
+    SJJunctionsBins.from_zarr
+    """
+
     def __init__(
         self,
         sj_junctionsbins: _SJJunctionsBins,

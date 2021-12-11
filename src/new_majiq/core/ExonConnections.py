@@ -21,7 +21,17 @@ from .SimplifierGroup import SimplifierGroup, _SimplifierGroup
 
 
 class ExonConnections(object):
-    """Tracks introns/junctions associated with each exon (stranded direction)"""
+    """Map from exons to the introns and junctions that start or end from them
+
+    Parameters
+    ----------
+    exon_connections: _ExonConnections
+        Underlying object binding the internal C++ API
+    """
+
+    def __init__(self, exon_connections: _ExonConnections):
+        self._exon_connections: Final[_ExonConnections] = exon_connections
+        return
 
     @classmethod
     def create_connecting(
@@ -30,19 +40,15 @@ class ExonConnections(object):
         introns: GeneIntrons,
         junctions: GeneJunctions,
     ) -> "ExonConnections":
-        """connect input exons, introns, and gene junctions"""
+        """Create :py:class:`ExonConnections` mapping exons to introns, junctions"""
         return ExonConnections(
             _ExonConnections(
                 exons._exons, introns._gene_introns, junctions._gene_junctions
             )
         )
 
-    def __init__(self, exon_connections: _ExonConnections):
-        self._exon_connections: Final[_ExonConnections] = exon_connections
-        return
-
     def simplifier(self) -> SimplifierGroup:
-        """Create simplifier group to unsimplify introns and junctions"""
+        """Create :py:class:`SimplifierGroup` to unsimplify introns and junctions"""
         return SimplifierGroup(_SimplifierGroup(self._exon_connections))
 
     @property
@@ -63,7 +69,31 @@ class ExonConnections(object):
     def lsvs(
         self, select_lsvs: constants.SelectLSVs = constants.DEFAULT_SELECT_LSVS
     ) -> Events:
-        """construct Events for all LSVs defined by these exon connections"""
+        """construct :py:class:`Events` for all LSVs defined by exon connections
+
+        construct :py:class:`Events` for all LSVs defined by exon connections.
+        LSVs are events where
+        - all connections have different source/target exons (i.e. no exitrons)
+        - all connections are not simplified
+        - at least one event passes build filters (i.e. the event is "reliable")
+
+        Parameters
+        ----------
+        select_lsvs: constants.SelectLSVs
+            - SelectLSVs.STRICT_LSVS: select all LSVs that are either not strict
+              subsets of other events (nonredundant) or mutually redundant source
+              events
+            - SelectLSVs.PERMISSIVE_LSVS: select all LSVs that are not mutually
+              redundant targets
+            - SelectLSVs.SOURCE_LSVS: select LSVs that are source events, even
+              if they are subsets of target LSVs
+            - SelectLSVs.SOURCE_LSVS: select LSVs that are target events, even
+              if they are subsets of source LSVs
+
+        Returns
+        -------
+        Events
+        """
         if select_lsvs == constants.SelectLSVs.STRICT_LSVS:
             return Events(self._exon_connections.strict_lsvs())
         elif select_lsvs == constants.SelectLSVs.PERMISSIVE_LSVS:
@@ -78,7 +108,16 @@ class ExonConnections(object):
             )
 
     def constitutive(self) -> Events:
-        """construct Events for all constitutive events defined by ExonConnections"""
+        """construct :py:class:`Events` for all constitutive events in ExonConnections
+
+        construct :py:class:`Events` for all constitutive events in ExonConnections.
+        This means that there is only one connection between the source and
+        target exons, and the connection has passed and is not simplified.
+
+        Returns
+        -------
+        Events
+        """
         return Events(self._exon_connections.constitutive())
 
     @staticmethod

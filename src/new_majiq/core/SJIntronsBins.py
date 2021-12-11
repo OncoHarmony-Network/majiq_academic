@@ -26,6 +26,33 @@ from .SJIntrons import SJIntrons
 
 
 class SJIntronsBins(SJBinsReads):
+    """Per-bin read coverage over introns
+
+    Parameters
+    ----------
+    sj_intronsbins: _SJIntronsBins
+        Underlying object binding the internal C++ API
+    strandness: ExperimentStrandness
+        strandness that was used for the experiment
+    original_path: str
+        Original path to BAM file from which coverage was derived
+    original_version, original_time: str
+        Version of MAJIQ and time BAM file was processed
+    gene_introns_checksum, exons_checksum: Optional[int]
+        Checksum of gene introns, exons used to define regions for coverage
+
+    Notes
+    -----
+    Intron coverage is dependent on the gene introns and exons used to define
+    regions on which to assess coverage.
+
+    See Also
+    --------
+    SJExperiment.from_bam
+    SJIntronsBins.from_bam
+    SJIntronsBins.from_zarr
+    """
+
     def __init__(
         self,
         sj_intronsbins: _SJIntronsBins,

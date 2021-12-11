@@ -50,6 +50,20 @@ class SpliceGraph(object):
         junctions: GeneJunctions,
         introns: GeneIntrons,
     ) -> "SpliceGraph":
+        """Construct :py:class:`SpliceGraph` with given components
+
+        Parameters
+        ----------
+        contigs: Contigs
+        genes: Genes
+        exons: Exons
+        junctions: GeneJunctions
+        introns: GeneIntrons
+
+        Returns
+        -------
+        SpliceGraph
+        """
         return SpliceGraph(
             _SpliceGraph(
                 contigs._contigs,
@@ -63,7 +77,16 @@ class SpliceGraph(object):
     def with_updated_exon_connections(
         self, exon_connections: ExonConnections
     ) -> "SpliceGraph":
-        """convenience function to build splicegraph with same contigs/genes"""
+        """Create :py:class:`SpliceGraph` from exon connections with same genes
+
+        Parameters
+        ----------
+        exon_connections: ExonConnections
+
+        Returns
+        -------
+        SpliceGraph
+        """
         return SpliceGraph.from_components(
             self.contigs,
             self.genes,
@@ -79,6 +102,18 @@ class SpliceGraph(object):
         process_ir: bool = constants.DEFAULT_BUILD_PROCESS_IR,
         gff3_types: Dict[str, GFF3FeatureType] = constants.DEFAULT_BUILD_GFF3TYPES,
     ) -> "SpliceGraph":
+        """Create :py:class:`SpliceGraph` from GFF3 transcriptome annotations
+
+        Parameters
+        ----------
+        path: Union[str, Path]
+            Path to GFF3 file (can be gzipped)
+        process_ir: bool
+            Identify annotated introns. This should generally be True
+        gff3_types: Dict[str, GFF3FeatureType]
+            How GFF3 lines will be parsed hierarchically for genes, transcript,
+            and exon definitions
+        """
         return SpliceGraph(_SpliceGraph.from_gff3(str(path), process_ir, gff3_types))
 
     @property
@@ -106,7 +141,13 @@ class SpliceGraph(object):
         return ExonConnections(self._sg._exon_connections)
 
     def to_zarr(self, path: Union[str, Path]) -> None:
-        """Serialize splicegraph to zarr format"""
+        """Save :py:class:`SpliceGraph` to specified path
+
+        Parameters
+        ----------
+        path: Union[str, Path]
+            Path for zarr store with SpliceGraph components
+        """
         if Path(path).exists():
             raise ValueError(
                 f"Will not save splicegraph to already existing file {path}."
@@ -124,7 +165,17 @@ class SpliceGraph(object):
     def from_zarr(
         cls, path: Union[str, Path], genes: Optional[Genes] = None
     ) -> "SpliceGraph":
-        """Load SpliceGraph from specified path"""
+        """Load :py:class:`SpliceGraph` from specified path
+
+        Parameters
+        ----------
+        path: Union[str, Path]
+            Path where splicegraph is stored in zarr format
+        genes: Optional[Genes]
+            If specified, :py:class:`Genes` that has already been loaded.
+            Used when multiple objects refer to the same set of genes.
+            Otherwise, load from path.
+        """
         if genes is None:
             contigs = Contigs.from_zarr(path)
             genes = Genes.from_zarr(path, contigs)

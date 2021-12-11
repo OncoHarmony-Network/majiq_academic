@@ -25,19 +25,28 @@ if TYPE_CHECKING:
 
 
 class GeneJunctions(GeneConnections):
+    """Collection of junctions per gene and their coordinates, flags, and exons"""
+
     def __init__(self, gene_junctions: _GeneJunctions):
         super().__init__(gene_junctions)
         return
 
     def build_group(self, exons: Exons) -> "GroupJunctionsGenerator":
-        """Create accumulator of per-experiment passed junctions for build group"""
-        from new_majiq.PassedJunctions import GroupJunctionsGenerator
+        """Create :py:class:`GroupJunctionsGenerator` starting from these junctions and exons
+
+        Parameters
+        ----------
+        exons: Exons
+            Exons over the same genes as the junctions, which enable
+            identification of most likely genes to which novel junctions belong
+        """
+        from .PassedJunctions import GroupJunctionsGenerator
 
         return GroupJunctionsGenerator(self, exons)
 
     def builder(self) -> "PassedJunctionsGenerator":
-        """Create accumulator of passed junctions from build groups"""
-        from new_majiq.PassedJunctions import PassedJunctionsGenerator
+        """Create :py:class:`PassedJunctionsGenerator` starting from these junctions"""
+        from .PassedJunctions import PassedJunctionsGenerator
 
         return PassedJunctionsGenerator(self)
 
@@ -84,15 +93,52 @@ class GeneJunctions(GeneConnections):
 
     @staticmethod
     def load_dataset(path: Union[str, Path]) -> xr.Dataset:
-        """load junctions table from file"""
+        """Load junctions from zarr file as :py:class:`xr.Dataset`
+
+        Load junctions from zarr file as :py:class:`xr.Dataset`. This is a more
+        lightweight representation of junctions when it is not necessary to
+        connect to gene or contig information
+
+        Parameters
+        ----------
+        path: Union[str, Path]
+            Path to where :py:class:`GeneJunctions` are saved (this includes
+            splicegraphs)
+
+        Returns
+        -------
+        xr.Dataset
+        """
         with xr.open_zarr(path, group=constants.NC_GENEJUNCTIONS) as df:
             return df.load()
 
     @staticmethod
     def combine_datasets(dfs: Sequence[xr.Dataset]) -> xr.Dataset:
-        """combine junctions found in multiple splicegraphs
+        """Aggregate multiple junctions :py:class:`xr.Dataset` to single one
 
-        Assumes that they all share the same genes
+        Aggregate multiple junctions :py:class:`xr.Dataset` to single one.
+        These datasets should be as what is found by
+        :py:meth:`GeneJunctions.load_dataset`. Repeated junctions have flags
+        summarized using "all" rule on denovo, not passed, and simplified.
+
+        Parameters
+        ----------
+        dfs: Sequence[xr.Dataset]
+            sequence of junction datasets as can be loaded by
+            :py:meth:`GeneJunctions.load_dataset`
+
+        Returns
+        -------
+        xr.Dataset
+            junction dataset aggregating the input datasets
+
+        Notes
+        -----
+        This requires each dataset to be simultaneously loaded in memory and
+        may not be the most efficient approach. Furthermore, it assumes,
+        without checking, that the datasets are referring to the same genes
+        with gene_idx. In the future, we may replace this functionality with a
+        C++ class that accumulates GeneJunctions one at a time.
         """
         return (
             xr.concat(
@@ -126,6 +172,21 @@ class GeneJunctions(GeneConnections):
 
     @staticmethod
     def from_dataset_and_genes(df: xr.Dataset, genes: Genes) -> "GeneJunctions":
+        """Create :py:class:`GeneJunctions` from junction dataset and :py:class:`Genes`
+
+        Parameters
+        ----------
+        df: xr.Dataset
+            Dataset of junctions as created by
+            :py:meth:`GeneJunctions.load_dataset` or
+            :py:meth:`GeneJunctions.combine_datasets`
+        genes: Genes
+            Genes matched to gene_id in input dataset
+
+        Returns
+        -------
+        GeneJunctions
+        """
         return GeneJunctions(
             _GeneJunctions(
                 genes._genes,
@@ -143,7 +204,7 @@ class GeneJunctions(GeneConnections):
         path: Union[str, Path],
         genes: Optional[Genes] = None,
     ) -> "GeneJunctions":
-        """Read exons from zarr file
+        """Load :py:class:`GeneJunctions` from specified path
 
         Parameters
         ----------

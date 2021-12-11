@@ -274,6 +274,17 @@ class PsiControlsSummary(object):
         introns: GeneIntrons,
         junctions: GeneJunctions,
     ) -> Events:
+        """Construct :py:class:`Events` using saved dataset and introns, junctions
+
+        Parameters
+        ----------
+        introns: GeneIntrons
+        junctions: GeneJunctions
+
+        Returns
+        -------
+        Events
+        """
         if self.events.intron_hash != introns.checksum():
             raise ValueError("GeneIntrons checksums do not match")
         if self.events.junction_hash != junctions.checksum():

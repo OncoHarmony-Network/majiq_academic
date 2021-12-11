@@ -33,10 +33,17 @@ Classes
    SJJunctionsBins
    SJIntronsBins
    SpliceGraph
+   Contigs
+   Genes
    Exons
    GeneIntrons
    GeneJunctions
    ExonConnections
+   ExperimentThresholds
+   GroupJunctionsGenerator
+   PassedJunctionsGenerator
+   GroupIntronsGenerator
+   SimplifierGroup
 
 
 Create a splicegraph from GFF3
@@ -67,19 +74,12 @@ Process BAMs for junction/intron coverage
    SJExperiment.from_bam
    SJExperiment.to_zarr
    SJExperiment.from_zarr
+   SJExperiment.introns
+   SJExperiment.junctions
 
 
 Update SpliceGraph using intron, junction coverage
 --------------------------------------------------
-
-
-Thresholds for intron and junction coverage
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-.. autosummary::
-   :toctree: generated/
-
-   ExperimentThresholds
 
 
 Update junctions
@@ -88,9 +88,7 @@ Update junctions
 .. autosummary::
    :toctree: generated/
 
-   PassedJunctionsGenerator
    GeneJunctions.builder
-   GroupJunctionsGenerator
    GeneJunctions.build_group
    GroupJunctionsGenerator.add_experiment
    PassedJunctionsGenerator.add_group
@@ -115,7 +113,6 @@ Update introns
    Exons.empty_introns
    Exons.potential_introns
    GeneIntrons.update_flags_from
-   GroupIntronsGenerator
    GeneIntrons.build_group
    GroupIntronsGenerator.add_experiment
    GroupIntronsGenerator.update_introns
@@ -141,7 +138,8 @@ Update simplifier flags
 
    GeneIntrons._simplify_all
    GeneJunctions._simplify_all
-   SimplifierGroup
+   GeneIntrons._unsimplify_all
+   GeneJunctions._unsimplify_all
    ExonConnections.simplifier
    SimplifierGroup.add_experiment
    SimplifierGroup.update_connections
@@ -161,35 +159,112 @@ Combine multiple splicegraphs together
 Events API
 ==========
 
+Classes
+-------
+
+.. autosummary::
+   :toctree: generated/
+   :nosignatures:
+
+   Events
+   UniqueEventsMasks
+
+Create/save events objects
+--------------------------
+
 .. autosummary::
    :toctree: generated/
 
-   Events
    ExonConnections.lsvs
+   ExonConnections.constitutive
+   PsiCoverage.get_events
+   PsiControlsSummary.get_events
+   Events.to_zarr
+   Events.from_zarr
+
+Work with events objects
+------------------------
+
+.. autosummary::
+   :toctree: generated/
+
    Events.unique_events_mask
+   Events.exons
+   Events.introns
+   Events.junctions
+   Events.df
+   Events.ec_dataframe
+
+Information on unique events
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. autosummary::
+   :toctree: generated/
+
+   Events.e_idx
+   Events.ref_exon_idx
+   Events.event_type
+   Events.ec_idx_start
+   Events.ec_idx_end
+   Events.connections_slice_for_event
+
+Information on connections per event
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. autosummary::
+   :toctree: generated/
+
+   Events.ec_idx
+   Events.is_intron
+   Events.connection_idx
+   Events.connection_gene_idx
+   Events.connection_start
+   Events.connection_end
+   Events.connection_denovo
+   Events.connection_ref_exon_idx
+   Events.connection_other_exon_idx
 
 
 PsiCoverage API
 ===============
 
+Classes
+-------
+
+.. autosummary::
+   :toctree: generated/
+   :nosignatures:
+
+   PsiCoverage
+
+Create/save PsiCoverage
+-----------------------
+
 .. autosummary::
    :toctree: generated/
 
-   PsiCoverage
    PsiCoverage.from_sj_lsvs
    PsiCoverage.to_zarr
    PsiCoverage.to_zarr_slice_init
    PsiCoverage.to_zarr_slice
    PsiCoverage.from_zarr
    PsiCoverage.updated
+   PsiCoverage.sum
+   PsiCoverage.mask_events
+
+Events/prefixes with coverage
+-----------------------------
+
+.. autosummary::
+   :toctree: generated/
+
+   PsiCoverage.num_connections
    PsiCoverage.get_events
    PsiCoverage.num_prefixes
    PsiCoverage.prefixes
    PsiCoverage.event_passed
    PsiCoverage.num_passed
    PsiCoverage.passed_min_experiments
-   PsiCoverage.sum
-   PsiCoverage.mask_events
 
 Raw coverage/posteriors
 -----------------------
@@ -212,6 +287,7 @@ Bootstrap coverage/posteriors
 .. autosummary::
    :toctree: generated/
 
+   PsiCoverage.num_bootstraps
    PsiCoverage.bootstrap_total
    PsiCoverage.bootstrap_coverage
    PsiCoverage.bootstrap_alpha
@@ -283,7 +359,6 @@ Controls
    PsiControlsSummary.from_psicov
    PsiControlsSummary.from_zarr
    PsiControlsSummary.to_zarr
-   PsiControlsSummary.get_events
    PsiControlsSummary.q
    PsiControlsSummary.num_passed
    PsiControlsSummary.prefixes

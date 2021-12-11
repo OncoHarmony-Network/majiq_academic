@@ -20,7 +20,7 @@ from .SJIntronsBins import SJIntronsBins
 
 
 class GroupIntronsGenerator(object):
-    """Count number of experiments that have passed each input intron"""
+    """Accumulator of :py:class:`SJIntronsBins` that pass per-experiment thresholds to update :py:class:`GeneIntrons` flags"""
 
     def __init__(self, introns: GeneIntrons):
         self._group: Final[_GroupIntronsGenerator] = _GroupIntronsGenerator(
@@ -52,13 +52,31 @@ class GroupIntronsGenerator(object):
         sj_introns: SJIntronsBins,
         thresholds: ExperimentThresholds = constants.DEFAULT_BUILD_EXP_THRESHOLDS,
     ) -> "GroupIntronsGenerator":
-        """Add input experiment to build group"""
+        """Add :py:class:`SJIntronsBins` experiment to build group
+
+        Parameters
+        ----------
+        sj_introns: SJIntronsBins
+            Per-bin read coverage over introns
+        thresholds: ExperimentThresholds
+            Per-experiment thresholds to determine if there is enough evidence
+            for each intron
+        """
         self._group.add_experiment(sj_introns._sj_intronsbins, thresholds)
         return self
 
     def update_introns(
         self, min_experiments: float = constants.DEFAULT_BUILD_MINEXPERIMENTS
     ) -> None:
-        """Pass introns in place that have passed enough experiments, reset counts"""
+        """In-place update of original :py:class:`GeneIntrons` flags passing group filters
+
+        Parameters
+        ----------
+        min_experiments: float
+            Threshold for group filters. This specifies the fraction (value <
+            1) or absolute number (value >= 1) of experiments that must pass
+            individually in the build group that must pass in order for the
+            intron to be updated as being reliable
+        """
         self._group.update_introns(min_experiments)
         return

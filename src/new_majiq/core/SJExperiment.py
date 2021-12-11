@@ -26,7 +26,7 @@ from .SpliceGraphReads import SpliceGraphReads
 
 
 class SJExperiment(object):
-    """Per-bin read coverage over introns and junctions in the same experiment
+    """:py:class:`SJIntronsBins` and :py:class:`SJJunctionsBins` for the same experiment
 
     Parameters
     ----------
@@ -54,31 +54,47 @@ class SJExperiment(object):
 
     @property
     def introns(self) -> SJIntronsBins:
-        """Bin reads for introns for this experiment"""
+        """:py:class:`SJIntronsBins` with intron coverage for this experiment"""
         return self._introns
 
     @property
     def junctions(self) -> SJJunctionsBins:
-        """Bin reads for junctions for this experiment"""
+        """:py:class:`SJJunctionsBins` with junctioncoverage for this experiment"""
         return self._junctions
 
     @property
     def original_path(self) -> str:
+        """Path to BAM file that was processed for coverage"""
         return self.junctions.original_path
 
     @property
     def original_version(self) -> str:
+        """Version of MAJIQ that was used to process the coverage"""
         return self.junctions.original_version
 
     @classmethod
     def from_zarr(cls, path: Union[str, Path]) -> "SJExperiment":
-        """Load introns and junctions reads from specified path"""
+        """Load :py:class:`SJExperiment` from specified path
+
+        Parameters
+        ----------
+        path: Union[str, Path]
+            Path where coverage is stored in zarr format
+        """
         return SJExperiment(
             SJIntronsBins.from_zarr(path), SJJunctionsBins.from_zarr(path)
         )
 
     def to_zarr(self, path: Union[str, Path], consolidated: bool = True) -> None:
-        """Serialize to zarr format"""
+        """Save :py:class:`SJExperiment` to specified path
+
+        Parameters
+        ----------
+        path: Union[str, Path]
+            Path for zarr store with intron and junction coverage
+        consolidated: bool
+            Finalize metadata for zarr file
+        """
         self.junctions.to_zarr(path, consolidated=False)
         self.introns.to_zarr(path, consolidated=True, check_experiment_if_exists=False)
         return
@@ -96,7 +112,12 @@ class SJExperiment(object):
         auto_minjunctions: int = constants.DEFAULT_BAM_STRAND_MINJUNCTIONS,
         auto_mediantolerance: float = constants.DEFAULT_BAM_STRAND_MINDEVIATION,
     ) -> "SJExperiment":
-        """Load SJ information from path using given splicegraph, strandness
+        """Load intron and junction coverage from BAM file
+
+        Load intron and junction coverage from BAM file using splicegraph to
+        define intron regions for coverage. If strandness is "auto", use
+        coverage assigned to each strand on known junctions to infer
+        experimental strandness.
 
         Parameters
         ----------

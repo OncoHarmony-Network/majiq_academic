@@ -16,7 +16,7 @@ import new_majiq.stats as stats
 from .core.Contigs import Contigs
 from .core.DeltaPsi import DeltaPsi
 from .core.DPsiPrior import DPsiPrior
-from .core.Events import Events
+from .core.Events import Events, UniqueEventsMasks
 from .core.EventsCoverage import EventsCoverage
 from .core.ExonConnections import ExonConnections
 from .core.Exons import Exons
@@ -99,6 +99,7 @@ __all__ = [
     "constants",
     "Contigs",
     "Events",
+    "UniqueEventsMasks",
     "EventsCoverage",
     "ExonConnections",
     "Exons",

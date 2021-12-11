@@ -85,11 +85,11 @@ class GeneConnections(GeneRegions):
         return
 
     def _simplify_all(self) -> None:
-        """Set all connections to be simplified"""
+        """Set all connections to the simplified state"""
         self._gene_connections._simplify_all()
         return
 
     def _unsimplify_all(self) -> None:
-        """Set all connections to be unsimplified"""
+        """Set all connections to the unsimplified state"""
         self._gene_connections._unsimplify_all()
         return

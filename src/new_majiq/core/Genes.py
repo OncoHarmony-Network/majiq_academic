@@ -21,7 +21,7 @@ from .Contigs import Contigs
 
 
 class Genes(ContigRegions):
-    """Genes defined on contigs used by a splicegraph"""
+    """Collection of genes and their coordinates"""
 
     def __init__(self, genes: _Genes):
         super().__init__(genes)

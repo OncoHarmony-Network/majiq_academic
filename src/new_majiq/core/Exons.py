@@ -25,12 +25,22 @@ if TYPE_CHECKING:
 
 
 class Exons(GeneRegions):
+    """Collection of exons per gene and their annotated/updated coordinates"""
+
     def __init__(self, exons: _Exons):
         super().__init__(exons)
         return
 
     def infer_with_junctions(self, junctions: "GeneJunctions") -> "Exons":
-        """Infer denovo exons/extended exon boundaries given denovo junctions"""
+        """Return updated :py:class:`Exons` accommodating novel junctions per gene
+
+        Parameters
+        ----------
+        junctions: GeneJunctions
+            Junctions over same genes. Novel exons will be added or have
+            boundaries extended compared to original annotated exons to match
+            the junctions
+        """
         from new_majiq.internals import SpliceGraph as _SpliceGraph
 
         return Exons(_SpliceGraph.infer_exons(self._exons, junctions._gene_junctions))
@@ -50,26 +60,27 @@ class Exons(GeneRegions):
     def potential_introns(
         self, make_simplified: bool = constants.DEFAULT_BUILD_DENOVO_SIMPLIFIED
     ) -> "GeneIntrons":
-        """denovo, nonpassed introns corresponding to these exons
+        """:py:class:`GeneIntrons` enumerating all possible introns between exons
+
+        Return :py:class:`GeneIntrons` enumerating all possible introns between
+        exons. All introns will be initially marked as de novo and not passing
+        filters (use :py:meth:`GeneIntrons.update_flags_from` to update these
+        flags)
 
         Parameters
         ----------
         make_simplified: bool
-            Simplified status of resulting introns
+            Indicate whether introns should start in the simplified state
+            (requires subsequently performing simplification with
+            :py:class:`SimplifierGroup` to identify which introns pass
+            simplification thresholds)
         """
-        from new_majiq.GeneIntrons import GeneIntrons
+        from .GeneIntrons import GeneIntrons
 
         return GeneIntrons(self._exons.potential_introns(make_simplified))
 
     def empty_introns(self) -> "GeneIntrons":
-        """Get empty introns to go with exons
-
-        Note
-        ----
-        Currently doing unncessary work by inferring all introns.
-        But, it gets the job done since potential_introns starts off denovo and
-        not passed
-        """
+        """Return empty :py:class:`GeneIntrons` that match these exons"""
         return self.potential_introns().filter_passed()
 
     @property

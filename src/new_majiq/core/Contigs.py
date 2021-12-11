@@ -20,7 +20,7 @@ from ._workarounds import _load_zerodim_variables
 
 
 class Contigs(object):
-    """Contigs/chromosomes used by a splicegraph"""
+    """Collection of contigs/chromosomes on which genes can be defined"""
 
     def __init__(self, contigs: _Contigs):
         self._contigs: Final[_Contigs] = contigs

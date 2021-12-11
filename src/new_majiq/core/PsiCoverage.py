@@ -113,21 +113,31 @@ class PsiCoverage(object):
 
     @property
     def num_connections(self) -> int:
+        """Total number of connections over all events where coverage defined"""
         return self.df.sizes["ec_idx"]
 
     @property
     def num_bootstraps(self) -> int:
+        """Number of bootstrap replicates used for bootstraped coverage estimates"""
         return self.df.sizes["bootstrap_replicate"]
 
     @property
     def num_prefixes(self) -> int:
+        """Number of independent units of analysis"""
         return self.df.sizes["prefix"]
 
     @property
     def prefixes(self) -> List[str]:
+        """Prefixes: Names of independent units of analysis
+
+        Names of independent units of analysis (e.g. experiments, aggregations
+        over experiments). Name derived from prefixes of BAM files used as
+        experiment names.
+        """
         return self.df["prefix"].values.tolist()
 
     def __repr__(self) -> str:
+        """String representation of PsiCoverage"""
         MAX_PREFIXES_END = 1  # how many prefixes on either end to display
         if self.num_prefixes > 2 * MAX_PREFIXES_END:
             print_prefixes_list = [
@@ -144,7 +154,7 @@ class PsiCoverage(object):
         )
 
     def __getitem__(self, prefixes) -> "PsiCoverage":
-        """Get subset of PsiCoverage corresponding to selected prefixes"""
+        """Subset :py:class:`PsiCoverage` to selected prefixes"""
         if isinstance(prefixes, str):
             # make sure that prefixes is a sequence
             prefixes = [prefixes]
@@ -152,80 +162,119 @@ class PsiCoverage(object):
 
     @property
     def event_passed(self) -> xr.DataArray:
-        """True if event passed per event connection"""
+        """array(prefix, ec_idx) indicating if event passed"""
         return self.df["event_passed"]
 
     @property
     def event_size(self) -> xr.DataArray:
-        """Size of event each event connection belongs to"""
+        """array(ec_idx) total number of connections from same event
+
+        Number of connections belonging to event for each event connection,
+        which is used to set the parameters for the prior distribution
+        """
         return self.df["event_size"]
 
     @property
     def lsv_offsets(self) -> xr.DataArray:
-        """Offsets into ec_idx for LSVs (start/end)"""
+        """array(offset_idx) offsets for events into ec_idx"""
         return self.df["lsv_offsets"]
 
     @property
     def lsv_idx(self) -> xr.DataArray:
-        """Index identifier of the LSV to which each event connection belongs"""
+        """array(ec_idx) index identifying event it belongs to"""
         return self.df["lsv_idx"]
 
     @property
     def raw_total(self) -> xr.DataArray:
-        """Raw total reads across event per event connection"""
+        """array(prefix, ec_idx) raw total reads over event
+
+        py:class:`xr.DataArray` (prefix, ec_idx) raw total reads over event
+        (i.e. sum over all event connections per event)
+        """
         return self.df["raw_total"]
 
     @property
     def raw_psi(self) -> xr.DataArray:
-        """Percentage of self.raw_total attributable to each event connection"""
+        """array(prefix, ec_idx) percentage of raw_total for connection
+
+        py:class:`xr.DataArray` (prefix, ec_idx) percentage of raw_total for
+        connection (maximum likelihood estimate of PSI over raw reads)
+        """
         return self.df["raw_psi"]
 
     @property
     def bootstrap_total(self) -> xr.DataArray:
-        """Bootstrapped total reads across event per event connection"""
+        """array(prefix, ec_idx, bootstrap_replicate) bootstrapped raw_total
+
+        py:class:`xr.DataArray` (prefix, ec_idx, bootstrap_replicate)
+        bootstrapped total reads over event (i.e. sum over all event
+        connections per event)
+        """
         return self.df["bootstrap_total"]
 
     @property
     def bootstrap_psi(self) -> xr.DataArray:
-        """Percentage of self.bootstrap_total attributable to each event connection"""
+        """array(prefix, ec_idx, bootstrap_replicate) bootstrapped raw_psi
+
+        py:class:`xr.DataArray` (prefix, ec_idx, bootstrap_replicate)
+        percentage of bootstrap_total for connection (maximum likelihood
+        estimate of PSI over raw reads)
+        """
         return self.df["bootstrap_psi"]
 
     @cached_property
     def raw_coverage(self) -> xr.DataArray:
-        """Infer LSV coverage at specific event connection from psi/total"""
+        """array(prefix, ec_idx) coverage for individual connection (psi * total)"""
         return self.raw_psi * self.raw_total
 
     @cached_property
     def bootstrap_coverage(self) -> xr.DataArray:
-        """Infer LSV coverage at specific event connection from psi/total"""
+        """array(prefix, ec_idx, bootstrap_replicate) bootstrapped raw_coverage"""
         return self.bootstrap_psi * self.bootstrap_total
 
     @cached_property
     def alpha_prior(self) -> xr.DataArray:
+        """array(ec_idx) alpha parameter of prior distribution on PSI for connection"""
         return 1 / self.event_size.astype(self.raw_psi.dtype)
 
     @cached_property
     def beta_prior(self) -> xr.DataArray:
+        """array(ec_idx) beta parameter of prior distribution on PSI for connection"""
         return 1 - self.alpha_prior
 
     @cached_property
     def raw_alpha(self) -> xr.DataArray:
+        """array(prefix, ec_idx) alpha parameter of raw posterior"""
         return (self.alpha_prior + self.raw_coverage).where(self.event_passed)
 
     @cached_property
     def bootstrap_alpha(self) -> xr.DataArray:
+        """array(prefix, ec_idx, bootstrap_replicate) alpha parameter of bootstrapped posterior"""
         return (self.alpha_prior + self.bootstrap_coverage).where(self.event_passed)
 
     @cached_property
     def raw_beta(self) -> xr.DataArray:
+        """array(prefix, ec_idx) beta parameter of raw posterior"""
         return 1 + self.raw_total - self.raw_alpha
 
     @cached_property
     def bootstrap_beta(self) -> xr.DataArray:
+        """array(prefix, ec_idx, bootstrap_replicate) beta parameter of bootstrapped posterior"""
         return 1 + self.bootstrap_total - self.bootstrap_alpha
 
     @cached_property
     def _approximate_params(self) -> Tuple[xr.DataArray, xr.DataArray]:
+        """Beta distribution parameters matching mean, variance of bootstrap mixture
+
+        In many cases, we operate on the bootstrapped distributions as a single
+        distribution by treating it as a uniform mixture over bootstrap
+        replicates.
+        This mixture is an poorly-behaved model for fixed number of bootstrap replicates as the total coverage increases (the bootstrap replicates behave as atoms).
+        This motivates making a smooth approximation by a single beta
+        distribution.
+        Here, we approximate the beta mixture by matching mean and variance,
+        which we prefer in most cases.
+        """
         _params = xr.apply_ufunc(
             bm.approximation,
             self.bootstrap_alpha,
@@ -241,42 +290,80 @@ class PsiCoverage(object):
 
     @property
     def approximate_alpha(self) -> xr.DataArray:
+        """array(prefix, ec_idx) alpha parameter of approximated bootstrap posterior
+
+        In many cases, we operate on the bootstrapped distributions as a single
+        distribution by treating it as a uniform mixture over bootstrap
+        replicates.
+        This mixture is an poorly-behaved model for fixed number of bootstrap replicates as the total coverage increases (the bootstrap replicates behave as atoms).
+        This motivates making a smooth approximation by a single beta
+        distribution.
+        Here, we approximate the beta mixture by matching mean and variance,
+        which we prefer in most cases.
+        """
         return self._approximate_params[0]
 
     @property
     def approximate_beta(self) -> xr.DataArray:
+        """array(prefix, ec_idx) beta parameter of approximated bootstrap posterior
+
+        In many cases, we operate on the bootstrapped distributions as a single
+        distribution by treating it as a uniform mixture over bootstrap
+        replicates.
+        This mixture is an poorly-behaved model for fixed number of bootstrap replicates as the total coverage increases (the bootstrap replicates behave as atoms).
+        This motivates making a smooth approximation by a single beta
+        distribution.
+        Here, we approximate the beta mixture by matching mean and variance,
+        which we prefer in most cases.
+        """
         return self._approximate_params[1]
 
     @cached_property
     def raw_posterior_mean(self) -> xr.DataArray:
+        """array(prefix, ec_idx) means of raw posterior distribution on PSI"""
         return self.raw_alpha / np.add(1, self.raw_total)
 
     @cached_property
     def raw_posterior_variance(self) -> xr.DataArray:
+        """array(prefix, ec_idx) variances of raw posterior distribution on PSI"""
         mean = self.raw_posterior_mean
         return mean * np.subtract(1, mean) / np.add(1, self.raw_total)
 
     @cached_property
     def raw_posterior_std(self) -> xr.DataArray:
+        """array(prefix, ec_idx) standard deviations of raw posterior distribution"""
         return cast(xr.DataArray, np.sqrt(self.raw_posterior_variance))
 
     @property
     def raw_psi_mean(self) -> xr.DataArray:
-        """alias for raw_posterior_mean"""
+        """array(prefix, ec_idx) means of raw posterior distribution on PSI
+
+        array(prefix, ec_idx) means of raw posterior distribution on PSI.
+        Alias for :py:meth:`PsiCoverage.raw_posterior_mean`
+        """
         return self.raw_posterior_mean
 
     @property
     def raw_psi_variance(self) -> xr.DataArray:
-        """alias for raw_posterior_variance"""
+        """array(prefix, ec_idx) variances of raw posterior distribution on PSI
+
+        array(prefix, ec_idx) variances of raw posterior distribution on PSI.
+        Alias for :py:meth:`PsiCoverage.raw_posterior_variance`
+        """
         return self.raw_posterior_variance
 
     @property
     def raw_psi_std(self) -> xr.DataArray:
-        """alias for raw_posterior_std"""
+        """array(prefix, ec_idx) standard deviations of raw posterior distribution
+
+        array(prefix, ec_idx) standard deviations of raw posterior distribution
+        on PSI. Alias for :py:meth:`PsiCoverage.raw_posterior_std`
+        """
         return self.raw_posterior_std
 
     @cached_property
     def _bootstrap_moments(self) -> Tuple[xr.DataArray, xr.DataArray]:
+        """Compute mean, variance of bootstrap posterior mixture"""
         _moments = xr.apply_ufunc(
             bm.moments,
             self.bootstrap_alpha,
@@ -292,24 +379,55 @@ class PsiCoverage(object):
 
     @property
     def bootstrap_posterior_mean(self) -> xr.DataArray:
+        """array(prefix, ec_idx) means of mixtures of bootstrapped posteriors
+
+        array(prefix, ec_idx) means of mixture of bootstrapped posterior
+        distribution on PSI
+        """
         return self._bootstrap_moments[0]
 
     @property
     def bootstrap_posterior_variance(self) -> xr.DataArray:
+        """array(prefix, ec_idx) variances of mixtures of bootstrapped posteriors
+
+        array(prefix, ec_idx) variances of mixtures of bootstrapped posterior
+        distributions on PSI
+        """
         return self._bootstrap_moments[1]
 
     @cached_property
     def bootstrap_posterior_std(self) -> xr.DataArray:
+        """array(prefix, ec_idx) standard deviations of mixtures of bootstrapped posteriors
+
+        array(prefix, ec_idx) standard deviations of mixtures of bootstrapped
+        posterior distributions on PSI
+        """
         return cast(xr.DataArray, np.sqrt(self.bootstrap_posterior_variance))
 
     @property
     def bootstrap_psi_mean(self) -> xr.DataArray:
-        """alias for bootstrap_posterior_mean"""
+        """array(prefix, ec_idx) means of mixtures of bootstrapped posteriors
+
+        array(prefix, ec_idx) means of mixture of bootstrapped posterior
+        distribution on PSI.
+        Alias for `:py:meth:`PsiCoverage.bootstrap_posterior_mean`
+        """
         return self.bootstrap_posterior_mean
 
     @cached_property
     def bootstrap_psi_mean_legacy(self) -> xr.DataArray:
-        """old calculation of bootstrap psi mean where summarizing by median"""
+        """array(prefix, ec_idx) median of means of bootstrapped posteriors
+
+        array(prefix, ec_idx) median of means of bootstrapped posterior
+        distributions on PSI.
+
+        Notes
+        -----
+        This is what was reported in MAJIQ v1 and v2.
+        We have observed that if we increase the number of bootstrap replicates,
+        both estimates tend close (but not exactly) to the raw posterior mean,
+        which we now prefer.
+        """
         return xr.apply_ufunc(
             bm.means_median,
             self.bootstrap_alpha,
@@ -320,12 +438,22 @@ class PsiCoverage(object):
 
     @property
     def bootstrap_psi_variance(self) -> xr.DataArray:
-        """alias for bootstrap_posterior_variance"""
+        """array(prefix, ec_idx) variances of mixtures of bootstrapped posteriors
+
+        array(prefix, ec_idx) variances of mixtures of bootstrapped posterior
+        distributions on PSI.
+        Alias for `:py:meth:`PsiCoverage.bootstrap_posterior_variance`
+        """
         return self.bootstrap_posterior_variance
 
     @property
     def bootstrap_psi_std(self) -> xr.DataArray:
-        """alias for bootstrap_posterior_std"""
+        """array(prefix, ec_idx) standard deviations of mixtures of bootstrapped posteriors
+
+        array(prefix, ec_idx) standard deviations of mixtures of bootstrapped
+        posterior distributions on PSI.
+        Alias for `:py:meth:`PsiCoverage.bootstrap_posterior_std`
+        """
         return self.bootstrap_posterior_std
 
     @staticmethod
@@ -362,7 +490,25 @@ class PsiCoverage(object):
         self,
         quantiles: Union[xr.DataArray, Sequence[float]] = [0.1, 0.9],
     ) -> xr.DataArray:
-        """Get quantiles of bootstrap posterior"""
+        """Compute quantiles of mixture of bootstrapped posterior distributions
+
+        Parameters
+        ----------
+        quantiles: Union[xr.DataArray, Sequence[float]]
+            quantiles of distribution to compute
+
+        Returns
+        -------
+        xr.DataArray
+            Return array(ec_idx, ...) of quantiles per connection. If
+            `quantiles` is not :py:class:`xr.DataArray`, dimension over
+            quantiles will be "quantiles"
+
+        Notes
+        -----
+        Please use :py:meth:`PsiCoverage.approximate_quantile` instead, which
+        is faster, and what we think is a better representation of PSI
+        """
         return self._compute_posterior_quantile(
             self.bootstrap_alpha, self.bootstrap_beta, quantiles=quantiles
         )
@@ -371,7 +517,24 @@ class PsiCoverage(object):
         self,
         quantiles: Union[xr.DataArray, Sequence[float]] = [0.1, 0.9],
     ) -> xr.DataArray:
-        """Get quantiles of approximate bootstrap posterior"""
+        """Compute quantiles of approximate/smoothed bootstrapped posterior
+
+        Parameters
+        ----------
+        quantiles: Union[xr.DataArray, Sequence[float]]
+            quantiles of distribution to compute
+
+        Returns
+        -------
+        xr.DataArray
+            Return array(ec_idx, ...) of quantiles per connection. If
+            `quantiles` is not :py:class:`xr.DataArray`, dimension over
+            quantiles will be "quantiles"
+
+        See Also
+        --------
+        :py:meth:`PsiCoverage.bootstrap_quantile`
+        """
         return self._compute_posterior_quantile(
             self.approximate_alpha, self.approximate_beta, quantiles=quantiles
         )
@@ -414,7 +577,14 @@ class PsiCoverage(object):
     def bootstrap_discretized_pmf(
         self, nbins: int = constants.DEFAULT_QUANTIFY_PSIBINS
     ) -> xr.DataArray:
-        """Get discretized PMF with specified number of bins"""
+        """Compute discretized PMF of bootstrap posterior mixture
+
+        Parameters
+        ----------
+        nbins: int
+            Number of uniform bins on [0, 1] on which probability mass will be
+            computed
+        """
         return self._compute_posterior_discretized_pmf(
             self.bootstrap_alpha, self.bootstrap_beta, nbins=nbins
         )
@@ -422,7 +592,14 @@ class PsiCoverage(object):
     def approximate_discretized_pmf(
         self, nbins: int = constants.DEFAULT_QUANTIFY_PSIBINS
     ) -> xr.DataArray:
-        """Get discretized PMF with specified number of bins"""
+        """Compute discretized PMF of approximate/smoothed bootstrap posterior
+
+        Parameters
+        ----------
+        nbins: int
+            Number of uniform bins on [0, 1] on which probability mass will be
+            computed
+        """
         return self._compute_posterior_discretized_pmf(
             self.approximate_alpha, self.approximate_beta, nbins=nbins
         )
@@ -445,6 +622,7 @@ class PsiCoverage(object):
 
     @cached_property
     def raw_psi_mean_population_median(self) -> xr.DataArray:
+        """array(ec_idx) median over prefixes of :py:meth:`PsiCoverage.raw_psi_mean`"""
         return xr.apply_ufunc(
             nanmedian,
             self._raw_psi_mean_core_prefix,
@@ -454,6 +632,7 @@ class PsiCoverage(object):
 
     @cached_property
     def bootstrap_psi_mean_population_median(self) -> xr.DataArray:
+        """array(ec_idx) median over prefixes of :py:meth:`PsiCoverage.bootstrap_psi_mean`"""
         return xr.apply_ufunc(
             nanmedian,
             self._bootstrap_psi_mean_core_prefix,
@@ -482,7 +661,21 @@ class PsiCoverage(object):
         quantiles: Sequence[float] = constants.DEFAULT_HET_POPULATION_QUANTILES,
         quantile_dim_name: str = "population_quantile",
     ) -> xr.DataArray:
-        """Get quantiles of psi mean over population (adds dim quantile)"""
+        """empirical quantiles over prefixes of :py:meth:`PsiCoverage.raw_psi_mean`
+
+        Parameters
+        ----------
+        quantiles: Sequence[float]
+            quantiles over quantified population to compute
+        quantiles_dim_name: str
+            Name of dimension in output array matching `quantiles`
+
+        Returns
+        -------
+        xr.DataArray
+            array(ec_idx, `quantiles_dim_name`) of quantiles per connection
+            over quantified prefixes
+        """
         return self._compute_population_quantile(
             self._raw_psi_mean_core_prefix,
             quantiles,
@@ -494,7 +687,21 @@ class PsiCoverage(object):
         quantiles: Sequence[float] = constants.DEFAULT_HET_POPULATION_QUANTILES,
         quantile_dim_name: str = "population_quantile",
     ) -> xr.DataArray:
-        """Get quantiles of psi mean over population (adds dim quantile)"""
+        """empirical quantiles over prefixes of :py:meth:`PsiCoverage.bootstrap_psi_mean`
+
+        Parameters
+        ----------
+        quantiles: Sequence[float]
+            quantiles over quantified population to compute
+        quantiles_dim_name: str
+            Name of dimension in output array matching `quantiles`
+
+        Returns
+        -------
+        xr.DataArray
+            array(ec_idx, `quantiles_dim_name`) of quantiles per connection
+            over quantified prefixes
+        """
         return self._compute_population_quantile(
             self._bootstrap_psi_mean_core_prefix,
             quantiles,
@@ -508,10 +715,16 @@ class PsiCoverage(object):
         minreads: float = constants.DEFAULT_QUANTIFY_MINREADS,
         minbins: float = constants.DEFAULT_QUANTIFY_MINBINS,
     ) -> "PsiCoverage":
-        """Convert EventsCoverage into PSI/total coverage
+        """Create :py:class:`PsiCoverage` from :py:class:`EventsCoverage`
 
-        Convert EventsCoverage into PSI/total coverage. This allows for
-        junctions/introns to be processed independently.
+        Parameters
+        ----------
+        minreads, minbins: float
+            Quantifiability thresholds
+
+        Returns
+        -------
+        PsiCoverage
         """
         # get offsets as int (not uint)
         offsets: np.ndarray = events_coverage.events._offsets.astype(np.int64)
@@ -570,7 +783,34 @@ class PsiCoverage(object):
         num_bootstraps: int = constants.DEFAULT_COVERAGE_NUM_BOOTSTRAPS,
         pvalue_threshold: float = constants.DEFAULT_COVERAGE_STACK_PVALUE,
     ) -> "PsiCoverage":
-        """Given SJ and Events information (generally LSVs), load PsiCoverage"""
+        """Create :py:class:`PsiCoverage` from coverage and events
+
+        Parameters
+        ----------
+        sj: SJExperiment
+            Intron and junction coverage from an experiment
+        lsvs: Events
+            Events over which PsiCoverage will be defined
+        minreads, minbins: float
+            Quantifiability thresholds
+        num_bootstraps: int
+            The number of bootstrap replicates for bootstrapped estimates
+        pvalue_threshold: float
+            P-value threshold for removing stacks under leave-one-out Poisson
+            model of per-bin read coverage, for both raw and bootstrapped
+            coverage (Set to nonpositive value to skip stack detection)
+
+        Returns
+        -------
+        PsiCoverage
+
+        Notes
+        -----
+        The pvalue_threshold for stack removal is applied to both raw and
+        bootstrapped coverage. This differs from the behavior in MAJIQ v2,
+        where stack removal was only applied to bootstrapped coverage.
+        In this sense "raw" coverage is only after stack detection.
+        """
         lsv_coverage = EventsCoverage.from_events_and_sj(
             lsvs, sj, num_bootstraps=num_bootstraps, pvalue_threshold=pvalue_threshold
         )
@@ -578,11 +818,27 @@ class PsiCoverage(object):
 
     @classmethod
     def from_zarr(cls, path: Union[str, Path, List[Union[str, Path]]]) -> "PsiCoverage":
-        """Load one or more PsiCoverage files together at once
+        """Load :py:class:`PsiCoverage` from one or more specified paths
 
-        Load one or more PsiCoverage files together at once. If they have
-        overlapping prefixes, data will be loaded from the first file with the
-        given prefix.
+        Load :py:class:`PsiCoverage` from one or more specified paths.
+        Prefixes will be concatenated (overlapping prefixes will use values
+        from the first file it is found in).
+
+        Parameters
+        ----------
+        path: Union[str, Path, List[Union[str, Path]]]
+            path or paths with PsiCoverage saved in zarr format
+
+        Returns
+        -------
+        PsiCoverage
+            PsiCoverage for prefixes found in all specified files
+
+        Notes
+        -----
+        Does not check that events are same in each input file. It will fail if
+        they are not the same size, which should catch most cases, but be wary
+        that events information is derived from the first file alone.
         """
         if not isinstance(path, list):
             path = [path]
@@ -609,7 +865,22 @@ class PsiCoverage(object):
         raw_psi: Optional[xr.DataArray],
         **update_attrs,
     ) -> "PsiCoverage":
-        """Updated PsiCoverage, replacing bootstrap_psi, raw_psi"""
+        """Create updated :py:class:`PsiCoverage` with new values of psi
+
+        Parameters
+        ----------
+        bootstrap_psi, raw_psi: Optional[xr.DataArray]
+            If specified, new values of bootstrap_psi, raw_psi to use in new
+            PsiCoverage (with all other variables equal)
+        update_attrs:
+            Additional kwargs are set as attributes to the dataset used to
+            construct the resulting PsiCoverage
+
+        Returns
+        -------
+        PsiCoverage
+            Updated :py:class:`PsiCoverage` with new values of psi
+        """
         df = self.df
         # update psi arrays
         if bootstrap_psi is not None:
@@ -658,7 +929,7 @@ class PsiCoverage(object):
         consolidated: bool = True,
         show_progress: bool = False,
     ) -> None:
-        """Save PSI coverage dataset as zarr
+        """Save :py:class:`PsiCoverage` to specified path
 
         Parameters
         ----------
@@ -702,10 +973,26 @@ class PsiCoverage(object):
         prefix_slice: slice,
         ec_chunksize: int = constants.DEFAULT_COVERAGE_CHUNKS,
     ) -> None:
-        """Save PsiCoverage to specified path for specified slice on prefix
+        """Save :py:class:`PsiCoverage` to specified path for specified slice on prefix
 
-        Save PsiCoverage to specified path for specified slice. Typically run
-        after PsiCoverage.to_zarr_slice_init()
+        Save :py:class:`PsiCoverage` to specified path for specified slice.
+        Typically run after :py:meth:`PsiCoverage.to_zarr_slice_init`
+
+        Parameters
+        ----------
+        path: Union[str, Path]
+            Path with output file in zarr format with metadata initialized by
+            :py:meth:`PsiCoverage.to_zarr_slice_init`
+        prefix_slice: slice
+            Slice of prefix dimension in output zarr store to save current
+            PsiCoverage
+        ec_chunksize: int
+            How to chunk event connections to prevent memory from getting to
+            large when loading many samples simultaneously
+
+        See Also
+        --------
+        PsiCoverage.to_zarr_slice_init
         """
         self._save_df(ec_chunksize=ec_chunksize).drop_vars("prefix").pipe(
             lambda x: x.drop_vars(
@@ -727,11 +1014,12 @@ class PsiCoverage(object):
         cov_dtype: type = np.float32,
         psicov_attrs: Dict[Hashable, Any] = dict(),
     ) -> None:
-        """Init zarr for PsiCoverage over many prefixes for multithreaded write
+        """Initialize zarr store for saving :py:class:`PsiCoverage` over many writes
 
-        Initialize zarr for PsiCoverage over many prefixes. Saves all
-        information except dimensions that are prefix-specific. This enables
-        multithreaded (or multiprocess) write with to_zarr_slice
+        Initialize zarr for :py:class:`PsiCoverage` over many prefixes.
+        Saves all information except dimensions that are prefix-specific.
+        This enables multithreaded (or multiprocess) write with
+        :py:meth:`PsiCoverage.to_zarr_slice`
 
         Parameters
         ----------
@@ -753,6 +1041,10 @@ class PsiCoverage(object):
             What type to use for psi/total_coverage arrays
         psicov_attrs: Dict[Hashable, Any]
             Attributes to include
+
+        See Also
+        --------
+        PsiCoverage.to_zarr_slice
         """
         # force events to be saved as single chunk (no benefit for chunking here)
         events_df = events_df.chunk(events_df.sizes)
@@ -806,13 +1098,28 @@ class PsiCoverage(object):
 
     @cached_property
     def num_passed(self) -> xr.DataArray:
+        """array(ec_idx) number of experiments passed for each connection"""
         return self.event_passed.sum("prefix")
 
     def passed_min_experiments(
         self,
         min_experiments_f: float = constants.DEFAULT_QUANTIFY_MINEXPERIMENTS,
     ) -> xr.DataArray:
-        """Get boolean mask of events that pass enough experiments"""
+        """Return array(ec_idx) boolean mask for events passing min_experiments
+
+        Parameters
+        ----------
+        min_experiments_f: float
+            Threshold for group filters. This specifies the fraction (value <
+            1) or absolute number (value >= 1) of prefixes that must pass
+            individually for the event to be considered as passed for the group
+
+        Returns
+        -------
+        xr.DataArray
+            array(ec_idx) indicate whether the event (for each event connection)
+            passed min_experiments
+        """
         return self.num_passed >= min_experiments(min_experiments_f, self.num_prefixes)
 
     def sum(
@@ -820,7 +1127,23 @@ class PsiCoverage(object):
         new_prefix: str,
         min_experiments_f: float = constants.DEFAULT_QUANTIFY_MINEXPERIMENTS,
     ) -> "PsiCoverage":
-        """Aggregate coverage/psi values over all prefixes"""
+        """Create aggregated :py:class:`PsiCoverage` with sum coverage over prefixes
+
+        Parameters
+        ----------
+        new_prefix: str
+            Prefix for summarized :py:class:`PsiCoverage`
+        min_experiments_f: float
+            Threshold for group filters. This specifies the fraction (value <
+            1) or absolute number (value >= 1) of prefixes that must pass
+            individually for the event to be considered as passed for the group
+
+        Returns
+        -------
+        PsiCoverage
+            Sum coverage over prefixes, with passed being defined over group
+            filters
+        """
         event_passed = self.passed_min_experiments(min_experiments_f)
         raw_total = self.raw_total.sum("prefix")
         raw_coverage = (self.raw_total * self.raw_psi).sum("prefix")
@@ -848,55 +1171,40 @@ class PsiCoverage(object):
         return PsiCoverage(df, self.events)
 
     def mask_events(self, passed: xr.DataArray) -> "PsiCoverage":
-        """Return PsiCoverage passing only events that are passed in input
+        """Return :py:class:`PsiCoverage` passing only events that are passed in input
 
-        Return PsiCoverage passing only events that are passed in input (and in
-        the original object)
+        Parameters
+        ----------
+        passed: xr.DataArray
+            boolean array(ec_idx) where connections marked as not passed
+            (False) will be marked as not passed (False) in resulting
+            :py:class:`PsiCoverage`
+        Returns
+        -------
+        PsiCoverage
+            Same coverage but passing only events that are passed in input (and
+            in the original object)
         """
         return PsiCoverage(
             self.df.assign(event_passed=self.event_passed & passed), self.events
         )
-
-    def drop_unquantifiable(self) -> "PsiCoverage":
-        """Drop all events that are not (passed in all prefixes)"""
-        # what passed?
-        ec_idx_passed = self.event_passed.all("prefix").load().reset_coords(drop=True)
-        e_idx_passed = (
-            ec_idx_passed.isel(ec_idx=self.lsv_offsets.values[:-1])
-            .rename(ec_idx="e_idx")
-            .reset_coords(drop=True)
-        )
-        # get subset of df, events corresponding to these, dropping variables
-        # that require recalculation
-        df_subset = self.df.drop_vars(["lsv_offsets", "lsv_idx"]).sel(
-            ec_idx=ec_idx_passed
-        )
-        events_subset = self.events.drop_vars(["_offsets"]).sel(
-            ec_idx=ec_idx_passed, e_idx=e_idx_passed
-        )
-        # recalculate offsets
-        passed_sizes = (
-            self.event_size.isel(ec_idx=self.lsv_offsets.values[:-1])
-            .rename(ec_idx="e_idx")
-            .sel(e_idx=e_idx_passed)
-            .values
-        )
-        offsets = np.empty(len(passed_sizes) + 1, dtype=passed_sizes.dtype)
-        offsets[0] = 0
-        offsets[1:] = np.cumsum(passed_sizes)
-        # add offsets back in
-        df_subset = df_subset.assign_coords(lsv_offsets=("offset_idx", offsets))
-        events_subset = events_subset.assign_coords(
-            _offsets=("e_offsets_idx", offsets.astype(np.uint64))
-        )
-        # return subsetted PsiCoverage
-        return PsiCoverage(df_subset, events_subset)
 
     def get_events(
         self,
         introns: GeneIntrons,
         junctions: GeneJunctions,
     ) -> Events:
+        """Construct :py:class:`Events` using saved dataset and introns, junctions
+
+        Parameters
+        ----------
+        introns: GeneIntrons
+        junctions: GeneJunctions
+
+        Returns
+        -------
+        Events
+        """
         if self.events.intron_hash != introns.checksum():
             raise ValueError("GeneIntrons checksums do not match")
         if self.events.junction_hash != junctions.checksum():
@@ -927,7 +1235,7 @@ class PsiCoverage(object):
         psibins: Optional[int] = None,
         use_posterior: str = "approximation",
     ) -> xr.Dataset:
-        """Extract selected properties into single dataset
+        """Extract selected properties into single :py:class:`xr.Dataset`
 
         Parameters
         ----------

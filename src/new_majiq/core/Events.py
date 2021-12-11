@@ -26,12 +26,17 @@ from .Genes import Genes
 
 
 class UniqueEventsMasks(NamedTuple):
-    """
+    """Masks betwen two :py:class:`Events` objects over e_idx for unique/shared events
+
     unique_events_mask: np.ndarray
         boolean mask into events that are unique (i.e. not found in other)
     shared_events_idx: np.ndarray
         index into events in other for shared events (corresponding to False
         values in unique_events_mask)
+
+    See Also
+    --------
+    Events.unique_events_mask
     """
 
     unique_events_mask: np.ndarray  # boolean mask into events that are unique
@@ -61,60 +66,78 @@ class Events(object):
 
     @property
     def introns(self) -> GeneIntrons:
-        """Introns referenced by event connections"""
+        """:py:class:`Introns` over which events defined"""
         return GeneIntrons(self._events.introns)
 
     @property
     def junctions(self) -> GeneJunctions:
-        """Junctions referenced by event connections"""
+        """:py:class:`Junctions` over which events defined"""
         return GeneJunctions(self._events.junctions)
 
     @property
     def exons(self) -> Exons:
-        """Exons used by these events"""
+        """:py:class:`Exons` over which events defined"""
         exons = self.junctions.connected_exons
         assert isinstance(exons, Exons), "Events appears to not reference exons"
         return exons
 
     @property
     def genes(self) -> Genes:
-        """Genes used by these events"""
+        """:py:class:`Genes` over which events defined"""
         return self.junctions.genes
 
     @property
     def contigs(self) -> Contigs:
-        """Contigs used by these events"""
+        """:py:class:`Contigs` over which events defined"""
         return self.genes.contigs
 
     @property
     def num_events(self) -> int:
+        """Number of events"""
         return self._events.num_events
 
     @property
     def e_idx(self) -> np.ndarray:
+        """Index over unique events"""
         return np.arange(self.num_events)
 
     @property
     def ref_exon_idx(self) -> np.ndarray:
+        """Index into self.exons for reference exon of each unique event"""
         return self._events.ref_exon_idx
 
     @property
     def event_type(self) -> np.ndarray:
+        """Indicator if source ('s') or target ('b') for each unique event"""
         return self._events.event_type
 
     @property
     def _offsets(self) -> np.ndarray:
+        """Offsets array for events into event connections"""
         return self._events._offsets
 
     @property
     def ec_idx_start(self) -> np.ndarray:
+        """First index into event connections (ec_idx) for each unique event"""
         return self._events.connection_idx_start
 
     @property
     def ec_idx_end(self) -> np.ndarray:
+        """One-past-end index into event connections (ec_idx) for each unique event"""
         return self._events.connection_idx_end
 
     def connections_slice_for_event(self, event_idx: int) -> slice:
+        """Get slice into event connections for event with specified index
+
+        Parameters
+        ----------
+        event_idx: int
+            Index of single event to get slice into event connections for
+
+        Returns
+        -------
+        slice
+        """
         return slice(
             self.ec_idx_start[event_idx],
             self.ec_idx_end[event_idx],
@@ -122,56 +145,127 @@ class Events(object):
 
     @property
     def num_connections(self) -> int:
+        """Total number of connections over all events
+
+        Total number of connections over all events (double counting if in
+        source and target events)
+        """
         return self._events.num_connections
 
     @property
     def ec_idx(self) -> np.ndarray:
+        """Index over event connections"""
         return np.arange(self.num_connections)
 
     @property
     def is_intron(self) -> np.ndarray:
+        """Indicator if an intron or junction for each event connection"""
         return self._events.is_intron
 
     @property
     def connection_idx(self) -> np.ndarray:
+        """Index into self.introns or self.junctions for each event connection"""
         return self._events.idx
 
     def connection_gene_idx(self, ec_idx: Optional[np.ndarray] = None) -> np.ndarray:
+        """Index into self.genes for selected event connections
+
+        Parameters
+        ----------
+        ec_idx: Optional[np.ndarray]
+            Indexes of selected event connections. If None, select all event
+            connections in order
+
+        Returns
+        -------
+        np.ndarray
+        """
         if ec_idx is None:
             ec_idx = self.ec_idx
         return self._events.connection_gene_idx(ec_idx)
 
     def connection_contig_idx(self, ec_idx: Optional[np.ndarray] = None) -> np.ndarray:
+        """Index into self.contigs for selected event connections
+
+        Parameters
+        ----------
+        ec_idx: Optional[np.ndarray]
+            Indexes of selected event connections. If None, select all event
+            connections in order
+
+        Returns
+        -------
+        np.ndarray
+        """
         return self.genes.contig_idx[self.connection_gene_idx(ec_idx)]
 
     def connection_start(self, ec_idx: Optional[np.ndarray] = None) -> np.ndarray:
+        """Start coordinate for each selected event connection
+
+        Parameters
+        ----------
+        ec_idx: Optional[np.ndarray]
+            Indexes of selected event connections. If None, select all event
+            connections in order
+
+        Returns
+        -------
+        np.ndarray
+        """
         if ec_idx is None:
             ec_idx = self.ec_idx
         return self._events.connection_start(ec_idx)
 
     def connection_end(self, ec_idx: Optional[np.ndarray] = None) -> np.ndarray:
+        """End coordinate for each selected event connection
+
+        Parameters
+        ----------
+        ec_idx: Optional[np.ndarray]
+            Indexes of selected event connections. If None, select all event
+            connections in order
+
+        Returns
+        -------
+        np.ndarray
+        """
         if ec_idx is None:
             ec_idx = self.ec_idx
         return self._events.connection_end(ec_idx)
 
     def connection_denovo(self, ec_idx: Optional[np.ndarray] = None) -> np.ndarray:
+        """Indicator if connection was denovo for each selected event connection
+
+        Parameters
+        ----------
+        ec_idx: Optional[np.ndarray]
+            Indexes of selected event connections. If None, select all event
+            connections in order
+
+        Returns
+        -------
+        np.ndarray
+        """
         if ec_idx is None:
             ec_idx = self.ec_idx
         return self._events.connection_denovo(ec_idx)
 
     @property
     def connection_ref_exon_idx(self) -> np.ndarray:
+        """Index into self.exons for reference exon for each event connection"""
         return np.repeat(self.ref_exon_idx, np.diff(self._offsets.astype(int)))
 
     def connection_other_exon_idx(
         self, ec_idx: Optional[np.ndarray] = None
     ) -> np.ndarray:
+        """Index into self.exons for nonreference exon for each event connection"""
         if ec_idx is None:
             ec_idx = self.ec_idx
         return self._events.connection_other_exon_idx(ec_idx)
 
     @property
     def df(self) -> xr.Dataset:
+        """:py:class:`xr.Dataset` with event and event connections information"""
         return xr.Dataset(
             {},
             {
@@ -191,6 +285,7 @@ class Events(object):
 
     @property
     def df_events(self) -> xr.Dataset:
+        """:py:class:`xr.Dataset` with event information"""
         return xr.Dataset(
             {},
             {
@@ -204,6 +299,7 @@ class Events(object):
 
     @property
     def df_event_connections(self) -> xr.Dataset:
+        """:py:class:`xr.Dataset` with event connections information"""
         return xr.Dataset(
             {},
             {
@@ -216,7 +312,7 @@ class Events(object):
 
     @property
     def save_df(self) -> xr.Dataset:
-        """Dataset that is directly saved for Events"""
+        """:py:class:`xr.Dataset` that is directly saved for Events"""
         return (
             self.df
             # drop indexes and nice offsets
@@ -233,7 +329,7 @@ class Events(object):
     def to_zarr(
         self, path: Union[str, Path], mode: str, consolidated: bool = True
     ) -> None:
-        """Save to specified zarr file"""
+        """Save :py:class:`Events` to specified path"""
         self.save_df.pipe(lambda x: x.chunk(x.sizes)).pipe(
             _load_zerodim_variables
         ).to_zarr(
@@ -251,6 +347,7 @@ class Events(object):
         introns: GeneIntrons,
         junctions: GeneJunctions,
     ) -> "Events":
+        """Load :py:class:`Events` from specified path"""
         with xr.open_zarr(path, group=constants.NC_EVENTS) as df:
             if df.intron_hash != introns.checksum():
                 raise ValueError("Saved hash for introns does not match")
@@ -269,7 +366,12 @@ class Events(object):
             )
 
     def __getitem__(self, event_mask) -> "Events":
-        """Subset of events corresponding to boolean event mask"""
+        """Subset :py:class:`Events` corresponding to boolean event mask
+
+        Returns
+        -------
+        Events
+        """
         event_mask = np.array(event_mask, copy=False, dtype=bool)  # make sure array
         if event_mask.ndim != 1:
             raise ValueError("event_mask must be 1-dimensional")
@@ -294,7 +396,16 @@ class Events(object):
         )
 
     def unique_events_mask(self, other: "Events") -> UniqueEventsMasks:
-        """Get events unique to self vs other, and indexes to shared events"""
+        """Get :py:class:`UniqueEventsMasks` with shared events and events unique to self
+
+        Parameters
+        ----------
+        other: Events
+
+        Returns
+        -------
+        UniqueEventsMasks
+        """
         aligned = EventsAlign(self._events, other._events)
         unique_mask = np.ones(self.num_events, dtype=bool)
         unique_mask[aligned.left_event_idx] = False  # if aligned, not unique
@@ -305,7 +416,7 @@ class Events(object):
 
     @property
     def ec_dataframe(self) -> pd.DataFrame:
-        """Annotated event connections as dataframe"""
+        """:py:class:`pd.DataFrame` over event connections detailing genomic information"""
         gene_idx = self.connection_gene_idx()
         other_exon_idx = self.connection_other_exon_idx()
         return pd.DataFrame(
@@ -326,7 +437,7 @@ class Events(object):
                 other_exon_start=self.exons.start[other_exon_idx],
                 other_exon_end=self.exons.end[other_exon_idx],
             ),
-            index=pd.Index(np.arange(self.num_connections), name="ec_idx"),
+            index=pd.Index(self.ec_idx, name="ec_idx"),
         ).assign(
             event_type=lambda df: df.event_type.str.decode("utf-8"),
             strand=lambda df: df.strand.str.decode("utf-8"),

@@ -24,13 +24,21 @@ if TYPE_CHECKING:
 
 
 class GeneIntrons(GeneConnections):
+    """Collection of introns per gene and their coordinates, flags, and exons
+
+    Parameters
+    ----------
+    gene_introns: _GeneIntrons
+        Underlying object binding the internal C++ API
+    """
+
     def __init__(self, gene_introns: _GeneIntrons):
         super().__init__(gene_introns)
         return
 
     def build_group(self) -> "GroupIntronsGenerator":
-        """Create build group to update these introns to be passed or not"""
-        from new_majiq.GroupIntronsGenerator import GroupIntronsGenerator
+        """Create :py:class:`GroupIntronsGenerator` to update these introns in place"""
+        from .GroupIntronsGenerator import GroupIntronsGenerator
 
         return GroupIntronsGenerator(self)
 
@@ -39,7 +47,7 @@ class GeneIntrons(GeneConnections):
         keep_annotated: bool = constants.DEFAULT_BUILD_KEEP_ANNOTATED_IR,
         discard_denovo: bool = not constants.DEFAULT_BUILD_DENOVO_IR,
     ) -> "GeneIntrons":
-        """Get subset of introns that passed build filters
+        """Return :py:class:`GeneIntrons` subset that all passed build filters
 
         Parameters
         ----------
@@ -53,7 +61,19 @@ class GeneIntrons(GeneConnections):
         )
 
     def update_flags_from(self, donor_introns: "GeneIntrons") -> None:
-        """Update denovo, passed_build, and simplified using introns from donor"""
+        """Update flags using overlapping donor :py:class:`GeneIntrons`
+
+        Update flags (denovo, passed_build, simplified) using overlapping donor
+        :py:class:`GeneIntrons`
+
+        Parameters
+        ----------
+        donor_introns: GeneIntrons
+            Flags from donor_introns will be used to update flags in self when
+            they overlap (if annotated in donor, mark as annotated, if passed
+            in donor, mark as passed, if unsimplified in donor, mark as
+            unsimplified)
+        """
         self._gene_introns.update_flags_from(donor_introns._gene_introns)
         return
 

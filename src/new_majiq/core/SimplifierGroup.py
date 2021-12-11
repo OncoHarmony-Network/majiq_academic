@@ -21,7 +21,7 @@ if TYPE_CHECKING:
 
 
 class SimplifierGroup(object):
-    """Accumulate groups of experiments to determine connections for simplification"""
+    """Accumulator of :py:class:`SJExperiment` to update simplifier flags"""
 
     def __init__(self, group: _SimplifierGroup):
         self._group: Final[_SimplifierGroup] = group
@@ -78,7 +78,23 @@ class SimplifierGroup(object):
         minreads_denovo: float = constants.DEFAULT_SIMPLIFIER_MINREADS_DENOVO,
         minreads_introns: float = constants.DEFAULT_SIMPLIFIER_MINREADS_INTRON,
     ) -> "SimplifierGroup":
-        """Add reads from experiment to group for simplification"""
+        """Add :py:class:`SJExperiment` to simplification group
+
+        Add :py:class:`SJExperiment` to simplification group. Counts when a
+        junction or intron passes simplification filters with respect to source
+        exon (or target exon)
+
+        Parameters
+        ----------
+        min_psi: float
+            An intron or junction passes as a source (or target) only if the
+            percentage of reads assigned to it vs other connections sharing the
+            same source (or target) exon exceeds this value
+        minreads_annotated, minreads_denovo, minreads_introns: float
+            A connection can only pass simplifier thresholds if the readrate
+            assigned to it exceeds appropriate value (annotated junction vs
+            denovo junction vs intron)
+        """
         self._group.add_experiment(
             SpliceGraphReads._internals_from_connections_and_sj(
                 self.introns, self.junctions, sj
@@ -93,6 +109,16 @@ class SimplifierGroup(object):
     def update_connections(
         self, min_experiments: float = constants.DEFAULT_SIMPLIFIER_MINEXPERIMENTS
     ) -> None:
-        """Unsimplify introns/junctions with enough evidence, reset counts"""
+        """In-place update of connections passing thresholds in enough experiments
+
+        Parameters
+        ----------
+        min_experiments: float
+            Threshold for group filters, specifying fraction (value < 1) or
+            absolute number (value >= 1) of experiments that must pass
+            simplifier thresholds as a source or as a target. When group
+            filters are passed, a connection will be updated from simplified to
+            unsimplified.
+        """
         self._group.update_connections(min_experiments)
         return

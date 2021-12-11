@@ -2046,7 +2046,7 @@ void init_pyExperimentThresholds(
   pyExperimentThresholds
     .def(py::init<junction_ct_t, junction_ct_t, junction_pos_t, real_t, real_t, real_t>(),
         py::call_guard<py::gil_scoped_release>(),
-        "per-experiment thresholds for junctions",
+        "Thresholds on intron and junction coverage for inclusion in SpliceGraph",
         py::arg("minreads") = DEFAULT_BUILD_MINREADS,
         py::arg("mindenovo") = DEFAULT_BUILD_MINDENOVO,
         py::arg("minpos") = DEFAULT_BUILD_MINPOS,
@@ -2256,7 +2256,8 @@ void init_SpliceGraphAll(py::module_& m) {
       "Splicegraph managing exons, junctions, and introns within genes");
 
   auto pyExperimentThresholds
-    = pyExperimentThresholds_t(m, "ExperimentThresholds");
+    = pyExperimentThresholds_t(m, "ExperimentThresholds",
+        "Thresholds on intron and junction coverage for inclusion in SpliceGraph");
   auto pyIntronThresholdsGenerator
     = pyIntronThresholdsGenerator_t(m, "IntronThresholdsGenerator");
 
