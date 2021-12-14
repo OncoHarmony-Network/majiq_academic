@@ -332,7 +332,8 @@ def test_moccasin_coverage_model_command(script_runner, tmp_path):
         "moccasin-coverage-model",
         path_result,
         *paths_psicov,
-        *("--factors-tsv", FACTORS_TSV, "--confounding", *FACTORS_TSV_CONFOUNDERS),
+        *("--factors-tsv", get_path(FACTORS_TSV)),
+        *("--confounding", *FACTORS_TSV_CONFOUNDERS),
         "--disable-progress",
         *("--dask-local-directory", str(tmp_path)),
     )
@@ -354,7 +355,8 @@ def test_moccasin_coverage_infer_command(script_runner, tmp_path):
         get_path(COVERAGE_MODEL),
         path_result,
         *paths_psicov,
-        *("--factors-tsv", FACTORS_TSV, "--confounding", *FACTORS_TSV_CONFOUNDERS),
+        *("--factors-tsv", get_path(FACTORS_TSV)),
+        *("--confounding", *FACTORS_TSV_CONFOUNDERS),
         "--disable-progress",
         *("--dask-local-directory", str(tmp_path)),
     )
