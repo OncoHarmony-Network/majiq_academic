@@ -102,6 +102,10 @@ class GenericSubcommand(object):
             log.exception("Exiting due to exception:")
             sys.exit(-1)
             return
+        # if dask cluster, clean up after ourselves
+        if getattr(args, "use_dask", False):
+            client.cluster.close()
+            client.close()
         # when done running, note that it was successsfully completed!
         log.info("Finished successfully!")
         return
