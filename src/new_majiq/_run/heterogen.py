@@ -256,10 +256,14 @@ def run(args: argparse.Namespace) -> None:
         df_pq.columns = [f"{grp}-{var}_{q:0.3f}" for var, grp, q in df_pq.columns]
         concat_df.append(df_pq)
 
-    log.info(f"Writing metadata to {args.output_tsv.name}")
+    try:
+        output_name = args.output_tsv.name
+    except AttributeError:
+        output_name = args.output_tsv
+    log.info(f"Writing metadata to {output_name}")
     metadata_json = json.dumps(metadata, sort_keys=True, indent=4)
     args.output_tsv.write("# {}\n".format(metadata_json.replace("\n", "\n# ")))
-    log.info(f"Writing table to {args.output_tsv.name}")
+    log.info(f"Writing table to {output_name}")
     (
         # concatenate columns together
         pd.concat(concat_df, axis=1, join="inner")

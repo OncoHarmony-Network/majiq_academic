@@ -381,6 +381,13 @@ def resources_args(parser: argparse.ArgumentParser, use_dask: bool = False) -> N
             default="auto",
             help="Memory limit to pass to dask cluster (default: %(default)s)",
         )
+        resources.add_argument(
+            "--dask-local-directory",
+            metavar="path",
+            type=Path,
+            default=None,
+            help="Path for dask-worker-space (default: current directory)",
+        )
         progress_bar = resources.add_mutually_exclusive_group()
         progress_bar.add_argument(
             "--show-progress",

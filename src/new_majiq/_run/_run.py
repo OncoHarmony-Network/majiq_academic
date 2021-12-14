@@ -89,6 +89,7 @@ class GenericSubcommand(object):
                 threads_per_worker=args.nthreads,
                 dashboard_address=":0",
                 memory_limit=args.memory_limit,
+                local_directory=args.dask_local_directory,
             )
             # dashboard_address=None should disable server, but it doesn't
             client.cluster.scheduler.http_server.stop()  # stop server

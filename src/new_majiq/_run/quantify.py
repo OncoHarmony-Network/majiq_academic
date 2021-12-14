@@ -97,10 +97,14 @@ def run(args: argparse.Namespace) -> None:
             for (var, prefix, q) in df_quantiles.columns.values
         ]
         concat_df.append(df_quantiles)
-    log.info(f"Writing metadata to {args.output_tsv.name}")
+    try:
+        output_name = args.output_tsv.name
+    except AttributeError:
+        output_name = args.output_tsv
+    log.info(f"Writing metadata to {output_name}")
     metadata_json = json.dumps(metadata, sort_keys=True, indent=4)
     args.output_tsv.write("# {}\n".format(metadata_json.replace("\n", "\n# ")))
-    log.info(f"Writing table to {args.output_tsv.name}")
+    log.info(f"Writing table to {output_name}")
     (
         # concatenate columns together
         pd.concat(concat_df, axis=1, join="inner")
