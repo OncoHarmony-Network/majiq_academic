@@ -64,6 +64,8 @@ napoleon_use_rtype = False
 napoleon_preprocess_types = True
 napoleon_type_aliases = {
     # without namespace
+    "GeneJunctions": "new_majiq.GeneJunctions",
+    "GeneJunctionsAccumulator": "new_majiq.GeneJunctionsAccumulator",
     "DPsiPrior": "new_majiq.DPsiPrior",
     "PsiCoverage": "new_majiq.PsiCoverage",
     "SJIntronsBins": "new_majiq.SJIntronsBins",

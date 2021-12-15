@@ -9,8 +9,6 @@ Author: Joseph K Aicher
 import argparse
 from typing import List, Optional
 
-import xarray as xr
-
 import new_majiq as nm
 from new_majiq._run._majiq_args import (
     ExistingResolvedPath,
@@ -70,20 +68,15 @@ def run(args: argparse.Namespace) -> None:
     log = get_logger()
 
     log.info("Combining input junctions")
-    df_junctions = nm.GeneJunctions.combine_datasets(
-        [
-            nm.GeneJunctions.load_dataset(p).assign_coords(
-                denovo=lambda df: xr.DataArray(False).expand_dims(
-                    {"gj_idx": df.sizes["gj_idx"]}  # type: ignore[arg-type]
-                )
-            )
-            for p in args.make_annotated
-        ]
-        + [nm.GeneJunctions.load_dataset(p) for p in args.keep_denovo]
-    )
-    log.info("Constructing GeneJunctions object for combined set of junctions")
     genes = nm.Genes.from_zarr(all_inputs[0])
-    junctions = nm.GeneJunctions.from_dataset_and_genes(df_junctions, genes)
+    accumulator = nm.GeneJunctionsAccumulator(genes)
+    for p in args.make_annotated:
+        accumulator.add(nm.GeneJunctions.from_zarr(p, genes=genes), make_annotated=True)
+    for p in args.keep_denovo:
+        accumulator.add(
+            nm.GeneJunctions.from_zarr(p, genes=genes), make_annotated=False
+        )
+    junctions = accumulator.accumulated()
     log.info("Creating updated combined exon definitions")
     exons = nm.Exons.from_zarr(all_inputs[0], genes).infer_with_junctions(junctions)
     introns: nm.GeneIntrons

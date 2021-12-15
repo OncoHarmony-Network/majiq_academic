@@ -110,7 +110,7 @@ def test_build_command(script_runner, build_group, simplify, min_experiments, tm
     ret = script_runner.run(
         "new-majiq",
         "build",
-        ANNOTATED_SG,
+        get_path(ANNOTATED_SG),
         path_result,
         "--sjs",
         *paths_sj,

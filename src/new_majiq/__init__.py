@@ -22,6 +22,7 @@ from .core.ExonConnections import ExonConnections
 from .core.Exons import Exons
 from .core.GeneIntrons import GeneIntrons
 from .core.GeneJunctions import GeneJunctions
+from .core.GeneJunctionsAccumulator import GeneJunctionsAccumulator
 from .core.Genes import Genes
 from .core.GroupIntronsGenerator import GroupIntronsGenerator
 from .core.Heterogen import Heterogen
@@ -105,6 +106,7 @@ __all__ = [
     "Exons",
     "GeneIntrons",
     "GeneJunctions",
+    "GeneJunctionsAccumulator",
     "Genes",
     "GroupIntronsGenerator",
     "GroupJunctionsGenerator",

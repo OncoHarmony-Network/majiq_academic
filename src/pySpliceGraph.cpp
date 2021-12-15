@@ -38,6 +38,7 @@
 #include "internals/EventsAlign.hpp"
 #include "internals/SpliceGraphReads.hpp"
 #include "internals/SimplifierGroup.hpp"
+#include "internals/GeneJunctionsAccumulator.hpp"
 #include "internals/Meta.hpp"
 
 #include "internals/ExperimentThresholds.hpp"
@@ -75,6 +76,7 @@ using pyEvents_t = pyClassShared_t<majiq::Events>;
 using pyEventsCoverage_t = pyClassShared_t<majiq::EventsCoverage>;
 using pyEventsAlign_t = pyClassShared_t<majiq::EventsAlign>;
 using pySpliceGraphReads_t = pyClassShared_t<majiq::SpliceGraphReads>;
+using pyGeneJunctionsAccumulator_t = pyClassShared_t<majiq::GeneJunctionsAccumulator>;
 
 using pyExperimentThresholds_t = pyClassShared_t<majiq::ExperimentThresholds>;
 using pyIntronThresholdsGenerator_t
@@ -712,6 +714,31 @@ void init_Exons(pyExons_t& pyExons) {
         return oss.str();
         },
         py::call_guard<py::gil_scoped_release>());
+}
+
+void init_GeneJunctionsAccumulator(
+    pyGeneJunctionsAccumulator_t& pyGeneJunctionsAccumulator) {
+  using majiq::Genes;
+  using majiq::GeneJunctionsAccumulator;
+  using majiq::GeneJunctions;
+  pyGeneJunctionsAccumulator
+    .def(py::init<const std::shared_ptr<Genes>&>(),
+        py::call_guard<py::gil_scoped_release>(),
+        "Initialize accumulator of GeneJunctions with Genes",
+        py::arg("genes"))
+    .def_property_readonly(
+        "_genes", &GeneJunctionsAccumulator::genes,
+        "Genes used by GeneJunctionsAccumulator")
+    .def(
+        "add",
+        &GeneJunctionsAccumulator::Add,
+        "Add/update accumulated junctions",
+        py::arg("junctions"),
+        py::arg("make_annotated") = false)
+    .def(
+        "accumulated",
+        &GeneJunctionsAccumulator::Accumulated,
+        "Return GeneJunctions combining accumulated junctions");
 }
 
 void init_GeneJunctions(pyGeneJunctions_t& pyGeneJunctions) {
@@ -2160,6 +2187,8 @@ void init_SpliceGraphAll(py::module_& m) {
       "Splicegraph introns");
   auto pyGeneJunctions = pyGeneJunctions_t(
       m, "GeneJunctions", "Splicegraph junctions");
+  auto pyGeneJunctionsAccumulator = pyGeneJunctionsAccumulator_t(
+      m, "GeneJunctionsAccumulator", "Accumulator of splicegraph junctions");
   auto pyEvents = pyEvents_t(
       m, "Events", "Events from reference exon with junctions/introns");
   auto pyEventsAlign = pyEventsAlign_t(
@@ -2267,6 +2296,7 @@ void init_SpliceGraphAll(py::module_& m) {
   init_Genes(pyGenes);
   init_Exons(pyExons);
   init_GeneJunctions(pyGeneJunctions);
+  init_GeneJunctionsAccumulator(pyGeneJunctionsAccumulator);
   init_GeneIntrons(pyGeneIntrons);
   init_SJJunctions(pySJJunctions);
   init_SJJunctionsBins(pySJJunctionsBins);

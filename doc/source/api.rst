@@ -54,6 +54,7 @@ Classes
    PassedJunctionsGenerator
    GroupIntronsGenerator
    SimplifierGroup
+   GeneJunctionsAccumulator
 
 
 Create a splicegraph from GFF3
@@ -145,14 +146,15 @@ Update junctions from other junctions
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Updated :class:`GeneJunctions` can also be created by loading junctions from
-previous splicegraphs and combining them.
+previous splicegraphs and combining them using :class:`GeneJunctions`.
+Note that they must all share the same :class:`Genes` object, which can be done
+by setting `genes` argument to :meth:`GeneJunctions.from_zarr`.
 
 .. autosummary::
    :toctree: generated/
 
-   GeneJunctions.load_dataset
-   GeneJunctions.combine_datasets
-   GeneJunctions.from_dataset_and_genes
+   GeneJunctionsAccumulator.add
+   GeneJunctionsAccumulator.accumulated
 
 
 Update exons
