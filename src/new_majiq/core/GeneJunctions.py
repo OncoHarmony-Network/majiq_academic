@@ -7,7 +7,7 @@ Author: Joseph K Aicher
 """
 
 from pathlib import Path
-from typing import TYPE_CHECKING, Optional, Sequence, Union
+from typing import TYPE_CHECKING, Optional, Union
 
 import numpy as np
 import xarray as xr
@@ -113,75 +113,21 @@ class GeneJunctions(GeneConnections):
             return df.load()
 
     @staticmethod
-    def combine_datasets(dfs: Sequence[xr.Dataset]) -> xr.Dataset:
-        """Aggregate multiple junctions :py:class:`xr.Dataset` to single one
-
-        Aggregate multiple junctions :py:class:`xr.Dataset` to single one.
-        These datasets should be as what is found by
-        :py:meth:`GeneJunctions.load_dataset`. Repeated junctions have flags
-        summarized using "all" rule on denovo, not passed, and simplified.
-
-        Parameters
-        ----------
-        dfs: Sequence[xr.Dataset]
-            sequence of junction datasets as can be loaded by
-            :py:meth:`GeneJunctions.load_dataset`
-
-        Returns
-        -------
-        xr.Dataset
-            junction dataset aggregating the input datasets
-
-        Notes
-        -----
-        This requires each dataset to be simultaneously loaded in memory and
-        may not be the most efficient approach. Furthermore, it assumes,
-        without checking, that the datasets are referring to the same genes
-        with gene_idx. In the future, we may replace this functionality with a
-        C++ class that accumulates GeneJunctions one at a time.
-        """
-        return (
-            xr.concat(
-                [
-                    df
-                    # work with not_passed so that can combine using ALL
-                    .assign_coords(not_passed=~df.passed_build)
-                    # set index so can see matches
-                    .set_index(gj_idx=["gene_idx", "start", "end"])
-                    # select variables we want to use
-                    .reset_coords()[["denovo", "not_passed", "simplified"]]
-                    for df in dfs
-                ],
-                # concatenate over new dimension inputs
-                dim="inputs",
-                # take all unique indexes (gene_idx, start, end)
-                join="outer",
-                # missing values ~ is denovo, not passed, and simplified
-                fill_value=True,
-                # don't retain any attributes here
-                combine_attrs="drop",
-            )
-            # aggregate over inputs using ALL rule
-            .all("inputs")
-            # get coordinates we want back ~ from load_dataset
-            .assign_coords(passed_build=lambda df: ~df.not_passed)
-            .drop_vars(["not_passed"])
-            .set_coords(["denovo", "simplified"])
-            .reset_index("gj_idx")
-        )
-
-    @staticmethod
     def from_dataset_and_genes(df: xr.Dataset, genes: Genes) -> "GeneJunctions":
         """Create :py:class:`GeneJunctions` from junction dataset and :py:class:`Genes`
 
         Parameters
         ----------
         df: xr.Dataset
-            Dataset of junctions as created by
-            :py:meth:`GeneJunctions.load_dataset` or
-            :py:meth:`GeneJunctions.combine_datasets`
+            Variables:
+                gene_idx(gj_idx) uint64
+                start(gj_idx) int64
+                end(gj_idx) int64
+                denovo(gj_idx) bool
+                passed_build(gj_idx) bool
+                simplified(gj_idx) bool
         genes: Genes
-            Genes matched to gene_id in input dataset
+            Genes matched to gene_idx in input dataset
 
         Returns
         -------
