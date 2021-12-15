@@ -18,4 +18,5 @@ rna_majiq_meta.egg-info
 */git_version
 *.so
 
-
+/doc/build
+/doc/source/generated
