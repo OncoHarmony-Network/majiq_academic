@@ -18,7 +18,7 @@ pipelines:
             - git clone git@bitbucket.org:biociphers/majiq-docs.git
             - cd majiq-docs
             - echo 'yay' > index.html
-            - git add –all
+            - git add --all
             - git commit -m "Automatic update from pipeline"
             - git push
           artifacts:
