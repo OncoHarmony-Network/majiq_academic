@@ -8,11 +8,11 @@ pipelines:
           caches:
             - pip
           script:
-            # - apt-get update && apt-get -y install python-sphinx
+             - apt-get update && apt-get -y install libhts-dev
 
             # INSTALL YOUR DEPENDENCIES HERE
             # - pip install -r requirements.txt
-
+            - pip install .
             - pip install sphinx sphinx_rtd_theme
             - cd doc
             - make clean
