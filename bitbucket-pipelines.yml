@@ -8,7 +8,7 @@ pipelines:
           caches:
             - pip
           script:
-             - apt-get update && apt-get -y install libhts-dev
+            - apt-get update && apt-get -y install libhts-dev
 
             # INSTALL YOUR DEPENDENCIES HERE
             # - pip install -r requirements.txt
