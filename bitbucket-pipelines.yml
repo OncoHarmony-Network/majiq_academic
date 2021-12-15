@@ -17,9 +17,10 @@ pipelines:
             - make html
             - git config --global user.email "admin@biociphers.org"
             - git config --global user.name "Biociphers Admin"
-            - git clone git@bitbucket.org:biociphers/majiq-docs.git
-            - cd majiq-docs
-            - cp -R ../build/html/* .
+            - git clone git@bitbucket.org:biociphers/biociphers.bitbucket.io.git
+            - cd biociphers.bitbucket.io
+            - mkdir -p majiq-docs
+            - cp -R ../build/html/* majiq-docs
             - git add --all
             - git commit -m "Automatic update from pipeline"
             - git push
