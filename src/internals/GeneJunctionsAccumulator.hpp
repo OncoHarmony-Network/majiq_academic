@@ -42,7 +42,7 @@ class GeneJunctionsAccumulator {
   const std::shared_ptr<Genes> genes() const { return genes_; }
 
   // add GeneJunctions as denovo or as annotated
-  void Add(const GeneJunctions& junctions, bool make_annotated) {
+  void Add(const GeneJunctions& junctions, const bool make_annotated) {
     // check that genes match
     if (genes_ != junctions.parents()) {
       throw std::invalid_argument(
@@ -52,18 +52,21 @@ class GeneJunctionsAccumulator {
     for (auto&& x : junctions) {
       // map from intervals to junction flags for gene associated with junction
       auto& junction_map = gene_junctions_[x.gene.idx_];
+      // get data from x, updating denovo to false if make_annotated set
+      detail::ConnectionData x_data = x.data;
+      if (make_annotated) { x_data.denovo = false; }
       // try to emplace new junction into map.
       // If it exists, get iterator to it (but don't update it yet)
       auto [pair_it, new_junction] =
-          junction_map.try_emplace(x.coordinates, x.data);
+          junction_map.try_emplace(x.coordinates, x_data);
       // If the junction existed already, update flags
       if (!new_junction) {
         // get reference to existing junction data
-        detail::ConnectionData& data = pair_it->second;
+        detail::ConnectionData& map_data = pair_it->second;
         // update flags: denovo or simplified only if both are, passed if either
-        data.denovo = (!make_annotated && x.data.denovo) && data.denovo;
-        data.passed_build = x.data.passed_build || data.passed_build;
-        data.simplified = x.data.simplified && data.simplified;
+        map_data.denovo = x_data.denovo && map_data.denovo;
+        map_data.passed_build = x_data.passed_build || map_data.passed_build;
+        map_data.simplified = x_data.simplified && map_data.simplified;
       }
     }
     return;
