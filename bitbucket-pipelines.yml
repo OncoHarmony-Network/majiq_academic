@@ -2,7 +2,7 @@ image: python:3.8.10
 
 pipelines:
   branches:
-    master:
+    docs-with-sphinx:
       - step:
           name: doc generator
           trigger: manual
