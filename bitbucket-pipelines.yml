@@ -8,18 +8,18 @@ pipelines:
           caches:
             - pip
           script:
-#            - apt-get update && apt-get -y install libhts-dev
-#
-#            - pip install .
-#            - pip install sphinx sphinx_rtd_theme
-#            - cd doc
-#            - make clean
-#            - make html
+            - apt-get update && apt-get -y install libhts-dev
+
+            - pip install .
+            - pip install sphinx sphinx_rtd_theme
+            - cd doc
+            - make clean
+            - make html
             - git config --global user.email "admin@biociphers.org"
             - git config --global user.name "Biociphers Admin"
             - git clone git@bitbucket.org:biociphers/majiq-docs.git
             - cd majiq-docs
-            - echo 'yay' > index.html
+            - cp -R ../build/html/* .
             - git add --all
             - git commit -m "Automatic update from pipeline"
             - git push
