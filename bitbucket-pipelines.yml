@@ -1,7 +1,7 @@
 image: python:3.8.10
 
 pipelines:
-  branches:
+  custom:
     docs-with-sphinx:
       - step:
           name: doc generator
