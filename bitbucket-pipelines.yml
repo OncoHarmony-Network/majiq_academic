@@ -5,7 +5,6 @@ pipelines:
     docs-with-sphinx:
       - step:
           name: doc generator
-          trigger: manual
           caches:
             - pip
           script:
