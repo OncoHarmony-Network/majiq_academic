@@ -1,0 +1,22 @@
+image: python:3.8.10
+
+pipelines:
+  branches:
+    master:
+      - step:
+          name: doc generator
+          trigger: manual
+          caches:
+            - pip
+          script:
+            # - apt-get update && apt-get -y install python-sphinx
+
+            # INSTALL YOUR DEPENDENCIES HERE
+            # - pip install -r requirements.txt
+
+            - pip install sphinx sphinx_rtd_theme
+            - cd doc
+            - make clean
+            - make html
+          artifacts:
+            - docs/build/html/**
