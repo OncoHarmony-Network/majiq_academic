@@ -21,7 +21,17 @@ from .Contigs import Contigs
 
 
 class Genes(ContigRegions):
-    """Collection of genes and their coordinates"""
+    """Collection of genes on :class:`Contigs` with their coordinates, and ids
+
+    Parameters
+    ----------
+    genes: _Genes
+        Underlying object binding the internal C++ API
+
+    See Also
+    --------
+    Contigs.from_zarr
+    """
 
     def __init__(self, genes: _Genes):
         super().__init__(genes)
@@ -92,11 +102,11 @@ class Genes(ContigRegions):
 
     @classmethod
     def from_zarr(
-        self,
+        cls,
         path: Union[str, Path],
         contigs: Optional[Contigs] = None,
     ) -> "Genes":
-        """Read genes from zarr file.
+        """Load :class:`Genes` from specified path
 
         Parameters
         ----------

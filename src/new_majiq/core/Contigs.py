@@ -20,7 +20,18 @@ from ._workarounds import _load_zerodim_variables
 
 
 class Contigs(object):
-    """Collection of contigs/chromosomes on which genes can be defined"""
+    """Collection of contigs/chromosomes on which genes can be defined
+
+    Parameters
+    ----------
+    contigs: _Contigs
+        Underlying object binding the internal C++ API
+
+    See Also
+    --------
+    Contigs.from_list
+    Contigs.from_zarr
+    """
 
     def __init__(self, contigs: _Contigs):
         self._contigs: Final[_Contigs] = contigs
@@ -82,8 +93,32 @@ class Contigs(object):
         return
 
     @classmethod
+    def from_list(cls, seqid: List[str]) -> "Contigs":
+        """Create :class:`Contigs` for the list of seqids
+
+        Parameters
+        ----------
+        seqid: List[str]
+            Unique names of independent contigs
+        """
+        return Contigs(_Contigs(seqid))
+
+    @classmethod
     def from_zarr(
         cls, path: Union[str, Path], group: str = constants.NC_CONTIGS
     ) -> "Contigs":
+        """Load :class:`Contigs` from specified path
+
+        Parameters
+        ----------
+        path: Union[str, Path]
+            Path where contigs are stored in zarr format
+        group: str
+            group in zarr store where contigs are stored. Default is where
+            contigs are stored for splicegraphs, but some stores (e.g. for
+            :class:`SJExperiment`) need to hold two independent sets of
+            contigs, which requires having two separate group names, which this
+            allows
+        """
         with xr.open_zarr(path, group=group) as df:
-            return Contigs(_Contigs(df.seqid.values.tolist()))
+            return Contigs.from_list(df.seqid.values.tolist())
