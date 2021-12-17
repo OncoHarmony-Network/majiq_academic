@@ -8,10 +8,9 @@ Author: Joseph K Aicher
 """
 
 from pathlib import Path
-from typing import Any, Callable, Dict, Final, Optional, Union
+from typing import Any, Callable, Final, Optional, Union
 
 import new_majiq.constants as constants
-from new_majiq.internals import GFF3FeatureType
 from new_majiq.internals import SpliceGraph as _SpliceGraph
 
 from .Contigs import Contigs
@@ -20,6 +19,7 @@ from .Exons import Exons
 from .GeneIntrons import GeneIntrons
 from .GeneJunctions import GeneJunctions
 from .Genes import Genes
+from .GFF3TypesMap import GFF3TypesMap
 
 
 class SpliceGraph(object):
@@ -101,7 +101,7 @@ class SpliceGraph(object):
         cls,
         path: Union[str, Path],
         process_ir: bool = constants.DEFAULT_BUILD_PROCESS_IR,
-        gff3_types: Dict[str, GFF3FeatureType] = constants.DEFAULT_BUILD_GFF3TYPES,
+        gff3_types: Optional[GFF3TypesMap] = None,
         log_function: Optional[Callable[[str, str, int], Any]] = None,
     ) -> "SpliceGraph":
         """Create :py:class:`SpliceGraph` from GFF3 transcriptome annotations
@@ -112,17 +112,22 @@ class SpliceGraph(object):
             Path to GFF3 file (can be gzipped)
         process_ir: bool
             Identify annotated introns. This should generally be True
-        gff3_types: Dict[str, GFF3FeatureType]
+        gff3_types: Optional[GFF3TypesMap]
             How GFF3 lines will be parsed hierarchically for genes, transcript,
-            and exon definitions
+            and exon definitions. If None, use default initialization of
+            :class:`GFF3TypesMap`.
         log_function: Optional[Callable[str, str, int]]
             GFF3 types that were not accepted or explicitly ignored will be
             reported per unique type/part of hierarchy where they were missing,
             along with their counts. This function will be called for each
             unique type: log_function(type, location_in_hierarchy, count).
         """
+        if gff3_types is None:
+            gff3_types = GFF3TypesMap()
         return SpliceGraph(
-            _SpliceGraph.from_gff3(str(path), process_ir, gff3_types, log_function)
+            _SpliceGraph.from_gff3(
+                str(path), process_ir, gff3_types.current_map, log_function
+            )
         )
 
     @property

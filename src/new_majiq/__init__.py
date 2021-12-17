@@ -24,6 +24,7 @@ from .core.GeneIntrons import GeneIntrons
 from .core.GeneJunctions import GeneJunctions
 from .core.GeneJunctionsAccumulator import GeneJunctionsAccumulator
 from .core.Genes import Genes
+from .core.GFF3TypesMap import GFF3TypesMap
 from .core.GroupIntronsGenerator import GroupIntronsGenerator
 from .core.Heterogen import Heterogen
 from .core.PassedJunctions import GroupJunctionsGenerator, PassedJunctionsGenerator
@@ -108,6 +109,7 @@ __all__ = [
     "GeneJunctions",
     "GeneJunctionsAccumulator",
     "Genes",
+    "GFF3TypesMap",
     "GroupIntronsGenerator",
     "GroupJunctionsGenerator",
     "PassedJunctionsGenerator",

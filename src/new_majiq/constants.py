@@ -11,12 +11,7 @@ from enum import Enum
 from typing import Dict, Final, List, Set
 
 from new_majiq.beta_mixture import stats_available as _stats_available
-from new_majiq.internals import (
-    ExperimentStrandness,
-    ExperimentThresholds,
-    GFF3FeatureType,
-    _default_gff3_types,
-)
+from new_majiq.internals import ExperimentStrandness, ExperimentThresholds
 
 NC_CONTIGS: Final[str] = "contigs"
 NC_GENES: Final[str] = "genes"
@@ -48,7 +43,6 @@ NC_SGREADS_CHUNKS: Final[int] = 1 << 15
 
 
 DEFAULT_BUILD_PROCESS_IR: Final[bool] = True
-DEFAULT_BUILD_GFF3TYPES: Final[Dict[str, GFF3FeatureType]] = _default_gff3_types()
 
 DEFAULT_BAM_STRANDNESS: Final[ExperimentStrandness] = ExperimentStrandness.NONE
 DEFAULT_BAM_NTHREADS: Final[int] = 1

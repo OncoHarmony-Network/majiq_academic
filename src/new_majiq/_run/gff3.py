@@ -67,10 +67,9 @@ def run(args: argparse.Namespace) -> None:
         args.gff3,
         process_ir=args.process_ir,
         # TODO(jaicher): enable configuration of GFF3 parsing
-        gff3_types=nm.constants.DEFAULT_BUILD_GFF3TYPES,
+        gff3_types=None,
         log_function=log_function,
     )
-    # TODO(jaicher): enable capture of skipped features to print to logger
     log.info(f"Saving annotated splicegraph to {args.splicegraph}")
     sg.to_zarr(args.splicegraph)
     return
