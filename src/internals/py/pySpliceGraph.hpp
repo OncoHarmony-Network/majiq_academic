@@ -104,37 +104,59 @@ inline void init_SpliceGraph(pySpliceGraph_t& pySpliceGraph) {
     // constructors from gff3
     .def_static("from_gff3",
         [](std::string gff3_path, bool process_ir,
-            majiq::gff3::featuretype_map_t gff3_types) {
+            majiq::gff3::featuretype_map_t gff3_types,
+            pybind11::object log_function) {
           using majiq::gff3::GFF3ExonHierarchy;
           using majiq::gff3::GFF3TranscriptModels;
           using majiq::gff3::ToTranscriptModels;
           // load gff3 exon hierarchy, convert to MAJIQ gene/transcript/exons
           auto gff3_models
             = ToTranscriptModels(GFF3ExonHierarchy{gff3_path, gff3_types});
-          // TODO(jaicher) print info about skipped types more Python-friendly
-          for (const auto& [tx_type, tx_ct]
-              : gff3_models.skipped_transcript_type_ct_) {
-            std::cerr << "Skipped exons for "
-              << tx_ct
-              << " potential transcripts with unaccepted parent type '"
-              << tx_type << "'\n";
-          }
-          for (const auto& [gene_type, gene_ct]
-              : gff3_models.skipped_gene_type_ct_) {
-            std::cerr << "Skipped exons for "
-              << gene_ct
-              << " potential genes with unaccepted top-level type '"
-              << gene_type << "'\n";
+          {
+            pybind11::gil_scoped_acquire gil;  // acquire GIL to use Python
+            if (!log_function.is_none()) {
+              for (const auto& [tx_type, tx_ct]
+                  : gff3_models.skipped_transcript_type_ct_) {
+                log_function(tx_type, "parent", tx_ct);
+              }
+              for (const auto& [gene_type, gene_ct]
+                  : gff3_models.skipped_gene_type_ct_) {
+                log_function(gene_type, "top-level ancestor", gene_ct);
+              }
+            }  // log skipped exons if log_function is not none
           }
           // convert to splicegraph
           return gff3_models.models_.ToSpliceGraph(process_ir);
         },
         pybind11::call_guard<pybind11::gil_scoped_release>(),
+        R"pbdoc(
+        Create splicegraph from input GFF3 file
+
+        Parameters
+        ----------
+        gff3_path: str
+            Path to GFF3 file to process (supports gzipped files)
+        process_ir: bool
+            Should annotated retained introns be assessed
+        gff3_types: GFF3Types
+            Map from GFF3 type to feature type it should be interpreted in
+            building transcript models of each gene
+        log_function: Optional[Callable[[str, str, int]]]
+            If not None, it will be called for each unaccepted parent
+            (transcript) or top-level ancestor (gene) type that was neither
+            explicitly accepted or ignored when building transcript models.
+            First argument indicates the unaccepted GFF3 type,
+            second argument indicates if it was unaccepted as a parent or
+            top-level ancestor,
+            third argument indicates how many unique cases the GFF3 type was
+            missing in this way.
+        )pbdoc"
         "Create splicegraph from input GFF3 file",
         pybind11::arg("gff3_path"),
         pybind11::arg("process_ir") = DEFAULT_BUILD_PROCESS_IR,
         pybind11::arg_v("gff3_types", majiq::gff3::default_gff3_types,
-            "new_majiq._default_gff3_types()"))
+            "new_majiq._default_gff3_types()"),
+        pybind11::arg("log_function") = pybind11::none())
     .def_static("infer_exons", &SpliceGraph::InferExons,
         pybind11::call_guard<pybind11::gil_scoped_release>(),
         "Infer exons from base annotated exons and junctions",

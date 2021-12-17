@@ -1,4 +1,14 @@
-from typing import Any, ClassVar, Dict, Iterable, Iterator, List, Optional, overload
+from typing import (
+    Any,
+    Callable,
+    ClassVar,
+    Dict,
+    Iterable,
+    Iterator,
+    List,
+    Optional,
+    overload,
+)
 
 import numpy
 import numpy.typing as npt
@@ -676,7 +686,10 @@ class SpliceGraph:
     ) -> bool: ...
     @staticmethod
     def from_gff3(
-        gff3_path: str, process_ir: bool, gff3_types: Dict[str, GFF3FeatureType]
+        gff3_path: str,
+        process_ir: bool,
+        gff3_types: Dict[str, GFF3FeatureType],
+        log_function: Optional[Callable[[str, str, int], Any]] = ...,
     ) -> SpliceGraph: ...
     @staticmethod
     def infer_exons(base_exons: Exons, junctions: GeneJunctions) -> Exons: ...

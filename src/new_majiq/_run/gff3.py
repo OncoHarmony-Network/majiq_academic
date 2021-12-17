@@ -53,11 +53,22 @@ def add_args(parser: argparse.ArgumentParser) -> None:
 def run(args: argparse.Namespace) -> None:
     log = get_logger()
     log.info(f"Processing GFF3 {args.gff3} to create annotated splicegraph")
+
+    def log_function(gff3_type: str, missing_reason: str, count: int) -> None:
+        log.warning(
+            "GFF3 type '%s' skipped %d times (%s)",
+            gff3_type,
+            count,
+            missing_reason,
+        )
+        return
+
     sg = nm.SpliceGraph.from_gff3(
         args.gff3,
         process_ir=args.process_ir,
         # TODO(jaicher): enable configuration of GFF3 parsing
         gff3_types=nm.constants.DEFAULT_BUILD_GFF3TYPES,
+        log_function=log_function,
     )
     # TODO(jaicher): enable capture of skipped features to print to logger
     log.info(f"Saving annotated splicegraph to {args.splicegraph}")

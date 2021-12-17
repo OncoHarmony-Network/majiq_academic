@@ -8,7 +8,7 @@ Author: Joseph K Aicher
 """
 
 from pathlib import Path
-from typing import Dict, Final, Optional, Union
+from typing import Any, Callable, Dict, Final, Optional, Union
 
 import new_majiq.constants as constants
 from new_majiq.internals import GFF3FeatureType
@@ -102,6 +102,7 @@ class SpliceGraph(object):
         path: Union[str, Path],
         process_ir: bool = constants.DEFAULT_BUILD_PROCESS_IR,
         gff3_types: Dict[str, GFF3FeatureType] = constants.DEFAULT_BUILD_GFF3TYPES,
+        log_function: Optional[Callable[[str, str, int], Any]] = None,
     ) -> "SpliceGraph":
         """Create :py:class:`SpliceGraph` from GFF3 transcriptome annotations
 
@@ -114,8 +115,15 @@ class SpliceGraph(object):
         gff3_types: Dict[str, GFF3FeatureType]
             How GFF3 lines will be parsed hierarchically for genes, transcript,
             and exon definitions
+        log_function: Optional[Callable[str, str, int]]
+            GFF3 types that were not accepted or explicitly ignored will be
+            reported per unique type/part of hierarchy where they were missing,
+            along with their counts. This function will be called for each
+            unique type: log_function(type, location_in_hierarchy, count).
         """
-        return SpliceGraph(_SpliceGraph.from_gff3(str(path), process_ir, gff3_types))
+        return SpliceGraph(
+            _SpliceGraph.from_gff3(str(path), process_ir, gff3_types, log_function)
+        )
 
     @property
     def contigs(self) -> Contigs:
