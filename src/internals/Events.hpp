@@ -174,7 +174,20 @@ class Events {
     // get connection_idx matching is_intron
     std::vector<size_t> result;
     for (size_t i = 0; i < num_connections(); ++i) {
-      if (is_intron(i) == INTRON) { result.push_back(i); }
+      if (is_intron(i) == INTRON) {
+        if constexpr(INTRON) {
+          if (connections_[i].idx_ >= introns_->size()) {
+            throw std::invalid_argument(
+                "Events has invalid index into introns");
+          }
+        } else {
+          if (connections_[i].idx_ >= junctions_->size()) {
+            throw std::invalid_argument(
+                "Events has invalid index into junctions");
+          }
+        }
+        result.push_back(i);
+      }
     }
     // sort result as unstranded contig region
     std::sort(result.begin(), result.end(),

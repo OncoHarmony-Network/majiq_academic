@@ -62,8 +62,7 @@ class Regions {
       // update result tracking offsets
       const size_t new_parent_idx = elements[i].parent().idx_;
       if (new_parent_idx >= parents->size()) {
-        throw std::invalid_argument(
-            "Regions parent indexes cannot correspond to parent itself");
+        throw std::invalid_argument("Invalid regions parent index");
       }
       for (; cur_parent_idx < new_parent_idx; ++cur_parent_idx) {
         result[1 + cur_parent_idx] = i;
@@ -73,6 +72,7 @@ class Regions {
         throw std::invalid_argument(
             "Regions must all point to same container of parents");
       }
+      // check that sorted order/non-overlapping is correct
       if constexpr(HAS_OVERLAPS) {
         if (i > 0 && !(elements[i - 1] < elements[i])) {
           throw std::invalid_argument("Regions must be in sorted order");
