@@ -9,7 +9,7 @@ you will need to contact us, please refer to `majiq commercial`_.
 
 
 Required dependencies and tech stack
----------------------
+------------------------------------
 
 Majiq and Voila are primarily python based tools. In general, the best support for running both the analysis portion
 and the visualizer comes from using a Linux-based operating system, however, usage has also been successfully tested
@@ -45,7 +45,7 @@ installed to a non-default / non-system-wide location):
 
 
 Usage with Conda
---------
+----------------
 
 Majiq installation will also work with the 'anaconda' environment manager. (more information about usage or limitations
 with conda here)
