@@ -1,5 +1,5 @@
 """
-GFF3Types.py
+GFF3TypesMap.py
 
 Specify how GFF3 types are used to build transcript models that are translated
 into :class:`SpliceGraph`
@@ -7,7 +7,7 @@ into :class:`SpliceGraph`
 Author: Joseph K Aicher
 """
 
-from typing import Dict, List, Optional, Union
+from typing import Dict, List, Optional, Set, Union
 
 from new_majiq.internals import GFF3FeatureType, _default_gff3_types
 
@@ -61,6 +61,41 @@ class GFF3TypesMap(object):
                 self[k] = v
         return
 
+    @classmethod
+    def from_types_sets(
+        cls,
+        gene_types: Set[str] = set(),
+        transcript_types: Set[str] = set(),
+        exon_types: Set[str] = set(),
+        silent_types: Set[str] = set(),
+        hard_skip_types: Set[str] = set(),
+    ) -> "GFF3TypesMap":
+        """Create :class:`GFF3TypesMap` from non-overlapping sets of types"""
+        # ensure that they are sets
+        gene_types = set(gene_types)
+        transcript_types = set(transcript_types)
+        exon_types = set(exon_types)
+        silent_types = set(silent_types)
+        hard_skip_types = set(hard_skip_types)
+        # Create new GFF3TypesMap
+        result = GFF3TypesMap({})
+        for assign_set, assign_type in (
+            (gene_types, GFF3FeatureType.ACCEPT_GENE),
+            (transcript_types, GFF3FeatureType.ACCEPT_TRANSCRIPT),
+            (exon_types, GFF3FeatureType.EXON),
+            (silent_types, GFF3FeatureType.REJECT_SILENT),
+            (hard_skip_types, GFF3FeatureType.HARD_SKIP),
+        ):
+            for x in assign_set:
+                if x in result:
+                    raise ValueError(
+                        "Overlapping sets in GFF3TypesMap.from_types_sets"
+                        f" (e.g. {x} to {result[x].name} and {assign_type.name})"
+                    )
+                else:
+                    result[x] = assign_type
+        return result
+
     def __repr__(self) -> str:
         # current_map but to names
         str_map = {k: v.name for k, v in self.current_map.items()}
@@ -80,6 +115,9 @@ class GFF3TypesMap(object):
             f"{rk}<-{sorted(reversed_map[rk])}" for rk in sorted(reversed_map)
         )
         return f"GFF3TypesMap({reversed_str})"
+
+    def __contains__(self, k):
+        return k in self.current_map
 
     def __getitem__(self, k):
         return self.current_map[k]
@@ -119,53 +157,55 @@ class GFF3TypesMap(object):
         self.current_map[k] = feature_type
         return
 
-    def exon_types(self) -> List[str]:
-        """List of values for GFF3 type (column 3) recognized as EXON"""
-        return sorted(
-            k for k, v in self.current_map.items() if v == GFF3FeatureType.EXON
-        )
+    def exon_types(self) -> Set[str]:
+        """Set of values for GFF3 type (column 3) recognized as EXON"""
+        return set(k for k, v in self.current_map.items() if v == GFF3FeatureType.EXON)
 
-    def transcript_types(self) -> List[str]:
-        """List of values for GFF3 type (column 3) recognized as transcript
+    def transcript_types(self, exclude_genes: bool = True) -> Set[str]:
+        """Set of values for GFF3 type (column 3) recognized as transcript
 
-        List of values for GFF3 type (column 3) recognized as transcript when
+        Set of values for GFF3 type (column 3) recognized as transcript when
         the immediate parent of accepted exons. Note this includes both
-        ACCEPT_TRANSCRIPT and ACCEPT_GENE.
+        ACCEPT_TRANSCRIPT and ACCEPT_GENE. If exclude_genes is set, exclude
+        types that are also recognized as genes.
         """
-        return sorted(
+        result = set(
             k
             for k, v in self.current_map.items()
-            if v in (GFF3FeatureType.ACCEPT_GENE, GFF3FeatureType.ACCEPT_TRANSCRIPT)
+            if v == GFF3FeatureType.ACCEPT_TRANSCRIPT
         )
+        if not exclude_genes:
+            result |= self.gene_types()
+        return result
 
-    def gene_types(self) -> List[str]:
-        """List of values for GFF3 type (column 3) recognized as gene (ACCEPT_GENE)
+    def gene_types(self) -> Set[str]:
+        """Set of values for GFF3 type (column 3) recognized as gene (ACCEPT_GENE)
 
-        List of values for GFF3 type (column 3) recognized as gene when
+        Set of values for GFF3 type (column 3) recognized as gene when
         ancestor of exon (if multiple ancestors are recognized, the most recent
         ancestor in hierarchy is the assigned gene)
         """
-        return sorted(
+        return set(
             k for k, v in self.current_map.items() if v == GFF3FeatureType.ACCEPT_GENE
         )
 
-    def silent_types(self) -> List[str]:
-        """List of values for GFF3 type (column 3) that will be silently ignored
+    def silent_types(self) -> Set[str]:
+        """Set of values for GFF3 type (column 3) that will be silently ignored
 
-        List of values for GFF3 type (column 3) that will be ignored, but
+        Set of values for GFF3 type (column 3) that will be ignored, but
         silently. Non-accepted features that are not included here will be
         accounted for.
         """
-        return sorted(
+        return set(
             k for k, v in self.current_map.items() if v == GFF3FeatureType.REJECT_SILENT
         )
 
-    def hard_skip_types(self) -> List[str]:
-        """List of values for GFF3 type (column 3) hard excluded from hierarchy
+    def hard_skip_types(self) -> Set[str]:
+        """Set of values for GFF3 type (column 3) hard excluded from hierarchy
 
-        List of values for GFF3 type (column 3) hard excluded from hierarchy.
+        Set of values for GFF3 type (column 3) hard excluded from hierarchy.
         If an exon has one of these as an ancestor, an exception will be raised.
         """
-        return sorted(
+        return set(
             k for k, v in self.current_map.items() if v == GFF3FeatureType.HARD_SKIP
         )
