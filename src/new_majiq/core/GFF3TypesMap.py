@@ -56,22 +56,30 @@ class GFF3TypesMap(object):
         if gff3_types_map is None:
             self.current_map = _default_gff3_types()
         else:
-            # convert everything to GFF3FeatureType
-            self.current_map = {
-                k: GFF3FeatureType.__members__[v] if isinstance(v, str) else v
-                for k, v in gff3_types_map.items()
-            }
-        # ensure that all values of GFF3FeatureType are valid
-        if invalid := [
-            (k, v)
-            for k, v in self.current_map.items()
-            if v.name not in GFF3FeatureType.__members__
-        ]:
-            raise ValueError(f"Invalid feature types for GFF3TypesMap {invalid = }")
+            self.current_map = {}
+            for k, v in gff3_types_map.items():
+                self[k] = v
         return
 
     def __repr__(self) -> str:
-        return str({k: v.name for k, v in self.current_map.items()})
+        # current_map but to names
+        str_map = {k: v.name for k, v in self.current_map.items()}
+        return f"GFF3TypesMap({str_map})"
+
+    def __str__(self) -> str:
+        # reversed map from how it's processed to lists of GFF3 types
+        reversed_map: Dict[str, List[str]] = {}
+        # fill reversed_map
+        for k, v in self.current_map.items():
+            try:
+                reversed_map[v.name].append(k)
+            except KeyError:
+                reversed_map[v.name] = [k]
+        # put it in sorted order
+        reversed_str = ", ".join(
+            f"{rk}<-{sorted(reversed_map[rk])}" for rk in sorted(reversed_map)
+        )
+        return f"GFF3TypesMap({reversed_str})"
 
     def __getitem__(self, k):
         return self.current_map[k]
@@ -92,15 +100,22 @@ class GFF3TypesMap(object):
         """
         if not isinstance(k, str):
             raise ValueError(f"Keys in GFF3TypesMap must be string (key = {k})")
-        if isinstance(feature_type, str):
-            feature_type = GFF3FeatureType.__members__[feature_type.upper()]
-        else:
-            feature_type = GFF3FeatureType(feature_type)
-            if feature_type.name not in GFF3FeatureType.__members__:
-                raise ValueError(
-                    f"Invalid feature type {feature_type}"
-                    f" (valid choices: {GFF3FeatureType.__members__})"
-                )
+        try:
+            if isinstance(feature_type, str):
+                feature_type = GFF3FeatureType.__members__[feature_type.upper()]
+            else:
+                # if feature_type is not int or GFF3FeatureType, TypeError
+                # but it accepts non-enumerated ints, so further checks name
+                # against __members__, yielding either enumerated
+                # GFF3FeatureType or KeyError
+                feature_type = GFF3FeatureType.__members__[
+                    GFF3FeatureType(feature_type).name
+                ]
+        except (TypeError, KeyError):
+            raise ValueError(
+                f"Invalid parsing option {feature_type} for GFF3 type {k}"
+                f" (valid choices: {sorted(GFF3FeatureType.__members__)})"
+            )
         self.current_map[k] = feature_type
         return
 
