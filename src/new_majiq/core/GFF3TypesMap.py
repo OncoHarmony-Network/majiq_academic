@@ -96,6 +96,10 @@ class GFF3TypesMap(object):
                     result[x] = assign_type
         return result
 
+    @classmethod
+    def VALID_ACTIONS(cls) -> Set[str]:
+        return set(GFF3FeatureType.__members__.keys())
+
     def __repr__(self) -> str:
         # current_map but to names
         str_map = {k: v.name for k, v in self.current_map.items()}
