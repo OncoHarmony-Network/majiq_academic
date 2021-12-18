@@ -97,6 +97,24 @@ inline FeatureType get_feature_type(
   return result_it != gff3_types.end()
     ? result_it->second : FeatureType::REJECT_OTHER;
 }
+// throw exception if featuretype_map_t has no chance of succeeding
+inline void assert_featuretype_map_plausible(
+    const featuretype_map_t& gff3_types) {
+  bool no_gene = true;  // it needs to have at least one ACCEPT_GENE
+  bool no_exon = true;  // it needs to have at least one EXON
+  for (const auto& x : gff3_types) {
+    if (x.second == FeatureType::ACCEPT_GENE) {
+      no_gene = false;
+    } else if (x.second == FeatureType::EXON) {
+      no_exon = false;
+    }
+  }
+  if (no_gene || no_exon) {
+    throw std::invalid_argument(
+        "GFF3 feature map needs at least one ACCEPT_GENE and one EXON");
+  }
+  return;
+}
 
 
 struct GFF3TranscriptModels {
