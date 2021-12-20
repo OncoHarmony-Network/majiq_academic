@@ -181,6 +181,8 @@ class PassedJunctionsGenerator {
    * Add junction with gene/coordinates as passed
    */
   void AddJunction(const KnownGene& gene, const OpenInterval& coordinates) {
+    // acquire appropriate locks on self
+    std::scoped_lock lock(passed_mutex_);
     // junction that we want to add
     GeneJunction j{gene, coordinates, true, true, false};  // passed and denovo
     // check if it is among known junctions
