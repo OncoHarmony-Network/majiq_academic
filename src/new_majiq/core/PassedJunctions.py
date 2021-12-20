@@ -30,6 +30,11 @@ class GroupJunctionsGenerator(object):
         return
 
     @property
+    def _known(self) -> GeneJunctions:
+        """Underlying known :class:`GeneJunctions`"""
+        return GeneJunctions(self._group._known)
+
+    @property
     def num_experiments(self) -> int:
         return self._group.num_experiments
 
@@ -77,6 +82,11 @@ class PassedJunctionsGenerator(object):
         return
 
     @property
+    def _known(self) -> GeneJunctions:
+        """Underlying known :class:`GeneJunctions`"""
+        return GeneJunctions(self._passed._known)
+
+    @property
     def num_known(self) -> int:
         """Number of 'known' junctions (originally passed in)"""
         return self._passed.num_known
@@ -105,6 +115,33 @@ class PassedJunctionsGenerator(object):
             junction to be updated as being reliable
         """
         self._passed.add_group(group._group, min_experiments)
+        return self
+
+    def add_junction(
+        self, gene_idx: int, start: int, end: int
+    ) -> "PassedJunctionsGenerator":
+        """Pass the specified junction
+
+        Parameters
+        ----------
+        gene_idx: int
+            gene index for junction to be passed
+        start, end: int
+            Coordinates for junction to be passed
+        """
+        num_genes = len(self._known.genes)
+        if not 0 <= gene_idx < num_genes:
+            raise ValueError(
+                f"Invalid gene_idx ({gene_idx}, must be in [0, {num_genes}))"
+            )
+        gene_start = self._known.genes.start[gene_idx]
+        gene_end = self._known.genes.end[gene_idx]
+        if start < gene_start or gene_end < end:
+            raise ValueError(
+                f"Invalid coordinates ({start}, {end});"
+                f" must be in [{gene_start}, {gene_end}]"
+            )
+        self._passed.add_junction(gene_idx, start, end)
         return self
 
     def get_passed(

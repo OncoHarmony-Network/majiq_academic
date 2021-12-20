@@ -34,6 +34,9 @@ inline void init_GroupJunctionsGenerator(
       "Accumulate SJJunctions for build group for input junctions/exons",
       pybind11::arg("junctions"),
       pybind11::arg("exons"))
+    .def_property_readonly("_known", &GroupJunctionsGenerator::known,
+        pybind11::call_guard<pybind11::gil_scoped_release>(),
+        "Get underlying known junctions")
     .def("add_experiment", &majiq::GroupJunctionsGenerator::AddExperiment,
         pybind11::call_guard<pybind11::gil_scoped_release>(),
         "Increment count of passed junctions from input experiment",
@@ -71,11 +74,25 @@ inline void init_PassedJunctionsGenerator(
       Accumulator of GroupJunctionsGenerator for different build groups
       )pbdoc",
       pybind11::arg("junctions"))
+    .def_property_readonly("_known", &PassedJunctionsGenerator::known,
+        pybind11::call_guard<pybind11::gil_scoped_release>(),
+        "Get underlying known junctions")
     .def("add_group", &majiq::PassedJunctionsGenerator::AddGroup,
         pybind11::call_guard<pybind11::gil_scoped_release>(),
         "Combine passed junctions from build group of experiments",
         pybind11::arg("group"),
         pybind11::arg("min_experiments") = DEFAULT_BUILD_MINEXPERIMENTS)
+    .def("add_junction",
+        [](PassedJunctionsGenerator& self, size_t gene_idx,
+          position_t start, position_t end) {
+        self.AddJunction(gene_idx, start, end);
+        return;
+        },
+        pybind11::call_guard<pybind11::gil_scoped_release>(),
+        "Mark specific junction as passed",
+        pybind11::arg("gene_idx"),
+        pybind11::arg("start"),
+        pybind11::arg("end"))
     .def("get_passed", &majiq::PassedJunctionsGenerator::PassedJunctions,
         pybind11::call_guard<pybind11::gil_scoped_release>(),
         "Get static, array-based representation of passed junctions",

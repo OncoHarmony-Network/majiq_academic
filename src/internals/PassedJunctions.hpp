@@ -128,6 +128,8 @@ class GroupJunctionsGenerator {
   }
   size_t size() const noexcept { return num_annotated() + num_denovo(); }
 
+  const std::shared_ptr<GeneJunctions>& known() const { return known_; }
+
   void AddExperiment(const SJJunctionsBins& sjp,
       const ExperimentThresholds& thresholds, bool process_denovo);
   /**
@@ -171,6 +173,30 @@ class PassedJunctionsGenerator {
       throw std::invalid_argument(
           "PassedJunctionsGenerator requires non-null known GeneJunctions");
      }
+  }
+
+  const std::shared_ptr<GeneJunctions>& known() const { return known_; }
+
+  /**
+   * Add junction with gene/coordinates as passed
+   */
+  void AddJunction(const KnownGene& gene, const OpenInterval& coordinates) {
+    // junction that we want to add
+    GeneJunction j{gene, coordinates, true, true, false};  // passed and denovo
+    // check if it is among known junctions
+    auto known_it = known_->find(j);
+    if (known_it != known_->end()) {
+      // it is a known junction, make sure it is marked as passed
+      known_passed_build_[known_it - known_->begin()] = true;
+    } else {
+      // make sure it is among denovos passing build
+      denovos_passed_build_.insert(j);
+    }
+    return;
+  }
+  void AddJunction(size_t gene_idx, position_t start, position_t end) {
+    return AddJunction(
+        KnownGene{gene_idx, known_->parents()}, OpenInterval{start, end});
   }
 
   void AddGroup(
