@@ -14,3 +14,4 @@ It is designed to introduce the main concepts for new users.
    installing
    quick-overview
    faq
+   builder
