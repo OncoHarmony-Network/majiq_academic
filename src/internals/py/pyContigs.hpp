@@ -33,8 +33,12 @@ inline void init_Contigs(pyContigs_t& pyContigs) {
     .def(
         pybind11::init([](pybind11::list seqids) {
           auto result = Contigs::create();
-          for (auto seqid : seqids) {
-            result->add(Contig{seqid.cast<seqid_t>()});
+          for (auto seqid_py : seqids) {
+            auto seqid = seqid_py.cast<seqid_t>();
+            if (result->count(seqid)) {
+              throw std::invalid_argument("Contigs require unique seqids");
+            }
+            result->add(Contig{seqid});
           }
           return result;
         }),
