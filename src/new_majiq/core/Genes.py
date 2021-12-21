@@ -111,7 +111,27 @@ class Genes(ContigRegions):
         gene_id: List[str],
         gene_name: List[str],
     ) -> "Genes":
-        """Create :class:`Genes` from :class:`Contigs` and input arrays"""
+        """Create :class:`Genes` from :class:`Contigs` and input arrays
+
+        Parameters
+        ----------
+        contigs: Contigs
+            Contigs on which genes are defined
+        contig_idx: array_like, int
+            Index of contig for each gene
+        start, end: array_like, int
+            Coordinates for each gene on the contig
+        strand: array_like, {"+", "-"}
+            Forward or reverse strand for each gene
+        gene_id: List[str]
+            Unique identifier for each gene
+        gene_name: List[str]
+            Name for each gene
+
+        Notes
+        -----
+        Genes must be provided in sorted order (contig_idx, start, end, strand).
+        """
         return Genes(
             _Genes(contigs._contigs, contig_idx, start, end, strand, gene_id, gene_name)
         )

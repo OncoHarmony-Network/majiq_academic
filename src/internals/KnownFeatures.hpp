@@ -16,6 +16,7 @@
 #include <tuple>
 #include <optional>
 #include <functional>
+#include <stdexcept>
 #include <vector>
 
 
@@ -158,7 +159,15 @@ class KnownFeatures {
            std::enable_if_t<std::is_same_v<CT, ContainerT>, bool> = true>
   explicit KnownFeatures(CT&& features) : features_{std::move(features)} {
     for (size_t idx = 0; idx < features_.size(); ++idx) {
-      idx_map_[features_[idx].unique_key()] = idx;
+      // try mapping unique key of features_[idx] to idx
+      auto insert_pair = idx_map_.insert_or_assign(
+          features_[idx].unique_key(), idx);
+      // insert_pair is [iterator to key in map, bool if insertion took place]
+      if (!insert_pair.second) {
+        // the unique key is not unique, which is an error
+        throw std::invalid_argument(
+            "Input features have non-unique identifiers");
+      }
     }
   }
   KnownFeatures() = default;
