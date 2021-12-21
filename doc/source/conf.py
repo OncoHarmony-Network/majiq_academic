@@ -51,7 +51,13 @@ exclude_patterns = ["**.ipynb_checkpoints"]
 #
 html_theme = "sphinx_rtd_theme"
 html_title = "Majiq Documentation"
-html_logo = 'img/logo1.png'
+html_logo = 'static/logo1.png'
+html_favicon = 'static/favicon.ico'
+# html_context = {
+#     'css_files': ['static/style.css'],
+# }
+html_static_path = ['static']
+html_css_files = ['style.css']
 html_theme_options = {
     'logo_only': True,
     'display_version': True,

@@ -3,8 +3,8 @@
 
 .. _MAJIQ Builder full:
 
-MAJIQ Builder
--------------
+MAJIQ Builder In Depth
+----------------------
 
 *Creating the config file*
 
