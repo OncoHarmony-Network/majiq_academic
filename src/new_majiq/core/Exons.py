@@ -81,7 +81,9 @@ class Exons(GeneRegions):
 
     def empty_introns(self) -> "GeneIntrons":
         """Return empty :py:class:`GeneIntrons` that match these exons"""
-        return self.potential_introns().filter_passed()
+        from .GeneIntrons import GeneIntrons
+
+        return GeneIntrons.from_genes(self.genes, self)
 
     @property
     def annotated_start(self) -> np.ndarray:

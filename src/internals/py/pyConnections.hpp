@@ -47,7 +47,8 @@ inline void define_connections_properties(
             pybind11::array_t<position_t> _end,
             pybind11::array_t<bool> _denovo,
             pybind11::array_t<bool> _passed_build,
-            pybind11::array_t<bool> _simplified) {
+            pybind11::array_t<bool> _simplified,
+            std::shared_ptr<Exons> connected_exons) {
           if (_gene_idx.ndim() != 1
               || _start.ndim() != 1
               || _end.ndim() != 1
@@ -80,14 +81,16 @@ inline void define_connections_properties(
                     IntervalT{start(i), end(i)},
                     denovo(i), passed_build(i), simplified(i));
           }
-          return std::make_shared<RegionsT>(genes, std::move(connection_vec));
+          return std::make_shared<RegionsT>(
+              genes, std::move(connection_vec), connected_exons);
         }),
         pybind11::call_guard<pybind11::gil_scoped_release>(),
         "Create connections using Genes and arrays defining each connection",
         pybind11::arg("genes"),
         pybind11::arg("gene_idx"), pybind11::arg("start"), pybind11::arg("end"),
         pybind11::arg("denovo"), pybind11::arg("passed_build"),
-        pybind11::arg("simplified"))
+        pybind11::arg("simplified"),
+        pybind11::arg("connected_exons").none(true) = nullptr)
     .def("checksum",
         [](const RegionsT& self) {
         return self.template checksum<true>();

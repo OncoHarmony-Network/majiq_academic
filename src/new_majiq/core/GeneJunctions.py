@@ -101,11 +101,21 @@ class GeneJunctions(GeneConnections):
         denovo: np.ndarray,
         passed_build: np.ndarray,
         simplified: np.ndarray,
+        connected_exons: Optional[Exons] = None,
     ) -> "GeneJunctions":
         """Create :class:`GeneJunctions` from :class:`Genes` and input arrays"""
         return GeneJunctions(
             _GeneJunctions(
-                genes._genes, gene_idx, start, end, denovo, passed_build, simplified
+                genes._genes,
+                gene_idx,
+                start,
+                end,
+                denovo,
+                passed_build,
+                simplified,
+                connected_exons=None
+                if connected_exons is None
+                else connected_exons._exons,
             )
         )
 

@@ -16,6 +16,7 @@ import new_majiq.constants as constants
 from new_majiq.internals import GeneIntrons as _GeneIntrons
 
 from ._workarounds import _load_zerodim_variables
+from .Exons import Exons
 from .GeneConnections import GeneConnections
 from .Genes import Genes
 
@@ -131,16 +132,28 @@ class GeneIntrons(GeneConnections):
         denovo: np.ndarray,
         passed_build: np.ndarray,
         simplified: np.ndarray,
+        connected_exons: Optional[Exons] = None,
     ) -> "GeneIntrons":
         """Create :class:`GeneIntrons` from :class:`Genes` and input arrays"""
         return GeneIntrons(
             _GeneIntrons(
-                genes._genes, gene_idx, start, end, denovo, passed_build, simplified
+                genes._genes,
+                gene_idx,
+                start,
+                end,
+                denovo,
+                passed_build,
+                simplified,
+                connected_exons=None
+                if connected_exons is None
+                else connected_exons._exons,
             )
         )
 
     @classmethod
-    def from_genes(cls, genes: Genes) -> "GeneIntrons":
+    def from_genes(
+        cls, genes: Genes, connected_exons: Optional[Exons] = None
+    ) -> "GeneIntrons":
         """Empty introns matched to specified genes"""
         return GeneIntrons.from_arrays(
             genes,
@@ -150,6 +163,7 @@ class GeneIntrons(GeneConnections):
             np.array([], dtype=bool),
             np.array([], dtype=bool),
             np.array([], dtype=bool),
+            connected_exons=connected_exons,
         )
 
     @classmethod

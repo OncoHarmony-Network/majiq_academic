@@ -9,6 +9,7 @@
 #ifndef MAJIQ_GENECONNECTIONS_HPP
 #define MAJIQ_GENECONNECTIONS_HPP
 
+#include <memory>
 #include <tuple>
 
 #include "ConnectionData.hpp"
