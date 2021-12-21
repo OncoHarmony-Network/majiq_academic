@@ -242,6 +242,60 @@ class SJJunctionsBins(SJBinsReads):
         )
 
     @classmethod
+    def with_summaries(
+        cls,
+        regions: SJJunctions,
+        numreads: np.ndarray,
+        numbins: np.ndarray,
+        total_bins: int,
+        strandness: Optional[ExperimentStrandness] = None,
+    ) -> "SJJunctionsBins":
+        """Create :class:`SJJunctionsBins` with uniform coverage over nonzero bins"""
+        if numreads.ndim != 1 or numbins.ndim != 1:
+            raise ValueError("numreads, numbins must be 1D")
+        if len(regions) != numreads.shape[0] or len(regions) != numbins.shape[0]:
+            raise ValueError("numreads, numbins must match regions in length")
+        if np.any(numreads < numbins):
+            raise ValueError("numreads must be at least numbins")
+        if np.any(numbins < 0) or np.any(numbins > total_bins):
+            raise ValueError(f"numbins must be in [0, {total_bins = }]")
+        # offsets are determined by numbins
+        offsets = np.empty(1 + len(regions), dtype=np.int64)
+        offsets[0] = 0
+        np.cumsum(numbins, out=offsets[1:])
+        # how many reads per bin (lower value, deal with remainder after)
+        reads_per_bin = numreads // numbins
+        # how many bins will get an extra read?
+        remainder_bins = numreads % numbins
+        # construct bin_reads so that remainders go on end each slice per region
+        nonzero_bin_idx = np.repeat(offsets[1:], numbins) + np.arange(
+            -1, -1 - offsets[-1], -1
+        )
+        bin_reads = np.repeat(reads_per_bin, numbins) + np.where(
+            nonzero_bin_idx < np.repeat(remainder_bins, numbins), 1, 0
+        )
+        # make bin_idx arbitrarily.
+        # To make sure there are no repeats, we tile the possible indexes.
+        tile_ct = -(len(bin_reads) // -total_bins)  # ceil(bin_reads / total_bins)
+        bin_idx = np.tile(np.arange(total_bins), tile_ct)[: len(bin_reads)]
+        # guess strandness if not specified (REVERSE vs NONE)
+        if strandness is None:
+            strandness = (
+                ExperimentStrandness.REVERSE
+                if np.any(regions.strand != b".")
+                else ExperimentStrandness.NONE
+            )
+        # use these arrays to construct simple SJJunctionsBins
+        return SJJunctionsBins.from_arrays(
+            regions,
+            bin_reads.astype(np.int32),
+            bin_idx.astype(np.int32),
+            offsets.astype(np.uint64),
+            total_bins,
+            strandness,
+        )
+
+    @classmethod
     def from_zarr(cls, path: Union[str, Path]) -> "SJJunctionsBins":
         """Load SJJunctionsBins from zarr format"""
         regions = SJJunctions.from_zarr(path)
