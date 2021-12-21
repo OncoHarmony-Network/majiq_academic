@@ -26,7 +26,7 @@ compile_args = ["-fopenmp"]
 linker_args = ["-lgomp"]
 
 # uncomment to compile with symbols for debugging with gdb/lldb
-# compile_args += ["-O0", "-g"]  # for debugging
+compile_args += ["-O0", "-g"]  # for debugging
 
 # C++11 flags
 if sys.platform == "darwin":
