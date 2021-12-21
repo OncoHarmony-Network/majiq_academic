@@ -48,6 +48,7 @@ cdef int  read_gff(str filename, map[string, Gene*] all_genes, vector[string] gi
     cdef coord_key_t key
     # cdef map[string, Gene*] all_genes
 
+    logging.debug("begin processing GFF3 records")
     for record in parse_gff3(filename):
 
         if record.strand is None or record.seqid is None:
@@ -129,6 +130,7 @@ cdef int  read_gff(str filename, map[string, Gene*] all_genes, vector[string] gi
                     parent_tx_id,
                 )
     # end loop over records in GFF3 file
+    logging.debug("end processing GFF3 records, extract transcript junctions")
 
     for parent_tx_id, (gene_id, coord_list) in trcpt_id_dict.items():
         last_ss = constants.FIRST_LAST_JUNC
@@ -144,7 +146,9 @@ cdef int  read_gff(str filename, map[string, Gene*] all_genes, vector[string] gi
         key = coord_key_t(last_ss, constants.FIRST_LAST_JUNC)
         if all_genes[gene_id].junc_map_.count(key) == 0:
             all_genes[gene_id].junc_map_[key] = new Junction(last_ss, constants.FIRST_LAST_JUNC, True, simpl)
+    logging.debug("end extract transcript junctions, extract exons/introns")
     merge_exons(exon_dict, all_genes, simpl, enable_anot_ir)
+    logging.debug("end extract exons/introns")
     return 0
 
 
