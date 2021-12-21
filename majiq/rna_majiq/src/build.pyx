@@ -562,8 +562,11 @@ cdef _core_build(str transcripts, list file_list, object conf, object logger):
     logger.info("Parsing GFF3")
     majiq_io.read_gff(transcripts, gene_map, gid_vec, bsimpl, enable_anot_ir, logger)
 
+    logger.debug("Prepare gene list")
     prepare_genelist(gene_map, gene_list)
+    logger.debug("Count number of genes")
     n = gene_map.size()
+    logger.debug("Initialize splicegraph")
     init_splicegraph(sg_filename, conf)
     logger.info("Reading bamfiles")
     _find_junctions(file_list, gene_map, gid_vec, gene_list, conf, logger)
