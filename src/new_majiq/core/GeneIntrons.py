@@ -122,9 +122,35 @@ class GeneIntrons(GeneConnections):
         return
 
     @classmethod
+    def from_arrays(
+        cls,
+        genes: Genes,
+        gene_idx: np.ndarray,
+        start: np.ndarray,
+        end: np.ndarray,
+        denovo: np.ndarray,
+        passed_build: np.ndarray,
+        simplified: np.ndarray,
+    ) -> "GeneIntrons":
+        """Create :class:`GeneIntrons` from :class:`Genes` and input arrays"""
+        return GeneIntrons(
+            _GeneIntrons(
+                genes._genes, gene_idx, start, end, denovo, passed_build, simplified
+            )
+        )
+
+    @classmethod
     def from_genes(cls, genes: Genes) -> "GeneIntrons":
         """Empty introns matched to specified genes"""
-        return GeneIntrons(_GeneIntrons(genes._genes, [], [], [], [], [], []))
+        return GeneIntrons.from_arrays(
+            genes,
+            np.array([], dtype=np.uint64),
+            np.array([], dtype=np.int64),
+            np.array([], dtype=np.int64),
+            np.array([], dtype=bool),
+            np.array([], dtype=bool),
+            np.array([], dtype=bool),
+        )
 
     @classmethod
     def from_zarr(
@@ -147,14 +173,13 @@ class GeneIntrons(GeneConnections):
         if genes is None:
             genes = Genes.from_zarr(path)
         with xr.open_zarr(path, group=constants.NC_GENEINTRONS) as df:
-            return GeneIntrons(
-                _GeneIntrons(
-                    genes._genes,
-                    df.gene_idx.values,
-                    df.start.values,
-                    df.end.values,
-                    df.denovo.values,
-                    df.passed_build.values,
-                    df.simplified.values,
-                )
+            df.load()
+            return GeneIntrons.from_arrays(
+                genes,
+                df.gene_idx.values,
+                df.start.values,
+                df.end.values,
+                df.denovo.values,
+                df.passed_build.values,
+                df.simplified.values,
             )

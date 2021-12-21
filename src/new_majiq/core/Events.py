@@ -341,6 +341,34 @@ class Events(object):
         return
 
     @classmethod
+    def from_arrays(
+        cls,
+        introns: GeneIntrons,
+        junctions: GeneJunctions,
+        ref_exon_idx: np.ndarray,
+        event_type: np.ndarray,
+        offsets: np.ndarray,
+        is_intron: np.ndarray,
+        connection_idx: np.ndarray,
+    ) -> "Events":
+        """Create :class:`Events` from connections and input arrays
+
+        Create :class:`Events` from connections (:class:`GeneIntrons` and
+        :class:`GeneJunctions`) and input arrays
+        """
+        return Events(
+            _Events(
+                introns._gene_introns,
+                junctions._gene_junctions,
+                ref_exon_idx,
+                event_type,
+                offsets,
+                is_intron,
+                connection_idx,
+            )
+        )
+
+    @classmethod
     def from_zarr(
         cls,
         path: Union[str, Path],
@@ -349,20 +377,19 @@ class Events(object):
     ) -> "Events":
         """Load :py:class:`Events` from specified path"""
         with xr.open_zarr(path, group=constants.NC_EVENTS) as df:
+            df.load()
             if df.intron_hash != introns.checksum():
                 raise ValueError("Saved hash for introns does not match")
             if df.junction_hash != junctions.checksum():
                 raise ValueError("Saved hash for junctions does not match")
-            return Events(
-                _Events(
-                    introns._gene_introns,
-                    junctions._gene_junctions,
-                    df.ref_exon_idx.values,
-                    df.event_type.values,
-                    df._offsets.values,
-                    df.is_intron.values,
-                    df.connection_idx.values,
-                )
+            return Events.from_arrays(
+                introns,
+                junctions,
+                df.ref_exon_idx.values,
+                df.event_type.values,
+                df._offsets.values,
+                df.is_intron.values,
+                df.connection_idx.values,
             )
 
     def __getitem__(self, event_mask) -> "Events":

@@ -148,6 +148,21 @@ class Exons(GeneRegions):
         return
 
     @classmethod
+    def from_arrays(
+        cls,
+        genes: Genes,
+        gene_idx: np.ndarray,
+        start: np.ndarray,
+        end: np.ndarray,
+        annotated_start: np.ndarray,
+        annotated_end: np.ndarray,
+    ) -> "Exons":
+        """Create :class:`Exons` from :class:`Genes` and input arrays"""
+        return Exons(
+            _Exons(genes._genes, gene_idx, start, end, annotated_start, annotated_end)
+        )
+
+    @classmethod
     def from_zarr(
         self,
         path: Union[str, Path],
@@ -168,13 +183,12 @@ class Exons(GeneRegions):
         if genes is None:
             genes = Genes.from_zarr(path)
         with xr.open_zarr(path, group=constants.NC_EXONS) as df:
-            return Exons(
-                _Exons(
-                    genes._genes,
-                    df.gene_idx.values,
-                    df.start.values,
-                    df.end.values,
-                    df.annotated_start.values,
-                    df.annotated_end.values,
-                )
+            df.load()
+            return Exons.from_arrays(
+                genes,
+                df.gene_idx.values,
+                df.start.values,
+                df.end.values,
+                df.annotated_start.values,
+                df.annotated_end.values,
             )

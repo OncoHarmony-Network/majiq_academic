@@ -91,57 +91,21 @@ class GeneJunctions(GeneConnections):
         )
         return
 
-    @staticmethod
-    def load_dataset(path: Union[str, Path]) -> xr.Dataset:
-        """Load junctions from zarr file as :py:class:`xr.Dataset`
-
-        Load junctions from zarr file as :py:class:`xr.Dataset`. This is a more
-        lightweight representation of junctions when it is not necessary to
-        connect to gene or contig information
-
-        Parameters
-        ----------
-        path: Union[str, Path]
-            Path to where :py:class:`GeneJunctions` are saved (this includes
-            splicegraphs)
-
-        Returns
-        -------
-        xr.Dataset
-        """
-        with xr.open_zarr(path, group=constants.NC_GENEJUNCTIONS) as df:
-            return df.load()
-
-    @staticmethod
-    def from_dataset_and_genes(df: xr.Dataset, genes: Genes) -> "GeneJunctions":
-        """Create :py:class:`GeneJunctions` from junction dataset and :py:class:`Genes`
-
-        Parameters
-        ----------
-        df: xr.Dataset
-            Variables:
-                gene_idx(gj_idx) uint64
-                start(gj_idx) int64
-                end(gj_idx) int64
-                denovo(gj_idx) bool
-                passed_build(gj_idx) bool
-                simplified(gj_idx) bool
-        genes: Genes
-            Genes matched to gene_idx in input dataset
-
-        Returns
-        -------
-        GeneJunctions
-        """
+    @classmethod
+    def from_arrays(
+        cls,
+        genes: Genes,
+        gene_idx: np.ndarray,
+        start: np.ndarray,
+        end: np.ndarray,
+        denovo: np.ndarray,
+        passed_build: np.ndarray,
+        simplified: np.ndarray,
+    ) -> "GeneJunctions":
+        """Create :class:`GeneJunctions` from :class:`Genes` and input arrays"""
         return GeneJunctions(
             _GeneJunctions(
-                genes._genes,
-                df.gene_idx.values,
-                df.start.values,
-                df.end.values,
-                df.denovo.values,
-                df.passed_build.values,
-                df.simplified.values,
+                genes._genes, gene_idx, start, end, denovo, passed_build, simplified
             )
         )
 
@@ -164,6 +128,14 @@ class GeneJunctions(GeneConnections):
         """
         if genes is None:
             genes = Genes.from_zarr(path)
-        return GeneJunctions.from_dataset_and_genes(
-            GeneJunctions.load_dataset(path), genes
-        )
+        with xr.open_zarr(path, group=constants.NC_GENEJUNCTIONS) as df:
+            df.load()
+            return GeneJunctions.from_arrays(
+                genes,
+                df.gene_idx.values,
+                df.start.values,
+                df.end.values,
+                df.denovo.values,
+                df.passed_build.values,
+                df.simplified.values,
+            )

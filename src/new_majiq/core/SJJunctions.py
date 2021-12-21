@@ -72,6 +72,20 @@ class SJJunctions(ContigRegions):
         return
 
     @classmethod
+    def from_arrays(
+        cls,
+        contigs: Contigs,
+        contig_idx: np.ndarray,
+        start: np.ndarray,
+        end: np.ndarray,
+        strand: np.ndarray,
+    ) -> "SJJunctions":
+        """Create :class:`SJJunctions` from :class:`Contigs` and input arrays"""
+        return SJJunctions(
+            _SJJunctions(contigs._contigs, contig_idx, start, end, strand)
+        )
+
+    @classmethod
     def from_zarr(
         cls,
         path: Union[str, Path],
@@ -90,12 +104,11 @@ class SJJunctions(ContigRegions):
         if contigs is None:
             contigs = Contigs.from_zarr(path, group=constants.NC_SJJUNCTIONSCONTIGS)
         with xr.open_zarr(path, group=constants.NC_SJJUNCTIONS) as df:
-            return SJJunctions(
-                _SJJunctions(
-                    contigs._contigs,
-                    df.contig_idx.values,
-                    df.start.values,
-                    df.end.values,
-                    df.strand.values,
-                )
+            df.load()
+            return SJJunctions.from_arrays(
+                contigs,
+                df.contig_idx.values,
+                df.start.values,
+                df.end.values,
+                df.strand.values,
             )

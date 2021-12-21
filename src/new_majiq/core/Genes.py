@@ -101,6 +101,22 @@ class Genes(ContigRegions):
         return
 
     @classmethod
+    def from_arrays(
+        cls,
+        contigs: Contigs,
+        contig_idx: np.ndarray,
+        start: np.ndarray,
+        end: np.ndarray,
+        strand: np.ndarray,
+        gene_id: List[str],
+        gene_name: List[str],
+    ) -> "Genes":
+        """Create :class:`Genes` from :class:`Contigs` and input arrays"""
+        return Genes(
+            _Genes(contigs._contigs, contig_idx, start, end, strand, gene_id, gene_name)
+        )
+
+    @classmethod
     def from_zarr(
         cls,
         path: Union[str, Path],
@@ -121,14 +137,13 @@ class Genes(ContigRegions):
         if contigs is None:
             contigs = Contigs.from_zarr(path)
         with xr.open_zarr(path, group=constants.NC_GENES) as df:
-            return Genes(
-                _Genes(
-                    contigs._contigs,
-                    df.contig_idx.values,
-                    df.start.values,
-                    df.end.values,
-                    df.strand.values,
-                    df.gene_id.values.tolist(),
-                    df.gene_name.values.tolist(),
-                )
+            df.load()
+            return Genes.from_arrays(
+                contigs,
+                df.contig_idx.values,
+                df.start.values,
+                df.end.values,
+                df.strand.values,
+                df.gene_id.values.tolist(),
+                df.gene_name.values.tolist(),
             )

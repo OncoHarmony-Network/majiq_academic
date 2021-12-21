@@ -242,6 +242,36 @@ class SJIntronsBins(SJBinsReads):
         return
 
     @classmethod
+    def from_arrays(
+        cls,
+        regions: SJIntrons,
+        bin_reads: np.ndarray,
+        bin_idx: np.ndarray,
+        offsets: np.ndarray,
+        total_bins: int,
+        strandness: ExperimentStrandness,
+        original_path: str = "<none>",
+        original_version: str = nm_version,
+        original_time: Optional[str] = None,
+        gene_introns_checksum: Optional[int] = None,
+        exons_checksum: Optional[int] = None,
+    ) -> "SJIntronsBins":
+        """Create :class:`SJIntronsBins` from :class:`SJIntrons`, arrays, metadata"""
+        if original_time is None:
+            original_time = str(np.datetime64("now"))
+        return SJIntronsBins(
+            _SJIntronsBins(
+                regions._sj_introns, bin_reads, bin_idx, offsets, total_bins
+            ),
+            strandness,
+            original_path,
+            original_version,
+            original_time,
+            gene_introns_checksum=gene_introns_checksum,
+            exons_checksum=exons_checksum,
+        )
+
+    @classmethod
     def from_regions(
         cls,
         introns: SJIntrons,
@@ -252,20 +282,16 @@ class SJIntronsBins(SJBinsReads):
         original_time: Optional[str] = None,
     ) -> "SJIntronsBins":
         """Empty SJIntronsBins matched to input introns"""
-        if original_time is None:
-            original_time = str(np.datetime64("now"))
-        return SJIntronsBins(
-            _SJIntronsBins(
-                introns._sj_introns,
-                [],
-                [],
-                np.zeros(1 + len(introns), dtype=np.uint64),
-                total_bins,
-            ),
+        return SJIntronsBins.from_arrays(
+            introns,
+            np.array([], dtype=np.float32),
+            np.array([], dtype=np.int32),
+            np.zeros(1 + len(introns), dtype=np.uint64),
+            total_bins,
             strandness,
-            original_path,
-            original_version,
-            original_time,
+            original_path=original_path,
+            original_version=original_version,
+            original_time=original_time,
         )
 
     @classmethod
@@ -273,6 +299,7 @@ class SJIntronsBins(SJBinsReads):
         """Load SJIntronsBins from zarr format"""
         regions = SJIntrons.from_zarr(path)
         with xr.open_zarr(path, group=constants.NC_SJINTRONSBINS) as df:
+            df.load()
             try:
                 strandness = ExperimentStrandness(ord(df.strandness[0]))
             except AttributeError:
@@ -281,18 +308,16 @@ class SJIntronsBins(SJBinsReads):
                     " -> defaulting to NONE"
                 )
                 strandness = ExperimentStrandness.NONE
-            return SJIntronsBins(
-                _SJIntronsBins(
-                    regions._sj_introns,
-                    df.bin_reads.values,
-                    df.bin_idx.values,
-                    df._offsets.values,
-                    df.total_bins,
-                ),
+            return SJIntronsBins.from_arrays(
+                regions,
+                df.bin_reads.values,
+                df.bin_idx.values,
+                df._offsets.values,
+                df.total_bins,
                 strandness,
-                df.original_path,
-                df.original_version,
-                df.original_time,
+                original_path=df.original_path,
+                original_version=df.original_version,
+                original_time=df.original_time,
                 gene_introns_checksum=df.attrs.get("gene_introns_checksum"),
                 exons_checksum=df.attrs.get("exons_checksum"),
             )

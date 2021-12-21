@@ -7,7 +7,7 @@ Author: Joseph K Aicher
 """
 
 from pathlib import Path
-from typing import Union
+from typing import Optional, Union
 
 import numpy as np
 import xarray as xr
@@ -216,10 +216,37 @@ class SJJunctionsBins(SJBinsReads):
             return df.original_path
 
     @classmethod
+    def from_arrays(
+        cls,
+        regions: SJJunctions,
+        bin_reads: np.ndarray,
+        bin_idx: np.ndarray,
+        offsets: np.ndarray,
+        total_bins: int,
+        strandness: ExperimentStrandness,
+        original_path: str = "<none>",
+        original_version: str = nm_version,
+        original_time: Optional[str] = None,
+    ) -> "SJJunctionsBins":
+        """Create :class:`SJJunctionsBins` from :class:`SJJunctions`, arrays, metadata"""
+        if original_time is None:
+            original_time = str(np.datetime64("now"))
+        return SJJunctionsBins(
+            _SJJunctionsBins(
+                regions._sj_junctions, bin_reads, bin_idx, offsets, total_bins
+            ),
+            strandness,
+            original_path,
+            original_version,
+            original_time,
+        )
+
+    @classmethod
     def from_zarr(cls, path: Union[str, Path]) -> "SJJunctionsBins":
         """Load SJJunctionsBins from zarr format"""
         regions = SJJunctions.from_zarr(path)
         with xr.open_zarr(path, group=constants.NC_SJJUNCTIONSBINS) as df:
+            df.load()
             try:
                 strandness = ExperimentStrandness(ord(df.strandness[0]))
             except AttributeError:
@@ -228,16 +255,14 @@ class SJJunctionsBins(SJBinsReads):
                     " -> defaulting to NONE"
                 )
                 strandness = ExperimentStrandness.NONE
-            return SJJunctionsBins(
-                _SJJunctionsBins(
-                    regions._sj_junctions,
-                    df.bin_reads.values,
-                    df.bin_idx.values,
-                    df._offsets.values,
-                    df.total_bins,
-                ),
+            return SJJunctionsBins.from_arrays(
+                regions,
+                df.bin_reads.values,
+                df.bin_idx.values,
+                df._offsets.values,
+                df.total_bins,
                 strandness,
-                df.original_path,
-                df.original_version,
-                df.original_time,
+                original_path=df.original_path,
+                original_version=df.original_version,
+                original_time=df.original_time,
             )

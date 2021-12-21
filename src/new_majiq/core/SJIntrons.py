@@ -83,9 +83,31 @@ class SJIntrons(ContigRegions):
         )
 
     @classmethod
+    def from_arrays(
+        cls,
+        contigs: Contigs,
+        contig_idx: np.ndarray,
+        start: np.ndarray,
+        end: np.ndarray,
+        strand: np.ndarray,
+        annotated: np.ndarray,
+    ) -> "SJIntrons":
+        """Create :class:`SJIntrons` from :class:`Contigs` and input arrays"""
+        return SJIntrons(
+            _SJIntrons(contigs._contigs, contig_idx, start, end, strand, annotated)
+        )
+
+    @classmethod
     def from_contigs(cls, contigs: Contigs) -> "SJIntrons":
         """Empty SJIntrons linked to specified contigs"""
-        return SJIntrons(_SJIntrons(contigs._contigs, [], [], [], [], []))
+        return SJIntrons.from_arrays(
+            contigs,
+            np.array([], dtype=np.uint64),
+            np.array([], dtype=np.int64),
+            np.array([], dtype=np.int64),
+            np.array([], dtype="S1"),
+            np.array([], dtype=bool),
+        )
 
     @classmethod
     def from_zarr(
@@ -106,13 +128,12 @@ class SJIntrons(ContigRegions):
         if contigs is None:
             contigs = Contigs.from_zarr(path)
         with xr.open_zarr(path, group=constants.NC_SJINTRONS) as df:
-            return SJIntrons(
-                _SJIntrons(
-                    contigs._contigs,
-                    df.contig_idx.values,
-                    df.start.values,
-                    df.end.values,
-                    df.strand.values,
-                    df.annotated.values,
-                )
+            df.load()
+            return SJIntrons.from_arrays(
+                contigs,
+                df.contig_idx.values,
+                df.start.values,
+                df.end.values,
+                df.strand.values,
+                df.annotated.values,
             )
