@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Optional, Union
 
 import numpy as np
+import numpy.typing as npt
 import xarray as xr
 
 import new_majiq.constants as constants
@@ -40,7 +41,7 @@ class SJJunctions(ContigRegions):
         return SJJunctions(self._sj_junctions.flip_strand())
 
     @property
-    def sj_idx(self) -> np.ndarray:
+    def sj_idx(self) -> npt.NDArray[np.int64]:
         return self._region_idx
 
     @property
@@ -75,10 +76,10 @@ class SJJunctions(ContigRegions):
     def from_arrays(
         cls,
         contigs: Contigs,
-        contig_idx: np.ndarray,
-        start: np.ndarray,
-        end: np.ndarray,
-        strand: np.ndarray,
+        contig_idx: npt._ArrayLikeInt_co,
+        start: npt._ArrayLikeInt_co,
+        end: npt._ArrayLikeInt_co,
+        strand: npt._ArrayLikeStr_co,
     ) -> "SJJunctions":
         """Create :class:`SJJunctions` from :class:`Contigs` and input arrays"""
         return SJJunctions(

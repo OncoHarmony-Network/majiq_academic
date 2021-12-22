@@ -27,26 +27,26 @@ class Events:
         self,
         introns: GeneIntrons,
         junctions: GeneJunctions,
-        ref_exon_idx: npt.ArrayLike,
-        event_type: npt.ArrayLike,
-        offsets: npt.ArrayLike,
-        is_intron: npt.ArrayLike,
-        connection_idx: npt.ArrayLike,
+        ref_exon_idx: npt._ArrayLikeInt_co,
+        event_type: npt._ArrayLikeStr_co,
+        offsets: npt._ArrayLikeInt_co,
+        is_intron: npt._ArrayLikeBool_co,
+        connection_idx: npt._ArrayLikeInt_co,
     ) -> None: ...
     def connection_denovo(
-        self, connection_idx: npt.ArrayLike
+        self, connection_idx: npt._ArrayLikeInt_co
     ) -> npt.NDArray[numpy.bool_]: ...
     def connection_end(
-        self, connection_idx: npt.ArrayLike
+        self, connection_idx: npt._ArrayLikeInt_co
     ) -> npt.NDArray[numpy.int64]: ...
     def connection_gene_idx(
-        self, connection_idx: npt.ArrayLike
+        self, connection_idx: npt._ArrayLikeInt_co
     ) -> npt.NDArray[numpy.uint64]: ...
     def connection_other_exon_idx(
-        self, connection_idx: npt.ArrayLike
+        self, connection_idx: npt._ArrayLikeInt_co
     ) -> npt.NDArray[numpy.uint64]: ...
     def connection_start(
-        self, connection_idx: npt.ArrayLike
+        self, connection_idx: npt._ArrayLikeInt_co
     ) -> npt.NDArray[numpy.int64]: ...
     def __len__(self) -> int: ...
     @property
@@ -58,7 +58,7 @@ class Events:
     @property
     def connection_idx_start(self) -> npt.NDArray[numpy.uint64]: ...
     @property
-    def event_type(self) -> npt.NDArray: ...
+    def event_type(self) -> npt.NDArray[numpy.str_]: ...
     @property
     def idx(self) -> npt.NDArray[numpy.uint64]: ...
     @property
@@ -90,9 +90,9 @@ class EventsCoverage:
     def __init__(
         self,
         events: Events,
-        numreads: npt.ArrayLike,
-        numbins: npt.ArrayLike,
-        bootstraps: npt.ArrayLike,
+        numreads: npt._ArrayLikeFloat_co,
+        numbins: npt._ArrayLikeFloat_co,
+        bootstraps: npt._ArrayLikeFloat_co,
     ) -> None: ...
     @staticmethod
     def from_sj(
@@ -118,44 +118,44 @@ class ExonConnections:
     ) -> None: ...
     def constitutive(self) -> Events: ...
     def event_description(
-        self, exon_idx: npt.ArrayLike, event_type: npt.ArrayLike
+        self, exon_idx: npt._ArrayLikeInt_co, event_type: npt._ArrayLikeStr_co
     ) -> List[str]: ...
     def event_id(
-        self, exon_idx: npt.ArrayLike, event_type: npt.ArrayLike
+        self, exon_idx: npt._ArrayLikeInt_co, event_type: npt._ArrayLikeStr_co
     ) -> List[str]: ...
     def event_size(
-        self, exon_idx: npt.ArrayLike, is_source: npt.ArrayLike
+        self, exon_idx: npt._ArrayLikeInt_co, is_source: npt._ArrayLikeBool_co
     ) -> npt.NDArray[numpy.uint64]: ...
     def events_for(
-        self, exon_idx: npt.ArrayLike, is_source: npt.ArrayLike
+        self, exon_idx: npt._ArrayLikeInt_co, is_source: npt._ArrayLikeBool_co
     ) -> Events: ...
     def has_intron(
-        self, exon_idx: npt.ArrayLike, is_source: npt.ArrayLike
+        self, exon_idx: npt._ArrayLikeInt_co, is_source: npt._ArrayLikeBool_co
     ) -> npt.NDArray[numpy.bool_]: ...
     def is_strict_LSV(
-        self, exon_idx: npt.ArrayLike, is_source: npt.ArrayLike
+        self, exon_idx: npt._ArrayLikeInt_co, is_source: npt._ArrayLikeBool_co
     ) -> npt.NDArray[numpy.bool_]: ...
     def is_permissive_LSV(
-        self, exon_idx: npt.ArrayLike, is_source: npt.ArrayLike
+        self, exon_idx: npt._ArrayLikeInt_co, is_source: npt._ArrayLikeBool_co
     ) -> npt.NDArray[numpy.bool_]: ...
     def is_source_LSV(
-        self, exon_idx: npt.ArrayLike, is_source: npt.ArrayLike
+        self, exon_idx: npt._ArrayLikeInt_co, is_source: npt._ArrayLikeBool_co
     ) -> npt.NDArray[numpy.bool_]: ...
     def is_target_LSV(
-        self, exon_idx: npt.ArrayLike, is_source: npt.ArrayLike
+        self, exon_idx: npt._ArrayLikeInt_co, is_source: npt._ArrayLikeBool_co
     ) -> npt.NDArray[numpy.bool_]: ...
     def is_constitutive(
-        self, exon_idx: npt.ArrayLike, is_source: npt.ArrayLike
+        self, exon_idx: npt._ArrayLikeInt_co, is_source: npt._ArrayLikeBool_co
     ) -> npt.NDArray[numpy.bool_]: ...
     def strict_lsvs(self) -> Events: ...
     def permissive_lsvs(self) -> Events: ...
     def source_lsvs(self) -> Events: ...
     def target_lsvs(self) -> Events: ...
     def passed(
-        self, exon_idx: npt.ArrayLike, is_source: npt.ArrayLike
+        self, exon_idx: npt._ArrayLikeInt_co, is_source: npt._ArrayLikeBool_co
     ) -> npt.NDArray[numpy.bool_]: ...
     def redundant(
-        self, exon_idx: npt.ArrayLike, is_source: npt.ArrayLike
+        self, exon_idx: npt._ArrayLikeInt_co, is_source: npt._ArrayLikeBool_co
     ) -> npt.NDArray[numpy.bool_]: ...
     @property
     def _exons(self) -> Exons: ...
@@ -184,22 +184,29 @@ class Exons:
     def __init__(
         self,
         genes: Genes,
-        gene_idx: npt.ArrayLike,
-        start: npt.ArrayLike,
-        end: npt.ArrayLike,
-        annotated_start: npt.ArrayLike,
-        annotated_end: npt.ArrayLike,
+        gene_idx: npt._ArrayLikeInt_co,
+        start: npt._ArrayLikeInt_co,
+        end: npt._ArrayLikeInt_co,
+        annotated_start: npt._ArrayLikeInt_co,
+        annotated_end: npt._ArrayLikeInt_co,
     ) -> None: ...
     def checksum(self) -> int: ...
     def index(
-        self, gene_idx: npt.ArrayLike, start: npt.ArrayLike, end: npt.ArrayLike
+        self,
+        gene_idx: npt._ArrayLikeInt_co,
+        start: npt._ArrayLikeInt_co,
+        end: npt._ArrayLikeInt_co,
     ) -> object: ...
-    def is_denovo(self, exon_idx: npt.ArrayLike) -> npt.NDArray[numpy.bool_]: ...
+    def is_denovo(self, exon_idx: npt._ArrayLikeInt_co) -> npt.NDArray[numpy.bool_]: ...
     def is_exon_extension(
-        self, exon_idx: npt.ArrayLike
+        self, exon_idx: npt._ArrayLikeInt_co
     ) -> npt.NDArray[numpy.bool_]: ...
-    def is_full_exon(self, exon_idx: npt.ArrayLike) -> npt.NDArray[numpy.bool_]: ...
-    def is_half_exon(self, exon_idx: npt.ArrayLike) -> npt.NDArray[numpy.bool_]: ...
+    def is_full_exon(
+        self, exon_idx: npt._ArrayLikeInt_co
+    ) -> npt.NDArray[numpy.bool_]: ...
+    def is_half_exon(
+        self, exon_idx: npt._ArrayLikeInt_co
+    ) -> npt.NDArray[numpy.bool_]: ...
     def potential_introns(self, make_simplified: bool) -> GeneIntrons: ...
     def __len__(self) -> int: ...
     @property
@@ -301,12 +308,12 @@ class GeneIntrons:
     def __init__(
         self,
         genes: Genes,
-        gene_idx: npt.ArrayLike,
-        start: npt.ArrayLike,
-        end: npt.ArrayLike,
-        denovo: npt.ArrayLike,
-        passed_build: npt.ArrayLike,
-        simplified: npt.ArrayLike,
+        gene_idx: npt._ArrayLikeInt_co,
+        start: npt._ArrayLikeInt_co,
+        end: npt._ArrayLikeInt_co,
+        denovo: npt._ArrayLikeBool_co,
+        passed_build: npt._ArrayLikeBool_co,
+        simplified: npt._ArrayLikeBool_co,
         connected_exons: Optional[Exons] = ...,
     ) -> None: ...
     def _pass_all(self) -> None: ...
@@ -320,7 +327,10 @@ class GeneIntrons:
         self, keep_annotated: bool = ..., discard_denovo: bool = ...
     ) -> GeneIntrons: ...
     def index(
-        self, gene_idx: npt.ArrayLike, start: npt.ArrayLike, end: npt.ArrayLike
+        self,
+        gene_idx: npt._ArrayLikeInt_co,
+        start: npt._ArrayLikeInt_co,
+        end: npt._ArrayLikeInt_co,
     ) -> object: ...
     def update_flags_from(self, donor_introns: GeneIntrons) -> None: ...
     def __len__(self) -> int: ...
@@ -348,19 +358,23 @@ class GeneIntrons:
     def start(self) -> npt.NDArray[numpy.int64]: ...
     @property
     def start_exon_idx(self) -> npt.NDArray[numpy.uint64]: ...
-    def src_exon_idx(self, gi_idx: npt.ArrayLike) -> npt.NDArray[numpy.uint64]: ...
-    def dst_exon_idx(self, gi_idx: npt.ArrayLike) -> npt.NDArray[numpy.uint64]: ...
+    def src_exon_idx(
+        self, gi_idx: npt._ArrayLikeInt_co
+    ) -> npt.NDArray[numpy.uint64]: ...
+    def dst_exon_idx(
+        self, gi_idx: npt._ArrayLikeInt_co
+    ) -> npt.NDArray[numpy.uint64]: ...
 
 class GeneJunctions:
     def __init__(
         self,
         genes: Genes,
-        gene_idx: npt.ArrayLike,
-        start: npt.ArrayLike,
-        end: npt.ArrayLike,
-        denovo: npt.ArrayLike,
-        passed_build: npt.ArrayLike,
-        simplified: npt.ArrayLike,
+        gene_idx: npt._ArrayLikeInt_co,
+        start: npt._ArrayLikeInt_co,
+        end: npt._ArrayLikeInt_co,
+        denovo: npt._ArrayLikeBool_co,
+        passed_build: npt._ArrayLikeBool_co,
+        simplified: npt._ArrayLikeBool_co,
         connected_exons: Optional[Exons] = ...,
     ) -> None: ...
     def _pass_all(self) -> None: ...
@@ -370,7 +384,10 @@ class GeneJunctions:
     def checksum_nodata(self) -> int: ...
     def connect_exons(self, exons: Exons) -> None: ...
     def index(
-        self, gene_idx: npt.ArrayLike, start: npt.ArrayLike, end: npt.ArrayLike
+        self,
+        gene_idx: npt._ArrayLikeInt_co,
+        start: npt._ArrayLikeInt_co,
+        end: npt._ArrayLikeInt_co,
     ) -> object: ...
     def __len__(self) -> int: ...
     @property
@@ -397,8 +414,12 @@ class GeneJunctions:
     def start(self) -> npt.NDArray[numpy.int64]: ...
     @property
     def start_exon_idx(self) -> npt.NDArray[numpy.uint64]: ...
-    def src_exon_idx(self, gj_idx: npt.ArrayLike) -> npt.NDArray[numpy.uint64]: ...
-    def dst_exon_idx(self, gj_idx: npt.ArrayLike) -> npt.NDArray[numpy.uint64]: ...
+    def src_exon_idx(
+        self, gj_idx: npt._ArrayLikeInt_co
+    ) -> npt.NDArray[numpy.uint64]: ...
+    def dst_exon_idx(
+        self, gj_idx: npt._ArrayLikeInt_co
+    ) -> npt.NDArray[numpy.uint64]: ...
 
 class GeneJunctionsAccumulator:
     def __init__(self, genes: Genes) -> None: ...
@@ -430,10 +451,10 @@ class Genes:
     def __init__(
         self,
         contigs: Contigs,
-        contig_idx: npt.ArrayLike,
-        start: npt.ArrayLike,
-        end: npt.ArrayLike,
-        strand: npt.ArrayLike,
+        contig_idx: npt._ArrayLikeInt_co,
+        start: npt._ArrayLikeInt_co,
+        end: npt._ArrayLikeInt_co,
+        strand: npt._ArrayLikeStr_co,
         gene_id: List[str],
         gene_name: List[str],
     ) -> None: ...
@@ -458,7 +479,7 @@ class Genes:
     @property
     def start(self) -> npt.NDArray[numpy.int64]: ...
     @property
-    def strand(self) -> npt.NDArray: ...
+    def strand(self) -> npt.NDArray[numpy.str_]: ...
 
 class GroupIntronsGenerator:
     def __init__(self, gene_introns: GeneIntrons) -> None: ...
@@ -495,7 +516,7 @@ class GroupJunctionsGenerator:
 
 class IntronThresholdsGenerator:
     def __init__(self, *args, **kwargs) -> None: ...
-    def __call__(self, intron_lengths: npt.ArrayLike) -> object: ...
+    def __call__(self, intron_lengths: npt._ArrayLikeInt_co) -> object: ...
 
 class PassedJunctionsGenerator:
     def __init__(self, junctions: GeneJunctions) -> None: ...
@@ -516,11 +537,11 @@ class SJIntrons:
     def __init__(
         self,
         contigs: Contigs,
-        contig_idx: npt.ArrayLike,
-        start: npt.ArrayLike,
-        end: npt.ArrayLike,
-        strand: npt.ArrayLike,
-        annotated: npt.ArrayLike,
+        contig_idx: npt._ArrayLikeInt_co,
+        start: npt._ArrayLikeInt_co,
+        end: npt._ArrayLikeInt_co,
+        strand: npt._ArrayLikeStr_co,
+        annotated: npt._ArrayLikeBool_co,
     ) -> None: ...
     @staticmethod
     def from_exons_and_introns(
@@ -542,15 +563,15 @@ class SJIntrons:
     @property
     def start(self) -> npt.NDArray[numpy.int64]: ...
     @property
-    def strand(self) -> npt.NDArray: ...
+    def strand(self) -> npt.NDArray[numpy.str_]: ...
 
 class SJIntronsBins:
     def __init__(
         self,
         sj: SJIntrons,
-        bin_reads: npt.ArrayLike,
-        bin_idx: npt.ArrayLike,
-        _offsets: npt.ArrayLike,
+        bin_reads: npt._ArrayLikeFloat_co,
+        bin_idx: npt._ArrayLikeInt_co,
+        _offsets: npt._ArrayLikeInt_co,
         total_bins: int,
     ) -> None: ...
     @staticmethod
@@ -564,18 +585,18 @@ class SJIntronsBins:
     ) -> SJIntronsBins: ...
     def numbins(
         self,
-        region_idx: npt.ArrayLike,
-        minreads: npt.ArrayLike,
+        region_idx: npt._ArrayLikeInt_co,
+        minreads: npt._ArrayLikeFloat_co,
     ) -> object: ...
     def numreads(
         self,
-        region_idx: npt.ArrayLike,
-        num_stacks: npt.ArrayLike,
+        region_idx: npt._ArrayLikeInt_co,
+        num_stacks: npt._ArrayLikeInt_co,
     ) -> object: ...
     def numstacks(
         self,
-        region_idx: npt.ArrayLike,
-        pvalue_threshold: npt.ArrayLike = ...,
+        region_idx: npt._ArrayLikeInt_co,
+        pvalue_threshold: npt._ArrayLikeFloat_co = ...,
     ) -> object: ...
     def __len__(self) -> int: ...
     @property
@@ -593,10 +614,10 @@ class SJJunctions:
     def __init__(
         self,
         contigs: Contigs,
-        contig_idx: npt.ArrayLike,
-        start: npt.ArrayLike,
-        end: npt.ArrayLike,
-        strand: npt.ArrayLike,
+        contig_idx: npt._ArrayLikeInt_co,
+        start: npt._ArrayLikeInt_co,
+        end: npt._ArrayLikeInt_co,
+        strand: npt._ArrayLikeStr_co,
     ) -> None: ...
     def flip_strand(self) -> SJJunctions: ...
     def to_unstranded(self) -> SJJunctions: ...
@@ -616,31 +637,33 @@ class SJJunctions:
     @property
     def start(self) -> npt.NDArray[numpy.int64]: ...
     @property
-    def strand(self) -> npt.NDArray: ...
+    def strand(self) -> npt.NDArray[numpy.str_]: ...
 
 class SJJunctionsBins:
     def __init__(
         self,
         sj: SJJunctions,
-        bin_reads: npt.ArrayLike,
-        bin_idx: npt.ArrayLike,
-        _offsets: npt.ArrayLike,
+        bin_reads: npt._ArrayLikeInt_co,
+        bin_idx: npt._ArrayLikeInt_co,
+        _offsets: npt._ArrayLikeInt_co,
         total_bins: int,
     ) -> None: ...
     @staticmethod
     def from_bam(
         bam_path: str, experiment_strandness: ExperimentStrandness, nthreads: int
     ) -> SJJunctionsBins: ...
-    def numbins(self, region_idx: npt.ArrayLike, minreads: npt.ArrayLike) -> object: ...
+    def numbins(
+        self, region_idx: npt._ArrayLikeInt_co, minreads: npt._ArrayLikeInt_co
+    ) -> object: ...
     def numreads(
         self,
-        region_idx: npt.ArrayLike,
-        num_stacks: npt.ArrayLike,
+        region_idx: npt._ArrayLikeInt_co,
+        num_stacks: npt._ArrayLikeInt_co,
     ) -> object: ...
     def numstacks(
         self,
-        region_idx: npt.ArrayLike,
-        pvalue_threshold: npt.ArrayLike = ...,
+        region_idx: npt._ArrayLikeInt_co,
+        pvalue_threshold: npt._ArrayLikeFloat_co = ...,
     ) -> object: ...
     def project_reads(self, arg0: SJJunctions, arg1: bool) -> SJJunctionsBins: ...
     def __len__(self) -> int: ...
@@ -728,8 +751,8 @@ class SpliceGraphReads:
         self,
         introns: GeneIntrons,
         junctions: GeneJunctions,
-        introns_reads: npt.ArrayLike,
-        junctions_reads: npt.ArrayLike,
+        introns_reads: npt._ArrayLikeFloat_co,
+        junctions_reads: npt._ArrayLikeFloat_co,
     ) -> None: ...
     @staticmethod
     def from_sj(

@@ -7,6 +7,7 @@ Author: Joseph K Aicher
 """
 
 import numpy as np
+import numpy.typing as npt
 
 from .Genes import Genes
 from .Regions import Regions
@@ -28,13 +29,16 @@ class GeneRegions(Regions):
         return Genes(self._parents)
 
     @property
-    def gene_idx(self) -> np.ndarray:
+    def gene_idx(self) -> npt.NDArray[np.int64]:
         """Index of gene on which region is defined"""
         return self._gene_regions.gene_idx
 
     def index(
-        self, gene_idx: np.ndarray, start: np.ndarray, end: np.ndarray
-    ) -> np.ndarray:
+        self,
+        gene_idx: npt._ArrayLikeInt_co,
+        start: npt._ArrayLikeInt_co,
+        end: npt._ArrayLikeInt_co,
+    ) -> npt.NDArray[np.int64]:
         """Get indexes of gene regions (-1 if not present)"""
         return self._gene_regions.index(gene_idx, start, end)
 

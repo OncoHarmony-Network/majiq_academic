@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Final, List, Optional, Union
 
 import numpy as np
+import numpy.typing as npt
 import xarray as xr
 
 import new_majiq.constants as constants
@@ -51,17 +52,17 @@ class EventsCoverage(object):
         return Events(self._events_coverage._events)
 
     @property
-    def numreads(self) -> np.ndarray:
+    def numreads(self) -> npt.NDArray[np.float32]:
         """Scaled readrate for each event connection"""
         return self._events_coverage.numreads
 
     @property
-    def numbins(self) -> np.ndarray:
+    def numbins(self) -> npt.NDArray[np.float32]:
         """Number of nonzero bins for each event connection"""
         return self._events_coverage.numbins
 
     @property
-    def bootstraps(self) -> np.ndarray:
+    def bootstraps(self) -> npt.NDArray[np.float32]:
         """Bootstrapped read coverage replicates for each event connection"""
         return self._events_coverage.bootstraps
 

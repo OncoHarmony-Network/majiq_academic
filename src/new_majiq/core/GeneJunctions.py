@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Optional, Union
 
 import numpy as np
+import numpy.typing as npt
 import xarray as xr
 
 import new_majiq.constants as constants
@@ -56,7 +57,7 @@ class GeneJunctions(GeneConnections):
         return self._gene_connections
 
     @property
-    def gj_idx(self) -> np.ndarray:
+    def gj_idx(self) -> npt.NDArray[np.int64]:
         return self._region_idx
 
     @property
@@ -95,12 +96,12 @@ class GeneJunctions(GeneConnections):
     def from_arrays(
         cls,
         genes: Genes,
-        gene_idx: np.ndarray,
-        start: np.ndarray,
-        end: np.ndarray,
-        denovo: np.ndarray,
-        passed_build: np.ndarray,
-        simplified: np.ndarray,
+        gene_idx: npt._ArrayLikeInt_co,
+        start: npt._ArrayLikeInt_co,
+        end: npt._ArrayLikeInt_co,
+        denovo: npt._ArrayLikeBool_co,
+        passed_build: npt._ArrayLikeBool_co,
+        simplified: npt._ArrayLikeBool_co,
         connected_exons: Optional[Exons] = None,
     ) -> "GeneJunctions":
         """Create :class:`GeneJunctions` from :class:`Genes` and input arrays"""

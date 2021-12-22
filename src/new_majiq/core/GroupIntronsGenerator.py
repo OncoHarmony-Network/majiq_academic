@@ -9,6 +9,7 @@ Author: Joseph K Aicher
 from typing import Final
 
 import numpy as np
+import numpy.typing as npt
 import xarray as xr
 
 import new_majiq.constants as constants
@@ -38,7 +39,7 @@ class GroupIntronsGenerator(object):
         return GeneIntrons(self._group._introns)
 
     @property
-    def num_passed(self) -> np.ndarray:
+    def num_passed(self) -> npt.NDArray[np.uint64]:
         return self._group.num_passed
 
     @property

@@ -9,6 +9,7 @@ Author: Joseph K Aicher
 from typing import Final
 
 import numpy as np
+import numpy.typing as npt
 
 
 class Regions(object):
@@ -27,7 +28,7 @@ class Regions(object):
         return len(self._regions)
 
     @property
-    def _region_idx(self) -> np.ndarray:
+    def _region_idx(self) -> npt.NDArray[np.int64]:
         """Index over regions"""
         return np.arange(len(self))
 
@@ -37,12 +38,12 @@ class Regions(object):
         return self._regions._parents
 
     @property
-    def _parent_idx_start(self) -> np.ndarray:
+    def _parent_idx_start(self) -> npt.NDArray[np.uint64]:
         """First index in regions for each parent"""
         return self._regions._parent_idx_start
 
     @property
-    def _parent_idx_end(self) -> np.ndarray:
+    def _parent_idx_end(self) -> npt.NDArray[np.uint64]:
         """One after last index in regions for each parent"""
         return self._regions._parent_idx_end
 
@@ -54,11 +55,11 @@ class Regions(object):
         )
 
     @property
-    def start(self) -> np.ndarray:
+    def start(self) -> npt.NDArray[np.int64]:
         """Start coordinate of each region"""
         return self._regions.start
 
     @property
-    def end(self) -> np.ndarray:
+    def end(self) -> npt.NDArray[np.int64]:
         """End coordinate of each region"""
         return self._regions.end

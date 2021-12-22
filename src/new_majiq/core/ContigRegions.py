@@ -7,6 +7,7 @@ Author: Joseph K Aicher
 """
 
 import numpy as np
+import numpy.typing as npt
 
 from .Contigs import Contigs
 from .Regions import Regions
@@ -28,12 +29,12 @@ class ContigRegions(Regions):
         return Contigs(self._parents)
 
     @property
-    def contig_idx(self) -> np.ndarray:
+    def contig_idx(self) -> npt.NDArray[np.uint64]:
         """Index of contig on which each region is defined"""
         return self._contig_regions.contig_idx
 
     @property
-    def strand(self) -> np.ndarray:
+    def strand(self) -> npt.NDArray[np.str_]:
         """Strand direction for each region"""
         return self._contig_regions.strand
 

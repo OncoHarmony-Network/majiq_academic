@@ -26,6 +26,7 @@ from typing import (
 
 import dask.array as da
 import numpy as np
+import numpy.typing as npt
 import xarray as xr
 from dask.delayed import Delayed
 from dask.distributed import progress
@@ -727,7 +728,9 @@ class PsiCoverage(object):
         PsiCoverage
         """
         # get offsets as int (not uint)
-        offsets: np.ndarray = events_coverage.events._offsets.astype(np.int64)
+        offsets: npt.NDArray[np.int64] = np.array(
+            events_coverage.events._offsets, dtype=np.int64
+        )
         # get whether individual connection passes thresholds
         passed = (events_coverage.numreads >= minreads) & (
             events_coverage.numbins >= minbins

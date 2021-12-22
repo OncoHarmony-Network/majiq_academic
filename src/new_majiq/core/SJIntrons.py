@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Optional, Union
 
 import numpy as np
+import numpy.typing as npt
 import xarray as xr
 
 import new_majiq.constants as constants
@@ -34,11 +35,11 @@ class SJIntrons(ContigRegions):
         return self._contig_regions
 
     @property
-    def si_idx(self) -> np.ndarray:
+    def si_idx(self) -> npt.NDArray[np.int64]:
         return self._region_idx
 
     @property
-    def annotated(self) -> np.ndarray:
+    def annotated(self) -> npt.NDArray[np.bool_]:
         """Indicates if region associated with annotated intron"""
         return self._sj_introns.annotated
 
@@ -86,11 +87,11 @@ class SJIntrons(ContigRegions):
     def from_arrays(
         cls,
         contigs: Contigs,
-        contig_idx: np.ndarray,
-        start: np.ndarray,
-        end: np.ndarray,
-        strand: np.ndarray,
-        annotated: np.ndarray,
+        contig_idx: npt._ArrayLikeInt_co,
+        start: npt._ArrayLikeInt_co,
+        end: npt._ArrayLikeInt_co,
+        strand: npt._ArrayLikeStr_co,
+        annotated: npt._ArrayLikeBool_co,
     ) -> "SJIntrons":
         """Create :class:`SJIntrons` from :class:`Contigs` and input arrays"""
         return SJIntrons(

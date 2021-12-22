@@ -9,6 +9,7 @@ Author: Joseph K Aicher
 from typing import Final, List
 
 import numpy as np
+import numpy.typing as npt
 
 import new_majiq.constants as constants
 from new_majiq.internals import ExonConnections as _ExonConnections
@@ -121,7 +122,9 @@ class ExonConnections(object):
         return Events(self._exon_connections.constitutive())
 
     @staticmethod
-    def _event_type_is_source(event_type: np.ndarray) -> np.ndarray:
+    def _event_type_is_source(
+        event_type: npt._ArrayLikeStr_co,
+    ) -> npt.NDArray[np.bool_]:
         """convert array(dtype="S1") to array(dtype=bool) for vectorized internals"""
         event_type = np.array(event_type, copy=False)
         is_source = event_type == b"s"
@@ -130,7 +133,9 @@ class ExonConnections(object):
             raise ValueError("event_type has invalid values (must be b's' or b't')")
         return is_source
 
-    def _events_for(self, ref_exon_idx: np.ndarray, event_type: np.ndarray) -> Events:
+    def _events_for(
+        self, ref_exon_idx: npt._ArrayLikeInt_co, event_type: npt._ArrayLikeStr_co
+    ) -> Events:
         """construct events for specified exons/event types"""
         return Events(
             self._exon_connections.events_for(
@@ -139,36 +144,40 @@ class ExonConnections(object):
         )
 
     def has_intron(
-        self, ref_exon_idx: np.ndarray, event_type: np.ndarray
-    ) -> np.ndarray:
+        self, ref_exon_idx: npt._ArrayLikeInt_co, event_type: npt._ArrayLikeStr_co
+    ) -> npt.NDArray[np.bool_]:
         """Indicate if selected events have a non-simplified intron"""
         return self._exon_connections.has_intron(
             ref_exon_idx, self._event_type_is_source(event_type)
         )
 
     def event_size(
-        self, ref_exon_idx: np.ndarray, event_type: np.ndarray
-    ) -> np.ndarray:
+        self, ref_exon_idx: npt._ArrayLikeInt_co, event_type: npt._ArrayLikeStr_co
+    ) -> npt.NDArray[np.uint64]:
         """Indicate number of connections in the event"""
         return self._exon_connections.event_size(
             ref_exon_idx, self._event_type_is_source(event_type)
         )
 
-    def passed(self, ref_exon_idx: np.ndarray, event_type: np.ndarray) -> np.ndarray:
+    def passed(
+        self, ref_exon_idx: npt._ArrayLikeInt_co, event_type: npt._ArrayLikeStr_co
+    ) -> npt.NDArray[np.bool_]:
         """Indicate if any of the connections in the event are passed"""
         return self._exon_connections.passed(
             ref_exon_idx, self._event_type_is_source(event_type)
         )
 
-    def redundant(self, ref_exon_idx: np.ndarray, event_type: np.ndarray) -> np.ndarray:
+    def redundant(
+        self, ref_exon_idx: npt._ArrayLikeInt_co, event_type: npt._ArrayLikeStr_co
+    ) -> npt.NDArray[np.bool_]:
         """Indicate if the event is redundant (subset by a different event)"""
         return self._exon_connections.redundant(
             ref_exon_idx, self._event_type_is_source(event_type)
         )
 
     def is_strict_LSV(
-        self, ref_exon_idx: np.ndarray, event_type: np.ndarray
-    ) -> np.ndarray:
+        self, ref_exon_idx: npt._ArrayLikeInt_co, event_type: npt._ArrayLikeStr_co
+    ) -> npt.NDArray[np.bool_]:
         """Indicate if the event is a strict LSV
 
         (passed, event size > 1, nonredundant or mutually redundant source)
@@ -178,8 +187,8 @@ class ExonConnections(object):
         )
 
     def is_permissive_LSV(
-        self, ref_exon_idx: np.ndarray, event_type: np.ndarray
-    ) -> np.ndarray:
+        self, ref_exon_idx: npt._ArrayLikeInt_co, event_type: npt._ArrayLikeStr_co
+    ) -> npt.NDArray[np.bool_]:
         """Indicate if the event is a permissive LSV
 
         (passed, event size > 1, not mutually redundant target)
@@ -189,8 +198,8 @@ class ExonConnections(object):
         )
 
     def is_source_LSV(
-        self, ref_exon_idx: np.ndarray, event_type: np.ndarray
-    ) -> np.ndarray:
+        self, ref_exon_idx: npt._ArrayLikeInt_co, event_type: npt._ArrayLikeStr_co
+    ) -> npt.NDArray[np.bool_]:
         """Indicate if the event is a source LSV
 
         (passed, event size > 1, event_type == 's')
@@ -200,8 +209,8 @@ class ExonConnections(object):
         )
 
     def is_target_LSV(
-        self, ref_exon_idx: np.ndarray, event_type: np.ndarray
-    ) -> np.ndarray:
+        self, ref_exon_idx: npt._ArrayLikeInt_co, event_type: npt._ArrayLikeStr_co
+    ) -> npt.NDArray[np.bool_]:
         """Indicate if the event is a target LSV
 
         (passed, event size > 1, event_type == 't')
@@ -211,24 +220,26 @@ class ExonConnections(object):
         )
 
     def is_constitutive(
-        self, ref_exon_idx: np.ndarray, event_type: np.ndarray
-    ) -> np.ndarray:
+        self, ref_exon_idx: npt._ArrayLikeInt_co, event_type: npt._ArrayLikeStr_co
+    ) -> npt.NDArray[np.bool_]:
         """Indicate if the event is constitutive (nonredundant with event_size == 1)"""
         return self._exon_connections.is_constitutive(
             ref_exon_idx, self._event_type_is_source(event_type)
         )
 
-    def event_id(self, ref_exon_idx: np.ndarray, event_type: np.ndarray) -> List[str]:
+    def event_id(
+        self, ref_exon_idx: npt._ArrayLikeInt_co, event_type: npt._ArrayLikeStr_co
+    ) -> List[str]:
         """List of event identifiers for VOILA for specified events"""
         return self._exon_connections.event_id(ref_exon_idx, event_type)
 
     def event_description(
-        self, ref_exon_idx: np.ndarray, event_type: np.ndarray
+        self, ref_exon_idx: npt._ArrayLikeInt_co, event_type: npt._ArrayLikeStr_co
     ) -> List[str]:
         """List of event descriptions for VOILA for specified events"""
         return self._exon_connections.event_description(ref_exon_idx, event_type)
 
-    def src_introns_for(self, exon_idx: int) -> np.ndarray:
+    def src_introns_for(self, exon_idx: int) -> npt.NDArray[np.uint64]:
         """array of intron_idx that have exon_idx as src_exon
 
         Note
@@ -242,7 +253,7 @@ class ExonConnections(object):
         )
         return self._exon_connections.src_intron_idx[idx_slice]
 
-    def dst_introns_for(self, exon_idx: int) -> np.ndarray:
+    def dst_introns_for(self, exon_idx: int) -> npt.NDArray[np.uint64]:
         """array of intron_idx that have exon_idx as dst_exon
 
         Note
@@ -256,7 +267,7 @@ class ExonConnections(object):
         )
         return self._exon_connections.dst_intron_idx[idx_slice]
 
-    def src_junctions_for(self, exon_idx: int) -> np.ndarray:
+    def src_junctions_for(self, exon_idx: int) -> npt.NDArray[np.uint64]:
         """array of junction_idx that have exon_idx as src_exon
 
         Note
@@ -270,7 +281,7 @@ class ExonConnections(object):
         )
         return self._exon_connections.src_junction_idx[idx_slice]
 
-    def dst_junctions_for(self, exon_idx: int) -> np.ndarray:
+    def dst_junctions_for(self, exon_idx: int) -> npt.NDArray[np.uint64]:
         """array of junction_idx that have exon_idx as dst_exon
 
         Note

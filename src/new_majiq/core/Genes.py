@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import List, Optional, Union
 
 import numpy as np
+import numpy.typing as npt
 import xarray as xr
 
 import new_majiq.constants as constants
@@ -46,7 +47,7 @@ class Genes(ContigRegions):
         return self._contig_regions
 
     @property
-    def gene_idx(self) -> np.ndarray:
+    def gene_idx(self) -> npt.NDArray[np.int64]:
         return self._region_idx
 
     def __getitem__(self, gene_id: str) -> int:
@@ -104,10 +105,10 @@ class Genes(ContigRegions):
     def from_arrays(
         cls,
         contigs: Contigs,
-        contig_idx: np.ndarray,
-        start: np.ndarray,
-        end: np.ndarray,
-        strand: np.ndarray,
+        contig_idx: npt._ArrayLikeInt_co,
+        start: npt._ArrayLikeInt_co,
+        end: npt._ArrayLikeInt_co,
+        strand: npt._ArrayLikeStr_co,
         gene_id: List[str],
         gene_name: List[str],
     ) -> "Genes":

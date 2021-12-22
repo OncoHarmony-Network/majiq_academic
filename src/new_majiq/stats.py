@@ -14,11 +14,14 @@ Author: Joseph K Aicher
 from typing import Optional
 
 import numpy as np
+import numpy.typing as npt
 
 import new_majiq._stats as _stats
 
 
-def ttest(x: np.ndarray, labels: np.ndarray) -> np.ndarray:
+def ttest(
+    x: npt._ArrayLikeFloat_co, labels: npt._ArrayLikeBool_co
+) -> npt.NDArray[np.floating]:
     """Compute p-values for Welch's t-test on input data
 
     gufunc signature: (n),(n)->()
@@ -42,8 +45,10 @@ def ttest(x: np.ndarray, labels: np.ndarray) -> np.ndarray:
 
 
 def mannwhitneyu(
-    x: np.ndarray, labels: np.ndarray, sortx: Optional[np.ndarray] = None
-) -> np.ndarray:
+    x: npt._ArrayLikeFloat_co,
+    labels: npt._ArrayLikeBool_co,
+    sortx: Optional[npt._ArrayLikeInt_co] = None,
+) -> npt.NDArray[np.floating]:
     """Compute p-values for Mann-Whitney U test on input data
 
     gufunc signature: (n),(n)(,(n))?->()
@@ -72,8 +77,10 @@ def mannwhitneyu(
 
 
 def infoscore(
-    x: np.ndarray, labels: np.ndarray, sortx: Optional[np.ndarray] = None
-) -> np.ndarray:
+    x: npt._ArrayLikeFloat_co,
+    labels: npt._ArrayLikeBool_co,
+    sortx: Optional[npt._ArrayLikeInt_co] = None,
+) -> npt.NDArray[np.floating]:
     """Compute p-values for InfoScore test on input data
 
     gufunc signature: (n),(n)(,(n))?->()
@@ -101,8 +108,10 @@ def infoscore(
 
 
 def tnom(
-    x: np.ndarray, labels: np.ndarray, sortx: Optional[np.ndarray] = None
-) -> np.ndarray:
+    x: npt._ArrayLikeFloat_co,
+    labels: npt._ArrayLikeBool_co,
+    sortx: Optional[npt._ArrayLikeInt_co] = None,
+) -> npt.NDArray[np.floating]:
     """Compute p-values for TNOM test on input data
 
     gufunc signature: (n),(n)(,(n))?->()

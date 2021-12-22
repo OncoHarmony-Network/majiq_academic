@@ -7,6 +7,7 @@ Author: Joseph K Aicher
 from typing import TYPE_CHECKING, Final
 
 import numpy as np
+import numpy.typing as npt
 import xarray as xr
 
 import new_majiq.constants as constants
@@ -37,11 +38,11 @@ class SimplifierGroup(object):
         return GeneIntrons(self._group._exon_connections._introns)
 
     @property
-    def introns_passed_src(self) -> np.ndarray:
+    def introns_passed_src(self) -> npt.NDArray[np.uint64]:
         return self._group.introns_passed_src
 
     @property
-    def introns_passed_dst(self) -> np.ndarray:
+    def introns_passed_dst(self) -> npt.NDArray[np.uint64]:
         return self._group.introns_passed_dst
 
     @property
@@ -49,11 +50,11 @@ class SimplifierGroup(object):
         return GeneJunctions(self._group._exon_connections._junctions)
 
     @property
-    def junctions_passed_src(self) -> np.ndarray:
+    def junctions_passed_src(self) -> npt.NDArray[np.uint64]:
         return self._group.junctions_passed_src
 
     @property
-    def junctions_passed_dst(self) -> np.ndarray:
+    def junctions_passed_dst(self) -> npt.NDArray[np.uint64]:
         return self._group.junctions_passed_dst
 
     @property

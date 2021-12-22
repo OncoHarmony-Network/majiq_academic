@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Optional, Union
 
 import numpy as np
+import numpy.typing as npt
 import xarray as xr
 
 import new_majiq.constants as constants
@@ -54,7 +55,7 @@ class Exons(GeneRegions):
         return self._gene_regions
 
     @property
-    def exon_idx(self) -> np.ndarray:
+    def exon_idx(self) -> npt.NDArray[np.int64]:
         return self._region_idx
 
     def potential_introns(
@@ -86,7 +87,7 @@ class Exons(GeneRegions):
         return GeneIntrons.from_genes(self.genes, self)
 
     @property
-    def annotated_start(self) -> np.ndarray:
+    def annotated_start(self) -> npt.NDArray[np.int64]:
         """Annotated coordinates start. If denovo, -1
 
         Note that denovo behavior is different than previous versions of MAJIQ
@@ -94,32 +95,40 @@ class Exons(GeneRegions):
         return self._exons.annotated_start
 
     @property
-    def annotated_end(self) -> np.ndarray:
+    def annotated_end(self) -> npt.NDArray[np.int64]:
         """Annotated coordinates end. If denovo, -1
 
         Note that denovo behavior is different than previous versions of MAJIQ
         """
         return self._exons.annotated_end
 
-    def is_denovo(self, exon_idx: Optional[np.ndarray] = None) -> np.ndarray:
+    def is_denovo(
+        self, exon_idx: Optional[npt._ArrayLikeInt_co] = None
+    ) -> npt.NDArray[np.bool_]:
         """Return denovo status of exon"""
         if exon_idx is None:
             exon_idx = self.exon_idx
         return self._exons.is_denovo(exon_idx)
 
-    def is_exon_extension(self, exon_idx: Optional[np.ndarray] = None) -> np.ndarray:
+    def is_exon_extension(
+        self, exon_idx: Optional[npt._ArrayLikeInt_co] = None
+    ) -> npt.NDArray[np.bool_]:
         """Return if exon(s) have exon extension"""
         if exon_idx is None:
             exon_idx = self.exon_idx
         return self._exons.is_exon_extension(exon_idx)
 
-    def is_full_exon(self, exon_idx: Optional[np.ndarray] = None) -> np.ndarray:
+    def is_full_exon(
+        self, exon_idx: Optional[npt._ArrayLikeInt_co] = None
+    ) -> npt.NDArray[np.bool_]:
         """Return if exon(s) are full exons"""
         if exon_idx is None:
             exon_idx = self.exon_idx
         return self._exons.is_full_exon(exon_idx)
 
-    def is_half_exon(self, exon_idx: Optional[np.ndarray] = None) -> np.ndarray:
+    def is_half_exon(
+        self, exon_idx: Optional[npt._ArrayLikeInt_co] = None
+    ) -> npt.NDArray[np.bool_]:
         """Return if exon(s) are half exons"""
         if exon_idx is None:
             exon_idx = self.exon_idx
@@ -153,11 +162,11 @@ class Exons(GeneRegions):
     def from_arrays(
         cls,
         genes: Genes,
-        gene_idx: np.ndarray,
-        start: np.ndarray,
-        end: np.ndarray,
-        annotated_start: np.ndarray,
-        annotated_end: np.ndarray,
+        gene_idx: npt._ArrayLikeInt_co,
+        start: npt._ArrayLikeInt_co,
+        end: npt._ArrayLikeInt_co,
+        annotated_start: npt._ArrayLikeInt_co,
+        annotated_end: npt._ArrayLikeInt_co,
     ) -> "Exons":
         """Create :class:`Exons` from :class:`Genes` and input arrays"""
         return Exons(

@@ -10,6 +10,7 @@ Author: Joseph K Aicher
 from typing import Optional
 
 import numpy as np
+import numpy.typing as npt
 
 from .Exons import Exons, _Exons
 from .GeneRegions import GeneRegions
@@ -45,36 +46,40 @@ class GeneConnections(GeneRegions):
         return None if raw is None else Exons(raw)
 
     @property
-    def denovo(self) -> np.ndarray:
+    def denovo(self) -> npt.NDArray[np.bool_]:
         """Indicate if each connection is denovo or not"""
         return self._gene_connections.denovo
 
     @property
-    def passed_build(self) -> np.ndarray:
+    def passed_build(self) -> npt.NDArray[np.bool_]:
         """Indicate if each connection passed build filters (reliable) or not"""
         return self._gene_connections.passed_build
 
     @property
-    def simplified(self) -> np.ndarray:
+    def simplified(self) -> npt.NDArray[np.bool_]:
         """Indicate if each connection is simplified or not"""
         return self._gene_connections.simplified
 
     @property
-    def start_exon_idx(self) -> np.ndarray:
+    def start_exon_idx(self) -> npt.NDArray[np.uint64]:
         """Indicate exon_idx associated with start coordinate"""
         return self._gene_connections.start_exon_idx
 
     @property
-    def end_exon_idx(self) -> np.ndarray:
+    def end_exon_idx(self) -> npt.NDArray[np.uint64]:
         """Indicate exon_idx associated with end coordinate"""
         return self._gene_connections.end_exon_idx
 
-    def src_exon_idx(self, region_idx: Optional[np.ndarray] = None):
+    def src_exon_idx(
+        self, region_idx: Optional[npt._ArrayLikeInt_co] = None
+    ) -> npt.NDArray[np.uint64]:
         if region_idx is None:
             region_idx = self._region_idx
         return self._gene_connections.src_exon_idx(region_idx)
 
-    def dst_exon_idx(self, region_idx: Optional[np.ndarray] = None):
+    def dst_exon_idx(
+        self, region_idx: Optional[npt._ArrayLikeInt_co] = None
+    ) -> npt.NDArray[np.uint64]:
         if region_idx is None:
             region_idx = self._region_idx
         return self._gene_connections.dst_exon_idx(region_idx)

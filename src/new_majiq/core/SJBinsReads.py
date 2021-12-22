@@ -9,7 +9,7 @@ Author: Joseph K Aicher
 from typing import Final, Optional
 
 import numpy as np
-from numpy.typing import ArrayLike
+import numpy.typing as npt
 
 import new_majiq.constants as constants
 from new_majiq.internals import ExperimentStrandness
@@ -58,7 +58,7 @@ class SJBinsReads(object):
         return len(self._sj_binsreads)
 
     @property
-    def _sjbin_idx(self) -> np.ndarray:
+    def _sjbin_idx(self) -> npt.NDArray[np.int64]:
         """Index over bins/regions"""
         return np.arange(len(self))
 
@@ -68,17 +68,17 @@ class SJBinsReads(object):
         return self._sj_binsreads._regions
 
     @property
-    def _offsets(self) -> np.ndarray:
+    def _offsets(self) -> npt.NDArray[np.uint64]:
         """raw offsets for regions (1 more than length of regions) into bins"""
         return self._sj_binsreads._offsets
 
     @property
-    def _region_idx_start(self) -> np.ndarray:
+    def _region_idx_start(self) -> npt.NDArray[np.uint64]:
         """offset into start of bins for each region"""
         return self._offsets[:-1]
 
     @property
-    def _region_idx_end(self) -> np.ndarray:
+    def _region_idx_end(self) -> npt.NDArray[np.uint64]:
         """offset after end of bins for each region"""
         return self._offsets[1:]
 
@@ -92,20 +92,20 @@ class SJBinsReads(object):
         return self._sj_binsreads.total_bins
 
     @property
-    def bin_reads(self) -> np.ndarray:
+    def bin_reads(self) -> npt.NDArray:
         """number of reads for each region/bin"""
         return self._sj_binsreads.bin_reads
 
     @property
-    def bin_idx(self) -> np.ndarray:
+    def bin_idx(self) -> npt.NDArray[np.int32]:
         """index of each bin on each region"""
         return self._sj_binsreads.bin_idx
 
     def numstacks(
         self,
-        region_idx: Optional[ArrayLike] = None,
-        pvalue_threshold: ArrayLike = constants.DEFAULT_COVERAGE_STACK_PVALUE,
-    ) -> ArrayLike:
+        region_idx: Optional[npt._ArrayLikeInt_co] = None,
+        pvalue_threshold: npt._ArrayLikeFloat_co = constants.DEFAULT_COVERAGE_STACK_PVALUE,
+    ) -> npt.NDArray[np.int32]:
         """Calculate number of stacks at specified regions/pvalues"""
         if region_idx is None:
             region_idx = np.arange(len(self._regions))
@@ -113,9 +113,9 @@ class SJBinsReads(object):
 
     def numbins(
         self,
-        region_idx: Optional[ArrayLike] = None,
-        minreads: ArrayLike = 0,
-    ) -> ArrayLike:
+        region_idx: Optional[npt._ArrayLikeInt_co] = None,
+        minreads: npt._ArrayLikeInt_co = 0,
+    ) -> npt.NDArray[np.int32]:
         """Number of bins for regions with at least specified number of reads"""
         if region_idx is None:
             region_idx = np.arange(len(self._regions))
@@ -123,9 +123,9 @@ class SJBinsReads(object):
 
     def numreads(
         self,
-        region_idx: Optional[ArrayLike] = None,
-        numstacks: ArrayLike = 0,
-    ) -> ArrayLike:
+        region_idx: Optional[npt._ArrayLikeInt_co] = None,
+        numstacks: npt._ArrayLikeInt_co = 0,
+    ) -> npt.NDArray:
         """Calculate total number of reads at specified regions with stacks"""
         if region_idx is None:
             region_idx = np.arange(len(self._regions))

@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Final, Optional, Union
 
 import numpy as np
+import numpy.typing as npt
 import xarray as xr
 
 import new_majiq.constants as constants
@@ -84,11 +85,11 @@ class SJIntronsBins(SJBinsReads):
         return SJIntrons(self._regions)
 
     @property
-    def sib_idx_start(self) -> np.ndarray:
+    def sib_idx_start(self) -> npt.NDArray[np.uint64]:
         return self._region_idx_start
 
     @property
-    def sib_idx_end(self) -> np.ndarray:
+    def sib_idx_end(self) -> npt.NDArray[np.uint64]:
         return self._region_idx_end
 
     @property
@@ -245,9 +246,9 @@ class SJIntronsBins(SJBinsReads):
     def from_arrays(
         cls,
         regions: SJIntrons,
-        bin_reads: np.ndarray,
-        bin_idx: np.ndarray,
-        offsets: np.ndarray,
+        bin_reads: npt._ArrayLikeFloat_co,
+        bin_idx: npt._ArrayLikeInt_co,
+        offsets: npt._ArrayLikeInt_co,
         total_bins: int,
         strandness: ExperimentStrandness,
         original_path: str = "<none>",

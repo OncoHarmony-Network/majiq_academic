@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Final, List, Union
 
 import numpy as np
+import numpy.typing as npt
 import xarray as xr
 
 import new_majiq.constants as constants
@@ -45,7 +46,7 @@ class Contigs(object):
         return len(self._contigs)
 
     @property
-    def contig_idx(self) -> np.ndarray:
+    def contig_idx(self) -> npt.NDArray[np.int64]:
         return np.arange(len(self))
 
     @property

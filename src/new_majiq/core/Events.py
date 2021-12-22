@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Final, NamedTuple, Optional, Union
 
 import numpy as np
+import numpy.typing as npt
 import pandas as pd
 import xarray as xr
 
@@ -28,9 +29,9 @@ from .Genes import Genes
 class UniqueEventsMasks(NamedTuple):
     """Masks betwen two :py:class:`Events` objects over e_idx for unique/shared events
 
-    unique_events_mask: np.ndarray
+    unique_events_mask: npt.NDArray[bool]
         boolean mask into events that are unique (i.e. not found in other)
-    shared_events_idx: np.ndarray
+    shared_events_idx: npt.NDArray[int]
         index into events in other for shared events (corresponding to False
         values in unique_events_mask)
 
@@ -39,8 +40,10 @@ class UniqueEventsMasks(NamedTuple):
     Events.unique_events_mask
     """
 
-    unique_events_mask: np.ndarray  # boolean mask into events that are unique
-    shared_events_idx: np.ndarray  # index from nonunique to matching in other
+    # boolean mask into events that are unique
+    unique_events_mask: npt.NDArray[np.bool_]
+    # index from nonunique to matching in other
+    shared_events_idx: npt.NDArray[np.uint64]
 
 
 class Events(object):
@@ -97,32 +100,32 @@ class Events(object):
         return self._events.num_events
 
     @property
-    def e_idx(self) -> np.ndarray:
+    def e_idx(self) -> npt.NDArray[np.int64]:
         """Index over unique events"""
         return np.arange(self.num_events)
 
     @property
-    def ref_exon_idx(self) -> np.ndarray:
+    def ref_exon_idx(self) -> npt.NDArray[np.uint64]:
         """Index into self.exons for reference exon of each unique event"""
         return self._events.ref_exon_idx
 
     @property
-    def event_type(self) -> np.ndarray:
+    def event_type(self) -> npt.NDArray[np.str_]:
         """Indicator if source ('s') or target ('b') for each unique event"""
         return self._events.event_type
 
     @property
-    def _offsets(self) -> np.ndarray:
+    def _offsets(self) -> npt.NDArray[np.uint64]:
         """Offsets array for events into event connections"""
         return self._events._offsets
 
     @property
-    def ec_idx_start(self) -> np.ndarray:
+    def ec_idx_start(self) -> npt.NDArray[np.uint64]:
         """First index into event connections (ec_idx) for each unique event"""
         return self._events.connection_idx_start
 
     @property
-    def ec_idx_end(self) -> np.ndarray:
+    def ec_idx_end(self) -> npt.NDArray[np.uint64]:
         """One-past-end index into event connections (ec_idx) for each unique event"""
         return self._events.connection_idx_end
 
@@ -153,111 +156,121 @@ class Events(object):
         return self._events.num_connections
 
     @property
-    def ec_idx(self) -> np.ndarray:
+    def ec_idx(self) -> npt.NDArray[np.int64]:
         """Index over event connections"""
         return np.arange(self.num_connections)
 
     @property
-    def is_intron(self) -> np.ndarray:
+    def is_intron(self) -> npt.NDArray[np.bool_]:
         """Indicator if an intron or junction for each event connection"""
         return self._events.is_intron
 
     @property
-    def connection_idx(self) -> np.ndarray:
+    def connection_idx(self) -> npt.NDArray[np.uint64]:
         """Index into self.introns or self.junctions for each event connection"""
         return self._events.idx
 
-    def connection_gene_idx(self, ec_idx: Optional[np.ndarray] = None) -> np.ndarray:
+    def connection_gene_idx(
+        self, ec_idx: Optional[npt._ArrayLikeInt_co] = None
+    ) -> npt.NDArray[np.uint64]:
         """Index into self.genes for selected event connections
 
         Parameters
         ----------
-        ec_idx: Optional[np.ndarray]
+        ec_idx: Optional[npt._ArrayLikeInt_co]
             Indexes of selected event connections. If None, select all event
             connections in order
 
         Returns
         -------
-        np.ndarray
+        npt.NDArray[np.uint64]
         """
         if ec_idx is None:
             ec_idx = self.ec_idx
         return self._events.connection_gene_idx(ec_idx)
 
-    def connection_contig_idx(self, ec_idx: Optional[np.ndarray] = None) -> np.ndarray:
+    def connection_contig_idx(
+        self, ec_idx: Optional[npt._ArrayLikeInt_co] = None
+    ) -> npt.NDArray[np.uint64]:
         """Index into self.contigs for selected event connections
 
         Parameters
         ----------
-        ec_idx: Optional[np.ndarray]
+        ec_idx: Optional[npt._ArrayLikeInt_co]
             Indexes of selected event connections. If None, select all event
             connections in order
 
         Returns
         -------
-        np.ndarray
+        npt.NDArray[np.uint64]
         """
         return self.genes.contig_idx[self.connection_gene_idx(ec_idx)]
 
-    def connection_start(self, ec_idx: Optional[np.ndarray] = None) -> np.ndarray:
+    def connection_start(
+        self, ec_idx: Optional[npt._ArrayLikeInt_co] = None
+    ) -> npt.NDArray[np.int64]:
         """Start coordinate for each selected event connection
 
         Parameters
         ----------
-        ec_idx: Optional[np.ndarray]
+        ec_idx: Optional[npt._ArrayLikeInt_co]
             Indexes of selected event connections. If None, select all event
             connections in order
 
         Returns
         -------
-        np.ndarray
+        npt.NDArray[np.int64]
         """
         if ec_idx is None:
             ec_idx = self.ec_idx
         return self._events.connection_start(ec_idx)
 
-    def connection_end(self, ec_idx: Optional[np.ndarray] = None) -> np.ndarray:
+    def connection_end(
+        self, ec_idx: Optional[npt._ArrayLikeInt_co] = None
+    ) -> npt.NDArray[np.int64]:
         """End coordinate for each selected event connection
 
         Parameters
         ----------
-        ec_idx: Optional[np.ndarray]
+        ec_idx: Optional[npt._ArrayLikeInt_co]
             Indexes of selected event connections. If None, select all event
             connections in order
 
         Returns
         -------
-        np.ndarray
+        npt.NDArray[np.int64]
         """
         if ec_idx is None:
             ec_idx = self.ec_idx
         return self._events.connection_end(ec_idx)
 
-    def connection_denovo(self, ec_idx: Optional[np.ndarray] = None) -> np.ndarray:
+    def connection_denovo(
+        self, ec_idx: Optional[npt._ArrayLikeInt_co] = None
+    ) -> npt.NDArray[np.bool_]:
         """Indicator if connection was denovo for each selected event connection
 
         Parameters
         ----------
-        ec_idx: Optional[np.ndarray]
+        ec_idx: Optional[npt._ArrayLikeInt_co]
             Indexes of selected event connections. If None, select all event
             connections in order
 
         Returns
         -------
-        np.ndarray
+        npt.NDArray[np.bool_]
         """
         if ec_idx is None:
             ec_idx = self.ec_idx
         return self._events.connection_denovo(ec_idx)
 
     @property
-    def connection_ref_exon_idx(self) -> np.ndarray:
+    def connection_ref_exon_idx(self) -> npt.NDArray[np.uint64]:
         """Index into self.exons for reference exon for each event connection"""
         return np.repeat(self.ref_exon_idx, np.diff(self._offsets.astype(int)))
 
     def connection_other_exon_idx(
-        self, ec_idx: Optional[np.ndarray] = None
-    ) -> np.ndarray:
+        self, ec_idx: Optional[npt._ArrayLikeInt_co] = None
+    ) -> npt.NDArray[np.uint64]:
         """Index into self.exons for nonreference exon for each event connection"""
         if ec_idx is None:
             ec_idx = self.ec_idx
@@ -345,11 +358,11 @@ class Events(object):
         cls,
         introns: GeneIntrons,
         junctions: GeneJunctions,
-        ref_exon_idx: np.ndarray,
-        event_type: np.ndarray,
-        offsets: np.ndarray,
-        is_intron: np.ndarray,
-        connection_idx: np.ndarray,
+        ref_exon_idx: npt._ArrayLikeInt_co,
+        event_type: npt._ArrayLikeStr_co,
+        offsets: npt._ArrayLikeInt_co,
+        is_intron: npt._ArrayLikeBool_co,
+        connection_idx: npt._ArrayLikeInt_co,
     ) -> "Events":
         """Create :class:`Events` from connections and input arrays
 

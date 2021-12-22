@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Optional, Union
 
 import numpy as np
+import numpy.typing as npt
 import xarray as xr
 
 import new_majiq.constants as constants
@@ -115,11 +116,11 @@ class SJJunctionsBins(SJBinsReads):
         return SJJunctions(self._regions)
 
     @property
-    def sjb_idx_start(self) -> np.ndarray:
+    def sjb_idx_start(self) -> npt.NDArray[np.uint64]:
         return self._region_idx_start
 
     @property
-    def sjb_idx_end(self) -> np.ndarray:
+    def sjb_idx_end(self) -> npt.NDArray[np.uint64]:
         return self._region_idx_end
 
     @property
@@ -219,9 +220,9 @@ class SJJunctionsBins(SJBinsReads):
     def from_arrays(
         cls,
         regions: SJJunctions,
-        bin_reads: np.ndarray,
-        bin_idx: np.ndarray,
-        offsets: np.ndarray,
+        bin_reads: npt._ArrayLikeInt_co,
+        bin_idx: npt._ArrayLikeInt_co,
+        offsets: npt._ArrayLikeInt_co,
         total_bins: int,
         strandness: ExperimentStrandness,
         original_path: str = "<none>",
@@ -245,16 +246,21 @@ class SJJunctionsBins(SJBinsReads):
     def with_summaries(
         cls,
         regions: SJJunctions,
-        numreads: np.ndarray,
-        numbins: np.ndarray,
+        numreads: npt._ArrayLikeInt_co,
+        numbins: npt._ArrayLikeInt_co,
         total_bins: int,
         strandness: Optional[ExperimentStrandness] = None,
     ) -> "SJJunctionsBins":
         """Create :class:`SJJunctionsBins` with uniform coverage over nonzero bins"""
+        # cast to integer if necessary
+        numreads = np.array(numreads, copy=False)
+        numbins = np.array(numbins, copy=False)
+        # check valid sizes
         if numreads.ndim != 1 or numbins.ndim != 1:
             raise ValueError("numreads, numbins must be 1D")
         if len(regions) != numreads.shape[0] or len(regions) != numbins.shape[0]:
             raise ValueError("numreads, numbins must match regions in length")
+        # check valid values
         if np.any(numreads < numbins):
             raise ValueError("numreads must be at least numbins")
         if np.any(numbins < 0) or np.any(numbins > total_bins):
