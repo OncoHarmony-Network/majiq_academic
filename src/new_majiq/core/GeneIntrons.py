@@ -130,12 +130,18 @@ class GeneIntrons(GeneConnections):
         gene_idx: npt._ArrayLikeInt_co,
         start: npt._ArrayLikeInt_co,
         end: npt._ArrayLikeInt_co,
-        denovo: npt._ArrayLikeBool_co,
-        passed_build: npt._ArrayLikeBool_co,
-        simplified: npt._ArrayLikeBool_co,
+        denovo: Optional[npt._ArrayLikeBool_co] = None,
+        passed_build: Optional[npt._ArrayLikeBool_co] = None,
+        simplified: Optional[npt._ArrayLikeBool_co] = None,
         connected_exons: Optional[Exons] = None,
     ) -> "GeneIntrons":
         """Create :class:`GeneIntrons` from :class:`Genes` and input arrays"""
+        if denovo is None:
+            denovo = np.zeros_like(gene_idx, dtype=np.bool_)
+        if passed_build is None:
+            passed_build = np.zeros_like(gene_idx, dtype=np.bool_)
+        if simplified is None:
+            simplified = np.zeros_like(gene_idx, dtype=np.bool_)
         return GeneIntrons(
             _GeneIntrons(
                 genes._genes,
@@ -161,9 +167,9 @@ class GeneIntrons(GeneConnections):
             np.array([], dtype=np.uint64),
             np.array([], dtype=np.int64),
             np.array([], dtype=np.int64),
-            np.array([], dtype=bool),
-            np.array([], dtype=bool),
-            np.array([], dtype=bool),
+            denovo=np.array([], dtype=bool),
+            passed_build=np.array([], dtype=bool),
+            simplified=np.array([], dtype=bool),
             connected_exons=connected_exons,
         )
 
@@ -194,7 +200,7 @@ class GeneIntrons(GeneConnections):
                 df.gene_idx.values,
                 df.start.values,
                 df.end.values,
-                df.denovo.values,
-                df.passed_build.values,
-                df.simplified.values,
+                denovo=df.denovo.values,
+                passed_build=df.passed_build.values,
+                simplified=df.simplified.values,
             )

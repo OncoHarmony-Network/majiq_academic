@@ -7,7 +7,7 @@ Author: Joseph K Aicher
 """
 
 from pathlib import Path
-from typing import TYPE_CHECKING, Optional, Union
+from typing import TYPE_CHECKING, Optional, Union, cast
 
 import numpy as np
 import numpy.typing as npt
@@ -165,10 +165,21 @@ class Exons(GeneRegions):
         gene_idx: npt._ArrayLikeInt_co,
         start: npt._ArrayLikeInt_co,
         end: npt._ArrayLikeInt_co,
-        annotated_start: npt._ArrayLikeInt_co,
-        annotated_end: npt._ArrayLikeInt_co,
+        annotated_start: Optional[npt._ArrayLikeInt_co] = None,
+        annotated_end: Optional[npt._ArrayLikeInt_co] = None,
     ) -> "Exons":
         """Create :class:`Exons` from :class:`Genes` and input arrays"""
+        start = np.array(start, copy=False)
+        end = np.array(end, copy=False)
+        if annotated_start is None and annotated_end is None:
+            # assume annotated unless not full exon
+            full_exon = (start >= 0) & (end >= 0)
+            annotated_start = np.where(full_exon, start, -1)
+            annotated_end = np.where(full_exon, end, -1)
+        elif (annotated_start is None) != (annotated_end is None):
+            raise ValueError("annotated_{start,end} must both or neither be passed")
+        annotated_start = cast(npt._ArrayLikeInt_co, annotated_start)
+        annotated_end = cast(npt._ArrayLikeInt_co, annotated_end)
         return Exons(
             _Exons(genes._genes, gene_idx, start, end, annotated_start, annotated_end)
         )
@@ -200,6 +211,6 @@ class Exons(GeneRegions):
                 df.gene_idx.values,
                 df.start.values,
                 df.end.values,
-                df.annotated_start.values,
-                df.annotated_end.values,
+                annotated_start=df.annotated_start.values,
+                annotated_end=df.annotated_end.values,
             )

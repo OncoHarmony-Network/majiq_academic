@@ -110,7 +110,7 @@ class Genes(ContigRegions):
         end: npt._ArrayLikeInt_co,
         strand: npt._ArrayLikeStr_co,
         gene_id: List[str],
-        gene_name: List[str],
+        gene_name: Optional[List[str]] = None,
     ) -> "Genes":
         """Create :class:`Genes` from :class:`Contigs` and input arrays
 
@@ -126,13 +126,15 @@ class Genes(ContigRegions):
             Forward or reverse strand for each gene
         gene_id: List[str]
             Unique identifier for each gene
-        gene_name: List[str]
-            Name for each gene
+        gene_name: Optional[List[str]]
+            Name for each gene. If not specified, will be the same as gene_id
 
         Notes
         -----
         Genes must be provided in sorted order (contig_idx, start, end, strand).
         """
+        if gene_name is None:
+            gene_name = gene_id
         return Genes(
             _Genes(contigs._contigs, contig_idx, start, end, strand, gene_id, gene_name)
         )

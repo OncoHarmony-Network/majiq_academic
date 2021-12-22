@@ -99,12 +99,18 @@ class GeneJunctions(GeneConnections):
         gene_idx: npt._ArrayLikeInt_co,
         start: npt._ArrayLikeInt_co,
         end: npt._ArrayLikeInt_co,
-        denovo: npt._ArrayLikeBool_co,
-        passed_build: npt._ArrayLikeBool_co,
-        simplified: npt._ArrayLikeBool_co,
+        denovo: Optional[npt._ArrayLikeBool_co] = None,
+        passed_build: Optional[npt._ArrayLikeBool_co] = None,
+        simplified: Optional[npt._ArrayLikeBool_co] = None,
         connected_exons: Optional[Exons] = None,
     ) -> "GeneJunctions":
         """Create :class:`GeneJunctions` from :class:`Genes` and input arrays"""
+        if denovo is None:
+            denovo = np.zeros_like(gene_idx, dtype=np.bool_)
+        if passed_build is None:
+            passed_build = np.zeros_like(gene_idx, dtype=np.bool_)
+        if simplified is None:
+            simplified = np.zeros_like(gene_idx, dtype=np.bool_)
         return GeneJunctions(
             _GeneJunctions(
                 genes._genes,
@@ -146,7 +152,7 @@ class GeneJunctions(GeneConnections):
                 df.gene_idx.values,
                 df.start.values,
                 df.end.values,
-                df.denovo.values,
-                df.passed_build.values,
-                df.simplified.values,
+                denovo=df.denovo.values,
+                passed_build=df.passed_build.values,
+                simplified=df.simplified.values,
             )
