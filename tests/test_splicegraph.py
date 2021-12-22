@@ -270,3 +270,24 @@ def test_splicegraph_roundtrip(base_splicegraph: nm.SpliceGraph, tmpdir: Path):
     xr.testing.assert_equal(
         base_splicegraph.junctions.df, roundtrip_splicegraph.junctions.df
     )
+    return
+
+
+def test_splicegraph_events(base_splicegraph: nm.SpliceGraph):
+    base_splicegraph.introns._pass_all()
+    base_splicegraph.junctions._pass_all()
+    events = base_splicegraph.exon_connections.lsvs()
+    # 2 events each for even genes, 1 event each for odd genes
+    assert events.num_events == 9
+    # 5 connections for even genes (exon skipping with intron on one side)
+    # 2 connections for odd genes
+    assert events.num_connections == 21
+    # if we simplify introns, they should be excluded from events, bringing
+    # down num_connections to 18
+    base_splicegraph.introns._simplify_all()
+    events = base_splicegraph.exon_connections.lsvs()
+    assert events.num_events == 9
+    assert events.num_connections == 18
+    # TODO: right now we are just checking summaries. In the future could check
+    # that the actual values make sense
+    return
