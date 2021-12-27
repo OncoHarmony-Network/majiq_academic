@@ -17,7 +17,7 @@ from new_majiq._run.heterogen import subcommand as heterogen
 from new_majiq._run.quantify import subcommand as quantify
 
 SUBPARSER_SOURCES: Dict[str, GenericSubcommand] = {
-    "quantify": quantify,
+    "psi": quantify,
     "deltapsi": deltapsi,
     "heterogen": heterogen,
 }
