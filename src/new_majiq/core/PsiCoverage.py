@@ -1033,8 +1033,6 @@ class PsiCoverage(object):
             PsiCoverage.events, etc.)
         prefixes: List[str]
             Values for the prefix dimension coordinate
-        num_prefixes: int
-            Number of prefixes that will be filled in
         num_bootstraps: int
             Number of bootstrap replicates that will be used
         ec_chunksize: int
