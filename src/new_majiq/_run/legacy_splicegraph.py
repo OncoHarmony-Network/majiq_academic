@@ -14,7 +14,9 @@ from new_majiq._run._majiq_args import ExistingResolvedPath, NewResolvedPath
 from new_majiq._run._run import GenericSubcommand
 from new_majiq.logger import get_logger
 
-DESCRIPTION = "Output legacy lsv coverage file (.majiq) compatible with MAJIQ v2"
+DESCRIPTION = (
+    "Output legacy splicegraph file (splicegraph.sql) compatible with VOILA v2"
+)
 
 
 def add_args(parser: argparse.ArgumentParser) -> None:

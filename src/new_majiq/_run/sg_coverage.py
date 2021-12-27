@@ -24,7 +24,7 @@ from new_majiq.experiments import bam_experiment_name
 from new_majiq.logger import get_logger
 
 DESCRIPTION = (
-    "Get raw coverage for input experiment at splicegraph introns and junctions,"
+    "Get raw coverage for input experiment at splicegraph introns and junctions"
 )
 
 

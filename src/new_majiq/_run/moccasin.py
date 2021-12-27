@@ -424,22 +424,22 @@ def run_coverage_infer(args: argparse.Namespace) -> None:
 
 
 subcommand_factors_model = GenericSubcommand(
-    "(Advanced) Build model of unknown confounding factors using input PsiCoverage",
+    "Build model of unknown confounding factors using input PsiCoverage",
     args_factors_model,
     run_factors_model,
 )
 subcommand_factors_infer = GenericSubcommand(
-    "(Advanced) Use unknown confounding factors model on inputs to infer known/unknown factors",
+    "Use unknown confounding factors model on inputs to infer known/unknown factors",
     args_factors_infer,
     run_factors_infer,
 )
 subcommand_coverage_model = GenericSubcommand(
-    "(Advanced) Build model of PsiCoverage using input coverage and factors",
+    "Build model of PsiCoverage using input coverage and factors",
     args_coverage_model,
     run_coverage_model,
 )
 subcommand_coverage_infer = GenericSubcommand(
-    "(Advanced) Use PsiCoverage model to infer corrected coverage given inputs",
+    "Use PsiCoverage model to infer corrected coverage given inputs",
     args_coverage_infer,
     run_coverage_infer,
 )
