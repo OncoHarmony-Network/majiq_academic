@@ -12,3 +12,4 @@ to MAJIQ's main concepts.
    :hidden:
 
    installing
+   quick-overview
