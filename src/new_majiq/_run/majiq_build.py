@@ -35,8 +35,8 @@ def main() -> None:
     """Entry-point into multiple tools using subcommands"""
     # build parser
     parser = argparse.ArgumentParser(
-        description="Tools to analyze RNA splicing by building splicegraphs"
-        " over genes and assessing coverage over junctions and retained introns"
+        description="Tools to build splicegraphs and assess coverage from"
+        " RNA-seq experiments"
     )
     # add subparsers
     subparsers = parser.add_subparsers(required=True, help="")

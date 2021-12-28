@@ -27,7 +27,7 @@ def main() -> None:
     """Entry-point into multiple tools using subcommands"""
     # build parser
     parser = argparse.ArgumentParser(
-        description="Tools to detect, quantify, and analyze RNA splicing"
+        description="Tools to quantify RNA splicing within or between groups"
     )
     # add subparsers
     subparsers = parser.add_subparsers(required=True, help="")

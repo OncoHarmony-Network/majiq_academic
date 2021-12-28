@@ -40,8 +40,8 @@ from new_majiq.experiments import bam_experiment_name
 from new_majiq.logger import get_logger
 
 DESCRIPTION = (
-    "Run pipeline of majiq-build gff3/sj/update/psi-coverage to build"
-    " splicegraph and prepare coverage over LSVs"
+    "majiq-build pipeline to build splicegraph and coverage from annotations"
+    " and RNA-seq experiments"
 )
 
 
