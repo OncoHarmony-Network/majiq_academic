@@ -18,6 +18,7 @@ from new_majiq._run.build_pipeline import subcommand as pipeline
 from new_majiq._run.build_update import subcommand as update
 from new_majiq._run.psi_coverage import subcommand as psi_coverage
 from new_majiq._run.sg_coverage import subcommand as sg_coverage
+from new_majiq._run.sg_coverage_summarize import subcommand as sg_coverage_summarize
 from new_majiq._run.sj import subcommand as sj
 
 SUBPARSER_SOURCES: Dict[str, GenericSubcommand] = {
@@ -27,6 +28,7 @@ SUBPARSER_SOURCES: Dict[str, GenericSubcommand] = {
     "combine": combine,
     "psi-coverage": psi_coverage,
     "sg-coverage": sg_coverage,
+    "sg-coverage-summary": sg_coverage_summarize,
     "pipeline": pipeline,
 }
 

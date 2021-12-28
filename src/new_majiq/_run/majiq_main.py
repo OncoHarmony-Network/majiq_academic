@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 """
-tools.py
+majiq_main.py
 
-Provides entry-point to different majiq-tools scripts
+Provides entry-point to primary majiq scripts
 
 Author: Joseph K Aicher
 """
