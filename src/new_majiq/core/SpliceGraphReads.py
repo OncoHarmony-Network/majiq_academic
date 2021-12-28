@@ -16,6 +16,7 @@ from typing import (
     Hashable,
     List,
     Optional,
+    Sequence,
     Union,
     cast,
 )
@@ -29,6 +30,7 @@ from dask.distributed import progress
 import new_majiq.constants as constants
 from new_majiq.experiments import bam_experiment_name
 from new_majiq.internals import SpliceGraphReads as _SpliceGraphReads
+from new_majiq.logger import get_logger
 
 from ._workarounds import _load_zerodim_variables
 from .GeneIntrons import GeneIntrons
@@ -247,6 +249,81 @@ class SpliceGraphReads(object):
         xr.Dataset({}, {"prefix": prefixes}, attrs).to_zarr(
             path, mode="a", group=constants.NC_SGREADS, consolidated=True
         )
+        return
+
+    @classmethod
+    def convert_sj_batch(
+        cls,
+        sjs: Sequence[Path],
+        introns: GeneIntrons,
+        junctions: GeneJunctions,
+        path: Path,
+        chunksize: int = constants.NC_SGREADS_CHUNKS,
+        attrs: Dict = dict(),
+        imap_unordered_fn=map,
+    ) -> None:
+        """Load SpliceGraphReads from sj paths, save to single output path
+
+        Parameters
+        ----------
+        sjs: Sequence[Path]
+            Paths to input SJ files that will have PsiCoverage evaluated for
+        introns: GeneIntrons
+            Introns over which read coverage will be assessed
+        junctions: GeneJunctions
+            Junctions over which read coverage will be assessed
+        path: Path
+            Output path for SpliceGraphReads zarr file
+        attrs: Dict
+            Attributes to save with SpliceGraphReads file
+        imap_unordered_fn
+            Loading/saving of input SJ files will be passed through this
+            function, which can enable concurrency if appropriate
+        """
+        from .SJExperiment import SJExperiment
+
+        log = get_logger()
+
+        def sj_to_sgreads(sj_path: Path) -> SpliceGraphReads:
+            return SpliceGraphReads.from_connections_and_sj(
+                introns, junctions, SJExperiment.from_zarr(sj_path)
+            )
+
+        if len(sjs) == 0:
+            raise ValueError("At least one SJ file must be processed")
+        elif len(sjs) == 1:
+            log.info(f"Inferring SpliceGraphReads from {sjs[0]}")
+            sgreads = sj_to_sgreads(sjs[0])
+            log.info(f"Saving SpliceGraphReads to {path}")
+            sgreads.to_zarr(path, chunksize=chunksize)
+        else:
+            # precompute prefixes to use
+            log.info("Precomputing prefixes corresponding to input SJ files")
+            prefixes = [
+                bam_experiment_name(SJExperiment.original_path_from_zarr(x))
+                for x in sjs
+            ]
+            log.info(f"Saving prefixes and metadata to {path}")
+            SpliceGraphReads.to_zarr_slice_init(
+                path,
+                prefixes,
+                len(introns),
+                len(junctions),
+                chunksize=chunksize,
+                attrs={**attrs, "sj": [str(x) for x in sjs]},
+            )
+            jobs = imap_unordered_fn(
+                lambda x: (
+                    sj_to_sgreads(x[1]).to_zarr_slice(
+                        path,
+                        slice(x[0], 1 + x[0]),
+                        chunksize=chunksize,
+                    )
+                ),
+                list(enumerate(sjs)),
+            )
+            for ndx, _ in enumerate(jobs, 1):
+                log.info(f"Finished processing {ndx} / {len(sjs)} SJ files")
         return
 
     @classmethod

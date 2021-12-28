@@ -10,12 +10,9 @@ import argparse
 from typing import List, Optional
 
 import new_majiq as nm
-from new_majiq._run._majiq_args import (
-    ExistingResolvedPath,
-    NewResolvedPath,
-    lsv_coverage_args,
-)
+from new_majiq._run._majiq_args import ExistingResolvedPath, NewResolvedPath
 from new_majiq._run._run import GenericSubcommand
+from new_majiq._run.build_args import lsv_coverage_args
 from new_majiq.logger import get_logger
 
 DESCRIPTION = "Output legacy lsv coverage file (.majiq) compatible with MAJIQ v2"

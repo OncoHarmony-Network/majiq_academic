@@ -16,7 +16,7 @@ from new_majiq._run._majiq_args import (
     StoreRequiredUniqueActionFactory,
 )
 from new_majiq._run._run import GenericSubcommand
-from new_majiq._run.build import IntronsType, ir_filtering_args
+from new_majiq._run.build_args import IntronsType, ir_filtering_args
 from new_majiq.logger import get_logger
 
 DESCRIPTION = "Combine input splicegraphs into single splicegraph"

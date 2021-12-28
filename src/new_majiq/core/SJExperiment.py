@@ -85,6 +85,11 @@ class SJExperiment(object):
             SJIntronsBins.from_zarr(path), SJJunctionsBins.from_zarr(path)
         )
 
+    @classmethod
+    def original_path_from_zarr(cls, path: Union[str, Path]) -> str:
+        """Extract bam path from zarr with SJJunctionsBins"""
+        return SJJunctionsBins.original_path_from_zarr(path)
+
     def to_zarr(self, path: Union[str, Path], consolidated: bool = True) -> None:
         """Save :py:class:`SJExperiment` to specified path
 

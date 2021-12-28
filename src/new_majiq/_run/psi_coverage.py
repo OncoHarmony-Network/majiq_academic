@@ -8,7 +8,6 @@ Author: Joseph K Aicher
 
 import argparse
 import multiprocessing.dummy as mp
-from pathlib import Path
 from typing import List, Optional
 
 import new_majiq as nm
@@ -16,13 +15,11 @@ from new_majiq._run._majiq_args import (
     ExistingResolvedPath,
     NewResolvedPath,
     StoreRequiredUniqueActionFactory,
-    check_nonnegative_factory,
     chunks_args,
-    lsv_coverage_args,
     resources_args,
 )
 from new_majiq._run._run import GenericSubcommand
-from new_majiq.experiments import bam_experiment_name
+from new_majiq._run.build_args import lsv_coverage_args, quantifiability_threshold_args
 from new_majiq.logger import get_logger
 
 DESCRIPTION = (
@@ -50,21 +47,7 @@ def add_args(parser: argparse.ArgumentParser) -> None:
         nargs="+",
         help="Path to SJ coverage files for experiments",
     )
-    thresholds = parser.add_argument_group("quantifiability thresholds arguments")
-    thresholds.add_argument(
-        "--minreads",
-        type=check_nonnegative_factory(float, True),
-        default=nm.constants.DEFAULT_QUANTIFY_MINREADS,
-        help="Minimum readrate per experiment to pass a connection"
-        " (default: %(default)s)",
-    )
-    thresholds.add_argument(
-        "--minbins",
-        type=check_nonnegative_factory(float, True),
-        default=nm.constants.DEFAULT_QUANTIFY_MINBINS,
-        help="Minimum number of nonzero bins to pass a connection"
-        " (default: %(default)s).",
-    )
+    quantifiability_threshold_args(parser)
     lsv_coverage_args(parser)
     chunks_args(parser, nm.constants.DEFAULT_COVERAGE_CHUNKS)
     resources_args(parser, use_dask=False)
@@ -87,58 +70,20 @@ def run(args: argparse.Namespace) -> None:
             ).unique_events_mask
         ]
 
-    # define how to get from sj path to psicoverage file
-    def sj_to_psicov(sj_path: Path) -> nm.PsiCoverage:
-        return nm.PsiCoverage.from_sj_lsvs(
-            nm.SJExperiment.from_zarr(sj_path),
-            lsvs,
-            minreads=args.minreads,
-            minbins=args.minbins,
-            num_bootstraps=args.num_bootstraps,
-            pvalue_threshold=args.stack_pvalue_threshold,
-        )
-
-    if len(args.sj) == 1:
-        # if there is only one file, don't bother with threads
-        log.info(f"Inferring PSI coverage from {args.sj[0]}")
-        psi_coverage = sj_to_psicov(args.sj[0])
-        log.info(f"Saving PSI coverage to {args.psi_coverage}")
-        psi_coverage.to_zarr(args.psi_coverage, ec_chunksize=args.chunksize)
-    else:
-        # precompute prefixes to use
-        log.info("Precomputing prefixes corresponding to input SJ files")
-        prefixes = [
-            bam_experiment_name(nm.SJJunctionsBins.original_path_from_zarr(x))
-            for x in args.sj
-        ]
-        # we have more than one input file
-        log.info(f"Saving event information and metadata to {args.psi_coverage}")
-        nm.PsiCoverage.to_zarr_slice_init(
-            args.psi_coverage,
-            lsvs.save_df,
-            prefixes,
-            args.num_bootstraps,
-            psicov_attrs=dict(
-                sj=[str(x) for x in args.sj],
-                minreads=args.minreads,
-                minbins=args.minbins,
-            ),
-            ec_chunksize=args.chunksize,
-        )
-        nm.rng_resize(args.nthreads)  # allow for as many rngs as there are threads
-        with mp.Pool(args.nthreads) as p:
-            jobs = p.imap_unordered(
-                lambda x: (
-                    sj_to_psicov(x[1]).to_zarr_slice(
-                        args.psi_coverage,
-                        slice(x[0], 1 + x[0]),
-                        ec_chunksize=args.chunksize,
-                    )
-                ),
-                list(enumerate(args.sj)),
-            )
-            for ndx, _ in enumerate(jobs, 1):
-                log.info(f"Finished processing {ndx} / {len(args.sj)} SJ files")
+    nm.rng_resize(args.nthreads)
+    nm.PsiCoverage.convert_sj_batch(
+        args.sj,
+        lsvs,
+        args.psi_coverage,
+        minreads=args.quantify_minreads,
+        minbins=args.quantify_minbins,
+        num_bootstraps=args.num_bootstraps,
+        pvalue_threshold=args.stack_pvalue_threshold,
+        ec_chunksize=args.chunksize,
+        imap_unordered_fn=map
+        if len(args.sj) == 1
+        else mp.Pool(args.nthreads).imap_unordered,
+    )
     return
 
 

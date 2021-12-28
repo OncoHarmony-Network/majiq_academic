@@ -12,9 +12,9 @@ import sys
 from typing import Dict
 
 from new_majiq._run._run import GenericSubcommand
-from new_majiq._run.build import subcommand as build
-from new_majiq._run.combine import subcommand as combine
-from new_majiq._run.gff3 import subcommand as gff3
+from new_majiq._run.build_combine import subcommand as combine
+from new_majiq._run.build_gff3 import subcommand as gff3
+from new_majiq._run.build_update import subcommand as update
 from new_majiq._run.psi_coverage import subcommand as psi_coverage
 from new_majiq._run.sg_coverage import subcommand as sg_coverage
 from new_majiq._run.sj import subcommand as sj
@@ -22,7 +22,7 @@ from new_majiq._run.sj import subcommand as sj
 SUBPARSER_SOURCES: Dict[str, GenericSubcommand] = {
     "gff3": gff3,
     "sj": sj,
-    "update": build,
+    "update": update,
     "combine": combine,
     "psi-coverage": psi_coverage,
     "sg-coverage": sg_coverage,

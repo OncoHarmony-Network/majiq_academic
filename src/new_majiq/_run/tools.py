@@ -12,47 +12,17 @@ import sys
 from typing import Dict
 
 from new_majiq._run._run import GenericSubcommand
-from new_majiq._run.build import subcommand as build
+from new_majiq._run.build_pipeline import subcommand as build_pipeline
 from new_majiq._run.cite import subcommand as cite
-from new_majiq._run.combine import subcommand as combine
 from new_majiq._run.deltapsi import subcommand as deltapsi
-from new_majiq._run.gff3 import subcommand as gff3
 from new_majiq._run.heterogen import subcommand as heterogen
-from new_majiq._run.legacy_majiq import subcommand as legacy_majiq
-from new_majiq._run.legacy_splicegraph import subcommand as legacy_splicegraph
-from new_majiq._run.moccasin import subcommand_coverage_infer as moccasin_coverage_infer
-from new_majiq._run.moccasin import subcommand_coverage_model as moccasin_coverage_model
-from new_majiq._run.moccasin import subcommand_factors_infer as moccasin_factors_infer
-from new_majiq._run.moccasin import subcommand_factors_model as moccasin_factors_model
-from new_majiq._run.psi_controls import subcommand as psi_controls
-from new_majiq._run.psi_coverage import subcommand as psi_coverage
-from new_majiq._run.psi_outliers import subcommand as psi_outliers
-from new_majiq._run.psi_outliers_summary import subcommand as psi_outliers_summary
-from new_majiq._run.quantify import subcommand as quantify
-from new_majiq._run.sg_coverage import subcommand as sg_coverage
-from new_majiq._run.sg_coverage_summarize import subcommand as sg_coverage_summarize
-from new_majiq._run.sj import subcommand as sj
+from new_majiq._run.quantify import subcommand as psi
 
 SUBPARSER_SOURCES: Dict[str, GenericSubcommand] = {
-    "gff3": gff3,
-    "sj": sj,
-    "build": build,
-    "combine": combine,
-    "psi-coverage": psi_coverage,
-    "sg-coverage": sg_coverage,
-    "sg-coverage-summary": sg_coverage_summarize,
-    "quantify": quantify,
+    "build": build_pipeline,
+    "psi": psi,
     "deltapsi": deltapsi,
     "heterogen": heterogen,
-    "psi-controls": psi_controls,
-    "psi-outliers": psi_outliers,
-    "psi-outliers-summary": psi_outliers_summary,
-    "moccasin-factors-model": moccasin_factors_model,
-    "moccasin-factors-infer": moccasin_factors_infer,
-    "moccasin-coverage-model": moccasin_coverage_model,
-    "moccasin-coverage-infer": moccasin_coverage_infer,
-    "legacy-majiq": legacy_majiq,
-    "legacy-splicegraph": legacy_splicegraph,
     "cite": cite,
 }
 

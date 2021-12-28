@@ -20,10 +20,10 @@ from new_majiq._run._majiq_args import (
     ExistingResolvedPath,
     NewResolvedPath,
     StoreRequiredUniqueActionFactory,
-    _events_selection_args,
     resources_args,
 )
 from new_majiq._run._run import GenericSubcommand
+from new_majiq._run.build_args import _events_selection_args
 from new_majiq.logger import get_logger
 
 DESCRIPTION = (

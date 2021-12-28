@@ -36,6 +36,7 @@ import new_majiq.beta_mixture as bm
 import new_majiq.constants as constants
 from new_majiq._stats import nanmedian, nanquantile
 from new_majiq.experiments import bam_experiment_name
+from new_majiq.logger import get_logger
 
 from .Events import Events, _Events
 from .EventsCoverage import EventsCoverage
@@ -1096,6 +1097,98 @@ class PsiCoverage(object):
         add_offsets.to_zarr(
             path, mode="a", group=constants.NC_PSICOVERAGE, consolidated=True
         )
+        return
+
+    @classmethod
+    def convert_sj_batch(
+        cls,
+        sjs: Sequence[Path],
+        lsvs: Events,
+        path: Path,
+        minreads: float = constants.DEFAULT_QUANTIFY_MINREADS,
+        minbins: float = constants.DEFAULT_QUANTIFY_MINBINS,
+        num_bootstraps: int = constants.DEFAULT_COVERAGE_NUM_BOOTSTRAPS,
+        pvalue_threshold: float = constants.DEFAULT_COVERAGE_STACK_PVALUE,
+        ec_chunksize: int = constants.DEFAULT_COVERAGE_CHUNKS,
+        imap_unordered_fn=map,
+    ) -> None:
+        """Load PsiCoverage from sj paths, save to single output path
+
+        Parameters
+        ----------
+        sjs: Sequence[Path]
+            Paths to input SJ files that will have PsiCoverage evaluated for
+        lsvs: Events
+            Events over which PsiCoverage will be calculated
+        path: Path
+            Output path for PsiCoverage zarr file
+        minreads, minbins: float
+            Quantifiability thresholds
+        num_bootstraps: int
+            The number of bootstrap replicates for bootstrapped estimates
+        pvalue_threshold: float
+            P-value threshold for removing stacks under leave-one-out Poisson
+            model of per-bin read coverage, for both raw and bootstrapped
+            coverage (Set to nonpositive value to skip stack detection)
+        imap_unordered_fn
+            Loading/saving of input SJ files will be passed through this
+            function, which can enable concurrency if appropriate
+        """
+        log = get_logger()
+
+        # how to go from sj path to psicoverage file
+        def sj_to_psicov(sj_path: Path) -> PsiCoverage:
+            return PsiCoverage.from_sj_lsvs(
+                SJExperiment.from_zarr(sj_path),
+                lsvs,
+                minreads=minreads,
+                minbins=minbins,
+                num_bootstraps=num_bootstraps,
+                pvalue_threshold=pvalue_threshold,
+            )
+
+        if len(sjs) == 0:
+            raise ValueError("At least one SJ file must be processed")
+        elif len(sjs) == 1:
+            # if there is only one file, don't bother with imap_unordered_fn
+            log.info(f"Inferring PSI coverage from {sjs[0]}")
+            psi_coverage = sj_to_psicov(sjs[0])
+            log.info(f"Saving PSI coverage to {path}")
+            psi_coverage.to_zarr(path, ec_chunksize=ec_chunksize)
+        else:
+            # precompute prefixes to use
+            log.info("Precomputing prefixes corresponding to input SJ files")
+            prefixes = [
+                bam_experiment_name(SJExperiment.original_path_from_zarr(x))
+                for x in sjs
+            ]
+            # we have more than one input file
+            log.info(f"Saving event information and metadata to {path}")
+            PsiCoverage.to_zarr_slice_init(
+                path,
+                lsvs.save_df,
+                prefixes,
+                num_bootstraps,
+                psicov_attrs=dict(
+                    sj=[str(x) for x in sjs],
+                    minreads=minreads,
+                    minbins=minbins,
+                ),
+                ec_chunksize=ec_chunksize,
+            )
+            jobs = imap_unordered_fn(
+                lambda x: (
+                    sj_to_psicov(x[1]).to_zarr_slice(
+                        path,
+                        slice(x[0], 1 + x[0]),
+                        ec_chunksize=ec_chunksize,
+                    )
+                ),
+                list(enumerate(sjs)),
+            )
+            for ndx, _ in enumerate(jobs, 1):
+                log.info(f"Finished processing {ndx} / {len(sjs)} SJ files")
+        return
 
     @cached_property
     def num_passed(self) -> xr.DataArray:

@@ -13,10 +13,10 @@ import new_majiq as nm
 from new_majiq._run._majiq_args import (
     ExistingResolvedPath,
     NewResolvedPath,
-    check_nonnegative_factory,
     resources_args,
 )
 from new_majiq._run._run import GenericSubcommand
+from new_majiq._run.build_args import sj_strandness_args
 from new_majiq.logger import get_logger
 
 DESCRIPTION = (
@@ -40,48 +40,7 @@ def add_args(parser: argparse.ArgumentParser) -> None:
         type=NewResolvedPath,
         help="Path for SJ file with raw bin reads for junctions and introns",
     )
-    strandness = parser.add_argument_group("strandness arguments")
-    strandness.add_argument(
-        "--strandness",
-        type=str,
-        default="AUTO",
-        choices=(
-            "AUTO",
-            nm.ExperimentStrandness.NONE.name,
-            nm.ExperimentStrandness.FORWARD.name,
-            nm.ExperimentStrandness.REVERSE.name,
-        ),
-        help="Strandness of input BAM."
-        " AUTO = automatically detect strand (use median ratio of forward vs"
-        " reverse stranded reads at annotated junctions). (default: %(default)s)",
-    )
-    strandness.add_argument(
-        "--auto-minreads",
-        metavar="N",
-        type=check_nonnegative_factory(int, reject_zero=True),
-        default=nm.constants.DEFAULT_BAM_STRAND_MINREADS,
-        help="For automatic detection of strand. Only consider evidence from"
-        " splicegraph junctions with at least this many total (unstranded) reads"
-        " (default: %(default)s)",
-    )
-    strandness.add_argument(
-        "--auto-minjunctions",
-        metavar="N",
-        type=check_nonnegative_factory(int, reject_zero=True),
-        default=nm.constants.DEFAULT_BAM_STRAND_MINJUNCTIONS,
-        help="For automatic detection of strand. Infer unstranded if the number"
-        " of splicegraph junctions with sufficient reads is less than this argument"
-        " (default: %(default)s)",
-    )
-    strandness.add_argument(
-        "--auto-mediantolerance",
-        metavar="X",
-        type=check_nonnegative_factory(float, reject_zero=True),
-        default=nm.constants.DEFAULT_BAM_STRAND_MINDEVIATION,
-        help="For automatic detection of strand. Infer unstranded if the median"
-        " proportion over junctions of forward strand reads vs all reads"
-        " deviates from 0.5 by only this amount (default: %(default)s)",
-    )
+    sj_strandness_args(parser)
     parser.add_argument(
         "--update-exons",
         action="store_true",
