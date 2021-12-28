@@ -16,10 +16,12 @@ from new_majiq._run.build_pipeline import subcommand as build_pipeline
 from new_majiq._run.cite import subcommand as cite
 from new_majiq._run.deltapsi import subcommand as deltapsi
 from new_majiq._run.heterogen import subcommand as heterogen
+from new_majiq._run.moccasin import subcommand_pipeline as moccasin_pipeline
 from new_majiq._run.quantify import subcommand as psi
 
 SUBPARSER_SOURCES: Dict[str, GenericSubcommand] = {
     "build": build_pipeline,
+    "moccasin": moccasin_pipeline,
     "psi": psi,
     "deltapsi": deltapsi,
     "heterogen": heterogen,

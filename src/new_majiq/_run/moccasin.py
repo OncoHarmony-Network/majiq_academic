@@ -7,7 +7,8 @@ Author: Joseph K Aicher
 """
 
 import argparse
-from typing import List, Union
+import sys
+from typing import Dict, List, Union
 
 import moccasin.moccasin as mc
 import numpy as np
@@ -147,13 +148,16 @@ def _get_factors(
     return factors
 
 
-def _args_ruv_parameters(parser: argparse.ArgumentParser) -> None:
+def _args_ruv_parameters(
+    parser: argparse.ArgumentParser,
+    default_max_new_factors: int = nm.constants.DEFAULT_MOCCASIN_RUV_MAX_FACTORS,
+) -> None:
     ruv = parser.add_argument_group("unknown confounders modeling arguments")
     ruv.add_argument(
         "--ruv-max-new-factors",
         metavar="N",
         type=check_nonnegative_factory(int, True),
-        default=nm.constants.DEFAULT_MOCCASIN_RUV_MAX_FACTORS,
+        default=default_max_new_factors,
         help="Maximum number of new factors the model will add (default: %(default)s)",
     )
     ruv.add_argument(
@@ -423,6 +427,230 @@ def run_coverage_infer(args: argparse.Namespace) -> None:
     return
 
 
+def args_pipeline(parser: argparse.ArgumentParser) -> None:
+    """arguments for pipeline through model/inference steps of factors/coverage"""
+    _args_factors(parser)
+    _args_ruv_parameters(parser, default_max_new_factors=0)
+    parser.add_argument(
+        "psicov",
+        nargs="+",
+        type=ExistingResolvedPath,
+        action=StoreRequiredUniqueActionFactory(),
+        help="Paths for input psi coverage files to perform batch correction on",
+    )
+    parser.add_argument(
+        "output_dir",
+        type=NewResolvedPath,
+        help="Path for new directory for output files",
+    )
+    factor_prefixes = parser.add_argument_group("factor modeling experiments arguments")
+    factor_prefixes_ex = factor_prefixes.add_mutually_exclusive_group()
+    factor_prefixes_ex.add_argument(
+        "--factors-prefixes-include",
+        nargs="+",
+        type=str,
+        default=None,
+        action=StoreRequiredUniqueActionFactory(),
+        help="Prefixes to explicitly include in factors-model step"
+        " (default: include all)",
+    )
+    factor_prefixes_ex.add_argument(
+        "--factors-prefixes-exclude",
+        nargs="+",
+        type=str,
+        default=None,
+        action=StoreRequiredUniqueActionFactory(),
+        help="Prefixes to explicitly exclude in factors-model step,"
+        " i.e. use all others (default: include all)",
+    )
+    coverage_prefixes = parser.add_argument_group(
+        "coverage modeling experiments arguments"
+    )
+    coverage_prefixes_ex = coverage_prefixes.add_mutually_exclusive_group()
+    coverage_prefixes_ex.add_argument(
+        "--coverage-prefixes-include",
+        nargs="+",
+        type=str,
+        default=None,
+        action=StoreRequiredUniqueActionFactory(),
+        help="Prefixes to explicitly include in coverage-model step"
+        " (default: include all)",
+    )
+    coverage_prefixes_ex.add_argument(
+        "--coverage-prefixes-exclude",
+        nargs="+",
+        type=str,
+        default=None,
+        action=StoreRequiredUniqueActionFactory(),
+        help="Prefixes to explicitly exclude in coverage-model step,"
+        " i.e. use all others (default: include all)",
+    )
+    resources_args(parser, use_dask=True)
+    return
+
+
+def run_pipeline(args: argparse.Namespace) -> None:
+    """model factors, get updated factors, model coverage, get updated coverage"""
+    log = get_logger()
+    log.info(f"Opening coverage from {len(args.psicov)} PSI coverage files")
+    psicov = nm.PsiCoverage.from_zarr(args.psicov)
+    psicov_subset: nm.PsiCoverage  # used for modeling steps
+    log.info(f"Correcting coverage for {psicov}")
+    log.info("Setting up model matrix of known factors")
+    factors = _get_factors(psicov.prefixes, args)
+
+    if args.ruv_max_new_factors > 0:
+        log.info(f"Modeling up to {args.ruv_max_new_factors} unknown factors")
+        if args.factors_prefixes_include:
+            log.info("Modeling factors using specified prefixes")
+            psicov_subset = psicov[args.factors_prefixes_include]
+        elif args.factors_prefixes_exclude:
+            log.info("Modeling factors excluding specified prefixes")
+            psicov_subset = psicov[
+                [x for x in psicov.prefixes if x not in args.factors_prefixes_exclude]
+            ]
+        else:
+            psicov_subset = psicov
+        log.info(f"Learning model for unknown confounding factors from {psicov_subset}")
+        factors_model = mc.ModelUnknownConfounders.train(
+            psicov_subset.raw_psi,
+            psicov_subset.event_passed,
+            psicov_subset.lsv_offsets.values,
+            factors.sel(prefix=psicov_subset.prefixes),
+            max_new_factors=args.ruv_max_new_factors,
+            max_events=args.ruv_max_events,
+            dim_prefix="prefix",
+            dim_factor="factor",
+            dim_ecidx="ec_idx",
+            log=log,
+            show_progress=args.show_progress,
+        )
+        # report about explained variance
+        explained_variance = factors_model.explained_variance.values
+        if len(explained_variance):
+            log.info(
+                f"Learned {factors_model.num_factors} factors explaining"
+                f" {explained_variance.sum():.3%} of residual variance"
+                " (after accounting for known factors):"
+                + "".join(
+                    [
+                        f"\nfactor {i}\t{x:.3%} (cumulative: {cum_x:.3%})"
+                        for i, (x, cum_x) in enumerate(
+                            zip(explained_variance, explained_variance.cumsum()), 1
+                        )
+                    ]
+                )
+            )
+        factors_model_path = args.output_dir / "factors_model.zarr"
+        log.info(f"Saving factors model to {factors_model_path}")
+        factors_model.to_zarr(factors_model_path)
+
+        # infer factors for all experiments
+        log.info(f"Inferring unknown factors for {psicov}")
+        unknown_factors = factors_model.predict(
+            psicov.raw_psi, psicov.event_passed, factors
+        )
+        if args.show_progress:
+            unknown_factors = unknown_factors.persist()
+            progress(unknown_factors.data)
+        unknown_factors = unknown_factors.load()
+        # update factors
+        factors = xr.concat(
+            [factors, unknown_factors.rename(new_factor="factor")], dim="factor"
+        )
+        factors_path = args.output_dir / "factors.zarr"
+        log.info(f"Saving combined known/unknown factors to {factors_path}")
+        factors.rename("factors").to_dataset().to_zarr(factors_path, mode="w")
+    # done modeling/updating factors if modeling unknown factors
+
+    if args.coverage_prefixes_include:
+        log.info("Modeling coverage using specified prefixes")
+        psicov_subset = psicov[args.coverage_prefixes_include]
+    elif args.coverage_prefixes_exclude:
+        log.info("Modeling coverage excluding specified prefixes")
+        psicov_subset = psicov[
+            [x for x in psicov.prefixes if x not in args.coverage_prefixes_exclude]
+        ]
+    else:
+        psicov_subset = psicov
+    log.info(f"Learning model for observed coverage from {psicov_subset}")
+    bootstrap_model = mc.infer_model_params(
+        psicov_subset.bootstrap_psi,
+        psicov_subset.event_passed,
+        factors.sel(prefix=psicov_subset.prefixes),
+        complete=False,
+        dim_prefix="prefix",
+        dim_factor="factor",
+    )
+    raw_model = mc.infer_model_params(
+        psicov_subset.raw_psi,
+        psicov_subset.event_passed,
+        factors.sel(prefix=psicov_subset.prefixes),
+        complete=False,
+        dim_prefix="prefix",
+        dim_factor="factor",
+    )
+    models = xr.Dataset(dict(bootstrap_model=bootstrap_model, raw_model=raw_model))
+    if args.show_progress:
+        models = models.persist()
+        progress(*(x.data for x in models.variables.values() if x.chunks))
+    models.load().chunk({})
+    models_path = args.output_dir / "coverage_model.zarr"
+    log.info(f"Saving coverage model to {models_path}")
+    models.to_zarr(models_path, mode="w")
+
+    log.info(f"Updating coverage for {psicov}")
+    offsets = psicov.lsv_offsets.load()
+
+    def clip_and_renormalize_psi(x: xr.DataArray) -> xr.DataArray:
+        return xr.apply_ufunc(
+            clip_and_normalize_strict,
+            x.chunk({"ec_idx": -1}),
+            offsets,
+            input_core_dims=[["ec_idx"], ["offset_idx"]],
+            output_core_dims=[["ec_idx"]],
+            output_dtypes=(x.dtype,),
+            dask="parallelized",
+        )
+
+    adj_bootstrap_psi = (
+        # get linear adjustment of bootstrap_psi
+        mc.correct_with_model(
+            psicov.bootstrap_psi,
+            models.bootstrap_model,
+            factors,
+            dim_prefix="prefix",
+            dim_factor="factor",
+        )
+        # clip and renormalize
+        .pipe(clip_and_renormalize_psi)
+        # but must be passed and not null
+        .pipe(
+            lambda x: x.where(x.notnull() & psicov.event_passed, psicov.bootstrap_psi)
+        )
+    )
+    adj_raw_psi = (
+        # get linear adjustment of raw_psi
+        mc.correct_with_model(
+            psicov.raw_psi,
+            models.raw_model,
+            factors,
+            dim_prefix="prefix",
+            dim_factor="factor",
+        )
+        # clip and renormalize
+        .pipe(clip_and_renormalize_psi)
+        # but must be passed and not null
+        .pipe(lambda x: x.where(x.notnull() & psicov.event_passed, psicov.raw_psi))
+    )
+    # replace original coverage with adjusted coverage
+    psicov = psicov.updated(adj_bootstrap_psi, adj_raw_psi, model_path=f"{models_path}")
+    psicov_path = args.output_dir / "corrected.psicov"
+    log.info(f"Saving corrected coverage to {psicov_path}")
+    psicov.to_zarr(psicov_path, show_progress=args.show_progress)
+    return
+
+
 subcommand_factors_model = GenericSubcommand(
     "Build model of unknown confounding factors using input PsiCoverage",
     args_factors_model,
@@ -443,3 +671,48 @@ subcommand_coverage_infer = GenericSubcommand(
     args_coverage_infer,
     run_coverage_infer,
 )
+subcommand_pipeline = GenericSubcommand(
+    "majiq-moccasin pipeline for PsiCoverage batch correction with"
+    " known/unknown factors",
+    args_pipeline,
+    run_pipeline,
+)
+
+
+SUBPARSER_SOURCES: Dict[str, GenericSubcommand] = {
+    "factors-model": subcommand_factors_model,
+    "factors-infer": subcommand_factors_infer,
+    "coverage-model": subcommand_coverage_model,
+    "coverage-infer": subcommand_coverage_infer,
+    "pipeline": subcommand_pipeline,
+}
+
+
+def main() -> None:
+    """Entry-point into multiple tools using subcommands"""
+    # build parser
+    parser = argparse.ArgumentParser(
+        description="Tools to model factors and PsiCoverage using MOCCASIN"
+    )
+    # add subparsers
+    subparsers = parser.add_subparsers(required=True, help="")
+    for src_name, src_module in SUBPARSER_SOURCES.items():
+        src_parser = subparsers.add_parser(
+            src_name,
+            help=src_module.DESCRIPTION,
+            description=src_module.DESCRIPTION,
+        )
+        src_parser.set_defaults(func=src_module.run)
+        src_module.add_args(src_parser)
+
+    # check length of input
+    if len(sys.argv) == 1:
+        parser.print_help()
+        sys.exit(1)
+    # parse arguments now
+    args = parser.parse_args()
+    args.func(args)
+
+
+if __name__ == "__main__":
+    main()
