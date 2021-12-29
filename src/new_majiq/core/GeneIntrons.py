@@ -62,11 +62,11 @@ class GeneIntrons(GeneConnections):
             self._gene_introns.filter_passed(keep_annotated, discard_denovo)
         )
 
-    def update_flags_from(self, donor_introns: "GeneIntrons") -> None:
+    def update_flags_from(self, donor_introns: "GeneIntrons") -> "GeneIntrons":
         """Update flags using overlapping donor :py:class:`GeneIntrons`
 
         Update flags (denovo, passed_build, simplified) using overlapping donor
-        :py:class:`GeneIntrons`
+        :py:class:`GeneIntrons` in place.
 
         Parameters
         ----------
@@ -75,9 +75,14 @@ class GeneIntrons(GeneConnections):
             they overlap (if annotated in donor, mark as annotated, if passed
             in donor, mark as passed, if unsimplified in donor, mark as
             unsimplified)
+
+        Returns
+        -------
+        GeneIntrons
+            Returns self, after flags have been updated
         """
         self._gene_introns.update_flags_from(donor_introns._gene_introns)
-        return
+        return self
 
     @property
     def _gene_introns(self) -> _GeneIntrons:

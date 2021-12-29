@@ -7,8 +7,8 @@ Author: Joseph K Aicher
 """
 
 import argparse
-import multiprocessing.dummy as mp
-from typing import List, Optional
+from multiprocessing.pool import ThreadPool
+from typing import Callable, List, Optional
 
 import new_majiq as nm
 from new_majiq._run._majiq_args import (
@@ -71,6 +71,12 @@ def run(args: argparse.Namespace) -> None:
         ]
 
     nm.rng_resize(args.nthreads)
+    p: Optional[ThreadPool] = None
+    imap_unordered_fn: Callable = map
+    if len(args.sj) != 1:
+        p = ThreadPool(args.nthreads)
+        imap_unordered_fn = p.imap_unordered
+
     nm.PsiCoverage.convert_sj_batch(
         args.sj,
         lsvs,
@@ -80,10 +86,12 @@ def run(args: argparse.Namespace) -> None:
         num_bootstraps=args.num_bootstraps,
         pvalue_threshold=args.stack_pvalue_threshold,
         ec_chunksize=args.chunksize,
-        imap_unordered_fn=map
-        if len(args.sj) == 1
-        else mp.Pool(args.nthreads).imap_unordered,
+        imap_unordered_fn=imap_unordered_fn,
     )
+
+    if p:
+        p.close()
+
     return
 
 

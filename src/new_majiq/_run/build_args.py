@@ -814,6 +814,34 @@ def do_build_and_simplify(
             imap_unordered_fn=imap_unordered_fn,
         )
 
+    # propagate intron flags within annotated exon boundaries
+    if introns_type != IntronsType.NO_INTRONS:
+        # propagate intron flags for introns within annotated exon boundaries
+        introns = (
+            sg.exons.potential_introns(True)
+            .update_flags_from(
+                # annotated exons
+                sg.exons.get_annotated()
+                # introns between these annotated exon boundaries (starting simplified)
+                .potential_introns(True)
+                # propagate flags using sg.introns
+                .update_flags_from(sg.introns)
+                # remove introns that didn't pass
+                .filter_passed(keep_annotated=True, discard_denovo=False)
+            )
+            .filter_passed(
+                keep_annotated=True,
+                discard_denovo=introns_type == IntronsType.ANNOTATED_INTRONS,
+            )
+        )
+        sg = nm.SpliceGraph.from_components(
+            contigs=sg.contigs,
+            genes=sg.genes,
+            exons=sg.exons,
+            junctions=sg.junctions,
+            introns=introns,
+        )
+
     return sg
 
 
