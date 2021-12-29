@@ -13,6 +13,7 @@ dependencies:
   - netcdf4>=1.5
   - zarr>=2.3
   - dask>=2.11
+  - sparse >= 0.13
   - matplotlib
   - ipython
   - pytest

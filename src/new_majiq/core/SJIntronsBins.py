@@ -105,7 +105,6 @@ class SJIntronsBins(SJBinsReads):
                 "bin_reads": ("sib_idx", self.bin_reads),
             },
             {
-                "sib_idx": self.sib_idx,
                 "bin_idx": ("sib_idx", self.bin_idx),
                 "_offsets": ("si_offsets_idx", self._offsets),
             },
@@ -124,13 +123,17 @@ class SJIntronsBins(SJBinsReads):
         """View of SJIntronsBins (combined with underlying regions)"""
         return xr.merge(
             (
-                self._df.drop_vars("_offsets"),
-                self.regions.df.assign_coords(
-                    sib_idx_start=("si_idx", self.sib_idx_start),
-                    sib_idx_end=("si_idx", self.sib_idx_end),
+                # arrays defining sparse representation
+                self._df.drop_vars(["bin_reads", "bin_idx", "_offsets"]),
+                # sparse representation
+                xr.Dataset(
+                    {"bin_reads": (("si_idx", "bin_idx"), self.bin_reads_2d)},
+                    {"bin_idx": np.arange(self.total_bins)},
                 ),
+                # information about introns
+                self.regions.df,
             ),
-            join="exact",
+            join="override",
             combine_attrs="no_conflicts",
         )
 
@@ -232,9 +235,7 @@ class SJIntronsBins(SJBinsReads):
         # otherwise
         self.regions.contigs.to_zarr(path, "w", consolidated=False)
         self.regions.to_zarr(path, "a", consolidated=False)
-        self._df.drop_vars("sib_idx").pipe(lambda x: x.chunk(x.sizes)).pipe(
-            _load_zerodim_variables
-        ).to_zarr(
+        self._df.pipe(lambda x: x.chunk(x.sizes)).pipe(_load_zerodim_variables).to_zarr(
             path,
             mode="a",
             group=constants.NC_SJINTRONSBINS,

@@ -6,13 +6,16 @@ Wrap shared aspects of junction/intron raw SJ reads
 Author: Joseph K Aicher
 """
 
-from typing import Final, Optional
+from typing import TYPE_CHECKING, Final, Optional, Union
 
 import numpy as np
 import numpy.typing as npt
 
 import new_majiq.constants as constants
 from new_majiq.internals import ExperimentStrandness
+
+if TYPE_CHECKING:
+    import sparse
 
 
 class SJBinsReads(object):
@@ -100,6 +103,36 @@ class SJBinsReads(object):
     def bin_idx(self) -> npt.NDArray[np.int32]:
         """index of each bin on each region"""
         return self._sj_binsreads.bin_idx
+
+    @property
+    def bin_reads_2d(self) -> Union["sparse.GCXS", npt.NDArray]:
+        """2D array representation of reads per region/bin
+
+        Notes
+        -----
+        If `sparse` module is installed, will use sparse representation over
+        internal arrays (no copy). Otherwise, will return dense array, which
+        will increase memory utilization, potentially significantly
+        """
+        try:
+            import sparse
+
+            return sparse.GCXS(
+                (self.bin_reads, self.bin_idx, self._offsets.view(np.int64)),
+                shape=(len(self._regions), self.total_bins),
+                compressed_axes=(0,),
+            )
+        except ModuleNotFoundError:
+            # create dense array
+            result = np.zeros(
+                (len(self._regions), self.total_bins), dtype=self.bin_reads.dtype
+            )
+            # fill nonzero values
+            result[
+                np.repeat(np.arange(len(self._regions)), self.numbins()),
+                self.bin_idx,
+            ] = self.bin_reads
+            return result
 
     def numstacks(
         self,

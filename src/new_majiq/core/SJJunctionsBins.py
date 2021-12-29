@@ -131,7 +131,6 @@ class SJJunctionsBins(SJBinsReads):
                 "bin_reads": ("sjb_idx", self.bin_reads),
             },
             {
-                "sjb_idx": self.sjb_idx,
                 "bin_idx": ("sjb_idx", self.bin_idx),
                 "_offsets": ("sj_offsets_idx", self._offsets),
             },
@@ -149,13 +148,17 @@ class SJJunctionsBins(SJBinsReads):
         """View of SJJunctionsBins (combined with underlying regions)"""
         return xr.merge(
             (
-                self._df.drop_vars("_offsets"),
-                self.regions.df.assign_coords(
-                    sjb_idx_start=("sj_idx", self.sjb_idx_start),
-                    sjb_idx_end=("sj_idx", self.sjb_idx_end),
+                # arrays defining sparse representation
+                self._df.drop_vars(["bin_reads", "bin_idx", "_offsets"]),
+                # sparse representation
+                xr.Dataset(
+                    {"bin_reads": (("sj_idx", "bin_idx"), self.bin_reads_2d)},
+                    {"bin_idx": np.arange(self.total_bins)},
                 ),
+                # information about junctions
+                self.regions.df,
             ),
-            join="exact",
+            join="override",
             combine_attrs="no_conflicts",
         )
 
@@ -200,9 +203,7 @@ class SJJunctionsBins(SJBinsReads):
             path, "w", group=constants.NC_SJJUNCTIONSCONTIGS, consolidated=False
         )
         self.regions.to_zarr(path, "a", consolidated=False)
-        self._df.drop_vars("sjb_idx").pipe(lambda x: x.chunk(x.sizes)).pipe(
-            _load_zerodim_variables
-        ).to_zarr(
+        self._df.pipe(lambda x: x.chunk(x.sizes)).pipe(_load_zerodim_variables).to_zarr(
             path,
             mode="a",
             group=constants.NC_SJJUNCTIONSBINS,
