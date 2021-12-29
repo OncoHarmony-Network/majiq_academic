@@ -165,7 +165,7 @@ class EventsCoverage(object):
             [
                 (eid, start, end, reads, bins)
                 for eid, start, end, reads, bins in zip(
-                    np.repeat(event_id, np.diff(self.events._offsets.astype(int))),
+                    self.events.broadcast_eidx_to_ecidx(event_id),
                     self.events.connection_start(),
                     self.events.connection_end(),
                     self.numreads,

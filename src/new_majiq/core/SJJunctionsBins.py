@@ -294,9 +294,9 @@ class SJJunctionsBins(SJBinsReads):
         # use these arrays to construct simple SJJunctionsBins
         return SJJunctionsBins.from_arrays(
             regions,
-            bin_reads.astype(np.int32),
-            bin_idx.astype(np.int32),
-            offsets.astype(np.uint64),
+            bin_reads.astype(np.int32, copy=False),
+            bin_idx.astype(np.int32, copy=False),
+            offsets.astype(np.uint64, copy=False),
             total_bins,
             strandness,
         )

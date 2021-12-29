@@ -128,7 +128,7 @@ def run(args: argparse.Namespace) -> None:
             .unique_events_mask(events)
             .shared_events_idx
         ] = True
-        ec_mask = np.repeat(e_mask, np.diff(events._offsets.astype(int)))
+        ec_mask = events.broadcast_eidx_to_ecidx(e_mask)
         return (
             xr.Dataset(
                 dict(e_mask=("e_idx", e_mask), ec_mask=("ec_idx", ec_mask)),

@@ -6,6 +6,7 @@ Wrapper around events
 Author: Joseph K Aicher
 """
 
+from functools import cached_property
 from pathlib import Path
 from typing import Final, NamedTuple, Optional, Union
 
@@ -128,6 +129,27 @@ class Events(object):
     def ec_idx_end(self) -> npt.NDArray[np.uint64]:
         """One-past-end index into event connections (ec_idx) for each unique event"""
         return self._events.connection_idx_end
+
+    @cached_property
+    def event_size(self) -> npt.NDArray[np.uint64]:
+        """Number of event connections for each unique event"""
+        return self.ec_idx_end - self.ec_idx_start
+
+    def broadcast_eidx_to_ecidx(self, x: npt.ArrayLike) -> npt.NDArray:
+        """Broadcast `x` over events to event connections
+
+        Parameters
+        ----------
+        x: array_like
+            Array of length self.num_events that will have values per-event
+            repeated for each connection in the event
+
+        Returns
+        -------
+        array
+            with values of `x` repeated for each event connection
+        """
+        return np.repeat(x, self.event_size.view(np.int64))
 
     def connections_slice_for_event(self, event_idx: int) -> slice:
         """Get slice into event connections for event with specified index
@@ -266,7 +288,7 @@ class Events(object):
     @property
     def connection_ref_exon_idx(self) -> npt.NDArray[np.uint64]:
         """Index into self.exons for reference exon for each event connection"""
-        return np.repeat(self.ref_exon_idx, np.diff(self._offsets.astype(int)))
+        return self.broadcast_eidx_to_ecidx(self.ref_exon_idx)
 
     def connection_other_exon_idx(
         self, ec_idx: Optional[npt._ArrayLikeInt_co] = None
@@ -417,12 +439,11 @@ class Events(object):
             raise ValueError("event_mask must be 1-dimensional")
         elif len(event_mask) != self.num_events:
             raise ValueError("event_mask must match events")
-        event_size = (self.ec_idx_end - self.ec_idx_start).astype(int)
-        subset_size = event_size[event_mask]
+        subset_size = self.event_size[event_mask]
         subset_offsets = np.empty(1 + len(subset_size), dtype=np.uint64)
         subset_offsets[0] = 0
-        subset_offsets[1:] = np.cumsum(subset_size)
-        ec_mask = np.repeat(event_mask, event_size)
+        np.cumsum(subset_size, out=subset_offsets[1:])
+        ec_mask = self.broadcast_eidx_to_ecidx(event_mask)
         return Events(
             _Events(
                 self.introns._gene_introns,
@@ -465,9 +486,7 @@ class Events(object):
                 strand=self.genes.strand[gene_idx],
                 gene_name=np.array(self.genes.gene_name)[gene_idx],
                 gene_id=np.array(self.genes.gene_id)[gene_idx],
-                event_type=np.repeat(
-                    self.event_type, np.diff(self._offsets.astype(int))
-                ),
+                event_type=self.broadcast_eidx_to_ecidx(self.event_type),
                 ref_exon_start=self.exons.start[self.connection_ref_exon_idx],
                 ref_exon_end=self.exons.end[self.connection_ref_exon_idx],
                 start=self.connection_start(),
