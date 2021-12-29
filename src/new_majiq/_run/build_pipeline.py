@@ -101,6 +101,7 @@ def run(args: argparse.Namespace) -> None:
             "is_sj": bool,
         },
     )
+
     if "path" not in df_experiments.columns:
         raise ValueError("Experiments table does not have 'path' column")
     elif len(set(df_experiments["path"])) < len(df_experiments):
@@ -113,8 +114,12 @@ def run(args: argparse.Namespace) -> None:
         raise ValueError(f"Input paths are not unique ({nonunique_paths = })")
     else:
         df_experiments["path"] = df_experiments["path"].apply(ExistingResolvedPath)
+
     if "group" not in df_experiments.columns:
         df_experiments["group"] = "experiments"  # all are same group, trivial name
+    elif df_experiments["group"].isna().any():
+        raise ValueError("Specified group column may not have missing values")
+
     if "strandness" not in df_experiments.columns:
         df_experiments["strandness"] = args.strandness
     else:
@@ -127,6 +132,7 @@ def run(args: argparse.Namespace) -> None:
                 "Invalid values for strandness in experiments_tsv"
                 f" ({invalid_strandness = }, {valid_strandness = })"
             )
+
     df_experiments["is_sj"] = df_experiments["path"].apply(
         lambda x: x.suffix.upper() in {".SJ", ".ZIP", ".ZARR"}
     )
