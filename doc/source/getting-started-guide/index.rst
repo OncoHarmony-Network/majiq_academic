@@ -9,7 +9,7 @@ to MAJIQ's main concepts.
 
 .. toctree::
    :maxdepth: 2
-   :hidden:
 
    installing
    quick-overview
+   majiq-build
