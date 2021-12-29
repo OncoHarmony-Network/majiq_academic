@@ -58,6 +58,10 @@ class Exons(GeneRegions):
     def exon_idx(self) -> npt.NDArray[np.int64]:
         return self._region_idx
 
+    def get_annotated(self) -> "Exons":
+        """Annotated :class:`Exons` with original coordinates, excluding novel exons"""
+        return Exons(self._exons.get_annotated())
+
     def potential_introns(
         self, make_simplified: bool = constants.DEFAULT_BUILD_DENOVO_SIMPLIFIED
     ) -> "GeneIntrons":

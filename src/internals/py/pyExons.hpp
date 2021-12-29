@@ -77,6 +77,9 @@ inline void init_Exons(pyExons_t& pyExons) {
         [](const Exons& self) { return majiq::checksum(self); },
         pybind11::call_guard<pybind11::gil_scoped_release>(),
         "checksum of exons")
+    .def("get_annotated", &Exons::get_annotated,
+        pybind11::call_guard<pybind11::gil_scoped_release>(),
+        "Return original annotated exons")
     .def("potential_introns",
         [](const std::shared_ptr<Exons>& exons_ptr, bool make_simplified) {
         return majiq::GeneIntrons::PotentialIntrons(exons_ptr, make_simplified);

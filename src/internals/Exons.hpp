@@ -100,6 +100,17 @@ class Exons : public detail::Regions<Exon, false> {
       throw std::invalid_argument("Exons cannot have null genes");
     }
   }
+
+  /**
+   * Return original set of annotated exons (remove denovos, reset coordinates)
+   */
+  Exons get_annotated() const {
+    std::vector<Exon> exon_vec;
+    for (auto ex_it = begin(); ex_it != end(); ++ex_it) {
+      if (!ex_it->is_denovo()) { exon_vec.push_back(ex_it->get_annotated()); }
+    }
+    return Exons{parents(), std::move(exon_vec)};
+  }
 };
 
 inline detail::checksum_t checksum(const Exons& x) noexcept {
