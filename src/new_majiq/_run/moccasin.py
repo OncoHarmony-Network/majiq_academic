@@ -432,16 +432,16 @@ def args_pipeline(parser: argparse.ArgumentParser) -> None:
     _args_factors(parser)
     _args_ruv_parameters(parser, default_max_new_factors=0)
     parser.add_argument(
+        "output_dir",
+        type=NewResolvedPath,
+        help="Path for new directory for output files",
+    )
+    parser.add_argument(
         "psicov",
         nargs="+",
         type=ExistingResolvedPath,
         action=StoreRequiredUniqueActionFactory(),
         help="Paths for input psi coverage files to perform batch correction on",
-    )
-    parser.add_argument(
-        "output_dir",
-        type=NewResolvedPath,
-        help="Path for new directory for output files",
     )
     factor_prefixes = parser.add_argument_group("factor modeling experiments arguments")
     factor_prefixes_ex = factor_prefixes.add_mutually_exclusive_group()
