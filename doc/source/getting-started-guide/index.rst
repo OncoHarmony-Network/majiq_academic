@@ -10,6 +10,8 @@ to MAJIQ's main concepts.
 .. toctree::
    :maxdepth: 2
 
-   installing
    quick-overview
+   installing
    majiq-build
+   moccasin
+   quantifiers

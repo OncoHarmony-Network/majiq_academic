@@ -41,6 +41,7 @@ extensions = [
     "IPython.sphinxext.ipython_console_highlighting",
     "sphinx_autosummary_accessors",
     "nbsphinx",
+    "sphinxcontrib.programoutput",
 ]
 
 # Add any paths that contain templates here, relative to this directory.

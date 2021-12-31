@@ -33,7 +33,8 @@ def main() -> None:
     """Entry-point into multiple tools using subcommands"""
     # build parser
     parser = argparse.ArgumentParser(
-        description="Tools to detect, quantify, and analyze RNA splicing"
+        description="Tools to detect, quantify, and analyze RNA splicing",
+        epilog="More with majiq-{build,moccasin,quantify,mendelian} or new-majiq",
     )
     # add subparsers
     subparsers = parser.add_subparsers(required=True, help="")

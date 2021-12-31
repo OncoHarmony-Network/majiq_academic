@@ -1,12 +1,14 @@
-#############
-MAJIQ Builder
-#############
+.. _majiq-build:
+
+##################################
+Building splicegraphs and coverage
+##################################
 
 .. role:: bash(code)
    :language: bash
 
-The MAJIQ Builder defines a splicegraph and coverage over local splicing
-variations per input experiment.
+The MAJIQ Builder defines a splicegraph and per-input-experiment coverage over
+local splicing variations.
 The MAJIQ Builder pipeline can be run on a single machine using the command
 :bash:`majiq build`.
 This command chains together the following steps:
@@ -21,9 +23,8 @@ This command chains together the following steps:
    quantification/analysis (:bash:`majiq-build psi-coverage`).
 
 
-Input/output files
-==================
-
+The MAJIQ Builder pipeline
+==========================
 
 From the perspective of input and output files, the MAJIQ builder takes as
 input and produces as output the following:
@@ -48,16 +49,17 @@ Output files
   Used as input by subsequent runs of the MAJIQ builder (used to speed up
   execution of future builds with the same experiment and GFF3 by parsing input
   BAM file only once).
-- PsiCoverage files (`{group}.psicov`) with raw/bootstrapped coverage over LSVs
-  for one or more experiments saved as a group.
+- PsiCoverage files (`{group}.psicov`) with raw/bootstrapped coverage over
+  LSVs for one or more experiments saved as a group.
   Used as input by MAJIQ quantifiers and other downstream analysis.
 
 
-MAJIQ builder pipeline CLI
-==========================
+Command-line interface
+----------------------
 
-From the perspective of the command-line, MAJIQ specifies the locations of
-these inputs and outputs using the required arguments:
+From the perspective of the command-line, the MAJIQ builder pipeline specifies
+the locations of these inputs and outputs using the required positional
+arguments:
 
 - :bash:`gff3`: path to input GFF3 file.
 - :bash:`experiments_tsv`: path to TSV file defining where to find input
@@ -127,8 +129,8 @@ More detailed explanations of these parameters (and others) can be found by
 running :bash:`majiq build --help`.
 
 
-Finer control with :bash:`majiq-build`
-======================================
+Individual steps with :bash:`majiq-build`
+=========================================
 
 The MAJIQ Builder pipeline chains together 4 different unique commands
 from :bash:`majiq-build`.
@@ -163,6 +165,8 @@ experiments relative to old splicegraphs, by itself it does not evaluate what
 the analysis would be if the build had included the additional experiment.
 
 
+.. _quick-twopass:
+
 Two-pass build
 --------------
 
@@ -171,21 +175,24 @@ splicegraphs:
 
 - :bash:`majiq-build combine` allows combining independent evidence from
   multiple splicegraphs into a single splicegraph.
-  This is roughly equivalent to running :bash:`majiq-build update` with the
-  experiments from each build as independent build groups.
-  Simplification is not exactly the same.
-  **NOTE**: how we handle introns needs to be fixed. We can propagate intron
-  status to all introns between annotated exons to enable near-equivalence
-  (besides slight differences with simplification) as a fix.
+
+    - This is roughly equivalent to running :bash:`majiq-build update` with the
+      experiments from each build as independent build groups.
+    - Largely negligible differences come from merging simplification calls on
+      the component splicegraphs; if the differences are unacceptable, one can
+      reset simplification calls with
+      :bash:`majiq-build update --reset-simplify --simplify-only`.
+
 - :bash:`majiq-build combine` allows treating novel junctions from some of
   these splicegraphs as known, highlighting junctions that were novel to
   specific experiments.
 - :bash:`majiq-build psi-coverage` allows producing coverage for events that
   are unique to only one splicegraph (i.e. if it was structurally the same in
   the first build, ignore it).
-  This enables focusing on structurally novel events.
-  It can also prevent duplicate work with shared experiments/events which were
-  quantified in previous builds that share the same events.
+
+    - This enables focusing on structurally novel events.
+    - It can also prevent duplicate work with shared experiments/events which
+      were quantified in previous builds that share the same events.
 
 This functionality is of particular interest for our clinical analysis
 pipelines for patients with suspected Mendelian disorders, where each
