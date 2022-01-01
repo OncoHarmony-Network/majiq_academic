@@ -5,10 +5,6 @@ Run commands of majiq-build in sequence:
 + Load annotated splicegraph (majiq-build gff3)
 + Load coverage from BAM files (majiq-build sj)
 + Update annotated splicegraph (majiq-build update)
-+ Obtain coverage over LSVs (majiq-build psi-coverage)
-
-In the future, we might update coverage to also have splicegraph coverage in
-the same file
 """
 
 import argparse
@@ -40,8 +36,8 @@ from new_majiq.experiments import bam_experiment_name
 from new_majiq.logger import get_logger
 
 DESCRIPTION = (
-    "majiq-build pipeline to build splicegraph and coverage from annotations"
-    " and RNA-seq experiments"
+    "majiq-build pipeline to build splicegraph"
+    " from annotations and RNA-seq experiments"
 )
 
 
@@ -218,41 +214,7 @@ def run(args: argparse.Namespace) -> None:
     log.info(f"Saving updated splicegraph to {output_splicegraph}")
     sg.to_zarr(output_splicegraph)
 
-    log.info(f"Defining LSVs for coverage ({args.select_lsvs})")
-    lsvs = sg.exon_connections.lsvs(args.select_lsvs)
-    if args.ignore_from is not None:
-        log.info(f"Ignoring LSVs also found in {args.ignore_from}")
-        lsvs = lsvs[
-            lsvs.unique_events_mask(
-                nm.SpliceGraph.from_zarr(
-                    args.ignore_from, genes=sg.genes
-                ).exon_connections.lsvs(args.select_lsvs)
-            ).unique_events_mask
-        ]
-
-    nm.rng_resize(args.nthreads)
-    for group_idx, (group, sj_paths) in enumerate(experiments.items(), 1):
-        output_psicov = args.output_dir / f"{group}.psicov"
-        sj_paths_str: str = str(sj_paths[0])
-        if len(sj_paths) > 2:
-            sj_paths_str += " {...}"
-        if len(sj_paths) > 1:
-            sj_paths_str += f" {str(sj_paths[-1])}"
-        log.info(f"Saving PsiCoverage for {group} ({group_idx} / {len(experiments)})")
-        log.info(
-            f" (`majiq-build psi-coverage {output_splicegraph} {output_psicov}"
-            f" {sj_paths_str}`)"
-        )
-        nm.PsiCoverage.convert_sj_batch(
-            sj_paths,
-            lsvs,
-            output_psicov,
-            minreads=args.quantify_minreads,
-            minbins=args.quantify_minbins,
-            num_bootstraps=args.num_bootstraps,
-            pvalue_threshold=args.stack_pvalue_threshold,
-            imap_unordered_fn=p.imap_unordered,
-        )
+    p.close()
     return
 
 

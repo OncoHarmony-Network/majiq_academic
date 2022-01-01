@@ -1,3 +1,4 @@
+.. currentmodule:: new_majiq
 .. _majiq-build:
 
 ##################################
@@ -7,8 +8,7 @@ Building splicegraphs and coverage
 .. role:: bash(code)
    :language: bash
 
-The MAJIQ Builder defines a splicegraph and per-input-experiment coverage over
-local splicing variations.
+The MAJIQ Builder defines a splicegraph over local splicing variations.
 The MAJIQ Builder pipeline can be run on a single machine using the command
 :bash:`majiq build`.
 This command chains together the following steps:
@@ -16,11 +16,15 @@ This command chains together the following steps:
 1. Initialize splicegraph using annotated transcript definitions from GFF3
    (:bash:`majiq-build gff3`).
 2. Process input BAM files for spliced junction and retained intron coverage
-   (:bash:`majiq-build sj`).
+   (:bash:`majiq-build sj`), producing :py:class:`SJExperiment` files.
 3. Update splicegraph, identifying annotated/novel junctions/retained introns
-   with reliable coverage (:bash:`majiq-build update`).
-4. Get raw and bootstrapped coverage per LSV, experiment for downstream
-   quantification/analysis (:bash:`majiq-build psi-coverage`).
+   with reliable coverage (:bash:`majiq-build update`),
+   producing a :py:class:`SpliceGraph` file.
+
+An additional command is required before quantification.
+The command :bash:`majiq psi-coverage` gets raw and bootstrapped coverage per
+LSV and experiment for downstream quantification/analysis (:bash:`majiq-build
+psi-coverage`) as a :py:class:`PsiCoverage` file.
 
 
 The MAJIQ Builder pipeline
@@ -42,16 +46,14 @@ Input files
 Output files
 ------------
 
-- Splicegraph database (`splicegraph.zarr`) defining annotated and novel exons,
-  junctions, and retained introns on which LSVs are defined.
-- SJ files (`{experiment}.sj`) reusable intermediate files with coverage
-  information per experiment/BAM.
+- :py:class:`SpliceGraph` file (`splicegraph.zarr`) defining
+  annotated and novel exons, junctions, and retained introns on which LSVs are
+  defined.
+- :py:class:`SJExperiment` files (`{experiment}.sj`) reusable
+  intermediate files with coverage information per experiment/BAM.
   Used as input by subsequent runs of the MAJIQ builder (used to speed up
   execution of future builds with the same experiment and GFF3 by parsing input
   BAM file only once).
-- PsiCoverage files (`{group}.psicov`) with raw/bootstrapped coverage over
-  LSVs for one or more experiments saved as a group.
-  Used as input by MAJIQ quantifiers and other downstream analysis.
 
 
 Command-line interface
@@ -122,53 +124,79 @@ attention to the following parameters:
   intron into the splicegraph
 - :bash:`--simplify`: ignore reliable but very low usage junctions or retained
   introns
-- :bash:`--quantify-minreads`: minimum readrate for a junction or retained
-  intron to pass an LSV for quantification
 
 More detailed explanations of these parameters (and others) can be found by
 running :bash:`majiq build --help`.
 
 
+The MAJIQ PsiCoverage command
+=============================
+
+MAJIQ now requires running :bash:`majiq psi-coverage` separately from the MAJIQ
+Builder pipeline.
+This makes the builder have the singular purpose of building a splicegraph
+model of all genes and leaves preparing coverage for quantification to this new
+step.
+This also allows for creating PsiCoverage files faster in a cluster/distributed
+environment.
+
+This command produces a single PsiCoverage file, requiring a splicegraph and
+one or more input SJ files as input:
+
+- :bash:`splicegraph`: path to input :py:class:`SpliceGraph` file
+- :bash:`psi_coverage`: path for output :py:class:`PsiCoverage` file
+- :bash:`sj [sj ...]`: path for input :py:class:`SJExperiment` files.
+
+We believe our default parameters are sensible, but it is worth paying
+particular attention to :bash:`--minreads` and :bash:`--minbins`, which
+determine which LSVs pass quantification thresholds. Detailed explanations of
+all parameters can be found by running :bash:`majiq psi-coverage --help`.
+
+Coverage from each input experiment (SJ file) is stored independently in the
+resulting PsiCoverage file.
+Downstream analysis steps permit multiple PsiCoverage files to be grouped
+together later.
+Since one can group experiments later, creating a PsiCoverage file for each
+experiment generally gives the most flexibility for downstream analysis.
+However, if the experiments are generally analyzed together as a group,
+grouping experiments into smaller number of files allows one (and workflow
+managers) to keep track of less commands/output files.
+This trades off against distributed parallelism
+(since :bash:`majiq psi-coverage` runs on a single machine),
+so in these cases it is advisable to split these groups into independent
+batches that can be combined later.
+For example, in past analyses with GTEx, where some tissues have around 1000
+experiments, we have batched experiments into 10 PsiCoverage files per tissue.
+
+
 Individual steps with :bash:`majiq-build`
 =========================================
 
-The MAJIQ Builder pipeline chains together 4 different unique commands
-from :bash:`majiq-build`.
-There are many cases where you might want to use these commands directly rather
-than the pipeline.
-These include (but are not limited to):
+The MAJIQ Builder pipeline chains together 3 different unique commands
+from :bash:`majiq-build`:
 
-- Processing GFF3 and SJ files:
-  The initial steps for processing annotations and input BAM files can
-  generally be shared between analyses.
-  Furthermore, each BAM file can be processed in parallel in a
+.. command-output:: majiq-build
+   :returncode: 1
+
+You may want to use these commands directly rather than the pipeline because:
+
+- Preprocessing GFF3 and SJ files separately for multiple analyses: this only
+  needs to be done once per experiment/annotation and can be run as part of a
+  standard RNA-seq pipeline after alignment.
+- SJ files can be made in an embarassingly parallel manner on a
   cluster/distributed environment.
-- Creating PsiCoverage files faster:
-  Each PsiCoverage file can be processed in parallel in a cluster/distributed
-  environment.
-  The pipeline saves experiments with each other in a single file per build
-  group.
-  Beyond parallelizing over these groups, we observe further speed improvements
-  on large groups by splitting them into smaller batches.
-- Different group definitions for PsiCoverage files:
-  We sometimes want to group experiments for quantification differently than the
-  build groups used for updating the splicegraph.
-- PsiCoverage from experiments that were not part of a previous build:
-  The pipeline only creates coverage for experiments contributing to the
-  splicegraph at the time of the build.
-  New experiments can be quickly compared to previous quantifications by
-  producing coverage relative to an old splicegraph.
+- Using the individual commands gives finer control as to where output files
+  are saved.
 
-The last point is of particular interest.
-While :bash:`majiq-build psi-coverage` allows creating PsiCoverage for new
-experiments relative to old splicegraphs, by itself it does not evaluate what
-the analysis would be if the build had included the additional experiment.
+It also gives access to :bash:`majiq-build combine`, which allows splicegraphs
+from multiple analyses/different experiments to be combined/contrasted.
+This is particularly useful for what we call a "two-pass build".
 
 
 .. _quick-twopass:
 
 Two-pass build
---------------
+==============
 
 The MAJIQ builder includes tools for contrasting and combining multiple
 splicegraphs:
@@ -186,9 +214,9 @@ splicegraphs:
 - :bash:`majiq-build combine` allows treating novel junctions from some of
   these splicegraphs as known, highlighting junctions that were novel to
   specific experiments.
-- :bash:`majiq-build psi-coverage` allows producing coverage for events that
-  are unique to only one splicegraph (i.e. if it was structurally the same in
-  the first build, ignore it).
+- :bash:`majiq psi-coverage`, with the :bash:`--ignore-from sg` flag, allows
+  producing coverage for events that are unique to only one splicegraph
+  (i.e. if it was structurally the same in the first build, ignore it).
 
     - This enables focusing on structurally novel events.
     - It can also prevent duplicate work with shared experiments/events which

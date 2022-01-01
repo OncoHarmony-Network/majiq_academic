@@ -7,6 +7,14 @@ Correcting for batch effects
 .. role:: bash(code)
    :language: bash
 
+Correcting for confounding variables/batch effects may be tricky...
+
+.. image:: https://imgs.xkcd.com/comics/confounding_variables.png
+   :alt: xkcd on confounding variables
+   :target: https://xkcd.com/2560/
+
+... but we should still try.
+
 MOCCASIN is a framework for splicing confounder adjustment [SlaffRadens2021]_.
 MAJIQ provides commands (:bash:`majiq moccasin`, subcommands from
 :bash:`majiq-moccasin`) to use this framework to correct batch effects in

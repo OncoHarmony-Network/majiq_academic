@@ -17,10 +17,12 @@ from new_majiq._run.cite import subcommand as cite
 from new_majiq._run.deltapsi import subcommand as deltapsi
 from new_majiq._run.heterogen import subcommand as heterogen
 from new_majiq._run.moccasin import subcommand_pipeline as moccasin_pipeline
+from new_majiq._run.psi_coverage import subcommand as psi_coverage
 from new_majiq._run.quantify import subcommand as psi
 
 SUBPARSER_SOURCES: Dict[str, GenericSubcommand] = {
     "build": build_pipeline,
+    "psi-coverage": psi_coverage,
     "moccasin": moccasin_pipeline,
     "psi": psi,
     "deltapsi": deltapsi,
@@ -34,7 +36,7 @@ def main() -> None:
     # build parser
     parser = argparse.ArgumentParser(
         description="Tools to detect, quantify, and analyze RNA splicing",
-        epilog="More with majiq-{build,moccasin,quantify,mendelian} or new-majiq",
+        epilog="More with majiq-* commands or new-majiq",
     )
     # add subparsers
     subparsers = parser.add_subparsers(required=True, help="")

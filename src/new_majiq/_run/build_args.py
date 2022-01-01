@@ -562,9 +562,10 @@ def lsv_coverage_args(parser: argparse.ArgumentParser) -> None:
         metavar="P",
         type=check_nonnegative_factory(float, False),
         default=nm.constants.DEFAULT_COVERAGE_STACK_PVALUE,
-        help="Bins with readrate having right-tailed probability less than this"
-        " threshold vs Poisson from other nonzero bins will be ignored as"
-        " outlier 'read stacks' (default: %(default).2e)",
+        help="Exclude coverage from read stacks."
+        " Read stacks are bins with readrate having right-tailed probability"
+        " less than this threshold vs Poisson from other nonzero bins"
+        " (default: %(default).2e)",
     )
     events = parser.add_argument_group("events selection arguments")
     events.add_argument(

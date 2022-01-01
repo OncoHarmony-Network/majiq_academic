@@ -318,6 +318,8 @@ Information on connections per event
    Events.connection_other_exon_idx
 
 
+.. _api-psicoverage:
+
 PsiCoverage API
 ===============
 
@@ -430,6 +432,8 @@ Beta approximation to bootstrap mixture coverage/posteriors
    PsiCoverage.approximate_quantile
    PsiCoverage.approximate_discretized_pmf
 
+
+.. _api-quantifier:
 
 Quantifier API
 ==============

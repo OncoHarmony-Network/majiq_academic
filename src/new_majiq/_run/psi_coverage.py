@@ -22,10 +22,7 @@ from new_majiq._run._run import GenericSubcommand
 from new_majiq._run.build_args import lsv_coverage_args, quantifiability_threshold_args
 from new_majiq.logger import get_logger
 
-DESCRIPTION = (
-    "Identify coverage for input experiment at splicegraph LSVs,"
-    " removing per-bin stacks and bootstrapping replicates of coverage"
-)
+DESCRIPTION = "Prepare raw and bootstrapped coverage at LSVs for quantification"
 
 
 def add_args(parser: argparse.ArgumentParser) -> None:

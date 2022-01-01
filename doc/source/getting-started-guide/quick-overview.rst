@@ -2,28 +2,16 @@
 Quick overview
 ##############
 
-MAJIQ is a software package for defining and quantifying local splicing
-variations (LSVs) from RNA-seq.
-Conceptually, MAJIQ is divided into the following modules:
-
 .. role:: bash(code)
    :language: bash
 
-- :ref:`MAJIQ Builder <majiq-build>`:
-  Define splicegraphs and coverage over LSVs per input experiment.
-- :ref:`MOCCASIN <moccasin>`:
-  Batch correction of LSV coverage using observed and unobserved factors.
-- :ref:`MAJIQ Quantifiers <quantifiers>`:
-  Quantify splicing over LSVs within/between groups of input experiments.
-- MAJIQ Mendelian (working name):
-  Summarize PSI over control experiments to identify outliers in individual
-  cases.
-
+MAJIQ is a software package for defining and quantifying local splicing
+variations (LSVs) from RNA-seq.
+:ref:`Install MAJIQ <installing>` using the source code and pip.
 Access the main user-facing pipelines using the command :bash:`majiq`:
 
 .. command-output:: majiq
    :returncode: 1
-
 
 MAJIQ expects GFF3_ files and `SAM/BAM`_ files as input.
 The GFF3_ file is used to build an initial model of all annotated splicing
@@ -39,13 +27,17 @@ MAJIQ models splicing changes in each gene in terms of a
 MAJIQ quantifies splicing in terms of :ref:`PSI <how-lsvs-quantified>` on
 subsets of splicegraphs called :ref:`LSVs <what-is-lsv>`.
 
-The MAJIQ Builder creates a :py:class:`~new_majiq.SpliceGraph` file with the
-model of all genes and :py:class:`~new_majiq.SJExperiment` files with coverage
-for each experiment.
+So, :ref:`MAJIQ Builder <majiq-build>` creates a
+:py:class:`~new_majiq.SpliceGraph` file with the model of all genes and
+:py:class:`~new_majiq.SJExperiment` files with coverage
+for each experiment (:bash:`majiq build`).
 It then uses these two to create :py:class:`~new_majiq.PsiCoverage` files
-with summarized raw and bootstrap coverage over LSVs.
-MOCCASIN, if used, creates batch-corrected versions of these files.
-MAJIQ subsequently uses these files for downstream quantification.
+with summarized raw and bootstrap coverage over LSVs
+(:bash:`majiq psi-coverage`).
+:ref:`MOCCASIN <moccasin>`, if used, creates batch-corrected versions of these
+files (:bash:`majiq moccasin`).
+MAJIQ subsequently uses these files for downstream quantification and analysis
+(:ref:`MAJIQ quantifiers <quantifiers>`, MAJIQ Mendelian [working name]).
 
 
 .. _GFF3: https://m.ensembl.org/info/website/upload/gff3.html

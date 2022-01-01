@@ -201,12 +201,24 @@ class Events {
   std::vector<size_t> ConnectionEventIndexFromOffsets(
       const std::vector<size_t>& offsets) {
     if (offsets.empty()) {
-      throw std::runtime_error("Events cannot have empty connection offsets");
+      throw std::invalid_argument(
+          "Events cannot have empty connection offsets");
+    } else if (offsets[0] != 0) {
+      throw std::invalid_argument(
+          "Event connection offsets must start at 0");
     }
     std::vector<size_t> result(offsets.back());
-    for (auto it = offsets.begin(); it != offsets.end() - 1; ++it) {
-      std::fill(result.begin() + *it, result.begin() + *(it + 1),
-          it - offsets.begin());
+    for (size_t i = 0; i < offsets.size() - 1; ++i) {
+      if (offsets[i] > offsets[1 + i]) {
+        throw std::invalid_argument(
+            "Event connection offsets must be nondecreasing (1)");
+      } else if (offsets[1 + i] > result.size()) {
+        // we know that last offset is less than offsets[1 + i]
+        throw std::invalid_argument(
+            "Event connection offsets must be nondecreasing (2)");
+      }
+      std::fill(
+          result.begin() + offsets[i], result.begin() + offsets[1 + i], i);
     }
     return result;
   }

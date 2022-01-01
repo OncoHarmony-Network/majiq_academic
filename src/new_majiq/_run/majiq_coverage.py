@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 """
-majiq_build.py
+majiq_coverage.py
 
-Provides entry-point to different majiq-build scripts
+Provides entry-point to different majiq-coverage scripts
 
 Author: Joseph K Aicher
 """
@@ -12,18 +12,16 @@ import sys
 from typing import Dict
 
 from new_majiq._run._run import GenericSubcommand
-from new_majiq._run.build_combine import subcommand as combine
-from new_majiq._run.build_gff3 import subcommand as gff3
-from new_majiq._run.build_pipeline import subcommand as pipeline
-from new_majiq._run.build_update import subcommand as update
+from new_majiq._run.psi_coverage import subcommand as psi_coverage
+from new_majiq._run.sg_coverage import subcommand as sg_coverage
+from new_majiq._run.sg_coverage_summarize import subcommand as sg_coverage_summarize
 from new_majiq._run.sj import subcommand as sj
 
 SUBPARSER_SOURCES: Dict[str, GenericSubcommand] = {
-    "gff3": gff3,
     "sj": sj,
-    "update": update,
-    "combine": combine,
-    "pipeline": pipeline,
+    "psi-coverage": psi_coverage,
+    "sg-coverage": sg_coverage,
+    "sg-coverage-summary": sg_coverage_summarize,
 }
 
 
@@ -31,8 +29,7 @@ def main() -> None:
     """Entry-point into multiple tools using subcommands"""
     # build parser
     parser = argparse.ArgumentParser(
-        description="Tools to build splicegraphs from GFF3 annotations and"
-        " RNA-seq experiments"
+        description="Tools to assess coverage from RNA-seq experiments"
     )
     # add subparsers
     subparsers = parser.add_subparsers(required=True, help="")
