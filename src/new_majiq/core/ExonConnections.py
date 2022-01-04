@@ -34,6 +34,13 @@ class ExonConnections(object):
         self._exon_connections: Final[_ExonConnections] = exon_connections
         return
 
+    def __repr__(self) -> str:
+        return (
+            f"ExonConnections["
+            f"{len(self.exons)}/{len(self.introns)}/{len(self.junctions)}"
+            " exons/introns/junctions]"
+        )
+
     @classmethod
     def create_connecting(
         cls,

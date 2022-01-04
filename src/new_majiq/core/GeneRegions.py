@@ -18,6 +18,12 @@ class GeneRegions(Regions):
         super().__init__(gene_regions)
         return
 
+    def __repr__(self) -> str:
+        return (
+            f"{self.__class__.__name__}["
+            f"{len(self.genes.contigs)} contigs, {len(self.genes)} genes, {len(self)}]"
+        )
+
     @property
     def _gene_regions(self):
         """Underlying internals class for gene regions"""

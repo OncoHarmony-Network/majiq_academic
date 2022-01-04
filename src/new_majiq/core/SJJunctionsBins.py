@@ -58,6 +58,13 @@ class SJJunctionsBins(SJBinsReads):
         )
         return
 
+    def __repr__(self) -> str:
+        """String representation of SJJunctionsBins"""
+        return (
+            f"SJJunctionsBins(strandness={self.strandness.name},"
+            f" original_path=.../{Path(self.original_path).name})"
+        )
+
     @property
     def _sj_junctionsbins(self) -> _SJJunctionsBins:
         return self._sj_binsreads

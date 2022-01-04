@@ -26,20 +26,58 @@ from .SpliceGraphReads import SpliceGraphReads
 
 
 class SJExperiment(object):
-    """:py:class:`SJIntronsBins` and :py:class:`SJJunctionsBins` for the same experiment
+    """Spliced junction and retained intron coverage for the same experiment.
+
+    Junctions and retained introns are defined over contigs, not genes
+    (i.e. :class:`ContigIntrons`, :class:`ContigJunctions`, not
+    :class:`GeneIntrons`, :class:`GeneJunctions`).
+    Coverage assigned to these regions is later mapped to their gene
+    equivalents (matching contig and strand; matching coordinates for
+    junctions, matching annotated status and overlapping coordinates for
+    introns).
+
+    Coverage is obtained over unique bins.
+    Bins represent positions at which the start of the feature would intersect
+    the aligned read.
+    In the case of junctions, there is a single bin for each possible position,
+    so the total number of bins/positions is determined by the maximum read
+    length.
+    For introns, nonzero length increases the total number of possible
+    positions.
+    In order to treat introns and junctions similarly, MAJIQ groups together
+    contiguous positions into the same number of bins as junctions.
+
+    This is represented by:
+
+    - :class:`SJIntronsBins` with intron coverage and assigned regions
+      (:attr:`SJExperiment.introns`),
+    - :class:`SJJunctionsBins` with junction coverage and assigned regions
+      (:attr:`SJExperiment.junctions`).
 
     Parameters
     ----------
     introns: SJIntronsBins
     junctions: SJJunctionsBins
 
-    Notes
-    -----
-    Enforces requirement that introns and junctions share the same original
-    (bam) path and version of majiq used to do parsing
+    See Also
+    --------
+    SJExperiment.from_bam : Load :class:`SJExperiment` from BAM file
+    SJExperiment.from_zarr : Load :class:`SJExperiment` saved to Zarr file
     """
 
     def __init__(self, introns: SJIntronsBins, junctions: SJJunctionsBins):
+        """Initialize :class:`SJExperiment` with intron and junction coverage
+
+        Parameters
+        ----------
+        introns: SJIntronsBins
+        junctions: SJJunctionsBins
+
+        Notes
+        -----
+        Enforces requirement that introns and junctions share the same original
+        (bam) path and version of majiq used to do parsing
+        """
         if introns.original_path != junctions.original_path:
             raise ValueError(
                 "SJExperiment introns and junctions must have same original path"
@@ -51,6 +89,10 @@ class SJExperiment(object):
         self._introns: Final[SJIntronsBins] = introns
         self._junctions: Final[SJJunctionsBins] = junctions
         return
+
+    def __repr__(self) -> str:
+        """String representation of SJExperiment"""
+        return f"SJExperiment(original_path=.../{Path(self.original_path).name})"
 
     @property
     def introns(self) -> SJIntronsBins:
@@ -80,6 +122,10 @@ class SJExperiment(object):
         ----------
         path: Union[str, Path]
             Path where coverage is stored in zarr format
+
+        Returns
+        -------
+        SJExperiment
         """
         return SJExperiment(
             SJIntronsBins.from_zarr(path), SJJunctionsBins.from_zarr(path)
@@ -87,7 +133,19 @@ class SJExperiment(object):
 
     @classmethod
     def original_path_from_zarr(cls, path: Union[str, Path]) -> str:
-        """Extract bam path from zarr with SJJunctionsBins"""
+        """Extract bam path from Zarr without loading entire file
+
+        Parameters
+        ----------
+        path: Union[str, Path]
+            Path where coverage is stored in zarr format
+
+        Returns
+        -------
+        str
+            Original BAM path used to load the :class:`SJExperiment` saved at
+            path
+        """
         return SJJunctionsBins.original_path_from_zarr(path)
 
     def to_zarr(self, path: Union[str, Path], consolidated: bool = True) -> None:
@@ -117,7 +175,7 @@ class SJExperiment(object):
         auto_minjunctions: int = constants.DEFAULT_BAM_STRAND_MINJUNCTIONS,
         auto_mediantolerance: float = constants.DEFAULT_BAM_STRAND_MINDEVIATION,
     ) -> "SJExperiment":
-        """Load intron and junction coverage from BAM file
+        """Load :class:`SJExperiment` from BAM file
 
         Load intron and junction coverage from BAM file using splicegraph to
         define intron regions for coverage. If strandness is "auto", use
@@ -152,6 +210,11 @@ class SJExperiment(object):
         auto_mediantolerance: float
             Infer unstranded if the median proportion of junctions of forward
             strand vs all reads deviates from 0.5 by at most this amount
+
+        Returns
+        -------
+        SJExperiment
+            intron and junction coverage from specified BAM file
         """
         log = get_logger()
         # manage strand
@@ -230,7 +293,26 @@ class SJExperiment(object):
         minjunctions: int = constants.DEFAULT_BAM_STRAND_MINJUNCTIONS,
         mindeviation: float = constants.DEFAULT_BAM_STRAND_MINDEVIATION,
     ) -> SJJunctionsBins:
-        """Use splicegraph to get correct strand orientation of junctions"""
+        """Return :class:`SJJunctionsBins` with appropriate strandness
+
+        Given `sj_junctions`, flip or remove strandness as appropriate to match
+        junctions in `sg`.
+        This is done by comparing the number of reads assigned to each junction
+        in `sg` when junctions are treated as forward vs reverse stranded.
+        MAJIQ restricts analysis to junctions with more than `minreads` reads.
+        Then, it calls an experiment as stranded if the median ratio of stranded
+        vs total reads is within `mindeviation` of 0.5.
+        If stranded, it chooses the strand direction consistent with the median
+        ratio.
+
+        Parameters
+        ----------
+        sj_junctions: SJJunctionsBins
+            junction coverage to align strandness for relative to splicegraph
+        sg: SpliceGraph
+            splicegraph with junctions which are checked against junction
+            coverage
+        """
         log = get_logger()
         if sj_junctions.strandness == ExperimentStrandness.NONE:
             # there's nothing to do
@@ -285,7 +367,7 @@ class SJExperiment(object):
 
     @classmethod
     def from_SJJunctionsBins(cls, junctions: SJJunctionsBins) -> "SJExperiment":
-        """SJExperiment with given junction coverage, zero intron coverage"""
+        """Return :class:`SJExperiment` with junction coverage, no introns"""
         return SJExperiment(
             SJIntronsBins.from_regions(
                 SJIntrons.from_contigs(junctions.regions.contigs),

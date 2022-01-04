@@ -72,6 +72,13 @@ class SJIntronsBins(SJBinsReads):
         self.exons_checksum: Final[Optional[int]] = exons_checksum
         return
 
+    def __repr__(self) -> str:
+        """String representation of SJIntronsBins"""
+        return (
+            f"SJIntronsBins(strandness={self.strandness.name},"
+            f" original_path=.../{Path(self.original_path).name})"
+        )
+
     @property
     def _sj_intronsbins(self) -> _SJIntronsBins:
         return self._sj_binsreads

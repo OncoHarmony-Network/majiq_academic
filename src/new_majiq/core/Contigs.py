@@ -38,6 +38,9 @@ class Contigs(object):
         self._contigs: Final[_Contigs] = contigs
         return
 
+    def __repr__(self) -> str:
+        return f"Contigs[{len(self)}]"
+
     def checksum(self):
         return self._contigs.checksum()
 

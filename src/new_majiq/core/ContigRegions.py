@@ -18,6 +18,9 @@ class ContigRegions(Regions):
         super().__init__(contig_regions)
         return
 
+    def __repr__(self) -> str:
+        return f"{self.__class__.__name__}[{len(self.contigs)} contigs, {len(self)}]"
+
     @property
     def _contig_regions(self):
         """Underlying internals class for contig regions"""

@@ -52,14 +52,42 @@ def min_experiments(min_experiments_f: float, num_experiments: int) -> float:
 
 
 class PsiCoverage(object):
-    """Coverage for Psi posterior distributions over raw or bootstrap coverage
+    """Summarized raw and bootstrap coverage over LSVs for one or more experiments.
 
-    Coverage for Psi posterior distributions over raw or bootstrap coverage.
-    Holds raw and bootstrap coverage over events per prefix (e.g. experiment,
-    summary over experiments, etc.) and whether they passed quantification
-    thresholds.
-    Functions/attributes allow computation with underlying posterior
-    distributions.
+    Summarized raw and bootstrap coverage over LSVs for one or more
+    experiments as input for quantification.
+    Coverage is a total readrate over all bins, excluding stacks and after any
+    preceding batch correction steps, ready for quantification.
+    Per-experiment coverage stored independently over "prefix" dimension, where
+    prefixes originate as the prefix from BAM file names
+    (i.e. foo/experiment1.bam -> experiment1).
+    Coverage is accompanied by boolean array indicating whether an event is
+    "passed for quantification" for each experiment
+    (:attr:`PsiCoverage.passed`).
+
+    Provides functionality for combining and summarizing over experiments and
+    multiple :class:`PsiCoverage` objects.
+    Functions and attributes enable computation of PSI posterior statistics
+    under MAJIQ models for splicing quantification.
+    Computations are performed over xarray objects.
+    When loading :class:`PsiCoverage` from Zarr files, data/computations
+    will be loaded/performed lazily using Dask.
+    Testing of these computations have been performed over local clusters using
+    threads rather than processes (expensive computations generally release the
+    GIL).
+
+    Generally, for point estimates of location, quantification with raw coverage
+    should be preferred, as bootstrap estimates converge very closely to raw
+    estimates as the number of bootstrap replicates becomes large.
+    For estimates of variability, quantification with bootstrap coverage should
+    be used to account for additional per-bin readrate variability that isn't
+    fully captured by the Bayesian model on its own.
+
+    Underlying coverage is stored as the total number of reads over the event
+    and the proportion of reads per intron/junction.
+    This requires twice the uncompressed memory vs the number of reads per
+    intron/junction, but permits easier lazy computation with Dask over large
+    datasets.
 
     Parameters
     ----------
@@ -82,16 +110,37 @@ class PsiCoverage(object):
 
     See Also
     --------
-    PsiCoverage.from_sj_lsvs
-    PsiCoverage.from_events_coverage
-    PsiCoverage.from_zarr
-    PsiCoverage.updated
-    PsiCoverage.sum
-    PsiCoverage.mask_events
-    PsiCoverage.__getitem__
+    PsiCoverage.from_sj_lsvs : Create :class:`PsiCoverage` from :class:`SJExperiment` and :class:`Events`
+    PsiCoverage.from_events_coverage : Create :class:`PsiCoverage` from :class:`EventsCoverage`
+    PsiCoverage.from_zarr : Load :class:`PsiCoverage` from one or more Zarr files
+    PsiCoverage.updated : Create updated :class:`PsiCoverage` with updated arrays
+    PsiCoverage.sum : Summed :class:`PsiCoverage` over current prefixes
+    PsiCoverage.mask_events : Create updated :class:`PsiCoverage` passing only specified events
+    PsiCoverage.__getitem__ : Get :class:`PsiCoverage` for subset of prefixes
     """
 
     def __init__(self, df: xr.Dataset, events: xr.Dataset):
+        """Initialize :class:`PsiCoverage` with specified xarray datasets
+
+        Parameters
+        ----------
+        df: xr.Dataset
+            Data variables:
+                - event_passed[prefix, ec_idx]
+                - raw_total[prefix, ec_idx]
+                - raw_psi[prefix, ec_idx]
+                - bootstrap_total[prefix, ec_idx, bootstrap_replicate]
+                - bootstrap_psi[prefix, ec_idx, bootstrap_replicate]
+            Coordinates:
+                - lsv_offsets[offset_idx]
+                - prefix[prefix]
+            Derived (from _offsets):
+                - event_size[ec_idx]
+                - lsv_idx[ec_idx]
+        events: xr.Dataset
+            dataset that can be loaded along with matching introns/junctions as
+            Events
+        """
         offsets = df["lsv_offsets"].load().values
         if offsets[0] != 0:
             raise ValueError("offsets[0] must be zero")
@@ -787,7 +836,7 @@ class PsiCoverage(object):
         num_bootstraps: int = constants.DEFAULT_COVERAGE_NUM_BOOTSTRAPS,
         pvalue_threshold: float = constants.DEFAULT_COVERAGE_STACK_PVALUE,
     ) -> "PsiCoverage":
-        """Create :py:class:`PsiCoverage` from coverage and events
+        """Create :class:`PsiCoverage` from :class:`SJExperiment` and :class:`Events`.
 
         Parameters
         ----------

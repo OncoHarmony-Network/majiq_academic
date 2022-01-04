@@ -27,17 +27,20 @@ MAJIQ models splicing changes in each gene in terms of a
 MAJIQ quantifies splicing in terms of :ref:`PSI <how-lsvs-quantified>` on
 subsets of splicegraphs called :ref:`LSVs <what-is-lsv>`.
 
-So, :ref:`MAJIQ Builder <majiq-build>` creates a
-:py:class:`~new_majiq.SpliceGraph` file with the model of all genes and
-:py:class:`~new_majiq.SJExperiment` files with coverage
-for each experiment (:bash:`majiq build`).
-It then uses these two to create :py:class:`~new_majiq.PsiCoverage` files
-with summarized raw and bootstrap coverage over LSVs
-(:bash:`majiq psi-coverage`).
-:ref:`MOCCASIN <moccasin>`, if used, creates batch-corrected versions of these
-files (:bash:`majiq moccasin`).
-MAJIQ subsequently uses these files for downstream quantification and analysis
-(:ref:`MAJIQ quantifiers <quantifiers>`, MAJIQ Mendelian [working name]).
+So:
+
+- :ref:`MAJIQ Builder <majiq-build>` creates a
+  :py:class:`~new_majiq.SpliceGraph` file with the model of all genes and
+  :py:class:`~new_majiq.SJExperiment` files with coverage for each experiment
+  (:bash:`majiq build`).
+- Then, the :ref:`MAJIQ PsiCoverage command <majiq-psi-coverage>` uses these
+  two to create :py:class:`~new_majiq.PsiCoverage` files with summarized raw
+  and bootstrap coverage over LSVs (:bash:`majiq psi-coverage`).
+- If used, :ref:`MOCCASIN <moccasin>` creates batch-corrected versions of these
+  files (:bash:`majiq moccasin`).
+- Finally, MAJIQ subsequently uses these files for downstream quantification
+  and analysis
+  (:ref:`MAJIQ quantifiers <quantifiers>`, MAJIQ Mendelian [working name]).
 
 
 .. _GFF3: https://m.ensembl.org/info/website/upload/gff3.html

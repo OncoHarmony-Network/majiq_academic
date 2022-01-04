@@ -129,6 +129,8 @@ More detailed explanations of these parameters (and others) can be found by
 running :bash:`majiq build --help`.
 
 
+.. _majiq-psi-coverage:
+
 The MAJIQ PsiCoverage command
 =============================
 

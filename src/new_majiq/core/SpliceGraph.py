@@ -23,7 +23,25 @@ from .GFF3TypesMap import GFF3TypesMap
 
 
 class SpliceGraph(object):
-    """Representation of all genes as exons connected by introns and junctions
+    """Representation of all possible splicing changes in each gene.
+
+    Representation of splicing in each gene as exons connected by spliced
+    junctions and retained introns.
+    This representation is composed of:
+
+    - the collection of all :class:`Contigs` (e.g. chromosomes) on which genes
+      can be defined (:attr:`SpliceGraph.contigs`),
+    - the collection of all :class:`Genes` and their coordinates on the
+      splicegraph contigs (:attr:`SpliceGraph.genes`),
+    - the collection of all :class:`Exons` for each gene
+      (:attr:`SpliceGraph.exons`),
+    - the collection of all :class:`GeneIntrons` for each gene
+      (:attr:`SpliceGraph.introns`),
+    - the collection of all :class:`GeneJunctions` for each gene
+      (:attr:`SpliceGraph.junctions`),
+    - :class:`ExonConnections` associating introns and junctions to source and
+      target exons, enabling the identification of splicing events, e.g. LSVs
+      (:attr:`SpliceGraph.exon_connections`).
 
     Parameters
     ----------
@@ -32,15 +50,30 @@ class SpliceGraph(object):
 
     See Also
     --------
-    SpliceGraph.from_gff3
-    SpliceGraph.from_components
-    SpliceGraph.from_zarr
+    SpliceGraph.from_gff3 : Initialize :class:`SpliceGraph` from GFF3 file
+    SpliceGraph.from_components : Construct :class:`SpliceGraph` from components
+    SpliceGraph.from_zarr : Load :class:`SpliceGraph` saved in Zarr format
     """
 
     def __init__(self, sg: _SpliceGraph):
-        """Construct :class:`SpliceGraph` using object from internal C++ API"""
+        """Construct :class:`SpliceGraph` using object from internal C++ API
+
+        Parameters
+        ----------
+        sg: _SpliceGraph
+            Underlying object binding the internal C++ API
+        """
         self._sg: Final[_SpliceGraph] = sg
         return
+
+    def __repr__(self) -> str:
+        return (
+            f"SpliceGraph["
+            f"{len(self.contigs)} contigs,"
+            f" {len(self.genes)} genes,"
+            f" {len(self.exons)}/{len(self.introns)}/{len(self.junctions)}"
+            " exons/introns/junctions]"
+        )
 
     @classmethod
     def from_components(
@@ -132,27 +165,27 @@ class SpliceGraph(object):
 
     @property
     def contigs(self) -> Contigs:
-        """:class:`Contigs` for the splicegraph"""
+        """The collection of all :class:`Contigs` on which genes can be defined"""
         return Contigs(self._sg._contigs)
 
     @property
     def genes(self) -> Genes:
-        """:class:`Genes` for the splicegraph"""
+        """The collection of all :class:`Genes` and their coordinates on contigs"""
         return Genes(self._sg._genes)
 
     @property
     def exons(self) -> Exons:
-        """:class:`Exons` for the splicegraph"""
+        """The collection of all :class:`Exons` for each gene"""
         return Exons(self._sg._exons)
 
     @property
     def introns(self) -> GeneIntrons:
-        """:class:`GeneIntrons` for the splicegraph"""
+        """The collection of all :class:`GeneIntrons` for each gene"""
         return GeneIntrons(self._sg._introns)
 
     @property
     def junctions(self) -> GeneJunctions:
-        """:class:`GeneJunctions` for the splicegraph"""
+        """The collection of all :class:`GeneJunctions` for each gene"""
         return GeneJunctions(self._sg._junctions)
 
     @property
