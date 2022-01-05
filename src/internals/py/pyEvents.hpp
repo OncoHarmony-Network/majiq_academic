@@ -171,6 +171,9 @@ inline void init_Events(pyEvents_t& pyEvents) {
     .def("connection_gene_idx",
         [](const Events& self, pybind11::array_t<size_t> connection_idx) {
         auto f = [&self](size_t idx) {
+        if (idx >= self.num_connections()) {
+          throw std::invalid_argument("connection_idx has values out of range");
+        }
         return self.connection_gene(idx).idx_; };
         return pybind11::vectorize(f)(connection_idx);
         },
@@ -180,6 +183,9 @@ inline void init_Events(pyEvents_t& pyEvents) {
     .def("connection_start",
         [](const Events& self, pybind11::array_t<size_t> connection_idx) {
         auto f = [&self](size_t idx) {
+        if (idx >= self.num_connections()) {
+          throw std::invalid_argument("connection_idx has values out of range");
+        }
         return self.connection_start(idx); };
         return pybind11::vectorize(f)(connection_idx);
         },
@@ -189,6 +195,9 @@ inline void init_Events(pyEvents_t& pyEvents) {
     .def("connection_end",
         [](const Events& self, pybind11::array_t<size_t> connection_idx) {
         auto f = [&self](size_t idx) {
+        if (idx >= self.num_connections()) {
+          throw std::invalid_argument("connection_idx has values out of range");
+        }
         return self.connection_end(idx); };
         return pybind11::vectorize(f)(connection_idx);
         },
@@ -198,6 +207,9 @@ inline void init_Events(pyEvents_t& pyEvents) {
     .def("connection_denovo",
         [](const Events& self, pybind11::array_t<size_t> connection_idx) {
         auto f = [&self](size_t idx) {
+        if (idx >= self.num_connections()) {
+          throw std::invalid_argument("connection_idx has values out of range");
+        }
         return self.connection_denovo(idx); };
         return pybind11::vectorize(f)(connection_idx);
         },
@@ -207,6 +219,9 @@ inline void init_Events(pyEvents_t& pyEvents) {
     .def("connection_other_exon_idx",
         [](const Events& self, pybind11::array_t<size_t> connection_idx) {
         auto f = [&self](size_t idx) {
+        if (idx >= self.num_connections()) {
+          throw std::invalid_argument("connection_idx has values out of range");
+        }
         return self.connection_other_exon_idx(idx); };
         return pybind11::vectorize(f)(connection_idx);
         },
