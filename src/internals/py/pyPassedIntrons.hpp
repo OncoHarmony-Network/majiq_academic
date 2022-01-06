@@ -43,7 +43,6 @@ inline void init_GroupIntronsGenerator(
         return ArrayFromVectorAndOffset<size_t, size_t>(
             self.num_passed(), 0, self_obj);
         },
-        pybind11::call_guard<pybind11::gil_scoped_release>(),
         "Number of experiments or which each intron has passed")
     .def("__len__", &GroupIntronsGenerator::size,
         pybind11::call_guard<pybind11::gil_scoped_release>())

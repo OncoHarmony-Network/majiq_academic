@@ -69,10 +69,10 @@ inline void init_SJJunctions(pySJJunctions_t& pySJJunctions) {
               OpenInterval{start(i), end(i)},
               strand_i};
           }
+          pybind11::gil_scoped_release release;  // release GIL at this stage
           return std::make_shared<SJJunctions>(
               contigs, std::move(sj_vec));
         }),
-        pybind11::call_guard<pybind11::gil_scoped_release>(),
         "Create SJJunctions object from contigs and arrays",
         pybind11::arg("contigs"),
         pybind11::arg("contig_idx"),

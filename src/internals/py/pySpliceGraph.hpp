@@ -14,7 +14,6 @@
 #include <iostream>
 #include <memory>
 #include <string>
-#include <sstream>
 
 #include "../GFF3.hpp"
 #include "../SpliceGraph.hpp"
@@ -237,14 +236,7 @@ inline void init_SpliceGraph(pySpliceGraph_t& pySpliceGraph) {
         pybind11::arg("bam_path"),
         pybind11::arg("num_bins"),
         pybind11::arg("experiment_strandness") = DEFAULT_BAM_STRANDNESS,
-        pybind11::arg("nthreads") = DEFAULT_BAM_NTHREADS)
-    // string representation of splicegraph
-    .def("__repr__", [](const SpliceGraph& sg) -> std::string {
-        std::ostringstream oss;
-        oss << sg;
-        return oss.str();
-        },
-        pybind11::call_guard<pybind11::gil_scoped_release>());
+        pybind11::arg("nthreads") = DEFAULT_BAM_NTHREADS);
 }
 
 }  // namespace bindings

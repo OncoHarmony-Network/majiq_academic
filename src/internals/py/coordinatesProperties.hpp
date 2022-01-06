@@ -32,12 +32,13 @@ inline void define_coordinates_properties(pyClassShared_t<RegionsT>& pyRegions) 
   // general properties
   pyRegions
     .def("__len__",
-        &RegionsT::size, pybind11::call_guard<pybind11::gil_scoped_release>())
+        &RegionsT::size,
+        pybind11::call_guard<pybind11::gil_scoped_release>(),
+        "number of regions")
     .def("__eq__", [](const RegionsT& x, const RegionsT& y) { return x == y; },
         pybind11::call_guard<pybind11::gil_scoped_release>(),
         pybind11::is_operator())
     .def_property_readonly("_parents", &RegionsT::parents,
-        pybind11::call_guard<pybind11::gil_scoped_release>(),
         "Get parents object on which regions are defined (e.g. contigs, genes)")
     .def_property_readonly("_parent_idx_start",
         [](pybind11::object& regions_obj) {
@@ -45,7 +46,6 @@ inline void define_coordinates_properties(pyClassShared_t<RegionsT>& pyRegions) 
         return ArrayFromOffsetsVector<size_t>(
             regions.parent_idx_offsets(), true, regions_obj);
         },
-        pybind11::call_guard<pybind11::gil_scoped_release>(),
         "First index into regions corresponding to associated parent")
     .def_property_readonly("_parent_idx_end",
         [](pybind11::object& regions_obj) {
@@ -53,7 +53,6 @@ inline void define_coordinates_properties(pyClassShared_t<RegionsT>& pyRegions) 
         return ArrayFromOffsetsVector<size_t>(
             regions.parent_idx_offsets(), false, regions_obj);
         },
-        pybind11::call_guard<pybind11::gil_scoped_release>(),
         "One after last index into regions corresponding to associated parent")
     .def_property_readonly("start",
         [](pybind11::object& regions_obj) -> pybind11::array_t<position_t> {
@@ -62,7 +61,6 @@ inline void define_coordinates_properties(pyClassShared_t<RegionsT>& pyRegions) 
         return ArrayFromVectorAndOffset<position_t, RegionT>(
             regions.data(), offset, regions_obj);
         },
-        pybind11::call_guard<pybind11::gil_scoped_release>(),
         "array[int] of starts for each feature")
     .def_property_readonly("end",
         [](pybind11::object& regions_obj) -> pybind11::array_t<position_t> {
@@ -71,7 +69,6 @@ inline void define_coordinates_properties(pyClassShared_t<RegionsT>& pyRegions) 
         return ArrayFromVectorAndOffset<position_t, RegionT>(
             regions.data(), offset, regions_obj);
         },
-        pybind11::call_guard<pybind11::gil_scoped_release>(),
         "array[int] of ends for each feature");
   // if has contigs field
   if constexpr(majiq::detail::has_contig_field<RegionT>::value) {
@@ -82,7 +79,6 @@ inline void define_coordinates_properties(pyClassShared_t<RegionsT>& pyRegions) 
         return ArrayFromVectorAndOffset<size_t, RegionT>(
             regions.data(), offset, regions_obj);
         },
-        pybind11::call_guard<pybind11::gil_scoped_release>(),
         "array[int] of indexes indicating contig feature belongs to");
   }
   // if has strand field
@@ -95,7 +91,6 @@ inline void define_coordinates_properties(pyClassShared_t<RegionsT>& pyRegions) 
         return ArrayFromVectorAndOffset<std::array<char, 1>, RegionT>(
             regions.data(), offset, regions_obj);
         },
-        pybind11::call_guard<pybind11::gil_scoped_release>(),
         "array[char] of characters indicating strand of each feature");
   }
   // if it has the gene field
@@ -107,7 +102,6 @@ inline void define_coordinates_properties(pyClassShared_t<RegionsT>& pyRegions) 
         return ArrayFromVectorAndOffset<size_t, RegionT>(
             regions.data(), offset, regions_obj);
         },
-        pybind11::call_guard<pybind11::gil_scoped_release>(),
         "array[int] of indexes indicating gene feature belongs to");
   }
   // has genes as parent, enable quick lookup of specific intervals
@@ -131,7 +125,6 @@ inline void define_coordinates_properties(pyClassShared_t<RegionsT>& pyRegions) 
             return it == self.end() ? -1 : it - self.begin(); };
           return pybind11::vectorize(f)(gene_idx, start, end);
           },
-          pybind11::call_guard<pybind11::gil_scoped_release>(),
           "Get indexes for specified regions (or -1 if it doesn't exist)",
           pybind11::arg("gene_idx"),
           pybind11::arg("start"),

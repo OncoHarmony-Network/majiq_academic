@@ -51,7 +51,6 @@ inline void init_EventsAlign(pyEventsAlign_t& pyEventsAlign) {
         return ArrayFromVectorAndOffset<size_t, EventsAlign::EventAligned>(
             self.matched_, offset, self_obj);
         },
-        pybind11::call_guard<pybind11::gil_scoped_release>(),
         "Indexes for events in left_events used in constructor")
     .def_property_readonly("right_event_idx",
         [](pybind11::object& self_obj) {
@@ -60,7 +59,6 @@ inline void init_EventsAlign(pyEventsAlign_t& pyEventsAlign) {
         return ArrayFromVectorAndOffset<size_t, EventsAlign::EventAligned>(
             self.matched_, offset, self_obj);
         },
-        pybind11::call_guard<pybind11::gil_scoped_release>(),
         "Indexes for events in right_events used in constructor");
   return;
 }

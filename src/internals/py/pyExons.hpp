@@ -11,7 +11,6 @@
 #include <pybind11/numpy.h>
 
 #include <memory>
-#include <sstream>
 #include <string>
 #include <utility>
 #include <vector>
@@ -66,9 +65,9 @@ inline void init_Exons(pyExons_t& pyExons) {
                 majiq::ClosedInterval{start(i), end(i)},
                 majiq::ClosedInterval{ann_start(i), ann_end(i)}});
           }
+          pybind11::gil_scoped_release release;  // release GIL at this stage
           return std::make_shared<Exons>(genes, std::move(exon_vec));
         }),
-        pybind11::call_guard<pybind11::gil_scoped_release>(),
         "Create Exons object using Genes and info about each exon",
         pybind11::arg("genes"), pybind11::arg("gene_idx"),
         pybind11::arg("start"), pybind11::arg("end"),
@@ -94,7 +93,6 @@ inline void init_Exons(pyExons_t& pyExons) {
         return ArrayFromVectorAndOffset<position_t, majiq::Exon>(
             exons.data(), offset, exons_obj);
         },
-        pybind11::call_guard<pybind11::gil_scoped_release>(),
         "array[int] of annotated exon starts")
     .def_property_readonly("annotated_end",
         [](pybind11::object& exons_obj) -> pybind11::array_t<position_t> {
@@ -103,7 +101,6 @@ inline void init_Exons(pyExons_t& pyExons) {
         return ArrayFromVectorAndOffset<position_t, majiq::Exon>(
             exons.data(), offset, exons_obj);
         },
-        pybind11::call_guard<pybind11::gil_scoped_release>(),
         "array[int] of annotated exon ends")
     .def("is_denovo",
         [](const Exons& self,
@@ -115,7 +112,6 @@ inline void init_Exons(pyExons_t& pyExons) {
           return self[i].is_denovo(); };
         return pybind11::vectorize(f)(exon_idx);
         },
-        pybind11::call_guard<pybind11::gil_scoped_release>(),
         "Indicate if selected exons are denovo",
         pybind11::arg("exon_idx"))
     .def("is_exon_extension",
@@ -128,7 +124,6 @@ inline void init_Exons(pyExons_t& pyExons) {
           return self[i].is_exon_extension(); };
         return pybind11::vectorize(f)(exon_idx);
         },
-        pybind11::call_guard<pybind11::gil_scoped_release>(),
         "Indicate if selected exons have exon extension",
         pybind11::arg("exon_idx"))
     .def("is_full_exon",
@@ -141,7 +136,6 @@ inline void init_Exons(pyExons_t& pyExons) {
           return self[i].is_full_exon(); };
         return pybind11::vectorize(f)(exon_idx);
         },
-        pybind11::call_guard<pybind11::gil_scoped_release>(),
         "Indicate if selected exons are full exons",
         pybind11::arg("exon_idx"))
     .def("is_half_exon",
@@ -154,15 +148,8 @@ inline void init_Exons(pyExons_t& pyExons) {
           return self[i].is_half_exon(); };
         return pybind11::vectorize(f)(exon_idx);
         },
-        pybind11::call_guard<pybind11::gil_scoped_release>(),
         "Indicate if selected exons are half exons",
-        pybind11::arg("exon_idx"))
-    .def("__repr__", [](const Exons& self) -> std::string {
-        std::ostringstream oss;
-        oss << "Exons<" << self.size() << " total>";
-        return oss.str();
-        },
-        pybind11::call_guard<pybind11::gil_scoped_release>());
+        pybind11::arg("exon_idx"));
 }
 
 

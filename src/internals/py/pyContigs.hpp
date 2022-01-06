@@ -10,7 +10,6 @@
 #include <pybind11/pybind11.h>
 
 #include <memory>
-#include <sstream>
 #include <string>
 #include <utility>
 #include <vector>
@@ -42,7 +41,6 @@ inline void init_Contigs(pyContigs_t& pyContigs) {
           }
           return result;
         }),
-        pybind11::call_guard<pybind11::gil_scoped_release>(),
         "Set up Contigs object using specified identifiers",
         pybind11::arg("seqids"))
     .def_property_readonly("seqid", &Contigs::seqids,
@@ -50,12 +48,6 @@ inline void init_Contigs(pyContigs_t& pyContigs) {
         R"pbdoc(
         Sequence[str] of contig ids in order matching contig_idx
         )pbdoc")
-    .def("__repr__", [](const Contigs& self) -> std::string {
-        std::ostringstream oss;
-        oss << self;
-        return oss.str();
-        },
-        pybind11::call_guard<pybind11::gil_scoped_release>())
     .def("__len__", &Contigs::size,
         pybind11::call_guard<pybind11::gil_scoped_release>())
     .def("__contains__",

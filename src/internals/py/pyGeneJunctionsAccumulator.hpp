@@ -34,16 +34,19 @@ inline void init_GeneJunctionsAccumulator(
         pybind11::arg("genes"))
     .def_property_readonly(
         "_genes", &GeneJunctionsAccumulator::genes,
+        pybind11::call_guard<pybind11::gil_scoped_release>(),
         "Genes used by GeneJunctionsAccumulator")
     .def(
         "add",
         &GeneJunctionsAccumulator::Add,
+        pybind11::call_guard<pybind11::gil_scoped_release>(),
         "Add/update accumulated junctions",
         pybind11::arg("junctions"),
         pybind11::arg("make_annotated") = false)
     .def(
         "accumulated",
         &GeneJunctionsAccumulator::Accumulated,
+        pybind11::call_guard<pybind11::gil_scoped_release>(),
         "Return GeneJunctions combining accumulated junctions");
 }
 

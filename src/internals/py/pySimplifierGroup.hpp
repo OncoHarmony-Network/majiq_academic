@@ -35,7 +35,6 @@ inline void init_SimplifierGroup(pySimplifierGroup_t& pySimplifierGroup) {
         return ArrayFromVectorAndOffset<size_t, SimplifierCount>(
             self.introns_passed(), offset, self_obj);
         },
-        pybind11::call_guard<pybind11::gil_scoped_release>(),
         "Number of experiments with evidence for unsimplification as source for introns")
     .def_property_readonly("introns_passed_dst",
         [](pybind11::object& self_obj) {
@@ -44,7 +43,6 @@ inline void init_SimplifierGroup(pySimplifierGroup_t& pySimplifierGroup) {
         return ArrayFromVectorAndOffset<size_t, SimplifierCount>(
             self.introns_passed(), offset, self_obj);
         },
-        pybind11::call_guard<pybind11::gil_scoped_release>(),
         "Number of experiments with evidence for unsimplification as target for introns")
     .def_property_readonly("junctions_passed_src",
         [](pybind11::object& self_obj) {
@@ -53,7 +51,6 @@ inline void init_SimplifierGroup(pySimplifierGroup_t& pySimplifierGroup) {
         return ArrayFromVectorAndOffset<size_t, SimplifierCount>(
             self.junctions_passed(), offset, self_obj);
         },
-        pybind11::call_guard<pybind11::gil_scoped_release>(),
         "Number of experiments with evidence for unsimplification as source for junctions")
     .def_property_readonly("junctions_passed_dst",
         [](pybind11::object& self_obj) {
@@ -62,7 +59,6 @@ inline void init_SimplifierGroup(pySimplifierGroup_t& pySimplifierGroup) {
         return ArrayFromVectorAndOffset<size_t, SimplifierCount>(
             self.junctions_passed(), offset, self_obj);
         },
-        pybind11::call_guard<pybind11::gil_scoped_release>(),
         "Number of experiments with evidence for unsimplification as target for junctions")
     .def_property_readonly("num_experiments",
         &SimplifierGroup::num_experiments,

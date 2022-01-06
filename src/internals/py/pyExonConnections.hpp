@@ -42,7 +42,6 @@ inline void init_ExonConnections(pyExonConnections_t& pyExonConnections) {
         return ArrayFromVectorAndOffset<size_t, size_t>(
                 indexes.idx_, 0, self_obj);
         },
-        pybind11::call_guard<pybind11::gil_scoped_release>(),
         "intron_idx for exon_connections in src_exon sorted order")
     .def_property_readonly("src_intron_exon_offsets",
         [](pybind11::object& self_obj) {
@@ -51,7 +50,6 @@ inline void init_ExonConnections(pyExonConnections_t& pyExonConnections) {
         return ArrayFromVectorAndOffset<size_t, size_t>(
                 indexes.exon_offsets_, 0, self_obj);
         },
-        pybind11::call_guard<pybind11::gil_scoped_release>(),
         "offsets into src_intron_idx for each exon")
     .def_property_readonly("dst_intron_idx",
         [](pybind11::object& self_obj) {
@@ -60,7 +58,6 @@ inline void init_ExonConnections(pyExonConnections_t& pyExonConnections) {
         return ArrayFromVectorAndOffset<size_t, size_t>(
                 indexes.idx_, 0, self_obj);
         },
-        pybind11::call_guard<pybind11::gil_scoped_release>(),
         "intron_idx for exon_connections in dst_exon sorted order")
     .def_property_readonly("dst_intron_exon_offsets",
         [](pybind11::object& self_obj) {
@@ -69,7 +66,6 @@ inline void init_ExonConnections(pyExonConnections_t& pyExonConnections) {
         return ArrayFromVectorAndOffset<size_t, size_t>(
                 indexes.exon_offsets_, 0, self_obj);
         },
-        pybind11::call_guard<pybind11::gil_scoped_release>(),
         "offsets into dst_intron_idx for each exon")
     .def_property_readonly("src_junction_idx",
         [](pybind11::object& self_obj) {
@@ -78,7 +74,6 @@ inline void init_ExonConnections(pyExonConnections_t& pyExonConnections) {
         return ArrayFromVectorAndOffset<size_t, size_t>(
                 indexes.idx_, 0, self_obj);
         },
-        pybind11::call_guard<pybind11::gil_scoped_release>(),
         "junction_idx for exon_connections in src_exon sorted order")
     .def_property_readonly("src_junction_exon_offsets",
         [](pybind11::object& self_obj) {
@@ -87,7 +82,6 @@ inline void init_ExonConnections(pyExonConnections_t& pyExonConnections) {
         return ArrayFromVectorAndOffset<size_t, size_t>(
                 indexes.exon_offsets_, 0, self_obj);
         },
-        pybind11::call_guard<pybind11::gil_scoped_release>(),
         "offsets into src_junction_idx for each exon")
     .def_property_readonly("dst_junction_idx",
         [](pybind11::object& self_obj) {
@@ -96,7 +90,6 @@ inline void init_ExonConnections(pyExonConnections_t& pyExonConnections) {
         return ArrayFromVectorAndOffset<size_t, size_t>(
                 indexes.idx_, 0, self_obj);
         },
-        pybind11::call_guard<pybind11::gil_scoped_release>(),
         "junction_idx for exon_connections in dst_exon sorted order")
     .def_property_readonly("dst_junction_exon_offsets",
         [](pybind11::object& self_obj) {
@@ -105,7 +98,6 @@ inline void init_ExonConnections(pyExonConnections_t& pyExonConnections) {
         return ArrayFromVectorAndOffset<size_t, size_t>(
                 indexes.exon_offsets_, 0, self_obj);
         },
-        pybind11::call_guard<pybind11::gil_scoped_release>(),
         "offsets into dst_junction_idx for each exon")
     .def_property_readonly("_exons", &ExonConnections::exons,
         pybind11::call_guard<pybind11::gil_scoped_release>(),
@@ -154,9 +146,9 @@ inline void init_ExonConnections(pyExonConnections_t& pyExonConnections) {
             _exon_idx(i),
             _is_source(i) ? EventType::SRC_EVENT : EventType::DST_EVENT};
         }
+        pybind11::gil_scoped_release release;  // release GIL at this stage
         return self.CreateEvents(std::move(events));
         },
-        pybind11::call_guard<pybind11::gil_scoped_release>(),
         "Construct events for specified exons/directions",
         pybind11::arg("exon_idx"), pybind11::arg("is_source"))
     .def("has_intron",
@@ -172,7 +164,6 @@ inline void init_ExonConnections(pyExonConnections_t& pyExonConnections) {
         };
         return pybind11::vectorize(f)(exon_idx, is_source);
         },
-        pybind11::call_guard<pybind11::gil_scoped_release>(),
         "Indicate if events have introns or not",
         pybind11::arg("exon_idx"), pybind11::arg("is_source"))
     .def("event_size",
@@ -188,7 +179,6 @@ inline void init_ExonConnections(pyExonConnections_t& pyExonConnections) {
         };
         return pybind11::vectorize(f)(exon_idx, is_source);
         },
-        pybind11::call_guard<pybind11::gil_scoped_release>(),
         "Indicate size of event",
         pybind11::arg("exon_idx"), pybind11::arg("is_source"))
     .def("passed",
@@ -204,7 +194,6 @@ inline void init_ExonConnections(pyExonConnections_t& pyExonConnections) {
         };
         return pybind11::vectorize(f)(exon_idx, is_source);
         },
-        pybind11::call_guard<pybind11::gil_scoped_release>(),
         "Indicate if event was passed",
         pybind11::arg("exon_idx"), pybind11::arg("is_source"))
     .def("redundant",
@@ -220,7 +209,6 @@ inline void init_ExonConnections(pyExonConnections_t& pyExonConnections) {
         };
         return pybind11::vectorize(f)(exon_idx, is_source);
         },
-        pybind11::call_guard<pybind11::gil_scoped_release>(),
         "Indicate if event was redundant",
         pybind11::arg("exon_idx"), pybind11::arg("is_source"))
     .def("is_target_LSV",
@@ -236,7 +224,6 @@ inline void init_ExonConnections(pyExonConnections_t& pyExonConnections) {
         };
         return pybind11::vectorize(f)(exon_idx, is_target);
         },
-        pybind11::call_guard<pybind11::gil_scoped_release>(),
         "Indicate if event is target LSV",
         pybind11::arg("exon_idx"), pybind11::arg("is_target"))
     .def("is_source_LSV",
@@ -252,7 +239,6 @@ inline void init_ExonConnections(pyExonConnections_t& pyExonConnections) {
         };
         return pybind11::vectorize(f)(exon_idx, is_source);
         },
-        pybind11::call_guard<pybind11::gil_scoped_release>(),
         "Indicate if event is source LSV",
         pybind11::arg("exon_idx"), pybind11::arg("is_source"))
     .def("is_permissive_LSV",
@@ -268,7 +254,6 @@ inline void init_ExonConnections(pyExonConnections_t& pyExonConnections) {
         };
         return pybind11::vectorize(f)(exon_idx, is_source);
         },
-        pybind11::call_guard<pybind11::gil_scoped_release>(),
         "Indicate if event is permissive LSV",
         pybind11::arg("exon_idx"), pybind11::arg("is_source"))
     .def("is_strict_LSV",
@@ -284,7 +269,6 @@ inline void init_ExonConnections(pyExonConnections_t& pyExonConnections) {
         };
         return pybind11::vectorize(f)(exon_idx, is_source);
         },
-        pybind11::call_guard<pybind11::gil_scoped_release>(),
         "Indicate if event is strict LSV",
         pybind11::arg("exon_idx"), pybind11::arg("is_source"))
     .def("is_constitutive",
@@ -300,7 +284,6 @@ inline void init_ExonConnections(pyExonConnections_t& pyExonConnections) {
         };
         return pybind11::vectorize(f)(exon_idx, is_source);
         },
-        pybind11::call_guard<pybind11::gil_scoped_release>(),
         "Indicate if event is constitutive",
         pybind11::arg("exon_idx"), pybind11::arg("is_source"))
     .def("event_id",
@@ -327,7 +310,6 @@ inline void init_ExonConnections(pyExonConnections_t& pyExonConnections) {
         }
         return result;
         },
-        pybind11::call_guard<pybind11::gil_scoped_release>(),
         "List of event_id for specified events",
         pybind11::arg("exon_idx"), pybind11::arg("event_type"))
     .def("event_description",
@@ -354,7 +336,6 @@ inline void init_ExonConnections(pyExonConnections_t& pyExonConnections) {
         }
         return result;
         },
-        pybind11::call_guard<pybind11::gil_scoped_release>(),
         "List of description for specified events",
         pybind11::arg("exon_idx"), pybind11::arg("event_type"));
 }

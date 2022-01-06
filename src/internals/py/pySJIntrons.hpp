@@ -11,7 +11,6 @@
 #include <pybind11/numpy.h>
 
 #include <memory>
-#include <sstream>
 #include <string>
 #include <utility>
 #include <vector>
@@ -73,9 +72,9 @@ inline void init_SJIntrons(pySJIntrons_t& pySJIntrons) {
               strand_i,
               annotated(i)};
           }
+          pybind11::gil_scoped_release release;  // release GIL at this stage
           return std::make_shared<SJIntrons>(contigs, std::move(result));
         }),
-        pybind11::call_guard<pybind11::gil_scoped_release>(),
         "Create SJIntrons object from contigs and arrays",
         pybind11::arg("contigs"),
         pybind11::arg("contig_idx"),
@@ -94,14 +93,7 @@ inline void init_SJIntrons(pySJIntrons_t& pySJIntrons) {
         return ArrayFromVectorAndOffset<bool, majiq::SJIntron>(
             introns.data(), offset, introns_obj);
         },
-        pybind11::call_guard<pybind11::gil_scoped_release>(),
-        "array[bool] indicating if intron is annotated (exon in annotation)")
-    .def("__repr__", [](const majiq::SJIntrons& self) -> std::string {
-        std::ostringstream oss;
-        oss << "SJIntrons<" << self.size() << " total>";
-        return oss.str();
-        },
-        pybind11::call_guard<pybind11::gil_scoped_release>());
+        "array[bool] indicating if intron is annotated (exon in annotation)");
 }
 
 }  // namespace bindings

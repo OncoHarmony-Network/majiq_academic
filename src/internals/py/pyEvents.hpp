@@ -81,10 +81,10 @@ inline void init_Events(pyEvents_t& pyEvents) {
                 is_intron(i), connection_idx(i)};
             }
           }
+          pybind11::gil_scoped_release release;  // release GIL at this stage
           return Events{introns, junctions, std::move(event_vec),
             std::move(offsets_vec), std::move(connections_vec)};
           }),
-        pybind11::call_guard<pybind11::gil_scoped_release>(),
         "Initialize events object from numpy arrays",
         pybind11::arg("introns"),
         pybind11::arg("junctions"),
@@ -105,7 +105,6 @@ inline void init_Events(pyEvents_t& pyEvents) {
         const size_t offset = offsetof(Event, ref_exon_idx_);
         return ArrayFromVectorAndOffset<size_t, Event>(
             self.events(), offset, self_obj); },
-        pybind11::call_guard<pybind11::gil_scoped_release>(),
         "Event reference exon")
     .def_property_readonly("event_type",
         [](pybind11::object& self_obj) {
@@ -113,7 +112,6 @@ inline void init_Events(pyEvents_t& pyEvents) {
         const size_t offset = offsetof(Event, type_);
         return ArrayFromVectorAndOffset<std::array<char, 1>, Event>(
             self.events(), offset, self_obj); },
-        pybind11::call_guard<pybind11::gil_scoped_release>(),
         "Event type")
     .def_property_readonly("_offsets",
         [](pybind11::object& self_obj) {
@@ -121,21 +119,18 @@ inline void init_Events(pyEvents_t& pyEvents) {
         return ArrayFromVectorAndOffset<size_t, size_t>(
             self.connection_offsets(), 0, self_obj);
         },
-        pybind11::call_guard<pybind11::gil_scoped_release>(),
         "Raw offsets for events into connections")
     .def_property_readonly("connection_idx_start",
         [](pybind11::object& self_obj) {
         Events& self = self_obj.cast<Events&>();
         return ArrayFromOffsetsVector<size_t>(
             self.connection_offsets(), true, self_obj); },
-        pybind11::call_guard<pybind11::gil_scoped_release>(),
         "First index into event connections for each event")
     .def_property_readonly("connection_idx_end",
         [](pybind11::object& self_obj) {
         Events& self = self_obj.cast<Events&>();
         return ArrayFromOffsetsVector<size_t>(
             self.connection_offsets(), false, self_obj); },
-        pybind11::call_guard<pybind11::gil_scoped_release>(),
         "One after last index into event connections for each event")
     .def_property_readonly("is_intron",
         [](pybind11::object& self_obj) {
@@ -143,7 +138,6 @@ inline void init_Events(pyEvents_t& pyEvents) {
         const size_t offset = offsetof(ConnectionIndex, is_intron_);
         return ArrayFromVectorAndOffset<bool, ConnectionIndex>(
             self.connections(), offset, self_obj); },
-        pybind11::call_guard<pybind11::gil_scoped_release>(),
         "Event connection is intron (false --> is junction)")
     .def_property_readonly("idx",
         [](pybind11::object& self_obj) {
@@ -151,14 +145,12 @@ inline void init_Events(pyEvents_t& pyEvents) {
         const size_t offset = offsetof(ConnectionIndex, idx_);
         return ArrayFromVectorAndOffset<size_t, ConnectionIndex>(
             self.connections(), offset, self_obj); },
-        pybind11::call_guard<pybind11::gil_scoped_release>(),
         "Event connection index into corresponding Introns or Junctions")
     .def_property_readonly("connection_event_idx",
         [](pybind11::object& self_obj) {
         Events& self = self_obj.cast<Events&>();
         return ArrayFromVectorAndOffset<size_t, size_t>(
             self.connection_event_idx(), 0, self_obj); },
-        pybind11::call_guard<pybind11::gil_scoped_release>(),
         "Event connection index back into events")
     .def_property_readonly("num_events", &Events::num_events,
         pybind11::call_guard<pybind11::gil_scoped_release>())
@@ -177,7 +169,6 @@ inline void init_Events(pyEvents_t& pyEvents) {
         return self.connection_gene(idx).idx_; };
         return pybind11::vectorize(f)(connection_idx);
         },
-        pybind11::call_guard<pybind11::gil_scoped_release>(),
         "gene_idx for specified connection indexes",
         pybind11::arg("connection_idx"))
     .def("connection_start",
@@ -189,7 +180,6 @@ inline void init_Events(pyEvents_t& pyEvents) {
         return self.connection_start(idx); };
         return pybind11::vectorize(f)(connection_idx);
         },
-        pybind11::call_guard<pybind11::gil_scoped_release>(),
         "start for specified connection indexes",
         pybind11::arg("connection_idx"))
     .def("connection_end",
@@ -201,7 +191,6 @@ inline void init_Events(pyEvents_t& pyEvents) {
         return self.connection_end(idx); };
         return pybind11::vectorize(f)(connection_idx);
         },
-        pybind11::call_guard<pybind11::gil_scoped_release>(),
         "end for specified connection indexes",
         pybind11::arg("connection_idx"))
     .def("connection_denovo",
@@ -213,7 +202,6 @@ inline void init_Events(pyEvents_t& pyEvents) {
         return self.connection_denovo(idx); };
         return pybind11::vectorize(f)(connection_idx);
         },
-        pybind11::call_guard<pybind11::gil_scoped_release>(),
         "denovo status for specified connection indexes",
         pybind11::arg("connection_idx"))
     .def("connection_other_exon_idx",
@@ -225,7 +213,6 @@ inline void init_Events(pyEvents_t& pyEvents) {
         return self.connection_other_exon_idx(idx); };
         return pybind11::vectorize(f)(connection_idx);
         },
-        pybind11::call_guard<pybind11::gil_scoped_release>(),
         "index for other exon for specified connection indexes",
         pybind11::arg("connection_idx"))
     .def("__len__",

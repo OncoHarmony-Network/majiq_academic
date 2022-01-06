@@ -40,7 +40,6 @@ inline void init_SpliceGraphReads(pySpliceGraphReads_t& pySpliceGraphReads) {
         return ArrayFromVectorAndOffset<majiq::real_t, majiq::real_t>(
             self.introns_reads(), 0, self_obj);
         },
-        pybind11::call_guard<pybind11::gil_scoped_release>(),
         "Raw readrates for each intron")
     .def_property_readonly("junctions_reads",
         [](pybind11::object& self_obj) {
@@ -48,7 +47,6 @@ inline void init_SpliceGraphReads(pySpliceGraphReads_t& pySpliceGraphReads) {
         return ArrayFromVectorAndOffset<majiq::real_t, majiq::real_t>(
             self.junctions_reads(), 0, self_obj);
         },
-        pybind11::call_guard<pybind11::gil_scoped_release>(),
         "Raw readrates for each junction")
     .def(pybind11::init([](
             const std::shared_ptr<GeneIntrons>& introns,
@@ -73,10 +71,10 @@ inline void init_SpliceGraphReads(pySpliceGraphReads_t& pySpliceGraphReads) {
             jreads_vec[j] = junctions_reads(j);
             }
           }
+          pybind11::gil_scoped_release release;  // release GIL at this stage
           return SpliceGraphReads{introns, junctions,
               std::move(ireads_vec), std::move(jreads_vec)};
           }),
-        pybind11::call_guard<pybind11::gil_scoped_release>(),
         "Initialize SpliceGraphReads from numpy arrays",
         pybind11::arg("introns"),
         pybind11::arg("junctions"),

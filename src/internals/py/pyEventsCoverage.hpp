@@ -63,10 +63,10 @@ inline void init_EventsCoverage(pyEventsCoverage_t& pyEventsCoverage) {
               }
             }
           }
+          pybind11::gil_scoped_release release;  // release GIL at this stage
           return EventsCoverage{events,
               std::move(summaries_vec), std::move(coverage)};
           }),
-        pybind11::call_guard<pybind11::gil_scoped_release>(),
         "construct events coverage from numpy arrays",
         pybind11::arg("events"),
         pybind11::arg("numreads"),
@@ -101,7 +101,6 @@ inline void init_EventsCoverage(pyEventsCoverage_t& pyEventsCoverage) {
         return ArrayFromVectorAndOffset<majiq::real_t, CoverageSummary>(
             self.summaries(), offset, self_obj);
         },
-        pybind11::call_guard<pybind11::gil_scoped_release>(),
         "Readrate of each event connection after stacks removed")
     .def_property_readonly("numbins",
         [](pybind11::object& self_obj) -> pybind11::array_t<majiq::real_t> {
@@ -110,7 +109,6 @@ inline void init_EventsCoverage(pyEventsCoverage_t& pyEventsCoverage) {
         return ArrayFromVectorAndOffset<majiq::real_t, CoverageSummary>(
             self.summaries(), offset, self_obj);
         },
-        pybind11::call_guard<pybind11::gil_scoped_release>(),
         "Number of nonzero bins for each connection after stacks removed")
     .def_property_readonly("bootstraps",
         [](pybind11::object& self_obj) -> pybind11::array_t<majiq::real_t> {
@@ -127,7 +125,6 @@ inline void init_EventsCoverage(pyEventsCoverage_t& pyEventsCoverage) {
             self_obj);
         return result;
         },
-        pybind11::call_guard<pybind11::gil_scoped_release>(),
         "Bootstrapped read coverage or each connection after stacks removed")
     .def_property_readonly("_events", &EventsCoverage::events,
         pybind11::call_guard<pybind11::gil_scoped_release>(),

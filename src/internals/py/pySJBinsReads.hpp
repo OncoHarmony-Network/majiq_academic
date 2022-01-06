@@ -46,7 +46,6 @@ inline void define_sjbins_properties(pyClassShared_t<SJBinsT>& pySJBins) {
         return ArrayFromVectorAndOffset<CountT, BinReads>(
             sj.reads(), offset, sj_obj);
         },
-        pybind11::call_guard<pybind11::gil_scoped_release>(),
         "Number of reads for each bin")
     .def_property_readonly("bin_idx",
         [](pybind11::object& sj_obj) {
@@ -55,7 +54,6 @@ inline void define_sjbins_properties(pyClassShared_t<SJBinsT>& pySJBins) {
         return ArrayFromVectorAndOffset<majiq::junction_pos_t, BinReads>(
             sj.reads(), offset, sj_obj);
         },
-        pybind11::call_guard<pybind11::gil_scoped_release>(),
         "Bin index for the each bin reads")
     .def_property_readonly("_offsets",
         [](pybind11::object& sj_obj) {
@@ -63,7 +61,6 @@ inline void define_sjbins_properties(pyClassShared_t<SJBinsT>& pySJBins) {
         return ArrayFromVectorAndOffset<size_t, size_t>(
             sj.offsets(), 0, sj_obj);
         },
-        pybind11::call_guard<pybind11::gil_scoped_release>(),
         "Raw offsets for regions into bin reads")
     .def("numstacks",
         [](const SJBinsT& self,
@@ -75,7 +72,6 @@ inline void define_sjbins_properties(pyClassShared_t<SJBinsT>& pySJBins) {
           return self.numstacks(i, p); };
         return pybind11::vectorize(f)(idx, pvalue);
         },
-        pybind11::call_guard<pybind11::gil_scoped_release>(),
         "Get number of stacks for the specified regions given threshold",
         pybind11::arg("region_idx"),
         pybind11::arg("pvalue_threshold") = DEFAULT_BUILD_STACK_PVALUE)
@@ -90,7 +86,6 @@ inline void define_sjbins_properties(pyClassShared_t<SJBinsT>& pySJBins) {
           return self.numbins_minreads(i, r); };
         return pybind11::vectorize(f)(idx, minreads);
         },
-        pybind11::call_guard<pybind11::gil_scoped_release>(),
         "Number of bins for regions with more than specified number of reads",
         pybind11::arg("region_idx"), pybind11::arg("minreads"))
     .def("numreads",
@@ -104,7 +99,6 @@ inline void define_sjbins_properties(pyClassShared_t<SJBinsT>& pySJBins) {
           return self.numreads(i, n); };
         return pybind11::vectorize(f)(idx, num_stacks);
         },
-        pybind11::call_guard<pybind11::gil_scoped_release>(),
         "Number of reads for regions given known number of stacks",
         pybind11::arg("region_idx"), pybind11::arg("num_stacks"))
     .def("__len__", &SJBinsT::size,
@@ -141,10 +135,10 @@ inline void define_sjbins_properties(pyClassShared_t<SJBinsT>& pySJBins) {
               br_vec[i] = BinReads{bin_idx(i), bin_reads(i)};
             }
           }
+          pybind11::gil_scoped_release release;  // release GIL at this stage
           return SJBinsT{regions,
             std::move(br_vec), std::move(offsets_vec), total_bins};
           }),
-        pybind11::call_guard<pybind11::gil_scoped_release>(),
         "Initialize bins over specified regions with per-bin coverage",
         pybind11::arg("sj"),
         pybind11::arg("bin_reads"), pybind11::arg("bin_idx"), pybind11::arg("_offsets"),

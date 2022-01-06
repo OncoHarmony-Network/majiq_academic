@@ -11,7 +11,6 @@
 #include <pybind11/numpy.h>
 
 #include <memory>
-#include <sstream>
 #include <string>
 #include <utility>
 #include <vector>
@@ -81,10 +80,10 @@ inline void define_connections_properties(
                     IntervalT{start(i), end(i)},
                     denovo(i), passed_build(i), simplified(i));
           }
+          pybind11::gil_scoped_release release;  // release GIL at this stage
           return std::make_shared<RegionsT>(
               genes, std::move(connection_vec), connected_exons);
         }),
-        pybind11::call_guard<pybind11::gil_scoped_release>(),
         "Create connections using Genes and arrays defining each connection",
         pybind11::arg("genes"),
         pybind11::arg("gene_idx"), pybind11::arg("start"), pybind11::arg("end"),
@@ -119,7 +118,6 @@ inline void define_connections_properties(
         return ArrayFromVectorAndOffset<bool, RegionT>(
             regions.data(), offset, regions_obj);
         },
-        pybind11::call_guard<pybind11::gil_scoped_release>(),
         "array[bool] indicating if connection was not found in annotations")
     .def_property_readonly("passed_build",
         [](pybind11::object& regions_obj) -> pybind11::array_t<bool> {
@@ -128,7 +126,6 @@ inline void define_connections_properties(
         return ArrayFromVectorAndOffset<bool, RegionT>(
             regions.data(), offset, regions_obj);
         },
-        pybind11::call_guard<pybind11::gil_scoped_release>(),
         "array[bool] indicating if passed build criteria to be in LSV")
     .def_property_readonly("simplified",
         [](pybind11::object& regions_obj) -> pybind11::array_t<bool> {
@@ -137,7 +134,6 @@ inline void define_connections_properties(
         return ArrayFromVectorAndOffset<bool, RegionT>(
             regions.data(), offset, regions_obj);
         },
-        pybind11::call_guard<pybind11::gil_scoped_release>(),
         "array[bool] indicating if the connection is simplified")
     .def("connect_exons", &RegionsT::connect_exons,
         pybind11::call_guard<pybind11::gil_scoped_release>(),
@@ -161,7 +157,6 @@ inline void define_connections_properties(
           return self[i].src_exon_idx(); };
         return pybind11::vectorize(f)(region_idx);
         },
-        pybind11::call_guard<pybind11::gil_scoped_release>(),
         R"pbdoc(
         array[int] indicating exon_idx for connection source exon
 
@@ -178,7 +173,6 @@ inline void define_connections_properties(
           return self[i].dst_exon_idx(); };
         return pybind11::vectorize(f)(region_idx);
         },
-        pybind11::call_guard<pybind11::gil_scoped_release>(),
         R"pbdoc(
         array[int] indicating exon_idx for connection target exon
 
@@ -192,7 +186,6 @@ inline void define_connections_properties(
         return ArrayFromVectorAndOffset<size_t, RegionT>(
             regions.data(), offset, regions_obj);
         },
-        pybind11::call_guard<pybind11::gil_scoped_release>(),
         R"pbdoc(
         array[int] indicating exon_idx for connection start
 
@@ -205,7 +198,6 @@ inline void define_connections_properties(
         return ArrayFromVectorAndOffset<size_t, RegionT>(
             regions.data(), offset, regions_obj);
         },
-        pybind11::call_guard<pybind11::gil_scoped_release>(),
         R"pbdoc(
         array[int] indicating exon_idx for connection end
 
@@ -239,25 +231,12 @@ inline void init_GeneIntrons(pyGeneIntrons_t& pyGeneIntrons) {
             Discard all denovo introns regardless of whether they passed
         )pbdoc",
         pybind11::arg("keep_annotated") = DEFAULT_BUILD_KEEP_ANNOTATED_IR,
-        pybind11::arg("discard_denovo") = !DEFAULT_BUILD_DENOVO_IR)
-    .def("__repr__", [](const GeneIntrons& self) -> std::string {
-        std::ostringstream oss;
-        oss << "GeneIntrons<" << self.size() << " total>";
-        return oss.str();
-        },
-        pybind11::call_guard<pybind11::gil_scoped_release>());
+        pybind11::arg("discard_denovo") = !DEFAULT_BUILD_DENOVO_IR);
 }
 
 inline void init_GeneJunctions(pyGeneJunctions_t& pyGeneJunctions) {
   define_coordinates_properties(pyGeneJunctions);
   define_connections_properties(pyGeneJunctions);
-  pyGeneJunctions
-    .def("__repr__", [](const GeneJunctions& self) -> std::string {
-        std::ostringstream oss;
-        oss << "GeneJunctions<" << self.size() << " total>";
-        return oss.str();
-        },
-        pybind11::call_guard<pybind11::gil_scoped_release>());
 }
 
 }  // namespace bindings

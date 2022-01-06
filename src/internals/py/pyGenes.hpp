@@ -12,7 +12,6 @@
 
 #include <array>
 #include <memory>
-#include <sstream>
 #include <string>
 #include <utility>
 #include <vector>
@@ -77,9 +76,9 @@ inline void init_Genes(pyGenes_t& pyGenes) {
                 geneid[i].cast<majiq::geneid_t>(),
                 genename[i].cast<majiq::genename_t>()});
           }
+          pybind11::gil_scoped_release release;  // release GIL at this stage
           return Genes::create(contigs, std::move(gene_vec));
         }),
-        pybind11::call_guard<pybind11::gil_scoped_release>(),
         "Create Genes object using Contigs object and arrays defining genes",
         pybind11::arg("contigs"), pybind11::arg("contig_idx"),
         pybind11::arg("start"), pybind11::arg("end"), pybind11::arg("strand"),
@@ -90,12 +89,6 @@ inline void init_Genes(pyGenes_t& pyGenes) {
     .def_property_readonly("gene_name", &majiq::Genes::genenames,
         pybind11::call_guard<pybind11::gil_scoped_release>(),
         "Sequence[str] of gene names in order matching gene_idx")
-    .def("__repr__", [](const majiq::Genes& self) -> std::string {
-        std::ostringstream oss;
-        oss << "Genes<" << self.size() << " total>";
-        return oss.str();
-        },
-        pybind11::call_guard<pybind11::gil_scoped_release>())
     .def("__contains__",
         [](const Genes& self, geneid_t x) { return self.count(x) > 0; },
         pybind11::call_guard<pybind11::gil_scoped_release>())
