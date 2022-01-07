@@ -27,8 +27,6 @@ from new_majiq._run.build_args import (
     gff3_parsing_args,
     gff3_parsing_pipeline,
     ir_filtering_args,
-    lsv_coverage_args,
-    quantifiability_threshold_args,
     simplifier_threshold_args,
     sj_strandness_args,
 )
@@ -75,8 +73,6 @@ def add_args(parser: argparse.ArgumentParser) -> None:
     enable_simplify_args(parser)
     build_threshold_args(parser)
     simplifier_threshold_args(parser, prefix="simplify-")
-    quantifiability_threshold_args(parser, prefix="quantify-")
-    lsv_coverage_args(parser)
     sj_strandness_args(parser)
     gff3_parsing_args(parser, prefix="gff3-")
     resources_args(parser, use_dask=False)
