@@ -135,7 +135,7 @@ class Events(object):
         """Number of event connections for each unique event"""
         return self.ec_idx_end - self.ec_idx_start
 
-    def broadcast_eidx_to_ecidx(self, x: npt.ArrayLike) -> npt.NDArray:
+    def broadcast_eidx_to_ecidx(self, x: npt.ArrayLike, axis: int = 0) -> npt.NDArray:
         """Broadcast `x` over events to event connections
 
         Parameters
@@ -143,13 +143,22 @@ class Events(object):
         x: array_like
             Array of length self.num_events that will have values per-event
             repeated for each connection in the event
+        axis: int
+            Axis to broadcast from events to event connections (must have shape
+            equal to `num_events`)
 
         Returns
         -------
         array
             with values of `x` repeated for each event connection
         """
-        return np.repeat(x, self.event_size.view(np.int64))
+        x = np.array(x, copy=False)
+        try:
+            if x.shape[axis] != self.num_events:
+                raise ValueError("x must have length equal to the number of events")
+        except IndexError:
+            raise ValueError(f"x must have {axis = } to broadcast over")
+        return np.take(x, self.connection_e_idx.view(np.int64), axis=axis)
 
     def connections_slice_for_event(self, event_idx: int) -> slice:
         """Get slice into event connections for event with specified index
@@ -181,6 +190,11 @@ class Events(object):
     def ec_idx(self) -> npt.NDArray[np.int64]:
         """Index over event connections"""
         return np.arange(self.num_connections)
+
+    @property
+    def connection_e_idx(self) -> npt.NDArray[np.uint64]:
+        """Index into events for each event connection"""
+        return self._events.connection_event_idx
 
     @property
     def is_intron(self) -> npt.NDArray[np.bool_]:
