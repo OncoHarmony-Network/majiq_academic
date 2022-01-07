@@ -296,7 +296,7 @@ inline void init_ExonConnections(pyExonConnections_t& pyExonConnections) {
         throw std::invalid_argument(
                 "exon_idx and event_type must have same shape");
         }
-        std::vector<std::string> result(_exon_idx.shape(0));
+        pybind11::list result{_exon_idx.shape(0)};
         {
           auto exon_idx = _exon_idx.unchecked<1>();
           auto event_type = _event_type.unchecked<1>();
@@ -322,7 +322,7 @@ inline void init_ExonConnections(pyExonConnections_t& pyExonConnections) {
         throw std::invalid_argument(
                 "exon_idx and event_type must have same shape");
         }
-        std::vector<std::string> result(_exon_idx.shape(0));
+        pybind11::list result{_exon_idx.shape(0)};
         {
           auto exon_idx = _exon_idx.unchecked<1>();
           auto event_type = _event_type.unchecked<1>();
