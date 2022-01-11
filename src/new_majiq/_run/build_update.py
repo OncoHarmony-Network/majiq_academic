@@ -137,6 +137,8 @@ def run(args: argparse.Namespace) -> None:
         max_pctbins=args.max_pctbins,
         junction_acceptance_probability=args.junction_acceptance_probability,
         intron_acceptance_probability=args.intron_acceptance_probability,
+        min_experiments=args.min_experiments,
+        introns_type=args.introns,
         simplify=simplify,
         reset_simplify=args.reset_simplify,
         simplify_minpsi=args.simplify_minpsi,
