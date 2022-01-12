@@ -81,6 +81,23 @@ class SpliceGraphReads(object):
         self.df: Final[xr.Dataset] = df
         return
 
+    def __repr__(self) -> str:
+        MAX_PREFIXES_END = 1  # how many prefixes on either end to display
+        if self.num_prefixes > 2 * MAX_PREFIXES_END:
+            print_prefixes_list = [
+                *self.prefixes[:MAX_PREFIXES_END],
+                *([] if self.num_prefixes <= 2 * MAX_PREFIXES_END else ["..."]),
+                *self.prefixes[-MAX_PREFIXES_END:],
+            ]
+        else:
+            print_prefixes_list = self.prefixes
+        print_prefixes = ", ".join(print_prefixes_list)
+        return (
+            f"{self.__class__.__name__}[{self.num_introns} introns,"
+            f" {self.num_junctions} junctions] for {self.num_prefixes}"
+            f" experiments [{print_prefixes}]"
+        )
+
     def __getitem__(self, prefixes) -> "SpliceGraphReads":
         """Get subset of SpliceGraphReads corresponding to selected prefixes"""
         if isinstance(prefixes, str):
@@ -292,18 +309,18 @@ class SpliceGraphReads(object):
         if len(sjs) == 0:
             raise ValueError("At least one SJ file must be processed")
         elif len(sjs) == 1:
-            log.info(f"Inferring SpliceGraphReads from {sjs[0]}")
+            log.info("Inferring SpliceGraphReads from %s", sjs[0])
             sgreads = sj_to_sgreads(sjs[0])
-            log.info(f"Saving SpliceGraphReads to {path}")
+            log.info("Saving %s to %s", sgreads, path)
             sgreads.to_zarr(path, chunksize=chunksize)
         else:
             # precompute prefixes to use
-            log.info("Precomputing prefixes corresponding to input SJ files")
+            log.debug("Precomputing prefixes corresponding to input SJ files")
             prefixes = [
                 bam_experiment_name(SJExperiment.original_path_from_zarr(x))
                 for x in sjs
             ]
-            log.info(f"Saving prefixes and metadata to {path}")
+            log.info("Saving prefixes and metadata to %s", path)
             SpliceGraphReads.to_zarr_slice_init(
                 path,
                 prefixes,
@@ -312,18 +329,18 @@ class SpliceGraphReads(object):
                 chunksize=chunksize,
                 attrs={**attrs, "sj": [str(x) for x in sjs]},
             )
-            jobs = imap_unordered_fn(
-                lambda x: (
-                    sj_to_sgreads(x[1]).to_zarr_slice(
-                        path,
-                        slice(x[0], 1 + x[0]),
-                        chunksize=chunksize,
-                    )
-                ),
-                list(enumerate(sjs)),
-            )
-            for ndx, _ in enumerate(jobs, 1):
-                log.info(f"Finished processing {ndx} / {len(sjs)} SJ files")
+
+            def job_fn(sj_idx: int, sj: Path) -> Path:
+                sj_to_sgreads(sj).to_zarr_slice(
+                    path,
+                    slice(sj_idx, 1 + sj_idx),
+                    chunksize=chunksize,
+                )
+                return sj
+
+            jobs = imap_unordered_fn(lambda x: job_fn(x[0], x[1]), list(enumerate(sjs)))
+            for ndx, sj in enumerate(jobs, 1):
+                log.info("Saved coverage from %s (%d / %d)", sj, ndx, len(sjs))
         return
 
     @classmethod

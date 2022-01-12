@@ -68,6 +68,12 @@ class Events(object):
         self._events: Final[_Events] = events
         return
 
+    def __repr__(self) -> str:
+        return (
+            f"{self.__class__.__name__}["
+            f"{self.num_events} events, {self.num_connections} connections]"
+        )
+
     @property
     def introns(self) -> GeneIntrons:
         """:py:class:`Introns` over which events defined"""

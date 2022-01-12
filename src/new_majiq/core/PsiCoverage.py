@@ -1200,19 +1200,19 @@ class PsiCoverage(object):
             raise ValueError("At least one SJ file must be processed")
         elif len(sjs) == 1:
             # if there is only one file, don't bother with imap_unordered_fn
-            log.info(f"Inferring PSI coverage from {sjs[0]}")
+            log.info("Inferring PsiCoverage from %s", sjs[0])
             psi_coverage = sj_to_psicov(sjs[0])
-            log.info(f"Saving PSI coverage to {path}")
+            log.info("Saving %s to %s", psi_coverage, path)
             psi_coverage.to_zarr(path, ec_chunksize=ec_chunksize)
         else:
             # precompute prefixes to use
-            log.info("Precomputing prefixes corresponding to input SJ files")
+            log.debug("Precomputing prefixes corresponding to input SJ files")
             prefixes = [
                 bam_experiment_name(SJExperiment.original_path_from_zarr(x))
                 for x in sjs
             ]
             # we have more than one input file
-            log.info(f"Saving event information and metadata to {path}")
+            log.info("Saving event information and metadata to %s", path)
             PsiCoverage.to_zarr_slice_init(
                 path,
                 lsvs.save_df,
@@ -1225,18 +1225,18 @@ class PsiCoverage(object):
                 ),
                 ec_chunksize=ec_chunksize,
             )
-            jobs = imap_unordered_fn(
-                lambda x: (
-                    sj_to_psicov(x[1]).to_zarr_slice(
-                        path,
-                        slice(x[0], 1 + x[0]),
-                        ec_chunksize=ec_chunksize,
-                    )
-                ),
-                list(enumerate(sjs)),
-            )
-            for ndx, _ in enumerate(jobs, 1):
-                log.info(f"Finished processing {ndx} / {len(sjs)} SJ files")
+
+            def job_fn(sj_idx: int, sj: Path) -> Path:
+                sj_to_psicov(sj).to_zarr_slice(
+                    path,
+                    slice(sj_idx, 1 + sj_idx),
+                    ec_chunksize=ec_chunksize,
+                )
+                return sj
+
+            jobs = imap_unordered_fn(lambda x: job_fn(x[0], x[1]), list(enumerate(sjs)))
+            for ndx, sj in enumerate(jobs, 1):
+                log.info("Saved coverage from %s (%d / %d)", sj, ndx, len(sjs))
         return
 
     @cached_property

@@ -55,10 +55,10 @@ def run(args: argparse.Namespace) -> None:
     log = get_logger()
     log.info(f"Loading input splicegraph from {args.splicegraph}")
     sg = nm.SpliceGraph.from_zarr(args.splicegraph)
-    log.info(f"Defining LSVs for coverage ({args.select_lsvs})")
+    log.debug(f"Defining events for coverage ({args.select_lsvs})")
     lsvs = sg.exon_connections.lsvs(args.select_lsvs)
     if args.ignore_from is not None:
-        log.info(f"Ignoring LSVs also found in {args.ignore_from}")
+        log.info(f"Ignoring events also found in {args.ignore_from}")
         lsvs = lsvs[
             lsvs.unique_events_mask(
                 nm.SpliceGraph.from_zarr(
@@ -66,6 +66,7 @@ def run(args: argparse.Namespace) -> None:
                 ).exon_connections.lsvs(args.select_lsvs)
             ).unique_events_mask
         ]
+    log.info("Assessing coverage for %s on %s", lsvs, sg)
 
     nm.rng_resize(args.nthreads)
     p: Optional[ThreadPool] = None
