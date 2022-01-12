@@ -108,7 +108,7 @@ class AlignmentFile {
   /**
    * Free memory for in_, header_, p_ given error in constructor or destructor
    */
-  void cleanup_hts();
+  inline void cleanup_hts();
 
  public:
   /**
