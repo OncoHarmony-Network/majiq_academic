@@ -29,7 +29,7 @@ def get_logger(allow_setup: bool = True) -> logging.Logger:
 def _default_formatter() -> logging.Formatter:
     """How we want log messsages to look"""
     # set up formatting
-    log_format = "%(asctime)s (PID:%(process)s) - %(levelname)s - %(message)s"
+    log_format = "%(asctime)s (%(levelname)s) - %(message)s"
     formatter = logging.Formatter(log_format)
     return formatter
 
