@@ -159,7 +159,7 @@ class SpliceGraph(object):
             gff3_types = GFF3TypesMap()
         return SpliceGraph(
             _SpliceGraph.from_gff3(
-                str(path), process_ir, gff3_types.current_map, log_function
+                str(path), gff3_types.current_map, process_ir, log_function
             )
         )
 

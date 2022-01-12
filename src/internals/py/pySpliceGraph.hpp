@@ -76,8 +76,6 @@ inline void init_GFF3Types(pybind11::module_& m) {
         to ignore records that are completely unrelated to exons
         )pbdoc");
   pybind11::bind_map<majiq::gff3::featuretype_map_t>(m, "GFF3Types");
-  m.def("_default_gff3_types",
-      []() { return majiq::gff3::default_gff3_types; });
 }
 
 inline void init_SpliceGraph(pySpliceGraph_t& pySpliceGraph) {
@@ -102,8 +100,8 @@ inline void init_SpliceGraph(pySpliceGraph_t& pySpliceGraph) {
         pybind11::arg("junctions"), pybind11::arg("introns"))
     // constructors from gff3
     .def_static("from_gff3",
-        [](std::string gff3_path, bool process_ir,
-            majiq::gff3::featuretype_map_t gff3_types,
+        [](std::string gff3_path, majiq::gff3::featuretype_map_t gff3_types,
+            bool process_ir,
             pybind11::object log_function) {
           using majiq::gff3::GFF3ExonHierarchy;
           using majiq::gff3::GFF3TranscriptModels;
@@ -135,11 +133,11 @@ inline void init_SpliceGraph(pySpliceGraph_t& pySpliceGraph) {
         ----------
         gff3_path: str
             Path to GFF3 file to process (supports gzipped files)
-        process_ir: bool
-            Should annotated retained introns be assessed
         gff3_types: GFF3Types
             Map from GFF3 type to feature type it should be interpreted in
             building transcript models of each gene
+        process_ir: bool
+            Should annotated retained introns be assessed
         log_function: Optional[Callable[[str, str, int]]]
             If not None, it will be called for each unaccepted parent
             (transcript) or top-level ancestor (gene) type that was neither
@@ -152,9 +150,8 @@ inline void init_SpliceGraph(pySpliceGraph_t& pySpliceGraph) {
         )pbdoc"
         "Create splicegraph from input GFF3 file",
         pybind11::arg("gff3_path"),
+        pybind11::arg("gff3_types"),
         pybind11::arg("process_ir") = DEFAULT_BUILD_PROCESS_IR,
-        pybind11::arg_v("gff3_types", majiq::gff3::default_gff3_types,
-            "new_majiq._default_gff3_types()"),
         pybind11::arg("log_function") = pybind11::none())
     .def_static("infer_exons", &SpliceGraph::InferExons,
         pybind11::call_guard<pybind11::gil_scoped_release>(),

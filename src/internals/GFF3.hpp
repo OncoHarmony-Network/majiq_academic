@@ -23,15 +23,6 @@
 
 namespace majiq {
 namespace gff3 {
-// number of columns in GFF3
-constexpr size_t NUM_COLUMNS = 9;
-// columns of interest
-constexpr size_t COL_SEQID = 0;
-constexpr size_t COL_TYPE = 2;
-constexpr size_t COL_START = 3;
-constexpr size_t COL_END = 4;
-constexpr size_t COL_STRAND = 6;
-constexpr size_t COL_ATTRIBUTES = 8;
 
 using feature_id_t = std::string;
 using skipped_features_ct_t = std::map<std::string, unsigned int>;
@@ -62,41 +53,6 @@ inline bool type_is_silent(FeatureType x) {
 using featuretype_map_t = std::map<std::string, FeatureType>;
 using featuretype_info_t = std::pair<FeatureType, std::string>;
 
-static const featuretype_map_t default_gff3_types = {
-  // genes
-  {"gene", FeatureType::ACCEPT_GENE},
-  {"ncRNA_gene", FeatureType::ACCEPT_GENE},
-  {"pseudogene", FeatureType::ACCEPT_GENE},
-  {"ncRNA_gene", FeatureType::ACCEPT_GENE},
-  {"bidirectional_promoter_lncRNA", FeatureType::ACCEPT_GENE},
-  // transcripts
-  {"mRNA", FeatureType::ACCEPT_TRANSCRIPT},
-  {"transcript", FeatureType::ACCEPT_TRANSCRIPT},
-  {"lnc_RNA", FeatureType::ACCEPT_TRANSCRIPT},
-  {"miRNA", FeatureType::ACCEPT_TRANSCRIPT},
-  {"ncRNA", FeatureType::ACCEPT_TRANSCRIPT},
-  {"rRNA", FeatureType::ACCEPT_TRANSCRIPT},
-  {"scRNA", FeatureType::ACCEPT_TRANSCRIPT},
-  {"snRNA", FeatureType::ACCEPT_TRANSCRIPT},
-  {"snoRNA", FeatureType::ACCEPT_TRANSCRIPT},
-  {"tRNA", FeatureType::ACCEPT_TRANSCRIPT},
-  {"pseudogenic_transcript", FeatureType::ACCEPT_TRANSCRIPT},
-  {"C_gene_segment", FeatureType::ACCEPT_TRANSCRIPT},
-  {"D_gene_segment", FeatureType::ACCEPT_TRANSCRIPT},
-  {"J_gene_segment", FeatureType::ACCEPT_TRANSCRIPT},
-  {"V_gene_segment", FeatureType::ACCEPT_TRANSCRIPT},
-  {"unconfirmed_transcript", FeatureType::ACCEPT_TRANSCRIPT},
-  {"three_prime_overlapping_ncrna", FeatureType::ACCEPT_TRANSCRIPT},
-  // exons
-  {"exon", FeatureType::EXON}
-};
-// get feature type associated with type column. If no match, is "OTHER"
-inline FeatureType get_feature_type(
-    const std::string& type_str, const featuretype_map_t& gff3_types) {
-  auto result_it = gff3_types.find(type_str);
-  return result_it != gff3_types.end()
-    ? result_it->second : FeatureType::REJECT_OTHER;
-}
 // throw exception if featuretype_map_t has no chance of succeeding
 inline void assert_featuretype_map_plausible(
     const featuretype_map_t& gff3_types) {
@@ -177,8 +133,6 @@ class GFF3ExonHierarchy {
    * Load GFF3ExonHierarchy from specified input path
    */
   GFF3ExonHierarchy(const std::string& gff3_filename, const featuretype_map_t&);
-  explicit GFF3ExonHierarchy(const std::string& gff3_filename)
-      : GFF3ExonHierarchy{gff3_filename, default_gff3_types} { }
   // default or deleted constructors/operators
   GFF3ExonHierarchy() = delete;
   GFF3ExonHierarchy(const GFF3ExonHierarchy&) = default;

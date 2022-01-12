@@ -9,7 +9,7 @@ Author: Joseph K Aicher
 
 from typing import Dict, List, Optional, Set, Union
 
-from new_majiq.internals import GFF3FeatureType, _default_gff3_types
+from new_majiq.internals import GFF3FeatureType
 
 
 class GFF3TypesMap(object):
@@ -22,8 +22,7 @@ class GFF3TypesMap(object):
         gene/transcript/exon hierarchy.
         Valid values are specified by keys or values of
         :attr:`GFF3FeatureType.__members__`
-        If None, use default value from
-        :func:`new_majiq.internals._default_gff3_types`.
+        If None, use default value
 
     Notes
     -----
@@ -54,7 +53,33 @@ class GFF3TypesMap(object):
     ) -> None:
         self.current_map: Dict[str, GFF3FeatureType]
         if gff3_types_map is None:
-            self.current_map = _default_gff3_types()
+            self.current_map = {
+                # genes
+                "gene": GFF3FeatureType.ACCEPT_GENE,
+                "ncRNA_gene": GFF3FeatureType.ACCEPT_GENE,
+                "pseudogene": GFF3FeatureType.ACCEPT_GENE,
+                "bidirectional_promoter_lncRNA": GFF3FeatureType.ACCEPT_GENE,
+                # transcripts
+                "mRNA": GFF3FeatureType.ACCEPT_TRANSCRIPT,
+                "transcript": GFF3FeatureType.ACCEPT_TRANSCRIPT,
+                "lnc_RNA": GFF3FeatureType.ACCEPT_TRANSCRIPT,
+                "miRNA": GFF3FeatureType.ACCEPT_TRANSCRIPT,
+                "ncRNA": GFF3FeatureType.ACCEPT_TRANSCRIPT,
+                "rRNA": GFF3FeatureType.ACCEPT_TRANSCRIPT,
+                "scRNA": GFF3FeatureType.ACCEPT_TRANSCRIPT,
+                "snRNA": GFF3FeatureType.ACCEPT_TRANSCRIPT,
+                "snoRNA": GFF3FeatureType.ACCEPT_TRANSCRIPT,
+                "tRNA": GFF3FeatureType.ACCEPT_TRANSCRIPT,
+                "pseudogenic_transcript": GFF3FeatureType.ACCEPT_TRANSCRIPT,
+                "C_gene_segment": GFF3FeatureType.ACCEPT_TRANSCRIPT,
+                "D_gene_segment": GFF3FeatureType.ACCEPT_TRANSCRIPT,
+                "J_gene_segment": GFF3FeatureType.ACCEPT_TRANSCRIPT,
+                "V_gene_segment": GFF3FeatureType.ACCEPT_TRANSCRIPT,
+                "unconfirmed_transcript": GFF3FeatureType.ACCEPT_TRANSCRIPT,
+                "three_prime_overlapping_ncrna": GFF3FeatureType.ACCEPT_TRANSCRIPT,
+                # exons
+                "exon": GFF3FeatureType.EXON,
+            }
         else:
             self.current_map = {}
             for k, v in gff3_types_map.items():

@@ -136,7 +136,17 @@ GFF3TranscriptModels ToTranscriptModels(GFF3ExonHierarchy&& x) {
     std::move(skipped_transcript_type_ct), std::move(skipped_gene_type_ct)};
 }
 
+// number of columns in GFF3
+constexpr size_t NUM_COLUMNS = 9;
+// columns of interest
+constexpr size_t COL_SEQID = 0;
+constexpr size_t COL_TYPE = 2;
+constexpr size_t COL_START = 3;
+constexpr size_t COL_END = 4;
+constexpr size_t COL_STRAND = 6;
+constexpr size_t COL_ATTRIBUTES = 8;
 
+// regular expressions for parsing from attributes column
 static const std::vector<std::regex> regex_parent_vec = {
   std::regex{"(?:^|;)Parent=([^;]+)"}
 };
@@ -164,6 +174,14 @@ inline ClosedInterval get_coordinates(const std::vector<std::string>& record) {
   position_t start = std::atol(record[COL_START].c_str());
   position_t end = std::atol(record[COL_END].c_str());
   return ClosedInterval{start, end};
+}
+
+// get feature type associated with type column. If no match, is "OTHER"
+inline FeatureType get_feature_type(
+    const std::string& type_str, const featuretype_map_t& gff3_types) {
+  auto result_it = gff3_types.find(type_str);
+  return result_it != gff3_types.end()
+    ? result_it->second : FeatureType::REJECT_OTHER;
 }
 
 inline GeneStrandness convert_strand(const std::string& col_strand) {

@@ -718,8 +718,8 @@ class SpliceGraph:
     @staticmethod
     def from_gff3(
         gff3_path: str,
-        process_ir: bool,
         gff3_types: Dict[str, GFF3FeatureType],
+        process_ir: bool,
         log_function: Optional[Callable[[str, str, int], Any]] = ...,
     ) -> SpliceGraph: ...
     @staticmethod
@@ -808,6 +808,5 @@ class VectorString:
     @overload
     def __setitem__(self, arg0: slice, arg1: VectorString) -> None: ...
 
-def _default_gff3_types() -> Dict[str, GFF3FeatureType]: ...
 def rng_seed(seed: int) -> None: ...
 def rng_resize(n: int) -> None: ...
