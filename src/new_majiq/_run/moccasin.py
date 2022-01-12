@@ -694,6 +694,9 @@ def main() -> None:
     parser = argparse.ArgumentParser(
         description="Tools to model factors and PsiCoverage using MOCCASIN"
     )
+    parser.add_argument(
+        "--version", action="version", version=f"%(prog)s {nm.__version__}"
+    )
     # add subparsers
     subparsers = parser.add_subparsers(required=True, help="")
     for src_name, src_module in SUBPARSER_SOURCES.items():

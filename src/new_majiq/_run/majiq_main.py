@@ -11,6 +11,7 @@ import argparse
 import sys
 from typing import Dict
 
+from new_majiq import __version__
 from new_majiq._run._run import GenericSubcommand
 from new_majiq._run.build_pipeline import subcommand as build_pipeline
 from new_majiq._run.cite import subcommand as cite
@@ -37,6 +38,9 @@ def main() -> None:
     parser = argparse.ArgumentParser(
         description="Tools to detect, quantify, and analyze RNA splicing",
         epilog="More with majiq-* commands or new-majiq",
+    )
+    parser.add_argument(
+        "--version", action="version", version=f"%(prog)s {__version__}"
     )
     # add subparsers
     subparsers = parser.add_subparsers(required=True, help="")

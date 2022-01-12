@@ -11,6 +11,7 @@ import argparse
 import sys
 from typing import Dict
 
+from new_majiq import __version__
 from new_majiq._run._run import GenericSubcommand
 from new_majiq._run.deltapsi import subcommand as deltapsi
 from new_majiq._run.heterogen import subcommand as heterogen
@@ -28,6 +29,9 @@ def main() -> None:
     # build parser
     parser = argparse.ArgumentParser(
         description="Tools to quantify RNA splicing within or between groups"
+    )
+    parser.add_argument(
+        "--version", action="version", version=f"%(prog)s {__version__}"
     )
     # add subparsers
     subparsers = parser.add_subparsers(required=True, help="")

@@ -14,6 +14,7 @@ from typing import Callable
 
 from dask.distributed import Client
 
+from new_majiq import __version__
 from new_majiq.logger import get_logger, setup_logger
 
 
@@ -37,6 +38,9 @@ class GenericSubcommand(object):
 
     def add_args(self, parser: argparse.ArgumentParser) -> None:
         """Add arguments to provided argument parser"""
+        parser.add_argument(
+            "--version", action="version", version=f"%(prog)s {__version__}"
+        )
         self._add_args(parser)
         # add parameters for logging
         log_args = parser.add_argument_group("logging arguments")

@@ -11,6 +11,7 @@ import argparse
 import sys
 from typing import Dict
 
+from new_majiq import __version__
 from new_majiq._run._run import GenericSubcommand
 from new_majiq._run.legacy_majiq import subcommand as legacy_majiq
 from new_majiq._run.legacy_splicegraph import subcommand as legacy_splicegraph
@@ -26,6 +27,9 @@ def main() -> None:
     # build parser
     parser = argparse.ArgumentParser(
         description="Tools to make files compatible with previous MAJIQ (v2)",
+    )
+    parser.add_argument(
+        "--version", action="version", version=f"%(prog)s {__version__}"
     )
     # add subparsers
     subparsers = parser.add_subparsers(required=True, help="")
