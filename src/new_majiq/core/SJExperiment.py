@@ -92,7 +92,7 @@ class SJExperiment(object):
 
     def __repr__(self) -> str:
         """String representation of SJExperiment"""
-        return f"SJExperiment(original_path=.../{Path(self.original_path).name})"
+        return f"SJExperiment(original_path=[...]/{Path(self.original_path).name})"
 
     @property
     def introns(self) -> SJIntronsBins:
@@ -217,6 +217,7 @@ class SJExperiment(object):
             intron and junction coverage from specified BAM file
         """
         log = get_logger()
+        log.info("Loading SJExperiment from aligned reads in %s", path)
         # manage strand
         autostrand: bool = False
         if not isinstance(strandness, ExperimentStrandness):
@@ -236,7 +237,7 @@ class SJExperiment(object):
                     " must be AUTO, FORWARD, REVERSE, or NONE"
                 )
         # load junctions
-        log.info(f"Parsing alignments from {path} for junctions")
+        log.debug("Parsing SJJunctions from %s", path)
         junctions: SJJunctionsBins = SJJunctionsBins.from_bam(
             path, strandness=strandness, nthreads=nthreads
         )
@@ -252,7 +253,7 @@ class SJExperiment(object):
                 )
                 raise RuntimeError("Contigs from splicegraph and BAM are disjoint")
         if autostrand:
-            log.info("Inferring strandness comparing counts on splicegraph junctions")
+            log.debug("Inferring strandness comparing counts on splicegraph junctions")
             junctions = cls.detect_strand(
                 junctions,
                 sg,
@@ -262,11 +263,11 @@ class SJExperiment(object):
             )
             log.info(f"Inferred strandness: {junctions.strandness.name}")
         # determine introns
-        log.info("Using gene introns/exons to define regions for intronic coverage")
+        log.debug("Using gene introns/exons to define regions for intronic coverage")
         gene_introns: GeneIntrons = sg.introns
         exons: Exons = sg.exons
         if update_exons:
-            log.info("Identifying potential denovo exons from input junctions")
+            log.debug("Identifying potential denovo exons from input junctions")
             # TODO (change parameters used for reliable updated junctions?)
             updated_junctions = (
                 sg.junctions.builder()
@@ -274,7 +275,7 @@ class SJExperiment(object):
                 .get_passed()
             )
             exons = exons.infer_with_junctions(updated_junctions)
-        log.info(f"Parsing alignments from {path} for introns")
+        log.debug("Parsing SJIntrons from %s", path)
         introns = SJIntronsBins.from_bam(
             path,
             junctions.total_bins,
@@ -340,15 +341,18 @@ class SJExperiment(object):
         # check that we had enough junctions
         if len(ratios) < minjunctions:
             log.info(
-                f"Only {len(ratios)} junctions with at least {minreads} reads"
-                f" vs minimum {minjunctions} junctions for inferring strandedness"
+                "Too few junctions with enough reads to infer strandness"
+                " (%d < minjunctions=%d; with minreads=%d)",
+                len(ratios),
+                minjunctions,
+                minreads,
             )
             return sj_junctions.to_unstranded()
 
         # compute ratio
         median_ratio = np.median(ratios)
         deviation = np.abs(median_ratio - 0.5)
-        log.info(
+        log.debug(
             f"Median ratio of original stranded reads vs total is {median_ratio:.1%}"
             f" (deviates by {deviation:.1%} from unstranded expectation)"
             f" from {len(ratios)} junctions with at least {minreads} reads"

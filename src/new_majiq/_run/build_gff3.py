@@ -46,7 +46,7 @@ def run(args: argparse.Namespace) -> None:
         types_silent=args.gff3_types_silent,
         types_hard_skip=args.gff3_types_hard_skip,
     )
-    log.info(f"Saving annotated splicegraph to {args.splicegraph}")
+    log.info("Saving %s to %s", sg, args.splicegraph)
     sg.to_zarr(args.splicegraph)
     return
 

@@ -80,6 +80,9 @@ def add_args(parser: argparse.ArgumentParser) -> None:
 
 
 def run(args: argparse.Namespace) -> None:
+    log = get_logger()
+    log.info("Loading experiment information from %s", args.experiments_tsv)
+
     import pandas as pd
 
     # load args.experiments_tsv
@@ -108,6 +111,7 @@ def run(args: argparse.Namespace) -> None:
         df_experiments["path"] = df_experiments["path"].apply(ExistingResolvedPath)
 
     if "group" not in df_experiments.columns:
+        log.debug("No `group` column ; all experiments will be in one build group")
         df_experiments["group"] = "experiments"  # all are same group, trivial name
     elif df_experiments["group"].isna().any():
         raise ValueError("Specified group column may not have missing values")
@@ -133,15 +137,11 @@ def run(args: argparse.Namespace) -> None:
         for path, is_sj in zip(df_experiments["path"], df_experiments["is_sj"])
     ]
 
-    log = get_logger()
-    log.info(f"Creating directory for output files at {args.output_dir}")
+    log.info("Creating directory for output files at %s", args.output_dir)
     args.output_dir.mkdir()
 
     # load base splicegraph
-    log.info(
-        "Load annotated splicegraph from GFF3"
-        f" (`majiq-build gff3 {str(args.gff3)} <memory>`)"
-    )
+    log.info("(`majiq-build gff3`)")
     sg: nm.SpliceGraph = gff3_parsing_pipeline(
         args.gff3,
         features_default=args.gff3_features_default,
@@ -152,16 +152,13 @@ def run(args: argparse.Namespace) -> None:
         types_silent=args.gff3_types_silent,
         types_hard_skip=args.gff3_types_hard_skip,
     )
+    log.info("Loaded annotated %s", sg)
 
     # get SJ files that we don't already have
-    log.info("Preparing SJ coverage for each experiment")
+    log.info("(`majiq-build sj`)")
     sj: Optional[nm.SJExperiment] = None
     df_experiments_bam = df_experiments.loc[~df_experiments["is_sj"]]
     for idx, (_, experiment_info) in enumerate(df_experiments_bam.iterrows(), 1):
-        log.info(
-            f"(`majiq-build sj {experiment_info['path']} <memory>"
-            f" {experiment_info['sj_path']}`)"
-        )
         sj = nm.SJExperiment.from_bam(
             experiment_info["path"],
             sg,
@@ -172,8 +169,11 @@ def run(args: argparse.Namespace) -> None:
             auto_mediantolerance=args.auto_mediantolerance,
         )
         log.info(
-            f"Saving SJExperiment from {experiment_info['path']}"
-            f" to {experiment_info['sj_path']} ({idx} / {len(df_experiments_bam)})"
+            "Saving %s to %s (%d / %d)",
+            sj,
+            experiment_info["sj_path"],
+            idx,
+            len(df_experiments_bam),
         )
         sj.to_zarr(experiment_info["sj_path"])
     sj = None  # unload SJ coverage from memory
@@ -182,9 +182,7 @@ def run(args: argparse.Namespace) -> None:
     p = ThreadPool(args.nthreads)
 
     output_splicegraph = args.output_dir / "splicegraph.zarr"
-    log.info(
-        f"(`majiq-build update <memory> {output_splicegraph} --groups-tsv <memory>`)"
-    )
+    log.info("(`majiq-build update`)")
     experiments: SJGroupsT = {
         group: sj_paths.tolist()
         for group, sj_paths in df_experiments.groupby("group")["sj_path"]
@@ -210,7 +208,7 @@ def run(args: argparse.Namespace) -> None:
         simplify_min_experiments=args.simplify_min_experiments,
         imap_unordered_fn=p.imap_unordered,
     )
-    log.info(f"Saving updated splicegraph to {output_splicegraph}")
+    log.info("Saving updated %s to %s", sg, output_splicegraph)
     sg.to_zarr(output_splicegraph)
 
     p.close()

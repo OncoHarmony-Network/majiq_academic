@@ -118,11 +118,11 @@ def run(args: argparse.Namespace) -> None:
 
     log = get_logger()
     if args.groups_tsv:
-        log.info("Loading experiment groups")
+        log.info("Loading experiment groups from %s", args.groups_tsv)
         experiments = get_grouped_experiments(args.groups_tsv)
     else:
         experiments = {"": args.sjs}
-    log.info(f"Loading base splicegraph from {args.base_sg}")
+    log.info("Loading base splicegraph from %s", args.base_sg)
     sg = nm.SpliceGraph.from_zarr(args.base_sg)
 
     # pool for performing build, simplification
@@ -150,7 +150,7 @@ def run(args: argparse.Namespace) -> None:
     )
     p.close()
 
-    log.info(f"Saving updated splicegraph to {args.out_sg}")
+    log.info("Saving updated %s to %s", sg, args.out_sg)
     sg.to_zarr(args.out_sg)
     return
 
