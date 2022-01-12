@@ -7,8 +7,8 @@ Author: Joseph K Aicher
 """
 
 import argparse
-import multiprocessing.dummy as mp
-from typing import List, Optional
+from multiprocessing.pool import ThreadPool
+from typing import Callable, List, Optional
 
 import new_majiq as nm
 from new_majiq._run._majiq_args import (
@@ -54,6 +54,13 @@ def run(args: argparse.Namespace) -> None:
     log = get_logger()
     log.info(f"Loading input splicegraph from {args.splicegraph}")
     sg = nm.SpliceGraph.from_zarr(args.splicegraph)
+
+    p: Optional[ThreadPool] = None
+    imap_unordered_fn: Callable = map
+    if len(args.sj) != 1:
+        p = ThreadPool(args.nthreads)
+        imap_unordered_fn = p.imap_unordered
+
     nm.SpliceGraphReads.convert_sj_batch(
         args.sj,
         sg.introns,
@@ -61,10 +68,12 @@ def run(args: argparse.Namespace) -> None:
         args.sg_coverage,
         chunksize=args.chunksize,
         attrs=dict(sg=str(args.splicegraph)),
-        imap_unordered_fn=map
-        if len(args.sj) == 1
-        else mp.Pool(args.nthreads).imap_unordered,
+        imap_unordered_fn=imap_unordered_fn,
     )
+
+    if p:
+        p.close()
+
     return
 
 

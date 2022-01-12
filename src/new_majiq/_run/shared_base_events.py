@@ -8,7 +8,7 @@ Author: Joseph K Aicher
 """
 
 import argparse
-import multiprocessing.dummy as mp
+from multiprocessing.pool import ThreadPool
 from typing import List, Optional
 
 import dask.array as da
@@ -138,7 +138,7 @@ def run(args: argparse.Namespace) -> None:
         )
 
     log.info(f"Saving masks for derived splicegraphs to {args.base_mask}")
-    with mp.Pool(args.nthreads) as p:
+    with ThreadPool(args.nthreads) as p:
         jobs = p.imap_unordered(update_base_mask, range(len(args.sg_derived)))
         for ndx, _ in enumerate(jobs, 1):
             log.info(

@@ -7,7 +7,7 @@ Author: Joseph K Aicher
 """
 
 import argparse
-import multiprocessing.dummy as mp
+from multiprocessing.pool import ThreadPool
 from pathlib import Path
 from typing import List, Optional
 
@@ -126,7 +126,7 @@ def run(args: argparse.Namespace) -> None:
     sg = nm.SpliceGraph.from_zarr(args.base_sg)
 
     # pool for performing build, simplification
-    p = mp.Pool(args.nthreads)
+    p = ThreadPool(args.nthreads)
     sg = do_build_and_simplify(
         sg,
         experiments,

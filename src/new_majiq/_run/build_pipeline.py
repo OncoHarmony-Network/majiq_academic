@@ -8,7 +8,7 @@ Run commands of majiq-build in sequence:
 """
 
 import argparse
-import multiprocessing.dummy as mp
+from multiprocessing.pool import ThreadPool
 from typing import List, Optional
 
 import new_majiq as nm
@@ -179,7 +179,7 @@ def run(args: argparse.Namespace) -> None:
     sj = None  # unload SJ coverage from memory
 
     # create pool for multithreading
-    p = mp.Pool(args.nthreads)
+    p = ThreadPool(args.nthreads)
 
     output_splicegraph = args.output_dir / "splicegraph.zarr"
     log.info(
