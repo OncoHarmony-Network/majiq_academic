@@ -27,12 +27,8 @@ ext_modules = [
         sorted(
             [
                 "src/internals/py/module.cpp",
-                "src/internals/SJIntrons.cpp",
                 "src/internals/SJBinsReads.cpp",
-                "src/internals/PassedJunctions.cpp",
-                "src/internals/SpliceGraph.cpp",
                 "src/internals/GFF3.cpp",
-                "src/internals/TranscriptModels.cpp",
             ]
         ),
         define_macros=[("VERSION_INFO", cpp_version), ("DEBUG",)],
