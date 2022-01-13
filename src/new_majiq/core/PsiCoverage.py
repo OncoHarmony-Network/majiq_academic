@@ -158,7 +158,7 @@ class PsiCoverage(object):
         if df["event_passed"].dtype != bool:
             # for some reason, this is sometimes saved as int8, ensure consistent type
             df["event_passed"] = df["event_passed"].astype(bool)
-        self.df: Final[xr.Dataset] = df
+        self.df: Final[xr.Dataset] = df.transpose(..., "ec_idx", "bootstrap_replicate")
         self.events: Final[xr.Dataset] = events
         return
 
