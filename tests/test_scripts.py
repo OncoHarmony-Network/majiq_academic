@@ -206,6 +206,26 @@ def test_psi_coverage_command(script_runner, batch_group, ignore_first, tmp_path
     return
 
 
+@pytest.mark.parametrize("batch_group", EXPERIMENT_GROUPS)
+def test_sg_coverage_command(script_runner, batch_group, tmp_path):
+    """Test sg-coverage command
+
+    Smoke test of sg-coverage command
+    """
+    group, names = batch_group
+    paths_sj = [get_sj_path(name, strandness="AUTO") for name in names]
+    path_result = str(tmp_path / "result")
+    ret = script_runner.run(
+        "new-majiq",
+        "sg-coverage",
+        get_path(COMBINED_SG),
+        path_result,
+        *paths_sj,
+    )
+    assert ret.success
+    return
+
+
 @pytest.mark.parametrize("min_experiments", [None, 2])
 def test_quantify_command(script_runner, min_experiments, tmp_path):
     """Smoke test for quantify command"""

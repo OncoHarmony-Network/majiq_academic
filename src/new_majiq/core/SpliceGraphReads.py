@@ -47,8 +47,8 @@ class SpliceGraphReads(object):
     ----------
     df: xr.Dataset
         Data variables:
-            + introns_reads[prefix, gi_idx]
-            + junctions_reads[prefix, gj_idx]
+            + introns_reads[gi_idx, prefix]
+            + junctions_reads[gj_idx, prefix]
             + intron_hash[prefix]
             + junction_hash[prefix]
         Coordinates:
@@ -78,7 +78,7 @@ class SpliceGraphReads(object):
             raise ValueError(
                 "SpliceGraphReads.df.junctions_reads must have dimensions (prefix, gj_idx)"
             )
-        self.df: Final[xr.Dataset] = df
+        self.df: Final[xr.Dataset] = df.transpose("gi_idx", "gj_idx", ..., "prefix")
         return
 
     def __repr__(self) -> str:
@@ -242,16 +242,16 @@ class SpliceGraphReads(object):
         """
         hashes_arr = da.empty(len(prefixes), dtype=int, chunks=1)
         introns_arr = da.empty(
-            (len(prefixes), num_introns), dtype=reads_dtype, chunks=(1, chunksize)
+            (num_introns, len(prefixes)), dtype=reads_dtype, chunks=(chunksize, 1)
         )
         junctions_arr = da.empty(
-            (len(prefixes), num_junctions), dtype=reads_dtype, chunks=(1, chunksize)
+            (num_junctions, len(prefixes)), dtype=reads_dtype, chunks=(chunksize, 1)
         )
         # save basic metadata
         xr.Dataset(
             dict(
-                introns_reads=(("prefix", "gi_idx"), introns_arr),
-                junctions_reads=(("prefix", "gj_idx"), junctions_arr),
+                introns_reads=(("gi_idx", "prefix"), introns_arr),
+                junctions_reads=(("gj_idx", "prefix"), junctions_arr),
                 junction_hash=("prefix", hashes_arr),
                 intron_hash=("prefix", hashes_arr),
             ),
@@ -404,12 +404,12 @@ class SpliceGraphReads(object):
         df = xr.Dataset(
             {
                 "junctions_reads": (
-                    ("prefix", "gj_idx"),
-                    np.array([sgreads.junctions_reads]),
+                    ("gj_idx", "prefix"),
+                    np.array(sgreads.junctions_reads[:, np.newaxis], copy=True),
                 ),
                 "introns_reads": (
-                    ("prefix", "gi_idx"),
-                    np.array([sgreads.introns_reads]),
+                    ("gi_idx", "prefix"),
+                    np.array(sgreads.introns_reads[:, np.newaxis], copy=True),
                 ),
                 "junction_hash": ("prefix", [sgreads._junctions.checksum_nodata()]),
                 "intron_hash": ("prefix", [sgreads._introns.checksum_nodata()]),

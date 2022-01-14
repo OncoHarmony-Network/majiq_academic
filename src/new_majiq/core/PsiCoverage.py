@@ -126,11 +126,11 @@ class PsiCoverage(object):
         ----------
         df: xr.Dataset
             Data variables:
-                - event_passed[prefix, ec_idx]
-                - raw_total[prefix, ec_idx]
+                - event_passed[ec_idx, prefix]
+                - raw_total[ec_idx, prefix]
                 - raw_psi[prefix, ec_idx]
-                - bootstrap_total[prefix, ec_idx, bootstrap_replicate]
-                - bootstrap_psi[prefix, ec_idx, bootstrap_replicate]
+                - bootstrap_total[ec_idx, prefix, bootstrap_replicate]
+                - bootstrap_psi[ec_idx, prefix, bootstrap_replicate]
             Coordinates:
                 - lsv_offsets[offset_idx]
                 - prefix[prefix]
@@ -158,7 +158,9 @@ class PsiCoverage(object):
         if df["event_passed"].dtype != bool:
             # for some reason, this is sometimes saved as int8, ensure consistent type
             df["event_passed"] = df["event_passed"].astype(bool)
-        self.df: Final[xr.Dataset] = df.transpose(..., "ec_idx", "bootstrap_replicate")
+        self.df: Final[xr.Dataset] = df.transpose(
+            "ec_idx", "prefix", ..., "bootstrap_replicate"
+        )
         self.events: Final[xr.Dataset] = events
         return
 
@@ -296,12 +298,12 @@ class PsiCoverage(object):
     @cached_property
     def raw_alpha(self) -> xr.DataArray:
         """array(prefix, ec_idx) alpha parameter of raw posterior"""
-        return (self.alpha_prior + self.raw_coverage).where(self.event_passed)
+        return (self.raw_coverage + self.alpha_prior).where(self.event_passed)
 
     @cached_property
     def bootstrap_alpha(self) -> xr.DataArray:
         """array(prefix, ec_idx, bootstrap_replicate) alpha parameter of bootstrapped posterior"""
-        return (self.alpha_prior + self.bootstrap_coverage).where(self.event_passed)
+        return (self.bootstrap_coverage + self.alpha_prior).where(self.event_passed)
 
     @cached_property
     def raw_beta(self) -> xr.DataArray:
@@ -1102,13 +1104,13 @@ class PsiCoverage(object):
         # save events
         events_df.to_zarr(path, mode="w", group=constants.NC_EVENTS, consolidated=False)
         # dims for skeleton
-        raw_dims = ("prefix", "ec_idx")
+        raw_dims = ("ec_idx", "prefix")
         bootstrap_dims = (*raw_dims, "bootstrap_replicate")
         # shapes for skeleton
-        raw_shape = (len(prefixes), events_df.sizes["ec_idx"])
+        raw_shape = (events_df.sizes["ec_idx"], len(prefixes))
         bootstrap_shape = (*raw_shape, num_bootstraps)
         # chunksizes for skeleton
-        raw_chunks = (1, ec_chunksize)
+        raw_chunks = (ec_chunksize, 1)
         bootstrap_chunks = (*raw_chunks, None)
         # arrays for skeleton
         raw_arr = da.empty(raw_shape, dtype=cov_dtype, chunks=raw_chunks)
