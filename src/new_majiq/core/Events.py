@@ -134,6 +134,10 @@ class Events(object):
         """One-past-end index into event connections (ec_idx) for each unique event"""
         return self._events.connection_idx_end
 
+    def ec_idx_slice_for_event(self, e_idx: int) -> slice:
+        """Get slice into event connections (ec_idx) for specified event"""
+        return slice(self.ec_idx_start[e_idx], self.ec_idx_end[e_idx])
+
     @property
     def _gene_offsets(self) -> npt.NDArray[np.uint64]:
         """Offsets array for genes into events"""
@@ -149,9 +153,13 @@ class Events(object):
         """One-past-end index into events (e_idx) for each gene"""
         return self._events.event_idx_end
 
-    def slice_for_gene(self, gene_idx: int) -> slice:
+    def e_idx_slice_for_gene(self, gene_idx: int) -> slice:
         """Get slice into events (e_idx) for specified gene"""
         return slice(self.e_idx_start[gene_idx], self.e_idx_end[gene_idx])
+
+    def slice_for_gene(self, gene_idx: int) -> slice:
+        """Get slice into events (e_idx) for specified gene"""
+        return self.e_idx_slice_for_gene(gene_idx)
 
     @cached_property
     def event_size(self) -> npt.NDArray[np.uint64]:
