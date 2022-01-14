@@ -34,15 +34,28 @@ class Events {
   // underlying connections
   const std::shared_ptr<GeneIntrons> introns_;
   const std::shared_ptr<GeneJunctions> junctions_;
+  const std::shared_ptr<Exons> exons_;
 
-  // indexes for events, for connections that are part of each event
+  // event definitions: ref_exon and type (source vs target)
   const std::vector<Event> events_;
-  const std::vector<size_t> connection_offsets_;
-  // for event connections
-  const std::vector<size_t> connection_event_idx_;  // give connections knowledge of parent event
+
+  // go from genes to events
+  // require that events_ are sorted and unique, start at 0, end at events_.size
+  const std::vector<size_t> gene_idx_offsets_;
+
+  // connection definitions: is intron/junction, index into introns/junctions
   const std::vector<ConnectionIndex> connections_;
 
+  // go from events to connections using offsets
+  // require sorted, start/end at 0/connections_.size(), size=1+events_.size
+  const std::vector<size_t> connection_offsets_;
+
+  // go from connections back to events they belong to
+  const std::vector<size_t> connection_event_idx_;
+
   // get indexes of connections_ into junctions/introns, sorted by contig/region
+  // Used by EventsCoverage to assign coverage in linear sweep over SJ, which
+  // are also sorted by contig/region
   const std::vector<size_t> junction_connection_idx_;
   const std::vector<size_t> intron_connection_idx_;
 
@@ -55,6 +68,7 @@ class Events {
 
   const std::shared_ptr<GeneIntrons>& introns() const { return introns_; }
   const std::shared_ptr<GeneJunctions>& junctions() const { return junctions_; }
+  const std::shared_ptr<Exons>& exons() const { return exons_; }
 
   // index into connections for contig-sorted junctins
   typename std::vector<size_t>::const_iterator
@@ -81,6 +95,12 @@ class Events {
   }
   const GeneIntron& connection_intron(size_t connection_idx) const {
     return (*introns_)[connections_[connection_idx].idx_];
+  }
+  const Exon& event_ref_exon(size_t event_idx) const {
+    return (*exons_)[events_[event_idx].ref_exon_idx_];
+  }
+  const Exon& connection_ref_exon(size_t connection_idx) const {
+    return event_ref_exon(connection_event_idx_[connection_idx]);
   }
 
   // provide templated access into junctions or introns
@@ -119,9 +139,7 @@ class Events {
 
   // get region information from connection_idx
   const KnownGene& connection_gene(size_t connection_idx) const {
-    return is_intron(connection_idx)
-      ? connection_intron(connection_idx).gene
-      : connection_junction(connection_idx).gene;
+    return connection_ref_exon(connection_idx).gene;
   }
   const position_t& connection_start(size_t connection_idx) const {
     return is_intron(connection_idx)
@@ -150,6 +168,9 @@ class Events {
   }
 
   const std::vector<Event>& events() const { return events_; }
+  const std::vector<size_t>& gene_idx_offsets() const {
+    return gene_idx_offsets_;
+  }
   const std::vector<size_t>& connection_offsets() const {
     return connection_offsets_;
   }
@@ -161,9 +182,33 @@ class Events {
   }
 
  private:
-  // either for introns or junctions
+  /**
+   * Get connection indexes corresponding to introns or junctions in unstranded
+   * contig sorted order
+   *
+   * Checks that
+   * - introns/junctions are not null
+   * - connection indexes are valid into introns/junctions
+   * - connection gene matches that of exon
+   *
+   * Assumes that gene_idx_offsets_ already set with GeneOffsetsForEvents,
+   * which checks validity of exon indexes
+   * Assumes that connection_event_idx already set with
+   * ConnectionEventIndexFromOffsets
+   */
   template <bool INTRON>
-  std::vector<size_t> ContigSortedConnectionIndexes() {
+  std::vector<size_t> ContigSortedConnectionIndexes() const {
+    // verify that introns/junctions not null
+    if constexpr(INTRON) {
+      if (introns_ == nullptr) {
+        throw std::invalid_argument("Events given null introns");
+      }
+    } else {
+      if (junctions_ == nullptr) {
+        throw std::invalid_argument("Events given null junctions");
+      }
+    }
+    // function to get intron/junction for specified index
     using ConnectionT = std::conditional_t<INTRON, GeneIntron, GeneJunction>;
     auto get_connection = [this](size_t connection_idx) -> const ConnectionT& {
       if constexpr(INTRON) {
@@ -174,6 +219,7 @@ class Events {
     // get connection_idx matching is_intron
     std::vector<size_t> result;
     for (size_t i = 0; i < num_connections(); ++i) {
+      // check that the connection references a valid intron/junction
       if (is_intron(i) == INTRON) {
         if constexpr(INTRON) {
           if (connections_[i].idx_ >= introns_->size()) {
@@ -186,6 +232,12 @@ class Events {
                 "Events has invalid index into junctions");
           }
         }
+        // check that connection has same gene as corresponding event
+        if (get_connection(i).gene != connection_ref_exon(i).gene) {
+          throw std::invalid_argument(
+              "Events has event/connection with non-matching genes");
+        }
+        // this index has the right type, so track it
         result.push_back(i);
       }
     }
@@ -198,27 +250,75 @@ class Events {
     return result;
   }
 
-  std::vector<size_t> ConnectionEventIndexFromOffsets(
-      const std::vector<size_t>& offsets) {
-    if (offsets.empty()) {
+  /**
+   * Map connections back to events using connection offsets (from events)
+   *
+   * Checks that connection_offsets_ is valid: starts at zero, ends at number
+   * of connections, nondecreasing, and has correct length (1 + events.size)
+   *
+   * Returns vector with same length as connections. Each value corresponds to
+   * the event that connection belongs to
+   */
+  std::vector<size_t> ConnectionEventIndexFromOffsets() const {
+    if (connection_offsets_.size() != 1 + num_events()) {
       throw std::invalid_argument(
-          "Events cannot have empty connection offsets");
-    } else if (offsets[0] != 0) {
+          "Events connection offsets have incorrect size for events");
+    } else if (connection_offsets_[0] != 0) {
       throw std::invalid_argument(
-          "Event connection offsets must start at 0");
+          "Events connection offsets must start at 0");
+    } else if (connection_offsets_.back() != num_connections()) {
+      throw std::invalid_argument(
+          "Events connection offsets must end at number of connections");
     }
-    std::vector<size_t> result(offsets.back());
-    for (size_t i = 0; i < offsets.size() - 1; ++i) {
-      if (offsets[i] > offsets[1 + i]) {
+    std::vector<size_t> result(num_connections());
+    for (size_t i = 0; i < num_events(); ++i) {
+      if (connection_offsets_[i] > connection_offsets_[1 + i]
+          || connection_offsets_[1 + i] > result.size()) {
         throw std::invalid_argument(
-            "Event connection offsets must be nondecreasing (1)");
-      } else if (offsets[1 + i] > result.size()) {
-        // we know that last offset is less than offsets[1 + i]
-        throw std::invalid_argument(
-            "Event connection offsets must be nondecreasing (2)");
+            "Event connection offsets must be nondecreasing");
       }
-      std::fill(
-          result.begin() + offsets[i], result.begin() + offsets[1 + i], i);
+      std::fill(result.begin() + connection_offsets_[i],
+          result.begin() + connection_offsets_[1 + i], i);
+    }
+    return result;
+  }
+
+  /**
+   * Check that events are in sorted order, use exons to get offsets for genes
+   */
+  static std::vector<size_t> GeneOffsetsForEvents(
+      const std::vector<Event>& events,
+      const std::shared_ptr<Exons>& exons_ptr) {
+    // get exons events are defined over
+    if (exons_ptr == nullptr) {
+      throw std::invalid_argument("Events has null exons");
+    }
+    const Exons& exons = *exons_ptr;
+    const size_t num_genes = exons.parents()->size();
+
+    // offsets over genes must have length 1 + number of genes
+    std::vector<size_t> result(1 + num_genes);
+
+    // check that events are sorted and valid, update offsets
+    size_t cur_gene_idx = 0;
+    for (size_t i = 0; i < events.size(); ++i) {
+      const size_t ref_exon_idx = events[i].ref_exon_idx_;
+      if (ref_exon_idx >= exons.size()) {
+        throw std::invalid_argument("Events given invalid ref_exon_idx");
+      }
+      const size_t new_gene_idx = exons[ref_exon_idx].gene.idx_;
+      // by construction of Exons, cur_gene_idx is valid
+      for (; cur_gene_idx < new_gene_idx; ++cur_gene_idx) {
+        result[1 + cur_gene_idx] = i;
+      }
+      // validate that events are sorted
+      if (i > 0 && !(events[i - 1] < events[i])) {
+        throw std::invalid_argument("Events are not in sorted order");
+      }
+    }
+    // fill in remaining offsets
+    for (; cur_gene_idx < num_genes; ++cur_gene_idx) {
+      result[1 + cur_gene_idx] = events.size();
     }
     return result;
   }
@@ -231,21 +331,30 @@ class Events {
       std::vector<ConnectionIndex>&& connections)
       : introns_{introns},
         junctions_{junctions},
+        exons_{introns_->connected_exons()},
+        // event definitions without checking anything
         events_{std::move(events)},
-        connection_offsets_{std::move(connection_offsets)},
-        connection_event_idx_{
-          ConnectionEventIndexFromOffsets(connection_offsets_)},
+        // check exons not null, events sorted, valid exon indexes
+        gene_idx_offsets_{GeneOffsetsForEvents(events_, exons_)},
+        // connection/offset definitions without checking anything
         connections_{std::move(connections)},
+        connection_offsets_{std::move(connection_offsets)},
+        // checks that connection_offsets_ defined appropriately
+        connection_event_idx_{ConnectionEventIndexFromOffsets()},
+        // introns/junctions not null, connections valid, have matching genes
         junction_connection_idx_{ContigSortedConnectionIndexes<false>()},
         intron_connection_idx_{ContigSortedConnectionIndexes<true>()} {
-    if (introns == nullptr) {
-      throw std::runtime_error("Events given null introns");
-    } else if (junctions == nullptr) {
-      throw std::runtime_error("Events given null introns");
-    } else if (introns->parents() != junctions->parents()) {
-      throw std::runtime_error("Event junctions/introns do not share genes");
+    // recall that exons_ is defined using introns_->connected_exons()
+    // this also checks that they share genes because they can only have
+    // connected exons set if they share genes with exons
+    if (exons_ != junctions_->connected_exons()) {
+      throw std::runtime_error("Events junctions/introns do not share exons");
     }
   }
+  Events(const Events&) = default;
+  Events(Events&&) = default;
+  Events& operator=(const Events&) = default;
+  Events& operator=(Events&&) = default;
 };
 
 

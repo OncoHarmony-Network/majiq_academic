@@ -99,6 +99,9 @@ inline void init_Events(pyEvents_t& pyEvents) {
     .def_property_readonly("junctions", &Events::junctions,
         pybind11::call_guard<pybind11::gil_scoped_release>(),
         "underlying junctions")
+    .def_property_readonly("exons", &Events::exons,
+        pybind11::call_guard<pybind11::gil_scoped_release>(),
+        "underlying exons")
     .def_property_readonly("ref_exon_idx",
         [](pybind11::object& self_obj) {
         Events& self = self_obj.cast<Events&>();
@@ -132,6 +135,25 @@ inline void init_Events(pyEvents_t& pyEvents) {
         return ArrayFromOffsetsVector<size_t>(
             self.connection_offsets(), false, self_obj); },
         "One after last index into event connections for each event")
+    .def_property_readonly("_gene_offsets",
+        [](pybind11::object& self_obj) {
+        Events& self = self_obj.cast<Events&>();
+        return ArrayFromVectorAndOffset<size_t, size_t>(
+            self.gene_idx_offsets(), 0, self_obj);
+        },
+        "Raw offsets for genes into events")
+    .def_property_readonly("event_idx_start",
+        [](pybind11::object& self_obj) {
+        Events& self = self_obj.cast<Events&>();
+        return ArrayFromOffsetsVector<size_t>(
+            self.gene_idx_offsets(), true, self_obj); },
+        "First index into gene events for each gene")
+    .def_property_readonly("event_idx_end",
+        [](pybind11::object& self_obj) {
+        Events& self = self_obj.cast<Events&>();
+        return ArrayFromOffsetsVector<size_t>(
+            self.gene_idx_offsets(), false, self_obj); },
+        "One after last index into gene events for each gene")
     .def_property_readonly("is_intron",
         [](pybind11::object& self_obj) {
         Events& self = self_obj.cast<Events&>();

@@ -87,9 +87,7 @@ class Events(object):
     @property
     def exons(self) -> Exons:
         """:py:class:`Exons` over which events defined"""
-        exons = self.junctions.connected_exons
-        assert isinstance(exons, Exons), "Events appears to not reference exons"
-        return exons
+        return Exons(self._events.exons)
 
     @property
     def genes(self) -> Genes:
@@ -135,6 +133,25 @@ class Events(object):
     def ec_idx_end(self) -> npt.NDArray[np.uint64]:
         """One-past-end index into event connections (ec_idx) for each unique event"""
         return self._events.connection_idx_end
+
+    @property
+    def _gene_offsets(self) -> npt.NDArray[np.uint64]:
+        """Offsets array for genes into events"""
+        return self._events._gene_offsets
+
+    @property
+    def e_idx_start(self) -> npt.NDArray[np.uint64]:
+        """First index into events (e_idx) for each gene"""
+        return self._events.event_idx_start
+
+    @property
+    def e_idx_end(self) -> npt.NDArray[np.uint64]:
+        """One-past-end index into events (e_idx) for each gene"""
+        return self._events.event_idx_end
+
+    def slice_for_gene(self, gene_idx: int) -> slice:
+        """Get slice into events (e_idx) for specified gene"""
+        return slice(self.e_idx_start[gene_idx], self.e_idx_end[gene_idx])
 
     @cached_property
     def event_size(self) -> npt.NDArray[np.uint64]:
