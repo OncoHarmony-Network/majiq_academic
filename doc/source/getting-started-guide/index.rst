@@ -15,3 +15,4 @@ It is designed to introduce the main concepts for new users.
    quick-overview
    faq
    builder
+   statistics
