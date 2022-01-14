@@ -14,6 +14,8 @@
 #include <algorithm>
 #include <utility>
 #include <memory>
+#include <sstream>
+#include <string>
 
 #include "GeneRegion.hpp"
 #include "Regions.hpp"
@@ -34,6 +36,12 @@ struct Exon : detail::GeneRegion<ClosedInterval, ClosedInterval> {
   inline ClosedInterval& annotated_coordinates() noexcept { return data; }
   inline const ClosedInterval& annotated_coordinates() const noexcept {
     return data;
+  }
+  // event id for this exon with given event type
+  std::string event_id(const EventType event_type) const {
+    std::ostringstream oss;
+    oss << gene.get() << ':' << event_type << ':' << coordinates;
+    return oss.str();
   }
 
   // constructors

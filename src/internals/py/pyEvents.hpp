@@ -116,6 +116,23 @@ inline void init_Events(pyEvents_t& pyEvents) {
         return ArrayFromVectorAndOffset<std::array<char, 1>, Event>(
             self.events(), offset, self_obj); },
         "Event type")
+    .def("event_id",
+        [](const Events& self, pybind11::array_t<size_t> _event_idx) {
+        if (_event_idx.ndim() != 1) {
+          throw std::invalid_argument("event_idx must be 1D");
+        }
+        pybind11::list result{_event_idx.shape(0)};
+        auto event_idx = _event_idx.unchecked<1>();
+        for (size_t i = 0; i < result.size(); ++i) {
+          if (event_idx(i) >= self.num_events()) {
+            throw std::invalid_argument("event_idx has values out of range");
+          }
+          result[i] = self.event_id(event_idx(i));
+        }
+        return result;
+        },
+        "List of event_id for specified events",
+        pybind11::arg("event_idx"))
     .def_property_readonly("_offsets",
         [](pybind11::object& self_obj) {
         Events& self = self_obj.cast<Events&>();

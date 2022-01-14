@@ -277,10 +277,7 @@ class ExonConnections {
       && (event_size(event) > 1) && passed(event);
   }
   std::string id(const Event& event) const {
-    const Exon& x = (*exons_)[event.ref_exon_idx_];
-    std::ostringstream oss;
-    oss << x.gene.get() << ':' << event.type_ << ':' << x.coordinates;
-    return oss.str();
+    return (*exons_)[event.ref_exon_idx_].event_id(event.type_);
   }
   // non-simplified junction coordinates from event reference exon in direction
   std::vector<position_t> ref_splicesites(const Event& event) const {

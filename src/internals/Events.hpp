@@ -102,6 +102,9 @@ class Events {
   const Exon& connection_ref_exon(size_t connection_idx) const {
     return event_ref_exon(connection_event_idx_[connection_idx]);
   }
+  std::string event_id(size_t event_idx) const {
+    return event_ref_exon(event_idx).event_id(events_[event_idx].type_);
+  }
 
   // provide templated access into junctions or introns
   template <bool IS_INTRON>
