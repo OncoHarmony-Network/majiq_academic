@@ -15,6 +15,10 @@ dependencies:
   - dask>=2.11
   - matplotlib
   - ipython
+  - sphinx-autosummary-accessors
+  - sphinx_rtd_theme
+  - nbsphinx
+  - sphinxcontrib-programoutput
   - pytest
   - pytest-console-scripts
   - mypy
