@@ -1289,30 +1289,35 @@ class PsiCoverage(object):
             Sum coverage over prefixes, with passed being defined over group
             filters
         """
-        event_passed = self.passed_min_experiments(min_experiments_f)
-        raw_total = self.raw_total.sum("prefix")
-        raw_coverage = (self.raw_total * self.raw_psi).sum("prefix")
-        raw_psi = (raw_coverage / raw_total.where(raw_total > 0)).fillna(0)
-        bootstrap_total = self.bootstrap_total.sum("prefix")
-        bootstrap_coverage = (self.bootstrap_total * self.bootstrap_psi).sum("prefix")
-        bootstrap_psi = (
-            bootstrap_coverage / bootstrap_total.where(bootstrap_total > 0)
-        ).fillna(0)
-        df = xr.Dataset(
-            data_vars=dict(
-                event_passed=event_passed,
-                raw_total=raw_total,
-                raw_psi=raw_psi,
-                bootstrap_total=bootstrap_total,
-                bootstrap_psi=bootstrap_psi,
-            ),
-            coords=dict(
-                lsv_offsets=self.lsv_offsets,
-                event_size=self.event_size,
-                lsv_idx=self.lsv_idx,
-            ),
-            attrs=dict(original_prefix=self.prefixes),
-        ).expand_dims(prefix=[new_prefix])
+        if self.num_prefixes > 1:
+            event_passed = self.passed_min_experiments(min_experiments_f)
+            raw_total = self.raw_total.sum("prefix")
+            raw_coverage = (self.raw_total * self.raw_psi).sum("prefix")
+            raw_psi = (raw_coverage / raw_total.where(raw_total > 0)).fillna(0)
+            bootstrap_total = self.bootstrap_total.sum("prefix")
+            bootstrap_coverage = (self.bootstrap_total * self.bootstrap_psi).sum(
+                "prefix"
+            )
+            bootstrap_psi = (
+                bootstrap_coverage / bootstrap_total.where(bootstrap_total > 0)
+            ).fillna(0)
+            df = xr.Dataset(
+                data_vars=dict(
+                    event_passed=event_passed,
+                    raw_total=raw_total,
+                    raw_psi=raw_psi,
+                    bootstrap_total=bootstrap_total,
+                    bootstrap_psi=bootstrap_psi,
+                ),
+                coords=dict(
+                    lsv_offsets=self.lsv_offsets,
+                    event_size=self.event_size,
+                    lsv_idx=self.lsv_idx,
+                ),
+                attrs=dict(original_prefix=self.prefixes),
+            ).expand_dims(prefix=[new_prefix])
+        else:
+            df = self.df.assign_coords(prefix=[new_prefix])
         return PsiCoverage(df, self.events)
 
     def mask_events(self, passed: xr.DataArray) -> "PsiCoverage":
