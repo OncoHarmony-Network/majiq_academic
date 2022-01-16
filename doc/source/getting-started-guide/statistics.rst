@@ -1,7 +1,7 @@
 .. _statistics:
 
 What statistic should I use for HET differential splicing analysis?
-==========================
+===================================================================
 
 MAJIQ HET analysis includes two types of statistics used to identify differentially spliced LSVs between two conditions: (1) The difference between the medians of the estimated E[PSI] of all samples in each condition (2) A test statistic yielding a matching p-value for a statistical test run over all the estimated E[PSI] against a null distribution. There are several statistical tests implemented in the HET package: Wilcoxon, TNOM, Info, and t-test.
 
