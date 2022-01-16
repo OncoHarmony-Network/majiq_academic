@@ -20,3 +20,5 @@ rna_majiq_meta.egg-info
 
 /doc/build
 /doc/source/generated
+
+.ipynb_checkpoints

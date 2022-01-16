@@ -33,7 +33,14 @@ copyright = '2020, University of Pennsylvania'
 # ones.
 extensions = [
     'sphinx.ext.autosectionlabel',
+    'nbsphinx',
 ]
+
+
+# nbsphinx options
+nbsphinx_timeout = 600
+nbsphinx_execute = "always"
+
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
