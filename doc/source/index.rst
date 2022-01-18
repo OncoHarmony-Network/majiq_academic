@@ -11,6 +11,7 @@ splicing.
    Getting started <getting-started-guide/index>
    Gallery <gallery>
    Whats new <whats-new>
+   Command Builder tool <commandbuilder>
 
 
 
