@@ -71,8 +71,10 @@ def run(args: argparse.Namespace) -> None:
     genes = nm.Genes.from_zarr(all_inputs[0])
     accumulator = nm.GeneJunctionsAccumulator(genes)
     for p in args.make_annotated:
+        log.debug("Adding junctions (as annotated) from %s", p)
         accumulator.add(nm.GeneJunctions.from_zarr(p, genes=genes), make_annotated=True)
     for p in args.keep_denovo:
+        log.debug("Adding junctions from %s", p)
         accumulator.add(
             nm.GeneJunctions.from_zarr(p, genes=genes), make_annotated=False
         )
@@ -84,28 +86,32 @@ def run(args: argparse.Namespace) -> None:
         log.info("Creating matching empty introns")
         introns = exons.empty_introns()
     else:
-        log.info("Defining new potential introns between exons")
+        log.info("Combining input introns")
+        log.debug("Defining potential introns for annotated and updated exons")
         introns = exons.potential_introns(True)  # all start simplified
         potential_introns = exons.get_annotated().potential_introns(True)
-        log.info("Updating intron flags using input splicegraphs")
         # propagate intron flags within annotated exon boundaries
         for p in all_inputs:
+            log.debug(
+                "Propagate intron flags between annotated exon boundaries from %s", p
+            )
             potential_introns.update_flags_from(nm.GeneIntrons.from_zarr(p, genes))
         # propagate back to introns between updated exon boundaries
+        log.debug("Propagate intron flags between updated exon boundaries")
         potential_introns = potential_introns.filter_passed(
             keep_annotated=True,
             discard_denovo=args.introns == IntronsType.ANNOTATED_INTRONS,
         )
         introns.update_flags_from(potential_introns)
         del potential_introns  # clear from memory, no longer necessary
-        log.info("Filtering introns to those passing thresholds")
+        log.debug("Filtering introns to those passing thresholds")
         introns = introns.filter_passed(
             keep_annotated=True,
             discard_denovo=args.introns == IntronsType.ANNOTATED_INTRONS,
         )
     log.info("Creating final combined splicegraph")
     sg = nm.SpliceGraph.from_components(genes.contigs, genes, exons, junctions, introns)
-    log.info(f"Saving updated splicegraph to {args.out_sg}")
+    log.info("Saving updated %s to %s", sg, args.out_sg)
     sg.to_zarr(args.out_sg)
     return
 
