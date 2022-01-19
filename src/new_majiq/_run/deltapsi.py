@@ -13,9 +13,6 @@ import sys
 from enum import Enum
 from typing import Any, Dict, List, Optional
 
-import pandas as pd
-from dask.distributed import progress
-
 import new_majiq as nm
 from new_majiq._run._majiq_args import (
     check_nonnegative_factory,
@@ -133,16 +130,6 @@ def run(args: argparse.Namespace) -> None:
     metadata["group_sizes"] = group_sizes
     log.info(f"Comparing {args.names[0]}({psi1}) vs {args.names[1]}({psi2})")
 
-    # initialize list of data frames that will be concatenated (on columns)
-    concat_df: List[pd.DataFrame] = list()
-
-    # did we have a splicegraph to work with? add annotations...
-    if args.splicegraph:
-        log.info(f"Loading splicegraph from {args.splicegraph}")
-        sg = nm.SpliceGraph.from_zarr(args.splicegraph)
-        events = psi1.get_events(sg.introns, sg.junctions)
-        concat_df.append(events.ec_dataframe)
-
     prior = nm.DPsiPrior()
     if args.prior_type == DPsiPriorType.DEFAULT_PRIOR:
         log.info(f"Using default deltapsi prior {prior}")
@@ -161,7 +148,7 @@ def run(args: argparse.Namespace) -> None:
         log.info(f"Using deltapsi prior {prior}")
 
     # dataset of quantifications I want
-    log.info("Performing quantification")
+    log.debug("Preparing quantification")
     deltapsi = nm.DeltaPsi(
         psi1,
         psi2,
@@ -171,29 +158,31 @@ def run(args: argparse.Namespace) -> None:
         name1=args.names[0],
         name2=args.names[1],
     )
-    ds_quant = deltapsi.dataset(
+    log.info("Computing quantifications to table")
+    deltapsi_voila = deltapsi.dataset()
+
+    sg: Optional[nm.SpliceGraph] = None
+    if args.splicegraph:
+        log.debug("Loading splicegraph from %s", args.splicegraph)
+        sg = nm.SpliceGraph.from_zarr(args.splicegraph)
+
+    df = deltapsi_voila.to_dataframe(
+        sg=sg,
         changing_threshold=args.changing_threshold,
         nonchanging_threshold=args.nonchanging_threshold,
+        show_progress=args.show_progress,
     )
-    if args.show_progress:
-        ds_quant = ds_quant.persist()
-        progress(*(x.data for x in ds_quant.variables.values() if x.chunks))
-    ds_quant = ds_quant.load()
 
-    log.info("Reshaping resulting quantifications to table")
-    concat_df.append(ds_quant.drop_vars("passed").to_dataframe())
     try:
         output_name = args.output_tsv.name
     except AttributeError:
         output_name = args.output_tsv
-    log.info(f"Writing metadata to {output_name}")
+    log.info("Writing metadata to %s", output_name)
     metadata_json = json.dumps(metadata, sort_keys=True, indent=4)
     args.output_tsv.write("# {}\n".format(metadata_json.replace("\n", "\n# ")))
-    log.info(f"Writing table to {output_name}")
+    log.info("Writing table to %s", output_name)
     (
-        pd.concat(concat_df, axis=1, join="inner")
-        # remove rows where no input passed
-        .loc[ds_quant["passed"].values]
+        df
         # manually format probability columns
         .pipe(
             lambda df: df.assign(

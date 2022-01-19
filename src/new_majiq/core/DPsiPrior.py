@@ -73,7 +73,9 @@ class DPsiPrior(object):
             dims="pmf_bin",
         )
         cdf = xr.dot(
-            xr.apply_ufunc(beta_dist.cdf, endpoints, self.a, self.a, -1, 2), self.pmix
+            xr.apply_ufunc(beta_dist.cdf, endpoints, self.a, self.a, -1, 2),
+            self.pmix,
+            dims=["mixture_component"],
         )
         pmf = (
             cdf.isel(pmf_bin=slice(1, None)) - cdf.isel(pmf_bin=slice(None, -1))
@@ -257,7 +259,13 @@ class DPsiPrior(object):
         if show_progress and dpsi.chunks:
             dpsi = dpsi.persist()
             progress(dpsi.data)
-        dpsi = dpsi.load().dropna("ec_idx").groupby("lsv_idx").first()
+        dpsi = (
+            dpsi.load()
+            .assign_coords(lsv_idx=psi1.lsv_idx)
+            .dropna("ec_idx")
+            .groupby("lsv_idx")
+            .first()
+        )
         return dpsi
 
     @staticmethod

@@ -9,7 +9,7 @@ Author: Joseph K Aicher
 """
 
 from functools import cached_property
-from typing import Final
+from typing import Final, cast
 
 import numpy as np
 import xarray as xr
@@ -99,6 +99,11 @@ class PMFSummaries(object):
         """variance of position (between bins, and within bins)"""
         mean_variance_per_bin = self.f_expectation(self.p, self.variance_per_bin)
         return mean_variance_per_bin + self.variance_across_bins
+
+    @cached_property
+    def standard_deviation(self) -> xr.DataArray:
+        """standard deviation (sqrt of variance)"""
+        return cast(xr.DataArray, np.sqrt(self.variance))
 
     def interval_probability(self, a: float, b: float) -> xr.DataArray:
         """compute probability of value on interval [a, b]"""

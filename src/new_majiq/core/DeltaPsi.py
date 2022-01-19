@@ -7,7 +7,7 @@ Author: Joseph K Aicher
 """
 
 from functools import cached_property
-from typing import Any, Dict, Final, List, Union, cast
+from typing import TYPE_CHECKING, Final, cast
 
 import numpy as np
 import xarray as xr
@@ -19,6 +19,9 @@ import new_majiq.constants as constants
 from .DPsiPrior import DPsiPrior
 from .PMFSummaries import PMFSummaries
 from .PsiCoverage import PsiCoverage
+
+if TYPE_CHECKING:
+    from ..voila.DeltaPsiDataset import DeltaPsiDataset
 
 
 class DeltaPsi(object):
@@ -176,10 +179,12 @@ class DeltaPsi(object):
 
     @cached_property
     def discrete_posterior(self) -> PMFSummaries:
+        """:class:`PMFSummaries` for dpsi posterior from approximated PSI posteriors"""
         return PMFSummaries(cast(xr.DataArray, np.exp(self.discrete_logposterior)))
 
     @cached_property
     def discrete_bootstrap_posterior(self) -> PMFSummaries:
+        """:class:`PMFSummaries` for average bootstrapped dpsi posteriors"""
         return PMFSummaries(
             cast(xr.DataArray, np.exp(self.discrete_bootstrap_logposterior))
         )
@@ -198,14 +203,17 @@ class DeltaPsi(object):
 
     @property
     def discrete_bootstrap_posterior_mean(self) -> xr.DataArray:
+        """Posterior mean on deltapsi from discrete_bootstrap_posterior"""
         return self.discrete_bootstrap_posterior.mean
 
     @property
     def discrete_bootstrap_posterior_variance(self) -> xr.DataArray:
+        """Posterior variance on deltapsi from discrete_bootstrap_posterior"""
         return self.discrete_bootstrap_posterior.variance
 
     @property
     def discrete_bootstrap_posterior_std(self) -> xr.DataArray:
+        """Posterior standard deviaion on deltapsi from discrete_bootstrap_posterior"""
         return cast(xr.DataArray, np.sqrt(self.discrete_bootstrap_posterior_variance))
 
     def probability_changing(
@@ -239,79 +247,19 @@ class DeltaPsi(object):
         )
 
     def dataset(
-        self,
-        changing_threshold: float = constants.DEFAULT_DPSI_CHANGING_THRESHOLD,
-        nonchanging_threshold: float = constants.DEFAULT_DPSI_NONCHANGING_THRESHOLD,
-        psi_dataset_kwargs: Dict[str, Any] = dict(),
-    ) -> xr.Dataset:
-        """Extract psi/dpsi statistics as xr.Dataset
+        self, compute: bool = False, show_progress: bool = False
+    ) -> "DeltaPsiDataset":
+        """Reduce to :class:`DeltaPsiDataset` used for VOILA visualization
 
         Parameters
         ----------
-        changing_threshold: float
-            threshold t for P(abs(dPSI) >= t), the posterior probability that
-            dPSI is changing by more than this amount
-        nonchanging_threshold: float
-            threshold t for P(abs(dPSI) <= t), the posterior probability that
-            dPSI is changing by less than this amount
-        use_posterior: str
-            Compute dPSI statistics using updated "smooth" approach for
-            inference, "legacy" approach from v2, or "both". Otherwise, raise
-            error
-        psi_dataset_kwargs: Dict[str, Any]
-            Change parameters passed into psi1/2.dataset() to control
-            PSI-specific variables returned
-
-        Notes
-        -----
-        DeltaPsi computations use the discrete bootstrap posterior, which
-        performs deltapsi inference on each bootstrap replicate separately,
-        then averages the deltapsi posterior distribution afterwards.
-        This is the legacy approach used in v2.
-
-        While :class:`DeltaPsi` enables computation with the approximate
-        posterior distribution (used for PSI and Heterogen computations), which
-        could be faster, this averages the bootstrap replicates before rather
-        than after deltapsi inference.
-        This means that the prior will unequally weight bootstrap replicates
-        towards those that agree more with the prior, which is not desired.
+        compute: bool
+            If true, eagerly perform inference of deltapsi posteriors
+        show_progress: bool
+            If `compute` is true, show progress bar in Dask
         """
-        # list of arrays/datasets to combine
-        combine_ds: List[Union[xr.DataArray, xr.Dataset]] = [
-            xr.Dataset(
-                {
-                    "dpsi_mean": self.discrete_bootstrap_posterior_mean,
-                    "dpsi_std": self.discrete_bootstrap_posterior_std,
-                    "probability_changing": self.bootstrap_probability_changing(
-                        changing_threshold
-                    ),
-                    "probability_nonchanging": self.bootstrap_probability_nonchanging(
-                        nonchanging_threshold
-                    ),
-                    "passed": self.passed,
-                }
-            ).reset_coords(drop=True)
-        ]
-        # get PSI datasets
-        combine_ds.append(
-            self.psi1.dataset(**psi_dataset_kwargs)
-            .drop_vars("any_passed")
-            .squeeze("prefix", drop=True)
-            .pipe(
-                lambda ds: ds.rename(
-                    {k: f"{self.name1}_{k}" for k in ds.variables.keys()}
-                )
-            )
+        from ..voila.DeltaPsiDataset import DeltaPsiDataset
+
+        return DeltaPsiDataset.from_deltapsi(
+            self, compute=compute, show_progress=show_progress
         )
-        combine_ds.append(
-            self.psi2.dataset(**psi_dataset_kwargs)
-            .drop_vars("any_passed")
-            .squeeze("prefix", drop=True)
-            .pipe(
-                lambda ds: ds.rename(
-                    {k: f"{self.name2}_{k}" for k in ds.variables.keys()}
-                )
-            )
-        )
-        # get deltapsi dataset
-        return xr.merge(combine_ds, compat="override", join="exact")
