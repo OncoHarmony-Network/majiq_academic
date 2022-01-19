@@ -8,10 +8,10 @@ pipelines:
           caches:
             - pip
           script:
-            - apt-get update && apt-get -y install libhts-dev
+            - apt-get update && apt-get -y install libhts-dev pandoc
 
             - pip install .
-            - pip install sphinx sphinx_rtd_theme
+            - pip install ".[docs]"
             - cd doc
             - make clean
             - make html
