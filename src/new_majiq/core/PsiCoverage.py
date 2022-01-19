@@ -216,7 +216,7 @@ class PsiCoverage(object):
     @property
     def event_passed(self) -> xr.DataArray:
         """array(prefix, ec_idx) indicating if event passed"""
-        return self.df["event_passed"]
+        return cast(xr.DataArray, self.df["event_passed"].reset_coords(drop=True))
 
     @property
     def event_size(self) -> xr.DataArray:
@@ -225,17 +225,17 @@ class PsiCoverage(object):
         Number of connections belonging to event for each event connection,
         which is used to set the parameters for the prior distribution
         """
-        return self.df["event_size"]
+        return cast(xr.DataArray, self.df["event_size"].reset_coords(drop=True))
 
     @property
     def lsv_offsets(self) -> xr.DataArray:
         """array(offset_idx) offsets for events into ec_idx"""
-        return self.df["lsv_offsets"]
+        return cast(xr.DataArray, self.df["lsv_offsets"].reset_coords(drop=True))
 
     @property
     def lsv_idx(self) -> xr.DataArray:
         """array(ec_idx) index identifying event it belongs to"""
-        return self.df["lsv_idx"]
+        return cast(xr.DataArray, self.df["lsv_idx"].reset_coords(drop=True))
 
     @property
     def raw_total(self) -> xr.DataArray:
@@ -244,7 +244,7 @@ class PsiCoverage(object):
         py:class:`xr.DataArray` (prefix, ec_idx) raw total reads over event
         (i.e. sum over all event connections per event)
         """
-        return self.df["raw_total"]
+        return cast(xr.DataArray, self.df["raw_total"].reset_coords(drop=True))
 
     @property
     def raw_psi(self) -> xr.DataArray:
@@ -253,7 +253,7 @@ class PsiCoverage(object):
         py:class:`xr.DataArray` (prefix, ec_idx) percentage of raw_total for
         connection (maximum likelihood estimate of PSI over raw reads)
         """
-        return self.df["raw_psi"]
+        return cast(xr.DataArray, self.df["raw_psi"].reset_coords(drop=True))
 
     @property
     def bootstrap_total(self) -> xr.DataArray:
@@ -263,7 +263,7 @@ class PsiCoverage(object):
         bootstrapped total reads over event (i.e. sum over all event
         connections per event)
         """
-        return self.df["bootstrap_total"]
+        return cast(xr.DataArray, self.df["bootstrap_total"].reset_coords(drop=True))
 
     @property
     def bootstrap_psi(self) -> xr.DataArray:
@@ -273,7 +273,7 @@ class PsiCoverage(object):
         percentage of bootstrap_total for connection (maximum likelihood
         estimate of PSI over raw reads)
         """
-        return self.df["bootstrap_psi"]
+        return cast(xr.DataArray, self.df["bootstrap_psi"].reset_coords(drop=True))
 
     @cached_property
     def raw_coverage(self) -> xr.DataArray:
