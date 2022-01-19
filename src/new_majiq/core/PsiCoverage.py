@@ -1373,17 +1373,9 @@ class PsiCoverage(object):
 
     def dataset(
         self,
-        properties: Sequence[str] = [
-            "raw_psi_mean",
-            "raw_psi_std",
-            "bootstrap_psi_mean",
-            "bootstrap_psi_std",
-            "bootstrap_psi_mean_legacy",
-            "raw_coverage",
-        ],
+        properties: Sequence[str] = constants.DEFAULT_PSI_PROPERTIES,
         quantiles: Sequence[float] = list(),
         psibins: Optional[int] = None,
-        use_posterior: str = "approximation",
     ) -> xr.Dataset:
         """Extract selected properties into single :py:class:`xr.Dataset`
 
@@ -1396,14 +1388,17 @@ class PsiCoverage(object):
         psibins: Optional[int]
             If specified, calculate discretized approximation to posterior
             distribution with this many bins
-        use_posterior: str
-            Compute quantiles/pmf with "bootstrap" or "approximation" posterior
-            distribution (or "both"). Otherwise, raise error.
+
+        Notes
+        -----
+        quantiles and psibins computations use the approximate posterior
+        distribution Beta(approximate_alpha, approximate_beta) because:
+
+        - by default, it's 30 times faster than using the bootstrap mixture,
+        - for high coverage events, the bootstrap distribution is discrete (for
+          each bootstrap replicate), so the approximate distribution is a
+          better representation of our desired model of variability in PSI.
         """
-        if use_posterior not in constants.PSICOV_POSTERIORS:
-            raise ValueError(
-                f"{use_posterior = } must be one of {constants.PSICOV_POSTERIORS}"
-            )
         # initialize variables to return with noting if any experiment passed
         quantify_vars: Dict[str, xr.DataArray] = {
             "any_passed": self.event_passed.any("prefix")
@@ -1411,23 +1406,8 @@ class PsiCoverage(object):
         # add properties
         for x in properties:
             quantify_vars[x] = getattr(self, x)
-        if len(quantiles) or psibins:
-            if len(quantiles):
-                if use_posterior in constants.PSICOV_APPROX:
-                    quantify_vars["approx_psi_quantile"] = self.approximate_quantile(
-                        quantiles
-                    )
-                if use_posterior in constants.PSICOV_BOOTSTRAP:
-                    quantify_vars["bootstrap_psi_quantile"] = self.bootstrap_quantile(
-                        quantiles
-                    )
-            if psibins:
-                if use_posterior in constants.PSICOV_APPROX:
-                    quantify_vars["approx_psi_pmf"] = self.approximate_discretized_pmf(
-                        psibins
-                    )
-                if use_posterior in constants.PSICOV_BOOTSTRAP:
-                    quantify_vars["bootstrap_psi_pmf"] = self.bootstrap_discretized_pmf(
-                        psibins
-                    )
+        if len(quantiles):
+            quantify_vars["psi_quantile"] = self.approximate_quantile(quantiles)
+        if psibins:
+            quantify_vars["psi_pmf"] = self.approximate_discretized_pmf(psibins)
         return xr.Dataset(quantify_vars).reset_coords(drop=True)  # type: ignore[arg-type]

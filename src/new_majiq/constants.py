@@ -8,7 +8,7 @@ Author: Joseph K Aicher
 
 import string
 from enum import Enum
-from typing import Dict, Final, List, Set
+from typing import Dict, Final, List, Sequence, Set
 
 from new_majiq.beta_mixture import stats_available as _stats_available
 from new_majiq.internals import ExperimentStrandness, ExperimentThresholds
@@ -132,17 +132,12 @@ ALLOWED_GROUP_NAME_CHARS: Final[Set[str]] = {
 DEFAULT_MOCCASIN_RUV_MAX_EVENTS: Final[int] = 10000
 DEFAULT_MOCCASIN_RUV_MAX_FACTORS: Final[int] = 1
 
-PSICOV_APPROX: Final[Set[str]] = {"approximation", "both"}
-PSICOV_BOOTSTRAP: Final[Set[str]] = {"bootstrap", "both"}
-PSICOV_POSTERIORS: Final[Set[str]] = PSICOV_APPROX | PSICOV_BOOTSTRAP
-DEFAULT_PSICOV_POSTERIOR: Final[str] = "approximation"
-assert DEFAULT_PSICOV_POSTERIOR in PSICOV_POSTERIORS
-
-DPSI_SMOOTH: Final[Set[str]] = {"smooth", "both"}
-DPSI_LEGACY: Final[Set[str]] = {"legacy", "both"}
-DPSI_POSTERIORS: Final[Set[str]] = DPSI_SMOOTH | DPSI_LEGACY
-DEFAULT_DPSI_POSTERIOR: Final[str] = "smooth"
-assert DEFAULT_DPSI_POSTERIOR in DPSI_POSTERIORS
+DEFAULT_PSI_PROPERTIES: Final[Sequence[str]] = [
+    "raw_psi_mean",
+    "raw_psi_std",
+    "bootstrap_psi_std",
+    "raw_coverage",
+]
 
 DEFAULT_HET_PSISAMPLES: Final[int] = 100
 DEFAULT_HET_POPULATION_QUANTILES: Final[List[float]] = [0.25, 0.75]
@@ -151,7 +146,6 @@ DEFAULT_HET_USESTATS: Final[List[str]] = ["ttest", "mannwhitneyu"]
 assert all(x in STATS_AVAILABLE for x in DEFAULT_HET_USESTATS)
 DEFAULT_HET_RAWSTATS: Final[bool] = True
 DEFAULT_HET_APPROXSTATS: Final[bool] = True
-DEFAULT_HET_BOOTSTRAPSTATS: Final[bool] = False
 
 DEFAULT_OUTLIERS_MINEXPERIMENTS: Final[float] = 0.9
 DEFAULT_OUTLIERS_ALPHA: Final[List[float]] = [0.05]

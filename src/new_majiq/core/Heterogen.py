@@ -223,10 +223,7 @@ class Heterogen(object):
 
     def dataset(
         self,
-        raw_psi: bool = True,
-        bootstrap_psi: bool = True,
         raw_stats: bool = constants.DEFAULT_HET_RAWSTATS,
-        bootstrap_stats: bool = constants.DEFAULT_HET_BOOTSTRAPSTATS,
         approximate_stats: bool = constants.DEFAULT_HET_APPROXSTATS,
         population_quantiles: Sequence[
             float
@@ -245,63 +242,42 @@ class Heterogen(object):
                 dim="grp",
             ).rename("num_passed"),
         ]
+        combine_ds.append(
+            xr.concat(
+                [
+                    self.psi1.raw_psi_mean_population_median.expand_dims(
+                        grp=[self.name1]
+                    ),
+                    self.psi2.raw_psi_mean_population_median.expand_dims(
+                        grp=[self.name2]
+                    ),
+                ],
+                dim="grp",
+            ).rename("raw_psi_median")
+        )
+        if population_quantiles:
+            combine_ds.append(
+                xr.concat(
+                    [
+                        self.psi1.raw_psi_mean_population_quantile(
+                            quantiles=population_quantiles
+                        ).expand_dims(grp=[self.name1]),
+                        self.psi2.raw_psi_mean_population_quantile(
+                            quantiles=population_quantiles
+                        ).expand_dims(grp=[self.name2]),
+                    ],
+                    dim="grp",
+                ).rename("raw_psi_quantile")
+            )
         if raw_stats:
             combine_ds.append(
                 self.raw_stats(
                     use_stats=use_stats,
                 ).pipe(lambda x: x.rename_vars(**{y: f"raw_{y}" for y in x.data_vars}))
             )
-        if bootstrap_stats:
-            combine_ds.append(
-                self.bootstrap_stats(
-                    quantiles=pvalue_quantiles,
-                    psisamples=psisamples,
-                    use_stats=use_stats,
-                ).pipe(
-                    lambda x: x.rename_vars(
-                        **{y: f"bootstrap_{y}" for y in x.data_vars}
-                    )
-                )
-            )
         if approximate_stats:
-            combine_ds.append(
-                self.approximate_stats(
-                    quantiles=pvalue_quantiles,
-                    psisamples=psisamples,
-                    use_stats=use_stats,
-                ).pipe(
-                    lambda x: x.rename_vars(**{y: f"approx_{y}" for y in x.data_vars})
-                )
-            )
-        if raw_psi:
-            combine_ds.append(
-                xr.concat(
-                    [
-                        self.psi1.raw_psi_mean_population_median.expand_dims(
-                            grp=[self.name1]
-                        ),
-                        self.psi2.raw_psi_mean_population_median.expand_dims(
-                            grp=[self.name2]
-                        ),
-                    ],
-                    dim="grp",
-                ).rename("raw_psi_median")
-            )
-            if population_quantiles:
-                combine_ds.append(
-                    xr.concat(
-                        [
-                            self.psi1.raw_psi_mean_population_quantile(
-                                quantiles=population_quantiles
-                            ).expand_dims(grp=[self.name1]),
-                            self.psi2.raw_psi_mean_population_quantile(
-                                quantiles=population_quantiles
-                            ).expand_dims(grp=[self.name2]),
-                        ],
-                        dim="grp",
-                    ).rename("raw_psi_quantile")
-                )
-        if bootstrap_psi:
+            # store medians of bootstrap distribution if stats with boostrapped
+            # posteriors done
             combine_ds.append(
                 xr.concat(
                     [
@@ -315,20 +291,15 @@ class Heterogen(object):
                     dim="grp",
                 ).rename("bootstrap_psi_median")
             )
-            if population_quantiles:
-                combine_ds.append(
-                    xr.concat(
-                        [
-                            self.psi1.bootstrap_psi_mean_population_quantile(
-                                quantiles=population_quantiles
-                            ).expand_dims(grp=[self.name1]),
-                            self.psi2.bootstrap_psi_mean_population_quantile(
-                                quantiles=population_quantiles
-                            ).expand_dims(grp=[self.name2]),
-                        ],
-                        dim="grp",
-                    ).rename("bootstrap_psi_quantile")
+            combine_ds.append(
+                self.approximate_stats(
+                    quantiles=pvalue_quantiles,
+                    psisamples=psisamples,
+                    use_stats=use_stats,
+                ).pipe(
+                    lambda x: x.rename_vars(**{y: f"approx_{y}" for y in x.data_vars})
                 )
+            )
         return xr.merge(combine_ds, compat="override", join="exact").reset_coords(
             drop=True
         )

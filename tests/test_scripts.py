@@ -260,7 +260,6 @@ def test_deltapsi_command(script_runner, tmp_path):
         *("-n", "grp1", "grp2"),
         *("--min-experiments", "2"),
         *("--splicegraph", get_path(COMBINED_SG)),
-        *("--use-posterior", "both"),
         "--disable-progress",
         *("--dask-local-directory", str(tmp_path)),
     )

@@ -31,7 +31,6 @@ DESCRIPTION = "Quantify dPSI from two groups of replicate experiments"
 class DPsiPriorType(Enum):
     DEFAULT_PRIOR = "default_prior"
     EMPIRICAL_PRIOR = "empirical_prior"
-    LEGACY_PRIOR = "legacy_prior"
 
 
 def add_args(parser: argparse.ArgumentParser) -> None:
@@ -62,14 +61,6 @@ def add_args(parser: argparse.ArgumentParser) -> None:
         help="Report posterior probability that abs(dPSI) less than this"
         " threshold (default: %(default)s)",
     )
-    quant_settings.add_argument(
-        "--use-posterior",
-        type=str,
-        default=nm.constants.DEFAULT_DPSI_POSTERIOR,
-        choices=nm.constants.DPSI_POSTERIORS,
-        help="Perform deltapsi inference with new (smooth) vs legacy approach"
-        " (or both) (default: %(default)s",
-    )
 
     prior_args = parser.add_argument_group("deltapsi prior arguments")
     prior_type = prior_args.add_mutually_exclusive_group()
@@ -89,16 +80,6 @@ def add_args(parser: argparse.ArgumentParser) -> None:
         action="store_const",
         const=DPsiPriorType.DEFAULT_PRIOR,
         help="Use default prior on deltapsi for quantification (default: %(default)s)",
-    )
-    prior_type.add_argument(
-        "--legacy-prior",
-        dest="prior_type",
-        default=DPsiPriorType.EMPIRICAL_PRIOR,
-        action="store_const",
-        const=DPsiPriorType.LEGACY_PRIOR,
-        help="Update default prior using hard-assignment (legacy approach from v2)"
-        " to bins at 0.05 and 0.30 on empirical difference in PSI from"
-        " high-confidence binary events (default: %(default)s)",
     )
     prior_args.add_argument(
         "--prior-minreads",
@@ -174,7 +155,7 @@ def run(args: argparse.Namespace) -> None:
             min_experiments_f=args.min_experiments,
             min_lsvs=args.prior_minevents,
             n_update_a=args.prior_iter,
-            legacy=(args.prior_type == DPsiPriorType.LEGACY_PRIOR),
+            legacy=False,
             show_progress=args.show_progress,
         )
         log.info(f"Using deltapsi prior {prior}")
@@ -193,7 +174,6 @@ def run(args: argparse.Namespace) -> None:
     ds_quant = deltapsi.dataset(
         changing_threshold=args.changing_threshold,
         nonchanging_threshold=args.nonchanging_threshold,
-        use_posterior=args.use_posterior,
     )
     if args.show_progress:
         ds_quant = ds_quant.persist()

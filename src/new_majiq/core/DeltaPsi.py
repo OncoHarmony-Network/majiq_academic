@@ -242,7 +242,6 @@ class DeltaPsi(object):
         self,
         changing_threshold: float = constants.DEFAULT_DPSI_CHANGING_THRESHOLD,
         nonchanging_threshold: float = constants.DEFAULT_DPSI_NONCHANGING_THRESHOLD,
-        use_posterior: str = "smooth",
         psi_dataset_kwargs: Dict[str, Any] = dict(),
     ) -> xr.Dataset:
         """Extract psi/dpsi statistics as xr.Dataset
@@ -262,45 +261,37 @@ class DeltaPsi(object):
         psi_dataset_kwargs: Dict[str, Any]
             Change parameters passed into psi1/2.dataset() to control
             PSI-specific variables returned
+
+        Notes
+        -----
+        DeltaPsi computations use the discrete bootstrap posterior, which
+        performs deltapsi inference on each bootstrap replicate separately,
+        then averages the deltapsi posterior distribution afterwards.
+        This is the legacy approach used in v2.
+
+        While :class:`DeltaPsi` enables computation with the approximate
+        posterior distribution (used for PSI and Heterogen computations), which
+        could be faster, this averages the bootstrap replicates before rather
+        than after deltapsi inference.
+        This means that the prior will unequally weight bootstrap replicates
+        towards those that agree more with the prior, which is not desired.
         """
-        if use_posterior not in constants.DPSI_POSTERIORS:
-            raise ValueError(
-                f"{use_posterior = } must be one of {constants.DPSI_POSTERIORS}"
-            )
         # list of arrays/datasets to combine
         combine_ds: List[Union[xr.DataArray, xr.Dataset]] = [
-            cast(xr.DataArray, self.passed.rename("passed").reset_coords(drop=True))
+            xr.Dataset(
+                {
+                    "dpsi_mean": self.discrete_bootstrap_posterior_mean,
+                    "dpsi_std": self.discrete_bootstrap_posterior_std,
+                    "probability_changing": self.bootstrap_probability_changing(
+                        changing_threshold
+                    ),
+                    "probability_nonchanging": self.bootstrap_probability_nonchanging(
+                        nonchanging_threshold
+                    ),
+                    "passed": self.passed,
+                }
+            ).reset_coords(drop=True)
         ]
-        if use_posterior in constants.DPSI_SMOOTH:
-            combine_ds.append(
-                xr.Dataset(
-                    {
-                        "dpsi_mean": self.discrete_posterior_mean,
-                        "dpsi_std": self.discrete_posterior_std,
-                        "probability_changing": self.probability_changing(
-                            changing_threshold
-                        ),
-                        "probability_nonchanging": self.probability_nonchanging(
-                            nonchanging_threshold
-                        ),
-                    }
-                ).reset_coords(drop=True)
-            )
-        if use_posterior in constants.DPSI_LEGACY:
-            combine_ds.append(
-                xr.Dataset(
-                    {
-                        "legacy_dpsi_mean": self.discrete_bootstrap_posterior_mean,
-                        "legacy_dpsi_std": self.discrete_bootstrap_posterior_std,
-                        "legacy_probability_changing": self.bootstrap_probability_changing(
-                            changing_threshold
-                        ),
-                        "legacy_probability_nonchanging": self.bootstrap_probability_nonchanging(
-                            nonchanging_threshold
-                        ),
-                    }
-                ).reset_coords(drop=True)
-            )
         # get PSI datasets
         combine_ds.append(
             self.psi1.dataset(**psi_dataset_kwargs)

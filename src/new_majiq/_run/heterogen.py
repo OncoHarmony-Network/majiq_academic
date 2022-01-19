@@ -88,28 +88,9 @@ def add_args(parser: argparse.ArgumentParser) -> None:
         default=nm.constants.DEFAULT_HET_RAWSTATS,
         help="Do not test for differences on raw_psi_mean (default: %(default)s)",
     )
-    distribution_bootstrap = distribution_settings.add_mutually_exclusive_group()
-    distribution_bootstrap.add_argument(
-        "--test-legacy",
-        dest="bootstrap_stats",
-        action="store_true",
-        default=nm.constants.DEFAULT_HET_BOOTSTRAPSTATS,
-        help="Test for differences on bootstrap_psi_mean_legacy and psisamples"
-        " samples from bootstrap posterior distributions. --test-approximate is"
-        " preferred because the bootstrap posterior mixture becomes"
-        " unrealistically atomic with high coverage (default: %(default)s)",
-    )
-    distribution_bootstrap.add_argument(
-        "--ignore-legacy",
-        dest="bootstrap_stats",
-        action="store_false",
-        default=nm.constants.DEFAULT_HET_BOOTSTRAPSTATS,
-        help="Do not test for differences with legacy bootstrap approach"
-        " (default: %(default)s)",
-    )
     distribution_approximate = distribution_settings.add_mutually_exclusive_group()
     distribution_approximate.add_argument(
-        "--test-approximate",
+        "--test-bootstrap",
         dest="approximate_stats",
         action="store_true",
         default=nm.constants.DEFAULT_HET_APPROXSTATS,
@@ -118,7 +99,7 @@ def add_args(parser: argparse.ArgumentParser) -> None:
         " (default: %(default)s)",
     )
     distribution_approximate.add_argument(
-        "--ignore-approximate",
+        "--ignore-bootstrap",
         dest="approximate_stats",
         action="store_false",
         default=nm.constants.DEFAULT_HET_APPROXSTATS,
@@ -179,7 +160,6 @@ def run(args: argparse.Namespace) -> None:
     # which tests? which psi? which quantiles (pop and pval)? what psisamples?
     ds_quant = heterogen.dataset(
         raw_stats=args.raw_stats,
-        bootstrap_stats=args.bootstrap_stats,
         approximate_stats=args.approximate_stats,
         population_quantiles=population_quantiles,
         pvalue_quantiles=pvalue_quantiles,
