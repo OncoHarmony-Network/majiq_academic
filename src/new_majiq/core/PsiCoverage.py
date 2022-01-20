@@ -32,6 +32,7 @@ from .GeneJunctions import GeneJunctions
 from .MixinPsiInference import (
     MixinBootstrapPsi,
     MixinBootstrapPsiMeanPopulation,
+    MixinRawPsi,
     MixinRawPsiMeanPopulation,
 )
 from .SJExperiment import SJExperiment
@@ -44,7 +45,10 @@ def min_experiments(min_experiments_f: float, num_experiments: int) -> float:
 
 
 class PsiCoverage(
-    MixinBootstrapPsiMeanPopulation, MixinRawPsiMeanPopulation, MixinBootstrapPsi
+    MixinBootstrapPsi,
+    MixinRawPsi,
+    MixinBootstrapPsiMeanPopulation,
+    MixinRawPsiMeanPopulation,
 ):
     """Summarized raw and bootstrap coverage over LSVs for one or more experiments.
 

@@ -326,8 +326,14 @@ class MixinBootstrapPsi(MixinApproximatePsi, ABC):
         )
 
 
-class MixinRawPsiMeanPopulation(MixinRawPsi):
+class MixinRawPsiMeanPopulation(ABC):
     """Methods for summarizing raw_psi_mean over a population (dimension prefix)"""
+
+    @property
+    @abstractmethod
+    def raw_psi_mean(self):
+        """array(...) means of raw posterior distribution on PSI"""
+        ...
 
     @cached_property
     def _raw_psi_mean_core_prefix(self) -> xr.DataArray:
@@ -378,8 +384,14 @@ class MixinRawPsiMeanPopulation(MixinRawPsi):
         )
 
 
-class MixinBootstrapPsiMeanPopulation(MixinApproximatePsi):
+class MixinBootstrapPsiMeanPopulation(ABC):
     """Methods for summarizing bootstrap_psi_mean over a population (dimension prefix)"""
+
+    @property
+    @abstractmethod
+    def bootstrap_psi_mean(self):
+        """array(...) means of bootstrap posterior distribution on PSI"""
+        ...
 
     @cached_property
     def _bootstrap_psi_mean_core_prefix(self) -> xr.DataArray:
