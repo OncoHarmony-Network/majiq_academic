@@ -271,6 +271,14 @@ def quantify_comparison_args(parser: argparse.ArgumentParser) -> None:
         " (default: %(default)s)",
     )
     _quantify_shared_args(parser)
+    parser.add_argument(
+        "--output-voila",
+        metavar="ZARR",
+        type=NewResolvedPath,
+        default=None,
+        help="Path for output voila view file (default: none)",
+    )
+    chunks_args(parser, nm.constants.DEFAULT_COVERAGE_CHUNKS)
     return
 
 
@@ -281,7 +289,7 @@ def chunks_args(parser: argparse.ArgumentParser, chunksize: int) -> None:
         metavar="CHUNKS",
         type=check_nonnegative_factory(int, True),
         default=chunksize,
-        help="Chunk coverage per prefix and per this many introns/junctions at"
+        help="Chunk output per prefix and per this many introns/junctions at"
         " a time (default: %(default)s)",
     )
 

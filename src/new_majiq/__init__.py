@@ -49,6 +49,9 @@ from .core.SpliceGraph import SpliceGraph
 # coverage on splicegraph or events
 from .core.SpliceGraphReads import SpliceGraphReads
 
+# datasets for VOILA
+from .voila.DeltaPsiDataset import DeltaPsiDataset
+
 
 def rng_seed(seed: int) -> None:
     """Set seed for random number generator pools
@@ -117,6 +120,7 @@ __all__ = [
     "PsiCoverage",
     "DPsiPrior",
     "DeltaPsi",
+    "DeltaPsiDataset",
     "Heterogen",
     "PassedJunctions",
     "PMFSummaries",

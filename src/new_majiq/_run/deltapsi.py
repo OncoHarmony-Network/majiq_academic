@@ -161,6 +161,15 @@ def run(args: argparse.Namespace) -> None:
     log.info("Computing quantifications to table")
     deltapsi_voila = deltapsi.dataset
 
+    if args.output_voila:
+        log.info("Saving quantifications for VOILA to %s", args.output_voila)
+        deltapsi_voila.to_zarr(
+            args.output_voila,
+            ec_chunksize=args.chunksize,
+            show_progress=args.show_progress,
+        )
+        deltapsi_voila = nm.DeltaPsiDataset.from_zarr(args.output_voila)
+
     sg: Optional[nm.SpliceGraph] = None
     if args.splicegraph:
         log.debug("Loading splicegraph from %s", args.splicegraph)
@@ -170,7 +179,8 @@ def run(args: argparse.Namespace) -> None:
         sg=sg,
         changing_threshold=args.changing_threshold,
         nonchanging_threshold=args.nonchanging_threshold,
-        show_progress=args.show_progress,
+        # no need to show progress if most of the work already done in VOILA file
+        show_progress=args.show_progress and args.output_voila is None,
     )
 
     try:
