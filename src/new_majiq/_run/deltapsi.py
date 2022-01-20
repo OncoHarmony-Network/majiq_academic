@@ -159,7 +159,7 @@ def run(args: argparse.Namespace) -> None:
         name2=args.names[1],
     )
     log.info("Computing quantifications to table")
-    deltapsi_voila = deltapsi.dataset()
+    deltapsi_voila = deltapsi.dataset
 
     sg: Optional[nm.SpliceGraph] = None
     if args.splicegraph:

@@ -7,11 +7,13 @@ Author: Joseph K Aicher
 """
 
 from functools import cached_property
-from typing import Final, List, Optional, cast
+from pathlib import Path
+from typing import Final, List, Optional, Union, cast
 
 import numpy as np
 import pandas as pd
 import xarray as xr
+from dask.delayed import Delayed
 from dask.distributed import progress
 
 import new_majiq.constants as constants
@@ -54,12 +56,7 @@ class DeltaPsiDataset(object):
     }
 
     @classmethod
-    def from_deltapsi(
-        cls,
-        dpsi: DeltaPsi,
-        compute: bool = False,
-        show_progress: bool = False,
-    ) -> "DeltaPsiDataset":
+    def from_deltapsi(cls, dpsi: DeltaPsi) -> "DeltaPsiDataset":
         """Create :class:`DeltaPsiDataset` using :class:`DeltaPsi`
 
         Create :class:`DeltaPsiDataset` with minimal data required for
@@ -70,10 +67,6 @@ class DeltaPsiDataset(object):
         dpsi: DeltaPsi
             Handle to coverage with full availability of possible DeltaPsi
             related computations
-        compute: bool
-            If true, eagerly perform inference of deltapsi posteriors
-        show_progress: bool
-            If `compute` is true, show progress bar in Dask
         """
         dpsi_ds = (
             xr.Dataset(
@@ -110,11 +103,6 @@ class DeltaPsiDataset(object):
             .swap_dims(prefix="grp")
         )
         df = xr.merge([dpsi_ds, psi_ds], compat="override", join="exact")
-        if compute:
-            if show_progress:
-                df = df.persist()
-                progress(*(x.data for x in df.variables.values() if x.chunks))
-            df = df.load()
         return DeltaPsiDataset(df, dpsi.psi1.events)
 
     def __init__(self, df: xr.Dataset, events: xr.Dataset):
@@ -151,6 +139,57 @@ class DeltaPsiDataset(object):
             ..., "ec_idx", "mixture_component", "pmf_bin"
         )
         self.events: Final[xr.Dataset] = events
+        return
+
+    @classmethod
+    def from_zarr(
+        cls, path: Union[str, Path, List[Union[str, Path]]]
+    ) -> "DeltaPsiDataset":
+        """Load :class:`DeltaPsiDataset` from one or more specified paths"""
+        if not isinstance(path, list):
+            path = [path]
+        df = xr.open_mfdataset(
+            path,
+            engine="zarr",
+            group=constants.NC_DELTAPSI,
+            combine="nested",
+            preprocess=lambda ds: ds.assign_coords(comparison=[ds.encoding["source"]]),
+            join="outer",
+            compat="no_conflicts",
+            coords="minimal",
+            data_vars="minimal",
+        )
+        if len(path) > 1:
+            # attributes are defined by path[0]. We'd rather just have none
+            df.attrs.clear()
+        events_df = xr.open_zarr(path[0], group=constants.NC_EVENTS)
+        return DeltaPsiDataset(df, events_df)
+
+    def to_zarr(
+        self,
+        path: Union[str, Path],
+        ec_chunksize: int = constants.DEFAULT_COVERAGE_CHUNKS,
+        consolidated: bool = True,
+        show_progress: bool = False,
+    ) -> None:
+        save_df_future = cast(
+            Delayed,
+            self.df.to_zarr(
+                path,
+                mode="w",
+                group=constants.NC_DELTAPSI,
+                consolidated=False,
+                compute=False,
+            ),
+        )
+        if show_progress:
+            save_df_future = save_df_future.persist()
+            progress(save_df_future)
+        else:
+            save_df_future.compute()
+        self.events.chunk(self.events.sizes).to_zarr(
+            path, mode="a", group=constants.NC_EVENTS, consolidated=consolidated
+        )
         return
 
     def __repr__(self) -> str:

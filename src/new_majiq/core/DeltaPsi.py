@@ -246,20 +246,9 @@ class DeltaPsi(object):
             -nonchanging_threshold, nonchanging_threshold
         )
 
-    def dataset(
-        self, compute: bool = False, show_progress: bool = False
-    ) -> "DeltaPsiDataset":
-        """Reduce to :class:`DeltaPsiDataset` used for VOILA visualization
-
-        Parameters
-        ----------
-        compute: bool
-            If true, eagerly perform inference of deltapsi posteriors
-        show_progress: bool
-            If `compute` is true, show progress bar in Dask
-        """
+    @property
+    def dataset(self) -> "DeltaPsiDataset":
+        """Reduce to :class:`DeltaPsiDataset` used for VOILA visualization"""
         from ..voila.DeltaPsiDataset import DeltaPsiDataset
 
-        return DeltaPsiDataset.from_deltapsi(
-            self, compute=compute, show_progress=show_progress
-        )
+        return DeltaPsiDataset.from_deltapsi(self)

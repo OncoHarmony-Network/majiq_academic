@@ -111,8 +111,8 @@ class PMFSummaries(object):
             # there is no interval, so probability should be 0
             return self.f_expectation(self.p, xr.DataArray(0))
         # compute percentage of each interval that overlaps [a, b]
-        overlap_start = xr.apply_ufunc(np.maximum, a, self.bin_start)
-        overlap_end = xr.apply_ufunc(np.minimum, b, self.bin_end)
+        overlap_start = cast(xr.DataArray, np.maximum(a, self.bin_start))
+        overlap_end = cast(xr.DataArray, np.minimum(b, self.bin_end))
         overlap_width = self.interval_width(overlap_start, overlap_end)
         overlap_pct = overlap_width / self.bin_width
         # the probability of being in [a, b] is the expectation of overlap_pct

@@ -319,7 +319,8 @@ def test_moccasin_factors_model_command(script_runner, tmp_path):
     )
     assert ret.success
     xr.testing.assert_allclose(
-        xr.open_zarr(path_result), xr.open_zarr(get_path(FACTORS_MODEL))
+        xr.open_zarr(path_result),
+        xr.open_zarr(get_path(FACTORS_MODEL)).drop_vars(["lsv_idx", "event_size"]),
     )
     return
 
@@ -359,7 +360,9 @@ def test_moccasin_coverage_model_command(script_runner, tmp_path):
     assert ret.success
     xr.testing.assert_allclose(
         xr.open_zarr(path_result).drop_vars(["bootstrap_model"]),
-        xr.open_zarr(get_path(COVERAGE_MODEL)).drop_vars(["bootstrap_model"]),
+        xr.open_zarr(get_path(COVERAGE_MODEL)).drop_vars(
+            ["bootstrap_model", "lsv_idx", "event_size"]
+        ),
     )
     return
 
