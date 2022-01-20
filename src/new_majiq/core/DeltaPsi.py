@@ -24,6 +24,51 @@ if TYPE_CHECKING:
     from ..voila.DeltaPsiDataset import DeltaPsiDataset
 
 
+class DeltaPsiPMF(PMFSummaries):
+    """Specialization of PMFSummaries for DeltaPsi on [-1, 1]
+
+    Parameters
+    ----------
+    p: xr.DataArray
+        Probability distribution(s) over intervals (dimension: pmf_bin)
+        Dimensions: [..., "pmf_bin"]
+        Coordinates: pmf_bin_start, pmf_bin_end (..., "pmf_bin")
+        First pmf_bin_start must be -1, Last pmf_bin_end must be 1
+    """
+
+    def __init__(self, p: xr.DataArray):
+        """Initialize :class:`DeltaPsiPMF` with given probability vector
+
+        Parameters
+        ----------
+        p: xr.DataArray
+            Probability distribution(s) over intervals (dimension: pmf_bin)
+            Dimensions: [..., "pmf_bin"]
+            Coordinates: pmf_bin_start, pmf_bin_end (..., "pmf_bin")
+            First pmf_bin_start must be -1, Last pmf_bin_end must be 1
+        """
+        PMFSummaries.__init__(self, p)
+        if self.bin_start.values[0] != -1:
+            raise ValueError("First bin must start at -1")
+        if self.bin_end.values[-1] != 1:
+            raise ValueError("Last bin must end at 1")
+        return
+
+    def probability_nonchanging(
+        self,
+        nonchanging_threshold: float = constants.DEFAULT_DPSI_NONCHANGING_THRESHOLD,
+    ) -> xr.DataArray:
+        """Probability that abs(dPSI) <= nonchanging_threshold"""
+        return self.interval_probability(-nonchanging_threshold, nonchanging_threshold)
+
+    def probability_changing(
+        self,
+        changing_threshold: float = constants.DEFAULT_DPSI_CHANGING_THRESHOLD,
+    ) -> xr.DataArray:
+        """Probability that abs(dPSI) > changing_threshold"""
+        return 1 - self.interval_probability(-changing_threshold, changing_threshold)
+
+
 class DeltaPsi(object):
     """Compute DeltaPsi between two groups of PsiCoverage (replicate assumption)
 
@@ -108,7 +153,7 @@ class DeltaPsi(object):
         return self.prior.discretized_logpmf(psibins=self.psibins)
 
     @cached_property
-    def discrete_logposterior(self) -> xr.DataArray:
+    def smooth_logposterior(self) -> xr.DataArray:
         a1 = (
             self.psi1.approximate_alpha.squeeze("prefix", drop=True)
             .expand_dims(mix1=1)
@@ -142,7 +187,7 @@ class DeltaPsi(object):
         )
 
     @cached_property
-    def discrete_bootstrap_logposterior(self) -> xr.DataArray:
+    def bootstrap_logposterior(self) -> xr.DataArray:
         """Average bootstrap replicates after inference of deltapsi"""
         a1 = self.psi1.bootstrap_alpha.rename(prefix="mix1").where(self.passed)
         b1 = self.psi1.bootstrap_beta.rename(prefix="mix1").where(self.passed)
@@ -178,73 +223,19 @@ class DeltaPsi(object):
         return unnormalized / logZ
 
     @cached_property
-    def discrete_posterior(self) -> PMFSummaries:
-        """:class:`PMFSummaries` for dpsi posterior from approximated PSI posteriors"""
-        return PMFSummaries(cast(xr.DataArray, np.exp(self.discrete_logposterior)))
+    def discrete_prior(self) -> DeltaPsiPMF:
+        """:class:`DeltaPsiPMF` for discretized deltapsi prior"""
+        return DeltaPsiPMF(cast(xr.DataArray, np.exp(self.discrete_logprior)))
 
     @cached_property
-    def discrete_bootstrap_posterior(self) -> PMFSummaries:
-        """:class:`PMFSummaries` for average bootstrapped dpsi posteriors"""
-        return PMFSummaries(
-            cast(xr.DataArray, np.exp(self.discrete_bootstrap_logposterior))
-        )
+    def smooth_posterior(self) -> DeltaPsiPMF:
+        """:class:`DeltaPsiPMF` for dpsi posterior from approximated PSI posteriors"""
+        return DeltaPsiPMF(cast(xr.DataArray, np.exp(self.smooth_logposterior)))
 
-    @property
-    def discrete_posterior_mean(self) -> xr.DataArray:
-        return self.discrete_posterior.mean
-
-    @property
-    def discrete_posterior_variance(self) -> xr.DataArray:
-        return self.discrete_posterior.variance
-
-    @property
-    def discrete_posterior_std(self) -> xr.DataArray:
-        return cast(xr.DataArray, np.sqrt(self.discrete_posterior_variance))
-
-    @property
-    def discrete_bootstrap_posterior_mean(self) -> xr.DataArray:
-        """Posterior mean on deltapsi from discrete_bootstrap_posterior"""
-        return self.discrete_bootstrap_posterior.mean
-
-    @property
-    def discrete_bootstrap_posterior_variance(self) -> xr.DataArray:
-        """Posterior variance on deltapsi from discrete_bootstrap_posterior"""
-        return self.discrete_bootstrap_posterior.variance
-
-    @property
-    def discrete_bootstrap_posterior_std(self) -> xr.DataArray:
-        """Posterior standard deviaion on deltapsi from discrete_bootstrap_posterior"""
-        return cast(xr.DataArray, np.sqrt(self.discrete_bootstrap_posterior_variance))
-
-    def probability_changing(
-        self, changing_threshold: float = constants.DEFAULT_DPSI_CHANGING_THRESHOLD
-    ):
-        return 1 - self.discrete_posterior.interval_probability(
-            -changing_threshold, changing_threshold
-        )
-
-    def probability_nonchanging(
-        self,
-        nonchanging_threshold: float = constants.DEFAULT_DPSI_NONCHANGING_THRESHOLD,
-    ):
-        return self.discrete_posterior.interval_probability(
-            -nonchanging_threshold, nonchanging_threshold
-        )
-
-    def bootstrap_probability_changing(
-        self, changing_threshold: float = constants.DEFAULT_DPSI_CHANGING_THRESHOLD
-    ):
-        return 1 - self.discrete_bootstrap_posterior.interval_probability(
-            -changing_threshold, changing_threshold
-        )
-
-    def bootstrap_probability_nonchanging(
-        self,
-        nonchanging_threshold: float = constants.DEFAULT_DPSI_NONCHANGING_THRESHOLD,
-    ):
-        return self.discrete_bootstrap_posterior.interval_probability(
-            -nonchanging_threshold, nonchanging_threshold
-        )
+    @cached_property
+    def bootstrap_posterior(self) -> DeltaPsiPMF:
+        """:class:`DeltaPsiPMF` for average bootstrapped dpsi posteriors"""
+        return DeltaPsiPMF(cast(xr.DataArray, np.exp(self.bootstrap_logposterior)))
 
     @property
     def dataset(self) -> "DeltaPsiDataset":

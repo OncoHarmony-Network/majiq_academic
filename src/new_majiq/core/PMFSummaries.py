@@ -86,13 +86,13 @@ class PMFSummaries(object):
     def variance_per_bin(self) -> xr.DataArray:
         """variance of position in a selected bin under uniform distribution"""
         # for U ~ Uniform[a, b], Var(U) = (b - a)**2 / 12
-        return self.bin_width * self.bin_width / 12
+        return cast(xr.DataArray, np.square(self.bin_width) / 12)
 
     @cached_property
     def variance_across_bins(self) -> xr.DataArray:
         """variance choosing between bins (treating as point mass at midpoints)"""
         residual = self.midpoints - self.mean
-        return self.f_expectation(self.p, residual * residual)
+        return self.f_expectation(self.p, cast(xr.DataArray, np.square(residual)))
 
     @cached_property
     def variance(self) -> xr.DataArray:

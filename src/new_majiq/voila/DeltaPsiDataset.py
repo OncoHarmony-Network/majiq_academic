@@ -18,13 +18,12 @@ from dask.distributed import progress
 
 import new_majiq.constants as constants
 
-from ..core.DeltaPsi import DeltaPsi
+from ..core.DeltaPsi import DeltaPsi, DeltaPsiPMF
 from ..core.DPsiPrior import DPsiPrior
 from ..core.Events import Events, _Events
 from ..core.GeneIntrons import GeneIntrons
 from ..core.GeneJunctions import GeneJunctions
 from ..core.MixinPsiInference import MixinApproximatePsi, MixinRawPsi
-from ..core.PMFSummaries import PMFSummaries
 from ..core.SpliceGraph import SpliceGraph
 
 
@@ -93,7 +92,7 @@ class DeltaPsiDataset(object):
         "pmf_bin_start": ("pmf_bin",),
         "pmf_bin_end": ("pmf_bin",),
         # discretized posterior on deltapsi
-        "discrete_bootstrap_logposterior": ("comparison", "ec_idx", "pmf_bin"),
+        "bootstrap_logposterior": ("comparison", "ec_idx", "pmf_bin"),
         # prior on deltapsi
         "prior_a": ("comparison", "mixture_component"),
         "prior_pmix": ("comparison", "mixture_component"),
@@ -119,7 +118,7 @@ class DeltaPsiDataset(object):
         dpsi_ds = (
             xr.Dataset(
                 {
-                    "discrete_bootstrap_logposterior": dpsi.discrete_bootstrap_logposterior,
+                    "bootstrap_logposterior": dpsi.bootstrap_logposterior,
                     "prior_a": dpsi.prior.a,
                     "prior_pmix": dpsi.prior.pmix,
                     "passed": dpsi.passed,
@@ -261,6 +260,11 @@ class DeltaPsiDataset(object):
         return self.df.sizes["grp"]
 
     @property
+    def psibins(self) -> int:
+        """Number of bins used to bin PSI for deltapsi computation"""
+        return self.df.sizes["pmf_bin"] // 2
+
+    @property
     def comparisons(self):
         """Enumerate which groups were compared in this dataset"""
         return tuple(
@@ -273,31 +277,28 @@ class DeltaPsiDataset(object):
         return self.df["passed"]
 
     @cached_property
-    def dpsi_prior(self) -> DPsiPrior:
+    def prior(self) -> DPsiPrior:
         """Prior over deltapsi for each comparison"""
         return DPsiPrior(self.df["prior_a"], self.df["prior_pmix"])
 
     @cached_property
-    def dpsi_posterior(self) -> PMFSummaries:
-        """:class:`PMFSummaries` for average bootstrapped dpsi posteriors"""
-        return PMFSummaries(
-            cast(xr.DataArray, np.exp(self.df["discrete_bootstrap_logposterior"]))
-        )
+    def discrete_logprior(self) -> xr.DataArray:
+        return self.prior.discretized_logpmf(psibins=self.psibins)
 
-    def probability_changing(
-        self, changing_threshold: float = constants.DEFAULT_DPSI_CHANGING_THRESHOLD
-    ):
-        return 1 - self.dpsi_posterior.interval_probability(
-            -changing_threshold, changing_threshold
-        )
+    @property
+    def bootstrap_logposterior(self) -> xr.DataArray:
+        """Log-average bootstrap replicates after inference of deltapsi"""
+        return self.df["bootstrap_logposterior"]
 
-    def probability_nonchanging(
-        self,
-        nonchanging_threshold: float = constants.DEFAULT_DPSI_NONCHANGING_THRESHOLD,
-    ):
-        return self.dpsi_posterior.interval_probability(
-            -nonchanging_threshold, nonchanging_threshold
-        )
+    @cached_property
+    def discrete_prior(self) -> DeltaPsiPMF:
+        """:class:`DeltaPsiPMF` for discretized deltapsi prior"""
+        return DeltaPsiPMF(cast(xr.DataArray, np.exp(self.discrete_logprior)))
+
+    @cached_property
+    def bootstrap_posterior(self) -> DeltaPsiPMF:
+        """:class:`DeltaPsiPMF` for average bootstrapped dpsi posteriors"""
+        return DeltaPsiPMF(cast(xr.DataArray, np.exp(self.bootstrap_logposterior)))
 
     def get_events(
         self,
@@ -363,14 +364,13 @@ class DeltaPsiDataset(object):
         ds = xr.Dataset(
             {
                 "any_passed": self.passed.any("comparison"),
-                "dpsi_mean": self.dpsi_posterior.mean,
-                "dpsi_std": self.dpsi_posterior.standard_deviation,
-                "probability_changing": 1
-                - self.dpsi_posterior.interval_probability(
-                    -changing_threshold, changing_threshold
+                "dpsi_mean": self.bootstrap_posterior.mean,
+                "dpsi_std": self.bootstrap_posterior.standard_deviation,
+                "probability_changing": self.bootstrap_posterior.probability_changing(
+                    changing_threshold
                 ),
-                "probability_nonchanging": self.dpsi_posterior.interval_probability(
-                    -nonchanging_threshold, nonchanging_threshold
+                "probability_nonchanging": self.bootstrap_posterior.probability_nonchanging(
+                    nonchanging_threshold
                 ),
                 "raw_psi_mean": self.groups.raw_psi_mean,
                 "raw_psi_std": self.groups.raw_psi_std,
