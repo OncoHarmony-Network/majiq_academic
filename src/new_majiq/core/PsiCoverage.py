@@ -11,18 +11,7 @@ Author: Joseph K Aicher
 
 from functools import cached_property
 from pathlib import Path
-from typing import (
-    Any,
-    Dict,
-    Final,
-    Hashable,
-    List,
-    Optional,
-    Sequence,
-    Tuple,
-    Union,
-    cast,
-)
+from typing import Any, Dict, Final, Hashable, List, Optional, Sequence, Union, cast
 
 import dask.array as da
 import numpy as np
@@ -32,9 +21,7 @@ from dask.delayed import Delayed
 from dask.distributed import progress
 
 import new_majiq._offsets as _offsets
-import new_majiq.beta_mixture as bm
 import new_majiq.constants as constants
-from new_majiq._stats import nanmedian, nanquantile
 from new_majiq.experiments import bam_experiment_name
 from new_majiq.logger import get_logger
 
@@ -42,6 +29,11 @@ from .Events import Events, _Events
 from .EventsCoverage import EventsCoverage
 from .GeneIntrons import GeneIntrons
 from .GeneJunctions import GeneJunctions
+from .MixinPsiInference import (
+    MixinBootstrapPsi,
+    MixinBootstrapPsiMeanPopulation,
+    MixinRawPsiMeanPopulation,
+)
 from .SJExperiment import SJExperiment
 
 
@@ -51,7 +43,9 @@ def min_experiments(min_experiments_f: float, num_experiments: int) -> float:
     return max(1, min(min_experiments_f, num_experiments))
 
 
-class PsiCoverage(object):
+class PsiCoverage(
+    MixinBootstrapPsiMeanPopulation, MixinRawPsiMeanPopulation, MixinBootstrapPsi
+):
     """Summarized raw and bootstrap coverage over LSVs for one or more experiments.
 
     Summarized raw and bootstrap coverage over LSVs for one or more
@@ -306,460 +300,18 @@ class PsiCoverage(object):
         return (self.bootstrap_coverage + self.alpha_prior).where(self.event_passed)
 
     @cached_property
+    def raw_alpha_plus_beta(self) -> xr.DataArray:
+        return 1 + self.raw_total
+
+    @cached_property
     def raw_beta(self) -> xr.DataArray:
         """array(prefix, ec_idx) beta parameter of raw posterior"""
-        return 1 + self.raw_total - self.raw_alpha
+        return self.raw_alpha_plus_beta - self.raw_alpha
 
     @cached_property
     def bootstrap_beta(self) -> xr.DataArray:
         """array(prefix, ec_idx, bootstrap_replicate) beta parameter of bootstrapped posterior"""
         return 1 + self.bootstrap_total - self.bootstrap_alpha
-
-    @cached_property
-    def _approximate_params(self) -> Tuple[xr.DataArray, xr.DataArray]:
-        """Beta distribution parameters matching mean, variance of bootstrap mixture
-
-        In many cases, we operate on the bootstrapped distributions as a single
-        distribution by treating it as a uniform mixture over bootstrap
-        replicates.
-        This mixture is an poorly-behaved model for fixed number of bootstrap replicates as the total coverage increases (the bootstrap replicates behave as atoms).
-        This motivates making a smooth approximation by a single beta
-        distribution.
-        Here, we approximate the beta mixture by matching mean and variance,
-        which we prefer in most cases.
-        """
-        _params = xr.apply_ufunc(
-            bm.approximation,
-            self.bootstrap_alpha,
-            self.bootstrap_beta,
-            input_core_dims=[["bootstrap_replicate"], ["bootstrap_replicate"]],
-            output_core_dims=[["_param_idx"]],
-            dask="parallelized",
-            dask_gufunc_kwargs=dict(output_sizes={"_param_idx": 2}),
-        )
-        alpha = _params.isel(_param_idx=0)
-        beta = _params.isel(_param_idx=1)
-        return (alpha, beta)
-
-    @property
-    def approximate_alpha(self) -> xr.DataArray:
-        """array(prefix, ec_idx) alpha parameter of approximated bootstrap posterior
-
-        In many cases, we operate on the bootstrapped distributions as a single
-        distribution by treating it as a uniform mixture over bootstrap
-        replicates.
-        This mixture is an poorly-behaved model for fixed number of bootstrap replicates as the total coverage increases (the bootstrap replicates behave as atoms).
-        This motivates making a smooth approximation by a single beta
-        distribution.
-        Here, we approximate the beta mixture by matching mean and variance,
-        which we prefer in most cases.
-        """
-        return self._approximate_params[0]
-
-    @property
-    def approximate_beta(self) -> xr.DataArray:
-        """array(prefix, ec_idx) beta parameter of approximated bootstrap posterior
-
-        In many cases, we operate on the bootstrapped distributions as a single
-        distribution by treating it as a uniform mixture over bootstrap
-        replicates.
-        This mixture is an poorly-behaved model for fixed number of bootstrap replicates as the total coverage increases (the bootstrap replicates behave as atoms).
-        This motivates making a smooth approximation by a single beta
-        distribution.
-        Here, we approximate the beta mixture by matching mean and variance,
-        which we prefer in most cases.
-        """
-        return self._approximate_params[1]
-
-    @cached_property
-    def raw_posterior_mean(self) -> xr.DataArray:
-        """array(prefix, ec_idx) means of raw posterior distribution on PSI"""
-        return self.raw_alpha / np.add(1, self.raw_total)
-
-    @cached_property
-    def raw_posterior_variance(self) -> xr.DataArray:
-        """array(prefix, ec_idx) variances of raw posterior distribution on PSI"""
-        mean = self.raw_posterior_mean
-        return mean * np.subtract(1, mean) / np.add(1, self.raw_total)
-
-    @cached_property
-    def raw_posterior_std(self) -> xr.DataArray:
-        """array(prefix, ec_idx) standard deviations of raw posterior distribution"""
-        return cast(xr.DataArray, np.sqrt(self.raw_posterior_variance))
-
-    @property
-    def raw_psi_mean(self) -> xr.DataArray:
-        """array(prefix, ec_idx) means of raw posterior distribution on PSI
-
-        array(prefix, ec_idx) means of raw posterior distribution on PSI.
-        Alias for :py:meth:`PsiCoverage.raw_posterior_mean`
-        """
-        return self.raw_posterior_mean
-
-    @property
-    def raw_psi_variance(self) -> xr.DataArray:
-        """array(prefix, ec_idx) variances of raw posterior distribution on PSI
-
-        array(prefix, ec_idx) variances of raw posterior distribution on PSI.
-        Alias for :py:meth:`PsiCoverage.raw_posterior_variance`
-        """
-        return self.raw_posterior_variance
-
-    @property
-    def raw_psi_std(self) -> xr.DataArray:
-        """array(prefix, ec_idx) standard deviations of raw posterior distribution
-
-        array(prefix, ec_idx) standard deviations of raw posterior distribution
-        on PSI. Alias for :py:meth:`PsiCoverage.raw_posterior_std`
-        """
-        return self.raw_posterior_std
-
-    @cached_property
-    def _bootstrap_moments(self) -> Tuple[xr.DataArray, xr.DataArray]:
-        """Compute mean, variance of bootstrap posterior mixture"""
-        _moments = xr.apply_ufunc(
-            bm.moments,
-            self.bootstrap_alpha,
-            self.bootstrap_beta,
-            input_core_dims=[["bootstrap_replicate"], ["bootstrap_replicate"]],
-            output_core_dims=[["_moment_idx"]],
-            dask="parallelized",
-            dask_gufunc_kwargs=dict(output_sizes={"_moment_idx": 2}),
-        )
-        agg_mean = _moments.isel(_moment_idx=0)
-        agg_variance = _moments.isel(_moment_idx=1)
-        return (agg_mean, agg_variance)
-
-    @property
-    def bootstrap_posterior_mean(self) -> xr.DataArray:
-        """array(prefix, ec_idx) means of mixtures of bootstrapped posteriors
-
-        array(prefix, ec_idx) means of mixture of bootstrapped posterior
-        distribution on PSI
-        """
-        return self._bootstrap_moments[0]
-
-    @property
-    def bootstrap_posterior_variance(self) -> xr.DataArray:
-        """array(prefix, ec_idx) variances of mixtures of bootstrapped posteriors
-
-        array(prefix, ec_idx) variances of mixtures of bootstrapped posterior
-        distributions on PSI
-        """
-        return self._bootstrap_moments[1]
-
-    @cached_property
-    def bootstrap_posterior_std(self) -> xr.DataArray:
-        """array(prefix, ec_idx) standard deviations of mixtures of bootstrapped posteriors
-
-        array(prefix, ec_idx) standard deviations of mixtures of bootstrapped
-        posterior distributions on PSI
-        """
-        return cast(xr.DataArray, np.sqrt(self.bootstrap_posterior_variance))
-
-    @property
-    def bootstrap_psi_mean(self) -> xr.DataArray:
-        """array(prefix, ec_idx) means of mixtures of bootstrapped posteriors
-
-        array(prefix, ec_idx) means of mixture of bootstrapped posterior
-        distribution on PSI.
-        Alias for `:py:meth:`PsiCoverage.bootstrap_posterior_mean`
-        """
-        return self.bootstrap_posterior_mean
-
-    @cached_property
-    def bootstrap_psi_mean_legacy(self) -> xr.DataArray:
-        """array(prefix, ec_idx) median of means of bootstrapped posteriors
-
-        array(prefix, ec_idx) median of means of bootstrapped posterior
-        distributions on PSI.
-
-        Notes
-        -----
-        This is what was reported in MAJIQ v1 and v2.
-        We have observed that if we increase the number of bootstrap replicates,
-        both estimates tend close (but not exactly) to the raw posterior mean,
-        which we now prefer.
-        """
-        return xr.apply_ufunc(
-            bm.means_median,
-            self.bootstrap_alpha,
-            self.bootstrap_beta,
-            input_core_dims=[["bootstrap_replicate"], ["bootstrap_replicate"]],
-            dask="parallelized",
-        )
-
-    @property
-    def bootstrap_psi_variance(self) -> xr.DataArray:
-        """array(prefix, ec_idx) variances of mixtures of bootstrapped posteriors
-
-        array(prefix, ec_idx) variances of mixtures of bootstrapped posterior
-        distributions on PSI.
-        Alias for `:py:meth:`PsiCoverage.bootstrap_posterior_variance`
-        """
-        return self.bootstrap_posterior_variance
-
-    @property
-    def bootstrap_psi_std(self) -> xr.DataArray:
-        """array(prefix, ec_idx) standard deviations of mixtures of bootstrapped posteriors
-
-        array(prefix, ec_idx) standard deviations of mixtures of bootstrapped
-        posterior distributions on PSI.
-        Alias for `:py:meth:`PsiCoverage.bootstrap_posterior_std`
-        """
-        return self.bootstrap_posterior_std
-
-    @staticmethod
-    def _compute_posterior_quantile(
-        a: xr.DataArray,
-        b: xr.DataArray,
-        quantiles: Union[xr.DataArray, Sequence[float]] = [0.1, 0.9],
-        mix_dim: str = "bootstrap_replicate",
-    ) -> xr.DataArray:
-        if not isinstance(quantiles, xr.DataArray):
-            quantiles_arr = np.array(quantiles, dtype=a.dtype)
-            if quantiles_arr.ndim > 1:
-                raise ValueError(
-                    "Unable to handle non-xarray multi-dimensional quantiles"
-                )
-            elif quantiles_arr.ndim == 0:
-                quantiles_arr = quantiles_arr[np.newaxis]
-            quantiles = xr.DataArray(quantiles_arr, [("quantiles", quantiles_arr)])
-        # if mixture dimension is not present, treat as one-component mixture
-        if mix_dim not in a.dims:
-            a = a.expand_dims(**{mix_dim: 1})
-        if mix_dim not in b.dims:
-            b = b.expand_dims(**{mix_dim: 1})
-        return xr.apply_ufunc(
-            bm.quantile,
-            quantiles,
-            a,
-            b,
-            input_core_dims=[[], [mix_dim], [mix_dim]],
-            dask="allowed",
-        )
-
-    def bootstrap_quantile(
-        self,
-        quantiles: Union[xr.DataArray, Sequence[float]] = [0.1, 0.9],
-    ) -> xr.DataArray:
-        """Compute quantiles of mixture of bootstrapped posterior distributions
-
-        Parameters
-        ----------
-        quantiles: Union[xr.DataArray, Sequence[float]]
-            quantiles of distribution to compute
-
-        Returns
-        -------
-        xr.DataArray
-            Return array(ec_idx, ...) of quantiles per connection. If
-            `quantiles` is not :py:class:`xr.DataArray`, dimension over
-            quantiles will be "quantiles"
-
-        Notes
-        -----
-        Please use :py:meth:`PsiCoverage.approximate_quantile` instead, which
-        is faster, and what we think is a better representation of PSI
-        """
-        return self._compute_posterior_quantile(
-            self.bootstrap_alpha, self.bootstrap_beta, quantiles=quantiles
-        )
-
-    def approximate_quantile(
-        self,
-        quantiles: Union[xr.DataArray, Sequence[float]] = [0.1, 0.9],
-    ) -> xr.DataArray:
-        """Compute quantiles of approximate/smoothed bootstrapped posterior
-
-        Parameters
-        ----------
-        quantiles: Union[xr.DataArray, Sequence[float]]
-            quantiles of distribution to compute
-
-        Returns
-        -------
-        xr.DataArray
-            Return array(ec_idx, ...) of quantiles per connection. If
-            `quantiles` is not :py:class:`xr.DataArray`, dimension over
-            quantiles will be "quantiles"
-
-        See Also
-        --------
-        :py:meth:`PsiCoverage.bootstrap_quantile`
-        """
-        return self._compute_posterior_quantile(
-            self.approximate_alpha, self.approximate_beta, quantiles=quantiles
-        )
-
-    @staticmethod
-    def _compute_posterior_discretized_pmf(
-        a: xr.DataArray,
-        b: xr.DataArray,
-        nbins: int = constants.DEFAULT_QUANTIFY_PSIBINS,
-        mix_dim: str = "bootstrap_replicate",
-    ) -> xr.DataArray:
-        endpoints = np.linspace(0, 1, 1 + nbins, dtype=a.dtype)
-        dummy_bins = xr.DataArray(
-            np.empty(nbins, dtype=a.dtype),
-            {
-                "pmf_bin_start": ("pmf_bin", endpoints[:-1]),
-                "pmf_bin_end": ("pmf_bin", endpoints[1:]),
-            },
-            dims=["pmf_bin"],
-        )
-        # if mixture dimension is not present, treat as one-component mixture
-        if mix_dim not in a.dims:
-            a = a.expand_dims(**{mix_dim: 1})
-        if mix_dim not in b.dims:
-            b = b.expand_dims(**{mix_dim: 1})
-        return xr.apply_ufunc(
-            bm.pmf,
-            a,
-            b,
-            dummy_bins,
-            input_core_dims=[
-                [mix_dim],
-                [mix_dim],
-                ["pmf_bin"],
-            ],
-            output_core_dims=[["pmf_bin"]],
-            dask="allowed",
-        )
-
-    def bootstrap_discretized_pmf(
-        self, nbins: int = constants.DEFAULT_QUANTIFY_PSIBINS
-    ) -> xr.DataArray:
-        """Compute discretized PMF of bootstrap posterior mixture
-
-        Parameters
-        ----------
-        nbins: int
-            Number of uniform bins on [0, 1] on which probability mass will be
-            computed
-        """
-        return self._compute_posterior_discretized_pmf(
-            self.bootstrap_alpha, self.bootstrap_beta, nbins=nbins
-        )
-
-    def approximate_discretized_pmf(
-        self, nbins: int = constants.DEFAULT_QUANTIFY_PSIBINS
-    ) -> xr.DataArray:
-        """Compute discretized PMF of approximate/smoothed bootstrap posterior
-
-        Parameters
-        ----------
-        nbins: int
-            Number of uniform bins on [0, 1] on which probability mass will be
-            computed
-        """
-        return self._compute_posterior_discretized_pmf(
-            self.approximate_alpha, self.approximate_beta, nbins=nbins
-        )
-
-    @cached_property
-    def _raw_psi_mean_core_prefix(self) -> xr.DataArray:
-        """For computing quantiles over a population of samples"""
-        result = self.raw_psi_mean
-        if result.chunks:
-            result = result.chunk({"prefix": None})
-        return result
-
-    @cached_property
-    def _bootstrap_psi_mean_core_prefix(self) -> xr.DataArray:
-        """For computing quantiles over a population of samples"""
-        result = self.bootstrap_psi_mean
-        if result.chunks:
-            result = result.chunk({"prefix": None})
-        return result
-
-    @cached_property
-    def raw_psi_mean_population_median(self) -> xr.DataArray:
-        """array(ec_idx) median over prefixes of :py:meth:`PsiCoverage.raw_psi_mean`"""
-        return xr.apply_ufunc(
-            nanmedian,
-            self._raw_psi_mean_core_prefix,
-            input_core_dims=[["prefix"]],
-            dask="allowed",
-        )
-
-    @cached_property
-    def bootstrap_psi_mean_population_median(self) -> xr.DataArray:
-        """array(ec_idx) median over prefixes of :py:meth:`PsiCoverage.bootstrap_psi_mean`"""
-        return xr.apply_ufunc(
-            nanmedian,
-            self._bootstrap_psi_mean_core_prefix,
-            input_core_dims=[["prefix"]],
-            dask="allowed",
-        )
-
-    @staticmethod
-    def _compute_population_quantile(
-        x: xr.DataArray,
-        quantiles: Sequence[float] = constants.DEFAULT_HET_POPULATION_QUANTILES,
-        quantile_dim_name: str = "population_quantile",
-    ) -> xr.DataArray:
-        quantiles_xr = xr.DataArray(quantiles, [(quantile_dim_name, quantiles)])
-        return xr.apply_ufunc(
-            nanquantile,
-            x,
-            quantiles_xr,
-            input_core_dims=[["prefix"], [quantile_dim_name]],
-            output_core_dims=[[quantile_dim_name]],
-            dask="allowed",
-        )
-
-    def raw_psi_mean_population_quantile(
-        self,
-        quantiles: Sequence[float] = constants.DEFAULT_HET_POPULATION_QUANTILES,
-        quantile_dim_name: str = "population_quantile",
-    ) -> xr.DataArray:
-        """empirical quantiles over prefixes of :py:meth:`PsiCoverage.raw_psi_mean`
-
-        Parameters
-        ----------
-        quantiles: Sequence[float]
-            quantiles over quantified population to compute
-        quantiles_dim_name: str
-            Name of dimension in output array matching `quantiles`
-
-        Returns
-        -------
-        xr.DataArray
-            array(ec_idx, `quantiles_dim_name`) of quantiles per connection
-            over quantified prefixes
-        """
-        return self._compute_population_quantile(
-            self._raw_psi_mean_core_prefix,
-            quantiles,
-            quantile_dim_name=quantile_dim_name,
-        )
-
-    def bootstrap_psi_mean_population_quantile(
-        self,
-        quantiles: Sequence[float] = constants.DEFAULT_HET_POPULATION_QUANTILES,
-        quantile_dim_name: str = "population_quantile",
-    ) -> xr.DataArray:
-        """empirical quantiles over prefixes of :py:meth:`PsiCoverage.bootstrap_psi_mean`
-
-        Parameters
-        ----------
-        quantiles: Sequence[float]
-            quantiles over quantified population to compute
-        quantiles_dim_name: str
-            Name of dimension in output array matching `quantiles`
-
-        Returns
-        -------
-        xr.DataArray
-            array(ec_idx, `quantiles_dim_name`) of quantiles per connection
-            over quantified prefixes
-        """
-        return self._compute_population_quantile(
-            self._bootstrap_psi_mean_core_prefix,
-            quantiles,
-            quantile_dim_name=quantile_dim_name,
-        )
 
     @classmethod
     def from_events_coverage(

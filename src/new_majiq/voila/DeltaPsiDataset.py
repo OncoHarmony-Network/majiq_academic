@@ -23,9 +23,62 @@ from ..core.DPsiPrior import DPsiPrior
 from ..core.Events import Events, _Events
 from ..core.GeneIntrons import GeneIntrons
 from ..core.GeneJunctions import GeneJunctions
+from ..core.MixinPsiInference import MixinApproximatePsi, MixinRawPsi
 from ..core.PMFSummaries import PMFSummaries
-from ..core.PsiCoverage import PsiCoverage
 from ..core.SpliceGraph import SpliceGraph
+
+
+class DeltaPsiGroupPsiStatistics(MixinRawPsi, MixinApproximatePsi):
+    """Encapsulate group statistics around PSI for DeltaPsi groups
+
+    Parameters
+    ----------
+    df: xr.Dataset
+    """
+
+    EXPECTED_VARIABLES: Final = {
+        # values for PSI
+        "raw_alpha": ("grp", "ec_idx"),
+        "raw_beta": ("grp", "ec_idx"),
+        "approximate_alpha": ("grp", "ec_idx"),
+        "approximate_beta": ("grp", "ec_idx"),
+        "raw_coverage": ("grp", "ec_idx"),
+    }
+
+    def __init__(self, df: xr.Dataset):
+        # verify that every variable expected is present
+        for var, var_dims in self.EXPECTED_VARIABLES.items():
+            if var not in df.variables:
+                raise ValueError(f"{var} must be in df variables")
+            if set(df[var].dims) != set(var_dims):
+                raise ValueError(f"df['{var}'] must have dimensions {var_dims}")
+        self.df: Final[xr.Dataset] = df
+        return
+
+    @property
+    def raw_coverage(self) -> xr.DataArray:
+        """Raw coverage per event connection"""
+        return self.df["raw_coverage"]
+
+    @property
+    def raw_alpha(self) -> xr.DataArray:
+        """array(...) of alpha for raw posterior"""
+        return self.df["raw_alpha"]
+
+    @property
+    def raw_beta(self) -> xr.DataArray:
+        """array(...) of beta for raw posterior"""
+        return self.df["raw_beta"]
+
+    @property
+    def approximate_alpha(self) -> xr.DataArray:
+        """array(...) of alpha approximating bootstrap posterior"""
+        return self.df["approximate_alpha"]
+
+    @property
+    def approximate_beta(self) -> xr.DataArray:
+        """array(...) of beta approximating bootstrap posterior"""
+        return self.df["approximate_beta"]
 
 
 class DeltaPsiDataset(object):
@@ -47,12 +100,7 @@ class DeltaPsiDataset(object):
         # whether a comparison was passed
         "passed": ("comparison", "ec_idx"),
         # values for PSI
-        "raw_psi_mean": ("grp", "ec_idx"),
-        "raw_psi_std": ("grp", "ec_idx"),
-        "bootstrap_psi_std": ("grp", "ec_idx"),
-        "raw_coverage": ("grp", "ec_idx"),
-        "approximate_alpha": ("grp", "ec_idx"),
-        "approximate_beta": ("grp", "ec_idx"),
+        **DeltaPsiGroupPsiStatistics.EXPECTED_VARIABLES,
     }
 
     @classmethod
@@ -83,19 +131,15 @@ class DeltaPsiDataset(object):
                 comparison_grp2=("comparison", [dpsi.name2]),
             )
         )
-        PSI_VARIABLES = [
-            "raw_psi_mean",
-            "raw_psi_std",
-            "bootstrap_psi_std",
-            "raw_coverage",
-            "approximate_alpha",
-            "approximate_beta",
-        ]
         psi_ds = (
             xr.concat(
                 [
-                    dpsi.psi1.dataset(PSI_VARIABLES).drop_vars("any_passed"),
-                    dpsi.psi2.dataset(PSI_VARIABLES).drop_vars("any_passed"),
+                    dpsi.psi1.dataset(
+                        list(DeltaPsiGroupPsiStatistics.EXPECTED_VARIABLES.keys())
+                    ).drop_vars("any_passed"),
+                    dpsi.psi2.dataset(
+                        list(DeltaPsiGroupPsiStatistics.EXPECTED_VARIABLES.keys())
+                    ).drop_vars("any_passed"),
                 ],
                 dim="prefix",
             )
@@ -119,11 +163,9 @@ class DeltaPsiDataset(object):
         # verify that every variable expected is present
         for var, var_dims in self.EXPECTED_VARIABLES.items():
             if var not in df.variables:
-                raise ValueError(f"{var} must be in DeltaPsiDataset df variables")
+                raise ValueError(f"{var} must be in df variables")
             if set(df[var].dims) != set(var_dims):
-                raise ValueError(
-                    f"DeltaPsiDataset df['{var}' must have dimensions {var_dims}"
-                )
+                raise ValueError(f"df['{var}'] must have dimensions {var_dims}")
         # verify that all compared groups have PSI information available
         if not (
             df["comparison_grp1"].load().isin(df["grp"]).all()
@@ -135,11 +177,16 @@ class DeltaPsiDataset(object):
                 f" have PSI information on dimension {df['grp'] = }"
             )
         # make these values available
-        self.df: Final[xr.Dataset] = df.transpose(
-            ..., "ec_idx", "mixture_component", "pmf_bin"
-        )
         self.events: Final[xr.Dataset] = events
+        self.groups: Final[DeltaPsiGroupPsiStatistics] = DeltaPsiGroupPsiStatistics(
+            df.transpose(..., "ec_idx", "mixture_component", "pmf_bin")
+        )
         return
+
+    @property
+    def df(self) -> xr.Dataset:
+        """Underlying xarray dataset"""
+        return self.groups.df
 
     @classmethod
     def from_zarr(
@@ -224,41 +271,6 @@ class DeltaPsiDataset(object):
     def passed(self) -> xr.DataArray:
         """Boolean mask for passed events for each comparison"""
         return self.df["passed"]
-
-    @property
-    def raw_psi_mean(self) -> xr.DataArray:
-        """PSI posterior means from raw coverage per group"""
-        return self.df["raw_psi_mean"]
-
-    @property
-    def raw_psi_std(self) -> xr.DataArray:
-        """PSI posterior standard deviations from raw coverage per group"""
-        return self.df["raw_psi_std"]
-
-    @property
-    def bootstrap_psi_std(self) -> xr.DataArray:
-        """PSI posterior standard deviations from bootstrap coverage per group"""
-        return self.df["bootstrap_psi_std"]
-
-    @property
-    def raw_coverage(self) -> xr.DataArray:
-        """Raw coverage for each connection"""
-        return self.df["raw_coverage"]
-
-    def psi_approximate_discretized_pmf(
-        self, nbins: int = constants.DEFAULT_QUANTIFY_PSIBINS
-    ) -> xr.DataArray:
-        """Compute discretized PMF of approximate/smoothed bootstrap posterior
-
-        Parameters
-        ----------
-        nbins: int
-            Number of uniform bins on [0, 1] on which probability mass will be
-            computed
-        """
-        return PsiCoverage._compute_posterior_discretized_pmf(
-            self.df["approximate_alpha"], self.df["approximate_beta"], nbins=nbins
-        )
 
     @cached_property
     def dpsi_prior(self) -> DPsiPrior:
@@ -360,10 +372,10 @@ class DeltaPsiDataset(object):
                 "probability_nonchanging": self.dpsi_posterior.interval_probability(
                     -nonchanging_threshold, nonchanging_threshold
                 ),
-                "raw_psi_mean": self.raw_psi_mean,
-                "raw_psi_std": self.raw_psi_std,
-                "bootstrap_psi_std": self.bootstrap_psi_std,
-                "raw_coverage": self.raw_coverage,
+                "raw_psi_mean": self.groups.raw_psi_mean,
+                "raw_psi_std": self.groups.raw_psi_std,
+                "bootstrap_psi_std": self.groups.bootstrap_psi_std,
+                "raw_coverage": self.groups.raw_coverage,
             },
         )
         # load/compute into memory
