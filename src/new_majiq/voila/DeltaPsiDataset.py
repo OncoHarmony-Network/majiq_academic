@@ -218,6 +218,7 @@ class DeltaPsiDataset(object):
         consolidated: bool = True,
         show_progress: bool = False,
     ) -> None:
+        """Save :class:`DeltaPsiDataset` to specified path"""
         save_df_future = cast(
             Delayed,
             self.df.to_zarr(

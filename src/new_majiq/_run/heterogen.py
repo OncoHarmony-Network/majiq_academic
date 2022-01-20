@@ -12,8 +12,6 @@ import sys
 from typing import Any, Dict, List, Optional
 
 import numpy as np
-import pandas as pd
-from dask.distributed import progress
 
 import new_majiq as nm
 from new_majiq._run._majiq_args import (
@@ -138,16 +136,6 @@ def run(args: argparse.Namespace) -> None:
     metadata["group_sizes"] = group_sizes
     log.info(f"Comparing {args.names[0]}({psi1}) vs {args.names[1]}({psi2})")
 
-    # initialize list of data frames that will be concatenated (on columns)
-    concat_df: List[pd.DataFrame] = list()
-
-    # did we have a splicegraph to work with? add annotations...
-    if args.splicegraph:
-        log.info(f"Loading splicegraph from {args.splicegraph}")
-        sg = nm.SpliceGraph.from_zarr(args.splicegraph)
-        events = psi1.get_events(sg.introns, sg.junctions)
-        concat_df.append(events.ec_dataframe)
-
     # dataset of quantifications I want
     log.info(f"Performing quantification on means and {args.psisamples} psisamples")
     heterogen = nm.Heterogen(
@@ -157,84 +145,33 @@ def run(args: argparse.Namespace) -> None:
         name1=args.names[0],
         name2=args.names[1],
     )
-    # which tests? which psi? which quantiles (pop and pval)? what psisamples?
-    ds_quant = heterogen.dataset(
-        raw_stats=args.raw_stats,
-        approximate_stats=args.approximate_stats,
-        population_quantiles=population_quantiles,
+    heterogen_voila = heterogen.dataset(
         pvalue_quantiles=pvalue_quantiles,
-        psisamples=args.psisamples,
         use_stats=use_stats,
+        psisamples=args.psisamples,
+        psibins=nm.constants.DEFAULT_QUANTIFY_PSIBINS,
     )
-    if args.show_progress:
-        ds_quant = ds_quant.persist()
-        progress(*(x.data for x in ds_quant.variables.values() if x.chunks))
-    ds_quant = ds_quant.load()
 
-    log.info("Reshaping resulting quantifications to table")
-    # pvalue columns that have dims (ec_idx, stats)
-    df_pvalues = (
-        ds_quant[
-            [
-                name
-                for name, v in ds_quant.data_vars.items()
-                if set(v.dims) == {"ec_idx", "stats"}
-            ]
-        ]
-        .to_dataframe()
-        .unstack(["stats"])
-        .sort_index(axis=1)
-    )
-    df_pvalues.columns = [f"{stat}-{var}" for var, stat in df_pvalues.columns]
-    concat_df.append(df_pvalues)
-    if args.psisamples > 0 and pvalue_quantiles:
-        # have dims (ec_idx, stats, pval_quantile)
-        df_psisamples = (
-            ds_quant[
-                [
-                    name
-                    for name, v in ds_quant.data_vars.items()
-                    if set(v.dims) == {"ec_idx", "stats", "pval_quantile"}
-                ]
-            ]
-            .to_dataframe()
-            .unstack(["stats", "pval_quantile"])
-            .sort_index(axis=1)
+    if args.output_voila:
+        log.info("Saving quantifications for VOILA to %s", args.output_voila)
+        heterogen_voila.to_zarr(
+            args.output_voila,
+            ec_chunksize=args.chunksize,
+            show_progress=args.show_progress,
         )
-        df_psisamples.columns = [
-            f"{stat}-{var}_{q:0.3f}" for var, stat, q in df_psisamples.columns
-        ]
-        concat_df.append(df_psisamples)
-    # columns that have dims (grp, ec_idx) (always)
-    df_medians = (
-        ds_quant[
-            [
-                name
-                for name, v in ds_quant.data_vars.items()
-                if set(v.dims) == {"ec_idx", "grp"}
-            ]
-        ]
-        .to_dataframe()
-        .unstack(["grp"])
-        .sort_index(axis=1)
+        heterogen_voila = nm.HeterogenDataset.from_zarr(args.output_voila)
+
+    sg: Optional[nm.SpliceGraph] = None
+    if args.splicegraph:
+        log.debug("Loading splicegraph from %s", args.splicegraph)
+        sg = nm.SpliceGraph.from_zarr(args.splicegraph)
+
+    log.info("Summarizing population quantiles per group")
+    df = heterogen_voila.to_dataframe(
+        sg=sg,
+        population_quantiles=population_quantiles,
+        show_progress=args.show_progress,
     )
-    df_medians.columns = [f"{grp}-{var}" for var, grp in df_medians.columns]
-    concat_df.append(df_medians)
-    if population_quantiles:
-        df_pq = (
-            ds_quant[
-                [
-                    name
-                    for name, v in ds_quant.data_vars.items()
-                    if set(v.dims) == {"ec_idx", "grp", "population_quantile"}
-                ]
-            ]
-            .to_dataframe()
-            .unstack(["grp", "population_quantile"])
-            .sort_index(axis=1)
-        )
-        df_pq.columns = [f"{grp}-{var}_{q:0.3f}" for var, grp, q in df_pq.columns]
-        concat_df.append(df_pq)
 
     try:
         output_name = args.output_tsv.name
@@ -245,10 +182,7 @@ def run(args: argparse.Namespace) -> None:
     args.output_tsv.write("# {}\n".format(metadata_json.replace("\n", "\n# ")))
     log.info(f"Writing table to {output_name}")
     (
-        # concatenate columns together
-        pd.concat(concat_df, axis=1, join="inner")
-        # remove rows where no input passed
-        .loc[ds_quant["passed"].values]
+        df
         # any column with pvalue in it needs to be manually formatted
         .pipe(
             lambda df: df.assign(

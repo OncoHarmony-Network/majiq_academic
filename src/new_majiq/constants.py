@@ -30,6 +30,7 @@ NC_EVENTS: Final[str] = "events"
 NC_EVENTSCOVERAGE: Final[str] = "events_coverage"
 NC_PSICOVERAGE: Final[str] = "psi_coverage"
 NC_DELTAPSI: Final[str] = "deltapsi"
+NC_HETEROGEN: Final[str] = "heterogen"
 
 NC_PSICONTROLS: Final[str] = "psi_controls"
 NC_PSIOUTLIERS: Final[str] = "psi_outliers"

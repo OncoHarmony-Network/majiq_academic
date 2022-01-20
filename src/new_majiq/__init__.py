@@ -51,6 +51,7 @@ from .core.SpliceGraphReads import SpliceGraphReads
 
 # datasets for VOILA
 from .voila.DeltaPsiDataset import DeltaPsiDataset
+from .voila.HeterogenDataset import HeterogenDataset
 
 
 def rng_seed(seed: int) -> None:
@@ -122,6 +123,7 @@ __all__ = [
     "DeltaPsi",
     "DeltaPsiDataset",
     "Heterogen",
+    "HeterogenDataset",
     "PassedJunctions",
     "PMFSummaries",
     "PsiControlsSummary",

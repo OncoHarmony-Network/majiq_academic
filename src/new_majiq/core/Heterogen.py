@@ -7,7 +7,7 @@ Author: Joseph K Aicher
 """
 
 from functools import cached_property
-from typing import Collection, Final, List, Sequence, Union
+from typing import TYPE_CHECKING, Collection, Final, Sequence, Union
 
 import numpy as np
 import xarray as xr
@@ -17,6 +17,9 @@ import new_majiq.constants as constants
 from new_majiq.logger import get_logger
 
 from .PsiCoverage import PsiCoverage
+
+if TYPE_CHECKING:
+    from ..voila.HeterogenDataset import HeterogenDataset
 
 
 class Heterogen(object):
@@ -88,6 +91,7 @@ class Heterogen(object):
         mix_dim: str = "bootstrap_replicate",
         name1: str = "grp1",
         name2: str = "grp2",
+        drop: bool = True,
     ) -> xr.Dataset:
         """get pvalues on distribution means and pvalue quantiles on samples"""
         # define stats vector to input
@@ -157,7 +161,7 @@ class Heterogen(object):
                 ),
             },
         )
-        if not (psisamples > 0 and quantiles):
+        if drop and not (psisamples > 0 and quantiles):
             ds = ds.drop_dims("pval_quantile")
         return ds
 
@@ -184,6 +188,7 @@ class Heterogen(object):
         quantiles: Sequence[float] = constants.DEFAULT_HET_PVALUE_QUANTILES,
         psisamples: int = constants.DEFAULT_HET_PSISAMPLES,
         use_stats: Union[str, Collection[str]] = constants.DEFAULT_HET_USESTATS,
+        drop: bool = True,
     ) -> xr.Dataset:
         """Statistics on means, samples from bootstrap posteriors"""
         if psisamples < 1:
@@ -198,6 +203,7 @@ class Heterogen(object):
             quantiles=quantiles,
             psisamples=psisamples,
             use_stats=use_stats,
+            drop=drop,
         )
 
     def approximate_stats(
@@ -205,6 +211,7 @@ class Heterogen(object):
         quantiles: Sequence[float] = constants.DEFAULT_HET_PVALUE_QUANTILES,
         psisamples: int = constants.DEFAULT_HET_PSISAMPLES,
         use_stats: Union[str, Collection[str]] = constants.DEFAULT_HET_USESTATS,
+        drop: bool = True,
     ) -> xr.Dataset:
         """Statistics on means, samples from approximate posteriors"""
         if psisamples < 1:
@@ -219,87 +226,22 @@ class Heterogen(object):
             quantiles=quantiles,
             psisamples=psisamples,
             use_stats=use_stats,
+            drop=drop,
         )
 
     def dataset(
         self,
-        raw_stats: bool = constants.DEFAULT_HET_RAWSTATS,
-        approximate_stats: bool = constants.DEFAULT_HET_APPROXSTATS,
-        population_quantiles: Sequence[
-            float
-        ] = constants.DEFAULT_HET_POPULATION_QUANTILES,
         pvalue_quantiles: Sequence[float] = constants.DEFAULT_HET_PVALUE_QUANTILES,
-        psisamples: int = constants.DEFAULT_HET_PSISAMPLES,
         use_stats: Union[str, Collection[str]] = constants.DEFAULT_HET_USESTATS,
-    ) -> xr.Dataset:
-        combine_ds: List[Union[xr.DataArray, xr.Dataset]] = [
-            self.passed.rename("passed"),
-            xr.concat(
-                [
-                    self.psi1.num_passed.expand_dims(grp=[self.name1]),
-                    self.psi2.num_passed.expand_dims(grp=[self.name2]),
-                ],
-                dim="grp",
-            ).rename("num_passed"),
-        ]
-        combine_ds.append(
-            xr.concat(
-                [
-                    self.psi1.raw_psi_mean_population_median.expand_dims(
-                        grp=[self.name1]
-                    ),
-                    self.psi2.raw_psi_mean_population_median.expand_dims(
-                        grp=[self.name2]
-                    ),
-                ],
-                dim="grp",
-            ).rename("raw_psi_median")
-        )
-        if population_quantiles:
-            combine_ds.append(
-                xr.concat(
-                    [
-                        self.psi1.raw_psi_mean_population_quantile(
-                            quantiles=population_quantiles
-                        ).expand_dims(grp=[self.name1]),
-                        self.psi2.raw_psi_mean_population_quantile(
-                            quantiles=population_quantiles
-                        ).expand_dims(grp=[self.name2]),
-                    ],
-                    dim="grp",
-                ).rename("raw_psi_quantile")
-            )
-        if raw_stats:
-            combine_ds.append(
-                self.raw_stats(
-                    use_stats=use_stats,
-                ).pipe(lambda x: x.rename_vars(**{y: f"raw_{y}" for y in x.data_vars}))
-            )
-        if approximate_stats:
-            # store medians of bootstrap distribution if stats with boostrapped
-            # posteriors done
-            combine_ds.append(
-                xr.concat(
-                    [
-                        self.psi1.bootstrap_psi_mean_population_median.expand_dims(
-                            grp=[self.name1]
-                        ),
-                        self.psi2.bootstrap_psi_mean_population_median.expand_dims(
-                            grp=[self.name2]
-                        ),
-                    ],
-                    dim="grp",
-                ).rename("bootstrap_psi_median")
-            )
-            combine_ds.append(
-                self.approximate_stats(
-                    quantiles=pvalue_quantiles,
-                    psisamples=psisamples,
-                    use_stats=use_stats,
-                ).pipe(
-                    lambda x: x.rename_vars(**{y: f"approx_{y}" for y in x.data_vars})
-                )
-            )
-        return xr.merge(combine_ds, compat="override", join="exact").reset_coords(
-            drop=True
+        psisamples: int = constants.DEFAULT_HET_PSISAMPLES,
+        psibins: int = constants.DEFAULT_QUANTIFY_PSIBINS,
+    ) -> "HeterogenDataset":
+        from ..voila.HeterogenDataset import HeterogenDataset
+
+        return HeterogenDataset.from_heterogen(
+            self,
+            pvalue_quantiles=pvalue_quantiles,
+            use_stats=use_stats,
+            psisamples=psisamples,
+            psibins=psibins,
         )
