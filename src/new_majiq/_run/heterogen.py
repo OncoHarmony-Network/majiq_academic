@@ -105,6 +105,14 @@ def add_args(parser: argparse.ArgumentParser) -> None:
         " posteriors (default: %(default)s)",
     )
     resources_args(parser, use_dask=True)
+    parser.add_argument(
+        "--psibins",
+        metavar="B",
+        type=check_nonnegative_factory(int, True),
+        default=nm.constants.DEFAULT_QUANTIFY_PSIBINS,
+        help="Number of bins for discretizing PSI distribution for visualization"
+        " (default: %(default)s)",
+    )
     return
 
 
