@@ -88,15 +88,19 @@ class GenericSubcommand(object):
         )
         if getattr(args, "use_dask", False):
             # we are using dask, so set up client here
-            client = Client(
-                n_workers=1,
-                threads_per_worker=args.nthreads,
-                dashboard_address=":0",
-                memory_limit=args.memory_limit,
-                local_directory=args.dask_local_directory,
-            )
-            # dashboard_address=None should disable server, but it doesn't
-            client.cluster.scheduler.http_server.stop()  # stop server
+            client: Client
+            if args.scheduler_address:
+                client = Client(args.scheduler_address)
+            else:
+                client = Client(
+                    n_workers=1,
+                    threads_per_worker=args.nthreads,
+                    dashboard_address=":0",
+                    memory_limit=args.memory_limit,
+                    local_directory=args.dask_local_directory,
+                )
+                # dashboard_address=None should disable http server, but it doesn't
+                client.cluster.scheduler.http_server.stop()  # stop http server
             log.info(client)
         # run subcommand
         try:
@@ -104,12 +108,15 @@ class GenericSubcommand(object):
         except Exception:
             # log exception and re-raise
             log.exception("Exiting due to exception:")
+            if getattr(args, "use_dask", False) and not args.scheduler_address:
+                client.shutdown()
+                del client
             sys.exit(-1)
             return
         # if dask cluster, clean up after ourselves
-        if getattr(args, "use_dask", False):
-            client.cluster.close()
-            client.close()
+        if getattr(args, "use_dask", False) and not args.scheduler_address:
+            client.shutdown()
+            del client
         # when done running, note that it was successsfully completed!
         log.info("Finished successfully!")
         return

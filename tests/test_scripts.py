@@ -227,7 +227,7 @@ def test_sg_coverage_command(script_runner, batch_group, tmp_path):
 
 
 @pytest.mark.parametrize("min_experiments", [None, 2])
-def test_quantify_command(script_runner, min_experiments, tmp_path):
+def test_quantify_command(script_runner, min_experiments, tmp_path, dask_client):
     """Smoke test for quantify command"""
     paths_psicov = [get_psicov_path(group) for group, _ in EXPERIMENT_GROUPS]
     flag = []
@@ -241,17 +241,24 @@ def test_quantify_command(script_runner, min_experiments, tmp_path):
         *("--splicegraph", get_path(COMBINED_SG)),
         *("--quantiles", "0.1", "0.9"),
         "--disable-progress",
-        *("--dask-local-directory", str(tmp_path)),
+        *("--scheduler-address", dask_client.scheduler.address),
     )
     assert ret.success
     return
 
 
-def test_deltapsi_command(script_runner, tmp_path):
+# this test verifies that majiq can setup/tear down its own dask client, too
+@pytest.mark.parametrize("own_cluster", [True, False])
+def test_deltapsi_command(script_runner, tmp_path, dask_client, own_cluster):
     """Smoke test for deltapsi command"""
     # split up psicoverage files into two groups arbitrarily
     paths_psicov = [get_psicov_path(group) for group, _ in EXPERIMENT_GROUPS]
     half = len(paths_psicov) // 2
+    dask_args = (
+        ("--dask-local-directory", str(tmp_path))
+        if own_cluster
+        else ("--scheduler-address", dask_client.scheduler.address)
+    )
     ret = script_runner.run(
         "new-majiq",
         "deltapsi",
@@ -261,13 +268,13 @@ def test_deltapsi_command(script_runner, tmp_path):
         *("--min-experiments", "2"),
         *("--splicegraph", get_path(COMBINED_SG)),
         "--disable-progress",
-        *("--dask-local-directory", str(tmp_path)),
+        *dask_args,
     )
     assert ret.success
     return
 
 
-def test_heterogen_command(script_runner, tmp_path):
+def test_heterogen_command(script_runner, tmp_path, dask_client):
     """Smoke test for heterogen command"""
     # split up psicoverage files into two groups arbitrarily
     paths_psicov = [get_psicov_path(group) for group, _ in EXPERIMENT_GROUPS]
@@ -281,13 +288,13 @@ def test_heterogen_command(script_runner, tmp_path):
         *("--min-experiments", "2"),
         *("--splicegraph", get_path(COMBINED_SG)),
         "--disable-progress",
-        *("--dask-local-directory", str(tmp_path)),
+        *("--scheduler-address", dask_client.scheduler.address),
     )
     assert ret.success
     return
 
 
-def test_psi_controls_command(script_runner, tmp_path):
+def test_psi_controls_command(script_runner, tmp_path, dask_client):
     """Smoke test for psi-controls command (all but first group)"""
     paths_psicov = [get_psicov_path(group) for group, _ in EXPERIMENT_GROUPS[1:]]
     path_result = str(tmp_path / "result")
@@ -297,13 +304,13 @@ def test_psi_controls_command(script_runner, tmp_path):
         path_result,
         *paths_psicov,
         "--disable-progress",
-        *("--dask-local-directory", str(tmp_path)),
+        *("--scheduler-address", dask_client.scheduler.address),
     )
     assert ret.success
     return
 
 
-def test_moccasin_factors_model_command(script_runner, tmp_path):
+def test_moccasin_factors_model_command(script_runner, tmp_path, dask_client):
     """Smoke test for moccasin-factors-model command, check close to expected"""
     paths_psicov = [get_psicov_path(group) for group, _ in EXPERIMENT_GROUPS]
     path_result = str(tmp_path / "result")
@@ -315,7 +322,7 @@ def test_moccasin_factors_model_command(script_runner, tmp_path):
         "--intercept-only",
         *("--ruv-max-new-factors", "1"),
         "--disable-progress",
-        *("--dask-local-directory", str(tmp_path)),
+        *("--scheduler-address", dask_client.scheduler.address),
     )
     assert ret.success
     xr.testing.assert_allclose(
@@ -325,7 +332,7 @@ def test_moccasin_factors_model_command(script_runner, tmp_path):
     return
 
 
-def test_moccasin_factors_infer_command(script_runner, tmp_path):
+def test_moccasin_factors_infer_command(script_runner, tmp_path, dask_client):
     """Smoke test for moccasin-factors-infer command"""
     paths_psicov = [get_psicov_path(group) for group, _ in EXPERIMENT_GROUPS]
     path_result = str(tmp_path / "result")
@@ -337,13 +344,13 @@ def test_moccasin_factors_infer_command(script_runner, tmp_path):
         *paths_psicov,
         "--intercept-only",
         "--disable-progress",
-        *("--dask-local-directory", str(tmp_path)),
+        *("--scheduler-address", dask_client.scheduler.address),
     )
     assert ret.success
     return
 
 
-def test_moccasin_coverage_model_command(script_runner, tmp_path):
+def test_moccasin_coverage_model_command(script_runner, tmp_path, dask_client):
     """Smoke test for moccasin-coverage-model command, check close to expected"""
     paths_psicov = [get_psicov_path(group) for group, _ in EXPERIMENT_GROUPS]
     path_result = str(tmp_path / "result")
@@ -355,7 +362,7 @@ def test_moccasin_coverage_model_command(script_runner, tmp_path):
         *("--factors-tsv", get_path(FACTORS_TSV)),
         *("--confounding", *FACTORS_TSV_CONFOUNDERS),
         "--disable-progress",
-        *("--dask-local-directory", str(tmp_path)),
+        *("--scheduler-address", dask_client.scheduler.address),
     )
     assert ret.success
     xr.testing.assert_allclose(
@@ -367,7 +374,7 @@ def test_moccasin_coverage_model_command(script_runner, tmp_path):
     return
 
 
-def test_moccasin_coverage_infer_command(script_runner, tmp_path):
+def test_moccasin_coverage_infer_command(script_runner, tmp_path, dask_client):
     """Smoke test for moccasin-coverage-infer command"""
     paths_psicov = [get_psicov_path(group) for group, _ in EXPERIMENT_GROUPS]
     path_result = str(tmp_path / "result")
@@ -380,7 +387,7 @@ def test_moccasin_coverage_infer_command(script_runner, tmp_path):
         *("--factors-tsv", get_path(FACTORS_TSV)),
         *("--confounding", *FACTORS_TSV_CONFOUNDERS),
         "--disable-progress",
-        *("--dask-local-directory", str(tmp_path)),
+        *("--scheduler-address", dask_client.scheduler.address),
     )
     assert ret.success
     return

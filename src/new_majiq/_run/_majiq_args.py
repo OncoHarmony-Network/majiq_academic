@@ -337,6 +337,18 @@ def resources_args(parser: argparse.ArgumentParser, use_dask: bool = False) -> N
             help="Disable progress bar for Dask computations"
             " (default: show_progress=%(default)s)",
         )
+        resources.add_argument(
+            "--scheduler-address",
+            metavar="url",
+            type=str,
+            default=None,
+            help="Use resources from existing Dask cluster at specified URL."
+            " This ignores nthreads, memory_limit, and dask_local_directory."
+            " Default is to create a new local cluster with those resources"
+            " for the duration of the script."
+            " If used, expects cluster to remain running and accessible while"
+            " the script is running.",
+        )
         parser.set_defaults(use_dask=True)
     else:
         resources.add_argument(
