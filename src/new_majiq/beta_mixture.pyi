@@ -9,6 +9,7 @@ means_median: numpy.ufunc
 moments: numpy.ufunc
 pdf: numpy.ufunc
 pmf: numpy.ufunc
+stochastic_pmf: numpy.ufunc
 quantile: numpy.ufunc
 sample: numpy.ufunc
 stats_sample: numpy.ufunc

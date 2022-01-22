@@ -27,6 +27,7 @@
 #include "Quantile.hpp"
 #include "Sample.hpp"
 #include "StatsSample.hpp"
+#include "StochasticPMF.hpp"
 
 // for functions requiring sampling
 static PyObject* SetSeedGlobalGen(PyObject* self, PyObject* args) {
@@ -179,6 +180,15 @@ PyMODINIT_FUNC PyInit_beta_mixture(void) {
       PMF::signature);
   PyDict_SetItemString(d, PMF::name, pmf);
   Py_DECREF(pmf);
+
+  namespace StochasticPMF = MajiqGufuncs::BetaMixture::StochasticPMF;
+  PyObject *stochastic_pmf = PyUFunc_FromFuncAndDataAndSignature(
+      StochasticPMF::funcs, data, StochasticPMF::types,
+      StochasticPMF::ntypes, StochasticPMF::nin, StochasticPMF::nout,
+      PyUFunc_None, StochasticPMF::name, StochasticPMF::doc, 0,
+      StochasticPMF::signature);
+  PyDict_SetItemString(d, StochasticPMF::name, stochastic_pmf);
+  Py_DECREF(stochastic_pmf);
 
   namespace Sample = MajiqGufuncs::BetaMixture::Sample;
   PyObject *sample = PyUFunc_FromFuncAndDataAndSignature(
