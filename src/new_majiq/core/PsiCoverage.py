@@ -25,10 +25,9 @@ import new_majiq.constants as constants
 from new_majiq.experiments import bam_experiment_name
 from new_majiq.logger import get_logger
 
-from .Events import Events, _Events
+from .Events import Events
 from .EventsCoverage import EventsCoverage
-from .GeneIntrons import GeneIntrons
-from .GeneJunctions import GeneJunctions
+from .MixinHasEvents import MixinHasEvents
 from .MixinPsiInference import (
     MixinBootstrapPsi,
     MixinBootstrapPsiMeanPopulation,
@@ -45,6 +44,7 @@ def min_experiments(min_experiments_f: float, num_experiments: int) -> float:
 
 
 class PsiCoverage(
+    MixinHasEvents,
     MixinBootstrapPsi,
     MixinRawPsi,
     MixinBootstrapPsiMeanPopulation,
@@ -139,6 +139,9 @@ class PsiCoverage(
             dataset that can be loaded along with matching introns/junctions as
             Events
         """
+        # save events
+        MixinHasEvents.__init__(self, df, events)
+        # save df after checking/updating values
         offsets = df["lsv_offsets"].load().values
         if offsets[0] != 0:
             raise ValueError("offsets[0] must be zero")
@@ -159,13 +162,7 @@ class PsiCoverage(
         self.df: Final[xr.Dataset] = df.transpose(
             "ec_idx", "prefix", ..., "bootstrap_replicate"
         )
-        self.events: Final[xr.Dataset] = events
         return
-
-    @property
-    def num_connections(self) -> int:
-        """Total number of connections over all events where coverage defined"""
-        return self.df.sizes["ec_idx"]
 
     @property
     def num_bootstraps(self) -> int:
@@ -573,9 +570,7 @@ class PsiCoverage(
             progress(save_df_future)
         else:
             save_df_future.compute()
-        self.events.chunk(self.events.sizes).to_zarr(
-            path, mode="a", group=constants.NC_EVENTS, consolidated=consolidated
-        )
+        self.events_to_zarr(path, mode="a", consolidated=consolidated)
         return
 
     def to_zarr_slice(
@@ -893,38 +888,6 @@ class PsiCoverage(
         """
         return PsiCoverage(
             self.df.assign(event_passed=self.event_passed & passed), self.events
-        )
-
-    def get_events(
-        self,
-        introns: GeneIntrons,
-        junctions: GeneJunctions,
-    ) -> Events:
-        """Construct :py:class:`Events` using saved dataset and introns, junctions
-
-        Parameters
-        ----------
-        introns: GeneIntrons
-        junctions: GeneJunctions
-
-        Returns
-        -------
-        Events
-        """
-        if self.events.intron_hash != introns.checksum():
-            raise ValueError("GeneIntrons checksums do not match")
-        if self.events.junction_hash != junctions.checksum():
-            raise ValueError("GeneJunctions checksums do not match")
-        return Events(
-            _Events(
-                introns._gene_introns,
-                junctions._gene_junctions,
-                self.events.ref_exon_idx,
-                self.events.event_type,
-                self.events._offsets,
-                self.events.is_intron,
-                self.events.connection_idx,
-            )
         )
 
     def dataset(

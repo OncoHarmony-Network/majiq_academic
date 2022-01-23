@@ -20,9 +20,7 @@ import new_majiq.constants as constants
 
 from ..core.DeltaPsi import DeltaPsi, DeltaPsiPMF
 from ..core.DPsiPrior import DPsiPrior
-from ..core.Events import Events, _Events
-from ..core.GeneIntrons import GeneIntrons
-from ..core.GeneJunctions import GeneJunctions
+from ..core.MixinHasEvents import MixinHasEvents
 from ..core.MixinPsiInference import MixinApproximatePsi, MixinRawPsi
 from ..core.SpliceGraph import SpliceGraph
 
@@ -80,7 +78,7 @@ class DeltaPsiGroupPsiStatistics(MixinRawPsi, MixinApproximatePsi):
         return self.df["approximate_beta"]
 
 
-class DeltaPsiDataset(object):
+class DeltaPsiDataset(MixinHasEvents):
     """Precomputed DeltaPsi quantifications for use in VOILA visualizations"""
 
     EXPECTED_VARIABLES: Final = {
@@ -159,6 +157,9 @@ class DeltaPsiDataset(object):
             dataset that can be loaded along with matching introns/junctions as
             Events
         """
+        # save events
+        MixinHasEvents.__init__(self, df, events)
+        # save df/groups after validating input
         # verify that every variable expected is present
         for var, var_dims in self.EXPECTED_VARIABLES.items():
             if var not in df.variables:
@@ -176,7 +177,6 @@ class DeltaPsiDataset(object):
                 f" have PSI information on dimension {df['grp'] = }"
             )
         # make these values available
-        self.events: Final[xr.Dataset] = events
         self.groups: Final[DeltaPsiGroupPsiStatistics] = DeltaPsiGroupPsiStatistics(
             df.transpose(..., "ec_idx", "mixture_component", "pmf_bin")
         )
@@ -234,9 +234,7 @@ class DeltaPsiDataset(object):
             progress(save_df_future)
         else:
             save_df_future.compute()
-        self.events.chunk(self.events.sizes).to_zarr(
-            path, mode="a", group=constants.NC_EVENTS, consolidated=consolidated
-        )
+        self.events_to_zarr(path, mode="a", consolidated=consolidated)
         return
 
     def __repr__(self) -> str:
@@ -244,11 +242,6 @@ class DeltaPsiDataset(object):
             f"DeltaPsiDataset[{self.num_connections}]"
             f" for {self.num_comparisons} comparisons of {self.num_groups} groups"
         )
-
-    @property
-    def num_connections(self) -> int:
-        """Number of event connections"""
-        return self.df.sizes["ec_idx"]
 
     @property
     def num_comparisons(self) -> int:
@@ -300,38 +293,6 @@ class DeltaPsiDataset(object):
     def bootstrap_posterior(self) -> DeltaPsiPMF:
         """:class:`DeltaPsiPMF` for average bootstrapped dpsi posteriors"""
         return DeltaPsiPMF(cast(xr.DataArray, np.exp(self.bootstrap_logposterior)))
-
-    def get_events(
-        self,
-        introns: GeneIntrons,
-        junctions: GeneJunctions,
-    ) -> Events:
-        """Construct :py:class:`Events` using saved dataset and introns, junctions
-
-        Parameters
-        ----------
-        introns: GeneIntrons
-        junctions: GeneJunctions
-
-        Returns
-        -------
-        Events
-        """
-        if self.events.intron_hash != introns.checksum():
-            raise ValueError("GeneIntrons checksums do not match")
-        if self.events.junction_hash != junctions.checksum():
-            raise ValueError("GeneJunctions checksums do not match")
-        return Events(
-            _Events(
-                introns._gene_introns,
-                junctions._gene_junctions,
-                self.events.ref_exon_idx,
-                self.events.event_type,
-                self.events._offsets,
-                self.events.is_intron,
-                self.events.connection_idx,
-            )
-        )
 
     def to_dataframe(
         self,

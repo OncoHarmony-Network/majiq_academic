@@ -18,10 +18,8 @@ from dask.distributed import progress
 
 import new_majiq.constants as constants
 
-from ..core.Events import Events, _Events
-from ..core.GeneIntrons import GeneIntrons
-from ..core.GeneJunctions import GeneJunctions
 from ..core.Heterogen import Heterogen
+from ..core.MixinHasEvents import MixinHasEvents
 from ..core.MixinPsiInference import MixinRawPsiMeanPopulation
 from ..core.SpliceGraph import SpliceGraph
 
@@ -73,7 +71,7 @@ class HeterogenGroupPsi(MixinRawPsiMeanPopulation):
         return self.raw_psi_mean["prefix"].values.tolist()
 
 
-class HeterogenDataset(object):
+class HeterogenDataset(MixinHasEvents):
     """Precomputed Heterogen quantifications for use in VOILA visualizations"""
 
     EXPECTED_VARIABLES: Final = {
@@ -184,6 +182,9 @@ class HeterogenDataset(object):
             dataset that can be loaded along with matching introns/junctions as
             Events
         """
+        # save events
+        MixinHasEvents.__init__(self, df, events)
+        # save df appropriately after checking validity
         # verify that every variable expected is present
         for var, var_dims in self.EXPECTED_VARIABLES.items():
             if var not in df.variables:
@@ -209,7 +210,6 @@ class HeterogenDataset(object):
         ):
             raise ValueError("Mismatch between prefix_grp numbers and grp_size")
         # make these values available
-        self.events: Final[xr.Dataset] = events
         self.df: Final[xr.Dataset] = df.transpose(
             "comparison", "grp", "ec_idx", "prefix", "stats", "pval_quantile", "pmf_bin"
         )
@@ -244,9 +244,7 @@ class HeterogenDataset(object):
             progress(save_df_future)
         else:
             save_df_future.compute()
-        self.events.chunk(self.events.sizes).to_zarr(
-            path, mode="a", group=constants.NC_EVENTS, consolidated=consolidated
-        )
+        self.events_to_zarr(path, mode="a", consolidated=consolidated)
         return
 
     @classmethod
@@ -272,11 +270,6 @@ class HeterogenDataset(object):
             df.attrs.clear()
         events_df = xr.open_zarr(path[0], group=constants.NC_EVENTS)
         return HeterogenDataset(df, events_df)
-
-    @property
-    def num_connections(self) -> int:
-        """Number of event connections"""
-        return self.df.sizes["ec_idx"]
 
     @property
     def num_comparisons(self) -> int:
@@ -343,38 +336,6 @@ class HeterogenDataset(object):
     @property
     def approximate_pvalue_quantiles(self) -> xr.DataArray:
         return self.df["approximate_pvalue_quantiles"]
-
-    def get_events(
-        self,
-        introns: GeneIntrons,
-        junctions: GeneJunctions,
-    ) -> Events:
-        """Construct :py:class:`Events` using saved dataset and introns, junctions
-
-        Parameters
-        ----------
-        introns: GeneIntrons
-        junctions: GeneJunctions
-
-        Returns
-        -------
-        Events
-        """
-        if self.events.intron_hash != introns.checksum():
-            raise ValueError("GeneIntrons checksums do not match")
-        if self.events.junction_hash != junctions.checksum():
-            raise ValueError("GeneJunctions checksums do not match")
-        return Events(
-            _Events(
-                introns._gene_introns,
-                junctions._gene_junctions,
-                self.events.ref_exon_idx,
-                self.events.event_type,
-                self.events._offsets,
-                self.events.is_intron,
-                self.events.connection_idx,
-            )
-        )
 
     @cached_property
     def any_passed(self) -> xr.DataArray:

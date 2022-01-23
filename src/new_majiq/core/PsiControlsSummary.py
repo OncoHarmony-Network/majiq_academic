@@ -18,9 +18,7 @@ from dask.distributed import progress
 import new_majiq.constants as constants
 
 from ._workarounds import _load_zerodim_variables
-from .Events import Events, _Events
-from .GeneIntrons import GeneIntrons
-from .GeneJunctions import GeneJunctions
+from .MixinHasEvents import MixinHasEvents
 from .PsiCoverage import PsiCoverage, min_experiments
 
 
@@ -41,7 +39,7 @@ def _psirange_from_psiquantiles(quantiles: xr.DataArray) -> xr.DataArray:
     return (quantiles.sel(is_lb=False) - quantiles.sel(is_lb=True)).rename("psi_range")
 
 
-class PsiControlsSummary(object):
+class PsiControlsSummary(MixinHasEvents):
     """Summary of PSI posterior means over large group of controls
 
     Summary of PSI posterior means over large group of controls noting the
@@ -80,6 +78,9 @@ class PsiControlsSummary(object):
     """
 
     def __init__(self, df: xr.Dataset, events: xr.Dataset):
+        # save events
+        MixinHasEvents.__init__(self, df, events)
+        # save df after checking validity
         REQUIRED_INDEXES: Set[Hashable] = {"controls_alpha", "is_lb"}
         REQUIRED_VARS: Set[Hashable] = {"num_passed", "psi_median", "psi_quantile"}
         if missing := REQUIRED_INDEXES - df.indexes.keys():
@@ -98,10 +99,7 @@ class PsiControlsSummary(object):
             df = df.assign_coords(controls_q=_q_from_alpha(df["controls_alpha"]))
         if "prefixes" not in df.attrs or not isinstance(df.attrs["prefixes"], list):
             raise ValueError("df.attrs missing required list attribute 'prefixes'")
-        if df.sizes["ec_idx"] != events.sizes["ec_idx"]:
-            raise ValueError("df and events do not have same number of junctions")
         self.df: Final[xr.Dataset] = df
-        self.events: Final[xr.Dataset] = events
         return
 
     @property
@@ -137,10 +135,6 @@ class PsiControlsSummary(object):
     @property
     def num_prefixes(self) -> int:
         return len(self.prefixes)
-
-    @property
-    def num_connections(self) -> int:
-        return self.df.sizes["ec_idx"]
 
     def passed_min_experiments(
         self,
@@ -264,42 +258,8 @@ class PsiControlsSummary(object):
         else:
             save_df_future.compute()
         # save events
-        self.events.chunk(self.events.sizes).to_zarr(
-            path, mode="a", group=constants.NC_EVENTS, consolidated=consolidated
-        )
+        self.events_to_zarr(path, mode="a", consolidated=consolidated)
         return
-
-    def get_events(
-        self,
-        introns: GeneIntrons,
-        junctions: GeneJunctions,
-    ) -> Events:
-        """Construct :py:class:`Events` using saved dataset and introns, junctions
-
-        Parameters
-        ----------
-        introns: GeneIntrons
-        junctions: GeneJunctions
-
-        Returns
-        -------
-        Events
-        """
-        if self.events.intron_hash != introns.checksum():
-            raise ValueError("GeneIntrons checksums do not match")
-        if self.events.junction_hash != junctions.checksum():
-            raise ValueError("GeneJunctions checksums do not match")
-        return Events(
-            _Events(
-                introns._gene_introns,
-                junctions._gene_junctions,
-                self.events.ref_exon_idx,
-                self.events.event_type,
-                self.events._offsets,
-                self.events.is_intron,
-                self.events.connection_idx,
-            )
-        )
 
     def __repr__(self) -> str:
         MAX_PREFIXES_END = 1  # how many prefixes on either end to display
