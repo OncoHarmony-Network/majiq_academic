@@ -84,9 +84,9 @@ class PsiControlsSummary(MixinHasEvents):
         REQUIRED_INDEXES: Set[Hashable] = {"controls_alpha", "is_lb"}
         REQUIRED_VARS: Set[Hashable] = {"num_passed", "psi_median", "psi_quantile"}
         if missing := REQUIRED_INDEXES - df.indexes.keys():
-            raise ValueError(f"df missing requires indexed dimensions ({missing := })")
+            raise ValueError(f"df missing requires indexed dimensions ({missing = })")
         if missing := REQUIRED_VARS - df.variables.keys():
-            raise ValueError(f"df missing required data variables ({missing := })")
+            raise ValueError(f"df missing required data variables ({missing = })")
         if missing := {v for v in REQUIRED_VARS if "ec_idx" not in df[v].dims}:
             raise ValueError(
                 f"df variables missing required ec_idx dimension ({missing = })"

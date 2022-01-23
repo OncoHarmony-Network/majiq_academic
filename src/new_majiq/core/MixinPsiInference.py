@@ -540,7 +540,7 @@ def _compute_posterior_cdf(
         a,
         b,
         input_core_dims=[[], [mix_dim], [mix_dim]],
-        dask="allowed",
+        dask="parallelized",
     )
 
 
