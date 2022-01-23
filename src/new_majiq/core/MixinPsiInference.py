@@ -120,6 +120,26 @@ class MixinApproximatePsi(ABC):
         """array(...) standard deviations of bootstrap posterior distribution (alias)"""
         return self.bootstrap_posterior_std
 
+    def approximate_cdf(
+        self,
+        x: Union[xr.DataArray, Sequence[float]],
+    ) -> xr.DataArray:
+        """Compute cdf of approximate/smoothed bootstrapped posterior
+
+        Parameters
+        ----------
+        x: Union[xr.DataArray, Sequence[float]]
+            potential realizations of distribution to evaluate CDF at
+
+        Returns
+        -------
+        xr.DataArray
+            Return array(...) of cdf probabilities per connection. If
+            `x` is not :py:class:`xr.DataArray`, dimension over
+            quantiles will be "x"
+        """
+        return _compute_posterior_cdf(self.approximate_alpha, self.approximate_beta, x)
+
     def approximate_quantile(
         self,
         quantiles: Union[xr.DataArray, Sequence[float]] = [0.1, 0.9],
@@ -282,6 +302,26 @@ class MixinBootstrapPsi(MixinApproximatePsi, ABC):
             input_core_dims=[["bootstrap_replicate"], ["bootstrap_replicate"]],
             dask="parallelized",
         )
+
+    def bootstrap_cdf(
+        self,
+        x: Union[xr.DataArray, Sequence[float]],
+    ) -> xr.DataArray:
+        """Compute cdf of mixture of bootstrapped posterior distribution
+
+        Parameters
+        ----------
+        x: Union[xr.DataArray, Sequence[float]]
+            potential realizations of distribution to evaluate CDF at
+
+        Returns
+        -------
+        xr.DataArray
+            Return array(...) of CDF probabilities per connection. If
+            `x` is not :py:class:`xr.DataArray`, dimension over
+            quantiles will be "x"
+        """
+        return _compute_posterior_cdf(self.bootstrap_alpha, self.bootstrap_beta, x)
 
     def bootstrap_quantile(
         self,
@@ -455,6 +495,51 @@ def _compute_population_quantile(
         quantiles_xr,
         input_core_dims=[["prefix"], [quantile_dim_name]],
         output_core_dims=[[quantile_dim_name]],
+        dask="allowed",
+    )
+
+
+def _compute_posterior_cdf(
+    a: xr.DataArray,
+    b: xr.DataArray,
+    x: Union[xr.DataArray, Sequence[float]],
+    mix_dim: str = "bootstrap_replicate",
+) -> xr.DataArray:
+    """Caclulate cdf over posterior distribution
+
+    Parameters
+    ----------
+    a, b: xr.DataArray
+        Parameters of posterior distributions
+    x: Union[xr.DataArray, Sequence[float]]
+        potential realizations of the distribution at which to evaluate the CDF
+    mix_dim: str
+        Dimension of `a` and `b` over which distribution is a mixture. If not
+        found in a or b, treat as a single beta distribution
+    """
+    if not isinstance(x, xr.DataArray):
+        x_arr = np.array(x, dtype=a.dtype)
+        if x_arr.ndim > 1:
+            raise ValueError("Unable to handle non-xarray multi-dimensional x")
+        elif x_arr.ndim == 0:
+            x_arr = x_arr[np.newaxis]
+        x = xr.DataArray(x_arr, [("x", x_arr)])
+    # if mixture dimension is not present, treat as one-component mixture
+    if mix_dim not in a.dims:
+        a = a.expand_dims(**{mix_dim: 1})
+    if mix_dim not in b.dims:
+        b = b.expand_dims(**{mix_dim: 1})
+    if a.sizes[mix_dim] != b.sizes[mix_dim]:
+        raise ValueError(
+            f"a and b must share same size for dimension {mix_dim}"
+            f" ({a.sizes = }, {b.sizes = })"
+        )
+    return xr.apply_ufunc(
+        bm.cdf,
+        x,
+        a,
+        b,
+        input_core_dims=[[], [mix_dim], [mix_dim]],
         dask="allowed",
     )
 
