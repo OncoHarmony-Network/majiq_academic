@@ -13,6 +13,7 @@
 
 #include <numpy/ndarraytypes.h>
 
+#include <cfenv>
 #include <limits>
 
 #include <gufuncs/CoreIt.hpp>
@@ -73,6 +74,9 @@ static void Outer(
     *out = _CDF(*x, a.with_stride(inner_stride_a),
         b.with_stride(inner_stride_b), dim_mixture);
   }
+  // we expect that extreme values of x in CDF will cause divide by zero flag
+  // to be set (where CDF is effectively 0 or 1). Unset this flag.
+  std::feclearexcept(FE_DIVBYZERO);
   return;
 }
 
