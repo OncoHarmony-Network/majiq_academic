@@ -8,7 +8,7 @@ Author: Joseph K Aicher
 
 from functools import cached_property
 from pathlib import Path
-from typing import Final, List, NamedTuple, Optional, Union
+from typing import Final, List, NamedTuple, Optional, Sequence, Union
 
 import numpy as np
 import numpy.typing as npt
@@ -196,6 +196,45 @@ class Events(object):
         except IndexError:
             raise ValueError(f"x must have {axis = } to broadcast over")
         return np.take(x, self.connection_e_idx.view(np.int64), axis=axis)
+
+    def select_eidx_to_select_ecidx(
+        self, select_eidx: npt._ArrayLikeInt_co
+    ) -> npt.NDArray[np.int64]:
+        """Given index array for e_idx, get index array for associated ec_idx
+
+        Parameters
+        ----------
+        select_eidx: array[int]
+            1D array of indexes into select events. Values must be between 0
+            and `self.num_events`.
+
+        Returns
+        -------
+        array[int]
+            1D array of indexes into event connections associated with
+            `select_eidx`
+
+        Notes
+        -----
+        If you have a mask over events, use broadcast_eidx_to_ecidx instead
+        (i.e. don't convert to select_eidx using np.where).
+
+        See Also
+        --------
+        Events.connections_slice_for_event : for 0D/scalar case
+        """
+        # make sure select_eidx is an array
+        select_eidx = np.array(select_eidx, copy=False)
+        # make sure it is 1D
+        if select_eidx.ndim != 1:
+            raise ValueError("select_eidx must be 1D")
+        # convert to mask over events
+        select_eidx_mask = np.zeros(self.num_events, dtype=bool)
+        select_eidx_mask[select_eidx] = True
+        # broadcast to connections
+        select_ecidx_mask = self.broadcast_eidx_to_ecidx(select_eidx_mask)
+        # extract indexes from mask
+        return np.where(select_ecidx_mask)[0]
 
     def connections_slice_for_event(self, event_idx: int) -> slice:
         """Get slice into event connections for event with specified index
@@ -552,3 +591,89 @@ class Events(object):
             event_type=lambda df: df.event_type.str.decode("utf-8"),
             strand=lambda df: df.strand.str.decode("utf-8"),
         )
+
+    def merge_dataframes(
+        self, df_seq: Sequence[pd.DataFrame], events_seq: Sequence["Events"]
+    ) -> pd.DataFrame:
+        """Merge df_seq (index ec_idx, matching events_seq) onto self events
+
+        Merge sequence of tables corresponding to sequence of events onto
+        events shared with self. If there are overlapping events, values from
+        first tables will be used preferentially over those from later tables.
+
+        Notes
+        -----
+
+        - Resulting table will have union of events and columns from the input
+          tables.
+        - Resulting table will be annotated with `self.ec_dataframe` (this
+          ensures that any outdated information from those columns are updated
+          to current events).
+
+        Parameters
+        ----------
+        df_seq: Sequence[pd.DataFrame]
+            Sequence of dataframes with index variable "ec_idx"
+        events_seq: Sequence[Events]
+            Sequence of events with same length as `df_seq`. Records in
+            `df_seq[i]` refer to connections in `events_seq[i]` for each `i`.
+            Each element must share genes with `self`.
+
+        Returns
+        -------
+        pd.DataFrame
+            Union of records in `df_seq` that belong to events shared between
+            `self` and `events_seq`, preferring values found in later tables.
+            Event information from `self.ec_dataframe` will be
+            added/overwritten to table.
+            An additional column `events_pass` will be added indicating which
+            element of df_seq/events_seq each record came from.
+        """
+        if len(df_seq) != len(events_seq):
+            raise ValueError(
+                "(df_seq, events_seq) have mismatched lengths"
+                f" ({len(df_seq) = }, {len(events_seq) = })"
+            )
+        result = pd.DataFrame()
+        # iterate over sequences in reverse order
+        for events_pass, (df, events) in reversed(
+            list(enumerate(zip(df_seq, events_seq), 1))
+        ):
+            # get overlap between self and events
+            overlap = self.unique_events_mask(events)
+            # how to map from events to self, which pass
+            events_to_self = pd.DataFrame(
+                dict(
+                    self_ec_idx=np.where(
+                        self.broadcast_eidx_to_ecidx(~overlap.unique_events_mask)
+                    )[0],
+                ),
+                index=pd.Index(
+                    events.select_eidx_to_select_ecidx(overlap.shared_events_idx),
+                    name="ec_idx",
+                ),
+            ).assign(events_pass=events_pass)
+            # update result with table from this event
+            result = result.combine_first(
+                events_to_self.join(df, on="ec_idx", how="inner").set_index(
+                    "self_ec_idx"
+                )
+            )
+        # annotate with ec_dataframe
+        ec_dataframe = self.ec_dataframe
+        result = ec_dataframe.join(
+            result.drop(columns=ec_dataframe.columns, errors="ignore"),
+            how="inner",
+            on="ec_idx",
+        )
+        # add e_idx as column as well
+        result["e_idx"] = self.connection_e_idx[result.index]
+        # reorder columns
+        REORDER_COLUMNS = ["e_idx", "events_pass"]
+        result = result[
+            [
+                *REORDER_COLUMNS,
+                *(x for x in result.columns if x not in REORDER_COLUMNS),
+            ]
+        ]
+        return result
