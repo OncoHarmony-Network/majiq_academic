@@ -16,12 +16,10 @@ from new_majiq import __version__
 from new_majiq._run._run import GenericSubcommand
 from new_majiq._run.psi_controls import subcommand as psi_controls
 from new_majiq._run.psi_outliers import subcommand as psi_outliers
-from new_majiq._run.psi_outliers_summary import subcommand as psi_outliers_summary
 
 SUBPARSER_SOURCES: Dict[str, GenericSubcommand] = {
     "controls": psi_controls,
     "outliers": psi_outliers,
-    "outliers-summary": psi_outliers_summary,
 }
 
 

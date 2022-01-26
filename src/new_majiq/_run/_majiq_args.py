@@ -159,6 +159,10 @@ def StoreRequiredUniqueActionFactory():
 
         def __call__(self, parser, namespace, values, option_string=None):
             """Check that values are unique if list, not in shared_values"""
+            was_list: bool = True  # assume it's a list
+            if not isinstance(values, list):
+                values = [values]
+                was_list = False  # it wasn't a list
             # no repeated or overlapping values
             repeated_values = self.repeated_values(values)
             if repeated_values:
@@ -173,6 +177,8 @@ def StoreRequiredUniqueActionFactory():
                     f" (overlaps: {overlapping_values})",
                 )
             # no non-unique or overlapping values, so save updated values
+            if not was_list:
+                values = values[0]  # return it back to scalar value
             setattr(namespace, self.dest, values)
 
     return StoreRequiredUniqueAction

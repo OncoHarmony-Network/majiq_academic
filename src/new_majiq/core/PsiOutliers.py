@@ -6,9 +6,11 @@ Identify aberrant splicing events of interests in cases vs controls
 Author: Joseph K Aicher
 """
 
+import re
 from functools import cached_property
-from typing import Final, List, Optional
+from typing import Dict, Final, List, Optional, Tuple
 
+import numpy as np
 import pandas as pd
 import xarray as xr
 from dask.distributed import progress
@@ -88,7 +90,7 @@ class PsiOutliers(object):
         return gap_case_higher.clip(min=gap_case_lower)
 
     @cached_property
-    def cases_tail_probability(self) -> xr.DataArray:
+    def tail_probability(self) -> xr.DataArray:
         """Probability that cases psi < ub quantile or psi > lb quantile
 
         Probability that cases psi is less than upper bound quantile or greater
@@ -113,7 +115,7 @@ class PsiOutliers(object):
         return p_lb.clip(max=p_ub)  # take the minimum value of these
 
     @cached_property
-    def cases_dpsi_lb(self) -> xr.DataArray:
+    def dpsi_lb(self) -> xr.DataArray:
         """dPSI from case quantiles vs controls median.
 
         dPSI of case quantiles vs controls median.
@@ -129,16 +131,238 @@ class PsiOutliers(object):
         return gap_case_higher.clip(min=gap_case_lower)
 
     @cached_property
-    def cases_dpsi_lb_scaled(self) -> xr.DataArray:
-        """dPSI of case quantiles vs controls median scaled by interquantile range.
+    def dpsi_lb_scaled(self) -> xr.DataArray:
+        """dPSI of case quantiles vs controls median scaled by controls interquantile range.
 
-        dPSI of case quantiles vs controls median scaled by interquantile range.
+        dPSI of case quantiles vs controls median scaled by controls
+        interquantile range.
         Negative values indicate that the controls median is within range of
         case quantiles.
         """
-        return self.cases_dpsi_lb / self.controls.psi_range.where(
-            self.controls.psi_range > 0
+        return self.dpsi_lb / self.controls.psi_range.where(self.controls.psi_range > 0)
+
+    @staticmethod
+    def summarize_df_genes(df_events: pd.DataFrame) -> pd.DataFrame:
+        """Summarize table from :meth:`PsiOutliers.summarize_df_events` to genes
+
+        Parameters
+        ----------
+        df_events: pd.DataFrame
+            Table from :meth:`PsiOutliers.summarize_df_events`.
+
+        Returns
+        -------
+        pd.DataFrame
+            Summary per gene of the event-level statistics.
+        """
+        # how to aggregate columns per event
+        agg_kwargs: Dict[str, Tuple[str, str]] = {
+            "gene_name": ("gene_name", "first"),
+            "num_events": ("gene_name", "count"),
+            "num_events_denovo_junction": ("has_denovo_junction", "sum"),
+        }
+        # how to summarize events_pass information, if present
+        if "events_pass" in df_events.columns:
+            df_events = df_events.assign(is_later_pass=lambda df: df.events_pass > 1)
+            agg_kwargs = {
+                "events_pass_max": ("events_pass", "max"),
+                "num_later_pass": ("is_later_pass", "sum"),
+                **agg_kwargs,
+            }
+
+        # identify cases to summarize
+        pattern = re.compile(r"(.*)cases_raw_total")
+        case_prefixes = [
+            match.group(1)
+            for match in (pattern.fullmatch(x) for x in df_events.columns)
+            if match is not None
+        ]
+        # identify values of alpha to summarize
+        pattern = re.compile(rf"{case_prefixes[0]}dpsi_lb(.*)")
+        alpha_suffixes = [
+            match.group(1)
+            for match in (pattern.fullmatch(x) for x in df_events.columns)
+            if match is not None
+        ]
+
+        # define aggregation for each case
+        def get_case_kwargs(case_prefix: str) -> Dict[str, Tuple[str, str]]:
+            case_agg_kwargs = {
+                f"{case_prefix}cases_raw_total_max": (
+                    f"{case_prefix}cases_raw_total_gene_max",
+                    "first",
+                ),
+            }
+            if len(case_prefixes) > 1:
+                case_agg_kwargs = {
+                    f"{case_prefix}num_passed": (
+                        f"{case_prefix}cases_raw_total",
+                        "count",
+                    ),
+                    **case_agg_kwargs,
+                }
+            for x in alpha_suffixes:
+                case_agg_kwargs = {
+                    **case_agg_kwargs,
+                    f"{case_prefix}dpsi_quantile_gap{x}": (
+                        f"{case_prefix}dpsi_quantile_gap{x}",
+                        "max",
+                    ),
+                    f"{case_prefix}tail_probability{x}": (
+                        f"{case_prefix}tail_probability{x}",
+                        "min",
+                    ),
+                    f"{case_prefix}dpsi_lb{x}": (f"{case_prefix}dpsi_lb{x}", "max"),
+                }
+                # TODO add count above/below threshold as appropriate
+            return case_agg_kwargs
+
+        for case_prefix in case_prefixes:
+            agg_kwargs = {**agg_kwargs, **get_case_kwargs(case_prefix)}
+
+        # perform the aggregation
+        df_genes = df_events.groupby("gene_id").agg(**agg_kwargs)
+
+        # postprocessing for each case
+        if len(case_prefixes) > 1:
+            for case_prefix in case_prefixes:
+                case_passed = df_genes[f"{case_prefix}num_passed"] > 0
+                # mask float values to nan whenever no events passed for prefix
+                for col in get_case_kwargs(case_prefix).keys():
+                    if np.issubdtype(df_genes[col].dtype, np.floating):
+                        df_genes[col] = df_genes[col].where(case_passed)
+
+        # sorting for result
+        if len(case_prefixes) == 1 and len(alpha_suffixes) == 1:
+            df_genes.sort_values("dpsi_quantile_gap", ascending=False, inplace=True)
+        if "events_pass_max" in df_genes.columns:
+            df_genes.sort_values(
+                # use stable sort to keep ordering from previous sort, if applicable
+                "events_pass_max",
+                ascending=False,
+                kind="stable",
+                inplace=True,
+            )
+        return df_genes
+
+    @staticmethod
+    def summarize_df_events(df_ecidx: pd.DataFrame) -> pd.DataFrame:
+        """Summarize table in format of :meth:`PsiOutliers.to_dataframe` to events
+
+        Parameters
+        ----------
+        df_ecidx: pd.DataFrame
+            Table defined over event connections as created by
+            :meth:`PsiOutliers.to_dataframe`.
+            Requires columns as from :meth:`Events.ec_dataframe`.
+            If present, also summarizes "events_pass" column as introduced by
+            :meth:`Events.merge_dataframes`.
+
+        Returns
+        -------
+        pd.DataFrame
+            Table indexed by unique events defined by
+            ["gene_id", "ref_exon_start", "ref_exon_end", "event_type"] with
+            most extreme values of each statistic per event (note that most
+            extreme values may not come from same connection).
+        """
+        # add additional columns to df_ecidx (copy)
+        df_ecidx = df_ecidx.assign(
+            # specifically look for denovo junctions vs introns because we
+            # can highlight denovo junctions that are only found in cases vs
+            # controls (through 2 passes), but we do not do that for introns
+            is_denovo_junction=lambda df: df["is_denovo"]
+            & ~df["is_intron"]
         )
+        # how to aggregate columns per event
+        agg_kwargs: Dict[str, Tuple[str, str]] = {
+            # splicegraph
+            "gene_name": ("gene_name", "first"),
+            "event_size": ("gene_name", "count"),
+            "has_intron": ("is_intron", "any"),
+            "has_denovo_junction": ("is_denovo_junction", "any"),
+            # controls, which always named same
+            "num_passed": ("num_passed", "first"),
+        }
+        # if there are two passes, summarize this for the event, make it first
+        if "events_pass" in df_ecidx.columns:
+            agg_kwargs = {"events_pass": ("events_pass", "first"), **agg_kwargs}
+        # identify cases to summarize
+        pattern = re.compile(r"(.*)cases_raw_psi_mean")
+        case_prefixes = [
+            match.group(1)
+            for match in (pattern.fullmatch(x) for x in df_ecidx.columns)
+            if match is not None
+        ]
+        # identify values of alpha we have to work with
+        pattern = re.compile(rf"{case_prefixes[0]}dpsi_lb(.*)")
+        alpha_suffixes = [
+            match.group(1)
+            for match in (pattern.fullmatch(x) for x in df_ecidx.columns)
+            if match is not None
+        ]
+
+        # define aggregation per case
+        def get_case_kwargs(case_prefix: str) -> Dict[str, Tuple[str, str]]:
+            case_agg_kwargs = {
+                f"{case_prefix}passed": (f"{case_prefix}cases_raw_psi_mean", "count"),
+                f"{case_prefix}cases_raw_total": (
+                    f"{case_prefix}cases_raw_coverage",
+                    "sum",
+                ),
+            }
+            for x in alpha_suffixes:
+                case_agg_kwargs = {
+                    **case_agg_kwargs,
+                    f"{case_prefix}dpsi_quantile_gap{x}": (
+                        f"{case_prefix}dpsi_quantile_gap{x}",
+                        "max",
+                    ),
+                    f"{case_prefix}tail_probability{x}": (
+                        f"{case_prefix}tail_probability{x}",
+                        "min",
+                    ),
+                    f"{case_prefix}dpsi_lb{x}": (f"{case_prefix}dpsi_lb{x}", "max"),
+                }
+            return case_agg_kwargs
+
+        for case_prefix in case_prefixes:
+            agg_kwargs = {**agg_kwargs, **get_case_kwargs(case_prefix)}
+
+        # perform the aggregation
+        df_events = df_ecidx.groupby(
+            ["gene_id", "ref_exon_start", "ref_exon_end", "event_type"]
+        ).agg(**agg_kwargs)
+
+        # postprocessing for each case
+        for case_prefix in case_prefixes:
+            case_passed = df_events[f"{case_prefix}passed"] > 0
+            df_events.drop(columns=f"{case_prefix}passed", inplace=True)
+            for col in get_case_kwargs(case_prefix).keys():
+                # mask columns if they did not pass for specified prefix
+                if col in df_events.columns:
+                    df_events[col] = df_events[col].where(case_passed)
+            # summarize coverage for events along the gene
+            df_events[f"{case_prefix}cases_raw_total_gene_max"] = df_events.groupby(
+                "gene_id"
+            )[f"{case_prefix}cases_raw_total"].transform("max")
+            df_events[f"{case_prefix}cases_raw_total_pct"] = (
+                df_events[f"{case_prefix}cases_raw_total"]
+                / df_events[f"{case_prefix}cases_raw_total_gene_max"]
+            )
+
+        # sorting for result
+        if len(case_prefixes) == 1 and len(alpha_suffixes) == 1:
+            df_events.sort_values("dpsi_quantile_gap", ascending=False, inplace=True)
+        if "events_pass" in df_events.columns:
+            df_events.sort_values(
+                # use stable sort to keep ordering from previous sort, if applicable
+                "events_pass",
+                ascending=False,
+                kind="stable",
+                inplace=True,
+            )
+        return df_events
 
     def to_dataframe(
         self,
@@ -189,8 +413,8 @@ class PsiOutliers(object):
                 "controls_psi_quantile": self.controls.psi_quantile,
                 "cases_psi_quantile": self.cases_psi_quantile,
                 "dpsi_quantile_gap": self.dpsi_quantile_gap,
-                "cases_tail_probability": self.cases_tail_probability,
-                "cases_dpsi_lb": self.cases_dpsi_lb,
+                "tail_probability": self.tail_probability,
+                "dpsi_lb": self.dpsi_lb,
             }
         ).reset_coords("num_passed")
         if alpha is not None:
