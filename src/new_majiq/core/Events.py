@@ -565,11 +565,31 @@ class Events(object):
             shared_events_idx=np.array(aligned.right_event_idx, copy=True),
         )
 
-    @property
-    def ec_dataframe(self) -> pd.DataFrame:
-        """:py:class:`pd.DataFrame` over event connections detailing genomic information"""
+    def ec_dataframe(
+        self,
+        annotated_exons: Optional[Exons] = None,
+        annotated_introns: Optional[GeneIntrons] = None,
+    ) -> pd.DataFrame:
+        """:py:class:`pd.DataFrame` over event connections detailing genomic information
+
+        Parameters
+        ----------
+        annotated_exons: Optional[Exons]
+            If specified, use to reduce the number of exons called as denovo
+        annotated_introns: Optional[GeneIntrons]
+            If specified, use to reduce the number of introns called as denovo
+
+        Returns
+        -------
+        pd.DataFrame
+        """
         gene_idx = self.connection_gene_idx()
         other_exon_idx = self.connection_other_exon_idx()
+        # get connection denovo status
+        connection_denovo = self.connection_denovo()
+        connection_denovo[self.is_intron] = self.introns.is_denovo(
+            self.connection_idx[self.is_intron], annotated_introns=annotated_introns
+        )
         return pd.DataFrame(
             dict(
                 seqid=np.array(self.contigs.seqid)[self.connection_contig_idx()],
@@ -581,10 +601,16 @@ class Events(object):
                 ref_exon_end=self.exons.end[self.connection_ref_exon_idx],
                 start=self.connection_start(),
                 end=self.connection_end(),
-                is_denovo=self.connection_denovo(),
+                ref_exon_denovo=self.exons.is_denovo(
+                    self.connection_ref_exon_idx, annotated_exons=annotated_exons
+                ),
+                is_denovo=connection_denovo,
                 is_intron=self.is_intron,
                 other_exon_start=self.exons.start[other_exon_idx],
                 other_exon_end=self.exons.end[other_exon_idx],
+                other_exon_denovo=self.exons.is_denovo(
+                    other_exon_idx, annotated_exons=annotated_exons
+                ),
             ),
             index=pd.Index(self.ec_idx, name="ec_idx"),
         ).assign(
@@ -593,7 +619,11 @@ class Events(object):
         )
 
     def merge_dataframes(
-        self, df_seq: Sequence[pd.DataFrame], events_seq: Sequence["Events"]
+        self,
+        df_seq: Sequence[pd.DataFrame],
+        events_seq: Sequence["Events"],
+        annotated_exons: Optional[Exons] = None,
+        annotated_introns: Optional[GeneIntrons] = None,
     ) -> pd.DataFrame:
         """Merge df_seq (index ec_idx, matching events_seq) onto self events
 
@@ -618,6 +648,10 @@ class Events(object):
             Sequence of events with same length as `df_seq`. Records in
             `df_seq[i]` refer to connections in `events_seq[i]` for each `i`.
             Each element must share genes with `self`.
+        annotated_exons: Optional[Exons]
+            If specified, use to reduce the number of exons called as denovo
+        annotated_introns: Optional[GeneIntrons]
+            If specified, use to reduce the number of introns called as denovo
 
         Returns
         -------
@@ -660,7 +694,9 @@ class Events(object):
                 )
             )
         # annotate with ec_dataframe
-        ec_dataframe = self.ec_dataframe
+        ec_dataframe = self.ec_dataframe(
+            annotated_exons=annotated_exons, annotated_introns=annotated_introns
+        )
         result = ec_dataframe.join(
             result.drop(columns=ec_dataframe.columns, errors="ignore"),
             how="inner",

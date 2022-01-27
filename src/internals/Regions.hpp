@@ -80,8 +80,8 @@ class Regions {
       } else {
         if (i > 0
             && (elements[i - 1].parent() == elements[i].parent())
-            && (elements[i].coordinates.first_pos()
-              <= elements[i - 1].coordinates.last_pos())) {
+            && !IntervalPrecedes(
+              elements[i - 1].coordinates, elements[i].coordinates)) {
           throw std::invalid_argument(
               "Regions must be in sorted order and non-overlapping");
         }
@@ -140,6 +140,35 @@ class Regions {
     // do search on this subset. NOTE: assumes not < and not > --> ==
     auto lb = std::lower_bound(first, last, key);
     return (lb == end() || *lb != key) ? end() : lb;
+  }
+  /**
+   * get iterator to first feature overlapping key, or end()
+   */
+  template <bool CHECK_PARENTS = true>
+  const_iterator find_overlap(const RegionT& key) const {
+    if constexpr(CHECK_PARENTS) {
+      if (key.parent().ptr_ != parents_) {
+        throw std::invalid_argument(
+            "Regions::find_overlap requires parent objects to be the same");
+      }
+    }
+    if constexpr(HAS_OVERLAPS) {
+      // use find instead
+      return find(key);
+    }
+    // iterators into elements_ that share the same parent
+    const_iterator first = begin_parent(key.parent().idx_);
+    const_iterator last = end_parent(key.parent().idx_);
+    // get iterator to first value in range that doesn't precede key
+    auto lb = std::lower_bound(first, last, key,
+          [](const RegionT& x, const RegionT& y) {
+          return IntervalPrecedes(x.coordinates, y.coordinates); });
+    // if iterator is in range and key doesn't precede it, then it must intersect
+    if (lb != last && !IntervalPrecedes(key.coordinates, lb->coordinates)) {
+      return lb;
+    } else {
+      return end();
+    }
   }
   const_iterator overlap_lower_bound(
       const ParentT& parent, position_t coordinate) const {

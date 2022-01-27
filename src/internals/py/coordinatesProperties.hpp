@@ -54,6 +54,21 @@ inline void define_coordinates_properties(pyClassShared_t<RegionsT>& pyRegions) 
             regions.parent_idx_offsets(), false, regions_obj);
         },
         "One after last index into regions corresponding to associated parent")
+    .def("overlaps",
+        [](RegionsT& self, pybind11::array_t<size_t> region_idx, RegionsT& other) {
+        if (self.parents() != other.parents()) {
+          throw std::invalid_argument("self and other do not share parents");
+        }
+        auto f = [&self, &other](size_t idx) -> bool {
+        if (idx >= self.size()) {
+          throw std::invalid_argument("region_idx has values out of range");
+        }
+        return other.template find_overlap<false>(self[idx]) != other.end(); };
+        return pybind11::vectorize(f)(region_idx);
+        },
+        "Identify if selected regions have overlapping features in other",
+        pybind11::arg("region_idx"),
+        pybind11::arg("other"))
     .def_property_readonly("start",
         [](pybind11::object& regions_obj) -> pybind11::array_t<position_t> {
         RegionsT& regions = regions_obj.cast<RegionsT&>();

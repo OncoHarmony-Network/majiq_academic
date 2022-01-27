@@ -146,7 +146,7 @@ SpliceGraph TranscriptModels::ToSpliceGraph(bool process_ir) const {
         } else if (cur_end != EMPTY) {
           // this is a start that follows an end, creating an exon
           exons.emplace_back(
-              gene, ClosedInterval{cur_start, cur_end},
+              gene, ExonIntervalT{cur_start, cur_end},
               Exon::DefaultAnnotated{});
           if (process_ir && nopen > 1) {
             // there is an exon besides the one that just opened that's still
@@ -173,7 +173,7 @@ SpliceGraph TranscriptModels::ToSpliceGraph(bool process_ir) const {
       throw std::logic_error(oss.str());
     }
     exons.emplace_back(
-        gene, ClosedInterval{cur_start, cur_end}, Exon::DefaultAnnotated{});
+        gene, ExonIntervalT{cur_start, cur_end}, Exon::DefaultAnnotated{});
 
     // check that we've closed all splice sites -- should have nopen = 0 at end
     if (nopen != 0) {

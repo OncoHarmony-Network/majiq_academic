@@ -160,6 +160,8 @@ class PsiOutliers(object):
             "gene_name": ("gene_name", "first"),
             "num_events": ("gene_name", "count"),
             "num_events_denovo_junction": ("has_denovo_junction", "sum"),
+            "num_events_denovo_intron": ("has_denovo_intron", "sum"),
+            "num_events_denovo_exon": ("has_denovo_exon", "sum"),
         }
         # how to summarize events_pass information, if present
         if "events_pass" in df_events.columns:
@@ -268,11 +270,9 @@ class PsiOutliers(object):
         """
         # add additional columns to df_ecidx (copy)
         df_ecidx = df_ecidx.assign(
-            # specifically look for denovo junctions vs introns because we
-            # can highlight denovo junctions that are only found in cases vs
-            # controls (through 2 passes), but we do not do that for introns
-            is_denovo_junction=lambda df: df["is_denovo"]
-            & ~df["is_intron"]
+            is_denovo_junction=lambda df: df["is_denovo"] & ~df["is_intron"],
+            is_denovo_intron=lambda df: df["is_denovo"] & df["is_intron"],
+            denovo_exon=lambda df: df["ref_exon_denovo"] | df["other_exon_denovo"],
         )
         # how to aggregate columns per event
         agg_kwargs: Dict[str, Tuple[str, str]] = {
@@ -281,6 +281,8 @@ class PsiOutliers(object):
             "event_size": ("gene_name", "count"),
             "has_intron": ("is_intron", "any"),
             "has_denovo_junction": ("is_denovo_junction", "any"),
+            "has_denovo_intron": ("is_denovo_intron", "any"),
+            "has_denovo_exon": ("denovo_exon", "any"),
             # controls, which always named same
             "num_passed": ("num_passed", "first"),
         }
@@ -396,7 +398,7 @@ class PsiOutliers(object):
         # add dataframe with events annotations
         if sg is not None:
             concat_df.append(
-                self.controls.get_events(sg.introns, sg.junctions).ec_dataframe
+                self.controls.get_events(sg.introns, sg.junctions).ec_dataframe()
             )
         ds = xr.Dataset(
             {

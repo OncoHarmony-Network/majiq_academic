@@ -48,6 +48,9 @@ class Genes
   KnownGene end_parent(size_t idx);
   KnownGene begin_parent(const KnownContig& contig);
   KnownGene end_parent(const KnownContig& contig);
+  // use find_overlap from genes object
+  template <bool CHECK_PARENTS = true>
+  KnownGene find_overlap(const KnownGene& key);
   // access contigs that are parent to this
   std::shared_ptr<Contigs> contigs() const { return features_.parents(); }
   std::shared_ptr<Contigs> parents() const { return contigs(); }
@@ -178,6 +181,12 @@ inline KnownGene Genes::begin_parent(const KnownContig& contig) {
 }
 inline KnownGene Genes::end_parent(const KnownContig& contig) {
   return end_contig(contig);
+}
+template <bool CHECK_PARENTS = true>
+KnownGene Genes::find_overlap(const KnownGene& known_key) {
+  const auto key = known_key.get();
+  return operator[](
+      features_.find_overlap<CHECK_PARENTS>(key) - features_.begin());
 }
 
 

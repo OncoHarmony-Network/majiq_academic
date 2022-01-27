@@ -86,6 +86,12 @@ inline bool operator==(const U& x, const ContigRegion<T, D>& y) noexcept {
     == std::tie(y.contig, y.coordinates, y.strand);
 }
 
+template <typename T1, typename T2, typename D1, typename D2>
+inline bool operator!=(
+    const ContigRegion<T1, D1>& x, const ContigRegion<T2, D2>& y) noexcept {
+  return !(x == y);
+}
+
 // order regions by genomic position and strand, ignoring data
 template <typename T1, typename T2, typename D1, typename D2>
 inline bool operator<(

@@ -62,8 +62,8 @@ inline void init_Exons(pyExons_t& pyExons) {
           for (pybind11::ssize_t i = 0; i < gene_idx.shape(0); ++i) {
             exon_vec.push_back(majiq::Exon{
                 majiq::KnownGene{gene_idx(i), genes},
-                majiq::ClosedInterval{start(i), end(i)},
-                majiq::ClosedInterval{ann_start(i), ann_end(i)}});
+                majiq::ExonIntervalT{start(i), end(i)},
+                majiq::ExonIntervalT{ann_start(i), ann_end(i)}});
           }
           pybind11::gil_scoped_release release;  // release GIL at this stage
           return std::make_shared<Exons>(genes, std::move(exon_vec));

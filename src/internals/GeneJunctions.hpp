@@ -76,7 +76,7 @@ class GeneJunctions : public detail::GeneConnections<GeneJunction, true> {
           eidx < exons.size()
           && (exons[eidx].gene < j.gene
             || (exons[eidx].gene == j.gene
-              && IntervalPrecedes(exons[eidx].coordinates, j.coordinates)));
+              && exons[eidx].coordinates.last_pos() < j.coordinates.start));
           ++eidx) {
       }  // done skipping exons that precede junction
       if (eidx == exons.size()) {

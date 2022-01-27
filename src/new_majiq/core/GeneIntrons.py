@@ -38,6 +38,40 @@ class GeneIntrons(GeneConnections):
         super().__init__(gene_introns)
         return
 
+    def is_denovo(
+        self,
+        gi_idx: Optional[npt._ArrayLikeInt_co] = None,
+        annotated_introns: Optional["GeneIntrons"] = None,
+    ) -> npt.NDArray[np.bool_]:
+        """Return denovo status of selected introns
+
+        Parameters
+        ----------
+        gi_idx: Optional[array_like[int]]
+            Index into introns for to get denovo status for.
+            If None, get denovo status for all introns.
+        annotated_introns: Optional[GeneIntrons]
+            If specified, use introns that are found in `annotated_exons` to
+            reduce the number of exons called annotated by treating exons
+            overlapping with `annotated_exons` as annotated.
+            If `annotated_introns` has connected exons, will appropriately
+            propagate to original gaps between annotated exons.
+        """
+        if gi_idx is None:
+            gi_idx = self.gi_idx
+        denovos = self.denovo[gi_idx]
+        if annotated_introns:
+            if annotated_introns.connected_exons:
+                # we should propagate to annotated exons/introns for overlaps
+                annotated_introns = (
+                    annotated_introns.connected_exons.get_annotated()
+                    .potential_introns()
+                    .update_flags_from(annotated_introns)
+                    .filter_passed()
+                )
+            denovos = denovos & ~self.overlaps(annotated_introns, gi_idx)
+        return denovos
+
     def build_group(self) -> "GroupIntronsGenerator":
         """Create :py:class:`GroupIntronsGenerator` to update these introns in place"""
         from .GroupIntronsGenerator import GroupIntronsGenerator

@@ -206,7 +206,7 @@ void detail::GeneInferExons(
   // iterate over sites to build our result
   // define state: potential half-acceptors/extension, current exon.
   std::vector<position_t> naked_acceptors;
-  ClosedInterval coordinates, annotated;
+  ExonIntervalT coordinates, annotated;
 
   // how do we update this state?
   auto past_naked_acceptors = [&dst, &gene, &naked_acceptors](position_t x) {
@@ -217,7 +217,7 @@ void detail::GeneInferExons(
       // add the naked acceptors and clear
       std::transform(naked_acceptors.begin(), naked_acceptors.end(),
           std::back_inserter(dst), [&gene](position_t y) {
-          return Exon{gene, ClosedInterval{y, -1}, Exon::MakeDenovo{}}; });
+          return Exon{gene, ExonIntervalT{y, -1}, Exon::MakeDenovo{}}; });
       naked_acceptors.clear();
     }
     return result;
@@ -278,7 +278,7 @@ void detail::GeneInferExons(
           // we were past previous exon or acceptors
           add_exon();  // we add current exon (if it exists)
           dst.emplace_back(  // we add current value as well
-              gene, ClosedInterval{-1, position}, Exon::MakeDenovo{});
+              gene, ExonIntervalT{-1, position}, Exon::MakeDenovo{});
         }
         break;
       case SpliceT::ANN_EXON_END:

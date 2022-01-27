@@ -6,7 +6,7 @@ Parent class that wraps new_majiq internals for regions. This is a parent class
 Author: Joseph K Aicher
 """
 
-from typing import Final
+from typing import Final, Optional
 
 import numpy as np
 import numpy.typing as npt
@@ -26,6 +26,34 @@ class Regions(object):
     def __len__(self) -> int:
         """Number of regions"""
         return len(self._regions)
+
+    def overlaps(
+        self, other, region_idx: Optional[npt._ArrayLikeInt_co] = None
+    ) -> npt.NDArray[np.bool_]:
+        """Get mask over region_idx indicating if they overlap regions in other
+
+        Parameters
+        ----------
+        other:
+            Regions of same type as self
+        region_idx: Optional[array_like[int]]
+            Indexes for regions in self. If None, compute overlaps for all
+            regions in self
+
+        Returns
+        -------
+        array[bool]
+            array matching region_idx. An element is true when there exists a
+            feature in other that overlaps self[region_idx].
+
+        Notes
+        -----
+        For junctions, this just searches for a matching feature.
+        Requires that the regions share the same parent.
+        """
+        if region_idx is None:
+            region_idx = np.arange(len(self))
+        return self._regions.overlaps(region_idx, other._regions)
 
     @property
     def _region_idx(self) -> npt.NDArray[np.int64]:

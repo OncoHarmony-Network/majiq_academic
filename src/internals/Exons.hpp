@@ -26,15 +26,18 @@
 
 
 namespace majiq {
-struct Exon : detail::GeneRegion<ClosedInterval, ClosedInterval> {
+
+using ExonIntervalT = ClosedOrHalfInterval;
+
+struct Exon : detail::GeneRegion<ExonIntervalT, ExonIntervalT> {
  public:
-  using BaseT = detail::GeneRegion<ClosedInterval, ClosedInterval>;
+  using BaseT = detail::GeneRegion<ExonIntervalT, ExonIntervalT>;
   struct DefaultAnnotated { };
   struct MakeDenovo { };
 
   // exon-specific members
-  inline ClosedInterval& annotated_coordinates() noexcept { return data; }
-  inline const ClosedInterval& annotated_coordinates() const noexcept {
+  inline ExonIntervalT& annotated_coordinates() noexcept { return data; }
+  inline const ExonIntervalT& annotated_coordinates() const noexcept {
     return data;
   }
   // event id for this exon with given event type
@@ -45,19 +48,19 @@ struct Exon : detail::GeneRegion<ClosedInterval, ClosedInterval> {
   }
 
   // constructors
-  Exon(KnownGene _gene, ClosedInterval _coordinates, ClosedInterval _annotated)
+  Exon(KnownGene _gene, ExonIntervalT _coordinates, ExonIntervalT _annotated)
       : BaseT{_gene, _coordinates, _annotated} {
   }
-  Exon(KnownGene _gene, ClosedInterval _coordinates, DefaultAnnotated)
+  Exon(KnownGene _gene, ExonIntervalT _coordinates, DefaultAnnotated)
       : Exon{_gene, _coordinates, _coordinates} {
   }
-  Exon(KnownGene _gene, ClosedInterval _coordinates, MakeDenovo)
-      : Exon{_gene, _coordinates, ClosedInterval{}} {
+  Exon(KnownGene _gene, ExonIntervalT _coordinates, MakeDenovo)
+      : Exon{_gene, _coordinates, ExonIntervalT{}} {
   }
   // if no specifier passed, annotated by default
-  Exon(KnownGene _gene, ClosedInterval _coordinates)
+  Exon(KnownGene _gene, ExonIntervalT _coordinates)
       : Exon{_gene, _coordinates, DefaultAnnotated{}} { }
-  Exon() : Exon{KnownGene{}, ClosedInterval{}, ClosedInterval{}} { }
+  Exon() : Exon{KnownGene{}, ExonIntervalT{}, ExonIntervalT{}} { }
   Exon(const Exon& x) = default;
   Exon(Exon&& x) = default;
   Exon& operator=(const Exon& x) = default;
@@ -82,7 +85,7 @@ struct Exon : detail::GeneRegion<ClosedInterval, ClosedInterval> {
   /**
    * If denovo, return current coordinates to match previous MAJIQ
    */
-  inline const ClosedInterval& legacy_annotated_coordinates() const noexcept {
+  inline const ExonIntervalT& legacy_annotated_coordinates() const noexcept {
     return is_denovo() ? coordinates : annotated_coordinates();
   }
   /**

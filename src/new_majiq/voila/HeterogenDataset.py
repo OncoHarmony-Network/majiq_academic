@@ -367,7 +367,7 @@ class HeterogenDataset(MixinHasEvents):
         population_quantiles = sorted({0.5, *np.round(population_quantiles, 3)})
         # add dataframe with events annotations
         if sg is not None:
-            concat_df.append(self.get_events(sg.introns, sg.junctions).ec_dataframe)
+            concat_df.append(self.get_events(sg.introns, sg.junctions).ec_dataframe())
         # build dataset with quantifications to load simultaneously
         ds: xr.Dataset = (
             self.df.drop_dims("pmf_bin")

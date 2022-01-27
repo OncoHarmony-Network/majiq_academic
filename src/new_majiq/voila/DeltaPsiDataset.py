@@ -321,7 +321,7 @@ class DeltaPsiDataset(MixinHasEvents):
         concat_df: List[pd.DataFrame] = list()
         # add dataframe with events annotations
         if sg is not None:
-            concat_df.append(self.get_events(sg.introns, sg.junctions).ec_dataframe)
+            concat_df.append(self.get_events(sg.introns, sg.junctions).ec_dataframe())
         # build dataset with quantifcations to load simultaneously
         ds = xr.Dataset(
             {

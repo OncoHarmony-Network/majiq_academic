@@ -199,12 +199,18 @@ def run(args: argparse.Namespace) -> None:
             for controls, sg in zip(controls_list, sg_list)
         ]
         # merge df_list onto events
-        df = events.merge_dataframes(df_list, events_list)
+        df = events.merge_dataframes(
+            df_list,
+            events_list,
+            annotated_exons=sg_list[0].exons,
+            annotated_introns=sg_list[0].introns,
+        )
     else:
         df = (
             controls_list[0]
             .get_events(sg_list[0].introns, sg_list[0].junctions)
-            .ec_dataframe.join(df_list[0], how="inner", on="ec_idx")
+            .ec_dataframe()
+            .join(df_list[0], how="inner", on="ec_idx")
         )
 
     try:

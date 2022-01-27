@@ -107,12 +107,28 @@ class Exons(GeneRegions):
         return self._exons.annotated_end
 
     def is_denovo(
-        self, exon_idx: Optional[npt._ArrayLikeInt_co] = None
+        self,
+        exon_idx: Optional[npt._ArrayLikeInt_co] = None,
+        annotated_exons: Optional["Exons"] = None,
     ) -> npt.NDArray[np.bool_]:
-        """Return denovo status of exon"""
+        """Return denovo status of selected exons
+
+        Parameters
+        ----------
+        exon_idx: Optional[array_like[int]]
+            Index into exons for to get denovo status for.
+            If None, get denovo status for all exons.
+        annotated_exons: Optional[Exons]
+            If specified, use exons that are found in `annotated_exons` to
+            reduce the number of exons called annotated by treating exons
+            overlapping with `annotated_exons` as annotated.
+        """
         if exon_idx is None:
             exon_idx = self.exon_idx
-        return self._exons.is_denovo(exon_idx)
+        denovos = self._exons.is_denovo(exon_idx)
+        if annotated_exons:
+            denovos = denovos & ~self.overlaps(annotated_exons, exon_idx)
+        return denovos
 
     def is_exon_extension(
         self, exon_idx: Optional[npt._ArrayLikeInt_co] = None
