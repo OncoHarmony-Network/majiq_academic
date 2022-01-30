@@ -8,7 +8,7 @@ Author: Joseph K Aicher
 """
 
 from pathlib import Path
-from typing import Any, Callable, Final, Optional, Union
+from typing import TYPE_CHECKING, Any, Callable, Final, Optional, Union
 
 import new_majiq.constants as constants
 from new_majiq.internals import SpliceGraph as _SpliceGraph
@@ -20,6 +20,9 @@ from .GeneIntrons import GeneIntrons
 from .GeneJunctions import GeneJunctions
 from .Genes import Genes
 from .GFF3TypesMap import GFF3TypesMap
+
+if TYPE_CHECKING:
+    from ..voila.mplSpliceGraph import SpliceGraphGeneView
 
 
 class SpliceGraph(object):
@@ -192,6 +195,34 @@ class SpliceGraph(object):
     def exon_connections(self) -> ExonConnections:
         """:class:`ExonConnections` for the splicegraph"""
         return ExonConnections(self._sg._exon_connections)
+
+    def get_gene_view(
+        self,
+        gene_idx: Optional[int] = None,
+        gene_id: Optional[str] = None,
+        gene_name: Optional[str] = None,
+        **kwargs,
+    ) -> "SpliceGraphGeneView":
+        """Get view into specific gene (requires matplotlib)
+
+        Get view into specific gene. Prioritizes specified gene_idx > gene_id >
+        gene_name.
+        """
+        try:
+            from ..voila.mplSpliceGraph import SpliceGraphGeneView
+        except ImportError:
+            raise ImportError("get_gene_view requires matplotlib to be installed")
+
+        if gene_idx is None:
+            if gene_id is not None:
+                gene_idx = self.genes.gene_id.index(gene_id)
+            elif gene_name is not None:
+                gene_idx = self.genes.gene_name.index(gene_name)
+            else:
+                raise ValueError(
+                    "get_gene_view requires one of gene_{idx,id,name} to be specified"
+                )
+        return SpliceGraphGeneView(self, gene_idx, **kwargs)
 
     def to_zarr(self, path: Union[str, Path]) -> None:
         """Save :py:class:`SpliceGraph` to specified path
