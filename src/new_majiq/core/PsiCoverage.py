@@ -33,6 +33,7 @@ from .MixinPsiInference import (
     MixinBootstrapPsiMeanPopulation,
     MixinRawPsi,
     MixinRawPsiMeanPopulation,
+    _compute_beta_updf,
 )
 from .SJExperiment import SJExperiment
 
@@ -930,3 +931,73 @@ class PsiCoverage(
         if psibins:
             quantify_vars["psi_pmf"] = self.approximate_discretized_pmf(psibins)
         return xr.Dataset(quantify_vars).reset_coords(drop=True)  # type: ignore[arg-type]
+
+    def approximate_posterior_plot(
+        self,
+        ec_idx: int,
+        ax=None,
+        nbins: int = constants.DEFAULT_QUANTIFY_PSIBINS,
+        use_width: float = 0.9,
+        cmap=None,
+    ) -> None:
+        """Plot individual posterior distributions
+
+        Parameters
+        ----------
+        ec_idx: int
+            index of event connection to plot violins for
+        ax: Optional[Axes]
+            Matplotlib axes to build plot in
+        nbins: int
+            Compute PDF over endpoints of uniformly spaced bins on [0, 1].
+            (the first and last values are computed at the midpoints in order
+            to handle singularities at {0, 1} when either of the beta
+            distribution parameters are less than 1).
+        cmap: matplotlib colors, optional
+            matplotlib colors. If not provided, will use tab10 from matplotlib
+        use_width: float
+            How much of plotting width each violin takes
+        """
+        if ax is None:
+            try:
+                import matplotlib.pyplot as plt
+            except ImportError:
+                raise ValueError("approximate_posterior_plot requires matplotlib")
+            ax = plt.gca()
+        if not (0 < use_width < 1):
+            raise ValueError("use_width must be between 0 and 1")
+        if cmap is None:
+            import matplotlib as mpl
+
+            cmap = mpl.cm.get_cmap("tab10")
+        updf = _compute_beta_updf(
+            self.approximate_alpha.isel(ec_idx=ec_idx),
+            self.approximate_beta.isel(ec_idx=ec_idx),
+            nbins=nbins,
+        ).load()
+        psi_mean = self.raw_psi_mean.isel(ec_idx=ec_idx).load()
+        for i in range(self.num_prefixes):
+            x_i = 1 + i
+            psi_i = psi_mean.isel(prefix=i).values
+            updf_i = updf.isel(prefix=i)
+            if updf_i.isnull().any():
+                continue
+            # normalize it to desired width
+            updf_i *= 0.5 * use_width / updf_i.max()
+            # don't plot negligible values
+            updf_i = updf_i[updf_i > 5e-4 * use_width]
+            # plot psi_mean
+            ax.scatter([x_i], [psi_i], c=["black"])
+            # plot distribution
+            ax.fill_betweenx(
+                updf_i.psi,
+                x_i - updf_i,
+                x_i + updf_i,
+                fc=cmap(i),
+                ec=cmap(i),
+                alpha=0.7,
+            )
+        ax.set_xticks(np.arange(1, 1 + self.num_prefixes))
+        ax.set_xticklabels(self.prefixes, rotation=45, va="top", ha="right")
+        ax.set_ylim(0, 1)
+        return

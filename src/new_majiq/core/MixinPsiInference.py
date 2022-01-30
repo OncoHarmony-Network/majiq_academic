@@ -177,6 +177,30 @@ class MixinApproximatePsi(ABC):
             self.approximate_alpha, self.approximate_beta, nbins=nbins
         )
 
+    def approximate_updf(
+        self,
+        nbins: int = constants.DEFAULT_QUANTIFY_PSIBINS,
+    ) -> xr.DataArray:
+        """Compute unnormalized PDF of approximate/smoothed bootstrap posterior
+
+        Parameters
+        ----------
+        nbins: int
+            Compute PDF over endpoints of uniformly spaced bins on [0, 1].
+            (the first and last values are computed at the midpoints in order
+            to handle singularities at {0, 1} when either of the beta
+            distribution parameters are less than 1).
+
+        Notes
+        -----
+        This is appropriate for plotting because
+
+        - it is much faster than computing the PMF
+        - the usual plots are qualitative with arbitrary scale, so the
+          normalization constant is irrelevant
+        """
+        return _compute_beta_updf(self.approximate_alpha, self.approximate_beta)
+
 
 class MixinBootstrapPsi(MixinApproximatePsi, ABC):
     """Methods for PSI inference when bootstrap_alpha, bootstrap_beta defined"""
@@ -642,3 +666,39 @@ def _compute_posterior_discretized_pmf(
         output_core_dims=[["pmf_bin"]],
         dask="allowed",
     )
+
+
+def _compute_beta_updf(
+    a: xr.DataArray,
+    b: xr.DataArray,
+    nbins: int = constants.DEFAULT_QUANTIFY_PSIBINS,
+) -> xr.DataArray:
+    """Compute unnormalized PDF of beta distribution
+
+    Parameters
+    ----------
+    nbins: int
+        Compute PDF over endpoints of uniformly spaced bins on [0, 1].
+        (the first and last values are computed at the midpoints in order
+        to handle singularities at {0, 1} when either of the beta
+        distribution parameters are less than 1).
+
+    Notes
+    -----
+    This is appropriate for plotting because
+
+    - it is much faster than computing the PMF
+    - the usual plots are qualitative with arbitrary scale, so the
+      normalization constant is irrelevant
+    """
+    if nbins < 2:
+        raise ValueError("approximate_updf requires at least 2 bins")
+    psi_arr = np.linspace(0, 1, 1 + nbins, dtype=a.dtype)
+    psi_calc = psi_arr.copy()
+    psi_calc[0] = 0.5 * psi_calc[1]
+    psi_calc[-1] = 0.5 + 0.5 * psi_calc[-2]
+    psi = xr.DataArray(psi_calc, [("psi", psi_arr)], name="psi")
+    logpsi = np.log(psi)
+    log1mpsi = np.log1p(-psi)
+    pdf = np.exp((a - 1) * logpsi + (b - 1) * log1mpsi)
+    return pdf
