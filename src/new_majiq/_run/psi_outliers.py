@@ -142,13 +142,27 @@ def run(args: argparse.Namespace) -> None:
                 "Input controls are defined with different experiments"
                 f" between passes (not shared: {missing})"
             )
-        log.debug("Verifying that controls were defined with the same values of alpha")
-        if set(controls_list[0].alpha.values) != set(controls_list[1].alpha.values):
-            raise ValueError(
-                "Input controls are defined with different values of alpha"
-                f" (pass1: {set(controls_list[0].alpha.values)},"
-                f" pass2: {set(controls_list[1].alpha.values)})"
+        if not args.select_alpha:
+            log.debug(
+                "Verifying that controls were defined with the same values of alpha"
             )
+            if set(controls_list[0].alpha.values) != set(controls_list[1].alpha.values):
+                raise ValueError(
+                    "Input controls are defined with different values of alpha"
+                    f" (pass1: {set(controls_list[0].alpha.values)},"
+                    f" pass2: {set(controls_list[1].alpha.values)})"
+                )
+        else:
+            log.debug(
+                "Verifying that pass1 controls have selected value of alpha (%f)",
+                args.select_alpha,
+            )
+            if args.select_alpha not in controls_list[1].alpha.values:
+                raise ValueError(
+                    f"Selected value of alpha ({args.select_alpha}) is not defined"
+                    " for pass1 controls (defined:"
+                    f" {controls_list[1].alpha.values.tolist()})"
+                )
     if args.select_alpha and args.select_alpha not in controls_list[0].alpha.values:
         raise ValueError(
             f"Selected value of alpha ({args.select_alpha}) is not defined for"
