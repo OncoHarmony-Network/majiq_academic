@@ -68,6 +68,19 @@ class Events(object):
         self._events: Final[_Events] = events
         return
 
+    def index(
+        self, ref_exon_idx: npt._ArrayLikeInt_co, event_type: npt._ArrayLikeStr_co
+    ) -> npt.NDArray[np.int64]:
+        """Get index for specified event in self (-1 if not present)
+
+        Raises ValueError if ref_exon_idx is outside of valid range
+        (i.e. >= len(exons))
+        """
+        from .ExonConnections import ExonConnections
+
+        is_source = ExonConnections._event_type_is_source(event_type)
+        return self._events.index(ref_exon_idx, is_source)
+
     def __repr__(self) -> str:
         return (
             f"{self.__class__.__name__}["

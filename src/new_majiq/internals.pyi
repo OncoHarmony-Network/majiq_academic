@@ -33,6 +33,9 @@ class Events:
         is_intron: npt._ArrayLikeBool_co,
         connection_idx: npt._ArrayLikeInt_co,
     ) -> None: ...
+    def index(
+        self, ref_exon_idx: npt._ArrayLikeInt_co, is_source: npt._ArrayLikeBool_co
+    ) -> npt.NDArray[numpy.int64]: ...
     def event_id(self, event_idx: npt._ArrayLikeInt_co) -> List[str]: ...
     def connection_denovo(
         self, connection_idx: npt._ArrayLikeInt_co

@@ -30,6 +30,9 @@ struct ConnectionIndex {
 };
 
 class Events {
+ public:
+  using event_iterator = typename std::vector<Event>::const_iterator;
+
  private:
   // underlying connections
   const std::shared_ptr<GeneIntrons> introns_;
@@ -60,6 +63,31 @@ class Events {
   const std::vector<size_t> intron_connection_idx_;
 
  public:
+  event_iterator events_begin() const { return events_.begin(); }
+  event_iterator events_end() const { return events_.end(); }
+  event_iterator events_begin_gene(size_t gene_idx) const {
+    return events_begin() + gene_idx_offsets_[gene_idx];
+  }
+  event_iterator events_end_gene(size_t gene_idx) const {
+    return events_begin_gene(1 + gene_idx);
+  }
+  /**
+   * first iterator over events_ that is not less than query
+   */
+  event_iterator events_lower_bound(const Event& query) const {
+    // verify that valid reference exon
+    if (query.ref_exon_idx_ >= exons_->size()) {
+      throw std::invalid_argument(
+          "events_lower_bound query has invalid ref_exon_idx");
+    }
+    // get gene associated with event
+    const auto gene_idx = (*exons_)[query.ref_exon_idx_].gene.idx_;
+    // perform query on the range associated with matching gene
+    return std::lower_bound(
+        events_begin_gene(gene_idx), events_end_gene(gene_idx), query);
+  }
+
+
   size_t num_events() const { return events_.size(); }
   size_t num_connections() const { return connections_.size(); }
   size_t num_junctions() const { return junction_connection_idx_.size(); }

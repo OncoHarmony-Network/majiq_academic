@@ -102,6 +102,25 @@ inline void init_Events(pyEvents_t& pyEvents) {
     .def_property_readonly("exons", &Events::exons,
         pybind11::call_guard<pybind11::gil_scoped_release>(),
         "underlying exons")
+    .def("index",
+        [](const Events& self,
+          pybind11::array_t<size_t> ref_exon_idx,
+          pybind11::array_t<bool> is_source) {
+        auto f = [&self](size_t idx, bool is_src) -> std::ptrdiff_t {
+          if (idx >= self.exons()->size()) {
+            throw std::invalid_argument("ref_exon_idx has values out of range");
+          }
+          Event query{
+              idx, is_src ? EventType::SRC_EVENT : EventType::DST_EVENT};
+          auto lb = self.events_lower_bound(query);
+          return (lb == self.events_end() || *lb != query)
+              ? -1 : lb - self.events_begin();
+        };
+        return pybind11::vectorize(f)(ref_exon_idx, is_source);
+        },
+        "Get indexes for specified events (-1 if not found)",
+        pybind11::arg("ref_exon_idx"),
+        pybind11::arg("is_source"))
     .def_property_readonly("ref_exon_idx",
         [](pybind11::object& self_obj) {
         Events& self = self_obj.cast<Events&>();
