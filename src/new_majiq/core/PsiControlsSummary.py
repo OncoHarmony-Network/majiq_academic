@@ -210,7 +210,7 @@ class PsiControlsSummary(MixinHasEvents):
                 .unstack("_idx")
             )
         ).drop_vars(["event_size", "lsv_idx"], errors="ignore")
-        return PsiControlsSummary(df, psicov.events)
+        return PsiControlsSummary(df, psicov.events_df)
 
     @classmethod
     def from_zarr(cls, path: Union[str, Path]) -> "PsiControlsSummary":

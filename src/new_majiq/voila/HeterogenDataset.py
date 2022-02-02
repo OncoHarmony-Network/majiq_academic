@@ -169,7 +169,7 @@ class HeterogenDataset(MixinHasEvents):
                 "psisamples": ("comparison", [psisamples]),
             },
         )
-        return HeterogenDataset(df, het.psi1.events)
+        return HeterogenDataset(df, het.psi1.events_df)
 
     def __init__(self, df: xr.Dataset, events: xr.Dataset):
         """Initialize :class:`HeterogenDataset` with specified underlying data

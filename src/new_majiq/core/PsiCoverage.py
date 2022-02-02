@@ -207,7 +207,7 @@ class PsiCoverage(
         if isinstance(prefixes, str):
             # make sure that prefixes is a sequence
             prefixes = [prefixes]
-        return PsiCoverage(self.df.sel(prefix=prefixes), self.events)
+        return PsiCoverage(self.df.sel(prefix=prefixes), self.events_df)
 
     @property
     def event_passed(self) -> xr.DataArray:
@@ -503,7 +503,7 @@ class PsiCoverage(
         # update/add attributes
         df = df.assign_attrs(**update_attrs)
         # return resulting PsiCoverage object
-        return PsiCoverage(df, self.events)
+        return PsiCoverage(df, self.events_df)
 
     def _save_df(
         self,
@@ -634,7 +634,7 @@ class PsiCoverage(
             Path for output Zarr for psicoverage output
         events_df: xr.Dataset
             Dataset encoding psicoverage events (Events.save_df,
-            PsiCoverage.events, etc.)
+            PsiCoverage.events_df, etc.)
         prefixes: List[str]
             Values for the prefix dimension coordinate
         num_bootstraps: int
@@ -870,7 +870,7 @@ class PsiCoverage(
             ).expand_dims(prefix=[new_prefix])
         else:
             df = self.df.assign_coords(prefix=[new_prefix])
-        return PsiCoverage(df, self.events)
+        return PsiCoverage(df, self.events_df)
 
     def mask_events(self, passed: xr.DataArray) -> "PsiCoverage":
         """Return :py:class:`PsiCoverage` passing only events that are passed in input
@@ -888,7 +888,7 @@ class PsiCoverage(
             in the original object)
         """
         return PsiCoverage(
-            self.df.assign(event_passed=self.event_passed & passed), self.events
+            self.df.assign(event_passed=self.event_passed & passed), self.events_df
         )
 
     def dataset(

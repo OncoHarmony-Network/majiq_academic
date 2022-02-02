@@ -121,7 +121,7 @@ def run(args: argparse.Namespace) -> None:
     log.info("Loading input coverage files")
     psi1 = nm.PsiCoverage.from_zarr(args.psi1)
     psi2 = nm.PsiCoverage.from_zarr(args.psi2)
-    if not psi1.events.equals(psi2.events):
+    if not psi1.events_df.equals(psi2.events_df):
         raise ValueError("Events from psi1 do not match events from psi2")
     group_sizes = {
         args.names[0]: psi1.num_prefixes,

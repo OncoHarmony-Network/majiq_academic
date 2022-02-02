@@ -34,46 +34,46 @@ class MixinHasEvents(object):
     df: Optional[xr.Dataset]
         If not None, passed-through dataset to validate sizes against
         (i.e.  ec_idx, e_idx)
-    events: xr.Dataset
+    events_df: xr.Dataset
         dataset that can be loaded along with matching introns/junctions as
         Events
     """
 
-    def __init__(self, df: Optional[xr.Dataset], events: xr.Dataset):
+    def __init__(self, df: Optional[xr.Dataset], events_df: xr.Dataset):
         if df is not None:
             try:
                 df_ec_size = df.sizes["ec_idx"]
             except KeyError:
                 pass
             else:
-                if df_ec_size != events.sizes["ec_idx"]:
+                if df_ec_size != events_df.sizes["ec_idx"]:
                     raise ValueError("df/events ec_idx are not same size")
             try:
                 df_e_size = df.sizes["e_idx"]
             except KeyError:
                 pass
             else:
-                if df_e_size != events.sizes["e_idx"]:
+                if df_e_size != events_df.sizes["e_idx"]:
                     raise ValueError("df/events e_idx are not same size")
 
-        self.events: Final[xr.Dataset] = events
+        self.events_df: Final[xr.Dataset] = events_df
         return
 
     @property
     def num_connections(self) -> int:
         """Total number of connections over all events"""
-        return self.events.sizes["ec_idx"]
+        return self.events_df.sizes["ec_idx"]
 
     @property
     def num_events(self) -> int:
         """Total number of events"""
-        return self.events.sizes["e_idx"]
+        return self.events_df.sizes["e_idx"]
 
     def events_to_zarr(
         self, path: Union[str, Path], mode: str, consolidated: bool = True
     ) -> None:
         """Save events information to specified path"""
-        self.events.chunk(self.events.sizes).to_zarr(
+        self.events_df.chunk(self.events_df.sizes).to_zarr(
             path, mode=mode, group=constants.NC_EVENTS, consolidated=consolidated
         )
         return
@@ -94,18 +94,18 @@ class MixinHasEvents(object):
         -------
         Events
         """
-        if self.events.intron_hash != introns.checksum():
+        if self.events_df.intron_hash != introns.checksum():
             raise ValueError("GeneIntrons checksums do not match")
-        if self.events.junction_hash != junctions.checksum():
+        if self.events_df.junction_hash != junctions.checksum():
             raise ValueError("GeneJunctions checksums do not match")
         return Events(
             _Events(
                 introns._gene_introns,
                 junctions._gene_junctions,
-                self.events.ref_exon_idx,
-                self.events.event_type,
-                self.events._offsets,
-                self.events.is_intron,
-                self.events.connection_idx,
+                self.events_df.ref_exon_idx,
+                self.events_df.event_type,
+                self.events_df._offsets,
+                self.events_df.is_intron,
+                self.events_df.connection_idx,
             )
         )

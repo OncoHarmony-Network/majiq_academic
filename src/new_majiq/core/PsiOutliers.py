@@ -35,10 +35,10 @@ class PsiOutliers(object):
     """
 
     def __init__(self, cases: PsiCoverage, controls: PsiControlsSummary):
-        if not cases.events.equals(controls.events):
+        if not cases.events_df.equals(controls.events_df):
             raise ValueError(
                 "cases and controls are not defined with the same events"
-                f" ({cases.events=}, {controls.events=})"
+                f" ({cases.events_df=}, {controls.events_df=})"
             )
         if prefix_overlap := set(cases.prefixes) & set(controls.prefixes):
             # warning if there is overlap between prefixes

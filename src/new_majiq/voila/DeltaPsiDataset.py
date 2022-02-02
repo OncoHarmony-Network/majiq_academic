@@ -144,7 +144,7 @@ class DeltaPsiDataset(MixinHasEvents):
             .swap_dims(prefix="grp")
         )
         df = xr.merge([dpsi_ds, psi_ds], compat="override", join="exact")
-        return DeltaPsiDataset(df, dpsi.psi1.events)
+        return DeltaPsiDataset(df, dpsi.psi1.events_df)
 
     def __init__(self, df: xr.Dataset, events: xr.Dataset):
         """Initialize :class:`DeltaPsiDataset` with specified underlying data
