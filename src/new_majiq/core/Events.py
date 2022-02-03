@@ -226,8 +226,8 @@ class Events(object):
         Parameters
         ----------
         select_eidx: array[int]
-            1D array of indexes into select events. Values must be between 0
-            and `self.num_events`.
+            0 or 1D array of indexes into select events. Values must be between
+            0 and `self.num_events`.
 
         Returns
         -------
@@ -246,9 +246,14 @@ class Events(object):
         """
         # make sure select_eidx is an array
         select_eidx = np.array(select_eidx, copy=False)
-        # make sure it is 1D
-        if select_eidx.ndim != 1:
-            raise ValueError("select_eidx must be 1D")
+        # make sure it is 0 or 1D
+        if select_eidx.ndim > 1:
+            raise ValueError("select_eidx must be 0 or 1D")
+        elif select_eidx.ndim == 0:
+            if not (0 <= select_eidx < self.num_events):
+                raise IndexError(f"{select_eidx = } is out of range")
+            ec_idx_start, ec_idx_end = self._offsets[select_eidx : 2 + select_eidx]  # type: ignore[misc]
+            return np.arange(ec_idx_start, ec_idx_end)
         # convert to mask over events
         select_eidx_mask = np.zeros(self.num_events, dtype=bool)
         select_eidx_mask[select_eidx] = True
