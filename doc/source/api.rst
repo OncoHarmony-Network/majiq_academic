@@ -448,14 +448,12 @@ DeltaPsi (replicate PsiCoverage)
    DPsiPrior.empirical_update
    DeltaPsi
    DeltaPsi.dataset
-   DeltaPsi.discrete_posterior_mean
-   DeltaPsi.discrete_posterior_std
-   DeltaPsi.probability_changing
-   DeltaPsi.probability_nonchanging
-   DeltaPsi.discrete_bootstrap_posterior_mean
-   DeltaPsi.discrete_bootstrap_posterior_std
-   DeltaPsi.bootstrap_probability_changing
-   DeltaPsi.bootstrap_probability_nonchanging
+   DeltaPsi.bootstrap_posterior
+   DeltaPsiPMF
+   DeltaPsiPMF.mean
+   DeltaPsiPMF.standard_deviation
+   DeltaPsiPMF.probability_changing
+   DeltaPsiPMF.probability_nonchanging
 
 
 Heterogen (independent PsiCoverage)

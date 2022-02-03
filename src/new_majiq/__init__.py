@@ -14,7 +14,7 @@ import new_majiq.constants as constants
 import new_majiq.stats as stats
 
 from .core.Contigs import Contigs
-from .core.DeltaPsi import DeltaPsi
+from .core.DeltaPsi import DeltaPsi, DeltaPsiPMF
 from .core.DPsiPrior import DPsiPrior
 from .core.Events import Events, UniqueEventsMasks
 from .core.EventsCoverage import EventsCoverage
@@ -121,6 +121,7 @@ __all__ = [
     "PsiCoverage",
     "DPsiPrior",
     "DeltaPsi",
+    "DeltaPsiPMF",
     "DeltaPsiDataset",
     "Heterogen",
     "HeterogenDataset",
