@@ -128,6 +128,14 @@ class Events(object):
             e_idx = self.e_idx
         return self._events.event_id(e_idx)
 
+    def has_intron(
+        self, e_idx: Optional[npt._ArrayLikeInt_co] = None
+    ) -> npt.NDArray[np.bool_]:
+        """Indicate if selected events have an intron"""
+        if e_idx is None:
+            e_idx = self.e_idx
+        return self.is_intron[self.ec_idx_end.view(np.int64)[e_idx] - 1]
+
     @property
     def ref_exon_idx(self) -> npt.NDArray[np.uint64]:
         """Index into self.exons for reference exon of each unique event"""
