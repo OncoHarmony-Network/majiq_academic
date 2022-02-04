@@ -6,7 +6,7 @@ ExonConnections for SpliceGraph
 Author: Joseph K Aicher
 """
 
-from typing import Final, List
+from typing import Final
 
 import numpy as np
 import numpy.typing as npt
@@ -236,15 +236,25 @@ class ExonConnections(object):
 
     def event_id(
         self, ref_exon_idx: npt._ArrayLikeInt_co, event_type: npt._ArrayLikeStr_co
-    ) -> List[str]:
-        """List of event identifiers for VOILA for specified events"""
-        return self._exon_connections.event_id(ref_exon_idx, event_type)
+    ) -> npt.NDArray[np.str_]:
+        """Array of event identifiers for VOILA for specified events"""
+        ref_exon_idx_arr, event_type_arr = np.broadcast_arrays(ref_exon_idx, event_type)
+        return np.array(
+            self._exon_connections.event_id(
+                ref_exon_idx_arr.reshape((-1,)), event_type_arr.reshape((-1,))
+            )
+        ).reshape(ref_exon_idx_arr.shape)
 
     def event_description(
         self, ref_exon_idx: npt._ArrayLikeInt_co, event_type: npt._ArrayLikeStr_co
-    ) -> List[str]:
-        """List of event descriptions for VOILA for specified events"""
-        return self._exon_connections.event_description(ref_exon_idx, event_type)
+    ) -> npt.NDArray[np.str_]:
+        """Array of event descriptions for VOILA for specified events"""
+        ref_exon_idx_arr, event_type_arr = np.broadcast_arrays(ref_exon_idx, event_type)
+        return np.array(
+            self._exon_connections.event_description(
+                ref_exon_idx_arr.reshape((-1,)), event_type_arr.reshape((-1,))
+            )
+        ).reshape(ref_exon_idx_arr.shape)
 
     def src_introns_for(self, exon_idx: int) -> npt.NDArray[np.uint64]:
         """array of intron_idx that have exon_idx as src_exon

@@ -8,7 +8,7 @@ Author: Joseph K Aicher
 
 from functools import cached_property
 from pathlib import Path
-from typing import Final, List, NamedTuple, Optional, Sequence, Union
+from typing import Final, NamedTuple, Optional, Sequence, Union
 
 import numpy as np
 import numpy.typing as npt
@@ -122,11 +122,17 @@ class Events(object):
         """Index over unique events"""
         return np.arange(self.num_events)
 
-    def event_id(self, e_idx: Optional[npt._ArrayLikeInt_co] = None) -> List[str]:
-        """List of event identifiers for VOILA for specified events"""
+    def event_id(
+        self, e_idx: Optional[npt._ArrayLikeInt_co] = None
+    ) -> npt.NDArray[np.str_]:
+        """Array of event identifiers for VOILA for specified events"""
         if e_idx is None:
-            e_idx = self.e_idx
-        return self._events.event_id(e_idx)
+            e_idx_arr = self.e_idx
+        else:
+            e_idx_arr = np.array(e_idx, copy=False)
+        return np.array(self._events.event_id(e_idx_arr.reshape((-1,)))).reshape(
+            e_idx_arr.shape
+        )
 
     def has_intron(
         self, e_idx: Optional[npt._ArrayLikeInt_co] = None

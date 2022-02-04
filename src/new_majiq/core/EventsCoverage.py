@@ -7,7 +7,7 @@ Author: Joseph K Aicher
 """
 
 from pathlib import Path
-from typing import Final, List, Optional, Union
+from typing import Final, Optional, Union
 
 import numpy as np
 import numpy.typing as npt
@@ -119,28 +119,32 @@ class EventsCoverage(object):
         exon_connections: Optional[ExonConnections]
             If specified, use exon connections to obtain full lsv descriptions
         """
-        event_id: List[str]
-        event_description: List[str]
+        event_id: npt.NDArray[np.str_]
+        event_description: npt.NDArray[np.str_]
         if exon_connections is None:
             gene_id = np.array(self.events.genes.gene_id)[
                 self.events.exons.gene_idx[self.events.ref_exon_idx]
             ]
             ref_start = self.events.exons.start[self.events.ref_exon_idx]
             ref_end = self.events.exons.end[self.events.ref_exon_idx]
-            event_id = [
-                f"{g}:{t.decode('utf-8')}:"
-                f"{s if s >= 0 else 'na'}-{e if e >= 0 else 'na'}"
-                for g, t, s, e in zip(
-                    gene_id, self.events.event_type, ref_start, ref_end
-                )
-            ]
-            event_description = [
-                f"{t.decode('utf-8')}|na{'|i' if has_intron else ''}"
-                for t, has_intron in zip(
-                    self.events.event_type,
-                    self.events.is_intron[self.events.ec_idx_end - 1],
-                )
-            ]
+            event_id = np.array(
+                [
+                    f"{g}:{t.decode('utf-8')}:"
+                    f"{s if s >= 0 else 'na'}-{e if e >= 0 else 'na'}"
+                    for g, t, s, e in zip(
+                        gene_id, self.events.event_type, ref_start, ref_end
+                    )
+                ]
+            )
+            event_description = np.array(
+                [
+                    f"{t.decode('utf-8')}|na{'|i' if has_intron else ''}"
+                    for t, has_intron in zip(
+                        self.events.event_type,
+                        self.events.is_intron[self.events.ec_idx_end - 1],
+                    )
+                ]
+            )
         else:
             event_id = exon_connections.event_id(
                 self.events.ref_exon_idx, self.events.event_type
