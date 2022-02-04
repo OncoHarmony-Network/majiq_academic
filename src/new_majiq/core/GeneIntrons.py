@@ -16,7 +16,6 @@ import xarray as xr
 import new_majiq.constants as constants
 from new_majiq.internals import GeneIntrons as _GeneIntrons
 
-from ._workarounds import _load_zerodim_variables
 from .Exons import Exons
 from .GeneConnections import GeneConnections
 from .Genes import Genes
@@ -152,7 +151,6 @@ class GeneIntrons(GeneConnections):
         (
             self.df.drop_vars(["gi_idx", "start_exon_idx", "end_exon_idx"])
             .pipe(lambda x: x.chunk(x.sizes))
-            .pipe(_load_zerodim_variables)
             .to_zarr(
                 path,
                 mode=mode,

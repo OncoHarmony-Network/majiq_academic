@@ -19,7 +19,6 @@ import new_majiq.constants as constants
 from new_majiq.internals import Events as _Events
 from new_majiq.internals import EventsAlign
 
-from ._workarounds import _load_zerodim_variables
 from .Contigs import Contigs
 from .Exons import Exons
 from .GeneIntrons import GeneIntrons
@@ -487,9 +486,7 @@ class Events(object):
         self, path: Union[str, Path], mode: str, consolidated: bool = True
     ) -> None:
         """Save :py:class:`Events` to specified path"""
-        self.save_df.pipe(lambda x: x.chunk(x.sizes)).pipe(
-            _load_zerodim_variables
-        ).to_zarr(
+        self.save_df.pipe(lambda x: x.chunk(x.sizes)).to_zarr(
             path,
             mode=mode,
             group=constants.NC_EVENTS,

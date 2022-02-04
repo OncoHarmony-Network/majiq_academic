@@ -170,8 +170,8 @@ def test_combine_command(script_runner, tmp_path):
 
 
 @pytest.mark.parametrize("batch_group", EXPERIMENT_GROUPS)
-@pytest.mark.parametrize("ignore_first", [False, True])
-def test_psi_coverage_command(script_runner, batch_group, ignore_first, tmp_path):
+@pytest.mark.parametrize("ignore", [None, "first", "all"])
+def test_psi_coverage_command(script_runner, batch_group, ignore, tmp_path):
     """Test psi-coverage command
 
     Test psi-coverage command, comparing to results when not ignoring first
@@ -181,10 +181,14 @@ def test_psi_coverage_command(script_runner, batch_group, ignore_first, tmp_path
     paths_sj = [get_sj_path(name, strandness="AUTO") for name in names]
     path_result = str(tmp_path / "result")
     ignore_from = list()
-    if ignore_first:
+    if ignore:
         ignore_from = [
             "--ignore-from",
-            get_build_path(EXPERIMENT_GROUPS[0][0], simplify=True, min_experiments=1),
+            get_path(COMBINED_SG)
+            if ignore == "all"
+            else get_build_path(
+                EXPERIMENT_GROUPS[0][0], simplify=True, min_experiments=1
+            ),
         ]
     ret = script_runner.run(
         "new-majiq",
@@ -195,7 +199,7 @@ def test_psi_coverage_command(script_runner, batch_group, ignore_first, tmp_path
         *ignore_from,
     )
     assert ret.success
-    if not ignore_first:
+    if not ignore:
         path_expected = get_psicov_path(group)
         result = nm.PsiCoverage.from_zarr(path_result)
         expected = nm.PsiCoverage.from_zarr(path_expected)

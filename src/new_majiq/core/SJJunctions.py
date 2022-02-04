@@ -17,7 +17,6 @@ import xarray as xr
 import new_majiq.constants as constants
 from new_majiq.internals import SJJunctions as _SJJunctions
 
-from ._workarounds import _load_zerodim_variables
 from .ContigRegions import ContigRegions
 from .Contigs import Contigs
 
@@ -62,9 +61,7 @@ class SJJunctions(ContigRegions):
         self, path: Union[str, Path], mode: str, consolidated: bool = True
     ) -> None:
         """Serialize to zarr format. Note contigs need to be saved separately"""
-        self.df.drop_vars("sj_idx").pipe(lambda x: x.chunk(x.sizes)).pipe(
-            _load_zerodim_variables
-        ).to_zarr(
+        self.df.drop_vars("sj_idx").pipe(lambda x: x.chunk(x.sizes)).to_zarr(
             path,
             mode=mode,
             group=constants.NC_SJJUNCTIONS,

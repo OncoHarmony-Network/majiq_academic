@@ -17,7 +17,6 @@ from dask.distributed import progress
 
 import new_majiq.constants as constants
 
-from ._workarounds import _load_zerodim_variables
 from .MixinHasEvents import MixinHasEvents
 from .PsiCoverage import PsiCoverage, min_experiments
 
@@ -242,9 +241,7 @@ class PsiControlsSummary(MixinHasEvents):
         # save df
         save_df_future = cast(
             Delayed,
-            self.df.chunk(self.df.sizes)
-            .pipe(_load_zerodim_variables)
-            .to_zarr(
+            self.df.chunk(self.df.sizes).to_zarr(
                 path,
                 mode="w",
                 group=constants.NC_PSICONTROLS,

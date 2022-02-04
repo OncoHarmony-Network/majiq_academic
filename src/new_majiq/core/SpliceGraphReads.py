@@ -32,7 +32,6 @@ from new_majiq.experiments import bam_experiment_name
 from new_majiq.internals import SpliceGraphReads as _SpliceGraphReads
 from new_majiq.logger import get_logger
 
-from ._workarounds import _load_zerodim_variables
 from .GeneIntrons import GeneIntrons
 from .GeneJunctions import GeneJunctions
 
@@ -167,9 +166,7 @@ class SpliceGraphReads(object):
         """Save to specified zarr file"""
         save_df_future = cast(
             Delayed,
-            self.df.chunk(chunksize)
-            .pipe(_load_zerodim_variables)
-            .to_zarr(
+            self.df.chunk(chunksize).to_zarr(
                 path,
                 mode=mode,
                 group=constants.NC_SGREADS,

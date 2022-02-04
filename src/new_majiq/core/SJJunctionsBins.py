@@ -19,7 +19,6 @@ from new_majiq.internals import ExperimentStrandness
 from new_majiq.internals import SJJunctionsBins as _SJJunctionsBins
 from new_majiq.logger import get_logger
 
-from ._workarounds import _load_zerodim_variables
 from .SJBinsReads import SJBinsReads
 from .SJJunctions import SJJunctions
 
@@ -210,7 +209,7 @@ class SJJunctionsBins(SJBinsReads):
             path, "w", group=constants.NC_SJJUNCTIONSCONTIGS, consolidated=False
         )
         self.regions.to_zarr(path, "a", consolidated=False)
-        self._df.pipe(lambda x: x.chunk(x.sizes)).pipe(_load_zerodim_variables).to_zarr(
+        self._df.pipe(lambda x: x.chunk(x.sizes)).to_zarr(
             path,
             mode="a",
             group=constants.NC_SJJUNCTIONSBINS,

@@ -17,8 +17,6 @@ import xarray as xr
 import new_majiq.constants as constants
 from new_majiq.internals import Contigs as _Contigs
 
-from ._workarounds import _load_zerodim_variables
-
 
 class Contigs(object):
     """Collection of contigs/chromosomes on which genes can be defined
@@ -86,9 +84,7 @@ class Contigs(object):
         group: str = constants.NC_CONTIGS,
         consolidated: bool = True,
     ) -> None:
-        self.df.drop_vars("contig_idx").pipe(lambda x: x.chunk(x.sizes)).pipe(
-            _load_zerodim_variables
-        ).to_zarr(
+        self.df.drop_vars("contig_idx").pipe(lambda x: x.chunk(x.sizes)).to_zarr(
             path,
             mode=mode,
             group=group,

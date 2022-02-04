@@ -19,7 +19,6 @@ from new_majiq.internals import ExperimentStrandness
 from new_majiq.internals import SJIntronsBins as _SJIntronsBins
 from new_majiq.logger import get_logger
 
-from ._workarounds import _load_zerodim_variables
 from .Exons import Exons
 from .GeneIntrons import GeneIntrons
 from .SJBinsReads import SJBinsReads
@@ -242,7 +241,7 @@ class SJIntronsBins(SJBinsReads):
         # otherwise
         self.regions.contigs.to_zarr(path, "w", consolidated=False)
         self.regions.to_zarr(path, "a", consolidated=False)
-        self._df.pipe(lambda x: x.chunk(x.sizes)).pipe(_load_zerodim_variables).to_zarr(
+        self._df.pipe(lambda x: x.chunk(x.sizes)).to_zarr(
             path,
             mode="a",
             group=constants.NC_SJINTRONSBINS,

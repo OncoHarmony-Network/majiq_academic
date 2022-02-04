@@ -17,7 +17,6 @@ import new_majiq.constants as constants
 from new_majiq.experiments import bam_experiment_name
 from new_majiq.internals import EventsCoverage as _EventsCoverage
 
-from ._workarounds import _load_zerodim_variables
 from .Events import Events
 from .ExonConnections import ExonConnections
 from .GeneIntrons import GeneIntrons
@@ -99,7 +98,7 @@ class EventsCoverage(object):
             )
         # save events, events coverage
         self.events.to_zarr(path, "w", consolidated=False)
-        self._df.drop_vars("ec_idx").pipe(_load_zerodim_variables).to_zarr(
+        self._df.drop_vars("ec_idx").to_zarr(
             path,
             mode="a",
             group=constants.NC_EVENTSCOVERAGE,
