@@ -700,5 +700,5 @@ def _compute_beta_updf(
     psi = xr.DataArray(psi_calc, [("psi", psi_arr)], name="psi")
     logpsi = np.log(psi)
     log1mpsi = np.log1p(-psi)
-    pdf = np.exp((a - 1) * logpsi + (b - 1) * log1mpsi)
+    pdf = cast(xr.DataArray, np.exp((a - 1) * logpsi + (b - 1) * log1mpsi))
     return pdf

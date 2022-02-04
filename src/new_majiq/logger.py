@@ -41,6 +41,7 @@ def setup_logger(
 ) -> None:
     """Setup logger to print output to logfile (if None, stderr, as default)"""
     # set up handler
+    handler: logging.Handler
     if logfile is None:
         # use stderr
         handler = logging.StreamHandler()
