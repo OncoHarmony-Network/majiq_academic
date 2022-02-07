@@ -60,6 +60,14 @@ def get_psicov_path(group):
     return get_path(f"data/psicov/{group}.psicov.zip")
 
 
+def assert_splicegraphs(sg1: nm.SpliceGraph, sg2: nm.SpliceGraph):
+    xr.testing.assert_equal(sg1.contigs.df, sg2.contigs.df)
+    xr.testing.assert_equal(sg1.genes.df, sg2.genes.df)
+    xr.testing.assert_equal(sg1.exons.df, sg2.exons.df)
+    xr.testing.assert_equal(sg1.introns.df, sg2.introns.df)
+    xr.testing.assert_equal(sg1.junctions.df, sg2.junctions.df)
+
+
 def test_gff3_command(script_runner, tmp_path):
     """Test new-majiq gff3 runs and compare to expected result"""
     path_result = str(tmp_path / "result")
@@ -68,11 +76,7 @@ def test_gff3_command(script_runner, tmp_path):
     path_expected = get_path(ANNOTATED_SG)
     sg_result = nm.SpliceGraph.from_zarr(path_result)
     sg_expected = nm.SpliceGraph.from_zarr(path_expected)
-    xr.testing.assert_equal(sg_result.contigs.df, sg_expected.contigs.df)
-    xr.testing.assert_equal(sg_result.genes.df, sg_expected.genes.df)
-    xr.testing.assert_equal(sg_result.exons.df, sg_expected.exons.df)
-    xr.testing.assert_equal(sg_result.introns.df, sg_expected.introns.df)
-    xr.testing.assert_equal(sg_result.junctions.df, sg_expected.junctions.df)
+    assert_splicegraphs(sg_result, sg_expected)
     return
 
 
@@ -125,11 +129,65 @@ def test_build_command(script_runner, build_group, simplify, min_experiments, tm
     if Path(path_expected).exists():
         sg_result = nm.SpliceGraph.from_zarr(path_result)
         sg_expected = nm.SpliceGraph.from_zarr(path_expected)
-        xr.testing.assert_equal(sg_result.contigs.df, sg_expected.contigs.df)
-        xr.testing.assert_equal(sg_result.genes.df, sg_expected.genes.df)
-        xr.testing.assert_equal(sg_result.exons.df, sg_expected.exons.df)
-        xr.testing.assert_equal(sg_result.introns.df, sg_expected.introns.df)
-        xr.testing.assert_equal(sg_result.junctions.df, sg_expected.junctions.df)
+        assert_splicegraphs(sg_result, sg_expected)
+    return
+
+
+@pytest.mark.parametrize("min_experiments", ["1", "999"])
+def test_update_vs_combine(script_runner, tmp_path, min_experiments):
+    """Test majiq-build update with groups tsv vs update on sjs and combine
+
+    We expect that running update on build groups individually and then
+    combining should be equivalent to a build with them all together
+    """
+    grp1 = [get_sj_path(x, strandness="AUTO") for x in EXPERIMENT_GROUPS[0][1]]
+    grp2 = [get_sj_path(x, strandness="AUTO") for x in EXPERIMENT_GROUPS[1][1]]
+    # separate calls to majiq-build update, then majiq-build combine
+    assert script_runner.run(
+        "majiq-build",
+        "update",
+        get_path(ANNOTATED_SG),
+        str(tmp_path / "grp1.sg"),
+        *("--sjs", *grp1),
+        "--no-simplify",
+        *("--min-experiments", min_experiments),
+    ).success
+    assert script_runner.run(
+        "majiq-build",
+        "update",
+        get_path(ANNOTATED_SG),
+        str(tmp_path / "grp2.sg"),
+        *("--sjs", *grp2),
+        "--no-simplify",
+        *("--min-experiments", min_experiments),
+    ).success
+    assert script_runner.run(
+        "majiq-build",
+        "combine",
+        str(tmp_path / "combined.sg"),
+        *("--keep-denovo", str(tmp_path / "grp1.sg"), str(tmp_path / "grp2.sg")),
+    )
+    # single call to majiq-build
+    with open(tmp_path / "groups.tsv", mode="w") as handle:
+        print("group\tsj", file=handle)
+        for x in grp1:
+            print(f"grp1\t{x}", file=handle)
+        for x in grp2:
+            print(f"grp2\t{x}", file=handle)
+    assert script_runner.run(
+        "majiq-build",
+        "update",
+        get_path(ANNOTATED_SG),
+        str(tmp_path / "multigrp_build.sg"),
+        *("--groups-tsv", str(tmp_path / "groups.tsv")),
+        "--no-simplify",
+        *("--min-experiments", min_experiments),
+    ).success
+    # check equivalence of splicegraphs
+    assert_splicegraphs(
+        nm.SpliceGraph.from_zarr(tmp_path / "combined.sg"),
+        nm.SpliceGraph.from_zarr(tmp_path / "multigrp_build.sg"),
+    )
     return
 
 
@@ -161,11 +219,7 @@ def test_combine_command(script_runner, tmp_path):
     path_expected = get_path(COMBINED_SG)
     sg_result = nm.SpliceGraph.from_zarr(path_result)
     sg_expected = nm.SpliceGraph.from_zarr(path_expected)
-    xr.testing.assert_equal(sg_result.contigs.df, sg_expected.contigs.df)
-    xr.testing.assert_equal(sg_result.genes.df, sg_expected.genes.df)
-    xr.testing.assert_equal(sg_result.exons.df, sg_expected.exons.df)
-    xr.testing.assert_equal(sg_result.introns.df, sg_expected.introns.df)
-    xr.testing.assert_equal(sg_result.junctions.df, sg_expected.junctions.df)
+    assert_splicegraphs(sg_result, sg_expected)
     return
 
 
