@@ -309,6 +309,11 @@ class Events(object):
         return self._events.is_intron
 
     @property
+    def connection_is_intron(self) -> npt.NDArray[np.bool_]:
+        """Indicator if intron/junction for each event connection (alias for is_intron)"""
+        return self.is_intron
+
+    @property
     def connection_idx(self) -> npt.NDArray[np.uint64]:
         """Index into self.introns or self.junctions for each event connection"""
         return self._events.idx
