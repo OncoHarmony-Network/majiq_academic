@@ -43,9 +43,6 @@ class Events:
     def connection_end(
         self, connection_idx: npt._ArrayLikeInt_co
     ) -> npt.NDArray[numpy.int64]: ...
-    def connection_gene_idx(
-        self, connection_idx: npt._ArrayLikeInt_co
-    ) -> npt.NDArray[numpy.uint64]: ...
     def connection_other_exon_idx(
         self, connection_idx: npt._ArrayLikeInt_co
     ) -> npt.NDArray[numpy.uint64]: ...

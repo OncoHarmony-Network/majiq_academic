@@ -169,9 +169,6 @@ class Events {
   }
 
   // get region information from connection_idx
-  const KnownGene& connection_gene(size_t connection_idx) const {
-    return connection_ref_exon(connection_idx).gene;
-  }
   const position_t& connection_start(size_t connection_idx) const {
     return is_intron(connection_idx)
       ? connection_intron(connection_idx).coordinates.start

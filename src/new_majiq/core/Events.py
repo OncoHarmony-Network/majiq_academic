@@ -330,7 +330,7 @@ class Events(object):
         """
         if ec_idx is None:
             ec_idx = self.ec_idx
-        return self._events.connection_gene_idx(ec_idx)
+        return self.exons.gene_idx[self.ref_exon_idx[self.connection_e_idx[ec_idx]]]
 
     def connection_contig_idx(
         self, ec_idx: Optional[npt._ArrayLikeInt_co] = None

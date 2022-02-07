@@ -218,17 +218,6 @@ inline void init_Events(pyEvents_t& pyEvents) {
         pybind11::call_guard<pybind11::gil_scoped_release>())
     .def_property_readonly("num_introns", &Events::num_introns,
         pybind11::call_guard<pybind11::gil_scoped_release>())
-    .def("connection_gene_idx",
-        [](const Events& self, pybind11::array_t<size_t> connection_idx) {
-        auto f = [&self](size_t idx) {
-        if (idx >= self.num_connections()) {
-          throw std::invalid_argument("connection_idx has values out of range");
-        }
-        return self.connection_gene(idx).idx_; };
-        return pybind11::vectorize(f)(connection_idx);
-        },
-        "gene_idx for specified connection indexes",
-        pybind11::arg("connection_idx"))
     .def("connection_start",
         [](const Events& self, pybind11::array_t<size_t> connection_idx) {
         auto f = [&self](size_t idx) {
