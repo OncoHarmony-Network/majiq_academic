@@ -290,38 +290,98 @@ inline bool IntervalSubsets(const I1& sub, const I2& sup) noexcept {
   return sup.contains(sub.start) && sup.contains(sub.end);
 }
 
-// interval preceding
-// NOTE: we consider closed-open to be intersecting if they share a coordinate.
-// That is, (2, 4) intersects [4, 6]. This reflects our use of open intervals
-// for junctions and closed intervals for exons.
+/*
+ * Determine if interval `before` precedes `after`.
+ *
+ * If neither precedes the other, the intervals overlap/intersect.
+ *
+ * Special care needs to be taken for the special case of zero-length
+ * intervals.
+ * When defining introns, we would like to be able to have directly adjacent
+ * zero length introns: for example, [100, 99], [100, 200], [201, 200].
+ * The zero length introns in this case would correspond to unspliced reads
+ * over the adjoining exon boundaries.
+ * For this case, we consider zero length regions as non-overlapping.
+ * However, when assigning coverage to introns, or matching introns, we would
+ * like these introns to be considered as overlapping.
+ * For example, if the intron [100, 200] is split by a denovo exon [100, 200],
+ * we would get two zero-length introns [100, 99] and [201, 200] that need to
+ * be matched back to the original intron [100, 200].
+ * For this case, the zero length regions are overlapping.
+ *
+ * We use the boolean template parameter bool ZERO_REGION_OVERLAPS to handle
+ * this case.
+ *
+ * We consider closed-open to be intersecting if they share a coordinate. That
+ * is, (2, 4) intersects [4, 6], reflecting our use of open intervals for
+ * junctions and closed intervals for exons.
+ */
 template <
+  bool ZERO_REGION_OVERLAPS = true,
   typename I1,
   typename I2,
   std::enable_if_t<std::is_base_of_v<detail::Interval, I1>, bool> = true,
   std::enable_if_t<std::is_base_of_v<detail::Interval, I2>, bool> = true
 >
 inline bool IntervalPrecedes(const I1& before, const I2& after) noexcept {
-  const auto& before_last = before.last_pos();
-  return before_last < after.first_pos() && before_last < after.last_pos();
-}
-// if both are open, then values can be equal and still be 'preceding'
-template <>
-inline bool IntervalPrecedes(
-    const OpenInterval& before, const OpenInterval& after) noexcept {
-  return before.end <= after.start;
+  if constexpr(std::is_same_v<I1, OpenInterval>
+      && std::is_same_v<I2, OpenInterval>) {
+    // treat open intervals as special case to allow overlapping end/start
+    return before.end <= after.start;
+  } else {
+    // length() treats half intervals as zero length, so we use this condition
+    // this condition isn't semantically correct for open intervals, but it is
+    // correct for this function, especially since we specialize for
+    // OpenInterval vs OpenInterval above
+    const auto& before_first = before.first_pos();
+    const auto& before_last = before.last_pos();
+    const auto& after_first = after.first_pos();
+    const auto& after_last = after.last_pos();
+    const bool before_zero = before_first > before_last;
+    const bool after_zero = after_first > after_last;
+    if (before_zero && after_zero) {
+      // if both are zero length, then should check start vs start or end vs end
+      return before_last < after_last;
+    } else if (before_zero) {
+      // - after is not zero length (would have been first case)
+      // - before_last < before_first
+      if constexpr(ZERO_REGION_OVERLAPS) {
+        // [a, a - 1] DOES NOT precede [a, b] (b >= a)
+        return before_first < after_first;
+      } else {
+        // [a, a - 1] DOES precede [a, b] (b >= a)
+        return before_first <= after_first;
+      }
+    } else if (after_zero) {
+      // - before is not zero length (would have been first case)
+      // - after_last < after_first
+      if constexpr(ZERO_REGION_OVERLAPS) {
+        // [a, b] (a <= b) DOES NOT precede [b + 1, b]
+        return before_last < after_last;
+      } else {
+        // [a, b] (a <= b) DOES precede [b + 1, b]
+        return before_last <= after_last;
+      }
+    } else {
+      // both have length and we can compare last vs first as expected
+      return before_last < after_first;
+    }
+  }
 }
 
+template <bool ZERO_REGION_OVERLAPS = true>
 struct IntervalPrecedesT {
   template <typename T, typename U>
   inline bool operator()(const T& before, const U& after) const noexcept {
-    return IntervalPrecedes<T, U>(before, after);
+    return IntervalPrecedes<ZERO_REGION_OVERLAPS>(before, after);
   }
 };
 
 // intersection of intervals
-template <typename I1, typename I2>
+template <bool ZERO_REGION_OVERLAPS = true, typename I1, typename I2>
 inline bool IntervalIntersects(const I1& x, const I2& y) noexcept {
-  return !(IntervalPrecedes(x, y) || IntervalPrecedes(y, x));
+  return !(IntervalPrecedes<ZERO_REGION_OVERLAPS>(x, y)
+      || IntervalPrecedes<ZERO_REGION_OVERLAPS>(y, x));
 }
 
 }  // namespace majiq

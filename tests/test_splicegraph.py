@@ -291,3 +291,57 @@ def test_splicegraph_events(base_splicegraph: nm.SpliceGraph):
     # TODO: right now we are just checking summaries. In the future could check
     # that the actual values make sense
     return
+
+
+@pytest.mark.parametrize(
+    "interval",
+    [
+        # description, interval[2], overlaps
+        ("same as base", 1000, 2000, True),
+        ("subset of base", 1250, 1750, True),
+        ("superset of base", 750, 2250, True),
+        ("overlap left of base", 750, 1250, True),
+        ("overlap right of base", 1750, 2250, True),
+        ("left of base", 250, 750, False),
+        ("right of base", 2250, 2750, False),
+        ("zero length within", 1500, 1500 - 1, True),
+        ("zero length start", 1000, 1000 - 1, True),
+        ("zero length end", 2000 + 1, 2000, True),
+        ("zero length before", 750, 750 - 1, False),
+        ("zero length after", 2250, 2250 - 1, False),
+    ],
+)
+def test_intron_overlaps_positive(base_genes: nm.Genes, interval):
+    """We expect overlaps to be called properly against positive-length introns"""
+    # base intron from 1000-2000 with positive length
+    base_introns = nm.GeneIntrons.from_arrays(base_genes, [0], [1000], [2000])
+    # get information about interval
+    description, start, end, expect_overlap = interval
+    query_introns = nm.GeneIntrons.from_arrays(base_genes, [0], [start], [end])
+    assert query_introns.overlaps(base_introns, 0) == expect_overlap, description
+    return
+
+
+@pytest.mark.parametrize(
+    "interval",
+    [
+        # description, interval[2], overlaps
+        ("same as base", 1000, 1000 - 1, True),
+        ("middle of base", 750, 1250, True),
+        ("start of base", 1000, 1200, True),
+        ("end of base", 800, 1000 - 1, True),
+        ("positive on left", 800, 900, False),
+        ("positive on right", 1100, 1200, False),
+        ("zero on left", 900, 900 - 1, False),
+        ("zero on right", 1100, 1100 - 1, False),
+    ],
+)
+def test_intron_overlaps_zero(base_genes: nm.Genes, interval):
+    """We expect overlaps to be called properly against zero-length introns"""
+    # base intron zero length at [1000, 1000 - 1]
+    base_introns = nm.GeneIntrons.from_arrays(base_genes, [0], [1000], [1000 - 1])
+    # get information about interval
+    description, start, end, expect_overlap = interval
+    query_introns = nm.GeneIntrons.from_arrays(base_genes, [0], [start], [end])
+    assert query_introns.overlaps(base_introns, 0) == expect_overlap, description
+    return

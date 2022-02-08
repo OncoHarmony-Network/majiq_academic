@@ -33,7 +33,7 @@ namespace majiq {
 class KnownGene;
 
 class Genes
-    : public detail::KnownFeatures<detail::Regions<Gene, true>>,
+    : public detail::KnownFeatures<detail::Regions<Gene, true, position_t{1}>>,
       public std::enable_shared_from_this<Genes> {
  public:
   // forward declaration of creation/viewing of KnownGene
@@ -79,8 +79,8 @@ class Genes
 // only allow Genes to be created as shared_ptr by Genes::create()
  private:
   Genes(const std::shared_ptr<Contigs>& contigs, std::vector<Gene>&& x)
-      : detail::KnownFeatures<detail::Regions<Gene, true>>(
-          detail::Regions<Gene, true>{contigs, std::move(x)}) {
+      : detail::KnownFeatures<detail::Regions<Gene, true, position_t{1}>>(
+          detail::Regions<Gene, true, position_t{1}>{contigs, std::move(x)}) {
     if (parents() == nullptr) {
       throw std::invalid_argument("Genes requires non-null contigs");
     }

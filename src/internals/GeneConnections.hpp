@@ -79,9 +79,14 @@ struct GeneConnection
   bool for_passed() const noexcept { return passed_build() && for_event(); }
 };
 
-template <typename GeneConnectionT, bool HAS_OVERLAPS>
-class GeneConnections : public Regions<GeneConnectionT, HAS_OVERLAPS> {
-  using BaseT = detail::Regions<GeneConnectionT, HAS_OVERLAPS>;
+template <
+  typename GeneConnectionT,
+  bool HAS_OVERLAPS,
+  position_t MIN_REGION_LENGTH = position_t{0}
+>
+class GeneConnections
+    : public Regions<GeneConnectionT, HAS_OVERLAPS, MIN_REGION_LENGTH> {
+  using BaseT = detail::Regions<GeneConnectionT, HAS_OVERLAPS, MIN_REGION_LENGTH>;
 
  protected:
   std::shared_ptr<Exons> connected_exons_;

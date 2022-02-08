@@ -78,7 +78,8 @@ class SpliceGraphReads {
     constexpr bool IS_INTRON = std::is_same_v<SJIntronsBins, SJBinsT>;
     using RegionIntervalBeforeT = std::conditional_t<
       IS_INTRON,
-      IntervalPrecedesT,
+      // zero-length introns [a, a-1], [b+1, b] overlap [a, b]
+      IntervalPrecedesT<true>,
       std::less<std::conditional_t<IS_INTRON, ClosedInterval, OpenInterval>>>;
 
     const auto& sj_regions = *(sj.regions());

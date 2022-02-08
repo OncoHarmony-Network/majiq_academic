@@ -39,8 +39,8 @@ class SJJunction : public detail::ContigRegion<OpenInterval, EmptyDataT> {
   SJJunction& operator=(SJJunction&&) = default;
 };
 
-class SJJunctions : public detail::Regions<SJJunction, true> {
-  using BaseT = detail::Regions<SJJunction, true>;
+class SJJunctions : public detail::Regions<SJJunction, true, position_t{1}> {
+  using BaseT = detail::Regions<SJJunction, true, position_t{1}>;
 
  public:
   SJJunctions(

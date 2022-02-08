@@ -46,8 +46,9 @@ struct GeneJunction : public detail::GeneConnection<OpenInterval> {
 };
 
 
-class GeneJunctions : public detail::GeneConnections<GeneJunction, true> {
-  using BaseT = detail::GeneConnections<GeneJunction, true>;
+class GeneJunctions
+    : public detail::GeneConnections<GeneJunction, true, position_t{1}> {
+  using BaseT = detail::GeneConnections<GeneJunction, true, position_t{1}>;
 
  public:
   // NOTE: assumes that connections to connected_exons already defined in x

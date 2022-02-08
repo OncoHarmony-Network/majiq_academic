@@ -150,7 +150,8 @@ class EventsCoverage {
     // how we determine if we no longer have match in coordinates
     using RegionIntervalBeforeT = std::conditional_t<
       IS_INTRON,
-      IntervalPrecedesT,
+      // zero-length introns [a, a-1], [b+1, b] overlap [a, b]
+      IntervalPrecedesT<true>,
       std::less<std::conditional_t<IS_INTRON, ClosedInterval, OpenInterval>>>;
 
     // we will temporarily accumulate the total number of positions

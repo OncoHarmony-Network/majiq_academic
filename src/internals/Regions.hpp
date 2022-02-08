@@ -20,12 +20,16 @@
 #include <initializer_list>
 #include <utility>
 
+#include "MajiqTypes.hpp"
+
 
 namespace majiq {
 namespace detail {
 
-template <typename RegionT, bool HAS_OVERLAPS>
+template <typename RegionT, bool HAS_OVERLAPS, position_t MIN_REGION_LENGTH = 0>
 class Regions {
+  static_assert(MIN_REGION_LENGTH >= 0,
+      "MIN_REGION_LENGTH must be nonnegative");
  public:
   using ParentT = decltype(std::declval<RegionT>().parent());
   using ParentsPtrT = decltype(std::declval<ParentT>().ptr_);
@@ -59,6 +63,12 @@ class Regions {
     // also, validate that it is sorted
     size_t cur_parent_idx = 0;
     for (size_t i = 0; i < elements.size(); ++i) {
+      // check that the region has appropriate length if full interval
+      if (elements[i].coordinates.is_full_interval()
+          && elements[i].coordinates.length() < MIN_REGION_LENGTH) {
+        throw std::invalid_argument(
+            "Full intervals do not have minimum length");
+      }
       // update result tracking offsets
       const size_t new_parent_idx = elements[i].parent().idx_;
       if (new_parent_idx >= parents->size()) {
@@ -80,7 +90,10 @@ class Regions {
       } else {
         if (i > 0
             && (elements[i - 1].parent() == elements[i].parent())
-            && !IntervalPrecedes(
+            // IntervalPrecedes<false> indicates that zero-length regions are
+            // NOT considered overlapping at endpoints, that is: [a, a-1],
+            // [b+1, b] do NOT overlap [a, b]
+            && !IntervalPrecedes<false>(
               elements[i - 1].coordinates, elements[i].coordinates)) {
           throw std::invalid_argument(
               "Regions must be in sorted order and non-overlapping");

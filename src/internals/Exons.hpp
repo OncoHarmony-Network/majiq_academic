@@ -100,8 +100,8 @@ struct Exon : detail::GeneRegion<ExonIntervalT, ExonIntervalT> {
 };
 
 
-class Exons : public detail::Regions<Exon, false> {
-  using BaseT = detail::Regions<Exon, false>;
+class Exons : public detail::Regions<Exon, false, position_t{1}> {
+  using BaseT = detail::Regions<Exon, false, position_t{1}>;
 
  public:
   Exons(
