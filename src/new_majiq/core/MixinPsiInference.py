@@ -123,6 +123,7 @@ class MixinApproximatePsi(ABC):
     def approximate_cdf(
         self,
         x: Union[xr.DataArray, Sequence[float]],
+        **indexer_kwargs: slice,
     ) -> xr.DataArray:
         """Compute cdf of approximate/smoothed bootstrapped posterior
 
@@ -130,6 +131,9 @@ class MixinApproximatePsi(ABC):
         ----------
         x: Union[xr.DataArray, Sequence[float]]
             potential realizations of distribution to evaluate CDF at
+        indexer_kwargs: {dim: slice}, optional
+            pairs of dimension names slices passed into `isel()` method on
+            underlying xarray objects
 
         Returns
         -------
@@ -138,11 +142,17 @@ class MixinApproximatePsi(ABC):
             `x` is not :py:class:`xr.DataArray`, dimension over
             quantiles will be "x"
         """
-        return _compute_posterior_cdf(self.approximate_alpha, self.approximate_beta, x)
+        alpha = self.approximate_alpha
+        beta = self.approximate_beta
+        if indexer_kwargs:
+            alpha = alpha.isel(indexer_kwargs)
+            beta = beta.isel(indexer_kwargs)
+        return _compute_posterior_cdf(alpha, beta, x)
 
     def approximate_quantile(
         self,
         quantiles: Union[xr.DataArray, Sequence[float]] = [0.1, 0.9],
+        **indexer_kwargs: slice,
     ) -> xr.DataArray:
         """Compute quantiles of approximate/smoothed bootstrapped posterior
 
@@ -150,6 +160,9 @@ class MixinApproximatePsi(ABC):
         ----------
         quantiles: Union[xr.DataArray, Sequence[float]]
             quantiles of distribution to compute
+        indexer_kwargs: {dim: slice}, optional
+            pairs of dimension names slices passed into `isel()` method on
+            underlying xarray objects
 
         Returns
         -------
@@ -158,12 +171,17 @@ class MixinApproximatePsi(ABC):
             `quantiles` is not :py:class:`xr.DataArray`, dimension over
             quantiles will be "quantiles"
         """
-        return _compute_posterior_quantile(
-            self.approximate_alpha, self.approximate_beta, quantiles=quantiles
-        )
+        alpha = self.approximate_alpha
+        beta = self.approximate_beta
+        if indexer_kwargs:
+            alpha = alpha.isel(indexer_kwargs)
+            beta = beta.isel(indexer_kwargs)
+        return _compute_posterior_quantile(alpha, beta, quantiles=quantiles)
 
     def approximate_discretized_pmf(
-        self, nbins: int = constants.DEFAULT_QUANTIFY_PSIBINS
+        self,
+        nbins: int = constants.DEFAULT_QUANTIFY_PSIBINS,
+        **indexer_kwargs: slice,
     ) -> xr.DataArray:
         """Compute discretized PMF of approximate/smoothed bootstrap posterior
 
@@ -172,14 +190,21 @@ class MixinApproximatePsi(ABC):
         nbins: int
             Number of uniform bins on [0, 1] on which probability mass will be
             computed
+        indexer_kwargs: {dim: slice}, optional
+            pairs of dimension names slices passed into `isel()` method on
+            underlying xarray objects
         """
-        return _compute_posterior_discretized_pmf(
-            self.approximate_alpha, self.approximate_beta, nbins=nbins
-        )
+        alpha = self.approximate_alpha
+        beta = self.approximate_beta
+        if indexer_kwargs:
+            alpha = alpha.isel(indexer_kwargs)
+            beta = beta.isel(indexer_kwargs)
+        return _compute_posterior_discretized_pmf(alpha, beta, nbins=nbins)
 
     def approximate_updf(
         self,
         nbins: int = constants.DEFAULT_QUANTIFY_PSIBINS,
+        **indexer_kwargs: slice,
     ) -> xr.DataArray:
         """Compute unnormalized PDF of approximate/smoothed bootstrap posterior
 
@@ -190,6 +215,9 @@ class MixinApproximatePsi(ABC):
             (the first and last values are computed at the midpoints in order
             to handle singularities at {0, 1} when either of the beta
             distribution parameters are less than 1).
+        indexer_kwargs: {dim: slice}, optional
+            pairs of dimension names slices passed into `isel()` method on
+            underlying xarray objects
 
         Notes
         -----
@@ -199,7 +227,12 @@ class MixinApproximatePsi(ABC):
         - the usual plots are qualitative with arbitrary scale, so the
           normalization constant is irrelevant
         """
-        return _compute_beta_updf(self.approximate_alpha, self.approximate_beta)
+        alpha = self.approximate_alpha
+        beta = self.approximate_beta
+        if indexer_kwargs:
+            alpha = alpha.isel(indexer_kwargs)
+            beta = beta.isel(indexer_kwargs)
+        return _compute_beta_updf(alpha, beta)
 
 
 class MixinBootstrapPsi(MixinApproximatePsi, ABC):
@@ -330,6 +363,7 @@ class MixinBootstrapPsi(MixinApproximatePsi, ABC):
     def bootstrap_cdf(
         self,
         x: Union[xr.DataArray, Sequence[float]],
+        **indexer_kwargs: slice,
     ) -> xr.DataArray:
         """Compute cdf of mixture of bootstrapped posterior distribution
 
@@ -337,6 +371,11 @@ class MixinBootstrapPsi(MixinApproximatePsi, ABC):
         ----------
         x: Union[xr.DataArray, Sequence[float]]
             potential realizations of distribution to evaluate CDF at
+        indexer_kwargs: {dim: slice}, optional
+            pairs of dimension names slices passed into `isel()` method on
+            underlying xarray objects.
+            Note that you *can* slice bootstrap_replicate, in which case,
+            computation will be performed on the selected replicates.
 
         Returns
         -------
@@ -345,11 +384,17 @@ class MixinBootstrapPsi(MixinApproximatePsi, ABC):
             `x` is not :py:class:`xr.DataArray`, dimension over
             quantiles will be "x"
         """
-        return _compute_posterior_cdf(self.bootstrap_alpha, self.bootstrap_beta, x)
+        alpha = self.bootstrap_alpha
+        beta = self.bootstrap_beta
+        if indexer_kwargs:
+            alpha = alpha.isel(indexer_kwargs)
+            beta = beta.isel(indexer_kwargs)
+        return _compute_posterior_cdf(alpha, beta, x)
 
     def bootstrap_quantile(
         self,
         quantiles: Union[xr.DataArray, Sequence[float]] = [0.1, 0.9],
+        **indexer_kwargs: slice,
     ) -> xr.DataArray:
         """Compute quantiles of mixture of bootstrapped posterior distributions
 
@@ -357,6 +402,11 @@ class MixinBootstrapPsi(MixinApproximatePsi, ABC):
         ----------
         quantiles: Union[xr.DataArray, Sequence[float]]
             quantiles of distribution to compute
+        indexer_kwargs: {dim: slice}, optional
+            pairs of dimension names slices passed into `isel()` method on
+            underlying xarray objects.
+            Note that you *can* slice bootstrap_replicate, in which case,
+            computation will be performed on the selected replicates.
 
         Returns
         -------
@@ -370,12 +420,17 @@ class MixinBootstrapPsi(MixinApproximatePsi, ABC):
         Please use `approximate_quantile` instead, which is faster, and what we
         think is a better representation of PSI
         """
-        return _compute_posterior_quantile(
-            self.bootstrap_alpha, self.bootstrap_beta, quantiles=quantiles
-        )
+        alpha = self.bootstrap_alpha
+        beta = self.bootstrap_beta
+        if indexer_kwargs:
+            alpha = alpha.isel(indexer_kwargs)
+            beta = beta.isel(indexer_kwargs)
+        return _compute_posterior_quantile(alpha, beta, quantiles=quantiles)
 
     def bootstrap_discretized_pmf(
-        self, nbins: int = constants.DEFAULT_QUANTIFY_PSIBINS
+        self,
+        nbins: int = constants.DEFAULT_QUANTIFY_PSIBINS,
+        **indexer_kwargs: slice,
     ) -> xr.DataArray:
         """Compute discretized PMF of bootstrap posterior mixture
 
@@ -384,10 +439,18 @@ class MixinBootstrapPsi(MixinApproximatePsi, ABC):
         nbins: int
             Number of uniform bins on [0, 1] on which probability mass will be
             computed
+        indexer_kwargs: {dim: slice}, optional
+            pairs of dimension names slices passed into `isel()` method on
+            underlying xarray objects.
+            Note that you *can* slice bootstrap_replicate, in which case,
+            computation will be performed on the selected replicates.
         """
-        return _compute_posterior_discretized_pmf(
-            self.bootstrap_alpha, self.bootstrap_beta, nbins=nbins
-        )
+        alpha = self.bootstrap_alpha
+        beta = self.bootstrap_beta
+        if indexer_kwargs:
+            alpha = alpha.isel(indexer_kwargs)
+            beta = beta.isel(indexer_kwargs)
+        return _compute_posterior_discretized_pmf(alpha, beta, nbins=nbins)
 
 
 class MixinRawPsiMeanPopulation(ABC):
@@ -425,6 +488,7 @@ class MixinRawPsiMeanPopulation(ABC):
         self,
         quantiles: Sequence[float] = constants.DEFAULT_HET_POPULATION_QUANTILES,
         quantile_dim_name: str = "population_quantile",
+        **indexer_kwargs: slice,
     ) -> xr.DataArray:
         """empirical quantiles over prefixes of `raw_psi_mean`
 
@@ -434,6 +498,11 @@ class MixinRawPsiMeanPopulation(ABC):
             quantiles over quantified population to compute
         quantiles_dim_name: str
             Name of dimension in output array matching `quantiles`
+        indexer_kwargs: {dim: slice}, optional
+            pairs of dimension names slices passed into `isel()` method on
+            underlying xarray objects.
+            Note that this can slice on "prefix", in which case the quantile is
+            taken over the remaining prefixes.
 
         Returns
         -------
@@ -441,8 +510,11 @@ class MixinRawPsiMeanPopulation(ABC):
             array(..., `quantiles_dim_name`) of quantiles per connection
             over quantified prefixes
         """
+        psi = self._raw_psi_mean_core_prefix
+        if indexer_kwargs:
+            psi = psi.isel(indexer_kwargs)
         return _compute_population_quantile(
-            self._raw_psi_mean_core_prefix,
+            psi,
             quantiles,
             quantile_dim_name=quantile_dim_name,
         )
@@ -483,6 +555,7 @@ class MixinBootstrapPsiMeanPopulation(ABC):
         self,
         quantiles: Sequence[float] = constants.DEFAULT_HET_POPULATION_QUANTILES,
         quantile_dim_name: str = "population_quantile",
+        **indexer_kwargs: slice,
     ) -> xr.DataArray:
         """empirical quantiles over prefixes of `bootstrap_psi_mean`
 
@@ -492,6 +565,11 @@ class MixinBootstrapPsiMeanPopulation(ABC):
             quantiles over quantified population to compute
         quantiles_dim_name: str
             Name of dimension in output array matching `quantiles`
+        indexer_kwargs: {dim: slice}, optional
+            pairs of dimension names slices passed into `isel()` method on
+            underlying xarray objects.
+            Note that this can slice on "prefix", in which case the quantile is
+            taken over the remaining prefixes.
 
         Returns
         -------
@@ -499,8 +577,11 @@ class MixinBootstrapPsiMeanPopulation(ABC):
             array(..., `quantiles_dim_name`) of quantiles per connection
             over quantified prefixes
         """
+        psi = self._bootstrap_psi_mean_core_prefix
+        if indexer_kwargs:
+            psi = psi.isel(indexer_kwargs)
         return _compute_population_quantile(
-            self._bootstrap_psi_mean_core_prefix,
+            psi,
             quantiles,
             quantile_dim_name=quantile_dim_name,
         )
