@@ -8,7 +8,7 @@ Author: Joseph K Aicher
 
 from functools import cached_property
 from pathlib import Path
-from typing import Final, NamedTuple, Optional, Sequence, Union
+from typing import TYPE_CHECKING, Final, NamedTuple, Optional, Sequence, Union
 
 import numpy as np
 import numpy.typing as npt
@@ -24,6 +24,9 @@ from .Exons import Exons
 from .GeneIntrons import GeneIntrons
 from .GeneJunctions import GeneJunctions
 from .Genes import Genes
+
+if TYPE_CHECKING:
+    from .SpliceGraph import SpliceGraph
 
 
 class UniqueEventsMasks(NamedTuple):
@@ -601,17 +604,23 @@ class Events(object):
 
     def ec_dataframe(
         self,
-        annotated_exons: Optional[Exons] = None,
-        annotated_introns: Optional[GeneIntrons] = None,
+        annotated: Optional["SpliceGraph"] = None,
+        annotated_select: constants.SelectLSVs = constants.SelectLSVs.PERMISSIVE_LSVS,
     ) -> pd.DataFrame:
         """:py:class:`pd.DataFrame` over event connections detailing genomic information
 
         Parameters
         ----------
-        annotated_exons: Optional[Exons]
-            If specified, use to reduce the number of exons called as denovo
-        annotated_introns: Optional[GeneIntrons]
-            If specified, use to reduce the number of introns called as denovo
+        annotated: Optional[SpliceGraph]
+            If specified, override denovo definitions by comparing
+            exons/introns/junctions to annotated splicegraph
+        annotated_select: SelectLSVs
+            If `annotated` provided, mark events as denovo relative to
+            annotated splicegraph, checking for sharing with events in
+            `annotated.exon_connections.lsvs(annotated_select)`.
+            By default, use permissive LSVs for this check (change if self
+            should be all target LSVs, which creates mutually redundant target
+            events)
 
         Returns
         -------
@@ -620,10 +629,25 @@ class Events(object):
         gene_idx = self.connection_gene_idx()
         other_exon_idx = self.connection_other_exon_idx()
         # get connection denovo status
-        connection_denovo = self.connection_denovo()
-        connection_denovo[self.is_intron] = self.introns.is_denovo(
-            self.connection_idx[self.is_intron], annotated_introns=annotated_introns
-        )
+        connection_denovo: npt.NDArray[np.bool_]
+        event_denovo: Optional[npt.NDArray[np.bool_]] = None
+        if annotated:
+            connection_denovo = np.empty(self.num_connections, dtype=np.bool_)
+            connection_denovo[self.is_intron] = self.introns.is_denovo(
+                self.connection_idx[self.is_intron], annotated_introns=annotated.introns
+            )
+            connection_denovo[~self.is_intron] = self.junctions.is_denovo(
+                self.connection_idx[~self.is_intron],
+                annotated_junctions=annotated.junctions,
+            )
+            # determine if events themselves are denovo relative to annotated
+            event_denovo = self.broadcast_eidx_to_ecidx(
+                self.unique_events_mask(
+                    annotated.exon_connections.lsvs(annotated_select)
+                ).unique_events_mask
+            )
+        else:
+            connection_denovo = self.connection_denovo()
         return pd.DataFrame(
             dict(
                 seqid=np.array(self.contigs.seqid)[self.connection_contig_idx()],
@@ -633,17 +657,20 @@ class Events(object):
                 event_type=self.broadcast_eidx_to_ecidx(self.event_type),
                 ref_exon_start=self.exons.start[self.connection_ref_exon_idx],
                 ref_exon_end=self.exons.end[self.connection_ref_exon_idx],
+                **({} if event_denovo is None else {"event_denovo": event_denovo}),
                 start=self.connection_start(),
                 end=self.connection_end(),
                 ref_exon_denovo=self.exons.is_denovo(
-                    self.connection_ref_exon_idx, annotated_exons=annotated_exons
+                    self.connection_ref_exon_idx,
+                    annotated_exons=annotated.exons if annotated else None,
                 ),
                 is_denovo=connection_denovo,
                 is_intron=self.is_intron,
                 other_exon_start=self.exons.start[other_exon_idx],
                 other_exon_end=self.exons.end[other_exon_idx],
                 other_exon_denovo=self.exons.is_denovo(
-                    other_exon_idx, annotated_exons=annotated_exons
+                    other_exon_idx,
+                    annotated_exons=annotated.exons if annotated else None,
                 ),
             ),
             index=pd.Index(self.ec_idx, name="ec_idx"),
@@ -656,8 +683,7 @@ class Events(object):
         self,
         df_seq: Sequence[pd.DataFrame],
         events_seq: Sequence["Events"],
-        annotated_exons: Optional[Exons] = None,
-        annotated_introns: Optional[GeneIntrons] = None,
+        annotated: Optional["SpliceGraph"] = None,
     ) -> pd.DataFrame:
         """Merge df_seq (index ec_idx, matching events_seq) onto self events
 
@@ -682,10 +708,9 @@ class Events(object):
             Sequence of events with same length as `df_seq`. Records in
             `df_seq[i]` refer to connections in `events_seq[i]` for each `i`.
             Each element must share genes with `self`.
-        annotated_exons: Optional[Exons]
-            If specified, use to reduce the number of exons called as denovo
-        annotated_introns: Optional[GeneIntrons]
-            If specified, use to reduce the number of introns called as denovo
+        annotated: Optional[SpliceGraph]
+            If specified, override denovo definitions by comparing
+            exons/introns/junctions to annotated splicegraph
 
         Returns
         -------
@@ -728,9 +753,7 @@ class Events(object):
                 )
             )
         # annotate with ec_dataframe
-        ec_dataframe = self.ec_dataframe(
-            annotated_exons=annotated_exons, annotated_introns=annotated_introns
-        )
+        ec_dataframe = self.ec_dataframe(annotated=annotated)
         result = ec_dataframe.join(
             result.drop(columns=ec_dataframe.columns, errors="ignore"),
             how="inner",
@@ -740,6 +763,8 @@ class Events(object):
         result["e_idx"] = self.connection_e_idx[result.index]
         # reorder columns
         REORDER_COLUMNS = ["e_idx", "events_pass"]
+        if "event_denovo" in ec_dataframe:
+            REORDER_COLUMNS.append("event_denovo")
         result = result[
             [
                 *REORDER_COLUMNS,

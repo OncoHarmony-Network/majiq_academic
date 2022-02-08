@@ -31,6 +31,31 @@ class GeneJunctions(GeneConnections):
         super().__init__(gene_junctions)
         return
 
+    def is_denovo(
+        self,
+        gj_idx: Optional[npt._ArrayLikeInt_co] = None,
+        annotated_junctions: Optional["GeneJunctions"] = None,
+    ) -> npt.NDArray[np.bool_]:
+        """Return denovo status of selected junctions
+
+        Parameters
+        ----------
+        gj_idx: Optional[array_like[int]]
+            Index into junctions to get denovo status for. If None, get denovo
+            status for all junctions.
+        annotated_junctions: Optional[GeneJunctions]
+            If specified, use junctions found in `annotated_junctions` as
+            definition of annotated junctions, so that a junction is called
+            denovo if and only if it is not found in `annotated_junctions`.
+        """
+        if not annotated_junctions:
+            if gj_idx is None:
+                return self.denovo
+            else:
+                return self.denovo[gj_idx]
+        else:
+            return ~self.overlaps(annotated_junctions, gj_idx)
+
     def build_group(self, exons: Exons) -> "GroupJunctionsGenerator":
         """Create :py:class:`GroupJunctionsGenerator` starting from these junctions and exons
 

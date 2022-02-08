@@ -171,6 +171,12 @@ class PsiOutliers(object):
                 "num_later_pass": ("is_later_pass", "sum"),
                 **agg_kwargs,
             }
+        if "event_denovo" in df_events.columns:
+            agg_kwargs = {
+                "num_events_denovo": ("event_denovo", "sum"),
+                "has_event_denovo": ("event_denovo", "any"),
+                **agg_kwargs,
+            }
 
         # identify cases to summarize
         pattern = re.compile(r"(.*)cases_raw_total")
@@ -235,12 +241,25 @@ class PsiOutliers(object):
                         df_genes[col] = df_genes[col].where(case_passed)
 
         # sorting for result
-        if len(case_prefixes) == 1 and len(alpha_suffixes) == 1:
-            df_genes.sort_values("dpsi_quantile_gap", ascending=False, inplace=True)
-        if "events_pass_max" in df_genes.columns:
+        df_genes.sort_values(
+            # if we have multiple values of alpha or prefixes, pick which
+            # dpsi_quantile_gap to sort by arbitrarily
+            next(x for x in df_genes.columns if "dpsi_quantile_gap" in x),
+            ascending=False,
+            inplace=True,
+        )
+        # sort by event status
+        sort_column: Optional[str]
+        for x in ["has_event_denovo", "events_pass_max"]:
+            if x in df_genes.columns:
+                sort_column = x
+                break
+        else:
+            sort_column = None
+        if sort_column:
             df_genes.sort_values(
                 # use stable sort to keep ordering from previous sort, if applicable
-                "events_pass_max",
+                sort_column,
                 ascending=False,
                 kind="stable",
                 inplace=True,
@@ -289,6 +308,8 @@ class PsiOutliers(object):
         # if there are two passes, summarize this for the event, make it first
         if "events_pass" in df_ecidx.columns:
             agg_kwargs = {"events_pass": ("events_pass", "first"), **agg_kwargs}
+        if "event_denovo" in df_ecidx.columns:
+            agg_kwargs = {"event_denovo": ("event_denovo", "first"), **agg_kwargs}
         # identify cases to summarize
         pattern = re.compile(r"(.*)cases_raw_psi_mean")
         case_prefixes = [
@@ -354,12 +375,25 @@ class PsiOutliers(object):
             )
 
         # sorting for result
-        if len(case_prefixes) == 1 and len(alpha_suffixes) == 1:
-            df_events.sort_values("dpsi_quantile_gap", ascending=False, inplace=True)
-        if "events_pass" in df_events.columns:
+        df_events.sort_values(
+            # if we have multiple values of alpha or prefixes, pick which
+            # dpsi_quantile_gap to sort by arbitrarily
+            next(x for x in df_events.columns if "dpsi_quantile_gap" in x),
+            ascending=False,
+            inplace=True,
+        )
+        # sort by event status: prefer event_denovo over events_pass
+        sort_column: Optional[str]
+        for x in ["event_denovo", "events_pass"]:
+            if x in df_events.columns:
+                sort_column = x
+                break
+        else:
+            sort_column = None
+        if sort_column:
             df_events.sort_values(
                 # use stable sort to keep ordering from previous sort, if applicable
-                "events_pass",
+                sort_column,
                 ascending=False,
                 kind="stable",
                 inplace=True,

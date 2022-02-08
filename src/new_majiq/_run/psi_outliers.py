@@ -216,8 +216,7 @@ def run(args: argparse.Namespace) -> None:
         df = events.merge_dataframes(
             df_list,
             events_list,
-            annotated_exons=sg_list[0].exons,
-            annotated_introns=sg_list[0].introns,
+            annotated=sg_list[0],
         )
     else:
         df = (

@@ -56,10 +56,14 @@ class GeneIntrons(GeneConnections):
             If `annotated_introns` has connected exons, will appropriately
             propagate to original gaps between annotated exons.
         """
-        if gi_idx is None:
-            gi_idx = self.gi_idx
-        denovos = self.denovo[gi_idx]
-        if annotated_introns:
+        if not annotated_introns:
+            if gi_idx is None:
+                return self.denovo
+            else:
+                return self.denovo[gi_idx]
+        else:
+            # propagate annotated_introns to potential introns between
+            # underlying annotated exons (if possible)
             if annotated_introns.connected_exons:
                 # we should propagate to annotated exons/introns for overlaps
                 annotated_introns = (
@@ -68,8 +72,7 @@ class GeneIntrons(GeneConnections):
                     .update_flags_from(annotated_introns)
                     .filter_passed()
                 )
-            denovos = denovos & ~self.overlaps(annotated_introns, gi_idx)
-        return denovos
+            return ~self.overlaps(annotated_introns, gi_idx)
 
     def build_group(self) -> "GroupIntronsGenerator":
         """Create :py:class:`GroupIntronsGenerator` to update these introns in place"""
