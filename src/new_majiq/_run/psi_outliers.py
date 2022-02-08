@@ -16,7 +16,6 @@ import pandas as pd
 import new_majiq as nm
 from new_majiq._run._majiq_args import (
     ExistingResolvedPath,
-    StoreRequiredUniqueActionFactory,
     check_range_factory,
     resources_args,
 )
@@ -26,64 +25,71 @@ DESCRIPTION = "Identify outliers from PSI cases (N ~ 1) vs PSI controls (N >> 1)
 
 
 def add_args(parser: argparse.ArgumentParser) -> None:
-    StoreUniqueInputPaths = StoreRequiredUniqueActionFactory()
     parser.add_argument(
-        "splicegraph",
+        "--pass",
+        dest="pass_args_list",
+        metavar=("splicegraph", "controls", "cases"),
+        nargs=3,
         type=ExistingResolvedPath,
-        action=StoreUniqueInputPaths,
-        help="Path for input SpliceGraph on which comparisons will be made",
+        action="append",
+        required=True,
+        help="Specify an analysis pass of SpliceGraph, PsiControlsSummary,"
+        " and PsiCoverage for cases for outliers analysis."
+        " Use this flag multiple times to merge analysis over multiple"
+        " build/quantification passes."
+        " Final results will be relative to the last specified pass."
+        " Each pass' PsiControlsSummary and PsiCoverage must share events"
+        " defined on the pass' SpliceGraph."
+        " Each SpliceGraph must share genes."
+        " Controls are required to share the same experiments."
+        " The cases from each pass must include the same experiments as the"
+        " cases from the last specified pass.",
     )
-    parser.add_argument(
-        "controls",
+    annotated = parser.add_argument_group("annotated features arguments")
+    annotated_ex = annotated.add_mutually_exclusive_group(required=False)
+    annotated_ex.add_argument(
+        "--annotated",
+        dest="annotated",
+        metavar="splicegraph",
         type=ExistingResolvedPath,
-        action=StoreUniqueInputPaths,
-        help="Path for PsiControlsSummary defined over splicegraph",
+        default=None,
+        help="Identify novel events/exons/introns/junctions relative to this"
+        " splicegraph."
+        " Default: use the splicegraph from the second-last analysis pass"
+        " if more than one pass was specified (otherwise '--no-annotated').",
     )
-    parser.add_argument(
-        "cases",
-        type=ExistingResolvedPath,
-        action=StoreUniqueInputPaths,
-        help="Path for PsiCoverage for cases defined over splicegraph",
+    annotated_ex.add_argument(
+        "--no-annotated",
+        dest="annotated",
+        action="store_false",
+        default=None,
+        help="Identify novel exons/introns/junctions using definitions from"
+        " last specified SpliceGraph."
+        " Do not identify novel features relative to another splicegraph."
+        " Default: use the splicegraph from the second-last analysis pass"
+        " if more than one pass was specified",
     )
-    parser.add_argument(
+    tsv = parser.add_argument_group("output TSV locations arguments")
+    tsv.add_argument(
         "--output-tsv",
         metavar="TSV",
         type=argparse.FileType("w"),
         default=sys.stdout,
         help="Path for output TSV file (default: stdout)",
     )
-    parser.add_argument(
+    tsv.add_argument(
         "--events-summary",
         metavar="TSV",
         type=argparse.FileType("w"),
         default=None,
         help="Path for summary per splicing event (default: None)",
     )
-    parser.add_argument(
+    tsv.add_argument(
         "--genes-summary",
         metavar="TSV",
         type=argparse.FileType("w"),
         default=None,
         help="Path for summary per splicing gene (default: None)",
-    )
-    parser.add_argument(
-        "--pass-previous",
-        metavar=("base-splicegraph", "base-controls", "base-cases"),
-        nargs=3,
-        type=ExistingResolvedPath,
-        action=StoreUniqueInputPaths,
-        default=None,
-        help="Paths for input SpliceGraph, PsiControlsSummary, and PsiCoverage"
-        " for previous pass. If specified, comparisons from both passes"
-        " will be merged on events defined `splicegraph`."
-        " Splicegraphs are required to have the same genes."
-        " Controls are required to be defined relative to the same"
-        " experiments."
-        " For cases, experiments in `cases` must also be in `base-cases`."
-        " This helps combine results from two passes of majiq build, one with"
-        " just controls that can be shared between analyses, and another with"
-        " the cases added."
-        " (default: only process one set of quantifications)",
     )
     parser.add_argument(
         "--min-experiments",
@@ -99,7 +105,7 @@ def add_args(parser: argparse.ArgumentParser) -> None:
         metavar="A",
         type=check_range_factory(float, 0, 1, True, True),
         default=None,
-        help="Select single threshold on controls/case quantils in both"
+        help="Select single threshold on controls/case quantiles in both"
         " directions (two-sided comparison)."
         " Quantiles are 0.5*alpha and 1.0-0.5*alpha."
         " Selected threshold must have been used when creating controls"
@@ -116,79 +122,99 @@ def run(args: argparse.Namespace) -> None:
     metadata["command"] = " ".join(sys.argv)
     metadata["version"] = nm.__version__
 
+    # args.pass_args_list: List[Tuple[sg, controls, cases]]
+
     log.debug("Loading input splicegraphs")
-    sg_list: List[nm.SpliceGraph] = []
-    use_genes: Optional[nm.Genes] = None
-    if args.pass_previous:
-        log.info("Loading previous pass splicegraph from %s", args.pass_previous[0])
-        sg_list.append(nm.SpliceGraph.from_zarr(args.pass_previous[0]))
-        use_genes = sg_list[0].genes
-    log.info("Loading input splicegraph from %s", args.splicegraph)
-    sg_list.append(nm.SpliceGraph.from_zarr(args.splicegraph, genes=use_genes))
+    use_genes = nm.Genes.from_zarr(args.pass_args_list[-1][0])
+    sg_list: List[nm.SpliceGraph] = [
+        nm.SpliceGraph.from_zarr(sg_path, genes=use_genes)
+        for sg_path, _, _ in args.pass_args_list
+    ]
+    log.info(
+        "Outliers analysis on %d passes with splicegraphs %s", len(sg_list), sg_list
+    )
 
     log.debug("Loading input controls")
-    controls_list: List[nm.PsiControlsSummary] = []
-    if args.pass_previous:
-        log.info("Loading previous pass controls from %s", args.pass_previous[1])
-        controls_list.append(nm.PsiControlsSummary.from_zarr(args.pass_previous[1]))
-    log.info("Loading input controls from %s", args.controls)
-    controls_list.append(nm.PsiControlsSummary.from_zarr(args.controls))
-    if args.pass_previous:
+    controls_list: List[nm.PsiControlsSummary] = [
+        nm.PsiControlsSummary.from_zarr(controls_path)
+        for _, controls_path, _ in args.pass_args_list
+    ]
+    if len(controls_list) > 1:
         log.debug("Verifying that controls were defined with the same experiments")
-        if missing := set(controls_list[0].prefixes).symmetric_difference(
-            set(controls_list[1].prefixes)
-        ):
-            raise ValueError(
-                "Input controls are defined with different experiments"
-                f" between passes (not shared: {missing})"
-            )
-        if not args.select_alpha:
+        for pass_ct, compare_controls in enumerate(controls_list[:-1], 1):
+            if missing := set(compare_controls.prefixes).symmetric_difference(
+                set(controls_list[-1].prefixes)
+            ):
+                raise ValueError(
+                    f"Pass {pass_ct} controls were not defined with same"
+                    f" experiments as pass {len(controls_list)}"
+                    f" (not shared: {missing})."
+                )
+        if args.select_alpha is None:
             log.debug(
                 "Verifying that controls were defined with the same values of alpha"
             )
-            if set(controls_list[0].alpha.values) != set(controls_list[1].alpha.values):
+            for pass_ct, compare_controls in enumerate(controls_list[:-1], 1):
+                if set(compare_controls.alpha.values) != set(
+                    controls_list[-1].alpha.values
+                ):
+                    raise ValueError(
+                        "Input controls are defined with different values of alpha"
+                        f" (pass {pass_ct}: {set(compare_controls.alpha.values)},"
+                        f" pass {len(controls_list)}:"
+                        f" {set(controls_list[-1].alpha.values)})."
+                    )
+    if args.select_alpha is not None:
+        for pass_ct, compare_controls in enumerate(controls_list, 1):
+            if args.select_alpha not in compare_controls.alpha.values:
                 raise ValueError(
-                    "Input controls are defined with different values of alpha"
-                    f" (pass1: {set(controls_list[0].alpha.values)},"
-                    f" pass2: {set(controls_list[1].alpha.values)})"
+                    f"Selected value of alpha ({args.select_alpha}) is not"
+                    f" defined for pass {pass_ct} controls from"
+                    f" {args.pass_args_list[pass_ct][1]}"
+                    f" (defined: {compare_controls.alpha.values})."
                 )
-        else:
-            log.debug(
-                "Verifying that pass1 controls have selected value of alpha (%f)",
-                args.select_alpha,
-            )
-            if args.select_alpha not in controls_list[1].alpha.values:
-                raise ValueError(
-                    f"Selected value of alpha ({args.select_alpha}) is not defined"
-                    " for pass1 controls (defined:"
-                    f" {controls_list[1].alpha.values.tolist()})"
-                )
-    if args.select_alpha and args.select_alpha not in controls_list[0].alpha.values:
-        raise ValueError(
-            f"Selected value of alpha ({args.select_alpha}) is not defined for"
-            f" controls (defined: {controls_list[0].alpha.values.tolist()})"
-        )
-    metadata["n_controls"] = controls_list[0].num_prefixes
+    metadata["n_controls"] = controls_list[-1].num_prefixes
     log.info("Quantifying potential outliers relative to controls %s", controls_list)
 
     log.debug("Loading input cases")
-    cases_list: List[nm.PsiCoverage] = []
-    if args.pass_previous:
-        log.info("Loading previous pass cases from %s", args.pass_previous[2])
-        cases_list.append(nm.PsiCoverage.from_zarr(args.pass_previous[2]))
-    log.info("Loading input cases from %s", args.cases)
-    cases_list.append(nm.PsiCoverage.from_zarr(args.cases))
-    if args.pass_previous:
-        log.debug("Verifying that previous pass cases has experiments from input cases")
-        if missing := set(cases_list[1].prefixes).difference(cases_list[0].prefixes):
-            raise ValueError(
-                "Previous pass cases does not have coverage for same"
-                f" experiments as input cases ({missing = })"
-            )
-        log.debug("Taking subset of experiments in base cases")
-        cases_list[0] = cases_list[0][cases_list[1].prefixes]
-    metadata["n_cases"] = cases_list[0].num_prefixes
+    cases_list: List[nm.PsiCoverage] = [
+        nm.PsiCoverage.from_zarr(cases_path) for _, _, cases_path in args.pass_args_list
+    ]
+    if len(cases_list) > 1:
+        for pass_ct, compare_cases in enumerate(cases_list[:-1], 1):
+            if missing := set(cases_list[-1].prefixes).difference(
+                compare_cases.prefixes
+            ):
+                raise ValueError(
+                    f"Pass {pass_ct} cases does not have coverage for same"
+                    f" experiments as pass {len(cases_list)} ({missing = })"
+                )
+            else:
+                # taking subset of experiments in previous passes
+                cases_list[pass_ct - 1] = compare_cases[cases_list[-1].prefixes]
+    metadata["n_cases"] = cases_list[-1].num_prefixes
     log.info("Quantifying potential outliers from cases %s", cases_list)
+
+    log.debug("Defining how novel features will be identified")
+    annotated: Optional[nm.SpliceGraph]
+    if args.annotated is None and len(sg_list) > 1:
+        # second last splicegraph as default
+        args.annotated = args.pass_args_list[-2][0]
+    if args.annotated:
+        try:
+            annotated = sg_list[
+                [sg_path for sg_path, _, _ in args.pass_args_list].index(args.annotated)
+            ]
+        except ValueError:  # args.annotated not from one of the input passes
+            annotated = nm.SpliceGraph.from_zarr(args.annotated, genes=use_genes)
+        log.info(
+            "Novel features will be defined relative to %s (%s)",
+            args.annotated,
+            annotated,
+        )
+    else:  # explicitly used --no-annotated or only one pass specified
+        annotated = None
+        log.info("Novel features will be defined as in %s", args.pass_args_list[-1][0])
 
     log.info("Quantifying differences between cases vs controls")
     df_list: List[pd.DataFrame] = [
@@ -201,7 +227,7 @@ def run(args: argparse.Namespace) -> None:
     ]
     log.info("Annotating quantifications with splicegraph information")
     df: pd.DataFrame
-    if args.pass_previous:
+    if len(df_list) > 1:
         # keep any information compatible with current splicegraph, even if it
         # isn't a strict LSV in current splicegraph
         events = sg_list[-1].exon_connections.lsvs(
@@ -213,16 +239,12 @@ def run(args: argparse.Namespace) -> None:
             for controls, sg in zip(controls_list, sg_list)
         ]
         # merge df_list onto events
-        df = events.merge_dataframes(
-            df_list,
-            events_list,
-            annotated=sg_list[0],
-        )
+        df = events.merge_dataframes(df_list, events_list, annotated=annotated)
     else:
         df = (
             controls_list[0]
             .get_events(sg_list[0].introns, sg_list[0].junctions)
-            .ec_dataframe()
+            .ec_dataframe(annotated=annotated)
             .join(df_list[0], how="inner", on="ec_idx")
         )
 
@@ -248,7 +270,7 @@ def run(args: argparse.Namespace) -> None:
         # numeric columns need at most 4 digits precision
         .round(4)
         # save result in TSV format
-        .to_csv(args.output_tsv, sep="\t", index=not args.splicegraph)
+        .to_csv(args.output_tsv, sep="\t", index=False)
     )
 
     if args.events_summary or args.genes_summary:
