@@ -674,11 +674,32 @@ class Events(object):
         pd.DataFrame
         """
         gene_idx = self.connection_gene_idx()
+        connection_ref_exon_idx = self.connection_ref_exon_idx
         other_exon_idx = self.connection_other_exon_idx()
+        df_dict = dict(
+            seqid=np.array(self.contigs.seqid)[self.connection_contig_idx()],
+            strand=np.array([x.decode() for x in self.genes.strand])[gene_idx],
+            gene_name=np.array(self.genes.gene_name)[gene_idx],
+            gene_id=np.array(self.genes.gene_id)[gene_idx],
+            event_type=self.broadcast_eidx_to_ecidx(
+                [x.decode() for x in self.event_type]
+            ),
+            ref_exon_start=self.exons.start[connection_ref_exon_idx],
+            ref_exon_end=self.exons.end[connection_ref_exon_idx],
+            start=self.connection_start(),
+            end=self.connection_end(),
+            is_intron=self.is_intron,
+            other_exon_start=self.exons.start[other_exon_idx],
+            other_exon_end=self.exons.end[other_exon_idx],
+        )
         # get connection denovo status
         connection_denovo: npt.NDArray[np.bool_]
-        event_denovo: Optional[npt.NDArray[np.bool_]] = None
         if annotated:
+            df_dict["event_denovo"] = self.broadcast_eidx_to_ecidx(
+                self.unique_events_mask(
+                    annotated.exon_connections.lsvs(annotated_select)
+                ).unique_events_mask
+            )
             connection_denovo = np.empty(self.num_connections, dtype=np.bool_)
             connection_denovo[self.is_intron] = self.introns.is_denovo(
                 self.connection_idx[self.is_intron], annotated_introns=annotated.introns
@@ -687,44 +708,24 @@ class Events(object):
                 self.connection_idx[~self.is_intron],
                 annotated_junctions=annotated.junctions,
             )
-            # determine if events themselves are denovo relative to annotated
-            event_denovo = self.broadcast_eidx_to_ecidx(
-                self.unique_events_mask(
-                    annotated.exon_connections.lsvs(annotated_select)
-                ).unique_events_mask
-            )
         else:
             connection_denovo = self.connection_denovo()
-        return pd.DataFrame(
-            dict(
-                seqid=np.array(self.contigs.seqid)[self.connection_contig_idx()],
-                strand=self.genes.strand[gene_idx],
-                gene_name=np.array(self.genes.gene_name)[gene_idx],
-                gene_id=np.array(self.genes.gene_id)[gene_idx],
-                event_type=self.broadcast_eidx_to_ecidx(self.event_type),
-                ref_exon_start=self.exons.start[self.connection_ref_exon_idx],
-                ref_exon_end=self.exons.end[self.connection_ref_exon_idx],
-                **({} if event_denovo is None else {"event_denovo": event_denovo}),
-                start=self.connection_start(),
-                end=self.connection_end(),
-                ref_exon_denovo=self.exons.is_denovo(
-                    self.connection_ref_exon_idx,
-                    annotated_exons=annotated.exons if annotated else None,
-                ),
-                is_denovo=connection_denovo,
-                is_intron=self.is_intron,
-                other_exon_start=self.exons.start[other_exon_idx],
-                other_exon_end=self.exons.end[other_exon_idx],
-                other_exon_denovo=self.exons.is_denovo(
-                    other_exon_idx,
-                    annotated_exons=annotated.exons if annotated else None,
-                ),
-            ),
-            index=pd.Index(self.ec_idx, name="ec_idx"),
-        ).assign(
-            event_type=lambda df: df.event_type.str.decode("utf-8"),
-            strand=lambda df: df.strand.str.decode("utf-8"),
-        )
+        df_dict["is_denovo"] = connection_denovo
+        if 2 * self.num_connections > len(self.exons):
+            # num_connections * 2 is the number of exons that would have to be
+            # evaluated if not doing for all exons and then going back. So
+            # there are a lot of repeats.
+            exon_denovo = self.exons.is_denovo(
+                annotated_exons=annotated.exons if annotated else None
+            )
+            df_dict["ref_exon_denovo"] = exon_denovo[connection_ref_exon_idx]
+            df_dict["other_exon_denovo"] = exon_denovo[other_exon_idx]
+        else:
+            # there are fewer connections, so just compute as needed, accepting
+            # that we might have repeat exon indexes
+            df_dict["ref_exon_denovo"] = self.exons.is_denovo(connection_ref_exon_idx)
+            df_dict["other_exon_denovo"] = self.exons.is_denovo(other_exon_idx)
+        return pd.DataFrame(df_dict, index=pd.Index(self.ec_idx, name="ec_idx"))
 
     def merge_dataframes(
         self,
