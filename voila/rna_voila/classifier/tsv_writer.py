@@ -1630,7 +1630,7 @@ class TsvWriter(BaseTsvWriter):
                                len(event['As'])]  # num exons spanned
                         quants = [
                                      event_non_changing, event_changing
-                                 ] + self.quantifications(module, 's', event['Skip'], event['C1'])
+                                 ] + self.quantifications(module, 's', event['Include1'], event['C1'])
                         writer.writerow(common + row + quants)
                         self.junction_cache.append((module, common, quants, row[2], 'C1_A', row[1]))
 
@@ -1665,7 +1665,7 @@ class TsvWriter(BaseTsvWriter):
                                len(event['As'])]  # num exons spanned
                         quants = [
                                      event_non_changing, event_changing
-                                 ] + self.quantifications(module, 't', event['Skip'], event['C2'])
+                                 ] + self.quantifications(module, 't', event['Include2'], event['C2'])
 
                         writer.writerow(common + row + quants)
                         self.junction_cache.append((module, common, quants, row[2], 'A_C2', row[1]))
