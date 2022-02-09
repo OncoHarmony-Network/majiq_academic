@@ -132,12 +132,22 @@ class DPsiPrior(object):
         show_progress: bool
             Attempt to show progress on distributed cluster for Dask
         """
+        log = get_logger()
         # how many updates do we want to make?
         if n_update_pmix is None:
             n_update_pmix = 1 + n_update_a
         if max(n_update_a, n_update_pmix) < 1:
             # if we don't want to update anything, don't
             return self
+        # don't bother getting empirical dpsi if futile
+        if psi1.num_events < max(1, min_lsvs):
+            log.info(
+                "It is impossible for enough events (%d) to be identified."
+                " Will not adjust prior.",
+                min_lsvs,
+            )
+            return self
+
         # otherwise, get empirical dpsi to make adjustment
         dpsi = self.get_empirical_dpsi(
             psi1,
@@ -146,7 +156,6 @@ class DPsiPrior(object):
             min_experiments_f=min_experiments_f,
             show_progress=show_progress,
         )
-        log = get_logger()
         # do we have enough observations to do adjustment?
         if dpsi.sizes["lsv_idx"] < min_lsvs:
             log.info(

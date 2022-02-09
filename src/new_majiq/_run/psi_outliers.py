@@ -195,6 +195,17 @@ def run(args: argparse.Namespace) -> None:
     metadata["n_cases"] = cases_list[-1].num_prefixes
     log.info("Quantifying potential outliers from cases %s", cases_list)
 
+    log.debug("Identify passes with 0 events and remove them")
+    ignore_passes = [
+        i for i, controls in enumerate(controls_list) if controls.num_events == 0
+    ]
+    for remove_i in reversed(ignore_passes):
+        log.info("Removing pass %d because it has no events", 1 + remove_i)
+        del controls_list[remove_i]
+        del cases_list[remove_i]
+        del sg_list[remove_i]
+        del args.pass_args_list[remove_i]
+
     log.debug("Defining how novel features will be identified")
     annotated: Optional[nm.SpliceGraph]
     if args.annotated is None and len(sg_list) > 1:
@@ -214,7 +225,12 @@ def run(args: argparse.Namespace) -> None:
         )
     else:  # explicitly used --no-annotated or only one pass specified
         annotated = None
-        log.info("Novel features will be defined as in %s", args.pass_args_list[-1][0])
+        try:
+            log.info(
+                "Novel features will be defined as in %s", args.pass_args_list[-1][0]
+            )
+        except IndexError:
+            pass
 
     log.info("Quantifying differences between cases vs controls")
     df_list: List[pd.DataFrame] = [
@@ -240,13 +256,15 @@ def run(args: argparse.Namespace) -> None:
         ]
         # merge df_list onto events
         df = events.merge_dataframes(df_list, events_list, annotated=annotated)
-    else:
+    elif len(df_list) == 1:
         df = (
             controls_list[0]
             .get_events(sg_list[0].introns, sg_list[0].junctions)
             .ec_dataframe(annotated=annotated)
             .join(df_list[0], how="inner", on="ec_idx")
         )
+    else:
+        df = pd.DataFrame({})
 
     try:
         output_name = args.output_tsv.name
@@ -274,7 +292,7 @@ def run(args: argparse.Namespace) -> None:
     )
 
     if args.events_summary or args.genes_summary:
-        df_events = nm.PsiOutliers.summarize_df_events(df)
+        df_events = nm.PsiOutliers.summarize_df_events(df) if df_list else df
         if args.events_summary:
             try:
                 output_name = args.events_summary.name
@@ -312,8 +330,11 @@ def run(args: argparse.Namespace) -> None:
             args.genes_summary.write(
                 "# {}\n".format(metadata_json.replace("\n", "\n# "))
             )
+            df_genes = (
+                nm.PsiOutliers.summarize_df_genes(df_events) if df_list else df_events
+            )
             (
-                nm.PsiOutliers.summarize_df_genes(df_events)
+                df_genes
                 # manually format probability columns
                 .pipe(
                     lambda df: df.assign(
