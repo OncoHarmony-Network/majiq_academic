@@ -136,6 +136,53 @@ class Events(object):
             e_idx_arr.shape
         )
 
+    def event_has_ref_alt_ss(
+        self, e_idx: Optional[npt._ArrayLikeInt_co] = None
+    ) -> npt.NDArray[np.bool_]:
+        """Indicate if events junctions use >1 splice sites on reference exon"""
+        if e_idx is None:
+            e_idx = self.e_idx
+        return self._events.event_has_ref_alt_ss(e_idx)
+
+    def event_has_other_alt_ss(
+        self, e_idx: Optional[npt._ArrayLikeInt_co] = None
+    ) -> npt.NDArray[np.bool_]:
+        """Indicate if events junctions use >1 splice sites on a non-reference exon"""
+        if e_idx is None:
+            e_idx = self.e_idx
+        return self._events.event_has_other_alt_ss(e_idx)
+
+    def event_legacy_a5ss(
+        self, e_idx: Optional[npt._ArrayLikeInt_co] = None
+    ) -> npt.NDArray[np.bool_]:
+        """Indicate if event would be called as a5ss by voila v2"""
+        if e_idx is None:
+            e_idx = self.e_idx
+        return self._events.event_legacy_a5ss(e_idx)
+
+    def event_legacy_a3ss(
+        self, e_idx: Optional[npt._ArrayLikeInt_co] = None
+    ) -> npt.NDArray[np.bool_]:
+        """Indicate if event would be called as a3ss by voila v2"""
+        if e_idx is None:
+            e_idx = self.e_idx
+        return self._events.event_legacy_a3ss(e_idx)
+
+    def event_has_alt_exons(
+        self, e_idx: Optional[npt._ArrayLikeInt_co] = None
+    ) -> npt.NDArray[np.bool_]:
+        """Indicate if events junctions are connected to more than one other exon
+
+        Notes
+        -----
+        This ignore the exon that the intron is connected to. That is, an event
+        with a junction connected to a different exon than its intron would be
+        marked as False
+        """
+        if e_idx is None:
+            e_idx = self.e_idx
+        return self._events.event_has_alt_exons(e_idx)
+
     def has_intron(
         self, e_idx: Optional[npt._ArrayLikeInt_co] = None
     ) -> npt.NDArray[np.bool_]:

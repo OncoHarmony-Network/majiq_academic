@@ -262,6 +262,64 @@ inline void init_Events(pyEvents_t& pyEvents) {
         },
         "index for other exon for specified connection indexes",
         pybind11::arg("connection_idx"))
+    .def("event_has_ref_alt_ss",
+        [](const Events& self, pybind11::array_t<size_t> event_idx) {
+        auto f = [&self](size_t idx) {
+        if (idx >= self.num_events()) {
+          throw std::invalid_argument("event_idx has values out of range");
+        }
+        return self.has_ref_alt_ss(idx); };
+        return pybind11::vectorize(f)(event_idx);
+        },
+        "If selected events have alternative splice sites on the reference exon",
+        pybind11::arg("event_idx"))
+    .def("event_has_other_alt_ss",
+        [](const Events& self, pybind11::array_t<size_t> event_idx) {
+        auto f = [&self](size_t idx) {
+        if (idx >= self.num_events()) {
+          throw std::invalid_argument("event_idx has values out of range");
+        }
+        return self.has_other_alt_ss(idx); };
+        return pybind11::vectorize(f)(event_idx);
+        },
+        "If selected events have multiple junctions to same exon with different splice sites",
+        pybind11::arg("event_idx"))
+    .def("event_legacy_a5ss",
+        [](const Events& self, pybind11::array_t<size_t> event_idx) {
+        auto f = [&self](size_t idx) {
+        if (idx >= self.num_events()) {
+          throw std::invalid_argument("event_idx has values out of range");
+        }
+        return self.events()[idx].type_ == EventType::SRC_EVENT
+            ? self.has_ref_alt_ss(idx) : self.has_other_alt_ss(idx); };
+        return pybind11::vectorize(f)(event_idx);
+        },
+        "If selected events would be called as a5ss by voila v2",
+        pybind11::arg("event_idx"))
+    .def("event_legacy_a3ss",
+        [](const Events& self, pybind11::array_t<size_t> event_idx) {
+        auto f = [&self](size_t idx) {
+        if (idx >= self.num_events()) {
+          throw std::invalid_argument("event_idx has values out of range");
+        }
+        return self.events()[idx].type_ == EventType::SRC_EVENT
+            ? self.has_other_alt_ss(idx) : self.has_ref_alt_ss(idx); };
+        return pybind11::vectorize(f)(event_idx);
+        },
+        "If selected events would be called as a3ss by voila v2",
+        pybind11::arg("event_idx"))
+    .def("event_has_alt_exons",
+        [](const Events& self, pybind11::array_t<size_t> event_idx) {
+        auto f = [&self](size_t idx) {
+        if (idx >= self.num_events()) {
+          throw std::invalid_argument("event_idx has values out of range");
+        }
+        constexpr bool INCLUDE_INTRON = false;  // we exclude introns for this
+        return self.has_alt_exons<INCLUDE_INTRON>(idx); };
+        return pybind11::vectorize(f)(event_idx);
+        },
+        "If selected events have junctions to more than one exon",
+        pybind11::arg("event_idx"))
     .def("__len__",
         &Events::size,
         pybind11::call_guard<pybind11::gil_scoped_release>());

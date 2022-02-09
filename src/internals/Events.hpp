@@ -16,6 +16,7 @@
 #include <string>
 #include <type_traits>
 #include <utility>
+#include <map>
 #include <vector>
 
 #include "MajiqTypes.hpp"
@@ -207,6 +208,77 @@ class Events {
   }
   const std::vector<ConnectionIndex>& connections() const {
     return connections_;
+  }
+
+  // does the event have alternative splice sites on the reference exon?
+  bool has_ref_alt_ss(const size_t event_idx) const {
+    const EventType& type = events_[event_idx].type_;
+    bool is_first = true;
+    position_t first_coordinate;
+    for (size_t i = connection_offsets_[event_idx];
+        i < connection_offsets_[1 + event_idx]; ++i) {
+      if (is_intron(i)) { continue; }
+      const auto& current_junction = connection_junction(i);
+      const auto& current_coordinate = current_junction.ref_coordinate(type);
+      if (is_first) {
+        first_coordinate = current_coordinate;
+        is_first = false;
+      } else {
+        if (first_coordinate != current_coordinate) {
+          // there are multiple reference splice sites
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+  // does the event have multiple junctions going to the same exon with
+  // different coordinates?
+  bool has_other_alt_ss(const size_t event_idx) const {
+    const EventType& type = events_[event_idx].type_;
+    // map from other_exon_idx to the first observed position on that exon
+    std::map<size_t, position_t> other_exon_coordinate;
+    for (size_t i = connection_offsets_[event_idx];
+        i < connection_offsets_[1 + event_idx]; ++i) {
+      if (is_intron(i)) { continue; }
+      const auto& current_junction = connection_junction(i);
+      const auto& current_exon = current_junction.other_exon_idx(type);
+      const auto& current_coordinate = current_junction.other_coordinate(type);
+      const auto&& [map_it, is_first] = other_exon_coordinate.try_emplace(
+          current_exon, current_coordinate);
+      if (!is_first && map_it->second != current_coordinate) {
+        // current exon has two coordinates from this event
+        return true;
+      }
+    }
+    return false;
+  }
+  // does the event have multiple exons connected by junctions?
+  template <bool INCLUDE_INTRON>
+  bool has_alt_exons(const size_t event_idx) const {
+    const EventType& type = events_[event_idx].type_;
+    bool is_first = true;
+    size_t first_other_exon;
+    for (size_t i = connection_offsets_[event_idx];
+        i < connection_offsets_[1 + event_idx]; ++i) {
+      size_t current_exon;
+      if constexpr(INCLUDE_INTRON) {
+        current_exon = connection_other_exon_idx(i);
+      } else {
+        if (is_intron(i)) { continue; }
+        current_exon = connection_junction(i).other_exon_idx(type);
+      }
+      if (is_first) {
+        first_other_exon = current_exon;
+        is_first = false;
+      } else {
+        if (first_other_exon != current_exon) {
+          // there are multiple alternative exons
+          return true;
+        }
+      }
+    }
+    return false;
   }
 
  private:
