@@ -1,0 +1,28 @@
+image: python:3.8.10
+
+pipelines:
+  custom:
+    docs-with-sphinx:
+      - step:
+          name: doc generator
+          caches:
+            - pip
+          script:
+            - apt-get update && apt-get -y install libhts-dev pandoc
+
+            - pip install .
+            - pip install ".[docs]"
+            - cd doc
+            - make clean
+            - make html
+            - git config --global user.email "admin@biociphers.org"
+            - git config --global user.name "Biociphers Admin"
+            - git clone git@bitbucket.org:biociphers/biociphers.bitbucket.io.git
+            - cd biociphers.bitbucket.io
+            - mkdir -p majiq-docs
+            - cp -R ../build/html/* majiq-docs
+            - git add --all
+            - git commit -m "Automatic update from pipeline"
+            - git push
+          artifacts:
+            - docs/build/html/**
