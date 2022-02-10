@@ -10,7 +10,6 @@ It is designed to introduce the main concepts for new users.
    :maxdepth: 2
    :hidden:
 
-   why-majiq
    installing
    quick-overview
    faq
