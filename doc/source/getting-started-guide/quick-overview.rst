@@ -27,7 +27,13 @@ MAJIQ Builder
 ~~~~~~~~~~~~~
 
 First, you will need to prepare the config file for your specific aligned experiments, you can find a sample config
-template and more in depth instructions in :ref:`MAJIQ Builder full`
+template and more in depth instructions in :ref:`MAJIQ Builder full`. Here is a simple example of a build using
+8 threads:
+
+::
+
+    $ majiq build  -c settings_file.ini annotation_database.gff3 -o /path/to/some/output/directory  -j 8
+
 
 MAJIQ Quantifiers
 -----------------
@@ -39,25 +45,44 @@ Available modes are listed below.
 Psi Quantifier
 ~~~~~~~~~~~~~~
 
-<Paul to add example from workshop>
+::
+
+    $ majiq psi -o /path/to/some/output/directory -n some_group_name /path/to/some/processed/experiment.majiq
 
 
 Deltapsi Quantifier (replicate experiments)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-<Good quick use case for dpsi? (can also be workshop theoretically)>
+::
+
+    $ majiq deltapsi -o /path/to/some/output/directory -n group_name_1 group_name_2 -grp1 /some/experiment1.majiq /some/experiment2.majiq -grp2 /some/experiment3.majiq /some/experiment4.majiq
 
 
 Heterogen Quantifier (independent experiments)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-<Good quick use case for het? (can also be workshop theoretically)>
+::
+
+    $ majiq heterogen -o /output/directory -n group_name_1 group_name_2 -grp1 /some/experiment1.majiq -grp2 /some/experiment2.majiq
+    $ majiq heterogen -o /output/directory -n group_name_3 group_name_4 -grp1 /some/experiment3.majiq -grp2 /some/experiment4.majiq
+    $ majiq heterogen -o /output/directory -n group_name_5 group_name_6 -grp1 /some/experiment5.majiq -grp2 /some/experiment6.majiq
 
 
 Analysis with VOILA
 -------------------
 
-<paul to add commands for voila tsv, modulize, and view>
+::
+
+    $ voila view -p 5000 /path/to/splicegraph.sql /path/to/voila/files
+    $ voila tsv -f /path/to/output/tsv /path/to/splicegraph.sql /path/to/voila/files -j8
+    $ voila modulize -d /path/to/output/directory /path/to/splicegraph.sql /path/to/voila/files -j8
+
+
+Note: different voila modes support different combinations of voila files:
+
+    * voila view can take one or multiple PSI files (single or multiple, independent PSI), one DPSI file, or one or more HET files.
+    * voila tsv may only take one PSI file, one DPSI file, or one or more HET files
+    * voila modulize may take any number or combination of PSI, DPSI, and/or HET files.
 
 
 .. _STAR: https://github.com/alexdobin/STAR
