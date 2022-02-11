@@ -258,8 +258,12 @@ def test_psi_coverage_command(script_runner, batch_group, ignore, tmp_path):
         result = nm.PsiCoverage.from_zarr(path_result)
         expected = nm.PsiCoverage.from_zarr(path_expected)
         xr.testing.assert_equal(
-            result.df.drop_vars(["bootstrap_psi", "bootstrap_total"]),
-            expected.df.drop_vars(["bootstrap_psi", "bootstrap_total"]),
+            result.df.drop_vars(
+                ["bootstrap_psi", "bootstrap_total", "experiment_total"]
+            ),
+            expected.df.drop_vars(
+                ["bootstrap_psi", "bootstrap_total", "experiment_total"]
+            ),
         )
     return
 

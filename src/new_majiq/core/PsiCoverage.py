@@ -130,6 +130,7 @@ class PsiCoverage(
                 - raw_psi[prefix, ec_idx]
                 - bootstrap_total[ec_idx, prefix, bootstrap_replicate]
                 - bootstrap_psi[ec_idx, prefix, bootstrap_replicate]
+                - prefix_total[prefix]
             Coordinates:
                 - lsv_offsets[offset_idx]
                 - prefix[prefix]
@@ -234,6 +235,11 @@ class PsiCoverage(
         return cast(xr.DataArray, self.df["lsv_idx"].reset_coords(drop=True))
 
     @property
+    def prefix_total(self) -> xr.DataArray:
+        """array(prefix) of total number of reads over entire experiment"""
+        return cast(xr.DataArray, self.df["prefix_total"].reset_coords(drop=True))
+
+    @property
     def raw_total(self) -> xr.DataArray:
         """array(prefix, ec_idx) raw total reads over event
 
@@ -321,13 +327,20 @@ class PsiCoverage(
         events_coverage: EventsCoverage,
         minreads: float = constants.DEFAULT_QUANTIFY_MINREADS,
         minbins: float = constants.DEFAULT_QUANTIFY_MINBINS,
+        prefix_total: float = np.nan,
     ) -> "PsiCoverage":
         """Create :py:class:`PsiCoverage` from :py:class:`EventsCoverage`
 
         Parameters
         ----------
+        events_coverage: EventsCoverage
+            Read coverage per feature, raw and bootstrapped, along with raw
+            number of bins with nonzero coverage
         minreads, minbins: float
             Quantifiability thresholds
+        prefix_total: float
+            If specified, the sum total number of reads over all junctions for
+            the experiment
 
         Returns
         -------
@@ -368,6 +381,7 @@ class PsiCoverage(
                         bootstrap_total,
                     ),
                     bootstrap_psi=(("ec_idx", "bootstrap_replicate"), bootstrap_psi),
+                    prefix_total=np.array(prefix_total, dtype=raw_total.dtype),
                 ),
                 coords=dict(
                     lsv_offsets=("offset_idx", offsets),
@@ -423,7 +437,14 @@ class PsiCoverage(
         lsv_coverage = EventsCoverage.from_events_and_sj(
             lsvs, sj, num_bootstraps=num_bootstraps, pvalue_threshold=pvalue_threshold
         )
-        return PsiCoverage.from_events_coverage(lsv_coverage, minreads, minbins)
+        return PsiCoverage.from_events_coverage(
+            lsv_coverage,
+            minreads=minreads,
+            minbins=minbins,
+            prefix_total=sj.junctions.numreads(
+                numstacks=sj.junctions.numstacks(pvalue_threshold=pvalue_threshold)
+            ).sum(),
+        )
 
     @classmethod
     def from_zarr(cls, path: Union[str, Path, List[Union[str, Path]]]) -> "PsiCoverage":
@@ -449,6 +470,27 @@ class PsiCoverage(
         they are not the same size, which should catch most cases, but be wary
         that events information is derived from the first file alone.
         """
+
+        def backwards_compatible_preprocess(ds: xr.Dataset) -> xr.Dataset:
+            """Update PsiCoverage to add missing information from old files"""
+            if "prefix_total" not in ds.data_vars.keys():
+                get_logger().warning(
+                    "%s is an old PsiCoverage file without prefix_total",
+                    ds.encoding["source"],
+                )
+                ds = ds.assign(
+                    prefix_total=(
+                        "prefix",
+                        da.full(
+                            ds.sizes["prefix"],
+                            np.nan,
+                            dtype=ds["raw_total"].dtype,
+                            chunks=ds.chunks["prefix"],
+                        ),
+                    ),
+                )
+            return ds
+
         if not isinstance(path, list):
             path = [path]
         df = xr.open_mfdataset(
@@ -461,6 +503,7 @@ class PsiCoverage(
             compat="override",
             coords="minimal",
             data_vars="minimal",
+            preprocess=backwards_compatible_preprocess,
         )
         if len(path) > 1:
             # attributes are defined by path[0]. We'd rather just have none
@@ -678,6 +721,10 @@ class PsiCoverage(
                 event_passed=(raw_dims, passed_arr),
                 raw_psi=(raw_dims, raw_arr),
                 raw_total=(raw_dims, raw_arr),
+                prefix_total=(
+                    "prefix",
+                    da.empty(len(prefixes), dtype=cov_dtype, chunks=1),
+                ),
             ),
         ).to_zarr(
             path,
@@ -853,6 +900,7 @@ class PsiCoverage(
             bootstrap_psi = (
                 bootstrap_coverage / bootstrap_total.where(bootstrap_total > 0)
             ).fillna(0)
+            prefix_total = self.prefix_total.sum("prefix")
             df = xr.Dataset(
                 data_vars=dict(
                     event_passed=event_passed,
@@ -860,6 +908,7 @@ class PsiCoverage(
                     raw_psi=raw_psi,
                     bootstrap_total=bootstrap_total,
                     bootstrap_psi=bootstrap_psi,
+                    prefix_total=prefix_total,
                 ),
                 coords=dict(
                     lsv_offsets=self.lsv_offsets,
