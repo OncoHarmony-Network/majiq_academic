@@ -327,11 +327,11 @@ class SJExperiment(object):
         # get reads in original and reversed strand directions
         reads = SpliceGraphReads._internals_from_connections_and_sj(
             empty_sg_introns, sg.junctions, sj
-        ).junctions_reads
+        ).junctions_values
         sj_flipped = SJExperiment(sj.introns, sj_junctions.flip_strand())
         reads_flipped = SpliceGraphReads._internals_from_connections_and_sj(
             empty_sg_introns, sg.junctions, sj_flipped
-        ).junctions_reads
+        ).junctions_values
 
         # compute ratios for junctions with at least minreads
         reads_total = reads + reads_flipped

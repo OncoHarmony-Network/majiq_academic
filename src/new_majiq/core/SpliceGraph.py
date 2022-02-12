@@ -18,8 +18,10 @@ from .ExonConnections import ExonConnections
 from .Exons import Exons
 from .GeneIntrons import GeneIntrons
 from .GeneJunctions import GeneJunctions
+from .GeneModules import GeneModules
 from .Genes import Genes
 from .GFF3TypesMap import GFF3TypesMap
+from .SpliceGraphMask import SpliceGraphMask
 
 if TYPE_CHECKING:
     from ..voila.mplSpliceGraph import SpliceGraphGeneView
@@ -195,6 +197,25 @@ class SpliceGraph(object):
     def exon_connections(self) -> ExonConnections:
         """:class:`ExonConnections` for the splicegraph"""
         return ExonConnections(self._sg._exon_connections)
+
+    def modules(self, sg_mask: Optional[SpliceGraphMask] = None) -> GeneModules:
+        """Create :class:`GeneModules` over this splicegraph with mask
+
+        Parameters
+        ----------
+        sg_mask: Optional[SpliceGraphMask]
+            Mask over introns, junctions indicating which elements can be used
+            for identifying splicing modules.
+            If None, use default mask (use unsimplified connections that pass
+            build filters.
+
+        Returns
+        -------
+        GeneModules
+        """
+        if sg_mask is None:
+            sg_mask = SpliceGraphMask.from_arrays(self.introns, self.junctions)
+        return GeneModules.from_connections_and_mask(self.exon_connections, sg_mask)
 
     def get_gene_view(
         self,

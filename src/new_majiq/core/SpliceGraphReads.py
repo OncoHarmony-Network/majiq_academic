@@ -402,11 +402,11 @@ class SpliceGraphReads(object):
             {
                 "junctions_reads": (
                     ("gj_idx", "prefix"),
-                    np.array(sgreads.junctions_reads[:, np.newaxis], copy=True),
+                    sgreads.junctions_values[:, np.newaxis].copy(),
                 ),
                 "introns_reads": (
                     ("gi_idx", "prefix"),
-                    np.array(sgreads.introns_reads[:, np.newaxis], copy=True),
+                    sgreads.introns_values[:, np.newaxis].copy(),
                 ),
                 "junction_hash": ("prefix", [sgreads._junctions.checksum_nodata()]),
                 "intron_hash": ("prefix", [sgreads._introns.checksum_nodata()]),

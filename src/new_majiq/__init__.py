@@ -23,6 +23,7 @@ from .core.Exons import Exons
 from .core.GeneIntrons import GeneIntrons
 from .core.GeneJunctions import GeneJunctions
 from .core.GeneJunctionsAccumulator import GeneJunctionsAccumulator
+from .core.GeneModules import GeneModules
 from .core.Genes import Genes
 from .core.GFF3TypesMap import GFF3TypesMap
 from .core.GroupIntronsGenerator import GroupIntronsGenerator
@@ -45,6 +46,9 @@ from .core.SJJunctionsBins import SJJunctionsBins
 
 # model of genes, exons connected by introns/junctions
 from .core.SpliceGraph import SpliceGraph
+
+# mask on splicegraph introns/junctions
+from .core.SpliceGraphMask import SpliceGraphMask
 
 # coverage on splicegraph or events
 from .core.SpliceGraphReads import SpliceGraphReads
@@ -112,6 +116,7 @@ __all__ = [
     "GeneIntrons",
     "GeneJunctions",
     "GeneJunctionsAccumulator",
+    "GeneModules",
     "Genes",
     "GFF3TypesMap",
     "GroupIntronsGenerator",
@@ -135,5 +140,6 @@ __all__ = [
     "SJJunctions",
     "SJJunctionsBins",
     "SpliceGraph",
+    "SpliceGraphMask",
     "SpliceGraphReads",
 ]

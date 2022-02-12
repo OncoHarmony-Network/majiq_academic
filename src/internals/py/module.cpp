@@ -25,11 +25,12 @@
 #include "pyExperimentThresholds.hpp"
 #include "pyGenes.hpp"
 #include "pyGeneJunctionsAccumulator.hpp"
+#include "pyGeneModules.hpp"
 #include "pyPassedIntrons.hpp"
 #include "pyPassedJunctions.hpp"
 #include "pySimplifierGroup.hpp"
 #include "pySpliceGraph.hpp"
-#include "pySpliceGraphReads.hpp"
+#include "pySpliceGraphValues.hpp"
 #include "pySJBinsReads.hpp"
 #include "pySJIntrons.hpp"
 #include "pySJJunctions.hpp"
@@ -134,6 +135,12 @@ PYBIND11_MODULE(internals, m) {
   auto pySimplifierGroup = majiq::bindings::pySimplifierGroup_t(
       m, "SimplifierGroup",
       "Accumulator of SpliceGraphReads to unsimplify introns and junctions");
+  auto pySpliceGraphMask = majiq::bindings::pySpliceGraphMask_t(
+      m, "SpliceGraphMask",
+      "Boolean mask over splicegraph junctions and introns");
+  auto pyGeneModules = majiq::bindings::pyGeneModules_t(
+      m, "GeneModules",
+      "Splicing modules for each gene");
   auto pySpliceGraph = majiq::bindings::pySpliceGraph_t(
       m, "SpliceGraph",
       "SpliceGraph managing exons, junctions, and introns within genes");
@@ -163,5 +170,7 @@ PYBIND11_MODULE(internals, m) {
   majiq::bindings::init_SpliceGraphReads(pySpliceGraphReads);
   majiq::bindings::init_ExonConnections(pyExonConnections);
   majiq::bindings::init_SimplifierGroup(pySimplifierGroup);
+  majiq::bindings::init_SpliceGraphMask(pySpliceGraphMask);
+  majiq::bindings::init_GeneModules(pyGeneModules);
   majiq::bindings::init_SpliceGraph(pySpliceGraph);
 }  // PYBIND11_MODULE

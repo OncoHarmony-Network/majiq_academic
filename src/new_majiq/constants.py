@@ -37,6 +37,7 @@ NC_PSIOUTLIERS: Final[str] = "psi_outliers"
 
 NC_EVENTSQUANTIFIED: Final[str] = "events_quantified"
 
+NC_SGMASK: Final[str] = "sg_mask"
 NC_SGREADS: Final[str] = "sg_reads"
 # number of junctions/introns per chunk in sg_reads
 # size of computation across N experiments for a chunk is

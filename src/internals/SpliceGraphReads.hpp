@@ -18,50 +18,29 @@
 
 #include "GeneIntrons.hpp"
 #include "GeneJunctions.hpp"
+#include "SpliceGraphValues.hpp"
 #include "SJBinsReads.hpp"
 
 
 namespace majiq {
 
-class SpliceGraphReads {
- private:
-  const std::shared_ptr<GeneIntrons> introns_;
-  const std::shared_ptr<GeneJunctions> junctions_;
-  const std::vector<real_t> introns_reads_;
-  const std::vector<real_t> junctions_reads_;
-
+class SpliceGraphReads : public detail::SpliceGraphValues<real_t> {
  public:
   SpliceGraphReads(
       const std::shared_ptr<GeneIntrons>& introns,
       const std::shared_ptr<GeneJunctions>& junctions,
       std::vector<real_t>&& introns_reads,
       std::vector<real_t>&& junctions_reads)
-      : introns_{introns},
-        junctions_{junctions},
-        introns_reads_{std::move(introns_reads)},
-        junctions_reads_{std::move(junctions_reads)} {
-    if (introns_ == nullptr) {
-      throw std::runtime_error("SpliceGraphReads given null introns");
-    } else if (junctions_ == nullptr) {
-      throw std::runtime_error("SpliceGraphReads given null junctions");
-    } else if (introns_->size() != introns_reads_.size()) {
-      throw std::runtime_error(
-          "SpliceGraphReads introns reads do not match introns in size");
-    } else if (junctions_->size() != junctions_reads_.size()) {
-      throw std::runtime_error(
-          "SpliceGraphReads junctions reads do not match junctions in size");
-    }
-  }
+      : detail::SpliceGraphValues<real_t>{introns, junctions,
+        std::move(introns_reads), std::move(junctions_reads)} { }
   SpliceGraphReads(const SpliceGraphReads&) = default;
   SpliceGraphReads(SpliceGraphReads&&) = default;
   SpliceGraphReads& operator=(const SpliceGraphReads&) = delete;
   SpliceGraphReads& operator=(SpliceGraphReads&&) = delete;
 
-  const std::shared_ptr<GeneIntrons>& introns() const { return introns_; }
-  const std::shared_ptr<GeneJunctions>& junctions() const { return junctions_; }
-  const std::vector<real_t>& introns_reads() const { return introns_reads_; }
+  const std::vector<real_t>& introns_reads() const { return introns_values(); }
   const std::vector<real_t>& junctions_reads() const {
-    return junctions_reads_;
+    return junctions_values();
   }
 
   // how do we get this from SJ files?

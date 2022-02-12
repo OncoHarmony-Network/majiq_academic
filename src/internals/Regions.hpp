@@ -20,6 +20,7 @@
 #include <initializer_list>
 #include <utility>
 
+#include "Interval.hpp"
 #include "MajiqTypes.hpp"
 
 
