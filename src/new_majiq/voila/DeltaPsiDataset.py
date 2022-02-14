@@ -297,6 +297,7 @@ class DeltaPsiDataset(MixinHasEvents):
     def to_dataframe(
         self,
         sg: Optional[SpliceGraph] = None,
+        annotated: Optional[SpliceGraph] = None,
         changing_threshold: float = constants.DEFAULT_DPSI_CHANGING_THRESHOLD,
         nonchanging_threshold: float = constants.DEFAULT_DPSI_NONCHANGING_THRESHOLD,
         show_progress: bool = False,
@@ -308,6 +309,10 @@ class DeltaPsiDataset(MixinHasEvents):
         sg: Optional[SpliceGraph]
             If provided, splicegraph with introns/junctions consistent with
             events used to annotate resulting dataframe
+        annotated: Optional[SpliceGraph]
+            If specified, override denovo definitions by comparing
+            exons/introns/junctions to annotated splicegraph.
+            Only used if `sg` also provided.
         changing_threshold: float
             threshold t for P(abs(dPSI) >= t), the posterior probability that
             dPSI is changing by more than this amount
@@ -321,7 +326,11 @@ class DeltaPsiDataset(MixinHasEvents):
         concat_df: List[pd.DataFrame] = list()
         # add dataframe with events annotations
         if sg is not None:
-            concat_df.append(self.get_events(sg.introns, sg.junctions).ec_dataframe())
+            concat_df.append(
+                self.get_events(sg.introns, sg.junctions).ec_dataframe(
+                    annotated=annotated
+                )
+            )
         # build dataset with quantifcations to load simultaneously
         ds = xr.Dataset(
             {

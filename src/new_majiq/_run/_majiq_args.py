@@ -194,6 +194,15 @@ def _quantify_shared_args(parser: argparse.ArgumentParser) -> None:
         help="If specified, annotate quantifications with splicegraph information",
     )
     parser.add_argument(
+        "--annotated",
+        metavar="SG",
+        type=ExistingResolvedPath,
+        default=None,
+        help="If specified, identify novel events/exons/introns relative to"
+        " this splicegraph (vs --splicegraph)."
+        " Ignored if --splicegraph not used.",
+    )
+    parser.add_argument(
         "--output-tsv",
         metavar="TSV",
         type=argparse.FileType("w"),

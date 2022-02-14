@@ -171,12 +171,17 @@ def run(args: argparse.Namespace) -> None:
         deltapsi_voila = nm.DeltaPsiDataset.from_zarr(args.output_voila)
 
     sg: Optional[nm.SpliceGraph] = None
+    annotated: Optional[nm.SpliceGraph] = None
     if args.splicegraph:
         log.debug("Loading splicegraph from %s", args.splicegraph)
         sg = nm.SpliceGraph.from_zarr(args.splicegraph)
+        if args.annotated:
+            log.debug("Loading splicegraph (annotated) from %s", args.annotated)
+            annotated = nm.SpliceGraph.from_zarr(args.annotated, genes=sg.genes)
 
     df = deltapsi_voila.to_dataframe(
         sg=sg,
+        annotated=annotated,
         changing_threshold=args.changing_threshold,
         nonchanging_threshold=args.nonchanging_threshold,
         # no need to show progress if most of the work already done in VOILA file

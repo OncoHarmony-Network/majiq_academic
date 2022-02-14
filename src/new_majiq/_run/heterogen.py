@@ -170,13 +170,18 @@ def run(args: argparse.Namespace) -> None:
         heterogen_voila = nm.HeterogenDataset.from_zarr(args.output_voila)
 
     sg: Optional[nm.SpliceGraph] = None
+    annotated: Optional[nm.SpliceGraph] = None
     if args.splicegraph:
         log.debug("Loading splicegraph from %s", args.splicegraph)
         sg = nm.SpliceGraph.from_zarr(args.splicegraph)
+        if args.annotated:
+            log.debug("Loading splicegraph (annotated) from %s", args.annotated)
+            annotated = nm.SpliceGraph.from_zarr(args.annotated, genes=sg.genes)
 
     log.info("Summarizing population quantiles per group")
     df = heterogen_voila.to_dataframe(
         sg=sg,
+        annotated=annotated,
         population_quantiles=population_quantiles,
         show_progress=args.show_progress,
     )

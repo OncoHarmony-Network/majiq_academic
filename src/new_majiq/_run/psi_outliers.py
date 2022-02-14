@@ -25,7 +25,8 @@ DESCRIPTION = "Identify outliers from PSI cases (N ~ 1) vs PSI controls (N >> 1)
 
 
 def add_args(parser: argparse.ArgumentParser) -> None:
-    parser.add_argument(
+    required = parser.add_argument_group("required analysis pass arguments")
+    required.add_argument(
         "--pass",
         dest="pass_args_list",
         metavar=("splicegraph", "controls", "cases"),
@@ -50,7 +51,7 @@ def add_args(parser: argparse.ArgumentParser) -> None:
     annotated_ex.add_argument(
         "--annotated",
         dest="annotated",
-        metavar="splicegraph",
+        metavar="SG",
         type=ExistingResolvedPath,
         default=None,
         help="Identify novel events/exons/introns/junctions relative to this"

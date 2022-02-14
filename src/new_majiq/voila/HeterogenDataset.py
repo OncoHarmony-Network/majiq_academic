@@ -344,6 +344,7 @@ class HeterogenDataset(MixinHasEvents):
     def to_dataframe(
         self,
         sg: Optional[SpliceGraph] = None,
+        annotated: Optional[SpliceGraph] = None,
         population_quantiles: Sequence[
             float
         ] = constants.DEFAULT_HET_POPULATION_QUANTILES,
@@ -356,6 +357,10 @@ class HeterogenDataset(MixinHasEvents):
         sg: Optional[SpliceGraph]
             If provided, splicegraph with introns/junctions consistent with
             events used to annotate resulting dataframe
+        annotated: Optional[SpliceGraph]
+            If specified, override denovo definitions by comparing
+            exons/introns/junctions to annotated splicegraph.
+            Only used if `sg` also provided.
         population_quantiles: Sequence[float]
             quantiles of raw_psi_mean to evaluate per group
         show_progress: bool
@@ -367,7 +372,11 @@ class HeterogenDataset(MixinHasEvents):
         population_quantiles = sorted({0.5, *np.round(population_quantiles, 3)})
         # add dataframe with events annotations
         if sg is not None:
-            concat_df.append(self.get_events(sg.introns, sg.junctions).ec_dataframe())
+            concat_df.append(
+                self.get_events(sg.introns, sg.junctions).ec_dataframe(
+                    annotated=annotated
+                )
+            )
         # build dataset with quantifications to load simultaneously
         ds: xr.Dataset = (
             self.df.drop_dims("pmf_bin")

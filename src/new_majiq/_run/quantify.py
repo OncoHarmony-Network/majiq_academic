@@ -59,7 +59,11 @@ def run(args: argparse.Namespace) -> None:
         log.info(f"Loading splicegraph from {args.splicegraph}")
         sg = nm.SpliceGraph.from_zarr(args.splicegraph)
         events = psicov.get_events(sg.introns, sg.junctions)
-        concat_df.append(events.ec_dataframe())
+        annotated: Optional[nm.SpliceGraph] = None
+        if args.annotated:
+            annotated = nm.SpliceGraph.from_zarr(args.annotated, genes=sg.genes)
+        concat_df.append(events.ec_dataframe(annotated=annotated))
+        del sg, annotated, events
 
     log.info("Performing quantification")
     ds_quant = psicov.dataset(quantiles=sorted(set(np.round(args.quantiles, 3))))
