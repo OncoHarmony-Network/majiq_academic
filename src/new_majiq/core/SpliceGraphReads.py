@@ -23,6 +23,7 @@ from typing import (
 
 import dask.array as da
 import numpy as np
+import numpy.typing as npt
 import xarray as xr
 from dask.delayed import Delayed
 from dask.distributed import progress
@@ -395,31 +396,55 @@ class SpliceGraphReads(object):
         )
 
     @classmethod
-    def _from_internals(
-        cls, sgreads: _SpliceGraphReads, bam_path: str, bam_version: str
+    def from_arrays(
+        cls,
+        junctions_reads: npt._ArrayLikeFloat_co,
+        introns_reads: npt._ArrayLikeFloat_co,
+        junction_hash: int = 0,
+        intron_hash: int = 0,
+        prefix: str = "mock_prefix",
+        **extra_attributes,
     ) -> "SpliceGraphReads":
+        """Create :class:`SpliceGraphReads` for a single experiment"""
+        junctions_reads_arr = np.array(junctions_reads)
+        introns_reads_arr = np.array(introns_reads)
+        if junctions_reads_arr.ndim != 1:
+            raise ValueError("junctions_reads must be 1D")
+        if introns_reads_arr.ndim != 1:
+            raise ValueError("introns_reads must be 1D")
         df = xr.Dataset(
             {
                 "junctions_reads": (
                     ("gj_idx", "prefix"),
-                    sgreads.junctions_values[:, np.newaxis].copy(),
+                    junctions_reads_arr[:, np.newaxis],
                 ),
                 "introns_reads": (
                     ("gi_idx", "prefix"),
-                    sgreads.introns_values[:, np.newaxis].copy(),
+                    introns_reads_arr[:, np.newaxis],
                 ),
-                "junction_hash": ("prefix", [sgreads._junctions.checksum_nodata()]),
-                "intron_hash": ("prefix", [sgreads._introns.checksum_nodata()]),
+                "junction_hash": ("prefix", [junction_hash]),
+                "intron_hash": ("prefix", [intron_hash]),
             },
             {
-                "prefix": [bam_experiment_name(bam_path)],
+                "prefix": [prefix],
             },
-            {
-                "bam_path": bam_path,
-                "bam_version": bam_version,
-            },
+            extra_attributes,
         )
         return SpliceGraphReads(df)
+
+    @classmethod
+    def _from_internals(
+        cls, sgreads: _SpliceGraphReads, bam_path: str, bam_version: str
+    ) -> "SpliceGraphReads":
+        return SpliceGraphReads.from_arrays(
+            sgreads.junctions_values,
+            sgreads.introns_values,
+            junction_hash=sgreads._junctions.checksum_nodata(),
+            intron_hash=sgreads._introns.checksum_nodata(),
+            prefix=bam_experiment_name(bam_path),
+            bam_path=bam_path,
+            bam_version=bam_version,
+        )
 
     @staticmethod
     def _internals_from_connections_and_sj(

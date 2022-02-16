@@ -8,6 +8,7 @@ Author: Joseph K Aicher
 
 from pathlib import Path
 
+import numpy as np
 import pytest
 import xarray as xr
 
@@ -344,4 +345,64 @@ def test_intron_overlaps_zero(base_genes: nm.Genes, interval):
     description, start, end, expect_overlap = interval
     query_introns = nm.GeneIntrons.from_arrays(base_genes, [0], [start], [end])
     assert query_introns.overlaps(base_introns, 0) == expect_overlap, description
+    return
+
+
+@pytest.mark.parametrize(
+    ("junction_ratio", "min_psi"),
+    [
+        pytest.param(0.005, 0.01, marks=pytest.mark.xfail),
+        (0.02, 0.01),
+        (0.995, 0.01),
+    ],
+)
+def test_simplify_half_junction(junction_ratio, min_psi):
+    # define splicegraph with a half junction and an intron
+    contigs = nm.Contigs.from_list(["A"])
+    genes = nm.Genes.from_arrays(contigs, [0], [100], [2300], ["+"], ["A"], ["A"])
+    exons = nm.Exons.from_arrays(
+        genes,
+        gene_idx=[0, 0, 0, 0],
+        start=[100, -1, 1600, 2200],
+        end=[200, 1500, -1, 2300],
+        annotated_start=[100, -1, -1, 2200],
+        annotated_end=[200, -1, -1, 2300],
+    )
+    junctions = nm.GeneJunctions.from_arrays(
+        genes,
+        gene_idx=[0],
+        start=[1500],
+        end=[1600],
+        denovo=[True],
+        passed_build=[True],
+        simplified=[True],
+    )
+    introns = nm.GeneIntrons.from_arrays(
+        genes,
+        gene_idx=[0],
+        start=[201],
+        end=[2199],
+        denovo=[False],
+        passed_build=[True],
+        simplified=[True],
+    )
+    sg = nm.SpliceGraph.from_components(contigs, genes, exons, junctions, introns)
+    # get coverage over this splicegraph
+    TOTAL_READS = 1000.0
+    junction_reads = junction_ratio * TOTAL_READS
+    intron_reads = TOTAL_READS - junction_reads
+    sgcov = nm.SpliceGraphReads.from_arrays(
+        junctions_reads=np.array([junction_reads], dtype=np.float32),
+        introns_reads=np.array([intron_reads], dtype=np.float32),
+        junction_hash=sg.junctions.checksum_nodata(),
+        intron_hash=sg.introns.checksum_nodata(),
+    )
+    # get simplifier
+    simplifier = sg.exon_connections.simplifier()
+    simplifier.add_reads(sgcov, min_psi=min_psi)
+    simplifier.update_connections(min_experiments=1)
+    # the half junction should consider the ratio relative to the intron
+    assert junctions.simplified[0] == (junction_ratio < min_psi)
+    # the intron is constitutive and so always becomes unsimplified
+    assert not introns.simplified[0]
     return

@@ -71,6 +71,43 @@ class SimplifierGroup(object):
             passed_dst=("gj_idx", self.junctions_passed_dst),
         ).assign_attrs(num_experiments=self.num_experiments)
 
+    def add_reads(
+        self,
+        sgcov: SpliceGraphReads,
+        min_psi: float = constants.DEFAULT_SIMPLIFIER_MINPSI,
+        minreads_annotated: float = constants.DEFAULT_SIMPLIFIER_MINREADS_ANNOTATED,
+        minreads_denovo: float = constants.DEFAULT_SIMPLIFIER_MINREADS_DENOVO,
+        minreads_introns: float = constants.DEFAULT_SIMPLIFIER_MINREADS_INTRON,
+    ) -> "SimplifierGroup":
+        """Add experiments from :class:`SpliceGraphReads` to simplification group
+
+        Add experiments from :class:`SpliceGraphReads` to simplification group.
+        Counts when a junction or intron passes simplification filters with
+        respect to source exon (or target exon)
+
+        Parameters
+        ----------
+        sgcov: SpliceGraphReads
+            Reads over splicegraph for 1 or more experiments
+        min_psi: float
+            An intron or junction passes as a source (or target) only if the
+            percentage of reads assigned to it vs other connections sharing the
+            same source (or target) exon exceeds this value
+        minreads_annotated, minreads_denovo, minreads_introns: float
+            A connection can only pass simplifier thresholds if the readrate
+            assigned to it exceeds appropriate value (annotated junction vs
+            denovo junction vs intron)
+        """
+        for prefix in sgcov.prefixes:
+            self._group.add_experiment(
+                sgcov._to_internals(self.introns, self.junctions, prefix=prefix),
+                min_psi,
+                minreads_annotated,
+                minreads_denovo,
+                minreads_introns,
+            )
+        return self
+
     def add_experiment(
         self,
         sj: "SJExperiment",
