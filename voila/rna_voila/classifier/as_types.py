@@ -1317,12 +1317,20 @@ class Graph:
                     if j - i > 2:
                         skip = n1.connects(n2)
                         if skip:
-                            include1s = n1.connects(self.nodes[i + 1], ir=True)
-                            if len(include1s) == 0:
-                                include1s.append(None)
-                            include2s = self.nodes[j - 1].connects(n2, ir=True)
-                            if len(include2s) == 0:
-                                include2s.append(None)
+
+                            for possible_i in range(i+1, j):
+                                include1s = n1.connects(self.nodes[possible_i], ir=True)
+                                if len(include1s) > 0:
+                                    break
+                            else:
+                                include1s = (None,)
+
+                            for possible_i in range(j-1, i, -1):
+                                include2s = self.nodes[possible_i].connects(n2, ir=True)
+                                if len(include2s) > 0:
+                                    break
+                            else:
+                                include2s = (None,)
                             for sk in skip:
                                 for include1 in include1s:
                                     for include2 in include2s:
