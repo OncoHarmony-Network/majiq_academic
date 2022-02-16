@@ -333,25 +333,41 @@ def run_coverage_model(args: argparse.Namespace) -> None:
     psicov = nm.PsiCoverage.from_zarr(args.psicov)
     log.info("Setting up model matrix of all factors")
     factors = _get_factors(psicov.prefixes, args).load()
-    log.info(f"Solving for model parameters from {psicov}")
-    bootstrap_model = mc.infer_model_params(
-        psicov.bootstrap_psi,
-        psicov.event_passed,
-        factors,
-        complete=False,
-        dim_prefix="prefix",
-        dim_factor="factor",
-    )
-    # TODO could potentially share work if combined bootstrap_psi, raw_psi to
-    # solve for parameters together
-    raw_model = mc.infer_model_params(
-        psicov.raw_psi,
-        psicov.event_passed,
-        factors,
-        complete=False,
-        dim_prefix="prefix",
-        dim_factor="factor",
-    )
+    if psicov.num_events > 0:
+        log.info(f"Solving for model parameters from {psicov}")
+        bootstrap_model = mc.infer_model_params(
+            psicov.bootstrap_psi,
+            psicov.event_passed,
+            factors,
+            complete=False,
+            dim_prefix="prefix",
+            dim_factor="factor",
+        )
+        # TODO could potentially share work if combined bootstrap_psi, raw_psi to
+        # solve for parameters together
+        raw_model = mc.infer_model_params(
+            psicov.raw_psi,
+            psicov.event_passed,
+            factors,
+            complete=False,
+            dim_prefix="prefix",
+            dim_factor="factor",
+        )
+    else:
+        log.info("Preparing empty model (no events to consider)")
+        bootstrap_model = xr.DataArray(
+            np.empty(
+                (0, factors.sizes["factor"], psicov.num_bootstraps),
+                dtype=psicov.bootstrap_total.dtype,
+            ),
+            coords={"factor": factors["factor"]},
+            dims=["ec_idx", "factor", "bootstrap_replicate"],
+        ).chunk({})
+        raw_model = xr.DataArray(
+            np.empty((0, factors.sizes["factor"]), dtype=psicov.raw_total.dtype),
+            coords={"factor": factors["factor"]},
+            dims=["ec_idx", "factor"],
+        ).chunk({})
     models = xr.Dataset(dict(bootstrap_model=bootstrap_model, raw_model=raw_model))
     if args.show_progress:
         models = models.persist()
