@@ -638,11 +638,14 @@ def do_build_introns(
     """Get updated GeneIntrons given input experiments and thresholds"""
     log = get_logger()
     log.info("Updating %s with %s and input coverage", base_introns, exons)
-    log.debug("Determining potential gene introns")
-    potential_introns = exons.potential_introns(denovo_simplified)
-    potential_introns.update_flags_from(base_introns)
+    log.debug("Updating flags with respect to annotated exon boundaries")
+    base_introns = (
+        exons.get_annotated()
+        .potential_introns(make_simplified=denovo_simplified)
+        .update_flags_from(base_introns)
+    )
     log.debug("Identifying new passed introns")
-    intron_group = potential_introns.build_group()  # intron groups done in place
+    intron_group = base_introns.build_group()  # intron groups done in place
 
     def add_experiment_to_group(sj: Path) -> Path:
         intron_group.add_experiment(
@@ -667,10 +670,11 @@ def do_build_introns(
                 len(group_sjs),
             )
         intron_group.update_introns(min_experiments)
-    log.debug("Filtering potential introns to those passing thresholds")
-    result = potential_introns.filter_passed(
-        keep_annotated=True,
-        discard_denovo=discard_denovo,
+    log.debug("Propagating updated introns back to exons boundaries")
+    result = base_introns.filter_passed(
+        keep_annotated=True, discard_denovo=False
+    ).propagate_to_annotated(
+        annotated_exons=exons, keep_annotated=True, discard_denovo=discard_denovo
     )
     log.info("Updated %s from input experiments", result)
     return result
@@ -853,29 +857,15 @@ def do_build_and_simplify(
     # propagate intron flags within annotated exon boundaries
     if introns_type != IntronsType.NO_INTRONS:
         # propagate intron flags for introns within annotated exon boundaries
-        introns = (
-            sg.exons.potential_introns(True)
-            .update_flags_from(
-                # annotated exons
-                sg.exons.get_annotated()
-                # introns between these annotated exon boundaries (starting simplified)
-                .potential_introns(True)
-                # propagate flags using sg.introns
-                .update_flags_from(sg.introns)
-                # remove introns that didn't pass
-                .filter_passed(keep_annotated=True, discard_denovo=False)
-            )
-            .filter_passed(
-                keep_annotated=True,
-                discard_denovo=introns_type == IntronsType.ANNOTATED_INTRONS,
-            )
-        )
         sg = nm.SpliceGraph.from_components(
             contigs=sg.contigs,
             genes=sg.genes,
             exons=sg.exons,
             junctions=sg.junctions,
-            introns=introns,
+            introns=sg.introns.propagate_through_annotated(
+                keep_annotated=True,
+                discard_denovo=introns_type == IntronsType.ANNOTATED_INTRONS,
+            ),
         )
 
     return sg

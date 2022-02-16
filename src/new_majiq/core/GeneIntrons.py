@@ -37,6 +37,59 @@ class GeneIntrons(GeneConnections):
         super().__init__(gene_introns)
         return
 
+    def propagate_to_annotated(
+        self,
+        annotated_exons: Optional[Exons] = None,
+        keep_annotated: bool = constants.DEFAULT_BUILD_KEEP_ANNOTATED_IR,
+        discard_denovo: bool = not constants.DEFAULT_BUILD_DENOVO_IR,
+    ) -> "GeneIntrons":
+        """Get :class:`GeneIntrons` for annotated exons
+
+        Parameters
+        ----------
+        annotated_exons: Optional[Exons]
+            Propagate introns to match annotated exons. If not specified, get
+            annotated exons from connected exons (raise error if not connected
+            exons).
+        keep_annotated: bool
+            Keep all annotated introns regardless of whether they passed
+        discard_denovo: bool
+            Discard all denovo introns regardless of whether they passed
+        """
+        if not annotated_exons:
+            if self.connected_exons:
+                annotated_exons = self.connected_exons.get_annotated()
+            else:
+                raise ValueError(
+                    "annotated_exons must be passed when introns not connected"
+                )
+        return (
+            annotated_exons.potential_introns(make_simplified=True)
+            .update_flags_from(self)
+            .filter_passed(keep_annotated=keep_annotated, discard_denovo=discard_denovo)
+        )
+
+    def propagate_through_annotated(
+        self,
+        keep_annotated: bool = constants.DEFAULT_BUILD_KEEP_ANNOTATED_IR,
+        discard_denovo: bool = not constants.DEFAULT_BUILD_DENOVO_IR,
+    ) -> "GeneIntrons":
+        """Propagate introns to annotated exons, then back to current exons.
+
+        This ensures that all possible introns between annotated exons have the
+        same flags, which keeps introns consistent with two-pass build.
+        This requires that the introns are connected to exons.
+        """
+        if not self.connected_exons:
+            raise ValueError("GeneIntrons are not connected to exons")
+        return self.propagate_to_annotated(
+            keep_annotated=True, discard_denovo=False
+        ).propagate_to_annotated(
+            annotated_exons=self.connected_exons,
+            keep_annotated=keep_annotated,
+            discard_denovo=discard_denovo,
+        )
+
     def is_denovo(
         self,
         gi_idx: Optional[npt._ArrayLikeInt_co] = None,
@@ -64,14 +117,10 @@ class GeneIntrons(GeneConnections):
         else:
             # propagate annotated_introns to potential introns between
             # underlying annotated exons (if possible)
-            if annotated_introns.connected_exons:
-                # we should propagate to annotated exons/introns for overlaps
-                annotated_introns = (
-                    annotated_introns.connected_exons.get_annotated()
-                    .potential_introns()
-                    .update_flags_from(annotated_introns)
-                    .filter_passed()
-                )
+            try:
+                annotated_introns = annotated_introns.propagate_to_annotated()
+            except ValueError:
+                pass  # keep as original value
             return ~self.overlaps(annotated_introns, gi_idx)
 
     def build_group(self) -> "GroupIntronsGenerator":

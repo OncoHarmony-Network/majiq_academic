@@ -88,8 +88,10 @@ def run(args: argparse.Namespace) -> None:
     else:
         log.info("Combining input introns")
         log.debug("Defining potential introns for annotated and updated exons")
-        introns = exons.potential_introns(True)  # all start simplified
-        potential_introns = exons.get_annotated().potential_introns(True)
+        introns = exons.potential_introns(make_simplified=True)
+        potential_introns = exons.get_annotated().potential_introns(
+            make_simplified=True
+        )
         # propagate intron flags within annotated exon boundaries
         for p in all_inputs:
             log.debug(
