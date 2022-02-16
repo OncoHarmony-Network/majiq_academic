@@ -137,6 +137,7 @@ class SimplifierGroup {
           "SimplifierGroup given experiment reads with different junctions");
     }
     const GeneJunctions& junctions = *(exon_connections_->junctions());
+    const Exons& exons = *(exon_connections_->exons());
 
     std::lock_guard lock{simplifier_mutex_};
     ++num_experiments_;  // update number of experiments
@@ -167,6 +168,37 @@ class SimplifierGroup {
               [&x = sg_reads.introns_reads()](real_t s, size_t i) {
               return s + x[i]; });
         if (total_reads == 0) { continue; }  // no evidence for this event
+        // if this is a half exon, total_reads does not consider intersecting
+        // intron coverage. This coverage should be added to total_reads.
+        if (!exons[exon_idx].is_full_exon()) {
+          // get next full exon
+          size_t full_exon_idx = 1 + exon_idx;
+          bool full_exon_found = false;
+          for (;
+              full_exon_idx < exons.size()
+              && exons[full_exon_idx].gene.idx_ == exons[exon_idx].gene.idx_;
+              ++full_exon_idx) {
+            if (exons[full_exon_idx].is_full_exon()) {
+              full_exon_found = true;
+              break;
+            }
+          }
+          if (full_exon_found) {
+            Event full_event{full_exon_idx,
+                // if forward strand gene, then to get intron overlapping
+                // exon_idx, we would need to look at this next exon as a
+                // target event
+                exons[full_exon_idx].strand_forward()
+                ? EventType::DST_EVENT
+                : EventType::SRC_EVENT};
+            total_reads = std::accumulate(
+                exon_connections_->begin_introns_for(full_event),
+                exon_connections_->end_introns_for(full_event),
+                total_reads,
+                [&x = sg_reads.introns_reads()](real_t s, size_t i) {
+                return s + x[i]; });
+          }
+        }
         // determine if experiment has evidence to unsimplify the connections
         for (auto it = junction_idx_begin; it != junction_idx_end; ++it) {
           // reads for this junction index

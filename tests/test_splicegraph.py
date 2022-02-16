@@ -351,7 +351,7 @@ def test_intron_overlaps_zero(base_genes: nm.Genes, interval):
 @pytest.mark.parametrize(
     ("junction_ratio", "min_psi"),
     [
-        pytest.param(0.005, 0.01, marks=pytest.mark.xfail),
+        (0.005, 0.01),
         (0.02, 0.01),
         (0.995, 0.01),
     ],
