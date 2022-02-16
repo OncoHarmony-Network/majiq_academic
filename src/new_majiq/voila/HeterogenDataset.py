@@ -206,7 +206,8 @@ class HeterogenDataset(MixinHasEvents):
             not df["prefix_grp"]
             .to_series()
             .value_counts()
-            .equals(df["grp_size"].to_series())
+            .sort_index()
+            .equals(df["grp_size"].to_series().sort_index())
         ):
             raise ValueError("Mismatch between prefix_grp numbers and grp_size")
         # make these values available

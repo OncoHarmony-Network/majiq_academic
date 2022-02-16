@@ -134,7 +134,39 @@ def run(args: argparse.Namespace) -> None:
     # load psi1, psi2
     log.info("Loading input coverage files")
     psi1 = nm.PsiCoverage.from_zarr(args.psi1)
-    psi2 = nm.PsiCoverage.from_zarr(args.psi2)
+    if args.psi2:
+        psi2 = nm.PsiCoverage.from_zarr(args.psi2)
+        if args.downsample2 and psi2.num_prefixes > psi1.num_prefixes:
+            SEED = 221230 + psi2.num_prefixes
+            rng = np.random.RandomState(SEED)
+            psi2_prefixes = sorted(
+                rng.choice(psi2.prefixes, size=psi1.num_prefixes, replace=False)
+            )
+            log.info(
+                "Downsampling group 2 (%s) to have same number of experiments as"
+                " group 1 (%s)",
+                psi2,
+                psi1,
+            )
+            log.info("Group 2: %s", psi2_prefixes)
+            psi2 = psi2[psi2_prefixes]
+    else:
+        if psi1.num_prefixes < 2:
+            raise ValueError(
+                f"Cannot split {psi1} unless there are at least 2 experiments"
+            )
+        log.info("Splitting %s randomly into two groups", psi1)
+        SEED = 221216 + psi1.num_prefixes
+        rng = np.random.RandomState(SEED)
+        psi2_prefixes = sorted(
+            rng.choice(psi1.prefixes, size=psi1.num_prefixes // 2, replace=False)
+        )
+        psi1_prefixes = sorted(set(psi1.prefixes) - set(psi2_prefixes))
+        log.info("Group 1: %s", psi1_prefixes)
+        log.info("Group 2: %s", psi2_prefixes)
+        psi2 = psi1[psi2_prefixes]
+        psi1 = psi1[psi1_prefixes]
+
     if not psi1.events_df.equals(psi2.events_df):
         raise ValueError("Events from psi1 do not match events from psi2")
     group_sizes = {

@@ -234,9 +234,7 @@ def quantify_nocomparison_args(parser: argparse.ArgumentParser) -> None:
 
 
 def quantify_comparison_args(parser: argparse.ArgumentParser) -> None:
-    comparison_req = parser.add_argument_group(
-        "required quantification group arguments"
-    )
+    comparison_req = parser.add_argument_group("quantification group arguments")
     StorePSICovPaths = StoreRequiredUniqueActionFactory()
     comparison_req.add_argument(
         "-psi1",
@@ -257,8 +255,11 @@ def quantify_comparison_args(parser: argparse.ArgumentParser) -> None:
         type=ExistingResolvedPath,
         action=StorePSICovPaths,
         nargs="+",
-        required=True,
-        help="Paths to PsiCoverage files for experiments contributing to psi2",
+        required=False,
+        default=None,
+        help="Paths to PsiCoverage files for experiments contributing to psi2."
+        " If not specified, the experiments contributing to psi1 will be"
+        " split into two groups for the comparison.",
     )
     StoreGroupNames = StoreRequiredUniqueActionFactory()
     check_group_chars = check_characters_factory(
@@ -270,10 +271,19 @@ def quantify_comparison_args(parser: argparse.ArgumentParser) -> None:
         dest="names",
         nargs=2,
         metavar=("NAME1", "NAME2"),
-        required=True,
+        default=["grp1", "grp2"],
         action=StoreGroupNames,
         type=check_group_chars,
-        help="The names that identify the groups being compared.",
+        help="The names that identify the groups being compared"
+        " (default: %(default)s).",
+    )
+    comparison_req.add_argument(
+        "--downsample2",
+        action="store_true",
+        default=False,
+        help="If psi2 has more experiments than psi2, a random subset of"
+        " experiments from psi2 will be selected to perform the comparison"
+        " on groups of equal size (default: no downsampling).",
     )
     parser.add_argument(
         "--min-experiments",
