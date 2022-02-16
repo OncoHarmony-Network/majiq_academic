@@ -353,6 +353,77 @@ def test_intron_overlaps_zero(base_genes: nm.Genes, interval):
     [
         (0.005, 0.01),
         (0.02, 0.01),
+        (0.98, 0.01),
+        (0.995, 0.01),
+    ],
+)
+def test_simplify_half_intron(junction_ratio, min_psi):
+    # define splicegraph with a half junction and an intron
+    contigs = nm.Contigs.from_list(["A"])
+    genes = nm.Genes.from_arrays(contigs, [0], [100], [2300], ["+"], ["A"], ["A"])
+    exons = nm.Exons.from_arrays(
+        genes,
+        gene_idx=[0, 0, 0, 0],
+        start=[100, -1, 1600, 2200],
+        end=[200, 1500, -1, 2300],
+        annotated_start=[100, -1, -1, 2200],
+        annotated_end=[200, -1, -1, 2300],
+    )
+    junctions = nm.GeneJunctions.from_arrays(
+        genes,
+        gene_idx=[0, 0],
+        start=[200, 1500],
+        end=[2200, 1600],
+        denovo=[True, True],
+        passed_build=[True, True],
+        simplified=[True, True],
+    )
+    introns = nm.GeneIntrons.from_arrays(
+        genes,
+        gene_idx=[0, 0, 0],
+        start=[201, 1501, 1601],
+        end=[1499, 1599, 2199],
+        denovo=[False, False, False],
+        passed_build=[True, True, True],
+        simplified=[True, True, True],
+    )
+    sg = nm.SpliceGraph.from_components(contigs, genes, exons, junctions, introns)
+    # get coverage over this splicegraph
+    TOTAL_READS = 1000.0
+    junction_reads = junction_ratio * TOTAL_READS
+    intron_reads = TOTAL_READS - junction_reads
+    sgcov = nm.SpliceGraphReads.from_arrays(
+        junctions_reads=np.array(
+            [junction_reads, intron_reads * 0.5], dtype=np.float32
+        ),
+        introns_reads=np.array(
+            [intron_reads, intron_reads * 0.5, intron_reads], dtype=np.float32
+        ),
+        junction_hash=sg.junctions.checksum_nodata(),
+        intron_hash=sg.introns.checksum_nodata(),
+    )
+    # get simplifier
+    simplifier = sg.exon_connections.simplifier()
+    simplifier.add_reads(sgcov, min_psi=min_psi)
+    simplifier.update_connections(min_experiments=1)
+    # the middle junction/intron only simplified if min_psi > 0.5
+    np.testing.assert_equal(
+        junctions.simplified, [junction_ratio < min_psi, 0.5 < min_psi]
+    )
+    # the intron between the half exons can be simplified now
+    np.testing.assert_equal(
+        introns.simplified,
+        [1 - junction_ratio < min_psi, 0.5 < min_psi, 1 - junction_ratio < min_psi],
+    )
+    return
+
+
+@pytest.mark.parametrize(
+    ("junction_ratio", "min_psi"),
+    [
+        (0.005, 0.01),
+        (0.02, 0.01),
+        (0.98, 0.01),
         (0.995, 0.01),
     ],
 )
@@ -379,12 +450,12 @@ def test_simplify_half_junction(junction_ratio, min_psi):
     )
     introns = nm.GeneIntrons.from_arrays(
         genes,
-        gene_idx=[0],
-        start=[201],
-        end=[2199],
-        denovo=[False],
-        passed_build=[True],
-        simplified=[True],
+        gene_idx=[0, 0, 0],
+        start=[201, 1501, 1601],
+        end=[1499, 1599, 2199],
+        denovo=[False, False, False],
+        passed_build=[True, True, True],
+        simplified=[True, True, True],
     )
     sg = nm.SpliceGraph.from_components(contigs, genes, exons, junctions, introns)
     # get coverage over this splicegraph
@@ -393,7 +464,9 @@ def test_simplify_half_junction(junction_ratio, min_psi):
     intron_reads = TOTAL_READS - junction_reads
     sgcov = nm.SpliceGraphReads.from_arrays(
         junctions_reads=np.array([junction_reads], dtype=np.float32),
-        introns_reads=np.array([intron_reads], dtype=np.float32),
+        introns_reads=np.array(
+            [intron_reads, intron_reads, intron_reads], dtype=np.float32
+        ),
         junction_hash=sg.junctions.checksum_nodata(),
         intron_hash=sg.introns.checksum_nodata(),
     )
@@ -403,6 +476,8 @@ def test_simplify_half_junction(junction_ratio, min_psi):
     simplifier.update_connections(min_experiments=1)
     # the half junction should consider the ratio relative to the intron
     assert junctions.simplified[0] == (junction_ratio < min_psi)
-    # the intron is constitutive and so always becomes unsimplified
-    assert not introns.simplified[0]
+    # the intron between the half exons can be simplified now
+    np.testing.assert_equal(
+        introns.simplified, [False, 1 - junction_ratio < min_psi, False]
+    )
     return

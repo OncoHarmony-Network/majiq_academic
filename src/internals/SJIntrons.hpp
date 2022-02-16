@@ -99,23 +99,21 @@ SJIntronEvidenceForOverGene(
     // evidence from gene's exons
     for (auto it = exons.begin_parent(gene);
         it != exons.end_parent(gene); ++it) {
-      if (it->coordinates.is_full_interval()) {
-        GeneStrandness strand
-          = stranded ? it->gene.strand() : GeneStrandness::AMBIGUOUS;
-        result[strand].emplace_back(it->coordinates.start,
-            it == exons.begin_parent(gene)
-            ? SJIntronEvidenceType::FIRST_EXON_START
-            : SJIntronEvidenceType::EXON_START);
-        result[strand].emplace_back(it->coordinates.end,
-            it == std::prev(exons.end_parent(gene))
-            ? SJIntronEvidenceType::LAST_EXON_END
-            : SJIntronEvidenceType::EXON_END);
-      }
+      GeneStrandness strand
+        = stranded ? it->gene.strand() : GeneStrandness::AMBIGUOUS;
+      result[strand].emplace_back(it->coordinates.first_pos(),
+          it == exons.begin_parent(gene)
+          ? SJIntronEvidenceType::FIRST_EXON_START
+          : SJIntronEvidenceType::EXON_START);
+      result[strand].emplace_back(it->coordinates.last_pos(),
+          it == std::prev(exons.end_parent(gene))
+          ? SJIntronEvidenceType::LAST_EXON_END
+          : SJIntronEvidenceType::EXON_END);
     }
     // evidence from gene's introns
     for (auto it = gene_introns.begin_parent(gene);
         it != gene_introns.end_parent(gene); ++it) {
-      if (!(it->denovo()) && it->coordinates.is_full_interval()) {
+      if (!(it->denovo())) {
         GeneStrandness strand
           = stranded ? it->gene.strand() : GeneStrandness::AMBIGUOUS;
         // NOTE: we adjust intron coordinates +/- 1 back to exon boundaries

@@ -39,6 +39,11 @@ struct ExonConnectionsIndexes {
   size_t num_exons() const { return exon_offsets_.size() - 1; }
 
   typename std::vector<size_t>::const_iterator
+  begin() const { return idx_.cbegin(); }
+  typename std::vector<size_t>::const_iterator
+  end() const { return idx_.cend(); }
+
+  typename std::vector<size_t>::const_iterator
   begin_exon(size_t idx) const { return idx_.cbegin() + exon_offsets_[idx]; }
   typename std::vector<size_t>::const_iterator
   end_exon(size_t idx) const { return idx_.cbegin() + exon_offsets_[1 + idx]; }
@@ -142,20 +147,39 @@ class ExonConnections {
  public:
   size_t num_exons() const { return exons_->size(); }
 
+  // indicate if event direction is valid. This rules out half exons in
+  // directions of missing coordinates
+  bool valid_event(const Event& event) const {
+    return (*exons_)[event.ref_exon_idx_].valid_event(event.type_);
+  }
+
   typename std::vector<size_t>::const_iterator
   begin_introns_for(const Event& event) const {
-    return introns_for(event).begin_exon(event.ref_exon_idx_);
+    const auto& connections_index = introns_for(event);
+    return valid_event(event)
+      ? connections_index.begin_exon(event.ref_exon_idx_)
+      : connections_index.end();
   }
   typename std::vector<size_t>::const_iterator
   end_introns_for(const Event& event) const {
-    return introns_for(event).end_exon(event.ref_exon_idx_);
+    const auto& connections_index = introns_for(event);
+    return valid_event(event)
+      ? connections_index.end_exon(event.ref_exon_idx_)
+      : connections_index.end();
   }
   typename std::vector<size_t>::const_iterator
   begin_junctions_for(const Event& event) const {
-    return junctions_for(event).begin_exon(event.ref_exon_idx_);
+    const auto& connections_index = junctions_for(event);
+    return valid_event(event)
+      ? connections_index.begin_exon(event.ref_exon_idx_)
+      : connections_index.end();
   }
   typename std::vector<size_t>::const_iterator
   end_junctions_for(const Event& event) const {
+    const auto& connections_index = junctions_for(event);
+    return valid_event(event)
+      ? connections_index.end_exon(event.ref_exon_idx_)
+      : connections_index.end();
     return junctions_for(event).end_exon(event.ref_exon_idx_);
   }
 

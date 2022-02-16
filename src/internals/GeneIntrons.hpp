@@ -84,10 +84,9 @@ class GeneIntrons : public detail::GeneConnections<GeneIntron, false> {
         _ExonIndexes intron_exons{};  // get exons for this intron
         exon_it = std::find_if(exon_it, exon_it_end,
             [&intron = *intron_it](const Exon& x) {
-            return 1 + x.coordinates.end >= intron.coordinates.start; });
+            return 1 + x.coordinates.last_pos() >= intron.coordinates.start; });
         if (exon_it == exon_it_end
-            || !exon_it->is_full_exon()
-            || 1 + exon_it->coordinates.end != intron_it->coordinates.start) {
+            || 1 + exon_it->coordinates.last_pos() != intron_it->coordinates.start) {
           std::ostringstream oss;
           oss << "Cannot match intron (idx=" << (intron_it - begin())
             << ") to appropriate start exon (expected idx="
@@ -96,11 +95,10 @@ class GeneIntrons : public detail::GeneConnections<GeneIntron, false> {
         } else {
           intron_exons.start = exon_it - exons.begin();
         }
-        // should be connected to next full exon
-        exon_it = std::find_if(1 + exon_it, exon_it_end,
-            [](const Exon& x) { return x.is_full_exon(); });
+        // should be connected to next exon
+        ++exon_it;
         if (exon_it == exon_it_end
-            || 1 + intron_it->coordinates.end != exon_it->coordinates.start) {
+            || 1 + intron_it->coordinates.end != exon_it->coordinates.first_pos()) {
           std::ostringstream oss;
           oss << "Cannot match intron (idx=" << (intron_it - begin())
             << ") to appropriate end exon (expected idx="
@@ -190,30 +188,30 @@ class GeneIntrons : public detail::GeneConnections<GeneIntron, false> {
 
     std::vector<GeneIntron> result_vec;
 
+    // for each gene
     for (const auto& gene : *(exons.parents())) {
+      // get range of exons for the gene
+      auto exon_it = exons.begin_parent(gene);
       const auto exon_it_end = exons.end_parent(gene);
-      auto prev_exon_it = exon_it_end;  // haven't gotten to first full exon
-      for (auto exon_it = exons.begin_parent(gene);
-          exon_it != exon_it_end; ++exon_it) {
-        if (exon_it->is_full_exon()) {
-          if (prev_exon_it != exon_it_end) {
-            size_t start_exon_idx = prev_exon_it - exons.begin();
-            size_t end_exon_idx = exon_it - exons.begin();
-            result_vec.emplace_back(
-                gene,
-                ClosedInterval{
-                  prev_exon_it->coordinates.end + 1,
-                  exon_it->coordinates.start - 1},
-                detail::ConnectionData{
-                  true,  // consider denovo for now
-                  false,  // hasn't passed build
-                  make_simplified,
-                  start_exon_idx,
-                  end_exon_idx});
-          }  // handle intron between prev_exon_it and exon_it
-          prev_exon_it = exon_it;  // update prev_exon, wait for next full exon
-        }  // conditional -- if new full exon
-      }  // loop over exons
+      // if no exons, there are no introns
+      if (exon_it == exon_it_end) { continue; }
+      // increment to following exon (if any), then operate between current and
+      // previous exons until reaching end
+      ++exon_it;
+      for (; exon_it != exon_it_end; ++exon_it) {
+        const size_t end_exon_idx = exon_it - exons.begin();
+        result_vec.emplace_back(
+            gene,
+            ClosedInterval{
+              1 + (exon_it - 1)->coordinates.last_pos(),
+              exon_it->coordinates.first_pos() - 1},
+            detail::ConnectionData{
+              true,  // consider denovo for now
+              false,  // hasn't passed build
+              make_simplified,
+              end_exon_idx - 1,  // start/end exon idx now always one apart
+              end_exon_idx});
+      }  // loop over second exon to last exon in the gene
     }  // loop over genes
 
     return GeneIntrons{exons.parents(), std::move(result_vec), exons_ptr};

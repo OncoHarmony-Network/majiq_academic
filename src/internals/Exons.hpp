@@ -97,6 +97,12 @@ struct Exon : detail::GeneRegion<ExonIntervalT, ExonIntervalT> {
   Exon get_annotated() const {
     return Exon{gene, legacy_annotated_coordinates(), DefaultAnnotated{}};
   }
+
+  bool valid_event(const EventType& type) const {
+    return strand_forward() == (type == EventType::SRC_EVENT)
+      ? coordinates.has_end()
+      : coordinates.has_start();
+  }
 };
 
 
