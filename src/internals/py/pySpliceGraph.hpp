@@ -153,9 +153,13 @@ inline void init_SpliceGraph(pySpliceGraph_t& pySpliceGraph) {
         pybind11::arg("gff3_types"),
         pybind11::arg("process_ir") = DEFAULT_BUILD_PROCESS_IR,
         pybind11::arg("log_function") = pybind11::none())
-    .def_static("infer_exons", &SpliceGraph::InferExons,
+    .def_static("infer_exons", &SpliceGraph::InferExons<true>,
         pybind11::call_guard<pybind11::gil_scoped_release>(),
         "Infer exons from base annotated exons and junctions",
+        pybind11::arg("base_exons"), pybind11::arg("junctions"))
+    .def_static("infer_minimal_exons", &SpliceGraph::InferExons<false>,
+        pybind11::call_guard<pybind11::gil_scoped_release>(),
+        "Construct minimal exons from base annotated exons and junctions",
         pybind11::arg("base_exons"), pybind11::arg("junctions"))
     .def("make_group_junctions", &SpliceGraph::MakeGroupGenerator,
         pybind11::call_guard<pybind11::gil_scoped_release>(),

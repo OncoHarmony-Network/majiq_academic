@@ -43,6 +43,22 @@ inline void GeneInferExons(
     GeneJunctions::const_iterator junctions_end,
     std::vector<Exon>& dst);
 
+/**
+ * Get minimal exons from passed iterators, with annotated exons and length-1
+ * novel exons for each splicesite that does not fall within annotated exon
+ * boundaries
+ *
+ * @param exons_begin, exons_end range of exons to infer from
+ * @param junctions_begin, junctions_end range of junctions to infer from
+ * @param dst where inferred exons will be inserted (push_back)
+ */
+inline void GeneMinimalExons(
+    Exons::const_iterator exons_begin,
+    Exons::const_iterator exons_end,
+    GeneJunctions::const_iterator junctions_begin,
+    GeneJunctions::const_iterator junctions_end,
+    std::vector<Exon>& dst);
+
 }  // namespace detail
 
 class SpliceGraph {
@@ -98,6 +114,7 @@ class SpliceGraph {
   SpliceGraph& operator=(const SpliceGraph& sg) = default;
   SpliceGraph& operator=(SpliceGraph&& sg) = default;
 
+  template <bool FULL_INFERENCE = true>
   static Exons InferExons(const Exons& source, const GeneJunctions& junctions) {
     if (source.parents() != junctions.parents()) {
       throw std::invalid_argument(
@@ -107,10 +124,17 @@ class SpliceGraph {
     result_vec.reserve(source.size());  // will have at least same number exons
     for (size_t gene_idx = 0; gene_idx < source.parents()->size(); ++gene_idx) {
       // add exons inferred for each gene
-      detail::GeneInferExons(
-          source.begin_parent(gene_idx), source.end_parent(gene_idx),
-          junctions.begin_parent(gene_idx), junctions.end_parent(gene_idx),
-          result_vec);
+      if constexpr(FULL_INFERENCE) {
+        detail::GeneInferExons(
+            source.begin_parent(gene_idx), source.end_parent(gene_idx),
+            junctions.begin_parent(gene_idx), junctions.end_parent(gene_idx),
+            result_vec);
+      } else {
+        detail::GeneMinimalExons(
+            source.begin_parent(gene_idx), source.end_parent(gene_idx),
+            junctions.begin_parent(gene_idx), junctions.end_parent(gene_idx),
+            result_vec);
+      }
     }
     return Exons{source.parents(), std::move(result_vec)};
   }
@@ -158,6 +182,60 @@ inline std::ostream& operator<<(
     << sg.introns_->size() << " introns"
     << ">";
   return os;
+}
+
+void detail::GeneMinimalExons(
+    Exons::const_iterator exons_begin,
+    Exons::const_iterator exons_end,
+    GeneJunctions::const_iterator junctions_begin,
+    GeneJunctions::const_iterator junctions_end,
+    std::vector<Exon>& dst) {
+  // special cases
+  if (exons_begin == exons_end) {
+    // no exons input --> no exons output
+    return;
+  } else if (junctions_begin == junctions_end) {
+    // no junctions means just annotated exon boundaries
+    for (auto eit = exons_begin; eit != exons_end; ++eit) {
+      if (!eit->is_denovo() && eit->is_full_exon()) {
+        dst.emplace_back(
+            eit->gene, eit->annotated_coordinates(), Exon::DefaultAnnotated{});
+      }
+    }
+    return;
+  }
+  // otherwise get all unique junction coordinates in order
+  std::set<position_t> sites;
+  for (auto jit = junctions_begin; jit != junctions_end; ++jit) {
+    sites.insert(jit->coordinates.start);
+    sites.insert(jit->coordinates.end);
+  }
+  // add exons and splice sites (as length 1 exons)
+  auto sit = sites.begin();
+  for (auto eit = exons_begin; eit != exons_end; ++eit) {
+    // only use full annotated exons
+    if (eit->is_denovo() || !eit->is_full_exon()) { continue; }
+    // we assume that sit is advanced to first splice site after previous exon
+    // so all sites prior to the current exon start should be added first
+    for (; sit != sites.end() && *sit < eit->annotated_coordinates().start;
+        ++sit) {
+      dst.emplace_back(
+          eit->gene, ClosedOrHalfInterval{*sit, *sit}, Exon::MakeDenovo{});
+    }
+    // add current annotated exon
+    dst.emplace_back(
+        eit->gene, eit->annotated_coordinates(), Exon::DefaultAnnotated{});
+    // advance sit past current annotated exon
+    sit = std::find_if(sit, sites.end(),
+        [exon_end=eit->annotated_coordinates().end](const position_t x) {
+        return x > exon_end; });
+  }
+  // we do not expect junctions past last annotated exon
+  if (sit != sites.end()) {
+    throw std::logic_error(
+        "Found junction splicesites past last annotated exon boundary");
+  }
+  return;
 }
 
 // implementation of detail::GeneInferExons (infer exons for single gene)

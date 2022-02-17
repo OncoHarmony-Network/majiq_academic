@@ -8,16 +8,17 @@ Author: Joseph K Aicher
 """
 
 from pathlib import Path
-from typing import Final, Union
+from typing import Final, Optional, Union
 
 import numpy as np
 
 import new_majiq.constants as constants
-from new_majiq.internals import ExperimentStrandness
+from new_majiq.internals import ExperimentStrandness, ExperimentThresholds
 from new_majiq.logger import get_logger
 
 from .Exons import Exons
 from .GeneIntrons import GeneIntrons
+from .GeneJunctions import GeneJunctions
 from .SJIntrons import SJIntrons
 from .SJIntronsBins import SJIntronsBins
 from .SJJunctionsBins import SJJunctionsBins
@@ -168,12 +169,14 @@ class SJExperiment(object):
         path: Union[str, Path],
         sg: SpliceGraph,
         strandness: Union[str, ExperimentStrandness] = "auto",
-        update_exons: bool = False,
         nthreads: int = constants.DEFAULT_BAM_NTHREADS,
         allow_disjoint_contigs: bool = constants.DEFAULT_BAM_ALLOW_DISJOINT_CONTIGS,
         auto_minreads: int = constants.DEFAULT_BAM_STRAND_MINREADS,
         auto_minjunctions: int = constants.DEFAULT_BAM_STRAND_MINJUNCTIONS,
         auto_mediantolerance: float = constants.DEFAULT_BAM_STRAND_MINDEVIATION,
+        update_exons_thresholds: Optional[
+            ExperimentThresholds
+        ] = constants.DEFAULT_BUILD_EXP_THRESHOLDS,
     ) -> "SJExperiment":
         """Load :class:`SJExperiment` from BAM file
 
@@ -193,9 +196,6 @@ class SJExperiment(object):
             "forward", "reverse", or "none" (not case-sensitive).
             If auto, automatically detects strand using median ratio of forward
             vs reverse stranded reads at annotated junctions
-        update_exons: bool
-            Experimental -- use junction coverage to definitively ignore
-            intronic coverage in potential denovo exons (or exon extension)
         nthreads: int
             Number of threads to parse BAM with
         allow_disjoint_contigs: bool
@@ -210,6 +210,10 @@ class SJExperiment(object):
         auto_mediantolerance: float
             Infer unstranded if the median proportion of junctions of forward
             strand vs all reads deviates from 0.5 by at most this amount
+        update_exons_thresholds: Optional[ExperimentThresholds]
+            If specified, use denovo junction coverage passing thresholds to
+            split intronic coverage by novel splice sites. If None, do not
+            update junctions from splicegraph using input junction coverage.
 
         Returns
         -------
@@ -265,16 +269,21 @@ class SJExperiment(object):
         # determine introns
         log.debug("Using gene introns/exons to define regions for intronic coverage")
         gene_introns: GeneIntrons = sg.introns
+        gene_junctions: GeneJunctions = sg.junctions
         exons: Exons = sg.exons
-        if update_exons:
-            log.debug("Identifying potential denovo exons from input junctions")
-            # TODO (change parameters used for reliable updated junctions?)
-            updated_junctions = (
+        if update_exons_thresholds:
+            log.debug("Updating splicegraph junctions using SJ coverage")
+            gene_junctions = (
                 sg.junctions.builder()
-                .add_group(sg.junctions.build_group(exons).add_experiment(junctions))
+                .add_group(
+                    sg.junctions.build_group(exons).add_experiment(
+                        junctions, thresholds=update_exons_thresholds, add_denovo=True
+                    )
+                )
                 .get_passed()
             )
-            exons = exons.infer_with_junctions(updated_junctions)
+        # update exons using annotated boundaries, splicesites from gene_junctions
+        exons = exons.infer_with_junctions(gene_junctions, full_inference=False)
         log.debug("Parsing SJIntrons from %s", path)
         introns = SJIntronsBins.from_bam(
             path,

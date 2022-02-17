@@ -31,7 +31,9 @@ class Exons(GeneRegions):
         super().__init__(exons)
         return
 
-    def infer_with_junctions(self, junctions: "GeneJunctions") -> "Exons":
+    def infer_with_junctions(
+        self, junctions: "GeneJunctions", full_inference: bool = True
+    ) -> "Exons":
         """Return updated :py:class:`Exons` accommodating novel junctions per gene
 
         Parameters
@@ -40,10 +42,23 @@ class Exons(GeneRegions):
             Junctions over same genes. Novel exons will be added or have
             boundaries extended compared to original annotated exons to match
             the junctions
+        full_inference: bool
+            If True, infer denovo exon structure: novel junctions lead to exon
+            extension vs denovo exon vs half exons depending on relative
+            locations.
+            If False, use annotated exon boundaries, and each unique splice
+            site coordinate outside of annotated exons leads to its own exon
+            (of length 1).
         """
         from new_majiq.internals import SpliceGraph as _SpliceGraph
 
-        return Exons(_SpliceGraph.infer_exons(self._exons, junctions._gene_junctions))
+        return Exons(
+            _SpliceGraph.infer_exons(self._exons, junctions._gene_junctions)
+            if full_inference
+            else _SpliceGraph.infer_minimal_exons(
+                self._exons, junctions._gene_junctions
+            )
+        )
 
     def checksum(self):
         return self._exons.checksum()
