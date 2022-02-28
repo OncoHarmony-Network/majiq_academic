@@ -11,8 +11,8 @@ from rna_voila.api.matrix_utils import generate_variances
 from rna_voila.api import view_matrix
 from collections import OrderedDict
 
-SIG_FIGS = 3
-
+def fRound(x):
+    return f'{x:0.3e}'
 
 class QuantificationWriter:
 
@@ -163,11 +163,11 @@ class QuantificationWriter:
                     else:
                         vals.append(all_quants[edge_idx])
 
-                return (round(x, SIG_FIGS) for x in vals) if _round else vals
+                return (fRound(x) for x in vals) if _round else vals
             else:
                 if self.avg_multival and all_quants:
                     return np.mean(all_quants)
-                return (round(x, SIG_FIGS) for x in all_quants) if _round else all_quants
+                return (fRound(x) for x in all_quants) if _round else all_quants
 
         def _psi_psi(voila_files):
             def f(lsv_id, edge=None):
@@ -209,7 +209,7 @@ class QuantificationWriter:
                 if not found_psis:
                     return None
                 else:
-                    return [round(sum(found_psis) / len(found_psis), SIG_FIGS)]
+                    return [fRound(sum(found_psis) / len(found_psis))]
             return f
 
         def _het_stats(voila_files, stat_idx):
@@ -247,7 +247,7 @@ class QuantificationWriter:
 
                                     vals.append(psi_g1-psi_g2)
 
-                            return (round(x, SIG_FIGS) for x in vals)
+                            return (fRound(x) for x in vals)
 
                         except (GeneIdNotFoundInVoilaFile, LsvIdNotFoundInVoilaFile) as e:
                             continue
@@ -285,7 +285,7 @@ class QuantificationWriter:
                                 else:
                                     vals.append(lsv.excl_incl[edge_idx][1] - lsv.excl_incl[edge_idx][0])
 
-                            return (round(x, SIG_FIGS) for x in vals)
+                            return (fRound(x) for x in vals)
 
                         except (GeneIdNotFoundInVoilaFile, LsvIdNotFoundInVoilaFile) as e:
                             continue
@@ -309,12 +309,12 @@ class QuantificationWriter:
                                         continue
                                     else:
                                         vals.append(matrix_area(bins[edge_idx], self.config.changing_between_group_dpsi))
-                                return (round(x, SIG_FIGS) for x in vals)
+                                return (fRound(x) for x in vals)
                             else:
                                 if self.avg_multival:
                                     return np.mean((matrix_area(b, self.config.changing_between_group_dpsi) for b in bins))
                                 return (
-                                            round(matrix_area(b, self.config.changing_between_group_dpsi), SIG_FIGS) for b in bins
+                                            fRound(matrix_area(b, self.config.changing_between_group_dpsi)) for b in bins
                                         )
                         except (GeneIdNotFoundInVoilaFile, LsvIdNotFoundInVoilaFile) as e:
                             continue
