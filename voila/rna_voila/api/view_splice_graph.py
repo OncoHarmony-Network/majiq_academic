@@ -6,13 +6,14 @@ from statistics import median, StatisticsError
 from math import ceil
 
 class ViewSpliceGraph(SpliceGraph):
-    def __init__(self, omit_simplified=False):
+    def __init__(self, omit_simplified=False, splice_graph_file=None):
         """
         Wrapper class to splice graph api used to generate voila output.
         """
         self.omit_simplified = omit_simplified
-        config = ViewConfig()
-        splice_graph_file = config.splice_graph_file
+        if not splice_graph_file:
+            config = ViewConfig()
+            splice_graph_file = config.splice_graph_file
         super().__init__(splice_graph_file)
 
     @staticmethod

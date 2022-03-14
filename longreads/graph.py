@@ -1,7 +1,7 @@
 from itertools import combinations, permutations, product
 from pathlib import Path
 from operator import itemgetter
-from rna_voila.api import _SpliceGraphSQL as SpliceGraph
+from rna_voila.api import SpliceGraph
 from bisect import bisect_left, bisect_right
 
 from collections import namedtuple

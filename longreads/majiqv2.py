@@ -1,4 +1,4 @@
-from rna_voila.api import _SpliceGraphSQL as SpliceGraph
+from rna_voila.api import SpliceGraph
 from rna_voila.api.view_splice_graph import ViewSpliceGraph
 from graph import Graph, exon
 from collections import namedtuple
