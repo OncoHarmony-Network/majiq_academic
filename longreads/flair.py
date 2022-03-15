@@ -36,7 +36,8 @@ class FlairReader:
             elif row[ki['feature']] == 'exon':
                 _exon = exon(int(row[ki["start"]]), int(row[ki["end"]]))
                 if extent:
-                    if _exon.start > extent[0] or _exon.end < extent[1]:
+                    if (_exon.end > extent[0] and _exon.end < extent[1]) or \
+                       (_exon.start > extent[0] and _exon.start < extent[1]):
                         transcript_exons.append(_exon)
                 else:
                     transcript_exons.append(_exon)

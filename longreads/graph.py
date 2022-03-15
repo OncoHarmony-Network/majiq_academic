@@ -754,15 +754,11 @@ class Graph:
                         # we aim to make sure that the half exons are in the middle of the module
                         # so that we don't mark the next module as having that half exon
                         module = self.Module(self.nodes[start_idx: i + 1 + 1], self)
-                        module._global_node_start_idx = start_idx
-                        module._global_node_end_idx = i + 1 + 1
                         if self._module_is_valid(module):
                             modules.append(module)
                         nextEndShift = 1
                     else:
                         module = self.Module(self.nodes[start_idx + nextEndShift: i + 1], self)
-                        module._global_node_start_idx = start_idx + nextEndShift
-                        module._global_node_end_idx = i + 1
                         if self._module_is_valid(module):
                             modules.append(module)
                         nextEndShift = 0
@@ -815,6 +811,15 @@ class Graph:
 
         if modules:
             modules[0].p_multi_gene_regions = p_multi_gene_regions
+
+        # populate start and end idxs
+        for mod in modules:
+            for idx, node in enumerate(self.nodes):
+                if mod.nodes[0] == node:
+                    mod._global_node_start_idx = idx
+                elif mod.nodes[-1] == node:
+                    mod._global_node_end_idx = idx
+
 
         return modules
 

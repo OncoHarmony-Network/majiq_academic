@@ -37,8 +37,8 @@ class MajiqV2Reader:
         # must already have run parse_splicegraph()
 
         # we treat the module as
-        start = float('-inf')
-        end = float('inf')
+        start = float('inf')
+        end = float('-inf')
         for edge in self.modules[module_idx].get_all_edges(ir=True):
             start = min(edge.start, start)
             end = max(edge.end, end)
@@ -119,11 +119,12 @@ class MajiqV2Reader:
                     _start = next_node.end
                     yield from self.getAllPathsUtil(next_node, d, visited, _path, _start, True)
 
-                _path[-1] = exon(path[-1].start, edge.start)
-                _start = edge.end
-                if visited[next_node._idx] == False:
-                    yield from self.getAllPathsUtil(next_node, d, visited, _path, _start)
-                    #yield from self.getAllPathsUtil(next_node, d, visited, path)
+                else:
+                    _path[-1] = exon(path[-1].start, edge.start)
+                    _start = edge.end
+                    if visited[next_node._idx] == False:
+                        yield from self.getAllPathsUtil(next_node, d, visited, _path, _start)
+                        #yield from self.getAllPathsUtil(next_node, d, visited, path)
 
         path.pop()
         visited[u._idx]= False
@@ -160,18 +161,18 @@ class MajiqV2Reader:
         alt_starts = []
         alt_ends = []
         for node in self.graph.nodes[start_node_idx:end_node_idx]:
-            if not node.edges:
+            if not node.edges and not node == self.graph.nodes[-1]:
                 alt_ends.append(node)
-            elif not node.back_edges:
+            elif not node.back_edges and not node == self.graph.nodes[0]:
                 alt_starts.append(node)
 
         # gather all possibilities from beginning to alt ends
         for alt_end in alt_ends:
             paths2search.append((self.graph.nodes[start_node_idx], alt_end))
-        # gather all possibilities from alt starts to end
+        # # gather all possibilities from alt starts to end
         for alt_start in alt_starts:
             paths2search.append((alt_start, self.graph.nodes[end_node_idx]))
-        # finally, gather all possibilities from alt starts to alt ends
+        # # finally, gather all possibilities from alt starts to alt ends
         for alt_start in alt_starts:
             for alt_end in alt_ends:
                 paths2search.append((alt_start, alt_end))
@@ -191,6 +192,10 @@ if __name__ == "__main__":
     parser = MajiqV2Reader(sqlpath)
     parser.parse_splicegraph("gene:ENSG00000109534")
 
-    print(parser.getNumModules())
-    for path in parser.getAllPaths(module_idx=2):
+    for i in range(3):
+        print(parser.modules[i].nodes)
+        print(parser.modules[i]._global_node_start_idx, parser.modules[i]._global_node_end_idx)
+
+    #print(parser.getNumModules())
+    for path in parser.getAllPaths(module_idx=1):
         print(path)
