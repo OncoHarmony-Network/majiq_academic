@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 
 import majiqv2, flair
-
+from graph import exon
 
 
 majiq_splicegraph_path = '/slowdata/lrdata/majiq/splicegraph.sql'
@@ -31,7 +31,7 @@ moduleColor='#c3b40840'
 
 
 
-def plot(flair_exons, majiq_exons, filename, module_extent=None):
+def plot(only_in_flair, only_in_majiq, in_flair_and_majiq, filename, module_extent=None):
 
     fig, ax = plt.subplots(1)
 
@@ -39,12 +39,6 @@ def plot(flair_exons, majiq_exons, filename, module_extent=None):
         gene_start, gene_end = parser.extent(majiq_gene_id)
     else:
         gene_start, gene_end = module_extent[0], module_extent[1]
-
-
-    only_in_flair = flair_exons.difference(majiq_exons)
-    only_in_majiq = majiq_exons.difference(flair_exons)
-    in_flair_and_majiq = flair_exons.intersection(majiq_exons)
-
 
 
     print(only_in_flair)
@@ -98,19 +92,43 @@ def plot(flair_exons, majiq_exons, filename, module_extent=None):
 
 
 
-
+# Plot for the entire gene
+# here, we match transcripts exactly between majiq and flair
 flair_exons = set(x[0] for x in flair.FlairReader.parse_gtf(flair_gtf_path, flair_gene_id))
 majiq_exons = set(x[0] for x in parser.getAllPaths())
-plot(flair_exons, majiq_exons, f'{majiq_gene_id}_module_combined.png')
+only_in_flair = flair_exons.difference(majiq_exons)
+only_in_majiq = majiq_exons.difference(flair_exons)
+in_flair_and_majiq = flair_exons.intersection(majiq_exons)
+plot(only_in_flair, only_in_majiq, in_flair_and_majiq, f'{majiq_gene_id}_module_combined.png')
 
 for module_idx in range(parser.getNumModules()):
 
     majiq_module_extent = parser.moduleExtent(module_idx)
 
-    flair_exons = set(x[0] for x in flair.FlairReader.parse_gtf(flair_gtf_path, flair_gene_id, extent=majiq_module_extent))
-    majiq_exons = set(x[0] for x in parser.getAllPaths(module_idx=module_idx))
+    """
+    for in-module, by default the exons we receive from majiq start/end are technically not part of the module
+    UNLESS, they have different start/end. As a simple way to deal with this, for matching purposes, we will trim all
+    exon coordinates at the start/end of the module to match the module coordinates
+    
+    """
 
-    plot(flair_exons, majiq_exons, f'{majiq_gene_id}_module_{module_idx}.png', module_extent=majiq_module_extent)
+    ord_flair_exons = tuple(x[0] for x in flair.FlairReader.parse_gtf(flair_gtf_path, flair_gene_id, extent=majiq_module_extent))
+
+    ord_majiq_exons = tuple(x[0] for x in parser.getAllPaths(module_idx=module_idx))
+    flair_exons = set()
+    for transcript in ord_flair_exons:
+        flair_exons.add((exon(max(majiq_module_extent[0], e.start), min(majiq_module_extent[1], e.end)) for e in transcript))
+    majiq_exons = set()
+    for transcript in ord_majiq_exons:
+        majiq_exons.add((exon(max(majiq_module_extent[0], e.start), min(majiq_module_extent[1], e.end)) for e in transcript))
+
+
+    only_in_flair = flair_exons.difference(majiq_exons)
+    only_in_majiq = majiq_exons.difference(flair_exons)
+    in_flair_and_majiq = flair_exons.intersection(majiq_exons)
+
+
+    plot(only_in_flair, only_in_majiq, in_flair_and_majiq, f'{majiq_gene_id}_module_{module_idx}.png', module_extent=majiq_module_extent)
 
 
 
