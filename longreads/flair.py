@@ -1,28 +1,25 @@
 from pygtftk.gtf_interface import GTF
 from graph import exon
+from gtfparse import read_gtf
 
 
 class FlairReader:
 
-    def __init__(self):
+    def __init__(self, gtf_path):
         self.modules = {}
+        self.df = read_gtf(gtf_path)
 
-    @classmethod
-    def parse_gtf(cls, gtf_path, gene_id, extent=None):
-        gtf = GTF(gtf_path)
+    def gene(self, gene_id, extent=None):
 
-        keys = ["start", "end", "gene_id", "transcript_id", "strand", "exon_number", "feature"]
-        ki = {k: i for i, k in enumerate(keys)}
+        df_gene = self.df[self.df['gene_id'] == gene_id]
 
         found_transcripts = set()
         transcript_exons = set()
         transcript_meta = {}
 
-        for row in gtf.extract_data(keys):
-            if row[ki['gene_id']] != gene_id:
-                continue
+        for index, row in df_gene.iterrows():
 
-            if row[ki['feature']] == 'transcript':
+            if row.feature == 'transcript':
                 if transcript_exons:
                     transcript_exons = frozenset(transcript_exons)
                     if not transcript_exons in found_transcripts:
@@ -30,11 +27,11 @@ class FlairReader:
                         yield tuple(transcript_exons), transcript_meta
 
                 transcript_exons = []
-                transcript_meta = {x: row[ki[x]] for x in ('strand', 'gene_id', 'transcript_id')}
+                transcript_meta = {x: getattr(row, x) for x in ('strand', 'gene_id', 'transcript_id')}
                 continue
 
-            elif row[ki['feature']] == 'exon':
-                _exon = exon(int(row[ki["start"]]), int(row[ki["end"]]))
+            elif row.feature == 'exon':
+                _exon = exon(int(row.start), int(row.end))
                 if extent:
                     if (_exon.end > extent[0] and _exon.end < extent[1]) or \
                        (_exon.start > extent[0] and _exon.start < extent[1]):
@@ -52,7 +49,10 @@ class FlairReader:
 if __name__ == "__main__":
 
     gtf_path = '/slowdata/lrdata/flair/flair_filter_transcripts.gtf'
-    for exons, meta in FlairReader.parse_gtf(gtf_path, 'ENSG00000138326.18'):
+
+    flairreader = FlairReader(gtf_path)
+
+    for exons, meta in flairreader.gene('ENSG00000138326.18'):
         print(exons)
         print(meta)
         break
