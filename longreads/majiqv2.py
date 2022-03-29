@@ -98,7 +98,7 @@ class MajiqV2Reader:
     #
     #     return paths_found
 
-    def getAllPathsUtil(self, u, d, visited, path, start=None, dont_append=False):
+    def getAllPathsUtil(self, u, d, visited, path, start=None, dont_append=False, is_denovo=False, has_reads=True):
 
         visited[u._idx]= True
         if start is None:
@@ -107,23 +107,24 @@ class MajiqV2Reader:
             path.append(exon(start, u.end))
         if u == d:
 
-            yield path
+            yield path, is_denovo, has_reads
         else:
 
             for edge in u.edges:
-
+                is_denovo = is_denovo or edge.is_de_novo()
+                has_reads = has_reads and edge.has_reads
                 _path = path[:]
                 next_node = self.graph.end_node(edge)
                 if edge.ir:
                     _path[-1] = exon(path[-1].start, next_node.end)
                     _start = next_node.end
-                    yield from self.getAllPathsUtil(next_node, d, visited, _path, _start, True)
+                    yield from self.getAllPathsUtil(next_node, d, visited, _path, _start, True, is_denovo, has_reads)
 
                 else:
                     _path[-1] = exon(path[-1].start, edge.start)
                     _start = edge.end
                     if visited[next_node._idx] == False:
-                        yield from self.getAllPathsUtil(next_node, d, visited, _path, _start)
+                        yield from self.getAllPathsUtil(next_node, d, visited, _path, _start, is_denovo, has_reads)
                         #yield from self.getAllPathsUtil(next_node, d, visited, path)
 
         path.pop()
@@ -178,9 +179,9 @@ class MajiqV2Reader:
                 paths2search.append((alt_start, alt_end))
 
         for start, end in paths2search:
-            for path in self.getAllPathsBetweenNodes(start, end):
+            for path, is_denovo, has_reads in self.getAllPathsBetweenNodes(start, end):
                 exons = tuple(exon(n.start, n.end) for n in path)
-                yield exons, self.meta
+                yield exons, self.meta, is_denovo, has_reads
 
 
 if __name__ == "__main__":
@@ -192,9 +193,9 @@ if __name__ == "__main__":
     parser = MajiqV2Reader(sqlpath)
     parser.parse_splicegraph("gene:ENSG00000109534")
 
-    for i in range(3):
-        print(parser.modules[i].nodes)
-        print(parser.modules[i]._global_node_start_idx, parser.modules[i]._global_node_end_idx)
+    # for i in range(3):
+    #     print(parser.modules[i].nodes)
+    #     print(parser.modules[i]._global_node_start_idx, parser.modules[i]._global_node_end_idx)
 
     #print(parser.getNumModules())
     for path in parser.getAllPaths(module_idx=1):

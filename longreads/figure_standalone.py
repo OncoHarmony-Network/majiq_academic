@@ -3,7 +3,7 @@ import os
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 
-import majiqv2, flair
+import majiqv2, flairParser
 from graph import exon
 
 
@@ -28,7 +28,7 @@ bothColor='b'
 moduleColor='#c3b40840'
 
 print('~~~Parsing Flair~~~')
-flairreader = flair.FlairReader(flair_gtf_path)
+flairreader = flairParser.FlairReader(flair_gtf_path)
 print('~~~Done Parsing Flair~~~')
 
 

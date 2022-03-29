@@ -383,6 +383,7 @@ class Graph:
             return self.start >= node.start and self.end <= node.end
 
 
+
     def start_node(self, edge):
         """
         Get exon where this junction starts.
@@ -402,7 +403,7 @@ class Graph:
         assert i > 0  # this should never be negative / loop to the last / first node
         return self.nodes[i - 1]
 
-    def _add_junc(self, junc, ir=False):
+    def _add_junc(self, junc, ir=False, has_reads=True):
         """
         Add junction to graph as edge object. If junction starts and ends in the same exon, it is not added to graph.
         This function follows decomplexify rules accordingly. Voila files will be read for this junction. If the
@@ -417,6 +418,7 @@ class Graph:
             junc['end'] += 1
 
         edge = self.Edge(junc, ir)
+        edge.has_reads = has_reads
 
         # Since majiq doesn't quantify junctions that start/stop in same exon, filter them.
         #if start_node != end_node:
@@ -563,14 +565,26 @@ class Graph:
             for exon in sg.exons(self.gene_id):
                 self._add_exon(exon)
             for junc in sg.junctions(self.gene_id, omit_simplified=True):
+                has_reads = False
+                for reads_exp in sg.junction_reads_exp(junc, self.experiment_names):
+                    if reads_exp['reads'] != 0:
+                        has_reads = True
+                        break
+
                 # if self.config.decomplexify_reads_threshold == 0 or self._enough_reads(
                 #         sg.junction_reads_exp(junc, self.experiment_names)):
-                self._add_junc(junc)
+                self._add_junc(junc, has_reads=has_reads)
 
             for ir in sg.intron_retentions(self.gene_id, omit_simplified=True):
                 # if self.config.decomplexify_reads_threshold == 0 or self._enough_reads(
                 #         sg.intron_retention_reads_exp(ir, self.experiment_names)):
-                self._add_junc(ir, ir=True)
+                has_reads = False
+                for reads_exp in sg.intron_retention_reads_exp(ir, self.experiment_names):
+                    if reads_exp['reads'] != 0:
+                        has_reads = True
+                        break
+
+                self._add_junc(ir, ir=True, has_reads=has_reads)
 
         # remove exons that don't have any junctions
         # this is done by looking at the start and end of each junction and seeing if any of those ends
