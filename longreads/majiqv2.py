@@ -124,7 +124,7 @@ class MajiqV2Reader:
                     _path[-1] = exon(path[-1].start, edge.start)
                     _start = edge.end
                     if visited[next_node._idx] == False:
-                        yield from self.getAllPathsUtil(next_node, d, visited, _path, _start, is_denovo, has_reads)
+                        yield from self.getAllPathsUtil(next_node, d, visited, _path, _start, False, is_denovo, has_reads)
                         #yield from self.getAllPathsUtil(next_node, d, visited, path)
 
         path.pop()
