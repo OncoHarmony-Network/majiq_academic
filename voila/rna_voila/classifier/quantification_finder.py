@@ -12,7 +12,12 @@ from rna_voila.api import view_matrix
 from collections import OrderedDict
 
 def fRound(x):
-    return f'{x:0.3e}'
+    try:
+        x = iter(x)
+        ret = ';'.join(f'{_x:0.3e}' for _x in x)
+    except TypeError as te:
+        ret = f'{x:0.3e}'
+    return ret
 
 class QuantificationWriter:
 
@@ -126,6 +131,7 @@ class QuantificationWriter:
                     pass
             except:
                 pass
+        return slice(None)
 
     def quantification_intersection(self):
         """
