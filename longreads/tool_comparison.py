@@ -6,19 +6,32 @@ import matplotlib.patches as patches
 import majiqv2, flairParser
 from graph import exon
 import pprint
+from config import get_args
 
-majiq_splicegraph_path = '/slowdata/lrdata/majiq/splicegraph.sql'
-majiq_gene_id="gene:ENSG00000109534"
-parser = majiqv2.MajiqV2Reader(majiq_splicegraph_path)
-parser.parse_splicegraph(majiq_gene_id)
+#majiq_splicegraph_path = '/slowdata/lrdata/majiq/splicegraph.sql'
+#majiq_gene_id="gene:ENSG00000109534"
 
-flair_gtf_path = '/slowdata/lrdata/flair/flair_filter_transcripts.gtf'
-flair_gene_id = 'ENSG00000109534.16'
+
+#flair_gtf_path = '/slowdata/lrdata/flair/flair_filter_transcripts.gtf'
+#flair_gene_id = 'ENSG00000109534.16'
 #
 # save_path = '/tmp/lr_o'
 # os.makedirs(save_path, exist_ok=True)
 
+args = get_args()
 
+majiq_splicegraph_path = args.majiq_splicegraph_path
+majiq_gene_id = args.gene_id
+
+flair_gtf_path = args.flair_gtf_path
+
+if args.gene_id_flair:
+    flair_gene_id = args.gene_id_flair
+else:
+    flair_gene_id = majiq_gene_id
+
+parser = majiqv2.MajiqV2Reader(majiq_splicegraph_path)
+parser.parse_splicegraph(majiq_gene_id)
 
 print('~~~Parsing Flair~~~')
 flairreader = flairParser.FlairReader(flair_gtf_path)

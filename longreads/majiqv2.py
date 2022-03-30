@@ -111,20 +111,23 @@ class MajiqV2Reader:
         else:
 
             for edge in u.edges:
-                is_denovo = is_denovo or edge.is_de_novo()
-                has_reads = has_reads and edge.has_reads
+
                 _path = path[:]
                 next_node = self.graph.end_node(edge)
                 if edge.ir:
                     _path[-1] = exon(path[-1].start, next_node.end)
                     _start = next_node.end
-                    yield from self.getAllPathsUtil(next_node, d, visited, _path, _start, True, is_denovo, has_reads)
+                    _is_denovo = is_denovo or edge.is_de_novo()
+                    _has_reads = has_reads and edge.has_reads
+                    yield from self.getAllPathsUtil(next_node, d, visited, _path, _start, True, _is_denovo, _has_reads)
 
                 else:
                     _path[-1] = exon(path[-1].start, edge.start)
                     _start = edge.end
                     if visited[next_node._idx] == False:
-                        yield from self.getAllPathsUtil(next_node, d, visited, _path, _start, False, is_denovo, has_reads)
+                        _is_denovo = is_denovo or edge.is_de_novo()
+                        _has_reads = has_reads and edge.has_reads
+                        yield from self.getAllPathsUtil(next_node, d, visited, _path, _start, False, _is_denovo, _has_reads)
                         #yield from self.getAllPathsUtil(next_node, d, visited, path)
 
         path.pop()
