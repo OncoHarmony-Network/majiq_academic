@@ -9,22 +9,33 @@ class MajiqV2Reader:
 
     def __init__(self, path):
         self.path = path
+        with SpliceGraph(self.path) as sg:
+            self.experiment_names = sg.experiment_names
+            #strand = sg.gene(gene_id)['strand']
 
+    @property
+    def gene_ids(self):
+        with SpliceGraph(self.path) as sg:
+            for entry in sg.genes():
+                if entry['strand'] == '+':
+                    yield entry['id']
+
+    def has_gene(self, gene_id):
+        with SpliceGraph(self.path) as sg:
+            return sg.gene(gene_id) is not None
 
     def parse_splicegraph(self, gene_id):
-        with SpliceGraph(self.path) as sg:
-            experiment_names = sg.experiment_names
-            strand = sg.gene(gene_id)['strand']
+
         # with ViewSpliceGraph(path, splice_graph_file=path) as sg:
         #     self.view_gene = sg.view_gene(gene_id)
         #     print(self.view_gene)
             #gene_meta = sg.gene(gene_id)
             #print(gene_meta)
 
-        self.meta = {'strand': strand, 'gene_id': gene_id, 'transcript_id': None}
+        #self.meta = {'strand': strand, 'gene_id': gene_id, 'transcript_id': None}
         #config = fake_config(splice_graph_file=path)
 
-        self.graph = Graph(gene_id, experiment_names, self.path)
+        self.graph = Graph(gene_id, self.experiment_names, self.path)
         self.modules = self.graph.modules()
 
 
@@ -131,7 +142,7 @@ class MajiqV2Reader:
                         #yield from self.getAllPathsUtil(next_node, d, visited, path)
 
         path.pop()
-        visited[u._idx]= False
+        visited[u._idx] = False
 
 
     # Prints all paths from 's' to 'd'
@@ -184,7 +195,8 @@ class MajiqV2Reader:
         for start, end in paths2search:
             for path, is_denovo, has_reads in self.getAllPathsBetweenNodes(start, end):
                 exons = tuple(exon(n.start, n.end) for n in path)
-                yield exons, self.meta, is_denovo, has_reads
+                #print("PATH", exons)
+                yield exons, {}, is_denovo, has_reads
 
 
 if __name__ == "__main__":
