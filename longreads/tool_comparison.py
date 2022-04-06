@@ -8,12 +8,12 @@ from graph import exon
 import pprint
 
 majiq_splicegraph_path = '/slowdata/lrdata/majiq/splicegraph.sql'
-majiq_gene_id="gene:ENSG00000109534"
+majiq_gene_id="ENSG00000110492.17"
 parser = majiqv2.MajiqV2Reader(majiq_splicegraph_path)
 parser.parse_splicegraph(majiq_gene_id)
 
 flair_gtf_path = '/slowdata/lrdata/flair/flair_filter_transcripts.gtf'
-flair_gene_id = 'ENSG00000109534.16'
+flair_gene_id = 'ENSG00000110492.17'
 #
 # save_path = '/tmp/lr_o'
 # os.makedirs(save_path, exist_ok=True)
@@ -101,7 +101,27 @@ def compare_tools():
 
         pprint.pprint(tc.counts)
 
+def compare_all_tools():
 
+    tc = ToolComparer()
+    flair_exons = set()
+    ord_flair_exons = tuple(x[0] for x in flairreader.gene(flair_gene_id, extent=majiq_module_extent))
+    for transcript in ord_flair_exons:
+        flair_exons.add(tuple(exon(max(majiq_module_extent[0], e.start), min(majiq_module_extent[1], e.end)) for e in transcript))
+
+    majiq_exons = set()
+    majiq_denovo = {}
+    majiq_has_reads = {}
+    for (ord_majiq_transcript, majiq_meta, denovo, has_reads) in parser.getAllPaths(module_idx=module_idx):
+        set_key = tuple(exon(max(majiq_module_extent[0], e.start), min(majiq_module_extent[1], e.end)) for e in ord_majiq_transcript)
+        majiq_exons.add(set_key)
+        majiq_denovo[set_key] = denovo
+        majiq_has_reads[set_key] = has_reads
+
+
+    tc.add_module_data(majiq_exons, majiq_denovo, majiq_has_reads, flair_exons)
+
+    pprint.pprint(tc.counts)
 
         #
         #
