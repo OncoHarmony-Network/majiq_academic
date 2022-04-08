@@ -216,7 +216,7 @@ def compare_tools(modules=False):
                 print('                                                  \r', end="")
                 break
             except:
-                print("Some error with gene!", gene_id)
+                print("Some error with gene!", majiq_gene_id, flair_gene_id)
                 with open(error_file_path, 'a') as f:
                     f.write(traceback.format_exc())
 
