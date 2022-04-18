@@ -9,6 +9,9 @@ class FlairReader:
         self.modules = {}
         self.df = read_gtf(gtf_path)
 
+    def has_gene(self, gene_id):
+        return len(self.df[self.df['gene_id'] == gene_id].index) != 0
+
     def gene(self, gene_id, extent=None):
 
         df_gene = self.df[self.df['gene_id'] == gene_id]
