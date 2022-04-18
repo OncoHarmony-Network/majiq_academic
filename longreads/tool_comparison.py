@@ -93,11 +93,49 @@ class ToolComparer:
         if args.verbose >= 2:
             print("PATH", key, transcript)
 
+    def compare_fuzzy(self, set1, set2, fuzziness):
+        """
+        Return "only in set1", "only in set2" and "in both sets" by fuzzy matching
+        To be considered a match, the length of the element must be the same, and also each inner integer value
+        must be within N (fuzziness) absolute value of the other set
+        note in the fuzzy match case, the value of SET2 will be used in the return
+        """
+        only_in_set1 = set()
+        in_both_sets = set()
+
+        for set1elem in set1:
+            for set2elem in set2:
+                if set1elem == set2elem:
+                    in_both_sets.add(set2elem)
+                    break
+                if len(set1elem) == len(set2elem):
+                    for coords1, coords2 in zip(set1elem, set2elem):
+                        if abs(coords1[0] - coords2[0]) <= fuzziness and abs(coords1[1] - coords2[1]) <= fuzziness:
+                            in_both_sets.add(set2elem)
+                            break
+                    else:
+                        continue
+                    break
+            else:
+                only_in_set1.add(set1elem)
+
+        only_in_set2 = set2.difference(in_both_sets)
+
+        return only_in_set1, only_in_set2, in_both_sets
+
+    def compare_exact(self, set1, set2):
+        """
+        Return "only in set1", "only in set2" and "in both sets"  by exact matching the elements of sets
+        """
+        only_in_set1 = set1.difference(set2)
+        only_in_set2 = set2.difference(set1)
+        in_both_sets = set1.intersection(set2)
+        return only_in_set1, only_in_set2, in_both_sets
+
     def add_data(self, majiq_result, majiq_denovo, majiq_has_reads, flair_result):
-        
-        only_in_flair = flair_result.difference(majiq_result)
-        only_in_majiq = majiq_result.difference(flair_result)
-        in_flair_and_majiq = flair_result.intersection(majiq_result)
+
+        only_in_flair, only_in_majiq, in_flair_and_majiq = self.compare_exact(flair_result, majiq_result)
+
         tmpcounts = {}
         for majiq in (True, False):
             for flair in (True, False):
@@ -216,7 +254,7 @@ def compare_tools(modules=False):
                 print('                                                  \r', end="")
                 break
             except:
-                print("Some error with gene!", gene_id)
+                print("Some error with gene!", majiq_gene_id, flair_gene_id)
                 with open(error_file_path, 'a') as f:
                     f.write(traceback.format_exc())
 
