@@ -17,5 +17,7 @@ def get_args():
     parser.add_argument('-v', '--verbose', action='count', default=0)
     parser.add_argument('--per-module', action='store_true',
                         help='Show additional verbose output')
+    parser.add_argument('--fuzziness', type=int, default=0,
+                        help='Reduce fuzziness of long-read sequencing')
     args = parser.parse_args()
     return args

@@ -137,7 +137,10 @@ class ToolComparer:
 
     def add_data(self, majiq_result, majiq_denovo, majiq_has_reads, flair_result):
 
-        only_in_flair, only_in_majiq, in_flair_and_majiq = self.compare_exact(flair_result, majiq_result)
+        if args.fuzziness == 0:
+            only_in_flair, only_in_majiq, in_flair_and_majiq = self.compare_exact(flair_result, majiq_result)
+        else:
+            only_in_flair, only_in_majiq, in_flair_and_majiq = self.compare_fuzzy(flair_result, majiq_result, args.fuzziness)
 
         tmpcounts = {}
         for majiq in (True, False):
