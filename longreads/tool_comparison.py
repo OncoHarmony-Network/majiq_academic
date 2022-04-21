@@ -27,6 +27,9 @@ majiq_splicegraph_path = args.majiq_splicegraph_path
 majiqParser = majiqv2.MajiqV2Reader(majiq_splicegraph_path)
 flair_gtf_path = args.flair_gtf_path
 
+
+os.makedirs(args.output_path, exist_ok=True)
+
 error_file_path = os.path.join(args.output_path, 'comparison.errors.txt')
 if os.path.exists(error_file_path):
     os.remove(error_file_path)
