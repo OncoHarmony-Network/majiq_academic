@@ -68,13 +68,22 @@ def plot(only_in_flair, only_in_majiq, in_flair_and_majiq, filename, module_exte
         color = colors[i]
         for exons in transcripts:
 
-            for exon in exons:
-                x = exon.start
+            for _exon in exons:
 
-                gene_start = min(gene_start, exon.start)
-                gene_end = max(gene_end, exon.end)
+                if _exon.start == -1:
+                    print('!', _exon)
+                    _exon = exon(_exon.end, _exon.end)
 
-                width = exon.end - exon.start
+                if _exon.end == -1:
+                    _exon = exon(_exon.start, _exon.start)
+
+                print(_exon)
+                x = _exon.start
+
+                gene_start = min(gene_start, _exon.start)
+                gene_end = max(gene_end, _exon.end)
+
+                width = _exon.end - _exon.start
 
                 rect = patches.Rectangle((x, y), width, transcript_height, linewidth=1,
                                          edgecolor=color, facecolor="none")
@@ -125,15 +134,15 @@ for module_idx in range(parser.getNumModules()):
     
     """
 
-    ord_flair_exons = tuple(x[0] for x in flairreader.gene(flair_gene_id, extent=majiq_module_extent))
+    ord_flair_exons = tuple(x[0] for x in flairreader.gene(flair_gene_id, extent=majiq_module_extent, ignore_starts_ends=True))
 
     ord_majiq_exons = tuple(x[0] for x in parser.getAllPaths(module_idx=module_idx))
     flair_exons = set()
     for transcript in ord_flair_exons:
-        flair_exons.add((exon(max(majiq_module_extent[0], e.start), min(majiq_module_extent[1], e.end)) for e in transcript))
+        flair_exons.add((exon(max(majiq_module_extent[0], e.start) if e.start != -1 else -1, min(majiq_module_extent[1], e.end) if e.end != -1 else -1) for e in transcript))
     majiq_exons = set()
     for transcript in ord_majiq_exons:
-        majiq_exons.add((exon(max(majiq_module_extent[0], e.start), min(majiq_module_extent[1], e.end)) for e in transcript))
+        majiq_exons.add((exon(max(majiq_module_extent[0], e.start) if e.start != -1 else -1, min(majiq_module_extent[1], e.end) if e.end != -1 else -1) for e in transcript))
 
 
     only_in_flair = flair_exons.difference(majiq_exons)

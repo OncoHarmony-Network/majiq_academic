@@ -59,7 +59,9 @@ class ToolComparer:
                     break
                 if len(set1elem) == len(set2elem):
                     for coords1, coords2 in zip(set1elem, set2elem):
-                        if abs(coords1[0] - coords2[0]) <= fuzziness and abs(coords1[1] - coords2[1]) <= fuzziness:
+                        startCondition = coords1[0] == -1 or coords2[0] == -1 or (abs(coords1[0] - coords2[0]) <= fuzziness)
+                        endCondition = coords1[1] == -1 or coords2[1] == -1 or (abs(coords1[1] - coords2[1]) <= fuzziness)
+                        if startCondition and endCondition:
                             in_both_sets.add(set2elem)
                             break
                     else:
@@ -102,11 +104,14 @@ class ToolComparer:
         return False
 
     def add_data(self, majiq_result, majiq_denovo, majiq_has_reads, flair_result):
+        """
 
-        if self.args.fuzziness == 0:
-            only_in_flair, only_in_majiq, in_flair_and_majiq = self.compare_exact(flair_result, majiq_result)
-        else:
-            only_in_flair, only_in_majiq, in_flair_and_majiq = self.compare_fuzzy(flair_result, majiq_result, self.args.fuzziness)
+        """
+
+        # if self.args.fuzziness == 0:
+        #     only_in_flair, only_in_majiq, in_flair_and_majiq = self.compare_exact(flair_result, majiq_result)
+        # else:
+        only_in_flair, only_in_majiq, in_flair_and_majiq = self.compare_fuzzy(flair_result, majiq_result, self.args.fuzziness)
 
         tmpcounts = self._makeCountsObj()
 
@@ -125,10 +130,10 @@ class ToolComparer:
             else:
                 self.incCountPrint(tmpcounts, transcript, countComp(True, False, True))
         for transcript in only_in_flair:
-            if self._is_partial_isoform(only_in_majiq, transcript, self.args.fuzziness):
-                self.incCountPrint(tmpcounts, transcript, 'partial')
-            else:
-                self.incCountPrint(tmpcounts, transcript, countComp(False, True, False))
+            # if self._is_partial_isoform(only_in_majiq, transcript, self.args.fuzziness):
+            #     self.incCountPrint(tmpcounts, transcript, 'partial')
+            # else:
+            self.incCountPrint(tmpcounts, transcript, countComp(False, True, False))
 
         for k, v in tmpcounts.items():
             self.counts[k] += v

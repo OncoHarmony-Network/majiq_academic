@@ -12,22 +12,30 @@ class FlairReader:
     def has_gene(self, gene_id):
         return len(self.df[self.df['gene_id'] == gene_id].index) != 0
 
-    def gene(self, gene_id, extent=None):
+    def gene(self, gene_id, extent=None, ignore_starts_ends=False):
 
         df_gene = self.df[self.df['gene_id'] == gene_id]
 
         found_transcripts = set()
-        transcript_exons = set()
+        transcript_exons = []
         transcript_meta = {}
+
+        def append_next(_transcript_exons):
+            if _transcript_exons:
+                if ignore_starts_ends:
+                    _transcript_exons[0] = exon(-1, _transcript_exons[0].end)
+                    _transcript_exons[-1] = exon(_transcript_exons[-1].start, -1)
+                _transcript_exons = frozenset(_transcript_exons)
+                if not _transcript_exons in found_transcripts:
+                    found_transcripts.add(_transcript_exons)
+                    return tuple(_transcript_exons), transcript_meta
 
         for index, row in df_gene.iterrows():
 
             if row.feature == 'transcript':
-                if transcript_exons:
-                    transcript_exons = frozenset(transcript_exons)
-                    if not transcript_exons in found_transcripts:
-                        found_transcripts.add(transcript_exons)
-                        yield tuple(transcript_exons), transcript_meta
+                ret = append_next(transcript_exons)
+                if ret:
+                    yield ret
 
                 transcript_exons = []
                 transcript_meta = {x: getattr(row, x) for x in ('strand', 'gene_id', 'transcript_id')}
@@ -35,6 +43,8 @@ class FlairReader:
 
             elif row.feature == 'exon':
                 _exon = exon(int(row.start), int(row.end))
+
+
                 if extent:
                     if (_exon.end > extent[0] and _exon.end < extent[1]) or \
                        (_exon.start > extent[0] and _exon.start < extent[1]):
@@ -42,11 +52,9 @@ class FlairReader:
                 else:
                     transcript_exons.append(_exon)
 
-        if transcript_exons:
-            transcript_exons = frozenset(transcript_exons)
-            if not transcript_exons in found_transcripts:
-                found_transcripts.add(transcript_exons)
-                yield tuple(transcript_exons), transcript_meta
+        ret = append_next(transcript_exons)  # catch the last append
+        if ret:
+            yield ret
 
 
 if __name__ == "__main__":

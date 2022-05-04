@@ -129,10 +129,10 @@ def compare_tools(modules=False):
 
 
                     flair_exons = set()
-                    ord_flair_exons = tuple(x[0] for x in flairreader.gene(flair_gene_id, extent=majiq_module_extent))
+                    ord_flair_exons = tuple(x[0] for x in flairreader.gene(flair_gene_id, extent=majiq_module_extent, ignore_starts_ends=True))
                     for transcript in ord_flair_exons:
                         if modules:
-                            flair_exons.add(tuple(exon(max(majiq_module_extent[0], e.start), min(majiq_module_extent[1], e.end)) for e in transcript))
+                            flair_exons.add(tuple(exon(max(majiq_module_extent[0], e.start) if e.start != -1 else -1, min(majiq_module_extent[1], e.end) if e.end != -1 else -1) for e in transcript))
                         else:
                             flair_exons.add(tuple(exon(e.start, e.end) for e in transcript))
 
@@ -141,7 +141,7 @@ def compare_tools(modules=False):
                     majiq_has_reads = {}
                     for (ord_majiq_transcript, majiq_meta, denovo, has_reads) in majiqParser.getAllPaths(module_idx=module_idx if modules else None):
                         if modules:
-                            set_key = tuple(exon(max(majiq_module_extent[0], e.start), min(majiq_module_extent[1], e.end)) for e in ord_majiq_transcript)
+                            set_key = tuple(exon(max(majiq_module_extent[0], e.start) if e.start != -1 else -1, min(majiq_module_extent[1], e.end) if e.end != -1 else -1) for e in ord_majiq_transcript)
                         else:
                             set_key = tuple(exon(e.start, e.end) for e in ord_majiq_transcript)
                         majiq_exons.add(set_key)
