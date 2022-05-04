@@ -111,6 +111,7 @@ class MajiqV2Reader:
 
     def getAllPathsUtil(self, u, d, visited, path, start=None, dont_append=False, is_denovo=False, has_reads=True):
 
+
         visited[u._idx]= True
         if start is None:
             start = u.start
@@ -192,8 +193,13 @@ class MajiqV2Reader:
             for alt_end in alt_ends:
                 paths2search.append((alt_start, alt_end))
 
+        total_paths = 0
         for start, end in paths2search:
             for path, is_denovo, has_reads in self.getAllPathsBetweenNodes(start, end):
+                total_paths += 1
+                if total_paths > 10000:
+                    raise RecursionError("Skipping gene with greater than 10000 paths")
+
                 exons = tuple(exon(n.start, n.end) for n in path)
                 #print("PATH", exons)
                 yield exons, {}, is_denovo, has_reads

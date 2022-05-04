@@ -94,7 +94,7 @@ def compare_tools(modules=False):
 
         for i, (majiq_gene_id, flair_gene_id) in enumerate(zip(majiq_gene_ids, flair_gene_ids)):
 
-            print('Processing Genes [%d/%d]\r' % (i, work_size), end="")
+            print('Processing Genes [%d/%d] (%s)\r' % (i, work_size, majiq_gene_id), end="")
 
             try:
                 if not flairreader.has_gene(flair_gene_id):
