@@ -59,8 +59,6 @@ def plot(only_in_flair, only_in_majiq, in_flair_and_majiq, filename, module_exte
     print(in_flair_and_majiq)
     print('---------------------')
 
-
-
     delayed_patches = []
     y = transcript_height_padding
     colors = (flairColor, majiqColor, bothColor)
@@ -71,13 +69,11 @@ def plot(only_in_flair, only_in_majiq, in_flair_and_majiq, filename, module_exte
             for _exon in exons:
 
                 if _exon.start == -1:
-                    print('!', _exon)
                     _exon = exon(_exon.end, _exon.end)
 
                 if _exon.end == -1:
                     _exon = exon(_exon.start, _exon.start)
 
-                print(_exon)
                 x = _exon.start
 
                 gene_start = min(gene_start, _exon.start)

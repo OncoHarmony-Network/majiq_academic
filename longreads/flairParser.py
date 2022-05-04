@@ -20,12 +20,15 @@ class FlairReader:
         transcript_exons = []
         transcript_meta = {}
 
+
+
         def append_next(_transcript_exons):
             if _transcript_exons:
+                #_transcript_exons = sorted(_transcript_exons, key=lambda e: e.start)
                 if ignore_starts_ends:
                     _transcript_exons[0] = exon(-1, _transcript_exons[0].end)
                     _transcript_exons[-1] = exon(_transcript_exons[-1].start, -1)
-                _transcript_exons = frozenset(_transcript_exons)
+                _transcript_exons = tuple(_transcript_exons)
                 if not _transcript_exons in found_transcripts:
                     found_transcripts.add(_transcript_exons)
                     return tuple(_transcript_exons), transcript_meta
@@ -46,8 +49,8 @@ class FlairReader:
 
 
                 if extent:
-                    if (_exon.end > extent[0] and _exon.end < extent[1]) or \
-                       (_exon.start > extent[0] and _exon.start < extent[1]):
+                    if (_exon.end >= extent[0] and _exon.end <= extent[1]) or \
+                       (_exon.start >= extent[0] and _exon.start <= extent[1]):
                         transcript_exons.append(_exon)
                 else:
                     transcript_exons.append(_exon)

@@ -130,6 +130,7 @@ def compare_tools(modules=False):
 
                     flair_exons = set()
                     ord_flair_exons = tuple(x[0] for x in flairreader.gene(flair_gene_id, extent=majiq_module_extent, ignore_starts_ends=True))
+
                     for transcript in ord_flair_exons:
                         if modules:
                             flair_exons.add(tuple(exon(max(majiq_module_extent[0], e.start) if e.start != -1 else -1, min(majiq_module_extent[1], e.end) if e.end != -1 else -1) for e in transcript))
@@ -147,6 +148,7 @@ def compare_tools(modules=False):
                         majiq_exons.add(set_key)
                         majiq_denovo[set_key] = denovo
                         majiq_has_reads[set_key] = has_reads
+
 
                     counts = tc.add_data(majiq_exons, majiq_denovo, majiq_has_reads, flair_exons)
 

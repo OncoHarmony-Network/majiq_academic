@@ -50,27 +50,47 @@ class ToolComparer:
         note in the fuzzy match case, the value of SET2 will be used in the return
         """
         only_in_set1 = set()
+        only_in_set2 = set()
         in_both_sets = set()
+        superset = set1.union(set2)
 
-        for set1elem in set1:
-            for set2elem in set2:
-                if set1elem == set2elem:
-                    in_both_sets.add(set2elem)
-                    break
-                if len(set1elem) == len(set2elem):
-                    for coords1, coords2 in zip(set1elem, set2elem):
-                        startCondition = coords1[0] == -1 or coords2[0] == -1 or (abs(coords1[0] - coords2[0]) <= fuzziness)
-                        endCondition = coords1[1] == -1 or coords2[1] == -1 or (abs(coords1[1] - coords2[1]) <= fuzziness)
-                        if startCondition and endCondition:
-                            in_both_sets.add(set2elem)
-                            break
-                    else:
-                        continue
-                    break
+        def compare(set1elem, set2elem):
+            if set1elem == set2elem:
+                return True
+            if len(set1elem) == len(set2elem):
+                for coords1, coords2 in zip(set1elem, set2elem):
+                    startCondition = coords1[0] == -1 or coords2[0] == -1 or (abs(coords1[0] - coords2[0]) <= fuzziness)
+                    endCondition = coords1[1] == -1 or coords2[1] == -1 or (abs(coords1[1] - coords2[1]) <= fuzziness)
+                    if not startCondition or not endCondition:
+                        break
+                else:
+                    return set2elem
+                        #print('true by cond', coords1[0] == -1, coords2[0] == -1, abs(coords1[0] - coords2[0]) <= fuzziness, coords1[1] == -1, coords2[1] == -1, abs(coords1[1] - coords2[1]) <= fuzziness)
+                        #return True
+            return False
+
+        for transcript in superset:
+            result1 = False
+            for t in set1:
+                if compare(transcript, t):
+                    if result1:
+                        if self.args.verbose:
+                            print("Warning, duplicate matches for transcript", transcript)
+                    result1 = True
+            result2 = False
+            for t in set2:
+                if compare(transcript, t):
+                    if result2:
+                        if self.args.verbose:
+                            print("Warning, duplicate matches for transcript", transcript)
+                    result2 = t
+
+            if result1 and result2:
+                in_both_sets.add(result2)
+            elif result1:
+                only_in_set1.add(transcript)
             else:
-                only_in_set1.add(set1elem)
-
-        only_in_set2 = set2.difference(in_both_sets)
+                only_in_set2.add(transcript)
 
         return only_in_set1, only_in_set2, in_both_sets
 
@@ -111,7 +131,12 @@ class ToolComparer:
         # if self.args.fuzziness == 0:
         #     only_in_flair, only_in_majiq, in_flair_and_majiq = self.compare_exact(flair_result, majiq_result)
         # else:
+        # print('F', flair_result)
+        # print('M', majiq_result)
         only_in_flair, only_in_majiq, in_flair_and_majiq = self.compare_fuzzy(flair_result, majiq_result, self.args.fuzziness)
+        # print(only_in_flair)
+        # print(in_flair_and_majiq)
+
 
         tmpcounts = self._makeCountsObj()
 
