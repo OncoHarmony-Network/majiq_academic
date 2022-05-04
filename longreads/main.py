@@ -164,6 +164,10 @@ def compare_tools(modules=False):
             except KeyboardInterrupt:
                 print('                                                  \r', end="")
                 break
+            except RecursionError:
+                print("Recursion too great, gene skipped!", majiq_gene_id, flair_gene_id)
+                with open(error_file_path, 'a') as f:
+                    f.write(traceback.format_exc())
             except:
                 print("Some error with gene!", majiq_gene_id, flair_gene_id)
                 with open(error_file_path, 'a') as f:
