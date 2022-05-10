@@ -164,7 +164,8 @@ class MajiqV2Reader:
         return len(self.modules)
 
     def getAllPaths(self, module_idx=None):
-
+        if len(self.graph.nodes) < 2:
+            return
         if module_idx is None:
             start_node_idx = 0
             end_node_idx = len(self.graph.nodes) - 1
@@ -172,6 +173,7 @@ class MajiqV2Reader:
             start_node_idx = self.modules[module_idx]._global_node_start_idx
             end_node_idx = self.modules[module_idx]._global_node_end_idx
 
+        #print(start_node_idx, end_node_idx, self.graph.nodes)
         paths2search = [(self.graph.nodes[start_node_idx], self.graph.nodes[end_node_idx])]
 
         alt_starts = []
@@ -210,14 +212,17 @@ if __name__ == "__main__":
     # parser = MajiqV2Reader(sqlpath)
     # parser.parse_splicegraph('generated')
 
-    sqlpath = '/slowdata/lrdata/majiq/splicegraph.sql'
+    sqlpath = '/home/pjewell/longreads_debug/splicegraph.sql'
     parser = MajiqV2Reader(sqlpath)
-    parser.parse_splicegraph("gene:ENSG00000109534")
+    #parser.parse_splicegraph("gene:ENSG00000109534")
+
+    gene_id = 'ENSG00000127603.32'
 
     # for i in range(3):
     #     print(parser.modules[i].nodes)
     #     print(parser.modules[i]._global_node_start_idx, parser.modules[i]._global_node_end_idx)
+    parser.parse_splicegraph(gene_id)
 
-    #print(parser.getNumModules())
-    for path in parser.getAllPaths(module_idx=1):
+    print(parser.getNumModules())
+    for path in parser.getAllPaths():
         print(path)

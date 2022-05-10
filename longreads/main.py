@@ -170,6 +170,9 @@ def compare_tools(modules=False):
                     f.write(traceback.format_exc())
             except:
                 print("Some error with gene!", majiq_gene_id, flair_gene_id)
+                if args.debug:
+                    print(traceback.format_exc())
+                    break
                 with open(error_file_path, 'a') as f:
                     f.write(traceback.format_exc())
 
