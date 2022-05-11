@@ -21,5 +21,8 @@ def get_args():
                         help='Reduce fuzziness of long-read sequencing')
     parser.add_argument('--debug', action='store_true',
                         help='Break and display full message on error')
+    parser.add_argument('--max-paths', type=int, default=10000,
+                        help='The maximum number of paths permissible per gene (or module in --per-module mode, '
+                             'after which that gene/module will be skipped. set to 0 for no skipping')
     args = parser.parse_args()
     return args

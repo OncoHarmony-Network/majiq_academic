@@ -195,13 +195,8 @@ class MajiqV2Reader:
             for alt_end in alt_ends:
                 paths2search.append((alt_start, alt_end))
 
-        total_paths = 0
         for start, end in paths2search:
             for path, is_denovo, has_reads in self.getAllPathsBetweenNodes(start, end):
-                total_paths += 1
-                if total_paths > 10000:
-                    raise RecursionError("Skipping gene with greater than 10000 paths")
-
                 exons = tuple(exon(n.start, n.end) for n in path)
                 #print("PATH", exons)
                 yield exons, {}, is_denovo, has_reads
@@ -216,7 +211,7 @@ if __name__ == "__main__":
     parser = MajiqV2Reader(sqlpath)
     #parser.parse_splicegraph("gene:ENSG00000109534")
 
-    gene_id = 'ENSG00000127603.32'
+    gene_id = 'ENSG00000046651.16'
 
     # for i in range(3):
     #     print(parser.modules[i].nodes)
@@ -224,5 +219,6 @@ if __name__ == "__main__":
     parser.parse_splicegraph(gene_id)
 
     print(parser.getNumModules())
-    for path in parser.getAllPaths():
-        print(path)
+    print(len(list(parser.getAllPaths())))
+    # for path in parser.getAllPaths():
+    #     print(path)

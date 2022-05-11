@@ -128,6 +128,7 @@ def compare_tools(modules=False):
                     """
 
 
+
                     flair_exons = set()
                     ord_flair_exons = tuple(x[0] for x in flairreader.gene(flair_gene_id, extent=majiq_module_extent, ignore_starts_ends=True))
 
@@ -140,7 +141,12 @@ def compare_tools(modules=False):
                     majiq_exons = set()
                     majiq_denovo = {}
                     majiq_has_reads = {}
+
+                    num_paths = 0
                     for (ord_majiq_transcript, majiq_meta, denovo, has_reads) in majiqParser.getAllPaths(module_idx=module_idx if modules else None):
+                        num_paths += 1
+                        if args.max_paths == 0 or num_paths > args.max_paths:
+                            raise RecursionError()
                         if modules:
                             set_key = tuple(exon(max(majiq_module_extent[0], e.start) if e.start != -1 else -1, min(majiq_module_extent[1], e.end) if e.end != -1 else -1) for e in ord_majiq_transcript)
                         else:
