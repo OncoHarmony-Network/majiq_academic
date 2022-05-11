@@ -92,22 +92,34 @@ def compare_tools(modules=False):
         writer = csv.writer(tsv, delimiter='\t')
         writer.writerow(fieldnames)
 
+        skipped_from_flair = 0
         for i, (majiq_gene_id, flair_gene_id) in enumerate(zip(majiq_gene_ids, flair_gene_ids)):
+
+            if args.debug_num_genes and i > args.debug_num_genes:
+                break
 
             print('Processing Genes [%d/%d] (%s)\r' % (i, work_size, majiq_gene_id), end="")
 
+
             try:
                 if not flairreader.has_gene(flair_gene_id):
+                    skipped_from_flair += 1
                     with open(error_file_path, 'a') as f:
-                        f.write(f"gene_id not found for flair, skipping: {flair_gene_id}")
+                        f.write(f"gene_id not found for flair, skipping: {flair_gene_id}\n")
                     continue
 
                 if not majiqParser.has_gene(majiq_gene_id):
                     with open(error_file_path, 'a') as f:
-                        f.write(f"gene_id not found for majiq, skipping: {majiq_gene_id}")
+                        f.write(f"gene_id not found for majiq, skipping: {majiq_gene_id}\n")
                     continue
 
                 majiqParser.parse_splicegraph(majiq_gene_id)
+
+                annotated_starts = majiqParser.annotated_starts(majiq_gene_id)
+                annotated_ends = majiqParser.annotated_ends(majiq_gene_id)
+                full_flair_exons = tuple(x[0] for x in flairreader.gene(flair_gene_id, extent=None, ignore_starts_ends=False))
+                gene_partial_count = tc.add_partials(full_flair_exons, annotated_starts, annotated_ends)
+
 
                 for module_idx in range(majiqParser.getNumModules() if modules else 1):
                     if args.verbose >= 1:
@@ -157,6 +169,7 @@ def compare_tools(modules=False):
 
 
                     counts = tc.add_data(majiq_exons, majiq_denovo, majiq_has_reads, flair_exons)
+                    counts['partial'] = gene_partial_count
 
                     row = [majiq_gene_id]
                     if modules:
@@ -173,16 +186,17 @@ def compare_tools(modules=False):
             except RecursionError:
                 print("Recursion too great, gene skipped!", majiq_gene_id, flair_gene_id)
                 with open(error_file_path, 'a') as f:
-                    f.write(traceback.format_exc())
+                    f.write(traceback.format_exc() + '\n')
             except:
                 print("Some error with gene!", majiq_gene_id, flair_gene_id)
                 if args.debug:
                     print(traceback.format_exc())
                     break
                 with open(error_file_path, 'a') as f:
-                    f.write(traceback.format_exc())
+                    f.write(traceback.format_exc() + '\n')
 
         print('                                                  \r', end="")
+        print(f'{round((skipped_from_flair / i) * 100.0, 1)}% of genes were missing from flair and skipped' )
 
 
     if not modules:

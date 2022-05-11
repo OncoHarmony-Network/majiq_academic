@@ -123,10 +123,36 @@ class ToolComparer:
 
         return False
 
+    def add_partials(self, flair_result, annotated_starts, annotated_ends):
+
+        total_partials = 0
+        for transcript in flair_result:
+
+            if (transcript[0].start not in annotated_starts) or (transcript[-1].end not in annotated_ends):
+                self.counts['partial'] += 1
+                total_partials += 1
+        return total_partials
+
+
+    def set_flair_unknown_ends(self, flair_result):
+        _flair_result = set()
+        for transcript in flair_result:
+            _flair_result.add((
+                exon(-1, transcript[0].end),
+                *transcript[1:-1],
+                exon(transcript[-1].start, -1)
+            ))
+        return _flair_result
+
     def add_data(self, majiq_result, majiq_denovo, majiq_has_reads, flair_result):
         """
 
         """
+        tmpcounts = self._makeCountsObj()
+
+        # before removing start / end information, we use it to check for partial isoforms
+
+
 
         # if self.args.fuzziness == 0:
         #     only_in_flair, only_in_majiq, in_flair_and_majiq = self.compare_exact(flair_result, majiq_result)
@@ -138,7 +164,7 @@ class ToolComparer:
         # print(in_flair_and_majiq)
 
 
-        tmpcounts = self._makeCountsObj()
+
 
         for transcript in in_flair_and_majiq:
             if majiq_denovo[transcript]:
@@ -159,6 +185,7 @@ class ToolComparer:
             #     self.incCountPrint(tmpcounts, transcript, 'partial')
             # else:
             self.incCountPrint(tmpcounts, transcript, countComp(False, True, False))
+
 
         for k, v in tmpcounts.items():
             self.counts[k] += v

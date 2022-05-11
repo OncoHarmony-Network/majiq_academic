@@ -38,7 +38,13 @@ class MajiqV2Reader:
         self.graph = Graph(gene_id, self.experiment_names, self.path)
         self.modules = self.graph.modules()
 
+    def annotated_starts(self, gene_id):
+        with SpliceGraph(self.path) as sg:
+            return set(x['coordinate'] for x in sg.alt_starts(gene_id))
 
+    def annotated_ends(self, gene_id):
+        with SpliceGraph(self.path) as sg:
+            return set(x['coordinate'] for x in sg.alt_ends(gene_id))
 
     def extent(self, gene_id):
         with ViewSpliceGraph(splice_graph_file=self.path) as sg:
@@ -159,13 +165,14 @@ if __name__ == "__main__":
     #parser.parse_splicegraph("gene:ENSG00000109534")
 
     gene_id = 'ENSG00000046651.16'
+    print(list(parser.annotated_starts(gene_id)))
 
     # for i in range(3):
     #     print(parser.modules[i].nodes)
     #     print(parser.modules[i]._global_node_start_idx, parser.modules[i]._global_node_end_idx)
-    parser.parse_splicegraph(gene_id)
+    #parser.parse_splicegraph(gene_id)
 
-    print(parser.getNumModules())
-    print(len(list(parser.getAllPaths())))
+    #print(parser.getNumModules())
+    #print(len(list(parser.getAllPaths())))
     # for path in parser.getAllPaths():
     #     print(path)
