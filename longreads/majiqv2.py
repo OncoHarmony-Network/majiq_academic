@@ -56,59 +56,6 @@ class MajiqV2Reader:
 
         return start, end
 
-
-    # def paths_through_gene(self):
-    #     """
-    #     For each module, recursively find paths out of the last exon entered in that path and add then to the running
-    #     list of junctions in the path until we reach the last exon in the module. Then output an ordered list of
-    #     paths that were found in each iteration.
-    #
-    #     This will end up skipping alt-first and "p-alt-first" because there are no junctions entering
-    #     So we need to manually run the algorithm starting at these nodes as well as the first node.
-    #     :return:
-    #     """
-    #
-    #
-    #     paths_found = []
-    #     for module in self.modules:
-    #         path_idx = 0
-    #         #print('=====================')
-    #
-    #         def add_junctions_out(node, prev_juncs, exon_length, is_module_length):
-    #             nonlocal path_idx
-    #             #print('iter', node, prev_juncs, node.edges, node == module.nodes[-1])
-    #             if not node.edges or node == module.nodes[-1]:
-    #                 if (not node.edges and node != module.nodes[-1]) or node.end == -1:
-    #                     # takes care of checking for ALE cases and p_ALE cases (they will always be at the end)
-    #                     is_module_length = False
-    #                 # got to end of possible path
-    #                 #print(node)
-    #                 exon_length = exon_length + (node.end - prev_juncs[-1].end) + 1
-    #                 if is_module_length:
-    #                     frameshift = str(exon_length % 3)
-    #                 else:
-    #                     frameshift = 'N/A'
-    #                 path_idx += 1
-    #                 paths_found.append((module.idx, path_idx, prev_juncs, frameshift))
-    #             else:
-    #                 for junc in node.edges:
-    #                     _prev_juncs = prev_juncs[:]
-    #                     _prev_juncs.append(junc)
-    #                     next_node = self.graph.end_node(junc)
-    #                     add_junctions_out(next_node, _prev_juncs,
-    #                                       exon_length + (junc.start - node.start) - (junc.end - next_node.start) + 1,
-    #                                       is_module_length)
-    #
-    #
-    #         # run over junctions from the start of the module
-    #         add_junctions_out(module.nodes[0], [], 0, True)
-    #         # find other possible starting nodes like afe, p_afe, and run over those
-    #         for node in module.nodes[1:-1]:
-    #             if not node.back_edges:
-    #                 add_junctions_out(node, [], 0, False)
-    #
-    #     return paths_found
-
     def getAllPathsUtil(self, u, d, visited, path, start=None, dont_append=False, is_denovo=False, has_reads=True):
 
 
