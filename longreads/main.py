@@ -196,7 +196,7 @@ def compare_tools(modules=False):
                     f.write(traceback.format_exc() + '\n')
 
         print('                                                  \r', end="")
-        print(f'{round((skipped_from_flair / i) * 100.0, 1)}% of genes were missing from flair and skipped' )
+        print(f'{round((skipped_from_flair / (i+1)) * 100.0, 1)}% of genes were missing from flair and skipped' )
 
 
     if not modules:
