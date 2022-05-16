@@ -22,17 +22,25 @@ class ToolComparer:
         to be an authoritative source.
         """
 
-        self.extra_count_keys = ['partial']
+        self.extra_count_keys = ['partial', 
+                                 'TTT',
+                                 'TTF', 
+                                 'TFT', 
+                                 'FTT', 
+                                 'majiq_combination', 
+                                 'maqji_novel', 
+                                 'flair_combination', 
+                                 'flair_novel']
         self.counts = self._makeCountsObj()
         self.args = args
 
 
     def _makeCountsObj(self):
         tmpcounts = {}
-        for majiq in (True, False):
-            for flair in (True, False):
-                for annotated in (True, False):
-                    tmpcounts[countComp(majiq, flair, annotated)] = 0
+        # for majiq in (True, False):
+        #     for flair in (True, False):
+        #         for annotated in (True, False):
+        #             tmpcounts[countComp(majiq, flair, annotated)] = 0
         for key in self.extra_count_keys:
             tmpcounts[key] = 0
         return tmpcounts
@@ -143,6 +151,18 @@ class ToolComparer:
                 exon(transcript[-1].start, -1)
             ))
         return _flair_result
+    
+    def all_start_end(self, current_transcript):
+        _all_coordinate = {(exon.start, exon.end) for exon in current_transcript}
+        return _all_coordinate
+    
+    def all_annotated(self, in_flair_and_majiq, only_in_majiq, majiq_denovo):
+        _annotated_coordinate = set()
+        for transcript in in_flair_and_majiq.union(only_in_majiq):
+            _annotated_coordinate.update({(exon.start, exon.end) for exon in transcript
+                                          if not majiq_denovo[transcript]})
+        return _annotated_coordinate
+                
 
     def add_data(self, majiq_result, majiq_denovo, majiq_has_reads, flair_result):
         """
@@ -162,29 +182,29 @@ class ToolComparer:
         only_in_flair, only_in_majiq, in_flair_and_majiq = self.compare_fuzzy(flair_result, majiq_result, self.args.fuzziness)
         # print(only_in_flair)
         # print(in_flair_and_majiq)
-
-
+  
+        _annotated_coordinate = self.all_annotated(in_flair_and_majiq, only_in_majiq, majiq_denovo)
 
 
         for transcript in in_flair_and_majiq:
             if majiq_denovo[transcript]:
-                self.incCountPrint(tmpcounts, transcript, countComp(True, True, False))
-            elif not majiq_has_reads[transcript]:
-                self.incCountPrint(tmpcounts, transcript, countComp(False, True, True))
+                count_key = 'TTF'
             else:
-                self.incCountPrint(tmpcounts, transcript, countComp(True, True, True))
+                count_key = 'FFT' if not majiq_has_reads[transcript] else 'TTT'
+            self.incCountPrint(tmpcounts, transcript, count_key)
+
         for transcript in only_in_majiq:
             if majiq_denovo[transcript]:
-                self.incCountPrint(tmpcounts, transcript, countComp(True, False, False))
-            elif not majiq_has_reads[transcript]:
-                self.incCountPrint(tmpcounts, transcript, countComp(False, False, True))
+                count_key = 'majiq_combination' if self.all_start_end(transcript) == _annotated_coordinate \
+                    else 'majiq_novel'
             else:
-                self.incCountPrint(tmpcounts, transcript, countComp(True, False, True))
+                count_key = 'FFT' if not majiq_has_reads[transcript] else 'TFT'
+            self.incCountPrint(tmpcounts, transcript, count_key)
+
         for transcript in only_in_flair:
-            # if self._is_partial_isoform(only_in_majiq, transcript, self.args.fuzziness):
-            #     self.incCountPrint(tmpcounts, transcript, 'partial')
-            # else:
-            self.incCountPrint(tmpcounts, transcript, countComp(False, True, False))
+            count_key = 'flair_combination' if self.all_start_end(transcript) == _annotated_coordinate \
+                else 'flair_novel'
+            self.incCountPrint(tmpcounts, transcript, count_key)
 
 
         for k, v in tmpcounts.items():
