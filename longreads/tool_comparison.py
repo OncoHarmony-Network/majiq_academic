@@ -33,7 +33,7 @@ class ToolComparer:
                                  'majiq_novel', 
                                  'flair_combination', 
                                  'flair_novel',
-                                 'flair_partial'
+                                 'partial'
                                  ]
         self.counts = self._makeCountsObj()
         self.args = args
