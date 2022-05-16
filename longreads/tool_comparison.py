@@ -22,15 +22,19 @@ class ToolComparer:
         to be an authoritative source.
         """
 
-        self.extra_count_keys = ['partial', 
-                                 'TTT',
+        self.extra_count_keys = ['TTT',
                                  'TTF', 
                                  'TFT', 
-                                 'FTT', 
+                                 'TFF',
+                                 'FTT',
+                                 'FTF',
+                                 'FFT',
                                  'majiq_combination', 
-                                 'maqji_novel', 
+                                 'majiq_novel', 
                                  'flair_combination', 
-                                 'flair_novel']
+                                 'flair_novel',
+                                 'flair_partial'
+                                 ]
         self.counts = self._makeCountsObj()
         self.args = args
 
@@ -152,15 +156,22 @@ class ToolComparer:
             ))
         return _flair_result
     
-    def all_start_end(self, current_transcript):
-        _all_coordinate = {(exon.start, exon.end) for exon in current_transcript}
+    def current_coordinate(self, current_transcript):
+        _all_coordinate = set()
+        for exon in current_transcript:
+            _all_coordinate.add(exon.start)
+            _all_coordinate.add(exon.end)
+            #_all_coordinate.union(exon.start, exon.end)
         return _all_coordinate
     
     def all_annotated(self, in_flair_and_majiq, only_in_majiq, majiq_denovo):
         _annotated_coordinate = set()
         for transcript in in_flair_and_majiq.union(only_in_majiq):
-            _annotated_coordinate.update({(exon.start, exon.end) for exon in transcript
-                                          if not majiq_denovo[transcript]})
+            if not majiq_denovo[transcript]:
+                for exon in transcript:       
+                    _annotated_coordinate.add(exon.start)
+                    _annotated_coordinate.add(exon.end)
+
         return _annotated_coordinate
                 
 
@@ -188,24 +199,33 @@ class ToolComparer:
 
         for transcript in in_flair_and_majiq:
             if majiq_denovo[transcript]:
-                count_key = 'TTF'
+                self.incCountPrint(tmpcounts, transcript, 'TTF')
             else:
-                count_key = 'FFT' if not majiq_has_reads[transcript] else 'TTT'
-            self.incCountPrint(tmpcounts, transcript, count_key)
+                if majiq_has_reads[transcript]:
+                    self.incCountPrint(tmpcounts, transcript, 'TTT')
+                else:
+                    self.incCountPrint(tmpcounts, transcript, 'FTT')
+                    if not _annotated_coordinate.difference(self.all_start_end(transcript)):
+                        self.incCountPrint(tmpcounts, transcript, 'flair_combination')
+                    else:
+                        self.incCountPrint(tmpcounts, transcript, 'flair_novel')
 
         for transcript in only_in_majiq:
             if majiq_denovo[transcript]:
-                count_key = 'majiq_combination' if self.all_start_end(transcript) == _annotated_coordinate \
-                    else 'majiq_novel'
+                self.incCountPrint(tmpcounts, transcript, 'TFF')
+                if not _annotated_coordinate.difference(self.all_start_end(transcript)):
+                    self.incCountPrint(tmpcounts, transcript, 'majiq_combination')            
+                else:
+                    self.incCountPrint(tmpcounts, transcript, 'majiq_novel')
             else:
-                count_key = 'FFT' if not majiq_has_reads[transcript] else 'TFT'
-            self.incCountPrint(tmpcounts, transcript, count_key)
+                if not majiq_has_reads[transcript]:
+                    self.incCountPrint(tmpcounts, transcript, 'FFT')
+                else:
+                    self.incCountPrint(tmpcounts, transcript, 'TFT')
 
         for transcript in only_in_flair:
-            count_key = 'flair_combination' if self.all_start_end(transcript) == _annotated_coordinate \
-                else 'flair_novel'
-            self.incCountPrint(tmpcounts, transcript, count_key)
-
+            self.incCountPrint(tmpcounts, transcript, 'FTF')
+            self.incCountPrint(tmpcounts, transcript, 'flair_novel')
 
         for k, v in tmpcounts.items():
             self.counts[k] += v

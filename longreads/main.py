@@ -83,10 +83,10 @@ def compare_tools(modules=False):
         fieldnames = ['gene_id']
         if modules:
             fieldnames.append('module_idx')
-        for majiq in ('T', 'F'):
-            for flair in ('T', 'F'):
-                for annotated in ('T', 'F'):
-                    fieldnames.append(f'{majiq}{flair}{annotated}')
+        # for majiq in ('T', 'F'):
+        #     for flair in ('T', 'F'):
+        #         for annotated in ('T', 'F'):
+        #             fieldnames.append(f'{majiq}{flair}{annotated}')
         for key in tc.extra_count_keys:
             fieldnames.append(key)
         writer = csv.writer(tsv, delimiter='\t')
