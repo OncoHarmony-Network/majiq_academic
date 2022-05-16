@@ -17,8 +17,7 @@ class MajiqV2Reader:
     def gene_ids(self):
         with SpliceGraph(self.path) as sg:
             for entry in sg.genes():
-                if entry['strand'] == '+':
-                    yield entry['id']
+                yield entry['id']
 
     def has_gene(self, gene_id):
         with SpliceGraph(self.path) as sg:
@@ -160,19 +159,21 @@ if __name__ == "__main__":
     # parser = MajiqV2Reader(sqlpath)
     # parser.parse_splicegraph('generated')
 
-    sqlpath = '/home/pjewell/longreads_debug/splicegraph.sql'
+    sqlpath = '/tmp/sg_generated.sql'
     parser = MajiqV2Reader(sqlpath)
     #parser.parse_splicegraph("gene:ENSG00000109534")
 
     gene_id = 'ENSG00000046651.16'
-    print(list(parser.annotated_starts(gene_id)))
+    gene_id = 'ENSG00000000003.15'
+    gene_id = 'mxe_long_alt_last_minus'
+    #print(list(parser.annotated_starts(gene_id)))
 
     # for i in range(3):
     #     print(parser.modules[i].nodes)
     #     print(parser.modules[i]._global_node_start_idx, parser.modules[i]._global_node_end_idx)
-    #parser.parse_splicegraph(gene_id)
+    parser.parse_splicegraph(gene_id)
 
     #print(parser.getNumModules())
     #print(len(list(parser.getAllPaths())))
-    # for path in parser.getAllPaths():
-    #     print(path)
+    for path in parser.getAllPaths():
+        print(path)
