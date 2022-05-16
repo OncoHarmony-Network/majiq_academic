@@ -205,7 +205,7 @@ class ToolComparer:
                     self.incCountPrint(tmpcounts, transcript, 'TTT')
                 else:
                     self.incCountPrint(tmpcounts, transcript, 'FTT')
-                    if not _annotated_coordinate.difference(self.all_start_end(transcript)):
+                    if not _annotated_coordinate.difference(self.current_coordinate(transcript)):
                         self.incCountPrint(tmpcounts, transcript, 'flair_combination')
                     else:
                         self.incCountPrint(tmpcounts, transcript, 'flair_novel')
@@ -213,7 +213,7 @@ class ToolComparer:
         for transcript in only_in_majiq:
             if majiq_denovo[transcript]:
                 self.incCountPrint(tmpcounts, transcript, 'TFF')
-                if not _annotated_coordinate.difference(self.all_start_end(transcript)):
+                if not _annotated_coordinate.difference(self.current_coordinate(transcript)):
                     self.incCountPrint(tmpcounts, transcript, 'majiq_combination')            
                 else:
                     self.incCountPrint(tmpcounts, transcript, 'majiq_novel')
