@@ -33,6 +33,8 @@ class ToolComparer:
                                  'majiq_novel', 
                                  'flair_combination', 
                                  'flair_novel',
+                                 'flair_combination_partial',
+                                 'flair_novel_partial',
                                  'flair_denovo_partial',
                                  'partial'
                                  ]
@@ -240,7 +242,7 @@ class ToolComparer:
             else:
                 self.incCountPrint(tmpcounts, transcript, 'flair_novel')
                 if (transcript[0].start not in annotated_starts) or (transcript[-1].end not in annotated_ends):
-                    self.incCountPrint(tmpcounts, transcript, 'flair_combination_novel')
+                    self.incCountPrint(tmpcounts, transcript, 'flair_novel_partial')
         
         for k, v in tmpcounts.items():
             self.counts[k] += v
