@@ -168,7 +168,7 @@ def compare_tools(modules=False):
                         majiq_has_reads[set_key] = has_reads
 
 
-                    counts = tc.add_data(majiq_exons, majiq_denovo, majiq_has_reads, flair_exons)
+                    counts = tc.add_data(majiq_exons, majiq_denovo, majiq_has_reads, flair_exons, annotated_starts, annotated_ends)
                     counts['partial'] = gene_partial_count
 
                     row = [majiq_gene_id]
