@@ -53,11 +53,12 @@ class BaseTsvWriter(MultiQuantWriter):
         :param output_path: The folder where all output TSV files will be written under
         :param graph: the Graph object of the gene
         """
+        self.graph = graph
         super().__init__()
 
         self.common_headers = ['module_id', 'gene_id', 'gene_name', 'seqid', 'strand']
 
-        self.graph = graph
+
         self.gene_id = gene_id
         self.strand = self.graph.strand if self.graph else None
 

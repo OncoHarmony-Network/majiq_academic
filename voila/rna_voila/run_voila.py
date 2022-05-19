@@ -216,6 +216,9 @@ classify_parser.add_argument('--heatmap-selection', choices=['shortest_junction'
 classify_parser.add_argument('--disable-metadata', action='store_true',
                              help="By default, there will be a commented-out JSON metadata for the run at the top of all output TSV files. "
                                   "If your pipeline doesn't work well with this format, this switch disables it.")
+classify_parser.add_argument('--show-read-counts', action='store_true',
+                             help="Show the read counts per experiment in the TSV output")
+
 
 classify_general_filter_parser = classify_parser.add_argument_group(
     "Limit the number of data processed to a specific target subset"
