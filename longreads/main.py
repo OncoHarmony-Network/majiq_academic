@@ -10,7 +10,11 @@ import pprint
 from config import get_args
 import csv
 import traceback
-
+import multiprocessing
+import time
+import os, sys
+from multiprocessing import Manager, Pool
+import glob
 
 #majiq_splicegraph_path = '/slowdata/lrdata/majiq/splicegraph.sql'
 #majiq_gene_id="gene:ENSG00000109534"
@@ -71,135 +75,218 @@ print('~~~Parsing Flair~~~')
 flairreader = flairParser.FlairReader(flair_gtf_path)
 print('~~~Done Parsing Flair~~~')
 
+def compare_gene(_args):
+    """
+    Single thread process self_contained
+
+    The general strategy involved each process writing to it's own file, and then merging them at the end of the run
+    """
+    gene_id, modules, output_path_format, q = _args
+
+    tc = ToolComparer(args)
+    if q:
+        pid = multiprocessing.current_process().pid
+        tsv_path = output_path_format.format('.' + str(pid))
+    else:
+        tsv_path = output_path_format.format('')
+
+    try:
 
 
-def compare_tools(modules=False):
+        majiqParser.parse_splicegraph(gene_id)
 
-    work_size = len(majiq_gene_ids)
+        annotated_starts = majiqParser.annotated_starts(gene_id)
+        annotated_ends = majiqParser.annotated_ends(gene_id)
+        full_flair_exons = tuple(x[0] for x in flairreader.gene(gene_id, extent=None, ignore_starts_ends=False))
+        gene_partial_count = tc.add_partials(full_flair_exons, annotated_starts, annotated_ends)
+
+
+        for module_idx in range(majiqParser.getNumModules() if modules else 1):
+            if args.verbose >= 1:
+                print(gene_id, '-------------------------')
+                if modules:
+                    print('module IDX', module_idx)
+
+
+
+
+            majiq_module_extent = majiqParser.moduleExtent(module_idx) if modules else None
+
+            """
+            for in-module, by default the exons we receive from majiq start/end are technically not part of the module
+            UNLESS, they have different start/end. As a simple way to deal with this, for matching purposes, we will trim all
+            exon coordinates at the start/end of the module to match the module coordinates
+            
+            """
+
+
+
+            flair_exons = set()
+            ord_flair_exons = tuple(x[0] for x in flairreader.gene(gene_id, extent=majiq_module_extent, ignore_starts_ends=True))
+
+            for transcript in ord_flair_exons:
+                if modules:
+                    flair_exons.add(tuple(exon(max(majiq_module_extent[0], e.start) if e.start != -1 else -1, min(majiq_module_extent[1], e.end) if e.end != -1 else -1) for e in transcript))
+                else:
+                    flair_exons.add(tuple(exon(e.start, e.end) for e in transcript))
+
+            majiq_exons = set()
+            majiq_denovo = {}
+            majiq_has_reads = {}
+
+            num_paths = 0
+            for (ord_majiq_transcript, majiq_meta, denovo, has_reads) in majiqParser.getAllPaths(module_idx=module_idx if modules else None):
+                num_paths += 1
+                if args.max_paths == 0 or num_paths > args.max_paths:
+                    raise RecursionError()
+                if modules:
+                    set_key = tuple(exon(max(majiq_module_extent[0], e.start) if e.start != -1 else -1, min(majiq_module_extent[1], e.end) if e.end != -1 else -1) for e in ord_majiq_transcript)
+                else:
+                    set_key = tuple(exon(e.start, e.end) for e in ord_majiq_transcript)
+                majiq_exons.add(set_key)
+                majiq_denovo[set_key] = denovo
+                majiq_has_reads[set_key] = has_reads
+
+
+            counts = tc.add_data(majiq_exons, majiq_denovo, majiq_has_reads, flair_exons)
+            counts['partial'] = gene_partial_count
+
+            row = [gene_id]
+            if modules:
+                row.append(module_idx)
+            for count in counts.values():
+                row.append(count)
+
+            with open(tsv_path, 'a') as tsv:
+                writer = csv.writer(tsv, delimiter='\t')
+                writer.writerow(row)
+
+            if args.verbose >= 1:
+                pprint.pprint(tc.counts)
+    except KeyboardInterrupt:
+        raise
+    except RecursionError:
+        if args.verbose >= 1:
+            print("Recursion too great, gene skipped!", gene_id)
+        with open(error_file_path, 'a') as f:
+            f.write(traceback.format_exc() + '\n')
+    except:
+        print("Some error with gene!", gene_id)
+        if args.debug:
+            print(traceback.format_exc())
+            return
+        with open(error_file_path, 'a') as f:
+            f.write(traceback.format_exc() + '\n')
+    finally:
+        if q:
+            q.put(None)
+
+def compare_tools(all_gene_ids, modules=False):
+
+    work_size = len(all_gene_ids)
 
     main_tsv_path = os.path.join(args.output_path, 'comparison.tsv')
+    output_path_format = main_tsv_path + "{0}"
+
     tc = ToolComparer(args)
-    with open(main_tsv_path, 'w') as tsv:
-        fieldnames = ['gene_id']
-        if modules:
-            fieldnames.append('module_idx')
-        for majiq in ('T', 'F'):
-            for flair in ('T', 'F'):
-                for annotated in ('T', 'F'):
-                    fieldnames.append(f'{majiq}{flair}{annotated}')
-        for key in tc.extra_count_keys:
-            fieldnames.append(key)
-        writer = csv.writer(tsv, delimiter='\t')
-        writer.writerow(fieldnames)
+    fieldnames = ['gene_id']
+    if modules:
+        fieldnames.append('module_idx')
+    for majiq in ('T', 'F'):
+        for flair in ('T', 'F'):
+            for annotated in ('T', 'F'):
+                fieldnames.append(f'{majiq}{flair}{annotated}')
 
-        skipped_from_flair = 0
-        for i, (majiq_gene_id, flair_gene_id) in enumerate(zip(majiq_gene_ids, flair_gene_ids)):
+    for key in tc.extra_count_keys:
+        fieldnames.append(key)
 
-            if args.debug_num_genes and i > args.debug_num_genes:
-                break
-
-            print('Processing Genes [%d/%d] (%s)\r' % (i, work_size, majiq_gene_id), end="")
+    if args.debug or args.threads:
+        with open(main_tsv_path, 'w') as tsv:
+            writer = csv.writer(tsv, delimiter='\t')
+            writer.writerow(fieldnames)
 
 
-            try:
-                if not flairreader.has_gene(flair_gene_id):
-                    skipped_from_flair += 1
-                    with open(error_file_path, 'a') as f:
-                        f.write(f"gene_id not found for flair, skipping: {flair_gene_id}\n")
-                    continue
+    if args.debug_num_genes and args.debug_num_genes > 0:
+        all_gene_ids = all_gene_ids[:args.debug_num_genes]
 
-                if not majiqParser.has_gene(majiq_gene_id):
-                    with open(error_file_path, 'a') as f:
-                        f.write(f"gene_id not found for majiq, skipping: {majiq_gene_id}\n")
-                    continue
-
-                majiqParser.parse_splicegraph(majiq_gene_id)
-
-                annotated_starts = majiqParser.annotated_starts(majiq_gene_id)
-                annotated_ends = majiqParser.annotated_ends(majiq_gene_id)
-                full_flair_exons = tuple(x[0] for x in flairreader.gene(flair_gene_id, extent=None, ignore_starts_ends=False))
-                gene_partial_count = tc.add_partials(full_flair_exons, annotated_starts, annotated_ends)
-
-
-                for module_idx in range(majiqParser.getNumModules() if modules else 1):
-                    if args.verbose >= 1:
-                        print(majiq_gene_id, '-------------------------')
-                        if modules:
-                            print('module IDX', module_idx)
+    skipped_from_flair = 0
+    # for i, gene_id in enumerate(all_gene_ids):
+    #
+    #     if not flairreader.has_gene(gene_id):
+    #         skipped_from_flair += 1
+    #         with open(error_file_path, 'a') as f:
+    #             f.write(f"gene_id not found for flair, skipping: {gene_id}\n")
+    #         continue
+    #
+    #     if not majiqParser.has_gene(gene_id):
+    #         with open(error_file_path, 'a') as f:
+    #             f.write(f"gene_id not found for majiq, skipping: {gene_id}\n")
+    #         continue
 
 
 
 
-                    majiq_module_extent = majiqParser.moduleExtent(module_idx) if modules else None
+    if args.threads == 1:
+        try:
+            for i, gene_id in enumerate(all_gene_ids):
+                # t1 = time.time()
+                # gene_id, modules, tc, output_path_format, q
+                compare_gene((gene_id, modules, output_path_format, None))
+                # t2 = time.time()
+                # print(t2-t1)
+                print('Processing Genes [%d/%d]\r' % (i, work_size), end="")
+        except KeyboardInterrupt:
+            print('                                                  \r', end="")
 
-                    """
-                    for in-module, by default the exons we receive from majiq start/end are technically not part of the module
-                    UNLESS, they have different start/end. As a simple way to deal with this, for matching purposes, we will trim all
-                    exon coordinates at the start/end of the module to match the module coordinates
-                    
-                    """
-
-
-
-                    flair_exons = set()
-                    ord_flair_exons = tuple(x[0] for x in flairreader.gene(flair_gene_id, extent=majiq_module_extent, ignore_starts_ends=True))
-
-                    for transcript in ord_flair_exons:
-                        if modules:
-                            flair_exons.add(tuple(exon(max(majiq_module_extent[0], e.start) if e.start != -1 else -1, min(majiq_module_extent[1], e.end) if e.end != -1 else -1) for e in transcript))
-                        else:
-                            flair_exons.add(tuple(exon(e.start, e.end) for e in transcript))
-
-                    majiq_exons = set()
-                    majiq_denovo = {}
-                    majiq_has_reads = {}
-
-                    num_paths = 0
-                    for (ord_majiq_transcript, majiq_meta, denovo, has_reads) in majiqParser.getAllPaths(module_idx=module_idx if modules else None):
-                        num_paths += 1
-                        if args.max_paths == 0 or num_paths > args.max_paths:
-                            raise RecursionError()
-                        if modules:
-                            set_key = tuple(exon(max(majiq_module_extent[0], e.start) if e.start != -1 else -1, min(majiq_module_extent[1], e.end) if e.end != -1 else -1) for e in ord_majiq_transcript)
-                        else:
-                            set_key = tuple(exon(e.start, e.end) for e in ord_majiq_transcript)
-                        majiq_exons.add(set_key)
-                        majiq_denovo[set_key] = denovo
-                        majiq_has_reads[set_key] = has_reads
-
-
-                    counts = tc.add_data(majiq_exons, majiq_denovo, majiq_has_reads, flair_exons)
-                    counts['partial'] = gene_partial_count
-
-                    row = [majiq_gene_id]
-                    if modules:
-                        row.append(module_idx)
-                    for count in counts.values():
-                        row.append(count)
-                    writer.writerow(row)
-
-                    if args.verbose >= 1:
-                        pprint.pprint(tc.counts)
-            except KeyboardInterrupt:
-                print('                                                  \r', end="")
-                break
-            except RecursionError:
-                print("Recursion too great, gene skipped!", majiq_gene_id, flair_gene_id)
-                with open(error_file_path, 'a') as f:
-                    f.write(traceback.format_exc() + '\n')
-            except:
-                print("Some error with gene!", majiq_gene_id, flair_gene_id)
-                if args.debug:
-                    print(traceback.format_exc())
-                    break
-                with open(error_file_path, 'a') as f:
-                    f.write(traceback.format_exc() + '\n')
 
         print('                                                  \r', end="")
-        print(f'{round((skipped_from_flair / (i+1)) * 100.0, 1)}% of genes were missing from flair and skipped' )
+
+    else:
+        old_read_files = glob.glob(args.output_path + "/comparison.tsv.*")
+        for _f in old_read_files:
+            os.remove(_f)
 
 
-    if not modules:
+        manager = Manager()
+        q = manager.Queue()
+
+        p = Pool(args.threads)
+
+
+
+        # voila_index = p.map(self._heterogen_pool_add_index, zip(lsv_ids, range(work_size), repeat(work_size)))
+        classifier_pool = p.map_async(compare_gene, ((x, modules, output_path_format, q) for x in all_gene_ids),)
+
+        # monitor loop
+        while True:
+
+            if classifier_pool.ready():
+                break
+            else:
+                size = q.qsize()
+                print('Processing Genes [%d/%d]\r' % (size, work_size), end="")
+                time.sleep(2)
+
+        print('                                                  \r', end="")
+        res = classifier_pool.get()
+
+
+
+        #print('                                                  \r', end="")
+        #print(f'{round((skipped_from_flair / (i+1)) * 100.0, 1)}% of genes were missing from flair and skipped')
+
+
+    if not (args.threads == 1):
+        read_files = glob.glob(args.output_path + "/comparison.tsv.*")
+
+        with open(main_tsv_path, "wb") as outfile:
+            outfile.write(('\t'.join(fieldnames) + '\n').encode())
+            for f in read_files:
+                with open(f, "rb") as infile:
+                    outfile.write(infile.read())
+                os.remove(f)
+
+    if not modules and args.threads == 1:
         final_counts_path = os.path.join(args.output_path, 'comparison.totals.txt')
         with open(final_counts_path, 'w') as f:
             line = ''
@@ -223,5 +310,5 @@ def compare_tools(modules=False):
 if __name__ == "__main__":
 
     print('~~~Running comparison~~~')
-    compare_tools(modules=args.per_module)
+    compare_tools(majiq_gene_ids, modules=args.per_module)
     print('~~~Finished Running comparison~~~')

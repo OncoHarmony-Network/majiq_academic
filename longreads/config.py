@@ -26,5 +26,7 @@ def get_args():
     parser.add_argument('--max-paths', type=int, default=10000,
                         help='The maximum number of paths permissible per gene (or module in --per-module mode, '
                              'after which that gene/module will be skipped. set to 0 for no skipping')
+    parser.add_argument('-j', '--threads', type=int, default=1,
+                        help='If greater than 1, will use multiple processes')
     args = parser.parse_args()
     return args
