@@ -11,6 +11,8 @@ from rna_voila.api.matrix_utils import generate_variances
 from rna_voila.api import view_matrix
 from collections import OrderedDict
 from rna_voila.api import SpliceGraph
+from statistics import median, StatisticsError
+from math import ceil
 
 def fRound(x):
     try:
@@ -403,16 +405,15 @@ class QuantificationWriter:
 
             return f
 
-        def _reads(splice_graph_file, gene_id, experiment_name):
+        def _reads(splice_graph_file, gene_id, _experiment_names):
             def f(lsv_id, edge=None):
                 with SpliceGraph(splice_graph_file) as sg:
 
                     try:
                         junc = {'start': edge.start, 'end': edge.end, 'gene_id': gene_id}
-                        reads = next(sg.junction_reads_exp(junc, [experiment_name]))['reads']
+                        reads = ceil(median((x['reads'] for x in sg.junction_reads_exp(junc, _experiment_names))))
                     except:
                         reads = ''
-
 
                 return [reads]
 
@@ -425,13 +426,6 @@ class QuantificationWriter:
 
         # junc {'gene_id': 'ENSMUSG00000001419', 'start': 88168458, 'end': 88168632, 'has_reads': 1, 'annotated': 1, 'is_simplified': 0, 'is_constitutive': 0}
 
-        if self.config.show_read_counts:
-            with SpliceGraph(self.config.splice_graph_file) as sg:
-                experiment_names = sg.experiment_names
-
-            for experiment_name in experiment_names:
-                header = f'{experiment_name}_reads'
-                tmp[header] = (_reads, self.config.splice_graph_file, self.graph.gene_id if self.graph else None, experiment_name)
 
 
         for voila_file in self.config.voila_files:
@@ -439,15 +433,24 @@ class QuantificationWriter:
             with Matrix(voila_file) as m:
                 analysis_type = m.analysis_type
                 group_names = m.group_names
+                experiment_names = m.experiment_names
                 if analysis_type == constants.ANALYSIS_HETEROGEN:
                     stat_names = m.stat_names
                 else:
                     stat_names = None
 
 
+
             if analysis_type == constants.ANALYSIS_PSI:
-                for group in group_names:
-                    for key in ("median_psi", "var_psi",):
+                for group, experiments in zip(group_names, experiment_names[:-1]):
+
+                    if self.config.show_read_counts:
+
+                        header = f'{group}_median_reads'
+                        tmp[header] = (_reads, self.config.splice_graph_file, self.graph.gene_id if self.graph else None, experiments)
+
+
+                for key in ("median_psi", "var_psi",):
                         header = "%s_%s" % (group, key)
                         if header in tmp:
                             tmp[header][1].append(voila_file)
