@@ -13,7 +13,7 @@ def read_result_file(path):
             yield line
 
 
-subprocess.check_call("python generate_splice_graph.py -o testcases/sg_generated --json testcases/splice_graphs2.json --template-sql ../voila/rna_voila/api/model.sql", shell=True)
+subprocess.check_call("python generate_splice_graph.py -o testcases/sg_generated --json testcases/splice_graphs.json --template-sql ../voila/rna_voila/api/model.sql", shell=True)
 subprocess.check_call("python main.py --majiq-splicegraph-path testcases/sg_generated.sql --flair-gtf-path /home/pjewell/longreads_debug/collapse3.isoforms.gtf --output-path testcases/result -j 1 --debug", shell=True)
 
 errors = False
