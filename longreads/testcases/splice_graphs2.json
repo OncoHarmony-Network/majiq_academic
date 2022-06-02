@@ -1,0 +1,327 @@
+{
+  "ENSG00000111111.5": {
+    "desc": "TTF: both in majiq and flair, not annotation",
+    "strand": "+",
+    "exons": [
+      [1000, 2000],
+      [3000, 4000],
+      [5000, 6000]
+    ],
+    "exons_annotated": [
+      1,1,1
+    ],
+    "junctions": [
+      [2000, 3000],
+      [4000, 5000]
+    ],
+    "introns": [
+    ],
+    "junctions_reads": [
+      10,
+      10
+    ],
+    "introns_reads": [
+
+    ],
+    "junctions_annotated": [
+      0,
+      0
+    ],
+    "introns_annotated": [
+
+    ]
+  },
+  "ENSG00000111112.5": {
+    "desc": "TTT & FFT: in majiq, flair, and annotation / in annoatiaon, but not in majiq and flair",
+    "strand": "+",
+    "exons": [
+      [1000, 2000],
+      [3000, 4000],
+      [5000, 6000]
+    ],
+    "exons_annotated": [
+      1,1,1
+    ],
+    "junctions": [
+      [2000,5000],
+      [2000, 3000],
+      [4000, 5000]
+    ],
+    "introns": [
+    ],
+    "junctions_reads": [
+      0,
+      10,
+      10
+    ],
+    "introns_reads": [
+
+    ],
+    "junctions_annotated": [
+      1,
+      1,
+      1
+    ],
+    "introns_annotated": [
+
+    ]
+  },
+  "ENSG00000111113.5": {
+    "desc": "FTT: not in majiq, but in flair and annotation",
+    "strand": "+",
+    "exons": [
+      [1000, 2000],
+      [3000, 4000],
+      [5000, 6000]
+    ],
+    "exons_annotated": [
+      1,1,1
+    ],
+    "junctions": [
+      [2000, 5000],
+      [2000, 3000],
+      [4000, 5000]
+    ],
+    "introns": [
+    ],
+    "junctions_reads": [
+      0,
+      10,
+      10
+    ],
+    "introns_reads": [
+
+    ],
+    "junctions_annotated": [
+      1,
+      1,
+      1
+    ],
+    "introns_annotated": [
+
+    ]
+  },
+  "ENSG00000111114.5": {
+    "desc": "TFF (majiq combination): in majiq, but not in flair and annotation",
+    "strand": "+",
+    "exons": [
+      [1000, 2000],
+      [3000, 4000],
+      [5000, 6000]
+    ],
+    "exons_annotated": [
+      1,1,1
+    ],
+    "junctions": [
+      [2000, 3000],
+      [2000, 5000]
+    ],
+    "introns": [
+    ],
+    "junctions_reads": [
+      10,
+      10
+    ],
+    "introns_reads": [
+
+    ],
+    "junctions_annotated": [
+      0,
+      1
+    ],
+    "introns_annotated": [
+
+    ]
+  },
+  "ENSG00000111115.5": {
+    "desc": "TFF (majiq novel): in majiq, but not in flair and annotation",
+    "strand": "+",
+    "exons": [
+      [1000, 2000],
+      [3000, 4000],
+      [5000, 6000]
+    ],
+    "exons_annotated": [
+      1,1,1
+    ],
+    "junctions": [
+      [1700, 3000],
+      [2300, 3000],
+      [2000, 5000]
+    ],
+    "introns": [
+    ],
+    "junctions_reads": [
+      10,
+      10,
+      10
+    ],
+    "introns_reads": [
+
+    ],
+    "junctions_annotated": [
+      0,
+      0,
+      1
+    ],
+    "introns_annotated": [
+
+    ]
+  },
+  "ENSG00000111116.5": {
+    "desc": "TFT: in majiq and annoataion, but not in flair",
+    "strand": "+",
+    "exons": [
+      [1000, 2000],
+      [3000, 4000],
+      [5000, 6000]
+    ],
+    "exons_annotated": [
+      1,1,1
+    ],
+    "junctions": [
+      [1980, 3000],
+      [2000, 3000],
+      [4000, 5000]
+    ],
+    "introns": [
+    ],
+    "junctions_reads": [
+      10,
+      10,
+      10
+    ],
+    "introns_reads": [
+
+    ],
+    "junctions_annotated": [
+      1,
+      1,
+      1
+    ],
+    "introns_annotated": [
+
+    ]
+  },
+  "ENSG00000111117.5": {
+    "desc": "FTF (flair novel, combination): in flair, but not in majiq and annotation",
+    "strand": "+",
+    "exons": [
+      [1000, 2000],
+      [3000, 4000],
+      [5000, 6000]
+    ],
+    "exons_annotated": [
+      1,1,1
+    ],
+    "junctions": [
+      [2000, 3000],
+      [4000, 5000]
+    ],
+    "introns": [
+    ],
+    "junctions_reads": [
+      10,
+      10
+    ],
+    "introns_reads": [
+
+    ],
+    "junctions_annotated": [
+      1,
+      1
+    ],
+    "introns_annotated": [
+
+    ],
+    "TSS": [
+      1000,
+      1500
+    ],
+    "TES": [
+      5800,
+      6000
+    ]
+  },
+  "ENSG00000111118.5": {
+    "desc": "FTF (flair partial, partial + combination, patial + novel): in flair, but not in majiq and annotation",
+    "strand": "+",
+    "exons": [
+      [1000, 2000],
+      [3000, 4000],
+      [5000, 6000]
+    ],
+    "exons_annotated": [
+      1,1,1
+    ],
+    "junctions": [
+      [2000, 5000],
+      [4000, 5000]
+    ],
+    "introns": [
+    ],
+    "junctions_reads": [
+      10,
+      10
+    ],
+    "introns_reads": [
+
+    ],
+    "junctions_annotated": [
+      1,
+      1
+    ],
+    "introns_annotated": [
+
+    ],
+    "TSS": [
+      1000,
+      1500
+    ],
+    "TES": [
+      5800,
+      6000
+    ]
+  },
+  "ENSG00000111119.5": {
+    "desc": "FTF (flair partial + combination + novel, partial + novel): in flair, but not in majiq and annotation",
+    "strand": "+",
+    "exons": [
+      [1000, 2000],
+      [3000, 4000],
+      [5000, 6000]
+    ],
+    "exons_annotated": [
+      1,1,1
+    ],
+    "junctions": [
+      [2000, 3000],
+      [2000, 5000]
+    ],
+    "introns": [
+    ],
+    "junctions_reads": [
+      10,
+      10
+    ],
+    "introns_reads": [
+
+    ],
+    "junctions_annotated": [
+      1,
+      1
+    ],
+    "introns_annotated": [
+
+    ],
+    "TSS": [
+      1000,
+      1500
+    ],
+    "TES": [
+      5800,
+      6000
+    ]
+  }
+
+}
