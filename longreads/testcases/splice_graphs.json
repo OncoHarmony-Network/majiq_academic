@@ -1,6 +1,6 @@
 {
-  "TTF_majiq_flair": {
-    "desc": "ENSG00000111111.5",
+  "ENSG00000111111.5_TTF_majiq_flair": {
+    "desc": "in majiq and flair, not in annotation",
     "strand": "+",
     "exons": [
       [1000, 2000],
@@ -31,8 +31,8 @@
 
     ]
   },
-  "TTT_all_FFT_annoataion": {
-    "desc": "ENSG00000111112.5",
+  "ENSG00000111112.5_TTT_all_FFT_annoataion": {
+    "desc": "in majiq, flair, and annotationf / only in annotation",
     "strand": "+",
     "exons": [
       [1000, 2000],
@@ -66,8 +66,8 @@
 
     ]
   },
-  "FTT_flair_annotation": {
-    "desc": "ENSG00000111113.5",
+  "ENSG00000111113.5_FTT_flair_annotation": {
+    "desc": "in flair and annotation, not in majiq",
     "strand": "+",
     "exons": [
       [1000, 2000],
@@ -101,8 +101,8 @@
 
     ]
   },
-  "TFF_majiq_combination": {
-    "desc": "ENSG00000111114.5",
+  "ENSG00000111114.5_TFF_majiq_combination": {
+    "desc": "in majiq, not in flair and annotation",
     "strand": "+",
     "exons": [
       [1000, 2000],
@@ -133,8 +133,8 @@
 
     ]
   },
-  "TFF_majiq_novel": {
-    "desc": "ENSG00000111115.5",
+  "ENSG00000111115.5_TFF_majiq_novel": {
+    "desc": "in majiq, not in flair and annotation",
     "strand": "+",
     "exons": [
       [1000, 2000],
@@ -168,8 +168,8 @@
 
     ]
   },
-  "TFT_majiq_annotation": {
-    "desc": "ENSG00000111116.5",
+  "ENSG00000111116.5_TFT_majiq_annotation": {
+    "desc": "in majiq and annotation, not in flair",
     "strand": "+",
     "exons": [
       [1000, 2000],
@@ -203,8 +203,8 @@
 
     ]
   },
-  "FTF_flair_novel_combinataion": {
-    "desc": "ENSG00000111117.5",
+  "ENSG00000111117.5_FTF_flair_novel_combinataion": {
+    "desc": "in flair, not in majiq and annotation",
     "strand": "+",
     "exons": [
       [1000, 2000],
@@ -243,8 +243,8 @@
       6000
     ]
   },
-  "FTF_flair_only_partial_combination_partial_novel_partial": {
-    "desc": "ENSG00000111118.5",
+  "ENSG00000111118.5_FTF_flair_only_partial_combination_partial_novel_partial": {
+    "desc": "in flair, not in majiq and annotation",
     "strand": "+",
     "exons": [
       [1000, 2000],
@@ -283,8 +283,8 @@
       6000
     ]
   },
-  "FTF_flair_combination_novel_partial": {
-    "desc": "ENSG00000111119.5",
+  "ENSG00000111119.5_FTF_flair_combination_novel_partial": {
+    "desc": "in flair, not in majiq and annotation",
     "strand": "+",
     "exons": [
       [1000, 2000],
