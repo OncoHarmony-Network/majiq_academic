@@ -20,6 +20,17 @@ class ToolComparer:
         """
         Here we gather counts for each permutation of tools used + "gene annotation", of which we consider majiq-non-denovo
         to be an authoritative source.
+
+        majiq_combination
+        majiq_novel
+        flair_only_combination
+        flair_only_novel
+        flair_combination_novel
+        flair_only_partial
+        flair_combination_partial
+        flair_novel_partial
+        flair_partial_combination_novel
+
         """
 
         self.extra_count_keys = ['TTT',
@@ -29,15 +40,17 @@ class ToolComparer:
                                  'FTT',
                                  'FTF',
                                  'FFT',
-                                 'majiq_combination', 
-                                 'majiq_novel', 
-                                 'flair_combination', 
-                                 'flair_novel',
+                                 'majiq_combination',
+                                 'majiq_novel',
+                                 'flair_only_combination',
+                                 'flair_only_novel',
+                                 'flair_combination_novel',
+                                 'flair_only_partial',
                                  'flair_combination_partial',
                                  'flair_novel_partial',
-                                 'flair_denovo_partial',
-                                 'partial'
+                                 'flair_partial_combination_novel'
                                  ]
+
         self.counts = self._makeCountsObj()
         self.args = args
 
@@ -144,7 +157,7 @@ class ToolComparer:
         for transcript in flair_result:
 
             if (transcript[0].start not in annotated_starts) or (transcript[-1].end not in annotated_ends):
-                self.counts['partial'] += 1
+                self.counts['flair_novel_partial'] += 1
                 total_partials += 1
 
         return total_partials
@@ -208,7 +221,7 @@ class ToolComparer:
         _annotated_coordinate = self.all_annotated(in_flair_and_majiq, only_in_majiq, majiq_denovo)
         flair_partials = self.add_partials(only_in_flair, annotated_starts, annotated_ends)
 
-        tmpcounts['flair_denovo_partial'] += flair_partials
+        tmpcounts['flair_novel_partial'] += flair_partials
 
         for transcript in in_flair_and_majiq:
             if majiq_denovo[transcript]:
@@ -236,16 +249,17 @@ class ToolComparer:
         for transcript in only_in_flair:
             self.incCountPrint(tmpcounts, transcript, 'FTF')
             if not _annotated_coordinate.difference(self.current_coordinate(transcript)):
-                self.incCountPrint(tmpcounts, transcript, 'flair_combination')
+                self.incCountPrint(tmpcounts, transcript, 'flair_only_combination')
                 if (transcript[0].start not in annotated_starts) or (transcript[-1].end not in annotated_ends):
                     self.incCountPrint(tmpcounts, transcript, 'flair_combination_partial')
             else:
-                self.incCountPrint(tmpcounts, transcript, 'flair_novel')
+                self.incCountPrint(tmpcounts, transcript, 'flair_only_novel')
                 if (transcript[0].start not in annotated_starts) or (transcript[-1].end not in annotated_ends):
                     self.incCountPrint(tmpcounts, transcript, 'flair_novel_partial')
         
         for k, v in tmpcounts.items():
             self.counts[k] += v
+
 
         return tmpcounts
 

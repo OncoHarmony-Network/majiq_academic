@@ -97,8 +97,8 @@ def compare_gene(_args):
 
         annotated_starts = majiqParser.annotated_starts(gene_id)
         annotated_ends = majiqParser.annotated_ends(gene_id)
-        full_flair_exons = tuple(x[0] for x in flairreader.gene(gene_id, extent=None, ignore_starts_ends=False))
-        gene_partial_count = tc.add_partials(full_flair_exons, annotated_starts, annotated_ends)
+        full_flair_exons = tuple(x for x in flairreader.gene(gene_id, extent=None, ignore_starts_ends=False))
+        #gene_partial_count = tc.add_partials(full_flair_exons, annotated_starts, annotated_ends)
 
 
         for module_idx in range(majiqParser.getNumModules() if modules else 1):
@@ -122,7 +122,7 @@ def compare_gene(_args):
 
 
             flair_exons = set()
-            ord_flair_exons = tuple(x[0] for x in flairreader.gene(gene_id, extent=majiq_module_extent, ignore_starts_ends=True))
+            ord_flair_exons = tuple(x for x in flairreader.gene(gene_id, extent=majiq_module_extent, ignore_starts_ends=True))
 
             for transcript in ord_flair_exons:
                 if modules:
@@ -149,7 +149,7 @@ def compare_gene(_args):
 
 
             counts = tc.add_data(majiq_exons, majiq_denovo, majiq_has_reads, flair_exons, annotated_starts, annotated_ends)
-            counts['partial'] = gene_partial_count
+            #counts['partial'] = gene_partial_count
 
             row = [gene_id]
             if modules:
@@ -192,10 +192,6 @@ def compare_tools(all_gene_ids, modules=False):
     fieldnames = ['gene_id']
     if modules:
         fieldnames.append('module_idx')
-    for majiq in ('T', 'F'):
-        for flair in ('T', 'F'):
-            for annotated in ('T', 'F'):
-                fieldnames.append(f'{majiq}{flair}{annotated}')
 
     for key in tc.extra_count_keys:
         fieldnames.append(key)

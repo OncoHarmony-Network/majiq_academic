@@ -19,7 +19,6 @@ class FlairReader:
 
         found_transcripts = set()
         transcript_exons = []
-        transcript_meta = {}
 
 
 
@@ -32,7 +31,7 @@ class FlairReader:
                 _transcript_exons = tuple(_transcript_exons)
                 if not _transcript_exons in found_transcripts:
                     found_transcripts.add(_transcript_exons)
-                    return tuple(_transcript_exons), transcript_meta
+                    return tuple(_transcript_exons)
 
         for index, row in df_gene.iterrows():
 
@@ -42,7 +41,7 @@ class FlairReader:
                     yield ret
 
                 transcript_exons = []
-                transcript_meta = {x: getattr(row, x) for x in ('strand', 'gene_id', 'transcript_id')}
+                #transcript_meta = {x: getattr(row, x) for x in ('strand', 'gene_id', 'transcript_id')}
                 continue
 
             elif row.feature == 'exon':

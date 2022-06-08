@@ -25,7 +25,7 @@ if args.gene_id:
     generate_str += f' -n {args.gene_id}'
 
 subprocess.check_call(generate_str, shell=True)
-subprocess.check_call("python main.py --majiq-splicegraph-path testcases/sg_generated.sql --flair-gtf-path /home/pjewell/longreads_debug/collapse3.isoforms.gtf --output-path testcases/result -j 1 --debug", shell=True)
+subprocess.check_call("python main.py --majiq-splicegraph-path testcases/sg_generated.sql --flair-gtf-path testcases/ex.isoforms.gtf --output-path testcases/result -j 1 --debug", shell=True)
 
 errors = False
 
