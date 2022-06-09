@@ -127,7 +127,7 @@ def compare_gene(_args):
 
             for transcript in ord_flair_exons:
                 if modules:
-                    flair_exons.add(tuple(exon(max(majiq_module_extent[0], e.start) if e.start != -1 else -1, min(majiq_module_extent[1], e.end) if e.end != -1 else -1) for e in transcript))
+                    flair_exons.add(tuple(exon(max(majiq_module_extent[0], e.start) if e.start > 0 else e.start, min(majiq_module_extent[1], e.end) if e.end > 0 else e.end) for e in transcript))
                 else:
                     flair_exons.add(tuple(exon(e.start, e.end) for e in transcript))
 
@@ -142,7 +142,7 @@ def compare_gene(_args):
                 if args.max_paths == 0 or num_paths > args.max_paths:
                     raise RecursionError()
                 if modules:
-                    set_key = tuple(exon(max(majiq_module_extent[0], e.start) if e.start != -1 else -1, min(majiq_module_extent[1], e.end) if e.end != -1 else -1) for e in ord_majiq_transcript)
+                    set_key = tuple(exon(max(majiq_module_extent[0], e.start) if e.start > 0 else e.start, min(majiq_module_extent[1], e.end) if e.end > 0 else e.end) for e in ord_majiq_transcript)
                 else:
                     set_key = tuple(exon(e.start, e.end) for e in ord_majiq_transcript)
                 majiq_exons.add(set_key)

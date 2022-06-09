@@ -26,8 +26,8 @@ class FlairReader:
             if _transcript_exons:
                 #_transcript_exons = sorted(_transcript_exons, key=lambda e: e.start)
                 if ignore_starts_ends:
-                    _transcript_exons[0] = exon(-1, _transcript_exons[0].end)
-                    _transcript_exons[-1] = exon(_transcript_exons[-1].start, -1)
+                    _transcript_exons[0] = exon(-2, _transcript_exons[0].end)
+                    _transcript_exons[-1] = exon(_transcript_exons[-1].start, -2)
                 _transcript_exons = tuple(_transcript_exons)
                 if not _transcript_exons in found_transcripts:
                     found_transcripts.add(_transcript_exons)
