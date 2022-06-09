@@ -215,8 +215,8 @@ class ToolComparer:
         # if self.args.fuzziness == 0:
         #     only_in_flair, only_in_majiq, in_flair_and_majiq = self.compare_exact(flair_result, majiq_result)
         # else:
-        print('F', flair_result)
-        print('M', majiq_result)
+        #print('F', flair_result)
+        #print('M', majiq_result)
         only_in_flair, only_in_majiq, in_flair_and_majiq = self.compare_fuzzy(flair_result, majiq_result, self.args.fuzziness)
         # print(only_in_flair)
         # print(in_flair_and_majiq)
