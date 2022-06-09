@@ -112,7 +112,7 @@ def plot(only_in_flair, only_in_majiq, in_flair_and_majiq, filename, module_exte
 
 # Plot for the entire gene
 # here, we match transcripts exactly between majiq and flair
-flair_exons = set(x[0] for x in flairreader.gene(flair_gene_id))
+flair_exons = set(x for x in flairreader.gene(flair_gene_id))
 majiq_exons = set(x[0] for x in parser.getAllPaths())
 only_in_flair = flair_exons.difference(majiq_exons)
 only_in_majiq = majiq_exons.difference(flair_exons)
@@ -130,7 +130,7 @@ for module_idx in range(parser.getNumModules()):
     
     """
 
-    ord_flair_exons = tuple(x[0] for x in flairreader.gene(flair_gene_id, extent=majiq_module_extent, ignore_starts_ends=True))
+    ord_flair_exons = tuple(x for x in flairreader.gene(flair_gene_id, extent=majiq_module_extent, ignore_starts_ends=True))
 
     ord_majiq_exons = tuple(x[0] for x in parser.getAllPaths(module_idx=module_idx))
     flair_exons = set()

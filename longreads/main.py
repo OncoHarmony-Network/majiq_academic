@@ -97,8 +97,9 @@ def compare_gene(_args):
 
         annotated_starts = majiqParser.annotated_starts(gene_id)
         annotated_ends = majiqParser.annotated_ends(gene_id)
-        full_flair_exons = tuple(x[0] for x in flairreader.gene(gene_id, extent=None, ignore_starts_ends=False))
-        gene_partial_count = tc.add_partials(full_flair_exons, annotated_starts, annotated_ends)
+        annotated_exons = majiqParser.annotated_exons(gene_id)
+        #full_flair_exons = tuple(x for x in flairreader.gene(gene_id, extent=None, ignore_starts_ends=False))
+        #gene_partial_count = tc.add_partials(full_flair_exons, annotated_starts, annotated_ends)
 
 
         for module_idx in range(majiqParser.getNumModules() if modules else 1):
@@ -122,11 +123,11 @@ def compare_gene(_args):
 
 
             flair_exons = set()
-            ord_flair_exons = tuple(x[0] for x in flairreader.gene(gene_id, extent=majiq_module_extent, ignore_starts_ends=True))
+            ord_flair_exons = tuple(x for x in flairreader.gene(gene_id, extent=majiq_module_extent, ignore_starts_ends=True))
 
             for transcript in ord_flair_exons:
                 if modules:
-                    flair_exons.add(tuple(exon(max(majiq_module_extent[0], e.start) if e.start != -1 else -1, min(majiq_module_extent[1], e.end) if e.end != -1 else -1) for e in transcript))
+                    flair_exons.add(tuple(exon(max(majiq_module_extent[0], e.start) if e.start > 0 else e.start, min(majiq_module_extent[1], e.end) if e.end > 0 else e.end) for e in transcript))
                 else:
                     flair_exons.add(tuple(exon(e.start, e.end) for e in transcript))
 
@@ -134,13 +135,14 @@ def compare_gene(_args):
             majiq_denovo = {}
             majiq_has_reads = {}
 
+
             num_paths = 0
             for (ord_majiq_transcript, majiq_meta, denovo, has_reads) in majiqParser.getAllPaths(module_idx=module_idx if modules else None):
                 num_paths += 1
                 if args.max_paths == 0 or num_paths > args.max_paths:
                     raise RecursionError()
                 if modules:
-                    set_key = tuple(exon(max(majiq_module_extent[0], e.start) if e.start != -1 else -1, min(majiq_module_extent[1], e.end) if e.end != -1 else -1) for e in ord_majiq_transcript)
+                    set_key = tuple(exon(max(majiq_module_extent[0], e.start) if e.start > 0 else e.start, min(majiq_module_extent[1], e.end) if e.end > 0 else e.end) for e in ord_majiq_transcript)
                 else:
                     set_key = tuple(exon(e.start, e.end) for e in ord_majiq_transcript)
                 majiq_exons.add(set_key)
@@ -148,8 +150,8 @@ def compare_gene(_args):
                 majiq_has_reads[set_key] = has_reads
 
 
-            counts = tc.add_data(majiq_exons, majiq_denovo, majiq_has_reads, flair_exons, annotated_starts, annotated_ends)
-            counts['partial'] = gene_partial_count
+            counts = tc.add_data(majiq_exons, majiq_denovo, majiq_has_reads, flair_exons, annotated_starts, annotated_ends, annotated_exons)
+            #counts['partial'] = gene_partial_count
 
             row = [gene_id]
             if modules:
@@ -192,10 +194,6 @@ def compare_tools(all_gene_ids, modules=False):
     fieldnames = ['gene_id']
     if modules:
         fieldnames.append('module_idx')
-    for majiq in ('T', 'F'):
-        for flair in ('T', 'F'):
-            for annotated in ('T', 'F'):
-                fieldnames.append(f'{majiq}{flair}{annotated}')
 
     for key in tc.extra_count_keys:
         fieldnames.append(key)

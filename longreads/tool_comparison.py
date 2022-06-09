@@ -20,6 +20,17 @@ class ToolComparer:
         """
         Here we gather counts for each permutation of tools used + "gene annotation", of which we consider majiq-non-denovo
         to be an authoritative source.
+
+        majiq_combination
+        majiq_novel
+        flair_only_combination
+        flair_only_novel
+        flair_combination_novel
+        flair_only_partial
+        flair_combination_partial
+        flair_novel_partial
+        flair_partial_combination_novel
+
         """
 
         self.extra_count_keys = ['TTT',
@@ -29,15 +40,17 @@ class ToolComparer:
                                  'FTT',
                                  'FTF',
                                  'FFT',
-                                 'majiq_combination', 
-                                 'majiq_novel', 
-                                 'flair_combination', 
-                                 'flair_novel',
+                                 'majiq_combination',
+                                 'majiq_novel',
+                                 'flair_only_combination',
+                                 'flair_only_novel',
+                                 'flair_combination_novel',
+                                 'flair_only_partial',
                                  'flair_combination_partial',
                                  'flair_novel_partial',
-                                 'flair_denovo_partial',
-                                 'partial'
+                                 'flair_partial_combination_novel'
                                  ]
+
         self.counts = self._makeCountsObj()
         self.args = args
 
@@ -74,8 +87,8 @@ class ToolComparer:
                 return True
             if len(set1elem) == len(set2elem):
                 for coords1, coords2 in zip(set1elem, set2elem):
-                    startCondition = coords1[0] == -1 or coords2[0] == -1 or (abs(coords1[0] - coords2[0]) <= fuzziness)
-                    endCondition = coords1[1] == -1 or coords2[1] == -1 or (abs(coords1[1] - coords2[1]) <= fuzziness)
+                    startCondition = coords1[0] == -2 or coords2[0] == -2 or (abs(coords1[0] - coords2[0]) <= fuzziness)
+                    endCondition = coords1[1] == -2 or coords2[1] == -2 or (abs(coords1[1] - coords2[1]) <= fuzziness)
                     if not startCondition or not endCondition:
                         break
                 else:
@@ -144,7 +157,7 @@ class ToolComparer:
         for transcript in flair_result:
 
             if (transcript[0].start not in annotated_starts) or (transcript[-1].end not in annotated_ends):
-                self.counts['partial'] += 1
+                self.counts['flair_novel_partial'] += 1
                 total_partials += 1
 
         return total_partials
@@ -162,9 +175,9 @@ class ToolComparer:
         _flair_result = set()
         for transcript in flair_result:
             _flair_result.add((
-                exon(-1, transcript[0].end),
+                exon(-2, transcript[0].end),
                 *transcript[1:-1],
-                exon(transcript[-1].start, -1)
+                exon(transcript[-1].start, -2)
             ))
         return _flair_result
     
@@ -176,6 +189,9 @@ class ToolComparer:
         return _all_coordinate
     
     def all_annotated(self, in_flair_and_majiq, only_in_majiq, majiq_denovo):
+        """
+        This finds in annotated as dictated by non denovo paths only, generally superseded be directly using annotated exons from the splicegraph
+        """
         _annotated_coordinate = set()
         for transcript in in_flair_and_majiq.union(only_in_majiq):
             if not majiq_denovo[transcript]:
@@ -186,7 +202,7 @@ class ToolComparer:
         return _annotated_coordinate
                 
 
-    def add_data(self, majiq_result, majiq_denovo, majiq_has_reads, flair_result, annotated_starts, annotated_ends):
+    def add_data(self, majiq_result, majiq_denovo, majiq_has_reads, flair_result, annotated_starts, annotated_ends, annotated_exons):
         """
 
         """
@@ -199,16 +215,17 @@ class ToolComparer:
         # if self.args.fuzziness == 0:
         #     only_in_flair, only_in_majiq, in_flair_and_majiq = self.compare_exact(flair_result, majiq_result)
         # else:
-        # print('F', flair_result)
-        # print('M', majiq_result)
+        #print('F', flair_result)
+        #print('M', majiq_result)
         only_in_flair, only_in_majiq, in_flair_and_majiq = self.compare_fuzzy(flair_result, majiq_result, self.args.fuzziness)
         # print(only_in_flair)
         # print(in_flair_and_majiq)
-  
-        _annotated_coordinate = self.all_annotated(in_flair_and_majiq, only_in_majiq, majiq_denovo)
+
+
+        #_annotated_coordinate = self.all_annotated(in_flair_and_majiq, only_in_majiq, majiq_denovo)
         flair_partials = self.add_partials(only_in_flair, annotated_starts, annotated_ends)
 
-        tmpcounts['flair_denovo_partial'] += flair_partials
+        tmpcounts['flair_novel_partial'] += flair_partials
 
         for transcript in in_flair_and_majiq:
             if majiq_denovo[transcript]:
@@ -223,7 +240,7 @@ class ToolComparer:
         for transcript in only_in_majiq:
             if majiq_denovo[transcript]:
                 self.incCountPrint(tmpcounts, transcript, 'TFF')
-                if not _annotated_coordinate.difference(self.current_coordinate(transcript)):
+                if self.current_coordinate(transcript).issubset(annotated_exons):
                     self.incCountPrint(tmpcounts, transcript, 'majiq_combination')            
                 else:
                     self.incCountPrint(tmpcounts, transcript, 'majiq_novel')
@@ -235,17 +252,18 @@ class ToolComparer:
 
         for transcript in only_in_flair:
             self.incCountPrint(tmpcounts, transcript, 'FTF')
-            if not _annotated_coordinate.difference(self.current_coordinate(transcript)):
-                self.incCountPrint(tmpcounts, transcript, 'flair_combination')
+            if self.current_coordinate(transcript).issubset(annotated_exons):
+                self.incCountPrint(tmpcounts, transcript, 'flair_only_combination')
                 if (transcript[0].start not in annotated_starts) or (transcript[-1].end not in annotated_ends):
                     self.incCountPrint(tmpcounts, transcript, 'flair_combination_partial')
             else:
-                self.incCountPrint(tmpcounts, transcript, 'flair_novel')
+                self.incCountPrint(tmpcounts, transcript, 'flair_only_novel')
                 if (transcript[0].start not in annotated_starts) or (transcript[-1].end not in annotated_ends):
                     self.incCountPrint(tmpcounts, transcript, 'flair_novel_partial')
         
         for k, v in tmpcounts.items():
             self.counts[k] += v
+
 
         return tmpcounts
 
