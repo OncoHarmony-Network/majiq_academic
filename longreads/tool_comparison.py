@@ -189,6 +189,9 @@ class ToolComparer:
         return _all_coordinate
     
     def all_annotated(self, in_flair_and_majiq, only_in_majiq, majiq_denovo):
+        """
+        This finds in annotated as dictated by non denovo paths only, generally superseded be directly using annotated exons from the splicegraph
+        """
         _annotated_coordinate = set()
         for transcript in in_flair_and_majiq.union(only_in_majiq):
             if not majiq_denovo[transcript]:
@@ -199,7 +202,7 @@ class ToolComparer:
         return _annotated_coordinate
                 
 
-    def add_data(self, majiq_result, majiq_denovo, majiq_has_reads, flair_result, annotated_starts, annotated_ends):
+    def add_data(self, majiq_result, majiq_denovo, majiq_has_reads, flair_result, annotated_starts, annotated_ends, annotated_exons):
         """
 
         """
@@ -217,8 +220,9 @@ class ToolComparer:
         only_in_flair, only_in_majiq, in_flair_and_majiq = self.compare_fuzzy(flair_result, majiq_result, self.args.fuzziness)
         # print(only_in_flair)
         # print(in_flair_and_majiq)
-  
-        _annotated_coordinate = self.all_annotated(in_flair_and_majiq, only_in_majiq, majiq_denovo)
+
+
+        #_annotated_coordinate = self.all_annotated(in_flair_and_majiq, only_in_majiq, majiq_denovo)
         flair_partials = self.add_partials(only_in_flair, annotated_starts, annotated_ends)
 
         tmpcounts['flair_novel_partial'] += flair_partials
@@ -236,7 +240,7 @@ class ToolComparer:
         for transcript in only_in_majiq:
             if majiq_denovo[transcript]:
                 self.incCountPrint(tmpcounts, transcript, 'TFF')
-                if not _annotated_coordinate.difference(self.current_coordinate(transcript)):
+                if self.current_coordinate(transcript).issubset(annotated_exons):
                     self.incCountPrint(tmpcounts, transcript, 'majiq_combination')            
                 else:
                     self.incCountPrint(tmpcounts, transcript, 'majiq_novel')
@@ -248,7 +252,7 @@ class ToolComparer:
 
         for transcript in only_in_flair:
             self.incCountPrint(tmpcounts, transcript, 'FTF')
-            if not _annotated_coordinate.difference(self.current_coordinate(transcript)):
+            if self.current_coordinate(transcript).issubset(annotated_exons):
                 self.incCountPrint(tmpcounts, transcript, 'flair_only_combination')
                 if (transcript[0].start not in annotated_starts) or (transcript[-1].end not in annotated_ends):
                     self.incCountPrint(tmpcounts, transcript, 'flair_combination_partial')

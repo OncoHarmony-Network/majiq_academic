@@ -17,7 +17,11 @@ def read_result_file(path):
     with open(path, 'r') as tsvfile:
         reader = csv.DictReader(tsvfile, delimiter='\t')
         for line in reader:
-            yield line
+            if args.gene_id:
+                if args.gene_id == line['gene_id']:
+                    yield line
+            else:
+                yield line
 
 
 generate_str = "python generate_splice_graph.py -o testcases/sg_generated --json testcases/splice_graphs.json --template-sql ../voila/rna_voila/api/model.sql"
@@ -28,10 +32,11 @@ subprocess.check_call(generate_str, shell=True)
 subprocess.check_call("python main.py --majiq-splicegraph-path testcases/sg_generated.sql --flair-gtf-path testcases/ex.isoforms.gtf --output-path testcases/result -j 1 --debug", shell=True)
 
 errors = False
+found_gene = False
 
 for expected, actual in zip(read_result_file('testcases/comparison.tsv'), read_result_file('testcases/result/comparison.tsv')):
-    if args.gene_id and not expected['gene_id'] == args.gene_id:
-        continue
+
+    found_gene = True
     diff = []
     for key in expected.keys():
         if key not in actual:
@@ -46,5 +51,7 @@ for expected, actual in zip(read_result_file('testcases/comparison.tsv'), read_r
             print('     -', key, 'expected: ', _exp, 'found: ', _act)
         break
 
-if not errors:
+if not found_gene:
+    print("Could not find any matching genes!")
+elif not errors:
     print("All is well!")

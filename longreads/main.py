@@ -97,7 +97,8 @@ def compare_gene(_args):
 
         annotated_starts = majiqParser.annotated_starts(gene_id)
         annotated_ends = majiqParser.annotated_ends(gene_id)
-        full_flair_exons = tuple(x for x in flairreader.gene(gene_id, extent=None, ignore_starts_ends=False))
+        annotated_exons = majiqParser.annotated_exons(gene_id)
+        #full_flair_exons = tuple(x for x in flairreader.gene(gene_id, extent=None, ignore_starts_ends=False))
         #gene_partial_count = tc.add_partials(full_flair_exons, annotated_starts, annotated_ends)
 
 
@@ -134,6 +135,7 @@ def compare_gene(_args):
             majiq_denovo = {}
             majiq_has_reads = {}
 
+
             num_paths = 0
             for (ord_majiq_transcript, majiq_meta, denovo, has_reads) in majiqParser.getAllPaths(module_idx=module_idx if modules else None):
                 num_paths += 1
@@ -148,7 +150,7 @@ def compare_gene(_args):
                 majiq_has_reads[set_key] = has_reads
 
 
-            counts = tc.add_data(majiq_exons, majiq_denovo, majiq_has_reads, flair_exons, annotated_starts, annotated_ends)
+            counts = tc.add_data(majiq_exons, majiq_denovo, majiq_has_reads, flair_exons, annotated_starts, annotated_ends, annotated_exons)
             #counts['partial'] = gene_partial_count
 
             row = [gene_id]
