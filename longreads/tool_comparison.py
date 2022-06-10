@@ -87,8 +87,8 @@ class ToolComparer:
                 return True
             if len(set1elem) == len(set2elem):
                 for coords1, coords2 in zip(set1elem, set2elem):
-                    startCondition = coords1[0] == -2 or coords2[0] == -2 or (abs(coords1[0] - coords2[0]) <= fuzziness)
-                    endCondition = coords1[1] == -2 or coords2[1] == -2 or (abs(coords1[1] - coords2[1]) <= fuzziness)
+                    startCondition = coords1[0] <= -2 or coords2[0] <= -2 or (abs(coords1[0] - coords2[0]) <= fuzziness)
+                    endCondition = coords1[1] <= -2 or coords2[1] <= -2 or (abs(coords1[1] - coords2[1]) <= fuzziness)
                     if not startCondition or not endCondition:
                         break
                 else:
@@ -162,22 +162,13 @@ class ToolComparer:
 
         return total_partials
 
-    # def add_flair_partials(self, transcript, annotated_starts, annotated_ends):
-
-    #     total_partials = 0
-    #     if (transcript[0].start not in annotated_starts) or (transcript[-1].end not in annotated_ends):
-    #         self.counts['partial'] += 1
-    #         total_partials += 1
-    #     return total_partials
-
-
     def set_flair_unknown_ends(self, flair_result):
         _flair_result = set()
         for transcript in flair_result:
             _flair_result.add((
-                exon(-2, transcript[0].end),
+                exon(-transcript[0].start, transcript[0].end),
                 *transcript[1:-1],
-                exon(transcript[-1].start, -2)
+                exon(transcript[-1].start, -transcript[-1].end)
             ))
         return _flair_result
     
@@ -215,8 +206,8 @@ class ToolComparer:
         # if self.args.fuzziness == 0:
         #     only_in_flair, only_in_majiq, in_flair_and_majiq = self.compare_exact(flair_result, majiq_result)
         # else:
-        #print('F', flair_result)
-        #print('M', majiq_result)
+        print('F', flair_result)
+        print('M', majiq_result)
         only_in_flair, only_in_majiq, in_flair_and_majiq = self.compare_fuzzy(flair_result, majiq_result, self.args.fuzziness)
         # print(only_in_flair)
         # print(in_flair_and_majiq)
