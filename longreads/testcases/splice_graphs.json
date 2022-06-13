@@ -29,6 +29,14 @@
     ],
     "introns_annotated": [
 
+    ],
+    "TSS": [
+      1000,
+      1500
+    ],
+    "TES": [
+      5800,
+      6000
     ]
   },
   "ENSG00000111112.5_TTT_all_FFT_annoataion": {
@@ -99,6 +107,14 @@
     ],
     "introns_annotated": [
 
+    ],
+    "TSS": [
+      1000,
+      1500
+    ],
+    "TES": [
+      5800,
+      6000
     ]
   },
   "ENSG00000111114.5_TFF_majiq_combination": {
