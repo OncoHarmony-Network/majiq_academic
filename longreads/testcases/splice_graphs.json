@@ -1,6 +1,6 @@
 {
   "ENSG00000111111.5_TTF_majiq_flair": {
-    "desc": "in majiq and flair, not in annotation",
+    "desc": "in majiq and flair, not in annotation + TTF_partial",
     "strand": "+",
     "exons": [
       [1000, 2000],
@@ -75,7 +75,7 @@
     ]
   },
   "ENSG00000111113.5_FTT_flair_annotation": {
-    "desc": "in flair and annotation, not in majiq",
+    "desc": "in flair and annotation, not in majiq + FTT_partial",
     "strand": "+",
     "exons": [
       [1000, 2000],
@@ -261,7 +261,7 @@
     ]
   },
   "ENSG00000111118.5_FTF_flair_only_partial_combination_partial_novel_partial": {
-    "desc": "in flair, not in majiq and annotation",
+    "desc": "in flair, not in majiq and annotation + TTT_partial",
     "strand": "+",
     "exons": [
       [1000, 2000],
