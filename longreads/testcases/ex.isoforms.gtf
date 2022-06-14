@@ -39,7 +39,7 @@ chr7	FLAIR	exon	1000	1800	.	+	.	gene_id "ENSG00000111117.5_FTF_flair_novel_combi
 chr7	FLAIR	exon	3000	4000	.	+	.	gene_id "ENSG00000111117.5_FTF_flair_novel_combinataion";
 chr7	FLAIR	exon	5000	6000	.	+	.	gene_id "ENSG00000111117.5_FTF_flair_novel_combinataion";
 chr8	FLAIR	transcript	1000	5900	.	+	.	gene_id "ENSG00000111118.5_FTF_flair_only_partial_combination_partial_novel_partial";
-chr8	FLAIR	exon	1000	2000	.	+	.	gene_id "EENSG00000111118.5_FTF_flair_only_partial_combination_partial_novel_partial";
+chr8	FLAIR	exon	1000	2000	.	+	.	gene_id "ENSG00000111118.5_FTF_flair_only_partial_combination_partial_novel_partial";
 chr8	FLAIR	exon	3000	4000	.	+	.	gene_id "ENSG00000111118.5_FTF_flair_only_partial_combination_partial_novel_partial";
 chr8	FLAIR	exon	5000	5900	.	+	.	gene_id "ENSG00000111118.5_FTF_flair_only_partial_combination_partial_novel_partial";
 chr8	FLAIR	transcript	1500	5900	.	+	.	gene_id "ENSG00000111118.5_FTF_flair_only_partial_combination_partial_novel_partial";
@@ -50,7 +50,7 @@ chr8	FLAIR	transcript	1000	5900	.	+	.	gene_id "ENSG00000111118.5_FTF_flair_only_
 chr8	FLAIR	exon	1000	2000	.	+	.	gene_id "ENSG00000111118.5_FTF_flair_only_partial_combination_partial_novel_partial";
 chr8	FLAIR	exon	5000	5900	.	+	.	gene_id "ENSG00000111118.5_FTF_flair_only_partial_combination_partial_novel_partial";
 chr9	FLAIR	transcript	1000	5900	.	+	.	gene_id "ENSG00000111119.5_FTF_flair_combination_novel_partial";
-chr9	FLAIR	exon	1000	2000	.	+	.	gene_id "EENSG00000111119.5_FTF_flair_combination_novel_partial";
+chr9	FLAIR	exon	1000	2000	.	+	.	gene_id "ENSG00000111119.5_FTF_flair_combination_novel_partial";
 chr9	FLAIR	exon	5000	5900	.	+	.	gene_id "ENSG00000111119.5_FTF_flair_combination_novel_partial";
 chr9	FLAIR	transcript	1500	5900	.	+	.	gene_id "ENSG00000111119.5_FTF_flair_combination_novel_partial";
 chr9	FLAIR	exon	1500	1800	.	+	.	gene_id "ENSG00000111119.5_FTF_flair_combination_novel_partial";
