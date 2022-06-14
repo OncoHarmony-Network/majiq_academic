@@ -49,6 +49,7 @@ class ToolComparer:
                                  'flair_novel_partial',
                                  'flair_partial_combination_novel',
                                  'partial',
+                                 'flair_FTF_unknown'
                                  ]
 
         self.counts = self._makeCountsObj()
@@ -205,7 +206,7 @@ class ToolComparer:
         elif kwargs.get('combination', False):
             return 'flair_only_combination'
         else:
-            print("unexpected", kwargs)
+            #print("unexpected", kwargs)
             assert False
 
     def add_data(self, majiq_result, majiq_denovo, majiq_has_reads, flair_result, annotated_starts, annotated_ends, annotated_exon_coords):
@@ -225,6 +226,7 @@ class ToolComparer:
 
         for f_transcript, m_transcript in in_flair_and_majiq:
             known_junctions = known_junctions.union(self.get_junctions(m_transcript))
+            #known_junctions = known_junctions.union(self.get_junctions(f_transcript))
             if majiq_denovo[m_transcript]:
                 self.incCountPrint(tmpcounts, m_transcript, 'TTF')
             else:
@@ -251,13 +253,13 @@ class ToolComparer:
                     self.incCountPrint(tmpcounts, transcript, 'TFT')
 
         # fun debugging help things
-        print('F', flair_result)
-        print('M', majiq_result)
-        print("A_ex", annotated_exon_coords)
-        print("Known_j", known_junctions)
-        print('f_o', only_in_flair)
-        print('m_o', only_in_majiq)
-        print('f_m_b', in_flair_and_majiq)
+        # print('F', flair_result)
+        # print('M', majiq_result)
+        # print("A_ex", annotated_exon_coords)
+        # print("Known_j", known_junctions)
+        # print('f_o', only_in_flair)
+        # print('m_o', only_in_majiq)
+        # print('f_m_b', in_flair_and_majiq)
 
         for transcript in only_in_flair:
             self.incCountPrint(tmpcounts, transcript, 'FTF')
@@ -272,8 +274,14 @@ class ToolComparer:
             if (-transcript[0].start not in annotated_starts) or (-transcript[-1].end not in annotated_ends):
                 partial = True
 
-            self.incCountPrint(tmpcounts, transcript,
-                               self.substring_FTF(partial=partial, novel=novel, combination=combination))
+            try:
+                name = self.substring_FTF(partial=partial, novel=novel, combination=combination)
+            except:
+                #print("Error with substring_FTF", partial, novel, combination, transcript)
+                #raise
+                name = 'flair_FTF_unknown'
+
+            self.incCountPrint(tmpcounts, transcript, name)
 
         
         for k, v in tmpcounts.items():
