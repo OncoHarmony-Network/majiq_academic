@@ -7,6 +7,7 @@ from bisect import bisect_left, bisect_right
 from collections import namedtuple
 
 exon = namedtuple('exon', 'start end')
+junction = namedtuple('junction', 'start end')
 
 class UnsupportedVoilaFile(Exception):
     pass

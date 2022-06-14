@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 
 import majiqv2, flairParser
-from graph import exon
+from graph import exon, junction
 import pprint
 from config import get_args
 import csv
@@ -45,10 +45,10 @@ class ToolComparer:
                                  'flair_only_combination',
                                  'flair_only_novel',
                                  'flair_combination_novel',
-                                 'flair_only_partial',
                                  'flair_combination_partial',
                                  'flair_novel_partial',
-                                 'flair_partial_combination_novel'
+                                 'flair_partial_combination_novel',
+                                 'partial',
                                  ]
 
         self.counts = self._makeCountsObj()
@@ -75,7 +75,7 @@ class ToolComparer:
         Return "only in set1", "only in set2" and "in both sets" by fuzzy matching
         To be considered a match, the length of the element must be the same, and also each inner integer value
         must be within N (fuzziness) absolute value of the other set
-        note in the fuzzy match case, the value of SET2 will be used in the return
+        note in the fuzzy match case, the value of SET1 will be used in the return
         """
         only_in_set1 = set()
         only_in_set2 = set()
@@ -97,28 +97,16 @@ class ToolComparer:
                         #return True
             return False
 
-        for transcript in superset:
-            result1 = False
-            for t in set1:
-                if compare(transcript, t):
-                    if result1:
-                        if self.args.verbose:
-                            print("Warning, duplicate matches for transcript", transcript)
-                    result1 = True
-            result2 = False
-            for t in set2:
-                if compare(transcript, t):
-                    if result2:
-                        if self.args.verbose:
-                            print("Warning, duplicate matches for transcript", transcript)
-                    result2 = t
-
-            if result1 and result2:
-                in_both_sets.add(result2)
-            elif result1:
-                only_in_set1.add(transcript)
+        only_in_set2 = set2.copy()
+        for f_transcript in set1:
+            for m_transcript in set2:
+                if compare(f_transcript, m_transcript):
+                    in_both_sets.add((f_transcript, m_transcript))
+                    if m_transcript in only_in_set2:
+                        only_in_set2.remove(m_transcript)
+                    break
             else:
-                only_in_set2.add(transcript)
+                only_in_set1.add(f_transcript)
 
         return only_in_set1, only_in_set2, in_both_sets
 
@@ -180,6 +168,12 @@ class ToolComparer:
             if exon.end > 0:
                 _all_coordinate.add(exon.end)
         return _all_coordinate
+
+    def get_junctions(self, transcript):
+        junctions = set()
+        for i in range(len(transcript)-1):
+            junctions.add(junction(transcript[i].end, transcript[i+1].start))
+        return junctions
     
     def all_annotated(self, in_flair_and_majiq, only_in_majiq, majiq_denovo):
         """
@@ -193,48 +187,60 @@ class ToolComparer:
                     _annotated_coordinate.add(exon.end)
 
         return _annotated_coordinate
-                
 
-    def add_data(self, majiq_result, majiq_denovo, majiq_has_reads, flair_result, annotated_starts, annotated_ends, annotated_exons):
+    def substring_FTF(self, **kwargs):
+        """
+        kwargs: partial, novel, combination
+        """
+        if all(kwargs.get(x, False) for x in ('partial', 'novel', 'combination')):
+            return 'flair_partial_combination_novel'
+        elif all(kwargs.get(x, False) for x in ('partial', 'novel')):
+            return 'flair_novel_partial'
+        elif all(kwargs.get(x, False) for x in ('partial', 'combination')):
+            return 'flair_combination_partial'
+        elif all(kwargs.get(x, False) for x in ('novel', 'combination')):
+            return 'flair_combination_novel'
+        elif kwargs.get('novel', False):
+            return 'flair_only_novel'
+        elif kwargs.get('combination', False):
+            return 'flair_only_combination'
+        else:
+            print("unexpected", kwargs)
+            assert False
+
+    def add_data(self, majiq_result, majiq_denovo, majiq_has_reads, flair_result, annotated_starts, annotated_ends, annotated_exon_coords):
         """
 
         """
         tmpcounts = self._makeCountsObj()
+        known_junctions = set()
 
         # before removing start / end information, we use it to check for partial isoforms
 
 
-
-        # if self.args.fuzziness == 0:
-        #     only_in_flair, only_in_majiq, in_flair_and_majiq = self.compare_exact(flair_result, majiq_result)
-        # else:
-        print('F', flair_result)
-        print('M', majiq_result)
-        print("A_ex", annotated_exons)
         only_in_flair, only_in_majiq, in_flair_and_majiq = self.compare_fuzzy(flair_result, majiq_result, self.args.fuzziness)
-        # print(only_in_flair)
-        # print(in_flair_and_majiq)
 
 
-        #_annotated_coordinate = self.all_annotated(in_flair_and_majiq, only_in_majiq, majiq_denovo)
-        #flair_partials = self.add_partials(only_in_flair, annotated_starts, annotated_ends)
 
-        #tmpcounts['flair_novel_partial'] += flair_partials
 
-        for transcript in in_flair_and_majiq:
-            if majiq_denovo[transcript]:
-                self.incCountPrint(tmpcounts, transcript, 'TTF')
+        for f_transcript, m_transcript in in_flair_and_majiq:
+            known_junctions = known_junctions.union(self.get_junctions(m_transcript))
+            if majiq_denovo[m_transcript]:
+                self.incCountPrint(tmpcounts, m_transcript, 'TTF')
             else:
-                if majiq_has_reads[transcript]:
-                    self.incCountPrint(tmpcounts, transcript, 'TTT')
+                if majiq_has_reads[m_transcript]:
+                    self.incCountPrint(tmpcounts, m_transcript, 'TTT')
                 else:
-                    self.incCountPrint(tmpcounts, transcript, 'FTT')
+                    self.incCountPrint(tmpcounts, m_transcript, 'FTT')
+            if (-f_transcript[0].start not in annotated_starts) or (-f_transcript[-1].end not in annotated_ends):
+                self.incCountPrint(tmpcounts, f_transcript, 'partial')
 
 
         for transcript in only_in_majiq:
+            known_junctions = known_junctions.union(self.get_junctions(transcript))
             if majiq_denovo[transcript]:
                 self.incCountPrint(tmpcounts, transcript, 'TFF')
-                if self.current_coordinate(transcript).issubset(annotated_exons):
+                if self.current_coordinate(transcript).issubset(annotated_exon_coords):
                     self.incCountPrint(tmpcounts, transcript, 'majiq_combination')            
                 else:
                     self.incCountPrint(tmpcounts, transcript, 'majiq_novel')
@@ -244,17 +250,31 @@ class ToolComparer:
                 else:
                     self.incCountPrint(tmpcounts, transcript, 'TFT')
 
+        # fun debugging help things
+        print('F', flair_result)
+        print('M', majiq_result)
+        print("A_ex", annotated_exon_coords)
+        print("Known_j", known_junctions)
+        print('f_o', only_in_flair)
+        print('m_o', only_in_majiq)
+        print('f_m_b', in_flair_and_majiq)
+
         for transcript in only_in_flair:
             self.incCountPrint(tmpcounts, transcript, 'FTF')
-            if self.current_coordinate(transcript).issubset(annotated_exons):
-                self.incCountPrint(tmpcounts, transcript, 'flair_only_combination')
-                if (-transcript[0].start not in annotated_starts) or (-transcript[-1].end not in annotated_ends):
-                    self.incCountPrint(tmpcounts, transcript, 'flair_combination_partial')
-            else:
-                self.incCountPrint(tmpcounts, transcript, 'flair_only_novel')
-                print(transcript)
-                if (-transcript[0].start not in annotated_starts) or (-transcript[-1].end not in annotated_ends):
-                    self.incCountPrint(tmpcounts, transcript, 'flair_novel_partial')
+            partial, novel, combination = False, False, False
+
+            for i in range(len(transcript)-1):
+                junc = junction(transcript[i].end, transcript[i + 1].start)
+                if {junc.start, junc.end}.issubset(annotated_exon_coords) and junc not in known_junctions:
+                    combination = True
+                elif junc not in known_junctions:
+                    novel = True
+            if (-transcript[0].start not in annotated_starts) or (-transcript[-1].end not in annotated_ends):
+                partial = True
+
+            self.incCountPrint(tmpcounts, transcript,
+                               self.substring_FTF(partial=partial, novel=novel, combination=combination))
+
         
         for k, v in tmpcounts.items():
             self.counts[k] += v

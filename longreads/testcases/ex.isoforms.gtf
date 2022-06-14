@@ -32,8 +32,8 @@ chr7	FLAIR	exon	1000	2000	.	+	.	gene_id "ENSG00000111117.5_FTF_flair_novel_combi
 chr7	FLAIR	exon	3000	4000	.	+	.	gene_id "ENSG00000111117.5_FTF_flair_novel_combinataion";
 chr7	FLAIR	exon	5000	6000	.	+	.	gene_id "ENSG00000111117.5_FTF_flair_novel_combinataion";
 chr7	FLAIR	transcript	1000	6000	.	+	.	gene_id "ENSG00000111117.5_FTF_flair_novel_combinataion";
-chr7	FLAIR	exon	1000	2000	.	+	.	gene_id "ENSG00000111117.5_FTF_flair_novel_combinataionn";
-chr7	FLAIR	exon	5000	6000	.	+	.	gene_id "ENSG00000111117.5_FTF_flair_novel_combinataionn";
+chr7	FLAIR	exon	1000	2000	.	+	.	gene_id "ENSG00000111117.5_FTF_flair_novel_combinataion";
+chr7	FLAIR	exon	5000	6000	.	+	.	gene_id "ENSG00000111117.5_FTF_flair_novel_combinataion";
 chr7	FLAIR	transcript	1000	6000	.	+	.	gene_id "ENSG00000111117.5_FTF_flair_novel_combinataion";
 chr7	FLAIR	exon	1000	1800	.	+	.	gene_id "ENSG00000111117.5_FTF_flair_novel_combinataion";
 chr7	FLAIR	exon	3000	4000	.	+	.	gene_id "ENSG00000111117.5_FTF_flair_novel_combinataion";

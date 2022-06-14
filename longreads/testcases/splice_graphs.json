@@ -72,6 +72,14 @@
     ],
     "introns_annotated": [
 
+    ],
+    "TSS": [
+      1000,
+      1500
+    ],
+    "TES": [
+      5800,
+      6000
     ]
   },
   "ENSG00000111113.5_FTT_flair_annotation": {
@@ -147,6 +155,14 @@
     ],
     "introns_annotated": [
 
+    ],
+    "TSS": [
+      1000,
+      1500
+    ],
+    "TES": [
+      5800,
+      6000
     ]
   },
   "ENSG00000111115.5_TFF_majiq_novel": {
@@ -183,6 +199,14 @@
     ],
     "introns_annotated": [
 
+    ],
+    "TSS": [
+      1000,
+      1500
+    ],
+    "TES": [
+      5800,
+      6000
     ]
   },
   "ENSG00000111116.5_TFT_majiq_annotation": {
@@ -218,6 +242,14 @@
     ],
     "introns_annotated": [
 
+    ],
+    "TSS": [
+      1000,
+      1500
+    ],
+    "TES": [
+      5800,
+      6000
     ]
   },
   "ENSG00000111117.5_FTF_flair_novel_combinataion": {
