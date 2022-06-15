@@ -12,6 +12,9 @@ junction = namedtuple('junction', 'start end')
 class UnsupportedVoilaFile(Exception):
     pass
 
+class GeneNotFoundInSplicegraph(Exception):
+    pass
+
 class Printable_Event:
 
     def _ranges_to_string(self, start, end):
@@ -55,7 +58,8 @@ class Graph:
         with SpliceGraph(self.splice_graph_file) as sg:
             gene_meta = sg.gene(self.gene_id)
             if not gene_meta:
-                raise Exception("Gene ID not found in SpliceGraph File: %s" % self.gene_id)
+                raise GeneNotFoundInSplicegraph
+                #raise Exception("Gene ID not found in SpliceGraph File: %s" % self.gene_id)
             self.strand, self.gene_name, self.chromosome = itemgetter('strand', 'name', 'chromosome')(gene_meta)
 
         self.priors = {}

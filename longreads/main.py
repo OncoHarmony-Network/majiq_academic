@@ -14,6 +14,7 @@ import multiprocessing
 import time
 import os, sys
 from multiprocessing import Manager, Pool
+from graph import GeneNotFoundInSplicegraph
 import glob
 
 #majiq_splicegraph_path = '/slowdata/lrdata/majiq/splicegraph.sql'
@@ -167,6 +168,8 @@ def compare_gene(_args):
                 pprint.pprint(tc.counts)
     except KeyboardInterrupt:
         raise
+    except GeneNotFoundInSplicegraph:
+        pass
     except RecursionError:
         if args.verbose >= 1:
             print("Recursion too great, gene skipped!", gene_id)
