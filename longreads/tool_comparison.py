@@ -316,23 +316,22 @@ class ToolComparer:
                     if junc.start not in annotated_exon_coords and junc.start not in flair_new_exon:
                         novel_alt3 = True 
                     
-            if True:
-                # print("known_junc: ",known_junctions)
-                for junction_ in sorted(known_junctions):
-                    # print("sorted junc: ",junction_)
-                    # print(transcript)
-                    for flair_exon in transcript:
-                        #print(flair_exon)
-                        # print("exon_start: ",flair_exon.start)
-                        # print("exon_end: ",flair_exon.end)
-                        # print("junc_start: ",junction_.start)
-                        # print("junc_start: ",junction_.end)
-                        if abs(flair_exon.start) < junction_.start and abs(flair_exon.end) > junction_.end:
-                            novel_intron = True; novel = True
-                            # print(novel_intron)
-                        else:
-                            continue
-                        break
+            # print("known_junc: ",known_junctions)
+            for junction_ in sorted(known_junctions):
+                # print("sorted junc: ",junction_)
+                # print(transcript)
+                for flair_exon in transcript:
+                    #print(flair_exon)
+                    # print("exon_start: ",flair_exon.start)
+                    # print("exon_end: ",flair_exon.end)
+                    # print("junc_start: ",junction_.start)
+                    # print("junc_start: ",junction_.end)
+                    if abs(flair_exon.start) < junction_.start and abs(flair_exon.end) > junction_.end:
+                        novel_intron = True; novel = True
+                        # print(novel_intron)
+                    else:
+                        continue
+                    break
                     # if junc.end in annotated_exon_coords and junc.start in annotated_exon_coords and junc not in known_junctions:
                     #     novel_intron = True
             

@@ -415,5 +415,288 @@
       7800,
       8000
     ]
+  },
+  "ENSG00000111121.5_TTT_alt_start_end": {
+    "desc": "within flair novel case, cases with one overlapped areas ",
+    "strand": "+",
+    "exons": [
+      [1000, 2000],
+      [3000, 4000],
+      [5000, 6000]
+    ],
+    "exons_annotated": [
+      1,1,1
+    ],
+    "junctions": [
+      [2000, 3000],
+      [4000, 5000],
+      [2000, 5000]
+    ],
+    "introns": [
+    ],
+    "junctions_reads": [
+      10,
+      10,
+      10
+    ],
+    "introns_reads": [
+
+    ],
+    "junctions_annotated": [
+      1,
+      1,
+      1
+    ],
+    "introns_annotated": [
+
+    ],
+    "TSS": [
+      1000,
+      3000
+    ],
+    "TES": [
+      4000,
+      6000
+    ]
+  },
+  "ENSG00000111122.5_TTT_alt_start_end_partial": {
+    "desc": "within flair novel case, cases with one overlapped areas ",
+    "strand": "+",
+    "exons": [
+      [1000, 2000],
+      [3000, 4000],
+      [5000, 6000]
+    ],
+    "exons_annotated": [
+      1,1,1
+    ],
+    "junctions": [
+      [2000, 3000],
+      [4000, 5000]
+    ],
+    "introns": [
+    ],
+    "junctions_reads": [
+      10,
+      10
+    ],
+    "introns_reads": [
+
+    ],
+    "junctions_annotated": [
+      1,
+      1
+    ],
+    "introns_annotated": [
+
+    ],
+    "TSS": [
+      1000
+    ],
+    "TES": [
+      6000
+    ]
+  },
+  "ENSG00000111123.5_TTF_alt_start_end": {
+    "desc": "within flair novel case, cases with one overlapped areas ",
+    "strand": "+",
+    "exons": [
+      [1000, 2000],
+      [3000, 4000],
+      [5000, 6000]
+    ],
+    "exons_annotated": [
+      1,1,1
+    ],
+    "junctions": [
+      [2000, 3000],
+      [4000, 5000]
+    ],
+    "introns": [
+    ],
+    "junctions_reads": [
+      10,
+      10
+    ],
+    "introns_reads": [
+
+    ],
+    "junctions_annotated": [
+      0,
+      0
+    ],
+    "introns_annotated": [
+
+    ],
+    "TSS": [
+      1000,
+      3000
+    ],
+    "TES": [
+      4000,
+      6000
+    ]
+  },
+  "ENSG00000111124.5_TTF_alt_start_end_partial": {
+    "desc": "within flair novel case, cases with one overlapped areas ",
+    "strand": "+",
+    "exons": [
+      [1000, 2000],
+      [3000, 4000],
+      [5000, 6000]
+    ],
+    "exons_annotated": [
+      1,1,1
+    ],
+    "junctions": [
+      [2000, 3000],
+      [4000, 5000]
+    ],
+    "introns": [
+    ],
+    "junctions_reads": [
+      10,
+      10
+    ],
+    "introns_reads": [
+
+    ],
+    "junctions_annotated": [
+      0,
+      0
+    ],
+    "introns_annotated": [
+
+    ],
+    "TSS": [
+      1000
+    ],
+    "TES": [
+      6000
+    ]
+  },
+  "ENSG00000111125.5_FTT_alt_start_end": {
+    "desc": "within flair novel case, cases with one overlapped areas ",
+    "strand": "+",
+    "exons": [
+      [1000, 2000],
+      [3000, 4000],
+      [5000, 6000]
+    ],
+    "exons_annotated": [
+      1,1,1
+    ],
+    "junctions": [
+      [2000, 3000],
+      [4000, 5000],
+      [2000, 5000]
+    ],
+    "introns": [
+    ],
+    "junctions_reads": [
+      0,
+      0,
+      10
+    ],
+    "introns_reads": [
+
+    ],
+    "junctions_annotated": [
+      1,
+      1,
+      1
+    ],
+    "introns_annotated": [
+
+    ],
+    "TSS": [
+      1000,
+      3000
+    ],
+    "TES": [
+      4000,
+      6000
+    ]
+  },
+  "ENSG00000111126.5_FTT_alt_start_end_partial": {
+    "desc": "within flair novel case, cases with one overlapped areas ",
+    "strand": "+",
+    "exons": [
+      [1000, 2000],
+      [3000, 4000],
+      [5000, 6000]
+    ],
+    "exons_annotated": [
+      1,1,1
+    ],
+    "junctions": [
+      [2000, 3000],
+      [4000, 5000],
+      [2000, 5000]
+    ],
+    "introns": [
+    ],
+    "junctions_reads": [
+      0,
+      0,
+      10
+    ],
+    "introns_reads": [
+
+    ],
+    "junctions_annotated": [
+      1,
+      1,
+      1
+    ],
+    "introns_annotated": [
+
+    ],
+    "TSS": [
+      1000
+    ],
+    "TES": [
+      6000
+    ]
+  },
+  "ENSG00000111127.5_FTF_novel_speical_exon": {
+    "desc": "within flair novel case, cases with one overlapped areas ",
+    "strand": "+",
+    "exons": [
+      [1000, 2000],
+      [3000, 4000],
+      [5000, 6000]
+    ],
+    "exons_annotated": [
+      1,1,1
+    ],
+    "junctions": [
+      [2000, 3000],
+      [4000, 5000]
+    ],
+    "introns": [
+    ],
+    "junctions_reads": [
+      10,
+      10
+    ],
+    "introns_reads": [
+
+    ],
+    "junctions_annotated": [
+      1,
+      1
+    ],
+    "introns_annotated": [
+
+    ],
+    "TSS": [
+      1000,
+      1500
+    ],
+    "TES": [
+      5800,
+      6000
+    ]
   }
 }
