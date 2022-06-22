@@ -371,6 +371,49 @@
       5800,
       6000
     ]
-  }
+  },
+  "ENSG00000111120.5_FTF_flair_novel_alt3_alt5_exon_intron_one": {
+    "desc": "within flair novel case, cases with one overlapped areas ",
+    "strand": "+",
+    "exons": [
+      [1000, 2000],
+      [3000, 4000],
+      [5000, 6000],
+      [7000, 8000]
+    ],
+    "exons_annotated": [
+      1,1,1,1
+    ],
+    "junctions": [
+      [2000, 3000],
+      [4000, 5000],
+      [6000, 7000]
+    ],
+    "introns": [
+    ],
+    "junctions_reads": [
+      10,
+      10,
+      10
+    ],
+    "introns_reads": [
 
+    ],
+    "junctions_annotated": [
+      1,
+      1,
+      1
+    ],
+    "introns_annotated": [
+
+    ],
+    "TSS": [
+      1000,
+      1500
+    ],
+    "TES": [
+      7800,
+      8000
+    ]
+  }
 }

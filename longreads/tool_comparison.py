@@ -43,12 +43,27 @@ class ToolComparer:
                                  'majiq_combination',
                                  'majiq_novel',
                                  'flair_only_combination',
-                                 'flair_only_novel',
+                                 'flair_novel',
                                  'flair_combination_novel',
                                  'flair_combination_partial',
                                  'flair_novel_partial',
                                  'flair_partial_combination_novel',
                                  'partial',
+                                 'flair_novel_alt3',
+                                 'flair_novel_alt5',
+                                 'flair_novel_exon',
+                                 'flair_novel_intron',
+                                 'flair_novel_alt3_alt5',
+                                 'flair_novel_alt3_exon',
+                                 'flair_novel_alt3_intron',
+                                 'flair_novel_alt5_exon',
+                                 'flair_novel_alt5_intron',
+                                 'flair_novel_intron_exon',
+                                 'flair_novel_alt3_alt5_exon',
+                                 'flair_novel_alt3_alt5_intron',
+                                 'flair_novel_alt3_intron_exon',
+                                 'flair_novel_alt5_intron_exon',
+                                 'flair_novel_alt3_alt5_intron_exon',
                                  'flair_FTF_unknown'
                                  ]
 
@@ -174,6 +189,7 @@ class ToolComparer:
         junctions = set()
         for i in range(len(transcript)-1):
             junctions.add(junction(transcript[i].end, transcript[i+1].start))
+            print("See the process",junctions)
         return junctions
     
     def all_annotated(self, in_flair_and_majiq, only_in_majiq, majiq_denovo):
@@ -202,14 +218,29 @@ class ToolComparer:
         elif all(kwargs.get(x, False) for x in ('novel', 'combination')):
             return 'flair_combination_novel'
         elif kwargs.get('novel', False):
-            return 'flair_only_novel'
+            return 'flair_novel'
         elif kwargs.get('combination', False):
             return 'flair_only_combination'
         else:
             #print("unexpected", kwargs)
             assert False
 
-    def add_data(self, majiq_result, majiq_denovo, majiq_has_reads, flair_result, annotated_starts, annotated_ends, annotated_exon_coords):
+    def substring_FTF_novel(self, **kwargs):
+        """
+        kwargs: novel_alt3, novel_alt5, novel_intron, novel_exon
+        """
+        novel_substring = 'flair_novel'
+        novel_substring+= "_alt3" if kwargs.get('novel_alt3',False) else ""
+        novel_substring+= "_alt5" if kwargs.get('novel_alt5',False) else ""
+        novel_substring+= "_intron" if kwargs.get('novel_intron',False) else ""
+        novel_substring+= "_exon" if kwargs.get('novel_exon',False) else ""
+
+        assert novel_substring != 'flair_novel' 
+
+        return novel_substring 
+
+
+    def add_data(self, majiq_result, majiq_denovo, majiq_has_reads, flair_result, annotated_starts, annotated_ends, annotated_exon_coords, annotated_exons_order):
         """
 
         """
@@ -218,11 +249,7 @@ class ToolComparer:
 
         # before removing start / end information, we use it to check for partial isoforms
 
-
         only_in_flair, only_in_majiq, in_flair_and_majiq = self.compare_fuzzy(flair_result, majiq_result, self.args.fuzziness)
-
-
-
 
         for f_transcript, m_transcript in in_flair_and_majiq:
             known_junctions = known_junctions.union(self.get_junctions(m_transcript))
@@ -257,20 +284,63 @@ class ToolComparer:
         # print('M', majiq_result)
         # print("A_ex", annotated_exon_coords)
         # print("Known_j", known_junctions)
-        # print('f_o', only_in_flair)
+        print('transcript number:', len(only_in_flair),' | f_o', only_in_flair)
         # print('m_o', only_in_majiq)
         # print('f_m_b', in_flair_and_majiq)
 
         for transcript in only_in_flair:
             self.incCountPrint(tmpcounts, transcript, 'FTF')
             partial, novel, combination = False, False, False
+            novel_alt3, novel_alt5, novel_intron, novel_exon = False, False, False, False
+
+            flair_new_exon = set()
+            for flair_exon in transcript[1:-1]:
+                for i in range(len(annotated_exons_order)-1):
+                    E1, E2 = annotated_exons_order[i], annotated_exons_order[i+1]
+                    if flair_exon.start > E1.end and flair_exon.end < E2.start:
+                        flair_new_exon.add(flair_exon.start)
+                        flair_new_exon.add(flair_exon.end)
+                        #print("new exon: ", flair_new_exon)
+                        novel_exon = True
 
             for i in range(len(transcript)-1):
                 junc = junction(transcript[i].end, transcript[i + 1].start)
+                # print(known_junctions)
                 if {junc.start, junc.end}.issubset(annotated_exon_coords) and junc not in known_junctions:
                     combination = True
                 elif junc not in known_junctions:
                     novel = True
+                    if junc.end not in annotated_exon_coords and junc.end not in flair_new_exon:
+                        novel_alt5 = True
+                    if junc.start not in annotated_exon_coords and junc.start not in flair_new_exon:
+                        novel_alt3 = True 
+                    
+            if True:
+                print("known_junc: ",known_junctions)
+                for junction_ in sorted(known_junctions):
+                    print("sorted junc: ",junction_)
+                    print(transcript)
+                    for flair_exon in transcript:
+                        #print(flair_exon)
+                        print("exon_start: ",flair_exon.start)
+                        print("exon_end: ",flair_exon.end)
+                        print("junc_start: ",junction_.start)
+                        print("junc_start: ",junction_.end)
+                        if abs(flair_exon.start) < junction_.start and abs(flair_exon.end) > junction_.end:
+                            novel_intron = True; novel = True
+                            print(novel_intron)
+                        else:
+                            continue
+                        break
+                    # if junc.end in annotated_exon_coords and junc.start in annotated_exon_coords and junc not in known_junctions:
+                    #     novel_intron = True
+            
+            assert not (not novel and novel_exon)
+                # print(novel_alt3, novel_alt5)
+            if novel:
+                novel_name = self.substring_FTF_novel(novel_alt3=novel_alt3, novel_alt5=novel_alt5, novel_intron=novel_intron, novel_exon=novel_exon)
+                self.incCountPrint(tmpcounts, transcript, novel_name)      
+
             if (-transcript[0].start not in annotated_starts) or (-transcript[-1].end not in annotated_ends):
                 partial = True
 
