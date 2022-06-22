@@ -189,7 +189,7 @@ class ToolComparer:
         junctions = set()
         for i in range(len(transcript)-1):
             junctions.add(junction(transcript[i].end, transcript[i+1].start))
-            print("See the process",junctions)
+            # print("See the process",junctions)
         return junctions
     
     def all_annotated(self, in_flair_and_majiq, only_in_majiq, majiq_denovo):
@@ -284,7 +284,8 @@ class ToolComparer:
         # print('M', majiq_result)
         # print("A_ex", annotated_exon_coords)
         # print("Known_j", known_junctions)
-        print('transcript number:', len(only_in_flair),' | f_o', only_in_flair)
+        # print(' | f_o', only_in_flair)
+        # print('flair transcript number:', len(only_in_flair))
         # print('m_o', only_in_majiq)
         # print('f_m_b', in_flair_and_majiq)
 
@@ -316,19 +317,19 @@ class ToolComparer:
                         novel_alt3 = True 
                     
             if True:
-                print("known_junc: ",known_junctions)
+                # print("known_junc: ",known_junctions)
                 for junction_ in sorted(known_junctions):
-                    print("sorted junc: ",junction_)
-                    print(transcript)
+                    # print("sorted junc: ",junction_)
+                    # print(transcript)
                     for flair_exon in transcript:
                         #print(flair_exon)
-                        print("exon_start: ",flair_exon.start)
-                        print("exon_end: ",flair_exon.end)
-                        print("junc_start: ",junction_.start)
-                        print("junc_start: ",junction_.end)
+                        # print("exon_start: ",flair_exon.start)
+                        # print("exon_end: ",flair_exon.end)
+                        # print("junc_start: ",junction_.start)
+                        # print("junc_start: ",junction_.end)
                         if abs(flair_exon.start) < junction_.start and abs(flair_exon.end) > junction_.end:
                             novel_intron = True; novel = True
-                            print(novel_intron)
+                            # print(novel_intron)
                         else:
                             continue
                         break
