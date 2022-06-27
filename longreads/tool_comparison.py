@@ -114,8 +114,6 @@ class ToolComparer:
                 for k in range(len(set2elem) - len(set1elem)+1):
                     slide_set2 = set2elem[k:k+len(set1elem)]
                     for coords1, coords2 in zip(set1elem, slide_set2):
-                        # print("coords1", coords1, coords1[0], coords1[1])
-                        # print("coords2", coords2, coords2[0], coords2[1])
                         startCondition = coords1[0] <= -2 or coords2[0] <= -2 or (abs(coords1[0] - coords2[0]) <= fuzziness)
                         endCondition = coords1[1] <= -2 or coords2[1] <= -2 or (abs(coords1[1] - coords2[1]) <= fuzziness)
                         if not startCondition or not endCondition:
@@ -134,7 +132,6 @@ class ToolComparer:
                     in_both_sets.add((f_transcript, m_transcript))
                     if m_transcript in only_in_set2:
                         only_in_set2.remove(m_transcript)
-                        print(only_in_set2)
                     break
             else:
                 only_in_set1.add(f_transcript)
@@ -273,7 +270,6 @@ class ToolComparer:
                 self.incCountPrint(tmpcounts, m_transcript, 'TTF')
             else:
                 if majiq_has_reads[m_transcript]:
-                    print(majiq_has_reads)
                     self.incCountPrint(tmpcounts, m_transcript, 'TTT')
                 else:
                     self.incCountPrint(tmpcounts, m_transcript, 'FTT')
@@ -332,27 +328,16 @@ class ToolComparer:
                     if junc.start not in annotated_exon_coords and junc.start not in flair_new_exon:
                         novel_alt3 = True 
                     
-            # print("known_junc: ",known_junctions)
             for junction_ in sorted(known_junctions):
-                # print("sorted junc: ",junction_)
-                # print(transcript)
                 for flair_exon in transcript:
-                    #print(flair_exon)
-                    # print("exon_start: ",flair_exon.start)
-                    # print("exon_end: ",flair_exon.end)
-                    # print("junc_start: ",junction_.start)
-                    # print("junc_start: ",junction_.end)
                     if abs(flair_exon.start) < junction_.start and abs(flair_exon.end) > junction_.end:
                         novel_intron = True; novel = True
-                        # print(novel_intron)
                     else:
                         continue
                     break
-                    # if junc.end in annotated_exon_coords and junc.start in annotated_exon_coords and junc not in known_junctions:
-                    #     novel_intron = True
             
             assert not (not novel and novel_exon)
-                # print(novel_alt3, novel_alt5)
+
             if novel:
                 novel_name = self.substring_FTF_novel(novel_alt3=novel_alt3, novel_alt5=novel_alt5, novel_intron=novel_intron, novel_exon=novel_exon)
                 self.incCountPrint(tmpcounts, transcript, novel_name)      
