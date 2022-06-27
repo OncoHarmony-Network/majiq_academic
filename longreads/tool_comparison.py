@@ -85,6 +85,8 @@ class ToolComparer:
         if self.args.verbose >= 2:
             print("PATH", key, transcript)
 
+    
+
     def compare_fuzzy(self, set1, set2, fuzziness):
         """
         Return "only in set1", "only in set2" and "in both sets" by fuzzy matching
@@ -102,30 +104,25 @@ class ToolComparer:
                 return True
             if len(set1elem) <= len(set2elem):
                 # set1elem: Flair, set2elem: MAJIQ
-                if len(set2elem) > len(set1elem):
-                    for k in range(len(set2elem) - len(set1elem)+1):
-                        slide_set2 = set2elem[k:k+len(set1elem)]
-                        # print(set2elem[k:k+len(set1elem)])
-                        if all(tup in set1elem for tup in slide_set2):
-                            #print("Both are equal")
-                            return slide_set2
-                        else:
-                            #print("They are not equal")
-                            return slide_set2
-                # for i in set1elem:
-                    # print(set1elem[0].start, set1elem[-1].end)
-                    # print("set1 ", set1elem, len(set1elem))
-                    # print("set2 ", set2elem, len(set2elem))
-                    
-                for coords1, coords2 in zip(set1elem, set2elem):
-                    # print("coords1", coords1, coords1[0], coords1[1])
-                    # print("coords2", coords2, coords2[0], coords2[1])
-                    startCondition = coords1[0] <= -2 or coords2[0] <= -2 or (abs(coords1[0] - coords2[0]) <= fuzziness)
-                    endCondition = coords1[1] <= -2 or coords2[1] <= -2 or (abs(coords1[1] - coords2[1]) <= fuzziness)
-                    if not startCondition or not endCondition:
-                        break
-                else:
-                    return set2elem
+                for i in range(len(set2elem)-1):
+                    junc_majiq = junction(set2elem[i].end, set2elem[i + 1].start)
+                    if junc_majiq.start > abs(set1elem[0].start) and junc_majiq.end < set1elem[0].end:
+                        return False
+                    elif junc_majiq.start > set1elem[-1].start and junc_majiq.end < abs(set1elem[-1].end):
+                        return False
+
+                for k in range(len(set2elem) - len(set1elem)+1):
+                    slide_set2 = set2elem[k:k+len(set1elem)]
+                    for coords1, coords2 in zip(set1elem, slide_set2):
+                        # print("coords1", coords1, coords1[0], coords1[1])
+                        # print("coords2", coords2, coords2[0], coords2[1])
+                        startCondition = coords1[0] <= -2 or coords2[0] <= -2 or (abs(coords1[0] - coords2[0]) <= fuzziness)
+                        endCondition = coords1[1] <= -2 or coords2[1] <= -2 or (abs(coords1[1] - coords2[1]) <= fuzziness)
+                        if not startCondition or not endCondition:
+                            break
+                    else:
+                        return set2elem
+
                         #print('true by cond', coords1[0] == -1, coords2[0] == -1, abs(coords1[0] - coords2[0]) <= fuzziness, coords1[1] == -1, coords2[1] == -1, abs(coords1[1] - coords2[1]) <= fuzziness)
                         #return True
             return False
@@ -308,31 +305,7 @@ class ToolComparer:
         # print('m_o', only_in_majiq)
         # print('f_m_b', in_flair_and_majiq)
 
-        for transcript in only_in_flair:
-            # for i in range(len(transcript)-1):
-            #     known_junctions = known_junctions.union(self.get_junctions(transcript))
-            #     junc = junction(transcript[i].end, transcript[i+1].start)
-            #     print(junc)
-            #     print("junc: ", known_junctions)
-            #     print('exon start: ', abs(transcript[0].start))
-            #     print('exon end: ', abs(transcript[-1].end))
-            #     print('flair: ',transcript)
-            #     print('exon coord: ',annotated_exon_coords)
-            #     print("annotated: ",annotated_exons_order,'\n')
-            #     # It should match TES and TSS
-            #     name = 'flair_FTF_unknown'  
-            #     if junc in known_junctions and (abs(transcript[0].start) and abs(transcript[-1].end)) in annotated_ends:
-            #         print('hey------------------')
-            #         self.incCountPrint(tmpcounts, transcript, 'TTT')
-          
-            #         # try:
-            #         #     self.incCountPrint(tmpcounts, transcript, 'TTT')
-            #         # except:
-            #         #     assert name != 'flair_FTF_unknown'   
-            #     else:
-            #         self.incCountPrint(tmpcounts, transcript, 'FTF')
-                    
-                                
+        for transcript in only_in_flair:                                     
             self.incCountPrint(tmpcounts, transcript, 'FTF')
             partial, novel, combination = False, False, False
             novel_alt3, novel_alt5, novel_intron, novel_exon = False, False, False, False
