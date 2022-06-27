@@ -307,6 +307,8 @@ class ToolComparer:
             novel_alt3, novel_alt5, novel_intron, novel_exon = False, False, False, False
 
             flair_new_exon = set()
+
+            # check for flair exons in between annotated exons
             for flair_exon in transcript[1:-1]:
                 for i in range(len(annotated_exons_order)-1):
                     E1, E2 = annotated_exons_order[i], annotated_exons_order[i+1]
@@ -315,6 +317,17 @@ class ToolComparer:
                         flair_new_exon.add(flair_exon.end)
                         #print("new exon: ", flair_new_exon)
                         novel_exon = True
+
+
+            # check for flair exons existing before/after any annotated exons
+            for flair_exon in transcript:
+                if all(abs(flair_exon.end) < e.start for e in annotated_exons_order) or \
+                   all(abs(flair_exon.start) > e.end for e in annotated_exons_order):
+                    flair_new_exon.add(flair_exon.start)
+                    flair_new_exon.add(flair_exon.end)
+                    novel = True
+                    novel_exon = True
+
 
             for i in range(len(transcript)-1):
                 junc = junction(transcript[i].end, transcript[i + 1].start)
@@ -331,7 +344,8 @@ class ToolComparer:
             for junction_ in sorted(known_junctions):
                 for flair_exon in transcript:
                     if abs(flair_exon.start) < junction_.start and abs(flair_exon.end) > junction_.end:
-                        novel_intron = True; novel = True
+                        novel_intron = True
+                        novel = True
                     else:
                         continue
                     break
@@ -344,7 +358,8 @@ class ToolComparer:
 
             if (-transcript[0].start not in annotated_starts) or (-transcript[-1].end not in annotated_ends):
                 partial = True
-                
+
+
             try:
                 name = self.substring_FTF(partial=partial, novel=novel, combination=combination)
             except:
