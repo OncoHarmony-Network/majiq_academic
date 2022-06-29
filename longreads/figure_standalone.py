@@ -62,11 +62,11 @@ def plot(only_in_flair, only_in_majiq, in_flair_and_majiq, filename, module_exte
 
     delayed_patches = []
     y = transcript_height_padding
-    colors = (flairColor, majiqColor, bothColor)
-    for i, transcripts in enumerate((only_in_flair, only_in_majiq, in_flair_and_majiq)):
+    colors = (flairColor, bothColor, majiqColor)
+    for i, transcripts in enumerate((only_in_flair, in_flair_and_majiq, only_in_majiq)):
         color = colors[i]
 
-        if i == 2:
+        if i == 1:
             transcripts = (x[1] for x in transcripts)  # use the majiq transcripts when both are provided
 
         for exons in transcripts:
