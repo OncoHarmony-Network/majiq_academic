@@ -123,34 +123,14 @@ def compare_gene(_args):
             
             """
 
+            flair_exons = flairreader.get_exons(gene_id, majiq_module_extent=majiq_module_extent, modules=modules)
 
-
-            flair_exons = set()
-            ord_flair_exons = tuple(x for x in flairreader.gene(gene_id, extent=majiq_module_extent, ignore_starts_ends=True))
-
-            for transcript in ord_flair_exons:
-                if modules:
-                    flair_exons.add(tuple(exon(max(majiq_module_extent[0], e.start) if e.start > 0 else e.start, min(majiq_module_extent[1], e.end) if e.end > 0 else e.end) for e in transcript))
-                else:
-                    flair_exons.add(tuple(exon(e.start, e.end) for e in transcript))
-
-            majiq_exons = set()
-            majiq_denovo = {}
-            majiq_has_reads = {}
-
-
-            num_paths = 0
-            for (ord_majiq_transcript, majiq_meta, denovo, has_reads) in majiqParser.getAllPaths(module_idx=module_idx if modules else None):
-                num_paths += 1
-                if args.max_paths == 0 or num_paths > args.max_paths:
-                    raise RecursionError()
-                if modules:
-                    set_key = tuple(exon(max(majiq_module_extent[0], e.start) if e.start > 0 else e.start, min(majiq_module_extent[1], e.end) if e.end > 0 else e.end) for e in ord_majiq_transcript)
-                else:
-                    set_key = tuple(exon(e.start, e.end) for e in ord_majiq_transcript)
-                majiq_exons.add(set_key)
-                majiq_denovo[set_key] = denovo
-                majiq_has_reads[set_key] = has_reads
+            majiq_exons, majiq_denovo, majiq_has_reads = majiqParser.allpaths_data(
+                modules=modules,
+                module_idx=module_idx if modules else None,
+                max_paths=args.max_paths,
+                majiq_module_extent=majiq_module_extent
+            )
 
 
             counts = tc.add_data(majiq_exons, majiq_denovo, majiq_has_reads, flair_exons, annotated_starts, annotated_ends, annotated_exons, annotated_exons_order)

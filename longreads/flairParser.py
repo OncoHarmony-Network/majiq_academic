@@ -1,4 +1,6 @@
-from pygtftk.gtf_interface import GTF
+import warnings
+warnings.simplefilter(action='ignore', category=FutureWarning)
+
 from graph import exon
 from gtfparse import read_gtf
 
@@ -12,6 +14,18 @@ class FlairReader:
     def has_gene(self, gene_id):
         return len(self.df[self.df['gene_id'] == gene_id].index) != 0
 
+
+    def get_exons(self, gene_id, majiq_module_extent=None, modules=False):
+        flair_exons = set()
+        ord_flair_exons = tuple(x for x in self.gene(gene_id, extent=majiq_module_extent, ignore_starts_ends=True))
+
+        for transcript in ord_flair_exons:
+            if modules:
+                flair_exons.add(tuple(exon(max(majiq_module_extent[0], e.start) if e.start > 0 else e.start, min(majiq_module_extent[1], e.end) if e.end > 0 else e.end) for e in transcript))
+            else:
+                flair_exons.add(tuple(exon(e.start, e.end) for e in transcript))
+
+        return flair_exons
 
     def gene(self, gene_id, extent=None, ignore_starts_ends=False):
 

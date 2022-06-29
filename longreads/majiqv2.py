@@ -23,6 +23,26 @@ class MajiqV2Reader:
         with SpliceGraph(self.path) as sg:
             return sg.gene(gene_id) is not None
 
+    def allpaths_data(self, max_paths, modules=None, module_idx=None, majiq_module_extent=None):
+        majiq_exons = set()
+        majiq_denovo = {}
+        majiq_has_reads = {}
+
+        num_paths = 0
+        for (ord_majiq_transcript, majiq_meta, denovo, has_reads) in self.getAllPaths(module_idx=module_idx):
+            num_paths += 1
+            if max_paths == 0 or num_paths > max_paths:
+                raise RecursionError()
+            if modules:
+                set_key = tuple(exon(max(majiq_module_extent[0], e.start) if e.start > 0 else e.start, min(majiq_module_extent[1], e.end) if e.end > 0 else e.end) for e in ord_majiq_transcript)
+            else:
+                set_key = tuple(exon(e.start, e.end) for e in ord_majiq_transcript)
+            majiq_exons.add(set_key)
+            majiq_denovo[set_key] = denovo
+            majiq_has_reads[set_key] = has_reads
+
+        return majiq_exons, majiq_denovo, majiq_has_reads
+
     def parse_splicegraph(self, gene_id):
 
         # with ViewSpliceGraph(path, splice_graph_file=path) as sg:

@@ -7,6 +7,10 @@ import argparse
 parser = argparse.ArgumentParser(description='Majiq long reads test runner')
 parser.add_argument('--gene-id', type=str, required=False,
                     help='run test for this specific gene_id instead of all of them')
+parser.add_argument('--only-full-gene', action='store_true',
+                    help='run tests for only the full length gene comparison (by default, all are run)')
+parser.add_argument('--only-modules', action='store_true',
+                    help='run tests for only the modules mode gene comparison (by default, all are run)')
 args = parser.parse_args()
 
 abspath = os.path.abspath(__file__)
@@ -23,35 +27,45 @@ def read_result_file(path):
             else:
                 yield line
 
+def run_and_check(tmpname, splice_graph_json_path, flair_gtf_path, ground_truth_path, modules=False):
+    generate_str = f"python generate_splice_graph.py -o testcases/{tmpname} --json {splice_graph_json_path} --template-sql ../voila/rna_voila/api/model.sql"
+    if args.gene_id:
+        generate_str += f' -n {args.gene_id}'
 
-generate_str = "python generate_splice_graph.py -o testcases/sg_generated --json testcases/splice_graphs.json --template-sql ../voila/rna_voila/api/model.sql"
-if args.gene_id:
-    generate_str += f' -n {args.gene_id}'
+    run_str = f"python main.py --majiq-splicegraph-path testcases/{tmpname}.sql --flair-gtf-path {flair_gtf_path} --output-path testcases/{tmpname} -j 1 --debug"
+    if modules:
+        run_str += ' --per-module'
 
-subprocess.check_call(generate_str, shell=True)
-subprocess.check_call("python main.py --majiq-splicegraph-path testcases/sg_generated.sql --flair-gtf-path testcases/ex.isoforms.gtf --output-path testcases/result -j 1 --debug", shell=True)
+    subprocess.check_call(generate_str, shell=True)
+    subprocess.check_call(run_str, shell=True)
 
-errors = False
-found_gene = False
+    errors = False
+    found_gene = False
 
-for expected, actual in zip(read_result_file('testcases/comparison.tsv'), read_result_file('testcases/result/comparison.tsv')):
+    for expected, actual in zip(read_result_file(ground_truth_path), read_result_file(f'testcases/{tmpname}/comparison.tsv')):
 
-    found_gene = True
-    diff = []
-    for key in expected.keys():
-        if key not in actual:
-            diff.append(('Header missing', key, ''))
-            continue
-        if expected[key] != actual[key]:
-            diff.append((key, expected[key], actual[key]))
-    if diff:
-        errors = True
-        print('~~~~~Error in gene:', expected['gene_id'] )
-        for key, _exp, _act in diff:
-            print('     -', key, 'expected: ', _exp, 'found: ', _act)
-        break
+        found_gene = True
+        diff = []
+        for key in expected.keys():
+            if key not in actual:
+                diff.append(('Header missing', key, ''))
+                continue
+            if expected[key] != actual[key]:
+                diff.append((key, expected[key], actual[key]))
+        if diff:
+            errors = True
+            print('~~~~~Error in gene:', expected['gene_id'] )
+            for key, _exp, _act in diff:
+                print('     -', key, 'expected: ', _exp, 'found: ', _act)
+            break
 
-if not found_gene:
-    print("Could not find any matching genes!")
-elif not errors:
-    print("All is well!")
+    if not found_gene:
+        print("Could not find any matching genes!")
+    elif not errors:
+        print("All is well!")
+
+if not args.only_full_gene:
+    run_and_check('testcases_module', 'testcases/splice_graphs_modules.json', 'testcases/ex.isoforms_modules.gtf', 'testcases/comparison_modules.tsv')
+
+if not args.only_modules:
+    run_and_check('testcases_gene', 'testcases/splice_graphs.json', 'testcases/ex.isoforms.gtf', 'testcases/comparison.tsv')

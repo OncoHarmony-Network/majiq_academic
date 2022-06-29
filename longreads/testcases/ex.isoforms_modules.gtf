@@ -1,0 +1,8 @@
+chr1	FLAIR	transcript	1000	6000	.	+	.	gene_id "ENSG00000111111.6_TTF_majiq_flair";
+chr1	FLAIR	exon	1000	2000	.	+	.	gene_id "ENSG00000111111.6_TTF_majiq_flair";
+chr1	FLAIR	exon	3000	4000	.	+	.	gene_id "ENSG00000111111.6_TTF_majiq_flair";
+chr1	FLAIR	exon	5000	6000	.	+	.	gene_id "ENSG00000111111.6_TTF_majiq_flair";
+chr1	FLAIR	transcript	1000	5900	.	+	.	gene_id "ENSG00000111111.6_TTF_majiq_flair";
+chr1	FLAIR	exon	1000	2000	.	+	.	gene_id "ENSG00000111111.6_TTF_majiq_flair";
+chr1	FLAIR	exon	3000	4000	.	+	.	gene_id "ENSG00000111111.6_TTF_majiq_flair";
+chr1	FLAIR	exon	5000	5900	.	+	.	gene_id "ENSG00000111111.6_TTF_majiq_flair";
