@@ -594,9 +594,7 @@ class Violin {
             .selectAll('circle')
             .data(d => swarm_fn.data(d).arrange())
             .enter()
-            .filter(d => {
-                return d.datum !== -1
-            })
+            .select(function(d) { return d.datum !== -1 ? this : null; })
             .append("circle")
             .attr('fill', color)
             .attr('stroke', null)
