@@ -24,17 +24,14 @@ chr3	FLAIR	transcript	1000	8000	.	+	.	gene_id "ENSG00000222223.5_outside_module_
 chr3	FLAIR	exon	1000	2000	.	+	.	gene_id "ENSG00000222223.5_outside_module_exon3";
 chr3	FLAIR	exon	3000	4000	.	+	.	gene_id "ENSG00000222223.5_outside_module_exon3";
 chr3	FLAIR	exon	7000	8000	.	+	.	gene_id "ENSG00000222223.5_outside_module_exon3";
-chr3	FLAIR	transcript	100	6000	.	+	.	gene_id "ENSG00000222223.5_outside_module_exon3";
-chr3	FLAIR	exon	100	200	.	+	.	gene_id "ENSG00000222223.5_outside_module_exon3";
-chr3	FLAIR	exon	300	400	.	+	.	gene_id "ENSG00000222223.5_outside_module_exon3";
-chr3	FLAIR	exon	500	600	.	+	.	gene_id "ENSG00000222223.5_outside_module_exon3";
-chr3	FLAIR	exon	5000	6000	.	+	.	gene_id "ENSG00000222223.5_outside_module_exon3";
 chr3	FLAIR	transcript	5000	8000	.	+	.	gene_id "ENSG00000222223.5_outside_module_exon3";
 chr3	FLAIR	exon	5000	6000	.	+	.	gene_id "ENSG00000222223.5_outside_module_exon3";
 chr3	FLAIR	exon	7000	8000	.	+	.	gene_id "ENSG00000222223.5_outside_module_exon3";
 chr3	FLAIR	transcript	4300	8000	.	+	.	gene_id "ENSG00000222223.5_outside_module_exon3";
 chr3	FLAIR	exon	4300	6000	.	+	.	gene_id "ENSG00000222223.5_outside_module_exon3";
 chr3	FLAIR	exon	7000	8000	.	+	.	gene_id "ENSG00000222223.5_outside_module_exon3";
-
-
-
+chr3	FLAIR	transcript	100	6000	.	+	.	gene_id "ENSG00000222224.5_outside_module_exon4";
+chr3	FLAIR	exon	100	200	.	+	.	gene_id "ENSG00000222224.5_outside_module_exon4";
+chr3	FLAIR	exon	300	400	.	+	.	gene_id "ENSG00000222224.5_outside_module_exon4";
+chr3	FLAIR	exon	500	600	.	+	.	gene_id "ENSG00000222224.5_outside_module_exon4";
+chr3	FLAIR	exon	5000	6000	.	+	.	gene_id "ENSG00000222224.5_outside_module_exon4";
