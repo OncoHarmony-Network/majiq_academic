@@ -138,7 +138,11 @@ only_in_flair, only_in_majiq, in_flair_and_majiq = tc.compare_fuzzy(flair_exons,
 
 plot(only_in_flair, only_in_majiq, in_flair_and_majiq, f'{majiq_gene_id}_module_combined.png')
 
-for module_idx in range(majiq_parser.getNumModules()):
+
+modules_list = [majiq_parser.moduleExtent(i) for i in range(majiq_parser.getNumModules())]
+modules_list = flairreader.extend_modules(modules_list, flairreader.get_exons(flair_gene_id))
+
+for module_idx, module in enumerate(modules_list):
 
     majiq_module_extent = majiq_parser.moduleExtent(module_idx)
 
@@ -149,15 +153,13 @@ for module_idx in range(majiq_parser.getNumModules()):
     
     """
 
-
-
-    flair_exons = flairreader.get_exons(flair_gene_id, majiq_module_extent=majiq_module_extent, modules=None)
+    flair_exons = flairreader.get_exons(flair_gene_id, majiq_module_extent=module, modules=None)
 
     majiq_exons, majiq_denovo, majiq_has_reads = majiq_parser.allpaths_data(
         modules=None,
         module_idx=module_idx,
         max_paths=args.max_paths,
-        majiq_module_extent=majiq_module_extent
+        majiq_module_extent=module
     )
     only_in_flair, only_in_majiq, in_flair_and_majiq = tc.compare_fuzzy(flair_exons, majiq_exons, args.fuzziness)
 

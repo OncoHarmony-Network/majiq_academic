@@ -8,6 +8,7 @@ from collections import namedtuple
 
 exon = namedtuple('exon', 'start end')
 junction = namedtuple('junction', 'start end')
+module = namedtuple('module', 'start end')
 
 class UnsupportedVoilaFile(Exception):
     pass

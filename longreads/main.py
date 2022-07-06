@@ -103,18 +103,16 @@ def compare_gene(_args):
 
         #full_flair_exons = tuple(x for x in flairreader.gene(gene_id, extent=None, ignore_starts_ends=False))
         #gene_partial_count = tc.add_partials(full_flair_exons, annotated_starts, annotated_ends)
+        modules_list = [majiqParser.moduleExtent(i) for i in range(majiqParser.getNumModules())] if modules else [None]
+        modules_list = flairreader.extend_modules(modules_list, flairreader.get_exons(gene_id)) if modules else [None]
 
-
-        for module_idx in range(majiqParser.getNumModules() if modules else 1):
+        for module_idx, module in enumerate(modules_list):
             if args.verbose >= 1:
                 print(gene_id, '-------------------------')
                 if modules:
                     print('module IDX', module_idx)
 
 
-
-
-            majiq_module_extent = majiqParser.moduleExtent(module_idx) if modules else None
 
             """
             for in-module, by default the exons we receive from majiq start/end are technically not part of the module
@@ -123,13 +121,13 @@ def compare_gene(_args):
             
             """
 
-            flair_exons = flairreader.get_exons(gene_id, majiq_module_extent=majiq_module_extent, modules=modules)
+            flair_exons = flairreader.get_exons(gene_id, majiq_module_extent=module, modules=modules)
 
             majiq_exons, majiq_denovo, majiq_has_reads = majiqParser.allpaths_data(
                 modules=modules,
                 module_idx=module_idx if modules else None,
                 max_paths=args.max_paths,
-                majiq_module_extent=majiq_module_extent
+                majiq_module_extent=module
             )
 
 

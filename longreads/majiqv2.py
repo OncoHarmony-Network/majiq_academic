@@ -1,6 +1,7 @@
 from rna_voila.api import SpliceGraph
 from rna_voila.api.view_splice_graph import ViewSpliceGraph
 from graph import Graph, exon
+from graph import module as _module
 from collections import namedtuple
 
 fake_config = namedtuple('ClassifyConfig', "splice_graph_file")
@@ -96,7 +97,7 @@ class MajiqV2Reader:
             start = min(edge.start, start)
             end = max(edge.end, end)
 
-        return start, end
+        return _module(start, end)
 
     def getAllPathsUtil(self, u, d, visited, path, start=None, dont_append=False, is_denovo=False, has_reads=True):
 
