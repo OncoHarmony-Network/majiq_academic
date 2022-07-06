@@ -65,7 +65,7 @@ def run_and_check(tmpname, splice_graph_json_path, flair_gtf_path, ground_truth_
         print("All is well!")
 
 if not args.only_full_gene:
-    run_and_check('testcases_module', 'testcases/splice_graphs_modules.json', 'testcases/ex.isoforms_modules.gtf', 'testcases/comparison_modules.tsv')
+    run_and_check('testcases_module', 'testcases/testcases_module/splice_graphs.json', 'testcases/testcases_module/ex.isoforms.gtf', 'testcases/testcases_module/comparison.tsv')
 
 if not args.only_modules:
-    run_and_check('testcases_gene', 'testcases/splice_graphs.json', 'testcases/ex.isoforms.gtf', 'testcases/comparison.tsv')
+    run_and_check('testcases_gene', 'testcases/testcases_module/splice_graphs.json', 'testcases/testcases_module/ex.isoforms.gtf', 'testcases/testcases_gene/comparison.tsv')
