@@ -1,22 +1,27 @@
 {
-  "ENSG00000111111.6_TTF_majiq_flair": {
+  "ENSG00000222221.5_outside_module_exon": {
     "desc": "in majiq and flair, not in annotation + TTF_partial",
     "strand": "+",
     "exons": [
       [1000, 2000],
       [3000, 4000],
-      [5000, 6000]
+      [5000, 6000],
+      [7000, 8000]
     ],
     "exons_annotated": [
-      1,1,1
+      1,1,1,1
     ],
     "junctions": [
       [2000, 3000],
-      [4000, 5000]
+      [4000, 5000],
+      [4000, 7000],
+      [6000, 7000]
     ],
     "introns": [
     ],
     "junctions_reads": [
+      10,
+      10,
       10,
       10
     ],
@@ -24,8 +29,10 @@
 
     ],
     "junctions_annotated": [
-      0,
-      0
+      1,
+      1,
+      1,
+      1
     ],
     "introns_annotated": [
 
@@ -35,8 +42,121 @@
       1500
     ],
     "TES": [
-      5800,
-      6000
+      7800,
+      8000
+    ]
+  },
+  "ENSG00000222222.5_outside_module_exon2": {
+    "desc": "in majiq and flair, not in annotation + TTF_partial",
+    "strand": "+",
+    "exons": [
+      [1000, 2000],
+      [3000, 4000],
+      [5000, 6000],
+      [7000, 8000],
+      [9000, 10000],
+      [11000, 12000],
+      [13000, 14000],
+      [15000, 16000]
+    ],
+    "exons_annotated": [
+      1,1,1,1,1,1,1,1
+    ],
+    "junctions": [
+      [2000, 3000],
+      [2000, 3100],
+      [4000, 5000],
+      [6000, 7000],
+      [6000, 9000],
+      [6000, 11000],
+      [12000, 13000],
+      [14000, 15000],
+      [14000, 15100]
+    ],
+    "introns": [
+    ],
+    "junctions_reads": [
+      10,
+      10,
+      10,
+      10,
+      10,
+      10,
+      10,
+      10,
+      10
+    ],
+    "introns_reads": [
+
+    ],
+    "junctions_annotated": [
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1
+    ],
+    "introns_annotated": [
+
+    ],
+    "TSS": [
+      1000,
+      1500
+    ],
+    "TES": [
+      15800,
+      16000
+    ]
+  },
+  "ENSG00000222223.5_outside_module_exon3": {
+    "desc": "in majiq and flair, not in annotation + TTF_partial",
+    "strand": "+",
+    "exons": [
+      [1000, 2000],
+      [3000, 4000],
+      [5000, 6000],
+      [7000, 8000]
+    ],
+    "exons_annotated": [
+      1,1,1,1
+    ],
+    "junctions": [
+      [2000, 3000],
+      [4000, 5000],
+      [2000, 5000],
+      [6000, 7000]
+    ],
+    "introns": [
+    ],
+    "junctions_reads": [
+      10,
+      10,
+      10,
+      10
+    ],
+    "introns_reads": [
+
+    ],
+    "junctions_annotated": [
+      1,
+      1,
+      1,
+      1
+    ],
+    "introns_annotated": [
+
+    ],
+    "TSS": [
+      1000,
+      1500
+    ],
+    "TES": [
+      7800,
+      8000
     ]
   }
 }
