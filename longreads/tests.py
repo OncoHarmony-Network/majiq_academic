@@ -58,6 +58,8 @@ def run_and_check(tmpname, splice_graph_json_path, flair_gtf_path, ground_truth_
             for key, _exp, _act in diff:
                 print('     -', key, 'expected: ', _exp, 'found: ', _act)
             break
+        # else:
+        #     print('Matched!', actual)
 
     if not found_gene:
         print("Could not find any matching genes!")
@@ -68,4 +70,4 @@ if not args.only_full_gene:
     run_and_check('testcases_module', 'testcases/testcases_module/splice_graphs.json', 'testcases/testcases_module/ex.isoforms.gtf', 'testcases/testcases_module/comparison.tsv')
 
 if not args.only_modules:
-    run_and_check('testcases_gene', 'testcases/testcases_module/splice_graphs.json', 'testcases/testcases_module/ex.isoforms.gtf', 'testcases/testcases_gene/comparison.tsv')
+    run_and_check('testcases_gene', 'testcases/testcases_gene/splice_graphs.json', 'testcases/testcases_gene/ex.isoforms.gtf', 'testcases/testcases_gene/comparison.tsv')
