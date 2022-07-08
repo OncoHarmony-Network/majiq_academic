@@ -45,16 +45,23 @@ print('~~~Done Parsing Flair~~~')
 
 
 
-def plot(only_in_flair, only_in_majiq, in_flair_and_majiq, filename, module_extent=None):
+def plot(only_in_flair, only_in_majiq, in_flair_and_majiq, filename, module_extent=None, module_extents=None):
 
     fig, ax = plt.subplots(1)
 
     if not module_extent:
-        gene_start, gene_end = majiq_parser.extent(majiq_gene_id)
+        gene_start = float('inf')
+        gene_end = float('-inf')
+        for transcript_type in (only_in_flair, only_in_majiq, in_flair_and_majiq):
+            for transcript in transcript_type:
+                for _exon in transcript:
+                    gene_start = min(gene_start, abs(_exon.start))
+                    gene_end = max(gene_end, abs(_exon.end))
     else:
         gene_start, gene_end = module_extent[0], module_extent[1]
 
     import pprint
+    print(gene_start, gene_end)
     print(only_in_flair)
     print(only_in_majiq)
     print(in_flair_and_majiq)
@@ -103,9 +110,8 @@ def plot(only_in_flair, only_in_majiq, in_flair_and_majiq, filename, module_exte
                                  edgecolor='none', facecolor=moduleColor)
         ax.add_patch(rect)
     else:
-        for module_idx in range(majiq_parser.getNumModules()):
-            module_extent = majiq_parser.moduleExtent(module_idx)
-            rect = patches.Rectangle((module_extent[0], transcript_height_padding/2.0), module_extent[1]-module_extent[0], y-(transcript_height_padding/2.0), linewidth=1,
+        for _module_extent in module_extents:
+            rect = patches.Rectangle((_module_extent.start, transcript_height_padding/2.0), _module_extent.end-_module_extent.start, y-(transcript_height_padding/2.0), linewidth=1,
                                      edgecolor='none', facecolor=moduleColor)
             ax.add_patch(rect)
 
@@ -124,11 +130,16 @@ def plot(only_in_flair, only_in_majiq, in_flair_and_majiq, filename, module_exte
 flair_exons = flairreader.get_exons(flair_gene_id, majiq_module_extent=None, modules=None)
 print('!', flair_exons)
 
+modules_list = [majiq_parser.moduleExtent(i) for i in range(majiq_parser.getNumModules())]
+modules_list = flairreader.extend_modules(modules_list, flairreader.get_exons(flair_gene_id))
+
+print('modules', modules_list)
+
 majiq_exons, majiq_denovo, majiq_has_reads = majiq_parser.allpaths_data(
     modules=None,
     module_idx=None,
     max_paths=args.max_paths,
-    majiq_module_extent=None
+    majiq_module_extent=None,
 )
 
 tc = ToolComparer(args)
@@ -136,15 +147,16 @@ only_in_flair, only_in_majiq, in_flair_and_majiq = tc.compare_fuzzy(flair_exons,
 # Plot for the entire gene
 # here, we match transcripts exactly between majiq and flair
 
-plot(only_in_flair, only_in_majiq, in_flair_and_majiq, f'{majiq_gene_id}_module_combined.png')
+plot(only_in_flair, only_in_majiq, in_flair_and_majiq, f'{majiq_gene_id}_module_combined.png', module_extents=modules_list)
 
 
-modules_list = [majiq_parser.moduleExtent(i) for i in range(majiq_parser.getNumModules())]
-modules_list = flairreader.extend_modules(modules_list, flairreader.get_exons(flair_gene_id))
+
+
+
 
 for module_idx, module in enumerate(modules_list):
 
-    majiq_module_extent = majiq_parser.moduleExtent(module_idx)
+
 
     """
     for in-module, by default the exons we receive from majiq start/end are technically not part of the module
@@ -164,7 +176,7 @@ for module_idx, module in enumerate(modules_list):
     only_in_flair, only_in_majiq, in_flair_and_majiq = tc.compare_fuzzy(flair_exons, majiq_exons, args.fuzziness)
 
 
-    plot(only_in_flair, only_in_majiq, in_flair_and_majiq, f'{majiq_gene_id}_module_{module_idx}.png', module_extent=majiq_module_extent)
+    plot(only_in_flair, only_in_majiq, in_flair_and_majiq, f'{majiq_gene_id}_module_{module_idx}.png', module_extent=module)
 
 
 
