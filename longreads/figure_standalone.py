@@ -52,9 +52,17 @@ def plot(only_in_flair, only_in_majiq, in_flair_and_majiq, filename, module_exte
     if not module_extent:
         gene_start = float('inf')
         gene_end = float('-inf')
-        for transcript_type in (only_in_flair, only_in_majiq, in_flair_and_majiq):
+        for transcript_type in (only_in_flair, only_in_majiq,):
             for transcript in transcript_type:
                 for _exon in transcript:
+                    gene_start = min(gene_start, abs(_exon.start))
+                    gene_end = max(gene_end, abs(_exon.end))
+        for transcript_type in (in_flair_and_majiq,):
+            for m_transcript, f_transcript in transcript_type:
+                for _exon in m_transcript:
+                    gene_start = min(gene_start, abs(_exon.start))
+                    gene_end = max(gene_end, abs(_exon.end))
+                for _exon in f_transcript:
                     gene_start = min(gene_start, abs(_exon.start))
                     gene_end = max(gene_end, abs(_exon.end))
     else:
