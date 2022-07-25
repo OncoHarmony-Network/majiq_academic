@@ -32,7 +32,7 @@ def run_and_check(tmpname, splice_graph_json_path, flair_gtf_path, ground_truth_
     if args.gene_id:
         generate_str += f' -n {args.gene_id}'
 
-    run_str = f"python main.py --majiq-splicegraph-path testcases/{tmpname}.sql --flair-gtf-path {flair_gtf_path} --output-path testcases/{tmpname} -j 1 --debug"
+    run_str = f"python main.py --majiq-splicegraph-path testcases/{tmpname}.sql --flair-gtf-path {flair_gtf_path} --output-path testcases/{tmpname}/result -j 1 --debug"
     if modules:
         run_str += ' --per-module'
 
@@ -42,7 +42,7 @@ def run_and_check(tmpname, splice_graph_json_path, flair_gtf_path, ground_truth_
     errors = False
     found_gene = False
 
-    for expected, actual in zip(read_result_file(ground_truth_path), read_result_file(f'testcases/{tmpname}/comparison.tsv')):
+    for expected, actual in zip(read_result_file(ground_truth_path), read_result_file(f'testcases/{tmpname}/result/comparison.tsv')):
 
         found_gene = True
         diff = []
