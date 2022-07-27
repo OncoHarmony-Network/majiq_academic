@@ -313,6 +313,8 @@ class ToolComparer:
                 for i in range(len(annotated_exons_order)-1):
                     E1, E2 = annotated_exons_order[i], annotated_exons_order[i+1]
                     if flair_exon.start > E1.end and flair_exon.end < E2.start:
+                        # print("E1 start ",E1.start)
+                        # print("E2 end ",E2.end)
                         flair_new_exon.add(flair_exon.start)
                         flair_new_exon.add(flair_exon.end)
                         #print("new exon: ", flair_new_exon)
@@ -321,6 +323,7 @@ class ToolComparer:
 
             # check for flair exons existing before/after any annotated exons
             for flair_exon in transcript:
+                print(flair_exon)
                 if all(abs(flair_exon.end) < e.start for e in annotated_exons_order) or \
                    all(abs(flair_exon.start) > e.end for e in annotated_exons_order):
                     flair_new_exon.add(flair_exon.start)
@@ -344,6 +347,10 @@ class ToolComparer:
             for junction_ in sorted(known_junctions):
                 for flair_exon in transcript:
                     if abs(flair_exon.start) < junction_.start and abs(flair_exon.end) > junction_.end:
+                        # print("flair start ",flair_exon.start)
+                        # print("flair end ",flair_exon.end)
+                        # print("junc start ",junction_.start)
+                        # print("junc end ",junction_.end)
                         novel_intron = True
                         novel = True
                     else:
