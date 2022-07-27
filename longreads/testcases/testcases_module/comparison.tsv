@@ -5,8 +5,8 @@ ENSG00000222223.5_outside_module_exon3	true	2	0	2	0	0	1	0	0	0	1	0	0	0	0	0	0	0	0	
 ENSG00000222224.5_outside_module_exon4	true	0	0	2	0	0	4	0	0	0	0	1	0	0	0	0	0	0	0	3	0	0	0	0	0	0	0	0	0	0	0	0	0
 ENSG00000222225.5_outside_module_intron	true	0	0	4	0	0	3	0	0	0	0	3	0	0	0	0	0	0	0	0	3	0	0	0	0	0	0	0	0	0	0	0	0
 ENSG00000222226.5_outside_module_intron2	true	0	0	4	0	0	3	0	0	0	0	3	0	0	0	0	0	0	0	0	3	0	0	0	0	0	0	0	0	0	0	0	0
-ENSG00000222227.5_outside_module_special	true	1	0	2	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0
-ENSG00000222228.5_outside_module_special2	true	1	0	2	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0
+ENSG00000222227.5_outside_module_special		1	0	1	0	0	0	0	0	0	0	0	0	0	0	0	1	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0
+ENSG00000222228.5_outside_module_special2		1	0	1	0	0	0	0	0	0	0	0	0	0	0	0	1	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0
 ENSG00000222229.5_outside_module_special3	true	0	0	2	0	0	1	0	0	0	0	1	0	0	0	0	0	0	0	0	1	0	0	0	0	0	0	0	0	0	0	0	0
 																																	
 																																	
