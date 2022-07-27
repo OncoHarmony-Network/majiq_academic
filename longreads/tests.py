@@ -41,9 +41,13 @@ def run_and_check(tmpname, splice_graph_json_path, flair_gtf_path, ground_truth_
 
     errors = False
     found_gene = False
+    num_success = 0
 
     for expected, actual in zip(read_result_file(ground_truth_path), read_result_file(f'testcases/{tmpname}/result/comparison.tsv')):
 
+        if expected.get('disabled', '') == 'true':
+            continue
+        del expected['disabled']
         found_gene = True
         diff = []
         for key in expected.keys():
@@ -58,13 +62,15 @@ def run_and_check(tmpname, splice_graph_json_path, flair_gtf_path, ground_truth_
             for key, _exp, _act in diff:
                 print('     -', key, 'expected: ', _exp, 'found: ', _act)
             break
+
+        num_success += 1
         # else:
         #     print('Matched!', actual)
 
     if not found_gene:
         print("Could not find any matching genes!")
     elif not errors:
-        print("All is well!")
+        print(f"All is well! [{num_success}] successful!")
 
 if not args.only_full_gene:
     run_and_check('testcases_module', 'testcases/testcases_module/splice_graphs.json', 'testcases/testcases_module/ex.isoforms.gtf', 'testcases/testcases_module/comparison.tsv')

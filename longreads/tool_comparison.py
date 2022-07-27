@@ -323,7 +323,7 @@ class ToolComparer:
 
             # check for flair exons existing before/after any annotated exons
             for flair_exon in transcript:
-                print(flair_exon)
+                #print(flair_exon)
                 if all(abs(flair_exon.end) < e.start for e in annotated_exons_order) or \
                    all(abs(flair_exon.start) > e.end for e in annotated_exons_order):
                     flair_new_exon.add(flair_exon.start)
