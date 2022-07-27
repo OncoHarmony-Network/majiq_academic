@@ -100,6 +100,10 @@ class ToolComparer:
         superset = set1.union(set2)
 
         def compare(set1elem, set2elem):
+            if len(set1elem) == 1:
+                # we can not compare a one-exon flair transcript with majiq in our current paradigm, because both
+                # the start and end coordinate will be TSS/TES ; which majiq does not measure automatic mark as match
+                return True
             if set1elem == set2elem:
                 return True
             if len(set1elem) <= len(set2elem):
@@ -323,7 +327,7 @@ class ToolComparer:
 
             # check for flair exons existing before/after any annotated exons
             for flair_exon in transcript:
-                print(flair_exon)
+                #print(flair_exon)
                 if all(abs(flair_exon.end) < e.start for e in annotated_exons_order) or \
                    all(abs(flair_exon.start) > e.end for e in annotated_exons_order):
                     flair_new_exon.add(flair_exon.start)
