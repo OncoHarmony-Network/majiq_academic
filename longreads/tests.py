@@ -45,7 +45,7 @@ def run_and_check(tmpname, splice_graph_json_path, flair_gtf_path, ground_truth_
 
     for expected, actual in zip(read_result_file(ground_truth_path), read_result_file(f'testcases/{tmpname}/result/comparison.tsv')):
 
-        if expected.get('disabled', '') == 'true':
+        if expected.get('disabled', '').lower() == 'true':
             continue
         del expected['disabled']
         found_gene = True
