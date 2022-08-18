@@ -659,7 +659,7 @@
       6000
     ]
   },
-  "ENSG00000111127.5_FTF_novel_speical_exon": {
+  "ENSG00000111127.5_FTF_novel_special_exon": {
     "desc": "within flair novel case, cases with one overlapped areas ",
     "strand": "+",
     "exons": [
@@ -699,7 +699,7 @@
       6000
     ]
   },
-  "ENSG00000111128.5_FTF_novel_speical_intron_retention": {
+  "ENSG00000111128.5_FTF_novel_special_intron_retention": {
     "desc": "within flair novel case, cases with one overlapped areas ",
     "strand": "+",
     "exons": [
@@ -744,60 +744,6 @@
     "TES": [
       5800,
       6000
-    ]
-  },
-  "ENSG00000111129.5_FTF_novel_module_intron_retention": {
-    "desc": "within flair novel case, cases with one overlapped areas ",
-    "strand": "+",
-    "exons": [
-      [1000, 2000],
-      [3000, 4000],
-      [5000, 6000],
-      [7000, 8000],
-      [9000, 10000]
-    ],
-    "exons_annotated": [
-      1,1,1,1,1
-    ],
-    "junctions": [
-      [2000, 3000],
-      [2000, 5000],
-      [4000, 5000],
-      [6000, 7000],
-      [6000, 9000],
-      [8000, 9000]
-    ],
-    "introns": [
-    ],
-    "junctions_reads": [
-      10,
-      10,
-      10,
-      10,
-      10,
-      10
-    ],
-    "introns_reads": [
-
-    ],
-    "junctions_annotated": [
-      1,
-      1,
-      1,
-      1,
-      1,
-      1
-    ],
-    "introns_annotated": [
-
-    ],
-    "TSS": [
-      1000,
-      1500
-    ],
-    "TES": [
-      9800,
-      10000
     ]
   }
 }
