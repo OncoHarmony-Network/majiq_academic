@@ -9,6 +9,7 @@ import pprint
 from config import get_args
 import csv
 import traceback
+from itertools import product, combinations
 
 
 from collections import namedtuple
@@ -256,12 +257,13 @@ class ToolComparer:
         return novel_substring 
 
 
-    def add_data(self, majiq_result, majiq_denovo, majiq_has_reads, flair_result, annotated_starts, annotated_ends, annotated_exon_coords, annotated_exons_order):
+    def add_data(self, majiq_result, majiq_denovo, majiq_has_reads, flair_result, annotated_starts, annotated_ends, annotated_exons_starts, annotated_exons_ends, annotated_exons_order):
         """
 
         """
         tmpcounts = self._makeCountsObj()
         known_junctions = set()
+        annotated_exon_coords = set(annotated_exons_starts).union(set(annotated_exons_ends))
 
         # before removing start / end information, we use it to check for partial isoforms
 
@@ -346,11 +348,14 @@ class ToolComparer:
                     if junc.end not in annotated_exon_coords and junc.end not in flair_new_exon:
                         novel_alt5 = True
                     if junc.start not in annotated_exon_coords and junc.start not in flair_new_exon:
-                        novel_alt3 = True 
-                    
-            for junction_ in sorted(known_junctions):
+                        novel_alt3 = True
+
+            for majiq_exon_1, majiq_exon_2 in combinations(zip(annotated_exons_starts, annotated_exons_ends), 2):
+                junc_start = majiq_exon_1[1]
+                junc_end = majiq_exon_2[0]
                 for flair_exon in transcript:
-                    if abs(flair_exon.start) < junction_.start and abs(flair_exon.end) > junction_.end:
+                    if abs(flair_exon.start) < junc_start and abs(flair_exon.end) > junc_end:
+                        # print(abs(flair_exon.start), junc_start, abs(flair_exon.end), junc_end)
                         # print("flair start ",flair_exon.start)
                         # print("flair end ",flair_exon.end)
                         # print("junc start ",junction_.start)

@@ -67,13 +67,14 @@ class MajiqV2Reader:
             return set(x['coordinate'] for x in sg.alt_ends(gene_id))
 
     def annotated_exons(self, gene_id):
-        all_coords = set()
+        starts = []
+        ends = []
         with SpliceGraph(self.path) as sg:
             for x in sg.exons(gene_id):
                 if x['annotated']:
-                    all_coords.add(x['start'])
-                    all_coords.add(x['end'])
-        return all_coords
+                    starts.append(x['start'])
+                    ends.append(x['end'])
+        return starts, ends
 
     def annotated_exons_order(self, gene_id):
         all_coords_order = []
