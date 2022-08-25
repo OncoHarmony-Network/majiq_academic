@@ -354,7 +354,7 @@ class ToolComparer:
                 junc_start = majiq_exon_1[1]
                 junc_end = majiq_exon_2[0]
                 for flair_exon in transcript:
-                    if abs(flair_exon.start) < junc_start and abs(flair_exon.end) > junc_end:
+                    if abs(flair_exon.start) <= junc_start and abs(flair_exon.end) > junc_end:
                         # print(abs(flair_exon.start), junc_start, abs(flair_exon.end), junc_end)
                         # print("flair start ",flair_exon.start)
                         # print("flair end ",flair_exon.end)

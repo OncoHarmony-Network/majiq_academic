@@ -187,3 +187,14 @@ chr18	FLAIR	transcript	1000	6000	.	+	.	gene_id "ENSG00000111128.5_FTF_novel_spec
 chr18	FLAIR	exon	1000	2000	.	+	.	gene_id "ENSG00000111128.5_FTF_novel_special_intron_retention";
 chr18	FLAIR	exon	3000	4000	.	+	.	gene_id "ENSG00000111128.5_FTF_novel_special_intron_retention";
 chr18	FLAIR	exon	5000	6000	.	+	.	gene_id "ENSG00000111128.5_FTF_novel_special_intron_retention";
+chr19	FLAIR	transcript	1000	6000	.	+	.	gene_id "ENSG00000111129.5_FTF_novel_special_intron_retention2";
+chr19	FLAIR	exon	1000	2000	.	+	.	gene_id "ENSG00000111129.5_FTF_novel_special_intron_retention2";
+chr19	FLAIR	exon	3000	6000	.	+	.	gene_id "ENSG00000111129.5_FTF_novel_special_intron_retention2";
+chr20	FLAIR	transcript	1000	8000	.	+	.	gene_id "ENSG00000111130.5_FTF_novel_special_intron_retention3";
+chr20	FLAIR	exon	1000	2000	.	+	.	gene_id "ENSG00000111130.5_FTF_novel_special_intron_retention3";
+chr20	FLAIR	exon	3000	6000	.	+	.	gene_id "ENSG00000111130.5_FTF_novel_special_intron_retention3";
+chr20	FLAIR	exon	7000	8000	.	+	.	gene_id "ENSG00000111130.5_FTF_novel_special_intron_retention3";
+chr20	FLAIR	transcript	1000	8000	.	+	.	gene_id "ENSG00000111130.5_FTF_novel_special_intron_retention3";
+chr20	FLAIR	exon	1000	2000	.	+	.	gene_id "ENSG00000111130.5_FTF_novel_special_intron_retention3";
+chr20	FLAIR	exon	4000	6000	.	+	.	gene_id "ENSG00000111130.5_FTF_novel_special_intron_retention3";
+chr20	FLAIR	exon	7000	8000	.	+	.	gene_id "ENSG00000111130.5_FTF_novel_special_intron_retention3";
