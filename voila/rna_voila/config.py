@@ -39,7 +39,7 @@ _ClassifyConfig = namedtuple('ClassifyConfig', ['directory', 'voila_files', 'voi
                                                 'keep_no_lsvs_junctions', 'debug_num_genes', 'overwrite', 'output_mpe',
                                                 'heatmap_selection', 'logger', 'enabled_outputs',
                                                 'ignore_inconsistent_group_errors', 'disable_metadata',
-                                                'show_read_counts'])
+                                                'show_read_counts', 'cassettes_constitutive_column'])
 _ClassifyConfig.__new__.__defaults__ = (None,) * len(_ClassifyConfig._fields)
 _FilterConfig = namedtuple('FilterConfig', ['directory', 'voila_files', 'voila_file', 'splice_graph_file',
                                             'nproc', 'gene_ids', 'debug', 'silent', 'analysis_type', 'overwrite',
@@ -401,7 +401,8 @@ class ClassifyConfig:
                 settings[float_key] = config_parser['SETTINGS'].getfloat(float_key)
             for bool_key in ['debug', 'keep_no_lsvs_modules', 'only_binary', 'untrimmed_exons', 'overwrite',
                              'putative_multi_gene_regions', 'show_all', 'keep_no_lsvs_junctions', 'output_mpe',
-                             'ignore_inconsistent_group_errors', 'disable_metadata', 'show_read_counts'
+                             'ignore_inconsistent_group_errors', 'disable_metadata', 'show_read_counts',
+                             'cassettes_constitutive_column'
                              ]:
                 settings[bool_key] = config_parser['SETTINGS'].getboolean(bool_key)
 

@@ -233,7 +233,10 @@ class TsvWriter(BaseTsvWriter):
                                              'junction_coord']
             if 'events' in self.config.enabled_outputs:
 
-                self.start_headers(self.common_headers + relatively_common_headers + ['event_size'] + self.quantification_headers, 'cassette.tsv')
+                headers = self.common_headers + relatively_common_headers + ['event_size'] + self.quantification_headers
+                if self.config.cassettes_constitutive_column:
+                    headers.append('event_constitutive')
+                self.start_headers(headers, 'cassette.tsv')
                 self.start_headers(self.common_headers + relatively_common_headers + ['event_size'] + self.quantification_headers, 'alt3prime.tsv')
                 self.start_headers(self.common_headers + relatively_common_headers + ['event_size'] + self.quantification_headers, 'alt5prime.tsv')
                 self.start_headers(self.common_headers + relatively_common_headers + ['event_size'] + self.quantification_headers, 'p_alt5prime.tsv')
@@ -471,6 +474,8 @@ class TsvWriter(BaseTsvWriter):
                 for event in events:
                     if event['event'] == 'cassette_exon':
 
+
+
                         src_common = self.common_data(module,
                                                       's',
                                                       node=event['C1'],
@@ -523,7 +528,7 @@ class TsvWriter(BaseTsvWriter):
                         event_changing = self.event_changing(module, quant_identifiers)
 
                         quants = [event_non_changing, event_changing] + self.quantifications(module, 's', event['Skip'], event['C1'])
-                        writer.writerow(src_common + row + [event_size] + quants)
+                        writer.writerow(src_common + row + [event_size] + quants + event['constitutive'])
                         self.junction_cache.append((module, src_common, quants, row[0], row[4], row[5]))
                         self._add_training_junction(src_common, event['Skip'], quants, module.idx)
                         self.heatmap_add(module, src_common, quants,
@@ -538,7 +543,7 @@ class TsvWriter(BaseTsvWriter):
                                event['Include1'].range_str()]
 
                         quants = [event_non_changing, event_changing] + self.quantifications(module, 's', event['Include1'], event['C1'])
-                        writer.writerow(src_common + row + [event_size] + quants)
+                        writer.writerow(src_common + row + [event_size] + quants + event['constitutive'])
                         self.junction_cache.append((module, src_common, quants, row[0], row[4], row[5]))
                         self._add_training_junction(src_common, event['Include1'], quants, module.idx)
                         self.heatmap_add(module, src_common, quants,
@@ -553,7 +558,7 @@ class TsvWriter(BaseTsvWriter):
                                event['Skip'].range_str()]
 
                         quants = [event_non_changing, event_changing] + self.quantifications(module, 't', event['Skip'], event['C2'])
-                        writer.writerow(trg_common + row + [event_size] + quants)
+                        writer.writerow(trg_common + row + [event_size] + quants + event['constitutive'])
                         self.junction_cache.append((module, trg_common, quants, row[0], row[4], row[5]))
                         self._add_training_junction(trg_common, event['Skip'], quants, module.idx)
                         self.heatmap_add(module, trg_common, quants,
@@ -568,7 +573,7 @@ class TsvWriter(BaseTsvWriter):
                                event['Include2'].range_str()]
 
                         quants = [event_non_changing, event_changing] + self.quantifications(module, 't', event['Include2'], event['C2'])
-                        writer.writerow(trg_common + row + [event_size] + quants)
+                        writer.writerow(trg_common + row + [event_size] + quants + event['constitutive'])
                         self.junction_cache.append((module, trg_common, quants, row[0], row[4], row[5]))
                         self._add_training_junction(trg_common, event['Include2'], quants, module.idx)
                         self.heatmap_add(module, trg_common, quants,
