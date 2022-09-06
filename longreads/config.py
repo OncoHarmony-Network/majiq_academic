@@ -17,8 +17,10 @@ def get_args():
     parser.add_argument('-v', '--verbose', action='count', default=0)
     parser.add_argument('--per-module', action='store_true',
                         help='Show additional verbose output')
-    parser.add_argument('--fuzziness', type=int, default=0,
-                        help='Reduce fuzziness of long-read sequencing')
+    parser.add_argument('--fuzziness_5', type=int, default=0,
+                        help='Reduce 5 prime fuzziness of long-read sequencing')
+    parser.add_argument('--fuziness_3', type=int, default=0,
+                        help='Reduce 3 prime fuzziness of long-read sequencing')
     parser.add_argument('--debug', action='store_true',
                         help='Break and display full message on error')
     parser.add_argument('--debug-num-genes', type=int, default=0,

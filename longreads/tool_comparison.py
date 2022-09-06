@@ -88,7 +88,7 @@ class ToolComparer:
 
     
 
-    def compare_fuzzy(self, set1, set2, fuzziness):
+    def compare_fuzzy(self, set1, set2, fuzziness_5, fuzziness_3):
         """
         Return "only in set1", "only in set2" and "in both sets" by fuzzy matching
         To be considered a match, the length of the element must be the same, and also each inner integer value
@@ -119,8 +119,8 @@ class ToolComparer:
                 for k in range(len(set2elem) - len(set1elem)+1):
                     slide_set2 = set2elem[k:k+len(set1elem)]
                     for coords1, coords2 in zip(set1elem, slide_set2):
-                        startCondition = coords1[0] <= -2 or coords2[0] <= -2 or (abs(coords1[0] - coords2[0]) <= fuzziness)
-                        endCondition = coords1[1] <= -2 or coords2[1] <= -2 or (abs(coords1[1] - coords2[1]) <= fuzziness)
+                        startCondition = coords1[0] <= -2 or coords2[0] <= -2 or (abs(coords1[0] - coords2[0]) <= fuzziness_5)
+                        endCondition = coords1[1] <= -2 or coords2[1] <= -2 or (abs(coords1[1] - coords2[1]) <= fuzziness_3)
                         if not startCondition or not endCondition:
                             break
                     else:
@@ -267,7 +267,7 @@ class ToolComparer:
 
         # before removing start / end information, we use it to check for partial isoforms
 
-        only_in_flair, only_in_majiq, in_flair_and_majiq = self.compare_fuzzy(flair_result, majiq_result, self.args.fuzziness)
+        only_in_flair, only_in_majiq, in_flair_and_majiq = self.compare_fuzzy(flair_result, majiq_result, self.args.fuzziness_5, self.args.fuzziness_3)
 
         for f_transcript, m_transcript in in_flair_and_majiq:
             known_junctions = known_junctions.union(self.get_junctions(m_transcript))
