@@ -247,10 +247,10 @@ class ToolComparer:
         kwargs: novel_alt3, novel_alt5, novel_intron, novel_exon
         """
         novel_substring = 'flair_novel'
-        novel_substring+= "_alt3" if kwargs.get('novel_alt3',False) else ""
-        novel_substring+= "_alt5" if kwargs.get('novel_alt5',False) else ""
-        novel_substring+= "_intron" if kwargs.get('novel_intron',False) else ""
-        novel_substring+= "_exon" if kwargs.get('novel_exon',False) else ""
+        novel_substring += "_alt3" if kwargs.get('novel_alt3',False) else ""
+        novel_substring += "_alt5" if kwargs.get('novel_alt5',False) else ""
+        novel_substring += "_intron" if kwargs.get('novel_intron',False) else ""
+        novel_substring += "_exon" if kwargs.get('novel_exon',False) else ""
 
         assert novel_substring != 'flair_novel' 
 
@@ -351,11 +351,16 @@ class ToolComparer:
                         novel_alt3 = True
 
             for majiq_exon_1, majiq_exon_2 in combinations(zip(annotated_exons_starts, annotated_exons_ends), 2):
+                print("ann_start ", annotated_exons_starts)
+                print("ann_end ", annotated_exons_ends)
+                print("1 ",majiq_exon_1[1])
+                print("2 ",majiq_exon_2[0])
                 junc_start = majiq_exon_1[1]
                 junc_end = majiq_exon_2[0]
                 for flair_exon in transcript:
+                    print("flair ", flair_exon)
                     if abs(flair_exon.start) <= junc_start and abs(flair_exon.end) > junc_end:
-                        # print(abs(flair_exon.start), junc_start, abs(flair_exon.end), junc_end)
+                        print(abs(flair_exon.start), junc_start, abs(flair_exon.end), junc_end)
                         # print("flair start ",flair_exon.start)
                         # print("flair end ",flair_exon.end)
                         # print("junc start ",junction_.start)
@@ -388,7 +393,6 @@ class ToolComparer:
         
         for k, v in tmpcounts.items():
             self.counts[k] += v
-
 
         return tmpcounts
 

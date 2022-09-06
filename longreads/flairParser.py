@@ -123,11 +123,11 @@ class FlairReader:
 
 if __name__ == "__main__":
 
-    gtf_path = '/slowdata/lrdata/flair/flair_filter_transcripts.gtf'
+    gtf_path = '/Users/seongwoohan/Desktop/flair-1.5.isoforms.gtf'
 
     flairreader = FlairReader(gtf_path)
 
-    for exons, meta in flairreader.gene('ENSG00000138326.18'):
+    for exons in flairreader.gene('ENSG00000198692.10'):
         print(exons)
-        print(meta)
+        #print(meta)
         break
