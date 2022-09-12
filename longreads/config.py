@@ -19,7 +19,7 @@ def get_args():
                         help='Show additional verbose output')
     parser.add_argument('--fuzziness_5', type=int, default=0,
                         help='Reduce 5 prime fuzziness of long-read sequencing')
-    parser.add_argument('--fuziness_3', type=int, default=0,
+    parser.add_argument('--fuzziness_3', type=int, default=0,
                         help='Reduce 3 prime fuzziness of long-read sequencing')
     parser.add_argument('--debug', action='store_true',
                         help='Break and display full message on error')
