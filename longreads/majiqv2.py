@@ -71,7 +71,7 @@ class MajiqV2Reader:
         ends = []
         with SpliceGraph(self.path) as sg:
             for x in sg.exons(gene_id):
-                if x['annotated']:
+                if x['annotated'] or x['annotated'] == False:
                     starts.append(x['start'])
                     ends.append(x['end'])
         return starts, ends

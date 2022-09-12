@@ -152,6 +152,15 @@ class ToolComparer:
         in_both_sets = set1.intersection(set2)
         return only_in_set1, only_in_set2, in_both_sets
 
+    def closest_transcript(self, flair_transcript, majiq_transcript):
+        closest_result = set()
+        for i in range(len(flair_transcript)-1): 
+            for j in range(len(majiq_transcript)-1):
+                min(abs(flair_transcript[i].end - majiq_transcript[j].end))
+                
+            
+            
+
     def _is_partial_isoform(self, majiq_transcripts, flair_transcript, fuzziness=0):
         for majiq_transcript in majiq_transcripts:
             for flair_exon in flair_transcript:
@@ -351,16 +360,16 @@ class ToolComparer:
                         novel_alt3 = True
 
             for majiq_exon_1, majiq_exon_2 in combinations(zip(annotated_exons_starts, annotated_exons_ends), 2):
-                print("ann_start ", annotated_exons_starts)
-                print("ann_end ", annotated_exons_ends)
-                print("1 ",majiq_exon_1[1])
-                print("2 ",majiq_exon_2[0])
+                # print("ann_start ", annotated_exons_starts)
+                # print("ann_end ", annotated_exons_ends)
+                # print("1 ",majiq_exon_1[1])
+                # print("2 ",majiq_exon_2[0])
                 junc_start = majiq_exon_1[1]
                 junc_end = majiq_exon_2[0]
                 for flair_exon in transcript:
-                    print("flair ", flair_exon)
+                    # print("flair ", flair_exon)
                     if abs(flair_exon.start) <= junc_start and abs(flair_exon.end) > junc_end:
-                        print(abs(flair_exon.start), junc_start, abs(flair_exon.end), junc_end)
+                        # print(abs(flair_exon.start), junc_start, abs(flair_exon.end), junc_end)
                         # print("flair start ",flair_exon.start)
                         # print("flair end ",flair_exon.end)
                         # print("junc start ",junction_.start)
