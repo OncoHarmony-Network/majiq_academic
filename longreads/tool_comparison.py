@@ -103,15 +103,21 @@ class ToolComparer:
         def fuzzy_distance(flair_transcript, majiq_transcript):
             
             total_distance = 0
+            print("mmmm ", majiq_transcript)
+            print("ffff ", flair_transcript)
             for i in range(len(majiq_transcript)):
-                dist5 = abs(majiq_transcript[i].start - flair_transcript[i].start)
-                dist3 = abs(majiq_transcript[i].end - flair_transcript[i].end)
-                
-                if (dist5 > fuzziness_5) or (dist3 > fuzziness_3):
-                    return False
+                print("num ",i)
+                dist5 = abs(majiq_transcript[i].start) - abs(flair_transcript[i].start)
+                print("dist5 ",dist5)
+                dist3 = abs(majiq_transcript[i].end) - abs(flair_transcript[i].end)
+                print("dist3 ",dist3)
 
                 total_distance += dist5 + dist3
-            
+                # if (dist5 > fuzziness_5) or (dist3 > fuzziness_3):
+                #     return False
+
+            print("TOTAL1111 ",total_distance)
+
             return total_distance
 
 
@@ -126,8 +132,6 @@ class ToolComparer:
             if len(set1elem) <= len(set2elem):
                 # set1elem: Flair, set2elem: MAJIQ
                 for i in range(len(set2elem)-1):
-                    # print("FLAIR ", set1elem)
-                    # print("MAJIQ ", set2elem[i])
                     junc_majiq = junction(set2elem[i].end, set2elem[i + 1].start)
                     if junc_majiq.start > abs(set1elem[0].start) and junc_majiq.end < set1elem[0].end:
                         return False
@@ -136,7 +140,11 @@ class ToolComparer:
 
                 for k in range(len(set2elem) - len(set1elem)+1):
                     slide_set2 = set2elem[k:k+len(set1elem)]
+                    # print("FLAIR ", set1elem)
+                    # print("MAJIQ ", set2elem)
                     # print("slide_set2 ",slide_set2)
+                    # total_distance = fuzzy_distance(set1elem, set2elem)
+                    # print("nya ", total_distance)
                     # slide_set2 = self.closest_transcript(set1elem, slide_set2, fuzziness_5, fuzziness_3)
                     # print("found it ",slide_set2)
                     for coords1, coords2 in zip(set1elem, slide_set2):
@@ -150,24 +158,26 @@ class ToolComparer:
                             break
                     else:
                         total_distance = fuzzy_distance(set1elem, set2elem)
-                        return set2elem, total_distance
+                        print("why ",total_distance)
+                        return (set2elem, total_distance)
 
                         #print('true by cond', coords1[0] == -1, coords2[0] == -1, abs(coords1[0] - coords2[0]) <= fuzziness, coords1[1] == -1, coords2[1] == -1, abs(coords1[1] - coords2[1]) <= fuzziness)
                         #return True
-            return False, 0
+            return (False, 0)
 
         dist_ = []
         only_in_set2 = set2.copy()
         for f_transcript in set1:
-            print("f_transcript: ",f_transcript)
             for m_transcript in set2:
-                print("m_transcript: ",m_transcript)
                 matched, total_distance = compare(f_transcript, m_transcript)
-                if matched:
-                    dist_.append(total_distance)
-                    print("DIST.  ",dist_)
+                print(matched)
+                print(total_distance)
+                if not matched:
+                    dist_.append((matched, total_distance))
+                    print("DIST  ",dist_)
                     dist_.sort(key = lambda x: x[1])
                     m_transcript = dist_[0][0]
+                    print(m_transcript)
                     # sorting and choosing the closest majiq
                     in_both_sets.add((f_transcript, m_transcript))
                     if m_transcript in only_in_set2:
