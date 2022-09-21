@@ -198,3 +198,7 @@ chr20	FLAIR	transcript	1000	8000	.	+	.	gene_id "ENSG00000111130.5_FTF_novel_spec
 chr20	FLAIR	exon	1000	2000	.	+	.	gene_id "ENSG00000111130.5_FTF_novel_special_intron_retention3";
 chr20	FLAIR	exon	4000	6000	.	+	.	gene_id "ENSG00000111130.5_FTF_novel_special_intron_retention3";
 chr20	FLAIR	exon	7000	8000	.	+	.	gene_id "ENSG00000111130.5_FTF_novel_special_intron_retention3";
+chr21	FLAIR	transcript	1000	6000	.	+	.	gene_id "ENSG00000111131.5_fuzziness";
+chr21	FLAIR	exon	1000	2000	.	+	.	gene_id "ENSG00000111131.5_fuzziness";
+chr21	FLAIR	exon	3000	3596	.	+	.	gene_id "ENSG00000111131.5_fuzziness";
+chr21	FLAIR	exon	5000	6000	.	+	.	gene_id "ENSG00000111131.5_fuzziness";

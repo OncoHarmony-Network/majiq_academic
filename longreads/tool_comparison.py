@@ -100,7 +100,23 @@ class ToolComparer:
         in_both_sets = set()
         superset = set1.union(set2)
 
+        def fuzzy_distance(flair_transcript, majiq_transcript):
+            
+            total_distance = 0
+            for i in range(len(majiq_transcript)):
+                dist5 = abs(majiq_transcript[i].start - flair_transcript[i].start)
+                dist3 = abs(majiq_transcript[i].end - flair_transcript[i].end)
+                
+                if (dist5 > fuzziness_5) or (dist3 > fuzziness_3):
+                    return False
+
+                total_distance += dist5 + dist3
+            
+            return total_distance
+
+
         def compare(set1elem, set2elem):
+        
             if len(set1elem) == 1:
                 # we can not compare a one-exon flair transcript with majiq in our current paradigm, because both
                 # the start and end coordinate will be TSS/TES ; which majiq does not measure automatic mark as match
@@ -110,6 +126,8 @@ class ToolComparer:
             if len(set1elem) <= len(set2elem):
                 # set1elem: Flair, set2elem: MAJIQ
                 for i in range(len(set2elem)-1):
+                    # print("FLAIR ", set1elem)
+                    # print("MAJIQ ", set2elem[i])
                     junc_majiq = junction(set2elem[i].end, set2elem[i + 1].start)
                     if junc_majiq.start > abs(set1elem[0].start) and junc_majiq.end < set1elem[0].end:
                         return False
@@ -118,22 +136,39 @@ class ToolComparer:
 
                 for k in range(len(set2elem) - len(set1elem)+1):
                     slide_set2 = set2elem[k:k+len(set1elem)]
+                    # print("slide_set2 ",slide_set2)
+                    # slide_set2 = self.closest_transcript(set1elem, slide_set2, fuzziness_5, fuzziness_3)
+                    # print("found it ",slide_set2)
                     for coords1, coords2 in zip(set1elem, slide_set2):
+                        # print("FLAIR coord",coords1)
+                        # print("MAJIQ coord",coords2)
                         startCondition = coords1[0] <= -2 or coords2[0] <= -2 or (abs(coords1[0] - coords2[0]) <= fuzziness_5)
                         endCondition = coords1[1] <= -2 or coords2[1] <= -2 or (abs(coords1[1] - coords2[1]) <= fuzziness_3)
+                        # print(startCondition)
+                        # print(endCondition)
                         if not startCondition or not endCondition:
                             break
                     else:
-                        return set2elem
+                        total_distance = fuzzy_distance(set1elem, set2elem)
+                        return set2elem, total_distance
 
                         #print('true by cond', coords1[0] == -1, coords2[0] == -1, abs(coords1[0] - coords2[0]) <= fuzziness, coords1[1] == -1, coords2[1] == -1, abs(coords1[1] - coords2[1]) <= fuzziness)
                         #return True
-            return False
+            return False, 0
 
+        dist_ = []
         only_in_set2 = set2.copy()
         for f_transcript in set1:
+            print("f_transcript: ",f_transcript)
             for m_transcript in set2:
-                if compare(f_transcript, m_transcript):
+                print("m_transcript: ",m_transcript)
+                matched, total_distance = compare(f_transcript, m_transcript)
+                if matched:
+                    dist_.append(total_distance)
+                    print("DIST.  ",dist_)
+                    dist_.sort(key = lambda x: x[1])
+                    m_transcript = dist_[0][0]
+                    # sorting and choosing the closest majiq
                     in_both_sets.add((f_transcript, m_transcript))
                     if m_transcript in only_in_set2:
                         only_in_set2.remove(m_transcript)
@@ -142,6 +177,7 @@ class ToolComparer:
                 only_in_set1.add(f_transcript)
 
         return only_in_set1, only_in_set2, in_both_sets
+
 
     def compare_exact(self, set1, set2):
         """
@@ -152,15 +188,7 @@ class ToolComparer:
         in_both_sets = set1.intersection(set2)
         return only_in_set1, only_in_set2, in_both_sets
 
-    def closest_transcript(self, flair_transcript, majiq_transcript):
-        closest_result = set()
-        for i in range(len(flair_transcript)-1): 
-            for j in range(len(majiq_transcript)-1):
-                min(abs(flair_transcript[i].end - majiq_transcript[j].end))
-                
             
-            
-
     def _is_partial_isoform(self, majiq_transcripts, flair_transcript, fuzziness=0):
         for majiq_transcript in majiq_transcripts:
             for flair_exon in flair_transcript:
@@ -277,7 +305,8 @@ class ToolComparer:
         # before removing start / end information, we use it to check for partial isoforms
 
         only_in_flair, only_in_majiq, in_flair_and_majiq = self.compare_fuzzy(flair_result, majiq_result, self.args.fuzziness_5, self.args.fuzziness_3)
-
+        # print("Only_flair",only_in_flair)
+        # print("Only_majiq",only_in_majiq)
         for f_transcript, m_transcript in in_flair_and_majiq:
             known_junctions = known_junctions.union(self.get_junctions(m_transcript))
             #known_junctions = known_junctions.union(self.get_junctions(f_transcript))
