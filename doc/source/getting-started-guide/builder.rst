@@ -6,6 +6,8 @@
 MAJIQ Builder In Depth
 ----------------------
 
+**General note**: in addition to the example below, you can find help composing your own commands + config by using the :ref:`command-builder`.
+
 *Creating the config file*
 
 Majiq needs to know some basic information about your study, annotation, and experiments before it can run. Provide this information
