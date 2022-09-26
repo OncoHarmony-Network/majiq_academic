@@ -11,10 +11,10 @@ parser.add_argument('--only-full-gene', action='store_true',
                     help='run tests for only the full length gene comparison (by default, all are run)')
 parser.add_argument('--only-modules', action='store_true',
                     help='run tests for only the modules mode gene comparison (by default, all are run)')
-parser.add_argument('--fuzziness_5', type=int, default=0,
-                    help='Reduce 5 prime fuzziness of long-read sequencing')
-parser.add_argument('--fuzziness_3', type=int, default=0,
-                    help='Reduce 3 prime fuzziness of long-read sequencing')
+# parser.add_argument('--fuzziness5', type=int, default=0,
+#                     help='Reduce 5 prime fuzziness of long-read sequencing')
+# parser.add_argument('--fuzziness3', type=int, default=0,
+#                     help='Reduce 3 prime fuzziness of long-read sequencing')
 args = parser.parse_args()
 
 abspath = os.path.abspath(__file__)
@@ -36,7 +36,7 @@ def run_and_check(tmpname, splice_graph_json_path, flair_gtf_path, num5: int, nu
     if args.gene_id:
         generate_str += f' -n {args.gene_id}'
 
-    run_str = f"python main.py --majiq-splicegraph-path testcases/{tmpname}.sql --flair-gtf-path {flair_gtf_path} --fuzziness_5 {num5} --fuzziness_3 {num3} --output-path testcases/{tmpname}/result -j 1 --debug"
+    run_str = f"python main.py --majiq-splicegraph-path testcases/{tmpname}.sql --flair-gtf-path {flair_gtf_path} --fuzziness5 {num5} --fuzziness3 {num3} --output-path testcases/{tmpname}/result -j 1 --debug"
     if modules:
         run_str += ' --per-module'
 
@@ -77,7 +77,7 @@ def run_and_check(tmpname, splice_graph_json_path, flair_gtf_path, num5: int, nu
         print(f"All is well! [{num_success}] successful!")
 
 if not args.only_full_gene:
-    run_and_check('testcases_module', 'testcases/testcases_module/splice_graphs.json', 'testcases/testcases_module/ex.isoforms.gtf', 0, 0,'testcases/testcases_module/comparison.tsv')
+    run_and_check('testcases_module', 'testcases/testcases_module/splice_graphs.json', 'testcases/testcases_module/ex.isoforms.gtf', 0, 5,'testcases/testcases_module/comparison.tsv')
 
 if not args.only_modules:
-    run_and_check('testcases_gene', 'testcases/testcases_gene/splice_graphs.json', 'testcases/testcases_gene/ex.isoforms.gtf', 0, 0, 'testcases/testcases_gene/comparison.tsv')
+    run_and_check('testcases_gene', 'testcases/testcases_gene/splice_graphs.json', 'testcases/testcases_gene/ex.isoforms.gtf', 0, 5, 'testcases/testcases_gene/comparison.tsv')
