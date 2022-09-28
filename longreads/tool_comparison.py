@@ -103,7 +103,7 @@ class ToolComparer:
         def fuzzy_distance(flair_transcript, majiq_transcript):
             
             total_distance = 0
-            print(len(flair_transcript), len(majiq_transcript))
+            #print(len(flair_transcript), len(majiq_transcript))
             if len(flair_transcript) <= len(majiq_transcript):
                 for i in range(len(majiq_transcript) - len(flair_transcript)):
                     majiq_transcript = majiq_transcript[i:i+len(flair_transcript)]
@@ -151,7 +151,7 @@ class ToolComparer:
                         if not startCondition or not endCondition:
                             break
                     else:
-                        total_distance = fuzzy_distance(set1elem, set2elem)
+                        #total_distance = fuzzy_distance(set1elem, set2elem)
                         # print("why ",total_distance)
                         # print("why2 ",set2elem)
                         return set2elem#, total_distance
