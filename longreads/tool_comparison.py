@@ -107,9 +107,9 @@ class ToolComparer:
             if len(flair_transcript) <= len(majiq_transcript):
                 for i in range(len(majiq_transcript) - len(flair_transcript)):
                     majiq_transcript = majiq_transcript[i:i+len(flair_transcript)]
-                    print("num ",i)
-                    print("M ",majiq_transcript)
-                    print("F ",flair_transcript)
+                    # print("num ",i)
+                    # print("M ",majiq_transcript)
+                    # print("F ",flair_transcript)
                     dist5 = abs(majiq_transcript[i].start) - abs(flair_transcript[i].start)
                     #print("dist5 ",dist5)
                     dist3 = abs(majiq_transcript[i].end) - abs(flair_transcript[i].end)
@@ -152,40 +152,41 @@ class ToolComparer:
                             break
                     else:
                         total_distance = fuzzy_distance(set1elem, set2elem)
-                        print("why ",total_distance)
-                        print("why2 ",set2elem)
-                        return set2elem, total_distance
+                        # print("why ",total_distance)
+                        # print("why2 ",set2elem)
+                        return set2elem#, total_distance
 
                         #print('true by cond', coords1[0] == -1, coords2[0] == -1, abs(coords1[0] - coords2[0]) <= fuzziness, coords1[1] == -1, coords2[1] == -1, abs(coords1[1] - coords2[1]) <= fuzziness)
                         #return True
-            return False, 0
+            return False,# 0
 
         
         only_in_set2 = set2.copy()
         for f_transcript in set1:
             for m_transcript in set2:
-                matched, total_distance = compare(f_transcript, m_transcript)
-                print("matched ",matched)
-                print("dist", total_distance)
-                print("m_trans ",m_transcript)
-                if matched:
+                # matched, total_distance = compare(f_transcript, m_transcript)
+                # print("matched ",matched)
+                # print("dist", total_distance)
+                # print("m_trans ",m_transcript)
+                if compare(f_transcript, m_transcript):
+                #if matched:
                     # print("aft1 ",matched)
                     # print("aft2 ",total_distance)
                     #print("DIST  ",dist_)
                     # dist_.sort(key = lambda x: x[1])
                     # m_transcript = dist_[0][0]
                     # sorting and choosing the closest majiq
-                    in_both_sets.add((f_transcript, m_transcript, total_distance))
-                    print("Both: ",in_both_sets)
-                    print("BEFORE",only_in_set2)
+                    in_both_sets.add((f_transcript, m_transcript))#, total_distance))
+                    # print("Both: ",in_both_sets)
+                    # print("BEFORE",only_in_set2)
                     if m_transcript in only_in_set2:
-                        print("mmm ", m_transcript)
+                        # print("mmm ", m_transcript)
                         only_in_set2.remove(m_transcript)
-                        print("ONLY ",only_in_set2)
+                        # print("ONLY ",only_in_set2)
                     #break
             else:
                 only_in_set1.add(f_transcript)
-                print("only 1 : ",only_in_set1)
+                # print("only 1 : ",only_in_set1)
 
         return only_in_set1, only_in_set2, in_both_sets
 
@@ -318,8 +319,9 @@ class ToolComparer:
         only_in_flair, only_in_majiq, in_flair_and_majiq = self.compare_fuzzy(flair_result, majiq_result, self.args.fuzziness5, self.args.fuzziness3)
         # print("Only_flair",only_in_flair)
         # print("Only_majiq",only_in_majiq)
-        for f_transcript, m_transcript, total_distance in in_flair_and_majiq:
-            print("total :",total_distance)
+        #for f_transcript, m_transcript, total_distance in in_flair_and_majiq:
+        for f_transcript, m_transcript in in_flair_and_majiq:
+            #print("total :",total_distance)
             known_junctions = known_junctions.union(self.get_junctions(m_transcript))
             #known_junctions = known_junctions.union(self.get_junctions(f_transcript))
             if majiq_denovo[m_transcript]:
