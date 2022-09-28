@@ -158,7 +158,7 @@ class ToolComparer:
 
                         #print('true by cond', coords1[0] == -1, coords2[0] == -1, abs(coords1[0] - coords2[0]) <= fuzziness, coords1[1] == -1, coords2[1] == -1, abs(coords1[1] - coords2[1]) <= fuzziness)
                         #return True
-            return False,# 0
+            return False# 0
 
         
         only_in_set2 = set2.copy()
@@ -183,7 +183,7 @@ class ToolComparer:
                         # print("mmm ", m_transcript)
                         only_in_set2.remove(m_transcript)
                         # print("ONLY ",only_in_set2)
-                    #break
+                    break
             else:
                 only_in_set1.add(f_transcript)
                 # print("only 1 : ",only_in_set1)
