@@ -111,9 +111,9 @@ class ToolComparer:
                     # print("M ",majiq_transcript)
                     # print("F ",flair_transcript)
                     dist5 = abs(majiq_transcript[i].start) - abs(flair_transcript[i].start)
-                    #print("dist5 ",dist5)
+                    print("dist5 ",dist5)
                     dist3 = abs(majiq_transcript[i].end) - abs(flair_transcript[i].end)
-                    #print("dist3 ",dist3)
+                    print("dist3 ",dist3)
 
                     total_distance += dist5 + dist3
                     # if (dist5 > fuzziness_5) or (dist3 > fuzziness_3):
