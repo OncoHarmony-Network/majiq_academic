@@ -116,7 +116,7 @@ class ToolComparer:
                         return 0
                     elif junc_majiq.start > flair_transcript[-1].start and junc_majiq.end < abs(flair_transcript[-1].end):
                         return 0
-                for i in range(len(majiq_transcript) - len(flair_transcript)+1):
+                for i in range(len(majiq_transcript) - len(flair_transcript)):
                     majiq_transcript = majiq_transcript[i:i+len(flair_transcript)]
                     # print("num ",i)
                     print("M ",majiq_transcript)
