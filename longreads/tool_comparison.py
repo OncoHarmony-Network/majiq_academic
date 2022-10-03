@@ -103,24 +103,17 @@ class ToolComparer:
         def fuzzy_distance(flair_transcript, majiq_transcript):
             
             total_distance = 0
-            print(len(majiq_transcript), len(flair_transcript))
-            print("M_before ",majiq_transcript)
-            print("F_before ",flair_transcript)
-
             for k in range(len(majiq_transcript)):
-            # if len(flair_transcript) <= len(majiq_transcript):
-            #     for k in range(len(majiq_transcript) - len(flair_transcript)):
-            #         majiq_transcript = majiq_transcript[k:k+len(flair_transcript)]
-                print("M ",majiq_transcript)
-                print("F ",flair_transcript)
-                print("M_start: ", abs(majiq_transcript[k].start))
-                print("M_end: ", abs(majiq_transcript[k].end))
-                print("F_start: ", abs(flair_transcript[k].start))
-                print("F_end: ", abs(flair_transcript[k].end))
+                # print("M ",majiq_transcript)
+                # print("F ",flair_transcript)
+                # print("M_start: ", abs(majiq_transcript[k].start))
+                # print("M_end: ", abs(majiq_transcript[k].end))
+                # print("F_start: ", abs(flair_transcript[k].start))
+                # print("F_end: ", abs(flair_transcript[k].end))
                 dist5 = abs(abs(majiq_transcript[k].start) - abs(flair_transcript[k].start))
-                print("dist5 ",dist5)
+                # print("dist5 ",dist5)
                 dist3 = abs(abs(majiq_transcript[k].end) - abs(flair_transcript[k].end))
-                print("dist3 ",dist3)
+                # print("dist3 ",dist3)
 
                 total_distance += dist5 + dist3
                     # if (dist5 > fuzziness_5) or (dist3 > fuzziness_3):
