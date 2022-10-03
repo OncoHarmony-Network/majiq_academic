@@ -99,6 +99,7 @@ def compare_gene(_args):
         annotated_starts = majiqParser.annotated_starts(gene_id)
         annotated_ends = majiqParser.annotated_ends(gene_id)
         annotated_exons_starts, annotated_exons_ends = majiqParser.annotated_exons(gene_id)
+        all_exons_starts, all_exons_ends = majiqParser.all_exons(gene_id)
         annotated_exons_order = majiqParser.annotated_exons_order(gene_id)
 
         #full_flair_exons = tuple(x for x in flairreader.gene(gene_id, extent=None, ignore_starts_ends=False))
@@ -131,7 +132,7 @@ def compare_gene(_args):
             )
 
 
-            counts = tc.add_data(majiq_exons, majiq_denovo, majiq_has_reads, flair_exons, annotated_starts, annotated_ends, annotated_exons_starts, annotated_exons_ends, annotated_exons_order)
+            counts = tc.add_data(majiq_exons, majiq_denovo, majiq_has_reads, flair_exons, annotated_starts, annotated_ends, all_exons_starts, all_exons_ends, annotated_exons_starts, annotated_exons_ends, annotated_exons_order)
             #counts['partial'] = gene_partial_count
 
             row = [gene_id]

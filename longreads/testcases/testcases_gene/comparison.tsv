@@ -15,8 +15,8 @@ ENSG00000111123.5_TTF_alt_start_end		0	2	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0
 ENSG00000111124.5_TTF_alt_start_end_partial		0	2	0	0	0	0	0	0	0	0	0	0	0	0	0	2	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0
 ENSG00000111125.5_FTT_alt_start_end		0	0	1	0	2	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0
 ENSG00000111126.5_FTT_alt_start_end_partial		0	0	1	0	2	0	0	0	0	0	0	0	0	0	0	2	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0
-ENSG00000111127.5_FTF_novel_special_exon	TRUE	0	0	1	0	0	2	0	0	0	0	2	0	0	0	0	0	0	0	2	0	0	0	0	0	0	0	0	0	0	0	0	0
+ENSG00000111127.5_FTF_novel_special_exon		0	0	1	0	0	2	0	0	0	0	0	0	0	2	0	0	0	0	2	0	0	0	0	0	0	0	0	0	0	0	0	0
 ENSG00000111128.5_FTF_novel_special_intron_retention		0	0	2	0	0	1	0	0	0	0	1	0	0	0	0	0	0	0	0	1	0	0	0	0	0	0	0	0	0	0	0	0
 ENSG00000111129.5_FTF_novel_special_intron_retention2		0	0	1	1	0	1	0	0	1	0	1	0	0	0	0	0	0	0	0	1	0	0	0	0	0	0	0	0	0	0	0	0
 ENSG00000111130.5_FTF_novel_special_intron_retention3		0	0	3	0	0	2	1	0	0	0	2	0	0	0	0	0	0	0	0	2	0	0	0	0	0	0	0	0	0	0	0	0
-ENSG00000111131.5_fuzziness		0	0	3	0	0	1	0	0	0	0	1	0	0	0	0	0	1	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0
+ENSG00000111131.5_fuzziness		3	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0
