@@ -103,13 +103,17 @@ class ToolComparer:
         def fuzzy_distance(flair_transcript, majiq_transcript):
             
             total_distance = 0
-            #print(len(flair_transcript), len(majiq_transcript))
+            print(len(flair_transcript), len(majiq_transcript))
             if len(flair_transcript) <= len(majiq_transcript):
                 for i in range(len(majiq_transcript) - len(flair_transcript)):
                     majiq_transcript = majiq_transcript[i:i+len(flair_transcript)]
                     # print("num ",i)
-                    # print("M ",majiq_transcript)
-                    # print("F ",flair_transcript)
+                    print("M ",majiq_transcript)
+                    print("F ",flair_transcript)
+                    print("M_start: ", abs(majiq_transcript[i].start))
+                    print("M_end: ", abs(majiq_transcript[i].end))
+                    print("F_start: ", abs(flair_transcript[i].start))
+                    print("F_end: ", abs(flair_transcript[i].end))
                     dist5 = abs(majiq_transcript[i].start) - abs(flair_transcript[i].start)
                     print("dist5 ",dist5)
                     dist3 = abs(majiq_transcript[i].end) - abs(flair_transcript[i].end)
