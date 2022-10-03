@@ -105,12 +105,17 @@ class ToolComparer:
             total_distance = 0
             print(len(flair_transcript), len(majiq_transcript))
             
-            # if len(flair_transcript) == 1:
-            #     return 0
-            # if flair_transcript == majiq_transcript:
-            #     return 0
+            if len(flair_transcript) == 1:
+                return 0
+            if flair_transcript == majiq_transcript:
+                return 0
             if len(flair_transcript) <= len(majiq_transcript):
-
+                for k in range(len(majiq_transcript)-1):
+                    junc_majiq = junction(majiq_transcript[k].end, majiq_transcript[k + 1].start)
+                    if junc_majiq.start > abs(flair_transcript[0].start) and junc_majiq.end < flair_transcript[0].end:
+                        return 0
+                    elif junc_majiq.start > flair_transcript[-1].start and junc_majiq.end < abs(flair_transcript[-1].end):
+                        return 0
                 for i in range(len(majiq_transcript) - len(flair_transcript)+1):
                     majiq_transcript = majiq_transcript[i:i+len(flair_transcript)]
                     # print("num ",i)
