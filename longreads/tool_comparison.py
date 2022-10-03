@@ -103,12 +103,20 @@ class ToolComparer:
         def fuzzy_distance(flair_transcript, majiq_transcript):
             
             total_distance = 0
-            print(len(flair_transcript), len(majiq_transcript))
+            print(len(majiq_transcript), len(flair_transcript))
             print("M_before ",majiq_transcript)
             print("F_before ",flair_transcript)
+
             if len(flair_transcript) <= len(majiq_transcript):
-                for i in range(len(majiq_transcript) - len(flair_transcript)):
-                    majiq_transcript = majiq_transcript[i:i+len(flair_transcript)]
+                for i in range(len(majiq_transcript)-1):
+                    junc_majiq = junction(majiq_transcript[i].end, majiq_transcript[i + 1].start)
+                    if junc_majiq.start > abs(flair_transcript[0].start) and junc_majiq.end < flair_transcript[0].end:
+                        return 0
+                    elif junc_majiq.start > flair_transcript[-1].start and junc_majiq.end < abs(flair_transcript[-1].end):
+                        return 0
+
+                for k in range(len(majiq_transcript) - len(flair_transcript)):
+                    majiq_transcript = majiq_transcript[k:k+len(flair_transcript)]
                     
                     for coords1, coords2 in zip(flair_transcript, majiq_transcript):
                         startCondition = coords1[0] <= -2 or coords2[0] <= -2 or (abs(coords1[0] - coords2[0]) <= fuzziness_5)
