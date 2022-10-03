@@ -108,20 +108,36 @@ class ToolComparer:
             print("F_before ",flair_transcript)
 
             if len(flair_transcript) <= len(majiq_transcript):
+                for i in range(len(majiq_transcript)-1):
+                    junc_majiq = junction(majiq_transcript[i].end, majiq_transcript[i + 1].start)
+                    if junc_majiq.start > abs(flair_transcript[0].start) and junc_majiq.end < flair_transcript[0].end:
+                        return 0
+                    elif junc_majiq.start > flair_transcript[-1].start and junc_majiq.end < abs(flair_transcript[-1].end):
+                        return 0
+
                 for k in range(len(majiq_transcript) - len(flair_transcript)):
                     majiq_transcript = majiq_transcript[k:k+len(flair_transcript)]
-                    print("M ",majiq_transcript)
-                    print("F ",flair_transcript)
-                    print("M_start: ", abs(majiq_transcript[i].start))
-                    print("M_end: ", abs(majiq_transcript[i].end))
-                    print("F_start: ", abs(flair_transcript[i].start))
-                    print("F_end: ", abs(flair_transcript[i].end))
-                    dist5 = abs(abs(majiq_transcript[i].start) - abs(flair_transcript[i].start))
-                    print("dist5 ",dist5)
-                    dist3 = abs(abs(majiq_transcript[i].end) - abs(flair_transcript[i].end))
-                    print("dist3 ",dist3)
+                    
+                    for coords1, coords2 in zip(flair_transcript, majiq_transcript):
+                        startCondition = coords1[0] <= -2 or coords2[0] <= -2 or (abs(coords1[0] - coords2[0]) <= fuzziness_5)
+                        endCondition = coords1[1] <= -2 or coords2[1] <= -2 or (abs(coords1[1] - coords2[1]) <= fuzziness_3)
+                        print("start ",startCondition)
+                        print("end ", endCondition)
+                        if not startCondition or not endCondition:
+                            break
+                    else:
+                        print("M ",majiq_transcript)
+                        print("F ",flair_transcript)
+                        print("M_start: ", abs(majiq_transcript[k].start))
+                        print("M_end: ", abs(majiq_transcript[k].end))
+                        print("F_start: ", abs(flair_transcript[k].start))
+                        print("F_end: ", abs(flair_transcript[k].end))
+                        dist5 = abs(abs(majiq_transcript[k].start) - abs(flair_transcript[k].start))
+                        print("dist5 ",dist5)
+                        dist3 = abs(abs(majiq_transcript[k].end) - abs(flair_transcript[k].end))
+                        print("dist3 ",dist3)
 
-                    total_distance += dist5 + dist3
+                        total_distance += dist5 + dist3
                     # if (dist5 > fuzziness_5) or (dist3 > fuzziness_3):
                     #     return False
 
