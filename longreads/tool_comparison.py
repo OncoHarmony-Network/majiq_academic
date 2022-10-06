@@ -104,6 +104,7 @@ class ToolComparer:
             
             total_distance = 0
             for k in range(len(majiq_transcript)):
+                # print(k)
                 # print("M ",majiq_transcript)
                 # print("F ",flair_transcript)
                 # print("M_start: ", abs(majiq_transcript[k].start))
@@ -133,6 +134,7 @@ class ToolComparer:
             if set1elem == set2elem:
                 return True, 0
             if len(set1elem) <= len(set2elem):
+                # print("CHECK ",set2elem)
                 # set1elem: Flair, set2elem: MAJIQ
                 for i in range(len(set2elem)-1):
                     junc_majiq = junction(set2elem[i].end, set2elem[i + 1].start)
@@ -151,10 +153,14 @@ class ToolComparer:
                         if not startCondition or not endCondition:
                             break
                     else:
+                        # print("FLAIR ",set1elem)
+                        # print("MAJIQ ",slide_set2)
                         #total_distance = fuzzy_distance(set1elem, set2elem)
                         total_distance = fuzzy_distance(set1elem, slide_set2)
                         # print("why ",total_distance)
                         # print("why2 ",set2elem)
+                        # print("SLIDE ",slide_set2)
+                        # print("SET ",set2elem)
                         return set2elem, total_distance
 
                         #print('true by cond', coords1[0] == -1, coords2[0] == -1, abs(coords1[0] - coords2[0]) <= fuzziness, coords1[1] == -1, coords2[1] == -1, abs(coords1[1] - coords2[1]) <= fuzziness)
@@ -164,20 +170,20 @@ class ToolComparer:
         
         only_in_set2 = set2.copy()
         for f_transcript in set1:
-            same = False
+            #same = False
             for m_transcript in set2:
                 matched, total_distance = compare(f_transcript, m_transcript)
-                # print("matched ",matched)
-                # print("dist", total_distance)
-                # print("m_trans ",m_transcript)
                 if matched:
-                    same = True
+                    #same = True
                     in_both_sets.add((f_transcript, m_transcript, total_distance))
     
                     if m_transcript in only_in_set2:
                         only_in_set2.remove(m_transcript)
+                    break
                  
-            if not same:
+            #if not same:
+            else:
+                print("F: ",f_transcript)
                 only_in_set1.add(f_transcript)
 
         return only_in_set1, only_in_set2, in_both_sets
@@ -320,6 +326,7 @@ class ToolComparer:
                 self.incCountPrint(tmpcounts, m_transcript, 'TTF')
             else:
                 if majiq_has_reads[m_transcript]:
+                    # print("M ",m_transcript)
                     self.incCountPrint(tmpcounts, m_transcript, 'TTT')
                 else:
                     self.incCountPrint(tmpcounts, m_transcript, 'FTT')
@@ -339,6 +346,7 @@ class ToolComparer:
                 if not majiq_has_reads[transcript]:
                     self.incCountPrint(tmpcounts, transcript, 'FFT')
                 else:
+                    # print("TFT: ",transcript)
                     self.incCountPrint(tmpcounts, transcript, 'TFT')
 
         # fun debugging help things
@@ -394,7 +402,7 @@ class ToolComparer:
                     if junc.start not in annotated_exon_coords and junc.start not in flair_new_exon:
                         novel_alt3 = True
 
-            for majiq_exon_1, majiq_exon_2 in combinations(zip(annotated_exons_starts, annotated_exons_ends), 2):
+            for majiq_exon_1, majiq_exon_2 in combinations(zip(all_exons_starts, all_exons_ends), 2):
                 # print("ann_start ", annotated_exons_starts)
                 # print("ann_end ", annotated_exons_ends)
                 # print("1 ",majiq_exon_1[1])
