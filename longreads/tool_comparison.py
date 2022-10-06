@@ -183,7 +183,7 @@ class ToolComparer:
                  
             #if not same:
             else:
-                print("F: ",f_transcript)
+                # print("F: ",f_transcript)
                 only_in_set1.add(f_transcript)
 
         return only_in_set1, only_in_set2, in_both_sets
