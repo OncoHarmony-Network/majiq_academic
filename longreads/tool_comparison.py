@@ -394,7 +394,7 @@ class ToolComparer:
                     if junc.start not in annotated_exon_coords and junc.start not in flair_new_exon:
                         novel_alt3 = True
 
-            for majiq_exon_1, majiq_exon_2 in combinations(zip(all_exons_starts, all_exons_ends), 2):
+            for majiq_exon_1, majiq_exon_2 in combinations(zip(annotated_exons_starts, annotated_exons_ends), 2):
                 # print("ann_start ", annotated_exons_starts)
                 # print("ann_end ", annotated_exons_ends)
                 # print("1 ",majiq_exon_1[1])
