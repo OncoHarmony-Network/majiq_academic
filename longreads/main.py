@@ -132,7 +132,7 @@ def compare_gene(_args):
             )
 
 
-            counts = tc.add_data(majiq_exons, majiq_denovo, majiq_has_reads, flair_exons, annotated_starts, annotated_ends, all_exons_starts, all_exons_ends, annotated_exons_starts, annotated_exons_ends, annotated_exons_order)
+            counts = tc.add_data(majiq_exons, majiq_denovo, majiq_has_reads, flair_exons, annotated_starts, annotated_ends, annotated_exons_starts, annotated_exons_ends, annotated_exons_starts, annotated_exons_ends, annotated_exons_order)
             #counts['partial'] = gene_partial_count
 
             row = [gene_id]
