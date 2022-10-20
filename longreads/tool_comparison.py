@@ -151,7 +151,7 @@ class ToolComparer:
             return False, 0
 
 
-        print("SET2. ",set2)
+        #print("SET2. ",set2)
         only_in_set2 = set2.copy()
         for f_transcript in set1:
             same = False
@@ -196,9 +196,9 @@ class ToolComparer:
        
                     
         
-        print("1: ",only_in_set1)
-        print("2: ",only_in_set2)
-        print("3: ",in_both_sets)
+        # print("1: ",only_in_set1)
+        # print("2: ",only_in_set2)
+        # print("3: ",in_both_sets)
 
         return only_in_set1, only_in_set2, in_both_sets
 
@@ -340,7 +340,7 @@ class ToolComparer:
                 self.incCountPrint(tmpcounts, m_transcript, 'TTF')
             else:
                 if majiq_has_reads[m_transcript]:
-                    print("TTT ",m_transcript)
+                    #print("TTT ",m_transcript)
                     self.incCountPrint(tmpcounts, m_transcript, 'TTT')
                 else:
                     self.incCountPrint(tmpcounts, m_transcript, 'FTT')
@@ -360,7 +360,7 @@ class ToolComparer:
                 if not majiq_has_reads[transcript]:
                     self.incCountPrint(tmpcounts, transcript, 'FFT')
                 else:
-                    print("TFT: ",transcript)
+                    #print("TFT: ",transcript)
                     self.incCountPrint(tmpcounts, transcript, 'TFT')
 
         # fun debugging help things
