@@ -88,7 +88,7 @@ class ToolComparer:
 
     
 
-    def compare_fuzzy(self, set1, set2, fuzziness_5, fuzziness_3):
+    def compare_fuzzy(self, set1, set2, fuzziness_5, fuzziness_3, majiq_has_reads):
         """
         Return "only in set1", "only in set2" and "in both sets" by fuzzy matching
         To be considered a match, the length of the element must be the same, and also each inner integer value
@@ -104,23 +104,13 @@ class ToolComparer:
             
             total_distance = 0
             for k in range(len(majiq_transcript)):
-                # print(k)
-                # print("M ",majiq_transcript)
-                # print("F ",flair_transcript)
-                # print("M_start: ", abs(majiq_transcript[k].start))
-                # print("M_end: ", abs(majiq_transcript[k].end))
-                # print("F_start: ", abs(flair_transcript[k].start))
-                # print("F_end: ", abs(flair_transcript[k].end))
+
                 dist5 = abs(abs(majiq_transcript[k].start) - abs(flair_transcript[k].start))
-                # print("dist5 ",dist5)
                 dist3 = abs(abs(majiq_transcript[k].end) - abs(flair_transcript[k].end))
-                # print("dist3 ",dist3)
 
                 total_distance += dist5 + dist3
                     # if (dist5 > fuzziness_5) or (dist3 > fuzziness_3):
                     #     return False
-
-                #print("TOTAL DISTANCE ",total_distance)
 
             return total_distance
 
@@ -134,7 +124,6 @@ class ToolComparer:
             if set1elem == set2elem:
                 return True, 0
             if len(set1elem) <= len(set2elem):
-                # print("CHECK ",set2elem)
                 # set1elem: Flair, set2elem: MAJIQ
                 for i in range(len(set2elem)-1):
                     junc_majiq = junction(set2elem[i].end, set2elem[i + 1].start)
@@ -153,38 +142,63 @@ class ToolComparer:
                         if not startCondition or not endCondition:
                             break
                     else:
-                        # print("FLAIR ",set1elem)
-                        # print("MAJIQ ",slide_set2)
-                        #total_distance = fuzzy_distance(set1elem, set2elem)
                         total_distance = fuzzy_distance(set1elem, slide_set2)
-                        # print("why ",total_distance)
-                        # print("why2 ",set2elem)
-                        # print("SLIDE ",slide_set2)
-                        # print("SET ",set2elem)
+       
                         return set2elem, total_distance
 
                         #print('true by cond', coords1[0] == -1, coords2[0] == -1, abs(coords1[0] - coords2[0]) <= fuzziness, coords1[1] == -1, coords2[1] == -1, abs(coords1[1] - coords2[1]) <= fuzziness)
                         #return True
             return False, 0
 
-        
+
+        print("SET2. ",set2)
         only_in_set2 = set2.copy()
         for f_transcript in set1:
-            #same = False
+            same = False
+            closest_majiq = []
             for m_transcript in set2:
-                matched, total_distance = compare(f_transcript, m_transcript)
-                if matched:
-                    #same = True
-                    in_both_sets.add((f_transcript, m_transcript, total_distance))
-    
-                    if m_transcript in only_in_set2:
-                        only_in_set2.remove(m_transcript)
-                    break
-                 
-            #if not same:
+                if majiq_has_reads[m_transcript]: 
+                    matched, total_distance = compare(f_transcript, m_transcript)
+                    if matched:
+                        same = True
+                        closest_majiq.append((m_transcript, total_distance))
+                    
+            if closest_majiq:
+                closest_majiq.sort(key = lambda x: x[1])
+                closest_transcript = closest_majiq[0][0]
+                # print("CCC ", closest_transcript)
+                in_both_sets.add((f_transcript, closest_transcript, total_distance))
+                # print("BOTH ",in_both_sets)
+
+                if closest_transcript in only_in_set2:
+                    only_in_set2.remove(closest_transcript)                 
+                    
             else:
-                # print("F: ",f_transcript)
+                for m_transcript in set2:
+                    if not majiq_has_reads[m_transcript]:
+                        matched, total_distance = compare(f_transcript, m_transcript)       
+                        if matched:
+                            same = True
+                            closest_majiq.append((m_transcript, total_distance))
+                
+                if closest_majiq:
+                    closest_majiq.sort(key = lambda x: x[1])
+                    closest_transcript = closest_majiq[0][0]
+                    # print("CCC ", closest_transcript)
+                    in_both_sets.add((f_transcript, closest_transcript, total_distance))
+                    # print("BOTH ",in_both_sets)
+
+                    if closest_transcript in only_in_set2:
+                        only_in_set2.remove(closest_transcript)
+
+            if not same:
                 only_in_set1.add(f_transcript)
+       
+                    
+        
+        print("1: ",only_in_set1)
+        print("2: ",only_in_set2)
+        print("3: ",in_both_sets)
 
         return only_in_set1, only_in_set2, in_both_sets
 
@@ -314,7 +328,7 @@ class ToolComparer:
 
         # before removing start / end information, we use it to check for partial isoforms
 
-        only_in_flair, only_in_majiq, in_flair_and_majiq = self.compare_fuzzy(flair_result, majiq_result, self.args.fuzziness5, self.args.fuzziness3)
+        only_in_flair, only_in_majiq, in_flair_and_majiq = self.compare_fuzzy(flair_result, majiq_result, self.args.fuzziness5, self.args.fuzziness3, majiq_has_reads)
         # print("Only_flair",only_in_flair)
         # print("Only_majiq",only_in_majiq)
         for f_transcript, m_transcript, total_distance in in_flair_and_majiq:
@@ -326,7 +340,7 @@ class ToolComparer:
                 self.incCountPrint(tmpcounts, m_transcript, 'TTF')
             else:
                 if majiq_has_reads[m_transcript]:
-                    # print("M ",m_transcript)
+                    print("TTT ",m_transcript)
                     self.incCountPrint(tmpcounts, m_transcript, 'TTT')
                 else:
                     self.incCountPrint(tmpcounts, m_transcript, 'FTT')
@@ -346,7 +360,7 @@ class ToolComparer:
                 if not majiq_has_reads[transcript]:
                     self.incCountPrint(tmpcounts, transcript, 'FFT')
                 else:
-                    # print("TFT: ",transcript)
+                    print("TFT: ",transcript)
                     self.incCountPrint(tmpcounts, transcript, 'TFT')
 
         # fun debugging help things

@@ -19,4 +19,5 @@ ENSG00000111127.5_FTF_novel_special_exon		0	0	1	0	0	2	0	0	0	0	0	0	0	2	0	0	0	0	2	
 ENSG00000111128.5_FTF_novel_special_intron_retention		0	0	2	0	0	1	0	0	0	0	1	0	0	0	0	0	0	0	0	1	0	0	0	0	0	0	0	0	0	0	0	0
 ENSG00000111129.5_FTF_novel_special_intron_retention2		0	0	1	1	0	1	0	0	1	0	1	0	0	0	0	0	0	0	0	1	0	0	0	0	0	0	0	0	0	0	0	0
 ENSG00000111130.5_FTF_novel_special_intron_retention3		0	0	3	0	0	2	1	0	0	0	2	0	0	0	0	0	0	0	0	2	0	0	0	0	0	0	0	0	0	0	0	0
-ENSG00000111131.5_fuzziness		3	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0
+ENSG00000111131.5_fuzziness		1	0	2	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0
+ENSG00000111132.5_fuzziness2		3	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0

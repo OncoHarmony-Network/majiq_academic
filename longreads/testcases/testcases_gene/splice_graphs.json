@@ -881,5 +881,45 @@
       5800,
       6000
     ]
+  },
+  "ENSG00000111132.5_fuzziness2": {
+    "desc": "within flair novel case, cases with one overlapped areas ",
+    "strand": "+",
+    "exons": [
+      [1000, 2000],
+      [3000, 4000],
+      [5000, 6000]
+    ],
+    "exons_annotated": [
+      1,1,1
+    ],
+    "junctions": [
+      [2000, 3000],
+      [4000, 5000]
+    ],
+    "introns": [
+    ],
+    "junctions_reads": [
+      10,
+      10
+    ],
+    "introns_reads": [
+
+    ],
+    "junctions_annotated": [
+      1,
+      1
+    ],
+    "introns_annotated": [
+
+    ],
+    "TSS": [
+      1000,
+      1500
+    ],
+    "TES": [
+      5800,
+      6000
+    ]
   }
 }
