@@ -128,6 +128,7 @@ dpsi_het_thresholds_parser.add_argument('--non-changing-between-group-dpsi', typ
                                              ' The default is "%(default)s"')
 
 
+
 dpsi_thresholds_parser = tsv_parser.add_argument_group("Thresholds for Deltapsi inputs")
 dpsi_thresholds_parser.add_argument('--threshold', type=float, default=0.2,
                         help='Filter out LSVs with no junctions predicted to change over a certain value. Even when '
@@ -292,6 +293,10 @@ dpsi_het_modulize_filter_parser.add_argument('--changing-between-group-dpsi-seco
                                               ' meet the other changing definitions, and ALL junctions in an event must meet this condition (DPSI value'
                                               ' of the junction >= this value). Applies to HET or delta-PSI inputs'
                                               ' The default is "%(default)s".')
+dpsi_het_modulize_filter_parser.add_argument('--non-changing-median-reads-threshold', type=int, default=0,
+                                        help='(beta), for all non changing events in the output, after all other thresholds, '
+                                             'apply a filter based on median-reads. If this flag is set and the median reads '
+                                             'are less than the specified value, do not mark that event as non-changing.')
 
 
 het_modulize_filter_parser = classify_parser.add_argument_group(

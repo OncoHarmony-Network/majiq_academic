@@ -1,3 +1,4 @@
+import statistics
 from rna_voila.config import ClassifyConfig
 import numpy as np
 from rna_voila.vlsv import get_expected_psi, matrix_area
@@ -546,6 +547,17 @@ class MultiQuantWriter(QuantificationWriter):
                 missing_any = True
         return lsvs, missing_any
 
+    def _reads(self, splice_graph_file, gene_id, _experiment_names, edge):
+
+        with SpliceGraph(splice_graph_file) as sg:
+
+            junc = {'start': edge.start, 'end': edge.end, 'gene_id': gene_id}
+            try:
+                reads = ceil(median((x['reads'] for x in sg.junction_reads_exp(junc, _experiment_names))))
+            except statistics.StatisticsError:
+                return None
+        return reads
+
     def event_changing(self, module, quant_identifiers):
 
         # should only have one edge specified --
@@ -644,9 +656,18 @@ class MultiQuantWriter(QuantificationWriter):
 
             with Matrix(voila_file) as m1:
                 analysis_type = m1.analysis_type
-
+                experiments = m1.experiment_names[:-1][0]
 
             for lsv_id, _edge in lsvs:
+
+                if self.config.non_changing_median_reads_threshold:
+                    if not _edge:
+                        continue
+                    mean_reads = self._reads(self.config.splice_graph_file, self.graph.gene_id if self.graph else None, experiments, _edge)
+                    if not mean_reads or mean_reads < self.config.non_changing_median_reads_threshold:
+                        junc_results.append(False)
+                        continue
+
                 try:
                     if analysis_type == constants.ANALYSIS_HETEROGEN:
                         with view_matrix.ViewHeterogen(voila_file) as m:
@@ -685,3 +706,4 @@ class MultiQuantWriter(QuantificationWriter):
 
         # bool() needed here because they are of type "numpy._bool" by default
         return all(bool(x) is True for x in junc_results)
+
