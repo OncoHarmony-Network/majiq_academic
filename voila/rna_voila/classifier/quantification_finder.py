@@ -211,7 +211,7 @@ class QuantificationWriter:
                         try:
                             lsv = m.lsv(lsv_id)
                             edge_idx = self._filter_edges(edge, lsv)
-                            if edge_idx is None:
+                            if edge_idx is None or edge_idx == slice(None):
                                 continue
                             medians = lsv.median_psi()
                             psi = medians[edge_idx][group_idx]
@@ -249,7 +249,7 @@ class QuantificationWriter:
 
                             for _edge in edges:
                                 edge_idx = self._filter_edges(_edge, lsv)
-                                if edge_idx is None:
+                                if edge_idx is None or edge_idx == slice(None):
                                     continue
                                 else:
                                     medians = lsv.median_psi()
@@ -292,7 +292,7 @@ class QuantificationWriter:
                             vals = []
                             for _edge in edges:
                                 edge_idx = self._filter_edges(_edge, lsv)
-                                if edge_idx is None:
+                                if edge_idx is None or edge_idx == slice(None):
                                     continue
                                 else:
                                     vals.append(lsv.excl_incl[edge_idx][1] - lsv.excl_incl[edge_idx][0])
@@ -317,7 +317,7 @@ class QuantificationWriter:
                                 vals = []
                                 for _edge in edges:
                                     edge_idx = self._filter_edges(_edge, lsv)
-                                    if edge_idx is None:
+                                    if edge_idx is None or edge_idx == slice(None):
                                         continue
                                     else:
                                         vals.append(matrix_area(bins[edge_idx], self.config.changing_between_group_dpsi))
@@ -370,7 +370,7 @@ class QuantificationWriter:
                                         lsv = m.lsv(lsv_id)
 
                                         edge_idx = self._filter_edges(_edge, lsv)
-                                        if edge_idx is None:
+                                        if edge_idx is None or edge_idx == slice(None):
                                             continue
                                         else:
 
@@ -388,7 +388,7 @@ class QuantificationWriter:
                                         lsv = m.lsv(lsv_id)
 
                                         edge_idx = self._filter_edges(_edge, lsv)
-                                        if edge_idx is None:
+                                        if edge_idx is None or edge_idx == slice(None):
                                             continue
                                         else:
                                             is_changing = lsv.changing(
@@ -587,7 +587,7 @@ class MultiQuantWriter(QuantificationWriter):
 
                             edge_idx = self._filter_edges(_edge, lsv)
 
-                            if edge_idx is None:
+                            if edge_idx is None or edge_idx == slice(None):
                                 break
                             else:
 
@@ -613,7 +613,7 @@ class MultiQuantWriter(QuantificationWriter):
                             lsv = m.lsv(lsv_id)
 
                             edge_idx = self._filter_edges(_edge, lsv)
-                            if edge_idx is None:
+                            if edge_idx is None or edge_idx == slice(None):
                                 continue
                             else:
                                 is_changing = lsv.changing(
@@ -676,7 +676,7 @@ class MultiQuantWriter(QuantificationWriter):
                             lsv = m.lsv(lsv_id)
 
                             edge_idx = self._filter_edges(_edge, lsv)
-                            if edge_idx is None:
+                            if edge_idx is None or edge_idx == slice(None):
                                 continue
                             else:
                                 is_non_changing = lsv.nonchanging(self.config.non_changing_pvalue_threshold,
@@ -690,7 +690,7 @@ class MultiQuantWriter(QuantificationWriter):
                             lsv = m.lsv(lsv_id)
 
                             edge_idx = self._filter_edges(_edge, lsv)
-                            if edge_idx is None:
+                            if edge_idx is None or edge_idx == slice(None):
                                 continue
                             else:
                                 non_changing_quant = lsv.high_probability_non_changing(
