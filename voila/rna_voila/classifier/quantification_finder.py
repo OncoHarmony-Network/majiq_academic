@@ -211,6 +211,8 @@ class QuantificationWriter:
                         try:
                             lsv = m.lsv(lsv_id)
                             edge_idx = self._filter_edges(edge, lsv)
+                            if edge_idx is None:
+                                continue
                             medians = lsv.median_psi()
                             psi = medians[edge_idx][group_idx]
                             found_psis.append(psi)
