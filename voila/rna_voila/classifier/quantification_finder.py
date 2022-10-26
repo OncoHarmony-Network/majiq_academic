@@ -437,20 +437,19 @@ class QuantificationWriter:
                 analysis_type = m.analysis_type
                 group_names = m.group_names
                 experiment_names = m.experiment_names
+                if analysis_type == constants.ANALYSIS_PSI:
+                    experiment_names = experiment_names[:-1]
                 if analysis_type == constants.ANALYSIS_HETEROGEN:
                     stat_names = m.stat_names
                 else:
                     stat_names = None
 
-
+            if self.config.show_read_counts:
+                for group, experiments in zip(group_names, experiment_names):
+                    header = f'{group}_median_reads'
+                    tmp[header] = (_reads, self.config.splice_graph_file, self.graph.gene_id if self.graph else None, experiments)
 
             if analysis_type == constants.ANALYSIS_PSI:
-                for group, experiments in zip(group_names, experiment_names[:-1]):
-
-                    if self.config.show_read_counts:
-
-                        header = f'{group}_median_reads'
-                        tmp[header] = (_reads, self.config.splice_graph_file, self.graph.gene_id if self.graph else None, experiments)
 
 
                 for key in ("median_psi", "var_psi",):
