@@ -553,8 +553,11 @@ class MultiQuantWriter(QuantificationWriter):
         with SpliceGraph(splice_graph_file) as sg:
 
             junc = {'start': edge.start, 'end': edge.end, 'gene_id': gene_id}
+            reads = [x['reads'] for x in (sg.junction_reads_exp(junc, _experiment_names))]
+            if len(reads) == 0:
+                return None
             try:
-                reads = ceil(median((x['reads'] for x in sg.junction_reads_exp(junc, _experiment_names))))
+                reads = ceil(median(reads))
             except statistics.StatisticsError:
                 return None
         return reads
@@ -665,7 +668,9 @@ class MultiQuantWriter(QuantificationWriter):
                     if not _edge:
                         continue
                     mean_reads = self._reads(self.config.splice_graph_file, self.graph.gene_id if self.graph else None, experiments, _edge)
-                    if not mean_reads or mean_reads < self.config.non_changing_median_reads_threshold:
+                    if mean_reads is None:
+                        continue
+                    if mean_reads < self.config.non_changing_median_reads_threshold:
                         junc_results.append(False)
                         continue
 
