@@ -548,12 +548,15 @@ class MultiQuantWriter(QuantificationWriter):
                 missing_any = True
         return lsvs, missing_any
 
-    def _reads(self, splice_graph_file, gene_id, _experiment_names, edge):
+    def _reads(self, splice_graph_file, gene_id, edge):
+        """
+        Find the median reads across all experiments for a specific junction
+        """
 
         with SpliceGraph(splice_graph_file) as sg:
 
             junc = {'start': edge.start, 'end': edge.end, 'gene_id': gene_id}
-            reads = [x['reads'] for x in (sg.junction_reads_exp(junc, _experiment_names))]
+            reads = [x['reads'] for x in (sg.junction_reads_exp(junc, experiment_names=None))]
             if len(reads) == 0:
                 return None
             try:
@@ -654,25 +657,29 @@ class MultiQuantWriter(QuantificationWriter):
         if missing_any:
             return False
 
+        if self.config.non_changing_median_reads_threshold:
+            reads_per_junc_per_lsv = {}
+            for lsv_id, _edge in lsvs:
+                if not _edge:
+                    continue
+                mean_reads = self._reads(self.config.splice_graph_file, self.graph.gene_id if self.graph else None, _edge)
+                if mean_reads is None:
+                    continue
+                if lsv_id not in reads_per_junc_per_lsv:
+                    reads_per_junc_per_lsv[lsv_id] = []
+                reads_per_junc_per_lsv[lsv_id].append(mean_reads)
+            for lsv_id, readlist in reads_per_junc_per_lsv.items():
+                if sum(readlist) < self.config.non_changing_median_reads_threshold:
+                    return False
+
         junc_results = []
 
         for voila_file in self.config.voila_files:
 
             with Matrix(voila_file) as m1:
                 analysis_type = m1.analysis_type
-                experiments = m1.experiment_names[:-1][0]
 
             for lsv_id, _edge in lsvs:
-
-                if self.config.non_changing_median_reads_threshold:
-                    if not _edge:
-                        continue
-                    mean_reads = self._reads(self.config.splice_graph_file, self.graph.gene_id if self.graph else None, experiments, _edge)
-                    if mean_reads is None:
-                        continue
-                    if mean_reads < self.config.non_changing_median_reads_threshold:
-                        junc_results.append(False)
-                        continue
 
                 try:
                     if analysis_type == constants.ANALYSIS_HETEROGEN:
