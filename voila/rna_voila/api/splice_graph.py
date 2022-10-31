@@ -236,22 +236,25 @@ class Junctions(SpliceGraphSQL):
                                     ''' + (" AND is_simplified = 0" if omit_simplified else ''), (gene_id,))
         return self._iter_results(query, junc_fieldnames)
 
-    def junction_reads_exp(self, junction, experiment_names):
+    def junction_reads_exp(self, junction, experiment_names=None):
         """
         for a junction and a set of experiment names, get a list of reads.
         :param junction: junction dictionary
         :param experiment_names: list of experiment names
         :return: list of reads dictionaries
         """
-
-        query = self.conn.execute('''
-                                SELECT reads, experiment_name 
-                                FROM junction_reads
-                                WHERE junction_start=?
-                                AND junction_end=?
-                                AND junction_gene_id=?
-                                AND experiment_name IN ({})
-                                '''.format(','.join(["'{}'".format(x) for x in experiment_names])),
+        q_s = '''
+            SELECT reads, experiment_name 
+            FROM junction_reads
+            WHERE junction_start=?
+            AND junction_end=?
+            AND junction_gene_id=? 
+            '''
+        if experiment_names:
+            q_s += '''
+            AND experiment_name IN ({})
+            '''.format(','.join(["'{}'".format(x) for x in experiment_names]))
+        query = self.conn.execute(q_s,
                                   itemgetter('start', 'end', 'gene_id')(junction))
 
         return self._iter_results(query, junc_reads_fieldnames)
