@@ -709,18 +709,18 @@ class MultiQuantWriter(QuantificationWriter):
             # secondary check on reads
             if self.config.non_changing_median_reads_threshold:
                 reads_per_junc_per_lsv = {}
-            for lsv_id, _edge in lsvs:
-                if not _edge:
-                    continue
-                mean_reads = self._reads(self.config.splice_graph_file, self.graph.gene_id if self.graph else None, _edge)
-                if mean_reads is None:
-                    continue
-                if lsv_id not in reads_per_junc_per_lsv:
-                    reads_per_junc_per_lsv[lsv_id] = []
-                reads_per_junc_per_lsv[lsv_id].append(mean_reads)
-            for lsv_id, readlist in reads_per_junc_per_lsv.items():
-                if sum(readlist) < self.config.non_changing_median_reads_threshold:
-                    return False
+                for lsv_id, _edge in lsvs:
+                    if not _edge:
+                        continue
+                    mean_reads = self._reads(self.config.splice_graph_file, self.graph.gene_id if self.graph else None, _edge)
+                    if mean_reads is None:
+                        continue
+                    if lsv_id not in reads_per_junc_per_lsv:
+                        reads_per_junc_per_lsv[lsv_id] = []
+                    reads_per_junc_per_lsv[lsv_id].append(mean_reads)
+                for lsv_id, readlist in reads_per_junc_per_lsv.items():
+                    if sum(readlist) < self.config.non_changing_median_reads_threshold:
+                        return False
             return True
         return False
 
