@@ -56,6 +56,16 @@ class QuantificationWriter:
         for field in self.quantifications_int:
 
             quantification_vals = []
+            if not lsvs and self.config.show_read_counts:
+                try:
+                    quants = self.quantifications_int[field][0](*self.quantifications_int[field][1:])(None, edge)
+                    if quants is None:
+                        quantification_vals.append('')
+                    else:
+                        for val in quants:
+                            quantification_vals.append(val)
+                except:
+                    quantification_vals.append('')
             for lsv_id in lsvs:
                  #print(self.quantifications_int[field](lsv_id, edge))
 
@@ -411,10 +421,14 @@ class QuantificationWriter:
         def _reads(splice_graph_file, gene_id, _experiment_names):
             def f(lsv_id, edge=None):
                 with SpliceGraph(splice_graph_file) as sg:
-
                     try:
                         junc = {'start': edge.start, 'end': edge.end, 'gene_id': gene_id}
-                        reads = ceil(median((x['reads'] for x in sg.junction_reads_exp(junc, _experiment_names))))
+                        if edge.ir:
+                            junc['start'] += 1
+                            junc['end'] -= 1
+                            reads = ceil(median((x['reads'] for x in sg.intron_retention_reads_exp(junc, _experiment_names))))
+                        else:
+                            reads = ceil(median((x['reads'] for x in sg.junction_reads_exp(junc, _experiment_names))))
                     except:
                         reads = ''
 

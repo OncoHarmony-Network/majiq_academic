@@ -290,15 +290,19 @@ class IntronRetentions(SpliceGraphSQL):
         :return: list of intron retention reads
         """
 
-        query = self.conn.execute('''
-                                SELECT reads, experiment_name 
-                                FROM intron_retention_reads
-                                WHERE intron_retention_start=?
-                                AND intron_retention_end=?
-                                AND intron_retention_gene_id=?
-                                AND experiment_name IN ({})
-                                '''.format(','.join(["'{}'".format(x) for x in experiment_names])),
-                                  (ir['start'], ir['end'], ir['gene_id']))
+        q_s = '''
+            SELECT reads, experiment_name 
+            FROM intron_retention_reads
+            WHERE intron_retention_start=?
+            AND intron_retention_end=?
+            AND intron_retention_gene_id=?
+                                '''
+        if experiment_names:
+            q_s += '''
+            AND experiment_name IN ({})
+            '''.format(','.join(["'{}'".format(x) for x in experiment_names]))
+        query = self.conn.execute(q_s, itemgetter('start', 'end', 'gene_id')(ir))
+
         return self._iter_results(query, ir_reads_fieldnames)
 
 
