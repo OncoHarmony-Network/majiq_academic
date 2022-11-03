@@ -150,10 +150,29 @@ class ToolComparer:
                         #return True
             return False, 0
 
+        def majiq_first_fuzzy(f_transcript, majiq_transcript_set):
+            
+            for m_transcript in majiq_transcript_set:
+                if majiq_has_reads[m_transcript]:
+                    matched, total = compare(f_transcript, m_transcript)
+                    if matched:
+                        same = True
+                        closest_majiq.append((m_transcript, total_distance))
+                if closest_majiq:
+                    closest_majiq.sort(key = lambda x: x[1])
+                    closest_transcript = closest_majiq[0][0]
+                    # print("CCC ", closest_transcript)
+                    in_both_sets.add((f_transcript, closest_transcript, total_distance))
+                    # print("BOTH ",in_both_sets)
+
+                    if closest_transcript in only_in_set2:
+                        only_in_set2.remove(closest_transcript)             
+
 
         #print("SET2. ",set2)
         only_in_set2 = set2.copy()
         for f_transcript in set1:
+            print(f_transcript)
             same = False
             closest_majiq = []
             for m_transcript in set2:
@@ -175,6 +194,7 @@ class ToolComparer:
                     
             else:
                 for m_transcript in set2:
+                    
                     if not majiq_has_reads[m_transcript]:
                         matched, total_distance = compare(f_transcript, m_transcript)       
                         if matched:
@@ -335,8 +355,10 @@ class ToolComparer:
         # for f_transcript, m_transcript in in_flair_and_majiq:
             #print("total :",total_distance)
             known_junctions = known_junctions.union(self.get_junctions(m_transcript))
+            print(known_junctions)
             #known_junctions = known_junctions.union(self.get_junctions(f_transcript))
             if majiq_denovo[m_transcript]:
+                
                 self.incCountPrint(tmpcounts, m_transcript, 'TTF')
             else:
                 if majiq_has_reads[m_transcript]:
