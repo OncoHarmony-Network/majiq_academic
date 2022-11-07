@@ -297,7 +297,11 @@ dpsi_het_modulize_filter_parser.add_argument('--non-changing-median-reads-thresh
                                         help='(beta), for all non changing events in the output, after all other thresholds, '
                                              'apply a filter based on median-reads. If this flag is set and the median reads '
                                              'are less than the specified value, do not mark that event as non-changing.')
-
+dpsi_het_modulize_filter_parser.add_argument('--permissive-event-non-changing-threshold', type=float, default=1.0,
+                                             help='Add a new criterion for non-changing: mark events non_changing as long as 1) '
+                                                  'none of the cases are changing 2) as least X percent of the cases are non-changing '
+                                                  '(per junction). Will also enable an additional output column event_non_changing_cases '
+                                                  'which gives the total count of comparisons which were marked non-changing (summed over junctions in event). ')
 
 het_modulize_filter_parser = classify_parser.add_argument_group(
     "Adjust the parameters used for determining whether a junction / module is changing or non-changing based on "

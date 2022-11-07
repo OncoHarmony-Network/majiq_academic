@@ -669,11 +669,12 @@ class MultiQuantWriter(QuantificationWriter):
 
         lsvs, missing_any = self.gen_lsvs_list(module, quant_identifiers)
         if missing_any:
-            return False
+            return False, ''
 
 
 
         junc_results = []
+        found_changing = False
 
         for voila_file in self.config.voila_files:
 
@@ -695,6 +696,13 @@ class MultiQuantWriter(QuantificationWriter):
                                                         self.config.non_changing_within_group_iqr,
                                                         self.config.non_changing_between_group_dpsi,
                                                         edge_idx)
+
+                                if not found_changing:
+                                    found_changing = lsv.changing(
+                                        self.config.changing_pvalue_threshold,
+                                        self.config.changing_between_group_dpsi,
+                                        edge_idx)
+
                                 junc_results.append(is_non_changing)
 
                     elif analysis_type == constants.ANALYSIS_DELTAPSI:
@@ -710,15 +718,30 @@ class MultiQuantWriter(QuantificationWriter):
 
                                 is_non_changing = non_changing_quant >= self.config.probability_non_changing_threshold
 
+                                if not found_changing:
+                                    found_changing = lsv.changing(
+                                        self.config.changing_between_group_dpsi,
+                                        self.config.probability_changing_threshold,
+                                        edge_idx)
+
                                 junc_results.append(is_non_changing)
 
                 except (GeneIdNotFoundInVoilaFile, LsvIdNotFoundInVoilaFile) as e:
                     continue
 
-        if not junc_results:
-            return ''
 
-        if all(bool(x) is True for x in junc_results):
+
+        if not junc_results:
+            return '', ''
+
+        num_cases = sum((1 if x == True else 0 for x in junc_results))
+
+        if found_changing:
+            return False, num_cases
+
+        ratio_non_changing = num_cases / len(junc_results)
+
+        if ratio_non_changing >= self.config.permissive_event_non_changing_threshold:
 
             # secondary check on reads
             if self.config.non_changing_median_reads_threshold:
@@ -734,7 +757,7 @@ class MultiQuantWriter(QuantificationWriter):
                     reads_per_junc_per_lsv[lsv_id].append(mean_reads)
                 for lsv_id, readlist in reads_per_junc_per_lsv.items():
                     if sum(readlist) < self.config.non_changing_median_reads_threshold:
-                        return False
-            return True
-        return False
+                        return False, num_cases
+            return True, num_cases
+        return False, num_cases
 
