@@ -231,6 +231,8 @@ classify_general_filter_parser.add_argument('--gene-ids', nargs='*', default=[],
 classify_general_filter_parser.add_argument('--debug-num-genes', type=int,
                              help='Modulize only n many genes, useful to see an excerpt of the functionality without '
                                   'waiting for a full run to complete.')
+classify_general_filter_parser.add_argument('--include-change-cases', action='store_true',
+                                             help=argparse.SUPPRESS)
 
 classify_secondary_modes_parser = classify_parser.add_argument_group(
     "Alternative use cases / run modes for specialized applications of modulizer"
