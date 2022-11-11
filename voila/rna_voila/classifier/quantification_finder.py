@@ -682,9 +682,9 @@ class MultiQuantWriter(QuantificationWriter):
                 # so we check if any primary ones passed, if this is not true, we move to the next
                 # voila file...
                 if any(bool(x) is True for x in junc_results):
-                    return True
+                    return True, []
 
-        return False, [] if found_quant else '', []
+        return (False, []) if found_quant else ('', [])
 
 
     def _event_non_changing_classic(self, module, quant_identifiers):
@@ -759,7 +759,7 @@ class MultiQuantWriter(QuantificationWriter):
         num_cases = sum((1 if x == True else 0 for x in junc_results))
 
         if found_changing:
-            return False, num_cases
+            return False, []
 
         ratio_non_changing = num_cases / len(junc_results)
 
