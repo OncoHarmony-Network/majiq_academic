@@ -874,11 +874,14 @@ class MultiQuantWriter(QuantificationWriter):
                 # this executes is we never broke, in other words, all secondary filters passed
                 # so we check if any primary ones passed, if this is not true, we move to the next
                 # voila file...
-                if any(bool(x) is True for x in junc_results):
-                    overall_changing = True
-                    individual.append(True)
+                if not junc_results:
+                    individual.append('')
                 else:
-                    individual.append(False)
+                    if any(bool(x) is True for x in junc_results):
+                        overall_changing = True
+                        individual.append(True)
+                    else:
+                        individual.append(False)
 
 
         if not found_quant:
