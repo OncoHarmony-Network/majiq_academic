@@ -494,7 +494,7 @@ class QuantificationWriter:
 
 
                 for group1, group2 in combinations(group_names, 2):
-                    for key in ("median_dpsi"):
+                    for key in ("median_dpsi",):
                         header = "%s-%s_het_%s" % (group1, group2, key)
                         if header in tmp:
                             tmp[header][1].append(voila_file)
