@@ -465,8 +465,8 @@ class QuantificationWriter:
 
             if analysis_type == constants.ANALYSIS_PSI:
 
-
-                for key in ("median_psi", "var_psi",):
+                for group in group_names:
+                    for key in ("median_psi", "var_psi",):
                         header = "%s_%s" % (group, key)
                         if header in tmp:
                             tmp[header][1].append(voila_file)
