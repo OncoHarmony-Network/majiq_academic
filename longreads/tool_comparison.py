@@ -172,7 +172,7 @@ class ToolComparer:
         #print("SET2. ",set2)
         only_in_set2 = set2.copy()
         for f_transcript in set1:
-            print(f_transcript)
+            #print(f_transcript)
             same = False
             closest_majiq = []
             for m_transcript in set2:
@@ -355,7 +355,7 @@ class ToolComparer:
         # for f_transcript, m_transcript in in_flair_and_majiq:
             #print("total :",total_distance)
             known_junctions = known_junctions.union(self.get_junctions(m_transcript))
-            print(known_junctions)
+            #print(known_junctions)
             #known_junctions = known_junctions.union(self.get_junctions(f_transcript))
             if majiq_denovo[m_transcript]:
                 
