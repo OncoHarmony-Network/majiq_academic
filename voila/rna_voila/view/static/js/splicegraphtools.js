@@ -2,6 +2,8 @@ class SpliceGraphTools {
     constructor(sgs, gene, highlight_lsvs) {
         this.grp_names = gene.group_names;
         this.exp_names = gene.experiment_names;
+        // for use with natural sorting
+        this.collator = new Intl.Collator(undefined, {numeric: true, sensitivity: 'base'});
         this.sgs = sgs;
         this.highlight_lsvs = highlight_lsvs;
         this._init();
@@ -74,7 +76,7 @@ class SpliceGraphTools {
                 .map(sg => sg.dataset.experiment);
 
             const exps = this.exp_names[event.target.selectedIndex]
-                .filter(e => !shown_exps.includes(e));
+                .filter(e => !shown_exps.includes(e)).sort(this.collator.compare);
 
             const s = d3.select('.experiments select')
                 .selectAll('option')
