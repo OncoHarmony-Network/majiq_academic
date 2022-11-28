@@ -88,10 +88,10 @@ def compare_gene(_args):
 
     # create file
     #debug_path = f'/home/seong/lr_paper/lr_output/debug/{gene_id}'
-    global debug_path
-    debug_path =  os.path.join(debug_path, gene_id)
+    #global debug_path
+    debug_gene_path =  os.path.join(debug_path, gene_id)
 
-    with open(debug_path, 'a') as f:
+    with open(debug_gene_path, 'a') as f:
         pass
 
     tc = ToolComparer(args)
@@ -175,7 +175,7 @@ def compare_gene(_args):
             f.write(traceback.format_exc() + '\n')
     finally:
         # delete file
-        os.remove(debug_path)
+        os.remove(debug_gene_path)
         if q:
             q.put(None)
 
