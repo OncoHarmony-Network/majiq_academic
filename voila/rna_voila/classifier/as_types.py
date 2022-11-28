@@ -1208,6 +1208,16 @@ class Graph:
                                 if len(edge.lsvs) > 0:
                                     self.classified_lsvs.extend(edge.lsvs)
                                 self.classified_junctions.extend([include1, include2, edge])
+
+                            event_constitutive = []
+                            if self.graph.config.cassettes_constitutive_column:
+                                indices = [self.nodes.index(x) for x in (n1, n2, n3)]
+                                if list(range(min(indices), max(indices)+1)) == sorted(indices) or \
+                                   list(reversed(range(min(indices), max(indices)+1))) == sorted(indices, reverse=True):
+                                    event_constitutive = [True]
+                                else:
+                                    event_constitutive = [False]
+
                             found.append({'event': 'cassette_exon',
                                           'C1': self.strand_case(n1, n3),
                                           'C2': self.strand_case(n3, n1),
@@ -1215,7 +1225,8 @@ class Graph:
                                           'Include1': self.strand_case(include1, include2),
                                           'Include2': self.strand_case(include2, include1),
                                           'Skip': skip,
-                                          'event_id': 'CE_%s' % i})
+                                          'event_id': 'CE_%s' % i,
+                                          'constitutive': event_constitutive})
                             i += 1
 
             return found

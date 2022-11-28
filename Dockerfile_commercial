@@ -6,16 +6,23 @@ RUN apt-get -y update
 RUN apt-get -y install libhts-dev python3-dev python3-pip git gcc
 
 
+# setup keys for bitbucket
+RUN mkdir -p /root/.ssh
+RUN rm -rf /root/.ssh/id_rsa
+COPY id_rsa /root/.ssh/id_rsa
+RUN chmod 700 /root/.ssh/id_rsa
+RUN echo "Host bitbucket.org\n\tStrictHostKeyChecking no\n" >> /root/.ssh/config
+
 # install majiq
 
 WORKDIR /tmp
-RUN git clone https://bitbucket.org/biociphers/majiq_academic.git
-WORKDIR majiq_academic
+RUN git clone git@bitbucket.org:biociphers/majiq_commercial.git
+WORKDIR majiq_commercial
 RUN pip3 install --no-cache-dir -U pip
 RUN pip3 install --no-cache-dir ./voila
 RUN pip3 install --no-cache-dir ./majiq
 WORKDIR /tmp
-RUN rm -rf majiq_academic
+RUN rm -rf majiq_commercial
 
 
 # remove these lines to go back to default majiq/voila usage (non CWL)
@@ -26,7 +33,8 @@ RUN rm -rf majiq_academic
 
 CMD []
 
-# To build image: go to some temporary directory and $ docker build -t majiq_voila -f /path/to/this/Dockerfile .
+# To build image: go to some temporary directory and copy id_rsa used for bitbucket into it, then
+# $ docker build -t majiq_voila -f /path/to/this/Dockerfile .
 # To run loaded image: docker run majiq_voila majiq --help
 # To run loaded image: docker run majiq_voila -v /path/to/voila/data/files:/mnt -p 5010:5010 voila view /mnt --host 0.0.0.0 -p 5010 -j4
 # note that you may not see the line "Serving on 0.0.0.0:5010" for voila view some reason, but it will work anyway

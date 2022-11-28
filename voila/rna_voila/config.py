@@ -38,7 +38,10 @@ _ClassifyConfig = namedtuple('ClassifyConfig', ['directory', 'voila_files', 'voi
                                                 'changing_between_group_dpsi', 'changing_between_group_dpsi_secondary',
                                                 'keep_no_lsvs_junctions', 'debug_num_genes', 'overwrite', 'output_mpe',
                                                 'heatmap_selection', 'logger', 'enabled_outputs',
-                                                'ignore_inconsistent_group_errors', 'disable_metadata'])
+                                                'ignore_inconsistent_group_errors', 'disable_metadata',
+                                                'show_read_counts', 'cassettes_constitutive_column',
+                                                'non_changing_median_reads_threshold', 'permissive_event_non_changing_threshold',
+                                                'include_change_cases'])
 _ClassifyConfig.__new__.__defaults__ = (None,) * len(_ClassifyConfig._fields)
 _FilterConfig = namedtuple('FilterConfig', ['directory', 'voila_files', 'voila_file', 'splice_graph_file',
                                             'nproc', 'gene_ids', 'debug', 'silent', 'analysis_type', 'overwrite',
@@ -387,20 +390,20 @@ class ClassifyConfig:
             settings = dict(config_parser['SETTINGS'])
 
 
-
-
-            for int_key in ['nproc', 'keep_constitutive', 'decomplexify_reads_threshold', 'debug_num_genes']:
+            for int_key in ['nproc', 'keep_constitutive', 'decomplexify_reads_threshold', 'debug_num_genes',
+                            'non_changing_median_reads_threshold']:
                 settings[int_key] = config_parser['SETTINGS'].getint(int_key)
             for float_key in ['decomplexify_psi_threshold', 'decomplexify_deltapsi_threshold',
                               'probability_changing_threshold',
                               'probability_non_changing_threshold', 'non_changing_pvalue_threshold',
                               'non_changing_within_group_iqr', 'non_changing_between_group_dpsi',
                               'changing_pvalue_threshold', 'changing_between_group_dpsi',
-                              'changing_between_group_dpsi_secondary']:
+                              'changing_between_group_dpsi_secondary', 'permissive_event_non_changing_threshold']:
                 settings[float_key] = config_parser['SETTINGS'].getfloat(float_key)
             for bool_key in ['debug', 'keep_no_lsvs_modules', 'only_binary', 'untrimmed_exons', 'overwrite',
                              'putative_multi_gene_regions', 'show_all', 'keep_no_lsvs_junctions', 'output_mpe',
-                             'ignore_inconsistent_group_errors', 'disable_metadata'
+                             'ignore_inconsistent_group_errors', 'disable_metadata', 'show_read_counts',
+                             'cassettes_constitutive_column', 'include_change_cases'
                              ]:
                 settings[bool_key] = config_parser['SETTINGS'].getboolean(bool_key)
 

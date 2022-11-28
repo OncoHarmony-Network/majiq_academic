@@ -21,6 +21,8 @@ In addition, you will need a gene annotation database in GFF3 format, for exampl
 
 *Please make sure that the gene names from your annotation exactly match the gene names from your bamfiles.*
 
+**General note**: in addition to the example below, you can find help composing your own commands + config by using the :ref:`command-builder`.
+
 .. _MAJIQ Builder quick:
 
 MAJIQ Builder

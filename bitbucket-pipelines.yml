@@ -3,6 +3,13 @@ image: python:3.8.10
 pipelines:
   custom:
     docs-with-sphinx:
+      - variables:
+          - name: upload_folder
+            default: "majiq-docs"
+            allowed-values:
+              - "majiq-docs"
+              - "majiq-docs-academic"
+              - "majiq-docs-commercial"
       - step:
           name: doc generator
           caches:
@@ -19,8 +26,8 @@ pipelines:
             - git config --global user.name "Biociphers Admin"
             - git clone git@bitbucket.org:biociphers/biociphers.bitbucket.io.git
             - cd biociphers.bitbucket.io
-            - mkdir -p majiq-docs
-            - cp -R ../build/html/* majiq-docs
+            - mkdir -p "$upload_folder"
+            - cp -R ../build/html/* "$upload_folder"
             - git add --all
             - git commit -m "Automatic update from pipeline"
             - git push

@@ -1,3 +1,5 @@
+.. _command-builder:
+
 Command Builder
 ===============
 
