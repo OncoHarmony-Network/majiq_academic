@@ -36,6 +36,8 @@ flair_gtf_path = args.flair_gtf_path
 
 
 os.makedirs(args.output_path, exist_ok=True)
+debug_path = os.path.join(args.output_path, 'debug')
+os.makedirs(debug_path, exist_ok=True)
 
 error_file_path = os.path.join(args.output_path, 'comparison.errors.txt')
 if os.path.exists(error_file_path):
@@ -85,7 +87,10 @@ def compare_gene(_args):
     gene_id, modules, output_path_format, q = _args
 
     # create file
-    debug_path = f'/home/seong/lr_paper/lr_output/debug/{gene_id}'
+    #debug_path = f'/home/seong/lr_paper/lr_output/debug/{gene_id}'
+    global debug_path
+    debug_path =  os.path.join(debug_path, gene_id)
+
     with open(debug_path, 'a') as f:
         pass
 
