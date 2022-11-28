@@ -84,6 +84,12 @@ def compare_gene(_args):
     """
     gene_id, modules, output_path_format, q = _args
 
+    # create file
+    debug_path = '/home/seong/lr_paper/lr_output/debug'
+    with open(debug_path, 'a') as f:
+        f.write(gene_id)
+        f.close()
+
     tc = ToolComparer(args)
     if q:
         pid = multiprocessing.current_process().pid
@@ -164,6 +170,7 @@ def compare_gene(_args):
         with open(error_file_path, 'a') as f:
             f.write(traceback.format_exc() + '\n')
     finally:
+        # delete file
         if q:
             q.put(None)
 
