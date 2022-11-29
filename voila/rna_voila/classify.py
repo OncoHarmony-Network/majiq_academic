@@ -113,8 +113,7 @@ def classify_gene(args):
 
             if 'heatmap' in config.enabled_outputs:
                 writer.heatmap()
-            if 'junctions' in config.enabled_outputs:
-                writer.junctions()
+
             if 'mpe' in config.enabled_outputs:
                 writer.mpe()
             if 'training_junctions' in config.enabled_outputs:
@@ -125,6 +124,8 @@ def classify_gene(args):
             if ClassifyConfig().keep_constitutive and 'events' in config.enabled_outputs:
                 writer.constitutive()
 
+            if 'junctions' in config.enabled_outputs:
+                writer.junctions()
 
 
     except KeyboardInterrupt:
