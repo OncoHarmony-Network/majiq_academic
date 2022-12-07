@@ -151,7 +151,7 @@ majiq_exons, majiq_denovo, majiq_has_reads = majiq_parser.allpaths_data(
 )
 
 tc = ToolComparer(args)
-only_in_flair, only_in_majiq, in_flair_and_majiq = tc.compare_fuzzy(flair_exons, majiq_exons, args.fuzziness5, args.fuzziness3)
+only_in_flair, only_in_majiq, in_flair_and_majiq = tc.compare_fuzzy(flair_exons, majiq_exons, args.fuzziness5, args.fuzziness3, majiq_has_reads)
 # Plot for the entire gene
 # here, we match transcripts exactly between majiq and flair
 
