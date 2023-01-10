@@ -15,6 +15,9 @@ class FlairReader:
     def has_gene(self, gene_id):
         return len(self.df[self.df['gene_id'] == gene_id].index) != 0
 
+    @property
+    def gene_ids(self):
+        yield from self.df['gene_id']
 
     def get_exons(self, gene_id, majiq_module_extent=None, modules=False):
         flair_exons = set()
