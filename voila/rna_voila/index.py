@@ -455,7 +455,7 @@ class Index:
 
             try:
 
-                for row in h['index'].value:
+                for row in h['index'][()]:
                     if gene_id is None or gene_id == row[1]:
                         yield dict(zip(keys, row))
 

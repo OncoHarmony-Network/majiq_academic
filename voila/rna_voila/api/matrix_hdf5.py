@@ -28,7 +28,7 @@ class MatrixHdf5:
         """
         self.voila_tsv = voila_tsv
         self.voila_file = voila_file
-        self.dt = h5py.special_dtype(vlen=np.unicode)
+        self.dt = h5py.special_dtype(vlen=str)
         self._group_names = None
         self._tsv_writer = None
         self._tsv_file = None
@@ -205,7 +205,7 @@ class MatrixHdf5:
         Gets analysis type from h5py file.
         :return:
         """
-        return self.h['metadata']['analysis_type'][()]
+        return self.h['metadata']['analysis_type'].asstr()[()]
 
     @analysis_type.setter
     def analysis_type(self, a):
@@ -223,7 +223,7 @@ class MatrixHdf5:
         :return: list of strings
         """
         if self._group_names is None:
-            self._group_names = self.h['metadata']['group_names'][()].tolist()
+            self._group_names = self.h['metadata']['group_names'].asstr()[()].tolist()
         return self._group_names
 
     @group_names.setter
@@ -258,7 +258,7 @@ class MatrixHdf5:
         Get list of experiment names using h5py api.
         :return:
         """
-        return self.h['metadata']['experiment_names'][()].tolist()
+        return self.h['metadata']['experiment_names'].asstr()[()].tolist()
 
     @experiment_names.setter
     def experiment_names(self, ns):
@@ -281,7 +281,7 @@ class MatrixHdf5:
         List of stats used in this quantification.
         :return: list of strings
         """
-        return self.h['metadata']['stat_names'][()]
+        return self.h['metadata']['stat_names'].asstr()[()]
 
     @stat_names.setter
     def stat_names(self, s):
@@ -467,7 +467,7 @@ class MatrixType(ABC):
         :return: string
         """
         if self._lsv_type is None:
-            self._lsv_type = self.get('lsv_type')
+            self._lsv_type = self.get('lsv_type').decode()
         return self._lsv_type
 
     @property
