@@ -100,13 +100,31 @@ class SpliceGraphTools {
             const f = event.target;
             const g = f.querySelector('#groups').value;
             const e = f.querySelector('#experiments').value;
+            const _type = 'short_read'
             if (g && e) {
                 f.querySelector('button').disabled = true;
-                this.sgs.create(g, e);
+                this.sgs.create(g, e, _type);
                 SpliceGraphTools._populate_sg_form();
                 f.querySelector('button').disabled = false;
                 junctions_filter();
                 this.highlight_lsvs();
+            }
+        };
+
+        document.querySelector('.splice-graph-form-lr').onsubmit = (event) => {
+            event.preventDefault();
+            const f = event.target;
+            const g = 'LR';
+            const e = 'LR';
+            const _type = 'long_read'
+            if (g && e) {
+                f.querySelector('button').disabled = true;
+                for(let transcript of this.sgs.gene_lr){
+                    this.sgs.create(g, e, _type, transcript);
+                }
+                //SpliceGraphTools._populate_sg_form();
+                f.querySelector('button').disabled = false;
+
             }
         };
 

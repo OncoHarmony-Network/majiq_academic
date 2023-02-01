@@ -15,7 +15,7 @@ _ViewConfig = namedtuple('ViewConfig', ['voila_file', 'voila_files', 'splice_gra
                                         'force_index', 'debug', 'silent', 'port', 'host', 'web_server', 'index_file',
                                         'num_web_workers', 'strict_indexing', 'skip_type_indexing', 'splice_graph_only',
                                         'enable_passcode', 'ignore_inconsistent_group_errors',
-                                        'enable_het_comparison_chooser'])
+                                        'enable_het_comparison_chooser', 'long_read_file'])
 _ViewConfig.__new__.__defaults__ = (None,) * len(_ViewConfig._fields)
 _TsvConfig = namedtuple('TsvConfig', ['file_name', 'voila_files', 'voila_file', 'splice_graph_file',
                                       'non_changing_threshold', 'nproc', 'threshold', 'analysis_type', 'show_all',

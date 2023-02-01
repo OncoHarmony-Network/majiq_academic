@@ -158,6 +158,8 @@ view_parser.add_argument('files', nargs='+', type=check_file,
 view_parser.add_argument('--ignore-inconsistent-group-errors', action='store_true',
                          help="Don't show any warnings / errors when multiple experiments with the same name, "
                               "but different experiments are analyzed")
+view_parser.add_argument('--long-read-file', type=str,
+                         help="Path to the processed voila long read file")
 view_parser.add_argument('--splice-graph-only', action='store_true', help=argparse.SUPPRESS)
 view_parser.add_argument('--enable-het-comparison-chooser', action='store_true', help=argparse.SUPPRESS)
 

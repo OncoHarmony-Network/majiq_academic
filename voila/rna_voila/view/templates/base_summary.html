@@ -10,10 +10,33 @@
     <script>
         const legend = document.querySelector('.legend');
         new Lsv().renderFloatingLegend(legend)
+        // const legend_lr = document.querySelector('.legend-lr');
+        // new Lsv().renderFloatingLegendLr(legend_lr)
         var highlightFirst = false;
         const gene_name = "{{ gene.name }}";
         const gene_id = "{{ gene.id }}";
 
+        // resizing of the upper part of the page
+        const BORDER_SIZE = 4;
+        const panel = $('.top')[0];
+
+        let m_pos;
+        function resize_sgbox(e){
+            const dy = m_pos - e.y;
+            m_pos = e.y;
+            panel.style['max-height'] = (parseInt(getComputedStyle(panel, '').height) - dy) + "px";
+        }
+
+        panel.addEventListener("mousedown", function(e){
+            if (e.offsetY > parseInt(getComputedStyle(panel, '').height) - BORDER_SIZE) {
+                m_pos = e.y;
+                document.addEventListener("mousemove", resize_sgbox, false);
+            }
+        }, false);
+
+        document.addEventListener("mouseup", function(){
+            document.removeEventListener("mousemove", resize_sgbox, false);
+        }, false);
 
         const sg_simplified_view = "{{ session.get('omit_simplified', False) }}";
         if (sg_simplified_view === 'True') $('#sg-simplified-view').prop('checked', true);
@@ -196,16 +219,19 @@
             <img class="zoom-reset rm-dl" src="{{ url_for('static', filename='img/undo.png') }}">
         </div>
         <div>
-            <div>
+            <div style="display: inline-block;">
                 <canvas width="650px" height="40px" class="legend"></canvas>
             </div>
+<!--            <div style="display: inline-block;">-->
+<!--                <canvas width="650px" height="40px" class="legend-lr"></canvas>-->
+<!--            </div>-->
             <div class="coordinates"></div>
         </div>
 
     </div>
 
     <div class="tools-menu hide-tools-menu pure-g" id="splice-graph-tools-box">
-        <div class="pure-u-1-3">
+        <div class="pure-u-1-4">
             <form class="splice-graph-form pure-form pure-form-aligned">
                 <fieldset>
                     <div class="groups pure-control-group">
@@ -225,7 +251,23 @@
                 </fieldset>
             </form>
         </div>
-        <div class="pure-u-1-3">
+        <div class="pure-u-1-4">
+            <form class="splice-graph-form-lr pure-form pure-form-aligned">
+                <fieldset>
+                    <div class="experiments pure-control-group">
+                        <label for="experiments_lr">Long Read Experiments</label>
+                        <select id="experiments_lr">
+                            <option>LR1</option>
+                        </select>
+                    </div>
+
+                    <div class="pure-controls">
+                        <button type="submit" id="londread_submit" class="pure-button pure-button-primary">Add</button>
+                    </div>
+                </fieldset>
+            </form>
+        </div>
+        <div class="pure-u-1-4">
             <form class="splice-graph-form pure-form pure-form-aligned">
                 <fieldset>
                     <div class="pure-control-group">
@@ -243,7 +285,7 @@
                 </fieldset>
             </form>
         </div>
-        <div class="pure-u-1-3">
+        <div class="pure-u-1-4">
             <form class="splice-graph-form pure-form pure-form-aligned">
                 <fieldset>
                     <div class="pure-control-group">
@@ -301,6 +343,7 @@
         <div class="top">
             <div class="splice-graph-container default-view"></div>
         </div>
+
 
         <div class="bottom">
             {% if session.get('warnings', []) %}

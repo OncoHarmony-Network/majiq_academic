@@ -6,6 +6,7 @@ from flask import render_template, url_for, jsonify, request, session, Response
 
 from rna_voila.api.view_matrix import ViewPsi, ViewPsis
 from rna_voila.api.view_splice_graph import ViewSpliceGraph
+from rna_voila.api.splice_graph_lr import SpliceGraphLR
 from rna_voila.index import Index
 from rna_voila.view import views
 from rna_voila.view.datatables import DataTables
@@ -62,11 +63,13 @@ def gene(gene_id):
 
         lsv_data = []
         lsv_is_source = {}
-        for lsv_id in m.lsv_ids(gene_ids=[gene_id]):
-            lsv = m.lsv(lsv_id)
 
-            lsv_data.append([lsv_id, lsv.lsv_type])
-            lsv_is_source[lsv_id] = 1 if lsv.source else 0
+        #TODO
+        # for lsv_id in m.lsv_ids(gene_ids=[gene_id]):
+        #     lsv = m.lsv(lsv_id)
+        #
+        #     lsv_data.append([lsv_id, lsv.lsv_type])
+        #     lsv_is_source[lsv_id] = 1 if lsv.source else 0
 
         # this is the default sort, so modify the list, and add the indexes
         lsv_data.sort(key=lambda x: (exon_numbers[x[0]], lsv_is_source[x[0]]))
@@ -149,6 +152,29 @@ def splice_graph(gene_id):
         gd['group_names'] = v.group_names
         return jsonify(gd)
 
+testfile = '/home/sjewell/PycharmProjects/majiq/longreads/debug.lr.voila'
+testfile = '/slowdata/longread/ex.isoforms.voila.lr'
+
+@bp.route('/splice-graph/lr/<gene_id>', methods=('POST', 'GET'))
+def splice_graph_lr(gene_id):
+    with SpliceGraphLR(ViewConfig().long_read_file) as sgl:
+        with ViewSpliceGraph(omit_simplified=session.get('omit_simplified', False)) as sg:
+            annot_exons = [(x['annotated_start'], x['annotated_end'],) for x in sg.exons(gene_id) if x['annotated']]
+            gd = sgl.gene(gene_id, annot_exons)
+
+            #print(gd)
+            return jsonify(gd)
+
+@bp.route('/splice-graph/combined/<gene_id>', methods=('POST', 'GET'))
+def splice_graph_combined(gene_id):
+
+    with SpliceGraphLR(ViewConfig().long_read_file) as sgl:
+        with ViewSpliceGraph(omit_simplified=session.get('omit_simplified', False)) as sg, ViewPsis() as v:
+            exp_names = v.splice_graph_experiment_names
+            sr = sg.gene_experiment(gene_id, exp_names)
+            combined = sgl.combined_gene(gene_id, sr)
+
+            return jsonify(combined)
 
 @bp.route('/summary-table/<gene_id>', methods=('POST',))
 def summary_table(gene_id):

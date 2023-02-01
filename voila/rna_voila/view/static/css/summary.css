@@ -213,7 +213,7 @@ form.het-highlight-form label {
     margin-left: 4px;
 }
 
-.legend {
+.legend, .legend-lr {
     padding: 5px;
     background: #fffec9;
     border: 2px solid #fc0;
@@ -257,4 +257,19 @@ form.het-highlight-form label {
     border-radius: 10px;
     transform: translate(-50%, 0);
 
+}
+
+.top{
+    position:relative;
+}
+.top::after {
+    content: '';
+    display: block;
+    background: repeating-linear-gradient(#dbb30f, #dbb30f 1px, #211e00 1px, #211e00 2px);
+    position: sticky;
+    bottom: 0;
+    height: 4px;
+    width: 100%;
+    cursor: ns-resize;
+    z-index: 100;
 }
