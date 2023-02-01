@@ -64,12 +64,11 @@ def gene(gene_id):
         lsv_data = []
         lsv_is_source = {}
 
-        #TODO
-        # for lsv_id in m.lsv_ids(gene_ids=[gene_id]):
-        #     lsv = m.lsv(lsv_id)
-        #
-        #     lsv_data.append([lsv_id, lsv.lsv_type])
-        #     lsv_is_source[lsv_id] = 1 if lsv.source else 0
+        for lsv_id in m.lsv_ids(gene_ids=[gene_id]):
+            lsv = m.lsv(lsv_id)
+
+            lsv_data.append([lsv_id, lsv.lsv_type])
+            lsv_is_source[lsv_id] = 1 if lsv.source else 0
 
         # this is the default sort, so modify the list, and add the indexes
         lsv_data.sort(key=lambda x: (exon_numbers[x[0]], lsv_is_source[x[0]]))
