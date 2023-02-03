@@ -1270,7 +1270,11 @@ class SpliceGraphs {
                     .classed('reads-filter', d => {
                         let r;
                         try {
-                            r = parseInt(intron_retention_reads[d.start][d.end]) || 0;
+                            if (Array.isArray(intron_retention_reads[d.start][d.end])){
+                                r = Math.max(intron_retention_reads[d.start][d.end][0], intron_retention_reads[d.start][d.end][1]);
+                            } else {
+                                r = parseInt(intron_retention_reads[d.start][d.end]) || 0;
+                            }
                         } catch (TypeError) {
                             r = 0;
                         }
