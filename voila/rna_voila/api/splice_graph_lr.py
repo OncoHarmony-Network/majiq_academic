@@ -129,10 +129,10 @@ class SpliceGraphLR:
                 lr_junctions.add((j[0], j[1]))
 
         j_sla = annot_sr_junctions & lr_junctions
-        j_l = lr_junctions - annot_junctions
-        j_sl = sr_junctions & j_l
+        j_l = lr_junctions - annot_junctions - sr_junctions
+        j_sl = sr_junctions & (lr_junctions - annot_junctions)
         j_la = (lr_junctions & annot_junctions) - j_sla
-        j_s = sr_junctions
+        j_s = sr_junctions - j_sla - j_l - j_sl
         j_sa = annot_sr_junctions - j_sla
         j_ao = annot_only_junctions - j_la
 
@@ -163,7 +163,7 @@ class SpliceGraphLR:
         sr_reads = {exp:v for exp, v in shortread[readssubkey].items()} #  if exp.endswith('Combined')
         lr_reads = {v['experiment']: {(j[0], j[1],): r for j, r in zip(v[subkey], v[readssubkey])} for v in self.lrdb.get(gene_id, [])}
         j_sla, j_l, j_sl, j_la, j_s, j_sa, j_ao = self._overlap_categories(gene_id, shortread, subkey)
-        #self._debugprint(j_sla, j_l, j_sl, j_la, j_s, j_sa, j_ao)
+        self._debugprint(j_sla, j_l, j_sl, j_la, j_s, j_sa, j_ao)
 
         shortread[subkey] = []
         shortread[readssubkey] = {'combined':{}}
