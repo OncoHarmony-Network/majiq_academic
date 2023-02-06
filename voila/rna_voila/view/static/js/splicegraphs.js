@@ -12,10 +12,12 @@ class SpliceGraphs {
         this.container_selector = container;
         this.remove_img = opts.remove_img;
         this.download_img = opts.download_img;
+        this.resize_img = opts.resize_img;
         this.remove_fn = opts.remove_fn;
         this.gene = opts.gene;
         this.gene_lr = opts.gene_lr;
         this.gene_c = opts.gene_c;
+        this.scaling_transcript = this.gene
         this.lr_sg_height = 40;
 
         // migrate reads from LR for general look-up
@@ -750,7 +752,6 @@ class SpliceGraphs {
         const exon_height = this.exon_height;
         const font_size = this.font_size;
         const junc_height = this.junction_height;
-        console.log(gene.junctions, reads)
         d3.select(sg).selectAll('.junction-reads')
             .interrupt()
             .data(gene.junctions)
@@ -786,6 +787,8 @@ class SpliceGraphs {
 
         sg.dataset.group = group;
         sg.dataset.experiment = experiment;
+        sg.transcript = (transcript === undefined) ? this.gene : transcript;
+
         sg.classList.add('splice-graph');
 
         if(_type == "short_read" || _type == "combined"){
@@ -834,6 +837,12 @@ class SpliceGraphs {
             .append('img')
             .attr('src', this.remove_img)
             .attr('class', 'splice-graph-remove')
+            .attr('height', '16px');
+
+        sg_header
+            .append('img')
+            .attr('class', 'splice-graph-rescale')
+            .attr('src', this.resize_img)
             .attr('height', '16px');
 
         sg_header
@@ -964,6 +973,12 @@ class SpliceGraphs {
             .append('img')
             .attr('src', this.remove_img)
             .attr('class', 'splice-graph-remove')
+            .attr('height', '16px');
+
+        sg_header
+            .append('img')
+            .attr('class', 'splice-graph-rescale')
+            .attr('src', this.resize_img)
             .attr('height', '16px');
 
         sg_header
@@ -1100,7 +1115,7 @@ class SpliceGraphs {
     splice_graph_update_lr(sg, gene, lsvs) {
         //update some values
         this.zoom = parseInt(sg.parentNode.dataset.zoom);
-        this.x = this.x_scale(this.gene);
+        this.x = this.x_scale(this.scaling_transcript);
         this.y = this.y_scale(this.lr_sg_height+10);
 
         // update splice graph
@@ -1128,7 +1143,7 @@ class SpliceGraphs {
     splice_graph_update(sg, gene, lsvs) {
         //update some values
         this.zoom = parseInt(sg.parentNode.dataset.zoom);
-        this.x = this.x_scale(this.gene);
+        this.x = this.x_scale(this.scaling_transcript);
         this.junction_bins(sg.dataset.experiment, gene);
         this.y = this.y_scale();
 

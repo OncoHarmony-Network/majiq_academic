@@ -8,6 +8,7 @@ class SpliceGraphTools {
         this.highlight_lsvs = highlight_lsvs;
         this._init();
         this.download_svg()
+        this.rescale_sg()
     }
 
     _init() {
@@ -199,6 +200,18 @@ class SpliceGraphTools {
                 const svg = sg.querySelector('svg').outerHTML;
 
                 download_svg_elem(svg, `${grp}_${exp}_sg.svg`);
+
+            }
+        })
+    }
+
+    rescale_sg() {
+        window.addEventListener('click', e => {
+            if (e.target.classList.contains('splice-graph-rescale')) {
+                const sg = e.target.closest('.splice-graph');
+
+                this.sgs.scaling_transcript = sg.transcript;
+                this.sgs.update(250);
 
             }
         })

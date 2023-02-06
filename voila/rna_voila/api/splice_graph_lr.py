@@ -112,6 +112,8 @@ class SpliceGraphLR:
                     'color': 'hidden'
                 })
             d['exons'].sort(key=lambda x: x['start'])
+            d['start'] = d['exons'][0]['start']
+            d['end'] = d['exons'][-1]['end']
 
 
             ret.append(d)
@@ -163,7 +165,7 @@ class SpliceGraphLR:
         sr_reads = {exp:v for exp, v in shortread[readssubkey].items()} #  if exp.endswith('Combined')
         lr_reads = {v['experiment']: {(j[0], j[1],): r for j, r in zip(v[subkey], v[readssubkey])} for v in self.lrdb.get(gene_id, [])}
         j_sla, j_l, j_sl, j_la, j_s, j_sa, j_ao = self._overlap_categories(gene_id, shortread, subkey)
-        self._debugprint(j_sla, j_l, j_sl, j_la, j_s, j_sa, j_ao)
+        #self._debugprint(j_sla, j_l, j_sl, j_la, j_s, j_sa, j_ao)
 
         shortread[subkey] = []
         shortread[readssubkey] = {'combined':{}}
