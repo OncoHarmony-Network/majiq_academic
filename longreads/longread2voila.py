@@ -112,6 +112,7 @@ for prog_i, gene_id in enumerate(all_gene_ids):
                 transcript_exons.append((lr_exon[0], lr_exon[1],))
 
         out_t = {
+            'strand': strand,
             'experiment': f'LR_{gene_id}_{t_i}',
             'exons': transcript_exons,
             'junctions': transcript_junctions,

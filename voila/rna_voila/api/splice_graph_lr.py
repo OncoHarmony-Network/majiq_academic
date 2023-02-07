@@ -114,6 +114,7 @@ class SpliceGraphLR:
             d['exons'].sort(key=lambda x: x['start'])
             d['start'] = d['exons'][0]['start']
             d['end'] = d['exons'][-1]['end']
+            d['strand'] = transcript['strand']
 
 
             ret.append(d)

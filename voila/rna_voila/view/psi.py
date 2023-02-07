@@ -389,8 +389,8 @@ def lsv_highlight():
                         'intron_retention': intron_retention,
                         'reference_exon': list(psi.reference_exon),
                         'weighted': weighted,
-                        'group_means': group_means
-
+                        'group_means': group_means,
+                        'lsv_dir': lsv_id.split(':')[1]
                     })
 
         return jsonify(lsvs)

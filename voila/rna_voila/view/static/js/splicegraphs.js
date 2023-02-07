@@ -27,7 +27,7 @@ class SpliceGraphs {
             this.gene['junction_reads'][lr_gene.experiment] = lr_gene['junction_reads'][lr_gene.experiment]
             this.gene['intron_retention_reads'][lr_gene.experiment] = lr_gene['intron_retention_reads'][lr_gene.experiment]
         }
-        console.log('gene_updated', this.gene)
+
 
 
         this.lsv_ids = [];
@@ -696,8 +696,16 @@ class SpliceGraphs {
                 if (lsvs.length) {
                     const hl = lsvs.reduce(function (acc, lsv) {
                         return acc.concat(lsv.junctions.reduce(function (acc, junc, idx) {
-                            if (SpliceGraphs.array_equal(junc, [d.start, d.end])) {
-                                acc.push(colors.brewer(idx))
+                            if(grp === 'combined'){
+                                if(junc[1] === d.end && lsv.dir === 't'){
+                                    acc.push(colors.brewer(idx))
+                                }else if(junc[0] === d.start && lsv.dir === 's'){
+                                    acc.push(colors.brewer(idx))
+                                }
+                            }else{
+                                if (SpliceGraphs.array_equal(junc, [d.start, d.end])) {
+                                    acc.push(colors.brewer(idx))
+                                }
                             }
                             return acc
                         }, []))
@@ -966,7 +974,6 @@ class SpliceGraphs {
 
     splice_graph_init(sg, transcript) {
         const gene = transcript === undefined ? this.gene : transcript;
-        console.log('gene', gene, transcript)
         const sg_header = d3.select(sg).append('div').attr('class', 'splice-graph-header');
 
         sg_header
@@ -1251,7 +1258,14 @@ class SpliceGraphs {
         this.d = duration;
         this.container
             .querySelectorAll('.splice-graph')
-            .forEach(sg => this.splice_graph_update(sg, this.gene, this.lsvs));
+            .forEach(sg => {
+                if(sg.dataset.group === 'Long Reads'){
+                    this.splice_graph_update_lr(sg, sg.transcript, this.lsvs)
+                }else{
+                    this.splice_graph_update(sg, sg.transcript, this.lsvs)
+                }
+
+            });
         this.d = undefined;
     }
 
