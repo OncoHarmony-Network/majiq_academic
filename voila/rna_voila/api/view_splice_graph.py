@@ -2,8 +2,10 @@ from operator import itemgetter
 
 from rna_voila.api import SpliceGraph
 from rna_voila.config import ViewConfig
+from rna_voila.api.splice_graph_lr import combined_colors
 from statistics import median, StatisticsError
 from math import ceil
+
 
 class ViewSpliceGraph(SpliceGraph):
     def __init__(self, omit_simplified=False, splice_graph_file=None):
@@ -202,11 +204,11 @@ class ViewSpliceGraph(SpliceGraph):
 
         if exon['annotated']:
             if self.exon_has_reads(exon):
-                return 'grey'
+                return combined_colors['ao']
             else:
                 return ''
         else:
-            return 'green'
+            return combined_colors['s']
 
     def view_junctions(self, gene):
         """
@@ -237,11 +239,11 @@ class ViewSpliceGraph(SpliceGraph):
 
         if junction['annotated']:
             if junction['has_reads']:
-                return 'red'
+                return combined_colors['sa']
             else:
-                return 'grey'
+                return combined_colors['ao']
         else:
-            return 'green'
+            return combined_colors['s']
 
     def view_intron_retentions(self, gene):
         """
@@ -272,11 +274,11 @@ class ViewSpliceGraph(SpliceGraph):
 
         if ir['annotated']:
             if ir['has_reads']:
-                return 'red'
+                return combined_colors['sa']
             else:
-                return 'grey'
+                return combined_colors['ao']
         else:
-            return 'green'
+            return combined_colors['s']
 
     def annotated_junctions(self, gene_id, lsv_junctions):
         """

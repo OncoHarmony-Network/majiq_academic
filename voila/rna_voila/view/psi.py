@@ -390,7 +390,7 @@ def lsv_highlight():
                         'reference_exon': list(psi.reference_exon),
                         'weighted': weighted,
                         'group_means': group_means,
-                        'lsv_dir': lsv_id.split(':')[1]
+                        'dir': lsv_id.split(':')[1]
                     })
 
         return jsonify(lsvs)

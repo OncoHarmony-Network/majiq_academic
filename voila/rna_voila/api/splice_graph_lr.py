@@ -13,12 +13,12 @@ from math import ceil
        majiq + lr + denovo 
        """
 combined_colors = {
-    'sla': '#332288',
-    'sl': '#88CCEE',
-    'l': '#AA4499',
-    'la': '#CC6677',
-    's': '#44AA99',
-    'sa': '#882255',
+    'sla': '#05689A',
+    'sl': '#BDA117',
+    'l': '#86527D',
+    'la': '#82711F',
+    's': '#1EA54B',
+    'sa': '#BF2F47',
     'ao': 'grey'
 }
 
@@ -92,7 +92,7 @@ class SpliceGraphLR:
                     ex_d['annotated'] = 1
                     ex_d['annotated_start'] = matching_annotated[0]
                     ex_d['annotated_end'] = matching_annotated[1]
-                    ex_d['ext_color'] = 'orange'
+                    ex_d['ext_color'] = combined_colors['l']
                     annotated_exons.remove(matching_annotated)
                 else:
                     ex_d['start'] = lr_exon[0]
@@ -235,10 +235,10 @@ class SpliceGraphLR:
                     if self._overlaps(lr_exon[0], lr_exon[1], sr_exon['annotated_start'], sr_exon['annotated_end']):
                         if lr_exon[0] < sr_exon['start']:
                             sr_exon['start'] = lr_exon[0]
-                            sr_exon['ext_color'] = 'orange'
+                            sr_exon['ext_color'] = combined_colors['l']
                         if lr_exon[1] > sr_exon['end']:
                             sr_exon['end'] = lr_exon[1]
-                            sr_exon['ext_color'] = 'orange'
+                            sr_exon['ext_color'] = combined_colors['l']
 
         return shortread
 
