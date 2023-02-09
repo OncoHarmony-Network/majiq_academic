@@ -25,7 +25,17 @@
 {% block footer %}{% endblock %}
 </body>
 <script>
-    const base_url = '{{ config['EXT_URL_PREFIX'] }}';
+    const base_url = '{{ config["EXT_URL_PREFIX"] }}';
+    const longread_enabled = '{{ "true" if config["long_read_file"] else "false" }}';
+    const combined_colors = {
+        'sla': '#05689A',
+        'sl': '#BDA117',
+        'l': '#86527D',
+        'la': '#5A4E12',
+        's': '#1EA54B',
+        'sa': '#BF2F47',
+        'ao': '#808080'
+    };
 </script>
 <script src="{{ url_for('static', filename='js/lib/jquery.min.js') }}"></script>
 <script src="{{ url_for('static', filename='js/lib/jquery.dataTables.min.js') }}"></script>

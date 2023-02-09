@@ -690,7 +690,7 @@ class Lsv {
          * Legend junctions
          * */
         // DB & RNASeq
-        ctx.strokeStyle = 'red';
+        ctx.strokeStyle = combined_colors['sa'];
         ctx.lineWidth = 1.2;
         ctx.beginPath();
         ctx.arc(Math.round(x + (area_figures[0] / num_fig - SEP_FIG) / 2), Math.round(y + area_figures[1]), (area_figures[0] / num_fig - SEP_FIG) / 2, -Math.PI, 0);
@@ -700,7 +700,7 @@ class Lsv {
         x = x + area_figures[0] / num_fig + SEP_FIG;
 
         // RNASeq Only
-        ctx.strokeStyle = Lsv.get_color(2, BREWER_PALETTE, .8);
+        ctx.strokeStyle = combined_colors['s'];
         ctx.beginPath();
         ctx.arc(Math.round(x + (area_figures[0] / num_fig - SEP_FIG) / 2), Math.round(y + area_figures[1]), (area_figures[0] / num_fig - SEP_FIG) / 2, -Math.PI, 0);
         ctx.stroke();
@@ -709,7 +709,7 @@ class Lsv {
         x = x + area_figures[0] / num_fig + SEP_FIG;
 
         // DB Only
-        ctx.strokeStyle = "rgba(0, 0, 0, 0.8)";
+        ctx.strokeStyle = combined_colors['ao'];
         ctx.setLineDash([5, 5]);
         ctx.beginPath();
         ctx.arc(Math.round(x + (area_figures[0] / num_fig - SEP_FIG) / 2), Math.round(y + area_figures[1]), (area_figures[0] / num_fig - SEP_FIG) / 2, -Math.PI, 0);
@@ -723,7 +723,7 @@ class Lsv {
          * Legend number of reads
          * */
         // DB & RNASeq example chosen
-        ctx.strokeStyle = 'red';
+        ctx.strokeStyle = combined_colors['sa'];
         ctx.lineWidth = 1.2;
         ctx.font = "8pt Arial";
         var font_height = 9;
@@ -739,12 +739,16 @@ class Lsv {
         /**
          * Legend Intron Retention
          * */
+
+        ctx.lineWidth = 1.2;
+        ctx.strokeStyle = combined_colors['sa'];
+        ctx.fillStyle = combined_colors['sa'] + "66";
+        this.draw_rectangle(ctx, Math.round(x + (area_figures[0] / num_fig) / 3 - SEP_FIG), y + area_figures[1] / 4, Math.round((area_figures[0] / num_fig - SEP_FIG) * 2 / 3) + 4, Math.round(area_figures[1] / 2), true);
         ctx.strokeStyle = "rgba(0, 0, 0, 0.8)";
         ctx.fillStyle = "rgba(0, 0, 0, 0.2)";
-        ctx.lineWidth = 1.2;
         this.draw_rectangle(ctx, x, y, Math.round((area_figures[0] / num_fig) / 3 - SEP_FIG), Math.round(area_figures[1]), true);
         this.draw_rectangle(ctx, Math.round(x + (area_figures[0] / num_fig) * 2 / 3), y, Math.round((area_figures[0] / num_fig) / 3 - SEP_FIG), Math.round(area_figures[1]), true);
-        this.draw_rectangle(ctx, Math.round(x + (area_figures[0] / num_fig) / 3 - SEP_FIG), y + area_figures[1] / 4, Math.round((area_figures[0] / num_fig - SEP_FIG) * 2 / 3) + 4, Math.round(area_figures[1] / 2), true);
+
         ctx.fillStyle = "rgba(0, 0, 0, 1)";
         ctx.fillText("Intron Ret.", x + Math.round((area_figures[0] / num_fig - SEP_FIG) / 2), canvas.height - MARGINS[3]);
         x = x + area_figures[0] / num_fig + SEP_FIG;
@@ -773,14 +777,16 @@ class Lsv {
 
         var MARGINS = [10, 2, 2, 2];
         var SEP_FIG_TEXT = canvas.height * .05;
-        var SEP_FIG = canvas.width * .02;
-        var num_fig = 10;
+        var SEP_FIG = canvas.width * .01;
+        console.log(SEP_FIG)
+        var num_fig = 12;
         var area_figures = [
             canvas.width - MARGINS[0] - MARGINS[1] - (num_fig - 1) * SEP_FIG,
             canvas.height * .7 - MARGINS[2] - SEP_FIG_TEXT
         ];
-        var area_texts = [canvas.width - MARGINS[0] - MARGINS[1], canvas.height * .3 - MARGINS[2] - SEP_FIG_TEXT];
-        var legend_line_length = 20;
+        console.log(area_figures)
+        //var area_texts = [canvas.width - MARGINS[0] - MARGINS[1], canvas.height * .3 - MARGINS[2] - SEP_FIG_TEXT];
+        //var legend_line_length = 20;
         var x = MARGINS[0];
         var y = MARGINS[2];
         ctx.font = "7pt Arial";
@@ -789,99 +795,138 @@ class Lsv {
         /**
          * Legend exons_obj
          * */
+
         // DB & RNASeq
         ctx.strokeStyle = "rgba(0, 0, 0, 0.8)";
         ctx.fillStyle = "rgba(0, 0, 0, 0.2)";
-        this.draw_rectangle(ctx, x, y + Math.round(area_figures[1]/2), Math.round(area_figures[0] / num_fig - SEP_FIG + 1), Math.round(area_figures[1]/2), true);
-        ctx.fillStyle = "rgba(0, 0, 0, 1)";
-        ctx.fillText("DB & RNASeq", Math.round(x + (area_figures[0] / num_fig - SEP_FIG) / 2), canvas.height - MARGINS[3]);
-
-        ctx.strokeStyle = 'red';
-        ctx.lineWidth = 1.2;
-        ctx.beginPath();
-        ctx.ellipse(Math.round(x + (area_figures[0] / num_fig - SEP_FIG) / 2), Math.round((y + area_figures[1])/2), (area_figures[0] / num_fig - SEP_FIG) / 2, (area_figures[0] / num_fig - SEP_FIG) / 4, 0, -Math.PI, 0);
-        ctx.stroke();
-
-        x = x + area_figures[0] / num_fig + SEP_FIG;
-
-        // RNASeq Only
-        ctx.strokeStyle = Lsv.get_color(2, BREWER_PALETTE, .8);
-        ctx.fillStyle = Lsv.get_color(2, BREWER_PALETTE, .2);
         this.draw_rectangle(ctx, x, y, Math.round(area_figures[0] / num_fig - SEP_FIG), Math.round(area_figures[1]), true);
         ctx.fillStyle = "rgba(0, 0, 0, 1)";
-        ctx.fillText("RNASeq Only", Math.round(x + (area_figures[0] / num_fig - SEP_FIG) / 2), canvas.height - MARGINS[3]);
+        ctx.fillText("DB & SR/LR", Math.round(x + (area_figures[0] / num_fig - SEP_FIG) / 2), canvas.height - MARGINS[3]);
         x = x + area_figures[0] / num_fig + SEP_FIG;
 
-        // DB Only
-        ctx.strokeStyle = "rgba(0, 0, 0, 0.8)";
-        ctx.lineWidth = 2;
-        ctx.fillStyle = "rgba(255, 255, 255, .5)";
-        ctx.setLineDash([5, 5]);
-        this.draw_rectangle(ctx, Math.round(x), y, Math.round(area_figures[0] / num_fig - SEP_FIG), Math.round(area_figures[1]), true);
-        ctx.setLineDash([]);
+        // sla
+        ctx.strokeStyle = combined_colors['sla'];
+        ctx.fillStyle = combined_colors['sla']+'66';
+        //this.draw_rectangle(ctx, x, y + Math.round(area_figures[1]/2), Math.round(area_figures[0] / num_fig - SEP_FIG + 1), Math.round(area_figures[1]/2), true);
+        this.draw_rectangle(ctx, x, y + Math.round(area_figures[1]/2), Math.round((area_figures[0] / num_fig - SEP_FIG + 1)/4), Math.round(area_figures[1]/2), true);
+        this.draw_rectangle(ctx, x + Math.round((area_figures[0] / num_fig - SEP_FIG + 1)*(3/4)), y + Math.round(area_figures[1]/2), Math.round((area_figures[0] / num_fig - SEP_FIG + 1)/4), Math.round(area_figures[1]/2), true);
         ctx.fillStyle = "rgba(0, 0, 0, 1)";
-        ctx.fillText("DB Only", Math.round(x + (area_figures[0] / num_fig - SEP_FIG) / 2), canvas.height - MARGINS[3]);
-        x = x + area_figures[0] / num_fig + SEP_FIG;
-
-        /**
-         * Legend junctions
-         * */
-        // DB & RNASeq
-        ctx.strokeStyle = 'red';
+        ctx.fillText("DB+SR+LR", Math.round(x + (area_figures[0] / num_fig - SEP_FIG) / 2), canvas.height - MARGINS[3]);
+        ctx.strokeStyle = combined_colors['sla'];
         ctx.lineWidth = 1.2;
         ctx.beginPath();
-        ctx.arc(Math.round(x + (area_figures[0] / num_fig - SEP_FIG) / 2), Math.round(y + area_figures[1]), (area_figures[0] / num_fig - SEP_FIG) / 2, -Math.PI, 0);
+        //ctx.ellipse(Math.round(x + (area_figures[0] / num_fig - SEP_FIG) / 2), Math.round((y + area_figures[1])/2), (area_figures[0] / num_fig - SEP_FIG) / 2, (area_figures[0] / num_fig - SEP_FIG) / 4, 0, -Math.PI, 0);
+        ctx.ellipse(Math.round(x + (area_figures[0] / num_fig - SEP_FIG) / 2), Math.round((y + area_figures[1])/2), (area_figures[0] / num_fig - SEP_FIG) / 4, (area_figures[0] / num_fig - SEP_FIG) / 4, 0, -Math.PI, 0);
         ctx.stroke();
-        ctx.fillStyle = "rgba(0, 0, 0, 1)";
-        ctx.fillText("DB & RNASeq", x + Math.round((area_figures[0] / num_fig - SEP_FIG) / 2), canvas.height - MARGINS[3]);
         x = x + area_figures[0] / num_fig + SEP_FIG;
 
-        // RNASeq Only
-        ctx.strokeStyle = Lsv.get_color(2, BREWER_PALETTE, .8);
+        // sl
+        ctx.strokeStyle = combined_colors['sl'];
+        ctx.fillStyle = combined_colors['sl']+'66';
+        this.draw_rectangle(ctx, x, y + Math.round(area_figures[1]/2), Math.round((area_figures[0] / num_fig - SEP_FIG + 1)/4), Math.round(area_figures[1]/2), true);
+        this.draw_rectangle(ctx, x + Math.round((area_figures[0] / num_fig - SEP_FIG + 1)*(3/4)), y + Math.round(area_figures[1]/2), Math.round((area_figures[0] / num_fig - SEP_FIG + 1)/4), Math.round(area_figures[1]/2), true);
+        ctx.fillStyle = "rgba(0, 0, 0, 1)";
+        ctx.fillText("SR+LR", Math.round(x + (area_figures[0] / num_fig - SEP_FIG) / 2), canvas.height - MARGINS[3]);
+        ctx.strokeStyle = combined_colors['sl'];
+        ctx.lineWidth = 1.2;
         ctx.beginPath();
-        ctx.arc(Math.round(x + (area_figures[0] / num_fig - SEP_FIG) / 2), Math.round(y + area_figures[1]), (area_figures[0] / num_fig - SEP_FIG) / 2, -Math.PI, 0);
+        ctx.ellipse(Math.round(x + (area_figures[0] / num_fig - SEP_FIG) / 2), Math.round((y + area_figures[1])/2), (area_figures[0] / num_fig - SEP_FIG) / 4, (area_figures[0] / num_fig - SEP_FIG) / 4, 0, -Math.PI, 0);
         ctx.stroke();
-        ctx.fillStyle = "rgba(0, 0, 0, 1)";
-        ctx.fillText("RNASeq Only", Math.round(x + (area_figures[0] / num_fig - SEP_FIG) / 2), canvas.height - MARGINS[3]);
         x = x + area_figures[0] / num_fig + SEP_FIG;
 
-        // DB Only
+        // l
+        ctx.strokeStyle = combined_colors['l'];
+        ctx.fillStyle = combined_colors['l']+'66';
+        this.draw_rectangle(ctx, x, y + Math.round(area_figures[1]/2), Math.round((area_figures[0] / num_fig - SEP_FIG + 1)/4), Math.round(area_figures[1]/2), true);
+        this.draw_rectangle(ctx, x + Math.round((area_figures[0] / num_fig - SEP_FIG + 1)*(3/4)), y + Math.round(area_figures[1]/2), Math.round((area_figures[0] / num_fig - SEP_FIG + 1)/4), Math.round(area_figures[1]/2), true);
+        ctx.fillStyle = "rgba(0, 0, 0, 1)";
+        ctx.fillText("LR only", Math.round(x + (area_figures[0] / num_fig - SEP_FIG) / 2), canvas.height - MARGINS[3]);
+        ctx.strokeStyle = combined_colors['l'];
+        ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        ctx.ellipse(Math.round(x + (area_figures[0] / num_fig - SEP_FIG) / 2), Math.round((y + area_figures[1])/2), (area_figures[0] / num_fig - SEP_FIG) / 4, (area_figures[0] / num_fig - SEP_FIG) / 4, 0, -Math.PI, 0);
+        ctx.stroke();
+        x = x + area_figures[0] / num_fig + SEP_FIG;
+
+        // la
+        ctx.strokeStyle = combined_colors['la'];
+        ctx.fillStyle = combined_colors['la']+'66';
+        this.draw_rectangle(ctx, x, y + Math.round(area_figures[1]/2), Math.round((area_figures[0] / num_fig - SEP_FIG + 1)/4), Math.round(area_figures[1]/2), true);
+        this.draw_rectangle(ctx, x + Math.round((area_figures[0] / num_fig - SEP_FIG + 1)*(3/4)), y + Math.round(area_figures[1]/2), Math.round((area_figures[0] / num_fig - SEP_FIG + 1)/4), Math.round(area_figures[1]/2), true);
+        ctx.fillStyle = "rgba(0, 0, 0, 1)";
+        ctx.fillText("DB+LR", Math.round(x + (area_figures[0] / num_fig - SEP_FIG) / 2), canvas.height - MARGINS[3]);
+        ctx.strokeStyle = combined_colors['la'];
+        ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        ctx.ellipse(Math.round(x + (area_figures[0] / num_fig - SEP_FIG) / 2), Math.round((y + area_figures[1])/2), (area_figures[0] / num_fig - SEP_FIG) / 4, (area_figures[0] / num_fig - SEP_FIG) / 4, 0, -Math.PI, 0);
+        ctx.stroke();
+        x = x + area_figures[0] / num_fig + SEP_FIG;
+
+        // s
+        ctx.strokeStyle = combined_colors['s'];
+        ctx.fillStyle = combined_colors['s']+'66';
+        this.draw_rectangle(ctx, x, y + Math.round(area_figures[1]/2), Math.round((area_figures[0] / num_fig - SEP_FIG + 1)/4), Math.round(area_figures[1]/2), true);
+        this.draw_rectangle(ctx, x + Math.round((area_figures[0] / num_fig - SEP_FIG + 1)*(3/4)), y + Math.round(area_figures[1]/2), Math.round((area_figures[0] / num_fig - SEP_FIG + 1)/4), Math.round(area_figures[1]/2), true);
+        ctx.fillStyle = "rgba(0, 0, 0, 1)";
+        ctx.fillText("SR only", Math.round(x + (area_figures[0] / num_fig - SEP_FIG) / 2), canvas.height - MARGINS[3]);
+        ctx.strokeStyle = combined_colors['s'];
+        ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        ctx.ellipse(Math.round(x + (area_figures[0] / num_fig - SEP_FIG) / 2), Math.round((y + area_figures[1])/2), (area_figures[0] / num_fig - SEP_FIG) / 4, (area_figures[0] / num_fig - SEP_FIG) / 4, 0, -Math.PI, 0);
+        ctx.stroke();
+        x = x + area_figures[0] / num_fig + SEP_FIG;
+
+        // sa
+        ctx.strokeStyle = combined_colors['sa'];
+        ctx.fillStyle = combined_colors['sa']+'66';
+        this.draw_rectangle(ctx, x, y + Math.round(area_figures[1]/2), Math.round((area_figures[0] / num_fig - SEP_FIG + 1)/4), Math.round(area_figures[1]/2), true);
+        this.draw_rectangle(ctx, x + Math.round((area_figures[0] / num_fig - SEP_FIG + 1)*(3/4)), y + Math.round(area_figures[1]/2), Math.round((area_figures[0] / num_fig - SEP_FIG + 1)/4), Math.round(area_figures[1]/2), true);
+        ctx.fillStyle = "rgba(0, 0, 0, 1)";
+        ctx.fillText("DB+SR", Math.round(x + (area_figures[0] / num_fig - SEP_FIG) / 2), canvas.height - MARGINS[3]);
+        ctx.strokeStyle = combined_colors['sa'];
+        ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        ctx.ellipse(Math.round(x + (area_figures[0] / num_fig - SEP_FIG) / 2), Math.round((y + area_figures[1])/2), (area_figures[0] / num_fig - SEP_FIG) / 4, (area_figures[0] / num_fig - SEP_FIG) / 4, 0, -Math.PI, 0);
+        ctx.stroke();
+        x = x + area_figures[0] / num_fig + SEP_FIG;
+
+        // ao
         ctx.strokeStyle = "rgba(0, 0, 0, 0.8)";
+        ctx.fillStyle = "rgba(255, 255, 255, .5)";
+        ctx.lineWidth = 2;
         ctx.setLineDash([5, 5]);
+        this.draw_rectangle(ctx, x, y + Math.round(area_figures[1]/2), Math.round((area_figures[0] / num_fig - SEP_FIG + 1)/4), Math.round(area_figures[1]/2), true);
+        this.draw_rectangle(ctx, x + Math.round((area_figures[0] / num_fig - SEP_FIG + 1)*(3/4)), y + Math.round(area_figures[1]/2), Math.round((area_figures[0] / num_fig - SEP_FIG + 1)/4), Math.round(area_figures[1]/2), true);
+        ctx.strokeStyle = "rgba(0, 0, 0, 0.8)";
+        ctx.lineWidth = 1.2;
         ctx.beginPath();
-        ctx.arc(Math.round(x + (area_figures[0] / num_fig - SEP_FIG) / 2), Math.round(y + area_figures[1]), (area_figures[0] / num_fig - SEP_FIG) / 2, -Math.PI, 0);
+        ctx.ellipse(Math.round(x + (area_figures[0] / num_fig - SEP_FIG) / 2), Math.round((y + area_figures[1])/2), (area_figures[0] / num_fig - SEP_FIG) / 4, (area_figures[0] / num_fig - SEP_FIG) / 4, 0, -Math.PI, 0);
         ctx.stroke();
         ctx.setLineDash([]);
         ctx.fillStyle = "rgba(0, 0, 0, 1)";
-        ctx.fillText("DB Only", Math.round(x + (area_figures[0] / num_fig - SEP_FIG) / 2), canvas.height - MARGINS[3]);
+        ctx.fillText("DB only", Math.round(x + (area_figures[0] / num_fig - SEP_FIG) / 2), canvas.height - MARGINS[3]);
         x = x + area_figures[0] / num_fig + SEP_FIG;
 
-        /**
-         * Legend number of reads
-         * */
         // DB & RNASeq example chosen
-        ctx.strokeStyle = 'red';
+        ctx.strokeStyle = combined_colors['s'];
         ctx.lineWidth = 1.2;
         ctx.font = "8pt Arial";
         var font_height = 9;
         ctx.beginPath();
-        ctx.arc(Math.round(x + (area_figures[0] / num_fig - SEP_FIG) / 2), Math.round(y + area_figures[1]), (area_figures[0] / num_fig - 2 * SEP_FIG) / 2, -Math.PI, 0);
+        ctx.arc(Math.round(x + (area_figures[0] / num_fig - SEP_FIG) / 2), Math.round(y + area_figures[1]), (area_figures[0] / num_fig - 2 * SEP_FIG) * (1/3), -Math.PI, 0);
         ctx.stroke();
-        Lsv.renderNumReads(ctx, Math.round(x + (area_figures[0] / num_fig - SEP_FIG) / 2), MARGINS[2] + font_height, 32);
+        Lsv.renderNumReads(ctx, Math.round(x + (area_figures[0] / num_fig - SEP_FIG) / 2), MARGINS[2] + font_height, "69|42");
         ctx.fillStyle = "rgba(0, 0, 0, 1)";
         ctx.font = "7pt Arial";
-        ctx.fillText("RNASeq reads", x + Math.round((area_figures[0] / num_fig - SEP_FIG) / 2), canvas.height - MARGINS[3]);
+        ctx.fillText("SR|LR reads", x + Math.round((area_figures[0] / num_fig - SEP_FIG) / 2), canvas.height - MARGINS[3]);
         x = x + area_figures[0] / num_fig + SEP_FIG;
 
-        /**
-         * Legend Intron Retention
-         * */
         ctx.strokeStyle = "rgba(0, 0, 0, 0.8)";
         ctx.fillStyle = "rgba(0, 0, 0, 0.2)";
         ctx.lineWidth = 1.2;
         this.draw_rectangle(ctx, x, y, Math.round((area_figures[0] / num_fig) / 3 - SEP_FIG), Math.round(area_figures[1]), true);
         this.draw_rectangle(ctx, Math.round(x + (area_figures[0] / num_fig) * 2 / 3), y, Math.round((area_figures[0] / num_fig) / 3 - SEP_FIG), Math.round(area_figures[1]), true);
-        this.draw_rectangle(ctx, Math.round(x + (area_figures[0] / num_fig) / 3 - SEP_FIG), y + area_figures[1] / 4, Math.round((area_figures[0] / num_fig - SEP_FIG) * 2 / 3) + 4, Math.round(area_figures[1] / 2), true);
+        this.draw_rectangle(ctx, Math.round(x + (area_figures[0] / num_fig) / 3 - SEP_FIG), y + area_figures[1] / 4, Math.round(((area_figures[0] / num_fig - SEP_FIG) * 2 / 3) - 6), Math.round(area_figures[1] / 2), true);
         ctx.fillStyle = "rgba(0, 0, 0, 1)";
         ctx.fillText("Intron Ret.", x + Math.round((area_figures[0] / num_fig - SEP_FIG) / 2), canvas.height - MARGINS[3]);
         x = x + area_figures[0] / num_fig + SEP_FIG;

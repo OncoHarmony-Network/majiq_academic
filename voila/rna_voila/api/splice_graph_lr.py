@@ -16,10 +16,10 @@ combined_colors = {
     'sla': '#05689A',
     'sl': '#BDA117',
     'l': '#86527D',
-    'la': '#82711F',
+    'la': '#5A4E12',
     's': '#1EA54B',
     'sa': '#BF2F47',
-    'ao': 'grey'
+    'ao': '#808080'
 }
 
 lrdb = None
@@ -131,6 +131,9 @@ class SpliceGraphLR:
             for j in transcript[subkey]:
                 lr_junctions.add((j[0], j[1]))
 
+        """
+        This is the main logic used for determine which of the six categories the junction or intron falls into
+        """
         j_sla = annot_sr_junctions & lr_junctions
         j_l = lr_junctions - annot_junctions - sr_junctions
         j_sl = sr_junctions & (lr_junctions - annot_junctions)
@@ -139,7 +142,6 @@ class SpliceGraphLR:
         j_sa = annot_sr_junctions - j_sla
         j_ao = annot_only_junctions - j_la
 
-        #assert bool(j_sla & j_l & j_sl & j_la & j_s & j_sa & j_ao) is False  # there should be no overlaps
         return j_sla, j_l, j_sl, j_la, j_s, j_sa, j_ao
 
     def _debugprint(self, j_sla, j_l, j_sl, j_la, j_s, j_sa, j_ao):
@@ -204,15 +206,15 @@ class SpliceGraphLR:
                 # all_reads = _sr_reads + _lr_reads
                 # final_reads = ceil(median(all_reads)) if all_reads else 0
                 if junc[0] not in shortread[readssubkey]['combined']:
-                    shortread[readssubkey]['combined'][junc[0]] = {junc[1]: (_sr_reads, _lr_reads,)}
+                    shortread[readssubkey]['combined'][junc[0]] = {junc[1]: f"{_sr_reads}|{_lr_reads}"}
                 else:
                     if junc[1] in shortread[readssubkey]['combined'][junc[0]]:
-                        print('hmmm?', junc)
+                        print('error: there seem to be overlapping junctions between the six categories!', junc)
                         # pass
                         assert False
                         #shortread[readssubkey]['combined'][junc[0]][junc[1]] += final_reads
                     else:
-                        shortread[readssubkey]['combined'][junc[0]][junc[1]] = (_sr_reads, _lr_reads,)
+                        shortread[readssubkey]['combined'][junc[0]][junc[1]] = f"{_sr_reads}|{_lr_reads}"
 
         return shortread
 

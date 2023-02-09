@@ -9,7 +9,12 @@
     <script src="{{ url_for('static', filename='js/lsvtools.js') }}"></script>
     <script>
         const legend = document.querySelector('.legend');
-        new Lsv().renderFloatingLegend(legend)
+        if(longread_enabled){
+            new Lsv().renderFloatingLegendLr(legend);
+        }else{
+            new Lsv().renderFloatingLegend(legend);
+        }
+
         // const legend_lr = document.querySelector('.legend-lr');
         // new Lsv().renderFloatingLegendLr(legend_lr)
         var highlightFirst = false;
@@ -220,7 +225,7 @@
         </div>
         <div>
             <div style="display: inline-block;">
-                <canvas width="650px" height="40px" class="legend"></canvas>
+                <canvas width="800px" height="40px" class="legend"></canvas>
             </div>
 <!--            <div style="display: inline-block;">-->
 <!--                <canvas width="650px" height="40px" class="legend-lr"></canvas>-->
