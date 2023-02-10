@@ -8,9 +8,12 @@ from gtfparse import read_gtf
 
 class FlairReader:
 
-    def __init__(self, gtf_path):
+    def __init__(self, gtf_path=None, gtf_df=None):
         self.modules = {}
-        self.df = read_gtf(gtf_path)
+        if gtf_path:
+            self.df = read_gtf(gtf_path)
+        else:
+            self.df = gtf_df
 
     def has_gene(self, gene_id):
         return len(self.df[self.df['gene_id'] == gene_id].index) != 0
