@@ -348,8 +348,7 @@ for gene_id in tqdm(all_gene_ids):
             'junctions': transcript_junctions,
             'junction_reads': transcript_junctions_reads,
             'intron_retention': transcript_intron_retention,
-            'intron_retention_reads': transcript_intron_retention_reads,
-            'transcript_reads':
+            'intron_retention_reads': transcript_intron_retention_reads           
         }
 
         if strand == '-':
