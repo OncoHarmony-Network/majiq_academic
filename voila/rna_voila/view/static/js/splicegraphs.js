@@ -464,8 +464,8 @@ class SpliceGraphs {
                         this.setAttribute('fill', 'green');
                         this.setAttribute('stroke', 'green');
                         break;
-                    case 'grey':
-                        this.setAttribute('fill', 'grey');
+                    case combined_colors['ao']:
+                        this.setAttribute('fill', combined_colors['ao']);
                         this.setAttribute('stroke', 'black');
                         break;
                     default:
