@@ -83,7 +83,7 @@ class SpliceGraphLR:
             annotated_exons = IntervalTree.from_tuples(annotated_exons)
             for lr_exon in transcript['exons']:
                 matching_annotated = annotated_exons.overlap(lr_exon[0], lr_exon[1])
-                ex_d = {'color': 'grey'}
+                ex_d = {'color': combined_colors['ao']}
                 if matching_annotated:
                     matching_annotated = matching_annotated.pop()
 
