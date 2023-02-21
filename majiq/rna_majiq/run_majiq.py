@@ -157,6 +157,31 @@ def main():
         " [Default: %(default)s]",
     )
 
+    # intergene detection flags
+    buildparser_intergene = buildparser.add_argument_group("Intergene filters")
+    buildparser_intergene.add_argument(
+        "--ext3prime",
+        default=10000,
+        type=check_nonnegative_int,
+        help="Sets how far past the (annotated) 3 prime end of the gene majiq should look for novel junctions"
+             " set to zero to discard findings outside of the annotated gene 3' region. [Default: %(default)s]",
+    )
+    buildparser_intergene.add_argument(
+        "--ext5prime",
+        default=10000,
+        type=check_nonnegative_int,
+        help="Sets how far past the (annotated) 5 prime end of the gene majiq should look for novel junctions"
+             " set to zero to discard findings outside of the annotated gene 5' region. [Default: %(default)s]",
+    )
+    buildparser_intergene.add_argument(
+        "--allow-full-intergene",
+        action="store_true",
+        default=False,
+        help="If this flag is set, junctions may be detected in which both splice sites lie outside gene boundaries."
+             " Without this flag set, at least one end of a junction must lie inside an annotated exon to be considered"
+             " (when outside of the gene boundary)",
+    )
+
     # denovo flags
     buildparser_denovo = buildparser.add_argument_group("Denovo junctions options")
     buildparser_denovo.add_argument(

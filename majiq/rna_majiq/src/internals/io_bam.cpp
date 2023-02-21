@@ -147,6 +147,8 @@ namespace io_bam {
     /**
      * Associate junction nreads_ptr with appropriate genes
      */
+
+
     void IOBam::find_junction_genes(
             string chrom, char strand, int start, int end,
             shared_ptr<vector<float>> nreads_ptr) {
@@ -180,18 +182,30 @@ namespace io_bam {
         Junction junc(start, end, false, simpl_);
         const coord_key_t key = junc.get_key();
 
-
         // the junction could be in any of the genes from the first set
         for (const auto &gObj: possible_genes) {
+            bool utr_gene_junc = false;
             // try to rule out being any stage...
             if (strand != '.' && strand != gObj->get_strand()) {
                 // junction must be matched to gene that matches its strand
                 continue;
             }
-            if (start < gObj->get_start() || end > gObj->get_end()) {
-                // junction must be matched to gene where it is intragenic
+
+            if (start < gObj->get_utr_start() || end > gObj->get_utr_end()) {
+                // if either junction end falls outside of the possible extended area around the gene, ignore it
+                //cout << "SKIPPED JUNC UTR " << gObj->get_name() << ' ' << start << '-' << end << ' ' << gObj->get_utr_start()  << '-' << gObj->get_utr_end() << '\n';
                 continue;
             }
+            if (start < gObj->get_start() && end > gObj->get_end()) {
+                // if both ends of the junction fall outside of the gene or UTR end, also ignore it
+                //cout << "SKIPPED JUNC INTRA " << gObj->get_name() << ' ' << start << '-' << end << ' ' << gObj->get_start() << '-' << gObj->get_end() << '\n';
+                continue;
+            }
+            if (start < gObj->get_start() || end > gObj->get_end()) {
+                // if either junction end fall outside of the gene or UTR end, set as potential UTR junction
+                utr_gene_junc = true;
+            }
+
             // junction is matched to this gene in either stage 1, 2, or 3
             // Stage 1: is the junction already present for the gene?
             if (gObj->junc_map_.count(key) > 0) {
@@ -203,6 +217,47 @@ namespace io_bam {
                 // because we will only use stage 1 matches
                 continue;
             } else {
+
+                // this section searches the UTR junc
+                if(!allow_full_intergene_ && utr_gene_junc){
+                    bool start_in_exon = false;
+                    bool end_in_exon = false;
+                    for (const auto &ex: gObj->exon_map_) {
+                        // compare junction to exon boundaries
+                        const int exon_start = ex.second->get_start();
+                        const int exon_end = ex.second->get_end();
+                        // skip half exons
+                        if (exon_start < 0 || exon_end < 0) {
+                            continue;
+                        }
+                        // is the junction close the the full-exon boundaries?
+                        if (!start_in_exon) {
+                            if (start <= exon_start) {
+                                // this nor subsequent exons will be close to
+                                // start (not stage 2)
+                                break;
+                            } else if (start <= exon_end) {
+                                start_in_exon = true;
+                                // still need to see if end is near exon
+                            }
+                        }
+                        if (end < exon_start) {
+                            // this nor subsequent exons will be close to end (not
+                            // stage 2)
+                            break;
+                        } else if (end < exon_end) {
+                            end_in_exon = true;
+                            break;
+                        }
+                    }
+
+                    if(!start_in_exon && !end_in_exon){
+                        // we ignore UTR junctions with neither end near an annotated exon
+                        continue;
+                    }
+                }
+
+
                 // unless we find a stage 1 gene, we need to know if this is
                 // stage 2 or stage 3 gene. So check whether start and end are
                 // close enough to any of the gene's exons
@@ -236,6 +291,10 @@ namespace io_bam {
                         break;
                     }
                 }
+
+
+
+
                 // was this stage 2 or stage 3?
                 if (start_near_exon && end_near_exon) {
                     stage2_genes.push_back(gObj);
@@ -1010,8 +1069,8 @@ namespace io_bam {
 
             for (const auto &g: (gl.second)){
 
-                int st = g->get_start() ;
-                int nd = g->get_end() ;
+                int st = g->get_utr_start() ;
+                int nd = g->get_utr_end() ;
                 // if current gene overlaps previous overgene, add it
                 if (st <= gend && nd >= gstart){
                     // update overgene boundaries to include new gene

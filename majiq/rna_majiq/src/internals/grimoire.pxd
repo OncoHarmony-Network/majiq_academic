@@ -11,7 +11,11 @@ ctypedef vector[overGene*] overGene_vect_t
 ctypedef vector[Gene*] Gene_vect_t
 ctypedef pair[int, int] coord_key_t
 ctypedef string lsv_id_t
+
+
 cdef extern from "grimoire.hpp" namespace "grimoire":
+
+
     cdef cppclass overGene:
         pass
 
@@ -55,9 +59,11 @@ cdef extern from "grimoire.hpp" namespace "grimoire":
     cdef cppclass Gene:
         Gene() nogil except +
         Gene(string id1, string name1, string chromosome1,
-             char strand1, unsigned int start1, unsigned int end1) nogil except +
+             char strand1, unsigned int start1, unsigned int end1, unsigned int ext3prime, unsigned int ext3prime) nogil except +
 
         string  get_chromosome() nogil ;
+        int     get_utr_start()  nogil ;
+        int     get_utr_end()    nogil ;
         int     get_start()      nogil ;
         int     get_strand()     nogil ;
         int     get_end()        nogil ;

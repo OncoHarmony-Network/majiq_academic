@@ -28,7 +28,7 @@ cdef list gene_id_keys = ['ID', 'gene_id']
 
 
 cdef int  read_gff(str filename, map[string, Gene*] all_genes, vector[string] gid_vec, bint simpl, bint enable_anot_ir,
-                   object logging) except -1:
+                   object logging, bint ext3prime, bint ext5prime) except -1:
     """
     :param filename: GFF input filename
     :param list_of_genes: List of genes that will be updated with all the gene_id detected on the gff file
@@ -90,7 +90,7 @@ cdef int  read_gff(str filename, map[string, Gene*] all_genes, vector[string] gi
                 gene_name = gene_id  # gene_id is fallback for no gene_name
 
             exon_dict[gene_id] = []
-            all_genes[gene_id] = new Gene(gene_id, gene_name, chrom, strand, start, end)
+            all_genes[gene_id] = new Gene(gene_id, gene_name, chrom, strand, start, end, ext3prime, ext5prime)
             gid_vec.push_back(gene_id)
         elif record.type in accepted_transcripts:
             if transcript_id_keys not in record.attributes or 'Parent' not in record.attributes:

@@ -13,7 +13,7 @@ cdef extern from "io_bam.hpp" namespace "io_bam":
 
     cdef cppclass IOBam:
         IOBam() nogil except +
-        IOBam(string, int, unsigned int, unsigned int, map[string, overGene_vect_t], bint simpl1) nogil except +
+        IOBam(string, int, unsigned int, unsigned int, map[string, overGene_vect_t], bint simpl1, bint allow_full_intergene) nogil except +
         int ParseJunctionsFromFile(bint ir_func) nogil
         void EstimateEffLenFromFile(int num_reads) nogil
         int bootstrap_samples(int msamples, np.float32_t* boots, np.float32_t pvalue_limit) nogil
