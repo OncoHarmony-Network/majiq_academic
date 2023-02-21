@@ -1069,7 +1069,7 @@ namespace io_bam {
 
             for (const auto &g: (gl.second)){
 
-                int st = g->get_utr_start() ;
+                int st = max(g->get_utr_start(), 1) ;
                 int nd = g->get_utr_end() ;
                 // if current gene overlaps previous overgene, add it
                 if (st <= gend && nd >= gstart){
