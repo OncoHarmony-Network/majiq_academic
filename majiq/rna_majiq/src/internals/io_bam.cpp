@@ -194,6 +194,7 @@ namespace io_bam {
             if (start < gObj->get_utr_start() || end > gObj->get_utr_end()) {
                 // if either junction end falls outside of the possible extended area around the gene, ignore it
                 //cout << "SKIPPED JUNC UTR " << gObj->get_name() << ' ' << start << '-' << end << ' ' << gObj->get_utr_start()  << '-' << gObj->get_utr_end() << '\n';
+
                 continue;
             }
             if (start < gObj->get_start() && end > gObj->get_end()) {
@@ -220,8 +221,8 @@ namespace io_bam {
 
                 // this section searches the UTR junc
                 if(!allow_full_intergene_ && utr_gene_junc){
-                    bool start_in_exon = false;
-                    bool end_in_exon = false;
+
+                    bool in_exon = false;
                     for (const auto &ex: gObj->exon_map_) {
                         // compare junction to exon boundaries
                         const int exon_start = ex.second->get_start();
@@ -230,28 +231,16 @@ namespace io_bam {
                         if (exon_start < 0 || exon_end < 0) {
                             continue;
                         }
-                        // is the junction close the the full-exon boundaries?
-                        if (!start_in_exon) {
-                            if (start <= exon_start) {
-                                // this nor subsequent exons will be close to
-                                // start (not stage 2)
-                                break;
-                            } else if (start <= exon_end) {
-                                start_in_exon = true;
-                                // still need to see if end is near exon
-                            }
-                        }
-                        if (end < exon_start) {
-                            // this nor subsequent exons will be close to end (not
-                            // stage 2)
+                        if (start >= exon_start && start <= exon_end){
+                            in_exon = true;
                             break;
-                        } else if (end < exon_end) {
-                            end_in_exon = true;
+                        }
+                        if (end >= exon_start && end <= exon_end){
+                            in_exon = true;
                             break;
                         }
                     }
-
-                    if(!start_in_exon && !end_in_exon){
+                    if(!in_exon){
                         // we ignore UTR junctions with neither end near an annotated exon
                         continue;
                     }
@@ -291,9 +280,6 @@ namespace io_bam {
                         break;
                     }
                 }
-
-
-
 
                 // was this stage 2 or stage 3?
                 if (start_near_exon && end_near_exon) {
