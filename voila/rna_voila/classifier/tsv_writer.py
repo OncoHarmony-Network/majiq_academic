@@ -317,7 +317,10 @@ class TsvWriter(BaseTsvWriter):
 
             if 'junctions' in self.config.enabled_outputs:
                 headers = self.common_headers + ['module_event_combination', 'denovo', 'junction_name',
-                                                 'junction_coord'] + self.quantification_headers
+                                                 'junction_coord']
+                if self.config.junc_gene_dist_column:
+                    headers += ['junc_5_to_gene_dist', 'junc_3_to_gene_dist']
+                headers += self.quantification_headers
                 self.start_headers(headers, 'junctions.tsv')
 
             if 'mpe' in self.config.enabled_outputs:
@@ -2206,7 +2209,15 @@ class TsvWriter(BaseTsvWriter):
             writer = csv.writer(csvfile, dialect='excel-tab', delimiter='\t')
 
             for module, common_data, quantifications, de_novo, junction_name, coordinates in self.junction_cache:
-                writer.writerow(common_data + [module.collapsed_event_name, de_novo, junction_name, coordinates] + quantifications)
+                row = common_data + [module.collapsed_event_name, de_novo, junction_name, coordinates]
+                if self.config.junc_gene_dist_column:
+                    j_start, j_end = (int(x) for x in coordinates.split('-'))
+                    gene_start_dist = self.graph.gene_start - j_start if j_start < self.graph.gene_start else 0
+                    gene_end_dist = j_end - self.graph.gene_end if j_end > self.graph.gene_end else 0
+                    row += [gene_start_dist, gene_end_dist]
+
+                row += quantifications
+                writer.writerow(row)
 
     def mpe(self):
         """

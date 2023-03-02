@@ -176,6 +176,23 @@ class Genes(SpliceGraphSQL):
         query = self.conn.execute('SELECT id, name, strand, chromosome FROM gene')
         return self._iter_results(query, gene_fieldnames)
 
+    def gene_extent(self, gene_id):
+        """
+        Get start and end of gene based on first and last annotated exon coordinates
+        """
+        query = self.conn.execute('''
+                                SELECT annotated_start, annotated_end 
+                                FROM exon 
+                                WHERE annotated_start=(SELECT MIN (annotated_start) FROM exon WHERE gene_id=? AND annotated=TRUE) or 
+                                annotated_end=(SELECT MAX (annotated_end) FROM exon WHERE gene_id=? AND annotated=TRUE) 
+                                ORDER BY annotated_start
+                                 
+
+                                ''', (gene_id, gene_id))
+
+        start_ex, end_ex = query.fetchall()
+        return start_ex[0], end_ex[1]
+
     def gene(self, gene_id):
         """
         Get gene with gene id supplied.
