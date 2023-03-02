@@ -11,7 +11,7 @@ class FlairReader:
     def __init__(self, gtf_path=None, gtf_df=None):
         self.modules = {}
         if gtf_path:
-            self.df = read_gtf(gtf_path)
+            self.df = read_gtf(gtf_path).to_pandas()
         else:
             self.df = gtf_df
 
@@ -79,6 +79,12 @@ class FlairReader:
 
 
         return module_extents
+
+    def gene_transcript_names(self, gene_id):
+        df_gene = self.df[self.df['gene_id'] == gene_id]
+        for index, row in df_gene.iterrows():
+            if row.feature == 'transcript':
+                yield row['transcript_id']
 
     def gene(self, gene_id, extent=None, ignore_starts_ends=False):
 

@@ -863,6 +863,11 @@ class SpliceGraphs {
             .append('div')
             .text(`Group: ${sg.dataset.group}; Experiment: ${sg.dataset.experiment};`);
 
+        sg_header
+            .append('div')
+            .attr('class', 'splice-graph-lr-transcript-reads')
+            .text(`Transcript Total Reads: ${transcript.reads}`);
+
         this.x = this.x_scale(this.gene);
         this.junction_bins(sg.dataset.experiment, gene);
         this.y = this.y_scale(this.lr_sg_height+10);

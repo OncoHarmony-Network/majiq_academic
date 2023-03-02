@@ -46,6 +46,8 @@ class SpliceGraphLR:
 
         for transcript in self.lrdb.get(gene_id, []):
             d = {
+                'id': transcript['id'],
+                'reads': transcript['transcript_reads'],
                 'experiment': transcript['experiment'],
                 'exons': [
                 ],
@@ -206,7 +208,7 @@ class SpliceGraphLR:
                 # all_reads = _sr_reads + _lr_reads
                 # final_reads = ceil(median(all_reads)) if all_reads else 0
                 if junc[0] not in shortread[readssubkey]['combined']:
-                    shortread[readssubkey]['combined'][junc[0]] = {junc[1]: f"{_sr_reads}|{_lr_reads}"}
+                    shortread[readssubkey]['combined'][junc[0]] = {junc[1]: f"{_sr_reads}╦{_lr_reads}"}
                 else:
                     if junc[1] in shortread[readssubkey]['combined'][junc[0]]:
                         print('error: there seem to be overlapping junctions between the six categories!', junc)
@@ -214,7 +216,7 @@ class SpliceGraphLR:
                         assert False
                         #shortread[readssubkey]['combined'][junc[0]][junc[1]] += final_reads
                     else:
-                        shortread[readssubkey]['combined'][junc[0]][junc[1]] = f"{_sr_reads}|{_lr_reads}"
+                        shortread[readssubkey]['combined'][junc[0]][junc[1]] = f"{_sr_reads}╦{_lr_reads}"
 
         return shortread
 

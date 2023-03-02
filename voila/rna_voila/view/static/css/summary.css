@@ -120,6 +120,11 @@ table {
 
 }
 
+.splice-graph-lr-transcript-reads {
+    color: #28105c;
+
+}
+
 .splice-graph-header > * {
     display: inline-grid;
     margin-right: 10px;
