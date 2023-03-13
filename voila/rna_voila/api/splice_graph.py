@@ -193,7 +193,7 @@ class Genes(SpliceGraphSQL):
         if len(res) == 1:  # single exon
             return res[0][0], res[0][1]
         else:
-            start_ex, end_ex = query.fetchall()
+            start_ex, end_ex = res
             return start_ex[0], end_ex[1]
 
     def gene(self, gene_id):
