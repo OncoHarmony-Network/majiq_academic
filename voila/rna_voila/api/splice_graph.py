@@ -180,21 +180,13 @@ class Genes(SpliceGraphSQL):
         """
         Get start and end of gene based on first and last annotated exon coordinates
         """
-        query = self.conn.execute('''
-                                SELECT annotated_start, annotated_end 
-                                FROM exon 
-                                WHERE annotated_start=(SELECT MIN (annotated_start) FROM exon WHERE gene_id=? AND annotated=TRUE AND annotated_start != -1 AND annotated_end != -1 ) or 
-                                annotated_end=(SELECT MAX (annotated_end) FROM exon WHERE gene_id=? AND annotated=TRUE AND annotated_start != -1 AND annotated_end != -1) 
-                                ORDER BY annotated_start
-                                 
 
-                                ''', (gene_id, gene_id))
-        res = query.fetchall()
-        if len(res) == 1:  # single exon
-            return res[0][0], res[0][1]
-        else:
-            start_ex, end_ex = res
-            return start_ex[0], end_ex[1]
+        min_query = self.conn.execute('SELECT MIN (annotated_start) FROM exon WHERE gene_id=? AND annotated=TRUE AND annotated_start != -1 AND annotated_end != -1', (gene_id,))
+        max_query = self.conn.execute('SELECT MAX (annotated_end) FROM exon WHERE gene_id=? AND annotated=TRUE AND annotated_start != -1 AND annotated_end != -1', (gene_id,))
+
+        res_min = min_query.fetchall()
+        res_max = max_query.fetchall()
+        return res_min[0][0], res_max[0][0]
 
     def gene(self, gene_id):
         """
