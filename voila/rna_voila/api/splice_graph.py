@@ -183,8 +183,8 @@ class Genes(SpliceGraphSQL):
         query = self.conn.execute('''
                                 SELECT annotated_start, annotated_end 
                                 FROM exon 
-                                WHERE annotated_start=(SELECT MIN (annotated_start) FROM exon WHERE gene_id=? AND annotated=TRUE) or 
-                                annotated_end=(SELECT MAX (annotated_end) FROM exon WHERE gene_id=? AND annotated=TRUE) 
+                                WHERE annotated_start=(SELECT MIN (annotated_start) FROM exon WHERE gene_id=? AND annotated=TRUE AND annotated_start != -1 AND annotated_end != -1 ) or 
+                                annotated_end=(SELECT MAX (annotated_end) FROM exon WHERE gene_id=? AND annotated=TRUE AND annotated_start != -1 AND annotated_end != -1) 
                                 ORDER BY annotated_start
                                  
 
