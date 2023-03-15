@@ -13,12 +13,12 @@ from math import ceil
        majiq + lr + denovo 
        """
 combined_colors = {
-    'sla': '#05689A',
-    'sl': '#BDA117',
-    'l': '#86527D',
-    'la': '#5A4E12',
-    's': '#1EA54B',
-    'sa': '#BF2F47',
+    'sla': '#332288',
+    'sl': '#44AA99',
+    'l': '#AA4499',
+    'la': '#DDCC77',
+    's': '#117733',
+    'sa': '#882255',
     'ao': '#808080'
 }
 
