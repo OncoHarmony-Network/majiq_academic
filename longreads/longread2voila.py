@@ -10,7 +10,6 @@ import numpy as np
 from gtfparse import read_gtf
 from tqdm import tqdm
 import warnings
-from pandarallel import pandarallel
 warnings.filterwarnings('ignore')
 
 parser = argparse.ArgumentParser(description='Converter from various long read non-majiq output softwares to voila.lr file')
@@ -40,124 +39,62 @@ args = _args(
 )
 """
 
-def extract_junction(row):
-    chromStart = row.chromStart
-    blockSizes = row.blockSizes.split(',')
-    blockStarts = row.blockStarts.split(',')
+def reads_new_version(df_gtf, tsv_dict):
 
-    temp = [int(chromStart) + int(blockSizes[0])]
-    for j in range(len(blockSizes) - 1):
-        temp.append(temp[-1] + int(blockStarts[j+1]) - int(blockStarts[j]) - int(blockSizes[j]) + 1)
-        temp.append(temp[-1] + int(blockSizes[j+1]) - 1)
+    transcripts = {}
+    junctions = {}
 
-    temp = temp[:-1]
-    temp = [temp[i:i+2] for i in range(0, len(temp), 2)]
+    # for gene in tqdm(df_gtf['gene_id'].unique()[0:10]):
+    for gene in tqdm(df_gtf['gene_id'].unique()):
+        df_gene = df_gtf[df_gtf['gene_id']==gene]
+        #     print(df_gene)
+        #     print(len(df_gene))
+        #     break
+        #     if len(df_gene) < 4:
+        #         continue
 
-    return temp
+        transcripts_dict = df_gene['transcript_id'].value_counts().to_dict()
+        #transcripts_dict = {k:v for k,v in transcripts_dict.items() if v > 2}
+        transcripts[gene] = {k:tsv_dict.get(k) for k,v in transcripts_dict.items()}
 
-def s_parse_bed():
+        junction_read_dict = {}
 
+        for k,v in transcripts_dict.items():
+            df_transcript = df_gene[df_gene['transcript_id']==k]
 
-    df = pd.read_csv(args.isq_bed_file, sep='\t', engine='python')#, header=None)
-    df = df[df.blockCount != 1]
+            if df_transcript['strand'].iloc[0] == '-':
+                df_transcript['next_exon']= df_transcript.start.shift(1)
+                df_transcript = df_transcript[2:]
+            else:
+                df_transcript['next_exon']= df_transcript.start.shift(-1)
+                df_transcript = df_transcript[1:-1]
 
-    pandarallel.initialize(progress_bar=True, verbose=0)
-    df['junction'] = df[['chromStart', 'blockSizes', 'blockStarts']].parallel_apply(lambda x: extract_junction(x), axis=1)
+            for i,row in df_transcript.iterrows():
+                pair = (row['end'], int(row['next_exon']))
+                if not junction_read_dict.get(pair):
+                    junction_read_dict[pair] = tsv_dict.get(k)
+                else:
+                    junction_read_dict[pair] += tsv_dict.get(k)
 
-
-    df = df.explode('junction')
-    df[['start','end']] = pd.DataFrame(df.junction.tolist(), index= df.index)
-    df = df.groupby(['start', 'end']).size().reset_index(name='counts')
-    df['junc'] = list(zip(df.start, df.end))
-    bed_out = dict(zip(df['junc'], df['counts']))
-    return bed_out
-
-
-
-def s_parse_gtf():
-
-    df_gtf_all = read_gtf(args.isq_gtf_file).to_pandas()
-
-    df3 = df_gtf_all
-    df3 = df3[~df3['feature'].isin(['gene'])]
-    df3 = df3.sort_values(['transcript_id','start'], ascending = [False, True]).reset_index(drop=True)
-    count = df3['transcript_id'].value_counts()
-    df3 = df3[~df3['transcript_id'].isin(count[count < 3].index)]
-    df3 = df3[~df3['feature'].isin(['transcript'])]
-    new_val = np.nan
-    df3.insert(loc=5, column= "next_exon", value=new_val)
-    df3['next_exon']= df3.start.shift(-1)
-    df3 = df3.drop(df3.groupby('transcript_id').tail(1).index, axis=0)
-    df3['next_exon']= df3['next_exon'].astype(int)
-    gtf_out = {}
-    for i in tqdm(zip(df3['end'], df3['next_exon'])):
-        gtf_out[i] = 1
-
-    return gtf_out, df_gtf_all
-
-def s_gtf_bed_combine(bed_out, gtf_out):
-
-    bed_gtf_combine = {}
-
-    for k,v in tqdm(bed_out.items()):
-        if gtf_out.get(k):
-            bed_gtf_combine[k] = v
-
-    return bed_gtf_combine
-
-def s_parse_tsv():
-    df_tsv = pd.read_csv(args.isq_tsv_file, sep='\t', engine='python')
-    df_tsv = df_tsv[df_tsv.transcript_id.apply(lambda x: len(x)>1)]
-    df_tsv_count = df_tsv.groupby('transcript_id', sort=False).agg({'transcript_id': 'size'}).to_dict()
-    return df_tsv_count
-
-def s_final_reads_combine(df_gtf_all, bed_gtf_combine, df_tsv_count):
+        junctions[gene] = dict(sorted(junction_read_dict.items()))
 
 
-    transcripts_dict = {}
-    junctions_dict = {}
+    return transcripts, junctions
 
-    for gene in tqdm(df_gtf_all.gene_id.unique()):
-        df3 = df_gtf_all[df_gtf_all.gene_id == gene]
-        df3 = df3[~df3['feature'].isin(['gene'])]
-        df3 = df3.sort_values(['transcript_id','start'], ascending = [False, True]).reset_index(drop=True)
-        count = df3['transcript_id'].value_counts()
-        df3 = df3[~df3['transcript_id'].isin(count[count < 3].index)]
-        df3 = df3[~df3['feature'].isin(['transcript'])]
-        new_val = np.nan
-        df3.insert(loc=5, column= "next_exon", value=new_val)
-        df3['next_exon']= df3.start.shift(-1)
-        df3 = df3.drop(df3.groupby('transcript_id').tail(1).index, axis=0)
-
-        transcript_dict = {transcript: df_tsv_count['transcript_id'].get(transcript) for transcript in count.index}
-
-        transcripts_dict[gene] = transcript_dict
-
-        junction_dict = {pair: bed_gtf_combine.get(pair) for pair in zip(df3['end'],df3['next_exon'])}
-        junctions_dict[gene] = junction_dict
-
-    #out = {'transcript_read_number': transcripts_dict, 'junction_read_number': junctions_dict}
-    return transcripts_dict, junctions_dict
-
-        #pickle.dump(out, (open('bed_gtf_tsv_output', 'wb')))
-
-
-print('~~~Parsing Long Read BED~~~')
-bed_out = s_parse_bed()
 print('~~~Parsing Long Read GTF~~~')
-gtf_out, df_gtf_all = s_parse_gtf()
-print('~~~Combining GTF+BED information~~~')
-bed_gtf_combine = s_gtf_bed_combine(bed_out, gtf_out)
+df_gtf = read_gtf(args.isq_gtf_file)
+
 print('~~~Parsing Long Read TSV~~~')
-df_tsv_count = s_parse_tsv()
+df_tsv = pd.read_csv(args.isq_tsv_file, sep='\t', engine='python')
+tsv_dict = df_tsv['transcript_id'].value_counts().to_dict()
 print('~~~Processing Long Read combined read counts~~~')
-transcript_raw_reads, junction_raw_reads = s_final_reads_combine(df_gtf_all, bed_gtf_combine, df_tsv_count)
+transcript_raw_reads, junction_raw_reads = reads_new_version(df_gtf, tsv_dict)
 
 # transcript_raw_reads format: { 'gene_id': { 'transcript_id' : reads }}
 # junction_raw_reads format: { 'gene_id': { (junc_start, junc_end) : reads ) }}
 
 #df_gtf_all = read_gtf(args.isq_gtf_file).to_pandas()
-flairreader = flairParser.FlairReader(gtf_df=df_gtf_all)
+flairreader = flairParser.FlairReader(gtf_df=df_gtf)
 
 
 conn = sqlite3.connect(args.splice_graph)
