@@ -160,6 +160,20 @@ class SpliceGraphLR:
         })
         print('--------------------------------')
 
+    def _even_strsize(self, _sr_reads, _lr_reads):
+        """
+        If there are less characters in the lr or sr, we even them so that the separator appears centered.
+        Currently, in voila, the SVG read counts font is sans-sarif, not monospace. Therefore, this is only
+        an approximate solution which uses two non-breaking spaces to achieve the desired effect.
+        """
+        sr_letter_count = len(str(_sr_reads))
+        lr_letter_count = len(str(_lr_reads))
+        max_lettercount = max(sr_letter_count, lr_letter_count)
+        _sr_reads = '\u00A0\u00A0' * (max_lettercount - sr_letter_count) + str(_sr_reads)
+        _lr_reads = str(_lr_reads) + '\u00A0\u00A0' * (max_lettercount - lr_letter_count)
+
+        return _sr_reads, _lr_reads
+
     def _combine_summary(self, gene_id, shortread, subkey):
 
         if subkey == 'junctions':
@@ -208,6 +222,7 @@ class SpliceGraphLR:
                 # all_reads = _sr_reads + _lr_reads
                 # final_reads = ceil(median(all_reads)) if all_reads else 0
                 if junc[0] not in shortread[readssubkey]['combined']:
+                    _sr_reads, _lr_reads = self._even_strsize(_sr_reads, _lr_reads)
                     shortread[readssubkey]['combined'][junc[0]] = {junc[1]: f"{_sr_reads}╦{_lr_reads}"}
                 else:
                     if junc[1] in shortread[readssubkey]['combined'][junc[0]]:
@@ -216,6 +231,7 @@ class SpliceGraphLR:
                         assert False
                         #shortread[readssubkey]['combined'][junc[0]][junc[1]] += final_reads
                     else:
+                        _sr_reads, _lr_reads = self._even_strsize(_sr_reads, _lr_reads)
                         shortread[readssubkey]['combined'][junc[0]][junc[1]] = f"{_sr_reads}╦{_lr_reads}"
 
         return shortread
