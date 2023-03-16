@@ -82,6 +82,10 @@ class SpliceGraphLR:
                     transcript['experiment']: {j[0]: {j[1]: r} for j, r in zip(transcript['intron_retention'], transcript['intron_retention_reads'])}
                 }
             }
+
+            # I'm not sure why it happens that we get exons like this but it seems to once in a while...
+            annotated_exons = [x for x in annotated_exons if x[0] != x[1]]
+
             annotated_exons = IntervalTree.from_tuples(annotated_exons)
             for lr_exon in transcript['exons']:
                 matching_annotated = annotated_exons.overlap(lr_exon[0], lr_exon[1])
