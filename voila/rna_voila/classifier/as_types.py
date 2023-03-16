@@ -91,6 +91,8 @@ class Graph:
             if not gene_meta:
                 raise VoilaException("Gene ID not found in SpliceGraph File: %s" % self.gene_id)
             self.strand, self.gene_name, self.chromosome = itemgetter('strand', 'name', 'chromosome')(gene_meta)
+            if self.config.junc_gene_dist_column:
+                self.gene_start, self.gene_end = sg.gene_extent(self.gene_id)
 
         self.priors = {}
 

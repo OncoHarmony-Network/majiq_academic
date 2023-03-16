@@ -68,8 +68,8 @@ cdef int _core_deltapsi(object self) except -1:
 
 
     majiq_logger.create_if_not_exists(self.outDir)
-    logger = majiq_logger.get_logger("%s/deltapsi_majiq.log" % self.outDir, silent=self.silent,
-                                     debug=self.debug)
+    logFile = self.logger if self.logger else f"{self.outDir}/deltapsi_majiq.log"
+    logger = majiq_logger.get_logger(logFile, silent=self.silent, debug=self.debug)
     logger.info(f"Majiq deltapsi v{constants.VERSION}")
     logger.info("Command: %s" % " ".join(sys.argv))
     logger.info("GROUP1: %s" % self.files1)

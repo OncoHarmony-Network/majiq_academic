@@ -222,6 +222,7 @@ classify_parser.add_argument('--disable-metadata', action='store_true',
 classify_parser.add_argument('--show-read-counts', action='store_true',
                              help="Show the read counts per experiment in the TSV output")
 classify_parser.add_argument('--cassettes-constitutive-column', action='store_true', help=argparse.SUPPRESS)
+classify_parser.add_argument('--junc-gene-dist-column', action='store_true', help=argparse.SUPPRESS)
 
 
 classify_general_filter_parser = classify_parser.add_argument_group(

@@ -651,7 +651,8 @@ class Builder(BasicPipeline):
 
     def builder(self, majiq_config):
 
-        logger = majiq_logger.get_logger("%s/majiq.log" % majiq_config.outDir, silent=self.silent, debug=self.debug)
+        logFile = majiq_config.logger if majiq_config.logger else f"{majiq_config.outDir}/majiq.log"
+        logger = majiq_logger.get_logger(logFile, silent=self.silent, debug=self.debug)
         logger.info(f"Majiq Build v{constants.VERSION}")
         logger.info("Command: %s" % " ".join(sys.argv))
 
