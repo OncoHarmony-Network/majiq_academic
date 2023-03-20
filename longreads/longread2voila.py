@@ -39,28 +39,57 @@ args = _args(
 )
 """
 
+
+conn = sqlite3.connect(args.splice_graph)
+conn.execute('pragma foreign_keys=ON')
+
+def sr_gene_exons(gene_id):
+    query = conn.execute('''
+                        SELECT gene_id, start, end, annotated_start, annotated_end, annotated 
+                        FROM exon 
+                        WHERE gene_id=?
+                        ''', (gene_id,))
+    while True:
+        fetch = query.fetchmany(100)
+        if not fetch:
+            break
+        for x in fetch:
+            yield dict(zip(('gene_id', 'start', 'end', 'annotated_start', 'annotated_end', 'annotated'), x))
+
+
 def reads_new_version(df_gtf, tsv_dict):
 
     transcripts = {}
     junctions = {}
 
-    # for gene in tqdm(df_gtf['gene_id'].unique()[0:10]):
     for gene in tqdm(df_gtf['gene_id'].unique()):
         df_gene = df_gtf[df_gtf['gene_id']==gene]
-        #     print(df_gene)
-        #     print(len(df_gene))
-        #     break
-        #     if len(df_gene) < 4:
-        #         continue
-
-        transcripts_dict = df_gene['transcript_id'].value_counts().to_dict()
-        #transcripts_dict = {k:v for k,v in transcripts_dict.items() if v > 2}
-        transcripts[gene] = {k:tsv_dict.get(k) for k,v in transcripts_dict.items()}
-
+        introns_dict = {}
         junction_read_dict = {}
 
-        for k,v in transcripts_dict.items():
-            df_transcript = df_gene[df_gene['transcript_id']==k]
+        junc_pairs_from_sql = [(x['start'], x['end'],) for x in sr_gene_exons(gene) if x['start'] != -1 and x['end'] != -1 and x['start'] != x['end']]
+        junc_pairs_from_sql = [(junc_pairs_from_sql[i][1], junc_pairs_from_sql[i+1][0]) for i in range(len(junc_pairs_from_sql)-1)]
+
+        transcripts_list = list(df_gene['transcript_id'].unique())
+        transcripts_list.remove('')
+        transcripts[gene] = {transcript:tsv_dict.get(transcript) for transcript in sorted(transcripts_list)}
+
+        for transcript in transcripts_list:
+            df_transcript = df_gene[df_gene['transcript_id'] == transcript]
+            exon_pairs_list = [(row['start'], row['end']) for i,row in df_transcript[1:].iterrows()]
+
+            for junc_pair in junc_pairs_from_sql:
+                junc_pair = (junc_pair[0]+1, junc_pair[1]-1)
+
+                for exon_pair in exon_pairs_list:
+                    if exon_pair[0] <= junc_pair[0] and junc_pair[1] <= exon_pair[1]:
+                        if not introns_dict.get(junc_pair):
+                            introns_dict[junc_pair] = tsv_dict.get(transcript)
+                        else:
+                            introns_dict[junc_pair] += tsv_dict.get(transcript)
+
+            if len(df_transcript) < 3:
+                continue
 
             if df_transcript['strand'].iloc[0] == '-':
                 df_transcript['next_exon']= df_transcript.start.shift(1)
@@ -72,11 +101,12 @@ def reads_new_version(df_gtf, tsv_dict):
             for i,row in df_transcript.iterrows():
                 pair = (row['end'], int(row['next_exon']))
                 if not junction_read_dict.get(pair):
-                    junction_read_dict[pair] = tsv_dict.get(k)
+                    junction_read_dict[pair] = tsv_dict.get(transcript)
                 else:
-                    junction_read_dict[pair] += tsv_dict.get(k)
+                    junction_read_dict[pair] += tsv_dict.get(transcript)
 
         junctions[gene] = dict(sorted(junction_read_dict.items()))
+        junctions[gene].update(dict(sorted(introns_dict.items())))
 
 
     return transcripts, junctions
@@ -97,21 +127,7 @@ transcript_raw_reads, junction_raw_reads = reads_new_version(df_gtf, tsv_dict)
 flairreader = flairParser.FlairReader(gtf_df=df_gtf)
 
 
-conn = sqlite3.connect(args.splice_graph)
-conn.execute('pragma foreign_keys=ON')
 
-def sr_gene_exons(gene_id):
-    query = conn.execute('''
-                        SELECT gene_id, start, end, annotated_start, annotated_end, annotated 
-                        FROM exon 
-                        WHERE gene_id=?
-                        ''', (gene_id,))
-    while True:
-        fetch = query.fetchmany(100)
-        if not fetch:
-            break
-        for x in fetch:
-            yield dict(zip(('gene_id', 'start', 'end', 'annotated_start', 'annotated_end', 'annotated'), x))
 
 def get_strand(gene_id):
     query = conn.execute('SELECT id, name, strand, chromosome FROM gene WHERE id=?', (gene_id,))
