@@ -15,7 +15,7 @@ from math import ceil
 combined_colors = {
     'sla': '#332288',
     'sl': '#44AA99',
-    'l': '#AA4499',
+    'l': '#EA07C5',
     'la': '#DDCC77',
     's': '#117733',
     'sa': '#882255',
