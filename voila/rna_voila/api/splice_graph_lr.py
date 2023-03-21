@@ -226,8 +226,9 @@ class SpliceGraphLR:
                 # all_reads = _sr_reads + _lr_reads
                 # final_reads = ceil(median(all_reads)) if all_reads else 0
                 if junc[0] not in shortread[readssubkey]['combined']:
-                    _sr_reads, _lr_reads = self._even_strsize(_sr_reads, _lr_reads)
-                    shortread[readssubkey]['combined'][junc[0]] = {junc[1]: f"{_sr_reads}╦{_lr_reads}"}
+                    reads = self._format_reads(_sr_reads, _lr_reads)
+                    if reads:
+                        shortread[readssubkey]['combined'][junc[0]] = {junc[1]: reads}
                 else:
                     if junc[1] in shortread[readssubkey]['combined'][junc[0]]:
                         print('error: there seem to be overlapping junctions between the six categories!', junc)
@@ -235,10 +236,17 @@ class SpliceGraphLR:
                         assert False
                         #shortread[readssubkey]['combined'][junc[0]][junc[1]] += final_reads
                     else:
-                        _sr_reads, _lr_reads = self._even_strsize(_sr_reads, _lr_reads)
-                        shortread[readssubkey]['combined'][junc[0]][junc[1]] = f"{_sr_reads}╦{_lr_reads}"
+                        reads = self._format_reads(_sr_reads, _lr_reads)
+                        if reads:
+                            shortread[readssubkey]['combined'][junc[0]][junc[1]] = reads
 
         return shortread
+
+    def _format_reads(self, _sr_reads, _lr_reads):
+        if _sr_reads or _lr_reads:
+            _sr_reads, _lr_reads = self._even_strsize(_sr_reads, _lr_reads)
+            return f"{_sr_reads}╦{_lr_reads}"
+        return None
 
     def _overlaps(self, s1, e1, s2, e2):
         return s1 <= e2 and s2 <= e1
