@@ -244,8 +244,9 @@ class SpliceGraphLR:
 
     def _format_reads(self, _sr_reads, _lr_reads):
         if _sr_reads or _lr_reads:
-            _sr_reads, _lr_reads = self._even_strsize(_sr_reads, _lr_reads)
-            return f"{_sr_reads}╦{_lr_reads}"
+            #_sr_reads, _lr_reads = self._even_strsize(_sr_reads, _lr_reads)
+            #return f"{_sr_reads}╦{_lr_reads}"
+            return (_sr_reads, _lr_reads,)
         return None
 
     def _overlaps(self, s1, e1, s2, e2):

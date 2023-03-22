@@ -752,7 +752,22 @@ class SpliceGraphs {
     }
 
 
+
     junction_reads(sg, gene, style) {
+        function format_reads(r){
+            if (r){
+                if(Array.isArray(r)){
+                    const sr_letter_count = String(r[0]).length;
+                    const lr_letter_count = String(r[1]).length;
+                    const max_lettercount = Math.max(sr_letter_count, lr_letter_count);
+                    const _sr_reads = ' '.repeat(max_lettercount - sr_letter_count) + String(r[0]);
+                    const _lr_reads = String(r[1]) + ' '.repeat(max_lettercount - lr_letter_count);
+                    return `${_sr_reads}╦${_lr_reads}`;
+                }
+                return r;
+            }
+        }
+
         const experiment = sg.dataset.experiment;
         const reads = gene.junction_reads[experiment];
         const x = this.x;
@@ -768,7 +783,7 @@ class SpliceGraphs {
                 try {
                     const r = reads[d.start][d.end];
                     if (r)
-                        return r
+                        return format_reads(r);
                 } catch (TypeError) {
                     return '';
                 }
@@ -785,7 +800,7 @@ class SpliceGraphs {
                 }
             })
             .attr('text-anchor', 'middle')
-            .attr('font-family', 'sans-serif')
+            .attr('font-family', 'monospace')
             .attr('font-size', font_size);
     }
 
@@ -1274,10 +1289,42 @@ class SpliceGraphs {
         this.d = undefined;
     }
 
-    junctions_filter(gt, lt) {
+    junctions_filter(gt, lt, gtl, ltl) {
         const gene = this.gene;
         gt = parseInt(gt);
         lt = parseInt(lt);
+        gtl = parseInt(gtl);
+        ltl = parseInt(ltl);
+        const gtd = isNaN(gt);
+        const ltd = isNaN(lt);
+        const gtld = isNaN(gtl);
+        const ltld = isNaN(ltl);
+
+        function _determine(sr, lr){
+
+
+
+            const passed_gt = gtd || sr >= gt;
+            const passed_lt = ltd || sr <= lt;
+            const passed_gtl = gtld || lr >= gtl;
+            const passed_ltl = ltld || lr <= lt;
+
+            // if both short read filters undefined, only judge on long reads and vice versa
+            // otherwise, either long or short may pass in order for junction to pass.
+            if(sr === undefined){
+                return passed_gtl && passed_ltl
+            }else if(lr === undefined){
+                return passed_gt && passed_lt;
+            }else if(gtld && ltld){
+                return passed_gt && passed_lt;
+            }else if(gtd && ltd){
+                return passed_gtl && passed_ltl;
+            }else{
+                return (passed_gt && passed_lt) || (passed_gtl && passed_ltl);
+            }
+
+        }
+
 
         this.container
             .querySelectorAll('.splice-graph')
@@ -1288,31 +1335,47 @@ class SpliceGraphs {
 
                 d3.selectAll(sg.querySelectorAll('.junction-grp'))
                     .classed('reads-filter', d => {
-                        let r;
+                        let sr, lr;
                         try {
                             if (Array.isArray(junction_reads[d.start][d.end])){
-                                r = Math.max(junction_reads[d.start][d.end][0], junction_reads[d.start][d.end][1]);
+                                sr = junction_reads[d.start][d.end][0];
+                                lr = junction_reads[d.start][d.end][1];
                             } else {
-                                r = parseInt(junction_reads[d.start][d.end]) || 0;
+                                if(sg.dataset.group === "Long Reads"){
+                                    sr = undefined;
+                                    lr = parseInt(junction_reads[d.start][d.end]) || 0;
+                                }else{
+                                    sr = parseInt(junction_reads[d.start][d.end]) || 0;
+                                    lr = undefined;
+                                }
                             }
                         } catch (TypeError) {
-                            r = 0;
+                            sr = 0;
+                            lr = 0;
                         }
-                        return (!isNaN(gt) && !isNaN(lt) && r <= gt || r >= lt) || (!isNaN(gt) && r <= gt) || (!isNaN(lt) && r >= lt);
+                        return !(_determine(sr, lr));
                     })
                 d3.selectAll(sg.querySelectorAll('.intron-retention-grp'))
                     .classed('reads-filter', d => {
-                        let r;
+                        let sr, lr;
                         try {
                             if (Array.isArray(intron_retention_reads[d.start][d.end])){
-                                r = Math.max(intron_retention_reads[d.start][d.end][0], intron_retention_reads[d.start][d.end][1]);
+                                sr = intron_retention_reads[d.start][d.end][0];
+                                lr = intron_retention_reads[d.start][d.end][1];
                             } else {
-                                r = parseInt(intron_retention_reads[d.start][d.end]) || 0;
+                                if(sg.dataset.group === "Long Reads"){
+                                    sr = undefined;
+                                    lr = parseInt(intron_retention_reads[d.start][d.end]) || 0;
+                                }else{
+                                    sr = parseInt(intron_retention_reads[d.start][d.end]) || 0;
+                                    lr = undefined;
+                                }
                             }
                         } catch (TypeError) {
-                            r = 0;
+                            sr = 0;
+                            lr = 0;
                         }
-                        return (!isNaN(gt) && !isNaN(lt) && r <= gt || r >= lt) || (!isNaN(gt) && r <= gt) || (!isNaN(lt) && r >= lt);
+                        return !(_determine(sr, lr));
                     })
             })
 

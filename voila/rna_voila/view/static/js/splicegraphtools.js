@@ -161,25 +161,32 @@ class SpliceGraphTools {
 
         // activate/deactivate junction reads filter
         document.querySelector('#junction-reads-filter').onchange = (event) => {
-            document.querySelectorAll('#reads-greater-than, #reads-less-than').forEach(el => el.disabled = !el.disabled);
-            if (event.target.checked) {
-                junctions_filter()
-            } else {
-                this.sgs.junctions_filter()
-            }
+           junctions_filter()
+        };
+
+        // same as above for long reads
+        document.querySelector('#junction-lr-reads-filter').onchange = (event) => {
+            junctions_filter()
         };
 
         // adjust greater than and less than fields in junction filter
         const junctions_filter = () => {
+            let gt, lt, gtl, ltl;
             if (document.querySelector('#junction-reads-filter').checked) {
-                const gt = document.querySelector('#reads-greater-than').value;
-                const lt = document.querySelector('#reads-less-than').value;
-                this.sgs.junctions_filter(gt, lt)
+                gt = document.querySelector('#reads-greater-than').value;
+                lt = document.querySelector('#reads-less-than').value;
             }
+            if (document.querySelector('#junction-lr-reads-filter').checked) {
+                gtl = document.querySelector('#lr-reads-greater-than').value;
+                ltl = document.querySelector('#lr-reads-less-than').value;
+            }
+            this.sgs.junctions_filter(gt, lt, gtl, ltl);
         };
 
         document.querySelector('#reads-greater-than').oninput = junctions_filter;
         document.querySelector('#reads-less-than').oninput = junctions_filter;
+        document.querySelector('#lr-reads-greater-than').oninput = junctions_filter;
+        document.querySelector('#lr-reads-less-than').oninput = junctions_filter;
         junctions_filter();
 
 
