@@ -1289,25 +1289,34 @@ class SpliceGraphs {
         this.d = undefined;
     }
 
-    junctions_filter(gt, lt, gtl, ltl) {
+    junctions_filter(gts, lts, gtl, ltl, gtp, ltp, gtpl, ltpl) {
+        // args:
+        // for reads, greater than short, less than short, greater than long, less than long
+        // then for psi, similar order.
+
         const gene = this.gene;
-        gt = parseInt(gt);
-        lt = parseInt(lt);
+        gts = parseInt(gts);
+        lts = parseInt(lts);
         gtl = parseInt(gtl);
         ltl = parseInt(ltl);
-        const gtd = isNaN(gt);
-        const ltd = isNaN(lt);
+        const gtd = isNaN(gts);
+        const ltd = isNaN(lts);
         const gtld = isNaN(gtl);
         const ltld = isNaN(ltl);
+        gtp = parseFloat(gtp);
+        ltp = parseFloat(ltp);
+        gtpl = parseFloat(ltpl);
+        ltpl = parseFloat(ltpl);
+        const gtpd = isNaN(gtp);
+        const ltpd = isNaN(ltp);
+        const gtpld = isNaN(gtpl);
+        const ltpld = isNaN(ltpl);
 
-        function _determine(sr, lr){
-
-
-
-            const passed_gt = gtd || sr >= gt;
-            const passed_lt = ltd || sr <= lt;
+        function _determine_reads(sr, lr){
+            const passed_gt = gtd || sr >= gts;
+            const passed_lt = ltd || sr <= lts;
             const passed_gtl = gtld || lr >= gtl;
-            const passed_ltl = ltld || lr <= lt;
+            const passed_ltl = ltld || lr <= lts;
 
             // if both short read filters undefined, only judge on long reads and vice versa
             // otherwise, either long or short may pass in order for junction to pass.
@@ -1322,7 +1331,31 @@ class SpliceGraphs {
             }else{
                 return (passed_gt && passed_lt) || (passed_gtl && passed_ltl);
             }
+        }
 
+        function _determine_psis(sr, lr){
+            const passed_gt = gtpd || sr >= gtp;
+            const passed_lt = ltpd || sr <= ltp;
+            const passed_gtl = gtpld || lr >= gtpl;
+            const passed_ltl = ltpld || lr <= ltps;
+
+            // if both short read filters undefined, only judge on long reads and vice versa
+            // otherwise, either long or short may pass in order for junction to pass.
+            if(sr === undefined){
+                return passed_gtl && passed_ltl
+            }else if(lr === undefined){
+                return passed_gt && passed_lt;
+            }else if(gtpld && ltpld){
+                return passed_gt && passed_lt;
+            }else if(gtpd && ltpd){
+                return passed_gtl && passed_ltl;
+            }else{
+                return (passed_gt && passed_lt) || (passed_gtl && passed_ltl);
+            }
+        }
+
+        function _determine(sr, lr, sp, lp){
+            return _determine_reads(sr, lr) && _determine_psis(sp, lp);
         }
 
 
@@ -1332,50 +1365,67 @@ class SpliceGraphs {
                 const experiment = sg.dataset.experiment;
                 const junction_reads = gene.junction_reads[experiment];
                 const intron_retention_reads = gene.intron_retention_reads[experiment];
+                const junction_psis = gene.junction_psis;
 
                 d3.selectAll(sg.querySelectorAll('.junction-grp'))
                     .classed('reads-filter', d => {
-                        let sr, lr;
+                        let sr, lr, sp, lp;
                         try {
                             if (Array.isArray(junction_reads[d.start][d.end])){
                                 sr = junction_reads[d.start][d.end][0];
                                 lr = junction_reads[d.start][d.end][1];
+                                sp = junction_psis[d.start][d.end];
+                                lp = junction_psis[d.start][d.end];
                             } else {
                                 if(sg.dataset.group === "Long Reads"){
                                     sr = undefined;
                                     lr = parseInt(junction_reads[d.start][d.end]) || 0;
+                                    sp = undefined;
+                                    lp = junction_psis[d.start][d.end] || 0;
                                 }else{
                                     sr = parseInt(junction_reads[d.start][d.end]) || 0;
                                     lr = undefined;
+                                    sp = junction_psis[d.start][d.end] || 0;
+                                    lp = undefined;
                                 }
                             }
                         } catch (TypeError) {
                             sr = 0;
                             lr = 0;
+                            sp = 0;
+                            lp = 0;
                         }
-                        return !(_determine(sr, lr));
+                        return !(_determine(sr, lr, sp, lp));
                     })
                 d3.selectAll(sg.querySelectorAll('.intron-retention-grp'))
                     .classed('reads-filter', d => {
-                        let sr, lr;
+                        let sr, lr, sp, lp;
                         try {
                             if (Array.isArray(intron_retention_reads[d.start][d.end])){
                                 sr = intron_retention_reads[d.start][d.end][0];
                                 lr = intron_retention_reads[d.start][d.end][1];
+                                sp = junction_psis[d.start][d.end];
+                                lp = junction_psis[d.start][d.end];
                             } else {
                                 if(sg.dataset.group === "Long Reads"){
                                     sr = undefined;
                                     lr = parseInt(intron_retention_reads[d.start][d.end]) || 0;
+                                    sp = undefined;
+                                    lp = junction_psis[d.start][d.end] || 0;
                                 }else{
                                     sr = parseInt(intron_retention_reads[d.start][d.end]) || 0;
                                     lr = undefined;
+                                    sp = junction_psis[d.start][d.end] || 0;
+                                    lp = undefined;
                                 }
                             }
                         } catch (TypeError) {
                             sr = 0;
                             lr = 0;
+                            sp = 0;
+                            lp = 0;
                         }
-                        return !(_determine(sr, lr));
+                        return !(_determine(sr, lr, sp, lp));
                     })
             })
 

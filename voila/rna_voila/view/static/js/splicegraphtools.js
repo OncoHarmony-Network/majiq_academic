@@ -160,18 +160,12 @@ class SpliceGraphTools {
         };
 
         // activate/deactivate junction reads filter
-        document.querySelector('#junction-reads-filter').onchange = (event) => {
-           junctions_filter()
-        };
 
-        // same as above for long reads
-        document.querySelector('#junction-lr-reads-filter').onchange = (event) => {
-            junctions_filter()
-        };
 
         // adjust greater than and less than fields in junction filter
         const junctions_filter = () => {
             let gt, lt, gtl, ltl;
+            let gtp, ltp, gtpl, ltpl;
             if (document.querySelector('#junction-reads-filter').checked) {
                 gt = document.querySelector('#reads-greater-than').value;
                 lt = document.querySelector('#reads-less-than').value;
@@ -180,13 +174,29 @@ class SpliceGraphTools {
                 gtl = document.querySelector('#lr-reads-greater-than').value;
                 ltl = document.querySelector('#lr-reads-less-than').value;
             }
-            this.sgs.junctions_filter(gt, lt, gtl, ltl);
+            if (document.querySelector('#junction-psi-filter').checked) {
+                gtp = document.querySelector('#psi-greater-than').value;
+                ltp = document.querySelector('#psi-less-than').value;
+            }
+            if (document.querySelector('#junction-lr-psi-filter').checked) {
+                gtpl = document.querySelector('#lr-psi-greater-than').value;
+                ltpl = document.querySelector('#lr-psi-less-than').value;
+            }
+            this.sgs.junctions_filter(gt, lt, gtl, ltl, gtp, ltp, gtpl, ltpl);
         };
 
+        document.querySelector('#junction-reads-filter').onchange = junctions_filter;
+        document.querySelector('#junction-lr-reads-filter').onchange = junctions_filter;
+        document.querySelector('#junction-psi-filter').onchange = junctions_filter;
+        document.querySelector('#junction-lr-psi-filter').onchange = junctions_filter;
         document.querySelector('#reads-greater-than').oninput = junctions_filter;
         document.querySelector('#reads-less-than').oninput = junctions_filter;
         document.querySelector('#lr-reads-greater-than').oninput = junctions_filter;
         document.querySelector('#lr-reads-less-than').oninput = junctions_filter;
+        document.querySelector('#psi-greater-than').oninput = junctions_filter;
+        document.querySelector('#psi-less-than').oninput = junctions_filter;
+        document.querySelector('#lr-psi-greater-than').oninput = junctions_filter;
+        document.querySelector('#lr-psi-less-than').oninput = junctions_filter;
         junctions_filter();
 
 

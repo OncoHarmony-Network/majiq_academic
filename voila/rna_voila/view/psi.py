@@ -142,6 +142,43 @@ def nav(gene_id):
         })
 
 
+def add_psis(gd):
+
+    # for name in gd['experiment_names']:
+    #     junc_psis[name] = {}
+    junc_psis = {}
+
+    with ViewPsis() as v:
+        grp_name = v.group_names[0]
+        lsv_list = (x['lsv_id'].decode('utf-8') for x in Index.psi(gd['id']))
+
+        for lsv_id in lsv_list:
+            # print(lsv_id)
+            psi = v.lsv(lsv_id)
+            for psimean, junc_coord in zip(psi.group_means[grp_name], psi.junctions):
+
+                junc_start, junc_end = int(junc_coord[0]), int(junc_coord[1])
+                try:
+                    previous_psimean = junc_psis[junc_start][junc_end]
+                    psimean = (psimean + previous_psimean) / 2.0
+                except:
+                    pass
+
+                try:
+                    junc_psis[junc_start][junc_end] = psimean
+                except KeyError:
+                    junc_psis[junc_start] = {junc_end: psimean}
+
+            # print(psi.group_means)
+            # print(psi.junctions)
+            # print(dir(psi))
+            # lsv_type = psi.lsv_type
+            #
+            # lsv_exons = sg.lsv_exons(gene_id, psi.junctions)
+            # start, end = views.lsv_boundries(lsv_exons)
+    gd['junction_psis'] = junc_psis
+    return gd
+
 @bp.route('/splice-graph/<gene_id>', methods=('POST', 'GET'))
 def splice_graph(gene_id):
     with ViewSpliceGraph(omit_simplified=session.get('omit_simplified', False)) as sg, ViewPsis() as v:
@@ -149,6 +186,7 @@ def splice_graph(gene_id):
         gd = sg.gene_experiment(gene_id, exp_names)
         gd['experiment_names'] = exp_names
         gd['group_names'] = v.group_names
+        gd = add_psis(gd)
         return jsonify(gd)
 
 testfile = '/home/sjewell/PycharmProjects/majiq/longreads/debug.lr.voila'
@@ -171,9 +209,10 @@ def splice_graph_combined(gene_id):
         with ViewSpliceGraph(omit_simplified=session.get('omit_simplified', False)) as sg, ViewPsis() as v:
             exp_names = v.splice_graph_experiment_names
             sr = sg.gene_experiment(gene_id, exp_names)
-            combined = sgl.combined_gene(gene_id, sr)
+            gd = sgl.combined_gene(gene_id, sr)
+            gd = add_psis(gd)
 
-            return jsonify(combined)
+            return jsonify(gd)
 
 @bp.route('/summary-table/<gene_id>', methods=('POST',))
 def summary_table(gene_id):
