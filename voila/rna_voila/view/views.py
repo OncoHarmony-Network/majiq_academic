@@ -11,7 +11,7 @@ from rna_voila.config import ViewConfig
 from rna_voila.exceptions import UnknownAnalysisType
 from rna_voila.index import Index
 from rna_voila.voila_log import voila_log
-import os
+import os, sys
 from flask import Blueprint, Flask
 from flask_session import Session
 import tempfile, atexit, shutil
@@ -104,6 +104,10 @@ def run_service():
 def get_app():
     Index()
     analysis_type = ViewConfig().analysis_type
+    if ViewConfig().long_read_file and analysis_type != constants.ANALYSIS_PSI:
+        voila_log().critical("It is currently not supported to use long-read inputs with analysis other than PSI")
+        sys.exit(-1)
+
 
     if not analysis_type:
         run_app = splicegraph.app
