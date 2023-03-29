@@ -1228,6 +1228,10 @@ class SpliceGraphs {
                                 d3.select(el)
                                     .classed('mouseover-filter', d => d.start !== datum.start || d.end !== datum.end)
                             });
+                            document.querySelectorAll('.exon-grp').forEach(el => {
+                                d3.select(el)
+                                    .classed('mouseover-filter', d => !((datum.end >= d.start-1 && datum.end <= d.end) || (datum.start >= d.start && datum.start <= d.end + 1)))
+                            });
                         }
                     };
 
@@ -1238,6 +1242,7 @@ class SpliceGraphs {
 
                         el.classList.remove('mouseover');
                         document.querySelectorAll('.junction-grp, .intron-retention-grp').forEach(el => el.classList.remove('mouseover-filter'));
+                        document.querySelectorAll('.exon-grp').forEach(el => el.classList.remove('mouseover-filter'));
                     };
 
 
