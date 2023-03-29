@@ -351,12 +351,13 @@ class SpliceGraphs {
 
     intron_retention_reads(sg, gene, style) {
         const reads = gene.intron_retention_reads[sg.dataset.experiment];
+        const format_reads = this.format_reads;
         d3.select(sg).selectAll('.intron-retention-reads')
             .interrupt()
             .transition(this.t())
             .text(d => {
                 const x = this.find_reads(reads, d);
-                return x ? x : null;
+                return x ? format_reads(x) : null;
             })
 
             .attr('x', d => this.x(d.start + ((d.end - d.start + 1) / 2)))
@@ -751,22 +752,22 @@ class SpliceGraphs {
             .text(() => strand === '+' ? '^' : '↳')
     }
 
-
+    format_reads(r){
+        if (r){
+            if(Array.isArray(r)){
+                const sr_letter_count = String(r[0]).length;
+                const lr_letter_count = String(r[1]).length;
+                const max_lettercount = Math.max(sr_letter_count, lr_letter_count);
+                const _sr_reads = ' '.repeat(max_lettercount - sr_letter_count) + String(r[0]);
+                const _lr_reads = String(r[1]) + ' '.repeat(max_lettercount - lr_letter_count);
+                return `${_sr_reads}╦${_lr_reads}`;
+            }
+            return r;
+        }
+    }
 
     junction_reads(sg, gene, style) {
-        function format_reads(r){
-            if (r){
-                if(Array.isArray(r)){
-                    const sr_letter_count = String(r[0]).length;
-                    const lr_letter_count = String(r[1]).length;
-                    const max_lettercount = Math.max(sr_letter_count, lr_letter_count);
-                    const _sr_reads = ' '.repeat(max_lettercount - sr_letter_count) + String(r[0]);
-                    const _lr_reads = String(r[1]) + ' '.repeat(max_lettercount - lr_letter_count);
-                    return `${_sr_reads}╦${_lr_reads}`;
-                }
-                return r;
-            }
-        }
+
 
         const experiment = sg.dataset.experiment;
         const reads = gene.junction_reads[experiment];
@@ -775,6 +776,7 @@ class SpliceGraphs {
         const exon_height = this.exon_height;
         const font_size = this.font_size;
         const junc_height = this.junction_height;
+        const format_reads = this.format_reads;
         d3.select(sg).selectAll('.junction-reads')
             .interrupt()
             .data(gene.junctions)
