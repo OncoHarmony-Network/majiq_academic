@@ -274,7 +274,10 @@
         </div>
         <div class="pure-u-1-5">
             <form class="splice-graph-form pure-form pure-form-aligned">
-                <fieldset>
+                <fieldset class="upper-fieldset-group">
+                    <div class="pure-control-group">
+                        <label style="text-align: left;font-weight: 900;">Short Reads</label>
+                    </div>
                     <div class="pure-control-group">
                         <label for="junction-reads-filter">Reads Filter</label>
                         <input id="junction-reads-filter" type="checkbox" checked>
@@ -304,9 +307,12 @@
         </div>
         <div class="pure-u-1-5">
             <form class="splice-graph-form pure-form pure-form-aligned">
-                <fieldset>
+                <fieldset class="upper-fieldset-group">
                     <div class="pure-control-group">
-                        <label for="junction-lr-reads-filter">Long Reads Filter</label>
+                        <label style="text-align: left;font-weight: 900;">Long Reads</label>
+                    </div>
+                    <div class="pure-control-group">
+                        <label for="junction-lr-reads-filter">Reads Filter</label>
                         <input id="junction-lr-reads-filter" type="checkbox" checked>
                     </div>
                     <div class="junction-filter pure-control-group">
@@ -318,8 +324,12 @@
                         <input id="lr-reads-less-than">
                     </div>
                     <div class="pure-control-group">
-                        <label for="junction-lr-psi-filter">Long Reads PSI Filter</label>
+
+
+                        <label for="junction-lr-psi-filter">PSI Filter</label>
                         <input id="junction-lr-psi-filter" type="checkbox">
+                        <label for="lock-lr-psi-filter">Lock to short read</label>
+                        <input type='checkbox' id="lock-lr-psi-filter" checked><label for="lock-lr-psi-filter"></label>
                     </div>
                     <div class="junction-filter pure-control-group">
                         <label for="lr-psi-greater-than">Psi Greater Than</label>

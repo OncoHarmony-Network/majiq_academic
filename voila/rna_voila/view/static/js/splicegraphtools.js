@@ -159,13 +159,22 @@ class SpliceGraphTools {
             this.sgs.update(250);
         };
 
-        // activate/deactivate junction reads filter
-
+        // toggle locking psi filter disabling inputs
+        const filter_lock_check = () => {
+            const _readonly = document.querySelector('#lock-lr-psi-filter').checked;
+            document.querySelector('#lr-psi-greater-than').readOnly = _readonly;
+            document.querySelector('#lr-psi-less-than').readOnly = _readonly;
+            if(_readonly){
+                document.querySelector('#lr-psi-greater-than').value = document.querySelector('#psi-greater-than').value;
+                document.querySelector('#lr-psi-less-than').value = document.querySelector('#psi-less-than').value;
+            }
+        }
 
         // adjust greater than and less than fields in junction filter
         const junctions_filter = () => {
             let gt, lt, gtl, ltl;
             let gtp, ltp, gtpl, ltpl;
+            filter_lock_check();
             if (document.querySelector('#junction-reads-filter').checked) {
                 gt = document.querySelector('#reads-greater-than').value;
                 lt = document.querySelector('#reads-less-than').value;
@@ -185,6 +194,7 @@ class SpliceGraphTools {
             this.sgs.junctions_filter(gt, lt, gtl, ltl, gtp, ltp, gtpl, ltpl);
         };
 
+        document.querySelector('#lock-lr-psi-filter').onchange = filter_lock_check;
         document.querySelector('#junction-reads-filter').onchange = junctions_filter;
         document.querySelector('#junction-lr-reads-filter').onchange = junctions_filter;
         document.querySelector('#junction-psi-filter').onchange = junctions_filter;
@@ -198,6 +208,7 @@ class SpliceGraphTools {
         document.querySelector('#lr-psi-greater-than').oninput = junctions_filter;
         document.querySelector('#lr-psi-less-than').oninput = junctions_filter;
         junctions_filter();
+
 
 
     }

@@ -277,3 +277,31 @@ form.het-highlight-form label {
     cursor: ns-resize;
     z-index: 100;
 }
+
+.pure-form .upper-fieldset-group{
+    border: dashed #2458d5 1px;
+    padding: 2px;
+    margin: 3px;
+    border-radius: 6px;
+}
+
+#lock-lr-psi-filter {
+    display:none;
+}
+
+#lock-lr-psi-filter + label
+{
+    background: url("/static/img/unlock.svg");
+    height: 16px;
+    width: 12px;
+    display:inline-block;
+    padding: 0 0 0 0px;
+}
+#lock-lr-psi-filter:checked + label
+{
+    background: url("/static/img/lock.svg");
+    height: 16px;
+    width: 12px;
+    display:inline-block;
+    padding: 0 0 0 0px;
+}
