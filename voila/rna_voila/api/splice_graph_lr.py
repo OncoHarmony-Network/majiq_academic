@@ -259,13 +259,17 @@ class SpliceGraphLR:
         """
 
         #print(shortread['exons'])
-        for sr_exon in shortread['exons']:
+        for transcript in self.lrdb.get(gene_id, []):
 
-            for transcript in self.lrdb.get(gene_id, []):
+            for lr_exon in transcript['exons']:
+
+                found_lr_exon = False
+                for sr_exon in shortread['exons']:
                 #print(transcript)
-                for lr_exon in transcript['exons']:
+
                     #print(lr_exon, sr_exon, self._overlaps(lr_exon[0], lr_exon[1], sr_exon['annotated_start'], sr_exon['annotated_end']))
                     if self._overlaps(lr_exon[0], lr_exon[1], sr_exon['annotated_start'], sr_exon['annotated_end']):
+                        found_lr_exon = True
                         if lr_exon[0] < sr_exon['start']:
                             sr_exon['start'] = lr_exon[0]
                             sr_exon['ext_color'] = combined_colors['l']
@@ -273,8 +277,17 @@ class SpliceGraphLR:
                             sr_exon['end'] = lr_exon[1]
                             sr_exon['ext_color'] = combined_colors['l']
 
-        return shortread
+                if not found_lr_exon:
+                    shortread['exons'] = list(shortread['exons'])
+                    shortread['exons'].append({
+                        'start': lr_exon[0], 'end': lr_exon[1], 'annotated': 0, 'color': combined_colors['l'], 'annotated_start': lr_exon[0], 'annotated_end': lr_exon[1]
+                    })
+                    shortread['exons'] = sorted(shortread['exons'], key=lambda d: d['start'])
+                    shortread['start'] = min(shortread['start'], lr_exon[0])
+                    shortread['end'] = max(shortread['end'], lr_exon[1])
 
+
+        return shortread
 
     def combined_gene(self, gene_id, shortread):
 

@@ -469,6 +469,10 @@ class SpliceGraphs {
                         this.setAttribute('fill', combined_colors['ao']);
                         this.setAttribute('stroke', 'black');
                         break;
+                    case combined_colors['l']:
+                        this.setAttribute('fill', combined_colors['l']);
+                        this.setAttribute('stroke', 'black');
+                        break;
                     default:
                         this.setAttribute('fill', 'transparent');
                         this.setAttribute('stroke', 'black');
@@ -1232,21 +1236,23 @@ class SpliceGraphs {
                                 d3.select(el)
                                     .classed('mouseover-filter', d => !((datum.end >= d.start-1 && datum.end <= d.end) || (datum.start >= d.start && datum.start <= d.end + 1)))
                             });
-                            document.querySelectorAll('.splice-graph').forEach(el => {
-                                if(el.dataset.group == "Long Reads"){
-                                    let found_junc = false;
-                                    el.querySelectorAll('.junction-grp, .intron-retention-grp').forEach(el2 => {
-                                        const d = d3.select(el2).data()[0];
-                                        if(!(d.start !== datum.start || d.end !== datum.end)){
-                                            found_junc = true;
+                            if(!el.classList.contains('exon-grp')){
+                                document.querySelectorAll('.splice-graph').forEach(el => {
+                                    if(el.dataset.group == "Long Reads"){
+                                        let found_junc = false;
+                                        el.querySelectorAll('.junction-grp, .intron-retention-grp').forEach(el2 => {
+                                            const d = d3.select(el2).data()[0];
+                                            if(!(d.start !== datum.start || d.end !== datum.end)){
+                                                found_junc = true;
+                                            }
+                                        });
+                                        if(!found_junc){
+                                            el.style.display = "none";
                                         }
-                                    });
-                                    if(!found_junc){
-                                        el.style.display = "none";
                                     }
-                                }
+                                });
+                            }
 
-                            });
                         }
                     };
 
