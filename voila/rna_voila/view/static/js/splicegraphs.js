@@ -1232,6 +1232,21 @@ class SpliceGraphs {
                                 d3.select(el)
                                     .classed('mouseover-filter', d => !((datum.end >= d.start-1 && datum.end <= d.end) || (datum.start >= d.start && datum.start <= d.end + 1)))
                             });
+                            document.querySelectorAll('.splice-graph').forEach(el => {
+                                if(el.dataset.group == "Long Reads"){
+                                    let found_junc = false;
+                                    el.querySelectorAll('.junction-grp, .intron-retention-grp').forEach(el2 => {
+                                        const d = d3.select(el2).data()[0];
+                                        if(!(d.start !== datum.start || d.end !== datum.end)){
+                                            found_junc = true;
+                                        }
+                                    });
+                                    if(!found_junc){
+                                        el.style.display = "none";
+                                    }
+                                }
+
+                            });
                         }
                     };
 
@@ -1243,6 +1258,7 @@ class SpliceGraphs {
                         el.classList.remove('mouseover');
                         document.querySelectorAll('.junction-grp, .intron-retention-grp').forEach(el => el.classList.remove('mouseover-filter'));
                         document.querySelectorAll('.exon-grp').forEach(el => el.classList.remove('mouseover-filter'));
+                        document.querySelectorAll('.splice-graph').forEach(el => el.style.display = "");
                     };
 
 

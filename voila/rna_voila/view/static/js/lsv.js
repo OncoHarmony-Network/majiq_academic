@@ -778,13 +778,13 @@ class Lsv {
         var MARGINS = [10, 2, 2, 2];
         var SEP_FIG_TEXT = canvas.height * .05;
         var SEP_FIG = canvas.width * .01;
-        console.log(SEP_FIG)
+
         var num_fig = 12;
         var area_figures = [
             canvas.width - MARGINS[0] - MARGINS[1] - (num_fig - 1) * SEP_FIG,
             canvas.height * .7 - MARGINS[2] - SEP_FIG_TEXT
         ];
-        console.log(area_figures)
+
         //var area_texts = [canvas.width - MARGINS[0] - MARGINS[1], canvas.height * .3 - MARGINS[2] - SEP_FIG_TEXT];
         //var legend_line_length = 20;
         var x = MARGINS[0];
