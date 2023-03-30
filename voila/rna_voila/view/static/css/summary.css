@@ -237,13 +237,7 @@ form.het-highlight-form label {
     box-shadow: 0 0 12px #ffd400;
 }
 
-.lsv-single-compact-percentiles, .psi-violin-plot, .dpsi-violin, .excl-incl-rect{
-    cursor: pointer;
-}
 
-.lsv-single-compact-percentiles:hover, .psi-violin-plot:hover, .dpsi-violin:hover, .excl-incl-rect:hover{
-    box-shadow: 0 0 12px #ffd400;
-}
 
 .violin-download, .heatmap-download{
     float:left;

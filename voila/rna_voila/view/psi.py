@@ -232,10 +232,13 @@ def summary_table(gene_id):
         for idx, record, records in dt.callback():
             lsv_id = record['lsv_id'].decode('utf-8')
             psi = v.lsv(lsv_id)
+
             lsv_type = psi.lsv_type
 
             gene = sg.gene(gene_id)
             lsv_exons = sg.lsv_exons(gene_id, psi.junctions)
+
+
             start, end = views.lsv_boundries(lsv_exons)
             ucsc = views.ucsc_href(sg.genome, gene['chromosome'], start, end)
 
@@ -248,6 +251,7 @@ def summary_table(gene_id):
                 highlight,
                 lsv_id,
                 lsv_type,
+                grp_name,
                 grp_name,
                 ucsc
             ]
@@ -282,7 +286,7 @@ def psi_splice_graphs():
 @bp.route('/lsv-data/<lsv_id>', methods=('POST',))
 def lsv_data(lsv_id):
 
-    with ViewSpliceGraph(omit_simplified=session.get('omit_simplified', False)) as sg, ViewPsis() as m:
+    with ViewSpliceGraph(omit_simplified=session.get('omit_simplified', False)) as sg, ViewPsis() as m, SpliceGraphLR(ViewConfig().long_read_file) as sgl:
         psi = m.lsv(lsv_id)
         ref_exon = psi.reference_exon
         gene_id = psi.gene_id
@@ -291,15 +295,29 @@ def lsv_data(lsv_id):
         exons = sg.exons(gene_id)
         exon_number = views.find_exon_number(exons, ref_exon, strand)
 
-        return jsonify({
-            'lsv': {
-                'name': m.group_names[0],
-                'junctions': psi.junctions.tolist(),
-                'group_means': dict(psi.group_means),
-                'group_bins': dict(psi.group_bins)
-            },
-            'exon_number': exon_number
-        })
+        lr_group_means = {m.group_names[0]: sgl.combined_junctions(gene_id, psi.junctions)}
+        lr_group_bins = {m.group_names[0]: [[0] * 40] * len(psi.junctions)}
+
+        return jsonify([
+            {
+                'lsv': {
+                    'name': m.group_names[0],
+                    'junctions': psi.junctions.tolist(),
+                    'group_means': dict(psi.group_means),
+                    'group_bins': dict(psi.group_bins)
+                },
+                'exon_number': exon_number
+            }, {
+                'lsv': {
+                    'name': m.group_names[0],
+                    'junctions': psi.junctions.tolist(),
+                    'group_means': lr_group_means,
+                    'group_bins': lr_group_bins
+                },
+                'exon_number': exon_number
+            }
+
+        ])
 
 @bp.route('/violin-data', methods=('POST',))
 @bp.route('/violin-data/<lsv_id>', methods=('POST',))

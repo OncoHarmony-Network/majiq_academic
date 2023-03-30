@@ -296,3 +296,31 @@ class SpliceGraphLR:
         shortread = self._combine_exons(gene_id, shortread)
 
         return shortread
+
+    def combined_junctions(self, gene_id, lsv_junctions):
+        """
+        Figure out LR junction LSVs that match with short read labeled LSVs
+        """
+        lr_equiv_reads = []
+        total_reads = 0
+
+        all_lr_transcripts = self.lrdb.get(gene_id, [])
+
+
+        for seek_junc in lsv_junctions:
+            for transcript in all_lr_transcripts:
+                for j, r in zip(transcript['junctions'], transcript['junction_reads']):
+                    if j[0] == seek_junc[0] and j[1] == seek_junc[1]:
+                        total_reads += r
+                        lr_equiv_reads.append(r)
+                        break
+                else:
+                    continue
+                break
+            else:
+                lr_equiv_reads.append(0)
+
+        assert len(lr_equiv_reads) == len(lsv_junctions)
+        if total_reads > 0:
+            lr_equiv_reads = [r / total_reads for r in lr_equiv_reads]
+        return lr_equiv_reads

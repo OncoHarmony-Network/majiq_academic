@@ -186,15 +186,29 @@
 
                                 const lsv_id = tds[1].textContent;
                                 json_ajax('{{ url_for("main.lsv_data") }}/' + encodeURIComponent(lsv_id))
-                                    .then(lsv_data => {
-                                        const lsv = new Lsv(lsv_data);
-                                        const violin = new Violin(lsv_data.lsv);
-                                        const s = n.querySelector('.psi-violin-plot');
+                                    .then(all_lsv_data => {
+                                        const lsv_data = all_lsv_data[0];
+                                        const lr_lsv_data = all_lsv_data[1];
 
+                                        const lsv = new Lsv(lsv_data);
+
+                                        const violin = new Violin(lsv_data.lsv);
                                         lsv.cartoon(n.querySelector('.lsv-cartoon'));
+
+                                        const s = n.querySelector('.psi-violin-plot');
                                         lsv.draw_lsv_compact_stack_bars(n.querySelector('.lsv-single-compact-percentiles'));
                                         $(s).hide();
                                         violin.psi(s);
+
+                                        const lr_lsv = new Lsv(lr_lsv_data);
+                                        const lr_violin = new Violin(lr_lsv_data.lsv);
+
+                                        const lr_s = n.querySelector('.lr-psi-violin-plot');
+                                        lr_lsv.draw_lsv_compact_stack_bars(n.querySelector('.lr-lsv-single-compact-percentiles'));
+                                        $(lr_s).hide();
+                                        lr_violin.psi(lr_s);
+
+
 
 
                                     });
@@ -372,6 +386,23 @@
                                 targets: 4,
                                 sortable: false,
                                 render: data => {
+                                    const compact = document.createElement('canvas');
+                                    compact.classList.add('lr-lsv-single-compact-percentiles');
+                                    compact.dataset.group = data;
+
+                                    const violin = document.createElement('svg');
+                                    violin.classList.add('lr-psi-violin-plot');
+                                    violin.setAttribute('width', '0');
+                                    violin.setAttribute('height', '0');
+                                    violin.dataset.group = data;
+
+                                    return compact.outerHTML + violin.outerHTML
+                                }
+                            },
+                            {
+                                targets: 5,
+                                sortable: false,
+                                render: data => {
                                     const btn = document.createElement('button');
                                     btn.textContent = 'Copy LSV';
                                     btn.classList.add('pure-button', 'copy-lsv');
@@ -399,6 +430,14 @@
                 const parent = event.target.closest('td');
                 const violin = parent.querySelector('.psi-violin-plot');
                 const compact = parent.querySelector('.lsv-single-compact-percentiles');
+                $(violin).toggle();
+                $(compact).toggle();
+            })
+        $('#results tbody')
+            .on('click', '.lr-psi-violin-plot, .lr-lsv-single-compact-percentiles', event => {
+                const parent = event.target.closest('td');
+                const violin = parent.querySelector('.lr-psi-violin-plot');
+                const compact = parent.querySelector('.lr-lsv-single-compact-percentiles');
                 $(violin).toggle();
                 $(compact).toggle();
             })
@@ -477,6 +516,7 @@
                     <th>LSV ID</th>
                     <th>LSV Type</th>
                     <th>Ψ per Junction</th>
+                    <th>LR Ψ per Junction</th>
                     <th>Links</th>
                 </tr>
                 </thead>

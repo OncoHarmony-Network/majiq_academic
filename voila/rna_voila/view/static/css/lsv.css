@@ -8,7 +8,7 @@
     font-size: 12px;
 }
 
-.lsv-single-compact-percentiles {
+.lsv-single-compact-percentiles, .lr-lsv-single-compact-percentiles {
     width: 20px;
     height: 80px;
     border: 2pt solid darkgrey;
@@ -16,4 +16,12 @@
 
 .lsv-table .heat-map-outer, .lsv-table .heat-map, .psi-violin-plot{
     overflow: visible !important;
+}
+
+.lsv-single-compact-percentiles, .psi-violin-plot, .lr-lsv-single-compact-percentiles, .lr-psi-violin-plot, .dpsi-violin, .excl-incl-rect{
+    cursor: pointer;
+}
+
+.lsv-single-compact-percentiles:hover, .psi-violin-plot:hover, .lr-lsv-single-compact-percentiles:hover, .lr-psi-violin-plot:hover, .dpsi-violin:hover, .excl-incl-rect:hover{
+    box-shadow: 0 0 12px #ffd400;
 }
