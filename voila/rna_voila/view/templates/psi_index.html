@@ -20,7 +20,7 @@
 
 
                     json_ajax('{{ url_for("main.lsv_data") }}/' + encodeURIComponent(lsv_id)).then(lsv_data => {
-
+                        lsv_data = lsv_data[0]; // only short read for now.
                         const lsv = new Lsv(lsv_data);
                         lsv.cartoon(n.querySelector('.lsv-cartoon'));
 
