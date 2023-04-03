@@ -129,7 +129,12 @@
                         })
                     };
 
-                    sgs.init_create().then(s => new SpliceGraphTools(s, gene, highlight_lsvs));
+                    sgs.init_create().then(s => {
+                        new SpliceGraphTools(s, gene, highlight_lsvs);
+                        // When elements are hovered over and hidden, a problem that can happen is that the area will scroll violently due to the height change
+                        // To mitigate this we fix the height of the splice graphs container
+                        $('.splice-graph-container').css('min-height', $('.splice-graph-container').height() + 'px');
+                    });
 
                     document.querySelectorAll('.lsv-cartoon').forEach(async function (c) {
                         const lsv_id = c.closest('.lsv').dataset.lsvId;
@@ -421,6 +426,7 @@
                         ]
                     });
                     {% endif %}
+
                 });
             });
         });
