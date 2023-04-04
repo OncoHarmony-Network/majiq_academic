@@ -612,7 +612,6 @@ class SpliceGraphs {
             .interrupt()
             .transition(this.t())
             .text(function (d, i) {
-                console.log(d.number);
                 if (d.color == 'hidden'){
                     return '';
                 }
