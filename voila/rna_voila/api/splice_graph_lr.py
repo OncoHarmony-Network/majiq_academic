@@ -60,6 +60,7 @@ class SpliceGraphLR:
                         "is_constitutive": 0,
                         "is_simplified": 0,
                         "start": j[0],
+                        "presence": "l"
                     }
                     for j in transcript['junctions']
                 ],
@@ -75,6 +76,7 @@ class SpliceGraphLR:
                         "is_constitutive": 0,
                         "is_simplified": 0,
                         "start": j[0],
+                        "presence": "l"
                     }
                     for j in transcript['intron_retention']
                 ],
@@ -199,6 +201,7 @@ class SpliceGraphLR:
                 shortread[subkey].append({
                     "annotated": 1,
                     "color": combined_colors[_type],
+                    "presence": _type,
                     "end": junc[1],
                     #"gene_id": "ENSMUSG00000031134",
                     "has_reads": 1,

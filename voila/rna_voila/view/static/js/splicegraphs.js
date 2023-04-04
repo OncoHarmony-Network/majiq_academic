@@ -1318,7 +1318,7 @@ class SpliceGraphs {
         this.d = undefined;
     }
 
-    junctions_filter(gts, lts, gtl, ltl, gtp, ltp, gtpl, ltpl) {
+    junctions_filter(gts, lts, gtl, ltl, gtp, ltp, gtpl, ltpl, presence) {
         // args:
         // for reads, greater than short, less than short, greater than long, less than long
         // then for psi, similar order.
@@ -1342,6 +1342,7 @@ class SpliceGraphs {
         const ltpld = isNaN(ltpl);
 
         function _determine_reads(sr, lr){
+
             const passed_gt = gtd || sr >= gts;
             const passed_lt = ltd || sr <= lts;
             const passed_gtl = gtld || lr >= gtl;
@@ -1383,7 +1384,10 @@ class SpliceGraphs {
             }
         }
 
-        function _determine(sr, lr, sp, lp){
+        function _determine(sr, lr, sp, lp, _j_presence){
+            if (presence && !isInArr(_j_presence, presence)){
+                return false;
+            }
             return _determine_reads(sr, lr) && _determine_psis(sp, lp);
         }
 
@@ -1399,6 +1403,8 @@ class SpliceGraphs {
                 d3.selectAll(sg.querySelectorAll('.junction-grp'))
                     .classed('reads-filter', d => {
                         let sr, lr, sp, lp;
+
+
                         try {
                             if (Array.isArray(junction_reads[d.start][d.end])){
                                 sr = junction_reads[d.start][d.end][0];
@@ -1424,7 +1430,7 @@ class SpliceGraphs {
                             sp = 0;
                             lp = 0;
                         }
-                        return !(_determine(sr, lr, sp, lp));
+                        return !(_determine(sr, lr, sp, lp, d.presence));
                     })
                 d3.selectAll(sg.querySelectorAll('.intron-retention-grp'))
                     .classed('reads-filter', d => {
@@ -1454,7 +1460,7 @@ class SpliceGraphs {
                             sp = 0;
                             lp = 0;
                         }
-                        return !(_determine(sr, lr, sp, lp));
+                        return !(_determine(sr, lr, sp, lp, d.presence));
                     })
             })
 

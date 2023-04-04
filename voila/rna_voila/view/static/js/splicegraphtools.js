@@ -191,10 +191,17 @@ class SpliceGraphTools {
                 gtpl = document.querySelector('#lr-psi-greater-than').value;
                 ltpl = document.querySelector('#lr-psi-less-than').value;
             }
-            this.sgs.junctions_filter(gt, lt, gtl, ltl, gtp, ltp, gtpl, ltpl);
+            let presence = document.querySelector('input[name="sg-toggles"]:checked').value;
+            if(presence){
+                presence = presence.split(',');
+            }
+            console.log(presence)
+            this.sgs.junctions_filter(gt, lt, gtl, ltl, gtp, ltp, gtpl, ltpl, presence);
         };
 
+
         document.querySelector('#lock-lr-psi-filter').onchange = filter_lock_check;
+        $('input[name="sg-toggles"]').click(junctions_filter);
         document.querySelector('#junction-reads-filter').onchange = junctions_filter;
         document.querySelector('#junction-lr-reads-filter').onchange = junctions_filter;
         document.querySelector('#junction-psi-filter').onchange = junctions_filter;
@@ -207,6 +214,7 @@ class SpliceGraphTools {
         document.querySelector('#psi-less-than').oninput = junctions_filter;
         document.querySelector('#lr-psi-greater-than').oninput = junctions_filter;
         document.querySelector('#lr-psi-less-than').oninput = junctions_filter;
+
         junctions_filter();
 
 

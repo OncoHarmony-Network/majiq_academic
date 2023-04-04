@@ -227,9 +227,25 @@
             <div style="display: inline-block;">
                 <canvas width="800px" height="40px" class="legend"></canvas>
             </div>
-<!--            <div style="display: inline-block;">-->
-<!--                <canvas width="650px" height="40px" class="legend-lr"></canvas>-->
-<!--            </div>-->
+            <div class="view-toggles">
+                <label class="form-control">
+                    <input id="sg-toggle-all" type="radio" name="sg-toggles" value="" checked>
+                    Show All
+                </label>
+                <label class="form-control">
+                    <input id="sg-toggle-sr" type="radio" name="sg-toggles" value="s,sl">
+                    SR Relevant
+                </label>
+                <label class="form-control">
+                    <input id="sg-toggle-lr" type="radio" name="sg-toggles" value="l,la,sl">
+                    LR Relevant
+                </label>
+                <label class="form-control">
+                    <input id="sg-toggle-srlr" type="radio" name="sg-toggles" value="s,l,la,sl">
+                    SR or LR Relevant
+                </label>
+
+            </div>
             <div class="coordinates"></div>
         </div>
 

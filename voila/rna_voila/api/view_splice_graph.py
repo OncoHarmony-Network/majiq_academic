@@ -410,6 +410,15 @@ class ViewSpliceGraph(SpliceGraph):
             if ir.start in exons_ends:
                 yield ir
 
+    def _add_presence_key(self, items):
+        for item in items:
+            if not item['has_reads']:
+                item['presence'] = 'ao'
+            elif item['annotated']:
+                item['presence'] = 'sa'
+            else:
+                item['presence'] = 's'
+
     def gene_experiment(self, gene_id, experiment_names_list):
         """
         Get data to populate javascript splice graph.
@@ -493,7 +502,9 @@ class ViewSpliceGraph(SpliceGraph):
         gene_dict = dict(self.view_gene(gene_id))
         gene_dict['exons'] = tuple(dict(e) for e in self.view_exons(gene_id))
         gene_dict['junctions'] = tuple(dict(j) for j in self.view_junctions(gene_id))
+        self._add_presence_key(gene_dict['junctions'])
         gene_dict['intron_retention'] = tuple(dict(ir) for ir in self.view_intron_retentions(gene_id))
+        self._add_presence_key(gene_dict['intron_retention'])
         gene_dict['junction_reads'] = junc_reads
         gene_dict['intron_retention_reads'] = ir_reads
         gene_dict['genome'] = self.genome
