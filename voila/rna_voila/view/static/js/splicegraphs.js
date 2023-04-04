@@ -612,10 +612,14 @@ class SpliceGraphs {
             .interrupt()
             .transition(this.t())
             .text(function (d, i) {
+                console.log(d.number);
                 if (d.color == 'hidden'){
                     return '';
                 }
-                if (strand === '+')
+                else if (d.number !== undefined){
+                    return d.number;
+                }
+                else if (strand === '+')
                     return i + 1;
                 else
                     return size - i

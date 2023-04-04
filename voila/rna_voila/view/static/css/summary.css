@@ -136,9 +136,9 @@ table {
 .content {
     display: flex;
     flex-direction: column;
-    height: calc(100% - 147px);
+    height: calc(100% - 158px);
     position: absolute;
-    top: 147px;
+    top: 158px;
     width: 100%
 }
 

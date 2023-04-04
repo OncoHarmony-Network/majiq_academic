@@ -43,6 +43,8 @@ class SpliceGraphLR:
     def gene(self, gene_id, annotated_exons):
         ret = []
 
+        # I'm not sure why it happens that we get exons like this but it seems to once in a while...
+        annotated_exons = [x for x in annotated_exons if x[0] != x[1]]
 
         for transcript in self.lrdb.get(gene_id, []):
             d = {
@@ -85,13 +87,13 @@ class SpliceGraphLR:
                 }
             }
 
-            # I'm not sure why it happens that we get exons like this but it seems to once in a while...
-            annotated_exons = [x for x in annotated_exons if x[0] != x[1]]
 
-            annotated_exons = IntervalTree.from_tuples(annotated_exons)
+
+            _annotated_exons = IntervalTree.from_tuples(annotated_exons)
+
             for lr_exon in transcript['exons']:
-                matching_annotated = annotated_exons.overlap(lr_exon[0], lr_exon[1])
-                ex_d = {'color': combined_colors['ao']}
+                matching_annotated = _annotated_exons.overlap(lr_exon[0], lr_exon[1])
+                ex_d = {'color': combined_colors['ao'], 'presence': 'la'}
                 if matching_annotated:
                     matching_annotated = matching_annotated.pop()
 
@@ -101,25 +103,38 @@ class SpliceGraphLR:
                     ex_d['annotated_start'] = matching_annotated[0]
                     ex_d['annotated_end'] = matching_annotated[1]
                     ex_d['ext_color'] = combined_colors['l']
-                    annotated_exons.remove(matching_annotated)
+                    _annotated_exons.remove(matching_annotated)
                 else:
                     ex_d['start'] = lr_exon[0]
                     ex_d['end'] = lr_exon[1]
                     ex_d['annotated'] = 0
                     ex_d['annotated_start'] = lr_exon[0]
                     ex_d['annotated_end'] = lr_exon[1]
+                    ex_d['color'] = combined_colors['l']
+                    ex_d['presence'] = 'l'
 
                 d['exons'].append(ex_d)
-            for annot_exon in annotated_exons:
+
+            for annot_exon in _annotated_exons:
                 d['exons'].append({
                     'start': annot_exon.begin,
                     'end': annot_exon.end,
                     'annotated': 1,
                     'annotated_start': annot_exon.begin,
                     'annotated_end': annot_exon.end,
-                    'color': 'hidden'
+                    'color': 'hidden',
+                    'presence': 'ao'
                 })
             d['exons'].sort(key=lambda x: x['start'])
+
+            exon_number = 1
+            for exon in (d['exons'] if transcript['strand'] == "+" else reversed(d['exons'])):
+                if exon['presence'] == 'l':
+                    exon['number'] = ''
+                else:
+                    exon['number'] = exon_number
+                    exon_number += 1
+
             d['start'] = d['exons'][0]['start']
             d['end'] = d['exons'][-1]['end']
             d['strand'] = transcript['strand']
