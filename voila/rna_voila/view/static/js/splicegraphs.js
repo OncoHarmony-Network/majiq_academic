@@ -632,6 +632,46 @@ class SpliceGraphs {
             .attr('font-size', font_size);
     }
 
+    exon_reads(sg, gene, style) {
+
+        const experiment = sg.dataset.experiment;
+        const reads = gene.exon_reads[experiment];
+        const x = this.x;
+        const y = this.y;
+        const exon_height = this.exon_height;
+        const font_size = this.font_size;
+        const junc_height = this.junction_height;
+
+        d3.select(sg).selectAll('.exon-reads')
+            .interrupt()
+            .data(gene.exons)
+            .transition(this.t())
+            .text(function (d) {
+                try {
+                    const r = reads[d.start][d.end];
+                    if (r)
+                        return r;
+                } catch (TypeError) {
+                    return '';
+                }
+            })
+            .attr('x', function (d) {
+                return x(d.start) + (x(d.end) - x(d.start)) / 2
+            })
+            .attr('y', function (d) {
+                if(style == 'flat'){
+                    return y(exon_height) - 5;
+                }else{
+                    const long_junc = 0;
+                    return y(exon_height + (junc_height * (d.bin + long_junc)) + 3)
+                }
+            })
+            .attr('text-anchor', 'middle')
+            .attr('font-family', 'monospace')
+            .attr('font-size', font_size)
+            .attr('fill', '#5c22d0');
+    }
+
     junctions(sg, gene, style) {
         const x = this.x;
         const y = this.y;
@@ -944,6 +984,10 @@ class SpliceGraphs {
             .append('text')
             .attr('class', 'exon-number');
 
+        exon_grps
+            .append('text')
+            .attr('class', 'exon-reads');
+
         const denovo_ext_ends = gene.exons
             .filter(e => e.annotated)
             .filter(e => e.end > e.annotated_end);
@@ -1161,6 +1205,7 @@ class SpliceGraphs {
         this.intron_retention(sg, lsvs);
         this.intron_retention_reads(sg, gene, 'flat');
         this.exon_numbers(sg, gene);
+        this.exon_reads(sg, gene, 'flat');
         this.junctions(sg, gene, 'flat');
         this.junction_reads(sg, gene, 'flat');
         // this.ss3p(sg, gene);

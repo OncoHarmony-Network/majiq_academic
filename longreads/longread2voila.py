@@ -23,6 +23,9 @@ parser.add_argument('-o', '--output-file', type=str, required=True,
                     help='the path to write the resulting voila file to')
 parser.add_argument('-sg', '--splice-graph', type=str, required=True,
                     help='the path to the majiq splice graph file which will be used to align to annotated exons')
+parser.add_argument('--gene-id', type=str, required=False,
+                    help='Limit to a gene-id for testing')
+
 
 
 args = parser.parse_args()
@@ -61,11 +64,16 @@ def reads_new_version(df_gtf, tsv_dict):
 
     transcripts = {}
     junctions = {}
+    exons = {}
 
     for gene in tqdm(df_gtf['gene_id'].unique()):
+        if args.gene_id and gene != args.gene_id:
+            continue
+
         df_gene = df_gtf[df_gtf['gene_id']==gene]
         introns_dict = {}
         junction_read_dict = {}
+        exons_read_dict = {}
 
         junc_pairs_from_sql = [(x['start'], x['end'],) for x in sr_gene_exons(gene) if x['start'] != -1 and x['end'] != -1 and x['start'] != x['end']]
         junc_pairs_from_sql = [(junc_pairs_from_sql[i][1], junc_pairs_from_sql[i+1][0]) for i in range(len(junc_pairs_from_sql)-1)]
@@ -91,6 +99,13 @@ def reads_new_version(df_gtf, tsv_dict):
             if len(df_transcript) < 3:
                 continue
 
+            for i,row in df_transcript.iterrows():
+                exon_pair = (row['start'], row['end'])
+                if not exons_read_dict.get(exon_pair):
+                    exons_read_dict[exon_pair] = tsv_dict.get(transcript)
+                else:
+                    exons_read_dict[exon_pair] += tsv_dict.get(transcript)
+
             if df_transcript['strand'].iloc[0] == '-':
                 df_transcript['next_exon']= df_transcript.start.shift(1)
                 df_transcript = df_transcript[2:]
@@ -105,11 +120,13 @@ def reads_new_version(df_gtf, tsv_dict):
                 else:
                     junction_read_dict[pair] += tsv_dict.get(transcript)
 
+
         junctions[gene] = dict(sorted(junction_read_dict.items()))
         junctions[gene].update(dict(sorted(introns_dict.items())))
+        exons[gene] = dict(sorted(exons_read_dict.items()))
 
 
-    return transcripts, junctions
+    return transcripts, junctions, exons
 
 print('~~~Parsing Long Read GTF~~~')
 df_gtf = read_gtf(args.isq_gtf_file)
@@ -118,7 +135,7 @@ print('~~~Parsing Long Read TSV~~~')
 df_tsv = pd.read_csv(args.isq_tsv_file, sep='\t', engine='python')
 tsv_dict = df_tsv['transcript_id'].value_counts().to_dict()
 print('~~~Processing Long Read combined read counts~~~')
-transcript_raw_reads, junction_raw_reads = reads_new_version(df_gtf, tsv_dict)
+transcript_raw_reads, junction_raw_reads, exons_raw_reads = reads_new_version(df_gtf, tsv_dict)
 
 # transcript_raw_reads format: { 'gene_id': { 'transcript_id' : reads }}
 # junction_raw_reads format: { 'gene_id': { (junc_start, junc_end) : reads ) }}
@@ -140,6 +157,8 @@ all_gene_ids = list(set(flairreader.gene_ids))
 #print("total genes in LR: ", len(all_gene_ids))
 print('~~~Processing final version of long reads transcript~~~')
 for gene_id in tqdm(all_gene_ids):
+    if args.gene_id and gene_id != args.gene_id:
+        continue
 
 
     #majiq_gene_id = 'gene:' + gene_id.split('.')[0]
@@ -159,6 +178,7 @@ for gene_id in tqdm(all_gene_ids):
     for t_i, (transcript_id, transcript) in enumerate(zip(flairreader.gene_transcript_names(gene_id), flairreader.gene(gene_id))):
 
         transcript_exons = []
+        transcript_exon_reads = []
         transcript_junctions = []
         transcript_junctions_reads = []
         transcript_intron_retention = []
@@ -167,6 +187,7 @@ for gene_id in tqdm(all_gene_ids):
         if strand == '-':
             #transcript = [(x[1], x[0]) for x in (reversed(transcript))]
             transcript = [x for x in (reversed(transcript))]
+
 
         # detect junctions
         for i, lr_exon in enumerate(transcript):
@@ -199,6 +220,7 @@ for gene_id in tqdm(all_gene_ids):
                         ir_ends.append(output_exon.begin)
 
                     transcript_exons.append((start, end,))
+                    transcript_exon_reads.append(exons_raw_reads[gene_id].get(lr_exon, 0))
 
                 for ir_s, ir_e in zip(ir_starts, ir_ends):
                     junc = (ir_s+1, ir_e-1,)
@@ -206,12 +228,16 @@ for gene_id in tqdm(all_gene_ids):
                     transcript_intron_retention_reads.append(junction_raw_reads[gene_id].get(junc, 0))
             else:
                 transcript_exons.append((lr_exon[0], lr_exon[1],))
+                # print("transcript", exons_raw_reads[gene_id])
+                # print("lr_exon", lr_exon)
+                transcript_exon_reads.append(exons_raw_reads[gene_id].get(lr_exon, 0))
 
         out_t = {
             'id': transcript_id,
             'strand': strand,
             'experiment': transcript_id,  # f'LR_{gene_id}_{t_i}',
             'exons': transcript_exons,
+            'exon_reads': transcript_exon_reads,
             'junctions': transcript_junctions,
             'junction_reads': transcript_junctions_reads,
             'intron_retention': transcript_intron_retention,

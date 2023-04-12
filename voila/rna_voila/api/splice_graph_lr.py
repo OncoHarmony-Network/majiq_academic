@@ -84,6 +84,9 @@ class SpliceGraphLR:
                 ],
                 'intron_retention_reads': {
                     transcript['experiment']: {j[0]: {j[1]: r} for j, r in zip(transcript['intron_retention'], transcript['intron_retention_reads'])}
+                },
+                'exon_reads': {
+                    transcript['experiment']: {j[0]: {j[1]: r} for j, r in zip(transcript['exons'], transcript['exon_reads'])}
                 }
             }
 
