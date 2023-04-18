@@ -204,6 +204,8 @@ class Config(object):
             for exp_id, opts_list in opt.items():
                 elist = opts_list.split(",")
                 for opt in elist:
+                    if not opt:
+                        continue
                     op_id, op_val = opt.split(":")
                     try:
                         opt_dict[op_id](exp_id, op_val)
