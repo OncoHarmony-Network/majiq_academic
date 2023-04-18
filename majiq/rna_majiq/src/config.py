@@ -43,7 +43,7 @@ class Config(object):
 
     class __Config(object):
         def _set_strandness(self, experiment_name, val):
-            self.strand_specific[experiment_name] = self.strandness_map[val]
+            self.strand_specific[experiment_name] = self.strandness_map[val.lower()]
 
         def _strandness_from_junc_file(self, junc_file_path):
             with np.load(junc_file_path) as fp:
