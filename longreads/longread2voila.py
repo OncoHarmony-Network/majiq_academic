@@ -129,7 +129,7 @@ def reads_new_version(df_gtf, tsv_dict):
     return transcripts, junctions, exons
 
 print('~~~Parsing Long Read GTF~~~')
-df_gtf = read_gtf(args.isq_gtf_file)
+df_gtf = read_gtf(args.isq_gtf_file).to_pandas()
 
 print('~~~Parsing Long Read TSV~~~')
 df_tsv = pd.read_csv(args.isq_tsv_file, sep='\t', engine='python')
