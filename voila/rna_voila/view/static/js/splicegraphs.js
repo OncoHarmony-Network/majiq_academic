@@ -28,8 +28,6 @@ class SpliceGraphs {
             this.gene['intron_retention_reads'][lr_gene.experiment] = lr_gene['intron_retention_reads'][lr_gene.experiment]
         }
 
-
-
         this.lsv_ids = [];
         this.zoom = 1;
         this.max_bin = 1;
@@ -236,6 +234,7 @@ class SpliceGraphs {
     }
 
     find_reads(reads, junc) {
+        if (reads === undefined) return 0;
         if (junc.start in reads)
             if (junc.end in reads[junc.start])
                 return reads[junc.start][junc.end];

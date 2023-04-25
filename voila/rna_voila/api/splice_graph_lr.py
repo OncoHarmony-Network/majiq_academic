@@ -279,6 +279,7 @@ class SpliceGraphLR:
         different amounts, we don't really have a good way to show this yet
         """
 
+
         #print(shortread['exons'])
         for transcript in self.lrdb.get(gene_id, []):
 
@@ -290,6 +291,7 @@ class SpliceGraphLR:
 
                     #print(lr_exon, sr_exon, self._overlaps(lr_exon[0], lr_exon[1], sr_exon['annotated_start'], sr_exon['annotated_end']))
                     if self._overlaps(lr_exon[0], lr_exon[1], sr_exon['annotated_start'], sr_exon['annotated_end']):
+
                         found_lr_exon = True
                         if lr_exon[0] < sr_exon['start']:
                             sr_exon['start'] = lr_exon[0]
@@ -297,6 +299,8 @@ class SpliceGraphLR:
                         if lr_exon[1] > sr_exon['end']:
                             sr_exon['end'] = lr_exon[1]
                             sr_exon['ext_color'] = combined_colors['l']
+                        if not sr_exon['color']:  # dubious
+                            sr_exon['color'] = combined_colors['l']
 
                 if not found_lr_exon:
                     shortread['exons'] = list(shortread['exons'])
@@ -312,9 +316,13 @@ class SpliceGraphLR:
 
     def combined_gene(self, gene_id, shortread):
 
+        #long_reads_only = not shortread['junction_reads'] and not shortread['intron_retention_reads']
+
         shortread = self._combine_summary(gene_id, shortread, 'junctions')
         shortread = self._combine_summary(gene_id, shortread, 'intron_retention')
         shortread = self._combine_exons(gene_id, shortread)
+
+
 
         return shortread
 

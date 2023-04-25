@@ -4,7 +4,9 @@ from bisect import bisect
 from flask import url_for, jsonify, request, session, redirect
 
 from rna_voila.api.view_splice_graph import ViewSpliceGraph
+from rna_voila.api.splice_graph_lr import SpliceGraphLR
 from rna_voila.view import views
+from rna_voila.config import ViewConfig
 
 app, bp = views.get_bp(__name__)
 
@@ -67,13 +69,41 @@ def splice_graph(gene_id):
         return jsonify(gd)
 
 
+@bp.route('/splice-graph/lr/<gene_id>', methods=('POST', 'GET'))
+def splice_graph_lr(gene_id):
+    with SpliceGraphLR(ViewConfig().long_read_file) as sgl:
+        with ViewSpliceGraph(omit_simplified=session.get('omit_simplified', False)) as sg:
+            annot_exons = [(x['annotated_start'], x['annotated_end'],) for x in sg.exons(gene_id) if x['annotated']]
+            gd = sgl.gene(gene_id, annot_exons)
+
+            #print(gd)
+            return jsonify(gd)
+
+@bp.route('/splice-graph/combined/<gene_id>', methods=('POST', 'GET'))
+def splice_graph_combined(gene_id):
+
+    with SpliceGraphLR(ViewConfig().long_read_file) as sgl:
+        with ViewSpliceGraph(omit_simplified=session.get('omit_simplified', False)) as sg:
+
+            sr = sg.gene_experiment(gene_id, [])
+            gd = sgl.combined_gene(gene_id, sr)
+
+            # if not sg.experiment_names:
+            #     for exon in gd['exons']:
+            #         exon['color'] =
+
+            return jsonify(gd)
+
 @bp.route('/psi-splice-graphs', methods=('POST',))
 def psi_splice_graphs():
     with ViewSpliceGraph(omit_simplified=session.get('omit_simplified', False)) as sg:
         try:
             sg_init = session['psi_init_splice_graphs']
         except KeyError:
-            sg_init = [['splice graph', sg.experiment_names[0]]]
+            try:
+                sg_init = [['splice graph', sg.experiment_names[0]]]
+            except IndexError:
+                sg_init = [['splice graph', 'no experiment']]
 
         json_data = request.get_json()
 

@@ -104,7 +104,7 @@ def run_service():
 def get_app():
     Index()
     analysis_type = ViewConfig().analysis_type
-    if ViewConfig().long_read_file and analysis_type != constants.ANALYSIS_PSI:
+    if not ViewConfig().splice_graph_only and ViewConfig().long_read_file and analysis_type != constants.ANALYSIS_PSI:
         voila_log().critical("It is currently not supported to use long-read inputs with analysis other than PSI")
         sys.exit(-1)
 

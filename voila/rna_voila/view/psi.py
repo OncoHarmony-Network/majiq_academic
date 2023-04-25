@@ -189,9 +189,6 @@ def splice_graph(gene_id):
         gd = add_psis(gd)
         return jsonify(gd)
 
-testfile = '/home/sjewell/PycharmProjects/majiq/longreads/debug.lr.voila'
-testfile = '/slowdata/longread/ex.isoforms.voila.lr'
-
 @bp.route('/splice-graph/lr/<gene_id>', methods=('POST', 'GET'))
 def splice_graph_lr(gene_id):
     with SpliceGraphLR(ViewConfig().long_read_file) as sgl:
